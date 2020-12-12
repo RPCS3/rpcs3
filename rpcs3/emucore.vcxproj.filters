@@ -878,9 +878,6 @@
     <ClCompile Include="util\cereal.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="util\shared_cptr.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="util\fixed_typemap.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -942,9 +939,6 @@
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="util\logs.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
-    <ClCompile Include="util\shared_cptr.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
@@ -1189,7 +1183,7 @@
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\types.h">
+    <ClInclude Include="util\types.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\BitField.h">
@@ -1837,7 +1831,7 @@
     <ClInclude Include="util\logs.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="util\shared_cptr.hpp">
+    <ClInclude Include="util\shared_ptr.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="util\typeindices.hpp">

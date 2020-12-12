@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
@@ -50,7 +50,7 @@ struct trophy_handle_t
 struct sce_np_trophy_manager
 {
 	shared_mutex mtx;
-	std::atomic<bool> is_initialized = false;
+	atomic_t<bool> is_initialized = false;
 
 	// Get context + check handle given
 	static std::pair<trophy_context_t*, SceNpTrophyError> get_context_ex(u32 context, u32 handle)

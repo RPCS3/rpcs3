@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
@@ -203,7 +203,7 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 	case microphone_handler::singstar:
 	case microphone_handler::real_singstar:
 		// SingStar mic has always 2 channels, each channel represent a physical microphone
-		ASSERT(num_channels >= 2);
+		ensure(num_channels >= 2);
 		if (num_channels > 2)
 		{
 			cellMic.error("Tried to open a SingStar-type device with num_channels = %d", num_channels);
@@ -211,7 +211,7 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 		}
 		break;
 	case microphone_handler::rocksmith: num_channels = 1; break;
-	default: ASSERT(false); break;
+	default: ensure(false); break;
 	}
 
 	ALCenum num_al_channels;
@@ -363,7 +363,7 @@ bool microphone_device::has_data() const
 
 u32 microphone_device::capture_audio()
 {
-	verify(HERE), sample_size > 0;
+	ensure(sample_size > 0);
 
 	u32 num_samples = inbuf_size / sample_size;
 
@@ -412,7 +412,7 @@ void microphone_device::get_raw(const u32 num_samples)
 		}
 		break;
 	case microphone_handler::singstar:
-		verify(HERE), sample_size == 4;
+		ensure(sample_size == 4);
 
 		// Mixing the 2 mics as if channels
 		if (input_devices.size() == 2)
@@ -437,7 +437,7 @@ void microphone_device::get_raw(const u32 num_samples)
 		}
 
 		break;
-	default: ASSERT(false); break;
+	default: ensure(false); break;
 	}
 
 	rbuf_raw.write_bytes(tmp_ptr, num_samples * sample_size);
@@ -466,7 +466,7 @@ void microphone_device::get_dsp(const u32 num_samples)
 		}
 		break;
 	case microphone_handler::singstar:
-		verify(HERE), sample_size == 4;
+		ensure(sample_size == 4);
 
 		// Mixing the 2 mics as if channels
 		if (input_devices.size() == 2)
@@ -491,7 +491,7 @@ void microphone_device::get_dsp(const u32 num_samples)
 		}
 
 		break;
-	default: ASSERT(false); break;
+	default: ensure(false); break;
 	}
 
 	rbuf_dsp.write_bytes(tmp_ptr, num_samples * sample_size);
@@ -1009,7 +1009,7 @@ error_code cellMicGetStatus(s32 dev_num, vm::ptr<CellMicStatus> status)
 
 error_code cellMicStopEx()
 {
-	fmt::throw_exception("Unexpected function" HERE);
+	fmt::throw_exception("Unexpected function");
 }
 
 error_code cellMicSysShareClose()

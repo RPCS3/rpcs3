@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "overlays.h"
 #include "overlay_osk_panel.h"

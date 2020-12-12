@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Cell/PPUAnalyser.h"
 #include "sys_sync.h"

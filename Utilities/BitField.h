@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "types.h"
+#include "util/types.hpp"
 
 template<typename T, uint N>
 struct bf_base

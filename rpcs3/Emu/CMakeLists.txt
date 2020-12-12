@@ -34,7 +34,6 @@ target_include_directories(rpcs3_emu
 target_sources(rpcs3_emu PRIVATE
 	../util/atomic.cpp
 	../util/atomic2.cpp
-	../util/shared_cptr.cpp
 	../util/fixed_typemap.cpp
 	../util/logs.cpp
 	../util/yaml.cpp
@@ -422,6 +421,7 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/GL/GLFragmentProgram.cpp
 	RSX/GL/GLGSRender.cpp
 	RSX/GL/GLHelpers.cpp
+	RSX/GL/GLPipelineCompiler.cpp
 	RSX/GL/GLPresent.cpp
 	RSX/GL/GLRenderTargets.cpp
 	RSX/GL/GLShaderInterpreter.cpp
@@ -443,6 +443,7 @@ if(TARGET 3rdparty_vulkan)
 		RSX/VK/VKGSRender.cpp
 		RSX/VK/VKHelpers.cpp
 		RSX/VK/VKMemAlloc.cpp
+		RSX/VK/VKPipelineCompiler.cpp
 		RSX/VK/VKPresent.cpp
 		RSX/VK/VKProgramPipeline.cpp
 		RSX/VK/VKQueryPool.cpp

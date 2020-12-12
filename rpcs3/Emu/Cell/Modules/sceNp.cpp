@@ -11,6 +11,7 @@
 #include "sceNp.h"
 #include "cellSysutil.h"
 
+#include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
 
@@ -550,7 +551,7 @@ error_code sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 
 	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
 
-	sceNp.warning("sceNpDrmVerifyUpgradeLicense(): content_id=“%s”", content_id);
+	sceNp.warning(u8"sceNpDrmVerifyUpgradeLicense(): content_id=“%s”", content_id);
 
 	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_str + ".rap")))
 	{
@@ -573,7 +574,7 @@ error_code sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 
 	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
 
-	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(): content_id=“%s”", content_id);
+	sceNp.warning(u8"sceNpDrmVerifyUpgradeLicense2(): content_id=“%s”", content_id);
 
 	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_str + ".rap")))
 	{
@@ -2519,9 +2520,18 @@ error_code sceNpManagerGetNetworkTime(vm::ptr<CellRtcTick> pTick)
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	auto now    = std::chrono::system_clock::now();
-	// That's assuming epoch is unix epoch which is not actually standardized, god I hate you C++ std
-	pTick->tick = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count() + (62135596800 * 1000 * 1000);
+	vm::var<s64> sec;
+	vm::var<s64> nsec;
+
+	error_code ret = sys_time_get_current_time(sec, nsec);
+
+	if (ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	// Taken from cellRtc
+	pTick->tick = *nsec / 1000 + *sec * cellRtcGetTickResolution() + 62135596800000000ULL;
 
 	return CELL_OK;
 }
@@ -4766,7 +4776,7 @@ error_code sceNpUtilCmpNpIdInOrder(vm::cptr<SceNpId> id1, vm::cptr<SceNpId> id2,
 	if (opt14 == 0 && opt24 == 0)
 	{
 		*order = 0;
-		return CELL_OK;	
+		return CELL_OK;
 	}
 
 	if (opt14 != 0 && opt24 != 0)
@@ -4819,7 +4829,7 @@ error_code sceNpUtilGetPlatformType(vm::cptr<SceNpId> npId)
 	case "psp2"_u32:
 		return not_an_error(SCE_NP_PLATFORM_TYPE_VITA);
 	case "ps3\0"_u32:
-		return not_an_error(SCE_NP_PLATFORM_TYPE_PS3); 
+		return not_an_error(SCE_NP_PLATFORM_TYPE_PS3);
 	case 0u:
 		return not_an_error(SCE_NP_PLATFORM_TYPE_NONE);
 	default:

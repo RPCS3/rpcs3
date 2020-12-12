@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "VKHelpers.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
@@ -6,6 +6,7 @@
 #include "VKFramebuffer.h"
 #include "VKResourceManager.h"
 #include "VKRenderPass.h"
+#include "VKPipelineCompiler.h"
 
 #include "../Overlays/overlays.h"
 
@@ -79,7 +80,7 @@ namespace vk
 					u64 pass_value;
 					u64 config;
 				}
-				key{ reinterpret_cast<uintptr_t>(pass), static_cast<u64>(renderpass_config.ia.topology) };
+				key{ reinterpret_cast<uptr>(pass), static_cast<u64>(renderpass_config.ia.topology) };
 				return rpcs3::hash_struct(key);
 			}
 		}
@@ -233,7 +234,6 @@ namespace vk
 			vp.scissorCount = 1;
 			vp.viewportCount = 1;
 
-			VkPipeline pipeline;
 			VkGraphicsPipelineCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 			info.pVertexInputState = &vi;
@@ -251,9 +251,8 @@ namespace vk
 			info.basePipelineHandle = VK_NULL_HANDLE;
 			info.renderPass = render_pass;
 
-			CHECK_RESULT(vkCreateGraphicsPipelines(*m_device, nullptr, 1, &info, NULL, &pipeline));
-
-			auto program = std::make_unique<vk::glsl::program>(*m_device, pipeline, m_pipeline_layout, get_vertex_inputs(), get_fragment_inputs());
+			auto compiler = vk::get_pipe_compiler();
+			auto program = compiler->compile(info, m_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE, {}, get_vertex_inputs(), get_fragment_inputs());
 			auto result = program.get();
 			m_program_cache[storage_key] = std::move(program);
 
@@ -271,7 +270,7 @@ namespace vk
 			else
 				program = build_pipeline(key, pass);
 
-			verify(HERE), m_used_descriptors < VK_OVERLAY_MAX_DRAW_CALLS;
+			ensure(m_used_descriptors < VK_OVERLAY_MAX_DRAW_CALLS);
 
 			VkDescriptorSetAllocateInfo alloc_info = {};
 			alloc_info.descriptorPool = m_descriptor_pool;
@@ -768,7 +767,7 @@ namespace vk
 					renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_LINE_STRIP);
 					break;
 				default:
-					fmt::throw_exception("Unexpected primitive type %d" HERE, static_cast<s32>(type));
+					fmt::throw_exception("Unexpected primitive type %d", static_cast<s32>(type));
 			}
 		}
 

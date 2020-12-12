@@ -1,8 +1,9 @@
-﻿#pragma once
+#pragma once
 #include "VKHelpers.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "VKRenderPass.h"
+#include "VKPipelineCompiler.h"
 #include "../Common/TextGlyphs.h"
 
 namespace vk
@@ -176,7 +177,6 @@ namespace vk
 			VkPipelineDepthStencilStateCreateInfo ds = {};
 			ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 
-			VkPipeline pipeline;
 			VkGraphicsPipelineCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 			info.pVertexInputState = &vi;
@@ -194,15 +194,13 @@ namespace vk
 			info.basePipelineHandle = VK_NULL_HANDLE;
 			info.renderPass = m_render_pass;
 
-			CHECK_RESULT(vkCreateGraphicsPipelines(dev, nullptr, 1, &info, NULL, &pipeline));
-
-			const std::vector<vk::glsl::program_input> unused;
-			m_program = std::make_unique<vk::glsl::program>(static_cast<VkDevice>(dev), pipeline, m_pipeline_layout, unused, unused);
+			auto compiler = vk::get_pipe_compiler();
+			m_program = compiler->compile(info, m_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE);
 		}
 
 		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, const float *offsets, size_t nb_offsets, std::array<float, 4> color)
 		{
-			verify(HERE), m_used_descriptors < 120;
+			ensure(m_used_descriptors < 120);
 
 			VkDescriptorSetAllocateInfo alloc_info = {};
 			alloc_info.descriptorPool = m_descriptor_pool;
@@ -257,7 +255,7 @@ namespace vk
 
 		void init(vk::render_device &dev, VkRenderPass render_pass)
 		{
-			verify(HERE), render_pass != VK_NULL_HANDLE;
+			ensure(render_pass != VK_NULL_HANDLE);
 
 			//At worst case, 1 char = 16*16*8 bytes (average about 24*8), so ~256K for 128 chars. Allocating 512k for verts
 			//uniform params are 8k in size, allocating for 120 lines (max lines at 4k, one column per row. Can be expanded

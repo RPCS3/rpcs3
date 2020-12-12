@@ -1,10 +1,10 @@
-﻿#pragma once
+#pragma once
 
 #include <cmath>
 #include "pad_types.h"
 #include "pad_config.h"
 #include "pad_config_types.h"
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 struct PadDevice
 {

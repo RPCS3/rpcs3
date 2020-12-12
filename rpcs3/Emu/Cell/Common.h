@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 // Floating-point rounding mode (for both PPU and SPU)
 enum FPSCR_RN

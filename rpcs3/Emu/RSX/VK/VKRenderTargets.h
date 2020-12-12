@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "stdafx.h"
 #include "VKHelpers.h"
@@ -59,7 +59,7 @@ namespace vk
 
 			if (!is_depth_surface()) [[likely]]
 			{
-				verify(HERE), current_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				ensure(current_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 				// This is the source; finish writing before reading
 				vk::insert_image_memory_barrier(
@@ -127,12 +127,12 @@ namespace vk
 		// Unresolve the linear data into planar MSAA data
 		void unresolve(vk::command_buffer& cmd)
 		{
-			verify(HERE), !(msaa_flags & rsx::surface_state_flags::require_resolve);
+			ensure(!(msaa_flags & rsx::surface_state_flags::require_resolve));
 			VkImageSubresourceRange range = { aspect(), 0, 1, 0, 1 };
 
 			if (!is_depth_surface()) [[likely]]
 			{
-				verify(HERE), current_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				ensure(current_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 				// This is the dest; finish reading before writing
 				vk::insert_image_memory_barrier(
@@ -329,7 +329,8 @@ namespace vk
 			}
 
 			// A read barrier should have been called before this!
-			verify("Read access without explicit barrier" HERE), resolve_surface, !(msaa_flags & rsx::surface_state_flags::require_resolve);
+			ensure(resolve_surface); // "Read access without explicit barrier"
+			ensure(!(msaa_flags & rsx::surface_state_flags::require_resolve));
 			return resolve_surface.get();
 		}
 
@@ -345,8 +346,9 @@ namespace vk
 
 		bool matches_dimensions(u16 _width, u16 _height) const
 		{
-			//Use forward scaling to account for rounding and clamping errors
-			return (rsx::apply_resolution_scale(_width, true) == width()) && (rsx::apply_resolution_scale(_height, true) == height());
+			// Use forward scaling to account for rounding and clamping errors
+			const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(_width, _height);
+			return (scaled_w == width()) && (scaled_h == height());
 		}
 
 		void texture_barrier(vk::command_buffer& cmd)
@@ -453,7 +455,7 @@ namespace vk
 					// NOTE: This step CAN introduce MSAA flags!
 					initialize_memory(cmd, read_access);
 
-					verify(HERE), state_flags == rsx::surface_state_flags::ready;
+					ensure(state_flags == rsx::surface_state_flags::ready);
 					on_write(rsx::get_shared_tag(), static_cast<rsx::surface_state_flags>(msaa_flags));
 				}
 
@@ -471,7 +473,7 @@ namespace vk
 					if (!read_access)
 					{
 						// Only do this step when it is needed to start rendering
-						verify(HERE), resolve_surface;
+						ensure(resolve_surface);
 						unresolve(cmd);
 					}
 				}
@@ -542,7 +544,7 @@ namespace vk
 				{
 					// Might introduce MSAA flags
 					initialize_memory(cmd, false);
-					verify(HERE), state_flags == rsx::surface_state_flags::ready;
+					ensure(state_flags == rsx::surface_state_flags::ready);
 				}
 
 				if (msaa_flags & rsx::surface_state_flags::require_resolve)
@@ -596,7 +598,7 @@ namespace vk
 
 	static inline vk::render_target* as_rtt(vk::image* t)
 	{
-		return verify(HERE, dynamic_cast<vk::render_target*>(t));
+		return ensure(dynamic_cast<vk::render_target*>(t));
 	}
 }
 
@@ -644,11 +646,13 @@ namespace rsx
 			}
 
 			std::unique_ptr<vk::render_target> rtt;
+			const auto [width_, height_] = rsx::apply_resolution_scale<true>(static_cast<u16>(width), static_cast<u16>(height));
+
 			rtt = std::make_unique<vk::render_target>(device, device.get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
-				static_cast<uint32_t>(rsx::apply_resolution_scale(static_cast<u16>(width), true)), static_cast<uint32_t>(rsx::apply_resolution_scale(static_cast<u16>(height), true)), 1, 1, 1,
+				static_cast<uint32_t>(width_), static_cast<uint32_t>(height_), 1, 1, 1,
 				static_cast<VkSampleCountFlagBits>(samples),
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -702,11 +706,13 @@ namespace rsx
 			}
 
 			std::unique_ptr<vk::render_target> ds;
+			const auto [width_, height_] = rsx::apply_resolution_scale<true>(static_cast<u16>(width), static_cast<u16>(height));
+
 			ds = std::make_unique<vk::render_target>(device, device.get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
-				static_cast<uint32_t>(rsx::apply_resolution_scale(static_cast<u16>(width), true)), static_cast<uint32_t>(rsx::apply_resolution_scale(static_cast<u16>(height), true)), 1, 1, 1,
+				static_cast<uint32_t>(width_), static_cast<uint32_t>(height_), 1, 1, 1,
 				static_cast<VkSampleCountFlagBits>(samples),
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
@@ -738,8 +744,8 @@ namespace rsx
 		{
 			if (!sink)
 			{
-				const auto new_w = rsx::apply_resolution_scale(prev.width, true, ref->get_surface_width(rsx::surface_metrics::pixels));
-				const auto new_h = rsx::apply_resolution_scale(prev.height, true, ref->get_surface_height(rsx::surface_metrics::pixels));
+				const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(prev.width, prev.height,
+					ref->get_surface_width(rsx::surface_metrics::pixels), ref->get_surface_height(rsx::surface_metrics::pixels));
 
 				auto& dev = cmd.get_command_pool().get_owner();
 				sink = std::make_unique<vk::render_target>(dev, dev.get_memory_mapping().device_local,
@@ -931,7 +937,7 @@ namespace rsx
 			const u64 last_finished_frame = vk::get_last_completed_frame_id();
 			invalidated_resources.remove_if([&](std::unique_ptr<vk::render_target> &rtt)
 			{
-				verify(HERE), rtt->frame_tag != 0;
+				ensure(rtt->frame_tag != 0);
 
 				if (rtt->unused_check_count() >= 2 && rtt->frame_tag < last_finished_frame)
 					return true;

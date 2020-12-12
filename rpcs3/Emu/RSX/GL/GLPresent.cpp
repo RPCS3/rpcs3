@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLGSRender.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 
@@ -48,8 +48,9 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 				surface->read_barrier(cmd);
 				image = section.surface->get_surface(rsx::surface_access::read);
 
-				info->width = rsx::apply_resolution_scale(std::min(surface_width, static_cast<u16>(info->width)), true);
-				info->height = rsx::apply_resolution_scale(std::min(surface_height, static_cast<u16>(info->height)), true);
+				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
+					std::min(surface_width, static_cast<u16>(info->width)),
+					std::min(surface_height, static_cast<u16>(info->height)));
 			}
 		}
 	}
@@ -147,28 +148,29 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		present_info.height = buffer_height;
 		present_info.pitch = buffer_pitch;
 		present_info.format = av_format;
-		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL, HERE);
+		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 		const auto image_to_flip_ = get_present_source(&present_info, avconfig);
 		image_to_flip = image_to_flip_->id();
 
 		if (avconfig->_3d) [[unlikely]]
 		{
-			const auto min_expected_height = rsx::apply_resolution_scale(buffer_height + 30, true);
+			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip_->height() < min_expected_height)
 			{
 				// Get image for second eye
 				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffers[info.buffer].offset;
 				present_info.width = buffer_width;
 				present_info.height = buffer_height;
-				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL, HERE);
+				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL);
 
 				image_to_flip2 = get_present_source(&present_info, avconfig)->id();
 			}
 			else
 			{
 				// Account for possible insets
-				buffer_height = std::min<u32>(image_to_flip_->height() - min_expected_height, rsx::apply_resolution_scale(buffer_height, true));
+				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
+				buffer_height = std::min<u32>(image_to_flip_->height() - min_expected_height, scaled_buffer_height);
 			}
 		}
 
@@ -210,7 +212,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (image_to_flip)
 	{
-		if (m_frame->screenshot_toggle == true)
+		if (m_frame->screenshot_toggle)
 		{
 			m_frame->screenshot_toggle = false;
 
@@ -290,6 +292,9 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (g_cfg.video.overlay)
 	{
+		// Disable depth test
+		gl_state.depth_func(GL_ALWAYS);
+
 		gl::screen.bind();
 		glViewport(0, 0, m_frame->client_width(), m_frame->client_height());
 

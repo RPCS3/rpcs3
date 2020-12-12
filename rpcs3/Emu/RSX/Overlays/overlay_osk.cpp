@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_osk.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
@@ -75,7 +75,7 @@ namespace rsx
 
 		void osk_dialog::update_panel()
 		{
-			ASSERT(m_panel_index < m_panels.size());
+			ensure(m_panel_index < m_panels.size());
 
 			const auto& panel = m_panels[m_panel_index];
 
@@ -103,7 +103,7 @@ namespace rsx
 				{
 					const auto row = (index / num_columns);
 					const auto col = (index % num_columns);
-					verify(HERE), row < num_rows && col < num_columns;
+					ensure(row < num_rows && col < num_columns);
 
 					auto& _cell = m_grid[index++];
 					_cell.button_flag = props.type_flags;
@@ -185,11 +185,11 @@ namespace rsx
 				}
 			}
 
-			verify(HERE), num_shift_layers_by_charset.size();
+			ensure(num_shift_layers_by_charset.size());
 
 			for (u32 layer = 0; layer < num_shift_layers_by_charset.size(); ++layer)
 			{
-				verify(HERE), num_shift_layers_by_charset[layer];
+				ensure(num_shift_layers_by_charset[layer]);
 			}
 
 			// Reset to first shift layer in the first charset, because the panel changed and we don't know if the layers are similar between panels.
@@ -346,7 +346,7 @@ namespace rsx
 			while (true)
 			{
 				const auto current_index = (start_index + count);
-				verify(HERE), current_index <= index_limit;
+				ensure(current_index <= index_limit);
 
 				if (m_grid[current_index].flags & border_flags::right)
 				{

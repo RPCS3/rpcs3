@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rsx_utils.h"
 #include "rsx_methods.h"
 #include "Emu/RSX/GCM.h"

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "../Common/VertexProgramDecompiler.h"
 #include "Emu/RSX/RSXVertexProgram.h"
 #include "GLHelpers.h"
@@ -59,7 +59,6 @@ public:
 	gl::glsl::shader shader;
 
 	void Decompile(const RSXVertexProgram& prog);
-	void Compile();
 
 private:
 	void Delete();

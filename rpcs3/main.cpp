@@ -1,4 +1,4 @@
-﻿// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
+// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
 #include <iostream>
@@ -292,7 +292,6 @@ int main(int argc, char** argv)
 #ifdef _WIN32
 	ULONG64 intro_cycles{};
 	QueryThreadCycleTime(GetCurrentThread(), &intro_cycles);
-	SetProcessWorkingSetSize(GetCurrentProcess(), 0x60000000, 0x80000000); // 2GiB
 #elif defined(RUSAGE_THREAD)
 	struct ::rusage intro_stats{};
 	::getrusage(RUSAGE_THREAD, &intro_stats);
@@ -357,6 +356,14 @@ int main(int argc, char** argv)
 
 		return 1;
 	}
+
+#ifdef _WIN32
+	if (!SetProcessWorkingSetSize(GetCurrentProcess(), 0x80000000, 0xC0000000)) // 2-3 GiB
+	{
+		report_fatal_error("Not enough memory for RPCS3 process.");
+		return 2;
+	}
+#endif
 
 	std::unique_ptr<logs::listener> log_file;
 	{

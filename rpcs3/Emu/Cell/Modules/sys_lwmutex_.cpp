@@ -1,12 +1,10 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "sysPrxForUser.h"
-
-#include <atomic>
 
 LOG_CHANNEL(sysPrxForUser);
 
@@ -128,7 +126,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 
 		// recursive locking succeeded
 		lwmutex->recursive_count++;
-		std::atomic_thread_fence(std::memory_order_acq_rel);
+		atomic_fence_acq_rel();
 
 		return CELL_OK;
 	}
@@ -181,7 +179,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 
 		if (old != lwmutex_reserved)
 		{
-			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
+			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 		}
 
 		return CELL_OK;
@@ -288,7 +286,7 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 
 		// recursive locking succeeded
 		lwmutex->recursive_count++;
-		std::atomic_thread_fence(std::memory_order_acq_rel);
+		atomic_fence_acq_rel();
 
 		return CELL_OK;
 	}
@@ -311,7 +309,7 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 
 			if (old != lwmutex_reserved)
 			{
-				fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
+				fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 			}
 		}
 

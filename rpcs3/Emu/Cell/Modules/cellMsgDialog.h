@@ -1,7 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include "Utilities/BitField.h"
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 enum
 {

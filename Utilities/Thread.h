@@ -1,8 +1,8 @@
 ﻿#pragma once
 
-#include "types.h"
+#include "util/types.hpp"
 #include "util/atomic.hpp"
-#include "util/shared_cptr.hpp"
+#include "util/shared_ptr.hpp"
 
 #include <string>
 #include <memory>
@@ -10,9 +10,6 @@
 
 #include "mutex.h"
 #include "lockless.h"
-
-// Report error and call std::abort(), defined in main.cpp
-[[noreturn]] void report_fatal_error(const std::string&);
 
 // Hardware core layout
 enum class native_core_arrangement : u32
@@ -100,6 +97,8 @@ public:
 	using native_entry = void*(*)(void* arg);
 #endif
 
+	const native_entry entry_point;
+
 private:
 	// Thread handle (platform-specific)
 	atomic_t<u64> m_thread{0};
@@ -108,25 +107,25 @@ private:
 	atomic_t<u64> m_sync{0};
 
 	// Thread name
-	stx::atomic_cptr<std::string> m_tname;
+	atomic_ptr<std::string> m_tname;
 
 	// Start thread
-	void start(native_entry, void(*)());
+	void start();
 
 	// Called at the thread start
 	void initialize(void (*error_cb)());
 
-	// Called at the thread end, returns true if needs destruction
+	// Called at the thread end, returns self handle
 	u64 finalize(thread_state result) noexcept;
 
 	// Cleanup after possibly deleting the thread instance
-	static void finalize(u64 _self) noexcept;
+	static native_entry finalize(u64 _self) noexcept;
 
 	// Set name for debugger
 	static void set_name(std::string);
 
-	// Make trampoline with stack fix
-	static void(*make_trampoline(native_entry))();
+	// Make entry point
+	static native_entry make_trampoline(u64(*)(thread_base*));
 
 	friend class thread_ctrl;
 
@@ -134,7 +133,7 @@ private:
 	friend class named_thread;
 
 protected:
-	thread_base(std::string_view name);
+	thread_base(native_entry, std::string_view name);
 
 	~thread_base();
 
@@ -189,14 +188,14 @@ public:
 	// Set current thread name (not recommended)
 	static void set_name(std::string_view name)
 	{
-		g_tls_this_thread->m_tname.store(stx::shared_cptr<std::string>::make(name));
+		g_tls_this_thread->m_tname.store(make_single<std::string>(name));
 	}
 
 	// Set thread name (not recommended)
 	template <typename T>
 	static void set_name(named_thread<T>& thread, std::string_view name)
 	{
-		static_cast<thread_base&>(thread).m_tname.store(stx::shared_cptr<std::string>::make(name));
+		static_cast<thread_base&>(thread).m_tname.store(make_single<std::string>(name));
 	}
 
 	template <typename T>
@@ -277,35 +276,12 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 	using result = result_storage_t<Context>;
 	using thread = thread_base;
 
-	// Type-erased thread entry point
-#ifdef _WIN32
-	static inline uint __stdcall entry_point(void* arg)
-#else
-	static inline void* entry_point(void* arg)
-#endif
+	static u64 entry_point(thread_base* _base)
 	{
-		if (auto _this = thread_ctrl::get_current())
-		{
-			arg = _this;
-		}
-
-		const auto _this = static_cast<named_thread*>(static_cast<thread*>(arg));
-
-		// Perform self-cleanup if necessary
-		u64 _self = _this->entry_point();
-
-		if (!_self)
-		{
-			delete _this;
-			thread::finalize(0);
-			return 0;
-		}
-
-		thread::finalize(_self);
-		return 0;
+		return static_cast<named_thread*>(_base)->entry_point2();
 	}
 
-	u64 entry_point()
+	u64 entry_point2()
 	{
 		thread::initialize([]()
 		{
@@ -330,7 +306,7 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 		return thread::finalize(thread_state::finished);
 	}
 
-	static inline void(*trampoline)() = thread::make_trampoline(entry_point);
+	static inline thread::native_entry trampoline = thread::make_trampoline(entry_point);
 
 	friend class thread_ctrl;
 
@@ -339,26 +315,26 @@ public:
 	template <bool Valid = std::is_default_constructible_v<Context> && thread_thread_name<Context>(), typename = std::enable_if_t<Valid>>
 	named_thread()
 		: Context()
-		, thread(Context::thread_name)
+		, thread(trampoline, Context::thread_name)
 	{
-		thread::start(&named_thread::entry_point, trampoline);
+		thread::start();
 	}
 
 	// Normal forwarding constructor
 	template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<Context, Args&&...>>>
 	named_thread(std::string_view name, Args&&... args)
 		: Context(std::forward<Args>(args)...)
-		, thread(name)
+		, thread(trampoline, name)
 	{
-		thread::start(&named_thread::entry_point, trampoline);
+		thread::start();
 	}
 
 	// Lambda constructor, also the implicit deduction guide candidate
 	named_thread(std::string_view name, Context&& f)
 		: Context(std::forward<Context>(f))
-		, thread(name)
+		, thread(trampoline, name)
 	{
-		thread::start(&named_thread::entry_point, trampoline);
+		thread::start();
 	}
 
 	named_thread(const named_thread&) = delete;
@@ -396,8 +372,6 @@ public:
 	// Try to abort by assigning thread_state::aborting (UB if assigning different state)
 	named_thread& operator=(thread_state s)
 	{
-		ASSUME(s == thread_state::aborting);
-
 		if (s == thread_state::aborting && thread::m_sync.fetch_op([](u64& v){ return !(v & 3) && (v |= 1); }).second)
 		{
 			if (s == thread_state::aborting)

@@ -1,4 +1,4 @@
-﻿#include "localized.h"
+#include "localized.h"
 
 Localized::Localized()
 {

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "overlay_animation.h"
 #include "overlay_controls.h"
 

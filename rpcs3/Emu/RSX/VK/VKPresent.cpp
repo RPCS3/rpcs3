@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKGSRender.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 
@@ -73,7 +73,7 @@ void VKGSRender::reinitialize_swapchain()
 
 void VKGSRender::present(vk::frame_context_t *ctx)
 {
-	verify(HERE), ctx->present_image != UINT32_MAX;
+	ensure(ctx->present_image != UINT32_MAX);
 
 	// Partial CS flush
 	ctx->swap_command_buffer->flush();
@@ -91,7 +91,7 @@ void VKGSRender::present(vk::frame_context_t *ctx)
 			swapchain_unavailable = true;
 			break;
 		default:
-			vk::die_with_error(HERE, error);
+			vk::die_with_error(error);
 		}
 	}
 
@@ -129,7 +129,7 @@ void VKGSRender::advance_queued_frames()
 		m_raster_env_ring_info.get_current_put_pos_minus_one());
 
 	m_queued_frames.push_back(m_current_frame);
-	verify(HERE), m_queued_frames.size() <= VK_MAX_ASYNC_FRAMES;
+	ensure(m_queued_frames.size() <= VK_MAX_ASYNC_FRAMES);
 
 	m_current_queue_index = (m_current_queue_index + 1) % VK_MAX_ASYNC_FRAMES;
 	m_current_frame = &frame_context_storage[m_current_queue_index];
@@ -140,7 +140,7 @@ void VKGSRender::advance_queued_frames()
 
 void VKGSRender::queue_swap_request()
 {
-	verify(HERE), !m_current_frame->swap_command_buffer;
+	ensure(!m_current_frame->swap_command_buffer);
 	m_current_frame->swap_command_buffer = m_current_command_buffer;
 
 	if (m_swapchain->is_headless())
@@ -174,7 +174,7 @@ void VKGSRender::queue_swap_request()
 
 void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resources)
 {
-	verify(HERE), ctx->swap_command_buffer;
+	ensure(ctx->swap_command_buffer);
 
 	if (ctx->swap_command_buffer->pending)
 	{
@@ -313,8 +313,9 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 				surface->read_barrier(*m_current_command_buffer);
 				image_to_flip = section.surface->get_surface(rsx::surface_access::read);
 
-				info->width = rsx::apply_resolution_scale(std::min(surface_width, static_cast<u16>(info->width)), true);
-				info->height = rsx::apply_resolution_scale(std::min(surface_height, static_cast<u16>(info->height)), true);
+				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
+					std::min(surface_width, static_cast<u16>(info->width)),
+					std::min(surface_height, static_cast<u16>(info->height)));
 			}
 		}
 	}
@@ -416,7 +417,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	{
 		if (!info.skip_frame)
 		{
-			verify(HERE), swapchain_unavailable;
+			ensure(swapchain_unavailable);
 
 			// Perform a mini-flip here without invoking present code
 			m_current_frame->swap_command_buffer = m_current_command_buffer;
@@ -463,27 +464,28 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		present_info.height = buffer_height;
 		present_info.pitch = buffer_pitch;
 		present_info.format = av_format;
-		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL, HERE);
+		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 		image_to_flip = get_present_source(&present_info, avconfig);
 
 		if (avconfig->_3d) [[unlikely]]
 		{
-			const auto min_expected_height = rsx::apply_resolution_scale(buffer_height + 30, true);
+			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
 			{
 				// Get image for second eye
 				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffers[info.buffer].offset;
 				present_info.width = buffer_width;
 				present_info.height = buffer_height;
-				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL, HERE);
+				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL);
 
 				image_to_flip2 = get_present_source(&present_info, avconfig);
 			}
 			else
 			{
 				// Account for possible insets
-				buffer_height = std::min<u32>(image_to_flip->height() - min_expected_height, rsx::apply_resolution_scale(buffer_height, true));
+				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
+				buffer_height = std::min<u32>(image_to_flip->height() - min_expected_height, scaled_buffer_height);
 			}
 		}
 
@@ -492,8 +494,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	// Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
-	verify(HERE), m_current_frame->present_image == UINT32_MAX;
-	verify(HERE), m_current_frame->swap_command_buffer == nullptr;
+	ensure(m_current_frame->present_image == UINT32_MAX);
+	ensure(m_current_frame->swap_command_buffer == nullptr);
 
 	u64 timeout = m_swapchain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES? 0ull: 100000000ull;
 	while (VkResult status = m_swapchain->acquire_next_swapchain_image(m_current_frame->acquire_signal_semaphore, timeout, &m_current_frame->present_image))
@@ -524,7 +526,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			reinitialize_swapchain();
 			continue;
 		default:
-			vk::die_with_error(HERE, status);
+			vk::die_with_error(status);
 		}
 
 		if (should_reinitialize_swapchain)
@@ -535,7 +537,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	// Confirm that the driver did not silently fail
-	verify(HERE), m_current_frame->present_image != UINT32_MAX;
+	ensure(m_current_frame->present_image != UINT32_MAX);
 
 	// Calculate output dimensions. Done after swapchain acquisition in case it was recreated.
 	coordi aspect_ratio;
@@ -590,12 +592,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f) || avconfig->_3d) [[unlikely]]
 		{
 			calibration_src.push_back(dynamic_cast<vk::viewable_image*>(image_to_flip));
-			verify("Image not viewable" HERE), calibration_src.front();
+			ensure(calibration_src.front());
 
 			if (image_to_flip2)
 			{
 				calibration_src.push_back(dynamic_cast<vk::viewable_image*>(image_to_flip2));
-				verify("Image not viewable" HERE), calibration_src.back();
+				ensure(calibration_src.back());
 			}
 		}
 
@@ -629,7 +631,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			const auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
 			single_target_pass = vk::get_renderpass(*m_device, key);
-			verify("Usupported renderpass configuration" HERE), single_target_pass != VK_NULL_HANDLE;
+			ensure(single_target_pass != VK_NULL_HANDLE);
 
 			direct_fbo = vk::get_framebuffer(*m_device, m_swapchain_dims.width, m_swapchain_dims.height, single_target_pass, m_swapchain->get_surface_format(), target_image);
 			direct_fbo->add_ref();
@@ -643,7 +645,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			direct_fbo->release();
 		}
 
-		if (m_frame->screenshot_toggle == true)
+		if (m_frame->screenshot_toggle)
 		{
 			m_frame->screenshot_toggle = false;
 
@@ -707,7 +709,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		{
 			const auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
 			single_target_pass = vk::get_renderpass(*m_device, key);
-			verify("Usupported renderpass configuration" HERE), single_target_pass != VK_NULL_HANDLE;
+			ensure(single_target_pass != VK_NULL_HANDLE);
 
 			direct_fbo = vk::get_framebuffer(*m_device, m_swapchain_dims.width, m_swapchain_dims.height, single_target_pass, m_swapchain->get_surface_format(), target_image);
 		}

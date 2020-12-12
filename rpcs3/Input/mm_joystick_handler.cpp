@@ -1,4 +1,4 @@
-﻿#ifdef _WIN32
+#ifdef _WIN32
 #include "mm_joystick_handler.h"
 #include "Emu/Io/pad_config.h"
 
@@ -32,6 +32,8 @@ mm_joystick_handler::~mm_joystick_handler()
 
 void mm_joystick_handler::init_config(pad_config* cfg, const std::string& name)
 {
+	if (!cfg) return;
+
 	// Set this profile's save location
 	cfg->cfg_name = name;
 

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 #include "gcm_enums.h"
@@ -151,26 +151,19 @@ struct GcmTileInfo
 	}
 };
 
-namespace rsx
+struct any32
 {
-	template<typename AT>
-	static inline u32 make_command(vm::_ptr_base<be_t<u32>, AT>& dst, u32 start_register, std::initializer_list<any32> values)
+	u32 m_data;
+
+	template <typename T, typename T2 = simple_t<T>>
+	any32(const T& value)
+		: m_data(std::bit_cast<u32, T2>(value))
 	{
-		*dst++ = start_register << 2 | static_cast<u32>(values.size()) << 18;
-
-		for (const any32& cmd : values)
-		{
-			*dst++ = cmd.as<u32>();
-		}
-
-		return u32{sizeof(u32)} * (static_cast<u32>(values.size()) + 1);
 	}
 
-	template<typename AT>
-	static inline u32 make_jump(vm::_ptr_base<be_t<u32>, AT>& dst, u32 offset)
+	template <typename T>
+	T as() const
 	{
-		*dst++ = RSX_METHOD_OLD_JUMP_CMD | offset;
-
-		return sizeof(u32);
+		return std::bit_cast<T>(m_data);
 	}
-}
+};

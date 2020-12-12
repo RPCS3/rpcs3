@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "PPCDisAsm.h"
 #include "SPUOpcodes.h"

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rpcn_config.h"
 #include "Emu/System.h"
 

@@ -4,6 +4,7 @@
 #include "Utilities/mutex.h"
 
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 #include <vector>
 #include <utility>
@@ -310,7 +311,7 @@ struct sys_net_linger
 struct lv2_socket final
 {
 #ifdef _WIN32
-	using socket_type = std::uintptr_t;
+	using socket_type = uptr;
 #else
 	using socket_type = int;
 #endif

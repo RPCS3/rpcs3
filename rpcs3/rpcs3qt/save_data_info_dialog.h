@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 // I just want the struct for the save data.
 #include "Emu/Cell/Modules/cellSaveData.h"

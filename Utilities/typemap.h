@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "types.h"
+#include "util/types.hpp"
 #include "mutex.h"
 #include "util/atomic.hpp"
 #include "util/typeindices.hpp"
@@ -372,7 +372,6 @@ namespace utils
 		template <typename D = std::remove_reference_t<T>>
 		auto get() const noexcept
 		{
-			ASSUME(m_block->m_type != 0);
 			return m_block->get_ptr<T>();
 		}
 
@@ -587,7 +586,7 @@ namespace utils
 					const uint align = type->align;
 					const uint ssize = ::align<uint>(sizeof(typemap_block), align) + ::align(type->size, align);
 					const auto total = std::size_t{ssize} * type->count;
-					const auto start = std::uintptr_t{::align(m_total, align)};
+					const auto start = uptr{::align(m_total, align)};
 
 					if (total)
 					{
@@ -613,7 +612,7 @@ namespace utils
 				{
 					if (m_map[i].m_count)
 					{
-						m_map[i].m_ptr = static_cast<uchar*>(m_memory) + reinterpret_cast<std::uintptr_t>(m_map[i].m_ptr);
+						m_map[i].m_ptr = static_cast<uchar*>(m_memory) + reinterpret_cast<uptr>(m_map[i].m_ptr);
 					}
 				}
 			}

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Emu/RSX/GSRender.h"
 #include "VKHelpers.h"
 #include "VKTextureCache.h"
@@ -13,7 +13,6 @@
 #include "../GCM.h"
 
 #include <thread>
-#include <atomic>
 #include <optional>
 
 namespace vk
@@ -22,7 +21,7 @@ namespace vk
 	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<VkFormat>;
 	using null_vertex_cache = vertex_cache;
 
-	using shader_cache = rsx::shaders_cache<vk::pipeline_props, VKProgramBuffer>;
+	using shader_cache = rsx::shaders_cache<vk::pipeline_props, vk::program_cache>;
 
 	struct vertex_upload_info
 	{
@@ -59,7 +58,7 @@ namespace vk
 		vk::fence* submit_fence = nullptr;
 		VkDevice m_device = VK_NULL_HANDLE;
 
-		std::atomic_bool pending = { false };
+		atomic_t<bool> pending = { false };
 		u64 eid_tag = 0;
 		u64 reset_id = 0;
 		shared_mutex guard_mutex;
@@ -373,7 +372,7 @@ private:
 
 	shared_mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;
-	std::atomic_bool m_samplers_dirty = { true };
+	atomic_t<bool> m_samplers_dirty = { true };
 	std::unique_ptr<vk::sampler> m_stencil_mirror_sampler;
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
@@ -390,7 +389,7 @@ public:
 	std::unique_ptr<vk::shader_cache> m_shaders_cache;
 
 private:
-	std::unique_ptr<VKProgramBuffer> m_prog_buffer;
+	std::unique_ptr<vk::program_cache> m_prog_buffer;
 
 	std::unique_ptr<vk::swapchain_base> m_swapchain;
 	vk::context m_thread_context;
@@ -573,6 +572,4 @@ protected:
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
 	void on_semaphore_acquire_wait() override;
-
-	bool on_decompiler_task() override;
 };

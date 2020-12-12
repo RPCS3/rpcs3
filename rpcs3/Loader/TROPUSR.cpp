@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "restore_new.h"
 #include "Utilities/rXml.h"
 #include "define_new_memleakdetect.h"

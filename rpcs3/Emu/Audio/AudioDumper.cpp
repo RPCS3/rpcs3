@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "AudioDumper.h"
 
 #include "Utilities/date_time.h"
@@ -33,7 +33,8 @@ void AudioDumper::WriteData(const void* buffer, u32 size)
 {
 	if (GetCh())
 	{
-		verify(HERE), size, m_output.write(buffer, size) == size;
+		ensure(size);
+		ensure(m_output.write(buffer, size) == size);
 		m_header.Size += size;
 		m_header.RIFF.Size += size;
 	}

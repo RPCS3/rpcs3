@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QMap>
 
@@ -71,6 +71,7 @@ enum class emu_settings_type
 	DisableOnDiskShaderCache,
 	DisableVulkanMemAllocator,
 	ShaderMode,
+	ShaderCompilerNumThreads,
 	MultithreadedRSX,
 	VBlankRate,
 	RelaxedZCULL,
@@ -211,6 +212,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DisableOnDiskShaderCache,   { "Video", "Disable On-Disk Shader Cache"}},
 	{ emu_settings_type::DisableVulkanMemAllocator,  { "Video", "Disable Vulkan Memory Allocator"}},
 	{ emu_settings_type::ShaderMode,                 { "Video", "Shader Mode"}},
+	{ emu_settings_type::ShaderCompilerNumThreads,   { "Video", "Shader Compiler Threads"}},
 	{ emu_settings_type::MultithreadedRSX,           { "Video", "Multithreaded RSX"}},
 	{ emu_settings_type::RelaxedZCULL,               { "Video", "Relaxed ZCULL Sync"}},
 	{ emu_settings_type::AnisotropicFilterOverride,  { "Video", "Anisotropic Filter Override"}},

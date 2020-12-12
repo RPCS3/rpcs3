@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "types.h"
+#include "util/types.hpp"
 #include "StrFmt.h"
 #include <vector>
 
@@ -92,7 +92,7 @@ namespace utils
 		void set_length(const u32 new_length)
 		{
 			end = start + new_length - 1;
-			ASSERT(valid());
+			ensure(valid());
 		}
 
 		u32 next_address() const

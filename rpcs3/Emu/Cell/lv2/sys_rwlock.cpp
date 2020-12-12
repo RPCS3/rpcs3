@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_rwlock.h"
 
 #include "Emu/IdManager.h"
@@ -259,7 +259,7 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 			{
 				rwlock->owner = 0;
 
-				verify(HERE), rwlock->rq.empty();
+				ensure(rwlock->rq.empty());
 			}
 		}
 	}

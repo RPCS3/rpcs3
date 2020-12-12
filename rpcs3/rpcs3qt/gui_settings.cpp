@@ -1,4 +1,4 @@
-﻿#include "gui_settings.h"
+#include "gui_settings.h"
 
 #include "qt_utils.h"
 #include "localized.h"
@@ -154,9 +154,9 @@ void gui_settings::SetCategoryVisibility(int cat, const bool& val)
 	SetValue(value, val);
 }
 
-void gui_settings::ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr, bool always_on_top = false)
+void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr, bool always_on_top = false)
 {
-	const std::string dialog_type = confirm ? "Confirmation" : "Info";
+	const std::string dialog_type = icon != QMessageBox::Information ? "Confirmation" : "Info";
 	const bool has_gui_setting = !entry.name.isEmpty();
 
 	if (has_gui_setting && !GetValue(entry).toBool())
@@ -165,13 +165,13 @@ void gui_settings::ShowBox(bool confirm, const QString& title, const QString& te
 		return;
 	}
 
-	const QFlags<QMessageBox::StandardButton> buttons = confirm ? QMessageBox::Yes | QMessageBox::No : QMessageBox::Ok;
-	const QMessageBox::Icon icon = confirm ? QMessageBox::Question : QMessageBox::Information;
+	const QFlags<QMessageBox::StandardButton> buttons = icon != QMessageBox::Information ? QMessageBox::Yes | QMessageBox::No : QMessageBox::Ok;
 
 	QMessageBox* mb = new QMessageBox(icon, title, text, buttons, parent, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | (always_on_top ? Qt::WindowStaysOnTopHint : Qt::Widget));
 	mb->deleteLater();
+	mb->setTextFormat(Qt::RichText);
 
-	if (has_gui_setting)
+	if (has_gui_setting && icon != QMessageBox::Critical)
 	{
 		mb->setCheckBox(new QCheckBox(tr("Don't show again")));
 	}
@@ -182,7 +182,10 @@ void gui_settings::ShowBox(bool confirm, const QString& title, const QString& te
 		{
 			*result = res;
 		}
-		if (has_gui_setting && mb->checkBox()->isChecked())
+
+		const auto checkBox = mb->checkBox();
+
+		if (checkBox && checkBox->isChecked())
 		{
 			SetValue(entry, false);
 			cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, sstr(entry.name));
@@ -194,12 +197,12 @@ void gui_settings::ShowBox(bool confirm, const QString& title, const QString& te
 
 void gui_settings::ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr)
 {
-	ShowBox(true, title, text, entry, result, parent, true);
+	ShowBox(QMessageBox::Question, title, text, entry, result, parent, true);
 }
 
 void gui_settings::ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent = nullptr)
 {
-	ShowBox(false, title, text, entry, nullptr, parent, false);
+	ShowBox(QMessageBox::Information, title, text, entry, nullptr, parent, false);
 }
 
 bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save_entry)
@@ -208,6 +211,7 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 	{
 		QString title = tr("Close Running Game?");
 		QString message = tr("Performing this action will close the current game.\nDo you really want to continue?\n\nAny unsaved progress will be lost!\n");
+		auto icon = QMessageBox::Question;
 
 		if (gui_save_entry == gui::ib_confirm_boot)
 		{
@@ -218,10 +222,18 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 			title = tr("Exit RPCS3?");
 			message = tr("A game is currently running. Do you really want to close RPCS3?\n\nAny unsaved progress will be lost!\n");
 		}
+		else if (gui_save_entry == gui::ib_confirm_fw)
+		{
+			title = tr("Missing Firmware Detected!");
+			message = tr("Install the PS3 Firmware (Menu: File -> Install Firmware)."
+				"\n<br>For more information read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>."
+				"\nCommercial games do not work without firmware! Do you wish to continue!?");
+			icon = QMessageBox::Critical;
+		}
 
 		int result = QMessageBox::Yes;
 
-		ShowConfirmationBox(title, message, gui_save_entry, &result, parent);
+		ShowBox(icon, title, message, gui_save_entry, &result, parent);
 
 		if (result != QMessageBox::Yes)
 		{

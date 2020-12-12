@@ -1,4 +1,4 @@
-﻿#include <QButtonGroup>
+#include <QButtonGroup>
 #include <QDialogButtonBox>
 #include <QFontMetrics>
 #include <QPushButton>
@@ -30,6 +30,7 @@
 #include "Crypto/unself.h"
 #include "Utilities/sysinfo.h"
 
+#include <set>
 #include <unordered_set>
 #include <thread>
 
@@ -41,6 +42,7 @@ LOG_CHANNEL(cfg_log, "CFG");
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
+inline QString qsv(std::string_view sv) { return QString(sv.data()); }
 
 settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, const int& tab_index, QWidget *parent, const GameInfo* game)
 	: QDialog(parent)
@@ -229,7 +231,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	else
 	{
 		ui->enableTSX->setEnabled(false);
-		ui->enableTSX->addItem(tr("Not supported", "Enable TSX"));
+		ui->enableTSX->setPlaceholderText(tr("Not supported", "Enable TSX"));
 		SubscribeTooltip(ui->enableTSX, tr("Unfortunately your CPU model does not support this instruction set.", "Enable TSX"));
 
 		m_emu_settings->SetSetting(emu_settings_type::EnableTSX, fmt::format("%s", tsx_usage::disabled));
@@ -345,7 +347,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	for (int i = 0; i < ui->resBox->count(); i++)
 	{
 		const QVariantList var_list = ui->resBox->itemData(i).toList();
-		ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
+		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
 
 		if (var_list[0].toString() == "1280x720")
 		{
@@ -391,6 +393,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			break;
 		}
 	}
+
+	// Comboboxes
+	m_emu_settings->EnhanceComboBox(ui->shaderCompilerThreads, emu_settings_type::ShaderCompilerNumThreads, true);
+	SubscribeTooltip(ui->gb_shader_compiler_threads, tooltips.settings.shader_compiler_threads);
+	ui->shaderCompilerThreads->setItemText(ui->shaderCompilerThreads->findData(0), tr("Auto", "Number of Shader Compiler Threads"));
 
 	// Checkboxes: main options
 	m_emu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings_type::WriteColorBuffers);
@@ -548,14 +555,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			// Fill combobox with placeholder if no adapters needed
 			if (!renderer.has_adapters)
 			{
-				ui->graphicsAdapterBox->addItem(tr("Not needed for %1 renderer", "Graphics adapter").arg(text));
+				ui->graphicsAdapterBox->clear();
+				ui->graphicsAdapterBox->setPlaceholderText(tr("Not needed for %0 renderer", "Graphics adapter").arg(text));
 				return;
 			}
+
 			// Fill combobox
-			for (const auto& adapter : renderer.adapters)
-			{
-				ui->graphicsAdapterBox->addItem(adapter);
-			}
+			ui->graphicsAdapterBox->clear();
+			ui->graphicsAdapterBox->addItems(renderer.adapters);
+
 			// Reset Adapter to old config
 			int idx = ui->graphicsAdapterBox->findText(renderer.old_adapter);
 			if (idx < 0)
@@ -650,7 +658,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	auto enable_buffering = [this, enable_buffering_options](int index)
 	{
 		const QVariantList var_list = ui->audioOutBox->itemData(index).toList();
-		ASSERT(var_list.size() == 2 && var_list[0].canConvert<QString>());
+		ensure(var_list.size() == 2 && var_list[0].canConvert<QString>());
 		const QString text = var_list[0].toString();
 		const bool enabled = text == "XAudio2" || text == "OpenAL" || text == "FAudio";
 		ui->enableBuffering->setEnabled(enabled);
@@ -667,7 +675,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 
 		const QVariantList var_list = ui->microphoneBox->itemData(index).toList();
-		ASSERT(var_list.size() == 2 && var_list[1].canConvert<int>());
+		ensure(var_list.size() == 2 && var_list[1].canConvert<int>());
 		const int handler_id = var_list[1].toInt();
 		int max = 0;
 
@@ -1021,47 +1029,28 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceRadioButton(lib_mode_bg, emu_settings_type::LibLoadOptions);
 
-	// Sort string vector alphabetically
-	static const auto sort_string_vector = [](std::vector<std::string>& vec)
-	{
-		std::sort(vec.begin(), vec.end(), [](const std::string &str1, const std::string &str2) { return str1 < str2; });
-	};
-
 	std::vector<std::string> loadedLibs = m_emu_settings->GetLoadedLibraries();
 
-	sort_string_vector(loadedLibs);
+	std::set<std::string_view> set(loadedLibs.begin(), loadedLibs.end());
 
-	for (const auto& lib : loadedLibs)
+	for (const auto& lib : set)
 	{
-		QListWidgetItem* item = new QListWidgetItem(qstr(lib), ui->lleList);
+		QListWidgetItem* item = new QListWidgetItem(qsv(lib), ui->lleList);
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
 		item->setCheckState(Qt::Checked); // AND initialize check state
 		ui->lleList->addItem(item);
 	}
 
-	const std::string lle_dir = g_cfg.vfs.get_dev_flash() + "sys/external/";
+	extern const std::unordered_map<std::string_view, int> g_prx_list;
 
-	std::unordered_set<std::string> set(loadedLibs.begin(), loadedLibs.end());
-	std::vector<std::string> lle_module_list_unselected;
-
-	for (const auto& prxf : fs::dir(lle_dir))
+	for (const auto& lib : g_prx_list)
 	{
-		// List found unselected modules
-		if (prxf.is_directory || (prxf.name.substr(std::max<size_t>(size_t(3), prxf.name.length()) - 4)) != "sprx")
+		if (set.count(lib.first))
 		{
 			continue;
 		}
-		if (verify_npdrm_self_headers(fs::file(lle_dir + prxf.name)) && !set.count(prxf.name))
-		{
-			lle_module_list_unselected.push_back(prxf.name);
-		}
-	}
 
-	sort_string_vector(lle_module_list_unselected);
-
-	for (const auto& lib : lle_module_list_unselected)
-	{
-		QListWidgetItem* item = new QListWidgetItem(qstr(lib), ui->lleList);
+		QListWidgetItem* item = new QListWidgetItem(qsv(lib.first), ui->lleList);
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
 		item->setCheckState(Qt::Unchecked); // AND initialize check state
 		ui->lleList->addItem(item);
@@ -1069,18 +1058,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	ui->searchBox->setPlaceholderText(tr("Search libraries", "Library search box"));
 
-	auto on_lib_button_clicked = [this](int ind)
+	auto on_lib_button_clicked = [this](int id)
 	{
-		if (ind != static_cast<int>(lib_loading_type::liblv2only))
-		{
-			ui->searchBox->setEnabled(true);
-			ui->lleList->setEnabled(true);
-		}
-		else
-		{
-			ui->searchBox->setEnabled(false);
-			ui->lleList->setEnabled(false);
-		}
+		const bool enableLibs = id != static_cast<int>(lib_loading_type::liblv2only);
+		ui->searchBox->setEnabled(enableLibs);
+		ui->lleList->setEnabled(enableLibs);
 	};
 
 	auto on_search_box_text_changed = [this](QString text)
@@ -1113,7 +1095,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	};
 
 	// Events
-	connect(lib_mode_bg, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), on_lib_button_clicked);
+	connect(lib_mode_bg, &QButtonGroup::idClicked, on_lib_button_clicked);
 	connect(ui->searchBox, &QLineEdit::textChanged, on_search_box_text_changed);
 
 	// enable multiselection (there must be a better way)
@@ -1810,11 +1792,7 @@ void settings_dialog::SnapSlider(QSlider *slider, int interval)
 void settings_dialog::AddGuiConfigs()
 {
 	ui->combo_configs->clear();
-
-	for (const QString& entry : m_gui_settings->GetConfigEntries())
-	{
-		ui->combo_configs->addItem(entry);
-	}
+	ui->combo_configs->addItems(m_gui_settings->GetConfigEntries());
 
 	m_current_gui_config = m_gui_settings->GetValue(gui::m_currentConfig).toString();
 

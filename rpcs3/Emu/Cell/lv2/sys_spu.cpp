@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_spu.h"
 
 #include "Emu/System.h"
@@ -54,7 +54,7 @@ void sys_spu_image::load(const fs::file& stream)
 
 	if (obj != elf_error::ok)
 	{
-		fmt::throw_exception("Failed to load SPU image: %s" HERE, obj.get_error());
+		fmt::throw_exception("Failed to load SPU image: %s", obj.get_error());
 	}
 
 	for (const auto& shdr : obj.shdrs)
@@ -87,7 +87,7 @@ void sys_spu_image::load(const fs::file& stream)
 
 	if (nsegs <= 0 || nsegs > 0x20 || sys_spu_image::fill(segs, nsegs, obj.progs, src) != nsegs)
 	{
-		fmt::throw_exception("Failed to load SPU segments (%d)" HERE, nsegs);
+		fmt::throw_exception("Failed to load SPU segments (%d)", nsegs);
 	}
 
 	// Write ID and save entry
@@ -289,7 +289,7 @@ error_code _sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 		return CELL_ESRCH;
 	}
 
-	verify(HERE), vm::dealloc(handle->segs.addr(), vm::main);
+	ensure(vm::dealloc(handle->segs.addr(), vm::main));
 	return CELL_OK;
 }
 
@@ -403,7 +403,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	const u32 tid = (inited << 24) | (group_id & 0xffffff);
 
-	verify(HERE), idm::import<named_thread<spu_thread>>([&]()
+	ensure(idm::import<named_thread<spu_thread>>([&]()
 	{
 		std::string full_name = fmt::format("SPU[0x%07x] ", tid);
 
@@ -416,7 +416,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		group->threads[inited] = spu;
 		group->threads_map[spu_num] = static_cast<s8>(inited);
 		return spu;
-	});
+	}));
 
 	*thread = tid;
 
@@ -682,7 +682,7 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 		if (auto thread = t.get())
 		{
 			// Deallocate LS
-			vm::get(vm::spu)->dealloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (thread->id & 0xffffff), &thread->shm);
+			ensure(vm::get(vm::spu)->dealloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (thread->id & 0xffffff), &thread->shm));
 
 			// Remove ID from IDM (destruction will occur in group destructor)
 			idm::remove<named_thread<spu_thread>>(thread->id);
@@ -1271,7 +1271,7 @@ error_code sys_spu_thread_write_ls(ppu_thread& ppu, u32 id, u32 lsa, u64 value, 
 	case 2: thread->_ref<u16>(lsa) = static_cast<u16>(value); break;
 	case 4: thread->_ref<u32>(lsa) = static_cast<u32>(value); break;
 	case 8: thread->_ref<u64>(lsa) = value; break;
-	default: ASSUME(0);
+	default: fmt::throw_exception("Unreachable");
 	}
 
 	return CELL_OK;
@@ -1314,7 +1314,7 @@ error_code sys_spu_thread_read_ls(ppu_thread& ppu, u32 id, u32 lsa, vm::ptr<u64>
 	case 2: *value = thread->_ref<u16>(lsa); break;
 	case 4: *value = thread->_ref<u32>(lsa); break;
 	case 8: *value = thread->_ref<u64>(lsa); break;
-	default: ASSUME(0);
+	default: fmt::throw_exception("Unreachable");
 	}
 
 	return CELL_OK;
@@ -1848,7 +1848,7 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 
 	const u32 tid = idm::make<named_thread<spu_thread>>(fmt::format("RawSPU[0x%x] ", index), nullptr, index, "", index);
 
-	spu_thread::g_raw_spu_id[index] = verify("RawSPU ID" HERE, tid);
+	spu_thread::g_raw_spu_id[index] = (ensure(tid));
 
 	*id = index;
 
@@ -1901,7 +1901,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 	thread->gpr[5] = v128::from64(0, arg3);
 	thread->gpr[6] = v128::from64(0, arg4);
 
-	spu_thread::g_raw_spu_id[index] = verify("IsoSPU ID" HERE, thread->id);
+	spu_thread::g_raw_spu_id[index] = (ensure(thread->id));
 
 	sys_spu_image img;
 	img.load(obj);
@@ -1910,7 +1910,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 	img.deploy(thread->ls, image_info->segs.get_ptr(), image_info->nsegs);
 
 	thread->write_reg(ls_addr + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, image_info->e_entry);
-	verify(HERE), idm::remove_verify<lv2_obj, lv2_spu_image>(img.entry_point, std::move(image_info));
+	ensure(idm::remove_verify<lv2_obj, lv2_spu_image>(img.entry_point, std::move(image_info)));
 
 	*id = index;
 	return CELL_OK;
@@ -2244,7 +2244,7 @@ error_code raw_spu_set_spu_cfg(u32 id, u32 value)
 {
 	if (value > 3)
 	{
-		fmt::throw_exception("Unexpected value (0x%x)" HERE, value);
+		fmt::throw_exception("Unexpected value (0x%x)", value);
 	}
 
 	const auto thread = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));

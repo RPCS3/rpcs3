@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -34,7 +34,7 @@ extern void libio_sys_config_init()
 	if (cfg->init_ctr++ == 0)
 	{
 		// Belongs to "_cfg_evt_hndlr" thread (8k stack)
-		cfg->stack_addr = verify(HERE, vm::alloc(0x2000, vm::stack, 4096));
+		cfg->stack_addr = (ensure(vm::alloc(0x2000, vm::stack, 4096)));
 	}
 }
 
@@ -46,7 +46,7 @@ extern void libio_sys_config_end()
 
 	if (cfg->init_ctr-- == 1)
 	{
-		verify(HERE), vm::dealloc(std::exchange(cfg->stack_addr, 0), vm::stack);
+		ensure(vm::dealloc(std::exchange(cfg->stack_addr, 0), vm::stack));
 	}
 }
 

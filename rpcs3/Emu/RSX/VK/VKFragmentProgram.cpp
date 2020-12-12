@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKFragmentProgram.h"
 #include "VKCommonDecompiler.h"
 #include "VKHelpers.h"
@@ -164,7 +164,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		}
 	}
 
-	verify("Too many sampler descriptors!" HERE), location <= m_binding_table.vertex_textures_first_bind_slot;
+	ensure(location <= m_binding_table.vertex_textures_first_bind_slot); // "Too many sampler descriptors!"
 
 	std::string constants_block;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])

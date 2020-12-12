@@ -1,4 +1,4 @@
-﻿#include "call_stack_list.h"
+#include "call_stack_list.h"
 
 constexpr auto qstr = QString::fromStdString;
 

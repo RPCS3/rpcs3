@@ -1,4 +1,4 @@
-﻿#include "instruction_editor_dialog.h"
+#include "instruction_editor_dialog.h"
 
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/CPU/CPUThread.h"

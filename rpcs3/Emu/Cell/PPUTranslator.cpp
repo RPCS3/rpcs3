@@ -1,4 +1,4 @@
-﻿#ifdef LLVM_AVAILABLE
+#ifdef LLVM_AVAILABLE
 
 #include "Emu/system_config.h"
 #include "PPUTranslator.h"
@@ -10,8 +10,8 @@
 
 using namespace llvm;
 
-constexpr ppu_decoder<PPUTranslator> s_ppu_decoder;
-constexpr ppu_decoder<ppu_iname> s_ppu_iname;
+const ppu_decoder<PPUTranslator> s_ppu_decoder;
+const ppu_decoder<ppu_iname> s_ppu_iname;
 
 PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_module& info, ExecutionEngine& engine)
 	: cpu_translator(_module, false)
@@ -264,12 +264,11 @@ Value* PPUTranslator::GetAddr(u64 _add)
 
 Type* PPUTranslator::ScaleType(Type* type, s32 pow2)
 {
-	verify(HERE), (type->getScalarType()->isIntegerTy());
-	verify(HERE), pow2 > -32, pow2 < 32;
+	ensure(type->getScalarType()->isIntegerTy());
+	ensure(pow2 > -32 && pow2 < 32);
 
 	uint scaled = type->getScalarSizeInBits();
-
-	verify(HERE), (scaled & (scaled - 1)) == 0;
+	ensure((scaled & (scaled - 1)) == 0);
 
 	if (pow2 > 0)
 	{
@@ -280,7 +279,7 @@ Type* PPUTranslator::ScaleType(Type* type, s32 pow2)
 		scaled >>= -pow2;
 	}
 
-	verify(HERE), (scaled != 0);
+	ensure(scaled);
 	const auto new_type = m_ir->getIntNTy(scaled);
 	const auto vec_type = dyn_cast<VectorType>(type);
 	return vec_type ? VectorType::get(new_type, vec_type->getNumElements(), false) : cast<Type>(new_type);
@@ -410,7 +409,7 @@ void PPUTranslator::FlushRegisters()
 
 Value* PPUTranslator::Solid(Value* value)
 {
-	const u32 size = ::narrow<u32>(+value->getType()->getPrimitiveSizeInBits(), HERE);
+	const u32 size = ::narrow<u32>(+value->getType()->getPrimitiveSizeInBits());
 
 	/* Workarounds (casting bool vectors directly may produce invalid code) */
 
@@ -587,7 +586,7 @@ llvm::Value* PPUTranslator::GetMemory(llvm::Value* addr, llvm::Type* type)
 
 Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 {
-	const u32 size = ::narrow<u32>(+type->getPrimitiveSizeInBits(), HERE);
+	const u32 size = ::narrow<u32>(+type->getPrimitiveSizeInBits());
 
 	if (is_be ^ m_is_be && size > 8)
 	{
@@ -604,7 +603,7 @@ Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align)
 {
 	const auto type = value->getType();
-	const u32 size = ::narrow<u32>(+type->getPrimitiveSizeInBits(), HERE);
+	const u32 size = ::narrow<u32>(+type->getPrimitiveSizeInBits());
 
 	if (is_be ^ m_is_be && size > 8)
 	{
@@ -4630,7 +4629,7 @@ Value* PPUTranslator::GetVr(u32 vr, VrType type)
 	case VrType::vi16: _type = GetType<u16[8]>(); break;
 	case VrType::vf  : _type = GetType<f32[4]>(); break;
 	case VrType::i128: _type = GetType<u128>(); break;
-	default: report_fatal_error("GetVr(): invalid type");
+	default: ensure(false);
 	}
 
 	return bitcast(value, _type);
@@ -4710,8 +4709,7 @@ void PPUTranslator::SetFPRF(Value* value, bool set_cr)
 {
 	const bool is32 =
 		value->getType()->isFloatTy() ? true :
-		value->getType()->isDoubleTy() ? false :
-		(report_fatal_error("SetFPRF(): invalid value type"), false);
+		value->getType()->isDoubleTy() ? false : ensure(false);
 
 	//const auto zero = ConstantFP::get(value->getType(), 0.0);
 	//const auto is_nan = m_ir->CreateFCmpUNO(value, zero);

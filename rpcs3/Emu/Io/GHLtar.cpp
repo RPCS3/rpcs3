@@ -1,4 +1,4 @@
-﻿// Guitar Hero Live controller emulator
+// Guitar Hero Live controller emulator
 
 #include "stdafx.h"
 #include "GHLtar.h"

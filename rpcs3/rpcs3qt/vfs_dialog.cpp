@@ -1,4 +1,4 @@
-﻿#include "vfs_dialog.h"
+#include "vfs_dialog.h"
 #include "vfs_dialog_tab.h"
 #include "gui_settings.h"
 #include "emu_settings_type.h"

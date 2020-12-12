@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_rsx.h"
 
 #include "Emu/Cell/PPUModule.h"
@@ -84,7 +84,7 @@ void lv2_rsx_config::send_event(u64 data1, u64 event_flags, u64 data3) const
 
 	if (error && error + 0u != CELL_ENOTCONN)
 	{
-		fmt::throw_exception("lv2_rsx_config::send_event() Failed to send event! (error=%x)" HERE, +error);
+		fmt::throw_exception("lv2_rsx_config::send_event() Failed to send event! (error=%x)", +error);
 	}
 }
 
@@ -150,7 +150,7 @@ error_code sys_rsx_memory_free(cpu_thread& cpu, u32 mem_handle)
 
 	if (g_fxo->get<lv2_rsx_config>()->context_base)
 	{
-		fmt::throw_exception("Attempting to dealloc rsx memory when the context is still being used" HERE);
+		fmt::throw_exception("Attempting to dealloc rsx memory when the context is still being used");
 	}
 
 	if (!vm::dealloc(rsx::constants::local_mem_base))
@@ -189,7 +189,7 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	if (rsx_cfg->context_base)
 	{
 		// We currently do not support multiple contexts
-		fmt::throw_exception("sys_rsx_context_allocate was called twice" HERE);
+		fmt::throw_exception("sys_rsx_context_allocate was called twice");
 	}
 
 	const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
@@ -204,7 +204,7 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	*lpar_driver_info = context_base + 0x100000;
 	*lpar_reports = context_base + 0x200000;
 
-	auto &reports = vm::_ref<RsxReports>(vm::cast(*lpar_reports, HERE));
+	auto &reports = vm::_ref<RsxReports>(vm::cast(*lpar_reports));
 	std::memset(&reports, 0, sizeof(RsxReports));
 
 	for (size_t i = 0; i < std::size(reports.notify); ++i)
@@ -225,7 +225,7 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 		reports.report[i].pad = -1;
 	}
 
-	auto &driverInfo = vm::_ref<RsxDriverInfo>(vm::cast(*lpar_driver_info, HERE));
+	auto &driverInfo = vm::_ref<RsxDriverInfo>(vm::cast(*lpar_driver_info));
 
 	std::memset(&driverInfo, 0, sizeof(RsxDriverInfo));
 
@@ -240,9 +240,9 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	driverInfo.systemModeFlags = static_cast<u32>(system_mode);
 	driverInfo.hardware_channel = 1; // * i think* this 1 for games, 0 for vsh
 
-	rsx_cfg->driver_info = vm::cast(*lpar_driver_info, HERE);
+	rsx_cfg->driver_info = vm::cast(*lpar_driver_info);
 
-	auto &dmaControl = vm::_ref<RsxDmaControl>(vm::cast(*lpar_dma_control, HERE));
+	auto &dmaControl = vm::_ref<RsxDmaControl>(vm::cast(*lpar_dma_control));
 	dmaControl.get = 0;
 	dmaControl.put = 0;
 	dmaControl.ref = 0; // Set later to -1 by cellGcmSys
@@ -263,16 +263,15 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	sys_event_queue_create(cpu, vm::get_addr(&driverInfo.handler_queue), attr, 0, 0x20);
 	sys_event_port_connect_local(cpu, rsx_cfg->rsx_event_port, driverInfo.handler_queue);
 
-	rsx_cfg->dma_address = vm::cast(*lpar_dma_control, HERE);
+	rsx_cfg->dma_address = vm::cast(*lpar_dma_control);
 
 	const auto render = rsx::get_current_renderer();
 	render->display_buffers_count = 0;
 	render->current_display_buffer = 0;
-	render->label_addr = vm::cast(*lpar_reports, HERE);
+	render->label_addr = vm::cast(*lpar_reports);
 	render->device_addr = rsx_cfg->device_addr;
-	render->dma_address = rsx_cfg->dma_address;
 	render->local_mem_size = rsx_cfg->memory_size;
-	render->init(vm::cast(*lpar_dma_control, HERE));
+	render->init(vm::cast(*lpar_dma_control));
 
 	rsx_cfg->context_base = context_base;
 	*context_id = 0x55555555;
@@ -467,7 +466,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		if ((a4 & 0x80000000) != 0)
 		{
 			// NOTE: There currently seem to only be 2 active heads on PS3
-			verify(HERE), a3 < 2;
+			ensure(a3 < 2);
 
 			// last half byte gives buffer, 0xf seems to trigger just last queued
 			u8 idx_check = a4 & 0xf;
@@ -507,7 +506,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	case 0x103: // Display Queue
 	{
 		// NOTE: There currently seem to only be 2 active heads on PS3
-		verify(HERE), a3 < 2;
+		ensure(a3 < 2);
 
 		driverInfo.head[a3].lastQueuedBufferId = static_cast<u32>(a4);
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
@@ -566,7 +565,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		}
 
 		// NOTE: There currently seem to only be 2 active heads on PS3
-		verify(HERE), a3 < 2;
+		ensure(a3 < 2);
 
 		driverInfo.head[a3].flipFlags.atomic_op([&](be_t<u32>& flipStatus)
 		{
@@ -585,7 +584,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		//a5 high bits = ret.pitch = (pitch / 0x100) << 8;
 		//a5 low bits = ret.format = base | ((base + ((size - 1) / 0x10000)) << 13) | (comp << 26) | (1 << 30);
 
-		verify(HERE), a3 < std::size(render->tiles);
+		ensure(a3 < std::size(render->tiles));
 
 		if (!render->is_fifo_idle())
 		{
@@ -618,7 +617,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			{
 			case CELL_GCM_LOCATION_MAIN: limit = render->main_mem_size; break;
 			case CELL_GCM_LOCATION_LOCAL: limit = render->local_mem_size; break;
-			default: fmt::throw_exception("sys_rsx_context_attribute(): Unexpected location value (location=0x%x)" HERE, location);
+			default: fmt::throw_exception("sys_rsx_context_attribute(): Unexpected location value (location=0x%x)", location);
 			}
 
 			if (!range.valid() || range.end >= limit)
@@ -627,7 +626,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			}
 
 			// Hardcoded value in gcm
-			verify(HERE), !!(a5 & (1 << 30));
+			ensure(a5 & (1 << 30));
 		}
 
 		std::lock_guard lock(rsx_cfg->mutex);
@@ -670,7 +669,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		//a6 high = status0 = (zcullDir << 1) | (zcullFormat << 2) | ((sFunc & 0xF) << 12) | (sRef << 16) | (sMask << 24);
 		//a6 low = status1 = (0x2000 << 0) | (0x20 << 16);
 
-		verify(HERE), a3 < std::size(render->zculls);
+		ensure(a3 < std::size(render->zculls));
 
 		if (!render->is_fifo_idle())
 		{
@@ -700,7 +699,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			}
 
 			// Hardcoded values in gcm
-			verify(HERE), !!(a4 & (1ull << 32)), (a6 & 0xFFFFFFFF) == 0u + ((0x2000 << 0) | (0x20 << 16));
+			ensure(a4 & (1ull << 32));
+			ensure((a6 & 0xFFFFFFFF) == 0u + ((0x2000 << 0) | (0x20 << 16)));
 		}
 
 		std::lock_guard lock(rsx_cfg->mutex);
@@ -753,7 +753,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	case 0xFED: // hack: vblank command
 	{
 		// NOTE: There currently seem to only be 2 active heads on PS3
-		verify(HERE), a3 < 2;
+		ensure(a3 < 2);
 
 		// todo: this is wrong and should be 'second' vblank handler and freq, but since currently everything is reported as being 59.94, this should be fine
 		vm::_ref<u32>(render->device_addr + 0x30) = 1;

@@ -1,4 +1,4 @@
-﻿#include "headless_application.h"
+#include "headless_application.h"
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
@@ -72,7 +72,7 @@ void headless_application::InitializeCallbacks()
 		}
 		default:
 		{
-			fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+			fmt::throw_exception("Invalid video renderer: %s", type);
 		}
 		}
 	};

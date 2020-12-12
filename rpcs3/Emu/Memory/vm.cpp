@@ -211,7 +211,7 @@ namespace vm
 
 			for (u32 i = begin / 4096, max = (begin + size - 1) / 4096; i <= max; i++)
 			{
-				if (!(g_pages[i].flags & (vm::page_readable)))
+				if (!(g_pages[i] & (vm::page_readable)))
 				{
 					test = i * 4096;
 					break;
@@ -242,7 +242,7 @@ namespace vm
 	{
 		if (range_lock < g_range_lock_set || range_lock >= std::end(g_range_lock_set))
 		{
-			fmt::throw_exception("Invalid range lock" HERE);
+			fmt::throw_exception("Invalid range lock");
 		}
 
 		range_lock->release(0);
@@ -284,15 +284,15 @@ namespace vm
 		// Shouldn't really happen
 		if (size == 0)
 		{
-			vm_log.warning("Tried to lock empty range (flags=0x%x, addr=0x%x)" HERE, flags >> 32, addr);
+			vm_log.warning("Tried to lock empty range (flags=0x%x, addr=0x%x)", flags >> 32, addr);
 			g_range_lock.release(0);
 			return;
 		}
 
-		// Limit to 256 MiB at once; make sure if it operates on big amount of data, it's page-aligned
-		if (size > 256 * 1024 * 1024 || (size > 65536 && size % 4096))
+		// Limit to <512 MiB at once; make sure if it operates on big amount of data, it's page-aligned
+		if (size >= 512 * 1024 * 1024 || (size > 65536 && size % 4096))
 		{
-			fmt::throw_exception("Failed to lock range (flags=0x%x, addr=0x%x, size=0x%x)" HERE, flags >> 32, addr, size);
+			fmt::throw_exception("Failed to lock range (flags=0x%x, addr=0x%x, size=0x%x)", flags >> 32, addr, size);
 		}
 
 		// Block or signal new range locks
@@ -310,8 +310,6 @@ namespace vm
 		{
 			to_clear = for_all_range_locks(to_clear, [&](u32 addr2, u32 size2)
 			{
-				ASSUME(size2);
-
 				if (range.overlaps(utils::address_range::start_length(addr2, size2))) [[unlikely]]
 				{
 					return 1;
@@ -572,7 +570,7 @@ namespace vm
 			else
 			{
 				// TODO: Accurate locking in this case
-				if (!(g_pages[addr / 4096].flags & page_writable))
+				if (!(g_pages[addr / 4096] & page_writable))
 				{
 					return -1;
 				}
@@ -660,14 +658,14 @@ namespace vm
 
 		if (!size || (size | addr) % 4096 || flags & page_allocated)
 		{
-			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_pages[i].flags)
+			if (g_pages[i])
 			{
-				fmt::throw_exception("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)" HERE, addr, size, flags, i * 4096);
+				fmt::throw_exception("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
 		}
 
@@ -686,7 +684,7 @@ namespace vm
 				// 1. To simplify range_lock logic
 				// 2. To make sure it never overlaps with 32-bit addresses
 				// Also check that it's aligned (lowest 16 bits)
-				verify(HERE), (shm_self & 0xffff'8000'0000'ffff) == range_locked;
+				ensure((shm_self & 0xffff'8000'0000'ffff) == range_locked);
 
 				// Find another mirror and map it as shareable too
 				for (auto& ploc : g_locations)
@@ -716,7 +714,7 @@ namespace vm
 			u64 shm_self = reinterpret_cast<u64>(shm->get()) ^ range_locked;
 
 			// Check (see above)
-			verify(HERE), (shm_self & 0xffff'8000'0000'ffff) == range_locked;
+			ensure((shm_self & 0xffff'8000'0000'ffff) == range_locked);
 
 			// Map range as shareable
 			for (u32 i = addr / 65536; i < addr / 65536 + size / 65536; i++)
@@ -761,9 +759,9 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_pages[i].flags.exchange(flags | page_allocated))
+			if (g_pages[i].exchange(flags | page_allocated))
 			{
-				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)" HERE, addr, size, flags, i * 4096);
+				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
 		}
 
@@ -779,7 +777,7 @@ namespace vm
 
 		if (!size || (size | addr) % 4096)
 		{
-			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
 
 		const u8 flags_both = flags_set & flags_clear;
@@ -790,7 +788,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if ((g_pages[i].flags & flags_test) != (flags_test | page_allocated))
+			if ((g_pages[i] & flags_test) != (flags_test | page_allocated))
 			{
 				return false;
 			}
@@ -810,14 +808,14 @@ namespace vm
 
 			if (i < end)
 			{
-				new_val = g_pages[i].flags;
+				new_val = g_pages[i];
 				new_val |= flags_set;
 				new_val &= ~flags_clear;
 			}
 
 			if (new_val != start_value)
 			{
-				const u8 old_val = g_pages[start].flags;
+				const u8 old_val = g_pages[start];
 
 				if (u32 page_size = (i - start) * 4096; page_size && old_val != start_value)
 				{
@@ -827,15 +825,13 @@ namespace vm
 						safe_bits |= range_readable;
 					if (old_val & start_value & page_writable && safe_bits & range_readable)
 						safe_bits |= range_writable;
-					if (old_val & start_value & page_executable && safe_bits & range_readable)
-						safe_bits |= range_executable;
 
 					// Protect range locks from observing changes in memory protection
 					_lock_main_range_lock(safe_bits, start * 4096, page_size);
 
 					for (u32 j = start; j < i; j++)
 					{
-						g_pages[j].flags.release(start_value);
+						g_pages[j].release(start_value);
 					}
 
 					if ((old_val ^ start_value) & (page_readable | page_writable))
@@ -865,7 +861,7 @@ namespace vm
 
 		if (!max_size || (max_size | addr) % 4096)
 		{
-			fmt::throw_exception("Invalid arguments (addr=0x%x, max_size=0x%x)" HERE, addr, max_size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, max_size=0x%x)", addr, max_size);
 		}
 
 		// Determine deallocation size
@@ -874,19 +870,19 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + max_size / 4096; i++)
 		{
-			if ((g_pages[i].flags & page_allocated) == 0)
+			if ((g_pages[i] & page_allocated) == 0)
 			{
 				break;
 			}
 
 			if (size == 0)
 			{
-				is_exec = !!(g_pages[i].flags & page_executable);
+				is_exec = !!(g_pages[i] & page_executable);
 			}
 			else
 			{
 				// Must be consistent
-				verify(HERE), is_exec == !!(g_pages[i].flags & page_executable);
+				ensure(is_exec == !!(g_pages[i] & page_executable));
 			}
 
 			size += 4096;
@@ -907,12 +903,12 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (!(g_pages[i].flags & page_allocated))
+			if (!(g_pages[i] & page_allocated))
 			{
-				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)" HERE, addr, size, i * 4096);
+				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * 4096);
 			}
 
-			g_pages[i].flags.release(0);
+			g_pages[i].release(0);
 		}
 
 		// Notify rsx to invalidate range
@@ -969,7 +965,7 @@ namespace vm
 
 		for (u32 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max;)
 		{
-			auto state = +g_pages[i].flags;
+			auto state = +g_pages[i];
 
 			if (~state & flags) [[unlikely]]
 			{
@@ -1000,7 +996,7 @@ namespace vm
 
 		if (!block)
 		{
-			fmt::throw_exception("Invalid memory location (%u)" HERE, +location);
+			fmt::throw_exception("Invalid memory location (%u)", +location);
 		}
 
 		return block->alloc(size, nullptr, align);
@@ -1012,7 +1008,7 @@ namespace vm
 
 		if (!block)
 		{
-			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, +location, addr);
+			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)", +location, addr);
 		}
 
 		return block->falloc(addr, size);
@@ -1024,7 +1020,7 @@ namespace vm
 
 		if (!block)
 		{
-			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)" HERE, +location, addr);
+			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)", +location, addr);
 		}
 
 		return block->dealloc(addr);
@@ -1051,8 +1047,8 @@ namespace vm
 	{
 		perf_meter<"PAGE_LCK"_u64> perf;
 
-		verify("lock_sudo" HERE), addr % 4096 == 0;
-		verify("lock_sudo" HERE), size % 4096 == 0;
+		ensure(addr % 4096 == 0);
+		ensure(size % 4096 == 0);
 
 		if (!utils::memory_lock(g_sudo_addr + addr, size))
 		{
@@ -1065,7 +1061,7 @@ namespace vm
 		// Check if memory area is already mapped
 		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
 		{
-			if (g_pages[i].flags)
+			if (g_pages[i])
 			{
 				return false;
 			}
@@ -1077,8 +1073,8 @@ namespace vm
 		if (this->flags & 0x10)
 		{
 			// Mark overflow/underflow guard pages as allocated
-			verify(HERE), !g_pages[addr / 4096].flags.exchange(page_allocated);
-			verify(HERE), !g_pages[addr / 4096 + size / 4096 - 1].flags.exchange(page_allocated);
+			ensure(!g_pages[addr / 4096].exchange(page_allocated));
+			ensure(!g_pages[addr / 4096 + size / 4096 - 1].exchange(page_allocated));
 		}
 
 		// Map "real" memory pages; provide a function to search for mirrors with private member access
@@ -1114,10 +1110,10 @@ namespace vm
 #ifdef _MSC_VER
 				__stosq(target, data, count);
 #else
-				for (std::size_t i = 0; i < count; i++)
-				{
-					target[i] = data;
-				}
+				__asm__ ("mov %0, %%rdi; mov %1, %%rax; mov %2, %%rcx; rep stosq;"
+					:
+					: "r" (ptr), "r" (data), "r" (count)
+					: "rdi", "rax", "rcx", "memory");
 #endif
 			};
 
@@ -1186,7 +1182,7 @@ namespace vm
 		// Check alignment (it's page allocation, so passing small values there is just silly)
 		if (align < min_page_size || align != (0x80000000u >> std::countl_zero(align)))
 		{
-			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)" HERE, size, align);
+			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)", size, align);
 		}
 
 		// Return if size is invalid
@@ -1210,7 +1206,7 @@ namespace vm
 		std::shared_ptr<utils::shm> shm;
 
 		if (m_common)
-			verify(HERE), !src;
+			ensure(!src);
 		else if (src)
 			shm = *src;
 		else
@@ -1267,7 +1263,7 @@ namespace vm
 		std::shared_ptr<utils::shm> shm;
 
 		if (m_common)
-			verify(HERE), !src;
+			ensure(!src);
 		else if (src)
 			shm = *src;
 		else
@@ -1308,12 +1304,12 @@ namespace vm
 			if (flags & 0x10)
 			{
 				// Clear guard pages
-				verify(HERE), g_pages[addr / 4096 - 1].flags.exchange(0) == page_allocated;
-				verify(HERE), g_pages[addr / 4096 + size / 4096].flags.exchange(0) == page_allocated;
+				ensure(g_pages[addr / 4096 - 1].exchange(0) == page_allocated);
+				ensure(g_pages[addr / 4096 + size / 4096].exchange(0) == page_allocated);
 			}
 
 			// Unmap "real" memory pages
-			verify(HERE), size == _page_unmap(addr, size, found->second.second.get());
+			ensure(size == _page_unmap(addr, size, found->second.second.get()));
 
 			// Clear stack guards
 			if (flags & 0x10)
@@ -1429,7 +1425,7 @@ namespace vm
 	{
 		if (!size || (size | addr) % 4096)
 		{
-			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)" HERE, addr, size);
+			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
 
 		if (!_test_map(addr, size))
@@ -1439,9 +1435,9 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_pages[i].flags)
+			if (g_pages[i])
 			{
-				fmt::throw_exception("Unexpected pages allocated (current_addr=0x%x)" HERE, i * 4096);
+				fmt::throw_exception("Unexpected pages allocated (current_addr=0x%x)", i * 4096);
 			}
 		}
 
@@ -1494,7 +1490,7 @@ namespace vm
 		// Check alignment
 		if (align < 0x10000 || align != (0x80000000u >> std::countl_zero(align)))
 		{
-			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)" HERE, size, align);
+			fmt::throw_exception("Invalid alignment (size=0x%x, align=0x%x)", size, align);
 		}
 
 		// Return if size is invalid

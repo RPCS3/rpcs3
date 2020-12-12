@@ -1,8 +1,9 @@
-﻿#pragma once
+#pragma once
 
 #include "sys_sync.h"
 #include "sys_event.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Utilities/File.h"

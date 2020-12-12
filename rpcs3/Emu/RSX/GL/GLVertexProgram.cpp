@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLVertexProgram.h"
 
 #include "Emu/System.h"
@@ -273,11 +273,6 @@ void GLVertexProgram::Decompile(const RSXVertexProgram& prog)
 	decompiler.Task();
 
 	shader.create(::glsl::program_domain::glsl_vertex_program, source);
-}
-
-void GLVertexProgram::Compile()
-{
-	shader.compile();
 	id = shader.id();
 }
 

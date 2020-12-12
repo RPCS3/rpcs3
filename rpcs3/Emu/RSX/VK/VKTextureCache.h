@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "stdafx.h"
 #include "VKRenderTargets.h"
 #include "VKGSRender.h"
@@ -47,10 +47,10 @@ namespace vk
 		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image *image, u32 rsx_pitch, bool managed, u32 gcm_format, bool pack_swap_bytes = false)
 		{
 			auto new_texture = static_cast<vk::viewable_image*>(image);
-			ASSERT(!exists() || !is_managed() || vram_texture == new_texture);
+			ensure(!exists() || !is_managed() || vram_texture == new_texture);
 			vram_texture = new_texture;
 
-			verify(HERE), rsx_pitch;
+			ensure(rsx_pitch);
 
 			width = w;
 			height = h;
@@ -98,7 +98,9 @@ namespace vk
 		{
 			// Called if a reset occurs, usually via reprotect path after a bad prediction.
 			// Discard the sync event, the next sync, if any, will properly recreate this.
-			verify(HERE), synchronized, !flushed, dma_fence;
+			ensure(synchronized);
+			ensure(!flushed);
+			ensure(dma_fence);
 			vk::get_resource_manager()->dispose(dma_fence);
 		}
 
@@ -110,7 +112,7 @@ namespace vk
 			m_tex_cache->on_section_destroyed(*this);
 
 			vram_texture = nullptr;
-			ASSERT(!managed_texture);
+			ensure(!managed_texture);
 			release_dma_resources();
 
 			baseclass::on_section_resources_destroyed();
@@ -128,13 +130,13 @@ namespace vk
 
 		vk::image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap)
 		{
-			ASSERT(vram_texture != nullptr);
+			ensure(vram_texture != nullptr);
 			return vram_texture->get_view(remap_encoding, remap);
 		}
 
 		vk::image_view* get_raw_view()
 		{
-			ASSERT(vram_texture != nullptr);
+			ensure(vram_texture != nullptr);
 			return vram_texture->get_view(0xAAE4, rsx::default_remap_vector);
 		}
 
@@ -155,7 +157,7 @@ namespace vk
 				return VK_FORMAT_R32_UINT;
 			}
 
-			ASSERT(vram_texture != nullptr);
+			ensure(vram_texture != nullptr);
 			return vram_texture->format();
 		}
 
@@ -167,7 +169,7 @@ namespace vk
 
 		void dma_transfer(vk::command_buffer& cmd, vk::image* src, const areai& src_area, const utils::address_range& valid_range, u32 pitch)
 		{
-			verify(HERE), src->samples() == 1;
+			ensure(src->samples() == 1);
 
 			if (!m_device)
 			{
@@ -228,7 +230,7 @@ namespace vk
 					}
 					else
 					{
-						verify(HERE), get_context() == rsx::texture_upload_context::dma;
+						ensure(get_context() == rsx::texture_upload_context::dma);
 						shuffle_kernel = nullptr;
 					}
 
@@ -322,11 +324,11 @@ namespace vk
 
 		void copy_texture(vk::command_buffer& cmd, bool miss)
 		{
-			ASSERT(exists());
+			ensure(exists());
 
 			if (!miss) [[likely]]
 			{
-				verify(HERE), !synchronized;
+				ensure(!synchronized);
 				baseclass::on_speculative_flush();
 			}
 			else
@@ -381,7 +383,8 @@ namespace vk
 					transfer_y = offset / rsx_pitch;
 					transfer_x = (offset % rsx_pitch) / internal_bpp;
 
-					verify(HERE), transfer_width >= transfer_x, transfer_height >= transfer_y;
+					ensure(transfer_width >= transfer_x);
+					ensure(transfer_height >= transfer_y);
 					transfer_width -= transfer_x;
 					transfer_height -= transfer_y;
 				}
@@ -390,7 +393,7 @@ namespace vk
 				{
 					const auto row_count = tail / rsx_pitch;
 
-					verify(HERE), transfer_height >= row_count;
+					ensure(transfer_height >= row_count);
 					transfer_height -= row_count;
 				}
 			}
@@ -478,6 +481,7 @@ namespace vk
 			switch (vram_texture->info.format)
 			{
 			case VK_FORMAT_D16_UNORM:
+			case VK_FORMAT_D32_SFLOAT:
 			case VK_FORMAT_D32_SFLOAT_S8_UINT:
 			case VK_FORMAT_D24_UNORM_S8_UINT:
 				return true;
@@ -557,7 +561,7 @@ namespace vk
 
 		//Stuff that has been dereferenced goes into these
 		std::list<temporary_storage> m_temporary_storage;
-		std::atomic<u32> m_temporary_memory_size = { 0 };
+		atomic_t<u32> m_temporary_memory_size = { 0 };
 
 		void clear()
 		{
@@ -679,7 +683,7 @@ namespace vk
 					src_w = convert_w;
 				}
 
-				verify(HERE), src_image->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || src_image->current_layout == VK_IMAGE_LAYOUT_GENERAL;
+				ensure(src_image->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || src_image->current_layout == VK_IMAGE_LAYOUT_GENERAL);
 
 				// Final aspect mask of the 'final' transfer source
 				const auto new_src_aspect = src_image->aspect();
@@ -707,7 +711,7 @@ namespace vk
 				}
 				else
 				{
-					verify(HERE), section.dst_z == 0;
+					ensure(section.dst_z == 0);
 
 					u16 dst_x = section.dst_x, dst_y = section.dst_y;
 					vk::image* _dst;
@@ -781,7 +785,7 @@ namespace vk
 					}
 					else
 					{
-						fmt::throw_exception("Unreachable" HERE);
+						fmt::throw_exception("Unreachable");
 					}
 
 					if (_dst != dst) [[unlikely]]
@@ -1142,8 +1146,7 @@ namespace vk
 				layer = 1;
 				break;
 			default:
-				ASSUME(0);
-				break;
+				fmt::throw_exception("Unreachable");
 			}
 
 			auto *image = new vk::viewable_image(*m_device, m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -1158,7 +1161,7 @@ namespace vk
 			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect_flags, 0, mipmaps, 0, layer });
 
 			cached_texture_section& region = *find_cached_texture(rsx_range, gcm_format, true, true, width, height, section_depth);
-			ASSERT(!region.is_locked());
+			ensure(!region.is_locked());
 
 			// New section, we must prepare it
 			region.reset(rsx_range);
@@ -1196,7 +1199,7 @@ namespace vk
 		cached_texture_section* create_nul_section(vk::command_buffer& cmd, const utils::address_range& rsx_range, bool memory_load) override
 		{
 			auto& region = *find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, true, false);
-			ASSERT(!region.is_locked());
+			ensure(!region.is_locked());
 
 			// Prepare section
 			region.reset(rsx_range);
@@ -1272,7 +1275,7 @@ namespace vk
 			else
 			{
 				// Insert ordering barrier
-				verify(HERE), preferred_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+				ensure(preferred_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 				insert_image_memory_barrier(cmd, image->value, image->current_layout, preferred_layout,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -1291,7 +1294,7 @@ namespace vk
 			const VkComponentMapping mapping = apply_component_mapping_flags(gcm_format, expected_flags, rsx::default_remap_vector);
 			auto image = static_cast<vk::viewable_image*>(section.get_raw_texture());
 
-			verify(HERE), image != nullptr;
+			ensure(image);
 			image->set_native_component_layout(mapping);
 
 			section.set_view_flags(expected_flags);
@@ -1373,11 +1376,11 @@ namespace vk
 				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_TRUE);
 			}
 
-			verify(HERE), cmd.flags == 0;
+			ensure(cmd.flags == 0);
 
 			if (occlusion_query_active)
 			{
-				verify(HERE), cmd.is_recording();
+				ensure(cmd.is_recording());
 				cmd.flags |= vk::command_buffer::cb_load_occluson_task;
 			}
 		}
@@ -1421,6 +1424,7 @@ namespace vk
 					switch (tex.get_format())
 					{
 					case VK_FORMAT_D16_UNORM:
+					case VK_FORMAT_D32_SFLOAT:
 					case VK_FORMAT_D32_SFLOAT_S8_UINT:
 					case VK_FORMAT_D24_UNORM_S8_UINT:
 						return true;
@@ -1472,7 +1476,7 @@ namespace vk
 				linear_format_supported = m_formats_support.argb8_linear;
 				break;
 			default:
-				rsx_log.error("Unsupported VkFormat 0x%x" HERE, static_cast<u32>(format));
+				rsx_log.error("Unsupported VkFormat 0x%x", static_cast<u32>(format));
 				return nullptr;
 			}
 

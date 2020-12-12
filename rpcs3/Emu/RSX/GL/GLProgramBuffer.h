@@ -1,7 +1,8 @@
-﻿#pragma once
+#pragma once
 #include "GLVertexProgram.h"
 #include "GLFragmentProgram.h"
 #include "GLHelpers.h"
+#include "GLPipelineCompiler.h"
 #include "../Common/ProgramStateCache.h"
 #include "../rsx_utils.h"
 
@@ -9,6 +10,7 @@ struct GLTraits
 {
 	using vertex_program_type = GLVertexProgram;
 	using fragment_program_type = GLFragmentProgram;
+	using pipeline_type = gl::glsl::program;
 	using pipeline_storage_type = std::unique_ptr<gl::glsl::program>;
 	using pipeline_properties = void*;
 
@@ -16,14 +18,12 @@ struct GLTraits
 	void recompile_fragment_program(const RSXFragmentProgram &RSXFP, fragment_program_type& fragmentProgramData, size_t /*ID*/)
 	{
 		fragmentProgramData.Decompile(RSXFP);
-		fragmentProgramData.Compile();
 	}
 
 	static
 	void recompile_vertex_program(const RSXVertexProgram &RSXVP, vertex_program_type& vertexProgramData, size_t /*ID*/)
 	{
 		vertexProgramData.Decompile(RSXVP);
-		vertexProgramData.Compile();
 	}
 
 	static
@@ -32,60 +32,80 @@ struct GLTraits
 	}
 
 	static
-	pipeline_storage_type build_pipeline(const vertex_program_type &vertexProgramData, const fragment_program_type &fragmentProgramData, const pipeline_properties&)
+	pipeline_type* build_pipeline(
+		const vertex_program_type &vertexProgramData,
+		const fragment_program_type &fragmentProgramData,
+		const pipeline_properties&,
+		bool compile_async,
+		std::function<pipeline_type*(pipeline_storage_type&)> callback)
 	{
-		pipeline_storage_type result = std::make_unique<gl::glsl::program>();
-		result->create()
-			.attach(gl::glsl::shader_view(vertexProgramData.id))
-			.attach(gl::glsl::shader_view(fragmentProgramData.id))
-			.bind_fragment_data_location("ocol0", 0)
-			.bind_fragment_data_location("ocol1", 1)
-			.bind_fragment_data_location("ocol2", 2)
-			.bind_fragment_data_location("ocol3", 3)
-			.link([](gl::glsl::program* program)
-			{
-				// Program locations are guaranteed to not change after linking
-				// Texture locations are simply bound to the TIUs so this can be done once
-				for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
-				{
-					int location;
-					if (program->uniforms.has_location(rsx::constants::fragment_texture_names[i], &location))
-					{
-						// Assign location to TIU
-						program->uniforms[location] = GL_FRAGMENT_TEXTURES_START + i;
+		auto compiler = gl::get_pipe_compiler();
+		auto flags = (compile_async) ? gl::pipe_compiler::COMPILE_DEFERRED : gl::pipe_compiler::COMPILE_INLINE;
 
-						// Check for stencil mirror
-						const std::string mirror_name = std::string(rsx::constants::fragment_texture_names[i]) + "_stencil";
-						if (program->uniforms.has_location(mirror_name, &location))
-						{
-							// Assign mirror to TIU
-							program->uniforms[location] = GL_STENCIL_MIRRORS_START + i;
-						}
+		auto post_create_func = [vp = &vertexProgramData.shader, fp = &fragmentProgramData.shader]
+		(gl::glsl::program* program)
+		{
+			if (!vp->compiled())
+			{
+				const_cast<gl::glsl::shader*>(vp)->compile();
+			}
+
+			if (!fp->compiled())
+			{
+				const_cast<gl::glsl::shader*>(fp)->compile();
+			}
+
+			program->attach(*vp)
+				.attach(*fp)
+				.bind_fragment_data_location("ocol0", 0)
+				.bind_fragment_data_location("ocol1", 1)
+				.bind_fragment_data_location("ocol2", 2)
+				.bind_fragment_data_location("ocol3", 3);
+
+			if (g_cfg.video.log_programs)
+			{
+				rsx_log.notice("*** prog id = %d", program->id());
+				rsx_log.notice("*** vp id = %d", vp->id());
+				rsx_log.notice("*** fp id = %d", fp->id());
+			}
+		};
+
+		auto post_link_func = [](gl::glsl::program* program)
+		{
+			// Program locations are guaranteed to not change after linking
+			// Texture locations are simply bound to the TIUs so this can be done once
+			for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+			{
+				int location;
+				if (program->uniforms.has_location(rsx::constants::fragment_texture_names[i], &location))
+				{
+					// Assign location to TIU
+					program->uniforms[location] = GL_FRAGMENT_TEXTURES_START + i;
+
+					// Check for stencil mirror
+					const std::string mirror_name = std::string(rsx::constants::fragment_texture_names[i]) + "_stencil";
+					if (program->uniforms.has_location(mirror_name, &location))
+					{
+						// Assign mirror to TIU
+						program->uniforms[location] = GL_STENCIL_MIRRORS_START + i;
 					}
 				}
+			}
 
-				for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
-				{
-					int location;
-					if (program->uniforms.has_location(rsx::constants::vertex_texture_names[i], &location))
-						program->uniforms[location] = GL_VERTEX_TEXTURES_START + i;
-				}
+			for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+			{
+				int location;
+				if (program->uniforms.has_location(rsx::constants::vertex_texture_names[i], &location))
+					program->uniforms[location] = GL_VERTEX_TEXTURES_START + i;
+			}
 
-				// Bind locations 0 and 1 to the stream buffers
-				program->uniforms[0] = GL_STREAM_BUFFER_START + 0;
-				program->uniforms[1] = GL_STREAM_BUFFER_START + 1;
-			});
+			// Bind locations 0 and 1 to the stream buffers
+			program->uniforms[0] = GL_STREAM_BUFFER_START + 0;
+			program->uniforms[1] = GL_STREAM_BUFFER_START + 1;
+		};
 
-		if (g_cfg.video.log_programs)
-		{
-			rsx_log.notice("*** prog id = %d", result->id());
-			rsx_log.notice("*** vp id = %d", vertexProgramData.id);
-			rsx_log.notice("*** fp id = %d", fragmentProgramData.id);
-			rsx_log.notice("*** vp shader = \n%s", vertexProgramData.shader.get_source().c_str());
-			rsx_log.notice("*** fp shader = \n%s", fragmentProgramData.shader.get_source().c_str());
-		}
-
-		return result;
+		auto pipeline = compiler->compile(flags, post_create_func, post_link_func, callback);
+		return callback(pipeline);
 	}
 };
 

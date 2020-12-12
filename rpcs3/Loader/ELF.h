@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "../../Utilities/types.h"
+#include "util/types.hpp"
 #include "../../Utilities/File.h"
 #include "../../Utilities/bit_set.h"
 

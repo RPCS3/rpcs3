@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "Utilities/geometry.h"
 #include "Utilities/address_range.h"
 #include "TextureUtils.h"
@@ -85,10 +85,14 @@ namespace rsx
 				if (g_cfg.video.resolution_scale_percent != 100)
 				{
 					auto src = static_cast<T>(source);
-					src_w = rsx::apply_resolution_scale(src_w, true, src->get_surface_width(rsx::surface_metrics::pixels));
-					src_h = rsx::apply_resolution_scale(src_h, true, src->get_surface_height(rsx::surface_metrics::pixels));
-					dst_w = rsx::apply_resolution_scale(dst_w, true, target_surface->get_surface_width(rsx::surface_metrics::pixels));
-					dst_h = rsx::apply_resolution_scale(dst_h, true, target_surface->get_surface_height(rsx::surface_metrics::pixels));
+
+					std::tie(src_w, src_h) = rsx::apply_resolution_scale<true>(src_w, src_h,
+						src->get_surface_width(rsx::surface_metrics::pixels),
+						src->get_surface_height(rsx::surface_metrics::pixels));
+
+					std::tie(dst_w, dst_h) = rsx::apply_resolution_scale<true>(dst_w, dst_h,
+						target_surface->get_surface_width(rsx::surface_metrics::pixels),
+						target_surface->get_surface_height(rsx::surface_metrics::pixels));
 				}
 
 				width = src_w;
@@ -102,13 +106,13 @@ namespace rsx
 
 		areai src_rect() const
 		{
-			verify(HERE), width;
+			ensure(width);
 			return { src_x, src_y, src_x + width, src_y + height };
 		}
 
 		areai dst_rect() const
 		{
-			verify(HERE), width;
+			ensure(width);
 			return { dst_x, dst_y, dst_x + u16(width * transfer_scale_x + 0.5f), dst_y + u16(height * transfer_scale_y + 0.5f) };
 		}
 	};
@@ -345,7 +349,8 @@ namespace rsx
 #else
 		void queue_tag(u32 address)
 		{
-			verify(HERE), native_pitch, rsx_pitch;
+			ensure(native_pitch);
+			ensure(rsx_pitch);
 
 			base_addr = address;
 
@@ -440,7 +445,7 @@ namespace rsx
 		template<typename T>
 		void set_old_contents(T* other)
 		{
-			verify(HERE), old_contents.empty();
+			ensure(old_contents.empty());
 
 			if (!other || other->get_rsx_pitch() != this->get_rsx_pitch())
 			{
@@ -456,7 +461,8 @@ namespace rsx
 		void set_old_contents_region(const T& region, bool normalized)
 		{
 			// NOTE: This method will not perform pitch verification!
-			verify(HERE), region.source, region.source != static_cast<decltype(region.source)>(this);
+			ensure(region.source);
+			ensure(region.source != static_cast<decltype(region.source)>(this));
 
 			old_contents.push_back(region.template cast<image_storage_type>());
 			auto &slice = old_contents.back();
@@ -484,11 +490,8 @@ namespace rsx
 			// Apply resolution scale if needed
 			if (g_cfg.video.resolution_scale_percent != 100)
 			{
-				auto src_width = rsx::apply_resolution_scale(slice.width, true, slice.source->width());
-				auto src_height = rsx::apply_resolution_scale(slice.height, true, slice.source->height());
-
-				auto dst_width = rsx::apply_resolution_scale(slice.width, true, slice.target->width());
-				auto dst_height = rsx::apply_resolution_scale(slice.height, true, slice.target->height());
+				auto [src_width, src_height] = rsx::apply_resolution_scale<true>(slice.width, slice.height, slice.source->width(), slice.source->height());
+				auto [dst_width, dst_height] = rsx::apply_resolution_scale<true>(slice.width, slice.height, slice.target->width(), slice.target->height());
 
 				slice.transfer_scale_x *= f32(dst_width) / src_width;
 				slice.transfer_scale_y *= f32(dst_height) / src_height;
@@ -496,10 +499,8 @@ namespace rsx
 				slice.width = src_width;
 				slice.height = src_height;
 
-				slice.src_x = rsx::apply_resolution_scale(slice.src_x, false, slice.source->width());
-				slice.src_y = rsx::apply_resolution_scale(slice.src_y, false, slice.source->height());
-				slice.dst_x = rsx::apply_resolution_scale(slice.dst_x, false, slice.target->width());
-				slice.dst_y = rsx::apply_resolution_scale(slice.dst_y, false, slice.target->height());
+				std::tie(slice.src_x, slice.src_y) = rsx::apply_resolution_scale<false>(slice.src_x, slice.src_y, slice.source->width(), slice.source->height());
+				std::tie(slice.dst_x, slice.dst_y) = rsx::apply_resolution_scale<false>(slice.dst_x, slice.dst_y, slice.target->width(), slice.target->height());
 			}
 		}
 
@@ -622,7 +623,7 @@ namespace rsx
 			if (spp == 1 || sample_layout == rsx::surface_sample_layout::ps3)
 				return;
 
-			verify(HERE), access_type != rsx::surface_access::write;
+			ensure(access_type != rsx::surface_access::write);
 			transform_samples_to_pixels(region);
 		}
 	};

@@ -1,7 +1,6 @@
-﻿#pragma once
+#pragma once
 
 #include <memory>
-#include <atomic>
 
 #include "display.h"
 
@@ -27,6 +26,6 @@ public:
 
 	virtual display_handle_t handle() const = 0;
 
-	std::atomic<bool> screenshot_toggle = false;
+	atomic_t<bool> screenshot_toggle = false;
 	virtual void take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height, bool is_bgra) = 0;
 };

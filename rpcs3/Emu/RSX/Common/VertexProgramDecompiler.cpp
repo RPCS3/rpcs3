@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "VertexProgramDecompiler.h"
@@ -76,7 +76,7 @@ std::string VertexProgramDecompiler::GetDST(bool is_sca)
 		if (!ret.empty())
 		{
 			// Double assignment. Only possible for vector ops
-			verify(HERE), !is_sca;
+			ensure(!is_sca);
 			ret += " = ";
 		}
 
@@ -507,7 +507,7 @@ std::string VertexProgramDecompiler::Decompile()
 		if (m_prog.entry != m_prog.base_address)
 		{
 			jump_position = find_jump_lvl(m_prog.entry - m_prog.base_address);
-			verify(HERE), jump_position != UINT32_MAX;
+			ensure(jump_position != UINT32_MAX);
 		}
 
 		AddCode(fmt::format("int jump_position = %u;", jump_position));

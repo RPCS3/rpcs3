@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_usbd.h"
 #include "sys_ppu_thread.h"
 #include "sys_sync.h"
@@ -266,7 +266,7 @@ void usb_handler_thread::operator()()
 			{
 				auto transfer = *it;
 
-				ASSERT(transfer->busy && transfer->fake);
+				ensure(transfer->busy && transfer->fake);
 
 				if (transfer->expected_time > timestamp)
 				{
@@ -472,7 +472,7 @@ error_code sys_usbd_initialize(ppu_thread& ppu, vm::ptr<u32> handle)
 	std::lock_guard lock(usbh->mutex);
 
 	// Must not occur (lv2 allows multiple handles, cellUsbd does not)
-	verify("sys_usbd Initialized twice" HERE), !usbh->is_init.exchange(true);
+	ensure(!usbh->is_init.exchange(true));
 
 	*handle = 0x115B;
 

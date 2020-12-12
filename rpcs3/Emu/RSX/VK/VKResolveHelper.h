@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "VKHelpers.h"
 #include "VKCompute.h"
@@ -125,7 +125,8 @@ namespace vk
 
 		void run(VkCommandBuffer cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image)
 		{
-			verify(HERE), msaa_image->samples() > 1, resolve_image->samples() == 1;
+			ensure(msaa_image->samples() > 1);
+			ensure(resolve_image->samples() == 1);
 
 			multisampled = msaa_image;
 			resolve = resolve_image;
@@ -235,7 +236,7 @@ namespace vk
 			switch (msaa_image->samples())
 			{
 			case 1:
-				fmt::throw_exception("MSAA input not multisampled!" HERE);
+				fmt::throw_exception("MSAA input not multisampled!");
 			case 2:
 				samples_x = 2;
 				samples_y = 1;
@@ -244,7 +245,7 @@ namespace vk
 				samples_x = samples_y = 2;
 				break;
 			default:
-				fmt::throw_exception("Unsupported sample count %d" HERE, msaa_image->samples());
+				fmt::throw_exception("Unsupported sample count %d", msaa_image->samples());
 			}
 
 			static_parameters[0] = samples_x;

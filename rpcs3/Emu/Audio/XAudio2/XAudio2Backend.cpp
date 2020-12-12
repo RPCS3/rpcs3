@@ -1,4 +1,4 @@
-﻿#ifndef _WIN32
+#ifndef _WIN32
 #error "XAudio2 can only be built on Windows."
 #endif
 

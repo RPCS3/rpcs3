@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "ProgramStateCache.h"
 #include "Emu/system_config.h"
 
@@ -53,13 +53,13 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 		while (true)
 		{
-			verify(HERE), current_instruction < 512;
+			ensure(current_instruction < 512);
 
 			if (result.instruction_mask[current_instruction])
 			{
 				if (!fast_exit)
 				{
-					if (!has_printed_error) 
+					if (!has_printed_error)
 					{
 						// This can be harmless if a dangling RET was encountered before
 						rsx_log.error("vp_analyser: Possible infinite loop detected");
@@ -198,7 +198,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 	if (!has_branch_instruction)
 	{
-		verify(HERE), instruction_range.first == entry;
+		ensure(instruction_range.first == entry);
 		std::memcpy(dst_prog.data.data(), data + (instruction_range.first * 4), result.ucode_length);
 	}
 	else
@@ -423,7 +423,7 @@ size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragment
 {
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
 	size_t hash = 0xCBF29CE484222325ULL;
-	const void* instbuffer = program.addr;
+	const void* instbuffer = program.get_data();
 	size_t instIndex = 0;
 	while (true)
 	{
@@ -466,17 +466,8 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 		binary1.shadow_textures != binary2.shadow_textures || binary1.redirected_textures != binary2.redirected_textures)
 		return false;
 
-	for (u8 index = 0; index < 16; ++index)
-	{
-		if (binary1.textures_alpha_kill[index] != binary2.textures_alpha_kill[index])
-			return false;
-
-		if (binary1.textures_zfunc[index] != binary2.textures_zfunc[index])
-			return false;
-	}
-
-	const void* instBuffer1 = binary1.addr;
-	const void* instBuffer2 = binary2.addr;
+	const void* instBuffer1 = binary1.get_data();
+	const void* instBuffer2 = binary2.get_data();
 	size_t instIndex = 0;
 	while (true)
 	{

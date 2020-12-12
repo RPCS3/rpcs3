@@ -1,4 +1,4 @@
-﻿#include "user_account.h"
+#include "user_account.h"
 
 #include "Emu/System.h"
 #include "Utilities/File.h"

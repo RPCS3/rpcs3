@@ -1,41 +1,20 @@
-﻿#pragma once
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
-#include <cstdint>
-#include "Utilities/types.h"
-
-#if __has_include(<bit>)
-#include <bit>
-#else
-#include <type_traits>
-#endif
+#include "util/types.hpp"
 
 namespace stx
 {
-	static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big);
-
-	template<class T, std::size_t... N>
-	FORCE_INLINE constexpr T bswap_impl(T i, std::index_sequence<N...>)
-	{
-		return static_cast<T>(((((i >> (N * 8)) & T{UINT8_MAX}) << ((sizeof(T) - 1 - N) * 8)) | ...));
-	};
-
-	template<class T, class U = typename std::make_unsigned<T>::type>
-	FORCE_INLINE constexpr U bswap(T i)
-	{
-		return bswap_impl<U>(i, std::make_index_sequence<sizeof(T)>{});
-	}
-
 	template <typename T, std::size_t Align = alignof(T), std::size_t Size = sizeof(T)>
 	struct se_storage
 	{
 		struct type8
 		{
-			alignas(Align > alignof(T) ? alignof(T) : Align) unsigned char data[sizeof(T)];
+			alignas(Align > alignof(T) ? alignof(T) : Align) uchar data[sizeof(T)];
 		};
 
 		struct type64
 		{
-			alignas(8) std::uint64_t data[sizeof(T) < 8 ? 1 : sizeof(T) / 8];
+			alignas(8) u64 data[sizeof(T) < 8 ? 1 : sizeof(T) / 8];
 		};
 
 		using type = std::conditional_t<(Align >= 8 && sizeof(T) % 8 == 0), type64, type8>;
@@ -45,60 +24,63 @@ namespace stx
 	};
 
 	template <typename T>
-	struct se_storage<T, alignof(std::uint16_t), 2>
+	struct se_storage<T, 2, 2>
 	{
-		using type = std::uint16_t;
+		using type = u16;
 
-		static constexpr std::uint16_t swap(std::uint16_t src) noexcept
+		static constexpr u16 swap(u16 src) noexcept
 		{
-			if (std::is_constant_evaluated())
-			{
-				return stx::bswap(src);
-			}
-
 #if defined(__GNUG__)
 			return __builtin_bswap16(src);
 #else
+			if (std::is_constant_evaluated())
+			{
+				return (src >> 8) | (src << 8);
+			}
+
 			return _byteswap_ushort(src);
 #endif
 		}
 	};
 
 	template <typename T>
-	struct se_storage<T, alignof(std::uint32_t), 4>
+	struct se_storage<T, 4, 4>
 	{
-		using type = std::uint32_t;
+		using type = u32;
 
-		static constexpr std::uint32_t swap(std::uint32_t src) noexcept
+		static constexpr u32 swap(u32 src) noexcept
 		{
-			if (std::is_constant_evaluated())
-			{
-				return stx::bswap(src);
-			}
-
 #if defined(__GNUG__)
 			return __builtin_bswap32(src);
 #else
+			if (std::is_constant_evaluated())
+			{
+				const u32 v0 = ((src << 8) & 0xff00ff00) | ((src >> 8) & 0x00ff00ff);
+				return (v0 << 16) | (v0 >> 16);
+			}
+
 			return _byteswap_ulong(src);
 #endif
 		}
 	};
 
 	template <typename T>
-	struct se_storage<T, alignof(std::uint64_t), 8>
+	struct se_storage<T, 8, 8>
 	{
-		using type = std::uint64_t;
+		using type = u64;
 
-		static constexpr std::uint64_t swap(std::uint64_t src) noexcept
+		static constexpr u64 swap(u64 src) noexcept
 		{
-			if (std::is_constant_evaluated())
-			{
-				return stx::bswap(src);
-			}
-
 #if defined(__GNUG__)
 			return __builtin_bswap64(src);
 #else
+			if (std::is_constant_evaluated())
+			{
+				const u64 v0 = ((src << 8) & 0xff00ff00ff00ff00) | ((src >> 8) & 0x00ff00ff00ff00ff);
+				const u64 v1 = ((v0 << 16) & 0xffff0000ffff0000) | ((v0 >> 16) & 0x0000ffff0000ffff);
+				return (v1 << 32) | (v1 >> 32);
+			}
+
 			return _byteswap_uint64(src);
 #endif
 		}
@@ -114,15 +96,15 @@ namespace stx
 		}
 		else if constexpr (sizeof(T) == 2)
 		{
-			return std::bit_cast<type>(se_storage<std::uint16_t>::swap(std::bit_cast<std::uint16_t>(src)));
+			return std::bit_cast<type>(se_storage<u16>::swap(std::bit_cast<u16>(src)));
 		}
 		else if constexpr (sizeof(T) == 4)
 		{
-			return std::bit_cast<type>(se_storage<std::uint32_t>::swap(std::bit_cast<std::uint32_t>(src)));
+			return std::bit_cast<type>(se_storage<u32>::swap(std::bit_cast<u32>(src)));
 		}
 		else if constexpr (sizeof(T) == 8)
 		{
-			return std::bit_cast<type>(se_storage<std::uint64_t>::swap(std::bit_cast<std::uint64_t>(src)));
+			return std::bit_cast<type>(se_storage<u64>::swap(std::bit_cast<u64>(src)));
 		}
 		else if constexpr (sizeof(T) % 8 == 0)
 		{
@@ -132,7 +114,7 @@ namespace stx
 			// Swap u64 blocks
 			for (std::size_t i = 0; i < sizeof(T) / 8; i++)
 			{
-				dst.data[i] = se_storage<std::uint64_t>::swap(tmp.data[sizeof(T) / 8 - 1 - i]);
+				dst.data[i] = se_storage<u64>::swap(tmp.data[sizeof(T) / 8 - 1 - i]);
 			}
 
 			return std::bit_cast<type>(dst);
@@ -180,13 +162,13 @@ namespace stx
 
 		static constexpr auto int_or_enum()
 		{
-			if constexpr (std::is_enum_v<simple_t<type>>)
+			if constexpr (std::is_enum_v<type>)
 			{
-				return std::underlying_type_t<simple_t<type>>{};
+				return std::underlying_type_t<type>{};
 			}
 			else
 			{
-				return simple_t<type>{};
+				return type{};
 			}
 		}
 

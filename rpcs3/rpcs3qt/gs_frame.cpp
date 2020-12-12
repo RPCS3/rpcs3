@@ -1,4 +1,4 @@
-﻿#include "gs_frame.h"
+#include "gs_frame.h"
 #include "gui_settings.h"
 
 #include "Utilities/Config.h"
@@ -41,7 +41,7 @@
 
 LOG_CHANNEL(screenshot);
 
-extern std::atomic<bool> g_user_asked_for_frame_capture;
+extern atomic_t<bool> g_user_asked_for_frame_capture;
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -285,7 +285,11 @@ bool gs_frame::get_mouse_lock_state()
 
 void gs_frame::close()
 {
-	Emu.Stop();
+	if (!Emu.IsStopped())
+	{
+		Emu.Stop();
+	}
+
 	Emu.CallAfter([this]() { deleteLater(); });
 }
 

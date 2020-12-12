@@ -1,4 +1,4 @@
-﻿#include "sysinfo.h"
+#include "sysinfo.h"
 #include "StrFmt.h"
 #include "File.h"
 #include "Emu/system_config.h"

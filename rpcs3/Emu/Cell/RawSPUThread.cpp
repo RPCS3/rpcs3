@@ -1,10 +1,8 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/IdManager.h"
 #include "Loader/ELF.h"
 
 #include "Emu/Cell/RawSPUThread.h"
-
-#include <atomic>
 
 inline void try_start(spu_thread& spu)
 {
@@ -105,7 +103,7 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 		case MFC_EIEIO_CMD:
 		case MFC_SYNC_CMD:
 		{
-			std::atomic_thread_fence(std::memory_order_seq_cst);
+			atomic_fence_seq_cst();
 			value = MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
 			return true;
 		}

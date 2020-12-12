@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Utilities/mutex.h"
 #include "Utilities/sema.h"
@@ -165,7 +165,7 @@ public:
 
 	static void set_priority(cpu_thread& thread, s32 prio)
 	{
-		verify(HERE), prio + 512u < 3712;
+		ensure(prio + 512u < 3712);
 		awake(&thread, prio);
 	}
 

@@ -1,10 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include "../rsx_cache.h"
 #include "../rsx_utils.h"
 #include "TextureUtils.h"
-#include <atomic>
-
 
 namespace rsx
 {
@@ -339,7 +337,7 @@ namespace rsx
 
 	public:
 		// Per-frame statistics
-		std::atomic<u32> m_mispredictions_this_frame = {0};
+		atomic_t<u32> m_mispredictions_this_frame = {0};
 
 		// Constructors
 		texture_cache_predictor(texture_cache_type* tex_cache)

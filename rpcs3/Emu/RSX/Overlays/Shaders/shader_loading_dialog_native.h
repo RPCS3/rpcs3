@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "shader_loading_dialog.h"
 

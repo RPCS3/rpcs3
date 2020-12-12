@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <string>
 #include <functional>
@@ -13,6 +13,7 @@
 #include "../Common/GLSLTypes.h"
 
 #include "Emu/system_config.h"
+#include "Utilities/mutex.h"
 #include "Utilities/geometry.h"
 #include "util/logs.hpp"
 
@@ -51,12 +52,15 @@ namespace gl
 	else\
 		gl##func##EXT(texture_name, target, __VA_ARGS__);
 
+	class fence;
+
 	void enable_debugging();
 	bool is_primitive_native(rsx::primitive_type in);
 	GLenum draw_mode(rsx::primitive_type in);
 
-	void set_primary_context_thread();
+	void set_primary_context_thread(bool = true);
 	bool is_primary_context_thread();
+	void flush_command_queue(fence& fence_obj);
 
 	// Texture helpers
 	std::array<GLenum, 4> apply_swizzle_remap(const std::array<GLenum, 4>& swizzle_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& decoded_remap);
@@ -76,8 +80,8 @@ namespace gl
 	class fence
 	{
 		GLsync m_value = nullptr;
-		GLenum flags = GL_SYNC_FLUSH_COMMANDS_BIT;
-		bool signaled = false;
+		mutable GLenum flags = GL_SYNC_FLUSH_COMMANDS_BIT;
+		mutable bool signaled = false;
 
 	public:
 
@@ -104,14 +108,14 @@ namespace gl
 			create();
 		}
 
-		bool is_empty()
+		bool is_empty() const
 		{
 			return (m_value == nullptr);
 		}
 
-		bool check_signaled()
+		bool check_signaled() const
 		{
-			verify(HERE), m_value != nullptr;
+			ensure(m_value);
 
 			if (signaled)
 				return true;
@@ -141,7 +145,7 @@ namespace gl
 
 		bool wait_for_signal()
 		{
-			verify(HERE), m_value != nullptr;
+			ensure(m_value);
 
 			if (signaled == GL_FALSE)
 			{
@@ -191,7 +195,7 @@ namespace gl
 
 		void server_wait_sync() const
 		{
-			verify(HERE), m_value != nullptr;
+			ensure(m_value != nullptr);
 			glWaitSync(m_value, 0, GL_TIMEOUT_IGNORED);
 		}
 	};
@@ -717,7 +721,7 @@ namespace gl
 
 		void data(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW)
 		{
-			verify(HERE), m_memory_type != memory_type::local;
+			ensure(m_memory_type != memory_type::local);
 
 			target target_ = current_target();
 			save_binding_state save(target_, *this);
@@ -727,7 +731,7 @@ namespace gl
 
 		GLubyte* map(access access_)
 		{
-			verify(HERE), m_memory_type == memory_type::host_visible;
+			ensure(m_memory_type == memory_type::host_visible);
 
 			bind(current_target());
 			return reinterpret_cast<GLubyte*>(glMapBuffer(static_cast<GLenum>(current_target()), static_cast<GLenum>(access_)));
@@ -735,7 +739,7 @@ namespace gl
 
 		void unmap()
 		{
-			verify(HERE), m_memory_type == memory_type::host_visible;
+			ensure(m_memory_type == memory_type::host_visible);
 			glUnmapBuffer(static_cast<GLenum>(current_target()));
 		}
 
@@ -790,7 +794,7 @@ namespace gl
 			glBufferStorage(static_cast<GLenum>(m_target), size, data, buffer_storage_flags);
 			m_memory_mapping = glMapBufferRange(static_cast<GLenum>(m_target), 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
-			verify(HERE), m_memory_mapping != nullptr;
+			ensure(m_memory_mapping != nullptr);
 			m_data_loc = 0;
 			m_size = ::narrow<u32>(size);
 		}
@@ -890,7 +894,7 @@ namespace gl
 
 		void reserve_storage_on_heap(u32 alloc_size) override
 		{
-			verify (HERE), m_memory_mapping == nullptr;
+			ensure(m_memory_mapping == nullptr);
 
 			u32 offset = m_data_loc;
 			if (m_data_loc) offset = align(offset, 256);
@@ -923,7 +927,7 @@ namespace gl
 				m_alignment_offset = ::narrow<u32>(diff_bytes);
 			}
 
-			verify(HERE), m_mapped_bytes >= alloc_size;
+			ensure(m_mapped_bytes >= alloc_size);
 		}
 
 		std::pair<void*, u32> alloc_from_heap(u32 alloc_size, u16 alignment) override
@@ -990,7 +994,7 @@ namespace gl
 
 		void update(buffer *_buffer, u32 offset, u32 range, GLenum format = GL_R8UI)
 		{
-			verify(HERE), _buffer->size() >= (offset + range);
+			ensure(_buffer->size() >= (offset + range));
 			m_buffer = _buffer;
 			m_offset = offset;
 			m_range = range;
@@ -1406,7 +1410,7 @@ namespace gl
 			switch (target)
 			{
 			default:
-				fmt::throw_exception("Invalid image target 0x%X" HERE, target);
+				fmt::throw_exception("Invalid image target 0x%X", target);
 			case GL_TEXTURE_1D:
 				glTexStorage1D(target, mipmaps, sized_format, width);
 				height = depth = 1;
@@ -1491,7 +1495,7 @@ namespace gl
 
 				if (!m_pitch)
 				{
-					fmt::throw_exception("Unhandled GL format 0x%X" HERE, sized_format);
+					fmt::throw_exception("Unhandled GL format 0x%X", sized_format);
 				}
 
 				if (format_class == RSX_FORMAT_CLASS_UNDEFINED)
@@ -1673,7 +1677,7 @@ namespace gl
 		void copy_from(buffer &buf, u32 gl_format_type, u32 offset, u32 length)
 		{
 			if (get_target() != target::textureBuffer)
-				fmt::throw_exception("OpenGL error: texture cannot copy from buffer" HERE);
+				fmt::throw_exception("OpenGL error: texture cannot copy from buffer");
 
 			DSA_CALL(TextureBufferRange, m_id, GL_TEXTURE_BUFFER, gl_format_type, buf.id(), offset, length);
 		}
@@ -1773,7 +1777,7 @@ namespace gl
 			if (aspect_flags & image_aspect::stencil)
 			{
 				constexpr u32 depth_stencil_mask = (image_aspect::depth | image_aspect::stencil);
-				verify("Invalid aspect mask combination" HERE), (aspect_flags & depth_stencil_mask) != depth_stencil_mask;
+				ensure((aspect_flags & depth_stencil_mask) != depth_stencil_mask); // "Invalid aspect mask combination"
 
 				glBindTexture(m_target, m_id);
 				glTexParameteri(m_target, GL_DEPTH_STENCIL_TEXTURE_MODE, GL_STENCIL_INDEX);
@@ -1876,7 +1880,7 @@ public:
 				}
 			}
 
-			verify(HERE), aspect() & aspect_flags;
+			ensure(aspect() & aspect_flags);
 			auto mapping = apply_swizzle_remap(get_native_component_layout(), remap);
 			auto view = std::make_unique<texture_view>(this, mapping.data(), aspect_flags);
 			auto result = view.get();
@@ -2106,7 +2110,7 @@ public:
 			{
 				save_binding_state save(m_parent);
 
-				verify(HERE), rhs.get_target() == texture::target::texture2D;
+				ensure(rhs.get_target() == texture::target::texture2D);
 				m_parent.m_resource_bindings[m_id] = rhs.id();
 				glFramebufferTexture2D(GL_FRAMEBUFFER, m_id, GL_TEXTURE_2D, rhs.id(), 0);
 			}
@@ -2222,6 +2226,42 @@ public:
 			::glsl::program_domain type;
 			GLuint m_id = GL_NONE;
 
+			fence m_compiled_fence;
+			fence m_init_fence;
+
+			shared_mutex m_compile_lock;
+			atomic_t<bool> m_is_compiled{};
+
+			void precompile()
+			{
+				const char* str = source.c_str();
+				const GLint length = ::narrow<GLint>(source.length());
+
+				if (g_cfg.video.log_programs)
+				{
+					std::string base_name;
+					switch (type)
+					{
+					case ::glsl::program_domain::glsl_vertex_program:
+						base_name = "shaderlog/VertexProgram";
+						break;
+					case ::glsl::program_domain::glsl_fragment_program:
+						base_name = "shaderlog/FragmentProgram";
+						break;
+					case ::glsl::program_domain::glsl_compute_program:
+						base_name = "shaderlog/ComputeProgram";
+						break;
+					}
+
+					fs::file(fs::get_cache_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str, length);
+				}
+
+				glShaderSource(m_id, 1, &str, &length);
+
+				m_init_fence.create();
+				flush_command_queue(m_init_fence);
+			}
+
 		public:
 			shader() = default;
 
@@ -2245,10 +2285,7 @@ public:
 			{
 				type = type_;
 				source = src;
-			}
 
-			shader& compile()
-			{
 				GLenum shader_type;
 				switch (type)
 				{
@@ -2266,29 +2303,21 @@ public:
 				}
 
 				m_id = glCreateShader(shader_type);
-				const char* str = source.c_str();
-				const GLint length = ::narrow<GLint>(source.length());
+				precompile();
+			}
 
-				if (g_cfg.video.log_programs)
+			shader& compile()
+			{
+				std::lock_guard lock(m_compile_lock);
+				if (m_is_compiled)
 				{
-					std::string base_name;
-					switch (type)
-					{
-					case ::glsl::program_domain::glsl_vertex_program:
-						base_name = "shaderlog/VertexProgram";
-						break;
-					case ::glsl::program_domain::glsl_fragment_program:
-						base_name = "shaderlog/FragmentProgram";
-						break;
-					case ::glsl::program_domain::glsl_compute_program:
-						base_name = "shaderlog/ComputeProgram";
-						break;
-					}
-
-					fs::file(fs::get_cache_dir() + base_name + std::to_string(m_id) + ".glsl", fs::rewrite).write(str);
+					// Another thread compiled this already
+					return *this;
 				}
 
-				glShaderSource(m_id, 1, &str, &length);
+				ensure(!m_init_fence.is_empty()); // Do not attempt to compile a shader_view!!
+				m_init_fence.server_wait_sync();
+
 				glCompileShader(m_id);
 
 				GLint status = GL_FALSE;
@@ -2310,6 +2339,10 @@ public:
 					rsx_log.fatal("Compilation failed: %s", error_msg);
 				}
 
+				m_compiled_fence.create();
+				flush_command_queue(m_compiled_fence);
+
+				m_is_compiled = true;
 				return *this;
 			}
 
@@ -2332,6 +2365,11 @@ public:
 				return source;
 			}
 
+			fence get_compile_fence_sync() const
+			{
+				return m_compiled_fence;
+			}
+
 			void set_id(uint id)
 			{
 				m_id = id;
@@ -2342,9 +2380,27 @@ public:
 				return m_id != GL_NONE;
 			}
 
+			bool compiled() const
+			{
+				return m_is_compiled;
+			}
+
 			explicit operator bool() const
 			{
 				return created();
+			}
+		};
+
+		class shader_view : public shader
+		{
+		public:
+			shader_view(GLuint id) : shader(id)
+			{
+			}
+
+			~shader_view()
+			{
+				set_id(0);
 			}
 		};
 
@@ -2548,11 +2604,7 @@ public:
 					}
 
 					m_fence.create();
-
-					if (!is_primary_context_thread())
-					{
-						glFlush();
-					}
+					flush_command_queue(m_fence);
 				}
 			}
 
@@ -2637,18 +2689,6 @@ public:
 				return glGetUniformLocation(m_id, name.c_str());
 			}
 
-			program& operator += (const shader& rhs)
-			{
-				return attach(rhs);
-			}
-
-			program& operator += (std::initializer_list<shader> shaders)
-			{
-				for (auto &shader : shaders)
-					*this += shader;
-				return *this;
-			}
-
 			program() = default;
 			program(const program&) = delete;
 			program(program&& program_)
@@ -2680,19 +2720,6 @@ public:
 			{
 				swap(rhs);
 				return *this;
-			}
-		};
-
-		class shader_view : public shader
-		{
-		public:
-			shader_view(GLuint id) : shader(id)
-			{
-			}
-
-			~shader_view()
-			{
-				set_id(0);
 			}
 		};
 

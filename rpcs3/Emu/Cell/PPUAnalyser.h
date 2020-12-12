@@ -1244,13 +1244,13 @@ struct ppu_acontext
 
 				r.imin = (min + ~mask) & mask;
 				r.imax = max & mask;
-				verify("Impossible range" HERE), r.imin <= r.imax;
+				ensure(r.imin <= r.imax); // "Impossible range"
 			}
 			else
 			{
 				r.imin = min & mask;
 				r.imax = (max + ~mask) & mask;
-				verify("Impossible range" HERE), r.imin >= r.imax;
+				ensure(r.imin >= r.imax); // "Impossible range"
 			}
 
 			// Fix const values

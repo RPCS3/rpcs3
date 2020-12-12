@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
@@ -34,12 +34,12 @@ struct sys_lwmutex_locker
 		: ppu(ppu)
 		, mutex(mutex)
 	{
-		verify(HERE), sys_lwmutex_lock(ppu, mutex, 0) == CELL_OK;
+		ensure(sys_lwmutex_lock(ppu, mutex, 0) == CELL_OK);
 	}
 
 	~sys_lwmutex_locker() noexcept(false)
 	{
-		verify(HERE), sys_lwmutex_unlock(ppu, mutex) == CELL_OK;
+		ensure(sys_lwmutex_unlock(ppu, mutex) == CELL_OK);
 	}
 };
 

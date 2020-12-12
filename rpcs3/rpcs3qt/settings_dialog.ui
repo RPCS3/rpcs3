@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>753</width>
-    <height>620</height>
+    <height>650</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -37,6 +37,9 @@
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
+     </property>
+     <property name="currentIndex">
+      <number>1</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -678,6 +681,18 @@
                  <string notr="true">Shader Interpreter only</string>
                 </property>
                </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_shader_compiler_threads">
+             <property name="title">
+              <string>Number of Shader Compiler Threads</string>
+             </property>
+             <layout class="QVBoxLayout" name="gb_shader_compiler_threads_layout">
+              <item>
+               <widget class="QComboBox" name="shaderCompilerThreads"/>
               </item>
              </layout>
             </widget>

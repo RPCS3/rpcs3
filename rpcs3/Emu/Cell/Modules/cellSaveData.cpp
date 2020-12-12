@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "Emu/localized_string.h"
@@ -367,7 +367,7 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 			return 4;
 		}
 		case 0: break;
-		default: ASSUME(0);
+		default: fmt::throw_exception("Unreachable");
 		}
 	}
 
@@ -426,7 +426,7 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 						return 17;
 					}
 					case 0: break;
-					default: ASSUME(0);
+					default: fmt::throw_exception("Unreachable");
 					}
 				}
 
@@ -776,7 +776,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					break;
 				}
 				case 0: break;
-				default: ASSUME(0);
+				default: fmt::throw_exception("Unreachable");
 				}
 
 				selected_list.emplace(listSet->fixedList[i].dirName);
@@ -826,7 +826,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					break;
 				}
 				case 0: break;
-				default: ASSUME(0);
+				default: fmt::throw_exception("Unreachable");
 				}
 			}
 
@@ -858,7 +858,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					break;
 				}
 				case 0: break;
-				default: ASSUME(0);
+				default: fmt::throw_exception("Unreachable");
 				}
 
 				const std::string dirStr = listSet->focusDirName.get_ptr();
@@ -1114,7 +1114,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				return {CELL_SAVEDATA_ERROR_PARAM, "28"};
 			}
 			case 0: break;
-			default: ASSUME(0);
+			default: fmt::throw_exception("Unreachable");
 			}
 
 			const std::string dirStr = fixedSet->dirName.get_ptr();
@@ -1220,7 +1220,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 			else
 			{
-				fmt::throw_exception("Invalid savedata selected" HERE);
+				fmt::throw_exception("Invalid savedata selected");
 			}
 		}
 	}
@@ -1973,7 +1973,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 		return {CELL_SAVEDATA_ERROR_PARAM, "109"};
 	}
 	case 0: break;
-	default: ASSUME(0);
+	default: fmt::throw_exception("Unreachable");
 	}
 
 	const std::string base_dir = fmt::format("/dev_hdd0/home/%08u/savedata/", userId);

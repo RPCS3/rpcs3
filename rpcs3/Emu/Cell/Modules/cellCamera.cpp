@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "cellCamera.h"
 
 #include "Emu/System.h"
@@ -639,7 +639,7 @@ s32 cellCameraIsOpen(s32 dev_num)
 
 	std::lock_guard lock(g_camera->mutex);
 
-	return g_camera->is_open;
+	return g_camera->is_open.load();
 }
 
 s32 cellCameraIsStarted(s32 dev_num)
@@ -665,7 +665,7 @@ s32 cellCameraIsStarted(s32 dev_num)
 
 	std::lock_guard lock(g_camera->mutex);
 
-	return g_camera->is_streaming;
+	return g_camera->is_streaming.load();
 }
 
 error_code cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u32> arg2)

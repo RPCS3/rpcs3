@@ -1,6 +1,6 @@
-#pragma once
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
-#include "types.h"
+#include "util/types.hpp"
 
 #include <string>
 
@@ -19,7 +19,7 @@ struct fmt_unveil
 
 	static inline u64 get(const T& arg)
 	{
-		return reinterpret_cast<std::uintptr_t>(&arg);
+		return reinterpret_cast<uptr>(&arg);
 	}
 
 	// Temporary value container (can possibly be created by other fmt_unveil<> specializations)
@@ -30,7 +30,7 @@ struct fmt_unveil
 		// Allow implicit conversion
 		operator u64() const
 		{
-			return reinterpret_cast<std::uintptr_t>(&arg);
+			return reinterpret_cast<uptr>(&arg);
 		}
 	};
 
@@ -93,7 +93,7 @@ struct fmt_unveil<T*, void>
 
 	static inline u64 get(type arg)
 	{
-		return reinterpret_cast<std::uintptr_t>(arg);
+		return reinterpret_cast<uptr>(arg);
 	}
 };
 
@@ -104,7 +104,7 @@ struct fmt_unveil<T[N], void>
 
 	static inline u64 get(type arg)
 	{
-		return reinterpret_cast<std::uintptr_t>(arg);
+		return reinterpret_cast<uptr>(arg);
 	}
 };
 
@@ -132,7 +132,7 @@ struct fmt_class_string
 	// Helper function (converts arg to object reference)
 	static SAFE_BUFFERS FORCE_INLINE const T& get_object(u64 arg)
 	{
-		return *reinterpret_cast<const T*>(static_cast<std::uintptr_t>(arg));
+		return *reinterpret_cast<const T*>(static_cast<uptr>(arg));
 	}
 
 	// Enum -> string function type
@@ -289,13 +289,23 @@ namespace fmt
 	}
 
 	// Internal exception message formatting template, must be explicitly specialized or instantiated in cpp to minimize code bloat
-	[[noreturn]] void raw_throw_exception(const char*, const fmt_type_info*, const u64*);
+	[[noreturn]] void raw_throw_exception(const src_loc&, const char*, const fmt_type_info*, const u64*);
 
 	// Throw exception with formatting
-	template <typename... Args>
-	[[noreturn]] SAFE_BUFFERS FORCE_INLINE void throw_exception(const char* fmt, const Args&... args)
+	template <typename CharT, std::size_t N, typename... Args>
+	struct throw_exception
 	{
-		static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
-		raw_throw_exception(fmt, type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
-	}
+		[[noreturn]] SAFE_BUFFERS FORCE_INLINE throw_exception(const CharT(&fmt)[N], const Args&... args,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION())
+		{
+			static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
+			raw_throw_exception({line, col, file, func}, reinterpret_cast<const char*>(fmt), type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
+		}
+	};
+
+	template <typename CharT, std::size_t N, typename... Args>
+	throw_exception(const CharT(&)[N], const Args&...) -> throw_exception<CharT, N, Args...>;
 }

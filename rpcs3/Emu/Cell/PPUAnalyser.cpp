@@ -10,7 +10,7 @@
 
 LOG_CHANNEL(ppu_validator);
 
-constexpr ppu_decoder<ppu_itype> s_ppu_itype;
+const ppu_decoder<ppu_itype> s_ppu_itype;
 
 template<>
 void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
@@ -1530,7 +1530,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 void ppu_acontext::UNK(ppu_opcode_t op)
 {
 	std::fill_n(gpr, 32, spec_gpr{});
-	ppu_log.error("Unknown/Illegal opcode: 0x%08x at 0x%x" HERE, op.opcode, cia);
+	ppu_log.error("Unknown/Illegal opcode: 0x%08x at 0x%x", op.opcode, cia);
 }
 
 void ppu_acontext::MFVSCR(ppu_opcode_t op)

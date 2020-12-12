@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "PadHandler.h"
 #include "Emu/System.h"
 #include "Input/pad_thread.h"

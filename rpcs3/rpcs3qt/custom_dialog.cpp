@@ -1,4 +1,4 @@
-﻿#include "custom_dialog.h"
+#include "custom_dialog.h"
 
 custom_dialog::custom_dialog(bool disableCancel, QWidget* parent)
 	: QDialog(parent), m_disable_cancel(disableCancel)

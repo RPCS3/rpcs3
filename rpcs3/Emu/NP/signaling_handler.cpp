@@ -111,7 +111,7 @@ void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMa
 //// SIGNALING MSGS PROCESSING ////
 ///////////////////////////////////
 
-void signaling_handler::reschedule_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd, std::chrono::time_point<std::chrono::system_clock> new_timepoint)
+void signaling_handler::reschedule_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd, steady_clock::time_point new_timepoint)
 {
 	for (auto it = qpackets.begin(); it != qpackets.end(); it++)
 	{
@@ -229,7 +229,7 @@ void signaling_handler::process_incoming_messages()
 			continue;
 		}
 
-		const auto now = std::chrono::system_clock::now();
+		const auto now = steady_clock::now();
 		if (si)
 			si->time_last_msg_recvd = now;
 
@@ -257,7 +257,7 @@ void signaling_handler::process_incoming_messages()
 		case signal_pong:
 			reply           = false;
 			schedule_repeat = false;
-			reschedule_packet(si, signal_ping, now + std::chrono::seconds(15));
+			reschedule_packet(si, signal_ping, now + 15s);
 			break;
 		case signal_connect:
 			reply               = true;
@@ -324,14 +324,14 @@ void signaling_handler::operator()()
 
 		process_incoming_messages();
 
-		const auto now = std::chrono::system_clock::now();
+		const auto now = steady_clock::now();
 
 		for (auto it = qpackets.begin(); it != qpackets.end();)
 		{
 			if (it->first > now)
 				break;
 
-			if (it->second.sig_info->time_last_msg_recvd < now - std::chrono::seconds(60))
+			if (it->second.sig_info->time_last_msg_recvd < now - 60s)
 			{
 				// We had no connection to opponent for 60 seconds, consider the connection dead
 				sign_log.trace("Timeout disconnection");
@@ -377,7 +377,7 @@ void signaling_handler::wake_up()
 
 void signaling_handler::update_si_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port)
 {
-	ASSERT(si);
+	ensure(si);
 
 	if (si->addr != new_addr || si->port != new_port)
 	{
@@ -399,7 +399,7 @@ void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s3
 	if (si->connStatus == SCE_NP_SIGNALING_CONN_STATUS_PENDING && new_status == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE)
 	{
 		si->connStatus = SCE_NP_SIGNALING_CONN_STATUS_ACTIVE;
-		ASSERT(si->version == 1u || si->version == 2u);
+		ensure(si->version == 1u || si->version == 2u);
 		if (si->version == 1u)
 			signal_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_ESTABLISHED);
 		else
@@ -411,7 +411,7 @@ void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s3
 	if ((si->connStatus == SCE_NP_SIGNALING_CONN_STATUS_PENDING || si->connStatus == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE) && new_status == SCE_NP_SIGNALING_CONN_STATUS_INACTIVE)
 	{
 		si->connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
-		ASSERT(si->version == 1u || si->version == 2u);
+		ensure(si->version == 1u || si->version == 2u);
 		if (si->version == 1u)
 			signal_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_DEAD);
 		else
@@ -461,7 +461,7 @@ void signaling_handler::send_signaling_packet(signaling_packet& sp, u32 addr, u1
 	}
 }
 
-void signaling_handler::queue_signaling_packet(signaling_packet& sp, std::shared_ptr<signaling_info> si, std::chrono::time_point<std::chrono::system_clock> wakeup_time)
+void signaling_handler::queue_signaling_packet(signaling_packet& sp, std::shared_ptr<signaling_info> si, steady_clock::time_point wakeup_time)
 {
 	queued_packet qp;
 	qp.sig_info = si;
@@ -517,7 +517,7 @@ void signaling_handler::start_sig_nl(u32 conn_id, u32 addr, u16 port)
 	si->port = port;
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
-	queue_signaling_packet(sent_packet, si, std::chrono::system_clock::now() + REPEAT_CONNECT_DELAY);
+	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_CONNECT_DELAY);
 }
 
 void signaling_handler::start_sig2(u64 room_id, u16 member_id)
@@ -530,7 +530,7 @@ void signaling_handler::start_sig2(u64 room_id, u16 member_id)
 	auto si = sig2_peers.at(room_id).at(member_id);
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
-	queue_signaling_packet(sent_packet, si, std::chrono::system_clock::now() + REPEAT_CONNECT_DELAY);
+	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_CONNECT_DELAY);
 }
 
 void signaling_handler::disconnect_sig2_users(u64 room_id)
@@ -550,14 +550,14 @@ void signaling_handler::disconnect_sig2_users(u64 room_id)
 		if (si->connStatus != SCE_NP_SIGNALING_CONN_STATUS_INACTIVE && !si->self)
 		{
 			send_signaling_packet(sent_packet, si->addr, si->port);
-			queue_signaling_packet(sent_packet, si, std::chrono::system_clock::now() + REPEAT_FINISHED_DELAY);
+			queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_FINISHED_DELAY);
 		}
 	}
 }
 
 u32 signaling_handler::create_sig_infos(const SceNpId* npid)
 {
-	ASSERT(npid->handle.term == 0);
+	ensure(npid->handle.term == 0);
 	std::string npid_str(reinterpret_cast<const char*>(npid->handle.data));
 
 	if (npid_to_conn_id.count(npid_str))

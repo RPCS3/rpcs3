@@ -1,4 +1,4 @@
-﻿#include "osk_dialog_frame.h"
+#include "osk_dialog_frame.h"
 #include "custom_dialog.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 

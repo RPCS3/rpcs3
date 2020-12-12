@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -489,22 +489,22 @@ error_code cellSailSourceNotifyMediaStateChanged()
 
 error_code cellSailSourceNotifyOpenCompleted()
 {
-	fmt::throw_exception("Unexpected function" HERE);
+	fmt::throw_exception("Unexpected function");
 }
 
 error_code cellSailSourceNotifyStartCompleted()
 {
-	fmt::throw_exception("Unexpected function" HERE);
+	fmt::throw_exception("Unexpected function");
 }
 
 error_code cellSailSourceNotifyStopCompleted()
 {
-	fmt::throw_exception("Unexpected function" HERE);
+	fmt::throw_exception("Unexpected function");
 }
 
 error_code cellSailSourceNotifyReadCompleted()
 {
-	fmt::throw_exception("Unexpected function" HERE);
+	fmt::throw_exception("Unexpected function");
 }
 
 error_code cellSailSourceSetDiagHandler()
@@ -515,7 +515,7 @@ error_code cellSailSourceSetDiagHandler()
 
 error_code cellSailSourceNotifyCloseCompleted()
 {
-	fmt::throw_exception("Unexpected function" HERE);
+	fmt::throw_exception("Unexpected function");
 }
 
 error_code cellSailMp4MovieGetBrand()
@@ -836,7 +836,7 @@ error_code cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 str
 					u32 buffer = vm::alloc(size, vm::main);
 					auto bufPtr = vm::cptr<PamfHeader>::make(buffer);
 					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
-					verify(HERE), f.read(buf, size) == size;
+					ensure(f.read(buf, size) == size);
 					u32 sp_ = vm::alloc(sizeof(CellPamfReader), vm::main);
 					auto sp = vm::ptr<CellPamfReader>::make(sp_);
 					u32 reader = cellPamfReaderInitialize(sp, bufPtr, size, 0);

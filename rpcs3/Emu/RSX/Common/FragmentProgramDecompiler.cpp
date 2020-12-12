@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "../rsx_methods.h"
 #include "FragmentProgramDecompiler.h"
@@ -126,7 +126,7 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 
 	u32 reg_index = dst.fp16 ? dst.dest_reg >> 1 : dst.dest_reg;
 
-	verify(HERE), reg_index < temp_registers.size();
+	ensure(reg_index < temp_registers.size());
 
 	if (dst.opcode == RSX_FP_OPCODE_MOV &&
 		src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP &&
@@ -174,7 +174,7 @@ std::string FragmentProgramDecompiler::GetMask()
 {
 	std::string ret;
 	ret.reserve(5);
-	
+
 	static constexpr std::string_view dst_mask = "xyzw";
 
 	ret += '.';
@@ -217,7 +217,7 @@ std::string FragmentProgramDecompiler::AddConst()
 		return name;
 	}
 
-	auto data = reinterpret_cast<be_t<u32>*>(static_cast<char*>(m_prog.addr) + m_size + 4 * sizeof(u32));
+	auto data = reinterpret_cast<be_t<u32>*>(static_cast<char*>(m_prog.get_data()) + m_size + 4 * sizeof(u32));
 	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);
 	u32 y = GetData(data[1]);
@@ -1118,7 +1118,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 
 std::string FragmentProgramDecompiler::Decompile()
 {
-	auto data = static_cast<be_t<u32>*>(m_prog.addr);
+	auto data = static_cast<be_t<u32>*>(m_prog.get_data());
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;
@@ -1266,7 +1266,7 @@ std::string FragmentProgramDecompiler::Decompile()
 
 		if (dst.end) break;
 
-		verify(HERE), m_offset % sizeof(u32) == 0;
+		ensure(m_offset % sizeof(u32) == 0);
 		data += m_offset / sizeof(u32);
 	}
 

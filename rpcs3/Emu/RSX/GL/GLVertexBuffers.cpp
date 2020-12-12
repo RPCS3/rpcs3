@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLGSRender.h"
 #include "../Common/BufferUtils.h"
 #include "GLHelpers.h"
@@ -23,7 +23,7 @@ namespace
 	{
 		// This is an emulated buffer, so our indices only range from 0->original_vertex_array_length
 		const auto element_count = get_index_count(primitive_mode, vertex_count);
-		verify(HERE), !gl::is_primitive_native(primitive_mode);
+		ensure(!gl::is_primitive_native(primitive_mode));
 
 		auto mapping = dst.alloc_from_heap(element_count * sizeof(u16), 256);
 		auto mapped_buffer = static_cast<char*>(mapping.first);
@@ -199,7 +199,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, GL_R8UI, required.first))
 			{
-				verify(HERE), cached->local_address == storage_address;
+				ensure(cached->local_address == storage_address);
 
 				in_cache = true;
 				upload_info.persistent_mapping_offset = cached->offset_in_heap;
@@ -224,7 +224,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 
 		if (!m_persistent_stream_view.in_range(upload_info.persistent_mapping_offset, required.first, upload_info.persistent_mapping_offset))
 		{
-			verify(HERE), m_max_texbuffer_size < m_attrib_ring_buffer->size();
+			ensure(m_max_texbuffer_size < m_attrib_ring_buffer->size());
 			const size_t view_size = ((upload_info.persistent_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
 				(m_attrib_ring_buffer->size() - upload_info.persistent_mapping_offset) : m_max_texbuffer_size;
 
@@ -241,7 +241,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 
 		if (!m_volatile_stream_view.in_range(upload_info.volatile_mapping_offset, required.second, upload_info.volatile_mapping_offset))
 		{
-			verify(HERE), m_max_texbuffer_size < m_attrib_ring_buffer->size();
+			ensure(m_max_texbuffer_size < m_attrib_ring_buffer->size());
 			const size_t view_size = ((upload_info.volatile_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
 				(m_attrib_ring_buffer->size() - upload_info.volatile_mapping_offset) : m_max_texbuffer_size;
 

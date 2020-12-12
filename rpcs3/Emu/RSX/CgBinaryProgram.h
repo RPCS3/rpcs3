@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <sstream>
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GL/GLVertexProgram.h"
@@ -310,7 +310,7 @@ public:
 				u32 ctrl = (vmfprog.outputFromH0 ? 0 : 0x40) | (vmfprog.depthReplace ? 0xe : 0);
 				std::vector<rsx::texture_dimension_extended> td;
 				RSXFragmentProgram prog;
-				prog.ucode_length = 0, prog.addr = vm::base(ptr + vmprog.ucode), prog.offset = 0, prog.ctrl = ctrl;
+				prog.ucode_length = 0, prog.data = vm::base(ptr + vmprog.ucode), prog.offset = 0, prog.ctrl = ctrl;
 				GLFragmentDecompilerThread(m_glsl_shader, param_array, prog, size).Task();
 				vm::close();
 			}
@@ -348,7 +348,7 @@ public:
 			m_offset = prog.ucode;
 
 			u32* vdata = reinterpret_cast<u32*>(&m_buffer[m_offset]);
-			verify(HERE), (m_buffer_size - m_offset) % sizeof(u32) == 0;
+			ensure((m_buffer_size - m_offset) % sizeof(u32) == 0);
 			for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 			{
 				vdata[i] = std::bit_cast<u32, be_t<u32>>(vdata[i]);

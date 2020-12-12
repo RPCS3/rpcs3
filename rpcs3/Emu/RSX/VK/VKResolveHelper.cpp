@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "VKResolveHelper.h"
 #include "VKRenderPass.h"
@@ -28,7 +28,7 @@ namespace
 			case VK_FORMAT_R32_SFLOAT:
 				return "r32f";
 			default:
-				fmt::throw_exception("Unhandled VkFormat 0x%x" HERE, u32(format));
+				fmt::throw_exception("Unhandled VkFormat 0x%x", u32(format));
 		}
 	}
 }

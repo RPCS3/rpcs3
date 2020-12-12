@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "../Overlays/overlay_shader_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "GLGSRender.h"
@@ -32,8 +32,9 @@ extern CellGcmContextData current_context;
 void GLGSRender::set_viewport()
 {
 	// NOTE: scale offset matrix already contains the viewport transformation
-	const auto clip_width = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_width(), true);
-	const auto clip_height = rsx::apply_resolution_scale(rsx::method_registers.surface_clip_height(), true);
+	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
+		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
+
 	glViewport(0, 0, clip_width, clip_height);
 }
 
@@ -51,17 +52,40 @@ void GLGSRender::set_scissor(bool clip_viewport)
 
 void GLGSRender::on_init_thread()
 {
-	verify(HERE), m_frame;
+	ensure(m_frame);
 
 	// NOTES: All contexts have to be created before any is bound to a thread
 	// This allows context sharing to work (both GLRCs passed to wglShareLists have to be idle or you get ERROR_BUSY)
 	m_context = m_frame->make_context();
 
 	const auto shadermode = g_cfg.video.shadermode.get();
-
-	if (shadermode == shader_mode::async_recompiler || shadermode == shader_mode::async_with_interpreter)
+	if (shadermode != shader_mode::recompiler)
 	{
-		m_decompiler_context = m_frame->make_context();
+		auto context_create_func = [m_frame = m_frame]()
+		{
+			return m_frame->make_context();
+		};
+
+		auto context_bind_func = [m_frame = m_frame](draw_context_t ctx)
+		{
+			m_frame->set_current(ctx);
+		};
+
+		auto context_destroy_func = [m_frame = m_frame](draw_context_t ctx)
+		{
+			m_frame->delete_context(ctx);
+		};
+
+		gl::initialize_pipe_compiler(context_create_func, context_bind_func, context_destroy_func, g_cfg.video.shader_compiler_threads_count);
+	}
+	else
+	{
+		auto null_context_create_func = []() -> draw_context_t
+		{
+			return nullptr;
+		};
+
+		gl::initialize_pipe_compiler(null_context_create_func, {}, {}, 1);
 	}
 
 	// Bind primary context to main RSX thread
@@ -332,6 +356,9 @@ void GLGSRender::on_init_thread()
 
 void GLGSRender::on_exit()
 {
+	// Destroy internal RSX state, may call upon this->do_local_task
+	GSRender::on_exit();
+
 	// Globals
 	// TODO: Move these
 	gl::destroy_compute_tasks();
@@ -340,6 +367,8 @@ void GLGSRender::on_exit()
 	{
 		gl::g_typeless_transfer_buffer.remove();
 	}
+
+	gl::destroy_pipe_compiler();
 
 	m_prog_buffer.clear();
 	m_rtts.destroy();
@@ -463,11 +492,9 @@ void GLGSRender::on_exit()
 		query.driver_handle = 0;
 	}
 
-	glFlush();
-	glFinish();
-
-	GSRender::on_exit();
 	zcull_ctrl.release();
+
+	gl::set_primary_context_thread(false);
 }
 
 void GLGSRender::clear_surface(u32 arg)
@@ -525,7 +552,7 @@ void GLGSRender::clear_surface(u32 arg)
 
 			if ((arg & 0x3) != 0x3 && !require_mem_load && ds->dirty())
 			{
-				verify(HERE), mask;
+				ensure(mask);
 
 				// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
 				if (arg == 1)
@@ -621,10 +648,10 @@ bool GLGSRender::load_program()
 {
 	const auto shadermode = g_cfg.video.shadermode.get();
 
-	if ((m_interpreter_state = (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)))
+	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
-		verify(HERE), current_fragment_program.valid;
+		ensure(current_fragment_program.valid);
 
 		get_current_vertex_program(vs_sampler_state);
 
@@ -650,7 +677,7 @@ bool GLGSRender::load_program()
 	{
 		void* pipeline_properties = nullptr;
 		m_program = m_prog_buffer.get_graphics_pipeline(current_vertex_program, current_fragment_program, pipeline_properties,
-			shadermode != shader_mode::recompiler, true).get();
+			shadermode != shader_mode::recompiler, true);
 
 		if (m_prog_buffer.check_cache_missed())
 		{
@@ -674,7 +701,7 @@ bool GLGSRender::load_program()
 		}
 		else
 		{
-			verify(HERE), m_program;
+			ensure(m_program);
 			m_program->sync();
 		}
 	}
@@ -701,7 +728,7 @@ void GLGSRender::load_program_env()
 {
 	if (!m_program)
 	{
-		fmt::throw_exception("Unreachable right now" HERE);
+		fmt::throw_exception("Unreachable right now");
 	}
 
 	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
@@ -835,8 +862,7 @@ void GLGSRender::load_program_env()
 			// Bind textures
 			m_shader_interpreter.update_fragment_textures(fs_sampler_state, current_fp_metadata.referenced_textures_mask, reinterpret_cast<u32*>(fp_buf + 16));
 
-			const auto fp_data = static_cast<u8*>(current_fragment_program.addr) + current_fp_metadata.program_start_offset;
-			std::memcpy(fp_buf + 80, fp_data, current_fp_metadata.program_ucode_length);
+			std::memcpy(fp_buf + 80, current_fragment_program.get_data(), current_fragment_program.ucode_length);
 
 			m_fragment_instructions_buffer->bind_range(GL_INTERPRETER_FRAGMENT_BLOCK, fp_mapping.second, fp_block_length);
 			m_fragment_instructions_buffer->notify();
@@ -1016,7 +1042,7 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	// TODO: Handle texture writeback
 	if (false)
 	{
-		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location, HERE);
+		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
 		on_notify_memory_unmapped(addr, tiles[tile].size);
 		m_rtts.invalidate_surface_address(addr, false);
 	}
@@ -1035,7 +1061,7 @@ void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query
 
 void GLGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
-	verify(HERE), query->active;
+	ensure(query->active);
 	glEndQuery(GL_ANY_SAMPLES_PASSED);
 }
 
@@ -1068,21 +1094,4 @@ void GLGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 		//Discard is being called on an active query, close it
 		glEndQuery(GL_ANY_SAMPLES_PASSED);
 	}
-}
-
-void GLGSRender::on_decompiler_init()
-{
-	// Bind decompiler context to this thread
-	m_frame->set_current(m_decompiler_context);
-}
-
-void GLGSRender::on_decompiler_exit()
-{
-	// Cleanup
-	m_frame->delete_context(m_decompiler_context);
-}
-
-bool GLGSRender::on_decompiler_task()
-{
-	return m_prog_buffer.async_update(8).first;
 }

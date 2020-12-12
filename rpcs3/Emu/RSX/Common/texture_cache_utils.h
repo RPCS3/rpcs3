@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../rsx_cache.h"
 #include "texture_cache_predictor.h"
@@ -6,8 +6,6 @@
 
 #include <list>
 #include <unordered_set>
-#include <atomic>
-
 
 namespace rsx
 {
@@ -105,7 +103,7 @@ namespace rsx
 			else if (cause == deferred_write)
 				return write;
 			else
-				fmt::throw_exception("Unreachable " HERE);
+				fmt::throw_exception("Unreachable");
 		}
 
 		constexpr invalidation_cause defer() const
@@ -116,7 +114,7 @@ namespace rsx
 			else if (cause == write)
 				return deferred_write;
 			else
-				fmt::throw_exception("Unreachable " HERE);
+				fmt::throw_exception("Unreachable");
 		}
 
 		constexpr invalidation_cause() : cause(invalid) {}
@@ -284,7 +282,7 @@ namespace rsx
 				next_array();
 			}
 
-			ASSERT(m_capacity > 0 && m_array_idx < array_size && m_data_it != m_data.end());
+			ensure(m_capacity > 0 && m_array_idx < array_size && m_data_it != m_data.end());
 
 			value_type *dest = &((*m_data_it)[m_array_idx++]);
 			new (dest) value_type(std::forward<Args>(args)...);
@@ -324,9 +322,9 @@ namespace rsx
 		address_range range = {};
 		block_container_type sections = {};
 		unowned_container_type unowned; // pointers to sections from other blocks that overlap this block
-		std::atomic<u32> exists_count = 0;
-		std::atomic<u32> locked_count = 0;
-		std::atomic<u32> unreleased_count = 0;
+		atomic_t<u32> exists_count = 0;
+		atomic_t<u32> locked_count = 0;
+		atomic_t<u32> unreleased_count = 0;
 		ranged_storage_type *m_storage = nullptr;
 
 		inline void add_owned_section_overlaps(section_storage_type &section)
@@ -353,7 +351,7 @@ namespace rsx
 
 		void initialize(u32 _index, ranged_storage_type *storage)
 		{
-			verify(HERE), m_storage == nullptr && storage != nullptr;
+			ensure(m_storage == nullptr && storage != nullptr);
 			AUDIT(index < num_blocks);
 
 			m_storage = storage;
@@ -459,7 +457,7 @@ namespace rsx
 			(void)section; // silence unused warning without _AUDIT
 			AUDIT(!section.is_locked());
 			u32 prev_locked = locked_count--;
-			ASSERT(prev_locked > 0);
+			ensure(prev_locked > 0);
 		}
 
 		inline void on_section_range_valid(section_storage_type &section)
@@ -495,7 +493,7 @@ namespace rsx
 			AUDIT(!section.exists());
 
 			u32 prev_exists = exists_count--;
-			ASSERT(prev_exists > 0);
+			ensure(prev_exists > 0);
 
 			if (prev_exists == 1)
 			{
@@ -506,7 +504,7 @@ namespace rsx
 		void on_section_released(const section_storage_type &/*section*/)
 		{
 			u32 prev_unreleased = unreleased_count--;
-			ASSERT(prev_unreleased > 0);
+			ensure(prev_unreleased > 0);
 		}
 
 		void on_section_unreleased(const section_storage_type &/*section*/)
@@ -567,8 +565,8 @@ namespace rsx
 		bool m_purging = false;
 
 	public:
-		std::atomic<u32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
-		std::atomic<u64> m_texture_memory_in_use = { 0 };
+		atomic_t<u32> m_unreleased_texture_objects = { 0 }; //Number of invalidated objects not yet freed from memory
+		atomic_t<u64> m_texture_memory_in_use = { 0 };
 
 		// Constructor
 		ranged_storage(texture_cache_type *tex_cache) :
@@ -662,7 +660,7 @@ namespace rsx
 						if (!tex.is_unreleased())
 							continue;
 
-						ASSERT(!tex.is_locked());
+						ensure(!tex.is_locked());
 
 						tex.destroy();
 					}
@@ -701,7 +699,7 @@ namespace rsx
 							continue;
 						}
 
-						ASSERT(!tex.is_locked() && tex.exists());
+						ensure(!tex.is_locked() && tex.exists());
 						tex.destroy();
 						any_released = true;
 					}
@@ -727,7 +725,7 @@ namespace rsx
 		void on_section_released(const section_storage_type &/*section*/)
 		{
 			u32 prev_unreleased = m_unreleased_texture_objects--;
-			ASSERT(prev_unreleased > 0);
+			ensure(prev_unreleased > 0);
 		}
 
 		void on_section_unreleased(const section_storage_type &/*section*/)
@@ -744,7 +742,7 @@ namespace rsx
 		{
 			u64 size = section.get_section_size();
 			u64 prev_size = m_texture_memory_in_use.fetch_sub(size);
-			ASSERT(prev_size >= size);
+			ensure(prev_size >= size);
 		}
 
 		void on_ranged_block_first_section_created(block_type& block)
@@ -1054,7 +1052,7 @@ namespace rsx
 
 		void initialize(ranged_storage_block_type *block)
 		{
-			verify(HERE), m_block == nullptr && m_tex_cache == nullptr && m_storage == nullptr;
+			ensure(m_block == nullptr && m_tex_cache == nullptr && m_storage == nullptr);
 			m_block = block;
 			m_storage = &block->get_storage();
 			m_tex_cache = &block->get_texture_cache();
@@ -1142,8 +1140,8 @@ namespace rsx
 			triggered_exists_callbacks = false;
 
 			AUDIT(valid_range());
-			ASSERT(!is_locked());
-			ASSERT(is_managed());
+			ensure(!is_locked());
+			ensure(is_managed());
 
 			// Set dirty
 			set_dirty(true);
@@ -1447,7 +1445,7 @@ namespace rsx
 		{
 			AUDIT(synchronized);
 
-			ASSERT(real_pitch > 0);
+			ensure(real_pitch > 0);
 
 			// Calculate valid range
 			const auto valid_range  = get_confirmed_range();
@@ -1483,7 +1481,7 @@ namespace rsx
 			// Obtain pointers to the source and destination memory regions
 			u8 *src = static_cast<u8*>(derived()->map_synchronized(mapped_offset, mapped_length));
 			u32 dst = valid_range.start;
-			ASSERT(src != nullptr);
+			ensure(src != nullptr);
 
 			// Copy from src to dst
 			if (real_pitch >= rsx_pitch || valid_length <= rsx_pitch)
@@ -1518,7 +1516,7 @@ namespace rsx
 			if (flushed) return;
 
 			// Sanity checks
-			ASSERT(exists());
+			ensure(exists());
 			AUDIT(is_locked());
 
 			// If we are fully inside the flush exclusions regions, we just mark ourselves as flushed and return
@@ -1531,7 +1529,7 @@ namespace rsx
 			}
 
 			// NOTE: Hard faults should have been pre-processed beforehand
-			ASSERT(synchronized);
+			ensure(synchronized);
 
 			// Copy flush result to guest memory
 			imp_flush();

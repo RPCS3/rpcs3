@@ -1,4 +1,4 @@
-﻿#include "about_dialog.h"
+#include "about_dialog.h"
 #include "ui_about_dialog.h"
 
 #include "rpcs3_version.h"

@@ -52,7 +52,7 @@ void semaphore_base::imp_wait()
 
 void semaphore_base::imp_post(s32 _old)
 {
-	verify("semaphore_base: overflow" HERE), _old < 0;
+	ensure(_old < 0); // "semaphore_base: overflow"
 
 	m_value.notify_one();
 }

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Utilities/StrUtil.h"
 #include "Emu/IdManager.h"

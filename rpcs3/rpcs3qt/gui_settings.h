@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "settings.h"
 #include "util/logs.hpp"
@@ -6,6 +6,7 @@
 #include <QVariant>
 #include <QSize>
 #include <QColor>
+#include <QMessageBox>
 
 namespace gui
 {
@@ -120,6 +121,7 @@ namespace gui
 	const gui_save ib_show_welcome = gui_save(main_window, "infoBoxEnabledWelcome",    true);
 	const gui_save ib_confirm_exit = gui_save(main_window, "confirmationBoxExitGame",  true);
 	const gui_save ib_confirm_boot = gui_save(main_window, "confirmationBoxBootGame",  true);
+	const gui_save ib_confirm_fw   = gui_save(main_window, "confirmationMissingFW",    true);
 
 	const gui_save fd_install_pkg  = gui_save(main_window, "lastExplorePathPKG",  "");
 	const gui_save fd_install_pup  = gui_save(main_window, "lastExplorePathPUP",  "");
@@ -273,7 +275,7 @@ public Q_SLOTS:
 private:
 	void SaveConfigNameToDefault(const QString& config_name);
 	void BackupSettingsToTarget(const QString& config_name);
-	void ShowBox(bool confirm, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, bool always_on_top);
+	void ShowBox(QMessageBox::Icon icon, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, bool always_on_top);
 
 	QString m_current_name;
 };

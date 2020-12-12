@@ -1,4 +1,4 @@
-﻿#include "StrFmt.h"
+#include "StrFmt.h"
 #include "BEType.h"
 #include "StrUtil.h"
 #include "cfmt.h"
@@ -242,49 +242,55 @@ void fmt_class_string<v128>::format(std::string& out, u64 arg)
 	fmt::append(out, "0x%016llx%016llx", vec._u64[1], vec._u64[0]);
 }
 
+template <>
+void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
+{
+	const src_loc& loc = get_object(arg);
+
+	if (loc.col != umax)
+	{
+		fmt::append(out, "\n(in file %s:%s[:%s]", loc.file, loc.line, loc.col);
+	}
+	else
+	{
+		fmt::append(out, "\n(in file %s:%s", loc.file, loc.line);
+	}
+
+	if (loc.func && *loc.func)
+	{
+		fmt::append(out, ", in function %s)", loc.func);
+	}
+	else
+	{
+		out += ')';
+	}
+
+	// Print error code (may be irrelevant)
+#ifdef _WIN32
+	if (DWORD error = GetLastError())
+	{
+		fmt::append(out, " (e=0x%08x[%u])", error, error);
+	}
+#else
+	if (int error = errno)
+	{
+		fmt::append(out, " (errno=%d)", error);
+	}
+#endif
+}
+
 namespace fmt
 {
-	void raw_error(const char* msg)
-	{
-		thread_ctrl::emergency_exit(msg);
-	}
-
-	void raw_verify_error(const char* msg, const fmt_type_info* sup, u64 arg)
+	void raw_verify_error(const src_loc& loc)
 	{
 		std::string out{"Verification failed"};
-
-		// Print error code (may be irrelevant)
-#ifdef _WIN32
-		if (DWORD error = GetLastError())
-		{
-			fmt::append(out, " (e=%#x)", error);
-		}
-#else
-		if (int error = errno)
-		{
-			fmt::append(out, " (e=%d)", error);
-		}
-#endif
-
-		if (sup)
-		{
-			out += " (";
-			sup->fmt_string(out, arg); // Print value
-			out += ")";
-		}
-
-		if (msg)
-		{
-			out += ": ";
-			out += msg;
-		}
-
+		fmt::append(out, "%s", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
-	void raw_narrow_error(const char* msg, const fmt_type_info* sup, u64 arg)
+	void raw_narrow_error(const src_loc& loc, const fmt_type_info* sup, u64 arg)
 	{
-		std::string out{"Narrow error"};
+		std::string out{"Narrowing error"};
 
 		if (sup)
 		{
@@ -293,19 +299,15 @@ namespace fmt
 			out += ")";
 		}
 
-		if (msg)
-		{
-			out += ": ";
-			out += msg;
-		}
-
+		fmt::append(out, "%s", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
-	void raw_throw_exception(const char* fmt, const fmt_type_info* sup, const u64* args)
+	void raw_throw_exception(const src_loc& loc, const char* fmt, const fmt_type_info* sup, const u64* args)
 	{
 		std::string out;
 		raw_append(out, fmt, sup, args);
+		fmt::append(out, "%s", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 

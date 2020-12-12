@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
 #ifdef _MSC_VER
 #include <intrin.h>
@@ -14,8 +14,11 @@
 #include <type_traits>
 #include <utility>
 #include <chrono>
-#include <limits>
 #include <array>
+
+using std::chrono::steady_clock;
+
+using namespace std::literals;
 
 #ifdef _MSC_VER
 #if !defined(__cpp_lib_bitops) && _MSC_VER < 1928
@@ -29,30 +32,13 @@
 #endif
 
 #ifdef _MSC_VER
-
-#define ASSUME(...) ((__VA_ARGS__) ? void() : __assume(0))  // MSVC __assume ignores side-effects
 #define SAFE_BUFFERS __declspec(safebuffers)
 #define NEVER_INLINE __declspec(noinline)
 #define FORCE_INLINE __forceinline
-#define RESTRICT __restrict
-
 #else // not _MSC_VER
-
-#ifdef __clang__
-#if defined(__has_builtin) && __has_builtin(__builtin_assume)
-#define ASSUME(...) ((__VA_ARGS__) ? void() : __builtin_assume(0)) // __builtin_assume (supported by modern clang) ignores side-effects
-#endif
-#endif
-
-#ifndef ASSUME // gcc and old clang
-#define ASSUME(...) ((__VA_ARGS__) ? void() : __builtin_unreachable())  // note: the compiler will generate code to evaluate "cond" if the expression is opaque
-#endif
-
 #define SAFE_BUFFERS __attribute__((no_stack_protector))
 #define NEVER_INLINE __attribute__((noinline)) inline
 #define FORCE_INLINE __attribute__((always_inline)) inline
-#define RESTRICT __restrict__
-
 #endif // _MSC_VER
 
 #define CHECK_SIZE(type, size) static_assert(sizeof(type) == size, "Invalid " #type " type size")
@@ -60,28 +46,14 @@
 #define CHECK_MAX_SIZE(type, size) static_assert(sizeof(type) <= size, #type " type size is too big")
 #define CHECK_SIZE_ALIGN(type, size, align) CHECK_SIZE(type, size); CHECK_ALIGN(type, align)
 
-// Variant pattern matching helper
-#define MATCH(arg, ...) constexpr(std::is_same_v<std::decay_t<decltype(arg)>, __VA_ARGS__>)
-
-#define CONCATENATE_DETAIL(x, y) x ## y
-#define CONCATENATE(x, y) CONCATENATE_DETAIL(x, y)
-
-#define STRINGIZE_DETAIL(x) #x ""
-#define STRINGIZE(x) STRINGIZE_DETAIL(x)
-
-#define HERE "\n(in file " __FILE__ ":" STRINGIZE(__LINE__) ")"
-
 #define DECLARE(...) decltype(__VA_ARGS__) __VA_ARGS__
 
 #define STR_CASE(...) case __VA_ARGS__: return #__VA_ARGS__
 
-
-#define ASSERT(...) ((__VA_ARGS__) ? void() : fmt::raw_error("Assertion failed: " STRINGIZE(__VA_ARGS__) HERE))
-
 #if defined(_DEBUG) || defined(_AUDIT)
-#define AUDIT(...) ASSERT(__VA_ARGS__)
+#define AUDIT(...) (static_cast<void>(ensure(__VA_ARGS__)))
 #else
-#define AUDIT(...) ((void)0)
+#define AUDIT(...) (static_cast<void>(0))
 #endif
 
 #if __cpp_lib_bit_cast >= 201806L
@@ -177,10 +149,6 @@ namespace std
 }
 #endif
 
-using steady_clock = std::conditional<
-    std::chrono::high_resolution_clock::is_steady,
-    std::chrono::high_resolution_clock, std::chrono::steady_clock>::type;
-
 // Get integral type from type size
 template <std::size_t N>
 struct get_int_impl
@@ -224,7 +192,7 @@ using get_sint_t = typename get_int_impl<N>::stype;
 template <typename T>
 std::remove_cvref_t<T> as_rvalue(T&& obj)
 {
-    return std::forward<T>(obj);
+	return std::forward<T>(obj);
 }
 
 // Formatting helper, type-specific preprocessing for improving safety and functionality
@@ -296,11 +264,19 @@ struct alignas(16) u128
 {
 	u64 lo, hi;
 
-	u128() = default;
+	u128() noexcept = default;
 
-	constexpr u128(u64 l)
-		: lo(l)
+	template <typename T, std::enable_if_t<std::is_unsigned_v<T>, u64> = 0>
+	constexpr u128(T arg) noexcept
+		: lo(arg)
 		, hi(0)
+	{
+	}
+
+	template <typename T, std::enable_if_t<std::is_signed_v<T>, s64> = 0>
+	constexpr u128(T arg) noexcept
+		: lo(s64{arg})
+		, hi(s64{arg} >> 63)
 	{
 	}
 
@@ -309,167 +285,204 @@ struct alignas(16) u128
 		return !!(lo | hi);
 	}
 
-	friend u128 operator+(const u128& l, const u128& r)
+	constexpr explicit operator u64() const noexcept
 	{
-		u128 value;
-		_addcarry_u64(_addcarry_u64(0, r.lo, l.lo, &value.lo), r.hi, l.hi, &value.hi);
+		return lo;
+	}
+
+	constexpr friend u128 operator+(const u128& l, const u128& r)
+	{
+		u128 value = l;
+		value += r;
 		return value;
 	}
 
-	friend u128 operator+(const u128& l, u64 r)
+	constexpr friend u128 operator-(const u128& l, const u128& r)
 	{
-		u128 value;
-		_addcarry_u64(_addcarry_u64(0, r, l.lo, &value.lo), l.hi, 0, &value.hi);
+		u128 value = l;
+		value -= r;
 		return value;
 	}
 
-	friend u128 operator+(u64 l, const u128& r)
-	{
-		u128 value;
-		_addcarry_u64(_addcarry_u64(0, r.lo, l, &value.lo), 0, r.hi, &value.hi);
-		return value;
-	}
-
-	friend u128 operator-(const u128& l, const u128& r)
-	{
-		u128 value;
-		_subborrow_u64(_subborrow_u64(0, r.lo, l.lo, &value.lo), r.hi, l.hi, &value.hi);
-		return value;
-	}
-
-	friend u128 operator-(const u128& l, u64 r)
-	{
-		u128 value;
-		_subborrow_u64(_subborrow_u64(0, r, l.lo, &value.lo), 0, l.hi, &value.hi);
-		return value;
-	}
-
-	friend u128 operator-(u64 l, const u128& r)
-	{
-		u128 value;
-		_subborrow_u64(_subborrow_u64(0, r.lo, l, &value.lo), r.hi, 0, &value.hi);
-		return value;
-	}
-
-	u128 operator+() const
+	constexpr u128 operator+() const
 	{
 		return *this;
 	}
 
-	u128 operator-() const
+	constexpr u128 operator-() const
 	{
-		u128 value;
-		_subborrow_u64(_subborrow_u64(0, lo, 0, &value.lo), hi, 0, &value.hi);
+		u128 value{};
+		value -= *this;
 		return value;
 	}
 
-	u128& operator++()
+	constexpr u128& operator++()
 	{
-		_addcarry_u64(_addcarry_u64(0, 1, lo, &lo), 0, hi, &hi);
+		*this += 1;
 		return *this;
 	}
 
-	u128 operator++(int)
+	constexpr u128 operator++(int)
 	{
 		u128 value = *this;
-		_addcarry_u64(_addcarry_u64(0, 1, lo, &lo), 0, hi, &hi);
+		*this += 1;
 		return value;
 	}
 
-	u128& operator--()
+	constexpr u128& operator--()
 	{
-		_subborrow_u64(_subborrow_u64(0, 1, lo, &lo), 0, hi, &hi);
+		*this -= 1;
 		return *this;
 	}
 
-	u128 operator--(int)
+	constexpr u128 operator--(int)
 	{
 		u128 value = *this;
-		_subborrow_u64(_subborrow_u64(0, 1, lo, &lo), 0, hi, &hi);
+		*this -= 1;
 		return value;
 	}
 
-	u128 operator<<(u128 shift_value)
+	constexpr u128 operator<<(u128 shift_value) const
 	{
-		const u64 v0 = lo << (shift_value.lo & 63);
-		const u64 v1 = __shiftleft128(lo, hi, static_cast<uchar>(shift_value.lo));
-
-		u128 value;
-		value.lo = (shift_value.lo & 64) ? 0 : v0;
-		value.hi = (shift_value.lo & 64) ? v0 : v1;
+		u128 value = *this;
+		value <<= shift_value;
 		return value;
 	}
 
-	u128 operator>>(u128 shift_value)
+	constexpr u128 operator>>(u128 shift_value) const
 	{
-		const u64 v0 = hi >> (shift_value.lo & 63);
-		const u64 v1 = __shiftright128(lo, hi, static_cast<uchar>(shift_value.lo));
-
-		u128 value;
-		value.lo = (shift_value.lo & 64) ? v0 : v1;
-		value.hi = (shift_value.lo & 64) ? 0 : v0;
+		u128 value = *this;
+		value >>= shift_value;
 		return value;
 	}
 
-	u128 operator~() const
+	constexpr u128 operator~() const
 	{
-		u128 value;
+		u128 value{};
 		value.lo = ~lo;
 		value.hi = ~hi;
 		return value;
 	}
 
-	friend u128 operator&(const u128& l, const u128& r)
+	constexpr friend u128 operator&(const u128& l, const u128& r)
 	{
-		u128 value;
+		u128 value{};
 		value.lo = l.lo & r.lo;
 		value.hi = l.hi & r.hi;
 		return value;
 	}
 
-	friend u128 operator|(const u128& l, const u128& r)
+	constexpr friend u128 operator|(const u128& l, const u128& r)
 	{
-		u128 value;
+		u128 value{};
 		value.lo = l.lo | r.lo;
 		value.hi = l.hi | r.hi;
 		return value;
 	}
 
-	friend u128 operator^(const u128& l, const u128& r)
+	constexpr friend u128 operator^(const u128& l, const u128& r)
 	{
-		u128 value;
+		u128 value{};
 		value.lo = l.lo ^ r.lo;
 		value.hi = l.hi ^ r.hi;
 		return value;
 	}
 
-	u128& operator+=(const u128& r)
+	constexpr u128& operator+=(const u128& r)
 	{
-		_addcarry_u64(_addcarry_u64(0, r.lo, lo, &lo), r.hi, hi, &hi);
+		if (std::is_constant_evaluated())
+		{
+			lo += r.lo;
+			hi += r.hi + (lo < r.lo);
+		}
+		else
+		{
+			_addcarry_u64(_addcarry_u64(0, r.lo, lo, &lo), r.hi, hi, &hi);
+		}
+
 		return *this;
 	}
 
-	u128& operator+=(uint64_t r)
+	constexpr u128& operator-=(const u128& r)
 	{
-		_addcarry_u64(_addcarry_u64(0, r, lo, &lo), 0, hi, &hi);
+		if (std::is_constant_evaluated())
+		{
+			hi -= r.hi + (lo < r.lo);
+			lo -= r.lo;
+		}
+		else
+		{
+			_subborrow_u64(_subborrow_u64(0, lo, r.lo, &lo), hi, r.hi, &hi);
+		}
+
 		return *this;
 	}
 
-	u128& operator&=(const u128& r)
+	constexpr u128& operator<<=(const u128& r)
+	{
+		if (std::is_constant_evaluated())
+		{
+			if (r.hi == 0 && r.lo < 64)
+			{
+				hi = (hi << r.lo) | (lo >> (64 - r.lo));
+				lo = (lo << r.lo);
+				return *this;
+			}
+			else if (r.hi == 0 && r.lo < 128)
+			{
+				hi = (lo << (r.lo - 64));
+				lo = 0;
+				return *this;
+			}
+		}
+
+		const u64 v0 = lo << (r.lo & 63);
+		const u64 v1 = __shiftleft128(lo, hi, static_cast<uchar>(r.lo));
+		lo = (r.lo & 64) ? 0 : v0;
+		hi = (r.lo & 64) ? v0 : v1;
+		return *this;
+	}
+
+	constexpr u128& operator>>=(const u128& r)
+	{
+		if (std::is_constant_evaluated())
+		{
+			if (r.hi == 0 && r.lo < 64)
+			{
+				lo = (lo >> r.lo) | (hi << (64 - r.lo));
+				hi = (hi >> r.lo);
+				return *this;
+			}
+			else if (r.hi == 0 && r.lo < 128)
+			{
+				lo = (hi >> (r.lo - 64));
+				hi = 0;
+				return *this;
+			}
+		}
+
+		const u64 v0 = hi >> (r.lo & 63);
+		const u64 v1 = __shiftright128(lo, hi, static_cast<uchar>(r.lo));
+		lo = (r.lo & 64) ? v0 : v1;
+		hi = (r.lo & 64) ? 0 : v0;
+		return *this;
+	}
+
+	constexpr u128& operator&=(const u128& r)
 	{
 		lo &= r.lo;
 		hi &= r.hi;
 		return *this;
 	}
 
-	u128& operator|=(const u128& r)
+	constexpr u128& operator|=(const u128& r)
 	{
 		lo |= r.lo;
 		hi |= r.hi;
 		return *this;
 	}
 
-	u128& operator^=(const u128& r)
+	constexpr u128& operator^=(const u128& r)
 	{
 		lo ^= r.lo;
 		hi ^= r.hi;
@@ -484,23 +497,14 @@ struct alignas(16) s128
 	s64 hi;
 
 	s128() = default;
-
-	constexpr s128(s64 l)
-		: hi(l >> 63)
-		, lo(l)
-	{
-	}
-
-	constexpr s128(u64 l)
-		: hi(0)
-		, lo(l)
-	{
-	}
 };
 #endif
 
-CHECK_SIZE_ALIGN(u128, 16, 16);
-CHECK_SIZE_ALIGN(s128, 16, 16);
+template <>
+struct get_int_impl<16>
+{
+	using utype = u128;
+};
 
 // Return magic value for any unsigned type
 constexpr inline struct umax_helper
@@ -510,13 +514,13 @@ constexpr inline struct umax_helper
 	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	explicit constexpr operator T() const
 	{
-		return std::numeric_limits<S>::max();
+		return static_cast<S>(-1);
 	}
 
 	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator==(const T& rhs) const
 	{
-		return rhs == std::numeric_limits<S>::max();
+		return rhs == static_cast<S>(-1);
 	}
 
 #if __cpp_impl_three_way_comparison >= 201711 && !__INTELLISENSE__
@@ -524,7 +528,7 @@ constexpr inline struct umax_helper
 	template <typename T>
 	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator==(const T& lhs, const umax_helper& rhs)
 	{
-		return lhs == std::numeric_limits<simple_t<T>>::max();
+		return lhs == static_cast<simple_t<T>>(-1);
 	}
 #endif
 
@@ -533,13 +537,13 @@ constexpr inline struct umax_helper
 	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator!=(const T& rhs) const
 	{
-		return rhs != std::numeric_limits<S>::max();
+		return rhs != static_cast<S>(-1);
 	}
 
 	template <typename T>
 	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator!=(const T& lhs, const umax_helper& rhs)
 	{
-		return lhs != std::numeric_limits<simple_t<T>>::max();
+		return lhs != static_cast<simple_t<T>>(-1);
 	}
 #endif
 } umax;
@@ -562,8 +566,8 @@ union alignas(2) f16
 		// See http://stackoverflow.com/a/26779139
 		// The conversion doesn't handle NaN/Inf
 		u32 raw = ((_u16 & 0x8000) << 16) |             // Sign (just moved)
-		          (((_u16 & 0x7c00) + 0x1C000) << 13) | // Exponent ( exp - 15 + 127)
-		          ((_u16 & 0x03FF) << 13);              // Mantissa
+				  (((_u16 & 0x7c00) + 0x1C000) << 13) | // Exponent ( exp - 15 + 127)
+				  ((_u16 & 0x03FF) << 13);              // Mantissa
 
 		return std::bit_cast<f32>(raw);
 	}
@@ -717,75 +721,40 @@ constexpr u64 operator""_u64(const char* s, std::size_t /*length*/)
 	}
 }
 
+#if !defined(__INTELLISENSE__) && !__has_builtin(__builtin_COLUMN) && !defined(_MSC_VER)
+constexpr unsigned __builtin_COLUMN()
+{
+	return -1;
+}
+#endif
+
+struct src_loc
+{
+	u32 line;
+	u32 col;
+	const char* file;
+	const char* func;
+};
+
 namespace fmt
 {
-	[[noreturn]] void raw_error(const char* msg);
-	[[noreturn]] void raw_verify_error(const char* msg, const fmt_type_info* sup, u64 arg);
-	[[noreturn]] void raw_narrow_error(const char* msg, const fmt_type_info* sup, u64 arg);
+	[[noreturn]] void raw_verify_error(const src_loc& loc);
+	[[noreturn]] void raw_narrow_error(const src_loc& loc, const fmt_type_info* sup, u64 arg);
 }
 
-struct verify_func
+template <typename T>
+constexpr decltype(auto) ensure(T&& arg,
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION()) noexcept
 {
-	template <typename T>
-	bool operator()(T&& value) const
+	if (std::forward<T>(arg)) [[likely]]
 	{
-		if (std::forward<T>(value))
-		{
-			return true;
-		}
-
-		return false;
-	}
-};
-
-template <uint N>
-struct verify_impl
-{
-	const char* cause;
-
-	template <typename T>
-	auto operator,(T&& value) const
-	{
-		// Verification (can be safely disabled)
-		if (!verify_func()(std::forward<T>(value)))
-		{
-			fmt::raw_verify_error(cause, nullptr, N);
-		}
-
-		return verify_impl<N + 1>{cause};
-	}
-};
-
-// Verification helper, checks several conditions delimited with comma operator
-inline auto verify(const char* cause)
-{
-	return verify_impl<0>{cause};
-}
-
-// Verification helper (returns value or lvalue reference, may require to use verify_move instead)
-template <typename F = verify_func, typename T>
-inline T verify(const char* cause, T&& value, F&& pred = F())
-{
-	if (!pred(std::forward<T>(value)))
-	{
-		using unref = std::remove_const_t<std::remove_reference_t<T>>;
-		fmt::raw_verify_error(cause, fmt::get_type_info<fmt_unveil_t<unref>>(), fmt_unveil<unref>::get(value));
+		return std::forward<T>(arg);
 	}
 
-	return std::forward<T>(value);
-}
-
-// Verification helper (must be used in return expression or in place of std::move)
-template <typename F = verify_func, typename T>
-inline std::remove_reference_t<T>&& verify_move(const char* cause, T&& value, F&& pred = F())
-{
-	if (!pred(std::forward<T>(value)))
-	{
-		using unref = std::remove_const_t<std::remove_reference_t<T>>;
-		fmt::raw_verify_error(cause, fmt::get_type_info<fmt_unveil_t<unref>>(), fmt_unveil<unref>::get(value));
-	}
-
-	return std::move(value);
+	fmt::raw_verify_error({line, col, file, func});
 }
 
 // narrow() function details
@@ -861,13 +830,17 @@ struct narrow_impl<From, To, std::void_t<typename From::simple_type>>
 };
 
 template <typename To = void, typename From, typename = decltype(static_cast<To>(std::declval<From>()))>
-inline To narrow(const From& value, const char* msg = nullptr)
+[[nodiscard]] constexpr To narrow(const From& value,
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION())
 {
 	// Narrow check
-	if (narrow_impl<From, To>::test(value))
+	if (narrow_impl<From, To>::test(value)) [[unlikely]]
 	{
 		// Pack value as formatting argument
-		fmt::raw_narrow_error(msg, fmt::get_type_info<fmt_unveil_t<From>>(), fmt_unveil<From>::get(value));
+		fmt::raw_narrow_error({line, col, file, func}, fmt::get_type_info<fmt_unveil_t<From>>(), fmt_unveil<From>::get(value));
 	}
 
 	return static_cast<To>(value);
@@ -875,15 +848,20 @@ inline To narrow(const From& value, const char* msg = nullptr)
 
 // Returns u32 size() for container
 template <typename CT, typename = decltype(static_cast<u32>(std::declval<CT>().size()))>
-inline u32 size32(const CT& container, const char* msg = nullptr)
+[[nodiscard]] constexpr u32 size32(const CT& container,
+	u32 line = __builtin_LINE(),
+	u32 col = __builtin_COLUMN(),
+	const char* file = __builtin_FILE(),
+	const char* func = __builtin_FUNCTION())
 {
-	return narrow<u32>(container.size(), msg);
+	return narrow<u32>(container.size(), line, col, file, func);
 }
 
 // Returns u32 size for an array
 template <typename T, std::size_t Size>
-constexpr u32 size32(const T (&)[Size], const char* msg = nullptr)
+[[nodiscard]] constexpr u32 size32(const T (&)[Size])
 {
+	static_assert(Size < UINT32_MAX, "Array is too big for 32-bit");
 	return static_cast<u32>(Size);
 }
 
@@ -893,7 +871,7 @@ struct pointer_hash
 {
 	std::size_t operator()(T* ptr) const
 	{
-		return reinterpret_cast<std::uintptr_t>(ptr) / Align;
+		return reinterpret_cast<uptr>(ptr) / Align;
 	}
 };
 
@@ -906,188 +884,9 @@ struct value_hash
 	}
 };
 
-// Contains value of any POD type with fixed size and alignment. TT<> is the type converter applied.
-// For example, `simple_t` may be used to remove endianness.
-template <template <typename> class TT, std::size_t S, std::size_t A = S>
-struct alignas(A) any_pod
-{
-	alignas(A) std::byte data[S];
-
-	any_pod() = default;
-
-	template <typename T, typename T2 = TT<T>, typename = std::enable_if_t<std::is_trivially_copyable_v<T> && sizeof(T2) == S && alignof(T2) <= A>>
-	any_pod(const T& value)
-	{
-		*this = std::bit_cast<any_pod>(value);
-	}
-
-	template <typename T, typename T2 = TT<T>, typename = std::enable_if_t<std::is_trivially_copyable_v<T> && sizeof(T2) == S && alignof(T2) <= A>>
-	T2& as()
-	{
-		return reinterpret_cast<T2&>(data);
-	}
-
-	template <typename T, typename T2 = TT<T>, typename = std::enable_if_t<std::is_trivially_copyable_v<T> && sizeof(T2) == S && alignof(T2) <= A>>
-	const T2& as() const
-	{
-		return reinterpret_cast<const T2&>(data);
-	}
-};
-
-using any16 = any_pod<simple_t, sizeof(u16)>;
-using any32 = any_pod<simple_t, sizeof(u32)>;
-using any64 = any_pod<simple_t, sizeof(u64)>;
-
-struct cmd64 : any64
-{
-	struct pair_t
-	{
-		any32 arg1;
-		any32 arg2;
-	};
-
-	cmd64() = default;
-
-	template <typename T>
-	cmd64(const T& value)
-		: any64(value)
-	{
-	}
-
-	template <typename T1, typename T2>
-	cmd64(const T1& arg1, const T2& arg2)
-		: any64(pair_t{arg1, arg2})
-	{
-	}
-
-	explicit operator bool() const
-	{
-		return as<u64>() != 0;
-	}
-
-	// TODO: compatibility with std::pair/std::tuple?
-
-	template <typename T>
-	decltype(auto) arg1()
-	{
-		return as<pair_t>().arg1.as<T>();
-	}
-
-	template <typename T>
-	decltype(auto) arg1() const
-	{
-		return as<const pair_t>().arg1.as<const T>();
-	}
-
-	template <typename T>
-	decltype(auto) arg2()
-	{
-		return as<pair_t>().arg2.as<T>();
-	}
-
-	template <typename T>
-	decltype(auto) arg2() const
-	{
-		return as<const pair_t>().arg2.as<const T>();
-	}
-};
-
-static_assert(sizeof(cmd64) == 8 && std::is_trivially_copyable_v<cmd64>, "Incorrect cmd64 type");
-
-// Error code type (return type), implements error reporting. Could be a template.
-class error_code
-{
-	// Use fixed s32 type for now
-	s32 value;
-
-public:
-	error_code() = default;
-
-	// Implementation must be provided specially
-	static s32 error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2);
-
-	// Helper type
-	enum class not_an_error : s32
-	{
-		__not_an_error // SFINAE marker
-	};
-
-	// __not_an_error tester
-	template<typename ET, typename = void>
-	struct is_error : std::integral_constant<bool, std::is_enum<ET>::value || std::is_integral<ET>::value>
-	{
-	};
-
-	template<typename ET>
-	struct is_error<ET, std::enable_if_t<sizeof(ET::__not_an_error) != 0>> : std::false_type
-	{
-	};
-
-	// Common constructor
-	template<typename ET>
-	error_code(const ET& value)
-		: value(static_cast<s32>(value))
-	{
-		if constexpr(is_error<ET>::value)
-		{
-			this->value = error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), nullptr, 0);
-		}
-	}
-
-	// Error constructor (2 args)
-	template<typename ET, typename T2>
-	error_code(const ET& value, const T2& value2)
-		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), fmt::get_type_info<fmt_unveil_t<T2>>(), fmt_unveil<T2>::get(value2)))
-	{
-	}
-
-	operator s32() const
-	{
-		return value;
-	}
-};
-
-// Helper function for error_code
-template <typename T>
-constexpr FORCE_INLINE error_code::not_an_error not_an_error(const T& value)
-{
-	return static_cast<error_code::not_an_error>(static_cast<s32>(value));
-}
-
 // Synchronization helper (cache-friendly busy waiting)
 inline void busy_wait(std::size_t cycles = 3000)
 {
 	const u64 s = __rdtsc();
 	do _mm_pause(); while (__rdtsc() - s < cycles);
-}
-
-// TODO: Remove when moving to c++20
-template <typename T>
-inline constexpr uintmax_t floor2(T value)
-{
-	value >>= 1;
-
-	for (uintmax_t i = 0;; i++, value >>= 1)
-	{
-		if (value == 0)
-		{
-			return i;
-		}
-	}
-}
-
-template <typename T>
-inline constexpr uintmax_t ceil2(T value)
-{
-	const uintmax_t ispow2 = value & (value - 1); // if power of 2 the result is 0
-
-	value >>= 1;
-
-	for (uintmax_t i = 0;; i++, value >>= 1)
-	{
-		if (value == 0)
-		{
-			return i + std::min<uintmax_t>(ispow2, 1);
-		}
-	}
 }

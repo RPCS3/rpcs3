@@ -1,5 +1,6 @@
-﻿#pragma once
-#include "Utilities/types.h"
+#pragma once
+
+#include "util/types.hpp"
 
 namespace rsx
 {
@@ -76,8 +77,8 @@ namespace rsx
 			return (rhs == surface_depth_format2::z16_uint || rhs == surface_depth_format2::z16_float);
 		case surface_depth_format::z24s8:
 			return (rhs == surface_depth_format2::z24s8_uint || rhs == surface_depth_format2::z24s8_float);
-		default:
-			ASSUME(0);
+		[[unlikely]] default:
+			return false;
 		}
 	}
 

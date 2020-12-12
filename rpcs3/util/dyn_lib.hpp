@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <string>
 
@@ -53,7 +53,7 @@ namespace utils
 	template <typename R, typename... Args>
 	struct dynamic_import<R(Args...)>
 	{
-		atomic_t<std::uintptr_t> ptr;
+		atomic_t<uptr> ptr;
 		const char* const lib;
 		const char* const name;
 
@@ -67,7 +67,7 @@ namespace utils
 
 		void init() noexcept
 		{
-			ptr.release(reinterpret_cast<std::uintptr_t>(get_proc_address(lib, name)));
+			ptr.release(reinterpret_cast<uptr>(get_proc_address(lib, name)));
 		}
 
 		operator bool() noexcept

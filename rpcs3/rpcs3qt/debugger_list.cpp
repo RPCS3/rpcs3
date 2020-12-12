@@ -1,4 +1,4 @@
-﻿#include "debugger_list.h"
+#include "debugger_list.h"
 #include "gui_settings.h"
 #include "breakpoint_handler.h"
 
@@ -32,28 +32,6 @@ void debugger_list::UpdateCPUData(std::weak_ptr<cpu_thread> cpu, std::shared_ptr
 {
 	this->cpu = cpu;
 	m_disasm = disasm;
-}
-
-u32 debugger_list::GetPc() const
-{
-	const auto cpu = this->cpu.lock();
-
-	if (!cpu)
-	{
-		return 0;
-	}
-
-	if (cpu->id_type() == 1)
-	{
-		return static_cast<ppu_thread*>(cpu.get())->cia;
-	}
-
-	if (cpu->id_type() == 2)
-	{
-		return static_cast<spu_thread*>(cpu.get())->pc;
-	}
-
-	return 0;
 }
 
 u32 debugger_list::GetCenteredAddress(u32 address) const
@@ -110,7 +88,7 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 
 		for (uint i = 0, count = 4; i<m_item_count; ++i, pc = (pc + count) & address_limits)
 		{
-			if (cpu->is_paused() && pc == GetPc())
+			if (cpu->is_paused() && pc == cpu->get_pc())
 			{
 				item(i)->setForeground(m_text_color_pc);
 				item(i)->setBackground(m_color_pc);
@@ -156,7 +134,7 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 
 void debugger_list::keyPressEvent(QKeyEvent* event)
 {
-	if (!isActiveWindow() || currentRow() < 0 || !this->cpu.lock())
+	if (!isActiveWindow())
 	{
 		return;
 	}

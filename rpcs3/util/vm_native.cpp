@@ -15,6 +15,7 @@
 
 #ifdef __linux__
 #include <sys/syscall.h>
+#include <linux/memfd.h>
 
 #ifdef __NR_memfd_create
 #elif __x86_64__
@@ -74,6 +75,8 @@ namespace utils
 			return nullptr;
 		}
 
+		const auto orig_size = size;
+
 		if (!use_addr)
 		{
 			// Hack: Ensure aligned 64k allocations
@@ -107,6 +110,11 @@ namespace utils
 			ptr = static_cast<u8*>(ptr) + (0x10000 - misalign);
 		}
 
+#ifdef MADV_HUGEPAGE
+		if (orig_size % 0x200000 == 0)
+			::madvise(ptr, orig_size, MADV_HUGEPAGE);
+#endif
+
 		return ptr;
 #endif
 	}
@@ -114,25 +122,25 @@ namespace utils
 	void memory_commit(void* pointer, std::size_t size, protection prot)
 	{
 #ifdef _WIN32
-		verify(HERE), ::VirtualAlloc(pointer, size, MEM_COMMIT, +prot);
+		ensure(::VirtualAlloc(pointer, size, MEM_COMMIT, +prot));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		verify(HERE), ::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1;
-		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1;
+		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1);
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
 #endif
 	}
 
 	void memory_decommit(void* pointer, std::size_t size)
 	{
 #ifdef _WIN32
-		verify(HERE), ::VirtualFree(pointer, size, MEM_DECOMMIT);
+		ensure(::VirtualFree(pointer, size, MEM_DECOMMIT));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		verify(HERE), ::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1);
+		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1));
 #ifdef MADV_FREE
-		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_FREE) != -1;
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_FREE) != -1);
 #else
-		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_DONTNEED) != -1;
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_DONTNEED) != -1);
 #endif
 #endif
 	}
@@ -145,21 +153,26 @@ namespace utils
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
 #ifdef MADV_FREE
-		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_FREE) != -1;
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_FREE) != -1);
 #else
-		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_DONTNEED) != -1;
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_DONTNEED) != -1);
 #endif
-		verify(HERE), ::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1);
-		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1;
+		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1));
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
+
+#ifdef MADV_HUGEPAGE
+		if (size % 0x200000 == 0)
+			::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_HUGEPAGE);
+#endif
 #endif
 	}
 
 	void memory_release(void* pointer, std::size_t size)
 	{
 #ifdef _WIN32
-		verify(HERE), ::VirtualFree(pointer, 0, MEM_RELEASE);
+		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
 #else
-		verify(HERE), ::munmap(pointer, size) != -1;
+		ensure(::munmap(pointer, size) != -1);
 #endif
 	}
 
@@ -182,7 +195,7 @@ namespace utils
 		}
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		verify(HERE), ::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1;
+		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1);
 #endif
 	}
 
@@ -202,11 +215,23 @@ namespace utils
 	{
 #ifdef _WIN32
 		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, m_size, NULL);
-		verify(HERE), m_handle != INVALID_HANDLE_VALUE;
+		ensure(m_handle != INVALID_HANDLE_VALUE);
 #elif __linux__
-		m_file = ::memfd_create_("", 0);
-		verify(HERE), m_file >= 0;
-		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
+		m_file = -1;
+#ifdef MFD_HUGETLB
+		// Try to use 2MB pages for 2M-aligned shm
+		if (m_size % 0x200000 == 0 && flags & 2)
+		{
+			m_file = ::memfd_create_("2M", MFD_HUGETLB | MFD_HUGE_2MB);
+		}
+#endif
+		if (m_file == -1)
+		{
+			m_file = ::memfd_create_("", 0);
+		}
+
+		ensure(m_file >= 0);
+		ensure(::ftruncate(m_file, m_size) >= 0);
 #else
 		const std::string name = "/rpcs3-mem-" + std::to_string(reinterpret_cast<u64>(this));
 
@@ -217,11 +242,11 @@ namespace utils
 				fmt::throw_exception("Too many open files. Raise the limit and try again.");
 			}
 
-			verify(HERE), errno == EEXIST;
+			ensure(errno == EEXIST);
 		}
 
-		verify(HERE), ::shm_unlink(name.c_str()) >= 0;
-		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
+		ensure(::shm_unlink(name.c_str()) >= 0);
+		ensure(::ftruncate(m_file, m_size) >= 0);
 #endif
 	}
 
@@ -273,7 +298,9 @@ namespace utils
 
 		if (ptr64)
 		{
-			return reinterpret_cast<u8*>(reinterpret_cast<u64>(::mmap(reinterpret_cast<void*>(ptr64), m_size, +prot, MAP_SHARED | MAP_FIXED, m_file, 0)));
+			const auto result = ::mmap(reinterpret_cast<void*>(ptr64), m_size, +prot, MAP_SHARED | MAP_FIXED, m_file, 0);
+
+			return reinterpret_cast<u8*>(result);
 		}
 		else
 		{
@@ -285,12 +312,12 @@ namespace utils
 			// Now cleanup remnants
 			if (aligned > res64)
 			{
-				verify(HERE), ::munmap(reinterpret_cast<void*>(res64), aligned - res64) == 0;
+				ensure(::munmap(reinterpret_cast<void*>(res64), aligned - res64) == 0);
 			}
 
 			if (aligned < res64 + 0xf000)
 			{
-				verify(HERE), ::munmap(reinterpret_cast<void*>(aligned + m_size), (res64 + 0xf000) - (aligned)) == 0;
+				ensure(::munmap(reinterpret_cast<void*>(aligned + m_size), (res64 + 0xf000) - (aligned)) == 0);
 			}
 
 			return reinterpret_cast<u8*>(result);

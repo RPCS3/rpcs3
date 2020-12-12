@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/SPUInterpreter.h"
@@ -568,7 +568,7 @@ public:
 			return this->_u32[3] >> 10 & 0x3;
 
 		default:
-			fmt::throw_exception("Unexpected slice value (%d)" HERE, slice);
+			fmt::throw_exception("Unexpected slice value (%d)", slice);
 		}
 	}
 
@@ -747,7 +747,7 @@ public:
 	const u32 lv2_id; // The actual id that is used by syscalls
 
 	// Thread name
-	stx::atomic_cptr<std::string> spu_tname;
+	atomic_ptr<std::string> spu_tname;
 
 	std::unique_ptr<class spu_recompiler_base> jit; // Recompiler instance
 

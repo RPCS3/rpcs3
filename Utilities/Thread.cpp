@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
@@ -88,7 +88,11 @@ thread_local u64 g_tls_fault_rsx = 0;
 thread_local u64 g_tls_fault_spu = 0;
 thread_local u64 g_tls_wait_time = 0;
 thread_local u64 g_tls_wait_fail = 0;
+thread_local bool g_tls_access_violation_recovered = false;
 extern thread_local std::string(*g_tls_log_prefix)();
+
+// Report error and call std::abort(), defined in main.cpp
+[[noreturn]] void report_fatal_error(const std::string&);
 
 template <>
 void fmt_class_string<std::thread::id>::format(std::string& out, u64 arg)
@@ -1367,13 +1371,11 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		return true;
 	}
 
-	thread_local bool access_violation_recovered = false;
-
 	// Hack: allocate memory in case the emulator is stopping
 	const auto hack_alloc = [&]()
 	{
 		// If failed the value remains true and std::terminate should be called
-		access_violation_recovered = true;
+		g_tls_access_violation_recovered = true;
 
 		const auto area = vm::reserve_map(vm::any, addr & -0x10000, 0x10000);
 
@@ -1525,7 +1527,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 		if (cpu->id_type() != 1)
 		{
-			if (!access_violation_recovered)
+			if (!g_tls_access_violation_recovered)
 			{
 				vm_log.notice("\n%s", cpu->dump_all());
 				vm_log.error("Access violation %s location 0x%x (%s) [type=u%u]", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory", d_size * 8);
@@ -1556,14 +1558,14 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 	Emu.Pause();
 
-	if (cpu && !access_violation_recovered)
+	if (cpu && !g_tls_access_violation_recovered)
 	{
 		vm_log.notice("\n%s", cpu->dump_all());
 	}
 
 	// Note: a thread may access violate more than once after hack_alloc recovery
 	// Do not log any further access violations in this case.
-	if (!access_violation_recovered)
+	if (!g_tls_access_violation_recovered)
 	{
 		vm_log.fatal("Access violation %s location 0x%x (%s) [type=u%u]", is_writing ? "writing" : "reading", addr, (is_writing && vm::check_addr(addr)) ? "read-only memory" : "unmapped memory", d_size * 8);
 	}
@@ -1787,7 +1789,9 @@ static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 
 	if (IsDebuggerPresent())
 	{
-		__asm("int3;");
+		// Convert to SIGTRAP
+		raise(SIGTRAP);
+		return;
 	}
 
 	report_fatal_error(msg);
@@ -1850,7 +1854,7 @@ static atomic_t<u128, 64> s_thread_bits{0};
 
 static atomic_t<thread_base**> s_thread_pool[128]{};
 
-void thread_base::start(native_entry entry, void(*trampoline)())
+void thread_base::start()
 {
 	for (u128 bits = s_thread_bits.load(); bits; bits &= bits - 1)
 	{
@@ -1868,30 +1872,30 @@ void thread_base::start(native_entry entry, void(*trampoline)())
 			continue;
 		}
 
-		// Send "this" and entry point
-		m_thread = reinterpret_cast<u64>(trampoline);
-		atomic_storage<thread_base*>::release(*tls, this);
-		s_thread_pool[pos].notify_all();
-
-		// Wait for actual "m_thread" in return
-		while (m_thread == reinterpret_cast<u64>(trampoline))
-		{
-			busy_wait(300);
-		}
-
+		// Receive "that" native thread handle, sent "this" thread_base
+		const u64 _self = reinterpret_cast<u64>(atomic_storage<thread_base*>::load(*tls));
+		m_thread.release(_self);
+		ensure(_self != reinterpret_cast<u64>(this));
+		atomic_storage<thread_base*>::store(*tls, this);
+		s_thread_pool[pos].notify_one();
 		return;
 	}
 
 #ifdef _WIN32
-	m_thread = ::_beginthreadex(nullptr, 0, entry, this, CREATE_SUSPENDED, nullptr);
-	verify("thread_ctrl::start" HERE), m_thread, ::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1;
+	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
+	ensure(m_thread);
+	ensure(::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1);
 #else
-	verify("thread_ctrl::start" HERE), pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), nullptr, entry, this) == 0;
+	ensure(pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), nullptr, entry_point, this) == 0);
 #endif
 }
 
 void thread_base::initialize(void (*error_cb)())
 {
+#ifndef _WIN32
+	m_thread.release(reinterpret_cast<u64>(pthread_self()));
+#endif
+
 	// Initialize TLS variables
 	thread_ctrl::g_tls_this_thread = this;
 
@@ -2012,10 +2016,10 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 
 	atomic_wait_engine::set_wait_callback(nullptr);
 
+	// Avoid race with the destructor
 	const u64 _self = m_thread;
-	m_thread.release(0);
 
-	// Return true if need to delete thread object (no)
+	// Set result state (errored or finalized)
 	const bool ok = 0 == (3 & ~m_sync.fetch_op([&](u64& v)
 	{
 		v &= -4;
@@ -2025,55 +2029,108 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 	// Signal waiting threads
 	m_sync.notify_all(2);
 
-	// No detached thread supported atm
 	return _self;
 }
 
-void thread_base::finalize(u64 _self) noexcept
+thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 {
-	atomic_wait_engine::set_wait_callback(nullptr);
+	g_tls_fault_all = 0;
+	g_tls_fault_rsx = 0;
+	g_tls_fault_spu = 0;
+	g_tls_wait_time = 0;
+	g_tls_wait_fail = 0;
+	g_tls_access_violation_recovered = false;
+
+	const auto fake_self = reinterpret_cast<thread_base*>(_self);
+
 	g_tls_log_prefix = []() -> std::string { return {}; };
-	thread_ctrl::g_tls_this_thread = nullptr;
+	thread_ctrl::g_tls_this_thread = fake_self;
 
 	if (!_self)
 	{
-		return;
+		return nullptr;
 	}
 
 	// Try to add self to thread pool
-	const auto [bits, ok] = s_thread_bits.fetch_op([](u128& bits)
-	{
-		if (~bits) [[likely]]
-		{
-			// Set lowest clear bit
-			bits |= bits + 1;
-			return true;
-		}
-
-		return false;
-	});
-
-	if (!ok)
-	{
-#ifdef _WIN32
-		_endthread();
-#else
-		pthread_detach(reinterpret_cast<pthread_t>(_self));
-		pthread_exit(0);
-#endif
-		return;
-	}
-
 	set_name("..pool");
 
-	// Obtain id from atomic op
-	const u32 pos = utils::ctz128(~bits);
+	static constexpr u64 s_stop_bit = 0x8000'0000'0000'0000ull;
+
+	static atomic_t<u64> s_pool_ctr = []
+	{
+		std::atexit([]
+		{
+			s_pool_ctr |= s_stop_bit;
+
+			while (u64 remains = s_pool_ctr & ~s_stop_bit)
+			{
+				for (u32 i = 0; i < std::size(s_thread_pool); i++)
+				{
+					if (thread_base** ptls = s_thread_pool[i].exchange(nullptr))
+					{
+						// Extract thread handle
+						const u64 _self = reinterpret_cast<u64>(*ptls);
+
+						// Wake up a thread and make sure it's joined
+						s_thread_pool[i].notify_one();
+
+#ifdef _WIN32
+						const HANDLE handle = reinterpret_cast<HANDLE>(_self);
+						WaitForSingleObject(handle, INFINITE);
+						CloseHandle(handle);
+#else
+						pthread_join(reinterpret_cast<pthread_t>(_self), nullptr);
+#endif
+					}
+				}
+			}
+		});
+
+		return 0;
+	}();
+
+	s_pool_ctr++;
+
+	u32 pos = -1;
+
+	while (true)
+	{
+		const auto [bits, ok] = s_thread_bits.fetch_op([](u128& bits)
+		{
+			if (~bits) [[likely]]
+			{
+				// Set lowest clear bit
+				bits |= bits + 1;
+				return true;
+			}
+
+			return false;
+		});
+
+		if (ok) [[likely]]
+		{
+			pos = utils::ctz128(~bits);
+			break;
+		}
+
+		s_thread_bits.wait(bits);
+	}
+
 	const auto tls = &thread_ctrl::g_tls_this_thread;
 	s_thread_pool[pos] = tls;
 
-	while (s_thread_pool[pos] == tls || !atomic_storage<thread_base*>::load(*tls))
+	atomic_wait::list<2> list{};
+	list.set<0>(s_pool_ctr, 0, s_stop_bit);
+	list.set<1>(s_thread_pool[pos], tls);
+
+	while (s_thread_pool[pos] == tls || atomic_storage<thread_base*>::load(*tls) == fake_self)
 	{
-		s_thread_pool[pos].wait(tls);
+		list.wait();
+
+		if (s_pool_ctr & s_stop_bit)
+		{
+			break;
+		}
 	}
 
 	// Free thread pool slot
@@ -2082,30 +2139,47 @@ void thread_base::finalize(u64 _self) noexcept
 		val &= ~(u128(1) << pos);
 	});
 
-	// Restore thread id
-	const auto _this = atomic_storage<thread_base*>::load(*tls);
-	const auto entry = _this->m_thread.exchange(_self);
-	_this->m_thread.notify_one();
+	s_thread_bits.notify_one();
 
-	// Hack return address to avoid tail call
-#ifdef _MSC_VER
-	*static_cast<u64*>(_AddressOfReturnAddress()) = entry;
-#else
-	static_cast<u64*>(__builtin_frame_address(0))[1] = entry;
-#endif
-	//reinterpret_cast<native_entry>(entry)(_this);
+	if (--s_pool_ctr & s_stop_bit)
+	{
+		return nullptr;
+	}
+
+	// Return new entry point
+	utils::prefetch_exec((*tls)->entry_point);
+	return (*tls)->entry_point;
 }
 
-void (*thread_base::make_trampoline(native_entry entry))()
+thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* _base))
 {
-	return build_function_asm<void(*)()>([&](asmjit::X86Assembler& c, auto& args)
+	return build_function_asm<native_entry>([&](asmjit::X86Assembler& c, auto& args)
 	{
 		using namespace asmjit;
 
-		// Revert effect of ret instruction (fix stack alignment)
-		c.mov(x86::rax, imm_ptr(entry));
-		c.sub(x86::rsp, 8);
-		c.jmp(x86::rax);
+		Label _ret = c.newLabel();
+		c.push(x86::rbp);
+		c.sub(x86::rsp, 0x20);
+
+		// Call entry point (TODO: support for detached threads missing?)
+		c.call(imm_ptr(entry));
+
+		// Call finalize, return if zero
+		c.mov(args[0], x86::rax);
+		c.call(imm_ptr<native_entry(*)(u64)>(finalize));
+		c.test(x86::rax, x86::rax);
+		c.jz(_ret);
+
+		// Otherwise, call it as an entry point with first arg = new current thread
+		c.mov(x86::rbp, x86::rax);
+		c.call(imm_ptr(thread_ctrl::get_current));
+		c.mov(args[0], x86::rax);
+		c.add(x86::rsp, 0x28);
+		c.jmp(x86::rbp);
+
+		c.bind(_ret);
+		c.add(x86::rsp, 0x28);
+		c.ret();
 	});
 }
 
@@ -2158,7 +2232,7 @@ void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 	}
 #endif
 
-	if (_this->m_sync.btr(2))
+	if (_this->m_sync.bit_test_reset(2))
 	{
 		return;
 	}
@@ -2176,29 +2250,39 @@ std::string thread_ctrl::get_name_cached()
 		return {};
 	}
 
-	static thread_local stx::shared_cptr<std::string> name_cache;
+	static thread_local shared_ptr<std::string> name_cache;
 
 	if (!_this->m_tname.is_equal(name_cache)) [[unlikely]]
 	{
-		name_cache = _this->m_tname.load();
+		_this->m_tname.peek_op([&](const shared_ptr<std::string>& ptr)
+		{
+			if (ptr != name_cache)
+			{
+				name_cache = ptr;
+			}
+		});
 	}
 
 	return *name_cache;
 }
 
-thread_base::thread_base(std::string_view name)
-	: m_tname(stx::shared_cptr<std::string>::make(name))
+thread_base::thread_base(native_entry entry, std::string_view name)
+	: entry_point(entry)
+	, m_tname(make_single<std::string>(name))
 {
 }
 
 thread_base::~thread_base()
 {
-	if (u64 handle = m_thread.exchange(0))
+	// Only cleanup on errored status
+	if ((m_sync & 3) == 2)
 	{
 #ifdef _WIN32
-		CloseHandle(reinterpret_cast<HANDLE>(handle));
+		const HANDLE handle0 = reinterpret_cast<HANDLE>(m_thread.load());
+		WaitForSingleObject(handle0, INFINITE);
+		CloseHandle(handle0);
 #else
-		pthread_detach(reinterpret_cast<pthread_t>(handle));
+		pthread_join(reinterpret_cast<pthread_t>(m_thread.load()), nullptr);
 #endif
 	}
 }
@@ -2255,13 +2339,15 @@ u64 thread_base::get_native_id() const
 
 u64 thread_base::get_cycles()
 {
-	u64 cycles;
+	u64 cycles = 0;
+
+	const u64 handle = m_thread;
 
 #ifdef _WIN32
-	if (QueryThreadCycleTime(reinterpret_cast<HANDLE>(m_thread.load()), &cycles))
+	if (QueryThreadCycleTime(reinterpret_cast<HANDLE>(handle), &cycles))
 	{
 #elif __APPLE__
-	mach_port_name_t port = pthread_mach_thread_np(reinterpret_cast<pthread_t>(m_thread.load()));
+	mach_port_name_t port = pthread_mach_thread_np(reinterpret_cast<pthread_t>(handle));
 	mach_msg_type_number_t count = THREAD_BASIC_INFO_COUNT;
 	thread_basic_info_data_t info;
 	kern_return_t ret = thread_info(port, THREAD_BASIC_INFO, reinterpret_cast<thread_info_t>(&info), &count);
@@ -2272,7 +2358,7 @@ u64 thread_base::get_cycles()
 #else
 	clockid_t _clock;
 	struct timespec thread_time;
-	if (!pthread_getcpuclockid(reinterpret_cast<pthread_t>(m_thread.load()), &_clock) && !clock_gettime(_clock, &thread_time))
+	if (!pthread_getcpuclockid(reinterpret_cast<pthread_t>(handle), &_clock) && !clock_gettime(_clock, &thread_time))
 	{
 		cycles = static_cast<u64>(thread_time.tv_sec) * 1'000'000'000 + thread_time.tv_nsec;
 #endif
@@ -2317,19 +2403,15 @@ void thread_ctrl::emergency_exit(std::string_view reason)
 
 		if (!_self)
 		{
+			// Unused, detached thread support remnant
 			delete _this;
 		}
 
 		thread_base::finalize(0);
 
 #ifdef _WIN32
-		_endthread();
+		_endthreadex(0);
 #else
-		if (_self)
-		{
-			pthread_detach(reinterpret_cast<pthread_t>(_self));
-		}
-
 		pthread_exit(0);
 #endif
 	}
@@ -2377,8 +2459,8 @@ void thread_ctrl::detect_cpu_layout()
 		else
 		{
 			// Iterate through the buffer until a core with hyperthreading is found
-			auto ptr = reinterpret_cast<std::uintptr_t>(buffer.data());
-			const std::uintptr_t end = ptr + buffer_size;
+			auto ptr = reinterpret_cast<uptr>(buffer.data());
+			const uptr end = ptr + buffer_size;
 
 			while (ptr < end)
 			{

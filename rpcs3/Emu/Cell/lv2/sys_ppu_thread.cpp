@@ -159,7 +159,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	const u64 vret = thread->gpr[3];
 
 	// Cleanup
-	verify(HERE), idm::remove_verify<named_thread<ppu_thread>>(thread_id, std::move(thread.ptr));
+	ensure(idm::remove_verify<named_thread<ppu_thread>>(thread_id, std::move(thread.ptr)));
 
 	if (!vptr)
 	{
@@ -221,7 +221,7 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 
 	if (thread.ret == CELL_EAGAIN)
 	{
-		verify(HERE), idm::remove<named_thread<ppu_thread>>(thread_id);
+		ensure(idm::remove<named_thread<ppu_thread>>(thread_id));
 	}
 
 	return CELL_OK;
@@ -548,7 +548,7 @@ error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> 
 	const auto pname = name.get_ptr();
 
 	// Make valid name
-	auto _name = stx::shared_cptr<std::string>::make(pname, std::find(pname, pname + max_size, '\0'));
+	auto _name = make_single<std::string>(pname, std::find(pname, pname + max_size, '\0'));
 
 	// thread_ctrl name is not changed (TODO)
 	sys_ppu_thread.warning(u8"sys_ppu_thread_rename(): Thread renamed to “%s”", *_name);

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "../Common/FragmentProgramDecompiler.h"
 #include "../Common/GLSLTypes.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
@@ -67,9 +67,6 @@ public:
 	 * @param td texture dimensions of input textures
 	 */
 	void Decompile(const RSXFragmentProgram& prog);
-
-	/** Compile the decompiled fragment shader into a format we can use with OpenGL. */
-	void Compile();
 
 private:
 	/** Deletes the shader and any stored information */

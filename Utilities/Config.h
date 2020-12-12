@@ -1,10 +1,10 @@
 ﻿#pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "Utilities/StrFmt.h"
 #include "util/logs.hpp"
 #include "util/atomic.hpp"
-#include "util/shared_cptr.hpp"
+#include "util/shared_ptr.hpp"
 
 #include <utility>
 #include <string>
@@ -393,7 +393,7 @@ namespace cfg
 	{
 		const std::string m_name;
 
-		stx::atomic_cptr<std::string> m_value;
+		atomic_ptr<std::string> m_value;
 
 	public:
 		std::string def;
@@ -401,7 +401,7 @@ namespace cfg
 		string(node* owner, std::string name, std::string def = {}, bool dynamic = false)
 			: _base(type::string, owner, name, dynamic)
 			, m_name(std::move(name))
-			, m_value(m_value.make(def))
+			, m_value(def)
 			, def(std::move(def))
 		{
 		}
@@ -411,7 +411,7 @@ namespace cfg
 			return *m_value.load().get();
 		}
 
-		std::pair<const std::string&, stx::shared_cptr<std::string>> get() const
+		std::pair<const std::string&, shared_ptr<std::string>> get() const
 		{
 			auto v = m_value.load();
 
@@ -440,7 +440,7 @@ namespace cfg
 
 		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
 		{
-			m_value = m_value.make(value);
+			m_value = value;
 			return true;
 		}
 	};

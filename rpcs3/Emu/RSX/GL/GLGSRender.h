@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Emu/RSX/GSRender.h"
 #include "GLHelpers.h"
 #include "GLTexture.h"
@@ -121,7 +121,6 @@ private:
 	std::list<gl::work_item> work_queue;
 
 	GLProgramBuffer m_prog_buffer;
-	draw_context_t m_decompiler_context;
 
 	//buffer
 	gl::fbo* m_draw_fbo = nullptr;
@@ -134,7 +133,7 @@ private:
 
 	shared_mutex m_sampler_mutex;
 	u64 surface_store_tag = 0;
-	std::atomic_bool m_samplers_dirty = {true};
+	atomic_t<bool> m_samplers_dirty = {true};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
 	std::unordered_map<GLenum, std::unique_ptr<gl::texture>> m_null_textures;
@@ -198,8 +197,4 @@ protected:
 
 	std::array<std::vector<std::byte>, 4> copy_render_targets_to_memory() override;
 	std::array<std::vector<std::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
-
-	void on_decompiler_init() override;
-	void on_decompiler_exit() override;
-	bool on_decompiler_task() override;
 };

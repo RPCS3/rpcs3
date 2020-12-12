@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "TextureUtils.h"
 #include "../RSXThread.h"
@@ -425,7 +425,7 @@ std::tuple<u16, u16, u8> get_height_depth_layer(const RsxTextureType &tex)
 	case rsx::texture_dimension_extended::texture_dimension_cubemap: return std::make_tuple(tex.height(), 1, 6);
 	case rsx::texture_dimension_extended::texture_dimension_3d: return std::make_tuple(tex.height(), tex.depth(), 1);
 	}
-	fmt::throw_exception("Unsupported texture dimension" HERE);
+	fmt::throw_exception("Unsupported texture dimension");
 }
 }
 
@@ -442,7 +442,7 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 	const auto format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 	const auto pitch = texture.pitch();
 
-	const u32 texaddr = rsx::get_address(texture.offset(), texture.location(), HERE);
+	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
 	auto pixels = vm::_ptr<const std::byte>(texaddr);
 
 	const bool is_swizzled = !(texture.format() & CELL_GCM_TEXTURE_LN);
@@ -501,7 +501,7 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 		return get_subresources_layout_impl<4, u128>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, false);
 	}
-	fmt::throw_exception("Wrong format 0x%x" HERE, format);
+	fmt::throw_exception("Wrong format 0x%x", format);
 }
 
 namespace rsx
@@ -667,7 +667,7 @@ namespace rsx
 		}
 
 		default:
-			fmt::throw_exception("Wrong format 0x%x" HERE, format);
+			fmt::throw_exception("Wrong format 0x%x", format);
 		}
 
 		if (word_size)
@@ -834,7 +834,7 @@ namespace rsx
 		case rsx::surface_color_format::w32z32y32x32:
 			return 16;
 		default:
-			fmt::throw_exception("Invalid color format 0x%x" HERE, static_cast<u32>(format));
+			fmt::throw_exception("Invalid color format 0x%x", static_cast<u32>(format));
 		}
 	}
 
@@ -862,8 +862,7 @@ namespace rsx
 		case rsx::surface_antialiasing::square_rotated_4_samples:
 			return 4;
 		default:
-			ASSUME(0);
-			return 0;
+			fmt::throw_exception("Unreachable");
 		}
 	}
 
@@ -930,7 +929,7 @@ namespace rsx
 		}
 
 		// Mipmap, height and width aren't allowed to be zero
-		return verify("Texture params" HERE, result) * (cubemap ? 6 : 1);
+		return (ensure(result) * (cubemap ? 6 : 1));
 	}
 
 	size_t get_placed_texture_storage_size(const rsx::fragment_texture& texture, size_t row_pitch_alignment, size_t mipmap_alignment)
@@ -1083,7 +1082,7 @@ namespace rsx
 		case rsx::surface_depth_format2::z24s8_float:
 			return{ CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT, true };
 		default:
-			ASSUME(0);
+			fmt::throw_exception("Unreachable");
 		}
 	}
 

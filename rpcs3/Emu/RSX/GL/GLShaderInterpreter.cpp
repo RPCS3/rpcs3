@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLShaderInterpreter.h"
 #include "GLGSRender.h"
 #include "GLVertexProgram.h"
@@ -375,7 +375,7 @@ namespace gl
 			if (reference_mask & (1 << i))
 			{
 				auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(descriptors[i].get());
-				verify(HERE), sampler_state;
+				ensure(sampler_state);
 
 				int pool_id = static_cast<int>(sampler_state->image_type);
 				auto& pool = allocator.pools[pool_id];

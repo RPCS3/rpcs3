@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKHelpers.h"
 #include "../GCM.h"
 #include "../rsx_utils.h"
@@ -60,8 +60,7 @@ namespace vk
 	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes)
 	{
 		// Always validate
-		verify("Invalid image layout!" HERE),
-			src->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || src->current_layout == VK_IMAGE_LAYOUT_GENERAL;
+		ensure(src->current_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL || src->current_layout == VK_IMAGE_LAYOUT_GENERAL);
 
 		if (vk::is_renderpass_open(cmd))
 		{
@@ -72,14 +71,14 @@ namespace vk
 		{
 		default:
 		{
-			verify("Implicit byteswap option not supported for speficied format" HERE), !swap_bytes;
+			ensure(!swap_bytes); // "Implicit byteswap option not supported for speficied format"
 			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, dst->value, 1, &region);
 			break;
 		}
 		case VK_FORMAT_D32_SFLOAT:
 		{
 			rsx_log.error("Unsupported transfer (D16_FLOAT)"); // Need real games to test this.
-			verify(HERE), region.imageSubresource.aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT;
+			ensure(region.imageSubresource.aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT);
 
 			const u32 out_w = region.bufferRowLength ? region.bufferRowLength : region.imageExtent.width;
 			const u32 out_h = region.bufferImageHeight ? region.bufferImageHeight : region.imageExtent.height;
@@ -87,7 +86,7 @@ namespace vk
 			const u32 packed16_length = out_w * out_h * 2;
 
 			const auto allocation_end = region.bufferOffset + packed32_length + packed16_length;
-			verify(HERE), dst->size() >= allocation_end;
+			ensure(dst->size() >= allocation_end);
 
 			const auto data_offset = u32(region.bufferOffset);
 			const auto z32_offset = align<u32>(data_offset + packed16_length, 256);
@@ -124,7 +123,7 @@ namespace vk
 		case VK_FORMAT_D24_UNORM_S8_UINT:
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		{
-			verify(HERE), region.imageSubresource.aspectMask == (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+			ensure(region.imageSubresource.aspectMask == (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT));
 
 			const u32 out_w = region.bufferRowLength? region.bufferRowLength : region.imageExtent.width;
 			const u32 out_h = region.bufferImageHeight? region.bufferImageHeight : region.imageExtent.height;
@@ -133,7 +132,7 @@ namespace vk
 			const u32 in_stencil_size = out_w * out_h;
 
 			const auto allocation_end = region.bufferOffset + packed_length + in_depth_size + in_stencil_size;
-			verify(HERE), dst->size() >= allocation_end;
+			ensure(dst->size() >= allocation_end);
 
 			const auto data_offset = u32(region.bufferOffset);
 			const auto z_offset = align<u32>(data_offset + packed_length, 256);
@@ -198,8 +197,7 @@ namespace vk
 	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region)
 	{
 		// Always validate
-		verify("Invalid image layout!" HERE),
-			dst->current_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL || dst->current_layout == VK_IMAGE_LAYOUT_GENERAL;
+		ensure(dst->current_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL || dst->current_layout == VK_IMAGE_LAYOUT_GENERAL);
 
 		if (vk::is_renderpass_open(cmd))
 		{
@@ -216,7 +214,7 @@ namespace vk
 		case VK_FORMAT_D32_SFLOAT:
 		{
 			rsx_log.error("Unsupported transfer (D16_FLOAT)");
-			verify(HERE), region.imageSubresource.aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT;
+			ensure(region.imageSubresource.aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT);
 
 			const u32 out_w = region.bufferRowLength ? region.bufferRowLength : region.imageExtent.width;
 			const u32 out_h = region.bufferImageHeight ? region.bufferImageHeight : region.imageExtent.height;
@@ -224,7 +222,7 @@ namespace vk
 			const u32 packed16_length = out_w * out_h * 2;
 
 			const auto allocation_end = region.bufferOffset + packed32_length + packed16_length;
-			verify(HERE), src->size() >= allocation_end;
+			ensure(src->size() >= allocation_end);
 
 			const auto data_offset = u32(region.bufferOffset);
 			const auto z32_offset = align<u32>(data_offset + packed16_length, 256);
@@ -259,7 +257,7 @@ namespace vk
 			const u32 in_stencil_size = out_w * out_h;
 
 			const auto allocation_end = region.bufferOffset + packed_length + in_depth_size + in_stencil_size;
-			verify("Out of memory (compute heap). Lower your resolution scale setting." HERE), src->size() >= allocation_end;
+			ensure(src->size() >= allocation_end); // "Out of memory (compute heap). Lower your resolution scale setting."
 
 			const auto data_offset = u32(region.bufferOffset);
 			const auto z_offset = align<u32>(data_offset + packed_length, 256);
@@ -404,7 +402,7 @@ namespace vk
 						}
 						else
 						{
-							fmt::throw_exception("Unreachable" HERE);
+							fmt::throw_exception("Unreachable");
 						}
 					}
 
@@ -538,7 +536,7 @@ namespace vk
 			}
 			else
 			{
-				verify(HERE), !dst_rect.is_flipped();
+				ensure(!dst_rect.is_flipped());
 
 				auto stretch_image_typeless_unsafe = [&cmd, filter](vk::image* src, vk::image* dst, vk::image* typeless,
 						const areai& src_rect, const areai& dst_rect, VkImageAspectFlags aspect, VkImageAspectFlags transfer_flags = 0xFF)
@@ -675,7 +673,7 @@ namespace vk
 					break;
 				}
 				default:
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 					break;
 				}
 			}
@@ -709,7 +707,7 @@ namespace vk
 		vk::cs_deswizzle_base* job = nullptr;
 		const auto block_size = (word_size * word_count);
 
-		verify(HERE), word_size == 4 || word_size == 2;
+		ensure(word_size == 4 || word_size == 2);
 
 		if (!swap_bytes)
 		{
@@ -772,7 +770,7 @@ namespace vk
 			}
 		}
 
-		verify(HERE), job;
+		ensure(job);
 
 		auto next_layer = sections.front().imageSubresource.baseArrayLayer;
 		auto next_level = sections.front().imageSubresource.mipLevel;
@@ -782,7 +780,7 @@ namespace vk
 		std::vector<std::pair<unsigned, unsigned>> packets;
 		for (unsigned i = 0; i < sections.size(); ++i)
 		{
-			verify(HERE), sections[i].bufferRowLength;
+			ensure(sections[i].bufferRowLength);
 
 			const auto layer = sections[i].imageSubresource.baseArrayLayer;
 			const auto level = sections[i].imageSubresource.mipLevel;
@@ -832,7 +830,7 @@ namespace vk
 				section.imageExtent.width, section.imageExtent.height, section.imageExtent.depth, packet.second);
 		}
 
-		verify(HERE), dst_offset <= scratch_buf->size();
+		ensure(dst_offset <= scratch_buf->size());
 	}
 
 	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
@@ -879,7 +877,7 @@ namespace vk
 			else
 			{
 				row_pitch = rsx::align2(layout.width_in_block * block_size_in_bytes, heap_align);
-				verify(HERE), row_pitch == heap_align;
+				ensure(row_pitch == heap_align);
 			}
 
 			image_linear_size = row_pitch * layout.height_in_block * layout.depth;
@@ -937,13 +935,13 @@ namespace vk
 				copy_info.bufferOffset = scratch_offset;
 
 				scratch_offset += image_linear_size;
-				verify("Out of scratch memory" HERE), (scratch_offset + image_linear_size) <= scratch_buf->size();
+				ensure((scratch_offset + image_linear_size) <= scratch_buf->size()); // "Out of scratch memory"
 			}
 		}
 
 		if (opt.require_swap || opt.require_deswizzle || requires_depth_processing)
 		{
-			verify(HERE), scratch_buf;
+			ensure(scratch_buf);
 			vkCmdCopyBuffer(cmd, upload_heap.heap->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
 
 			insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, scratch_offset, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -967,7 +965,7 @@ namespace vk
 			}
 			else
 			{
-				fmt::throw_exception("Unreachable" HERE);
+				fmt::throw_exception("Unreachable");
 			}
 		}
 
@@ -982,7 +980,7 @@ namespace vk
 		}
 		else if (scratch_buf)
 		{
-			verify(HERE), opt.require_deswizzle || opt.require_swap;
+			ensure(opt.require_deswizzle || opt.require_swap);
 
 			const auto block_start = copy_regions.front().bufferOffset;
 			insert_buffer_memory_barrier(cmd, scratch_buf->value, block_start, scratch_offset, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -1146,7 +1144,7 @@ namespace vk
 			src_area.flip_vertical();
 		}
 
-		verify("Incompatible source and destination format!" HERE), real_src->aspect() == real_dst->aspect();
+		ensure(real_src->aspect() == real_dst->aspect()); // "Incompatible source and destination format!"
 
 		copy_scaled_image(cmd, real_src, real_dst, src_area, dst_area, 1,
 			formats_are_bitcast_compatible(real_src, real_dst),

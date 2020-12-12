@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "main_window.h"
 #include "qt_utils.h"
@@ -52,7 +52,7 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-extern std::atomic<bool> g_user_asked_for_frame_capture;
+extern atomic_t<bool> g_user_asked_for_frame_capture;
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -204,7 +204,7 @@ void main_window::Init()
 	m_download_menu_action = ui->menuBar->addMenu(download_menu);
 #endif
 
-	ASSERT(m_download_menu_action);
+	ensure(m_download_menu_action);
 	m_download_menu_action->setVisible(false);
 
 	connect(&m_updater, &update_manager::signal_update_available, this, [this](bool update_available)
@@ -300,10 +300,6 @@ void main_window::OnPlayOrPause()
 
 void main_window::show_boot_error(game_boot_result status)
 {
-	if (status == game_boot_result::no_errors)
-	{
-		return;
-	}
 	QString message;
 	switch (status)
 	{
@@ -325,9 +321,9 @@ void main_window::show_boot_error(game_boot_result status)
 	case game_boot_result::file_creation_error:
 		message = tr("The emulator could not create files required for booting.");
 		break;
-	case game_boot_result::firmware_missing:
-		message = tr("Firmware has not been installed. Install firmware with the \"File > Install Firmware\" menu option.");
-		break;
+	case game_boot_result::firmware_missing: // Handled elsewhere
+	case game_boot_result::no_errors:
+		return;
 	case game_boot_result::generic_error:
 	default:
 		message = tr("Unknown error.");
@@ -785,7 +781,7 @@ void main_window::HandlePupInstallation(QString file_path)
 		version_string.erase(version_pos);
 	}
 
-	const std::string cur_version = "4.86";
+	const std::string cur_version = "4.87";
 
 	if (version_string < cur_version &&
 		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(qstr(cur_version), qstr(version_string)),
@@ -2227,6 +2223,10 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 	}
 
 	// Cleanly stop and quit the emulator.
+	if (!Emu.IsStopped())
+	{
+		Emu.Stop();
+	}
 	Emu.Quit(true);
 }
 

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include <thread>
 #include "Emu/system_config.h"
 #include "np_handler.h"
@@ -21,7 +21,7 @@
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <net/if.h> 
+#include <net/if.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
@@ -102,13 +102,13 @@ np_handler::np_handler()
 bool np_handler::discover_ip_address()
 {
 	std::array<char, 1024> hostname;
-	
+
 	if (gethostname(hostname.data(), hostname.size()) == -1)
 	{
 		nph_log.error("gethostname failed in IP discovery!");
 		return false;
 	}
-	
+
 	hostent *host = gethostbyname(hostname.data());
 	if (!host)
 	{
@@ -315,7 +315,7 @@ void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 	if (g_cfg.net.psn_status >= np_psn_status::fake)
 	{
 		std::string s_npid = g_cfg_rpcn.get_npid();
-		ASSERT(!s_npid.empty()); // It should have been generated before this
+		ensure(!s_npid.empty()); // It should have been generated before this
 
 		np_handler::string_to_npid(s_npid.c_str(), &npid);
 		const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
@@ -336,7 +336,7 @@ void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 	{
 		if (!is_psn_active)
 			break;
-		
+
 		// Connect RPCN client
 		if (!rpcn.connect(g_cfg_rpcn.get_host()))
 		{
@@ -1014,7 +1014,7 @@ bool np_handler::reply_req_sign_infos(u32 req_id, std::vector<u8>& reply_data)
 {
 	if (!pending_sign_infos_requests.count(req_id))
 		return error_and_disconnect("Unexpected reply ID to req RequestSignalingInfos");
-	
+
 	u32 conn_id = pending_sign_infos_requests.at(req_id);
 	pending_sign_infos_requests.erase(req_id);
 
@@ -1024,7 +1024,7 @@ bool np_handler::reply_req_sign_infos(u32 req_id, std::vector<u8>& reply_data)
 
 	if (reply.is_error())
 		return error_and_disconnect("Malformed reply to RequestSignalingInfos command");
-	
+
 	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
 	sigh->start_sig(conn_id, addr, port);
 
@@ -1038,7 +1038,7 @@ bool np_handler::reply_req_ticket(u32 req_id, std::vector<u8>& reply_data)
 
 	if (reply.is_error())
 		return error_and_disconnect("Malformed reply to RequestTicket command");
-	
+
 	current_ticket = std::move(ticket_raw);
 	auto ticket_size = static_cast<s32>(current_ticket.size());
 
@@ -1328,7 +1328,7 @@ u32 np_handler::generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<
 	callback_info ret;
 
 	const auto ctx = get_match2_context(ctx_id);
-	ASSERT(ctx);
+	ensure(ctx);
 
 	const u32 req_id = get_req_id(optParam ? optParam->appReqId : ctx->default_match2_optparam.appReqId);
 

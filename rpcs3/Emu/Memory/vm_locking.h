@@ -13,16 +13,16 @@ namespace vm
 
 	enum range_lock_flags : u64
 	{
-		/* flags (3 bits, RWX) */
+		/* flags (3 bits, W + R + Reserved) */
 
-		range_readable = 4ull << 61,
-		range_writable = 2ull << 61,
-		range_executable = 1ull << 61,
+		range_writable = 4ull << 61,
+		range_readable = 2ull << 61,
+		range_reserved = 1ull << 61,
 		range_full_mask = 7ull << 61,
 
 		/* flag combinations with special meaning */
 
-		range_locked = 1ull << 61, // R+W as well, but being exclusively accessed (size extends addr)
+		range_locked = 4ull << 61, // R+W as well, but being exclusively accessed (size extends addr)
 		range_allocation = 0, // Allocation, no safe access, g_shmem may change at ANY location
 
 		range_pos = 61,

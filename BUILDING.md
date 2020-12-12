@@ -9,11 +9,11 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 
 * [CMake 3.14.1+](https://www.cmake.org/download/) (add to PATH)
 * [Python 3.3+](https://www.python.org/downloads/) (add to PATH)
-* [Qt 5.14.2](https://www.qt.io/download-qt-installer)
+* [Qt 5.15.2](https://www.qt.io/download-qt-installer)
 * [Visual Studio 2019](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community)
 * [Vulkan SDK 1.1.126+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
 
-**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.14.2\msvc2017_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2019)**
+**Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.15.2\msvc2019_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2019)**
 
 ### Linux
 
@@ -21,7 +21,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 
 * Clang 9+ or GCC 9+
 * [CMake 3.14.1+](https://www.cmake.org/download/)
-* [Qt 5.14.2](https://www.qt.io/download-qt-installer)
+* [Qt 5.15.2](https://www.qt.io/download-qt-installer)
 * [Vulkan SDK 1.1.126+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))
 * [SDL2](https://www.libsdl.org/download-2.0.php) (for the FAudio backend)
 
@@ -41,10 +41,10 @@ Ubuntu is usually horrendously out of date, and some packages need to be downloa
 Ubuntu usually does not have a new enough Qt package to suit rpcs3's needs. There is a PPA available to work around this. Run the following:
 ```
 . /etc/os-release
-sudo add-apt-repository ppa:beineri/opt-qt-5.14.2-$UBUNTU_CODENAME
+sudo add-apt-repository ppa:beineri/opt-qt-5.15.2-$UBUNTU_CODENAME
 sudo apt-get update
-sudo apt-get install qt514-meta-minimal qt514svg
-. /opt/qt514/bin/qt514-env.sh >/dev/null 2>&1
+sudo apt-get install qt515-meta-minimal qt515svg
+. /opt/qt515/bin/qt515-env.sh >/dev/null 2>&1
 ```
 
 ##### GCC 9.x installation
@@ -82,7 +82,7 @@ sudo apt-get install cmake
 
 #### Fedora
 
-    sudo dnf install alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt5-devel vulkan-devel
+    sudo dnf install alsa-lib-devel cmake glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt5-devel qt5-qtbase-private-devel vulkan-devel
 
 #### OpenSUSE
 
@@ -103,7 +103,7 @@ git submodule update --init
 #### Configuring the Qt plugin (if used)
 
 1) Go to the Qt5 menu and edit Qt5 options.
-2) Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\5.14.2\msvc2017_64`.
+2) Add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\5.15.2\msvc2019_64`.
 3) While selecting the rpcs3qt project, go to Qt5->Project Setting and select the version you added.
 
 #### Building the projects

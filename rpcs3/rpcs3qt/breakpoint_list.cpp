@@ -1,4 +1,4 @@
-﻿#include "breakpoint_list.h"
+#include "breakpoint_list.h"
 #include "breakpoint_handler.h"
 
 #include "Emu/CPU/CPUDisAsm.h"

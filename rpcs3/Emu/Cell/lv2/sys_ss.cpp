@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_ss.h"
 
 #include "sys_process.h"
@@ -61,14 +61,14 @@ error_code sys_ss_random_number_generator(u64 pkg_id, vm::ptr<void> buf, u64 siz
 #ifdef _WIN32
 	if (auto ret = BCryptGenRandom(nullptr, temp.get(), static_cast<ULONG>(size), BCRYPT_USE_SYSTEM_PREFERRED_RNG))
 	{
-		fmt::throw_exception("sys_ss_random_number_generator(): BCryptGenRandom failed (0x%08x)" HERE, ret);
+		fmt::throw_exception("sys_ss_random_number_generator(): BCryptGenRandom failed (0x%08x)", ret);
 	}
 #else
 	fs::file rnd{"/dev/urandom"};
 
 	if (!rnd || rnd.read(temp.get(), size) != size)
 	{
-		fmt::throw_exception("sys_ss_random_number_generator(): Failed to generate pseudo-random numbers" HERE);
+		fmt::throw_exception("sys_ss_random_number_generator(): Failed to generate pseudo-random numbers");
 	}
 #endif
 
@@ -97,7 +97,7 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 			return CELL_ESRCH;
 		}
 
-		verify(HERE), a2 == static_cast<u64>(process_getpid());
+		ensure(a2 == static_cast<u64>(process_getpid()));
 		vm::write64(vm::cast(a3), authid);
 		break;
 	}

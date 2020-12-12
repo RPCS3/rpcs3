@@ -1,8 +1,7 @@
-﻿#pragma once
+#pragma once
 
 #include <QObject>
-
-#include <atomic>
+#include "util/atomic.hpp"
 
 class curl_handle;
 class progress_dialog;
@@ -37,11 +36,11 @@ private:
 
 	curl_handle* m_curl = nullptr;
 	QByteArray m_curl_buf;
-	std::atomic<bool> m_curl_abort = false;
-	std::atomic<bool> m_curl_success = false;
+	atomic_t<bool> m_curl_abort = false;
+	atomic_t<bool> m_curl_success = false;
 	double m_actual_download_size = -1.0;
 
 	progress_dialog* m_progress_dialog = nullptr;
-	std::atomic<bool> m_keep_progress_dialog_open = false;
+	atomic_t<bool> m_keep_progress_dialog_open = false;
 	QString m_progress_dialog_title;
 };

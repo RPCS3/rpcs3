@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLTexture.h"
 #include "GLCompute.h"
 #include "GLRenderTargets.h"
@@ -19,7 +19,7 @@ namespace gl
 		case rsx::texture_dimension_extended::texture_dimension_cubemap: return GL_TEXTURE_CUBE_MAP;
 		case rsx::texture_dimension_extended::texture_dimension_3d: return GL_TEXTURE_3D;
 		}
-		fmt::throw_exception("Unknown texture target" HERE);
+		fmt::throw_exception("Unknown texture target");
 	}
 
 	GLenum get_sized_internal_format(u32 texture_format)
@@ -54,7 +54,7 @@ namespace gl
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return GL_RGBA8;
 		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return GL_RGBA8;
 		}
-		fmt::throw_exception("Unknown texture format 0x%x" HERE, texture_format);
+		fmt::throw_exception("Unknown texture format 0x%x", texture_format);
 	}
 
 	std::tuple<GLenum, GLenum> get_format_type(u32 texture_format)
@@ -89,7 +89,7 @@ namespace gl
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return std::make_tuple(GL_BGRA, GL_UNSIGNED_BYTE);
 		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return std::make_tuple(GL_BGRA, GL_UNSIGNED_BYTE);
 		}
-		fmt::throw_exception("Compressed or unknown texture format 0x%x" HERE, texture_format);
+		fmt::throw_exception("Compressed or unknown texture format 0x%x", texture_format);
 	}
 
 	pixel_buffer_layout get_format_type(texture::internal_format format)
@@ -132,7 +132,7 @@ namespace gl
 		case texture::internal_format::depth32f_stencil8:
 			return { GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 4, true };
 		default:
-			fmt::throw_exception("Unexpected internal format 0x%X" HERE, static_cast<u32>(format));
+			fmt::throw_exception("Unexpected internal format 0x%X", static_cast<u32>(format));
 		}
 	}
 
@@ -231,7 +231,7 @@ namespace gl
 		case rsx::texture_minify_filter::linear_linear: return GL_LINEAR_MIPMAP_LINEAR;
 		case rsx::texture_minify_filter::convolution_min: return GL_LINEAR_MIPMAP_LINEAR;
 		}
-		fmt::throw_exception("Unknown min filter" HERE);
+		fmt::throw_exception("Unknown min filter");
 	}
 
 	int tex_mag_filter(rsx::texture_magnify_filter mag_filter)
@@ -242,7 +242,7 @@ namespace gl
 		case rsx::texture_magnify_filter::linear: return GL_LINEAR;
 		case rsx::texture_magnify_filter::convolution_mag: return GL_LINEAR;
 		}
-		fmt::throw_exception("Unknown mag filter" HERE);
+		fmt::throw_exception("Unknown mag filter");
 	}
 
 	// Apply sampler state settings
@@ -392,7 +392,7 @@ namespace gl
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 			return true;
 		}
-		fmt::throw_exception("Unknown format 0x%x" HERE, texture_format);
+		fmt::throw_exception("Unknown format 0x%x", texture_format);
 	}
 
 	std::array<GLenum, 4> get_swizzle_remap(u32 texture_format)
@@ -451,7 +451,7 @@ namespace gl
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 			return{ GL_RED, GL_GREEN, GL_RED, GL_GREEN };
 		}
-		fmt::throw_exception("Unknown format 0x%x" HERE, texture_format);
+		fmt::throw_exception("Unknown format 0x%x", texture_format);
 	}
 
 	cs_shuffle_base* get_trivial_transform_job(const pixel_buffer_layout& pack_info)
@@ -503,7 +503,7 @@ namespace gl
 		}
 		else if (pack_info.type == GL_FLOAT)
 		{
-			verify(HERE), mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 4);
+			ensure(mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 4));
 			mem_info->memory_required = (mem_info->image_size_in_texels * 6);
 			initialize_scratch_mem();
 
@@ -513,7 +513,7 @@ namespace gl
 		}
 		else if (pack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
 		{
-			verify(HERE), mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 8);
+			ensure(mem_info->image_size_in_bytes == (mem_info->image_size_in_texels * 8));
 			mem_info->memory_required = (mem_info->image_size_in_texels * 12);
 			initialize_scratch_mem();
 
@@ -523,7 +523,7 @@ namespace gl
 		}
 		else
 		{
-			fmt::throw_exception("Invalid depth/stencil type 0x%x" HERE, pack_info.type);
+			fmt::throw_exception("Invalid depth/stencil type 0x%x", pack_info.type);
 		}
 
 		glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_PIXEL_BUFFER_BARRIER_BIT);
@@ -590,7 +590,7 @@ namespace gl
 		}
 		else
 		{
-			fmt::throw_exception("Invalid depth/stencil type 0x%x" HERE, unpack_info.type);
+			fmt::throw_exception("Invalid depth/stencil type 0x%x", unpack_info.type);
 		}
 
 		if (!skip_barrier)
@@ -694,8 +694,7 @@ namespace gl
 				}
 				default:
 				{
-					ASSUME(0);
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 				}
 				}
 			}
@@ -875,7 +874,7 @@ namespace gl
 		case GL_DEPTH32F_STENCIL8:
 			return 4;
 		default:
-			fmt::throw_exception("Unexpected internal format 0x%X" HERE, static_cast<u32>(format));
+			fmt::throw_exception("Unexpected internal format 0x%X", static_cast<u32>(format));
 		}
 	}
 
@@ -906,7 +905,7 @@ namespace gl
 		case GL_DEPTH32F_STENCIL8:
 			return { true, 4 };
 		default:
-			fmt::throw_exception("Unexpected internal format 0x%X" HERE, static_cast<u32>(format));
+			fmt::throw_exception("Unexpected internal format 0x%X", static_cast<u32>(format));
 		}
 	}
 

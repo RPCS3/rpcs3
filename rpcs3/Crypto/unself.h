@@ -1,9 +1,9 @@
-﻿#pragma once
+#pragma once
 
 #include "key_vault.h"
 #include "zlib.h"
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "Utilities/File.h"
 #include "util/logs.hpp"
 
@@ -489,7 +489,7 @@ private:
 				}
 
 				// Advance the data buffer offset by data size.
-				data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+				data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size);
 			}
 		}
 

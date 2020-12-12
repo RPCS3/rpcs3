@@ -1,9 +1,7 @@
-﻿#pragma once
+#pragma once
 
 #include "texture_cache_predictor.h"
 #include "texture_cache_helpers.h"
-
-#include <atomic>
 
 extern u64 get_system_time();
 
@@ -88,12 +86,12 @@ namespace rsx
 
 				//-------------------------
 				// It is illegal to have only exclusions except when reading from a range with only RO sections
-				ASSERT(flush_and_unprotect_count > 0 || exclude_count == 0 || cause.is_read());
+				ensure(flush_and_unprotect_count > 0 || exclude_count == 0 || cause.is_read());
 				if (flush_and_unprotect_count == 0 && exclude_count > 0)
 				{
 					// double-check that only RO sections exists
 					for (auto *tex : sections_to_exclude)
-						ASSERT(tex->get_protection() == utils::protection::ro);
+						ensure(tex->get_protection() == utils::protection::ro);
 				}
 
 				//-------------------------
@@ -108,10 +106,10 @@ namespace rsx
 				const u16 min_flush_or_unprotect = min_overlap_fault;
 
 				// we must flush or unprotect *all* sections that partially overlap the fault range
-				ASSERT(flush_and_unprotect_count >= min_flush_or_unprotect);
+				ensure(flush_and_unprotect_count >= min_flush_or_unprotect);
 
 				// result must contain *all* sections that overlap (completely or partially) the invalidation range
-				ASSERT(flush_and_unprotect_count + exclude_count >= min_overlap_invalidate);
+				ensure(flush_and_unprotect_count + exclude_count >= min_overlap_invalidate);
 			}
 
 			void check_post_sanity() const
@@ -279,7 +277,7 @@ namespace rsx
 		std::vector<image_view_type> m_uncached_subresources;
 		predictor_type m_predictor;
 
-		std::atomic<u64> m_cache_update_tag = {0};
+		atomic_t<u64> m_cache_update_tag = {0};
 
 		address_range read_only_range;
 		address_range no_access_range;
@@ -298,10 +296,10 @@ namespace rsx
 		const u32 m_max_zombie_objects = 64; //Limit on how many texture objects to keep around for reuse after they are invalidated
 
 		//Other statistics
-		std::atomic<u32> m_flushes_this_frame = { 0 };
-		std::atomic<u32> m_misses_this_frame  = { 0 };
-		std::atomic<u32> m_speculations_this_frame = { 0 };
-		std::atomic<u32> m_unavoidable_hard_faults_this_frame = { 0 };
+		atomic_t<u32> m_flushes_this_frame = { 0 };
+		atomic_t<u32> m_misses_this_frame  = { 0 };
+		atomic_t<u32> m_speculations_this_frame = { 0 };
+		atomic_t<u32> m_unavoidable_hard_faults_this_frame = { 0 };
 		static const u32 m_predict_max_flushes_per_frame = 50; // Above this number the predictions are disabled
 
 		// Invalidation
@@ -521,7 +519,7 @@ namespace rsx
 			{
 				for (auto* section : _set)
 				{
-					verify(HERE), section->is_flushed() || section->is_dirty();
+					ensure(section->is_flushed() || section->is_dirty());
 
 					section->discard(/*set_dirty*/ false);
 				}
@@ -574,7 +572,7 @@ namespace rsx
 					}
 					else
 					{
-						fmt::throw_exception("Unreachable" HERE);
+						fmt::throw_exception("Unreachable");
 					}
 				}
 
@@ -621,7 +619,7 @@ namespace rsx
 		}
 
 		// Return a set containing all sections that should be flushed/unprotected/reprotected
-		std::atomic<u64> m_last_section_cache_tag = 0;
+		atomic_t<u64> m_last_section_cache_tag = 0;
 		intersecting_set get_intersecting_set(const address_range &fault_range)
 		{
 			AUDIT(fault_range.is_page_range());
@@ -710,7 +708,7 @@ namespace rsx
 				{
 					if (section1 == section2) count++;
 				}
-				verify(HERE), count == 1;
+				ensure(count == 1);
 			}
 #endif //TEXTURE_CACHE_DEBUG
 
@@ -741,7 +739,7 @@ namespace rsx
 			// Fast code-path for keeping the fault range protection when not flushing anything
 			if (cause.keep_fault_range_protection() && cause.skip_flush() && !trampled_set.sections.empty())
 			{
-				verify(HERE), cause != invalidation_cause::committed_as_fbo;
+				ensure(cause != invalidation_cause::committed_as_fbo);
 
 				// We discard all sections fully inside fault_range
 				for (auto &obj : trampled_set.sections)
@@ -859,7 +857,7 @@ namespace rsx
 						continue;
 					}
 
-					fmt::throw_exception("Unreachable " HERE);
+					fmt::throw_exception("Unreachable");
 				}
 
 
@@ -876,7 +874,7 @@ namespace rsx
 				{
 					// There is something to flush, but we've been asked to defer it
 					result.num_flushable = static_cast<int>(result.sections_to_flush.size());
-					result.cache_tag = m_cache_update_tag.load(std::memory_order_consume);
+					result.cache_tag = m_cache_update_tag.load();
 					return result;
 				}
 				else if (has_flushables || has_unprotectables)
@@ -1007,7 +1005,7 @@ namespace rsx
 #ifndef TEXTURE_CACHE_DEBUG
 							return &tex;
 #else
-							ASSERT(res == nullptr);
+							ensure(res == nullptr);
 							res = &tex;
 #endif
 						}
@@ -1121,9 +1119,9 @@ namespace rsx
 			else
 			{
 				// Re-using clean fbo region
-				ASSERT(region.matches(rsx_range));
-				ASSERT(region.get_context() == texture_upload_context::framebuffer_storage);
-				ASSERT(region.get_image_type() == rsx::texture_dimension_extended::texture_dimension_2d);
+				ensure(region.matches(rsx_range));
+				ensure(region.get_context() == texture_upload_context::framebuffer_storage);
+				ensure(region.get_image_type() == rsx::texture_dimension_extended::texture_dimension_2d);
 			}
 
 			region.create(width, height, 1, 1, image, pitch, false, std::forward<Args>(extras)...);
@@ -1174,7 +1172,7 @@ namespace rsx
 				auto* region_ptr = find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, false, false);
 				if (region_ptr && region_ptr->is_locked() && region_ptr->get_context() == texture_upload_context::framebuffer_storage)
 				{
-					verify(HERE), region_ptr->get_protection() == utils::protection::no;
+					ensure(region_ptr->get_protection() == utils::protection::no);
 					region_ptr->discard(false);
 				}
 			}
@@ -1200,9 +1198,9 @@ namespace rsx
 				if (!region.is_dirty())
 				{
 					if (flags == memory_read_flags::flush_once)
-						verify(HERE), m_flush_always_cache.find(memory_range) == m_flush_always_cache.end();
+						ensure(m_flush_always_cache.find(memory_range) == m_flush_always_cache.end());
 					else
-						verify(HERE), m_flush_always_cache[memory_range] == &region;
+						ensure(m_flush_always_cache[memory_range] == &region);
 				}
 #endif // TEXTURE_CACHE_DEBUG
 				return;
@@ -1217,9 +1215,9 @@ namespace rsx
 #ifdef TEXTURE_CACHE_DEBUG
 			const auto &memory_range = section.get_section_range();
 			if (flags == memory_read_flags::flush_once)
-				verify(HERE), m_flush_always_cache[memory_range] == &section;
+				ensure(m_flush_always_cache[memory_range] == &section);
 			else
-				verify(HERE), m_flush_always_cache.find(memory_range) == m_flush_always_cache.end();
+				ensure(m_flush_always_cache.find(memory_range) == m_flush_always_cache.end());
 #endif
 			update_flush_always_cache(section, flags == memory_read_flags::flush_always);
 		}
@@ -1275,7 +1273,7 @@ namespace rsx
 			AUDIT(data.cause.deferred_flush());
 			AUDIT(!data.flushed);
 
-			if (m_cache_update_tag.load(std::memory_order_consume) == data.cache_tag)
+			if (m_cache_update_tag.load() == data.cache_tag)
 			{
 				//1. Write memory to cpu side
 				flush_set(cmd, data, std::forward<Args>(extras)...);
@@ -1453,7 +1451,7 @@ namespace rsx
 			default:
 			{
 				//Throw
-				fmt::throw_exception("Invalid deferred command op 0x%X" HERE, static_cast<u32>(desc.op));
+				fmt::throw_exception("Invalid deferred command op 0x%X", static_cast<u32>(desc.op));
 			}
 			}
 
@@ -1749,7 +1747,7 @@ namespace rsx
 		{
 			image_section_attributes_t attributes{};
 			texture_cache_search_options options{};
-			attributes.address = rsx::get_address(tex.offset(), tex.location(), HERE);
+			attributes.address = rsx::get_address(tex.offset(), tex.location());
 			attributes.gcm_format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 			attributes.bpp = get_format_block_size_in_bytes(attributes.gcm_format);
 			attributes.width = tex.width();
@@ -2171,7 +2169,7 @@ namespace rsx
 					surf->get_surface_height(rsx::surface_metrics::pixels) != surf->height())
 				{
 					// Must go through a scaling operation due to resolution scaling being present
-					verify(HERE), g_cfg.video.resolution_scale_percent != 100;
+					ensure(g_cfg.video.resolution_scale_percent != 100);
 					use_null_region = false;
 				}
 			}
@@ -2412,7 +2410,7 @@ namespace rsx
 						}
 						else
 						{
-							verify(HERE), src_is_render_target;
+							ensure(src_is_render_target);
 							src_is_depth = (typeless_info.src_is_typeless) ? false : src_subres.is_depth;
 						}
 					}
@@ -2613,7 +2611,7 @@ namespace rsx
 
 			if (!cached_dest && !dst_is_render_target)
 			{
-				verify(HERE), !dest_texture;
+				ensure(!dest_texture);
 
 				// Need to calculate the minimum required size that will fit the data, anchored on the rsx_address
 				// If the application starts off with an 'inseted' section, the guessed dimensions may not fit!
@@ -2700,7 +2698,7 @@ namespace rsx
 				}
 			}
 
-			verify(HERE), cached_dest || dst_is_render_target;
+			ensure(cached_dest || dst_is_render_target);
 
 			// Invalidate any cached subresources in modified range
 			notify_surface_changed(dst_range);
@@ -2712,7 +2710,7 @@ namespace rsx
 			{
 				// Validate modified range
 				u32 mem_offset = dst_address - cached_dest->get_section_base();
-				verify(HERE), (mem_offset + dst_payload_length) <= cached_dest->get_section_size();
+				ensure((mem_offset + dst_payload_length) <= cached_dest->get_section_size());
 
 				lock.upgrade();
 
@@ -2751,55 +2749,31 @@ namespace rsx
 						else
 						{
 							// Unlikely situation, but the only one which would allow re-upload from CPU to overlap this section.
-							verify(HERE), !found->is_flushable();
+							ensure(!found->is_flushable());
 							found->discard(true);
 						}
 					}
 				}
 			}
 
-			if (rsx::get_resolution_scale_percent() != 100)
-			{
-				const f32 resolution_scale = rsx::get_resolution_scale();
-				if (src_is_render_target)
-				{
-					if (src_subres.surface->get_surface_width(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
-					{
-						src_area.x1 = static_cast<u16>(src_area.x1 * resolution_scale);
-						src_area.x2 = static_cast<u16>(src_area.x2 * resolution_scale);
-					}
-
-					if (src_subres.surface->get_surface_height(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
-					{
-						src_area.y1 = static_cast<u16>(src_area.y1 * resolution_scale);
-						src_area.y2 = static_cast<u16>(src_area.y2 * resolution_scale);
-					}
-				}
-
-				if (dst_is_render_target)
-				{
-					if (dst_subres.surface->get_surface_width(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
-					{
-						dst_area.x1 = static_cast<u16>(dst_area.x1 * resolution_scale);
-						dst_area.x2 = static_cast<u16>(dst_area.x2 * resolution_scale);
-					}
-
-					if (dst_subres.surface->get_surface_height(rsx::surface_metrics::pixels) > g_cfg.video.min_scalable_dimension)
-					{
-						dst_area.y1 = static_cast<u16>(dst_area.y1 * resolution_scale);
-						dst_area.y2 = static_cast<u16>(dst_area.y2 * resolution_scale);
-					}
-				}
-			}
-
 			if (src_is_render_target)
 			{
+				const auto surface_width = src_subres.surface->get_surface_width(rsx::surface_metrics::pixels);
+				const auto surface_height = src_subres.surface->get_surface_height(rsx::surface_metrics::pixels);
+				std::tie(src_area.x1, src_area.y1) = rsx::apply_resolution_scale<false>(src_area.x1, src_area.y1, surface_width, surface_height);
+				std::tie(src_area.x2, src_area.y2) = rsx::apply_resolution_scale<true>(src_area.x2, src_area.y2, surface_width, surface_height);
+
 				// The resource is of surface type; possibly disabled AA emulation
 				src_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer, src_area);
 			}
 
 			if (dst_is_render_target)
 			{
+				const auto surface_width = dst_subres.surface->get_surface_width(rsx::surface_metrics::pixels);
+				const auto surface_height = dst_subres.surface->get_surface_height(rsx::surface_metrics::pixels);
+				std::tie(dst_area.x1, dst_area.y1) = rsx::apply_resolution_scale<false>(dst_area.x1, dst_area.y1, surface_width, surface_height);
+				std::tie(dst_area.x2, dst_area.y2) = rsx::apply_resolution_scale<true>(dst_area.x2, dst_area.y2, surface_width, surface_height);
+
 				// The resource is of surface type; possibly disabled AA emulation
 				dst_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer, dst_area);
 			}
@@ -2860,7 +2834,7 @@ namespace rsx
 		{
 			if (!m_flush_always_cache.empty())
 			{
-				if (m_cache_update_tag.load(std::memory_order_consume) != m_flush_always_update_timestamp)
+				if (m_cache_update_tag.load() != m_flush_always_update_timestamp)
 				{
 					std::lock_guard lock(m_cache_mutex);
 					bool update_tag = false;
@@ -2870,7 +2844,7 @@ namespace rsx
 						auto& section = *(It.second);
 						if (section.get_protection() != utils::protection::no)
 						{
-							verify(HERE), section.exists();
+							ensure(section.exists());
 							AUDIT(section.get_context() == texture_upload_context::framebuffer_storage);
 							AUDIT(section.get_memory_read_flags() == memory_read_flags::flush_always);
 
@@ -2880,7 +2854,7 @@ namespace rsx
 					}
 
 					if (update_tag) update_cache_tag();
-					m_flush_always_update_timestamp = m_cache_update_tag.load(std::memory_order_consume);
+					m_flush_always_update_timestamp = m_cache_update_tag.load();
 
 #ifdef TEXTURE_CACHE_DEBUG
 					// Check that the cache has the correct protections

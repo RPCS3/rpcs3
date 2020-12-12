@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_time.h"
 
 #include "Emu/system_config.h"
@@ -130,7 +130,7 @@ u64 get_timebased_time()
 {
 #ifdef _WIN32
 	LARGE_INTEGER count;
-	verify(HERE), QueryPerformanceCounter(&count);
+	ensure(QueryPerformanceCounter(&count));
 
 	const u64 time = count.QuadPart;
 	const u64 freq = s_time_aux_info.perf_freq;
@@ -138,7 +138,7 @@ u64 get_timebased_time()
 	return (time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u;
 #else
 	struct timespec ts;
-	verify(HERE), ::clock_gettime(CLOCK_MONOTONIC, &ts) == 0;
+	ensure(::clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
 
 	return (static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000ull) * g_cfg.core.clocks_scale / 100u;
 #endif
@@ -151,7 +151,7 @@ u64 get_system_time()
 	{
 #ifdef _WIN32
 		LARGE_INTEGER count;
-		verify(HERE), QueryPerformanceCounter(&count);
+		ensure(QueryPerformanceCounter(&count));
 
 		const u64 time = count.QuadPart;
 		const u64 freq = s_time_aux_info.perf_freq;
@@ -159,7 +159,7 @@ u64 get_system_time()
 		const u64 result = time / freq * 1000000ull + (time % freq) * 1000000ull / freq;
 #else
 		struct timespec ts;
-		verify(HERE), ::clock_gettime(CLOCK_MONOTONIC, &ts) == 0;
+		ensure(::clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
 
 		const u64 result = static_cast<u64>(ts.tv_sec) * 1000000ull + static_cast<u64>(ts.tv_nsec) / 1000u;
 #endif
@@ -196,7 +196,7 @@ error_code sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 
 #ifdef _WIN32
 	LARGE_INTEGER count;
-	verify(HERE), QueryPerformanceCounter(&count);
+	ensure(QueryPerformanceCounter(&count));
 
 	const u64 diff_base = count.QuadPart - s_time_aux_info.start_time;
 
@@ -219,7 +219,7 @@ error_code sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	*nsec = time % 1000000000ull;
 #else
 	struct timespec ts;
-	verify(HERE), ::clock_gettime(CLOCK_REALTIME, &ts) == 0;
+	ensure(::clock_gettime(CLOCK_REALTIME, &ts) == 0);
 
 	if (g_cfg.core.clocks_scale == 100)
 	{

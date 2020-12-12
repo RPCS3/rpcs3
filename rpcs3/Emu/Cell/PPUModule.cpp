@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Utilities/bin_patch.h"
@@ -813,9 +813,9 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		{
 			if (prog.p_memsz)
 			{
-				const u32 mem_size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
-				const u32 file_size = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
-				const u32 init_addr = ::narrow<u32>(prog.p_vaddr, "p_vaddr" HERE);
+				const u32 mem_size = ::narrow<u32>(prog.p_memsz);
+				const u32 file_size = ::narrow<u32>(prog.p_filesz);
+				const u32 init_addr = ::narrow<u32>(prog.p_vaddr);
 
 				// Alloc segment memory
 				const u32 addr = vm::alloc(mem_size, vm::main);
@@ -909,7 +909,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 				const auto& rel = reinterpret_cast<const ppu_prx_relocation_info&>(prog.bin[i]);
 
 				ppu_reloc _rel;
-				const u32 raddr = _rel.addr = vm::cast(prx->segs.at(rel.index_addr).addr + rel.offset, HERE);
+				const u32 raddr = _rel.addr = vm::cast(prx->segs.at(rel.index_addr).addr + rel.offset);
 				const u32 rtype = _rel.type = rel.type;
 				const u64 rdata = _rel.data = rel.index_value == 0xFF ? rel.ptr.addr().value() : prx->segs.at(rel.index_value).addr + rel.ptr.addr();
 				prx->relocs.emplace_back(_rel);
@@ -1008,7 +1008,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		};
 
 		// Access library information (TODO)
-		const vm::cptr<ppu_prx_library_info> lib_info = vm::cast(prx->segs[0].addr + elf.progs[0].p_paddr - elf.progs[0].p_offset, HERE);
+		const vm::cptr<ppu_prx_library_info> lib_info = vm::cast(prx->segs[0].addr + elf.progs[0].p_paddr - elf.progs[0].p_offset);
 		const std::string lib_name = lib_info->name;
 
 		strcpy_trunc(prx->module_info_name, lib_name);
@@ -1143,11 +1143,11 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		ppu_loader.notice("** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
 		ppu_segment _seg;
-		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr, HERE);
-		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
+		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr);
+		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz);
 		const u32 type = _seg.type = prog.p_type;
 		const u32 flag = _seg.flags = prog.p_flags;
-		_seg.filesz = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
+		_seg.filesz = ::narrow<u32>(prog.p_filesz);
 
 		// Hash big-endian values
 		sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_type), sizeof(prog.p_type));
@@ -1164,7 +1164,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 				if (!vm::falloc(addr, size))
 				{
-					fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)" HERE, addr, size);
+					fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
 				}
 			}
 
@@ -1279,9 +1279,9 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 		case 0x00000007: // TLS
 		{
-			tls_vaddr = vm::cast(prog.p_vaddr, HERE);
-			tls_fsize = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
-			tls_vsize = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
+			tls_vaddr = vm::cast(prog.p_vaddr);
+			tls_fsize = ::narrow<u32>(prog.p_filesz);
+			tls_vsize = ::narrow<u32>(prog.p_memsz);
 
 			ppu_loader.notice("TLS info segment found: tls-image=*0x%x, image-size=0x%x, tls-size=0x%x", tls_vaddr, tls_fsize, tls_vsize);
 			break;
@@ -1304,7 +1304,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 					//be_t<u32> crash_dump_param_addr;
 				};
 
-				const auto& info = vm::_ref<process_param_t>(vm::cast(prog.p_vaddr, HERE));
+				const auto& info = vm::_ref<process_param_t>(vm::cast(prog.p_vaddr));
 
 				if (info.size < sizeof(process_param_t))
 				{
@@ -1359,7 +1359,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 					be_t<u32> unk2;
 				};
 
-				const auto& proc_prx_param = vm::_ref<const ppu_proc_prx_param_t>(vm::cast(prog.p_vaddr, HERE));
+				const auto& proc_prx_param = vm::_ref<const ppu_proc_prx_param_t>(vm::cast(prog.p_vaddr));
 
 				ppu_loader.notice("* libent_start = *0x%x", proc_prx_param.libent_start);
 				ppu_loader.notice("* libstub_start = *0x%x", proc_prx_param.libstub_start);
@@ -1387,26 +1387,27 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	// Initialize process
 	std::vector<std::shared_ptr<lv2_prx>> loaded_modules;
 
-	// Get LLE module list
+	// Module list to load at startup
 	std::set<std::string> load_libs;
 
-	if (g_cfg.core.lib_loading == lib_loading_type::manual)
+	if ((g_cfg.core.lib_loading != lib_loading_type::hybrid && g_cfg.core.lib_loading != lib_loading_type::manual) || g_cfg.core.load_libraries.get_set().count("liblv2.sprx"))
 	{
-		// Load required set of modules (lib_loading_type::both processed in sys_prx.cpp)
-		load_libs = g_cfg.core.load_libraries.get_set();
+		// Will load libsysmodule.sprx internally
+		load_libs.emplace("liblv2.sprx");
 	}
-	else
+	else if (g_cfg.core.lib_loading == lib_loading_type::hybrid)
 	{
-		if (g_cfg.core.lib_loading != lib_loading_type::hybrid || g_cfg.core.load_libraries.get_set().count("liblv2.sprx"))
-		{
-			// Will load libsysmodule.sprx internally
-			load_libs.emplace("liblv2.sprx");
-		}
-		else
-		{
-			// Load only libsysmodule.sprx
-			load_libs.emplace("libsysmodule.sprx");
-		}
+		// Load only libsysmodule.sprx
+		load_libs.emplace("libsysmodule.sprx");
+	}
+
+	const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
+
+	if (!fs::is_file(lle_dir + "liblv2.sprx"))
+	{
+		ppu_loader.error("PS3 firmware is not installed or the installed firmware is invalid."
+			"\nYou should install the PS3 Firmware (Menu: File -> Install Firmware)."
+			"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
 	}
 
 	// Program entry
@@ -1414,15 +1415,6 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	if (!load_libs.empty())
 	{
-		const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
-
-		if (!fs::is_dir(lle_dir) || !fs::is_file(lle_dir + "libsysmodule.sprx"))
-		{
-			ppu_loader.error("PS3 firmware is not installed or the installed firmware is invalid."
-				"\nYou should install the PS3 Firmware (Menu: File -> Install Firmware)."
-				"\nVisit https://rpcs3.net/ for Quickstart Guide and more information.");
-		}
-
 		for (const auto& name : load_libs)
 		{
 			const ppu_prx_object obj = decrypt_self(fs::file(lle_dir + name));
@@ -1455,7 +1447,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			}
 			else
 			{
-				fmt::throw_exception("Failed to load /dev_flash/sys/external/%s: %s", name, obj.get_error());
+				ppu_loader.error("Failed to load /dev_flash/sys/external/%s: %s (forcing HLE implementation)", name, obj.get_error());
 			}
 		}
 	}
@@ -1486,7 +1478,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		// Additional segment for fixed allocations
 		if (!vm::map(0x30000000, 0x10000000, 0x200))
 		{
-			fmt::throw_exception("Failed to map ppc_seg's segment!" HERE);
+			fmt::throw_exception("Failed to map ppc_seg's segment!");
 		}
 	}
 
@@ -1632,7 +1624,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz && (prog.p_flags & 0x2) == 0u /* W */)
 		{
 			// Set memory protection to read-only when necessary
-			verify(HERE), vm::page_protect(addr, ::align(size, 0x1000), 0, 0, vm::page_writable);
+			ensure(vm::page_protect(addr, ::align(size, 0x1000), 0, 0, vm::page_writable));
 		}
 	}
 }
@@ -1654,11 +1646,11 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 		ppu_loader.notice("** Segment: p_type=0x%x, p_vaddr=0x%llx, p_filesz=0x%llx, p_memsz=0x%llx, flags=0x%x", prog.p_type, prog.p_vaddr, prog.p_filesz, prog.p_memsz, prog.p_flags);
 
 		ppu_segment _seg;
-		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr, HERE);
-		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz, "p_memsz" HERE);
+		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr);
+		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz);
 		const u32 type = _seg.type = prog.p_type;
 		const u32 flag = _seg.flags = prog.p_flags;
-		_seg.filesz = ::narrow<u32>(prog.p_filesz, "p_filesz" HERE);
+		_seg.filesz = ::narrow<u32>(prog.p_filesz);
 
 		// Hash big-endian values
 		sha1_update(&sha, reinterpret_cast<const uchar*>(&prog.p_type), sizeof(prog.p_type));
@@ -1756,7 +1748,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 											//and a lot of zeros.
 				};
 
-				const auto& info = vm::_ref<process_param_t>(vm::cast(prog.p_vaddr, HERE));
+				const auto& info = vm::_ref<process_param_t>(vm::cast(prog.p_vaddr));
 
 				if (info.size < sizeof(process_param_t))
 				{
@@ -1794,7 +1786,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 					be_t<u32> unk2;
 				};
 
-				const auto& proc_prx_param = vm::_ref<const ppu_proc_prx_param_t>(vm::cast(prog.p_vaddr, HERE));
+				const auto& proc_prx_param = vm::_ref<const ppu_proc_prx_param_t>(vm::cast(prog.p_vaddr));
 
 				ppu_loader.notice("* libent_start = *0x%x", proc_prx_param.libent_start);
 				ppu_loader.notice("* libstub_start = *0x%x", proc_prx_param.libstub_start);

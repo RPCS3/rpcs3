@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/localized_string.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
@@ -177,7 +177,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	std::string game_dir = dirName.get_ptr();
 
 	// TODO: Find error code
-	verify(HERE), game_dir.size() == 9;
+	ensure(game_dir.size() == 9);
 
 	const std::string dir = "/dev_hdd0/game/" + game_dir;
 
@@ -594,7 +594,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		case CELL_GAME_GAMETYPE_HDD: return "HG"sv;
 		case CELL_GAME_GAMETYPE_GAMEDATA: return "GD"sv;
 		case CELL_GAME_GAMETYPE_DISC: return "DG"sv;
-		default: ASSUME(0);
+		default: fmt::throw_exception("Unreachable");
 		}
 	}())
 	{

@@ -148,7 +148,7 @@ inline FT build_function_asm(F&& builder)
 
 	X86Assembler compiler(&code);
 	builder(std::ref(compiler), args);
-	ASSERT(compiler.getLastError() == 0);
+	ensure(compiler.getLastError() == 0);
 
 	FT result;
 
@@ -167,7 +167,7 @@ inline FT build_function_asm(F&& builder)
 #include <string_view>
 #include <unordered_map>
 
-#include "types.h"
+#include "util/types.hpp"
 #include "mutex.h"
 
 #include "restore_new.h"

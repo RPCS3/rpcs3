@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../system_config.h"
 #include "Utilities/address_range.h"
@@ -13,6 +13,8 @@ extern "C"
 {
 #include <libavutil/pixfmt.h>
 }
+
+#define RSX_SURFACE_DIMENSION_IGNORED 1
 
 namespace rsx
 {
@@ -142,7 +144,7 @@ namespace rsx
 
 		address_range get_memory_range() const
 		{
-			verify(HERE), range.start == address;
+			ensure(range.start == address);
 			return range;
 		}
 	};
@@ -586,33 +588,48 @@ namespace rsx
 		return g_cfg.video.strict_rendering_mode ? 100 : g_cfg.video.resolution_scale_percent;
 	}
 
-	static inline const u16 apply_resolution_scale(u16 value, bool clamp, u16 ref = 0)
+	template <bool clamp = false>
+	static inline const std::pair<u16, u16> apply_resolution_scale(u16 width, u16 height, u16 ref_width = 0, u16 ref_height = 0)
 	{
-		if (ref == 0)
-			ref = value;
+		ref_width = (ref_width)? ref_width : width;
+		ref_height = (ref_height)? ref_height : height;
+		const u16 ref = std::max(ref_width, ref_height);
 
-		if (ref <= g_cfg.video.min_scalable_dimension)
-			return value;
+		if (ref > g_cfg.video.min_scalable_dimension)
+		{
+			// Upscale both width and height
+			width = (get_resolution_scale_percent() * width) / 100;
+			height = (get_resolution_scale_percent() * height) / 100;
 
-		else if (clamp)
-			return static_cast<u16>(std::max((get_resolution_scale_percent() * value) / 100, 1));
-		else
-			return static_cast<u16>((get_resolution_scale_percent() * value) / 100);
+			if constexpr (clamp)
+			{
+				width = std::max<u16>(width, 1);
+				height = std::max<u16>(height, 1);
+			}
+		}
+
+		return { width, height };
 	}
 
-	static inline const u16 apply_inverse_resolution_scale(u16 value, bool clamp)
+	template <bool clamp = false>
+	static inline const std::pair<u16, u16> apply_inverse_resolution_scale(u16 width, u16 height)
 	{
-		u16 result = value;
+		// Inverse scale
+		auto width_ = (width * 100) / get_resolution_scale_percent();
+		auto height_ = (height * 100) / get_resolution_scale_percent();
 
 		if (clamp)
-			result = static_cast<u16>(std::max((value * 100) / get_resolution_scale_percent(), 1));
-		else
-			result = static_cast<u16>((value * 100) / get_resolution_scale_percent());
+		{
+			width_ = std::max<u16>(width_, 1);
+			height_ = std::max<u16>(height_, 1);
+		}
 
-		if (result <= g_cfg.video.min_scalable_dimension)
-			return value;
+		if (std::max(width_, height_) > g_cfg.video.min_scalable_dimension)
+		{
+			return { width_, height_ };
+		}
 
-		return result;
+		return { width, height };
 	}
 
 	/**
@@ -1008,7 +1025,7 @@ namespace rsx
 			if (_capacity >= size)
 				return;
 
-			verify("realloc() failed!" HERE), _data = static_cast<Ty*>(std::realloc(_data, sizeof(Ty) * size));
+			ensure(_data = static_cast<Ty*>(std::realloc(_data, sizeof(Ty) * size))); // "realloc() failed!"
 			_capacity = size;
 		}
 
@@ -1040,7 +1057,7 @@ namespace rsx
 
 		iterator insert(iterator pos, const Ty& val)
 		{
-			verify(HERE), pos >= _data;
+			ensure(pos >= _data);
 			const auto _loc = offset(pos);
 
 			if (_size >= _capacity)
@@ -1055,7 +1072,7 @@ namespace rsx
 				return pos;
 			}
 
-			verify(HERE), _loc < _size;
+			ensure(_loc < _size);
 
 			const auto remaining = (_size - _loc);
 			memmove(pos + 1, pos, remaining * sizeof(Ty));
@@ -1068,7 +1085,7 @@ namespace rsx
 
 		iterator insert(iterator pos, Ty&& val)
 		{
-			verify(HERE), pos >= _data;
+			ensure(pos >= _data);
 			const auto _loc = offset(pos);
 
 			if (_size >= _capacity)
@@ -1083,7 +1100,7 @@ namespace rsx
 				return pos;
 			}
 
-			verify(HERE), _loc < _size;
+			ensure(_loc < _size);
 
 			const u32 remaining = (_size - _loc);
 			memmove(pos + 1, pos, remaining * sizeof(Ty));
@@ -1178,7 +1195,7 @@ namespace rsx
 	struct profiling_timer
 	{
 		bool enabled = false;
-		std::chrono::time_point<steady_clock> last;
+		steady_clock::time_point last;
 
 		profiling_timer() = default;
 

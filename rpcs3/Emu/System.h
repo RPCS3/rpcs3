@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "stdafx.h"
 #include <functional>
@@ -30,6 +30,7 @@ enum class game_boot_result : u32
 	decryption_error,
 	file_creation_error,
 	firmware_missing,
+	unsupported_disc_type
 };
 
 struct EmuCallbacks
@@ -40,6 +41,7 @@ struct EmuCallbacks
 	std::function<void()> on_resume;
 	std::function<void()> on_stop;
 	std::function<void()> on_ready;
+	std::function<bool()> on_missing_fw;
 	std::function<bool(bool)> exit; // (force_quit) close RPCS3
 	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit
 	std::function<void()> init_kb_handler;
@@ -82,7 +84,12 @@ class Emulator final
 	u32 m_usrid{1};
 
 	bool m_force_global_config = false;
+
+	// This flag should be adjusted before each Stop() or each BootGame() and similar because:
+	// 1. It forces an application to boot immediately by calling Run() in Load().
+	// 2. It signifies that we don't want to exit on Stop(), for example if we want to transition to another application.
 	bool m_force_boot = false;
+
 	bool m_has_gui = true;
 
 public:

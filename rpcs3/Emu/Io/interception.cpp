@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "interception.h"
 #include "KeyboardHandler.h"
 #include "MouseHandler.h"
@@ -7,7 +7,7 @@
 
 namespace input
 {
-	std::atomic<bool> g_intercepted{false};
+	atomic_t<bool> g_intercepted{false};
 
 	void SetIntercepted(bool intercepted)
 	{

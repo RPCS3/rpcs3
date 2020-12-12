@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "util/logs.hpp"
 #include "Utilities/sysinfo.h"
 #include "system_config.h"
@@ -31,6 +31,12 @@ protected:
 	// Accumulate values from a thread
 	void push(u64 ns[66]) noexcept;
 
+	// Register TLS storage for stats
+	static void add(u64 ns[66], const char* name) noexcept;
+
+	// Unregister TLS storage and drain its data
+	static void remove(u64 ns[66], const char* name) noexcept;
+
 public:
 	perf_stat_base() noexcept = default;
 
@@ -39,6 +45,9 @@ public:
 	perf_stat_base& operator =(const perf_stat_base&) = delete;
 
 	~perf_stat_base() {}
+
+	// Collect all data, report it, and clean
+	static void report() noexcept;
 };
 
 // Object that prints event length stats at the end
@@ -50,27 +59,36 @@ class perf_stat final : public perf_stat_base
 		// Local non-atomic values for increments
 		u64 m_log[66]{};
 
+		perf_stat_local() noexcept
+		{
+			perf_stat_base::add(m_log, perf_name<ShortName>.data());
+		}
+
 		~perf_stat_local()
 		{
-			// Update on thread exit
-			if (m_log[0])
-			{
-				if (auto* pfs = g_fxo->get<perf_stat>())
-				{
-					pfs->perf_stat_base::push(m_log);
-				}
-			}
+			perf_stat_base::remove(m_log, perf_name<ShortName>.data());
 		}
+
 	} g_tls_perf_stat;
 
 public:
-	~perf_stat()
+	static NEVER_INLINE void push(u64 start_time) noexcept
 	{
-		perf_stat_base::print(perf_name<ShortName>.data());
-	}
+		// Event end
+		const u64 end_time = (_mm_lfence(), __rdtsc());
 
-	void push(u64 ns) noexcept
-	{
+		// Compute difference in seconds
+		const f64 diff = (end_time - start_time) * 1. / utils::get_tsc_freq();
+
+		// Register perf stat in nanoseconds
+		const u64 ns = static_cast<u64>(diff * 1000'000'000.);
+
+		// Print in microseconds
+		if (static_cast<u64>(diff * 1000'000.) >= g_cfg.core.perf_report_threshold)
+		{
+			perf_log.notice(u8"%s: %.3fµs", perf_name<ShortName>.data(), diff * 1000'000.);
+		}
+
 		auto& data = g_tls_perf_stat.m_log;
 		data[0] += ns != 0;
 		data[64 - std::countl_zero(ns)]++;
@@ -171,20 +189,8 @@ public:
 			return;
 		}
 
-		// Event end
-		const u64 end_time = __rdtsc();
-
-		// Compute difference in seconds
-		const f64 diff = (end_time - m_timestamps[0]) * 1. / utils::get_tsc_freq();
-
 		// Register perf stat in nanoseconds
-		g_fxo->get<perf_stat<ShortName>>()->push(static_cast<u64>(diff * 1000'000'000.));
-
-		// Print in microseconds
-		if (static_cast<u64>(diff * 1000'000.) >= g_cfg.core.perf_report_threshold)
-		{
-			perf_log.notice(u8"%s: %.3fµs", perf_name<ShortName>.data(), diff * 1000'000.);
-		}
+		perf_stat<ShortName>::push(m_timestamps[0]);
 
 		// TODO: handle push(), currently ignored
 	}

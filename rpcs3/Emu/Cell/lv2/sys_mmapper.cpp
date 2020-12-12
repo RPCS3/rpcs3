@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_mmapper.h"
 
 #include "Emu/Cell/PPUThread.h"

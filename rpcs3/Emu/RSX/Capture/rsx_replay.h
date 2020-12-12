@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/RSX/rsx_methods.h"

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLFragmentProgram.h"
 
 #include "Emu/System.h"
@@ -375,11 +375,6 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	}
 
 	shader.create(::glsl::program_domain::glsl_fragment_program, source);
-}
-
-void GLFragmentProgram::Compile()
-{
-	shader.compile();
 	id = shader.id();
 }
 

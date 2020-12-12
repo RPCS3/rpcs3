@@ -1,10 +1,9 @@
-﻿#pragma once
+#pragma once
 
 #include <queue>
 #include <deque>
 #include <variant>
 #include <stack>
-#include <atomic>
 
 #include "GCM.h"
 #include "rsx_cache.h"
@@ -29,7 +28,7 @@
 extern u64 get_guest_system_time();
 extern u64 get_system_time();
 
-extern std::atomic<bool> g_user_asked_for_frame_capture;
+extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern rsx::frame_trace_data frame_debug;
 extern rsx::frame_capture_data frame_capture;
 
@@ -83,7 +82,7 @@ namespace rsx
 		template<bool IsFullLock>
 		void unlock(u32 addr, u32 len) noexcept
 		{
-			ASSERT(len >= 1);
+			ensure(len >= 1);
 			const u32 end = addr + len - 1;
 
 			for (u32 block = (addr >> 20); block <= (end >> 20); ++block)
@@ -110,24 +109,28 @@ namespace rsx
 
 	enum pipeline_state : u32
 	{
-		fragment_program_dirty = 0x1,        // Fragment program changed
-		vertex_program_dirty = 0x2,          // Vertex program changed
-		fragment_state_dirty = 0x4,          // Fragment state changed (alpha test, etc)
-		vertex_state_dirty = 0x8,            // Vertex state changed (scale_offset, clip planes, etc)
-		transform_constants_dirty = 0x10,    // Transform constants changed
-		fragment_constants_dirty = 0x20,     // Fragment constants changed
-		framebuffer_reads_dirty = 0x40,      // Framebuffer contents changed
-		fragment_texture_state_dirty = 0x80, // Fragment texture parameters changed
-		vertex_texture_state_dirty = 0x100,  // Fragment texture parameters changed
-		scissor_config_state_dirty = 0x200,  // Scissor region changed
-		zclip_config_state_dirty = 0x400,    // Viewport Z clip changed
+		fragment_program_ucode_dirty = 0x1,   // Fragment program ucode changed
+		vertex_program_ucode_dirty = 0x2,     // Vertex program ucode changed
+		fragment_program_state_dirty = 0x4,   // Fragment program state changed
+		vertex_program_state_dirty = 0x8,     // Vertex program state changed
+		fragment_state_dirty = 0x10,          // Fragment state changed (alpha test, etc)
+		vertex_state_dirty = 0x20,            // Vertex state changed (scale_offset, clip planes, etc)
+		transform_constants_dirty = 0x40,     // Transform constants changed
+		fragment_constants_dirty = 0x80,      // Fragment constants changed
+		framebuffer_reads_dirty = 0x100,      // Framebuffer contents changed
+		fragment_texture_state_dirty = 0x200, // Fragment texture parameters changed
+		vertex_texture_state_dirty = 0x400,   // Fragment texture parameters changed
+		scissor_config_state_dirty = 0x800,   // Scissor region changed
+		zclip_config_state_dirty = 0x1000,    // Viewport Z clip changed
 
-		scissor_setup_invalid = 0x800,       // Scissor configuration is broken
-		scissor_setup_clipped = 0x1000,      // Scissor region is cropped by viewport constraint
+		scissor_setup_invalid = 0x2000,       // Scissor configuration is broken
+		scissor_setup_clipped = 0x4000,       // Scissor region is cropped by viewport constraint
 
-		polygon_stipple_pattern_dirty = 0x2000,  // Rasterizer stippling pattern changed
-		line_stipple_pattern_dirty = 0x4000,     // Line stippling pattern changed
+		polygon_stipple_pattern_dirty = 0x8000,  // Rasterizer stippling pattern changed
+		line_stipple_pattern_dirty = 0x10000,    // Line stippling pattern changed
 
+		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
+		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
 		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
 		invalidate_zclip_bits = vertex_state_dirty | zclip_config_state_dirty,
 		memory_barrier_bits = framebuffer_reads_dirty,
@@ -169,8 +172,11 @@ namespace rsx
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
-	// TODO: Replace with std::source_location in c++20
-	u32 get_address(u32 offset, u32 location, const char* from);
+	u32 get_address(u32 offset, u32 location,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION());
 
 	struct tiled_region
 	{
@@ -283,7 +289,7 @@ namespace rsx
 				}
 			}
 
-			verify(HERE), _max_index >= _min_index;
+			ensure(_max_index >= _min_index);
 			return { _min_index, (_max_index - _min_index) + 1 };
 		}
 	};
@@ -349,7 +355,7 @@ namespace rsx
 				}
 				default:
 				{
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 				}
 				}
 			}
@@ -767,7 +773,13 @@ namespace rsx
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
 
-		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors, bool skip_textures = false, bool skip_vertex_inputs = true);
+		// Prefetch and analyze the currently active fragment program ucode
+		void prefetch_fragment_program();
+
+		// Prefetch and analyze the currently active vertex program ucode
+		void prefetch_vertex_program();
+
+		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors);
 
 		/**
 		 * Gets current fragment program and associated fragment state
@@ -825,10 +837,6 @@ namespace rsx
 		 * Execute a backend local task queue
 		 */
 		virtual void do_local_task(FIFO_state state);
-
-		virtual void on_decompiler_init() {}
-		virtual void on_decompiler_exit() {}
-		virtual bool on_decompiler_task() { return false; }
 
 		virtual void emit_geometry(u32) {}
 

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Utilities/hash.h"
 #include "Utilities/File.h"
 #include "Utilities/lockless.h"
@@ -35,7 +35,7 @@ namespace rsx
 
 	static inline void memory_protect(const address_range& range, utils::protection prot)
 	{
-		verify(HERE), range.is_page_range();
+		ensure(range.is_page_range());
 
 		//rsx_log.error("memory_protect(0x%x, 0x%x, %x)", static_cast<u32>(range.start), static_cast<u32>(range.length()), static_cast<u32>(prot));
 		utils::memory_protect(vm::base(range.start), range.length(), prot);
@@ -84,7 +84,7 @@ namespace rsx
 
 			AUDIT( (locked_range.start == page_start(range.start)) || (locked_range.start == next_page(range.start)) );
 			AUDIT( locked_range.end <= page_end(range.end) );
-			verify(HERE), locked_range.is_page_range();
+			ensure(locked_range.is_page_range());
 		}
 
 	public:
@@ -94,7 +94,7 @@ namespace rsx
 
 		void reset(const address_range &memory_range)
 		{
-			verify(HERE), memory_range.valid() && locked == false;
+			ensure(memory_range.valid() && locked == false);
 
 			cpu_range = address_range(memory_range);
 			confirmed_range.invalidate();
@@ -109,7 +109,7 @@ namespace rsx
 	protected:
 		void invalidate_range()
 		{
-			ASSERT(!locked);
+			ensure(!locked);
 
 			cpu_range.invalidate();
 			confirmed_range.invalidate();
@@ -121,7 +121,7 @@ namespace rsx
 		{
 			if (new_prot == protection && !force) return;
 
-			verify(HERE), locked_range.is_page_range();
+			ensure(locked_range.is_page_range());
 			AUDIT( !confirmed_range.valid() || confirmed_range.inside(cpu_range) );
 
 #ifdef TEXTURE_CACHE_DEBUG
@@ -174,10 +174,10 @@ namespace rsx
 				else
 				{
 					confirmed_range = address_range::start_length(cpu_range.start + new_confirm.first, new_confirm.second);
-					ASSERT(!locked || locked_range.inside(confirmed_range.to_page_range()));
+					ensure(!locked || locked_range.inside(confirmed_range.to_page_range()));
 				}
 
-				verify(HERE), confirmed_range.inside(cpu_range);
+				ensure(confirmed_range.inside(cpu_range));
 				init_lockable_range(confirmed_range);
 			}
 
@@ -213,7 +213,7 @@ namespace rsx
 			case section_bounds::confirmed_range:
 				return confirmed_range.valid() ? confirmed_range : cpu_range;
 			default:
-				ASSUME(0);
+				fmt::throw_exception("Unreachable");
 			}
 		}
 
@@ -414,8 +414,8 @@ namespace rsx
 			u16 fp_lighting_flags;
 			u16 fp_shadow_textures;
 			u16 fp_redirected_textures;
-			u16 fp_alphakill_mask;
-			u64 fp_zfunc_mask;
+			u16 unused_0;             // Retained for binary compatibility
+			u64 unused_1;             // Retained for binary compatibility
 
 			pipeline_storage_type pipeline_properties;
 		};
@@ -496,7 +496,7 @@ namespace rsx
 
 			if (nb_workers == 1)
 			{
-				std::chrono::time_point<steady_clock> last_update;
+				steady_clock::time_point last_update;
 
 				// Call the worker function directly, stoping it prematurely to be able update the screen
 				u8 inc = 10;
@@ -508,7 +508,7 @@ namespace rsx
 					worker(stop_at);
 
 					// Only update the screen at about 10fps since updating it everytime slows down the process
-					std::chrono::time_point<steady_clock> now = std::chrono::steady_clock::now();
+					steady_clock::time_point now = steady_clock::now();
 					processed_since_last_update += inc;
 					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (stop_at == entry_count))
 					{
@@ -544,7 +544,7 @@ namespace rsx
 				}
 			}
 
-			verify(HERE), processed == entry_count;
+			ensure(processed == entry_count);
 		}
 
 	public:
@@ -645,7 +645,7 @@ namespace rsx
 
 			if (!fs::is_file(fp_name))
 			{
-				fs::file(fp_name, fs::rewrite).write(fp.addr, fp.ucode_length);
+				fs::file(fp_name, fs::rewrite).write(fp.get_data(), fp.ucode_length);
 			}
 
 			if (!fs::is_file(vp_name))
@@ -665,8 +665,6 @@ namespace rsx
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_lighting_flags);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_shadow_textures);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_redirected_textures);
-			state_hash ^= rpcs3::hash_base<u16>(data.fp_alphakill_mask);
-			state_hash ^= rpcs3::hash_base<u64>(data.fp_zfunc_mask);
 
 			std::string pipeline_file_name = fmt::format("%llX+%llX+%llX+%llX.bin", data.vertex_program_hash, data.fragment_program_hash, data.pipeline_storage_hash, state_hash);
 			std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "/" + pipeline_file_name;
@@ -700,7 +698,7 @@ namespace rsx
 			{
 				std::lock_guard<std::mutex> lock(fpd_mutex);
 				fragment_program_data[program_hash] = data;
-				fp.addr                             = fragment_program_data[program_hash].data();
+				fp.data = fragment_program_data[program_hash].data();
 			}
 			fp.ucode_length = ::size32(data);
 
@@ -739,12 +737,6 @@ namespace rsx
 			fp.two_sided_lighting = !!(data.fp_lighting_flags & 0x1);
 			fp.shadow_textures = data.fp_shadow_textures;
 			fp.redirected_textures = data.fp_redirected_textures;
-
-			for (u8 index = 0; index < 16; ++index)
-			{
-				fp.textures_alpha_kill[index] = (data.fp_alphakill_mask & (1 << index))? 1: 0;
-				fp.textures_zfunc[index] = (data.fp_zfunc_mask >> (index << 2)) & 0xF;
-			}
 
 			return std::make_tuple(pipeline, vp, fp);
 		}
@@ -790,12 +782,6 @@ namespace rsx
 			data_block.fp_shadow_textures = fp.shadow_textures;
 			data_block.fp_redirected_textures = fp.redirected_textures;
 
-			for (u8 index = 0; index < 16; ++index)
-			{
-				data_block.fp_alphakill_mask |= u32(fp.textures_alpha_kill[index] & 0x1) << index;
-				data_block.fp_zfunc_mask |= u64(fp.textures_zfunc[index] & 0xF) << (index << 2);
-			}
-
 			return data_block;
 		}
 	};
@@ -808,8 +794,8 @@ namespace rsx
 		{
 		public:
 			virtual ~default_vertex_cache() = default;
-			virtual storage_type* find_vertex_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/) { return nullptr; }
-			virtual void store_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
+			virtual storage_type* find_vertex_range(uptr /*local_addr*/, upload_format, u32 /*data_length*/) { return nullptr; }
+			virtual void store_range(uptr /*local_addr*/, upload_format, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
 			virtual void purge() {}
 		};
 
@@ -819,7 +805,7 @@ namespace rsx
 		template <typename upload_format>
 		struct uploaded_range
 		{
-			uintptr_t local_address;
+			uptr local_address;
 			upload_format buffer_format;
 			u32 offset_in_heap;
 			u32 data_length;
@@ -831,11 +817,11 @@ namespace rsx
 			using storage_type = uploaded_range<upload_format>;
 
 		private:
-			std::unordered_map<uintptr_t, std::vector<storage_type>> vertex_ranges;
+			std::unordered_map<uptr, std::vector<storage_type>> vertex_ranges;
 
 		public:
 
-			storage_type* find_vertex_range(uintptr_t local_addr, upload_format fmt, u32 data_length) override
+			storage_type* find_vertex_range(uptr local_addr, upload_format fmt, u32 data_length) override
 			{
 				const auto data_end = local_addr + data_length;
 
@@ -849,7 +835,7 @@ namespace rsx
 				return nullptr;
 			}
 
-			void store_range(uintptr_t local_addr, upload_format fmt, u32 data_length, u32 offset_in_heap) override
+			void store_range(uptr local_addr, upload_format fmt, u32 data_length, u32 offset_in_heap) override
 			{
 				storage_type v = {};
 				v.buffer_format = fmt;

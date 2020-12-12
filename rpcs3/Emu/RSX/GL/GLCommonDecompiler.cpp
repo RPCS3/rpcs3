@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLCommonDecompiler.h"
 
 namespace gl
@@ -33,6 +33,6 @@ namespace gl
 			}
 		}
 
-		fmt::throw_exception("Unknown register name: %s" HERE, varying_register_name);
+		fmt::throw_exception("Unknown register name: %s", varying_register_name);
 	}
 }
