@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VFS.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/vm.h"
@@ -547,13 +547,16 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	m_state = system_state::ready;
 	GetCallbacks().on_ready();
 
-	Emu.GetCallbacks().init_gs_render();
-	Emu.GetCallbacks().init_pad_handler("");
+	const auto& callbacks = Emu.GetCallbacks();
+	callbacks.init_gs_render();
+	callbacks.init_pad_handler("");
 
 	GetCallbacks().on_run(false);
 	m_state = system_state::running;
 
-	g_fxo->init<named_thread<rsx::rsx_replay_thread>>("RSX Replay"sv, std::move(frame));
+	auto replay_thr = g_fxo->init<named_thread<rsx::rsx_replay_thread>>("RSX Replay"sv, std::move(frame));
+	replay_thr->state -= cpu_flag::stop;
+	thread_ctrl::notify(*replay_thr);
 
 	return true;
 }
@@ -674,7 +677,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 		if (fs::is_file(elf))
 		{
-			m_path = elf;
+			m_path = std::move(elf);
 			result = Load(title_id, add_only, force_global_config);
 			break;
 		}
@@ -769,8 +772,8 @@ std::string Emulator::GetExeDir()
 	GetModuleFileNameW(nullptr, buffer, sizeof(buffer)/2);
 
 	std::string path_to_exe = wchar_to_utf8(buffer);
-	size_t last = path_to_exe.find_last_of("\\");
-	return last == std::string::npos ? std::string("") : path_to_exe.substr(0, last+1);
+	size_t last = path_to_exe.find_last_of('\\');
+	return last == std::string::npos ? std::string() : path_to_exe.substr(0, last+1);
 }
 #endif
 
@@ -1643,10 +1646,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			ConfigurePPUCache();
 
 			g_fxo->init();
-			Emu.GetCallbacks().init_gs_render();
-			Emu.GetCallbacks().init_pad_handler(m_title_id);
-			Emu.GetCallbacks().init_kb_handler();
-			Emu.GetCallbacks().init_mouse_handler();
+			const auto& callbacks = Emu.GetCallbacks();
+			callbacks.init_gs_render();
+			callbacks.init_pad_handler(m_title_id);
+			callbacks.init_kb_handler();
+			callbacks.init_mouse_handler();
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
@@ -2100,13 +2104,13 @@ void Emulator::ConfigurePPUCache()
 }
 
 template <>
-void stx::manual_fixed_typemap<void>::init_reporter(const char* name, unsigned long long created) const noexcept
+void stx::manual_fixed_typemap<void>::init_reporter(const char* name, size_t created) const noexcept
 {
 	sys_log.notice("[ord:%u] Object '%s' was created", created, name);
 }
 
 template <>
-void stx::manual_fixed_typemap<void>::destroy_reporter(const char* name, unsigned long long created) const noexcept
+void stx::manual_fixed_typemap<void>::destroy_reporter(const char* name, size_t created) const noexcept
 {
 	sys_log.notice("[ord:%u] Object '%s' is destroying", created, name);
 }

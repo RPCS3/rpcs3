@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "SPURecompiler.h"
 
 #include "Emu/System.h"
@@ -653,8 +653,9 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		{
 			if (const auto ptr = it->compiled.load())
 			{
-				std::basic_string_view<u32> range{it->data.data.data(), it->data.data.size()};
-				range.remove_prefix((it->data.entry_point - it->data.lower_bound) / 4);
+				const auto& data = it->data;
+				std::basic_string_view<u32> range{data.data.data(), data.data.size()};
+				range.remove_prefix((data.entry_point - data.lower_bound) / 4);
 				m_flat_list.emplace_back(range, ptr);
 			}
 			else
@@ -733,15 +734,16 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			raw += 4;
 		};
 
+		auto& back  = workload.back();
 		workload.clear();
 		workload.reserve(size0);
 		workload.emplace_back();
-		workload.back().size  = size0;
-		workload.back().level = 0;
-		workload.back().from  = -1;
-		workload.back().rel32 = 0;
-		workload.back().beg   = beg;
-		workload.back().end   = _end;
+		back.size   = size0;
+		back.level  = 0;
+		back.from   = -1;
+		back.rel32  = 0;
+		back.beg    = beg;
+		back.end    = _end;
 
 		// LS address starting from PC is already loaded into rcx (see spu_runtime::tr_all)
 
@@ -4925,7 +4927,7 @@ public:
 			float_to.reserve(256);
 			to_float.reserve(256);
 
-			for (int i = 0; i < 256; ++i)
+			for (u16 i = 0; i < 256; ++i)
 			{
 				float_to.push_back(ConstantFP::get(get_type<f32>(), std::exp2(173 - i)));
 				to_float.push_back(ConstantFP::get(get_type<f32>(), std::exp2(i - 155)));

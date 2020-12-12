@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_interrupt.h"
 
 #include "Emu/IdManager.h"
@@ -81,7 +81,7 @@ error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32
 
 	const u32 id = idm::import<lv2_obj, lv2_int_serv>([&]()
 	{
-		std::shared_ptr<lv2_int_serv> result;
+		std::shared_ptr<lv2_int_serv> result = nullptr;
 
 		// Get interrupt tag
 		const auto tag = idm::check_unlocked<lv2_obj, lv2_int_tag>(intrtag);

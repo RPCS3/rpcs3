@@ -283,7 +283,7 @@ void GLGSRender::load_texture_env()
 		surface_store_tag = m_rtts.cache_tag;
 	}
 
-	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+	for (u8 i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
 		if (!fs_sampler_state[i])
 			fs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
@@ -292,13 +292,14 @@ void GLGSRender::load_texture_env()
 			(update_framebuffer_sourced && fs_sampler_state[i]->upload_context == rsx::texture_upload_context::framebuffer_storage))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+			const auto& tex = rsx::method_registers.fragment_textures[i];
 
-			if (rsx::method_registers.fragment_textures[i].enabled())
+			if (tex.enabled())
 			{
-				*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.fragment_textures[i], m_rtts);
+				*sampler_state = m_gl_texture_cache.upload_texture(cmd, tex, m_rtts);
 
 				if (m_textures_dirty[i])
-					m_fs_sampler_states[i].apply(rsx::method_registers.fragment_textures[i], fs_sampler_state[i].get());
+					m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
 			}
 			else
 			{
@@ -309,7 +310,7 @@ void GLGSRender::load_texture_env()
 		}
 	}
 
-	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	for (u8 i = 0; i < rsx::limits::vertex_textures_count; ++i)
 	{
 		if (!vs_sampler_state[i])
 			vs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
@@ -318,13 +319,14 @@ void GLGSRender::load_texture_env()
 			(update_framebuffer_sourced && vs_sampler_state[i]->upload_context == rsx::texture_upload_context::framebuffer_storage))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+			const auto& tex = rsx::method_registers.vertex_textures[i];
 
-			if (rsx::method_registers.vertex_textures[i].enabled())
+			if (tex.enabled())
 			{
-				*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.vertex_textures[i], m_rtts);
+				*sampler_state = m_gl_texture_cache.upload_texture(cmd, tex, m_rtts);
 
 				if (m_vertex_textures_dirty[i])
-					m_vs_sampler_states[i].apply(rsx::method_registers.vertex_textures[i], vs_sampler_state[i].get());
+					m_vs_sampler_states[i].apply(tex, vs_sampler_state[i].get());
 			}
 			else
 				*sampler_state = {};
@@ -341,7 +343,7 @@ void GLGSRender::bind_texture_env()
 	// Bind textures and resolve external copy operations
 	gl::command_context cmd{ gl_state };
 
-	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+	for (u8 i = 0; i < rsx::limits::fragment_textures_count; ++i)
 	{
 		if (current_fp_metadata.referenced_textures_mask & (1 << i))
 		{
@@ -349,8 +351,9 @@ void GLGSRender::bind_texture_env()
 
 			gl::texture_view* view = nullptr;
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+			const auto& tex = rsx::method_registers.fragment_textures[i];
 
-			if (rsx::method_registers.fragment_textures[i].enabled() &&
+			if (tex.enabled() &&
 				sampler_state->validate())
 			{
 				if (view = sampler_state->image_handle; !view) [[unlikely]]
@@ -386,15 +389,15 @@ void GLGSRender::bind_texture_env()
 		}
 	}
 
-	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	for (u8 i = 0; i < rsx::limits::vertex_textures_count; ++i)
 	{
 		if (current_vp_metadata.referenced_textures_mask & (1 << i))
 		{
 			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+			const auto& tex = rsx::method_registers.vertex_textures[i];
 			_SelectTexture(GL_VERTEX_TEXTURES_START + i);
 
-			if (rsx::method_registers.vertex_textures[i].enabled() &&
-				sampler_state->validate())
+			if (tex.enabled() && sampler_state->validate())
 			{
 				if (sampler_state->image_handle) [[likely]]
 				{

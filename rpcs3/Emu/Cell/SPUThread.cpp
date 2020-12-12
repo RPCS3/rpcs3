@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Utilities/JIT.h"
 #include "Utilities/date_time.h"
 #include "Utilities/sysinfo.h"
@@ -1753,12 +1753,13 @@ void spu_thread::push_snr(u32 number, u32 value)
 
 			if (thread_notify)
 			{
-				ch_events.raw().events |= event_bit;
+				auto& raw = ch_events.raw();
+				raw.events |= event_bit;
 
-				if (ch_events.raw().mask & event_bit)
+				if (raw.mask & event_bit)
 				{
-					ch_events.raw().count = 1;
-					thread_notify = ch_events.raw().waiting != 0;
+					raw.count     = 1;
+					thread_notify = raw.waiting != 0;
 				}
 				else
 				{
@@ -1781,7 +1782,7 @@ void spu_thread::push_snr(u32 number, u32 value)
 	// Lock event channel in case it needs event notification
 	ch_events.atomic_op([](ch_events_t& ev)
 	{
-		ev.locks++;
+		++ev.locks;
 	});
 
 	// Check corresponding SNR register settings
@@ -1798,7 +1799,7 @@ void spu_thread::push_snr(u32 number, u32 value)
 
 	ch_events.atomic_op([](ch_events_t& ev)
 	{
-		ev.locks--;
+		--ev.locks;
 	});
 }
 
@@ -3564,7 +3565,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 			state += cpu_flag::wait + cpu_flag::temp;
 		}
 
-		for (int i = 0; i < 10 && channel.get_count() == 0; i++)
+		for (u8 i = 0; i < 10 && channel.get_count() == 0; i++)
 		{
 			busy_wait();
 		}
@@ -3589,7 +3590,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		while (true)
 		{
-			for (int i = 0; i < 10 && ch_in_mbox.get_count() == 0; i++)
+			for (u8 i = 0; i < 10 && ch_in_mbox.get_count() == 0; i++)
 			{
 				busy_wait();
 			}

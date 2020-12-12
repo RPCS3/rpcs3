@@ -60,6 +60,10 @@ error_code sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, v
 	*mempool = id;
 
 	auto memory_pool = idm::get<memory_pool_t>(id);
+	if (!memory_pool)
+	{
+		return CELL_EINVAL;
+	}
 
 	memory_pool->chunk = chunk;
 	memory_pool->chunk_size = chunk_size;

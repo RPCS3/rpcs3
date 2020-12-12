@@ -234,7 +234,7 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 
 	const bool flip = current_outParam.outputMode == CELL_JPGDEC_BOTTOM_TO_TOP;
 	const int bytesPerLine = static_cast<int>(dataCtrlParam->outputBytesPerLine);
-	size_t image_size = width * height;
+	size_t image_size = static_cast<size_t>(width) * height;
 
 	switch(current_outParam.outputColorSpace)
 	{

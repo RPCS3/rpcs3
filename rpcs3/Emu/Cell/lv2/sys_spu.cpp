@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_spu.h"
 
 #include "Emu/System.h"
@@ -2023,7 +2023,7 @@ error_code raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::
 
 	const auto tag = idm::import<lv2_obj, lv2_int_tag>([&]()
 	{
-		std::shared_ptr<lv2_int_tag> result;
+		std::shared_ptr<lv2_int_tag> result = nullptr;
 
 		auto thread = idm::check_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu(id));
 

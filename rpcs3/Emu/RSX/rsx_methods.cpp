@@ -296,7 +296,7 @@ namespace rsx
 			info.size = count;
 			info.frequency = 0;
 			info.stride = 0;
-			rsx::method_registers.register_vertex_info[attribute_index].data[vertex_subreg] = arg;
+			info.data[vertex_subreg] = arg;
 		}
 
 		template<u32 index>
@@ -3138,6 +3138,7 @@ namespace rsx
 		bind<NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE, nv4097::set_zcull_pixel_count_enable>();
 		bind<NV4097_CLEAR_ZCULL_SURFACE, nv4097::clear_zcull>();
 		bind<NV4097_SET_DEPTH_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_DEPTH_FUNC, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit>();

@@ -418,8 +418,8 @@ namespace rsx
 
 		for (auto & push_buf : vertex_push_buffers)
 		{
-			//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
-			//rsx::method_registers.register_vertex_info[index].size = 0;
+			// Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
+			// rsx::method_registers.register_vertex_info[index].size = 0;
 
 			push_buf.clear();
 		}
@@ -1360,6 +1360,7 @@ namespace rsx
 		{
 		case NV4097_SET_DEPTH_TEST_ENABLE:
 		case NV4097_SET_DEPTH_MASK:
+		case NV4097_SET_DEPTH_FUNC:
 		{
 			evaluate_depth_buffer_state();
 
@@ -1483,8 +1484,8 @@ namespace rsx
 			framebuffer_status_valid = true;
 		}
 
-		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(x1, y1);
-		std::tie(region.x2, region.y2) = rsx::apply_resolution_scale<true>(x2, y2);
+		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(x1, y1, m_framebuffer_layout.width, m_framebuffer_layout.height);
+		std::tie(region.x2, region.y2) = rsx::apply_resolution_scale<true>(x2, y2, m_framebuffer_layout.width, m_framebuffer_layout.height);
 
 		return true;
 	}
@@ -1534,35 +1535,47 @@ namespace rsx
 				if (!enabled)
 					continue;
 
-				if (rsx::method_registers.vertex_arrays_info[index].size() > 0)
+				const auto& vertinfo = rsx::method_registers.vertex_arrays_info[index];
+				const auto& vertbuf  = vertex_push_buffers[index];
+				const auto& reginfo  = rsx::method_registers.register_vertex_info[index];
+
+				if (vertinfo.size() > 0)
 				{
 					current_vertex_program.rsx_vertex_inputs.push_back(
-						{ index,
-							rsx::method_registers.vertex_arrays_info[index].size(),
-							rsx::method_registers.vertex_arrays_info[index].frequency(),
+						{
+							index,
+							vertinfo.size(),
+							vertinfo.frequency(),
 							!!((modulo_mask >> index) & 0x1),
 							true,
-							is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
+							is_int_type(vertinfo.type()), 0
+						});
 				}
-				else if (vertex_push_buffers[index].vertex_count > 1)
+				else if (vertbuf.vertex_count > 1)
 				{
 					current_vertex_program.rsx_vertex_inputs.push_back(
-						{ index,
-							vertex_push_buffers[index].size,
+						{
+							index,
+							vertbuf.size,
 							1,
 							false,
 							true,
-							is_int_type(vertex_push_buffers[index].type), 0 });
+							is_int_type(vertbuf.type),
+							0
+						});
 				}
-				else if (rsx::method_registers.register_vertex_info[index].size > 0)
+				else if (reginfo.size > 0)
 				{
 					current_vertex_program.rsx_vertex_inputs.push_back(
-						{ index,
-							rsx::method_registers.register_vertex_info[index].size,
-							rsx::method_registers.register_vertex_info[index].frequency,
+						{
+							index,
+							reginfo.size,
+							reginfo.frequency,
 							!!((modulo_mask >> index) & 0x1),
 							false,
-							is_int_type(rsx::method_registers.vertex_arrays_info[index].type()), 0 });
+							is_int_type(vertinfo.type()),
+							0
+						});
 				}
 			}
 		}
@@ -1766,11 +1779,9 @@ namespace rsx
 			result.texcoord_control_mask |= u32(method_registers.point_sprite_control_mask()) << 16;
 		}
 
-		const auto resolution_scale = rsx::get_resolution_scale();
-
 		for (u32 i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
-			auto &tex = rsx::method_registers.fragment_textures[i];
+			const auto& tex = rsx::method_registers.fragment_textures[i];
 			result.texture_scale[i][0] = sampler_descriptors[i]->scale_x;
 			result.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
 			result.texture_scale[i][2] = std::bit_cast<f32>(tex.remap());
@@ -2042,7 +2053,7 @@ namespace rsx
 			u32 inline_data_offset = volatile_offset;
 			for (const auto& attrib : block.locations)
 			{
-				auto &info = rsx::method_registers.vertex_arrays_info[attrib.index];
+				const auto &info = rsx::method_registers.vertex_arrays_info[attrib.index];
 
 				offset_in_block[attrib.index] = inline_data_offset;
 				inline_data_offset += rsx::get_vertex_type_size_on_host(info.type(), info.size());
@@ -2054,7 +2065,9 @@ namespace rsx
 			{
 				for (const auto& attrib : block.locations)
 				{
-					const u32 local_address = (rsx::method_registers.vertex_arrays_info[attrib.index].offset() & 0x7fffffff);
+					const auto& info = rsx::method_registers.vertex_arrays_info[attrib.index];
+
+					const u32 local_address = (info.offset() & 0x7fffffff);
 					offset_in_block[attrib.index] = persistent_offset + (local_address - block.base_offset);
 				}
 
@@ -2150,7 +2163,7 @@ namespace rsx
 			}
 			else
 			{
-				auto &info = rsx::method_registers.vertex_arrays_info[index];
+				const auto &info = rsx::method_registers.vertex_arrays_info[index];
 				type = info.type();
 				size = info.size();
 
@@ -2239,7 +2252,8 @@ namespace rsx
 			{
 				for (const u8 index : layout.referenced_registers)
 				{
-					memcpy(transient, rsx::method_registers.register_vertex_info[index].data.data(), 16);
+					const auto& regdata = rsx::method_registers.register_vertex_info[index].data;
+					memcpy(transient, regdata.data(), 16);
 					transient += 16;
 				}
 
@@ -2254,14 +2268,16 @@ namespace rsx
 				//NOTE: It is possible for immediate draw to only contain index data, so vertex data can be in persistent memory
 				for (const auto &info : layout.volatile_blocks)
 				{
-					memcpy(transient, vertex_push_buffers[info.first].data.data(), info.second);
+					const auto& vertbuf = vertex_push_buffers[info.first].data;
+					memcpy(transient, vertbuf.data(), info.second);
 					transient += info.second;
 				}
 			}
 
 			for (const u8 index : layout.referenced_registers)
 			{
-				memcpy(transient, rsx::method_registers.register_vertex_info[index].data.data(), 16);
+				const auto& regdata = rsx::method_registers.register_vertex_info[index].data;
+				memcpy(transient, regdata.data(), 16);
 				transient += 16;
 			}
 		}

@@ -64,7 +64,7 @@ namespace rsx
 
 			static constexpr std::array<u8, 0x10000 / 4> m_register_properties = []
 			{
-				constexpr std::array<std::pair<u32, u32>, 4> ignorable_ranges =
+				constexpr std::array<std::pair<u16, u8>, 4> ignorable_ranges =
 				{{
 					// General
 					{ NV4097_INVALIDATE_VERTEX_FILE, 3 }, // PSLight clears VERTEX_FILE[0-2]
@@ -77,9 +77,9 @@ namespace rsx
 
 				for (const auto &method : ignorable_ranges)
 				{
-					for (u32 i = 0; i < method.second; ++i)
+					for (u8 i = 0; i < method.second; ++i)
 					{
-						register_properties[method.first + i] |= register_props_always_ignore;
+						register_properties[static_cast<u16>(i) + method.first] |= register_props_always_ignore;
 					}
 				}
 
@@ -90,9 +90,9 @@ namespace rsx
 			u32 draw_count = 0;
 			u32 begin_end_ctr = 0;
 
-			bool enabled = false;
-			u32  num_collapsed = 0;
+			u32 num_collapsed = 0;
 			optimization_hint fifo_hint = unknown;
+			bool enabled = false;
 
 			void reset(bool _enabled);
 

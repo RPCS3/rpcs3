@@ -318,7 +318,7 @@ public:
 
 			const auto expected_time = now + rtt.rtt_time;
 
-			msgs.insert(std::make_pair(expected_time, std::move(msg)));
+			msgs.emplace(expected_time, std::move(msg));
 		}
 		wakey.notify_one(); // TODO: Should be improved to only wake if new timeout < old timeout
 	}
@@ -418,7 +418,7 @@ public:
 				}
 
 				// Update key timeout
-				msgs.insert(std::make_pair(now + rtt.rtt_time, std::move(msg)));
+				msgs.emplace(now + rtt.rtt_time, std::move(msg));
 				it = msgs.erase(it);
 			}
 		}

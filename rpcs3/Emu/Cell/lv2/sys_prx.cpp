@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_prx.h"
 
 #include "Emu/VFS.h"
@@ -625,7 +625,8 @@ error_code _sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<
 		return CELL_EFAULT;
 	}
 
-	if (pOpt->size != pOpt.size() || !pOpt->info)
+	vm::bptr<sys_prx_module_info_t> info = pOpt->info;
+	if (pOpt->size != pOpt.size() || !info)
 	{
 		return CELL_EINVAL;
 	}
@@ -635,31 +636,31 @@ error_code _sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<
 		return CELL_PRX_ERROR_UNKNOWN_MODULE;
 	}
 
-	strcpy_trunc(pOpt->info->name, prx->module_info_name);
-	pOpt->info->version[0] = prx->module_info_version[0];
-	pOpt->info->version[1] = prx->module_info_version[1];
-	pOpt->info->modattribute = prx->module_info_attributes;
-	pOpt->info->start_entry = prx->start.addr();
-	pOpt->info->stop_entry = prx->stop.addr();
-	pOpt->info->all_segments_num = ::size32(prx->segs);
-	if (pOpt->info->filename)
+	strcpy_trunc(info->name, prx->module_info_name);
+	info->version[0] = prx->module_info_version[0];
+	info->version[1]             = prx->module_info_version[1];
+	info->modattribute           = prx->module_info_attributes;
+	info->start_entry            = prx->start.addr();
+	info->stop_entry             = prx->stop.addr();
+	info->all_segments_num = ::size32(prx->segs);
+	if (info->filename)
 	{
-		gsl::span dst(pOpt->info->filename.get_ptr(), pOpt->info->filename_size);
+		gsl::span dst(info->filename.get_ptr(), info->filename_size);
 		strcpy_trunc(dst, prx->name);
 	}
 
-	if (pOpt->info->segments)
+	if (info->segments)
 	{
 		u32 i = 0;
-		for (; i < prx->segs.size() && i < pOpt->info->segments_num; i++)
+		for (; i < prx->segs.size() && i < info->segments_num; i++)
 		{
-			pOpt->info->segments[i].index = i;
-			pOpt->info->segments[i].base = prx->segs[i].addr;
-			pOpt->info->segments[i].filesz = prx->segs[i].filesz;
-			pOpt->info->segments[i].memsz = prx->segs[i].size;
-			pOpt->info->segments[i].type = prx->segs[i].type;
+			info->segments[i].index = i;
+			info->segments[i].base = prx->segs[i].addr;
+			info->segments[i].filesz = prx->segs[i].filesz;
+			info->segments[i].memsz = prx->segs[i].size;
+			info->segments[i].type = prx->segs[i].type;
 		}
-		pOpt->info->segments_num = i;
+		info->segments_num = i;
 	}
 
 	return CELL_OK;

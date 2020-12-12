@@ -145,11 +145,7 @@ public:
 
 		// get the first process info.
 		BOOL ret = true;
-		ret      = Process32First(snapshot, &entry);
-		while (ret && entry.th32ProcessID != id)
-		{
-			ret = Process32Next(snapshot, &entry);
-		}
+		for (ret = Process32First(snapshot, &entry); ret && entry.th32ProcessID != id; ret = Process32Next(snapshot, &entry));
 		CloseHandle(snapshot);
 		return ret ? entry.cntThreads : 0;
 #elif defined(__APPLE__)

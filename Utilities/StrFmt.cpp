@@ -430,7 +430,7 @@ std::vector<std::string> fmt::split(const std::string& source, std::initializer_
 
 	if (cursor_begin != source.length())
 	{
-		result.push_back(source.substr(cursor_begin));
+		result.emplace_back(source.begin() + cursor_begin, source.end());
 	}
 
 	return result;

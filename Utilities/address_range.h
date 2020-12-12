@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "types.h"
 #include "StrFmt.h"
@@ -436,7 +436,7 @@ namespace utils
 					else
 					{
 						// IMPORTANT: adding to data invalidates "existing". This must be done last!
-						data.push_back(address_range::start_end(exclusion.next_address(), tail_end));
+						data.emplace_back(address_range::start_end(exclusion.next_address(), tail_end));
 					}
 				}
 			}

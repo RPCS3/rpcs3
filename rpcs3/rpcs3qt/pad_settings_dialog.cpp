@@ -538,7 +538,7 @@ void pad_settings_dialog::ReloadButtons()
 	auto updateButton = [this](int id, QPushButton* button, cfg::string* cfg_name)
 	{
 		const QString name = qstr(*cfg_name);
-		m_cfg_entries.insert(std::make_pair(id, pad_button{cfg_name, *cfg_name, name}));
+		m_cfg_entries.emplace(id, pad_button{cfg_name, *cfg_name, name});
 		button->setText(name);
 	};
 

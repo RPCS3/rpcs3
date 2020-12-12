@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "VertexProgramDecompiler.h"
@@ -335,8 +335,8 @@ u32 VertexProgramDecompiler::GetAddr()
 
 void VertexProgramDecompiler::AddCode(const std::string& code)
 {
-	m_body.push_back(Format(code) + ";");
-	m_cur_instr->body.push_back(Format(code));
+	m_body.emplace_back(Format(code) + ";");
+	m_cur_instr->body.emplace_back(Format(code));
 }
 
 void VertexProgramDecompiler::SetDSTVec(const std::string& code)

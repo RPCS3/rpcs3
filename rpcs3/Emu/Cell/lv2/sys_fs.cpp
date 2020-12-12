@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_sync.h"
 #include "sys_fs.h"
 
@@ -971,7 +971,8 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 		return CELL_EBADF;
 	}
 
-	std::lock_guard lock(file->mp->mutex);
+	lv2_fs_mount_point* mp = file->mp;
+	std::lock_guard lock(mp->mutex);
 
 	if (file->lock == 2)
 	{
@@ -981,15 +982,15 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 	const fs::stat_t& info = file->file.stat();
 
 	sb->mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-	sb->uid = file->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
-	sb->gid = file->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
+	sb->uid = mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
+	sb->gid = mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 	sb->atime = info.atime;
 	sb->mtime = info.mtime;
 	sb->ctime = info.ctime; // ctime may be incorrect
 	sb->size = info.size;
-	sb->blksize = file->mp->block_size;
+	sb->blksize = mp->block_size;
 
-	if (file->mp->flags & lv2_mp_flag::read_only)
+	if (mp->flags & lv2_mp_flag::read_only)
 	{
 		// Remove write permissions
 		sb->mode &= ~0222;
@@ -1553,17 +1554,18 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			if (auto* info = directory->dir_read())
 			{
 				auto& entry = arg->ptr[arg->_size++];
+				lv2_fs_mount_point* mp = directory->mp;
 
 				entry.attribute.mode = info->is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
-				entry.attribute.uid = directory->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
-				entry.attribute.gid = directory->mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
+				entry.attribute.uid = mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
+				entry.attribute.gid = mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 				entry.attribute.atime = info->atime;
 				entry.attribute.mtime = info->mtime;
 				entry.attribute.ctime = info->ctime;
 				entry.attribute.size = info->size;
-				entry.attribute.blksize = directory->mp->block_size;
+				entry.attribute.blksize = mp->block_size;
 
-				if (directory->mp->flags & lv2_mp_flag::read_only)
+				if (mp->flags & lv2_mp_flag::read_only)
 				{
 					// Remove write permissions
 					entry.attribute.mode &= ~0222;

@@ -73,6 +73,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_grid = new game_list_grid(QSize(), m_icon_color, m_margin_factor, m_text_factor, false);
 
 	m_game_list = new game_list();
+
 	m_game_list->setShowGrid(false);
 	m_game_list->setItemDelegate(new table_item_delegate(this, true));
 	m_game_list->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -85,16 +86,18 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_list->horizontalScrollBar()->setSingleStep(20);
 	m_game_list->verticalHeader()->setSectionResizeMode(QHeaderView::Fixed);
 	m_game_list->verticalHeader()->setVisible(false);
-	m_game_list->horizontalHeader()->setContextMenuPolicy(Qt::CustomContextMenu);
-	m_game_list->horizontalHeader()->setHighlightSections(false);
-	m_game_list->horizontalHeader()->setSortIndicatorShown(true);
-	m_game_list->horizontalHeader()->setStretchLastSection(true);
-	m_game_list->horizontalHeader()->setDefaultSectionSize(150);
-	m_game_list->horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
 	m_game_list->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_game_list->setAlternatingRowColors(true);
 	m_game_list->installEventFilter(this);
 	m_game_list->setColumnCount(gui::column_count);
+
+	QHeaderView* hHeader = m_game_list->horizontalHeader();
+	hHeader->setContextMenuPolicy(Qt::CustomContextMenu);
+	hHeader->setHighlightSections(false);
+	hHeader->setSortIndicatorShown(true);
+	hHeader->setStretchLastSection(true);
+	hHeader->setDefaultSectionSize(150);
+	hHeader->setDefaultAlignment(Qt::AlignLeft);
 
 	m_game_compat = new game_compatibility(m_gui_settings, this);
 
@@ -687,7 +690,8 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		// Try to update the app version for disc games if there is a patch
 		for (const auto& entry : m_game_data)
 		{
-			if (entry->info.category == "DG")
+			auto& info = entry->info;
+			if (info.category == "DG")
 			{
 				for (const auto& other : m_game_data)
 				{
@@ -707,22 +711,23 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 						return false;
 					};
 
-					if (entry->info.serial == other->info.serial && other->info.category == "GD" && other->info.app_ver != cat_unknown_localized)
+					auto& otherinfo = other->info;
+					if (info.serial == otherinfo.serial && otherinfo.category == "GD" && otherinfo.app_ver != cat_unknown_localized)
 					{
 						// Update the app version if it's higher than the disc's version (old games may not have an app version)
-						if (entry->info.app_ver == cat_unknown_localized || version_is_bigger(other->info.app_ver, entry->info.app_ver, entry->info.serial, true))
+						if (info.app_ver == cat_unknown_localized || version_is_bigger(otherinfo.app_ver, info.app_ver, info.serial, true))
 						{
-							entry->info.app_ver = other->info.app_ver;
+							info.app_ver = otherinfo.app_ver;
 						}
 						// Update the firmware version if possible and if it's higher than the disc's version
-						if (other->info.fw != cat_unknown_localized && version_is_bigger(other->info.fw, entry->info.fw, entry->info.serial, false))
+						if (otherinfo.fw != cat_unknown_localized && version_is_bigger(otherinfo.fw, info.fw, info.serial, false))
 						{
-							entry->info.fw = other->info.fw;
+							info.fw = otherinfo.fw;
 						}
 						// Update the parental level if possible and if it's higher than the disc's level
-						if (other->info.parental_lvl != 0 && other->info.parental_lvl > entry->info.parental_lvl)
+						if (otherinfo.parental_lvl != 0 && otherinfo.parental_lvl > info.parental_lvl)
 						{
-							entry->info.parental_lvl = other->info.parental_lvl;
+							info.parental_lvl = otherinfo.parental_lvl;
 						}
 					}
 				}
@@ -1104,7 +1109,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		{
 			if (game)
 			{
-				games[game->info.serial].insert(game_list_frame::GetGameVersion(game));
+				games[game->info.serial].emplace(game_list_frame::GetGameVersion(game));
 			}
 		}
 		patch_manager_dialog patch_manager(m_gui_settings, games, current_game.serial, this);

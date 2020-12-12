@@ -306,11 +306,12 @@ namespace rsx
 				const auto h = std::min(section_end, slice_end) - dst_y;
 				dst_y = (dst_y - slice_begin);
 
-				const auto [src_width, src_height] = rsx::apply_resolution_scale<true>(section.src_area.width, h, attr.width, attr.height);
-				const auto [dst_width, unused] = rsx::apply_resolution_scale<true>(section.dst_area.width, RSX_SURFACE_DIMENSION_IGNORED, attr.width, RSX_SURFACE_DIMENSION_IGNORED);
-				const auto dst_height = src_height;
+				const auto surface_width = section.surface->get_surface_width(rsx::surface_metrics::pixels);
+				const auto surface_height = section.surface->get_surface_height(rsx::surface_metrics::pixels);
+				const auto [src_width, src_height] = rsx::apply_resolution_scale<true>(section.src_area.width, h, surface_width, surface_height);
+				const auto [dst_width, dst_height] = rsx::apply_resolution_scale<true>(section.dst_area.width, h, attr.width, attr.height);
 
-				std::tie(src_x, src_y) = rsx::apply_resolution_scale<false>(src_x, src_y, attr.width, attr.height);
+				std::tie(src_x, src_y) = rsx::apply_resolution_scale<false>(src_x, src_y, surface_width, surface_height);
 				std::tie(dst_x, dst_y) = rsx::apply_resolution_scale<false>(dst_x, dst_y, attr.width, attr.height);
 
 				out.push_back
@@ -515,6 +516,15 @@ namespace rsx
 			bool is_depth = texptr->is_depth_surface();
 			auto attr2 = attr;
 
+			if (rsx::get_resolution_scale_percent() != 100)
+			{
+				const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(attr.width, attr.height, surface_width, surface_height);
+				const auto [unused, scaled_slice_h] = rsx::apply_resolution_scale<false>(RSX_SURFACE_DIMENSION_IGNORED, attr.slice_h, surface_width, surface_height);
+				attr2.width = scaled_w;
+				attr2.height = scaled_h;
+				attr2.slice_h = scaled_slice_h;
+			}
+
 			if (const bool gcm_format_is_depth = is_gcm_depth_format(attr2.gcm_format);
 				gcm_format_is_depth != is_depth)
 			{
@@ -540,17 +550,12 @@ namespace rsx
 				}
 
 				if ((surface_is_rop_target && g_cfg.video.strict_rendering_mode) ||
-					attr2.width < surface_width ||
-					attr2.height < surface_height ||
+					attr.width < surface_width ||
+					attr.height < surface_height ||
 					force_convert)
 				{
-					const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(attr2.width, attr2.height);
-
 					const auto format_class = (force_convert) ? classify_format(attr2.gcm_format) : texptr->format_class();
 					const auto command = surface_is_rop_target ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
-
-					attr2.width = scaled_w;
-					attr2.height = scaled_h;
 
 					return { texptr->get_surface(rsx::surface_access::read), command, attr2, {},
 							texture_upload_context::framebuffer_storage, format_class, scale,
@@ -561,8 +566,6 @@ namespace rsx
 						texptr->format_class(), scale, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target };
 			}
 
-			const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(attr2.width, attr2.height);
-
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d)
 			{
 				return{ texptr->get_surface(rsx::surface_access::read), deferred_request_command::_3d_unwrap,
@@ -572,9 +575,6 @@ namespace rsx
 			}
 
 			verify(HERE), extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap;
-
-			attr2.width = scaled_w;
-			attr2.height = scaled_h;
 
 			return{ texptr->get_surface(rsx::surface_access::read), deferred_request_command::cubemap_unwrap,
 					attr2, {},

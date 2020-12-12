@@ -277,7 +277,7 @@ namespace gl
 			builder << "#define WITH_TEXTURES\n\n";
 
 			const char* type_names[] = { "sampler1D", "sampler2D", "samplerCube", "sampler3D" };
-			for (int i = 0; i < 4; ++i)
+			for (u8 i = 0; i < 4; ++i)
 			{
 				builder << "uniform " << type_names[i] << " " << type_names[i] << "_array[" << allocator.pools[i].pool_size << "];\n";
 			}
@@ -329,17 +329,17 @@ namespace gl
 		{
 			// Initialize texture bindings
 			int assigned = 0;
-			auto& allocator = data->allocator;
 			const char* type_names[] = { "sampler1D_array", "sampler2D_array", "samplerCube_array", "sampler3D_array" };
 
-			for (int i = 0; i < 4; ++i)
+			for (u8 i = 0; i < 4; ++i)
 			{
-				for (int j = 0; j < allocator.pools[i].pool_size; ++j)
+				auto& pool = data->allocator.pools[i];
+				for (int j = 0; j < pool.pool_size; ++j)
 				{
-					allocator.pools[i].allocate(assigned++);
+					pool.allocate(assigned++);
 				}
 
-				data->prog.uniforms[type_names[i]] = allocator.pools[i].allocated;
+				data->prog.uniforms[type_names[i]] = pool.allocated;
 			}
 		}
 
@@ -363,14 +363,14 @@ namespace gl
 
 		// Reset allocation
 		auto& allocator = m_current_interpreter->allocator;
-		for (unsigned i = 0; i < 4; ++i)
+		for (u8 i = 0; i < 4; ++i)
 		{
 			allocator.pools[i].num_used = 0;
 			allocator.pools[i].flags = 0;
 		}
 
 		rsx::simple_array<std::pair<int, int>> replacement_map;
-		for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+		for (u8 i = 0; i < rsx::limits::fragment_textures_count; ++i)
 		{
 			if (reference_mask & (1 << i))
 			{
@@ -422,9 +422,9 @@ namespace gl
 		}
 
 		// Overlapping texture bindings are trouble. Cannot bind one TIU to two types of samplers simultaneously
-		for (unsigned i = 0; i < replacement_map.size(); ++i)
+		for (size_t i = 0; i < replacement_map.size(); ++i)
 		{
-			for (int j = 0; j < 4; ++j)
+			for (u8 j = 0; j < 4; ++j)
 			{
 				auto& pool = allocator.pools[j];
 				for (int k = pool.num_used; k < pool.pool_size; ++k)
@@ -442,9 +442,14 @@ namespace gl
 			}
 		}
 
-		if (allocator.pools[0].flags) m_current_interpreter->prog.uniforms["sampler1D_array"] = allocator.pools[0].allocated;
-		if (allocator.pools[1].flags) m_current_interpreter->prog.uniforms["sampler2D_array"] = allocator.pools[1].allocated;
-		if (allocator.pools[2].flags) m_current_interpreter->prog.uniforms["samplerCube_array"] = allocator.pools[2].allocated;
-		if (allocator.pools[3].flags) m_current_interpreter->prog.uniforms["sampler3D_array"] = allocator.pools[3].allocated;
+		const char* type_names[] = {"sampler1D_array", "sampler2D_array", "samplerCube_array", "sampler3D_array"};
+		for (u8 i = 0; i < 4; ++i)
+		{
+			auto& pool = allocator.pools[i];
+			if (pool.flags)
+			{
+				m_current_interpreter->prog.uniforms[type_names[i]] = pool.allocated;
+			}
+		}
 	}
 }

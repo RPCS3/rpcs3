@@ -185,12 +185,12 @@ namespace rsx
 
 	struct vertex_array_buffer
 	{
-		rsx::vertex_base_type type;
+		gsl::span<const std::byte> data;
 		u8 attribute_size;
 		u8 stride;
-		gsl::span<const std::byte> data;
 		u8 index;
 		bool is_be;
+		rsx::vertex_base_type type;
 	};
 
 	struct vertex_array_register

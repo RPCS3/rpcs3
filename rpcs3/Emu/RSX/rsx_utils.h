@@ -207,7 +207,10 @@ namespace rsx
 
 	struct blit_dst_info
 	{
-		blit_engine::transfer_destination_format format;
+		void* pixels;
+		f32 scale_x;
+		f32 scale_y;
+		u32 rsx_address;
 		u16 offset_x;
 		u16 offset_y;
 		u16 width;
@@ -217,11 +220,8 @@ namespace rsx
 		u16 clip_y;
 		u16 clip_width;
 		u16 clip_height;
-		f32 scale_x;
-		f32 scale_y;
-		u32  rsx_address;
-		void *pixels;
 		bool swizzled;
+		blit_engine::transfer_destination_format format;
 	};
 
 	static const std::pair<std::array<u8, 4>, std::array<u8, 4>> default_remap_vector =
@@ -591,15 +591,9 @@ namespace rsx
 	template <bool clamp = false>
 	static inline const std::pair<u16, u16> apply_resolution_scale(u16 width, u16 height, u16 ref_width = 0, u16 ref_height = 0)
 	{
-		u16 ref;
-		if (width > height) [[likely]]
-		{
-			ref = (ref_width) ? ref_width : width;
-		}
-		else
-		{
-			ref = (ref_height) ? ref_height : height;
-		}
+		ref_width = (ref_width)? ref_width : width;
+		ref_height = (ref_height)? ref_height : height;
+		const u16 ref = std::max(ref_width, ref_height);
 
 		if (ref > g_cfg.video.min_scalable_dimension)
 		{
@@ -828,9 +822,9 @@ namespace rsx
 		}
 
 		// Extract components
-		unsigned int sign = (bits >> 15) & 1;
-		unsigned int exp = (bits >> 10) & 0x1f;
-		unsigned int mantissa = bits & 0x3ff;
+		size_t sign = (bits >> 15) & 1;
+		size_t exp = (bits >> 10) & 0x1f;
+		size_t mantissa = bits & 0x3ff;
 
 		float base = (sign != 0) ? -1.f : 1.f;
 		float scale;

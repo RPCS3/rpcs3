@@ -598,7 +598,7 @@ int validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *
 
 	// Hash with NPDRM_OMAC_KEY_3 and compare with title_hash.
 	// Try to ignore case sensivity with file extension
-	title_hash_result = 
+	title_hash_result =
 		cmac_hash_compare(NP_OMAC_KEY_3, 0x10, buf.get(), buf_len, npd->title_hash, 0x10) ||
 		cmac_hash_compare(NP_OMAC_KEY_3, 0x10, buf_lower.get(), buf_len, npd->title_hash, 0x10) ||
 		cmac_hash_compare(NP_OMAC_KEY_3, 0x10, buf_upper.get(), buf_len, npd->title_hash, 0x10);
@@ -922,7 +922,7 @@ bool EDATADecrypter::ReadHeader()
 
 			if (dec_key == v128{})
 			{
-				edat_log.warning("EDAT: Empty Dec key for local actívation!");
+				edat_log.warning("EDAT: Empty Dec key for local activation!");
 			}
 		}
 		else if ((npdHeader.license & 0x1) == 0x1)      // Type 1: Use network activation.

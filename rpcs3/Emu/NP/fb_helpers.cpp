@@ -109,13 +109,14 @@ void np_handler::SearchRoomReponse_to_SceNpMatching2SearchRoomResponse(const Sea
 
 			room_info->flagAttr = room->flagAttr();
 
-			if (room->roomSearchableIntAttrExternal() && room->roomSearchableIntAttrExternal()->size() != 0)
+			const auto* room_attr = room->roomSearchableIntAttrExternal();
+			if (room_attr && room_attr->size() != 0)
 			{
-				room_info->roomSearchableIntAttrExternalNum = room->roomSearchableIntAttrExternal()->size();
+				room_info->roomSearchableIntAttrExternalNum = room_attr->size();
 				vm::ptr<SceNpMatching2IntAttr> intattr_info(allocate(sizeof(SceNpMatching2IntAttr) * room_info->roomSearchableIntAttrExternalNum));
-				for (flatbuffers::uoffset_t a_index = 0; a_index < room->roomSearchableIntAttrExternal()->size(); a_index++)
+				for (flatbuffers::uoffset_t a_index = 0; a_index < room_attr->size(); a_index++)
 				{
-					auto int_attr             = room->roomSearchableIntAttrExternal()->Get(a_index);
+					auto int_attr             = room_attr->Get(a_index);
 					intattr_info[a_index].id  = int_attr->id();
 					intattr_info[a_index].num = int_attr->num();
 				}
@@ -212,14 +213,15 @@ u16 np_handler::RoomDataInternal_to_SceNpMatching2RoomDataInternal(const RoomDat
 			for (u32 b_index = 0; b_index < member_info->roomMemberBinAttrInternalNum; b_index++)
 			{
 				const auto battr                      = member->roomMemberBinAttrInternal()->Get(b_index);
+				auto& data							  = binattr_info[b_index].data;
 				binattr_info[b_index].updateDate.tick = battr->updateDate();
 
-				binattr_info[b_index].data.id   = battr->data()->id();
-				binattr_info[b_index].data.size = battr->data()->data()->size();
-				binattr_info[b_index].data.ptr  = allocate(binattr_info[b_index].data.size);
-				for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < binattr_info[b_index].data.size; tmp_index++)
+				data.id								  = battr->data()->id();
+				data.size							  = battr->data()->data()->size();
+				data.ptr							  = allocate(data.size);
+				for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < data.size; tmp_index++)
 				{
-					binattr_info[b_index].data.ptr[tmp_index] = battr->data()->data()->Get(tmp_index);
+					data.ptr[tmp_index] = battr->data()->data()->Get(tmp_index);
 				}
 			}
 			member_info->roomMemberBinAttrInternal = binattr_info;
@@ -259,15 +261,16 @@ u16 np_handler::RoomDataInternal_to_SceNpMatching2RoomDataInternal(const RoomDat
 		for (u32 b_index = 0; b_index < room_info->roomBinAttrInternalNum; b_index++)
 		{
 			auto battr                               = resp->roomBinAttrInternal()->Get(b_index);
+			auto& data                               = binattrint_info[b_index].data;
 			binattrint_info[b_index].updateDate.tick = battr->updateDate();
 			binattrint_info[b_index].updateMemberId  = battr->updateMemberId();
 
-			binattrint_info[b_index].data.id   = battr->data()->id();
-			binattrint_info[b_index].data.size = battr->data()->data()->size();
-			binattrint_info[b_index].data.ptr  = allocate(binattrint_info[b_index].data.size);
-			for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < binattrint_info[b_index].data.size; tmp_index++)
+			data.id									 = battr->data()->id();
+			data.size								 = battr->data()->data()->size();
+			data.ptr								 = allocate(data.size);
+			for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < data.size; tmp_index++)
 			{
-				binattrint_info[b_index].data.ptr[tmp_index] = battr->data()->data()->Get(tmp_index);
+				data.ptr[tmp_index] = battr->data()->data()->Get(tmp_index);
 			}
 		}
 
@@ -313,14 +316,15 @@ void np_handler::RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(cons
 			for (u32 b_index = 0; b_index < member_info->roomMemberBinAttrInternalNum; b_index++)
 			{
 				const auto battr                      = member->roomMemberBinAttrInternal()->Get(b_index);
+				auto& data                            = binattr_info[b_index].data;
 				binattr_info[b_index].updateDate.tick = battr->updateDate();
 
-				binattr_info[b_index].data.id   = battr->data()->id();
-				binattr_info[b_index].data.size = battr->data()->data()->size();
-				binattr_info[b_index].data.ptr  = allocate(binattr_info[b_index].data.size);
-				for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < binattr_info[b_index].data.size; tmp_index++)
+				data.id								  = battr->data()->id();
+				data.size							  = battr->data()->data()->size();
+				data.ptr							  = allocate(data.size);
+				for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < data.size; tmp_index++)
 				{
-					binattr_info[b_index].data.ptr[tmp_index] = battr->data()->data()->Get(tmp_index);
+					data.ptr[tmp_index] = battr->data()->data()->Get(tmp_index);
 				}
 			}
 			member_info->roomMemberBinAttrInternal = binattr_info;
@@ -361,22 +365,23 @@ void np_handler::RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(const RoomMess
 		sce_mi->dst = dst_info;
 	}
 
+	const auto* dst = mi->dst();
 	switch (sce_mi->castType)
 	{
 	case SCE_NP_MATCHING2_CASTTYPE_BROADCAST: break;
-	case SCE_NP_MATCHING2_CASTTYPE_UNICAST: sce_mi->dst->unicastTarget = mi->dst()->Get(0); break;
+	case SCE_NP_MATCHING2_CASTTYPE_UNICAST: sce_mi->dst->unicastTarget = dst->Get(0); break;
 	case SCE_NP_MATCHING2_CASTTYPE_MULTICAST:
 	{
-		sce_mi->dst->multicastTarget.memberIdNum = mi->dst()->size();
-		vm::ptr<be_t<u16>> member_list(allocate(sizeof(u16) * mi->dst()->size()));
+		sce_mi->dst->multicastTarget.memberIdNum = dst->size();
+		vm::ptr<be_t<u16>> member_list(allocate(sizeof(u16) * dst->size()));
 		sce_mi->dst->multicastTarget.memberId = member_list;
-		for (u32 i = 0; i < mi->dst()->size(); i++)
+		for (u32 i = 0; i < dst->size(); i++)
 		{
-			sce_mi->dst->multicastTarget.memberId[i] = mi->dst()->Get(i);
+			sce_mi->dst->multicastTarget.memberId[i] = dst->Get(i);
 		}
 		break;
 	}
-	case SCE_NP_MATCHING2_CASTTYPE_MULTICAST_TEAM: sce_mi->dst->multicastTargetTeamId = mi->dst()->Get(0); break;
+	case SCE_NP_MATCHING2_CASTTYPE_MULTICAST_TEAM: sce_mi->dst->multicastTargetTeamId = dst->Get(0); break;
 	default: ASSERT(false);
 	}
 
