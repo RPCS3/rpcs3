@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellAudioOut.h"
@@ -51,8 +51,9 @@ error_code cellAudioOutGetSoundAvailability(u32 audioOut, u32 type, u32 fs, u32 
 	switch (type)
 	{
 	case CELL_AUDIO_OUT_CODING_TYPE_LPCM: break;
-	case CELL_AUDIO_OUT_CODING_TYPE_AC3: available = 0; break;
-	case CELL_AUDIO_OUT_CODING_TYPE_DTS: available = 0; break;
+	case CELL_AUDIO_OUT_CODING_TYPE_AC3:
+	case CELL_AUDIO_OUT_CODING_TYPE_DTS:
+		available = 0; break;
 
 	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}
@@ -88,9 +89,11 @@ error_code cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32
 
 	switch (ch)
 	{
-	case 2: break;
-	case 6: available = 0; break;
-	case 8: available = 0; break;
+	case CELL_AUDIO_OUT_CHNUM_2: break;
+	case CELL_AUDIO_OUT_CHNUM_4:
+	case CELL_AUDIO_OUT_CHNUM_6:
+	case CELL_AUDIO_OUT_CHNUM_8:
+		available = 0; break;
 
 	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}
@@ -98,8 +101,9 @@ error_code cellAudioOutGetSoundAvailability2(u32 audioOut, u32 type, u32 fs, u32
 	switch (type)
 	{
 	case CELL_AUDIO_OUT_CODING_TYPE_LPCM: break;
-	case CELL_AUDIO_OUT_CODING_TYPE_AC3: available = 0; break;
-	case CELL_AUDIO_OUT_CODING_TYPE_DTS: available = 0; break;
+	case CELL_AUDIO_OUT_CODING_TYPE_AC3:
+	case CELL_AUDIO_OUT_CODING_TYPE_DTS:
+		available = 0; break;
 
 	default: return CELL_AUDIO_OUT_ERROR_UNSUPPORTED_SOUND_MODE;
 	}

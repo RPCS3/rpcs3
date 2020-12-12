@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -548,10 +548,10 @@ namespace audio
 		return
 		{
 			.buffering_enabled = static_cast<bool>(g_cfg.audio.enable_buffering),
+		    .enable_time_stretching  = static_cast<bool>(g_cfg.audio.enable_time_stretching),
+		    .convert_to_u16          = static_cast<bool>(g_cfg.audio.convert_to_u16),
 			.desired_buffer_duration = g_cfg.audio.desired_buffer_duration,
-			.enable_time_stretching = static_cast<bool>(g_cfg.audio.enable_time_stretching),
 			.time_stretching_threshold = g_cfg.audio.time_stretching_threshold,
-			.convert_to_u16 = static_cast<bool>(g_cfg.audio.convert_to_u16),
 			.start_threshold = static_cast<u32>(g_cfg.audio.start_threshold),
 			.sampling_period_multiplier = static_cast<u32>(g_cfg.audio.sampling_period_multiplier),
 			.downmix = g_cfg.audio.audio_channel_downmix,
@@ -567,11 +567,11 @@ namespace audio
 			const auto new_raw = get_raw_config();
 
 			if (const auto raw = g_audio->cfg.raw;
-				raw.desired_buffer_duration != new_raw.desired_buffer_duration ||
 				raw.buffering_enabled != new_raw.buffering_enabled ||
-				raw.time_stretching_threshold != new_raw.time_stretching_threshold ||
 				raw.enable_time_stretching != new_raw.enable_time_stretching ||
 				raw.convert_to_u16 != new_raw.convert_to_u16 ||
+				raw.desired_buffer_duration != new_raw.desired_buffer_duration ||
+				raw.time_stretching_threshold != new_raw.time_stretching_threshold ||
 				raw.start_threshold != new_raw.start_threshold ||
 				raw.sampling_period_multiplier != new_raw.sampling_period_multiplier ||
 				raw.downmix != new_raw.downmix ||
@@ -1352,8 +1352,9 @@ error_code cellAudioPortClose(u32 portNum)
 	switch (auto state = g_audio->ports[portNum].state.exchange(audio_port_state::closed))
 	{
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
-	case audio_port_state::started: return CELL_OK;
-	case audio_port_state::opened: return CELL_OK;
+	case audio_port_state::started:
+	case audio_port_state::opened:
+		return CELL_OK;
 	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
 	}
 }
@@ -1378,10 +1379,13 @@ error_code cellAudioPortStop(u32 portNum)
 
 	switch (auto state = g_audio->ports[portNum].state.compare_and_swap(audio_port_state::started, audio_port_state::opened))
 	{
-	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_RUN;
+	case audio_port_state::opened:
+	case audio_port_state::closed:
+		return CELL_AUDIO_ERROR_PORT_NOT_RUN;
 	case audio_port_state::started: return CELL_OK;
-	case audio_port_state::opened: return CELL_AUDIO_ERROR_PORT_NOT_RUN;
-	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
+
+	default:
+		fmt::throw_exception("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
 	}
 }
 

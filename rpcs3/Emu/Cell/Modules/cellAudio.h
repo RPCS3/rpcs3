@@ -192,10 +192,10 @@ struct cell_audio_config
 	struct raw_config
 	{
 		bool buffering_enabled = false;
-		s64 desired_buffer_duration = 0;
 		bool enable_time_stretching = false;
+		bool convert_to_u16         = false;
+		s64 desired_buffer_duration = 0;
 		s64 time_stretching_threshold = 0;
-		bool convert_to_u16 = false;
 		u32 start_threshold = 0;
 		u32 sampling_period_multiplier = 0;
 		audio_downmix downmix = audio_downmix::downmix_to_stereo;

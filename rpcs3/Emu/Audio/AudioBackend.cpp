@@ -1,6 +1,7 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "AudioBackend.h"
 #include "Emu/system_config.h"
+#include "Emu/Cell/Modules/cellAudioOut.h"
 
 AudioBackend::AudioBackend()
 {
@@ -26,16 +27,19 @@ AudioBackend::AudioBackend()
 	switch (downmix)
 	{
 	case audio_downmix::no_downmix:
-		m_channels = 8;
+		m_channels = CELL_AUDIO_OUT_CHNUM_8;
 		break;
 	case audio_downmix::downmix_to_stereo:
-		m_channels = 2;
+		m_channels = CELL_AUDIO_OUT_CHNUM_2;
+		break;
+	case audio_downmix::downmix_to_3_1:
+		m_channels = CELL_AUDIO_OUT_CHNUM_4;
 		break;
 	case audio_downmix::downmix_to_5_1:
-		m_channels = 6;
+		m_channels = CELL_AUDIO_OUT_CHNUM_6;
 		break;
 	case audio_downmix::use_application_settings:
-		m_channels = 2; // TODO
+		m_channels = CELL_AUDIO_OUT_CHNUM_2; // TODO
 		break;
 	default:
 		fmt::throw_exception("Unknown audio channel mode %s (%d)", downmix, static_cast<int>(downmix));

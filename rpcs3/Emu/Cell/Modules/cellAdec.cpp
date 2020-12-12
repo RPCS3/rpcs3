@@ -467,7 +467,7 @@ public:
 						else
 						{
 							data = NULL;
-							size = 0;
+							this->size = 0;
 						}
 					}
 
@@ -564,6 +564,7 @@ public:
 
 					int got_frame = 0;
 
+					// FIXME: avcodec_decode_audio4 is deprecated
 					int decode = 0; //avcodec_decode_audio4(ctx, frame.data, &got_frame, &au);
 
 					if (decode <= 0)
