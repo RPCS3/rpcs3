@@ -267,9 +267,17 @@ struct alignas(16) u128
 
 	u128() noexcept = default;
 
-	constexpr u128(u64 l) noexcept
-		: lo(l)
+	template <typename T, std::enable_if_t<std::is_unsigned_v<T>, u64> = 0>
+	constexpr u128(T arg) noexcept
+		: lo(arg)
 		, hi(0)
+	{
+	}
+
+	template <typename T, std::enable_if_t<std::is_signed_v<T>, s64> = 0>
+	constexpr u128(T arg) noexcept
+		: lo(s64{arg})
+		, hi(s64{arg} >> 63)
 	{
 	}
 
@@ -490,23 +498,8 @@ struct alignas(16) s128
 	s64 hi;
 
 	s128() = default;
-
-	constexpr s128(s64 l)
-		: hi(l >> 63)
-		, lo(l)
-	{
-	}
-
-	constexpr s128(u64 l)
-		: hi(0)
-		, lo(l)
-	{
-	}
 };
 #endif
-
-CHECK_SIZE_ALIGN(u128, 16, 16);
-CHECK_SIZE_ALIGN(s128, 16, 16);
 
 template <>
 struct get_int_impl<16>
