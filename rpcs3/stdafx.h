@@ -14,8 +14,8 @@
 #endif
 
 #include "util/types.hpp"
-#include "Utilities/BEType.h"
 #include "util/atomic.hpp"
+#include "util/endian.hpp"
 #include "Utilities/StrFmt.h"
 #include "Utilities/File.h"
 #include "util/logs.hpp"

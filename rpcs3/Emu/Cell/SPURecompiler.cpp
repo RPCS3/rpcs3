@@ -18,6 +18,8 @@
 #include <mutex>
 #include <thread>
 
+#include "util/v128.hpp"
+
 extern atomic_t<const char*> g_progr;
 extern atomic_t<u32> g_progr_ptotal;
 extern atomic_t<u32> g_progr_pdone;

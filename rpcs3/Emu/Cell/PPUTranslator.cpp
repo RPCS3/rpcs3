@@ -5,7 +5,10 @@
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
 
+#include "util/types.hpp"
+#include "util/endian.hpp"
 #include "util/logs.hpp"
+#include "util/v128.hpp"
 #include <algorithm>
 
 using namespace llvm;

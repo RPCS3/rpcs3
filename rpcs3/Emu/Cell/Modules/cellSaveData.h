@@ -3,6 +3,8 @@
 #include "stdafx.h"
 #include <Emu/Memory/vm_ptr.h>
 
+#include "util/v128.hpp"
+
 // Return codes
 enum CellSaveDataError : u32
 {

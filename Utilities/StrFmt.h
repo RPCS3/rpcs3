@@ -119,6 +119,17 @@ struct fmt_unveil<b8, void>
 	}
 };
 
+template <typename T, bool Se, std::size_t Align>
+struct fmt_unveil<se_t<T, Se, Align>, void>
+{
+	using type = typename fmt_unveil<T>::type;
+
+	static inline auto get(const se_t<T, Se, Align>& arg)
+	{
+		return fmt_unveil<T>::get(arg);
+	}
+};
+
 // String type format provider, also type classifier (format() called if an argument is formatted as "%s")
 template <typename T, typename = void>
 struct fmt_class_string

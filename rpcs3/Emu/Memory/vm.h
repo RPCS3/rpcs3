@@ -4,7 +4,8 @@
 #include <memory>
 #include "util/types.hpp"
 #include "Utilities/StrFmt.h"
-#include "Utilities/BEType.h"
+
+#include "util/to_endian.hpp"
 
 namespace utils
 {

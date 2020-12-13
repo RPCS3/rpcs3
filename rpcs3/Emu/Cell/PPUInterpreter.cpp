@@ -11,6 +11,7 @@
 #include <cmath>
 
 #include "util/asm.hpp"
+#include "util/v128.hpp"
 
 #if !defined(_MSC_VER) && defined(__clang__)
 #pragma GCC diagnostic push

@@ -3,12 +3,13 @@
 #include "sha1.h"
 #include "utils.h"
 #include "unself.h"
-#include "Utilities/BEType.h"
 #include "Emu/VFS.h"
 #include "Emu/System.h"
 
 #include <algorithm>
 #include <zlib.h>
+
+#include "util/v128.hpp"
 
 inline u8 Read8(const fs::file& f)
 {

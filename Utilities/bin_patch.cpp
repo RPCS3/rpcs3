@@ -4,6 +4,9 @@
 #include "version.h"
 #include "Emu/System.h"
 
+#include "util/types.hpp"
+#include "util/endian.hpp"
+
 LOG_CHANNEL(patch_log, "PAT");
 
 namespace config_key

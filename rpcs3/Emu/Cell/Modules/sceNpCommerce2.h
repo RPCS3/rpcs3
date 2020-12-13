@@ -2,8 +2,6 @@
 
 #include "cellRtc.h"
 
-#include "Utilities/BEType.h"
-
 // Return codes
 enum SceNpCommerce2Error
 {

@@ -174,7 +174,7 @@ struct audio_port
 		return addr.addr() + position(offset) * buf_size();
 	}
 
-	to_be_t<float>* get_vm_ptr(s32 offset = 0) const
+	be_t<f32>* get_vm_ptr(s32 offset = 0) const
 	{
 		return vm::_ptr<f32>(buf_addr(offset));
 	}

@@ -14,6 +14,8 @@
 #include <QMessageBox>
 #include <charconv>
 
+#include "util/v128.hpp"
+
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }

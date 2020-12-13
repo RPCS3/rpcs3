@@ -66,6 +66,7 @@
 #include <cctype>
 #include "util/asm.hpp"
 #include "util/vm.hpp"
+#include "util/v128.hpp"
 
 const bool s_use_ssse3 = utils::has_ssse3();
 
@@ -1240,8 +1241,8 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			const auto inst = vm::_ptr<const nse_t<u32>>(cia);
 
 			// Search for STWCX or STDCX nearby (LDARX-STWCX and LWARX-STDCX loops will use accurate 128-byte reservations)
-			constexpr u32 store_cond = se_storage<u32>::swap(sizeof(T) == 8 ? 0x7C00012D : 0x7C0001AD);
-			constexpr u32 mask = se_storage<u32>::swap(0xFC0007FF);
+			constexpr u32 store_cond = stx::se_storage<u32>::swap(sizeof(T) == 8 ? 0x7C00012D : 0x7C0001AD);
+			constexpr u32 mask = stx::se_storage<u32>::swap(0xFC0007FF);
 
 			const auto store_vec = v128::from32p(store_cond);
 			const auto mask_vec = v128::from32p(mask);

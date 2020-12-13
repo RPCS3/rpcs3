@@ -26,7 +26,6 @@
 
 #include "util/types.hpp"
 #include "Utilities/StrFmt.h"
-#include "Utilities/BEType.h"
 #include "Utilities/BitField.h"
 #include "util/logs.hpp"
 #include "Utilities/JIT.h"
@@ -37,6 +36,8 @@
 #include <set>
 #include <array>
 #include <vector>
+
+#include "util/v128.hpp"
 
 enum class i2 : char
 {

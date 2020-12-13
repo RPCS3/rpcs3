@@ -13,6 +13,8 @@
 #include <thread>
 #include <mutex>
 
+#include "util/v128.hpp"
+
 LOG_CHANNEL(cellSpurs);
 
 //----------------------------------------------------------------------------

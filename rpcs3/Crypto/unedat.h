@@ -4,8 +4,9 @@
 
 #include "utils.h"
 
-#include "Utilities/BEType.h"
 #include "Utilities/File.h"
+
+#include "util/v128.hpp"
 
 constexpr u32 SDAT_FLAG = 0x01000000;
 constexpr u32 EDAT_COMPRESSED_FLAG = 0x00000001;

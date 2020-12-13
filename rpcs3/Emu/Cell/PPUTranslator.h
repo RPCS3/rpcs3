@@ -6,6 +6,8 @@
 #include "PPUOpcodes.h"
 #include "PPUAnalyser.h"
 
+#include "util/types.hpp"
+
 class PPUTranslator final : public cpu_translator
 {
 	// PPU Module

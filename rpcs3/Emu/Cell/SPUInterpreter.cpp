@@ -7,6 +7,7 @@
 #include "Emu/Cell/Common.h"
 
 #include "util/asm.hpp"
+#include "util/v128.hpp"
 
 #include <cmath>
 #include <cfenv>

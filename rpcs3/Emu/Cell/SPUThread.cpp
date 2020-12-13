@@ -31,6 +31,7 @@
 #include <shared_mutex>
 #include "util/vm.hpp"
 #include "util/asm.hpp"
+#include "util/v128.hpp"
 
 using spu_rdata_t = decltype(spu_thread::rdata);
 

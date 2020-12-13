@@ -2,6 +2,8 @@
 
 #include "PPUThread.h"
 
+#include "util/v128.hpp"
+
 using ppu_function_t = bool(*)(ppu_thread&);
 
 // BIND_FUNC macro "converts" any appropriate HLE function to ppu_function_t, binding it to PPU thread context.

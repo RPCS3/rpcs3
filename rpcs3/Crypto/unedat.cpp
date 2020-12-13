@@ -5,6 +5,8 @@
 #include "Utilities/mutex.h"
 #include <cmath>
 
+#include "util/v128.hpp"
+
 LOG_CHANNEL(edat_log, "EDAT");
 
 // Static variables are being modified concurrently in ec.cpp, for now use a mutex

@@ -1069,7 +1069,10 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\BEType.h">
+    <ClInclude Include="util\v128.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\to_endian.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\StrFmt.h">

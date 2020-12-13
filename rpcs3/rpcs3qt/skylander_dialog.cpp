@@ -3,7 +3,6 @@
 #include "Crypto/md5.h"
 #include "Crypto/aes.h"
 #include "skylander_dialog.h"
-#include "Utilities/BEType.h"
 #include "Emu/Io/Skylander.h"
 
 #include <QLabel>

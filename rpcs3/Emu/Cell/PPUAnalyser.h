@@ -3,9 +3,10 @@
 #include <string>
 #include <map>
 #include <set>
+#include "util/types.hpp"
+#include "util/endian.hpp"
 
 #include "Utilities/bit_set.h"
-#include "Utilities/BEType.h"
 #include "PPUOpcodes.h"
 
 // PPU Function Attributes
