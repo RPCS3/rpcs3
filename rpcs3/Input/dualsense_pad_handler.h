@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Io/PadHandler.h"
 #include "Utilities/CRC.h"
