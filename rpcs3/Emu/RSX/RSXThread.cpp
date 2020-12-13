@@ -17,6 +17,7 @@
 #include "Utilities/StrUtil.h"
 
 #include <cereal/archives/binary.hpp>
+#include <cereal/types/unordered_map.hpp>
 
 #include "util/asm.hpp"
 

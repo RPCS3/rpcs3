@@ -1,5 +1,6 @@
 #pragma once
 
+#include "texture_cache_utils.h"
 #include "texture_cache_predictor.h"
 #include "texture_cache_helpers.h"
 

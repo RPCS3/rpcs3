@@ -1,6 +1,7 @@
 #include "stdafx.h"
-#include "VKGSRender.h"
 #include "../Common/BufferUtils.h"
+#include "../rsx_methods.h"
+#include "VKGSRender.h"
 
 namespace vk
 {

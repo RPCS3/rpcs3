@@ -5,6 +5,7 @@
 #include "GLCompute.h"
 #include "GLVertexProgram.h"
 #include "Emu/Memory/vm_locking.h"
+#include "Emu/RSX/rsx_methods.h"
 
 #define DUMP_VERTEX_DATA 0
 
