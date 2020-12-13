@@ -2,6 +2,7 @@
 
 #include "stdafx.h"
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 // Error codes
 enum SceNpTrophyError : u32

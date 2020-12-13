@@ -5,6 +5,7 @@
 #include "Emu/System.h"
 #include "Emu/perf_meter.hpp"
 
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/PPUOpcodes.h"

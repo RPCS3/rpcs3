@@ -22,10 +22,10 @@ namespace gui
 			// Get minimum virtual screen x & y for clamping the
 			// window x & y later while taking the width and height
 			// into account, so they don't go offscreen
-			s32 min_screen_x = std::numeric_limits<s32>::max();
-			s32 max_screen_x = std::numeric_limits<s32>::min();
-			s32 min_screen_y = std::numeric_limits<s32>::max();
-			s32 max_screen_y = std::numeric_limits<s32>::min();
+			s32 min_screen_x = INT32_MAX;
+			s32 max_screen_x = INT32_MIN;
+			s32 min_screen_y = INT32_MAX;
+			s32 max_screen_y = INT32_MIN;
 			for (auto screen : QApplication::screens())
 			{
 				auto screen_geometry = screen->availableGeometry();

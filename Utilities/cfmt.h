@@ -1,12 +1,12 @@
 #pragma once
 
-#include "types.h"
+#include "util/types.hpp"
 #include <climits>
 #include <string>
 #include <vector>
 #include <algorithm>
 
-static const size_t size_dropped = std::numeric_limits<size_t>::max();
+static const std::size_t size_dropped = -1;
 
 /*
 C-style format parser. Appends formatted string to `out`, returns number of characters written.

@@ -14,7 +14,6 @@
 #include <type_traits>
 #include <utility>
 #include <chrono>
-#include <limits>
 #include <array>
 
 using std::chrono::steady_clock;
@@ -267,9 +266,17 @@ struct alignas(16) u128
 
 	u128() noexcept = default;
 
-	constexpr u128(u64 l) noexcept
-		: lo(l)
+	template <typename T, std::enable_if_t<std::is_unsigned_v<T>, u64> = 0>
+	constexpr u128(T arg) noexcept
+		: lo(arg)
 		, hi(0)
+	{
+	}
+
+	template <typename T, std::enable_if_t<std::is_signed_v<T>, s64> = 0>
+	constexpr u128(T arg) noexcept
+		: lo(s64{arg})
+		, hi(s64{arg} >> 63)
 	{
 	}
 
@@ -490,23 +497,8 @@ struct alignas(16) s128
 	s64 hi;
 
 	s128() = default;
-
-	constexpr s128(s64 l)
-		: hi(l >> 63)
-		, lo(l)
-	{
-	}
-
-	constexpr s128(u64 l)
-		: hi(0)
-		, lo(l)
-	{
-	}
 };
 #endif
-
-CHECK_SIZE_ALIGN(u128, 16, 16);
-CHECK_SIZE_ALIGN(s128, 16, 16);
 
 template <>
 struct get_int_impl<16>
@@ -522,13 +514,13 @@ constexpr inline struct umax_helper
 	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	explicit constexpr operator T() const
 	{
-		return std::numeric_limits<S>::max();
+		return static_cast<S>(-1);
 	}
 
 	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator==(const T& rhs) const
 	{
-		return rhs == std::numeric_limits<S>::max();
+		return rhs == static_cast<S>(-1);
 	}
 
 #if __cpp_impl_three_way_comparison >= 201711 && !__INTELLISENSE__
@@ -536,7 +528,7 @@ constexpr inline struct umax_helper
 	template <typename T>
 	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator==(const T& lhs, const umax_helper& rhs)
 	{
-		return lhs == std::numeric_limits<simple_t<T>>::max();
+		return lhs == static_cast<simple_t<T>>(-1);
 	}
 #endif
 
@@ -545,13 +537,13 @@ constexpr inline struct umax_helper
 	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator!=(const T& rhs) const
 	{
-		return rhs != std::numeric_limits<S>::max();
+		return rhs != static_cast<S>(-1);
 	}
 
 	template <typename T>
 	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator!=(const T& lhs, const umax_helper& rhs)
 	{
-		return lhs != std::numeric_limits<simple_t<T>>::max();
+		return lhs != static_cast<simple_t<T>>(-1);
 	}
 #endif
 } umax;
@@ -879,7 +871,7 @@ struct pointer_hash
 {
 	std::size_t operator()(T* ptr) const
 	{
-		return reinterpret_cast<std::uintptr_t>(ptr) / Align;
+		return reinterpret_cast<uptr>(ptr) / Align;
 	}
 };
 
@@ -892,188 +884,9 @@ struct value_hash
 	}
 };
 
-// Contains value of any POD type with fixed size and alignment. TT<> is the type converter applied.
-// For example, `simple_t` may be used to remove endianness.
-template <template <typename> class TT, std::size_t S, std::size_t A = S>
-struct alignas(A) any_pod
-{
-	alignas(A) std::byte data[S];
-
-	any_pod() = default;
-
-	template <typename T, typename T2 = TT<T>, typename = std::enable_if_t<std::is_trivially_copyable_v<T> && sizeof(T2) == S && alignof(T2) <= A>>
-	any_pod(const T& value)
-	{
-		*this = std::bit_cast<any_pod>(value);
-	}
-
-	template <typename T, typename T2 = TT<T>, typename = std::enable_if_t<std::is_trivially_copyable_v<T> && sizeof(T2) == S && alignof(T2) <= A>>
-	T2& as()
-	{
-		return reinterpret_cast<T2&>(data);
-	}
-
-	template <typename T, typename T2 = TT<T>, typename = std::enable_if_t<std::is_trivially_copyable_v<T> && sizeof(T2) == S && alignof(T2) <= A>>
-	const T2& as() const
-	{
-		return reinterpret_cast<const T2&>(data);
-	}
-};
-
-using any16 = any_pod<simple_t, sizeof(u16)>;
-using any32 = any_pod<simple_t, sizeof(u32)>;
-using any64 = any_pod<simple_t, sizeof(u64)>;
-
-struct cmd64 : any64
-{
-	struct pair_t
-	{
-		any32 arg1;
-		any32 arg2;
-	};
-
-	cmd64() = default;
-
-	template <typename T>
-	cmd64(const T& value)
-		: any64(value)
-	{
-	}
-
-	template <typename T1, typename T2>
-	cmd64(const T1& arg1, const T2& arg2)
-		: any64(pair_t{arg1, arg2})
-	{
-	}
-
-	explicit operator bool() const
-	{
-		return as<u64>() != 0;
-	}
-
-	// TODO: compatibility with std::pair/std::tuple?
-
-	template <typename T>
-	decltype(auto) arg1()
-	{
-		return as<pair_t>().arg1.as<T>();
-	}
-
-	template <typename T>
-	decltype(auto) arg1() const
-	{
-		return as<const pair_t>().arg1.as<const T>();
-	}
-
-	template <typename T>
-	decltype(auto) arg2()
-	{
-		return as<pair_t>().arg2.as<T>();
-	}
-
-	template <typename T>
-	decltype(auto) arg2() const
-	{
-		return as<const pair_t>().arg2.as<const T>();
-	}
-};
-
-static_assert(sizeof(cmd64) == 8 && std::is_trivially_copyable_v<cmd64>, "Incorrect cmd64 type");
-
-// Error code type (return type), implements error reporting. Could be a template.
-class error_code
-{
-	// Use fixed s32 type for now
-	s32 value;
-
-public:
-	error_code() = default;
-
-	// Implementation must be provided specially
-	static s32 error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2);
-
-	// Helper type
-	enum class not_an_error : s32
-	{
-		__not_an_error // SFINAE marker
-	};
-
-	// __not_an_error tester
-	template<typename ET, typename = void>
-	struct is_error : std::integral_constant<bool, std::is_enum<ET>::value || std::is_integral<ET>::value>
-	{
-	};
-
-	template<typename ET>
-	struct is_error<ET, std::enable_if_t<sizeof(ET::__not_an_error) != 0>> : std::false_type
-	{
-	};
-
-	// Common constructor
-	template<typename ET>
-	error_code(const ET& value)
-		: value(static_cast<s32>(value))
-	{
-		if constexpr(is_error<ET>::value)
-		{
-			this->value = error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), nullptr, 0);
-		}
-	}
-
-	// Error constructor (2 args)
-	template<typename ET, typename T2>
-	error_code(const ET& value, const T2& value2)
-		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), fmt::get_type_info<fmt_unveil_t<T2>>(), fmt_unveil<T2>::get(value2)))
-	{
-	}
-
-	operator s32() const
-	{
-		return value;
-	}
-};
-
-// Helper function for error_code
-template <typename T>
-constexpr FORCE_INLINE error_code::not_an_error not_an_error(const T& value)
-{
-	return static_cast<error_code::not_an_error>(static_cast<s32>(value));
-}
-
 // Synchronization helper (cache-friendly busy waiting)
 inline void busy_wait(std::size_t cycles = 3000)
 {
 	const u64 s = __rdtsc();
 	do _mm_pause(); while (__rdtsc() - s < cycles);
-}
-
-// TODO: Remove when moving to c++20
-template <typename T>
-inline constexpr uintmax_t floor2(T value)
-{
-	value >>= 1;
-
-	for (uintmax_t i = 0;; i++, value >>= 1)
-	{
-		if (value == 0)
-		{
-			return i;
-		}
-	}
-}
-
-template <typename T>
-inline constexpr uintmax_t ceil2(T value)
-{
-	const uintmax_t ispow2 = value & (value - 1); // if power of 2 the result is 0
-
-	value >>= 1;
-
-	for (uintmax_t i = 0;; i++, value >>= 1)
-	{
-		if (value == 0)
-		{
-			return i + std::min<uintmax_t>(ispow2, 1);
-		}
-	}
 }

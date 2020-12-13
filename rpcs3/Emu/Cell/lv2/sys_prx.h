@@ -3,6 +3,7 @@
 #include "sys_sync.h"
 
 #include "Emu/Cell/PPUAnalyser.h"
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Memory/vm_ptr.h"
 
 // Return codes

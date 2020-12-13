@@ -4,7 +4,7 @@
 // Licensed under the terms of the GNU GPL, version 3
 // http://www.gnu.org/licenses/gpl-3.0.txt
 
-#include "../../Utilities/types.h"
+#include "util/types.hpp"
 
 #include <stdlib.h>
 #include "aes.h"

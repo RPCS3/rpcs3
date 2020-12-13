@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cellRtc.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 #include "Utilities/BEType.h"
 

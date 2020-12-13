@@ -1,7 +1,7 @@
 #pragma once
 
 #include "gcm_enums.h"
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 #include <vector>
 #include <bitset>

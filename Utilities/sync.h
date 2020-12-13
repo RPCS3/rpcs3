@@ -2,7 +2,7 @@
 
 /* For internal use. Don't include. */
 
-#include "types.h"
+#include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/dyn_lib.hpp"
 

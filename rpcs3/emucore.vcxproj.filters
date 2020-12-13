@@ -1183,7 +1183,7 @@
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\types.h">
+    <ClInclude Include="util\types.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\BitField.h">

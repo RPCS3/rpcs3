@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "Utilities/geometry.h"
 #include "Utilities/address_range.h"
 #include "TextureUtils.h"

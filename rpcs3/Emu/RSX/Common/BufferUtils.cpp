@@ -685,7 +685,7 @@ namespace
 	template <typename T>
 	constexpr T index_limit()
 	{
-		return std::numeric_limits<T>::max();
+		return -1;
 	}
 
 	template <typename T>

@@ -1,6 +1,83 @@
 #pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
+
+// Error code type (return type), implements error reporting.
+class error_code
+{
+	s32 value;
+
+public:
+	error_code() = default;
+
+	// Implementation must be provided independently
+	static s32 error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2);
+
+	// Helper type
+	enum class not_an_error : s32
+	{
+		__not_an_error // SFINAE marker
+	};
+
+	// __not_an_error tester
+	template<typename ET, typename = void>
+	struct is_error : std::integral_constant<bool, std::is_enum<ET>::value || std::is_integral<ET>::value>
+	{
+	};
+
+	template<typename ET>
+	struct is_error<ET, std::enable_if_t<sizeof(ET::__not_an_error) != 0>> : std::false_type
+	{
+	};
+
+	// Common constructor
+	template<typename ET>
+	error_code(const ET& value)
+		: value(static_cast<s32>(value))
+	{
+		if constexpr(is_error<ET>::value)
+		{
+			this->value = error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), nullptr, 0);
+		}
+	}
+
+	// Error constructor (2 args)
+	template<typename ET, typename T2>
+	error_code(const ET& value, const T2& value2)
+		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), fmt::get_type_info<fmt_unveil_t<T2>>(), fmt_unveil<T2>::get(value2)))
+	{
+	}
+
+	operator s32() const
+	{
+		return value;
+	}
+};
+
+// Helper function for error_code
+template <typename T>
+constexpr FORCE_INLINE error_code::not_an_error not_an_error(const T& value)
+{
+	return static_cast<error_code::not_an_error>(static_cast<s32>(value));
+}
+
+template <typename T, typename>
+struct ppu_gpr_cast_impl;
+
+template <>
+struct ppu_gpr_cast_impl<error_code, void>
+{
+	static inline u64 to(const error_code& code)
+	{
+		return code;
+	}
+
+	static inline error_code from(const u64 reg)
+	{
+		return not_an_error(reg);
+	}
+};
+
 
 enum CellNotAnError : s32
 {

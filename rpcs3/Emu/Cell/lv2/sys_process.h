@@ -2,6 +2,7 @@
 
 #include "Crypto/unself.h"
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 // Process Local Object Type
 enum : u32
@@ -37,7 +38,7 @@ struct sys_exit2_param
 	vm::bpptr<char, u64, u64> args;
 };
 
-struct ps3_process_info_t 
+struct ps3_process_info_t
 {
 	u32 sdk_ver;
 	u32 ppc_seg;

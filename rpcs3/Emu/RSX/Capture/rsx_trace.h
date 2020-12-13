@@ -1,8 +1,9 @@
 #pragma once
+
 #include <string>
 #include <array>
 #include <vector>
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "Emu/RSX/rsx_methods.h"
 
 namespace rsx

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit1;

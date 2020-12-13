@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "Config.h"
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 #include "util/yaml.hpp"
 

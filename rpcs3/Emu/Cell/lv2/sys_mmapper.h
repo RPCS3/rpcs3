@@ -3,6 +3,7 @@
 #include "sys_sync.h"
 
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 #include <vector>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 enum class pad_handler
 {
@@ -8,6 +8,7 @@ enum class pad_handler
 	keyboard,
 	ds3,
 	ds4,
+	dualsense,
 #ifdef _WIN32
 	xinput,
 	mm,

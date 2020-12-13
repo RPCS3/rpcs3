@@ -3,6 +3,7 @@
 #include "product_info.h"
 #include "ds3_pad_handler.h"
 #include "ds4_pad_handler.h"
+#include "dualsense_pad_handler.h"
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
 #include "mm_joystick_handler.h"
@@ -122,6 +123,9 @@ void pad_thread::Init()
 				break;
 			case pad_handler::ds4:
 				cur_pad_handler = std::make_shared<ds4_pad_handler>();
+				break;
+			case pad_handler::dualsense:
+				cur_pad_handler = std::make_shared<dualsense_pad_handler>();
 				break;
 #ifdef _WIN32
 			case pad_handler::xinput:

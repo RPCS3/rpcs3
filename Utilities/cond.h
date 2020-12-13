@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "util/types.hpp"
 #include "util/atomic.hpp"
 
 // Lightweight condition variable
