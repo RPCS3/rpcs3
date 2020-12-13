@@ -612,10 +612,10 @@ void GLGSRender::end()
 		return;
 	}
 
+	analyse_current_rsx_pipeline();
 	m_frame_stats.setup_time += m_profiler.duration();
 
 	// Active texture environment is used to decode shaders
-	m_profiler.start();
 	load_texture_env();
 	m_frame_stats.textures_upload_time += m_profiler.duration();
 

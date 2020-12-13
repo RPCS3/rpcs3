@@ -360,16 +360,6 @@ namespace rsx
 			}
 		}
 
-		if (m_graphics_state & rsx::pipeline_state::fragment_program_ucode_dirty)
-		{
-			// Request for update of fragment constants if the program block is invalidated
-			m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
-		}
-
-		// Preload the GPU programs for this draw call if needed
-		prefetch_vertex_program();
-		prefetch_fragment_program();
-
 		in_begin_end = true;
 	}
 
@@ -1573,6 +1563,18 @@ namespace rsx
 				}
 			}
 		}
+	}
+
+	void thread::analyse_current_rsx_pipeline()
+	{
+		if (m_graphics_state & rsx::pipeline_state::fragment_program_ucode_dirty)
+		{
+			// Request for update of fragment constants if the program block is invalidated
+			m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
+		}
+
+		prefetch_vertex_program();
+		prefetch_fragment_program();
 	}
 
 	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors)
