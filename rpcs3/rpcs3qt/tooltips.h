@@ -19,8 +19,8 @@ public:
 	{
 		// advanced
 
-		const QString lle_list                     = tr("This libraries group are LLEd by default (lower list), selection will switch to HLE.\nLLE - \"Low Level Emulated\", function code inside the selected SPRX file will be used for exported firmware functions.\nHLE - \"High Level Emulated\", alternative emulator code will be used instead for exported firmware functions.\nIf choosen wrongly, games will not work! If unsure, leave both lists' selection empty.");
-		const QString hle_list                     = tr("This libraries group are HLEd by default (upper list), selection will switch to LLE.\nLLE - \"Low Level Emulated\", function code inside the selected SPRX file will be used for exported firmware functions.\nHLE - \"High Level Emulated\", alternative emulator code will be used instead for exported firmware functions.\nIf choosen wrongly, games will not work! If unsure, leave both lists' selection empty.");
+		const QString lle_list                     = tr("These libraries are LLE'd by default (lower list), selection will switch to HLE.\nLLE - \"Low Level Emulated\", function code inside the selected SPRX file will be used for exported firmware functions.\nHLE - \"High Level Emulated\", alternative emulator code will be used instead for exported firmware functions.\nIf choosen wrongly, games will not work! If unsure, leave both lists' selection empty.");
+		const QString hle_list                     = tr("These libraries are HLE'd by default (upper list), selection will switch to LLE.\nLLE - \"Low Level Emulated\", function code inside the selected SPRX file will be used for exported firmware functions.\nHLE - \"High Level Emulated\", alternative emulator code will be used instead for exported firmware functions.\nIf choosen wrongly, games will not work! If unsure, leave both lists' selection empty.");
 		const QString lib_default_hle              = tr("Select to LLE. (HLE by default)");
 		const QString lib_default_lle              = tr("Select to HLE. (LLE by default)");
 
