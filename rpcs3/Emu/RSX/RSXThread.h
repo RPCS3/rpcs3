@@ -12,9 +12,8 @@
 #include "RSXOffload.h"
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
-#include "rsx_methods.h"
 #include "rsx_utils.h"
-#include "Common/texture_cache_utils.h"
+#include "Common/texture_cache_types.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/geometry.h"

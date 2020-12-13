@@ -36,6 +36,7 @@
 #include "util/logs.hpp"
 
 #include "cereal/archives/binary.hpp"
+#include <cereal/types/unordered_map.hpp>
 
 #include <thread>
 #include <typeinfo>

@@ -3,6 +3,7 @@
 #include "GLGSRender.h"
 #include "GLVertexProgram.h"
 #include "GLFragmentProgram.h"
+#include "../rsx_methods.h"
 #include "../Common/ShaderInterpreter.h"
 #include "../Common/GLSLCommon.h"
 

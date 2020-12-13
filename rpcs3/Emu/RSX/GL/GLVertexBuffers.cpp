@@ -1,6 +1,7 @@
 #include "stdafx.h"
-#include "GLGSRender.h"
 #include "../Common/BufferUtils.h"
+#include "../rsx_methods.h"
+#include "GLGSRender.h"
 #include "GLHelpers.h"
 
 namespace

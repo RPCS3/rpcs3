@@ -13,9 +13,6 @@
 #include "rsx_utils.h"
 #include "Utilities/geometry.h"
 
-#include <cereal/types/array.hpp>
-#include <cereal/types/unordered_map.hpp>
-
 extern u64 get_system_time();
 extern bool is_primitive_disjointed(rsx::primitive_type);
 
