@@ -27,8 +27,10 @@
 #include "pkg_install_dialog.h"
 #include "category.h"
 #include "gui_settings.h"
+#include "input_dialog.h"
 
 #include <thread>
+#include <charconv>
 
 #include <QScreen>
 #include <QDirIterator>
@@ -38,10 +40,12 @@
 
 #include "rpcs3_version.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/system_config.h"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
+#include "Crypto/unedat.h"
 
 #include "Loader/PUP.h"
 #include "Loader/TAR.h"
@@ -876,27 +880,55 @@ void main_window::DecryptSPRXLibraries()
 		return;
 	}
 
-	if (!m_gui_settings->GetBootConfirmation(this))
-	{
-		return;
-	}
-
-	Emu.SetForceBoot(true);
-	Emu.Stop();
-
 	m_gui_settings->SetValue(gui::fd_decrypt_sprx, QFileInfo(modules.first()).path());
 
 	gui_log.notice("Decrypting binaries...");
+
+	// Always start with no KLIC
+	std::vector<v128> klics{v128{}};
+
+	if (const auto keys = g_fxo->get<loaded_npdrm_keys>())
+	{
+		// Second klic: get it from a running game
+		if (const v128 klic = keys->devKlic; klic != v128{})
+		{
+			klics.emplace_back(klic);
+		}
+	}
 
 	for (const QString& _module : modules)
 	{
 		const std::string old_path = sstr(_module);
 
-		fs::file elf_file(old_path);
+		fs::file elf_file;
 
-		if (elf_file && elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
+		bool tried = false;
+		bool invalid = false;
+		std::size_t key_it = 0;
+
+		while (true)
 		{
-			elf_file = decrypt_self(std::move(elf_file));
+			for (; key_it < klics.size(); key_it++)
+			{
+				if (elf_file.open(old_path) && elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
+				{
+					// First KLIC is no KLIC
+					elf_file = decrypt_self(std::move(elf_file), key_it != 0 ? klics[key_it]._bytes : nullptr);
+
+					if (!elf_file)
+					{
+						// Try another key
+						continue;
+					}
+				}
+				else
+				{
+					elf_file = {};
+					invalid = true;
+				}
+
+				break;
+			}
 
 			if (elf_file)
 			{
@@ -912,11 +944,66 @@ void main_window::DecryptSPRXLibraries()
 				{
 					gui_log.error("Failed to create %s", new_path);
 				}
+
+				break;
 			}
-			else
+			else if (!invalid)
 			{
-				gui_log.error("Failed to decrypt %s", old_path);
+				// Allow the user to manually type KLIC if decryption failed
+
+				const std::string filename = old_path.substr(old_path.find_last_of(fs::delim) + 1);
+	
+				const QString hint = tr("Hint: KLIC (KLicense key) is a 16-byte long string. (32 hexadecimal characters)"
+							"\nAnd is logged with some sceNpDrm* functions when the game/application which owns \"%0\" is running.").arg(qstr(filename));
+
+				if (tried)
+				{
+					gui_log.error("Failed to decrypt %s with specfied KLIC, retrying.\n%s", old_path, sstr(hint));
+				}
+
+				input_dialog dlg(32, "", tr("Enter KLIC of %0").arg(qstr(filename)),
+					tried ? tr("Decryption failed with provided KLIC.\n%0").arg(hint) : tr("Hexadecimal only."), "00000000000000000000000000000000", this);
+
+				QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+				mono.setPointSize(8);
+				dlg.set_input_font(mono, true, '0');
+				dlg.set_clear_button_enabled(false);
+				dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
+				dlg.set_validator(new QRegExpValidator(QRegExp("^[a-fA-F0-9]*$"))); // HEX only
+
+				connect(&dlg, &input_dialog::text_changed, [&](const QString& text)
+				{
+					dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, text.size() == 32);
+				});
+
+				if (dlg.exec() == QDialog::Accepted)
+				{
+					const std::string text = sstr(dlg.get_input_text());
+
+					auto& klic = (tried ? klics.back() : klics.emplace_back());
+
+					ensure(text.size() == 32);
+
+					// It must succeed (only hex characters are present)
+					std::from_chars(&text[0], &text[16], klic._u64[1], 16); // Not a typo: on LE systems the u64[1] part will be swapped with u64[0] later
+					std::from_chars(&text[16], &text[32], klic._u64[0], 16); // And on BE systems it will be already swapped by index internally
+
+					// Needs to be in big endian because the left to right byte-order means big endian
+					klic = std::bit_cast<be_t<v128>>(klic);
+
+					// Retry with specified KLIC
+					key_it -= +std::exchange(tried, true); // Rewind on second and above attempt
+					gui_log.notice("KLIC entered for %s: %s", filename, klic);
+					continue;
+				}
+				else
+				{
+					gui_log.notice("User has cancelled entering KLIC.");
+				}
 			}
+
+			gui_log.error("Failed to decrypt \"%s\".", old_path);
+			break;
 		}
 	}
 
