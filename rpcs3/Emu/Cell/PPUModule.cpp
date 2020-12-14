@@ -811,6 +811,10 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		{
 		case 0x1: // LOAD
 		{
+			auto& _seg = prx->segs.emplace_back();
+			_seg.flags = prog.p_flags;
+			_seg.type = p_type;
+
 			if (prog.p_memsz)
 			{
 				const u32 mem_size = ::narrow<u32>(prog.p_memsz);
@@ -840,13 +844,9 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 					ppu_register_range(addr, mem_size);
 				}
 
-				ppu_segment _seg;
 				_seg.addr = addr;
 				_seg.size = mem_size;
 				_seg.filesz = file_size;
-				_seg.type = p_type;
-				_seg.flags = prog.p_flags;
-				prx->segs.emplace_back(_seg);
 			}
 
 			break;
@@ -908,10 +908,22 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 			{
 				const auto& rel = reinterpret_cast<const ppu_prx_relocation_info&>(prog.bin[i]);
 
+				if (rel.offset >= prx->segs.at(rel.index_addr).size)
+				{
+					fmt::throw_exception("Relocation offset out of segment memory! (offset=0x%x, index_addr=%u)", rel.offset, rel.index_addr);
+				}
+
+				const u32 data_base = rel.index_value == 0xFF ? 0 : prx->segs.at(rel.index_value).addr;
+
+				if (rel.index_value != 0xFF && !data_base)
+				{
+					fmt::throw_exception("Empty segment has been referenced for relocation data! (reloc_offset=0x%x, index_value=%u)", i, rel.index_value);
+				}
+
 				ppu_reloc _rel;
 				const u32 raddr = _rel.addr = vm::cast(prx->segs.at(rel.index_addr).addr + rel.offset);
 				const u32 rtype = _rel.type = rel.type;
-				const u64 rdata = _rel.data = rel.index_value == 0xFF ? rel.ptr.addr().value() : prx->segs.at(rel.index_value).addr + rel.ptr.addr();
+				const u64 rdata = _rel.data = data_base + rel.ptr.addr();
 				prx->relocs.emplace_back(_rel);
 
 				switch (rtype)

@@ -2324,9 +2324,10 @@ extern void ppu_initialize(const ppu_module& info)
 		globals.emplace_back(fmt::format("__cptr%x", suffix), reinterpret_cast<u64>(vm::g_exec_addr));
 
 		// Initialize segments for relocations
-		for (u32 i = 0; i < info.segs.size(); i++)
+		for (u32 i = 0, num = 0; i < info.segs.size(); i++)
 		{
-			globals.emplace_back(fmt::format("__seg%u_%x", i, suffix), info.segs[i].addr);
+			if (!info.segs[i].addr) continue;
+			globals.emplace_back(fmt::format("__seg%u_%x", num++, suffix), info.segs[i].addr);
 		}
 
 		link_workload.emplace_back(obj_name, false);
@@ -2490,6 +2491,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 			for (const auto& seg : info.segs)
 			{
+				if (!seg.addr) continue;
 				*jit_mod.vars[index++] = seg.addr;
 			}
 		}
