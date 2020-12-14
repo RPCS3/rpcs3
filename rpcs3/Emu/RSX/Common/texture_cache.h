@@ -332,6 +332,8 @@ namespace rsx
 		atomic_t<u32> m_misses_this_frame  = { 0 };
 		atomic_t<u32> m_speculations_this_frame = { 0 };
 		atomic_t<u32> m_unavoidable_hard_faults_this_frame = { 0 };
+		atomic_t<u32> m_texture_upload_calls_this_frame = { 0 };
+		atomic_t<u32> m_texture_upload_misses_this_frame = { 0 };
 		static const u32 m_predict_max_flushes_per_frame = 50; // Above this number the predictions are disabled
 
 		// Invalidation
@@ -1810,6 +1812,8 @@ namespace rsx
 		template <typename RsxTextureType, typename surface_store_type, typename ...Args>
 		sampled_image_descriptor upload_texture(commandbuffer_type& cmd, RsxTextureType& tex, surface_store_type& m_rtts, Args&&... extras)
 		{
+			m_texture_upload_calls_this_frame++;
+
 			image_section_attributes_t attributes{};
 			texture_cache_search_options options{};
 			attributes.address = rsx::get_address(tex.offset(), tex.location());
@@ -2004,6 +2008,8 @@ namespace rsx
 			}
 
 			// Do direct upload from CPU as the last resort
+			m_texture_upload_misses_this_frame++;
+
 			const auto subresources_layout = get_subresources_layout(tex);
 			const auto format_class = classify_format(attributes.gcm_format);
 
@@ -2961,6 +2967,8 @@ namespace rsx
 			m_misses_this_frame.store(0u);
 			m_speculations_this_frame.store(0u);
 			m_unavoidable_hard_faults_this_frame.store(0u);
+			m_texture_upload_calls_this_frame.store(0u);
+			m_texture_upload_misses_this_frame.store(0u);
 		}
 
 		void on_flush()
@@ -3027,6 +3035,21 @@ namespace rsx
 		{
 			const auto num_flushes = m_flushes_this_frame.load();
 			return (num_flushes == 0u) ? 0.f : static_cast<f32>(m_misses_this_frame.load()) / num_flushes;
+		}
+
+		u32 get_texture_upload_calls_this_frame()
+		{
+			return m_texture_upload_calls_this_frame;
+		}
+
+		u32 get_texture_upload_misses_this_frame()
+		{
+			return m_texture_upload_misses_this_frame;
+		}
+
+		u32 get_texture_upload_miss_percentage()
+		{
+			return (m_texture_upload_calls_this_frame)? (m_texture_upload_misses_this_frame * 100 / m_texture_upload_calls_this_frame) : 0;
 		}
 	};
 }
