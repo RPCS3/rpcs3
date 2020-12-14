@@ -190,7 +190,7 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resou
 
 	if (free_resources)
 	{
-		if (g_cfg.video.overlay)
+		if (m_text_writer)
 		{
 			m_text_writer->reset_descriptors();
 		}
@@ -730,6 +730,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (g_cfg.video.overlay)
 		{
+			if (!m_text_writer)
+			{
+				auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
+				m_text_writer = std::make_unique<vk::text_writer>();
+				m_text_writer->init(*m_device, vk::get_renderpass(*m_device, key));
+			}
+
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,   0, direct_fbo->width(), direct_fbo->height(), fmt::format("RSX Load:                 %3d%%", get_load()));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  18, direct_fbo->width(), direct_fbo->height(), fmt::format("draw calls: %17d", info.stats.draw_calls));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  36, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call setup: %12dus", info.stats.setup_time));

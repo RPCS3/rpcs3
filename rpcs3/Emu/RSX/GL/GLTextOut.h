@@ -118,6 +118,11 @@ namespace gl
 			enabled = state;
 		}
 
+		bool is_enabled()
+		{
+			return enabled;
+		}
+
 		void print_text(int x, int y, int target_w, int target_h, const std::string &text, color4f color = { 0.3f, 1.f, 0.3f, 1.f })
 		{
 			if (!enabled) return;
