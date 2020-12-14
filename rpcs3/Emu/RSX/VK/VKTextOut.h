@@ -66,7 +66,7 @@ namespace vk
 			CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &m_pipeline_layout));
 		}
 
-		void init_program(vk::render_device &dev)
+		void init_program()
 		{
 			std::string vs =
 			{
@@ -266,7 +266,7 @@ namespace vk
 			m_uniform_buffer_size = 983040;
 
 			init_descriptor_set(dev);
-			init_program(dev);
+			init_program();
 
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
