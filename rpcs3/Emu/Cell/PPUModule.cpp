@@ -253,13 +253,13 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 	// Fill the array (visible data: self address and function index)
 	for (u32 addr = ppu_function_manager::addr, index = 0; index < hle_funcs.size(); addr += 8, index++)
 	{
-		// Function address = current address, RTOC = BLR instruction for the interpreter
-		vm::write32(addr + 0, addr);
-		vm::write32(addr + 4, ppu_instructions::BLR());
+		// Function address = next CIA, RTOC = 0 (vm::null)
+		vm::write32(addr + 0, addr + 4);
+		vm::write32(addr + 4, 0);
 
 		// Register the HLE function directly
-		ppu_register_function_at(addr + 0, 4, hle_funcs[index]);
-		ppu_register_function_at(addr + 4, 4, nullptr);
+		ppu_register_function_at(addr + 0, 4, nullptr);
+		ppu_register_function_at(addr + 4, 4, hle_funcs[index]);
 	}
 
 	// Set memory protection to read-only
@@ -303,7 +303,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 				auto& flink = linkage.functions[function.first];
 
 				flink.static_func = &function.second;
-				flink.export_addr = ppu_function_manager::addr + 8 * function.second.index;
+				flink.export_addr = ppu_function_manager::func_addr(function.second.index);
 				function.second.export_addr = &flink.export_addr;
 			}
 		}
@@ -507,7 +507,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 			// Function linkage info
 			auto& flink = mlink.functions[fnid];
 
-			if (flink.static_func && flink.export_addr == ppu_function_manager::addr + 8 * flink.static_func->index)
+			if (flink.static_func && flink.export_addr == ppu_function_manager::func_addr(flink.static_func->index))
 			{
 				flink.export_addr = 0;
 			}
@@ -525,10 +525,10 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 				{
 					// Inject a branch to the HLE implementation
 					const u32 _entry = vm::read32(faddr);
-					const u32 target = ppu_function_manager::addr + 8 * _sf->index;
+					const u32 target = ppu_function_manager::func_addr(_sf->index) + 4;
 
 					// Set exported function
-					flink.export_addr = target;
+					flink.export_addr = target - 4;
 
 					if ((target <= _entry && _entry - target <= 0x2000000) || (target > _entry && target - _entry < 0x2000000))
 					{
@@ -1107,7 +1107,7 @@ void ppu_unload_prx(const lv2_prx& prx)
 	//	auto pinfo = static_cast<ppu_linkage_info::module_data::info*>(exp.second);
 	//	if (pinfo->static_func)
 	//	{
-	//		pinfo->export_addr = ppu_function_manager::addr + 8 * pinfo->static_func->index;
+	//		pinfo->export_addr = ppu_function_manager::func_addr(pinfo->static_func->index);
 	//	}
 	//	else if (pinfo->static_var)
 	//	{

@@ -281,6 +281,16 @@ public:
 		return access();
 	}
 
+	static inline u32 func_addr(u32 index)
+	{
+		if (index >= access().size() || !addr)
+		{
+			return 0;
+		}
+
+		return addr + index * 8;
+	}
+
 	// Allocation address
 	static u32 addr;
 };

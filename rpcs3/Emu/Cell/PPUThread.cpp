@@ -183,20 +183,10 @@ void ppu_reservation_fallback(ppu_thread& ppu)
 {
 	const auto& table = g_ppu_interpreter_fast.get_table();
 
-	const u32 min_hle = ppu_function_manager::addr ? ppu_function_manager::addr : UINT32_MAX;
-	const u32 max_hle = min_hle + ppu_function_manager::get().size() * 8 - 1;
-
 	while (true)
 	{
 		// Run instructions in interpreter
 		const u32 op = vm::read32(ppu.cia);
-
-		if (op == ppu.cia && ppu.cia >= min_hle && ppu.cia <= max_hle)
-		{
-			// HLE function
-			// ppu.raddr = 0;
-			return;
-		}
 
 		if (table[ppu_decode(op)](ppu, {op})) [[likely]]
 		{
@@ -643,7 +633,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			}
 
 			// Ignore HLE stop address
-			return addr == ppu_function_manager::addr + 8;
+			return addr == ppu_function_manager::func_addr(1) + 4;
 		};
 
 		if (is_invalid(addr))
@@ -1039,7 +1029,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 
 	cia = addr;
 	gpr[2] = rtoc;
-	lr = ppu_function_manager::addr + 8; // HLE stop address
+	lr = ppu_function_manager::func_addr(1) + 4; // HLE stop address
 	current_function = nullptr;
 
 	g_tls_log_prefix = []
