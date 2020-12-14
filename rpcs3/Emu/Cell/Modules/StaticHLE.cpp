@@ -164,7 +164,7 @@ bool statichle_handler::check_against_patterns(vm::cptr<u8>& data, u32 size, u32
 		}
 
 		const auto sfunc   = &smodule->functions.at(pat.fnid);
-		const u32 target   = ppu_function_manager::addr + 8 * sfunc->index;
+		const u32 target   = ppu_function_manager::func_addr(sfunc->index) + 4;
 
 		// write stub
 		vm::write32(addr, ppu_instructions::LIS(0, (target&0xFFFF0000)>>16));

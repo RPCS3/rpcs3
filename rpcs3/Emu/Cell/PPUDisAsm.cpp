@@ -2346,12 +2346,12 @@ extern std::vector<std::string> g_ppu_function_names;
 
 void PPUDisAsm::UNK(ppu_opcode_t op)
 {
-	if (op.opcode == dump_pc && ppu_function_manager::addr)
+	if (ppu_function_manager::addr)
 	{
 		// HLE function index
 		const u32 index = (dump_pc - ppu_function_manager::addr) / 8;
 
-		if (index < ppu_function_manager::get().size())
+		if (dump_pc % 8 == 4 && index < ppu_function_manager::get().size())
 		{
 			Write(fmt::format("Function : %s (index %u)", index < g_ppu_function_names.size() ? g_ppu_function_names[index].c_str() : "?", index));
 			return;
