@@ -141,17 +141,20 @@ void VKGSRender::update_draw_state()
 
 void VKGSRender::load_texture_env()
 {
-	//Load textures
-	bool update_framebuffer_sourced = false;
+	// Load textures
 	bool check_for_cyclic_refs = false;
+	auto check_surface_cache_sampler = [&](auto descriptor)
+	{
+		if (!m_texture_cache.test_if_descriptor_expired(*m_current_command_buffer, m_rtts, descriptor))
+		{
+			check_for_cyclic_refs |= descriptor->is_cyclic_reference;
+			return true;
+		}
+
+		return false;
+	};
 
 	std::lock_guard lock(m_sampler_mutex);
-
-	if (surface_store_tag != m_rtts.cache_tag) [[unlikely]]
-	{
-		update_framebuffer_sourced = true;
-		surface_store_tag = m_rtts.cache_tag;
-	}
 
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
@@ -161,11 +164,9 @@ void VKGSRender::load_texture_env()
 		if (!fs_sampler_state[i])
 			fs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
 
-		if (m_samplers_dirty || m_textures_dirty[i] ||
-			(update_framebuffer_sourced && fs_sampler_state[i]->upload_context == rsx::texture_upload_context::framebuffer_storage))
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+		if (m_samplers_dirty || m_textures_dirty[i] || !check_surface_cache_sampler(sampler_state))
 		{
-			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-
 			if (rsx::method_registers.fragment_textures[i].enabled())
 			{
 				check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
@@ -301,11 +302,9 @@ void VKGSRender::load_texture_env()
 		if (!vs_sampler_state[i])
 			vs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
 
-		if (m_samplers_dirty || m_vertex_textures_dirty[i] ||
-			(update_framebuffer_sourced && vs_sampler_state[i]->upload_context == rsx::texture_upload_context::framebuffer_storage))
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+		if (m_samplers_dirty || m_vertex_textures_dirty[i] || !check_surface_cache_sampler(sampler_state))
 		{
-			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
-
 			if (rsx::method_registers.vertex_textures[i].enabled())
 			{
 				check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);

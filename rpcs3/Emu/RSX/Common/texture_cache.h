@@ -263,6 +263,37 @@ namespace rsx
 			{
 				return (image_handle || external_subresource_desc.op != deferred_request_command::nop);
 			}
+
+			/**
+			 * Returns a boolean true/false if the descriptor is expired
+			 * Optionally returns a second variable that contains the surface reference.
+			 * The surface reference can be used to insert a texture barrier or inject a deferred resource
+			 */
+			template <typename surface_store_type>
+			std::pair<bool, typename surface_store_type::surface_type> is_expired(surface_store_type& surface_cache)
+			{
+				if (upload_context != rsx::texture_upload_context::framebuffer_storage ||
+					surface_cache_tag == surface_cache.cache_tag)
+				{
+					return { false, nullptr };
+				}
+
+				// Expired, but may still be valid. Check if the texture is still accessible
+				auto ref_image = image_handle ? image_handle->image() : external_subresource_desc.external_handle;
+				if (ref_image)
+				{
+					if (auto as_rtt = dynamic_cast<surface_store_type::surface_type>(ref_image);
+						as_rtt && as_rtt == surface_cache.get_surface_at(ref_address))
+					{
+						// Fast sync
+						surface_cache_tag = surface_cache.cache_tag;
+						is_cyclic_reference = surface_cache.address_is_bound(ref_address);
+						return { false, as_rtt };
+					}
+				}
+
+				return { true, nullptr };
+			}
 		};
 
 
@@ -322,7 +353,7 @@ namespace rsx
 			const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) = 0;
 		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range &rsx_range, bool memory_load) = 0;
 		virtual void enforce_surface_creation_type(section_storage_type& section, u32 gcm_format, texture_create_flags expected) = 0;
-		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex) = 0;
+		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex, bool strong_ordering = true) = 0;
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
 		virtual image_view_type generate_3d_from_2d_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
 		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const std::vector<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
@@ -1743,6 +1774,39 @@ namespace rsx
 			return {};
 		}
 
+		template <typename surface_store_type>
+		bool test_if_descriptor_expired(commandbuffer_type& cmd, surface_store_type& surface_cache, sampled_image_descriptor* descriptor)
+		{
+			auto result = descriptor->is_expired(surface_cache);
+			if (result.second && descriptor->is_cyclic_reference)
+			{
+				/* NOTE: All cyclic descriptors updated via fast update must have a barrier check
+				 * It is possible for the following sequence of events to break common-sense tests
+				 * 1. Cyclic ref occurs normally in upload_texture
+				 * 2. Surface is swappd out, but texture is not updated
+				 * 3. Surface is swapped back in. Surface cache resets layout to optimal rasterization layout
+				 * 4. During bind, the surface is converted to shader layout because it is not in GENERAL layout
+				 */
+				if (!g_cfg.video.strict_rendering_mode)
+				{
+					insert_texture_barrier(cmd, result.second, false);
+				}
+				else if (descriptor->image_handle)
+				{
+					descriptor->external_subresource_desc.external_handle = descriptor->image_handle->image();
+					descriptor->external_subresource_desc.op = deferred_request_command::copy_image_dynamic;
+					descriptor->external_subresource_desc.do_not_cache = true;
+				}
+				else
+				{
+					// Force reupload
+					return true;
+				}
+			}
+
+			return result.first;
+		}
+
 		template <typename RsxTextureType, typename surface_store_type, typename ...Args>
 		sampled_image_descriptor upload_texture(commandbuffer_type& cmd, RsxTextureType& tex, surface_store_type& m_rtts, Args&&... extras)
 		{
@@ -1846,6 +1910,9 @@ namespace rsx
 					// Deferred reconstruct
 					result.external_subresource_desc.cache_range = lookup_range;
 				}
+
+				result.ref_address = attributes.address;
+				result.surface_cache_tag = m_rtts.cache_tag;
 
 				if (subsurface_count == 1)
 				{
@@ -2727,7 +2794,6 @@ namespace rsx
 				// NOTE: This doesn't work very well in case of Cell access
 				// Need to lock the affected memory range and actually attach this subres to a locked_region
 				dst_subres.surface->on_write_copy(rsx::get_shared_tag(), false, raster_type);
-				m_rtts.notify_memory_structure_changed();
 
 				// Reset this object's synchronization status if it is locked
 				lock.upgrade();

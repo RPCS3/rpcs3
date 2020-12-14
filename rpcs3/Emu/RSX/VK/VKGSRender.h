@@ -371,7 +371,6 @@ private:
 	u64 m_cond_render_sync_tag = 0;
 
 	shared_mutex m_sampler_mutex;
-	u64 surface_store_tag = 0;
 	atomic_t<bool> m_samplers_dirty = { true };
 	std::unique_ptr<vk::sampler> m_stencil_mirror_sampler;
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
