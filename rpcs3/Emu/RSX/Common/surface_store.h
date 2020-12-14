@@ -796,8 +796,6 @@ namespace rsx
 				{
 					invalidate(It->second);
 					m_render_targets_storage.erase(It);
-
-					cache_tag = rsx::get_shared_tag();
 					return;
 				}
 			}
@@ -808,8 +806,6 @@ namespace rsx
 				{
 					invalidate(It->second);
 					m_depth_stencil_storage.erase(It);
-
-					cache_tag = rsx::get_shared_tag();
 					return;
 				}
 			}
@@ -1031,11 +1027,6 @@ namespace rsx
 				// Skip any further updates as all active surfaces have been updated
 				m_skip_write_updates = true;
 			}
-		}
-
-		void notify_memory_structure_changed()
-		{
-			cache_tag = rsx::get_shared_tag();
 		}
 
 		void invalidate_all()

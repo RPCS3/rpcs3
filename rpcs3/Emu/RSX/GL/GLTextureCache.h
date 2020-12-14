@@ -964,7 +964,7 @@ namespace gl
 			section.set_view_flags(flags);
 		}
 
-		void insert_texture_barrier(gl::command_context&, gl::texture*) override
+		void insert_texture_barrier(gl::command_context&, gl::texture*, bool) override
 		{
 			auto &caps = gl::get_driver_caps();
 

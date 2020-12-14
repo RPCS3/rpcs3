@@ -274,15 +274,7 @@ void GLGSRender::load_texture_env()
 {
 	// Load textures
 	gl::command_context cmd{ gl_state };
-	bool update_framebuffer_sourced = false;
-
 	std::lock_guard lock(m_sampler_mutex);
-
-	if (surface_store_tag != m_rtts.cache_tag)
-	{
-		update_framebuffer_sourced = true;
-		surface_store_tag = m_rtts.cache_tag;
-	}
 
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
@@ -292,11 +284,9 @@ void GLGSRender::load_texture_env()
 		if (!fs_sampler_state[i])
 			fs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
 
-		if (m_samplers_dirty || m_textures_dirty[i] ||
-			(update_framebuffer_sourced && fs_sampler_state[i]->upload_context == rsx::texture_upload_context::framebuffer_storage))
+		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+		if (m_samplers_dirty || m_textures_dirty[i] || m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state))
 		{
-			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-
 			if (rsx::method_registers.fragment_textures[i].enabled())
 			{
 				*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.fragment_textures[i], m_rtts);
@@ -321,11 +311,9 @@ void GLGSRender::load_texture_env()
 		if (!vs_sampler_state[i])
 			vs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
 
-		if (m_samplers_dirty || m_vertex_textures_dirty[i] ||
-			(update_framebuffer_sourced && vs_sampler_state[i]->upload_context == rsx::texture_upload_context::framebuffer_storage))
+		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+		if (m_samplers_dirty || m_vertex_textures_dirty[i] || m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state))
 		{
-			auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
-
 			if (rsx::method_registers.vertex_textures[i].enabled())
 			{
 				*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.vertex_textures[i], m_rtts);
