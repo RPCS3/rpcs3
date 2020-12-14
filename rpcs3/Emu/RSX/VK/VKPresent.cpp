@@ -754,10 +754,14 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			const auto num_misses = m_texture_cache.get_num_cache_misses();
 			const auto num_unavoidable = m_texture_cache.get_num_unavoidable_hard_faults();
 			const auto cache_miss_ratio = static_cast<u32>(ceil(m_texture_cache.get_cache_miss_ratio() * 100));
+			const auto num_texture_upload = m_texture_cache.get_texture_upload_calls_this_frame();
+			const auto num_texture_upload_miss = m_texture_cache.get_texture_upload_misses_this_frame();
+			const auto texture_upload_miss_ratio = m_texture_cache.get_texture_upload_miss_percentage();
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 144, direct_fbo->width(), direct_fbo->height(), fmt::format("Unreleased textures: %8d", num_dirty_textures));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 162, direct_fbo->width(), direct_fbo->height(), fmt::format("Texture cache memory: %7dM", texture_memory_size));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 180, direct_fbo->width(), direct_fbo->height(), fmt::format("Temporary texture memory: %3dM", tmp_texture_memory_size));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 198, direct_fbo->width(), direct_fbo->height(), fmt::format("Flush requests: %13d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 216, direct_fbo->width(), direct_fbo->height(), fmt::format("Texture uploads: %14u (%u from CPU - %02u%%)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio));
 		}
 
 		direct_fbo->release();
