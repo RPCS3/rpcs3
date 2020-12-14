@@ -50,7 +50,7 @@ namespace vk
 				const vk::pipeline_props& pipelineProperties,
 				bool compile_async,
 				std::function<pipeline_type*(pipeline_storage_type&)> callback,
-				VkDevice dev, VkPipelineLayout common_pipeline_layout)
+				VkPipelineLayout common_pipeline_layout)
 		{
 			const auto compiler_flags = compile_async ? vk::pipe_compiler::COMPILE_DEFERRED : vk::pipe_compiler::COMPILE_INLINE;
 			VkShaderModule modules[2] = { vertexProgramData.handle, fragmentProgramData.handle };

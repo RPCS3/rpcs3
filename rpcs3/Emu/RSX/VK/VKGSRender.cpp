@@ -1016,7 +1016,7 @@ void VKGSRender::on_init_thread()
 	if (!m_overlay_manager)
 	{
 		m_frame->hide();
-		m_shaders_cache->load(nullptr, *m_device, pipeline_layout);
+		m_shaders_cache->load(nullptr, pipeline_layout);
 		m_frame->show();
 	}
 	else
@@ -1024,7 +1024,7 @@ void VKGSRender::on_init_thread()
 		rsx::shader_loading_dialog_native dlg(this);
 
 		// TODO: Handle window resize messages during loading on GPUs without OUT_OF_DATE_KHR support
-		m_shaders_cache->load(&dlg, *m_device, pipeline_layout);
+		m_shaders_cache->load(&dlg, pipeline_layout);
 	}
 }
 
@@ -1634,7 +1634,7 @@ bool VKGSRender::load_program()
 		vertex_program.skip_vertex_input_check = true;
 		fragment_program.unnormalized_coords = 0;
 		m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
-			shadermode != shader_mode::recompiler, true, *m_device, pipeline_layout);
+			shadermode != shader_mode::recompiler, true, pipeline_layout);
 
 		vk::leave_uninterruptible();
 
