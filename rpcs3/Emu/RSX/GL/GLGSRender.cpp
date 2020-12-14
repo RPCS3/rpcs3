@@ -276,15 +276,6 @@ void GLGSRender::on_init_thread()
 
 	m_vao.element_array_buffer = *m_index_ring_buffer;
 
-	if (g_cfg.video.overlay)
-	{
-		if (gl_caps.ARB_shader_draw_parameters_supported)
-		{
-			m_text_printer.init();
-			m_text_printer.set_enabled(true);
-		}
-	}
-
 	int image_unit = 0;
 	for (auto &sampler : m_fs_sampler_states)
 	{

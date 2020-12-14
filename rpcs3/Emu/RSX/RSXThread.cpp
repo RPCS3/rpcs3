@@ -478,7 +478,6 @@ namespace rsx
 		on_init_thread();
 
 		method_registers.init();
-		m_profiler.enabled = !!g_cfg.video.overlay;
 
 		if (!zcull_ctrl)
 		{
@@ -2843,6 +2842,7 @@ namespace rsx
 
 		// Reset current stats
 		m_frame_stats = {};
+		m_profiler.enabled = !!g_cfg.video.overlay;
 	}
 
 	void thread::request_emu_flip(u32 buffer)

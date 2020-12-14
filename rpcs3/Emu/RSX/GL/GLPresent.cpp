@@ -290,8 +290,14 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 	}
 
-	if (g_cfg.video.overlay)
+	if (g_cfg.video.overlay && gl::get_driver_caps().ARB_shader_draw_parameters_supported)
 	{
+		if (!m_text_printer.is_enabled())
+		{
+			m_text_printer.init();
+			m_text_printer.set_enabled(true);
+		}
+
 		// Disable depth test
 		gl_state.depth_func(GL_ALWAYS);
 

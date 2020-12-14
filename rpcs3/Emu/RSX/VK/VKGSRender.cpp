@@ -477,13 +477,6 @@ VKGSRender::VKGSRender() : GSRender()
 	vk::initialize_compiler_context();
 	vk::initialize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
 
-	if (g_cfg.video.overlay)
-	{
-		auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
-		m_text_writer = std::make_unique<vk::text_writer>();
-		m_text_writer->init(*m_device, vk::get_renderpass(*m_device, key));
-	}
-
 	m_prog_buffer = std::make_unique<vk::program_cache>
 	(
 		[this](const vk::pipeline_props& props, const RSXVertexProgram& vp, const RSXFragmentProgram& fp)
