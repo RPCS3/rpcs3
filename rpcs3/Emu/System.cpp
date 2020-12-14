@@ -1224,6 +1224,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 							{
 								lock.unlock();
 								ppu_initialize(*prx);
+								idm::remove<lv2_obj, lv2_prx>(idm::last_id());
 								lock.lock();
 								ppu_unload_prx(*prx);
 								g_progr_fdone++;
