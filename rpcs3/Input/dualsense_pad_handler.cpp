@@ -582,9 +582,16 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 	return keyBuffer;
 }
 
-pad_preview_values dualsense_pad_handler::get_preview_values(std::unordered_map<u64, u16> data)
+pad_preview_values dualsense_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
 {
-	return {data[L2], data[R2], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg]};
+	return {
+		data.at(L2),
+		data.at(R2),
+		data.at(LSXPos) - data.at(LSXNeg),
+		data.at(LSYPos) - data.at(LSYNeg),
+		data.at(RSXPos) - data.at(RSXNeg),
+		data.at(RSYPos) - data.at(RSYNeg)
+	};
 }
 
 std::shared_ptr<dualsense_pad_handler::DualSenseDevice> dualsense_pad_handler::GetDualSenseDevice(const std::string& padId)
@@ -646,8 +653,8 @@ int dualsense_pad_handler::SendVibrateData(const std::shared_ptr<DualSenseDevice
 	if (!device)
 		return -2;
 
-	auto p_profile = device->config;
-	if (p_profile == nullptr)
+	auto config = device->config;
+	if (config == nullptr)
 		return -2; // hid_write and hid_write_control return -1 on error
 
 	if (device->btCon)
@@ -690,14 +697,14 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 	if (!dualsense_dev || !pad)
 		return;
 
-	auto profile = dualsense_dev->config;
+	auto config = dualsense_dev->config;
 
 	// Attempt to send rumble no matter what
-	int idx_l = profile->switch_vibration_motors ? 1 : 0;
-	int idx_s = profile->switch_vibration_motors ? 0 : 1;
+	const int idx_l = config->switch_vibration_motors ? 1 : 0;
+	const int idx_s  = config->switch_vibration_motors ? 0 : 1;
 
-	int speed_large = profile->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
-	int speed_small = profile->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
+	const int speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
+	const int speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
 
 	dualsense_dev->newVibrateData |= dualsense_dev->largeVibrate != speed_large || dualsense_dev->smallVibrate != speed_small;
 

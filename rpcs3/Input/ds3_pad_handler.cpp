@@ -231,11 +231,11 @@ std::shared_ptr<ds3_pad_handler::ds3_device> ds3_pad_handler::get_ds3_device(con
 	if (!Init())
 		return nullptr;
 
-	size_t pos = padId.find(m_name_string);
+	const size_t pos = padId.find(m_name_string);
 	if (pos == umax)
 		return nullptr;
 
-	int pad_number = std::stoi(padId.substr(pos + 9));
+	const int pad_number = std::stoi(padId.substr(pos + 9));
 	if (pad_number > 0 && pad_number + 0u <= controllers.size())
 		return controllers[static_cast<size_t>(pad_number) - 1];
 
@@ -302,9 +302,9 @@ ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_d
 
 #ifdef _WIN32
 	dbuf[0] = ds3dev->report_id;
-	int result = hid_get_feature_report(ds3dev->handle, dbuf, sizeof(dbuf));
+	const int result = hid_get_feature_report(ds3dev->handle, dbuf, sizeof(dbuf));
 #else
-	int result = hid_read(ds3dev->handle, dbuf, sizeof(dbuf));
+	const int result = hid_read(ds3dev->handle, dbuf, sizeof(dbuf));
 #endif
 
 	if (result > 0)
@@ -325,7 +325,7 @@ ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_d
 	}
 	else
 	{
-		if(result == 0)
+		if (result == 0)
 			return DS3Status::Connected;
 	}
 
@@ -386,9 +386,16 @@ std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::share
 	return key_buf;
 }
 
-pad_preview_values ds3_pad_handler::get_preview_values(std::unordered_map<u64, u16> data)
+pad_preview_values ds3_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
 {
-	return { data[L2], data[R2], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg] };
+	return {
+		data.at(L2),
+		data.at(R2),
+		data.at(LSXPos) - data.at(LSXNeg),
+		data.at(LSYPos) - data.at(LSYNeg),
+		data.at(RSXPos) - data.at(RSXNeg),
+		data.at(RSYPos) - data.at(RSYNeg)
+	};
 }
 
 void ds3_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
