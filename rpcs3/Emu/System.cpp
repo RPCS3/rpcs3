@@ -1150,11 +1150,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 						// Check .sprx filename
 						if (fmt::to_upper(entry.name).ends_with(".SPRX"))
 						{
-							if (entry.name == "libfs_155.sprx")
-							{
-								continue;
-							}
-
 							// Get full path
 							file_queue.emplace_back(dir_queue[i] + entry.name, 0);
 							g_progr_ftotal++;

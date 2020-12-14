@@ -750,6 +750,7 @@ error_code _sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<
 		u32 i = 0;
 		for (; i < prx->segs.size() && i < pOpt->info->segments_num; i++)
 		{
+			if (!prx->segs[i].addr) continue; // TODO: Check this
 			pOpt->info->segments[i].index = i;
 			pOpt->info->segments[i].base = prx->segs[i].addr;
 			pOpt->info->segments[i].filesz = prx->segs[i].filesz;
