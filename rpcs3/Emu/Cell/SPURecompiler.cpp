@@ -8847,6 +8847,11 @@ struct spu_llvm_worker
 				continue;
 			}
 
+			if (!prog->second)
+			{
+				break;
+			}
+
 			const auto& func = *prog->second;
 
 			// Get data start
@@ -8986,7 +8991,7 @@ struct spu_llvm
 			{
 				// Interrupt profiler thread and put it to sleep
 				static_cast<void>(prof_mutex.reset());
-				registered.wait();
+				atomic_wait::list(registered).wait(); // TODO
 				continue;
 			}
 
@@ -9016,6 +9021,11 @@ struct spu_llvm
 
 			// Push the workload
 			(workers.begin() + (worker_index++ % worker_count))->registered.push(reinterpret_cast<u64>(_old), &func);
+		}
+
+		for (u32 i = 0; i < worker_count; i++)
+		{
+			(workers.begin() + i)->registered.push(0, nullptr);
 		}
 	}
 

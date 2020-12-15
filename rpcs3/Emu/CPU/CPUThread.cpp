@@ -182,7 +182,7 @@ struct cpu_prof
 			if (threads.empty())
 			{
 				// Wait for messages if no work (don't waste CPU)
-				registered.wait();
+				atomic_wait::list(registered).wait();
 				continue;
 			}
 
