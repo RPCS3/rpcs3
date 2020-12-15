@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Utilities/BEType.h"
-
 enum CellRescError : u32
 {
 	CELL_RESC_ERROR_NOT_INITIALIZED   = 0x80210301,

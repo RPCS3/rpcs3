@@ -7,7 +7,6 @@
 #include "rpcn_client.h"
 #include "np_structs_extra.h"
 #include "Utilities/StrUtil.h"
-#include "Utilities/BEType.h"
 #include "Utilities/Thread.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"

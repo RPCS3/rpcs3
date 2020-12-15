@@ -1,7 +1,6 @@
 #include "File.h"
 #include "mutex.h"
 #include "StrFmt.h"
-#include "BEType.h"
 #include "Crypto/sha1.h"
 
 #include <unordered_map>

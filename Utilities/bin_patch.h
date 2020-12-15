@@ -1,10 +1,10 @@
 ﻿#pragma once
 
-#include "BEType.h"
 #include <vector>
 #include <string>
 #include <unordered_map>
 
+#include "util/types.hpp"
 #include "util/yaml.hpp"
 
 namespace patch_key
@@ -53,7 +53,7 @@ public:
 			f64 double_value;
 		} value { 0 };
 	};
-	
+
 	using patch_app_versions = std::unordered_map<std::string /*app_version*/, bool /*enabled*/>;
 	using patch_serials = std::unordered_map<std::string /*serial*/, patch_app_versions>;
 	using patch_titles = std::unordered_map<std::string /*serial*/, patch_serials>;

@@ -2,6 +2,8 @@
 
 #include "Emu/Cell/PPUThread.h"
 
+#include "util/v128.hpp"
+
 struct ppu_func_opd_t;
 
 namespace ppu_cb_detail

@@ -78,7 +78,7 @@ namespace vm
 	atomic_t<u64, 64> g_range_lock_set[64]{};
 
 	// Memory pages
-	std::array<memory_page, 0x100000000 / 4096> g_pages{};
+	std::array<memory_page, 0x100000000 / 4096> g_pages;
 
 	std::pair<bool, u64> try_reservation_update(u32 addr)
 	{
@@ -1635,6 +1635,8 @@ namespace vm
 			g_exec_addr, g_exec_addr + 0x200000000 - 1,
 			g_stat_addr, g_stat_addr + UINT32_MAX,
 			g_reservations, g_reservations + sizeof(g_reservations) - 1);
+
+			std::memset(&g_pages, 0, sizeof(g_pages));
 
 			g_locations =
 			{

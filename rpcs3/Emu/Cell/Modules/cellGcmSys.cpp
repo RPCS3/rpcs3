@@ -417,7 +417,7 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 	gcm_cfg->current_context.begin.set(g_defaultCommandBufferBegin + 4096); // 4 kb reserved at the beginning
 	gcm_cfg->current_context.end.set(g_defaultCommandBufferBegin + 32 * 1024 - 4); // 4b at the end for jump
 	gcm_cfg->current_context.current = gcm_cfg->current_context.begin;
-	gcm_cfg->current_context.callback.set(ppu_function_manager::addr + 8 * FIND_FUNC(cellGcmCallback));
+	gcm_cfg->current_context.callback.set(ppu_function_manager::func_addr(FIND_FUNC(cellGcmCallback)));
 
 	gcm_cfg->ctxt_addr = context.addr();
 	gcm_cfg->gcm_buffers.set(vm::alloc(sizeof(CellGcmDisplayInfo) * 8, vm::main));

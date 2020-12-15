@@ -307,12 +307,23 @@ public:
 		delete m_head.load();
 	}
 
-	void wait() noexcept
+	template <atomic_wait::op Flags = atomic_wait::op::eq>
+	void wait(std::nullptr_t null = nullptr) noexcept
 	{
 		if (m_head == nullptr)
 		{
-			m_head.wait(nullptr);
+			m_head.template wait<Flags>(nullptr);
 		}
+	}
+
+	const volatile void* observe() const noexcept
+	{
+		return m_head.load();
+	}
+
+	explicit operator bool() const noexcept
+	{
+		return m_head != nullptr;
 	}
 
 	template <typename... Args>
@@ -413,6 +424,18 @@ public:
 		return iterator{};
 	}
 };
+
+namespace atomic_wait
+{
+	template <typename T>
+	inline __m128i default_mask<lf_queue<T>> = _mm_cvtsi64_si128(-1);
+
+	template <typename T>
+	constexpr __m128i get_value(lf_queue<T>&, std::nullptr_t value = nullptr)
+	{
+		return _mm_setzero_si128();
+	}
+}
 
 // Concurrent linked list, elements remain until destroyed.
 template <typename T>

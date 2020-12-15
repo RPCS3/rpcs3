@@ -1,6 +1,7 @@
 #include "stdafx.h"
-#include "VKGSRender.h"
 #include "../Common/BufferUtils.h"
+#include "../rsx_methods.h"
+#include "VKGSRender.h"
 
 namespace vk
 {
@@ -894,6 +895,8 @@ void VKGSRender::end()
 		return;
 	}
 
+	m_profiler.start();
+
 	// Check for frame resource status here because it is possible for an async flip to happen between begin/end
 	if (m_current_frame->flags & frame_context_state::dirty) [[unlikely]]
 	{
@@ -916,7 +919,8 @@ void VKGSRender::end()
 		m_current_frame->flags &= ~frame_context_state::dirty;
 	}
 
-	m_profiler.start();
+	analyse_current_rsx_pipeline();
+	m_frame_stats.setup_time += m_profiler.duration();
 
 	load_texture_env();
 	m_frame_stats.textures_upload_time += m_profiler.duration();

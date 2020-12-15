@@ -10,6 +10,7 @@
 #include "VKCommandStream.h"
 #include "VKRenderPass.h"
 
+#include "Emu/RSX/rsx_methods.h"
 #include "Utilities/mutex.h"
 #include "Utilities/lockless.h"
 

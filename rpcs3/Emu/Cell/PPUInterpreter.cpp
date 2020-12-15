@@ -6,11 +6,13 @@
 #include "PPUThread.h"
 #include "Utilities/sysinfo.h"
 #include "Emu/Cell/Common.h"
+#include "Emu/Cell/PPUFunction.h"
 
 #include <bit>
 #include <cmath>
 
 #include "util/asm.hpp"
+#include "util/v128.hpp"
 
 #if !defined(_MSC_VER) && defined(__clang__)
 #pragma GCC diagnostic push
@@ -5172,5 +5174,15 @@ bool ppu_interpreter::FCFID(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::UNK(ppu_thread& ppu, ppu_opcode_t op)
 {
+	// HLE function index
+	const u32 index = (ppu.cia - ppu_function_manager::addr) / 8;
+
+	const auto& hle_funcs = ppu_function_manager::get();
+
+	if (ppu.cia % 8 == 4 && index < hle_funcs.size())
+	{
+		return hle_funcs[index](ppu);
+	}
+
 	fmt::throw_exception("Unknown/Illegal opcode: 0x%08x at 0x%x", op.opcode, ppu.cia);
 }

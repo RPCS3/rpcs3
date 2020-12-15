@@ -1,7 +1,8 @@
 #pragma once
 
 #include "vm_ptr.h"
-#include "Utilities/BEType.h"
+
+#include "util/to_endian.hpp"
 
 namespace vm
 {

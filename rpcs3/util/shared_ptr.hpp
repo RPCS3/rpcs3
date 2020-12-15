@@ -6,23 +6,47 @@
 
 namespace stx
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wundefined_var_template"
+#endif
+
+	// Not defined anywhere (and produces a useless warning)
+	template <typename X>
+	extern X sample;
+
+	// Checks whether the cast between two types is the same pointer
 	template <typename T, typename U>
 	constexpr bool is_same_ptr() noexcept
 	{
-		// I would like to make it a trait if there is some trick.
-		// And believe it shall possible with constexpr bit_cast.
-		// Otherwise I hope it will compile in null code anyway.
-		const auto u = reinterpret_cast<U*>(0x11223344556);
-		const volatile void* x = u;
-		return static_cast<T*>(u) == x;
+		if constexpr (std::is_void_v<T> || std::is_void_v<U> || std::is_same_v<T, U>)
+		{
+			return true;
+		}
+		else if constexpr (std::is_convertible_v<U*, T*>)
+		{
+			const auto u = &sample<U>;
+			const volatile void* x = u;
+			return static_cast<T*>(u) == x;
+		}
+		else if constexpr (std::is_convertible_v<T*, U*>)
+		{
+			const auto t = &sample<T>;
+			const volatile void* x = t;
+			return static_cast<U*>(t) == x;
+		}
+		else
+		{
+			return false;
+		}
 	}
 
-	// TODO
 	template <typename T, typename U>
-	constexpr bool is_same_ptr_v = true;
+	constexpr bool is_same_ptr_cast_v = std::is_convertible_v<U*, T*> && is_same_ptr<T, U>();
 
-	template <typename T, typename U>
-	constexpr bool is_same_ptr_cast_v = std::is_same_v<T, U> || (std::is_convertible_v<U, T> && is_same_ptr_v<T, U>);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 	template <typename T>
 	class single_ptr;
@@ -38,6 +62,9 @@ namespace stx
 
 	// Use lower 17 bits as atomic_ptr internal counter of borrowed refs (pointer itself is shifted)
 	constexpr uint c_ref_mask = 0x1ffff, c_ref_size = 17;
+
+	// Remaining pointer bits
+	constexpr uptr c_ptr_mask = static_cast<uptr>(-1) << c_ref_size;
 
 	struct shared_counter
 	{
@@ -101,6 +128,9 @@ namespace stx
 		}
 
 		template <typename U>
+		friend class single_ptr;
+
+		template <typename U>
 		friend class shared_ptr;
 
 		template <typename U>
@@ -125,7 +155,6 @@ namespace stx
 		single_ptr(single_ptr<U>&& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
-			ensure(is_same_ptr<T, U>());
 			r.m_ptr = nullptr;
 		}
 
@@ -146,7 +175,6 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		single_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
-			ensure(is_same_ptr<T, U>());
 			m_ptr = r.m_ptr;
 			r.m_ptr = nullptr;
 			return *this;
@@ -216,11 +244,9 @@ namespace stx
 		}
 
 		// "Moving" "static cast"
-		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr_v<U, T>>>
+		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr<U, T>()>>
 		explicit operator single_ptr<U>() && noexcept
 		{
-			ensure(is_same_ptr<U, T>());
-
 			single_ptr<U> r;
 			r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
 			return r;
@@ -349,6 +375,9 @@ namespace stx
 		}
 
 		template <typename U>
+		friend class shared_ptr;
+
+		template <typename U>
 		friend class atomic_ptr;
 
 	public:
@@ -369,7 +398,6 @@ namespace stx
 		shared_ptr(const shared_ptr<U>& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
-			ensure(is_same_ptr<T, U>());
 			if (m_ptr)
 				d()->refs++;
 		}
@@ -384,7 +412,6 @@ namespace stx
 		shared_ptr(shared_ptr<U>&& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
-			ensure(is_same_ptr<T, U>());
 			r.m_ptr = nullptr;
 		}
 
@@ -392,7 +419,6 @@ namespace stx
 		shared_ptr(single_ptr<U>&& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
-			ensure(is_same_ptr<T, U>());
 			r.m_ptr = nullptr;
 		}
 
@@ -410,7 +436,6 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_ptr& operator=(const shared_ptr<U>& r) noexcept
 		{
-			ensure(is_same_ptr<T, U>());
 			shared_ptr(r).swap(*this);
 			return *this;
 		}
@@ -424,7 +449,6 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_ptr& operator=(shared_ptr<U>&& r) noexcept
 		{
-			ensure(is_same_ptr<T, U>());
 			shared_ptr(std::move(r)).swap(*this);
 			return *this;
 		}
@@ -432,7 +456,6 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
-			ensure(is_same_ptr<T, U>());
 			shared_ptr(std::move(r)).swap(*this);
 			return *this;
 		}
@@ -450,11 +473,9 @@ namespace stx
 		}
 
 		// Converts to unique (single) ptr if reference is 1, otherwise returns null. Nullifies self.
-		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr_v<U, T>>>
+		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr<U, T>()>>
 		explicit operator single_ptr<U>() && noexcept
 		{
-			ensure(is_same_ptr<U, T>());
-
 			const auto o = d();
 
 			if (m_ptr && !--o->refs)
@@ -537,11 +558,9 @@ namespace stx
 		}
 
 		// Basic "static cast" support
-		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr_v<U, T>>>
+		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr<U, T>()>>
 		explicit operator shared_ptr<U>() const& noexcept
 		{
-			ensure(is_same_ptr<U, T>());
-
 			if (m_ptr)
 			{
 				d()->refs++;
@@ -553,11 +572,9 @@ namespace stx
 		}
 
 		// "Moving" "static cast"
-		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr_v<U, T>>>
+		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr<U, T>()>>
 		explicit operator shared_ptr<U>() && noexcept
 		{
-			ensure(is_same_ptr<U, T>());
-
 			shared_ptr<U> r;
 			r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
 			return r;
@@ -592,6 +609,9 @@ namespace stx
 			return d(m_val);
 		}
 
+		template <typename U>
+		friend class atomic_ptr;
+
 	public:
 		using pointer = T*;
 
@@ -614,8 +634,6 @@ namespace stx
 		atomic_ptr(const shared_ptr<U>& r) noexcept
 			: m_val(reinterpret_cast<uptr>(r.m_ptr) << c_ref_size)
 		{
-			ensure(is_same_ptr<T, U>());
-
 			// Obtain a ref + as many refs as an atomic_ptr can additionally reference
 			if (m_val)
 				d()->refs += c_ref_mask + 1;
@@ -625,7 +643,6 @@ namespace stx
 		atomic_ptr(shared_ptr<U>&& r) noexcept
 			: m_val(reinterpret_cast<uptr>(r.m_ptr) << c_ref_size)
 		{
-			ensure(is_same_ptr<T, U>());
 			r.m_ptr = nullptr;
 
 			if (m_val)
@@ -636,7 +653,6 @@ namespace stx
 		atomic_ptr(single_ptr<U>&& r) noexcept
 			: m_val(reinterpret_cast<uptr>(r.m_ptr) << c_ref_size)
 		{
-			ensure(is_same_ptr<T, U>());
 			r.m_ptr = nullptr;
 
 			if (m_val)
@@ -668,7 +684,6 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		atomic_ptr& operator=(const shared_ptr<U>& r) noexcept
 		{
-			ensure(is_same_ptr<T, U>());
 			store(r);
 			return *this;
 		}
@@ -676,7 +691,6 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		atomic_ptr& operator=(shared_ptr<U>&& r) noexcept
 		{
-			ensure(is_same_ptr<T, U>());
 			store(std::move(r));
 			return *this;
 		}
@@ -684,7 +698,6 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		atomic_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
-			ensure(is_same_ptr<T, U>());
 			store(std::move(r));
 			return *this;
 		}
@@ -909,7 +922,7 @@ namespace stx
 			}
 
 			atomic_ptr old_exch;
-			old_exch.m_val.raw() = reinterpret_cast<uptr>(std::exchange(exch.m_ptr, nullptr)) << 17;
+			old_exch.m_val.raw() = reinterpret_cast<uptr>(std::exchange(exch.m_ptr, nullptr)) << c_ref_size;
 
 			// Set to reset old cmp_and_old value
 			old.m_val.raw() = (cmp_and_old.m_ptr << c_ref_size) | c_ref_mask;
@@ -948,8 +961,6 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_type compare_and_swap(const shared_ptr<U>& cmp, shared_type exch)
 		{
-			ensure(is_same_ptr<T, U>());
-
 			shared_type old = cmp;
 
 			if (compare_exchange(old, std::move(exch)))
@@ -966,8 +977,6 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		bool compare_and_swap_test(const shared_ptr<U>& cmp, shared_type exch)
 		{
-			ensure(is_same_ptr<T, U>());
-
 			const uptr _old = reinterpret_cast<uptr>(cmp.m_ptr);
 			const uptr _new = reinterpret_cast<uptr>(exch.m_ptr);
 
@@ -999,7 +1008,7 @@ namespace stx
 			}
 
 			// Failure (return references)
-			old.m_val.raw() = reinterpret_cast<uptr>(std::exchange(exch.m_ptr, nullptr)) << 17;
+			old.m_val.raw() = reinterpret_cast<uptr>(std::exchange(exch.m_ptr, nullptr)) << c_ref_size;
 			return false;
 		}
 
@@ -1007,8 +1016,6 @@ namespace stx
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U>>>
 		shared_type compare_and_swap(const single_ptr<U>& cmp, shared_type exch)
 		{
-			ensure(is_same_ptr<T, U>());
-
 			shared_type old = cmp;
 
 			if (compare_exchange(old, std::move(exch)))
@@ -1050,6 +1057,22 @@ namespace stx
 		{
 			return observe() == r.get();
 		}
+
+		template <atomic_wait::op Flags = atomic_wait::op::eq>
+		void wait(const volatile void* value, atomic_wait_timeout timeout = atomic_wait_timeout::inf)
+		{
+			m_val.template wait<Flags>(reinterpret_cast<uptr>(value) << c_ref_size, c_ptr_mask, timeout);
+		}
+
+		void notify_one()
+		{
+			m_val.notify_one(c_ptr_mask);
+		}
+
+		void notify_all()
+		{
+			m_val.notify_all(c_ptr_mask);
+		}
 	};
 
 	// Some nullptr replacement for few cases
@@ -1089,6 +1112,18 @@ namespace stx
 		}
 
 	} null_ptr;
+}
+
+namespace atomic_wait
+{
+	template <typename T>
+	inline __m128i default_mask<stx::atomic_ptr<T>> = _mm_cvtsi64_si128(stx::c_ptr_mask);
+
+	template <typename T>
+	constexpr __m128i get_value(stx::atomic_ptr<T>&, const volatile void* value = nullptr)
+	{
+		return _mm_cvtsi64_si128(reinterpret_cast<uptr>(value) << stx::c_ref_size);
+	}
 }
 
 namespace std

@@ -18,8 +18,6 @@ extern "C"
 #pragma GCC diagnostic pop
 #endif
 
-#include "Utilities/BEType.h"
-
 // Error Codes
 enum CellVpostError : u32
 {

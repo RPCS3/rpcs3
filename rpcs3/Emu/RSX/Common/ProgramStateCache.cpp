@@ -3,6 +3,7 @@
 #include "Emu/system_config.h"
 
 #include <stack>
+#include "util/v128.hpp"
 
 using namespace program_hash_util;
 

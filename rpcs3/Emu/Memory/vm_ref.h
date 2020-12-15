@@ -1,8 +1,9 @@
 #pragma once
 
 #include <type_traits>
-#include "Utilities/BEType.h"
 #include "vm.h"
+
+#include "util/to_endian.hpp"
 
 namespace vm
 {

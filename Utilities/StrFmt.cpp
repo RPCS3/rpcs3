@@ -1,8 +1,9 @@
 #include "StrFmt.h"
-#include "BEType.h"
 #include "StrUtil.h"
 #include "cfmt.h"
+#include "util/endian.hpp"
 #include "util/logs.hpp"
+#include "util/v128.hpp"
 
 #include <algorithm>
 #include <string_view>

@@ -593,6 +593,8 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		// Grope for OPD section (TODO: optimization, better constraints)
 		for (const auto& seg : segs)
 		{
+			if (!seg.addr) continue;
+
 			for (vm::cptr<u32> ptr = vm::cast(seg.addr); ptr.addr() < seg.addr + seg.size; ptr++)
 			{
 				if (ptr[0] >= start && ptr[0] < end && ptr[0] % 4 == 0 && ptr[1] == toc)
@@ -616,6 +618,8 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 	// Find references indiscriminately
 	for (const auto& seg : segs)
 	{
+		if (!seg.addr) continue;
+
 		for (vm::cptr<u32> ptr = vm::cast(seg.addr); ptr.addr() < seg.addr + seg.size; ptr++)
 		{
 			const u32 value = *ptr;
@@ -627,6 +631,8 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 
 			for (const auto& _seg : segs)
 			{
+				if (!_seg.addr) continue;
+
 				if (value >= _seg.addr && value < _seg.addr + _seg.size)
 				{
 					addr_heap.emplace(value);

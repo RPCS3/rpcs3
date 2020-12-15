@@ -4,7 +4,8 @@
 #include <memory>
 #include "util/types.hpp"
 #include "Utilities/StrFmt.h"
-#include "Utilities/BEType.h"
+
+#include "util/to_endian.hpp"
 
 namespace utils
 {
@@ -174,10 +175,10 @@ namespace vm
 	struct cast_impl<u32>
 	{
 		static vm::addr_t cast(u32 addr,
-			u32 line,
-			u32 col,
-			const char* file,
-			const char* func)
+			u32,
+			u32,
+			const char*,
+			const char*)
 		{
 			return static_cast<vm::addr_t>(addr);
 		}
@@ -192,7 +193,7 @@ namespace vm
 			const char* file,
 			const char* func)
 		{
-			return static_cast<vm::addr_t>(static_cast<u32>(addr));
+			return static_cast<vm::addr_t>(::narrow<u32>(addr, line, col, file, func));
 		}
 	};
 

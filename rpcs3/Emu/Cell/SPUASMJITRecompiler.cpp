@@ -12,6 +12,7 @@
 #include "Crypto/sha1.h"
 
 #include "util/asm.hpp"
+#include "util/v128.hpp"
 
 #include <cmath>
 #include <mutex>

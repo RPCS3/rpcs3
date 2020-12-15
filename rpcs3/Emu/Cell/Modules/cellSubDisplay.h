@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Utilities/BEType.h"
-
 // Return Codes
 enum CellSubDisplayError : u32
 {

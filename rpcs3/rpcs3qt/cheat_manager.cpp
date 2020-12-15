@@ -18,6 +18,7 @@
 #include "Emu/Cell/PPUFunction.h"
 
 #include "util/yaml.hpp"
+#include "util/to_endian.hpp"
 #include "Utilities/StrUtil.h"
 #include "Utilities/bin_patch.h" // get_patches_path()
 

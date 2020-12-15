@@ -66,6 +66,7 @@
 #include <cctype>
 #include "util/asm.hpp"
 #include "util/vm.hpp"
+#include "util/v128.hpp"
 
 const bool s_use_ssse3 = utils::has_ssse3();
 
@@ -182,20 +183,10 @@ void ppu_reservation_fallback(ppu_thread& ppu)
 {
 	const auto& table = g_ppu_interpreter_fast.get_table();
 
-	const u32 min_hle = ppu_function_manager::addr ? ppu_function_manager::addr : UINT32_MAX;
-	const u32 max_hle = min_hle + ppu_function_manager::get().size() * 8 - 1;
-
 	while (true)
 	{
 		// Run instructions in interpreter
 		const u32 op = vm::read32(ppu.cia);
-
-		if (op == ppu.cia && ppu.cia >= min_hle && ppu.cia <= max_hle)
-		{
-			// HLE function
-			// ppu.raddr = 0;
-			return;
-		}
 
 		if (table[ppu_decode(op)](ppu, {op})) [[likely]]
 		{
@@ -642,7 +633,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			}
 
 			// Ignore HLE stop address
-			return addr == ppu_function_manager::addr + 8;
+			return addr == ppu_function_manager::func_addr(1) + 4;
 		};
 
 		if (is_invalid(addr))
@@ -1038,7 +1029,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 
 	cia = addr;
 	gpr[2] = rtoc;
-	lr = ppu_function_manager::addr + 8; // HLE stop address
+	lr = ppu_function_manager::func_addr(1) + 4; // HLE stop address
 	current_function = nullptr;
 
 	g_tls_log_prefix = []
@@ -1240,8 +1231,8 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 			const auto inst = vm::_ptr<const nse_t<u32>>(cia);
 
 			// Search for STWCX or STDCX nearby (LDARX-STWCX and LWARX-STDCX loops will use accurate 128-byte reservations)
-			constexpr u32 store_cond = se_storage<u32>::swap(sizeof(T) == 8 ? 0x7C00012D : 0x7C0001AD);
-			constexpr u32 mask = se_storage<u32>::swap(0xFC0007FF);
+			constexpr u32 store_cond = stx::se_storage<u32>::swap(sizeof(T) == 8 ? 0x7C00012D : 0x7C0001AD);
+			constexpr u32 mask = stx::se_storage<u32>::swap(0xFC0007FF);
 
 			const auto store_vec = v128::from32p(store_cond);
 			const auto mask_vec = v128::from32p(mask);
@@ -2323,9 +2314,10 @@ extern void ppu_initialize(const ppu_module& info)
 		globals.emplace_back(fmt::format("__cptr%x", suffix), reinterpret_cast<u64>(vm::g_exec_addr));
 
 		// Initialize segments for relocations
-		for (u32 i = 0; i < info.segs.size(); i++)
+		for (u32 i = 0, num = 0; i < info.segs.size(); i++)
 		{
-			globals.emplace_back(fmt::format("__seg%u_%x", i, suffix), info.segs[i].addr);
+			if (!info.segs[i].addr) continue;
+			globals.emplace_back(fmt::format("__seg%u_%x", num++, suffix), info.segs[i].addr);
 		}
 
 		link_workload.emplace_back(obj_name, false);
@@ -2489,6 +2481,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 			for (const auto& seg : info.segs)
 			{
+				if (!seg.addr) continue;
 				*jit_mod.vars[index++] = seg.addr;
 			}
 		}

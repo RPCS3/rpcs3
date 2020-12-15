@@ -1,7 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "Utilities/BEType.h"
+#include "util/to_endian.hpp"
 #include "vm.h"
 
 class ppu_thread;

@@ -15,6 +15,8 @@
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
 
+#include "util/v128.hpp"
+
 LOG_CHANNEL(sceNp);
 
 template <>

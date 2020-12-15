@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Io/PadHandler.h"
 #include "Utilities/CRC.h"
@@ -99,6 +99,6 @@ private:
 	bool get_is_right_stick(u64 keyCode) override;
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
-	pad_preview_values get_preview_values(std::unordered_map<u64, u16> data) override;
+	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
 	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
 };

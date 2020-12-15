@@ -12,9 +12,8 @@
 #include "RSXOffload.h"
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
-#include "rsx_methods.h"
 #include "rsx_utils.h"
-#include "Common/texture_cache_utils.h"
+#include "Common/texture_cache_types.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/geometry.h"
@@ -773,6 +772,9 @@ namespace rsx
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
 
+		// Runs shader prefetch and resolves pipeline status flags
+		void analyse_current_rsx_pipeline();
+
 		// Prefetch and analyze the currently active fragment program ucode
 		void prefetch_fragment_program();
 
@@ -783,8 +785,6 @@ namespace rsx
 
 		/**
 		 * Gets current fragment program and associated fragment state
-		 * get_surface_info is a helper takes 2 parameters: rsx_texture_address and surface_is_depth
-		 * returns whether surface is a render target and surface pitch in native format
 		 */
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
 

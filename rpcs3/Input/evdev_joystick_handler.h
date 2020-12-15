@@ -379,8 +379,8 @@ private:
 
 	positive_axis m_pos_axis_config;
 	std::vector<u32> m_positive_axis;
-	std::vector<std::string> blacklist;
-	std::unordered_map<std::string, int> settings_added;
+	std::vector<std::string> m_blacklist;
+	std::unordered_map<std::string, int> m_settings_added;
 	std::shared_ptr<EvdevDevice> m_dev;
 	bool m_is_button_or_trigger;
 	bool m_is_negative;

@@ -5,7 +5,10 @@
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
 
+#include "util/types.hpp"
+#include "util/endian.hpp"
 #include "util/logs.hpp"
+#include "util/v128.hpp"
 #include <algorithm>
 
 using namespace llvm;
@@ -67,6 +70,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 	// Create segment variables
 	for (const auto& seg : m_info.segs)
 	{
+		if (!seg.addr) continue;
 		auto gv = new GlobalVariable(*_module, GetType<u64>(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__seg%u_%x", m_segs.size(), gsuffix));
 		gv->setInitializer(ConstantInt::get(GetType<u64>(), seg.addr));
 		gv->setExternallyInitialized(true);

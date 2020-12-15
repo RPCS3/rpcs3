@@ -7,6 +7,8 @@ const spu_decoder<SPUDisAsm> s_spu_disasm;
 const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iflag> s_spu_iflag;
 
+#include "util/v128.hpp"
+
 u32 SPUDisAsm::disasm(u32 pc)
 {
 	const u32 op = *reinterpret_cast<const be_t<u32>*>(offset + pc);

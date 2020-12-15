@@ -3,8 +3,10 @@
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "VKGSRender.h"
+
 #include "../Common/GLSLCommon.h"
 #include "../Common/ShaderInterpreter.h"
+#include "../rsx_methods.h"
 
 namespace vk
 {

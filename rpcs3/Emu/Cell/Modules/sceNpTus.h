@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Utilities/BEType.h"
-
 #include "cellRtc.h"
 #include "sceNp.h"
 

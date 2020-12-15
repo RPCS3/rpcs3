@@ -3,6 +3,8 @@
 #include "PPCDisAsm.h"
 #include "SPUOpcodes.h"
 
+#include "util/v128.hpp"
+
 static constexpr const char* spu_reg_name[128] =
 {
 	"lr", "sp", "r2", "r3", "r4", "r5", "r6", "r7",

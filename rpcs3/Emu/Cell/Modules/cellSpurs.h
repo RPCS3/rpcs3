@@ -2,7 +2,7 @@
 
 #include "cellSync.h"
 
-
+#include "util/v128.hpp"
 
 struct CellSpurs;
 struct CellSpursTaskset;

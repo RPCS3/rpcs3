@@ -1296,7 +1296,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 			if (op != X64OP_LOAD_BE)
 			{
-				value = se_storage<u32>::swap(value);
+				value = stx::se_storage<u32>::swap(value);
 			}
 
 			if (op == X64OP_LOAD_CMP)
@@ -1338,7 +1338,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			}
 
 			u32 val32 = static_cast<u32>(reg_value);
-			if (!thread->write_reg(addr, op == X64OP_STORE ? se_storage<u32>::swap(val32) : val32))
+			if (!thread->write_reg(addr, op == X64OP_STORE ? stx::se_storage<u32>::swap(val32) : val32))
 			{
 				return false;
 			}

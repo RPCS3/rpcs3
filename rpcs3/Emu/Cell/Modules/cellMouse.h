@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Utilities/BEType.h"
-
 enum CellMouseError : u32
 {
 	CELL_MOUSE_ERROR_FATAL                      = 0x80121201,

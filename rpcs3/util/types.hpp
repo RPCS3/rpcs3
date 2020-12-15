@@ -213,6 +213,28 @@ namespace fmt
 template <typename T, std::size_t Align>
 class atomic_t;
 
+namespace stx
+{
+	template <typename T, bool Se, std::size_t Align>
+	class se_t;
+}
+
+using stx::se_t;
+
+// se_t<> with native endianness
+template <typename T, std::size_t Align = alignof(T)>
+using nse_t = se_t<T, false, Align>;
+
+template <typename T, std::size_t Align = alignof(T)>
+using be_t = se_t<T, std::endian::little == std::endian::native, Align>;
+template <typename T, std::size_t Align = alignof(T)>
+using le_t = se_t<T, std::endian::big == std::endian::native, Align>;
+
+template <typename T, std::size_t Align = alignof(T)>
+using atomic_be_t = atomic_t<be_t<T>, Align>;
+template <typename T, std::size_t Align = alignof(T)>
+using atomic_le_t = atomic_t<le_t<T>, Align>;
+
 // Extract T::simple_type if available, remove cv qualifiers
 template <typename T, typename = void>
 struct simple_type_helper

@@ -2,6 +2,8 @@
 
 #include "PPUThread.h"
 
+#include "util/v128.hpp"
+
 using ppu_function_t = bool(*)(ppu_thread&);
 
 // BIND_FUNC macro "converts" any appropriate HLE function to ppu_function_t, binding it to PPU thread context.
@@ -277,6 +279,16 @@ public:
 	static inline const auto& get()
 	{
 		return access();
+	}
+
+	static inline u32 func_addr(u32 index)
+	{
+		if (index >= access().size() || !addr)
+		{
+			return 0;
+		}
+
+		return addr + index * 8;
 	}
 
 	// Allocation address

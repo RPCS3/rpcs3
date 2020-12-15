@@ -356,24 +356,6 @@ void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<lib_loading_type>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](lib_loading_type value)
-	{
-		switch (value)
-		{
-		case lib_loading_type::manual: return "Manually load selected libraries";
-		case lib_loading_type::hybrid: return "Load automatic and manual selection";
-		case lib_loading_type::liblv2only: return "Load liblv2.sprx only";
-		case lib_loading_type::liblv2both: return "Load liblv2.sprx and manual selection";
-		case lib_loading_type::liblv2list: return "Load liblv2.sprx and strict selection";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
 void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](ppu_decoder_type type)

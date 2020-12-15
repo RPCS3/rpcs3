@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Utilities/BEType.h"
 #include <sstream>
 #include <iomanip>
 
@@ -96,7 +95,7 @@ struct PKGExtHeader
 	be_t<u32> ext_hdr_size;                     // Extended header size. ex: 0x40
 	be_t<u32> ext_data_size;                    // ex: 0x180
 	be_t<u32> main_and_ext_headers_hmac_offset; // ex: 0x100
-	be_t<u32> metadata_header_hmac_offset;      // ex: 0x360, 0x390, 0x490 
+	be_t<u32> metadata_header_hmac_offset;      // ex: 0x360, 0x390, 0x490
 	be_t<u64> tail_offset;                      // tail size seams to be always 0x1A0
 	be_t<u32> padding1;
 	be_t<u32> pkg_key_id;                       // Id of the AES key used for decryption. PSP = 0x1, PSVita = 0xC0000002, PSM = 0xC0000004

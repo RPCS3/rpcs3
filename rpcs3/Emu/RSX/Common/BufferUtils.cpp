@@ -4,7 +4,8 @@
 #include "Utilities/sysinfo.h"
 #include "../RSXThread.h"
 
-#include <limits>
+#include "util/v128.hpp"
+#include "util/to_endian.hpp"
 
 #define DEBUG_VERTEX_STREAMING 0
 
@@ -667,7 +668,7 @@ void write_vertex_array_data_to_buffer(gsl::span<std::byte> raw_dst_span, gsl::s
 			u32 src_value;
 			memcpy(&src_value, src_ptr.subspan(attribute_src_stride * i).data(), sizeof(u32));
 
-			if (swap_endianness) src_value = se_storage<u32>::swap(src_value);
+			if (swap_endianness) src_value = stx::se_storage<u32>::swap(src_value);
 
 			const auto& decoded_vector                 = decode_cmp_vector(src_value);
 			dst_span[i * dst_stride / sizeof(u16)] = decoded_vector[0];
