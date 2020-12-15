@@ -432,6 +432,9 @@ void spu_cache::initialize()
 
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
 	{
+		// Set low priority
+		thread_ctrl::set_native_priority(-1);
+
 		// Initialize compiler instances for parallel compilation
 		std::unique_ptr<spu_recompiler_base> compiler;
 
