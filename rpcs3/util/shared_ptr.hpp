@@ -63,6 +63,9 @@ namespace stx
 	// Use lower 17 bits as atomic_ptr internal counter of borrowed refs (pointer itself is shifted)
 	constexpr uint c_ref_mask = 0x1ffff, c_ref_size = 17;
 
+	// Remaining pointer bits
+	constexpr uptr c_ptr_mask = static_cast<uptr>(-1) << c_ref_size;
+
 	struct shared_counter
 	{
 		// Stored destructor
@@ -919,7 +922,7 @@ namespace stx
 			}
 
 			atomic_ptr old_exch;
-			old_exch.m_val.raw() = reinterpret_cast<uptr>(std::exchange(exch.m_ptr, nullptr)) << 17;
+			old_exch.m_val.raw() = reinterpret_cast<uptr>(std::exchange(exch.m_ptr, nullptr)) << c_ref_size;
 
 			// Set to reset old cmp_and_old value
 			old.m_val.raw() = (cmp_and_old.m_ptr << c_ref_size) | c_ref_mask;
@@ -1005,7 +1008,7 @@ namespace stx
 			}
 
 			// Failure (return references)
-			old.m_val.raw() = reinterpret_cast<uptr>(std::exchange(exch.m_ptr, nullptr)) << 17;
+			old.m_val.raw() = reinterpret_cast<uptr>(std::exchange(exch.m_ptr, nullptr)) << c_ref_size;
 			return false;
 		}
 
@@ -1054,6 +1057,22 @@ namespace stx
 		{
 			return observe() == r.get();
 		}
+
+		template <atomic_wait::op Flags = atomic_wait::op::eq>
+		void wait(const volatile void* value, atomic_wait_timeout timeout = atomic_wait_timeout::inf)
+		{
+			m_val.template wait<Flags>(reinterpret_cast<uptr>(value) << c_ref_size, c_ptr_mask, timeout);
+		}
+
+		void notify_one()
+		{
+			m_val.notify_one(c_ptr_mask);
+		}
+
+		void notify_all()
+		{
+			m_val.notify_all(c_ptr_mask);
+		}
 	};
 
 	// Some nullptr replacement for few cases
@@ -1093,6 +1112,18 @@ namespace stx
 		}
 
 	} null_ptr;
+}
+
+namespace atomic_wait
+{
+	template <typename T>
+	inline __m128i default_mask<stx::atomic_ptr<T>> = _mm_cvtsi64_si128(stx::c_ptr_mask);
+
+	template <typename T>
+	constexpr __m128i get_value(stx::atomic_ptr<T>&, const volatile void* value = nullptr)
+	{
+		return _mm_cvtsi64_si128(reinterpret_cast<uptr>(value) << stx::c_ref_size);
+	}
 }
 
 namespace std
