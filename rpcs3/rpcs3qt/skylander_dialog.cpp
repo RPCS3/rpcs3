@@ -222,7 +222,6 @@ const std::map<const std::pair<const u16, const u16>, const std::string> list_sk
     {{220, 13599}, "Ultimate Kaos Trap"},
     {{230, 0}, "Hand of Fate"},
     {{230, 13315}, "Legendary Hand of Fate"},
-    {{230, 13315}, "Legendary Hand of Fate"},
     {{231, 0}, "Piggy Bank"},
     {{232, 0}, "Rocket Ram"},
     {{233, 0}, "Tiki Speaky"},
