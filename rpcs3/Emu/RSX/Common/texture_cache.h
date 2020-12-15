@@ -269,8 +269,8 @@ namespace rsx
 			 * Optionally returns a second variable that contains the surface reference.
 			 * The surface reference can be used to insert a texture barrier or inject a deferred resource
 			 */
-			template <typename surface_store_type>
-			std::pair<bool, typename surface_store_type::surface_type> is_expired(surface_store_type& surface_cache)
+			template <typename surface_store_type, typename surface_type = typename surface_store_type::surface_type>
+			std::pair<bool, surface_type> is_expired(surface_store_type& surface_cache)
 			{
 				if (upload_context != rsx::texture_upload_context::framebuffer_storage ||
 					surface_cache_tag == surface_cache.cache_tag)
@@ -282,13 +282,13 @@ namespace rsx
 				auto ref_image = image_handle ? image_handle->image() : external_subresource_desc.external_handle;
 				if (ref_image)
 				{
-					if (auto as_rtt = dynamic_cast<surface_store_type::surface_type>(ref_image);
-						as_rtt && as_rtt == surface_cache.get_surface_at(ref_address))
+					if (auto surface = dynamic_cast<surface_type>(ref_image);
+						surface && surface == surface_cache.get_surface_at(ref_address))
 					{
 						// Fast sync
 						surface_cache_tag = surface_cache.cache_tag;
 						is_cyclic_reference = surface_cache.address_is_bound(ref_address);
-						return { false, as_rtt };
+						return { false, surface };
 					}
 				}
 
