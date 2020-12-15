@@ -39,6 +39,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 
 #include "Utilities/sysinfo.h"
 #include "Utilities/Config.h"
+#include "Utilities/Thread.h"
 #include "rpcs3_version.h"
 #include "Emu/System.h"
 #include <thread>
@@ -366,6 +367,9 @@ int main(int argc, char** argv)
 		return 2;
 	}
 #endif
+
+	// Initialize thread pool finalizer (on first use)
+	named_thread("", []{});
 
 	std::unique_ptr<logs::listener> log_file;
 	{
