@@ -544,7 +544,10 @@ namespace rsx
 				}
 			}
 
-			ensure(processed == entry_count);
+			if (!Emu.IsStopped())
+			{
+				ensure(processed == entry_count);
+			}
 		}
 
 	public:
