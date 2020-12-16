@@ -805,9 +805,11 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	if (!m_current_subdraw_id++)
 	{
-		vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 		update_draw_state();
 		begin_render_pass();
+
+		// Bind pipeline after starting the renderpass to work around some validation layer spam about format mismatch
+		vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 
 		if (cond_render_ctrl.hw_cond_active && m_device->get_conditional_render_support())
 		{
