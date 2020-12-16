@@ -1,6 +1,7 @@
 #include "debugger_frame.h"
 #include "register_editor_dialog.h"
 #include "instruction_editor_dialog.h"
+#include "memory_viewer_panel.h"
 #include "gui_settings.h"
 #include "debugger_list.h"
 #include "breakpoint_list.h"
@@ -311,6 +312,28 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			if (auto pos = std::basic_string_view<u32>(res.data(), 2).find_last_not_of(UINT32_MAX); pos != umax)
 				m_debugger_list->ShowAddress(res[pos] - std::max(i, 0) * 4, true);
 
+			return;
+		}
+		case Qt::Key_M:
+		{
+			// Memory viewer
+
+			u32 addr = pc;
+
+			if (auto spu = static_cast<const spu_thread*>(cpu->id_type() == 2 ? cpu.get() : nullptr))
+			{
+				if (spu->get_type() != spu_type::threaded)
+				{
+					addr += RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * spu->index;
+				}
+				else
+				{
+					addr += SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (spu->id & 0xffffff);
+				}
+			}
+
+			auto mvp = new memory_viewer_panel(this, addr);
+			mvp->show();
 			return;
 		}
 		case Qt::Key_F10:
