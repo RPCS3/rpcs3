@@ -17,6 +17,7 @@ class CPUDisAsm
 protected:
 	const CPUDisAsmMode m_mode;
 	const std::add_pointer_t<const u8> m_offset;
+	u32 m_op = 0;
 
 	virtual void Write(const std::string& value)
 	{
@@ -25,20 +26,20 @@ protected:
 			case CPUDisAsm_DumpMode:
 			{
 				last_opcode = fmt::format("\t%08x:\t%02x %02x %02x %02x\t%s\n", dump_pc,
-					m_offset[dump_pc],
-					m_offset[dump_pc + 1],
-					m_offset[dump_pc + 2],
-					m_offset[dump_pc + 3], value);
+					static_cast<u8>(m_op >> 24),
+					static_cast<u8>(m_op >> 16),
+					static_cast<u8>(m_op >> 8),
+					static_cast<u8>(m_op >> 0), value);
 				break;
 			}
 
 			case CPUDisAsm_InterpreterMode:
 			{
 				last_opcode = fmt::format("[%08x]  %02x %02x %02x %02x: %s", dump_pc,
-					m_offset[dump_pc],
-					m_offset[dump_pc + 1],
-					m_offset[dump_pc + 2],
-					m_offset[dump_pc + 3], value);
+					static_cast<u8>(m_op >> 24),
+					static_cast<u8>(m_op >> 16),
+					static_cast<u8>(m_op >> 8),
+					static_cast<u8>(m_op >> 0), value);
 				break;
 			}
 
