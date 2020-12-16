@@ -1807,8 +1807,7 @@ void Emulator::Resume()
 	// Print and reset debug data collected
 	if (m_state == system_state::paused && g_cfg.core.ppu_debug)
 	{
-		PPUDisAsm dis_asm(CPUDisAsm_DumpMode);
-		dis_asm.offset = vm::g_sudo_addr;
+		PPUDisAsm dis_asm(CPUDisAsm_DumpMode, vm::g_sudo_addr);
 
 		std::string dump;
 
@@ -1818,7 +1817,6 @@ void Emulator::Resume()
 			{
 				if (auto& data = *reinterpret_cast<be_t<u32>*>(vm::g_stat_addr + i))
 				{
-					dis_asm.dump_pc = i;
 					dis_asm.disasm(i);
 					fmt::append(dump, "\n\t'%08X' %s", data, dis_asm.last_opcode);
 					data = 0;

@@ -71,7 +71,7 @@ static constexpr const char* spu_ch_name[128] =
 class SPUDisAsm final : public PPCDisAsm
 {
 public:
-	SPUDisAsm(CPUDisAsmMode mode) : PPCDisAsm(mode)
+	SPUDisAsm(CPUDisAsmMode mode, const u8* offset) : PPCDisAsm(mode, offset)
 	{
 	}
 
