@@ -149,7 +149,7 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 {
-	if (event->button() == Qt::LeftButton && !Emu.IsStopped() && !m_no_thread_selected)
+	if (event->button() == Qt::LeftButton)
 	{
 		int i = currentRow();
 		if (i < 0) return;

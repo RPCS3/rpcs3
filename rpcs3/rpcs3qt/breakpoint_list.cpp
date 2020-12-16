@@ -86,18 +86,21 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 */
 void breakpoint_list::HandleBreakpointRequest(u32 loc)
 {
+	const auto cpu = this->cpu.lock();
+
+	if (!cpu || cpu->id_type() != 1 || !vm::check_addr(loc, vm::page_allocated | vm::page_executable))
+	{
+		// TODO: SPU breakpoints
+		return;
+	}
+
 	if (m_breakpoint_handler->HasBreakpoint(loc))
 	{
 		RemoveBreakpoint(loc);
 	}
 	else
 	{
-		const auto cpu = this->cpu.lock();
-
-		if (cpu->id_type() == 1 && vm::check_addr(loc, vm::page_allocated | vm::page_executable))
-		{
-			AddBreakpoint(loc);
-		}
+		AddBreakpoint(loc);
 	}
 }
 
