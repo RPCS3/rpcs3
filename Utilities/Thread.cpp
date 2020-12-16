@@ -2287,10 +2287,16 @@ thread_base::~thread_base()
 	}
 }
 
-bool thread_base::join() const
+bool thread_base::join(bool dtor) const
 {
+	// Check if already finished
+	if (m_sync & 2)
+	{
+		return (m_sync & 3) == 3;
+	}
+
 	// Hacked for too sleepy threads (1ms) TODO: make sure it's unneeded and remove
-	const auto timeout = Emu.IsStopped() ? atomic_wait_timeout{1'000'000} : atomic_wait_timeout::inf;
+	const auto timeout = dtor && Emu.IsStopped() ? atomic_wait_timeout{1'000'000} : atomic_wait_timeout::inf;
 
 	bool warn = false;
 	auto stamp0 = __rdtsc();

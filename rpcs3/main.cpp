@@ -369,7 +369,7 @@ int main(int argc, char** argv)
 #endif
 
 	// Initialize thread pool finalizer (on first use)
-	named_thread("", []{});
+	named_thread("", []{})();
 
 	std::unique_ptr<logs::listener> log_file;
 	{

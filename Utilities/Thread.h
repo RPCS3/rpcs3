@@ -142,7 +142,7 @@ public:
 	u64 get_cycles();
 
 	// Wait for the thread (it does NOT change thread state, and can be called from multiple threads)
-	bool join() const;
+	bool join(bool dtor = false) const;
 
 	// Notify the thread
 	void notify();
@@ -393,7 +393,7 @@ public:
 	{
 		// Assign aborting state forcefully
 		operator=(thread_state::aborting);
-		thread::join();
+		thread::join(true);
 
 		if constexpr (!result::empty)
 		{
