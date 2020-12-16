@@ -99,6 +99,7 @@ const std::map<const std::pair<const u16, const u16>, const std::string> list_sk
     {{27, 6145}, "Series 2 Stump Smash"},
     {{28, 0}, "Dark Spyro"},
     {{29, 0}, "Hex"},
+	{{29, 4614}, "LightCore Hex"},
     {{29, 6145}, "Series 2 Hex"},
     {{30, 0}, "Chop Chop"},
     {{30, 6145}, "Series 2 Chop Chop"},
