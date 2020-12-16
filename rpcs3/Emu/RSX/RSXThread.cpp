@@ -1540,7 +1540,6 @@ namespace rsx
 		current_vertex_program.rsx_vertex_inputs.clear();
 		current_vertex_program.data.reserve(512 * 4);
 		current_vertex_program.jump_table.clear();
-		current_vertex_program.texture_dimensions = 0;
 
 		current_vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program
 		(
