@@ -36,7 +36,6 @@ class debugger_frame : public custom_dock_widget
 	QPushButton* m_btn_step_over;
 	QPushButton* m_btn_run;
 	QComboBox* m_choice_units;
-	QString m_current_choice;
 	QTimer* m_update;
 	QSplitter* m_splitter;
 
@@ -45,7 +44,6 @@ class debugger_frame : public custom_dock_widget
 	u32 m_last_pc = -1;
 	std::vector<char> m_last_query_state;
 	u32 m_last_step_over_breakpoint = -1;
-	bool m_no_thread_selected = true;
 
 	std::shared_ptr<CPUDisAsm> m_disasm;
 	std::weak_ptr<cpu_thread> cpu;

@@ -226,7 +226,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	const auto cpu = this->cpu.lock();
 	int i = m_debugger_list->currentRow();
 
-	if (!isActiveWindow() || !cpu || m_no_thread_selected)
+	if (!isActiveWindow() || !cpu)
 	{
 		return;
 	}
@@ -356,8 +356,6 @@ void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
 
-	if (m_no_thread_selected) return;
-
 	const auto cpu = this->cpu.lock();
 
 	if (!cpu)
@@ -449,18 +447,22 @@ void debugger_frame::UpdateUnitList()
 
 void debugger_frame::OnSelectUnit()
 {
-	if (m_choice_units->count() < 1 || m_current_choice == m_choice_units->currentText()) return;
+	if (m_choice_units->count() < 1) return;
 
-	m_current_choice = m_choice_units->currentText();
-	m_no_thread_selected = m_current_choice == NoThreadString;
-	m_debugger_list->m_no_thread_selected = m_no_thread_selected;
+	const auto weak = m_choice_units->currentData().value<std::weak_ptr<cpu_thread>>();
+
+	if (!weak.owner_before(cpu) && !cpu.owner_before(weak))
+	{
+		// They match, nothing to do.
+		return;
+	}
 
 	m_disasm.reset();
 	cpu.reset();
 
-	if (!m_no_thread_selected)
+	if (!weak.expired())
 	{
-		if (const auto cpu0 = m_choice_units->currentData().value<std::weak_ptr<cpu_thread>>().lock())
+		if (const auto cpu0 = weak.lock())
 		{
 			if (cpu0->id_type() == 1)
 			{
@@ -481,7 +483,7 @@ void debugger_frame::OnSelectUnit()
 		}
 	}
 
-	EnableButtons(!m_no_thread_selected);
+	EnableButtons(true);
 
 	m_debugger_list->UpdateCPUData(this->cpu, m_disasm);
 	m_breakpoint_list->UpdateCPUData(this->cpu, m_disasm);
@@ -698,7 +700,7 @@ void debugger_frame::EnableUpdateTimer(bool enable)
 
 void debugger_frame::EnableButtons(bool enable)
 {
-	if (m_no_thread_selected) enable = false;
+	if (cpu.expired()) enable = false;
 
 	m_go_to_addr->setEnabled(enable);
 	m_go_to_pc->setEnabled(enable);
