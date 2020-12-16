@@ -1288,9 +1288,7 @@ std::string spu_thread::dump_regs() const
 
 		if (i3 >= 0x80 && is_exec_code(i3))
 		{
-			SPUDisAsm dis_asm(CPUDisAsm_NormalMode);
-			dis_asm.offset = ls;
-			dis_asm.dump_pc = i3;
+			SPUDisAsm dis_asm(CPUDisAsm_NormalMode, ls);
 			dis_asm.disasm(i3);
 			fmt::append(ret, " -> %s", dis_asm.last_opcode);
 		}

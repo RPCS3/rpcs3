@@ -500,9 +500,7 @@ std::string ppu_thread::dump_regs() const
 				}
 				else
 				{
-					PPUDisAsm dis_asm(CPUDisAsm_NormalMode);
-					dis_asm.offset = vm::g_sudo_addr;
-					dis_asm.dump_pc = reg;
+					PPUDisAsm dis_asm(CPUDisAsm_NormalMode, vm::g_sudo_addr);
 					dis_asm.disasm(reg);
 					fmt::append(ret, " -> %s", dis_asm.last_opcode);
 				}

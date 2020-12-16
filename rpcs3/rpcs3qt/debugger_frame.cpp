@@ -465,7 +465,7 @@ void debugger_frame::OnSelectUnit()
 				if (cpu0.get() == idm::check<named_thread<ppu_thread>>(cpu0->id))
 				{
 					cpu = cpu0;
-					m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
+					m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode, vm::g_sudo_addr);
 				}
 			}
 			else if (cpu0->id_type() == 2)
@@ -473,7 +473,7 @@ void debugger_frame::OnSelectUnit()
 				if (cpu0.get() == idm::check<named_thread<spu_thread>>(cpu0->id))
 				{
 					cpu = cpu0;
-					m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
+					m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode, static_cast<const spu_thread*>(cpu0.get())->ls);
 				}
 			}
 		}

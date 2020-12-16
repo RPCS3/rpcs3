@@ -11,7 +11,8 @@ const spu_decoder<spu_iflag> s_spu_iflag;
 
 u32 SPUDisAsm::disasm(u32 pc)
 {
-	const u32 op = *reinterpret_cast<const be_t<u32>*>(offset + pc);
+	dump_pc = pc;
+	const u32 op = *reinterpret_cast<const be_t<u32>*>(m_offset + pc);
 	(this->*(s_spu_disasm.decode(op)))({ op });
 	return 4;
 }
@@ -33,7 +34,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 
 	for (s32 i = pc - 4; i >= 0; i -= 4)
 	{
-		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(offset + i);
+		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(m_offset + i);
 		const spu_opcode_t op0{ opcode };
 
 		const auto type = s_spu_itype.decode(opcode);
