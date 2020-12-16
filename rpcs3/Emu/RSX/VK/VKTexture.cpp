@@ -621,7 +621,16 @@ namespace vk
 				{
 					auto typeless = vk::get_typeless_helper(VK_FORMAT_R16_UNORM, RSX_FORMAT_CLASS_COLOR, typeless_w, typeless_h);
 					change_image_layout(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL);
-					stretch_image_typeless_unsafe(src, dst, typeless, src_rect, dst_rect, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+					if (vk::get_chip_family() < vk::chip_class::NV_ampere)
+					{
+						stretch_image_typeless_unsafe(src, dst, typeless, src_rect, dst_rect, VK_IMAGE_ASPECT_DEPTH_BIT);
+					}
+					else
+					{
+						// Ampere GPUs don't like the direct transfer hack above
+						stretch_image_typeless_safe(src, dst, typeless, src_rect, dst_rect, VK_IMAGE_ASPECT_DEPTH_BIT, VK_IMAGE_ASPECT_DEPTH_BIT);
+					}
 					break;
 				}
 				case VK_FORMAT_D32_SFLOAT:
