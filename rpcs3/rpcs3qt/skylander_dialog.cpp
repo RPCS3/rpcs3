@@ -74,6 +74,7 @@ const std::map<const std::pair<const u16, const u16>, const std::string> list_sk
     {{19, 0}, "Trigger Happy"},
     {{19, 280}, "Series 2 Trigger Happy"},
     {{19, 556}, "Springtime Trigger Happy"},
+    {{19, 1320}, "Big Bang Tripper Happy"},
     {{19, 4152}, "Eon's Elite Trigger Happy"},
     {{20, 0}, "Drobot"},
     {{20, 280}, "Series 2 Drobot"},
