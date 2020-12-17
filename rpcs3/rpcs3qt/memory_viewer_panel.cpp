@@ -447,62 +447,72 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 	}
 
 	const auto originalBuffer  = vm::get_super_ptr<const uchar>(addr);
-	const auto convertedBuffer = static_cast<uchar*>(std::malloc(width * height * 4));
+	const auto convertedBuffer = static_cast<uchar*>(std::malloc(4ULL * width * height));
 
 	switch (format)
 	{
 	case color_format::RGB:
 	{
+		const u32 pitch = width * 3;
+		const u32 pitch_new = width * 4;
 		for (u32 y = 0; y < height; y++)
 		{
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 3)
+			const u32 offset = y * pitch;
+			const u32 offset_new = y * pitch_new;
+			for (u32 x = 0, x_new = 0; x < pitch; x += 3, x_new += 4)
 			{
-				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 2 + y * width * 3];
-				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 1 + y * width * 3];
-				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 0 + y * width * 3];
-				convertedBuffer[i + 3 + y * width * 4] = 255;
+				convertedBuffer[offset_new + x_new + 0] = originalBuffer[offset + x + 2];
+				convertedBuffer[offset_new + x_new + 1] = originalBuffer[offset + x + 1];
+				convertedBuffer[offset_new + x_new + 2] = originalBuffer[offset + x + 0];
+				convertedBuffer[offset_new + x_new + 3] = 255;
 			}
 		}
 		break;
 	}
 	case color_format::ARGB:
 	{
+		const u32 pitch = width * 4;
 		for (u32 y = 0; y < height; y++)
 		{
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
+			const u32 offset = y * pitch;
+			for (u32 x = 0; x < pitch; x += 4)
 			{
-				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
-				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
-				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
-				convertedBuffer[i + 3 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
+				convertedBuffer[offset + x + 0] = originalBuffer[offset + x + 3];
+				convertedBuffer[offset + x + 1] = originalBuffer[offset + x + 2];
+				convertedBuffer[offset + x + 2] = originalBuffer[offset + x + 1];
+				convertedBuffer[offset + x + 3] = originalBuffer[offset + x + 0];
 			}
 		}
 		break;
 	}
 	case color_format::RGBA:
 	{
+		const u32 pitch = width * 4;
 		for (u32 y = 0; y < height; y++)
 		{
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
+			const u32 offset = y * pitch;
+			for (u32 x = 0; x < pitch; x += 4)
 			{
-				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
-				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
-				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
-				convertedBuffer[i + 3 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
+				convertedBuffer[offset + x + 0] = originalBuffer[offset + x + 2];
+				convertedBuffer[offset + x + 1] = originalBuffer[offset + x + 1];
+				convertedBuffer[offset + x + 2] = originalBuffer[offset + x + 0];
+				convertedBuffer[offset + x + 3] = originalBuffer[offset + x + 3];
 			}
 		}
 		break;
 	}
 	case color_format::ABGR:
 	{
+		const u32 pitch = width * 4;
 		for (u32 y = 0; y < height; y++)
 		{
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
+			const u32 offset = y * pitch;
+			for (u32 x = 0; x < pitch; x += 4)
 			{
-				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
-				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
-				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
-				convertedBuffer[i + 3 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
+				convertedBuffer[offset + x + 0] = originalBuffer[offset + x + 1];
+				convertedBuffer[offset + x + 1] = originalBuffer[offset + x + 2];
+				convertedBuffer[offset + x + 2] = originalBuffer[offset + x + 3];
+				convertedBuffer[offset + x + 3] = originalBuffer[offset + x + 0];
 			}
 		}
 		break;
@@ -514,18 +524,21 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 	// Flip vertically
 	if (flipv)
 	{
+		const u32 pitch = width * 4;
 		for (u32 y = 0; y < height / 2; y++)
 		{
-			for (u32 x = 0; x < width * 4; x++)
+			const u32 offset = y * pitch;
+			const u32 flip_offset = (height - y - 1) * pitch;
+			for (u32 x = 0; x < pitch; x++)
 			{
-				const u8 t = convertedBuffer[x + y * width * 4];
-				convertedBuffer[x + y * width * 4] = convertedBuffer[x + (height - y - 1) * width * 4];
-				convertedBuffer[x + (height - y - 1) * width * 4] = t;
+				const u8 tmp = convertedBuffer[offset + x];
+				convertedBuffer[offset + x] = convertedBuffer[flip_offset + x];
+				convertedBuffer[flip_offset + x] = tmp;
 			}
 		}
 	}
 
-	QImage image = QImage(convertedBuffer, width, height, QImage::Format_ARGB32, [](void* buffer){ std::free(buffer); }, convertedBuffer);
+	QImage image(convertedBuffer, width, height, QImage::Format_ARGB32, [](void* buffer){ std::free(buffer); }, convertedBuffer);
 	if (image.isNull()) return;
 
 	QLabel* canvas = new QLabel();
