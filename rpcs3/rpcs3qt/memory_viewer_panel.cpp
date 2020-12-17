@@ -283,7 +283,8 @@ void memory_viewer_panel::resizeEvent(QResizeEvent *event)
 	else if (m_height_leftover < -font_height)
 	{
 		m_height_leftover += font_height;
-		--m_rowcount;
+		if (m_rowcount > 0)
+			--m_rowcount;
 		ShowMemory();
 	}
 }
