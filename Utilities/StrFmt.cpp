@@ -250,11 +250,11 @@ void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
 
 	if (loc.col != umax)
 	{
-		fmt::append(out, "\n(in file %s:%s[:%s]", loc.file, loc.line, loc.col);
+		fmt::append(out, "\n(in file %s:%u[:%u]", loc.file, loc.line, loc.col);
 	}
 	else
 	{
-		fmt::append(out, "\n(in file %s:%s", loc.file, loc.line);
+		fmt::append(out, "\n(in file %s:%u", loc.file, loc.line);
 	}
 
 	if (loc.func && *loc.func)
