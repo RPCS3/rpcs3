@@ -178,7 +178,7 @@ namespace vk
 		return inheritance_info.parent->head();
 	}
 
-	void dma_block::set_parent(command_buffer& cmd, dma_block* parent)
+	void dma_block::set_parent(const command_buffer& cmd, dma_block* parent)
 	{
 		ensure(parent);
 		if (inheritance_info.parent == parent)
@@ -206,7 +206,7 @@ namespace vk
 		}
 	}
 
-	void dma_block::extend(command_buffer& cmd, const render_device &dev, usz new_size)
+	void dma_block::extend(const command_buffer& cmd, const render_device &dev, usz new_size)
 	{
 		ensure(allocated_memory);
 		if (new_size <= allocated_memory->size())
@@ -244,7 +244,7 @@ namespace vk
 		return (allocated_memory) ? allocated_memory->size() : 0;
 	}
 
-	std::pair<u32, vk::buffer*> map_dma(command_buffer& cmd, u32 local_address, u32 length)
+	std::pair<u32, vk::buffer*> map_dma(const command_buffer& cmd, u32 local_address, u32 length)
 	{
 		const auto map_range = utils::address_range::start_length(local_address, length);
 		const auto first_block = (local_address & s_dma_block_mask);
