@@ -304,7 +304,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			{
 				be_t<ppu_opcode_t> op{};
 
-				if (vm::try_access(pc, &op, 4, false))
+				if (vm::check_addr(pc, vm::page_executable) && vm::try_access(pc, &op, 4, false))
 					res = op_branch_targets(pc, op);
 
 				break;
