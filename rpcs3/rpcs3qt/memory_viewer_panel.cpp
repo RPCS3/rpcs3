@@ -118,10 +118,10 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	QGroupBox* tools_img_mode = new QGroupBox(tr("Mode"));
 	QHBoxLayout* hbox_tools_img_mode = new QHBoxLayout();
 	QComboBox* cbox_img_mode = new QComboBox(this);
-	cbox_img_mode->addItem("RGB");
-	cbox_img_mode->addItem("ARGB");
-	cbox_img_mode->addItem("RGBA");
-	cbox_img_mode->addItem("ABGR");
+	cbox_img_mode->addItem("RGB", QVariant::fromValue(color_format::RGB));
+	cbox_img_mode->addItem("ARGB", QVariant::fromValue(color_format::ARGB));
+	cbox_img_mode->addItem("RGBA", QVariant::fromValue(color_format::RGBA));
+	cbox_img_mode->addItem("ABGR", QVariant::fromValue(color_format::ABGR));
 	cbox_img_mode->setCurrentIndex(1); //ARGB
 	hbox_tools_img_mode->addWidget(cbox_img_mode);
 	tools_img_mode->setLayout(hbox_tools_img_mode);
@@ -226,10 +226,10 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	connect(b_fnext, &QAbstractButton::clicked, [this]() { scroll(m_rowcount); });
 	connect(b_img, &QAbstractButton::clicked, [=, this]()
 	{
-		const int mode = cbox_img_mode->currentIndex();
+		const color_format format = cbox_img_mode->currentData().value<color_format>();
 		const int sizex = sb_img_size_x->value();
 		const int sizey = sb_img_size_y->value();
-		ShowImage(this, m_addr, mode, sizex, sizey, false);
+		ShowImage(this, m_addr, format, sizex, sizey, false);
 	});
 
 	// Fill the QTextEdits
@@ -437,7 +437,7 @@ void memory_viewer_panel::SetPC(const uint pc)
 	m_addr = pc;
 }
 
-void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
+void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv)
 {
 	std::shared_lock rlock(vm::g_mutex);
 
@@ -449,9 +449,9 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	const auto originalBuffer  = vm::get_super_ptr<const uchar>(addr);
 	const auto convertedBuffer = static_cast<uchar*>(std::malloc(width * height * 4));
 
-	switch (mode)
+	switch (format)
 	{
-	case 0: // RGB
+	case color_format::RGB:
 	{
 		for (u32 y = 0; y < height; y++)
 		{
@@ -465,7 +465,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 		}
 		break;
 	}
-	case 1: // ARGB
+	case color_format::ARGB:
 	{
 		for (u32 y = 0; y < height; y++)
 		{
@@ -479,7 +479,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 		}
 		break;
 	}
-	case 2: // RGBA
+	case color_format::RGBA:
 	{
 		for (u32 y = 0; y < height; y++)
 		{
@@ -493,7 +493,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 		}
 		break;
 	}
-	case 3: // ABGR
+	case color_format::ABGR:
 	{
 		for (u32 y = 0; y < height; y++)
 		{
