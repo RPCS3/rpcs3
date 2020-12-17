@@ -12,6 +12,16 @@ class memory_viewer_panel : public QDialog
 {
 	Q_OBJECT
 
+public:
+	memory_viewer_panel(QWidget* parent, u32 addr = 0);
+	~memory_viewer_panel();
+
+	bool exit;
+
+protected:
+	void wheelEvent(QWheelEvent* event) override;
+	void resizeEvent(QResizeEvent* event) override;
+
 private:
 	u32 m_addr;
 	u32 m_colcount;
@@ -28,18 +38,9 @@ private:
 
 	std::string getHeaderAtAddr(u32 addr);
 	void scroll(s32 steps);
-
-public:
-	bool exit;
-	memory_viewer_panel(QWidget* parent, u32 addr = 0);
-	~memory_viewer_panel();
-
-	void wheelEvent(QWheelEvent *event) override;
-	void resizeEvent(QResizeEvent *event) override;
-
-	virtual void ShowMemory();
 	void SetPC(const uint pc);
 
-	//Static methods
+	virtual void ShowMemory();
+
 	static void ShowImage(QWidget* parent, u32 addr, int mode, u32 sizex, u32 sizey, bool flipv);
 };
