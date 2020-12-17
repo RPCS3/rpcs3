@@ -229,7 +229,8 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		return;
 	}
 
-	const u32 pc = i >= 0 ? m_debugger_list->m_pc + i * 4 : cpu->get_pc();
+	const u32 address_limits = (cpu->id_type() != 1 ? 0x3fffc : ~3);
+	const u32 pc = (i >= 0 ? m_debugger_list->m_pc + i * 4 : cpu->get_pc()) & address_limits;
 
 	const auto modifiers = QApplication::keyboardModifiers();
 
