@@ -61,6 +61,7 @@ namespace vk
 		table.add(0x1F82, 0x1FB9, chip_class::NV_turing); // TU117, TU117M, TU117GL
 		table.add(0x2182, 0x21D1, chip_class::NV_turing); // TU116, TU116M, TU116GL
 		table.add(0x20B0, 0x20BE, chip_class::NV_ampere); // GA100
+		table.add(0x2204, 0x25AF, chip_class::NV_ampere); // GA10x (RTX 30 series)
 
 		return table;
 	}();
