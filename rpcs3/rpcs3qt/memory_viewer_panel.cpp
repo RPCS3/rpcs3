@@ -4,6 +4,8 @@
 
 #include "memory_viewer_panel.h"
 
+#include "Emu/Cell/SPUThread.h"
+#include "Emu/IdManager.h"
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QSpinBox>
@@ -23,8 +25,9 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	setObjectName("memory_viewer");
 	setAttribute(Qt::WA_DeleteOnClose);
 	exit = false;
-	m_colcount = 16;
+	m_colcount = 4;
 	m_rowcount = 16;
+	m_addr -= m_addr % (m_colcount * 4); // Align by amount of bytes in a row
 	int pSize = 10;
 
 	//Font
@@ -55,14 +58,14 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	hbox_tools_mem_addr->addWidget(m_addr_line);
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
 
-	//Tools: Memory Viewer Options: Bytes
-	QGroupBox* tools_mem_bytes = new QGroupBox(tr("Bytes"));
-	QHBoxLayout* hbox_tools_mem_bytes = new QHBoxLayout();
-	QSpinBox* sb_bytes = new QSpinBox(this);
-	sb_bytes->setRange(1, 16);
-	sb_bytes->setValue(16);
-	hbox_tools_mem_bytes->addWidget(sb_bytes);
-	tools_mem_bytes->setLayout(hbox_tools_mem_bytes);
+	//Tools: Memory Viewer Options: Words
+	QGroupBox* tools_mem_words = new QGroupBox(tr("Words"));
+	QHBoxLayout* hbox_tools_mem_words = new QHBoxLayout();
+	QSpinBox* sb_words = new QSpinBox(this);
+	sb_words->setRange(1, 4);
+	sb_words->setValue(4);
+	hbox_tools_mem_words->addWidget(sb_words);
+	tools_mem_words->setLayout(hbox_tools_mem_words);
 
 	//Tools: Memory Viewer Options: Control
 	QGroupBox* tools_mem_buttons = new QGroupBox(tr("Control"));
@@ -87,7 +90,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 
 	//Merge Tools: Memory Viewer
 	hbox_tools_mem->addWidget(tools_mem_addr);
-	hbox_tools_mem->addWidget(tools_mem_bytes);
+	hbox_tools_mem->addWidget(tools_mem_words);
 	hbox_tools_mem->addWidget(tools_mem_buttons);
 	tools_mem->setLayout(hbox_tools_mem);
 
@@ -179,15 +182,11 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	hbox_mem_panel->addWidget(m_mem_ascii);
 	hbox_mem_panel->addSpacing(10);
 
-	//Memory Panel: Set size of the QTextEdits
-	m_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
-	m_mem_ascii->setFixedSize(QSize(pSize * m_colcount + 6, 228));
-
 	//Set Margins to adjust WindowSize
 	vbox_panel->setContentsMargins(0, 0, 0, 0);
 	hbox_tools->setContentsMargins(0, 0, 0, 0);
 	tools_mem_addr->setContentsMargins(0, 10, 0, 0);
-	tools_mem_bytes->setContentsMargins(0, 10, 0, 0);
+	tools_mem_words->setContentsMargins(0, 10, 0, 0);
 	tools_mem_buttons->setContentsMargins(0, 10, 0, 0);
 	tools_img_mode->setContentsMargins(0, 10, 0, 0);
 	tools_img_size->setContentsMargins(0, 10, 0, 0);
@@ -205,25 +204,24 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	setLayout(vbox_panel);
 
 	//Events
-	connect(m_addr_line, &QLineEdit::returnPressed, [=, this]()
+	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
 	{
 		bool ok;
-		m_addr = m_addr_line->text().toULong(&ok, 16);
+		m_addr = m_addr_line->text().toULong(&ok, 16); 
+		m_addr -= m_addr % (m_colcount * 4); // Align by amount of bytes in a row
 		m_addr_line->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));	// get 8 digits in input line
 		ShowMemory();
 	});
-	connect(sb_bytes, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=, this]()
+	connect(sb_words, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=, this]()
 	{
-		m_colcount = sb_bytes->value();
-		m_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
-		m_mem_ascii->setFixedSize(QSize(pSize * m_colcount + 6, 228));
+		m_colcount = sb_words->value();
 		ShowMemory();
 	});
 
-	connect(b_prev, &QAbstractButton::clicked, [=, this]() { m_addr -= m_colcount; ShowMemory(); });
-	connect(b_next, &QAbstractButton::clicked, [=, this]() { m_addr += m_colcount; ShowMemory(); });
-	connect(b_fprev, &QAbstractButton::clicked, [=, this]() { m_addr -= m_rowcount * m_colcount; ShowMemory(); });
-	connect(b_fnext, &QAbstractButton::clicked, [=, this]() { m_addr += m_rowcount * m_colcount; ShowMemory(); });
+	connect(b_prev, &QAbstractButton::clicked, [this]() { scroll(-1); });
+	connect(b_next, &QAbstractButton::clicked, [this]() { scroll(1); });
+	connect(b_fprev, &QAbstractButton::clicked, [this]() { scroll(-m_rowcount); });
+	connect(b_fnext, &QAbstractButton::clicked, [this]() { scroll(m_rowcount); });
 	connect(b_img, &QAbstractButton::clicked, [=, this]()
 	{
 		int mode = cbox_img_mode->currentIndex();
@@ -252,8 +250,15 @@ void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 		stepSize *= m_rowcount;
 
 	QPoint numSteps = event->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
-	m_addr -= stepSize * m_colcount * numSteps.y();
 
+	scroll(stepSize * (0 - numSteps.y()));
+}
+
+void memory_viewer_panel::scroll(s32 steps)
+{
+	if (steps == 0) return;
+
+	m_addr += m_colcount * 4 * steps;
 	m_addr_line->setText(qstr(fmt::format("%08x", m_addr)));
 	ShowMemory();
 }
@@ -281,41 +286,131 @@ void memory_viewer_panel::resizeEvent(QResizeEvent *event)
 	}
 }
 
+std::string memory_viewer_panel::getHeaderAtAddr(u32 addr)
+{
+	// Check if its an SPU Local Storage beginning
+	const u32 spu_boundary = ::align<u32>(addr, SPU_LS_SIZE);
+
+	if (spu_boundary <= addr + m_colcount * 4 - 1)
+	{
+		std::shared_ptr<named_thread<spu_thread>> spu;
+
+		if (u32 raw_spu_index = (spu_boundary - RAW_SPU_BASE_ADDR) / SPU_LS_SIZE; raw_spu_index < 5)
+		{
+			spu = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(raw_spu_index));
+		}
+		else if (u32 spu_index = (spu_boundary - SPU_FAKE_BASE_ADDR) / SPU_LS_SIZE; spu_index < spu_thread::id_count)
+		{
+			spu = idm::get<named_thread<spu_thread>>(spu_thread::id_base | spu_index);
+		}
+
+		if (spu)
+		{
+			return spu->get_name();
+		}
+	}
+
+	return {};
+}
+
 void memory_viewer_panel::ShowMemory()
 {
 	QString t_mem_addr_str;
 	QString t_mem_hex_str;
 	QString t_mem_ascii_str;
 
-	for(u32 addr = m_addr; addr != m_addr + m_rowcount * m_colcount; addr += m_colcount)
+	for (u32 row = 0, spu_passed = 0; row < m_rowcount; row++)
 	{
-		t_mem_addr_str += qstr(fmt::format("%08x", addr));
-		if (addr != m_addr + m_rowcount * m_colcount - m_colcount) t_mem_addr_str += "\r\n";
-	}
+		if (row)
+		{
+			t_mem_addr_str += "\r\n";
+			t_mem_hex_str += "\r\n";
+			t_mem_ascii_str += "\r\n";
+		}
 
-	for (u32 row = 0; row < m_rowcount; row++)
-	{
+		{
+			// Check if this address contains potential header
+			const u32 addr = m_addr + (row - spu_passed) * m_colcount * 4;
+			const std::string header = getHeaderAtAddr(addr);
+			if (!header.empty())
+			{
+				// Create an SPU header at the beginning of local storage
+				// Like so:
+				// =======================================
+				// SPU[0x0000100] CellSpursKernel0
+				// =======================================
+
+				bool _break = false;
+
+				for (u32 i = 0; i < 3; i++)
+				{
+					t_mem_addr_str += qstr(fmt::format("%08x", addr));
+
+					std::string str(i == 1 ? header : "");
+
+					const u32 expected_str_size = m_colcount * 13 - 2;
+
+					// Truncate or enlarge string to a fixed size
+					str.resize(expected_str_size);
+					std::replace(str.begin(), str.end(), '\0', i == 1 ? ' ' : '=');
+
+					t_mem_hex_str += qstr(str);
+
+					spu_passed++;
+					row++;
+
+					if (row >= m_rowcount)
+					{
+						_break = true;
+						break;
+					}
+
+					t_mem_addr_str += "\r\n";
+					t_mem_hex_str += "\r\n";
+					t_mem_ascii_str += "\r\n";
+				}
+
+				if (_break)
+				{
+					break;
+				}
+			}
+
+			t_mem_addr_str += qstr(fmt::format("%08x", m_addr + (row - spu_passed) * m_colcount * 4));
+		}
+
 		for (u32 col = 0; col < m_colcount; col++)
 		{
-			u32 addr = m_addr + row * m_colcount + col;
-
-			if (vm::check_addr(addr, 0))
+			if (col)
 			{
-				const u8 rmem = *vm::get_super_ptr<u8>(addr);
-				t_mem_hex_str += qstr(fmt::format("%02x ", rmem));
-				t_mem_ascii_str += qstr(std::string(1, std::isprint(rmem) ? static_cast<char>(rmem) : '.'));
+				t_mem_hex_str += "  ";
+			}
+
+			u32 addr = m_addr + (row - spu_passed) * m_colcount * 4 + col * 4;
+
+			if (vm::check_addr(addr, 0, 4))
+			{
+				const be_t<u32> rmem = *vm::get_super_ptr<u32>(addr);
+				t_mem_hex_str += qstr(fmt::format("%02x %02x %02x %02x",
+					static_cast<u8>(rmem >> 24),
+					static_cast<u8>(rmem >> 16),
+					static_cast<u8>(rmem >> 8),
+					static_cast<u8>(rmem >> 0)));
+
+				std::string str{reinterpret_cast<const char*>(&rmem), 4};
+
+				for (auto& ch : str)
+				{
+					if (!std::isprint(static_cast<u8>(ch))) ch = '.';
+				}
+
+				t_mem_ascii_str += qstr(std::move(str));
 			}
 			else
 			{
-				t_mem_hex_str += "??";
-				t_mem_ascii_str += "?";
-				if (col != m_colcount - 1) t_mem_hex_str += " ";
+				t_mem_hex_str += "?? ?? ?? ??";
+				t_mem_ascii_str += "????";
 			}
-		}
-		if (row != m_rowcount - 1)
-		{
-			t_mem_hex_str += "\r\n";
-			t_mem_ascii_str += "\r\n";
 		}
 	}
 
