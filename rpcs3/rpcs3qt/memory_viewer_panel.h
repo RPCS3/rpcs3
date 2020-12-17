@@ -16,6 +16,15 @@ public:
 	memory_viewer_panel(QWidget* parent, u32 addr = 0);
 	~memory_viewer_panel();
 
+	enum class color_format : int
+	{
+		RGB,
+		ARGB,
+		RGBA,
+		ABGR
+	};
+	Q_ENUM(color_format)
+
 	bool exit;
 
 protected:
@@ -42,5 +51,5 @@ private:
 
 	virtual void ShowMemory();
 
-	static void ShowImage(QWidget* parent, u32 addr, int mode, u32 sizex, u32 sizey, bool flipv);
+	static void ShowImage(QWidget* parent, u32 addr, color_format format, u32 sizex, u32 sizey, bool flipv);
 };
