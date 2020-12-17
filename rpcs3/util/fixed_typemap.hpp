@@ -97,7 +97,7 @@ namespace stx
 
 		manual_fixed_typemap& operator=(manual_fixed_typemap&& r) noexcept
 		{
-			manual_fixed_typemap x(std::move(*this));
+			manual_fixed_typemap x(std::move(r));
 			std::swap(m_list, x.m_list);
 			std::swap(m_order, x.m_order);
 			std::swap(m_init_count, x.m_init_count);
