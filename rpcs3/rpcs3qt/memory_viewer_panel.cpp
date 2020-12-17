@@ -30,22 +30,22 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	m_addr -= m_addr % (m_colcount * 4); // Align by amount of bytes in a row
 	int pSize = 10;
 
-	//Font
+	// Font
 	QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 	mono.setPointSize(pSize);
 	m_fontMetrics = new QFontMetrics(mono);
 
-	//Layout:
+	// Layout:
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
 
-	//Tools
+	// Tools
 	QHBoxLayout* hbox_tools = new QHBoxLayout();
 
-	//Tools: Memory Viewer Options
+	// Tools: Memory Viewer Options
 	QGroupBox* tools_mem = new QGroupBox(tr("Memory Viewer Options"));
 	QHBoxLayout* hbox_tools_mem = new QHBoxLayout();
 
-	//Tools: Memory Viewer Options: Address
+	// Tools: Memory Viewer Options: Address
 	QGroupBox* tools_mem_addr = new QGroupBox(tr("Address"));
 	QHBoxLayout* hbox_tools_mem_addr = new QHBoxLayout();
 	m_addr_line = new QLineEdit(this);
@@ -59,7 +59,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	hbox_tools_mem_addr->addWidget(m_addr_line);
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
 
-	//Tools: Memory Viewer Options: Words
+	// Tools: Memory Viewer Options: Words
 	QGroupBox* tools_mem_words = new QGroupBox(tr("Words"));
 	QHBoxLayout* hbox_tools_mem_words = new QHBoxLayout();
 	QSpinBox* sb_words = new QSpinBox(this);
@@ -68,7 +68,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	hbox_tools_mem_words->addWidget(sb_words);
 	tools_mem_words->setLayout(hbox_tools_mem_words);
 
-	//Tools: Memory Viewer Options: Control
+	// Tools: Memory Viewer Options: Control
 	QGroupBox* tools_mem_buttons = new QGroupBox(tr("Control"));
 	QHBoxLayout* hbox_tools_mem_buttons = new QHBoxLayout();
 	QPushButton* b_fprev = new QPushButton("<<", this);
@@ -89,17 +89,17 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	hbox_tools_mem_buttons->addWidget(b_fnext);
 	tools_mem_buttons->setLayout(hbox_tools_mem_buttons);
 
-	//Merge Tools: Memory Viewer
+	// Merge Tools: Memory Viewer
 	hbox_tools_mem->addWidget(tools_mem_addr);
 	hbox_tools_mem->addWidget(tools_mem_words);
 	hbox_tools_mem->addWidget(tools_mem_buttons);
 	tools_mem->setLayout(hbox_tools_mem);
 
-	//Tools: Raw Image Preview Options
+	// Tools: Raw Image Preview Options
 	QGroupBox* tools_img = new QGroupBox(tr("Raw Image Preview Options"));
 	QHBoxLayout* hbox_tools_img = new QHBoxLayout();;
 
-	//Tools: Raw Image Preview Options : Size
+	// Tools: Raw Image Preview Options : Size
 	QGroupBox* tools_img_size = new QGroupBox(tr("Size"));
 	QHBoxLayout* hbox_tools_img_size = new QHBoxLayout();
 	QLabel* l_x = new QLabel(" x ");
@@ -114,7 +114,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	hbox_tools_img_size->addWidget(sb_img_size_y);
 	tools_img_size->setLayout(hbox_tools_img_size);
 
-	//Tools: Raw Image Preview Options: Mode
+	// Tools: Raw Image Preview Options: Mode
 	QGroupBox* tools_img_mode = new QGroupBox(tr("Mode"));
 	QHBoxLayout* hbox_tools_img_mode = new QHBoxLayout();
 	QComboBox* cbox_img_mode = new QComboBox(this);
@@ -126,12 +126,12 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	hbox_tools_img_mode->addWidget(cbox_img_mode);
 	tools_img_mode->setLayout(hbox_tools_img_mode);
 
-	//Merge Tools: Raw Image Preview Options
+	// Merge Tools: Raw Image Preview Options
 	hbox_tools_img->addWidget(tools_img_size);
 	hbox_tools_img->addWidget(tools_img_mode);
 	tools_img->setLayout(hbox_tools_img);
 
-	//Tools: Tool Buttons
+	// Tools: Tool Buttons
 	QGroupBox* tools_buttons = new QGroupBox(tr("Tools"));
 	QVBoxLayout* hbox_tools_buttons = new QVBoxLayout(this);
 	QPushButton* b_img = new QPushButton(tr("View\nimage"), this);
@@ -139,17 +139,17 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	hbox_tools_buttons->addWidget(b_img);
 	tools_buttons->setLayout(hbox_tools_buttons);
 
-	//Merge Tools = Memory Viewer Options + Raw Image Preview Options + Tool Buttons
+	// Merge Tools = Memory Viewer Options + Raw Image Preview Options + Tool Buttons
 	hbox_tools->addSpacing(10);
 	hbox_tools->addWidget(tools_mem);
 	hbox_tools->addWidget(tools_img);
 	hbox_tools->addWidget(tools_buttons);
 	hbox_tools->addSpacing(10);
 
-	//Memory Panel:
+	// Memory Panel:
 	QHBoxLayout* hbox_mem_panel = new QHBoxLayout();
 
-	//Memory Panel: Address Panel
+	// Memory Panel: Address Panel
 	m_mem_addr = new QLabel("");
 	m_mem_addr->setObjectName("memory_viewer_address_panel");
 	m_mem_addr->setFont(mono);
@@ -157,7 +157,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	m_mem_addr->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 	m_mem_addr->ensurePolished();
 
-	//Memory Panel: Hex Panel
+	// Memory Panel: Hex Panel
 	m_mem_hex = new QLabel("");
 	m_mem_hex->setObjectName("memory_viewer_hex_panel");
 	m_mem_hex->setFont(mono);
@@ -165,7 +165,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	m_mem_hex->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 	m_mem_hex->ensurePolished();
 
-	//Memory Panel: ASCII Panel
+	// Memory Panel: ASCII Panel
 	m_mem_ascii = new QLabel("");
 	m_mem_ascii->setObjectName("memory_viewer_ascii_panel");
 	m_mem_ascii->setFont(mono);
@@ -173,7 +173,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	m_mem_ascii->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 	m_mem_ascii->ensurePolished();
 
-	//Merge Memory Panel:
+	// Merge Memory Panel:
 	hbox_mem_panel->setAlignment(Qt::AlignLeft);
 	hbox_mem_panel->addSpacing(20);
 	hbox_mem_panel->addWidget(m_mem_addr);
@@ -183,7 +183,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	hbox_mem_panel->addWidget(m_mem_ascii);
 	hbox_mem_panel->addSpacing(10);
 
-	//Set Margins to adjust WindowSize
+	// Set Margins to adjust WindowSize
 	vbox_panel->setContentsMargins(0, 0, 0, 0);
 	hbox_tools->setContentsMargins(0, 0, 0, 0);
 	tools_mem_addr->setContentsMargins(0, 10, 0, 0);
@@ -196,7 +196,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	tools_buttons->setContentsMargins(0, 10, 0, 0);
 	hbox_mem_panel->setContentsMargins(0, 0, 0, 0);
 
-	//Merge and display everything
+	// Merge and display everything
 	vbox_panel->addSpacing(10);
 	vbox_panel->addLayout(hbox_tools);
 	vbox_panel->addSpacing(10);
@@ -204,7 +204,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	vbox_panel->addSpacing(10);
 	setLayout(vbox_panel);
 
-	//Events
+	// Events
 	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
 	{
 		bool ok;
@@ -226,13 +226,13 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	connect(b_fnext, &QAbstractButton::clicked, [this]() { scroll(m_rowcount); });
 	connect(b_img, &QAbstractButton::clicked, [=, this]()
 	{
-		int mode = cbox_img_mode->currentIndex();
-		int sizex = sb_img_size_x->value();
-		int sizey = sb_img_size_y->value();
+		const int mode = cbox_img_mode->currentIndex();
+		const int sizex = sb_img_size_x->value();
+		const int sizey = sb_img_size_y->value();
 		ShowImage(this, m_addr, mode, sizex, sizey, false);
 	});
 
-	//Fill the QTextEdits
+	// Fill the QTextEdits
 	ShowMemory();
 
 	setFixedWidth(sizeHint().width());
@@ -448,9 +448,10 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 	const auto originalBuffer  = vm::get_super_ptr<const uchar>(addr);
 	const auto convertedBuffer = static_cast<uchar*>(std::malloc(width * height * 4));
 
-	switch(mode)
+	switch (mode)
 	{
-	case(0): // RGB
+	case 0: // RGB
+	{
 		for (u32 y = 0; y < height; y++)
 		{
 			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 3)
@@ -461,9 +462,10 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 				convertedBuffer[i + 3 + y * width * 4] = 255;
 			}
 		}
-	break;
-
-	case(1): // ARGB
+		break;
+	}
+	case 1: // ARGB
+	{
 		for (u32 y = 0; y < height; y++)
 		{
 			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
@@ -474,9 +476,10 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 				convertedBuffer[i + 3 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
 			}
 		}
-	break;
-
-	case(2): // RGBA
+		break;
+	}
+	case 2: // RGBA
+	{
 		for (u32 y = 0; y < height; y++)
 		{
 			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
@@ -487,9 +490,10 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 				convertedBuffer[i + 3 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
 			}
 		}
-	break;
-
-	case(3): // ABGR
+		break;
+	}
+	case 3: // ABGR
+	{
 		for (u32 y = 0; y < height; y++)
 		{
 			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
@@ -500,7 +504,8 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 wid
 				convertedBuffer[i + 3 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
 			}
 		}
-	break;
+		break;
+	}
 	}
 
 	rlock.unlock();
