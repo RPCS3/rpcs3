@@ -573,10 +573,9 @@ constexpr inline struct umax_helper
 using f32 = float;
 using f64 = double;
 
-union alignas(2) f16
+struct f16
 {
 	u16 _u16;
-	u8 _u8[2];
 
 	explicit f16(u16 raw)
 	{
@@ -594,8 +593,6 @@ union alignas(2) f16
 		return std::bit_cast<f32>(raw);
 	}
 };
-
-CHECK_SIZE_ALIGN(f16, 2, 2);
 
 template <typename T, typename = std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value>>
 constexpr T align(T value, ullong align)
