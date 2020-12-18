@@ -174,7 +174,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	m_mem_ascii->ensurePolished();
 
 	// Merge Memory Panel:
-	hbox_mem_panel->setAlignment(Qt::AlignLeft);
+	hbox_mem_panel->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
 	hbox_mem_panel->addSpacing(20);
 	hbox_mem_panel->addWidget(m_mem_addr);
 	hbox_mem_panel->addSpacing(10);
@@ -198,9 +198,9 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 
 	// Merge and display everything
 	vbox_panel->addSpacing(10);
-	vbox_panel->addLayout(hbox_tools);
+	vbox_panel->addLayout(hbox_tools, 0);
 	vbox_panel->addSpacing(10);
-	vbox_panel->addLayout(hbox_mem_panel);
+	vbox_panel->addLayout(hbox_mem_panel, 1);
 	vbox_panel->addSpacing(10);
 	setLayout(vbox_panel);
 
@@ -236,7 +236,6 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	ShowMemory();
 
 	setFixedWidth(sizeHint().width());
-	setMinimumHeight(hbox_tools->sizeHint().height());
 }
 
 memory_viewer_panel::~memory_viewer_panel()
@@ -269,22 +268,24 @@ void memory_viewer_panel::resizeEvent(QResizeEvent *event)
 {
 	QDialog::resizeEvent(event);
 
-	if (event->oldSize().height() != -1)
-		m_height_leftover += event->size().height() - event->oldSize().height();
+	const int font_height  = m_fontMetrics->height();
+	const QMargins margins = layout()->contentsMargins();
 
-	const auto font_height = m_fontMetrics->height();
+	int free_height = event->size().height()
+		- (layout()->count() * (margins.top() + margins.bottom()))
+		- font_height; // bottom margin to allow shrinking
 
-	if (m_height_leftover >= font_height)
+	for (int i = 0; i < layout()->count(); i++)
 	{
-		m_height_leftover -= font_height;
-		++m_rowcount;
-		ShowMemory();
+		if (i != 3) // Index of our memory layout
+			free_height -= layout()->itemAt(i)->sizeHint().height();
 	}
-	else if (m_height_leftover < -font_height)
+
+	const u32 new_row_count = std::max(0, free_height) / font_height;
+
+	if (m_rowcount != new_row_count)
 	{
-		m_height_leftover += font_height;
-		if (m_rowcount > 0)
-			--m_rowcount;
+		m_rowcount = new_row_count;
 		ShowMemory();
 	}
 }
@@ -421,15 +422,15 @@ void memory_viewer_panel::ShowMemory()
 	m_mem_hex->setText(t_mem_hex_str);
 	m_mem_ascii->setText(t_mem_ascii_str);
 
-	// Adjust Text Boxes
+	// Adjust Text Boxes (also helps with window resize)
 	QSize textSize = m_fontMetrics->size(0, m_mem_addr->text());
-	m_mem_addr->setFixedSize(textSize.width() + 10, textSize.height() + 10);
+	m_mem_addr->setFixedSize(textSize.width() + 10, textSize.height());
 
 	textSize = m_fontMetrics->size(0, m_mem_hex->text());
-	m_mem_hex->setFixedSize(textSize.width() + 10, textSize.height() + 10);
+	m_mem_hex->setFixedSize(textSize.width() + 10, textSize.height());
 
 	textSize = m_fontMetrics->size(0, m_mem_ascii->text());
-	m_mem_ascii->setFixedSize(textSize.width() + 10, textSize.height() + 10);
+	m_mem_ascii->setFixedSize(textSize.width() + 10, textSize.height());
 }
 
 void memory_viewer_panel::SetPC(const uint pc)
