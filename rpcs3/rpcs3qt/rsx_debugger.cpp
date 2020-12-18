@@ -48,8 +48,9 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	m_addr_line = new QLineEdit();
 	m_addr_line->setFont(mono);
 	m_addr_line->setPlaceholderText("00000000");
-	m_addr_line->setMaxLength(8);
+	m_addr_line->setMaxLength(18);
 	m_addr_line->setFixedWidth(l.sizeHint().width());
+	m_addr_line->setValidator(new QRegExpValidator(QRegExp("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
 	setFocusProxy(m_addr_line);
 
 	QHBoxLayout* hbox_controls_addr = new QHBoxLayout();
@@ -234,8 +235,10 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	});
 	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
 	{
-		bool ok;
-		m_addr = m_addr_line->text().toULong(&ok, 16);
+		bool ok = false;
+		const u32 addr = static_cast<u32>(m_addr_line->text().toULong(&ok, 16));
+
+		if (ok) m_addr = addr;
 		UpdateInformation();
 	});
 	connect(m_list_captured_draw_calls, &QTableWidget::itemClicked, this, &rsx_debugger::OnClickDrawCalls);

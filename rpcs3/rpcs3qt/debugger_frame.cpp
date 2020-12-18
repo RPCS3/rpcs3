@@ -542,38 +542,37 @@ void debugger_frame::WritePanels()
 void debugger_frame::ShowGotoAddressDialog()
 {
 	QDialog* diag = new QDialog(this);
-	diag->setWindowTitle(tr("Enter expression"));
+	diag->setWindowTitle(tr("Go To Address"));
 	diag->setModal(true);
 
 	// Panels
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
-	QHBoxLayout* hbox_address_preview_panel(new QHBoxLayout());
 	QHBoxLayout* hbox_expression_input_panel = new QHBoxLayout();
 	QHBoxLayout* hbox_button_panel(new QHBoxLayout());
-
-	// Address preview
-	QLabel* address_preview_label(new QLabel(diag));
-	address_preview_label->setFont(m_mono);
 
 	// Address expression input
 	QLineEdit* expression_input(new QLineEdit(diag));
 	expression_input->setFont(m_mono);
 	expression_input->setMaxLength(18);
-	expression_input->setFixedWidth(190);
 
+	if (auto thread = cpu.lock(); !thread || thread->id_type() != 2)
+	{
+		expression_input->setValidator(new QRegExpValidator(QRegExp("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
+	}
+	else
+	{
+		expression_input->setValidator(new QRegExpValidator(QRegExp("^(0[xX])?0*[a-fA-F0-9]{0,5}$")));
+	}
+	
 	// Ok/Cancel
 	QPushButton* button_ok = new QPushButton(tr("OK"));
 	QPushButton* button_cancel = new QPushButton(tr("Cancel"));
-
-	hbox_address_preview_panel->addWidget(address_preview_label);
 
 	hbox_expression_input_panel->addWidget(expression_input);
 
 	hbox_button_panel->addWidget(button_ok);
 	hbox_button_panel->addWidget(button_cancel);
 
-	vbox_panel->addLayout(hbox_address_preview_panel);
-	vbox_panel->addSpacing(8);
 	vbox_panel->addLayout(hbox_expression_input_panel);
 	vbox_panel->addSpacing(8);
 	vbox_panel->addLayout(hbox_button_panel);
@@ -581,34 +580,13 @@ void debugger_frame::ShowGotoAddressDialog()
 	diag->setLayout(vbox_panel);
 
 	const auto cpu = this->cpu.lock();
+	const QFont font = expression_input->font();
 
-	if (cpu)
-	{
-		// -1 turns into 0
-		u32 pc = utils::align<u32>(cpu->get_pc(), 4);
-		address_preview_label->setText(QString("Address: 0x%1").arg(pc, 8, 16, QChar('0')));
-		expression_input->setPlaceholderText(QString("0x%1").arg(pc, 8, 16, QChar('0')));
-	}
-	else
-	{
-		expression_input->setPlaceholderText("0x00000000");
-		address_preview_label->setText("Address: 0x00000000");
-	}
+	// -1 from get_pc() turns into 0
+	const u32 pc = cpu ? utils::align<u32>(cpu->get_pc(), 4) : 0;
+	expression_input->setPlaceholderText(QString("0x%1").arg(pc, 16, 16, QChar('0')));
+	expression_input->setFixedWidth(gui::utils::get_label_width(expression_input->placeholderText(), &font));
 
-	auto l_changeLabel = [&](const QString& text)
-	{
-		if (text.isEmpty())
-		{
-			address_preview_label->setText("Address: " + expression_input->placeholderText());
-		}
-		else
-		{
-			ulong ul_addr = EvaluateExpression(text);
-			address_preview_label->setText(QString("Address: 0x%1").arg(ul_addr, 8, 16, QChar('0')));
-		}
-	};
-
-	connect(expression_input, &QLineEdit::textChanged, l_changeLabel);
 	connect(button_ok, &QAbstractButton::clicked, diag, &QDialog::accept);
 	connect(button_cancel, &QAbstractButton::clicked, diag, &QDialog::reject);
 
@@ -616,19 +594,7 @@ void debugger_frame::ShowGotoAddressDialog()
 
 	if (diag->exec() == QDialog::Accepted)
 	{
-		// -1 turns into 0
-		u32 address = utils::align<u32>(cpu ? cpu->get_pc() : 0, 4);
-
-		if (expression_input->text().isEmpty())
-		{
-			address_preview_label->setText(expression_input->placeholderText());
-		}
-		else
-		{
-			address = EvaluateExpression(expression_input->text());
-			address_preview_label->setText(expression_input->text());
-		}
-
+		const u32 address = EvaluateExpression(expression_input->text());
 		m_debugger_list->ShowAddress(address);
 	}
 
@@ -641,9 +607,12 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 
 	if (!thread) return 0;
 
+	bool ok = false;
+
 	// Parse expression(or at least used to, was nuked to remove the need for QtJsEngine)
 	const QString fixed_expression = QRegExp("^[A-Fa-f0-9]+$").exactMatch(expression) ? "0x" + expression : expression;
-	return static_cast<ulong>(fixed_expression.toULong(nullptr, 0));
+	const u64 res = static_cast<u64>(fixed_expression.toULong(&ok, 16));
+	return ok ? res : thread->get_pc();
 }
 
 void debugger_frame::ClearBreakpoints()
