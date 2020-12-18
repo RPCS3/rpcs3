@@ -905,10 +905,3 @@ struct value_hash
 		return static_cast<std::size_t>(value) >> Shift;
 	}
 };
-
-// Synchronization helper (cache-friendly busy waiting)
-inline void busy_wait(std::size_t cycles = 3000)
-{
-	const u64 s = __rdtsc();
-	do _mm_pause(); while (__rdtsc() - s < cycles);
-}

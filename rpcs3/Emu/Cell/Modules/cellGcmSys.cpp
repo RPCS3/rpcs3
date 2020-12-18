@@ -10,7 +10,7 @@
 #include "cellGcmSys.h"
 #include "sysPrxForUser.h"
 
-#include <thread>
+#include "util/asm.hpp"
 
 LOG_CHANNEL(cellGcmSys);
 

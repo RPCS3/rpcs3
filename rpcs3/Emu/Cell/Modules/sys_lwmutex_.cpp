@@ -6,6 +6,8 @@
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "sysPrxForUser.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sysPrxForUser);
 
 error_code sys_lwmutex_create(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)

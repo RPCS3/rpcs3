@@ -1,5 +1,7 @@
 #include "mutex.h"
 
+#include "util/asm.hpp"
+
 void shared_mutex::imp_lock_shared(u32 val)
 {
 	ensure(val < c_err); // "shared_mutex underflow"

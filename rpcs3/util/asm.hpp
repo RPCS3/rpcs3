@@ -284,4 +284,14 @@ namespace utils
 			return std::countl_zero<u64>(arg) + 64;
 #endif
 	}
+
+	// Synchronization helper (cache-friendly busy waiting)
+	inline void busy_wait(std::size_t cycles = 3000)
+	{
+		const u64 start = __rdtsc();
+		do _mm_pause();
+		while (__rdtsc() - start < cycles);
+	}
 } // namespace utils
+
+using utils::busy_wait;

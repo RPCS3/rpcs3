@@ -21,6 +21,8 @@
 #include "sys_event.h"
 #include "sys_fs.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sys_spu);
 
 extern u64 get_timebased_time();
