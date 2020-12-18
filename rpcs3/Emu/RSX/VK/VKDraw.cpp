@@ -803,13 +803,30 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		m_program->bind_uniform(m_vertex_layout_storage->value, binding_table.vertex_buffers_first_bind_slot + 2, m_current_frame->descriptor_set);
 	}
 
-	if (!m_current_subdraw_id++)
+	bool reload_state = (!m_current_subdraw_id++);
+	vk::renderpass_op(*m_current_command_buffer, [&](VkCommandBuffer cmd, VkRenderPass pass, VkFramebuffer fbo)
 	{
+		if (get_render_pass() == pass && m_draw_fbo->value == fbo)
+		{
+			// Nothing to do
+			return;
+		}
+
+		if (pass)
+		{
+			// Subpass mismatch, end it before proceeding
+			vk::end_renderpass(cmd);
+		}
+
+		reload_state = true;
+	});
+
+	if (reload_state)
+	{
+		vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
+
 		update_draw_state();
 		begin_render_pass();
-
-		// Bind pipeline after starting the renderpass to work around some validation layer spam about format mismatch
-		vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 
 		if (cond_render_ctrl.hw_cond_active && m_device->get_conditional_render_support())
 		{

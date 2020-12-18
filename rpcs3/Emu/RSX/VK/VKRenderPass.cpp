@@ -272,4 +272,10 @@ namespace vk
 	{
 		return g_current_renderpass[cmd].pass != VK_NULL_HANDLE;
 	}
+
+	void renderpass_op(VkCommandBuffer cmd, const renderpass_op_callback_t& op)
+	{
+		const auto& active = g_current_renderpass[cmd];
+		op(cmd, active.pass, active.fbo);
+	}
 }
