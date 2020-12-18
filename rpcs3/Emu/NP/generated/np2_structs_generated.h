@@ -1425,8 +1425,8 @@ struct SearchRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_BINFILTER = 20,
     VT_ATTRID = 22
   };
-  int32_t option() const {
-    return GetField<int32_t>(VT_OPTION, 0);
+  s32 option() const {
+    return GetField<s32>(VT_OPTION, 0);
   }
   uint32_t worldId() const {
     return GetField<uint32_t>(VT_WORLDID, 0);
@@ -1457,7 +1457,7 @@ struct SearchRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<int32_t>(verifier, VT_OPTION) &&
+           VerifyField<s32>(verifier, VT_OPTION) &&
            VerifyField<uint32_t>(verifier, VT_WORLDID) &&
            VerifyField<uint64_t>(verifier, VT_LOBBYID) &&
            VerifyField<uint32_t>(verifier, VT_RANGEFILTER_STARTINDEX) &&
@@ -1479,8 +1479,8 @@ struct SearchRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 struct SearchRoomRequestBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_option(int32_t option) {
-    fbb_.AddElement<int32_t>(SearchRoomRequest::VT_OPTION, option, 0);
+  void add_option(s32 option) {
+    fbb_.AddElement<s32>(SearchRoomRequest::VT_OPTION, option, 0);
   }
   void add_worldId(uint32_t worldId) {
     fbb_.AddElement<uint32_t>(SearchRoomRequest::VT_WORLDID, worldId, 0);
@@ -1523,7 +1523,7 @@ struct SearchRoomRequestBuilder {
 
 inline flatbuffers::Offset<SearchRoomRequest> CreateSearchRoomRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
-    int32_t option = 0,
+    s32 option = 0,
     uint32_t worldId = 0,
     uint64_t lobbyId = 0,
     uint32_t rangeFilter_startIndex = 0,
@@ -1549,7 +1549,7 @@ inline flatbuffers::Offset<SearchRoomRequest> CreateSearchRoomRequest(
 
 inline flatbuffers::Offset<SearchRoomRequest> CreateSearchRoomRequestDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
-    int32_t option = 0,
+    s32 option = 0,
     uint32_t worldId = 0,
     uint64_t lobbyId = 0,
     uint32_t rangeFilter_startIndex = 0,
@@ -2453,8 +2453,8 @@ struct RoomUpdateInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   u8 eventCause() const {
     return GetField<u8>(VT_EVENTCAUSE, 0);
   }
-  int32_t errorCode() const {
-    return GetField<int32_t>(VT_ERRORCODE, 0);
+  s32 errorCode() const {
+    return GetField<s32>(VT_ERRORCODE, 0);
   }
   const PresenceOptionData *optData() const {
     return GetPointer<const PresenceOptionData *>(VT_OPTDATA);
@@ -2462,7 +2462,7 @@ struct RoomUpdateInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<u8>(verifier, VT_EVENTCAUSE) &&
-           VerifyField<int32_t>(verifier, VT_ERRORCODE) &&
+           VerifyField<s32>(verifier, VT_ERRORCODE) &&
            VerifyOffset(verifier, VT_OPTDATA) &&
            verifier.VerifyTable(optData()) &&
            verifier.EndTable();
@@ -2475,8 +2475,8 @@ struct RoomUpdateInfoBuilder {
   void add_eventCause(u8 eventCause) {
     fbb_.AddElement<u8>(RoomUpdateInfo::VT_EVENTCAUSE, eventCause, 0);
   }
-  void add_errorCode(int32_t errorCode) {
-    fbb_.AddElement<int32_t>(RoomUpdateInfo::VT_ERRORCODE, errorCode, 0);
+  void add_errorCode(s32 errorCode) {
+    fbb_.AddElement<s32>(RoomUpdateInfo::VT_ERRORCODE, errorCode, 0);
   }
   void add_optData(flatbuffers::Offset<PresenceOptionData> optData) {
     fbb_.AddOffset(RoomUpdateInfo::VT_OPTDATA, optData);
@@ -2496,7 +2496,7 @@ struct RoomUpdateInfoBuilder {
 inline flatbuffers::Offset<RoomUpdateInfo> CreateRoomUpdateInfo(
     flatbuffers::FlatBufferBuilder &_fbb,
     u8 eventCause = 0,
-    int32_t errorCode = 0,
+    s32 errorCode = 0,
     flatbuffers::Offset<PresenceOptionData> optData = 0) {
   RoomUpdateInfoBuilder builder_(_fbb);
   builder_.add_optData(optData);

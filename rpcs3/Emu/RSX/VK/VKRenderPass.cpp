@@ -242,8 +242,8 @@ namespace vk
 		rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		rp_begin.renderPass = pass;
 		rp_begin.framebuffer = target;
-		rp_begin.renderArea.offset.x = static_cast<int32_t>(framebuffer_region.x);
-		rp_begin.renderArea.offset.y = static_cast<int32_t>(framebuffer_region.y);
+		rp_begin.renderArea.offset.x = static_cast<s32>(framebuffer_region.x);
+		rp_begin.renderArea.offset.y = static_cast<s32>(framebuffer_region.y);
 		rp_begin.renderArea.extent.width = framebuffer_region.width;
 		rp_begin.renderArea.extent.height = framebuffer_region.height;
 
