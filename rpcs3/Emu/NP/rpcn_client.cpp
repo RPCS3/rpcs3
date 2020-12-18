@@ -659,7 +659,7 @@ bool rpcn_client::createjoin_room(u32 req_id, const SceNpCommunicationId& commun
 		}
 		final_binattrexternal_vec = builder.CreateVector(davec);
 	}
-	flatbuffers::Offset<flatbuffers::Vector<uint8_t>> final_roompassword;
+	flatbuffers::Offset<flatbuffers::Vector<u8>> final_roompassword;
 	if (req->roomPassword)
 		final_roompassword = builder.CreateVector(req->roomPassword->data, 8);
 	flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<GroupConfig>>> final_groupconfigs_vec;
@@ -695,7 +695,7 @@ bool rpcn_client::createjoin_room(u32 req_id, const SceNpCommunicationId& commun
 		}
 		final_blockedusers_vec = builder.CreateVector(davec);
 	}
-	flatbuffers::Offset<flatbuffers::Vector<uint8_t>> final_grouplabel;
+	flatbuffers::Offset<flatbuffers::Vector<u8>> final_grouplabel;
 	if (req->joinRoomGroupLabel)
 		final_grouplabel = builder.CreateVector(req->joinRoomGroupLabel->data, 8);
 	flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_memberbinattrinternal_vec;
@@ -744,10 +744,10 @@ bool rpcn_client::join_room(u32 req_id, const SceNpCommunicationId& communicatio
 
 	flatbuffers::FlatBufferBuilder builder(1024);
 
-	flatbuffers::Offset<flatbuffers::Vector<uint8_t>> final_roompassword;
+	flatbuffers::Offset<flatbuffers::Vector<u8>> final_roompassword;
 	if (req->roomPassword)
 		final_roompassword = builder.CreateVector(req->roomPassword->data, 8);
-	flatbuffers::Offset<flatbuffers::Vector<uint8_t>> final_grouplabel;
+	flatbuffers::Offset<flatbuffers::Vector<u8>> final_grouplabel;
 	if (req->joinRoomGroupLabel)
 		final_grouplabel = builder.CreateVector(req->joinRoomGroupLabel->data, 8);
 	flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_memberbinattrinternal_vec;

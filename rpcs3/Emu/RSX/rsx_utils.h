@@ -29,7 +29,7 @@ namespace rsx
 	using flags64_t = uint64_t;
 	using flags32_t = uint32_t;
 	using flags16_t = uint16_t;
-	using flags8_t = uint8_t;
+	using flags8_t = u8;
 
 	extern atomic_t<u64> g_rsx_shared_tag;
 
