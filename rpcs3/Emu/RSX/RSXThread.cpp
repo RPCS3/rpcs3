@@ -139,6 +139,52 @@ namespace rsx
 		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc{line, col, file, func});
 	}
 
+	std::pair<u32, u32> interleaved_range_info::calculate_required_range(u32 first, u32 count) const
+	{
+		if (single_vertex)
+		{
+			return { 0, 1 };
+		}
+
+		const u32 max_index = (first + count) - 1;
+		u32 _max_index = 0;
+		u32 _min_index = first;
+
+		for (const auto &attrib : locations)
+		{
+			if (attrib.frequency <= 1) [[likely]]
+			{
+				_max_index = max_index;
+			}
+			else
+			{
+				if (attrib.modulo)
+				{
+					if (max_index >= attrib.frequency)
+					{
+						// Actually uses the modulo operator
+						_min_index = 0;
+						_max_index = attrib.frequency - 1;
+					}
+					else
+					{
+						// Same as having no modulo
+						_max_index = max_index;
+					}
+				}
+				else
+				{
+					// Division operator
+					_min_index = std::min(_min_index, first / attrib.frequency);
+					_max_index = std::max<u32>(_max_index, utils::aligned_div(max_index, attrib.frequency));
+				}
+			}
+		}
+
+		ensure(_max_index >= _min_index);
+		return { _min_index, (_max_index - _min_index) + 1 };
+	}
+
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size)
 	{
 		switch (type)
@@ -2521,7 +2567,7 @@ namespace rsx
 		}
 
 		// Some cases do not need full delay
-		remaining = ::aligned_div(remaining, div);
+		remaining = utils::aligned_div(remaining, div);
 		const u64 until = get_system_time() + remaining;
 
 		while (true)

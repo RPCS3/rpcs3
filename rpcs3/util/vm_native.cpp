@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "util/logs.hpp"
 #include "util/vm.hpp"
+#include "util/asm.hpp"
 #ifdef _WIN32
 #include "util/dyn_lib.hpp"
 #include <Windows.h>
@@ -209,7 +210,7 @@ namespace utils
 	}
 
 	shm::shm(u32 size, u32 flags)
-		: m_size(::align(size, 0x10000))
+		: m_size(utils::align(size, 0x10000))
 		, m_flags(flags)
 		, m_ptr(0)
 	{
@@ -306,7 +307,7 @@ namespace utils
 		{
 			const u64 res64 = reinterpret_cast<u64>(::mmap(reinterpret_cast<void*>(ptr64), m_size + 0xf000, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0));
 
-			const u64 aligned = ::align(res64, 0x10000);
+			const u64 aligned = utils::align(res64, 0x10000);
 			const auto result = ::mmap(reinterpret_cast<void*>(aligned), m_size, +prot, MAP_SHARED | MAP_FIXED, m_file, 0);
 
 			// Now cleanup remnants

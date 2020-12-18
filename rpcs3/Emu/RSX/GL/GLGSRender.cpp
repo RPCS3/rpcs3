@@ -740,7 +740,7 @@ void GLGSRender::load_program_env()
 		if (update_fragment_env) m_fragment_env_buffer->reserve_storage_on_heap(128);
 		if (update_vertex_env) m_vertex_env_buffer->reserve_storage_on_heap(256);
 		if (update_fragment_texture_env) m_texture_parameters_buffer->reserve_storage_on_heap(256);
-		if (update_fragment_constants) m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_constants_size, 256));
+		if (update_fragment_constants) m_fragment_constants_buffer->reserve_storage_on_heap(utils::align(fragment_constants_size, 256));
 		if (update_transform_constants) m_transform_constants_buffer->reserve_storage_on_heap(8192);
 		if (update_raster_env) m_raster_env_ring_buffer->reserve_storage_on_heap(128);
 

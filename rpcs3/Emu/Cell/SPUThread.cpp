@@ -2338,7 +2338,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 			}
 
 			u32 range_addr = eal & -128;
-			u32 range_end = ::align(eal + size, 128);
+			u32 range_end = utils::align(eal + size, 128);
 
 			// Handle the case of crossing 64K page borders (TODO: maybe split in 4K fragments?)
 			if (range_addr >> 16 != (range_end - 1) >> 16)

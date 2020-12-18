@@ -246,51 +246,7 @@ namespace rsx
 		rsx::simple_array<interleaved_attribute_t> locations;
 
 		// Check if we need to upload a full unoptimized range, i.e [0-max_index]
-		std::pair<u32, u32> calculate_required_range(u32 first, u32 count) const
-		{
-			if (single_vertex)
-			{
-				return { 0, 1 };
-			}
-
-			const u32 max_index = (first + count) - 1;
-			u32 _max_index = 0;
-			u32 _min_index = first;
-
-			for (const auto &attrib : locations)
-			{
-				if (attrib.frequency <= 1) [[likely]]
-				{
-					_max_index = max_index;
-				}
-				else
-				{
-					if (attrib.modulo)
-					{
-						if (max_index >= attrib.frequency)
-						{
-							// Actually uses the modulo operator
-							_min_index = 0;
-							_max_index = attrib.frequency - 1;
-						}
-						else
-						{
-							// Same as having no modulo
-							_max_index = max_index;
-						}
-					}
-					else
-					{
-						// Division operator
-						_min_index = std::min(_min_index, first / attrib.frequency);
-						_max_index = std::max<u32>(_max_index, aligned_div(max_index, attrib.frequency));
-					}
-				}
-			}
-
-			ensure(_max_index >= _min_index);
-			return { _min_index, (_max_index - _min_index) + 1 };
-		}
+		std::pair<u32, u32> calculate_required_range(u32 first, u32 count) const;
 	};
 
 	enum attribute_buffer_placement : u8

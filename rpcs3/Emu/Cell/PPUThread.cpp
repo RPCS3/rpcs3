@@ -242,7 +242,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 
 	// Register executable range at
 	utils::memory_commit(&ppu_ref(addr), size * 2, utils::protection::rw);
-	vm::page_protect(addr, align(size, 0x10000), 0, vm::page_executable);
+	vm::page_protect(addr, utils::align(size, 0x10000), 0, vm::page_executable);
 
 	const u64 fallback = g_cfg.core.ppu_decoder == ppu_decoder_type::llvm ? reinterpret_cast<uptr>(ppu_recompiler_fallback) : reinterpret_cast<uptr>(ppu_fallback);
 
@@ -1098,7 +1098,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 		ppu_thread& context = static_cast<ppu_thread&>(*cpu);
 
 		const u32 old_pos = vm::cast(context.gpr[1]);
-		context.gpr[1] -= align(size + 4, 8); // room minimal possible size
+		context.gpr[1] -= utils::align(size + 4, 8); // room minimal possible size
 		context.gpr[1] &= ~(u64{align_v} - 1); // fix stack alignment
 
 		if (old_pos >= context.stack_addr && old_pos < context.stack_addr + context.stack_size && context.gpr[1] < context.stack_addr)

@@ -974,13 +974,13 @@ namespace vm
 
 			if (state & page_1m_size)
 			{
-				i = ::align(i + 1, 0x100000 / 4096);
+				i = utils::align(i + 1, 0x100000 / 4096);
 				continue;
 			}
 
 			if (state & page_64k_size)
 			{
-				i = ::align(i + 1, 0x10000 / 4096);
+				i = utils::align(i + 1, 0x10000 / 4096);
 				continue;
 			}
 
@@ -1177,7 +1177,7 @@ namespace vm
 		const u32 min_page_size = flags & 0x100 ? 0x1000 : 0x10000;
 
 		// Align to minimal page size
-		const u32 size = ::align(orig_size, min_page_size) + (flags & 0x10 ? 0x2000 : 0);
+		const u32 size = utils::align(orig_size, min_page_size) + (flags & 0x10 ? 0x2000 : 0);
 
 		// Check alignment (it's page allocation, so passing small values there is just silly)
 		if (align < min_page_size || align != (0x80000000u >> std::countl_zero(align)))
@@ -1217,7 +1217,7 @@ namespace vm
 		vm::writer_lock lock(0);
 
 		// Search for an appropriate place (unoptimized)
-		for (u32 addr = ::align(this->addr, align); u64{addr} + size <= u64{this->addr} + this->size; addr += align)
+		for (u32 addr = utils::align(this->addr, align); u64{addr} + size <= u64{this->addr} + this->size; addr += align)
 		{
 			if (try_alloc(addr, pflags, size, std::move(shm)))
 			{
@@ -1240,7 +1240,7 @@ namespace vm
 		const u32 min_page_size = flags & 0x100 ? 0x1000 : 0x10000;
 
 		// Align to minimal page size
-		const u32 size = ::align(orig_size, min_page_size);
+		const u32 size = utils::align(orig_size, min_page_size);
 
 		// return if addr or size is invalid
 		if (!size || addr < this->addr || orig_size > size || addr + u64{size} > this->addr + u64{this->size} || flags & 0x10)
@@ -1410,7 +1410,7 @@ namespace vm
 
 	static std::shared_ptr<block_t> _find_map(u32 size, u32 align, u64 flags)
 	{
-		for (u32 addr = ::align<u32>(0x20000000, align); addr - 1 < 0xC0000000 - 1; addr += align)
+		for (u32 addr = utils::align<u32>(0x20000000, align); addr - 1 < 0xC0000000 - 1; addr += align)
 		{
 			if (_test_map(addr, size))
 			{
@@ -1485,7 +1485,7 @@ namespace vm
 		vm::writer_lock lock(0);
 
 		// Align to minimal page size
-		const u32 size = ::align(orig_size, 0x10000);
+		const u32 size = utils::align(orig_size, 0x10000);
 
 		// Check alignment
 		if (align < 0x10000 || align != (0x80000000u >> std::countl_zero(align)))

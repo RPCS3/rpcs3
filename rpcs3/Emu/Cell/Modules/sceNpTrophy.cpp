@@ -20,6 +20,7 @@
 #include "Emu/Cell/lv2/sys_process.h"
 
 #include <cmath>
+#include "util/asm.hpp"
 
 LOG_CHANNEL(sceNpTrophy);
 
@@ -1109,7 +1110,7 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 	const u32 trp_count = ctxt->tropusr->GetTrophiesCount();
 
 	// Round result to nearest (TODO: Check 0 trophies)
-	*percentage = trp_count ? ::rounded_div(unlocked * 100, trp_count) : 0;
+	*percentage = trp_count ? utils::rounded_div(unlocked * 100, trp_count) : 0;
 
 	if (trp_count == 0 || trp_count > 128)
 	{

@@ -16,6 +16,7 @@
 #include "Utilities/mutex.h"
 #include "Utilities/geometry.h"
 #include "util/logs.hpp"
+#include "util/asm.hpp"
 
 #define GL_FRAGMENT_TEXTURES_START 0
 #define GL_VERTEX_TEXTURES_START   (GL_FRAGMENT_TEXTURES_START + 16)
@@ -808,7 +809,7 @@ namespace gl
 		virtual std::pair<void*, u32> alloc_from_heap(u32 alloc_size, u16 alignment)
 		{
 			u32 offset = m_data_loc;
-			if (m_data_loc) offset = align(offset, alignment);
+			if (m_data_loc) offset = utils::align(offset, alignment);
 
 			if ((offset + alloc_size) > m_size)
 			{
@@ -827,7 +828,7 @@ namespace gl
 			}
 
 			//Align data loc to 256; allows some "guard" region so we dont trample our own data inadvertently
-			m_data_loc = align(offset + alloc_size, 256);
+			m_data_loc = utils::align(offset + alloc_size, 256);
 			return std::make_pair(static_cast<char*>(m_memory_mapping) + offset, offset);
 		}
 
@@ -897,9 +898,9 @@ namespace gl
 			ensure(m_memory_mapping == nullptr);
 
 			u32 offset = m_data_loc;
-			if (m_data_loc) offset = align(offset, 256);
+			if (m_data_loc) offset = utils::align(offset, 256);
 
-			const u32 block_size = align(alloc_size + 16, 256);	//Overallocate just in case we need to realign base
+			const u32 block_size = utils::align(alloc_size + 16, 256);	//Overallocate just in case we need to realign base
 
 			if ((offset + block_size) > m_size)
 			{
@@ -933,10 +934,10 @@ namespace gl
 		std::pair<void*, u32> alloc_from_heap(u32 alloc_size, u16 alignment) override
 		{
 			u32 offset = m_data_loc;
-			if (m_data_loc) offset = align(offset, alignment);
+			if (m_data_loc) offset = utils::align(offset, alignment);
 
 			u32 padding = (offset - m_data_loc);
-			u32 real_size = align(padding + alloc_size, alignment);	//Ensures we leave the loc pointer aligned after we exit
+			u32 real_size = utils::align(padding + alloc_size, alignment);	//Ensures we leave the loc pointer aligned after we exit
 
 			if (real_size > m_mapped_bytes)
 			{
@@ -946,10 +947,10 @@ namespace gl
 				reserve_storage_on_heap(std::max(real_size, 4096U));
 
 				offset = m_data_loc;
-				if (m_data_loc) offset = align(offset, alignment);
+				if (m_data_loc) offset = utils::align(offset, alignment);
 
 				padding = (offset - m_data_loc);
-				real_size = align(padding + alloc_size, alignment);
+				real_size = utils::align(padding + alloc_size, alignment);
 			}
 
 			m_data_loc = offset + real_size;

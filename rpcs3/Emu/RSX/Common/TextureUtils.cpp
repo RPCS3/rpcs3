@@ -4,6 +4,8 @@
 #include "../RSXThread.h"
 #include "../rsx_utils.h"
 
+#include "util/asm.hpp"
+
 namespace
 {
 	// FIXME: GSL as_span break build if template parameter is non const with current revision.
@@ -346,8 +348,8 @@ namespace
 				}
 				else
 				{
-					current_subresource_layout.width_in_block = aligned_div(miplevel_width_in_texel, block_edge_in_texel);
-					current_subresource_layout.height_in_block = aligned_div(miplevel_height_in_texel, block_edge_in_texel);
+					current_subresource_layout.width_in_block = utils::aligned_div(miplevel_width_in_texel, block_edge_in_texel);
+					current_subresource_layout.height_in_block = utils::aligned_div(miplevel_height_in_texel, block_edge_in_texel);
 				}
 
 				if (padded_row)
@@ -375,7 +377,7 @@ namespace
 				miplevel_height_in_texel = std::max(miplevel_height_in_texel / 2, 1);
 			}
 
-			offset_in_src = align(offset_in_src, 128);
+			offset_in_src = utils::align(offset_in_src, 128);
 		}
 
 		return result;
@@ -922,8 +924,8 @@ namespace rsx
 		usz result = 0;
 		for (u16 i = 0; i < mipmap; ++i)
 		{
-			usz rowPitch = align(block_size_in_byte * width_in_blocks, row_pitch_alignment);
-			result += align(rowPitch * height_in_blocks * depth, mipmap_alignment);
+			usz rowPitch = utils::align(block_size_in_byte * width_in_blocks, row_pitch_alignment);
+			result += utils::align(rowPitch * height_in_blocks * depth, mipmap_alignment);
 			height_in_blocks = std::max<usz>(height_in_blocks / 2, 1);
 			width_in_blocks = std::max<usz>(width_in_blocks / 2, 1);
 		}

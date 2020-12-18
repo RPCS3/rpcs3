@@ -3,6 +3,8 @@
 #include "VKResourceManager.h"
 #include "VKDMA.h"
 
+#include "util/asm.hpp"
+
 namespace vk
 {
 	static constexpr usz s_dma_block_length = 0x01000000;
@@ -85,7 +87,7 @@ namespace vk
 	{
 		if (!inheritance_info.parent)
 		{
-			const u32 start = align(range.start, s_page_size);
+			const u32 start = utils::align(range.start, s_page_size);
 			const u32 end = ((range.end + 1) & s_page_align);
 
 			for (u32 page = start; page < end; page += s_page_size)
@@ -259,7 +261,7 @@ namespace vk
 		}
 
 		dma_block* block_head = nullptr;
-		auto block_end = align(limit, s_dma_block_length);
+		auto block_end = utils::align(limit, s_dma_block_length);
 
 		// Reverse scan to try and find the minimum required length in case of other chaining
 		for (auto block = last_block; block != first_block; block -= s_dma_block_length)

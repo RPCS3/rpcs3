@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "PSF.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(psf_log, "PSF");
 
 template<>
@@ -208,7 +210,7 @@ namespace psf
 		}
 
 		// Align next section (data) offset
-		key_offset = ::align(key_offset, 4);
+		key_offset = utils::align(key_offset, 4);
 
 		// Generate header
 		header_t header;

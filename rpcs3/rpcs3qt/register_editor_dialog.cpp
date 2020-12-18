@@ -15,6 +15,7 @@
 #include <charconv>
 
 #include "util/v128.hpp"
+#include "util/asm.hpp"
 
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -30,7 +31,7 @@ enum registers : int
 	ppu_ff31 = ppu_ff0 + 31,
 	ppu_v0,
 	ppu_v31 = ppu_v0 + 31,
-	spu_r0 = ::align(ppu_v31 + 1u, 128),
+	spu_r0 = utils::align(ppu_v31 + 1u, 128),
 	spu_r127 = spu_r0 + 127,
 	PPU_CR,
 	PPU_LR,

@@ -4,6 +4,8 @@
 #include "Emu/IdManager.h"
 #include "GLHelpers.h"
 
+#include "util/asm.hpp"
+
 namespace gl
 {
     struct compute_task
@@ -224,7 +226,7 @@ namespace gl
 			m_data_length = data_length;
 
 			const auto num_bytes_per_invocation = optimal_group_size * kernel_size * 4;
-			const auto num_bytes_to_process = align(data_length, num_bytes_per_invocation);
+			const auto num_bytes_to_process = utils::align(data_length, num_bytes_per_invocation);
 			const auto num_invocations = num_bytes_to_process / num_bytes_per_invocation;
 
 			if ((num_bytes_to_process + data_offset) > data->size())

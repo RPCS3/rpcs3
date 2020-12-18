@@ -428,6 +428,7 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/GL/GLTexture.cpp
 	RSX/GL/GLVertexBuffers.cpp
 	RSX/GL/GLVertexProgram.cpp
+	RSX/GL/GLTextureCache.cpp
 	RSX/GL/OpenGL.cpp
 )
 
@@ -454,6 +455,7 @@ if(TARGET 3rdparty_vulkan)
 		RSX/VK/VKTexture.cpp
 		RSX/VK/VKVertexBuffers.cpp
 		RSX/VK/VKVertexProgram.cpp
+		RSX/VK/VKTextureCache.cpp
 	)
 endif()
 
