@@ -1,21 +1,44 @@
 #pragma once
 
 #include "Emu/Io/usb_device.h"
+#include "Utilities/mutex.h"
 #include <queue>
-#include <mutex>
 
-struct sky_portal
+struct skylander
 {
-	std::mutex sky_mutex;
 	fs::file sky_file;
-	bool sky_reload          = false;
-	u8 sky_dump[0x40 * 0x10] = {};
-
-	void sky_save();
-	void sky_load();
+	u8 status = 0;
+	std::queue<u8> queued_status;
+	std::array<u8, 0x40 * 0x10> data{};
+	u32 last_id = 0;
+	void save();
 };
 
-extern sky_portal g_skylander;
+class sky_portal
+{
+public:
+	void activate();
+	void deactivate();
+	void set_leds(u8 r, u8 g, u8 b);
+
+	void get_status(u8* buf);
+	void query_block(u8 sky_num, u8 block, u8* reply_buf);
+	void write_block(u8 sky_num, u8 block, const u8* to_write_buf, u8* reply_buf);
+
+	bool remove_skylander(u8 sky_num);
+	u8 load_skylander(u8* buf, fs::file in_file);
+
+protected:
+	shared_mutex sky_mutex;
+
+	bool activated       = true;
+	u8 interrupt_counter = 0;
+	u8 r = 0, g = 0, b = 0;
+
+	skylander skylanders[8];
+};
+
+extern sky_portal g_skyportal;
 
 class usb_device_skylander : public usb_device_emulated
 {
@@ -27,6 +50,5 @@ public:
 	void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer) override;
 
 protected:
-	u8 interrupt_counter = 0;
 	std::queue<std::array<u8, 32>> q_queries;
 };
