@@ -833,7 +833,7 @@ bool rpcn_client::search_room(u32 req_id, const SceNpCommunicationId& communicat
 		}
 		final_binfilter_vec = builder.CreateVector(davec);
 	}
-	flatbuffers::Offset<flatbuffers::Vector<uint16_t>> attrid_vec;
+	flatbuffers::Offset<flatbuffers::Vector<u16>> attrid_vec;
 	if (req->attrIdNum)
 		attrid_vec = builder.CreateVector(reinterpret_cast<const u16*>(req->attrId.get_ptr()), req->attrIdNum);
 
@@ -929,7 +929,7 @@ bool rpcn_client::get_roomdata_internal(u32 req_id, const SceNpCommunicationId& 
 
 	flatbuffers::FlatBufferBuilder builder(1024);
 
-	flatbuffers::Offset<flatbuffers::Vector<uint16_t>> final_attr_ids_vec;
+	flatbuffers::Offset<flatbuffers::Vector<u16>> final_attr_ids_vec;
 	if (req->attrIdNum)
 		final_attr_ids_vec = builder.CreateVector(reinterpret_cast<const u16*>(req->attrId.get_ptr()), req->attrIdNum);
 
@@ -983,7 +983,7 @@ bool rpcn_client::set_roomdata_internal(u32 req_id, const SceNpCommunicationId& 
 	if (req->passwordSlotMask)
 		final_passwordSlotMask = *req->passwordSlotMask;
 
-	flatbuffers::Offset<flatbuffers::Vector<uint16_t>> final_ownerprivilege_vec;
+	flatbuffers::Offset<flatbuffers::Vector<u16>> final_ownerprivilege_vec;
 	if (req->ownerPrivilegeRankNum)
 		final_ownerprivilege_vec = builder.CreateVector(reinterpret_cast<const u16*>(req->ownerPrivilegeRank.get_ptr()), req->ownerPrivilegeRankNum);
 
