@@ -53,10 +53,10 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	m_addr_line->setPlaceholderText("00000000");
 	m_addr_line->setText(qstr(fmt::format("%08x", m_addr)));
 	m_addr_line->setFont(mono);
-	m_addr_line->setMaxLength(10);
+	m_addr_line->setMaxLength(18);
 	m_addr_line->setFixedWidth(75);
 	m_addr_line->setFocus();
-	m_addr_line->setValidator(new QRegExpValidator(QRegExp("^([0][xX])?[a-fA-F0-9]{0,8}$")));
+	m_addr_line->setValidator(new QRegExpValidator(QRegExp("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
 	hbox_tools_mem_addr->addWidget(m_addr_line);
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
 
@@ -209,9 +209,11 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	// Events
 	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
 	{
-		bool ok;
+		bool ok = false;
 		const QString text = m_addr_line->text();
-		m_addr = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16);
+		const u32 addr = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16);
+		if (!ok) return;
+
 		m_addr -= m_addr % (m_colcount * 4); // Align by amount of bytes in a row
 		m_addr_line->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));	// get 8 digits in input line
 		ShowMemory();
