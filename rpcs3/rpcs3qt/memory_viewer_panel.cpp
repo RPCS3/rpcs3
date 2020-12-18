@@ -439,6 +439,11 @@ void memory_viewer_panel::SetPC(const uint pc)
 
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv)
 {
+	if (width == 0 || height == 0)
+	{
+		return;
+	}
+
 	std::shared_lock rlock(vm::g_mutex);
 
 	if (!vm::check_addr(addr, 0, width * height * 4))
@@ -522,7 +527,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 	rlock.unlock();
 
 	// Flip vertically
-	if (flipv)
+	if (flipv && height > 1)
 	{
 		const u32 pitch = width * 4;
 		for (u32 y = 0; y < height / 2; y++)
