@@ -222,7 +222,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 
 	connect(b_prev, &QAbstractButton::clicked, [this]() { scroll(-1); });
 	connect(b_next, &QAbstractButton::clicked, [this]() { scroll(1); });
-	connect(b_fprev, &QAbstractButton::clicked, [this]() { scroll(-m_rowcount); });
+	connect(b_fprev, &QAbstractButton::clicked, [this]() { scroll(m_rowcount * -1); });
 	connect(b_fnext, &QAbstractButton::clicked, [this]() { scroll(m_rowcount); });
 	connect(b_img, &QAbstractButton::clicked, [=, this]()
 	{
