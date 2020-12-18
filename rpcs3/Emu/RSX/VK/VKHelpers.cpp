@@ -1124,7 +1124,7 @@ namespace vk
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-											uint64_t srcObject, usz location, s32 msgCode,
+											u64 srcObject, usz location, s32 msgCode,
 											const char *pLayerPrefix, const char *pMsg, void *pUserData)
 	{
 		if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
@@ -1147,7 +1147,7 @@ namespace vk
 	}
 
 	VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-							uint64_t srcObject, usz location, s32 msgCode,
+							u64 srcObject, usz location, s32 msgCode,
 							const char *pLayerPrefix, const char *pMsg, void *pUserData)
 	{
 #ifdef _WIN32

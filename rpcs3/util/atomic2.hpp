@@ -9,7 +9,7 @@ namespace stx
 	class alignas(16) atomic2
 	{
 		// First 64-bit value is an actual value, second one is an allocated control block pointer (if not zero)
-		std::int64_t m_data[2]{};
+		s64 m_data[2]{};
 
 		friend class multi_cas_record;
 
@@ -29,7 +29,7 @@ namespace stx
 		// Simply observe the state
 		u64 load() const noexcept
 		{
-			return atomic_storage<std::uint64_t>::load(m_data[0]);
+			return atomic_storage<u64>::load(m_data[0]);
 		}
 
 		// void wait(u64 old_value) const noexcept;
@@ -41,8 +41,8 @@ namespace stx
 	class multi_cas_item
 	{
 		atomic2* m_addr;
-		std::uint64_t m_old;
-		std::uint64_t m_new;
+		u64 m_old;
+		u64 m_new;
 
 		friend class multi_cas_record;
 
@@ -73,10 +73,10 @@ namespace stx
 	class alignas(64) multi_cas_record
 	{
 		// Ref counter and Multi-CAS state
-		atomic_t<std::uint64_t> m_state;
+		atomic_t<u64> m_state;
 
 		// Total number of CASes
-		std::uint64_t m_count;
+		u64 m_count;
 
 		// Support up to 10 CASes
 		multi_cas_item m_list[10];

@@ -179,15 +179,15 @@ struct MemberBinAttrInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tabl
     VT_UPDATEDATE = 4,
     VT_DATA = 6
   };
-  uint64_t updateDate() const {
-    return GetField<uint64_t>(VT_UPDATEDATE, 0);
+  u64 updateDate() const {
+    return GetField<u64>(VT_UPDATEDATE, 0);
   }
   const BinAttr *data() const {
     return GetPointer<const BinAttr *>(VT_DATA);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_UPDATEDATE) &&
+           VerifyField<u64>(verifier, VT_UPDATEDATE) &&
            VerifyOffset(verifier, VT_DATA) &&
            verifier.VerifyTable(data()) &&
            verifier.EndTable();
@@ -197,8 +197,8 @@ struct MemberBinAttrInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tabl
 struct MemberBinAttrInternalBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_updateDate(uint64_t updateDate) {
-    fbb_.AddElement<uint64_t>(MemberBinAttrInternal::VT_UPDATEDATE, updateDate, 0);
+  void add_updateDate(u64 updateDate) {
+    fbb_.AddElement<u64>(MemberBinAttrInternal::VT_UPDATEDATE, updateDate, 0);
   }
   void add_data(flatbuffers::Offset<BinAttr> data) {
     fbb_.AddOffset(MemberBinAttrInternal::VT_DATA, data);
@@ -217,7 +217,7 @@ struct MemberBinAttrInternalBuilder {
 
 inline flatbuffers::Offset<MemberBinAttrInternal> CreateMemberBinAttrInternal(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t updateDate = 0,
+    u64 updateDate = 0,
     flatbuffers::Offset<BinAttr> data = 0) {
   MemberBinAttrInternalBuilder builder_(_fbb);
   builder_.add_updateDate(updateDate);
@@ -231,8 +231,8 @@ struct BinAttrInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_UPDATEMEMBERID = 6,
     VT_DATA = 8
   };
-  uint64_t updateDate() const {
-    return GetField<uint64_t>(VT_UPDATEDATE, 0);
+  u64 updateDate() const {
+    return GetField<u64>(VT_UPDATEDATE, 0);
   }
   u16 updateMemberId() const {
     return GetField<u16>(VT_UPDATEMEMBERID, 0);
@@ -242,7 +242,7 @@ struct BinAttrInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_UPDATEDATE) &&
+           VerifyField<u64>(verifier, VT_UPDATEDATE) &&
            VerifyField<u16>(verifier, VT_UPDATEMEMBERID) &&
            VerifyOffset(verifier, VT_DATA) &&
            verifier.VerifyTable(data()) &&
@@ -253,8 +253,8 @@ struct BinAttrInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 struct BinAttrInternalBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_updateDate(uint64_t updateDate) {
-    fbb_.AddElement<uint64_t>(BinAttrInternal::VT_UPDATEDATE, updateDate, 0);
+  void add_updateDate(u64 updateDate) {
+    fbb_.AddElement<u64>(BinAttrInternal::VT_UPDATEDATE, updateDate, 0);
   }
   void add_updateMemberId(u16 updateMemberId) {
     fbb_.AddElement<u16>(BinAttrInternal::VT_UPDATEMEMBERID, updateMemberId, 0);
@@ -276,7 +276,7 @@ struct BinAttrInternalBuilder {
 
 inline flatbuffers::Offset<BinAttrInternal> CreateBinAttrInternal(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t updateDate = 0,
+    u64 updateDate = 0,
     u16 updateMemberId = 0,
     flatbuffers::Offset<BinAttr> data = 0) {
   BinAttrInternalBuilder builder_(_fbb);
@@ -524,8 +524,8 @@ struct RoomMemberDataInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tab
   const UserInfo2 *userInfo() const {
     return GetPointer<const UserInfo2 *>(VT_USERINFO);
   }
-  uint64_t joinDate() const {
-    return GetField<uint64_t>(VT_JOINDATE, 0);
+  u64 joinDate() const {
+    return GetField<u64>(VT_JOINDATE, 0);
   }
   u16 memberId() const {
     return GetField<u16>(VT_MEMBERID, 0);
@@ -549,7 +549,7 @@ struct RoomMemberDataInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tab
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_USERINFO) &&
            verifier.VerifyTable(userInfo()) &&
-           VerifyField<uint64_t>(verifier, VT_JOINDATE) &&
+           VerifyField<u64>(verifier, VT_JOINDATE) &&
            VerifyField<u16>(verifier, VT_MEMBERID) &&
            VerifyField<u8>(verifier, VT_TEAMID) &&
            VerifyField<u8>(verifier, VT_ROOMGROUP) &&
@@ -568,8 +568,8 @@ struct RoomMemberDataInternalBuilder {
   void add_userInfo(flatbuffers::Offset<UserInfo2> userInfo) {
     fbb_.AddOffset(RoomMemberDataInternal::VT_USERINFO, userInfo);
   }
-  void add_joinDate(uint64_t joinDate) {
-    fbb_.AddElement<uint64_t>(RoomMemberDataInternal::VT_JOINDATE, joinDate, 0);
+  void add_joinDate(u64 joinDate) {
+    fbb_.AddElement<u64>(RoomMemberDataInternal::VT_JOINDATE, joinDate, 0);
   }
   void add_memberId(u16 memberId) {
     fbb_.AddElement<u16>(RoomMemberDataInternal::VT_MEMBERID, memberId, 0);
@@ -604,7 +604,7 @@ struct RoomMemberDataInternalBuilder {
 inline flatbuffers::Offset<RoomMemberDataInternal> CreateRoomMemberDataInternal(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<UserInfo2> userInfo = 0,
-    uint64_t joinDate = 0,
+    u64 joinDate = 0,
     u16 memberId = 0,
     u8 teamId = 0,
     u8 roomGroup = 0,
@@ -626,7 +626,7 @@ inline flatbuffers::Offset<RoomMemberDataInternal> CreateRoomMemberDataInternal(
 inline flatbuffers::Offset<RoomMemberDataInternal> CreateRoomMemberDataInternalDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<UserInfo2> userInfo = 0,
-    uint64_t joinDate = 0,
+    u64 joinDate = 0,
     u16 memberId = 0,
     u8 teamId = 0,
     u8 roomGroup = 0,
@@ -776,14 +776,14 @@ struct RoomDataInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   u32 worldId() const {
     return GetField<u32>(VT_WORLDID, 0);
   }
-  uint64_t lobbyId() const {
-    return GetField<uint64_t>(VT_LOBBYID, 0);
+  u64 lobbyId() const {
+    return GetField<u64>(VT_LOBBYID, 0);
   }
-  uint64_t roomId() const {
-    return GetField<uint64_t>(VT_ROOMID, 0);
+  u64 roomId() const {
+    return GetField<u64>(VT_ROOMID, 0);
   }
-  uint64_t passwordSlotMask() const {
-    return GetField<uint64_t>(VT_PASSWORDSLOTMASK, 0);
+  u64 passwordSlotMask() const {
+    return GetField<u64>(VT_PASSWORDSLOTMASK, 0);
   }
   u32 maxSlot() const {
     return GetField<u32>(VT_MAXSLOT, 0);
@@ -807,9 +807,9 @@ struct RoomDataInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyField<u16>(verifier, VT_SERVERID) &&
            VerifyField<u32>(verifier, VT_WORLDID) &&
-           VerifyField<uint64_t>(verifier, VT_LOBBYID) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
-           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK) &&
+           VerifyField<u64>(verifier, VT_LOBBYID) &&
+           VerifyField<u64>(verifier, VT_ROOMID) &&
+           VerifyField<u64>(verifier, VT_PASSWORDSLOTMASK) &&
            VerifyField<u32>(verifier, VT_MAXSLOT) &&
            VerifyOffset(verifier, VT_MEMBERLIST) &&
            verifier.VerifyVector(memberList()) &&
@@ -835,14 +835,14 @@ struct RoomDataInternalBuilder {
   void add_worldId(u32 worldId) {
     fbb_.AddElement<u32>(RoomDataInternal::VT_WORLDID, worldId, 0);
   }
-  void add_lobbyId(uint64_t lobbyId) {
-    fbb_.AddElement<uint64_t>(RoomDataInternal::VT_LOBBYID, lobbyId, 0);
+  void add_lobbyId(u64 lobbyId) {
+    fbb_.AddElement<u64>(RoomDataInternal::VT_LOBBYID, lobbyId, 0);
   }
-  void add_roomId(uint64_t roomId) {
-    fbb_.AddElement<uint64_t>(RoomDataInternal::VT_ROOMID, roomId, 0);
+  void add_roomId(u64 roomId) {
+    fbb_.AddElement<u64>(RoomDataInternal::VT_ROOMID, roomId, 0);
   }
-  void add_passwordSlotMask(uint64_t passwordSlotMask) {
-    fbb_.AddElement<uint64_t>(RoomDataInternal::VT_PASSWORDSLOTMASK, passwordSlotMask, 0);
+  void add_passwordSlotMask(u64 passwordSlotMask) {
+    fbb_.AddElement<u64>(RoomDataInternal::VT_PASSWORDSLOTMASK, passwordSlotMask, 0);
   }
   void add_maxSlot(u32 maxSlot) {
     fbb_.AddElement<u32>(RoomDataInternal::VT_MAXSLOT, maxSlot, 0);
@@ -878,9 +878,9 @@ inline flatbuffers::Offset<RoomDataInternal> CreateRoomDataInternal(
     flatbuffers::FlatBufferBuilder &_fbb,
     u16 serverId = 0,
     u32 worldId = 0,
-    uint64_t lobbyId = 0,
-    uint64_t roomId = 0,
-    uint64_t passwordSlotMask = 0,
+    u64 lobbyId = 0,
+    u64 roomId = 0,
+    u64 passwordSlotMask = 0,
     u32 maxSlot = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RoomMemberDataInternal>>> memberList = 0,
     u16 ownerId = 0,
@@ -906,9 +906,9 @@ inline flatbuffers::Offset<RoomDataInternal> CreateRoomDataInternalDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     u16 serverId = 0,
     u32 worldId = 0,
-    uint64_t lobbyId = 0,
-    uint64_t roomId = 0,
-    uint64_t passwordSlotMask = 0,
+    u64 lobbyId = 0,
+    u64 roomId = 0,
+    u64 passwordSlotMask = 0,
     u32 maxSlot = 0,
     const std::vector<flatbuffers::Offset<RoomMemberDataInternal>> *memberList = nullptr,
     u16 ownerId = 0,
@@ -965,11 +965,11 @@ struct RoomDataExternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   u16 privateSlotNum() const {
     return GetField<u16>(VT_PRIVATESLOTNUM, 0);
   }
-  uint64_t lobbyId() const {
-    return GetField<uint64_t>(VT_LOBBYID, 0);
+  u64 lobbyId() const {
+    return GetField<u64>(VT_LOBBYID, 0);
   }
-  uint64_t roomId() const {
-    return GetField<uint64_t>(VT_ROOMID, 0);
+  u64 roomId() const {
+    return GetField<u64>(VT_ROOMID, 0);
   }
   u16 openPublicSlotNum() const {
     return GetField<u16>(VT_OPENPUBLICSLOTNUM, 0);
@@ -983,8 +983,8 @@ struct RoomDataExternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   u16 curMemberNum() const {
     return GetField<u16>(VT_CURMEMBERNUM, 0);
   }
-  uint64_t passwordSlotMask() const {
-    return GetField<uint64_t>(VT_PASSWORDSLOTMASK, 0);
+  u64 passwordSlotMask() const {
+    return GetField<u64>(VT_PASSWORDSLOTMASK, 0);
   }
   const UserInfo2 *owner() const {
     return GetPointer<const UserInfo2 *>(VT_OWNER);
@@ -1010,13 +1010,13 @@ struct RoomDataExternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyField<u32>(verifier, VT_WORLDID) &&
            VerifyField<u16>(verifier, VT_PUBLICSLOTNUM) &&
            VerifyField<u16>(verifier, VT_PRIVATESLOTNUM) &&
-           VerifyField<uint64_t>(verifier, VT_LOBBYID) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
+           VerifyField<u64>(verifier, VT_LOBBYID) &&
+           VerifyField<u64>(verifier, VT_ROOMID) &&
            VerifyField<u16>(verifier, VT_OPENPUBLICSLOTNUM) &&
            VerifyField<u16>(verifier, VT_MAXSLOT) &&
            VerifyField<u16>(verifier, VT_OPENPRIVATESLOTNUM) &&
            VerifyField<u16>(verifier, VT_CURMEMBERNUM) &&
-           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK) &&
+           VerifyField<u64>(verifier, VT_PASSWORDSLOTMASK) &&
            VerifyOffset(verifier, VT_OWNER) &&
            verifier.VerifyTable(owner()) &&
            VerifyOffset(verifier, VT_ROOMGROUP) &&
@@ -1051,11 +1051,11 @@ struct RoomDataExternalBuilder {
   void add_privateSlotNum(u16 privateSlotNum) {
     fbb_.AddElement<u16>(RoomDataExternal::VT_PRIVATESLOTNUM, privateSlotNum, 0);
   }
-  void add_lobbyId(uint64_t lobbyId) {
-    fbb_.AddElement<uint64_t>(RoomDataExternal::VT_LOBBYID, lobbyId, 0);
+  void add_lobbyId(u64 lobbyId) {
+    fbb_.AddElement<u64>(RoomDataExternal::VT_LOBBYID, lobbyId, 0);
   }
-  void add_roomId(uint64_t roomId) {
-    fbb_.AddElement<uint64_t>(RoomDataExternal::VT_ROOMID, roomId, 0);
+  void add_roomId(u64 roomId) {
+    fbb_.AddElement<u64>(RoomDataExternal::VT_ROOMID, roomId, 0);
   }
   void add_openPublicSlotNum(u16 openPublicSlotNum) {
     fbb_.AddElement<u16>(RoomDataExternal::VT_OPENPUBLICSLOTNUM, openPublicSlotNum, 0);
@@ -1069,8 +1069,8 @@ struct RoomDataExternalBuilder {
   void add_curMemberNum(u16 curMemberNum) {
     fbb_.AddElement<u16>(RoomDataExternal::VT_CURMEMBERNUM, curMemberNum, 0);
   }
-  void add_passwordSlotMask(uint64_t passwordSlotMask) {
-    fbb_.AddElement<uint64_t>(RoomDataExternal::VT_PASSWORDSLOTMASK, passwordSlotMask, 0);
+  void add_passwordSlotMask(u64 passwordSlotMask) {
+    fbb_.AddElement<u64>(RoomDataExternal::VT_PASSWORDSLOTMASK, passwordSlotMask, 0);
   }
   void add_owner(flatbuffers::Offset<UserInfo2> owner) {
     fbb_.AddOffset(RoomDataExternal::VT_OWNER, owner);
@@ -1108,13 +1108,13 @@ inline flatbuffers::Offset<RoomDataExternal> CreateRoomDataExternal(
     u32 worldId = 0,
     u16 publicSlotNum = 0,
     u16 privateSlotNum = 0,
-    uint64_t lobbyId = 0,
-    uint64_t roomId = 0,
+    u64 lobbyId = 0,
+    u64 roomId = 0,
     u16 openPublicSlotNum = 0,
     u16 maxSlot = 0,
     u16 openPrivateSlotNum = 0,
     u16 curMemberNum = 0,
-    uint64_t passwordSlotMask = 0,
+    u64 passwordSlotMask = 0,
     flatbuffers::Offset<UserInfo2> owner = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RoomGroup>>> roomGroup = 0,
     u32 flagAttr = 0,
@@ -1148,13 +1148,13 @@ inline flatbuffers::Offset<RoomDataExternal> CreateRoomDataExternalDirect(
     u32 worldId = 0,
     u16 publicSlotNum = 0,
     u16 privateSlotNum = 0,
-    uint64_t lobbyId = 0,
-    uint64_t roomId = 0,
+    u64 lobbyId = 0,
+    u64 roomId = 0,
     u16 openPublicSlotNum = 0,
     u16 maxSlot = 0,
     u16 openPrivateSlotNum = 0,
     u16 curMemberNum = 0,
-    uint64_t passwordSlotMask = 0,
+    u64 passwordSlotMask = 0,
     flatbuffers::Offset<UserInfo2> owner = 0,
     const std::vector<flatbuffers::Offset<RoomGroup>> *roomGroup = nullptr,
     u32 flagAttr = 0,
@@ -1431,8 +1431,8 @@ struct SearchRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   u32 worldId() const {
     return GetField<u32>(VT_WORLDID, 0);
   }
-  uint64_t lobbyId() const {
-    return GetField<uint64_t>(VT_LOBBYID, 0);
+  u64 lobbyId() const {
+    return GetField<u64>(VT_LOBBYID, 0);
   }
   u32 rangeFilter_startIndex() const {
     return GetField<u32>(VT_RANGEFILTER_STARTINDEX, 0);
@@ -1459,7 +1459,7 @@ struct SearchRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return VerifyTableStart(verifier) &&
            VerifyField<s32>(verifier, VT_OPTION) &&
            VerifyField<u32>(verifier, VT_WORLDID) &&
-           VerifyField<uint64_t>(verifier, VT_LOBBYID) &&
+           VerifyField<u64>(verifier, VT_LOBBYID) &&
            VerifyField<u32>(verifier, VT_RANGEFILTER_STARTINDEX) &&
            VerifyField<u32>(verifier, VT_RANGEFILTER_MAX) &&
            VerifyField<u32>(verifier, VT_FLAGFILTER) &&
@@ -1485,8 +1485,8 @@ struct SearchRoomRequestBuilder {
   void add_worldId(u32 worldId) {
     fbb_.AddElement<u32>(SearchRoomRequest::VT_WORLDID, worldId, 0);
   }
-  void add_lobbyId(uint64_t lobbyId) {
-    fbb_.AddElement<uint64_t>(SearchRoomRequest::VT_LOBBYID, lobbyId, 0);
+  void add_lobbyId(u64 lobbyId) {
+    fbb_.AddElement<u64>(SearchRoomRequest::VT_LOBBYID, lobbyId, 0);
   }
   void add_rangeFilter_startIndex(u32 rangeFilter_startIndex) {
     fbb_.AddElement<u32>(SearchRoomRequest::VT_RANGEFILTER_STARTINDEX, rangeFilter_startIndex, 0);
@@ -1525,7 +1525,7 @@ inline flatbuffers::Offset<SearchRoomRequest> CreateSearchRoomRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
     s32 option = 0,
     u32 worldId = 0,
-    uint64_t lobbyId = 0,
+    u64 lobbyId = 0,
     u32 rangeFilter_startIndex = 0,
     u32 rangeFilter_max = 0,
     u32 flagFilter = 0,
@@ -1551,7 +1551,7 @@ inline flatbuffers::Offset<SearchRoomRequest> CreateSearchRoomRequestDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     s32 option = 0,
     u32 worldId = 0,
-    uint64_t lobbyId = 0,
+    u64 lobbyId = 0,
     u32 rangeFilter_startIndex = 0,
     u32 rangeFilter_max = 0,
     u32 flagFilter = 0,
@@ -1686,8 +1686,8 @@ struct CreateJoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tabl
   u32 worldId() const {
     return GetField<u32>(VT_WORLDID, 0);
   }
-  uint64_t lobbyId() const {
-    return GetField<uint64_t>(VT_LOBBYID, 0);
+  u64 lobbyId() const {
+    return GetField<u64>(VT_LOBBYID, 0);
   }
   u32 maxSlot() const {
     return GetField<u32>(VT_MAXSLOT, 0);
@@ -1713,8 +1713,8 @@ struct CreateJoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tabl
   const flatbuffers::Vector<flatbuffers::Offset<GroupConfig>> *groupConfig() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<GroupConfig>> *>(VT_GROUPCONFIG);
   }
-  uint64_t passwordSlotMask() const {
-    return GetField<uint64_t>(VT_PASSWORDSLOTMASK, 0);
+  u64 passwordSlotMask() const {
+    return GetField<u64>(VT_PASSWORDSLOTMASK, 0);
   }
   const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *allowedUser() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_ALLOWEDUSER);
@@ -1737,7 +1737,7 @@ struct CreateJoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tabl
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<u32>(verifier, VT_WORLDID) &&
-           VerifyField<uint64_t>(verifier, VT_LOBBYID) &&
+           VerifyField<u64>(verifier, VT_LOBBYID) &&
            VerifyField<u32>(verifier, VT_MAXSLOT) &&
            VerifyField<u32>(verifier, VT_FLAGATTR) &&
            VerifyOffset(verifier, VT_ROOMBINATTRINTERNAL) &&
@@ -1757,7 +1757,7 @@ struct CreateJoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tabl
            VerifyOffset(verifier, VT_GROUPCONFIG) &&
            verifier.VerifyVector(groupConfig()) &&
            verifier.VerifyVectorOfTables(groupConfig()) &&
-           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK) &&
+           VerifyField<u64>(verifier, VT_PASSWORDSLOTMASK) &&
            VerifyOffset(verifier, VT_ALLOWEDUSER) &&
            verifier.VerifyVector(allowedUser()) &&
            verifier.VerifyVectorOfStrings(allowedUser()) &&
@@ -1782,8 +1782,8 @@ struct CreateJoinRoomRequestBuilder {
   void add_worldId(u32 worldId) {
     fbb_.AddElement<u32>(CreateJoinRoomRequest::VT_WORLDID, worldId, 0);
   }
-  void add_lobbyId(uint64_t lobbyId) {
-    fbb_.AddElement<uint64_t>(CreateJoinRoomRequest::VT_LOBBYID, lobbyId, 0);
+  void add_lobbyId(u64 lobbyId) {
+    fbb_.AddElement<u64>(CreateJoinRoomRequest::VT_LOBBYID, lobbyId, 0);
   }
   void add_maxSlot(u32 maxSlot) {
     fbb_.AddElement<u32>(CreateJoinRoomRequest::VT_MAXSLOT, maxSlot, 0);
@@ -1809,8 +1809,8 @@ struct CreateJoinRoomRequestBuilder {
   void add_groupConfig(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<GroupConfig>>> groupConfig) {
     fbb_.AddOffset(CreateJoinRoomRequest::VT_GROUPCONFIG, groupConfig);
   }
-  void add_passwordSlotMask(uint64_t passwordSlotMask) {
-    fbb_.AddElement<uint64_t>(CreateJoinRoomRequest::VT_PASSWORDSLOTMASK, passwordSlotMask, 0);
+  void add_passwordSlotMask(u64 passwordSlotMask) {
+    fbb_.AddElement<u64>(CreateJoinRoomRequest::VT_PASSWORDSLOTMASK, passwordSlotMask, 0);
   }
   void add_allowedUser(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> allowedUser) {
     fbb_.AddOffset(CreateJoinRoomRequest::VT_ALLOWEDUSER, allowedUser);
@@ -1845,7 +1845,7 @@ struct CreateJoinRoomRequestBuilder {
 inline flatbuffers::Offset<CreateJoinRoomRequest> CreateCreateJoinRoomRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
     u32 worldId = 0,
-    uint64_t lobbyId = 0,
+    u64 lobbyId = 0,
     u32 maxSlot = 0,
     u32 flagAttr = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> roomBinAttrInternal = 0,
@@ -1854,7 +1854,7 @@ inline flatbuffers::Offset<CreateJoinRoomRequest> CreateCreateJoinRoomRequest(
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> roomBinAttrExternal = 0,
     flatbuffers::Offset<flatbuffers::Vector<u8>> roomPassword = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<GroupConfig>>> groupConfig = 0,
-    uint64_t passwordSlotMask = 0,
+    u64 passwordSlotMask = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> allowedUser = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> blockedUser = 0,
     flatbuffers::Offset<flatbuffers::Vector<u8>> joinRoomGroupLabel = 0,
@@ -1885,7 +1885,7 @@ inline flatbuffers::Offset<CreateJoinRoomRequest> CreateCreateJoinRoomRequest(
 inline flatbuffers::Offset<CreateJoinRoomRequest> CreateCreateJoinRoomRequestDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     u32 worldId = 0,
-    uint64_t lobbyId = 0,
+    u64 lobbyId = 0,
     u32 maxSlot = 0,
     u32 flagAttr = 0,
     const std::vector<flatbuffers::Offset<BinAttr>> *roomBinAttrInternal = nullptr,
@@ -1894,7 +1894,7 @@ inline flatbuffers::Offset<CreateJoinRoomRequest> CreateCreateJoinRoomRequestDir
     const std::vector<flatbuffers::Offset<BinAttr>> *roomBinAttrExternal = nullptr,
     const std::vector<u8> *roomPassword = nullptr,
     const std::vector<flatbuffers::Offset<GroupConfig>> *groupConfig = nullptr,
-    uint64_t passwordSlotMask = 0,
+    u64 passwordSlotMask = 0,
     const std::vector<flatbuffers::Offset<flatbuffers::String>> *allowedUser = nullptr,
     const std::vector<flatbuffers::Offset<flatbuffers::String>> *blockedUser = nullptr,
     const std::vector<u8> *joinRoomGroupLabel = nullptr,
@@ -1941,8 +1941,8 @@ struct JoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_OPTDATA = 12,
     VT_TEAMID = 14
   };
-  uint64_t roomId() const {
-    return GetField<uint64_t>(VT_ROOMID, 0);
+  u64 roomId() const {
+    return GetField<u64>(VT_ROOMID, 0);
   }
   const flatbuffers::Vector<u8> *roomPassword() const {
     return GetPointer<const flatbuffers::Vector<u8> *>(VT_ROOMPASSWORD);
@@ -1961,7 +1961,7 @@ struct JoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
+           VerifyField<u64>(verifier, VT_ROOMID) &&
            VerifyOffset(verifier, VT_ROOMPASSWORD) &&
            verifier.VerifyVector(roomPassword()) &&
            VerifyOffset(verifier, VT_JOINROOMGROUPLABEL) &&
@@ -1979,8 +1979,8 @@ struct JoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 struct JoinRoomRequestBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_roomId(uint64_t roomId) {
-    fbb_.AddElement<uint64_t>(JoinRoomRequest::VT_ROOMID, roomId, 0);
+  void add_roomId(u64 roomId) {
+    fbb_.AddElement<u64>(JoinRoomRequest::VT_ROOMID, roomId, 0);
   }
   void add_roomPassword(flatbuffers::Offset<flatbuffers::Vector<u8>> roomPassword) {
     fbb_.AddOffset(JoinRoomRequest::VT_ROOMPASSWORD, roomPassword);
@@ -2011,7 +2011,7 @@ struct JoinRoomRequestBuilder {
 
 inline flatbuffers::Offset<JoinRoomRequest> CreateJoinRoomRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t roomId = 0,
+    u64 roomId = 0,
     flatbuffers::Offset<flatbuffers::Vector<u8>> roomPassword = 0,
     flatbuffers::Offset<flatbuffers::Vector<u8>> joinRoomGroupLabel = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> roomMemberBinAttrInternal = 0,
@@ -2029,7 +2029,7 @@ inline flatbuffers::Offset<JoinRoomRequest> CreateJoinRoomRequest(
 
 inline flatbuffers::Offset<JoinRoomRequest> CreateJoinRoomRequestDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t roomId = 0,
+    u64 roomId = 0,
     const std::vector<u8> *roomPassword = nullptr,
     const std::vector<u8> *joinRoomGroupLabel = nullptr,
     const std::vector<flatbuffers::Offset<BinAttr>> *roomMemberBinAttrInternal = nullptr,
@@ -2053,15 +2053,15 @@ struct LeaveRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_ROOMID = 4,
     VT_OPTDATA = 6
   };
-  uint64_t roomId() const {
-    return GetField<uint64_t>(VT_ROOMID, 0);
+  u64 roomId() const {
+    return GetField<u64>(VT_ROOMID, 0);
   }
   const PresenceOptionData *optData() const {
     return GetPointer<const PresenceOptionData *>(VT_OPTDATA);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
+           VerifyField<u64>(verifier, VT_ROOMID) &&
            VerifyOffset(verifier, VT_OPTDATA) &&
            verifier.VerifyTable(optData()) &&
            verifier.EndTable();
@@ -2071,8 +2071,8 @@ struct LeaveRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 struct LeaveRoomRequestBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_roomId(uint64_t roomId) {
-    fbb_.AddElement<uint64_t>(LeaveRoomRequest::VT_ROOMID, roomId, 0);
+  void add_roomId(u64 roomId) {
+    fbb_.AddElement<u64>(LeaveRoomRequest::VT_ROOMID, roomId, 0);
   }
   void add_optData(flatbuffers::Offset<PresenceOptionData> optData) {
     fbb_.AddOffset(LeaveRoomRequest::VT_OPTDATA, optData);
@@ -2091,7 +2091,7 @@ struct LeaveRoomRequestBuilder {
 
 inline flatbuffers::Offset<LeaveRoomRequest> CreateLeaveRoomRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t roomId = 0,
+    u64 roomId = 0,
     flatbuffers::Offset<PresenceOptionData> optData = 0) {
   LeaveRoomRequestBuilder builder_(_fbb);
   builder_.add_roomId(roomId);
@@ -2106,8 +2106,8 @@ struct SetRoomDataExternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
     VT_ROOMSEARCHABLEBINATTREXTERNAL = 8,
     VT_ROOMBINATTREXTERNAL = 10
   };
-  uint64_t roomId() const {
-    return GetField<uint64_t>(VT_ROOMID, 0);
+  u64 roomId() const {
+    return GetField<u64>(VT_ROOMID, 0);
   }
   const flatbuffers::Vector<flatbuffers::Offset<IntAttr>> *roomSearchableIntAttrExternal() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<IntAttr>> *>(VT_ROOMSEARCHABLEINTATTREXTERNAL);
@@ -2120,7 +2120,7 @@ struct SetRoomDataExternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
+           VerifyField<u64>(verifier, VT_ROOMID) &&
            VerifyOffset(verifier, VT_ROOMSEARCHABLEINTATTREXTERNAL) &&
            verifier.VerifyVector(roomSearchableIntAttrExternal()) &&
            verifier.VerifyVectorOfTables(roomSearchableIntAttrExternal()) &&
@@ -2137,8 +2137,8 @@ struct SetRoomDataExternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
 struct SetRoomDataExternalRequestBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_roomId(uint64_t roomId) {
-    fbb_.AddElement<uint64_t>(SetRoomDataExternalRequest::VT_ROOMID, roomId, 0);
+  void add_roomId(u64 roomId) {
+    fbb_.AddElement<u64>(SetRoomDataExternalRequest::VT_ROOMID, roomId, 0);
   }
   void add_roomSearchableIntAttrExternal(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<IntAttr>>> roomSearchableIntAttrExternal) {
     fbb_.AddOffset(SetRoomDataExternalRequest::VT_ROOMSEARCHABLEINTATTREXTERNAL, roomSearchableIntAttrExternal);
@@ -2163,7 +2163,7 @@ struct SetRoomDataExternalRequestBuilder {
 
 inline flatbuffers::Offset<SetRoomDataExternalRequest> CreateSetRoomDataExternalRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t roomId = 0,
+    u64 roomId = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<IntAttr>>> roomSearchableIntAttrExternal = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> roomSearchableBinAttrExternal = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> roomBinAttrExternal = 0) {
@@ -2177,7 +2177,7 @@ inline flatbuffers::Offset<SetRoomDataExternalRequest> CreateSetRoomDataExternal
 
 inline flatbuffers::Offset<SetRoomDataExternalRequest> CreateSetRoomDataExternalRequestDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t roomId = 0,
+    u64 roomId = 0,
     const std::vector<flatbuffers::Offset<IntAttr>> *roomSearchableIntAttrExternal = nullptr,
     const std::vector<flatbuffers::Offset<BinAttr>> *roomSearchableBinAttrExternal = nullptr,
     const std::vector<flatbuffers::Offset<BinAttr>> *roomBinAttrExternal = nullptr) {
@@ -2202,8 +2202,8 @@ struct SetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
     VT_PASSWORDSLOTMASK = 14,
     VT_OWNERPRIVILEGERANK = 16
   };
-  uint64_t roomId() const {
-    return GetField<uint64_t>(VT_ROOMID, 0);
+  u64 roomId() const {
+    return GetField<u64>(VT_ROOMID, 0);
   }
   u32 flagFilter() const {
     return GetField<u32>(VT_FLAGFILTER, 0);
@@ -2217,15 +2217,15 @@ struct SetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
   const flatbuffers::Vector<flatbuffers::Offset<RoomGroupPasswordConfig>> *passwordConfig() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<RoomGroupPasswordConfig>> *>(VT_PASSWORDCONFIG);
   }
-  uint64_t passwordSlotMask() const {
-    return GetField<uint64_t>(VT_PASSWORDSLOTMASK, 0);
+  u64 passwordSlotMask() const {
+    return GetField<u64>(VT_PASSWORDSLOTMASK, 0);
   }
   const flatbuffers::Vector<u16> *ownerPrivilegeRank() const {
     return GetPointer<const flatbuffers::Vector<u16> *>(VT_OWNERPRIVILEGERANK);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
+           VerifyField<u64>(verifier, VT_ROOMID) &&
            VerifyField<u32>(verifier, VT_FLAGFILTER) &&
            VerifyField<u32>(verifier, VT_FLAGATTR) &&
            VerifyOffset(verifier, VT_ROOMBINATTRINTERNAL) &&
@@ -2234,7 +2234,7 @@ struct SetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
            VerifyOffset(verifier, VT_PASSWORDCONFIG) &&
            verifier.VerifyVector(passwordConfig()) &&
            verifier.VerifyVectorOfTables(passwordConfig()) &&
-           VerifyField<uint64_t>(verifier, VT_PASSWORDSLOTMASK) &&
+           VerifyField<u64>(verifier, VT_PASSWORDSLOTMASK) &&
            VerifyOffset(verifier, VT_OWNERPRIVILEGERANK) &&
            verifier.VerifyVector(ownerPrivilegeRank()) &&
            verifier.EndTable();
@@ -2244,8 +2244,8 @@ struct SetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
 struct SetRoomDataInternalRequestBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_roomId(uint64_t roomId) {
-    fbb_.AddElement<uint64_t>(SetRoomDataInternalRequest::VT_ROOMID, roomId, 0);
+  void add_roomId(u64 roomId) {
+    fbb_.AddElement<u64>(SetRoomDataInternalRequest::VT_ROOMID, roomId, 0);
   }
   void add_flagFilter(u32 flagFilter) {
     fbb_.AddElement<u32>(SetRoomDataInternalRequest::VT_FLAGFILTER, flagFilter, 0);
@@ -2259,8 +2259,8 @@ struct SetRoomDataInternalRequestBuilder {
   void add_passwordConfig(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RoomGroupPasswordConfig>>> passwordConfig) {
     fbb_.AddOffset(SetRoomDataInternalRequest::VT_PASSWORDCONFIG, passwordConfig);
   }
-  void add_passwordSlotMask(uint64_t passwordSlotMask) {
-    fbb_.AddElement<uint64_t>(SetRoomDataInternalRequest::VT_PASSWORDSLOTMASK, passwordSlotMask, 0);
+  void add_passwordSlotMask(u64 passwordSlotMask) {
+    fbb_.AddElement<u64>(SetRoomDataInternalRequest::VT_PASSWORDSLOTMASK, passwordSlotMask, 0);
   }
   void add_ownerPrivilegeRank(flatbuffers::Offset<flatbuffers::Vector<u16>> ownerPrivilegeRank) {
     fbb_.AddOffset(SetRoomDataInternalRequest::VT_OWNERPRIVILEGERANK, ownerPrivilegeRank);
@@ -2279,12 +2279,12 @@ struct SetRoomDataInternalRequestBuilder {
 
 inline flatbuffers::Offset<SetRoomDataInternalRequest> CreateSetRoomDataInternalRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t roomId = 0,
+    u64 roomId = 0,
     u32 flagFilter = 0,
     u32 flagAttr = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> roomBinAttrInternal = 0,
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RoomGroupPasswordConfig>>> passwordConfig = 0,
-    uint64_t passwordSlotMask = 0,
+    u64 passwordSlotMask = 0,
     flatbuffers::Offset<flatbuffers::Vector<u16>> ownerPrivilegeRank = 0) {
   SetRoomDataInternalRequestBuilder builder_(_fbb);
   builder_.add_passwordSlotMask(passwordSlotMask);
@@ -2299,12 +2299,12 @@ inline flatbuffers::Offset<SetRoomDataInternalRequest> CreateSetRoomDataInternal
 
 inline flatbuffers::Offset<SetRoomDataInternalRequest> CreateSetRoomDataInternalRequestDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t roomId = 0,
+    u64 roomId = 0,
     u32 flagFilter = 0,
     u32 flagAttr = 0,
     const std::vector<flatbuffers::Offset<BinAttr>> *roomBinAttrInternal = nullptr,
     const std::vector<flatbuffers::Offset<RoomGroupPasswordConfig>> *passwordConfig = nullptr,
-    uint64_t passwordSlotMask = 0,
+    u64 passwordSlotMask = 0,
     const std::vector<u16> *ownerPrivilegeRank = nullptr) {
   auto roomBinAttrInternal__ = roomBinAttrInternal ? _fbb.CreateVector<flatbuffers::Offset<BinAttr>>(*roomBinAttrInternal) : 0;
   auto passwordConfig__ = passwordConfig ? _fbb.CreateVector<flatbuffers::Offset<RoomGroupPasswordConfig>>(*passwordConfig) : 0;
@@ -2325,15 +2325,15 @@ struct GetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
     VT_ROOMID = 4,
     VT_ATTRID = 6
   };
-  uint64_t roomId() const {
-    return GetField<uint64_t>(VT_ROOMID, 0);
+  u64 roomId() const {
+    return GetField<u64>(VT_ROOMID, 0);
   }
   const flatbuffers::Vector<u16> *attrId() const {
     return GetPointer<const flatbuffers::Vector<u16> *>(VT_ATTRID);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
+           VerifyField<u64>(verifier, VT_ROOMID) &&
            VerifyOffset(verifier, VT_ATTRID) &&
            verifier.VerifyVector(attrId()) &&
            verifier.EndTable();
@@ -2343,8 +2343,8 @@ struct GetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
 struct GetRoomDataInternalRequestBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_roomId(uint64_t roomId) {
-    fbb_.AddElement<uint64_t>(GetRoomDataInternalRequest::VT_ROOMID, roomId, 0);
+  void add_roomId(u64 roomId) {
+    fbb_.AddElement<u64>(GetRoomDataInternalRequest::VT_ROOMID, roomId, 0);
   }
   void add_attrId(flatbuffers::Offset<flatbuffers::Vector<u16>> attrId) {
     fbb_.AddOffset(GetRoomDataInternalRequest::VT_ATTRID, attrId);
@@ -2363,7 +2363,7 @@ struct GetRoomDataInternalRequestBuilder {
 
 inline flatbuffers::Offset<GetRoomDataInternalRequest> CreateGetRoomDataInternalRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t roomId = 0,
+    u64 roomId = 0,
     flatbuffers::Offset<flatbuffers::Vector<u16>> attrId = 0) {
   GetRoomDataInternalRequestBuilder builder_(_fbb);
   builder_.add_roomId(roomId);
@@ -2373,7 +2373,7 @@ inline flatbuffers::Offset<GetRoomDataInternalRequest> CreateGetRoomDataInternal
 
 inline flatbuffers::Offset<GetRoomDataInternalRequest> CreateGetRoomDataInternalRequestDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t roomId = 0,
+    u64 roomId = 0,
     const std::vector<u16> *attrId = nullptr) {
   auto attrId__ = attrId ? _fbb.CreateVector<u16>(*attrId) : 0;
   return CreateGetRoomDataInternalRequest(
@@ -2518,8 +2518,8 @@ struct GetPingInfoResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table 
   u32 worldId() const {
     return GetField<u32>(VT_WORLDID, 0);
   }
-  uint64_t roomId() const {
-    return GetField<uint64_t>(VT_ROOMID, 0);
+  u64 roomId() const {
+    return GetField<u64>(VT_ROOMID, 0);
   }
   u32 rtt() const {
     return GetField<u32>(VT_RTT, 0);
@@ -2528,7 +2528,7 @@ struct GetPingInfoResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table 
     return VerifyTableStart(verifier) &&
            VerifyField<u16>(verifier, VT_SERVERID) &&
            VerifyField<u32>(verifier, VT_WORLDID) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
+           VerifyField<u64>(verifier, VT_ROOMID) &&
            VerifyField<u32>(verifier, VT_RTT) &&
            verifier.EndTable();
   }
@@ -2543,8 +2543,8 @@ struct GetPingInfoResponseBuilder {
   void add_worldId(u32 worldId) {
     fbb_.AddElement<u32>(GetPingInfoResponse::VT_WORLDID, worldId, 0);
   }
-  void add_roomId(uint64_t roomId) {
-    fbb_.AddElement<uint64_t>(GetPingInfoResponse::VT_ROOMID, roomId, 0);
+  void add_roomId(u64 roomId) {
+    fbb_.AddElement<u64>(GetPingInfoResponse::VT_ROOMID, roomId, 0);
   }
   void add_rtt(u32 rtt) {
     fbb_.AddElement<u32>(GetPingInfoResponse::VT_RTT, rtt, 0);
@@ -2565,7 +2565,7 @@ inline flatbuffers::Offset<GetPingInfoResponse> CreateGetPingInfoResponse(
     flatbuffers::FlatBufferBuilder &_fbb,
     u16 serverId = 0,
     u32 worldId = 0,
-    uint64_t roomId = 0,
+    u64 roomId = 0,
     u32 rtt = 0) {
   GetPingInfoResponseBuilder builder_(_fbb);
   builder_.add_roomId(roomId);
@@ -2583,8 +2583,8 @@ struct SendRoomMessageRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tab
     VT_MSG = 10,
     VT_OPTION = 12
   };
-  uint64_t roomId() const {
-    return GetField<uint64_t>(VT_ROOMID, 0);
+  u64 roomId() const {
+    return GetField<u64>(VT_ROOMID, 0);
   }
   u8 castType() const {
     return GetField<u8>(VT_CASTTYPE, 0);
@@ -2600,7 +2600,7 @@ struct SendRoomMessageRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tab
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<uint64_t>(verifier, VT_ROOMID) &&
+           VerifyField<u64>(verifier, VT_ROOMID) &&
            VerifyField<u8>(verifier, VT_CASTTYPE) &&
            VerifyOffset(verifier, VT_DST) &&
            verifier.VerifyVector(dst()) &&
@@ -2614,8 +2614,8 @@ struct SendRoomMessageRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tab
 struct SendRoomMessageRequestBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_roomId(uint64_t roomId) {
-    fbb_.AddElement<uint64_t>(SendRoomMessageRequest::VT_ROOMID, roomId, 0);
+  void add_roomId(u64 roomId) {
+    fbb_.AddElement<u64>(SendRoomMessageRequest::VT_ROOMID, roomId, 0);
   }
   void add_castType(u8 castType) {
     fbb_.AddElement<u8>(SendRoomMessageRequest::VT_CASTTYPE, castType, 0);
@@ -2643,7 +2643,7 @@ struct SendRoomMessageRequestBuilder {
 
 inline flatbuffers::Offset<SendRoomMessageRequest> CreateSendRoomMessageRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t roomId = 0,
+    u64 roomId = 0,
     u8 castType = 0,
     flatbuffers::Offset<flatbuffers::Vector<u16>> dst = 0,
     flatbuffers::Offset<flatbuffers::Vector<u8>> msg = 0,
@@ -2659,7 +2659,7 @@ inline flatbuffers::Offset<SendRoomMessageRequest> CreateSendRoomMessageRequest(
 
 inline flatbuffers::Offset<SendRoomMessageRequest> CreateSendRoomMessageRequestDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
-    uint64_t roomId = 0,
+    u64 roomId = 0,
     u8 castType = 0,
     const std::vector<u16> *dst = nullptr,
     const std::vector<u8> *msg = nullptr,

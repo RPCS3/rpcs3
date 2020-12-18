@@ -833,7 +833,7 @@ typedef ucontext_t x64_context;
 #define XMMREG(context, reg) (reinterpret_cast<v128*>(&(context)->uc_mcontext->__fs.__fpu_xmm0.__xmm_reg[reg]))
 #define EFLAGS(context) ((context)->uc_mcontext->__ss.__rflags)
 
-uint64_t* darwin_x64reg(x64_context *context, int reg)
+u64* darwin_x64reg(x64_context *context, int reg)
 {
 	auto *state = &context->uc_mcontext->__ss;
 	switch(reg)

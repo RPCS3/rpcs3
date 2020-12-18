@@ -11,8 +11,6 @@
 
 namespace logs
 {
-	using u64 = std::uint64_t;
-
 	enum class level : unsigned
 	{
 		always, // Highest log severity (cannot be disabled)
