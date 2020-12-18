@@ -418,10 +418,8 @@ void debugger_frame::UpdateUnitList()
 		return;
 	}
 
+	const int old_size = m_choice_units->count();
 	QVariant old_cpu = m_choice_units->currentData();
-
-	m_choice_units->clear();
-	m_choice_units->addItem(NoThreadString);
 
 	const auto on_select = [&](u32 id, cpu_thread& cpu)
 	{
@@ -435,8 +433,17 @@ void debugger_frame::UpdateUnitList()
 	{
 		const QSignalBlocker blocker(m_choice_units);
 
+		m_choice_units->clear();
+		m_choice_units->addItem(NoThreadString);
+
 		idm::select<named_thread<ppu_thread>>(on_select);
 		idm::select<named_thread<spu_thread>>(on_select);
+
+		if (m_choice_units->count() > 1 && old_size <= 1)
+		{
+			// Select the first thread after "No Thread", usually the PPU main thread
+			m_choice_units->setCurrentIndex(1);
+		}
 	}
 
 	OnSelectUnit();
