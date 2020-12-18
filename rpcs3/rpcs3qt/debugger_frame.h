@@ -39,8 +39,8 @@ class debugger_frame : public custom_dock_widget
 	QTimer* m_update;
 	QSplitter* m_splitter;
 
-	u64 m_threads_created = 0;
-	u64 m_threads_deleted = 0;
+	u64 m_threads_created = -1;
+	u64 m_threads_deleted = -1;
 	u32 m_last_pc = -1;
 	std::vector<char> m_last_query_state;
 	u32 m_last_step_over_breakpoint = -1;
