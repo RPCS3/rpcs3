@@ -20,6 +20,8 @@
 #include <mutex>
 #include <algorithm>
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(cellSaveData);
 
 template<>
@@ -953,7 +955,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				if (!file.is_directory)
 				{
-					size_bytes += ::align(file.size, 1024);
+					size_bytes += utils::align(file.size, 1024);
 				}
 			}
 
@@ -1334,7 +1336,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				statGet->fileNum++;
 
-				size_bytes += ::align(entry.size, 1024); // firmware rounds this value up
+				size_bytes += utils::align(entry.size, 1024); // firmware rounds this value up
 
 				if (statGet->fileListNum >= setBuf->fileListMax)
 					continue;
@@ -1892,7 +1894,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		// add file list per FS order to PARAM.SFO
 		std::string final_blist;
 		final_blist = fmt::merge(blist, "/");
-		psf::assign(psf, "RPCS3_BLIST", psf::string(::align(::size32(final_blist) + 1, 4), final_blist));
+		psf::assign(psf, "RPCS3_BLIST", psf::string(utils::align(::size32(final_blist) + 1, 4), final_blist));
 
 		// Write all files in temporary directory
 		auto& fsfo = all_files["PARAM.SFO"];

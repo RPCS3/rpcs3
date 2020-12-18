@@ -5,6 +5,8 @@
 #include "../rsx_utils.h"
 #include <list>
 
+#include "util/asm.hpp"
+
 namespace rsx
 {
 	namespace utility
@@ -918,7 +920,7 @@ namespace rsx
 					{
 						// Width is calculated in the coordinate-space of the requester; normalize
 						info.src_area.x = (info.src_area.x * required_bpp) / surface_bpp;
-						info.src_area.width = align(width * required_bpp, surface_bpp) / surface_bpp;
+						info.src_area.width = utils::align(width * required_bpp, surface_bpp) / surface_bpp;
 					}
 					else
 					{

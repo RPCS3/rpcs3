@@ -15,6 +15,8 @@
 #include <errno.h>
 #endif
 
+#include "util/asm.hpp"
+
 inline std::array<u32, 4> utils::get_cpuid(u32 func, u32 subfunc)
 {
 	int regs[4];
@@ -298,7 +300,7 @@ std::string utils::get_OS_version()
 
 static constexpr ullong round_tsc(ullong val)
 {
-	return ::rounded_div(val, 1'000'000) * 1'000'000;
+	return utils::rounded_div(val, 1'000'000) * 1'000'000;
 }
 
 ullong utils::get_tsc_freq()

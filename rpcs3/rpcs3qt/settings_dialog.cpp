@@ -34,6 +34,7 @@
 #include <thread>
 
 #include "util/sysinfo.hpp"
+#include "util/asm.hpp"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
@@ -1809,7 +1810,7 @@ void settings_dialog::SnapSlider(QSlider *slider, int interval)
 		{
 			return;
 		}
-		slider->setValue(::rounded_div(value, interval) * interval);
+		slider->setValue(utils::rounded_div(value, interval) * interval);
 	});
 }
 

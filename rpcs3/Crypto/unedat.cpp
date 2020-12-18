@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include "util/v128.hpp"
+#include "util/asm.hpp"
 
 LOG_CHANNEL(edat_log, "EDAT");
 
@@ -949,7 +950,7 @@ bool EDATADecrypter::ReadHeader()
 	}*/
 
 	file_size = edatHeader.file_size;
-	total_blocks = ::aligned_div(edatHeader.file_size, edatHeader.block_size);
+	total_blocks = utils::aligned_div(edatHeader.file_size, edatHeader.block_size);
 
 	return true;
 }
@@ -962,7 +963,7 @@ u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
 	// now we need to offset things to account for the actual 'range' requested
 	const u64 startOffset = pos % edatHeader.block_size;
 
-	const u32 num_blocks = static_cast<u32>(::aligned_div(startOffset + size, edatHeader.block_size));
+	const u32 num_blocks = static_cast<u32>(utils::aligned_div(startOffset + size, edatHeader.block_size));
 	const u64 bufSize = num_blocks*edatHeader.block_size;
 	if (data_buf_size < (bufSize))
 	{

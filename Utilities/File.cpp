@@ -10,6 +10,8 @@
 #include <typeinfo>
 #include <map>
 
+#include "util/asm.hpp"
+
 using namespace std::literals::string_literals;
 
 #ifdef _WIN32
@@ -1725,7 +1727,7 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 
 		if (!entry.is_directory)
 		{
-			result += ::align(entry.size, rounding_alignment);
+			result += utils::align(entry.size, rounding_alignment);
 		}
 		else
 		{

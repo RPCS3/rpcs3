@@ -288,7 +288,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		words_align = 64;
 
 		const u32 starta = start & -64;
-		const u32 enda = ::align(end, 64);
+		const u32 enda = utils::align(end, 64);
 		const u32 sizea = (enda - starta) / 64;
 		ensure(sizea);
 
@@ -369,7 +369,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		words_align = 32;
 
 		const u32 starta = start & -32;
-		const u32 enda = ::align(end, 32);
+		const u32 enda = utils::align(end, 32);
 		const u32 sizea = (enda - starta) / 32;
 		ensure(sizea);
 
@@ -491,7 +491,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		words_align = 32;
 
 		const u32 starta = start & -32;
-		const u32 enda = ::align(end, 32);
+		const u32 enda = utils::align(end, 32);
 		const u32 sizea = (enda - starta) / 32;
 		ensure(sizea);
 

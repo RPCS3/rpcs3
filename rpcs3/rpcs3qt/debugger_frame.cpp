@@ -27,6 +27,8 @@
 #include <QVBoxLayout>
 #include <QTimer>
 
+#include "util/asm.hpp"
+
 constexpr auto qstr = QString::fromStdString;
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
@@ -573,7 +575,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	if (cpu)
 	{
 		// -1 turns into 0
-		u32 pc = ::align<u32>(cpu->get_pc(), 4);
+		u32 pc = utils::align<u32>(cpu->get_pc(), 4);
 		address_preview_label->setText(QString("Address: 0x%1").arg(pc, 8, 16, QChar('0')));
 		expression_input->setPlaceholderText(QString("0x%1").arg(pc, 8, 16, QChar('0')));
 	}
@@ -605,7 +607,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	if (diag->exec() == QDialog::Accepted)
 	{
 		// -1 turns into 0
-		u32 address = ::align<u32>(cpu ? cpu->get_pc() : 0, 4);
+		u32 address = utils::align<u32>(cpu ? cpu->get_pc() : 0, 4);
 
 		if (expression_input->text().isEmpty())
 		{

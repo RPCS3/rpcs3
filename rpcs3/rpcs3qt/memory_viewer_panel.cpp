@@ -15,6 +15,8 @@
 #include <QWheelEvent>
 #include <shared_mutex>
 
+#include "util/asm.hpp"
+
 constexpr auto qstr = QString::fromStdString;
 
 memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
@@ -210,7 +212,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	{
 		bool ok;
 		const QString text = m_addr_line->text();
-		m_addr = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16); 
+		m_addr = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16);
 		m_addr -= m_addr % (m_colcount * 4); // Align by amount of bytes in a row
 		m_addr_line->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));	// get 8 digits in input line
 		ShowMemory();
@@ -294,7 +296,7 @@ void memory_viewer_panel::resizeEvent(QResizeEvent *event)
 std::string memory_viewer_panel::getHeaderAtAddr(u32 addr)
 {
 	// Check if its an SPU Local Storage beginning
-	const u32 spu_boundary = ::align<u32>(addr, SPU_LS_SIZE);
+	const u32 spu_boundary = utils::align<u32>(addr, SPU_LS_SIZE);
 
 	if (spu_boundary <= addr + m_colcount * 4 - 1)
 	{

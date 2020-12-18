@@ -34,6 +34,7 @@ extern "C"
 #include <cmath>
 #include "Utilities/lockless.h"
 #include <variant>
+#include "util/asm.hpp"
 
 std::mutex g_mutex_avcodec_open2;
 
@@ -879,7 +880,7 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 
 		sws_scale(vdec->sws, in_data, in_line, 0, h, out_data, out_line);
 
-		//const u32 buf_size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
+		//const u32 buf_size = utils::align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
 
 		//// TODO: zero padding bytes
 
@@ -974,7 +975,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	info->startAddr = 0x00000123; // invalid value (no address for picture)
 	const int buffer_size = av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1);
 	ensure(buffer_size >= 0);
-	info->size = align<u32>(buffer_size, 128);
+	info->size = utils::align<u32>(buffer_size, 128);
 	info->auNum = 1;
 	info->auPts[0].lower = static_cast<u32>(pts);
 	info->auPts[0].upper = static_cast<u32>(pts >> 32);

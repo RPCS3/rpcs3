@@ -6,6 +6,7 @@
 #include "util/logs.hpp"
 #include "mutex.h"
 #include "util/vm.hpp"
+#include "util/asm.hpp"
 #include <immintrin.h>
 #include <zlib.h>
 
@@ -52,8 +53,8 @@ static u8* add_jit_memory(usz size, uint align)
 	// Simple allocation by incrementing pointer to the next free data
 	const u64 pos = Ctr.atomic_op([&](u64& ctr) -> u64
 	{
-		const u64 _pos = ::align(ctr & 0xffff'ffff, align);
-		const u64 _new = ::align(_pos + size, align);
+		const u64 _pos = utils::align(ctr & 0xffff'ffff, align);
+		const u64 _new = utils::align(_pos + size, align);
 
 		if (_new > 0x40000000) [[unlikely]]
 		{
@@ -69,7 +70,7 @@ static u8* add_jit_memory(usz size, uint align)
 		// Check the necessity to commit more memory
 		if (_new > olda) [[unlikely]]
 		{
-			newa = ::align(_new, 0x200000);
+			newa = utils::align(_new, 0x200000);
 		}
 
 		ctr += _new - (ctr & 0xffff'ffff);
@@ -223,7 +224,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 				return asmjit::kErrorNoCodeGenerated;
 			}
 
-			void* p = m_pos.fetch_add(::align(codeSize, 4096));
+			void* p = m_pos.fetch_add(utils::align(codeSize, 4096));
 			if (!p || m_pos > m_max) [[unlikely]]
 			{
 				*dst = nullptr;
@@ -237,7 +238,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 				return asmjit::kErrorInvalidState;
 			}
 
-			utils::memory_protect(p, ::align(codeSize, 4096), utils::protection::rx);
+			utils::memory_protect(p, utils::align(codeSize, 4096), utils::protection::rx);
 			flush(p, relocSize);
 			*dst = p;
 
@@ -351,8 +352,8 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 			return nullptr;
 		}
 
-		const u64 olda = ::align(oldp, align);
-		const u64 newp = ::align(olda + size, align);
+		const u64 olda = utils::align(oldp, align);
+		const u64 newp = utils::align(olda + size, align);
 
 		if ((newp - 1) / c_max_size != oldp / c_max_size)
 		{
@@ -363,8 +364,8 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 		if ((oldp - 1) / c_page_size != (newp - 1) / c_page_size)
 		{
 			// Allocate pages on demand
-			const u64 pagea = ::align(oldp, c_page_size);
-			const u64 psize = ::align(newp - pagea, c_page_size);
+			const u64 pagea = utils::align(oldp, c_page_size);
+			const u64 psize = utils::align(newp - pagea, c_page_size);
 			utils::memory_commit(this->ptr + pagea, psize, prot);
 		}
 

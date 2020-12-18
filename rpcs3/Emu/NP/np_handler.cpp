@@ -32,6 +32,8 @@
 #include <net/if_dl.h>
 #endif
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sys_net);
 LOG_CHANNEL(sceNp2);
 LOG_CHANNEL(sceNp);
@@ -384,7 +386,7 @@ vm::addr_t np_handler::allocate(u32 size)
 		return vm::cast(static_cast<u64>(0));
 
 	// Align allocs
-	const u32 alloc_size = ::align(size, 4);
+	const u32 alloc_size = utils::align(size, 4);
 	if (alloc_size > mpool_avail)
 	{
 		sceNp.error("Not enough memory available in NP pool!");
