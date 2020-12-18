@@ -202,6 +202,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	vbox_panel->addSpacing(10);
 	vbox_panel->addLayout(hbox_mem_panel, 1);
 	vbox_panel->addSpacing(10);
+	vbox_panel->setSizeConstraint(QLayout::SetNoConstraint);
 	setLayout(vbox_panel);
 
 	// Events
@@ -272,8 +273,7 @@ void memory_viewer_panel::resizeEvent(QResizeEvent *event)
 	const QMargins margins = layout()->contentsMargins();
 
 	int free_height = event->size().height()
-		- (layout()->count() * (margins.top() + margins.bottom()))
-		- font_height; // bottom margin to allow shrinking
+		- (layout()->count() * (margins.top() + margins.bottom()));
 
 	for (int i = 0; i < layout()->count(); i++)
 	{
@@ -281,6 +281,7 @@ void memory_viewer_panel::resizeEvent(QResizeEvent *event)
 			free_height -= layout()->itemAt(i)->sizeHint().height();
 	}
 
+	setMinimumHeight(event->size().height() - free_height + font_height);
 	const u32 new_row_count = std::max(0, free_height) / font_height;
 
 	if (m_rowcount != new_row_count)
