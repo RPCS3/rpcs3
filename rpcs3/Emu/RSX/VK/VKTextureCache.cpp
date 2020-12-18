@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "VKGSRender.h"
 #include "VKTextureCache.h"
+#include "VKCompute.h"
 
 #include "util/asm.hpp"
 

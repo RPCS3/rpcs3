@@ -26,7 +26,6 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	setWindowTitle(tr("Memory Viewer"));
 	setObjectName("memory_viewer");
 	setAttribute(Qt::WA_DeleteOnClose);
-	exit = false;
 	m_colcount = 4;
 	m_rowcount = 16;
 	m_addr -= m_addr % (m_colcount * 4); // Align by amount of bytes in a row
@@ -243,7 +242,6 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 
 memory_viewer_panel::~memory_viewer_panel()
 {
-	exit = true;
 }
 
 void memory_viewer_panel::wheelEvent(QWheelEvent *event)

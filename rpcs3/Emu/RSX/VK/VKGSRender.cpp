@@ -3,6 +3,7 @@
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "VKGSRender.h"
 #include "VKCommonDecompiler.h"
+#include "VKCompute.h"
 #include "VKRenderPass.h"
 #include "VKResourceManager.h"
 #include "VKCommandStream.h"
