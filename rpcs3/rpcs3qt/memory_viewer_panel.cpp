@@ -305,10 +305,20 @@ std::string memory_viewer_panel::getHeaderAtAddr(u32 addr)
 		if (u32 raw_spu_index = (spu_boundary - RAW_SPU_BASE_ADDR) / SPU_LS_SIZE; raw_spu_index < 5)
 		{
 			spu = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(raw_spu_index));
+
+			if (spu && spu->get_type() == spu_type::threaded)
+			{
+				spu.reset();
+			}
 		}
 		else if (u32 spu_index = (spu_boundary - SPU_FAKE_BASE_ADDR) / SPU_LS_SIZE; spu_index < spu_thread::id_count)
 		{
 			spu = idm::get<named_thread<spu_thread>>(spu_thread::id_base | spu_index);
+
+			if (spu && spu->get_type() != spu_type::threaded)
+			{
+				spu.reset();
+			}
 		}
 
 		if (spu)
