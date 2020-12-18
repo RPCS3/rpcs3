@@ -207,10 +207,10 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	auto &reports = vm::_ref<RsxReports>(vm::cast(*lpar_reports));
 	std::memset(&reports, 0, sizeof(RsxReports));
 
-	for (size_t i = 0; i < std::size(reports.notify); ++i)
+	for (usz i = 0; i < std::size(reports.notify); ++i)
 		reports.notify[i].timestamp = -1;
 
-	for (size_t i = 0; i < std::size(reports.semaphore); i += 4)
+	for (usz i = 0; i < std::size(reports.semaphore); i += 4)
 	{
 		reports.semaphore[i + 0].val.raw() = 0x1337C0D3;
 		reports.semaphore[i + 1].val.raw() = 0x1337BABE;
@@ -218,7 +218,7 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 		reports.semaphore[i + 3].val.raw() = 0x1337F001;
 	}
 
-	for (size_t i = 0; i < std::size(reports.report); ++i)
+	for (usz i = 0; i < std::size(reports.report); ++i)
 	{
 		reports.report[i].val = 0;
 		reports.report[i].timestamp = -1;

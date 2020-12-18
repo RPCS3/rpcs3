@@ -73,7 +73,7 @@ namespace rsx
 			u32 char_limit = UINT32_MAX;
 
 			std::vector<osk_panel> m_panels;
-			size_t m_panel_index = 0;
+			usz m_panel_index = 0;
 
 			osk_dialog() = default;
 			~osk_dialog() override = default;

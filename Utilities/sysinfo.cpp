@@ -217,13 +217,13 @@ std::string utils::get_firmware_version()
 		std::string version = version_file.to_string();
 
 		// Extract version
-		const size_t start = version.find_first_of(':') + 1;
-		const size_t end = version.find_first_of(':', start);
+		const usz start = version.find_first_of(':') + 1;
+		const usz end = version.find_first_of(':', start);
 		version = version.substr(start, end - start);
 
 		// Trim version
-		const size_t trim_start = version.find_first_not_of('0');
-		const size_t trim_end = version.find_last_not_of('0');
+		const usz trim_start = version.find_first_not_of('0');
+		const usz trim_end = version.find_last_not_of('0');
 		version = version.substr(trim_start, trim_end);
 
 		return version;

@@ -447,14 +447,14 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 			if (is_bgra) [[likely]]
 			{
-				for (size_t index = 0; index < sshot_data.size() / sizeof(u32); index++)
+				for (usz index = 0; index < sshot_data.size() / sizeof(u32); index++)
 				{
 					alpha_ptr[index] = ((sshot_ptr[index] & 0xFF) << 16) | (sshot_ptr[index] & 0xFF00) | ((sshot_ptr[index] & 0xFF0000) >> 16) | 0xFF000000;
 				}
 			}
 			else
 			{
-				for (size_t index = 0; index < sshot_data.size() / sizeof(u32); index++)
+				for (usz index = 0; index < sshot_data.size() / sizeof(u32); index++)
 				{
 					alpha_ptr[index] = sshot_ptr[index] | 0xFF000000;
 				}
@@ -467,7 +467,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 			png_set_IHDR(write_ptr, info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 
 			std::vector<u8*> rows(sshot_height);
-			for (size_t y = 0; y < sshot_height; y++)
+			for (usz y = 0; y < sshot_height; y++)
 				rows[y] = sshot_data_alpha.data() + y * sshot_width * 4;
 
 			png_set_rows(write_ptr, info_ptr, &rows[0]);

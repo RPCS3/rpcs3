@@ -48,8 +48,8 @@ private:
 	}
 
 public:
-	static constexpr std::size_t bitmax = sizeof(T) * 8;
-	static constexpr std::size_t bitsize = static_cast<under>(T::__bitset_enum_max);
+	static constexpr usz bitmax = sizeof(T) * 8;
+	static constexpr usz bitsize = static_cast<under>(T::__bitset_enum_max);
 
 	static_assert(std::is_enum<T>::value, "bs_t<> error: invalid type (must be enum)");
 	static_assert(bitsize <= bitmax, "bs_t<> error: invalid __bitset_enum_max");

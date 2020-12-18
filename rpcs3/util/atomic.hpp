@@ -265,7 +265,7 @@ namespace atomic_wait
 struct atomic_wait_engine
 {
 private:
-	template <typename T, std::size_t Align>
+	template <typename T, usz Align>
 	friend class atomic_t;
 
 	template <uint Max, typename... T>
@@ -304,7 +304,7 @@ void atomic_wait::list<Max, T...>::wait(atomic_wait_timeout timeout)
 }
 
 // Helper class, provides access to compiler-specific atomic intrinsics
-template <typename T, std::size_t Size = sizeof(T)>
+template <typename T, usz Size = sizeof(T)>
 struct atomic_storage
 {
 	/* First part: Non-MSVC intrinsics */
@@ -1036,7 +1036,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 };
 
 // Atomic type with lock-free and standard layout guarantees (and appropriate limitations)
-template <typename T, std::size_t Align = sizeof(T)>
+template <typename T, usz Align = sizeof(T)>
 class atomic_t
 {
 protected:
@@ -1058,7 +1058,7 @@ protected:
 	alignas(Align) type m_data;
 
 public:
-	static constexpr std::size_t align = Align;
+	static constexpr usz align = Align;
 
 	atomic_t() noexcept = default;
 
@@ -1631,13 +1631,13 @@ public:
 	}
 };
 
-template <std::size_t Align>
+template <usz Align>
 class atomic_t<bool, Align> : private atomic_t<uchar, Align>
 {
 	using base = atomic_t<uchar, Align>;
 
 public:
-	static constexpr std::size_t align = Align;
+	static constexpr usz align = Align;
 
 	using simple_type = bool;
 
@@ -1723,6 +1723,6 @@ public:
 
 namespace atomic_wait
 {
-	template <std::size_t Align>
+	template <usz Align>
 	inline __m128i default_mask<atomic_t<bool, Align>> = _mm_cvtsi32_si128(1);
 }

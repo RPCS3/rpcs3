@@ -253,7 +253,7 @@ u32 TROPUSRLoader::GetUnlockedPlatinumID(u32 trophy_id, const std::string& confi
 		trophy_base = trophy_base->GetChildren();
 	}
 
-	const size_t trophy_count = m_table4.size();
+	const usz trophy_count = m_table4.size();
 
 	for (std::shared_ptr<rXmlNode> n = trophy_base->GetChildren(); n; n = n->GetNext())
 	{
@@ -281,7 +281,7 @@ u32 TROPUSRLoader::GetUnlockedPlatinumID(u32 trophy_id, const std::string& confi
 	}
 
 	// The platinum trophy stays locked if any relevant trophy is still locked
-	for (size_t i = 0; i < trophy_count; i++)
+	for (usz i = 0; i < trophy_count; i++)
 	{
 		if (m_table4[i].trophy_pid == pid && !m_table6[i].trophy_state)
 		{

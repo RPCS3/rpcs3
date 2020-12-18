@@ -931,18 +931,18 @@ namespace
 		       " stride = " + std::to_string(stride) + " frequency = " + std::to_string(frequency);
 	}
 
-	std::string transform_constant(size_t index, u32 arg)
+	std::string transform_constant(usz index, u32 arg)
 	{
 		return "Transform constant " + std::to_string(index) + ": " + std::to_string(arg) + "/" +
 		       std::to_string(std::bit_cast<f32>(arg));
 	}
 
-	std::string texture_offset(size_t index, u32 arg)
+	std::string texture_offset(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + ": Offset @" + ptr_to_string(arg);
 	}
 
-	std::string texture_size(size_t index, u32 arg)
+	std::string texture_size(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + ": width = " + std::to_string(arg & 0xffff) +
 		       " height = " + std::to_string(arg >> 16);
@@ -983,7 +983,7 @@ namespace
 		return "Error";
 	}
 
-	std::string texture_format(size_t index, u32 arg)
+	std::string texture_format(usz index, u32 arg)
 	{
 		int format = ((arg >> 8) & 0xFF);
 		return "Texture " + std::to_string(index) + ": location = " + ptr_to_string((arg & 0x3) - 1) +
@@ -1028,7 +1028,7 @@ namespace
 		return "Error";
 	}
 
-	std::string texture_address(size_t index, u32 arg)
+	std::string texture_address(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + ": wrap_s = " + get_texture_wrap_mode(arg & 0xF) +
 		       " wrap_t = " + get_texture_wrap_mode((arg >> 8) & 0xF) + " wrap_r = " +
@@ -1054,7 +1054,7 @@ namespace
 		return "Error";
 	}
 
-	std::string texture_control0(size_t index, u32 arg)
+	std::string texture_control0(usz index, u32 arg)
 	{
 		std::string result = "Texture " + std::to_string(index);
 		if ((arg >> 31) & 0x1) {
@@ -1080,7 +1080,7 @@ namespace
 		return "Error";
 	}
 
-	std::string texture_control1(size_t index, u32 arg) noexcept
+	std::string texture_control1(usz index, u32 arg) noexcept
 	{
 		return "Texture " + std::to_string(index) + " Component 0 = " + get_remap_channel(arg & 0x3) +
 		       " Component 1 = " + get_remap_channel((arg >> 2) & 0x3) + " Component 2 = " +
@@ -1088,18 +1088,18 @@ namespace
 		       get_remap_channel((arg >> 6) & 0x3);
 	}
 
-	std::string texture_control3(size_t index, u32 arg)
+	std::string texture_control3(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + " depth = " + std::to_string(arg >> 20) +
 		       " pitch = " + std::to_string(arg & 0xFFFFF);
 	}
 
-	std::string texture_border_color(size_t index, u32 arg)
+	std::string texture_border_color(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + " border color = " + std::to_string(arg);
 	}
 
-	std::string texture_filter(size_t index, u32 arg)
+	std::string texture_filter(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + " bias = " + std::to_string(arg & 0x1fff) +
 		       " min_filter = " + std::to_string((arg >> 16) & 0x7) + " mag_filter = " +

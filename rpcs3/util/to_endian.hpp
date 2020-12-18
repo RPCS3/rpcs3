@@ -64,7 +64,7 @@ struct to_se<T[], Se>
 	using type = typename to_se<T, Se>::type[];
 };
 
-template <typename T, bool Se, std::size_t N>
+template <typename T, bool Se, usz N>
 struct to_se<T[N], Se>
 {
 	// Move array qualifier

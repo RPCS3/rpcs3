@@ -518,7 +518,7 @@ struct nt_p2p_port
 		}
 	}
 
-	static u16 tcp_checksum(const u16* buffer, std::size_t size)
+	static u16 tcp_checksum(const u16* buffer, usz size)
 	{
 		u32 cksum = 0;
 		while (size > 1)
@@ -1051,7 +1051,7 @@ struct network_thread
 
 			std::lock_guard lock(s_nw_mutex);
 
-			for (std::size_t i = 0; i < socklist.size(); i++)
+			for (usz i = 0; i < socklist.size(); i++)
 			{
 				bs_t<lv2_socket::poll> events{};
 
@@ -1114,7 +1114,7 @@ struct network_thread
 					socklist.emplace_back(idm::get_unlocked<lv2_socket>(id));
 			});
 
-			for (std::size_t i = 0; i < socklist.size(); i++)
+			for (usz i = 0; i < socklist.size(); i++)
 			{
 #ifdef _WIN32
 				std::lock_guard lock(socklist[i]->mutex);

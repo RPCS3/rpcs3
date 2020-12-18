@@ -990,7 +990,7 @@ void cheat_manager_dialog::do_the_search()
 
 	lst_search->clear();
 
-	const size_t size = offsets_found.size();
+	const usz size = offsets_found.size();
 
 	if (size == 0)
 	{
@@ -1018,7 +1018,7 @@ void cheat_manager_dialog::do_the_search()
 
 void cheat_manager_dialog::update_cheat_list()
 {
-	size_t num_rows = 0;
+	usz num_rows = 0;
 	for (const auto& name : g_cheat.cheats)
 		num_rows += name.second.size();
 

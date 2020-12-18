@@ -47,7 +47,7 @@ fs::file pup_object::get_file(u64 entry_id)
 
 bool pup_object::validate_hashes()
 {
-	for (size_t i = 0; i < m_file_tbl.size(); i++)
+	for (usz i = 0; i < m_file_tbl.size(); i++)
 	{
 		u8 *hash = m_hash_tbl[i].hash;
 		PUPFileEntry file = m_file_tbl[i];

@@ -185,7 +185,7 @@ namespace rsx
 			auto render = get_current_renderer();
 			auto last_flip = render->int_flip_index;
 
-			size_t stopIdx = 0;
+			usz stopIdx = 0;
 			for (const auto& replay_cmd : frame->replay_commands)
 			{
 				while (Emu.IsPaused())

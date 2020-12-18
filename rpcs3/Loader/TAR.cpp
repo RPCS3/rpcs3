@@ -7,7 +7,7 @@
 
 LOG_CHANNEL(tar_log, "TAR");
 
-tar_object::tar_object(const fs::file& file, size_t offset)
+tar_object::tar_object(const fs::file& file, usz offset)
 	: m_file(file)
 	, initial_offset(static_cast<int>(offset))
 {

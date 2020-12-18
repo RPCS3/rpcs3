@@ -301,7 +301,7 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 	}
 
 	// Emulate NTS (limited)
-	auto get_char = [&](std::size_t pos) -> char2
+	auto get_char = [&](usz pos) -> char2
 	{
 		if (pos < name.size())
 		{
@@ -352,7 +352,7 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 
 	result.reserve(result.size() + name.size());
 
-	for (std::size_t i = 0, s = name.size(); i < s; i++)
+	for (usz i = 0, s = name.size(); i < s; i++)
 	{
 		switch (char2 c = name[i])
 		{
@@ -499,7 +499,7 @@ std::string vfs::unescape(std::string_view name)
 	result.reserve(name.size());
 
 	// Emulate NTS
-	auto get_char = [&](std::size_t pos) -> char2
+	auto get_char = [&](usz pos) -> char2
 	{
 		if (pos < name.size())
 		{
@@ -511,7 +511,7 @@ std::string vfs::unescape(std::string_view name)
 		}
 	};
 
-	for (std::size_t i = 0, s = name.size(); i < s; i++)
+	for (usz i = 0, s = name.size(); i < s; i++)
 	{
 		switch (char2 c = name[i])
 		{

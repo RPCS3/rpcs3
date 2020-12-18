@@ -528,7 +528,7 @@ Value* PPUTranslator::Shuffle(Value* left, Value* right, std::initializer_list<u
 		const u32 mask = cast<VectorType>(type)->getNumElements() - 1;
 
 		// Transform indices (works for vectors with size 2^N)
-		for (std::size_t i = 0; i < indices.size(); i++)
+		for (usz i = 0; i < indices.size(); i++)
 		{
 			data.push_back(indices.end()[~i] ^ mask);
 		}

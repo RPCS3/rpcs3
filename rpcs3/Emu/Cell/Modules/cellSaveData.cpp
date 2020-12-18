@@ -564,7 +564,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	}
 
 	// Simulate idle time while data is being sent to VSH
-	const auto lv2_sleep = [](ppu_thread& ppu, size_t sleep_time)
+	const auto lv2_sleep = [](ppu_thread& ppu, usz sleep_time)
 	{
 		lv2_obj::sleep(ppu);
 		std::this_thread::sleep_for(std::chrono::microseconds(sleep_time));

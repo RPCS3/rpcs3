@@ -286,7 +286,7 @@ namespace utils
 	}
 
 	// Synchronization helper (cache-friendly busy waiting)
-	inline void busy_wait(std::size_t cycles = 3000)
+	inline void busy_wait(usz cycles = 3000)
 	{
 		const u64 start = __rdtsc();
 		do _mm_pause();

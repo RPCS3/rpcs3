@@ -9,26 +9,26 @@ union alignas(16) v128
 	uchar _bytes[16];
 	char _chars[16];
 
-	template <typename T, std::size_t N, std::size_t M>
+	template <typename T, usz N, usz M>
 	struct masked_array_t // array type accessed as (index ^ M)
 	{
 		char m_data[16];
 
 	public:
-		T& operator[](std::size_t index)
+		T& operator[](usz index)
 		{
 			return reinterpret_cast<T*>(m_data)[index ^ M];
 		}
 
-		const T& operator[](std::size_t index) const
+		const T& operator[](usz index) const
 		{
 			return reinterpret_cast<const T*>(m_data)[index ^ M];
 		}
 	};
 
-	template <typename T, std::size_t N = 16 / sizeof(T)>
+	template <typename T, usz N = 16 / sizeof(T)>
 	using normal_array_t = masked_array_t<T, N, std::endian::little == std::endian::native ? 0 : N - 1>;
-	template <typename T, std::size_t N = 16 / sizeof(T)>
+	template <typename T, usz N = 16 / sizeof(T)>
 	using reversed_array_t = masked_array_t<T, N, std::endian::little == std::endian::native ? N - 1 : 0>;
 
 	normal_array_t<u64> _u64;
@@ -218,7 +218,7 @@ union alignas(16) v128
 	}
 
 	// Unaligned load with optional index offset
-	static v128 loadu(const void* ptr, std::size_t index = 0)
+	static v128 loadu(const void* ptr, usz index = 0)
 	{
 		v128 ret;
 		std::memcpy(&ret, static_cast<const u8*>(ptr) + index * sizeof(v128), sizeof(v128));
@@ -226,7 +226,7 @@ union alignas(16) v128
 	}
 
 	// Unaligned store with optional index offset
-	static void storeu(v128 value, void* ptr, std::size_t index = 0)
+	static void storeu(v128 value, void* ptr, usz index = 0)
 	{
 		std::memcpy(static_cast<u8*>(ptr) + index * sizeof(v128), &value, sizeof(v128));
 	}
@@ -368,7 +368,7 @@ union alignas(16) v128
 	}
 };
 
-template <typename T, std::size_t N, std::size_t M>
+template <typename T, usz N, usz M>
 struct offset32_array<v128::masked_array_t<T, N, M>>
 {
 	template <typename Arg>

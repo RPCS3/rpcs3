@@ -589,7 +589,7 @@ extern "C"
 		return InitOnceComplete(reinterpret_cast<LPINIT_ONCE>(ppinit), f, lpc);
 	}
 
-	size_t __stdcall __std_get_string_size_without_trailing_whitespace(const char* str, size_t size) noexcept
+	usz __stdcall __std_get_string_size_without_trailing_whitespace(const char* str, usz size) noexcept
 	{
 		while (size)
 		{
@@ -612,7 +612,7 @@ extern "C"
 		return size;
 	}
 
-	size_t __stdcall __std_system_error_allocate_message(const unsigned long msg_id, char** ptr_str) noexcept
+	usz __stdcall __std_system_error_allocate_message(const unsigned long msg_id, char** ptr_str) noexcept
 	{
 		return __std_get_string_size_without_trailing_whitespace(*ptr_str, FormatMessageA(
 			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,

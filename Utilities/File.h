@@ -73,7 +73,7 @@ namespace fs
 	struct iovec_clone
 	{
 		const void* iov_base;
-		std::size_t iov_len;
+		usz iov_len;
 	};
 
 	// File handle base
@@ -200,7 +200,7 @@ namespace fs
 		explicit file(const std::string& path, bs_t<open_mode> mode = ::fs::read);
 
 		// Open memory for read
-		explicit file(const void* ptr, std::size_t size);
+		explicit file(const void* ptr, usz size);
 
 		// Open file with specified args (forward to constructor)
 		template <typename... Args>
@@ -370,7 +370,7 @@ namespace fs
 
 		// Read std::basic_string
 		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::basic_string<T>& str, std::size_t size,
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::basic_string<T>& str, usz size,
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION(),
 			u32 line = __builtin_LINE(),
@@ -405,7 +405,7 @@ namespace fs
 
 		// Read POD std::vector
 		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec, std::size_t size,
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec, usz size,
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION(),
 			u32 line = __builtin_LINE(),

@@ -181,7 +181,7 @@ public:
 	const u32 spec; //addr
 
 	std::vector<u8> raw_data; // demultiplexed data stream (managed by demuxer thread)
-	std::size_t raw_pos = 0; // should be <= raw_data.size()
+	usz raw_pos = 0; // should be <= raw_data.size()
 	u64 last_dts = CODEC_TS_INVALID;
 	u64 last_pts = CODEC_TS_INVALID;
 

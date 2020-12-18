@@ -19,7 +19,7 @@ namespace rsx
 			fmt::throw_exception("Wrong color_target");
 		}
 
-		size_t get_aligned_pitch(surface_color_format format, u32 width)
+		usz get_aligned_pitch(surface_color_format format, u32 width)
 		{
 			switch (format)
 			{
@@ -41,7 +41,7 @@ namespace rsx
 			fmt::throw_exception("Unknown color surface format");
 		}
 
-		size_t get_packed_pitch(surface_color_format format, u32 width)
+		usz get_packed_pitch(surface_color_format format, u32 width)
 		{
 			switch (format)
 			{

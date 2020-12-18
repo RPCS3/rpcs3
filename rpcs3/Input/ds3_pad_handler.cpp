@@ -158,7 +158,7 @@ std::vector<std::string> ds3_pad_handler::ListDevices()
 	if (!Init())
 		return ds3_pads_list;
 
-	for (size_t i = 1; i <= controllers.size(); ++i) // Controllers 1-n in GUI
+	for (usz i = 1; i <= controllers.size(); ++i) // Controllers 1-n in GUI
 	{
 		ds3_pads_list.emplace_back(m_name_string + std::to_string(i));
 	}
@@ -231,13 +231,13 @@ std::shared_ptr<ds3_pad_handler::ds3_device> ds3_pad_handler::get_ds3_device(con
 	if (!Init())
 		return nullptr;
 
-	const size_t pos = padId.find(m_name_string);
+	const usz pos = padId.find(m_name_string);
 	if (pos == umax)
 		return nullptr;
 
 	const int pad_number = std::stoi(padId.substr(pos + 9));
 	if (pad_number > 0 && pad_number + 0u <= controllers.size())
-		return controllers[static_cast<size_t>(pad_number) - 1];
+		return controllers[static_cast<usz>(pad_number) - 1];
 
 	return nullptr;
 }

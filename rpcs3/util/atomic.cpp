@@ -22,7 +22,7 @@
 #include "endian.hpp"
 
 // Total number of entries.
-static constexpr std::size_t s_hashtable_size = 1u << 17;
+static constexpr usz s_hashtable_size = 1u << 17;
 
 // Reference counter combined with shifted pointer (which is assumed to be 47 bit)
 static constexpr uptr s_ref_mask = (1u << 17) - 1;

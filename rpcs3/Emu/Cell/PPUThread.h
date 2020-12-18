@@ -137,7 +137,7 @@ public:
 		u8 bits[32];
 		u32 fields[8];
 
-		u8& operator [](std::size_t i)
+		u8& operator [](usz i)
 		{
 			return bits[i];
 		}

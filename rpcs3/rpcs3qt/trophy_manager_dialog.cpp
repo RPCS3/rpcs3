@@ -735,7 +735,7 @@ void trophy_manager_dialog::PopulateGameTable()
 	m_game_combo->clear();
 
 	QList<int> indices;
-	for (size_t i = 0; i < m_trophies_db.size(); ++i)
+	for (usz i = 0; i < m_trophies_db.size(); ++i)
 		indices.append(static_cast<int>(i));
 
 	std::function<QPixmap(const int&)> get_icon = [this](const int& i)

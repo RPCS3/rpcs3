@@ -892,7 +892,7 @@ namespace vk
 			image_linear_size = row_pitch * layout.height_in_block * layout.depth;
 
 			// Map with extra padding bytes in case of realignment
-			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size + 8);
+			usz offset_in_buffer = upload_heap.alloc<512>(image_linear_size + 8);
 			void* mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size + 8);
 
 			// Only do GPU-side conversion if occupancy is good

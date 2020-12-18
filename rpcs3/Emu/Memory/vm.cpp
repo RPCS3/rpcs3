@@ -1103,7 +1103,7 @@ namespace vm
 		// Fill stack guards with STACKGRD
 		if (this->flags & 0x10)
 		{
-			auto fill64 = [](u8* ptr, u64 data, std::size_t count)
+			auto fill64 = [](u8* ptr, u64 data, usz count)
 			{
 				u64* target = reinterpret_cast<u64*>(ptr);
 

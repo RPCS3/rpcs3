@@ -276,8 +276,8 @@ struct PngHandle
 struct PngBuffer
 {
 	// The cursor location and data pointer for reading from a buffer
-	size_t cursor;
-	size_t length;
+	usz cursor;
+	usz length;
 	vm::bptr<void> data;
 
 	// The file descriptor, and whether we need to read from a file descriptor

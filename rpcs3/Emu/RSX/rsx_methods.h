@@ -530,7 +530,7 @@ namespace rsx
 		std::array<data_array_format_info, 16> vertex_arrays_info;
 
 	private:
-		template<typename T, size_t... N, typename Args>
+		template<typename T, usz... N, typename Args>
 		static std::array<T, sizeof...(N)> fill_array(Args&& arg, std::index_sequence<N...>)
 		{
 			return{ T(N, std::forward<Args>(arg))... };

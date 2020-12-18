@@ -95,7 +95,7 @@ namespace vk
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
 
-	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
+	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, usz size, usz alignment, VkSystemAllocationScope allocationScope)
 	{
 #ifdef _MSC_VER
 		return _aligned_realloc(pOriginal, size, alignment);
@@ -106,7 +106,7 @@ namespace vk
 #endif
 	}
 
-	VKAPI_ATTR void* VKAPI_CALL mem_alloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
+	VKAPI_ATTR void* VKAPI_CALL mem_alloc(void* pUserData, usz size, usz alignment, VkSystemAllocationScope allocationScope)
 	{
 #ifdef _MSC_VER
 		return _aligned_malloc(size, alignment);
@@ -128,11 +128,11 @@ namespace vk
 #endif
 	}
 
-	bool data_heap::grow(size_t size)
+	bool data_heap::grow(usz size)
 	{
 		// Create new heap. All sizes are aligned up by 64M, upto 1GiB
-		const size_t size_limit = 1024 * 0x100000;
-		const size_t aligned_new_size = align(m_size + size, 64 * 0x100000);
+		const usz size_limit = 1024 * 0x100000;
+		const usz aligned_new_size = align(m_size + size, 64 * 0x100000);
 
 		if (aligned_new_size >= size_limit)
 		{
@@ -1124,7 +1124,7 @@ namespace vk
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-											uint64_t srcObject, size_t location, int32_t msgCode,
+											uint64_t srcObject, usz location, int32_t msgCode,
 											const char *pLayerPrefix, const char *pMsg, void *pUserData)
 	{
 		if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
@@ -1147,7 +1147,7 @@ namespace vk
 	}
 
 	VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-							uint64_t srcObject, size_t location, int32_t msgCode,
+							uint64_t srcObject, usz location, int32_t msgCode,
 							const char *pLayerPrefix, const char *pMsg, void *pUserData)
 	{
 #ifdef _WIN32

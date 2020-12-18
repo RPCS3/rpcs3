@@ -82,8 +82,8 @@ namespace rsx
 #ifdef TEXTURE_CACHE_DEBUG
 			void check_pre_sanity() const
 			{
-				size_t flush_and_unprotect_count = sections_to_flush.size() + sections_to_unprotect.size();
-				size_t exclude_count = sections_to_exclude.size();
+				usz flush_and_unprotect_count = sections_to_flush.size() + sections_to_unprotect.size();
+				usz exclude_count = sections_to_exclude.size();
 
 				//-------------------------
 				// It is illegal to have only exclusions except when reading from a range with only RO sections
@@ -381,7 +381,7 @@ namespace rsx
 			m_cache_update_tag = rsx::get_shared_tag();
 		}
 
-		template <typename CharT, std::size_t N, typename... Args>
+		template <typename CharT, usz N, typename... Args>
 		void emit_once(bool error, const CharT(&fmt)[N], const Args&... params)
 		{
 			const auto result = m_once_only_messages_set.emplace(fmt::format(fmt, params...));
@@ -394,13 +394,13 @@ namespace rsx
 				rsx_log.warning("%s", *result.first);
 		}
 
-		template <typename CharT, std::size_t N, typename... Args>
+		template <typename CharT, usz N, typename... Args>
 		void err_once(const CharT(&fmt)[N], const Args&... params)
 		{
 			emit_once(true, fmt, params...);
 		}
 
-		template <typename CharT, std::size_t N, typename... Args>
+		template <typename CharT, usz N, typename... Args>
 		void warn_once(const CharT(&fmt)[N], const Args&... params)
 		{
 			emit_once(false, fmt, params...);
@@ -737,7 +737,7 @@ namespace rsx
 			// naive check that sections are not duplicated in the results
 			for (auto &section1 : result.sections)
 			{
-				size_t count = 0;
+				usz count = 0;
 				for (auto &section2 : result.sections)
 				{
 					if (section1 == section2) count++;

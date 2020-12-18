@@ -932,7 +932,7 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 
 		const auto products = input::get_products_by_class(m_handler_cfg.device_class_type);
 
-		for (size_t i = 0; i < products.size(); i++)
+		for (usz i = 0; i < products.size(); i++)
 		{
 			if (products[i].vendor_id == m_handler_cfg.vendor_id && products[i].product_id == m_handler_cfg.product_id)
 			{
@@ -1259,7 +1259,7 @@ void pad_settings_dialog::ChangeInputType()
 	case pad_handler::dualsense:
 	{
 		const QString name_string = qstr(m_handler->name_string());
-		for (size_t i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
+		for (usz i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
 		{
 			const QString device_name = name_string + QString::number(i);
 			ui->chooseDevice->addItem(device_name, QVariant::fromValue(pad_device_info{ sstr(device_name), true }));
@@ -1278,7 +1278,7 @@ void pad_settings_dialog::ChangeInputType()
 	}
 	default:
 	{
-		for (size_t i = 0; i < device_list.size(); i++)
+		for (usz i = 0; i < device_list.size(); i++)
 		{
 			ui->chooseDevice->addItem(qstr(device_list[i]), QVariant::fromValue(pad_device_info{ device_list[i], true }));
 		}
@@ -1505,7 +1505,7 @@ void pad_settings_dialog::RefreshInputTypes()
 	else
 	{
 		const std::vector<std::string> str_inputs = g_cfg_input.player[0]->handler.to_list();
-		for (size_t index = 0; index < str_inputs.size(); index++)
+		for (usz index = 0; index < str_inputs.size(); index++)
 		{
 			const QString item_data = qstr(str_inputs[index]);
 			ui->chooseHandler->addItem(GetLocalizedPadHandler(item_data, static_cast<pad_handler>(index)), QVariant(item_data));

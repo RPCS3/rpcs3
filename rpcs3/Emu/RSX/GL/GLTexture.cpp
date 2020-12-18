@@ -836,7 +836,7 @@ namespace gl
 	{
 		// Calculate staging buffer size
 		const u32 aligned_pitch = align<u32>(dst->pitch(), 4);
-		size_t texture_data_sz = dst->depth() * dst->height() * aligned_pitch;
+		usz texture_data_sz = dst->depth() * dst->height() * aligned_pitch;
 		std::vector<std::byte> data_upload_buf(texture_data_sz);
 
 		// TODO: GL drivers support byteswapping and this should be used instead of doing so manually

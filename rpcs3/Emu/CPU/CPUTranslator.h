@@ -2917,9 +2917,9 @@ public:
 template <>
 struct fmt_unveil<llvm::TypeSize, void>
 {
-	using type = std::size_t;
+	using type = usz;
 
-	static inline std::size_t get(const llvm::TypeSize& arg)
+	static inline usz get(const llvm::TypeSize& arg)
 	{
 		return arg;
 	}

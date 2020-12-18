@@ -615,7 +615,7 @@ namespace rsx
 		static std::unique_ptr<vk::render_target> create_new_surface(
 			u32 address,
 			surface_color_format format,
-			size_t width, size_t height, size_t pitch,
+			usz width, usz height, usz pitch,
 			rsx::surface_antialiasing antialias,
 			vk::render_device &device, vk::command_buffer& cmd)
 		{
@@ -680,7 +680,7 @@ namespace rsx
 		static std::unique_ptr<vk::render_target> create_new_surface(
 			u32 address,
 			surface_depth_format2 format,
-			size_t width, size_t height, size_t pitch,
+			usz width, usz height, usz pitch,
 			rsx::surface_antialiasing antialias,
 			vk::render_device &device, vk::command_buffer& cmd)
 		{
@@ -828,12 +828,12 @@ namespace rsx
 		static void prepare_surface_for_sampling(vk::command_buffer& /*cmd*/, vk::render_target* /*surface*/)
 		{}
 
-		static bool surface_is_pitch_compatible(const std::unique_ptr<vk::render_target> &surface, size_t pitch)
+		static bool surface_is_pitch_compatible(const std::unique_ptr<vk::render_target> &surface, usz pitch)
 		{
 			return surface->rsx_pitch == pitch;
 		}
 
-		static void invalidate_surface_contents(vk::command_buffer& /*cmd*/, vk::render_target *surface, u32 address, size_t pitch)
+		static void invalidate_surface_contents(vk::command_buffer& /*cmd*/, vk::render_target *surface, u32 address, usz pitch)
 		{
 			surface->rsx_pitch = static_cast<u16>(pitch);
 			surface->queue_tag(address);
@@ -869,7 +869,7 @@ namespace rsx
 		static bool int_surface_matches_properties(
 			const std::unique_ptr<vk::render_target> &surface,
 			VkFormat format,
-			size_t width, size_t height,
+			usz width, usz height,
 			rsx::surface_antialiasing antialias,
 			bool check_refs)
 		{
@@ -887,7 +887,7 @@ namespace rsx
 		static bool surface_matches_properties(
 			const std::unique_ptr<vk::render_target> &surface,
 			surface_color_format format,
-			size_t width, size_t height,
+			usz width, usz height,
 			rsx::surface_antialiasing antialias,
 			bool check_refs = false)
 		{
@@ -898,7 +898,7 @@ namespace rsx
 		static bool surface_matches_properties(
 			const std::unique_ptr<vk::render_target> &surface,
 			surface_depth_format2 format,
-			size_t width, size_t height,
+			usz width, usz height,
 			rsx::surface_antialiasing antialias,
 			bool check_refs = false)
 		{

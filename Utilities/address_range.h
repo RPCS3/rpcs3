@@ -282,7 +282,7 @@ namespace utils
 
 	public:
 		// Wrapped functions
-		inline void reserve(size_t nr) { data.reserve(nr); }
+		inline void reserve(usz nr) { data.reserve(nr); }
 		inline void clear() { data.clear(); }
 		inline size_type size() const { return data.size(); }
 		inline bool empty() const { return data.empty(); }
@@ -456,9 +456,9 @@ namespace utils
 		// Will fail if ranges within the vector overlap our touch each-other
 		bool check_consistency() const
 		{
-			size_t _size = data.size();
+			usz _size = data.size();
 
-			for (size_t i = 0; i < _size; ++i)
+			for (usz i = 0; i < _size; ++i)
 			{
 				const auto &r1 = data[i];
 				if (!r1.valid())
@@ -466,7 +466,7 @@ namespace utils
 					continue;
 				}
 
-				for (size_t j = i + 1; j < _size; ++j)
+				for (usz j = i + 1; j < _size; ++j)
 				{
 					const auto &r2 = data[j];
 					if (!r2.valid())
@@ -582,15 +582,15 @@ namespace utils
 
 namespace std
 {
-	static_assert(sizeof(size_t) >= 2 * sizeof(u32), "size_t must be at least twice the size of u32");
+	static_assert(sizeof(usz) >= 2 * sizeof(u32), "usz must be at least twice the size of u32");
 
 	template <>
 	struct hash<utils::address_range>
 	{
-		std::size_t operator()(const utils::address_range& k) const
+		usz operator()(const utils::address_range& k) const
 		{
-			// we can guarantee a unique hash since our type is 64 bits and size_t as well
-			return (size_t{ k.start } << 32) | size_t{ k.end };
+			// we can guarantee a unique hash since our type is 64 bits and usz as well
+			return (usz{ k.start } << 32) | usz{ k.end };
 		}
 	};
 }

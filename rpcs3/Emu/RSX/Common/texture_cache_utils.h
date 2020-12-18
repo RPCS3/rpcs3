@@ -15,7 +15,7 @@ namespace rsx
 	 * List of Arrays
 	 * (avoids reallocation without the significant disadvantages of slow iteration through a list)
 	 */
-	template <typename section_storage_type, size_t array_size>
+	template <typename section_storage_type, usz array_size>
 	class ranged_storage_block_list
 	{
 		static_assert(array_size > 0, "array_elements must be positive non-zero");
@@ -497,7 +497,7 @@ namespace rsx
 			return block_for(section.get_section_base());
 		}
 
-		inline block_type& operator[](size_t pos)
+		inline block_type& operator[](usz pos)
 		{
 			AUDIT(pos < num_blocks);
 			return blocks[pos];
@@ -917,7 +917,7 @@ namespace rsx
 		address_range_vector flush_exclusions; // Address ranges that will be skipped during flush
 
 		predictor_type *m_predictor = nullptr;
-		size_t m_predictor_key_hash = 0;
+		usz m_predictor_key_hash = 0;
 		predictor_entry_type *m_predictor_entry = nullptr;
 
 	public:

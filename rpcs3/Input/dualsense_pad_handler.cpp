@@ -221,7 +221,7 @@ std::vector<std::string> dualsense_pad_handler::ListDevices()
 	if (!Init())
 		return dualsense_pads_list;
 
-	for (size_t i = 1; i < controllers.size(); ++i)
+	for (usz i = 1; i < controllers.size(); ++i)
 	{
 		dualsense_pads_list.emplace_back(m_name_string + std::to_string(i));
 	}
@@ -243,7 +243,7 @@ dualsense_pad_handler::DualSenseDataStatus dualsense_pad_handler::GetRawData(con
 
 	const int res = hid_read(device->hidDevice, buf.data(), 128);
 	// looks like controller disconnected or read error
-		
+
 	if (res == -1)
 		return DualSenseDataStatus::ReadError;
 
@@ -264,7 +264,7 @@ dualsense_pad_handler::DualSenseDataStatus dualsense_pad_handler::GetRawData(con
 		{
 			device->dataMode = DualSenseDataMode::Enhanced;
 			device->btCon = false;
-			offset = 1;	
+			offset = 1;
 		}
 		break;
 	case 0x31:
@@ -476,7 +476,7 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 
 		data = buf[6] & 0x03;
 		keyBuffer[DualSenseKeyCodes::PSButton] = ((data & 0x01) != 0) ? 255 : 0;
-		keyBuffer[DualSenseKeyCodes::TouchPad] = ((data & 0x02) != 0) ? 255 : 0; 
+		keyBuffer[DualSenseKeyCodes::TouchPad] = ((data & 0x02) != 0) ? 255 : 0;
 
 		return keyBuffer;
 	}
@@ -577,7 +577,7 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 
 	data = buf[9] & 0x03;
 	keyBuffer[DualSenseKeyCodes::PSButton] = ((data & 0x01) != 0) ? 255 : 0;
-	keyBuffer[DualSenseKeyCodes::TouchPad] = ((data & 0x02) != 0) ? 255 : 0; 
+	keyBuffer[DualSenseKeyCodes::TouchPad] = ((data & 0x02) != 0) ? 255 : 0;
 
 	return keyBuffer;
 }
@@ -599,7 +599,7 @@ std::shared_ptr<dualsense_pad_handler::DualSenseDevice> dualsense_pad_handler::G
 	if (!Init())
 		return nullptr;
 
-	size_t pos = padId.find(m_name_string);
+	usz pos = padId.find(m_name_string);
 	if (pos == umax)
 		return nullptr;
 

@@ -886,7 +886,7 @@ error_code cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 		pYomiString[i] = 0;
 	}
 
-	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
@@ -918,7 +918,7 @@ error_code cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 		pConfirmString[i] = 0;
 	}
 
-	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
@@ -950,7 +950,7 @@ error_code cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 		pYomiString[i] = 0;
 	}
 
-	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
@@ -982,7 +982,7 @@ error_code cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 		pConvertString[i] = 0;
 	}
 
-	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{

@@ -389,7 +389,7 @@ void spu_cache::initialize()
 
 	// Read cache
 	auto func_list = cache.get();
-	atomic_t<std::size_t> fnext{};
+	atomic_t<usz> fnext{};
 	atomic_t<u8> fail_flag{0};
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::fast || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
@@ -456,7 +456,7 @@ void spu_cache::initialize()
 		std::vector<be_t<u32>> ls(0x10000);
 
 		// Build functions
-		for (std::size_t func_i = fnext++; func_i < func_list.size(); func_i = fnext++)
+		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++)
 		{
 			const spu_program& func = std::as_const(func_list)[func_i];
 
@@ -750,7 +750,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 
 		// LS address starting from PC is already loaded into rcx (see spu_runtime::tr_all)
 
-		for (std::size_t i = 0; i < workload.size(); i++)
+		for (usz i = 0; i < workload.size(); i++)
 		{
 			// Get copy of the workload info
 			auto w = workload[i];
@@ -1975,7 +1975,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			workload.push_back(pair.first);
 			m_bits[pair.first / 4] = true;
 
-			for (std::size_t i = 0; !reachable && i < workload.size(); i++)
+			for (usz i = 0; !reachable && i < workload.size(); i++)
 			{
 				for (u32 j = workload[i];; j -= 4)
 				{
@@ -4492,7 +4492,7 @@ public:
 		m_function_table = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(entry_chunk->chunk->getType(), m_size / 4), true, llvm::GlobalValue::InternalLinkage, nullptr);
 
 		// Create function chunks
-		for (std::size_t fi = 0; fi < m_function_queue.size(); fi++)
+		for (usz fi = 0; fi < m_function_queue.size(); fi++)
 		{
 			// Initialize function info
 			m_entry = m_function_queue[fi];
@@ -4506,7 +4506,7 @@ public:
 			m_ir->CreateBr(add_block(m_entry));
 
 			// Emit instructions for basic blocks
-			for (std::size_t bi = 0; bi < m_block_queue.size(); bi++)
+			for (usz bi = 0; bi < m_block_queue.size(); bi++)
 			{
 				// Initialize basic block info
 				const u32 baddr = m_block_queue[bi];

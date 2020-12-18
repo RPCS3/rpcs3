@@ -20,7 +20,7 @@ using namespace std::literals::string_literals;
 static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 {
 	// String size + null terminator
-	const std::size_t buf_size = source.size() + 1;
+	const usz buf_size = source.size() + 1;
 
 	// Safe size
 	const int size = narrow<int>(buf_size);
@@ -51,7 +51,7 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 static void to_utf8(std::string& out, const wchar_t* source)
 {
 	// String size
-	const std::size_t length = std::wcslen(source);
+	const usz length = std::wcslen(source);
 
 	// Safe buffer size for max possible output length (including null terminator)
 	const int buf_size = narrow<int>(length * 3 + 1);
@@ -181,7 +181,7 @@ static std::string path_append(std::string_view path, std::string_view more)
 {
 	std::string result;
 
-	if (const size_t src_slash_pos = path.find_last_not_of('/'); src_slash_pos != path.npos)
+	if (const usz src_slash_pos = path.find_last_not_of('/'); src_slash_pos != path.npos)
 	{
 		path.remove_suffix(path.length() - src_slash_pos - 1);
 		result = path;
@@ -189,7 +189,7 @@ static std::string path_append(std::string_view path, std::string_view more)
 
 	result.push_back('/');
 
-	if (const size_t dst_slash_pos = more.find_first_not_of('/'); dst_slash_pos != more.npos)
+	if (const usz dst_slash_pos = more.find_first_not_of('/'); dst_slash_pos != more.npos)
 	{
 		more.remove_prefix(dst_slash_pos);
 		result.append(more);
@@ -505,7 +505,7 @@ bool fs::statfs(const std::string& path, fs::device_stat& info)
 	// Keep cutting path from right until it's short enough
 	while (str.size() > 256)
 	{
-		if (std::size_t x = str.find_last_of('\\') + 1)
+		if (usz x = str.find_last_of('\\') + 1)
 			str.resize(x - 1);
 		else
 			break;
@@ -1240,7 +1240,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 #endif
 }
 
-fs::file::file(const void* ptr, std::size_t size)
+fs::file::file(const void* ptr, usz size)
 {
 	class memory_stream : public file_base
 	{
@@ -1355,7 +1355,7 @@ bool fs::dir::open(const std::string& path)
 	class windows_dir final : public dir_base
 	{
 		std::vector<dir_entry> m_entries;
-		std::size_t m_pos = 0;
+		usz m_pos = 0;
 
 		void add_entry(const WIN32_FIND_DATAW& found)
 		{
@@ -1605,13 +1605,13 @@ std::string fs::escape_path(std::string_view path)
 {
 	std::string real; real.resize(path.size());
 
-	auto get_char = [&](std::size_t& from, std::size_t& to, std::size_t count)
+	auto get_char = [&](usz& from, usz& to, usz count)
 	{
 		std::memcpy(&real[to], &path[from], count);
 		from += count, to += count;
 	};
 
-	std::size_t i = 0, j = -1, pos_nondelim = 0, after_delim = 0;
+	usz i = 0, j = -1, pos_nondelim = 0, after_delim = 0;
 
 	if (i < path.size())
 	{
@@ -1648,7 +1648,7 @@ std::string fs::escape_path(std::string_view path)
 					case '.':
 					{
 						bool remove_element = true;
-						std::size_t k = 1;
+						usz k = 1;
 
 						for (; k + i != path.size(); k++)
 						{

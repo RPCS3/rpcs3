@@ -48,16 +48,16 @@ namespace vk
 {
 #define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) vk::die_with_error(_res); }
 
-	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
-	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
+	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, usz size, usz alignment, VkSystemAllocationScope allocationScope);
+	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, usz size, usz alignment, VkSystemAllocationScope allocationScope);
 	VKAPI_ATTR void VKAPI_CALL mem_free(void *pUserData, void *pMemory);
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-											uint64_t srcObject, size_t location, int32_t msgCode,
+											uint64_t srcObject, usz location, int32_t msgCode,
 											const char *pLayerPrefix, const char *pMsg, void *pUserData);
 
 	VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-							uint64_t srcObject, size_t location, int32_t msgCode,
+							uint64_t srcObject, usz location, int32_t msgCode,
 							const char *pLayerPrefix, const char *pMsg,
 							void *pUserData);
 
@@ -2054,7 +2054,7 @@ private:
 			, m_device(dev)
 		{
 			std::vector<VkImageView> image_view_array(attachments.size());
-			size_t i = 0;
+			usz i = 0;
 			for (const auto &att : attachments)
 			{
 				image_view_array[i++] = att->value;
@@ -3675,7 +3675,7 @@ public:
 	class data_heap : public ::data_heap
 	{
 	private:
-		size_t initial_size = 0;
+		usz initial_size = 0;
 		bool mapped = false;
 		void *_ptr = nullptr;
 
@@ -3685,7 +3685,7 @@ public:
 		std::vector<VkBufferCopy> dirty_ranges;
 
 	protected:
-		bool grow(size_t size) override;
+		bool grow(usz size) override;
 
 	public:
 		std::unique_ptr<buffer> heap;
@@ -3694,7 +3694,7 @@ public:
 		// Avoid mapping/unmapping to keep these drivers from stalling
 		// NOTE2: HOST_CACHED flag does not keep the mapped ptr around in the driver either
 
-		void create(VkBufferUsageFlags usage, size_t size, const char *name, size_t guard = 0x10000, VkBool32 notify = VK_FALSE)
+		void create(VkBufferUsageFlags usage, usz size, const char *name, usz guard = 0x10000, VkBool32 notify = VK_FALSE)
 		{
 			::data_heap::init(size, name, guard);
 
@@ -3731,7 +3731,7 @@ public:
 			shadow.reset();
 		}
 
-		void* map(size_t offset, size_t size)
+		void* map(usz offset, usz size)
 		{
 			if (!_ptr)
 			{
@@ -3793,7 +3793,7 @@ public:
 
 			// By default, allow the size to grow upto 8x larger
 			// This value is arbitrary, theoretically it is possible to allow infinite stretching to improve performance
-			const size_t soft_limit = initial_size * 8;
+			const usz soft_limit = initial_size * 8;
 			if ((m_size + m_min_guard_size) < soft_limit)
 				return false;
 

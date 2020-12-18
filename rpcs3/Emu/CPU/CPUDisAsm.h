@@ -96,7 +96,7 @@ protected:
 	{
 		if (m_mode != CPUDisAsm_NormalMode)
 		{
-			op.resize(std::max<std::size_t>(op.length(), 10), ' ');
+			op.resize(std::max<usz>(op.length(), 10), ' ');
 		}
 
 		return op;

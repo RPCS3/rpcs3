@@ -780,7 +780,7 @@ void main_window::HandlePupInstallation(QString file_path)
 
 	std::string version_string = pup.get_file(0x100).to_string();
 
-	if (const size_t version_pos = version_string.find('\n'); version_pos != umax)
+	if (const usz version_pos = version_string.find('\n'); version_pos != umax)
 	{
 		version_string.erase(version_pos);
 	}
@@ -904,7 +904,7 @@ void main_window::DecryptSPRXLibraries()
 
 		bool tried = false;
 		bool invalid = false;
-		std::size_t key_it = 0;
+		usz key_it = 0;
 
 		while (true)
 		{
@@ -952,7 +952,7 @@ void main_window::DecryptSPRXLibraries()
 				// Allow the user to manually type KLIC if decryption failed
 
 				const std::string filename = old_path.substr(old_path.find_last_of(fs::delim) + 1);
-	
+
 				const QString hint = tr("Hint: KLIC (KLicense key) is a 16-byte long string. (32 hexadecimal characters)"
 							"\nAnd is logged with some sceNpDrm* functions when the game/application which owns \"%0\" is running.").arg(qstr(filename));
 

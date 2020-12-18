@@ -250,7 +250,7 @@ void save_manager_dialog::UpdateList()
 	}
 
 	QList<int> indices;
-	for (size_t i = 0; i < m_save_entries.size(); ++i)
+	for (usz i = 0; i < m_save_entries.size(); ++i)
 		indices.append(static_cast<int>(i));
 
 	std::function<QPixmap(const int&)> get_icon = [this](const int& row)

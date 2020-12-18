@@ -2105,7 +2105,7 @@ extern void ppu_initialize(const ppu_module& info)
 	std::vector<std::pair<std::string, u64>> globals;
 
 	// Split module into fragments <= 1 MiB
-	std::size_t fpos = 0;
+	usz fpos = 0;
 
 	// Difference between function name and current location
 	const u32 reloc = info.name.empty() ? 0 : info.segs.at(0).addr;
@@ -2139,7 +2139,7 @@ extern void ppu_initialize(const ppu_module& info)
 		const u32 suffix = info.funcs.at(fstart).addr - reloc;
 
 		// Overall block size in bytes
-		std::size_t bsize = 0;
+		usz bsize = 0;
 
 		while (fpos < info.funcs.size())
 		{
@@ -2455,7 +2455,7 @@ extern void ppu_initialize(const ppu_module& info)
 	}
 	else
 	{
-		std::size_t index = 0;
+		usz index = 0;
 
 		// Locate existing functions
 		for (const auto& func : info.funcs)
@@ -2544,7 +2544,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		//pm.add(createLintPass()); // Check
 
 		// Translate functions
-		for (size_t fi = 0, fmax = module_part.funcs.size(); fi < fmax; fi++)
+		for (usz fi = 0, fmax = module_part.funcs.size(); fi < fmax; fi++)
 		{
 			if (Emu.IsStopped())
 			{

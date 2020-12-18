@@ -36,7 +36,7 @@ static atomic_t<u64> s_code_pos{0}, s_data_pos{0};
 static std::vector<u8> s_code_init, s_data_init;
 
 template <atomic_t<u64>& Ctr, uint Off, utils::protection Prot>
-static u8* add_jit_memory(std::size_t size, uint align)
+static u8* add_jit_memory(usz size, uint align)
 {
 	// Select subrange
 	u8* pointer = get_jit_memory() + Off;
@@ -112,7 +112,7 @@ jit_runtime::~jit_runtime()
 
 asmjit::Error jit_runtime::_add(void** dst, asmjit::CodeHolder* code) noexcept
 {
-	std::size_t codeSize = code->getCodeSize();
+	usz codeSize = code->getCodeSize();
 	if (!codeSize) [[unlikely]]
 	{
 		*dst = nullptr;
@@ -126,7 +126,7 @@ asmjit::Error jit_runtime::_add(void** dst, asmjit::CodeHolder* code) noexcept
 		return asmjit::kErrorNoVirtualMemory;
 	}
 
-	std::size_t relocSize = code->relocate(p);
+	usz relocSize = code->relocate(p);
 	if (!relocSize) [[unlikely]]
 	{
 		*dst = nullptr;
@@ -144,7 +144,7 @@ asmjit::Error jit_runtime::_release(void* ptr) noexcept
 	return asmjit::kErrorOk;
 }
 
-u8* jit_runtime::alloc(std::size_t size, uint align, bool exec) noexcept
+u8* jit_runtime::alloc(usz size, uint align, bool exec) noexcept
 {
 	if (exec)
 	{
@@ -216,7 +216,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 
 		asmjit::Error _add(void** dst, asmjit::CodeHolder* code) noexcept override
 		{
-			std::size_t codeSize = code->getCodeSize();
+			usz codeSize = code->getCodeSize();
 			if (!codeSize) [[unlikely]]
 			{
 				*dst = nullptr;
@@ -230,7 +230,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 				return asmjit::kErrorNoVirtualMemory;
 			}
 
-			std::size_t relocSize = code->relocate(p);
+			usz relocSize = code->relocate(p);
 			if (!relocSize) [[unlikely]]
 			{
 				*dst = nullptr;
@@ -389,7 +389,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 		return false;
 	}
 
-	void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	void registerEHFrames(u8* addr, u64 load_addr, usz size) override
 	{
 	}
 
@@ -422,7 +422,7 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 		return false;
 	}
 
-	void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	void registerEHFrames(u8* addr, u64 load_addr, usz size) override
 	{
 	}
 

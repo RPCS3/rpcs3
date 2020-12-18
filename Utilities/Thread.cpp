@@ -118,7 +118,7 @@ bool IsDebuggerPresent()
 	};
 	u_int miblen = std::size(mib);
 	struct kinfo_proc info;
-	size_t size = sizeof(info);
+	usz size = sizeof(info);
 
 	if (sysctl(mib, miblen, &info, &size, NULL, 0))
 	{
@@ -259,7 +259,7 @@ enum x64_op_t : u32
 	X64OP_SBB, // lock sbb [mem], ...
 };
 
-void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, size_t& out_size, size_t& out_length)
+void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz& out_size, usz& out_length)
 {
 	// simple analysis of x64 code allows to reinterpret MOV or other instructions in any desired way
 	out_length = 0;
@@ -385,12 +385,12 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		return x64_reg_t{((*code & 0x38) >> 3) + X64R_AL};
 	};
 
-	auto get_op_size = [](const u8 rex, const bool oso) -> size_t
+	auto get_op_size = [](const u8 rex, const bool oso) -> usz
 	{
 		return rex & 8 ? 8 : (oso ? 2 : 4);
 	};
 
-	auto get_modRM_size = [](const u8* code) -> size_t
+	auto get_modRM_size = [](const u8* code) -> usz
 	{
 		switch (*code >> 6) // check Mod
 		{
@@ -976,7 +976,7 @@ static const int reg_table[] =
 #define RDI(c) (*X64REG((c), 7))
 #define RIP(c) (*X64REG((c), 16))
 
-bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_t i_size, u64& out_value)
+bool get_x64_reg_value(x64_context* context, x64_reg_t reg, usz d_size, usz i_size, u64& out_value)
 {
 	// get x64 reg value (for store operations)
 	if (reg - X64R_RAX < 16)
@@ -1067,7 +1067,7 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 	return false;
 }
 
-bool put_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, u64 value)
+bool put_x64_reg_value(x64_context* context, x64_reg_t reg, usz d_size, u64 value)
 {
 	// save x64 reg value (for load operations)
 	if (reg - X64R_RAX < 16)
@@ -1086,7 +1086,7 @@ bool put_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, u64 v
 	return false;
 }
 
-bool set_x64_cmp_flags(x64_context* context, size_t d_size, u64 x, u64 y, bool carry = true)
+bool set_x64_cmp_flags(x64_context* context, usz d_size, u64 x, u64 y, bool carry = true)
 {
 	switch (d_size)
 	{
@@ -1162,7 +1162,7 @@ bool set_x64_cmp_flags(x64_context* context, size_t d_size, u64 x, u64 y, bool c
 	return true;
 }
 
-size_t get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, size_t d_size, size_t i_size)
+usz get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, usz d_size, usz i_size)
 {
 	if (op == X64OP_MOVS || op == X64OP_STOS)
 	{
@@ -1227,8 +1227,8 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 	x64_op_t op;
 	x64_reg_t reg;
-	size_t d_size;
-	size_t i_size;
+	usz d_size;
+	usz i_size;
 
 	// decode single x64 instruction that causes memory access
 	decode_x64_reg_op(code, op, reg, d_size, i_size);
@@ -1249,7 +1249,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 	}
 
 	// get length of data being accessed
-	size_t a_size = get_x64_access_size(context, op, reg, d_size, i_size);
+	usz a_size = get_x64_access_size(context, op, reg, d_size, i_size);
 
 	if (0x1'0000'0000ull - addr < a_size)
 	{
@@ -1954,14 +1954,14 @@ void thread_base::set_name(std::string name)
 #endif
 
 #if defined(__APPLE__)
-	name.resize(std::min<std::size_t>(15, name.size()));
+	name.resize(std::min<usz>(15, name.size()));
 	pthread_setname_np(name.c_str());
 #elif defined(__DragonFly__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 	pthread_set_name_np(pthread_self(), name.c_str());
 #elif defined(__NetBSD__)
 	pthread_setname_np(pthread_self(), "%s", name.data());
 #elif !defined(_WIN32)
-	name.resize(std::min<std::size_t>(15, name.size()));
+	name.resize(std::min<usz>(15, name.size()));
 	pthread_setname_np(pthread_self(), name.c_str());
 #endif
 }
@@ -2791,17 +2791,17 @@ u64 thread_ctrl::get_thread_affinity_mask()
 #endif
 }
 
-std::pair<void*, std::size_t> thread_ctrl::get_thread_stack()
+std::pair<void*, usz> thread_ctrl::get_thread_stack()
 {
 #ifdef _WIN32
 	ULONG_PTR _min = 0;
 	ULONG_PTR _max = 0;
 	GetCurrentThreadStackLimits(&_min, &_max);
-	const std::size_t ssize = _max - _min;
+	const usz ssize = _max - _min;
 	const auto saddr = reinterpret_cast<void*>(_min);
 #else
 	void* saddr = 0;
-	std::size_t ssize = 0;
+	usz ssize = 0;
 	pthread_attr_t attr;
 #ifdef __linux__
 	pthread_getattr_np(pthread_self(), &attr);

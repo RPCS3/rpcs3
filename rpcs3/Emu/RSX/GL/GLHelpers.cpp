@@ -298,13 +298,13 @@ namespace gl
 		glDrawElements(draw_mode(mode), count, static_cast<GLenum>(type), indices);
 	}
 
-	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
+	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, usz indices_buffer_offset) const
 	{
 		indices.bind(buffer::target::element_array);
 		glDrawElements(draw_mode(mode), count, static_cast<GLenum>(type), reinterpret_cast<GLvoid*>(indices_buffer_offset));
 	}
 
-	void fbo::draw_elements(const buffer& buffer_, rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
+	void fbo::draw_elements(const buffer& buffer_, rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, usz indices_buffer_offset) const
 	{
 		buffer_.bind(buffer::target::array);
 		draw_elements(mode, count, type, indices, indices_buffer_offset);

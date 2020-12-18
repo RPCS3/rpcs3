@@ -4454,9 +4454,9 @@ struct register_vertex_helper
 		decoded_type(u32 value) : value(value) {}
 	};
 
-	static constexpr size_t increment_per_array_index = (count * sizeof(type)) / sizeof(u32);
-	static constexpr size_t attribute_index = index / increment_per_array_index;
-	static constexpr size_t vertex_subreg = index % increment_per_array_index;
+	static constexpr usz increment_per_array_index = (count * sizeof(type)) / sizeof(u32);
+	static constexpr usz attribute_index = index / increment_per_array_index;
+	static constexpr usz vertex_subreg = index % increment_per_array_index;
 
 	static std::string dump(decoded_type&& decoded_values)
 	{

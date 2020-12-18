@@ -10,7 +10,7 @@ namespace rpcs3
 		// Parse title format string
 		std::string title_string;
 
-		for (std::size_t i = 0; i < title_data.format.size();)
+		for (usz i = 0; i < title_data.format.size();)
 		{
 			const char c1 = title_data.format[i];
 

@@ -10,8 +10,8 @@ namespace rsx
 	namespace utility
 	{
 		std::vector<u8> get_rtt_indexes(surface_target color_target);
-		size_t get_aligned_pitch(surface_color_format format, u32 width);
-		size_t get_packed_pitch(surface_color_format format, u32 width);
+		usz get_aligned_pitch(surface_color_format format, u32 width);
+		usz get_packed_pitch(surface_color_format format, u32 width);
 	}
 
 	template<typename Traits>
@@ -426,7 +426,7 @@ namespace rsx
 			u32 address,
 			format_type format,
 			surface_antialiasing antialias,
-			size_t width, size_t height, size_t pitch,
+			usz width, usz height, usz pitch,
 			u8 bpp,
 			Args&&... extra_params)
 		{
@@ -638,7 +638,7 @@ namespace rsx
 			u32 address,
 			surface_color_format color_format,
 			surface_antialiasing antialias,
-			size_t width, size_t height, size_t pitch,
+			usz width, usz height, usz pitch,
 			Args&&... extra_params)
 		{
 			return bind_surface_address<false>(
@@ -653,7 +653,7 @@ namespace rsx
 			u32 address,
 			surface_depth_format2 depth_format,
 			surface_antialiasing antialias,
-			size_t width, size_t height, size_t pitch,
+			usz width, usz height, usz pitch,
 			Args&&... extra_params)
 		{
 			return bind_surface_address<true>(

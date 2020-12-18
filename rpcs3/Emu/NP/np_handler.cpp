@@ -77,7 +77,7 @@ np_handler::np_handler()
 
 		// Init switch map for dns
 		auto swaps = fmt::split(g_cfg.net.swap_list.to_string(), {"&&"});
-		for (std::size_t i = 0; i < swaps.size(); i++)
+		for (usz i = 0; i < swaps.size(); i++)
 		{
 			auto host_and_ip = fmt::split(swaps[i], {"="});
 			if (host_and_ip.size() != 2)
@@ -741,7 +741,7 @@ bool np_handler::reply_get_world_list(u32 req_id, std::vector<u8>& reply_data)
 	if (!world_list.empty())
 	{
 		world_info->world.set(allocate(sizeof(SceNpMatching2World) * world_list.size()));
-		for (size_t i = 0; i < world_list.size(); i++)
+		for (usz i = 0; i < world_list.size(); i++)
 		{
 			world_info->world[i].worldId                  = world_list[i];
 			world_info->world[i].numOfLobby               = 1; // TODO
@@ -1343,7 +1343,7 @@ u32 np_handler::generate_callback_info(SceNpMatching2ContextId ctx_id, vm::cptr<
 	return req_id;
 }
 
-u8* np_handler::allocate_req_result(u32 event_key, size_t size)
+u8* np_handler::allocate_req_result(u32 event_key, usz size)
 {
 	std::lock_guard lock(mutex_req_results);
 	match2_req_results[event_key] = std::vector<u8>(size, 0);

@@ -148,7 +148,7 @@ int xinput_pad_handler::GetDeviceNumber(const std::string& padId)
 	if (!Init())
 		return -1;
 
-	size_t pos = padId.find(m_name_string);
+	usz pos = padId.find(m_name_string);
 	if (pos == umax)
 		return -1;
 
@@ -487,8 +487,8 @@ void xinput_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device
 
 	// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 	// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
-	size_t idx_l = profile->switch_vibration_motors ? 1 : 0;
-	size_t idx_s = profile->switch_vibration_motors ? 0 : 1;
+	usz idx_l = profile->switch_vibration_motors ? 1 : 0;
+	usz idx_s = profile->switch_vibration_motors ? 0 : 1;
 
 	u16 speed_large = profile->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : static_cast<u16>(vibration_min);
 	u16 speed_small = profile->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : static_cast<u16>(vibration_min);

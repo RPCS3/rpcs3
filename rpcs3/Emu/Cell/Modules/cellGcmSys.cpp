@@ -332,7 +332,7 @@ u32 cellGcmGetTiledPitchSize(u32 size)
 {
 	cellGcmSys.trace("cellGcmGetTiledPitchSize(size=%d)", size);
 
-	for (size_t i = 0; i < std::size(tiled_pitches) - 1; i++) {
+	for (usz i = 0; i < std::size(tiled_pitches) - 1; i++) {
 		if (tiled_pitches[i] < size && size <= tiled_pitches[i + 1]) {
 			return tiled_pitches[i + 1];
 		}

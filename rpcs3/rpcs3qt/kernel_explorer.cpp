@@ -192,7 +192,7 @@ void kernel_explorer::Update()
 		return;
 	}
 
-	static const size_t additional_size = 6;
+	static const usz additional_size = 6;
 
 	const std::unordered_map<u32, QString> tree_item_names =
 	{

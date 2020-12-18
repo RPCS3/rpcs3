@@ -4,7 +4,7 @@
 
 namespace stx
 {
-	template <typename T, std::size_t Align = alignof(T), std::size_t Size = sizeof(T)>
+	template <typename T, usz Align = alignof(T), usz Size = sizeof(T)>
 	struct se_storage
 	{
 		struct type8
@@ -86,7 +86,7 @@ namespace stx
 		}
 	};
 
-	template <typename T, std::size_t Align, std::size_t Size>
+	template <typename T, usz Align, usz Size>
 	constexpr typename se_storage<T, Align, Size>::type se_storage<T, Align, Size>::swap(const type& src) noexcept
 	{
 		// Try to keep u16/u32/u64 optimizations at the cost of more bitcasts
@@ -112,7 +112,7 @@ namespace stx
 			type64 dst{};
 
 			// Swap u64 blocks
-			for (std::size_t i = 0; i < sizeof(T) / 8; i++)
+			for (usz i = 0; i < sizeof(T) / 8; i++)
 			{
 				dst.data[i] = se_storage<u64>::swap(tmp.data[sizeof(T) / 8 - 1 - i]);
 			}
@@ -124,7 +124,7 @@ namespace stx
 			type dst{};
 
 			// Swap by moving every byte
-			for (std::size_t i = 0; i < sizeof(T); i++)
+			for (usz i = 0; i < sizeof(T); i++)
 			{
 				dst.data[i] = src.data[sizeof(T) - 1 - i];
 			}
@@ -134,7 +134,7 @@ namespace stx
 	}
 
 	// Endianness support template
-	template <typename T, bool Swap, std::size_t Align = alignof(T)>
+	template <typename T, bool Swap, usz Align = alignof(T)>
 	class alignas(Align) se_t
 	{
 		using type = typename std::remove_cv<T>::type;
@@ -246,7 +246,7 @@ private:
 			return std::bit_cast<To>(static_cast<se_t<To, Swap>>(rhs));
 		}
 
-		template <typename To, typename Test = int, typename R, std::size_t Align2>
+		template <typename To, typename Test = int, typename R, usz Align2>
 		static constexpr To right_arg_cast(const se_t<R, Swap, Align2>& rhs) noexcept
 		{
 			if constexpr ((std::is_integral_v<R> || std::is_enum_v<R>) && std::is_convertible_v<R, Test> && sizeof(R) == sizeof(T))

@@ -292,7 +292,7 @@ namespace rsx
 	// Copy memory in inverse direction from source
 	// Used to scale negatively x axis while transfering image data
 	template <typename Ts = u8, typename Td = Ts>
-	static void memcpy_r(void* dst, void* src, std::size_t size)
+	static void memcpy_r(void* dst, void* src, usz size)
 	{
 		for (u32 i = 0; i < size; i++)
 		{

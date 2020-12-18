@@ -209,20 +209,20 @@ public:
 	// Create sign extension (with double size if type is nullptr)
 	llvm::Value* SExt(llvm::Value* value, llvm::Type* = nullptr);
 
-	template<std::size_t N>
+	template<usz N>
 	std::array<llvm::Value*, N> SExt(std::array<llvm::Value*, N> values, llvm::Type* type = nullptr)
 	{
-		for (std::size_t i = 0; i < N; i++) values[i] = SExt(values[i], type);
+		for (usz i = 0; i < N; i++) values[i] = SExt(values[i], type);
 		return values;
 	}
 
 	// Create zero extension (with double size if type is nullptr)
 	llvm::Value* ZExt(llvm::Value*, llvm::Type* = nullptr);
 
-	template<std::size_t N>
+	template<usz N>
 	std::array<llvm::Value*, N> ZExt(std::array<llvm::Value*, N> values, llvm::Type* type = nullptr)
 	{
-		for (std::size_t i = 0; i < N; i++) values[i] = ZExt(values[i], type);
+		for (usz i = 0; i < N; i++) values[i] = ZExt(values[i], type);
 		return values;
 	}
 

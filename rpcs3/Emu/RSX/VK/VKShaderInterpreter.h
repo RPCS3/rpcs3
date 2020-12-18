@@ -31,7 +31,7 @@ namespace vk
 
 		struct key_hasher
 		{
-			size_t operator()(const pipeline_key& key) const
+			usz operator()(const pipeline_key& key) const
 			{
 				return rpcs3::hash_struct(key.properties) ^ key.compiler_opt;
 			}
@@ -40,7 +40,7 @@ namespace vk
 		std::unordered_map<pipeline_key, std::unique_ptr<glsl::program>, key_hasher> m_program_cache;
 		std::unordered_map<u64, std::unique_ptr<glsl::shader>> m_fs_cache;
 		vk::descriptor_pool m_descriptor_pool;
-		size_t m_used_descriptors = 0;
+		usz m_used_descriptors = 0;
 
 		uint32_t m_vertex_instruction_start = 0;
 		uint32_t m_fragment_instruction_start = 0;

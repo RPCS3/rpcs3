@@ -238,7 +238,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 	//Do actual vertex upload
 	auto required = calculate_memory_requirements(m_vertex_layout, vertex_base, vertex_count);
 	u32 persistent_range_base = UINT32_MAX, volatile_range_base = UINT32_MAX;
-	size_t persistent_offset = UINT64_MAX, volatile_offset = UINT64_MAX;
+	usz persistent_offset = UINT64_MAX, volatile_offset = UINT64_MAX;
 
 	if (required.first > 0)
 	{
@@ -291,9 +291,9 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 	if (required.first && required.second && volatile_offset > persistent_offset)
 	{
 		//Do this once for both to save time on map/unmap cycles
-		const size_t block_end = (volatile_offset + required.second);
-		const size_t block_size = block_end - persistent_offset;
-		const size_t volatile_offset_in_block = volatile_offset - persistent_offset;
+		const usz block_end = (volatile_offset + required.second);
+		const usz block_size = block_end - persistent_offset;
+		const usz volatile_offset_in_block = volatile_offset - persistent_offset;
 
 		void *block_mapping = m_attrib_ring_info.map(persistent_offset, block_size);
 		write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, block_mapping, static_cast<char*>(block_mapping) + volatile_offset_in_block);
@@ -344,7 +344,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 				m_current_frame->buffer_views_to_clean.push_back(std::move(m_persistent_attribute_storage));
 
 			//View 64M blocks at a time (different drivers will only allow a fixed viewable heap size, 64M should be safe)
-			const size_t view_size = (persistent_range_base + m_texbuffer_view_size) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - persistent_range_base : m_texbuffer_view_size;
+			const usz view_size = (persistent_range_base + m_texbuffer_view_size) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - persistent_range_base : m_texbuffer_view_size;
 			m_persistent_attribute_storage = std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, persistent_range_base, view_size);
 			persistent_range_base = 0;
 		}
@@ -359,7 +359,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 			if (m_volatile_attribute_storage)
 				m_current_frame->buffer_views_to_clean.push_back(std::move(m_volatile_attribute_storage));
 
-			const size_t view_size = (volatile_range_base + m_texbuffer_view_size) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - volatile_range_base : m_texbuffer_view_size;
+			const usz view_size = (volatile_range_base + m_texbuffer_view_size) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - volatile_range_base : m_texbuffer_view_size;
 			m_volatile_attribute_storage = std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, volatile_range_base, view_size);
 			volatile_range_base = 0;
 		}

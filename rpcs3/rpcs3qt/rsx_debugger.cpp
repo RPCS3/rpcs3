@@ -400,7 +400,7 @@ void Buffer::ShowWindowed()
 
 namespace
 {
-	std::array<u8, 3> get_value(gsl::span<const std::byte> orig_buffer, rsx::surface_color_format format, size_t idx)
+	std::array<u8, 3> get_value(gsl::span<const std::byte> orig_buffer, rsx::surface_color_format format, usz idx)
 	{
 		switch (format)
 		{
@@ -459,7 +459,7 @@ namespace
 	/**
 	 * Return a new buffer that can be passed to QImage.
 	 */
-	u8* convert_to_QImage_buffer(rsx::surface_color_format format, gsl::span<const std::byte> orig_buffer, size_t width, size_t height) noexcept
+	u8* convert_to_QImage_buffer(rsx::surface_color_format format, gsl::span<const std::byte> orig_buffer, usz width, usz height) noexcept
 	{
 		u8* buffer = static_cast<u8*>(std::malloc(width * height * 4));
 		for (u32 i = 0; i < width * height; i++)
@@ -477,7 +477,7 @@ namespace
 
 void rsx_debugger::OnClickDrawCalls()
 {
-	size_t draw_id = m_list_captured_draw_calls->currentRow();
+	usz draw_id = m_list_captured_draw_calls->currentRow();
 
 	const auto& draw_call = frame_debug.draw_calls[draw_id];
 
@@ -492,7 +492,7 @@ void rsx_debugger::OnClickDrawCalls()
 	u32 width = draw_call.state.surface_clip_width();
 	u32 height = draw_call.state.surface_clip_height();
 
-	for (size_t i = 0; i < 4; i++)
+	for (usz i = 0; i < 4; i++)
 	{
 		if (width && height && !draw_call.color_buffer[i].empty())
 		{

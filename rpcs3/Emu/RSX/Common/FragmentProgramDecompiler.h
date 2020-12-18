@@ -114,8 +114,8 @@ struct temp_register
 /**
  * This class is used to translate RSX Fragment program to GLSL/HLSL code
  * Backend with text based shader can subclass this class and implement :
- * - virtual std::string getFloatTypeName(size_t elementCount) = 0;
- * - virtual std::string getHalfTypeName(size_t elementCount) = 0;
+ * - virtual std::string getFloatTypeName(usz elementCount) = 0;
+ * - virtual std::string getHalfTypeName(usz elementCount) = 0;
  * - virtual std::string getFunction(enum class FUNCTION) = 0;
  * - virtual std::string saturate(const std::string &code) = 0;
  * - virtual std::string compareFunction(enum class COMPARE, const std::string &, const std::string &) = 0;
@@ -214,11 +214,11 @@ protected:
 
 	/** returns the type name of float vectors.
 	 */
-	virtual std::string getFloatTypeName(size_t elementCount) = 0;
+	virtual std::string getFloatTypeName(usz elementCount) = 0;
 
 	/** returns the type name of half vectors.
 	 */
-	virtual std::string getHalfTypeName(size_t elementCount) = 0;
+	virtual std::string getHalfTypeName(usz elementCount) = 0;
 
 	/** returns string calling function where arguments are passed via
 	 * $0 $1 $2 substring.

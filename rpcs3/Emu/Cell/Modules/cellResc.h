@@ -87,7 +87,7 @@ struct CellRescDsts
 
 struct CellRescInitConfig
 {
-	be_t<u32> size; // size_t
+	be_t<u32> size; // usz
 	be_t<u32> resourcePolicy;
 	be_t<u32> supportModes;
 	be_t<u32> ratioMode;

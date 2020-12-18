@@ -715,7 +715,7 @@ bool SCEDecrypter::LoadMetadata(const u8 erk[32], const u8 riv[16])
 	}
 
 	// Perform AES-CTR encryption on the metadata headers.
-	size_t ctr_nc_off = 0;
+	usz ctr_nc_off = 0;
 	u8 ctr_stream_block[0x10];
 	aes_setkey_enc(&aes, meta_info.key, 128);
 	aes_crypt_ctr(&aes, metadata_headers_size, &ctr_nc_off, meta_info.iv, ctr_stream_block, metadata_headers.get(), metadata_headers.get());
@@ -758,7 +758,7 @@ bool SCEDecrypter::DecryptData()
 	// Parse the metadata section headers to find the offsets of encrypted data.
 	for (unsigned int i = 0; i < meta_hdr.section_count; i++)
 	{
-		size_t ctr_nc_off = 0;
+		usz ctr_nc_off = 0;
 		u8 ctr_stream_block[0x10];
 		u8 data_key[0x10];
 		u8 data_iv[0x10];
@@ -824,7 +824,7 @@ std::vector<fs::file> SCEDecrypter::MakeFile()
 		// Decompress if necessary.
 		if (meta_shdr[i].compressed == 2)
 		{
-			const size_t BUFSIZE = 32 * 1024;
+			const usz BUFSIZE = 32 * 1024;
 			u8 tempbuf[BUFSIZE];
 			z_stream strm;
 			strm.zalloc = Z_NULL;
@@ -1210,7 +1210,7 @@ bool SELFDecrypter::LoadMetadata(u8* klic_key)
 	}
 
 	// Perform AES-CTR encryption on the metadata headers.
-	size_t ctr_nc_off = 0;
+	usz ctr_nc_off = 0;
 	u8 ctr_stream_block[0x10];
 	aes_setkey_enc(&aes, meta_info.key, 128);
 	aes_crypt_ctr(&aes, metadata_headers_size, &ctr_nc_off, meta_info.iv, ctr_stream_block, metadata_headers.get(), metadata_headers.get());
@@ -1257,7 +1257,7 @@ bool SELFDecrypter::DecryptData()
 	// Parse the metadata section headers to find the offsets of encrypted data.
 	for (unsigned int i = 0; i < meta_hdr.section_count; i++)
 	{
-		size_t ctr_nc_off = 0;
+		usz ctr_nc_off = 0;
 		u8 ctr_stream_block[0x10];
 		u8 data_key[0x10];
 		u8 data_iv[0x10];

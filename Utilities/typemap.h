@@ -152,7 +152,7 @@ namespace utils
 	template <typename T>
 	class refctr final
 	{
-		atomic_t<std::size_t> m_ref{1};
+		atomic_t<usz> m_ref{1};
 
 	public:
 		T object;
@@ -168,7 +168,7 @@ namespace utils
 			m_ref++;
 		}
 
-		std::size_t remove_ref() noexcept
+		usz remove_ref() noexcept
 		{
 			return --m_ref;
 		}
@@ -464,8 +464,8 @@ namespace utils
 		uint get_id() const
 		{
 			// It's not often needed so figure it out instead of storing it
-			const std::size_t diff = reinterpret_cast<uchar*>(m_block) - m_head->m_ptr;
-			const std::size_t quot = diff / m_head->m_ssize;
+			const usz diff = reinterpret_cast<uchar*>(m_block) - m_head->m_ptr;
+			const usz quot = diff / m_head->m_ssize;
 
 			if (diff % m_head->m_ssize || quot > typeinfo_count<T>::max_count)
 			{
@@ -498,7 +498,7 @@ namespace utils
 		void* m_memory = nullptr;
 
 		// Virtual memory size
-		std::size_t m_total = 0;
+		usz m_total = 0;
 
 		template <typename T>
 		typemap_head* get_head() const
@@ -555,7 +555,7 @@ namespace utils
 					// Delete objects (there shall be no threads accessing them)
 					const uint lim = m_map[i].m_count != 1 ? +m_map[i].m_limit : 1;
 
-					for (std::size_t j = 0; j < lim; j++)
+					for (usz j = 0; j < lim; j++)
 					{
 						const auto block = reinterpret_cast<typemap_block*>(m_map[i].m_ptr + j * m_map[i].m_ssize);
 
@@ -585,7 +585,7 @@ namespace utils
 				{
 					const uint align = type->align;
 					const uint ssize = ::align<uint>(sizeof(typemap_block), align) + ::align(type->size, align);
-					const auto total = std::size_t{ssize} * type->count;
+					const auto total = usz{ssize} * type->count;
 					const auto start = uptr{::align(m_total, align)};
 
 					if (total)
@@ -624,7 +624,7 @@ namespace utils
 		}
 
 		// Return allocated virtual memory block size (not aligned)
-		std::size_t get_memory_size() const
+		usz get_memory_size() const
 		{
 			return m_total;
 		}
@@ -664,7 +664,7 @@ namespace utils
 						// Find empty location and lock it, starting from hint index
 						for (uint lim = head->m_limit, i = (lim > last ? 0 : lim);; i = (i == last ? 0 : i + 1))
 						{
-							block = reinterpret_cast<typemap_block*>(head->m_ptr + std::size_t{i} * head->m_ssize);
+							block = reinterpret_cast<typemap_block*>(head->m_ptr + usz{i} * head->m_ssize);
 
 							if (block->m_type == 0 && block->m_mutex.try_lock())
 							{
@@ -703,7 +703,7 @@ namespace utils
 			else if constexpr (std::is_invocable_r_v<bool, const Arg&, const Type&>)
 			{
 				// Access with a lookup function
-				for (std::size_t j = 0; j < (typeinfo_count<Type>::max_count != 1 ? +head->m_limit : 1); j++)
+				for (usz j = 0; j < (typeinfo_count<Type>::max_count != 1 ? +head->m_limit : 1); j++)
 				{
 					block = reinterpret_cast<typemap_block*>(head->m_ptr + j * head->m_ssize);
 
@@ -731,7 +731,7 @@ namespace utils
 				const uint unbiased = static_cast<uint>(std::forward<Arg>(id)) - bias;
 				const uint unscaled = unbiased / step;
 
-				block = reinterpret_cast<typemap_block*>(head->m_ptr + std::size_t{head->m_ssize} * unscaled);
+				block = reinterpret_cast<typemap_block*>(head->m_ptr + usz{head->m_ssize} * unscaled);
 
 				// Check id range and type
 				if (unscaled >= typeinfo_count<Type>::max_count || unbiased % step) [[unlikely]]
@@ -866,7 +866,7 @@ namespace utils
 			}
 		}
 
-		template <std::size_t I, typename Type, typename... Types, bool Lock, bool... Locks, std::size_t N>
+		template <usz I, typename Type, typename... Types, bool Lock, bool... Locks, usz N>
 		bool try_lock(const std::array<typeptr_base, N>& array, uint locked, std::integer_sequence<bool, Lock, Locks...>) const
 		{
 			// Try to lock mutex if not locked from the previous step
@@ -905,8 +905,8 @@ namespace utils
 			return false;
 		}
 
-		template <typename... Types, std::size_t N, std::size_t... I, bool... Locks>
-		uint lock_array(const std::array<typeptr_base, N>& array, std::integer_sequence<std::size_t, I...>, std::integer_sequence<bool, Locks...>) const
+		template <typename... Types, usz N, usz... I, bool... Locks>
+		uint lock_array(const std::array<typeptr_base, N>& array, std::integer_sequence<usz, I...>, std::integer_sequence<bool, Locks...>) const
 		{
 			// Verify all mutexes are free or wait for one of them and return its index
 			uint locked = 0;
@@ -914,15 +914,15 @@ namespace utils
 			return locked;
 		}
 
-		template <typename... Types, std::size_t N, std::size_t... I, typename... Args>
-		void check_array(std::array<typeptr_base, N>& array, std::integer_sequence<std::size_t, I...>, Args&&... ids) const
+		template <typename... Types, usz N, usz... I, typename... Args>
+		void check_array(std::array<typeptr_base, N>& array, std::integer_sequence<usz, I...>, Args&&... ids) const
 		{
 			// Check types and unlock on mismatch
 			(check_ptr<Types, Args>(array[I].m_block, std::forward<Args>(ids)), ...);
 		}
 
-		template <typename... Types, std::size_t N, std::size_t... I>
-		std::tuple<typeptr<Types>...> array_to_tuple(const std::array<typeptr_base, N>& array, std::integer_sequence<std::size_t, I...>) const
+		template <typename... Types, usz N, usz... I>
+		std::tuple<typeptr<Types>...> array_to_tuple(const std::array<typeptr_base, N>& array, std::integer_sequence<usz, I...>) const
 		{
 			return {array[I]...};
 		}
@@ -1000,7 +1000,7 @@ namespace utils
 
 			const ullong ix = head->m_create_count;
 
-			for (std::size_t j = 0; j < (typeinfo_count<decode_t<Type>>::max_count != 1 ? +head->m_limit : 1); j++)
+			for (usz j = 0; j < (typeinfo_count<decode_t<Type>>::max_count != 1 ? +head->m_limit : 1); j++)
 			{
 				const auto block = reinterpret_cast<typemap_block*>(head->m_ptr + j * head->m_ssize);
 

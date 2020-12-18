@@ -64,7 +64,7 @@ namespace gl
 			m_program.link();
 		}
 
-		void load_program(float scale_x, float scale_y, float *offsets, size_t nb_offsets, color4f color)
+		void load_program(float scale_x, float scale_y, float *offsets, usz nb_offsets, color4f color)
 		{
 			float scale[] = { scale_x, scale_y };
 
@@ -88,7 +88,7 @@ namespace gl
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
 
-			const size_t buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
+			const usz buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
 
 			m_text_buffer.data(buffer_size, points.data());
 			m_offsets = glyph_source.get_glyph_offsets();

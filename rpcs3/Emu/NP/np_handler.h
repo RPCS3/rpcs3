@@ -204,7 +204,7 @@ protected:
 		return match2_event_cnt.fetch_add(1);
 	}
 	shared_mutex mutex_req_results;
-	u8* allocate_req_result(u32 event_key, size_t size);
+	u8* allocate_req_result(u32 event_key, usz size);
 
 	// RPCN
 	rpcn_client rpcn;

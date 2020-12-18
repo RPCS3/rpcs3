@@ -79,8 +79,8 @@ void auto_pause_settings_dialog::LoadEntries(void)
 	{
 		//System calls ID and Function calls ID are all u32 iirc.
 		u32 num;
-		size_t fmax = list.size();
-		size_t fcur = 0;
+		usz fmax = list.size();
+		usz fcur = 0;
 		list.seek(0);
 		while (fcur <= fmax - sizeof(u32))
 		{
@@ -102,7 +102,7 @@ void auto_pause_settings_dialog::SaveEntries(void)
 	//System calls ID and Function calls ID are all u32 iirc.
 	u32 num = 0;
 	list.seek(0);
-	for (size_t i = 0; i < m_entries.size(); ++i)
+	for (usz i = 0; i < m_entries.size(); ++i)
 	{
 		if (num == 0xFFFFFFFF) continue;
 		num = m_entries[i];

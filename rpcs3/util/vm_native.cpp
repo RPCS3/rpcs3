@@ -65,7 +65,7 @@ namespace utils
 		return _prot;
 	}
 
-	void* memory_reserve(std::size_t size, void* use_addr)
+	void* memory_reserve(usz size, void* use_addr)
 	{
 #ifdef _WIN32
 		return ::VirtualAlloc(use_addr, size, MEM_RESERVE, PAGE_NOACCESS);
@@ -119,7 +119,7 @@ namespace utils
 #endif
 	}
 
-	void memory_commit(void* pointer, std::size_t size, protection prot)
+	void memory_commit(void* pointer, usz size, protection prot)
 	{
 #ifdef _WIN32
 		ensure(::VirtualAlloc(pointer, size, MEM_COMMIT, +prot));
@@ -130,7 +130,7 @@ namespace utils
 #endif
 	}
 
-	void memory_decommit(void* pointer, std::size_t size)
+	void memory_decommit(void* pointer, usz size)
 	{
 #ifdef _WIN32
 		ensure(::VirtualFree(pointer, size, MEM_DECOMMIT));
@@ -145,7 +145,7 @@ namespace utils
 #endif
 	}
 
-	void memory_reset(void* pointer, std::size_t size, protection prot)
+	void memory_reset(void* pointer, usz size, protection prot)
 	{
 #ifdef _WIN32
 		memory_decommit(pointer, size);
@@ -167,7 +167,7 @@ namespace utils
 #endif
 	}
 
-	void memory_release(void* pointer, std::size_t size)
+	void memory_release(void* pointer, usz size)
 	{
 #ifdef _WIN32
 		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
@@ -176,7 +176,7 @@ namespace utils
 #endif
 	}
 
-	void memory_protect(void* pointer, std::size_t size, protection prot)
+	void memory_protect(void* pointer, usz size, protection prot)
 	{
 #ifdef _WIN32
 		for (u64 addr = reinterpret_cast<u64>(pointer), end = addr + size; addr < end;)
@@ -199,7 +199,7 @@ namespace utils
 #endif
 	}
 
-	bool memory_lock(void* pointer, std::size_t size)
+	bool memory_lock(void* pointer, usz size)
 	{
 #ifdef _WIN32
 		return ::VirtualLock(pointer, size);

@@ -8,7 +8,7 @@
 //!
 //! T is the type of elements. Currently, default constructor of T shall be constexpr.
 //! N is initial element count, available without any memory allocation and only stored contiguously.
-template <typename T, std::size_t N>
+template <typename T, usz N>
 class lf_array
 {
 	// Data (default-initialized)
@@ -28,7 +28,7 @@ public:
 		}
 	}
 
-	T& operator [](std::size_t index)
+	T& operator [](usz index)
 	{
 		if (index < N) [[likely]]
 		{
@@ -51,7 +51,7 @@ public:
 
 //! Simple lock-free FIFO queue base. Based on lf_array<T, N> itself. Currently uses 32-bit counters.
 //! There is no "push_end" or "pop_begin" provided, the queue element must signal its state on its own.
-template<typename T, std::size_t N>
+template<typename T, usz N>
 class lf_fifo : public lf_array<T, N>
 {
 	// LSB 32-bit: push, MSB 32-bit: pop
@@ -354,9 +354,9 @@ public:
 
 	// Apply func(data) to each element, return the total length
 	template <typename F>
-	std::size_t apply(F func)
+	usz apply(F func)
 	{
-		std::size_t count = 0;
+		usz count = 0;
 
 		for (auto slice = pop_all(); slice; slice.pop_front())
 		{

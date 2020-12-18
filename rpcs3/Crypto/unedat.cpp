@@ -578,7 +578,7 @@ int validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *
 	int dev_hash_result = 0;
 
 	const s32 file_name_length = ::narrow<s32>(std::strlen(file_name));
-	const std::size_t buf_len = 0x30 + file_name_length;
+	const usz buf_len = 0x30 + file_name_length;
 
 	std::unique_ptr<u8[]> buf(new u8[buf_len]);
 	std::unique_ptr<u8[]> buf_lower(new u8[buf_len]);
@@ -591,7 +591,7 @@ int validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *
 	std::memcpy(buf_lower.get(), buf.get(), buf_len);
 	std::memcpy(buf_upper.get(), buf.get(), buf_len);
 
-	for (std::size_t i = std::basic_string_view<u8>(buf.get() + 0x30, file_name_length).find_last_of('.'); i < buf_len; i++)
+	for (usz i = std::basic_string_view<u8>(buf.get() + 0x30, file_name_length).find_last_of('.'); i < buf_len; i++)
 	{
 		const u8 c = static_cast<u8>(buf[i]);
 		buf_upper[i] = std::toupper(c);

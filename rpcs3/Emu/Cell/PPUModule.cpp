@@ -698,7 +698,7 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 {
 	const std::string_view seg_view{vm::get_super_ptr<char>(seg.addr), seg.size};
 
-	for (std::size_t i = seg_view.find("\177ELF"); i < seg.size; i = seg_view.find("\177ELF", i + 4))
+	for (usz i = seg_view.find("\177ELF"); i < seg.size; i = seg_view.find("\177ELF", i + 4))
 	{
 		const auto elf_header = vm::get_super_ptr<u8>(seg.addr + i);
 
@@ -715,7 +715,7 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 		std::string name;
 		std::string dump;
 
-		std::size_t applied = 0;
+		usz applied = 0;
 
 		// Executable hash
 		sha1_context sha2;
@@ -867,7 +867,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 		if (s.sh_type == 1u && addr && size) // TODO: some sections with addr=0 are valid
 		{
-			for (std::size_t i = 0; i < prx->segs.size(); i++)
+			for (usz i = 0; i < prx->segs.size(); i++)
 			{
 				const u32 saddr = static_cast<u32>(elf.progs[i].p_vaddr);
 				if (addr >= saddr && addr < saddr + elf.progs[i].p_memsz)

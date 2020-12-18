@@ -317,7 +317,7 @@ namespace
 		u8 block_size_in_bytes = sizeof(SRC_TYPE);
 
 		std::vector<rsx::subresource_layout> result;
-		size_t offset_in_src = 0;
+		usz offset_in_src = 0;
 
 		u8 border_size = border ? (padded_row ? 1 : 4) : 0;
 		u32 src_pitch_in_block;
@@ -383,30 +383,30 @@ namespace
 }
 
 template<typename T>
-u32 get_row_pitch_in_block(u16 width_in_block, size_t alignment)
+u32 get_row_pitch_in_block(u16 width_in_block, usz alignment)
 {
-	if (const size_t pitch = width_in_block * sizeof(T);
+	if (const usz pitch = width_in_block * sizeof(T);
 		pitch == alignment)
 	{
 		return width_in_block;
 	}
 	else
 	{
-		size_t divided = (pitch + alignment - 1) / alignment;
+		usz divided = (pitch + alignment - 1) / alignment;
 		return static_cast<u32>(divided * alignment / sizeof(T));
 	}
 }
 
-u32 get_row_pitch_in_block(u16 block_size_in_bytes, u16 width_in_block, size_t alignment)
+u32 get_row_pitch_in_block(u16 block_size_in_bytes, u16 width_in_block, usz alignment)
 {
-	if (const size_t pitch = width_in_block * block_size_in_bytes;
+	if (const usz pitch = width_in_block * block_size_in_bytes;
 		pitch == alignment)
 	{
 		return width_in_block;
 	}
 	else
 	{
-		size_t divided = (pitch + alignment - 1) / alignment;
+		usz divided = (pitch + alignment - 1) / alignment;
 		return static_cast<u32>(divided * alignment / block_size_in_bytes);
 	}
 }
@@ -910,41 +910,41 @@ namespace rsx
 		return width_in_block * bytes_per_block;
 	}
 
-	size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignment, size_t mipmap_alignment)
+	usz get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, usz row_pitch_alignment, usz mipmap_alignment)
 	{
 		format &= ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-		size_t block_edge = get_format_block_size_in_texel(format);
-		size_t block_size_in_byte = get_format_block_size_in_bytes(format);
+		usz block_edge = get_format_block_size_in_texel(format);
+		usz block_size_in_byte = get_format_block_size_in_bytes(format);
 
-		size_t height_in_blocks = (height + block_edge - 1) / block_edge;
-		size_t width_in_blocks = (width + block_edge - 1) / block_edge;
+		usz height_in_blocks = (height + block_edge - 1) / block_edge;
+		usz width_in_blocks = (width + block_edge - 1) / block_edge;
 
-		size_t result = 0;
+		usz result = 0;
 		for (u16 i = 0; i < mipmap; ++i)
 		{
-			size_t rowPitch = align(block_size_in_byte * width_in_blocks, row_pitch_alignment);
+			usz rowPitch = align(block_size_in_byte * width_in_blocks, row_pitch_alignment);
 			result += align(rowPitch * height_in_blocks * depth, mipmap_alignment);
-			height_in_blocks = std::max<size_t>(height_in_blocks / 2, 1);
-			width_in_blocks = std::max<size_t>(width_in_blocks / 2, 1);
+			height_in_blocks = std::max<usz>(height_in_blocks / 2, 1);
+			width_in_blocks = std::max<usz>(width_in_blocks / 2, 1);
 		}
 
 		// Mipmap, height and width aren't allowed to be zero
 		return (ensure(result) * (cubemap ? 6 : 1));
 	}
 
-	size_t get_placed_texture_storage_size(const rsx::fragment_texture& texture, size_t row_pitch_alignment, size_t mipmap_alignment)
+	usz get_placed_texture_storage_size(const rsx::fragment_texture& texture, usz row_pitch_alignment, usz mipmap_alignment)
 	{
 		return get_placed_texture_storage_size(texture.width(), texture.height(), texture.depth(), texture.format(), texture.mipmap(), texture.cubemap(),
 			row_pitch_alignment, mipmap_alignment);
 	}
 
-	size_t get_placed_texture_storage_size(const rsx::vertex_texture& texture, size_t row_pitch_alignment, size_t mipmap_alignment)
+	usz get_placed_texture_storage_size(const rsx::vertex_texture& texture, usz row_pitch_alignment, usz mipmap_alignment)
 	{
 		return get_placed_texture_storage_size(texture.width(), texture.height(), texture.depth(), texture.format(), texture.mipmap(), texture.cubemap(),
 			row_pitch_alignment, mipmap_alignment);
 	}
 
-	static size_t get_texture_size(u32 format, u16 width, u16 height, u16 depth, u32 pitch, u16 mipmaps, u16 layers, u8 border)
+	static usz get_texture_size(u32 format, u16 width, u16 height, u16 depth, u32 pitch, u16 mipmaps, u16 layers, u8 border)
 	{
 		const auto gcm_format = format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		const bool packed = !(format & CELL_GCM_TEXTURE_LN);
@@ -1001,14 +1001,14 @@ namespace rsx
 		return size;
 	}
 
-	size_t get_texture_size(const rsx::fragment_texture& texture)
+	usz get_texture_size(const rsx::fragment_texture& texture)
 	{
 		return get_texture_size(texture.format(), texture.width(), texture.height(), texture.depth(),
 			texture.pitch(), texture.get_exact_mipmap_count(), texture.cubemap() ? 6 : 1,
 			texture.border_type() ^ 1);
 	}
 
-	size_t get_texture_size(const rsx::vertex_texture& texture)
+	usz get_texture_size(const rsx::vertex_texture& texture)
 	{
 		return get_texture_size(texture.format(), texture.width(), texture.height(), texture.depth(),
 			texture.pitch(), texture.get_exact_mipmap_count(), texture.cubemap() ? 6 : 1,

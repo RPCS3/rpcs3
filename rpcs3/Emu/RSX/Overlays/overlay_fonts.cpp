@@ -345,7 +345,7 @@ namespace rsx
 											auto first_affected = result.size() - (nb_chars * 4);
 											f32 base_x          = result[first_affected].values[0];
 
-											for (size_t n = first_affected; n < result.size(); ++n)
+											for (usz n = first_affected; n < result.size(); ++n)
 											{
 												auto char_index = n / 4;
 												if (text[char_index] == ' ')

@@ -96,6 +96,7 @@ using u8  = std::uint8_t;
 using u16 = std::uint16_t;
 using u32 = std::uint32_t;
 using u64 = std::uint64_t;
+using usz = std::size_t;
 
 using s8  = std::int8_t;
 using s16 = std::int16_t;
@@ -150,7 +151,7 @@ namespace std
 #endif
 
 // Get integral type from type size
-template <std::size_t N>
+template <usz N>
 struct get_int_impl
 {
 };
@@ -183,10 +184,10 @@ struct get_int_impl<sizeof(u64)>
 	using stype = s64;
 };
 
-template <std::size_t N>
+template <usz N>
 using get_uint_t = typename get_int_impl<N>::utype;
 
-template <std::size_t N>
+template <usz N>
 using get_sint_t = typename get_int_impl<N>::stype;
 
 template <typename T>
@@ -210,29 +211,29 @@ namespace fmt
 	const fmt_type_info* get_type_info();
 }
 
-template <typename T, std::size_t Align>
+template <typename T, usz Align>
 class atomic_t;
 
 namespace stx
 {
-	template <typename T, bool Se, std::size_t Align>
+	template <typename T, bool Se, usz Align>
 	class se_t;
 }
 
 using stx::se_t;
 
 // se_t<> with native endianness
-template <typename T, std::size_t Align = alignof(T)>
+template <typename T, usz Align = alignof(T)>
 using nse_t = se_t<T, false, Align>;
 
-template <typename T, std::size_t Align = alignof(T)>
+template <typename T, usz Align = alignof(T)>
 using be_t = se_t<T, std::endian::little == std::endian::native, Align>;
-template <typename T, std::size_t Align = alignof(T)>
+template <typename T, usz Align = alignof(T)>
 using le_t = se_t<T, std::endian::big == std::endian::native, Align>;
 
-template <typename T, std::size_t Align = alignof(T)>
+template <typename T, usz Align = alignof(T)>
 using atomic_be_t = atomic_t<be_t<T>, Align>;
-template <typename T, std::size_t Align = alignof(T)>
+template <typename T, usz Align = alignof(T)>
 using atomic_le_t = atomic_t<le_t<T>, Align>;
 
 // Extract T::simple_type if available, remove cv qualifiers
@@ -625,7 +626,7 @@ inline u32 offset32(T T2::*const mptr)
 #ifdef _MSC_VER
 	return std::bit_cast<u32>(mptr);
 #elif __GNUG__
-	return std::bit_cast<std::size_t>(mptr);
+	return std::bit_cast<usz>(mptr);
 #else
 	static_assert(sizeof(mptr) == 0, "Unsupported pointer-to-member size");
 #endif
@@ -643,7 +644,7 @@ struct offset32_array
 	}
 };
 
-template <typename T, std::size_t N>
+template <typename T, usz N>
 struct offset32_array<std::array<T, N>>
 {
 	template <typename Arg>
@@ -689,7 +690,7 @@ constexpr u32 to_u8(char c)
 }
 
 // Convert 1-2-byte string to u16 value like reinterpret_cast does
-constexpr u16 operator""_u16(const char* s, std::size_t /*length*/)
+constexpr u16 operator""_u16(const char* s, usz /*length*/)
 {
 	if constexpr (std::endian::little == std::endian::native)
 	{
@@ -702,7 +703,7 @@ constexpr u16 operator""_u16(const char* s, std::size_t /*length*/)
 }
 
 // Convert 3-4-byte string to u32 value like reinterpret_cast does
-constexpr u32 operator""_u32(const char* s, std::size_t /*length*/)
+constexpr u32 operator""_u32(const char* s, usz /*length*/)
 {
 	if constexpr (std::endian::little == std::endian::native)
 	{
@@ -715,7 +716,7 @@ constexpr u32 operator""_u32(const char* s, std::size_t /*length*/)
 }
 
 // Convert 5-6-byte string to u64 value like reinterpret_cast does
-constexpr u64 operator""_u48(const char* s, std::size_t /*length*/)
+constexpr u64 operator""_u48(const char* s, usz /*length*/)
 {
 	if constexpr (std::endian::little == std::endian::native)
 	{
@@ -728,7 +729,7 @@ constexpr u64 operator""_u48(const char* s, std::size_t /*length*/)
 }
 
 // Convert 7-8-byte string to u64 value like reinterpret_cast does
-constexpr u64 operator""_u64(const char* s, std::size_t /*length*/)
+constexpr u64 operator""_u64(const char* s, usz /*length*/)
 {
 	if constexpr (std::endian::little == std::endian::native)
 	{
@@ -877,7 +878,7 @@ template <typename CT, typename = decltype(static_cast<u32>(std::declval<CT>().s
 }
 
 // Returns u32 size for an array
-template <typename T, std::size_t Size>
+template <typename T, usz Size>
 [[nodiscard]] constexpr u32 size32(const T (&)[Size])
 {
 	static_assert(Size < UINT32_MAX, "Array is too big for 32-bit");
@@ -885,20 +886,20 @@ template <typename T, std::size_t Size>
 }
 
 // Simplified hash algorithm for pointers. May be used in std::unordered_(map|set).
-template <typename T, std::size_t Align = alignof(T)>
+template <typename T, usz Align = alignof(T)>
 struct pointer_hash
 {
-	std::size_t operator()(T* ptr) const
+	usz operator()(T* ptr) const
 	{
 		return reinterpret_cast<uptr>(ptr) / Align;
 	}
 };
 
-template <typename T, std::size_t Shift = 0>
+template <typename T, usz Shift = 0>
 struct value_hash
 {
-	std::size_t operator()(T value) const
+	usz operator()(T value) const
 	{
-		return static_cast<std::size_t>(value) >> Shift;
+		return static_cast<usz>(value) >> Shift;
 	}
 };

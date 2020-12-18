@@ -5,7 +5,7 @@
 
 namespace vk
 {
-	static constexpr size_t s_dma_block_length = 0x01000000;
+	static constexpr usz s_dma_block_length = 0x01000000;
 	static constexpr u32    s_dma_block_mask = 0xFF000000;
 	static constexpr u32    s_dma_offset_mask = 0x00FFFFFF;
 
@@ -42,7 +42,7 @@ namespace vk
 		}
 	}
 
-	void dma_block::init(const render_device& dev, u32 addr, size_t size)
+	void dma_block::init(const render_device& dev, u32 addr, usz size)
 	{
 		ensure(size);
 		ensure(!(size % s_dma_block_length));
@@ -55,7 +55,7 @@ namespace vk
 		page_info.resize(size / s_bytes_per_entry, ~0ull);
 	}
 
-	void dma_block::init(dma_block* parent, u32 addr, size_t size)
+	void dma_block::init(dma_block* parent, u32 addr, usz size)
 	{
 		base_address = addr;
 		inheritance_info.parent = parent;
@@ -201,7 +201,7 @@ namespace vk
 		}
 	}
 
-	void dma_block::extend(command_buffer& cmd, const render_device &dev, size_t new_size)
+	void dma_block::extend(command_buffer& cmd, const render_device &dev, usz new_size)
 	{
 		ensure(allocated_memory);
 		if (new_size <= allocated_memory->size())

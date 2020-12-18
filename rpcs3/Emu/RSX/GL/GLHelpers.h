@@ -2179,8 +2179,8 @@ public:
 
 		void draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const;
 		void draw_elements(const buffer& buffer, rsx::primitive_type mode, GLsizei count, indices_type type, const GLvoid *indices) const;
-		void draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset = 0) const;
-		void draw_elements(const buffer& buffer_, rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset = 0) const;
+		void draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, usz indices_buffer_offset = 0) const;
+		void draw_elements(const buffer& buffer_, rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, usz indices_buffer_offset = 0) const;
 		void draw_elements(rsx::primitive_type mode, GLsizei count, const GLubyte *indices) const;
 		void draw_elements(const buffer& buffer, rsx::primitive_type mode, GLsizei count, const GLubyte *indices) const;
 		void draw_elements(rsx::primitive_type mode, GLsizei count, const GLushort *indices) const;

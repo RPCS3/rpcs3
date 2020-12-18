@@ -141,7 +141,7 @@ public:
 	}
 
 	// Push subevent data in array
-	template <auto Event, std::size_t Index = 0>
+	template <auto Event, usz Index = 0>
 	SAFE_BUFFERS void push() noexcept
 	{
 		// TODO: should use more efficient search with type comparison, then value comparison, or pattern matching

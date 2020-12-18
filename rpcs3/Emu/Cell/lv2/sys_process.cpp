@@ -267,7 +267,7 @@ error_code _sys_process_get_paramsfo(vm::ptr<char> buffer)
 	}
 
 	memset(buffer.get_ptr(), 0, 0x40);
-	memcpy(buffer.get_ptr() + 1, Emu.GetTitleID().c_str(), std::min<size_t>(Emu.GetTitleID().length(), 9));
+	memcpy(buffer.get_ptr() + 1, Emu.GetTitleID().c_str(), std::min<usz>(Emu.GetTitleID().length(), 9));
 
 	return CELL_OK;
 }

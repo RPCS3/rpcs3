@@ -99,7 +99,7 @@ bool statichle_handler::load_patterns()
 
 #define POLY 0x8408
 
-uint16_t statichle_handler::gen_CRC16(const uint8_t* data_p, size_t length)
+uint16_t statichle_handler::gen_CRC16(const uint8_t* data_p, usz length)
 {
 	unsigned char i;
 	unsigned int data;

@@ -6,7 +6,7 @@
 
 namespace fmt
 {
-	template <typename CharT, std::size_t N, typename... Args>
+	template <typename CharT, usz N, typename... Args>
 	static std::string format(const CharT(&)[N], const Args&...);
 }
 
@@ -97,7 +97,7 @@ struct fmt_unveil<T*, void>
 	}
 };
 
-template <typename T, std::size_t N>
+template <typename T, usz N>
 struct fmt_unveil<T[N], void>
 {
 	using type = std::add_const_t<T>*;
@@ -119,7 +119,7 @@ struct fmt_unveil<b8, void>
 	}
 };
 
-template <typename T, bool Se, std::size_t Align>
+template <typename T, bool Se, usz Align>
 struct fmt_unveil<se_t<T, Se, Align>, void>
 {
 	using type = typename fmt_unveil<T>::type;
@@ -251,7 +251,7 @@ namespace fmt
 	struct base57
 	{
 		const uchar* data;
-		std::size_t size;
+		usz size;
 
 		template <typename T>
 		base57(const T& arg)
@@ -260,7 +260,7 @@ namespace fmt
 		{
 		}
 
-		base57(const uchar* data, std::size_t size)
+		base57(const uchar* data, usz size)
 			: data(data)
 			, size(size)
 		{
@@ -283,7 +283,7 @@ namespace fmt
 	void raw_append(std::string& out, const char*, const fmt_type_info*, const u64*) noexcept;
 
 	// Formatting function
-	template <typename CharT, std::size_t N, typename... Args>
+	template <typename CharT, usz N, typename... Args>
 	SAFE_BUFFERS FORCE_INLINE void append(std::string& out, const CharT(&fmt)[N], const Args&... args)
 	{
 		static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
@@ -291,7 +291,7 @@ namespace fmt
 	}
 
 	// Formatting function
-	template <typename CharT, std::size_t N, typename... Args>
+	template <typename CharT, usz N, typename... Args>
 	SAFE_BUFFERS FORCE_INLINE std::string format(const CharT(&fmt)[N], const Args&... args)
 	{
 		std::string result;
@@ -303,7 +303,7 @@ namespace fmt
 	[[noreturn]] void raw_throw_exception(const src_loc&, const char*, const fmt_type_info*, const u64*);
 
 	// Throw exception with formatting
-	template <typename CharT, std::size_t N, typename... Args>
+	template <typename CharT, usz N, typename... Args>
 	struct throw_exception
 	{
 		[[noreturn]] SAFE_BUFFERS FORCE_INLINE throw_exception(const CharT(&fmt)[N], const Args&... args,
@@ -317,6 +317,6 @@ namespace fmt
 		}
 	};
 
-	template <typename CharT, std::size_t N, typename... Args>
+	template <typename CharT, usz N, typename... Args>
 	throw_exception(const CharT(&)[N], const Args&...) -> throw_exception<CharT, N, Args...>;
 }

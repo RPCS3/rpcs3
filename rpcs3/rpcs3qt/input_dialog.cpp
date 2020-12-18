@@ -50,7 +50,7 @@ void input_dialog::set_input_font(const QFont& font, bool fix_width, char sample
 {
 	if (int max = m_input->maxLength(); max > 0 && fix_width && std::isprint(static_cast<uchar>(sample)))
 	{
-		const QString str = qstr(std::string(static_cast<std::size_t>(max), sample));
+		const QString str = qstr(std::string(static_cast<usz>(max), sample));
 		m_input->setFixedWidth(gui::utils::get_label_width(str, &font));
 	}
 
