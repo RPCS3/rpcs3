@@ -63,9 +63,28 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	// Tools: Memory Viewer Options: Words
 	QGroupBox* tools_mem_words = new QGroupBox(tr("Words"));
 	QHBoxLayout* hbox_tools_mem_words = new QHBoxLayout();
-	QSpinBox* sb_words = new QSpinBox(this);
-	sb_words->setRange(1, 4);
-	sb_words->setValue(4);
+
+	class words_spin_box : public QSpinBox
+	{
+	public:
+		words_spin_box(QWidget* parent = nullptr) : QSpinBox(parent) {}
+		~words_spin_box() override {};
+
+	private:
+		int valueFromText(const QString &text) const override
+		{
+			return std::countr_zero(text.toULong());
+		}
+
+		QString textFromValue(int value) const override
+		{
+			return tr("%0").arg(1 << value);
+		}
+	};
+
+	words_spin_box* sb_words = new words_spin_box(this);
+	sb_words->setRange(0, 2);
+	sb_words->setValue(2);
 	hbox_tools_mem_words->addWidget(sb_words);
 	tools_mem_words->setLayout(hbox_tools_mem_words);
 
@@ -220,7 +239,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	});
 	connect(sb_words, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=, this]()
 	{
-		m_colcount = sb_words->value();
+		m_colcount = 1 << sb_words->value();
 		ShowMemory();
 	});
 
