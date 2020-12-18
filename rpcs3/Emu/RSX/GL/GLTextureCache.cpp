@@ -2,6 +2,7 @@
 #include "Emu/RSX/RSXThread.h"
 #include "GLTexture.h"
 #include "GLTextureCache.h"
+#include "../Common/BufferUtils.h"
 
 #include "util/asm.hpp"
 

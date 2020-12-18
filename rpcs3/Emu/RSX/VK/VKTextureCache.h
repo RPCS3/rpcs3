@@ -1,13 +1,8 @@
 #pragma once
 #include "stdafx.h"
 #include "VKRenderTargets.h"
-#include "VKGSRender.h"
-#include "VKCompute.h"
 #include "VKResourceManager.h"
 #include "VKDMA.h"
-#include "VKRenderPass.h"
-#include "../Common/TextureUtils.h"
-#include "Utilities/mutex.h"
 #include "../Common/texture_cache.h"
 
 extern u64 get_system_time();

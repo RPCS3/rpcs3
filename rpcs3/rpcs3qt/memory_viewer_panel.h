@@ -25,8 +25,6 @@ public:
 	};
 	Q_ENUM(color_format)
 
-	bool exit;
-
 protected:
 	void wheelEvent(QWheelEvent* event) override;
 	void resizeEvent(QResizeEvent* event) override;

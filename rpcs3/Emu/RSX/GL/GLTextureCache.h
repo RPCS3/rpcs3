@@ -2,21 +2,8 @@
 
 #include "stdafx.h"
 
-#include <string>
-#include <functional>
-#include <vector>
-#include <memory>
-#include <thread>
-#include <condition_variable>
-#include <chrono>
-
-#include "Utilities/mutex.h"
 #include "GLRenderTargets.h"
-#include "GLOverlays.h"
-#include "GLTexture.h"
-#include "../Common/TextureUtils.h"
 #include "../Common/texture_cache.h"
-#include "../Common/BufferUtils.h"
 
 class GLGSRender;
 
