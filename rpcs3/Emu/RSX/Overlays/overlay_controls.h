@@ -147,7 +147,7 @@ namespace rsx
 						{
 							char result[ PATH_MAX ];
 #if defined(__APPLE__)
-							uint32_t bufsize = PATH_MAX;
+							u32 bufsize = PATH_MAX;
 							bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
 #elif defined(KERN_PROC_PATHNAME)
 							usz bufsize = PATH_MAX;

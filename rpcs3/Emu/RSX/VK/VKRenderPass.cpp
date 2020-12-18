@@ -204,7 +204,7 @@ namespace vk
 
 		VkRenderPassCreateInfo rp_info = {};
 		rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		rp_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+		rp_info.attachmentCount = static_cast<u32>(attachments.size());
 		rp_info.pAttachments = attachments.data();
 		rp_info.subpassCount = 1;
 		rp_info.pSubpasses = &subpass;

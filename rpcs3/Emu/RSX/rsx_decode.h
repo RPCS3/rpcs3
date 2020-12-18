@@ -38,7 +38,7 @@ namespace rsx
 	std::string to_string(shading_mode op);
 	std::string to_string(polygon_mode op);
 
-template<uint32_t Register>
+template<u32 Register>
 struct registers_decoder
 {};
 

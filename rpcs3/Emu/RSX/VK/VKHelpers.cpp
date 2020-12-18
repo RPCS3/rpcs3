@@ -238,7 +238,7 @@ namespace vk
 		return result;
 	}
 
-	chip_class get_chip_family(uint32_t vendor_id, uint32_t device_id)
+	chip_class get_chip_family(u32 vendor_id, u32 device_id)
 	{
 		if (vendor_id == 0x10DE)
 		{

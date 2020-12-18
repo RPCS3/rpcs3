@@ -1121,7 +1121,7 @@ namespace
 		template <typename T, T... Index>
 		auto create_printing_table(std::integer_sequence<T, Index...> seq)
 		{
-			std::unordered_map<uint32_t, std::string (*)(u32)> result;
+			std::unordered_map<u32, std::string (*)(u32)> result;
 			(result.insert({
 				{opcode_list[Index * 5 + 0], &register_pretty_printing<opcode_list[Index * 5 + 0]>},
 				{opcode_list[Index * 5 + 1], &register_pretty_printing<opcode_list[Index * 5 + 1]>},

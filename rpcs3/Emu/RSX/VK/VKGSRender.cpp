@@ -294,7 +294,7 @@ namespace
 		VkDescriptorSetLayoutCreateInfo infos = {};
 		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		infos.pBindings = bindings.data();
-		infos.bindingCount = static_cast<uint32_t>(bindings.size());
+		infos.bindingCount = static_cast<u32>(bindings.size());
 
 		VkDescriptorSetLayout set_layout;
 		CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &set_layout));
@@ -469,7 +469,7 @@ VKGSRender::VKGSRender() : GSRender()
 	{
 		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.present_wait_semaphore);
 		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.acquire_signal_semaphore);
-		ctx.descriptor_pool.create(*m_device, sizes.data(), static_cast<uint32_t>(sizes.size()), DESCRIPTOR_MAX_DRAW_CALLS, 1);
+		ctx.descriptor_pool.create(*m_device, sizes.data(), static_cast<u32>(sizes.size()), DESCRIPTOR_MAX_DRAW_CALLS, 1);
 	}
 
 	const auto& memory_map = m_device->get_memory_mapping();

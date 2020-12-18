@@ -27,7 +27,7 @@ namespace rsx
 	using utils::next_page;
 
 	using flags64_t = uint64_t;
-	using flags32_t = uint32_t;
+	using flags32_t = u32;
 	using flags16_t = u16;
 	using flags8_t = u8;
 

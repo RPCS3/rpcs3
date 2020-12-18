@@ -30,7 +30,7 @@ namespace vk
 		return subres;
 	}
 
-	VkImageSubresourceRange get_image_subresource_range(uint32_t base_layer, uint32_t base_mip, uint32_t layer_count, uint32_t level_count, VkImageAspectFlags aspect)
+	VkImageSubresourceRange get_image_subresource_range(u32 base_layer, u32 base_mip, u32 layer_count, u32 level_count, VkImageAspectFlags aspect)
 	{
 		VkImageSubresourceRange subres = {};
 		subres.aspectMask = aspect;

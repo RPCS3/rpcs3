@@ -158,7 +158,7 @@ struct CellMicInputStream
 struct CellMicInputDefinition
 {
 	// TODO: Data types
-	volatile uint32_t   uiDevId;
+	volatile u32   uiDevId;
 	CellMicInputStream  data;
 	CellMicInputFormatI aux_format;
 	CellMicInputFormatI raw_format;

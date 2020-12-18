@@ -52,7 +52,7 @@ namespace vk
 				{
 					bindings.push_back
 					({
-						uint32_t(bindings.size()),
+						u32(bindings.size()),
 						e.first,
 						1,
 						VK_SHADER_STAGE_COMPUTE_BIT,
