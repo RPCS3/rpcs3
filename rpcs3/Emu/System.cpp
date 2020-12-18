@@ -1979,13 +1979,13 @@ bool Emulator::Quit(bool force_quit)
 {
 	m_force_boot = false;
 
-	// Deinitialize object manager to prevent any hanging objects at program exit
-	if (force_quit)
+	// The callback is only used if we actually quit RPCS3
+	const auto on_exit = []()
 	{
+		// Deinitialize object manager to prevent any hanging objects at program exit
 		*g_fxo = {};
-	}
-
-	return GetCallbacks().exit(force_quit);
+	};
+	return GetCallbacks().try_to_quit(force_quit, on_exit);
 }
 
 std::string Emulator::GetFormattedTitle(double fps) const

@@ -39,10 +39,15 @@ void headless_application::InitializeCallbacks()
 {
 	EmuCallbacks callbacks = CreateCallbacks();
 
-	callbacks.exit = [this](bool force_quit) -> bool
+	callbacks.try_to_quit = [this](bool force_quit, std::function<void()> on_exit) -> bool
 	{
 		if (force_quit)
 		{
+			if (on_exit)
+			{
+				on_exit();
+			}
+
 			quit();
 			return true;
 		}
