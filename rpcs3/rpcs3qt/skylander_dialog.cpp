@@ -1,3 +1,4 @@
+#include "stdafx.h"
 #include <mutex>
 #include "Utilities/File.h"
 #include "Crypto/md5.h"
@@ -9,8 +10,15 @@
 #include <QGroupBox>
 #include <QFileDialog>
 #include <QVBoxLayout>
+#include <QMessageBox>
+#include <QComboBox>
+#include <QPushButton>
+#include <QStringList>
+#include <QCompleter>
 
 skylander_dialog* skylander_dialog::inst = nullptr;
+std::optional<std::tuple<u8, u16, u16>> skylander_dialog::sky_slots[UI_SKY_NUM];
+QString last_skylander_path;
 
 const std::map<const std::pair<const u16, const u16>, const std::string> list_skylanders = {
     {{0, 0x0000}, "Whirlwind"},
@@ -435,6 +443,7 @@ const std::map<const std::pair<const u16, const u16>, const std::string> list_sk
     {{3226, 0x0000}, "Thump Truck"},
     {{3227, 0x0000}, "Crypt Crusher"},
     {{3228, 0x0000}, "Stealth Stinger"},
+    {{3228, 0x4402}, "Nitro Stealth Stinger"},
     {{3231, 0x0000}, "Dive Bomber"},
     {{3231, 0x4402}, "Spring Ahead Dive Bomber"},
     {{3232, 0x0000}, "Sky Slicer"},
@@ -494,129 +503,7 @@ const std::map<const std::pair<const u16, const u16>, const std::string> list_sk
     {{3503, 0x0000}, "Kaos Trophy"},
 };
 
-QString cur_sky_file_path;
-
-skylander_dialog::skylander_dialog(QWidget* parent)
-    : QDialog(parent)
-{
-	setWindowTitle(tr("Skylanders Manager"));
-	setObjectName("skylanders_manager");
-	setAttribute(Qt::WA_DeleteOnClose);
-	setMinimumSize(QSize(700, 450));
-
-	QVBoxLayout* vbox_panel = new QVBoxLayout();
-
-	QHBoxLayout* hbox_buttons = new QHBoxLayout();
-	QPushButton* button_new   = new QPushButton(tr("New"), this);
-	QPushButton* button_load  = new QPushButton(tr("Load"), this);
-	hbox_buttons->addWidget(button_new);
-	hbox_buttons->addWidget(button_load);
-	hbox_buttons->addStretch();
-	vbox_panel->addLayout(hbox_buttons);
-
-	edit_curfile = new QLineEdit(cur_sky_file_path);
-	edit_curfile->setEnabled(false);
-	vbox_panel->addWidget(edit_curfile);
-
-	QGroupBox* group_skyinfo = new QGroupBox(tr("Skylander Info"));
-	QVBoxLayout* vbox_group  = new QVBoxLayout();
-	combo_skylist            = new QComboBox();
-	for (const auto& entry : list_skylanders)
-	{
-		uint qvar = (entry.first.first << 16) | entry.first.second;
-		combo_skylist->addItem(QString::fromStdString(entry.second), QVariant(qvar));
-	}
-
-	combo_skylist->addItem(tr("--Unknown--"), QVariant(0xFFFFFFFF));
-
-	QLabel* label_skyid    = new QLabel(tr("Skylander ID:"));
-	edit_skyid             = new QLineEdit();
-	QLabel* label_skyxp    = new QLabel(tr("Skylander XP:"));
-	edit_skyxp             = new QLineEdit();
-	QLabel* label_skymoney = new QLabel(tr("Skylander Money:"));
-	edit_skymoney          = new QLineEdit();
-
-	vbox_group->addWidget(combo_skylist);
-	vbox_group->addWidget(label_skyid);
-	vbox_group->addWidget(edit_skyid);
-	vbox_group->addWidget(label_skyxp);
-	vbox_group->addWidget(edit_skyxp);
-	vbox_group->addWidget(label_skymoney);
-	vbox_group->addWidget(edit_skymoney);
-
-	QHBoxLayout* sub_group = new QHBoxLayout();
-	sub_group->addStretch();
-	button_update = new QPushButton(tr("Update"), this);
-	sub_group->addWidget(button_update);
-	vbox_group->addLayout(sub_group);
-
-	vbox_group->addStretch();
-	group_skyinfo->setLayout(vbox_group);
-
-	vbox_panel->addWidget(group_skyinfo);
-
-	setLayout(vbox_panel);
-
-	connect(button_new, &QAbstractButton::clicked, this, &skylander_dialog::new_skylander);
-	connect(button_load, &QAbstractButton::clicked, this, &skylander_dialog::load_skylander);
-	connect(button_update, &QAbstractButton::clicked, this, &skylander_dialog::process_edits);
-
-	update_edits();
-
-	// clang-format off
-	connect(combo_skylist, &QComboBox::currentTextChanged, this, [&]()
-	{
-		const u32 sky_info = combo_skylist->itemData(combo_skylist->currentIndex()).toUInt();
-		if (sky_info != 0xFFFFFFFF)
-		{
-			const u16 sky_id = sky_info >> 16;
-			const u16 sky_var = sky_info & 0xFFFF;
-			{
-				std::lock_guard lock(g_skylander.sky_mutex);
-				reinterpret_cast<le_t<u32>&>(g_skylander.sky_dump[0])    = sky_info;
-				reinterpret_cast<le_t<u16>&>(g_skylander.sky_dump[0x10]) = sky_id;
-				reinterpret_cast<le_t<u16>&>(g_skylander.sky_dump[0x1C]) = sky_var;
-				reinterpret_cast<le_t<u16>&>(g_skylander.sky_dump[0x1E]) = skylander_crc16(0xFFFF, g_skylander.sky_dump, 0x1E);
-			}
-
-			if (is_initialized())
-			{
-				std::lock_guard lock(g_skylander.sky_mutex);
-				std::array<u8, 16> zero_array = {};
-				for (u32 index = 8; index < 0x40; index++)
-				{
-					if ((index + 1) % 4)
-					{
-						set_block(index, zero_array);
-					}
-				}
-
-				set_checksums();
-			}
-
-			g_skylander.sky_reload = true;
-		}
-
-		g_skylander.sky_save();
-		update_edits();
-	});
-	// clang-format on
-}
-
-skylander_dialog::~skylander_dialog()
-{
-	inst = nullptr;
-}
-
-skylander_dialog* skylander_dialog::get_dlg(QWidget* parent)
-{
-	if (inst == nullptr)
-		inst = new skylander_dialog(parent);
-
-	return inst;
-}
-
-u16 skylander_dialog::skylander_crc16(u16 init_value, const u8* buffer, u32 size)
+u16 skylander_crc16(u16 init_value, const u8* buffer, u32 size)
 {
 	const unsigned short CRC_CCITT_TABLE[256] = {0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50A5, 0x60C6, 0x70E7, 0x8108, 0x9129, 0xA14A, 0xB16B, 0xC18C, 0xD1AD, 0xE1CE, 0xF1EF, 0x1231, 0x0210, 0x3273,
 	    0x2252, 0x52B5, 0x4294, 0x72F7, 0x62D6, 0x9339, 0x8318, 0xB37B, 0xA35A, 0xD3BD, 0xC39C, 0xF3FF, 0xE3DE, 0x2462, 0x3443, 0x0420, 0x1401, 0x64E6, 0x74C7, 0x44A4, 0x5485, 0xA56A, 0xB54B, 0x8528,
@@ -642,273 +529,307 @@ u16 skylander_dialog::skylander_crc16(u16 init_value, const u8* buffer, u32 size
 	return crc;
 }
 
-void skylander_dialog::get_hash(u8 block, std::array<u8, 16>& res_hash)
+skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
+    : QDialog(parent)
 {
-	const u8 hash_magic[0x35] = {0x20, 0x43, 0x6F, 0x70, 0x79, 0x72, 0x69, 0x67, 0x68, 0x74, 0x20, 0x28, 0x43, 0x29, 0x20, 0x32, 0x30, 0x31, 0x30, 0x20, 0x41, 0x63, 0x74, 0x69, 0x76, 0x69, 0x73, 0x69,
-	    0x6F, 0x6E, 0x2E, 0x20, 0x41, 0x6C, 0x6C, 0x20, 0x52, 0x69, 0x67, 0x68, 0x74, 0x73, 0x20, 0x52, 0x65, 0x73, 0x65, 0x72, 0x76, 0x65, 0x64, 0x2E, 0x20};
+	setWindowTitle(tr("Skylander Creator"));
+	setObjectName("skylanders_creator");
+	setMinimumSize(QSize(500, 150));
 
-	mbedtls_md5_context md5_ctx;
+	QVBoxLayout* vbox_panel = new QVBoxLayout();
 
-	mbedtls_md5_init(&md5_ctx);
-	mbedtls_md5_starts_ret(&md5_ctx);
-	mbedtls_md5_update_ret(&md5_ctx, g_skylander.sky_dump, 0x20);
-	mbedtls_md5_update_ret(&md5_ctx, &block, 1);
-	mbedtls_md5_update_ret(&md5_ctx, hash_magic, 0x35);
-	mbedtls_md5_finish_ret(&md5_ctx, res_hash.data());
-}
-
-void skylander_dialog::set_block(const u8 block, const std::array<u8, 16>& to_encrypt)
-{
-	std::array<u8, 16> hash_result;
-	get_hash(block, hash_result);
-
-	aes_context aes_ctx;
-	aes_setkey_enc(&aes_ctx, hash_result.data(), 128);
-
-	u8 res_buf[16];
-	aes_crypt_ecb(&aes_ctx, AES_ENCRYPT, to_encrypt.data(), res_buf);
-
-	memcpy(g_skylander.sky_dump + (block * 16), res_buf, 16);
-}
-
-void skylander_dialog::get_block(const u8 block, std::array<u8, 16>& decrypted)
-{
-	std::array<u8, 16> hash_result;
-	get_hash(block, hash_result);
-
-	aes_context aes_ctx;
-	aes_setkey_dec(&aes_ctx, hash_result.data(), 128);
-
-	u8 res_buf[16];
-	aes_crypt_ecb(&aes_ctx, AES_DECRYPT, g_skylander.sky_dump + (block * 16), res_buf);
-
-	memcpy(decrypted.data(), res_buf, 16);
-}
-
-u8 skylander_dialog::get_active_block()
-{
-	std::array<u8, 16> dec_0x08;
-	std::array<u8, 16> dec_0x24;
-	get_block(0x08, dec_0x08);
-	get_block(0x24, dec_0x24);
-
-	return (dec_0x08[9] < dec_0x24[9]) ? 0x24 : 0x08;
-}
-
-void skylander_dialog::set_checksums()
-{
-	const std::array<u8, 2> sectors = {0x08, 0x24};
-
-	for (const auto& active : sectors)
+	QComboBox* combo_skylist = new QComboBox();
+	QStringList filterlist;
+	for (const auto& entry : list_skylanders)
 	{
-		// clang-format off
-		// Decrypt and hash a bunch of blocks
-		auto do_crc_blocks = [&](const u16 start_crc, const std::vector<u8>& blocks) -> u16
-		{
-			u16 cur_crc = start_crc;
-			std::array<u8, 16> decrypted_block;
-			for (const auto& b : blocks)
-			{
-				get_block(active + b, decrypted_block);
-				cur_crc = skylander_crc16(cur_crc, decrypted_block.data(), 16);
-			}
-			return cur_crc;
-		};
-		// clang-format on
-
-		std::array<u8, 16> decrypted_header, sub_header;
-		get_block(active, decrypted_header);
-		get_block(active + 9, sub_header);
-
-		// Type 4
-		reinterpret_cast<le_t<u16>&>(sub_header[0x0]) = 0x0106;
-		u16 res_crc                                   = skylander_crc16(0xFFFF, sub_header.data(), 16);
-		reinterpret_cast<le_t<u16>&>(sub_header[0x0]) = do_crc_blocks(res_crc, {10, 12, 13});
-
-		// Type 3
-		std::array<u8, 16> zero_block{};
-		res_crc = do_crc_blocks(0xFFFF, {5, 6, 8});
-		for (u32 index = 0; index < 0x0E; index++)
-		{
-			res_crc = skylander_crc16(res_crc, zero_block.data(), 16);
-		}
-		reinterpret_cast<le_t<u16>&>(decrypted_header[0xA]) = res_crc;
-
-		// Type 2
-		res_crc                                             = do_crc_blocks(0xFFFF, {1, 2, 4});
-		reinterpret_cast<le_t<u16>&>(decrypted_header[0xC]) = res_crc;
-
-		// Type 1
-		reinterpret_cast<le_t<u16>&>(decrypted_header[0xE]) = 5;
-		reinterpret_cast<le_t<u16>&>(decrypted_header[0xE]) = skylander_crc16(0xFFFF, decrypted_header.data(), 16);
-
-		set_block(active, decrypted_header);
-		set_block(active + 9, sub_header);
+		uint qvar = (entry.first.first << 16) | entry.first.second;
+		combo_skylist->addItem(QString::fromStdString(entry.second), QVariant(qvar));
+		filterlist << entry.second.c_str();
 	}
-}
+	combo_skylist->addItem(tr("--Unknown--"), QVariant(0xFFFFFFFF));
+	combo_skylist->setEditable(true);
+	combo_skylist->setInsertPolicy(QComboBox::NoInsert);
 
-bool skylander_dialog::is_initialized()
-{
-	std::lock_guard lock(g_skylander.sky_mutex);
-	for (u32 index = 1; index < 0x10; index++)
+	QCompleter* co_compl = new QCompleter(filterlist, this);
+	co_compl->setCaseSensitivity(Qt::CaseInsensitive);
+	co_compl->setCompletionMode(QCompleter::PopupCompletion);
+	co_compl->setFilterMode(Qt::MatchContains);
+	combo_skylist->setCompleter(co_compl);
+
+	vbox_panel->addWidget(combo_skylist);
+
+	QFrame* line = new QFrame();
+	line->setFrameShape(QFrame::HLine);
+	line->setFrameShadow(QFrame::Sunken);
+	vbox_panel->addWidget(line);
+
+	QHBoxLayout* hbox_idvar = new QHBoxLayout();
+	QLabel* label_id        = new QLabel(tr("ID:"));
+	QLabel* label_var       = new QLabel(tr("Variant:"));
+	QLineEdit* edit_id      = new QLineEdit("0");
+	QLineEdit* edit_var     = new QLineEdit("0");
+	QRegExpValidator* rxv   = new QRegExpValidator(QRegExp("\\d*"), this);
+	edit_id->setValidator(rxv);
+	edit_var->setValidator(rxv);
+	hbox_idvar->addWidget(label_id);
+	hbox_idvar->addWidget(edit_id);
+	hbox_idvar->addWidget(label_var);
+	hbox_idvar->addWidget(edit_var);
+	vbox_panel->addLayout(hbox_idvar);
+
+	QHBoxLayout* hbox_buttons = new QHBoxLayout();
+	QPushButton* btn_create   = new QPushButton(tr("Create"), this);
+	QPushButton* btn_cancel   = new QPushButton(tr("Cancel"), this);
+	hbox_buttons->addStretch();
+	hbox_buttons->addWidget(btn_create);
+	hbox_buttons->addWidget(btn_cancel);
+	vbox_panel->addLayout(hbox_buttons);
+
+	setLayout(vbox_panel);
+
+	connect(combo_skylist, QOverload<int>::of(&QComboBox::currentIndexChanged), [=](int index)
 	{
-		for (u32 subdex = 0; subdex < (0x30 / sizeof(u64)); subdex++)
+		const u32 sky_info = combo_skylist->itemData(index).toUInt();
+		if (sky_info != 0xFFFFFFFF)
 		{
-			if (reinterpret_cast<const u64&>(g_skylander.sky_dump[(index * 0x40) + (subdex * sizeof(u64))]) != 0)
-			{
-				return true;
-			}
+			const u16 sky_id  = sky_info >> 16;
+			const u16 sky_var = sky_info & 0xFFFF;
+
+			edit_id->setText(QString::number(sky_id));
+			edit_var->setText(QString::number(sky_var));
 		}
-	}
-	return false;
-}
+	});
 
-void skylander_dialog::new_skylander()
-{
-	const QString file_path = QFileDialog::getSaveFileName(this, tr("Create Skylander File"), cur_sky_file_path, tr("Skylander Object (*.sky);;"));
-	if (file_path.isEmpty())
-		return;
-
-	if (g_skylander.sky_file)
-		g_skylander.sky_file.close();
-
-	g_skylander.sky_file.open(file_path.toStdString(), fs::read + fs::write + fs::create);
-	if (!g_skylander.sky_file)
-		return;
-
-	cur_sky_file_path = file_path;
-
+	connect(btn_create, &QAbstractButton::clicked, this, [=, this]()
 	{
-		std::lock_guard lock(g_skylander.sky_mutex);
-		memset(g_skylander.sky_dump, 0, 0x40 * 0x10);
+		bool ok_id = false, ok_var = false;
+		const u16 sky_id = edit_id->text().toUShort(&ok_id);
+		if (!ok_id)
+		{
+			QMessageBox::warning(this, tr("Error converting value"), tr("ID entered is invalid!"), QMessageBox::Ok);
+			return;
+		}
+		const u16 sky_var = edit_var->text().toUShort(&ok_var);
+		if (!ok_var)
+		{
+			QMessageBox::warning(this, tr("Error converting value"), tr("Variant entered is invalid!"), QMessageBox::Ok);
+			return;
+		}
 
+		QString predef_name = last_skylander_path;
+		auto found_sky      = list_skylanders.find(std::make_pair(sky_id, sky_var));
+		if (found_sky != list_skylanders.end())
+		{
+			predef_name += QString::fromStdString(found_sky->second + ".sky");
+		}
+		else
+		{
+			predef_name += QString("Unknown(%1 %2).sky").arg(sky_id).arg(sky_var);
+		}
+
+		file_path = QFileDialog::getSaveFileName(this, tr("Create Skylander File"), predef_name, tr("Skylander Object (*.sky);;"));
+		if (file_path.isEmpty())
+		{
+			return;
+		}
+
+		fs::file sky_file(file_path.toStdString(), fs::read + fs::write + fs::create);
+		if (!sky_file)
+		{
+			QMessageBox::warning(this, tr("Failed to create skylander file!"), tr("Failed to create skylander file:\n%1").arg(file_path), QMessageBox::Ok);
+			return;
+		}
+
+		std::array<u8, 0x40 * 0x10> buf{};
+		auto data = buf.data();
 		// Set the block permissions
-		reinterpret_cast<le_t<u32>&>(g_skylander.sky_dump[0x36]) = 0x690F0F0F;
+		reinterpret_cast<le_t<u32>&>(data[0x36]) = 0x690F0F0F;
 		for (u32 index = 1; index < 0x10; index++)
 		{
-			reinterpret_cast<le_t<u32>&>(g_skylander.sky_dump[(index * 0x40) + 0x36]) = 0x69080F7F;
+			reinterpret_cast<le_t<u32>&>(data[(index * 0x40) + 0x36]) = 0x69080F7F;
+		}
+		// Set the skylander infos
+		reinterpret_cast<le_t<u32>&>(data[0])    = (sky_id << 16) | sky_var;
+		reinterpret_cast<le_t<u16>&>(data[0x10]) = sky_id;
+		reinterpret_cast<le_t<u16>&>(data[0x1C]) = sky_var;
+		// Set checksum
+		reinterpret_cast<le_t<u16>&>(data[0x1E]) = skylander_crc16(0xFFFF, data, 0x1E);
+
+		sky_file.write(buf.data(), buf.size());
+		sky_file.close();
+
+		last_skylander_path = QFileInfo(file_path).absolutePath() + "/";
+		accept();
+	});
+
+	connect(btn_cancel, &QAbstractButton::clicked, this, &QDialog::reject);
+
+	connect(co_compl, QOverload<const QString&>::of(&QCompleter::activated),[=](const QString& text)
+	{
+		combo_skylist->setCurrentText(text);
+		combo_skylist->setCurrentIndex(combo_skylist->findText(text));
+	});
+}
+
+QString skylander_creator_dialog::get_file_path() const
+{
+	return file_path;
+}
+
+skylander_dialog::skylander_dialog(QWidget* parent)
+    : QDialog(parent)
+{
+	setWindowTitle(tr("Skylanders Manager"));
+	setObjectName("skylanders_manager");
+	setAttribute(Qt::WA_DeleteOnClose);
+	setMinimumSize(QSize(700, 200));
+
+	QVBoxLayout* vbox_panel = new QVBoxLayout();
+
+	auto add_line = [](QVBoxLayout* vbox)
+	{
+		QFrame* line = new QFrame();
+		line->setFrameShape(QFrame::HLine);
+		line->setFrameShadow(QFrame::Sunken);
+		vbox->addWidget(line);
+	};
+
+	QGroupBox* group_skylanders = new QGroupBox(tr("Active Portal Skylanders:"));
+	QVBoxLayout* vbox_group     = new QVBoxLayout();
+
+	for (auto i = 0; i < UI_SKY_NUM; i++)
+	{
+		if (i != 0)
+		{
+			add_line(vbox_group);
 		}
 
-		reinterpret_cast<le_t<u16>&>(g_skylander.sky_dump[0x1E]) = skylander_crc16(0xFFFF, g_skylander.sky_dump, 0x1E);
+		QHBoxLayout* hbox_skylander = new QHBoxLayout();
+		QLabel* label_skyname       = new QLabel(QString(tr("Skylander %1")).arg(i + 1));
+		edit_skylanders[i]          = new QLineEdit();
+		edit_skylanders[i]->setEnabled(false);
 
-		// On a new skylander everything is 0'd and no crc apart from the first one is set
+		QPushButton* clear_btn  = new QPushButton(tr("Clear"));
+		QPushButton* create_btn = new QPushButton(tr("Create"));
+		QPushButton* load_btn   = new QPushButton(tr("Load"));
 
-		g_skylander.sky_reload = true;
+		connect(clear_btn, &QAbstractButton::clicked, this, [=, this]() { this->clear_skylander(i); });
+		connect(create_btn, &QAbstractButton::clicked, this, [=, this]() { this->create_skylander(i); });
+		connect(load_btn, &QAbstractButton::clicked, this, [=, this]() { this->load_skylander(i); });
+
+		hbox_skylander->addWidget(label_skyname);
+		hbox_skylander->addWidget(edit_skylanders[i]);
+		hbox_skylander->addWidget(clear_btn);
+		hbox_skylander->addWidget(create_btn);
+		hbox_skylander->addWidget(load_btn);
+
+		vbox_group->addLayout(hbox_skylander);
 	}
 
-	g_skylander.sky_save();
+	group_skylanders->setLayout(vbox_group);
+	vbox_panel->addWidget(group_skylanders);
+	setLayout(vbox_panel);
 
-	edit_curfile->setText(file_path);
 	update_edits();
 }
 
-void skylander_dialog::load_skylander()
+skylander_dialog::~skylander_dialog()
 {
-	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Skylander File"), cur_sky_file_path, tr("Skylander (*.sky);;"));
+	inst = nullptr;
+}
+
+skylander_dialog* skylander_dialog::get_dlg(QWidget* parent)
+{
+	if (inst == nullptr)
+		inst = new skylander_dialog(parent);
+
+	return inst;
+}
+
+void skylander_dialog::clear_skylander(u8 slot)
+{
+	if (auto slot_infos = sky_slots[slot])
+	{
+		auto [cur_slot, id, var] = slot_infos.value();
+		g_skyportal.remove_skylander(cur_slot);
+		sky_slots[slot] = {};
+		update_edits();
+	}
+}
+
+void skylander_dialog::create_skylander(u8 slot)
+{
+	skylander_creator_dialog create_dlg(this);
+	if (create_dlg.exec() == Accepted)
+	{
+		QString created_path = create_dlg.get_file_path();
+		load_skylander_path(slot, created_path);
+	}
+}
+
+void skylander_dialog::load_skylander(u8 slot)
+{
+	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select Skylander File"), last_skylander_path, tr("Skylander (*.sky);;"));
 	if (file_path.isEmpty())
+	{
 		return;
+	}
 
-	if (g_skylander.sky_file)
-		g_skylander.sky_file.close();
+	last_skylander_path = QFileInfo(file_path).absolutePath() + "/";
 
-	g_skylander.sky_file.open(file_path.toStdString(), fs::read + fs::write);
-	if (!g_skylander.sky_file)
+	load_skylander_path(slot, file_path);
+}
+
+void skylander_dialog::load_skylander_path(u8 slot, const QString& path)
+{
+	fs::file sky_file(path.toStdString(), fs::read + fs::write + fs::lock);
+	if (!sky_file)
+	{
+		QMessageBox::warning(this, tr("Failed to open the skylander file!"), tr("Failed to open the skylander file(%1)!\nFile may already be in use on the portal.").arg(path), QMessageBox::Ok);
 		return;
+	}
 
-	cur_sky_file_path = file_path;
+	std::array<u8, 0x40 * 0x10> data;
+	if (sky_file.read(data.data(), data.size()) != data.size())
+	{
+		QMessageBox::warning(this, tr("Failed to read the skylander file!"), tr("Failed to read the skylander file(%1)!\nFile was too small.").arg(path), QMessageBox::Ok);
+		return;
+	}
 
-	g_skylander.sky_load();
+	clear_skylander(slot);
 
-	edit_curfile->setText(file_path);
+	u16 sky_id  = reinterpret_cast<le_t<u16>&>(data[0x10]);
+	u16 sky_var = reinterpret_cast<le_t<u16>&>(data[0x1C]);
+
+	u8 portal_slot  = g_skyportal.load_skylander(data.data(), std::move(sky_file));
+	sky_slots[slot] = std::tuple(portal_slot, sky_id, sky_var);
+
 	update_edits();
 }
 
 void skylander_dialog::update_edits()
 {
-	// clang-format off
-	auto widget_enabler = [&](bool status_noinit, bool status)
+	for (auto i = 0; i < UI_SKY_NUM; i++)
 	{
-		combo_skylist->setEnabled(status_noinit);
-		edit_skyid->setEnabled(status_noinit);
-		edit_skyxp->setEnabled(status);
-		edit_skymoney->setEnabled(status);
-		button_update->setEnabled(status_noinit);
-	};
-	// clang-format on
-
-	if (!g_skylander.sky_file)
-	{
-		widget_enabler(false, false);
-		return;
-	}
-
-	if (!is_initialized())
-	{
-		widget_enabler(true, false);
-		std::lock_guard lock(g_skylander.sky_mutex);
-		edit_skyid->setText(QString::number(reinterpret_cast<le_t<u16>&>(g_skylander.sky_dump[0x10])));
-		return;
-	}
-
-	widget_enabler(true, true);
-	{
-		std::lock_guard lock(g_skylander.sky_mutex);
-		edit_skyid->setText(QString::number(reinterpret_cast<le_t<u16>&>(g_skylander.sky_dump[0x10])));
-
-		u8 active = get_active_block();
-
-		std::array<u8, 16> decrypted;
-		get_block(active, decrypted);
-		u32 xp = reinterpret_cast<le_t<u32>&>(decrypted[0]) & 0xFFFFFF;
-		edit_skyxp->setText(QString::number(xp));
-		u16 money = reinterpret_cast<le_t<u16, 1>&>(decrypted[3]);
-		edit_skymoney->setText(QString::number(money));
-	}
-}
-
-void skylander_dialog::process_edits()
-{
-	bool cast_success = false;
-	{
-		std::lock_guard lock(g_skylander.sky_mutex);
-
-		u16 skyID = edit_skyid->text().toInt(&cast_success);
-		if (cast_success)
+		QString display_string;
+		if (auto sd = sky_slots[i])
 		{
-			reinterpret_cast<le_t<u16>&>(g_skylander.sky_dump[0x10]) = skyID;
-			reinterpret_cast<le_t<u16>&>(g_skylander.sky_dump[0])    = skyID;
+			auto [portal_slot, sky_id, sky_var] = sd.value();
+			auto found_sky                      = list_skylanders.find(std::make_pair(sky_id, sky_var));
+			if (found_sky != list_skylanders.end())
+			{
+				display_string = QString::fromStdString(found_sky->second);
+			}
+			else
+			{
+				display_string = QString("Unknown (Id:%1 Var:%2)").arg(sky_id).arg(sky_var);
+			}
+		}
+		else
+		{
+			display_string = "None";
 		}
 
-		reinterpret_cast<le_t<u16>&>(g_skylander.sky_dump[0x1E]) = skylander_crc16(0xFFFF, g_skylander.sky_dump, 0x1E);
+		edit_skylanders[i]->setText(display_string);
 	}
-
-	if (is_initialized())
-	{
-		std::lock_guard lock(g_skylander.sky_mutex);
-		u8 active = get_active_block();
-
-		std::array<u8, 16> decrypted_header;
-		get_block(active, decrypted_header);
-
-		u32 old_xp    = reinterpret_cast<le_t<u32>&>(decrypted_header[0]) & 0xFFFFFF;
-		u16 old_money = reinterpret_cast<le_t<u16, 1>&>(decrypted_header[3]);
-
-		u32 xp = edit_skyxp->text().toInt(&cast_success);
-		if (!cast_success)
-			xp = old_xp;
-		u32 money = edit_skymoney->text().toInt(&cast_success);
-		if (!cast_success)
-			money = old_money;
-
-		memcpy(decrypted_header.data(), &xp, 3);
-		reinterpret_cast<le_t<u16>&>(decrypted_header[3]) = money;
-
-		set_block(active, decrypted_header);
-
-		set_checksums();
-
-		g_skylander.sky_reload = true;
-	}
-
-	g_skylander.sky_save();
 }
