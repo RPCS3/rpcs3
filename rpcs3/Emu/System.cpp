@@ -28,10 +28,10 @@
 #include "Loader/ELF.h"
 
 #include "Utilities/StrUtil.h"
-#include "Utilities/sysinfo.h"
 
 #include "../Crypto/unself.h"
 #include "../Crypto/unpkg.h"
+#include "util/sysinfo.hpp"
 #include "util/yaml.hpp"
 #include "util/logs.hpp"
 

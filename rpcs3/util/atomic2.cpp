@@ -1,6 +1,7 @@
 #include "atomic2.hpp"
 #include "Utilities/JIT.h"
-#include "Utilities/sysinfo.h"
+
+#include "util/sysinfo.hpp"
 
 //
 static const bool s_use_rtm = utils::has_rtm();

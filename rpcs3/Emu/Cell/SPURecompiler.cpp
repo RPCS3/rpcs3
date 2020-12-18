@@ -7,7 +7,6 @@
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/JIT.h"
-#include "Utilities/sysinfo.h"
 #include "util/init_mutex.hpp"
 
 #include "SPUThread.h"
@@ -19,6 +18,7 @@
 #include <thread>
 
 #include "util/v128.hpp"
+#include "util/sysinfo.hpp"
 
 extern atomic_t<const char*> g_progr;
 extern atomic_t<u32> g_progr_ptotal;

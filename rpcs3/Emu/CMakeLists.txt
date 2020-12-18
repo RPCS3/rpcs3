@@ -40,6 +40,7 @@ target_sources(rpcs3_emu PRIVATE
 	../util/cereal.cpp
 	../util/vm_native.cpp
 	../util/dyn_lib.cpp
+	../util/sysinfo.cpp
 	../../Utilities/bin_patch.cpp
 	../../Utilities/cheat_info.cpp
 	../../Utilities/cond.cpp
@@ -51,7 +52,6 @@ target_sources(rpcs3_emu PRIVATE
 	../../Utilities/rXml.cpp
 	../../Utilities/sema.cpp
 	../../Utilities/StrFmt.cpp
-	../../Utilities/sysinfo.cpp
 	../../Utilities/Thread.cpp
 	../../Utilities/version.cpp
 )

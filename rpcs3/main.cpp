@@ -37,7 +37,6 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <dispatch/dispatch.h>
 #endif
 
-#include "Utilities/sysinfo.h"
 #include "Utilities/Config.h"
 #include "Utilities/Thread.h"
 #include "rpcs3_version.h"
@@ -46,6 +45,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <charconv>
 
 #include "util/v128.hpp"
+#include "util/sysinfo.hpp"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 

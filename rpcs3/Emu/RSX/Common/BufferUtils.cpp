@@ -1,11 +1,11 @@
 #include "stdafx.h"
 #include "BufferUtils.h"
 #include "../rsx_methods.h"
-#include "Utilities/sysinfo.h"
 #include "../RSXThread.h"
 
 #include "util/v128.hpp"
 #include "util/to_endian.hpp"
+#include "util/sysinfo.hpp"
 
 #define DEBUG_VERTEX_STREAMING 0
 

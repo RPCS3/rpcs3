@@ -7,12 +7,12 @@
 #include "SPUDisAsm.h"
 #include "SPUThread.h"
 #include "SPUInterpreter.h"
-#include "Utilities/sysinfo.h"
 #include "PPUAnalyser.h"
 #include "Crypto/sha1.h"
 
 #include "util/asm.hpp"
 #include "util/v128.hpp"
+#include "util/sysinfo.hpp"
 
 #include <cmath>
 #include <mutex>

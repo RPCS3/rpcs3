@@ -28,11 +28,12 @@
 #include "Emu/system_config.h"
 #include "Emu/title.h"
 #include "Crypto/unself.h"
-#include "Utilities/sysinfo.h"
 
 #include <set>
 #include <unordered_set>
 #include <thread>
+
+#include "util/sysinfo.hpp"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
@@ -1043,7 +1044,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable); // set checkable flag
 
 		// If no override selected (res=0), checkbox is unchecked
-		// Otherwise if the override does not match the default behaviour, checkbox is checked 
+		// Otherwise if the override does not match the default behaviour, checkbox is checked
 		item->setCheckState(res && res != (lib.second * 2 - 1) ? Qt::Checked : Qt::Unchecked); // AND initialize check state
 
 		item->setToolTip(!lib.second ? tooltips.settings.lib_default_lle :
@@ -1077,7 +1078,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			return (i1->checkState() != i2->checkState()) ? (i1->checkState() > i2->checkState()) : (i1->text() < i2->text());
 		};
-		
+
 		std::sort(items.begin(), items.end(), func);
 		std::sort(items2.begin(), items2.end(), func);
 
@@ -1098,7 +1099,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	};
 
-	// Sort libs 
+	// Sort libs
 	on_lib_state_changed({});
 
 	// Events

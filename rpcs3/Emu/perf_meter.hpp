@@ -2,11 +2,12 @@
 
 #include "util/types.hpp"
 #include "util/logs.hpp"
-#include "Utilities/sysinfo.h"
 #include "system_config.h"
 #include "IdManager.h"
 #include <array>
 #include <cmath>
+
+#include "util/sysinfo.hpp"
 
 LOG_CHANNEL(perf_log, "PERF");
 

@@ -1,10 +1,10 @@
 #include "util/types.hpp"
+#include "util/sysinfo.hpp"
 #include "JIT.h"
 #include "StrFmt.h"
 #include "File.h"
 #include "util/logs.hpp"
 #include "mutex.h"
-#include "sysinfo.h"
 #include "util/vm.hpp"
 #include <immintrin.h>
 #include <zlib.h>

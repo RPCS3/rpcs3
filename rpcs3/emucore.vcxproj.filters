@@ -782,7 +782,7 @@
     <ClCompile Include="Emu\Cell\lv2\sys_ss.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\sysinfo.cpp">
+    <ClCompile Include="util\sysinfo.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_gamepad.cpp">
@@ -1624,7 +1624,7 @@
     <ClInclude Include="..\Utilities\CRC.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\sysinfo.h">
+    <ClInclude Include="util\sysinfo.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\GLSLCommon.h">
