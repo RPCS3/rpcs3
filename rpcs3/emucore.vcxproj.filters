@@ -206,6 +206,9 @@
     <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Common\GLSLCommon.cpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp">
       <Filter>Emu\GPU\RSX\Null</Filter>
     </ClCompile>

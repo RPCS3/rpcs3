@@ -345,6 +345,7 @@
     <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp" />
     <ClCompile Include="Emu\RSX\Common\FragmentProgramDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\Common\GLSLCommon.cpp" />
     <ClCompile Include="Emu\RSX\Common\ProgramStateCache.cpp" />
     <ClCompile Include="Emu\RSX\Common\surface_store.cpp" />
     <ClCompile Include="Emu\RSX\Common\TextureUtils.cpp" />

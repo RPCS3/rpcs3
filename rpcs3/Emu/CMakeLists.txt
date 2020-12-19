@@ -392,6 +392,7 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/rsx_utils.cpp
 	RSX/Common/BufferUtils.cpp
 	RSX/Common/FragmentProgramDecompiler.cpp
+	RSX/Common/GLSLCommon.cpp
 	RSX/Common/ProgramStateCache.cpp
 	RSX/Common/surface_store.cpp
 	RSX/Common/TextureUtils.cpp
