@@ -1317,12 +1317,6 @@ std::string spu_thread::dump_regs() const
 	fmt::append(ret, "Stall Mask: 0x%x\n", ch_stall_mask);
 	fmt::append(ret, "Tag Stat: %s\n", ch_tag_stat);
 	fmt::append(ret, "Tag Update: %s\n", mfc_tag_update{ch_tag_upd});
-
-	if (const u32 addr = raddr)
-		fmt::append(ret, "Reservation Addr: 0x%x\n", addr);
-	else
-		fmt::append(ret, "Reservation Addr: none\n");
-
 	fmt::append(ret, "Atomic Stat: %s\n", ch_atomic_stat); // TODO: use mfc_atomic_status formatting
 	fmt::append(ret, "Interrupts: %s\n", interrupts_enabled ? "Enabled" : "Disabled");
 	fmt::append(ret, "Inbound Mailbox: %s\n", ch_in_mbox);
@@ -1330,7 +1324,21 @@ std::string spu_thread::dump_regs() const
 	fmt::append(ret, "Out Interrupts Mailbox: %s\n", ch_out_intr_mbox);
 	fmt::append(ret, "SNR config: 0x%llx\n", snr_config);
 	fmt::append(ret, "SNR1: %s\n", ch_snr1);
-	fmt::append(ret, "SNR2: %s", ch_snr2);
+	fmt::append(ret, "SNR2: %s\n", ch_snr2);
+
+	const u32 addr = raddr;
+
+	fmt::append(ret, "Reservation Addr: %s\n", addr ? fmt::format("0x%x", addr) : "N/A");
+	fmt::append(ret, "Reservation Data:\n");
+
+	be_t<u32> data[32]{};
+	std::memcpy(data, rdata, sizeof(rdata)); // Show the data even if the reservation was lost inside the atomic loop 
+
+	for (usz i = 0; i < std::size(data); i += 4)
+	{
+		fmt::append(ret, "[0x%02x] %08x %08x %08x %08x\n", i * sizeof(data[0])
+			, data[i + 0], data[i + 1], data[i + 2], data[i + 3]);
+	}
 
 	return ret;
 }
@@ -3750,6 +3758,12 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 			for (; !events.count; events = get_events(mask1, false, true))
 			{
+				if (is_paused())
+				{
+					// Ensure reservation data won't change while paused for debugging purposes
+					check_state();
+				}
+
 				state += cpu_flag::wait;
 
 				if (is_stopped())
@@ -3766,6 +3780,11 @@ s64 spu_thread::get_ch_value(u32 ch)
 
 		for (; !events.count; events = get_events(mask1, true, true))
 		{
+			if (is_paused())
+			{
+				check_state();
+			}
+
 			state += cpu_flag::wait;
 
 			if (is_stopped())
