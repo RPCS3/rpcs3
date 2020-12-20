@@ -1117,12 +1117,12 @@ namespace stx
 namespace atomic_wait
 {
 	template <typename T>
-	inline __m128i default_mask<stx::atomic_ptr<T>> = _mm_cvtsi64_si128(stx::c_ptr_mask);
+	constexpr u128 default_mask<stx::atomic_ptr<T>> = stx::c_ptr_mask;
 
 	template <typename T>
-	constexpr __m128i get_value(stx::atomic_ptr<T>&, const volatile void* value = nullptr)
+	constexpr u128 get_value(stx::atomic_ptr<T>&, const volatile void* value = nullptr)
 	{
-		return _mm_cvtsi64_si128(reinterpret_cast<uptr>(value) << stx::c_ref_size);
+		return reinterpret_cast<uptr>(value) << stx::c_ref_size;
 	}
 }
 
