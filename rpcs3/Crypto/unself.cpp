@@ -9,8 +9,6 @@
 #include <algorithm>
 #include <zlib.h>
 
-#include "util/v128.hpp"
-
 inline u8 Read8(const fs::file& f)
 {
 	u8 ret;
@@ -1489,7 +1487,7 @@ bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 	return true;
 }
 
-v128 get_default_self_klic()
+u128 get_default_self_klic()
 {
-	return std::bit_cast<v128>(NP_KLIC_FREE);
+	return std::bit_cast<u128>(NP_KLIC_FREE);
 }

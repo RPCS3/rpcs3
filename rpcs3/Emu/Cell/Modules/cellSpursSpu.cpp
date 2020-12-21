@@ -14,6 +14,7 @@
 #include <mutex>
 
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
 
 LOG_CHANNEL(cellSpurs);
 

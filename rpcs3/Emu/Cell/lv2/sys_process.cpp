@@ -403,10 +403,9 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 		Emu.disc = std::move(disc);
 		Emu.hdd1 = std::move(hdd1);
 
-		if (klic != v128{})
+		if (klic)
 		{
-			// TODO: Use std::optional
-			Emu.klic.assign(std::begin(klic._bytes), std::end(klic._bytes));
+			Emu.klic.emplace_back(klic);
 		}
 
 		Emu.SetForceBoot(true);

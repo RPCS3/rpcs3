@@ -31,6 +31,7 @@
 #include "util/vm.hpp"
 #include "util/asm.hpp"
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
 #include "util/sysinfo.hpp"
 
 using spu_rdata_t = decltype(spu_thread::rdata);
@@ -1558,7 +1559,7 @@ void spu_thread::cpu_return()
 						for (u32 status; !thread->exit_status.try_read(status)
 							|| status != thread->last_exit_status;)
 						{
-							_mm_pause();
+							utils::pause();
 						}
 					}
 				}

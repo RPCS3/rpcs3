@@ -66,6 +66,8 @@
 #include "util/asm.hpp"
 #include "util/vm.hpp"
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
+#include "util/sysinfo.hpp"
 
 const bool s_use_ssse3 = utils::has_ssse3();
 

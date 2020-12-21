@@ -300,7 +300,11 @@ namespace vk
 		{
 			while (num_waiters.load() != 0)
 			{
+#ifdef _MSC_VER
 				_mm_pause();
+#else
+				__builtin_ia32_pause();
+#endif
 			}
 		}
 

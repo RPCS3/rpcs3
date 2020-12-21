@@ -12,6 +12,7 @@
 
 #include "util/asm.hpp"
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
 #include "util/sysinfo.hpp"
 
 #if !defined(_MSC_VER) && defined(__clang__)

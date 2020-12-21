@@ -2,6 +2,9 @@
 
 #include "CPUTranslator.h"
 
+#include "util/v128.hpp"
+#include "util/v128sse.hpp"
+
 llvm::LLVMContext g_llvm_ctx;
 
 cpu_translator::cpu_translator(llvm::Module* _module, bool is_be)

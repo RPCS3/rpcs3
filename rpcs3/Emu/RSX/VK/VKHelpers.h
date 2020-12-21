@@ -24,6 +24,10 @@
 
 #include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
 
+#ifdef _MSC_VER
+extern "C" void _mm_pause();
+#endif
+
 #ifdef __APPLE__
 #define VK_DISABLE_COMPONENT_SWIZZLE 1
 #else
@@ -1231,7 +1235,11 @@ private:
 		{
 			while (!flushed)
 			{
+#ifdef _MSC_VER
 				_mm_pause();
+#else
+				__builtin_ia32_pause();
+#endif
 			}
 		}
 

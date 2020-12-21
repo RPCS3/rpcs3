@@ -5,7 +5,6 @@
 #include "Utilities/mutex.h"
 #include <cmath>
 
-#include "util/v128.hpp"
 #include "util/asm.hpp"
 
 LOG_CHANNEL(edat_log, "EDAT");
@@ -138,15 +137,15 @@ std::tuple<u64, s32, s32> dec_section(unsigned char* metadata)
 	return std::make_tuple(offset, length, compression_end);
 }
 
-v128 get_block_key(int block, NPD_HEADER *npd)
+u128 get_block_key(int block, NPD_HEADER *npd)
 {
 	unsigned char empty_key[0x10] = {};
 	unsigned char *src_key = (npd->version <= 1) ? empty_key : npd->dev_hash;
-	v128 dest_key{};
-	memcpy(dest_key._bytes, src_key, 0xC);
+	u128 dest_key{};
+	std::memcpy(&dest_key, src_key, 0xC);
 
 	s32 swappedBlock = swap32(block);
-	memcpy(&dest_key._bytes[0xC], &swappedBlock, sizeof(swappedBlock));
+	std::memcpy(reinterpret_cast<uchar*>(&dest_key) + 0xC, &swappedBlock, sizeof(swappedBlock));
 	return dest_key;
 }
 
@@ -251,7 +250,7 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 	auto b_key = get_block_key(block_num, npd);
 
 	// Encrypt the block key with the crypto key.
-	aesecb128_encrypt(crypt_key, b_key._bytes, key_result);
+	aesecb128_encrypt(crypt_key, reinterpret_cast<uchar*>(&b_key), key_result);
 	if ((edat->flags & EDAT_FLAG_0x10) != 0)
 		aesecb128_encrypt(crypt_key, key_result, hash);  // If FLAG 0x10 is set, encrypt again to get the final hash.
 	else
@@ -556,9 +555,10 @@ int validate_dev_klic(const u8* klicensee, NPD_HEADER *npd)
 	memcpy(dev + 0xC, &type, 4);
 
 	// Check for an empty dev_hash (can't validate if devklic is NULL);
-	auto klic = v128::loadu(klicensee);
+	u128 klic;
+	std::memcpy(&klic, klicensee, sizeof(klic));
 
-	if (klic == v128{})
+	if (!klic)
 	{
 		// Allow empty dev hash.
 		return 1;
@@ -566,10 +566,10 @@ int validate_dev_klic(const u8* klicensee, NPD_HEADER *npd)
 	else
 	{
 		// Generate klicensee xor key.
-		auto key = klic ^ std::bit_cast<v128>(NP_OMAC_KEY_2);
+		u128 key = klic ^ std::bit_cast<u128>(NP_OMAC_KEY_2);
 
 		// Hash with generated key and compare with dev_hash.
-		return cmac_hash_compare(key._bytes, 0x10, dev, 0x60, npd->dev_hash, 0x10);
+		return cmac_hash_compare(reinterpret_cast<uchar*>(&key), 0x10, dev, 0x60, npd->dev_hash, 0x10);
 	}
 }
 
@@ -668,7 +668,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 	}
 
 	// Set decryption key.
-	v128 key{};
+	u128 key{};
 
 	// Check EDAT/SDAT flag.
 	if ((EDAT.flags & SDAT_FLAG) == SDAT_FLAG)
@@ -682,7 +682,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 		}
 
 		// Generate SDAT key.
-		key = std::bit_cast<v128>(NPD.dev_hash) ^ std::bit_cast<v128>(SDAT_KEY);
+		key = std::bit_cast<u128>(NPD.dev_hash) ^ std::bit_cast<u128>(SDAT_KEY);
 	}
 	else
 	{
@@ -715,7 +715,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 			memcpy(&key, rifkey, 0x10);
 
 			// Make sure we don't have an empty RIF key.
-			if (key == v128{})
+			if (!key)
 			{
 				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file! (local activation)");
 				return 1;
@@ -726,7 +726,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 			memcpy(&key, rifkey, 0x10);
 
 			// Make sure we don't have an empty RIF key.
-			if (key == v128{})
+			if (!key)
 			{
 				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file! (network activation)");
 				return 1;
@@ -735,7 +735,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 
 		if (verbose)
 		{
-			be_t<v128> data;
+			be_t<u128> data;
 
 			std::memcpy(&data, devklic, sizeof(data));
 			edat_log.notice("DEVKLIC: %s", data);
@@ -746,18 +746,18 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 
 	if (verbose)
 	{
-		edat_log.notice("DECRYPTION KEY: %s", std::bit_cast<be_t<v128>>(key));
+		edat_log.notice("DECRYPTION KEY: %s", std::bit_cast<be_t<u128>>(key));
 	}
 
 	input->seek(0);
-	if (check_data(key._bytes, &EDAT, &NPD, input, verbose))
+	if (check_data(reinterpret_cast<uchar*>(&key), &EDAT, &NPD, input, verbose))
 	{
 		edat_log.error("EDAT: Data parsing failed!");
 		return 1;
 	}
 
 	input->seek(0);
-	if (decrypt_data(input, output, &EDAT, &NPD, key._bytes, verbose))
+	if (decrypt_data(input, output, &EDAT, &NPD, reinterpret_cast<uchar*>(&key), verbose))
 	{
 		edat_log.error("EDAT: Data decryption failed!");
 		return 1;
@@ -766,14 +766,14 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 	return 0;
 }
 
-v128 GetEdatRifKeyFromRapFile(const fs::file& rap_file)
+u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file)
 {
-	v128 rapkey{};
-	v128 rifkey{};
+	u128 rapkey{};
+	u128 rifkey{};
 
-	rap_file.read<v128>(rapkey);
+	rap_file.read<u128>(rapkey);
 
-	rap_to_rif(rapkey._bytes, rifkey._bytes);
+	rap_to_rif(reinterpret_cast<uchar*>(&rapkey), reinterpret_cast<uchar*>(&rifkey));
 
 	return rifkey;
 }
@@ -824,8 +824,8 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 	input.seek(0);
 
 	// Set keys (RIF and DEVKLIC).
-	v128 rifKey{};
-	v128 devklic{};
+	u128 rifKey{};
+	u128 devklic{};
 
 	// Select the EDAT key mode.
 	switch (mode)
@@ -879,7 +879,7 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 
 	// Delete the bad output file if any errors arise.
 	fs::file output = fs::make_stream<std::vector<u8>>();
-	if (extract_all_data(&input, &output, input_file_name.c_str(), devklic._bytes, rifKey._bytes, verbose))
+	if (extract_all_data(&input, &output, input_file_name.c_str(), reinterpret_cast<uchar*>(&devklic), reinterpret_cast<uchar*>(&rifKey), verbose))
 	{
 		output.release();
 		return fs::file{};
@@ -905,12 +905,12 @@ bool EDATADecrypter::ReadHeader()
 	if ((edatHeader.flags & SDAT_FLAG) == SDAT_FLAG)
 	{
 		// Generate SDAT key.
-		dec_key = std::bit_cast<v128>(npdHeader.dev_hash) ^ std::bit_cast<v128>(SDAT_KEY);
+		dec_key = std::bit_cast<u128>(npdHeader.dev_hash) ^ std::bit_cast<u128>(SDAT_KEY);
 	}
 	else
 	{
 		// verify key
-		if (validate_dev_klic(dev_key._bytes, &npdHeader) == 0)
+		if (validate_dev_klic(reinterpret_cast<uchar*>(&dev_key), &npdHeader) == 0)
 		{
 			edat_log.error("EDAT: Failed validating klic");
 			return false;
@@ -923,7 +923,7 @@ bool EDATADecrypter::ReadHeader()
 		{
 			dec_key = std::move(rif_key);
 
-			if (dec_key == v128{})
+			if (!dec_key)
 			{
 				edat_log.warning("EDAT: Empty Dec key for local activation!");
 			}
@@ -932,7 +932,7 @@ bool EDATADecrypter::ReadHeader()
 		{
 			dec_key = std::move(rif_key);
 
-			if (dec_key == v128{})
+			if (!dec_key)
 			{
 				edat_log.warning("EDAT: Empty Dec key for network activation!");
 			}
@@ -978,7 +978,7 @@ u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
 	for (u32 i = starting_block; i < ending_block; ++i)
 	{
 		edata_file.seek(0);
-		u64 res = decrypt_block(&edata_file, &data_buf[writeOffset], &edatHeader, &npdHeader, dec_key._bytes, i, total_blocks, edatHeader.file_size);
+		u64 res = decrypt_block(&edata_file, &data_buf[writeOffset], &edatHeader, &npdHeader, reinterpret_cast<uchar*>(&dec_key), i, total_blocks, edatHeader.file_size);
 		if (res == umax)
 		{
 			edat_log.error("Error Decrypting data");

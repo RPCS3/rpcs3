@@ -284,7 +284,7 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 		{
 			const auto inst1 = v128::loadu(instBuffer1, instIndex);
 			const auto inst2 = v128::loadu(instBuffer2, instIndex);
-			if (inst1 != inst2)
+			if (inst1._u ^ inst2._u)
 			{
 				return false;
 			}
@@ -475,7 +475,7 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 		const auto inst1 = v128::loadu(instBuffer1, instIndex);
 		const auto inst2 = v128::loadu(instBuffer2, instIndex);
 
-		if (inst1 != inst2)
+		if (inst1._u ^ inst2._u)
 			return false;
 
 		instIndex++;

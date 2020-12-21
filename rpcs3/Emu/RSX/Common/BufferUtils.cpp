@@ -3,9 +3,11 @@
 #include "../rsx_methods.h"
 #include "../RSXThread.h"
 
-#include "util/v128.hpp"
 #include "util/to_endian.hpp"
 #include "util/sysinfo.hpp"
+
+#include "emmintrin.h"
+#include "immintrin.h"
 
 #define DEBUG_VERTEX_STREAMING 0
 
@@ -166,7 +168,7 @@ namespace
 		const u32 dword_count = size >> 2;
 		const u32 iterations = dword_count >> 2;
 
-		v128 bits_diff{};
+		__m128i bits_diff = _mm_setzero_si128();
 
 		if (s_use_ssse3) [[likely]]
 		{
@@ -177,12 +179,12 @@ namespace
 
 				if constexpr (!unaligned)
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_load_si128(dst_ptr), shuffled_vector));
+					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_load_si128(dst_ptr), shuffled_vector));
 					_mm_stream_si128(dst_ptr, shuffled_vector);
 				}
 				else
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_loadu_si128(dst_ptr), shuffled_vector));
+					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_loadu_si128(dst_ptr), shuffled_vector));
 					_mm_storeu_si128(dst_ptr, shuffled_vector);
 				}
 
@@ -200,12 +202,12 @@ namespace
 
 				if constexpr (!unaligned)
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_load_si128(dst_ptr), vec2));
+					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_load_si128(dst_ptr), vec2));
 					_mm_stream_si128(dst_ptr, vec2);
 				}
 				else
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_loadu_si128(dst_ptr), vec2));
+					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_loadu_si128(dst_ptr), vec2));
 					_mm_storeu_si128(dst_ptr, vec2);
 				}
 
@@ -228,12 +230,12 @@ namespace
 				if (dst_ptr2[i] != data)
 				{
 					dst_ptr2[i] = data;
-					bits_diff._u32[0] = UINT32_MAX;
+					bits_diff = _mm_set1_epi64x(-1);
 				}
 			}
 		}
 
-		return bits_diff != v128{};
+		return _mm_cvtsi128_si64(_mm_packs_epi32(bits_diff, bits_diff)) != 0;
 	}
 
 	template bool stream_data_to_memory_swapped_and_compare_u32<false>(void *dst, const void *src, u32 size);

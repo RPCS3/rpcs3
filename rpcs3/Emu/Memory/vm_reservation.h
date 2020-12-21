@@ -8,8 +8,26 @@
 extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit2;
 
+#ifdef _MSC_VER
+extern "C"
+{
+	u64 __rdtsc();
+	u32 _xbegin();
+	void _xend();
+}
+#endif
+
 namespace vm
 {
+	inline u64 get_tsc()
+	{
+#ifdef _MSC_VER
+		return __rdtsc();
+#else
+		return __builtin_ia32_rdtsc();
+#endif
+	}
+
 	enum : u64
 	{
 		rsrv_lock_mask = 127,
@@ -81,28 +99,28 @@ namespace vm
 		const auto sptr = vm::get_super_ptr<T>(static_cast<u32>(ptr.addr()));
 
 		// Prefetch some data
-		_m_prefetchw(sptr);
-		_m_prefetchw(reinterpret_cast<char*>(sptr) + 64);
+		//_m_prefetchw(sptr);
+		//_m_prefetchw(reinterpret_cast<char*>(sptr) + 64);
 
 		// Use 128-byte aligned addr
 		const u32 addr = static_cast<u32>(ptr.addr()) & -128;
 
 		auto& res = vm::reservation_acquire(addr, 128);
-		_m_prefetchw(&res);
+		//_m_prefetchw(&res);
 
 		if (g_use_rtm)
 		{
 			// Stage 1: single optimistic transaction attempt
-			unsigned status = _XBEGIN_STARTED;
+			unsigned status = -1;
 			u64 _old = 0;
 
-			auto stamp0 = __rdtsc(), stamp1 = stamp0, stamp2 = stamp0;
+			auto stamp0 = get_tsc(), stamp1 = stamp0, stamp2 = stamp0;
 
 #ifndef _MSC_VER
 			__asm__ goto ("xbegin %l[stage2];" ::: "memory" : stage2);
 #else
 			status = _xbegin();
-			if (status == _XBEGIN_STARTED)
+			if (status == umax)
 #endif
 			{
 				if (res & rsrv_unique_lock)
@@ -158,16 +176,16 @@ namespace vm
 #ifndef _MSC_VER
 			__asm__ volatile ("mov %%eax, %0;" : "=r" (status) :: "memory");
 #endif
-			stamp1 = __rdtsc();
+			stamp1 = get_tsc();
 
 			// Stage 2: try to lock reservation first
 			_old = res.fetch_add(1);
 
 			// Compute stamps excluding memory touch
-			stamp2 = __rdtsc() - (stamp1 - stamp0);
+			stamp2 = get_tsc() - (stamp1 - stamp0);
 
 			// Start lightened transaction
-			for (; !(_old & vm::rsrv_unique_lock) && stamp2 - stamp0 <= g_rtm_tx_limit2; stamp2 = __rdtsc())
+			for (; !(_old & vm::rsrv_unique_lock) && stamp2 - stamp0 <= g_rtm_tx_limit2; stamp2 = get_tsc())
 			{
 				if (cpu.has_pause_flag())
 				{
@@ -179,7 +197,7 @@ namespace vm
 #else
 				status = _xbegin();
 
-				if (status != _XBEGIN_STARTED) [[unlikely]]
+				if (status != umax) [[unlikely]]
 				{
 					goto retry;
 				}

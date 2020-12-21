@@ -1,13 +1,5 @@
 #pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
-#ifdef _MSC_VER
-#include <intrin.h>
-#else
-#include <x86intrin.h>
-#endif
-#include <immintrin.h>
-#include <emmintrin.h>
-
 #include <cstdint>
 #include <cstddef>
 #include <cstring>
@@ -278,9 +270,27 @@ public:
 };
 
 #ifndef _MSC_VER
+
 using u128 = __uint128_t;
 using s128 = __int128_t;
+
+using __m128i = long long __attribute__((vector_size(16)));
+using __m128d = double __attribute__((vector_size(16)));
+using __m128 = float __attribute__((vector_size(16)));
+
 #else
+
+extern "C"
+{
+	union __m128;
+	union __m128i;
+	struct __m128d;
+
+	uchar _addcarry_u64(uchar, u64, u64, u64*);
+	uchar _subborrow_u64(uchar, u64, u64, u64*);
+	u64 __shiftleft128(u64, u64, uchar);
+	u64 __shiftright128(u64, u64, uchar);
+}
 
 // Unsigned 128-bit integer implementation (TODO)
 struct alignas(16) u128

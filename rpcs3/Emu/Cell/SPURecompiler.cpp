@@ -18,6 +18,7 @@
 #include <thread>
 
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
 #include "util/sysinfo.hpp"
 
 extern atomic_t<const char*> g_progr;

@@ -323,7 +323,7 @@ namespace vm
 				break;
 			}
 
-			_mm_pause();
+			utils::pause();
 		}
 	}
 
@@ -525,7 +525,7 @@ namespace vm
 					break;
 				}
 
-				_mm_pause();
+				utils::pause();
 			}
 
 			for (auto lock = g_locks.cbegin(), end = lock + g_cfg.core.ppu_threads; lock != end; lock++)
@@ -533,7 +533,9 @@ namespace vm
 				if (auto ptr = +*lock)
 				{
 					while (!(ptr->state & cpu_flag::wait))
-						_mm_pause();
+					{
+						utils::pause();
+					}
 				}
 			}
 		}
@@ -1606,7 +1608,7 @@ namespace vm
 					case 2: atomic_storage<u16>::release(*static_cast<u16*>(dst), *static_cast<u16*>(src)); break;
 					case 4: atomic_storage<u32>::release(*static_cast<u32*>(dst), *static_cast<u32*>(src)); break;
 					case 8: atomic_storage<u64>::release(*static_cast<u64*>(dst), *static_cast<u64*>(src)); break;
-					case 16: _mm_store_si128(static_cast<__m128i*>(dst), _mm_loadu_si128(static_cast<__m128i*>(src))); break;
+					case 16: atomic_storage<u128>::release(*static_cast<u128*>(dst), *static_cast<u128*>(src)); break;
 					}
 
 					return true;

@@ -3,6 +3,8 @@
 #include "Emu/System.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
+#include "util/asm.hpp"
+
 namespace rsx
 {
 	void shader_loading_dialog::create(const std::string& msg, const std::string& title)
@@ -27,7 +29,7 @@ namespace rsx
 
 		while (ref_cnt.load() && !Emu.IsStopped())
 		{
-			_mm_pause();
+			utils::pause();
 		}
 	}
 
@@ -87,7 +89,7 @@ namespace rsx
 	{
 		while (ref_cnt.load() && !Emu.IsStopped())
 		{
-			_mm_pause();
+			utils::pause();
 		}
 	}
 }

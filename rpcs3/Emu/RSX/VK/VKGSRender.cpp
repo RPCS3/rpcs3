@@ -10,6 +10,8 @@
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/Memory/vm_locking.h"
 
+#include "../Common/program_state_cache2.hpp"
+
 #include "util/asm.hpp"
 
 namespace vk
@@ -679,7 +681,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			// Wait for deadlock to clear
 			while (m_queue_status & flush_queue_state::deadlock)
 			{
-				_mm_pause();
+				utils::pause();
 			}
 
 			g_fxo->get<rsx::dma_manager>()->clear_mem_fault_flag();

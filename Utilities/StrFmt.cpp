@@ -244,6 +244,18 @@ void fmt_class_string<v128>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<u128>::format(std::string& out, u64 arg)
+{
+	// TODO: it should be supported as full-fledged integral type (with %u, %d, etc, fmt)
+	const u128& num = get_object(arg);
+#ifdef _MSC_VER
+	fmt::append(out, "0x%016llx%016llx", num.hi, num.lo);
+#else
+	fmt::append(out, "0x%016llx%016llx", static_cast<u64>(num >> 64), static_cast<u64>(num));
+#endif
+}
+
+template <>
 void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
 {
 	const src_loc& loc = get_object(arg);

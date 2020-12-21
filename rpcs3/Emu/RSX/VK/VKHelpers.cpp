@@ -1006,7 +1006,11 @@ namespace vk
 			}
 
 			//std::this_thread::yield();
+#ifdef _MSC_VER
 			_mm_pause();
+#else
+			__builtin_ia32_pause();
+#endif
 		}
 	}
 

@@ -15,6 +15,9 @@
 #include <unordered_map>
 #include <map>
 
+#include <immintrin.h>
+#include <emmintrin.h>
+
 DECLARE(cpu_thread::g_threads_created){0};
 DECLARE(cpu_thread::g_threads_deleted){0};
 DECLARE(cpu_thread::g_suspend_counter){0};
@@ -938,7 +941,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 				break;
 			}
 
-			_mm_pause();
+			utils::pause();
 		}
 
 		// Second increment: all threads paused

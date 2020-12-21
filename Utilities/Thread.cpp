@@ -76,6 +76,8 @@
 #include "util/vm.hpp"
 #include "util/logs.hpp"
 #include "util/asm.hpp"
+#include "util/v128.hpp"
+#include "util/v128sse.hpp"
 #include "util/sysinfo.hpp"
 #include "Emu/Memory/vm_locking.h"
 

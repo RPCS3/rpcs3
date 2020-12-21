@@ -7,6 +7,62 @@
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4996)
+
+extern "C"
+{
+	void _ReadWriteBarrier();
+	void* _AddressOfReturnAddress();
+
+	uchar _bittest(const long*, long);
+	uchar _interlockedbittestandset(volatile long*, long);
+	uchar _interlockedbittestandreset(volatile long*, long);
+
+	char _InterlockedCompareExchange8(volatile char*, char, char);
+	char _InterlockedExchange8(volatile char*, char);
+	char _InterlockedExchangeAdd8(volatile char*, char);
+	char _InterlockedAnd8(volatile char*, char);
+	char _InterlockedOr8(volatile char*, char);
+	char _InterlockedXor8(volatile char*, char);
+
+	short _InterlockedCompareExchange16(volatile short*, short, short);
+	short _InterlockedExchange16(volatile short*, short);
+	short _InterlockedExchangeAdd16(volatile short*, short);
+	short _InterlockedAnd16(volatile short*, short);
+	short _InterlockedOr16(volatile short*, short);
+	short _InterlockedXor16(volatile short*, short);
+	short _InterlockedIncrement16(volatile short*);
+	short _InterlockedDecrement16(volatile short*);
+
+	long _InterlockedCompareExchange(volatile long*, long, long);
+	long _InterlockedCompareExchange_HLEAcquire(volatile long*, long, long);
+	long _InterlockedExchange(volatile long*, long);
+	long _InterlockedExchangeAdd(volatile long*, long);
+	long _InterlockedExchangeAdd_HLERelease(volatile long*, long);
+	long _InterlockedAnd(volatile long*, long);
+	long _InterlockedOr(volatile long*, long);
+	long _InterlockedXor(volatile long*, long);
+	long _InterlockedIncrement(volatile long*);
+	long _InterlockedDecrement(volatile long*);
+
+	s64 _InterlockedCompareExchange64(volatile s64*, s64, s64);
+	s64 _InterlockedCompareExchange64_HLEAcquire(volatile s64*, s64, s64);
+	s64 _InterlockedExchange64(volatile s64*, s64);
+	s64 _InterlockedExchangeAdd64(volatile s64*, s64);
+	s64 _InterlockedExchangeAdd64_HLERelease(volatile s64*, s64);
+	s64 _InterlockedAnd64(volatile s64*, s64);
+	s64 _InterlockedOr64(volatile s64*, s64);
+	s64 _InterlockedXor64(volatile s64*, s64);
+	s64 _InterlockedIncrement64(volatile s64*);
+	s64 _InterlockedDecrement64(volatile s64*);
+
+	uchar _InterlockedCompareExchange128(volatile s64*, s64, s64, s64*);
+}
+
+namespace utils
+{
+	u128 __vectorcall atomic_load16(const void*);
+	void __vectorcall atomic_store16(void*, u128);
+}
 #endif
 
 FORCE_INLINE void atomic_fence_consume()
@@ -238,7 +294,10 @@ namespace atomic_wait
 
 	template <typename... T, typename = std::void_t<decltype(std::declval<T>().template wait<op::eq>(any_value))...>>
 	list(T&... vars) -> list<sizeof...(T), T...>;
+}
 
+namespace utils
+{
 	// RDTSC with adjustment for being unique
 	u64 get_unique_tsc();
 }
@@ -871,18 +930,14 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	static inline T load(const T& dest)
 	{
 		atomic_fence_acquire();
-		__m128i val = _mm_load_si128(reinterpret_cast<const __m128i*>(&dest));
+		u128 val = utils::atomic_load16(&dest);
 		atomic_fence_acquire();
 		return std::bit_cast<T>(val);
 	}
 
 	static inline T observe(const T& dest)
 	{
-		// Barriers are kept intentionally
-		atomic_fence_acquire();
-		__m128i val = _mm_load_si128(reinterpret_cast<const __m128i*>(&dest));
-		atomic_fence_acquire();
-		return std::bit_cast<T>(val);
+		return load(dest);
 	}
 
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
@@ -906,32 +961,31 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	static inline void store(T& dest, T value)
 	{
 		atomic_fence_acq_rel();
-		_mm_store_si128(reinterpret_cast<__m128i*>(&dest), std::bit_cast<__m128i>(value));
+		release(dest, value);
 		atomic_fence_seq_cst();
 	}
 
 	static inline void release(T& dest, T value)
 	{
 		atomic_fence_release();
-		_mm_store_si128(reinterpret_cast<__m128i*>(&dest), std::bit_cast<__m128i>(value));
+		utils::atomic_store16(&dest, std::bit_cast<u128>(value));
 		atomic_fence_release();
 	}
 #else
 	static inline T load(const T& dest)
 	{
-		__atomic_thread_fence(__ATOMIC_ACQUIRE);
-		__m128i val = _mm_load_si128(reinterpret_cast<const __m128i*>(&dest));
-		__atomic_thread_fence(__ATOMIC_ACQUIRE);
-		return std::bit_cast<T>(val);
+		__m128i r;
+#ifdef __AVX__
+		__asm__ volatile("vmovdqa %1, %0;" : "=x" (r) : "m" (dest) : "memory");
+#else
+		__asm__ volatile("movdqa %1, %0;" : "=x" (r) : "m" (dest) : "memory");
+#endif
+		return std::bit_cast<T>(r);
 	}
 
 	static inline T observe(const T& dest)
 	{
-		// Barriers are kept intentionally
-		__atomic_thread_fence(__ATOMIC_ACQUIRE);
-		__m128i val = _mm_load_si128(reinterpret_cast<const __m128i*>(&dest));
-		__atomic_thread_fence(__ATOMIC_ACQUIRE);
-		return std::bit_cast<T>(val);
+		return load(dest);
 	}
 
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
@@ -987,16 +1041,17 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 
 	static inline void store(T& dest, T value)
 	{
-		__atomic_thread_fence(__ATOMIC_ACQ_REL);
-		_mm_store_si128(reinterpret_cast<__m128i*>(&dest), std::bit_cast<__m128i>(value));
+		release(dest, value);
 		atomic_fence_seq_cst();
 	}
 
 	static inline void release(T& dest, T value)
 	{
-		__atomic_thread_fence(__ATOMIC_RELEASE);
-		_mm_store_si128(reinterpret_cast<__m128i*>(&dest), std::bit_cast<__m128i>(value));
-		__atomic_thread_fence(__ATOMIC_RELEASE);
+#ifdef __AVX__
+		__asm__ volatile("vmovdqa %0, %1;" :: "x" (reinterpret_cast<__m128i&>(value)), "m" (dest) : "memory");
+#else
+		__asm__ volatile("movdqa %0, %1;" :: "x" (reinterpret_cast<__m128i&>(value)), "m" (dest) : "memory");
+#endif
 	}
 #endif
 

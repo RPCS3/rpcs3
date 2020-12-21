@@ -3,7 +3,7 @@
 #include "PPCDisAsm.h"
 #include "SPUOpcodes.h"
 
-#include "util/v128.hpp"
+union v128;
 
 static constexpr const char* spu_reg_name[128] =
 {
@@ -172,7 +172,7 @@ public:
 		u32 src_index;
 	};
 
-	static insert_mask_info try_get_insert_mask_info(v128 mask);
+	static insert_mask_info try_get_insert_mask_info(const v128& mask);
 
 	//0 - 10
 	void STOP(spu_opcode_t op)
@@ -972,31 +972,7 @@ public:
 	{
 		DisAsm("selb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], spu_reg_name[op.rc]);
 	}
-	void SHUFB(spu_opcode_t op)
-	{
-		const auto [is_const, value] = try_get_const_value(op.rc);
-
-		if (is_const)
-		{
-			const auto [size, dst, src] = try_get_insert_mask_info(value);
-
-			if (size)
-			{
-				if ((size >= 4u && !src) || (size == 2u && src == 1u) || (size == 1u && src == 3u))
-				{
-					// Comment insertion pattern for CWD-alike instruction
-					DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], fmt::format("%s #i%u[%u]", spu_reg_name[op.rc], size * 8, dst).c_str());
-					return;
-				}
-
-				// Comment insertion pattern for unknown instruction formations
-				DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], fmt::format("%s #i%u[%u] = [%u]", spu_reg_name[op.rc], size * 8, dst, src).c_str());
-				return;
-			}
-		}
-
-		DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], spu_reg_name[op.rc]);
-	}
+	void SHUFB(spu_opcode_t op);
 	void MPYA(spu_opcode_t op)
 	{
 		DisAsm("mpya", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], spu_reg_name[op.rc]);

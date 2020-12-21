@@ -7,6 +7,8 @@
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/rsx_methods.h"
 
+#include "../Common/program_state_cache2.hpp"
+
 #define DUMP_VERTEX_DATA 0
 
 u64 GLGSRender::get_cycles()

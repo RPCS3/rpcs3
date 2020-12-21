@@ -862,7 +862,7 @@ namespace rsx
 
 			for (; t == now; now = get_time_ns())
 			{
-				_mm_pause();
+				utils::pause();
 			}
 
 			timestamp_ctrl = now;
@@ -2662,7 +2662,7 @@ namespace rsx
 
 				for (u32 ea = address >> 20, end = ea + (size >> 20); ea < end; ea++)
 				{
-					const u32 io = utils::ror32(iomap_table.io[ea], 20);
+					const u32 io = utils::rol32(iomap_table.io[ea], 32 - 20);
 
 					if (io + 1)
 					{
@@ -2747,7 +2747,7 @@ namespace rsx
 			if (Emu.IsStopped())
 				break;
 
-			_mm_pause();
+			utils::pause();
 		}
 	}
 
@@ -2771,7 +2771,7 @@ namespace rsx
 			while (external_interrupt_lock)
 			{
 				// TODO: Investigate non busy-spinning method
-				_mm_pause();
+				utils::pause();
 			}
 
 			external_interrupt_ack.store(false);

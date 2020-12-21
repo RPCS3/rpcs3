@@ -6,6 +6,7 @@
 #include "rsx_utils.h"
 
 #include <thread>
+#include "util/asm.hpp"
 
 namespace rsx
 {
@@ -171,13 +172,13 @@ namespace rsx
 			while (_thr->m_enqueued_count.load() > _thr->m_processed_count.load())
 			{
 				rsxthr->on_semaphore_acquire_wait();
-				_mm_pause();
+				utils::pause();
 			}
 		}
 		else
 		{
 			while (_thr->m_enqueued_count.load() > _thr->m_processed_count.load())
-				_mm_pause();
+				utils::pause();
 		}
 
 		return true;

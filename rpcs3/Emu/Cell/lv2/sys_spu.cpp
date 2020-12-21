@@ -251,7 +251,9 @@ error_code sys_spu_image_open(ppu_thread& ppu, vm::ptr<sys_spu_image> img, vm::c
 		return {fs_error, path};
 	}
 
-	const fs::file elf_file = decrypt_self(std::move(file), g_fxo->get<loaded_npdrm_keys>()->devKlic.load()._bytes);
+	u128 klic = g_fxo->get<loaded_npdrm_keys>()->devKlic.load();
+
+	const fs::file elf_file = decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic));
 
 	if (!elf_file)
 	{

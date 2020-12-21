@@ -7,6 +7,7 @@
 
 #include "util/asm.hpp"
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
 #include "util/sysinfo.hpp"
 
 #include <cmath>

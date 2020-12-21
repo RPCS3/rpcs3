@@ -707,7 +707,7 @@ std::string vfs::unescape(std::string_view name)
 
 std::string vfs::host::hash_path(const std::string& path, const std::string& dev_root)
 {
-	return fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
+	return fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(utils::get_unique_tsc()));
 }
 
 bool vfs::host::rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite)

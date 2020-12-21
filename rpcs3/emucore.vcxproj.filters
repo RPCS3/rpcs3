@@ -935,9 +935,6 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
-    <ClCompile Include="util\atomic2.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="util\logs.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -1072,6 +1069,9 @@
     <ClInclude Include="util\v128.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="util\v128sse.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
     <ClInclude Include="util\to_endian.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1151,6 +1151,9 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\ProgramStateCache.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\program_state_cache2.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\FragmentProgramDecompiler.h">
@@ -1817,9 +1820,6 @@
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
     <ClInclude Include="util\yaml.hpp">
-      <Filter>Utilities</Filter>
-    </ClInclude>
-    <ClInclude Include="util\atomic2.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="util\endian.hpp">

@@ -1564,7 +1564,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				elf_file.open(decrypted_path);
 			}
 			// Decrypt SELF
-			else if ((elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data(), &g_ps3_process_info.self_info)))
+			else if ((elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &g_ps3_process_info.self_info)))
 			{
 				if (true)
 				{

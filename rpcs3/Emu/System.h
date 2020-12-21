@@ -124,7 +124,7 @@ public:
 	std::vector<std::string> argv;
 	std::vector<std::string> envp;
 	std::vector<u8> data;
-	std::vector<u8> klic;
+	std::vector<u128> klic;
 	std::string disc;
 	std::string hdd1;
 

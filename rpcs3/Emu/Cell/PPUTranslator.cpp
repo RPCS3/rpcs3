@@ -9,6 +9,7 @@
 #include "util/endian.hpp"
 #include "util/logs.hpp"
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
 #include <algorithm>
 
 using namespace llvm;

@@ -6,6 +6,25 @@
 #define USE_STD
 #endif
 
+#ifdef _MSC_VER
+
+#include "emmintrin.h"
+#include "immintrin.h"
+
+namespace utils
+{
+	u128 __vectorcall atomic_load16(const void* ptr)
+	{
+		return std::bit_cast<u128>(_mm_load_si128((__m128i*)ptr));
+	}
+
+	void __vectorcall atomic_store16(void* ptr, u128 value)
+	{
+		_mm_store_si128((__m128i*)ptr, std::bit_cast<__m128i>(value));
+	}
+}
+#endif
+
 #include "Utilities/sync.h"
 #include "Utilities/StrFmt.h"
 
@@ -847,9 +866,17 @@ namespace
 	};
 }
 
-u64 atomic_wait::get_unique_tsc()
+#ifdef _MSC_VER
+extern "C" u64 __rdtsc();
+#endif
+
+u64 utils::get_unique_tsc()
 {
+#ifdef _MSC_VER
 	const u64 stamp0 = __rdtsc();
+#else
+    const u64 stamp0 = __builtin_ia32_rdtsc();
+#endif
 
 	return s_min_tsc.atomic_op([&](u64& tsc)
 	{
@@ -1026,7 +1053,7 @@ FORCE_INLINE auto root_info::slot_search(uptr iptr, u32 size, u64 thread_id, u12
 
 SAFE_BUFFERS void atomic_wait_engine::wait(const void* data, u32 size, u128 old_value, u64 timeout, u128 mask, atomic_wait::info* ext)
 {
-	const auto stamp0 = atomic_wait::get_unique_tsc();
+	const auto stamp0 = utils::get_unique_tsc();
 
 	if (!s_tls_wait_cb(data, 0, stamp0))
 	{
