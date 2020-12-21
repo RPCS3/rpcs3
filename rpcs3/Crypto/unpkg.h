@@ -1,6 +1,9 @@
-﻿#pragma once
+#pragma once
 
 #include "Loader/PSF.h"
+#include "util/endian.hpp"
+#include "util/types.hpp"
+#include "Utilities/File.h"
 #include <sstream>
 #include <iomanip>
 
