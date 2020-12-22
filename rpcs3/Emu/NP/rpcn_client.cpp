@@ -91,11 +91,11 @@ void rpcn_client::disconnect()
 	server_info_received = false;
 }
 
-rpcn_client::recvn_result rpcn_client::recvn(u8* buf, std::size_t n)
+rpcn_client::recvn_result rpcn_client::recvn(u8* buf, usz n)
 {
 	u32 num_timeouts = 0;
 
-	size_t n_recv = 0;
+	usz n_recv = 0;
 	while (n_recv != n && !is_abort())
 	{
 		std::lock_guard lock(mutex_socket);
@@ -136,7 +136,7 @@ rpcn_client::recvn_result rpcn_client::recvn(u8* buf, std::size_t n)
 bool rpcn_client::send_packet(const std::vector<u8>& packet)
 {
 	u32 num_timeouts = 0;
-	std::size_t n_sent = 0;
+	usz n_sent = 0;
 	while (n_sent != packet.size())
 	{
 		std::lock_guard lock(mutex_socket);
@@ -659,7 +659,7 @@ bool rpcn_client::createjoin_room(u32 req_id, const SceNpCommunicationId& commun
 		}
 		final_binattrexternal_vec = builder.CreateVector(davec);
 	}
-	flatbuffers::Offset<flatbuffers::Vector<uint8_t>> final_roompassword;
+	flatbuffers::Offset<flatbuffers::Vector<u8>> final_roompassword;
 	if (req->roomPassword)
 		final_roompassword = builder.CreateVector(req->roomPassword->data, 8);
 	flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<GroupConfig>>> final_groupconfigs_vec;
@@ -695,7 +695,7 @@ bool rpcn_client::createjoin_room(u32 req_id, const SceNpCommunicationId& commun
 		}
 		final_blockedusers_vec = builder.CreateVector(davec);
 	}
-	flatbuffers::Offset<flatbuffers::Vector<uint8_t>> final_grouplabel;
+	flatbuffers::Offset<flatbuffers::Vector<u8>> final_grouplabel;
 	if (req->joinRoomGroupLabel)
 		final_grouplabel = builder.CreateVector(req->joinRoomGroupLabel->data, 8);
 	flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_memberbinattrinternal_vec;
@@ -723,7 +723,7 @@ bool rpcn_client::createjoin_room(u32 req_id, const SceNpCommunicationId& commun
 
 	builder.Finish(req_finished);
 	u8* buf        = builder.GetBufferPointer();
-	size_t bufsize = builder.GetSize();
+	usz bufsize = builder.GetSize();
 	data.resize(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 	memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -744,10 +744,10 @@ bool rpcn_client::join_room(u32 req_id, const SceNpCommunicationId& communicatio
 
 	flatbuffers::FlatBufferBuilder builder(1024);
 
-	flatbuffers::Offset<flatbuffers::Vector<uint8_t>> final_roompassword;
+	flatbuffers::Offset<flatbuffers::Vector<u8>> final_roompassword;
 	if (req->roomPassword)
 		final_roompassword = builder.CreateVector(req->roomPassword->data, 8);
-	flatbuffers::Offset<flatbuffers::Vector<uint8_t>> final_grouplabel;
+	flatbuffers::Offset<flatbuffers::Vector<u8>> final_grouplabel;
 	if (req->joinRoomGroupLabel)
 		final_grouplabel = builder.CreateVector(req->joinRoomGroupLabel->data, 8);
 	flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_memberbinattrinternal_vec;
@@ -767,7 +767,7 @@ bool rpcn_client::join_room(u32 req_id, const SceNpCommunicationId& communicatio
 
 	builder.Finish(req_finished);
 	u8* buf        = builder.GetBufferPointer();
-	size_t bufsize = builder.GetSize();
+	usz bufsize = builder.GetSize();
 	data.resize(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 	memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -789,7 +789,7 @@ bool rpcn_client::leave_room(u32 req_id, const SceNpCommunicationId& communicati
 	auto req_finished                                     = CreateLeaveRoomRequest(builder, req->roomId, final_optdata);
 	builder.Finish(req_finished);
 	u8* buf        = builder.GetBufferPointer();
-	size_t bufsize = builder.GetSize();
+	usz bufsize = builder.GetSize();
 	data.resize(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
 
 	memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -833,7 +833,7 @@ bool rpcn_client::search_room(u32 req_id, const SceNpCommunicationId& communicat
 		}
 		final_binfilter_vec = builder.CreateVector(davec);
 	}
-	flatbuffers::Offset<flatbuffers::Vector<uint16_t>> attrid_vec;
+	flatbuffers::Offset<flatbuffers::Vector<u16>> attrid_vec;
 	if (req->attrIdNum)
 		attrid_vec = builder.CreateVector(reinterpret_cast<const u16*>(req->attrId.get_ptr()), req->attrIdNum);
 
@@ -855,7 +855,7 @@ bool rpcn_client::search_room(u32 req_id, const SceNpCommunicationId& communicat
 	auto req_finished = s_req.Finish();
 	builder.Finish(req_finished);
 	u8* buf        = builder.GetBufferPointer();
-	size_t bufsize = builder.GetSize();
+	usz bufsize = builder.GetSize();
 	data.resize(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
 	memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -910,7 +910,7 @@ bool rpcn_client::set_roomdata_external(u32 req_id, const SceNpCommunicationId& 
 
 	builder.Finish(req_finished);
 	u8* buf        = builder.GetBufferPointer();
-	size_t bufsize = builder.GetSize();
+	usz bufsize = builder.GetSize();
 	data.resize(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
 	memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -929,7 +929,7 @@ bool rpcn_client::get_roomdata_internal(u32 req_id, const SceNpCommunicationId& 
 
 	flatbuffers::FlatBufferBuilder builder(1024);
 
-	flatbuffers::Offset<flatbuffers::Vector<uint16_t>> final_attr_ids_vec;
+	flatbuffers::Offset<flatbuffers::Vector<u16>> final_attr_ids_vec;
 	if (req->attrIdNum)
 		final_attr_ids_vec = builder.CreateVector(reinterpret_cast<const u16*>(req->attrId.get_ptr()), req->attrIdNum);
 
@@ -937,7 +937,7 @@ bool rpcn_client::get_roomdata_internal(u32 req_id, const SceNpCommunicationId& 
 
 	builder.Finish(req_finished);
 	u8* buf        = builder.GetBufferPointer();
-	size_t bufsize = builder.GetSize();
+	usz bufsize = builder.GetSize();
 	data.resize(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
 	memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -983,7 +983,7 @@ bool rpcn_client::set_roomdata_internal(u32 req_id, const SceNpCommunicationId& 
 	if (req->passwordSlotMask)
 		final_passwordSlotMask = *req->passwordSlotMask;
 
-	flatbuffers::Offset<flatbuffers::Vector<uint16_t>> final_ownerprivilege_vec;
+	flatbuffers::Offset<flatbuffers::Vector<u16>> final_ownerprivilege_vec;
 	if (req->ownerPrivilegeRankNum)
 		final_ownerprivilege_vec = builder.CreateVector(reinterpret_cast<const u16*>(req->ownerPrivilegeRank.get_ptr()), req->ownerPrivilegeRankNum);
 
@@ -992,7 +992,7 @@ bool rpcn_client::set_roomdata_internal(u32 req_id, const SceNpCommunicationId& 
 
 	builder.Finish(req_finished);
 	u8* buf        = builder.GetBufferPointer();
-	size_t bufsize = builder.GetSize();
+	usz bufsize = builder.GetSize();
 	data.resize(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
 	memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
@@ -1051,7 +1051,7 @@ bool rpcn_client::send_room_message(u32 req_id, const SceNpCommunicationId& comm
 
 	builder.Finish(req_finished);
 	u8* buf        = builder.GetBufferPointer();
-	size_t bufsize = builder.GetSize();
+	usz bufsize = builder.GetSize();
 	data.resize(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
 
 	memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);

@@ -198,7 +198,7 @@ namespace ppu_func_detail
 			is_variadic ? ARG_VARIADIC :
 			ARG_UNKNOWN;
 
-		const u32 g = g_count + (is_general || is_float ? 1 : is_vector ? ::align(g_count, 2) + 2 : 0);
+		const u32 g = g_count + (is_general || is_float ? 1 : is_vector ? (g_count & 1) + 2 : 0);
 		const u32 f = f_count + is_float;
 		const u32 v = v_count + is_vector;
 

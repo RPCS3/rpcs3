@@ -147,10 +147,10 @@ namespace rsx
 						{
 							char result[ PATH_MAX ];
 #if defined(__APPLE__)
-							uint32_t bufsize = PATH_MAX;
+							u32 bufsize = PATH_MAX;
 							bool success = _NSGetExecutablePath( result, &bufsize ) == 0;
 #elif defined(KERN_PROC_PATHNAME)
-							size_t bufsize = PATH_MAX;
+							usz bufsize = PATH_MAX;
 							int mib[] = {
 								CTL_KERN,
 #if defined(__NetBSD__)
@@ -272,7 +272,7 @@ namespace rsx
 				draw_commands.resize(old_size + other.draw_commands.size());
 				std::copy(other.draw_commands.begin(), other.draw_commands.end(), draw_commands.begin() + old_size);
 
-				for (size_t n = old_size; n < draw_commands.size(); ++n)
+				for (usz n = old_size; n < draw_commands.size(); ++n)
 				{
 					for (auto &v : draw_commands[n].verts)
 					{
@@ -287,7 +287,7 @@ namespace rsx
 				draw_commands.resize(old_size + other.draw_commands.size());
 				std::copy(other.draw_commands.begin(), other.draw_commands.end(), draw_commands.begin() + old_size);
 
-				for (size_t n = old_size; n < draw_commands.size(); ++n)
+				for (usz n = old_size; n < draw_commands.size(); ++n)
 				{
 					for (auto &v : draw_commands[n].verts)
 					{

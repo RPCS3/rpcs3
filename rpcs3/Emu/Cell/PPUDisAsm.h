@@ -6,7 +6,7 @@
 class PPUDisAsm final : public PPCDisAsm
 {
 public:
-	PPUDisAsm(CPUDisAsmMode mode) : PPCDisAsm(mode)
+	PPUDisAsm(CPUDisAsmMode mode, const u8* offset) : PPCDisAsm(mode, offset)
 	{
 	}
 

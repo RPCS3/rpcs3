@@ -16,7 +16,6 @@ class debugger_list : public QListWidget
 public:
 	u32 m_pc = 0;
 	u32 m_item_count = 30;
-	bool m_no_thread_selected;
 	QColor m_color_bp;
 	QColor m_color_pc;
 	QColor m_text_color_bp;

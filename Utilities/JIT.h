@@ -41,7 +41,7 @@ struct jit_runtime final : asmjit::HostRuntime
 	asmjit::Error _release(void* p) noexcept override;
 
 	// Allocate memory
-	static u8* alloc(std::size_t size, uint align, bool exec = true) noexcept;
+	static u8* alloc(usz size, uint align, bool exec = true) noexcept;
 
 	// Should be called at least once after global initialization
 	static void initialize();

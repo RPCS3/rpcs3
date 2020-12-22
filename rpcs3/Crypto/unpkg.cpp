@@ -697,7 +697,7 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 		return false;
 	}
 
-	size_t num_failures = 0;
+	usz num_failures = 0;
 
 	std::vector<PKGEntry> entries(header.file_count);
 
@@ -857,7 +857,7 @@ void package_reader::archive_seek(const s64 new_offset, const fs::seek_mode damo
 		cur_offset += new_offset;
 
 	u64 _offset = 0;
-	for (size_t i = 0; i < filelist.size(); i++)
+	for (usz i = 0; i < filelist.size(); i++)
 	{
 		if (cur_offset < (_offset + filelist[i].size()))
 		{

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "util/logs.hpp"
 #include "util/vm.hpp"
+#include "util/asm.hpp"
 #ifdef _WIN32
 #include "util/dyn_lib.hpp"
 #include <Windows.h>
@@ -65,7 +66,7 @@ namespace utils
 		return _prot;
 	}
 
-	void* memory_reserve(std::size_t size, void* use_addr)
+	void* memory_reserve(usz size, void* use_addr)
 	{
 #ifdef _WIN32
 		return ::VirtualAlloc(use_addr, size, MEM_RESERVE, PAGE_NOACCESS);
@@ -119,7 +120,7 @@ namespace utils
 #endif
 	}
 
-	void memory_commit(void* pointer, std::size_t size, protection prot)
+	void memory_commit(void* pointer, usz size, protection prot)
 	{
 #ifdef _WIN32
 		ensure(::VirtualAlloc(pointer, size, MEM_COMMIT, +prot));
@@ -130,7 +131,7 @@ namespace utils
 #endif
 	}
 
-	void memory_decommit(void* pointer, std::size_t size)
+	void memory_decommit(void* pointer, usz size)
 	{
 #ifdef _WIN32
 		ensure(::VirtualFree(pointer, size, MEM_DECOMMIT));
@@ -145,7 +146,7 @@ namespace utils
 #endif
 	}
 
-	void memory_reset(void* pointer, std::size_t size, protection prot)
+	void memory_reset(void* pointer, usz size, protection prot)
 	{
 #ifdef _WIN32
 		memory_decommit(pointer, size);
@@ -167,7 +168,7 @@ namespace utils
 #endif
 	}
 
-	void memory_release(void* pointer, std::size_t size)
+	void memory_release(void* pointer, usz size)
 	{
 #ifdef _WIN32
 		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
@@ -176,7 +177,7 @@ namespace utils
 #endif
 	}
 
-	void memory_protect(void* pointer, std::size_t size, protection prot)
+	void memory_protect(void* pointer, usz size, protection prot)
 	{
 #ifdef _WIN32
 		for (u64 addr = reinterpret_cast<u64>(pointer), end = addr + size; addr < end;)
@@ -199,7 +200,7 @@ namespace utils
 #endif
 	}
 
-	bool memory_lock(void* pointer, std::size_t size)
+	bool memory_lock(void* pointer, usz size)
 	{
 #ifdef _WIN32
 		return ::VirtualLock(pointer, size);
@@ -209,7 +210,7 @@ namespace utils
 	}
 
 	shm::shm(u32 size, u32 flags)
-		: m_size(::align(size, 0x10000))
+		: m_size(utils::align(size, 0x10000))
 		, m_flags(flags)
 		, m_ptr(0)
 	{
@@ -306,7 +307,7 @@ namespace utils
 		{
 			const u64 res64 = reinterpret_cast<u64>(::mmap(reinterpret_cast<void*>(ptr64), m_size + 0xf000, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0));
 
-			const u64 aligned = ::align(res64, 0x10000);
+			const u64 aligned = utils::align(res64, 0x10000);
 			const auto result = ::mmap(reinterpret_cast<void*>(aligned), m_size, +prot, MAP_SHARED | MAP_FIXED, m_file, 0);
 
 			// Now cleanup remnants

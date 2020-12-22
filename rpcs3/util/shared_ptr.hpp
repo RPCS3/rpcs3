@@ -72,15 +72,15 @@ namespace stx
 		atomic_t<void (*)(shared_counter* _this) noexcept> destroy{};
 
 		// Reference counter
-		atomic_t<std::size_t> refs{1};
+		atomic_t<usz> refs{1};
 	};
 
-	template <std::size_t Size, std::size_t Align, typename = void>
+	template <usz Size, usz Align, typename = void>
 	struct align_filler
 	{
 	};
 
-	template <std::size_t Size, std::size_t Align>
+	template <usz Size, usz Align>
 	struct align_filler<Size, Align, std::enable_if_t<(Align > Size)>>
 	{
 		char dummy[Align - Size];
@@ -104,10 +104,10 @@ namespace stx
 	};
 
 	template <typename T>
-	class alignas(T) shared_data<T[]> final : align_filler<sizeof(shared_counter) + sizeof(std::size_t), alignof(T)>
+	class alignas(T) shared_data<T[]> final : align_filler<sizeof(shared_counter) + sizeof(usz), alignof(T)>
 	{
 	public:
-		std::size_t m_count;
+		usz m_count;
 
 		shared_counter m_ctr;
 
@@ -301,13 +301,13 @@ namespace stx
 	}
 
 	template <typename T, bool Init = true>
-	static std::enable_if_t<std::is_unbounded_array_v<T>, single_ptr<T>> make_single(std::size_t count) noexcept
+	static std::enable_if_t<std::is_unbounded_array_v<T>, single_ptr<T>> make_single(usz count) noexcept
 	{
 		static_assert(sizeof(shared_data<T>) - offsetof(shared_data<T>, m_ctr) == sizeof(shared_counter));
 
 		using etype = std::remove_extent_t<T>;
 
-		const std::size_t size = sizeof(shared_data<T>) + count * sizeof(etype);
+		const usz size = sizeof(shared_data<T>) + count * sizeof(etype);
 
 		std::byte* bytes = nullptr;
 
@@ -535,7 +535,7 @@ namespace stx
 			}
 		}
 
-		std::size_t use_count() const noexcept
+		usz use_count() const noexcept
 		{
 			if (m_ptr)
 			{
@@ -588,7 +588,7 @@ namespace stx
 	}
 
 	template <typename T, bool Init = true>
-	static std::enable_if_t<std::is_unbounded_array_v<T>, shared_ptr<T>> make_shared(std::size_t count) noexcept
+	static std::enable_if_t<std::is_unbounded_array_v<T>, shared_ptr<T>> make_shared(usz count) noexcept
 	{
 		return make_single<T, Init>(count);
 	}
@@ -1117,12 +1117,12 @@ namespace stx
 namespace atomic_wait
 {
 	template <typename T>
-	inline __m128i default_mask<stx::atomic_ptr<T>> = _mm_cvtsi64_si128(stx::c_ptr_mask);
+	constexpr u128 default_mask<stx::atomic_ptr<T>> = stx::c_ptr_mask;
 
 	template <typename T>
-	constexpr __m128i get_value(stx::atomic_ptr<T>&, const volatile void* value = nullptr)
+	constexpr u128 get_value(stx::atomic_ptr<T>&, const volatile void* value = nullptr)
 	{
-		return _mm_cvtsi64_si128(reinterpret_cast<uptr>(value) << stx::c_ref_size);
+		return reinterpret_cast<uptr>(value) << stx::c_ref_size;
 	}
 }
 

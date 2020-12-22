@@ -4,11 +4,12 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Utilities/sysinfo.h"
 
 #include <algorithm>
 #include <utility>
 #include <charconv>
+
+#include "util/sysinfo.hpp"
 
 namespace rsx
 {

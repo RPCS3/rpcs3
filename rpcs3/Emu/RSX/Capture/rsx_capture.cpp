@@ -78,7 +78,7 @@ namespace rsx
 				auto layout       = get_subresources_layout(tex);
 
 				// todo: dont use this function and just get size somehow
-				size_t texSize = 0;
+				usz texSize = 0;
 				for (const auto& l : layout)
 					texSize += l.data.size();
 
@@ -104,7 +104,7 @@ namespace rsx
 				auto layout       = get_subresources_layout(tex);
 
 				// todo: dont use this function and just get size somehow
-				size_t texSize = 0;
+				usz texSize = 0;
 				for (const auto& l : layout)
 					texSize += l.data.size();
 
@@ -147,7 +147,7 @@ namespace rsx
 					{
 						const auto& range = method_registers.current_draw_clause.get_range();
 						const u32 vertCount = range.count;
-						const size_t bufferSize = (vertCount - 1) * vertStride + vertSize;
+						const usz bufferSize = (vertCount - 1) * vertStride + vertSize;
 
 						frame_capture_data::memory_block block;
 						block.offset = base_address + (range.first * vertStride);
@@ -186,7 +186,7 @@ namespace rsx
 					const u32 idxCount = range.count;
 					const u32 idxAddr  = base_addr + (idxFirst * type_size);
 
-					const size_t bufferSize = idxCount * type_size;
+					const usz bufferSize = idxCount * type_size;
 
 					frame_capture_data::memory_block block;
 					block.offset = base_address + (idxFirst * type_size);

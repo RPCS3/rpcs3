@@ -85,7 +85,7 @@ namespace logs
 		virtual ~file_writer();
 
 		// Append raw data
-		void log(const char* text, std::size_t size);
+		void log(const char* text, usz size);
 	};
 
 	struct file_listener final : file_writer, public listener
@@ -326,7 +326,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 
 	static constexpr fmt_type_info empty_sup{};
 
-	std::size_t args_count = 0;
+	usz args_count = 0;
 	for (auto v = sup; v && v->fmt_string; v++)
 		args_count++;
 
@@ -538,7 +538,7 @@ bool logs::file_writer::flush(u64 bufv)
 	return false;
 }
 
-void logs::file_writer::log(const char* text, std::size_t size)
+void logs::file_writer::log(const char* text, usz size)
 {
 	if (!m_fptr)
 	{

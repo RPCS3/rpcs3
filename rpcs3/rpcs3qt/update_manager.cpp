@@ -309,7 +309,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 	SRes res;
 	UInt16 temp_u16[PATH_MAX];
 	u8 temp_u8[PATH_MAX];
-	const size_t kInputBufSize = static_cast<size_t>(1u << 18u);
+	const usz kInputBufSize = static_cast<usz>(1u << 18u);
 	const ISzAlloc g_Alloc     = {SzAlloc, SzFree};
 
 	allocImp     = g_Alloc;
@@ -373,7 +373,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 
 	UInt32 blockIndex    = 0xFFFFFFFF;
 	Byte* outBuffer      = nullptr;
-	size_t outBufferSize = 0;
+	usz outBufferSize = 0;
 
 	// Creates temp folder for moving active files
 	const std::string tmp_folder = Emulator::GetEmuDir() + "rpcs3_old/";
@@ -381,9 +381,9 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 
 	for (UInt32 i = 0; i < db.NumFiles; i++)
 	{
-		size_t offset           = 0;
-		size_t outSizeProcessed = 0;
-		size_t len;
+		usz offset           = 0;
+		usz outSizeProcessed = 0;
+		usz len;
 		unsigned isDir = SzArEx_IsDir(&db, i);
 		len            = SzArEx_GetFileNameUtf16(&db, i, nullptr);
 
@@ -397,7 +397,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 		SzArEx_GetFileNameUtf16(&db, i, temp_u16);
 		memset(temp_u8, 0, sizeof(temp_u8));
 		// Simplistic conversion to UTF-8
-		for (size_t index = 0; index < len; index++)
+		for (usz index = 0; index < len; index++)
 		{
 			if (temp_u16[index] > 0xFF)
 			{
@@ -420,7 +420,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 				break;
 		}
 
-		if (const size_t pos = name.find_last_of('/'); pos != umax)
+		if (const usz pos = name.find_last_of('/'); pos != umax)
 		{
 			update_log.trace("Creating path: %s", name.substr(0, pos));
 			fs::create_path(name.substr(0, pos));

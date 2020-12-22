@@ -121,7 +121,7 @@ class CgBinaryDisasm
 	std::string m_path; // used for FP decompiler thread, delete this later
 
 	u8* m_buffer = nullptr;
-	std::size_t m_buffer_size = 0;
+	usz m_buffer_size = 0;
 	std::string m_arb_shader;
 	std::string m_glsl_shader;
 	std::string m_dst_reg_name;
@@ -138,8 +138,8 @@ class CgBinaryDisasm
 	// VP members
 	u32 m_sca_opcode;
 	u32 m_vec_opcode;
-	static const size_t m_max_instr_count = 512;
-	size_t m_instr_count;
+	static const usz m_max_instr_count = 512;
+	usz m_instr_count;
 	std::vector<u32> m_data;
 
 public:
@@ -298,7 +298,7 @@ public:
 					fs::file f(m_path);
 					if (!f) return;
 
-					size_t size = f.size();
+					usz size = f.size();
 					vm::init();
 					ptr = vm::alloc(static_cast<u32>(size), vm::main);
 					f.read(vm::base(ptr), size);

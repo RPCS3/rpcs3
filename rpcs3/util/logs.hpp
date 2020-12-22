@@ -11,8 +11,6 @@
 
 namespace logs
 {
-	using u64 = std::uint64_t;
-
 	enum class level : unsigned
 	{
 		always, // Highest log severity (cannot be disabled)
@@ -87,7 +85,7 @@ namespace logs
 
 #define GEN_LOG_METHOD(_sev)\
 		const message msg_##_sev{this, level::_sev};\
-		template <typename CharT, std::size_t N, typename... Args>\
+		template <typename CharT, usz N, typename... Args>\
 		void _sev(const CharT(&fmt)[N], const Args&... args)\
 		{\
 			if (level::_sev <= enabled.observe()) [[unlikely]]\

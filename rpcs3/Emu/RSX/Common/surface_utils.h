@@ -426,7 +426,7 @@ namespace rsx
 			});
 
 			// Try and optimize by omitting possible overlapped transfers
-			for (size_t i = old_contents.size() - 1; i > 0 /* Intentional */; i--)
+			for (usz i = old_contents.size() - 1; i > 0 /* Intentional */; i--)
 			{
 				old_contents[i].init_transfer(target);
 

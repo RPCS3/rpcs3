@@ -5,12 +5,12 @@
 #include "../Common/GLSLCommon.h"
 #include "../GCM.h"
 
-std::string VKFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
+std::string VKFragmentDecompilerThread::getFloatTypeName(usz elementCount)
 {
 	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
-std::string VKFragmentDecompilerThread::getHalfTypeName(size_t elementCount)
+std::string VKFragmentDecompilerThread::getHalfTypeName(usz elementCount)
 {
 	return glsl::getHalfTypeNameImpl(elementCount);
 }
@@ -411,7 +411,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 				PT.type == "samplerCube")
 				continue;
 
-			size_t offset = atoi(PI.name.c_str() + 2);
+			usz offset = atoi(PI.name.c_str() + 2);
 			FragmentConstantOffsetCache.push_back(offset);
 		}
 	}

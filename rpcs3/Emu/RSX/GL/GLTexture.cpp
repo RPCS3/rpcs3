@@ -6,6 +6,8 @@
 #include "../RSXThread.h"
 #include "../RSXTexture.h"
 
+#include "util/asm.hpp"
+
 namespace gl
 {
 	buffer g_typeless_transfer_buffer;
@@ -614,8 +616,8 @@ namespace gl
 		{
 			//Compressed formats have a 4-byte alignment
 			//TODO: Verify that samplers are not affected by the padding
-			width = align(width, 4);
-			height = align(height, 4);
+			width = utils::align(width, 4);
+			height = utils::align(height, 4);
 		}
 
 		GLenum target;
@@ -654,7 +656,7 @@ namespace gl
 		{
 			caps.supports_vtc_decoding = gl::get_driver_caps().vendor_NVIDIA;
 
-			unpack_settings.row_length(align(dst->width(), 4));
+			unpack_settings.row_length(utils::align(dst->width(), 4));
 			unpack_settings.apply();
 
 			glBindTexture(static_cast<GLenum>(dst->get_target()), dst->id());
@@ -664,7 +666,7 @@ namespace gl
 			for (const rsx::subresource_layout& layout : input_layouts)
 			{
 				upload_texture_subresource(staging_buffer, layout, format, is_swizzled, caps);
-				const sizei image_size{ align(layout.width_in_texel, 4), align(layout.height_in_texel, 4) };
+				const sizei image_size{utils::align(layout.width_in_texel, 4), utils::align(layout.height_in_texel, 4)};
 
 				switch (dst->get_target())
 				{
@@ -835,8 +837,8 @@ namespace gl
 	void upload_texture(texture* dst, u32 gcm_format, bool is_swizzled, const std::vector<rsx::subresource_layout>& subresources_layout)
 	{
 		// Calculate staging buffer size
-		const u32 aligned_pitch = align<u32>(dst->pitch(), 4);
-		size_t texture_data_sz = dst->depth() * dst->height() * aligned_pitch;
+		const u32 aligned_pitch = utils::align<u32>(dst->pitch(), 4);
+		usz texture_data_sz = dst->depth() * dst->height() * aligned_pitch;
 		std::vector<std::byte> data_upload_buf(texture_data_sz);
 
 		// TODO: GL drivers support byteswapping and this should be used instead of doing so manually

@@ -22,6 +22,7 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include "util/asm.hpp"
 
 LOG_CHANNEL(ppu_loader);
 
@@ -263,7 +264,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 	}
 
 	// Set memory protection to read-only
-	vm::page_protect(ppu_function_manager::addr, ::align(::size32(hle_funcs) * 8, 0x1000), 0, 0, vm::page_writable);
+	vm::page_protect(ppu_function_manager::addr, utils::align(::size32(hle_funcs) * 8, 0x1000), 0, 0, vm::page_writable);
 
 	// Initialize function names
 	const bool is_first = g_ppu_function_names.empty();
@@ -319,7 +320,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 			}
 			else
 			{
-				const u32 next = ::align(alloc_addr, variable.second.align);
+				const u32 next = utils::align(alloc_addr, variable.second.align);
 				const u32 end = next + variable.second.size;
 
 				if (!next || (end >> 12 != alloc_addr >> 12))
@@ -698,7 +699,7 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 {
 	const std::string_view seg_view{vm::get_super_ptr<char>(seg.addr), seg.size};
 
-	for (std::size_t i = seg_view.find("\177ELF"); i < seg.size; i = seg_view.find("\177ELF", i + 4))
+	for (usz i = seg_view.find("\177ELF"); i < seg.size; i = seg_view.find("\177ELF", i + 4))
 	{
 		const auto elf_header = vm::get_super_ptr<u8>(seg.addr + i);
 
@@ -715,7 +716,7 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 		std::string name;
 		std::string dump;
 
-		std::size_t applied = 0;
+		usz applied = 0;
 
 		// Executable hash
 		sha1_context sha2;
@@ -867,7 +868,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 		if (s.sh_type == 1u && addr && size) // TODO: some sections with addr=0 are valid
 		{
-			for (std::size_t i = 0; i < prx->segs.size(); i++)
+			for (usz i = 0; i < prx->segs.size(); i++)
 			{
 				const u32 saddr = static_cast<u32>(elf.progs[i].p_vaddr);
 				if (addr >= saddr && addr < saddr + elf.progs[i].p_memsz)
@@ -1500,7 +1501,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	for (const auto& arg : Emu.argv)
 	{
-		const u32 arg_size = ::align(::size32(arg) + 1, 0x10);
+		const u32 arg_size = utils::align(::size32(arg) + 1, 0x10);
 		const u32 arg_addr = vm::alloc(arg_size, vm::main);
 
 		std::memcpy(vm::base(arg_addr), arg.data(), arg_size);
@@ -1513,7 +1514,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 	for (const auto& arg : Emu.envp)
 	{
-		const u32 arg_size = ::align(::size32(arg) + 1, 0x10);
+		const u32 arg_size = utils::align(::size32(arg) + 1, 0x10);
 		const u32 arg_addr = vm::alloc(arg_size, vm::main);
 
 		std::memcpy(vm::base(arg_addr), arg.data(), arg_size);
@@ -1533,7 +1534,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	case 0x70: primary_stacksize = 1024 * 1024; break; // SYS_PROCESS_PRIMARY_STACK_SIZE_1M
 	default:
 	{
-		primary_stacksize = ::align<u32>(std::clamp<u32>(sz, 0x10000, 0x100000), 4096);
+		primary_stacksize = utils::align<u32>(std::clamp<u32>(sz, 0x10000, 0x100000), 4096);
 		break;
 	}
 	}
@@ -1636,7 +1637,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz && (prog.p_flags & 0x2) == 0u /* W */)
 		{
 			// Set memory protection to read-only when necessary
-			ensure(vm::page_protect(addr, ::align(size, 0x1000), 0, 0, vm::page_writable));
+			ensure(vm::page_protect(addr, utils::align(size, 0x1000), 0, 0, vm::page_writable));
 		}
 	}
 }

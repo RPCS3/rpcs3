@@ -4,7 +4,6 @@
 
 #include "stdafx.h"
 #include "rpcs3_version.h"
-#include "Utilities/sysinfo.h"
 #include "Utilities/mutex.h"
 #include "Utilities/lockless.h"
 
@@ -18,6 +17,8 @@
 #include <sstream>
 #include <deque>
 #include <mutex>
+
+#include "util/sysinfo.hpp"
 
 extern fs::file g_tty;
 extern atomic_t<s64> g_tty_size;

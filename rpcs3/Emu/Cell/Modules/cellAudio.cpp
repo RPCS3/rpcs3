@@ -5,6 +5,9 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "cellAudio.h"
+
+#include "emmintrin.h"
+#include "immintrin.h"
 #include <cmath>
 
 LOG_CHANNEL(cellAudio);
@@ -1071,7 +1074,7 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 		// 2x CVTPS2DQ (converts float to s32)
 		// PACKSSDW (converts s32 to s16 with signed saturation)
 
-		for (size_t i = 0; i < out_buffer_sz; i += 8)
+		for (usz i = 0; i < out_buffer_sz; i += 8)
 		{
 			const auto scale = _mm_set1_ps(0x8000);
 			_mm_store_ps(out_buffer + i / 2, _mm_castsi128_ps(_mm_packs_epi32(

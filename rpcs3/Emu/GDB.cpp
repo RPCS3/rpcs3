@@ -350,7 +350,7 @@ void gdb_thread::send_cmd(const std::string& cmd)
 	std::string buf;
 	buf.reserve(cmd.length() + 4);
 	buf += "$";
-	for (std::size_t i = 0; i < cmd.length(); ++i)
+	for (usz i = 0; i < cmd.length(); ++i)
 	{
 		checksum = (checksum + append_encoded_char(cmd[i], buf)) % 256;
 	}
@@ -590,7 +590,7 @@ bool gdb_thread::cmd_write_register(gdb_cmd& cmd)
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
 		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
-		size_t eq_pos = cmd.data.find('=');
+		usz eq_pos = cmd.data.find('=');
 		if (eq_pos == umax) {
 			GDB.warning("Wrong write_register cmd data '%s'.", cmd.data);
 			return send_cmd_ack("E02");
@@ -609,7 +609,7 @@ bool gdb_thread::cmd_write_register(gdb_cmd& cmd)
 
 bool gdb_thread::cmd_read_memory(gdb_cmd& cmd)
 {
-	size_t s = cmd.data.find(',');
+	usz s = cmd.data.find(',');
 	u32 addr = hex_to_u32(cmd.data.substr(0, s));
 	u32 len = hex_to_u32(cmd.data.substr(s + 1));
 	std::string result;
@@ -631,8 +631,8 @@ bool gdb_thread::cmd_read_memory(gdb_cmd& cmd)
 
 bool gdb_thread::cmd_write_memory(gdb_cmd& cmd)
 {
-	size_t s = cmd.data.find(',');
-	size_t s2 = cmd.data.find(':');
+	usz s = cmd.data.find(',');
+	usz s2 = cmd.data.find(':');
 	if ((s == umax) || (s2 == umax)) {
 		GDB.warning("Malformed write memory request received: '%s'.", cmd.data);
 		return send_cmd_ack("E01");

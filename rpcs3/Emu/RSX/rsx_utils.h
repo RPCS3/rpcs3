@@ -26,10 +26,10 @@ namespace rsx
 	using utils::page_end;
 	using utils::next_page;
 
-	using flags64_t = uint64_t;
-	using flags32_t = uint32_t;
-	using flags16_t = uint16_t;
-	using flags8_t = uint8_t;
+	using flags64_t = u64;
+	using flags32_t = u32;
+	using flags16_t = u16;
+	using flags8_t = u8;
 
 	extern atomic_t<u64> g_rsx_shared_tag;
 
@@ -292,7 +292,7 @@ namespace rsx
 	// Copy memory in inverse direction from source
 	// Used to scale negatively x axis while transfering image data
 	template <typename Ts = u8, typename Td = Ts>
-	static void memcpy_r(void* dst, void* src, std::size_t size)
+	static void memcpy_r(void* dst, void* src, usz size)
 	{
 		for (u32 i = 0; i < size; i++)
 		{

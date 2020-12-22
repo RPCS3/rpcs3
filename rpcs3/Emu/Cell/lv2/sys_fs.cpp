@@ -57,7 +57,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 {
 	std::string_view mp_name, vpath = filename;
 
-	for (std::size_t depth = 0;;)
+	for (usz depth = 0;;)
 	{
 		// Skip one or more '/'
 		const auto pos = vpath.find_first_not_of('/');
@@ -833,7 +833,7 @@ error_code sys_fs_readdir(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDirent> dir, vm
 	if (auto* info = directory->dir_read())
 	{
 		dir->d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
-		dir->d_namlen = u8(std::min<size_t>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
+		dir->d_namlen = u8(std::min<usz>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
 		strcpy_trunc(dir->d_name, info->name);
 		*nread = sizeof(CellFsDirent);
 	}
@@ -1570,7 +1570,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 				}
 
 				entry.entry_name.d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
-				entry.entry_name.d_namlen = u8(std::min<size_t>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
+				entry.entry_name.d_namlen = u8(std::min<usz>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
 				strcpy_trunc(entry.entry_name.d_name, info->name);
 			}
 		}

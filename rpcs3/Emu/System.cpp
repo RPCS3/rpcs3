@@ -28,10 +28,10 @@
 #include "Loader/ELF.h"
 
 #include "Utilities/StrUtil.h"
-#include "Utilities/sysinfo.h"
 
 #include "../Crypto/unself.h"
 #include "../Crypto/unpkg.h"
+#include "util/sysinfo.hpp"
 #include "util/yaml.hpp"
 #include "util/logs.hpp"
 
@@ -776,7 +776,7 @@ std::string Emulator::GetExeDir()
 	GetModuleFileNameW(nullptr, buffer, sizeof(buffer)/2);
 
 	std::string path_to_exe = wchar_to_utf8(buffer);
-	size_t last = path_to_exe.find_last_of("\\");
+	usz last = path_to_exe.find_last_of("\\");
 	return last == std::string::npos ? std::string("") : path_to_exe.substr(0, last+1);
 }
 #endif
@@ -1121,7 +1121,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				g_progr = "Scanning directories for SPRX libraries...";
 
 				// Find all .sprx files recursively (TODO: process .mself files)
-				for (std::size_t i = 0; i < dir_queue.size(); i++)
+				for (usz i = 0; i < dir_queue.size(); i++)
 				{
 					if (Emu.IsStopped())
 					{
@@ -1193,13 +1193,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					ensure(vm::falloc(0x10000, 0xf0000, vm::main));
 				}
 
-				atomic_t<std::size_t> fnext = 0;
+				atomic_t<usz> fnext = 0;
 
 				shared_mutex sprx_mtx;
 
 				named_thread_group workers("SPRX Worker ", GetMaxThreads(), [&]
 				{
-					for (std::size_t func_i = fnext++; func_i < file_queue.size(); func_i = fnext++)
+					for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++)
 					{
 						const auto& path = std::as_const(file_queue)[func_i].first;
 
@@ -1252,7 +1252,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 
 		// Detect boot location
-		constexpr size_t game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
+		constexpr usz game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
 		const std::string hdd0_game    = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc    = vfs::get("/dev_hdd0/disc/");
 		const bool from_hdd0_game      = m_path.find(hdd0_game) != umax;
@@ -1260,7 +1260,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Mount /dev_bdvd/ if necessary
 		if (bdvd_dir.empty() && disc.empty())
 		{
-			if (const size_t usrdir_pos = elf_dir.rfind("/USRDIR"); usrdir_pos != umax)
+			if (const usz usrdir_pos = elf_dir.rfind("/USRDIR"); usrdir_pos != umax)
 			{
 				const std::string main_dir = elf_dir.substr(0, usrdir_pos);
 
@@ -1564,7 +1564,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				elf_file.open(decrypted_path);
 			}
 			// Decrypt SELF
-			else if ((elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : klic.data(), &g_ps3_process_info.self_info)))
+			else if ((elf_file = decrypt_self(std::move(elf_file), klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &g_ps3_process_info.self_info)))
 			{
 				if (true)
 				{
@@ -1626,7 +1626,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					// Disc games are on /dev_bdvd/
-					const std::size_t pos = m_path.rfind(m_game_dir);
+					const usz pos = m_path.rfind(m_game_dir);
 					argv[0] = "/dev_bdvd/PS3_GAME/" + m_path.substr(pos + game_dir_size + 1);
 					m_dir = "/dev_bdvd/PS3_GAME/";
 				}
@@ -1807,8 +1807,7 @@ void Emulator::Resume()
 	// Print and reset debug data collected
 	if (m_state == system_state::paused && g_cfg.core.ppu_debug)
 	{
-		PPUDisAsm dis_asm(CPUDisAsm_DumpMode);
-		dis_asm.offset = vm::g_sudo_addr;
+		PPUDisAsm dis_asm(CPUDisAsm_DumpMode, vm::g_sudo_addr);
 
 		std::string dump;
 
@@ -1818,7 +1817,6 @@ void Emulator::Resume()
 			{
 				if (auto& data = *reinterpret_cast<be_t<u32>*>(vm::g_stat_addr + i))
 				{
-					dis_asm.dump_pc = i;
 					dis_asm.disasm(i);
 					fmt::append(dump, "\n\t'%08X' %s", data, dis_asm.last_opcode);
 					data = 0;
@@ -1979,10 +1977,13 @@ bool Emulator::Quit(bool force_quit)
 {
 	m_force_boot = false;
 
-	// Deinitialize object manager to prevent any hanging objects at program exit
-	*g_fxo = {};
-
-	return GetCallbacks().exit(force_quit);
+	// The callback is only used if we actually quit RPCS3
+	const auto on_exit = []()
+	{
+		// Deinitialize object manager to prevent any hanging objects at program exit
+		*g_fxo = {};
+	};
+	return GetCallbacks().try_to_quit(force_quit, on_exit);
 }
 
 std::string Emulator::GetFormattedTitle(double fps) const
@@ -2007,7 +2008,7 @@ u32 Emulator::GetMaxThreads() const
 
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)
 {
-	static thread_local std::unordered_map<std::string, std::size_t> g_tls_error_stats;
+	static thread_local std::unordered_map<std::string, usz> g_tls_error_stats;
 	static thread_local std::string g_tls_error_str;
 
 	if (!sup)

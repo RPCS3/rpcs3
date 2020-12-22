@@ -68,7 +68,7 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 	const auto default_foreground = palette().color(foregroundRole());
 	const auto default_background = palette().color(backgroundRole());
 
-	if (!cpu)
+	if (!cpu || !m_disasm)
 	{
 		for (uint i = 0; i < m_item_count; ++i)
 		{
@@ -80,10 +80,8 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 	else
 	{
 		const bool is_spu = cpu->id_type() != 1;
-		const auto cpu_offset = cpu->id_type() != 1 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
 		const u32 address_limits = (is_spu ? 0x3fffc : ~3);
 		m_pc &= address_limits;
-		m_disasm->offset = cpu_offset;
 		u32 pc = m_pc;
 
 		for (uint i = 0, count = 4; i<m_item_count; ++i, pc = (pc + count) & address_limits)
@@ -123,7 +121,7 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 				continue;
 			}
 
-			count = m_disasm->disasm(m_disasm->dump_pc = pc);
+			count = m_disasm->disasm(pc);
 
 			item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(m_disasm->last_opcode));
 		}
@@ -151,7 +149,7 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 {
-	if (event->button() == Qt::LeftButton && !Emu.IsStopped() && !m_no_thread_selected)
+	if (event->button() == Qt::LeftButton)
 	{
 		int i = currentRow();
 		if (i < 0) return;

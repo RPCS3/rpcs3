@@ -1,5 +1,4 @@
 ﻿#include "stdafx.h"
-#include "Utilities/sysinfo.h"
 #include "Utilities/JIT.h"
 #include "Crypto/sha1.h"
 #include "Emu/perf_meter.hpp"
@@ -67,6 +66,8 @@
 #include "util/asm.hpp"
 #include "util/vm.hpp"
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
+#include "util/sysinfo.hpp"
 
 const bool s_use_ssse3 = utils::has_ssse3();
 
@@ -243,7 +244,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 
 	// Register executable range at
 	utils::memory_commit(&ppu_ref(addr), size * 2, utils::protection::rw);
-	vm::page_protect(addr, align(size, 0x10000), 0, vm::page_executable);
+	vm::page_protect(addr, utils::align(size, 0x10000), 0, vm::page_executable);
 
 	const u64 fallback = g_cfg.core.ppu_decoder == ppu_decoder_type::llvm ? reinterpret_cast<uptr>(ppu_recompiler_fallback) : reinterpret_cast<uptr>(ppu_fallback);
 
@@ -500,9 +501,7 @@ std::string ppu_thread::dump_regs() const
 				}
 				else
 				{
-					PPUDisAsm dis_asm(CPUDisAsm_NormalMode);
-					dis_asm.offset = vm::g_sudo_addr;
-					dis_asm.dump_pc = reg;
+					PPUDisAsm dis_asm(CPUDisAsm_NormalMode, vm::g_sudo_addr);
 					dis_asm.disasm(reg);
 					fmt::append(ret, " -> %s", dis_asm.last_opcode);
 				}
@@ -1099,7 +1098,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 		ppu_thread& context = static_cast<ppu_thread&>(*cpu);
 
 		const u32 old_pos = vm::cast(context.gpr[1]);
-		context.gpr[1] -= align(size + 4, 8); // room minimal possible size
+		context.gpr[1] -= utils::align(size + 4, 8); // room minimal possible size
 		context.gpr[1] &= ~(u64{align_v} - 1); // fix stack alignment
 
 		if (old_pos >= context.stack_addr && old_pos < context.stack_addr + context.stack_size && context.gpr[1] < context.stack_addr)
@@ -2105,7 +2104,7 @@ extern void ppu_initialize(const ppu_module& info)
 	std::vector<std::pair<std::string, u64>> globals;
 
 	// Split module into fragments <= 1 MiB
-	std::size_t fpos = 0;
+	usz fpos = 0;
 
 	// Difference between function name and current location
 	const u32 reloc = info.name.empty() ? 0 : info.segs.at(0).addr;
@@ -2139,7 +2138,7 @@ extern void ppu_initialize(const ppu_module& info)
 		const u32 suffix = info.funcs.at(fstart).addr - reloc;
 
 		// Overall block size in bytes
-		std::size_t bsize = 0;
+		usz bsize = 0;
 
 		while (fpos < info.funcs.size())
 		{
@@ -2455,7 +2454,7 @@ extern void ppu_initialize(const ppu_module& info)
 	}
 	else
 	{
-		std::size_t index = 0;
+		usz index = 0;
 
 		// Locate existing functions
 		for (const auto& func : info.funcs)
@@ -2544,7 +2543,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		//pm.add(createLintPass()); // Check
 
 		// Translate functions
-		for (size_t fi = 0, fmax = module_part.funcs.size(); fi < fmax; fi++)
+		for (usz fi = 0, fmax = module_part.funcs.size(); fi < fmax; fi++)
 		{
 			if (Emu.IsStopped())
 			{

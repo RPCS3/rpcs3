@@ -52,7 +52,7 @@ namespace rsx
 
 		void osk_dialog::step_panel(bool next_panel)
 		{
-			const size_t num_panels = m_panels.size();
+			const usz num_panels = m_panels.size();
 
 			if (num_panels > 0)
 			{
@@ -123,9 +123,9 @@ namespace rsx
 							continue;
 						}
 
-						size_t cell_shift_layers = 0;
+						usz cell_shift_layers = 0;
 
-						for (size_t i = 0; i < _cell.outputs[layer].size(); ++i)
+						for (usz i = 0; i < _cell.outputs[layer].size(); ++i)
 						{
 							if (_cell.outputs[layer][i].empty() == false)
 							{
@@ -995,7 +995,7 @@ namespace rsx
 				}
 
 				// Get initial panel based on first_view_panel
-				for (size_t i = 0; i < m_panels.size(); ++i)
+				for (usz i = 0; i < m_panels.size(); ++i)
 				{
 					if (first_view_panel == m_panels[i].osk_panel_mode)
 					{

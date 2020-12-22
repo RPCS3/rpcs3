@@ -6,8 +6,9 @@ const ppu_decoder<PPUDisAsm> s_ppu_disasm;
 
 u32 PPUDisAsm::disasm(u32 pc)
 {
-	const u32 op = *reinterpret_cast<const be_t<u32>*>(offset + pc);
-	(this->*(s_ppu_disasm.decode(op)))({ op });
+	dump_pc = pc;
+	m_op = *reinterpret_cast<const atomic_be_t<u32>*>(m_offset + pc);
+	(this->*(s_ppu_disasm.decode(m_op)))({ m_op });
 	return 4;
 }
 

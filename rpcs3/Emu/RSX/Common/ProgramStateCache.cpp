@@ -7,12 +7,12 @@
 
 using namespace program_hash_util;
 
-size_t vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgram &program)
+usz vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgram &program)
 {
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
-	size_t hash = 0xCBF29CE484222325ULL;
+	usz hash = 0xCBF29CE484222325ULL;
 	const void* instbuffer = program.data.data();
-	size_t instIndex = 0;
+	usz instIndex = 0;
 	bool end = false;
 	for (unsigned i = 0; i < program.data.size() / 4; i++)
 	{
@@ -248,9 +248,9 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 	return result;
 }
 
-size_t vertex_program_storage_hash::operator()(const RSXVertexProgram &program) const
+usz vertex_program_storage_hash::operator()(const RSXVertexProgram &program) const
 {
-	size_t hash = vertex_program_utils::get_vertex_program_ucode_hash(program);
+	usz hash = vertex_program_utils::get_vertex_program_ucode_hash(program);
 	hash ^= program.output_mask;
 	hash ^= program.texture_dimensions;
 	return hash;
@@ -271,7 +271,7 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 
 	const void* instBuffer1 = binary1.data.data();
 	const void* instBuffer2 = binary2.data.data();
-	size_t instIndex = 0;
+	usz instIndex = 0;
 	for (unsigned i = 0; i < binary1.data.size() / 4; i++)
 	{
 		const auto active = binary1.instruction_mask[instIndex];
@@ -284,7 +284,7 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 		{
 			const auto inst1 = v128::loadu(instBuffer1, instIndex);
 			const auto inst2 = v128::loadu(instBuffer2, instIndex);
-			if (inst1 != inst2)
+			if (inst1._u ^ inst2._u)
 			{
 				return false;
 			}
@@ -302,10 +302,10 @@ bool fragment_program_utils::is_constant(u32 sourceOperand)
 	return ((sourceOperand >> 8) & 0x3) == 2;
 }
 
-size_t fragment_program_utils::get_fragment_program_ucode_size(const void* ptr)
+usz fragment_program_utils::get_fragment_program_ucode_size(const void* ptr)
 {
 	const auto instBuffer = ptr;
-	size_t instIndex = 0;
+	usz instIndex = 0;
 	while (true)
 	{
 		const v128 inst = v128::loadu(instBuffer, instIndex);
@@ -420,12 +420,12 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 	return result;
 }
 
-size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentProgram& program)
+usz fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentProgram& program)
 {
 	// 64-bit Fowler/Noll/Vo FNV-1a hash code
-	size_t hash = 0xCBF29CE484222325ULL;
+	usz hash = 0xCBF29CE484222325ULL;
 	const void* instbuffer = program.get_data();
-	size_t instIndex = 0;
+	usz instIndex = 0;
 	while (true)
 	{
 		const auto inst = v128::loadu(instbuffer, instIndex);
@@ -447,9 +447,9 @@ size_t fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragment
 	return 0;
 }
 
-size_t fragment_program_storage_hash::operator()(const RSXFragmentProgram& program) const
+usz fragment_program_storage_hash::operator()(const RSXFragmentProgram& program) const
 {
-	size_t hash = fragment_program_utils::get_fragment_program_ucode_hash(program);
+	usz hash = fragment_program_utils::get_fragment_program_ucode_hash(program);
 	hash ^= program.ctrl;
 	hash ^= program.texture_dimensions;
 	hash ^= program.unnormalized_coords;
@@ -469,13 +469,13 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 
 	const void* instBuffer1 = binary1.get_data();
 	const void* instBuffer2 = binary2.get_data();
-	size_t instIndex = 0;
+	usz instIndex = 0;
 	while (true)
 	{
 		const auto inst1 = v128::loadu(instBuffer1, instIndex);
 		const auto inst2 = v128::loadu(instBuffer2, instIndex);
 
-		if (inst1 != inst2)
+		if (inst1._u ^ inst2._u)
 			return false;
 
 		instIndex++;

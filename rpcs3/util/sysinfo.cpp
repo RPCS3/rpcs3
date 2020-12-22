@@ -1,8 +1,8 @@
-#include "sysinfo.h"
-#include "StrFmt.h"
-#include "File.h"
+#include "util/sysinfo.hpp"
+#include "Utilities/StrFmt.h"
+#include "Utilities/File.h"
 #include "Emu/system_config.h"
-#include "Thread.h"
+#include "Utilities/Thread.h"
 
 #ifdef _WIN32
 #include "windows.h"
@@ -14,6 +14,37 @@
 #include <sys/utsname.h>
 #include <errno.h>
 #endif
+
+#include "util/asm.hpp"
+
+#ifdef _MSC_VER
+extern "C"
+{
+	u64 _xgetbv(u32);
+}
+#endif
+
+inline std::array<u32, 4> utils::get_cpuid(u32 func, u32 subfunc)
+{
+	int regs[4];
+#ifdef _MSC_VER
+	__cpuidex(regs, func, subfunc);
+#else
+	__asm__ volatile("cpuid" : "=a" (regs[0]), "=b" (regs[1]), "=c" (regs[2]), "=d" (regs[3]) : "a" (func), "c" (subfunc));
+#endif
+	return {0u+regs[0], 0u+regs[1], 0u+regs[2], 0u+regs[3]};
+}
+
+inline u64 utils::get_xgetbv(u32 xcr)
+{
+#ifdef _MSC_VER
+	return _xgetbv(xcr);
+#else
+	u32 eax, edx;
+	__asm__ volatile("xgetbv" : "=a"(eax), "=d"(edx) : "c"(xcr));
+	return eax | (u64(edx) << 32);
+#endif
+}
 
 bool utils::has_ssse3()
 {
@@ -217,13 +248,13 @@ std::string utils::get_firmware_version()
 		std::string version = version_file.to_string();
 
 		// Extract version
-		const size_t start = version.find_first_of(':') + 1;
-		const size_t end = version.find_first_of(':', start);
+		const usz start = version.find_first_of(':') + 1;
+		const usz end = version.find_first_of(':', start);
 		version = version.substr(start, end - start);
 
 		// Trim version
-		const size_t trim_start = version.find_first_not_of('0');
-		const size_t trim_end = version.find_last_not_of('0');
+		const usz trim_start = version.find_first_not_of('0');
+		const usz trim_end = version.find_last_not_of('0');
 		version = version.substr(trim_start, trim_end);
 
 		return version;
@@ -276,7 +307,20 @@ std::string utils::get_OS_version()
 
 static constexpr ullong round_tsc(ullong val)
 {
-	return ::rounded_div(val, 1'000'000) * 1'000'000;
+	return utils::rounded_div(val, 1'000'000) * 1'000'000;
+}
+
+#ifdef _MSC_VER
+extern "C" void _mm_lfence();
+#endif
+
+static inline void lfence()
+{
+#ifdef _MSC_VER
+	_mm_lfence();
+#else
+	__builtin_ia32_lfence();
+#endif
 }
 
 ullong utils::get_tsc_freq()
@@ -319,17 +363,17 @@ ullong utils::get_tsc_freq()
 		{
 #ifdef _WIN32
 			Sleep(1);
-			error_data[i] = (_mm_lfence(), __rdtsc());
+			error_data[i] = (lfence(), utils::get_tsc());
 			LARGE_INTEGER ctr;
 			QueryPerformanceCounter(&ctr);
-			rdtsc_data[i] = (_mm_lfence(), __rdtsc());
+			rdtsc_data[i] = (lfence(), utils::get_tsc());
 			timer_data[i] = ctr.QuadPart;
 #else
 			usleep(200);
-			error_data[i] = (_mm_lfence(), __rdtsc());
+			error_data[i] = (lfence(), utils::get_tsc());
 			struct timespec ts;
 			clock_gettime(CLOCK_MONOTONIC, &ts);
-			rdtsc_data[i] = (_mm_lfence(), __rdtsc());
+			rdtsc_data[i] = (lfence(), utils::get_tsc());
 			timer_data[i] = ts.tv_nsec + (ts.tv_sec - sec_base) * 1'000'000'000;
 #endif
 		}

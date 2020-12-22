@@ -261,10 +261,10 @@ namespace rsx
 		template<u32 id, u32 index, int count, int register_count, typename type>
 		void set_vertex_data_impl(thread* rsx, u32 arg)
 		{
-			static const size_t increment_per_array_index = (register_count * sizeof(type)) / sizeof(u32);
+			static const usz increment_per_array_index = (register_count * sizeof(type)) / sizeof(u32);
 
-			static const size_t attribute_index = index / increment_per_array_index;
-			static const size_t vertex_subreg = index % increment_per_array_index;
+			static const usz attribute_index = index / increment_per_array_index;
+			static const usz vertex_subreg = index % increment_per_array_index;
 
 			const auto vtype = vertex_data_type_from_element_type<type>::type;
 			ensure(vtype != rsx::vertex_base_type::cmp);

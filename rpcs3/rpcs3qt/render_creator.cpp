@@ -100,7 +100,7 @@ void render_creator::update_names(const QStringList& names)
 {
 	for (int i = 0; i < names.size(); i++)
 	{
-		if (static_cast<size_t>(i) >= renderers.size() || !renderers[i])
+		if (static_cast<usz>(i) >= renderers.size() || !renderers[i])
 		{
 			cfg_log.error("render_creator::update_names could not update renderer %d", i);
 			return;

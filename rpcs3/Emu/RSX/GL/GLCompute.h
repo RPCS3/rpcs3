@@ -4,16 +4,18 @@
 #include "Emu/IdManager.h"
 #include "GLHelpers.h"
 
+#include "util/asm.hpp"
+
 namespace gl
 {
-    struct compute_task
-    {
-        std::string m_src;
-        gl::glsl::shader m_shader;
-        gl::glsl::program m_program;
-        bool compiled = false;
+	struct compute_task
+	{
+		std::string m_src;
+		gl::glsl::shader m_shader;
+		gl::glsl::program m_program;
+		bool compiled = false;
 
-        // Device-specific options
+		// Device-specific options
 		bool unroll_loops = true;
 		u32 optimal_group_size = 1;
 		u32 optimal_kernel_size = 1;
@@ -40,49 +42,49 @@ namespace gl
 			glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, reinterpret_cast<GLint*>(&max_invocations_x));
 		}
 
-        void create()
-        {
-            if (!compiled)
-            {
-                m_shader.create(::glsl::program_domain::glsl_compute_program, m_src);
-                m_shader.compile();
+		void create()
+		{
+			if (!compiled)
+			{
+				m_shader.create(::glsl::program_domain::glsl_compute_program, m_src);
+				m_shader.compile();
 
-                m_program.create();
-                m_program.attach(m_shader);
-                m_program.link();
+				m_program.create();
+				m_program.attach(m_shader);
+				m_program.link();
 
-                compiled = true;
-            }
-        }
+				compiled = true;
+			}
+		}
 
-        void destroy()
-        {
-            if (compiled)
-            {
-                m_program.remove();
-                m_shader.remove();
+		void destroy()
+		{
+			if (compiled)
+			{
+				m_program.remove();
+				m_shader.remove();
 
-                compiled = false;
-            }
-        }
+				compiled = false;
+			}
+		}
 
-        virtual void bind_resources()
-        {}
+		virtual void bind_resources()
+		{}
 
-        void run(u32 invocations_x, u32 invocations_y)
-        {
-            GLint old_program;
-            glGetIntegerv(GL_CURRENT_PROGRAM, &old_program);
+		void run(u32 invocations_x, u32 invocations_y)
+		{
+			GLint old_program;
+			glGetIntegerv(GL_CURRENT_PROGRAM, &old_program);
 
 			bind_resources();
-            m_program.use();
-            glDispatchCompute(invocations_x, invocations_y, 1);
+			m_program.use();
+			glDispatchCompute(invocations_x, invocations_y, 1);
 
-            glUseProgram(old_program);
-        }
+			glUseProgram(old_program);
+		}
 
-        void run(u32 num_invocations)
-        {
+		void run(u32 num_invocations)
+		{
 			u32 invocations_x, invocations_y;
 			if (num_invocations <= max_invocations_x) [[likely]]
 			{
@@ -99,9 +101,9 @@ namespace gl
 				if (num_invocations % invocations_x) invocations_y++;
 			}
 
-            run(invocations_x, invocations_y);
-        }
-    };
+			run(invocations_x, invocations_y);
+		}
+	};
 
 	struct cs_shuffle_base : compute_task
 	{
@@ -166,7 +168,7 @@ namespace gl
 
 			const std::pair<std::string, std::string> syntax_replace[] =
 			{
-                { "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
+				{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
 				{ "%ws", std::to_string(optimal_group_size) },
 				{ "%ks", std::to_string(kernel_size) },
 				{ "%vars", variables },
@@ -214,7 +216,7 @@ namespace gl
 
 		void bind_resources() override
 		{
-            m_data->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_data_length);
+			m_data->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), m_data_offset, m_data_length);
 		}
 
 		void run(const gl::buffer* data, u32 data_length, u32 data_offset = 0)
@@ -224,7 +226,7 @@ namespace gl
 			m_data_length = data_length;
 
 			const auto num_bytes_per_invocation = optimal_group_size * kernel_size * 4;
-			const auto num_bytes_to_process = align(data_length, num_bytes_per_invocation);
+			const auto num_bytes_to_process = utils::align(data_length, num_bytes_per_invocation);
 			const auto num_invocations = num_bytes_to_process / num_bytes_per_invocation;
 
 			if ((num_bytes_to_process + data_offset) > data->size())

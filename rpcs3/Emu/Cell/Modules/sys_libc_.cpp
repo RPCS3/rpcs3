@@ -16,47 +16,47 @@ struct ps3_fmt_src
 	ppu_thread* ctx;
 	u32 g_count;
 
-	bool test(std::size_t index) const
+	bool test(usz index) const
 	{
 		return true;
 	}
 
 	template <typename T>
-	T get(std::size_t index) const
+	T get(usz index) const
 	{
 		const u32 i = static_cast<u32>(index) + g_count;
 		return ppu_gpr_cast<T>(i < 8 ? ctx->gpr[3 + i] : +*ctx->get_stack_arg(i));
 	}
 
-	void skip(std::size_t extra)
+	void skip(usz extra)
 	{
 		g_count += static_cast<u32>(extra) + 1;
 	}
 
-	std::size_t fmt_string(std::string& out, std::size_t extra) const
+	usz fmt_string(std::string& out, usz extra) const
 	{
-		const std::size_t start = out.size();
+		const usz start = out.size();
 		out += vm::_ptr<const char>(get<u32>(extra));
 		return out.size() - start;
 	}
 
-	std::size_t type(std::size_t extra) const
+	usz type(usz extra) const
 	{
 		return 0;
 	}
 
-	static constexpr std::size_t size_char  = 1;
-	static constexpr std::size_t size_short = 2;
-	static constexpr std::size_t size_int   = 4;
-	static constexpr std::size_t size_long  = 4;
-	static constexpr std::size_t size_llong = 8;
-	static constexpr std::size_t size_size  = 4;
-	static constexpr std::size_t size_max   = 8;
-	static constexpr std::size_t size_diff  = 4;
+	static constexpr usz size_char  = 1;
+	static constexpr usz size_short = 2;
+	static constexpr usz size_int   = 4;
+	static constexpr usz size_long  = 4;
+	static constexpr usz size_llong = 8;
+	static constexpr usz size_size  = 4;
+	static constexpr usz size_max   = 8;
+	static constexpr usz size_diff  = 4;
 };
 
 template <>
-f64 ps3_fmt_src::get<f64>(std::size_t index) const
+f64 ps3_fmt_src::get<f64>(usz index) const
 {
 	return std::bit_cast<f64>(get<u64>(index));
 }
@@ -404,7 +404,7 @@ s32 _sys_snprintf(ppu_thread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> 
 	}
 	else
 	{
-		count = static_cast<u32>(std::min<size_t>(count - 1, result.size()));
+		count = static_cast<u32>(std::min<usz>(count - 1, result.size()));
 
 		std::memcpy(dst.get_ptr(), result.c_str(), count);
 		dst[count] = 0;

@@ -7,7 +7,7 @@
 #include "cellPamf.h"
 #include "cellDmux.h"
 
-#include <thread>
+#include "util/asm.hpp"
 
 LOG_CHANNEL(cellDmux);
 
@@ -181,7 +181,7 @@ public:
 	const u32 spec; //addr
 
 	std::vector<u8> raw_data; // demultiplexed data stream (managed by demuxer thread)
-	std::size_t raw_pos = 0; // should be <= raw_data.size()
+	usz raw_pos = 0; // should be <= raw_data.size()
 	u64 last_dts = CODEC_TS_INVALID;
 	u64 last_pts = CODEC_TS_INVALID;
 
@@ -753,9 +753,9 @@ PesHeader::PesHeader(DemuxerStream& stream)
 }
 
 ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
-	: put(align(addr, 128))
+	: put(utils::align(addr, 128))
 	, dmux(dmux)
-	, memAddr(align(addr, 128))
+	, memAddr(utils::align(addr, 128))
 	, memSize(size - (addr - memAddr))
 	, fidMajor(fidMajor)
 	, fidMinor(fidMinor)
@@ -847,7 +847,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 
 		addr = put;
 
-		put = align(put + 128 + size, 128);
+		put = utils::align(put + 128 + size, 128);
 
 		put_count++;
 	}

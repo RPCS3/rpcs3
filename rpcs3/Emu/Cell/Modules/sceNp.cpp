@@ -15,8 +15,6 @@
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
 
-#include "util/v128.hpp"
-
 LOG_CHANNEL(sceNp);
 
 template <>
@@ -447,12 +445,12 @@ error_code sceNpTerm()
 
 error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
-	v128 k_licensee{};
+	u128 k_licensee{};
 
 	if (k_licensee_addr)
 	{
 		std::memcpy(&k_licensee, k_licensee_addr.get_ptr(), sizeof(k_licensee));
-		sceNp.notice("npDrmIsAvailable(): KLicense key %s", std::bit_cast<be_t<v128>>(k_licensee));
+		sceNp.notice("npDrmIsAvailable(): KLicense key %s", std::bit_cast<be_t<u128>>(k_licensee));
 	}
 
 	if (Emu.GetCat() == "PE")
@@ -488,7 +486,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		if (!k_licensee_addr)
 			k_licensee = get_default_self_klic();
 
-		if (verify_npdrm_self_headers(enc_file, k_licensee._bytes))
+		if (verify_npdrm_self_headers(enc_file, reinterpret_cast<u8*>(&k_licensee)))
 		{
 			npdrmkeys->devKlic = k_licensee;
 		}
@@ -504,7 +502,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 		std::string contentID;
 
-		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, k_licensee._bytes, &contentID))
+		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, reinterpret_cast<u8*>(&k_licensee), &contentID))
 		{
 			const std::string rap_file = rap_dir_path + contentID + ".rap";
 			npdrmkeys->devKlic = k_licensee;

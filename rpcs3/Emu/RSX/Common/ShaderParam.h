@@ -218,7 +218,7 @@ public:
 		}
 	}
 
-	size_t get_vector_size() const
+	usz get_vector_size() const
 	{
 		return swizzles[swizzles.size() - 1].length();
 	}

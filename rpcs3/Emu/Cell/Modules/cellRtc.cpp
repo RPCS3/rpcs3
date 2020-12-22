@@ -823,9 +823,9 @@ error_code cellRtcSetTick(vm::ptr<CellRtcDateTime> pTime, vm::cptr<CellRtcTick> 
 	do
 	{
 		bool leap = is_leap_year(years);
-		for (uint32_t m = 0; m <= 11; m++)
+		for (u32 m = 0; m <= 11; m++)
 		{
-			uint8_t daysinmonth = DAYS_IN_MONTH[m + (leap * 12)];
+			u8 daysinmonth = DAYS_IN_MONTH[m + (leap * 12)];
 			if (days_tmp >= daysinmonth)
 			{
 				months++;

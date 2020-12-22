@@ -7,6 +7,7 @@
 #include "Emu/RSX/RSXThread.h"
 
 #include <map>
+#include "util/asm.hpp"
 
 namespace rsx
 {
@@ -23,7 +24,7 @@ namespace rsx
 		}
 
 		// User memory + fifo size
-		buffer_size = ::align<u32>(buffer_size, 0x100000) + 0x10000000;
+		buffer_size = utils::align<u32>(buffer_size, 0x100000) + 0x10000000;
 		// We are not allowed to drain all memory so add a little
 		g_fxo->init<lv2_memory_container>(buffer_size + 0x1000000);
 
@@ -185,7 +186,7 @@ namespace rsx
 			auto render = get_current_renderer();
 			auto last_flip = render->int_flip_index;
 
-			size_t stopIdx = 0;
+			usz stopIdx = 0;
 			for (const auto& replay_cmd : frame->replay_commands)
 			{
 				while (Emu.IsPaused())

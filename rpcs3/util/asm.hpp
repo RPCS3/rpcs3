@@ -5,22 +5,54 @@
 extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit1;
 
+#ifdef _MSC_VER
+extern "C"
+{
+	u64 __rdtsc();
+	u32 _xbegin();
+	void _xend();
+	void _mm_pause();
+	void _mm_prefetch(const char*, int);
+	void _m_prefetchw(const volatile void*);
+
+	uchar _rotl8(uchar, uchar);
+	ushort _rotl16(ushort, uchar);
+	uint _rotl(uint, int);
+	u64 _rotl64(u64, int);
+
+	s64 __mulh(s64, s64);
+	u64 __umulh(u64, u64);
+
+	s64 _div128(s64, s64, s64, s64*);
+	u64 _udiv128(u64, u64, u64, u64*);
+}
+#endif
+
 namespace utils
 {
+	inline u64 get_tsc()
+	{
+#ifdef _MSC_VER
+		return __rdtsc();
+#else
+		return __builtin_ia32_rdtsc();
+#endif
+	}
+
 	// Transaction helper (result = pair of success and op result, or just bool)
 	template <typename F, typename R = std::invoke_result_t<F>>
 	inline auto tx_start(F op)
 	{
 		uint status = -1;
 
-		for (auto stamp0 = __rdtsc(), stamp1 = stamp0; g_use_rtm && stamp1 - stamp0 <= g_rtm_tx_limit1; stamp1 = __rdtsc())
+		for (auto stamp0 = get_tsc(), stamp1 = stamp0; g_use_rtm && stamp1 - stamp0 <= g_rtm_tx_limit1; stamp1 = get_tsc())
 		{
 #ifndef _MSC_VER
 			__asm__ goto ("xbegin %l[retry];" ::: "memory" : retry);
 #else
 			status = _xbegin();
 
-			if (status != _XBEGIN_STARTED) [[unlikely]]
+			if (status != umax) [[unlikely]]
 			{
 				goto retry;
 			}
@@ -80,7 +112,7 @@ namespace utils
 		const void* ptr = reinterpret_cast<const void*>(value);
 
 #ifdef _MSC_VER
-		return _mm_prefetch(reinterpret_cast<const char*>(ptr), _MM_HINT_T1);
+		return _mm_prefetch(reinterpret_cast<const char*>(ptr), 2);
 #else
 		return __builtin_prefetch(ptr, 0, 2);
 #endif
@@ -95,7 +127,7 @@ namespace utils
 		}
 
 #ifdef _MSC_VER
-		return _mm_prefetch(reinterpret_cast<const char*>(ptr), _MM_HINT_T0);
+		return _mm_prefetch(reinterpret_cast<const char*>(ptr), 3);
 #else
 		return __builtin_prefetch(ptr, 0, 3);
 #endif
@@ -108,7 +140,11 @@ namespace utils
 			return;
 		}
 
+#ifdef _MSC_VER
 		return _m_prefetchw(ptr);
+#else
+		return __builtin_prefetch(ptr, 1, 0);
+#endif
 	}
 
 	constexpr u8 rol8(u8 x, u8 n)
@@ -120,8 +156,10 @@ namespace utils
 
 #ifdef _MSC_VER
 		return _rotl8(x, n);
+#elif defined(__clang__)
+		return __builtin_rotateleft8(x, n);
 #else
-		return __rolb(x, n);
+		return __builtin_ia32_rolqi(x, n);
 #endif
 	}
 
@@ -133,9 +171,11 @@ namespace utils
 		}
 
 #ifdef _MSC_VER
-		return _rotl16(x, n);
+		return _rotl16(x, static_cast<uchar>(n));
+#elif defined(__clang__)
+		return __builtin_rotateleft16(x, n);
 #else
-		return __rolw(x, n);
+		return __builtin_ia32_rolhi(x, n);
 #endif
 	}
 
@@ -148,22 +188,10 @@ namespace utils
 
 #ifdef _MSC_VER
 		return _rotl(x, n);
+#elif defined(__clang__)
+		return __builtin_rotateleft32(x, n);
 #else
-		return __rold(x, n);
-#endif
-	}
-
-	constexpr u32 ror32(u32 x, u32 n)
-	{
-		if (std::is_constant_evaluated())
-		{
-			return (x >> (n & 31)) | (x << (((0 - n) & 31)));
-		}
-
-#ifdef _MSC_VER
-		return _rotr(x, n);
-#else
-		return __rord(x, n);
+		return (x << n) | (x >> (32 - n));
 #endif
 	}
 
@@ -176,8 +204,10 @@ namespace utils
 
 #ifdef _MSC_VER
 		return _rotl64(x, static_cast<int>(n));
+#elif defined(__clang__)
+		return __builtin_rotateleft64(x, n);
 #else
-		return __rolq(x, static_cast<int>(n));
+		return (x << n) | (x >> (64 - n));
 #endif
 	}
 
@@ -284,4 +314,49 @@ namespace utils
 			return std::countl_zero<u64>(arg) + 64;
 #endif
 	}
+
+	inline void pause()
+	{
+#ifdef _MSC_VER
+		_mm_pause();
+#else
+		__builtin_ia32_pause();
+#endif
+	}
+
+	// Synchronization helper (cache-friendly busy waiting)
+	inline void busy_wait(usz cycles = 3000)
+	{
+		const u64 start = get_tsc();
+		do pause();
+		while (get_tsc() - start < cycles);
+	}
+
+	// Align to power of 2
+	template <typename T, typename = std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value>>
+	constexpr T align(T value, ullong align)
+	{
+		return static_cast<T>((value + (align - 1)) & (0 - align));
+	}
+
+	// General purpose aligned division, the result is rounded up not truncated
+	template <typename T, typename = std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value>>
+	constexpr T aligned_div(T value, ullong align)
+	{
+		return static_cast<T>((value + align - 1) / align);
+	}
+
+	// General purpose aligned division, the result is rounded to nearest
+	template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
+	constexpr T rounded_div(T value, std::conditional_t<std::is_signed<T>::value, llong, ullong> align)
+	{
+		if constexpr (std::is_unsigned<T>::value)
+		{
+			return static_cast<T>((value + (align / 2)) / align);
+		}
+
+		return static_cast<T>((value + (value < 0 ? 0 - align : align) / 2) / align);
+	}
 } // namespace utils
+
+using utils::busy_wait;

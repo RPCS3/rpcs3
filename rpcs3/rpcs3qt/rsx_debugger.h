@@ -63,7 +63,6 @@ class rsx_debugger : public QDialog
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 public:
-	bool exit = false;
 	rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = 0);
 	~rsx_debugger();
 

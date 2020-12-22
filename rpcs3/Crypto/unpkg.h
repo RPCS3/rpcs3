@@ -117,16 +117,16 @@ struct PKGEntry
 struct PKGMetaData
 {
 private:
-	static std::string to_hex_string(u8 buf[], size_t size)
+	static std::string to_hex_string(u8 buf[], usz size)
 	{
 		std::stringstream sstream;
-		for (size_t i = 0; i < size; i++)
+		for (usz i = 0; i < size; i++)
 		{
 			sstream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(buf[i]);
 		}
 		return sstream.str();
 	}
-	static std::string to_hex_string(u8 buf[], size_t size, size_t dotpos)
+	static std::string to_hex_string(u8 buf[], usz size, usz dotpos)
 	{
 		std::string result = to_hex_string(buf, size);
 		if (result.size() > dotpos)
@@ -312,14 +312,14 @@ private:
 	u64 archive_read(void* data_ptr, const u64 num_bytes);
 	u64 decrypt(u64 offset, u64 size, const uchar* key);
 
-	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
+	const usz BUF_SIZE = 8192 * 1024; // 8 MB
 
 	bool m_is_valid = false;
 
 	std::string m_path;
 	std::string install_dir;
 	std::vector<fs::file> filelist;
-	size_t cur_file = 0;
+	usz cur_file = 0;
 	u64 cur_offset = 0;
 	u64 cur_file_offset = 0;
 	std::unique_ptr<u128[]> buf;

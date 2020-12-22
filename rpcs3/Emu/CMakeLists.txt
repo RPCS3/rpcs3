@@ -33,13 +33,13 @@ target_include_directories(rpcs3_emu
 # Utilities
 target_sources(rpcs3_emu PRIVATE
 	../util/atomic.cpp
-	../util/atomic2.cpp
 	../util/fixed_typemap.cpp
 	../util/logs.cpp
 	../util/yaml.cpp
 	../util/cereal.cpp
 	../util/vm_native.cpp
 	../util/dyn_lib.cpp
+	../util/sysinfo.cpp
 	../../Utilities/bin_patch.cpp
 	../../Utilities/cheat_info.cpp
 	../../Utilities/cond.cpp
@@ -51,7 +51,6 @@ target_sources(rpcs3_emu PRIVATE
 	../../Utilities/rXml.cpp
 	../../Utilities/sema.cpp
 	../../Utilities/StrFmt.cpp
-	../../Utilities/sysinfo.cpp
 	../../Utilities/Thread.cpp
 	../../Utilities/version.cpp
 )
@@ -428,6 +427,7 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/GL/GLTexture.cpp
 	RSX/GL/GLVertexBuffers.cpp
 	RSX/GL/GLVertexProgram.cpp
+	RSX/GL/GLTextureCache.cpp
 	RSX/GL/OpenGL.cpp
 )
 
@@ -454,6 +454,7 @@ if(TARGET 3rdparty_vulkan)
 		RSX/VK/VKTexture.cpp
 		RSX/VK/VKVertexBuffers.cpp
 		RSX/VK/VKVertexProgram.cpp
+		RSX/VK/VKTextureCache.cpp
 	)
 endif()
 

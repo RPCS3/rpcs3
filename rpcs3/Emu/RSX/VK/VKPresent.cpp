@@ -2,6 +2,8 @@
 #include "VKGSRender.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 
+#include "util/asm.hpp"
+
 void VKGSRender::reinitialize_swapchain()
 {
 	m_swapchain_dims.width = m_frame->client_width();
@@ -649,9 +651,9 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		{
 			m_frame->screenshot_toggle = false;
 
-			const size_t sshot_size = buffer_height * buffer_width * 4;
+			const usz sshot_size = buffer_height * buffer_width * 4;
 
-			vk::buffer sshot_vkbuf(*m_device, align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			vk::buffer sshot_vkbuf(*m_device, utils::align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 				VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
 
 			VkBufferImageCopy copy_info;

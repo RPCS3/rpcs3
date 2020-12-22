@@ -1,5 +1,7 @@
 #include "sema.h"
 
+#include "util/asm.hpp"
+
 void semaphore_base::imp_wait()
 {
 	for (int i = 0; i < 10; i++)

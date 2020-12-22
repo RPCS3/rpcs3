@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/JIT.h"
 #include "Utilities/date_time.h"
-#include "Utilities/sysinfo.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Memory/vm_reservation.h"
@@ -32,6 +31,8 @@
 #include "util/vm.hpp"
 #include "util/asm.hpp"
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
+#include "util/sysinfo.hpp"
 
 using spu_rdata_t = decltype(spu_thread::rdata);
 
@@ -1288,9 +1289,7 @@ std::string spu_thread::dump_regs() const
 
 		if (i3 >= 0x80 && is_exec_code(i3))
 		{
-			SPUDisAsm dis_asm(CPUDisAsm_NormalMode);
-			dis_asm.offset = ls;
-			dis_asm.dump_pc = i3;
+			SPUDisAsm dis_asm(CPUDisAsm_NormalMode, ls);
 			dis_asm.disasm(i3);
 			fmt::append(ret, " -> %s", dis_asm.last_opcode);
 		}
@@ -1560,7 +1559,7 @@ void spu_thread::cpu_return()
 						for (u32 status; !thread->exit_status.try_read(status)
 							|| status != thread->last_exit_status;)
 						{
-							_mm_pause();
+							utils::pause();
 						}
 					}
 				}
@@ -2338,7 +2337,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 			}
 
 			u32 range_addr = eal & -128;
-			u32 range_end = ::align(eal + size, 128);
+			u32 range_end = utils::align(eal + size, 128);
 
 			// Handle the case of crossing 64K page borders (TODO: maybe split in 4K fragments?)
 			if (range_addr >> 16 != (range_end - 1) >> 16)

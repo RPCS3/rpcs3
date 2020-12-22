@@ -120,9 +120,6 @@
     <ClCompile Include="util\atomic.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="util\atomic2.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="util\yaml.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -165,12 +162,8 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\Utilities\sysinfo.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">NotUsing</PrecompiledHeader>
+    <ClCompile Include="util\sysinfo.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\version.cpp" />
@@ -520,6 +513,7 @@
     <ClInclude Include="Emu\system_config_types.h" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="util\v128.hpp" />
+    <ClInclude Include="util\v128sse.hpp" />
     <ClInclude Include="util\to_endian.hpp" />
     <ClInclude Include="..\Utilities\bin_patch.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
@@ -535,7 +529,6 @@
     <ClInclude Include="..\Utilities\mutex.h" />
     <ClInclude Include="..\Utilities\sema.h" />
     <ClInclude Include="..\Utilities\sync.h" />
-    <ClInclude Include="util\atomic2.hpp" />
     <ClInclude Include="util\endian.hpp" />
     <ClInclude Include="util\fixed_typemap.hpp" />
     <ClInclude Include="util\init_mutex.hpp" />
@@ -546,7 +539,7 @@
     <ClInclude Include="..\Utilities\rXml.h" />
     <ClInclude Include="..\Utilities\StrFmt.h" />
     <ClInclude Include="..\Utilities\StrUtil.h" />
-    <ClInclude Include="..\Utilities\sysinfo.h" />
+    <ClInclude Include="util\sysinfo.hpp" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
     <ClInclude Include="util\types.hpp" />
@@ -746,6 +739,7 @@
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h" />
     <ClInclude Include="Emu\RSX\Common\FragmentProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\Common\ProgramStateCache.h" />
+    <ClInclude Include="Emu\RSX\Common\program_state_cache2.hpp" />
     <ClInclude Include="Emu\RSX\Common\ring_buffer_helper.h" />
     <ClInclude Include="Emu\RSX\Common\ShaderParam.h" />
     <ClInclude Include="Emu\RSX\Common\surface_store.h" />

@@ -8,11 +8,13 @@ const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iflag> s_spu_iflag;
 
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
 
 u32 SPUDisAsm::disasm(u32 pc)
 {
-	const u32 op = *reinterpret_cast<const be_t<u32>*>(offset + pc);
-	(this->*(s_spu_disasm.decode(op)))({ op });
+	dump_pc = pc;
+	m_op = *reinterpret_cast<const atomic_be_t<u32>*>(m_offset + pc);
+	(this->*(s_spu_disasm.decode(m_op)))({ m_op });
 	return 4;
 }
 
@@ -33,7 +35,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 
 	for (s32 i = pc - 4; i >= 0; i -= 4)
 	{
-		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(offset + i);
+		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(m_offset + i);
 		const spu_opcode_t op0{ opcode };
 
 		const auto type = s_spu_itype.decode(opcode);
@@ -160,7 +162,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 	return {};
 }
 
-typename SPUDisAsm::insert_mask_info SPUDisAsm::try_get_insert_mask_info(v128 mask)
+typename SPUDisAsm::insert_mask_info SPUDisAsm::try_get_insert_mask_info(const v128& mask)
 {
 	if ((mask & v128::from8p(0xe0)) != v128{})
 	{
@@ -300,4 +302,30 @@ void SPUDisAsm::IOHL(spu_opcode_t op)
 	}
 
 	DisAsm("iohl", spu_reg_name[op.rt], op.i16);
+}
+
+void SPUDisAsm::SHUFB(spu_opcode_t op)
+{
+	const auto [is_const, value] = try_get_const_value(op.rc);
+
+	if (is_const)
+	{
+		const auto [size, dst, src] = try_get_insert_mask_info(value);
+
+		if (size)
+		{
+			if ((size >= 4u && !src) || (size == 2u && src == 1u) || (size == 1u && src == 3u))
+			{
+				// Comment insertion pattern for CWD-alike instruction
+				DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], fmt::format("%s #i%u[%u]", spu_reg_name[op.rc], size * 8, dst).c_str());
+				return;
+			}
+
+			// Comment insertion pattern for unknown instruction formations
+			DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], fmt::format("%s #i%u[%u] = [%u]", spu_reg_name[op.rc], size * 8, dst, src).c_str());
+			return;
+		}
+	}
+
+	DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], spu_reg_name[op.rc]);
 }

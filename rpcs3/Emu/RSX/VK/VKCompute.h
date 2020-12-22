@@ -5,6 +5,8 @@
 #include "Utilities/StrUtil.h"
 #include "Emu/IdManager.h"
 
+#include "util/asm.hpp"
+
 #define VK_MAX_COMPUTE_TASKS 4096   // Max number of jobs per frame
 
 namespace vk
@@ -52,7 +54,7 @@ namespace vk
 				{
 					bindings.push_back
 					({
-						uint32_t(bindings.size()),
+						u32(bindings.size()),
 						e.first,
 						1,
 						VK_SHADER_STAGE_COMPUTE_BIT,
@@ -296,7 +298,7 @@ namespace vk
 				"%vars"
 				"\n";
 
-			const auto parameters_size = align(push_constants_size, 16) / 16;
+			const auto parameters_size = utils::align(push_constants_size, 16) / 16;
 			const std::pair<std::string, std::string> syntax_replace[] =
 			{
 				{ "%ws", std::to_string(optimal_group_size) },
@@ -943,7 +945,7 @@ namespace vk
 			set_parameters(cmd);
 
 			const u32 num_bytes_per_invocation = (sizeof(_BlockType) * optimal_group_size);
-			const u32 linear_invocations = aligned_div(data_length, num_bytes_per_invocation);
+			const u32 linear_invocations = utils::aligned_div(data_length, num_bytes_per_invocation);
 			compute_task::run(cmd, linear_invocations);
 		}
 	};
@@ -997,7 +999,7 @@ namespace vk
 			word_count = num_words;
 			block_length = num_words * 4;
 
-			const u32 linear_invocations = aligned_div(word_count, optimal_group_size);
+			const u32 linear_invocations = utils::aligned_div(word_count, optimal_group_size);
 			compute_task::run(cmd, linear_invocations);
 		}
 	};

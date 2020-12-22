@@ -14,6 +14,7 @@
     <ClCompile Include="Emu\RSX\GL\GLShaderInterpreter.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLVertexBuffers.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLPipelineCompiler.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLTextureCache.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />

@@ -135,7 +135,7 @@ namespace program_common
 
 namespace glsl
 {
-	static std::string getFloatTypeNameImpl(size_t elementCount)
+	static std::string getFloatTypeNameImpl(usz elementCount)
 	{
 		switch (elementCount)
 		{
@@ -152,7 +152,7 @@ namespace glsl
 		}
 	}
 
-	static std::string getHalfTypeNameImpl(size_t elementCount)
+	static std::string getHalfTypeNameImpl(usz elementCount)
 	{
 		switch (elementCount)
 		{

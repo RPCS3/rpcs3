@@ -4,7 +4,6 @@
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/system_config.h"
 #include "PPUThread.h"
-#include "Utilities/sysinfo.h"
 #include "Emu/Cell/Common.h"
 #include "Emu/Cell/PPUFunction.h"
 
@@ -13,6 +12,8 @@
 
 #include "util/asm.hpp"
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
+#include "util/sysinfo.hpp"
 
 #if !defined(_MSC_VER) && defined(__clang__)
 #pragma GCC diagnostic push

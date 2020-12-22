@@ -3,9 +3,11 @@
 #include "VKResourceManager.h"
 #include "VKDMA.h"
 
+#include "util/asm.hpp"
+
 namespace vk
 {
-	static constexpr size_t s_dma_block_length = 0x01000000;
+	static constexpr usz s_dma_block_length = 0x01000000;
 	static constexpr u32    s_dma_block_mask = 0xFF000000;
 	static constexpr u32    s_dma_offset_mask = 0x00FFFFFF;
 
@@ -42,7 +44,7 @@ namespace vk
 		}
 	}
 
-	void dma_block::init(const render_device& dev, u32 addr, size_t size)
+	void dma_block::init(const render_device& dev, u32 addr, usz size)
 	{
 		ensure(size);
 		ensure(!(size % s_dma_block_length));
@@ -55,7 +57,7 @@ namespace vk
 		page_info.resize(size / s_bytes_per_entry, ~0ull);
 	}
 
-	void dma_block::init(dma_block* parent, u32 addr, size_t size)
+	void dma_block::init(dma_block* parent, u32 addr, usz size)
 	{
 		base_address = addr;
 		inheritance_info.parent = parent;
@@ -85,7 +87,7 @@ namespace vk
 	{
 		if (!inheritance_info.parent)
 		{
-			const u32 start = align(range.start, s_page_size);
+			const u32 start = utils::align(range.start, s_page_size);
 			const u32 end = ((range.end + 1) & s_page_align);
 
 			for (u32 page = start; page < end; page += s_page_size)
@@ -201,7 +203,7 @@ namespace vk
 		}
 	}
 
-	void dma_block::extend(command_buffer& cmd, const render_device &dev, size_t new_size)
+	void dma_block::extend(command_buffer& cmd, const render_device &dev, usz new_size)
 	{
 		ensure(allocated_memory);
 		if (new_size <= allocated_memory->size())
@@ -259,7 +261,7 @@ namespace vk
 		}
 
 		dma_block* block_head = nullptr;
-		auto block_end = align(limit, s_dma_block_length);
+		auto block_end = utils::align(limit, s_dma_block_length);
 
 		// Reverse scan to try and find the minimum required length in case of other chaining
 		for (auto block = last_block; block != first_block; block -= s_dma_block_length)

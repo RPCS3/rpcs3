@@ -7,12 +7,13 @@
 #include "SPUDisAsm.h"
 #include "SPUThread.h"
 #include "SPUInterpreter.h"
-#include "Utilities/sysinfo.h"
 #include "PPUAnalyser.h"
 #include "Crypto/sha1.h"
 
 #include "util/asm.hpp"
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
+#include "util/sysinfo.hpp"
 
 #include <cmath>
 #include <mutex>
@@ -288,7 +289,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		words_align = 64;
 
 		const u32 starta = start & -64;
-		const u32 enda = ::align(end, 64);
+		const u32 enda = utils::align(end, 64);
 		const u32 sizea = (enda - starta) / 64;
 		ensure(sizea);
 
@@ -369,7 +370,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		words_align = 32;
 
 		const u32 starta = start & -32;
-		const u32 enda = ::align(end, 32);
+		const u32 enda = utils::align(end, 32);
 		const u32 sizea = (enda - starta) / 32;
 		ensure(sizea);
 
@@ -491,7 +492,7 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		words_align = 32;
 
 		const u32 starta = start & -32;
-		const u32 enda = ::align(end, 32);
+		const u32 enda = utils::align(end, 32);
 		const u32 sizea = (enda - starta) / 32;
 		ensure(sizea);
 
@@ -959,7 +960,7 @@ spu_recompiler::XmmLink spu_recompiler::XmmGet(s8 reg, XmmType type) // get xmm 
 	return result;
 }
 
-inline asmjit::X86Mem spu_recompiler::XmmConst(v128 data)
+inline asmjit::X86Mem spu_recompiler::XmmConst(const v128& data)
 {
 	// Find existing const
 	auto& xmm_label = xmm_consts[std::make_pair(data._u64[0], data._u64[1])];
@@ -980,12 +981,12 @@ inline asmjit::X86Mem spu_recompiler::XmmConst(v128 data)
 	return asmjit::x86::oword_ptr(xmm_label);
 }
 
-inline asmjit::X86Mem spu_recompiler::XmmConst(__m128 data)
+inline asmjit::X86Mem spu_recompiler::XmmConst(const __m128& data)
 {
 	return XmmConst(v128::fromF(data));
 }
 
-inline asmjit::X86Mem spu_recompiler::XmmConst(__m128i data)
+inline asmjit::X86Mem spu_recompiler::XmmConst(const __m128i& data)
 {
 	return XmmConst(v128::fromV(data));
 }

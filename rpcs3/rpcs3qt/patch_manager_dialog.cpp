@@ -759,8 +759,8 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 
 				log_message.clear();
 
-				size_t count = 0;
-				size_t total = 0;
+				usz count = 0;
+				usz total = 0;
 
 				if (patch_engine::import_patches(patches, imported_patch_yml_path, count, total, &log_message))
 				{

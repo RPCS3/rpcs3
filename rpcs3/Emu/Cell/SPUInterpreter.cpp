@@ -2,12 +2,13 @@
 #include "SPUInterpreter.h"
 
 #include "Utilities/JIT.h"
-#include "Utilities/sysinfo.h"
 #include "SPUThread.h"
 #include "Emu/Cell/Common.h"
 
 #include "util/asm.hpp"
 #include "util/v128.hpp"
+#include "util/v128sse.hpp"
+#include "util/sysinfo.hpp"
 
 #include <cmath>
 #include <cfenv>

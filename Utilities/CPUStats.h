@@ -176,7 +176,7 @@ public:
 		};
 		u_int miblen = std::size(mib);
 		struct kinfo_proc info;
-		size_t size = sizeof(info);
+		usz size = sizeof(info);
 		if (sysctl(mib, miblen, &info, &size, NULL, 0))
 		{
 			return 0;
@@ -194,7 +194,7 @@ public:
 		u_int miblen = std::size(mib);
 
 		// get number of structs
-		size_t size;
+		usz size;
 		if (sysctl(mib, miblen, NULL, &size, NULL, 0))
 		{
 			return 0;

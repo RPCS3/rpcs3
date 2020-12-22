@@ -204,7 +204,7 @@ namespace vk
 
 		VkRenderPassCreateInfo rp_info = {};
 		rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		rp_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+		rp_info.attachmentCount = static_cast<u32>(attachments.size());
 		rp_info.pAttachments = attachments.data();
 		rp_info.subpassCount = 1;
 		rp_info.pSubpasses = &subpass;
@@ -242,8 +242,8 @@ namespace vk
 		rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		rp_begin.renderPass = pass;
 		rp_begin.framebuffer = target;
-		rp_begin.renderArea.offset.x = static_cast<int32_t>(framebuffer_region.x);
-		rp_begin.renderArea.offset.y = static_cast<int32_t>(framebuffer_region.y);
+		rp_begin.renderArea.offset.x = static_cast<s32>(framebuffer_region.x);
+		rp_begin.renderArea.offset.y = static_cast<s32>(framebuffer_region.y);
 		rp_begin.renderArea.extent.width = framebuffer_region.width;
 		rp_begin.renderArea.extent.height = framebuffer_region.height;
 
@@ -271,5 +271,11 @@ namespace vk
 	bool is_renderpass_open(VkCommandBuffer cmd)
 	{
 		return g_current_renderpass[cmd].pass != VK_NULL_HANDLE;
+	}
+
+	void renderpass_op(VkCommandBuffer cmd, const renderpass_op_callback_t& op)
+	{
+		const auto& active = g_current_renderpass[cmd];
+		op(cmd, active.pass, active.fbo);
 	}
 }

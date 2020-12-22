@@ -836,7 +836,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 	}
 
 	// Main loop (func_queue may grow)
-	for (std::size_t i = 0; i < func_queue.size(); i++)
+	for (usz i = 0; i < func_queue.size(); i++)
 	{
 		ppu_function& func = func_queue[i];
 
@@ -1187,7 +1187,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		const bool was_empty = block_queue.empty();
 
 		// Block loop (block_queue may grow, may be aborted via clearing)
-		for (std::size_t j = 0; j < block_queue.size(); j++)
+		for (usz j = 0; j < block_queue.size(); j++)
 		{
 			auto& block = block_queue[j].get();
 

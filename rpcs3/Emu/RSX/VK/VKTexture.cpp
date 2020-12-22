@@ -7,6 +7,8 @@
 #include "VKRenderPass.h"
 #include "VKRenderTargets.h"
 
+#include "util/asm.hpp"
+
 namespace vk
 {
 	VkComponentMapping default_component_map()
@@ -30,7 +32,7 @@ namespace vk
 		return subres;
 	}
 
-	VkImageSubresourceRange get_image_subresource_range(uint32_t base_layer, uint32_t base_mip, uint32_t layer_count, uint32_t level_count, VkImageAspectFlags aspect)
+	VkImageSubresourceRange get_image_subresource_range(u32 base_layer, u32 base_mip, u32 layer_count, u32 level_count, VkImageAspectFlags aspect)
 	{
 		VkImageSubresourceRange subres = {};
 		subres.aspectMask = aspect;
@@ -89,7 +91,7 @@ namespace vk
 			ensure(dst->size() >= allocation_end);
 
 			const auto data_offset = u32(region.bufferOffset);
-			const auto z32_offset = align<u32>(data_offset + packed16_length, 256);
+			const auto z32_offset = utils::align<u32>(data_offset + packed16_length, 256);
 
 			// 1. Copy the depth to buffer
 			VkBufferImageCopy region2;
@@ -135,8 +137,8 @@ namespace vk
 			ensure(dst->size() >= allocation_end);
 
 			const auto data_offset = u32(region.bufferOffset);
-			const auto z_offset = align<u32>(data_offset + packed_length, 256);
-			const auto s_offset = align<u32>(z_offset + in_depth_size, 256);
+			const auto z_offset = utils::align<u32>(data_offset + packed_length, 256);
+			const auto s_offset = utils::align<u32>(z_offset + in_depth_size, 256);
 
 			// 1. Copy the depth and stencil blocks to separate banks
 			VkBufferImageCopy sub_regions[2];
@@ -225,7 +227,7 @@ namespace vk
 			ensure(src->size() >= allocation_end);
 
 			const auto data_offset = u32(region.bufferOffset);
-			const auto z32_offset = align<u32>(data_offset + packed16_length, 256);
+			const auto z32_offset = utils::align<u32>(data_offset + packed16_length, 256);
 
 			// 1. Pre-compute barrier
 			vk::insert_buffer_memory_barrier(cmd, src->value, z32_offset, packed32_length,
@@ -260,8 +262,8 @@ namespace vk
 			ensure(src->size() >= allocation_end); // "Out of memory (compute heap). Lower your resolution scale setting."
 
 			const auto data_offset = u32(region.bufferOffset);
-			const auto z_offset = align<u32>(data_offset + packed_length, 256);
-			const auto s_offset = align<u32>(z_offset + in_depth_size, 256);
+			const auto z_offset = utils::align<u32>(data_offset + packed_length, 256);
+			const auto s_offset = utils::align<u32>(z_offset + in_depth_size, 256);
 
 			// Zero out the stencil block
 			vkCmdFillBuffer(cmd, src->value, s_offset, in_stencil_size, 0);
@@ -821,7 +823,7 @@ namespace vk
 			const auto src_offset = section.bufferOffset;
 
 			// Align output to 128-byte boundary to keep some drivers happy
-			dst_offset = align(dst_offset, 128);
+			dst_offset = utils::align(dst_offset, 128);
 
 			u32 data_length = 0;
 			for (unsigned i = 0, j = packet.first; i < packet.second; ++i, ++j)
@@ -892,7 +894,7 @@ namespace vk
 			image_linear_size = row_pitch * layout.height_in_block * layout.depth;
 
 			// Map with extra padding bytes in case of realignment
-			size_t offset_in_buffer = upload_heap.alloc<512>(image_linear_size + 8);
+			usz offset_in_buffer = upload_heap.alloc<512>(image_linear_size + 8);
 			void* mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size + 8);
 
 			// Only do GPU-side conversion if occupancy is good
@@ -930,7 +932,7 @@ namespace vk
 				if (layout.level == 0)
 				{
 					// Align mip0 on a 128-byte boundary
-					scratch_offset = align(scratch_offset, 128);
+					scratch_offset = utils::align(scratch_offset, 128);
 				}
 
 				// Copy from upload heap to scratch mem

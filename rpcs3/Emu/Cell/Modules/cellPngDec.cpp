@@ -153,7 +153,7 @@ void pngDecInfoCallback(png_structp png_ptr, png_infop info)
 		return;
 	}
 
-	const size_t remaining = png_process_data_pause(png_ptr, false);
+	const usz remaining = png_process_data_pause(png_ptr, false);
 	stream->buffer->cursor += (stream->buffer->length - remaining);
 }
 

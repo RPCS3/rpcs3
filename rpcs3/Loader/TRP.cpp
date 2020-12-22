@@ -23,7 +23,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 
 	const std::string& local_path = vfs::get(dest);
 
-	const auto temp = fmt::format(u8"%s.＄temp＄%u", local_path, __rdtsc());
+	const auto temp = fmt::format(u8"%s.＄temp＄%u", local_path, utils::get_unique_tsc());
 
 	if (!fs::create_dir(temp))
 	{

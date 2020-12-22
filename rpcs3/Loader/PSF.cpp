@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "PSF.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(psf_log, "PSF");
 
 template<>
@@ -189,7 +191,7 @@ namespace psf
 		std::vector<def_table_t> indices; indices.reserve(psf.size());
 
 		// Generate indices and calculate key table length
-		std::size_t key_offset = 0, data_offset = 0;
+		usz key_offset = 0, data_offset = 0;
 
 		for (const auto& entry : psf)
 		{
@@ -208,7 +210,7 @@ namespace psf
 		}
 
 		// Align next section (data) offset
-		key_offset = ::align(key_offset, 4);
+		key_offset = utils::align(key_offset, 4);
 
 		// Generate header
 		header_t header;
@@ -246,7 +248,7 @@ namespace psf
 			else if (fmt == format::string || fmt == format::array)
 			{
 				const std::string& value = entry.second.as_string();
-				const std::size_t size = std::min<std::size_t>(max, value.size());
+				const usz size = std::min<usz>(max, value.size());
 
 				if (value.size() + (fmt == format::string) > max)
 				{

@@ -27,6 +27,8 @@
 #include <QVBoxLayout>
 #include <QTimer>
 
+#include "util/asm.hpp"
+
 constexpr auto qstr = QString::fromStdString;
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
@@ -224,12 +226,13 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	const auto cpu = this->cpu.lock();
 	int i = m_debugger_list->currentRow();
 
-	if (!isActiveWindow() || !cpu || m_no_thread_selected)
+	if (!isActiveWindow() || !cpu)
 	{
 		return;
 	}
 
-	const u32 pc = i >= 0 ? m_debugger_list->m_pc + i * 4 : cpu->get_pc();
+	const u32 address_limits = (cpu->id_type() != 1 ? 0x3fffc : ~3);
+	const u32 pc = (i >= 0 ? m_debugger_list->m_pc + i * 4 : cpu->get_pc()) & address_limits;
 
 	const auto modifiers = QApplication::keyboardModifiers();
 
@@ -301,7 +304,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			{
 				be_t<ppu_opcode_t> op{};
 
-				if (vm::try_access(pc, &op, 4, false))
+				if (vm::check_addr(pc, vm::page_executable) && vm::try_access(pc, &op, 4, false))
 					res = op_branch_targets(pc, op);
 
 				break;
@@ -353,8 +356,6 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
-
-	if (m_no_thread_selected) return;
 
 	const auto cpu = this->cpu.lock();
 
@@ -419,10 +420,8 @@ void debugger_frame::UpdateUnitList()
 		return;
 	}
 
+	const int old_size = m_choice_units->count();
 	QVariant old_cpu = m_choice_units->currentData();
-
-	m_choice_units->clear();
-	m_choice_units->addItem(NoThreadString);
 
 	const auto on_select = [&](u32 id, cpu_thread& cpu)
 	{
@@ -436,8 +435,17 @@ void debugger_frame::UpdateUnitList()
 	{
 		const QSignalBlocker blocker(m_choice_units);
 
+		m_choice_units->clear();
+		m_choice_units->addItem(NoThreadString);
+
 		idm::select<named_thread<ppu_thread>>(on_select);
 		idm::select<named_thread<spu_thread>>(on_select);
+
+		if (m_choice_units->count() > 1 && old_size <= 1)
+		{
+			// Select the first thread after "No Thread", usually the PPU main thread
+			m_choice_units->setCurrentIndex(1);
+		}
 	}
 
 	OnSelectUnit();
@@ -447,25 +455,29 @@ void debugger_frame::UpdateUnitList()
 
 void debugger_frame::OnSelectUnit()
 {
-	if (m_choice_units->count() < 1 || m_current_choice == m_choice_units->currentText()) return;
+	if (m_choice_units->count() < 1) return;
 
-	m_current_choice = m_choice_units->currentText();
-	m_no_thread_selected = m_current_choice == NoThreadString;
-	m_debugger_list->m_no_thread_selected = m_no_thread_selected;
+	const auto weak = m_choice_units->currentData().value<std::weak_ptr<cpu_thread>>();
+
+	if (!weak.owner_before(cpu) && !cpu.owner_before(weak))
+	{
+		// They match, nothing to do.
+		return;
+	}
 
 	m_disasm.reset();
 	cpu.reset();
 
-	if (!m_no_thread_selected)
+	if (!weak.expired())
 	{
-		if (const auto cpu0 = m_choice_units->currentData().value<std::weak_ptr<cpu_thread>>().lock())
+		if (const auto cpu0 = weak.lock())
 		{
 			if (cpu0->id_type() == 1)
 			{
 				if (cpu0.get() == idm::check<named_thread<ppu_thread>>(cpu0->id))
 				{
 					cpu = cpu0;
-					m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode);
+					m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode, vm::g_sudo_addr);
 				}
 			}
 			else if (cpu0->id_type() == 2)
@@ -473,13 +485,13 @@ void debugger_frame::OnSelectUnit()
 				if (cpu0.get() == idm::check<named_thread<spu_thread>>(cpu0->id))
 				{
 					cpu = cpu0;
-					m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode);
+					m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode, static_cast<const spu_thread*>(cpu0.get())->ls);
 				}
 			}
 		}
 	}
 
-	EnableButtons(!m_no_thread_selected);
+	EnableButtons(true);
 
 	m_debugger_list->UpdateCPUData(this->cpu, m_disasm);
 	m_breakpoint_list->UpdateCPUData(this->cpu, m_disasm);
@@ -573,7 +585,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	if (cpu)
 	{
 		// -1 turns into 0
-		u32 pc = ::align<u32>(cpu->get_pc(), 4);
+		u32 pc = utils::align<u32>(cpu->get_pc(), 4);
 		address_preview_label->setText(QString("Address: 0x%1").arg(pc, 8, 16, QChar('0')));
 		expression_input->setPlaceholderText(QString("0x%1").arg(pc, 8, 16, QChar('0')));
 	}
@@ -605,7 +617,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	if (diag->exec() == QDialog::Accepted)
 	{
 		// -1 turns into 0
-		u32 address = ::align<u32>(cpu ? cpu->get_pc() : 0, 4);
+		u32 address = utils::align<u32>(cpu ? cpu->get_pc() : 0, 4);
 
 		if (expression_input->text().isEmpty())
 		{
@@ -696,7 +708,7 @@ void debugger_frame::EnableUpdateTimer(bool enable)
 
 void debugger_frame::EnableButtons(bool enable)
 {
-	if (m_no_thread_selected) enable = false;
+	if (cpu.expired()) enable = false;
 
 	m_go_to_addr->setEnabled(enable);
 	m_go_to_pc->setEnabled(enable);

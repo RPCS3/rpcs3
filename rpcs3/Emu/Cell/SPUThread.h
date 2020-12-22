@@ -504,7 +504,7 @@ struct spu_imm_table_t
 	public:
 		scale_table_t();
 
-		FORCE_INLINE __m128 operator [] (s32 scale) const
+		FORCE_INLINE const auto& operator [](s32 scale) const
 		{
 			return m_data[scale + 155].vf;
 		}

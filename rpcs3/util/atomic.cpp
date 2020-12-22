@@ -6,6 +6,25 @@
 #define USE_STD
 #endif
 
+#ifdef _MSC_VER
+
+#include "emmintrin.h"
+#include "immintrin.h"
+
+namespace utils
+{
+	u128 __vectorcall atomic_load16(const void* ptr)
+	{
+		return std::bit_cast<u128>(_mm_load_si128((__m128i*)ptr));
+	}
+
+	void __vectorcall atomic_store16(void* ptr, u128 value)
+	{
+		_mm_store_si128((__m128i*)ptr, std::bit_cast<__m128i>(value));
+	}
+}
+#endif
+
 #include "Utilities/sync.h"
 #include "Utilities/StrFmt.h"
 
@@ -22,7 +41,7 @@
 #include "endian.hpp"
 
 // Total number of entries.
-static constexpr std::size_t s_hashtable_size = 1u << 17;
+static constexpr usz s_hashtable_size = 1u << 17;
 
 // Reference counter combined with shifted pointer (which is assumed to be 47 bit)
 static constexpr uptr s_ref_mask = (1u << 17) - 1;
@@ -42,11 +61,7 @@ static inline bool operator &(atomic_wait::op lhs, atomic_wait::op_flag rhs)
 }
 
 // Compare data in memory with old value, and return true if they are equal
-static NEVER_INLINE bool
-#ifdef _WIN32
-__vectorcall
-#endif
-ptr_cmp(const void* data, u32 _size, __m128i old128, __m128i mask128, atomic_wait::info* ext = nullptr)
+static NEVER_INLINE bool ptr_cmp(const void* data, u32 _size, u128 old128, u128 mask128, atomic_wait::info* ext = nullptr)
 {
 	using atomic_wait::op;
 	using atomic_wait::op_flag;
@@ -59,8 +74,8 @@ ptr_cmp(const void* data, u32 _size, __m128i old128, __m128i mask128, atomic_wai
 	if (size <= 8)
 	{
 		u64 new_value = 0;
-		u64 old_value = _mm_cvtsi128_si64(old128);
-		u64 mask = _mm_cvtsi128_si64(mask128) & (UINT64_MAX >> ((64 - size * 8) & 63));
+		u64 old_value = static_cast<u64>(old128);
+		u64 mask = static_cast<u64>(mask128) & (UINT64_MAX >> ((64 - size * 8) & 63));
 
 		// Don't load memory on empty mask
 		switch (mask ? size : 0)
@@ -145,7 +160,7 @@ ptr_cmp(const void* data, u32 _size, __m128i old128, __m128i mask128, atomic_wai
 		case op::pop:
 		{
 			// Count is taken from least significant byte and ignores some flags
-			const u64 count = _mm_cvtsi128_si64(old128) & 0xff;
+			const u64 count = static_cast<u64>(old128) & 0xff;
 
 			u64 bitc = new_value;
 			bitc = (bitc & 0xaaaaaaaaaaaaaaaa) / 2 + (bitc & 0x5555555555555555);
@@ -210,23 +225,18 @@ ptr_cmp(const void* data, u32 _size, __m128i old128, __m128i mask128, atomic_wai
 }
 
 // Returns true if mask overlaps, or the argument is invalid
-static bool
-#ifdef _WIN32
-__vectorcall
-#endif
-cmp_mask(u32 size1, __m128i mask1, __m128i val1, u32 size2, __m128i mask2, __m128i val2)
+static bool cmp_mask(u32 size1, u128 mask1, u128 val1, u32 size2, u128 mask2, u128 val2)
 {
 	// Compare only masks, new value is not available in this mode
 	if (size1 == umax)
 	{
 		// Simple mask overlap
-		const auto v0 = _mm_and_si128(mask1, mask2);
-		const auto v1 = _mm_packs_epi16(v0, v0);
-		return !!_mm_cvtsi128_si64(v1);
+		const u128 v0 = mask1 & mask2;
+		return !!(v0);
 	}
 
 	// Generate masked value inequality bits
-	const auto v0 = _mm_and_si128(_mm_and_si128(mask1, mask2), _mm_xor_si128(val1, val2));
+	const u128 v0 = (mask1 & mask2) & (val1 ^ val2);
 
 	using atomic_wait::op;
 	using atomic_wait::op_flag;
@@ -244,14 +254,14 @@ cmp_mask(u32 size1, __m128i mask1, __m128i val1, u32 size2, __m128i mask2, __m12
 		// Generate sized mask
 		const u64 mask = UINT64_MAX >> ((64 - size * 8) & 63);
 
-		if (!(_mm_cvtsi128_si64(v0) & mask))
+		if (!(static_cast<u64>(v0) & mask))
 		{
 			return !!(flag & op_flag::inverse);
 		}
 	}
 	else if (size == 16)
 	{
-		if (!_mm_cvtsi128_si64(_mm_packs_epi16(v0, v0)))
+		if (!v0)
 		{
 			return !!(flag & op_flag::inverse);
 		}
@@ -328,8 +338,8 @@ namespace
 		// Combined pointer (most significant 47 bits) and ref counter (17 least significant bits)
 		atomic_t<u64> ptr_ref;
 		u64 tid;
-		__m128i mask;
-		__m128i oldv;
+		u128 mask;
+		u128 oldv;
 
 		u64 tsc0;
 		u16 link;
@@ -367,8 +377,8 @@ namespace
 			size = 0;
 			flag = 0;
 			sync.release(0);
-			mask = _mm_setzero_si128();
-			oldv = _mm_setzero_si128();
+			mask = 0;
+			oldv = 0;
 
 #ifdef USE_STD
 			mtx.destroy();
@@ -557,11 +567,7 @@ namespace
 // TLS storage for few allocaded "semaphores" to allow skipping initialization
 static thread_local tls_cond_handler s_tls_conds{};
 
-static u32
-#ifdef _WIN32
-__vectorcall
-#endif
-cond_alloc(uptr iptr, __m128i mask, u32 tls_slot = -1)
+static u32 cond_alloc(uptr iptr, u128 mask, u32 tls_slot = -1)
 {
 	// Try to get cond from tls slot instead
 	u16* ptls = tls_slot >= std::size(s_tls_conds.cond) ? nullptr : s_tls_conds.cond + tls_slot;
@@ -672,7 +678,7 @@ static void cond_free(u32 cond_id, u32 tls_slot = -1)
 	{
 		// Fast finalization
 		cond->sync.release(0);
-		cond->mask = _mm_setzero_si128();
+		cond->mask = 0;
 		*ptls = static_cast<u16>(cond_id);
 		return;
 	}
@@ -709,11 +715,7 @@ static void cond_free(u32 cond_id, u32 tls_slot = -1)
 	});
 }
 
-static cond_handle*
-#ifdef _WIN32
-__vectorcall
-#endif
-cond_id_lock(u32 cond_id, u32 size, __m128i mask, u64 thread_id = 0, uptr iptr = 0)
+static cond_handle* cond_id_lock(u32 cond_id, u32 size, u128 mask, u64 thread_id = 0, uptr iptr = 0)
 {
 	if (cond_id - 1 < u32{UINT16_MAX})
 	{
@@ -740,7 +742,7 @@ cond_id_lock(u32 cond_id, u32 size, __m128i mask, u64 thread_id = 0, uptr iptr =
 				return false;
 			}
 
-			const __m128i mask12 = _mm_and_si128(mask, _mm_load_si128(&cond->mask));
+			const u128 mask12 = mask & cond->mask;
 
 			if (thread_id)
 			{
@@ -749,7 +751,7 @@ cond_id_lock(u32 cond_id, u32 size, __m128i mask, u64 thread_id = 0, uptr iptr =
 					return false;
 				}
 			}
-			else if (size && _mm_cvtsi128_si64(_mm_packs_epi16(mask12, mask12)) == 0)
+			else if (size && !mask12)
 			{
 				return false;
 			}
@@ -805,7 +807,7 @@ namespace
 		static void slot_free(uptr ptr, atomic_t<u16>* slot, u32 tls_slot) noexcept;
 
 		template <typename F>
-		static auto slot_search(uptr iptr, u32 size, u64 thread_id, __m128i mask, F func) noexcept;
+		static auto slot_search(uptr iptr, u32 size, u64 thread_id, u128 mask, F func) noexcept;
 	};
 
 	static_assert(sizeof(root_info) == 64);
@@ -864,9 +866,17 @@ namespace
 	};
 }
 
-u64 atomic_wait::get_unique_tsc()
+#ifdef _MSC_VER
+extern "C" u64 __rdtsc();
+#endif
+
+u64 utils::get_unique_tsc()
 {
+#ifdef _MSC_VER
 	const u64 stamp0 = __rdtsc();
+#else
+    const u64 stamp0 = __builtin_ia32_rdtsc();
+#endif
 
 	return s_min_tsc.atomic_op([&](u64& tsc)
 	{
@@ -991,7 +1001,7 @@ void root_info::slot_free(uptr iptr, atomic_t<u16>* slot, u32 tls_slot) noexcept
 }
 
 template <typename F>
-FORCE_INLINE auto root_info::slot_search(uptr iptr, u32 size, u64 thread_id, __m128i mask, F func) noexcept
+FORCE_INLINE auto root_info::slot_search(uptr iptr, u32 size, u64 thread_id, u128 mask, F func) noexcept
 {
 	u32 index = 0;
 	u32 total = 0;
@@ -1041,13 +1051,9 @@ FORCE_INLINE auto root_info::slot_search(uptr iptr, u32 size, u64 thread_id, __m
 	}
 }
 
-SAFE_BUFFERS void
-#ifdef _WIN32
-__vectorcall
-#endif
-atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 timeout, __m128i mask, atomic_wait::info* ext)
+SAFE_BUFFERS void atomic_wait_engine::wait(const void* data, u32 size, u128 old_value, u64 timeout, u128 mask, atomic_wait::info* ext)
 {
-	const auto stamp0 = atomic_wait::get_unique_tsc();
+	const auto stamp0 = utils::get_unique_tsc();
 
 	if (!s_tls_wait_cb(data, 0, stamp0))
 	{
@@ -1300,11 +1306,7 @@ atomic_wait_engine::wait(const void* data, u32 size, __m128i old_value, u64 time
 }
 
 template <bool NoAlert = false>
-static u32
-#ifdef _WIN32
-__vectorcall
-#endif
-alert_sema(u32 cond_id, const void* data, u64 tid, u32 size, __m128i mask, __m128i phantom)
+static u32 alert_sema(u32 cond_id, const void* data, u64 tid, u32 size, u128 mask, u128 phantom)
 {
 	ensure(cond_id);
 
@@ -1316,7 +1318,7 @@ alert_sema(u32 cond_id, const void* data, u64 tid, u32 size, __m128i mask, __m12
 	{
 		// Redirect if necessary
 		const auto _old = cond;
-		const auto _new = _old->link ? cond_id_lock(_old->link, 0, _mm_set1_epi64x(-1)) : _old;
+		const auto _new = _old->link ? cond_id_lock(_old->link, 0, u128(-1)) : _old;
 
 		if (_new && _new->tsc0 == _old->tsc0)
 		{
@@ -1488,10 +1490,10 @@ bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 
 	u64 progress = 0;
 
-	root_info::slot_search(iptr, 0, thread_id, _mm_set1_epi64x(-1), [&](u32 cond_id)
+	root_info::slot_search(iptr, 0, thread_id, u128(-1), [&](u32 cond_id)
 	{
 		// Forced notification
-		if (alert_sema(cond_id, data, thread_id, 0, _mm_setzero_si128(), _mm_setzero_si128()))
+		if (alert_sema(cond_id, data, thread_id, 0, 0, 0))
 		{
 			if (s_tls_notify_cb)
 				s_tls_notify_cb(data, ++progress);
@@ -1514,11 +1516,7 @@ bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 	return progress != 0;
 }
 
-void
-#ifdef _WIN32
-__vectorcall
-#endif
-atomic_wait_engine::notify_one(const void* data, u32 size, __m128i mask, __m128i new_value)
+void atomic_wait_engine::notify_one(const void* data, u32 size, u128 mask, u128 new_value)
 {
 	const uptr iptr = reinterpret_cast<uptr>(data) & (~s_ref_mask >> 17);
 
@@ -1543,11 +1541,7 @@ atomic_wait_engine::notify_one(const void* data, u32 size, __m128i mask, __m128i
 		s_tls_notify_cb(data, -1);
 }
 
-SAFE_BUFFERS void
-#ifdef _WIN32
-__vectorcall
-#endif
-atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask)
+SAFE_BUFFERS void atomic_wait_engine::notify_all(const void* data, u32 size, u128 mask)
 {
 	const uptr iptr = reinterpret_cast<uptr>(data) & (~s_ref_mask >> 17);
 
@@ -1564,7 +1558,7 @@ atomic_wait_engine::notify_all(const void* data, u32 size, __m128i mask)
 
 	root_info::slot_search(iptr, size, 0, mask, [&](u32 cond_id)
 	{
-		u32 res = alert_sema<true>(cond_id, data, -1, size, mask, _mm_setzero_si128());
+		u32 res = alert_sema<true>(cond_id, data, -1, size, mask, 0);
 
 		if (res && ~res <= UINT16_MAX)
 		{

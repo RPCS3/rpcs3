@@ -105,8 +105,8 @@ struct SceNpTssIfModifiedSinceParam
 struct SceNpTssGetDataOptParam
 {
 	u64 size; // TODO: correct type?
-	vm::ptr<uint64_t> offset;
-	vm::ptr<uint64_t> lastByte;
+	vm::ptr<u64> offset;
+	vm::ptr<u64> lastByte;
 	vm::ptr<SceNpTssIfModifiedSinceParam> ifParam;
 };
 

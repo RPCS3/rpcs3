@@ -198,7 +198,7 @@ namespace vk
 			m_program = compiler->compile(info, m_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE);
 		}
 
-		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, const float *offsets, size_t nb_offsets, std::array<float, 4> color)
+		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, const float *offsets, usz nb_offsets, std::array<float, 4> color)
 		{
 			ensure(m_used_descriptors < 120);
 
@@ -216,7 +216,7 @@ namespace vk
 			float* dst = static_cast<float*>(m_uniforms_buffer->map(m_uniform_buffer_offset, 8192));
 
 			//std140 spec demands that arrays be multiples of 16 bytes
-			for (size_t i = 0; i < nb_offsets; ++i)
+			for (usz i = 0; i < nb_offsets; ++i)
 			{
 				dst[i * 4] = offsets[i * 2];
 				dst[i * 4 + 1] = offsets[i * 2 + 1];
@@ -270,7 +270,7 @@ namespace vk
 
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
-			const size_t buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
+			const usz buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
 
 			u8* dst = static_cast<u8*>(m_vertex_buffer->map(0, buffer_size));
 			memcpy(dst, points.data(), buffer_size);

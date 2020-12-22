@@ -15,13 +15,13 @@ struct GLTraits
 	using pipeline_properties = void*;
 
 	static
-	void recompile_fragment_program(const RSXFragmentProgram &RSXFP, fragment_program_type& fragmentProgramData, size_t /*ID*/)
+	void recompile_fragment_program(const RSXFragmentProgram &RSXFP, fragment_program_type& fragmentProgramData, usz /*ID*/)
 	{
 		fragmentProgramData.Decompile(RSXFP);
 	}
 
 	static
-	void recompile_vertex_program(const RSXVertexProgram &RSXVP, vertex_program_type& vertexProgramData, size_t /*ID*/)
+	void recompile_vertex_program(const RSXVertexProgram &RSXVP, vertex_program_type& vertexProgramData, usz /*ID*/)
 	{
 		vertexProgramData.Decompile(RSXVP);
 	}
@@ -140,11 +140,11 @@ struct GLProgramBuffer : public program_state_cache<GLTraits>
 		get_graphics_pipeline(vp, fp, props, false, false, std::forward<Args>(args)...);
 	}
 
-    void preload_programs(RSXVertexProgram &vp, RSXFragmentProgram &fp)
-    {
+	void preload_programs(RSXVertexProgram &vp, RSXFragmentProgram &fp)
+	{
 		search_vertex_program(vp);
 		search_fragment_program(fp);
-    }
+	}
 
 	bool check_cache_missed() const
 	{

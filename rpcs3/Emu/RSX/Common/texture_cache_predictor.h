@@ -28,7 +28,7 @@ namespace rsx
 			m_size  = 0;
 		}
 
-		size_t size() const
+		usz size() const
 		{
 			return m_size;
 		}
@@ -404,11 +404,11 @@ namespace std
 	template <typename traits>
 	struct hash<rsx::texture_cache_predictor_key<traits>>
 	{
-		std::size_t operator()(const rsx::texture_cache_predictor_key<traits>& k) const
+		usz operator()(const rsx::texture_cache_predictor_key<traits>& k) const
 		{
-			size_t result = std::hash<utils::address_range>{}(k.cpu_range);
-			result ^= static_cast<size_t>(k.format);
-			result ^= (static_cast<size_t>(k.context) << 16);
+			usz result = std::hash<utils::address_range>{}(k.cpu_range);
+			result ^= static_cast<usz>(k.format);
+			result ^= (static_cast<usz>(k.context) << 16);
 			return result;
 		}
 	};

@@ -65,7 +65,7 @@ const auto s_time_aux_info = []() -> time_aux_info_t
 
 // TODO create a list of timers,
 static double mt_timebase = 0.0;
-static uint64_t mt_timestart = 0;
+static u64 mt_timestart = 0;
 
 static int clock_gettime(int clk_id, struct timespec* tp)
 {

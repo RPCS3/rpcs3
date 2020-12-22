@@ -20,6 +20,7 @@
 #include "Emu/Cell/lv2/sys_process.h"
 
 #include <cmath>
+#include "util/asm.hpp"
 
 LOG_CHANNEL(sceNpTrophy);
 
@@ -163,7 +164,7 @@ void fmt_class_string<SceNpCommunicationSignature>::format(std::string& out, u64
 	// Format as a C byte array for ease of use
 	fmt::append(out, "{ ");
 
-	for (std::size_t i = 0;; i++)
+	for (usz i = 0;; i++)
 	{
 		if (i == std::size(sign.data) - 1)
 		{
@@ -490,7 +491,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 	}
 
 	// Rename or discard certain entries based on the files found
-	const size_t kTargetBufferLength = 31;
+	const usz kTargetBufferLength = 31;
 	char target[kTargetBufferLength + 1];
 	target[kTargetBufferLength] = 0;
 	strcpy_trunc(target, fmt::format("TROP_%02d.SFM", static_cast<s32>(g_cfg.sys.language)));
@@ -1109,7 +1110,7 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 	const u32 trp_count = ctxt->tropusr->GetTrophiesCount();
 
 	// Round result to nearest (TODO: Check 0 trophies)
-	*percentage = trp_count ? ::rounded_div(unlocked * 100, trp_count) : 0;
+	*percentage = trp_count ? utils::rounded_div(unlocked * 100, trp_count) : 0;
 
 	if (trp_count == 0 || trp_count > 128)
 	{

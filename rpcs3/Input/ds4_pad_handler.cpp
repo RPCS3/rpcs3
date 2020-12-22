@@ -249,7 +249,7 @@ std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDS4Device(const 
 	if (!Init())
 		return nullptr;
 
-	size_t pos = padId.find(m_name_string);
+	usz pos = padId.find(m_name_string);
 	if (pos == umax)
 		return nullptr;
 
@@ -721,7 +721,7 @@ std::vector<std::string> ds4_pad_handler::ListDevices()
 	if (!Init())
 		return ds4_pads_list;
 
-	for (size_t i = 1; i <= controllers.size(); ++i) // Controllers 1-n in GUI
+	for (usz i = 1; i <= controllers.size(); ++i) // Controllers 1-n in GUI
 	{
 		ds4_pads_list.emplace_back(m_name_string + std::to_string(i));
 	}
