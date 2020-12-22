@@ -6,6 +6,7 @@
 #include <QMimeData>
 
 #include "Utilities/bin_patch.h"
+#include <unordered_map>
 
 namespace Ui
 {

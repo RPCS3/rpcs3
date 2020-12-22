@@ -6,6 +6,7 @@
 #include "Emu/IdManager.h"
 
 #include "util/asm.hpp"
+#include <unordered_map>
 
 #define VK_MAX_COMPUTE_TASKS 4096   // Max number of jobs per frame
 

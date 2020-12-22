@@ -401,6 +401,19 @@ void Buffer::ShowWindowed()
 
 namespace
 {
+	f32 f16_to_f32(f16 val)
+	{
+		// See http://stackoverflow.com/a/26779139
+		// The conversion doesn't handle NaN/Inf
+
+		const u16 _u16 = static_cast<u16>(val);
+		const u32 raw = ((_u16 & 0x8000) << 16) |             // Sign (just moved)
+				  (((_u16 & 0x7c00) + 0x1C000) << 13) | // Exponent ( exp - 15 + 127)
+				  ((_u16 & 0x03FF) << 13);              // Mantissa
+
+		return std::bit_cast<f32>(raw);
+	}
+
 	std::array<u8, 3> get_value(gsl::span<const std::byte> orig_buffer, rsx::surface_color_format format, usz idx)
 	{
 		switch (format)
@@ -438,9 +451,9 @@ namespace
 			const f16 h0 = f16(ptr[4 * idx]);
 			const f16 h1 = f16(ptr[4 * idx + 1]);
 			const f16 h2 = f16(ptr[4 * idx + 2]);
-			const f32 f0 = float(h0);
-			const f32 f1 = float(h1);
-			const f32 f2 = float(h2);
+			const f32 f0 = f16_to_f32(h0);
+			const f32 f1 = f16_to_f32(h1);
+			const f32 f2 = f16_to_f32(h2);
 
 			const u8 val0 = f0 * 255.;
 			const u8 val1 = f1 * 255.;

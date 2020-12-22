@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Emu/Io/PadHandler.h"
+
+#include <unordered_map>
+
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif

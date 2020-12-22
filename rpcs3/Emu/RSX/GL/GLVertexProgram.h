@@ -3,6 +3,8 @@
 #include "Emu/RSX/RSXVertexProgram.h"
 #include "GLHelpers.h"
 
+#include <unordered_map>
+
 enum
 {
 	GL_VP_FORCE_ATTRIB_SCALING = 1,	//Scale vertex read result

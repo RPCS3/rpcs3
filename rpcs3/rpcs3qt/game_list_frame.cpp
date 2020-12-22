@@ -28,6 +28,7 @@
 #include <memory>
 #include <set>
 #include <regex>
+#include <unordered_map>
 
 #include <QtConcurrent>
 #include <QDesktopServices>

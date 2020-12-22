@@ -433,7 +433,7 @@ struct surmixer_thread : ppu_thread
 								g_surmx.mixdata[i * 8 + 1] += right;
 							}
 							if ((p.m_position == p.m_samples && p.m_speed > 0.0f) ||
-								(p.m_position = umax && p.m_speed < 0.0f)) // loop or stop
+								(p.m_position == umax && p.m_speed < 0.0f)) // loop or stop
 							{
 								if (p.m_loop_mode == CELL_SSPLAYER_LOOP_ON)
 								{

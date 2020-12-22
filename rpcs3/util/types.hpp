@@ -48,9 +48,7 @@ using namespace std::literals;
 #define AUDIT(...) (static_cast<void>(0))
 #endif
 
-#if __cpp_lib_bit_cast >= 201806L
-#include <bit>
-#else
+#if __cpp_lib_bit_cast < 201806L
 namespace std
 {
 	template <class To, class From, typename = std::enable_if_t<sizeof(To) == sizeof(From)>>
@@ -64,7 +62,7 @@ namespace std
 		}
 
 		To result{};
-		std::memcpy(&result, &from, sizeof(From));
+		__builtin_memcpy(&result, &from, sizeof(From));
 		return result;
 	}
 }
@@ -152,35 +150,28 @@ template <>
 struct get_int_impl<sizeof(u8)>
 {
 	using utype = u8;
-	using stype = s8;
 };
 
 template <>
 struct get_int_impl<sizeof(u16)>
 {
 	using utype = u16;
-	using stype = s16;
 };
 
 template <>
 struct get_int_impl<sizeof(u32)>
 {
 	using utype = u32;
-	using stype = s32;
 };
 
 template <>
 struct get_int_impl<sizeof(u64)>
 {
 	using utype = u64;
-	using stype = s64;
 };
 
 template <usz N>
 using get_uint_t = typename get_int_impl<N>::utype;
-
-template <usz N>
-using get_sint_t = typename get_int_impl<N>::stype;
 
 template <typename T>
 std::remove_cvref_t<T> as_rvalue(T&& obj)
@@ -530,12 +521,6 @@ constexpr inline struct umax_helper
 	constexpr umax_helper() noexcept = default;
 
 	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
-	explicit constexpr operator T() const
-	{
-		return static_cast<S>(-1);
-	}
-
-	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator==(const T& rhs) const
 	{
 		return rhs == static_cast<S>(-1);
@@ -566,29 +551,10 @@ constexpr inline struct umax_helper
 #endif
 } umax;
 
+enum class f16 : u16{};
+
 using f32 = float;
 using f64 = double;
-
-struct f16
-{
-	u16 _u16;
-
-	explicit f16(u16 raw)
-	{
-		_u16 = raw;
-	}
-
-	explicit operator f32() const
-	{
-		// See http://stackoverflow.com/a/26779139
-		// The conversion doesn't handle NaN/Inf
-		u32 raw = ((_u16 & 0x8000) << 16) |             // Sign (just moved)
-				  (((_u16 & 0x7c00) + 0x1C000) << 13) | // Exponent ( exp - 15 + 127)
-				  ((_u16 & 0x03FF) << 13);              // Mantissa
-
-		return std::bit_cast<f32>(raw);
-	}
-};
 
 template <typename T, typename T2>
 inline u32 offset32(T T2::*const mptr)
@@ -855,16 +821,7 @@ template <typename T, usz Size>
 	return static_cast<u32>(Size);
 }
 
-// Simplified hash algorithm for pointers. May be used in std::unordered_(map|set).
-template <typename T, usz Align = alignof(T)>
-struct pointer_hash
-{
-	usz operator()(T* ptr) const
-	{
-		return reinterpret_cast<uptr>(ptr) / Align;
-	}
-};
-
+// Simplified hash algorithm. May be used in std::unordered_(map|set).
 template <typename T, usz Shift = 0>
 struct value_hash
 {

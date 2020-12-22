@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "overlay_utils.h"
 
+#include <unordered_map>
+
 LOG_CHANNEL(overlays);
 
 static auto s_ascii_lowering_map = []()

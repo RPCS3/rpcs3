@@ -7,6 +7,8 @@
 
 #include "util/asm.hpp"
 
+#include <unordered_map>
+
 namespace rsx
 {
 	namespace utility
