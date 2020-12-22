@@ -9,9 +9,7 @@
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
-#include "restore_new.h"
 #include "SPIRV/GlslangToSpv.h"
-#include "define_new_memleakdetect.h"
 #include "spirv-tools/optimizer.hpp"
 #ifdef _MSC_VER
 #pragma warning(pop)

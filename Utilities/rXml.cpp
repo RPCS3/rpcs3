@@ -1,7 +1,5 @@
 #include "stdafx.h"
-#include "restore_new.h"
 #include "Utilities/rXml.h"
-#include "define_new_memleakdetect.h"
 
 rXmlNode::rXmlNode() : handle()
 {
@@ -54,7 +52,7 @@ std::string rXmlNode::GetAttribute(const std::string &name)
 
 std::string rXmlNode::GetNodeContent()
 {
-	return handle.text().get(); 
+	return handle.text().get();
 }
 
 rXmlDocument::rXmlDocument() : handle()
@@ -70,4 +68,3 @@ std::shared_ptr<rXmlNode> rXmlDocument::GetRoot()
 {
 	return std::make_shared<rXmlNode>(handle.root());
 }
-

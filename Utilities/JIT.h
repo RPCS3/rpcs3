@@ -170,7 +170,6 @@ inline FT build_function_asm(F&& builder)
 #include "util/types.hpp"
 #include "mutex.h"
 
-#include "restore_new.h"
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #else
@@ -187,7 +186,6 @@ inline FT build_function_asm(F&& builder)
 #else
 #pragma GCC diagnostic pop
 #endif
-#include "define_new_memleakdetect.h"
 
 // Temporary compiler interface
 class jit_compiler final

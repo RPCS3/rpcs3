@@ -4,9 +4,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "restore_new.h"
 #include "Utilities/rXml.h"
-#include "define_new_memleakdetect.h"
 #include "Loader/TRP.h"
 #include "Loader/TROPUSR.h"
 

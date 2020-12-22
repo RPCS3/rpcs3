@@ -18,7 +18,6 @@
 #include "Emu/GDB.h"
 
 #ifdef LLVM_AVAILABLE
-#include "restore_new.h"
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #else
@@ -55,7 +54,6 @@
 #else
 #pragma GCC diagnostic pop
 #endif
-#include "define_new_memleakdetect.h"
 
 #include "PPUTranslator.h"
 #endif
