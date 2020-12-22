@@ -887,7 +887,7 @@ namespace vm
 				ensure(is_exec == !!(g_pages[i] & page_executable));
 			}
 
-			size += 4096;
+			size += 4096 ;
 		}
 
 		// Protect range locks from actual memory protection changes
