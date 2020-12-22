@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QApplication>
 #include <QElapsedTimer>
@@ -8,6 +8,9 @@
 #include <QTranslator>
 
 #include "main_application.h"
+
+#include <memory>
+#include <functional>
 
 class gs_frame;
 class main_window;

@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Emu/Io/PadHandler.h"
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #include <Xinput.h>
 #include <chrono>

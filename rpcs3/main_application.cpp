@@ -1,5 +1,9 @@
 #include "main_application.h"
 
+#include "util/types.hpp"
+#include "util/logs.hpp"
+#include "util/atomic.hpp"
+
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"

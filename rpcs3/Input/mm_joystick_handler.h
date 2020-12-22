@@ -1,9 +1,17 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Emu/Io/PadHandler.h"
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <Windows.h>
 #include <mmsystem.h>
+
+#include <string>
+#include <vector>
+#include <memory>
+#include <unordered_map>
 
 class mm_joystick_handler final : public PadHandlerBase
 {

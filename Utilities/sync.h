@@ -7,7 +7,9 @@
 #include "util/dyn_lib.hpp"
 
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #include <time.h>
 #elif __linux__

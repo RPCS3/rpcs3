@@ -1,9 +1,10 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 
 #include <QWindow>
+#include <vector>
 
 class trophy_notification_helper : public TrophyNotificationBase
 {

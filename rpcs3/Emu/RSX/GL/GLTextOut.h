@@ -1,8 +1,10 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "GLHelpers.h"
 #include "../Common/TextGlyphs.h"
+#include <string>
+#include <vector>
 
 namespace gl
 {

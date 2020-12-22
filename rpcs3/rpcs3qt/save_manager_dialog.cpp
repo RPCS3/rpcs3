@@ -21,6 +21,8 @@
 #include <QPainter>
 #include <QScreen>
 
+#include "Utilities/File.h"
+
 LOG_CHANNEL(gui_log, "GUI");
 
 namespace

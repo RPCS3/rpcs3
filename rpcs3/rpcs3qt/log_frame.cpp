@@ -2,7 +2,6 @@
 #include "qt_utils.h"
 #include "gui_settings.h"
 
-#include "stdafx.h"
 #include "rpcs3_version.h"
 #include "Utilities/mutex.h"
 #include "Utilities/lockless.h"

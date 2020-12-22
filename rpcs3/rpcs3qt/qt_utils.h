@@ -1,6 +1,7 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
+
 #include <QDir>
 #include <QComboBox>
 #include <QFont>
@@ -9,6 +10,8 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QTreeWidgetItem>
+
+#include <string>
 
 namespace gui
 {

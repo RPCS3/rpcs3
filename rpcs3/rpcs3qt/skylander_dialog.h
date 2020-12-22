@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QDialog>
 #include <QPushButton>

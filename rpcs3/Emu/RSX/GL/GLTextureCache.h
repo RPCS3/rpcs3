@@ -1,9 +1,12 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include "GLRenderTargets.h"
 #include "../Common/texture_cache.h"
+
+#include <memory>
+#include <vector>
 
 class GLGSRender;
 

@@ -22,7 +22,6 @@
 #include "render_creator.h"
 #include "microphone_creator.h"
 
-#include "stdafx.h"
 #include "Emu/GameInfo.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"

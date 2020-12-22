@@ -1,12 +1,13 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QString>
 #include <QStringList>
 #include <QObject>
 
 #include <array>
+#include <string>
 
 class microphone_creator : public QObject
 {

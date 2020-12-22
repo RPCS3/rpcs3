@@ -9,6 +9,7 @@
 #include <QUrl>
 
 #include "Emu/System.h"
+#include "Utilities/File.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 constexpr auto qstr = QString::fromStdString;

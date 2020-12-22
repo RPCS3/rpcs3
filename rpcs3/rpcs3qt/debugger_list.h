@@ -1,8 +1,10 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QListWidget>
+
+#include <memory>
 
 class breakpoint_handler;
 class CPUDisAsm;

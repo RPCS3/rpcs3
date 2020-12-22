@@ -1,5 +1,6 @@
 #include "microphone_creator.h"
 
+#include "Utilities/StrFmt.h"
 #include "Utilities/StrUtil.h"
 
 #include "3rdparty/OpenAL/include/alext.h"

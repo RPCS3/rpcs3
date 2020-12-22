@@ -7,6 +7,7 @@
 
 #include <map>
 #include "util/v128.hpp"
+#include "util/logs.hpp"
 #include "util/to_endian.hpp"
 
 LOG_CHANNEL(spu_log, "SPU");

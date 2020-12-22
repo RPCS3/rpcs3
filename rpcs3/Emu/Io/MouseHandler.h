@@ -1,6 +1,7 @@
 #pragma once
 
 #include <list>
+#include <algorithm>
 #include "Utilities/mutex.h"
 #include "util/init_mutex.hpp"
 

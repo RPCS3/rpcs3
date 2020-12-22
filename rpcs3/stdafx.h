@@ -1,7 +1,5 @@
 #pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
-#define NOMINMAX
-
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/endian.hpp"

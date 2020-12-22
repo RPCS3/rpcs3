@@ -1,12 +1,17 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
+
 #include <QDialog>
 #include <QTableWidget>
 #include <QListWidget>
 #include <QLineEdit>
 #include <QComboBox>
 #include <QPushButton>
+
+#include <string>
+#include <vector>
+#include <map>
 
 #include "Utilities/cheat_info.h"
 

@@ -11,6 +11,7 @@
 #include "Emu/Cell/Modules/cellSysutil.h"
 
 #include "util/yaml.hpp"
+#include "Utilities/File.h"
 
 LOG_CHANNEL(cfg_log, "CFG");
 

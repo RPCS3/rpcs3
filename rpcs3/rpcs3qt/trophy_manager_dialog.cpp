@@ -5,10 +5,9 @@
 #include "game_list.h"
 #include "gui_settings.h"
 
-#include "stdafx.h"
-
 #include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
+#include "Utilities/File.h"
 #include "Emu/VFS.h"
 #include "Emu/System.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"

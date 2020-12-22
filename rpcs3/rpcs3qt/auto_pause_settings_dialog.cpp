@@ -8,6 +8,9 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 
+#include "util/logs.hpp"
+#include "Utilities/File.h"
+
 LOG_CHANNEL(autopause_log, "AutoPause");
 
 constexpr auto qstr = QString::fromStdString;

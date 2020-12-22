@@ -1,8 +1,9 @@
 #pragma once
-#include <sstream>
+
 #include "Emu/Memory/vm.h"
 #include "Emu/RSX/GL/GLVertexProgram.h"
 #include "Emu/RSX/GL/GLFragmentProgram.h"
+#include "Utilities/File.h"
 
 using CGprofile = be_t<u32>;
 using CGbool = be_t<s32>;

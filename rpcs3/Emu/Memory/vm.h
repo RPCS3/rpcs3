@@ -3,6 +3,7 @@
 #include <map>
 #include <memory>
 #include "util/types.hpp"
+#include "util/atomic.hpp"
 #include "Utilities/StrFmt.h"
 
 #include "util/to_endian.hpp"

@@ -4,6 +4,7 @@
 #include "Utilities/Config.h"
 #include "Utilities/Timer.h"
 #include "Utilities/date_time.h"
+#include "Utilities/File.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/IdManager.h"

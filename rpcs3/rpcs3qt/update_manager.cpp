@@ -1,11 +1,12 @@
-#include "stdafx.h"
 #include "update_manager.h"
 #include "progress_dialog.h"
 #include "localized.h"
 #include "rpcs3_version.h"
 #include "downloader.h"
 #include "Utilities/StrUtil.h"
+#include "Utilities/File.h"
 #include "Emu/System.h"
+#include "util/logs.hpp"
 
 #include <QApplication>
 #include <QDateTime>
@@ -15,7 +16,9 @@
 #include <QThread>
 
 #if defined(_WIN32)
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #include <CpuArch.h>
 #include <7z.h>

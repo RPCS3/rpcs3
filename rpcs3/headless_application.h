@@ -1,10 +1,10 @@
 #pragma once
 
-#include "stdafx.h"
-
 #include <QCoreApplication>
 
 #include "main_application.h"
+
+#include <functional>
 
 /** Headless RPCS3 Application Class
  * The main point of this class is to do application initialization and initialize callbacks.

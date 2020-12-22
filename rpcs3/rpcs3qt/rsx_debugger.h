@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QDialog>
 #include <QGroupBox>
@@ -11,6 +11,8 @@
 #include <QListWidget>
 #include <QTableWidget>
 #include <QTabWidget>
+
+#include <memory>
 
 class gui_settings;
 

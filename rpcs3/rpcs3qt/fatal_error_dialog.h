@@ -2,6 +2,8 @@
 
 #include <QMessageBox>
 
+#include <string>
+
 class fatal_error_dialog : public QMessageBox
 {
 	Q_OBJECT

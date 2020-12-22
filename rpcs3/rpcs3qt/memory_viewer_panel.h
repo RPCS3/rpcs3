@@ -1,12 +1,14 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QDialog>
 #include <QLineEdit>
 #include <QLabel>
 #include <QFont>
 #include <QFontDatabase>
+
+#include <string>
 
 class memory_viewer_panel : public QDialog
 {

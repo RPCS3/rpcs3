@@ -1,5 +1,3 @@
-#include "stdafx.h"
-
 #include <QApplication>
 #include <QThread>
 
@@ -8,6 +6,7 @@
 #include "progress_dialog.h"
 
 #include "Crypto/sha256.h"
+#include "util/logs.hpp"
 
 LOG_CHANNEL(network_log, "NETWORK");
 

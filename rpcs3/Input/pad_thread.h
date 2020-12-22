@@ -1,12 +1,15 @@
 #pragma once
 
+#include "util/types.hpp"
+#include "util/atomic.hpp"
+#include "Emu/Io/pad_types.h"
+#include "Emu/Io/pad_config_types.h"
+
 #include <map>
 #include <thread>
 #include <mutex>
-
-#include "stdafx.h"
-#include "Emu/Io/pad_types.h"
-#include "Emu/Io/pad_config_types.h"
+#include <string_view>
+#include <string>
 
 class PadHandlerBase;
 

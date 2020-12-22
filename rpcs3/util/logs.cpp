@@ -14,7 +14,9 @@
 using namespace std::literals::chrono_literals;
 
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #else
 #include <sys/mman.h>

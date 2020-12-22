@@ -15,6 +15,7 @@
 #include "Emu/system_config.h"
 #include "Utilities/mutex.h"
 #include "Utilities/geometry.h"
+#include "Utilities/File.h"
 #include "util/logs.hpp"
 #include "util/asm.hpp"
 

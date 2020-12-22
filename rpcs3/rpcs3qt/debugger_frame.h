@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include "custom_dock_widget.h"
 
@@ -8,6 +8,9 @@
 #include <QTextEdit>
 #include <QPushButton>
 #include <QComboBox>
+
+#include <memory>
+#include <vector>
 
 class CPUDisAsm;
 class cpu_thread;
@@ -73,7 +76,7 @@ public:
 	void ClearCallStack();
 
 	/** Needed so key press events work when other objects are selected in debugger_frame. */
-	bool eventFilter(QObject* object, QEvent* event) override; 
+	bool eventFilter(QObject* object, QEvent* event) override;
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;

@@ -1,6 +1,8 @@
 ﻿#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
+
+#include <string>
 
 enum class cheat_type : u8
 {

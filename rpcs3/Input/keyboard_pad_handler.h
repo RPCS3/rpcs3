@@ -1,10 +1,13 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Emu/Io/PadHandler.h"
 
 #include <QWindow>
 #include <QKeyEvent>
+#include <string>
+#include <vector>
+#include <unordered_map>
 
 enum mouse
 {

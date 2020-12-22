@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "Utilities/StrFmt.h"
 
 enum : u32
 {

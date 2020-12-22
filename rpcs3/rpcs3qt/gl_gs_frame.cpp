@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "gl_gs_frame.h"
 
 #include "Emu/system_config.h"

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QListWidget>
+#include <memory>
 
 class CPUDisAsm;
 class cpu_thread;

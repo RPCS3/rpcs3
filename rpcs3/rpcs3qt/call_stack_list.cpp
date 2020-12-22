@@ -1,5 +1,7 @@
 #include "call_stack_list.h"
 
+#include "Utilities/StrFmt.h"
+
 constexpr auto qstr = QString::fromStdString;
 
 call_stack_list::call_stack_list(QWidget* parent) : QListWidget(parent)

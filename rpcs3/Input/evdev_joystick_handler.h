@@ -1,10 +1,12 @@
 #pragma once
 #ifdef HAVE_LIBEVDEV
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Utilities/File.h"
 #include "Emu/Io/PadHandler.h"
 #include <libevdev/libevdev.h>
+#include <memory>
+#include <unordered_map>
 #include <vector>
 #include <thread>
 #include <ctime>

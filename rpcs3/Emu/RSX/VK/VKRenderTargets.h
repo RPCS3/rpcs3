@@ -1,6 +1,6 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "VKHelpers.h"
 #include "VKFormats.h"
 #include "../Common/surface_store.h"

@@ -1,9 +1,11 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
+#include "util/atomic.hpp"
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 u64 get_system_time();
 u64 get_guest_system_time();

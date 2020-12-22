@@ -1,9 +1,10 @@
 #pragma once
 
+#include "util/types.hpp"
+
 #include <QTextEdit>
 #include <QDropEvent>
-
-#include "stdafx.h"
+#include <memory>
 
 class AsmHighlighter;
 class GlslHighlighter;

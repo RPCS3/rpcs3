@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/logs.hpp"
 #include "Utilities/geometry.h"
 #include "Utilities/File.h"
 #include "overlay_utils.h"

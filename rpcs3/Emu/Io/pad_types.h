@@ -1,5 +1,9 @@
 #pragma once
 
+#include "util/types.hpp"
+
+#include <vector>
+
 enum SystemInfo
 {
 	CELL_PAD_INFO_INTERCEPTED = 0x00000001

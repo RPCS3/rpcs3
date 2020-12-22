@@ -1,8 +1,8 @@
 #pragma once
 
-#include "yaml-cpp/yaml.h"
+#include "util/types.hpp"
 
-#include "stdafx.h"
+#include "yaml-cpp/yaml.h"
 
 #include "microphone_creator.h"
 #include "render_creator.h"
@@ -14,6 +14,9 @@
 #include <QComboBox>
 #include <QSpinBox>
 #include <QDateTimeEdit>
+
+#include <string>
+#include <vector>
 
 constexpr auto qstr = QString::fromStdString;
 

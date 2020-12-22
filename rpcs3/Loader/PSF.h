@@ -1,7 +1,14 @@
 #pragma once
 
+#include "util/types.hpp"
 #include <map>
+#include <string>
 #include <string_view>
+
+namespace fs
+{
+	class file;
+}
 
 namespace psf
 {

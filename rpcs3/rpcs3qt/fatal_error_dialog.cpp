@@ -3,6 +3,8 @@
 #include <QLayout>
 #include <QTextDocument>
 
+#include <string>
+
 fatal_error_dialog::fatal_error_dialog(const std::string& text) : QMessageBox()
 {
 	setWindowTitle(tr("RPCS3: Fatal Error"));

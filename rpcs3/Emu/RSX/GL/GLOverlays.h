@@ -1,8 +1,9 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "GLHelpers.h"
 #include "../Overlays/overlays.h"
+#include <string>
 
 extern u64 get_system_time();
 

@@ -2,6 +2,8 @@
 
 #include "qt_utils.h"
 
+#include "Utilities/File.h"
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 settings::settings(QObject* parent) : QObject(parent),

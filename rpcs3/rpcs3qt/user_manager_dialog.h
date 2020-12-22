@@ -1,10 +1,13 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "user_account.h"
 
 #include <QDialog>
 #include <QTableWidget>
+#include <string>
+#include <memory>
+#include <map>
 
 class gui_settings;
 class persistent_settings;

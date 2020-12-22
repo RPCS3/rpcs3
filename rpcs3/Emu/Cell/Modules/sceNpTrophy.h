@@ -1,8 +1,10 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
+#include "util/endian.hpp"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include <vector>
 
 // Error codes
 enum SceNpTrophyError : u32

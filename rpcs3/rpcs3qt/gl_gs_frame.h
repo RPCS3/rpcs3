@@ -1,7 +1,10 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
+
 #include "gs_frame.h"
+
+#include <memory>
 
 struct GLContext
 {

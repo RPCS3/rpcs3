@@ -1,7 +1,10 @@
 #pragma once
 
-#include "stdafx.h"
-#include <Emu/Memory/vm_ptr.h>
+#include "util/types.hpp"
+#include "util/endian.hpp"
+#include "Emu/Memory/vm_ptr.h"
+#include <string>
+#include <vector>
 
 // Return codes
 enum CellSaveDataError : u32
