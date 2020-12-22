@@ -5,6 +5,7 @@
 #include "GLHelpers.h"
 
 #include "util/asm.hpp"
+#include <unordered_map>
 
 namespace gl
 {

@@ -3,6 +3,7 @@
 #include "Keyboard.h"
 
 #include <mutex>
+#include <vector>
 
 #include "util/init_mutex.hpp"
 

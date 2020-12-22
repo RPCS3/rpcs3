@@ -4,6 +4,7 @@
 #include <deque>
 #include <variant>
 #include <stack>
+#include <unordered_map>
 
 #include "GCM.h"
 #include "rsx_cache.h"

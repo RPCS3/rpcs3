@@ -1,6 +1,10 @@
 #pragma once
 #include "VKHelpers.h"
 
+#include <unordered_map>
+#include <deque>
+#include <memory>
+
 namespace vk
 {
 	u64 get_event_id();

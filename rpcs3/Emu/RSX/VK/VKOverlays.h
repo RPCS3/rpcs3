@@ -11,6 +11,7 @@
 #include "../Overlays/overlays.h"
 
 #include "Utilities/hash.h"
+#include <unordered_map>
 
 #define VK_OVERLAY_MAX_DRAW_CALLS 1024
 

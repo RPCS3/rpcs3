@@ -4,6 +4,7 @@
 #include "VKDMA.h"
 
 #include "util/asm.hpp"
+#include <unordered_map>
 
 namespace vk
 {

@@ -64,17 +64,6 @@ struct fmt_unveil<T, std::enable_if_t<std::is_floating_point<T>::value && sizeof
 	}
 };
 
-template <>
-struct fmt_unveil<f16, void>
-{
-	using type = f16;
-
-	static inline u64 get(const f16& arg)
-	{
-		return fmt_unveil<f64>::get(arg.operator float());
-	}
-};
-
 template <typename T>
 struct fmt_unveil<T, std::enable_if_t<std::is_enum<T>::value>>
 {
@@ -105,17 +94,6 @@ struct fmt_unveil<T[N], void>
 	static inline u64 get(type arg)
 	{
 		return reinterpret_cast<uptr>(arg);
-	}
-};
-
-template <>
-struct fmt_unveil<b8, void>
-{
-	using type = bool;
-
-	static inline u64 get(const b8& value)
-	{
-		return fmt_unveil<bool>::get(value);
 	}
 };
 

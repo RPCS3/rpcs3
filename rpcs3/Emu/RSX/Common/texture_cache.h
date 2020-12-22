@@ -4,6 +4,8 @@
 #include "texture_cache_predictor.h"
 #include "texture_cache_helpers.h"
 
+#include <unordered_map>
+
 extern u64 get_system_time();
 
 #define RSX_GCM_FORMAT_IGNORED 0

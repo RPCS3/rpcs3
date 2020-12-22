@@ -237,6 +237,12 @@ void fmt_class_string<bool>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<b8>::format(std::string& out, u64 arg)
+{
+	out += get_object(arg) ? "true" : "false";
+}
+
+template <>
 void fmt_class_string<v128>::format(std::string& out, u64 arg)
 {
 	const v128& vec = get_object(arg);

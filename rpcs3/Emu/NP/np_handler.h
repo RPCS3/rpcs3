@@ -2,6 +2,7 @@
 
 #include <queue>
 #include <map>
+#include <unordered_map>
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/Modules/sceNp.h"

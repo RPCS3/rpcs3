@@ -4,6 +4,8 @@
 #include "Utilities/CRC.h"
 #include "hidapi.h"
 
+#include <unordered_map>
+
 class dualsense_pad_handler final : public PadHandlerBase
 {
 	enum DualSenseKeyCodes

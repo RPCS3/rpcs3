@@ -3,6 +3,8 @@
 #include "../Common/ProgramStateCache.h"
 #include "../Common/TextureUtils.h"
 
+#include <unordered_map>
+
 namespace gl
 {
 	using namespace ::glsl;

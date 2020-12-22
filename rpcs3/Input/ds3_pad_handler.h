@@ -4,6 +4,8 @@
 
 #include "hidapi.h"
 
+#include <unordered_map>
+
 class ds3_pad_handler final : public PadHandlerBase
 {
 	enum DS3KeyCodes

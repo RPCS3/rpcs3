@@ -4,6 +4,7 @@
 #include "GLHelpers.h"
 #include "../Overlays/overlays.h"
 #include <string>
+#include <unordered_map>
 
 extern u64 get_system_time();
 

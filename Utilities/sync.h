@@ -71,7 +71,7 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 		};
 
 		std::mutex mutex;
-		std::unordered_multimap<volatile void*, waiter*, pointer_hash<volatile void, alignof(int)>> map;
+		std::unordered_multimap<volatile void*, waiter*> map;
 
 		int operator()(volatile void* uaddr, int futex_op, uint val, const timespec* timeout, uint mask)
 		{
