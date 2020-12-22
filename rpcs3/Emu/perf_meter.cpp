@@ -2,6 +2,7 @@
 #include "perf_meter.hpp"
 
 #include "util/sysinfo.hpp"
+#include "Utilities/Thread.h"
 
 #include <map>
 #include <mutex>
@@ -105,6 +106,12 @@ static std::multimap<std::string, u64*> s_perf_sources;
 
 void perf_stat_base::add(u64 ns[66], const char* name) noexcept
 {
+	// Don't attempt to register some foreign/unnamed threads
+	if (!thread_ctrl::get_current())
+	{
+		return;
+	}
+
 	std::lock_guard lock(s_perf_mutex);
 
 	s_perf_sources.emplace(name, ns);
@@ -113,6 +120,11 @@ void perf_stat_base::add(u64 ns[66], const char* name) noexcept
 
 void perf_stat_base::remove(u64 ns[66], const char* name) noexcept
 {
+	if (!thread_ctrl::get_current())
+	{
+		return;
+	}
+
 	std::lock_guard lock(s_perf_mutex);
 
 	const auto found = s_perf_sources.equal_range(name);
