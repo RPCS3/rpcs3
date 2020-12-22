@@ -5,6 +5,7 @@
 #include "VKRenderPass.h"
 #include "VKPipelineCompiler.h"
 #include "../Common/TextGlyphs.h"
+#include <unordered_map>
 
 namespace vk
 {

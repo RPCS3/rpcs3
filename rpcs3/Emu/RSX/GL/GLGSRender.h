@@ -10,6 +10,7 @@
 #include "GLShaderInterpreter.h"
 
 #include <optional>
+#include <unordered_map>
 
 #ifdef _WIN32
 #pragma comment(lib, "opengl32.lib")

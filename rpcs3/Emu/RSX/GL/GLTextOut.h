@@ -5,6 +5,7 @@
 #include "../Common/TextGlyphs.h"
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 namespace gl
 {

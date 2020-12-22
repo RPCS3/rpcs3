@@ -13,7 +13,7 @@
 #include "rsx_utils.h"
 #include <thread>
 #include <chrono>
-
+#include <unordered_map>
 
 #include "util/vm.hpp"
 

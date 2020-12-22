@@ -4,6 +4,8 @@
 #include "GLCompute.h"
 #include "util/logs.hpp"
 
+#include <unordered_map>
+
 namespace gl
 {
 	std::unordered_map<u32, std::unique_ptr<gl::compute_task>> g_compute_tasks;

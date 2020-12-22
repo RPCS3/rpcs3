@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "VKFramebuffer.h"
+#include <unordered_map>
 
 namespace vk
 {

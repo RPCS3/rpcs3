@@ -4,6 +4,8 @@
 #include "Utilities/CRC.h"
 #include "hidapi.h"
 
+#include <unordered_map>
+
 class ds4_pad_handler final : public PadHandlerBase
 {
 	// These are all the possible buttons on a standard DS4 controller

@@ -5,6 +5,8 @@
 #include "../Common/TextureUtils.h"
 #include "GLHelpers.h"
 
+#include <unordered_map>
+
 namespace rsx
 {
 	class vertex_texture;

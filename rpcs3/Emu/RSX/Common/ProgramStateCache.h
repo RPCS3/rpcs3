@@ -9,6 +9,7 @@
 #include "Utilities/span.h"
 
 #include <deque>
+#include <unordered_map>
 
 enum class SHADER_TYPE
 {

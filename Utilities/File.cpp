@@ -1715,7 +1715,7 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 
 	if (!root_dir)
 	{
-		return static_cast<u64>(umax);
+		return -1;
 	}
 
 	for (const auto& entry : root_dir)

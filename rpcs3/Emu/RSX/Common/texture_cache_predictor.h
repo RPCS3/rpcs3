@@ -4,6 +4,8 @@
 #include "../rsx_utils.h"
 #include "TextureUtils.h"
 
+#include <unordered_map>
+
 namespace rsx
 {
 	/**

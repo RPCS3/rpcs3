@@ -1,10 +1,16 @@
 #pragma once
 
-#include <cmath>
 #include "pad_types.h"
 #include "pad_config.h"
 #include "pad_config_types.h"
 #include "util/types.hpp"
+
+#include <cmath>
+#include <functional>
+#include <string>
+#include <vector>
+#include <memory>
+#include <unordered_map>
 
 struct PadDevice
 {

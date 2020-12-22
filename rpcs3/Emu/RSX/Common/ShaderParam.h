@@ -6,6 +6,8 @@
 #include "Utilities/StrUtil.h"
 #include "util/types.hpp"
 
+#include <unordered_map>
+
 enum class FUNCTION
 {
 	FUNCTION_DP2,
