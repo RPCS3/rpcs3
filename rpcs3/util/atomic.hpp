@@ -974,13 +974,13 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 #else
 	static inline T load(const T& dest)
 	{
-		__m128i r;
+		T r;
 #ifdef __AVX__
 		__asm__ volatile("vmovdqa %1, %0;" : "=x" (r) : "m" (dest) : "memory");
 #else
 		__asm__ volatile("movdqa %1, %0;" : "=x" (r) : "m" (dest) : "memory");
 #endif
-		return std::bit_cast<T>(r);
+		return r;
 	}
 
 	static inline T observe(const T& dest)
@@ -1048,9 +1048,9 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	static inline void release(T& dest, T value)
 	{
 #ifdef __AVX__
-		__asm__ volatile("vmovdqa %0, %1;" :: "x" (reinterpret_cast<__m128i&>(value)), "m" (dest) : "memory");
+		__asm__ volatile("vmovdqa %0, %1;" :: "x" (reinterpret_cast<u128&>(value)), "m" (dest) : "memory");
 #else
-		__asm__ volatile("movdqa %0, %1;" :: "x" (reinterpret_cast<__m128i&>(value)), "m" (dest) : "memory");
+		__asm__ volatile("movdqa %0, %1;" :: "x" (reinterpret_cast<u128&>(value)), "m" (dest) : "memory");
 #endif
 	}
 #endif
