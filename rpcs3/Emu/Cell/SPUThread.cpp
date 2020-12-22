@@ -4593,7 +4593,7 @@ bool spu_thread::capture_local_storage() const
 		if (name.empty())
 		{
 			// TODO: Maybe add thread group name here
-			fmt::append(name, "SPU.%u", lv2_id);
+			fmt::append(name, "SPU.0x%07x", lv2_id);
 		}
 	}
 	else
