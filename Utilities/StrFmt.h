@@ -10,7 +10,7 @@ namespace fmt
 	static std::string format(const CharT(&)[N], const Args&...);
 }
 
-template <typename T, typename>
+template <typename T, typename = void>
 struct fmt_unveil
 {
 	static_assert(sizeof(T) > 0, "fmt_unveil<> error: incomplete type");
@@ -244,6 +244,9 @@ struct fmt_type_info
 // Argument array type (each element generated via fmt_unveil<>)
 template <typename... Args>
 using fmt_args_t = const u64(&&)[sizeof...(Args) + 1];
+
+template <typename Arg>
+using fmt_unveil_t = typename fmt_unveil<Arg>::type;
 
 namespace fmt
 {

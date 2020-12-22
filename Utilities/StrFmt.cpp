@@ -294,29 +294,21 @@ void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
 
 namespace fmt
 {
-	void raw_verify_error(const src_loc& loc)
+	[[noreturn]] void raw_verify_error(const src_loc& loc)
 	{
 		std::string out{"Verification failed"};
 		fmt::append(out, "%s", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
-	void raw_narrow_error(const src_loc& loc, const fmt_type_info* sup, u64 arg)
+	[[noreturn]] void raw_narrow_error(const src_loc& loc)
 	{
 		std::string out{"Narrowing error"};
-
-		if (sup)
-		{
-			out += " (";
-			sup->fmt_string(out, arg); // Print value
-			out += ")";
-		}
-
 		fmt::append(out, "%s", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
-	void raw_throw_exception(const src_loc& loc, const char* fmt, const fmt_type_info* sup, const u64* args)
+	[[noreturn]] void raw_throw_exception(const src_loc& loc, const char* fmt, const fmt_type_info* sup, const u64* args)
 	{
 		std::string out;
 		raw_append(out, fmt, sup, args);

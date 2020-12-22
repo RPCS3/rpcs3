@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include "util/to_endian.hpp"
+#include "Utilities/StrFmt.h"
 #include "vm.h"
 
 class ppu_thread;

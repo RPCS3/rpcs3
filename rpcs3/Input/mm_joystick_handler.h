@@ -1,5 +1,6 @@
 #pragma once
 
+#ifdef _WIN32
 #include "util/types.hpp"
 #include "Emu/Io/PadHandler.h"
 #ifndef NOMINMAX
@@ -137,3 +138,4 @@ private:
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 };
+#endif

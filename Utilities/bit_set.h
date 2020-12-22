@@ -23,6 +23,7 @@ Intersection (&) and symmetric difference (^) is also available.
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
+#include "Utilities/StrFmt.h"
 
 template <typename T>
 class atomic_bs_t;

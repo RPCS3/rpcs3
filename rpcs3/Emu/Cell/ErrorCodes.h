@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "Utilities/StrFmt.h"
 
 // Error code type (return type), implements error reporting.
 class error_code

@@ -188,21 +188,6 @@ std::remove_cvref_t<T> as_rvalue(T&& obj)
 	return std::forward<T>(obj);
 }
 
-// Formatting helper, type-specific preprocessing for improving safety and functionality
-template <typename T, typename = void>
-struct fmt_unveil;
-
-template <typename Arg>
-using fmt_unveil_t = typename fmt_unveil<Arg>::type;
-
-struct fmt_type_info;
-
-namespace fmt
-{
-	template <typename... Args>
-	const fmt_type_info* get_type_info();
-}
-
 template <typename T, usz Align>
 class atomic_t;
 
@@ -744,7 +729,7 @@ struct src_loc
 namespace fmt
 {
 	[[noreturn]] void raw_verify_error(const src_loc& loc);
-	[[noreturn]] void raw_narrow_error(const src_loc& loc, const fmt_type_info* sup, u64 arg);
+	[[noreturn]] void raw_narrow_error(const src_loc& loc);
 }
 
 template <typename T>
@@ -845,7 +830,7 @@ template <typename To = void, typename From, typename = decltype(static_cast<To>
 	if (narrow_impl<From, To>::test(value)) [[unlikely]]
 	{
 		// Pack value as formatting argument
-		fmt::raw_narrow_error({line, col, file, func}, fmt::get_type_info<fmt_unveil_t<From>>(), fmt_unveil<From>::get(value));
+		fmt::raw_narrow_error({line, col, file, func});
 	}
 
 	return static_cast<To>(value);
