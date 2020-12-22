@@ -440,12 +440,6 @@ void debugger_frame::UpdateUnitList()
 
 		idm::select<named_thread<ppu_thread>>(on_select);
 		idm::select<named_thread<spu_thread>>(on_select);
-
-		if (m_choice_units->count() > 1 && old_size <= 1)
-		{
-			// Select the first thread after "No Thread", usually the PPU main thread
-			m_choice_units->setCurrentIndex(1);
-		}
 	}
 
 	OnSelectUnit();
