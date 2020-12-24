@@ -38,12 +38,44 @@ raw_mouse::raw_mouse(u32 index, const std::string& device_name, void* handle, ra
 		if (const auto& player = ::at32(g_cfg_raw_mouse.players, m_index))
 		{
 			m_mouse_acceleration = static_cast<float>(player->mouse_acceleration.get()) / 100.0f;
+
+			m_buttons[CELL_MOUSE_BUTTON_1] = get_mouse_button(player->mouse_button_1);
+			m_buttons[CELL_MOUSE_BUTTON_2] = get_mouse_button(player->mouse_button_2);
+			m_buttons[CELL_MOUSE_BUTTON_3] = get_mouse_button(player->mouse_button_3);
+			m_buttons[CELL_MOUSE_BUTTON_4] = get_mouse_button(player->mouse_button_4);
+			m_buttons[CELL_MOUSE_BUTTON_5] = get_mouse_button(player->mouse_button_5);
+			m_buttons[CELL_MOUSE_BUTTON_6] = get_mouse_button(player->mouse_button_6);
+			m_buttons[CELL_MOUSE_BUTTON_7] = get_mouse_button(player->mouse_button_7);
+			m_buttons[CELL_MOUSE_BUTTON_8] = get_mouse_button(player->mouse_button_8);
 		}
 	}
 }
 
 raw_mouse::~raw_mouse()
 {
+}
+
+std::pair<int, int> raw_mouse::get_mouse_button(const cfg::string& button)
+{
+	const std::string value = button.to_string();
+
+#ifdef _WIN32
+	static const std::unordered_map<int, std::pair<int, int>> btn_pairs
+	{
+		{ RI_MOUSE_BUTTON_1_UP, { RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_1_UP }},
+		{ RI_MOUSE_BUTTON_2_UP, { RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_2_UP }},
+		{ RI_MOUSE_BUTTON_3_UP, { RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP }},
+		{ RI_MOUSE_BUTTON_4_UP, { RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_4_UP }},
+		{ RI_MOUSE_BUTTON_5_UP, { RI_MOUSE_BUTTON_5_DOWN, RI_MOUSE_BUTTON_5_UP }},
+	};
+
+	if (const auto it = raw_mouse_button_map.find(value); it != raw_mouse_button_map.cend())
+	{
+		return ::at32(btn_pairs, it->second);
+	}
+#endif
+
+	return {};
 }
 
 void raw_mouse::update_window_handle()
@@ -89,8 +121,10 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 		return;
 	}
 
-	const auto get_button_pressed = [this](u8 button, int button_flags, int down, int up)
+	const auto get_button_pressed = [this](u8 button, int button_flags)
 	{
+		const auto& [down, up] = ::at32(m_buttons, button);
+
 		// Only update the value if either down or up flags are present
 		if ((button_flags & down))
 		{
@@ -103,11 +137,11 @@ void raw_mouse::update_values(const RAWMOUSE& state)
 	};
 
 	// Get mouse buttons
-	get_button_pressed(CELL_MOUSE_BUTTON_1, state.usButtonFlags, RI_MOUSE_BUTTON_1_DOWN, RI_MOUSE_BUTTON_1_UP);
-	get_button_pressed(CELL_MOUSE_BUTTON_2, state.usButtonFlags, RI_MOUSE_BUTTON_2_DOWN, RI_MOUSE_BUTTON_2_UP);
-	get_button_pressed(CELL_MOUSE_BUTTON_3, state.usButtonFlags, RI_MOUSE_BUTTON_3_DOWN, RI_MOUSE_BUTTON_3_UP);
-	get_button_pressed(CELL_MOUSE_BUTTON_4, state.usButtonFlags, RI_MOUSE_BUTTON_4_DOWN, RI_MOUSE_BUTTON_4_UP);
-	get_button_pressed(CELL_MOUSE_BUTTON_5, state.usButtonFlags, RI_MOUSE_BUTTON_5_DOWN, RI_MOUSE_BUTTON_5_UP);
+	get_button_pressed(CELL_MOUSE_BUTTON_1, state.usButtonFlags);
+	get_button_pressed(CELL_MOUSE_BUTTON_2, state.usButtonFlags);
+	get_button_pressed(CELL_MOUSE_BUTTON_3, state.usButtonFlags);
+	get_button_pressed(CELL_MOUSE_BUTTON_4, state.usButtonFlags);
+	get_button_pressed(CELL_MOUSE_BUTTON_5, state.usButtonFlags);
 
 	// Get vertical mouse wheel
 	if ((state.usButtonFlags & RI_MOUSE_WHEEL))

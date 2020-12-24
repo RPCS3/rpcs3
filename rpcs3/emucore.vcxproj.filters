@@ -1249,6 +1249,9 @@
     <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\mouse_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2488,9 +2491,6 @@
     <ClInclude Include="Emu\Io\rb3drums_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
-    <ClInclude Include="Input\raw_mouse_config.h">
-      <Filter>Emu\Io</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Program\SPIRVCommon.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClInclude>
@@ -2541,6 +2541,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\mouse_config.h">
+      <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

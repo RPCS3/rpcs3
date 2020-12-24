@@ -242,10 +242,18 @@
      <addaction name="confPSMoveDS3Act"/>
      <addaction name="confGunCon3Act"/>
     </widget>
+    <widget class="QMenu" name="menuMice">
+     <property name="title">
+      <string>Mice</string>
+     </property>
+     <addaction name="actionBasic_Mouse"/>
+     <addaction name="actionRaw_Mouse"/>
+    </widget>
     <addaction name="confCPUAct"/>
     <addaction name="confGPUAct"/>
     <addaction name="separator"/>
     <addaction name="confPadsAct"/>
+    <addaction name="menuMice"/>
     <addaction name="menuEmulatedPads"/>
     <addaction name="confCamerasAct"/>
     <addaction name="confAudioAct"/>
@@ -1195,7 +1203,7 @@
     <string>Create Savestate</string>
    </property>
   </action>
-    <action name="actionCreate_Savestate_And_Exit">
+  <action name="actionCreate_Savestate_And_Exit">
    <property name="enabled">
     <bool>false</bool>
    </property>
@@ -1328,6 +1336,16 @@
   <action name="confGunCon3Act">
    <property name="text">
     <string>GunCon 3</string>
+   </property>
+  </action>
+  <action name="actionBasic_Mouse">
+   <property name="text">
+    <string>Basic Mouse</string>
+   </property>
+  </action>
+  <action name="actionRaw_Mouse">
+   <property name="text">
+    <string>Raw Mouse</string>
    </property>
   </action>
  </widget>

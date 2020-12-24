@@ -35,6 +35,8 @@
 #include "shortcut_dialog.h"
 #include "system_cmd_dialog.h"
 #include "emulated_pad_settings_dialog.h"
+#include "basic_mouse_settings_dialog.h"
+#include "raw_mouse_settings_dialog.h"
 #include "welcome_dialog.h"
 
 #include <thread>
@@ -2756,6 +2758,22 @@ void main_window::CreateConnects()
 		emulated_pad_settings_dialog* dlg = new emulated_pad_settings_dialog(emulated_pad_settings_dialog::pad_type::guncon3, this);
 		dlg->show();
 	});
+
+	connect(ui->actionBasic_Mouse, &QAction::triggered, this, [this]
+	{
+		basic_mouse_settings_dialog* dlg = new basic_mouse_settings_dialog(this);
+		dlg->show();
+	});
+
+#ifndef _WIN32
+	ui->actionRaw_Mouse->setVisible(false);
+#else
+	connect(ui->actionRaw_Mouse, &QAction::triggered, this, [this]
+	{
+		raw_mouse_settings_dialog* dlg = new raw_mouse_settings_dialog(this);
+		dlg->show();
+	});
+#endif
 
 	connect(ui->confCamerasAct, &QAction::triggered, this, [this]()
 	{

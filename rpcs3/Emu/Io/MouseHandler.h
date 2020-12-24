@@ -3,6 +3,7 @@
 #include <list>
 #include <algorithm>
 #include <vector>
+#include "Utilities/StrFmt.h"
 #include "Utilities/mutex.h"
 #include "util/init_mutex.hpp"
 #include "Emu/system_config_types.h"
@@ -48,6 +49,22 @@ enum
 {
 	CELL_MOUSE_INFO_INTERCEPTED = 1
 };
+
+static inline MouseButtonCodes get_mouse_button_code(int i)
+{
+	switch (i)
+	{
+	case 0:	return CELL_MOUSE_BUTTON_1;
+	case 1:	return CELL_MOUSE_BUTTON_2;
+	case 2:	return CELL_MOUSE_BUTTON_3;
+	case 3:	return CELL_MOUSE_BUTTON_4;
+	case 4:	return CELL_MOUSE_BUTTON_5;
+	case 5:	return CELL_MOUSE_BUTTON_6;
+	case 6:	return CELL_MOUSE_BUTTON_7;
+	case 7:	return CELL_MOUSE_BUTTON_8;
+	default: fmt::throw_exception("get_mouse_button_code: Invalid index %d", i);
+	}
+}
 
 static const u32 MAX_MICE = 127;
 static const u32 MOUSE_MAX_DATA_LIST_NUM = 8;
@@ -191,7 +208,7 @@ public:
 
 			MouseData new_data;
 			new_data.update = CELL_MOUSE_DATA_UPDATE;
-			new_data.wheel = std::clamp(rotation / 120, -128, 127); //120=event.GetWheelDelta()
+			new_data.wheel = std::clamp(rotation / 120, -128, 127); // 120=event.GetWheelDelta()
 			new_data.buttons = mouse.buttons;
 
 			datalist.push_back(new_data);
@@ -236,9 +253,9 @@ public:
 			mouse.x_pos = x_pos_new;
 			mouse.y_pos = y_pos_new;
 
-			/*CellMouseRawData& rawdata = GetRawData(p);
-			rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)
-			rawdata.len++;*/
+			//CellMouseRawData& rawdata = GetRawData(p);
+			//rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)
+			//rawdata.len++;
 
 			datalist.push_back(new_data);
 		}

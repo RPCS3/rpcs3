@@ -18,6 +18,7 @@ public:
 	localized_emu() = default;
 
 	static QString translated_pad_button(pad_button btn);
+	static QString translated_mouse_button(int btn);
 
 	template <typename... Args>
 	static std::string get_string(localized_string_id id, Args&&... args)

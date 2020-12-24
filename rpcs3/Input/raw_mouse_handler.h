@@ -7,6 +7,18 @@
 #include <windows.h>
 #endif
 
+static const std::map<std::string, int> raw_mouse_button_map
+{
+	{ "No Button", 0 },
+#ifdef _WIN32
+	{ "Button 1", RI_MOUSE_BUTTON_1_UP },
+	{ "Button 2", RI_MOUSE_BUTTON_2_UP },
+	{ "Button 3", RI_MOUSE_BUTTON_3_UP },
+	{ "Button 4", RI_MOUSE_BUTTON_4_UP },
+	{ "Button 5", RI_MOUSE_BUTTON_5_UP },
+#endif
+};
+
 class raw_mouse_handler;
 
 class raw_mouse
@@ -26,6 +38,8 @@ public:
 #endif
 
 private:
+	static std::pair<int, int> get_mouse_button(const cfg::string& button);
+
 	u32 m_index = 0;
 	std::string m_device_name;
 	void* m_handle{};
@@ -38,6 +52,7 @@ private:
 	int m_pos_y{};
 	float m_mouse_acceleration = 1.0f;
 	raw_mouse_handler* m_handler{};
+	std::map<u8, std::pair<int, int>> m_buttons;
 };
 
 class raw_mouse_handler final : public MouseHandlerBase

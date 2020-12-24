@@ -864,8 +864,6 @@ static void ds3_input_to_ext(const u32 gem_num, const gem_config::gem_controller
 
 /**
  * \brief Maps Move controller data (digital buttons, and analog Trigger data) to mouse input.
- *        Move Button: Mouse1
- *        Trigger:     Mouse2
  * \param mouse_no Mouse index number to use
  * \param digital_buttons Bitmask filled with CELL_GEM_CTRL_* values
  * \param analog_t Analog value of Move's Trigger.
