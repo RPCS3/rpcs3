@@ -23,6 +23,27 @@
     <ClCompile Include="Emu\RSX\VK\VKCommandStream.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKQueryPool.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKPipelineCompiler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\helpers\chip_class.cpp">
+      <Filter>helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\helpers\fence.cpp">
+      <Filter>helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\helpers\mem_allocator.cpp">
+      <Filter>helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\helpers\memory_block.cpp">
+      <Filter>helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\helpers\physical_device.cpp">
+      <Filter>helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\helpers\sampler.cpp">
+      <Filter>helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\helpers\shared.cpp">
+      <Filter>helpers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
@@ -47,5 +68,44 @@
     <ClInclude Include="Emu\RSX\VK\VKCommandStream.h" />
     <ClInclude Include="Emu\RSX\VK\VKQueryPool.h" />
     <ClInclude Include="Emu\RSX\VK\VKPipelineCompiler.h" />
+    <ClInclude Include="Emu\RSX\VK\VKProgramPipeline.h" />
+    <ClInclude Include="Emu\RSX\VK\helpers\chip_class.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\helpers\fence.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\helpers\graphics_pipeline_state.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\helpers\mem_allocator.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\helpers\memory_block.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\helpers\physical_device.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\helpers\pipeline_binding_table.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\helpers\query_pool.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\helpers\sampler.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\helpers\shared.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\helpers\supported_extensions.h">
+      <Filter>helpers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="helpers">
+      <UniqueIdentifier>{2c6cb5a5-ed99-44fe-a0b6-7ba1949c8b29}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>

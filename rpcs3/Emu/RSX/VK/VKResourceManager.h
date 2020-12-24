@@ -1,5 +1,7 @@
 #pragma once
 #include "VKHelpers.h"
+#include "helpers/query_pool.h"
+#include "helpers/sampler.h"
 
 #include <unordered_map>
 #include <deque>

@@ -1,8 +1,16 @@
 #pragma once
-#include "VKHelpers.h"
+
+namespace utils
+{
+	class address_range;
+}
 
 namespace vk
 {
+	struct buffer;
+	class command_buffer;
+	class render_device;
+
 	std::pair<u32, vk::buffer*> map_dma(command_buffer& cmd, u32 local_address, u32 length);
 	void load_dma(u32 local_address, u32 length);
 	void flush_dma(u32 local_address, u32 length);

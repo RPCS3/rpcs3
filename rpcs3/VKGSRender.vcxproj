@@ -19,6 +19,17 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Emu\RSX\VK\helpers\chip_class.h" />
+    <ClInclude Include="Emu\RSX\VK\helpers\fence.h" />
+    <ClInclude Include="Emu\RSX\VK\helpers\graphics_pipeline_state.h" />
+    <ClInclude Include="Emu\RSX\VK\helpers\memory_block.h" />
+    <ClInclude Include="Emu\RSX\VK\helpers\mem_allocator.h" />
+    <ClInclude Include="Emu\RSX\VK\helpers\physical_device.h" />
+    <ClInclude Include="Emu\RSX\VK\helpers\pipeline_binding_table.h" />
+    <ClInclude Include="Emu\RSX\VK\helpers\query_pool.h" />
+    <ClInclude Include="Emu\RSX\VK\helpers\sampler.h" />
+    <ClInclude Include="Emu\RSX\VK\helpers\shared.h" />
+    <ClInclude Include="Emu\RSX\VK\helpers\supported_extensions.h" />
     <ClInclude Include="Emu\RSX\VK\VKCommandStream.h" />
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
     <ClInclude Include="Emu\RSX\VK\VKCompute.h" />
@@ -31,6 +42,7 @@
     <ClInclude Include="Emu\RSX\VK\VKOverlays.h" />
     <ClInclude Include="Emu\RSX\VK\VKPipelineCompiler.h" />
     <ClInclude Include="Emu\RSX\VK\VKProgramBuffer.h" />
+    <ClInclude Include="Emu\RSX\VK\VKProgramPipeline.h" />
     <ClInclude Include="Emu\RSX\VK\VKQueryPool.h" />
     <ClInclude Include="Emu\RSX\VK\VKRenderPass.h" />
     <ClInclude Include="Emu\RSX\VK\VKRenderTargets.h" />
@@ -43,6 +55,13 @@
     <ClInclude Include="Emu\RSX\VK\VulkanAPI.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Emu\RSX\VK\helpers\chip_class.cpp" />
+    <ClCompile Include="Emu\RSX\VK\helpers\fence.cpp" />
+    <ClCompile Include="Emu\RSX\VK\helpers\memory_block.cpp" />
+    <ClCompile Include="Emu\RSX\VK\helpers\mem_allocator.cpp" />
+    <ClCompile Include="Emu\RSX\VK\helpers\physical_device.cpp" />
+    <ClCompile Include="Emu\RSX\VK\helpers\sampler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\helpers\shared.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKCommandStream.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKDMA.cpp" />

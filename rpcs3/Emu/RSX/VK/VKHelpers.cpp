@@ -17,55 +17,7 @@
 
 namespace vk
 {
-	static chip_family_table s_AMD_family_tree = []()
-	{
-		chip_family_table table;
-		table.default_ = chip_class::AMD_gcn_generic;
-
-		// AMD cards. See https://github.com/torvalds/linux/blob/master/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c
-		table.add(0x67C0, 0x67FF, chip_class::AMD_polaris);
-		table.add(0x6FDF, chip_class::AMD_polaris); // RX580 2048SP
-		table.add(0x6980, 0x699F, chip_class::AMD_polaris); // Polaris12
-		table.add(0x694C, 0x694F, chip_class::AMD_vega); // VegaM
-		table.add(0x6860, 0x686F, chip_class::AMD_vega); // VegaPro
-		table.add(0x687F, chip_class::AMD_vega); // Vega56/64
-		table.add(0x69A0, 0x69AF, chip_class::AMD_vega); // Vega12
-		table.add(0x66A0, 0x66AF, chip_class::AMD_vega); // Vega20
-		table.add(0x15DD, chip_class::AMD_vega); // Raven Ridge
-		table.add(0x15D8, chip_class::AMD_vega); // Raven Ridge
-		table.add(0x7310, 0x731F, chip_class::AMD_navi1x); // Navi10
-		table.add(0x7340, 0x734F, chip_class::AMD_navi1x); // Navi14
-		table.add(0x73A0, 0x73BF, chip_class::AMD_navi2x); // Sienna cichlid
-
-		return table;
-	}();
-
-	static chip_family_table s_NV_family_tree = []()
-	{
-		chip_family_table table;
-		table.default_ = chip_class::NV_generic;
-
-		// NV cards. See https://envytools.readthedocs.io/en/latest/hw/pciid.html
-		// NOTE: Since NV device IDs are linearly incremented per generation, there is no need to carefully check all the ranges
-		table.add(0x1180, 0x11fa, chip_class::NV_kepler); // GK104, 106
-		table.add(0x0FC0, 0x0FFF, chip_class::NV_kepler); // GK107
-		table.add(0x1003, 0x1028, chip_class::NV_kepler); // GK110
-		table.add(0x1280, 0x12BA, chip_class::NV_kepler); // GK208
-		table.add(0x1381, 0x13B0, chip_class::NV_maxwell); // GM107
-		table.add(0x1340, 0x134D, chip_class::NV_maxwell); // GM108
-		table.add(0x13C0, 0x13D9, chip_class::NV_maxwell); // GM204
-		table.add(0x1401, 0x1427, chip_class::NV_maxwell); // GM206
-		table.add(0x15F7, 0x15F9, chip_class::NV_pascal); // GP100 (Tesla P100)
-		table.add(0x1B00, 0x1D80, chip_class::NV_pascal);
-		table.add(0x1D81, 0x1DBA, chip_class::NV_volta);
-		table.add(0x1E02, 0x1F54, chip_class::NV_turing); // TU102, TU104, TU106, TU106M, TU106GL (RTX 20 series)
-		table.add(0x1F82, 0x1FB9, chip_class::NV_turing); // TU117, TU117M, TU117GL
-		table.add(0x2182, 0x21D1, chip_class::NV_turing); // TU116, TU116M, TU116GL
-		table.add(0x20B0, 0x20BE, chip_class::NV_ampere); // GA100
-		table.add(0x2204, 0x25AF, chip_class::NV_ampere); // GA10x (RTX 30 series)
-
-		return table;
-	}();
+	extern chip_class g_chip_class;
 
 	const context* g_current_vulkan_ctx = nullptr;
 	const render_device* g_current_renderer;
@@ -87,7 +39,6 @@ namespace vk
 	// Driver compatibility workarounds
 	VkFlags g_heap_compatible_buffer_types = 0;
 	driver_vendor g_driver_vendor = driver_vendor::unknown;
-	chip_class g_chip_class = chip_class::unknown;
 	bool g_drv_no_primitive_restart = false;
 	bool g_drv_sanitize_fp_values = false;
 	bool g_drv_disable_fence_reset = false;
@@ -177,81 +128,6 @@ namespace vk
 		}
 
 		return true;
-	}
-
-	memory_type_mapping get_memory_mapping(const vk::physical_device& dev)
-	{
-		VkPhysicalDevice pdev = dev;
-		VkPhysicalDeviceMemoryProperties memory_properties;
-		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
-
-		memory_type_mapping result;
-		result.device_local = VK_MAX_MEMORY_TYPES;
-		result.host_visible_coherent = VK_MAX_MEMORY_TYPES;
-
-		bool host_visible_cached = false;
-		VkDeviceSize  host_visible_vram_size = 0;
-		VkDeviceSize  device_local_vram_size = 0;
-
-		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
-		{
-			VkMemoryHeap &heap = memory_properties.memoryHeaps[memory_properties.memoryTypes[i].heapIndex];
-
-			bool is_device_local = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			if (is_device_local)
-			{
-				if (device_local_vram_size < heap.size)
-				{
-					result.device_local = i;
-					device_local_vram_size = heap.size;
-				}
-			}
-
-			bool is_host_visible = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			bool is_host_coherent = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-			bool is_cached = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
-
-			if (is_host_coherent && is_host_visible)
-			{
-				if ((is_cached && !host_visible_cached) ||
-					(host_visible_vram_size < heap.size))
-				{
-					result.host_visible_coherent = i;
-					host_visible_vram_size = heap.size;
-					host_visible_cached = is_cached;
-				}
-			}
-		}
-
-		if (result.device_local == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support device local memory");
-		if (result.host_visible_coherent == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support host coherent device local memory");
-		return result;
-	}
-
-	pipeline_binding_table get_pipeline_binding_table(const vk::physical_device& dev)
-	{
-		pipeline_binding_table result{};
-
-		// Need to check how many samplers are supported by the driver
-		const auto usable_samplers = std::min(dev.get_limits().maxPerStageDescriptorSampledImages, 32u);
-		result.vertex_textures_first_bind_slot = result.textures_first_bind_slot + usable_samplers;
-		result.total_descriptor_bindings = result.vertex_textures_first_bind_slot + 4;
-		return result;
-	}
-
-	chip_class get_chip_family(u32 vendor_id, u32 device_id)
-	{
-		if (vendor_id == 0x10DE)
-		{
-			return s_NV_family_tree.find(device_id);
-		}
-
-		if (vendor_id == 0x1002)
-		{
-			return s_AMD_family_tree.find(device_id);
-		}
-
-		return chip_class::unknown;
 	}
 
 	VkAllocationCallbacks default_callbacks()
@@ -469,12 +345,6 @@ namespace vk
 		g_overlay_passes.clear();
 	}
 
-	vk::mem_allocator_base* get_current_mem_allocator()
-	{
-		ensure(g_current_renderer);
-		return g_current_renderer->get_allocator();
-	}
-
 	void set_current_thread_ctx(const vk::context &ctx)
 	{
 		g_current_vulkan_ctx = &ctx;
@@ -575,11 +445,6 @@ namespace vk
 	driver_vendor get_driver_vendor()
 	{
 		return g_driver_vendor;
-	}
-
-	chip_class get_chip_family()
-	{
-		return g_chip_class;
 	}
 
 	bool emulate_primitive_restart(rsx::primitive_type type)
@@ -1021,134 +886,6 @@ namespace vk
 		ensure(renderer);
 
 		renderer->emergency_query_cleanup(&cmd);
-	}
-
-	void die_with_error(VkResult error_code,
-		const char* file,
-		const char* func,
-		u32 line,
-		u32 col)
-	{
-		std::string error_message;
-		int severity = 0; //0 - die, 1 - warn, 2 - nothing
-
-		switch (error_code)
-		{
-		case VK_SUCCESS:
-		case VK_EVENT_SET:
-		case VK_EVENT_RESET:
-		case VK_INCOMPLETE:
-			return;
-		case VK_SUBOPTIMAL_KHR:
-			error_message = "Present surface is suboptimal (VK_SUBOPTIMAL_KHR)";
-			severity = 1;
-			break;
-		case VK_NOT_READY:
-			error_message = "Device or resource busy (VK_NOT_READY)";
-			break;
-		case VK_TIMEOUT:
-			error_message = "Timeout event (VK_TIMEOUT)";
-			break;
-		case VK_ERROR_OUT_OF_HOST_MEMORY:
-			error_message = "Out of host memory (system RAM) (VK_ERROR_OUT_OF_HOST_MEMORY)";
-			break;
-		case VK_ERROR_OUT_OF_DEVICE_MEMORY:
-			error_message = "Out of video memory (VRAM) (VK_ERROR_OUT_OF_DEVICE_MEMORY)";
-			break;
-		case VK_ERROR_INITIALIZATION_FAILED:
-			error_message = "Initialization failed (VK_ERROR_INITIALIZATION_FAILED)";
-			break;
-		case VK_ERROR_DEVICE_LOST:
-			error_message = "Device lost (Driver crashed with unspecified error or stopped responding and recovered) (VK_ERROR_DEVICE_LOST)";
-			break;
-		case VK_ERROR_MEMORY_MAP_FAILED:
-			error_message = "Memory map failed (VK_ERROR_MEMORY_MAP_FAILED)";
-			break;
-		case VK_ERROR_LAYER_NOT_PRESENT:
-			error_message = "Requested layer is not available (Try disabling debug output or install vulkan SDK) (VK_ERROR_LAYER_NOT_PRESENT)";
-			break;
-		case VK_ERROR_EXTENSION_NOT_PRESENT:
-			error_message = "Requested extension not available (VK_ERROR_EXTENSION_NOT_PRESENT)";
-			break;
-		case VK_ERROR_FEATURE_NOT_PRESENT:
-			error_message = "Requested feature not available (VK_ERROR_FEATURE_NOT_PRESENT)";
-			break;
-		case VK_ERROR_INCOMPATIBLE_DRIVER:
-			error_message = "Incompatible driver (VK_ERROR_INCOMPATIBLE_DRIVER)";
-			break;
-		case VK_ERROR_TOO_MANY_OBJECTS:
-			error_message = "Too many objects created (Out of handles) (VK_ERROR_TOO_MANY_OBJECTS)";
-			break;
-		case VK_ERROR_FORMAT_NOT_SUPPORTED:
-			error_message = "Format not supported (VK_ERROR_FORMAT_NOT_SUPPORTED)";
-			break;
-		case VK_ERROR_FRAGMENTED_POOL:
-			error_message = "Fragmented pool (VK_ERROR_FRAGMENTED_POOL)";
-			break;
-		case VK_ERROR_SURFACE_LOST_KHR:
-			error_message = "Surface lost (VK_ERROR_SURFACE_LOST)";
-			break;
-		case VK_ERROR_NATIVE_WINDOW_IN_USE_KHR:
-			error_message = "Native window in use (VK_ERROR_NATIVE_WINDOW_IN_USE_KHR)";
-			break;
-		case VK_ERROR_OUT_OF_DATE_KHR:
-			error_message = "Present surface is out of date (VK_ERROR_OUT_OF_DATE_KHR)";
-			severity = 1;
-			break;
-		case VK_ERROR_INCOMPATIBLE_DISPLAY_KHR:
-			error_message = "Incompatible display (VK_ERROR_INCOMPATIBLE_DISPLAY_KHR)";
-			break;
-		case VK_ERROR_VALIDATION_FAILED_EXT:
-			error_message = "Validation failed (VK_ERROR_INCOMPATIBLE_DISPLAY_KHR)";
-			break;
-		case VK_ERROR_INVALID_SHADER_NV:
-			error_message = "Invalid shader code (VK_ERROR_INVALID_SHADER_NV)";
-			break;
-		case VK_ERROR_OUT_OF_POOL_MEMORY_KHR:
-			error_message = "Out of pool memory (VK_ERROR_OUT_OF_POOL_MEMORY_KHR)";
-			break;
-		case VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR:
-			error_message = "Invalid external handle (VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR)";
-			break;
-		default:
-			error_message = fmt::format("Unknown Code (%Xh, %d)%s", static_cast<s32>(error_code), static_cast<s32>(error_code), src_loc{line, col, file, func});
-			break;
-		}
-
-		switch (severity)
-		{
-		default:
-		case 0:
-			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s%s", error_message, src_loc{line, col, file, func});
-		case 1:
-			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message, src_loc{line, col, file, func});
-			break;
-		case 2:
-			break;
-		}
-	}
-
-	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-											u64 srcObject, usz location, s32 msgCode,
-											const char *pLayerPrefix, const char *pMsg, void *pUserData)
-	{
-		if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-		{
-			if (strstr(pMsg, "IMAGE_VIEW_TYPE_1D")) return false;
-
-			rsx_log.error("ERROR: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-		}
-		else if (msgFlags & VK_DEBUG_REPORT_WARNING_BIT_EXT)
-		{
-			rsx_log.warning("WARNING: [%s] Code %d : %s", pLayerPrefix, msgCode, pMsg);
-		}
-		else
-		{
-			return false;
-		}
-
-		//Let the app crash..
-		return false;
 	}
 
 	VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,

@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include "Utilities/address_range.h"
+#include "gcm_enums.h"
 
 #include <vector>
 

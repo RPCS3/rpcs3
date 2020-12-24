@@ -1,9 +1,12 @@
 #pragma once
 
-#include "VKHelpers.h"
+#include "VulkanAPI.h"
+#include "Utilities/geometry.h"
 
 namespace vk
 {
+	class image;
+
 	u64 get_renderpass_key(const std::vector<vk::image*>& images);
 	u64 get_renderpass_key(const std::vector<vk::image*>& images, u64 previous_key);
 	u64 get_renderpass_key(VkFormat surface_format);
