@@ -4,6 +4,8 @@
 #include "rsx_methods.h"
 #include "rsx_utils.h"
 
+#include "Emu/system_config.h"
+
 namespace rsx
 {
 	u32 fragment_texture::offset() const
@@ -135,6 +137,19 @@ namespace rsx
 
 	rsx::texture_max_anisotropy fragment_texture::max_aniso() const
 	{
+		switch (g_cfg.video.strict_rendering_mode ? 0 : g_cfg.video.anisotropic_level_override)
+		{
+		case 1: return rsx::texture_max_anisotropy::x1;
+		case 2: return rsx::texture_max_anisotropy::x2;
+		case 4: return rsx::texture_max_anisotropy::x4;
+		case 6: return rsx::texture_max_anisotropy::x6;
+		case 8: return rsx::texture_max_anisotropy::x8;
+		case 10: return rsx::texture_max_anisotropy::x10;
+		case 12: return rsx::texture_max_anisotropy::x12;
+		case 16: return rsx::texture_max_anisotropy::x16;
+		default: break;
+		}
+	
 		return rsx::to_texture_max_anisotropy((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
 	}
 
