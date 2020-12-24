@@ -965,22 +965,24 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	auto insert_texture_fetch = [this](const std::array<FUNCTION, 6>& functions)
 	{
 		const auto type = m_prog.get_texture_dimension(dst.tex_num);
-		std::string mask = "";
+		const auto ref_mask = (1 << dst.tex_num);
+		std::string swz_mask = "";
 		auto select = static_cast<u8>(type);
 
 		if (type == rsx::texture_dimension_extended::texture_dimension_2d)
 		{
-			if (m_prog.shadow_textures & (1 << dst.tex_num))
+			if (m_prog.shadow_textures & ref_mask)
 			{
-				m_shadow_sampled_textures |= (1 << dst.tex_num);
+				properties.shadow_sampler_mask |= ref_mask;
 				select = 4;
-				mask = ".xxxx";
+				swz_mask = ".xxxx";
 			}
 			else
 			{
-				m_2d_sampled_textures |= (1 << dst.tex_num);
-				if (m_prog.redirected_textures & (1 << dst.tex_num))
+				properties.tex2d_sampler_mask |= ref_mask;
+				if (m_prog.redirected_textures & ref_mask)
 				{
+					properties.redirected_sampler_mask |= ref_mask;
 					select = 5;
 				}
 			}
@@ -993,7 +995,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		}
 
 		auto function = functions[select];
-		SetDst(getFunction(function) + mask);
+		SetDst(getFunction(function) + swz_mask);
 
 		if (dst.exp_tex)
 		{
