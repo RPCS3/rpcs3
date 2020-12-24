@@ -1,6 +1,7 @@
 add_library(rpcs3_ui STATIC
     about_dialog.cpp
     auto_pause_settings_dialog.cpp
+    basic_mouse_settings_dialog.cpp
     breakpoint_handler.cpp
     breakpoint_list.cpp
     call_stack_list.cpp
@@ -67,6 +68,7 @@ add_library(rpcs3_ui STATIC
     qt_camera_video_sink.cpp
     qt_music_handler.cpp
     qt_utils.cpp
+    raw_mouse_settings_dialog.cpp
     register_editor_dialog.cpp
     recvmessage_dialog_frame.cpp
     render_creator.cpp

@@ -285,6 +285,18 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_welcome_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_basic_mouse_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_basic_mouse_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_raw_mouse_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_raw_mouse_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_grid.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -1065,6 +1077,15 @@
     <ClCompile Include="util\console.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\basic_mouse_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\raw_mouse_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="Input\raw_mouse_config.cpp">
+      <Filter>Io\raw</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1246,6 +1267,15 @@
     </ClInclude>
     <ClInclude Include="util\console.h">
       <Filter>rpcs3</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\basic_mouse_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\raw_mouse_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\raw_mouse_config.h">
+      <Filter>Io\raw</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

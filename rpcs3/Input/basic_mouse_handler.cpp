@@ -7,8 +7,11 @@
 #include "basic_mouse_handler.h"
 #include "rpcs3qt/gs_frame.h"
 #include "Emu/Io/interception.h"
+#include "Emu/Io/mouse_config.h"
 
 LOG_CHANNEL(input_log, "Input");
+
+mouse_config g_cfg_mouse;
 
 void basic_mouse_handler::Init(const u32 max_connect)
 {
@@ -18,8 +21,21 @@ void basic_mouse_handler::Init(const u32 max_connect)
 		return;
 	}
 
+	g_cfg_mouse.from_default();
+	g_cfg_mouse.load();
+
+	m_buttons[CELL_MOUSE_BUTTON_1] = get_mouse_button(g_cfg_mouse.mouse_button_1);
+	m_buttons[CELL_MOUSE_BUTTON_2] = get_mouse_button(g_cfg_mouse.mouse_button_2);
+	m_buttons[CELL_MOUSE_BUTTON_3] = get_mouse_button(g_cfg_mouse.mouse_button_3);
+	m_buttons[CELL_MOUSE_BUTTON_4] = get_mouse_button(g_cfg_mouse.mouse_button_4);
+	m_buttons[CELL_MOUSE_BUTTON_5] = get_mouse_button(g_cfg_mouse.mouse_button_5);
+	m_buttons[CELL_MOUSE_BUTTON_6] = get_mouse_button(g_cfg_mouse.mouse_button_6);
+	m_buttons[CELL_MOUSE_BUTTON_7] = get_mouse_button(g_cfg_mouse.mouse_button_7);
+	m_buttons[CELL_MOUSE_BUTTON_8] = get_mouse_button(g_cfg_mouse.mouse_button_8);
+
 	m_mice.clear();
 	m_mice.emplace_back(Mouse());
+
 	m_info = {};
 	m_info.max_connect = max_connect;
 	m_info.now_connect = std::min(::size32(m_mice), max_connect);
@@ -88,28 +104,20 @@ bool basic_mouse_handler::eventFilter(QObject* target, QEvent* ev)
 
 void basic_mouse_handler::MouseButtonDown(QMouseEvent* event)
 {
-	if (event->button() == Qt::LeftButton)        MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_1, true);
-	else if (event->button() == Qt::RightButton)  MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_2, true);
-	else if (event->button() == Qt::MiddleButton) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_3, true);
-	// TODO: verify these
-	else if (event->button() == Qt::ExtraButton1) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_4, true);
-	else if (event->button() == Qt::ExtraButton2) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_5, true);
-	else if (event->button() == Qt::ExtraButton3) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_6, true);
-	else if (event->button() == Qt::ExtraButton4) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_7, true);
-	else if (event->button() == Qt::ExtraButton5) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_8, true);
+	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [event](const auto& entry){ return entry.second == event->button(); });
+		it != m_buttons.cend())
+	{
+		MouseHandlerBase::Button(0, it->first, true);
+	}
 }
 
 void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
 {
-	if (event->button() == Qt::LeftButton)        MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_1, false);
-	else if (event->button() == Qt::RightButton)  MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_2, false);
-	else if (event->button() == Qt::MiddleButton) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_3, false);
-	// TODO: verify these
-	else if (event->button() == Qt::ExtraButton1) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_4, false);
-	else if (event->button() == Qt::ExtraButton2) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_5, false);
-	else if (event->button() == Qt::ExtraButton3) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_6, false);
-	else if (event->button() == Qt::ExtraButton4) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_7, false);
-	else if (event->button() == Qt::ExtraButton5) MouseHandlerBase::Button(0, CELL_MOUSE_BUTTON_8, false);
+	if (const auto it = std::find_if(m_buttons.cbegin(), m_buttons.cend(), [event](const auto& entry){ return entry.second == event->button(); });
+		it != m_buttons.cend())
+	{
+		MouseHandlerBase::Button(0, it->first, false);
+	}
 }
 
 void basic_mouse_handler::MouseScroll(QWheelEvent* event)
@@ -122,6 +130,18 @@ bool basic_mouse_handler::get_mouse_lock_state() const
 	if (auto game_frame = dynamic_cast<gs_frame*>(m_target))
 		return game_frame->get_mouse_lock_state();
 	return false;
+}
+
+Qt::MouseButton basic_mouse_handler::get_mouse_button(const cfg::string& button)
+{
+	const std::string value = button.to_string();
+
+	if (const auto it = qt_mouse_button_map.find(value); it != qt_mouse_button_map.cend())
+	{
+		return it->second;
+	}
+
+	return Qt::MouseButton::NoButton;
 }
 
 void basic_mouse_handler::MouseMove(QMouseEvent* event)

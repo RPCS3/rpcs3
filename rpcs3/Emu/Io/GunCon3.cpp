@@ -15,7 +15,7 @@ void fmt_class_string<guncon3_btn>::format(std::string& out, u64 arg)
 	format_enum(out, arg, [](guncon3_btn value)
 	{
 		switch (value)
-		{			
+		{
 		case guncon3_btn::trigger: return "Trigger";
 		case guncon3_btn::a1: return "A1";
 		case guncon3_btn::a2: return "A2";

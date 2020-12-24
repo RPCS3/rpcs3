@@ -34,7 +34,7 @@ emulated_pad_settings_dialog::emulated_pad_settings_dialog(pad_type type, QWidge
 	QTabWidget* tabs = new QTabWidget();
 	tabs->setUsesScrollButtons(false);
 
-	QDialogButtonBox* buttons =new QDialogButtonBox(this);
+	QDialogButtonBox* buttons = new QDialogButtonBox(this);
 	buttons->setStandardButtons(QDialogButtonBox::Apply | QDialogButtonBox::Cancel | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);
 
 	connect(buttons, &QDialogButtonBox::clicked, this, [this, buttons](QAbstractButton* button)

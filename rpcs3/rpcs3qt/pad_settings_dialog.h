@@ -72,9 +72,7 @@ class pad_settings_dialog : public QDialog
 		id_reset_parameters,
 		id_blacklist,
 		id_refresh,
-		id_add_config_file,
-		id_ok,
-		id_cancel
+		id_add_config_file
 	};
 
 	struct pad_button

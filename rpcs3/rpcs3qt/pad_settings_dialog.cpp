@@ -322,7 +322,10 @@ void pad_settings_dialog::InitButtons()
 			ReactivateButtons();
 			return;
 		}
-		m_pad_buttons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(m_seconds));
+		if (auto button = m_pad_buttons->button(m_button_id))
+		{
+			button->setText(tr("[ Waiting %1 ]").arg(m_seconds));
+		}
 	});
 
 	connect(ui->chb_vibration_large, &QCheckBox::clicked, this, [this](bool checked)
@@ -731,10 +734,10 @@ void pad_settings_dialog::ReactivateButtons()
 		return;
 	}
 
-	if (m_pad_buttons->button(m_button_id))
+	if (auto button = m_pad_buttons->button(m_button_id))
 	{
-		m_pad_buttons->button(m_button_id)->setPalette(m_palette);
-		m_pad_buttons->button(m_button_id)->releaseMouse();
+		button->setPalette(m_palette);
+		button->releaseMouse();
 	}
 
 	m_button_id = button_ids::id_pad_begin;
@@ -1209,7 +1212,10 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		}
 
 		// The button has to contain at least one character, because it would be square'ish otherwise
-		m_pad_buttons->button(id)->setText(button.text.isEmpty() ? QStringLiteral("-") : button.text);
+		if (auto btn = m_pad_buttons->button(id))
+		{
+			btn->setText(button.text.isEmpty() ? QStringLiteral("-") : button.text);
+		}
 	}
 }
 
@@ -1243,7 +1249,10 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 
 	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
 	{
-		m_pad_buttons->button(i)->setEnabled(is_enabled);
+		if (auto button = m_pad_buttons->button(i))
+		{
+			button->setEnabled(is_enabled);
+		}
 	}
 }
 
@@ -1256,8 +1265,6 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	case button_ids::id_pad_end:
 	case button_ids::id_add_config_file:
 	case button_ids::id_refresh:
-	case button_ids::id_ok:
-	case button_ids::id_cancel:
 		return;
 	case button_ids::id_reset_parameters:
 		ReactivateButtons();
@@ -1302,9 +1309,12 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	m_last_pos = QCursor::pos();
 
 	m_button_id = id;
-	m_pad_buttons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(MAX_SECONDS));
-	m_pad_buttons->button(m_button_id)->setPalette(QPalette(Qt::blue));
-	m_pad_buttons->button(m_button_id)->grabMouse();
+	if (auto button = m_pad_buttons->button(m_button_id))
+	{
+		button->setText(tr("[ Waiting %1 ]").arg(MAX_SECONDS));
+		button->setPalette(QPalette(Qt::blue));
+		button->grabMouse();
+	}
 	SwitchButtons(false); // disable all buttons, needed for using Space, Enter and other specific buttons
 	m_remap_timer.start(1000);
 }
