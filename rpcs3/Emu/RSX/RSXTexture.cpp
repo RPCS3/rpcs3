@@ -264,7 +264,8 @@ namespace rsx
 
 	f32 fragment_texture::bias() const
 	{
-		return rsx::decode_fxp<4, 8>((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
+		const f32 bias = rsx::decode_fxp<4, 8>((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
+		return std::clamp<f32>(bias + g_cfg.video.texture_lod_bias, -16.f, 16.f - 1.f / 256);
 	}
 
 	rsx::texture_minify_filter fragment_texture::min_filter() const
@@ -418,7 +419,8 @@ namespace rsx
 
 	f32 vertex_texture::bias() const
 	{
-		return rsx::decode_fxp<4, 8>((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
+		const f32 bias = rsx::decode_fxp<4, 8>((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
+		return std::clamp<f32>(bias + g_cfg.video.texture_lod_bias, -16.f, 16.f - 1.f / 256);
 	}
 
 	rsx::texture_minify_filter vertex_texture::min_filter() const
