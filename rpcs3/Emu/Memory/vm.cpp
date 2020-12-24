@@ -1058,6 +1058,9 @@ namespace vm
 		}
 	}
 
+	// Mapped regions: addr -> shm handle
+	constexpr auto block_map = &auto_typemap<block_t>::get<std::map<u32, std::pair<u32, std::shared_ptr<utils::shm>>>>;
+
 	bool block_t::try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&& shm)
 	{
 		// Check if memory area is already mapped
@@ -1082,7 +1085,9 @@ namespace vm
 		// Map "real" memory pages; provide a function to search for mirrors with private member access
 		_page_map(page_addr, flags, page_size, shm.get(), [](vm::block_t* _this, utils::shm* shm)
 		{
-			decltype(m_map)::value_type* result = nullptr;
+			auto& map = (_this->m.*block_map)();
+
+			std::remove_reference_t<decltype(map)>::value_type* result = nullptr;
 
 			// Check eligibility
 			if (!_this || !(SYS_MEMORY_PAGE_SIZE_MASK & _this->flags) || _this->addr < 0x20000000 || _this->addr >= 0xC0000000)
@@ -1090,7 +1095,7 @@ namespace vm
 				return result;
 			}
 
-			for (auto& pp : _this->m_map)
+			for (auto& pp : map)
 			{
 				if (pp.second.second.get() == shm)
 				{
@@ -1125,7 +1130,7 @@ namespace vm
 		}
 
 		// Add entry
-		m_map[addr] = std::make_pair(size, std::move(shm));
+		(m.*block_map)()[addr] = std::make_pair(size, std::move(shm));
 
 		return true;
 	}
@@ -1147,6 +1152,7 @@ namespace vm
 
 	block_t::~block_t()
 	{
+		auto& m_map = (m.*block_map)();
 		{
 			vm::writer_lock lock(0);
 
@@ -1285,6 +1291,7 @@ namespace vm
 
 	u32 block_t::dealloc(u32 addr, const std::shared_ptr<utils::shm>* src)
 	{
+		auto& m_map = (m.*block_map)();
 		{
 			vm::writer_lock lock(0);
 
@@ -1334,6 +1341,8 @@ namespace vm
 			return {addr, nullptr};
 		}
 
+		auto& m_map = (m.*block_map)();
+
 		vm::reader_lock lock;
 
 		const auto upper = m_map.upper_bound(addr);
@@ -1370,7 +1379,7 @@ namespace vm
 	{
 		u32 result = 0;
 
-		for (auto& entry : m_map)
+		for (auto& entry : (m.*block_map)())
 		{
 			result += entry.second.first - (flags & 0x10 ? 0x2000 : 0);
 		}

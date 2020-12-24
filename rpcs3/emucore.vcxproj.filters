@@ -1822,6 +1822,9 @@
     <ClInclude Include="util\fixed_typemap.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="util\auto_typemap.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
     <ClInclude Include="util\init_mutex.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>

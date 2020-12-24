@@ -1,9 +1,9 @@
 #pragma once
 
-#include <map>
 #include <memory>
 #include "util/types.hpp"
 #include "util/atomic.hpp"
+#include "util/auto_typemap.hpp"
 #include "Utilities/StrFmt.h"
 
 #include "util/to_endian.hpp"
@@ -95,8 +95,7 @@ namespace vm
 	// Object that handles memory allocations inside specific constant bounds ("location")
 	class block_t final
 	{
-		// Mapped regions: addr -> shm handle
-		std::map<u32, std::pair<u32, std::shared_ptr<utils::shm>>> m_map;
+		auto_typemap<block_t> m;
 
 		// Common mapped region for special cases
 		std::shared_ptr<utils::shm> m_common;

@@ -7,6 +7,9 @@
 #include "Utilities/File.h"
 #include "util/logs.hpp"
 #include "util/shared_ptr.hpp"
+#include "util/typeindices.hpp"
+#include "util/fixed_typemap.hpp"
+#include "util/auto_typemap.hpp"
 
 #include <cstdlib>
 #include <cstring>
