@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "VKCommandStream.h"
+#include "helpers/fence.h"
 #include "Emu/IdManager.h"
+#include "Emu/system_config.h"
 #include "Emu/RSX/RSXOffload.h"
 
 namespace vk

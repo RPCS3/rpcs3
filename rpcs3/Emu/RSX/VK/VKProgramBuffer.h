@@ -3,7 +3,6 @@
 #include "VKFragmentProgram.h"
 #include "../Common/ProgramStateCache.h"
 #include "Utilities/hash.h"
-#include "VKHelpers.h"
 #include "VKRenderPass.h"
 #include "VKPipelineCompiler.h"
 

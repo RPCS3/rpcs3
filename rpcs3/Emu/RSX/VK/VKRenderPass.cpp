@@ -2,6 +2,7 @@
 
 #include "Utilities/mutex.h"
 #include "VKRenderPass.h"
+#include "VKHelpers.h"
 
 namespace vk
 {

@@ -1,0 +1,320 @@
+#include "physical_device.h"
+#include "supported_extensions.h"
+#include "util/logs.hpp"
+#include "Emu/system_config.h"
+
+namespace vk
+{
+	void physical_device::get_physical_device_features(bool allow_extensions)
+	{
+		if (!allow_extensions)
+		{
+			vkGetPhysicalDeviceFeatures(dev, &features);
+			return;
+		}
+
+		supported_extensions instance_extensions(supported_extensions::instance);
+		supported_extensions device_extensions(supported_extensions::device, nullptr, dev);
+
+		if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+		{
+			vkGetPhysicalDeviceFeatures(dev, &features);
+		}
+		else
+		{
+			VkPhysicalDeviceFeatures2KHR features2;
+			features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+			features2.pNext = nullptr;
+
+			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+
+			if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
+			{
+				shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
+				features2.pNext           = &shader_support_info;
+			}
+
+			if (device_extensions.is_supported(VK_KHR_DRIVER_PROPERTIES_EXTENSION_NAME))
+			{
+				driver_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
+				driver_properties.pNext = features2.pNext;
+				features2.pNext         = &driver_properties;
+			}
+
+			auto getPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
+			ensure(getPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
+			getPhysicalDeviceFeatures2KHR(dev, &features2);
+
+			shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
+			shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
+			shader_types_support.allow_int8    = !!shader_support_info.shaderInt8;
+			features                           = features2.features;
+		}
+
+		stencil_export_support           = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
+		conditional_render_support       = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+		unrestricted_depth_range_support = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
+	}
+
+	void physical_device::create(VkInstance context, VkPhysicalDevice pdev, bool allow_extensions)
+	{
+		dev    = pdev;
+		parent = context;
+		vkGetPhysicalDeviceProperties(pdev, &props);
+		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+		get_physical_device_features(allow_extensions);
+
+		rsx_log.always("Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
+
+		if (get_driver_vendor() == driver_vendor::RADV && get_name().find("LLVM 8.0.0") != umax)
+		{
+			// Serious driver bug causing black screens
+			// See https://bugs.freedesktop.org/show_bug.cgi?id=110970
+			rsx_log.fatal("RADV drivers have a major driver bug with LLVM 8.0.0 resulting in no visual output. Upgrade to LLVM version 8.0.1 or greater to avoid this issue.");
+		}
+		else if (get_driver_vendor() == driver_vendor::NVIDIA)
+		{
+#ifdef _WIN32
+			// SPIRV bugs were fixed in 452.28 for windows
+			const u32 threshold_version = (452u >> 22) | (28 >> 14);
+#else
+			// SPIRV bugs were fixed in 450.56 for linux/BSD
+			const u32 threshold_version = (450u >> 22) | (56 >> 14);
+#endif
+			const auto current_version = props.driverVersion & ~0x3fffu; // Clear patch and revision fields
+			if (current_version < threshold_version)
+			{
+				rsx_log.error("Your current NVIDIA graphics driver version %s has known issues and is unsupported. Update to the latest NVIDIA driver.", get_driver_version());
+			}
+		}
+
+		if (get_chip_class() == chip_class::AMD_vega)
+		{
+			// Disable fp16 if driver uses LLVM emitter. It does fine with AMD proprietary drivers though.
+			shader_types_support.allow_float16 = (driver_properties.driverID == VK_DRIVER_ID_AMD_PROPRIETARY_KHR);
+		}
+	}
+
+	std::string physical_device::get_name() const
+	{
+		return props.deviceName;
+	}
+
+	driver_vendor physical_device::get_driver_vendor() const
+	{
+		if (!driver_properties.driverID)
+		{
+			const auto gpu_name = get_name();
+			if (gpu_name.find("Radeon") != umax)
+			{
+				return driver_vendor::AMD;
+			}
+
+			if (gpu_name.find("NVIDIA") != umax || gpu_name.find("GeForce") != umax || gpu_name.find("Quadro") != umax)
+			{
+				return driver_vendor::NVIDIA;
+			}
+
+			if (gpu_name.find("RADV") != umax)
+			{
+				return driver_vendor::RADV;
+			}
+
+			if (gpu_name.find("Intel") != umax)
+			{
+				return driver_vendor::INTEL;
+			}
+
+			return driver_vendor::unknown;
+		}
+		else
+		{
+			switch (driver_properties.driverID)
+			{
+			case VK_DRIVER_ID_AMD_PROPRIETARY_KHR:
+			case VK_DRIVER_ID_AMD_OPEN_SOURCE_KHR:
+				return driver_vendor::AMD;
+			case VK_DRIVER_ID_MESA_RADV_KHR:
+				return driver_vendor::RADV;
+			case VK_DRIVER_ID_NVIDIA_PROPRIETARY_KHR:
+				return driver_vendor::NVIDIA;
+			case VK_DRIVER_ID_INTEL_PROPRIETARY_WINDOWS_KHR:
+			case VK_DRIVER_ID_INTEL_OPEN_SOURCE_MESA_KHR:
+				return driver_vendor::INTEL;
+			default:
+				// Mobile
+				return driver_vendor::unknown;
+			}
+		}
+	}
+
+	std::string physical_device::get_driver_version() const
+	{
+		switch (get_driver_vendor())
+		{
+		case driver_vendor::NVIDIA:
+		{
+			// 10 + 8 + 8 + 6
+			const auto major_version = props.driverVersion >> 22;
+			const auto minor_version = (props.driverVersion >> 14) & 0xff;
+			const auto patch         = (props.driverVersion >> 6) & 0xff;
+			const auto revision      = (props.driverVersion & 0x3f);
+
+			return fmt::format("%u.%u.%u.%u", major_version, minor_version, patch, revision);
+		}
+		default:
+		{
+			// 10 + 10 + 12 (standard vulkan encoding created with VK_MAKE_VERSION)
+			return fmt::format("%u.%u.%u", (props.driverVersion >> 22), (props.driverVersion >> 12) & 0x3ff, (props.driverVersion) & 0x3ff);
+		}
+		}
+	}
+
+	chip_class physical_device::get_chip_class() const
+	{
+		return get_chip_family(props.vendorID, props.deviceID);
+	}
+
+	u32 physical_device::get_queue_count() const
+	{
+		if (!queue_props.empty())
+			return ::size32(queue_props);
+
+		u32 count = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
+
+		return count;
+	}
+
+	VkQueueFamilyProperties physical_device::get_queue_properties(u32 queue)
+	{
+		if (queue_props.empty())
+		{
+			u32 count = 0;
+			vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
+
+			queue_props.resize(count);
+			vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, queue_props.data());
+		}
+
+		if (queue >= queue_props.size())
+			fmt::throw_exception("Bad queue index passed to get_queue_properties (%u)", queue);
+		return queue_props[queue];
+	}
+
+	VkPhysicalDeviceMemoryProperties physical_device::get_memory_properties() const
+	{
+		return memory_properties;
+	}
+
+	VkPhysicalDeviceLimits physical_device::get_limits() const
+	{
+		return props.limits;
+	}
+
+	physical_device::operator VkPhysicalDevice() const
+	{
+		return dev;
+	}
+
+	physical_device::operator VkInstance() const
+	{
+		return parent;
+	}
+
+	memory_type_mapping get_memory_mapping(const vk::physical_device& dev)
+	{
+		VkPhysicalDevice pdev = dev;
+		VkPhysicalDeviceMemoryProperties memory_properties;
+		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+
+		memory_type_mapping result;
+		result.device_local          = VK_MAX_MEMORY_TYPES;
+		result.host_visible_coherent = VK_MAX_MEMORY_TYPES;
+
+		bool host_visible_cached            = false;
+		VkDeviceSize host_visible_vram_size = 0;
+		VkDeviceSize device_local_vram_size = 0;
+
+		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
+		{
+			VkMemoryHeap& heap = memory_properties.memoryHeaps[memory_properties.memoryTypes[i].heapIndex];
+
+			bool is_device_local = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			if (is_device_local)
+			{
+				if (device_local_vram_size < heap.size)
+				{
+					result.device_local    = i;
+					device_local_vram_size = heap.size;
+				}
+			}
+
+			bool is_host_visible  = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			bool is_host_coherent = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			bool is_cached        = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+
+			if (is_host_coherent && is_host_visible)
+			{
+				if ((is_cached && !host_visible_cached) || (host_visible_vram_size < heap.size))
+				{
+					result.host_visible_coherent = i;
+					host_visible_vram_size       = heap.size;
+					host_visible_cached          = is_cached;
+				}
+			}
+		}
+
+		if (result.device_local == VK_MAX_MEMORY_TYPES)
+			fmt::throw_exception("GPU doesn't support device local memory");
+		if (result.host_visible_coherent == VK_MAX_MEMORY_TYPES)
+			fmt::throw_exception("GPU doesn't support host coherent device local memory");
+		return result;
+	}
+
+	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev)
+	{
+		gpu_formats_support result = {};
+
+		VkFormatProperties props;
+		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_D24_UNORM_S8_UINT, &props);
+
+		result.d24_unorm_s8 = !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) && !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) &&
+		                      !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) && !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT);
+
+		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_D32_SFLOAT_S8_UINT, &props);
+		result.d32_sfloat_s8 = !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) && !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) &&
+		                       !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
+
+		// Hide d24_s8 if force high precision z buffer is enabled
+		if (g_cfg.video.force_high_precision_z_buffer && result.d32_sfloat_s8)
+			result.d24_unorm_s8 = false;
+
+		// Checks if BGRA8 images can be used for blitting
+		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_B8G8R8A8_UNORM, &props);
+		result.bgra8_linear = !!(props.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
+
+		// Check if device supports RGBA8 format
+		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_R8G8B8A8_UNORM, &props);
+		if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) || !(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) ||
+		    !(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT))
+		{
+			// Non-fatal. Most games use BGRA layout due to legacy reasons as old GPUs typically supported BGRA and RGBA was emulated.
+			rsx_log.error("Your GPU and/or driver does not support RGBA8 format. This can cause problems in some rare games that use this memory layout.");
+		}
+
+		result.argb8_linear = !!(props.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
+		return result;
+	}
+
+	pipeline_binding_table get_pipeline_binding_table(const vk::physical_device& dev)
+	{
+		pipeline_binding_table result{};
+
+		// Need to check how many samplers are supported by the driver
+		const auto usable_samplers             = std::min(dev.get_limits().maxPerStageDescriptorSampledImages, 32u);
+		result.vertex_textures_first_bind_slot = result.textures_first_bind_slot + usable_samplers;
+		result.total_descriptor_bindings       = result.vertex_textures_first_bind_slot + 4;
+		return result;
+	}
+}

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "VKPipelineCompiler.h"
 #include "VKRenderPass.h"
+#include "VKHelpers.h"
 #include "Utilities/Thread.h"
 
 #include <thread>

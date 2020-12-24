@@ -3,7 +3,8 @@
 #include "Emu/RSX/RSXVertexProgram.h"
 #include "Utilities/Thread.h"
 #include "VulkanAPI.h"
-#include "../VK/VKHelpers.h"
+#include "VKProgramPipeline.h"
+#include "helpers/pipeline_binding_table.h"
 
 namespace vk
 {

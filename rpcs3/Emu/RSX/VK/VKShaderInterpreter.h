@@ -1,5 +1,6 @@
 #pragma once
 #include "VKProgramBuffer.h"
+#include "VKHelpers.h"
 #include <unordered_map>
 
 namespace vk

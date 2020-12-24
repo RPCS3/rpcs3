@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "VKProgramPipeline.h"
 #include "VKHelpers.h"
 
 #include <string>
@@ -8,6 +9,66 @@ namespace vk
 	namespace glsl
 	{
 		using namespace ::glsl;
+
+		void shader::create(::glsl::program_domain domain, const std::string& source)
+		{
+			type     = domain;
+			m_source = source;
+		}
+
+		VkShaderModule shader::compile()
+		{
+			ensure(m_handle == VK_NULL_HANDLE);
+
+			if (!vk::compile_glsl_to_spv(m_source, type, m_compiled))
+			{
+				const std::string shader_type = type == ::glsl::program_domain::glsl_vertex_program ? "vertex" :
+					type == ::glsl::program_domain::glsl_fragment_program ? "fragment" : "compute";
+
+				rsx_log.notice("%s", m_source);
+				fmt::throw_exception("Failed to compile %s shader", shader_type);
+			}
+
+			VkShaderModuleCreateInfo vs_info;
+			vs_info.codeSize = m_compiled.size() * sizeof(u32);
+			vs_info.pNext    = nullptr;
+			vs_info.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+			vs_info.pCode    = m_compiled.data();
+			vs_info.flags    = 0;
+
+			VkDevice dev = *vk::get_current_renderer();
+			vkCreateShaderModule(dev, &vs_info, nullptr, &m_handle);
+
+			return m_handle;
+		}
+
+		void shader::destroy()
+		{
+			m_source.clear();
+			m_compiled.clear();
+
+			if (m_handle)
+			{
+				VkDevice dev = *vk::get_current_renderer();
+				vkDestroyShaderModule(dev, m_handle, nullptr);
+				m_handle = nullptr;
+			}
+		}
+
+		const std::string& shader::get_source() const
+		{
+			return m_source;
+		}
+
+		const std::vector<u32> shader::get_compiled() const
+		{
+			return m_compiled;
+		}
+
+		VkShaderModule shader::get_handle() const
+		{
+			return m_handle;
+		}
 
 		void program::create_impl()
 		{
