@@ -209,7 +209,7 @@ public:
 
 			MouseData new_data;
 			new_data.update = CELL_MOUSE_DATA_UPDATE;
-			new_data.wheel = rotation / 120; //120=event.GetWheelDelta()
+			new_data.wheel = rotation / 120; // 120=event.GetWheelDelta()
 			new_data.buttons = m_mice[p].buttons;
 
 			datalist.push_back(new_data);
@@ -250,9 +250,9 @@ public:
 			m_mice[p].x_pos = x_pos_new;
 			m_mice[p].y_pos = y_pos_new;
 
-			/*CellMouseRawData& rawdata = GetRawData(p);
-			rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)
-			rawdata.len++;*/
+			//CellMouseRawData& rawdata = GetRawData(p);
+			//rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)
+			//rawdata.len++;
 
 			datalist.push_back(new_data);
 		}

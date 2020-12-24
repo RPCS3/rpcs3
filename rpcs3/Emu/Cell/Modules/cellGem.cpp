@@ -265,8 +265,6 @@ static bool ds3_input_to_ext(const u32 port_no, CellGemExtPortData& ext)
 
 /**
  * \brief Maps Move controller data (digital buttons, and analog Trigger data) to mouse input.
- *        Move Button: Mouse1
- *        Trigger:     Mouse2
  * \param mouse_no Mouse index number to use
  * \param digital_buttons Bitmask filled with CELL_GEM_CTRL_* values
  * \param analog_t Analog value of Move's Trigger.
@@ -287,20 +285,43 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 
 	digital_buttons = 0;
 
-	if ((mouse_data.buttons & CELL_MOUSE_BUTTON_1) && (mouse_data.buttons & CELL_MOUSE_BUTTON_2))
-		digital_buttons |= CELL_GEM_CTRL_CIRCLE;
-	if (mouse_data.buttons & CELL_MOUSE_BUTTON_3)
-		digital_buttons |= CELL_GEM_CTRL_CROSS;
-	if (mouse_data.buttons & CELL_MOUSE_BUTTON_2)
-		digital_buttons |= CELL_GEM_CTRL_MOVE;
-	if ((mouse_data.buttons & CELL_MOUSE_BUTTON_1) && (mouse_data.buttons & CELL_MOUSE_BUTTON_3))
-		digital_buttons |= CELL_GEM_CTRL_START;
-	if (mouse_data.buttons & CELL_MOUSE_BUTTON_1)
-		digital_buttons |= CELL_GEM_CTRL_T;
-	if ((mouse_data.buttons & CELL_MOUSE_BUTTON_2) && (mouse_data.buttons & CELL_MOUSE_BUTTON_3))
-		digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
+	// Handle mouse clicks exclusively. Some games prefer one button over another.
+	const bool clicked_left = !!(mouse_data.buttons & CELL_MOUSE_BUTTON_1);
+	const bool clicked_right = !!(mouse_data.buttons & CELL_MOUSE_BUTTON_2);
+	const bool clicked_middle = !!(mouse_data.buttons & CELL_MOUSE_BUTTON_3);
 
-	analog_t = (mouse_data.buttons & CELL_MOUSE_BUTTON_1) ? 0xFFFF : 0;
+	if (clicked_left)
+	{
+		if (clicked_right)
+		{
+			digital_buttons |= CELL_GEM_CTRL_CIRCLE;
+		}
+		else if (clicked_middle)
+		{
+			digital_buttons |= CELL_GEM_CTRL_START;
+		}
+		else
+		{
+			digital_buttons |= CELL_GEM_CTRL_T;
+		}
+	}
+	else if (clicked_right)
+	{
+		if (clicked_middle)
+		{
+			digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
+		}
+		else
+		{
+			digital_buttons |= CELL_GEM_CTRL_MOVE;
+		}
+	}
+	else if (clicked_middle)
+	{
+		digital_buttons |= CELL_GEM_CTRL_CROSS;
+	}
+
+	analog_t = clicked_left ? 0xFFFF : 0;
 
 	return true;
 }
