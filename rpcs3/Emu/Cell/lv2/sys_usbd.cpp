@@ -204,6 +204,9 @@ usb_handler_thread::usb_handler_thread()
 
 		// GCon3 Gun
 		check_device(0x0B9A, 0x0800, 0x0800, "guncon3");
+
+		// uDraw GameTablet
+		check_device(0x20D6, 0xCB17, 0xCB17, "uDraw GameTablet");
 	}
 
 	libusb_free_device_list(list, 1);
