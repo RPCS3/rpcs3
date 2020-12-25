@@ -22,7 +22,7 @@ option(USE_LIBEVDEV "libevdev-based joystick support" ON)
 option(USE_DISCORD_RPC "Discord rich presence integration" ON)
 option(USE_SYSTEM_ZLIB "Prefer system ZLIB instead of the builtin one" ON)
 option(USE_VULKAN "Vulkan render backend" ON)
-option(USE_PRECOMPILED_HEADERS "Use precompiled headers" ON)
+option(USE_PRECOMPILED_HEADERS "Use precompiled headers" OFF)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/rpcs3/cmake_modules")
 
