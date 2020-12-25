@@ -209,9 +209,6 @@ protected:
 	const RSXFragmentProgram &m_prog;
 	u32 m_ctrl = 0;
 
-	u32 m_2d_sampled_textures = 0;        //Mask of textures sampled as texture2D (conflicts with samplerShadow fetch)
-	u32 m_shadow_sampled_textures = 0;    //Mask of textures sampled as boolean shadow comparisons
-
 	/** returns the type name of float vectors.
 	 */
 	virtual std::string getFloatTypeName(usz elementCount) = 0;
@@ -273,7 +270,12 @@ public:
 
 	struct
 	{
-		u16  in_register_mask = 0;
+		u16 in_register_mask = 0;
+
+		u16 tex2d_sampler_mask = 0;
+		u16 shadow_sampler_mask = 0;
+		u16 redirected_sampler_mask = 0;
+
 		bool has_lit_op = false;
 		bool has_gather_op = false;
 		bool has_no_output = false;
