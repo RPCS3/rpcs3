@@ -1,4 +1,4 @@
-﻿#include "bin_patch.h"
+#include "bin_patch.h"
 #include "File.h"
 #include "Config.h"
 #include "version.h"
