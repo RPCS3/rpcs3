@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <typeinfo>
 #include <utility>
 #include <type_traits>
 #include <util/typeindices.hpp>
@@ -16,7 +15,6 @@ namespace stx
 			void** object_pointer;
 			unsigned long long created;
 			void(*destroy)(void*& ptr) noexcept;
-			const char* name;
 
 			static void sort_by_reverse_creation_order(destroy_info* begin, destroy_info* end);
 		};
@@ -31,7 +29,6 @@ namespace stx
 		{
 			void(*create)(void*& ptr) noexcept;
 			void(*destroy)(void*& ptr) noexcept;
-			const char* type_name = "__";
 
 			template <typename T>
 			static void call_ctor(void*& ptr) noexcept
@@ -60,7 +57,6 @@ namespace stx
 				typeinfo r;
 				r.create = &call_ctor<T>;
 				r.destroy = &call_dtor<T>;
-				r.type_name = typeid(T).name();
 				return r;
 			}
 		};
@@ -75,10 +71,10 @@ namespace stx
 		unsigned long long m_init_count = 0;
 
 		// Body is somewhere else if enabled
-		void init_reporter(const char* name, unsigned long long created) const noexcept;
+		void init_reporter(unsigned long long created) const noexcept;
 
 		// Body is somewhere else if enabled
-		void destroy_reporter(const char* name, unsigned long long created) const noexcept;
+		void destroy_reporter(unsigned long long created) const noexcept;
 
 	public:
 		constexpr manual_fixed_typemap() noexcept = default;
@@ -145,7 +141,6 @@ namespace stx
 				all_data[_max].object_pointer = &m_list[type.index()];
 				all_data[_max].created = m_order[type.index()];
 				all_data[_max].destroy = type.destroy;
-				all_data[_max].name = type.type_name;
 
 				// Clear creation order
 				m_order[type.index()] = 0;
@@ -159,7 +154,7 @@ namespace stx
 			for (unsigned i = 0; i < _max; i++)
 			{
 				if constexpr (Report)
-					destroy_reporter(all_data[i].name, all_data[i].created);
+					destroy_reporter(all_data[i].created);
 				all_data[i].destroy(*all_data[i].object_pointer);
 			}
 
@@ -179,7 +174,7 @@ namespace stx
 				{
 					m_order[type.index()] = ++m_init_count;
 					if constexpr (Report)
-						init_reporter(type.type_name, m_init_count);
+						init_reporter(m_init_count);
 				}
 			}
 		}
