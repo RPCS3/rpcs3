@@ -228,10 +228,6 @@ namespace rsx
 			fmt::throw_exception("Unreachable");
 		}
 
-		const uptr addr = uptr(address);
-		const uptr base = uptr(vm::g_base_addr);
-
-		ensure(addr > base);
-		return utils::address_range::start_length(u32(addr - base), range);
+		return utils::address_range::start_length(vm::get_addr(address), range);
 	}
 }

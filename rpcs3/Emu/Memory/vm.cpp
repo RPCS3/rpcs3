@@ -39,10 +39,10 @@ namespace vm
 	}
 
 	// Emulated virtual memory
-	u8* const g_base_addr = memory_reserve_4GiB(reinterpret_cast<void*>(0x2'0000'0000));
+	u8* const g_base_addr = memory_reserve_4GiB(reinterpret_cast<void*>(0x2'0000'0000), 0x2'0000'0000);
 
 	// Unprotected virtual memory mirror
-	u8* const g_sudo_addr = memory_reserve_4GiB(g_base_addr);
+	u8* const g_sudo_addr = g_base_addr + 0x1'0000'0000;
 
 	// Auxiliary virtual memory for executable areas
 	u8* const g_exec_addr = memory_reserve_4GiB(g_sudo_addr, 0x200000000);
@@ -1671,7 +1671,7 @@ namespace vm
 	{
 		g_locations.clear();
 
-		utils::memory_decommit(g_base_addr, 0x100000000);
+		utils::memory_decommit(g_base_addr, 0x200000000);
 		utils::memory_decommit(g_exec_addr, 0x100000000);
 		utils::memory_decommit(g_stat_addr, 0x100000000);
 	}
