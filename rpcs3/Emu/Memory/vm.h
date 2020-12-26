@@ -146,23 +146,30 @@ namespace vm
 	// Allocate segment at specified location, does nothing if exists already
 	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags = 0x200);
 
-	// Get PS3/PSV virtual memory address from the provided pointer (nullptr always converted to 0)
-	inline vm::addr_t get_addr(const void* real_ptr)
+	// Get PS3 virtual memory address from the provided pointer (nullptr or pointer from outside is always converted to 0)
+	// Super memory is allowed as well
+	inline std::pair<vm::addr_t, bool> try_get_addr(const void* real_ptr)
 	{
-		if (!real_ptr)
+		const std::make_unsigned_t<std::ptrdiff_t> diff = static_cast<const u8*>(real_ptr) - g_base_addr;
+
+		if (diff <= u64{UINT32_MAX} * 2 + 1)
 		{
-			return vm::addr_t{};
+			return {vm::addr_t{static_cast<u32>(diff)}, true};
 		}
 
-		const std::ptrdiff_t diff = static_cast<const u8*>(real_ptr) - g_base_addr;
-		const u32 res = static_cast<u32>(diff);
+		return {};
+	}
 
-		if (res == diff)
+	inline vm::addr_t get_addr(const void* ptr)
+	{
+		const auto [addr, ok] = try_get_addr(ptr);
+
+		if (!ok)
 		{
-			return static_cast<vm::addr_t>(res);
+			fmt::throw_exception("Not a virtual memory pointer (%p)", ptr);
 		}
 
-		fmt::throw_exception("Not a virtual memory pointer (%p)", real_ptr);
+		return addr;
 	}
 
 	template<typename T>

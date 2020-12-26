@@ -1594,21 +1594,27 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp) noexcept
 		return EXCEPTION_CONTINUE_SEARCH;
 	}
 
-	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - reinterpret_cast<u64>(vm::g_base_addr);
-	const u64 exec64 = (pExp->ExceptionRecord->ExceptionInformation[1] - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
+	const auto ptr = reinterpret_cast<u8*>(pExp->ExceptionRecord->ExceptionInformation[1]);
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
-	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull)
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
 	{
-		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(addr64), is_writing, pExp->ContextRecord))
-		{
-			return EXCEPTION_CONTINUE_EXECUTION;
-		}
-	}
+		u32 addr = 0;
 
-	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && exec64 < 0x100000000ull)
-	{
-		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(exec64), is_writing, pExp->ContextRecord))
+		if (auto [addr0, ok] = vm::try_get_addr(ptr); ok)
+		{
+			addr = addr0;
+		}
+		else if (const usz exec64 = (ptr - vm::g_exec_addr) / 2; exec64 <= UINT32_MAX)
+		{
+			addr = static_cast<u32>(exec64);
+		}
+		else
+		{
+			return EXCEPTION_CONTINUE_SEARCH;
+		}
+
+		if (thread_ctrl::get_current() && handle_access_violation(addr, is_writing, pExp->ContextRecord))
 		{
 			return EXCEPTION_CONTINUE_EXECUTION;
 		}
@@ -1749,14 +1755,13 @@ static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 	const bool is_writing = context->uc_mcontext.gregs[REG_ERR] & 0x2;
 #endif
 
-	const u64 addr64 = reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_base_addr);
 	const u64 exec64 = (reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
 	const auto cause = is_writing ? "writing" : "reading";
 
-	if (addr64 < 0x100000000ull)
+	if (auto [addr, ok] = vm::try_get_addr(info->si_addr); ok)
 	{
 		// Try to process access violation
-		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(addr64), is_writing, context))
+		if (thread_ctrl::get_current() && handle_access_violation(addr, is_writing, context))
 		{
 			return;
 		}
