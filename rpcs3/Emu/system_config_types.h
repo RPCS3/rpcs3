@@ -95,6 +95,13 @@ enum class move_handler
 	mouse,
 };
 
+enum class buzz_handler
+{
+	null,
+	one_controller,
+	two_controllers,
+};
+
 enum class microphone_handler
 {
 	null,
