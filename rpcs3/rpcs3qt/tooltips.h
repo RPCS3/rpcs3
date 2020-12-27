@@ -181,6 +181,7 @@ public:
 		const QString camera            = tr("Camera support is not implemented, leave this on null.");
 		const QString camera_type       = tr("Camera support is not implemented, leave this on unknown.");
 		const QString move              = tr("PlayStation Move support.\nFake: Experimental! This maps Move controls to DS3 controller mappings.\nMouse: Emulate PSMove with Mouse handler.");
+		const QString buzz              = tr("Buzz! support.\nSelect 1 or 2 controllers if the game requires Buzz! controllers and you don't have real controllers.\nSelect Null if the game has support for DualShock or if you have real Buzz! controllers.");
 
 		// network
 
