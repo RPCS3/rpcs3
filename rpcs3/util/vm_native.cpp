@@ -39,6 +39,14 @@ namespace utils
 	constexpr int c_map_noreserve = 0;
 #endif
 
+#ifdef MADV_FREE
+	constexpr auto c_madv_free = MADV_FREE;
+#elif defined(MADV_DONTNEED)
+	constexpr auto c_madv_free = MADV_DONTNEED;
+#else
+	constexpr auto c_madv_free = 0;
+#endif
+
 #ifdef _WIN32
 	DYNAMIC_IMPORT("KernelBase.dll", VirtualAlloc2, PVOID(HANDLE Process, PVOID Base, SIZE_T Size, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
 	DYNAMIC_IMPORT("KernelBase.dll", MapViewOfFile3, PVOID(HANDLE Handle, HANDLE Process, PVOID Base, ULONG64 Off, SIZE_T ViewSize, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
@@ -144,11 +152,7 @@ namespace utils
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
 		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(-1));
-#ifdef MADV_FREE
-		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_FREE) != -1);
-#else
-		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_DONTNEED) != -1);
-#endif
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_free) != -1);
 #endif
 	}
 
@@ -159,11 +163,7 @@ namespace utils
 		memory_commit(pointer, size, prot);
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-#ifdef MADV_FREE
-		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_FREE) != -1);
-#else
-		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_DONTNEED) != -1);
-#endif
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_free) != -1);
 		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1));
 		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
 
