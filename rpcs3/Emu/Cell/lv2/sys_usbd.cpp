@@ -231,8 +231,11 @@ usb_handler_thread::usb_handler_thread()
 
 	if (!found_buzz)
 	{
-		sys_usbd.error("Adding emulated Buzz! buzzer");
-		usb_devices.push_back(std::make_shared<usb_device_buzz>());
+		sys_usbd.notice("Adding emulated Buzz! buzzer");
+		usb_devices.push_back(std::make_shared<usb_device_buzz>(0, 3));
+		// The current buzz emulation piggybacks on the pad input.
+		// Since there can only be 7 pads connected on a PS3 the 8th player is currently not supported
+		usb_devices.push_back(std::make_shared<usb_device_buzz>(4, 6));
 	}
 
 	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)

@@ -7,8 +7,11 @@
 
 LOG_CHANNEL(buzz_log);
 
-usb_device_buzz::usb_device_buzz()
+usb_device_buzz::usb_device_buzz(int first_controller, int last_controller)
 {
+	this->first_controller = first_controller;
+	this->last_controller  = last_controller;
+
 	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 0x08, 0x054c, 0x0002, 0x05a1, 0x03, 0x01, 0x00, 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0022, 0x01, 0x01, 0x00, 0x80, 0x32}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE, UsbDeviceInterface{0x00, 0x00, 0x01, 0x03, 0x00, 0x00, 0x00}));
@@ -44,7 +47,7 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 	transfer->fake            = true;
 	transfer->expected_count  = 5;
 	transfer->expected_result = HC_CC_NOERR;
-	// Interrupt transfers are slow(6ms, TODO accurate measurement)
+	// Interrupt transfers are slow (6ms, TODO accurate measurement)
 	transfer->expected_time = get_timestamp() + 6000;
 
 	memset(buf, 0, buf_size);
@@ -59,9 +62,10 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 	const auto handler = pad::get_current_handler();
 	const auto& pads   = handler->GetPads();
 
-	for (int index = 0; index < 4; index++)
+	for (int index = 0; index <= (last_controller - first_controller); index++)
 	{
-		auto pad = pads[index];
+		const auto pad = pads[first_controller + index];
+
 		if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 			continue;
 
