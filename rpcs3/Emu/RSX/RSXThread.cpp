@@ -1887,13 +1887,24 @@ namespace rsx
 						texture_control |= (float_en << texture_control_bits::DEPTH_FLOAT);
 						break;
 					}
-					case CELL_GCM_TEXTURE_X16: // A simple way to quickly read DEPTH16 data without shadow comparison
+					case CELL_GCM_TEXTURE_X16:
+					{
+						// A simple way to quickly read DEPTH16 data without shadow comparison
+						break;
+					}
 					case CELL_GCM_TEXTURE_DEPTH16:
 					case CELL_GCM_TEXTURE_DEPTH24_D8:
 					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
 					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 					{
-						// Supported formats, nothing to do
+						// Natively supported Z formats with shadow comparison feature
+						const auto compare_mode = tex.zfunc();
+						if (!tex.alpha_kill_enabled() &&
+							compare_mode < rsx::comparison_function::always &&
+							compare_mode > rsx::comparison_function::never)
+						{
+							current_fragment_program.shadow_textures |= (1 << i);
+						}
 						break;
 					}
 					default:
