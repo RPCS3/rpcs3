@@ -192,12 +192,8 @@ namespace vk
 
 		if (allocated_memory)
 		{
-			VkBufferCopy copy{};
-			copy.srcOffset = 0;
-			copy.dstOffset = inheritance_info.block_offset;
-			copy.size = allocated_memory->size();
-			vkCmdCopyBuffer(cmd, allocated_memory->value, parent->allocated_memory->value, 1, &copy);
-
+			// Acquired blocks are always to be assumed dirty. It is not possible to synchronize host access and inline
+			// buffer copies without causing weird issues. Overlapped incomplete data ends up overwriting host-uploaded data.
 			auto gc = vk::get_resource_manager();
 			gc->dispose(allocated_memory);
 
@@ -219,10 +215,8 @@ namespace vk
 			dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
 
-		VkBufferCopy copy{};
-		copy.size = allocated_memory->size();
-		vkCmdCopyBuffer(cmd, allocated_memory->value, new_allocation->value, 1, &copy);
-
+		// Acquired blocks are always to be assumed dirty. It is not possible to synchronize host access and inline
+		// buffer copies without causing weird issues. Overlapped incomplete data ends up overwriting host-uploaded data.
 		auto gc = vk::get_resource_manager();
 		gc->dispose(allocated_memory);
 		allocated_memory = std::move(new_allocation);
@@ -251,13 +245,16 @@ namespace vk
 		const auto limit = local_address + length - 1;
 		auto last_block = (limit & s_dma_block_mask);
 
-		if (first_block == last_block) [[likely]]
+		if (auto found = g_dma_pool.find(first_block); found != g_dma_pool.end())
 		{
-			if (auto found = g_dma_pool.find(first_block); found != g_dma_pool.end())
+			if (found->second.end() >= limit)
 			{
 				return found->second.get(map_range);
 			}
+		}
 
+		if (first_block == last_block) [[likely]]
+		{
 			auto &block_info = g_dma_pool[first_block];
 			block_info.init(*g_render_device, first_block, s_dma_block_length);
 			return block_info.get(map_range);
@@ -274,6 +271,7 @@ namespace vk
 				const auto end = found->second.end();
 				last_block = std::max(last_block, end & s_dma_block_mask);
 				block_end = std::max(block_end, end + 1);
+
 				break;
 			}
 		}
