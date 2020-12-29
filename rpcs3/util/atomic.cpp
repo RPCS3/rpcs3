@@ -162,15 +162,7 @@ static NEVER_INLINE bool ptr_cmp(const void* data, u32 _size, u128 old128, u128 
 			// Count is taken from least significant byte and ignores some flags
 			const u64 count = static_cast<u64>(old128) & 0xff;
 
-			u64 bitc = new_value;
-			bitc = (bitc & 0xaaaaaaaaaaaaaaaa) / 2 + (bitc & 0x5555555555555555);
-			bitc = (bitc & 0xcccccccccccccccc) / 4 + (bitc & 0x3333333333333333);
-			bitc = (bitc & 0xf0f0f0f0f0f0f0f0) / 16 + (bitc & 0x0f0f0f0f0f0f0f0f);
-			bitc = (bitc & 0xff00ff00ff00ff00) / 256 + (bitc & 0x00ff00ff00ff00ff);
-			bitc = ((bitc & 0xffff0000ffff0000) >> 16) + (bitc & 0x0000ffff0000ffff);
-			bitc = (bitc >> 32) + bitc;
-
-			result = count < bitc;
+			result = count < utils::popcnt64(new_value);
 			break;
 		}
 		default:
