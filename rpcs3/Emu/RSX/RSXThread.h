@@ -615,6 +615,8 @@ namespace rsx
 		// FIFO
 	public:
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
+		rsx_state method_regs;
+
 	protected:
 		FIFO::flattening_helper m_flattener;
 		u32 fifo_ret_addr = RSX_CALL_STACK_EMPTY;
@@ -837,7 +839,7 @@ namespace rsx
 		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
 
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
-		get_draw_command(const rsx::rsx_state& state) const;
+		get_draw_command() const;
 
 		/**
 		* Immediate mode rendering requires a temp push buffer to hold attrib values

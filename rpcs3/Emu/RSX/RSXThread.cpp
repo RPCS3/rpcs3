@@ -449,7 +449,7 @@ namespace rsx
 		in_begin_end = false;
 		m_frame_stats.draw_calls++;
 
-		method_registers.current_draw_clause.post_execute_cleanup();
+		method_regs.current_draw_clause.post_execute_cleanup();
 
 		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
 		ROP_sync_timestamp = get_system_time();
@@ -457,7 +457,7 @@ namespace rsx
 		for (auto & push_buf : vertex_push_buffers)
 		{
 			//Disabled, see https://github.com/RPCS3/rpcs3/issues/1932
-			//rsx::method_registers.register_vertex_info[index].size = 0;
+			//method_regs.register_vertex_info[index].size = 0;
 
 			push_buf.clear();
 		}
@@ -468,19 +468,19 @@ namespace rsx
 
 		if (capture_current_frame)
 		{
-			u32 element_count = rsx::method_registers.current_draw_clause.get_elements_count();
-			capture_frame("Draw " + rsx::to_string(rsx::method_registers.current_draw_clause.primitive) + std::to_string(element_count));
+			u32 element_count = method_regs.current_draw_clause.get_elements_count();
+			capture_frame("Draw " + rsx::to_string(method_regs.current_draw_clause.primitive) + std::to_string(element_count));
 		}
 	}
 
 	void thread::execute_nop_draw()
 	{
-		method_registers.current_draw_clause.begin();
+		method_regs.current_draw_clause.begin();
 		do
 		{
-			method_registers.current_draw_clause.execute_pipeline_dependencies();
+			method_regs.current_draw_clause.execute_pipeline_dependencies();
 		}
-		while (method_registers.current_draw_clause.next());
+		while (method_regs.current_draw_clause.next());
 	}
 
 	void thread::operator()()
@@ -524,7 +524,7 @@ namespace rsx
 		g_fxo->get<rsx::dma_manager>()->init();
 		on_init_thread();
 
-		method_registers.init();
+		method_regs.init();
 
 		if (!zcull_ctrl)
 		{
@@ -672,21 +672,21 @@ namespace rsx
 
 	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
 	{
-		int clip_w = rsx::method_registers.surface_clip_width();
-		int clip_h = rsx::method_registers.surface_clip_height();
+		int clip_w = method_regs.surface_clip_width();
+		int clip_h = method_regs.surface_clip_height();
 
-		float scale_x = rsx::method_registers.viewport_scale_x() / (clip_w / 2.f);
-		float offset_x = rsx::method_registers.viewport_offset_x() - (clip_w / 2.f);
+		float scale_x = method_regs.viewport_scale_x() / (clip_w / 2.f);
+		float offset_x = method_regs.viewport_offset_x() - (clip_w / 2.f);
 		offset_x /= clip_w / 2.f;
 
-		float scale_y = rsx::method_registers.viewport_scale_y() / (clip_h / 2.f);
-		float offset_y = (rsx::method_registers.viewport_offset_y() - (clip_h / 2.f));
+		float scale_y = method_regs.viewport_scale_y() / (clip_h / 2.f);
+		float offset_y = (method_regs.viewport_offset_y() - (clip_h / 2.f));
 		offset_y /= clip_h / 2.f;
 		if (flip_y) scale_y *= -1;
 		if (flip_y) offset_y *= -1;
 
-		float scale_z = rsx::method_registers.viewport_scale_z();
-		float offset_z = rsx::method_registers.viewport_offset_z();
+		float scale_z = method_regs.viewport_scale_z();
+		float offset_z = method_regs.viewport_offset_z();
 		float one = 1.f;
 
 		stream_vector(buffer, std::bit_cast<u32>(scale_x), 0, 0, std::bit_cast<u32>(offset_x));
@@ -699,12 +699,12 @@ namespace rsx
 	{
 		const rsx::user_clip_plane_op clip_plane_control[6] =
 		{
-			rsx::method_registers.clip_plane_0_enabled(),
-			rsx::method_registers.clip_plane_1_enabled(),
-			rsx::method_registers.clip_plane_2_enabled(),
-			rsx::method_registers.clip_plane_3_enabled(),
-			rsx::method_registers.clip_plane_4_enabled(),
-			rsx::method_registers.clip_plane_5_enabled(),
+			method_regs.clip_plane_0_enabled(),
+			method_regs.clip_plane_1_enabled(),
+			method_regs.clip_plane_2_enabled(),
+			method_regs.clip_plane_3_enabled(),
+			method_regs.clip_plane_4_enabled(),
+			method_regs.clip_plane_5_enabled(),
 		};
 
 		u8 data_block[64];
@@ -745,36 +745,36 @@ namespace rsx
 	*/
 	void thread::fill_vertex_program_constants_data(void *buffer)
 	{
-		memcpy(buffer, rsx::method_registers.transform_constants.data(), 468 * 4 * sizeof(float));
+		memcpy(buffer, method_regs.transform_constants.data(), 468 * 4 * sizeof(float));
 	}
 
 	void thread::fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program)
 	{
 		u32 rop_control = 0u;
 
-		if (rsx::method_registers.alpha_test_enabled())
+		if (method_regs.alpha_test_enabled())
 		{
-			const u32 alpha_func = static_cast<u32>(rsx::method_registers.alpha_func());
+			const u32 alpha_func = static_cast<u32>(method_regs.alpha_func());
 			rop_control |= (alpha_func << 16);
 			rop_control |= ROP_control::alpha_test_enable;
 		}
 
-		if (rsx::method_registers.polygon_stipple_enabled())
+		if (method_regs.polygon_stipple_enabled())
 		{
 			rop_control |= ROP_control::polygon_stipple_enable;
 		}
 
-		if (rsx::method_registers.msaa_alpha_to_coverage_enabled() && !backend_config.supports_hw_a2c)
+		if (method_regs.msaa_alpha_to_coverage_enabled() && !backend_config.supports_hw_a2c)
 		{
 			// TODO: Properly support alpha-to-coverage and alpha-to-one behavior in shaders
 			// Alpha values generate a coverage mask for order independent blending
 			// Requires hardware AA to work properly (or just fragment sample stage in fragment shaders)
 			// Simulated using combined alpha blend and alpha test
-			if (rsx::method_registers.msaa_sample_mask()) rop_control |= ROP_control::msaa_mask_enable;
+			if (method_regs.msaa_sample_mask()) rop_control |= ROP_control::msaa_mask_enable;
 			rop_control |= ROP_control::csaa_enable;
 
 			// Sample configuration bits
-			switch (rsx::method_registers.surface_antialias())
+			switch (method_regs.surface_antialias())
 			{
 				case rsx::surface_antialiasing::center_1_sample:
 					break;
@@ -787,14 +787,14 @@ namespace rsx
 			}
 		}
 
-		const f32 fog0 = rsx::method_registers.fog_params_0();
-		const f32 fog1 = rsx::method_registers.fog_params_1();
-		const u32 fog_mode = static_cast<u32>(rsx::method_registers.fog_equation());
+		const f32 fog0 = method_regs.fog_params_0();
+		const f32 fog1 = method_regs.fog_params_1();
+		const u32 fog_mode = static_cast<u32>(method_regs.fog_equation());
 
-		if (rsx::method_registers.framebuffer_srgb_enabled())
+		if (method_regs.framebuffer_srgb_enabled())
 		{
 			// Check if framebuffer is actually an XRGB format and not a WZYX format
-			switch (rsx::method_registers.surface_color())
+			switch (method_regs.surface_color())
 			{
 			case rsx::surface_color_format::w16z16y16x16:
 			case rsx::surface_color_format::w32z32y32x32:
@@ -812,12 +812,12 @@ namespace rsx
 		// wpos.x = (frag_coord / resolution_scale)
 		// wpos.zw = frag_coord.zw
 
-		const auto window_origin = rsx::method_registers.shader_window_origin();
-		const u32 window_height = rsx::method_registers.shader_window_height();
+		const auto window_origin = method_regs.shader_window_origin();
+		const u32 window_height = method_regs.shader_window_height();
 		const f32 resolution_scale = (window_height <= static_cast<u32>(g_cfg.video.min_scalable_dimension)) ? 1.f : rsx::get_resolution_scale();
 		const f32 wpos_scale = (window_origin == rsx::window_origin::top) ? (1.f / resolution_scale) : (-1.f / resolution_scale);
 		const f32 wpos_bias = (window_origin == rsx::window_origin::top) ? 0.f : window_height;
-		const f32 alpha_ref = rsx::method_registers.alpha_ref();
+		const f32 alpha_ref = method_regs.alpha_ref();
 
 		u32 *dst = static_cast<u32*>(buffer);
 		stream_vector(dst, std::bit_cast<u32>(fog0), std::bit_cast<u32>(fog1), rop_control, std::bit_cast<u32>(alpha_ref));
@@ -883,14 +883,14 @@ namespace rsx
 			return{reinterpret_cast<const std::byte*>(element_push_buffer.data()), ::narrow<u32>(element_push_buffer.size() * sizeof(u32))};
 		}
 
-		const rsx::index_array_type type = rsx::method_registers.index_type();
+		const rsx::index_array_type type = method_regs.index_type();
 		const u32 type_size = get_index_type_size(type);
 
 		// Force aligned indices as realhw
-		const u32 address = (0 - type_size) & get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
+		const u32 address = (0 - type_size) & get_address(method_regs.index_array_address(), method_regs.index_array_location());
 
-		const bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
-		const u32 primitive_restart_index = rsx::method_registers.restart_index();
+		const bool is_primitive_restart_enabled = method_regs.restart_index_enabled();
+		const u32 primitive_restart_index = method_regs.restart_index();
 
 		const u32 first = draw_indexed_clause.min_index();
 		const u32 count = draw_indexed_clause.get_elements_count();
@@ -900,22 +900,22 @@ namespace rsx
 	}
 
 	std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
-	thread::get_draw_command(const rsx::rsx_state& state) const
+	thread::get_draw_command() const
 	{
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::array)
+		if (method_regs.current_draw_clause.command == rsx::draw_command::array)
 		{
 			return draw_array_command{};
 		}
 
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::indexed)
+		if (method_regs.current_draw_clause.command == rsx::draw_command::indexed)
 		{
 			return draw_indexed_array_command
 			{
-				get_raw_index_array(state.current_draw_clause)
+				get_raw_index_array(method_regs.current_draw_clause)
 			};
 		}
 
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
+		if (method_regs.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			return draw_inlined_array{};
 		}
@@ -965,17 +965,17 @@ namespace rsx
 	{
 		u32 offset_color[] =
 		{
-			rsx::method_registers.surface_a_offset(),
-			rsx::method_registers.surface_b_offset(),
-			rsx::method_registers.surface_c_offset(),
-			rsx::method_registers.surface_d_offset(),
+			method_regs.surface_a_offset(),
+			method_regs.surface_b_offset(),
+			method_regs.surface_c_offset(),
+			method_regs.surface_d_offset(),
 		};
 		u32 context_dma_color[] =
 		{
-			rsx::method_registers.surface_a_dma(),
-			rsx::method_registers.surface_b_dma(),
-			rsx::method_registers.surface_c_dma(),
-			rsx::method_registers.surface_d_dma(),
+			method_regs.surface_a_dma(),
+			method_regs.surface_b_dma(),
+			method_regs.surface_c_dma(),
+			method_regs.surface_d_dma(),
 		};
 		return
 		{
@@ -988,8 +988,8 @@ namespace rsx
 
 	u32 thread::get_zeta_surface_address() const
 	{
-		u32 m_context_dma_z = rsx::method_registers.surface_z_dma();
-		u32 offset_zeta = rsx::method_registers.surface_z_offset();
+		u32 m_context_dma_z = method_regs.surface_z_dma();
+		u32 offset_zeta = method_regs.surface_z_offset();
 		return rsx::get_address(offset_zeta, m_context_dma_z);
 	}
 
@@ -998,8 +998,8 @@ namespace rsx
 		layout = {};
 
 		layout.ignore_change = true;
-		layout.width = rsx::method_registers.surface_clip_width();
-		layout.height = rsx::method_registers.surface_clip_height();
+		layout.width = method_regs.surface_clip_width();
+		layout.height = method_regs.surface_clip_height();
 
 		framebuffer_status_valid = false;
 		m_framebuffer_state_contested = false;
@@ -1011,51 +1011,51 @@ namespace rsx
 			return;
 		}
 
-		const u16 clip_x = rsx::method_registers.surface_clip_origin_x();
-		const u16 clip_y = rsx::method_registers.surface_clip_origin_y();
+		const u16 clip_x = method_regs.surface_clip_origin_x();
+		const u16 clip_y = method_regs.surface_clip_origin_y();
 
 		layout.color_addresses = get_color_surface_addresses();
 		layout.zeta_address = get_zeta_surface_address();
-		layout.zeta_pitch = rsx::method_registers.surface_z_pitch();
+		layout.zeta_pitch = method_regs.surface_z_pitch();
 		layout.color_pitch =
 		{
-			rsx::method_registers.surface_a_pitch(),
-			rsx::method_registers.surface_b_pitch(),
-			rsx::method_registers.surface_c_pitch(),
-			rsx::method_registers.surface_d_pitch(),
+			method_regs.surface_a_pitch(),
+			method_regs.surface_b_pitch(),
+			method_regs.surface_c_pitch(),
+			method_regs.surface_d_pitch(),
 		};
 
-		layout.color_format = rsx::method_registers.surface_color();
-		layout.depth_format = rsx::method_registers.surface_depth_fmt();
-		layout.target = rsx::method_registers.surface_color_target();
+		layout.color_format = method_regs.surface_color();
+		layout.depth_format = method_regs.surface_depth_fmt();
+		layout.target = method_regs.surface_color_target();
 
 		const auto mrt_buffers = rsx::utility::get_rtt_indexes(layout.target);
-		const auto aa_mode = rsx::method_registers.surface_antialias();
+		const auto aa_mode = method_regs.surface_antialias();
 		const u32 aa_factor_u = (aa_mode == rsx::surface_antialiasing::center_1_sample) ? 1 : 2;
 		const u32 aa_factor_v = (aa_mode == rsx::surface_antialiasing::center_1_sample || aa_mode == rsx::surface_antialiasing::diagonal_centered_2_samples) ? 1 : 2;
 		const u8 sample_count = get_format_sample_count(aa_mode);
 
 		const auto depth_texel_size = get_format_block_size_in_bytes(layout.depth_format) * aa_factor_u;
 		const auto color_texel_size = get_format_block_size_in_bytes(layout.color_format) * aa_factor_u;
-		const bool stencil_test_enabled = is_depth_stencil_format(layout.depth_format) && rsx::method_registers.stencil_test_enabled();
-		const bool depth_test_enabled = rsx::method_registers.depth_test_enabled();
+		const bool stencil_test_enabled = is_depth_stencil_format(layout.depth_format) && method_regs.stencil_test_enabled();
+		const bool depth_test_enabled = method_regs.depth_test_enabled();
 
 		// Check write masks
-		layout.zeta_write_enabled = (depth_test_enabled && rsx::method_registers.depth_write_enabled());
+		layout.zeta_write_enabled = (depth_test_enabled && method_regs.depth_write_enabled());
 		if (!layout.zeta_write_enabled && stencil_test_enabled)
 		{
 			// Check if stencil data is modified
-			auto mask = rsx::method_registers.stencil_mask();
-			bool active_write_op = (rsx::method_registers.stencil_op_zpass() != rsx::stencil_op::keep ||
-				rsx::method_registers.stencil_op_fail() != rsx::stencil_op::keep ||
-				rsx::method_registers.stencil_op_zfail() != rsx::stencil_op::keep);
+			auto mask = method_regs.stencil_mask();
+			bool active_write_op = (method_regs.stencil_op_zpass() != rsx::stencil_op::keep ||
+				method_regs.stencil_op_fail() != rsx::stencil_op::keep ||
+				method_regs.stencil_op_zfail() != rsx::stencil_op::keep);
 
-			if ((!mask || !active_write_op) && rsx::method_registers.two_sided_stencil_test_enabled())
+			if ((!mask || !active_write_op) && method_regs.two_sided_stencil_test_enabled())
 			{
-				mask |= rsx::method_registers.back_stencil_mask();
-				active_write_op |= (rsx::method_registers.back_stencil_op_zpass() != rsx::stencil_op::keep ||
-					rsx::method_registers.back_stencil_op_fail() != rsx::stencil_op::keep ||
-					rsx::method_registers.back_stencil_op_zfail() != rsx::stencil_op::keep);
+				mask |= method_regs.back_stencil_mask();
+				active_write_op |= (method_regs.back_stencil_op_zpass() != rsx::stencil_op::keep ||
+					method_regs.back_stencil_op_fail() != rsx::stencil_op::keep ||
+					method_regs.back_stencil_op_zfail() != rsx::stencil_op::keep);
 			}
 
 			layout.zeta_write_enabled = (mask && active_write_op);
@@ -1065,7 +1065,7 @@ namespace rsx
 		bool color_write_enabled = false;
 		for (uint i = 0; i < mrt_buffers.size(); ++i)
 		{
-			if (rsx::method_registers.color_write_enabled(i))
+			if (method_regs.color_write_enabled(i))
 			{
 				const auto real_index = mrt_buffers[i];
 				layout.color_write_enabled[real_index] = true;
@@ -1095,10 +1095,10 @@ namespace rsx
 				{
 					depth_buffer_unused = true;
 				}
-				else if (!rsx::method_registers.depth_write_enabled())
+				else if (!method_regs.depth_write_enabled())
 				{
 					// Depth test is enabled but depth write is disabled
-					switch (rsx::method_registers.depth_func())
+					switch (method_regs.depth_func())
 					{
 					default:
 						break;
@@ -1114,8 +1114,8 @@ namespace rsx
 				{
 					// Check if depth bounds is active. Depth bounds test does NOT need depth test to be enabled to access the Z buffer
 					// Bind Z buffer in read mode for bounds check in this case
-					if (rsx::method_registers.depth_bounds_test_enabled() &&
-						(rsx::method_registers.depth_bounds_min() > 0.f || rsx::method_registers.depth_bounds_max() < 1.f))
+					if (method_regs.depth_bounds_test_enabled() &&
+						(method_regs.depth_bounds_min() > 0.f || method_regs.depth_bounds_max() < 1.f))
 					{
 						depth_buffer_unused = false;
 					}
@@ -1134,7 +1134,7 @@ namespace rsx
 		u32 minimum_color_pitch = 64u;
 		u32 minimum_zeta_pitch = 64u;
 
-		switch (layout.raster_type = rsx::method_registers.surface_type())
+		switch (layout.raster_type = method_regs.surface_type())
 		{
 		default:
 			rsx_log.error("Unknown raster mode 0x%x", static_cast<u32>(layout.raster_type));
@@ -1150,7 +1150,7 @@ namespace rsx
 		{
 			// Well, this is a write operation either way (clearing or drawing)
 			// We can deduce a minimum pitch for which this operation is guaranteed to require by checking for the lesser of scissor or clip
-			const u32 write_limit_x = std::min<u32>(layout.width, rsx::method_registers.scissor_origin_x() + rsx::method_registers.scissor_width());
+			const u32 write_limit_x = std::min<u32>(layout.width, method_regs.scissor_origin_x() + method_regs.scissor_width());
 
 			minimum_color_pitch = color_texel_size * write_limit_x;
 			minimum_zeta_pitch = depth_texel_size * write_limit_x;
@@ -1250,17 +1250,17 @@ namespace rsx
 		framebuffer_status_valid = true;
 
 		// Window (raster) offsets
-		const auto window_offset_x = rsx::method_registers.window_offset_x();
-		const auto window_offset_y = rsx::method_registers.window_offset_y();
-		const auto window_clip_width = rsx::method_registers.window_clip_horizontal();
-		const auto window_clip_height = rsx::method_registers.window_clip_vertical();
+		const auto window_offset_x = method_regs.window_offset_x();
+		const auto window_offset_y = method_regs.window_offset_y();
+		const auto window_clip_width = method_regs.window_clip_horizontal();
+		const auto window_clip_height = method_regs.window_clip_vertical();
 
 		if (window_offset_x || window_offset_y)
 		{
 			// Window offset is what affects the raster position!
 			// Tested with Turbo: Super stunt squad that only changes the window offset to declare new framebuffers
 			// Sampling behavior clearly indicates the addresses are expected to have changed
-			if (auto clip_type = rsx::method_registers.window_clip_type())
+			if (auto clip_type = method_regs.window_clip_type())
 				rsx_log.error("Unknown window clip type 0x%X", clip_type);
 
 			for (const auto &index : rsx::utility::get_rtt_indexes(layout.target))
@@ -1331,27 +1331,27 @@ namespace rsx
 		auto evaluate_depth_buffer_state = [&]()
 		{
 			m_framebuffer_layout.zeta_write_enabled =
-				(rsx::method_registers.depth_test_enabled() && rsx::method_registers.depth_write_enabled());
+				(method_regs.depth_test_enabled() && method_regs.depth_write_enabled());
 		};
 
 		auto evaluate_stencil_buffer_state = [&]()
 		{
 			if (!m_framebuffer_layout.zeta_write_enabled &&
-				rsx::method_registers.stencil_test_enabled() &&
+				method_regs.stencil_test_enabled() &&
 				is_depth_stencil_format(m_framebuffer_layout.depth_format))
 			{
 				// Check if stencil data is modified
-				auto mask = rsx::method_registers.stencil_mask();
-				bool active_write_op = (rsx::method_registers.stencil_op_zpass() != rsx::stencil_op::keep ||
-					rsx::method_registers.stencil_op_fail() != rsx::stencil_op::keep ||
-					rsx::method_registers.stencil_op_zfail() != rsx::stencil_op::keep);
+				auto mask = method_regs.stencil_mask();
+				bool active_write_op = (method_regs.stencil_op_zpass() != rsx::stencil_op::keep ||
+					method_regs.stencil_op_fail() != rsx::stencil_op::keep ||
+					method_regs.stencil_op_zfail() != rsx::stencil_op::keep);
 
-				if ((!mask || !active_write_op) && rsx::method_registers.two_sided_stencil_test_enabled())
+				if ((!mask || !active_write_op) && method_regs.two_sided_stencil_test_enabled())
 				{
-					mask |= rsx::method_registers.back_stencil_mask();
-					active_write_op |= (rsx::method_registers.back_stencil_op_zpass() != rsx::stencil_op::keep ||
-						rsx::method_registers.back_stencil_op_fail() != rsx::stencil_op::keep ||
-						rsx::method_registers.back_stencil_op_zfail() != rsx::stencil_op::keep);
+					mask |= method_regs.back_stencil_mask();
+					active_write_op |= (method_regs.back_stencil_op_zpass() != rsx::stencil_op::keep ||
+						method_regs.back_stencil_op_fail() != rsx::stencil_op::keep ||
+						method_regs.back_stencil_op_zfail() != rsx::stencil_op::keep);
 				}
 
 				m_framebuffer_layout.zeta_write_enabled = (mask && active_write_op);
@@ -1365,7 +1365,7 @@ namespace rsx
 
 			for (uint i = 0; i < mrt_buffers.size(); ++i)
 			{
-				if (rsx::method_registers.color_write_enabled(i))
+				if (method_regs.color_write_enabled(i))
 				{
 					const auto real_index = mrt_buffers[i];
 					m_framebuffer_layout.color_write_enabled[real_index] = true;
@@ -1386,14 +1386,14 @@ namespace rsx
 
 			// Check if depth read/write is enabled
 			if (m_framebuffer_layout.zeta_write_enabled ||
-				rsx::method_registers.depth_test_enabled())
+				method_regs.depth_test_enabled())
 			{
 				return true;
 			}
 
 			// Check if stencil read is enabled
 			if (is_depth_stencil_format(m_framebuffer_layout.depth_format) &&
-				rsx::method_registers.stencil_test_enabled())
+				method_regs.stencil_test_enabled())
 			{
 				return true;
 			}
@@ -1491,17 +1491,17 @@ namespace rsx
 
 		u16 x1, x2, y1, y2;
 
-		u16 scissor_x = rsx::method_registers.scissor_origin_x();
-		u16 scissor_w = rsx::method_registers.scissor_width();
-		u16 scissor_y = rsx::method_registers.scissor_origin_y();
-		u16 scissor_h = rsx::method_registers.scissor_height();
+		u16 scissor_x = method_regs.scissor_origin_x();
+		u16 scissor_w = method_regs.scissor_width();
+		u16 scissor_y = method_regs.scissor_origin_y();
+		u16 scissor_h = method_regs.scissor_height();
 
 		if (clip_viewport)
 		{
-			u16 raster_x = rsx::method_registers.viewport_origin_x();
-			u16 raster_w = rsx::method_registers.viewport_width();
-			u16 raster_y = rsx::method_registers.viewport_origin_y();
-			u16 raster_h = rsx::method_registers.viewport_height();
+			u16 raster_x = method_regs.viewport_origin_x();
+			u16 raster_w = method_regs.viewport_width();
+			u16 raster_y = method_regs.viewport_origin_y();
+			u16 raster_h = method_regs.viewport_height();
 
 			// Get the minimum area between these two
 			x1 = std::max(scissor_x, raster_x);
@@ -1521,8 +1521,8 @@ namespace rsx
 
 		if (x2 <= x1 ||
 			y2 <= y1 ||
-			x1 >= rsx::method_registers.window_clip_horizontal() ||
-			y1 >= rsx::method_registers.window_clip_vertical())
+			x1 >= method_regs.window_clip_horizontal() ||
+			y1 >= method_regs.window_clip_vertical())
 		{
 			m_graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
 			framebuffer_status_valid = false;
@@ -1548,7 +1548,7 @@ namespace rsx
 
 		m_graphics_state &= ~rsx::pipeline_state::fragment_program_ucode_dirty;
 
-		const auto [program_offset, program_location] = method_registers.shader_program_address();
+		const auto [program_offset, program_location] = method_regs.shader_program_address();
 		auto data_ptr = vm::base(rsx::get_address(program_offset, program_location));
 		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
 
@@ -1581,7 +1581,7 @@ namespace rsx
 
 		m_graphics_state &= ~rsx::pipeline_state::vertex_program_ucode_dirty;
 
-		const u32 transform_program_start = rsx::method_registers.transform_program_start();
+		const u32 transform_program_start = method_regs.transform_program_start();
 		current_vertex_program.skip_vertex_input_check = true;
 
 		current_vertex_program.rsx_vertex_inputs.clear();
@@ -1590,7 +1590,7 @@ namespace rsx
 
 		current_vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program
 		(
-			method_registers.transform_program.data(),  // Input raw block
+			method_regs.transform_program.data(),  // Input raw block
 			transform_program_start,                    // Address of entry point
 			current_vertex_program                      // [out] Program object
 		);
@@ -1629,13 +1629,13 @@ namespace rsx
 			return;
 
 		ensure(!(m_graphics_state & rsx::pipeline_state::vertex_program_ucode_dirty));
-		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
+		current_vertex_program.output_mask = method_regs.vertex_attrib_output_mask();
 
 		for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 		{
 			if (!(textures_ref & 1)) continue;
 
-			const auto &tex = rsx::method_registers.vertex_textures[i];
+			const auto tex = method_regs.vertex_textures[i];
 			if (tex.enabled() && (current_vp_metadata.referenced_textures_mask & (1 << i)))
 			{
 				current_vertex_program.texture_dimensions |= (static_cast<u32>(sampler_descriptors[i]->image_type) << (i << 1));
@@ -1645,12 +1645,11 @@ namespace rsx
 
 	void thread::analyse_inputs_interleaved(vertex_input_layout& result) const
 	{
-		const rsx_state& state = rsx::method_registers;
-		const u32 input_mask = state.vertex_attrib_input_mask();
+		const u32 input_mask = method_regs.vertex_attrib_input_mask();
 
 		result.clear();
 
-		if (state.current_draw_clause.command == rsx::draw_command::inlined_array)
+		if (method_regs.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			interleaved_range_info info = {};
 			info.interleaved = true;
@@ -1658,7 +1657,7 @@ namespace rsx
 
 			for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
 			{
-				auto &vinfo = state.vertex_arrays_info[index];
+				auto vinfo = method_regs.vertex_arrays_info[index];
 
 				if (vinfo.size() > 0)
 				{
@@ -1671,9 +1670,9 @@ namespace rsx
 						result.attribute_placement[index] = attribute_buffer_placement::transient;
 					}
 				}
-				else if (state.register_vertex_info[index].size > 0 && input_mask & (1u << index))
+				else if (method_regs.register_vertex_info[index].size > 0 && input_mask & (1u << index))
 				{
-					//Reads from register
+					// Reads from register
 					result.referenced_registers.push_back(index);
 					result.attribute_placement[index] = attribute_buffer_placement::transient;
 				}
@@ -1688,7 +1687,7 @@ namespace rsx
 			return;
 		}
 
-		const u32 frequency_divider_mask = rsx::method_registers.frequency_divider_operation_mask();
+		const u32 frequency_divider_mask = method_regs.frequency_divider_operation_mask();
 		result.interleaved_blocks.reserve(16);
 		result.referenced_registers.reserve(16);
 
@@ -1698,10 +1697,10 @@ namespace rsx
 			if (!(input_mask & (1 << index)))
 				continue;
 
-			//Check for interleaving
-			const auto &info = state.vertex_arrays_info[index];
-			if (rsx::method_registers.current_draw_clause.is_immediate_draw &&
-				rsx::method_registers.current_draw_clause.command != rsx::draw_command::indexed)
+			// Check for interleaving
+			const auto &info = method_regs.vertex_arrays_info[index];
+			if (method_regs.current_draw_clause.is_immediate_draw &&
+				method_regs.current_draw_clause.command != rsx::draw_command::indexed)
 			{
 				// NOTE: In immediate rendering mode, all vertex setup is ignored
 				// Observed with GT5, immediate render bypasses array pointers completely, even falling back to fixed-function register defaults
@@ -1712,7 +1711,7 @@ namespace rsx
 					result.volatile_blocks.push_back(volatile_range_info);
 					result.attribute_placement[index] = attribute_buffer_placement::transient;
 				}
-				else if (state.register_vertex_info[index].size > 0)
+				else if (method_regs.register_vertex_info[index].size > 0)
 				{
 					// Reads from register
 					result.referenced_registers.push_back(index);
@@ -1725,9 +1724,9 @@ namespace rsx
 
 			if (!info.size())
 			{
-				if (state.register_vertex_info[index].size > 0)
+				if (method_regs.register_vertex_info[index].size > 0)
 				{
-					//Reads from register
+					// Reads from register
 					result.referenced_registers.push_back(index);
 					result.attribute_placement[index] = attribute_buffer_placement::transient;
 					continue;
@@ -1744,13 +1743,13 @@ namespace rsx
 				{
 					if (block.single_vertex)
 					{
-						//Single vertex definition, continue
+						// Single vertex definition, continue
 						continue;
 					}
 
 					if (block.attribute_stride != info.stride())
 					{
-						//Stride does not match, continue
+						// Stride does not match, continue
 						continue;
 					}
 
@@ -1759,7 +1758,7 @@ namespace rsx
 						const u32 diff = base_address - block.base_offset;
 						if (diff > info.stride())
 						{
-							//Not interleaved, continue
+							// Not interleaved, continue
 							continue;
 						}
 					}
@@ -1768,11 +1767,11 @@ namespace rsx
 						const u32 diff = block.base_offset - base_address;
 						if (diff > info.stride())
 						{
-							//Not interleaved, continue
+							// Not interleaved, continue
 							continue;
 						}
 
-						//Matches, and this address is lower than existing
+						// Matches, and this address is lower than existing
 						block.base_offset = base_address;
 					}
 
@@ -1804,8 +1803,8 @@ namespace rsx
 
 		for (auto &info : result.interleaved_blocks)
 		{
-			//Calculate real data address to be used during upload
-			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(state.vertex_data_base_offset(), info.base_offset), info.memory_location);
+			// Calculate real data address to be used during upload
+			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(method_regs.vertex_data_base_offset(), info.base_offset), info.memory_location);
 		}
 	}
 
@@ -1818,28 +1817,28 @@ namespace rsx
 
 		m_graphics_state &= ~(rsx::pipeline_state::fragment_program_dirty);
 
-		current_fragment_program.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
-		current_fragment_program.texcoord_control_mask = rsx::method_registers.texcoord_control_mask();
+		current_fragment_program.ctrl = method_regs.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
+		current_fragment_program.texcoord_control_mask = method_regs.texcoord_control_mask();
 		current_fragment_program.texture_dimensions = 0;
 		current_fragment_program.unnormalized_coords = 0;
-		current_fragment_program.two_sided_lighting = rsx::method_registers.two_side_light_en();
+		current_fragment_program.two_sided_lighting = method_regs.two_side_light_en();
 		current_fragment_program.redirected_textures = 0;
 		current_fragment_program.shadow_textures = 0;
 
 		memset(current_fragment_program.texture_scale, 0, sizeof(current_fragment_program.texture_scale));
 
-		if (method_registers.current_draw_clause.primitive == primitive_type::points &&
-			method_registers.point_sprite_enabled())
+		if (method_regs.current_draw_clause.primitive == primitive_type::points &&
+			method_regs.point_sprite_enabled())
 		{
 			// Set high word of the control mask to store point sprite control
-			current_fragment_program.texcoord_control_mask |= u32(method_registers.point_sprite_control_mask()) << 16;
+			current_fragment_program.texcoord_control_mask |= u32(method_regs.point_sprite_control_mask()) << 16;
 		}
 
 		for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 		{
 			if (!(textures_ref & 1)) continue;
 
-			auto &tex = rsx::method_registers.fragment_textures[i];
+			auto &tex = method_regs.fragment_textures[i];
 			if (tex.enabled())
 			{
 				current_fragment_program.texture_scale[i][0] = sampler_descriptors[i]->scale_x;
@@ -1984,11 +1983,11 @@ namespace rsx
 			}
 		}
 
-		//Sanity checks
+		// Sanity checks
 		if (current_fragment_program.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 		{
-			//Check that the depth stage is not disabled
-			if (!rsx::method_registers.depth_test_enabled())
+			// Check that the depth stage is not disabled
+			if (!method_regs.depth_test_enabled())
 			{
 				rsx_log.error("FS exports depth component but depth test is disabled (INVALID_OPERATION)");
 			}
@@ -1997,7 +1996,7 @@ namespace rsx
 
 	bool thread::invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size)
 	{
-		const auto [shader_offset, shader_dma] = rsx::method_registers.shader_program_address();
+		const auto [shader_offset, shader_dma] = method_regs.shader_program_address();
 
 		if ((dst_dma & CELL_GCM_LOCATION_MAIN) == shader_dma &&
 		address_range::start_length(shader_offset, current_fragment_program.total_length).overlaps(
@@ -2013,7 +2012,7 @@ namespace rsx
 
 	void thread::reset()
 	{
-		rsx::method_registers.reset();
+		method_regs.reset();
 	}
 
 	void thread::init(u32 ctrlAddress)
@@ -2069,7 +2068,7 @@ namespace rsx
 
 		volatile_memory_size += ::size32(layout.referenced_registers) * 16u;
 
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
+		if (method_regs.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			for (const auto &block : layout.interleaved_blocks)
 			{
@@ -2080,7 +2079,7 @@ namespace rsx
 		{
 			//NOTE: Immediate commands can be index array only or both index array and vertex data
 			//Check both - but only check volatile blocks if immediate_draw flag is set
-			if (rsx::method_registers.current_draw_clause.is_immediate_draw)
+			if (method_regs.current_draw_clause.is_immediate_draw)
 			{
 				for (const auto &info : layout.volatile_blocks)
 				{
@@ -2101,7 +2100,7 @@ namespace rsx
 		u32 persistent_offset = persistent_offset_base;
 
 		//NOTE: Order is important! Transient ayout is always push_buffers followed by register data
-		if (rsx::method_registers.current_draw_clause.is_immediate_draw)
+		if (method_regs.current_draw_clause.is_immediate_draw)
 		{
 			for (const auto &info : layout.volatile_blocks)
 			{
@@ -2116,13 +2115,13 @@ namespace rsx
 			volatile_offset += 16;
 		}
 
-		if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
+		if (method_regs.current_draw_clause.command == rsx::draw_command::inlined_array)
 		{
 			const auto &block = layout.interleaved_blocks[0];
 			u32 inline_data_offset = volatile_offset;
 			for (const auto& attrib : block.locations)
 			{
-				auto &info = rsx::method_registers.vertex_arrays_info[attrib.index];
+				auto &info = method_regs.vertex_arrays_info[attrib.index];
 
 				offset_in_block[attrib.index] = inline_data_offset;
 				inline_data_offset += rsx::get_vertex_type_size_on_host(info.type(), info.size());
@@ -2134,7 +2133,7 @@ namespace rsx
 			{
 				for (const auto& attrib : block.locations)
 				{
-					const u32 local_address = (rsx::method_registers.vertex_arrays_info[attrib.index].offset() & 0x7fffffff);
+					const u32 local_address = (method_regs.vertex_arrays_info[attrib.index].offset() & 0x7fffffff);
 					offset_in_block[attrib.index] = persistent_offset + (local_address - block.base_offset);
 				}
 
@@ -2160,7 +2159,7 @@ namespace rsx
 		const s32 volatile_storage_mask = (1 << 30);
 		const s32 modulo_op_frequency_mask = (INT32_MIN);
 
-		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
+		const u32 modulo_mask = method_regs.frequency_divider_operation_mask();
 		const auto max_index = (first_vertex + vertex_count) - 1;
 
 		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
@@ -2178,14 +2177,14 @@ namespace rsx
 
 			if (layout.attribute_placement[index] == attribute_buffer_placement::transient)
 			{
-				if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::inlined_array)
+				if (method_regs.current_draw_clause.command == rsx::draw_command::inlined_array)
 				{
-					const auto &info = rsx::method_registers.vertex_arrays_info[index];
+					const auto info = method_regs.vertex_arrays_info[index];
 
 					if (!info.size())
 					{
 						// Register
-						const auto& reginfo = rsx::method_registers.register_vertex_info[index];
+						const auto& reginfo = method_regs.register_vertex_info[index];
 						type = reginfo.type;
 						size = reginfo.size;
 
@@ -2205,7 +2204,7 @@ namespace rsx
 					// Data is either from an immediate render or register input
 					// Immediate data overrides register input
 
-					if (rsx::method_registers.current_draw_clause.is_immediate_draw &&
+					if (method_regs.current_draw_clause.is_immediate_draw &&
 						vertex_push_buffers[index].vertex_count > 1)
 					{
 						// Push buffer
@@ -2218,7 +2217,7 @@ namespace rsx
 					else
 					{
 						// Register
-						const auto& info = rsx::method_registers.register_vertex_info[index];
+						const auto& info = method_regs.register_vertex_info[index];
 						type = info.type;
 						size = info.size;
 
@@ -2230,7 +2229,7 @@ namespace rsx
 			}
 			else
 			{
-				auto &info = rsx::method_registers.vertex_arrays_info[index];
+				auto &info = method_regs.vertex_arrays_info[index];
 				type = info.type();
 				size = info.size();
 
@@ -2311,7 +2310,7 @@ namespace rsx
 		auto transient = static_cast<char*>(volatile_data);
 		auto persistent = static_cast<char*>(persistent_data);
 
-		auto &draw_call = rsx::method_registers.current_draw_clause;
+		auto &draw_call = method_regs.current_draw_clause;
 
 		if (transient != nullptr)
 		{
@@ -2319,7 +2318,7 @@ namespace rsx
 			{
 				for (const u8 index : layout.referenced_registers)
 				{
-					memcpy(transient, rsx::method_registers.register_vertex_info[index].data.data(), 16);
+					memcpy(transient, method_regs.register_vertex_info[index].data.data(), 16);
 					transient += 16;
 				}
 
@@ -2341,7 +2340,7 @@ namespace rsx
 
 			for (const u8 index : layout.referenced_registers)
 			{
-				memcpy(transient, rsx::method_registers.register_vertex_info[index].data.data(), 16);
+				memcpy(transient, method_regs.register_vertex_info[index].data.data(), 16);
 				transient += 16;
 			}
 		}
@@ -2396,7 +2395,7 @@ namespace rsx
 				{
 					if (zcull.bound &&
 						rsx::to_surface_depth_format(zcull.zFormat) == m_depth_surface_info.depth_format &&
-						rsx::to_surface_antialiasing(zcull.aaFormat) == rsx::method_registers.surface_antialias())
+						rsx::to_surface_antialiasing(zcull.aaFormat) == method_regs.surface_antialias())
 					{
 						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL);
 						if (rsx_address == zeta_address)
@@ -2556,7 +2555,7 @@ namespace rsx
 		std::this_thread::sleep_for(2ms);
 		fifo_ctrl->abort();
 
-		if (std::exchange(in_begin_end, false) && !rsx::method_registers.current_draw_clause.empty())
+		if (std::exchange(in_begin_end, false) && !method_regs.current_draw_clause.empty())
 		{
 			execute_nop_draw();
 			rsx::thread::end();

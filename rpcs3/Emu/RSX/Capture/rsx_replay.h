@@ -154,7 +154,7 @@ namespace rsx
 		// actual command queue to hold everything above
 		std::vector<replay_command> replay_commands;
 		// Initial registers state at the beginning of the capture
-		rsx::rsx_state reg_state;
+		rsx::rsx_state method_regs;
 
 		template<typename Archive>
 		void serialize(Archive & ar)
@@ -166,18 +166,10 @@ namespace rsx
 			ar(memory_data_map);
 			ar(display_buffers_map);
 			ar(replay_commands);
-			ar(reg_state);
+			ar(method_regs);
 		}
 
-		void reset()
-		{
-			magic = FRAME_CAPTURE_MAGIC;
-			version = FRAME_CAPTURE_VERSION;
-			tile_map.clear();
-			memory_map.clear();
-			replay_commands.clear();
-			reg_state = method_registers;
-		}
+		void reset();
 	};
 
 

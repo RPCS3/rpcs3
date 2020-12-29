@@ -99,39 +99,6 @@ u8 rsx::internals::get_pixel_size(rsx::surface_depth_format format)
 	fmt::throw_exception("Unknown depth format");
 }
 
-namespace
-{
-	std::array<u32, 4> get_offsets()
-	{
-		return{
-			rsx::method_registers.surface_a_offset(),
-			rsx::method_registers.surface_b_offset(),
-			rsx::method_registers.surface_c_offset(),
-			rsx::method_registers.surface_d_offset(),
-		};
-	}
-
-	std::array<u32, 4> get_locations()
-	{
-		return{
-			rsx::method_registers.surface_a_dma(),
-			rsx::method_registers.surface_b_dma(),
-			rsx::method_registers.surface_c_dma(),
-			rsx::method_registers.surface_d_dma(),
-		};
-	}
-
-	std::array<u32, 4> get_pitchs()
-	{
-		return{
-			rsx::method_registers.surface_a_pitch(),
-			rsx::method_registers.surface_b_pitch(),
-			rsx::method_registers.surface_c_pitch(),
-			rsx::method_registers.surface_d_pitch(),
-		};
-	}
-}
-
 void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
 {
 	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
@@ -293,7 +260,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		}
 	}
 
-	switch (rsx::method_registers.surface_color_target())
+	switch (method_regs.surface_color_target())
 	{
 	case rsx::surface_target::none: break;
 

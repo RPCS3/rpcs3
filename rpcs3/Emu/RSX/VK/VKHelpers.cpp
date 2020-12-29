@@ -714,7 +714,7 @@ namespace vk
 		}
 		else
 		{
-			if (!rsx::method_registers.depth_write_enabled() && current_layout == new_layout)
+			if (!rsx::get_current_renderer()->method_regs.depth_write_enabled() && current_layout == new_layout)
 			{
 				// Nothing to do
 				return;

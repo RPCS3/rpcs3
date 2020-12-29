@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
 #include "rsx_utils.h"
@@ -11,8 +11,6 @@
 
 namespace rsx
 {
-	rsx_state method_registers;
-
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 
 	void invalid_method(thread* rsx, u32 _reg, u32 arg)
@@ -51,7 +49,7 @@ namespace rsx
 		void semaphore_acquire(thread* rsx, u32 /*_reg*/, u32 arg)
 		{
 			rsx->sync_point_request.release(true);
-			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
+			const u32 addr = get_address(rsx->method_regs.semaphore_offset_406e(), rsx->method_regs.semaphore_context_dma_406e());
 
 			const auto& sema = vm::_ref<RsxSemaphore>(addr).val;
 
@@ -124,7 +122,7 @@ namespace rsx
 		{
 			rsx->sync();
 
-			const u32 offset = method_registers.semaphore_offset_406e();
+			const u32 offset = rsx->method_regs.semaphore_offset_406e();
 
 			if (offset % 4)
 			{
@@ -132,7 +130,7 @@ namespace rsx
 				return;
 			}
 
-			const u32 ctxt = method_registers.semaphore_context_dma_406e();
+			const u32 ctxt = rsx->method_regs.semaphore_context_dma_406e();
 
 			// By avoiding doing this on flip's semaphore release
 			// We allow last gcm's registers reset to occur in case of a crash
@@ -184,18 +182,18 @@ namespace rsx
 				return;
 			default:
 				// Ignore value if unknown
-				method_registers.registers[reg] = method_registers.register_previous_value;
+				rsx->method_regs.registers[reg] = rsx->method_regs.register_previous_value;
 			}
 		}
 
 		void set_notify(thread* rsx, u32 _reg, u32 arg)
 		{
-			const u32 location = method_registers.context_dma_notify();
+			const u32 location = rsx->method_regs.context_dma_notify();
 			const u32 index = (location & 0x7) ^ 0x7;
 
 			if ((location & ~7) != (CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 & ~7))
 			{
-				rsx_log.trace("NV4097_NOTIFY: invalid context = 0x%x", method_registers.context_dma_notify());
+				rsx_log.trace("NV4097_NOTIFY: invalid context = 0x%x", rsx->method_regs.context_dma_notify());
 				return;
 			}
 
@@ -221,7 +219,7 @@ namespace rsx
 
 			// lle-gcm likes to inject system reserved semaphores, presumably for system/vsh usage
 			// Avoid calling render to avoid any havoc(flickering) they may cause from invalid flush/write
-			const u32 offset = method_registers.semaphore_offset_4097();
+			const u32 offset = rsx->method_regs.semaphore_offset_4097();
 
 			if (offset % 16)
 			{
@@ -230,7 +228,7 @@ namespace rsx
 				return;
 			}
 
-			vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097())).val = arg;
+			vm::_ref<RsxSemaphore>(get_address(offset, rsx->method_regs.semaphore_context_dma_4097())).val = arg;
 		}
 
 		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
@@ -239,7 +237,7 @@ namespace rsx
 			g_fxo->get<rsx::dma_manager>()->sync();
 			rsx->sync();
 
-			const u32 offset = method_registers.semaphore_offset_4097();
+			const u32 offset = rsx->method_regs.semaphore_offset_4097();
 
 			if (offset % 16)
 			{
@@ -249,7 +247,7 @@ namespace rsx
 			}
 
 			const u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097())).val = val;
+			vm::_ref<RsxSemaphore>(get_address(offset, rsx->method_regs.semaphore_context_dma_4097())).val = val;
 		}
 
 		/**
@@ -289,13 +287,13 @@ namespace rsx
 				// Fall through
 			}
 
-			auto& info = rsx::method_registers.register_vertex_info[attribute_index];
+			auto& info = rsx->method_regs.register_vertex_info[attribute_index];
 
 			info.type = vtype;
 			info.size = count;
 			info.frequency = 0;
 			info.stride = 0;
-			rsx::method_registers.register_vertex_info[attribute_index].data[vertex_subreg] = arg;
+			info.data[vertex_subreg] = arg;
 		}
 
 		template<u32 index>
@@ -388,24 +386,24 @@ namespace rsx
 
 		void draw_arrays(thread* rsx, u32 _reg, u32 arg)
 		{
-			rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
+			rsx->method_regs.current_draw_clause.command = rsx::draw_command::array;
 			rsx::registers_decoder<NV4097_DRAW_ARRAYS>::decoded_type v(arg);
 
-			rsx::method_registers.current_draw_clause.append(v.start(), v.count());
+			rsx->method_regs.current_draw_clause.append(v.start(), v.count());
 		}
 
 		void draw_index_array(thread* rsx, u32 _reg, u32 arg)
 		{
-			rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
+			rsx->method_regs.current_draw_clause.command = rsx::draw_command::indexed;
 			rsx::registers_decoder<NV4097_DRAW_INDEX_ARRAY>::decoded_type v(arg);
 
-			rsx::method_registers.current_draw_clause.append(v.start(), v.count());
+			rsx->method_regs.current_draw_clause.append(v.start(), v.count());
 		}
 
 		void draw_inline_array(thread* rsx, u32 _reg, u32 arg)
 		{
-			rsx::method_registers.current_draw_clause.command = rsx::draw_command::inlined_array;
-			rsx::method_registers.current_draw_clause.inline_vertex_array.push_back(arg);
+			rsx->method_regs.current_draw_clause.command = rsx::draw_command::inlined_array;
+			rsx->method_regs.current_draw_clause.inline_vertex_array.push_back(arg);
 		}
 
 		template<u32 index>
@@ -420,7 +418,7 @@ namespace rsx
 				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
 					static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos() - 4)) / 4), 32 - index});
 
-				const u32 load = rsx::method_registers.transform_constant_load();
+				const u32 load = rsx->method_regs.transform_constant_load();
 
 				u32 rcount = count;
 				if (const u32 max = (load + reg) * 4 + count + subreg, limit = 468 * 4; max > limit)
@@ -434,7 +432,7 @@ namespace rsx
 						rcount = 0;
 				}
 
-				const auto values = &rsx::method_registers.transform_constants[load + reg][subreg];
+				const auto values = &rsx->method_regs.transform_constants[load + reg][subreg];
 
 				if (rsx->m_graphics_state & rsx::pipeline_state::transform_constants_dirty)
 				{
@@ -463,7 +461,7 @@ namespace rsx
 				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
 					static_cast<u32>(((rsx->ctrl->put & ~3ull) - (rsx->fifo_ctrl->get_pos() - 4)) / 4), 32 - index});
 
-				const u32 load_pos = rsx::method_registers.transform_program_load();
+				const u32 load_pos = rsx->method_regs.transform_program_load();
 
 				u32 rcount = count;
 
@@ -477,18 +475,18 @@ namespace rsx
 					rcount -= max - (512 * 4);
 				}
 
-				stream_data_to_memory_swapped_u32<true>(&rsx::method_registers.transform_program[load_pos * 4 + index % 4]
+				stream_data_to_memory_swapped_u32<true>(&rsx->method_regs.transform_program[load_pos * 4 + index % 4]
 					, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount, 4);
 
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_ucode_dirty;
-				rsx::method_registers.transform_program_load_set(load_pos + ((rcount + index % 4) / 4));
+				rsx->method_regs.transform_program_load_set(load_pos + ((rcount + index % 4) / 4));
 				rsx->fifo_ctrl->skip_methods(count - 1);
 			}
 		};
 
 		void set_transform_program_start(thread* rsx, u32 reg, u32)
 		{
-			if (method_registers.registers[reg] != method_registers.register_previous_value)
+			if (rsx->method_regs.registers[reg] != rsx->method_regs.register_previous_value)
 			{
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_ucode_dirty;
 			}
@@ -496,78 +494,78 @@ namespace rsx
 
 		void set_vertex_attribute_output_mask(thread* rsx, u32 reg, u32)
 		{
-			if (method_registers.registers[reg] != method_registers.register_previous_value)
+			if (rsx->method_regs.registers[reg] != rsx->method_regs.register_previous_value)
 			{
 				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
 			}
 		}
 
-		void set_begin_end(thread* rsxthr, u32 _reg, u32 arg)
+		void set_begin_end(thread* rsx, u32 _reg, u32 arg)
 		{
 			// Ignore upper bits
 			if (const u8 prim = static_cast<u8>(arg))
 			{
-				rsx::method_registers.current_draw_clause.reset(to_primitive_type(prim));
+				rsx->method_regs.current_draw_clause.reset(to_primitive_type(prim));
 
-				if (rsx::method_registers.current_draw_clause.primitive == rsx::primitive_type::invalid)
+				if (rsx->method_regs.current_draw_clause.primitive == rsx::primitive_type::invalid)
 				{
-					rsxthr->in_begin_end = true;
+					rsx->in_begin_end = true;
 
 					rsx_log.warning("Invalid NV4097_SET_BEGIN_END value: 0x%x", arg);
 					return;
 				}
 
-				rsxthr->begin();
+				rsx->begin();
 				return;
 			}
 
 			//Check if we have immediate mode vertex data in a driver-local buffer
-			if (rsx::method_registers.current_draw_clause.command == rsx::draw_command::none)
+			if (rsx->method_regs.current_draw_clause.command == rsx::draw_command::none)
 			{
-				const u32 push_buffer_vertices_count = rsxthr->get_push_buffer_vertex_count();
-				const u32 push_buffer_index_count = rsxthr->get_push_buffer_index_count();
+				const u32 push_buffer_vertices_count = rsx->get_push_buffer_vertex_count();
+				const u32 push_buffer_index_count = rsx->get_push_buffer_index_count();
 
 				//Need to set this flag since it overrides some register contents
-				rsx::method_registers.current_draw_clause.is_immediate_draw = true;
+				rsx->method_regs.current_draw_clause.is_immediate_draw = true;
 
 				if (push_buffer_index_count)
 				{
-					rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
-					rsx::method_registers.current_draw_clause.append(0, push_buffer_index_count);
+					rsx->method_regs.current_draw_clause.command = rsx::draw_command::indexed;
+					rsx->method_regs.current_draw_clause.append(0, push_buffer_index_count);
 				}
 				else if (push_buffer_vertices_count)
 				{
-					rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
-					rsx::method_registers.current_draw_clause.append(0, push_buffer_vertices_count);
+					rsx->method_regs.current_draw_clause.command = rsx::draw_command::array;
+					rsx->method_regs.current_draw_clause.append(0, push_buffer_vertices_count);
 				}
 			}
 			else
-				rsx::method_registers.current_draw_clause.is_immediate_draw = false;
+				rsx->method_regs.current_draw_clause.is_immediate_draw = false;
 
-			if (!rsx::method_registers.current_draw_clause.empty())
+			if (!rsx->method_regs.current_draw_clause.empty())
 			{
-				if (rsx::method_registers.current_draw_clause.primitive == rsx::primitive_type::invalid)
+				if (rsx->method_regs.current_draw_clause.primitive == rsx::primitive_type::invalid)
 				{
 					// Recover from invalid primitive only if draw clause is not empty
-					rsxthr->recover_fifo();
+					rsx->recover_fifo();
 
 					rsx_log.error("NV4097_SET_BEGIN_END aborted due to invalid primitive!");
 					return;
 				}
 
-				rsx::method_registers.current_draw_clause.compile();
-				rsxthr->end();
+				rsx->method_regs.current_draw_clause.compile();
+				rsx->end();
 			}
 			else
 			{
-				rsxthr->in_begin_end = false;
+				rsx->in_begin_end = false;
 			}
 		}
 
-		vm::addr_t get_report_data_impl(u32 offset)
+		vm::addr_t get_report_data_impl(thread* rsx, u32 offset)
 		{
 			u32 location = 0;
-			blit_engine::context_dma report_dma = method_registers.context_dma_report();
+			blit_engine::context_dma report_dma = rsx->method_regs.context_dma_report();
 
 			switch (report_dma)
 			{
@@ -586,7 +584,7 @@ namespace rsx
 			u8 type = arg >> 24;
 			u32 offset = arg & 0xffffff;
 
-			auto address_ptr = get_report_data_impl(offset);
+			auto address_ptr = get_report_data_impl(rsx, offset);
 			if (!address_ptr)
 			{
 				rsx_log.error("Bad argument passed to NV4097_GET_REPORT, arg=0x%X", arg);
@@ -645,7 +643,7 @@ namespace rsx
 			}
 
 			const u32 offset = arg & 0xffffff;
-			auto address_ptr = get_report_data_impl(offset);
+			auto address_ptr = get_report_data_impl(rsx, offset);
 
 			if (!address_ptr)
 			{
@@ -690,7 +688,7 @@ namespace rsx
 			if (reg == NV4097_SET_SURFACE_CLIP_VERTICAL ||
 				reg == NV4097_SET_SURFACE_CLIP_HORIZONTAL)
 			{
-				if (arg != method_registers.register_previous_value)
+				if (arg != rsx->method_regs.register_previous_value)
 				{
 					rsx->m_graphics_state |= rsx::pipeline_state::vertex_state_dirty;
 				}
@@ -704,7 +702,7 @@ namespace rsx
 		{
 			// Special consideration - antialiasing control can affect ROP state
 			const auto aa_mask = (0xF << 12);
-			if ((arg & aa_mask) != (method_registers.register_previous_value & aa_mask))
+			if ((arg & aa_mask) != (rsx->method_regs.register_previous_value & aa_mask))
 			{
 				// Antialias control has changed, update ROP parameters
 				rsx->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
@@ -715,7 +713,7 @@ namespace rsx
 
 		void set_surface_options_dirty_bit(thread* rsx, u32 reg, u32 arg)
 		{
-			if (arg != method_registers.register_previous_value)
+			if (arg != rsx->method_regs.register_previous_value)
 			{
 				rsx->on_framebuffer_options_changed(reg);
 			}
@@ -723,7 +721,7 @@ namespace rsx
 
 		void set_stencil_op(thread* rsx, u32 reg, u32 arg)
 		{
-			if (arg != method_registers.register_previous_value)
+			if (arg != rsx->method_regs.register_previous_value)
 			{
 				switch (arg)
 				{
@@ -740,7 +738,7 @@ namespace rsx
 
 				default:
 					// Ignored on RSX
-					method_registers.decode(reg, method_registers.register_previous_value);
+					rsx->method_regs.decode(reg, rsx->method_regs.register_previous_value);
 					break;
 				}
 			}
@@ -749,7 +747,7 @@ namespace rsx
 		template <u32 RsxFlags>
 		void notify_state_changed(thread* rsx, u32, u32 arg)
 		{
-			if (arg != method_registers.register_previous_value)
+			if (arg != rsx->method_regs.register_previous_value)
 			{
 				rsx->m_graphics_state |= RsxFlags;
 			}
@@ -758,28 +756,28 @@ namespace rsx
 		void set_vertex_base_offset(thread* rsx, u32 reg, u32 arg)
 		{
 			if (rsx->in_begin_end &&
-				!rsx::method_registers.current_draw_clause.empty() &&
-				reg != method_registers.register_previous_value)
+				!rsx->method_regs.current_draw_clause.empty() &&
+				reg != rsx->method_regs.register_previous_value)
 			{
 				// Revert change to queue later
-				method_registers.decode(reg, method_registers.register_previous_value);
+				rsx->method_regs.decode(reg, rsx->method_regs.register_previous_value);
 
 				// Insert base mofifier barrier
-				method_registers.current_draw_clause.insert_command_barrier(vertex_base_modifier_barrier, arg);
+				rsx->method_regs.current_draw_clause.insert_command_barrier(vertex_base_modifier_barrier, arg);
 			}
 		}
 
 		void set_index_base_offset(thread* rsx, u32 reg, u32 arg)
 		{
 			if (rsx->in_begin_end &&
-				!rsx::method_registers.current_draw_clause.empty() &&
-				reg != method_registers.register_previous_value)
+				!rsx->method_regs.current_draw_clause.empty() &&
+				reg != rsx->method_regs.register_previous_value)
 			{
 				// Revert change to queue later
-				method_registers.decode(reg, method_registers.register_previous_value);
+				rsx->method_regs.decode(reg, rsx->method_regs.register_previous_value);
 
 				// Insert base mofifier barrier
-				method_registers.current_draw_clause.insert_command_barrier(index_base_modifier_barrier, arg);
+				rsx->method_regs.current_draw_clause.insert_command_barrier(index_base_modifier_barrier, arg);
 			}
 		}
 
@@ -789,7 +787,7 @@ namespace rsx
 			if (arg & ~(CELL_GCM_LOCATION_MAIN | (CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16 << 4)))
 			{
 				// Ignore invalid value, recover
-				method_registers.registers[reg] = method_registers.register_previous_value;
+				rsx->method_regs.registers[reg] = rsx->method_regs.register_previous_value;
 				rsx->recover_fifo();
 
 				rsx_log.error("Invalid NV4097_SET_INDEX_ARRAY_DMA value: 0x%x", arg);
@@ -815,7 +813,7 @@ namespace rsx
 				default:
 				{
 					// Ignore invalid values as a whole
-					method_registers.decode(reg, method_registers.register_previous_value);
+					rsx->method_regs.decode(reg, rsx->method_regs.register_previous_value);
 					return;
 				}
 				}
@@ -847,7 +845,7 @@ namespace rsx
 
 				default:
 					// Ignore invalid values as a whole
-					method_registers.decode(reg, method_registers.register_previous_value);
+					rsx->method_regs.decode(reg, rsx->method_regs.register_previous_value);
 					return;
 				}
 			}
@@ -889,7 +887,7 @@ namespace rsx
 		{
 			static void impl(thread* rsx, u32 /*_reg*/, u32 /*arg*/)
 			{
-				const u32 out_x_max = method_registers.nv308a_size_out_x();
+				const u32 out_x_max = rsx->method_regs.nv308a_size_out_x();
 
 				if (index >= out_x_max)
 				{
@@ -904,17 +902,17 @@ namespace rsx
 				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
 					static_cast<u32>(((rsx->ctrl->put & ~3ull) - src_offset) / 4), 0x700 - index, out_x_max - index});
 
-				const u32 dst_dma = method_registers.blit_engine_output_location_nv3062();
-				const u32 dst_offset = method_registers.blit_engine_output_offset_nv3062();
-				const u32 out_pitch = method_registers.blit_engine_output_pitch_nv3062();
+				const u32 dst_dma = rsx->method_regs.blit_engine_output_location_nv3062();
+				const u32 dst_offset = rsx->method_regs.blit_engine_output_offset_nv3062();
+				const u32 out_pitch = rsx->method_regs.blit_engine_output_pitch_nv3062();
 
-				const u32 x = method_registers.nv308a_x() + index;
-				const u32 y = method_registers.nv308a_y();
+				const u32 x = rsx->method_regs.nv308a_x() + index;
+				const u32 y = rsx->method_regs.nv308a_y();
 
 				// TODO
 				//auto res = vm::passive_lock(address, address + write_len);
 
-				switch (method_registers.blit_engine_nv3062_color_format())
+				switch (rsx->method_regs.blit_engine_nv3062_color_format())
 				{
 				case blit_engine::transfer_destination_format::a8r8g8b8:
 				case blit_engine::transfer_destination_format::y32:
@@ -1010,27 +1008,27 @@ namespace rsx
 	{
 		void image_in(thread *rsx, u32 _reg, u32 arg)
 		{
-			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
+			const rsx::blit_engine::transfer_operation operation = rsx->method_regs.blit_engine_operation();
 
-			const u16 out_x = method_registers.blit_engine_output_x();
-			const u16 out_y = method_registers.blit_engine_output_y();
-			const u16 out_w = method_registers.blit_engine_output_width();
-			const u16 out_h = method_registers.blit_engine_output_height();
+			const u16 out_x = rsx->method_regs.blit_engine_output_x();
+			const u16 out_y = rsx->method_regs.blit_engine_output_y();
+			const u16 out_w = rsx->method_regs.blit_engine_output_width();
+			const u16 out_h = rsx->method_regs.blit_engine_output_height();
 
-			const u16 in_w = method_registers.blit_engine_input_width();
-			const u16 in_h = method_registers.blit_engine_input_height();
+			const u16 in_w = rsx->method_regs.blit_engine_input_width();
+			const u16 in_h = rsx->method_regs.blit_engine_input_height();
 
-			const blit_engine::transfer_origin in_origin = method_registers.blit_engine_input_origin();
-			const blit_engine::transfer_interpolator in_inter = method_registers.blit_engine_input_inter();
-			rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
+			const blit_engine::transfer_origin in_origin = rsx->method_regs.blit_engine_input_origin();
+			const blit_engine::transfer_interpolator in_inter = rsx->method_regs.blit_engine_input_inter();
+			rsx::blit_engine::transfer_source_format src_color_format = rsx->method_regs.blit_engine_src_color_format();
 
-			const f32 scale_x = method_registers.blit_engine_ds_dx();
-			const f32 scale_y = method_registers.blit_engine_dt_dy();
+			const f32 scale_x = rsx->method_regs.blit_engine_ds_dx();
+			const f32 scale_y = rsx->method_regs.blit_engine_dt_dy();
 
 			// Clipping
 			// Validate that clipping rect will fit onto both src and dst regions
-			const u16 clip_w = std::min(method_registers.blit_engine_clip_width(), out_w);
-			const u16 clip_h = std::min(method_registers.blit_engine_clip_height(), out_h);
+			const u16 clip_w = std::min(rsx->method_regs.blit_engine_clip_width(), out_w);
+			const u16 clip_h = std::min(rsx->method_regs.blit_engine_clip_height(), out_h);
 
 			// Check both clip dimensions and dst dimensions
 			if (clip_w == 0 || clip_h == 0)
@@ -1045,14 +1043,14 @@ namespace rsx
 				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: Invalid blit dimensions passed (in_w=%d, in_h=%d)", in_w, in_h);
 			}
 
-			u16 clip_x = method_registers.blit_engine_clip_x();
-			u16 clip_y = method_registers.blit_engine_clip_y();
+			u16 clip_x = rsx->method_regs.blit_engine_clip_x();
+			u16 clip_y = rsx->method_regs.blit_engine_clip_y();
 
 			//Fit onto dst
 			if (clip_x && (out_x + clip_x + clip_w) > out_w) clip_x = 0;
 			if (clip_y && (out_y + clip_y + clip_h) > out_h) clip_y = 0;
 
-			u16 in_pitch = method_registers.blit_engine_input_pitch();
+			u16 in_pitch = rsx->method_regs.blit_engine_input_pitch();
 
 			switch (in_origin)
 			{
@@ -1068,8 +1066,8 @@ namespace rsx
 				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown operation (%d)", static_cast<u8>(operation));
 			}
 
-			const u32 src_offset = method_registers.blit_engine_input_offset();
-			const u32 src_dma = method_registers.blit_engine_input_location();
+			const u32 src_offset = rsx->method_regs.blit_engine_input_offset();
+			const u32 src_dma = rsx->method_regs.blit_engine_input_location();
 
 			u32 dst_offset;
 			u32 dst_dma = 0;
@@ -1078,27 +1076,27 @@ namespace rsx
 			u32 out_alignment = 64;
 			bool is_block_transfer = false;
 
-			switch (method_registers.blit_engine_context_surface())
+			switch (rsx->method_regs.blit_engine_context_surface())
 			{
 			case blit_engine::context_surface::surface2d:
 			{
-				dst_dma = method_registers.blit_engine_output_location_nv3062();
-				dst_offset = method_registers.blit_engine_output_offset_nv3062();
-				dst_color_format = method_registers.blit_engine_nv3062_color_format();
-				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
-				out_alignment = method_registers.blit_engine_output_alignment_nv3062();
+				dst_dma = rsx->method_regs.blit_engine_output_location_nv3062();
+				dst_offset = rsx->method_regs.blit_engine_output_offset_nv3062();
+				dst_color_format = rsx->method_regs.blit_engine_nv3062_color_format();
+				out_pitch = rsx->method_regs.blit_engine_output_pitch_nv3062();
+				out_alignment = rsx->method_regs.blit_engine_output_alignment_nv3062();
 				is_block_transfer = fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f);
 				break;
 			}
 			case blit_engine::context_surface::swizzle2d:
 			{
-				dst_dma = method_registers.blit_engine_nv309E_location();
-				dst_offset = method_registers.blit_engine_nv309E_offset();
-				dst_color_format = method_registers.blit_engine_output_format_nv309E();
+				dst_dma = rsx->method_regs.blit_engine_nv309E_location();
+				dst_offset = rsx->method_regs.blit_engine_nv309E_offset();
+				dst_color_format = rsx->method_regs.blit_engine_output_format_nv309E();
 				break;
 			}
 			default:
-				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", static_cast<u8>(method_registers.blit_engine_context_surface()));
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown m_context_surface (0x%x)", static_cast<u8>(rsx->method_regs.blit_engine_context_surface()));
 				return;
 			}
 
@@ -1119,15 +1117,15 @@ namespace rsx
 			if (in_origin == blit_engine::transfer_origin::center)
 			{
 				// Convert to normal u,v addressing. Under this scheme offset of 1 is actually half-way inside pixel 0
-				const float x = std::max(method_registers.blit_engine_in_x(), 0.5f);
-				const float y = std::max(method_registers.blit_engine_in_y(), 0.5f);
+				const float x = std::max(rsx->method_regs.blit_engine_in_x(), 0.5f);
+				const float y = std::max(rsx->method_regs.blit_engine_in_y(), 0.5f);
 				in_x = static_cast<u16>(std::floor(x - 0.5f));
 				in_y = static_cast<u16>(std::floor(y - 0.5f));
 			}
 			else
 			{
-				in_x = static_cast<u16>(std::floor(method_registers.blit_engine_in_x()));
-				in_y = static_cast<u16>(std::floor(method_registers.blit_engine_in_y()));
+				in_x = static_cast<u16>(std::floor(rsx->method_regs.blit_engine_in_x()));
+				in_y = static_cast<u16>(std::floor(rsx->method_regs.blit_engine_in_y()));
 			}
 
 			// Check for subpixel addressing
@@ -1206,7 +1204,7 @@ namespace rsx
 			if (convert_w == 0 || convert_h == 0)
 			{
 				rsx_log.error("NV3089_IMAGE_IN: Invalid dimensions or scaling factor. Request ignored (ds_dx=%f, dt_dy=%f)",
-					method_registers.blit_engine_ds_dx(), method_registers.blit_engine_dt_dy());
+					rsx->method_regs.blit_engine_ds_dx(), rsx->method_regs.blit_engine_dt_dy());
 				return;
 			}
 
@@ -1242,7 +1240,7 @@ namespace rsx
 				dst_info.scale_y = scale_y;
 				dst_info.rsx_address = dst_address;
 				dst_info.pixels = pixels_dst;
-				dst_info.swizzled = (method_registers.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
+				dst_info.swizzled = (rsx->method_regs.blit_engine_context_surface() == blit_engine::context_surface::swizzle2d);
 
 				if (rsx->scaled_image_from_memory(src_info, dst_info, in_inter == blit_engine::transfer_interpolator::foh))
 					return;
@@ -1295,7 +1293,7 @@ namespace rsx
 			const bool need_convert = out_format != in_format || !rsx::fcmp(fabsf(scale_x), 1.f) || !rsx::fcmp(fabsf(scale_y), 1.f);
 			const u32 slice_h = static_cast<u32>(std::ceil(static_cast<f32>(clip_h + clip_y) / scale_y));
 
-			if (method_registers.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
+			if (rsx->method_regs.blit_engine_context_surface() != blit_engine::context_surface::swizzle2d)
 			{
 				if (!need_convert)
 				{
@@ -1421,8 +1419,8 @@ namespace rsx
 
 				// It looks like rsx may ignore the requested swizzle size and just always
 				// round up to nearest power of 2
-				/*u8 sw_width_log2 = method_registers.nv309e_sw_width_log2();
-				u8 sw_height_log2 = method_registers.nv309e_sw_height_log2();
+				/*u8 sw_width_log2 = rsx->method_regs.nv309e_sw_width_log2();
+				u8 sw_height_log2 = rsx->method_regs.nv309e_sw_height_log2();
 
 				// 0 indicates height of 1 pixel
 				sw_height_log2 = sw_height_log2 == 0 ? 1 : sw_height_log2;
@@ -1479,12 +1477,12 @@ namespace rsx
 	{
 		void buffer_notify(thread *rsx, u32, u32 arg)
 		{
-			s32 in_pitch = method_registers.nv0039_input_pitch();
-			s32 out_pitch = method_registers.nv0039_output_pitch();
-			const u32 line_length = method_registers.nv0039_line_length();
-			const u32 line_count = method_registers.nv0039_line_count();
-			const u8 out_format = method_registers.nv0039_output_format();
-			const u8 in_format = method_registers.nv0039_input_format();
+			s32 in_pitch = rsx->method_regs.nv0039_input_pitch();
+			s32 out_pitch = rsx->method_regs.nv0039_output_pitch();
+			const u32 line_length = rsx->method_regs.nv0039_line_length();
+			const u32 line_count = rsx->method_regs.nv0039_line_count();
+			const u8 out_format = rsx->method_regs.nv0039_output_format();
+			const u8 in_format = rsx->method_regs.nv0039_input_format();
 			const u32 notify = arg;
 
 			// The existing GCM commands use only the value 0x1 for inFormat and outFormat
@@ -1503,11 +1501,11 @@ namespace rsx
 			rsx_log.trace("NV0039_BUFFER_NOTIFY: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
 				in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
 
-			u32 src_offset = method_registers.nv0039_input_offset();
-			u32 src_dma = method_registers.nv0039_input_location();
+			u32 src_offset = rsx->method_regs.nv0039_input_offset();
+			u32 src_dma = rsx->method_regs.nv0039_input_location();
 
-			u32 dst_offset = method_registers.nv0039_output_offset();
-			u32 dst_dma = method_registers.nv0039_output_location();
+			u32 dst_offset = rsx->method_regs.nv0039_output_offset();
+			u32 dst_dma = rsx->method_regs.nv0039_output_location();
 
 			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch + 0u == line_length);
 			const auto read_address = get_address(src_offset, src_dma);
@@ -1645,10 +1643,10 @@ namespace rsx
 		{
 			if (rsx->in_begin_end)
 			{
-				if (!method_registers.current_draw_clause.is_disjoint_primitive)
+				if (!rsx->method_regs.current_draw_clause.is_disjoint_primitive)
 				{
 					// Enable primitive barrier request
-					method_registers.current_draw_clause.primitive_barrier_enable = true;
+					rsx->method_regs.current_draw_clause.primitive_barrier_enable = true;
 				}
 			}
 		}
@@ -1660,6 +1658,7 @@ namespace rsx
 		registers.fill(0);
 		transform_program.fill(0);
 		transform_constants = {};
+		register_vertex_info = {};
 
 		// Special values set at initialization, these are not set by a context reset
 		registers[NV4097_SET_SHADER_PROGRAM] = (0 << 2) | (CELL_GCM_LOCATION_LOCAL + 1);
@@ -1677,7 +1676,7 @@ namespace rsx
 		registers[NV406E_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_R;
 		registers[NV4097_SET_CONTEXT_DMA_SEMAPHORE] = CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW;
 
-		if (get_current_renderer()->isHLE)
+		if (const auto render = get_current_renderer(); render->isHLE)
 		{
 			// Commands injected by cellGcmInit
 			registers[NV406E_SEMAPHORE_OFFSET] = 0x30;
@@ -2634,6 +2633,9 @@ namespace rsx
 	{
 		u32 result = 0;
 
+		auto& method_regs = rsx::get_current_renderer()->method_regs;
+		ensure(&method_regs.current_draw_clause == this);
+
 		for (const auto &barrier : draw_command_barriers)
 		{
 			if (barrier.draw_id != current_range_index)
@@ -2645,12 +2647,12 @@ namespace rsx
 				break;
 			case index_base_modifier_barrier:
 				// Change index base offset
-				method_registers.decode(NV4097_SET_VERTEX_DATA_BASE_INDEX, barrier.arg);
+				method_regs.decode(NV4097_SET_VERTEX_DATA_BASE_INDEX, barrier.arg);
 				result |= index_base_changed;
 				break;
 			case vertex_base_modifier_barrier:
 				// Change vertex base offset
-				method_registers.decode(NV4097_SET_VERTEX_DATA_BASE_OFFSET, barrier.arg);
+				method_regs.decode(NV4097_SET_VERTEX_DATA_BASE_OFFSET, barrier.arg);
 				result |= vertex_base_changed;
 				break;
 			default:
