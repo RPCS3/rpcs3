@@ -92,20 +92,6 @@ union alignas(16) v128
 	__m128d vd;
 #endif
 
-	struct bit_array_128
-	{
-		char m_data[16];
-
-	public:
-		class bit_element;
-
-		// Index 0 returns the MSB and index 127 returns the LSB
-		[[deprecated]] bit_element operator[](u32 index);
-
-		// Index 0 returns the MSB and index 127 returns the LSB
-		[[deprecated]] bool operator[](u32 index) const;
-	} _bit;
-
 	static v128 from64(u64 _0, u64 _1 = 0)
 	{
 		v128 ret;
