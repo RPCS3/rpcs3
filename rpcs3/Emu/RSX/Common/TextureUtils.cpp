@@ -735,14 +735,14 @@ namespace rsx
 		{
 			if (word_size == 1)
 			{
-				if (caps.supports_zero_copy)
+				if (is_swizzled)
+				{
+					copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), as_const_span<const u8>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+				}
+				else if (caps.supports_zero_copy)
 				{
 					result.require_upload = true;
 					result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-				}
-				else if (is_swizzled)
-				{
-					copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), as_const_span<const u8>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
 				}
 				else
 				{
@@ -751,6 +751,9 @@ namespace rsx
 			}
 			else
 			{
+				result.element_size = word_size;
+				result.block_length = words_per_block;
+
 				bool require_cpu_swizzle = !caps.supports_hw_deswizzle;
 				bool require_cpu_byteswap = !caps.supports_byteswap;
 
@@ -768,9 +771,7 @@ namespace rsx
 
 				if (!require_cpu_byteswap && !require_cpu_swizzle)
 				{
-					result.require_deswizzle = is_swizzled;
 					result.require_swap = true;
-					result.element_size = word_size;
 
 					if (caps.supports_zero_copy)
 					{
