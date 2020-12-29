@@ -2425,7 +2425,7 @@ u64 thread_base::get_cycles()
 #ifdef _WIN32
 		_endthreadex(0);
 #else
-		pthread_exit(0);
+		pthread_exit(nullptr);
 #endif
 	}
 
