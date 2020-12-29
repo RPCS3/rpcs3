@@ -31,6 +31,8 @@ else()
 	add_compile_options(-Werror=sign-compare)
 	add_compile_options(-Werror=reorder)
 
+	add_compile_options(-Wno-return-type)
+
 	#TODO Clean the code so these are removed
 	add_compile_options(-Wno-unused-variable)
 	add_compile_options(-Wno-unknown-pragmas)
