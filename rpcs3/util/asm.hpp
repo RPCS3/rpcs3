@@ -19,6 +19,7 @@ extern "C"
 	ushort _rotl16(ushort, uchar);
 	uint _rotl(uint, int);
 	u64 _rotl64(u64, int);
+	u64 __popcnt64(u64);
 
 	s64 __mulh(s64, s64);
 	u64 __umulh(u64, u64);
@@ -208,6 +209,38 @@ namespace utils
 		return __builtin_rotateleft64(x, n);
 #else
 		return (x << n) | (x >> (64 - n));
+#endif
+	}
+
+	constexpr u32 popcnt64(u64 v)
+	{
+#if !defined(_MSC_VER) || defined(__SSE4_2__)
+		if (std::is_constant_evaluated())
+#endif
+		{
+			v = (v & 0xaaaaaaaaaaaaaaaa) / 2 + (v & 0x5555555555555555);
+			v = (v & 0xcccccccccccccccc) / 4 + (v & 0x3333333333333333);
+			v = (v & 0xf0f0f0f0f0f0f0f0) / 16 + (v & 0x0f0f0f0f0f0f0f0f);
+			v = (v & 0xff00ff00ff00ff00) / 256 + (v & 0x00ff00ff00ff00ff);
+			v = ((v & 0xffff0000ffff0000) >> 16) + (v & 0x0000ffff0000ffff);
+			return static_cast<u32>((v >> 32) + v);
+		}
+
+#if !defined(_MSC_VER) || defined(__SSE4_2__)
+#ifdef _MSC_VER
+		return static_cast<u32>(__popcnt64(v));
+#else
+		return __builtin_popcountll(v);
+#endif
+#endif
+	}
+
+	constexpr u32 popcnt128(const u128& v)
+	{
+#ifdef _MSC_VER
+		return popcnt64(v.lo) + popcnt64(v.hi);
+#else
+		return popcnt64(v) + popcnt64(v >> 64);
 #endif
 	}
 
