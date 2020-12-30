@@ -426,4 +426,22 @@ namespace vm
 			return result;
 		}
 	}
+
+	template <bool Ack = false, typename T, typename F>
+	SAFE_BUFFERS inline auto atomic_op(T& data, F op)
+	{
+		return light_op<Ack, T>(data, [&](T& data)
+		{
+			return data.atomic_op(op);
+		});
+	}
+
+	template <bool Ack = false, typename T, typename F>
+	SAFE_BUFFERS inline auto fetch_op(T& data, F op)
+	{
+		return light_op<Ack, T>(data, [&](T& data)
+		{
+			return data.fetch_op(op);
+		});
+	}
 } // namespace vm
