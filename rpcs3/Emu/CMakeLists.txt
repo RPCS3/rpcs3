@@ -435,6 +435,7 @@ target_sources(rpcs3_emu PRIVATE
 
 if(TARGET 3rdparty_vulkan)
 	target_sources(rpcs3_emu PRIVATE
+		RSX/VK/vkutils/buffer_view.cpp
 		RSX/VK/vkutils/chip_class.cpp
 		RSX/VK/vkutils/fence.cpp
 		RSX/VK/vkutils/mem_allocator.cpp

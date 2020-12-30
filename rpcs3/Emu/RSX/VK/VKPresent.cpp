@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "VKGSRender.h"
+#include "vkutils/buffer_view.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 
 #include "util/asm.hpp"
