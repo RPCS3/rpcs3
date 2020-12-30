@@ -21,14 +21,14 @@
 #include "../Common/TextureUtils.h"
 #include "../display.h"
 #include "../rsx_utils.h"
-#include "helpers/chip_class.h"
-#include "helpers/fence.h"
-#include "helpers/mem_allocator.h"
-#include "helpers/memory_block.h"
-#include "helpers/physical_device.h"
-#include "helpers/pipeline_binding_table.h"
-#include "helpers/shared.h"
-#include "helpers/supported_extensions.h"
+#include "vkutils/chip_class.h"
+#include "vkutils/fence.h"
+#include "vkutils/mem_allocator.h"
+#include "vkutils/memory_block.h"
+#include "vkutils/physical_device.h"
+#include "vkutils/pipeline_binding_table.h"
+#include "vkutils/shared.h"
+#include "vkutils/supported_extensions.h"
 
 #ifdef __APPLE__
 #define VK_DISABLE_COMPONENT_SWIZZLE 1

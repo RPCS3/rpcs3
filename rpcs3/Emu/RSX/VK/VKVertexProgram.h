@@ -4,7 +4,7 @@
 #include "Utilities/Thread.h"
 #include "VulkanAPI.h"
 #include "VKProgramPipeline.h"
-#include "helpers/pipeline_binding_table.h"
+#include "vkutils/pipeline_binding_table.h"
 
 namespace vk
 {

@@ -3,7 +3,7 @@
 #include "Utilities/hash.h"
 #include "Utilities/lockless.h"
 #include "VKProgramPipeline.h"
-#include "helpers/graphics_pipeline_state.h"
+#include "vkutils/graphics_pipeline_state.h"
 
 namespace vk
 {
