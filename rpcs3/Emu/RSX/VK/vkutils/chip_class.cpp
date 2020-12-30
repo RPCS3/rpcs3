@@ -3,7 +3,7 @@
 
 namespace vk
 {
-	static chip_family_table s_AMD_family_tree = []()
+	static const chip_family_table s_AMD_family_tree = []()
 	{
 		chip_family_table table;
 		table.default_ = chip_class::AMD_gcn_generic;
@@ -26,7 +26,7 @@ namespace vk
 		return table;
 	}();
 
-	static chip_family_table s_NV_family_tree = []()
+	static const chip_family_table s_NV_family_tree = []()
 	{
 		chip_family_table table;
 		table.default_ = chip_class::NV_generic;
@@ -88,7 +88,7 @@ namespace vk
 		lut[id] = family;
 	}
 
-	chip_class chip_family_table::find(u32 device_id)
+	chip_class chip_family_table::find(u32 device_id) const
 	{
 		if (auto found = lut.find(device_id); found != lut.end())
 		{
