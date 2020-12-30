@@ -40,7 +40,7 @@ namespace vk
 		void add(u32 first, u32 last, chip_class family);
 		void add(u32 id, chip_class family);
 
-		chip_class find(u32 device_id);
+		chip_class find(u32 device_id) const;
 	};
 
 	chip_class get_chip_family();
