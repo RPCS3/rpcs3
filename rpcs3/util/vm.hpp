@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 namespace utils
 {
@@ -18,29 +18,29 @@ namespace utils
 	* Reserve `size` bytes of virtual memory and returns it.
 	* The memory should be commited before usage.
 	*/
-	void* memory_reserve(std::size_t size, void* use_addr = nullptr);
+	void* memory_reserve(usz size, void* use_addr = nullptr);
 
 	/**
 	* Commit `size` bytes of virtual memory starting at pointer.
 	* That is, bake reserved memory with physical memory.
 	* pointer should belong to a range of reserved memory.
 	*/
-	void memory_commit(void* pointer, std::size_t size, protection prot = protection::rw);
+	void memory_commit(void* pointer, usz size, protection prot = protection::rw);
 
 	// Decommit all memory committed via commit_page_memory.
-	void memory_decommit(void* pointer, std::size_t size);
+	void memory_decommit(void* pointer, usz size);
 
 	// Decommit all memory and commit it again.
-	void memory_reset(void* pointer, std::size_t size, protection prot = protection::rw);
+	void memory_reset(void* pointer, usz size, protection prot = protection::rw);
 
 	// Free memory after reserved by memory_reserve, should specify original size
-	void memory_release(void* pointer, std::size_t size);
+	void memory_release(void* pointer, usz size);
 
 	// Set memory protection
-	void memory_protect(void* pointer, std::size_t size, protection prot);
+	void memory_protect(void* pointer, usz size, protection prot);
 
 	// Lock pages in memory
-	bool memory_lock(void* pointer, std::size_t size);
+	bool memory_lock(void* pointer, usz size);
 
 	// Shared memory handle
 	class shm

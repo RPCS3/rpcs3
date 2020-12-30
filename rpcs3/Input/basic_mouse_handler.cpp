@@ -1,5 +1,8 @@
-﻿#include <QApplication>
+#include <QApplication>
 #include <QCursor>
+
+#include "util/types.hpp"
+#include "util/logs.hpp"
 
 #include "basic_mouse_handler.h"
 #include "rpcs3qt/gs_frame.h"

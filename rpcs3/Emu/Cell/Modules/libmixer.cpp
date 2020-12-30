@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 
@@ -433,7 +433,7 @@ struct surmixer_thread : ppu_thread
 								g_surmx.mixdata[i * 8 + 1] += right;
 							}
 							if ((p.m_position == p.m_samples && p.m_speed > 0.0f) ||
-								(p.m_position = umax && p.m_speed < 0.0f)) // loop or stop
+								(p.m_position == umax && p.m_speed < 0.0f)) // loop or stop
 							{
 								if (p.m_loop_mode == CELL_SSPLAYER_LOOP_ON)
 								{
@@ -536,7 +536,7 @@ s32 cellSurMixerSetNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> fu
 
 	if (g_surmx.cb)
 	{
-		fmt::throw_exception("Callback already set" HERE);
+		fmt::throw_exception("Callback already set");
 	}
 
 	g_surmx.cb = func;
@@ -551,7 +551,7 @@ s32 cellSurMixerRemoveNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction>
 
 	if (g_surmx.cb != func)
 	{
-		fmt::throw_exception("Callback not set" HERE);
+		fmt::throw_exception("Callback not set");
 	}
 
 	g_surmx.cb = vm::null;
@@ -670,19 +670,19 @@ void cellSurMixerBeep(u32 arg)
 f32 cellSurMixerUtilGetLevelFromDB(f32 dB)
 {
 	libmixer.todo("cellSurMixerUtilGetLevelFromDB(dB=%f)", dB);
-	fmt::throw_exception("TODO" HERE);
+	fmt::throw_exception("TODO");
 }
 
 f32 cellSurMixerUtilGetLevelFromDBIndex(s32 index)
 {
 	libmixer.todo("cellSurMixerUtilGetLevelFromDBIndex(index=%d)", index);
-	fmt::throw_exception("TODO" HERE);
+	fmt::throw_exception("TODO");
 }
 
 f32 cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 {
 	libmixer.todo("cellSurMixerUtilNoteToRatio(refNote=%d, note=%d)", refNote, note);
-	fmt::throw_exception("TODO" HERE);
+	fmt::throw_exception("TODO");
 }
 
 DECLARE(ppu_module_manager::libmixer)("libmixer", []()

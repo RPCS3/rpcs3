@@ -1,8 +1,6 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
-
-#include <atomic>
 
 // Return codes
 enum sceNpSnsError : u32
@@ -81,5 +79,5 @@ struct SceNpSnsFbLongAccessTokenResult
 
 struct sce_np_sns_manager
 {
-	std::atomic<bool> is_initialized = false;
+	atomic_t<bool> is_initialized = false;
 };

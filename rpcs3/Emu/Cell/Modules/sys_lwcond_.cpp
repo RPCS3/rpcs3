@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_lwmutex.h"
@@ -329,7 +329,7 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 
 		if (old == lwmutex_free || old == lwmutex_dead)
 		{
-			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
+			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 		}
 
 		return res;
@@ -361,13 +361,13 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 
 		if (old == lwmutex_free || old == lwmutex_dead)
 		{
-			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
+			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 		}
 
 		return not_an_error(CELL_ETIMEDOUT);
 	}
 
-	fmt::throw_exception("Unexpected syscall result (lwcond=*0x%x, result=0x%x)" HERE, lwcond, +res);
+	fmt::throw_exception("Unexpected syscall result (lwcond=*0x%x, result=0x%x)", lwcond, +res);
 }
 
 void sysPrxForUser_sys_lwcond_init()

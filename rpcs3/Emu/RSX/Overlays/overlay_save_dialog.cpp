@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_save_dialog.h"
 #include "Utilities/date_time.h"
 

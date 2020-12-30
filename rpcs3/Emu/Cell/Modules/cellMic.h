@@ -1,6 +1,5 @@
-﻿#pragma once
+#pragma once
 
-#include "Utilities/BEType.h"
 #include "Utilities/Thread.h"
 
 #include "3rdparty/OpenAL/include/alext.h"
@@ -159,7 +158,7 @@ struct CellMicInputStream
 struct CellMicInputDefinition
 {
 	// TODO: Data types
-	volatile uint32_t   uiDevId;
+	volatile u32   uiDevId;
 	CellMicInputStream  data;
 	CellMicInputFormatI aux_format;
 	CellMicInputFormatI raw_format;
@@ -183,7 +182,7 @@ struct CellMicStatus
 // --- End of cell definitions ---
 
 
-template <std::size_t S>
+template <usz S>
 class simple_ringbuf
 {
 public:
@@ -226,7 +225,7 @@ public:
 
 	void write_bytes(const u8* buf, const u32 size)
 	{
-		ASSERT(size <= S);
+		ensure(size <= S);
 
 		if (u32 over_size = m_used + size; over_size > S)
 		{
@@ -338,7 +337,7 @@ private:
 
 	u32 sample_size = 0; // Determined at opening for internal use
 
-	static constexpr std::size_t inbuf_size = 400000; // Default value unknown
+	static constexpr usz inbuf_size = 400000; // Default value unknown
 
 	simple_ringbuf<inbuf_size> rbuf_raw;
 	simple_ringbuf<inbuf_size> rbuf_dsp;

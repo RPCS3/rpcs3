@@ -5,6 +5,62 @@
 
 namespace
 {
+	constexpr u32 opcode_list[] = {NV4097_SET_VIEWPORT_HORIZONTAL, NV4097_SET_VIEWPORT_VERTICAL,
+	   NV4097_SET_SCISSOR_HORIZONTAL, NV4097_SET_SCISSOR_VERTICAL, NV4097_SET_SURFACE_CLIP_HORIZONTAL,
+	   NV4097_SET_SURFACE_CLIP_VERTICAL, NV4097_SET_CLEAR_RECT_HORIZONTAL,
+	   NV4097_SET_CLEAR_RECT_VERTICAL, NV3089_CLIP_POINT, NV3089_CLIP_SIZE, NV3089_IMAGE_OUT_POINT,
+	   NV3089_IMAGE_OUT_SIZE, NV3089_IMAGE_IN_SIZE, NV3062_SET_PITCH, NV308A_POINT,
+	   NV4097_SET_DEPTH_TEST_ENABLE, NV4097_SET_DEPTH_MASK, NV4097_SET_ALPHA_TEST_ENABLE,
+	   NV4097_SET_STENCIL_TEST_ENABLE, NV4097_SET_RESTART_INDEX_ENABLE,
+	   NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE, NV4097_SET_LOGIC_OP_ENABLE, NV4097_SET_DITHER_ENABLE,
+	   NV4097_SET_BLEND_ENABLE, NV4097_SET_LINE_SMOOTH_ENABLE, NV4097_SET_POLY_OFFSET_POINT_ENABLE,
+	   NV4097_SET_POLY_OFFSET_LINE_ENABLE, NV4097_SET_POLY_OFFSET_FILL_ENABLE,
+	   NV4097_SET_CULL_FACE_ENABLE, NV4097_SET_POLY_SMOOTH_ENABLE,
+	   NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE, NV4097_SET_TWO_SIDE_LIGHT_EN,
+	   NV4097_SET_RESTART_INDEX, NV4097_SET_SURFACE_COLOR_AOFFSET, NV4097_SET_SURFACE_COLOR_BOFFSET,
+	   NV4097_SET_SURFACE_COLOR_COFFSET, NV4097_SET_SURFACE_COLOR_DOFFSET, NV4097_SET_SURFACE_PITCH_A,
+	   NV4097_SET_SURFACE_PITCH_B, NV4097_SET_SURFACE_PITCH_C, NV4097_SET_SURFACE_PITCH_D,
+	   NV4097_SET_SURFACE_ZETA_OFFSET, NV4097_SET_SURFACE_PITCH_Z,
+	   NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, NV4097_SET_SHADER_CONTROL,
+	   NV4097_SET_VERTEX_DATA_BASE_OFFSET, NV4097_SET_INDEX_ARRAY_ADDRESS,
+	   NV4097_SET_VERTEX_DATA_BASE_INDEX, NV4097_SET_SHADER_PROGRAM,
+	   NV4097_SET_TRANSFORM_PROGRAM_START, NV406E_SET_CONTEXT_DMA_SEMAPHORE, NV406E_SEMAPHORE_OFFSET, NV4097_SET_SEMAPHORE_OFFSET,
+	   NV3089_IMAGE_IN_OFFSET, NV3062_SET_OFFSET_DESTIN, NV309E_SET_OFFSET, NV3089_DS_DX, NV3089_DT_DY,
+	   NV0039_PITCH_IN, NV0039_PITCH_OUT, NV0039_LINE_LENGTH_IN, NV0039_LINE_COUNT, NV0039_OFFSET_OUT,
+	   NV0039_OFFSET_IN, NV4097_SET_VERTEX_ATTRIB_INPUT_MASK, NV4097_SET_FREQUENCY_DIVIDER_OPERATION,
+	   NV4097_SET_DEPTH_BOUNDS_MIN, NV4097_SET_DEPTH_BOUNDS_MAX, NV4097_SET_FOG_PARAMS,
+	   NV4097_SET_FOG_PARAMS + 1, NV4097_SET_CLIP_MIN, NV4097_SET_CLIP_MAX,
+	   NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR, NV4097_SET_POLYGON_OFFSET_BIAS,
+	   NV4097_SET_VIEWPORT_SCALE, NV4097_SET_VIEWPORT_SCALE + 1, NV4097_SET_VIEWPORT_SCALE + 2,
+	   NV4097_SET_VIEWPORT_SCALE + 3, NV4097_SET_VIEWPORT_OFFSET, NV4097_SET_VIEWPORT_OFFSET + 1,
+	   NV4097_SET_VIEWPORT_OFFSET + 2, NV4097_SET_VIEWPORT_OFFSET + 3, NV4097_SET_DEPTH_FUNC,
+	   NV4097_SET_STENCIL_FUNC, NV4097_SET_BACK_STENCIL_FUNC, NV4097_SET_STENCIL_OP_FAIL,
+	   NV4097_SET_STENCIL_OP_ZFAIL, NV4097_SET_STENCIL_OP_ZPASS, NV4097_SET_BACK_STENCIL_OP_FAIL,
+	   NV4097_SET_BACK_STENCIL_OP_ZFAIL, NV4097_SET_BACK_STENCIL_OP_ZPASS, NV4097_SET_LOGIC_OP,
+	   NV4097_SET_FRONT_FACE, NV4097_SET_CULL_FACE, NV4097_SET_SURFACE_COLOR_TARGET,
+	   NV4097_SET_FOG_MODE, NV4097_SET_ALPHA_FUNC, NV4097_SET_BEGIN_END, NV3089_SET_OPERATION,
+	   NV3089_SET_COLOR_FORMAT, NV3089_SET_CONTEXT_SURFACE, NV3062_SET_COLOR_FORMAT,
+	   NV4097_SET_STENCIL_FUNC_REF, NV4097_SET_BACK_STENCIL_FUNC_REF, NV4097_SET_STENCIL_FUNC_MASK,
+	   NV4097_SET_BACK_STENCIL_FUNC_MASK, NV4097_SET_ALPHA_REF, NV4097_SET_COLOR_CLEAR_VALUE,
+	   NV4097_SET_STENCIL_MASK, NV4097_SET_BACK_STENCIL_MASK, NV4097_SET_BLEND_EQUATION,
+	   NV4097_SET_BLEND_FUNC_SFACTOR, NV4097_SET_BLEND_FUNC_DFACTOR, NV4097_SET_COLOR_MASK,
+	   NV4097_SET_SHADER_WINDOW, NV4097_SET_BLEND_ENABLE_MRT, NV4097_SET_USER_CLIP_PLANE_CONTROL,
+	   NV4097_SET_LINE_WIDTH, NV4097_SET_SURFACE_FORMAT, NV4097_SET_WINDOW_OFFSET,
+	   NV4097_SET_ZSTENCIL_CLEAR_VALUE, NV4097_SET_INDEX_ARRAY_DMA, NV4097_SET_CONTEXT_DMA_COLOR_A,
+	   NV4097_SET_CONTEXT_DMA_COLOR_B, NV4097_SET_CONTEXT_DMA_COLOR_C, NV4097_SET_CONTEXT_DMA_COLOR_D,
+	   NV4097_SET_CONTEXT_DMA_ZETA, NV3089_SET_CONTEXT_DMA_IMAGE, NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN,
+	   NV309E_SET_CONTEXT_DMA_IMAGE, NV0039_SET_CONTEXT_DMA_BUFFER_OUT,
+	   NV0039_SET_CONTEXT_DMA_BUFFER_IN, NV4097_SET_CONTEXT_DMA_REPORT, NV3089_IMAGE_IN_FORMAT,
+	   NV309E_SET_FORMAT, NV0039_FORMAT, NV4097_SET_BLEND_COLOR2, NV4097_SET_BLEND_COLOR,
+	   NV3089_IMAGE_IN, NV4097_NO_OPERATION, NV4097_INVALIDATE_VERTEX_CACHE_FILE,
+	   NV4097_INVALIDATE_VERTEX_FILE, NV4097_SET_ANTI_ALIASING_CONTROL, NV4097_SET_FRONT_POLYGON_MODE,
+	   NV4097_SET_BACK_POLYGON_MODE,
+	   EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA_ARRAY_FORMAT)
+	       EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA_ARRAY_OFFSET)
+	           EXPAND_RANGE_32(0, DECLARE_TRANSFORM_CONSTANT) NV4097_SET_TRANSFORM_CONSTANT_LOAD,
+	   NV4097_DRAW_ARRAYS, NV4097_DRAW_INDEX_ARRAY,
+	   EXPAND_RANGE_512(0, DECLARE_TRANSFORM_PROGRAM) NV4097_SET_TRANSFORM_PROGRAM_LOAD};
+
 	const std::unordered_map<u32, const char*> methods_name = {
 		{NV406E_SET_REFERENCE, "NV406E_SET_REFERENCE"},
 		{NV406E_SET_CONTEXT_DMA_SEMAPHORE, "NV406E_SET_CONTEXT_DMA_SEMAPHORE"},
@@ -875,18 +931,18 @@ namespace
 		       " stride = " + std::to_string(stride) + " frequency = " + std::to_string(frequency);
 	}
 
-	std::string transform_constant(size_t index, u32 arg)
+	std::string transform_constant(usz index, u32 arg)
 	{
 		return "Transform constant " + std::to_string(index) + ": " + std::to_string(arg) + "/" +
 		       std::to_string(std::bit_cast<f32>(arg));
 	}
 
-	std::string texture_offset(size_t index, u32 arg)
+	std::string texture_offset(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + ": Offset @" + ptr_to_string(arg);
 	}
 
-	std::string texture_size(size_t index, u32 arg)
+	std::string texture_size(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + ": width = " + std::to_string(arg & 0xffff) +
 		       " height = " + std::to_string(arg >> 16);
@@ -927,7 +983,7 @@ namespace
 		return "Error";
 	}
 
-	std::string texture_format(size_t index, u32 arg)
+	std::string texture_format(usz index, u32 arg)
 	{
 		int format = ((arg >> 8) & 0xFF);
 		return "Texture " + std::to_string(index) + ": location = " + ptr_to_string((arg & 0x3) - 1) +
@@ -972,7 +1028,7 @@ namespace
 		return "Error";
 	}
 
-	std::string texture_address(size_t index, u32 arg)
+	std::string texture_address(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + ": wrap_s = " + get_texture_wrap_mode(arg & 0xF) +
 		       " wrap_t = " + get_texture_wrap_mode((arg >> 8) & 0xF) + " wrap_r = " +
@@ -998,7 +1054,7 @@ namespace
 		return "Error";
 	}
 
-	std::string texture_control0(size_t index, u32 arg)
+	std::string texture_control0(usz index, u32 arg)
 	{
 		std::string result = "Texture " + std::to_string(index);
 		if ((arg >> 31) & 0x1) {
@@ -1024,7 +1080,7 @@ namespace
 		return "Error";
 	}
 
-	std::string texture_control1(size_t index, u32 arg) noexcept
+	std::string texture_control1(usz index, u32 arg) noexcept
 	{
 		return "Texture " + std::to_string(index) + " Component 0 = " + get_remap_channel(arg & 0x3) +
 		       " Component 1 = " + get_remap_channel((arg >> 2) & 0x3) + " Component 2 = " +
@@ -1032,18 +1088,18 @@ namespace
 		       get_remap_channel((arg >> 6) & 0x3);
 	}
 
-	std::string texture_control3(size_t index, u32 arg)
+	std::string texture_control3(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + " depth = " + std::to_string(arg >> 20) +
 		       " pitch = " + std::to_string(arg & 0xFFFFF);
 	}
 
-	std::string texture_border_color(size_t index, u32 arg)
+	std::string texture_border_color(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + " border color = " + std::to_string(arg);
 	}
 
-	std::string texture_filter(size_t index, u32 arg)
+	std::string texture_filter(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + " bias = " + std::to_string(arg & 0x1fff) +
 		       " min_filter = " + std::to_string((arg >> 16) & 0x7) + " mag_filter = " +
@@ -1062,16 +1118,24 @@ namespace
 			return rsx::registers_decoder<opcode>::dump(std::move(arg));
 		}
 
-		template <u32... opcode>
-		auto create_printing_table(const std::integer_sequence<u32, opcode...>&)
+		template <typename T, T... Index>
+		auto create_printing_table(std::integer_sequence<T, Index...> seq)
 		{
-			return std::unordered_map<uint32_t, std::string (*)(u32)>{
-			    {opcode, register_pretty_printing<opcode>}...};
+			std::unordered_map<u32, std::string (*)(u32)> result;
+			(result.insert({
+				{opcode_list[Index * 5 + 0], &register_pretty_printing<opcode_list[Index * 5 + 0]>},
+				{opcode_list[Index * 5 + 1], &register_pretty_printing<opcode_list[Index * 5 + 1]>},
+				{opcode_list[Index * 5 + 2], &register_pretty_printing<opcode_list[Index * 5 + 2]>},
+				{opcode_list[Index * 5 + 3], &register_pretty_printing<opcode_list[Index * 5 + 3]>},
+				{opcode_list[Index * 5 + 4], &register_pretty_printing<opcode_list[Index * 5 + 4]>}}), ...);
+			return result;
 		}
 	}
 
 	const std::unordered_map<u32, std::string (*)(u32)> printing_functions =
-	    create_printing_table(rsx::opcode_list);
+		create_printing_table(std::make_index_sequence<std::size(opcode_list) / 5>());
+
+	static_assert(std::size(opcode_list) % 5 == 0);
 	/*	{
 	  { NV4097_DRAW_ARRAYS, [](u32 arg) -> std::string { return "Draw " + std::to_string((arg >> 24) +
 	 1) + " vertex starting from " + std::to_string(arg & 0xFFFFFF); } },

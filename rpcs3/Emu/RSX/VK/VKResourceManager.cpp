@@ -1,11 +1,11 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKResourceManager.h"
 #include "VKGSRender.h"
 
 namespace vk
 {
-	std::unordered_map<uintptr_t, vmm_allocation_t> g_vmm_allocations;
-	std::unordered_map<uintptr_t, atomic_t<u64>> g_vmm_memory_usage;
+	std::unordered_map<uptr, vmm_allocation_t> g_vmm_allocations;
+	std::unordered_map<uptr, atomic_t<u64>> g_vmm_memory_usage;
 
 	resource_manager g_resource_manager;
 	atomic_t<u64> g_event_ctr;
@@ -40,7 +40,7 @@ namespace vk
 
 	void vmm_notify_memory_allocated(void* handle, u32 memory_type, u64 memory_size)
 	{
-		auto key = reinterpret_cast<uintptr_t>(handle);
+		auto key = reinterpret_cast<uptr>(handle);
 		const vmm_allocation_t info = { memory_size, memory_type };
 
 		if (const auto ins = g_vmm_allocations.insert_or_assign(key, info);
@@ -61,7 +61,7 @@ namespace vk
 
 	void vmm_notify_memory_freed(void* handle)
 	{
-		auto key = reinterpret_cast<uintptr_t>(handle);
+		auto key = reinterpret_cast<uptr>(handle);
 		if (auto found = g_vmm_allocations.find(key);
 			found != g_vmm_allocations.end())
 		{

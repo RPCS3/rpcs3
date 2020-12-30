@@ -1,8 +1,10 @@
-﻿#ifdef WITH_DISCORD_RPC
-#include "stdafx.h"
+#ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
 #include "discord_rpc.h"
 #include "discord_register.h"
+
+#include <string>
+#include <ctime>
 
 namespace discord
 {
@@ -27,7 +29,7 @@ namespace discord
 
 		if (reset_timer)
 		{
-			discordPresence.startTimestamp = time(0);
+			discordPresence.startTimestamp = std::time(0);
 		}
 
 		Discord_UpdatePresence(&discordPresence);

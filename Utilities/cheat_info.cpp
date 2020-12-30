@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "cheat_info.h"
 #include "Config.h"
 #include "StrUtil.h"

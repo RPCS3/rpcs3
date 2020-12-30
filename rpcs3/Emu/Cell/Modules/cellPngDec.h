@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "cellPng.h"
 
@@ -276,8 +276,8 @@ struct PngHandle
 struct PngBuffer
 {
 	// The cursor location and data pointer for reading from a buffer
-	size_t cursor;
-	size_t length;
+	usz cursor;
+	usz length;
 	vm::bptr<void> data;
 
 	// The file descriptor, and whether we need to read from a file descriptor
@@ -325,7 +325,7 @@ static s32 getPngDecColourType(u8 type)
 	case PNG_COLOR_TYPE_PALETTE:    return CELL_PNGDEC_PALETTE;
 	case PNG_COLOR_TYPE_GRAY:       return CELL_PNGDEC_GRAYSCALE;
 	case PNG_COLOR_TYPE_GRAY_ALPHA: return CELL_PNGDEC_GRAYSCALE_ALPHA;
-	default: fmt::throw_exception("Unknown colour type: %d" HERE, type);
+	default: fmt::throw_exception("Unknown colour type: %d", type);
 	}
 }
 

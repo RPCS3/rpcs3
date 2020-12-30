@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "StaticHLE.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUOpcodes.h"
@@ -82,7 +82,7 @@ bool statichle_handler::load_patterns()
 		for (u32 j = 0; j < 32; j++)
 			dapat.start_pattern[j] = char_to_u8(pattern[0][j * 2], pattern[0][(j * 2) + 1]);
 
-		dapat.crc16_length = ::narrow<u8>(char_to_u8(pattern[1][0], pattern[1][1]), HERE);
+		dapat.crc16_length = ::narrow<u8>(char_to_u8(pattern[1][0], pattern[1][1]));
 		dapat.crc16        = (char_to_u8(pattern[2][0], pattern[2][1]) << 8) | char_to_u8(pattern[2][2], pattern[2][3]);
 		dapat.total_length = (char_to_u8(pattern[3][0], pattern[3][1]) << 8) | char_to_u8(pattern[3][2], pattern[3][3]);
 		dapat._module      = pattern[4];
@@ -99,7 +99,7 @@ bool statichle_handler::load_patterns()
 
 #define POLY 0x8408
 
-uint16_t statichle_handler::gen_CRC16(const uint8_t* data_p, size_t length)
+u16 statichle_handler::gen_CRC16(const u8* data_p, usz length)
 {
 	unsigned char i;
 	unsigned int data;
@@ -164,7 +164,7 @@ bool statichle_handler::check_against_patterns(vm::cptr<u8>& data, u32 size, u32
 		}
 
 		const auto sfunc   = &smodule->functions.at(pat.fnid);
-		const u32 target   = ppu_function_manager::addr + 8 * sfunc->index;
+		const u32 target   = ppu_function_manager::func_addr(sfunc->index) + 4;
 
 		// write stub
 		vm::write32(addr, ppu_instructions::LIS(0, (target&0xFFFF0000)>>16));

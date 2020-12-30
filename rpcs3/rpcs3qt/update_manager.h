@@ -1,8 +1,10 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include <QObject>
 #include <QByteArray>
+
+#include <string>
 
 class downloader;
 

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #ifndef _WIN32
 #error "XAudio2 can only be built on Windows."

@@ -1,6 +1,9 @@
 ﻿#include "stdafx.h"
 #include "perf_meter.hpp"
 
+#include "util/sysinfo.hpp"
+#include "Utilities/Thread.h"
+
 #include <map>
 #include <mutex>
 
@@ -65,6 +68,36 @@ void perf_stat_base::print(const char* name) noexcept
 	}
 }
 
+#ifdef _MSC_VER
+extern "C" void _mm_lfence();
+#endif
+
+SAFE_BUFFERS void perf_stat_base::push(u64 data[66], u64 start_time, const char* name) noexcept
+{
+	// Event end
+#ifdef _MSC_VER
+	const u64 end_time = (_mm_lfence(), get_tsc());
+#else
+	const u64 end_time = (__builtin_ia32_lfence(), get_tsc());
+#endif
+
+	// Compute difference in seconds
+	const f64 diff = (end_time - start_time) * 1. / utils::get_tsc_freq();
+
+	// Register perf stat in nanoseconds
+	const u64 ns = static_cast<u64>(diff * 1000'000'000.);
+
+	// Print in microseconds
+	if (static_cast<u64>(diff * 1000'000.) >= g_cfg.core.perf_report_threshold)
+	{
+		perf_log.notice(u8"%s: %.3fµs", name, diff * 1000'000.);
+	}
+
+	data[0] += ns != 0;
+	data[64 - std::countl_zero(ns)]++;
+	data[65] += ns;
+}
+
 static shared_mutex s_perf_mutex;
 
 static std::map<std::string, perf_stat_base> s_perf_acc;
@@ -73,6 +106,12 @@ static std::multimap<std::string, u64*> s_perf_sources;
 
 void perf_stat_base::add(u64 ns[66], const char* name) noexcept
 {
+	// Don't attempt to register some foreign/unnamed threads
+	if (!thread_ctrl::get_current())
+	{
+		return;
+	}
+
 	std::lock_guard lock(s_perf_mutex);
 
 	s_perf_sources.emplace(name, ns);
@@ -81,6 +120,11 @@ void perf_stat_base::add(u64 ns[66], const char* name) noexcept
 
 void perf_stat_base::remove(u64 ns[66], const char* name) noexcept
 {
+	if (!thread_ctrl::get_current())
+	{
+		return;
+	}
+
 	std::lock_guard lock(s_perf_mutex);
 
 	const auto found = s_perf_sources.equal_range(name);

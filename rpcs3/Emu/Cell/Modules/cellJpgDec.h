@@ -1,6 +1,4 @@
-﻿#pragma once
-
-#include "Utilities/BEType.h"
+#pragma once
 
 //Return Codes
 enum CellJpgDecError : u32

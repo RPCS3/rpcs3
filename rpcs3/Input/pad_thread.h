@@ -1,12 +1,15 @@
-﻿#pragma once
+#pragma once
+
+#include "util/types.hpp"
+#include "util/atomic.hpp"
+#include "Emu/Io/pad_types.h"
+#include "Emu/Io/pad_config_types.h"
 
 #include <map>
 #include <thread>
 #include <mutex>
-
-#include "stdafx.h"
-#include "Emu/Io/pad_types.h"
-#include "Emu/Io/pad_config_types.h"
+#include <string_view>
+#include <string>
 
 class PadHandlerBase;
 
@@ -57,10 +60,10 @@ namespace pad
 	{
 		if (relaxed)
 		{
-			return g_current.load();
+			return g_current.observe();
 		}
 
-		return verify(HERE, g_current.load());
+		return ensure(g_current.load());
 	}
 
 	static inline void set_enabled(bool enabled)

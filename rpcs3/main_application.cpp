@@ -1,4 +1,8 @@
-﻿#include "main_application.h"
+#include "main_application.h"
+
+#include "util/types.hpp"
+#include "util/logs.hpp"
+#include "util/atomic.hpp"
 
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
@@ -124,7 +128,7 @@ EmuCallbacks main_application::CreateCallbacks()
 #ifdef HAVE_FAUDIO
 		case audio_renderer::faudio: result = std::make_shared<FAudioBackend>(); break;
 #endif
-		default: fmt::throw_exception("Invalid audio renderer: %s" HERE, type);
+		default: fmt::throw_exception("Invalid audio renderer: %s", type);
 		}
 
 		if (!result->Initialized())

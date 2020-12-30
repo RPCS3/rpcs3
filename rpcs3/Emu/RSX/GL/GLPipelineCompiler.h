@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "GLHelpers.h"
 #include "Emu/RSX/display.h"
 #include "Utilities/lockless.h"

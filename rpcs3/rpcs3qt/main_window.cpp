@@ -1,5 +1,3 @@
-﻿#include "stdafx.h"
-
 #include "main_window.h"
 #include "qt_utils.h"
 #include "vfs_dialog.h"
@@ -27,8 +25,10 @@
 #include "pkg_install_dialog.h"
 #include "category.h"
 #include "gui_settings.h"
+#include "input_dialog.h"
 
 #include <thread>
+#include <charconv>
 
 #include <QScreen>
 #include <QDirIterator>
@@ -38,10 +38,12 @@
 
 #include "rpcs3_version.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/system_config.h"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
+#include "Crypto/unedat.h"
 
 #include "Loader/PUP.h"
 #include "Loader/TAR.h"
@@ -52,7 +54,7 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-extern std::atomic<bool> g_user_asked_for_frame_capture;
+extern atomic_t<bool> g_user_asked_for_frame_capture;
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -204,7 +206,7 @@ void main_window::Init()
 	m_download_menu_action = ui->menuBar->addMenu(download_menu);
 #endif
 
-	ASSERT(m_download_menu_action);
+	ensure(m_download_menu_action);
 	m_download_menu_action->setVisible(false);
 
 	connect(&m_updater, &update_manager::signal_update_available, this, [this](bool update_available)
@@ -300,10 +302,6 @@ void main_window::OnPlayOrPause()
 
 void main_window::show_boot_error(game_boot_result status)
 {
-	if (status == game_boot_result::no_errors)
-	{
-		return;
-	}
 	QString message;
 	switch (status)
 	{
@@ -325,9 +323,9 @@ void main_window::show_boot_error(game_boot_result status)
 	case game_boot_result::file_creation_error:
 		message = tr("The emulator could not create files required for booting.");
 		break;
-	case game_boot_result::firmware_missing:
-		message = tr("Firmware has not been installed. Install firmware with the \"File > Install Firmware\" menu option.");
-		break;
+	case game_boot_result::firmware_missing: // Handled elsewhere
+	case game_boot_result::no_errors:
+		return;
 	case game_boot_result::generic_error:
 	default:
 		message = tr("Unknown error.");
@@ -780,12 +778,12 @@ void main_window::HandlePupInstallation(QString file_path)
 
 	std::string version_string = pup.get_file(0x100).to_string();
 
-	if (const size_t version_pos = version_string.find('\n'); version_pos != umax)
+	if (const usz version_pos = version_string.find('\n'); version_pos != umax)
 	{
 		version_string.erase(version_pos);
 	}
 
-	const std::string cur_version = "4.86";
+	const std::string cur_version = "4.87";
 
 	if (version_string < cur_version &&
 		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(qstr(cur_version), qstr(version_string)),
@@ -880,27 +878,55 @@ void main_window::DecryptSPRXLibraries()
 		return;
 	}
 
-	if (!m_gui_settings->GetBootConfirmation(this))
-	{
-		return;
-	}
-
-	Emu.SetForceBoot(true);
-	Emu.Stop();
-
 	m_gui_settings->SetValue(gui::fd_decrypt_sprx, QFileInfo(modules.first()).path());
 
 	gui_log.notice("Decrypting binaries...");
+
+	// Always start with no KLIC
+	std::vector<u128> klics{u128{}};
+
+	if (const auto keys = g_fxo->get<loaded_npdrm_keys>())
+	{
+		// Second klic: get it from a running game
+		if (const u128 klic = keys->devKlic)
+		{
+			klics.emplace_back(klic);
+		}
+	}
 
 	for (const QString& _module : modules)
 	{
 		const std::string old_path = sstr(_module);
 
-		fs::file elf_file(old_path);
+		fs::file elf_file;
 
-		if (elf_file && elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
+		bool tried = false;
+		bool invalid = false;
+		usz key_it = 0;
+
+		while (true)
 		{
-			elf_file = decrypt_self(std::move(elf_file));
+			for (; key_it < klics.size(); key_it++)
+			{
+				if (elf_file.open(old_path) && elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
+				{
+					// First KLIC is no KLIC
+					elf_file = decrypt_self(std::move(elf_file), key_it != 0 ? reinterpret_cast<u8*>(&klics[key_it]) : nullptr);
+
+					if (!elf_file)
+					{
+						// Try another key
+						continue;
+					}
+				}
+				else
+				{
+					elf_file = {};
+					invalid = true;
+				}
+
+				break;
+			}
 
 			if (elf_file)
 			{
@@ -916,11 +942,70 @@ void main_window::DecryptSPRXLibraries()
 				{
 					gui_log.error("Failed to create %s", new_path);
 				}
+
+				break;
 			}
-			else
+			else if (!invalid)
 			{
-				gui_log.error("Failed to decrypt %s", old_path);
+				// Allow the user to manually type KLIC if decryption failed
+
+				const std::string filename = old_path.substr(old_path.find_last_of(fs::delim) + 1);
+
+				const QString hint = tr("Hint: KLIC (KLicense key) is a 16-byte long string. (32 hexadecimal characters)"
+							"\nAnd is logged with some sceNpDrm* functions when the game/application which owns \"%0\" is running.").arg(qstr(filename));
+
+				if (tried)
+				{
+					gui_log.error("Failed to decrypt %s with specfied KLIC, retrying.\n%s", old_path, sstr(hint));
+				}
+
+				input_dialog dlg(32, "", tr("Enter KLIC of %0").arg(qstr(filename)),
+					tried ? tr("Decryption failed with provided KLIC.\n%0").arg(hint) : tr("Hexadecimal only."), "00000000000000000000000000000000", this);
+
+				QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+				mono.setPointSize(8);
+				dlg.set_input_font(mono, true, '0');
+				dlg.set_clear_button_enabled(false);
+				dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
+				dlg.set_validator(new QRegExpValidator(QRegExp("^[a-fA-F0-9]*$"))); // HEX only
+
+				connect(&dlg, &input_dialog::text_changed, [&](const QString& text)
+				{
+					dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, text.size() == 32);
+				});
+
+				if (dlg.exec() == QDialog::Accepted)
+				{
+					const std::string text = sstr(dlg.get_input_text());
+
+					auto& klic = (tried ? klics.back() : klics.emplace_back());
+
+					ensure(text.size() == 32);
+
+					// It must succeed (only hex characters are present)
+					u64 lo_ = 0;
+					u64 hi_ = 0;
+					std::from_chars(&text[0], &text[16], lo_, 16);
+					std::from_chars(&text[16], &text[32], hi_, 16);
+
+					be_t<u64> lo = std::bit_cast<be_t<u64>>(lo_);
+					be_t<u64> hi = std::bit_cast<be_t<u64>>(hi_);
+
+					klic = (u128{+hi} << 64) | +lo;
+
+					// Retry with specified KLIC
+					key_it -= +std::exchange(tried, true); // Rewind on second and above attempt
+					gui_log.notice("KLIC entered for %s: %s", filename, klic);
+					continue;
+				}
+				else
+				{
+					gui_log.notice("User has cancelled entering KLIC.");
+				}
 			}
+
+			gui_log.error("Failed to decrypt \"%s\".", old_path);
+			break;
 		}
 	}
 

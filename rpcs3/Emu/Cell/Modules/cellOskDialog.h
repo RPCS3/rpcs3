@@ -1,6 +1,10 @@
-﻿#pragma once
+#pragma once
 
+#include "util/types.hpp"
+#include "util/atomic.hpp"
 #include "Emu/Memory/vm_ptr.h"
+#include <string>
+#include <functional>
 
 // error codes
 enum CellOskDialogError : u32

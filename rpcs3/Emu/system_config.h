@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "system_config_types.h"
 #include "Utilities/Config.h"
@@ -60,9 +60,8 @@ struct cfg_root : cfg::node
 		cfg::_int<-64, 64> stub_ppu_traps{ this, "Stub PPU Traps", 0, true }; // Hack, skip PPU traps for rare cases where the trap is continueable (specify relative instructions to skip)
 
 		cfg::_bool debug_console_mode{ this, "Debug Console Mode", false }; // Debug console emulation, not recommended
-		cfg::_enum<lib_loading_type> lib_loading{ this, "Lib Loader", lib_loading_type::liblv2only };
 		cfg::_bool hook_functions{ this, "Hook static functions" };
-		cfg::set_entry load_libraries{ this, "Load libraries" };
+		cfg::set_entry libraries_control{ this, "Libraries Control" }; // Override HLE/LLE behaviour of selected libs
 		cfg::_bool hle_lwmutex{ this, "HLE lwmutex" }; // Force alternative lwmutex/lwcond implementation
 		cfg::uint64 spu_llvm_lower_bound{ this, "SPU LLVM Lower Bound" };
 		cfg::uint64 spu_llvm_upper_bound{ this, "SPU LLVM Upper Bound", 0xffffffffffffffff };
@@ -127,7 +126,7 @@ struct cfg_root : cfg::node
 		cfg::_bool log_programs{ this, "Log shader programs" };
 		cfg::_bool vsync{ this, "VSync" };
 		cfg::_bool debug_output{ this, "Debug output" };
-		cfg::_bool overlay{ this, "Debug overlay" };
+		cfg::_bool overlay{ this, "Debug overlay", false, true };
 		cfg::_bool gl_legacy_buffers{ this, "Use Legacy OpenGL Buffers" };
 		cfg::_bool use_gpu_texture_scaling{ this, "Use GPU texture scaling", false };
 		cfg::_bool stretch_to_display_area{ this, "Stretch To Display Area", false, true };
@@ -150,7 +149,8 @@ struct cfg_root : cfg::node
 		cfg::_int<1, 8> consecutive_frames_to_draw{ this, "Consecutive Frames To Draw", 1, true};
 		cfg::_int<1, 8> consecutive_frames_to_skip{ this, "Consecutive Frames To Skip", 1, true};
 		cfg::_int<50, 800> resolution_scale_percent{ this, "Resolution Scale", 100 };
-		cfg::_int<0, 16> anisotropic_level_override{ this, "Anisotropic Filter Override", 0, true };
+		cfg::uint<0, 16> anisotropic_level_override{ this, "Anisotropic Filter Override", 0, true };
+		cfg::_int<-16, 16> texture_lod_bias{ this, "Texture LOD Bias Addend", 0, true };
 		cfg::_int<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16 };
 		cfg::_int<0, 16> shader_compiler_threads_count{ this, "Shader Compiler Threads", 0 };
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };

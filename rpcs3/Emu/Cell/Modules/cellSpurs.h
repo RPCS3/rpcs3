@@ -2,7 +2,7 @@
 
 #include "cellSync.h"
 
-
+#include "util/v128.hpp"
 
 struct CellSpurs;
 struct CellSpursTaskset;
@@ -692,7 +692,7 @@ struct alignas(128) CellSpurs
 	u8 xCA;                                             // 0xCA
 	u8 xCB;                                             // 0xCB
 
-	struct alignas(4) SrvTraceSyncVar
+	struct SrvTraceSyncVar
 	{
 		u8 sysSrvTraceInitialised;                      // 0xCC
 		u8 sysSrvNotifyUpdateTraceComplete;             // 0xCD
@@ -881,7 +881,7 @@ CHECK_SIZE_ALIGN(CellSpursWorkloadAttribute, 512, 8);
 
 struct alignas(128) CellSpursEventFlag
 {
-	struct alignas(8) ControlSyncVar
+	struct ControlSyncVar
 	{
 		be_t<u16> events;                // 0x00 Event bits
 		be_t<u16> spuTaskPendingRecv;    // 0x02 A bit is set to 1 when the condition of the SPU task using the slot are met and back to 0 when the SPU task unblocks

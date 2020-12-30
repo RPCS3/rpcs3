@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../Utilities/Thread.h"
 #include "../Utilities/bit_set.h"
@@ -83,6 +83,8 @@ public:
 	{
 		return id >> 24;
 	}
+
+	u32 get_pc() const;
 
 	void notify();
 

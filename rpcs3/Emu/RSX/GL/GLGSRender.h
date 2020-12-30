@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Emu/RSX/GSRender.h"
 #include "GLHelpers.h"
 #include "GLTexture.h"
@@ -10,6 +10,7 @@
 #include "GLShaderInterpreter.h"
 
 #include <optional>
+#include <unordered_map>
 
 #ifdef _WIN32
 #pragma comment(lib, "opengl32.lib")
@@ -132,8 +133,7 @@ private:
 	gl::vao m_vao;
 
 	shared_mutex m_sampler_mutex;
-	u64 surface_store_tag = 0;
-	std::atomic_bool m_samplers_dirty = {true};
+	atomic_t<bool> m_samplers_dirty = {true};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
 	std::unordered_map<GLenum, std::unique_ptr<gl::texture>> m_null_textures;

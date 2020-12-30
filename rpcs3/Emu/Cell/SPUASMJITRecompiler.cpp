@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "SPUASMJITRecompiler.h"
 
 #include "Emu/system_config.h"
@@ -7,11 +7,13 @@
 #include "SPUDisAsm.h"
 #include "SPUThread.h"
 #include "SPUInterpreter.h"
-#include "Utilities/sysinfo.h"
 #include "PPUAnalyser.h"
 #include "Crypto/sha1.h"
 
 #include "util/asm.hpp"
+#include "util/v128.hpp"
+#include "util/v128sse.hpp"
+#include "util/sysinfo.hpp"
 
 #include <cmath>
 #include <mutex>
@@ -23,8 +25,8 @@
 #define SPU_OFF_16(x, ...) asmjit::x86::word_ptr(*cpu, offset32(&spu_thread::x, ##__VA_ARGS__))
 #define SPU_OFF_8(x, ...) asmjit::x86::byte_ptr(*cpu, offset32(&spu_thread::x, ##__VA_ARGS__))
 
-constexpr spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast; // TODO: avoid
-constexpr spu_decoder<spu_recompiler> s_spu_decoder;
+extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast{}; // TODO: avoid
+const spu_decoder<spu_recompiler> s_spu_decoder;
 
 extern u64 get_timebased_time();
 
@@ -287,9 +289,9 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		words_align = 64;
 
 		const u32 starta = start & -64;
-		const u32 enda = ::align(end, 64);
+		const u32 enda = utils::align(end, 64);
 		const u32 sizea = (enda - starta) / 64;
-		verify(HERE), sizea;
+		ensure(sizea);
 
 		// Initialize pointers
 		c->lea(x86::rax, x86::qword_ptr(label_code));
@@ -368,9 +370,9 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		words_align = 32;
 
 		const u32 starta = start & -32;
-		const u32 enda = ::align(end, 32);
+		const u32 enda = utils::align(end, 32);
 		const u32 sizea = (enda - starta) / 32;
-		verify(HERE), sizea;
+		ensure(sizea);
 
 		if (sizea == 1)
 		{
@@ -490,9 +492,9 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		words_align = 32;
 
 		const u32 starta = start & -32;
-		const u32 enda = ::align(end, 32);
+		const u32 enda = utils::align(end, 32);
 		const u32 sizea = (enda - starta) / 32;
-		verify(HERE), sizea;
+		ensure(sizea);
 
 		if (sizea == 1)
 		{
@@ -940,7 +942,7 @@ spu_recompiler::XmmLink spu_recompiler::XmmAlloc() // get empty xmm register
 		if (v) return{ v };
 	}
 
-	fmt::throw_exception("Out of Xmm Vars" HERE);
+	fmt::throw_exception("Out of Xmm Vars");
 }
 
 spu_recompiler::XmmLink spu_recompiler::XmmGet(s8 reg, XmmType type) // get xmm register with specific SPU reg
@@ -952,13 +954,13 @@ spu_recompiler::XmmLink spu_recompiler::XmmGet(s8 reg, XmmType type) // get xmm 
 	case XmmType::Int: c->movdqa(result, SPU_OFF_128(gpr, reg)); break;
 	case XmmType::Float: c->movaps(result, SPU_OFF_128(gpr, reg)); break;
 	case XmmType::Double: c->movapd(result, SPU_OFF_128(gpr, reg)); break;
-	default: fmt::throw_exception("Invalid XmmType" HERE);
+	default: fmt::throw_exception("Invalid XmmType");
 	}
 
 	return result;
 }
 
-inline asmjit::X86Mem spu_recompiler::XmmConst(v128 data)
+inline asmjit::X86Mem spu_recompiler::XmmConst(const v128& data)
 {
 	// Find existing const
 	auto& xmm_label = xmm_consts[std::make_pair(data._u64[0], data._u64[1])];
@@ -979,12 +981,12 @@ inline asmjit::X86Mem spu_recompiler::XmmConst(v128 data)
 	return asmjit::x86::oword_ptr(xmm_label);
 }
 
-inline asmjit::X86Mem spu_recompiler::XmmConst(__m128 data)
+inline asmjit::X86Mem spu_recompiler::XmmConst(const __m128& data)
 {
 	return XmmConst(v128::fromF(data));
 }
 
-inline asmjit::X86Mem spu_recompiler::XmmConst(__m128i data)
+inline asmjit::X86Mem spu_recompiler::XmmConst(const __m128i& data)
 {
 	return XmmConst(v128::fromV(data));
 }
@@ -1154,7 +1156,7 @@ void spu_recompiler::branch_indirect(spu_opcode_t op, bool jt, bool ret)
 		const u32 end = instr_labels.rbegin()->first + 4;
 
 		// Load local indirect jump address, check local bounds
-		verify(HERE), start == m_base;
+		ensure(start == m_base);
 		Label fail = c->newLabel();
 		c->mov(qw1->r32(), *addr);
 		c->sub(qw1->r32(), pc0->r32());
@@ -1252,7 +1254,7 @@ void spu_recompiler::UNK(spu_opcode_t op)
 	auto gate = [](spu_thread* _spu, u32 op)
 	{
 		_spu->state += cpu_flag::dbg_pause;
-		spu_log.fatal("Unknown/Illegal instruction (0x%08x)" HERE, op);
+		spu_log.fatal("Unknown/Illegal instruction (0x%08x)", op);
 		spu_runtime::g_escape(_spu);
 	};
 
@@ -1310,7 +1312,7 @@ void spu_recompiler::LNOP(spu_opcode_t op)
 void spu_recompiler::SYNC(spu_opcode_t op)
 {
 	// This instruction must be used following a store instruction that modifies the instruction stream.
-	c->mfence();
+	c->lock().or_(asmjit::x86::dword_ptr(asmjit::x86::rsp), 0);
 
 	if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 	{
@@ -1325,7 +1327,7 @@ void spu_recompiler::SYNC(spu_opcode_t op)
 void spu_recompiler::DSYNC(spu_opcode_t op)
 {
 	// This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
-	c->mfence();
+	c->lock().or_(asmjit::x86::dword_ptr(asmjit::x86::rsp), 0);
 }
 
 void spu_recompiler::MFSPR(spu_opcode_t op)

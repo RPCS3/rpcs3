@@ -1,4 +1,4 @@
-﻿#include "render_creator.h"
+#include "render_creator.h"
 
 #include <QMessageBox>
 
@@ -8,7 +8,6 @@
 #include "Emu/RSX/VK/VKHelpers.h"
 #endif
 
-#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <mutex>
@@ -25,9 +24,9 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 	// plugged in. This whole contraption is for showing an error message in case that happens, so that user has
 	// some idea about why the emulator window isn't showing up.
 
-	static std::atomic<bool> was_called = false;
+	static atomic_t<bool> was_called = false;
 	if (was_called.exchange(true))
-		fmt::throw_exception("Render_Creator cannot be created more than once" HERE);
+		fmt::throw_exception("Render_Creator cannot be created more than once");
 
 	static std::mutex mtx;
 	static std::condition_variable cond;
@@ -101,7 +100,7 @@ void render_creator::update_names(const QStringList& names)
 {
 	for (int i = 0; i < names.size(); i++)
 	{
-		if (static_cast<size_t>(i) >= renderers.size() || !renderers[i])
+		if (static_cast<usz>(i) >= renderers.size() || !renderers[i])
 		{
 			cfg_log.error("render_creator::update_names could not update renderer %d", i);
 			return;

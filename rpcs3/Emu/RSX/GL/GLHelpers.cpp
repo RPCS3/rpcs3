@@ -1,8 +1,10 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLHelpers.h"
 #include "GLTexture.h"
 #include "GLCompute.h"
 #include "util/logs.hpp"
+
+#include <unordered_map>
 
 namespace gl
 {
@@ -43,7 +45,7 @@ namespace gl
 		case rsx::primitive_type::quad_strip: return GL_TRIANGLE_STRIP;
 		case rsx::primitive_type::polygon: return GL_TRIANGLES;
 		default:
-			fmt::throw_exception("unknown primitive type" HERE);
+			fmt::throw_exception("unknown primitive type");
 		}
 	}
 
@@ -298,13 +300,13 @@ namespace gl
 		glDrawElements(draw_mode(mode), count, static_cast<GLenum>(type), indices);
 	}
 
-	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
+	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, usz indices_buffer_offset) const
 	{
 		indices.bind(buffer::target::element_array);
 		glDrawElements(draw_mode(mode), count, static_cast<GLenum>(type), reinterpret_cast<GLvoid*>(indices_buffer_offset));
 	}
 
-	void fbo::draw_elements(const buffer& buffer_, rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
+	void fbo::draw_elements(const buffer& buffer_, rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, usz indices_buffer_offset) const
 	{
 		buffer_.bind(buffer::target::array);
 		draw_elements(mode, count, type, indices, indices_buffer_offset);
@@ -471,7 +473,7 @@ namespace gl
 		case rsx::primitive_type::polygon:
 			return false;
 		default:
-			fmt::throw_exception("unknown primitive type" HERE);
+			fmt::throw_exception("unknown primitive type");
 		}
 	}
 
@@ -553,7 +555,7 @@ namespace gl
 			}
 		}
 
-		verify("Incompatible source and destination format!" HERE), real_src->aspect() == real_dst->aspect();
+		ensure(real_src->aspect() == real_dst->aspect());
 
 		const bool is_depth_copy = (real_src->aspect() != image_aspect::color);
 		const filter interp = (linear_interpolation && !is_depth_copy) ? filter::linear : filter::nearest;

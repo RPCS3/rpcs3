@@ -3,9 +3,10 @@
 #include <string>
 #include <map>
 #include <set>
+#include "util/types.hpp"
+#include "util/endian.hpp"
 
 #include "Utilities/bit_set.h"
-#include "Utilities/BEType.h"
 #include "PPUOpcodes.h"
 
 // PPU Function Attributes
@@ -116,9 +117,9 @@ struct ppu_pattern
 struct ppu_pattern_array
 {
 	const ppu_pattern* ptr;
-	std::size_t count;
+	usz count;
 
-	template <std::size_t N>
+	template <usz N>
 	constexpr ppu_pattern_array(const ppu_pattern(&array)[N])
 		: ptr(array)
 		, count(N)
@@ -139,9 +140,9 @@ struct ppu_pattern_array
 struct ppu_pattern_matrix
 {
 	const ppu_pattern_array* ptr;
-	std::size_t count;
+	usz count;
 
-	template <std::size_t N>
+	template <usz N>
 	constexpr ppu_pattern_matrix(const ppu_pattern_array(&array)[N])
 		: ptr(array)
 		, count(N)
@@ -1244,13 +1245,13 @@ struct ppu_acontext
 
 				r.imin = (min + ~mask) & mask;
 				r.imax = max & mask;
-				verify("Impossible range" HERE), r.imin <= r.imax;
+				ensure(r.imin <= r.imax); // "Impossible range"
 			}
 			else
 			{
 				r.imin = min & mask;
 				r.imax = (max + ~mask) & mask;
-				verify("Impossible range" HERE), r.imin >= r.imax;
+				ensure(r.imin >= r.imax); // "Impossible range"
 			}
 
 			// Fix const values

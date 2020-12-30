@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 struct CellSpurs;
 
@@ -60,7 +60,7 @@ struct CellCelp8EncResource
 	vm::bptr<void> startAddr;
 	be_t<u32> ppuThreadPriority;
 	be_t<u32> spuThreadPriority;
-	be_t<u32/*size_t*/> ppuThreadStackSize;
+	be_t<u32/*usz*/> ppuThreadStackSize;
 };
 
 struct CellCelp8EncParam

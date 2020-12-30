@@ -1,8 +1,10 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "GLHelpers.h"
 #include "../Overlays/overlays.h"
+#include <string>
+#include <unordered_map>
 
 extern u64 get_system_time();
 
@@ -544,7 +546,7 @@ namespace gl
 					primitives = GL_LINE_STRIP;
 					break;
 				default:
-					fmt::throw_exception("Unexpected primitive type %d" HERE, static_cast<s32>(type));
+					fmt::throw_exception("Unexpected primitive type %d", static_cast<s32>(type));
 			}
 		}
 

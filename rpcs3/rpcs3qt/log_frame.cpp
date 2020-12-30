@@ -1,10 +1,8 @@
-﻿#include "log_frame.h"
+#include "log_frame.h"
 #include "qt_utils.h"
 #include "gui_settings.h"
 
-#include "stdafx.h"
 #include "rpcs3_version.h"
-#include "Utilities/sysinfo.h"
 #include "Utilities/mutex.h"
 #include "Utilities/lockless.h"
 
@@ -18,6 +16,8 @@
 #include <sstream>
 #include <deque>
 #include <mutex>
+
+#include "util/sysinfo.hpp"
 
 extern fs::file g_tty;
 extern atomic_t<s64> g_tty_size;
@@ -404,10 +404,6 @@ void log_frame::LoadSettings()
 
 void log_frame::RepaintTextColors()
 {
-	// Backup old colors
-	QColor old_color_stack{ m_color_stack };
-	QList<QColor> old_color{ m_color };
-
 	// Get text color. Do this once to prevent possible slowdown
 	m_color.clear();
 	m_color.append(gui::utils::get_label_color("log_level_always"));

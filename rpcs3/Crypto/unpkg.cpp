@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "aes.h"
 #include "sha1.h"
 #include "key_vault.h"
@@ -502,7 +502,7 @@ package_error package_reader::check_target_app_version()
 
 		const std::string name{ reinterpret_cast<char*>(buf.get()), entry.name_size };
 
-		// We're looking for the PARAM.SFO file, if there is any 
+		// We're looking for the PARAM.SFO file, if there is any
 		if (name != "PARAM.SFO")
 		{
 			continue;
@@ -697,7 +697,7 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 		return false;
 	}
 
-	size_t num_failures = 0;
+	usz num_failures = 0;
 
 	std::vector<PKGEntry> entries(header.file_count);
 
@@ -857,7 +857,7 @@ void package_reader::archive_seek(const s64 new_offset, const fs::seek_mode damo
 		cur_offset += new_offset;
 
 	u64 _offset = 0;
-	for (size_t i = 0; i < filelist.size(); i++)
+	for (usz i = 0; i < filelist.size(); i++)
 	{
 		if (cur_offset < (_offset + filelist[i].size()))
 		{
@@ -872,7 +872,7 @@ void package_reader::archive_seek(const s64 new_offset, const fs::seek_mode damo
 
 u64 package_reader::archive_read(void* data_ptr, const u64 num_bytes)
 {
-	ASSERT(filelist.size() > cur_file && filelist[cur_file]);
+	ensure(filelist.size() > cur_file && filelist[cur_file]);
 
 	const u64 num_bytes_left = filelist[cur_file].size() - cur_file_offset;
 

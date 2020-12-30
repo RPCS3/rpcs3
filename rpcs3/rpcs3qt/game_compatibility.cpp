@@ -1,4 +1,4 @@
-﻿#include "game_compatibility.h"
+#include "game_compatibility.h"
 #include "gui_settings.h"
 #include "downloader.h"
 

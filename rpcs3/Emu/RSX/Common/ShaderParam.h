@@ -1,10 +1,12 @@
-﻿#pragma once
+#pragma once
 
 #include <string>
 #include <vector>
 
 #include "Utilities/StrUtil.h"
-#include "Utilities/types.h"
+#include "util/types.hpp"
+
+#include <unordered_map>
 
 enum class FUNCTION
 {
@@ -204,7 +206,7 @@ public:
 
 		auto var_blocks = fmt::split(simple_var, { "." });
 
-		verify(HERE), (!var_blocks.empty());
+		ensure((!var_blocks.empty()));
 
 		name = prefix + var_blocks[0];
 
@@ -218,7 +220,7 @@ public:
 		}
 	}
 
-	size_t get_vector_size() const
+	usz get_vector_size() const
 	{
 		return swizzles[swizzles.size() - 1].length();
 	}
@@ -302,7 +304,7 @@ public:
 			case 3:
 				return other_var + ".xyz";
 			default:
-				fmt::throw_exception("Unreachable" HERE);
+				fmt::throw_exception("Unreachable");
 			}
 		}
 		else
@@ -366,7 +368,7 @@ struct vertex_reg_info
 		case xall:
 			return (val && val != check_mask_value);
 		default:
-			fmt::throw_exception("Unreachable" HERE);
+			fmt::throw_exception("Unreachable");
 		}
 	}
 

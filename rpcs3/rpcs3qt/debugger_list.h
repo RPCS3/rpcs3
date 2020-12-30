@@ -1,8 +1,10 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QListWidget>
+
+#include <memory>
 
 class breakpoint_handler;
 class CPUDisAsm;
@@ -16,7 +18,6 @@ class debugger_list : public QListWidget
 public:
 	u32 m_pc = 0;
 	u32 m_item_count = 30;
-	bool m_no_thread_selected;
 	QColor m_color_bp;
 	QColor m_color_pc;
 	QColor m_text_color_bp;
@@ -38,7 +39,6 @@ private:
 	/**
 	* It really upsetted me I had to copy this code to make debugger_list/frame not circularly dependent.
 	*/
-	u32 GetPc() const;
 	u32 GetCenteredAddress(u32 address) const;
 
 	std::shared_ptr<gui_settings> xgui_settings;

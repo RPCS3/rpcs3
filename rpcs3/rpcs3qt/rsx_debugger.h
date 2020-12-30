@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QDialog>
 #include <QGroupBox>
@@ -11,6 +11,8 @@
 #include <QListWidget>
 #include <QTableWidget>
 #include <QTabWidget>
+
+#include <memory>
 
 class gui_settings;
 
@@ -63,7 +65,6 @@ class rsx_debugger : public QDialog
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 public:
-	bool exit = false;
 	rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = 0);
 	~rsx_debugger();
 

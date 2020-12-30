@@ -1,7 +1,12 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Io/PadHandler.h"
+
+#include <unordered_map>
+
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #include <Xinput.h>
 #include <chrono>
@@ -92,7 +97,7 @@ class xinput_pad_handler final : public PadHandlerBase
 		bool newVibrateData{ true };
 		u16 largeVibrate{ 0 };
 		u16 smallVibrate{ 0 };
-		std::chrono::high_resolution_clock::time_point last_vibration;
+		steady_clock::time_point last_vibration;
 		bool is_scp_device{ false };
 		DWORD state{ ERROR_NOT_CONNECTED }; // holds internal controller state change
 		SCP_EXTN state_scp{ 0 };
@@ -138,5 +143,5 @@ private:
 	void get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
 	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
-	pad_preview_values get_preview_values(std::unordered_map<u64, u16> data) override;
+	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
 };

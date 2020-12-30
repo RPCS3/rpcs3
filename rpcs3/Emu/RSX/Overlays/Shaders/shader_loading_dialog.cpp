@@ -1,7 +1,9 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "shader_loading_dialog.h"
 #include "Emu/System.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
+
+#include "util/asm.hpp"
 
 namespace rsx
 {
@@ -27,7 +29,7 @@ namespace rsx
 
 		while (ref_cnt.load() && !Emu.IsStopped())
 		{
-			_mm_pause();
+			utils::pause();
 		}
 	}
 
@@ -87,7 +89,7 @@ namespace rsx
 	{
 		while (ref_cnt.load() && !Emu.IsStopped())
 		{
-			_mm_pause();
+			utils::pause();
 		}
 	}
 }

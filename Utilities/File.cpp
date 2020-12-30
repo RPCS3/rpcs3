@@ -1,7 +1,6 @@
-﻿#include "File.h"
+#include "File.h"
 #include "mutex.h"
 #include "StrFmt.h"
-#include "BEType.h"
 #include "Crypto/sha1.h"
 
 #include <unordered_map>
@@ -10,6 +9,8 @@
 #include <cerrno>
 #include <typeinfo>
 #include <map>
+
+#include "util/asm.hpp"
 
 using namespace std::literals::string_literals;
 
@@ -21,10 +22,10 @@ using namespace std::literals::string_literals;
 static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 {
 	// String size + null terminator
-	const std::size_t buf_size = source.size() + 1;
+	const usz buf_size = source.size() + 1;
 
 	// Safe size
-	const int size = narrow<int>(buf_size, "to_wchar" HERE);
+	const int size = narrow<int>(buf_size);
 
 	// Buffer for max possible output length
 	std::unique_ptr<wchar_t[]> buffer(new wchar_t[buf_size + 8 + 32768]);
@@ -41,10 +42,10 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 		std::memcpy(buffer.get() + 32768 + 4, L"UNC\\", 4 * sizeof(wchar_t));
 	}
 
-	verify("to_wchar" HERE), MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get() + 32768 + (unc ? 8 : 4), size);
+	ensure(MultiByteToWideChar(CP_UTF8, 0, source.c_str(), size, buffer.get() + 32768 + (unc ? 8 : 4), size)); // "to_wchar"
 
 	// Canonicalize wide path (replace '/', ".", "..", \\ repetitions, etc)
-	verify("to_wchar" HERE), GetFullPathNameW(buffer.get() + 32768, 32768, buffer.get(), nullptr) - 1 < 32768 - 1;
+	ensure(GetFullPathNameW(buffer.get() + 32768, 32768, buffer.get(), nullptr) - 1 < 32768 - 1); // "to_wchar"
 
 	return buffer;
 }
@@ -52,10 +53,10 @@ static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 static void to_utf8(std::string& out, const wchar_t* source)
 {
 	// String size
-	const std::size_t length = std::wcslen(source);
+	const usz length = std::wcslen(source);
 
 	// Safe buffer size for max possible output length (including null terminator)
-	const int buf_size = narrow<int>(length * 3 + 1, "to_utf8" HERE);
+	const int buf_size = narrow<int>(length * 3 + 1);
 
 	// Resize buffer
 	out.resize(buf_size - 1);
@@ -63,7 +64,7 @@ static void to_utf8(std::string& out, const wchar_t* source)
 	const int result = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &out.front(), buf_size, NULL, NULL);
 
 	// Fix the size
-	out.resize(verify("to_utf8" HERE, result) - 1);
+	out.resize(ensure(result) - 1);
 }
 
 static time_t to_time(const ULARGE_INTEGER& ft)
@@ -182,7 +183,7 @@ static std::string path_append(std::string_view path, std::string_view more)
 {
 	std::string result;
 
-	if (const size_t src_slash_pos = path.find_last_not_of('/'); src_slash_pos != path.npos)
+	if (const usz src_slash_pos = path.find_last_not_of('/'); src_slash_pos != path.npos)
 	{
 		path.remove_suffix(path.length() - src_slash_pos - 1);
 		result = path;
@@ -190,7 +191,7 @@ static std::string path_append(std::string_view path, std::string_view more)
 
 	result.push_back('/');
 
-	if (const size_t dst_slash_pos = more.find_first_not_of('/'); dst_slash_pos != more.npos)
+	if (const usz dst_slash_pos = more.find_first_not_of('/'); dst_slash_pos != more.npos)
 	{
 		more.remove_prefix(dst_slash_pos);
 		result.append(more);
@@ -315,7 +316,7 @@ std::shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
 
 std::shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, const std::shared_ptr<device_base>& device)
 {
-	verify(HERE), name.starts_with("//"), name[2] != '/';
+	ensure(name.starts_with("//") && name[2] != '/');
 
 	return get_device_manager().set_device(name, device);
 }
@@ -355,7 +356,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 		if (!GetFileAttributesExW(to_wchar(std::string(epath) + '/').get(), GetFileExInfoStandard, &attrs))
 		{
 			g_tls_error = to_error(GetLastError());
-			return false;	
+			return false;
 		}
 
 		info.is_directory = true; // Handle drives as directories
@@ -404,7 +405,7 @@ bool fs::stat(const std::string& path, stat_t& info)
 			if (const DWORD err = GetLastError(); err != ERROR_NO_MORE_FILES)
 			{
 				g_tls_error = to_error(err);
-				return false;		
+				return false;
 			}
 
 			g_tls_error = fs::error::noent;
@@ -506,7 +507,7 @@ bool fs::statfs(const std::string& path, fs::device_stat& info)
 	// Keep cutting path from right until it's short enough
 	while (str.size() > 256)
 	{
-		if (std::size_t x = str.find_last_of('\\') + 1)
+		if (usz x = str.find_last_of('\\') + 1)
 			str.resize(x - 1);
 		else
 			break;
@@ -900,14 +901,19 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 #endif
 }
 
-void fs::file::xnull() const
+[[noreturn]] void fs::xnull(const src_loc& loc)
 {
-	fmt::throw_exception("fs::file is null");
+	fmt::throw_exception("Null object.%s", loc);
 }
 
-void fs::file::xfail() const
+[[noreturn]] void fs::xfail(const src_loc& loc)
 {
-	fmt::throw_exception("Unexpected fs::error %s", g_tls_error);
+	fmt::throw_exception("Unexpected fs::error %s%s", g_tls_error, loc);
+}
+
+[[noreturn]] void fs::xovfl()
+{
+	fmt::throw_exception("Stream overflow.");
 }
 
 fs::file::file(const std::string& path, bs_t<open_mode> mode)
@@ -990,7 +996,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		stat_t stat() override
 		{
 			FILE_BASIC_INFO basic_info;
-			verify("file::stat" HERE), GetFileInformationByHandleEx(m_handle, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO));
+			ensure(GetFileInformationByHandleEx(m_handle, FileBasicInfo, &basic_info, sizeof(FILE_BASIC_INFO))); // "file::stat"
 
 			stat_t info;
 			info.is_directory = (basic_info.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
@@ -1008,7 +1014,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 		void sync() override
 		{
-			verify("file::sync" HERE), FlushFileBuffers(m_handle);
+			ensure(FlushFileBuffers(m_handle)); // "file::sync"
 		}
 
 		bool trunc(u64 length) override
@@ -1028,10 +1034,10 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		u64 read(void* buffer, u64 count) override
 		{
 			// TODO (call ReadFile multiple times if count is too big)
-			const int size = narrow<int>(count, "file::read" HERE);
+			const int size = narrow<int>(count);
 
 			DWORD nread;
-			verify("file::read" HERE), ReadFile(m_handle, buffer, size, &nread, NULL);
+			ensure(ReadFile(m_handle, buffer, size, &nread, NULL)); // "file::read"
 
 			return nread;
 		}
@@ -1039,10 +1045,10 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		u64 write(const void* buffer, u64 count) override
 		{
 			// TODO (call WriteFile multiple times if count is too big)
-			const int size = narrow<int>(count, "file::write" HERE);
+			const int size = narrow<int>(count);
 
 			DWORD nwritten;
-			verify("file::write" HERE), WriteFile(m_handle, buffer, size, &nwritten, NULL);
+			ensure(WriteFile(m_handle, buffer, size, &nwritten, NULL)); // "file::write"
 
 			return nwritten;
 		}
@@ -1056,7 +1062,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				whence == seek_set ? FILE_BEGIN :
 				whence == seek_cur ? FILE_CURRENT :
 				whence == seek_end ? FILE_END :
-				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
+				(fmt::throw_exception("Invalid whence (0x%x)", whence), 0);
 
 			if (!SetFilePointerEx(m_handle, pos, &pos, mode))
 			{
@@ -1070,7 +1076,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		u64 size() override
 		{
 			LARGE_INTEGER size;
-			verify("file::size" HERE), GetFileSizeEx(m_handle, &size);
+			ensure(GetFileSizeEx(m_handle, &size)); // "file::size"
 
 			return size.QuadPart;
 		}
@@ -1119,7 +1125,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	if (mode & fs::trunc && mode & (fs::lock + fs::unread) && mode & fs::write)
 	{
 		// Postpone truncation in order to avoid using O_TRUNC on a locked file
-		verify(HERE), ::ftruncate(fd, 0) == 0;
+		ensure(::ftruncate(fd, 0) == 0);
 	}
 
 	class unix_file final : public file_base
@@ -1140,7 +1146,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		stat_t stat() override
 		{
 			struct ::stat file_info;
-			verify("file::stat" HERE), ::fstat(m_fd, &file_info) == 0;
+			ensure(::fstat(m_fd, &file_info) == 0); // "file::stat"
 
 			stat_t info;
 			info.is_directory = S_ISDIR(file_info.st_mode);
@@ -1158,7 +1164,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 		void sync() override
 		{
-			verify("file::sync" HERE), ::fsync(m_fd) == 0;
+			ensure(::fsync(m_fd) == 0); // "file::sync"
 		}
 
 		bool trunc(u64 length) override
@@ -1175,7 +1181,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		u64 read(void* buffer, u64 count) override
 		{
 			const auto result = ::read(m_fd, buffer, count);
-			verify("file::read" HERE), result != -1;
+			ensure(result != -1); // "file::read"
 
 			return result;
 		}
@@ -1183,7 +1189,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		u64 write(const void* buffer, u64 count) override
 		{
 			const auto result = ::write(m_fd, buffer, count);
-			verify("file::write" HERE), result != -1;
+			ensure(result != -1); // "file::write"
 
 			return result;
 		}
@@ -1194,7 +1200,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 				whence == seek_set ? SEEK_SET :
 				whence == seek_cur ? SEEK_CUR :
 				whence == seek_end ? SEEK_END :
-				(fmt::throw_exception("Invalid whence (0x%x)" HERE, whence), 0);
+				(fmt::throw_exception("Invalid whence (0x%x)", whence), 0);
 
 			const auto result = ::lseek(m_fd, offset, mode);
 
@@ -1210,7 +1216,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		u64 size() override
 		{
 			struct ::stat file_info;
-			verify("file::size" HERE), ::fstat(m_fd, &file_info) == 0;
+			ensure(::fstat(m_fd, &file_info) == 0); // "file::size"
 
 			return file_info.st_size;
 		}
@@ -1226,7 +1232,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			static_assert(offsetof(iovec, iov_len) == offsetof(iovec_clone, iov_len), "Weird iovec::iov_len offset");
 
 			const auto result = ::writev(m_fd, reinterpret_cast<const iovec*>(buffers), buf_count);
-			verify("file::write_gather" HERE), result != -1;
+			ensure(result != -1); // "file::write_gather"
 
 			return result;
 		}
@@ -1236,7 +1242,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 #endif
 }
 
-fs::file::file(const void* ptr, std::size_t size)
+fs::file::file(const void* ptr, usz size)
 {
 	class memory_stream : public file_base
 	{
@@ -1318,11 +1324,6 @@ fs::native_handle fs::file::get_handle() const
 #endif
 }
 
-void fs::dir::xnull() const
-{
-	fmt::throw_exception("fs::dir is null");
-}
-
 bool fs::dir::open(const std::string& path)
 {
 	if (path.empty())
@@ -1356,7 +1357,7 @@ bool fs::dir::open(const std::string& path)
 	class windows_dir final : public dir_base
 	{
 		std::vector<dir_entry> m_entries;
-		std::size_t m_pos = 0;
+		usz m_pos = 0;
 
 		void add_entry(const WIN32_FIND_DATAW& found)
 		{
@@ -1386,7 +1387,7 @@ bool fs::dir::open(const std::string& path)
 				add_entry(found);
 			}
 
-			verify("dir::read" HERE), ERROR_NO_MORE_FILES == GetLastError();
+			ensure(ERROR_NO_MORE_FILES == GetLastError()); // "dir::read"
 			FindClose(handle);
 		}
 
@@ -1606,13 +1607,13 @@ std::string fs::escape_path(std::string_view path)
 {
 	std::string real; real.resize(path.size());
 
-	auto get_char = [&](std::size_t& from, std::size_t& to, std::size_t count)
+	auto get_char = [&](usz& from, usz& to, usz count)
 	{
 		std::memcpy(&real[to], &path[from], count);
 		from += count, to += count;
 	};
 
-	std::size_t i = 0, j = -1, pos_nondelim = 0, after_delim = 0;
+	usz i = 0, j = -1, pos_nondelim = 0, after_delim = 0;
 
 	if (i < path.size())
 	{
@@ -1649,7 +1650,7 @@ std::string fs::escape_path(std::string_view path)
 					case '.':
 					{
 						bool remove_element = true;
-						std::size_t k = 1;
+						usz k = 1;
 
 						for (; k + i != path.size(); k++)
 						{
@@ -1714,7 +1715,7 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 
 	if (!root_dir)
 	{
-		return static_cast<u64>(umax);
+		return -1;
 	}
 
 	for (const auto& entry : root_dir)
@@ -1726,7 +1727,7 @@ u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)
 
 		if (!entry.is_directory)
 		{
-			result += ::align(entry.size, rounding_alignment);
+			result += utils::align(entry.size, rounding_alignment);
 		}
 		else
 		{

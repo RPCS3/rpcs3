@@ -1,8 +1,11 @@
-﻿#include "bin_patch.h"
+#include "bin_patch.h"
 #include "File.h"
 #include "Config.h"
 #include "version.h"
 #include "Emu/System.h"
+
+#include "util/types.hpp"
+#include "util/endian.hpp"
 
 LOG_CHANNEL(patch_log, "PAT");
 
@@ -524,7 +527,7 @@ bool patch_engine::read_patch_node(patch_info& info, YAML::Node node, const YAML
 	if (!node)
 	{
 		append_log_message(log_messages, fmt::format("Skipping invalid patch node %s. (key: %s)", info.description, info.hash));
-		patch_log.error("Skipping invalid patch node %s. (key: %s)" HERE, info.description, info.hash);
+		patch_log.error("Skipping invalid patch node %s. (key: %s)", info.description, info.hash);
 		return false;
 	}
 
@@ -574,20 +577,20 @@ void patch_engine::append_title_patches(const std::string& title_id)
 	load(m_map, get_patches_path() + title_id + "_patch.yml");
 }
 
-std::size_t patch_engine::apply(const std::string& name, u8* dst)
+usz patch_engine::apply(const std::string& name, u8* dst)
 {
 	return apply_patch<false>(name, dst, 0, 0);
 }
 
-std::size_t patch_engine::apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
+usz patch_engine::apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
 {
 	return apply_patch<true>(name, dst, filesz, ls_addr);
 }
 
 template <bool check_local_storage>
-static std::size_t apply_modification(const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 ls_addr)
+static usz apply_modification(const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 ls_addr)
 {
-	size_t applied = 0;
+	usz applied = 0;
 
 	for (const auto& p : patch.data_list)
 	{
@@ -600,7 +603,7 @@ static std::size_t apply_modification(const patch_engine::patch_info& patch, u8*
 				// This patch is out of range for this segment
 				continue;
 			}
-			
+
 			offset -= ls_addr;
 		}
 
@@ -678,14 +681,14 @@ static std::size_t apply_modification(const patch_engine::patch_info& patch, u8*
 }
 
 template <bool check_local_storage>
-std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
+usz patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
 {
 	if (m_map.find(name) == m_map.cend())
 	{
 		return 0;
 	}
 
-	size_t applied_total = 0;
+	usz applied_total = 0;
 	const auto& container = m_map.at(name);
 	const auto serial = Emu.GetTitleID();
 	const auto app_version = Emu.GetAppVersion();
@@ -796,7 +799,7 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 			m_applied_groups.insert(patch.patch_group);
 		}
 
-		const size_t applied = apply_modification<check_local_storage>(patch, dst, filesz, ls_addr);
+		const usz applied = apply_modification<check_local_storage>(patch, dst, filesz, ls_addr);
 		applied_total += applied;
 
 		if (patch.is_legacy)
@@ -903,7 +906,7 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 	file.write(out.c_str(), out.size());
 }
 
-static void append_patches(patch_engine::patch_map& existing_patches, const patch_engine::patch_map& new_patches, size_t& count, size_t& total, std::stringstream* log_messages)
+static void append_patches(patch_engine::patch_map& existing_patches, const patch_engine::patch_map& new_patches, usz& count, usz& total, std::stringstream* log_messages)
 {
 	for (const auto& [hash, new_container] : new_patches)
 	{
@@ -1055,7 +1058,7 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 	return true;
 }
 
-bool patch_engine::import_patches(const patch_engine::patch_map& patches, const std::string& path, size_t& count, size_t& total, std::stringstream* log_messages)
+bool patch_engine::import_patches(const patch_engine::patch_map& patches, const std::string& path, usz& count, usz& total, std::stringstream* log_messages)
 {
 	patch_engine::patch_map existing_patches;
 

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../RSXTexture.h"
 #include "Utilities/span.h"
@@ -69,6 +69,8 @@ namespace rsx
 		rsx::texture_dimension_extended image_type = texture_dimension_extended::texture_dimension_2d;
 		rsx::format_class format_class = RSX_FORMAT_CLASS_UNDEFINED;
 		bool is_cyclic_reference = false;
+		u32 ref_address = 0;
+		u64 surface_cache_tag = 0;
 		f32 scale_x = 1.f;
 		f32 scale_y = 1.f;
 
@@ -123,16 +125,16 @@ namespace rsx
 		bool supports_byteswap;
 		bool supports_vtc_decoding;
 		bool supports_hw_deswizzle;
-		size_t alignment;
+		usz alignment;
 	};
 
 	/**
 	* Get size to store texture in a linear fashion.
 	* Storage is assumed to use a rowPitchAlignment boundary for every row of texture.
 	*/
-	size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignment, size_t mipmap_alignment);
-	size_t get_placed_texture_storage_size(const rsx::fragment_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment = 0x200);
-	size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment = 0x200);
+	usz get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, usz row_pitch_alignment, usz mipmap_alignment);
+	usz get_placed_texture_storage_size(const rsx::fragment_texture &texture, usz row_pitch_alignment, usz mipmap_alignment = 0x200);
+	usz get_placed_texture_storage_size(const rsx::vertex_texture &texture, usz row_pitch_alignment, usz mipmap_alignment = 0x200);
 
 	/**
 	 * get all rsx::subresource_layout for texture.
@@ -160,8 +162,8 @@ namespace rsx
 	/**
 	* Get number of bytes occupied by texture in RSX mem
 	*/
-	size_t get_texture_size(const rsx::fragment_texture &texture);
-	size_t get_texture_size(const rsx::vertex_texture &texture);
+	usz get_texture_size(const rsx::fragment_texture &texture);
+	usz get_texture_size(const rsx::vertex_texture &texture);
 
 	/**
 	* Get packed pitch

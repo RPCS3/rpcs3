@@ -1,9 +1,9 @@
-﻿#pragma once
+#pragma once
 
 #include "key_vault.h"
 #include "zlib.h"
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "Utilities/File.h"
 #include "util/logs.hpp"
 
@@ -489,7 +489,7 @@ private:
 				}
 
 				// Advance the data buffer offset by data size.
-				data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+				data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size);
 			}
 		}
 
@@ -509,5 +509,4 @@ private:
 fs::file decrypt_self(fs::file elf_or_self, u8* klic_key = nullptr, SelfAdditionalInfo* additional_info = nullptr);
 bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key = nullptr);
 
-union v128;
-v128 get_default_self_klic();
+u128 get_default_self_klic();

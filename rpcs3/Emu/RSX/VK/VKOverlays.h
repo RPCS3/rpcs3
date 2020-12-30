@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "VKHelpers.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
@@ -11,6 +11,7 @@
 #include "../Overlays/overlays.h"
 
 #include "Utilities/hash.h"
+#include <unordered_map>
 
 #define VK_OVERLAY_MAX_DRAW_CALLS 1024
 
@@ -80,7 +81,7 @@ namespace vk
 					u64 pass_value;
 					u64 config;
 				}
-				key{ reinterpret_cast<uintptr_t>(pass), static_cast<u64>(renderpass_config.ia.topology) };
+				key{ reinterpret_cast<uptr>(pass), static_cast<u64>(renderpass_config.ia.topology) };
 				return rpcs3::hash_struct(key);
 			}
 		}
@@ -270,7 +271,7 @@ namespace vk
 			else
 				program = build_pipeline(key, pass);
 
-			verify(HERE), m_used_descriptors < VK_OVERLAY_MAX_DRAW_CALLS;
+			ensure(m_used_descriptors < VK_OVERLAY_MAX_DRAW_CALLS);
 
 			VkDescriptorSetAllocateInfo alloc_info = {};
 			alloc_info.descriptorPool = m_descriptor_pool;
@@ -767,7 +768,7 @@ namespace vk
 					renderpass_config.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_LINE_STRIP);
 					break;
 				default:
-					fmt::throw_exception("Unexpected primitive type %d" HERE, static_cast<s32>(type));
+					fmt::throw_exception("Unexpected primitive type %d", static_cast<s32>(type));
 			}
 		}
 
@@ -1011,7 +1012,7 @@ namespace vk
 			vkCmdSetScissor(cmd, 0, 1, &region);
 		}
 
-		void run(vk::command_buffer& cmd, vk::render_target* target, VkRect2D rect, uint32_t stencil_clear, uint32_t stencil_write_mask, VkRenderPass render_pass)
+		void run(vk::command_buffer& cmd, vk::render_target* target, VkRect2D rect, u32 stencil_clear, u32 stencil_write_mask, VkRenderPass render_pass)
 		{
 			region = rect;
 

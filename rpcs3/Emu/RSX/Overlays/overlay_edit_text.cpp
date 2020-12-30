@@ -1,17 +1,17 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_controls.h"
 
 namespace rsx
 {
 	namespace overlays
 	{
-		static size_t get_line_start(const std::u32string& text, size_t pos)
+		static usz get_line_start(const std::u32string& text, usz pos)
 		{
 			if (pos == 0)
 			{
 				return 0;
 			}
-			const size_t line_start = text.rfind('\n', pos - 1);
+			const usz line_start = text.rfind('\n', pos - 1);
 			if (line_start == std::string::npos)
 			{
 				return 0;
@@ -19,9 +19,9 @@ namespace rsx
 			return line_start + 1;
 		}
 
-		static size_t get_line_end(const std::u32string& text, size_t pos)
+		static usz get_line_end(const std::u32string& text, usz pos)
 		{
-			const size_t line_end = text.find('\n', pos);
+			const usz line_end = text.find('\n', pos);
 			if (line_end == std::string::npos)
 			{
 				return text.length();
@@ -53,7 +53,7 @@ namespace rsx
 			}
 			case direction::up:
 			{
-				const size_t current_line_start = get_line_start(text, caret_position);
+				const usz current_line_start = get_line_start(text, caret_position);
 				if (current_line_start == 0)
 				{
 					// This is the first line, so caret moves to the very beginning
@@ -61,9 +61,9 @@ namespace rsx
 					refresh();
 					break;
 				}
-				const size_t caret_pos_in_line = caret_position - current_line_start;
-				const size_t prev_line_end     = current_line_start - 1;
-				const size_t prev_line_start   = get_line_start(text, prev_line_end);
+				const usz caret_pos_in_line = caret_position - current_line_start;
+				const usz prev_line_end     = current_line_start - 1;
+				const usz prev_line_start   = get_line_start(text, prev_line_end);
 				// TODO : Save caret position to some kind of buffer, so after switching back and forward, caret would be on initial position
 				caret_position = std::min(prev_line_end, prev_line_start + caret_pos_in_line);
 
@@ -72,7 +72,7 @@ namespace rsx
 			}
 			case direction::down:
 			{
-				const size_t current_line_end = get_line_end(text, caret_position);
+				const usz current_line_end = get_line_end(text, caret_position);
 				if (current_line_end == text.length())
 				{
 					// This is the last line, so caret moves to the very end
@@ -80,10 +80,10 @@ namespace rsx
 					refresh();
 					break;
 				}
-				const size_t current_line_start = get_line_start(text, caret_position);
-				const size_t caret_pos_in_line  = caret_position - current_line_start;
-				const size_t next_line_start    = current_line_end + 1;
-				const size_t next_line_end      = get_line_end(text, next_line_start);
+				const usz current_line_start = get_line_start(text, caret_position);
+				const usz caret_pos_in_line  = caret_position - current_line_start;
+				const usz next_line_start    = current_line_end + 1;
+				const usz next_line_end      = get_line_end(text, next_line_start);
 				// TODO : Save caret position to some kind of buffer, so after switching back and forward, caret would be on initial position
 				caret_position = std::min(next_line_end, next_line_start + caret_pos_in_line);
 

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "PadHandler.h"
 #include "Emu/System.h"
 #include "Input/pad_thread.h"
@@ -253,7 +253,7 @@ std::string PadHandlerBase::name_string() const
 	return m_name_string;
 }
 
-size_t PadHandlerBase::max_devices() const
+usz PadHandlerBase::max_devices() const
 {
 	return m_max_devices;
 }
@@ -615,7 +615,7 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 
 void PadHandlerBase::ThreadProc()
 {
-	for (size_t i = 0; i < bindings.size(); ++i)
+	for (usz i = 0; i < bindings.size(); ++i)
 	{
 		auto device = bindings[i].first;
 		auto pad    = bindings[i].second;

@@ -2,12 +2,14 @@
 
 /* For internal use. Don't include. */
 
-#include "types.h"
+#include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/dyn_lib.hpp"
 
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #include <time.h>
 #elif __linux__
@@ -69,7 +71,7 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 		};
 
 		std::mutex mutex;
-		std::unordered_multimap<volatile void*, waiter*, pointer_hash<volatile void, alignof(int)>> map;
+		std::unordered_multimap<volatile void*, waiter*> map;
 
 		int operator()(volatile void* uaddr, int futex_op, uint val, const timespec* timeout, uint mask)
 		{

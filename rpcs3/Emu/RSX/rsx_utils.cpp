@@ -1,10 +1,9 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rsx_utils.h"
 #include "rsx_methods.h"
 #include "Emu/RSX/GCM.h"
 #include "Common/BufferUtils.h"
 #include "Overlays/overlays.h"
-#include "Utilities/sysinfo.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -23,6 +22,8 @@ extern "C"
 #else
 #pragma GCC diagnostic pop
 #endif
+
+#include "util/sysinfo.hpp"
 
 namespace rsx
 {

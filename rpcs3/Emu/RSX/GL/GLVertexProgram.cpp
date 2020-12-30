@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLVertexProgram.h"
 
 #include "Emu/System.h"
@@ -8,12 +8,12 @@
 
 #include <algorithm>
 
-std::string GLVertexDecompilerThread::getFloatTypeName(size_t elementCount)
+std::string GLVertexDecompilerThread::getFloatTypeName(usz elementCount)
 {
 	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
-std::string GLVertexDecompilerThread::getIntTypeName(size_t elementCount)
+std::string GLVertexDecompilerThread::getIntTypeName(usz elementCount)
 {
 	return "ivec4";
 }

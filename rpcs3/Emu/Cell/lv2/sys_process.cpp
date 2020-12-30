@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_process.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/System.h"
@@ -133,7 +133,7 @@ static error_code process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::
 	case SYS_INTR_SERVICE_HANDLE_OBJECT: idm_get_set<lv2_obj, lv2_int_serv>(objects); break;
 	case SYS_EVENT_QUEUE_OBJECT: idm_get_set<lv2_obj, lv2_event_queue>(objects); break;
 	case SYS_EVENT_PORT_OBJECT: idm_get_set<lv2_obj, lv2_event_port>(objects); break;
-	case SYS_TRACE_OBJECT: fmt::throw_exception("SYS_TRACE_OBJECT" HERE);
+	case SYS_TRACE_OBJECT: fmt::throw_exception("SYS_TRACE_OBJECT");
 	case SYS_SPUIMAGE_OBJECT: idm_get_set<lv2_obj, lv2_spu_image>(objects); break;
 	case SYS_PRX_OBJECT: idm_get_set<lv2_obj, lv2_prx>(objects); break;
 	case SYS_OVERLAY_OBJECT: idm_get_set<lv2_obj, lv2_overlay>(objects); break;
@@ -143,7 +143,7 @@ static error_code process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::
 	case SYS_FS_FD_OBJECT: idm_get_set<lv2_fs_object, lv2_fs_object>(objects); break;
 	case SYS_LWCOND_OBJECT: idm_get_set<lv2_obj, lv2_lwcond>(objects); break;
 	case SYS_EVENT_FLAG_OBJECT: idm_get_set<lv2_obj, lv2_event_flag>(objects); break;
-	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT" HERE);
+	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT");
 	default:
 	{
 		return CELL_EINVAL;
@@ -223,7 +223,7 @@ CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 	{
 		if (auto vm0 = idm::get<sys_vm_t>(sys_vm_t::find_id(addr & -0x1000'0000)))
 		{
-			// sys_vm area was not covering the address specified but made a reservation on the entire 256mb region 
+			// sys_vm area was not covering the address specified but made a reservation on the entire 256mb region
 			if (vm0->addr + vm0->size - 1 < addr)
 			{
 				return CELL_EINVAL;
@@ -267,7 +267,7 @@ error_code _sys_process_get_paramsfo(vm::ptr<char> buffer)
 	}
 
 	memset(buffer.get_ptr(), 0, 0x40);
-	memcpy(buffer.get_ptr() + 1, Emu.GetTitleID().c_str(), std::min<size_t>(Emu.GetTitleID().length(), 9));
+	memcpy(buffer.get_ptr() + 1, Emu.GetTitleID().c_str(), std::min<usz>(Emu.GetTitleID().length(), 9));
 
 	return CELL_OK;
 }
@@ -403,10 +403,9 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 		Emu.disc = std::move(disc);
 		Emu.hdd1 = std::move(hdd1);
 
-		if (klic != v128{})
+		if (klic)
 		{
-			// TODO: Use std::optional
-			Emu.klic.assign(std::begin(klic._bytes), std::end(klic._bytes));
+			Emu.klic.emplace_back(klic);
 		}
 
 		Emu.SetForceBoot(true);

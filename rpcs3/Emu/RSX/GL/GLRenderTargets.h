@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "../Common/surface_store.h"
 #include "GLHelpers.h"
 #include "../rsx_utils.h"
@@ -124,7 +124,7 @@ namespace gl
 
 	static inline gl::render_target* as_rtt(gl::texture* t)
 	{
-		return verify(HERE, dynamic_cast<gl::render_target*>(t));
+		return ensure(dynamic_cast<gl::render_target*>(t));
 	}
 }
 
@@ -140,7 +140,7 @@ struct gl_render_target_traits
 	std::unique_ptr<gl::render_target> create_new_surface(
 		u32 address,
 		rsx::surface_color_format surface_color_format,
-		size_t width, size_t height, size_t pitch,
+		usz width, usz height, usz pitch,
 		rsx::surface_antialiasing antialias
 	)
 	{
@@ -169,7 +169,7 @@ struct gl_render_target_traits
 	std::unique_ptr<gl::render_target> create_new_surface(
 			u32 address,
 			rsx::surface_depth_format2 surface_depth_format,
-			size_t width, size_t height, size_t pitch,
+			usz width, usz height, usz pitch,
 			rsx::surface_antialiasing antialias
 		)
 	{
@@ -262,13 +262,13 @@ struct gl_render_target_traits
 	{}
 
 	static
-	bool surface_is_pitch_compatible(const std::unique_ptr<gl::render_target> &surface, size_t pitch)
+	bool surface_is_pitch_compatible(const std::unique_ptr<gl::render_target> &surface, usz pitch)
 	{
 		return surface->get_rsx_pitch() == pitch;
 	}
 
 	static
-	void invalidate_surface_contents(gl::command_context&, gl::render_target *surface, u32 address, size_t pitch)
+	void invalidate_surface_contents(gl::command_context&, gl::render_target *surface, u32 address, usz pitch)
 	{
 		surface->set_rsx_pitch(static_cast<u16>(pitch));
 		surface->queue_tag(address);
@@ -305,7 +305,7 @@ struct gl_render_target_traits
 	bool int_surface_matches_properties(
 		const std::unique_ptr<gl::render_target> &surface,
 		gl::texture::internal_format format,
-		size_t width, size_t height,
+		usz width, usz height,
 		rsx::surface_antialiasing antialias,
 		bool check_refs = false)
 	{
@@ -321,7 +321,7 @@ struct gl_render_target_traits
 	bool surface_matches_properties(
 		const std::unique_ptr<gl::render_target> &surface,
 		rsx::surface_color_format format,
-		size_t width, size_t height,
+		usz width, usz height,
 		rsx::surface_antialiasing antialias,
 		bool check_refs=false)
 	{
@@ -333,7 +333,7 @@ struct gl_render_target_traits
 	bool surface_matches_properties(
 		const std::unique_ptr<gl::render_target> &surface,
 		rsx::surface_depth_format2 format,
-		size_t width, size_t height,
+		usz width, usz height,
 		rsx::surface_antialiasing antialias,
 		bool check_refs = false)
 	{

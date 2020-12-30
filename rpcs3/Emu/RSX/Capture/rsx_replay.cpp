@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rsx_replay.h"
 
 #include "Emu/Cell/ErrorCodes.h"
@@ -7,7 +7,7 @@
 #include "Emu/RSX/RSXThread.h"
 
 #include <map>
-#include <atomic>
+#include "util/asm.hpp"
 
 namespace rsx
 {
@@ -24,7 +24,7 @@ namespace rsx
 		}
 
 		// User memory + fifo size
-		buffer_size = ::align<u32>(buffer_size, 0x100000) + 0x10000000;
+		buffer_size = utils::align<u32>(buffer_size, 0x100000) + 0x10000000;
 		// We are not allowed to drain all memory so add a little
 		g_fxo->init<lv2_memory_container>(buffer_size + 0x1000000);
 
@@ -35,7 +35,7 @@ namespace rsx
 
 		// 'fake' initialize usermemory
 		sys_memory_allocate(*this, buffer_size, SYS_MEMORY_PAGE_SIZE_1M, contextInfo.ptr(&rsx_context::user_addr));
-		verify(HERE), (user_mem_addr = contextInfo->user_addr) != 0;
+		ensure((user_mem_addr = contextInfo->user_addr) != 0);
 
 		if (sys_rsx_device_map(*this, contextInfo.ptr(&rsx_context::dev_addr), vm::null, 0x8) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_device_map failed!");
@@ -114,7 +114,7 @@ namespace rsx
 				fmt::throw_exception("requested memory data state for command not found in memory_data_map");
 
 			const auto& data_block = it_data->second;
-			std::memcpy(vm::base(get_address(memblock.offset, memblock.location, HERE)), data_block.data.data(), data_block.data.size());
+			std::memcpy(vm::base(get_address(memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
 		}
 
 		if (replay_cmd.display_buffer_state != 0 && replay_cmd.display_buffer_state != cs.display_buffer_hash)
@@ -178,7 +178,7 @@ namespace rsx
 		{
 			// Load registers while the RSX is still idle
 			method_registers = frame->reg_state;
-			std::atomic_thread_fence(std::memory_order_seq_cst);
+			atomic_fence_seq_cst();
 
 			// start up fifo buffer by dumping the put ptr to first stop
 			sys_rsx_context_attribute(context_id, 0x001, 0x10000000, fifo_stops[0], 0, 0);
@@ -186,7 +186,7 @@ namespace rsx
 			auto render = get_current_renderer();
 			auto last_flip = render->int_flip_index;
 
-			size_t stopIdx = 0;
+			usz stopIdx = 0;
 			for (const auto& replay_cmd : frame->replay_commands)
 			{
 				while (Emu.IsPaused())
@@ -238,5 +238,7 @@ namespace rsx
 			// random pause to not destroy gpu
 			std::this_thread::sleep_for(10ms);
 		}
+
+		get_current_cpu_thread()->state += (cpu_flag::exit + cpu_flag::wait);
 	}
 }

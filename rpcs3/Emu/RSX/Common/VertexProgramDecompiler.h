@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Emu/RSX/RSXVertexProgram.h"
 #include <vector>
 #include <set>
@@ -9,7 +9,7 @@
 /**
 * This class is used to translate RSX Vertex program to GLSL/HLSL code
 * Backend with text based shader can subclass this class and implement :
-* - virtual std::string getFloatTypeName(size_t elementCount) = 0;
+* - virtual std::string getFloatTypeName(usz elementCount) = 0;
 * - virtual std::string getFunction(enum class FUNCTION) = 0;
 * - virtual std::string compareFunction(enum class COMPARE, const std::string &, const std::string &) = 0;
 * - virtual void insertHeader(std::stringstream &OS) = 0;
@@ -55,10 +55,10 @@ struct VertexProgramDecompiler
 		}
 	};
 
-	static const size_t m_max_instr_count = 512;
+	static const usz m_max_instr_count = 512;
 	Instruction m_instructions[m_max_instr_count];
 	Instruction* m_cur_instr;
-	size_t m_instr_count;
+	usz m_instr_count;
 
 	std::vector<std::string> m_body;
 	std::stack<u32> m_call_stack;
@@ -91,11 +91,11 @@ struct VertexProgramDecompiler
 protected:
 	/** returns the type name of float vectors.
 	*/
-	virtual std::string getFloatTypeName(size_t elementCount) = 0;
+	virtual std::string getFloatTypeName(usz elementCount) = 0;
 
 	/** returns the type name of int vectors.
 	*/
-	virtual std::string getIntTypeName(size_t elementCount) = 0;
+	virtual std::string getIntTypeName(usz elementCount) = 0;
 
 	/** returns string calling function where arguments are passed via
 	* $0 $1 $2 substring.

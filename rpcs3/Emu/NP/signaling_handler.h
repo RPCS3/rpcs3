@@ -1,5 +1,4 @@
 #pragma once
-#include "Utilities/BEType.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/Modules/sceNp.h"
@@ -23,15 +22,16 @@ struct signaling_info
 	u16 port       = 0;
 
 	// For handler
-	std::chrono::time_point<std::chrono::system_clock> time_last_msg_recvd = std::chrono::system_clock::now();
-	bool self                                                              = false;
-	u32 version                                                            = 0;
+	steady_clock::time_point time_last_msg_recvd = steady_clock::now();
+
+	bool self   = false;
+	u32 version = 0;
 	// Signaling
-	u32 conn_id                                                            = 0;
-	ext_signaling_status ext_status                                        = ext_sign_none;
+	u32 conn_id                     = 0;
+	ext_signaling_status ext_status = ext_sign_none;
 	// Matching2
-	u64 room_id                                                            = 0;
-	u16 member_id                                                          = 0;
+	u64 room_id   = 0;
+	u16 member_id = 0;
 };
 
 enum SignalingCommand : u32
@@ -128,7 +128,7 @@ private:
 
 private:
 	bool validate_signaling_packet(const signaling_packet* sp);
-	void reschedule_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd, std::chrono::time_point<std::chrono::system_clock> new_timepoint);
+	void reschedule_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd, steady_clock::time_point new_timepoint);
 	void retire_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd);
 	void retire_all_packets(std::shared_ptr<signaling_info>& si);
 
@@ -139,7 +139,7 @@ private:
 	signaling_packet sig1_packet{.version = 1u};
 	signaling_packet sig2_packet{.version = 2u};
 
-	std::map<std::chrono::time_point<std::chrono::system_clock>, queued_packet> qpackets; // (wakeup time, packet)
+	std::map<steady_clock::time_point, queued_packet> qpackets; // (wakeup time, packet)
 
 	u32 cur_conn_id = 1;
 	std::unordered_map<std::string, u32> npid_to_conn_id;                                         // (npid, conn_id)
@@ -150,5 +150,5 @@ private:
 	void process_incoming_messages();
 	std::shared_ptr<signaling_info> get_signaling_ptr(const signaling_packet* sp);
 	void send_signaling_packet(signaling_packet& sp, u32 addr, u16 port);
-	void queue_signaling_packet(signaling_packet& sp, std::shared_ptr<signaling_info> si, std::chrono::time_point<std::chrono::system_clock> wakeup_time);
+	void queue_signaling_packet(signaling_packet& sp, std::shared_ptr<signaling_info> si, steady_clock::time_point wakeup_time);
 };

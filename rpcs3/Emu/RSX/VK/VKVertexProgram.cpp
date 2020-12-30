@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "VKVertexProgram.h"
 #include "VKCommonDecompiler.h"
@@ -6,12 +6,12 @@
 #include "../Common/GLSLCommon.h"
 
 
-std::string VKVertexDecompilerThread::getFloatTypeName(size_t elementCount)
+std::string VKVertexDecompilerThread::getFloatTypeName(usz elementCount)
 {
 	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
-std::string VKVertexDecompilerThread::getIntTypeName(size_t elementCount)
+std::string VKVertexDecompilerThread::getIntTypeName(usz elementCount)
 {
 	return "ivec4";
 }

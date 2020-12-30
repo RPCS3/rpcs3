@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Audio/AudioBackend.h"
 #include "3rdparty/OpenAL/include/alext.h"

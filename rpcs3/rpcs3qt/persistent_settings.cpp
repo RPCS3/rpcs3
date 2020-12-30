@@ -1,5 +1,6 @@
-﻿#include "stdafx.h"
 #include "persistent_settings.h"
+
+#include "util/logs.hpp"
 
 LOG_CHANNEL(cfg_log, "CFG");
 

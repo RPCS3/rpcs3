@@ -1,9 +1,11 @@
-﻿#include "Utilities/mutex.h"
+#include "Utilities/mutex.h"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/Memory/vm.h"
 
 #include "memory_viewer_panel.h"
 
+#include "Emu/Cell/SPUThread.h"
+#include "Emu/IdManager.h"
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QSpinBox>
@@ -13,57 +15,83 @@
 #include <QWheelEvent>
 #include <shared_mutex>
 
+#include "util/asm.hpp"
+#include "util/vm.hpp"
+
 constexpr auto qstr = QString::fromStdString;
 
-memory_viewer_panel::memory_viewer_panel(QWidget* parent)
+memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr, const std::shared_ptr<cpu_thread>& cpu)
 	: QDialog(parent)
+	, m_addr(addr)
+	, m_type(!cpu || cpu->id_type() != 2 ? thread_type::ppu : thread_type::spu)
+	, m_spu_shm(m_type == thread_type::spu ? static_cast<spu_thread*>(cpu.get())->shm : nullptr)
+	, m_addr_mask(m_type == thread_type::spu ? SPU_LS_SIZE - 1 : ~0)
 {
-	setWindowTitle(tr("Memory Viewer"));
+	setWindowTitle(m_type != thread_type::spu ? tr("Memory Viewer") : tr("Memory Viewer Of %0").arg(qstr(cpu->get_name())));
+
 	setObjectName("memory_viewer");
 	setAttribute(Qt::WA_DeleteOnClose);
-	exit = false;
-	m_addr = 0;
-	m_colcount = 16;
+	m_colcount = 4;
 	m_rowcount = 16;
 	int pSize = 10;
 
-	//Font
+	// Font
 	QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 	mono.setPointSize(pSize);
 	m_fontMetrics = new QFontMetrics(mono);
 
-	//Layout:
+	// Layout:
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
 
-	//Tools
+	// Tools
 	QHBoxLayout* hbox_tools = new QHBoxLayout();
 
-	//Tools: Memory Viewer Options
+	// Tools: Memory Viewer Options
 	QGroupBox* tools_mem = new QGroupBox(tr("Memory Viewer Options"));
 	QHBoxLayout* hbox_tools_mem = new QHBoxLayout();
 
-	//Tools: Memory Viewer Options: Address
+	// Tools: Memory Viewer Options: Address
 	QGroupBox* tools_mem_addr = new QGroupBox(tr("Address"));
 	QHBoxLayout* hbox_tools_mem_addr = new QHBoxLayout();
 	m_addr_line = new QLineEdit(this);
 	m_addr_line->setPlaceholderText("00000000");
 	m_addr_line->setFont(mono);
-	m_addr_line->setMaxLength(8);
+	m_addr_line->setMaxLength(18);
 	m_addr_line->setFixedWidth(75);
 	m_addr_line->setFocus();
+	m_addr_line->setValidator(new QRegExpValidator(QRegExp(m_type == thread_type::spu ? "^(0[xX])?0*[a-fA-F0-9]{0,5}$" : "^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
 	hbox_tools_mem_addr->addWidget(m_addr_line);
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
 
-	//Tools: Memory Viewer Options: Bytes
-	QGroupBox* tools_mem_bytes = new QGroupBox(tr("Bytes"));
-	QHBoxLayout* hbox_tools_mem_bytes = new QHBoxLayout();
-	QSpinBox* sb_bytes = new QSpinBox(this);
-	sb_bytes->setRange(1, 16);
-	sb_bytes->setValue(16);
-	hbox_tools_mem_bytes->addWidget(sb_bytes);
-	tools_mem_bytes->setLayout(hbox_tools_mem_bytes);
+	// Tools: Memory Viewer Options: Words
+	QGroupBox* tools_mem_words = new QGroupBox(tr("Words"));
+	QHBoxLayout* hbox_tools_mem_words = new QHBoxLayout();
 
-	//Tools: Memory Viewer Options: Control
+	class words_spin_box : public QSpinBox
+	{
+	public:
+		words_spin_box(QWidget* parent = nullptr) : QSpinBox(parent) {}
+		~words_spin_box() override {};
+
+	private:
+		int valueFromText(const QString &text) const override
+		{
+			return std::countr_zero(text.toULong());
+		}
+
+		QString textFromValue(int value) const override
+		{
+			return tr("%0").arg(1 << value);
+		}
+	};
+
+	words_spin_box* sb_words = new words_spin_box(this);
+	sb_words->setRange(0, 2);
+	sb_words->setValue(2);
+	hbox_tools_mem_words->addWidget(sb_words);
+	tools_mem_words->setLayout(hbox_tools_mem_words);
+
+	// Tools: Memory Viewer Options: Control
 	QGroupBox* tools_mem_buttons = new QGroupBox(tr("Control"));
 	QHBoxLayout* hbox_tools_mem_buttons = new QHBoxLayout();
 	QPushButton* b_fprev = new QPushButton("<<", this);
@@ -84,24 +112,24 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	hbox_tools_mem_buttons->addWidget(b_fnext);
 	tools_mem_buttons->setLayout(hbox_tools_mem_buttons);
 
-	//Merge Tools: Memory Viewer
+	// Merge Tools: Memory Viewer
 	hbox_tools_mem->addWidget(tools_mem_addr);
-	hbox_tools_mem->addWidget(tools_mem_bytes);
+	hbox_tools_mem->addWidget(tools_mem_words);
 	hbox_tools_mem->addWidget(tools_mem_buttons);
 	tools_mem->setLayout(hbox_tools_mem);
 
-	//Tools: Raw Image Preview Options
+	// Tools: Raw Image Preview Options
 	QGroupBox* tools_img = new QGroupBox(tr("Raw Image Preview Options"));
 	QHBoxLayout* hbox_tools_img = new QHBoxLayout();;
 
-	//Tools: Raw Image Preview Options : Size
+	// Tools: Raw Image Preview Options : Size
 	QGroupBox* tools_img_size = new QGroupBox(tr("Size"));
 	QHBoxLayout* hbox_tools_img_size = new QHBoxLayout();
 	QLabel* l_x = new QLabel(" x ");
 	QSpinBox* sb_img_size_x = new QSpinBox(this);
 	QSpinBox* sb_img_size_y = new QSpinBox(this);
-	sb_img_size_x->setRange(1, 8192);
-	sb_img_size_y->setRange(1, 8192);
+	sb_img_size_x->setRange(1, m_type == thread_type::spu ? 256 : 4096);
+	sb_img_size_y->setRange(1, m_type == thread_type::spu ? 256 : 4096);
 	sb_img_size_x->setValue(256);
 	sb_img_size_y->setValue(256);
 	hbox_tools_img_size->addWidget(sb_img_size_x);
@@ -109,24 +137,24 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	hbox_tools_img_size->addWidget(sb_img_size_y);
 	tools_img_size->setLayout(hbox_tools_img_size);
 
-	//Tools: Raw Image Preview Options: Mode
+	// Tools: Raw Image Preview Options: Mode
 	QGroupBox* tools_img_mode = new QGroupBox(tr("Mode"));
 	QHBoxLayout* hbox_tools_img_mode = new QHBoxLayout();
 	QComboBox* cbox_img_mode = new QComboBox(this);
-	cbox_img_mode->addItem("RGB");
-	cbox_img_mode->addItem("ARGB");
-	cbox_img_mode->addItem("RGBA");
-	cbox_img_mode->addItem("ABGR");
+	cbox_img_mode->addItem("RGB", QVariant::fromValue(color_format::RGB));
+	cbox_img_mode->addItem("ARGB", QVariant::fromValue(color_format::ARGB));
+	cbox_img_mode->addItem("RGBA", QVariant::fromValue(color_format::RGBA));
+	cbox_img_mode->addItem("ABGR", QVariant::fromValue(color_format::ABGR));
 	cbox_img_mode->setCurrentIndex(1); //ARGB
 	hbox_tools_img_mode->addWidget(cbox_img_mode);
 	tools_img_mode->setLayout(hbox_tools_img_mode);
 
-	//Merge Tools: Raw Image Preview Options
+	// Merge Tools: Raw Image Preview Options
 	hbox_tools_img->addWidget(tools_img_size);
 	hbox_tools_img->addWidget(tools_img_mode);
 	tools_img->setLayout(hbox_tools_img);
 
-	//Tools: Tool Buttons
+	// Tools: Tool Buttons
 	QGroupBox* tools_buttons = new QGroupBox(tr("Tools"));
 	QVBoxLayout* hbox_tools_buttons = new QVBoxLayout(this);
 	QPushButton* b_img = new QPushButton(tr("View\nimage"), this);
@@ -134,17 +162,17 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	hbox_tools_buttons->addWidget(b_img);
 	tools_buttons->setLayout(hbox_tools_buttons);
 
-	//Merge Tools = Memory Viewer Options + Raw Image Preview Options + Tool Buttons
+	// Merge Tools = Memory Viewer Options + Raw Image Preview Options + Tool Buttons
 	hbox_tools->addSpacing(10);
 	hbox_tools->addWidget(tools_mem);
 	hbox_tools->addWidget(tools_img);
 	hbox_tools->addWidget(tools_buttons);
 	hbox_tools->addSpacing(10);
 
-	//Memory Panel:
+	// Memory Panel:
 	QHBoxLayout* hbox_mem_panel = new QHBoxLayout();
 
-	//Memory Panel: Address Panel
+	// Memory Panel: Address Panel
 	m_mem_addr = new QLabel("");
 	m_mem_addr->setObjectName("memory_viewer_address_panel");
 	m_mem_addr->setFont(mono);
@@ -152,7 +180,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	m_mem_addr->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 	m_mem_addr->ensurePolished();
 
-	//Memory Panel: Hex Panel
+	// Memory Panel: Hex Panel
 	m_mem_hex = new QLabel("");
 	m_mem_hex->setObjectName("memory_viewer_hex_panel");
 	m_mem_hex->setFont(mono);
@@ -160,7 +188,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	m_mem_hex->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 	m_mem_hex->ensurePolished();
 
-	//Memory Panel: ASCII Panel
+	// Memory Panel: ASCII Panel
 	m_mem_ascii = new QLabel("");
 	m_mem_ascii->setObjectName("memory_viewer_ascii_panel");
 	m_mem_ascii->setFont(mono);
@@ -168,8 +196,8 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	m_mem_ascii->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
 	m_mem_ascii->ensurePolished();
 
-	//Merge Memory Panel:
-	hbox_mem_panel->setAlignment(Qt::AlignLeft);
+	// Merge Memory Panel:
+	hbox_mem_panel->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
 	hbox_mem_panel->addSpacing(20);
 	hbox_mem_panel->addWidget(m_mem_addr);
 	hbox_mem_panel->addSpacing(10);
@@ -178,15 +206,11 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	hbox_mem_panel->addWidget(m_mem_ascii);
 	hbox_mem_panel->addSpacing(10);
 
-	//Memory Panel: Set size of the QTextEdits
-	m_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
-	m_mem_ascii->setFixedSize(QSize(pSize * m_colcount + 6, 228));
-
-	//Set Margins to adjust WindowSize
+	// Set Margins to adjust WindowSize
 	vbox_panel->setContentsMargins(0, 0, 0, 0);
 	hbox_tools->setContentsMargins(0, 0, 0, 0);
 	tools_mem_addr->setContentsMargins(0, 10, 0, 0);
-	tools_mem_bytes->setContentsMargins(0, 10, 0, 0);
+	tools_mem_words->setContentsMargins(0, 10, 0, 0);
 	tools_mem_buttons->setContentsMargins(0, 10, 0, 0);
 	tools_img_mode->setContentsMargins(0, 10, 0, 0);
 	tools_img_size->setContentsMargins(0, 10, 0, 0);
@@ -195,52 +219,51 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent)
 	tools_buttons->setContentsMargins(0, 10, 0, 0);
 	hbox_mem_panel->setContentsMargins(0, 0, 0, 0);
 
-	//Merge and display everything
+	// Merge and display everything
 	vbox_panel->addSpacing(10);
-	vbox_panel->addLayout(hbox_tools);
+	vbox_panel->addLayout(hbox_tools, 0);
 	vbox_panel->addSpacing(10);
-	vbox_panel->addLayout(hbox_mem_panel);
+	vbox_panel->addLayout(hbox_mem_panel, 1);
 	vbox_panel->addSpacing(10);
+	vbox_panel->setSizeConstraint(QLayout::SetNoConstraint);
 	setLayout(vbox_panel);
 
-	//Events
-	connect(m_addr_line, &QLineEdit::returnPressed, [=, this]()
+	// Fill the QTextEdits
+	scroll(0);
+
+	// Events
+	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
 	{
-		bool ok;
-		m_addr = m_addr_line->text().toULong(&ok, 16);
-		m_addr_line->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));	// get 8 digits in input line
-		ShowMemory();
+		bool ok = false;
+		const QString text = m_addr_line->text();
+		const u32 addr = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16);
+		if (ok) m_addr = addr;
+
+		scroll(0); // Refresh
 	});
-	connect(sb_bytes, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=, this]()
+	connect(sb_words, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=, this]()
 	{
-		m_colcount = sb_bytes->value();
-		m_mem_hex->setFixedSize(QSize(pSize * 3 * m_colcount + 6, 228));
-		m_mem_ascii->setFixedSize(QSize(pSize * m_colcount + 6, 228));
+		m_colcount = 1 << sb_words->value();
 		ShowMemory();
 	});
 
-	connect(b_prev, &QAbstractButton::clicked, [=, this]() { m_addr -= m_colcount; ShowMemory(); });
-	connect(b_next, &QAbstractButton::clicked, [=, this]() { m_addr += m_colcount; ShowMemory(); });
-	connect(b_fprev, &QAbstractButton::clicked, [=, this]() { m_addr -= m_rowcount * m_colcount; ShowMemory(); });
-	connect(b_fnext, &QAbstractButton::clicked, [=, this]() { m_addr += m_rowcount * m_colcount; ShowMemory(); });
+	connect(b_prev, &QAbstractButton::clicked, [this]() { scroll(-1); });
+	connect(b_next, &QAbstractButton::clicked, [this]() { scroll(1); });
+	connect(b_fprev, &QAbstractButton::clicked, [this]() { scroll(m_rowcount * -1); });
+	connect(b_fnext, &QAbstractButton::clicked, [this]() { scroll(m_rowcount); });
 	connect(b_img, &QAbstractButton::clicked, [=, this]()
 	{
-		int mode = cbox_img_mode->currentIndex();
-		int sizex = sb_img_size_x->value();
-		int sizey = sb_img_size_y->value();
-		ShowImage(this, m_addr, mode, sizex, sizey, false);
+		const color_format format = cbox_img_mode->currentData().value<color_format>();
+		const int sizex = sb_img_size_x->value();
+		const int sizey = sb_img_size_y->value();
+		ShowImage(this, m_addr, format, sizex, sizey, false);
 	});
 
-	//Fill the QTextEdits
-	ShowMemory();
-
 	setFixedWidth(sizeHint().width());
-	setMinimumHeight(hbox_tools->sizeHint().height());
 }
 
 memory_viewer_panel::~memory_viewer_panel()
 {
-	exit = true;
 }
 
 void memory_viewer_panel::wheelEvent(QWheelEvent *event)
@@ -251,7 +274,15 @@ void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 		stepSize *= m_rowcount;
 
 	QPoint numSteps = event->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
-	m_addr -= stepSize * m_colcount * numSteps.y();
+
+	scroll(stepSize * (0 - numSteps.y()));
+}
+
+void memory_viewer_panel::scroll(s32 steps)
+{
+	m_addr += m_colcount * 4 * steps; // Add steps
+	m_addr &= m_addr_mask; // Mask it
+	m_addr -= m_addr % (m_colcount * 4); // Align by amount of bytes in a row
 
 	m_addr_line->setText(qstr(fmt::format("%08x", m_addr)));
 	ShowMemory();
@@ -261,23 +292,65 @@ void memory_viewer_panel::resizeEvent(QResizeEvent *event)
 {
 	QDialog::resizeEvent(event);
 
-	if (event->oldSize().height() != -1)
-		m_height_leftover += event->size().height() - event->oldSize().height();
+	const int font_height  = m_fontMetrics->height();
+	const QMargins margins = layout()->contentsMargins();
 
-	const auto font_height = m_fontMetrics->height();
+	int free_height = event->size().height()
+		- (layout()->count() * (margins.top() + margins.bottom()));
 
-	if (m_height_leftover >= font_height)
+	for (int i = 0; i < layout()->count(); i++)
 	{
-		m_height_leftover -= font_height;
-		++m_rowcount;
+		if (i != 3) // Index of our memory layout
+			free_height -= layout()->itemAt(i)->sizeHint().height();
+	}
+
+	setMinimumHeight(event->size().height() - free_height + font_height);
+	const u32 new_row_count = std::max(0, free_height) / font_height;
+
+	if (m_rowcount != new_row_count)
+	{
+		m_rowcount = new_row_count;
 		ShowMemory();
 	}
-	else if (m_height_leftover < -font_height)
+}
+
+std::string memory_viewer_panel::getHeaderAtAddr(u32 addr)
+{
+	if (m_type == thread_type::spu) return {};
+
+	// Check if its an SPU Local Storage beginning
+	const u32 spu_boundary = utils::align<u32>(addr, SPU_LS_SIZE);
+
+	if (spu_boundary <= addr + m_colcount * 4 - 1)
 	{
-		m_height_leftover += font_height;
-		--m_rowcount;
-		ShowMemory();
+		std::shared_ptr<named_thread<spu_thread>> spu;
+
+		if (u32 raw_spu_index = (spu_boundary - RAW_SPU_BASE_ADDR) / SPU_LS_SIZE; raw_spu_index < 5)
+		{
+			spu = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(raw_spu_index));
+
+			if (spu && spu->get_type() == spu_type::threaded)
+			{
+				spu.reset();
+			}
+		}
+		else if (u32 spu_index = (spu_boundary - SPU_FAKE_BASE_ADDR) / SPU_LS_SIZE; spu_index < spu_thread::id_count)
+		{
+			spu = idm::get<named_thread<spu_thread>>(spu_thread::id_base | spu_index);
+
+			if (spu && spu->get_type() != spu_type::threaded)
+			{
+				spu.reset();
+			}
+		}
+
+		if (spu)
+		{
+			return spu->get_name();
+		}
 	}
+
+	return {};
 }
 
 void memory_viewer_panel::ShowMemory()
@@ -286,35 +359,98 @@ void memory_viewer_panel::ShowMemory()
 	QString t_mem_hex_str;
 	QString t_mem_ascii_str;
 
-	for(u32 addr = m_addr; addr != m_addr + m_rowcount * m_colcount; addr += m_colcount)
+	for (u32 row = 0, spu_passed = 0; row < m_rowcount; row++)
 	{
-		t_mem_addr_str += qstr(fmt::format("%08x", addr));
-		if (addr != m_addr + m_rowcount * m_colcount - m_colcount) t_mem_addr_str += "\r\n";
-	}
+		if (row)
+		{
+			t_mem_addr_str += "\r\n";
+			t_mem_hex_str += "\r\n";
+			t_mem_ascii_str += "\r\n";
+		}
 
-	for (u32 row = 0; row < m_rowcount; row++)
-	{
+		{
+			// Check if this address contains potential header
+			const u32 addr = (m_addr + (row - spu_passed) * m_colcount * 4) & m_addr_mask;
+			const std::string header = getHeaderAtAddr(addr);
+			if (!header.empty())
+			{
+				// Create an SPU header at the beginning of local storage
+				// Like so:
+				// =======================================
+				// SPU[0x0000100] CellSpursKernel0
+				// =======================================
+
+				bool _break = false;
+
+				for (u32 i = 0; i < 3; i++)
+				{
+					t_mem_addr_str += qstr(fmt::format("%08x", addr));
+
+					std::string str(i == 1 ? header : "");
+
+					const u32 expected_str_size = m_colcount * 13 - 2;
+
+					// Truncate or enlarge string to a fixed size
+					str.resize(expected_str_size);
+					std::replace(str.begin(), str.end(), '\0', i == 1 ? ' ' : '=');
+
+					t_mem_hex_str += qstr(str);
+
+					spu_passed++;
+					row++;
+
+					if (row >= m_rowcount)
+					{
+						_break = true;
+						break;
+					}
+
+					t_mem_addr_str += "\r\n";
+					t_mem_hex_str += "\r\n";
+					t_mem_ascii_str += "\r\n";
+				}
+
+				if (_break)
+				{
+					break;
+				}
+			}
+
+			t_mem_addr_str += qstr(fmt::format("%08x", (m_addr + (row - spu_passed) * m_colcount * 4) & m_addr_mask));
+		}
+
 		for (u32 col = 0; col < m_colcount; col++)
 		{
-			u32 addr = m_addr + row * m_colcount + col;
-
-			if (vm::check_addr(addr, 0))
+			if (col)
 			{
-				const u8 rmem = *vm::get_super_ptr<u8>(addr);
-				t_mem_hex_str += qstr(fmt::format("%02x ", rmem));
-				t_mem_ascii_str += qstr(std::string(1, std::isprint(rmem) ? static_cast<char>(rmem) : '.'));
+				t_mem_hex_str += "  ";
+			}
+
+			u32 addr = (m_addr + (row - spu_passed) * m_colcount * 4 + col * 4) & m_addr_mask;
+
+			if (m_spu_shm || vm::check_addr(addr, 0, 4))
+			{
+				const be_t<u32> rmem = m_spu_shm ? *reinterpret_cast<be_t<u32>*>(m_spu_shm->map_self() + addr) : *vm::get_super_ptr<u32>(addr);
+				t_mem_hex_str += qstr(fmt::format("%02x %02x %02x %02x",
+					static_cast<u8>(rmem >> 24),
+					static_cast<u8>(rmem >> 16),
+					static_cast<u8>(rmem >> 8),
+					static_cast<u8>(rmem >> 0)));
+
+				std::string str{reinterpret_cast<const char*>(&rmem), 4};
+
+				for (auto& ch : str)
+				{
+					if (!std::isprint(static_cast<u8>(ch))) ch = '.';
+				}
+
+				t_mem_ascii_str += qstr(std::move(str));
 			}
 			else
 			{
-				t_mem_hex_str += "??";
-				t_mem_ascii_str += "?";
-				if (col != m_colcount - 1) t_mem_hex_str += " ";
+				t_mem_hex_str += "?? ?? ?? ??";
+				t_mem_ascii_str += "????";
 			}
-		}
-		if (row != m_rowcount - 1)
-		{
-			t_mem_hex_str += "\r\n";
-			t_mem_ascii_str += "\r\n";
 		}
 	}
 
@@ -322,15 +458,15 @@ void memory_viewer_panel::ShowMemory()
 	m_mem_hex->setText(t_mem_hex_str);
 	m_mem_ascii->setText(t_mem_ascii_str);
 
-	// Adjust Text Boxes
+	// Adjust Text Boxes (also helps with window resize)
 	QSize textSize = m_fontMetrics->size(0, m_mem_addr->text());
-	m_mem_addr->setFixedSize(textSize.width() + 10, textSize.height() + 10);
+	m_mem_addr->setFixedSize(textSize.width() + 10, textSize.height());
 
 	textSize = m_fontMetrics->size(0, m_mem_hex->text());
-	m_mem_hex->setFixedSize(textSize.width() + 10, textSize.height() + 10);
+	m_mem_hex->setFixedSize(textSize.width() + 10, textSize.height());
 
 	textSize = m_fontMetrics->size(0, m_mem_ascii->text());
-	m_mem_ascii->setFixedSize(textSize.width() + 10, textSize.height() + 10);
+	m_mem_ascii->setFixedSize(textSize.width() + 10, textSize.height());
 }
 
 void memory_viewer_panel::SetPC(const uint pc)
@@ -338,90 +474,121 @@ void memory_viewer_panel::SetPC(const uint pc)
 	m_addr = pc;
 }
 
-void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, int mode, u32 width, u32 height, bool flipv)
+void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv)
 {
-	std::shared_lock rlock(vm::g_mutex);
+	const u64 memsize = 4ull * width * height;
 
-	if (!vm::check_addr(addr, 0, width * height * 4))
+	if (!memsize || memsize > m_addr_mask)
 	{
 		return;
 	}
 
-	const auto originalBuffer  = vm::get_super_ptr<const uchar>(addr);
-	const auto convertedBuffer = static_cast<uchar*>(std::malloc(width * height * 4));
+	std::shared_lock rlock(vm::g_mutex);
 
-	switch(mode)
+	if (!m_spu_shm && !vm::check_addr(addr, 0, static_cast<u32>(memsize)))
 	{
-	case(0): // RGB
-		for (u32 y = 0; y < height; y++)
-		{
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 3)
-			{
-				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 2 + y * width * 3];
-				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 1 + y * width * 3];
-				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 0 + y * width * 3];
-				convertedBuffer[i + 3 + y * width * 4] = 255;
-			}
-		}
-	break;
+		return;
+	}
 
-	case(1): // ARGB
-		for (u32 y = 0; y < height; y++)
-		{
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
-			{
-				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
-				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
-				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
-				convertedBuffer[i + 3 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
-			}
-		}
-	break;
+	const auto originalBuffer  = m_spu_shm ? (m_spu_shm->map_self() + addr) : vm::get_super_ptr<const u8>(addr);
+	const auto convertedBuffer = new (std::nothrow) u8[static_cast<u32>(memsize)];
 
-	case(2): // RGBA
-		for (u32 y = 0; y < height; y++)
-		{
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
-			{
-				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
-				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
-				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
-				convertedBuffer[i + 3 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
-			}
-		}
-	break;
+	if (!convertedBuffer)
+	{
+		// OOM, give up
+		return;
+	}
 
-	case(3): // ABGR
+	switch (format)
+	{
+	case color_format::RGB:
+	{
+		const u32 pitch = width * 3;
+		const u32 pitch_new = width * 4;
 		for (u32 y = 0; y < height; y++)
 		{
-			for (u32 i = 0, j = 0; j < width * 4; i += 4, j += 4)
+			const u32 offset = y * pitch;
+			const u32 offset_new = y * pitch_new;
+			for (u32 x = 0, x_new = 0; x < pitch; x += 3, x_new += 4)
 			{
-				convertedBuffer[i + 0 + y * width * 4] = originalBuffer[j + 1 + y * width * 4];
-				convertedBuffer[i + 1 + y * width * 4] = originalBuffer[j + 2 + y * width * 4];
-				convertedBuffer[i + 2 + y * width * 4] = originalBuffer[j + 3 + y * width * 4];
-				convertedBuffer[i + 3 + y * width * 4] = originalBuffer[j + 0 + y * width * 4];
+				convertedBuffer[offset_new + x_new + 0] = originalBuffer[offset + x + 2];
+				convertedBuffer[offset_new + x_new + 1] = originalBuffer[offset + x + 1];
+				convertedBuffer[offset_new + x_new + 2] = originalBuffer[offset + x + 0];
+				convertedBuffer[offset_new + x_new + 3] = 255;
 			}
 		}
-	break;
+		break;
+	}
+	case color_format::ARGB:
+	{
+		const u32 pitch = width * 4;
+		for (u32 y = 0; y < height; y++)
+		{
+			const u32 offset = y * pitch;
+			for (u32 x = 0; x < pitch; x += 4)
+			{
+				convertedBuffer[offset + x + 0] = originalBuffer[offset + x + 3];
+				convertedBuffer[offset + x + 1] = originalBuffer[offset + x + 2];
+				convertedBuffer[offset + x + 2] = originalBuffer[offset + x + 1];
+				convertedBuffer[offset + x + 3] = originalBuffer[offset + x + 0];
+			}
+		}
+		break;
+	}
+	case color_format::RGBA:
+	{
+		const u32 pitch = width * 4;
+		for (u32 y = 0; y < height; y++)
+		{
+			const u32 offset = y * pitch;
+			for (u32 x = 0; x < pitch; x += 4)
+			{
+				convertedBuffer[offset + x + 0] = originalBuffer[offset + x + 2];
+				convertedBuffer[offset + x + 1] = originalBuffer[offset + x + 1];
+				convertedBuffer[offset + x + 2] = originalBuffer[offset + x + 0];
+				convertedBuffer[offset + x + 3] = originalBuffer[offset + x + 3];
+			}
+		}
+		break;
+	}
+	case color_format::ABGR:
+	{
+		const u32 pitch = width * 4;
+		for (u32 y = 0; y < height; y++)
+		{
+			const u32 offset = y * pitch;
+			for (u32 x = 0; x < pitch; x += 4)
+			{
+				convertedBuffer[offset + x + 0] = originalBuffer[offset + x + 1];
+				convertedBuffer[offset + x + 1] = originalBuffer[offset + x + 2];
+				convertedBuffer[offset + x + 2] = originalBuffer[offset + x + 3];
+				convertedBuffer[offset + x + 3] = originalBuffer[offset + x + 0];
+			}
+		}
+		break;
+	}
 	}
 
 	rlock.unlock();
 
 	// Flip vertically
-	if (flipv)
+	if (flipv && height > 1)
 	{
+		const u32 pitch = width * 4;
 		for (u32 y = 0; y < height / 2; y++)
 		{
-			for (u32 x = 0; x < width * 4; x++)
+			const u32 offset = y * pitch;
+			const u32 flip_offset = (height - y - 1) * pitch;
+			for (u32 x = 0; x < pitch; x++)
 			{
-				const u8 t = convertedBuffer[x + y * width * 4];
-				convertedBuffer[x + y * width * 4] = convertedBuffer[x + (height - y - 1) * width * 4];
-				convertedBuffer[x + (height - y - 1) * width * 4] = t;
+				const u8 tmp = convertedBuffer[offset + x];
+				convertedBuffer[offset + x] = convertedBuffer[flip_offset + x];
+				convertedBuffer[flip_offset + x] = tmp;
 			}
 		}
 	}
 
-	QImage image = QImage(convertedBuffer, width, height, QImage::Format_ARGB32, [](void* buffer){ std::free(buffer); }, convertedBuffer);
+	QImage image(convertedBuffer, width, height, QImage::Format_ARGB32, [](void* buffer){ delete[] static_cast<u8*>(buffer); }, convertedBuffer);
 	if (image.isNull()) return;
 
 	QLabel* canvas = new QLabel();

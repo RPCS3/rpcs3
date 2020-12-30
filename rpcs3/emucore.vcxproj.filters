@@ -206,6 +206,9 @@
     <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Common\GLSLCommon.cpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Null\NullGSRender.cpp">
       <Filter>Emu\GPU\RSX\Null</Filter>
     </ClCompile>
@@ -782,7 +785,7 @@
     <ClCompile Include="Emu\Cell\lv2\sys_ss.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\sysinfo.cpp">
+    <ClCompile Include="util\sysinfo.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_gamepad.cpp">
@@ -935,9 +938,6 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
-    <ClCompile Include="util\atomic2.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="util\logs.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -1069,7 +1069,13 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\BEType.h">
+    <ClInclude Include="util\v128.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\v128sse.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\to_endian.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\StrFmt.h">
@@ -1132,12 +1138,6 @@
     <ClInclude Include="Emu\Memory\vm_var.h">
       <Filter>Emu\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="restore_new.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="define_new_memleakdetect.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Crypto\ec.h">
       <Filter>Crypto</Filter>
     </ClInclude>
@@ -1148,6 +1148,9 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\ProgramStateCache.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\program_state_cache2.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\FragmentProgramDecompiler.h">
@@ -1183,7 +1186,7 @@
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\types.h">
+    <ClInclude Include="util\types.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\BitField.h">
@@ -1621,7 +1624,7 @@
     <ClInclude Include="..\Utilities\CRC.h">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\sysinfo.h">
+    <ClInclude Include="util\sysinfo.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\GLSLCommon.h">
@@ -1816,13 +1819,13 @@
     <ClInclude Include="util\yaml.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="util\atomic2.hpp">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="util\endian.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="util\fixed_typemap.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\auto_typemap.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="util\init_mutex.hpp">

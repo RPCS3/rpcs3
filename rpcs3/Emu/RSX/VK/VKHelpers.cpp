@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKHelpers.h"
 #include "VKGSRender.h"
 #include "VKCompute.h"
@@ -10,8 +10,10 @@
 #include "VKCommandStream.h"
 #include "VKRenderPass.h"
 
+#include "Emu/RSX/rsx_methods.h"
 #include "Utilities/mutex.h"
 #include "Utilities/lockless.h"
+#include <unordered_map>
 
 namespace vk
 {
@@ -60,6 +62,7 @@ namespace vk
 		table.add(0x1F82, 0x1FB9, chip_class::NV_turing); // TU117, TU117M, TU117GL
 		table.add(0x2182, 0x21D1, chip_class::NV_turing); // TU116, TU116M, TU116GL
 		table.add(0x20B0, 0x20BE, chip_class::NV_ampere); // GA100
+		table.add(0x2204, 0x25AF, chip_class::NV_ampere); // GA10x (RTX 30 series)
 
 		return table;
 	}();
@@ -93,7 +96,7 @@ namespace vk
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
 
-	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
+	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, usz size, usz alignment, VkSystemAllocationScope allocationScope)
 	{
 #ifdef _MSC_VER
 		return _aligned_realloc(pOriginal, size, alignment);
@@ -104,7 +107,7 @@ namespace vk
 #endif
 	}
 
-	VKAPI_ATTR void* VKAPI_CALL mem_alloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
+	VKAPI_ATTR void* VKAPI_CALL mem_alloc(void* pUserData, usz size, usz alignment, VkSystemAllocationScope allocationScope)
 	{
 #ifdef _MSC_VER
 		return _aligned_malloc(size, alignment);
@@ -126,11 +129,11 @@ namespace vk
 #endif
 	}
 
-	bool data_heap::grow(size_t size)
+	bool data_heap::grow(usz size)
 	{
 		// Create new heap. All sizes are aligned up by 64M, upto 1GiB
-		const size_t size_limit = 1024 * 0x100000;
-		const size_t aligned_new_size = align(m_size + size, 64 * 0x100000);
+		const usz size_limit = 1024 * 0x100000;
+		const usz aligned_new_size = utils::align(m_size + size, 64 * 0x100000);
 
 		if (aligned_new_size >= size_limit)
 		{
@@ -220,8 +223,8 @@ namespace vk
 			}
 		}
 
-		if (result.device_local == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support device local memory" HERE);
-		if (result.host_visible_coherent == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support host coherent device local memory" HERE);
+		if (result.device_local == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support device local memory");
+		if (result.host_visible_coherent == VK_MAX_MEMORY_TYPES) fmt::throw_exception("GPU doesn't support host coherent device local memory");
 		return result;
 	}
 
@@ -236,7 +239,7 @@ namespace vk
 		return result;
 	}
 
-	chip_class get_chip_family(uint32_t vendor_id, uint32_t device_id)
+	chip_class get_chip_family(u32 vendor_id, u32 device_id)
 	{
 		if (vendor_id == 0x10DE)
 		{
@@ -349,8 +352,8 @@ namespace vk
 	{
 		auto create_texture = [&]()
 		{
-			u32 new_width = align(requested_width, 1024u);
-			u32 new_height = align(requested_height, 1024u);
+			u32 new_width = utils::align(requested_width, 1024u);
+			u32 new_height = utils::align(requested_height, 1024u);
 
 			return new vk::image(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D, format, new_width, new_height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
@@ -386,7 +389,7 @@ namespace vk
 		if (!g_scratch_buffer)
 		{
 			// Choose optimal size
-			const u64 alloc_size = std::max<u64>(64 * 0x100000, align(min_required_size, 0x100000));
+			const u64 alloc_size = std::max<u64>(64 * 0x100000, utils::align(min_required_size, 0x100000));
 
 			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, alloc_size,
 				g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -468,7 +471,7 @@ namespace vk
 
 	vk::mem_allocator_base* get_current_mem_allocator()
 	{
-		verify (HERE, g_current_renderer);
+		ensure(g_current_renderer);
 		return g_current_renderer->get_allocator();
 	}
 
@@ -919,7 +922,7 @@ namespace vk
 
 	void advance_frame_counter()
 	{
-		verify(HERE), g_num_processed_frames <= g_num_total_frames;
+		ensure(g_num_processed_frames <= g_num_total_frames);
 		g_num_total_frames++;
 	}
 
@@ -963,7 +966,7 @@ namespace vk
 				case VK_NOT_READY:
 					continue;
 				default:
-					die_with_error(HERE, status);
+					die_with_error(status);
 					return status;
 				}
 			}
@@ -984,7 +987,7 @@ namespace vk
 			case VK_EVENT_RESET:
 				break;
 			default:
-				die_with_error(HERE, status);
+				die_with_error(status);
 				return status;
 			}
 
@@ -1004,19 +1007,27 @@ namespace vk
 			}
 
 			//std::this_thread::yield();
+#ifdef _MSC_VER
 			_mm_pause();
+#else
+			__builtin_ia32_pause();
+#endif
 		}
 	}
 
 	void do_query_cleanup(vk::command_buffer& cmd)
 	{
 		auto renderer = dynamic_cast<VKGSRender*>(rsx::get_current_renderer());
-		verify(HERE), renderer;
+		ensure(renderer);
 
 		renderer->emergency_query_cleanup(&cmd);
 	}
 
-	void die_with_error(const char* faulting_addr, VkResult error_code)
+	void die_with_error(VkResult error_code,
+		const char* file,
+		const char* func,
+		u32 line,
+		u32 col)
 	{
 		std::string error_message;
 		int severity = 0; //0 - die, 1 - warn, 2 - nothing
@@ -1100,7 +1111,7 @@ namespace vk
 			error_message = "Invalid external handle (VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR)";
 			break;
 		default:
-			error_message = fmt::format("Unknown Code (%Xh, %d)%s", static_cast<s32>(error_code), static_cast<s32>(error_code), faulting_addr);
+			error_message = fmt::format("Unknown Code (%Xh, %d)%s", static_cast<s32>(error_code), static_cast<s32>(error_code), src_loc{line, col, file, func});
 			break;
 		}
 
@@ -1108,9 +1119,9 @@ namespace vk
 		{
 		default:
 		case 0:
-			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s%s", error_message.c_str(), faulting_addr);
+			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s%s", error_message, src_loc{line, col, file, func});
 		case 1:
-			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message.c_str(), faulting_addr);
+			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message, src_loc{line, col, file, func});
 			break;
 		case 2:
 			break;
@@ -1118,7 +1129,7 @@ namespace vk
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-											uint64_t srcObject, size_t location, int32_t msgCode,
+											u64 srcObject, usz location, s32 msgCode,
 											const char *pLayerPrefix, const char *pMsg, void *pUserData)
 	{
 		if (msgFlags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
@@ -1141,7 +1152,7 @@ namespace vk
 	}
 
 	VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-							uint64_t srcObject, size_t location, int32_t msgCode,
+							u64 srcObject, usz location, s32 msgCode,
 							const char *pLayerPrefix, const char *pMsg, void *pUserData)
 	{
 #ifdef _WIN32

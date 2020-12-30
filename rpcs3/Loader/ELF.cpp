@@ -11,7 +11,7 @@ void fmt_class_string<elf_error>::format(std::string& out, u64 arg)
 		{
 		case elf_error::ok: return "OK";
 
-		case elf_error::stream: return "Invalid stream or file not found";
+		case elf_error::stream: return "File not found";
 		case elf_error::stream_header: return "Failed to read ELF header";
 		case elf_error::stream_phdrs: return "Failed to read ELF program headers";
 		case elf_error::stream_shdrs: return "Failed to read ELF section headers";

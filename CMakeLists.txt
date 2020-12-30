@@ -7,8 +7,8 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 		message(FATAL_ERROR "RPCS3 requires at least gcc-9.")
 	endif()
 elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
-		message(FATAL_ERROR "RPCS3 requires at least clang-9.0.")
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11.0)
+		message(FATAL_ERROR "RPCS3 requires at least clang-11.0.")
 	endif()
 endif()
 
@@ -22,7 +22,7 @@ option(USE_LIBEVDEV "libevdev-based joystick support" ON)
 option(USE_DISCORD_RPC "Discord rich presence integration" ON)
 option(USE_SYSTEM_ZLIB "Prefer system ZLIB instead of the builtin one" ON)
 option(USE_VULKAN "Vulkan render backend" ON)
-option(USE_PRECOMPILED_HEADERS "Use precompiled headers" ON)
+option(USE_PRECOMPILED_HEADERS "Use precompiled headers" OFF)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/rpcs3/cmake_modules")
 
@@ -64,7 +64,7 @@ set(CMAKE_C_FLAGS -w)
 set(LLVM_ENABLE_WARNINGS OFF CACHE BOOL "")
 
 if(MSVC)
-	add_compile_options(/wd4530) # C++ exception handler used, but unwind semantics are not enabled
+	add_compile_options(/wd4530 /utf-8) # C++ exception handler used, but unwind semantics are not enabled
 endif()
 
 add_subdirectory(Vulkan EXCLUDE_FROM_ALL)

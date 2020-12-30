@@ -1,10 +1,13 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "../Overlays/overlay_shader_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "GLGSRender.h"
 #include "GLCompute.h"
 #include "GLVertexProgram.h"
 #include "Emu/Memory/vm_locking.h"
+#include "Emu/RSX/rsx_methods.h"
+
+#include "../Common/program_state_cache2.hpp"
 
 #define DUMP_VERTEX_DATA 0
 
@@ -52,7 +55,7 @@ void GLGSRender::set_scissor(bool clip_viewport)
 
 void GLGSRender::on_init_thread()
 {
-	verify(HERE), m_frame;
+	ensure(m_frame);
 
 	// NOTES: All contexts have to be created before any is bound to a thread
 	// This allows context sharing to work (both GLRCs passed to wglShareLists have to be idle or you get ERROR_BUSY)
@@ -274,15 +277,6 @@ void GLGSRender::on_init_thread()
 	m_gl_volatile_stream_buffer->copy_from(m_volatile_stream_view);
 
 	m_vao.element_array_buffer = *m_index_ring_buffer;
-
-	if (g_cfg.video.overlay)
-	{
-		if (gl_caps.ARB_shader_draw_parameters_supported)
-		{
-			m_text_printer.init();
-			m_text_printer.set_enabled(true);
-		}
-	}
 
 	int image_unit = 0;
 	for (auto &sampler : m_fs_sampler_states)
@@ -552,7 +546,7 @@ void GLGSRender::clear_surface(u32 arg)
 
 			if ((arg & 0x3) != 0x3 && !require_mem_load && ds->dirty())
 			{
-				verify(HERE), mask;
+				ensure(mask);
 
 				// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
 				if (arg == 1)
@@ -648,10 +642,10 @@ bool GLGSRender::load_program()
 {
 	const auto shadermode = g_cfg.video.shadermode.get();
 
-	if ((m_interpreter_state = (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)))
+	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
-		verify(HERE), current_fragment_program.valid;
+		ensure(current_fragment_program.valid);
 
 		get_current_vertex_program(vs_sampler_state);
 
@@ -701,7 +695,7 @@ bool GLGSRender::load_program()
 		}
 		else
 		{
-			verify(HERE), m_program;
+			ensure(m_program);
 			m_program->sync();
 		}
 	}
@@ -728,7 +722,7 @@ void GLGSRender::load_program_env()
 {
 	if (!m_program)
 	{
-		fmt::throw_exception("Unreachable right now" HERE);
+		fmt::throw_exception("Unreachable right now");
 	}
 
 	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
@@ -748,7 +742,7 @@ void GLGSRender::load_program_env()
 		if (update_fragment_env) m_fragment_env_buffer->reserve_storage_on_heap(128);
 		if (update_vertex_env) m_vertex_env_buffer->reserve_storage_on_heap(256);
 		if (update_fragment_texture_env) m_texture_parameters_buffer->reserve_storage_on_heap(256);
-		if (update_fragment_constants) m_fragment_constants_buffer->reserve_storage_on_heap(align(fragment_constants_size, 256));
+		if (update_fragment_constants) m_fragment_constants_buffer->reserve_storage_on_heap(utils::align(fragment_constants_size, 256));
 		if (update_transform_constants) m_transform_constants_buffer->reserve_storage_on_heap(8192);
 		if (update_raster_env) m_raster_env_ring_buffer->reserve_storage_on_heap(128);
 
@@ -1042,7 +1036,7 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 	// TODO: Handle texture writeback
 	if (false)
 	{
-		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location, HERE);
+		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
 		on_notify_memory_unmapped(addr, tiles[tile].size);
 		m_rtts.invalidate_surface_address(addr, false);
 	}
@@ -1061,7 +1055,7 @@ void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query
 
 void GLGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
-	verify(HERE), query->active;
+	ensure(query->active);
 	glEndQuery(GL_ANY_SAMPLES_PASSED);
 }
 

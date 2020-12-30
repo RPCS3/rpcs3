@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -17,8 +17,6 @@ extern "C"
 #else
 #pragma GCC diagnostic pop
 #endif
-
-#include "Utilities/BEType.h"
 
 // Error Codes
 enum CellVpostError : u32

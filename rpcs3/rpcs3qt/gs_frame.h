@@ -1,6 +1,7 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
+#include "util/atomic.hpp"
 #include "Emu/RSX/GSFrameBase.h"
 
 #include <QWindow>
@@ -11,6 +12,9 @@
 #include <QWinTaskbarProgress>
 #include <QWinTaskbarButton>
 #endif
+
+#include <memory>
+#include <vector>
 
 class gui_settings;
 
@@ -34,7 +38,7 @@ private:
 
 	u64 m_frames = 0;
 	QString m_window_title;
-	std::atomic<bool> m_show_mouse = true;
+	atomic_t<bool> m_show_mouse = true;
 	bool m_disable_mouse = false;
 	bool m_disable_kb_hotkeys = false;
 	bool m_mouse_hide_and_lock = false;

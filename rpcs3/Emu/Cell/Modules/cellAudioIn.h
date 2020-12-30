@@ -1,6 +1,7 @@
-﻿#pragma once
+#pragma once
 
-#include "Utilities/BEType.h"
+#include "util/types.hpp"
+#include "util/endian.hpp"
 
 // Error codes
 enum CellAudioInError

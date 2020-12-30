@@ -1,15 +1,15 @@
-﻿#pragma once
+#pragma once
 
 #include <QDialog>
 #include <QTreeWidget>
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 class kernel_explorer : public QDialog
 {
 	Q_OBJECT
 
-	static const size_t sys_size = 256;
+	static const usz sys_size = 256;
 
 	enum additional_nodes
 	{

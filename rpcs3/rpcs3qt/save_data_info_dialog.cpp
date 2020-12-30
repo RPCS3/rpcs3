@@ -1,4 +1,3 @@
-﻿#include "stdafx.h"
 #include "save_data_info_dialog.h"
 
 #include <QPushButton>

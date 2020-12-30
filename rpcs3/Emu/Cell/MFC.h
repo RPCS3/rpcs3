@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 enum MFC : u8
 {

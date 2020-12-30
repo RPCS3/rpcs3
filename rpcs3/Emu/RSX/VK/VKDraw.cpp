@@ -1,6 +1,7 @@
-﻿#include "stdafx.h"
-#include "VKGSRender.h"
+#include "stdafx.h"
 #include "../Common/BufferUtils.h"
+#include "../rsx_methods.h"
+#include "VKGSRender.h"
 
 namespace vk
 {
@@ -16,7 +17,7 @@ namespace vk
 			return VK_IMAGE_VIEW_TYPE_CUBE;
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 			return VK_IMAGE_VIEW_TYPE_3D;
-		default: ASSUME(0);
+		default: fmt::throw_exception("Unreachable");
 		};
 	}
 
@@ -33,7 +34,7 @@ namespace vk
 		case rsx::comparison_function::not_equal: return VK_COMPARE_OP_NOT_EQUAL;
 		case rsx::comparison_function::always: return VK_COMPARE_OP_ALWAYS;
 		default:
-			fmt::throw_exception("Unknown compare op: 0x%x" HERE, static_cast<u32>(op));
+			fmt::throw_exception("Unknown compare op: 0x%x", static_cast<u32>(op));
 		}
 	}
 }
@@ -140,28 +141,32 @@ void VKGSRender::update_draw_state()
 
 void VKGSRender::load_texture_env()
 {
-	//Load textures
-	bool update_framebuffer_sourced = false;
+	// Load textures
 	bool check_for_cyclic_refs = false;
+	auto check_surface_cache_sampler = [&](auto descriptor)
+	{
+		if (!m_texture_cache.test_if_descriptor_expired(*m_current_command_buffer, m_rtts, descriptor))
+		{
+			check_for_cyclic_refs |= descriptor->is_cyclic_reference;
+			return true;
+		}
+
+		return false;
+	};
 
 	std::lock_guard lock(m_sampler_mutex);
 
-	if (surface_store_tag != m_rtts.cache_tag) [[unlikely]]
+	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
-		update_framebuffer_sourced = true;
-		surface_store_tag = m_rtts.cache_tag;
-	}
+		if (!(textures_ref & 1))
+			continue;
 
-	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
-	{
 		if (!fs_sampler_state[i])
 			fs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
 
-		if (m_samplers_dirty || m_textures_dirty[i] ||
-			(update_framebuffer_sourced && fs_sampler_state[i]->upload_context == rsx::texture_upload_context::framebuffer_storage))
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+		if (m_samplers_dirty || m_textures_dirty[i] || !check_surface_cache_sampler(sampler_state))
 		{
-			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-
 			if (rsx::method_registers.fragment_textures[i].enabled())
 			{
 				check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
@@ -188,9 +193,7 @@ void VKGSRender::load_texture_env()
 					depth_compare_mode = vk::get_compare_func(rsx::method_registers.fragment_textures[i].zfunc(), true);
 				}
 
-				const int aniso_override_level = g_cfg.video.anisotropic_level_override;
-				const bool aniso_override = !g_cfg.video.strict_rendering_mode && aniso_override_level > 0;
-				const f32 af_level = aniso_override ? aniso_override_level : vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso());
+				const f32 af_level = vk::max_aniso(rsx::method_registers.fragment_textures[i].max_aniso());
 				const auto wrap_s = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_s());
 				const auto wrap_t = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_t());
 				const auto wrap_r = vk::vk_wrap_mode(rsx::method_registers.fragment_textures[i].wrap_r());
@@ -289,16 +292,17 @@ void VKGSRender::load_texture_env()
 		}
 	}
 
-	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
+		if (!(textures_ref & 1))
+			continue;
+
 		if (!vs_sampler_state[i])
 			vs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
 
-		if (m_samplers_dirty || m_vertex_textures_dirty[i] ||
-			(update_framebuffer_sourced && vs_sampler_state[i]->upload_context == rsx::texture_upload_context::framebuffer_storage))
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+		if (m_samplers_dirty || m_vertex_textures_dirty[i] || !check_surface_cache_sampler(sampler_state))
 		{
-			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
-
 			if (rsx::method_registers.vertex_textures[i].enabled())
 			{
 				check_heap_status(VK_HEAP_CHECK_TEXTURE_UPLOAD_STORAGE);
@@ -357,217 +361,217 @@ void VKGSRender::load_texture_env()
 
 void VKGSRender::bind_texture_env()
 {
-	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
-		if (current_fp_metadata.referenced_textures_mask & (1 << i))
+		if (!(textures_ref & 1))
+			continue;
+
+		vk::image_view* view = nullptr;
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+
+		if (rsx::method_registers.fragment_textures[i].enabled() &&
+			sampler_state->validate())
 		{
-			vk::image_view* view = nullptr;
-			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-
-			if (rsx::method_registers.fragment_textures[i].enabled() &&
-				sampler_state->validate())
+			if (view = sampler_state->image_handle; !view)
 			{
-				if (view = sampler_state->image_handle; !view)
-				{
-					//Requires update, copy subresource
-					view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
-				}
-				else
-				{
-					switch (auto raw = view->image(); raw->current_layout)
-					{
-					default:
-					//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-						break;
-					case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
-						raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-						break;
-					case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src;
-						raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-						break;
-					case VK_IMAGE_LAYOUT_GENERAL:
-						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
-						if (!sampler_state->is_cyclic_reference)
-						{
-							// This was used in a cyclic ref before, but is missing a barrier
-							// No need for a full stall, use a custom barrier instead
-							VkPipelineStageFlags src_stage;
-							VkAccessFlags src_access;
-							if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
-							{
-								src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-								src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-							}
-							else
-							{
-								src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-								src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-							}
-
-							vk::insert_image_memory_barrier(
-								*m_current_command_buffer,
-								raw->value,
-								VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-								src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-								src_access, VK_ACCESS_SHADER_READ_BIT,
-								{ raw->aspect(), 0, 1, 0, 1 });
-
-							raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-						}
-						break;
-					case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-					case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage, !sampler_state->is_cyclic_reference;
-						raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-						break;
-					}
-				}
-			}
-
-			if (view) [[likely]]
-			{
-				m_program->bind_uniform({ fs_sampler_handles[i]->value, view->value, view->image()->current_layout },
-					i,
-					::glsl::program_domain::glsl_fragment_program,
-					m_current_frame->descriptor_set);
-
-				if (current_fragment_program.redirected_textures & (1 << i))
-				{
-					// Stencil mirror required
-					auto root_image = static_cast<vk::viewable_image*>(view->image());
-					auto stencil_view = root_image->get_view(0xAAE4, rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
-
-					if (!m_stencil_mirror_sampler)
-					{
-						m_stencil_mirror_sampler = std::make_unique<vk::sampler>(*m_device,
-							VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-							VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-							VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-							VK_FALSE, 0.f, 1.f, 0.f, 0.f,
-							VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST,
-							VK_BORDER_COLOR_INT_OPAQUE_BLACK);
-					}
-
-					m_program->bind_uniform({ m_stencil_mirror_sampler->value, stencil_view->value, stencil_view->image()->current_layout },
-						i,
-						::glsl::program_domain::glsl_fragment_program,
-						m_current_frame->descriptor_set,
-						true);
-				}
+				//Requires update, copy subresource
+				view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
 			}
 			else
 			{
-				const VkImageViewType view_type = vk::get_view_type(current_fragment_program.get_texture_dimension(i));
+				switch (auto raw = view->image(); raw->current_layout)
+				{
+				default:
+				//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+					break;
+				case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst);
+					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+					break;
+				case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
+					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+					break;
+				case VK_IMAGE_LAYOUT_GENERAL:
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
+					if (!sampler_state->is_cyclic_reference)
+					{
+						// This was used in a cyclic ref before, but is missing a barrier
+						// No need for a full stall, use a custom barrier instead
+						VkPipelineStageFlags src_stage;
+						VkAccessFlags src_access;
+						if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
+						{
+							src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+							src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+						}
+						else
+						{
+							src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+							src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+						}
+
+						vk::insert_image_memory_barrier(
+							*m_current_command_buffer,
+							raw->value,
+							VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+							src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+							src_access, VK_ACCESS_SHADER_READ_BIT,
+							{ raw->aspect(), 0, 1, 0, 1 });
+
+						raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					}
+					break;
+				case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+				case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
+					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+					break;
+				}
+			}
+		}
+
+		if (view) [[likely]]
+		{
+			m_program->bind_uniform({ fs_sampler_handles[i]->value, view->value, view->image()->current_layout },
+				i,
+				::glsl::program_domain::glsl_fragment_program,
+				m_current_frame->descriptor_set);
+
+			if (current_fragment_program.redirected_textures & (1 << i))
+			{
+				// Stencil mirror required
+				auto root_image = static_cast<vk::viewable_image*>(view->image());
+				auto stencil_view = root_image->get_view(0xAAE4, rsx::default_remap_vector, VK_IMAGE_ASPECT_STENCIL_BIT);
+
+				if (!m_stencil_mirror_sampler)
+				{
+					m_stencil_mirror_sampler = std::make_unique<vk::sampler>(*m_device,
+						VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+						VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+						VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+						VK_FALSE, 0.f, 1.f, 0.f, 0.f,
+						VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST,
+						VK_BORDER_COLOR_INT_OPAQUE_BLACK);
+				}
+
+				m_program->bind_uniform({ m_stencil_mirror_sampler->value, stencil_view->value, stencil_view->image()->current_layout },
+					i,
+					::glsl::program_domain::glsl_fragment_program,
+					m_current_frame->descriptor_set,
+					true);
+			}
+		}
+		else
+		{
+			const VkImageViewType view_type = vk::get_view_type(current_fragment_program.get_texture_dimension(i));
+			m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				i,
+				::glsl::program_domain::glsl_fragment_program,
+				m_current_frame->descriptor_set);
+
+			if (current_fragment_program.redirected_textures & (1 << i))
+			{
 				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 					i,
 					::glsl::program_domain::glsl_fragment_program,
-					m_current_frame->descriptor_set);
-
-				if (current_fragment_program.redirected_textures & (1 << i))
-				{
-					m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
-						i,
-						::glsl::program_domain::glsl_fragment_program,
-						m_current_frame->descriptor_set,
-						true);
-				}
+					m_current_frame->descriptor_set,
+					true);
 			}
 		}
 	}
 
-	for (int i = 0; i < rsx::limits::vertex_textures_count; ++i)
+	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
-		if (current_vp_metadata.referenced_textures_mask & (1 << i))
+		if (!(textures_ref & 1))
+			continue;
+
+		if (!rsx::method_registers.vertex_textures[i].enabled())
 		{
-			if (!rsx::method_registers.vertex_textures[i].enabled())
-			{
-				const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
-					i,
-					::glsl::program_domain::glsl_vertex_program,
-					m_current_frame->descriptor_set);
-
-				continue;
-			}
-
-			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
-			auto image_ptr = sampler_state->image_handle;
-
-			if (!image_ptr && sampler_state->validate())
-			{
-				image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
-				m_vertex_textures_dirty[i] = true;
-			}
-
-			if (!image_ptr)
-			{
-				rsx_log.error("Texture upload failed to vtexture index %d. Binding null sampler.", i);
-				const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
-
-				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
-					i,
-					::glsl::program_domain::glsl_vertex_program,
-					m_current_frame->descriptor_set);
-
-				continue;
-			}
-
-			switch (auto raw = image_ptr->image(); raw->current_layout)
-			{
-			default:
-			//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-				break;
-			case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-				verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
-				raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-				break;
-			case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-				verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src;
-				raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-				break;
-			case VK_IMAGE_LAYOUT_GENERAL:
-				verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
-				if (!sampler_state->is_cyclic_reference)
-				{
-					// Custom barrier, see similar block in FS stage
-					VkPipelineStageFlags src_stage;
-					VkAccessFlags src_access;
-					if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
-					{
-						src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-						src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-					}
-					else
-					{
-						src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-						src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-					}
-
-					vk::insert_image_memory_barrier(
-						*m_current_command_buffer,
-						raw->value,
-						VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-						src_stage, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-						src_access, VK_ACCESS_SHADER_READ_BIT,
-						{ raw->aspect(), 0, 1, 0, 1 });
-
-					raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				}
-				break;
-			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-				verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
-				raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-				break;
-			}
-
-			m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, image_ptr->image()->current_layout },
+			const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
+			m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 				i,
 				::glsl::program_domain::glsl_vertex_program,
 				m_current_frame->descriptor_set);
+
+			continue;
 		}
+
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+		auto image_ptr = sampler_state->image_handle;
+
+		if (!image_ptr && sampler_state->validate())
+		{
+			image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
+			m_vertex_textures_dirty[i] = true;
+		}
+
+		if (!image_ptr)
+		{
+			rsx_log.error("Texture upload failed to vtexture index %d. Binding null sampler.", i);
+			const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
+
+			m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				i,
+				::glsl::program_domain::glsl_vertex_program,
+				m_current_frame->descriptor_set);
+
+			continue;
+		}
+
+		switch (auto raw = image_ptr->image(); raw->current_layout)
+		{
+		default:
+		//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+			break;
+		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+			ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst);
+			raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			break;
+		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+			ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
+			raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			break;
+		case VK_IMAGE_LAYOUT_GENERAL:
+			ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
+			if (!sampler_state->is_cyclic_reference)
+			{
+				// Custom barrier, see similar block in FS stage
+				VkPipelineStageFlags src_stage;
+				VkAccessFlags src_access;
+				if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
+				{
+					src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+					src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+				}
+				else
+				{
+					src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+					src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				}
+
+				vk::insert_image_memory_barrier(
+					*m_current_command_buffer,
+					raw->value,
+					VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					src_stage, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+					src_access, VK_ACCESS_SHADER_READ_BIT,
+					{ raw->aspect(), 0, 1, 0, 1 });
+
+				raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			}
+			break;
+		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+			ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
+			raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			break;
+		}
+
+		m_program->bind_uniform({ vs_sampler_handles[i]->value, image_ptr->value, image_ptr->image()->current_layout },
+			i,
+			::glsl::program_domain::glsl_vertex_program,
+			m_current_frame->descriptor_set);
 	}
 }
 
@@ -605,81 +609,82 @@ void VKGSRender::bind_interpreter_texture_env()
 	std::advance(end, 16);
 	std::fill(start, end, fallback);
 
-	for (int i = 0; i < rsx::limits::fragment_textures_count; ++i)
+	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
-		if (current_fp_metadata.referenced_textures_mask & (1 << i))
+		if (!(textures_ref & 1))
+			continue;
+
+		vk::image_view* view = nullptr;
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+
+		if (rsx::method_registers.fragment_textures[i].enabled() &&
+			sampler_state->validate())
 		{
-			vk::image_view* view = nullptr;
-			auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-
-			if (rsx::method_registers.fragment_textures[i].enabled() &&
-				sampler_state->validate())
+			if (view = sampler_state->image_handle; !view)
 			{
-				if (view = sampler_state->image_handle; !view)
+				//Requires update, copy subresource
+				view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
+			}
+			else
+			{
+				switch (auto raw = view->image(); raw->current_layout)
 				{
-					//Requires update, copy subresource
-					view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc);
-				}
-				else
-				{
-					switch (auto raw = view->image(); raw->current_layout)
+				default:
+					//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+					break;
+				case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst);
+					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+					break;
+				case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
+					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+					break;
+				case VK_IMAGE_LAYOUT_GENERAL:
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
+					if (!sampler_state->is_cyclic_reference)
 					{
-					default:
-						//case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-						break;
-					case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_dst;
-						raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-						break;
-					case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src;
-						raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-						break;
-					case VK_IMAGE_LAYOUT_GENERAL:
-						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage;
-						if (!sampler_state->is_cyclic_reference)
+						// This was used in a cyclic ref before, but is missing a barrier
+						// No need for a full stall, use a custom barrier instead
+						VkPipelineStageFlags src_stage;
+						VkAccessFlags src_access;
+						if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
 						{
-							// This was used in a cyclic ref before, but is missing a barrier
-							// No need for a full stall, use a custom barrier instead
-							VkPipelineStageFlags src_stage;
-							VkAccessFlags src_access;
-							if (raw->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
-							{
-								src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-								src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-							}
-							else
-							{
-								src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-								src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-							}
-
-							vk::insert_image_memory_barrier(
-								*m_current_command_buffer,
-								raw->value,
-								VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-								src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-								src_access, VK_ACCESS_SHADER_READ_BIT,
-								{ raw->aspect(), 0, 1, 0, 1 });
-
-							raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+							src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+							src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 						}
-						break;
-					case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-					case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-						verify(HERE), sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage, !sampler_state->is_cyclic_reference;
-						raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-						break;
+						else
+						{
+							src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+							src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+						}
+
+						vk::insert_image_memory_barrier(
+							*m_current_command_buffer,
+							raw->value,
+							VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+							src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+							src_access, VK_ACCESS_SHADER_READ_BIT,
+							{ raw->aspect(), 0, 1, 0, 1 });
+
+						raw->current_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 					}
+					break;
+				case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+				case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
+					ensure(!sampler_state->is_cyclic_reference);
+					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+					break;
 				}
 			}
+		}
 
-			if (view)
-			{
-				const int offsets[] = { 0, 16, 48, 32 };
-				auto& sampled_image_info = texture_env[offsets[static_cast<u32>(sampler_state->image_type)] + i];
-				sampled_image_info = { fs_sampler_handles[i]->value, view->value, view->image()->current_layout };
-			}
+		if (view)
+		{
+			const int offsets[] = { 0, 16, 48, 32 };
+			auto& sampled_image_info = texture_env[offsets[static_cast<u32>(sampler_state->image_type)] + i];
+			sampled_image_info = { fs_sampler_handles[i]->value, view->value, view->image()->current_layout };
 		}
 	}
 
@@ -715,7 +720,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		for (auto &info : m_vertex_layout.interleaved_blocks)
 		{
 			const auto vertex_base_offset = rsx::method_registers.vertex_data_base_offset();
-			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location, HERE);
+			info.real_offset_address = rsx::get_address(rsx::get_vertex_offset_from_base(vertex_base_offset, info.base_offset), info.memory_location);
 		}
 	}
 
@@ -788,7 +793,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	// Update vertex fetch parameters
 	update_vertex_env(sub_index, upload_info);
 
-	verify(HERE), m_vertex_layout_storage;
+	ensure(m_vertex_layout_storage);
 	if (update_descriptors)
 	{
 		m_program->bind_uniform(persistent_buffer, binding_table.vertex_buffers_first_bind_slot, m_current_frame->descriptor_set);
@@ -796,9 +801,28 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		m_program->bind_uniform(m_vertex_layout_storage->value, binding_table.vertex_buffers_first_bind_slot + 2, m_current_frame->descriptor_set);
 	}
 
-	if (!m_current_subdraw_id++)
+	bool reload_state = (!m_current_subdraw_id++);
+	vk::renderpass_op(*m_current_command_buffer, [&](VkCommandBuffer cmd, VkRenderPass pass, VkFramebuffer fbo)
+	{
+		if (get_render_pass() == pass && m_draw_fbo->value == fbo)
+		{
+			// Nothing to do
+			return;
+		}
+
+		if (pass)
+		{
+			// Subpass mismatch, end it before proceeding
+			vk::end_renderpass(cmd);
+		}
+
+		reload_state = true;
+	});
+
+	if (reload_state)
 	{
 		vkCmdBindPipeline(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
+
 		update_draw_state();
 		begin_render_pass();
 
@@ -867,6 +891,9 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 void VKGSRender::begin()
 {
+	// Save shader state now before prefetch and loading happens
+	m_interpreter_state = (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits);
+
 	rsx::thread::begin();
 
 	if (skip_current_frame || swapchain_unavailable || cond_render_ctrl.disable_rendering())
@@ -883,6 +910,8 @@ void VKGSRender::end()
 		rsx::thread::end();
 		return;
 	}
+
+	m_profiler.start();
 
 	// Check for frame resource status here because it is possible for an async flip to happen between begin/end
 	if (m_current_frame->flags & frame_context_state::dirty) [[unlikely]]
@@ -901,12 +930,13 @@ void VKGSRender::end()
 			m_current_frame->used_descriptors = 0;
 		}
 
-		verify(HERE), !m_current_frame->swap_command_buffer;
+		ensure(!m_current_frame->swap_command_buffer);
 
 		m_current_frame->flags &= ~frame_context_state::dirty;
 	}
 
-	m_profiler.start();
+	analyse_current_rsx_pipeline();
+	m_frame_stats.setup_time += m_profiler.duration();
 
 	load_texture_env();
 	m_frame_stats.textures_upload_time += m_profiler.duration();

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QDialog>
 #include <QTreeWidgetItem>
@@ -6,6 +6,7 @@
 #include <QMimeData>
 
 #include "Utilities/bin_patch.h"
+#include <unordered_map>
 
 namespace Ui
 {

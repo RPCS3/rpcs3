@@ -1,8 +1,8 @@
-﻿#pragma once
+#pragma once
+
+#include "util/types.hpp"
 
 #include "yaml-cpp/yaml.h"
-
-#include "stdafx.h"
 
 #include "microphone_creator.h"
 #include "render_creator.h"
@@ -14,6 +14,9 @@
 #include <QComboBox>
 #include <QSpinBox>
 #include <QDateTimeEdit>
+
+#include <string>
+#include <vector>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -56,7 +59,7 @@ public:
 	/** Connects a button group with the target settings type*/
 	void EnhanceRadioButton(QButtonGroup* button_group, emu_settings_type type);
 
-	std::vector<std::string> GetLoadedLibraries();
+	std::vector<std::string> GetLibrariesControl();
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
 
 	/** Returns the valid options for a given setting.*/

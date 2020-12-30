@@ -12,6 +12,8 @@
 #include "sys_mmapper.h"
 #include "sys_memory.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(sys_ppu_thread);
 
 // Simple structure to cleanup previous thread, because can't remove its own thread
@@ -159,7 +161,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	const u64 vret = thread->gpr[3];
 
 	// Cleanup
-	verify(HERE), idm::remove_verify<named_thread<ppu_thread>>(thread_id, std::move(thread.ptr));
+	ensure(idm::remove_verify<named_thread<ppu_thread>>(thread_id, std::move(thread.ptr)));
 
 	if (!vptr)
 	{
@@ -221,7 +223,7 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 
 	if (thread.ret == CELL_EAGAIN)
 	{
-		verify(HERE), idm::remove<named_thread<ppu_thread>>(thread_id);
+		ensure(idm::remove<named_thread<ppu_thread>>(thread_id));
 	}
 
 	return CELL_OK;
@@ -388,7 +390,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 	g_fxo->get<ppu_thread_cleaner>()->clean(0);
 
 	// Compute actual stack size and allocate
-	const u32 stack_size = ::align<u32>(std::max<u32>(_stacksz, 4096), 4096);
+	const u32 stack_size = utils::align<u32>(std::max<u32>(_stacksz, 4096), 4096);
 
 	const auto dct = g_fxo->get<lv2_memory_container>();
 

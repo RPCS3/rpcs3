@@ -1,11 +1,12 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QDialog>
 #include <QLabel>
 #include <QTableWidget>
 #include <QLineEdit>
+#include <vector>
 
 class auto_pause_settings_dialog : public QDialog
 {

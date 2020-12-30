@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "CPUThread.h"
 
 #include "Emu/System.h"
@@ -14,6 +14,9 @@
 #include <thread>
 #include <unordered_map>
 #include <map>
+
+#include <immintrin.h>
+#include <emmintrin.h>
 
 DECLARE(cpu_thread::g_threads_created){0};
 DECLARE(cpu_thread::g_threads_deleted){0};
@@ -182,7 +185,7 @@ struct cpu_prof
 			if (threads.empty())
 			{
 				// Wait for messages if no work (don't waste CPU)
-				registered.wait();
+				atomic_wait::list(registered).wait();
 				continue;
 			}
 
@@ -337,17 +340,13 @@ namespace cpu_counter
 			return;
 		}
 
-		// Unregister and wait if necessary
-		verify(HERE), _this->state & cpu_flag::wait;
-
 		if (slot >= std::size(s_cpu_list))
 		{
-			sys_log.fatal("Index out of bounds (%u)." HERE, slot);
+			sys_log.fatal("Index out of bounds (%u).", slot);
 			return;
 		}
 
-		std::lock_guard lock(s_cpu_lock);
-
+		// Asynchronous unregister
 		if (!s_cpu_list[slot].compare_and_swap_test(_this, nullptr))
 		{
 			sys_log.fatal("Inconsistency for array slot %u", slot);
@@ -468,7 +467,7 @@ void cpu_thread::operator()()
 		if (progress == umax && std::exchange(wait_set, false))
 		{
 			// Operation finished: need to clean wait flag
-			verify(HERE), !_cpu->check_state();
+			ensure(!_cpu->check_state());
 			return;
 		}
 	});
@@ -488,7 +487,7 @@ void cpu_thread::operator()()
 
 		if (progress == umax && std::exchange(wait_set, false))
 		{
-			verify(HERE), !_cpu->check_state();
+			ensure(!_cpu->check_state());
 			return;
 		}
 	};
@@ -518,6 +517,8 @@ void cpu_thread::operator()()
 			{
 				cpu_counter::remove(_this);
 			}
+
+			s_cpu_lock.lock_unlock();
 
 			s_cpu_counter--;
 
@@ -592,7 +593,7 @@ bool cpu_thread::check_state() noexcept
 		{
 			bool store = false;
 
-			if (flags & cpu_flag::pause)
+			if (flags & cpu_flag::pause && s_tls_thread_slot != umax)
 			{
 				// Save value before state is saved and cpu_flag::wait is observed
 				if (s_tls_sctr == umax)
@@ -614,6 +615,13 @@ bool cpu_thread::check_state() noexcept
 			}
 			else
 			{
+				// Cleanup after asynchronous remove()
+				if (flags & cpu_flag::pause && s_tls_thread_slot == umax)
+				{
+					flags -= cpu_flag::pause;
+					store = true;
+				}
+
 				s_tls_sctr = -1;
 			}
 
@@ -688,7 +696,7 @@ bool cpu_thread::check_state() noexcept
 				cpu_counter::add(this);
 			}
 
-			verify(HERE), cpu_can_stop || !retval;
+			ensure(cpu_can_stop || !retval);
 			return retval;
 		}
 
@@ -766,7 +774,7 @@ void cpu_thread::notify()
 	}
 	else
 	{
-		fmt::throw_exception("Invalid cpu_thread type" HERE);
+		fmt::throw_exception("Invalid cpu_thread type");
 	}
 }
 
@@ -783,7 +791,7 @@ void cpu_thread::abort()
 	}
 	else
 	{
-		fmt::throw_exception("Invalid cpu_thread type" HERE);
+		fmt::throw_exception("Invalid cpu_thread type");
 	}
 }
 
@@ -800,8 +808,30 @@ std::string cpu_thread::get_name() const
 	}
 	else
 	{
-		fmt::throw_exception("Invalid cpu_thread type" HERE);
+		fmt::throw_exception("Invalid cpu_thread type");
 	}
+}
+
+u32 cpu_thread::get_pc() const
+{
+	const u32* pc = nullptr;
+
+	switch (id_type())
+	{
+	case 1:
+	{
+		pc = &static_cast<const ppu_thread*>(this)->cia;
+		break;
+	}
+	case 2:
+	{
+		pc = &static_cast<const spu_thread*>(this)->pc;
+		break;
+	}
+	default: break;
+	}
+
+	return pc ? atomic_storage<u32>::load(*pc) : UINT32_MAX;
 }
 
 std::string cpu_thread::dump_all() const
@@ -832,7 +862,7 @@ std::string cpu_thread::dump_misc() const
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 {
 	// Can't allow pre-set wait bit (it'd be a problem)
-	verify(HERE), !_this || !(_this->state & cpu_flag::wait);
+	ensure(!_this || !(_this->state & cpu_flag::wait));
 
 	do
 	{
@@ -911,7 +941,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 				break;
 			}
 
-			_mm_pause();
+			utils::pause();
 		}
 
 		// Second increment: all threads paused
@@ -971,7 +1001,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		}
 
 		// Finalization (last increment)
-		verify(HERE), g_suspend_counter++ & 1;
+		ensure(g_suspend_counter++ & 1);
 
 		cpu_counter::for_all_cpu(copy2, [&](cpu_thread* cpu)
 		{
@@ -1030,7 +1060,7 @@ void cpu_thread::flush_profilers() noexcept
 {
 	if (!g_fxo->get<cpu_profiler>())
 	{
-		profiler.fatal("cpu_thread::flush_profilers() has been called incorrectly." HERE);
+		profiler.fatal("cpu_thread::flush_profilers() has been called incorrectly.");
 		return;
 	}
 

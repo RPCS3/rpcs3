@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 
@@ -17,7 +17,7 @@ static bool validateSlotIds(vm::cptr<SceNpTusSlotId> slotIdArray)
 	}
 
 	// TODO: how to properly iterate?
-	//for (size_t i = 0; i < slotIdArray.size(); ++i)
+	//for (usz i = 0; i < slotIdArray.size(); ++i)
 	//{
 	//	if (slotIdArray[i] < 0)
 	//	{
@@ -66,7 +66,7 @@ sce_np_tus_title_context* sce_np_tus_manager::get_title_context(s32 titleCtxId)
 
 s32 sce_np_tus_manager::add_transaction_context(s32 titleCtxId)
 {
-	size_t transaction_count = 0;
+	usz transaction_count = 0;
 
 	for (const auto& title_context : title_contexts)
 	{

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/IdManager.h"
@@ -798,10 +798,10 @@ error_code cellImeJpMoveFocusClause(CellImeJpHandle hImeJpHandle, s16 moveType)
 		manager->moveCursor(-1);
 		break;
 	case CELL_IMEJP_FOCUS_TOP:
-		manager->moveCursor(-1 * ::narrow<s8>(manager->input_string.length(), HERE));
+		manager->moveCursor(-1 * ::narrow<s8>(manager->input_string.length()));
 		break;
 	case CELL_IMEJP_FOCUS_END:
-		manager->moveCursor(::narrow<s8>(manager->input_string.length(), HERE));
+		manager->moveCursor(::narrow<s8>(manager->input_string.length()));
 		manager->moveCursor(-1);
 		break;
 	default:
@@ -886,7 +886,7 @@ error_code cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 		pYomiString[i] = 0;
 	}
 
-	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
@@ -918,7 +918,7 @@ error_code cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 		pConfirmString[i] = 0;
 	}
 
-	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
@@ -950,7 +950,7 @@ error_code cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 		pYomiString[i] = 0;
 	}
 
-	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
@@ -982,7 +982,7 @@ error_code cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 		pConvertString[i] = 0;
 	}
 
-	const size_t max_len = std::min<size_t>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{

@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include <QProgressBar>
@@ -10,6 +10,8 @@
 #include <QWinTaskbarProgress>
 #include <QWinTaskbarButton>
 #endif
+
+#include <string>
 
 class custom_dialog;
 

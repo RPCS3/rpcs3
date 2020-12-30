@@ -1,9 +1,11 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Emu/Cell/Modules/cellOskDialog.h"
 
 #include <QObject>
+
+#include <string>
 
 class custom_dialog;
 

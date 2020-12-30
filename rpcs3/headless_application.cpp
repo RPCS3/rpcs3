@@ -1,4 +1,4 @@
-﻿#include "headless_application.h"
+#include "headless_application.h"
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
@@ -39,10 +39,15 @@ void headless_application::InitializeCallbacks()
 {
 	EmuCallbacks callbacks = CreateCallbacks();
 
-	callbacks.exit = [this](bool force_quit) -> bool
+	callbacks.try_to_quit = [this](bool force_quit, std::function<void()> on_exit) -> bool
 	{
 		if (force_quit)
 		{
+			if (on_exit)
+			{
+				on_exit();
+			}
+
 			quit();
 			return true;
 		}
@@ -72,7 +77,7 @@ void headless_application::InitializeCallbacks()
 		}
 		default:
 		{
-			fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+			fmt::throw_exception("Invalid video renderer: %s", type);
 		}
 		}
 	};

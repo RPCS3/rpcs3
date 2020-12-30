@@ -1,4 +1,4 @@
-﻿#include "keyboard_pad_handler.h"
+#include "keyboard_pad_handler.h"
 #include "pad_thread.h"
 #include "Emu/Io/pad_config.h"
 #include "Input/product_info.h"
@@ -13,7 +13,7 @@ constexpr auto qstr = QString::fromStdString;
 
 bool keyboard_pad_handler::Init()
 {
-	const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+	const steady_clock::time_point now = steady_clock::now();
 	m_last_mouse_move_left  = now;
 	m_last_mouse_move_right = now;
 	m_last_mouse_move_up    = now;
@@ -372,13 +372,13 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 	{
 		Key(mouse::move_right, false);
 		Key(mouse::move_left, true, std::min(m_deadzone_x + std::abs(movement_x), 255));
-		m_last_mouse_move_left = std::chrono::steady_clock::now();
+		m_last_mouse_move_left = steady_clock::now();
 	}
 	else if (movement_x > 0)
 	{
 		Key(mouse::move_left, false);
 		Key(mouse::move_right, true, std::min(m_deadzone_x + movement_x, 255));
-		m_last_mouse_move_right = std::chrono::steady_clock::now();
+		m_last_mouse_move_right = steady_clock::now();
 	}
 
 	// in Qt mouse up is equivalent to movement_y < 0
@@ -386,13 +386,13 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 	{
 		Key(mouse::move_down, false);
 		Key(mouse::move_up, true, std::min(m_deadzone_y + std::abs(movement_y), 255));
-		m_last_mouse_move_up = std::chrono::steady_clock::now();
+		m_last_mouse_move_up = steady_clock::now();
 	}
 	else if (movement_y > 0)
 	{
 		Key(mouse::move_up, false);
 		Key(mouse::move_down, true, std::min(m_deadzone_y + movement_y, 255));
-		m_last_mouse_move_down = std::chrono::steady_clock::now();
+		m_last_mouse_move_down = steady_clock::now();
 	}
 
 	event->ignore();
@@ -415,12 +415,12 @@ void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
 		if (to_left)
 		{
 			Key(mouse::wheel_left, true);
-			m_last_wheel_move_left = std::chrono::steady_clock::now();
+			m_last_wheel_move_left = steady_clock::now();
 		}
 		else
 		{
 			Key(mouse::wheel_right, true);
-			m_last_wheel_move_right = std::chrono::steady_clock::now();
+			m_last_wheel_move_right = steady_clock::now();
 		}
 	}
 	if (const int y = direction.y())
@@ -430,12 +430,12 @@ void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
 		if (to_up)
 		{
 			Key(mouse::wheel_up, true);
-			m_last_wheel_move_up = std::chrono::steady_clock::now();
+			m_last_wheel_move_up = steady_clock::now();
 		}
 		else
 		{
 			Key(mouse::wheel_down, true);
-			m_last_wheel_move_down = std::chrono::steady_clock::now();
+			m_last_wheel_move_down = steady_clock::now();
 		}
 	}
 }
@@ -727,7 +727,7 @@ void keyboard_pad_handler::ThreadProc()
 	static const double stick_interval = 10.0;
 	static const double button_interval = 10.0;
 
-	const auto now = std::chrono::steady_clock::now();
+	const auto now = steady_clock::now();
 
 	const double elapsed_left = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_left).count() / 1000.0;
 	const double elapsed_right = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_right).count() / 1000.0;

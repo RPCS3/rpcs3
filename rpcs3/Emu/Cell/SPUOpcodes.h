@@ -41,6 +41,8 @@ static u32 spu_decode(u32 inst)
 	return inst >> 21;
 }
 
+std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op);
+
 // SPU decoder object. D provides functions. T is function pointer type returned.
 template <typename D, typename T = decltype(&D::UNK)>
 class spu_decoder
@@ -54,14 +56,14 @@ class spu_decoder
 		u32 value;
 		T pointer;
 
-		constexpr instruction_info(u32 m, u32 v, T p)
+		instruction_info(u32 m, u32 v, T p) noexcept
 			: magn(m)
 			, value(v)
 			, pointer(p)
 		{
 		}
 
-		constexpr instruction_info(u32 m, u32 v, const T* p)
+		instruction_info(u32 m, u32 v, const T* p) noexcept
 			: magn(m)
 			, value(v)
 			, pointer(*p)
@@ -70,7 +72,7 @@ class spu_decoder
 	};
 
 public:
-	constexpr spu_decoder()
+	spu_decoder() noexcept
 	{
 		const std::initializer_list<instruction_info> instructions
 		{
@@ -289,12 +291,12 @@ public:
 		}
 	}
 
-	const std::array<T, 2048>& get_table() const
+	const std::array<T, 2048>& get_table() const noexcept
 	{
 		return m_table;
 	}
 
-	T decode(u32 inst) const
+	T decode(u32 inst) const noexcept
 	{
 		return m_table[spu_decode(inst)];
 	}

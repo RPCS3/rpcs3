@@ -1,4 +1,4 @@
-﻿#include <QCheckBox>
+#include <QCheckBox>
 #include <QGroupBox>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -23,6 +23,7 @@
 #include "Input/keyboard_pad_handler.h"
 #include "Input/ds3_pad_handler.h"
 #include "Input/ds4_pad_handler.h"
+#include "Input/dualsense_pad_handler.h"
 #ifdef _WIN32
 #include "Input/xinput_pad_handler.h"
 #include "Input/mm_joystick_handler.h"
@@ -301,7 +302,7 @@ void pad_settings_dialog::InitButtons()
 	m_padButtons->addButton(ui->b_refresh, button_ids::id_refresh);
 	m_padButtons->addButton(ui->b_addProfile, button_ids::id_add_profile);
 
-	connect(m_padButtons, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &pad_settings_dialog::OnPadButtonClicked);
+	connect(m_padButtons, &QButtonGroup::idClicked, this, &pad_settings_dialog::OnPadButtonClicked);
 
 	connect(&m_timer, &QTimer::timeout, [this]()
 	{
@@ -931,7 +932,7 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 
 		const auto products = input::get_products_by_class(m_handler_cfg.device_class_type);
 
-		for (size_t i = 0; i < products.size(); i++)
+		for (usz i = 0; i < products.size(); i++)
 		{
 			if (products[i].vendor_id == m_handler_cfg.vendor_id && products[i].product_id == m_handler_cfg.product_id)
 			{
@@ -1137,6 +1138,9 @@ std::shared_ptr<PadHandlerBase> pad_settings_dialog::GetHandler(pad_handler type
 	case pad_handler::ds4:
 		ret_handler = std::make_unique<ds4_pad_handler>();
 		break;
+	case pad_handler::dualsense:
+		ret_handler = std::make_unique<dualsense_pad_handler>();
+		break;
 #ifdef _WIN32
 	case pad_handler::xinput:
 		ret_handler = std::make_unique<xinput_pad_handler>();
@@ -1214,16 +1218,22 @@ void pad_settings_dialog::ChangeInputType()
 		m_description = tooltips.gamepad_settings.ds3_windows; break;
 	case pad_handler::ds4:
 		m_description = tooltips.gamepad_settings.ds4_windows; break;
+	case pad_handler::dualsense:
+		m_description = tooltips.gamepad_settings.dualsense_windows; break;
 #elif __linux__
 	case pad_handler::ds3:
 		m_description = tooltips.gamepad_settings.ds3_linux; break;
 	case pad_handler::ds4:
 		m_description = tooltips.gamepad_settings.ds4_linux; break;
+	case pad_handler::dualsense:
+		m_description = tooltips.gamepad_settings.dualsense_linux; break;
 #else
 	case pad_handler::ds3:
 		m_description = tooltips.gamepad_settings.ds3_other; break;
 	case pad_handler::ds4:
 		m_description = tooltips.gamepad_settings.ds4_other; break;
+	case pad_handler::dualsense:
+		m_description = tooltips.gamepad_settings.dualsense_other; break;
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
@@ -1246,9 +1256,10 @@ void pad_settings_dialog::ChangeInputType()
 #endif
 	case pad_handler::ds3:
 	case pad_handler::ds4:
+	case pad_handler::dualsense:
 	{
 		const QString name_string = qstr(m_handler->name_string());
-		for (size_t i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
+		for (usz i = 1; i <= m_handler->max_devices(); i++) // Controllers 1-n in GUI
 		{
 			const QString device_name = name_string + QString::number(i);
 			ui->chooseDevice->addItem(device_name, QVariant::fromValue(pad_device_info{ sstr(device_name), true }));
@@ -1260,14 +1271,14 @@ void pad_settings_dialog::ChangeInputType()
 	{
 		if (is_ldd_pad)
 		{
-			ui->chooseDevice->addItem(tr("Custom Controller"));
+			ui->chooseDevice->setPlaceholderText(tr("Custom Controller"));
 			break;
 		}
 		[[fallthrough]];
 	}
 	default:
 	{
-		for (size_t i = 0; i < device_list.size(); i++)
+		for (usz i = 0; i < device_list.size(); i++)
 		{
 			ui->chooseDevice->addItem(qstr(device_list[i]), QVariant::fromValue(pad_device_info{ device_list[i], true }));
 		}
@@ -1277,9 +1288,6 @@ void pad_settings_dialog::ChangeInputType()
 
 	// Handle empty device list
 	bool config_enabled = force_enable || (m_handler->m_type != pad_handler::null && ui->chooseDevice->count() > 0);
-	ui->chooseDevice->setEnabled(config_enabled);
-	ui->chooseClass->setEnabled(config_enabled);
-	ui->chooseProduct->setEnabled(config_enabled);
 
 	if (config_enabled)
 	{
@@ -1306,7 +1314,7 @@ void pad_settings_dialog::ChangeInputType()
 
 		if (profiles.isEmpty())
 		{
-			QString def_name = "Default Profile";
+			const QString def_name = "Default Profile";
 			if (CreateConfigFile(profile_dir, def_name))
 			{
 				ui->chooseProfile->addItem(def_name);
@@ -1327,21 +1335,24 @@ void pad_settings_dialog::ChangeInputType()
 	}
 	else
 	{
-		ui->chooseProfile->addItem(tr("No Profiles"));
+		ui->chooseProfile->setPlaceholderText(tr("No Profiles"));
 
 		if (ui->chooseDevice->count() == 0)
 		{
-			ui->chooseDevice->addItem(tr("No Device Detected"), -1);
+			ui->chooseDevice->setPlaceholderText(tr("No Device Detected"));
 		}
 	}
 
-	// enable configuration and profile list if possible
+	// Enable configuration and profile list if possible
 	SwitchButtons(config_enabled && m_handler->m_type == pad_handler::keyboard);
-	ui->b_addProfile->setEnabled(config_enabled);
-	ui->chooseProfile->setEnabled(config_enabled);
 
 	ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(!is_ldd_pad);
-	ui->chooseHandler->setEnabled(!is_ldd_pad);
+	ui->b_addProfile->setEnabled(config_enabled);
+	ui->chooseProfile->setEnabled(config_enabled && ui->chooseProfile->count() > 0);
+	ui->chooseDevice->setEnabled(config_enabled && ui->chooseDevice->count() > 0);
+	ui->chooseClass->setEnabled(config_enabled && ui->chooseClass->count() > 0);
+	ui->chooseProduct->setEnabled(config_enabled && ui->chooseProduct->count() > 0);
+	ui->chooseHandler->setEnabled(!is_ldd_pad && ui->chooseHandler->count() > 0);
 }
 
 void pad_settings_dialog::ChangeProfile()
@@ -1382,6 +1393,9 @@ void pad_settings_dialog::ChangeProfile()
 		break;
 	case pad_handler::ds4:
 		static_cast<ds4_pad_handler*>(m_handler.get())->init_config(&m_handler_cfg, cfg_name);
+		break;
+	case pad_handler::dualsense:
+		static_cast<dualsense_pad_handler*>(m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 #ifdef _WIN32
 	case pad_handler::xinput:
@@ -1491,7 +1505,7 @@ void pad_settings_dialog::RefreshInputTypes()
 	else
 	{
 		const std::vector<std::string> str_inputs = g_cfg_input.player[0]->handler.to_list();
-		for (size_t index = 0; index < str_inputs.size(); index++)
+		for (usz index = 0; index < str_inputs.size(); index++)
 		{
 			const QString item_data = qstr(str_inputs[index]);
 			ui->chooseHandler->addItem(GetLocalizedPadHandler(item_data, static_cast<pad_handler>(index)), QVariant(item_data));
@@ -1595,6 +1609,7 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 		case pad_handler::keyboard: return tr("Keyboard");
 		case pad_handler::ds3: return tr("DualShock 3");
 		case pad_handler::ds4: return tr("DualShock 4");
+		case pad_handler::dualsense: return tr("DualSense");
 #ifdef _WIN32
 		case pad_handler::xinput: return tr("XInput");
 		case pad_handler::mm: return tr("MMJoystick");

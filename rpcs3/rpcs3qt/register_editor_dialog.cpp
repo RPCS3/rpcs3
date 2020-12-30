@@ -1,4 +1,4 @@
-﻿#include "register_editor_dialog.h"
+#include "register_editor_dialog.h"
 
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
@@ -14,6 +14,9 @@
 #include <QMessageBox>
 #include <charconv>
 
+#include "util/v128.hpp"
+#include "util/asm.hpp"
+
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 inline std::string sstr(const QVariant& _in) { return sstr(_in.toString()); }
@@ -28,7 +31,7 @@ enum registers : int
 	ppu_ff31 = ppu_ff0 + 31,
 	ppu_v0,
 	ppu_v31 = ppu_v0 + 31,
-	spu_r0 = ::align(ppu_v31 + 1u, 128),
+	spu_r0 = utils::align(ppu_v31 + 1u, 128),
 	spu_r127 = spu_r0 + 127,
 	PPU_CR,
 	PPU_LR,
@@ -176,7 +179,7 @@ void register_editor_dialog::updateRegister(int reg)
 			else if (reg >= ppu_v0 && reg <= ppu_v31)
 			{
 				const auto r = ppu.vr[reg_index];
-				str = r == v128::from32p(r._u32[0]) ? fmt::format("%08x$", r._u32[0]) : fmt::format("%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+				str = !r._u ? fmt::format("%08x$", r._u32[0]) : fmt::format("%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
 			}
 		}
 		else if (reg == PPU_CR)  str = fmt::format("%08x", ppu.cr.pack());
@@ -195,7 +198,7 @@ void register_editor_dialog::updateRegister(int reg)
 		{
 			const u32 reg_index = reg % 128;
 			const auto r = spu.gpr[reg_index];
-			str = r == v128::from32p(r._u32[0]) ? fmt::format("%08x$", r._u32[0]) : fmt::format("%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
+			str = !r._u ? fmt::format("%08x$", r._u32[0]) : fmt::format("%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
 		}
 		else if (reg == MFC_PEVENTS) str = fmt::format("%08x", +spu.ch_events.load().events);
 		else if (reg == MFC_EVENTS_MASK) str = fmt::format("%08x", +spu.ch_events.load().mask);

@@ -1,9 +1,8 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "aes.h"
 #include "sha1.h"
 #include "utils.h"
 #include "unself.h"
-#include "Utilities/BEType.h"
 #include "Emu/VFS.h"
 #include "Emu/System.h"
 
@@ -714,7 +713,7 @@ bool SCEDecrypter::LoadMetadata(const u8 erk[32], const u8 riv[16])
 	}
 
 	// Perform AES-CTR encryption on the metadata headers.
-	size_t ctr_nc_off = 0;
+	usz ctr_nc_off = 0;
 	u8 ctr_stream_block[0x10];
 	aes_setkey_enc(&aes, meta_info.key, 128);
 	aes_crypt_ctr(&aes, metadata_headers_size, &ctr_nc_off, meta_info.iv, ctr_stream_block, metadata_headers.get(), metadata_headers.get());
@@ -745,7 +744,7 @@ bool SCEDecrypter::DecryptData()
 	// Calculate the total data size.
 	for (unsigned int i = 0; i < meta_hdr.section_count; i++)
 	{
-		data_buf_length += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+		data_buf_length += ::narrow<u32>(meta_shdr[i].data_size);
 	}
 
 	// Allocate a buffer to store decrypted data.
@@ -757,7 +756,7 @@ bool SCEDecrypter::DecryptData()
 	// Parse the metadata section headers to find the offsets of encrypted data.
 	for (unsigned int i = 0; i < meta_hdr.section_count; i++)
 	{
-		size_t ctr_nc_off = 0;
+		usz ctr_nc_off = 0;
 		u8 ctr_stream_block[0x10];
 		u8 data_key[0x10];
 		u8 data_iv[0x10];
@@ -799,7 +798,7 @@ bool SCEDecrypter::DecryptData()
 		}
 
 		// Advance the buffer's offset.
-		data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+		data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size);
 	}
 
 	return true;
@@ -823,13 +822,13 @@ std::vector<fs::file> SCEDecrypter::MakeFile()
 		// Decompress if necessary.
 		if (meta_shdr[i].compressed == 2)
 		{
-			const size_t BUFSIZE = 32 * 1024;
+			const usz BUFSIZE = 32 * 1024;
 			u8 tempbuf[BUFSIZE];
 			z_stream strm;
 			strm.zalloc = Z_NULL;
 			strm.zfree = Z_NULL;
 			strm.opaque = Z_NULL;
-			strm.avail_in = ::narrow<uInt>(meta_shdr[i].data_size, HERE);
+			strm.avail_in = ::narrow<uInt>(meta_shdr[i].data_size);
 			strm.avail_out = BUFSIZE;
 			strm.next_in = data_buf.get()+data_buf_offset;
 			strm.next_out = tempbuf;
@@ -874,7 +873,7 @@ std::vector<fs::file> SCEDecrypter::MakeFile()
 		}
 
 		// Advance the data buffer offset by data size.
-		data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+		data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size);
 
 		if (out_f.pos() != out_f.size())
 			fmt::throw_exception("MakeELF written bytes (%llu) does not equal buffer size (%llu).", out_f.pos(), out_f.size());
@@ -1209,7 +1208,7 @@ bool SELFDecrypter::LoadMetadata(u8* klic_key)
 	}
 
 	// Perform AES-CTR encryption on the metadata headers.
-	size_t ctr_nc_off = 0;
+	usz ctr_nc_off = 0;
 	u8 ctr_stream_block[0x10];
 	aes_setkey_enc(&aes, meta_info.key, 128);
 	aes_crypt_ctr(&aes, metadata_headers_size, &ctr_nc_off, meta_info.iv, ctr_stream_block, metadata_headers.get(), metadata_headers.get());
@@ -1243,7 +1242,7 @@ bool SELFDecrypter::DecryptData()
 		if (meta_shdr[i].encrypted == 3)
 		{
 			if ((meta_shdr[i].key_idx <= meta_hdr.key_count - 1) && (meta_shdr[i].iv_idx <= meta_hdr.key_count))
-				data_buf_length += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+				data_buf_length += ::narrow<u32>(meta_shdr[i].data_size);
 		}
 	}
 
@@ -1256,7 +1255,7 @@ bool SELFDecrypter::DecryptData()
 	// Parse the metadata section headers to find the offsets of encrypted data.
 	for (unsigned int i = 0; i < meta_hdr.section_count; i++)
 	{
-		size_t ctr_nc_off = 0;
+		usz ctr_nc_off = 0;
 		u8 ctr_stream_block[0x10];
 		u8 data_key[0x10];
 		u8 data_iv[0x10];
@@ -1289,7 +1288,7 @@ bool SELFDecrypter::DecryptData()
 				memcpy(data_buf.get() + data_buf_offset, buf.get(), meta_shdr[i].data_size);
 
 				// Advance the buffer's offset.
-				data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+				data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size);
 			}
 		}
 	}
@@ -1488,7 +1487,7 @@ bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 	return true;
 }
 
-v128 get_default_self_klic()
+u128 get_default_self_klic()
 {
-	return std::bit_cast<v128>(NP_KLIC_FREE);
+	return std::bit_cast<u128>(NP_KLIC_FREE);
 }

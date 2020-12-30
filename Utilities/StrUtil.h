@@ -17,7 +17,7 @@ std::string utf8_path_to_ansi_path(const std::string& src);
 template <typename D, typename T>
 inline void strcpy_trunc(D& dst, const T& src)
 {
-	const std::size_t count = std::size(src) >= std::size(dst) ? std::size(dst) - 1 : std::size(src);
+	const usz count = std::size(src) >= std::size(dst) ? std::size(dst) - 1 : std::size(src);
 	std::memcpy(std::data(dst), std::data(src), count);
 	std::memset(std::data(dst) + count, 0, std::size(dst) - count);
 }
@@ -27,14 +27,14 @@ namespace fmt
 	std::string replace_first(const std::string& src, const std::string& from, const std::string& to);
 	std::string replace_all(const std::string& src, const std::string& from, const std::string& to);
 
-	template <size_t list_size>
+	template <usz list_size>
 	std::string replace_all(std::string src, const std::pair<std::string, std::string> (&list)[list_size])
 	{
-		for (size_t pos = 0; pos < src.length(); ++pos)
+		for (usz pos = 0; pos < src.length(); ++pos)
 		{
-			for (size_t i = 0; i < list_size; ++i)
+			for (usz i = 0; i < list_size; ++i)
 			{
-				const size_t comp_length = list[i].first.length();
+				const usz comp_length = list[i].first.length();
 
 				if (src.length() - pos < comp_length)
 					continue;
@@ -51,14 +51,14 @@ namespace fmt
 		return src;
 	}
 
-	template <size_t list_size>
+	template <usz list_size>
 	std::string replace_all(std::string src, const std::pair<std::string, std::function<std::string()>> (&list)[list_size])
 	{
-		for (size_t pos = 0; pos < src.length(); ++pos)
+		for (usz pos = 0; pos < src.length(); ++pos)
 		{
-			for (size_t i = 0; i < list_size; ++i)
+			for (usz i = 0; i < list_size; ++i)
 			{
-				const size_t comp_length = list[i].first.length();
+				const usz comp_length = list[i].first.length();
 
 				if (src.length() - pos < comp_length)
 					continue;

@@ -1,10 +1,12 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QDialog>
 #include <QComboBox>
 #include <QLineEdit>
+
+#include <memory>
 
 class CPUDisAsm;
 class cpu_thread;

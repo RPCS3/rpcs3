@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 
@@ -118,8 +118,8 @@ struct ime_jp_manager
 	std::u16string confirmed_string;
 	std::u16string converted_string;
 	std::u16string input_string;
-	size_t cursor = 0;
-	size_t cursor_end = 0;
+	usz cursor = 0;
+	usz cursor_end = 0;
 	s16 fix_input_mode = CELL_IMEJP_FIXINMODE_OFF;
 	s16 input_char_type = CELL_IMEJP_DSPCHAR_HIRA;
 	s16 kana_input_mode = CELL_IMEJP_ROMAN_INPUT;

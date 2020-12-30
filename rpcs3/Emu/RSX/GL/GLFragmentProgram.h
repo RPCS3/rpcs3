@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "../Common/FragmentProgramDecompiler.h"
 #include "../Common/GLSLTypes.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
@@ -33,8 +33,8 @@ public:
 	void Task();
 
 protected:
-	std::string getFloatTypeName(size_t elementCount) override;
-	std::string getHalfTypeName(size_t elementCount) override;
+	std::string getFloatTypeName(usz elementCount) override;
+	std::string getHalfTypeName(usz elementCount) override;
 	std::string getFunction(FUNCTION) override;
 	std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
 
@@ -59,7 +59,7 @@ public:
 	ParamArray parr;
 	u32 id;
 	gl::glsl::shader shader;
-	std::vector<size_t> FragmentConstantOffsetCache;
+	std::vector<usz> FragmentConstantOffsetCache;
 
 	/**
 	 * Decompile a fragment shader located in the PS3's Memory.  This function operates synchronously.

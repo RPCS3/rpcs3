@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/lv2/sys_usbd.h"

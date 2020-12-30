@@ -1,10 +1,7 @@
-﻿#pragma once
+#pragma once
 
 #include "cellRtc.h"
-
-#include "Utilities/BEType.h"
-
-#include <atomic>
+#include "Emu/Cell/ErrorCodes.h"
 
 error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr);
 error_code sceNpTerm();

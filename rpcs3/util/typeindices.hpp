@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 namespace stx
 {
@@ -134,5 +134,12 @@ namespace stx
 	inline unsigned typeindex() noexcept
 	{
 		return type_counter<Info>::template type<T>.index();
+	}
+
+	// Type info accessor
+	template <typename Info, typename T>
+	inline const Info& typedata() noexcept
+	{
+		return type_counter<Info>::template type<T>;
 	}
 }

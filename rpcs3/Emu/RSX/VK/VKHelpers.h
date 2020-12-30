@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include <string>
 #include <functional>
 #include <vector>
@@ -24,6 +24,10 @@
 
 #include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
 
+#ifdef _MSC_VER
+extern "C" void _mm_pause();
+#endif
+
 #ifdef __APPLE__
 #define VK_DISABLE_COMPONENT_SWIZZLE 1
 #else
@@ -46,18 +50,18 @@ namespace rsx
 
 namespace vk
 {
-#define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) vk::die_with_error(HERE, _res); }
+#define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) vk::die_with_error(_res); }
 
-	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
-	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope);
+	VKAPI_ATTR void *VKAPI_CALL mem_realloc(void *pUserData, void *pOriginal, usz size, usz alignment, VkSystemAllocationScope allocationScope);
+	VKAPI_ATTR void *VKAPI_CALL mem_alloc(void *pUserData, usz size, usz alignment, VkSystemAllocationScope allocationScope);
 	VKAPI_ATTR void VKAPI_CALL mem_free(void *pUserData, void *pMemory);
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-											uint64_t srcObject, size_t location, int32_t msgCode,
+											u64 srcObject, usz location, s32 msgCode,
 											const char *pLayerPrefix, const char *pMsg, void *pUserData);
 
 	VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-							uint64_t srcObject, size_t location, int32_t msgCode,
+							u64 srcObject, usz location, s32 msgCode,
 							const char *pLayerPrefix, const char *pMsg,
 							void *pUserData);
 
@@ -138,13 +142,13 @@ namespace vk
 	bool emulate_conditional_rendering();
 	VkFlags get_heap_compatible_buffer_types();
 	driver_vendor get_driver_vendor();
-	chip_class get_chip_family(uint32_t vendor_id, uint32_t device_id);
+	chip_class get_chip_family(u32 vendor_id, u32 device_id);
 	chip_class get_chip_family();
 
 	VkComponentMapping default_component_map();
 	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector);
 	VkImageSubresource default_image_subresource();
-	VkImageSubresourceRange get_image_subresource_range(uint32_t base_layer, uint32_t base_mip, uint32_t layer_count, uint32_t level_count, VkImageAspectFlags aspect);
+	VkImageSubresourceRange get_image_subresource_range(u32 base_layer, u32 base_mip, u32 layer_count, u32 level_count, VkImageAspectFlags aspect);
 	VkImageAspectFlags get_aspect_flags(VkFormat format);
 
 	VkSampler null_sampler();
@@ -244,7 +248,11 @@ namespace vk
 	// TODO: Move queries out of the renderer!
 	void do_query_cleanup(vk::command_buffer& cmd);
 
-	void die_with_error(const char* faulting_addr, VkResult error_code);
+	void die_with_error(VkResult error_code,
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION(),
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN());
 
 	struct pipeline_binding_table
 	{
@@ -263,8 +271,8 @@ namespace vk
 
 	struct memory_type_mapping
 	{
-		uint32_t host_visible_coherent;
-		uint32_t device_local;
+		u32 host_visible_coherent;
+		u32 device_local;
 	};
 
 	struct gpu_formats_support
@@ -285,9 +293,9 @@ namespace vk
 	struct chip_family_table
 	{
 		chip_class default_ = chip_class::unknown;
-		std::unordered_map<uint32_t, chip_class> lut;
+		std::unordered_map<u32, chip_class> lut;
 
-		void add(uint32_t first, uint32_t last, chip_class family)
+		void add(u32 first, u32 last, chip_class family)
 		{
 			for (auto i = first; i <= last; ++i)
 			{
@@ -295,12 +303,12 @@ namespace vk
 			}
 		}
 
-		void add(uint32_t id, chip_class family)
+		void add(u32 id, chip_class family)
 		{
 			lut[id] = family;
 		}
 
-		chip_class find(uint32_t device_id)
+		chip_class find(u32 device_id)
 		{
 			if (auto found = lut.find(device_id); found != lut.end())
 			{
@@ -324,7 +332,7 @@ namespace vk
 
 		virtual void destroy() = 0;
 
-		virtual mem_handle_t alloc(u64 block_sz, u64 alignment, uint32_t memory_type_index) = 0;
+		virtual mem_handle_t alloc(u64 block_sz, u64 alignment, u32 memory_type_index) = 0;
 		virtual void free(mem_handle_t mem_handle) = 0;
 		virtual void *map(mem_handle_t mem_handle, u64 offset, u64 size) = 0;
 		virtual void unmap(mem_handle_t mem_handle) = 0;
@@ -362,7 +370,7 @@ namespace vk
 			vmaDestroyAllocator(m_allocator);
 		}
 
-		mem_handle_t alloc(u64 block_sz, u64 alignment, uint32_t memory_type_index) override
+		mem_handle_t alloc(u64 block_sz, u64 alignment, u32 memory_type_index) override
 		{
 			VmaAllocation vma_alloc;
 			VkMemoryRequirements mem_req = {};
@@ -385,7 +393,7 @@ namespace vk
 
 				if (result != VK_SUCCESS)
 				{
-					die_with_error(HERE, result);
+					die_with_error(result);
 				}
 				else
 				{
@@ -469,7 +477,7 @@ namespace vk
 
 		void destroy() override {}
 
-		mem_handle_t alloc(u64 block_sz, u64 /*alignment*/, uint32_t memory_type_index) override
+		mem_handle_t alloc(u64 block_sz, u64 /*alignment*/, u32 memory_type_index) override
 		{
 			VkDeviceMemory memory;
 			VkMemoryAllocateInfo info = {};
@@ -489,7 +497,7 @@ namespace vk
 
 				if (result != VK_SUCCESS)
 				{
-					die_with_error(HERE, result);
+					die_with_error(result);
 				}
 				else
 				{
@@ -539,7 +547,7 @@ namespace vk
 
 	struct memory_block
 	{
-		memory_block(VkDevice dev, u64 block_sz, u64 alignment, uint32_t memory_type_index) : m_device(dev)
+		memory_block(VkDevice dev, u64 block_sz, u64 alignment, u32 memory_type_index) : m_device(dev)
 		{
 			m_mem_allocator = get_current_mem_allocator();
 			m_mem_handle = m_mem_allocator->alloc(block_sz, alignment, memory_type_index);
@@ -593,7 +601,7 @@ namespace vk
 
 		supported_extensions(enumeration_class _class, const char* layer_name = nullptr, VkPhysicalDevice pdev = VK_NULL_HANDLE)
 		{
-			uint32_t count;
+			u32 count;
 			if (_class == enumeration_class::instance)
 			{
 				if (vkEnumerateInstanceExtensionProperties(layer_name, &count, nullptr) != VK_SUCCESS)
@@ -601,7 +609,7 @@ namespace vk
 			}
 			else
 			{
-				verify(HERE), pdev;
+				ensure(pdev);
 				if (vkEnumerateDeviceExtensionProperties(pdev, layer_name, &count, nullptr) != VK_SUCCESS)
 					return;
 			}
@@ -680,7 +688,7 @@ private:
 				}
 
 				auto getPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
-				verify("vkGetInstanceProcAddress failed to find entry point!" HERE), getPhysicalDeviceFeatures2KHR;
+				ensure(getPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 				getPhysicalDeviceFeatures2KHR(dev, &features2);
 
 				shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
@@ -823,29 +831,29 @@ private:
 			return get_chip_family(props.vendorID, props.deviceID);
 		}
 
-		uint32_t get_queue_count() const
+		u32 get_queue_count() const
 		{
 			if (!queue_props.empty())
 				return ::size32(queue_props);
 
-			uint32_t count = 0;
+			u32 count = 0;
 			vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
 
 			return count;
 		}
 
-		VkQueueFamilyProperties get_queue_properties(uint32_t queue)
+		VkQueueFamilyProperties get_queue_properties(u32 queue)
 		{
 			if (queue_props.empty())
 			{
-				uint32_t count = 0;
+				u32 count = 0;
 				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
 
 				queue_props.resize(count);
 				vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, queue_props.data());
 			}
 
-			if (queue >= queue_props.size()) fmt::throw_exception("Bad queue index passed to get_queue_properties (%u)" HERE, queue);
+			if (queue >= queue_props.size()) fmt::throw_exception("Bad queue index passed to get_queue_properties (%u)", queue);
 			return queue_props[queue];
 		}
 
@@ -888,7 +896,7 @@ private:
 		render_device() = default;
 		~render_device() = default;
 
-		void create(vk::physical_device &pdev, uint32_t graphics_queue_idx)
+		void create(vk::physical_device &pdev, u32 graphics_queue_idx)
 		{
 			float queue_priorities[1] = { 0.f };
 			pgpu = &pdev;
@@ -1068,7 +1076,7 @@ private:
 		{
 			VkPhysicalDeviceMemoryProperties mem_infos = pgpu->get_memory_properties();
 
-			for (uint32_t i = 0; i < 32; i++)
+			for (u32 i = 0; i < 32; i++)
 			{
 				if ((typeBits & 1) == 1)
 				{
@@ -1227,7 +1235,11 @@ private:
 		{
 			while (!flushed)
 			{
+#ifdef _MSC_VER
 				_mm_pause();
+#else
+				__builtin_ia32_pause();
+#endif
 			}
 		}
 
@@ -1372,7 +1384,7 @@ private:
 			}
 
 			// Check for hanging queries to avoid driver hang
-			verify("close and submit of commandbuffer with a hanging query!" HERE), (flags & cb_has_open_query) == 0;
+			ensure((flags & cb_has_open_query) == 0); // "close and submit of commandbuffer with a hanging query!"
 
 			if (!pfence)
 			{
@@ -1409,6 +1421,40 @@ private:
 		VkImageAspectFlags m_storage_aspect = 0;
 
 		rsx::format_class m_format_class = RSX_FORMAT_CLASS_UNDEFINED;
+
+		void validate(const vk::render_device& dev, const VkImageCreateInfo& info) const
+		{
+			const auto gpu_limits = dev.gpu().get_limits();
+			u32 longest_dim, dim_limit;
+
+			switch (info.imageType)
+			{
+			case VK_IMAGE_TYPE_1D:
+				longest_dim = info.extent.width;
+				dim_limit = gpu_limits.maxImageDimension1D;
+				break;
+			case VK_IMAGE_TYPE_2D:
+				longest_dim = std::max(info.extent.width, info.extent.height);
+				dim_limit = (info.flags == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)? gpu_limits.maxImageDimensionCube : gpu_limits.maxImageDimension2D;
+				break;
+			case VK_IMAGE_TYPE_3D:
+				longest_dim = std::max({ info.extent.width, info.extent.height, info.extent.depth });
+				dim_limit = gpu_limits.maxImageDimension3D;
+				break;
+			default:
+				fmt::throw_exception("Unreachable");
+			}
+
+			if (longest_dim > dim_limit)
+			{
+				// Longest dimension exceeds the limit. Can happen when using MSAA + very high resolution scaling
+				// Just kill the application at this point.
+				fmt::throw_exception(
+					"The renderer requested an image larger than the limit allowed for by your GPU hardware. "
+					"Turn down your resolution scale and/or disable MSAA to fit within the image budget.");
+			}
+		}
+
 	public:
 		VkImage value = VK_NULL_HANDLE;
 		VkComponentMapping native_component_map = {VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A};
@@ -1417,12 +1463,12 @@ private:
 		std::shared_ptr<vk::memory_block> memory;
 
 		image(const vk::render_device &dev,
-			uint32_t memory_type_index,
-			uint32_t access_flags,
+			u32 memory_type_index,
+			u32 access_flags,
 			VkImageType image_type,
 			VkFormat format,
-			uint32_t width, uint32_t height, uint32_t depth,
-			uint32_t mipmaps, uint32_t layers,
+			u32 width, u32 height, u32 depth,
+			u32 mipmaps, u32 layers,
 			VkSampleCountFlagBits samples,
 			VkImageLayout initial_layout,
 			VkImageTiling tiling,
@@ -1445,6 +1491,7 @@ private:
 			info.initialLayout = initial_layout;
 			info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+			validate(dev, info);
 			CHECK_RESULT(vkCreateImage(m_device, &info, nullptr, &value));
 
 			VkMemoryRequirements memory_req;
@@ -1455,7 +1502,7 @@ private:
 				//Suggested memory type is incompatible with this memory type.
 				//Go through the bitset and test for requested props.
 				if (!dev.get_compatible_memory_type(memory_req.memoryTypeBits, access_flags, &memory_type_index))
-					fmt::throw_exception("No compatible memory type was found!" HERE);
+					fmt::throw_exception("No compatible memory type was found!");
 			}
 
 			memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, memory_type_index);
@@ -1547,7 +1594,7 @@ private:
 
 		void pop_layout(VkCommandBuffer cmd)
 		{
-			verify(HERE), !m_layout_stack.empty();
+			ensure(!m_layout_stack.empty());
 
 			auto layout = m_layout_stack.top();
 			m_layout_stack.pop();
@@ -1559,7 +1606,7 @@ private:
 			if (current_layout == new_layout)
 				return;
 
-			verify(HERE), m_layout_stack.empty();
+			ensure(m_layout_stack.empty());
 			change_image_layout(cmd, this, new_layout);
 		}
 
@@ -1623,8 +1670,7 @@ private:
 					info.viewType = VK_IMAGE_VIEW_TYPE_3D;
 					break;
 				default:
-					ASSUME(0);
-					break;
+					fmt::throw_exception("Unreachable");
 				}
 
 				info.subresourceRange.layerCount = resource->info.arrayLayers;
@@ -1736,7 +1782,7 @@ private:
 
 			const auto range = vk::get_image_subresource_range(0, 0, info.arrayLayers, info.mipLevels, aspect() & mask);
 
-			verify(HERE), range.aspectMask;
+			ensure(range.aspectMask);
 			auto view = std::make_unique<vk::image_view>(*get_current_renderer(), this, VK_IMAGE_VIEW_TYPE_MAX_ENUM, real_mapping, range);
 
 			auto result = view.get();
@@ -1763,7 +1809,7 @@ private:
 		VkBufferCreateInfo info = {};
 		std::unique_ptr<vk::memory_block> memory;
 
-		buffer(const vk::render_device& dev, u64 size, uint32_t memory_type_index, uint32_t access_flags, VkBufferUsageFlags usage, VkBufferCreateFlags flags)
+		buffer(const vk::render_device& dev, u64 size, u32 memory_type_index, u32 access_flags, VkBufferUsageFlags usage, VkBufferCreateFlags flags)
 			: m_device(dev)
 		{
 			info.size = size;
@@ -1783,7 +1829,7 @@ private:
 				//Suggested memory type is incompatible with this memory type.
 				//Go through the bitset and test for requested props.
 				if (!dev.get_compatible_memory_type(memory_reqs.memoryTypeBits, access_flags, &memory_type_index))
-					fmt::throw_exception("No compatible memory type was found!" HERE);
+					fmt::throw_exception("No compatible memory type was found!");
 			}
 
 			memory = std::make_unique<memory_block>(m_device, memory_reqs.size, memory_reqs.alignment, memory_type_index);
@@ -1870,7 +1916,7 @@ private:
 		VkEvent m_vk_event = VK_NULL_HANDLE;
 
 		std::unique_ptr<buffer> m_buffer;
-		volatile uint32_t* m_value = nullptr;
+		volatile u32* m_value = nullptr;
 
 	public:
 		event(const render_device& dev)
@@ -1899,7 +1945,7 @@ private:
 					0
 				);
 
-				m_value = reinterpret_cast<uint32_t*>(m_buffer->map(0, 4));
+				m_value = reinterpret_cast<u32*>(m_buffer->map(0, 4));
 				*m_value = 0xCAFEBABE;
 			}
 		}
@@ -2016,7 +2062,7 @@ private:
 			, m_device(dev)
 		{
 			std::vector<VkImageView> image_view_array(attachments.size());
-			size_t i = 0;
+			usz i = 0;
 			for (const auto &att : attachments)
 			{
 				image_view_array[i++] = att->value;
@@ -2025,7 +2071,7 @@ private:
 			info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 			info.width = width;
 			info.height = height;
-			info.attachmentCount = static_cast<uint32_t>(image_view_array.size());
+			info.attachmentCount = static_cast<u32>(image_view_array.size());
 			info.pAttachments = image_view_array.data();
 			info.renderPass = pass;
 			info.layers = 1;
@@ -2138,8 +2184,8 @@ public:
 	protected:
 		render_device dev;
 
-		uint32_t m_present_queue = UINT32_MAX;
-		uint32_t m_graphics_queue = UINT32_MAX;
+		u32 m_present_queue = UINT32_MAX;
+		u32 m_graphics_queue = UINT32_MAX;
 		VkQueue vk_graphics_queue = VK_NULL_HANDLE;
 		VkQueue vk_present_queue = VK_NULL_HANDLE;
 
@@ -2151,7 +2197,7 @@ public:
 		virtual void init_swapchain_images(render_device& dev, u32 count) = 0;
 
 	public:
-		swapchain_base(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		swapchain_base(physical_device &gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
 		{
 			dev.create(gpu, _graphics_queue);
 
@@ -2221,7 +2267,7 @@ public:
 		std::vector<T> swapchain_images;
 
 	public:
-		abstract_swapchain_impl(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		abstract_swapchain_impl(physical_device &gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
 		: swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
@@ -2248,7 +2294,7 @@ public:
 		LPVOID hPtr = NULL;
 
 	public:
-		swapchain_WIN32(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		swapchain_WIN32(physical_device &gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
 		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
@@ -2331,7 +2377,7 @@ public:
 		void* nsView = nullptr;
 
 	public:
-		swapchain_MacOS(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		swapchain_MacOS(physical_device &gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
 		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
@@ -2381,7 +2427,7 @@ public:
 		int bit_depth = 24;
 
 	public:
-		swapchain_X11(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		swapchain_X11(physical_device &gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
 		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
@@ -2415,7 +2461,7 @@ public:
 			if (!XMatchVisualInfo(display, DefaultScreen(display), bit_depth, TrueColor, &visual))
 #pragma GCC diagnostic pop
 			{
-				rsx_log.error("Could not find matching visual info!" HERE);
+				rsx_log.error("Could not find matching visual info!");
 				return false;
 			}
 
@@ -2483,7 +2529,7 @@ public:
 	{
 
 	public:
-		swapchain_Wayland(physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		swapchain_Wayland(physical_device &gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
 		: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{}
 
@@ -2575,7 +2621,7 @@ public:
 			u32 nb_swap_images = 0;
 			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
 
-			if (!nb_swap_images) fmt::throw_exception("Driver returned 0 images for swapchain" HERE);
+			if (!nb_swap_images) fmt::throw_exception("Driver returned 0 images for swapchain");
 
 			std::vector<VkImage> vk_images;
 			vk_images.resize(nb_swap_images);
@@ -2589,7 +2635,7 @@ public:
 		}
 
 	public:
-		swapchain_WSI(vk::physical_device &gpu, uint32_t _present_queue, uint32_t _graphics_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space, bool force_wm_reporting_off)
+		swapchain_WSI(vk::physical_device &gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space, bool force_wm_reporting_off)
 			: WSI_swapchain_base(gpu, _present_queue, _graphics_queue, format)
 		{
 			createSwapchainKHR = reinterpret_cast<PFN_vkCreateSwapchainKHR>(vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR"));
@@ -2682,7 +2728,7 @@ public:
 				m_height = surface_descriptors.currentExtent.height;
 			}
 
-			uint32_t nb_available_modes = 0;
+			u32 nb_available_modes = 0;
 			CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, nullptr));
 
 			std::vector<VkPresentModeKHR> present_modes(nb_available_modes);
@@ -2721,7 +2767,7 @@ public:
 
 			rsx_log.notice("Swapchain: present mode %d in use.", static_cast<int>(swapchain_present_mode));
 
-			uint32_t nb_swap_images = surface_descriptors.minImageCount + 1;
+			u32 nb_swap_images = surface_descriptors.minImageCount + 1;
 			if (surface_descriptors.maxImageCount > 0)
 			{
 				//Try to negotiate for a triple buffer setup
@@ -2941,9 +2987,9 @@ public:
 			VkInstanceCreateInfo instance_info = {};
 			instance_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 			instance_info.pApplicationInfo = &app;
-			instance_info.enabledLayerCount = static_cast<uint32_t>(layers.size());
+			instance_info.enabledLayerCount = static_cast<u32>(layers.size());
 			instance_info.ppEnabledLayerNames = layers.data();
-			instance_info.enabledExtensionCount = fast ? 0 : static_cast<uint32_t>(extensions.size());
+			instance_info.enabledExtensionCount = fast ? 0 : static_cast<u32>(extensions.size());
 			instance_info.ppEnabledExtensionNames = fast ? nullptr : extensions.data();
 
 			if (VkResult result = vkCreateInstance(&instance_info, nullptr, &m_instance); result != VK_SUCCESS)
@@ -2980,7 +3026,7 @@ public:
 
 		std::vector<physical_device>& enumerateDevices()
 		{
-			uint32_t num_gpus;
+			u32 num_gpus;
 			// This may fail on unsupported drivers, so just assume no devices
 			if (vkEnumeratePhysicalDevices(m_instance, &num_gpus, nullptr) != VK_SUCCESS)
 				return gpus;
@@ -3060,7 +3106,7 @@ public:
 			}, window_handle);
 #endif
 
-			uint32_t device_queues = dev.get_queue_count();
+			u32 device_queues = dev.get_queue_count();
 			std::vector<VkBool32> supportsPresent(device_queues, VK_FALSE);
 			bool present_possible = false;
 
@@ -3085,8 +3131,8 @@ public:
 
 			// Search for a graphics and a present queue in the array of queue
 			// families, try to find one that supports both
-			uint32_t graphicsQueueNodeIndex = UINT32_MAX;
-			uint32_t presentQueueNodeIndex = UINT32_MAX;
+			u32 graphicsQueueNodeIndex = UINT32_MAX;
+			u32 presentQueueNodeIndex = UINT32_MAX;
 
 			for (u32 i = 0; i < device_queues; i++)
 			{
@@ -3109,7 +3155,7 @@ public:
 			{
 				// If didn't find a queue that supports both graphics and present, then
 				// find a separate present queue.
-				for (uint32_t i = 0; i < device_queues; ++i)
+				for (u32 i = 0; i < device_queues; ++i)
 				{
 					if (supportsPresent[i] == VK_TRUE)
 					{
@@ -3121,7 +3167,7 @@ public:
 
 			if (graphicsQueueNodeIndex == UINT32_MAX)
 			{
-				rsx_log.fatal("Failed to find a suitable graphics queue" HERE);
+				rsx_log.fatal("Failed to find a suitable graphics queue");
 				return nullptr;
 			}
 
@@ -3141,7 +3187,7 @@ public:
 			}
 
 			// Get the list of VkFormat's that are supported:
-			uint32_t formatCount;
+			u32 formatCount;
 			CHECK_RESULT(vkGetPhysicalDeviceSurfaceFormatsKHR(dev, m_surface, &formatCount, nullptr));
 
 			std::vector<VkSurfaceFormatKHR> surfFormats(formatCount);
@@ -3156,7 +3202,7 @@ public:
 			}
 			else
 			{
-				if (!formatCount) fmt::throw_exception("Format count is zero!" HERE);
+				if (!formatCount) fmt::throw_exception("Format count is zero!");
 				format = surfFormats[0].format;
 
 				//Prefer BGRA8_UNORM to avoid sRGB compression (RADV)
@@ -3190,7 +3236,7 @@ public:
 
 		void create(const vk::render_device &dev, VkDescriptorPoolSize *sizes, u32 size_descriptors_count, u32 max_sets, u8 subpool_count)
 		{
-			verify(HERE), subpool_count;
+			ensure(subpool_count);
 
 			VkDescriptorPoolCreateInfo infos = {};
 			infos.flags = 0;
@@ -3542,7 +3588,7 @@ public:
 
 			VkShaderModule compile()
 			{
-				verify(HERE), m_handle == VK_NULL_HANDLE;
+				ensure(m_handle == VK_NULL_HANDLE);
 
 				if (!vk::compile_glsl_to_spv(m_source, type, m_compiled))
 				{
@@ -3550,7 +3596,7 @@ public:
 						type == ::glsl::program_domain::glsl_fragment_program ? "fragment" : "compute";
 
 					rsx_log.notice("%s", m_source);
-					fmt::throw_exception("Failed to compile %s shader" HERE, shader_type);
+					fmt::throw_exception("Failed to compile %s shader", shader_type);
 				}
 
 				VkShaderModuleCreateInfo vs_info;
@@ -3625,11 +3671,11 @@ public:
 			bool has_uniform(program_input_type type, const std::string &uniform_name);
 			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string &uniform_name, VkDescriptorType type, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkDescriptorImageInfo &image_descriptor, int texture_unit, ::glsl::program_domain domain, VkDescriptorSet &descriptor_set, bool is_stencil_mirror = false);
-			void bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorSet &descriptor_set);
-			void bind_uniform(const VkBufferView &buffer_view, uint32_t binding_point, VkDescriptorSet &descriptor_set);
+			void bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, VkDescriptorSet &descriptor_set);
+			void bind_uniform(const VkBufferView &buffer_view, u32 binding_point, VkDescriptorSet &descriptor_set);
 			void bind_uniform(const VkBufferView &buffer_view, program_input_type type, const std::string &binding_name, VkDescriptorSet &descriptor_set);
 
-			void bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, uint32_t binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set);
+			void bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, VkDescriptorType type, VkDescriptorSet &descriptor_set);
 			void bind_descriptor_set(const VkCommandBuffer cmd, VkDescriptorSet descriptor_set);
 		};
 	}
@@ -3637,7 +3683,7 @@ public:
 	class data_heap : public ::data_heap
 	{
 	private:
-		size_t initial_size = 0;
+		usz initial_size = 0;
 		bool mapped = false;
 		void *_ptr = nullptr;
 
@@ -3647,7 +3693,7 @@ public:
 		std::vector<VkBufferCopy> dirty_ranges;
 
 	protected:
-		bool grow(size_t size) override;
+		bool grow(usz size) override;
 
 	public:
 		std::unique_ptr<buffer> heap;
@@ -3656,7 +3702,7 @@ public:
 		// Avoid mapping/unmapping to keep these drivers from stalling
 		// NOTE2: HOST_CACHED flag does not keep the mapped ptr around in the driver either
 
-		void create(VkBufferUsageFlags usage, size_t size, const char *name, size_t guard = 0x10000, VkBool32 notify = VK_FALSE)
+		void create(VkBufferUsageFlags usage, usz size, const char *name, usz guard = 0x10000, VkBool32 notify = VK_FALSE)
 		{
 			::data_heap::init(size, name, guard);
 
@@ -3693,7 +3739,7 @@ public:
 			shadow.reset();
 		}
 
-		void* map(size_t offset, size_t size)
+		void* map(usz offset, usz size)
 		{
 			if (!_ptr)
 			{
@@ -3737,7 +3783,8 @@ public:
 		{
 			if (!dirty_ranges.empty())
 			{
-				verify (HERE), shadow, heap;
+				ensure(shadow);
+				ensure(heap);
 				vkCmdCopyBuffer(cmd, shadow->value, heap->value, ::size32(dirty_ranges), dirty_ranges.data());
 				dirty_ranges.clear();
 
@@ -3754,7 +3801,7 @@ public:
 
 			// By default, allow the size to grow upto 8x larger
 			// This value is arbitrary, theoretically it is possible to allow infinite stretching to improve performance
-			const size_t soft_limit = initial_size * 8;
+			const usz soft_limit = initial_size * 8;
 			if ((m_size + m_min_guard_size) < soft_limit)
 				return false;
 

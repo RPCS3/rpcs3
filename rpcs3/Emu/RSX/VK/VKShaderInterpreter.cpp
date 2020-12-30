@@ -1,10 +1,12 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKShaderInterpreter.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "VKGSRender.h"
+
 #include "../Common/GLSLCommon.h"
 #include "../Common/ShaderInterpreter.h"
+#include "../rsx_methods.h"
 
 namespace vk
 {
@@ -230,7 +232,7 @@ namespace vk
 		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
 		std::vector<VkDescriptorSetLayoutBinding> bindings(binding_table.total_descriptor_bindings);
 
-		uint32_t idx = 0;
+		u32 idx = 0;
 
 		// Vertex stream, one stream for cacheable data, one stream for transient data. Third stream contains vertex layout info
 		for (int i = 0; i < 3; i++)
@@ -358,7 +360,7 @@ namespace vk
 		VkDescriptorSetLayoutCreateInfo infos = {};
 		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		infos.pBindings = bindings.data();
-		infos.bindingCount = static_cast<uint32_t>(bindings.size());
+		infos.bindingCount = static_cast<u32>(bindings.size());
 
 		VkDescriptorSetLayout set_layout;
 		CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &set_layout));
@@ -473,7 +475,7 @@ namespace vk
 		vp.scissorCount = 1;
 
 		VkPipelineMultisampleStateCreateInfo ms = properties.state.ms;
-		verify("Multisample state mismatch!" HERE), ms.rasterizationSamples == VkSampleCountFlagBits((properties.renderpass_key >> 16) & 0xF);
+		ensure(ms.rasterizationSamples == VkSampleCountFlagBits((properties.renderpass_key >> 16) & 0xF)); // "Multisample state mismatch!"
 		if (ms.rasterizationSamples != VK_SAMPLE_COUNT_1_BIT)
 		{
 			// Update the sample mask pointer
@@ -509,7 +511,7 @@ namespace vk
 	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, VkDescriptorSet descriptor_set)
 	{
 		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
-		for (uint32_t i = 0, binding = m_fragment_textures_start; i < 4; ++i, ++binding, texture_ptr += 16)
+		for (u32 i = 0, binding = m_fragment_textures_start; i < 4; ++i, ++binding, texture_ptr += 16)
 		{
 			const VkWriteDescriptorSet descriptor_writer =
 			{
@@ -619,12 +621,12 @@ namespace vk
 		return prog == m_current_interpreter;
 	}
 
-	uint32_t shader_interpreter::get_vertex_instruction_location() const
+	u32 shader_interpreter::get_vertex_instruction_location() const
 	{
 		return m_vertex_instruction_start;
 	}
 
-	uint32_t shader_interpreter::get_fragment_instruction_location() const
+	u32 shader_interpreter::get_fragment_instruction_location() const
 	{
 		return m_fragment_instruction_start;
 	}

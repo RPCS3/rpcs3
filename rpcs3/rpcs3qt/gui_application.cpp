@@ -1,4 +1,4 @@
-﻿#include "gui_application.h"
+#include "gui_application.h"
 
 #include "qt_utils.h"
 #include "welcome_dialog.h"
@@ -270,7 +270,7 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		frame = new gs_frame(frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
-	default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+	default: fmt::throw_exception("Invalid video renderer: %s", type);
 	}
 
 	m_game_window = frame;
@@ -283,11 +283,16 @@ void gui_application::InitializeCallbacks()
 {
 	EmuCallbacks callbacks = CreateCallbacks();
 
-	callbacks.exit = [this](bool force_quit) -> bool
+	callbacks.try_to_quit = [this](bool force_quit, std::function<void()> on_exit) -> bool
 	{
 		// Close rpcs3 if closed in no-gui mode
 		if (force_quit || !m_main_window)
 		{
+			if (on_exit)
+			{
+				on_exit();
+			}
+
 			if (m_main_window)
 			{
 				// Close main window in order to save its window state
@@ -327,7 +332,7 @@ void gui_application::InitializeCallbacks()
 #endif
 		default:
 		{
-			fmt::throw_exception("Invalid video renderer: %s" HERE, type);
+			fmt::throw_exception("Invalid video renderer: %s", type);
 		}
 		}
 	};
@@ -343,6 +348,11 @@ void gui_application::InitializeCallbacks()
 	callbacks.on_resume = [this]() { OnEmulatorResume(true); };
 	callbacks.on_stop   = [this]() { OnEmulatorStop(); };
 	callbacks.on_ready  = [this]() { OnEmulatorReady(); };
+
+	callbacks.on_missing_fw = [this]()
+	{
+		return m_gui_settings->GetBootConfirmation(m_main_window, gui::ib_confirm_fw);
+	};
 
 	callbacks.handle_taskbar_progress = [this](s32 type, s32 value)
 	{

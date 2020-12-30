@@ -1,6 +1,8 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKGSRender.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
+
+#include "util/asm.hpp"
 
 void VKGSRender::reinitialize_swapchain()
 {
@@ -73,7 +75,7 @@ void VKGSRender::reinitialize_swapchain()
 
 void VKGSRender::present(vk::frame_context_t *ctx)
 {
-	verify(HERE), ctx->present_image != UINT32_MAX;
+	ensure(ctx->present_image != UINT32_MAX);
 
 	// Partial CS flush
 	ctx->swap_command_buffer->flush();
@@ -91,7 +93,7 @@ void VKGSRender::present(vk::frame_context_t *ctx)
 			swapchain_unavailable = true;
 			break;
 		default:
-			vk::die_with_error(HERE, error);
+			vk::die_with_error(error);
 		}
 	}
 
@@ -129,7 +131,7 @@ void VKGSRender::advance_queued_frames()
 		m_raster_env_ring_info.get_current_put_pos_minus_one());
 
 	m_queued_frames.push_back(m_current_frame);
-	verify(HERE), m_queued_frames.size() <= VK_MAX_ASYNC_FRAMES;
+	ensure(m_queued_frames.size() <= VK_MAX_ASYNC_FRAMES);
 
 	m_current_queue_index = (m_current_queue_index + 1) % VK_MAX_ASYNC_FRAMES;
 	m_current_frame = &frame_context_storage[m_current_queue_index];
@@ -140,7 +142,7 @@ void VKGSRender::advance_queued_frames()
 
 void VKGSRender::queue_swap_request()
 {
-	verify(HERE), !m_current_frame->swap_command_buffer;
+	ensure(!m_current_frame->swap_command_buffer);
 	m_current_frame->swap_command_buffer = m_current_command_buffer;
 
 	if (m_swapchain->is_headless())
@@ -174,7 +176,7 @@ void VKGSRender::queue_swap_request()
 
 void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resources)
 {
-	verify(HERE), ctx->swap_command_buffer;
+	ensure(ctx->swap_command_buffer);
 
 	if (ctx->swap_command_buffer->pending)
 	{
@@ -190,7 +192,7 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resou
 
 	if (free_resources)
 	{
-		if (g_cfg.video.overlay)
+		if (m_text_writer)
 		{
 			m_text_writer->reset_descriptors();
 		}
@@ -417,7 +419,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	{
 		if (!info.skip_frame)
 		{
-			verify(HERE), swapchain_unavailable;
+			ensure(swapchain_unavailable);
 
 			// Perform a mini-flip here without invoking present code
 			m_current_frame->swap_command_buffer = m_current_command_buffer;
@@ -464,7 +466,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		present_info.height = buffer_height;
 		present_info.pitch = buffer_pitch;
 		present_info.format = av_format;
-		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL, HERE);
+		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 		image_to_flip = get_present_source(&present_info, avconfig);
 
@@ -477,7 +479,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffers[info.buffer].offset;
 				present_info.width = buffer_width;
 				present_info.height = buffer_height;
-				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL, HERE);
+				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL);
 
 				image_to_flip2 = get_present_source(&present_info, avconfig);
 			}
@@ -494,8 +496,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	// Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
-	verify(HERE), m_current_frame->present_image == UINT32_MAX;
-	verify(HERE), m_current_frame->swap_command_buffer == nullptr;
+	ensure(m_current_frame->present_image == UINT32_MAX);
+	ensure(m_current_frame->swap_command_buffer == nullptr);
 
 	u64 timeout = m_swapchain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES? 0ull: 100000000ull;
 	while (VkResult status = m_swapchain->acquire_next_swapchain_image(m_current_frame->acquire_signal_semaphore, timeout, &m_current_frame->present_image))
@@ -526,7 +528,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			reinitialize_swapchain();
 			continue;
 		default:
-			vk::die_with_error(HERE, status);
+			vk::die_with_error(status);
 		}
 
 		if (should_reinitialize_swapchain)
@@ -537,7 +539,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	// Confirm that the driver did not silently fail
-	verify(HERE), m_current_frame->present_image != UINT32_MAX;
+	ensure(m_current_frame->present_image != UINT32_MAX);
 
 	// Calculate output dimensions. Done after swapchain acquisition in case it was recreated.
 	coordi aspect_ratio;
@@ -592,12 +594,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f) || avconfig->_3d) [[unlikely]]
 		{
 			calibration_src.push_back(dynamic_cast<vk::viewable_image*>(image_to_flip));
-			verify("Image not viewable" HERE), calibration_src.front();
+			ensure(calibration_src.front());
 
 			if (image_to_flip2)
 			{
 				calibration_src.push_back(dynamic_cast<vk::viewable_image*>(image_to_flip2));
-				verify("Image not viewable" HERE), calibration_src.back();
+				ensure(calibration_src.back());
 			}
 		}
 
@@ -631,7 +633,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			const auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
 			single_target_pass = vk::get_renderpass(*m_device, key);
-			verify("Usupported renderpass configuration" HERE), single_target_pass != VK_NULL_HANDLE;
+			ensure(single_target_pass != VK_NULL_HANDLE);
 
 			direct_fbo = vk::get_framebuffer(*m_device, m_swapchain_dims.width, m_swapchain_dims.height, single_target_pass, m_swapchain->get_surface_format(), target_image);
 			direct_fbo->add_ref();
@@ -645,13 +647,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			direct_fbo->release();
 		}
 
-		if (m_frame->screenshot_toggle == true)
+		if (m_frame->screenshot_toggle)
 		{
 			m_frame->screenshot_toggle = false;
 
-			const size_t sshot_size = buffer_height * buffer_width * 4;
+			const usz sshot_size = buffer_height * buffer_width * 4;
 
-			vk::buffer sshot_vkbuf(*m_device, align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			vk::buffer sshot_vkbuf(*m_device, utils::align(sshot_size, 0x100000), m_device->get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 				VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
 
 			VkBufferImageCopy copy_info;
@@ -709,7 +711,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		{
 			const auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
 			single_target_pass = vk::get_renderpass(*m_device, key);
-			verify("Usupported renderpass configuration" HERE), single_target_pass != VK_NULL_HANDLE;
+			ensure(single_target_pass != VK_NULL_HANDLE);
 
 			direct_fbo = vk::get_framebuffer(*m_device, m_swapchain_dims.width, m_swapchain_dims.height, single_target_pass, m_swapchain->get_surface_format(), target_image);
 		}
@@ -730,6 +732,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (g_cfg.video.overlay)
 		{
+			if (!m_text_writer)
+			{
+				auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
+				m_text_writer = std::make_unique<vk::text_writer>();
+				m_text_writer->init(*m_device, vk::get_renderpass(*m_device, key));
+			}
+
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,   0, direct_fbo->width(), direct_fbo->height(), fmt::format("RSX Load:                 %3d%%", get_load()));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  18, direct_fbo->width(), direct_fbo->height(), fmt::format("draw calls: %17d", info.stats.draw_calls));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0,  36, direct_fbo->width(), direct_fbo->height(), fmt::format("draw call setup: %12dus", info.stats.setup_time));
@@ -747,10 +756,14 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			const auto num_misses = m_texture_cache.get_num_cache_misses();
 			const auto num_unavoidable = m_texture_cache.get_num_unavoidable_hard_faults();
 			const auto cache_miss_ratio = static_cast<u32>(ceil(m_texture_cache.get_cache_miss_ratio() * 100));
+			const auto num_texture_upload = m_texture_cache.get_texture_upload_calls_this_frame();
+			const auto num_texture_upload_miss = m_texture_cache.get_texture_upload_misses_this_frame();
+			const auto texture_upload_miss_ratio = m_texture_cache.get_texture_upload_miss_percentage();
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 144, direct_fbo->width(), direct_fbo->height(), fmt::format("Unreleased textures: %8d", num_dirty_textures));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 162, direct_fbo->width(), direct_fbo->height(), fmt::format("Texture cache memory: %7dM", texture_memory_size));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 180, direct_fbo->width(), direct_fbo->height(), fmt::format("Temporary texture memory: %3dM", tmp_texture_memory_size));
 			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 198, direct_fbo->width(), direct_fbo->height(), fmt::format("Flush requests: %13d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
+			m_text_writer->print_text(*m_current_command_buffer, *direct_fbo, 0, 216, direct_fbo->width(), direct_fbo->height(), fmt::format("Texture uploads: %14u (%u from CPU - %02u%%)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio));
 		}
 
 		direct_fbo->release();

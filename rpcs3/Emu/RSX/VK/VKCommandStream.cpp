@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKCommandStream.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/RSXOffload.h"

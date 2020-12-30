@@ -1,10 +1,8 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/IdManager.h"
 #include "Loader/ELF.h"
 
 #include "Emu/Cell/RawSPUThread.h"
-
-#include <atomic>
 
 inline void try_start(spu_thread& spu)
 {
@@ -105,7 +103,7 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 		case MFC_EIEIO_CMD:
 		case MFC_SYNC_CMD:
 		{
-			std::atomic_thread_fence(std::memory_order_seq_cst);
+			atomic_fence_seq_cst();
 			value = MFC_PPU_DMA_CMD_ENQUEUE_SUCCESSFUL;
 			return true;
 		}
@@ -321,19 +319,17 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 
 void spu_load_exec(const spu_exec_object& elf)
 {
-	auto ls0 = vm::addr_t{RAW_SPU_BASE_ADDR};
-
 	spu_thread::g_raw_spu_ctr++;
+
+	auto spu = idm::make_ptr<named_thread<spu_thread>>("TEST_SPU", nullptr, 0, "", 0);
 
 	for (const auto& prog : elf.progs)
 	{
 		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
 		{
-			std::memcpy(vm::base(ls0 + prog.p_vaddr), prog.bin.data(), prog.p_filesz);
+			std::memcpy(spu->_ptr<void>(prog.p_vaddr), prog.bin.data(), prog.p_filesz);
 		}
 	}
-
-	auto spu = idm::make_ptr<named_thread<spu_thread>>("TEST_SPU", nullptr, 0, "", 0);
 
 	spu_thread::g_raw_spu_id[0] = spu->id;
 

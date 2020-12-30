@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <map>
 #include <list>
@@ -238,7 +238,7 @@ public:
 	const std::vector<u8> data;
 
 	// Constructors (should not be used directly)
-	lv2_config_service(sys_config_service_id _id, u64 _user_id, u64 _verbosity, u32 _padding, const u8 _data[], size_t size)
+	lv2_config_service(sys_config_service_id _id, u64 _user_id, u64 _verbosity, u32 _padding, const u8 _data[], usz size)
 		: timestamp(get_system_time())
 		, id(_id)
 		, user_id(_user_id)
@@ -269,7 +269,7 @@ public:
 	void notify() const;
 
 	// Utilities
-	size_t get_size() const { return sizeof(sys_config_service_event_t)-1 + data.size(); }
+	usz get_size() const { return sizeof(sys_config_service_event_t)-1 + data.size(); }
 	std::shared_ptr<lv2_config_service> get_shared_ptr () const { return wkptr.lock(); };
 	u32 get_id() const { return idm_id; }
 };
@@ -304,7 +304,7 @@ public:
 	const std::vector<u8> data;
 
 	// Constructors (should not be used directly)
-	lv2_config_service_listener(std::shared_ptr<lv2_config_handle>& _handle, sys_config_service_id _service_id, u64 _min_verbosity, sys_config_service_listener_type _type, const u8 _data[], size_t size)
+	lv2_config_service_listener(std::shared_ptr<lv2_config_handle>& _handle, sys_config_service_id _service_id, u64 _min_verbosity, sys_config_service_listener_type _type, const u8 _data[], usz size)
 		: handle(_handle)
 		, service_id(_service_id)
 		, min_verbosity(_min_verbosity)
@@ -406,7 +406,7 @@ public:
 	void write(sys_config_service_event_t *dst);
 
 	// Check if the buffer can fit the current event, return false otherwise
-	bool check_buffer_size(size_t size) const { return service->get_size() <= size; }
+	bool check_buffer_size(usz size) const { return service->get_size() <= size; }
 };
 
 /*

@@ -1,8 +1,10 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Io/PadHandler.h"
 #include "Utilities/CRC.h"
 #include "hidapi.h"
+
+#include <unordered_map>
 
 class ds4_pad_handler final : public PadHandlerBase
 {
@@ -132,10 +134,10 @@ private:
 		const s32 rem = calibData.sensNumer % calibData.sensDenom;
 		const s32 output = (quot * biased) + ((rem * biased) / calibData.sensDenom);
 
-		if (output > std::numeric_limits<s16>::max())
-			return std::numeric_limits<s16>::max();
-		else if (output < std::numeric_limits<s16>::min())
-			return std::numeric_limits<s16>::min();
+		if (output > INT16_MAX)
+			return INT16_MAX;
+		else if (output < INT16_MIN)
+			return INT16_MIN;
 		else return static_cast<s16>(output);
 	}
 
@@ -148,5 +150,5 @@ private:
 	void get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
 	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
-	pad_preview_values get_preview_values(std::unordered_map<u64, u16> data) override;
+	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
 };

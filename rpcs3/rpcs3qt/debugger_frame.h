@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include "custom_dock_widget.h"
 
@@ -8,6 +8,9 @@
 #include <QTextEdit>
 #include <QPushButton>
 #include <QComboBox>
+
+#include <memory>
+#include <vector>
 
 class CPUDisAsm;
 class cpu_thread;
@@ -36,16 +39,14 @@ class debugger_frame : public custom_dock_widget
 	QPushButton* m_btn_step_over;
 	QPushButton* m_btn_run;
 	QComboBox* m_choice_units;
-	QString m_current_choice;
 	QTimer* m_update;
 	QSplitter* m_splitter;
 
-	u64 m_threads_created = 0;
-	u64 m_threads_deleted = 0;
+	u64 m_threads_created = -1;
+	u64 m_threads_deleted = -1;
 	u32 m_last_pc = -1;
 	std::vector<char> m_last_query_state;
 	u32 m_last_step_over_breakpoint = -1;
-	bool m_no_thread_selected = true;
 
 	std::shared_ptr<CPUDisAsm> m_disasm;
 	std::weak_ptr<cpu_thread> cpu;
@@ -66,7 +67,6 @@ public:
 	void UpdateUI();
 	void UpdateUnitList();
 
-	u32 GetPc() const;
 	void DoUpdate();
 	void WritePanels();
 	void EnableButtons(bool enable);
@@ -76,7 +76,7 @@ public:
 	void ClearCallStack();
 
 	/** Needed so key press events work when other objects are selected in debugger_frame. */
-	bool eventFilter(QObject* object, QEvent* event) override; 
+	bool eventFilter(QObject* object, QEvent* event) override;
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;

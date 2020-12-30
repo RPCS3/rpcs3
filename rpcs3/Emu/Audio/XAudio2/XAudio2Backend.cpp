@@ -1,7 +1,8 @@
-﻿#ifndef _WIN32
+#ifndef _WIN32
 #error "XAudio2 can only be built on Windows."
 #endif
 
+#include <algorithm>
 #include "util/logs.hpp"
 #include "Utilities/StrFmt.h"
 #include "Emu/System.h"

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "VKHelpers.h"
 #include "VKCompute.h"
@@ -125,13 +125,14 @@ namespace vk
 
 		void run(VkCommandBuffer cmd, vk::viewable_image* msaa_image, vk::viewable_image* resolve_image)
 		{
-			verify(HERE), msaa_image->samples() > 1, resolve_image->samples() == 1;
+			ensure(msaa_image->samples() > 1);
+			ensure(resolve_image->samples() == 1);
 
 			multisampled = msaa_image;
 			resolve = resolve_image;
 
-			const u32 invocations_x = align(resolve_image->width(), cs_wave_x) / cs_wave_x;
-			const u32 invocations_y = align(resolve_image->height(), cs_wave_y) / cs_wave_y;
+			const u32 invocations_x = utils::align(resolve_image->width(), cs_wave_x) / cs_wave_x;
+			const u32 invocations_y = utils::align(resolve_image->height(), cs_wave_y) / cs_wave_y;
 
 			compute_task::run(cmd, invocations_x, invocations_y, 1);
 		}
@@ -172,11 +173,15 @@ namespace vk
 		u8 samples_x = 1;
 		u8 samples_y = 1;
 		s32 static_parameters[4];
+		s32 static_parameters_width = 2;
 
 		depth_resolve_base()
 		{
 			renderpass_config.set_depth_mask(true);
 			renderpass_config.enable_depth_test(VK_COMPARE_OP_ALWAYS);
+
+			// Depth-stencil buffers are almost never filterable, and we do not need it here (1:1 mapping)
+			m_sampler_filter = VK_FILTER_NEAREST;
 		}
 
 		void build(const std::string& kernel, const std::string& extensions, const std::vector<const char*>& inputs)
@@ -196,7 +201,7 @@ namespace vk
 				"#extension GL_ARB_separate_shader_objects : enable\n";
 			fs_src += extensions +
 				"\n"
-				"layout(push_constant) uniform static_data{ ivec4 regs[1]; };\n";
+				"layout(push_constant) uniform static_data{ ivec" + std::to_string(static_parameters_width) + " regs[1]; };\n";
 
 				int binding = 1;
 				for (const auto& input : inputs)
@@ -227,7 +232,7 @@ namespace vk
 
 		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/) override
 		{
-			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, 8, static_parameters);
+			vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, static_parameters_width * 4, static_parameters);
 		}
 
 		void update_sample_configuration(vk::image* msaa_image)
@@ -235,7 +240,7 @@ namespace vk
 			switch (msaa_image->samples())
 			{
 			case 1:
-				fmt::throw_exception("MSAA input not multisampled!" HERE);
+				fmt::throw_exception("MSAA input not multisampled!");
 			case 2:
 				samples_x = 2;
 				samples_y = 1;
@@ -244,7 +249,7 @@ namespace vk
 				samples_x = samples_y = 2;
 				break;
 			default:
-				fmt::throw_exception("Unsupported sample count %d" HERE, msaa_image->samples());
+				fmt::throw_exception("Unsupported sample count %d", msaa_image->samples());
 			}
 
 			static_parameters[0] = samples_x;
@@ -331,6 +336,8 @@ namespace vk
 			region.baseArrayLayer = 0;
 			region.layerCount = 1;
 
+			static_parameters_width = 3;
+
 			build(
 				"	ivec2 out_coord = ivec2(gl_FragCoord.xy);\n"
 				"	ivec2 in_coord = (out_coord / regs[0].xy);\n"
@@ -395,6 +402,8 @@ namespace vk
 			clear_info.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
 			region.baseArrayLayer = 0;
 			region.layerCount = 1;
+
+			static_parameters_width = 3;
 
 			build(
 				"	ivec2 pixel_coord = ivec2(gl_FragCoord.xy);\n"

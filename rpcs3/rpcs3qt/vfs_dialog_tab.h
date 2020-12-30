@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include "gui_settings.h"
 #include "emu_settings.h"
@@ -8,6 +8,8 @@
 
 #include <QListWidget>
 #include <QLabel>
+
+#include <memory>
 
 namespace cfg
 {

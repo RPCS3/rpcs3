@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Memory/vm_ptr.h"
@@ -32,7 +32,9 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 		src = std::move(lv2_file);
 	}
 
-	const ppu_exec_object obj = decrypt_self(std::move(src), g_fxo->get<loaded_npdrm_keys>()->devKlic.load()._bytes);
+	u128 klic = g_fxo->get<loaded_npdrm_keys>()->devKlic.load();
+
+	const ppu_exec_object obj = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic));
 
 	if (obj != elf_error::ok)
 	{

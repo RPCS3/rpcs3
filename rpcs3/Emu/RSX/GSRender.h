@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "GSFrameBase.h"
 #include "Emu/RSX/RSXThread.h"

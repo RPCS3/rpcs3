@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "../Common/ProgramStateCache.h"
@@ -18,7 +18,7 @@ namespace vk
 		using pipeline_properties = vk::pipeline_props;
 
 		static
-			void recompile_fragment_program(const RSXFragmentProgram& RSXFP, fragment_program_type& fragmentProgramData, size_t ID)
+			void recompile_fragment_program(const RSXFragmentProgram& RSXFP, fragment_program_type& fragmentProgramData, usz ID)
 		{
 			fragmentProgramData.Decompile(RSXFP);
 			fragmentProgramData.id = static_cast<u32>(ID);
@@ -26,7 +26,7 @@ namespace vk
 		}
 
 		static
-			void recompile_vertex_program(const RSXVertexProgram& RSXVP, vertex_program_type& vertexProgramData, size_t ID)
+			void recompile_vertex_program(const RSXVertexProgram& RSXVP, vertex_program_type& vertexProgramData, usz ID)
 		{
 			vertexProgramData.Decompile(RSXVP);
 			vertexProgramData.id = static_cast<u32>(ID);
@@ -50,7 +50,7 @@ namespace vk
 				const vk::pipeline_props& pipelineProperties,
 				bool compile_async,
 				std::function<pipeline_type*(pipeline_storage_type&)> callback,
-				VkDevice dev, VkPipelineLayout common_pipeline_layout)
+				VkPipelineLayout common_pipeline_layout)
 		{
 			const auto compiler_flags = compile_async ? vk::pipe_compiler::COMPILE_DEFERRED : vk::pipe_compiler::COMPILE_INLINE;
 			VkShaderModule modules[2] = { vertexProgramData.handle, fragmentProgramData.handle };

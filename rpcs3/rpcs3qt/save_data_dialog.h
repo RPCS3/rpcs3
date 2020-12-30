@@ -1,8 +1,10 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
+
+#include "util/types.hpp"
 
 class save_data_dialog : public SaveDialogBase
 {

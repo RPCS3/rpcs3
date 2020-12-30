@@ -1,6 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include <list>
+#include <algorithm>
+#include <vector>
 #include "Utilities/mutex.h"
 #include "util/init_mutex.hpp"
 
@@ -135,12 +137,12 @@ class MouseHandlerBase
 protected:
 	MouseInfo m_info;
 	std::vector<Mouse> m_mice;
-	std::chrono::steady_clock::time_point last_update;
+	steady_clock::time_point last_update;
 
 	bool is_time_for_update(double elapsed_time = 10.0) // 4-10 ms, let's use 10 for now
 	{
-		std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-		double elapsed = std::chrono::duration_cast<std::chrono::microseconds>(now - last_update).count() / 1000.0;
+		steady_clock::time_point now = steady_clock::now();
+		double elapsed = (now - last_update).count() / 1000'000.;
 
 		if (elapsed > elapsed_time)
 		{

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Utilities/Thread.h"
@@ -38,7 +38,7 @@ enum
 	CELL_AUDIO_BLOCK_SAMPLES           = 256,
 
 	CELL_AUDIO_CREATEEVENTFLAG_SPU     = 0x00000001,
-	
+
 	CELL_AUDIO_EVENT_MIX               = 0,
 	CELL_AUDIO_EVENT_HEADPHONE         = 1,
 
@@ -144,7 +144,7 @@ struct audio_port
 	u32 size;
 	u64 timestamp; // copy of global timestamp
 
-	struct alignas(8) level_set_t
+	struct level_set_t
 	{
 		float value;
 		float inc;
@@ -174,7 +174,7 @@ struct audio_port
 		return addr.addr() + position(offset) * buf_size();
 	}
 
-	to_be_t<float>* get_vm_ptr(s32 offset = 0) const
+	be_t<f32>* get_vm_ptr(s32 offset = 0) const
 	{
 		return vm::_ptr<f32>(buf_addr(offset));
 	}

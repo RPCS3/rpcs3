@@ -1,6 +1,7 @@
-﻿#pragma once
+#pragma once
 
 #include "util/logs.hpp"
+#include "util/asm.hpp"
 
 /**
  * Ring buffer memory helper :
@@ -17,10 +18,10 @@ protected:
 	* Does alloc cross get position ?
 	*/
 	template<int Alignment>
-	bool can_alloc(size_t size) const
+	bool can_alloc(usz size) const
 	{
-		size_t alloc_size = align(size, Alignment);
-		size_t aligned_put_pos = align(m_put_pos, Alignment);
+		usz alloc_size = utils::align(size, Alignment);
+		usz aligned_put_pos = utils::align(m_put_pos, Alignment);
 		if (aligned_put_pos + alloc_size < m_size)
 		{
 			// range before get
@@ -45,17 +46,17 @@ protected:
 	}
 
     // Grow the buffer to hold at least size bytes
-	virtual bool grow(size_t /*size*/)
+	virtual bool grow(usz /*size*/)
 	{
 		// Stub
 		return false;
 	}
 
-	size_t m_size;
-	size_t m_put_pos; // Start of free space
-	size_t m_min_guard_size; //If an allocation touches the guard region, reset the heap to avoid going over budget
-	size_t m_current_allocated_size;
-	size_t m_largest_allocated_pool;
+	usz m_size;
+	usz m_put_pos; // Start of free space
+	usz m_min_guard_size; //If an allocation touches the guard region, reset the heap to avoid going over budget
+	usz m_current_allocated_size;
+	usz m_largest_allocated_pool;
 
 	char* m_name;
 public:
@@ -64,9 +65,9 @@ public:
 	data_heap(const data_heap&) = delete;
 	data_heap(data_heap&&) = delete;
 
-	size_t m_get_pos; // End of free space
+	usz m_get_pos; // End of free space
 
-	void init(size_t heap_size, const char* buffer_name = "unnamed", size_t min_guard_size=0x10000)
+	void init(usz heap_size, const char* buffer_name = "unnamed", usz min_guard_size=0x10000)
 	{
 		m_name = const_cast<char*>(buffer_name);
 
@@ -81,18 +82,18 @@ public:
 	}
 
 	template<int Alignment>
-	size_t alloc(size_t size)
+	usz alloc(usz size)
 	{
-		const size_t alloc_size = align(size, Alignment);
-		const size_t aligned_put_pos = align(m_put_pos, Alignment);
+		const usz alloc_size = utils::align(size, Alignment);
+		const usz aligned_put_pos = utils::align(m_put_pos, Alignment);
 
 		if (!can_alloc<Alignment>(size) && !grow(aligned_put_pos + alloc_size))
 		{
-			fmt::throw_exception("[%s] Working buffer not big enough, buffer_length=%d allocated=%d requested=%d guard=%d largest_pool=%d" HERE,
+			fmt::throw_exception("[%s] Working buffer not big enough, buffer_length=%d allocated=%d requested=%d guard=%d largest_pool=%d",
 					m_name, m_size, m_current_allocated_size, size, m_min_guard_size, m_largest_allocated_pool);
 		}
 
-		const size_t block_length = (aligned_put_pos - m_put_pos) + alloc_size;
+		const usz block_length = (aligned_put_pos - m_put_pos) + alloc_size;
 		m_current_allocated_size += block_length;
 		m_largest_allocated_pool = std::max(m_largest_allocated_pool, block_length);
 
@@ -111,14 +112,14 @@ public:
 	/**
 	* return current putpos - 1
 	*/
-	size_t get_current_put_pos_minus_one() const
+	usz get_current_put_pos_minus_one() const
 	{
 		return (m_put_pos > 0) ? m_put_pos - 1 : m_size - 1;
 	}
 
 	virtual bool is_critical() const
 	{
-		const size_t guard_length = std::max(m_min_guard_size, m_largest_allocated_pool);
+		const usz guard_length = std::max(m_min_guard_size, m_largest_allocated_pool);
 		return (m_current_allocated_size + guard_length) >= m_size;
 	}
 
@@ -139,10 +140,10 @@ public:
 		else if (m_get_pos > m_put_pos)
 			m_current_allocated_size = (m_put_pos + (m_size - m_get_pos - 1));
 		else
-			fmt::throw_exception("m_put_pos == m_get_pos!" HERE);
+			fmt::throw_exception("m_put_pos == m_get_pos!");
 	}
 
-	size_t size() const
+	usz size() const
 	{
 		return m_size;
 	}

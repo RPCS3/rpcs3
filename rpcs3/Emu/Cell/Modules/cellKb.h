@@ -1,6 +1,5 @@
-﻿#pragma once
+#pragma once
 
-#include "Utilities/BEType.h"
 #include "Emu/Io/Keyboard.h"
 
 enum CellKbError : u32

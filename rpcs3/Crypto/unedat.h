@@ -4,7 +4,6 @@
 
 #include "utils.h"
 
-#include "Utilities/BEType.h"
 #include "Utilities/File.h"
 
 constexpr u32 SDAT_FLAG = 0x01000000;
@@ -17,8 +16,8 @@ constexpr u32 EDAT_DEBUG_DATA_FLAG = 0x80000000;
 
 struct loaded_npdrm_keys
 {
-	atomic_t<v128> devKlic{};
-	atomic_t<v128> rifKey{};
+	atomic_t<u128> devKlic{};
+	atomic_t<u128> rifKey{};
 	atomic_t<u32> npdrm_fds{0};
 };
 
@@ -48,7 +47,7 @@ extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file
 
 extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, std::string* contentID);
 
-v128 GetEdatRifKeyFromRapFile(const fs::file& rap_file);
+u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file);
 
 struct EDATADecrypter final : fs::file_base
 {
@@ -65,18 +64,20 @@ struct EDATADecrypter final : fs::file_base
 	std::unique_ptr<u8[]> data_buf;
 	u64 data_buf_size{0};
 
-	v128 dec_key{};
+	u128 dec_key{};
 
 	// edat usage
-	v128 rif_key{};
-	v128 dev_key{};
+	u128 rif_key{};
+	u128 dev_key{};
 public:
 	// SdataByFd usage
 	EDATADecrypter(fs::file&& input)
 		: edata_file(std::move(input)) {}
 	// Edat usage
-	EDATADecrypter(fs::file&& input, const v128& dev_key, const v128& rif_key)
-		: edata_file(std::move(input)), rif_key(rif_key), dev_key(dev_key) {}
+	EDATADecrypter(fs::file&& input, const u128& dev_key, const u128& rif_key)
+		: edata_file(std::move(input))
+		, rif_key(rif_key)
+		, dev_key(dev_key) {}
 
 	~EDATADecrypter() override {}
 	// false if invalid

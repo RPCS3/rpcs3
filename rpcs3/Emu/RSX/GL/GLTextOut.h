@@ -1,8 +1,11 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "GLHelpers.h"
 #include "../Common/TextGlyphs.h"
+#include <string>
+#include <vector>
+#include <unordered_map>
 
 namespace gl
 {
@@ -64,7 +67,7 @@ namespace gl
 			m_program.link();
 		}
 
-		void load_program(float scale_x, float scale_y, float *offsets, size_t nb_offsets, color4f color)
+		void load_program(float scale_x, float scale_y, float *offsets, usz nb_offsets, color4f color)
 		{
 			float scale[] = { scale_x, scale_y };
 
@@ -88,7 +91,7 @@ namespace gl
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
 
-			const size_t buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
+			const usz buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
 
 			m_text_buffer.data(buffer_size, points.data());
 			m_offsets = glyph_source.get_glyph_offsets();
@@ -118,11 +121,16 @@ namespace gl
 			enabled = state;
 		}
 
+		bool is_enabled()
+		{
+			return enabled;
+		}
+
 		void print_text(int x, int y, int target_w, int target_h, const std::string &text, color4f color = { 0.3f, 1.f, 0.3f, 1.f })
 		{
 			if (!enabled) return;
 
-			verify(HERE), initialized;
+			ensure(initialized);
 
 			std::vector<GLint> offsets;
 			std::vector<GLsizei> counts;

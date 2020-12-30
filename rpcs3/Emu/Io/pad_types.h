@@ -1,4 +1,8 @@
-﻿#pragma once
+#pragma once
+
+#include "util/types.hpp"
+
+#include <vector>
 
 enum SystemInfo
 {

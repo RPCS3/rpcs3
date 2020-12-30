@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "VKHelpers.h"
 #include "../rsx_utils.h"
 #include "Utilities/hash.h"
@@ -163,9 +163,9 @@ namespace vk
 namespace rpcs3
 {
 	template <>
-	size_t hash_struct<vk::pipeline_props>(const vk::pipeline_props &pipelineProperties)
+	usz hash_struct<vk::pipeline_props>(const vk::pipeline_props &pipelineProperties)
 	{
-		size_t seed = hash_base(pipelineProperties.renderpass_key);
+		usz seed = hash_base(pipelineProperties.renderpass_key);
 		seed ^= hash_struct(pipelineProperties.state.ia);
 		seed ^= hash_struct(pipelineProperties.state.ds);
 		seed ^= hash_struct(pipelineProperties.state.rs);

@@ -1,4 +1,4 @@
-﻿#include "cond.h"
+#include "cond.h"
 #include "sync.h"
 #include "lockless.h"
 
@@ -9,7 +9,7 @@
 void cond_variable::imp_wait(u32 _old, u64 _timeout) noexcept
 {
 	// Not supposed to fail
-	verify(HERE), _old;
+	ensure(_old);
 
 	// Wait with timeout
 	m_value.wait(_old, c_signal_mask, atomic_wait_timeout{_timeout > max_timeout ? UINT64_MAX : _timeout * 1000});

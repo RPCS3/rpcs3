@@ -1,4 +1,4 @@
-﻿#include "util/logs.hpp"
+#include "util/logs.hpp"
 #include "Utilities/File.h"
 #include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
@@ -14,7 +14,9 @@
 using namespace std::literals::chrono_literals;
 
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #else
 #include <sys/mman.h>
@@ -85,7 +87,7 @@ namespace logs
 		virtual ~file_writer();
 
 		// Append raw data
-		void log(const char* text, std::size_t size);
+		void log(const char* text, usz size);
 	};
 
 	struct file_listener final : file_writer, public listener
@@ -137,7 +139,7 @@ namespace logs
 				QueryPerformanceCounter(&start);
 			}
 #else
-			std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+			steady_clock::time_point start = steady_clock::now();
 #endif
 
 			u64 get() const
@@ -148,7 +150,7 @@ namespace logs
 				const LONGLONG diff = now.QuadPart - start.QuadPart;
 				return diff / freq.QuadPart * 1'000'000 + diff % freq.QuadPart * 1'000'000 / freq.QuadPart;
 #else
-				return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
+				return (steady_clock::now() - start).count() / 1000;
 #endif
 			}
 		} timebase{};
@@ -168,7 +170,7 @@ namespace logs
 
 		for (auto&& pair : get_logger()->channels)
 		{
-			pair.second->enabled.store(level::notice, std::memory_order_relaxed);
+			pair.second->enabled.release(level::notice);
 		}
 	}
 
@@ -178,7 +180,7 @@ namespace logs
 
 		for (auto&& pair : get_logger()->channels)
 		{
-			pair.second->enabled.store(level::always, std::memory_order_relaxed);
+			pair.second->enabled.release(level::always);
 		}
 	}
 
@@ -190,7 +192,7 @@ namespace logs
 
 		while (found.first != found.second)
 		{
-			found.first->second->enabled.store(value, std::memory_order_relaxed);
+			found.first->second->enabled.release(value);
 			found.first++;
 		}
 	}
@@ -203,7 +205,7 @@ namespace logs
 
 		if (found.first != found.second)
 		{
-			return found.first->second->enabled.load(std::memory_order_relaxed);
+			return found.first->second->enabled.observe();
 		}
 		else
 		{
@@ -275,7 +277,7 @@ logs::listener::~listener()
 
 		for (auto&& pair : logger->channels)
 		{
-			pair.second->enabled.store(level::always, std::memory_order_relaxed);
+			pair.second->enabled.release(level::always);
 		}
 	}
 }
@@ -290,7 +292,7 @@ void logs::listener::add(logs::listener* _new)
 	// Install new listener at the end of linked list
 	listener* null = nullptr;
 
-	while (lis->m_next || !lis->m_next.compare_exchange_strong(null, _new))
+	while (lis->m_next || !lis->m_next.compare_exchange(null, _new))
 	{
 		lis = lis->m_next;
 		null = nullptr;
@@ -326,7 +328,7 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 
 	static constexpr fmt_type_info empty_sup{};
 
-	std::size_t args_count = 0;
+	usz args_count = 0;
 	for (auto v = sup; v && v->fmt_string; v++)
 		args_count++;
 
@@ -538,7 +540,7 @@ bool logs::file_writer::flush(u64 bufv)
 	return false;
 }
 
-void logs::file_writer::log(const char* text, std::size_t size)
+void logs::file_writer::log(const char* text, usz size)
 {
 	if (!m_fptr)
 	{

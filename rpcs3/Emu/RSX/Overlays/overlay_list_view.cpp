@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_controls.h"
 #include "Emu/system_config.h"
 
@@ -62,7 +62,7 @@ namespace rsx
 				return; // Ideally unreachable but it should still be possible to recover by user interaction.
 			}
 
-			const size_t current_index = static_cast<size_t>(m_selected_entry) * 2;
+			const usz current_index = static_cast<usz>(m_selected_entry) * 2;
 
 			if (m_items.size() <= current_index)
 			{

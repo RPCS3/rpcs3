@@ -4,6 +4,7 @@
 #include "Utilities/mutex.h"
 
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 #include <vector>
 #include <utility>
@@ -310,7 +311,7 @@ struct sys_net_linger
 struct lv2_socket final
 {
 #ifdef _WIN32
-	using socket_type = std::uintptr_t;
+	using socket_type = uptr;
 #else
 	using socket_type = int;
 #endif
@@ -381,7 +382,7 @@ struct lv2_socket final
 		};
 
 		static constexpr be_t<u32> U2S_sig = (static_cast<u32>('U') << 24 | static_cast<u32>('2') << 16 | static_cast<u32>('S') << 8 | static_cast<u32>('0'));
-		static constexpr std::size_t MAX_RECEIVED_BUFFER = (1024*1024*10);
+		static constexpr usz MAX_RECEIVED_BUFFER = (1024*1024*10);
 
 		// P2P stream socket specific
 		struct encapsulated_tcp
@@ -406,7 +407,7 @@ struct lv2_socket final
 
 		stream_status status = stream_status::stream_closed;
 
-		std::size_t max_backlog = 0; // set on listen
+		usz max_backlog = 0; // set on listen
 		std::queue<s32> backlog;
 
 		u16 op_port = 0, op_vport = 0;

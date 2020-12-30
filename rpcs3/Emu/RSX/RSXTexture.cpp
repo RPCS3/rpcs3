@@ -1,8 +1,10 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "RSXTexture.h"
 
 #include "rsx_methods.h"
 #include "rsx_utils.h"
+
+#include "Emu/system_config.h"
 
 namespace rsx
 {
@@ -39,7 +41,7 @@ namespace rsx
 		case rsx::texture_dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_3d;
 		case rsx::texture_dimension::dimension2d: return cubemap() ? rsx::texture_dimension_extended::texture_dimension_cubemap : rsx::texture_dimension_extended::texture_dimension_2d;
 
-		default: ASSUME(0);
+		default: fmt::throw_exception("Unreachable");
 		}
 	}
 
@@ -75,7 +77,7 @@ namespace rsx
 		else
 			max_mipmap_count = floor_log2(static_cast<u32>(std::max(width(), height()))) + 1;
 
-		return std::min(verify(HERE, mipmap()), max_mipmap_count);
+		return std::min(ensure(mipmap()), max_mipmap_count);
 	}
 
 	rsx::texture_wrap_mode fragment_texture::wrap_s() const
@@ -135,6 +137,19 @@ namespace rsx
 
 	rsx::texture_max_anisotropy fragment_texture::max_aniso() const
 	{
+		switch (g_cfg.video.strict_rendering_mode ? 0 : g_cfg.video.anisotropic_level_override)
+		{
+		case 1: return rsx::texture_max_anisotropy::x1;
+		case 2: return rsx::texture_max_anisotropy::x2;
+		case 4: return rsx::texture_max_anisotropy::x4;
+		case 6: return rsx::texture_max_anisotropy::x6;
+		case 8: return rsx::texture_max_anisotropy::x8;
+		case 10: return rsx::texture_max_anisotropy::x10;
+		case 12: return rsx::texture_max_anisotropy::x12;
+		case 16: return rsx::texture_max_anisotropy::x16;
+		default: break;
+		}
+	
 		return rsx::to_texture_max_anisotropy((registers[NV4097_SET_TEXTURE_CONTROL0 + (m_index * 8)] >> 4) & 0x7);
 	}
 
@@ -249,7 +264,8 @@ namespace rsx
 
 	f32 fragment_texture::bias() const
 	{
-		return rsx::decode_fxp<4, 8>((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
+		const f32 bias = rsx::decode_fxp<4, 8>((registers[NV4097_SET_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
+		return std::clamp<f32>(bias + g_cfg.video.texture_lod_bias, -16.f, 16.f - 1.f / 256);
 	}
 
 	rsx::texture_minify_filter fragment_texture::min_filter() const
@@ -351,7 +367,7 @@ namespace rsx
 		case rsx::texture_dimension::dimension3d: return rsx::texture_dimension_extended::texture_dimension_3d;
 		case rsx::texture_dimension::dimension2d: return cubemap() ? rsx::texture_dimension_extended::texture_dimension_cubemap : rsx::texture_dimension_extended::texture_dimension_2d;
 
-		default: ASSUME(0);
+		default: fmt::throw_exception("Unreachable");
 		}
 	}
 
@@ -368,7 +384,7 @@ namespace rsx
 	u16 vertex_texture::get_exact_mipmap_count() const
 	{
 		const u16 max_mipmap_count = floor_log2(static_cast<u32>(std::max(width(), height()))) + 1;
-		return std::min(verify(HERE, mipmap()), max_mipmap_count);
+		return std::min(ensure(mipmap()), max_mipmap_count);
 	}
 
 	std::pair<std::array<u8, 4>, std::array<u8, 4>> vertex_texture::decoded_remap() const
@@ -403,7 +419,8 @@ namespace rsx
 
 	f32 vertex_texture::bias() const
 	{
-		return rsx::decode_fxp<4, 8>((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
+		const f32 bias = rsx::decode_fxp<4, 8>((registers[NV4097_SET_VERTEX_TEXTURE_FILTER + (m_index * 8)]) & 0x1fff);
+		return std::clamp<f32>(bias + g_cfg.video.texture_lod_bias, -16.f, 16.f - 1.f / 256);
 	}
 
 	rsx::texture_minify_filter vertex_texture::min_filter() const

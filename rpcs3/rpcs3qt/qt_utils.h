@@ -1,6 +1,7 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
+
 #include <QDir>
 #include <QComboBox>
 #include <QFont>
@@ -9,6 +10,8 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QTreeWidgetItem>
+
+#include <string>
 
 namespace gui
 {
@@ -44,7 +47,7 @@ namespace gui
 		QFont get_label_font(const QString& object_name);
 
 		// Returns the width of the text
-		int get_label_width(const QString& text);
+		int get_label_width(const QString& text, const QFont* font = nullptr);
 
 		// Returns the part of the image loaded from path that is inside the bounding box of its opaque areas
 		QImage get_opaque_image_area(const QString& path);

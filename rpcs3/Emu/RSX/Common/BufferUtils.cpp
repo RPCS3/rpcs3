@@ -1,10 +1,13 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "BufferUtils.h"
 #include "../rsx_methods.h"
-#include "Utilities/sysinfo.h"
 #include "../RSXThread.h"
 
-#include <limits>
+#include "util/to_endian.hpp"
+#include "util/sysinfo.hpp"
+
+#include "emmintrin.h"
+#include "immintrin.h"
 
 #define DEBUG_VERTEX_STREAMING 0
 
@@ -165,7 +168,7 @@ namespace
 		const u32 dword_count = size >> 2;
 		const u32 iterations = dword_count >> 2;
 
-		v128 bits_diff{};
+		__m128i bits_diff = _mm_setzero_si128();
 
 		if (s_use_ssse3) [[likely]]
 		{
@@ -176,12 +179,12 @@ namespace
 
 				if constexpr (!unaligned)
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_load_si128(dst_ptr), shuffled_vector));
+					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_load_si128(dst_ptr), shuffled_vector));
 					_mm_stream_si128(dst_ptr, shuffled_vector);
 				}
 				else
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_loadu_si128(dst_ptr), shuffled_vector));
+					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_loadu_si128(dst_ptr), shuffled_vector));
 					_mm_storeu_si128(dst_ptr, shuffled_vector);
 				}
 
@@ -199,12 +202,12 @@ namespace
 
 				if constexpr (!unaligned)
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_load_si128(dst_ptr), vec2));
+					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_load_si128(dst_ptr), vec2));
 					_mm_stream_si128(dst_ptr, vec2);
 				}
 				else
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_loadu_si128(dst_ptr), vec2));
+					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_loadu_si128(dst_ptr), vec2));
 					_mm_storeu_si128(dst_ptr, vec2);
 				}
 
@@ -227,12 +230,12 @@ namespace
 				if (dst_ptr2[i] != data)
 				{
 					dst_ptr2[i] = data;
-					bits_diff._u32[0] = UINT32_MAX;
+					bits_diff = _mm_set1_epi64x(-1);
 				}
 			}
 		}
 
-		return bits_diff != v128{};
+		return _mm_cvtsi128_si64(_mm_packs_epi32(bits_diff, bits_diff)) != 0;
 	}
 
 	template bool stream_data_to_memory_swapped_and_compare_u32<false>(void *dst, const void *src, u32 size);
@@ -581,7 +584,7 @@ namespace
 
 void write_vertex_array_data_to_buffer(gsl::span<std::byte> raw_dst_span, gsl::span<const std::byte> src_ptr, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, bool swap_endianness)
 {
-	verify(HERE), (vector_element_count > 0);
+	ensure((vector_element_count > 0));
 	const u32 src_read_stride = rsx::get_vertex_type_size_on_host(type, vector_element_count);
 
 	bool use_stream_no_stride = false;
@@ -667,7 +670,7 @@ void write_vertex_array_data_to_buffer(gsl::span<std::byte> raw_dst_span, gsl::s
 			u32 src_value;
 			memcpy(&src_value, src_ptr.subspan(attribute_src_stride * i).data(), sizeof(u32));
 
-			if (swap_endianness) src_value = se_storage<u32>::swap(src_value);
+			if (swap_endianness) src_value = stx::se_storage<u32>::swap(src_value);
 
 			const auto& decoded_vector                 = decode_cmp_vector(src_value);
 			dst_span[i * dst_stride / sizeof(u16)] = decoded_vector[0];
@@ -685,7 +688,7 @@ namespace
 	template <typename T>
 	constexpr T index_limit()
 	{
-		return std::numeric_limits<T>::max();
+		return -1;
 	}
 
 	template <typename T>
@@ -782,7 +785,7 @@ namespace
 		{
 			T min_index, max_index;
 			u32 written;
-			u32 remaining = ::size32(src, HERE);
+			u32 remaining = ::size32(src);
 
 			if (s_use_sse4_1 && remaining >= 32)
 			{
@@ -798,7 +801,7 @@ namespace
 				}
 				else
 				{
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 				}
 
 				remaining -= written;
@@ -956,7 +959,7 @@ namespace
 			T min_index = index_limit<T>();
 			T max_index = 0;
 			u32 written = 0;
-			u32 length = ::size32(src, HERE);
+			u32 length = ::size32(src);
 
 			if (length >= 32 && !skip_restart)
 			{
@@ -986,7 +989,7 @@ namespace
 				}
 				else
 				{
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 				}
 			}
 
@@ -1042,7 +1045,7 @@ namespace
 		T min_index = invalid_index;
 		T max_index = 0;
 
-		verify(HERE), (dst.size() >= 3 * (src.size() - 2));
+		ensure((dst.size() >= 3 * (src.size() - 2)));
 
 		u32 dst_idx = 0;
 		u32 src_idx = 0;
@@ -1093,7 +1096,7 @@ namespace
 		T min_index = index_limit<T>();
 		T max_index = 0;
 
-		verify(HERE), (4 * dst.size_bytes() >= 6 * src.size_bytes());
+		ensure((4 * dst.size_bytes() >= 6 * src.size_bytes()));
 
 		u32 dst_idx = 0;
 		u8 set_size = 0;
@@ -1150,7 +1153,7 @@ bool is_primitive_native(rsx::primitive_type draw_mode)
 		break;
 	}
 
-	fmt::throw_exception("Wrong primitive type" HERE);
+	fmt::throw_exception("Wrong primitive type");
 }
 
 bool is_primitive_disjointed(rsx::primitive_type draw_mode)
@@ -1196,7 +1199,7 @@ u32 get_index_type_size(rsx::index_array_type type)
 	case rsx::index_array_type::u16: return sizeof(u16);
 	case rsx::index_array_type::u32: return sizeof(u32);
 	}
-	fmt::throw_exception("Wrong index type" HERE);
+	fmt::throw_exception("Wrong index type");
 }
 
 void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned count)
@@ -1237,12 +1240,12 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	case rsx::primitive_type::line_strip:
 	case rsx::primitive_type::triangles:
 	case rsx::primitive_type::triangle_strip:
-		fmt::throw_exception("Native primitive type doesn't require expansion" HERE);
+		fmt::throw_exception("Native primitive type doesn't require expansion");
 	case rsx::primitive_type::invalid:
 		break;
 	}
 
-	fmt::throw_exception("Tried to load invalid primitive type" HERE);
+	fmt::throw_exception("Tried to load invalid primitive type");
 }
 
 
@@ -1288,7 +1291,7 @@ namespace
 			return expand_indexed_quads<T>(src, dst, restart_index_enabled, restart_index);
 		}
 		default:
-			fmt::throw_exception("Unknown draw mode (0x%x)" HERE, static_cast<u8>(draw_mode));
+			fmt::throw_exception("Unknown draw mode (0x%x)", static_cast<u8>(draw_mode));
 		}
 	}
 }
@@ -1311,7 +1314,7 @@ std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<std::byte> 
 			as_const_span<const be_t<u32>>(src_ptr), draw_mode, restart_index_enabled, restart_index, expands);
 	}
 	default:
-		fmt::throw_exception("Unreachable" HERE);
+		fmt::throw_exception("Unreachable");
 	}
 }
 

@@ -1,13 +1,15 @@
-﻿#pragma once
+#pragma once
 
-// I just want the struct for the save data.
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 
 #include <QTableWidget>
 #include <QDialog>
 #include <QLabel>
+
+#include <vector>
+#include <memory>
 
 class gui_settings;
 class persistent_settings;

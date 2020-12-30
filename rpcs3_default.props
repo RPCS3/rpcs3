@@ -13,14 +13,14 @@
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
     </Lib>
     <ClCompile>
-      <PreprocessorDefinitions>PUGIXML_HEADER_ONLY;_ENABLE_EXTENDED_ALIGNED_STORAGE;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;PUGIXML_HEADER_ONLY;_ENABLE_EXTENDED_ALIGNED_STORAGE;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
       <ExceptionHandling>false</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <AdditionalOptions>/Zc:throwingNew /constexpr:steps16777216 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /Zc:throwingNew /constexpr:steps16777216 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>xxhash.lib;ws2_32.lib;Iphlpapi.lib;Bcrypt.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib</AdditionalDependencies>

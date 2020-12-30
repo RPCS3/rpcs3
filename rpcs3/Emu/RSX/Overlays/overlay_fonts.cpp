@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_controls.h"
 #include "Emu/system_config.h"
 
@@ -119,6 +119,7 @@ namespace rsx
 			case language_class::default_:
 			{
 				result.font_names.emplace_back("Arial.ttf");
+				result.font_names.emplace_back("arial.ttf");
 #ifndef _WIN32
 				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //	ubuntu
 				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             //	arch
@@ -137,6 +138,7 @@ namespace rsx
 
 				// Known system font as last fallback
 				result.font_names.emplace_back("Yu Gothic.ttf");
+				result.font_names.emplace_back("YuGothR.ttc");
 				break;
 			}
 			case language_class::hangul:
@@ -149,6 +151,7 @@ namespace rsx
 
 				// Known system font as last fallback
 				result.font_names.emplace_back("Malgun Gothic.ttf");
+				result.font_names.emplace_back("malgun.ttf");
 				break;
 			}
 			}
@@ -342,7 +345,7 @@ namespace rsx
 											auto first_affected = result.size() - (nb_chars * 4);
 											f32 base_x          = result[first_affected].values[0];
 
-											for (size_t n = first_affected; n < result.size(); ++n)
+											for (usz n = first_affected; n < result.size(); ++n)
 											{
 												auto char_index = n / 4;
 												if (text[char_index] == ' ')

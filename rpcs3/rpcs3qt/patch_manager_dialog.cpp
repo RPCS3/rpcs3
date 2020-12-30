@@ -1,4 +1,4 @@
-﻿#include <QPushButton>
+#include <QPushButton>
 #include <QDialogButtonBox>
 #include <QGuiApplication>
 #include <QScreen>
@@ -250,7 +250,7 @@ void patch_manager_dialog::populate_tree()
 
 					ui->patch_tree->addTopLevelItem(title_level_item);
 				}
-				ASSERT(title_level_item);
+				ensure(title_level_item);
 
 				title_level_item->setData(0, persistance_role, true);
 
@@ -285,7 +285,7 @@ void patch_manager_dialog::populate_tree()
 
 							title_level_item->addChild(serial_level_item);
 						}
-						ASSERT(serial_level_item);
+						ensure(serial_level_item);
 
 						serial_level_item->setData(0, persistance_role, true);
 
@@ -351,7 +351,7 @@ void patch_manager_dialog::populate_tree()
 	if (const auto all_title_items = ui->patch_tree->findItems(tr_all_titles, Qt::MatchExactly); all_title_items.size() > 0)
 	{
 		const auto item = all_title_items[0];
-		ASSERT(item && all_title_items.size() == 1);
+		ensure(item && all_title_items.size() == 1);
 
 		if (const int index = ui->patch_tree->indexOfTopLevelItem(item); index >= 0)
 		{
@@ -759,8 +759,8 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 
 				log_message.clear();
 
-				size_t count = 0;
-				size_t total = 0;
+				usz count = 0;
+				usz total = 0;
 
 				if (patch_engine::import_patches(patches, imported_patch_yml_path, count, total, &log_message))
 				{

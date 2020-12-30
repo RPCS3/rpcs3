@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLPipelineCompiler.h"
 #include "Utilities/Thread.h"
 
@@ -40,7 +40,7 @@ namespace gl
 		{
 			for (auto&& job : m_work_queue.pop_all())
 			{
-				if (m_context_ready.compare_and_swap_test(false, true))
+				if (!m_context_ready.test_and_set())
 				{
 					// Bind context on first use
 					m_context_bind_func(m_context);
@@ -116,7 +116,7 @@ namespace gl
 			}
 		}
 
-		verify(HERE), num_worker_threads >= 1;
+		ensure(num_worker_threads >= 1);
 
 		// Create the thread pool
 		g_pipe_compilers = std::make_unique<named_thread_group<pipe_compiler>>("RSX.W", num_worker_threads);
@@ -136,7 +136,7 @@ namespace gl
 
 	pipe_compiler* get_pipe_compiler()
 	{
-		verify(HERE), g_pipe_compilers;
+		ensure(g_pipe_compilers);
 		int thread_index = g_compiler_index++;
 
 		return g_pipe_compilers.get()->begin() + (thread_index % g_num_pipe_compilers);

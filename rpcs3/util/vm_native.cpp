@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "util/logs.hpp"
 #include "util/vm.hpp"
+#include "util/asm.hpp"
 #ifdef _WIN32
 #include "util/dyn_lib.hpp"
 #include <Windows.h>
@@ -32,6 +33,20 @@ static int memfd_create_(const char *name, uint flags)
 
 namespace utils
 {
+#ifdef MAP_NORESERVE
+	constexpr auto c_map_noreserve = MAP_NORESERVE;
+#else
+	constexpr int c_map_noreserve = 0;
+#endif
+
+#ifdef MADV_FREE
+	constexpr auto c_madv_free = MADV_FREE;
+#elif defined(MADV_DONTNEED)
+	constexpr auto c_madv_free = MADV_DONTNEED;
+#else
+	constexpr auto c_madv_free = 0;
+#endif
+
 #ifdef _WIN32
 	DYNAMIC_IMPORT("KernelBase.dll", VirtualAlloc2, PVOID(HANDLE Process, PVOID Base, SIZE_T Size, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
 	DYNAMIC_IMPORT("KernelBase.dll", MapViewOfFile3, PVOID(HANDLE Handle, HANDLE Process, PVOID Base, ULONG64 Off, SIZE_T ViewSize, ULONG AllocType, ULONG Prot, MEM_EXTENDED_PARAMETER*, ULONG));
@@ -65,7 +80,7 @@ namespace utils
 		return _prot;
 	}
 
-	void* memory_reserve(std::size_t size, void* use_addr)
+	void* memory_reserve(usz size, void* use_addr)
 	{
 #ifdef _WIN32
 		return ::VirtualAlloc(use_addr, size, MEM_RESERVE, PAGE_NOACCESS);
@@ -83,7 +98,7 @@ namespace utils
 			size += 0x10000;
 		}
 
-		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0);
+		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0);
 
 		if (ptr == reinterpret_cast<void*>(-1))
 		{
@@ -119,46 +134,38 @@ namespace utils
 #endif
 	}
 
-	void memory_commit(void* pointer, std::size_t size, protection prot)
+	void memory_commit(void* pointer, usz size, protection prot)
 	{
 #ifdef _WIN32
-		verify(HERE), ::VirtualAlloc(pointer, size, MEM_COMMIT, +prot);
+		ensure(::VirtualAlloc(pointer, size, MEM_COMMIT, +prot));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		verify(HERE), ::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1;
-		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1;
+		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1);
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
 #endif
 	}
 
-	void memory_decommit(void* pointer, std::size_t size)
+	void memory_decommit(void* pointer, usz size)
 	{
 #ifdef _WIN32
-		verify(HERE), ::VirtualFree(pointer, size, MEM_DECOMMIT);
+		ensure(::VirtualFree(pointer, size, MEM_DECOMMIT));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		verify(HERE), ::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1);
-#ifdef MADV_FREE
-		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_FREE) != -1;
-#else
-		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_DONTNEED) != -1;
-#endif
+		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(-1));
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_free) != -1);
 #endif
 	}
 
-	void memory_reset(void* pointer, std::size_t size, protection prot)
+	void memory_reset(void* pointer, usz size, protection prot)
 	{
 #ifdef _WIN32
 		memory_decommit(pointer, size);
 		memory_commit(pointer, size, prot);
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-#ifdef MADV_FREE
-		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_FREE) != -1;
-#else
-		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_DONTNEED) != -1;
-#endif
-		verify(HERE), ::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1);
-		verify(HERE), ::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1;
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_free) != -1);
+		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1));
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
 
 #ifdef MADV_HUGEPAGE
 		if (size % 0x200000 == 0)
@@ -167,16 +174,16 @@ namespace utils
 #endif
 	}
 
-	void memory_release(void* pointer, std::size_t size)
+	void memory_release(void* pointer, usz size)
 	{
 #ifdef _WIN32
-		verify(HERE), ::VirtualFree(pointer, 0, MEM_RELEASE);
+		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
 #else
-		verify(HERE), ::munmap(pointer, size) != -1;
+		ensure(::munmap(pointer, size) != -1);
 #endif
 	}
 
-	void memory_protect(void* pointer, std::size_t size, protection prot)
+	void memory_protect(void* pointer, usz size, protection prot)
 	{
 #ifdef _WIN32
 		for (u64 addr = reinterpret_cast<u64>(pointer), end = addr + size; addr < end;)
@@ -195,11 +202,11 @@ namespace utils
 		}
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		verify(HERE), ::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1;
+		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1);
 #endif
 	}
 
-	bool memory_lock(void* pointer, std::size_t size)
+	bool memory_lock(void* pointer, usz size)
 	{
 #ifdef _WIN32
 		return ::VirtualLock(pointer, size);
@@ -209,13 +216,13 @@ namespace utils
 	}
 
 	shm::shm(u32 size, u32 flags)
-		: m_size(::align(size, 0x10000))
+		: m_size(utils::align(size, 0x10000))
 		, m_flags(flags)
 		, m_ptr(0)
 	{
 #ifdef _WIN32
 		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, m_size, NULL);
-		verify(HERE), m_handle != INVALID_HANDLE_VALUE;
+		ensure(m_handle != INVALID_HANDLE_VALUE);
 #elif __linux__
 		m_file = -1;
 #ifdef MFD_HUGETLB
@@ -230,8 +237,8 @@ namespace utils
 			m_file = ::memfd_create_("", 0);
 		}
 
-		verify(HERE), m_file >= 0;
-		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
+		ensure(m_file >= 0);
+		ensure(::ftruncate(m_file, m_size) >= 0);
 #else
 		const std::string name = "/rpcs3-mem-" + std::to_string(reinterpret_cast<u64>(this));
 
@@ -242,11 +249,11 @@ namespace utils
 				fmt::throw_exception("Too many open files. Raise the limit and try again.");
 			}
 
-			verify(HERE), errno == EEXIST;
+			ensure(errno == EEXIST);
 		}
 
-		verify(HERE), ::shm_unlink(name.c_str()) >= 0;
-		verify(HERE), ::ftruncate(m_file, m_size) >= 0;
+		ensure(::shm_unlink(name.c_str()) >= 0);
+		ensure(::ftruncate(m_file, m_size) >= 0);
 #endif
 	}
 
@@ -306,18 +313,18 @@ namespace utils
 		{
 			const u64 res64 = reinterpret_cast<u64>(::mmap(reinterpret_cast<void*>(ptr64), m_size + 0xf000, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0));
 
-			const u64 aligned = ::align(res64, 0x10000);
+			const u64 aligned = utils::align(res64, 0x10000);
 			const auto result = ::mmap(reinterpret_cast<void*>(aligned), m_size, +prot, MAP_SHARED | MAP_FIXED, m_file, 0);
 
 			// Now cleanup remnants
 			if (aligned > res64)
 			{
-				verify(HERE), ::munmap(reinterpret_cast<void*>(res64), aligned - res64) == 0;
+				ensure(::munmap(reinterpret_cast<void*>(res64), aligned - res64) == 0);
 			}
 
 			if (aligned < res64 + 0xf000)
 			{
-				verify(HERE), ::munmap(reinterpret_cast<void*>(aligned + m_size), (res64 + 0xf000) - (aligned)) == 0;
+				ensure(::munmap(reinterpret_cast<void*>(aligned + m_size), (res64 + 0xf000) - (aligned)) == 0);
 			}
 
 			return reinterpret_cast<u8*>(result);

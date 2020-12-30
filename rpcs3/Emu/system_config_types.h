@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 enum class ppu_decoder_type
 {
@@ -20,15 +20,6 @@ enum class spu_block_size_type
 	safe,
 	mega,
 	giga,
-};
-
-enum class lib_loading_type
-{
-	manual,
-	hybrid,
-	liblv2only,
-	liblv2both,
-	liblv2list,
 };
 
 enum class sleep_timers_accuracy_level

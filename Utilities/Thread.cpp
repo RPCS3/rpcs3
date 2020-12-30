@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
@@ -7,7 +7,6 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Thread.h"
 #include "Utilities/JIT.h"
-#include "sysinfo.h"
 #include <typeinfo>
 #include <thread>
 #include <sstream>
@@ -77,6 +76,9 @@
 #include "util/vm.hpp"
 #include "util/logs.hpp"
 #include "util/asm.hpp"
+#include "util/v128.hpp"
+#include "util/v128sse.hpp"
+#include "util/sysinfo.hpp"
 #include "Emu/Memory/vm_locking.h"
 
 LOG_CHANNEL(sig_log, "SIG");
@@ -90,6 +92,9 @@ thread_local u64 g_tls_wait_time = 0;
 thread_local u64 g_tls_wait_fail = 0;
 thread_local bool g_tls_access_violation_recovered = false;
 extern thread_local std::string(*g_tls_log_prefix)();
+
+// Report error and call std::abort(), defined in main.cpp
+[[noreturn]] void report_fatal_error(const std::string&);
 
 template <>
 void fmt_class_string<std::thread::id>::format(std::string& out, u64 arg)
@@ -115,7 +120,7 @@ bool IsDebuggerPresent()
 	};
 	u_int miblen = std::size(mib);
 	struct kinfo_proc info;
-	size_t size = sizeof(info);
+	usz size = sizeof(info);
 
 	if (sysctl(mib, miblen, &info, &size, NULL, 0))
 	{
@@ -256,7 +261,7 @@ enum x64_op_t : u32
 	X64OP_SBB, // lock sbb [mem], ...
 };
 
-void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, size_t& out_size, size_t& out_length)
+void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz& out_size, usz& out_length)
 {
 	// simple analysis of x64 code allows to reinterpret MOV or other instructions in any desired way
 	out_length = 0;
@@ -382,12 +387,12 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, siz
 		return x64_reg_t{((*code & 0x38) >> 3) + X64R_AL};
 	};
 
-	auto get_op_size = [](const u8 rex, const bool oso) -> size_t
+	auto get_op_size = [](const u8 rex, const bool oso) -> usz
 	{
 		return rex & 8 ? 8 : (oso ? 2 : 4);
 	};
 
-	auto get_modRM_size = [](const u8* code) -> size_t
+	auto get_modRM_size = [](const u8* code) -> usz
 	{
 		switch (*code >> 6) // check Mod
 		{
@@ -830,7 +835,7 @@ typedef ucontext_t x64_context;
 #define XMMREG(context, reg) (reinterpret_cast<v128*>(&(context)->uc_mcontext->__fs.__fpu_xmm0.__xmm_reg[reg]))
 #define EFLAGS(context) ((context)->uc_mcontext->__ss.__rflags)
 
-uint64_t* darwin_x64reg(x64_context *context, int reg)
+u64* darwin_x64reg(x64_context *context, int reg)
 {
 	auto *state = &context->uc_mcontext->__ss;
 	switch(reg)
@@ -973,7 +978,7 @@ static const int reg_table[] =
 #define RDI(c) (*X64REG((c), 7))
 #define RIP(c) (*X64REG((c), 16))
 
-bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_t i_size, u64& out_value)
+bool get_x64_reg_value(x64_context* context, x64_reg_t reg, usz d_size, usz i_size, u64& out_value)
 {
 	// get x64 reg value (for store operations)
 	if (reg - X64R_RAX < 16)
@@ -1064,7 +1069,7 @@ bool get_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, size_
 	return false;
 }
 
-bool put_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, u64 value)
+bool put_x64_reg_value(x64_context* context, x64_reg_t reg, usz d_size, u64 value)
 {
 	// save x64 reg value (for load operations)
 	if (reg - X64R_RAX < 16)
@@ -1083,7 +1088,7 @@ bool put_x64_reg_value(x64_context* context, x64_reg_t reg, size_t d_size, u64 v
 	return false;
 }
 
-bool set_x64_cmp_flags(x64_context* context, size_t d_size, u64 x, u64 y, bool carry = true)
+bool set_x64_cmp_flags(x64_context* context, usz d_size, u64 x, u64 y, bool carry = true)
 {
 	switch (d_size)
 	{
@@ -1159,7 +1164,7 @@ bool set_x64_cmp_flags(x64_context* context, size_t d_size, u64 x, u64 y, bool c
 	return true;
 }
 
-size_t get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, size_t d_size, size_t i_size)
+usz get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, usz d_size, usz i_size)
 {
 	if (op == X64OP_MOVS || op == X64OP_STOS)
 	{
@@ -1224,8 +1229,8 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 	x64_op_t op;
 	x64_reg_t reg;
-	size_t d_size;
-	size_t i_size;
+	usz d_size;
+	usz i_size;
 
 	// decode single x64 instruction that causes memory access
 	decode_x64_reg_op(code, op, reg, d_size, i_size);
@@ -1246,7 +1251,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 	}
 
 	// get length of data being accessed
-	size_t a_size = get_x64_access_size(context, op, reg, d_size, i_size);
+	usz a_size = get_x64_access_size(context, op, reg, d_size, i_size);
 
 	if (0x1'0000'0000ull - addr < a_size)
 	{
@@ -1293,7 +1298,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 			if (op != X64OP_LOAD_BE)
 			{
-				value = se_storage<u32>::swap(value);
+				value = stx::se_storage<u32>::swap(value);
 			}
 
 			if (op == X64OP_LOAD_CMP)
@@ -1335,7 +1340,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			}
 
 			u32 val32 = static_cast<u32>(reg_value);
-			if (!thread->write_reg(addr, op == X64OP_STORE ? se_storage<u32>::swap(val32) : val32))
+			if (!thread->write_reg(addr, op == X64OP_STORE ? stx::se_storage<u32>::swap(val32) : val32))
 			{
 				return false;
 			}
@@ -1589,21 +1594,27 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp) noexcept
 		return EXCEPTION_CONTINUE_SEARCH;
 	}
 
-	const u64 addr64 = pExp->ExceptionRecord->ExceptionInformation[1] - reinterpret_cast<u64>(vm::g_base_addr);
-	const u64 exec64 = (pExp->ExceptionRecord->ExceptionInformation[1] - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
+	const auto ptr = reinterpret_cast<u8*>(pExp->ExceptionRecord->ExceptionInformation[1]);
 	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
 
-	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && addr64 < 0x100000000ull)
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
 	{
-		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(addr64), is_writing, pExp->ContextRecord))
-		{
-			return EXCEPTION_CONTINUE_EXECUTION;
-		}
-	}
+		u32 addr = 0;
 
-	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && exec64 < 0x100000000ull)
-	{
-		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(exec64), is_writing, pExp->ContextRecord))
+		if (auto [addr0, ok] = vm::try_get_addr(ptr); ok)
+		{
+			addr = addr0;
+		}
+		else if (const usz exec64 = (ptr - vm::g_exec_addr) / 2; exec64 <= UINT32_MAX)
+		{
+			addr = static_cast<u32>(exec64);
+		}
+		else
+		{
+			return EXCEPTION_CONTINUE_SEARCH;
+		}
+
+		if (thread_ctrl::get_current() && handle_access_violation(addr, is_writing, pExp->ContextRecord))
 		{
 			return EXCEPTION_CONTINUE_EXECUTION;
 		}
@@ -1744,14 +1755,13 @@ static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 	const bool is_writing = context->uc_mcontext.gregs[REG_ERR] & 0x2;
 #endif
 
-	const u64 addr64 = reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_base_addr);
 	const u64 exec64 = (reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
 	const auto cause = is_writing ? "writing" : "reading";
 
-	if (addr64 < 0x100000000ull)
+	if (auto [addr, ok] = vm::try_get_addr(info->si_addr); ok)
 	{
 		// Try to process access violation
-		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(addr64), is_writing, context))
+		if (thread_ctrl::get_current() && handle_access_violation(addr, is_writing, context))
 		{
 			return;
 		}
@@ -1872,7 +1882,7 @@ void thread_base::start()
 		// Receive "that" native thread handle, sent "this" thread_base
 		const u64 _self = reinterpret_cast<u64>(atomic_storage<thread_base*>::load(*tls));
 		m_thread.release(_self);
-		verify(HERE), _self != reinterpret_cast<u64>(this);
+		ensure(_self != reinterpret_cast<u64>(this));
 		atomic_storage<thread_base*>::store(*tls, this);
 		s_thread_pool[pos].notify_one();
 		return;
@@ -1880,9 +1890,10 @@ void thread_base::start()
 
 #ifdef _WIN32
 	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
-	verify("thread_ctrl::start" HERE), m_thread, ::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1;
+	ensure(m_thread);
+	ensure(::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != -1);
 #else
-	verify("thread_ctrl::start" HERE), pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), nullptr, entry_point, this) == 0;
+	ensure(pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), nullptr, entry_point, this) == 0);
 #endif
 }
 
@@ -1950,14 +1961,14 @@ void thread_base::set_name(std::string name)
 #endif
 
 #if defined(__APPLE__)
-	name.resize(std::min<std::size_t>(15, name.size()));
+	name.resize(std::min<usz>(15, name.size()));
 	pthread_setname_np(name.c_str());
 #elif defined(__DragonFly__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 	pthread_set_name_np(pthread_self(), name.c_str());
 #elif defined(__NetBSD__)
 	pthread_setname_np(pthread_self(), "%s", name.data());
 #elif !defined(_WIN32)
-	name.resize(std::min<std::size_t>(15, name.size()));
+	name.resize(std::min<usz>(15, name.size()));
 	pthread_setname_np(pthread_self(), name.c_str());
 #endif
 }
@@ -2228,7 +2239,7 @@ void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 	}
 #endif
 
-	if (_this->m_sync.btr(2))
+	if (_this->m_sync.bit_test_reset(2))
 	{
 		return;
 	}
@@ -2250,7 +2261,13 @@ std::string thread_ctrl::get_name_cached()
 
 	if (!_this->m_tname.is_equal(name_cache)) [[unlikely]]
 	{
-		name_cache = _this->m_tname.load();
+		_this->m_tname.peek_op([&](const shared_ptr<std::string>& ptr)
+		{
+			if (ptr != name_cache)
+			{
+				name_cache = ptr;
+			}
+		});
 	}
 
 	return *name_cache;
@@ -2277,10 +2294,16 @@ thread_base::~thread_base()
 	}
 }
 
-bool thread_base::join() const
+bool thread_base::join(bool dtor) const
 {
+	// Check if already finished
+	if (m_sync & 2)
+	{
+		return (m_sync & 3) == 3;
+	}
+
 	// Hacked for too sleepy threads (1ms) TODO: make sure it's unneeded and remove
-	const auto timeout = Emu.IsStopped() ? atomic_wait_timeout{1'000'000} : atomic_wait_timeout::inf;
+	const auto timeout = dtor && Emu.IsStopped() ? atomic_wait_timeout{1'000'000} : atomic_wait_timeout::inf;
 
 	bool warn = false;
 	auto stamp0 = __rdtsc();
@@ -2366,7 +2389,7 @@ u64 thread_base::get_cycles()
 	}
 }
 
-void thread_ctrl::emergency_exit(std::string_view reason)
+[[noreturn]] void thread_ctrl::emergency_exit(std::string_view reason)
 {
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
 
@@ -2402,7 +2425,7 @@ void thread_ctrl::emergency_exit(std::string_view reason)
 #ifdef _WIN32
 		_endthreadex(0);
 #else
-		pthread_exit(0);
+		pthread_exit(nullptr);
 #endif
 	}
 
@@ -2449,8 +2472,8 @@ void thread_ctrl::detect_cpu_layout()
 		else
 		{
 			// Iterate through the buffer until a core with hyperthreading is found
-			auto ptr = reinterpret_cast<std::uintptr_t>(buffer.data());
-			const std::uintptr_t end = ptr + buffer_size;
+			auto ptr = reinterpret_cast<uptr>(buffer.data());
+			const uptr end = ptr + buffer_size;
 
 			while (ptr < end)
 			{
@@ -2775,17 +2798,17 @@ u64 thread_ctrl::get_thread_affinity_mask()
 #endif
 }
 
-std::pair<void*, std::size_t> thread_ctrl::get_thread_stack()
+std::pair<void*, usz> thread_ctrl::get_thread_stack()
 {
 #ifdef _WIN32
 	ULONG_PTR _min = 0;
 	ULONG_PTR _max = 0;
 	GetCurrentThreadStackLimits(&_min, &_max);
-	const std::size_t ssize = _max - _min;
+	const usz ssize = _max - _min;
 	const auto saddr = reinterpret_cast<void*>(_min);
 #else
 	void* saddr = 0;
-	std::size_t ssize = 0;
+	usz ssize = 0;
 	pthread_attr_t attr;
 #ifdef __linux__
 	pthread_getattr_np(pthread_self(), &attr);

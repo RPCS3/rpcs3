@@ -1,6 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Cell/PPUThread.h"
+
+#include "util/v128.hpp"
 
 struct ppu_func_opd_t;
 
@@ -102,7 +104,7 @@ namespace ppu_cb_detail
 			is_context ? ARG_CONTEXT :
 			ARG_UNKNOWN;
 
-		const u32 g = g_count + (is_general || is_float ? 1 : is_vector ? ::align(g_count, 2) + 2 : 0);
+		const u32 g = g_count + (is_general || is_float ? 1 : is_vector ? (g_count & 1) + 2 : 0);
 		const u32 f = f_count + is_float;
 		const u32 v = v_count + is_vector;
 
@@ -181,7 +183,7 @@ namespace vm
 	template<typename AT, typename RT, typename... T>
 	FORCE_INLINE RT _ptr_base<RT(T...), AT>::operator()(ppu_thread& CPU, T... args) const
 	{
-		const auto data = vm::_ptr<ppu_func_opd_t>(vm::cast(m_addr, HERE));
+		const auto data = vm::_ptr<ppu_func_opd_t>(vm::cast(m_addr));
 		const u32 pc = data->addr;
 		const u32 rtoc = data->rtoc;
 
@@ -191,7 +193,7 @@ namespace vm
 	template<typename AT, typename RT, typename... T>
 	FORCE_INLINE const ppu_func_opd_t& _ptr_base<RT(T...), AT>::opd() const
 	{
-		return vm::_ref<ppu_func_opd_t>(vm::cast(m_addr, HERE));
+		return vm::_ref<ppu_func_opd_t>(vm::cast(m_addr));
 	}
 }
 

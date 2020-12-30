@@ -6,7 +6,7 @@
 class PPUDisAsm final : public PPCDisAsm
 {
 public:
-	PPUDisAsm(CPUDisAsmMode mode) : PPCDisAsm(mode)
+	PPUDisAsm(CPUDisAsmMode mode, const u8* offset) : PPCDisAsm(mode, offset)
 	{
 	}
 
@@ -24,7 +24,7 @@ private:
 		case 0x1: return "gt";
 		case 0x2: return "eq";
 		case 0x3: return "so";
-		default: ASSUME(0); return {};
+		default: fmt::throw_exception("Unreachable");
 		}
 	}
 
@@ -284,7 +284,7 @@ private:
 	{
 		Write(fmt::format("%s cr%d[%s],0x%x ", FixOp(op), bi / 4, get_partial_BI_field(bi), pc));
 	}
-	
+
 public:
 	u32 disasm(u32 pc) override;
 

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "../Common/FragmentProgramDecompiler.h"
 #include "../Common/GLSLTypes.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
@@ -33,8 +33,8 @@ public:
 	void Task();
 	const std::vector<vk::glsl::program_input>& get_inputs() { return inputs; }
 protected:
-	std::string getFloatTypeName(size_t elementCount) override;
-	std::string getHalfTypeName(size_t elementCount) override;
+	std::string getFloatTypeName(usz elementCount) override;
+	std::string getHalfTypeName(usz elementCount) override;
 	std::string getFunction(FUNCTION) override;
 	std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
 
@@ -60,7 +60,7 @@ public:
 	VkShaderModule handle = nullptr;
 	u32 id;
 	vk::glsl::shader shader;
-	std::vector<size_t> FragmentConstantOffsetCache;
+	std::vector<usz> FragmentConstantOffsetCache;
 
 	std::array<u32, 4> output_color_masks{ {} };
 

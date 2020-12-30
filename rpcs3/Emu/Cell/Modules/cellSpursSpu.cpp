@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Loader/ELF.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -12,6 +12,10 @@
 
 #include <thread>
 #include <mutex>
+
+#include "util/asm.hpp"
+#include "util/v128.hpp"
+#include "util/v128sse.hpp"
 
 LOG_CHANNEL(cellSpurs);
 
@@ -268,7 +272,7 @@ bool spursKernel1SelectWorkload(spu_thread& spu)
 	u32 wklSelectedId;
 	u32 pollStatus;
 
-	//vm::reservation_op(vm::cast(ctxt->spurs.addr(), HERE), 128, [&]()
+	//vm::reservation_op(vm::cast(ctxt->spurs.addr()), 128, [&]()
 	{
 		// lock the first 0x80 bytes of spurs
 		auto spurs = ctxt->spurs.get_ptr();
@@ -452,7 +456,7 @@ bool spursKernel2SelectWorkload(spu_thread& spu)
 	u32 wklSelectedId;
 	u32 pollStatus;
 
-	//vm::reservation_op(vm::cast(ctxt->spurs.addr(), HERE), 128, [&]()
+	//vm::reservation_op(vm::cast(ctxt->spurs.addr()), 128, [&]()
 	{
 		// lock the first 0x80 bytes of spurs
 		auto spurs = ctxt->spurs.get_ptr();
@@ -767,7 +771,7 @@ void spursSysServiceIdleHandler(spu_thread& spu, SpursKernelContext* ctxt)
 	while (true)
 	{
 		const auto spurs = spu._ptr<CellSpurs>(0x100);
-		//vm::reservation_acquire(spurs, vm::cast(ctxt->spurs.addr(), HERE), 128);
+		//vm::reservation_acquire(spurs, vm::cast(ctxt->spurs.addr()), 128);
 
 		// Find the number of SPUs that are idling in this SPURS instance
 		u32 nIdlingSpus = 0;
@@ -855,7 +859,7 @@ void spursSysServiceIdleHandler(spu_thread& spu, SpursKernelContext* ctxt)
 			continue;
 		}
 
-		//if (vm::reservation_update(vm::cast(ctxt->spurs.addr(), HERE), spu._ptr<void>(0x100), 128) && (shouldExit || foundReadyWorkload))
+		//if (vm::reservation_update(vm::cast(ctxt->spurs.addr()), spu._ptr<void>(0x100), 128) && (shouldExit || foundReadyWorkload))
 		{
 			break;
 		}
@@ -883,7 +887,7 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 	{
 		ctxt->sysSrvInitialised = 1;
 
-		//vm::reservation_acquire(ctxt, vm::cast(ctxt->spurs.addr(), HERE), 128);
+		//vm::reservation_acquire(ctxt, vm::cast(ctxt->spurs.addr()), 128);
 
 		//vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]()
 		{
@@ -975,7 +979,7 @@ void spursSysServiceProcessRequests(spu_thread& spu, SpursKernelContext* ctxt)
 	bool updateWorkload = false;
 	bool terminate = false;
 
-	//vm::reservation_op(vm::cast(ctxt->spurs.addr() + OFFSET_32(CellSpurs, wklState1), HERE), 128, [&]()
+	//vm::reservation_op(vm::cast(ctxt->spurs.addr() + OFFSET_32(CellSpurs, wklState1)), 128, [&]()
 	{
 		auto spurs = ctxt->spurs.get_ptr();
 
@@ -1217,7 +1221,7 @@ void spursSysServiceTraceUpdate(spu_thread& spu, SpursKernelContext* ctxt, u32 a
 		else
 		{
 			const auto traceBuffer = spu._ptr<CellSpursTraceInfo>(0x2C00);
-			std::memcpy(traceBuffer, vm::base(vm::cast(spurs->traceBuffer.addr(), HERE) & -0x4), 0x80);
+			std::memcpy(traceBuffer, vm::base(vm::cast(spurs->traceBuffer.addr()) & -0x4), 0x80);
 			ctxt->traceMsgCount = traceBuffer->count[ctxt->spuNum];
 		}
 
@@ -1263,7 +1267,7 @@ void spursSysServiceCleanupAfterSystemWorkload(spu_thread& spu, SpursKernelConte
 
 	spursSysServiceActivateWorkload(spu, ctxt);
 
-	//vm::reservation_op(vm::cast(ctxt->spurs.addr(), HERE), 128, [&]()
+	//vm::reservation_op(vm::cast(ctxt->spurs.addr()), 128, [&]()
 	{
 		auto spurs = ctxt->spurs.get_ptr();
 
@@ -1364,7 +1368,7 @@ bool spursTasksetSyscallEntry(spu_thread& spu)
 		spu.gpr[3]._u32[3] = spursTasksetProcessSyscall(spu, spu.gpr[3]._u32[3], spu.gpr[4]._u32[3]);
 
 		// Resume the previously executing task if the syscall did not cause a context switch
-		fmt::throw_exception("Broken (TODO)" HERE);
+		fmt::throw_exception("Broken (TODO)");
 		//if (spu.m_is_branch == false) {
 		//    spursTasksetResumeTask(spu);
 		//}
@@ -1416,7 +1420,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 	s32 rc = CELL_OK;
 	s32 numNewlyReadyTasks = 0;
 
-	//vm::reservation_op(vm::cast(ctxt->taskset.addr(), HERE), 128, [&]()
+	//vm::reservation_op(vm::cast(ctxt->taskset.addr()), 128, [&]()
 	{
 		auto taskset = ctxt->taskset;
 		v128 waiting = vm::_ref<v128>(ctxt->taskset.addr() + ::offset32(&CellSpursTaskset::waiting));
@@ -1436,16 +1440,9 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 
 		// Find the number of tasks that have become ready since the last iteration
 		{
-			auto newlyReadyTasks = v128::andnot(ready, signalled | pready);
+			v128 newlyReadyTasks = v128::andnot(ready, signalled | pready);
 
-			// TODO: Optimize this shit with std::popcount when it's known to be fixed
-			for (auto i = 0; i < 128; i++)
-			{
-				if (newlyReadyTasks._bit[i])
-				{
-					numNewlyReadyTasks++;
-				}
-			}
+			numNewlyReadyTasks = utils::popcnt128(newlyReadyTasks._u);
 		}
 
 		v128 readyButNotRunning;
@@ -1453,38 +1450,40 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 		v128 signalled0 = (signalled & (ready | pready));
 		v128 ready0 = (signalled | ready | pready);
 
+		u128 ctxtTaskIdMask = u128{1} << +(~ctxt->taskId & 127);
+
 		switch (request)
 		{
 		case SPURS_TASKSET_REQUEST_POLL_SIGNAL:
 		{
-			rc = signalled0._bit[ctxt->taskId] ? 1 : 0;
-			signalled0._bit[ctxt->taskId] = false;
+			rc = signalled0._u & ctxtTaskIdMask ? 1 : 0;
+			signalled0._u &= ~ctxtTaskIdMask;
 			break;
 		}
 		case SPURS_TASKSET_REQUEST_DESTROY_TASK:
 		{
 			numNewlyReadyTasks--;
-			running._bit[ctxt->taskId] = false;
-			enabled._bit[ctxt->taskId] = false;
-			signalled0._bit[ctxt->taskId] = false;
-			ready0._bit[ctxt->taskId] = false;
+			running._u &= ~ctxtTaskIdMask;
+			enabled._u &= ~ctxtTaskIdMask;
+			signalled0._u &= ~ctxtTaskIdMask;
+			ready0._u &= ~ctxtTaskIdMask;
 			break;
 		}
 		case SPURS_TASKSET_REQUEST_YIELD_TASK:
 		{
-			running._bit[ctxt->taskId] = false;
-			waiting._bit[ctxt->taskId] = true;
+			running._u &= ~ctxtTaskIdMask;
+			waiting._u |= ctxtTaskIdMask;
 			break;
 		}
 		case SPURS_TASKSET_REQUEST_WAIT_SIGNAL:
 		{
-			if (signalled0._bit[ctxt->taskId] == false)
+			if (!(signalled0._u & ctxtTaskIdMask))
 			{
 				numNewlyReadyTasks--;
-				running._bit[ctxt->taskId] = false;
-				waiting._bit[ctxt->taskId] = true;
-				signalled0._bit[ctxt->taskId] = false;
-				ready0._bit[ctxt->taskId] = false;
+				running._u &= ~ctxtTaskIdMask;
+				waiting._u |= ctxtTaskIdMask;
+				signalled0._u &= ~ctxtTaskIdMask;
+				ready0._u &= ~ctxtTaskIdMask;
 			}
 			break;
 		}
@@ -1493,10 +1492,10 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 			readyButNotRunning = v128::andnot(running, ready0);
 			if (taskset->wkl_flag_wait_task < CELL_SPURS_MAX_TASK)
 			{
-				readyButNotRunning._bit[taskset->wkl_flag_wait_task] = false;
+				readyButNotRunning._u &= ~(u128{1} << (~taskset->wkl_flag_wait_task & 127));
 			}
 
-			rc = readyButNotRunning != v128{} ? 1 : 0;
+			rc = readyButNotRunning._u ? 1 : 0;
 			break;
 		}
 		case SPURS_TASKSET_REQUEST_WAIT_WKL_FLAG:
@@ -1511,8 +1510,8 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 			{
 				// No tasks are waiting for the workload flag. Mark this task as waiting for the workload flag.
 				taskset->wkl_flag_wait_task = ctxt->taskId;
-				running._bit[ctxt->taskId] = false;
-				waiting._bit[ctxt->taskId] = true;
+				running._u &= ~ctxtTaskIdMask;
+				waiting._u |= ctxtTaskIdMask;
 				rc = 1;
 				numNewlyReadyTasks--;
 			}
@@ -1528,13 +1527,13 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 			readyButNotRunning = v128::andnot(running, ready0);
 			if (taskset->wkl_flag_wait_task < CELL_SPURS_MAX_TASK)
 			{
-				readyButNotRunning._bit[taskset->wkl_flag_wait_task] = false;
+				readyButNotRunning._u &= ~(u128{1} << (~taskset->wkl_flag_wait_task & 127));
 			}
 
 			// Select a task from the readyButNotRunning set to run. Start from the task after the last scheduled task to ensure fairness.
 			for (selectedTaskId = taskset->last_scheduled_task + 1; selectedTaskId < 128; selectedTaskId++)
 			{
-				if (readyButNotRunning._bit[selectedTaskId])
+				if (readyButNotRunning._u & (u128{1} << (~selectedTaskId & 127)))
 				{
 					break;
 				}
@@ -1544,7 +1543,7 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 			{
 				for (selectedTaskId = 0; selectedTaskId < taskset->last_scheduled_task + 1; selectedTaskId++)
 				{
-					if (readyButNotRunning._bit[selectedTaskId])
+					if (readyButNotRunning._u & (u128{1} << (~selectedTaskId & 127)))
 					{
 						break;
 					}
@@ -1557,13 +1556,21 @@ s32 spursTasksetProcessRequest(spu_thread& spu, s32 request, u32* taskId, u32* i
 			}
 
 			*taskId = selectedTaskId;
-			*isWaiting = waiting._bit[selectedTaskId < CELL_SPURS_MAX_TASK ? selectedTaskId : 0] ? 1 : 0;
+
 			if (selectedTaskId != CELL_SPURS_MAX_TASK)
 			{
+				const u128 selectedTaskIdMask = u128{1} << (~selectedTaskId & 127);
+
+				*isWaiting = waiting._u & selectedTaskIdMask ? 1 : 0;
 				taskset->last_scheduled_task = selectedTaskId;
-				running._bit[selectedTaskId] = true;
-				waiting._bit[selectedTaskId] = false;
+				running._u |= selectedTaskIdMask;
+				waiting._u &= ~selectedTaskIdMask;
 			}
+			else
+			{
+				*isWaiting = waiting._u & (u128{1} << 127) ? 1 : 0;
+			}
+
 			break;
 		}
 		case SPURS_TASKSET_REQUEST_RECV_WKL_FLAG:
@@ -1688,15 +1695,9 @@ s32 spursTasketSaveTaskContext(spu_thread& spu)
 	}
 
 	u32 allocLsBlocks = static_cast<u32>(taskInfo->context_save_storage_and_alloc_ls_blocks & 0x7F);
-	u32 lsBlocks = 0;
 	v128 ls_pattern = v128::from64r(taskInfo->ls_pattern._u64[0], taskInfo->ls_pattern._u64[1]);
-	for (auto i = 0; i < 128; i++)
-	{
-		if (ls_pattern._bit[i])
-		{
-			lsBlocks++;
-		}
-	}
+
+	const u32 lsBlocks = utils::popcnt128(ls_pattern._u);
 
 	if (lsBlocks > allocLsBlocks)
 	{
@@ -1706,7 +1707,7 @@ s32 spursTasketSaveTaskContext(spu_thread& spu)
 	// Make sure the stack is area is specified in the ls pattern
 	for (auto i = (ctxt->savedContextSp.value()._u32[3]) >> 11; i < 128; i++)
 	{
-		if (ls_pattern._bit[i] == false)
+		if (!(ls_pattern._u & (u128{1} << (i ^ 127))))
 		{
 			return CELL_SPURS_TASK_ERROR_STAT;
 		}
@@ -1720,13 +1721,13 @@ s32 spursTasketSaveTaskContext(spu_thread& spu)
 	ctxt->savedWriteTagGroupQueryMask = static_cast<u32>(spu.get_ch_value(MFC_RdTagMask));
 
 	// Store the processor context
-	const u32 contextSaveStorage = vm::cast(taskInfo->context_save_storage_and_alloc_ls_blocks & -0x80, HERE);
+	const u32 contextSaveStorage = vm::cast(taskInfo->context_save_storage_and_alloc_ls_blocks & -0x80);
 	std::memcpy(vm::base(contextSaveStorage), spu._ptr<void>(0x2C80), 0x380);
 
 	// Save LS context
 	for (auto i = 6; i < 128; i++)
 	{
-		if (ls_pattern._bit[i])
+		if (ls_pattern._u & (u128{1} << (i ^ 127)))
 		{
 			// TODO: Combine DMA requests for consecutive blocks into a single request
 			std::memcpy(vm::base(contextSaveStorage + 0x400 + ((i - 6) << 11)), spu._ptr<void>(CELL_SPURS_TASK_TOP + ((i - 6) << 11)), 0x800);
@@ -1830,11 +1831,11 @@ void spursTasksetDispatch(spu_thread& spu)
 		}
 
 		// Load saved context from main memory to LS
-		const u32 contextSaveStorage = vm::cast(taskInfo->context_save_storage_and_alloc_ls_blocks & -0x80, HERE);
+		const u32 contextSaveStorage = vm::cast(taskInfo->context_save_storage_and_alloc_ls_blocks & -0x80);
 		std::memcpy(spu._ptr<void>(0x2C80), vm::base(contextSaveStorage), 0x380);
 		for (auto i = 6; i < 128; i++)
 		{
-			if (ls_pattern._bit[i])
+			if (ls_pattern._u & (u128{1} << (i ^ 127)))
 			{
 				// TODO: Combine DMA requests for consecutive blocks into a single request
 				std::memcpy(spu._ptr<void>(CELL_SPURS_TASK_TOP + ((i - 6) << 11)), vm::base(contextSaveStorage + 0x400 + ((i - 6) << 11)), 0x800);
@@ -2002,7 +2003,7 @@ s32 spursTasksetLoadElf(spu_thread& spu, u32* entryPoint, u32* lowestLoadAddr, u
 		return CELL_SPURS_TASK_ERROR_INVAL;
 	}
 
-	const spu_exec_object obj(fs::file(vm::base(vm::cast(elfAddr, HERE)), u32(0 - elfAddr)));
+	const spu_exec_object obj(fs::file(vm::base(vm::cast(elfAddr)), u32(0 - elfAddr)));
 
 	if (obj != elf_error::ok)
 	{

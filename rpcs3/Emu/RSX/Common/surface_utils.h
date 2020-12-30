@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "Utilities/geometry.h"
 #include "Utilities/address_range.h"
 #include "TextureUtils.h"
@@ -106,13 +106,13 @@ namespace rsx
 
 		areai src_rect() const
 		{
-			verify(HERE), width;
+			ensure(width);
 			return { src_x, src_y, src_x + width, src_y + height };
 		}
 
 		areai dst_rect() const
 		{
-			verify(HERE), width;
+			ensure(width);
 			return { dst_x, dst_y, dst_x + u16(width * transfer_scale_x + 0.5f), dst_y + u16(height * transfer_scale_y + 0.5f) };
 		}
 	};
@@ -349,7 +349,8 @@ namespace rsx
 #else
 		void queue_tag(u32 address)
 		{
-			verify(HERE), native_pitch, rsx_pitch;
+			ensure(native_pitch);
+			ensure(rsx_pitch);
 
 			base_addr = address;
 
@@ -425,7 +426,7 @@ namespace rsx
 			});
 
 			// Try and optimize by omitting possible overlapped transfers
-			for (size_t i = old_contents.size() - 1; i > 0 /* Intentional */; i--)
+			for (usz i = old_contents.size() - 1; i > 0 /* Intentional */; i--)
 			{
 				old_contents[i].init_transfer(target);
 
@@ -444,7 +445,7 @@ namespace rsx
 		template<typename T>
 		void set_old_contents(T* other)
 		{
-			verify(HERE), old_contents.empty();
+			ensure(old_contents.empty());
 
 			if (!other || other->get_rsx_pitch() != this->get_rsx_pitch())
 			{
@@ -460,7 +461,8 @@ namespace rsx
 		void set_old_contents_region(const T& region, bool normalized)
 		{
 			// NOTE: This method will not perform pitch verification!
-			verify(HERE), region.source, region.source != static_cast<decltype(region.source)>(this);
+			ensure(region.source);
+			ensure(region.source != static_cast<decltype(region.source)>(this));
 
 			old_contents.push_back(region.template cast<image_storage_type>());
 			auto &slice = old_contents.back();
@@ -621,7 +623,7 @@ namespace rsx
 			if (spp == 1 || sample_layout == rsx::surface_sample_layout::ps3)
 				return;
 
-			verify(HERE), access_type != rsx::surface_access::write;
+			ensure(access_type != rsx::surface_access::write);
 			transform_samples_to_pixels(region);
 		}
 	};

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "KeyboardHandler.h"
 #include "Utilities/StrUtil.h"
 

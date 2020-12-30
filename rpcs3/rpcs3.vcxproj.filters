@@ -134,6 +134,9 @@
     <Filter Include="Gui\network">
       <UniqueIdentifier>{bad5498c-a915-4a96-b0cc-f754c02d8e65}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\DualSense">
+      <UniqueIdentifier>{ff7eb8a7-5545-41af-bab1-348032b9a430}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -1102,6 +1105,9 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_localized_emu.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="Input\dualsense_pad_handler.cpp">
+      <Filter>Io\DualSense</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1202,6 +1208,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\curl_handle.h">
       <Filter>Gui\network</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\dualsense_pad_handler.h">
+      <Filter>Io\DualSense</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

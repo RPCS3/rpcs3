@@ -1,7 +1,13 @@
-﻿#pragma once
+#pragma once
 
+#include "util/types.hpp"
+#include "util/atomic.hpp"
 #include "Utilities/BitField.h"
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
+
+#include <string>
+#include <functional>
 
 enum
 {

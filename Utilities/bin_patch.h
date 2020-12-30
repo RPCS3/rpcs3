@@ -1,10 +1,10 @@
-﻿#pragma once
+#pragma once
 
-#include "BEType.h"
 #include <vector>
 #include <string>
 #include <unordered_map>
 
+#include "util/types.hpp"
 #include "util/yaml.hpp"
 
 namespace patch_key
@@ -53,7 +53,7 @@ public:
 			f64 double_value;
 		} value { 0 };
 	};
-	
+
 	using patch_app_versions = std::unordered_map<std::string /*app_version*/, bool /*enabled*/>;
 	using patch_serials = std::unordered_map<std::string /*serial*/, patch_app_versions>;
 	using patch_titles = std::unordered_map<std::string /*serial*/, patch_serials>;
@@ -117,7 +117,7 @@ public:
 	static bool save_patches(const patch_map& patches, const std::string& path, std::stringstream* log_messages = nullptr);
 
 	// Create or append patches to a file
-	static bool import_patches(const patch_map& patches, const std::string& path, size_t& count, size_t& total, std::stringstream* log_messages = nullptr);
+	static bool import_patches(const patch_map& patches, const std::string& path, usz& count, usz& total, std::stringstream* log_messages = nullptr);
 
 	// Remove a patch from a file
 	static bool remove_patch(const patch_info& info);
@@ -132,15 +132,15 @@ public:
 	void append_title_patches(const std::string& title_id);
 
 	// Apply patch (returns the number of entries applied)
-	std::size_t apply(const std::string& name, u8* dst);
+	usz apply(const std::string& name, u8* dst);
 
 	// Apply patch with a check that the address exists in SPU local storage
-	std::size_t apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
+	usz apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
 
 private:
 	// Internal: Apply patch (returns the number of entries applied)
 	template <bool check_local_storage>
-	std::size_t apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
+	usz apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
 
 	// Database
 	patch_map m_map;

@@ -1,11 +1,13 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
-
-#include "Emu/CPU/CPUThread.h"
-#include "Emu/CPU/CPUDisAsm.h"
+#include "util/types.hpp"
 
 #include <QListWidget>
+#include <memory>
+#include <vector>
+
+class cpu_thread;
+class CPUDisAsm;
 
 class call_stack_list : public QListWidget
 {

@@ -1,5 +1,3 @@
-﻿#include "stdafx.h"
-
 #include "cg_disasm_window.h"
 #include "gui_settings.h"
 #include "syntax_highlighter.h"

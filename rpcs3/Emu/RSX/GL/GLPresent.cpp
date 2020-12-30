@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLGSRender.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 
@@ -148,7 +148,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		present_info.height = buffer_height;
 		present_info.pitch = buffer_pitch;
 		present_info.format = av_format;
-		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL, HERE);
+		present_info.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL);
 
 		const auto image_to_flip_ = get_present_source(&present_info, avconfig);
 		image_to_flip = image_to_flip_->id();
@@ -162,7 +162,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffers[info.buffer].offset;
 				present_info.width = buffer_width;
 				present_info.height = buffer_height;
-				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL, HERE);
+				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL);
 
 				image_to_flip2 = get_present_source(&present_info, avconfig)->id();
 			}
@@ -212,7 +212,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (image_to_flip)
 	{
-		if (m_frame->screenshot_toggle == true)
+		if (m_frame->screenshot_toggle)
 		{
 			m_frame->screenshot_toggle = false;
 
@@ -290,8 +290,14 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 	}
 
-	if (g_cfg.video.overlay)
+	if (g_cfg.video.overlay && gl::get_driver_caps().ARB_shader_draw_parameters_supported)
 	{
+		if (!m_text_printer.is_enabled())
+		{
+			m_text_printer.init();
+			m_text_printer.set_enabled(true);
+		}
+
 		// Disable depth test
 		gl_state.depth_func(GL_ALWAYS);
 
@@ -313,9 +319,13 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		const auto num_misses = m_gl_texture_cache.get_num_cache_misses();
 		const auto num_unavoidable = m_gl_texture_cache.get_num_unavoidable_hard_faults();
 		const auto cache_miss_ratio = static_cast<u32>(ceil(m_gl_texture_cache.get_cache_miss_ratio() * 100));
+		const auto num_texture_upload = m_gl_texture_cache.get_texture_upload_calls_this_frame();
+		const auto num_texture_upload_miss = m_gl_texture_cache.get_texture_upload_misses_this_frame();
+		const auto texture_upload_miss_ratio = m_gl_texture_cache.get_texture_upload_miss_percentage();
 		m_text_printer.print_text(0, 126, m_frame->client_width(), m_frame->client_height(), fmt::format("Unreleased textures: %7d", num_dirty_textures));
 		m_text_printer.print_text(0, 144, m_frame->client_width(), m_frame->client_height(), fmt::format("Texture memory: %12dM", texture_memory_size));
 		m_text_printer.print_text(0, 162, m_frame->client_width(), m_frame->client_height(), fmt::format("Flush requests: %12d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
+		m_text_printer.print_text(0, 180, m_frame->client_width(), m_frame->client_height(), fmt::format("Texture uploads: %15u (%u from CPU - %02u%%)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio));
 	}
 
 	m_frame->flip(m_context);

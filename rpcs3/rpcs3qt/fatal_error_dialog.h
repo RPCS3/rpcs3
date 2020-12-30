@@ -1,6 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include <QMessageBox>
+
+#include <string>
 
 class fatal_error_dialog : public QMessageBox
 {

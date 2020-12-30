@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "Emu/RSX/RSXVertexProgram.h"
@@ -9,6 +9,7 @@
 #include "Utilities/span.h"
 
 #include <deque>
+#include <unordered_map>
 
 enum class SHADER_TYPE
 {
@@ -27,14 +28,14 @@ namespace program_hash_util
 			u32 referenced_textures_mask;
 		};
 
-		static size_t get_vertex_program_ucode_hash(const RSXVertexProgram &program);
+		static usz get_vertex_program_ucode_hash(const RSXVertexProgram &program);
 
 		static vertex_program_metadata analyse_vertex_program(const u32* data, u32 entry, RSXVertexProgram& dst_prog);
 	};
 
 	struct vertex_program_storage_hash
 	{
-		size_t operator()(const RSXVertexProgram &program) const;
+		usz operator()(const RSXVertexProgram &program) const;
 	};
 
 	struct vertex_program_compare
@@ -61,16 +62,16 @@ namespace program_hash_util
 		*/
 		static bool is_constant(u32 sourceOperand);
 
-		static size_t get_fragment_program_ucode_size(const void* ptr);
+		static usz get_fragment_program_ucode_size(const void* ptr);
 
 		static fragment_program_metadata analyse_fragment_program(const void* ptr);
 
-		static size_t get_fragment_program_ucode_hash(const RSXFragmentProgram &program);
+		static usz get_fragment_program_ucode_hash(const RSXFragmentProgram &program);
 	};
 
 	struct fragment_program_storage_hash
 	{
-		size_t operator()(const RSXFragmentProgram &program) const;
+		usz operator()(const RSXFragmentProgram &program) const;
 	};
 
 	struct fragment_program_compare
@@ -90,8 +91,8 @@ namespace program_hash_util
 * - a typedef PipelineProperties to a type that encapsulate various state info relevant to program compilation (alpha test, primitive type,...)
 * - a	typedef ExtraData type that will be passed to the buildProgram function.
 * It should also contains the following function member :
-* - static void recompile_fragment_program(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, size_t ID);
-* - static void recompile_vertex_program(RSXVertexProgram *RSXVP, VertexProgramData& vertexProgramData, size_t ID);
+* - static void recompile_fragment_program(RSXFragmentProgram *RSXFP, FragmentProgramData& fragmentProgramData, usz ID);
+* - static void recompile_vertex_program(RSXVertexProgram *RSXVP, VertexProgramData& vertexProgramData, usz ID);
 * - static PipelineData build_program(VertexProgramData &vertexProgramData, FragmentProgramData &fragmentProgramData, const PipelineProperties &pipelineProperties, const ExtraData& extraData);
 * - static void validate_pipeline_properties(const VertexProgramData &vertexProgramData, const FragmentProgramData &fragmentProgramData, PipelineProperties& props);
 */
@@ -116,9 +117,9 @@ class program_state_cache
 
 	struct pipeline_key_hash
 	{
-		size_t operator()(const pipeline_key &key) const
+		usz operator()(const pipeline_key &key) const
 		{
-			size_t hashValue = 0;
+			usz hashValue = 0;
 			hashValue ^= rpcs3::hash_base<unsigned>(key.vertex_program_id);
 			hashValue ^= rpcs3::hash_base<unsigned>(key.fragment_program_id);
 			hashValue ^= rpcs3::hash_struct<pipeline_properties>(key.properties);
@@ -142,7 +143,7 @@ protected:
 	shared_mutex m_pipeline_mutex;
 	shared_mutex m_decompiler_mutex;
 
-	atomic_t<size_t> m_next_id = 0;
+	atomic_t<usz> m_next_id = 0;
 	bool m_cache_miss_flag; // Set if last lookup did not find any usable cached programs
 
 	binary_to_vertex_program m_vertex_shader_cache;
@@ -397,62 +398,7 @@ public:
 			std::forward<Args>(args)...);   // Other arguments
 	}
 
-	void fill_fragment_constants_buffer(gsl::span<f32> dst_buffer, const RSXFragmentProgram &fragment_program, bool sanitize = false) const
-	{
-		const auto I = m_fragment_shader_cache.find(fragment_program);
-		if (I == m_fragment_shader_cache.end())
-			return;
-
-		verify(HERE), (dst_buffer.size_bytes() >= ::narrow<int>(I->second.FragmentConstantOffsetCache.size()) * 16u);
-
-		f32* dst = dst_buffer.data();
-		alignas(16) f32 tmp[4];
-		for (size_t offset_in_fragment_program : I->second.FragmentConstantOffsetCache)
-		{
-			char* data = static_cast<char*>(fragment_program.get_data()) + offset_in_fragment_program;
-			const __m128i vector = _mm_loadu_si128(reinterpret_cast<__m128i*>(data));
-			const __m128i shuffled_vector = _mm_or_si128(_mm_slli_epi16(vector, 8), _mm_srli_epi16(vector, 8));
-
-			if (!patch_table.is_empty())
-			{
-				_mm_store_ps(tmp, _mm_castsi128_ps(shuffled_vector));
-				bool patched;
-
-				for (int i = 0; i < 4; ++i)
-				{
-					patched = false;
-					for (auto& e : patch_table.db)
-					{
-						//TODO: Use fp comparison with fabsf without hurting performance
-						patched = e.second.test_and_set(tmp[i], &dst[i]);
-						if (patched)
-						{
-							break;
-						}
-					}
-
-					if (!patched)
-					{
-						dst[i] = tmp[i];
-					}
-				}
-			}
-			else if (sanitize)
-			{
-				//Convert NaNs and Infs to 0
-				const auto masked = _mm_and_si128(shuffled_vector, _mm_set1_epi32(0x7fffffff));
-				const auto valid = _mm_cmplt_epi32(masked, _mm_set1_epi32(0x7f800000));
-				const auto result = _mm_and_si128(shuffled_vector, valid);
-				_mm_stream_si128(std::bit_cast<__m128i*>(dst), result);
-			}
-			else
-			{
-				_mm_stream_si128(std::bit_cast<__m128i*>(dst), shuffled_vector);
-			}
-
-			dst += 4;
-		}
-	}
+	void fill_fragment_constants_buffer(gsl::span<f32> dst_buffer, const RSXFragmentProgram& fragment_program, bool sanitize = false) const;
 
 	void clear()
 	{

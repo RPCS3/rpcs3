@@ -1,12 +1,12 @@
 #pragma once
 
-#include "types.h"
+#include "util/types.hpp"
 #include <climits>
 #include <string>
 #include <vector>
 #include <algorithm>
 
-static const size_t size_dropped = std::numeric_limits<size_t>::max();
+static const usz size_dropped = -1;
 
 /*
 C-style format parser. Appends formatted string to `out`, returns number of characters written.
@@ -15,13 +15,13 @@ C-style format parser. Appends formatted string to `out`, returns number of char
 `src`: rvalue reference to argument provider.
 */
 template<typename Dst, typename Char, typename Src>
-std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
+usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 {
-	const std::size_t start_pos = out.size();
+	const usz start_pos = out.size();
 
 	struct cfmt_context
 	{
-		std::size_t size; // Size of current format sequence
+		usz size; // Size of current format sequence
 
 		u8 args; // Number of extra args used
 		u8 type; // Integral type bytesize
@@ -80,7 +80,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 	const auto write_decimal = [&](u64 value, s64 min_size)
 	{
-		const std::size_t start = out.size();
+		const usz start = out.size();
 
 		do
 		{
@@ -90,7 +90,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		while (0 < --min_size || value);
 
 		// Revert written characters
-		for (std::size_t i = start, j = out.size() - 1; i < j; i++, j--)
+		for (usz i = start, j = out.size() - 1; i < j; i++, j--)
 		{
 			std::swap(out[i], out[j]);
 		}
@@ -285,7 +285,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			break;
 		}
 
-		const std::size_t start = out.size();
+		const usz start = out.size();
 		out.push_back(src.template get<Char>(ctx.args));
 
 		if (1 < ctx.width)
@@ -307,8 +307,8 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			break;
 		}
 
-		const std::size_t start = out.size();
-		const std::size_t size1 = src.fmt_string(out, ctx.args);
+		const usz start = out.size();
+		const usz size1 = src.fmt_string(out, ctx.args);
 
 		if (ctx.dot && size1 > ctx.prec)
 		{
@@ -316,7 +316,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			out.resize(start + ctx.prec);
 		}
 
-		const std::size_t size2 = out.size() - start;
+		const usz size2 = out.size() - start;
 
 		if (size2 < ctx.width)
 		{
@@ -352,7 +352,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		const u64 val = src.template get<u64>(ctx.args);
 		const bool negative = ctx.type && static_cast<s64>(val) < 0;
 
-		const std::size_t start = out.size();
+		const usz start = out.size();
 
 		if (!ctx.dot || ctx.prec)
 		{
@@ -372,7 +372,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			write_decimal(negative ? 0 - val : val, ctx.prec);
 		}
 
-		const std::size_t size2 = out.size() - start;
+		const usz size2 = out.size() - start;
 
 		if (size2 < ctx.width)
 		{
@@ -419,7 +419,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		// Trunc sign-extended signed types
 		const u64 val = src.template get<u64>(ctx.args) & mask;
 
-		const std::size_t start = out.size();
+		const usz start = out.size();
 
 		if (ctx.alter)
 		{
@@ -435,7 +435,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			write_octal(val, ctx.prec);
 		}
 
-		const std::size_t size2 = out.size() - start;
+		const usz size2 = out.size() - start;
 
 		if (size2 < ctx.width)
 		{
@@ -476,7 +476,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		// Trunc sign-extended signed types
 		const u64 val = src.template get<u64>(ctx.args) & mask;
 
-		const std::size_t start = out.size();
+		const usz start = out.size();
 
 		if (ctx.alter)
 		{
@@ -493,7 +493,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			write_hex(val, ch == 'X', ctx.prec);
 		}
 
-		const std::size_t size2 = out.size() - start;
+		const usz size2 = out.size() - start;
 
 		if (size2 < ctx.width)
 		{
@@ -540,14 +540,14 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		// Trunc sign-extended signed types
 		const u64 val = src.template get<u64>(ctx.args) & mask;
 
-		const std::size_t start = out.size();
+		const usz start = out.size();
 
 		if (!ctx.dot || ctx.prec)
 		{
 			write_decimal(val, ctx.prec);
 		}
 
-		const std::size_t size2 = out.size() - start;
+		const usz size2 = out.size() - start;
 
 		if (size2 < ctx.width)
 		{
@@ -570,11 +570,11 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 		const u64 val = src.template get<u64>(ctx.args);
 
-		const std::size_t start = out.size();
+		const usz start = out.size();
 
 		write_hex(val, false, sizeof(void*) * 2);
 
-		const std::size_t size2 = out.size() - start;
+		const usz size2 = out.size() - start;
 
 		if (size2 < ctx.width)
 		{
@@ -610,7 +610,7 @@ std::size_t cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		const u64 arg1 = ctx.args >= 1 ? src.template get<u64>(1) : 0;
 		const u64 arg2 = ctx.args >= 2 ? src.template get<u64>(2) : 0;
 
-		if (const std::size_t _size = std::snprintf(0, 0, _fmt.c_str(), arg0, arg1, arg2))
+		if (const usz _size = std::snprintf(0, 0, _fmt.c_str(), arg0, arg1, arg2))
 		{
 			out.resize(out.size() + _size);
 			std::snprintf(&out.front() + out.size() - _size, _size + 1, _fmt.c_str(), arg0, arg1, arg2);

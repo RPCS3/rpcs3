@@ -1,5 +1,6 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLGSRender.h"
+#include "Emu/RSX/rsx_methods.h"
 
 color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_format color_format)
 {
@@ -62,7 +63,7 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		{ ::gl::texture::channel::a, ::gl::texture::channel::b, ::gl::texture::channel::g, ::gl::texture::channel::r } };
 
 	default:
-		fmt::throw_exception("Unsupported surface color format 0x%x" HERE, static_cast<u32>(color_format));
+		fmt::throw_exception("Unsupported surface color format 0x%x", static_cast<u32>(color_format));
 	}
 }
 
@@ -84,7 +85,7 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 		return{ ::gl::texture::type::float32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
 
 	default:
-		fmt::throw_exception("Unsupported depth format 0x%x" HERE, static_cast<u32>(depth_format));
+		fmt::throw_exception("Unsupported depth format 0x%x", static_cast<u32>(depth_format));
 	}
 }
 
@@ -95,7 +96,7 @@ u8 rsx::internals::get_pixel_size(rsx::surface_depth_format format)
 	case rsx::surface_depth_format::z16: return 2;
 	case rsx::surface_depth_format::z24s8: return 4;
 	}
-	fmt::throw_exception("Unknown depth format" HERE);
+	fmt::throw_exception("Unknown depth format");
 }
 
 namespace
@@ -191,7 +192,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			auto rtt = std::get<1>(m_rtts.m_bound_render_targets[i]);
 			color_targets[i] = rtt->id();
 
-			verify("Pitch mismatch!" HERE), rtt->get_rsx_pitch() == m_framebuffer_layout.actual_color_pitch[i];
+			ensure(rtt->get_rsx_pitch() == m_framebuffer_layout.actual_color_pitch[i]); // "Pitch mismatch!"
 			m_surface_info[i].address = m_framebuffer_layout.color_addresses[i];
 			m_surface_info[i].pitch = m_framebuffer_layout.actual_color_pitch[i];
 			m_surface_info[i].width = m_framebuffer_layout.width;
@@ -220,7 +221,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		depth_stencil_target = ds->id();
 
-		verify("Pitch mismatch!" HERE), std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == m_framebuffer_layout.actual_zeta_pitch;
+		ensure(std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == m_framebuffer_layout.actual_zeta_pitch); // "Pitch mismatch!"
 
 		m_depth_surface_info.address = m_framebuffer_layout.zeta_address;
 		m_depth_surface_info.pitch = m_framebuffer_layout.actual_zeta_pitch;
@@ -528,7 +529,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 		if (get_internal_format() == src_texture->get_internal_format())
 		{
 			// Copy data from old contents onto this one
-			verify(HERE), src_bpp == dst_bpp;
+			ensure(src_bpp == dst_bpp);
 		}
 		else
 		{

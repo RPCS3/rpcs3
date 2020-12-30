@@ -1,8 +1,9 @@
-﻿#include "StrFmt.h"
-#include "BEType.h"
+#include "StrFmt.h"
 #include "StrUtil.h"
 #include "cfmt.h"
+#include "util/endian.hpp"
 #include "util/logs.hpp"
+#include "util/v128.hpp"
 
 #include <algorithm>
 #include <string_view>
@@ -78,14 +79,14 @@ void fmt_class_string<fmt::base57>::format(std::string& out, u64 arg)
 		static constexpr u8 s_tail[8] = {0, 2, 3, 5, 6, 7, 9, 10};
 
 		// Get full output size
-		const std::size_t out_size = _arg.size / 8 * 11 + s_tail[_arg.size % 8];
+		const usz out_size = _arg.size / 8 * 11 + s_tail[_arg.size % 8];
 
 		out.resize(out.size() + out_size);
 
 		const auto ptr = &out.front() + (out.size() - out_size);
 
 		// Each 8 bytes of input data produce 11 bytes of base57 output
-		for (std::size_t i = 0, p = 0; i < _arg.size; i += 8, p += 11)
+		for (usz i = 0, p = 0; i < _arg.size; i += 8, p += 11)
 		{
 			// Load up to 8 bytes
 			be_t<u64> be_value;
@@ -236,76 +237,88 @@ void fmt_class_string<bool>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<b8>::format(std::string& out, u64 arg)
+{
+	out += get_object(arg) ? "true" : "false";
+}
+
+template <>
 void fmt_class_string<v128>::format(std::string& out, u64 arg)
 {
 	const v128& vec = get_object(arg);
 	fmt::append(out, "0x%016llx%016llx", vec._u64[1], vec._u64[0]);
 }
 
+template <>
+void fmt_class_string<u128>::format(std::string& out, u64 arg)
+{
+	// TODO: it should be supported as full-fledged integral type (with %u, %d, etc, fmt)
+	const u128& num = get_object(arg);
+#ifdef _MSC_VER
+	fmt::append(out, "0x%016llx%016llx", num.hi, num.lo);
+#else
+	fmt::append(out, "0x%016llx%016llx", static_cast<u64>(num >> 64), static_cast<u64>(num));
+#endif
+}
+
+template <>
+void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
+{
+	const src_loc& loc = get_object(arg);
+
+	if (loc.col != umax)
+	{
+		fmt::append(out, "\n(in file %s:%u[:%u]", loc.file, loc.line, loc.col);
+	}
+	else
+	{
+		fmt::append(out, "\n(in file %s:%u", loc.file, loc.line);
+	}
+
+	if (loc.func && *loc.func)
+	{
+		fmt::append(out, ", in function %s)", loc.func);
+	}
+	else
+	{
+		out += ')';
+	}
+
+	// Print error code (may be irrelevant)
+#ifdef _WIN32
+	if (DWORD error = GetLastError())
+	{
+		fmt::append(out, " (e=0x%08x[%u])", error, error);
+	}
+#else
+	if (int error = errno)
+	{
+		fmt::append(out, " (errno=%d)", error);
+	}
+#endif
+}
+
 namespace fmt
 {
-	void raw_error(const char* msg)
-	{
-		thread_ctrl::emergency_exit(msg);
-	}
-
-	void raw_verify_error(const char* msg, const fmt_type_info* sup, u64 arg)
+	[[noreturn]] void raw_verify_error(const src_loc& loc)
 	{
 		std::string out{"Verification failed"};
-
-		// Print error code (may be irrelevant)
-#ifdef _WIN32
-		if (DWORD error = GetLastError())
-		{
-			fmt::append(out, " (e=%#x)", error);
-		}
-#else
-		if (int error = errno)
-		{
-			fmt::append(out, " (e=%d)", error);
-		}
-#endif
-
-		if (sup)
-		{
-			out += " (";
-			sup->fmt_string(out, arg); // Print value
-			out += ")";
-		}
-
-		if (msg)
-		{
-			out += ": ";
-			out += msg;
-		}
-
+		fmt::append(out, "%s", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
-	void raw_narrow_error(const char* msg, const fmt_type_info* sup, u64 arg)
+	[[noreturn]] void raw_narrow_error(const src_loc& loc)
 	{
-		std::string out{"Narrow error"};
-
-		if (sup)
-		{
-			out += " (";
-			sup->fmt_string(out, arg); // Print value
-			out += ")";
-		}
-
-		if (msg)
-		{
-			out += ": ";
-			out += msg;
-		}
-
+		std::string out{"Narrowing error"};
+		fmt::append(out, "%s", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
-	void raw_throw_exception(const char* fmt, const fmt_type_info* sup, const u64* args)
+	[[noreturn]] void raw_throw_exception(const src_loc& loc, const char* fmt, const fmt_type_info* sup, const u64* args)
 	{
 		std::string out;
 		raw_append(out, fmt, sup, args);
+		fmt::append(out, "%s", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
@@ -318,7 +331,7 @@ struct fmt::cfmt_src
 	const fmt_type_info* sup;
 	const u64* args;
 
-	bool test(std::size_t index) const
+	bool test(usz index) const
 	{
 		if (!sup[index].fmt_string)
 		{
@@ -329,26 +342,26 @@ struct fmt::cfmt_src
 	}
 
 	template <typename T>
-	T get(std::size_t index) const
+	T get(usz index) const
 	{
 		return *reinterpret_cast<const T*>(reinterpret_cast<const u8*>(args + index));
 	}
 
-	void skip(std::size_t extra)
+	void skip(usz extra)
 	{
 		sup += extra + 1;
 		args += extra + 1;
 	}
 
-	std::size_t fmt_string(std::string& out, std::size_t extra) const
+	usz fmt_string(std::string& out, usz extra) const
 	{
-		const std::size_t start = out.size();
+		const usz start = out.size();
 		sup[extra].fmt_string(out, args[extra]);
 		return out.size() - start;
 	}
 
 	// Returns type size (0 if unknown, pointer, unsigned, assumed max)
-	std::size_t type(std::size_t extra) const
+	usz type(usz extra) const
 	{
 // Hack: use known function pointers to determine type
 #define TYPE(type) \
@@ -366,14 +379,14 @@ struct fmt::cfmt_src
 		return 0;
 	}
 
-	static constexpr std::size_t size_char  = 1;
-	static constexpr std::size_t size_short = 2;
-	static constexpr std::size_t size_int   = 0;
-	static constexpr std::size_t size_long  = sizeof(ulong);
-	static constexpr std::size_t size_llong = sizeof(ullong);
-	static constexpr std::size_t size_size  = sizeof(std::size_t);
-	static constexpr std::size_t size_max   = sizeof(std::uintmax_t);
-	static constexpr std::size_t size_diff  = sizeof(std::ptrdiff_t);
+	static constexpr usz size_char  = 1;
+	static constexpr usz size_short = 2;
+	static constexpr usz size_int   = 0;
+	static constexpr usz size_long  = sizeof(ulong);
+	static constexpr usz size_llong = sizeof(ullong);
+	static constexpr usz size_size  = sizeof(usz);
+	static constexpr usz size_max   = sizeof(std::uintmax_t);
+	static constexpr usz size_diff  = sizeof(std::ptrdiff_t);
 };
 
 void fmt::raw_append(std::string& out, const char* fmt, const fmt_type_info* sup, const u64* args) noexcept
@@ -409,9 +422,9 @@ std::vector<std::string> fmt::split(const std::string& source, std::initializer_
 {
 	std::vector<std::string> result;
 
-	size_t cursor_begin = 0;
+	usz cursor_begin = 0;
 
-	for (size_t cursor_end = 0; cursor_end < source.length(); ++cursor_end)
+	for (usz cursor_end = 0; cursor_end < source.length(); ++cursor_end)
 	{
 		for (auto& separator : separators)
 		{
@@ -438,7 +451,7 @@ std::vector<std::string> fmt::split(const std::string& source, std::initializer_
 
 std::string fmt::trim(const std::string& source, const std::string& values)
 {
-	std::size_t begin = source.find_first_not_of(values);
+	usz begin = source.find_first_not_of(values);
 
 	if (begin == source.npos)
 		return {};
@@ -464,7 +477,7 @@ std::string fmt::to_lower(const std::string& string)
 
 bool fmt::match(const std::string& source, const std::string& mask)
 {
-	std::size_t source_position = 0, mask_position = 0;
+	usz source_position = 0, mask_position = 0;
 
 	for (; source_position < source.size() && mask_position < mask.size(); ++mask_position, ++source_position)
 	{
@@ -473,7 +486,7 @@ bool fmt::match(const std::string& source, const std::string& mask)
 		case '?': break;
 
 		case '*':
-			for (std::size_t test_source_position = source_position; test_source_position < source.size(); ++test_source_position)
+			for (usz test_source_position = source_position; test_source_position < source.size(); ++test_source_position)
 			{
 				if (match(source.substr(test_source_position), mask.substr(mask_position + 1)))
 				{

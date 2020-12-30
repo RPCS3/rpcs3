@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "types.h"
+#include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/shared_ptr.hpp"
 
@@ -10,9 +10,6 @@
 
 #include "mutex.h"
 #include "lockless.h"
-
-// Report error and call std::abort(), defined in main.cpp
-[[noreturn]] void report_fatal_error(const std::string&);
 
 // Hardware core layout
 enum class native_core_arrangement : u32
@@ -145,7 +142,7 @@ public:
 	u64 get_cycles();
 
 	// Wait for the thread (it does NOT change thread state, and can be called from multiple threads)
-	bool join() const;
+	bool join(bool dtor = false) const;
 
 	// Notify the thread
 	void notify();
@@ -265,7 +262,7 @@ public:
 	static u64 get_thread_affinity_mask();
 
 	// Get current thread stack addr and size
-	static std::pair<void*, std::size_t> get_thread_stack();
+	static std::pair<void*, usz> get_thread_stack();
 
 private:
 	// Miscellaneous
@@ -375,8 +372,6 @@ public:
 	// Try to abort by assigning thread_state::aborting (UB if assigning different state)
 	named_thread& operator=(thread_state s)
 	{
-		ASSUME(s == thread_state::aborting);
-
 		if (s == thread_state::aborting && thread::m_sync.fetch_op([](u64& v){ return !(v & 3) && (v |= 1); }).second)
 		{
 			if (s == thread_state::aborting)
@@ -398,7 +393,7 @@ public:
 	{
 		// Assign aborting state forcefully
 		operator=(thread_state::aborting);
-		thread::join();
+		thread::join(true);
 
 		if constexpr (!result::empty)
 		{

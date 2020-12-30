@@ -1,7 +1,7 @@
-﻿#pragma once
+#pragma once
 
 #include "gcm_enums.h"
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 enum register_type
 {
@@ -279,8 +279,6 @@ struct RSXFragmentProgram
 	u32 texcoord_control_mask = 0;
 
 	float texture_scale[16][4];
-	u8 textures_alpha_kill[16];
-	u8 textures_zfunc[16];
 
 	bool valid = false;
 
@@ -303,8 +301,6 @@ struct RSXFragmentProgram
 	RSXFragmentProgram()
 	{
 		std::memset(texture_scale, 0, sizeof(float) * 16 * 4);
-		std::memset(textures_alpha_kill, 0, sizeof(u8) * 16);
-		std::memset(textures_zfunc, 0, sizeof(u8) * 16);
 	}
 
 	static RSXFragmentProgram clone(const RSXFragmentProgram& prog)
@@ -321,7 +317,7 @@ struct RSXFragmentProgram
 
 	void clone_data() const
 	{
-		verify(HERE), ucode_length;
+		ensure(ucode_length);
 		data.deep_copy(ucode_length);
 	}
 };

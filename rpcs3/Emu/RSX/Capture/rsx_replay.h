@@ -1,7 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/RSX/rsx_methods.h"
+#include <unordered_map>
 
 #include <cereal/types/vector.hpp>
 #include <cereal/types/array.hpp>

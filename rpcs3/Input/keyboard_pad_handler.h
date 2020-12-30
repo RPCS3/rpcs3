@@ -1,10 +1,13 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Emu/Io/PadHandler.h"
 
 #include <QWindow>
 #include <QKeyEvent>
+#include <string>
+#include <vector>
+#include <unordered_map>
 
 enum mouse
 {
@@ -107,12 +110,12 @@ private:
 	std::vector<std::shared_ptr<Pad>> bindings;
 
 	// Button Movements
-	std::chrono::steady_clock::time_point m_button_time;
+	steady_clock::time_point m_button_time;
 	f32 m_analog_lerp_factor  = 1.0f;
 	f32 m_trigger_lerp_factor = 1.0f;
 
 	// Stick Movements
-	std::chrono::steady_clock::time_point m_stick_time;
+	steady_clock::time_point m_stick_time;
 	f32 m_l_stick_lerp_factor = 1.0f;
 	f32 m_r_stick_lerp_factor = 1.0f;
 	u8 m_stick_min[4] = { 0, 0, 0, 0 };
@@ -120,18 +123,18 @@ private:
 	u8 m_stick_val[4] = { 128, 128, 128, 128 };
 
 	// Mouse Movements
-	std::chrono::steady_clock::time_point m_last_mouse_move_left;
-	std::chrono::steady_clock::time_point m_last_mouse_move_right;
-	std::chrono::steady_clock::time_point m_last_mouse_move_up;
-	std::chrono::steady_clock::time_point m_last_mouse_move_down;
+	steady_clock::time_point m_last_mouse_move_left;
+	steady_clock::time_point m_last_mouse_move_right;
+	steady_clock::time_point m_last_mouse_move_up;
+	steady_clock::time_point m_last_mouse_move_down;
 	int m_deadzone_x = 60;
 	int m_deadzone_y = 60;
 	double m_multi_x = 2;
 	double m_multi_y = 2.5;
 
 	// Mousewheel
-	std::chrono::steady_clock::time_point m_last_wheel_move_up;
-	std::chrono::steady_clock::time_point m_last_wheel_move_down;
-	std::chrono::steady_clock::time_point m_last_wheel_move_left;
-	std::chrono::steady_clock::time_point m_last_wheel_move_right;
+	steady_clock::time_point m_last_wheel_move_up;
+	steady_clock::time_point m_last_wheel_move_down;
+	steady_clock::time_point m_last_wheel_move_left;
+	steady_clock::time_point m_last_wheel_move_right;
 };

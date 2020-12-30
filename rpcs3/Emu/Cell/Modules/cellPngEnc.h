@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 // Error Codes
 enum CellPngEncError
@@ -97,7 +97,7 @@ struct CellPngEncConfig
 
 struct CellPngEncAttr
 {
-	be_t<u32> memSize; // size_t
+	be_t<u32> memSize; // usz
 	u8 cmdQueueDepth;
 	be_t<u32> versionUpper;
 	be_t<u32> versionLower;
@@ -106,7 +106,7 @@ struct CellPngEncAttr
 struct CellPngEncResource
 {
 	vm::bptr<void> memAddr;
-	be_t<u32> memSize; // size_t
+	be_t<u32> memSize; // usz
 	be_t<s32> ppuThreadPriority;
 	be_t<s32> spuThreadPriority;
 };
@@ -114,7 +114,7 @@ struct CellPngEncResource
 struct CellPngEncResourceEx
 {
 	vm::bptr<void> memAddr;
-	be_t<u32> memSize; // size_t
+	be_t<u32> memSize; // usz
 	be_t<s32> ppuThreadPriority;
 	vm::bptr<void> spurs; // CellSpurs
 	u8 priority[8];
@@ -153,7 +153,7 @@ struct CellPngEncOutputParam
 	be_t<u32> location; // CellPngEncLocation
 	vm::bcptr<char> streamFileName;
 	vm::bptr<void> streamAddr;
-	be_t<u32> limitSize; // size_t
+	be_t<u32> limitSize; // usz
 };
 
 struct CellPngEncStreamInfo
@@ -162,8 +162,8 @@ struct CellPngEncStreamInfo
 	be_t<u32> location; // CellPngEncLocation
 	vm::bcptr<char> streamFileName;
 	vm::bptr<void> streamAddr;
-	be_t<u32> limitSize; // size_t
-	be_t<u32> streamSize; // size_t
+	be_t<u32> limitSize; // usz
+	be_t<u32> streamSize; // usz
 	be_t<u32> processedLine;
 	be_t<u64> userData;
 };

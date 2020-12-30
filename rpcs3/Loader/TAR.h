@@ -28,7 +28,7 @@ class tar_object
 	TARHeader read_header(u64 offset);
 
 public:
-	tar_object(const fs::file& file, size_t offset = 0);
+	tar_object(const fs::file& file, usz offset = 0);
 
 	std::vector<std::string> get_filenames();
 

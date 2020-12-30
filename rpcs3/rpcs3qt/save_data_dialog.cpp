@@ -1,4 +1,4 @@
-﻿#include "save_data_dialog.h"
+#include "save_data_dialog.h"
 #include "save_data_list_dialog.h"
 
 #include "Emu/System.h"

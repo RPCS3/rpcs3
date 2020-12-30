@@ -21,8 +21,9 @@ Examples:
 Intersection (&) and symmetric difference (^) is also available.
 */
 
-#include "types.h"
+#include "util/types.hpp"
 #include "util/atomic.hpp"
+#include "Utilities/StrFmt.h"
 
 template <typename T>
 class atomic_bs_t;
@@ -48,8 +49,8 @@ private:
 	}
 
 public:
-	static constexpr std::size_t bitmax = sizeof(T) * 8;
-	static constexpr std::size_t bitsize = static_cast<under>(T::__bitset_enum_max);
+	static constexpr usz bitmax = sizeof(T) * 8;
+	static constexpr usz bitsize = static_cast<under>(T::__bitset_enum_max);
 
 	static_assert(std::is_enum<T>::value, "bs_t<> error: invalid type (must be enum)");
 	static_assert(bitsize <= bitmax, "bs_t<> error: invalid __bitset_enum_max");
@@ -205,7 +206,7 @@ constexpr bs_t<T> operator ^(T lhs, T rhs)
 
 // Atomic bitset specialization with optimized operations
 template <typename T>
-class atomic_bs_t : public atomic_t<::bs_t<T>> // TODO: true specialization
+class atomic_bs_t : public atomic_t<::bs_t<T>>
 {
 	// Corresponding bitset type
 	using bs_t = ::bs_t<T>;
@@ -379,11 +380,6 @@ public:
 		return lhs.m_data != rhs.load().m_data;
 	}
 
-	bool test(const bs_t& rhs)
-	{
-		return base::load().test(rhs);
-	}
-
 	bool test_and_set(T rhs)
 	{
 		return atomic_storage<under>::bts(m_data.m_data, static_cast<uint>(static_cast<under>(rhs)));
@@ -394,10 +390,14 @@ public:
 		return atomic_storage<under>::btr(m_data.m_data, static_cast<uint>(static_cast<under>(rhs)));
 	}
 
-	bool test_and_complement(T rhs)
+	bool test_and_invert(T rhs)
 	{
 		return atomic_storage<under>::btc(m_data.m_data, static_cast<uint>(static_cast<under>(rhs)));
 	}
+
+	bool bit_test_set(uint bit) = delete;
+	bool bit_test_reset(uint bit) = delete;
+	bool bit_test_invert(uint bit) = delete;
 };
 
 template <typename T>

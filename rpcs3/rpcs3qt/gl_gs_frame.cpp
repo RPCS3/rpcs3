@@ -1,4 +1,3 @@
-﻿#include "stdafx.h"
 #include "gl_gs_frame.h"
 
 #include "Emu/system_config.h"
@@ -57,7 +56,7 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 {
 	if (!ctx)
 	{
-		fmt::throw_exception("Null context handle passed to set_current" HERE);
+		fmt::throw_exception("Null context handle passed to set_current");
 	}
 
 	const auto context = static_cast<GLContext*>(ctx);
@@ -75,7 +74,7 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 
 		if (!context->handle->makeCurrent(context->surface))
 		{
-			fmt::throw_exception("Could not bind OpenGL context" HERE);
+			fmt::throw_exception("Could not bind OpenGL context");
 		}
 	}
 }

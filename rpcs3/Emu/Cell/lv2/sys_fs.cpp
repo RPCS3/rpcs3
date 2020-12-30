@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_sync.h"
 #include "sys_fs.h"
 
@@ -57,7 +57,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename)
 {
 	std::string_view mp_name, vpath = filename;
 
-	for (std::size_t depth = 0;;)
+	for (usz depth = 0;;)
 	{
 		// Skip one or more '/'
 		const auto pos = vpath.find_first_not_of('/');
@@ -207,7 +207,7 @@ struct lv2_file::file_view : fs::file_base
 		const u64 old_pos = m_file->file.pos();
 		const u64 new_pos = m_file->file.seek(m_off + m_pos);
 		const u64 result = m_file->file.read(buffer, size);
-		verify(HERE), old_pos == m_file->file.seek(old_pos);
+		ensure(old_pos == m_file->file.seek(old_pos));
 
 		m_pos += result;
 		return result;
@@ -357,7 +357,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 
 	if (!open_mode)
 	{
-		fmt::throw_exception("lv2_file::open_raw(): Invalid or unimplemented flags: %#o" HERE, flags);
+		fmt::throw_exception("lv2_file::open_raw(): Invalid or unimplemented flags: %#o", flags);
 	}
 
 	std::lock_guard lock(mp->mutex);
@@ -833,7 +833,7 @@ error_code sys_fs_readdir(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDirent> dir, vm
 	if (auto* info = directory->dir_read())
 	{
 		dir->d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
-		dir->d_namlen = u8(std::min<size_t>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
+		dir->d_namlen = u8(std::min<usz>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
 		strcpy_trunc(dir->d_name, info->name);
 		*nread = sizeof(CellFsDirent);
 	}
@@ -1306,7 +1306,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			? file->op_read(arg->buf, arg->size)
 			: file->op_write(arg->buf, arg->size);
 
-		verify(HERE), old_pos == file->file.seek(old_pos);
+		ensure(old_pos == file->file.seek(old_pos));
 
 		arg->out_code = CELL_OK;
 		return CELL_OK;
@@ -1570,7 +1570,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 				}
 
 				entry.entry_name.d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
-				entry.entry_name.d_namlen = u8(std::min<size_t>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
+				entry.entry_name.d_namlen = u8(std::min<usz>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
 				strcpy_trunc(entry.entry_name.d_name, info->name);
 			}
 		}

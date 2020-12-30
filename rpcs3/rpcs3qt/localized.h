@@ -1,9 +1,11 @@
-﻿#pragma once
+#pragma once
 
 #include "category.h"
 
 #include <QString>
 #include <QObject>
+
+#include "util/types.hpp"
 
 typedef std::map<const QString, const QString> localized_cat;
 
@@ -93,7 +95,7 @@ public:
 	{
 		// These values are partly generalized. They can vary between country and category
 		// Normally only values 1,2,3,5,7 and 9 are used
-		const std::map<uint32_t, QString> level
+		const std::map<u32, QString> level
 		{
 			{ 1,  tr("0+") },
 			{ 2,  tr("3+") },
@@ -112,7 +114,7 @@ public:
 	const struct resolution
 	{
 		// there might be different values for other categories
-		const std::map<uint32_t, QString> mode
+		const std::map<u32, QString> mode
 		{
 			{ 1 << 0, tr("480p") },
 			{ 1 << 1, tr("576p") },
@@ -125,7 +127,7 @@ public:
 
 	const struct sound
 	{
-		const std::map<uint32_t, QString> format
+		const std::map<u32, QString> format
 		{
 			{ 1 << 0, tr("LPCM 2.0") },
 			//{ 1 << 1, tr("LPCM ???") },

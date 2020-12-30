@@ -1,9 +1,18 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#ifdef _WIN32
+#include "util/types.hpp"
 #include "Emu/Io/PadHandler.h"
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <Windows.h>
 #include <mmsystem.h>
+
+#include <string>
+#include <vector>
+#include <memory>
+#include <unordered_map>
 
 class mm_joystick_handler final : public PadHandlerBase
 {
@@ -129,3 +138,4 @@ private:
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 };
+#endif

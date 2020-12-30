@@ -1,7 +1,8 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "system_config.h"
 #include "Utilities/StrUtil.h"
-#include "Utilities/sysinfo.h"
+
+#include "util/sysinfo.hpp"
 
 cfg_root g_cfg;
 

@@ -1,5 +1,7 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "PSF.h"
+
+#include "util/asm.hpp"
 
 LOG_CHANNEL(psf_log, "PSF");
 
@@ -45,7 +47,8 @@ namespace psf
 		, m_max_size(max_size)
 		, m_value_string(value)
 	{
-		verify(HERE), type == format::string || type == format::array, max_size;
+		ensure(type == format::string || type == format::array);
+		ensure(max_size);
 	}
 
 	entry::entry(u32 value)
@@ -61,26 +64,26 @@ namespace psf
 
 	const std::string& entry::as_string() const
 	{
-		verify(HERE), m_type == format::string || m_type == format::array;
+		ensure(m_type == format::string || m_type == format::array);
 		return m_value_string;
 	}
 
 	u32 entry::as_integer() const
 	{
-		verify(HERE), m_type == format::integer;
+		ensure(m_type == format::integer);
 		return m_value_integer;
 	}
 
 	entry& entry::operator =(const std::string& value)
 	{
-		verify(HERE), m_type == format::string || m_type == format::array;
+		ensure(m_type == format::string || m_type == format::array);
 		m_value_string = value;
 		return *this;
 	}
 
 	entry& entry::operator =(u32 value)
 	{
-		verify(HERE), m_type == format::integer;
+		ensure(m_type == format::integer);
 		m_value_integer = value;
 		return *this;
 	}
@@ -97,7 +100,7 @@ namespace psf
 			return sizeof(u32);
 		}
 
-		fmt::throw_exception("Invalid format (0x%x)" HERE, m_type);
+		fmt::throw_exception("Invalid format (0x%x)", m_type);
 	}
 
 	registry load_object(const fs::file& stream)
@@ -112,39 +115,37 @@ namespace psf
 
 		// Get header
 		header_t header;
-		verify(HERE), stream.read(header);
+		ensure(stream.read(header));
 
 		// Check magic and version
-		verify(HERE),
-			header.magic == "\0PSF"_u32,
-			header.version == 0x101u,
-			sizeof(header_t) + header.entries_num * sizeof(def_table_t) <= header.off_key_table,
-			header.off_key_table <= header.off_data_table,
-			header.off_data_table <= stream.size();
+		ensure(header.magic == "\0PSF"_u32);
+		ensure(header.version == 0x101u);
+		ensure(sizeof(header_t) + header.entries_num * sizeof(def_table_t) <= header.off_key_table);
+		ensure(header.off_key_table <= header.off_data_table);
+		ensure(header.off_data_table <= stream.size());
 
 		// Get indices
 		std::vector<def_table_t> indices;
-		verify(HERE), stream.read(indices, header.entries_num);
+		ensure(stream.read(indices, header.entries_num));
 
 		// Get keys
 		std::string keys;
-		verify(HERE), stream.seek(header.off_key_table) == header.off_key_table;
-		verify(HERE), stream.read(keys, header.off_data_table - header.off_key_table);
+		ensure(stream.seek(header.off_key_table) == header.off_key_table);
+		ensure(stream.read(keys, header.off_data_table - header.off_key_table));
 
 		// Load entries
 		for (u32 i = 0; i < header.entries_num; ++i)
 		{
-			verify(HERE), indices[i].key_off < header.off_data_table - header.off_key_table;
+			ensure(indices[i].key_off < header.off_data_table - header.off_key_table);
 
 			// Get key name (null-terminated string)
 			std::string key(keys.data() + indices[i].key_off);
 
 			// Check entry
-			verify(HERE),
-				result.count(key) == 0,
-				indices[i].param_len <= indices[i].param_max,
-				indices[i].data_off < stream.size() - header.off_data_table,
-				indices[i].param_max < stream.size() - indices[i].data_off;
+			ensure(result.count(key) == 0);
+			ensure(indices[i].param_len <= indices[i].param_max);
+			ensure(indices[i].data_off < stream.size() - header.off_data_table);
+			ensure(indices[i].param_max < stream.size() - indices[i].data_off);
 
 			// Seek data pointer
 			stream.seek(header.off_data_table + indices[i].data_off);
@@ -153,7 +154,7 @@ namespace psf
 			{
 				// Integer data
 				le_t<u32> value;
-				verify(HERE), stream.read(value);
+				ensure(stream.read(value));
 
 				result.emplace(std::piecewise_construct,
 					std::forward_as_tuple(std::move(key)),
@@ -163,7 +164,7 @@ namespace psf
 			{
 				// String/array data
 				std::string value;
-				verify(HERE), stream.read(value, indices[i].param_len);
+				ensure(stream.read(value, indices[i].param_len));
 
 				if (indices[i].param_fmt == format::string)
 				{
@@ -190,7 +191,7 @@ namespace psf
 		std::vector<def_table_t> indices; indices.reserve(psf.size());
 
 		// Generate indices and calculate key table length
-		std::size_t key_offset = 0, data_offset = 0;
+		usz key_offset = 0, data_offset = 0;
 
 		for (const auto& entry : psf)
 		{
@@ -209,7 +210,7 @@ namespace psf
 		}
 
 		// Align next section (data) offset
-		key_offset = ::align(key_offset, 4);
+		key_offset = utils::align(key_offset, 4);
 
 		// Generate header
 		header_t header;
@@ -247,7 +248,7 @@ namespace psf
 			else if (fmt == format::string || fmt == format::array)
 			{
 				const std::string& value = entry.second.as_string();
-				const std::size_t size = std::min<std::size_t>(max, value.size());
+				const usz size = std::min<usz>(max, value.size());
 
 				if (value.size() + (fmt == format::string) > max)
 				{
@@ -260,7 +261,7 @@ namespace psf
 			}
 			else
 			{
-				fmt::throw_exception("Invalid entry format (key='%s', fmt=0x%x)" HERE, entry.first, fmt);
+				fmt::throw_exception("Invalid entry format (key='%s', fmt=0x%x)", entry.first, fmt);
 			}
 		}
 	}

@@ -1,6 +1,7 @@
-﻿#pragma once
+#pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
+#include "Utilities/StrFmt.h"
 
 enum : u32
 {
@@ -101,7 +102,7 @@ public:
 	u32 get_sample_size() const;
 
 	u32 get_channels() const;
-	
+
 	bool get_convert_to_u16() const;
 
 	bool has_capability(u32 cap) const;

@@ -1,10 +1,12 @@
-﻿#pragma once
+#pragma once
 
-#include <map>
 #include <memory>
-#include "Utilities/types.h"
+#include "util/types.hpp"
+#include "util/atomic.hpp"
+#include "util/auto_typemap.hpp"
 #include "Utilities/StrFmt.h"
-#include "Utilities/BEType.h"
+
+#include "util/to_endian.hpp"
 
 namespace utils
 {
@@ -53,11 +55,7 @@ namespace vm
 	enum addr_t : u32 {};
 
 	// Page information
-	struct memory_page
-	{
-		// Memory flags
-		atomic_t<u8> flags;
-	};
+	using memory_page = atomic_t<u8>;
 
 	// Change memory protection of specified memory region
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
@@ -76,7 +74,7 @@ namespace vm
 			return check_addr(addr, flags, Size);
 		}
 
-		return !(~g_pages[addr / 4096].flags & (flags | page_allocated));
+		return !(~g_pages[addr / 4096] & (flags | page_allocated));
 	}
 
 	// Search and map memory in specified memory location (min alignment is 0x10000)
@@ -97,8 +95,7 @@ namespace vm
 	// Object that handles memory allocations inside specific constant bounds ("location")
 	class block_t final
 	{
-		// Mapped regions: addr -> shm handle
-		std::map<u32, std::pair<u32, std::shared_ptr<utils::shm>>> m_map;
+		auto_typemap<block_t> m;
 
 		// Common mapped region for special cases
 		std::shared_ptr<utils::shm> m_common;
@@ -149,23 +146,30 @@ namespace vm
 	// Allocate segment at specified location, does nothing if exists already
 	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags = 0x200);
 
-	// Get PS3/PSV virtual memory address from the provided pointer (nullptr always converted to 0)
-	inline vm::addr_t get_addr(const void* real_ptr)
+	// Get PS3 virtual memory address from the provided pointer (nullptr or pointer from outside is always converted to 0)
+	// Super memory is allowed as well
+	inline std::pair<vm::addr_t, bool> try_get_addr(const void* real_ptr)
 	{
-		if (!real_ptr)
+		const std::make_unsigned_t<std::ptrdiff_t> diff = static_cast<const u8*>(real_ptr) - g_base_addr;
+
+		if (diff <= u64{UINT32_MAX} * 2 + 1)
 		{
-			return vm::addr_t{};
+			return {vm::addr_t{static_cast<u32>(diff)}, true};
 		}
 
-		const std::ptrdiff_t diff = static_cast<const u8*>(real_ptr) - g_base_addr;
-		const u32 res = static_cast<u32>(diff);
+		return {};
+	}
 
-		if (res == diff)
+	inline vm::addr_t get_addr(const void* ptr)
+	{
+		const auto [addr, ok] = try_get_addr(ptr);
+
+		if (!ok)
 		{
-			return static_cast<vm::addr_t>(res);
+			fmt::throw_exception("Not a virtual memory pointer (%p)", ptr);
 		}
 
-		fmt::throw_exception("Not a virtual memory pointer (%p)", real_ptr);
+		return addr;
 	}
 
 	template<typename T>
@@ -177,12 +181,11 @@ namespace vm
 	template<>
 	struct cast_impl<u32>
 	{
-		static vm::addr_t cast(u32 addr, const char* /*loc*/)
-		{
-			return static_cast<vm::addr_t>(addr);
-		}
-
-		static vm::addr_t cast(u32 addr)
+		static vm::addr_t cast(u32 addr,
+			u32,
+			u32,
+			const char*,
+			const char*)
 		{
 			return static_cast<vm::addr_t>(addr);
 		}
@@ -191,41 +194,37 @@ namespace vm
 	template<>
 	struct cast_impl<u64>
 	{
-		static vm::addr_t cast(u64 addr, const char* /*loc*/)
+		static vm::addr_t cast(u64 addr,
+			u32 line,
+			u32 col,
+			const char* file,
+			const char* func)
 		{
-			return static_cast<vm::addr_t>(static_cast<u32>(addr));
-		}
-
-		static vm::addr_t cast(u64 addr)
-		{
-			return static_cast<vm::addr_t>(static_cast<u32>(addr));
+			return static_cast<vm::addr_t>(::narrow<u32>(addr, line, col, file, func));
 		}
 	};
 
 	template<typename T, bool Se>
 	struct cast_impl<se_t<T, Se>>
 	{
-		static vm::addr_t cast(const se_t<T, Se>& addr, const char* loc)
+		static vm::addr_t cast(const se_t<T, Se>& addr,
+			u32 line,
+			u32 col,
+			const char* file,
+			const char* func)
 		{
-			return cast_impl<T>::cast(addr, loc);
-		}
-
-		static vm::addr_t cast(const se_t<T, Se>& addr)
-		{
-			return cast_impl<T>::cast(addr);
+			return cast_impl<T>::cast(addr, line, col, file, func);
 		}
 	};
 
 	template<typename T>
-	vm::addr_t cast(const T& addr, const char* loc)
+	vm::addr_t cast(const T& addr,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION())
 	{
-		return cast_impl<T>::cast(addr, loc);
-	}
-
-	template<typename T>
-	vm::addr_t cast(const T& addr)
-	{
-		return cast_impl<T>::cast(addr);
+		return cast_impl<T>::cast(addr, line, col, file, func);
 	}
 
 	// Convert specified PS3/PSV virtual memory address to a pointer for common access

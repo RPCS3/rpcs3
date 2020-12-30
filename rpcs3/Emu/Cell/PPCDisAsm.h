@@ -5,7 +5,7 @@
 class PPCDisAsm : public CPUDisAsm
 {
 protected:
-	PPCDisAsm(CPUDisAsmMode mode) : CPUDisAsm(mode)
+	PPCDisAsm(CPUDisAsmMode mode, const u8* offset) : CPUDisAsm(mode, offset)
 	{
 	}
 

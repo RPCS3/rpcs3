@@ -1,8 +1,9 @@
 #pragma once
 
 #include <type_traits>
-#include "Utilities/BEType.h"
 #include "vm.h"
+
+#include "util/to_endian.hpp"
 
 namespace vm
 {
@@ -39,13 +40,13 @@ namespace vm
 
 		T& get_ref() const
 		{
-			return *static_cast<T*>(vm::base(vm::cast(m_addr, HERE)));
+			return *static_cast<T*>(vm::base(vm::cast(m_addr)));
 		}
 
 		// convert to vm pointer
 		vm::_ptr_base<T, u32> ptr() const
 		{
-			return vm::cast(m_addr, HERE);
+			return vm::cast(m_addr);
 		}
 
 		operator simple_t<T>() const

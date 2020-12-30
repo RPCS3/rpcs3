@@ -1,10 +1,11 @@
-﻿#pragma once
+#pragma once
 #include "VKHelpers.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "VKRenderPass.h"
 #include "VKPipelineCompiler.h"
 #include "../Common/TextGlyphs.h"
+#include <unordered_map>
 
 namespace vk
 {
@@ -66,7 +67,7 @@ namespace vk
 			CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &m_pipeline_layout));
 		}
 
-		void init_program(vk::render_device &dev)
+		void init_program()
 		{
 			std::string vs =
 			{
@@ -198,9 +199,9 @@ namespace vk
 			m_program = compiler->compile(info, m_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE);
 		}
 
-		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, const float *offsets, size_t nb_offsets, std::array<float, 4> color)
+		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, const float *offsets, usz nb_offsets, std::array<float, 4> color)
 		{
-			verify(HERE), m_used_descriptors < 120;
+			ensure(m_used_descriptors < 120);
 
 			VkDescriptorSetAllocateInfo alloc_info = {};
 			alloc_info.descriptorPool = m_descriptor_pool;
@@ -216,7 +217,7 @@ namespace vk
 			float* dst = static_cast<float*>(m_uniforms_buffer->map(m_uniform_buffer_offset, 8192));
 
 			//std140 spec demands that arrays be multiples of 16 bytes
-			for (size_t i = 0; i < nb_offsets; ++i)
+			for (usz i = 0; i < nb_offsets; ++i)
 			{
 				dst[i * 4] = offsets[i * 2];
 				dst[i * 4 + 1] = offsets[i * 2 + 1];
@@ -255,7 +256,7 @@ namespace vk
 
 		void init(vk::render_device &dev, VkRenderPass render_pass)
 		{
-			verify(HERE), render_pass != VK_NULL_HANDLE;
+			ensure(render_pass != VK_NULL_HANDLE);
 
 			//At worst case, 1 char = 16*16*8 bytes (average about 24*8), so ~256K for 128 chars. Allocating 512k for verts
 			//uniform params are 8k in size, allocating for 120 lines (max lines at 4k, one column per row. Can be expanded
@@ -266,11 +267,11 @@ namespace vk
 			m_uniform_buffer_size = 983040;
 
 			init_descriptor_set(dev);
-			init_program(dev);
+			init_program();
 
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
-			const size_t buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
+			const usz buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
 
 			u8* dst = static_cast<u8*>(m_vertex_buffer->map(0, buffer_size));
 			memcpy(dst, points.data(), buffer_size);

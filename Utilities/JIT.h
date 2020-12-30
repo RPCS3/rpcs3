@@ -41,7 +41,7 @@ struct jit_runtime final : asmjit::HostRuntime
 	asmjit::Error _release(void* p) noexcept override;
 
 	// Allocate memory
-	static u8* alloc(std::size_t size, uint align, bool exec = true) noexcept;
+	static u8* alloc(usz size, uint align, bool exec = true) noexcept;
 
 	// Should be called at least once after global initialization
 	static void initialize();
@@ -148,7 +148,7 @@ inline FT build_function_asm(F&& builder)
 
 	X86Assembler compiler(&code);
 	builder(std::ref(compiler), args);
-	ASSERT(compiler.getLastError() == 0);
+	ensure(compiler.getLastError() == 0);
 
 	FT result;
 
@@ -167,10 +167,9 @@ inline FT build_function_asm(F&& builder)
 #include <string_view>
 #include <unordered_map>
 
-#include "types.h"
+#include "util/types.hpp"
 #include "mutex.h"
 
-#include "restore_new.h"
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #else
@@ -187,7 +186,6 @@ inline FT build_function_asm(F&& builder)
 #else
 #pragma GCC diagnostic pop
 #endif
-#include "define_new_memleakdetect.h"
 
 // Temporary compiler interface
 class jit_compiler final

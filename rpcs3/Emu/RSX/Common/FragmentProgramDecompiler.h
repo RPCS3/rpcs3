@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "ShaderParam.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include <sstream>
@@ -66,7 +66,7 @@ struct temp_register
 	bool requires_gather(u8 channel) const
 	{
 		//Data fetched from the single precision register requires merging of the two half registers
-		verify(HERE), channel < 4;
+		ensure(channel < 4);
 		if (aliased_h0 && channel < 2)
 		{
 			return last_write_half[channel];
@@ -114,8 +114,8 @@ struct temp_register
 /**
  * This class is used to translate RSX Fragment program to GLSL/HLSL code
  * Backend with text based shader can subclass this class and implement :
- * - virtual std::string getFloatTypeName(size_t elementCount) = 0;
- * - virtual std::string getHalfTypeName(size_t elementCount) = 0;
+ * - virtual std::string getFloatTypeName(usz elementCount) = 0;
+ * - virtual std::string getHalfTypeName(usz elementCount) = 0;
  * - virtual std::string getFunction(enum class FUNCTION) = 0;
  * - virtual std::string saturate(const std::string &code) = 0;
  * - virtual std::string compareFunction(enum class COMPARE, const std::string &, const std::string &) = 0;
@@ -209,16 +209,13 @@ protected:
 	const RSXFragmentProgram &m_prog;
 	u32 m_ctrl = 0;
 
-	u32 m_2d_sampled_textures = 0;        //Mask of textures sampled as texture2D (conflicts with samplerShadow fetch)
-	u32 m_shadow_sampled_textures = 0;    //Mask of textures sampled as boolean shadow comparisons
-
 	/** returns the type name of float vectors.
 	 */
-	virtual std::string getFloatTypeName(size_t elementCount) = 0;
+	virtual std::string getFloatTypeName(usz elementCount) = 0;
 
 	/** returns the type name of half vectors.
 	 */
-	virtual std::string getHalfTypeName(size_t elementCount) = 0;
+	virtual std::string getHalfTypeName(usz elementCount) = 0;
 
 	/** returns string calling function where arguments are passed via
 	 * $0 $1 $2 substring.
@@ -273,7 +270,12 @@ public:
 
 	struct
 	{
-		u16  in_register_mask = 0;
+		u16 in_register_mask = 0;
+
+		u16 tex2d_sampler_mask = 0;
+		u16 shadow_sampler_mask = 0;
+		u16 redirected_sampler_mask = 0;
+
 		bool has_lit_op = false;
 		bool has_gather_op = false;
 		bool has_no_output = false;

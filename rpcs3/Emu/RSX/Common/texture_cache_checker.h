@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../rsx_utils.h"
 
@@ -40,7 +40,7 @@ namespace rsx {
 				case utils::protection::no: return no > 0;
 				case utils::protection::ro: return no == 0 && ro > 0;
 				case utils::protection::rw: return no == 0 && ro == 0;
-				default: ASSUME(0);
+				default: fmt::throw_exception("Unreachable");
 				}
 			}
 
@@ -50,7 +50,7 @@ namespace rsx {
 				{
 				case utils::protection::no: if (no++ == UINT8_MAX) fmt::throw_exception("add(protection::no) overflow with NO==%d", UINT8_MAX); return;
 				case utils::protection::ro: if (ro++ == UINT8_MAX) fmt::throw_exception("add(protection::ro) overflow with RO==%d", UINT8_MAX); return;
-				default: ASSUME(0);
+				default: fmt::throw_exception("Unreachable");
 				}
 			}
 
@@ -60,7 +60,7 @@ namespace rsx {
 				{
 				case utils::protection::no: if (no-- == 0) fmt::throw_exception("remove(protection::no) overflow with NO==0"); return;
 				case utils::protection::ro: if (ro-- == 0) fmt::throw_exception("remove(protection::ro) overflow with RO==0"); return;
-				default: ASSUME(0);
+				default: fmt::throw_exception("Unreachable");
 				}
 			}
 		};
@@ -69,17 +69,17 @@ namespace rsx {
 
 		// 4GB memory space / 4096 bytes per page = 1048576 pages
 		// Initialized to utils::protection::rw
-		static constexpr size_t num_pages = 0x1'0000'0000 / 4096;
+		static constexpr usz num_pages = 0x1'0000'0000 / 4096;
 		per_page_info_t _info[num_pages]{0};
-	
+
 		static_assert(static_cast<u32>(utils::protection::rw) == 0, "utils::protection::rw must have value 0 for the above constructor to work");
 
-		static constexpr size_t rsx_address_to_index(u32 address)
+		static constexpr usz rsx_address_to_index(u32 address)
 		{
 			return (address / 4096);
 		}
 
-		static constexpr u32 index_to_rsx_address(size_t idx)
+		static constexpr u32 index_to_rsx_address(usz idx)
 		{
 			return static_cast<u32>(idx * 4096);
 		}
@@ -96,7 +96,7 @@ namespace rsx {
 
 		constexpr u32 info_pointer_to_address(const per_page_info_t* ptr) const
 		{
-			return index_to_rsx_address(static_cast<size_t>(ptr - _info));
+			return index_to_rsx_address(static_cast<usz>(ptr - _info));
 		}
 
 		std::string prot_to_str(utils::protection prot) const
@@ -106,7 +106,7 @@ namespace rsx {
 			case utils::protection::no: return "NA";
 			case utils::protection::ro: return "RO";
 			case utils::protection::rw: return "RW";
-			default: fmt::throw_exception("Unreachable " HERE);
+			default: fmt::throw_exception("Unreachable");
 			}
 		}
 
@@ -199,7 +199,7 @@ namespace rsx {
 
 		void verify() const
 		{
-			for (size_t idx = 0; idx < num_pages; idx++)
+			for (usz idx = 0; idx < num_pages; idx++)
 			{
 				auto &elmnt = _info[idx];
 				if (!elmnt.verify())

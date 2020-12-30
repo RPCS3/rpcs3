@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
@@ -438,6 +438,6 @@ error_code sys_config_register_io_error_listener(u32 config_hdl)
 
 error_code sys_config_unregister_io_error_listener(u32 config_hdl)
 {
-	sys_config.todo("sys_config_register_io_error_listener(config_hdl=0x%x)", config_hdl);
+	sys_config.todo("sys_config_unregister_io_error_listener(config_hdl=0x%x)", config_hdl);
 	return CELL_OK;
 }

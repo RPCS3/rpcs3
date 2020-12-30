@@ -1,4 +1,4 @@
-﻿
+
 #ifdef _WIN32
 #include "stdafx.h"
 #include "xinput_pad_handler.h"
@@ -148,7 +148,7 @@ int xinput_pad_handler::GetDeviceNumber(const std::string& padId)
 	if (!Init())
 		return -1;
 
-	size_t pos = padId.find(m_name_string);
+	usz pos = padId.find(m_name_string);
 	if (pos == umax)
 		return -1;
 
@@ -290,9 +290,16 @@ xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_scp(co
 	return values;
 }
 
-pad_preview_values xinput_pad_handler::get_preview_values(std::unordered_map<u64, u16> data)
+pad_preview_values xinput_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
 {
-	return { data[LT], data[RT], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg] };
+	return {
+		data.at(LT),
+		data.at(RT),
+		data.at(LSXPos) - data.at(LSXNeg),
+		data.at(LSYPos) - data.at(LSYNeg),
+		data.at(RSXPos) - data.at(RSXNeg),
+		data.at(RSYPos) - data.at(RSYNeg)
+	};
 }
 
 bool xinput_pad_handler::Init()
@@ -480,8 +487,8 @@ void xinput_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device
 
 	// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 	// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
-	size_t idx_l = profile->switch_vibration_motors ? 1 : 0;
-	size_t idx_s = profile->switch_vibration_motors ? 0 : 1;
+	usz idx_l = profile->switch_vibration_motors ? 1 : 0;
+	usz idx_s = profile->switch_vibration_motors ? 0 : 1;
 
 	u16 speed_large = profile->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : static_cast<u16>(vibration_min);
 	u16 speed_small = profile->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : static_cast<u16>(vibration_min);
@@ -492,7 +499,7 @@ void xinput_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device
 	dev->smallVibrate = speed_small;
 
 	// XBox One Controller can't handle faster vibration updates than ~10ms. Elite is even worse. So I'll use 20ms to be on the safe side. No lag was noticable.
-	if (dev->newVibrateData && (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - dev->last_vibration) > 20ms))
+	if (dev->newVibrateData && steady_clock::now() - dev->last_vibration > 20ms)
 	{
 		XINPUT_VIBRATION vibrate;
 		vibrate.wLeftMotorSpeed = speed_large * 257;
@@ -501,7 +508,7 @@ void xinput_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device
 		if ((*xinputSetState)(padnum, &vibrate) == ERROR_SUCCESS)
 		{
 			dev->newVibrateData = false;
-			dev->last_vibration = std::chrono::high_resolution_clock::now();
+			dev->last_vibration = steady_clock::now();
 		}
 	}
 }

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -34,6 +34,7 @@ extern "C"
 #include <cmath>
 #include "Utilities/lockless.h"
 #include <variant>
+#include "util/asm.hpp"
 
 std::mutex g_mutex_avcodec_open2;
 
@@ -164,20 +165,20 @@ struct vdec_context final
 		}
 		default:
 		{
-			fmt::throw_exception("Unknown video decoder type (0x%x)" HERE, type);
+			fmt::throw_exception("Unknown video decoder type (0x%x)", type);
 		}
 		}
 
 		if (!codec)
 		{
-			fmt::throw_exception("avcodec_find_decoder() failed (type=0x%x)" HERE, type);
+			fmt::throw_exception("avcodec_find_decoder() failed (type=0x%x)", type);
 		}
 
 		ctx = avcodec_alloc_context3(codec);
 
 		if (!ctx)
 		{
-			fmt::throw_exception("avcodec_alloc_context3() failed (type=0x%x)" HERE, type);
+			fmt::throw_exception("avcodec_alloc_context3() failed (type=0x%x)", type);
 		}
 
 		AVDictionary* opts{};
@@ -189,7 +190,7 @@ struct vdec_context final
 		if (err || opts)
 		{
 			avcodec_free_context(&ctx);
-			fmt::throw_exception("avcodec_open2() failed (err=0x%x, opts=%d)" HERE, err, opts ? 1 : 0);
+			fmt::throw_exception("avcodec_open2() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
 		}
 	}
 
@@ -275,7 +276,7 @@ struct vdec_context final
 					{
 						char av_error[AV_ERROR_MAX_STRING_SIZE];
 						av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
-						fmt::throw_exception("AU queuing error(0x%x): %s" HERE, ret, av_error);
+						fmt::throw_exception("AU queuing error(0x%x): %s", ret, av_error);
 					}
 
 					while (true)
@@ -286,7 +287,7 @@ struct vdec_context final
 
 						if (!frame.avf)
 						{
-							fmt::throw_exception("av_frame_alloc() failed" HERE);
+							fmt::throw_exception("av_frame_alloc() failed");
 						}
 
 						if (int ret = avcodec_receive_frame(ctx, frame.avf.get()); ret < 0)
@@ -299,7 +300,7 @@ struct vdec_context final
 							{
 								char av_error[AV_ERROR_MAX_STRING_SIZE];
 								av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, ret);
-								fmt::throw_exception("AU decoding error(0x%x): %s" HERE, ret, av_error);
+								fmt::throw_exception("AU decoding error(0x%x): %s", ret, av_error);
 							}
 						}
 
@@ -344,7 +345,7 @@ struct vdec_context final
 							case CELL_VDEC_FRC_60: amend = 90000 / 60; break;
 							default:
 							{
-								fmt::throw_exception("Invalid frame rate code set (0x%x)" HERE, frc_set);
+								fmt::throw_exception("Invalid frame rate code set (0x%x)", frc_set);
 							}
 							}
 
@@ -576,7 +577,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 
 	attr->decoderVerLower = decoderVerLower;
 	attr->decoderVerUpper = 0x4840010;
-	attr->memSize = !spec_addr ? verify(HERE, memSize) : 4 * 1024 * 1024;
+	attr->memSize = !spec_addr ? ensure(memSize) : 4 * 1024 * 1024;
 	attr->cmdDepth = 4;
 	return CELL_OK;
 }
@@ -834,7 +835,7 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 
 		default:
 		{
-			fmt::throw_exception("Unknown formatType (%d)" HERE, type);
+			fmt::throw_exception("Unknown formatType (%d)", type);
 		}
 		}
 
@@ -857,7 +858,7 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 			break;
 		default:
 		{
-			fmt::throw_exception("Unknown format (%d)" HERE, frame->format);
+			fmt::throw_exception("Unknown format (%d)", frame->format);
 		}
 		}
 
@@ -879,7 +880,7 @@ error_code cellVdecGetPicture(u32 handle, vm::cptr<CellVdecPicFormat> format, vm
 
 		sws_scale(vdec->sws, in_data, in_line, 0, h, out_data, out_line);
 
-		//const u32 buf_size = align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
+		//const u32 buf_size = utils::align(av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1), 128);
 
 		//// TODO: zero padding bytes
 
@@ -899,7 +900,7 @@ error_code cellVdecGetPictureExt(u32 handle, vm::cptr<CellVdecPicFormat2> format
 
 	if (arg4 || format2->unk0 || format2->unk1)
 	{
-		fmt::throw_exception("Unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)" HERE, arg4, format2->unk0, format2->unk1);
+		fmt::throw_exception("Unknown arguments (arg4=*0x%x, unk0=0x%x, unk1=0x%x)", arg4, format2->unk0, format2->unk1);
 	}
 
 	vm::var<CellVdecPicFormat> format;
@@ -973,8 +974,8 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	info->codecType = vdec->type;
 	info->startAddr = 0x00000123; // invalid value (no address for picture)
 	const int buffer_size = av_image_get_buffer_size(vdec->ctx->pix_fmt, vdec->ctx->width, vdec->ctx->height, 1);
-	verify(HERE), (buffer_size >= 0);
-	info->size = align<u32>(buffer_size, 128);
+	ensure(buffer_size >= 0);
+	info->size = utils::align<u32>(buffer_size, 128);
 	info->auNum = 1;
 	info->auPts[0].lower = static_cast<u32>(pts);
 	info->auPts[0].upper = static_cast<u32>(pts >> 32);

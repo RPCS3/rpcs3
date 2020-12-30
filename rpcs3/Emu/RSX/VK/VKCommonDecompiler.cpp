@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKCommonDecompiler.h"
 
 #ifdef _MSC_VER
@@ -9,9 +9,7 @@
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #endif
-#include "restore_new.h"
 #include "SPIRV/GlslangToSpv.h"
-#include "define_new_memleakdetect.h"
 #include "spirv-tools/optimizer.hpp"
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -150,7 +148,7 @@ namespace vk
 			}
 		}
 
-		fmt::throw_exception("Unknown register name: %s" HERE, varying_register_name);
+		fmt::throw_exception("Unknown register name: %s", varying_register_name);
 	}
 
 	bool compile_glsl_to_spv(std::string& shader, program_domain domain, std::vector<u32>& spv)

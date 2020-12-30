@@ -1,10 +1,11 @@
-﻿#pragma once
+#pragma once
 
-#include <atomic>
+#include "util/types.hpp"
+#include "util/atomic.hpp"
 
 namespace input
 {
-	extern std::atomic<bool> g_intercepted;
+	extern atomic_t<bool> g_intercepted;
 
 	void SetIntercepted(bool intercepted);
 }

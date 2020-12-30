@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "CgBinaryProgram.h"
 
 #include "Emu/System.h"
@@ -6,13 +6,13 @@
 
 void CgBinaryDisasm::AddScaCodeDisasm(const std::string& code)
 {
-	verify(HERE), (m_sca_opcode < 21);
+	ensure((m_sca_opcode < 21));
 	m_arb_shader += rsx_vp_sca_op_names[m_sca_opcode] + code + " ";
 }
 
 void CgBinaryDisasm::AddVecCodeDisasm(const std::string& code)
 {
-	verify(HERE), (m_vec_opcode < 26);
+	ensure((m_vec_opcode < 26));
 	m_arb_shader += rsx_vp_vec_op_names[m_vec_opcode] + code + " ";
 }
 
@@ -298,7 +298,7 @@ void CgBinaryDisasm::AddCodeCondDisasm(const std::string& dst, const std::string
 	{
 		swizzle.clear();
 	}
-	
+
 	std::string cond = fmt::format("%s%s", cond_string_table[d0.cond], swizzle.c_str());
 	AddCodeDisasm(dst + "(" + cond + ") " + ", " + src + ";");
 }
