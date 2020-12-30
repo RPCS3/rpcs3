@@ -21,6 +21,7 @@
 #include "../Common/TextureUtils.h"
 #include "../display.h"
 #include "../rsx_utils.h"
+#include "vkutils/command_pool.h"
 #include "vkutils/fence.h"
 #include "vkutils/memory_block.h"
 #include "vkutils/physical_device.h"
@@ -183,45 +184,6 @@ namespace vk
 	// Handle unexpected submit with dangling occlusion query
 	// TODO: Move queries out of the renderer!
 	void do_query_cleanup(vk::command_buffer& cmd);
-
-	class command_pool
-	{
-		vk::render_device *owner = nullptr;
-		VkCommandPool pool = nullptr;
-
-	public:
-		command_pool() = default;
-		~command_pool() = default;
-
-		void create(vk::render_device &dev)
-		{
-			owner = &dev;
-			VkCommandPoolCreateInfo infos = {};
-			infos.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-			infos.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-
-			CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
-		}
-
-		void destroy()
-		{
-			if (!pool)
-				return;
-
-			vkDestroyCommandPool((*owner), pool, nullptr);
-			pool = nullptr;
-		}
-
-		vk::render_device& get_owner()
-		{
-			return (*owner);
-		}
-
-		operator VkCommandPool()
-		{
-			return pool;
-		}
-	};
 
 	class command_buffer
 	{
