@@ -49,6 +49,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\physical_device.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\pipeline_binding_table.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\query_pool.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\render_device.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\sampler.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\shared.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\supported_extensions.h" />
@@ -80,6 +81,7 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\memory_block.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\mem_allocator.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\physical_device.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\render_device.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\sampler.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\shared.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp" />

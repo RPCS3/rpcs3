@@ -441,6 +441,7 @@ if(TARGET 3rdparty_vulkan)
 		RSX/VK/vkutils/mem_allocator.cpp
 		RSX/VK/vkutils/memory_block.cpp
 		RSX/VK/vkutils/physical_device.cpp
+		RSX/VK/vkutils/render_device.cpp
 		RSX/VK/vkutils/sampler.cpp
 		RSX/VK/vkutils/shared.cpp
 		RSX/VK/VKCommandStream.cpp

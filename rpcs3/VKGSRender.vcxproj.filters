@@ -47,6 +47,9 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\buffer_view.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\render_device.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
@@ -106,6 +109,9 @@
       <Filter>vkutils</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\VK\vkutils\buffer_view.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\render_device.h">
       <Filter>vkutils</Filter>
     </ClInclude>
   </ItemGroup>
