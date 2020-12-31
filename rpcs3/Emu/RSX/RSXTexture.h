@@ -17,23 +17,21 @@ namespace rsx
 		u32 offset() const;
 
 		// Format
-		u8   location() const;
+		u8 location() const;
 		bool cubemap() const;
-		u8   border_type() const;
-		rsx::texture_dimension   dimension() const;
-		/**
-		 * 2d texture can be either plane or cubemap texture depending on cubemap bit.
-		 * Since cubemap is a format per se in all gfx API this function directly returns
-		 * cubemap as a separate dimension.
-		 */
+		u8 border_type() const;
+		rsx::texture_dimension dimension() const;
+
+		// 2D texture can be either plane or cubemap texture depending on cubemap bit.
+		// Since cubemap is a format per se in all gfx API this function directly returns
+		// cubemap as a separate dimension.
 		rsx::texture_dimension_extended get_extended_texture_dimension() const;
-		u8   format() const;
+		u8 format() const;
 		bool is_compressed_format() const;
-		u16  mipmap() const;
-		/**
-		 * mipmap() returns value from register which can be higher than the actual number of mipmap level.
-		 * This function clamp the result with the mipmap count allowed by texture size.
-		 */
+		u16 mipmap() const;
+
+		// mipmap() returns value from register which can be higher than the actual number of mipmap level.
+		// This function clamp the result with the mipmap count allowed by texture size.
 		u16 get_exact_mipmap_count() const;
 
 		// Address
@@ -50,7 +48,7 @@ namespace rsx
 		bool enabled() const;
 		f32 min_lod() const;
 		f32 max_lod() const;
-		rsx::texture_max_anisotropy   max_aniso() const;
+		rsx::texture_max_anisotropy max_aniso() const;
 		bool alpha_kill_enabled() const;
 
 		// Control1
@@ -66,10 +64,10 @@ namespace rsx
 
 		// Filter
 		f32 bias() const;
-		rsx::texture_minify_filter  min_filter() const;
-		rsx::texture_magnify_filter  mag_filter() const;
-		u8  convolution_filter() const;
-		u8  argb_signed() const;
+		rsx::texture_minify_filter min_filter() const;
+		rsx::texture_magnify_filter mag_filter() const;
+		u8 convolution_filter() const;
+		u8 argb_signed() const;
 		bool a_signed() const;
 		bool r_signed() const;
 		bool g_signed() const;

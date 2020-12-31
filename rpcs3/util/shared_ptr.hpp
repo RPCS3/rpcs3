@@ -8,7 +8,7 @@ namespace stx
 {
 #ifdef __clang__
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wundefined_var_template"
+#pragma clang diagnostic ignored "-Wundefined-var-template"
 #endif
 
 	// Not defined anywhere (and produces a useless warning)

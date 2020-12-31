@@ -2389,7 +2389,7 @@ u64 thread_base::get_cycles()
 	}
 }
 
-void thread_ctrl::emergency_exit(std::string_view reason)
+[[noreturn]] void thread_ctrl::emergency_exit(std::string_view reason)
 {
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
 
@@ -2425,7 +2425,7 @@ void thread_ctrl::emergency_exit(std::string_view reason)
 #ifdef _WIN32
 		_endthreadex(0);
 #else
-		pthread_exit(0);
+		pthread_exit(nullptr);
 #endif
 	}
 

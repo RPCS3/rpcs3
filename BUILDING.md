@@ -19,7 +19,7 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 
 These are the essentials tools to build RPCS3 on Linux. Some of them can be installed through your favorite package manager.
 
-* Clang 9+ or GCC 9+
+* Clang 11+ or GCC 9+
 * [CMake 3.14.1+](https://www.cmake.org/download/)
 * [Qt 5.15.2](https://www.qt.io/download-qt-installer)
 * [Vulkan SDK 1.1.126+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))

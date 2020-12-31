@@ -16,19 +16,23 @@
 #include <shared_mutex>
 
 #include "util/asm.hpp"
+#include "util/vm.hpp"
 
 constexpr auto qstr = QString::fromStdString;
 
-memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
+memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr, const std::shared_ptr<cpu_thread>& cpu)
 	: QDialog(parent)
 	, m_addr(addr)
+	, m_type(!cpu || cpu->id_type() != 2 ? thread_type::ppu : thread_type::spu)
+	, m_spu_shm(m_type == thread_type::spu ? static_cast<spu_thread*>(cpu.get())->shm : nullptr)
+	, m_addr_mask(m_type == thread_type::spu ? SPU_LS_SIZE - 1 : ~0)
 {
-	setWindowTitle(tr("Memory Viewer"));
+	setWindowTitle(m_type != thread_type::spu ? tr("Memory Viewer") : tr("Memory Viewer Of %0").arg(qstr(cpu->get_name())));
+
 	setObjectName("memory_viewer");
 	setAttribute(Qt::WA_DeleteOnClose);
 	m_colcount = 4;
 	m_rowcount = 16;
-	m_addr -= m_addr % (m_colcount * 4); // Align by amount of bytes in a row
 	int pSize = 10;
 
 	// Font
@@ -51,12 +55,11 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	QHBoxLayout* hbox_tools_mem_addr = new QHBoxLayout();
 	m_addr_line = new QLineEdit(this);
 	m_addr_line->setPlaceholderText("00000000");
-	m_addr_line->setText(qstr(fmt::format("%08x", m_addr)));
 	m_addr_line->setFont(mono);
 	m_addr_line->setMaxLength(18);
 	m_addr_line->setFixedWidth(75);
 	m_addr_line->setFocus();
-	m_addr_line->setValidator(new QRegExpValidator(QRegExp("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
+	m_addr_line->setValidator(new QRegExpValidator(QRegExp(m_type == thread_type::spu ? "^(0[xX])?0*[a-fA-F0-9]{0,5}$" : "^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
 	hbox_tools_mem_addr->addWidget(m_addr_line);
 	tools_mem_addr->setLayout(hbox_tools_mem_addr);
 
@@ -125,8 +128,8 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	QLabel* l_x = new QLabel(" x ");
 	QSpinBox* sb_img_size_x = new QSpinBox(this);
 	QSpinBox* sb_img_size_y = new QSpinBox(this);
-	sb_img_size_x->setRange(1, 8192);
-	sb_img_size_y->setRange(1, 8192);
+	sb_img_size_x->setRange(1, m_type == thread_type::spu ? 256 : 4096);
+	sb_img_size_y->setRange(1, m_type == thread_type::spu ? 256 : 4096);
 	sb_img_size_x->setValue(256);
 	sb_img_size_y->setValue(256);
 	hbox_tools_img_size->addWidget(sb_img_size_x);
@@ -225,17 +228,18 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 	vbox_panel->setSizeConstraint(QLayout::SetNoConstraint);
 	setLayout(vbox_panel);
 
+	// Fill the QTextEdits
+	scroll(0);
+
 	// Events
 	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
 	{
 		bool ok = false;
 		const QString text = m_addr_line->text();
 		const u32 addr = (text.startsWith("0x", Qt::CaseInsensitive) ? text.right(text.size() - 2) : text).toULong(&ok, 16);
-		if (!ok) return;
+		if (ok) m_addr = addr;
 
-		m_addr -= m_addr % (m_colcount * 4); // Align by amount of bytes in a row
-		m_addr_line->setText(QString("%1").arg(m_addr, 8, 16, QChar('0')));	// get 8 digits in input line
-		ShowMemory();
+		scroll(0); // Refresh
 	});
 	connect(sb_words, static_cast<void (QSpinBox::*)(int)>(&QSpinBox::valueChanged), [=, this]()
 	{
@@ -254,9 +258,6 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr)
 		const int sizey = sb_img_size_y->value();
 		ShowImage(this, m_addr, format, sizex, sizey, false);
 	});
-
-	// Fill the QTextEdits
-	ShowMemory();
 
 	setFixedWidth(sizeHint().width());
 }
@@ -279,9 +280,10 @@ void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 
 void memory_viewer_panel::scroll(s32 steps)
 {
-	if (steps == 0) return;
+	m_addr += m_colcount * 4 * steps; // Add steps
+	m_addr &= m_addr_mask; // Mask it
+	m_addr -= m_addr % (m_colcount * 4); // Align by amount of bytes in a row
 
-	m_addr += m_colcount * 4 * steps;
 	m_addr_line->setText(qstr(fmt::format("%08x", m_addr)));
 	ShowMemory();
 }
@@ -314,6 +316,8 @@ void memory_viewer_panel::resizeEvent(QResizeEvent *event)
 
 std::string memory_viewer_panel::getHeaderAtAddr(u32 addr)
 {
+	if (m_type == thread_type::spu) return {};
+
 	// Check if its an SPU Local Storage beginning
 	const u32 spu_boundary = utils::align<u32>(addr, SPU_LS_SIZE);
 
@@ -366,7 +370,7 @@ void memory_viewer_panel::ShowMemory()
 
 		{
 			// Check if this address contains potential header
-			const u32 addr = m_addr + (row - spu_passed) * m_colcount * 4;
+			const u32 addr = (m_addr + (row - spu_passed) * m_colcount * 4) & m_addr_mask;
 			const std::string header = getHeaderAtAddr(addr);
 			if (!header.empty())
 			{
@@ -412,7 +416,7 @@ void memory_viewer_panel::ShowMemory()
 				}
 			}
 
-			t_mem_addr_str += qstr(fmt::format("%08x", m_addr + (row - spu_passed) * m_colcount * 4));
+			t_mem_addr_str += qstr(fmt::format("%08x", (m_addr + (row - spu_passed) * m_colcount * 4) & m_addr_mask));
 		}
 
 		for (u32 col = 0; col < m_colcount; col++)
@@ -422,11 +426,11 @@ void memory_viewer_panel::ShowMemory()
 				t_mem_hex_str += "  ";
 			}
 
-			u32 addr = m_addr + (row - spu_passed) * m_colcount * 4 + col * 4;
+			u32 addr = (m_addr + (row - spu_passed) * m_colcount * 4 + col * 4) & m_addr_mask;
 
-			if (vm::check_addr(addr, 0, 4))
+			if (m_spu_shm || vm::check_addr(addr, 0, 4))
 			{
-				const be_t<u32> rmem = *vm::get_super_ptr<u32>(addr);
+				const be_t<u32> rmem = m_spu_shm ? *reinterpret_cast<be_t<u32>*>(m_spu_shm->map_self() + addr) : *vm::get_super_ptr<u32>(addr);
 				t_mem_hex_str += qstr(fmt::format("%02x %02x %02x %02x",
 					static_cast<u8>(rmem >> 24),
 					static_cast<u8>(rmem >> 16),
@@ -472,20 +476,28 @@ void memory_viewer_panel::SetPC(const uint pc)
 
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv)
 {
-	if (width == 0 || height == 0)
+	const u64 memsize = 4ull * width * height;
+
+	if (!memsize || memsize > m_addr_mask)
 	{
 		return;
 	}
 
 	std::shared_lock rlock(vm::g_mutex);
 
-	if (!vm::check_addr(addr, 0, width * height * 4))
+	if (!m_spu_shm && !vm::check_addr(addr, 0, static_cast<u32>(memsize)))
 	{
 		return;
 	}
 
-	const auto originalBuffer  = vm::get_super_ptr<const uchar>(addr);
-	const auto convertedBuffer = static_cast<uchar*>(std::malloc(4ULL * width * height));
+	const auto originalBuffer  = m_spu_shm ? (m_spu_shm->map_self() + addr) : vm::get_super_ptr<const u8>(addr);
+	const auto convertedBuffer = new (std::nothrow) u8[static_cast<u32>(memsize)];
+
+	if (!convertedBuffer)
+	{
+		// OOM, give up
+		return;
+	}
 
 	switch (format)
 	{
@@ -576,7 +588,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 		}
 	}
 
-	QImage image(convertedBuffer, width, height, QImage::Format_ARGB32, [](void* buffer){ std::free(buffer); }, convertedBuffer);
+	QImage image(convertedBuffer, width, height, QImage::Format_ARGB32, [](void* buffer){ delete[] static_cast<u8*>(buffer); }, convertedBuffer);
 	if (image.isNull()) return;
 
 	QLabel* canvas = new QLabel();

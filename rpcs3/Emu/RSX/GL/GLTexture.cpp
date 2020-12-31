@@ -297,9 +297,7 @@ namespace gl
 			set_parameterf(GL_TEXTURE_MAX_LOD, tex.max_lod());
 		}
 
-		const int aniso_override_level = g_cfg.video.anisotropic_level_override;
-		const bool aniso_override = !g_cfg.video.strict_rendering_mode && aniso_override_level > 0;
-		const f32 af_level = aniso_override ? aniso_override_level : max_aniso(tex.max_aniso());
+		const f32 af_level = max_aniso(tex.max_aniso());
 		set_parameterf(GL_TEXTURE_MAX_ANISOTROPY_EXT, af_level);
 		set_parameteri(GL_TEXTURE_MAG_FILTER, tex_mag_filter(tex.mag_filter()));
 

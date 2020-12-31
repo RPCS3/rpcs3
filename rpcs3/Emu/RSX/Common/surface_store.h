@@ -761,24 +761,6 @@ namespace rsx
 			if (_It != m_depth_stencil_storage.end())
 				return Traits::get(_It->second);
 
-			fmt::throw_exception("Unreachable");
-		}
-
-		surface_type get_color_surface_at(u32 address)
-		{
-			auto It = m_render_targets_storage.find(address);
-			if (It != m_render_targets_storage.end())
-				return Traits::get(It->second);
-
-			return nullptr;
-		}
-
-		surface_type get_depth_stencil_surface_at(u32 address)
-		{
-			auto It = m_depth_stencil_storage.find(address);
-			if (It != m_depth_stencil_storage.end())
-				return Traits::get(It->second);
-
 			return nullptr;
 		}
 
