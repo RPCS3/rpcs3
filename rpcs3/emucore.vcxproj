@@ -76,6 +76,7 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
+    <ClCompile Include="Emu\Io\Buzz.cpp" />
     <ClCompile Include="Emu\Audio\AudioBackend.cpp" />
     <ClCompile Include="Emu\Io\interception.cpp" />
     <ClCompile Include="Emu\Io\KeyboardHandler.cpp" />
@@ -445,6 +446,7 @@
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h" />
     <ClInclude Include="Emu\Cell\Modules\cellStorage.h" />
     <ClInclude Include="Emu\Io\GHLtar.h" />
+    <ClInclude Include="Emu\Io\Buzz.h" />
     <ClInclude Include="Emu\Io\interception.h" />
     <ClInclude Include="Emu\Io\pad_types.h" />
     <ClInclude Include="Emu\Io\Keyboard.h" />
@@ -498,6 +500,8 @@
     <ClInclude Include="util\fixed_typemap.hpp" />
     <ClInclude Include="util\auto_typemap.hpp" />
     <ClInclude Include="util\init_mutex.hpp" />
+    <ClInclude Include="util\slow_mutex.hpp" />
+    <ClInclude Include="util\fifo_mutex.hpp" />
     <ClInclude Include="util\logs.hpp" />
     <ClInclude Include="..\Utilities\dyn_lib.hpp" />
     <ClInclude Include="..\Utilities\File.h" />

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "atomic.hpp"
+#include "util/types.hpp"
+#include "util/atomic.hpp"
 #include "Utilities/StrFmt.h"
 #include <mutex>
 
@@ -79,7 +80,7 @@ public:
 		}
 	}
 
-	bool is_free() noexcept
+	bool is_free() const noexcept
 	{
 		return !m_value;
 	}

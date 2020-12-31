@@ -896,6 +896,9 @@
     <ClCompile Include="Emu\Io\GHLtar.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\Buzz.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_crypto_engine.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -1807,6 +1810,9 @@
     <ClInclude Include="Emu\Io\GHLtar.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\Buzz.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\NP\np_handler.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
@@ -1829,6 +1835,12 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="util\init_mutex.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\slow_mutex.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\fifo_mutex.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="util\logs.hpp">
