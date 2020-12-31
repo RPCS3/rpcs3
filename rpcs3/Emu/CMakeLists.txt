@@ -358,6 +358,7 @@ target_sources(rpcs3_emu PRIVATE
 	Io/usb_device.cpp
 	Io/Skylander.cpp
 	Io/GHLtar.cpp
+	Io/Buzz.cpp
 )
 
 # Np

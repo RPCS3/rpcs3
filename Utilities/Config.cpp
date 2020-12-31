@@ -82,7 +82,7 @@ bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 
 	if (ret.ec != std::errc() || ret.ptr != end || (start[0] == '-' && sign < 0))
 	{
-		if (out) cfg_log.error("cfg::try_to_int('%s'): invalid integer", value);
+		if (out) cfg_log.error("cfg::try_to_int64('%s'): invalid integer", value);
 		return false;
 	}
 
@@ -90,7 +90,7 @@ bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_int('%s'): out of bounds (%d..%d)", value, min, max);
+		if (out) cfg_log.error("cfg::try_to_int64('%s'): out of bounds (%d..%d)", value, min, max);
 		return false;
 	}
 
@@ -121,13 +121,13 @@ bool cfg::try_to_uint64(u64* out, const std::string& value, u64 min, u64 max)
 
 	if (ret.ec != std::errc() || ret.ptr != end)
 	{
-		if (out) cfg_log.error("cfg::try_to_int('%s'): invalid integer", value);
+		if (out) cfg_log.error("cfg::try_to_uint64('%s'): invalid integer", value);
 		return false;
 	}
 
 	if (result < min || result > max)
 	{
-		if (out) cfg_log.error("cfg::try_to_int('%s'): out of bounds (%u..%u)", value, min, max);
+		if (out) cfg_log.error("cfg::try_to_uint64('%s'): out of bounds (%u..%u)", value, min, max);
 		return false;
 	}
 

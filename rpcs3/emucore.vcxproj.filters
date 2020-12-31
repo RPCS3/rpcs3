@@ -896,6 +896,9 @@
     <ClCompile Include="Emu\Io\GHLtar.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\Buzz.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_crypto_engine.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
@@ -1805,6 +1808,9 @@
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\GHLtar.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Buzz.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\NP\np_handler.h">
