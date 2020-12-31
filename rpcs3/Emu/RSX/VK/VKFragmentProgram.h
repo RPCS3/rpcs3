@@ -3,7 +3,8 @@
 #include "../Common/GLSLTypes.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "VulkanAPI.h"
-#include "VKHelpers.h"
+#include "VKProgramPipeline.h"
+#include "vkutils/pipeline_binding_table.h"
 
 namespace vk
 {

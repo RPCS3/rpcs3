@@ -7,6 +7,7 @@
 #include "VKResourceManager.h"
 #include "VKRenderPass.h"
 #include "VKPipelineCompiler.h"
+#include "vkutils/sampler.h"
 
 #include "../Overlays/overlays.h"
 

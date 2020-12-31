@@ -1,8 +1,13 @@
 #pragma once
-#include "VKHelpers.h"
+#include "VulkanAPI.h"
+#include <deque>
 
 namespace vk
 {
+	class command_buffer;
+	class query_pool;
+	class render_device;
+
 	class query_pool_manager
 	{
 		struct query_slot_info

@@ -1,11 +1,14 @@
 #pragma once
-#include "VKHelpers.h"
 #include "../rsx_utils.h"
 #include "Utilities/hash.h"
 #include "Utilities/lockless.h"
+#include "VKProgramPipeline.h"
+#include "vkutils/graphics_pipeline_state.h"
 
 namespace vk
 {
+	class render_device;
+
 	struct pipeline_props
 	{
 		graphics_pipeline_state state;
