@@ -1831,6 +1831,12 @@
     <ClInclude Include="util\init_mutex.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="util\slow_mutex.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\fifo_mutex.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
     <ClInclude Include="util\logs.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>

@@ -498,6 +498,8 @@
     <ClInclude Include="util\fixed_typemap.hpp" />
     <ClInclude Include="util\auto_typemap.hpp" />
     <ClInclude Include="util\init_mutex.hpp" />
+    <ClInclude Include="util\slow_mutex.hpp" />
+    <ClInclude Include="util\fifo_mutex.hpp" />
     <ClInclude Include="util\logs.hpp" />
     <ClInclude Include="..\Utilities\dyn_lib.hpp" />
     <ClInclude Include="..\Utilities\File.h" />
