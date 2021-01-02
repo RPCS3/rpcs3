@@ -2543,7 +2543,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 						rsx_mask = 0b00000000000000001111111100000000;
 						break;
 					case 24:
-						// 3900X, Assign threads 7-22
+						// 3900X, Assign threads 7-24
 						ppu_mask = 0b111111000000000000000000;
 						spu_mask = 0b000000111111000000000000;
 						rsx_mask = 0b000000000000111111000000;
