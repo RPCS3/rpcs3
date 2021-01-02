@@ -733,9 +733,18 @@ namespace fs
 		// Always use write flag, remove read flag
 		if (fs::file f{path, mode + fs::write - fs::read})
 		{
-			// Write args sequentially
-			(f.write(args), ...);
-			return true;
+			if constexpr (sizeof...(args) == 2u && (std::is_pointer_v<Args> || ...))
+			{
+				// Specialization for [const void*, usz] args
+				f.write(args...);
+				return true;
+			}
+			else
+			{
+				// Write args sequentially
+				(f.write(args), ...);
+				return true;
+			}
 		}
 
 		return false;
