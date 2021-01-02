@@ -596,9 +596,9 @@ namespace rsx
 				return;
 			}
 
-			u32 entry_count = 0;
 			std::vector<fs::dir_entry> entries;
-			for (auto It = root.begin(); It != root.end(); ++It, entry_count++)
+
+			for (auto&& tmp : root)
 			{
 				if (tmp.is_directory)
 					continue;
@@ -606,7 +606,9 @@ namespace rsx
 				entries.push_back(tmp);
 			}
 
-			if ((entry_count = ::size32(entries)) <= 2)
+			u32 entry_count = ::size32(entries);
+
+			if (!entry_count)
 				return;
 
 			root.rewind();
