@@ -423,8 +423,7 @@ namespace rsx
 		std::string version_prefix;
 		std::string root_path;
 		std::string pipeline_class_name;
-		std::mutex fpd_mutex;
-		std::unordered_map<u64, std::vector<u8>> fragment_program_data;
+		lf_fifo<std::unique_ptr<u8[]>, 100> fragment_program_data;
 
 		backend_storage& m_storage;
 
@@ -694,9 +693,7 @@ namespace rsx
 		{
 			RSXVertexProgram vp = {};
 
-			std::string filename = fmt::format("%llX.vp", program_hash);
-
-			fs::file f(root_path + "/raw/" + filename);
+			fs::file f(fmt::format("%s/raw/%llX.vp", root_path, program_hash));
 			if (f) f.read(vp.data, f.size() / sizeof(u32));
 
 			vp.skip_vertex_input_check = true;
@@ -706,19 +703,21 @@ namespace rsx
 
 		RSXFragmentProgram load_fp_raw(u64 program_hash)
 		{
-			std::vector<u8> data;
-			std::string filename = fmt::format("%llX.fp", program_hash);
-
-			fs::file f(root_path + "/raw/" + filename);
-			if (f) f.read(data, f.size());
+			fs::file f(fmt::format("%s/raw/%llX.fp", root_path, program_hash));
 
 			RSXFragmentProgram fp = {};
-			fp.ucode_length = ::size32(data);
+
+			const u32 size = fp.ucode_length = f ? ::size32(f) : 0;
+
+			if (!size)
 			{
-				std::lock_guard lock(fpd_mutex);
-				fp.data = fragment_program_data.insert_or_assign(program_hash, std::move(data)).first->second.data();
+				return fp;
 			}
 
+			auto buf = std::make_unique<u8[]>(size);
+			fp.data = buf.get();
+			f.read(buf.get(), size);
+			fragment_program_data[fragment_program_data.push_begin()] = std::move(buf);
 			return fp;
 		}
 
