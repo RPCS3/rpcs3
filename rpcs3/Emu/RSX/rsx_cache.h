@@ -447,20 +447,34 @@ namespace rsx
 					fs::dir_entry tmp = entries[pos];
 
 					const auto filename = directory_path + "/" + tmp.name;
-					std::vector<u8> bytes;
 					fs::file f(filename);
+
+					if (!f)
+					{
+						// Unexpected error, but avoid crash
+						continue;
+					}
+
 					if (f.size() != sizeof(pipeline_data))
 					{
 						rsx_log.error("Removing cached pipeline object %s since it's not binary compatible with the current shader cache", tmp.name.c_str());
 						fs::remove_file(filename);
 						continue;
 					}
-					f.read<u8>(bytes, f.size());
 
-					auto entry = unpack(*reinterpret_cast<pipeline_data*>(bytes.data()));
+					pipeline_data pdata{};
+					f.read(&pdata, f.size());
+
+					auto entry = unpack(pdata);
+
+					if (std::get<1>(entry).data.empty() || !std::get<2>(entry).ucode_length)
+					{
+						continue;
+					}
+
 					m_storage.preload_programs(std::get<1>(entry), std::get<2>(entry));
 
-					unpacked[unpacked.push_begin()] = entry;
+					unpacked[unpacked.push_begin()] = std::move(entry);
 				}
 				// Do not account for an extra shader that was never processed
 				processed--;
@@ -573,23 +587,20 @@ namespace rsx
 
 			std::string directory_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix;
 
-			if (!fs::is_dir(directory_path))
+			fs::dir root = fs::dir(directory_path);
+
+			if (!root)
 			{
 				fs::create_path(directory_path);
 				fs::create_path(root_path + "/raw");
-
 				return;
 			}
-
-			fs::dir root = fs::dir(directory_path);
 
 			u32 entry_count = 0;
 			std::vector<fs::dir_entry> entries;
 			for (auto It = root.begin(); It != root.end(); ++It, entry_count++)
 			{
-				fs::dir_entry tmp = *It;
-
-				if (tmp.name == "." || tmp.name == "..")
+				if (tmp.is_directory)
 					continue;
 
 				entries.push_back(tmp);
@@ -643,17 +654,20 @@ namespace rsx
 			}
 
 			pipeline_data data = pack(pipeline, vp, fp);
+
 			std::string fp_name = root_path + "/raw/" + fmt::format("%llX.fp", data.fragment_program_hash);
 			std::string vp_name = root_path + "/raw/" + fmt::format("%llX.vp", data.vertex_program_hash);
 
-			if (!fs::is_file(fp_name))
+			// Writeback to cache either if file does not exist or it is invalid (unexpected size)
+			// Note: fs::write_file is not atomic, if the process is terminated in the middle an empty file is created
+			if (fs::stat_t s{}; !fs::stat(fp_name, s) || s.size != fp.ucode_length)
 			{
-				fs::file(fp_name, fs::rewrite).write(fp.get_data(), fp.ucode_length);
+				fs::write_file(fp_name, fs::rewrite, fp.get_data(), fp.ucode_length);
 			}
 
-			if (!fs::is_file(vp_name))
+			if (fs::stat_t s{}; !fs::stat(vp_name, s) || s.size != vp.data.size() * sizeof(u32))
 			{
-				fs::file(vp_name, fs::rewrite).write<u32>(vp.data);
+				fs::write_file(vp_name, fs::rewrite, vp.data);
 			}
 
 			u64 state_hash = 0;
@@ -669,21 +683,20 @@ namespace rsx
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_shadow_textures);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_redirected_textures);
 
-			std::string pipeline_file_name = fmt::format("%llX+%llX+%llX+%llX.bin", data.vertex_program_hash, data.fragment_program_hash, data.pipeline_storage_hash, state_hash);
-			std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "/" + pipeline_file_name;
-			fs::file(pipeline_path, fs::rewrite).write(&data, sizeof(pipeline_data));
+			const std::string pipeline_file_name = fmt::format("%llX+%llX+%llX+%llX.bin", data.vertex_program_hash, data.fragment_program_hash, data.pipeline_storage_hash, state_hash);
+			const std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "/" + pipeline_file_name;
+			fs::write_file(pipeline_path, fs::rewrite, &data, sizeof(data));
 		}
 
 		RSXVertexProgram load_vp_raw(u64 program_hash)
 		{
-			std::vector<u32> data;
+			RSXVertexProgram vp = {};
+
 			std::string filename = fmt::format("%llX.vp", program_hash);
 
 			fs::file f(root_path + "/raw/" + filename);
-			f.read<u32>(data, f.size() / sizeof(u32));
+			if (f) f.read(vp.data, f.size() / sizeof(u32));
 
-			RSXVertexProgram vp = {};
-			vp.data = data;
 			vp.skip_vertex_input_check = true;
 
 			return vp;
@@ -695,24 +708,26 @@ namespace rsx
 			std::string filename = fmt::format("%llX.fp", program_hash);
 
 			fs::file f(root_path + "/raw/" + filename);
-			f.read<u8>(data, f.size());
+			if (f) f.read(data, f.size());
 
 			RSXFragmentProgram fp = {};
-			{
-				std::lock_guard<std::mutex> lock(fpd_mutex);
-				fragment_program_data[program_hash] = data;
-				fp.data = fragment_program_data[program_hash].data();
-			}
 			fp.ucode_length = ::size32(data);
+			{
+				std::lock_guard lock(fpd_mutex);
+				fp.data = fragment_program_data.insert_or_assign(program_hash, std::move(data)).first->second.data();
+			}
 
 			return fp;
 		}
 
 		std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram> unpack(pipeline_data &data)
 		{
-			RSXVertexProgram vp = load_vp_raw(data.vertex_program_hash);
-			RSXFragmentProgram fp = load_fp_raw(data.fragment_program_hash);
-			pipeline_storage_type pipeline = data.pipeline_properties;
+			std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram> result;
+			auto& [pipeline, vp, fp] = result;
+
+			vp = load_vp_raw(data.vertex_program_hash);
+			fp = load_fp_raw(data.fragment_program_hash);
+			pipeline = data.pipeline_properties;
 
 			vp.output_mask = data.vp_ctrl;
 			vp.texture_dimensions = data.vp_texture_dimensions;
@@ -741,7 +756,7 @@ namespace rsx
 			fp.shadow_textures = data.fp_shadow_textures;
 			fp.redirected_textures = data.fp_redirected_textures;
 
-			return std::make_tuple(pipeline, vp, fp);
+			return result;
 		}
 
 		pipeline_data pack(const pipeline_storage_type &pipeline, const RSXVertexProgram &vp, const RSXFragmentProgram &fp)
