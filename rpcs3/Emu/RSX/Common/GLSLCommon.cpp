@@ -858,7 +858,7 @@ namespace glsl
 			if (props.emulate_shadow_compare)
 			{
 				OS <<
-				"#define SHADOW_COORD(coord3, scale, flags) vec3(coord3.xy * scale, _test_bit(flags, DEPTH_FLOAT)? coord3.z : min(coord3.z, 1.0))\n"
+				"#define SHADOW_COORD(coord3, scale, flags) vec3(coord3.xy * scale, _test_bit(flags, DEPTH_FLOAT)? coord3.z : min(float(coord3.z), 1.0))\n"
 				"#define SHADOW_COORD_PROJ(coord4, scale, flags) vec4(coord4.xy * scale, _test_bit(flags, DEPTH_FLOAT)? coord4.z : min(coord4.z, coord4.w), coord4.w)\n"
 				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), SHADOW_COORD(coord3, texture_parameters[index].scale, TEX_FLAGS(index)))\n"
 				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), SHADOW_COORD_PROJ(coord4, texture_parameters[index].scale, TEX_FLAGS(index)))\n";
