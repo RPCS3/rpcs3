@@ -557,10 +557,12 @@ namespace vk
 		pipeline_key key;
 		key.compiler_opt = 0;
 		key.properties = properties;
+	
+		const auto& method_regs = rsx::get_current_renderer()->method_regs;
 
-		if (rsx::method_registers.alpha_test_enabled()) [[unlikely]]
+		if (method_regs.alpha_test_enabled()) [[unlikely]]
 		{
-			switch (rsx::method_registers.alpha_func())
+			switch (method_regs.alpha_func())
 			{
 			case rsx::comparison_function::always:
 				break;
@@ -587,13 +589,13 @@ namespace vk
 			}
 		}
 
-		if (rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
-		if (rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
-		if (rsx::method_registers.shader_control() & RSX_SHADER_CONTROL_USES_KIL) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_KIL;
+		if (method_regs.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
+		if (method_regs.shader_control() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
+		if (method_regs.shader_control() & RSX_SHADER_CONTROL_USES_KIL) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_KIL;
 		if (metadata.referenced_textures_mask) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES;
 		if (metadata.has_branch_instructions) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (metadata.has_pack_instructions) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_PACKING;
-		if (rsx::method_registers.polygon_stipple_enabled()) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_STIPPLING;
+		if (method_regs.polygon_stipple_enabled()) key.compiler_opt |= program_common::interpreter::COMPILER_OPT_ENABLE_STIPPLING;
 
 		if (m_current_key == key) [[likely]]
 		{

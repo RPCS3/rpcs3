@@ -455,12 +455,8 @@ namespace rsx
 	void clip_image(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch);
 	void clip_image_may_overlap(u8 *dst, const u8 *src, int clip_x, int clip_y, int clip_w, int clip_h, int bpp, int src_pitch, int dst_pitch, u8* buffer);
 
-	std::array<float, 4> get_constant_blend_colors();
-
-	/**
-	 * Shuffle texel layout from xyzw to wzyx
-	 * TODO: Variable src/dst and optional se conversion
-	 */
+	// Shuffle texel layout from xyzw to wzyx
+	// TODO: Variable src/dst and optional se conversion
 	template <typename T>
 	void shuffle_texel_data_wzyx(void* data, u16 row_pitch_in_bytes, u16 row_length_in_texels, u16 num_rows)
 	{

@@ -36,7 +36,7 @@ void GLGSRender::set_viewport()
 {
 	// NOTE: scale offset matrix already contains the viewport transformation
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
-		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
+		method_regs.surface_clip_width(), method_regs.surface_clip_height());
 
 	glViewport(0, 0, clip_width, clip_height);
 }
@@ -496,7 +496,7 @@ void GLGSRender::clear_surface(u32 arg)
 	if (skip_current_frame) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
-	if (!rsx::method_registers.stencil_mask()) arg &= ~0x2u;
+	if (!method_regs.stencil_mask()) arg &= ~0x2u;
 
 	// Ignore invalid clear flags
 	if ((arg & 0xf3) == 0) return;
@@ -513,20 +513,20 @@ void GLGSRender::clear_surface(u32 arg)
 
 	gl::command_context cmd{ gl_state };
 	const bool require_mem_load =
-		rsx::method_registers.scissor_origin_x() > 0 ||
-		rsx::method_registers.scissor_origin_y() > 0 ||
-		rsx::method_registers.scissor_width() < rsx::method_registers.surface_clip_width() ||
-		rsx::method_registers.scissor_height() < rsx::method_registers.surface_clip_height();
+		method_regs.scissor_origin_x() > 0 ||
+		method_regs.scissor_origin_y() > 0 ||
+		method_regs.scissor_width() < method_regs.surface_clip_width() ||
+		method_regs.scissor_height() < method_regs.surface_clip_height();
 
 	bool update_color = false, update_z = false;
-	rsx::surface_depth_format2 surface_depth_format = rsx::method_registers.surface_depth_fmt();
+	rsx::surface_depth_format2 surface_depth_format = method_regs.surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & 0x3)
 	{
 		if (arg & 0x1)
 		{
 			u32 max_depth_value = get_max_depth_value(surface_depth_format);
-			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
+			u32 clear_depth = method_regs.z_clear_value(is_depth_stencil_format(surface_depth_format));
 
 			gl_state.depth_mask(GL_TRUE);
 			gl_state.clear_depth(f32(clear_depth) / max_depth_value);
@@ -537,9 +537,9 @@ void GLGSRender::clear_surface(u32 arg)
 		{
 			if (arg & 0x2)
 			{
-				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
+				u8 clear_stencil = method_regs.stencil_clear_value();
 
-				gl_state.stencil_mask(rsx::method_registers.stencil_mask());
+				gl_state.stencil_mask(method_regs.stencil_mask());
 				gl_state.clear_stencil(clear_stencil);
 				mask |= GLenum(gl::buffers::stencil);
 			}
@@ -577,12 +577,12 @@ void GLGSRender::clear_surface(u32 arg)
 
 	if (auto colormask = (arg & 0xf0))
 	{
-		u8 clear_a = rsx::method_registers.clear_color_a();
-		u8 clear_r = rsx::method_registers.clear_color_r();
-		u8 clear_g = rsx::method_registers.clear_color_g();
-		u8 clear_b = rsx::method_registers.clear_color_b();
+		u8 clear_a = method_regs.clear_color_a();
+		u8 clear_r = method_regs.clear_color_r();
+		u8 clear_g = method_regs.clear_color_g();
+		u8 clear_b = method_regs.clear_color_b();
 
-		switch (rsx::method_registers.surface_color())
+		switch (method_regs.surface_color())
 		{
 		case rsx::surface_color_format::x32:
 		case rsx::surface_color_format::w16z16y16x16:
@@ -733,7 +733,7 @@ void GLGSRender::load_program_env()
 	const bool update_fragment_env = !!(m_graphics_state & rsx::pipeline_state::fragment_state_dirty);
 	const bool update_fragment_texture_env = !!(m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
 	const bool update_instruction_buffers = (!!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program));
-	const bool update_raster_env = (rsx::method_registers.polygon_stipple_enabled() && !!(m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
+	const bool update_raster_env = (method_regs.polygon_stipple_enabled() && !!(m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
 
 	m_program->use();
 
@@ -760,10 +760,10 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 		fill_scale_offset_data(buf, false);
 		fill_user_clip_data(buf + 64);
-		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-		*(reinterpret_cast<f32*>(buf + 132)) = rsx::method_registers.point_size();
-		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.clip_min();
-		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_max();
+		*(reinterpret_cast<u32*>(buf + 128)) = method_regs.transform_branch_bits();
+		*(reinterpret_cast<f32*>(buf + 132)) = method_regs.point_size();
+		*(reinterpret_cast<f32*>(buf + 136)) = method_regs.clip_min();
+		*(reinterpret_cast<f32*>(buf + 140)) = method_regs.clip_max();
 
 		m_vertex_env_buffer->bind_range(GL_VERTEX_PARAMS_BIND_SLOT, mapping.second, 144);
 	}
@@ -814,7 +814,7 @@ void GLGSRender::load_program_env()
 	{
 		auto mapping = m_raster_env_ring_buffer->alloc_from_heap(128, m_uniform_buffer_offset_align);
 
-		std::memcpy(mapping.first, rsx::method_registers.polygon_stipple_pattern(), 128);
+		std::memcpy(mapping.first, method_regs.polygon_stipple_pattern(), 128);
 		m_raster_env_ring_buffer->bind_range(GL_RASTERIZER_STATE_BIND_SLOT, mapping.second, 128);
 
 		m_graphics_state &= ~(rsx::pipeline_state::polygon_stipple_pattern_dirty);
@@ -833,7 +833,7 @@ void GLGSRender::load_program_env()
 			vp_config[0] = current_vertex_program.base_address;
 			vp_config[1] = current_vertex_program.entry;
 			vp_config[2] = current_vertex_program.output_mask;
-			vp_config[3] = rsx::method_registers.two_side_light_en() ? 1u : 0u;
+			vp_config[3] = method_regs.two_side_light_en() ? 1u : 0u;
 
 			std::memcpy(vp_buf + 16, current_vertex_program.data.data(), current_vp_metadata.ucode_length);
 
@@ -850,7 +850,7 @@ void GLGSRender::load_program_env()
 
 			// Control mask
 			const auto control_masks = reinterpret_cast<u32*>(fp_buf);
-			control_masks[0] = rsx::method_registers.shader_control();
+			control_masks[0] = method_regs.shader_control();
 			control_masks[1] = current_fragment_program.texture_dimensions;
 
 			// Bind textures

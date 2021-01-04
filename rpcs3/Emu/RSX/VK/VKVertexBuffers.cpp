@@ -2,6 +2,7 @@
 #include "VKGSRender.h"
 #include "../Common/BufferUtils.h"
 #include "../rsx_methods.h"
+#include "../RSXThread.h"
 
 namespace vk
 {
@@ -96,12 +97,14 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_array_command& command)
 		{
+			const auto& method_regs = rsx::get_current_renderer()->method_regs;
+
 			bool primitives_emulated = false;
 			VkPrimitiveTopology prims = vk::get_appropriate_topology(
-				rsx::method_registers.current_draw_clause.primitive, primitives_emulated);
+				method_regs.current_draw_clause.primitive, primitives_emulated);
 
-			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
-			const u32 min_index = rsx::method_registers.current_draw_clause.min_index();
+			const u32 vertex_count = method_regs.current_draw_clause.get_elements_count();
+			const u32 min_index = method_regs.current_draw_clause.min_index();
 			const u32 max_index = (min_index + vertex_count) - 1;
 
 			if (primitives_emulated)
@@ -110,7 +113,7 @@ namespace
 				std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info;
 
 				std::tie(index_count, index_info) =
-					generate_emulating_index_buffer(rsx::method_registers.current_draw_clause,
+					generate_emulating_index_buffer(method_regs.current_draw_clause,
 						vertex_count, m_index_buffer_ring_info);
 
 				return{ prims, false, min_index, max_index, index_count, 0, index_info };
@@ -121,20 +124,22 @@ namespace
 
 		vertex_input_state operator()(const rsx::draw_indexed_array_command& command)
 		{
-			bool primitives_emulated = false;
-			auto primitive = rsx::method_registers.current_draw_clause.primitive;
-			const VkPrimitiveTopology prims = vk::get_appropriate_topology(primitive, primitives_emulated);
-			const bool emulate_restart = rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart(primitive);
+			const auto& method_regs = rsx::get_current_renderer()->method_regs;
 
-			rsx::index_array_type index_type = rsx::method_registers.current_draw_clause.is_immediate_draw ?
+			bool primitives_emulated = false;
+			auto primitive = method_regs.current_draw_clause.primitive;
+			const VkPrimitiveTopology prims = vk::get_appropriate_topology(primitive, primitives_emulated);
+			const bool emulate_restart = method_regs.restart_index_enabled() && vk::emulate_primitive_restart(primitive);
+
+			rsx::index_array_type index_type = method_regs.current_draw_clause.is_immediate_draw ?
 				rsx::index_array_type::u32 :
-				rsx::method_registers.index_type();
+				method_regs.index_type();
 
 			u32 type_size = get_index_type_size(index_type);
 
-			u32 index_count = rsx::method_registers.current_draw_clause.get_elements_count();
+			u32 index_count = method_regs.current_draw_clause.get_elements_count();
 			if (primitives_emulated)
-				index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, index_count);
+				index_count = get_index_count(method_regs.current_draw_clause.primitive, index_count);
 			u32 upload_size = index_count * type_size;
 
 			if (emulate_restart) upload_size *= 2;
@@ -161,9 +166,9 @@ namespace
 			std::tie(min_index, max_index, index_count) = write_index_array_data_to_buffer(
 				dst,
 				command.raw_index_buffer, index_type,
-				rsx::method_registers.current_draw_clause.primitive,
-				rsx::method_registers.restart_index_enabled(),
-				rsx::method_registers.restart_index(),
+				method_regs.current_draw_clause.primitive,
+				method_regs.restart_index_enabled(),
+				method_regs.restart_index(),
 				[](auto prim) { return !vk::is_primitive_native(prim); });
 
 			if (min_index >= max_index)
@@ -190,17 +195,19 @@ namespace
 			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info =
 				std::make_tuple(offset_in_index_buffer, vk::get_index_type(index_type));
 
-			const auto index_offset = rsx::method_registers.vertex_data_base_index();
+			const auto index_offset = method_regs.vertex_data_base_index();
 			return {prims, true, min_index, max_index, index_count, index_offset, index_info};
 		}
 
 		vertex_input_state operator()(const rsx::draw_inlined_array& command)
 		{
+			const auto& method_regs = rsx::get_current_renderer()->method_regs;
+
 			bool primitives_emulated = false;
-			auto &draw_clause = rsx::method_registers.current_draw_clause;
+			auto &draw_clause = method_regs.current_draw_clause;
 			VkPrimitiveTopology prims = vk::get_appropriate_topology(draw_clause.primitive, primitives_emulated);
 
-			const auto stream_length = rsx::method_registers.current_draw_clause.inline_vertex_array.size();
+			const auto stream_length = method_regs.current_draw_clause.inline_vertex_array.size();
 			const u32 vertex_count = u32(stream_length * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
 
 			if (!primitives_emulated)
@@ -223,7 +230,7 @@ namespace
 vk::vertex_upload_info VKGSRender::upload_vertex_data()
 {
 	draw_command_visitor visitor(m_index_buffer_ring_info, m_vertex_layout);
-	auto result = std::visit(visitor, get_draw_command(rsx::method_registers));
+	auto result = std::visit(visitor, get_draw_command());
 
 	const u32 vertex_count = (result.max_index - result.min_index) + 1;
 	u32 vertex_base = result.min_index;
@@ -231,7 +238,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 
 	if (result.index_rebase)
 	{
-		vertex_base = rsx::get_index_from_base(vertex_base, rsx::method_registers.vertex_data_base_index());
+		vertex_base = rsx::get_index_from_base(vertex_base, method_regs.vertex_data_base_index());
 		index_base = result.min_index;
 	}
 
@@ -250,7 +257,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		u32  storage_address = UINT32_MAX;
 
 		if (m_vertex_layout.interleaved_blocks.size() == 1 &&
-			rsx::method_registers.current_draw_clause.command != rsx::draw_command::inlined_array)
+			method_regs.current_draw_clause.command != rsx::draw_command::inlined_array)
 		{
 			const auto data_offset = (vertex_base * m_vertex_layout.interleaved_blocks[0].attribute_stride);
 			storage_address = m_vertex_layout.interleaved_blocks[0].real_offset_address + data_offset;

@@ -4,6 +4,7 @@
 #include "GLVertexProgram.h"
 #include "GLFragmentProgram.h"
 #include "../rsx_methods.h"
+#include "../RSXThread.h"
 #include "../Common/ShaderInterpreter.h"
 #include "../Common/GLSLCommon.h"
 
@@ -63,11 +64,13 @@ namespace gl
 
 	glsl::program* shader_interpreter::get(const interpreter::program_metadata& metadata)
 	{
+		const auto& method_regs = rsx::get_current_renderer()->method_regs;
+
 		// Build options
 		u64 opt = 0;
-		if (rsx::method_registers.alpha_test_enabled()) [[unlikely]]
+		if (method_regs.alpha_test_enabled()) [[unlikely]]
 		{
-			switch (rsx::method_registers.alpha_func())
+			switch (method_regs.alpha_func())
 			{
 			case rsx::comparison_function::always:
 				break;
@@ -94,13 +97,13 @@ namespace gl
 			}
 		}
 
-		if (rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
-		if (rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
-		if (rsx::method_registers.shader_control() & RSX_SHADER_CONTROL_USES_KIL) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_KIL;
+		if (method_regs.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_DEPTH_EXPORT;
+		if (method_regs.shader_control() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_F32_EXPORT;
+		if (method_regs.shader_control() & RSX_SHADER_CONTROL_USES_KIL) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_KIL;
 		if (metadata.referenced_textures_mask) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_TEXTURES;
 		if (metadata.has_branch_instructions) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (metadata.has_pack_instructions) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_PACKING;
-		if (rsx::method_registers.polygon_stipple_enabled()) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_STIPPLING;
+		if (method_regs.polygon_stipple_enabled()) opt |= program_common::interpreter::COMPILER_OPT_ENABLE_STIPPLING;
 
 		if (auto it = m_program_cache.find(opt); it != m_program_cache.end()) [[likely]]
 		{

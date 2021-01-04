@@ -51,7 +51,7 @@ namespace rsx
 			std::unordered_set<u64>& mem_changes = frame_capture.replay_commands.back().memory_state;
 
 			// capture fragment shader mem
-			const auto [program_offset, program_location] = method_registers.shader_program_address();
+			const auto [program_offset, program_location] = rsx->method_regs.shader_program_address();
 
 			const u32 addr          = get_address(program_offset, program_location);
 			const auto program_info = program_hash_util::fragment_program_utils::analyse_fragment_program(vm::base(addr));
@@ -69,7 +69,7 @@ namespace rsx
 			// vertex shader is passed in registers, so it can be ignored
 
 			// save fragment tex mem
-			for (const auto& tex : method_registers.fragment_textures)
+			for (const auto& tex : rsx->method_regs.fragment_textures)
 			{
 				if (!tex.enabled())
 					continue;
@@ -95,7 +95,7 @@ namespace rsx
 			}
 
 			// save vertex texture mem
-			for (const auto& tex : method_registers.vertex_textures)
+			for (const auto& tex : rsx->method_regs.vertex_textures)
 			{
 				if (!tex.enabled())
 					continue;
@@ -121,31 +121,31 @@ namespace rsx
 			}
 
 			// save vertex buffer memory
-			if (method_registers.current_draw_clause.command == draw_command::array)
+			if (rsx->method_regs.current_draw_clause.command == draw_command::array)
 			{
-				const u32 input_mask = method_registers.vertex_attrib_input_mask();
+				const u32 input_mask = rsx->method_regs.vertex_attrib_input_mask();
 				for (u8 index = 0; index < limits::vertex_count; ++index)
 				{
 					const bool enabled = !!(input_mask & (1 << index));
 					if (!enabled)
 						continue;
 
-					const auto& info = method_registers.vertex_arrays_info[index];
+					const auto& info = rsx->method_regs.vertex_arrays_info[index];
 					if (!info.size())
 						continue;
 
 					// vert buffer
-					const u32 base_address    = get_vertex_offset_from_base(method_registers.vertex_data_base_offset(), info.offset() & 0x7fffffff);
+					const u32 base_address    = get_vertex_offset_from_base(rsx->method_regs.vertex_data_base_offset(), info.offset() & 0x7fffffff);
 					const u32 memory_location = info.offset() >> 31;
 
 					const u32 addr       = get_address(base_address, memory_location);
 					const u32 vertSize   = get_vertex_type_size_on_host(info.type(), info.size());
 					const u32 vertStride = info.stride();
 
-					method_registers.current_draw_clause.begin();
+					rsx->method_regs.current_draw_clause.begin();
 					do
 					{
-						const auto& range = method_registers.current_draw_clause.get_range();
+						const auto& range = rsx->method_regs.current_draw_clause.get_range();
 						const u32 vertCount = range.count;
 						const usz bufferSize = (vertCount - 1) * vertStride + vertSize;
 
@@ -157,31 +157,31 @@ namespace rsx
 						std::memcpy(block_data.data.data(), vm::base(addr + (range.first * vertStride)), bufferSize);
 						insert_mem_block_in_map(mem_changes, std::move(block), std::move(block_data));
 					}
-					while (method_registers.current_draw_clause.next());
+					while (rsx->method_regs.current_draw_clause.next());
 				}
 			}
 			// save index buffer if used
-			else if (method_registers.current_draw_clause.command == draw_command::indexed)
+			else if (rsx->method_regs.current_draw_clause.command == draw_command::indexed)
 			{
-				const u32 input_mask = method_registers.vertex_attrib_input_mask();
+				const u32 input_mask = rsx->method_regs.vertex_attrib_input_mask();
 
-				const u32 base_address    = method_registers.index_array_address();
-				const u32 memory_location = method_registers.index_array_location();
+				const u32 base_address    = rsx->method_regs.index_array_address();
+				const u32 memory_location = rsx->method_regs.index_array_location();
 
-				const auto index_type = method_registers.index_type();
+				const auto index_type = rsx->method_regs.index_type();
 				const u32 type_size   = get_index_type_size(index_type);
 				const u32 base_addr   = get_address(base_address, memory_location) & (0 - type_size);
 
 				// manually parse index buffer and copy vertex buffer
 				u32 min_index = 0xFFFFFFFF, max_index = 0;
 
-				const bool is_primitive_restart_enabled = method_registers.restart_index_enabled();
-				const u32 primitive_restart_index       = method_registers.restart_index();
+				const bool is_primitive_restart_enabled = rsx->method_regs.restart_index_enabled();
+				const u32 primitive_restart_index       = rsx->method_regs.restart_index();
 
-				method_registers.current_draw_clause.begin();
+				rsx->method_regs.current_draw_clause.begin();
 				do
 				{
-					const auto& range = method_registers.current_draw_clause.get_range();
+					const auto& range = rsx->method_regs.current_draw_clause.get_range();
 					const u32 idxFirst = range.first;
 					const u32 idxCount = range.count;
 					const u32 idxAddr  = base_addr + (idxFirst * type_size);
@@ -206,7 +206,7 @@ namespace rsx
 							u16 index = fifo[i];
 							if (is_primitive_restart_enabled && u32{index} == primitive_restart_index)
 								continue;
-							index     = static_cast<u16>(get_index_from_base(index, method_registers.vertex_data_base_index()));
+							index     = static_cast<u16>(get_index_from_base(index, rsx->method_regs.vertex_data_base_index()));
 							min_index = std::min<u16>(index, static_cast<u16>(min_index));
 							max_index = std::max<u16>(index, static_cast<u16>(max_index));
 						}
@@ -220,7 +220,7 @@ namespace rsx
 							u32 index = fifo[i];
 							if (is_primitive_restart_enabled && index == primitive_restart_index)
 								continue;
-							index     = get_index_from_base(index, method_registers.vertex_data_base_index());
+							index     = get_index_from_base(index, rsx->method_regs.vertex_data_base_index());
 							min_index = std::min(index, min_index);
 							max_index = std::max(index, max_index);
 						}
@@ -228,7 +228,7 @@ namespace rsx
 					}
 					}
 				}
-				while (method_registers.current_draw_clause.next());
+				while (rsx->method_regs.current_draw_clause.next());
 
 				if (min_index <= max_index)
 				{
@@ -238,13 +238,13 @@ namespace rsx
 						if (!enabled)
 							continue;
 
-						const auto& info = method_registers.vertex_arrays_info[index];
+						const auto& info = rsx->method_regs.vertex_arrays_info[index];
 						if (!info.size())
 							continue;
 
 						// vert buffer
 						const u32 vertStride      = info.stride();
-						const u32 base_address    = get_vertex_offset_from_base(method_registers.vertex_data_base_offset(), (info.offset() & 0x7fffffff));
+						const u32 base_address    = get_vertex_offset_from_base(rsx->method_regs.vertex_data_base_offset(), (info.offset() & 0x7fffffff));
 						const u32 memory_location = info.offset() >> 31;
 
 						const u32 addr     = get_address(base_address, memory_location);
@@ -268,30 +268,30 @@ namespace rsx
 		// i realize these are a slight copy pasta of the rsx_method implementations but its kinda unavoidable currently
 		void capture_image_in(thread* rsx, frame_capture_data::replay_command& replay_command)
 		{
-			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
+			const rsx::blit_engine::transfer_operation operation = rsx->method_regs.blit_engine_operation();
 
-			const u16 clip_w = std::min(method_registers.blit_engine_output_width(), method_registers.blit_engine_clip_width());
-			const u16 clip_h = std::min(method_registers.blit_engine_output_height(), method_registers.blit_engine_clip_height());
+			const u16 clip_w = std::min(rsx->method_regs.blit_engine_output_width(), rsx->method_regs.blit_engine_clip_width());
+			const u16 clip_h = std::min(rsx->method_regs.blit_engine_output_height(), rsx->method_regs.blit_engine_clip_height());
 
-			const u16 in_w = method_registers.blit_engine_input_width();
-			const u16 in_h = method_registers.blit_engine_input_height();
+			const u16 in_w = rsx->method_regs.blit_engine_input_width();
+			const u16 in_h = rsx->method_regs.blit_engine_input_height();
 
-			const blit_engine::transfer_origin in_origin                    = method_registers.blit_engine_input_origin();
-			const blit_engine::transfer_interpolator in_inter               = method_registers.blit_engine_input_inter();
-			const rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
+			const blit_engine::transfer_origin in_origin                    = rsx->method_regs.blit_engine_input_origin();
+			const blit_engine::transfer_interpolator in_inter               = rsx->method_regs.blit_engine_input_inter();
+			const rsx::blit_engine::transfer_source_format src_color_format = rsx->method_regs.blit_engine_src_color_format();
 
-			const f32 in_x = std::floor(method_registers.blit_engine_in_x());
-			const f32 in_y = std::floor(method_registers.blit_engine_in_y());
+			const f32 in_x = std::floor(rsx->method_regs.blit_engine_in_x());
+			const f32 in_y = std::floor(rsx->method_regs.blit_engine_in_y());
 
-			u16 in_pitch = method_registers.blit_engine_input_pitch();
+			u16 in_pitch = rsx->method_regs.blit_engine_input_pitch();
 
 			if (in_w == 0 || in_h == 0 || clip_w == 0 || clip_h == 0)
 			{
 				return;
 			}
 
-			const u32 src_offset = method_registers.blit_engine_input_offset();
-			const u32 src_dma    = method_registers.blit_engine_input_location();
+			const u32 src_offset = rsx->method_regs.blit_engine_input_offset();
+			const u32 src_dma    = rsx->method_regs.blit_engine_input_location();
 
 			const u32 in_bpp              = (src_color_format == rsx::blit_engine::transfer_source_format::r5g6b5) ? 2 : 4; // bytes per pixel
 			const u32 in_offset           = u32(in_x * in_bpp + in_pitch * in_y);
@@ -316,13 +316,13 @@ namespace rsx
 
 		void capture_buffer_notify(thread* rsx, frame_capture_data::replay_command& replay_command)
 		{
-			s32 in_pitch          = method_registers.nv0039_input_pitch();
-			const u32 line_length = method_registers.nv0039_line_length();
-			const u32 line_count  = method_registers.nv0039_line_count();
-			const u8 in_format    = method_registers.nv0039_input_format();
+			s32 in_pitch          = rsx->method_regs.nv0039_input_pitch();
+			const u32 line_length = rsx->method_regs.nv0039_line_length();
+			const u32 line_count  = rsx->method_regs.nv0039_line_count();
+			const u8 in_format    = rsx->method_regs.nv0039_input_format();
 
-			u32 src_offset = method_registers.nv0039_input_offset();
-			u32 src_dma    = method_registers.nv0039_input_location();
+			u32 src_offset = rsx->method_regs.nv0039_input_offset();
+			u32 src_dma    = rsx->method_regs.nv0039_input_location();
 			u32 src_addr   = get_address(src_offset, src_dma);
 
 			rsx->read_barrier(src_addr, in_pitch * (line_count - 1) + line_length, true);

@@ -617,7 +617,7 @@ namespace rsx
 			const u32 reg = (command.reg & 0xffff) >> 2;
 			const u32 value = command.value;
 
-			method_registers.decode(reg, value);
+			method_regs.decode(reg, value);
 
 			if (auto method = methods[reg])
 			{

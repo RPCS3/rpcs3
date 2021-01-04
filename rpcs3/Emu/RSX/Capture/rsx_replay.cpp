@@ -11,6 +11,18 @@
 
 namespace rsx
 {
+	void frame_capture_data::reset()
+	{
+		magic = FRAME_CAPTURE_MAGIC;
+		version = FRAME_CAPTURE_VERSION;
+		tile_map.clear();
+		memory_map.clear();
+		replay_commands.clear();
+
+		const auto rsx = rsx::get_current_renderer();
+		method_regs = rsx ? rsx->method_regs : rsx::rsx_state{};
+	}
+
 	be_t<u32> rsx_replay_thread::allocate_context()
 	{
 		u32 buffer_size = 4;
@@ -177,7 +189,7 @@ namespace rsx
 		while (!Emu.IsStopped())
 		{
 			// Load registers while the RSX is still idle
-			method_registers = frame->reg_state;
+			get_current_renderer()->method_regs = frame->method_regs;
 			atomic_fence_seq_cst();
 
 			// start up fifo buffer by dumping the put ptr to first stop

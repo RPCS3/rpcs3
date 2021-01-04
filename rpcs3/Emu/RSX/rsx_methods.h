@@ -563,6 +563,8 @@ namespace rsx
 				);
 		}
 
+		std::array<float, 4> get_constant_blend_colors();
+
 		u16 viewport_width() const
 		{
 			return decode<NV4097_SET_VIEWPORT_HORIZONTAL>().width();
@@ -1727,6 +1729,5 @@ namespace rsx
 		}
 	};
 
-	extern rsx_state method_registers;
 	extern std::array<rsx_method_t, 0x10000 / 4> methods;
 }

@@ -815,7 +815,7 @@ enum
 };
 
 // GPU Class Handles
-enum
+enum CellGcmLocation : u32
 {
 	CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER = 0xFEED0000, // Local memory
 	CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER = 0xFEED0001, // Main memory
