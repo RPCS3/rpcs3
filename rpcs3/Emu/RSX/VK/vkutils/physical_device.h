@@ -4,6 +4,7 @@
 #include "chip_class.h"
 #include "pipeline_binding_table.h"
 
+#include <string>
 #include <vector>
 #include <unordered_map>
 
