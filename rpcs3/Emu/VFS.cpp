@@ -291,12 +291,10 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 {
 	std::string result;
 
-	if (name.size() > 2 && name.find_first_not_of('.') == umax)
+	if (name.size() <= 2 && name.find_first_not_of('.') == umax)
 	{
-		// Name contains only dots, not allowed on Windows.
-		result.reserve(name.size() + 2);
-		result += reinterpret_cast<const char*>(u8"．");
-		result += name.substr(1);
+		// Return . or .. as is
+		result = name;
 		return result;
 	}
 
