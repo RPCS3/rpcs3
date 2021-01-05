@@ -2113,16 +2113,4 @@ void Emulator::ConfigurePPUCache()
 	}
 }
 
-template <>
-void stx::manual_fixed_typemap<void>::init_reporter(unsigned long long created) const noexcept
-{
-	sys_log.notice("[ord:%u] Object was created", created);
-}
-
-template <>
-void stx::manual_fixed_typemap<void>::destroy_reporter(unsigned long long created) const noexcept
-{
-	sys_log.notice("[ord:%u] Object is destroying", created);
-}
-
 Emulator Emu;
