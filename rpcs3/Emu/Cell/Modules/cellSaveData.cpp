@@ -609,7 +609,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		listGet->dirList.set(setBuf->buf.addr());
 		std::memset(listGet->reserved, 0, sizeof(listGet->reserved));
 
-		const auto prefix_list = fmt::split(setList->dirNamePrefix.get_ptr(), {"|"});
+		auto prefix_list = fmt::split(setList->dirNamePrefix.get_ptr(), {"|"});
+
+		//if prefix_list is empty game wants to check all savedata
+		if (prefix_list.empty() && (operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_FIXED_LOAD)) {
+		    prefix_list = {""};
+		}
 
 		// get the saves matching the supplied prefix
 		for (auto&& entry : fs::dir(base_dir))
