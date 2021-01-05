@@ -863,10 +863,12 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	{
 		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
 
+		if (s.sh_type != 1u) continue;
+
 		const u32 addr = vm::cast(s.sh_addr);
 		const u32 size = vm::cast(s.sh_size);
 
-		if (s.sh_type == 1u && addr && size) // TODO: some sections with addr=0 are valid
+		if (addr && size) // TODO: some sections with addr=0 are valid
 		{
 			for (usz i = 0; i < prx->segs.size(); i++)
 			{
@@ -1203,6 +1205,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	{
 		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
 
+		if (s.sh_type != 1u) continue;
+
 		ppu_segment _sec;
 		const u32 addr = _sec.addr = vm::cast(s.sh_addr);
 		const u32 size = _sec.size = vm::cast(s.sh_size);
@@ -1210,7 +1214,7 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		const u32 flag = _sec.flags = static_cast<u32>(s.sh_flags & 7);
 		_sec.filesz = 0;
 
-		if (s.sh_type == 1u && addr && size)
+		if (addr && size)
 		{
 			_main->secs.emplace_back(_sec);
 		}
@@ -1699,6 +1703,8 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 	{
 		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
 
+		if (s.sh_type != 1u) continue;
+
 		ppu_segment _sec;
 		const u32 addr = _sec.addr = vm::cast(s.sh_addr);
 		const u32 size = _sec.size = vm::cast(s.sh_size);
@@ -1706,7 +1712,7 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 		const u32 flag = _sec.flags = static_cast<u32>(s.sh_flags & 7);
 		_sec.filesz = 0;
 
-		if (s.sh_type == 1u && addr && size)
+		if (addr && size)
 		{
 			ovlm->secs.emplace_back(_sec);
 		}
