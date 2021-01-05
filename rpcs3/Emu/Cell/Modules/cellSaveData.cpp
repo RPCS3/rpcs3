@@ -611,8 +611,9 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		auto prefix_list = fmt::split(setList->dirNamePrefix.get_ptr(), {"|"});
 
-		//if prefix_list is empty game wants to check all savedata
-		if (prefix_list.empty() && (operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_FIXED_LOAD)) {
+		// if prefix_list is empty game wants to check all savedata
+		if (prefix_list.empty() && (operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_FIXED_LOAD))
+		{
 			prefix_list = {""};
 		}
 
