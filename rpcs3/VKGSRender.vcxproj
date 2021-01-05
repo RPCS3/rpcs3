@@ -40,7 +40,9 @@
     <ClInclude Include="Emu\RSX\VK\VKShaderInterpreter.h" />
     <ClInclude Include="Emu\RSX\VK\VKTextOut.h" />
     <ClInclude Include="Emu\RSX\VK\VKTextureCache.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\buffer_view.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\chip_class.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\command_pool.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\fence.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\graphics_pipeline_state.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\memory_block.h" />
@@ -48,6 +50,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\physical_device.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\pipeline_binding_table.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\query_pool.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\render_device.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\sampler.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\shared.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\supported_extensions.h" />
@@ -73,11 +76,14 @@
     <ClCompile Include="Emu\RSX\VK\VKResourceManager.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKShaderInterpreter.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKTexture.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\buffer_view.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\chip_class.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\command_pool.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\fence.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\memory_block.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\mem_allocator.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\physical_device.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\render_device.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\sampler.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\shared.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp" />

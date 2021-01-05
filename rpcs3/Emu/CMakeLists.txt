@@ -435,11 +435,14 @@ target_sources(rpcs3_emu PRIVATE
 
 if(TARGET 3rdparty_vulkan)
 	target_sources(rpcs3_emu PRIVATE
+		RSX/VK/vkutils/buffer_view.cpp
 		RSX/VK/vkutils/chip_class.cpp
+		RSX/VK/vkutils/command_pool.cpp
 		RSX/VK/vkutils/fence.cpp
 		RSX/VK/vkutils/mem_allocator.cpp
 		RSX/VK/vkutils/memory_block.cpp
 		RSX/VK/vkutils/physical_device.cpp
+		RSX/VK/vkutils/render_device.cpp
 		RSX/VK/vkutils/sampler.cpp
 		RSX/VK/vkutils/shared.cpp
 		RSX/VK/VKCommandStream.cpp

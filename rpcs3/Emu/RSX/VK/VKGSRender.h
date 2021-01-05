@@ -53,6 +53,8 @@ extern u64 get_system_time();
 
 namespace vk
 {
+	struct buffer_view;
+
 	struct command_buffer_chunk: public vk::command_buffer
 	{
 		vk::fence* submit_fence = nullptr;
