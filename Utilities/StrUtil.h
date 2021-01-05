@@ -75,7 +75,7 @@ namespace fmt
 		return src;
 	}
 
-	std::vector<std::string> split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty = true);
+	std::vector<std::string> split(std::string_view source, std::initializer_list<std::string_view> separators, bool is_skip_empty = true);
 	std::string trim(const std::string& source, const std::string& values = " \t");
 
 	template <typename T>
