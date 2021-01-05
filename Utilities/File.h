@@ -272,7 +272,8 @@ namespace fs
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION()) const
 		{
-			if (!m_file) return (count ? (xnull({line, col, file, func}), 0) : 0);
+			if (!count) return 0;
+			if (!m_file) return xnull({line, col, file, func});
 			return m_file->read(buffer, count);
 		}
 
@@ -283,7 +284,8 @@ namespace fs
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION()) const
 		{
-			if (!m_file) return (count ? (xnull({line, col, file, func}), 0) : 0);
+			if (!count) return 0;
+			if (!m_file) return xnull({line, col, file, func});
 			return m_file->write(buffer, count);
 		}
 
