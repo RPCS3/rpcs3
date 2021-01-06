@@ -1,5 +1,3 @@
-#pragma once
-
 #include "fence.h"
 #include "shared.h"
 
