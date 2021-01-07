@@ -72,10 +72,7 @@ extern void ppu_initialize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 
-fs::file g_tty;
-atomic_t<s64> g_tty_size{0};
 std::array<std::deque<std::string>, 16> g_tty_input;
-std::mutex g_tty_mutex;
 
 // Progress display server synchronization variables
 atomic_t<const char*> g_progr{nullptr};
@@ -122,17 +119,6 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 void Emulator::Init()
 {
 	jit_runtime::initialize();
-
-	if (!g_tty)
-	{
-		const auto tty_path = fs::get_cache_dir() + "TTY.log";
-		g_tty.open(tty_path, fs::rewrite + fs::append);
-
-		if (!g_tty)
-		{
-			sys_log.fatal("Failed to create TTY log: %s (%s)", tty_path, fs::g_tls_error);
-		}
-	}
 
 	idm::init();
 	g_fxo->reset();

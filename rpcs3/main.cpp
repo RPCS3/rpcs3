@@ -318,6 +318,8 @@ int main(int argc, char** argv)
 		report_fatal_error(error);
 	}
 
+	fs::write_file(fs::get_cache_dir() + "TTY.log", fs::rewrite); // Empty TTY.log
+
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
 
 	fs::file instance_lock;
