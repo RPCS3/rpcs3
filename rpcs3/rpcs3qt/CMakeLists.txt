@@ -12,6 +12,7 @@ set(SRC_FILES
 	config_adapter.cpp
 	curl_handle.cpp
 	custom_dialog.cpp
+	custom_table_widget_item.cpp
 	debugger_frame.cpp
 	debugger_list.cpp
 	downloader.cpp
