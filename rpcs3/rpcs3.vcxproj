@@ -1570,6 +1570,7 @@
     <ClCompile Include="rpcs3qt\config_adapter.cpp" />
     <ClCompile Include="rpcs3qt\curl_handle.cpp" />
     <ClCompile Include="rpcs3qt\custom_dialog.cpp" />
+    <ClCompile Include="rpcs3qt\custom_table_widget_item.cpp" />
     <ClCompile Include="rpcs3qt\debugger_list.cpp" />
     <ClCompile Include="rpcs3qt\downloader.cpp" />
     <ClCompile Include="rpcs3qt\fatal_error_dialog.cpp" />
