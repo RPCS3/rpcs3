@@ -139,6 +139,8 @@ struct vdec_context final
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
+		// TODO: This function should be removed at some point, since ffmpeg does it automatically now.
+		//       We'll keep it for compatibility for now until more system ffmpeg libs are up to date.
 		avcodec_register_all();
 #ifdef _MSC_VER
 #pragma warning(pop)
