@@ -1896,7 +1896,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 			index = 0;
 	}
 
-	const vm::addr_t ls_addr{RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index};
+	const u32 ls_addr = RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index;
 
 	const auto thread = idm::make_ptr<named_thread<spu_thread>>(fmt::format("IsoSPU[0x%x] ", index), nullptr, index, "", index, true);
 
