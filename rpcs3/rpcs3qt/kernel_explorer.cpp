@@ -93,7 +93,7 @@ static QTreeWidgetItem* find_first_node(QTreeWidget* tree, QTreeWidgetItem *pare
 {
 	if (tree && parent)
 	{
-		for (auto item : tree->findItems(regexp, Qt::MatchFlag::MatchRegExp | Qt::MatchFlag::MatchRecursive))
+		for (auto item : tree->findItems(regexp, Qt::MatchFlag::MatchRegularExpression | Qt::MatchFlag::MatchRecursive))
 		{
 			if (item->parent() == parent && item->data(0, kernel_item_role::type_role).toInt() != kernel_item_type::leaf)
 			{
@@ -108,7 +108,7 @@ static QTreeWidgetItem* find_node(QTreeWidget* tree, u32 id)
 {
 	if (tree)
 	{
-		for (auto item : tree->findItems(".*", Qt::MatchFlag::MatchRegExp | Qt::MatchFlag::MatchRecursive))
+		for (auto item : tree->findItems(".*", Qt::MatchFlag::MatchRegularExpression | Qt::MatchFlag::MatchRecursive))
 		{
 			if (item->data(0, kernel_item_role::type_role).toInt() == kernel_item_type::node &&
 				item->data(0, kernel_item_role::id_role).toUInt() == id)

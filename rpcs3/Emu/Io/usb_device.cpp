@@ -72,7 +72,7 @@ void usb_device_passthrough::read_descriptors()
 	for (u8 index = 0; index < device._device.bNumConfigurations; index++)
 	{
 		u8 buf[1000];
-		int ssize = libusb_control_transfer(lusb_handle, LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE, LIBUSB_REQUEST_GET_DESCRIPTOR, 0x0200 | index, 0, buf, 1000, 0);
+		int ssize = libusb_control_transfer(lusb_handle, +LIBUSB_ENDPOINT_IN | +LIBUSB_REQUEST_TYPE_STANDARD | +LIBUSB_RECIPIENT_DEVICE, LIBUSB_REQUEST_GET_DESCRIPTOR, 0x0200 | index, 0, buf, 1000, 0);
 		if (ssize < 0)
 		{
 			sys_usbd.fatal("Couldn't get the config from the device: %d", ssize);

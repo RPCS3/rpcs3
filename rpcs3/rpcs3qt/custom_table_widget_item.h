@@ -28,12 +28,19 @@ public:
 		}
 	}
 
-	bool operator <(const QTableWidgetItem &other) const
+	bool operator <(const QTableWidgetItem& other) const
 	{
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
 		return data(m_sort_role) < other.data(m_sort_role);
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 	}
 
-	void setData(int role, const QVariant &value, bool assign_sort_role)
+	void setData(int role, const QVariant& value, bool assign_sort_role)
 	{
 		if (assign_sort_role)
 		{
