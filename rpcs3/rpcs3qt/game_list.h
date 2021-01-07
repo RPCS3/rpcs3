@@ -12,14 +12,7 @@ class game_list : public QTableWidget
 private:
 	void mousePressEvent(QMouseEvent *event) override
 	{
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-		if (!indexAt(event->pos()).isValid() || itemAt(event->pos())->data(Qt::UserRole) < 0)
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif
+		if (!indexAt(event->pos()).isValid() || !itemAt(event->pos())->data(Qt::UserRole).isValid())
 		{
 			clearSelection();
 			setCurrentItem(nullptr); // Needed for currentItemChanged
