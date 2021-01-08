@@ -3,6 +3,7 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QHeaderView>
+#include <QTreeWidget>
 #include <QTreeWidgetItem>
 
 #include "Emu/IdManager.h"
@@ -148,7 +149,9 @@ static QTreeWidgetItem* add_solid_node(QTreeWidget* tree, QTreeWidgetItem *paren
 	return node;
 }
 
-kernel_explorer::kernel_explorer(QWidget* parent) : QDialog(parent)
+kernel_explorer::kernel_explorer(QWidget* parent, std::function<void()> on_destroy)
+	: QDialog(parent)
+	, m_on_destroy(on_destroy)
 {
 	setWindowTitle(tr("Kernel Explorer"));
 	setObjectName("kernel_explorer");
@@ -167,17 +170,21 @@ kernel_explorer::kernel_explorer(QWidget* parent) : QDialog(parent)
 	m_tree->header()->close();
 
 	// Merge and display everything
-	vbox_panel->addSpacing(10);
+	vbox_panel->addSpacing(8);
 	vbox_panel->addLayout(hbox_buttons);
-	vbox_panel->addSpacing(10);
+	vbox_panel->addSpacing(8);
 	vbox_panel->addWidget(m_tree);
-	vbox_panel->addSpacing(10);
 	setLayout(vbox_panel);
 
 	// Events
 	connect(button_refresh, &QAbstractButton::clicked, this, &kernel_explorer::Update);
 
 	Update();
+}
+
+kernel_explorer::~kernel_explorer()
+{
+	m_on_destroy();
 }
 
 void kernel_explorer::Update()
