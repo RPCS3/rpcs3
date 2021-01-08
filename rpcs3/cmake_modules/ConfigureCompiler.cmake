@@ -35,7 +35,6 @@ else()
 	#TODO Clean the code so these are removed
 	add_compile_options(-Wno-unused-variable)
 	add_compile_options(-Wno-unknown-pragmas)
-	add_compile_options(-Wno-invalid-offsetof)
 	add_compile_options(-Wno-unused-function)
 	add_compile_options(-Wno-attributes)
 
