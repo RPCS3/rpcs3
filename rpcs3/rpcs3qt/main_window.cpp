@@ -1238,6 +1238,12 @@ void main_window::OnEmuStop()
 	{
 		m_game_list_frame->Refresh();
 	}
+
+	// Close kernel explorer if running
+	if (m_kernel_explorer)
+	{
+		m_kernel_explorer->close();
+	}
 }
 
 void main_window::OnEmuReady()
@@ -1759,8 +1765,15 @@ void main_window::CreateConnects()
 
 	connect(ui->toolskernel_explorerAct, &QAction::triggered, [this]
 	{
-		kernel_explorer* kernelExplorer = new kernel_explorer(this);
-		kernelExplorer->show();
+		if (!m_kernel_explorer)
+		{
+			m_kernel_explorer = new kernel_explorer(this, [this]()
+			{
+				m_kernel_explorer = nullptr;
+			});
+		}
+
+		m_kernel_explorer->show();
 	});
 
 	connect(ui->toolsmemory_viewerAct, &QAction::triggered, [this]
