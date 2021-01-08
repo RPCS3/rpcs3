@@ -9,11 +9,6 @@
 
 LOG_CHANNEL(patch_log, "PAT");
 
-namespace config_key
-{
-	static const std::string enable_legacy_patches = "Enable Legacy Patches";
-}
-
 template <>
 void fmt_class_string<YAML::NodeType::value>::format(std::string& out, u64 arg)
 {
@@ -128,16 +123,14 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 	}
 
 	// Load patch config to determine which patches are enabled
-	bool enable_legacy_patches = false;
 	patch_map patch_config;
 
 	if (!importing)
 	{
-		patch_config = load_config(enable_legacy_patches);
+		patch_config = load_config();
 	}
 
 	std::string version;
-	bool is_legacy_patch = false;
 
 	if (const auto version_node = root[patch_key::version])
 	{
@@ -153,16 +146,11 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 		// We don't need the Version node in local memory anymore
 		root.remove(patch_key::version);
 	}
-	else if (importing)
+	else
 	{
 		append_log_message(log_messages, fmt::format("Error: No '%s' entry found. Patch engine version = %s (file: %s)", patch_key::version, patch_engine_version, path));
 		patch_log.error("No '%s' entry found. Patch engine version = %s (file: %s)", patch_key::version, patch_engine_version, path);
 		return false;
-	}
-	else
-	{
-		patch_log.warning("Patch engine version %s: Reading legacy patch file %s", patch_engine_version, path);
-		is_legacy_patch = true;
 	}
 
 	bool is_valid = true;
@@ -171,30 +159,6 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 	for (auto pair : root)
 	{
 		const auto& main_key = pair.first.Scalar();
-
-		// Use old logic and yaml layout if this is a legacy patch
-		if (is_legacy_patch)
-		{
-			struct patch_info info{};
-			info.hash        = main_key;
-			info.is_enabled  = enable_legacy_patches;
-			info.is_legacy   = true;
-			info.source_path = path;
-
-			if (!read_patch_node(info, pair.second, root, log_messages))
-			{
-				is_valid = false;
-			}
-
-			// Find or create an entry matching the key/hash in our map
-			auto& container = patches_map[main_key];
-			container.hash      = main_key;
-			container.is_legacy = true;
-			container.patch_info_map["legacy"] = info;
-			continue;
-		}
-
-		// Use new logic and yaml layout
 
 		if (const auto yml_type = pair.second.Type(); yml_type != YAML::NodeType::Map)
 		{
@@ -212,7 +176,6 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 		// Find or create an entry matching the key/hash in our map
 		auto& container = patches_map[main_key];
-		container.is_legacy = false;
 		container.hash      = main_key;
 		container.version   = version;
 
@@ -431,35 +394,6 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	{
 		// Special syntax: anchors (named sequence)
 
-		// Most legacy patches don't use the anchor syntax correctly, so try to sanitize it.
-		if (info.is_legacy)
-		{
-			if (const auto yml_type = addr_node.Type(); yml_type == YAML::NodeType::Scalar)
-			{
-				if (!root)
-				{
-					patch_log.fatal("Trying to parse legacy patch with invalid root."); // Sanity Check
-					return false;
-				}
-
-				const auto anchor = addr_node.Scalar();
-				const auto anchor_node = root[anchor];
-
-				if (anchor_node)
-				{
-					addr_node = anchor_node;
-					append_log_message(log_messages, fmt::format("Incorrect anchor syntax found in legacy patch: %s (key: %s)", anchor, info.hash));
-					patch_log.warning("Incorrect anchor syntax found in legacy patch: %s (key: %s)", anchor, info.hash);
-				}
-				else
-				{
-					append_log_message(log_messages, fmt::format("Anchor not found in legacy patch: %s (key: %s)", anchor, info.hash));
-					patch_log.error("Anchor not found in legacy patch: %s (key: %s)", anchor, info.hash);
-					return false;
-				}
-			}
-		}
-
 		// Check if the anchor was resolved.
 		if (const auto yml_type = addr_node.Type(); yml_type != YAML::NodeType::Sequence)
 		{
@@ -553,10 +487,7 @@ bool patch_engine::read_patch_node(patch_info& info, YAML::Node node, const YAML
 
 void patch_engine::append_global_patches()
 {
-	// Legacy patch.yml
-	load(m_map, fs::get_config_dir() + "patch.yml");
-
-	// New patch.yml
+	// Regular patch.yml
 	load(m_map, get_patches_path() + "patch.yml");
 
 	// Imported patch.yml
@@ -570,10 +501,7 @@ void patch_engine::append_title_patches(const std::string& title_id)
 		return;
 	}
 
-	// Legacy patch.yml
-	load(m_map, fs::get_config_dir() + "data/" + title_id + "/patch.yml");
-
-	// New patch.yml
+	// Regular patch.yml
 	load(m_map, get_patches_path() + title_id + "_patch.yml");
 }
 
@@ -694,7 +622,6 @@ usz patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 
 	const auto app_version = Emu.GetAppVersion();
 
 	// Different containers in order to seperate the patches
-	std::vector<patch_engine::patch_info> legacy_patches;
 	std::vector<patch_engine::patch_info> patches_for_this_serial_and_this_version;
 	std::vector<patch_engine::patch_info> patches_for_this_serial_and_all_versions;
 	std::vector<patch_engine::patch_info> patches_for_all_serials_and_this_version;
@@ -703,17 +630,6 @@ usz patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 
 	// Sort patches into different vectors based on their serial and version
 	for (const auto& [description, patch] : container.patch_info_map)
 	{
-		// Find out if this legacy patch is enabled
-		if (patch.is_legacy)
-		{
-			if (patch.is_enabled)
-			{
-				legacy_patches.push_back(patch);
-			}
-
-			continue;
-		}
-
 		// Find out if this patch is enabled
 		for (const auto& [title, serials] : patch.titles)
 		{
@@ -780,7 +696,6 @@ usz patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 
 
 	// Sort specific patches in front of global patches
 	std::vector<patch_engine::patch_info> sorted_patches;
-	sorted_patches.insert(sorted_patches.end(), legacy_patches.begin(), legacy_patches.end());
 	sorted_patches.insert(sorted_patches.end(), patches_for_this_serial_and_this_version.begin(), patches_for_this_serial_and_this_version.end());
 	sorted_patches.insert(sorted_patches.end(), patches_for_this_serial_and_all_versions.begin(), patches_for_this_serial_and_all_versions.end());
 	sorted_patches.insert(sorted_patches.end(), patches_for_all_serials_and_this_version.begin(), patches_for_all_serials_and_this_version.end());
@@ -802,20 +717,13 @@ usz patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 
 		const usz applied = apply_modification<check_local_storage>(patch, dst, filesz, ls_addr);
 		applied_total += applied;
 
-		if (patch.is_legacy)
-		{
-			patch_log.success("Applied legacy patch (hash='%s')(<- %d)", patch.hash, applied);
-		}
-		else
-		{
-			patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %d)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied);
-		}
+		patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %d)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied);
 	}
 
 	return applied_total;
 }
 
-void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_patches)
+void patch_engine::save_config(const patch_map& patches_map)
 {
 	const std::string path = get_patch_config_path();
 	patch_log.notice("Saving patch config file %s", path);
@@ -830,26 +738,13 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 	YAML::Emitter out;
 	out << YAML::BeginMap;
 
-	// Save "Enable Legacy Patches"
-	out << config_key::enable_legacy_patches << enable_legacy_patches;
-
 	// Save 'enabled' state per hash, description, serial and app_version
 	patch_map config_map;
 
 	for (const auto& [hash, container] : patches_map)
 	{
-		if (container.is_legacy)
-		{
-			continue;
-		}
-
 		for (const auto& [description, patch] : container.patch_info_map)
 		{
-			if (patch.is_legacy)
-			{
-				continue;
-			}
-
 			for (const auto& [title, serials] : patch.titles)
 			{
 				for (const auto& [serial, app_versions] : serials)
@@ -1092,10 +987,8 @@ bool patch_engine::remove_patch(const patch_info& info)
 	return false;
 }
 
-patch_engine::patch_map patch_engine::load_config(bool& enable_legacy_patches)
+patch_engine::patch_map patch_engine::load_config()
 {
-	enable_legacy_patches = true; // Default to true
-
 	patch_map config_map;
 
 	const std::string path = get_patch_config_path();
@@ -1109,13 +1002,6 @@ patch_engine::patch_map patch_engine::load_config(bool& enable_legacy_patches)
 		{
 			patch_log.fatal("Failed to load patch config file %s:\n%s", path, error);
 			return config_map;
-		}
-
-		// Try to load "Enable Legacy Patches" (default to true)
-		if (auto enable_legacy_node = root[config_key::enable_legacy_patches])
-		{
-			enable_legacy_patches = enable_legacy_node.as<bool>(true);
-			root.remove(config_key::enable_legacy_patches); // Remove the node in order to skip it in the next part
 		}
 
 		for (const auto pair : root)
