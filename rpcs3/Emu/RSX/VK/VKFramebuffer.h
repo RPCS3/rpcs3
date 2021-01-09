@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VKHelpers.h"
+#include "vkutils/framebuffer_object.hpp"
 
 namespace vk
 {

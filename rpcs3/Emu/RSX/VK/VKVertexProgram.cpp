@@ -3,6 +3,7 @@
 #include "VKVertexProgram.h"
 #include "VKCommonDecompiler.h"
 #include "VKHelpers.h"
+#include "vkutils/device.h"
 #include "../Common/GLSLCommon.h"
 
 
@@ -186,7 +187,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.domain = glsl::glsl_vertex_program;
 	properties2.require_lit_emulation = properties.has_lit_op;
 	properties2.emulate_zclip_transform = true;
-	properties2.emulate_depth_clip_only = vk::get_current_renderer()->get_shader_types_support().allow_float64;
+	properties2.emulate_depth_clip_only = vk::g_render_device->get_shader_types_support().allow_float64;
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);
@@ -311,7 +312,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 void VKVertexDecompilerThread::Task()
 {
 	m_device_props.emulate_conditional_rendering = vk::emulate_conditional_rendering();
-	m_binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
+	m_binding_table = vk::g_render_device->get_pipeline_binding_table();
 
 	m_shader = Decompile();
 	vk_prog->SetInputs(inputs);
