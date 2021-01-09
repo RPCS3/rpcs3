@@ -106,7 +106,8 @@ void sys_spu_image::free()
 {
 	if (type == SYS_SPU_IMAGE_TYPE_KERNEL)
 	{
-		vm::dealloc_verbose_nothrow(segs.addr(), vm::main);
+		// TODO: Remove, should be handled by syscalls
+		ensure(vm::dealloc(segs.addr(), vm::main));
 	}
 }
 

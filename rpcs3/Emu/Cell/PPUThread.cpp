@@ -910,7 +910,7 @@ void ppu_thread::exec_task()
 ppu_thread::~ppu_thread()
 {
 	// Deallocate Stack Area
-	vm::dealloc_verbose_nothrow(stack_addr, vm::stack);
+	ensure(vm::dealloc(stack_addr, vm::stack));
 
 	if (const auto dct = g_fxo->get<lv2_memory_container>())
 	{

@@ -19,7 +19,7 @@ struct libio_sys_config
 	{
 		if (stack_addr)
 		{
-			vm::dealloc_verbose_nothrow(stack_addr, vm::stack);
+			ensure(vm::dealloc(stack_addr, vm::stack));
 		}
 	}
 };
