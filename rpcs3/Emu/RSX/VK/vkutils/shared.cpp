@@ -131,4 +131,15 @@ namespace vk
 		// Let the app crash..
 		return false;
 	}
+
+	VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
+		u64 srcObject, usz location, s32 msgCode,
+		const char* pLayerPrefix, const char* pMsg, void* pUserData)
+	{
+#ifdef _WIN32
+		DebugBreak();
+#endif
+
+		return false;
+	}
 }

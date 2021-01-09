@@ -1,6 +1,9 @@
 #include "stdafx.h"
 
 #include "VKFramebuffer.h"
+#include "vkutils/image.h"
+#include "vkutils/image_helpers.h"
+
 #include <unordered_map>
 
 namespace vk
@@ -26,7 +29,7 @@ namespace vk
 		for (auto &e : image_list)
 		{
 			const VkImageSubresourceRange subres = { e->aspect(), 0, 1, 0, 1 };
-			image_views.push_back(std::make_unique<vk::image_view>(dev, e, VK_IMAGE_VIEW_TYPE_2D, vk::default_component_map(), subres));
+			image_views.push_back(std::make_unique<vk::image_view>(dev, e, VK_IMAGE_VIEW_TYPE_2D, vk::default_component_map, subres));
 		}
 
 		auto value = std::make_unique<vk::framebuffer_holder>(dev, renderpass, width, height, std::move(image_views));
@@ -52,7 +55,7 @@ namespace vk
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 		std::vector<std::unique_ptr<vk::image_view>> views;
 
-		views.push_back(std::make_unique<vk::image_view>(dev, attachment, VK_IMAGE_VIEW_TYPE_2D, format, vk::default_component_map(), range));
+		views.push_back(std::make_unique<vk::image_view>(dev, attachment, VK_IMAGE_VIEW_TYPE_2D, format, vk::default_component_map, range));
 		auto value = std::make_unique<vk::framebuffer_holder>(dev, renderpass, width, height, std::move(views));
 		auto ret = value.get();
 

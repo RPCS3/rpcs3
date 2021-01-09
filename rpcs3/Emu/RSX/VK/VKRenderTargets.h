@@ -1,9 +1,15 @@
 #pragma once
 
 #include "util/types.hpp"
-#include "VKHelpers.h"
-#include "VKFormats.h"
 #include "../Common/surface_store.h"
+
+#include "VKFormats.h"
+#include "VKHelpers.h"
+#include "vkutils/barriers.h"
+#include "vkutils/data_heap.h"
+#include "vkutils/device.h"
+#include "vkutils/image.h"
+#include "vkutils/scratch.h"
 
 namespace vk
 {
@@ -21,7 +27,6 @@ namespace vk
 			if (!resolve_surface)
 			{
 				// Create a resolve surface
-				auto pdev = vk::get_current_renderer();
 				const auto resolve_w = width() * samples_x;
 				const auto resolve_h = height() * samples_y;
 
@@ -29,8 +34,8 @@ namespace vk
 				usage |= (this->info.usage & (VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
 
 				resolve_surface.reset(new vk::viewable_image(
-					*pdev,
-					pdev->get_memory_mapping().device_local,
+					*g_render_device,
+					g_render_device->get_memory_mapping().device_local,
 					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 					VK_IMAGE_TYPE_2D,
 					format(),

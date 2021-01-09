@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "VKPipelineCompiler.h"
 #include "VKRenderPass.h"
-#include "VKHelpers.h"
+#include "vkutils/device.h"
 #include "Utilities/Thread.h"
 
 #include <thread>
@@ -53,7 +53,7 @@ namespace vk
 	std::unique_ptr<glsl::program> pipe_compiler::int_compile_compute_pipe(const VkComputePipelineCreateInfo& create_info, VkPipelineLayout pipe_layout)
 	{
 		VkPipeline pipeline;
-		vkCreateComputePipelines(*get_current_renderer(), nullptr, 1, &create_info, nullptr, &pipeline);
+		vkCreateComputePipelines(*g_render_device, nullptr, 1, &create_info, nullptr, &pipeline);
 		return std::make_unique<vk::glsl::program>(*m_device, pipeline, pipe_layout);
 	}
 
@@ -91,7 +91,7 @@ namespace vk
 		dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
 		dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
 
-		if (vk::get_current_renderer()->get_depth_bounds_support())
+		if (g_render_device->get_depth_bounds_support())
 		{
 			dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
 		}
@@ -206,9 +206,7 @@ namespace vk
 		}
 
 		ensure(num_worker_threads >= 1);
-
-		const vk::render_device* dev = vk::get_current_renderer();
-		ensure(dev); // "Cannot initialize pipe compiler before creating a logical device"
+		ensure(g_render_device); // "Cannot initialize pipe compiler before creating a logical device"
 
 		// Create the thread pool
 		g_pipe_compilers = std::make_unique<named_thread_group<pipe_compiler>>("RSX.W", num_worker_threads);
@@ -217,7 +215,7 @@ namespace vk
 		// Initialize the workers. At least one inline compiler shall exist (doesn't actually run)
 		for (pipe_compiler& compiler : *g_pipe_compilers.get())
 		{
-			compiler.initialize(dev);
+			compiler.initialize(g_render_device);
 		}
 	}
 

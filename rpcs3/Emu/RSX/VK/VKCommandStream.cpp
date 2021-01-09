@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "VKCommandStream.h"
-#include "vkutils/fence.h"
+#include "vkutils/sync.h"
 #include "Emu/IdManager.h"
 #include "Emu/system_config.h"
 #include "Emu/RSX/RSXOffload.h"

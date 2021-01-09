@@ -2,7 +2,7 @@
 #include "VKGSRender.h"
 #include "../Common/BufferUtils.h"
 #include "../rsx_methods.h"
-#include "vkutils/buffer_view.h"
+#include "vkutils/buffer_object.h"
 
 namespace vk
 {
