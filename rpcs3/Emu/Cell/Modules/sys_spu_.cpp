@@ -362,7 +362,7 @@ error_code sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 	if (img->type == SYS_SPU_IMAGE_TYPE_USER)
 	{
 		//_sys_free(img->segs.addr());
-		vm::dealloc_verbose_nothrow(img->segs.addr(), vm::main);
+		vm::dealloc(img->segs.addr(), vm::main);
 	}
 	else if (img->type == SYS_SPU_IMAGE_TYPE_KERNEL)
 	{

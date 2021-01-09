@@ -58,7 +58,7 @@ static void ppu_free_tls(u32 addr)
 	if (addr < s_tls_area || i >= s_tls_max || (addr - s_tls_area) % s_tls_size)
 	{
 		// Alternative TLS allocation detected
-		vm::dealloc_verbose_nothrow(addr, vm::main);
+		ensure(vm::dealloc(addr, vm::main));
 		return;
 	}
 

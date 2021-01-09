@@ -1690,7 +1690,7 @@ spu_thread::~spu_thread()
 	if (!group)
 	{
 		// Deallocate local storage (thread groups are handled in sys_spu.cpp)
-		vm::dealloc_verbose_nothrow(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, vm::spu);
+		ensure(vm::dealloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, vm::spu));
 	}
 
 	// Release LS mirrors area
