@@ -221,12 +221,18 @@ namespace utils
 	void memory_protect(void* pointer, usz size, protection prot)
 	{
 #ifdef _WIN32
+
+		DWORD old;
+		if (::VirtualProtect(pointer, size, +prot, &old))
+		{
+			return;
+		}
+
 		for (u64 addr = reinterpret_cast<u64>(pointer), end = addr + size; addr < end;)
 		{
 			const u64 boundary = (addr + 0x10000) & -0x10000;
 			const u64 block_size = std::min(boundary, end) - addr;
 
-			DWORD old;
 			if (!::VirtualProtect(reinterpret_cast<LPVOID>(addr), block_size, +prot, &old))
 			{
 				fmt::throw_exception("VirtualProtect failed (%p, 0x%x, addr=0x%x, error=%#x)", pointer, size, addr, GetLastError());
