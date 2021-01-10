@@ -1,64 +1,20 @@
 #include "stdafx.h"
 #include "VKHelpers.h"
-#include "../GCM.h"
-#include "../rsx_utils.h"
 #include "VKFormats.h"
 #include "VKCompute.h"
 #include "VKRenderPass.h"
 #include "VKRenderTargets.h"
 
+#include "vkutils/data_heap.h"
+#include "vkutils/image_helpers.h"
+
+#include "../GCM.h"
+#include "../rsx_utils.h"
+
 #include "util/asm.hpp"
 
 namespace vk
 {
-	VkComponentMapping default_component_map()
-	{
-		VkComponentMapping result = {};
-		result.a = VK_COMPONENT_SWIZZLE_A;
-		result.r = VK_COMPONENT_SWIZZLE_R;
-		result.g = VK_COMPONENT_SWIZZLE_G;
-		result.b = VK_COMPONENT_SWIZZLE_B;
-
-		return result;
-	}
-
-	VkImageSubresource default_image_subresource()
-	{
-		VkImageSubresource subres = {};
-		subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		subres.mipLevel = 0;
-		subres.arrayLayer = 0;
-
-		return subres;
-	}
-
-	VkImageSubresourceRange get_image_subresource_range(u32 base_layer, u32 base_mip, u32 layer_count, u32 level_count, VkImageAspectFlags aspect)
-	{
-		VkImageSubresourceRange subres = {};
-		subres.aspectMask = aspect;
-		subres.baseArrayLayer = base_layer;
-		subres.baseMipLevel = base_mip;
-		subres.layerCount = layer_count;
-		subres.levelCount = level_count;
-
-		return subres;
-	}
-
-	VkImageAspectFlags get_aspect_flags(VkFormat format)
-	{
-		switch (format)
-		{
-		default:
-			return VK_IMAGE_ASPECT_COLOR_BIT;
-		case VK_FORMAT_D16_UNORM:
-		case VK_FORMAT_D32_SFLOAT:
-			return VK_IMAGE_ASPECT_DEPTH_BIT;
-		case VK_FORMAT_D24_UNORM_S8_UINT:
-		case VK_FORMAT_D32_SFLOAT_S8_UINT:
-			return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-		}
-	}
-
 	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes)
 	{
 		// Always validate
@@ -1003,31 +959,6 @@ namespace vk
 		{
 			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
 		}
-	}
-
-	VkComponentMapping apply_swizzle_remap(const std::array<VkComponentSwizzle, 4>& base_remap, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap_vector)
-	{
-		VkComponentSwizzle final_mapping[4] = {};
-
-		for (u8 channel = 0; channel < 4; ++channel)
-		{
-			switch (remap_vector.second[channel])
-			{
-			case CELL_GCM_TEXTURE_REMAP_ONE:
-				final_mapping[channel] = VK_COMPONENT_SWIZZLE_ONE;
-				break;
-			case CELL_GCM_TEXTURE_REMAP_ZERO:
-				final_mapping[channel] = VK_COMPONENT_SWIZZLE_ZERO;
-				break;
-			case CELL_GCM_TEXTURE_REMAP_REMAP:
-				final_mapping[channel] = base_remap[remap_vector.first[channel]];
-				break;
-			default:
-				rsx_log.error("Unknown remap lookup value %d", remap_vector.second[channel]);
-			}
-		}
-
-		return{ final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
 	}
 
 	void blitter::scale_image(vk::command_buffer& cmd, vk::image* src, vk::image* dst, areai src_area, areai dst_area, bool interpolate, const rsx::typeless_xfer& xfer_info)

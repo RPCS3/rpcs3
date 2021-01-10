@@ -21,7 +21,7 @@ namespace stx
 	}
 
 	// Typemap with exactly one object of each used type, created on init() and destroyed on clear()
-	template <typename /*Tag*/, bool Report = true>
+	template <typename Tag>
 	class manual_fixed_typemap
 	{
 		// Save default constructor and destructor
@@ -69,12 +69,6 @@ namespace stx
 
 		// Used to generate creation order (increased on every construction)
 		unsigned long long m_init_count = 0;
-
-		// Body is somewhere else if enabled
-		void init_reporter(unsigned long long created) const noexcept;
-
-		// Body is somewhere else if enabled
-		void destroy_reporter(unsigned long long created) const noexcept;
 
 	public:
 		constexpr manual_fixed_typemap() noexcept = default;
@@ -153,8 +147,6 @@ namespace stx
 			// Destroy objects in correct order
 			for (unsigned i = 0; i < _max; i++)
 			{
-				if constexpr (Report)
-					destroy_reporter(all_data[i].created);
 				all_data[i].destroy(*all_data[i].object_pointer);
 			}
 
@@ -173,8 +165,6 @@ namespace stx
 				if (m_list[type.index()])
 				{
 					m_order[type.index()] = ++m_init_count;
-					if constexpr (Report)
-						init_reporter(m_init_count);
 				}
 			}
 		}

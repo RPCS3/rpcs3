@@ -26,31 +26,40 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\chip_class.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\vkutils\fence.cpp">
-      <Filter>vkutils</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\vkutils\mem_allocator.cpp">
-      <Filter>vkutils</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\vkutils\memory_block.cpp">
-      <Filter>vkutils</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\vkutils\physical_device.cpp">
-      <Filter>vkutils</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\VK\vkutils\sampler.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\VK\vkutils\shared.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\vkutils\buffer_view.cpp">
+    <ClCompile Include="Emu\RSX\VK\vkutils\buffer_object.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\vkutils\render_device.cpp">
+    <ClCompile Include="Emu\RSX\VK\vkutils\commands.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\VK\vkutils\command_pool.cpp">
+    <ClCompile Include="Emu\RSX\VK\vkutils\sync.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\memory.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\device.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\image.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\data_heap.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\barriers.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\scratch.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\image_helpers.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
   </ItemGroup>
@@ -81,25 +90,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\chip_class.h">
       <Filter>vkutils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\fence.h">
-      <Filter>vkutils</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\graphics_pipeline_state.h">
-      <Filter>vkutils</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\mem_allocator.h">
-      <Filter>vkutils</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\memory_block.h">
-      <Filter>vkutils</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\physical_device.h">
-      <Filter>vkutils</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\VK\vkutils\pipeline_binding_table.h">
-      <Filter>vkutils</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\query_pool.h">
       <Filter>vkutils</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\VK\vkutils\sampler.h">
@@ -108,16 +99,52 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\shared.h">
       <Filter>vkutils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\supported_extensions.h">
+    <ClInclude Include="Emu\RSX\VK\vkutils\buffer_object.h">
       <Filter>vkutils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\buffer_view.h">
+    <ClInclude Include="Emu\RSX\VK\vkutils\commands.h">
       <Filter>vkutils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\render_device.h">
+    <ClInclude Include="Emu\RSX\VK\vkutils\sync.h">
       <Filter>vkutils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\command_pool.h">
+    <ClInclude Include="Emu\RSX\VK\vkutils\graphics_pipeline_state.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\device.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\instance.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\memory.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\query_pool.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\framebuffer_object.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\image.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\descriptors.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\data_heap.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\barriers.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\scratch.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\image_helpers.h">
       <Filter>vkutils</Filter>
     </ClInclude>
   </ItemGroup>
