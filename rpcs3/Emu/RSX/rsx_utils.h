@@ -618,7 +618,7 @@ namespace rsx
 		auto width_ = (width * 100) / get_resolution_scale_percent();
 		auto height_ = (height * 100) / get_resolution_scale_percent();
 
-		if (clamp)
+		if constexpr (clamp)
 		{
 			width_ = std::max<u16>(width_, 1);
 			height_ = std::max<u16>(height_, 1);
