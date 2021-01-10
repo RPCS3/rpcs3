@@ -1,7 +1,9 @@
 #include "stdafx.h"
-#include "VKHelpers.h"
 #include "VKResourceManager.h"
 #include "VKDMA.h"
+#include "vkutils/device.h"
+
+#include "Emu/Memory/vm.h"
 
 #include "util/asm.hpp"
 #include <unordered_map>
@@ -257,7 +259,7 @@ namespace vk
 			}
 
 			auto &block_info = g_dma_pool[first_block];
-			block_info.init(*vk::get_current_renderer(), first_block, s_dma_block_length);
+			block_info.init(*g_render_device, first_block, s_dma_block_length);
 			return block_info.get(map_range);
 		}
 
@@ -291,13 +293,13 @@ namespace vk
 					if (entry->end() < limit)
 					{
 						auto new_length = block_end - block_head->start();
-						block_head->extend(cmd, *vk::get_current_renderer(), new_length);
+						block_head->extend(cmd, *g_render_device, new_length);
 					}
 				}
 				else
 				{
 					auto required_size = (block_end - block);
-					block_head->init(*vk::get_current_renderer(), block, required_size);
+					block_head->init(*g_render_device, block, required_size);
 				}
 			}
 			else

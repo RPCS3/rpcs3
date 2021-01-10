@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "VKFormats.h"
-#include "VKHelpers.h"
+#include "vkutils/device.h"
+#include "vkutils/image.h"
 
 namespace vk
 {

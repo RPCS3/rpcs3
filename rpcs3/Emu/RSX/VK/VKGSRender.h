@@ -1,6 +1,12 @@
 #pragma once
 #include "Emu/RSX/GSRender.h"
-#include "VKHelpers.h"
+
+#include "vkutils/descriptors.hpp"
+#include "vkutils/data_heap.h"
+#include "vkutils/instance.hpp"
+#include "vkutils/sync.h"
+#include "vkutils/swapchain.hpp"
+
 #include "VKTextureCache.h"
 #include "VKRenderTargets.h"
 #include "VKFormats.h"
@@ -112,7 +118,7 @@ namespace vk
 
 				if (pending)
 				{
-					vk::reset_fence(submit_fence);
+					submit_fence->reset();
 					vk::on_event_completed(eid_tag);
 
 					pending = false;
@@ -136,7 +142,7 @@ namespace vk
 
 			if (pending)
 			{
-				vk::reset_fence(submit_fence);
+				submit_fence->reset();
 				vk::on_event_completed(eid_tag);
 
 				pending = false;
@@ -397,7 +403,7 @@ private:
 	std::unique_ptr<vk::program_cache> m_prog_buffer;
 
 	std::unique_ptr<vk::swapchain_base> m_swapchain;
-	vk::context m_thread_context;
+	vk::instance m_instance;
 	vk::render_device *m_device;
 
 	//Vulkan internals

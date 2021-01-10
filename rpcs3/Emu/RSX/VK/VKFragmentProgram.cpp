@@ -2,6 +2,8 @@
 #include "VKFragmentProgram.h"
 #include "VKCommonDecompiler.h"
 #include "VKHelpers.h"
+#include "vkutils/device.h"
+#include "Emu/system_config.h"
 #include "../Common/GLSLCommon.h"
 #include "../GCM.h"
 
@@ -369,7 +371,7 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::Task()
 {
-	m_binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
+	m_binding_table = vk::g_render_device->get_pipeline_binding_table();
 	m_shader = Decompile();
 	vk_prog->SetInputs(inputs);
 }

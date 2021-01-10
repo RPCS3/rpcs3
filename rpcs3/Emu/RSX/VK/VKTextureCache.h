@@ -1,9 +1,10 @@
 #pragma once
 
-#include "util/types.hpp"
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
 #include "VKDMA.h"
+#include "vkutils/image_helpers.h"
+
 #include "../Common/texture_cache.h"
 
 #include <memory>

@@ -1,9 +1,11 @@
 #pragma once
-#include "VKHelpers.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "VKRenderPass.h"
 #include "VKPipelineCompiler.h"
+
+#include "vkutils/framebuffer_object.hpp"
+
 #include "../Common/TextGlyphs.h"
 #include <unordered_map>
 

@@ -1,5 +1,4 @@
 #pragma once
-#include "VKHelpers.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "VKRenderTargets.h"
@@ -7,6 +6,10 @@
 #include "VKResourceManager.h"
 #include "VKRenderPass.h"
 #include "VKPipelineCompiler.h"
+
+#include "vkutils/data_heap.h"
+#include "vkutils/image.h"
+#include "vkutils/image_helpers.h"
 #include "vkutils/sampler.h"
 
 #include "../Overlays/overlays.h"
