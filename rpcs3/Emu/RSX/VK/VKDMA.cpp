@@ -10,17 +10,17 @@
 
 namespace vk
 {
-	static constexpr usz s_dma_block_length = 0x01000000;
-	static constexpr u32    s_dma_block_mask = 0xFF000000;
-	//static constexpr u32    s_dma_offset_mask = 0x00FFFFFF;
+	static constexpr usz s_dma_block_length = 0x00001000;//0x01000000;
+	static constexpr u32 s_dma_block_mask   = 0xFFFFF000;//0xFF000000;
+	//static constexpr u32 s_dma_offset_mask  = 0x00000FFF;//0x00FFFFFF;
 
-	static constexpr u32    s_page_size = 16384;
-	static constexpr u32    s_page_align = s_page_size - 1;
-	static constexpr u32    s_pages_per_entry = 32;
-	static constexpr u32    s_bits_per_page = 2;
-	static constexpr u32    s_bytes_per_entry = (s_page_size * s_pages_per_entry);
+	static constexpr u32 s_page_size = 16384;
+	static constexpr u32 s_page_align = s_page_size - 1;
+	static constexpr u32 s_pages_per_entry = 32;
+	static constexpr u32 s_bits_per_page = 2;
+	static constexpr u32 s_bytes_per_entry = (s_page_size * s_pages_per_entry);
 
-	std::unordered_map<u32, dma_block> g_dma_pool;
+	std::unordered_map<u32, std::unique_ptr<dma_block>> g_dma_pool;
 
 	void* dma_block::map_range(const utils::address_range& range)
 	{
@@ -47,16 +47,28 @@ namespace vk
 		}
 	}
 
+	void dma_block::allocate(const render_device& dev, usz size)
+	{
+		if (allocated_memory)
+		{
+			// Acquired blocks are always to be assumed dirty. It is not possible to synchronize host access and inline
+			// buffer copies without causing weird issues. Overlapped incomplete data ends up overwriting host-uploaded data.
+			auto gc = vk::get_resource_manager();
+			gc->dispose(allocated_memory);
+		}
+
+		allocated_memory = std::make_unique<vk::buffer>(dev, size,
+			dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+	}
+
 	void dma_block::init(const render_device& dev, u32 addr, usz size)
 	{
 		ensure(size);
 		ensure(!(size % s_dma_block_length));
 		base_address = addr;
 
-		allocated_memory = std::make_unique<vk::buffer>(dev, size,
-			dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
-
+		allocate(dev, size);
 		page_info.resize(size / s_bytes_per_entry, ~0ull);
 	}
 
@@ -70,7 +82,7 @@ namespace vk
 	void dma_block::set_page_bit(u32 offset, u64 bits)
 	{
 		const auto entry = (offset / s_bytes_per_entry);
-		const auto word =  entry / s_pages_per_entry;
+		const auto word = entry / s_pages_per_entry;
 		const auto shift = (entry % s_pages_per_entry) * s_bits_per_page;
 
 		page_info[word] &= ~(3 << shift);
@@ -202,24 +214,16 @@ namespace vk
 		}
 	}
 
-	void dma_block::extend(const command_buffer& cmd, const render_device &dev, usz new_size)
+	void dma_block::extend(const command_buffer& cmd, const render_device& dev, usz new_size)
 	{
 		ensure(allocated_memory);
 		if (new_size <= allocated_memory->size())
 			return;
 
+		allocate(dev, new_size);
+
 		const auto required_entries = new_size / s_bytes_per_entry;
 		page_info.resize(required_entries, ~0ull);
-
-		auto new_allocation = std::make_unique<vk::buffer>(dev, new_size,
-			dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
-
-		// Acquired blocks are always to be assumed dirty. It is not possible to synchronize host access and inline
-		// buffer copies without causing weird issues. Overlapped incomplete data ends up overwriting host-uploaded data.
-		auto gc = vk::get_resource_manager();
-		gc->dispose(allocated_memory);
-		allocated_memory = std::move(new_allocation);
 	}
 
 	u32 dma_block::start() const
@@ -238,6 +242,48 @@ namespace vk
 		return (allocated_memory) ? allocated_memory->size() : 0;
 	}
 
+	void dma_block_EXT::allocate(const render_device& dev, usz size)
+	{
+		if (allocated_memory)
+		{
+			// Acquired blocks are always to be assumed dirty. It is not possible to synchronize host access and inline
+			// buffer copies without causing weird issues. Overlapped incomplete data ends up overwriting host-uploaded data.
+			auto gc = vk::get_resource_manager();
+			gc->dispose(allocated_memory);
+		}
+
+		allocated_memory = std::make_unique<vk::buffer>(dev,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			vm::get_super_ptr<void>(base_address),
+			size);
+	}
+
+	void* dma_block_EXT::map_range(const utils::address_range& range)
+	{
+		return vm::get_super_ptr<void>(range.start);
+	}
+
+	void dma_block_EXT::unmap()
+	{
+		// NOP
+	}
+
+	void dma_block_EXT::flush(const utils::address_range& range)
+	{
+		// NOP
+	}
+
+	void dma_block_EXT::load(const utils::address_range& range)
+	{
+		// NOP
+	}
+
+	void create_dma_block(std::unique_ptr<dma_block>& block)
+	{
+		// TODO
+		block.reset(new dma_block_EXT());
+	}
+
 	std::pair<u32, vk::buffer*> map_dma(const command_buffer& cmd, u32 local_address, u32 length)
 	{
 		const auto map_range = utils::address_range::start_length(local_address, length);
@@ -247,17 +293,19 @@ namespace vk
 
 		if (auto found = g_dma_pool.find(first_block); found != g_dma_pool.end())
 		{
-			if (found->second.end() >= limit)
+			if (found->second->end() >= limit)
 			{
-				return found->second.get(map_range);
+				return found->second->get(map_range);
 			}
 		}
 
 		if (first_block == last_block) [[likely]]
 		{
 			auto &block_info = g_dma_pool[first_block];
-			block_info.init(*g_render_device, first_block, s_dma_block_length);
-			return block_info.get(map_range);
+			if (!block_info) create_dma_block(block_info);
+
+			block_info->init(*g_render_device, first_block, s_dma_block_length);
+			return block_info->get(map_range);
 		}
 
 		dma_block* block_head = nullptr;
@@ -268,7 +316,7 @@ namespace vk
 		{
 			if (auto found = g_dma_pool.find(block); found != g_dma_pool.end())
 			{
-				const auto end = found->second.end();
+				const auto end = found->second->end();
 				last_block = std::max(last_block, end & s_dma_block_mask);
 				block_end = std::max(block_end, end + 1);
 
@@ -279,8 +327,10 @@ namespace vk
 		for (auto block = first_block; block <= last_block; block += s_dma_block_length)
 		{
 			auto found = g_dma_pool.find(block);
-			const bool exists = (found != g_dma_pool.end());
-			auto entry = exists ? &found->second : &g_dma_pool[block];
+			auto &entry = g_dma_pool[block];
+
+			const bool exists = !!entry;
+			if (!exists) create_dma_block(entry);
 
 			if (block == first_block)
 			{
@@ -326,16 +376,16 @@ namespace vk
 			u32 block = (local_address & s_dma_block_mask);
 			if (auto found = g_dma_pool.find(block); found != g_dma_pool.end())
 			{
-				const auto sync_end = std::min(limit, found->second.end());
+				const auto sync_end = std::min(limit, found->second->end());
 				const auto range = utils::address_range::start_end(local_address, sync_end);
 
 				if constexpr (load)
 				{
-					found->second.load(range);
+					found->second->load(range);
 				}
 				else
 				{
-					found->second.flush(range);
+					found->second->flush(range);
 				}
 
 				if (sync_end < limit) [[unlikely]]

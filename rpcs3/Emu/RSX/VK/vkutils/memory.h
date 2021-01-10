@@ -82,21 +82,44 @@ namespace vk
 	struct memory_block
 	{
 		memory_block(VkDevice dev, u64 block_sz, u64 alignment, u32 memory_type_index);
-		~memory_block();
+		virtual ~memory_block();
 
-		VkDeviceMemory get_vk_device_memory();
-		u64 get_vk_device_memory_offset();
+		virtual VkDeviceMemory get_vk_device_memory();
+		virtual u64 get_vk_device_memory_offset();
 
-		void* map(u64 offset, u64 size);
-		void unmap();
+		virtual void* map(u64 offset, u64 size);
+		virtual void unmap();
 
 		memory_block(const memory_block&) = delete;
 		memory_block(memory_block&&)      = delete;
 
+	protected:
+		memory_block() = default;
+
 	private:
 		VkDevice m_device;
-		vk::mem_allocator_base* m_mem_allocator;
+		vk::mem_allocator_base* m_mem_allocator = nullptr;
 		mem_allocator_base::mem_handle_t m_mem_handle;
+	};
+
+	struct memory_block_host : public memory_block
+	{
+		memory_block_host(VkDevice dev, void* host_pointer, u64 size, u32 memory_type_index);
+		~memory_block_host();
+
+		VkDeviceMemory get_vk_device_memory() override;
+		u64 get_vk_device_memory_offset() override;
+		void* map(u64 offset, u64 size) override;
+		void unmap() override;
+
+		memory_block_host(const memory_block_host&) = delete;
+		memory_block_host(memory_block_host&&) = delete;
+		memory_block_host() = delete;
+
+	private:
+		VkDevice m_device;
+		VkDeviceMemory m_mem_handle;
+		void* m_host_pointer;
 	};
 
 	void vmm_notify_memory_allocated(void* handle, u32 memory_type, u64 memory_size);

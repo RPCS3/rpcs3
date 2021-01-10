@@ -30,6 +30,8 @@ namespace vk
 	{
 		u32 host_visible_coherent;
 		u32 device_local;
+
+		PFN_vkGetMemoryHostPointerPropertiesEXT getMemoryHostPointerPropertiesEXT;
 	};
 
 	class physical_device
@@ -47,6 +49,7 @@ namespace vk
 
 		bool stencil_export_support = false;
 		bool conditional_render_support = false;
+		bool external_memory_host_support = false;
 		bool unrestricted_depth_range_support = false;
 
 		friend class render_device;
