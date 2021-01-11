@@ -10,11 +10,11 @@
 
 namespace vk
 {
-	static constexpr usz s_dma_block_length = 0x00001000;//0x01000000;
-	static constexpr u32 s_dma_block_mask   = 0xFFFFF000;//0xFF000000;
-	//static constexpr u32 s_dma_offset_mask  = 0x00000FFF;//0x00FFFFFF;
+	static constexpr usz s_dma_block_length = 0x00010000;
+	static constexpr u32 s_dma_block_mask   = 0xFFFF0000;
+	//static constexpr u32 s_dma_offset_mask  = 0x0000FFFF;
 
-	static constexpr u32 s_page_size = 16384;
+	static constexpr u32 s_page_size = 65536;
 	static constexpr u32 s_page_align = s_page_size - 1;
 	static constexpr u32 s_pages_per_entry = 32;
 	static constexpr u32 s_bits_per_page = 2;
