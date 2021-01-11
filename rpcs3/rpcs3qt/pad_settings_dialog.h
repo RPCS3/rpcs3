@@ -120,7 +120,7 @@ private:
 	bool m_enable_battery{ false };
 
 	// Button Mapping
-	QButtonGroup* m_padButtons = nullptr;
+	QButtonGroup* m_pad_buttons = nullptr;
 	u32 m_button_id = id_pad_begin;
 	std::map<int /*id*/, pad_button /*info*/> m_cfg_entries;
 

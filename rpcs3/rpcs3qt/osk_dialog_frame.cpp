@@ -47,7 +47,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 	// Text Input Counter
 	const QString text = QString::fromStdU16String(std::u16string(init_text));
-	QLabel* inputCount = new QLabel(QString("%1/%2").arg(text.length()).arg(charlimit));
+	QLabel* input_count_label = new QLabel(QString("%1/%2").arg(text.length()).arg(charlimit));
 
 	// Ok Button
 	QPushButton* button_ok = new QPushButton(tr("OK"), m_dialog);
@@ -79,7 +79,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 		connect(input, &QLineEdit::textChanged, [=, this](const QString& text)
 		{
-			inputCount->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
+			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
 			on_osk_input_entered();
 		});
@@ -143,7 +143,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 			m_text_old = text;
 
-			inputCount->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
+			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
 			on_osk_input_entered();
 		});
@@ -151,7 +151,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 		inputLayout->addWidget(input);
 	}
 
-	inputLayout->addWidget(inputCount);
+	inputLayout->addWidget(input_count_label);
 
 	QFormLayout* layout = new QFormLayout(m_dialog);
 	layout->setFormAlignment(Qt::AlignHCenter);
