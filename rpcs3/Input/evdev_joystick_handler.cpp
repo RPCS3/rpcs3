@@ -656,12 +656,11 @@ int evdev_joystick_handler::add_device(const std::string& device, const std::sha
 				name == device)
 			{
 				// It's a joystick. Now let's make sure we don't already have this one.
-				auto it = std::find_if(bindings.begin(), bindings.end(), [&path](std::pair<std::shared_ptr<PadDevice>, std::shared_ptr<Pad>> binding)
+				if (std::any_of(bindings.begin(), bindings.end(), [&path](std::pair<std::shared_ptr<PadDevice>, std::shared_ptr<Pad>> binding)
 				{
-					auto device = std::static_pointer_cast<EvdevDevice>(binding.first);
+					const auto device = std::static_pointer_cast<EvdevDevice>(binding.first);
 					return device && path == device->path;
-				});
-				if (it != bindings.end())
+				}))
 				{
 					libevdev_free(dev);
 					close(fd);
@@ -1017,7 +1016,7 @@ bool evdev_joystick_handler::check_button(const EvdevButton& b, const u32 code)
 
 bool evdev_joystick_handler::check_buttons(const std::vector<EvdevButton>& b, const u32 code)
 {
-	return std::find_if(b.begin(), b.end(), [this, code](const EvdevButton& b) { return check_button(b, code); }) != b.end();
+	return std::any_of(b.begin(), b.end(), [this, code](const EvdevButton& b) { return check_button(b, code); });
 };
 
 bool evdev_joystick_handler::get_is_left_trigger(u64 keyCode)
