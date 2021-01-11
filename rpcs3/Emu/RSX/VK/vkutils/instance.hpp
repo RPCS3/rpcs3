@@ -149,6 +149,11 @@ namespace vk
 				{
 					extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 				}
+
+				if (support.is_supported(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME))
+				{
+					extensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+				}
 #ifdef _WIN32
 				extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(__APPLE__)

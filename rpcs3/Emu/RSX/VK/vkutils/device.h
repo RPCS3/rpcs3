@@ -115,6 +115,7 @@ namespace vk
 		bool get_alpha_to_one_support() const;
 		bool get_conditional_render_support() const;
 		bool get_unrestricted_depth_range_support() const;
+		bool get_external_memory_host_support() const;
 
 		mem_allocator_base* get_allocator() const;
 
