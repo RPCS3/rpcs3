@@ -280,8 +280,16 @@ namespace vk
 
 	void create_dma_block(std::unique_ptr<dma_block>& block)
 	{
-		// TODO
-		block.reset(new dma_block_EXT());
+#ifdef _WIN32
+		if (g_render_device->get_external_memory_host_support())
+		{
+			block.reset(new dma_block_EXT());
+		}
+		else
+#endif
+		{
+			block.reset(new dma_block());
+		}
 	}
 
 	std::pair<u32, vk::buffer*> map_dma(const command_buffer& cmd, u32 local_address, u32 length)

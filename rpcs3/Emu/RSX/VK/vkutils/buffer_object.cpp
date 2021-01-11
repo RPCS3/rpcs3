@@ -91,7 +91,7 @@ namespace vk
 
 			VkMemoryHostPointerPropertiesEXT memory_properties{};
 			memory_properties.sType = VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT;
-			memory_map.getMemoryHostPointerPropertiesEXT(dev, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, host_pointer, &memory_properties);
+			CHECK_RESULT(memory_map.getMemoryHostPointerPropertiesEXT(dev, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, host_pointer, &memory_properties));
 
 			VkMemoryRequirements memory_reqs;
 			vkGetBufferMemoryRequirements(m_device, value, &memory_reqs);
@@ -110,7 +110,7 @@ namespace vk
 			}
 
 			memory = std::make_unique<memory_block_host>(m_device, host_pointer, size, memory_type_index);
-			vkBindBufferMemory(dev, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset());
+			CHECK_RESULT(vkBindBufferMemory(dev, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset()));
 		}
 
 		buffer::~buffer()

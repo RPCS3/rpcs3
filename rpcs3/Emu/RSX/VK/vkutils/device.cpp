@@ -265,6 +265,7 @@ namespace vk
 
 		if (pgpu->external_memory_host_support)
 		{
+			requested_extensions.push_back(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME);
 			requested_extensions.push_back(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		}
 
@@ -482,6 +483,11 @@ namespace vk
 	bool render_device::get_unrestricted_depth_range_support() const
 	{
 		return pgpu->unrestricted_depth_range_support;
+	}
+
+	bool render_device::get_external_memory_host_support() const
+	{
+		return pgpu->external_memory_host_support;
 	}
 
 	mem_allocator_base* render_device::get_allocator() const
