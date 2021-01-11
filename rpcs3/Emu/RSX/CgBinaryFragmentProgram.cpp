@@ -95,10 +95,10 @@ std::string CgBinaryDisasm::GetCondDisAsm()
 	swizzle += f[src0.cond_swizzle_z];
 	swizzle += f[src0.cond_swizzle_w];
 
-	if (swizzle == ".xxxx") swizzle = ".x";
-	else if (swizzle == ".yyyy") swizzle = ".y";
-	else if (swizzle == ".zzzz") swizzle = ".z";
-	else if (swizzle == ".wwww") swizzle = ".w";
+	if (swizzle == ".xxxx"sv) swizzle = ".x";
+	else if (swizzle == ".yyyy"sv) swizzle = ".y";
+	else if (swizzle == ".zzzz"sv) swizzle = ".z";
+	else if (swizzle == ".wwww"sv) swizzle = ".w";
 
 	if (swizzle == ".xyzw"sv)
 	{
@@ -129,7 +129,6 @@ std::string CgBinaryDisasm::GetCondDisAsm()
 	{
 		cond = "FL";
 	}
-
 	else
 	{
 		cond = "TR";
@@ -212,10 +211,10 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 	swizzle += f[src.swizzle_z];
 	swizzle += f[src.swizzle_w];
 
-	if (swizzle == ".xxxx") swizzle = ".x";
-	else if (swizzle == ".yyyy") swizzle = ".y";
-	else if (swizzle == ".zzzz") swizzle = ".z";
-	else if (swizzle == ".wwww") swizzle = ".w";
+	if (swizzle == ".xxxx"sv) swizzle = ".x";
+	else if (swizzle == ".yyyy"sv) swizzle = ".y";
+	else if (swizzle == ".zzzz"sv) swizzle = ".z";
+	else if (swizzle == ".wwww"sv) swizzle = ".w";
 
 	if (swizzle != ".xyzw"sv)
 	{
@@ -404,9 +403,8 @@ void CgBinaryDisasm::TaskFP()
 				m_else_offsets.push_back(src1.else_offset << 2);
 				m_end_offsets.push_back(src2.end_offset << 2);
 				AddCodeAsm("($cond)");
+				break;
 			}
-			break;
-
 			case RSX_FP_OPCODE_LOOP:
 			{
 				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
@@ -418,9 +416,8 @@ void CgBinaryDisasm::TaskFP()
 					m_loop_end_offsets.push_back(src2.end_offset << 2);
 					AddCodeAsm(fmt::format("{ %u, %u, %u }", src1.end_counter, src1.init_counter, src1.increment));
 				}
+				break;
 			}
-			break;
-
 			case RSX_FP_OPCODE_REP:
 			{
 				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
@@ -432,9 +429,8 @@ void CgBinaryDisasm::TaskFP()
 					m_end_offsets.push_back(src2.end_offset << 2);
 					m_arb_shader += "# RSX_FP_OPCODE_REP_2\n";
 				}
+				break;
 			}
-			break;
-
 			case RSX_FP_OPCODE_RET: AddCodeAsm("$cond"); break;
 
 			default:

@@ -1717,7 +1717,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			if (std::find(blist.begin(), blist.end(), to_add) == blist.end())
 			{
-				if(auto it = std::find(blist.begin(), blist.end(), ""); it != blist.end())
+				if (auto it = std::find(blist.begin(), blist.end(), ""); it != blist.end())
 					*it = to_add;
 				else
 					blist.push_back(to_add);
