@@ -70,3 +70,22 @@ private:
 
 	void ShowImage(QWidget* parent, u32 addr, color_format format, u32 sizex, u32 sizey, bool flipv);
 };
+
+// Lifetime management with IDM
+struct memory_viewer_handle
+{
+	static constexpr u32 id_base = 1;
+	static constexpr u32 id_step = 1;
+	static constexpr u32 id_count = 2048;
+
+	template <typename... Args>
+	memory_viewer_handle(Args&&... args)
+		: m_mvp(new memory_viewer_panel(std::forward<Args>(args)...))
+	{
+	}
+
+	~memory_viewer_handle() { m_mvp->deleteLater(); }
+
+private:
+	const std::add_pointer_t<memory_viewer_panel> m_mvp;
+};

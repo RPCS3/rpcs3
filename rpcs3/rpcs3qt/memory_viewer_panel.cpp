@@ -30,7 +30,6 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr, const std::s
 	setWindowTitle(m_type != thread_type::spu ? tr("Memory Viewer") : tr("Memory Viewer Of %0").arg(qstr(cpu->get_name())));
 
 	setObjectName("memory_viewer");
-	setAttribute(Qt::WA_DeleteOnClose);
 	m_colcount = 4;
 	m_rowcount = 16;
 	int pSize = 10;
@@ -260,6 +259,15 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr, const std::s
 	});
 
 	setFixedWidth(sizeHint().width());
+
+	// Show by default
+	show();
+
+	// Expected to be created by IDM, emulation stop will close it
+	connect(this, &memory_viewer_panel::finished, [id = idm::last_id()](int)
+	{
+		idm::remove<memory_viewer_handle>(id);
+	});
 }
 
 memory_viewer_panel::~memory_viewer_panel()
