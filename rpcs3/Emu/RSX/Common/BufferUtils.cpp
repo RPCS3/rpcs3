@@ -349,11 +349,11 @@ namespace
 			const u8 attribute_sz = min_block_size >> 2;
 			for (u32 n = 0; n < remainder; ++n)
 			{
-				//auto src_ptr2 = reinterpret_cast<const be_t<u32>*>(src_ptr);
+				auto src_ptr2 = reinterpret_cast<const be_t<u32>*>(src_ptr);
 				auto dst_ptr2 = reinterpret_cast<u32*>(dst_ptr);
 
 				for (u32 v = 0; v < attribute_sz; ++v)
-					dst_ptr2[v] = src_ptr[v];
+					dst_ptr2[v] = src_ptr2[v];
 
 				src_ptr += src_stride;
 				dst_ptr += dst_stride;
@@ -415,11 +415,11 @@ namespace
 			const u8 attribute_sz = min_block_size >> 1;
 			for (u32 n = 0; n < remainder; ++n)
 			{
-				//auto src_ptr2 = reinterpret_cast<const be_t<u16>*>(src_ptr);
-				//auto dst_ptr2 = reinterpret_cast<u16*>(dst_ptr);
+				auto src_ptr2 = reinterpret_cast<const be_t<u16>*>(src_ptr);
+				auto dst_ptr2 = reinterpret_cast<u16*>(dst_ptr);
 
 				for (u32 v = 0; v < attribute_sz; ++v)
-					dst_ptr[v] = src_ptr[v];
+					dst_ptr2[v] = src_ptr2[v];
 
 				src_ptr += src_stride;
 				dst_ptr += dst_stride;
