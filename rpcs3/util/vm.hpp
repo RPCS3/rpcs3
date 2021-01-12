@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/atomic.hpp"
 
 namespace utils
 {
@@ -52,7 +53,7 @@ namespace utils
 #endif
 		u32 m_size;
 		u32 m_flags;
-		void* m_ptr;
+		atomic_t<void*> m_ptr;
 
 	public:
 		explicit shm(u32 size, u32 flags = 0);
@@ -84,7 +85,7 @@ namespace utils
 		// Get memory mapped by map_self()
 		u8* get() const
 		{
-			return reinterpret_cast<u8*>(m_ptr);
+			return static_cast<u8*>(+m_ptr);
 		}
 
 		u32 size() const

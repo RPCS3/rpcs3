@@ -218,7 +218,7 @@ namespace utils
 	shm::shm(u32 size, u32 flags)
 		: m_size(utils::align(size, 0x10000))
 		, m_flags(flags)
-		, m_ptr(0)
+		, m_ptr(nullptr)
 	{
 #ifdef _WIN32
 		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, m_size, NULL);
@@ -362,12 +362,21 @@ namespace utils
 
 	u8* shm::map_self(protection prot)
 	{
-		if (!m_ptr)
+		void* ptr = m_ptr;
+
+		if (!ptr)
 		{
-			m_ptr = this->map(nullptr, prot);
+			const auto mapped = this->map(nullptr, prot);
+
+			// Install mapped memory
+			if (!m_ptr.compare_exchange(ptr, mapped))
+			{
+				// Mapped already, nothing to do.
+				this->unmap(mapped);
+			}
 		}
 
-		return static_cast<u8*>(m_ptr);
+		return static_cast<u8*>(ptr);
 	}
 
 	void shm::unmap(void* ptr) const
@@ -414,10 +423,9 @@ namespace utils
 
 	void shm::unmap_self()
 	{
-		if (m_ptr)
+		if (auto ptr = m_ptr.exchange(nullptr))
 		{
-			this->unmap(m_ptr);
-			m_ptr = nullptr;
+			this->unmap(ptr);
 		}
 	}
 }
