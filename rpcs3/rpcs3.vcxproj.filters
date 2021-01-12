@@ -1218,6 +1218,9 @@
     <ClInclude Include="rpcs3qt\table_item_delegate.h">
       <Filter>Gui\custom items</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\richtext_item_delegate.h">
+      <Filter>Gui\custom items</Filter>
+    </ClInclude>
     <ClInclude Include="rpcs3qt\numbered_widget_item.h">
       <Filter>Gui\custom items</Filter>
     </ClInclude>

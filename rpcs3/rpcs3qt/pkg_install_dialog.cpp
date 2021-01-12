@@ -1,6 +1,7 @@
 #include "pkg_install_dialog.h"
 #include "game_compatibility.h"
 #include "numbered_widget_item.h"
+#include "richtext_item_delegate.h"
 
 #include <QDialogButtonBox>
 #include <QPushButton>
@@ -22,6 +23,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 	: QDialog(parent)
 {
 	m_dir_list = new QListWidget(this);
+	m_dir_list->setItemDelegate(new richtext_item_delegate(m_dir_list->itemDelegate()));
 
 	for (const QString& path : paths)
 	{
