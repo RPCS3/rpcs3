@@ -320,8 +320,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_M:
 		{
 			// Memory viewer
-			auto mvp = new memory_viewer_panel(this, pc, cpu);
-			mvp->show();
+			idm::make<memory_viewer_handle>(this, pc, cpu);
 			return;
 		}
 		case Qt::Key_F10:

@@ -1839,8 +1839,8 @@ void main_window::CreateConnects()
 
 	connect(ui->toolsmemory_viewerAct, &QAction::triggered, [this]
 	{
-		memory_viewer_panel* mvp = new memory_viewer_panel(this);
-		mvp->show();
+		if (!Emu.IsStopped())
+			idm::make<memory_viewer_handle>(this);
 	});
 
 	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, [this]
