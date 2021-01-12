@@ -11,7 +11,8 @@ class downloader : public QObject
 	Q_OBJECT
 
 public:
-	downloader(QWidget* parent = nullptr);
+	explicit downloader(QWidget* parent = nullptr);
+	~downloader();
 
 	void start(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title = "", bool keep_progress_dialog_open = false, int expected_size = -1);
 	usz update_buffer(char* data, usz size);
@@ -43,4 +44,6 @@ private:
 	progress_dialog* m_progress_dialog = nullptr;
 	atomic_t<bool> m_keep_progress_dialog_open = false;
 	QString m_progress_dialog_title;
+
+	QThread* m_thread = nullptr;
 };
