@@ -1338,7 +1338,7 @@ error_code cellRtcSetCurrentTick(vm::cptr<CellRtcTick> pTick)
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	u64 tmp = pTick->tick + 0xff23400100d44000;
+	//u64 tmp = pTick->tick + 0xff23400100d44000;
 	if (!(0xdcbffeff2bbfff < pTick->tick))
 	{
 		return CELL_RTC_ERROR_INVALID_ARG;

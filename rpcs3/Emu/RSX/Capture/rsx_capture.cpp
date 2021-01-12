@@ -268,7 +268,7 @@ namespace rsx
 		// i realize these are a slight copy pasta of the rsx_method implementations but its kinda unavoidable currently
 		void capture_image_in(thread* rsx, frame_capture_data::replay_command& replay_command)
 		{
-			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
+			//const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
 
 			const u16 clip_w = std::min(method_registers.blit_engine_output_width(), method_registers.blit_engine_clip_width());
 			const u16 clip_h = std::min(method_registers.blit_engine_output_height(), method_registers.blit_engine_clip_height());
@@ -276,8 +276,8 @@ namespace rsx
 			const u16 in_w = method_registers.blit_engine_input_width();
 			const u16 in_h = method_registers.blit_engine_input_height();
 
-			const blit_engine::transfer_origin in_origin                    = method_registers.blit_engine_input_origin();
-			const blit_engine::transfer_interpolator in_inter               = method_registers.blit_engine_input_inter();
+			//const blit_engine::transfer_origin in_origin                    = method_registers.blit_engine_input_origin();
+			//const blit_engine::transfer_interpolator in_inter               = method_registers.blit_engine_input_inter();
 			const rsx::blit_engine::transfer_source_format src_color_format = method_registers.blit_engine_src_color_format();
 
 			const f32 in_x = std::floor(method_registers.blit_engine_in_x());
@@ -319,7 +319,7 @@ namespace rsx
 			s32 in_pitch          = method_registers.nv0039_input_pitch();
 			const u32 line_length = method_registers.nv0039_line_length();
 			const u32 line_count  = method_registers.nv0039_line_count();
-			const u8 in_format    = method_registers.nv0039_input_format();
+			//const u8 in_format    = method_registers.nv0039_input_format();
 
 			u32 src_offset = method_registers.nv0039_input_offset();
 			u32 src_dma    = method_registers.nv0039_input_location();

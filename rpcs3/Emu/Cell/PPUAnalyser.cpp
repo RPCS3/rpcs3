@@ -666,8 +666,8 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			const u32 _toc = ptr[1];
 
 			// Rough Table of Contents borders
-			const u32 _toc_begin = _toc - 0x8000;
-			const u32 _toc_end = _toc + 0x8000;
+			//const u32 _toc_begin = _toc - 0x8000;
+			//const u32 _toc_end = _toc + 0x8000;
 
 			// TODO: improve TOC constraints
 			if (_toc % 4 || !vm::check_addr(_toc) || _toc >= 0x40000000 || (_toc >= start && _toc < end))

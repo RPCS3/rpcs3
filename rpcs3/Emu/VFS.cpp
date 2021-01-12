@@ -469,7 +469,7 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 		case char2{u8"！"[0]}:
 		{
 			// Escape full-width characters 0xFF01..0xFF5e with ！ (0xFF01)
-			switch (char2 c2 = get_char(i + 1))
+			switch (get_char(i + 1))
 			{
 			case char2{u8"！"[1]}:
 			{
@@ -533,7 +533,7 @@ std::string vfs::unescape(std::string_view name)
 		{
 		case char2{u8"！"[0]}:
 		{
-			switch (char2 c2 = get_char(i + 1))
+			switch (get_char(i + 1))
 			{
 			case char2{u8"！"[1]}:
 			{

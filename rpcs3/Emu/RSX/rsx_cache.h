@@ -842,7 +842,7 @@ namespace rsx
 
 			storage_type* find_vertex_range(uptr local_addr, upload_format fmt, u32 data_length) override
 			{
-				const auto data_end = local_addr + data_length;
+				//const auto data_end = local_addr + data_length;
 
 				for (auto &v : vertex_ranges[local_addr])
 				{

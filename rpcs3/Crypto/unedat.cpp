@@ -20,7 +20,7 @@ void generate_key(int crypto_mode, int version, unsigned char *key_final, unsign
 	case 0x10000000:
 		// Encrypted ERK.
 		// Decrypt the key with EDAT_KEY + EDAT_IV and copy the original IV.
-		aescbc128_decrypt(version ? EDAT_KEY_1 : EDAT_KEY_0, EDAT_IV, key, key_final, 0x10);
+		aescbc128_decrypt(const_cast<u8*>(version ? EDAT_KEY_1 : EDAT_KEY_0), const_cast<u8*>(EDAT_IV), key, key_final, 0x10);
 		memcpy(iv_final, iv, 0x10);
 		break;
 	case 0x20000000:
@@ -46,7 +46,7 @@ void generate_hash(int hash_mode, int version, unsigned char *hash_final, unsign
 	case 0x10000000:
 		// Encrypted HASH.
 		// Decrypt the hash with EDAT_KEY + EDAT_IV.
-		aescbc128_decrypt(version ? EDAT_KEY_1 : EDAT_KEY_0, EDAT_IV, hash, hash_final, 0x10);
+		aescbc128_decrypt(const_cast<u8*>(version ? EDAT_KEY_1 : EDAT_KEY_0), const_cast<u8*>(EDAT_IV), hash, hash_final, 0x10);
 		break;
 	case 0x20000000:
 		// Default HASH.
@@ -602,9 +602,9 @@ int validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *
 	// Hash with NPDRM_OMAC_KEY_3 and compare with title_hash.
 	// Try to ignore case sensivity with file extension
 	title_hash_result =
-		cmac_hash_compare(NP_OMAC_KEY_3, 0x10, buf.get(), buf_len, npd->title_hash, 0x10) ||
-		cmac_hash_compare(NP_OMAC_KEY_3, 0x10, buf_lower.get(), buf_len, npd->title_hash, 0x10) ||
-		cmac_hash_compare(NP_OMAC_KEY_3, 0x10, buf_upper.get(), buf_len, npd->title_hash, 0x10);
+		cmac_hash_compare(const_cast<u8*>(NP_OMAC_KEY_3), 0x10, buf.get(), buf_len, npd->title_hash, 0x10) ||
+		cmac_hash_compare(const_cast<u8*>(NP_OMAC_KEY_3), 0x10, buf_lower.get(), buf_len, npd->title_hash, 0x10) ||
+		cmac_hash_compare(const_cast<u8*>(NP_OMAC_KEY_3), 0x10, buf_upper.get(), buf_len, npd->title_hash, 0x10);
 
 	if (verbose)
 	{

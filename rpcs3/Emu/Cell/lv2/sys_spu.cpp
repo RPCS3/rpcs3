@@ -80,7 +80,7 @@ void sys_spu_image::load(const fs::file& stream)
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
 	const vm::ptr<sys_spu_segment> segs = vm::cast(vm::alloc(mem_size, vm::main));
 
-	const u32 entry = obj.header.e_entry;
+	//const u32 entry = obj.header.e_entry;
 
 	const u32 src = (segs + nsegs).addr();
 

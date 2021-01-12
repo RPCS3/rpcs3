@@ -461,7 +461,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 	{
 		cellVdec.warning("cellVdecQueryAttr: AVC (profile=%d)", profile);
 
-		const vm::ptr<CellVdecAvcSpecificInfo> sinfo = vm::cast(spec_addr);
+		//const vm::ptr<CellVdecAvcSpecificInfo> sinfo = vm::cast(spec_addr);
 
 		// TODO: sinfo
 
@@ -557,7 +557,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 	{
 		cellVdec.warning("cellVdecQueryAttr: DivX (profile=%d)", profile);
 
-		const vm::ptr<CellVdecDivxSpecificInfo2> sinfo = vm::cast(spec_addr);
+		//const vm::ptr<CellVdecDivxSpecificInfo2> sinfo = vm::cast(spec_addr);
 
 		// TODO: sinfo
 

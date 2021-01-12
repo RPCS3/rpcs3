@@ -405,7 +405,7 @@ void debugger_frame::UpdateUnitList()
 		return;
 	}
 
-	const int old_size = m_choice_units->count();
+	//const int old_size = m_choice_units->count();
 	QVariant old_cpu = m_choice_units->currentData();
 
 	const auto on_select = [&](u32 id, cpu_thread& cpu)
@@ -542,7 +542,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	{
 		expression_input->setValidator(new QRegExpValidator(QRegExp("^(0[xX])?0*[a-fA-F0-9]{0,5}$")));
 	}
-	
+
 	// Ok/Cancel
 	QPushButton* button_ok = new QPushButton(tr("OK"));
 	QPushButton* button_cancel = new QPushButton(tr("Cancel"));

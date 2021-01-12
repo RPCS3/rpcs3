@@ -90,7 +90,7 @@ namespace utils
 			return nullptr;
 		}
 
-		const auto orig_size = size;
+		[[maybe_unused]] const auto orig_size = size;
 
 		if (!use_addr)
 		{

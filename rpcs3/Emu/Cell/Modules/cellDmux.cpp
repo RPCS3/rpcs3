@@ -226,11 +226,11 @@ public:
 		DemuxerStream stream = {};
 		ElementaryStream* esALL[96]{};
 		ElementaryStream** esAVC = &esALL[0]; // AVC (max 16 minus M2V count)
-		ElementaryStream** esM2V = &esALL[16]; // M2V (max 16 minus AVC count)
-		ElementaryStream** esDATA = &esALL[32]; // user data (max 16)
+		//ElementaryStream** esM2V = &esALL[16]; // M2V (max 16 minus AVC count)
+		//ElementaryStream** esDATA = &esALL[32]; // user data (max 16)
 		ElementaryStream** esATX = &esALL[48]; // ATRAC3+ (max 16)
-		ElementaryStream** esAC3 = &esALL[64]; // AC3 (max 16)
-		ElementaryStream** esPCM = &esALL[80]; // LPCM (max 16)
+		//ElementaryStream** esAC3 = &esALL[64]; // AC3 (max 16)
+		//ElementaryStream** esPCM = &esALL[80]; // LPCM (max 16)
 
 		u32 cb_add = 0;
 

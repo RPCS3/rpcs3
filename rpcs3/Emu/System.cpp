@@ -1640,7 +1640,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				sys_log.notice("Elf path: %s", argv[0]);
 			}
 
-			const auto _main = g_fxo->init<ppu_module>();
+			g_fxo->init<ppu_module>();
 
 			ppu_load_exec(ppu_exec);
 

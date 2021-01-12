@@ -602,8 +602,6 @@ void cellGcmSetSecondVFrequency(u32 freq)
 {
 	cellGcmSys.warning("cellGcmSetSecondVFrequency(level=%d)", freq);
 
-	const auto render = rsx::get_current_renderer();
-
 	switch (freq)
 	{
 	case CELL_GCM_DISPLAY_FREQUENCY_59_94HZ:
@@ -1103,8 +1101,6 @@ error_code GcmUnmapIoAddress(ppu_thread& ppu, gcm_config* cfg, u32 io)
 		{
 			return error;
 		}
-
-		const auto render = rsx::get_current_renderer();
 
 		for (u32 i = 0; i < size; i++)
 		{

@@ -323,7 +323,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 				auto found = content_map->find(hash);
 				if (found == content_map->end()) // content isn't yet being tracked
 				{
-					auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
+					//auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
 
 					std::shared_ptr<search_content_t> curr_find = std::make_shared<search_content_t>();
 					if (item_path.length() > CELL_SEARCH_PATH_LEN_MAX)

@@ -542,7 +542,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 	}
 	case 0x80:
 	{
-		switch (auto mod_code = get_modRM_reg(code, 0))
+		switch (get_modRM_reg(code, 0))
 		{
 		//case 0: out_op = X64OP_ADD; break; // TODO: strange info in instruction manual
 		case 1: out_op = X64OP_OR; break;
@@ -561,7 +561,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 	}
 	case 0x81:
 	{
-		switch (auto mod_code = get_modRM_reg(code, 0))
+		switch (get_modRM_reg(code, 0))
 		{
 		case 0: out_op = X64OP_ADD; break;
 		case 1: out_op = X64OP_OR; break;
@@ -580,7 +580,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 	}
 	case 0x83:
 	{
-		switch (auto mod_code = get_modRM_reg(code, 0))
+		switch (get_modRM_reg(code, 0))
 		{
 		case 0: out_op = X64OP_ADD; break;
 		case 1: out_op = X64OP_OR; break;
@@ -721,7 +721,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 		const u8 vopm = op1 == 0xc5 ? 1 : op2 & 0x1f;
 		const u8 vop1 = op1 == 0xc5 ? op3 : code[2];
 		const u8 vlen = (opx & 0x4) ? 32 : 16;
-		const u8 vreg = (~opx >> 3) & 0xf;
+		//const u8 vreg = (~opx >> 3) & 0xf;
 		out_length += op1 == 0xc5 ? 2 : 3;
 		code += op1 == 0xc5 ? 2 : 3;
 
@@ -782,7 +782,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 	}
 	case 0xf6:
 	{
-		switch (auto mod_code = get_modRM_reg(code, 0))
+		switch (get_modRM_reg(code, 0))
 		{
 		case 0: out_op = X64OP_LOAD_TEST; break;
 		default: out_op = X64OP_NONE; break; // TODO...
@@ -795,7 +795,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 	}
 	case 0xf7:
 	{
-		switch (auto mod_code = get_modRM_reg(code, 0))
+		switch (get_modRM_reg(code, 0))
 		{
 		case 0: out_op = X64OP_LOAD_TEST; break;
 		default: out_op = X64OP_NONE; break; // TODO...
@@ -2027,11 +2027,11 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 	const u64 _self = m_thread;
 
 	// Set result state (errored or finalized)
-	const bool ok = 0 == (3 & ~m_sync.fetch_op([&](u64& v)
+	m_sync.fetch_op([&](u64& v)
 	{
 		v &= -4;
 		v |= static_cast<u32>(result_state);
-	}));
+	});
 
 	// Signal waiting threads
 	m_sync.notify_all(2);
@@ -2069,7 +2069,7 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 		{
 			s_pool_ctr |= s_stop_bit;
 
-			while (u64 remains = s_pool_ctr & ~s_stop_bit)
+			while (/*u64 remains = */s_pool_ctr & ~s_stop_bit)
 			{
 				for (u32 i = 0; i < std::size(s_thread_pool); i++)
 				{

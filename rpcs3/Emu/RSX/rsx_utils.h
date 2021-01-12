@@ -93,19 +93,19 @@ namespace rsx
 
 	namespace constants
 	{
-		static std::array<const char*, 16> fragment_texture_names =
+		constexpr std::array<const char*, 16> fragment_texture_names =
 		{
 			"tex0", "tex1", "tex2", "tex3", "tex4", "tex5", "tex6", "tex7",
 			"tex8", "tex9", "tex10", "tex11", "tex12", "tex13", "tex14", "tex15",
 		};
 
-		static std::array<const char*, 4> vertex_texture_names =
+		constexpr std::array<const char*, 4> vertex_texture_names =
 		{
 			"vtex0", "vtex1", "vtex2", "vtex3",
 		};
 
 		// Local RSX memory base (known as constant)
-		static constexpr u32 local_mem_base = 0xC0000000;
+		constexpr u32 local_mem_base = 0xC0000000;
 	}
 
 	/**

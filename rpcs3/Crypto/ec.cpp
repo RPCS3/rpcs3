@@ -464,7 +464,7 @@ static void ec_priv_to_pub(u8 *k, u8 *Q)
 }
 #endif
 
-int ecdsa_set_curve(u8* p, u8* a, u8* b, u8* N, u8* Gx, u8* Gy)
+int ecdsa_set_curve(const u8* p, const u8* a, const u8* b, const u8* N, const u8* Gx, const u8* Gy)
 {
 	memcpy(ec_p, p, 20);
 	memcpy(ec_a, a, 20);
@@ -481,14 +481,14 @@ int ecdsa_set_curve(u8* p, u8* a, u8* b, u8* N, u8* Gx, u8* Gy)
 	return 0;
 }
 
-void ecdsa_set_pub(u8 *Q)
+void ecdsa_set_pub(const u8* Q)
 {
 	memcpy(ec_Q.x, Q, 20);
 	memcpy(ec_Q.y, Q+20, 20);
 	point_to_mon(&ec_Q);
 }
 
-void ecdsa_set_priv(u8 *k)
+void ecdsa_set_priv(const u8* k)
 {
 	memcpy(ec_k, k, sizeof ec_k);
 }

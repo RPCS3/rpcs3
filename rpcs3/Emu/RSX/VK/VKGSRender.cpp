@@ -1059,7 +1059,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (!framebuffer_status_valid) return;
 
-	float depth_clear = 1.f;
+	//float depth_clear = 1.f;
 	u32   stencil_clear = 0;
 	u32   depth_stencil_mask = 0;
 
@@ -2333,7 +2333,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 		for (const auto occlusion_id : data.indices)
 		{
 			// We only need one hit
-			if (auto value = m_occlusion_query_manager->get_query_result(occlusion_id))
+			if (m_occlusion_query_manager->get_query_result(occlusion_id))
 			{
 				query->result = 1;
 				break;

@@ -743,7 +743,7 @@ bool spursKernelEntry(spu_thread& spu)
 bool spursSysServiceEntry(spu_thread& spu)
 {
 	const auto ctxt = spu._ptr<SpursKernelContext>(spu.gpr[3]._u32[3]);
-	auto arg = spu.gpr[4]._u64[1];
+	//auto arg = spu.gpr[4]._u64[1];
 	auto pollStatus = spu.gpr[5]._u32[3];
 
 	{
@@ -2059,11 +2059,11 @@ s32 spursTasksetLoadElf(spu_thread& spu, u32* entryPoint, u32* lowestLoadAddr, u
 //----------------------------------------------------------------------------
 bool spursJobChainEntry(spu_thread& spu)
 {
-	const auto ctxt = spu._ptr<SpursJobChainContext>(0x4a00);
-	auto kernelCtxt = spu._ptr<SpursKernelContext>(spu.gpr[3]._u32[3]);
+	//const auto ctxt = spu._ptr<SpursJobChainContext>(0x4a00);
+	//auto kernelCtxt = spu._ptr<SpursKernelContext>(spu.gpr[3]._u32[3]);
 
-	auto arg = spu.gpr[4]._u64[1];
-	auto pollStatus = spu.gpr[5]._u32[3];
+	//auto arg = spu.gpr[4]._u64[1];
+	//auto pollStatus = spu.gpr[5]._u32[3];
 
 	// TODO
 	return false;

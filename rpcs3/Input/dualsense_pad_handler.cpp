@@ -6,11 +6,11 @@ LOG_CHANNEL(dualsense_log, "DualSense");
 
 namespace
 {
-	const auto THREAD_SLEEP = 1ms;
-	const auto THREAD_SLEEP_INACTIVE = 100ms;
+	//const auto THREAD_SLEEP = 1ms;
+	//const auto THREAD_SLEEP_INACTIVE = 100ms;
 
-	const u32 DUALSENSE_ACC_RES_PER_G = 8192;
-	const u32 DUALSENSE_GYRO_RES_PER_DEG_S = 1024;
+	//const u32 DUALSENSE_ACC_RES_PER_G = 8192;
+	//const u32 DUALSENSE_GYRO_RES_PER_DEG_S = 1024;
 	const u32 DUALSENSE_BLUETOOTH_REPORT_SIZE = 78;
 	const u32 DUALSENSE_USB_REPORT_SIZE = 48;
 

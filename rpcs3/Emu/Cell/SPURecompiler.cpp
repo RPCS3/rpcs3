@@ -8941,7 +8941,7 @@ struct spu_llvm
 
 						if (!(spu.state.load() & (cpu_flag::wait + cpu_flag::stop + cpu_flag::dbg_global_pause)))
 						{
-							const auto found = std::as_const(samples).find(spu.block_hash);
+							const auto found = std::as_const(samples).find(name);
 
 							if (found != std::as_const(samples).end())
 							{

@@ -681,7 +681,7 @@ error_code cellSyncQueueSize(vm::ptr<CellSyncQueue> queue)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 depth = queue->check_depth();
+	queue->check_depth();
 
 	return not_an_error(queue->ctrl.load().count & 0xffffff);
 }
@@ -700,7 +700,7 @@ error_code cellSyncQueueClear(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 depth = queue->check_depth();
+	queue->check_depth();
 
 	while (!queue->ctrl.atomic_op(&CellSyncQueue::try_clear_begin_1))
 	{

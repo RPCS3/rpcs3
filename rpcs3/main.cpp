@@ -238,7 +238,7 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 			if (i_rounding_2)
 			{
 				const auto arg_val = argv[i_rounding_2];
-				const auto arg_len = std::strlen(arg_val);
+				//const auto arg_len = std::strlen(arg_val);
 				s64 rounding_val_cli = 0;
 
 				if (!cfg::try_to_int64(&rounding_val_cli, arg_val, static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::Unset), static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough)))

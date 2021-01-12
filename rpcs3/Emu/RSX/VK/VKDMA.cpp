@@ -12,7 +12,7 @@ namespace vk
 {
 	static constexpr usz s_dma_block_length = 0x01000000;
 	static constexpr u32    s_dma_block_mask = 0xFF000000;
-	static constexpr u32    s_dma_offset_mask = 0x00FFFFFF;
+	//static constexpr u32    s_dma_offset_mask = 0x00FFFFFF;
 
 	static constexpr u32    s_page_size = 16384;
 	static constexpr u32    s_page_align = s_page_size - 1;

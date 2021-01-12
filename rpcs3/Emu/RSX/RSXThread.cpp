@@ -889,8 +889,8 @@ namespace rsx
 		// Force aligned indices as realhw
 		const u32 address = (0 - type_size) & get_address(rsx::method_registers.index_array_address(), rsx::method_registers.index_array_location());
 
-		const bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
-		const u32 primitive_restart_index = rsx::method_registers.restart_index();
+		//const bool is_primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
+		//const u32 primitive_restart_index = rsx::method_registers.restart_index();
 
 		const u32 first = draw_indexed_clause.min_index();
 		const u32 count = draw_indexed_clause.get_elements_count();
@@ -1011,8 +1011,8 @@ namespace rsx
 			return;
 		}
 
-		const u16 clip_x = rsx::method_registers.surface_clip_origin_x();
-		const u16 clip_y = rsx::method_registers.surface_clip_origin_y();
+		//const u16 clip_x = rsx::method_registers.surface_clip_origin_x();
+		//const u16 clip_y = rsx::method_registers.surface_clip_origin_y();
 
 		layout.color_addresses = get_color_surface_addresses();
 		layout.zeta_address = get_zeta_surface_address();
@@ -1857,7 +1857,7 @@ namespace rsx
 					texture_control |= (1 << texture_control_bits::ALPHAKILL);
 				}
 
-				const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
+				//const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
 				const u32 raw_format = tex.format();
 				const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 

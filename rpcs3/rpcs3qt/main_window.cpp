@@ -1030,9 +1030,9 @@ void main_window::SaveWindowState()
 
 void main_window::RepaintThumbnailIcons()
 {
-	const QColor new_color = gui::utils::get_label_color("thumbnail_icon_color");
+	[[maybe_unused]] const QColor new_color = gui::utils::get_label_color("thumbnail_icon_color");
 
-	const auto icon = [&new_color](const QString& path)
+	[[maybe_unused]] const auto icon = [&new_color](const QString& path)
 	{
 		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, new_color);
 	};
