@@ -26,11 +26,19 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 	for (const QString& path : paths)
 	{
 		const compat::package_info info = game_compatibility::GetPkgInfo(path, compat);
+		const QFileInfo file_info(path);
 
 		// We have to build our complicated localized string in some annoying manner
 		QString accumulated_info;
-		QString additional_info;
 		QString tooltip;
+
+		const auto append_comma = [&accumulated_info]()
+		{
+			if (!accumulated_info.isEmpty())
+			{
+				accumulated_info += ", ";
+			}
+		};
 
 		if (!info.title_id.isEmpty())
 		{
@@ -39,10 +47,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 
 		if (info.type != compat::package_type::other)
 		{
-			if (!accumulated_info.isEmpty())
-			{
-				accumulated_info += ", ";
-			}
+			append_comma();
 
 			if (info.type == compat::package_type::dlc)
 			{
@@ -55,19 +60,13 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 		}
 		else if (!info.local_cat.isEmpty())
 		{
-			if (!accumulated_info.isEmpty())
-			{
-				accumulated_info += ", ";
-			}
+			append_comma();
 			accumulated_info += tr("%0", "Package type info").arg(info.local_cat);
 		}
 
 		if (!info.version.isEmpty())
 		{
-			if (!accumulated_info.isEmpty())
-			{
-				accumulated_info += ", ";
-			}
+			append_comma();
 			accumulated_info += tr("v.%0", "Version info").arg(info.version);
 		}
 
@@ -80,12 +79,10 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 			tooltip = tr("Changelog:\n\n%0", "Changelog info").arg(info.changelog);
 		}
 
-		if (!accumulated_info.isEmpty())
-		{
-			additional_info = tr(" (%0)", "Additional info").arg(accumulated_info);
-		}
+		append_comma();
+		accumulated_info += file_info.fileName();
 
-		const QString text = tr("%0%1", "Package text").arg(info.title).arg(additional_info);
+		const QString text = tr("<b>%0</b> (%2)", "Package text").arg(info.title.simplified()).arg(accumulated_info);
 
 		QListWidgetItem* item = new numbered_widget_item(text, m_dir_list);
 		item->setData(Roles::FullPathRole, info.path);
