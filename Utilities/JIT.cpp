@@ -79,7 +79,7 @@ static u8* add_jit_memory(usz size, uint align)
 
 	if (pos == umax) [[unlikely]]
 	{
-		jit_log.error("JIT: Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
+		jit_log.error("Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
 		return nullptr;
 	}
 
@@ -338,6 +338,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 
 		if (!addr)
 		{
+			jit_log.fatal("Function '%s' linked but not found.", name);
 			addr = reinterpret_cast<uptr>(&null);
 		}
 
@@ -348,7 +349,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 	{
 		if (align > c_page_size)
 		{
-			jit_log.fatal("JIT: Unsupported alignment (size=0x%x, align=0x%x)", size, align);
+			jit_log.fatal("Unsupported alignment (size=0x%x, align=0x%x)", size, align);
 			return nullptr;
 		}
 
@@ -357,7 +358,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 
 		if ((newp - 1) / c_max_size != oldp / c_max_size)
 		{
-			jit_log.fatal("JIT: Out of memory (size=0x%x, align=0x%x)", size, align);
+			jit_log.fatal("Out of memory (size=0x%x, align=0x%x)", size, align);
 			return nullptr;
 		}
 
