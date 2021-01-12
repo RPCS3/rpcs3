@@ -1,5 +1,6 @@
 #include "pkg_install_dialog.h"
 #include "game_compatibility.h"
+#include "numbered_widget_item.h"
 
 #include <QDialogButtonBox>
 #include <QPushButton>
@@ -11,49 +12,16 @@
 enum Roles
 {
 	FullPathRole    = Qt::UserRole + 0,
-	BaseDisplayRole = Qt::UserRole + 1,
-	ChangelogRole   = Qt::UserRole + 2,
-	TitleRole       = Qt::UserRole + 3,
-	TitleIdRole     = Qt::UserRole + 4,
-	VersionRole     = Qt::UserRole + 5,
+	ChangelogRole   = Qt::UserRole + 1,
+	TitleRole       = Qt::UserRole + 2,
+	TitleIdRole     = Qt::UserRole + 3,
+	VersionRole     = Qt::UserRole + 4,
 };
 
 pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibility* compat, QWidget* parent)
 	: QDialog(parent)
 {
 	m_dir_list = new QListWidget(this);
-
-	class numbered_widget_item final : public QListWidgetItem
-	{
-	public:
-		explicit numbered_widget_item(const QString& text, QListWidget* listview = nullptr, int type = QListWidgetItem::Type)
-			: QListWidgetItem(text, listview, type)
-		{
-		}
-
-		QVariant data(int role) const override
-		{
-			QVariant result;
-			switch (role)
-			{
-			case Qt::DisplayRole:
-				result = QStringLiteral("%1. %2").arg(listWidget()->row(this) + 1).arg(data(Roles::BaseDisplayRole).toString());
-				break;
-			case Roles::BaseDisplayRole:
-				result = QListWidgetItem::data(Qt::DisplayRole);
-				break;
-			default:
-				result = QListWidgetItem::data(role);
-				break;
-			}
-			return result;
-		}
-
-		bool operator<(const QListWidgetItem& other) const override
-		{
-			return data(Roles::BaseDisplayRole).toString() < other.data(Roles::BaseDisplayRole).toString();
-		}
-	};
 
 	for (const QString& path : paths)
 	{
