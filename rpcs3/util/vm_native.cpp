@@ -374,6 +374,10 @@ namespace utils
 				// Mapped already, nothing to do.
 				this->unmap(mapped);
 			}
+			else
+			{
+				ptr = mapped;
+			}
 		}
 
 		return static_cast<u8*>(ptr);
