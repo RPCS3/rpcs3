@@ -512,6 +512,7 @@ void main_window::InstallPackages(QStringList file_paths)
 	{
 		// This can currently only happen by drag and drop.
 		const QString file_path = file_paths.front();
+		const QFileInfo file_info(file_path);
 
 		compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
 
@@ -546,8 +547,8 @@ void main_window::InstallPackages(QStringList file_paths)
 			info.changelog = tr("\n\nChangelog:\n%0", "Block for Changelog").arg(info.changelog);
 		}
 
-		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0%1%2%3%4")
-			.arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version).arg(info.changelog),
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0\n\n%1%2%3%4%5")
+			.arg(file_info.fileName()).arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version).arg(info.changelog),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
 			gui_log.notice("PKG: Cancelled installation from drop. File: %s", sstr(file_paths.front()));
