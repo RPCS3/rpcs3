@@ -368,16 +368,44 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 	movement_x = m_multi_x * movement_x;
 	movement_y = m_multi_y * movement_y;
 
+	int deadzone_x = 0;
+	int deadzone_y = 0;
+
+	if (movement_x == 0 && movement_y != 0)
+	{
+		deadzone_y = m_deadzone_y;
+	}
+	else if (movement_y == 0 && movement_x != 0)
+	{
+		deadzone_x = m_deadzone_x;
+	}
+	else if (movement_x != 0 && movement_y != 0 && m_deadzone_x != 0 && m_deadzone_y != 0)
+	{
+		// Calculate the point on our deadzone ellipsis intersected with the line (0, 0)(movement_x, movement_y)
+		// Ellipsis: 1 = (x²/a²) + (y²/b²)     ; where: a = m_deadzone_x and b = m_deadzone_y
+		// Line:     y = mx + t                ; where: t = 0 and m = (movement_y / movement_x)
+		// Combined: x = +-(a*b)/sqrt(a²m²+b²) ; where +- is always +, since we only want the magnitude
+
+		const double a = m_deadzone_x;
+		const double b = m_deadzone_y;
+		const double m = double(movement_y) / double(movement_x);
+
+		deadzone_x = a * b / std::sqrt(std::pow(a, 2) * std::pow(m, 2) + std::pow(b, 2));
+		deadzone_y = std::abs(m * deadzone_x);
+	}
+
+	input_log.error("movement_x=%d, movement_y=%d => deadzone_x=%d, deadzone_y=%d", movement_x, movement_y, deadzone_x, deadzone_y);
+
 	if (movement_x < 0)
 	{
 		Key(mouse::move_right, false);
-		Key(mouse::move_left, true, std::min(m_deadzone_x + std::abs(movement_x), 255));
+		Key(mouse::move_left, true, std::min(deadzone_x + std::abs(movement_x), 255));
 		m_last_mouse_move_left = steady_clock::now();
 	}
 	else if (movement_x > 0)
 	{
 		Key(mouse::move_left, false);
-		Key(mouse::move_right, true, std::min(m_deadzone_x + movement_x, 255));
+		Key(mouse::move_right, true, std::min(deadzone_x + movement_x, 255));
 		m_last_mouse_move_right = steady_clock::now();
 	}
 
@@ -385,13 +413,13 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 	if (movement_y < 0)
 	{
 		Key(mouse::move_down, false);
-		Key(mouse::move_up, true, std::min(m_deadzone_y + std::abs(movement_y), 255));
+		Key(mouse::move_up, true, std::min(deadzone_y + std::abs(movement_y), 255));
 		m_last_mouse_move_up = steady_clock::now();
 	}
 	else if (movement_y > 0)
 	{
 		Key(mouse::move_up, false);
-		Key(mouse::move_down, true, std::min(m_deadzone_y + movement_y, 255));
+		Key(mouse::move_down, true, std::min(deadzone_y + movement_y, 255));
 		m_last_mouse_move_down = steady_clock::now();
 	}
 
