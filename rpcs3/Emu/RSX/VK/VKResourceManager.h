@@ -1,6 +1,6 @@
 #pragma once
-#include "VKHelpers.h"
-#include "vkutils/query_pool.h"
+#include "vkutils/image.h"
+#include "vkutils/query_pool.hpp"
 #include "vkutils/sampler.h"
 
 #include <unordered_map>
@@ -24,7 +24,7 @@ namespace vk
 		std::vector<std::unique_ptr<vk::query_pool>> m_disposed_query_pools;
 
 		eid_scope_t(u64 _eid):
-			eid(_eid), m_device(vk::get_current_renderer())
+			eid(_eid), m_device(g_render_device)
 		{}
 
 		~eid_scope_t()

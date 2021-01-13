@@ -511,7 +511,44 @@ void main_window::InstallPackages(QStringList file_paths)
 	else if (file_paths.count() == 1)
 	{
 		// This can currently only happen by drag and drop.
-		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Install package: %1?").arg(file_paths.front()),
+		const QString file_path = file_paths.front();
+		const QFileInfo file_info(file_path);
+
+		compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
+
+		if (info.type != compat::package_type::other)
+		{
+			if (info.type == compat::package_type::dlc)
+			{
+				info.local_cat = tr("\nDLC", "Block for package type (DLC)");
+			}
+			else
+			{
+				info.local_cat = tr("\nUpdate", "Block for package type (Update)");
+			}
+		}
+		else if (!info.local_cat.isEmpty())
+		{
+			info.local_cat = tr("\n%0", "Block for package type").arg(info.local_cat);
+		}
+
+		if (!info.title_id.isEmpty())
+		{
+			info.title_id = tr("\n%0", "Block for Title ID").arg(info.title_id);
+		}
+
+		if (!info.version.isEmpty())
+		{
+			info.version = tr("\nVersion %0", "Block for Version").arg(info.version);
+		}
+
+		if (!info.changelog.isEmpty())
+		{
+			info.changelog = tr("\n\nChangelog:\n%0", "Block for Changelog").arg(info.changelog);
+		}
+
+		if (QMessageBox::question(this, tr("PKG Decrypter / Installer"), tr("Do you want to install this package?\n\n%0\n\n%1%2%3%4%5")
+			.arg(file_info.fileName()).arg(info.title).arg(info.local_cat).arg(info.title_id).arg(info.version).arg(info.changelog),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
 			gui_log.notice("PKG: Cancelled installation from drop. File: %s", sstr(file_paths.front()));
@@ -538,37 +575,38 @@ void main_window::InstallPackages(QStringList file_paths)
 	// Find remaining package files
 	file_paths = file_paths.filter(QRegExp(".*\\.pkg", Qt::CaseInsensitive));
 
-	if (file_paths.isEmpty())
+	if (!file_paths.isEmpty())
 	{
-		return;
-	}
-
-	// Let the user choose the packages to install and select the order in which they shall be installed.
-	if (file_paths.size() > 1)
-	{
-		pkg_install_dialog dlg(file_paths, this);
-		connect(&dlg, &QDialog::accepted, [&file_paths, &dlg]()
+		// Handle further installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
+		QTimer::singleShot(0, [this, paths = std::move(file_paths)]()
 		{
-			file_paths = dlg.GetPathsToInstall();
+			HandlePackageInstallation(paths);
 		});
-		dlg.exec();
 	}
-
-	if (file_paths.empty())
-	{
-		return;
-	}
-
-	// Handle the actual installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
-	QTimer::singleShot(0, [this, file_paths]()
-	{
-		HandlePackageInstallation(file_paths);
-	});
 }
 
 void main_window::HandlePackageInstallation(QStringList file_paths)
 {
-	if (file_paths.isEmpty())
+	std::vector<compat::package_info> packages;
+
+	game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
+
+	if (file_paths.size() > 1)
+	{
+		// Let the user choose the packages to install and select the order in which they shall be installed.
+		pkg_install_dialog dlg(file_paths, compat, this);
+		connect(&dlg, &QDialog::accepted, [&packages, &dlg]()
+		{
+			packages = dlg.GetPathsToInstall();
+		});
+		dlg.exec();
+	}
+	else
+	{
+		packages.push_back(game_compatibility::GetPkgInfo(file_paths.front(), compat));
+	}
+
+	if (packages.empty())
 	{
 		return;
 	}
@@ -579,6 +617,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 	}
 
 	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package, please wait..."), tr("Cancel"), 0, 1000, false, this);
+	pdlg.setAutoClose(false);
 	pdlg.show();
 
 	// Synchronization variable
@@ -588,20 +627,42 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 
 	bool cancelled = false;
 
-	for (int i = 0, count = file_paths.count(); i < count; i++)
+	for (size_t i = 0, count = packages.size(); i < count; i++)
 	{
 		progress = 0.;
 
+		const compat::package_info& package = packages.at(i);
+		QString app_info = package.title; // This should always be non-empty
+
+		if (!package.title_id.isEmpty() || !package.version.isEmpty())
+		{
+			app_info += QStringLiteral("\n");
+
+			if (!package.title_id.isEmpty())
+			{
+				app_info += package.title_id;
+			}
+
+			if (!package.version.isEmpty())
+			{
+				if (!package.title_id.isEmpty())
+				{
+					app_info += " ";
+				}
+
+				app_info += tr("v.%0", "Package version for install progress dialog").arg(package.version);
+			}
+		}
+
 		pdlg.SetValue(0);
-		pdlg.setLabelText(tr("Installing package (%0/%1), please wait...").arg(i + 1).arg(count));
+		pdlg.setLabelText(tr("Installing package (%0/%1), please wait...\n\n%2").arg(i + 1).arg(count).arg(app_info));
 		pdlg.show();
 
 		Emu.SetForceBoot(true);
 		Emu.Stop();
 
-		const QString file_path = file_paths.at(i);
-		const QFileInfo file_info(file_path);
-		const std::string path = sstr(file_path);
+		const QFileInfo file_info(package.path);
+		const std::string path      = sstr(package.path);
 		const std::string file_name = sstr(file_info.fileName());
 
 		// Run PKG unpacking asynchronously
@@ -630,7 +691,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 
 			// Update progress window
 			double pval = progress;
-			if (pval < 0) pval += 1.;
+			if (pval < 0.) pval += 1.;
 			pdlg.SetValue(static_cast<int>(pval * pdlg.maximum()));
 			QCoreApplication::processEvents();
 		}
@@ -649,7 +710,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		if (worker())
 		{
 			m_game_list_frame->Refresh(true);
-			gui_log.success("Successfully installed %s.", file_name);
+			gui_log.success("Successfully installed %s (title_id=%s, title=%s, version=%s).", file_name, sstr(package.title_id), sstr(package.title), sstr(package.version));
 
 			if (i == (count - 1))
 			{
@@ -663,12 +724,12 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 				if (error == package_error::app_version)
 				{
 					gui_log.error("Cannot install %s.", file_name);
-					QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(file_path));
+					QMessageBox::warning(this, tr("Warning!"), tr("The following package cannot be installed on top of the current data:\n%1!").arg(package.path));
 				}
 				else
 				{
 					gui_log.error("Failed to install %s.", file_name);
-					QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!").arg(file_path));
+					QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!").arg(package.path));
 				}
 			}
 			return;
@@ -1030,9 +1091,9 @@ void main_window::SaveWindowState()
 
 void main_window::RepaintThumbnailIcons()
 {
-	const QColor new_color = gui::utils::get_label_color("thumbnail_icon_color");
+	[[maybe_unused]] const QColor new_color = gui::utils::get_label_color("thumbnail_icon_color");
 
-	const auto icon = [&new_color](const QString& path)
+	[[maybe_unused]] const auto icon = [&new_color](const QString& path)
 	{
 		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, new_color);
 	};
@@ -1237,6 +1298,12 @@ void main_window::OnEmuStop()
 	if (m_game_list_frame)
 	{
 		m_game_list_frame->Refresh();
+	}
+
+	// Close kernel explorer if running
+	if (m_kernel_explorer)
+	{
+		m_kernel_explorer->close();
 	}
 }
 
@@ -1759,14 +1826,21 @@ void main_window::CreateConnects()
 
 	connect(ui->toolskernel_explorerAct, &QAction::triggered, [this]
 	{
-		kernel_explorer* kernelExplorer = new kernel_explorer(this);
-		kernelExplorer->show();
+		if (!m_kernel_explorer)
+		{
+			m_kernel_explorer = new kernel_explorer(this, [this]()
+			{
+				m_kernel_explorer = nullptr;
+			});
+		}
+
+		m_kernel_explorer->show();
 	});
 
 	connect(ui->toolsmemory_viewerAct, &QAction::triggered, [this]
 	{
-		memory_viewer_panel* mvp = new memory_viewer_panel(this);
-		mvp->show();
+		if (!Emu.IsStopped())
+			idm::make<memory_viewer_handle>(this);
 	});
 
 	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, [this]

@@ -347,7 +347,6 @@ u64 audio_ringbuffer::update()
 
 void audio_port::tag(s32 offset)
 {
-	auto port_pos = position(offset);
 	auto port_buf = get_vm_ptr(offset);
 
 	// This tag will be used to make sure that the game has finished writing the audio for the next audio period
@@ -381,7 +380,6 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 		active++;
 
 		auto port_buf = port.get_vm_ptr();
-		u32 port_pos = port.position();
 
 		// Find the last tag that has been touched
 		const u32 tag_first_pos = port.num_channels == 2 ? PORT_BUFFER_TAG_FIRST_2CH : port.num_channels == 6 ? PORT_BUFFER_TAG_FIRST_6CH : PORT_BUFFER_TAG_FIRST_8CH;
@@ -614,7 +612,7 @@ void cell_audio_thread::operator()()
 	m_dynamic_period = 0;
 
 	u32 untouched_expected = 0;
-	u32 in_progress_expected = 0;
+	//u32 in_progress_expected = 0;
 
 	// Main cellAudio loop
 	while (thread_ctrl::state() != thread_state::aborting)
@@ -893,7 +891,7 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 		if (port.state != audio_port_state::started) continue;
 
 		auto buf = port.get_vm_ptr(offset);
-		static const float k = 1.f;
+
 		static constexpr float minus_3db = 0.707f; // value taken from https://www.dolby.com/us/en/technologies/a-guide-to-dolby-metadata.pdf
 		float m = master_volume;
 

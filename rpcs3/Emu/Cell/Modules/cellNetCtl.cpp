@@ -445,7 +445,6 @@ error_code cellGameUpdateCheckStartAsyncEx(vm::cptr<CellGameUpdateParam> param, 
 error_code cellGameUpdateCheckFinishAsyncEx(vm::ptr<CellGameUpdateCallbackEx> cb_func, vm::ptr<void> userdata)
 {
 	cellNetCtl.todo("cellGameUpdateCheckFinishAsyncEx(cb_func=*0x%x, userdata=*0x%x)", cb_func, userdata);
-	const s32 PROCESSING_COMPLETE = 5;
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		cb_func(ppu, vm::make_var(CellGameUpdateResult{CELL_GAMEUPDATE_RESULT_STATUS_FINISHED, CELL_OK}), userdata);

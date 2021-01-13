@@ -8,22 +8,116 @@
 class downloader;
 class gui_settings;
 
-struct compat_status
+namespace compat
 {
-	int index;
-	QString date;
-	QString color;
-	QString text;
-	QString tooltip;
-	QString latest_version;
-};
+	/** Represents the "title" json object */
+	struct pkg_title
+	{
+		std::string type; // TITLE or TITLE_08 etc. (system languages)
+		std::string title; // The Last of Arse
+	};
+
+	/** Represents the "changelog" json object */
+	struct pkg_changelog
+	{
+		std::string type; // paramhip or paramhip_08 etc. (system languages)
+		std::string content; // "This system software update improves system performance."
+	};
+
+	/** Represents the "package" json object */
+	struct pkg_package
+	{
+		std::string version; // 01.04
+		int size = 0;
+		std::string sha1sum;        // a5c83b88394ea3ae99974caedd38690981a80f3e
+		std::string ps3_system_ver; // 04.4000
+		std::string drm_type;       // local or mbind etc.
+		std::vector<pkg_changelog> changelogs;
+		std::vector<pkg_title> titles;
+
+		std::string get_changelog(const std::string& type) const
+		{
+			if (auto it = std::find_if(changelogs.begin(), changelogs.end(), [type](const pkg_changelog& cl) { return cl.type == type; });
+				it != changelogs.end())
+			{
+				return it->content;
+			}
+			if (auto it = std::find_if(changelogs.begin(), changelogs.end(), [](const pkg_changelog& cl) { return cl.type == "paramhip"; });
+				it != changelogs.end())
+			{
+				return it->content;
+			}
+			return "";
+		}
+
+		std::string get_title(const std::string& type) const
+		{
+			if (auto it = std::find_if(titles.begin(), titles.end(), [type](const pkg_title& t) { return t.type == type; });
+				it != titles.end())
+			{
+				return it->title;
+			}
+			if (auto it = std::find_if(titles.begin(), titles.end(), [](const pkg_title& t) { return t.type == "TITLE"; });
+				it != titles.end())
+			{
+				return it->title;
+			}
+			return "";
+		}
+	};
+
+	/** Represents the "patchset" json object */
+	struct pkg_patchset
+	{
+		std::string tag_id; // BLES01269_T7
+		bool popup = false;
+		bool signoff = false;
+		int popup_delay = 0;
+		std::string min_system_ver; // 03.60
+		std::vector<pkg_package> packages;
+	};
+
+	/** Represents the json object that contains an app's information and some additional info that is used in the GUI */
+	struct status
+	{
+		int index;
+		QString date;
+		QString color;
+		QString text;
+		QString tooltip;
+		QString latest_version;
+		std::vector<pkg_patchset> patch_sets;
+	};
+
+	// The type of the package. In the future this should signify the proper PKG_CONTENT_TYPE.
+	enum class package_type
+	{
+		update,
+		dlc,
+		other
+	};
+
+	/** Concicely represents a specific pkg's localized information for use in the GUI */
+	struct package_info
+	{
+		QString path;        // File path
+		QString title_id;    // TEST12345
+		QString title;       // Localized
+		QString changelog;   // Localized, may be empty
+		QString version;     // May be empty
+		QString category;    // HG, DG, GD etc.
+		QString local_cat;   // Localized category
+
+		package_type type = package_type::other; // The type of package (Update, DLC or other)
+	};
+}
 
 class game_compatibility : public QObject
 {
 	Q_OBJECT
 
 private:
-	const std::map<QString, compat_status> Status_Data =
+	const std::map<QString, compat::status> Status_Data =
 	{
 		{ "Playable", { 0, "", "#1ebc61", tr("Playable"),         tr("Games that can be properly played from start to finish") } },
 		{ "Ingame",   { 1, "", "#f9b32f", tr("Ingame"),           tr("Games that either can't be finished, have serious glitches or have insufficient performance") } },
@@ -37,7 +131,7 @@ private:
 	std::shared_ptr<gui_settings> m_gui_settings;
 	QString m_filepath;
 	downloader* m_downloader = nullptr;
-	std::map<std::string, compat_status> m_compat_database;
+	std::map<std::string, compat::status> m_compat_database;
 
 	/** Creates new map from the database */
 	bool ReadJSON(const QJsonObject& json_data, bool after_download);
@@ -50,10 +144,13 @@ public:
 	void RequestCompatibility(bool online = false);
 
 	/** Returns the compatibility status for the requested title */
-	compat_status GetCompatibility(const std::string& title_id);
+	compat::status GetCompatibility(const std::string& title_id);
 
 	/** Returns the data for the requested status */
-	compat_status GetStatusData(const QString& status);
+	compat::status GetStatusData(const QString& status);
+
+	/** Returns package information like title, version, changelog etc. */
+	static compat::package_info GetPkgInfo(const QString& pkg_path, game_compatibility* compat);
 
 Q_SIGNALS:
 	void DownloadStarted();

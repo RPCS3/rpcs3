@@ -9,7 +9,7 @@ namespace rsx
 		{
 			osk_panel_mode = panel_mode;
 
-			// TODO: Use proper translations for Space/Backspace/Enter etc. and make sure they fit in the grid.
+			// TODO: Use proper translations for Space/Backspace/Return etc. and make sure they fit in the grid.
 			switch (panel_mode)
 			{
 			case CELL_OSKDIALOG_PANELMODE_DEFAULT:
@@ -46,7 +46,7 @@ namespace rsx
 			{
 				space = U"Space";
 				backspace = U"Backspace";
-				enter = U"Enter";
+				enter = U"Return";
 			}
 			}
 		}

@@ -33,12 +33,8 @@ else()
 	add_compile_options(-Werror=return-type)
 
 	#TODO Clean the code so these are removed
-	add_compile_options(-Wno-unused-variable)
-	add_compile_options(-Wno-unknown-pragmas)
-	add_compile_options(-Wno-invalid-offsetof)
 	add_compile_options(-Wno-unused-function)
 	add_compile_options(-Wno-attributes)
-	add_compile_options(-Wno-comment)
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-fconstexpr-steps=16777216)

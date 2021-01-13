@@ -6,8 +6,8 @@ LOG_CHANNEL(ds4_log, "DS4");
 
 namespace
 {
-	const auto THREAD_SLEEP = 1ms; //ds4 has new data every ~4ms,
-	const auto THREAD_SLEEP_INACTIVE = 100ms;
+	//const auto THREAD_SLEEP = 1ms; //ds4 has new data every ~4ms,
+	//const auto THREAD_SLEEP_INACTIVE = 100ms;
 
 	const u32 DS4_ACC_RES_PER_G = 8192;
 	const u32 DS4_GYRO_RES_PER_DEG_S = 16; // technically this could be 1024, but keeping it at 16 keeps us within 16 bits of precision

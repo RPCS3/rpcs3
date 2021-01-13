@@ -7,7 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 
-int ecdsa_set_curve(unsigned char *p, unsigned char *a, unsigned char *b, unsigned char *N, unsigned char *Gx, unsigned char *Gy);
-void ecdsa_set_pub(unsigned char *Q);
-void ecdsa_set_priv(unsigned char *k);
+int ecdsa_set_curve(const unsigned char *p, const unsigned char *a, const unsigned char *b, const unsigned char *N, const unsigned char *Gx, const unsigned char *Gy);
+void ecdsa_set_pub(const unsigned char *Q);
+void ecdsa_set_priv(const unsigned char *k);
 int ecdsa_verify(unsigned char *hash, unsigned char *R, unsigned char *S);

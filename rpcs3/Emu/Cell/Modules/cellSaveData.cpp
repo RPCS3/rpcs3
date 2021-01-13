@@ -301,7 +301,7 @@ static error_code display_callback_result_error_message(ppu_thread& ppu, const C
 	lv2_obj::sleep(ppu);
 
 	// Get user confirmation by opening a blocking dialog (return value should be irrelevant here)
-	error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, use_invalid_message ? result.invalidMsg : vm::make_str(msg));
+	[[maybe_unused]] error_code res = open_msg_dialog(true, CELL_MSGDIALOG_TYPE_SE_TYPE_NORMAL | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, use_invalid_message ? result.invalidMsg : vm::make_str(msg));
 
 	// Reschedule after a blocking dialog returns
 	if (ppu.check_state())
@@ -1454,7 +1454,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			return {CELL_SAVEDATA_ERROR_PARAM, "50"};
 		}
 
-		switch (const u32 mode = statSet->reCreateMode & CELL_SAVEDATA_RECREATE_MASK)
+		switch (statSet->reCreateMode & CELL_SAVEDATA_RECREATE_MASK)
 		{
 		case CELL_SAVEDATA_RECREATE_NO:
 		{
@@ -1717,7 +1717,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			if (std::find(blist.begin(), blist.end(), to_add) == blist.end())
 			{
-				if(auto it = std::find(blist.begin(), blist.end(), ""); it != blist.end())
+				if (auto it = std::find(blist.begin(), blist.end(), ""); it != blist.end())
 					*it = to_add;
 				else
 					blist.push_back(to_add);
@@ -1767,7 +1767,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 
 			// Read from memory file to vm
-			const u64 sr = file->second.seek(fileSet->fileOffset);
+			file->second.seek(fileSet->fileOffset);
 			const u64 rr = lv2_file::op_read(file->second, fileSet->fileBuf, fileSet->fileSize);
 			fileGet->excSize = ::narrow<u32>(rr);
 			break;
@@ -1849,7 +1849,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 
 			// Write to memory file normally
-			const u64 sr = file.seek(fileSet->fileOffset);
+			file.seek(fileSet->fileOffset);
 			const u64 wr = lv2_file::op_write(file, fileSet->fileBuf, fileSet->fileSize);
 			fileGet->excSize = ::narrow<u32>(wr);
 			all_times.erase(file_path);

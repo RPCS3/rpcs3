@@ -1,9 +1,10 @@
 #pragma once
 
-#include "util/types.hpp"
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
 #include "VKDMA.h"
+#include "vkutils/image_helpers.h"
+
 #include "../Common/texture_cache.h"
 
 #include <memory>
@@ -494,7 +495,7 @@ namespace vk
 
 		std::unique_ptr<vk::viewable_image> find_temporary_image(VkFormat format, u16 w, u16 h, u16 d, u8 mipmaps)
 		{
-			const auto current_frame = vk::get_current_frame_id();
+			//const auto current_frame = vk::get_current_frame_id();
 			for (auto &e : m_temporary_storage)
 			{
 				if (e.can_reuse && e.matches(format, w, h, d, mipmaps, 0))
@@ -510,7 +511,7 @@ namespace vk
 
 		std::unique_ptr<vk::viewable_image> find_temporary_cubemap(VkFormat format, u16 size)
 		{
-			const auto current_frame = vk::get_current_frame_id();
+			//const auto current_frame = vk::get_current_frame_id();
 			for (auto &e : m_temporary_storage)
 			{
 				if (e.can_reuse && e.matches(format, size, size, 1, 1, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT))

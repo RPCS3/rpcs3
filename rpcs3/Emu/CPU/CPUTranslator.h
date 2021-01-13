@@ -2809,7 +2809,6 @@ public:
 		const auto data0 = a.eval(m_ir);
 		const auto data1 = b.eval(m_ir);
 		const auto index = c.eval(m_ir);
-		const auto zeros = llvm::ConstantAggregateZero::get(get_type<u8[16]>());
 
 		if (auto c = llvm::dyn_cast<llvm::Constant>(index))
 		{

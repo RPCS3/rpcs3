@@ -6,7 +6,7 @@
 
 static const int TROPHY_TIMEOUT_MS = 7500;
 
-constexpr auto qstr = QString::fromStdString;
+//constexpr auto qstr = QString::fromStdString;
 
 trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& imgBuffer, const SceNpTrophyDetails& trophy, int height) : QWidget()
 {

@@ -137,6 +137,9 @@
     <Filter Include="Io\DualSense">
       <UniqueIdentifier>{ff7eb8a7-5545-41af-bab1-348032b9a430}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\custom items">
+      <UniqueIdentifier>{949cff6d-9cc5-4a8a-a453-a5144da8ecf4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -1109,7 +1112,7 @@
       <Filter>Io\DualSense</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\custom_table_widget_item.cpp">
-      <Filter>Gui\game list</Filter>
+      <Filter>Gui\custom items</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1155,14 +1158,8 @@
     <ClInclude Include="rpcs3qt\game_list_grid_delegate.h">
       <Filter>Gui\game list</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\table_item_delegate.h">
-      <Filter>Gui\game list</Filter>
-    </ClInclude>
     <ClInclude Include="Input\evdev_joystick_handler.h">
       <Filter>Io\evdev</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3qt\custom_table_widget_item.h">
-      <Filter>Gui\game list</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\qt_utils.h">
       <Filter>Gui\utils</Filter>
@@ -1214,6 +1211,18 @@
     </ClInclude>
     <ClInclude Include="Input\dualsense_pad_handler.h">
       <Filter>Io\DualSense</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\custom_table_widget_item.h">
+      <Filter>Gui\custom items</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\table_item_delegate.h">
+      <Filter>Gui\custom items</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\richtext_item_delegate.h">
+      <Filter>Gui\custom items</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\numbered_widget_item.h">
+      <Filter>Gui\custom items</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1448,5 +1457,19 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="rpcs3.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="QTGeneratedFiles\Release - LLVM\pkg_install_dialog.moc">
+      <Filter>Generated Files\Release - LLVM</Filter>
+    </None>
+    <None Include="QTGeneratedFiles\Debug\pkg_install_dialog.moc">
+      <Filter>Generated Files\Debug</Filter>
+    </None>
+    <None Include="QTGeneratedFiles\Release\pkg_install_dialog.moc">
+      <Filter>Generated Files\Release</Filter>
+    </None>
+    <None Include="QTGeneratedFiles\Debug - LLVM\pkg_install_dialog.moc">
+      <Filter>Generated Files\Debug - LLVM</Filter>
+    </None>
   </ItemGroup>
 </Project>

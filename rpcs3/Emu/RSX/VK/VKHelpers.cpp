@@ -10,6 +10,8 @@
 #include "VKCommandStream.h"
 #include "VKRenderPass.h"
 
+#include "vkutils/scratch.h"
+#include "vkutils/device.h"
 #include "Emu/RSX/rsx_methods.h"
 #include "Utilities/mutex.h"
 #include "Utilities/lockless.h"
@@ -19,20 +21,8 @@ namespace vk
 {
 	extern chip_class g_chip_class;
 
-	const context* g_current_vulkan_ctx = nullptr;
-	const render_device* g_current_renderer;
-
-	std::unique_ptr<buffer> g_scratch_buffer;
-	std::unordered_map<VkImageViewType, std::unique_ptr<viewable_image>> g_null_image_views;
-	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
 	std::unordered_map<u32, std::unique_ptr<vk::compute_task>> g_compute_tasks;
 	std::unordered_map<u32, std::unique_ptr<vk::overlay_pass>> g_overlay_passes;
-
-	// General purpose upload heap
-	// TODO: Clean this up and integrate cleanly with VKGSRender
-	data_heap g_upload_heap;
-
-	VkSampler g_null_sampler = nullptr;
 
 	rsx::atomic_bitmask_t<runtime_state, u64> g_runtime_state;
 
@@ -46,244 +36,6 @@ namespace vk
 
 	u64 g_num_processed_frames = 0;
 	u64 g_num_total_frames = 0;
-
-	VKAPI_ATTR void* VKAPI_CALL mem_realloc(void* pUserData, void* pOriginal, usz size, usz alignment, VkSystemAllocationScope allocationScope)
-	{
-#ifdef _MSC_VER
-		return _aligned_realloc(pOriginal, size, alignment);
-#elif _WIN32
-		return __mingw_aligned_realloc(pOriginal, size, alignment);
-#else
-		std::abort();
-#endif
-	}
-
-	VKAPI_ATTR void* VKAPI_CALL mem_alloc(void* pUserData, usz size, usz alignment, VkSystemAllocationScope allocationScope)
-	{
-#ifdef _MSC_VER
-		return _aligned_malloc(size, alignment);
-#elif _WIN32
-		return __mingw_aligned_malloc(size, alignment);
-#else
-		std::abort();
-#endif
-	}
-
-	VKAPI_ATTR void VKAPI_CALL mem_free(void* pUserData, void* pMemory)
-	{
-#ifdef _MSC_VER
-		_aligned_free(pMemory);
-#elif _WIN32
-		__mingw_aligned_free(pMemory);
-#else
-		std::abort();
-#endif
-	}
-
-	bool data_heap::grow(usz size)
-	{
-		// Create new heap. All sizes are aligned up by 64M, upto 1GiB
-		const usz size_limit = 1024 * 0x100000;
-		const usz aligned_new_size = utils::align(m_size + size, 64 * 0x100000);
-
-		if (aligned_new_size >= size_limit)
-		{
-			// Too large
-			return false;
-		}
-
-		if (shadow)
-		{
-			// Shadowed. Growing this can be messy as it requires double allocation (macOS only)
-			return false;
-		}
-
-		// Wait for DMA activity to end
-		g_fxo->get<rsx::dma_manager>()->sync();
-
-		if (mapped)
-		{
-			// Force reset mapping
-			unmap(true);
-		}
-
-		VkBufferUsageFlags usage = heap->info.usage;
-
-		const auto device = get_current_renderer();
-		const auto& memory_map = device->get_memory_mapping();
-
-		VkFlags memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-		auto memory_index = memory_map.host_visible_coherent;
-
-		// Update heap information and reset the allocator
-		::data_heap::init(aligned_new_size, m_name, m_min_guard_size);
-
-		// Discard old heap and create a new one. Old heap will be garbage collected when no longer needed
-		get_resource_manager()->dispose(heap);
-		heap = std::make_unique<buffer>(*device, aligned_new_size, memory_index, memory_flags, usage, 0);
-
-		if (notify_on_grow)
-		{
-			raise_status_interrupt(vk::heap_changed);
-		}
-
-		return true;
-	}
-
-	VkAllocationCallbacks default_callbacks()
-	{
-		VkAllocationCallbacks callbacks;
-		callbacks.pfnAllocation = vk::mem_alloc;
-		callbacks.pfnFree = vk::mem_free;
-		callbacks.pfnReallocation = vk::mem_realloc;
-
-		return callbacks;
-	}
-
-	VkSampler null_sampler()
-	{
-		if (g_null_sampler)
-			return g_null_sampler;
-
-		VkSamplerCreateInfo sampler_info = {};
-
-		sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-		sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-		sampler_info.anisotropyEnable = VK_FALSE;
-		sampler_info.compareEnable = VK_FALSE;
-		sampler_info.unnormalizedCoordinates = VK_FALSE;
-		sampler_info.mipLodBias = 0;
-		sampler_info.maxAnisotropy = 0;
-		sampler_info.magFilter = VK_FILTER_NEAREST;
-		sampler_info.minFilter = VK_FILTER_NEAREST;
-		sampler_info.compareOp = VK_COMPARE_OP_NEVER;
-		sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-
-		vkCreateSampler(*g_current_renderer, &sampler_info, nullptr, &g_null_sampler);
-		return g_null_sampler;
-	}
-
-	vk::image_view* null_image_view(vk::command_buffer &cmd, VkImageViewType type)
-	{
-		if (auto found = g_null_image_views.find(type);
-			found != g_null_image_views.end())
-		{
-			return found->second->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector);
-		}
-
-		VkImageType image_type;
-		u32 num_layers = 1;
-		u32 flags = 0;
-		u16 size = 4;
-
-		switch (type)
-		{
-		case VK_IMAGE_VIEW_TYPE_1D:
-			image_type = VK_IMAGE_TYPE_1D;
-			size = 1;
-			break;
-		case VK_IMAGE_VIEW_TYPE_2D:
-			image_type = VK_IMAGE_TYPE_2D;
-			break;
-		case VK_IMAGE_VIEW_TYPE_3D:
-			image_type = VK_IMAGE_TYPE_3D;
-			break;
-		case VK_IMAGE_VIEW_TYPE_CUBE:
-			image_type = VK_IMAGE_TYPE_2D;
-			flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-			num_layers = 6;
-			break;
-		case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
-			image_type = VK_IMAGE_TYPE_2D;
-			num_layers = 2;
-			break;
-		default:
-			rsx_log.fatal("Unexpected image view type 0x%x", static_cast<u32>(type));
-			return nullptr;
-		}
-
-		auto& tex = g_null_image_views[type];
-		tex = std::make_unique<viewable_image>(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			image_type, VK_FORMAT_B8G8R8A8_UNORM, size, size, 1, 1, num_layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, flags);
-
-		// Initialize memory to transparent black
-		tex->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-		VkClearColorValue clear_color = {};
-		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-		vkCmdClearColorImage(cmd, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
-
-		// Prep for shader access
-		tex->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-		// Return view
-		return tex->get_view(VK_REMAP_IDENTITY, rsx::default_remap_vector);
-	}
-
-	vk::image* get_typeless_helper(VkFormat format, rsx::format_class format_class, u32 requested_width, u32 requested_height)
-	{
-		auto create_texture = [&]()
-		{
-			u32 new_width = utils::align(requested_width, 1024u);
-			u32 new_height = utils::align(requested_height, 1024u);
-
-			return new vk::image(*g_current_renderer, g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				VK_IMAGE_TYPE_2D, format, new_width, new_height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0);
-		};
-
-		const u32 key = (format_class << 24u) | format;
-		auto& ptr = g_typeless_textures[key];
-
-		if (!ptr || ptr->width() < requested_width || ptr->height() < requested_height)
-		{
-			if (ptr)
-			{
-				requested_width = std::max(requested_width, ptr->width());
-				requested_height = std::max(requested_height, ptr->height());
-				get_resource_manager()->dispose(ptr);
-			}
-
-			ptr.reset(create_texture());
-		}
-
-		return ptr.get();
-	}
-
-	vk::buffer* get_scratch_buffer(u32 min_required_size)
-	{
-		if (g_scratch_buffer && g_scratch_buffer->size() < min_required_size)
-		{
-			// Scratch heap cannot fit requirements. Discard it and allocate a new one.
-			vk::get_resource_manager()->dispose(g_scratch_buffer);
-		}
-
-		if (!g_scratch_buffer)
-		{
-			// Choose optimal size
-			const u64 alloc_size = std::max<u64>(64 * 0x100000, utils::align(min_required_size, 0x100000));
-
-			g_scratch_buffer = std::make_unique<vk::buffer>(*g_current_renderer, alloc_size,
-				g_current_renderer->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0);
-		}
-
-		return g_scratch_buffer.get();
-	}
-
-	data_heap* get_upload_heap()
-	{
-		if (!g_upload_heap.heap)
-		{
-			g_upload_heap.create(VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 64 * 0x100000, "auxilliary upload heap", 0x100000);
-		}
-
-		return &g_upload_heap;
-	}
 
 	void reset_compute_tasks()
 	{
@@ -307,30 +59,21 @@ namespace vk
 		vk::reset_resolve_resources();
 		vk::reset_overlay_passes();
 
-		g_upload_heap.reset_allocation_stats();
+		get_upload_heap()->reset_allocation_stats();
 	}
 
 	void destroy_global_resources()
 	{
-		VkDevice dev = *g_current_renderer;
+		VkDevice dev = *g_render_device;
 		vk::clear_renderpass_cache(dev);
 		vk::clear_framebuffer_cache();
 		vk::clear_resolve_helpers();
 		vk::clear_dma_resources();
 		vk::vmm_reset();
 		vk::get_resource_manager()->destroy();
+		vk::clear_scratch_resources();
 
-		g_null_image_views.clear();
-		g_scratch_buffer.reset();
-		g_upload_heap.destroy();
-
-		g_typeless_textures.clear();
-
-		if (g_null_sampler)
-		{
-			vkDestroySampler(dev, g_null_sampler, nullptr);
-			g_null_sampler = nullptr;
-		}
+		vk::get_upload_heap()->destroy();
 
 		for (const auto& p : g_compute_tasks)
 		{
@@ -345,34 +88,24 @@ namespace vk
 		g_overlay_passes.clear();
 	}
 
-	void set_current_thread_ctx(const vk::context &ctx)
-	{
-		g_current_vulkan_ctx = &ctx;
-	}
-
-	const context *get_current_thread_ctx()
-	{
-		return g_current_vulkan_ctx;
-	}
-
 	const vk::render_device *get_current_renderer()
 	{
-		return g_current_renderer;
+		return g_render_device;
 	}
 
 	void set_current_renderer(const vk::render_device &device)
 	{
-		g_current_renderer = &device;
+		g_render_device = &device;
 		g_runtime_state.clear();
 		g_drv_no_primitive_restart = false;
 		g_drv_sanitize_fp_values = false;
 		g_drv_disable_fence_reset = false;
-		g_drv_emulate_cond_render = (g_cfg.video.relaxed_zcull_sync && !g_current_renderer->get_conditional_render_support());
+		g_drv_emulate_cond_render = (g_cfg.video.relaxed_zcull_sync && !g_render_device->get_conditional_render_support());
 		g_num_processed_frames = 0;
 		g_num_total_frames = 0;
 		g_heap_compatible_buffer_types = 0;
 
-		const auto& gpu = g_current_renderer->gpu();
+		const auto& gpu = g_render_device->gpu();
 		const auto gpu_name = gpu.get_name();
 
 		g_driver_vendor = gpu.get_driver_vendor();
@@ -424,15 +157,15 @@ namespace vk
 			for (const auto &usage : types)
 			{
 				info.usage = usage;
-				CHECK_RESULT(vkCreateBuffer(*g_current_renderer, &info, nullptr, &tmp));
+				CHECK_RESULT(vkCreateBuffer(*g_render_device, &info, nullptr, &tmp));
 
-				vkGetBufferMemoryRequirements(*g_current_renderer, tmp, &memory_reqs);
-				if (g_current_renderer->get_compatible_memory_type(memory_reqs.memoryTypeBits, memory_flags, nullptr))
+				vkGetBufferMemoryRequirements(*g_render_device, tmp, &memory_reqs);
+				if (g_render_device->get_compatible_memory_type(memory_reqs.memoryTypeBits, memory_flags, nullptr))
 				{
 					g_heap_compatible_buffer_types |= usage;
 				}
 
-				vkDestroyBuffer(*g_current_renderer, tmp, nullptr);
+				vkDestroyBuffer(*g_render_device, tmp, nullptr);
 			}
 		}
 	}
@@ -477,277 +210,6 @@ namespace vk
 	bool emulate_conditional_rendering()
 	{
 		return g_drv_emulate_cond_render;
-	}
-
-	void insert_buffer_memory_barrier(VkCommandBuffer cmd, VkBuffer buffer, VkDeviceSize offset, VkDeviceSize length, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask)
-	{
-		if (vk::is_renderpass_open(cmd))
-		{
-			vk::end_renderpass(cmd);
-		}
-
-		VkBufferMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-		barrier.buffer = buffer;
-		barrier.offset = offset;
-		barrier.size = length;
-		barrier.srcAccessMask = src_mask;
-		barrier.dstAccessMask = dst_mask;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-	}
-
-	void insert_image_memory_barrier(
-		VkCommandBuffer cmd, VkImage image,
-		VkImageLayout current_layout, VkImageLayout new_layout,
-		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,
-		VkAccessFlags src_mask, VkAccessFlags dst_mask,
-		const VkImageSubresourceRange& range)
-	{
-		if (vk::is_renderpass_open(cmd))
-		{
-			vk::end_renderpass(cmd);
-		}
-
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.newLayout = new_layout;
-		barrier.oldLayout = current_layout;
-		barrier.image = image;
-		barrier.srcAccessMask = src_mask;
-		barrier.dstAccessMask = dst_mask;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.subresourceRange = range;
-
-		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-	}
-
-	void insert_execution_barrier(VkCommandBuffer cmd, VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage)
-	{
-		if (vk::is_renderpass_open(cmd))
-		{
-			vk::end_renderpass(cmd);
-		}
-
-		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 0, nullptr);
-	}
-
-	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range)
-	{
-		if (vk::is_renderpass_open(cmd))
-		{
-			vk::end_renderpass(cmd);
-		}
-
-		//Prepare an image to match the new layout..
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.newLayout = new_layout;
-		barrier.oldLayout = current_layout;
-		barrier.image = image;
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = 0;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.subresourceRange = range;
-
-		VkPipelineStageFlags src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		VkPipelineStageFlags dst_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-
-		switch (new_layout)
-		{
-		case VK_IMAGE_LAYOUT_GENERAL:
-			// Avoid this layout as it is unoptimized
-			barrier.dstAccessMask =
-			{
-				VK_ACCESS_TRANSFER_READ_BIT |
-				VK_ACCESS_TRANSFER_WRITE_BIT |
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-				VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-				VK_ACCESS_SHADER_READ_BIT |
-				VK_ACCESS_INPUT_ATTACHMENT_READ_BIT
-			};
-			dst_stage =
-			{
-				VK_PIPELINE_STAGE_TRANSFER_BIT |
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-				VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
-				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-			};
-			break;
-		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-			dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-			barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			dst_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-			barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			dst_stage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-			dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-			break;
-		default:
-		case VK_IMAGE_LAYOUT_UNDEFINED:
-		case VK_IMAGE_LAYOUT_PREINITIALIZED:
-			fmt::throw_exception("Attempted to transition to an invalid layout");
-		}
-
-		switch (current_layout)
-		{
-		case VK_IMAGE_LAYOUT_GENERAL:
-			// Avoid this layout as it is unoptimized
-			if (new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ||
-				new_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-			{
-				if (range.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
-				{
-					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-					src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				}
-				else
-				{
-					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-					src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-				}
-			}
-			else if (new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ||
-					 new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-			{
-				// Finish reading before writing
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_SHADER_READ_BIT;
-				src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-			}
-			else
-			{
-				barrier.srcAccessMask =
-				{
-					VK_ACCESS_TRANSFER_READ_BIT |
-					VK_ACCESS_TRANSFER_WRITE_BIT |
-					VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-					VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-					VK_ACCESS_SHADER_READ_BIT |
-					VK_ACCESS_INPUT_ATTACHMENT_READ_BIT
-				};
-				src_stage =
-				{
-					VK_PIPELINE_STAGE_TRANSFER_BIT |
-					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
-					VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT |
-					VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
-				};
-			}
-			break;
-		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-			barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-			src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-			barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-			break;
-		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-			barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-			src_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-			break;
-		default:
-			break; //TODO Investigate what happens here
-		}
-
-		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-	}
-
-	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout, const VkImageSubresourceRange& range)
-	{
-		if (image->current_layout == new_layout) return;
-
-		change_image_layout(cmd, image->value, image->current_layout, new_layout, range);
-		image->current_layout = new_layout;
-	}
-
-	void change_image_layout(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout)
-	{
-		if (image->current_layout == new_layout) return;
-
-		change_image_layout(cmd, image->value, image->current_layout, new_layout, { image->aspect(), 0, image->mipmaps(), 0, image->layers() });
-		image->current_layout = new_layout;
-	}
-
-	void insert_texture_barrier(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, VkImageSubresourceRange range)
-	{
-		// NOTE: Sampling from an attachment in ATTACHMENT_OPTIMAL layout on some hw ends up with garbage output
-		// Transition to GENERAL if this resource is both input and output
-		// TODO: This implicitly makes the target incompatible with the renderpass declaration; investigate a proper workaround
-		// TODO: This likely throws out hw optimizations on the rest of the renderpass, manage carefully
-		if (vk::is_renderpass_open(cmd))
-		{
-			vk::end_renderpass(cmd);
-		}
-
-		VkAccessFlags src_access;
-		VkPipelineStageFlags src_stage;
-		if (range.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
-		{
-			src_access = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			src_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		}
-		else
-		{
-			if (!rsx::method_registers.depth_write_enabled() && current_layout == new_layout)
-			{
-				// Nothing to do
-				return;
-			}
-
-			src_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			src_stage = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-		}
-
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.newLayout = new_layout;
-		barrier.oldLayout = current_layout;
-		barrier.image = image;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.subresourceRange = range;
-		barrier.srcAccessMask = src_access;
-		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-		vkCmdPipelineBarrier(cmd, src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-	}
-
-	void insert_texture_barrier(VkCommandBuffer cmd, vk::image *image, VkImageLayout new_layout)
-	{
-		if (image->samples() > 1)
-		{
-			// This barrier is pointless for multisampled images as they require a resolve operation before access anyway
-			return;
-		}
-
-		insert_texture_barrier(cmd, image->value, image->current_layout, new_layout, { image->aspect(), 0, 1, 0, 1 });
-		image->current_layout = new_layout;
 	}
 
 	void raise_status_interrupt(runtime_state status)
@@ -801,84 +263,7 @@ namespace vk
 		return (g_num_processed_frames > 0)? g_num_processed_frames - 1: 0;
 	}
 
-	void reset_fence(fence *pFence)
-	{
-		if (g_drv_disable_fence_reset)
-		{
-			delete pFence;
-			pFence = new fence(*g_current_renderer);
-		}
-		else
-		{
-			pFence->reset();
-		}
-	}
 
-	VkResult wait_for_fence(fence* pFence, u64 timeout)
-	{
-		pFence->wait_flush();
-
-		if (timeout)
-		{
-			return vkWaitForFences(*g_current_renderer, 1, &pFence->handle, VK_FALSE, timeout * 1000ull);
-		}
-		else
-		{
-			while (auto status = vkGetFenceStatus(*g_current_renderer, pFence->handle))
-			{
-				switch (status)
-				{
-				case VK_NOT_READY:
-					continue;
-				default:
-					die_with_error(status);
-					return status;
-				}
-			}
-
-			return VK_SUCCESS;
-		}
-	}
-
-	VkResult wait_for_event(event* pEvent, u64 timeout)
-	{
-		u64 t = 0;
-		while (true)
-		{
-			switch (const auto status = pEvent->status())
-			{
-			case VK_EVENT_SET:
-				return VK_SUCCESS;
-			case VK_EVENT_RESET:
-				break;
-			default:
-				die_with_error(status);
-				return status;
-			}
-
-			if (timeout)
-			{
-				if (!t)
-				{
-					t = get_system_time();
-					continue;
-				}
-
-				if ((get_system_time() - t) > timeout)
-				{
-					rsx_log.error("[vulkan] vk::wait_for_event has timed out!");
-					return VK_TIMEOUT;
-				}
-			}
-
-			//std::this_thread::yield();
-#ifdef _MSC_VER
-			_mm_pause();
-#else
-			__builtin_ia32_pause();
-#endif
-		}
-	}
 
 	void do_query_cleanup(vk::command_buffer& cmd)
 	{
@@ -886,16 +271,5 @@ namespace vk
 		ensure(renderer);
 
 		renderer->emergency_query_cleanup(&cmd);
-	}
-
-	VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
-							u64 srcObject, usz location, s32 msgCode,
-							const char *pLayerPrefix, const char *pMsg, void *pUserData)
-	{
-#ifdef _WIN32
-		DebugBreak();
-#endif
-
-		return false;
 	}
 }

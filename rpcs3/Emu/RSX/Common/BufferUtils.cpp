@@ -353,7 +353,7 @@ namespace
 				auto dst_ptr2 = reinterpret_cast<u32*>(dst_ptr);
 
 				for (u32 v = 0; v < attribute_sz; ++v)
-					dst_ptr2[v] = src_ptr[v];
+					dst_ptr2[v] = src_ptr2[v];
 
 				src_ptr += src_stride;
 				dst_ptr += dst_stride;
@@ -419,7 +419,7 @@ namespace
 				auto dst_ptr2 = reinterpret_cast<u16*>(dst_ptr);
 
 				for (u32 v = 0; v < attribute_sz; ++v)
-					dst_ptr[v] = src_ptr[v];
+					dst_ptr2[v] = src_ptr2[v];
 
 				src_ptr += src_stride;
 				dst_ptr += dst_stride;
@@ -1048,7 +1048,6 @@ namespace
 		ensure((dst.size() >= 3 * (src.size() - 2)));
 
 		u32 dst_idx = 0;
-		u32 src_idx = 0;
 
 		bool needs_anchor = true;
 		T anchor = invalid_index;

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "VKHelpers.h"
 #include "VKCompute.h"
 #include "VKOverlays.h"
 

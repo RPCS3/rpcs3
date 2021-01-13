@@ -33,7 +33,7 @@ bool custom_table_widget_item::operator<(const QTableWidgetItem& other) const
 	const QVariant::Type type_l = data_l.type();
 	const QVariant::Type type_r = data_r.type();
 
-	assert(type_l == type_r);
+	ensure(type_l == type_r);
 
 	switch (type_l)
 	{

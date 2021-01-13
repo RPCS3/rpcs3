@@ -205,7 +205,7 @@ struct lv2_file::file_view : fs::file_base
 	u64 read(void* buffer, u64 size) override
 	{
 		const u64 old_pos = m_file->file.pos();
-		const u64 new_pos = m_file->file.seek(m_off + m_pos);
+		m_file->file.seek(m_off + m_pos);
 		const u64 result = m_file->file.read(buffer, size);
 		ensure(old_pos == m_file->file.seek(old_pos));
 
@@ -1300,7 +1300,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		}
 
 		const u64 old_pos = file->file.pos();
-		const u64 new_pos = file->file.seek(arg->offset);
+		file->file.seek(arg->offset);
 
 		arg->out_size = op == 0x8000000a
 			? file->op_read(arg->buf, arg->size)

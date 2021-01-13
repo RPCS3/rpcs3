@@ -7,10 +7,6 @@
 #include "util/types.hpp"
 
 #include <stdlib.h>
-#include "aes.h"
-#include "sha1.h"
-#include "lz.h"
-#include "ec.h"
 
 enum { CRYPTO_MAX_PATH = 4096 };
 

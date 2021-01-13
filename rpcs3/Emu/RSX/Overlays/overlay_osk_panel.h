@@ -47,7 +47,7 @@ namespace rsx
 		protected:
 			std::u32string space;
 			std::u32string backspace;
-			std::u32string enter;
+			std::u32string enter; // Return key. Named 'enter' because 'return' is a reserved statement in cpp.
 		};
 
 		struct osk_panel_latin : public osk_panel

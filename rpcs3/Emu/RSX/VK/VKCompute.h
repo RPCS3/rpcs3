@@ -1,9 +1,13 @@
 #pragma once
-#include "VKHelpers.h"
-#include "VKPipelineCompiler.h"
-#include "VKRenderPass.h"
+#include "vkutils/descriptors.hpp"
 #include "Utilities/StrUtil.h"
 #include "Emu/IdManager.h"
+
+#include "VKPipelineCompiler.h"
+#include "VKRenderPass.h"
+#include "VKHelpers.h"
+#include "vkutils/buffer_object.h"
+#include "vkutils/device.h"
 
 #include "util/asm.hpp"
 #include <unordered_map>
@@ -65,14 +69,14 @@ namespace vk
 			}
 
 			// Reserve descriptor pools
-			m_descriptor_pool.create(*get_current_renderer(), descriptor_pool_sizes.data(), ::size32(descriptor_pool_sizes), VK_MAX_COMPUTE_TASKS, 3);
+			m_descriptor_pool.create(*g_render_device, descriptor_pool_sizes.data(), ::size32(descriptor_pool_sizes), VK_MAX_COMPUTE_TASKS, 3);
 
 			VkDescriptorSetLayoutCreateInfo infos = {};
 			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 			infos.pBindings = bindings.data();
 			infos.bindingCount = ::size32(bindings);
 
-			CHECK_RESULT(vkCreateDescriptorSetLayout(*get_current_renderer(), &infos, nullptr, &m_descriptor_layout));
+			CHECK_RESULT(vkCreateDescriptorSetLayout(*g_render_device, &infos, nullptr, &m_descriptor_layout));
 
 			VkPipelineLayoutCreateInfo layout_info = {};
 			layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -89,7 +93,7 @@ namespace vk
 				layout_info.pPushConstantRanges = &push_constants;
 			}
 
-			CHECK_RESULT(vkCreatePipelineLayout(*get_current_renderer(), &layout_info, nullptr, &m_pipeline_layout));
+			CHECK_RESULT(vkCreatePipelineLayout(*g_render_device, &layout_info, nullptr, &m_pipeline_layout));
 		}
 
 		void create()
@@ -123,7 +127,7 @@ namespace vk
 					break;
 				}
 
-				const auto& gpu = vk::get_current_renderer()->gpu();
+				const auto& gpu = vk::g_render_device->gpu();
 				max_invocations_x = gpu.get_limits().maxComputeWorkGroupCount[0];
 
 				initialized = true;
@@ -138,8 +142,8 @@ namespace vk
 				m_program.reset();
 				m_param_buffer.reset();
 
-				vkDestroyDescriptorSetLayout(*get_current_renderer(), m_descriptor_layout, nullptr);
-				vkDestroyPipelineLayout(*get_current_renderer(), m_pipeline_layout, nullptr);
+				vkDestroyDescriptorSetLayout(*g_render_device, m_descriptor_layout, nullptr);
+				vkDestroyPipelineLayout(*g_render_device, m_pipeline_layout, nullptr);
 				m_descriptor_pool.destroy();
 
 				initialized = false;
@@ -194,7 +198,7 @@ namespace vk
 			alloc_info.pSetLayouts = &m_descriptor_layout;
 			alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 
-			CHECK_RESULT(vkAllocateDescriptorSets(*get_current_renderer(), &alloc_info, &m_descriptor_set));
+			CHECK_RESULT(vkAllocateDescriptorSets(*g_render_device, &alloc_info, &m_descriptor_set));
 			m_used_descriptors++;
 
 			bind_resources();

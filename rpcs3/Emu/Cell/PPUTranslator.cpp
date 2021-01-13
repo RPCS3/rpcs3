@@ -380,7 +380,7 @@ Value* PPUTranslator::RegLoad(Value*& local)
 
 void PPUTranslator::RegStore(llvm::Value* value, llvm::Value*& local)
 {
-	const auto glb = RegInit(local);
+	RegInit(local);
 	local = value;
 }
 
@@ -4712,7 +4712,7 @@ void PPUTranslator::SetFPCC(Value* lt, Value* gt, Value* eq, Value* un, bool set
 
 void PPUTranslator::SetFPRF(Value* value, bool set_cr)
 {
-	const bool is32 =
+	//const bool is32 =
 		value->getType()->isFloatTy() ? true :
 		value->getType()->isDoubleTy() ? false : ensure(false);
 

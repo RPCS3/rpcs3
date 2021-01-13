@@ -1112,10 +1112,8 @@ namespace vm
 		{
 			auto fill64 = [](u8* ptr, u64 data, usz count)
 			{
-				u64* target = reinterpret_cast<u64*>(ptr);
-
 #ifdef _MSC_VER
-				__stosq(target, data, count);
+				__stosq(reinterpret_cast<u64*>(ptr), data, count);
 #else
 				__asm__ ("mov %0, %%rdi; mov %1, %%rax; mov %2, %%rcx; rep stosq;"
 					:

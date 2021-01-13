@@ -1501,7 +1501,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		if (disc.empty() && !bdvd_dir.empty() && m_path != hdd0_boot && fs::is_file(hdd0_boot))
 		{
 			// Booting game update
-			sys_log.success("Updates found at /dev_hdd0/game/%s/!", m_title_id);
+			sys_log.success("Updates found at /dev_hdd0/game/%s/", m_title_id);
 			return m_path = hdd0_boot, Load(m_title_id, false, force_global_config, true);
 		}
 
@@ -1640,7 +1640,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				sys_log.notice("Elf path: %s", argv[0]);
 			}
 
-			const auto _main = g_fxo->init<ppu_module>();
+			g_fxo->init<ppu_module>();
 
 			ppu_load_exec(ppu_exec);
 

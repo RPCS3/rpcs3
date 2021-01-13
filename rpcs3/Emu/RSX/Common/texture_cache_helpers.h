@@ -408,8 +408,8 @@ namespace rsx
 			};
 
 			u32 current_address = attr.address;
-			u16 current_src_offset = 0;
-			u16 current_dst_offset = 0;
+			//u16 current_src_offset = 0;
+			//u16 current_dst_offset = 0;
 			u32 slice_size = (attr.pitch * attr.slice_h);
 
 			out.reserve(count);

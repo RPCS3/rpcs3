@@ -599,7 +599,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u32 pitch = (((a5 >> 32) & 0xFFFFFFFF) >> 8) * 0x100;
 		const u32 comp = ((a5 & 0xFFFFFFFF) >> 26) & 0xF;
 		const u32 base = (a5 & 0xFFFFFFFF) & 0x7FF;
-		const u32 bank = (((a4 >> 32) & 0xFFFFFFFF) >> 4) & 0xF;
+		//const u32 bank = (((a4 >> 32) & 0xFFFFFFFF) >> 4) & 0xF;
 		const bool bound = ((a4 >> 32) & 0x3) != 0;
 
 		const auto range = utils::address_range::start_length(offset, size);

@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "GLFragmentProgram.h"
 
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "GLFragmentProgram.h"
 #include "GLCommonDecompiler.h"
 #include "../GCM.h"
