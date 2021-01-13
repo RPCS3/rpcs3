@@ -18,12 +18,14 @@ static shared_mutex ec_mtx;
 void generate_key(int crypto_mode, int version, unsigned char *key_final, unsigned char *iv_final, unsigned char *key, unsigned char *iv)
 {
 	int mode = crypto_mode & 0xF0000000;
+	uchar temp_iv[16]{};
 	switch (mode)
 	{
 	case 0x10000000:
 		// Encrypted ERK.
 		// Decrypt the key with EDAT_KEY + EDAT_IV and copy the original IV.
-		aescbc128_decrypt(version ? EDAT_KEY_1 : EDAT_KEY_0, EDAT_IV, key, key_final, 0x10);
+		memcpy(temp_iv, EDAT_IV, 0x10);
+		aescbc128_decrypt(version ? EDAT_KEY_1 : EDAT_KEY_0, temp_iv, key, key_final, 0x10);
 		memcpy(iv_final, iv, 0x10);
 		break;
 	case 0x20000000:
@@ -44,12 +46,14 @@ void generate_key(int crypto_mode, int version, unsigned char *key_final, unsign
 void generate_hash(int hash_mode, int version, unsigned char *hash_final, unsigned char *hash)
 {
 	int mode = hash_mode & 0xF0000000;
+	uchar temp_iv[16]{};
 	switch (mode)
 	{
 	case 0x10000000:
 		// Encrypted HASH.
 		// Decrypt the hash with EDAT_KEY + EDAT_IV.
-		aescbc128_decrypt(version ? EDAT_KEY_1 : EDAT_KEY_0, EDAT_IV, hash, hash_final, 0x10);
+		memcpy(temp_iv, EDAT_IV, 0x10);
+		aescbc128_decrypt(version ? EDAT_KEY_1 : EDAT_KEY_0, temp_iv, hash, hash_final, 0x10);
 		break;
 	case 0x20000000:
 		// Default HASH.
