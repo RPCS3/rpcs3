@@ -92,7 +92,7 @@ void bn_sub(u8 *d, u8 *a, u8 *b, u8 *N, u32 n)
 		bn_add_1(d, d, N, n);
 }
 
-static const u8 inv256[0x80] = {
+static constexpr u8 inv256[0x80] = {
 	0x01, 0xab, 0xcd, 0xb7, 0x39, 0xa3, 0xc5, 0xef,
 	0xf1, 0x1b, 0x3d, 0xa7, 0x29, 0x13, 0x35, 0xdf,
 	0xe1, 0x8b, 0xad, 0x97, 0x19, 0x83, 0xa5, 0xcf,
@@ -211,13 +211,13 @@ struct point {
 	u8 y[20];
 };
 
-static u8 ec_p[20];
-static u8 ec_a[20];	// mon
-static u8 ec_b[20];	// mon
-static u8 ec_N[21];
-static struct point ec_G;	// mon
-static struct point ec_Q;	// mon
-static u8 ec_k[21];
+static thread_local u8 ec_p[20]{};
+static thread_local u8 ec_a[20]{};	// mon
+static thread_local u8 ec_b[20]{};	// mon
+static thread_local u8 ec_N[21]{};
+static thread_local point ec_G{};	// mon
+static thread_local point ec_Q{};	// mon
+static thread_local u8 ec_k[21]{};
 
 static void elt_copy(u8 *d, u8 *a)
 {
