@@ -25,7 +25,7 @@ void generate_key(int crypto_mode, int version, unsigned char *key_final, unsign
 		// Encrypted ERK.
 		// Decrypt the key with EDAT_KEY + EDAT_IV and copy the original IV.
 		memcpy(temp_iv, EDAT_IV, 0x10);
-		aescbc128_decrypt(version ? EDAT_KEY_1 : EDAT_KEY_0, temp_iv, key, key_final, 0x10);
+		aescbc128_decrypt(const_cast<u8*>(version ? EDAT_KEY_1 : EDAT_KEY_0), temp_iv, key, key_final, 0x10);
 		memcpy(iv_final, iv, 0x10);
 		break;
 	case 0x20000000:
@@ -53,7 +53,7 @@ void generate_hash(int hash_mode, int version, unsigned char *hash_final, unsign
 		// Encrypted HASH.
 		// Decrypt the hash with EDAT_KEY + EDAT_IV.
 		memcpy(temp_iv, EDAT_IV, 0x10);
-		aescbc128_decrypt(version ? EDAT_KEY_1 : EDAT_KEY_0, temp_iv, hash, hash_final, 0x10);
+		aescbc128_decrypt(const_cast<u8*>(version ? EDAT_KEY_1 : EDAT_KEY_0), temp_iv, hash, hash_final, 0x10);
 		break;
 	case 0x20000000:
 		// Default HASH.

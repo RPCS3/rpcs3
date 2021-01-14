@@ -610,7 +610,7 @@ SELF_KEY KeyVault::GetSelfLV1Key(u64 version) const
 {
 	SELF_KEY key(0, 0, 0, 0, "", "", "", "", 0);
 
-	for(unsigned int i = 0; i < sk_LV1_arr.size(); i++)
+	for (uint i = 0; i < sk_LV1_arr.size(); i++)
 	{
 		if (version >= sk_LV1_arr[i].version_start && version <= sk_LV1_arr[i].version_end)
 		{
@@ -626,7 +626,7 @@ SELF_KEY KeyVault::GetSelfLV2Key(u64 version) const
 {
 	SELF_KEY key(0, 0, 0, 0, "", "", "", "", 0);
 
-	for(unsigned int i = 0; i < sk_LV2_arr.size(); i++)
+	for (uint i = 0; i < sk_LV2_arr.size(); i++)
 	{
 		if (version >= sk_LV2_arr[i].version_start && version <= sk_LV2_arr[i].version_end)
 		{
@@ -642,7 +642,7 @@ SELF_KEY KeyVault::GetSelfISOKey(u16 revision, u64 version) const
 {
 	SELF_KEY key(0, 0, 0, 0, "", "", "", "", 0);
 
-	for(unsigned int i = 0; i < sk_ISO_arr.size(); i++)
+	for (uint i = 0; i < sk_ISO_arr.size(); i++)
 	{
 		if ((version >= sk_ISO_arr[i].version_start && version <= sk_ISO_arr[i].version_end) && (sk_ISO_arr[i].revision == revision))
 		{
@@ -658,7 +658,7 @@ SELF_KEY KeyVault::GetSelfAPPKey(u16 revision) const
 {
 	SELF_KEY key(0, 0, 0, 0, "", "", "", "", 0);
 
-	for(unsigned int i = 0; i < sk_APP_arr.size(); i++)
+	for (uint i = 0; i < sk_APP_arr.size(); i++)
 	{
 		if (sk_APP_arr[i].revision == revision)
 		{
@@ -674,7 +674,7 @@ SELF_KEY KeyVault::GetSelfUNK7Key(u64 version) const
 {
 	SELF_KEY key(0, 0, 0, 0, "", "", "", "", 0);
 
-	for(unsigned int i = 0; i < sk_UNK7_arr.size(); i++)
+	for (uint i = 0; i < sk_UNK7_arr.size(); i++)
 	{
 		if (version >= sk_UNK7_arr[i].version_start && version <= sk_UNK7_arr[i].version_end)
 		{
@@ -690,7 +690,7 @@ SELF_KEY KeyVault::GetSelfNPDRMKey(u16 revision) const
 {
 	SELF_KEY key(0, 0, 0, 0, "", "", "", "", 0);
 
-	for(unsigned int i = 0; i < sk_NPDRM_arr.size(); i++)
+	for (uint i = 0; i < sk_NPDRM_arr.size(); i++)
 	{
 		if (sk_NPDRM_arr[i].revision == revision)
 		{
@@ -751,13 +751,13 @@ SELF_KEY KeyVault::FindSelfKey(u32 type, u16 revision, u64 version)
 	return key;
 }
 
-void KeyVault::SetKlicenseeKey(u8 *key)
+void KeyVault::SetKlicenseeKey(u8* key)
 {
 	klicensee_key = std::make_unique<u8[]>(0x10);
 	memcpy(klicensee_key.get(), key, 0x10);
 }
 
-u8 *KeyVault::GetKlicenseeKey()
+u8* KeyVault::GetKlicenseeKey()
 {
 	return klicensee_key.get();
 }
@@ -787,24 +787,26 @@ void rap_to_rif(unsigned char* rap, unsigned char* rif)
 		}
 		for (i = 15; i >= 1; --i)
 		{
-			int p = RAP_PBOX[i];
+			int p  = RAP_PBOX[i];
 			int pp = RAP_PBOX[i - 1];
 			key[p] ^= key[pp];
 		}
 		int o = 0;
 		for (i = 0; i < 16; ++i)
 		{
-			int p = RAP_PBOX[i];
-			unsigned char kc = key[p] - o;
+			int p             = RAP_PBOX[i];
+			unsigned char kc  = key[p] - o;
 			unsigned char ec2 = RAP_E2[p];
 			if (o != 1 || kc != 0xFF)
 			{
-				o = kc < ec2 ? 1 : 0;
+				o      = kc < ec2 ? 1 : 0;
 				key[p] = kc - ec2;
-			} else if (kc == 0xFF)
+			}
+			else if (kc == 0xFF)
 			{
 				key[p] = kc - ec2;
-			} else
+			}
+			else
 			{
 				key[p] = kc;
 			}
