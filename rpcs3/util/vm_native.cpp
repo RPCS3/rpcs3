@@ -396,9 +396,9 @@ namespace utils
 	{
 		const auto target = reinterpret_cast<u8*>(reinterpret_cast<u64>(ptr) & -0x10000);
 
+#ifdef _WIN32
 		this->unmap(target);
 
-#ifdef _WIN32
 		::MEMORY_BASIC_INFORMATION mem, mem2;
 		if (!::VirtualQuery(target - 1, &mem, sizeof(mem)) || !::VirtualQuery(target + m_size, &mem2, sizeof(mem2)))
 		{
@@ -422,6 +422,8 @@ namespace utils
 		{
 			return;
 		}
+#else
+		::mmap(reinterpret_cast<void*>(target), m_size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0);
 #endif
 	}
 
