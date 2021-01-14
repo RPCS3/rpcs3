@@ -19,13 +19,13 @@ class register_editor_dialog : public QDialog
 	QComboBox* m_register_combo;
 	QLineEdit* m_value_line;
 
+	const std::function<cpu_thread*()> m_get_cpu;
+
 public:
-	register_editor_dialog(QWidget *parent, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm);
+	register_editor_dialog(QWidget *parent, CPUDisAsm* _disasm, std::function<cpu_thread*()> func);
 
 private:
 	void OnOkay();
-
-	std::shared_ptr<cpu_thread> m_cpu;
 
 private Q_SLOTS:
 	void updateRegister(int reg);

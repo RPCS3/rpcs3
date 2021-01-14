@@ -313,10 +313,14 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		{
 		case Qt::Key_E:
 		{
-			if (m_cpu)
+			if (cpu->id_type() == 1 || cpu->id_type() == 2)
 			{
-				instruction_editor_dialog* dlg = new instruction_editor_dialog(this, pc, m_cpu, m_disasm.get());
-				dlg->show();
+				if (!m_inst_editor)
+				{
+					m_inst_editor = new instruction_editor_dialog(this, pc, m_disasm.get(), make_check_cpu(cpu));
+					connect(m_inst_editor, &QDialog::finished, this, [this]() { m_inst_editor = nullptr; });
+					m_inst_editor->show();
+				}
 			}
 			return;
 		}
@@ -332,10 +336,14 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		}
 		case Qt::Key_R:
 		{
-			if (m_cpu)
+			if (cpu->id_type() == 1 || cpu->id_type() == 2)
 			{
-				register_editor_dialog* dlg = new register_editor_dialog(this, m_cpu, m_disasm.get());
-				dlg->show();
+				if (!m_reg_editor)
+				{
+					m_reg_editor = new register_editor_dialog(this, m_disasm.get(), make_check_cpu(cpu));
+					connect(m_reg_editor, &QDialog::finished, this, [this]() { m_reg_editor = nullptr; });
+					m_reg_editor->show();
+				}
 			}
 			return;
 		}
@@ -386,7 +394,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_M:
 		{
 			// Memory viewer
-			if (m_cpu) idm::make<memory_viewer_handle>(this, pc, m_cpu);
+			idm::make<memory_viewer_handle>(this, pc, make_check_cpu(cpu));
 			return;
 		}
 		case Qt::Key_F10:
@@ -417,17 +425,61 @@ cpu_thread* debugger_frame::get_cpu()
 	// m_rsx is raw pointer, when emulation is stopped it won't be cleared
 	// Therefore need to do invalidation checks manually
 
+	if (m_emu_state == system_state::stopped)
+	{
+		m_rsx = nullptr;
+		return m_rsx;
+	}
+
 	if (g_fxo->get<rsx::thread>() != m_rsx)
 	{
 		m_rsx = nullptr;
+		return m_rsx;
 	}
 
 	if (m_rsx && !m_rsx->ctrl)
 	{
 		m_rsx = nullptr;
+		return m_rsx;
 	}
 
 	return m_rsx;
+}
+
+std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu)
+{
+	const u32 id = cpu ? cpu->id : UINT32_MAX;
+	const u32 type = id >> 24;
+
+	std::shared_ptr<cpu_thread> shared = type == 1 ? static_cast<std::shared_ptr<cpu_thread>>(idm::get<named_thread<ppu_thread>>(id)) :
+		type == 2 ? idm::get<named_thread<spu_thread>>(id) : nullptr;
+
+	if (shared.get() != cpu)
+	{
+		shared.reset();
+	}
+
+	return [&rsx = m_rsx, cpu, type, shared = std::move(shared)]() -> cpu_thread*
+	{
+		if (type == 1 || type == 2)
+		{
+			// SPU and PPU
+			if (!shared || (shared->state & cpu_flag::exit && shared->state & cpu_flag::wait))
+			{
+				return nullptr;
+			}
+
+			return shared.get();
+		}
+
+		// RSX
+		if (rsx == cpu)
+		{
+			return cpu;
+		}
+
+		return nullptr;
+	};
 }
 
 void debugger_frame::UpdateUI()
@@ -476,8 +528,9 @@ void debugger_frame::UpdateUI()
 	}
 }
 
-Q_DECLARE_METATYPE(std::weak_ptr<cpu_thread>);
-Q_DECLARE_METATYPE(::rsx::thread*);
+using data_type = std::pair<cpu_thread*, u32>;
+
+Q_DECLARE_METATYPE(data_type);
 
 void debugger_frame::UpdateUnitList()
 {
@@ -500,15 +553,20 @@ void debugger_frame::UpdateUnitList()
 	//const int old_size = m_choice_units->count();
 	QVariant old_cpu = m_choice_units->currentData();
 
+	bool reselected = false;
+
 	const auto on_select = [&](u32 id, cpu_thread& cpu)
 	{
 		if (emu_state == system_state::stopped) return;
 
-		QVariant var_cpu = QVariant::fromValue<std::weak_ptr<cpu_thread>>(
-			id >> 24 == 1 ? static_cast<std::weak_ptr<cpu_thread>>(idm::get_unlocked<named_thread<ppu_thread>>(id)) : idm::get_unlocked<named_thread<spu_thread>>(id));
+		QVariant var_cpu = QVariant::fromValue<std::pair<cpu_thread*, u32>>(std::make_pair(&cpu, id));
+		m_choice_units->addItem(qstr(id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()), var_cpu);
 
-		m_choice_units->addItem(qstr(cpu.get_name()), var_cpu);
-		if (old_cpu == var_cpu) m_choice_units->setCurrentIndex(m_choice_units->count() - 1);
+		if (!reselected && old_cpu == var_cpu)
+		{
+			m_choice_units->setCurrentIndex(m_choice_units->count() - 1);
+			reselected = true;
+		}
 	};
 
 	{
@@ -522,10 +580,15 @@ void debugger_frame::UpdateUnitList()
 
 		if (auto render = g_fxo->get<rsx::thread>(); emu_state != system_state::stopped && render && render->ctrl)
 		{
-			QVariant var_cpu = QVariant::fromValue<rsx::thread*>(render);
-			m_choice_units->addItem("RSX[0x55555555]", var_cpu);
-			if (old_cpu == var_cpu) m_choice_units->setCurrentIndex(m_choice_units->count() - 1);
+			on_select(render->id, *render);
 		}
+	}
+
+	// Close dialogs which are tied to the specific thread selected
+	if (!reselected)
+	{
+		if (m_reg_editor) m_reg_editor->close();
+		if (m_inst_editor) m_inst_editor->close();
 	}
 
 	OnSelectUnit();
@@ -535,65 +598,83 @@ void debugger_frame::UpdateUnitList()
 
 void debugger_frame::OnSelectUnit()
 {
-	if (m_choice_units->count() < 1)
-	{
-		m_debugger_list->UpdateCPUData(nullptr, nullptr);
-		m_breakpoint_list->UpdateCPUData(nullptr, nullptr);
-		m_disasm.reset();
-		m_cpu.reset();
-		return;
-	}
-
-	const auto weak = m_choice_units->currentData().value<std::weak_ptr<cpu_thread>>();
-	const auto render = m_choice_units->currentData().value<rsx::thread*>();
+	auto [selected, cpu_id] = m_choice_units->currentData().value<std::pair<cpu_thread*, u32>>();
 
 	if (m_emu_state != system_state::stopped)
 	{
-		if (!render && !weak.owner_before(m_cpu) && !m_cpu.owner_before(weak))
+		if (selected && m_cpu.get() == selected)
 		{
 			// They match, nothing to do.
 			return;
 		}
 
-		if (render && render == get_cpu())
+		if (selected && m_rsx == selected)
 		{
 			return;
 		}
+
+		if (!selected && !m_rsx && !m_cpu)
+		{
+			return;
+		}
+	}
+	else
+	{
+		selected = nullptr;
 	}
 
 	m_disasm.reset();
 	m_cpu.reset();
 	m_rsx = nullptr;
 
-	if (!weak.expired())
+	if (selected)
 	{
-		if (const auto cpu0 = weak.lock())
+		switch (cpu_id >> 24)
 		{
-			if (cpu0->id_type() == 1)
-			{
-				if (cpu0.get() == idm::check<named_thread<ppu_thread>>(cpu0->id))
-				{
-					m_cpu = cpu0;
-					m_disasm = std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr);
-				}
-			}
-			else if (cpu0->id_type() == 2)
-			{
-				if (cpu0.get() == idm::check<named_thread<spu_thread>>(cpu0->id))
-				{
-					m_cpu = cpu0;
-					m_disasm = std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(cpu0.get())->ls);
-				}
-			}
-		}
-	}
-	else
-	{
-		m_rsx = render;
+		case 1:
+		{
+			m_cpu = idm::get<named_thread<ppu_thread>>(cpu_id);
 
-		if (get_cpu())
+			if (selected == m_cpu.get())
+			{
+				m_disasm = std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr);
+			}
+			else
+			{
+				m_cpu.reset();
+				selected = nullptr;
+			}
+
+			break;
+		}
+		case 2:
 		{
-			m_disasm = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, m_rsx);
+			m_cpu = idm::get<named_thread<spu_thread>>(cpu_id);
+
+			if (selected == m_cpu.get())
+			{
+				m_disasm = std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(m_cpu.get())->ls);
+			}
+			else
+			{
+				m_cpu.reset();
+				selected = nullptr;
+			}
+
+			break;
+		}
+		case 0x55:
+		{
+			m_rsx = static_cast<rsx::thread*>(selected);
+
+			if (get_cpu())
+			{
+				m_disasm = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, m_rsx);
+			}
+
+			break;
+		}
+		default: break;
 		}
 	}
 
