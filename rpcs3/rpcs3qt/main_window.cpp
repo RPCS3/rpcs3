@@ -1827,10 +1827,8 @@ void main_window::CreateConnects()
 	{
 		if (!m_kernel_explorer)
 		{
-			m_kernel_explorer = new kernel_explorer(this, [this]()
-			{
-				m_kernel_explorer = nullptr;
-			});
+			m_kernel_explorer = new kernel_explorer(this);
+			connect(m_kernel_explorer, &QDialog::finished, this, [this]() { m_kernel_explorer = nullptr; });
 		}
 
 		m_kernel_explorer->show();

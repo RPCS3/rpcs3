@@ -13,17 +13,19 @@ constexpr auto qstr = QString::fromStdString;
 
 extern bool ppu_patch(u32 addr, u32 value);
 
-instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
+instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, CPUDisAsm* _disasm, std::function<cpu_thread*()> func)
 	: QDialog(parent)
 	, m_pc(_pc)
 	, m_disasm(_disasm)
-	, m_cpu(_cpu)
+	, m_get_cpu(std::move(func))
 {
 	setWindowTitle(tr("Edit instruction"));
 	setAttribute(Qt::WA_DeleteOnClose);
 	setMinimumSize(300, sizeHint().height());
 
-	m_cpu_offset = m_cpu->id_type() == 2 ? static_cast<spu_thread&>(*m_cpu).ls : vm::g_sudo_addr;
+	const auto cpu = m_get_cpu();
+
+	m_cpu_offset = cpu && cpu->id_type() == 2 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
 	QString instruction = qstr(fmt::format("%08x", *reinterpret_cast<be_t<u32>*>(m_cpu_offset + m_pc)));
 
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
@@ -68,11 +70,18 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	vbox_panel->addSpacing(10);
 	vbox_panel->addLayout(hbox_b_panel);
 	setLayout(vbox_panel);
-	setModal(true);
 
 	// Events
 	connect(button_ok, &QAbstractButton::clicked, [=, this]()
 	{
+		const auto cpu = m_get_cpu();
+
+		if (!cpu)
+		{
+			close();
+			return;
+		}
+
 		bool ok;
 		ulong opcode = m_instr->text().toULong(&ok, 16);
 		if (!ok || opcode > UINT32_MAX)
@@ -80,7 +89,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 			QMessageBox::critical(this, tr("Error"), tr("Failed to parse PPU instruction."));
 			return;
 		}
-		else if (m_cpu->id_type() == 1)
+		else if (cpu->id_type() == 1)
 		{
 			if (!ppu_patch(m_pc, static_cast<u32>(opcode)))
 			{

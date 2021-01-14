@@ -27,6 +27,9 @@ namespace rsx
 
 enum class system_state : u32;
 
+class instruction_editor_dialog;
+class register_editor_dialog;
+
 class debugger_frame : public custom_dock_widget
 {
 	Q_OBJECT
@@ -62,12 +65,15 @@ class debugger_frame : public custom_dock_widget
 
 	breakpoint_list* m_breakpoint_list;
 	breakpoint_handler* m_breakpoint_handler;
-
 	call_stack_list* m_call_stack_list;
+	instruction_editor_dialog* m_inst_editor = nullptr;
+	register_editor_dialog* m_reg_editor = nullptr;
 
 	std::shared_ptr<gui_settings> xgui_settings;
 
 	cpu_thread* get_cpu();
+	std::function<cpu_thread*()> make_check_cpu(cpu_thread* cpu);
+
 public:
 	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = 0);
 

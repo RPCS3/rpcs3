@@ -43,7 +43,7 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
-	u32 get_address(u32 offset, u32 location, u32 line, u32 col, const char* file, const char* func)
+	u32 get_address(u32 offset, u32 location, bool allow_failure, u32 line, u32 col, const char* file, const char* func)
 	{
 		const auto render = get_current_renderer();
 		std::string_view msg;
@@ -148,6 +148,11 @@ namespace rsx
 			msg = "Invalid location!"sv;
 			break;
 		}
+		}
+
+		if (allow_failure)
+		{
+			return 0;
 		}
 
 		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc{line, col, file, func});
