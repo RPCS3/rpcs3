@@ -103,7 +103,7 @@ namespace vk
 		}
 	}
 
-	void event::signal(const command_buffer& cmd, VkPipelineStageFlags stages)
+	void event::signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access)
 	{
 		if (m_vk_event) [[likely]]
 		{
@@ -111,7 +111,7 @@ namespace vk
 		}
 		else
 		{
-			insert_execution_barrier(cmd, stages, VK_PIPELINE_STAGE_TRANSFER_BIT);
+			insert_global_memory_barrier(cmd, stages, VK_PIPELINE_STAGE_TRANSFER_BIT, access, VK_ACCESS_TRANSFER_WRITE_BIT);
 			vkCmdFillBuffer(cmd, m_buffer->value, 0, 4, 0xDEADBEEF);
 		}
 	}
