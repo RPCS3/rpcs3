@@ -1659,7 +1659,7 @@ namespace vm
 		g_locations.clear();
 
 		utils::memory_decommit(g_base_addr, 0x200000000);
-		utils::memory_decommit(g_exec_addr, 0x100000000);
+		utils::memory_decommit(g_exec_addr, 0x200000000);
 		utils::memory_decommit(g_stat_addr, 0x100000000);
 	}
 }
