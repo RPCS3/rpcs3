@@ -25,7 +25,7 @@ namespace rsx
 		rsx->recover_fifo();
 	}
 
-	void trace_method(thread* rsx, u32 _reg, u32 arg)
+	static void trace_method(thread* rsx, u32 _reg, u32 arg)
 	{
 		// For unknown yet valid methods
 		rsx_log.trace("RSX method 0x%x (arg=0x%x)", _reg << 2, arg);

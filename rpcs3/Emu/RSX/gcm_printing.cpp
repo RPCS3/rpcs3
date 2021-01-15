@@ -6,62 +6,69 @@
 namespace
 {
 	constexpr u32 opcode_list[] = {NV4097_SET_VIEWPORT_HORIZONTAL, NV4097_SET_VIEWPORT_VERTICAL,
-	   NV4097_SET_SCISSOR_HORIZONTAL, NV4097_SET_SCISSOR_VERTICAL, NV4097_SET_SURFACE_CLIP_HORIZONTAL,
-	   NV4097_SET_SURFACE_CLIP_VERTICAL, NV4097_SET_CLEAR_RECT_HORIZONTAL,
-	   NV4097_SET_CLEAR_RECT_VERTICAL, NV3089_CLIP_POINT, NV3089_CLIP_SIZE, NV3089_IMAGE_OUT_POINT,
-	   NV3089_IMAGE_OUT_SIZE, NV3089_IMAGE_IN_SIZE, NV3062_SET_PITCH, NV308A_POINT,
-	   NV4097_SET_DEPTH_TEST_ENABLE, NV4097_SET_DEPTH_MASK, NV4097_SET_ALPHA_TEST_ENABLE,
-	   NV4097_SET_STENCIL_TEST_ENABLE, NV4097_SET_RESTART_INDEX_ENABLE,
-	   NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE, NV4097_SET_LOGIC_OP_ENABLE, NV4097_SET_DITHER_ENABLE,
-	   NV4097_SET_BLEND_ENABLE, NV4097_SET_LINE_SMOOTH_ENABLE, NV4097_SET_POLY_OFFSET_POINT_ENABLE,
-	   NV4097_SET_POLY_OFFSET_LINE_ENABLE, NV4097_SET_POLY_OFFSET_FILL_ENABLE,
-	   NV4097_SET_CULL_FACE_ENABLE, NV4097_SET_POLY_SMOOTH_ENABLE,
-	   NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE, NV4097_SET_TWO_SIDE_LIGHT_EN,
-	   NV4097_SET_RESTART_INDEX, NV4097_SET_SURFACE_COLOR_AOFFSET, NV4097_SET_SURFACE_COLOR_BOFFSET,
-	   NV4097_SET_SURFACE_COLOR_COFFSET, NV4097_SET_SURFACE_COLOR_DOFFSET, NV4097_SET_SURFACE_PITCH_A,
-	   NV4097_SET_SURFACE_PITCH_B, NV4097_SET_SURFACE_PITCH_C, NV4097_SET_SURFACE_PITCH_D,
-	   NV4097_SET_SURFACE_ZETA_OFFSET, NV4097_SET_SURFACE_PITCH_Z,
-	   NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, NV4097_SET_SHADER_CONTROL,
-	   NV4097_SET_VERTEX_DATA_BASE_OFFSET, NV4097_SET_INDEX_ARRAY_ADDRESS,
-	   NV4097_SET_VERTEX_DATA_BASE_INDEX, NV4097_SET_SHADER_PROGRAM,
-	   NV4097_SET_TRANSFORM_PROGRAM_START, NV406E_SET_CONTEXT_DMA_SEMAPHORE, NV406E_SEMAPHORE_OFFSET, NV4097_SET_SEMAPHORE_OFFSET,
-	   NV3089_IMAGE_IN_OFFSET, NV3062_SET_OFFSET_DESTIN, NV309E_SET_OFFSET, NV3089_DS_DX, NV3089_DT_DY,
-	   NV0039_PITCH_IN, NV0039_PITCH_OUT, NV0039_LINE_LENGTH_IN, NV0039_LINE_COUNT, NV0039_OFFSET_OUT,
-	   NV0039_OFFSET_IN, NV4097_SET_VERTEX_ATTRIB_INPUT_MASK, NV4097_SET_FREQUENCY_DIVIDER_OPERATION,
-	   NV4097_SET_DEPTH_BOUNDS_MIN, NV4097_SET_DEPTH_BOUNDS_MAX, NV4097_SET_FOG_PARAMS,
-	   NV4097_SET_FOG_PARAMS + 1, NV4097_SET_CLIP_MIN, NV4097_SET_CLIP_MAX,
-	   NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR, NV4097_SET_POLYGON_OFFSET_BIAS,
-	   NV4097_SET_VIEWPORT_SCALE, NV4097_SET_VIEWPORT_SCALE + 1, NV4097_SET_VIEWPORT_SCALE + 2,
-	   NV4097_SET_VIEWPORT_SCALE + 3, NV4097_SET_VIEWPORT_OFFSET, NV4097_SET_VIEWPORT_OFFSET + 1,
-	   NV4097_SET_VIEWPORT_OFFSET + 2, NV4097_SET_VIEWPORT_OFFSET + 3, NV4097_SET_DEPTH_FUNC,
-	   NV4097_SET_STENCIL_FUNC, NV4097_SET_BACK_STENCIL_FUNC, NV4097_SET_STENCIL_OP_FAIL,
-	   NV4097_SET_STENCIL_OP_ZFAIL, NV4097_SET_STENCIL_OP_ZPASS, NV4097_SET_BACK_STENCIL_OP_FAIL,
-	   NV4097_SET_BACK_STENCIL_OP_ZFAIL, NV4097_SET_BACK_STENCIL_OP_ZPASS, NV4097_SET_LOGIC_OP,
-	   NV4097_SET_FRONT_FACE, NV4097_SET_CULL_FACE, NV4097_SET_SURFACE_COLOR_TARGET,
-	   NV4097_SET_FOG_MODE, NV4097_SET_ALPHA_FUNC, NV4097_SET_BEGIN_END, NV3089_SET_OPERATION,
-	   NV3089_SET_COLOR_FORMAT, NV3089_SET_CONTEXT_SURFACE, NV3062_SET_COLOR_FORMAT,
-	   NV4097_SET_STENCIL_FUNC_REF, NV4097_SET_BACK_STENCIL_FUNC_REF, NV4097_SET_STENCIL_FUNC_MASK,
-	   NV4097_SET_BACK_STENCIL_FUNC_MASK, NV4097_SET_ALPHA_REF, NV4097_SET_COLOR_CLEAR_VALUE,
-	   NV4097_SET_STENCIL_MASK, NV4097_SET_BACK_STENCIL_MASK, NV4097_SET_BLEND_EQUATION,
-	   NV4097_SET_BLEND_FUNC_SFACTOR, NV4097_SET_BLEND_FUNC_DFACTOR, NV4097_SET_COLOR_MASK,
-	   NV4097_SET_SHADER_WINDOW, NV4097_SET_BLEND_ENABLE_MRT, NV4097_SET_USER_CLIP_PLANE_CONTROL,
-	   NV4097_SET_LINE_WIDTH, NV4097_SET_SURFACE_FORMAT, NV4097_SET_WINDOW_OFFSET,
-	   NV4097_SET_ZSTENCIL_CLEAR_VALUE, NV4097_SET_INDEX_ARRAY_DMA, NV4097_SET_CONTEXT_DMA_COLOR_A,
-	   NV4097_SET_CONTEXT_DMA_COLOR_B, NV4097_SET_CONTEXT_DMA_COLOR_C, NV4097_SET_CONTEXT_DMA_COLOR_D,
-	   NV4097_SET_CONTEXT_DMA_ZETA, NV3089_SET_CONTEXT_DMA_IMAGE, NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN,
-	   NV309E_SET_CONTEXT_DMA_IMAGE, NV0039_SET_CONTEXT_DMA_BUFFER_OUT,
-	   NV0039_SET_CONTEXT_DMA_BUFFER_IN, NV4097_SET_CONTEXT_DMA_REPORT, NV3089_IMAGE_IN_FORMAT,
-	   NV309E_SET_FORMAT, NV0039_FORMAT, NV4097_SET_BLEND_COLOR2, NV4097_SET_BLEND_COLOR,
-	   NV3089_IMAGE_IN, NV4097_NO_OPERATION, NV4097_INVALIDATE_VERTEX_CACHE_FILE,
-	   NV4097_INVALIDATE_VERTEX_FILE, NV4097_SET_ANTI_ALIASING_CONTROL, NV4097_SET_FRONT_POLYGON_MODE,
-	   NV4097_SET_BACK_POLYGON_MODE,
-	   EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA_ARRAY_FORMAT)
-	       EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA_ARRAY_OFFSET)
-	           EXPAND_RANGE_32(0, DECLARE_TRANSFORM_CONSTANT) NV4097_SET_TRANSFORM_CONSTANT_LOAD,
-	   NV4097_DRAW_ARRAYS, NV4097_DRAW_INDEX_ARRAY,
-	   EXPAND_RANGE_512(0, DECLARE_TRANSFORM_PROGRAM) NV4097_SET_TRANSFORM_PROGRAM_LOAD};
+		NV4097_SET_SCISSOR_HORIZONTAL, NV4097_SET_SCISSOR_VERTICAL, NV4097_SET_SURFACE_CLIP_HORIZONTAL,
+		NV4097_SET_SURFACE_CLIP_VERTICAL, NV4097_SET_CLEAR_RECT_HORIZONTAL,
+		NV4097_SET_CLEAR_RECT_VERTICAL, NV3089_CLIP_POINT, NV3089_CLIP_SIZE, NV3089_IMAGE_OUT_POINT,
+		NV3089_IMAGE_OUT_SIZE, NV3089_IMAGE_IN_SIZE, NV3062_SET_PITCH, NV308A_POINT,
+		NV4097_SET_DEPTH_TEST_ENABLE, NV4097_SET_DEPTH_MASK, NV4097_SET_ALPHA_TEST_ENABLE,
+		NV4097_SET_STENCIL_TEST_ENABLE, NV4097_SET_RESTART_INDEX_ENABLE,
+		NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE, NV4097_SET_LOGIC_OP_ENABLE, NV4097_SET_DITHER_ENABLE,
+		NV4097_SET_BLEND_ENABLE, NV4097_SET_LINE_SMOOTH_ENABLE, NV4097_SET_POLY_OFFSET_POINT_ENABLE,
+		NV4097_SET_POLY_OFFSET_LINE_ENABLE, NV4097_SET_POLY_OFFSET_FILL_ENABLE,
+		NV4097_SET_CULL_FACE_ENABLE, NV4097_SET_POLY_SMOOTH_ENABLE,
+		NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE, NV4097_SET_TWO_SIDE_LIGHT_EN,
+		NV4097_SET_RESTART_INDEX, NV4097_SET_SURFACE_COLOR_AOFFSET, NV4097_SET_SURFACE_COLOR_BOFFSET,
+		NV4097_SET_SURFACE_COLOR_COFFSET, NV4097_SET_SURFACE_COLOR_DOFFSET, NV4097_SET_SURFACE_PITCH_A,
+		NV4097_SET_SURFACE_PITCH_B, NV4097_SET_SURFACE_PITCH_C, NV4097_SET_SURFACE_PITCH_D,
+		NV4097_SET_SURFACE_ZETA_OFFSET, NV4097_SET_SURFACE_PITCH_Z,
+		NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, NV4097_SET_SHADER_CONTROL,
+		NV4097_SET_VERTEX_DATA_BASE_OFFSET, NV4097_SET_INDEX_ARRAY_ADDRESS,
+		NV4097_SET_VERTEX_DATA_BASE_INDEX, NV4097_SET_SHADER_PROGRAM,
+		NV4097_SET_TRANSFORM_PROGRAM_START, NV406E_SET_CONTEXT_DMA_SEMAPHORE, NV406E_SEMAPHORE_OFFSET, NV4097_SET_SEMAPHORE_OFFSET,
+		NV3089_IMAGE_IN_OFFSET, NV3062_SET_OFFSET_DESTIN, NV309E_SET_OFFSET, NV3089_DS_DX, NV3089_DT_DY,
+		NV0039_PITCH_IN, NV0039_PITCH_OUT, NV0039_LINE_LENGTH_IN, NV0039_LINE_COUNT, NV0039_OFFSET_OUT,
+		NV0039_OFFSET_IN, NV4097_SET_VERTEX_ATTRIB_INPUT_MASK, NV4097_SET_FREQUENCY_DIVIDER_OPERATION,
+		NV4097_SET_DEPTH_BOUNDS_MIN, NV4097_SET_DEPTH_BOUNDS_MAX, NV4097_SET_FOG_PARAMS,
+		NV4097_SET_FOG_PARAMS + 1, NV4097_SET_CLIP_MIN, NV4097_SET_CLIP_MAX,
+		NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR, NV4097_SET_POLYGON_OFFSET_BIAS,
+		NV4097_SET_VIEWPORT_SCALE, NV4097_SET_VIEWPORT_SCALE + 1, NV4097_SET_VIEWPORT_SCALE + 2,
+		NV4097_SET_VIEWPORT_SCALE + 3, NV4097_SET_VIEWPORT_OFFSET, NV4097_SET_VIEWPORT_OFFSET + 1,
+		NV4097_SET_VIEWPORT_OFFSET + 2, NV4097_SET_VIEWPORT_OFFSET + 3, NV4097_SET_DEPTH_FUNC,
+		NV4097_SET_STENCIL_FUNC, NV4097_SET_BACK_STENCIL_FUNC, NV4097_SET_STENCIL_OP_FAIL,
+		NV4097_SET_STENCIL_OP_ZFAIL, NV4097_SET_STENCIL_OP_ZPASS, NV4097_SET_BACK_STENCIL_OP_FAIL,
+		NV4097_SET_BACK_STENCIL_OP_ZFAIL, NV4097_SET_BACK_STENCIL_OP_ZPASS, NV4097_SET_LOGIC_OP,
+		NV4097_SET_FRONT_FACE, NV4097_SET_CULL_FACE, NV4097_SET_SURFACE_COLOR_TARGET,
+		NV4097_SET_FOG_MODE, NV4097_SET_ALPHA_FUNC, NV4097_SET_BEGIN_END, NV3089_SET_OPERATION,
+		NV3089_SET_COLOR_FORMAT, NV3089_SET_CONTEXT_SURFACE, NV3062_SET_COLOR_FORMAT,
+		NV4097_SET_STENCIL_FUNC_REF, NV4097_SET_BACK_STENCIL_FUNC_REF, NV4097_SET_STENCIL_FUNC_MASK,
+		NV4097_SET_BACK_STENCIL_FUNC_MASK, NV4097_SET_ALPHA_REF, NV4097_SET_COLOR_CLEAR_VALUE,
+		NV4097_SET_STENCIL_MASK, NV4097_SET_BACK_STENCIL_MASK, NV4097_SET_BLEND_EQUATION,
+		NV4097_SET_BLEND_FUNC_SFACTOR, NV4097_SET_BLEND_FUNC_DFACTOR, NV4097_SET_COLOR_MASK,
+		NV4097_SET_SHADER_WINDOW, NV4097_SET_BLEND_ENABLE_MRT, NV4097_SET_USER_CLIP_PLANE_CONTROL,
+		NV4097_SET_LINE_WIDTH, NV4097_SET_SURFACE_FORMAT, NV4097_SET_WINDOW_OFFSET,
+		NV4097_SET_ZSTENCIL_CLEAR_VALUE, NV4097_SET_INDEX_ARRAY_DMA, NV4097_SET_CONTEXT_DMA_COLOR_A,
+		NV4097_SET_CONTEXT_DMA_COLOR_B, NV4097_SET_CONTEXT_DMA_COLOR_C, NV4097_SET_CONTEXT_DMA_COLOR_D,
+		NV4097_SET_CONTEXT_DMA_ZETA, NV3089_SET_CONTEXT_DMA_IMAGE, NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN,
+		NV309E_SET_CONTEXT_DMA_IMAGE, NV0039_SET_CONTEXT_DMA_BUFFER_OUT,
+		NV0039_SET_CONTEXT_DMA_BUFFER_IN, NV4097_SET_CONTEXT_DMA_REPORT, NV3089_IMAGE_IN_FORMAT,
+		NV309E_SET_FORMAT, NV0039_FORMAT, NV4097_SET_BLEND_COLOR2, NV4097_SET_BLEND_COLOR,
+		NV3089_IMAGE_IN, NV4097_NO_OPERATION, NV4097_INVALIDATE_VERTEX_CACHE_FILE,
+		NV4097_INVALIDATE_VERTEX_FILE, NV4097_SET_ANTI_ALIASING_CONTROL, NV4097_SET_FRONT_POLYGON_MODE,
+		NV4097_SET_BACK_POLYGON_MODE, NV406E_SET_REFERENCE, NV406E_SEMAPHORE_RELEASE, NV406E_SEMAPHORE_ACQUIRE,
+		NV4097_SET_ZCULL_EN, NV4097_SET_ZCULL_STATS_ENABLE, NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE,
+		EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA_ARRAY_FORMAT)
+	    	EXPAND_RANGE_16(0, DECLARE_VERTEX_DATA_ARRAY_OFFSET)
+	    		EXPAND_RANGE_32(0, DECLARE_TRANSFORM_CONSTANT) NV4097_SET_TRANSFORM_CONSTANT_LOAD,
+		NV4097_DRAW_ARRAYS, NV4097_DRAW_INDEX_ARRAY,
+		EXPAND_RANGE_32(0, DECLARE_TRANSFORM_PROGRAM) NV4097_SET_TRANSFORM_PROGRAM_LOAD,
+		EXPAND_RANGE_16(0, DECLARE_TEXTURE_OFFSET) EXPAND_RANGE_16(0, DECLARE_TEXTURE_FORMAT)
+		EXPAND_RANGE_16(0, DECLARE_TEXTURE_IMAGE_RECT) EXPAND_RANGE_16(0, DECLARE_TEXTURE_CONTROL0)
+		EXPAND_RANGE_16(0, DECLARE_TEXTURE_CONTROL3) EXPAND_RANGE_4(0, DECLARE_VERTEX_TEXTURE_CONTROL0)};
 
-	const std::unordered_map<u32, const char*> methods_name = {
+	#define KEY_STR(key) { key, #key }
+
+	const std::unordered_map<u32, std::string_view> methods_name =
+	{
 		{NV406E_SET_REFERENCE, "NV406E_SET_REFERENCE"},
 		{NV406E_SET_CONTEXT_DMA_SEMAPHORE, "NV406E_SET_CONTEXT_DMA_SEMAPHORE"},
 		{NV406E_SEMAPHORE_OFFSET, "NV406E_SEMAPHORE_OFFSET"},
@@ -321,7 +328,37 @@ namespace
 		{NV4097_SET_EDGE_FLAG, "NV4097_SET_EDGE_FLAG"},
 		{NV4097_SET_USER_CLIP_PLANE_CONTROL, "NV4097_SET_USER_CLIP_PLANE_CONTROL"},
 		{NV4097_SET_POLYGON_STIPPLE, "NV4097_SET_POLYGON_STIPPLE"},
-		{NV4097_SET_POLYGON_STIPPLE_PATTERN, "NV4097_SET_POLYGON_STIPPLE_PATTERN"},
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 1),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 2),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 3),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 4),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 5),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 6),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 7),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 8),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 9),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 10),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 11),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 12),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 13),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 14),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 15),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 16),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 17),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 18),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 19),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 20),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 21),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 22),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 23),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 24),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 25),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 26),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 28),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 29),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 30),
+		KEY_STR(NV4097_SET_POLYGON_STIPPLE_PATTERN + 31),
 		{NV4097_SET_VERTEX_DATA3F_M, "NV4097_SET_VERTEX_DATA3F_M"},
 		{NV4097_SET_VERTEX_DATA3F_M + 4 / 4, "NV4097_SET_VERTEX_DATA3F_M + 4"},
 		{NV4097_SET_VERTEX_DATA3F_M + 8 / 4, "NV4097_SET_VERTEX_DATA3F_M + 8"},
@@ -853,149 +890,36 @@ namespace
 		{NV3089_IMAGE_IN_FORMAT, "NV3089_IMAGE_IN_FORMAT"},
 		{NV3089_IMAGE_IN_OFFSET, "NV3089_IMAGE_IN_OFFSET"},
 		{NV3089_IMAGE_IN, "NV3089_IMAGE_IN"},
-		{GCM_SET_DRIVER_OBJECT, "GCM_SET_DRIVER_OBJECT"},
-		{GCM_DRIVER_QUEUE, "GCM_DRIVER_QUEUE + 0x0"},
-		{GCM_DRIVER_QUEUE+1, "GCM_DRIVER_QUEUE + 0x4"},
-		{GCM_FLIP_HEAD, "GCM_FLIP_HEAD"},
-		{GCM_FLIP_HEAD+1, "GCM_FLIP_HEAD + 0x4"},
-		{GCM_SET_USER_COMMAND, "GCM_SET_USER_COMMAND"},
-		{GCM_FLIP_COMMAND, "GCM_FLIP_COMMAND"},
+		{GCM_SET_DRIVER_OBJECT, "SET_DRIVER_OBJECT"},
+		{GCM_DRIVER_QUEUE, "DRIVER_QUEUE + 0x0"},
+		{GCM_DRIVER_QUEUE+1, "DRIVER_QUEUE + 0x4"},
+		{GCM_FLIP_HEAD, "FLIP_HEAD"},
+		{GCM_FLIP_HEAD+1, "FLIP_HEAD + 0x4"},
+		{GCM_SET_USER_COMMAND, "SET_USER_COMMAND"},
+		{GCM_FLIP_COMMAND, "FLIP_COMMAND"},
 	};
+
+	#undef KEY_STR
 }
 
 std::string rsx::get_method_name(const u32 id)
 {
-	auto found = methods_name.find(id);
-	if (found != methods_name.end()) {
-		return std::string("CELL_GCM_") + found->second;
+	const auto found = methods_name.find(id);
+
+	if (found != methods_name.end())
+	{
+		std::string prefix("CELL_GCM_"sv);
+		prefix.append(found->second.data(), found->second.size());
+		return prefix;
 	}
 
-	return fmt::format("Unknown/illegal method [0x%04x]", id << 2);
+	return fmt::format("Unnamed method 0x%04x", id);
 }
 
 // Various parameter pretty printing function
 namespace
 {
-	std::string ptr_to_string(u32 ptr)
-	{
-		return fmt::format("0x%08x", ptr);
-	}
-
-	std::string dma_mode(u32 arg)
-	{
-		switch (arg)
-		{
-		case CELL_GCM_LOCATION_LOCAL:
-		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER: return "Local memory";
-		case CELL_GCM_LOCATION_MAIN:
-		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER: return "Main memory";
-		}
-		return "Error";
-	}
-
-	std::string texture_dimension(u8 dim)
-	{
-		switch (rsx::to_texture_dimension(dim))
-		{
-		case rsx::texture_dimension::dimension1d: return "1D";
-		case rsx::texture_dimension::dimension2d: return "2D";
-		case rsx::texture_dimension::dimension3d: return "3D";
-		}
-		return "";
-	}
-
-	std::string get_vertex_attribute_format(u8 type)
-	{
-		switch (rsx::to_vertex_base_type(type))
-		{
-		case rsx::vertex_base_type::s1: return "Signed short normalized";
-		case rsx::vertex_base_type::f: return "Float";
-		case rsx::vertex_base_type::sf: return "Half float";
-		case rsx::vertex_base_type::ub: return "Unsigned byte normalized";
-		case rsx::vertex_base_type::s32k: return "Signed short unormalized";
-		case rsx::vertex_base_type::cmp: return "CMP";
-		case rsx::vertex_base_type::ub256: return "Unsigned byte unormalized";
-		}
-		return "";
-	}
-
-	std::string unpack_vertex_format(u32 arg)
-	{
-		u32 frequency = arg >> 16;
-		u32 stride    = (arg >> 8) & 0xff;
-		u32 size      = (arg >> 4) & 0xf;
-		u32 type      = arg & 0xf;
-		if (size == 0) return "(disabled)";
-
-		return "Type = " + get_vertex_attribute_format(type) + " size = " + std::to_string(size) +
-		       " stride = " + std::to_string(stride) + " frequency = " + std::to_string(frequency);
-	}
-
-	std::string transform_constant(usz index, u32 arg)
-	{
-		return "Transform constant " + std::to_string(index) + ": " + std::to_string(arg) + "/" +
-		       std::to_string(std::bit_cast<f32>(arg));
-	}
-
-	std::string texture_offset(usz index, u32 arg)
-	{
-		return "Texture " + std::to_string(index) + ": Offset @" + ptr_to_string(arg);
-	}
-
-	std::string texture_size(usz index, u32 arg)
-	{
-		return "Texture " + std::to_string(index) + ": width = " + std::to_string(arg & 0xffff) +
-		       " height = " + std::to_string(arg >> 16);
-	}
-
-	static std::string get_texture_format_name(u32 format)
-	{
-		switch (format)
-		{
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO8: return "CELL_GCM_TEXTURE_COMPRESSED_HILO8";
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return "CELL_GCM_TEXTURE_COMPRESSED_HILO_S8";
-		case CELL_GCM_TEXTURE_B8: return "CELL_GCM_TEXTURE_B8";
-		case CELL_GCM_TEXTURE_A1R5G5B5: return "CELL_GCM_TEXTURE_A1R5G5B5";
-		case CELL_GCM_TEXTURE_A4R4G4B4: return "CELL_GCM_TEXTURE_A4R4G4B4";
-		case CELL_GCM_TEXTURE_R5G6B5: return "CELL_GCM_TEXTURE_R5G6B5";
-		case CELL_GCM_TEXTURE_A8R8G8B8: return "CELL_GCM_TEXTURE_A8R8G8B8";
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT1: return "CELL_GCM_TEXTURE_COMPRESSED_DXT1";
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT23: return "CELL_GCM_TEXTURE_COMPRESSED_DXT23";
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return "CELL_GCM_TEXTURE_COMPRESSED_DXT45";
-		case CELL_GCM_TEXTURE_G8B8: return "CELL_GCM_TEXTURE_G8B8";
-		case CELL_GCM_TEXTURE_R6G5B5: return "CELL_GCM_TEXTURE_R6G5B5";
-		case CELL_GCM_TEXTURE_DEPTH24_D8: return "CELL_GCM_TEXTURE_DEPTH24_D8";
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: return "CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT";
-		case CELL_GCM_TEXTURE_DEPTH16: return "CELL_GCM_TEXTURE_DEPTH16";
-		case CELL_GCM_TEXTURE_DEPTH16_FLOAT: return "CELL_GCM_TEXTURE_DEPTH16_FLOAT";
-		case CELL_GCM_TEXTURE_X16: return "CELL_GCM_TEXTURE_X16";
-		case CELL_GCM_TEXTURE_Y16_X16: return "CELL_GCM_TEXTURE_Y16_X16";
-		case CELL_GCM_TEXTURE_R5G5B5A1: return "CELL_GCM_TEXTURE_R5G5B5A1";
-		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT: return "CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT";
-		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT: return "CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT";
-		case CELL_GCM_TEXTURE_X32_FLOAT: return "CELL_GCM_TEXTURE_X32_FLOAT";
-		case CELL_GCM_TEXTURE_D1R5G5B5: return "CELL_GCM_TEXTURE_D1R5G5B5";
-		case CELL_GCM_TEXTURE_D8R8G8B8: return "CELL_GCM_TEXTURE_D8R8G8B8";
-		case CELL_GCM_TEXTURE_Y16_X16_FLOAT: return "CELL_GCM_TEXTURE_Y16_X16_FLOAT";
-		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8: return "CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8";
-		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return "CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8";
-		}
-		return "Error";
-	}
-
-	std::string texture_format(usz index, u32 arg)
-	{
-		int format = ((arg >> 8) & 0xFF);
-		return "Texture " + std::to_string(index) + ": location = " + ptr_to_string((arg & 0x3) - 1) +
-		       (((arg >> 2) & 0x1) ? " cubemap " : "") + " border type = " +
-		       std::to_string((arg >> 3) & 0x1) + " dimension = " + std::to_string((arg >> 4) & 0xF) +
-		       " format = " +
-		       get_texture_format_name(format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN)) +
-		       ((format & CELL_GCM_TEXTURE_LN) ? "" : " swizzled") +
-		       ((format & CELL_GCM_TEXTURE_UN) ? " unormalized coordinates" : "") + " mipmap levels = " +
-		       std::to_string((arg >> 16) & 0xFFFF);
-	}
-
+	/*
 	std::string get_texture_wrap_mode(u8 wrap)
 	{
 		switch (rsx::to_texture_wrap_mode(wrap))
@@ -1012,22 +936,6 @@ namespace
 		return "Error";
 	}
 
-	std::string get_zfunc_name(u8 op)
-	{
-		switch (op)
-		{
-		case 0: return "Never";
-		case 1: return "Less";
-		case 2: return "Equal";
-		case 3: return "LEqual";
-		case 4: return "Greater";
-		case 5: return "NotEqual";
-		case 6: return "GreaterOrEqual";
-		case 7: return "Always";
-		}
-		return "Error";
-	}
-
 	std::string texture_address(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + ": wrap_s = " + get_texture_wrap_mode(arg & 0xF) +
@@ -1036,36 +944,6 @@ namespace
 		       std::to_string((arg >> 12) & 0xF) + " zfunc = " + get_zfunc_name((arg >> 28) & 0xF) +
 		       " gamma = " + std::to_string((arg >> 20) & 0xF) + " aniso bias = " +
 		       std::to_string((arg >> 4) & 0xF) + " signed remap = " + std::to_string((arg >> 24) & 0xF);
-	}
-
-	std::string get_texture_max_aniso_name(u8 aniso)
-	{
-		switch (rsx::to_texture_max_anisotropy(aniso))
-		{
-		case rsx::texture_max_anisotropy::x1: return "1";
-		case rsx::texture_max_anisotropy::x2: return "2";
-		case rsx::texture_max_anisotropy::x4: return "4";
-		case rsx::texture_max_anisotropy::x6: return "6";
-		case rsx::texture_max_anisotropy::x8: return "8";
-		case rsx::texture_max_anisotropy::x10: return "10";
-		case rsx::texture_max_anisotropy::x12: return "12";
-		case rsx::texture_max_anisotropy::x16: return "16";
-		}
-		return "Error";
-	}
-
-	std::string texture_control0(usz index, u32 arg)
-	{
-		std::string result = "Texture " + std::to_string(index);
-		if ((arg >> 31) & 0x1) {
-			result += " min lod = " + std::to_string((arg >> 19) & 0xFFF) + " max lod = " +
-			          std::to_string((arg >> 7) & 0xFFF) + " max aniso = " +
-			          get_texture_max_aniso_name((arg >> 4) & 0x7) + " alpha kill = " +
-			          (((arg >> 2) & 0x1) ? "true" : "false");
-		}
-		else
-			result += " (disabled)";
-		return result;
 	}
 
 	std::string get_remap_channel(u8 op) noexcept
@@ -1088,12 +966,6 @@ namespace
 		       get_remap_channel((arg >> 6) & 0x3);
 	}
 
-	std::string texture_control3(usz index, u32 arg)
-	{
-		return "Texture " + std::to_string(index) + " depth = " + std::to_string(arg >> 20) +
-		       " pitch = " + std::to_string(arg & 0xFFFFF);
-	}
-
 	std::string texture_border_color(usz index, u32 arg)
 	{
 		return "Texture " + std::to_string(index) + " border color = " + std::to_string(arg);
@@ -1107,32 +979,33 @@ namespace
 		       std::to_string((arg >> 13) & 0xF) + " a_signed = " + std::to_string((arg >> 28) & 0x1) +
 		       " r_signed = " + std::to_string((arg >> 29) & 0x1) + " g_signed = " +
 		       std::to_string((arg >> 30) & 0x1) + " b_signed = " + std::to_string((arg >> 31) & 0x1);
-	}
+	}*/
 
 	namespace
 	{
-		template <u32 opcode>
-		auto register_pretty_printing(u32 arg)
+		template <u32 Opcode>
+		std::string register_pretty_function(u32 /*id*/, u32 arg)
 		{
-			typename rsx::registers_decoder<opcode>::decoded_type decoded_value(arg);
-			return rsx::registers_decoder<opcode>::dump(std::move(arg));
+			return rsx::registers_decoder<Opcode>::dump(arg);
 		}
 
 		template <typename T, T... Index>
-		auto create_printing_table(std::integer_sequence<T, Index...> seq)
+		std::array<std::string(*)(u32, u32), 1 << 14> create_printing_table(std::integer_sequence<T, Index...> seq)
 		{
-			std::unordered_map<u32, std::string (*)(u32)> result;
-			(result.insert({
-				{opcode_list[Index * 5 + 0], &register_pretty_printing<opcode_list[Index * 5 + 0]>},
-				{opcode_list[Index * 5 + 1], &register_pretty_printing<opcode_list[Index * 5 + 1]>},
-				{opcode_list[Index * 5 + 2], &register_pretty_printing<opcode_list[Index * 5 + 2]>},
-				{opcode_list[Index * 5 + 3], &register_pretty_printing<opcode_list[Index * 5 + 3]>},
-				{opcode_list[Index * 5 + 4], &register_pretty_printing<opcode_list[Index * 5 + 4]>}}), ...);
+			std::array<std::string(*)(u32, u32), 1 << 14> result{};
+
+			((result[opcode_list[Index * 5 + 0]] = &register_pretty_function<opcode_list[Index * 5 + 0]>,
+			result[opcode_list[Index * 5 + 1]] = &register_pretty_function<opcode_list[Index * 5 + 1]>,
+			result[opcode_list[Index * 5 + 2]] = &register_pretty_function<opcode_list[Index * 5 + 2]>,
+			result[opcode_list[Index * 5 + 3]] = &register_pretty_function<opcode_list[Index * 5 + 3]>,
+			result[opcode_list[Index * 5 + 4]] = &register_pretty_function<opcode_list[Index * 5 + 4]>
+			), ...);
+
 			return result;
 		}
 	}
 
-	const std::unordered_map<u32, std::string (*)(u32)> printing_functions =
+	const auto printing_functions =
 		create_printing_table(std::make_index_sequence<std::size(opcode_list) / 5>());
 
 	static_assert(std::size(opcode_list) % 5 == 0);
@@ -1141,8 +1014,6 @@ namespace
 	 1) + " vertex starting from " + std::to_string(arg & 0xFFFFFF); } },
 	  { NV4097_DRAW_INDEX_ARRAY, [](u32 arg) -> std::string { return "Draw " + std::to_string((arg >>
 	 24) + 1) + " index starting from " + std::to_string(arg & 0xFFFFFF); } },
-	  { NV4097_SET_SEMAPHORE_OFFSET, [](u32 arg) -> std::string { return "Semaphore: @ " +
-	 ptr_to_string(arg); } },
 	  { NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, [](u32 arg) -> std::string { return "Write semaphore
 	 value " + std::to_string(arg); } },
 	  { NV4097_CLEAR_SURFACE, [](u32 arg) -> std::string { return "Clear surface " + std::string(arg &
@@ -1151,12 +1022,20 @@ namespace
 	 };*/
 }
 
-std::function<std::string(u32)> rsx::get_pretty_printing_function(u32 id)
+std::add_pointer_t<std::string(u32, u32)> rsx::get_pretty_printing_function(u32 id)
 {
-	auto found = printing_functions.find(id);
-	if (found != printing_functions.end()) {
-		return found->second;
+	const auto found = id < printing_functions.size() ? printing_functions[id] : nullptr;
+
+	if (found)
+	{
+		return found;
 	}
 
-	return [=](u32 v) { return fmt::format("%s : 0x%08x", rsx::get_method_name(id), v); };
+	return [](u32 id, u32 v)
+	{
+		const std::string name = rsx::get_method_name(id);
+		const std::string_view view = name, prefix = "CELL_GCM_"sv;
+
+		return fmt::format("%s: 0x%08x", name.starts_with("CELL_GCM_"sv) ? view.substr(prefix.size()) : view, v);
+	};
 }

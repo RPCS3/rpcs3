@@ -645,11 +645,12 @@ void rsx_debugger::GetMemory()
 	}
 
 	std::string dump;
+	u32 cmd_i = 0;
 
-	for (u32 i = 0; i < frame_debug.command_queue.size(); i++)
+	for (const auto& command : frame_debug.command_queue)
 	{
-		const std::string& str = rsx::get_pretty_printing_function(frame_debug.command_queue[i].first)(frame_debug.command_queue[i].second);
-		m_list_captured_frame->setItem(i, 0, new QTableWidgetItem(qstr(str)));
+		const std::string str = rsx::get_pretty_printing_function(command.first)(command.first, command.second);
+		m_list_captured_frame->setItem(cmd_i++, 0, new QTableWidgetItem(qstr(str)));
 
 		dump += str;
 		dump += '\n';
@@ -739,93 +740,6 @@ void rsx_debugger::GetBuffers()
 	//m_buffer_tex->showImage(QImage(buffer, m_text_width, m_text_height, QImage::Format_RGB32));
 }
 
-const char* rsx_debugger::ParseGCMEnum(u32 value, u32 type)
-{
-	switch(type)
-	{
-	case CELL_GCM_ENUM:
-	{
-		switch(value)
-		{
-		case 0x0200: return "Never";
-		case 0x0201: return "Less";
-		case 0x0202: return "Equal";
-		case 0x0203: return "Less or Equal";
-		case 0x0204: return "Greater";
-		case 0x0205: return "Not Equal";
-		case 0x0206: return "Greater or Equal";
-		case 0x0207: return "Always";
-
-		case 0x0:    return "Zero";
-		case 0x1:    return "One";
-		case 0x0300: return "SRC_COLOR";
-		case 0x0301: return "1 - SRC_COLOR";
-		case 0x0302: return "SRC_ALPHA";
-		case 0x0303: return "1 - SRC_ALPHA";
-		case 0x0304: return "DST_ALPHA";
-		case 0x0305: return "1 - DST_ALPHA";
-		case 0x0306: return "DST_COLOR";
-		case 0x0307: return "1 - DST_COLOR";
-		case 0x0308: return "SRC_ALPHA_SATURATE";
-		case 0x8001: return "CONSTANT_COLOR";
-		case 0x8002: return "1 - CONSTANT_COLOR";
-		case 0x8003: return "CONSTANT_ALPHA";
-		case 0x8004: return "1 - CONSTANT_ALPHA";
-
-		case 0x8006: return "Add";
-		case 0x8007: return "Min";
-		case 0x8008: return "Max";
-		case 0x800A: return "Substract";
-		case 0x800B: return "Reverse Substract";
-		case 0xF005: return "Reverse Substract Signed";
-		case 0xF006: return "Add Signed";
-		case 0xF007: return "Reverse Add Signed";
-
-		default: return "Wrong Value!";
-		}
-	}
-	case CELL_GCM_PRIMITIVE_ENUM:
-	{
-		switch(value)
-		{
-		case 1:  return "POINTS";
-		case 2:  return "LINES";
-		case 3:  return "LINE_LOOP";
-		case 4:  return "LINE_STRIP";
-		case 5:  return "TRIANGLES";
-		case 6:  return "TRIANGLE_STRIP";
-		case 7:  return "TRIANGLE_FAN";
-		case 8:  return "QUADS";
-		case 9:  return "QUAD_STRIP";
-		case 10: return "POLYGON";
-
-		default: return "Wrong Value!";
-		}
-	}
-	default: return "Unknown!";
-	}
-}
-
-#define case_16(a, m) \
-	case a + m: \
-	case a + m * 2: \
-	case a + m * 3: \
-	case a + m * 4: \
-	case a + m * 5: \
-	case a + m * 6: \
-	case a + m * 7: \
-	case a + m * 8: \
-	case a + m * 9: \
-	case a + m * 10: \
-	case a + m * 11: \
-	case a + m * 12: \
-	case a + m * 13: \
-	case a + m * 14: \
-	case a + m * 15: \
-	index = (cmd - a) / m; \
-	[[fallthrough]]; \
-	case a \
-
 QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 {
 	std::string disasm;
@@ -874,30 +788,10 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 			DISASM("Flip and change current buffer: %d", args[0]);
 			break;
 		}
-		case_16(NV4097_SET_TEXTURE_OFFSET, 0x20):
-		{
-			DISASM("Texture Offset[%d]: %07x", index, args[0]);
-			switch ((args[1] & 0x3) - 1)
-			{
-			case CELL_GCM_LOCATION_LOCAL: DISASM("(Local memory);");  break;
-			case CELL_GCM_LOCATION_MAIN:  DISASM("(Main memory);");   break;
-			default:                      DISASM("(Bad location!);"); break;
-			}
-			DISASM("    Cubemap:%s; Dimension:0x%x; Format:0x%x; Mipmap:0x%x",
-				(((args[1] >> 2) & 0x1) ? "True" : "False"),
-				((args[1] >> 4) & 0xf),
-				((args[1] >> 8) & 0xff),
-				((args[1] >> 16) & 0xffff));
-			break;
-		}
-		case NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE:
-		{
-			DISASM("Depth bounds test: %s", args[0] ? "Enable" : "Disable");
-			break;
-		}
 		default:
 		{
-			std::string str = rsx::get_pretty_printing_function((cmd & 0x3ffff) >> 2)(args[0]);
+			const u32 id = (cmd & 0x3ffff) >> 2;
+			std::string str = rsx::get_pretty_printing_function(id)(id, args[0]);
 			DISASM("%s", str.c_str());
 			break;
 		}

@@ -11,6 +11,7 @@
 
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUDisAsm.h"
@@ -337,13 +338,32 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	}
 }
 
+rsx::thread* debugger_frame::get_rsx()
+{
+	// m_rsx is raw pointer, when emulation is stopped it won't be cleared
+	// Therefore need to do invalidation checks manually
+
+	if (g_fxo->get<rsx::thread>() != m_rsx)
+	{
+		m_rsx = nullptr;
+	}
+
+	if (m_rsx && !m_rsx->ctrl)
+	{
+		m_rsx = nullptr;
+	}
+
+	return m_rsx;
+}
+
 void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
 
 	const auto cpu = this->cpu.lock();
+	const auto rsx = this->get_rsx();
 
-	if (!cpu)
+	if (!cpu && !rsx)
 	{
 		if (m_last_pc != umax || !m_last_query_state.empty())
 		{
@@ -351,10 +371,15 @@ void debugger_frame::UpdateUI()
 			m_last_pc = -1;
 			DoUpdate();
 		}
-
-		m_btn_run->setEnabled(false);
-		m_btn_step->setEnabled(false);
-		m_btn_step_over->setEnabled(false);
+	}
+	else if (rsx)
+	{
+		if (m_last_pc != rsx->ctrl->get || !m_last_query_state.empty())
+		{
+			m_last_query_state.clear();
+			m_last_pc = rsx->ctrl->get;
+			DoUpdate();
+		}
 	}
 	else
 	{
@@ -387,6 +412,7 @@ void debugger_frame::UpdateUI()
 }
 
 Q_DECLARE_METATYPE(std::weak_ptr<cpu_thread>);
+Q_DECLARE_METATYPE(::rsx::thread*);
 
 void debugger_frame::UpdateUnitList()
 {
@@ -424,6 +450,13 @@ void debugger_frame::UpdateUnitList()
 
 		idm::select<named_thread<ppu_thread>>(on_select);
 		idm::select<named_thread<spu_thread>>(on_select);
+
+		if (auto render = g_fxo->get<rsx::thread>(); render && render->ctrl)
+		{
+			QVariant var_cpu = QVariant::fromValue<rsx::thread*>(render);
+			m_choice_units->addItem("RSX[0x55555555]", var_cpu);
+			if (old_cpu == var_cpu) m_choice_units->setCurrentIndex(m_choice_units->count() - 1);
+		}
 	}
 
 	OnSelectUnit();
@@ -436,15 +469,22 @@ void debugger_frame::OnSelectUnit()
 	if (m_choice_units->count() < 1) return;
 
 	const auto weak = m_choice_units->currentData().value<std::weak_ptr<cpu_thread>>();
+	const auto render = m_choice_units->currentData().value<rsx::thread*>();
 
-	if (!weak.owner_before(cpu) && !cpu.owner_before(weak))
+	if (!render && !weak.owner_before(cpu) && !cpu.owner_before(weak))
 	{
 		// They match, nothing to do.
 		return;
 	}
 
+	if (render && render == this->get_rsx())
+	{
+		return;
+	}
+
 	m_disasm.reset();
 	cpu.reset();
+	m_rsx = nullptr;
 
 	if (!weak.expired())
 	{
@@ -467,6 +507,10 @@ void debugger_frame::OnSelectUnit()
 				}
 			}
 		}
+	}
+	else
+	{
+		m_rsx = render;
 	}
 
 	EnableButtons(true);
@@ -494,8 +538,9 @@ void debugger_frame::DoUpdate()
 void debugger_frame::WritePanels()
 {
 	const auto cpu = this->cpu.lock();
+	const auto rsx = this->get_rsx();
 
-	if (!cpu)
+	if (!cpu && !rsx)
 	{
 		m_misc_state->clear();
 		m_regs->clear();
@@ -506,15 +551,15 @@ void debugger_frame::WritePanels()
 
 	loc = m_misc_state->verticalScrollBar()->value();
 	m_misc_state->clear();
-	m_misc_state->setText(qstr(cpu->dump_misc()));
+	m_misc_state->setText(qstr(rsx ? "" : cpu->dump_misc()));
 	m_misc_state->verticalScrollBar()->setValue(loc);
 
 	loc = m_regs->verticalScrollBar()->value();
 	m_regs->clear();
-	m_regs->setText(qstr(cpu->dump_regs()));
+	m_regs->setText(qstr(rsx ? rsx->dump_regs() : cpu->dump_regs()));
 	m_regs->verticalScrollBar()->setValue(loc);
 
-	Q_EMIT CallStackUpdateRequested(cpu->dump_callstack_list());
+	Q_EMIT CallStackUpdateRequested(rsx ? rsx->dump_callstack() : cpu->dump_callstack_list());
 }
 
 void debugger_frame::ShowGotoAddressDialog()
@@ -581,16 +626,16 @@ void debugger_frame::ShowGotoAddressDialog()
 
 u64 debugger_frame::EvaluateExpression(const QString& expression)
 {
-	auto thread = cpu.lock();
-
-	if (!thread) return 0;
-
 	bool ok = false;
 
 	// Parse expression(or at least used to, was nuked to remove the need for QtJsEngine)
 	const QString fixed_expression = QRegExp("^[A-Fa-f0-9]+$").exactMatch(expression) ? "0x" + expression : expression;
 	const u64 res = static_cast<u64>(fixed_expression.toULong(&ok, 16));
-	return ok ? res : thread->get_pc();
+
+	if (ok) return res;
+	if (auto thread = get_rsx()) return thread->ctrl->get;
+	if (auto thread = cpu.lock()) return thread->get_pc();
+	return 0;
 }
 
 void debugger_frame::ClearBreakpoints()
@@ -606,7 +651,11 @@ void debugger_frame::ClearCallStack()
 void debugger_frame::ShowPC()
 {
 	const auto cpu0 = cpu.lock();
-	m_debugger_list->ShowAddress(cpu0 ? cpu0->get_pc() : 0);
+
+	const u32 pc = get_rsx() ? +m_rsx->ctrl->get
+		: (cpu0 ? cpu0->get_pc() : 0);
+
+	m_debugger_list->ShowAddress(pc);
 }
 
 void debugger_frame::DoStep(bool stepOver)

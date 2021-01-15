@@ -20,6 +20,11 @@ class breakpoint_list;
 class breakpoint_handler;
 class call_stack_list;
 
+namespace rsx
+{
+	class thread;
+}
+
 class debugger_frame : public custom_dock_widget
 {
 	Q_OBJECT
@@ -50,6 +55,7 @@ class debugger_frame : public custom_dock_widget
 
 	std::shared_ptr<CPUDisAsm> m_disasm;
 	std::weak_ptr<cpu_thread> cpu;
+	rsx::thread* m_rsx = nullptr;
 
 	breakpoint_list* m_breakpoint_list;
 	breakpoint_handler* m_breakpoint_handler;
@@ -58,6 +64,7 @@ class debugger_frame : public custom_dock_widget
 
 	std::shared_ptr<gui_settings> xgui_settings;
 
+	rsx::thread* get_rsx(); // Do not read m_rsx directy, use this instead.
 public:
 	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = 0);
 
