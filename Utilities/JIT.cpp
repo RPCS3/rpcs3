@@ -305,6 +305,49 @@ const bool jit_initialize = []() -> bool
 	return true;
 }();
 
+[[noreturn]] static void null(const char* name)
+{
+	fmt::throw_exception("Null function: %s", name);
+}
+
+static shared_mutex null_mtx;
+
+static std::unordered_map<std::string, u64> null_funcs;
+
+static u64 make_null_function(const std::string& name)
+{
+	std::lock_guard lock(null_mtx);
+
+	if (u64& func_ptr = null_funcs[name]) [[likely]]
+	{
+		// Already exists
+		return func_ptr;
+	}
+	else
+	{
+		using namespace asmjit;
+
+		// Build a "null" function that contains its name
+		const auto func = build_function_asm<void (*)()>([&](X86Assembler& c, auto& args)
+		{
+			Label data = c.newLabel();
+			c.lea(args[0], x86::qword_ptr(data, 0));
+			c.jmp(imm_ptr(&null));
+			c.align(kAlignCode, 16);
+			c.bind(data);
+
+			// Copy function name bytes
+			for (char ch : name)
+				c.db(ch);
+			c.db(0);
+			c.align(kAlignData, 16);
+		});
+
+		func_ptr = reinterpret_cast<u64>(func);
+		return func_ptr;
+	}
+}
+
 // Simple memory manager
 struct MemoryManager1 : llvm::RTDyldMemoryManager
 {
@@ -327,19 +370,14 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 		utils::memory_release(ptr, c_max_size * 2);
 	}
 
-	[[noreturn]] static void null()
-	{
-		fmt::throw_exception("Null function");
-	}
-
 	llvm::JITSymbol findSymbol(const std::string& name) override
 	{
 		u64 addr = RTDyldMemoryManager::getSymbolAddress(name);
 
 		if (!addr)
 		{
-			jit_log.fatal("Function '%s' linked but not found.", name);
-			addr = reinterpret_cast<uptr>(&null);
+			jit_log.error("Function '%s' linked but not found.", name);
+			addr = make_null_function(name);
 		}
 
 		return {addr, llvm::JITSymbolFlags::Exported};
@@ -407,6 +445,19 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 
 	~MemoryManager2() override
 	{
+	}
+
+	llvm::JITSymbol findSymbol(const std::string& name) override
+	{
+		u64 addr = RTDyldMemoryManager::getSymbolAddress(name);
+
+		if (!addr)
+		{
+			jit_log.error("Function '%s' linked but not found.", name);
+			addr = make_null_function(name);
+		}
+
+		return {addr, llvm::JITSymbolFlags::Exported};
 	}
 
 	u8* allocateCodeSection(uptr size, uint align, uint sec_id, llvm::StringRef sec_name) override
