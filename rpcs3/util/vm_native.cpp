@@ -461,7 +461,7 @@ namespace utils
 			return;
 		}
 #else
-		::mmap(reinterpret_cast<void*>(target), m_size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0);
+		ensure(::mprotect(target, m_size, PROT_NONE) != -1);
 #endif
 	}
 
