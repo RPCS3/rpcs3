@@ -1817,7 +1817,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			addr &= -128;
 
 			// Cache line data
-			auto& cline_data = vm::_ref<spu_rdata_t>(addr);
+			//auto& cline_data = vm::_ref<spu_rdata_t>(addr);
 
 			data += 0;
 			rsx::reservation_lock rsx_lock(addr, 128);
@@ -2015,7 +2015,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 		for (u64 index = 0; index < 1024; index++)
 		{
-			if (auto sc = ppu_get_syscall(index))
+			if (ppu_get_syscall(index))
 			{
 				link_table.emplace(fmt::format("%s", ppu_syscall_code(index)), reinterpret_cast<u64>(ppu_execute_syscall));
 				link_table.emplace(fmt::format("syscall_%u", index), reinterpret_cast<u64>(ppu_execute_syscall));

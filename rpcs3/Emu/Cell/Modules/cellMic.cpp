@@ -125,7 +125,7 @@ void mic_context::operator()()
 
 void mic_context::load_config_and_init()
 {
-	auto device_list = fmt::split(g_cfg.audio.microphone_devices, {"@@@"});
+	auto device_list = fmt::split(g_cfg.audio.microphone_devices.to_string(), {"@@@"});
 
 	if (!device_list.empty() && mic_list.empty())
 	{

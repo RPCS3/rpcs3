@@ -4,7 +4,8 @@
 	ignore = dirty
 [submodule "asmjit"]
 	path = asmjit
-	url = https://github.com/kobalicek/asmjit
+	url = https://github.com/asmjit/asmjit
+	branch = oldstable
 	ignore = dirty
 [submodule "llvm"]
 	path = llvm

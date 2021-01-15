@@ -839,7 +839,7 @@ error_code cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 str
 					ensure(f.read(buf, size) == size);
 					u32 sp_ = vm::alloc(sizeof(CellPamfReader), vm::main);
 					auto sp = vm::ptr<CellPamfReader>::make(sp_);
-					u32 reader = cellPamfReaderInitialize(sp, bufPtr, size, 0);
+					[[maybe_unused]] u32 err = cellPamfReaderInitialize(sp, bufPtr, size, 0);
 
 					descriptor->buffer = buffer;
 					descriptor->sp_ = sp_;

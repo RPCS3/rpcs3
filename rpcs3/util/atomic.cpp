@@ -943,8 +943,6 @@ void root_info::slot_free(uptr iptr, atomic_t<u16>* slot, u32 tls_slot) noexcept
 {
 	const auto begin = reinterpret_cast<uptr>(std::begin(s_hashtable));
 
-	const auto end = reinterpret_cast<uptr>(std::end(s_hashtable));
-
 	const auto ptr = reinterpret_cast<uptr>(slot) - begin;
 
 	if (ptr >= sizeof(s_hashtable))

@@ -1,12 +1,16 @@
 #pragma once
 
+#include "Loader/PSF.h"
+#include "util/endian.hpp"
+#include "util/types.hpp"
+#include "Utilities/File.h"
 #include <sstream>
 #include <iomanip>
 
 // Constants
 enum
 {
-	PKG_HEADER_SIZE  = 0xC0, //sizeof(pkg_header) + sizeof(pkg_unk_checksum)
+	PKG_HEADER_SIZE  = 0xC0, // sizeof(pkg_header) + sizeof(pkg_unk_checksum)
 	PKG_HEADER_SIZE2 = 0x280,
 };
 
@@ -303,10 +307,12 @@ public:
 
 	package_error check_target_app_version();
 	bool extract_data(atomic_t<double>& sync);
+	psf::registry get_psf() const { return m_psf; }
 
 private:
 	bool read_header();
 	bool read_metadata();
+	bool read_param_sfo();
 	bool decrypt_data();
 	void archive_seek(const s64 new_offset, const fs::seek_mode damode = fs::seek_set);
 	u64 archive_read(void* data_ptr, const u64 num_bytes);
@@ -317,14 +323,15 @@ private:
 	bool m_is_valid = false;
 
 	std::string m_path;
-	std::string install_dir;
-	std::vector<fs::file> filelist;
-	usz cur_file = 0;
-	u64 cur_offset = 0;
-	u64 cur_file_offset = 0;
-	std::unique_ptr<u128[]> buf;
-	std::array<uchar, 16> dec_key{};
+	std::string m_install_dir;
+	std::vector<fs::file> m_filelist;
+	usz m_cur_file = 0;
+	u64 m_cur_offset = 0;
+	u64 m_cur_file_offset = 0;
+	std::unique_ptr<u128[]> m_buf;
+	std::array<uchar, 16> m_dec_key{};
 
-	PKGHeader header{};
-	PKGMetaData metadata{};
+	PKGHeader m_header{};
+	PKGMetaData m_metadata{};
+	psf::registry m_psf;
 };

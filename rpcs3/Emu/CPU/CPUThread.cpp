@@ -258,7 +258,7 @@ thread_local cpu_thread* g_tls_current_cpu_thread = nullptr;
 static atomic_t<u64, 64> s_cpu_counter{0};
 
 // List of posted tasks for suspend_all
-static atomic_t<cpu_thread::suspend_work*> s_cpu_work[128]{};
+//static atomic_t<cpu_thread::suspend_work*> s_cpu_work[128]{};
 
 // Linked list of pushed tasks for suspend_all
 static atomic_t<cpu_thread::suspend_work*> s_pushed{};

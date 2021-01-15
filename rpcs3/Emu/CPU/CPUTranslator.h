@@ -827,7 +827,7 @@ struct llvm_neg
 
 	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint || llvm_value_t<T>::is_float, "llvm_neg<>: invalid type");
 
-	static constexpr auto opc = llvm_value_t<T>::is_float ? llvm::Instruction::FNeg : llvm::Instruction::Sub;
+	static constexpr int opc = llvm_value_t<T>::is_float ? +llvm::Instruction::FNeg : +llvm::Instruction::Sub;
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
@@ -2809,7 +2809,6 @@ public:
 		const auto data0 = a.eval(m_ir);
 		const auto data1 = b.eval(m_ir);
 		const auto index = c.eval(m_ir);
-		const auto zeros = llvm::ConstantAggregateZero::get(get_type<u8[16]>());
 
 		if (auto c = llvm::dyn_cast<llvm::Constant>(index))
 		{

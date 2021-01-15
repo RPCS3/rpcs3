@@ -46,13 +46,6 @@
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QCheckBox" name="cb_enable_legacy_patches">
-           <property name="text">
-            <string>Enable Legacy Patches</string>
-           </property>
-          </widget>
-         </item>
         </layout>
        </item>
        <item>

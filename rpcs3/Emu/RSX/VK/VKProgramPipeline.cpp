@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "VKProgramPipeline.h"
-#include "VKHelpers.h"
-
+#include "vkutils/device.h"
 #include <string>
 
 namespace vk
@@ -36,8 +35,7 @@ namespace vk
 			vs_info.pCode    = m_compiled.data();
 			vs_info.flags    = 0;
 
-			VkDevice dev = *vk::get_current_renderer();
-			vkCreateShaderModule(dev, &vs_info, nullptr, &m_handle);
+			vkCreateShaderModule(*g_render_device, &vs_info, nullptr, &m_handle);
 
 			return m_handle;
 		}
@@ -49,8 +47,7 @@ namespace vk
 
 			if (m_handle)
 			{
-				VkDevice dev = *vk::get_current_renderer();
-				vkDestroyShaderModule(dev, m_handle, nullptr);
+				vkDestroyShaderModule(*g_render_device, m_handle, nullptr);
 				m_handle = nullptr;
 			}
 		}

@@ -3,6 +3,7 @@
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QHeaderView>
+#include <QTreeWidget>
 #include <QTreeWidgetItem>
 
 #include "Emu/IdManager.h"
@@ -93,7 +94,7 @@ static QTreeWidgetItem* find_first_node(QTreeWidget* tree, QTreeWidgetItem *pare
 {
 	if (tree && parent)
 	{
-		for (auto item : tree->findItems(regexp, Qt::MatchFlag::MatchRegExp | Qt::MatchFlag::MatchRecursive))
+		for (auto item : tree->findItems(regexp, Qt::MatchFlag::MatchRegularExpression | Qt::MatchFlag::MatchRecursive))
 		{
 			if (item->parent() == parent && item->data(0, kernel_item_role::type_role).toInt() != kernel_item_type::leaf)
 			{
@@ -108,7 +109,7 @@ static QTreeWidgetItem* find_node(QTreeWidget* tree, u32 id)
 {
 	if (tree)
 	{
-		for (auto item : tree->findItems(".*", Qt::MatchFlag::MatchRegExp | Qt::MatchFlag::MatchRecursive))
+		for (auto item : tree->findItems(".*", Qt::MatchFlag::MatchRegularExpression | Qt::MatchFlag::MatchRecursive))
 		{
 			if (item->data(0, kernel_item_role::type_role).toInt() == kernel_item_type::node &&
 				item->data(0, kernel_item_role::id_role).toUInt() == id)
@@ -148,7 +149,9 @@ static QTreeWidgetItem* add_solid_node(QTreeWidget* tree, QTreeWidgetItem *paren
 	return node;
 }
 
-kernel_explorer::kernel_explorer(QWidget* parent) : QDialog(parent)
+kernel_explorer::kernel_explorer(QWidget* parent, std::function<void()> on_destroy)
+	: QDialog(parent)
+	, m_on_destroy(on_destroy)
 {
 	setWindowTitle(tr("Kernel Explorer"));
 	setObjectName("kernel_explorer");
@@ -167,17 +170,21 @@ kernel_explorer::kernel_explorer(QWidget* parent) : QDialog(parent)
 	m_tree->header()->close();
 
 	// Merge and display everything
-	vbox_panel->addSpacing(10);
+	vbox_panel->addSpacing(8);
 	vbox_panel->addLayout(hbox_buttons);
-	vbox_panel->addSpacing(10);
+	vbox_panel->addSpacing(8);
 	vbox_panel->addWidget(m_tree);
-	vbox_panel->addSpacing(10);
 	setLayout(vbox_panel);
 
 	// Events
 	connect(button_refresh, &QAbstractButton::clicked, this, &kernel_explorer::Update);
 
 	Update();
+}
+
+kernel_explorer::~kernel_explorer()
+{
+	m_on_destroy();
 }
 
 void kernel_explorer::Update()
@@ -190,7 +197,7 @@ void kernel_explorer::Update()
 		return;
 	}
 
-	static const usz additional_size = 6;
+	//static const usz additional_size = 6;
 
 	const std::unordered_map<u32, QString> tree_item_names =
 	{

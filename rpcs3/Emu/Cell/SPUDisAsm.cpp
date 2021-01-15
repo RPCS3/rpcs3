@@ -56,7 +56,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 			continue;
 		}
 
-		const auto flag = s_spu_iflag.decode(opcode);
+		//const auto flag = s_spu_iflag.decode(opcode);
 
 		// TODO: It detects spurious register modifications
 		if (u32 dst = type & spu_itype::_quadrop ? +op0.rt4 : +op0.rt; dst == reg)

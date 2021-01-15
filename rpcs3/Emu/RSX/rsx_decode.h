@@ -1745,7 +1745,7 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_ADDRESS>
 
 		u32 index_array_offset() const
 		{
-			return value;
+			return bf_decoder<0, 29>(value);
 		}
 	};
 

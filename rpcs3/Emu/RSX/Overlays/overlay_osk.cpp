@@ -39,14 +39,10 @@ namespace rsx
 			if (m_panels.size() < 7)
 			{
 				// Don't add this panel if there already exists one with the same panel mode
-				for (const auto& existing : m_panels)
+				if (std::none_of(m_panels.begin(), m_panels.end(), [&panel](const osk_panel& existing) { return existing.osk_panel_mode == panel.osk_panel_mode; }))
 				{
-					if (existing.osk_panel_mode == panel.osk_panel_mode)
-					{
-						return;
-					}
+					m_panels.push_back(panel);
 				}
-				m_panels.push_back(panel);
 			}
 		}
 

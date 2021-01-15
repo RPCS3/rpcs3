@@ -205,7 +205,7 @@ union SRC2
 	};
 };
 
-static const char* rsx_fp_input_attr_regs[] =
+constexpr const char* rsx_fp_input_attr_regs[] =
 {
 	"WPOS", "COL0", "COL1", "FOGC", "TEX0",
 	"TEX1", "TEX2", "TEX3", "TEX4", "TEX5",

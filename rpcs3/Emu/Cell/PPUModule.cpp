@@ -626,7 +626,7 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* l
 		}
 
 		// Static module
-		const auto _sm = ppu_module_manager::get_module(module_name);
+		//const auto _sm = ppu_module_manager::get_module(module_name);
 
 		// Module linkage
 		auto& mlink = link->modules[module_name];
@@ -820,7 +820,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 			{
 				const u32 mem_size = ::narrow<u32>(prog.p_memsz);
 				const u32 file_size = ::narrow<u32>(prog.p_filesz);
-				const u32 init_addr = ::narrow<u32>(prog.p_vaddr);
+				//const u32 init_addr = ::narrow<u32>(prog.p_vaddr);
 
 				// Alloc segment memory
 				const u32 addr = vm::alloc(mem_size, vm::main);
@@ -863,10 +863,12 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	{
 		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
 
+		if (s.sh_type != 1u) continue;
+
 		const u32 addr = vm::cast(s.sh_addr);
 		const u32 size = vm::cast(s.sh_size);
 
-		if (s.sh_type == 1u && addr && size) // TODO: some sections with addr=0 are valid
+		if (addr && size) // TODO: some sections with addr=0 are valid
 		{
 			for (usz i = 0; i < prx->segs.size(); i++)
 			{
@@ -890,7 +892,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	// Do relocations
 	for (auto& prog : elf.progs)
 	{
-		switch (const u32 p_type = prog.p_type)
+		switch (prog.p_type)
 		{
 		case 0x700000a4:
 		{
@@ -1159,7 +1161,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr);
 		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz);
 		const u32 type = _seg.type = prog.p_type;
-		const u32 flag = _seg.flags = prog.p_flags;
+
+		_seg.flags  = prog.p_flags;
 		_seg.filesz = ::narrow<u32>(prog.p_filesz);
 
 		// Hash big-endian values
@@ -1203,14 +1206,17 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	{
 		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
 
+		if (s.sh_type != 1u) continue;
+
 		ppu_segment _sec;
 		const u32 addr = _sec.addr = vm::cast(s.sh_addr);
 		const u32 size = _sec.size = vm::cast(s.sh_size);
-		const u32 type = _sec.type = s.sh_type;
-		const u32 flag = _sec.flags = static_cast<u32>(s.sh_flags & 7);
+
+		_sec.type = s.sh_type;
+		_sec.flags = static_cast<u32>(s.sh_flags & 7);
 		_sec.filesz = 0;
 
-		if (s.sh_type == 1u && addr && size)
+		if (addr && size)
 		{
 			_main->secs.emplace_back(_sec);
 		}
@@ -1662,7 +1668,8 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 		const u32 addr = _seg.addr = vm::cast(prog.p_vaddr);
 		const u32 size = _seg.size = ::narrow<u32>(prog.p_memsz);
 		const u32 type = _seg.type = prog.p_type;
-		const u32 flag = _seg.flags = prog.p_flags;
+
+		_seg.flags = prog.p_flags;
 		_seg.filesz = ::narrow<u32>(prog.p_filesz);
 
 		// Hash big-endian values
@@ -1699,14 +1706,17 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 	{
 		ppu_loader.notice("** Section: sh_type=0x%x, addr=0x%llx, size=0x%llx, flags=0x%x", s.sh_type, s.sh_addr, s.sh_size, s.sh_flags);
 
+		if (s.sh_type != 1u) continue;
+
 		ppu_segment _sec;
 		const u32 addr = _sec.addr = vm::cast(s.sh_addr);
 		const u32 size = _sec.size = vm::cast(s.sh_size);
-		const u32 type = _sec.type = s.sh_type;
-		const u32 flag = _sec.flags = static_cast<u32>(s.sh_flags & 7);
+
+		_sec.type = s.sh_type;
+		_sec.flags = static_cast<u32>(s.sh_flags & 7);
 		_sec.filesz = 0;
 
-		if (s.sh_type == 1u && addr && size)
+		if (addr && size)
 		{
 			ovlm->secs.emplace_back(_sec);
 		}

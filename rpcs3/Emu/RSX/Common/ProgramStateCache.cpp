@@ -13,7 +13,7 @@ usz vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgram &
 	usz hash = 0xCBF29CE484222325ULL;
 	const void* instbuffer = program.data.data();
 	usz instIndex = 0;
-	bool end = false;
+
 	for (unsigned i = 0; i < program.data.size() / 4; i++)
 	{
 		if (program.instruction_mask[i])
@@ -33,8 +33,8 @@ usz vertex_program_utils::get_vertex_program_ucode_hash(const RSXVertexProgram &
 vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vertex_program(const u32* data, u32 entry, RSXVertexProgram& dst_prog)
 {
 	vertex_program_utils::vertex_program_metadata result{};
-	u32 last_instruction_address = 0;
-	u32 first_instruction_address = entry;
+	//u32 last_instruction_address = 0;
+	//u32 first_instruction_address = entry;
 
 	std::stack<u32> call_stack;
 	std::pair<u32, u32> instruction_range = { UINT32_MAX, 0 };

@@ -15,4 +15,9 @@ namespace vk
 	VKAPI_ATTR VkBool32 VKAPI_CALL dbgFunc(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
 	                                       u64 srcObject, usz location, s32 msgCode,
 	                                       const char *pLayerPrefix, const char *pMsg, void *pUserData);
+
+	VkBool32 BreakCallback(VkFlags msgFlags, VkDebugReportObjectTypeEXT objType,
+		u64 srcObject, usz location, s32 msgCode,
+		const char* pLayerPrefix, const char* pMsg,
+		void* pUserData);
 }

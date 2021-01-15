@@ -2,12 +2,16 @@
 #include "../Overlays/overlay_shader_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "VKGSRender.h"
+#include "VKHelpers.h"
 #include "VKCommonDecompiler.h"
 #include "VKCompute.h"
 #include "VKRenderPass.h"
 #include "VKResourceManager.h"
 #include "VKCommandStream.h"
-#include "vkutils/buffer_view.h"
+
+#include "vkutils/buffer_object.h"
+#include "vkutils/scratch.h"
+
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/Memory/vm_locking.h"
 
@@ -27,13 +31,13 @@ namespace vk
 		switch (color_format)
 		{
 		case rsx::surface_color_format::r5g6b5:
-			return std::make_pair(VK_FORMAT_R5G6B5_UNORM_PACK16, vk::default_component_map());
+			return std::make_pair(VK_FORMAT_R5G6B5_UNORM_PACK16, vk::default_component_map);
 
 		case rsx::surface_color_format::a8r8g8b8:
-			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map());
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map);
 
 		case rsx::surface_color_format::a8b8g8r8:
-			return std::make_pair(VK_FORMAT_R8G8B8A8_UNORM, vk::default_component_map());
+			return std::make_pair(VK_FORMAT_R8G8B8A8_UNORM, vk::default_component_map);
 
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 			return std::make_pair(VK_FORMAT_R8G8B8A8_UNORM, o_rgb);
@@ -48,10 +52,10 @@ namespace vk
 			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, o_rgb);
 
 		case rsx::surface_color_format::w16z16y16x16:
-			return std::make_pair(VK_FORMAT_R16G16B16A16_SFLOAT, vk::default_component_map());
+			return std::make_pair(VK_FORMAT_R16G16B16A16_SFLOAT, vk::default_component_map);
 
 		case rsx::surface_color_format::w32z32y32x32:
-			return std::make_pair(VK_FORMAT_R32G32B32A32_SFLOAT, vk::default_component_map());
+			return std::make_pair(VK_FORMAT_R32G32B32A32_SFLOAT, vk::default_component_map);
 
 		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
 			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, o_rgb);
@@ -79,7 +83,7 @@ namespace vk
 
 		default:
 			rsx_log.error("Surface color buffer: Unsupported surface color format (0x%x)", static_cast<u32>(color_format));
-			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map());
+			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map);
 		}
 	}
 
@@ -323,9 +327,9 @@ u64 VKGSRender::get_cycles()
 
 VKGSRender::VKGSRender() : GSRender()
 {
-	if (m_thread_context.createInstance("RPCS3"))
+	if (m_instance.create("RPCS3"))
 	{
-		m_thread_context.makeCurrentInstance();
+		m_instance.bind();
 	}
 	else
 	{
@@ -334,7 +338,7 @@ VKGSRender::VKGSRender() : GSRender()
 		return;
 	}
 
-	std::vector<vk::physical_device>& gpus = m_thread_context.enumerateDevices();
+	std::vector<vk::physical_device>& gpus = m_instance.enumerate_devices();
 
 	//Actually confirm  that the loader found at least one compatible device
 	//This should not happen unless something is wrong with the driver setup on the target system
@@ -365,7 +369,7 @@ VKGSRender::VKGSRender() : GSRender()
 	{
 		if (gpu.get_name() == adapter_name)
 		{
-			m_swapchain.reset(m_thread_context.createSwapChain(display, gpu));
+			m_swapchain.reset(m_instance.create_swapchain(display, gpu));
 			gpu_found = true;
 			break;
 		}
@@ -373,7 +377,7 @@ VKGSRender::VKGSRender() : GSRender()
 
 	if (!gpu_found || adapter_name.empty())
 	{
-		m_swapchain.reset(m_thread_context.createSwapChain(display, gpus[0]));
+		m_swapchain.reset(m_instance.create_swapchain(display, gpus[0]));
 	}
 
 	if (!m_swapchain)
@@ -384,8 +388,6 @@ VKGSRender::VKGSRender() : GSRender()
 	}
 
 	m_device = const_cast<vk::render_device*>(&m_swapchain->get_device());
-
-	vk::set_current_thread_ctx(m_thread_context);
 	vk::set_current_renderer(m_swapchain->get_device());
 
 	m_swapchain_dims.width = m_frame->client_width();
@@ -640,7 +642,7 @@ VKGSRender::~VKGSRender()
 
 	//Device handles/contexts
 	m_swapchain->destroy();
-	m_thread_context.close();
+	m_instance.destroy();
 
 #if defined(HAVE_X11) && defined(HAVE_VULKAN)
 	if (m_display_handle)
@@ -1057,7 +1059,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 	if (!framebuffer_status_valid) return;
 
-	float depth_clear = 1.f;
+	//float depth_clear = 1.f;
 	u32   stencil_clear = 0;
 	u32   depth_stencil_mask = 0;
 
@@ -1923,16 +1925,16 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 
 	if (vk::test_status_interrupt(vk::heap_dirty))
 	{
-		if (m_attrib_ring_info.dirty() ||
-			m_fragment_env_ring_info.dirty() ||
-			m_vertex_env_ring_info.dirty() ||
-			m_fragment_texture_params_ring_info.dirty() ||
-			m_vertex_layout_ring_info.dirty() ||
-			m_fragment_constants_ring_info.dirty() ||
-			m_index_buffer_ring_info.dirty() ||
-			m_transform_constants_ring_info.dirty() ||
-			m_texture_upload_buffer_ring_info.dirty() ||
-			m_raster_env_ring_info.dirty())
+		if (m_attrib_ring_info.is_dirty() ||
+			m_fragment_env_ring_info.is_dirty() ||
+			m_vertex_env_ring_info.is_dirty() ||
+			m_fragment_texture_params_ring_info.is_dirty() ||
+			m_vertex_layout_ring_info.is_dirty() ||
+			m_fragment_constants_ring_info.is_dirty() ||
+			m_index_buffer_ring_info.is_dirty() ||
+			m_transform_constants_ring_info.is_dirty() ||
+			m_texture_upload_buffer_ring_info.is_dirty() ||
+			m_raster_env_ring_info.is_dirty())
 		{
 			std::lock_guard lock(m_secondary_cb_guard);
 			m_secondary_command_buffer.begin();
@@ -2331,7 +2333,7 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 		for (const auto occlusion_id : data.indices)
 		{
 			// We only need one hit
-			if (auto value = m_occlusion_query_manager->get_query_result(occlusion_id))
+			if (m_occlusion_query_manager->get_query_result(occlusion_id))
 			{
 				query->result = 1;
 				break;

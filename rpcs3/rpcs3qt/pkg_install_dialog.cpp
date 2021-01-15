@@ -1,4 +1,7 @@
 #include "pkg_install_dialog.h"
+#include "game_compatibility.h"
+#include "numbered_widget_item.h"
+#include "richtext_item_delegate.h"
 
 #include <QDialogButtonBox>
 #include <QPushButton>
@@ -7,51 +10,89 @@
 #include <QLabel>
 #include <QToolButton>
 
-constexpr int FullPathRole = Qt::UserRole + 0;
-constexpr int BaseDisplayRole = Qt::UserRole + 1;
+enum Roles
+{
+	FullPathRole    = Qt::UserRole + 0,
+	ChangelogRole   = Qt::UserRole + 1,
+	TitleRole       = Qt::UserRole + 2,
+	TitleIdRole     = Qt::UserRole + 3,
+	VersionRole     = Qt::UserRole + 4,
+};
 
-pkg_install_dialog::pkg_install_dialog(const QStringList& paths, QWidget* parent)
+pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibility* compat, QWidget* parent)
 	: QDialog(parent)
 {
 	m_dir_list = new QListWidget(this);
-
-	class numbered_widget_item final : public QListWidgetItem
-	{
-	public:
-		explicit numbered_widget_item(const QString& text, QListWidget* listview = nullptr, int type = QListWidgetItem::Type)
-			: QListWidgetItem(text, listview, type)
-		{
-		}
-
-		QVariant data(int role) const override
-		{
-			QVariant result;
-			switch (role)
-			{
-			case Qt::DisplayRole:
-				result = QStringLiteral("%1. %2").arg(listWidget()->row(this) + 1).arg(data(BaseDisplayRole).toString());
-				break;
-			case BaseDisplayRole:
-				result = QListWidgetItem::data(Qt::DisplayRole);
-				break;
-			default:
-				result = QListWidgetItem::data(role);
-				break;
-			}
-			return result;
-		}
-
-		bool operator<(const QListWidgetItem& other) const override
-		{
-			return data(BaseDisplayRole).toString() < other.data(BaseDisplayRole).toString();
-		}
-	};
+	m_dir_list->setItemDelegate(new richtext_item_delegate(m_dir_list->itemDelegate()));
 
 	for (const QString& path : paths)
 	{
-		QListWidgetItem* item = new numbered_widget_item(QFileInfo(path).fileName(), m_dir_list);
-		// Save full path in a custom data role
-		item->setData(FullPathRole, path);
+		const compat::package_info info = game_compatibility::GetPkgInfo(path, compat);
+		const QFileInfo file_info(path);
+
+		// We have to build our complicated localized string in some annoying manner
+		QString accumulated_info;
+		QString tooltip;
+
+		const auto append_comma = [&accumulated_info]()
+		{
+			if (!accumulated_info.isEmpty())
+			{
+				accumulated_info += ", ";
+			}
+		};
+
+		if (!info.title_id.isEmpty())
+		{
+			accumulated_info = info.title_id;
+		}
+
+		if (info.type != compat::package_type::other)
+		{
+			append_comma();
+
+			if (info.type == compat::package_type::dlc)
+			{
+				accumulated_info += tr("DLC", "Package type info (DLC)");
+			}
+			else
+			{
+				accumulated_info += tr("Update", "Package type info (Update)");
+			}
+		}
+		else if (!info.local_cat.isEmpty())
+		{
+			append_comma();
+			accumulated_info += tr("%0", "Package type info").arg(info.local_cat);
+		}
+
+		if (!info.version.isEmpty())
+		{
+			append_comma();
+			accumulated_info += tr("v.%0", "Version info").arg(info.version);
+		}
+
+		if (info.changelog.isEmpty())
+		{
+			tooltip = tr("No info", "Changelog info placeholder");
+		}
+		else
+		{
+			tooltip = tr("Changelog:\n\n%0", "Changelog info").arg(info.changelog);
+		}
+
+		append_comma();
+		accumulated_info += file_info.fileName();
+
+		const QString text = tr("<b>%0</b> (%2)", "Package text").arg(info.title.simplified()).arg(accumulated_info);
+
+		QListWidgetItem* item = new numbered_widget_item(text, m_dir_list);
+		item->setData(Roles::FullPathRole, info.path);
+		item->setData(Roles::ChangelogRole, info.changelog);
+		item->setData(Roles::TitleRole, info.title);
+		item->setData(Roles::TitleIdRole, info.title_id);
+		item->setData(Roles::VersionRole, info.version);
+		item->setToolTip(tooltip);
 		item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
 		item->setCheckState(Qt::Checked);
 	}
@@ -65,7 +106,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, QWidget* parent
 	buttons->button(QDialogButtonBox::Ok)->setText(tr("Install"));
 	buttons->button(QDialogButtonBox::Ok)->setDefault(true);
 
-	connect(buttons, &QDialogButtonBox::clicked, [this, buttons](QAbstractButton* button)
+	connect(buttons, &QDialogButtonBox::clicked, this, [this, buttons](QAbstractButton* button)
 	{
 		if (button == buttons->button(QDialogButtonBox::Ok))
 		{
@@ -77,7 +118,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, QWidget* parent
 		}
 	});
 
-	connect(m_dir_list, &QListWidget::itemChanged, [this, buttons](QListWidgetItem*)
+	connect(m_dir_list, &QListWidget::itemChanged, this, [this, buttons](QListWidgetItem*)
 	{
 		bool any_checked = false;
 		for (int i = 0; i < m_dir_list->count(); i++)
@@ -95,12 +136,12 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, QWidget* parent
 	QToolButton* move_up = new QToolButton;
 	move_up->setArrowType(Qt::UpArrow);
 	move_up->setToolTip(tr("Move selected item up"));
-	connect(move_up, &QToolButton::clicked, [this]() { MoveItem(-1); });
+	connect(move_up, &QToolButton::clicked, this, [this]() { MoveItem(-1); });
 
 	QToolButton* move_down = new QToolButton;
 	move_down->setArrowType(Qt::DownArrow);
 	move_down->setToolTip(tr("Move selected item down"));
-	connect(move_down, &QToolButton::clicked, [this]() { MoveItem(1); });
+	connect(move_down, &QToolButton::clicked, this, [this]() { MoveItem(1); });
 
 	QHBoxLayout* hbox = new QHBoxLayout;
 	hbox->addStretch();
@@ -134,16 +175,22 @@ void pkg_install_dialog::MoveItem(int offset)
 	}
 }
 
-QStringList pkg_install_dialog::GetPathsToInstall() const
+std::vector<compat::package_info> pkg_install_dialog::GetPathsToInstall() const
 {
-	QStringList result;
+	std::vector<compat::package_info> result;
 
 	for (int i = 0; i < m_dir_list->count(); i++)
 	{
 		const QListWidgetItem* item = m_dir_list->item(i);
-		if (item->checkState() == Qt::Checked)
+		if (item && item->checkState() == Qt::Checked)
 		{
-			result.append(item->data(FullPathRole).toString());
+			compat::package_info info;
+			info.path      = item->data(Roles::FullPathRole).toString();
+			info.title     = item->data(Roles::TitleRole).toString();
+			info.title_id  = item->data(Roles::TitleIdRole).toString();
+			info.changelog = item->data(Roles::ChangelogRole).toString();
+			info.version   = item->data(Roles::VersionRole).toString();
+			result.push_back(info);
 		}
 	}
 

@@ -291,12 +291,10 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 {
 	std::string result;
 
-	if (name.size() > 2 && name.find_first_not_of('.') == umax)
+	if (name.size() <= 2 && name.find_first_not_of('.') == umax)
 	{
-		// Name contains only dots, not allowed on Windows.
-		result.reserve(name.size() + 2);
-		result += reinterpret_cast<const char*>(u8"．");
-		result += name.substr(1);
+		// Return . or .. as is
+		result = name;
 		return result;
 	}
 
@@ -450,10 +448,28 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 			result += c;
 			break;
 		}
+		case '.':
+		case ' ':
+		{
+			if (!get_char(i + 1))
+			{
+				switch (c)
+				{
+				// Directory name ended with a space or a period, not allowed on Windows.
+				case '.': result += reinterpret_cast<const char*>(u8"．"); break;
+				case ' ': result += reinterpret_cast<const char*>(u8"＿"); break;
+				}
+
+				break;
+			}
+
+			result += c;
+			break;
+		}
 		case char2{u8"！"[0]}:
 		{
 			// Escape full-width characters 0xFF01..0xFF5e with ！ (0xFF01)
-			switch (char2 c2 = get_char(i + 1))
+			switch (get_char(i + 1))
 			{
 			case char2{u8"！"[1]}:
 			{
@@ -517,7 +533,7 @@ std::string vfs::unescape(std::string_view name)
 		{
 		case char2{u8"！"[0]}:
 		{
-			switch (char2 c2 = get_char(i + 1))
+			switch (get_char(i + 1))
 			{
 			case char2{u8"！"[1]}:
 			{
@@ -584,6 +600,11 @@ std::string vfs::unescape(std::string_view name)
 
 						i += 3;
 						continue;
+					}
+					case char2{u8"＿"[2]}:
+					{
+						result += ' ';
+						break;
 					}
 					case char2{u8"．"[2]}:
 					{

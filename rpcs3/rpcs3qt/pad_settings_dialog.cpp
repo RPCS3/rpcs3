@@ -223,7 +223,7 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	SubscribeTooltips();
 
 	// Repaint controller image
-	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(*ui->l_controller->pixmap(), QColor(), gui::utils::get_label_color("l_controller"), false, true));
+	ui->l_controller->setPixmap(gui::utils::get_colorized_pixmap(ui->l_controller->pixmap(Qt::ReturnByValue), QColor(), gui::utils::get_label_color("l_controller"), false, true));
 
 	// Show default widgets first in order to calculate the required size for the scroll area (see pad_settings_dialog::ResizeDialog)
 	ui->left_stack->setCurrentIndex(0);
@@ -258,51 +258,51 @@ pad_settings_dialog::~pad_settings_dialog()
 
 void pad_settings_dialog::InitButtons()
 {
-	m_padButtons = new QButtonGroup(this);
+	m_pad_buttons = new QButtonGroup(this);
 	m_palette = ui->b_left->palette(); // save normal palette
 
-	auto insertButton = [this](int id, QPushButton* button)
+	const auto insert_button = [this](int id, QPushButton* button)
 	{
-		m_padButtons->addButton(button, id);
+		m_pad_buttons->addButton(button, id);
 		button->installEventFilter(this);
 	};
 
-	insertButton(button_ids::id_pad_lstick_left, ui->b_lstick_left);
-	insertButton(button_ids::id_pad_lstick_down, ui->b_lstick_down);
-	insertButton(button_ids::id_pad_lstick_right, ui->b_lstick_right);
-	insertButton(button_ids::id_pad_lstick_up, ui->b_lstick_up);
+	insert_button(button_ids::id_pad_lstick_left, ui->b_lstick_left);
+	insert_button(button_ids::id_pad_lstick_down, ui->b_lstick_down);
+	insert_button(button_ids::id_pad_lstick_right, ui->b_lstick_right);
+	insert_button(button_ids::id_pad_lstick_up, ui->b_lstick_up);
 
-	insertButton(button_ids::id_pad_left, ui->b_left);
-	insertButton(button_ids::id_pad_down, ui->b_down);
-	insertButton(button_ids::id_pad_right, ui->b_right);
-	insertButton(button_ids::id_pad_up, ui->b_up);
+	insert_button(button_ids::id_pad_left, ui->b_left);
+	insert_button(button_ids::id_pad_down, ui->b_down);
+	insert_button(button_ids::id_pad_right, ui->b_right);
+	insert_button(button_ids::id_pad_up, ui->b_up);
 
-	insertButton(button_ids::id_pad_l1, ui->b_shift_l1);
-	insertButton(button_ids::id_pad_l2, ui->b_shift_l2);
-	insertButton(button_ids::id_pad_l3, ui->b_shift_l3);
+	insert_button(button_ids::id_pad_l1, ui->b_shift_l1);
+	insert_button(button_ids::id_pad_l2, ui->b_shift_l2);
+	insert_button(button_ids::id_pad_l3, ui->b_shift_l3);
 
-	insertButton(button_ids::id_pad_start, ui->b_start);
-	insertButton(button_ids::id_pad_select, ui->b_select);
-	insertButton(button_ids::id_pad_ps, ui->b_ps);
+	insert_button(button_ids::id_pad_start, ui->b_start);
+	insert_button(button_ids::id_pad_select, ui->b_select);
+	insert_button(button_ids::id_pad_ps, ui->b_ps);
 
-	insertButton(button_ids::id_pad_r1, ui->b_shift_r1);
-	insertButton(button_ids::id_pad_r2, ui->b_shift_r2);
-	insertButton(button_ids::id_pad_r3, ui->b_shift_r3);
+	insert_button(button_ids::id_pad_r1, ui->b_shift_r1);
+	insert_button(button_ids::id_pad_r2, ui->b_shift_r2);
+	insert_button(button_ids::id_pad_r3, ui->b_shift_r3);
 
-	insertButton(button_ids::id_pad_square, ui->b_square);
-	insertButton(button_ids::id_pad_cross, ui->b_cross);
-	insertButton(button_ids::id_pad_circle, ui->b_circle);
-	insertButton(button_ids::id_pad_triangle, ui->b_triangle);
+	insert_button(button_ids::id_pad_square, ui->b_square);
+	insert_button(button_ids::id_pad_cross, ui->b_cross);
+	insert_button(button_ids::id_pad_circle, ui->b_circle);
+	insert_button(button_ids::id_pad_triangle, ui->b_triangle);
 
-	insertButton(button_ids::id_pad_rstick_left, ui->b_rstick_left);
-	insertButton(button_ids::id_pad_rstick_down, ui->b_rstick_down);
-	insertButton(button_ids::id_pad_rstick_right, ui->b_rstick_right);
-	insertButton(button_ids::id_pad_rstick_up, ui->b_rstick_up);
+	insert_button(button_ids::id_pad_rstick_left, ui->b_rstick_left);
+	insert_button(button_ids::id_pad_rstick_down, ui->b_rstick_down);
+	insert_button(button_ids::id_pad_rstick_right, ui->b_rstick_right);
+	insert_button(button_ids::id_pad_rstick_up, ui->b_rstick_up);
 
-	m_padButtons->addButton(ui->b_refresh, button_ids::id_refresh);
-	m_padButtons->addButton(ui->b_addProfile, button_ids::id_add_profile);
+	m_pad_buttons->addButton(ui->b_refresh, button_ids::id_refresh);
+	m_pad_buttons->addButton(ui->b_addProfile, button_ids::id_add_profile);
 
-	connect(m_padButtons, &QButtonGroup::idClicked, this, &pad_settings_dialog::OnPadButtonClicked);
+	connect(m_pad_buttons, &QButtonGroup::idClicked, this, &pad_settings_dialog::OnPadButtonClicked);
 
 	connect(&m_timer, &QTimer::timeout, [this]()
 	{
@@ -311,7 +311,7 @@ void pad_settings_dialog::InitButtons()
 			ReactivateButtons();
 			return;
 		}
-		m_padButtons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(m_seconds));
+		m_pad_buttons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(m_seconds));
 	});
 
 	connect(ui->chb_vibration_large, &QCheckBox::clicked, [this](bool checked)
@@ -597,17 +597,17 @@ void pad_settings_dialog::ReactivateButtons()
 		return;
 	}
 
-	if (m_padButtons->button(m_button_id))
+	if (m_pad_buttons->button(m_button_id))
 	{
-		m_padButtons->button(m_button_id)->setPalette(m_palette);
-		m_padButtons->button(m_button_id)->releaseMouse();
+		m_pad_buttons->button(m_button_id)->setPalette(m_palette);
+		m_pad_buttons->button(m_button_id)->releaseMouse();
 	}
 
 	m_button_id = button_ids::id_pad_begin;
 	UpdateLabels();
 	SwitchButtons(true);
 
-	for (auto but : m_padButtons->buttons())
+	for (auto but : m_pad_buttons->buttons())
 	{
 		but->setFocusPolicy(Qt::StrongFocus);
 	}
@@ -1029,7 +1029,7 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		}
 
 		// The button has to contain at least one character, because it would be square'ish otherwise
-		m_padButtons->button(entry.first)->setText(entry.second.text.isEmpty() ? QStringLiteral("-") : entry.second.text);
+		m_pad_buttons->button(entry.first)->setText(entry.second.text.isEmpty() ? QStringLiteral("-") : entry.second.text);
 	}
 }
 
@@ -1050,7 +1050,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 
 	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
 	{
-		m_padButtons->button(i)->setEnabled(is_enabled);
+		m_pad_buttons->button(i)->setEnabled(is_enabled);
 	}
 }
 
@@ -1078,7 +1078,7 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 		break;
 	}
 
-	for (auto but : m_padButtons->buttons())
+	for (auto but : m_pad_buttons->buttons())
 	{
 		but->setFocusPolicy(Qt::ClickFocus);
 	}
@@ -1100,9 +1100,9 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	m_last_pos = QCursor::pos();
 
 	m_button_id = id;
-	m_padButtons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(MAX_SECONDS));
-	m_padButtons->button(m_button_id)->setPalette(QPalette(Qt::blue));
-	m_padButtons->button(m_button_id)->grabMouse();
+	m_pad_buttons->button(m_button_id)->setText(tr("[ Waiting %1 ]").arg(MAX_SECONDS));
+	m_pad_buttons->button(m_button_id)->setPalette(QPalette(Qt::blue));
+	m_pad_buttons->button(m_button_id)->grabMouse();
 	SwitchButtons(false); // disable all buttons, needed for using Space, Enter and other specific buttons
 	m_timer.start(1000);
 }

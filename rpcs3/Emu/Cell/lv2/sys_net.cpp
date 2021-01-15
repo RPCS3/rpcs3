@@ -1055,7 +1055,7 @@ struct network_thread
 			{
 				bs_t<lv2_socket::poll> events{};
 
-				lv2_socket& sock = *socklist[i];
+				[[maybe_unused]] lv2_socket& sock = *socklist[i];
 
 				if (fds[i].revents & (POLLIN | POLLHUP) && socklist[i]->events.test_and_reset(lv2_socket::poll::read))
 					events += lv2_socket::poll::read;

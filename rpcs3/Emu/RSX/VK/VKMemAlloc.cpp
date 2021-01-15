@@ -42,6 +42,7 @@ private:
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wunused-variable"
 #endif
 #include "3rdparty/GPUOpen/include/vk_mem_alloc.h"
 #ifdef _MSC_VER

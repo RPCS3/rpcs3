@@ -6,7 +6,7 @@
 
 namespace
 {
-	static constexpr std::array<const char*, 16> s_reg_table =
+	[[maybe_unused]] constexpr std::array<const char*, 16> s_reg_table =
 	{
 		"in_pos_buffer", "in_weight_buffer", "in_normal_buffer",
 		"in_diff_color_buffer", "in_spec_color_buffer",

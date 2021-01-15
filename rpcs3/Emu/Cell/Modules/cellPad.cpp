@@ -765,8 +765,6 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 	if (!config->max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	const auto handler = pad::get_current_handler();
-
 	if (port_no >= CELL_MAX_PADS)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 

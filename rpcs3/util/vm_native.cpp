@@ -90,7 +90,7 @@ namespace utils
 			return nullptr;
 		}
 
-		const auto orig_size = size;
+		[[maybe_unused]] const auto orig_size = size;
 
 		if (!use_addr)
 		{
@@ -218,7 +218,7 @@ namespace utils
 	shm::shm(u32 size, u32 flags)
 		: m_size(utils::align(size, 0x10000))
 		, m_flags(flags)
-		, m_ptr(0)
+		, m_ptr(nullptr)
 	{
 #ifdef _WIN32
 		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, m_size, NULL);
@@ -362,12 +362,25 @@ namespace utils
 
 	u8* shm::map_self(protection prot)
 	{
-		if (!m_ptr)
+		void* ptr = m_ptr;
+
+		if (!ptr)
 		{
-			m_ptr = this->map(nullptr, prot);
+			const auto mapped = this->map(nullptr, prot);
+
+			// Install mapped memory
+			if (!m_ptr.compare_exchange(ptr, mapped))
+			{
+				// Mapped already, nothing to do.
+				this->unmap(mapped);
+			}
+			else
+			{
+				ptr = mapped;
+			}
 		}
 
-		return static_cast<u8*>(m_ptr);
+		return static_cast<u8*>(ptr);
 	}
 
 	void shm::unmap(void* ptr) const
@@ -383,9 +396,9 @@ namespace utils
 	{
 		const auto target = reinterpret_cast<u8*>(reinterpret_cast<u64>(ptr) & -0x10000);
 
+#ifdef _WIN32
 		this->unmap(target);
 
-#ifdef _WIN32
 		::MEMORY_BASIC_INFORMATION mem, mem2;
 		if (!::VirtualQuery(target - 1, &mem, sizeof(mem)) || !::VirtualQuery(target + m_size, &mem2, sizeof(mem2)))
 		{
@@ -409,15 +422,16 @@ namespace utils
 		{
 			return;
 		}
+#else
+		::mmap(reinterpret_cast<void*>(target), m_size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0);
 #endif
 	}
 
 	void shm::unmap_self()
 	{
-		if (m_ptr)
+		if (auto ptr = m_ptr.exchange(nullptr))
 		{
-			this->unmap(m_ptr);
-			m_ptr = nullptr;
+			this->unmap(ptr);
 		}
 	}
 }

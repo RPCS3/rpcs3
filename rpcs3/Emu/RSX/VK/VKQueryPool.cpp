@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "VKQueryPool.h"
+#include "VKRenderPass.h"
 #include "VKResourceManager.h"
 
 namespace vk

@@ -415,7 +415,7 @@ namespace vm
 	};
 
 	// Null pointer convertible to any vm::ptr* type
-	static null_t null;
+	constexpr null_t null{};
 }
 
 template<typename T1, typename AT1, typename T2, typename AT2>

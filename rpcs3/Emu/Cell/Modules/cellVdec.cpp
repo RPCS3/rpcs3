@@ -139,6 +139,8 @@ struct vdec_context final
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
+		// TODO: This function should be removed at some point, since ffmpeg does it automatically now.
+		//       We'll keep it for compatibility for now until more system ffmpeg libs are up to date.
 		avcodec_register_all();
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -459,7 +461,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 	{
 		cellVdec.warning("cellVdecQueryAttr: AVC (profile=%d)", profile);
 
-		const vm::ptr<CellVdecAvcSpecificInfo> sinfo = vm::cast(spec_addr);
+		//const vm::ptr<CellVdecAvcSpecificInfo> sinfo = vm::cast(spec_addr);
 
 		// TODO: sinfo
 
@@ -555,7 +557,7 @@ static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0
 	{
 		cellVdec.warning("cellVdecQueryAttr: DivX (profile=%d)", profile);
 
-		const vm::ptr<CellVdecDivxSpecificInfo2> sinfo = vm::cast(spec_addr);
+		//const vm::ptr<CellVdecDivxSpecificInfo2> sinfo = vm::cast(spec_addr);
 
 		// TODO: sinfo
 

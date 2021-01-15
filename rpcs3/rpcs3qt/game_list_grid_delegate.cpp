@@ -55,7 +55,7 @@ void game_list_grid_delegate::paint(QPainter *painter, const QStyleOptionViewIte
 	}
 
 	painter->setFont(option.font);
-	painter->drawText(QRect(r.left(), top, r.width(), height), Qt::TextWordWrap | Qt::AlignCenter, title);
+	painter->drawText(QRect(r.left(), top, r.width(), height), +Qt::TextWordWrap | +Qt::AlignCenter, title);
 }
 
 QSize game_list_grid_delegate::sizeHint(const QStyleOptionViewItem & option, const QModelIndex & index) const
