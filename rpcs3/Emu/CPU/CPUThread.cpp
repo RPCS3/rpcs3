@@ -531,7 +531,7 @@ void cpu_thread::operator()()
 		{
 			if (_this)
 			{
-				sys_log.warning("CPU Thread '%s' terminated abnormally:\n%s", name, _this->dump_all());
+				sys_log.warning("CPU Thread '%s' terminated abnormally!", name);
 				cleanup();
 			}
 		}

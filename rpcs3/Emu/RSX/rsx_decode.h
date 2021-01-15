@@ -5,40 +5,15 @@
 #include "Utilities/StrFmt.h"
 #include <tuple>
 #include <climits>
+#include <algorithm>
 #include "gcm_enums.h"
 #include "rsx_utils.h"
 
 namespace rsx
 {
 	std::string print_boolean(bool b);
-	std::string to_string(comparison_function f);
-	std::string to_string(stencil_op op);
-	std::string to_string(fog_mode op);
-	std::string to_string(logic_op op);
-	std::string to_string(front_face op);
-	std::string to_string(cull_face op);
-	std::string to_string(surface_target target);
-	std::string to_string(primitive_type draw_mode);
-	std::string to_string(blit_engine::transfer_operation op);
-	std::string to_string(blit_engine::transfer_source_format op);
-	std::string to_string(blit_engine::context_surface op);
-	std::string to_string(blit_engine::transfer_destination_format op);
-	std::string to_string(blend_equation op);
-	std::string to_string(blend_factor factor);
-	std::string to_string(window_origin origin);
-	std::string to_string(window_pixel_center in);
-	std::string to_string(user_clip_plane_op op);
-	std::string to_string(surface_depth_format format);
-	std::string to_string(surface_antialiasing format);
-	std::string to_string(surface_color_format format);
-	std::string to_string(index_array_type arg);
-	std::string to_string(blit_engine::context_dma op);
-	std::string to_string(blit_engine::transfer_origin op);
-	std::string to_string(blit_engine::transfer_interpolator op);
-	std::string to_string(shading_mode op);
-	std::string to_string(polygon_mode op);
 
-template<u32 Register>
+template <u16 Register>
 struct registers_decoder
 {};
 
@@ -48,6 +23,22 @@ constexpr T bf_decoder(u32 bits)
 {
 	return static_cast<T>(bf_t<u32, I, N>::extract(bits));
 }
+
+template <>
+struct registers_decoder<NV406E_SET_REFERENCE>
+{
+	struct decoded_type
+	{
+		const u32 value;
+
+		decoded_type(u32 value) : value(value) {}
+	};
+
+	static std::string dump(const decoded_type& decoded)
+	{
+		return fmt::format("NV406E Ref: 0x%08x", decoded.value);
+	}
+};
 
 template<>
 struct registers_decoder<NV4097_SET_VIEWPORT_HORIZONTAL>
@@ -71,9 +62,9 @@ struct registers_decoder<NV4097_SET_VIEWPORT_HORIZONTAL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Viewport: x = " + std::to_string(decoded_values.origin_x()) + " width = " + std::to_string(decoded_values.width());
+		return fmt::format("Viewport: x: %u width: %u", decoded.origin_x(), decoded.width());
 	}
 };
 
@@ -99,9 +90,9 @@ struct registers_decoder<NV4097_SET_VIEWPORT_VERTICAL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Viewport: y = " + std::to_string(decoded_values.origin_y()) + " height = " + std::to_string(decoded_values.height());
+		return fmt::format("Viewport: y: %u height: %u", decoded.origin_y(), decoded.height());
 	}
 };
 
@@ -127,9 +118,9 @@ struct registers_decoder<NV4097_SET_SCISSOR_HORIZONTAL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Scissor: x = " + std::to_string(decoded_values.origin_x()) + " width = " + std::to_string(decoded_values.width());
+		return "Scissor: x = " + std::to_string(decoded.origin_x()) + " width = " + std::to_string(decoded.width());
 	}
 };
 
@@ -155,9 +146,9 @@ struct registers_decoder<NV4097_SET_SCISSOR_VERTICAL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Scissor: y  = " + std::to_string(decoded_values.origin_y()) + " height = " + std::to_string(decoded_values.height());
+		return "Scissor: y  = " + std::to_string(decoded.origin_y()) + " height = " + std::to_string(decoded.height());
 	}
 };
 
@@ -183,9 +174,9 @@ struct registers_decoder<NV4097_SET_SURFACE_CLIP_HORIZONTAL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: clip x  = " + std::to_string(decoded_values.origin_x()) + " width = " + std::to_string(decoded_values.width());
+		return "Surface: clip x  = " + std::to_string(decoded.origin_x()) + " width = " + std::to_string(decoded.width());
 	}
 };
 
@@ -211,9 +202,9 @@ struct registers_decoder< NV4097_SET_SURFACE_CLIP_VERTICAL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: clip y  = " + std::to_string(decoded_values.origin_y()) + " height = " + std::to_string(decoded_values.height());
+		return "Surface: clip y  = " + std::to_string(decoded.origin_y()) + " height = " + std::to_string(decoded.height());
 	}
 };
 
@@ -239,9 +230,9 @@ struct registers_decoder<NV4097_SET_CLEAR_RECT_HORIZONTAL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Clear: rect x  = " + std::to_string(decoded_values.origin_x()) + " width = " + std::to_string(decoded_values.width());
+		return "Clear: rect x  = " + std::to_string(decoded.origin_x()) + " width = " + std::to_string(decoded.width());
 	}
 };
 
@@ -267,9 +258,9 @@ struct registers_decoder<NV4097_SET_CLEAR_RECT_VERTICAL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Clear: rect y  = " + std::to_string(decoded_values.origin_y()) + " height = " + std::to_string(decoded_values.height());
+		return "Clear: rect y  = " + std::to_string(decoded.origin_y()) + " height = " + std::to_string(decoded.height());
 	}
 };
 
@@ -295,9 +286,9 @@ struct registers_decoder< NV3089_CLIP_POINT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Blit engine: clip x  = " + std::to_string(decoded_values.clip_x()) + " y = " + std::to_string(decoded_values.clip_y());
+		return "Blit engine: clip x  = " + std::to_string(decoded.clip_x()) + " y = " + std::to_string(decoded.clip_y());
 	}
 };
 
@@ -323,9 +314,9 @@ struct registers_decoder<NV3089_CLIP_SIZE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Blit engine: clip width  = " + std::to_string(decoded_values.clip_width()) + " height = " + std::to_string(decoded_values.clip_height());
+		return "Blit engine: clip width  = " + std::to_string(decoded.clip_width()) + " height = " + std::to_string(decoded.clip_height());
 	}
 };
 
@@ -351,9 +342,9 @@ struct registers_decoder<NV3089_IMAGE_OUT_POINT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Blit engine: output x  = " + std::to_string(decoded_values.x()) + " y = " + std::to_string(decoded_values.y());
+		return "Blit engine: output x  = " + std::to_string(decoded.x()) + " y = " + std::to_string(decoded.y());
 	}
 };
 
@@ -379,9 +370,9 @@ struct registers_decoder<NV4097_SET_WINDOW_OFFSET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Window: offset x  = " + std::to_string(decoded_values.window_offset_x()) + " y = " + std::to_string(decoded_values.window_offset_y());
+		return fmt::format("Window: offset x: %u y: %u", decoded.window_offset_x(), decoded.window_offset_y());
 	}
 };
 
@@ -408,9 +399,9 @@ struct registers_decoder<NV3089_IMAGE_OUT_SIZE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Blit engine: output width  = " + std::to_string(decoded_values.width()) + " height = " + std::to_string(decoded_values.height());
+		return "Blit engine: output width  = " + std::to_string(decoded.width()) + " height = " + std::to_string(decoded.height());
 	}
 };
 
@@ -436,9 +427,9 @@ struct registers_decoder<NV3089_IMAGE_IN_SIZE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Blit engine: input width  = " + std::to_string(decoded_values.width()) + " height = " + std::to_string(decoded_values.height());
+		return "Blit engine: input width  = " + std::to_string(decoded.width()) + " height = " + std::to_string(decoded.height());
 	}
 };
 
@@ -464,9 +455,9 @@ struct registers_decoder<NV3062_SET_PITCH>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Blit engine: output alignment  = " + std::to_string(decoded_values.alignment()) + " pitch = " + std::to_string(decoded_values.pitch());
+		return "Blit engine: output alignment  = " + std::to_string(decoded.alignment()) + " pitch = " + std::to_string(decoded.pitch());
 	}
 };
 
@@ -492,9 +483,9 @@ struct registers_decoder< NV308A_POINT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV308A: x  = " + std::to_string(decoded_values.x()) + " y = " + std::to_string(decoded_values.y());
+		return "NV308A: x  = " + std::to_string(decoded.x()) + " y = " + std::to_string(decoded.y());
 	}
 };
 
@@ -515,7 +506,7 @@ struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_INPUT_MASK>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
 		std::string result = "Transform program enabled inputs:";
 		const std::string input_names[] =
@@ -528,7 +519,7 @@ struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_INPUT_MASK>
 			"in_tc4", "in_tc5", "in_tc6", "in_tc7"
 		};
 		for (unsigned i = 0; i < 16; i++)
-			if (decoded_values.mask() & (1 << i))
+			if (decoded.mask() & (1 << i))
 				result += input_names[i] + " ";
 		return result;
 	}
@@ -551,11 +542,11 @@ struct registers_decoder<NV4097_SET_FREQUENCY_DIVIDER_OPERATION>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
 		std::string result = "Frequency divider: ";
 		for (unsigned i = 0; i < 16; i++)
-			if (decoded_values.frequency_divider_operation_mask() & (1 << i))
+			if (decoded.frequency_divider_operation_mask() & (1 << i))
 				result += std::to_string(i) + " ";
 		return result;
 	}
@@ -578,9 +569,9 @@ struct registers_decoder<NV4097_SET_DEPTH_TEST_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Depth: test " + print_boolean(decoded_values.depth_test_enabled());
+		return "Depth: test " + print_boolean(decoded.depth_test_enabled());
 	}
 };
 
@@ -601,9 +592,9 @@ struct registers_decoder<NV4097_SET_DEPTH_MASK>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Depth: write " + print_boolean(decoded_values.depth_write_enabled());
+		return "Depth: write " + print_boolean(decoded.depth_write_enabled());
 	}
 };
 
@@ -634,11 +625,11 @@ struct registers_decoder<NV4097_SET_ZMIN_MAX_CONTROL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Depth: clip_enabled " + print_boolean(decoded_values.depth_clip_enabled()) +
-			" clamp " + print_boolean(decoded_values.depth_clamp_enabled()) +
-			" ignore_w " + print_boolean(decoded_values.depth_clip_ignore_w());
+		return "Depth: clip_enabled " + print_boolean(decoded.depth_clip_enabled()) +
+			" clamp " + print_boolean(decoded.depth_clamp_enabled()) +
+			" ignore_w " + print_boolean(decoded.depth_clip_ignore_w());
 	}
 };
 
@@ -659,9 +650,9 @@ struct registers_decoder<NV4097_SET_ALPHA_TEST_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Alpha: test " + print_boolean(decoded_values.alpha_test_enabled());
+		return "Alpha: test " + print_boolean(decoded.alpha_test_enabled());
 	}
 };
 
@@ -682,9 +673,9 @@ struct registers_decoder<NV4097_SET_STENCIL_TEST_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: test " + print_boolean(decoded_values.stencil_test_enabled());
+		return "Stencil: test " + print_boolean(decoded.stencil_test_enabled());
 	}
 };
 
@@ -705,9 +696,9 @@ struct registers_decoder<NV4097_SET_RESTART_INDEX_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Restart Index: " + print_boolean(decoded_values.restart_index_enabled());
+		return "Restart Index: " + print_boolean(decoded.restart_index_enabled());
 	}
 };
 
@@ -728,9 +719,9 @@ struct registers_decoder<NV4097_SET_DEPTH_BOUNDS_TEST_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Depth: bound test " + print_boolean(decoded_values.depth_bound_enabled());
+		return "Depth: bound test " + print_boolean(decoded.depth_bound_enabled());
 	}
 };
 
@@ -751,9 +742,9 @@ struct registers_decoder<NV4097_SET_LOGIC_OP_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Logic: " + print_boolean(decoded_values.logic_op_enabled());
+		return "Logic: " + print_boolean(decoded.logic_op_enabled());
 	}
 };
 
@@ -774,9 +765,9 @@ struct registers_decoder<NV4097_SET_DITHER_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Dither: " + print_boolean(decoded_values.dither_enabled());
+		return "Dither: " + print_boolean(decoded.dither_enabled());
 	}
 };
 
@@ -797,9 +788,9 @@ struct registers_decoder<NV4097_SET_BLEND_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Blend: " + print_boolean(decoded_values.blend_enabled());
+		return "Blend: " + print_boolean(decoded.blend_enabled());
 	}
 };
 
@@ -820,9 +811,9 @@ struct registers_decoder<NV4097_SET_LINE_SMOOTH_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Line: smooth " + print_boolean(decoded_values.line_smooth_enabled());
+		return "Line: smooth " + print_boolean(decoded.line_smooth_enabled());
 	}
 };
 
@@ -843,9 +834,9 @@ struct registers_decoder<NV4097_SET_POLY_OFFSET_POINT_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Polygon: offset point " + print_boolean(decoded_values.poly_offset_point_enabled());
+		return "Polygon: offset point " + print_boolean(decoded.poly_offset_point_enabled());
 	}
 };
 
@@ -866,9 +857,9 @@ struct registers_decoder<NV4097_SET_POLY_OFFSET_LINE_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Polygon: offset line " + print_boolean(decoded_values.poly_offset_line_enabled());
+		return "Polygon: offset line " + print_boolean(decoded.poly_offset_line_enabled());
 	}
 };
 
@@ -889,9 +880,9 @@ struct registers_decoder<NV4097_SET_POLY_OFFSET_FILL_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Polygon: offset fill " + print_boolean(decoded_values.poly_offset_fill_enabled());
+		return "Polygon: offset fill " + print_boolean(decoded.poly_offset_fill_enabled());
 	}
 };
 
@@ -912,9 +903,9 @@ struct registers_decoder<NV4097_SET_CULL_FACE_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Cull face: " + print_boolean(decoded_values.cull_face_enabled());
+		return "Cull face: " + print_boolean(decoded.cull_face_enabled());
 	}
 };
 
@@ -935,9 +926,9 @@ struct registers_decoder<NV4097_SET_POLY_SMOOTH_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Polygon: smooth " + print_boolean(decoded_values.poly_smooth_enabled());
+		return "Polygon: smooth " + print_boolean(decoded.poly_smooth_enabled());
 	}
 };
 
@@ -958,9 +949,9 @@ struct registers_decoder<NV4097_SET_TWO_SIDED_STENCIL_TEST_ENABLE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: per side " + print_boolean(decoded_values.two_sided_stencil_test_enabled());
+		return "Stencil: per side " + print_boolean(decoded.two_sided_stencil_test_enabled());
 	}
 };
 
@@ -981,9 +972,9 @@ struct registers_decoder<NV4097_SET_TWO_SIDE_LIGHT_EN>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Light: per side " + print_boolean(decoded_values.two_sided_lighting_enabled());
+		return "Light: per side " + print_boolean(decoded.two_sided_lighting_enabled());
 	}
 };
 
@@ -1004,9 +995,9 @@ struct registers_decoder<NV4097_SET_DEPTH_BOUNDS_MIN>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Depth: bound min = " + std::to_string(decoded_values.depth_bound_min());
+		return "Depth: bound min = " + std::to_string(decoded.depth_bound_min());
 	}
 };
 
@@ -1027,9 +1018,9 @@ struct registers_decoder<NV4097_SET_DEPTH_BOUNDS_MAX>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Depth: bound max = " + std::to_string(decoded_values.depth_bound_max());
+		return "Depth: bound max = " + std::to_string(decoded.depth_bound_max());
 	}
 };
 
@@ -1050,9 +1041,9 @@ struct registers_decoder<NV4097_SET_FOG_PARAMS>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Fog: param 0 = " + std::to_string(decoded_values.fog_param_0());
+		return "Fog: param 0 = " + std::to_string(decoded.fog_param_0());
 	}
 };
 
@@ -1073,9 +1064,9 @@ struct registers_decoder<NV4097_SET_FOG_PARAMS + 1>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Fog: param 1 = " + std::to_string(decoded_values.fog_param_1());
+		return "Fog: param 1 = " + std::to_string(decoded.fog_param_1());
 	}
 };
 
@@ -1096,9 +1087,9 @@ struct registers_decoder<NV4097_SET_CLIP_MIN>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Depth: clip min = " + std::to_string(decoded_values.clip_min());
+		return "Depth: clip min = " + std::to_string(decoded.clip_min());
 	}
 };
 
@@ -1119,9 +1110,9 @@ struct registers_decoder<NV4097_SET_CLIP_MAX>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Depth: clip max = " + std::to_string(decoded_values.clip_max());
+		return "Depth: clip max = " + std::to_string(decoded.clip_max());
 	}
 };
 
@@ -1142,9 +1133,9 @@ struct registers_decoder<NV4097_SET_POLYGON_OFFSET_SCALE_FACTOR>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Polygon: offset scale = " + std::to_string(decoded_values.polygon_offset_scale_factor());
+		return "Polygon: offset scale = " + std::to_string(decoded.polygon_offset_scale_factor());
 	}
 };
 
@@ -1165,9 +1156,9 @@ struct registers_decoder<NV4097_SET_POLYGON_OFFSET_BIAS>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Polygon: offset bias = " + std::to_string(decoded_values.polygon_offset_scale_bias());
+		return "Polygon: offset bias = " + std::to_string(decoded.polygon_offset_scale_bias());
 	}
 };
 
@@ -1188,9 +1179,9 @@ struct registers_decoder<NV4097_SET_VIEWPORT_SCALE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Viewport: scale x = " + std::to_string(decoded_values.viewport_scale_x());
+		return "Viewport: scale x = " + std::to_string(decoded.viewport_scale_x());
 	}
 };
 
@@ -1211,9 +1202,9 @@ struct registers_decoder<NV4097_SET_VIEWPORT_SCALE + 1>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Viewport: scale y = " + std::to_string(decoded_values.viewport_scale_y());
+		return "Viewport: scale y = " + std::to_string(decoded.viewport_scale_y());
 	}
 };
 
@@ -1234,9 +1225,9 @@ struct registers_decoder<NV4097_SET_VIEWPORT_SCALE + 2>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Viewport: scale z = " + std::to_string(decoded_values.viewport_scale_z());
+		return "Viewport: scale z = " + std::to_string(decoded.viewport_scale_z());
 	}
 };
 
@@ -1257,9 +1248,9 @@ struct registers_decoder<NV4097_SET_VIEWPORT_SCALE + 3>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Viewport: scale w = " + std::to_string(decoded_values.viewport_scale_w());
+		return "Viewport: scale w = " + std::to_string(decoded.viewport_scale_w());
 	}
 };
 
@@ -1280,9 +1271,9 @@ struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Viewport: offset x = " + std::to_string(decoded_values.viewport_offset_x());
+		return "Viewport: offset x = " + std::to_string(decoded.viewport_offset_x());
 	}
 };
 
@@ -1303,9 +1294,9 @@ struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET + 1>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Viewport: offset y = " + std::to_string(decoded_values.viewport_offset_y());
+		return "Viewport: offset y = " + std::to_string(decoded.viewport_offset_y());
 	}
 };
 
@@ -1326,9 +1317,9 @@ struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET + 2>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Viewport: offset z = " + std::to_string(decoded_values.viewport_offset_z());
+		return "Viewport: offset z = " + std::to_string(decoded.viewport_offset_z());
 	}
 };
 
@@ -1349,9 +1340,9 @@ struct registers_decoder<NV4097_SET_VIEWPORT_OFFSET + 3>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Viewport: offset w = " + std::to_string(decoded_values.viewport_offset_w());
+		return "Viewport: offset w = " + std::to_string(decoded.viewport_offset_w());
 	}
 };
 
@@ -1372,9 +1363,9 @@ struct registers_decoder<NV4097_SET_RESTART_INDEX>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Restart index: " + std::to_string(decoded_values.restart_index());
+		return "Restart index: " + std::to_string(decoded.restart_index());
 	}
 };
 
@@ -1395,9 +1386,9 @@ struct registers_decoder<NV4097_SET_SURFACE_COLOR_AOFFSET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: A offset " + std::to_string(decoded_values.surface_a_offset());
+		return fmt::format("Surface: A offset 0x%x", decoded.surface_a_offset());
 	}
 };
 
@@ -1418,9 +1409,9 @@ struct registers_decoder<NV4097_SET_SURFACE_COLOR_BOFFSET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: B offset " + std::to_string(decoded_values.surface_b_offset());
+		return fmt::format("Surface: B offset 0x%x", decoded.surface_b_offset());
 	}
 };
 
@@ -1441,9 +1432,9 @@ struct registers_decoder<NV4097_SET_SURFACE_COLOR_COFFSET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: C offset " + std::to_string(decoded_values.surface_c_offset());
+		return fmt::format("Surface: C offset 0x%x", decoded.surface_c_offset());
 	}
 };
 
@@ -1464,9 +1455,9 @@ struct registers_decoder<NV4097_SET_SURFACE_COLOR_DOFFSET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: D offset " + std::to_string(decoded_values.surface_d_offset());
+		return fmt::format("Surface: D offset 0x%x", decoded.surface_d_offset());
 	}
 };
 
@@ -1487,9 +1478,9 @@ struct registers_decoder<NV4097_SET_SURFACE_PITCH_A>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: A pitch " + std::to_string(decoded_values.surface_a_pitch());
+		return "Surface: A pitch " + std::to_string(decoded.surface_a_pitch());
 	}
 };
 
@@ -1510,9 +1501,9 @@ struct registers_decoder<NV4097_SET_SURFACE_PITCH_B>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: B pitch " + std::to_string(decoded_values.surface_b_pitch());
+		return "Surface: B pitch " + std::to_string(decoded.surface_b_pitch());
 	}
 };
 
@@ -1533,9 +1524,9 @@ struct registers_decoder<NV4097_SET_SURFACE_PITCH_C>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: C pitch " + std::to_string(decoded_values.surface_c_pitch());
+		return "Surface: C pitch " + std::to_string(decoded.surface_c_pitch());
 	}
 };
 
@@ -1556,9 +1547,9 @@ struct registers_decoder<NV4097_SET_SURFACE_PITCH_D>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: D pitch " + std::to_string(decoded_values.surface_d_pitch());
+		return "Surface: D pitch " + std::to_string(decoded.surface_d_pitch());
 	}
 };
 
@@ -1579,9 +1570,9 @@ struct registers_decoder<NV4097_SET_SURFACE_ZETA_OFFSET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: Z offset " + std::to_string(decoded_values.surface_z_offset());
+		return "Surface: Z offset " + std::to_string(decoded.surface_z_offset());
 	}
 };
 
@@ -1602,9 +1593,9 @@ struct registers_decoder<NV4097_SET_SURFACE_PITCH_Z>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: Z pitch " + std::to_string(decoded_values.surface_z_pitch());
+		return "Surface: Z pitch " + std::to_string(decoded.surface_z_pitch());
 	}
 };
 
@@ -1625,7 +1616,7 @@ struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
 		const std::string output_names[] =
 		{
@@ -1654,7 +1645,7 @@ struct registers_decoder<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK>
 		};
 		std::string result = "Transform program outputs:";
 		for (unsigned i = 0; i < 22; i++)
-			if (decoded_values.output_mask() & (1 << i))
+			if (decoded.output_mask() & (1 << i))
 				result += output_names[i] + " ";
 		return result;
 	}
@@ -1677,12 +1668,12 @@ struct registers_decoder<NV4097_SET_SHADER_CONTROL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Shader control: raw_value =" + std::to_string(decoded_values.shader_ctrl()) +
-			" reg_count = " + std::to_string((decoded_values.shader_ctrl() >> 24) & 0xFF) +
-			((decoded_values.shader_ctrl() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) ? " depth_replace " : "") +
-			((decoded_values.shader_ctrl() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? " 32b_exports " : "");
+		return "Shader control: raw_value =" + std::to_string(decoded.shader_ctrl()) +
+			" reg_count = " + std::to_string((decoded.shader_ctrl() >> 24) & 0xFF) +
+			((decoded.shader_ctrl() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) ? " depth_replace " : "") +
+			((decoded.shader_ctrl() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) ? " 32b_exports " : "");
 	}
 };
 
@@ -1703,9 +1694,9 @@ struct registers_decoder<NV4097_SET_SHADER_PACKER>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Shader packer control: srgb_enabled = " + std::to_string(decoded_values.srgb_output_enabled());
+		return "Shader packer control: srgb_enabled = " + std::to_string(decoded.srgb_output_enabled());
 	}
 };
 
@@ -1726,9 +1717,9 @@ struct registers_decoder<NV4097_SET_VERTEX_DATA_BASE_OFFSET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Vertex: base offset " + std::to_string(decoded_values.vertex_data_base_offset());
+		return fmt::format("Vertex: base offset 0x%x", decoded.vertex_data_base_offset());
 	}
 };
 
@@ -1749,9 +1740,9 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_ADDRESS>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Index: array offset " + std::to_string(decoded_values.index_array_offset());
+		return fmt::format("Index: array offset 0x%x", decoded.index_array_offset());
 	}
 };
 
@@ -1772,9 +1763,9 @@ struct registers_decoder<NV4097_SET_VERTEX_DATA_BASE_INDEX>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Vertex: base index " + std::to_string(decoded_values.vertex_data_base_index());
+		return "Vertex: base index " + std::to_string(decoded.vertex_data_base_index());
 	}
 };
 
@@ -1795,9 +1786,10 @@ struct registers_decoder<NV4097_SET_SHADER_PROGRAM>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Shader: program offset = " + std::to_string(decoded_values.shader_program_address());
+		const u32 address = decoded.shader_program_address();
+		return fmt::format("Shader: %s, offset: 0x%x", CellGcmLocation{(address & 3) - 1}, address & ~3);
 	}
 };
 
@@ -1818,9 +1810,9 @@ struct registers_decoder<NV4097_SET_TRANSFORM_PROGRAM_START>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Transform program: start = " + std::to_string(decoded_values.transform_program_start());
+		return "Transform program: start = " + std::to_string(decoded.transform_program_start());
 	}
 };
 
@@ -1835,15 +1827,15 @@ struct registers_decoder<NV406E_SET_CONTEXT_DMA_SEMAPHORE>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 context_dma() const
+		CellGcmLocation context_dma() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV406E semaphore: context = " + std::to_string(decoded_values.context_dma());
+		return fmt::format("NV406E semaphore: context: %s", decoded.context_dma());
 	}
 };
 
@@ -1865,9 +1857,42 @@ struct registers_decoder<NV406E_SEMAPHORE_OFFSET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV406E semaphore: offset = " + std::to_string(decoded_values.semaphore_offset());
+		return fmt::format("NV406E semaphore: offset: 0x%x", decoded.semaphore_offset());
+	}
+};
+
+template <>
+struct registers_decoder<NV406E_SEMAPHORE_RELEASE>
+{
+	struct decoded_type
+	{
+		const u32 value;
+
+		decoded_type(u32 value) : value(value) {}
+	};
+
+	static std::string dump(const decoded_type& decoded)
+	{
+		return fmt::format("NV409E semaphore: release: 0x%x", decoded.value);
+	}
+};
+
+
+template <>
+struct registers_decoder<NV406E_SEMAPHORE_ACQUIRE>
+{
+	struct decoded_type
+	{
+		const u32 value;
+
+		decoded_type(u32 value) : value(value) {}
+	};
+
+	static std::string dump(const decoded_type& decoded)
+	{
+		return fmt::format("NV409E semaphore: acquire: 0x%x", decoded.value);
 	}
 };
 
@@ -1882,15 +1907,15 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_SEMAPHORE>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 context_dma() const
+		CellGcmLocation context_dma() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV4097 semaphore: context = " + std::to_string(decoded_values.context_dma());
+		return fmt::format("NV4097 semaphore: context: %s", decoded.context_dma());
 	}
 };
 
@@ -1911,9 +1936,9 @@ struct registers_decoder<NV4097_SET_SEMAPHORE_OFFSET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "semaphore: offset = " + std::to_string(decoded_values.semaphore_offset());
+		return fmt::format("NV4097 semaphore: offset: 0x%x", decoded.semaphore_offset());
 	}
 };
 
@@ -1934,9 +1959,9 @@ struct registers_decoder<NV3089_IMAGE_IN_OFFSET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV3089: input offset = " + std::to_string(decoded_values.input_offset());
+		return fmt::format("NV3089: input offset: 0x%x", decoded.input_offset());
 	}
 };
 
@@ -1957,9 +1982,9 @@ struct registers_decoder<NV3062_SET_OFFSET_DESTIN>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV3062: output offset = " + std::to_string(decoded_values.output_offset());
+		return fmt::format("NV3062: output offset: 0x%x", decoded.output_offset());
 	}
 };
 
@@ -1980,9 +2005,9 @@ struct registers_decoder<NV309E_SET_OFFSET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV309E: offset = " + std::to_string(decoded_values.offset());
+		return fmt::format("NV309E: offset: 0x%x", decoded.offset());
 	}
 };
 
@@ -2012,9 +2037,9 @@ struct registers_decoder<NV3089_DS_DX>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV3089: dsdx = " + std::to_string(decoded_values.ds_dx());
+		return "NV3089: dsdx = " + std::to_string(decoded.ds_dx());
 	}
 };
 
@@ -2044,9 +2069,9 @@ struct registers_decoder<NV3089_DT_DY>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV3089: dtdy = " + std::to_string(decoded_values.dt_dy());
+		return "NV3089: dtdy = " + std::to_string(decoded.dt_dy());
 	}
 };
 
@@ -2067,9 +2092,9 @@ struct registers_decoder<NV0039_PITCH_IN>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV0039: input pitch = " + std::to_string(decoded_values.input_pitch());
+		return "NV0039: input pitch = " + std::to_string(decoded.input_pitch());
 	}
 };
 
@@ -2090,9 +2115,9 @@ struct registers_decoder<NV0039_PITCH_OUT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV0039: output pitch = " + std::to_string(decoded_values.output_pitch());
+		return "NV0039: output pitch = " + std::to_string(decoded.output_pitch());
 	}
 };
 
@@ -2113,9 +2138,9 @@ struct registers_decoder<NV0039_LINE_LENGTH_IN>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV0039: line length input = " + std::to_string(decoded_values.input_line_length());
+		return "NV0039: line length input = " + std::to_string(decoded.input_line_length());
 	}
 };
 
@@ -2136,9 +2161,9 @@ struct registers_decoder<NV0039_LINE_COUNT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV0039: line count = " + std::to_string(decoded_values.line_count());
+		return "NV0039: line count = " + std::to_string(decoded.line_count());
 	}
 };
 
@@ -2159,9 +2184,9 @@ struct registers_decoder<NV0039_OFFSET_OUT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV0039: output offset = " + std::to_string(decoded_values.output_offset());
+		return fmt::format("NV0039: output offset: 0x%x", decoded.output_offset());
 	}
 };
 
@@ -2182,9 +2207,9 @@ struct registers_decoder<NV0039_OFFSET_IN>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV0039: input offset = " + std::to_string(decoded_values.input_offset());
+		return fmt::format("NV0039: input offset: 00x%x", decoded.input_offset());
 	}
 };
 
@@ -2205,9 +2230,9 @@ struct registers_decoder<NV4097_SET_DEPTH_FUNC>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Depth: compare_function = " + to_string(decoded_values.depth_func());
+		return fmt::format("Depth: compare_function: %s", decoded.depth_func());
 	}
 };
 
@@ -2228,9 +2253,9 @@ struct registers_decoder<NV4097_SET_STENCIL_FUNC>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (front) compare_function = " + to_string(decoded_values.stencil_func());
+		return fmt::format("Stencil: (front) compare_function: %s", decoded.stencil_func());
 	}
 };
 
@@ -2251,9 +2276,9 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: back compare_function = " + to_string(decoded_values.back_stencil_func());
+		return fmt::format("Stencil: back compare_function: %s", decoded.back_stencil_func());
 	}
 };
 
@@ -2274,9 +2299,9 @@ struct registers_decoder<NV4097_SET_ALPHA_FUNC>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Alpha: compare_function = " + to_string(decoded_values.alpha_func());
+		return fmt::format("Alpha: compare_function: %s", decoded.alpha_func());
 	}
 };
 
@@ -2297,9 +2322,9 @@ struct registers_decoder<NV4097_SET_STENCIL_OP_FAIL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (front) fail op = " + to_string(decoded_values.fail());
+		return fmt::format("Stencil: (front) fail op: %s", decoded.fail());
 	}
 };
 
@@ -2320,9 +2345,9 @@ struct registers_decoder<NV4097_SET_STENCIL_OP_ZFAIL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (front) zfail op = " + to_string(decoded_values.zfail());
+		return fmt::format("Stencil: (front) zfail op: %s", decoded.zfail());
 	}
 };
 
@@ -2343,9 +2368,9 @@ struct registers_decoder<NV4097_SET_STENCIL_OP_ZPASS>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (front) zpass op = " + to_string(decoded_values.zpass());
+		return fmt::format("Stencil: (front) zpass op: %s", decoded.zpass());
 	}
 };
 
@@ -2366,9 +2391,9 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_OP_FAIL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (back) fail op = " + to_string(decoded_values.back_fail());
+		return fmt::format("Stencil: (back) fail op: %s", decoded.back_fail());
 	}
 };
 
@@ -2389,9 +2414,9 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_OP_ZFAIL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (back) zfail op = " + to_string(decoded_values.back_zfail());
+		return fmt::format("Stencil: (back) zfail op: %s", decoded.back_zfail());
 	}
 };
 
@@ -2412,9 +2437,9 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_OP_ZPASS>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (back) zpass op = " + to_string(decoded_values.back_zpass());
+		return fmt::format("Stencil: (back) zpass op: %s", decoded.back_zpass());
 	}
 };
 
@@ -2435,9 +2460,9 @@ struct registers_decoder<NV4097_SET_STENCIL_FUNC_REF>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (front) func ref = " + std::to_string(decoded_values.stencil_func_ref());
+		return "Stencil: (front) func ref = " + std::to_string(decoded.stencil_func_ref());
 	}
 };
 
@@ -2458,9 +2483,9 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC_REF>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (back) func ref = " + std::to_string(decoded_values.back_stencil_func_ref());
+		return "Stencil: (back) func ref = " + std::to_string(decoded.back_stencil_func_ref());
 	}
 };
 
@@ -2481,9 +2506,9 @@ struct registers_decoder<NV4097_SET_STENCIL_FUNC_MASK>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (front) func mask = " + std::to_string(decoded_values.stencil_func_mask());
+		return "Stencil: (front) func mask = " + std::to_string(decoded.stencil_func_mask());
 	}
 };
 
@@ -2504,9 +2529,9 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_FUNC_MASK>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (back) func mask = " + std::to_string(decoded_values.back_stencil_func_mask());
+		return "Stencil: (back) func mask = " + std::to_string(decoded.back_stencil_func_mask());
 	}
 };
 
@@ -2537,10 +2562,10 @@ struct registers_decoder<NV4097_SET_ALPHA_REF>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Alpha: ref unorm8 = " + std::to_string(decoded_values.alpha_ref8()) +
-			" f16 = " + std::to_string(decoded_values.alpha_ref16());
+		return "Alpha: ref unorm8 = " + std::to_string(decoded.alpha_ref8()) +
+			" f16 = " + std::to_string(decoded.alpha_ref16());
 	}
 };
 
@@ -2561,12 +2586,12 @@ struct registers_decoder<NV4097_SET_COLOR_CLEAR_VALUE>
 		u8 alpha() const { return bf_decoder<24, 8>(value); }
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Clear: R = " + std::to_string(decoded_values.red()) +
-			" G = " + std::to_string(decoded_values.green()) +
-			" B = " + std::to_string(decoded_values.blue()) +
-			" A = " + std::to_string(decoded_values.alpha());
+		return "Clear: R = " + std::to_string(decoded.red()) +
+			" G = " + std::to_string(decoded.green()) +
+			" B = " + std::to_string(decoded.blue()) +
+			" A = " + std::to_string(decoded.alpha());
 	}
 };
 
@@ -2587,9 +2612,9 @@ struct registers_decoder<NV4097_SET_STENCIL_MASK>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (front) mask = " + std::to_string(decoded_values.stencil_mask());
+		return "Stencil: (front) mask = " + std::to_string(decoded.stencil_mask());
 	}
 };
 
@@ -2610,9 +2635,9 @@ struct registers_decoder<NV4097_SET_BACK_STENCIL_MASK>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Stencil: (back) mask = " + std::to_string(decoded_values.back_stencil_mask());
+		return "Stencil: (back) mask = " + std::to_string(decoded.back_stencil_mask());
 	}
 };
 
@@ -2633,9 +2658,9 @@ struct registers_decoder<NV4097_SET_LOGIC_OP>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Logic: op = " + to_string(decoded_values.logic_operation());
+		return fmt::format("Logic: op: %s", decoded.logic_operation());
 	}
 };
 
@@ -2656,9 +2681,9 @@ struct registers_decoder<NV4097_SET_FRONT_FACE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Front Face: " + to_string(decoded_values.front_face_mode());
+		return fmt::format("Front Face: %s", decoded.front_face_mode());
 	}
 };
 
@@ -2680,9 +2705,9 @@ struct registers_decoder<NV4097_SET_CULL_FACE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Cull Face: " + to_string(decoded_values.cull_face_mode());
+		return fmt::format("Cull Face: %s", decoded.cull_face_mode());
 	}
 };
 
@@ -2703,9 +2728,9 @@ struct registers_decoder<NV4097_SET_SURFACE_COLOR_TARGET>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: Color target(s) = " + to_string(decoded_values.target());
+		return fmt::format("Surface: Color target(s): %s", decoded.target());
 	}
 };
 
@@ -2726,9 +2751,9 @@ struct registers_decoder<NV4097_SET_FOG_MODE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Fog: " + to_string(decoded_values.fog_equation());
+		return fmt::format("Fog: %s", decoded.fog_equation());
 	}
 };
 
@@ -2749,9 +2774,9 @@ struct registers_decoder<NV4097_SET_BEGIN_END>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "-- " + to_string(decoded_values.primitive()) + " --";
+		return fmt::format("Primitive: %s", decoded.primitive());
 	}
 };
 
@@ -2772,9 +2797,9 @@ struct registers_decoder<NV3089_SET_OPERATION>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV3089: op = " + to_string(decoded_values.transfer_op());
+		return fmt::format("NV3089: op: %s", decoded.transfer_op());
 	}
 };
 
@@ -2795,9 +2820,9 @@ struct registers_decoder<NV3089_SET_COLOR_FORMAT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV3089: source fmt = " + to_string(decoded_values.transfer_source_fmt());
+		return fmt::format("NV3089: source fmt: %s", decoded.transfer_source_fmt());
 	}
 };
 
@@ -2818,9 +2843,9 @@ struct registers_decoder<NV3089_SET_CONTEXT_SURFACE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV3089: context surface = " + to_string(decoded_values.ctx_surface());
+		return fmt::format("NV3089: context surface: %s", decoded.ctx_surface());
 	}
 };
 
@@ -2841,9 +2866,9 @@ struct registers_decoder<NV3062_SET_COLOR_FORMAT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV3062: output fmt = " + to_string(decoded_values.transfer_dest_fmt());
+		return fmt::format("NV3062: output fmt: %s", decoded.transfer_dest_fmt());
 	}
 };
 
@@ -2878,10 +2903,9 @@ struct registers_decoder<NV4097_SET_BLEND_EQUATION>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Blend: equation rgb = " + to_string(decoded_values.blend_rgb()) +
-			" a = " + to_string(decoded_values.blend_a());
+		return fmt::format("Blend: equation rgb: %s a: %s", decoded.blend_rgb(), decoded.blend_a());
 	}
 };
 
@@ -2916,10 +2940,9 @@ struct registers_decoder<NV4097_SET_BLEND_FUNC_SFACTOR>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Blend: sfactor rgb = " + to_string(decoded_values.src_blend_rgb()) +
-			" a = " + to_string(decoded_values.src_blend_a());
+		return fmt::format("Blend: sfactor rgb: %s a: %s", decoded.src_blend_rgb(), decoded.src_blend_a());
 	}
 };
 
@@ -2954,10 +2977,9 @@ struct registers_decoder<NV4097_SET_BLEND_FUNC_DFACTOR>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Blend: dfactor rgb = " + to_string(decoded_values.dst_blend_rgb()) +
-			" a = " + to_string(decoded_values.dst_blend_a());
+		return fmt::format("Blend: dfactor rgb: %s a: %s", decoded.dst_blend_rgb(), decoded.dst_blend_a());
 	}
 };
 
@@ -2998,12 +3020,12 @@ struct registers_decoder<NV4097_SET_COLOR_MASK>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: color mask A = " + print_boolean(decoded_values.color_a()) +
-			" R = " + print_boolean(decoded_values.color_r()) +
-			" G = " + print_boolean(decoded_values.color_g()) +
-			" B = " + print_boolean(decoded_values.color_b());
+		return "Surface: color mask A = " + print_boolean(decoded.color_a()) +
+			" R = " + print_boolean(decoded.color_r()) +
+			" G = " + print_boolean(decoded.color_g()) +
+			" B = " + print_boolean(decoded.color_b());
 	}
 };
 
@@ -3044,17 +3066,17 @@ struct registers_decoder<NV4097_SET_COLOR_MASK_MRT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
 		std::string result;
 		for (int index = 1; index < 4; ++index)
 		{
 			result += fmt::format("Surface[%d]: A:%d R:%d G:%d B:%d\n",
 				index,
-				decoded_values.color_a(index),
-				decoded_values.color_r(index),
-				decoded_values.color_g(index),
-				decoded_values.color_b(index));
+				decoded.color_a(index),
+				decoded.color_r(index),
+				decoded.color_g(index),
+				decoded.color_b(index));
 		}
 
 		return "Color Mask MRT:\n" + result;
@@ -3091,11 +3113,10 @@ struct registers_decoder<NV4097_SET_SHADER_WINDOW>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Viewport: height = " + std::to_string(decoded_values.window_shader_height()) +
-			" origin = " + to_string(decoded_values.window_shader_origin()) +
-			" pixel center = " + to_string(decoded_values.window_shader_pixel_center());
+		return fmt::format("Viewport: height: %u origin: %s pixel center: %s", decoded.window_shader_height()
+			, decoded.window_shader_origin(), decoded.window_shader_pixel_center());
 	}
 };
 
@@ -3126,11 +3147,11 @@ struct registers_decoder<NV4097_SET_BLEND_ENABLE_MRT>
 		}
 	};
 
-	static std::string dump(decoded_type&& decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Blend: mrt1 = " + print_boolean(decoded_values.blend_surface_b()) +
-			" mrt2 = " + print_boolean(decoded_values.blend_surface_c()) +
-			" mrt3 = " + print_boolean(decoded_values.blend_surface_d());
+		return "Blend: mrt1 = " + print_boolean(decoded.blend_surface_b()) +
+			" mrt2 = " + print_boolean(decoded.blend_surface_c()) +
+			" mrt3 = " + print_boolean(decoded.blend_surface_d());
 	}
 };
 
@@ -3184,14 +3205,15 @@ struct registers_decoder<NV4097_SET_USER_CLIP_PLANE_CONTROL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "User clip: UC0 = " + to_string(decoded_values.clip_plane0()) +
-			" UC1 = " + to_string(decoded_values.clip_plane1()) +
-			" UC2 = " + to_string(decoded_values.clip_plane2()) +
-			" UC2 = " + to_string(decoded_values.clip_plane3()) +
-			" UC2 = " + to_string(decoded_values.clip_plane4()) +
-			" UC2 = " + to_string(decoded_values.clip_plane5());
+		return fmt::format("User clip: UC0: %s UC1: %s UC2: %s UC3: %s UC4: %s"
+			, decoded.clip_plane0()
+			, decoded.clip_plane1()
+			, decoded.clip_plane2()
+			, decoded.clip_plane3()
+			, decoded.clip_plane4()
+			, decoded.clip_plane5());
 	}
 };
 
@@ -3212,9 +3234,9 @@ struct registers_decoder<NV4097_SET_LINE_WIDTH>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Line width: " + std::to_string(decoded_values.line_width());
+		return "Line width: " + std::to_string(decoded.line_width());
 	}
 };
 
@@ -3235,9 +3257,9 @@ struct registers_decoder<NV4097_SET_POINT_SIZE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Point size: " + std::to_string(decoded_values.point_size());
+		return "Point size: " + std::to_string(decoded.point_size());
 	}
 };
 
@@ -3263,10 +3285,10 @@ struct registers_decoder<NV4097_SET_POINT_SPRITE_CONTROL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Point sprite: enabled = " + print_boolean(decoded_values.enabled()) +
-			"override mask = " + fmt::format("0x%x", decoded_values.texcoord_mask());
+		return "Point sprite: enabled = " + print_boolean(decoded.enabled()) +
+			"override mask = " + fmt::format("0x%x", decoded.texcoord_mask());
 	}
 };
 
@@ -3317,13 +3339,10 @@ struct registers_decoder<NV4097_SET_SURFACE_FORMAT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: Color format = " + to_string(decoded_values.color_fmt()) +
-			" DepthStencil format = " + to_string(decoded_values.depth_fmt()) +
-			" Anti aliasing =" + to_string(decoded_values.antialias()) +
-			" w = " + std::to_string(decoded_values.log2width()) +
-			" h = " + std::to_string(decoded_values.log2height());
+		return fmt::format("Surface: Color format: %s DepthStencil format: %s Anti aliasing: %s w: %u h: %u", decoded.color_fmt()
+			, decoded.depth_fmt(), decoded.antialias(), decoded.log2width(), decoded.log2height());
 	}
 };
 
@@ -3355,11 +3374,11 @@ struct registers_decoder<NV4097_SET_ZSTENCIL_CLEAR_VALUE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Clear: Z24 = " + std::to_string(decoded_values.clear_z(true)) +
-			" z16 = " + std::to_string(decoded_values.clear_z(false)) +
-			" Stencil = " + std::to_string(decoded_values.clear_stencil());
+		return "Clear: Z24 = " + std::to_string(decoded.clear_z(true)) +
+			" z16 = " + std::to_string(decoded.clear_z(false)) +
+			" Stencil = " + std::to_string(decoded.clear_stencil());
 	}
 };
 
@@ -3376,9 +3395,9 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_DMA>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u8 index_dma() const
+		CellGcmLocation index_dma() const
 		{
-			return bf_decoder<0, 4>(value);
+			return CellGcmLocation{bf_decoder<0, 4>(value)};
 		}
 
 		index_array_type type() const
@@ -3388,10 +3407,9 @@ struct registers_decoder<NV4097_SET_INDEX_ARRAY_DMA>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Index: type = " + to_string(decoded_values.type()) +
-			" dma = " + std::to_string(decoded_values.index_dma());
+		return fmt::format("Index: type: %s dma: %s", decoded.type(), decoded.index_dma());
 	}
 };
 
@@ -3406,15 +3424,15 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_COLOR_A>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 dma_surface_a() const
+		CellGcmLocation dma_surface_a() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: A DMA = " + std::to_string(decoded_values.dma_surface_a());
+		return fmt::format("Surface: A DMA: %s", decoded.dma_surface_a());
 	}
 };
 
@@ -3429,15 +3447,15 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_COLOR_B>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 dma_surface_b() const
+		CellGcmLocation dma_surface_b() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: B DMA = " + std::to_string(decoded_values.dma_surface_b());
+		return fmt::format("Surface: B DMA: %s", decoded.dma_surface_b());
 	}
 };
 
@@ -3452,15 +3470,15 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_COLOR_C>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 dma_surface_c() const
+		CellGcmLocation dma_surface_c() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: C DMA = " + std::to_string(decoded_values.dma_surface_c());
+		return fmt::format("Surface: C DMA: %s", decoded.dma_surface_c());
 	}
 };
 
@@ -3475,15 +3493,15 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_COLOR_D>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 dma_surface_d() const
+		CellGcmLocation dma_surface_d() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: D DMA = " + std::to_string(decoded_values.dma_surface_d());
+		return fmt::format("Surface: D DMA: %s", decoded.dma_surface_d());
 	}
 };
 
@@ -3498,15 +3516,15 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_ZETA>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 dma_surface_z() const
+		CellGcmLocation dma_surface_z() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Surface: Z DMA = " + std::to_string(decoded_values.dma_surface_z());
+		return fmt::format("Surface: Z DMA: %s", decoded.dma_surface_z());
 	}
 };
 
@@ -3521,15 +3539,15 @@ struct registers_decoder<NV3089_SET_CONTEXT_DMA_IMAGE>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 context_dma() const
+		CellGcmLocation context_dma() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV3089: input DMA = " + std::to_string(decoded_values.context_dma());
+		return fmt::format("NV3089: input DMA: %s", decoded.context_dma());
 	}
 };
 
@@ -3544,15 +3562,15 @@ struct registers_decoder<NV3062_SET_CONTEXT_DMA_IMAGE_DESTIN>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 output_dma() const
+		CellGcmLocation output_dma() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV3062: output DMA = " + std::to_string(decoded_values.output_dma());
+		return fmt::format("NV3062: output DMA: %s", decoded.output_dma());
 	}
 };
 
@@ -3567,15 +3585,15 @@ struct registers_decoder<NV309E_SET_CONTEXT_DMA_IMAGE>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 context_dma() const
+		CellGcmLocation context_dma() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV309E: output DMA = " + std::to_string(decoded_values.context_dma());
+		return fmt::format("NV309E: output DMA: %s", decoded.context_dma());
 	}
 };
 
@@ -3590,15 +3608,15 @@ struct registers_decoder<NV0039_SET_CONTEXT_DMA_BUFFER_OUT>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 output_dma() const
+		CellGcmLocation output_dma() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV0039: output DMA = " + std::to_string(decoded_values.output_dma());
+		return fmt::format("NV0039: output DMA: %s", decoded.output_dma());
 	}
 };
 
@@ -3613,15 +3631,15 @@ struct registers_decoder<NV0039_SET_CONTEXT_DMA_BUFFER_IN>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 input_dma() const
+		CellGcmLocation input_dma() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV0039: input DMA = " + std::to_string(decoded_values.input_dma());
+		return fmt::format("NV0039: input DMA: %s", decoded.input_dma());
 	}
 };
 
@@ -3642,9 +3660,9 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_REPORT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Report: context DMA = " + to_string(decoded_values.context_dma_report());
+		return fmt::format("REPORT: context DMA: %s", decoded.context_dma_report());
 	}
 };
 
@@ -3659,15 +3677,15 @@ struct registers_decoder<NV4097_SET_CONTEXT_DMA_NOTIFIES>
 	public:
 		decoded_type(u32 value) : value(value) {}
 
-		u32 context_dma_notify() const
+		CellGcmLocation context_dma_notify() const
 		{
-			return value;
+			return CellGcmLocation{value};
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return fmt::format("NOTIFY: context DMA = 0x%x, index=%d", decoded_values.context_dma_notify(), (decoded_values.context_dma_notify() & 7) ^ 7);
+		return fmt::format("NOTIFY: context DMA: %s, index: %d", decoded.context_dma_notify(), (decoded.context_dma_notify() & 7) ^ 7);
 	}
 };
 
@@ -3701,11 +3719,10 @@ struct registers_decoder<NV3089_IMAGE_IN_FORMAT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV3089: input fmt " + std::to_string(decoded_values.format()) +
-			" origin = " + to_string(decoded_values.transfer_origin()) +
-			" interp = " + to_string(decoded_values.transfer_interpolator());
+		return fmt::format("NV3089: input fmt: %u origin: %s interp: %s", decoded.format()
+			, decoded.transfer_origin(), decoded.transfer_interpolator());
 	}
 };
 
@@ -3738,11 +3755,10 @@ struct registers_decoder<NV309E_SET_FORMAT>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV309E: output fmt = " + to_string(decoded_values.format()) +
-			" log2-width = " + std::to_string(decoded_values.sw_width_log2()) +
-			" log2-height = " + std::to_string(decoded_values.sw_height_log2());
+		return fmt::format("NV309E: output fmt: %s log2-width: %u log2-height: %u", decoded.format(),
+			decoded.sw_width_log2(), decoded.sw_height_log2());
 	}
 };
 
@@ -3772,10 +3788,10 @@ struct registers_decoder<NV0039_FORMAT>
 		return std::make_tuple(static_cast<u8>(value & 0xff), static_cast<u8>(value >> 8));
 	}
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV0039: input format = " + std::to_string(decoded_values.input_format()) +
-			" output format = " + std::to_string(decoded_values.output_format());
+		return "NV0039: input format = " + std::to_string(decoded.input_format()) +
+			" output format = " + std::to_string(decoded.output_format());
 	}
 };
 
@@ -3801,10 +3817,10 @@ struct registers_decoder<NV4097_SET_BLEND_COLOR2>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Blend color: 16b BA = " + std::to_string(decoded_values.blue()) +
-			", " + std::to_string(decoded_values.alpha());
+		return "Blend color: 16b BA = " + std::to_string(decoded.blue()) +
+			", " + std::to_string(decoded.alpha());
 	}
 };
 
@@ -3850,11 +3866,11 @@ struct registers_decoder<NV4097_SET_BLEND_COLOR>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
 		return "Blend color: 8b BGRA = " +
-			std::to_string(decoded_values.blue8()) + ", " + std::to_string(decoded_values.green8()) + ", " + std::to_string(decoded_values.red8()) + ", " + std::to_string(decoded_values.alpha8()) +
-			" 16b RG = " + std::to_string(decoded_values.red16()) + ", " + std::to_string(decoded_values.green16());
+			std::to_string(decoded.blue8()) + ", " + std::to_string(decoded.green8()) + ", " + std::to_string(decoded.red8()) + ", " + std::to_string(decoded.alpha8()) +
+			" 16b RG = " + std::to_string(decoded.red16()) + ", " + std::to_string(decoded.green16());
 	}
 };
 
@@ -3892,10 +3908,10 @@ struct registers_decoder<NV3089_IMAGE_IN>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "NV3089: in x = " + std::to_string(decoded_values.x()) +
-			" y = " + std::to_string(decoded_values.y());
+		return "NV3089: in x = " + std::to_string(decoded.x()) +
+			" y = " + std::to_string(decoded.y());
 	}
 };
 
@@ -3907,7 +3923,7 @@ struct registers_decoder<NV4097_NO_OPERATION>
 		decoded_type(u32) {}
 	};
 
-	static std::string dump(u32 &&)
+	static std::string dump(u32)
 	{
 		return "(nop)";
 	}
@@ -3921,7 +3937,7 @@ struct registers_decoder<NV4097_INVALIDATE_VERTEX_CACHE_FILE>
 		decoded_type(u32) {}
 	};
 
-	static std::string dump(u32 &&)
+	static std::string dump(u32)
 	{
 		return "(invalidate vertex cache file)";
 	}
@@ -3935,7 +3951,7 @@ struct registers_decoder<NV4097_INVALIDATE_VERTEX_FILE>
 		decoded_type(u32) {}
 	};
 
-	static std::string dump(u32 &&)
+	static std::string dump(u32)
 	{
 		return "(invalidate vertex file)";
 	}
@@ -3973,12 +3989,12 @@ struct registers_decoder<NV4097_SET_ANTI_ALIASING_CONTROL>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Anti_aliasing: " + print_boolean(decoded_values.msaa_enabled()) +
-			" alpha_to_coverage = " + print_boolean(decoded_values.msaa_alpha_to_coverage()) +
-			" alpha_to_one = " + print_boolean(decoded_values.msaa_alpha_to_one()) +
-			" sample_mask = " + std::to_string(decoded_values.msaa_sample_mask());
+		return "Anti_aliasing: " + print_boolean(decoded.msaa_enabled()) +
+			" alpha_to_coverage = " + print_boolean(decoded.msaa_alpha_to_coverage()) +
+			" alpha_to_one = " + print_boolean(decoded.msaa_alpha_to_one()) +
+			" sample_mask = " + std::to_string(decoded.msaa_sample_mask());
 	}
 };
 
@@ -3999,9 +4015,9 @@ struct registers_decoder<NV4097_SET_SHADE_MODE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Shading mode: " + to_string(decoded_values.shading());
+		return fmt::format("Shading mode: %s", decoded.shading());
 	}
 };
 
@@ -4022,9 +4038,9 @@ struct registers_decoder<NV4097_SET_FRONT_POLYGON_MODE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Front polygon mode: " + to_string(decoded_values.front_polygon_mode());
+		return fmt::format("Front polygon mode: %s", decoded.front_polygon_mode());
 	}
 };
 
@@ -4045,9 +4061,9 @@ struct registers_decoder<NV4097_SET_BACK_POLYGON_MODE>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "back polygon mode: " + to_string(decoded_values.back_polygon_mode());
+		return fmt::format("back polygon mode: %s", decoded.back_polygon_mode());
 	}
 };
 
@@ -4068,9 +4084,9 @@ struct registers_decoder<NV4097_SET_TRANSFORM_CONSTANT_LOAD>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Set transform constant pointer at " + std::to_string(decoded_values.transform_constant_load());
+		return fmt::format("Transform constant load: %u", decoded.transform_constant_load());
 	}
 };
 
@@ -4091,9 +4107,78 @@ struct registers_decoder<NV4097_SET_POLYGON_STIPPLE>
 		}
 	};
 
-	static std::string dump(decoded_type&& decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return std::string("polygon_stipple: ") + (decoded_values.enabled()? "true" : "false");
+		return fmt::format("polygon_stipple: %s", print_boolean(decoded.enabled()));
+	}
+};
+
+template <>
+struct registers_decoder<NV4097_SET_ZCULL_EN>
+{
+	struct decoded_type
+	{
+	private:
+		u32 value;
+
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		bool enabled() const
+		{
+			return value > 0;
+		}
+	};
+
+	static std::string dump(const decoded_type& decoded)
+	{
+		return fmt::format("ZCULL: %s", print_boolean(decoded.enabled()));
+	}
+};
+
+template <>
+struct registers_decoder<NV4097_SET_ZCULL_STATS_ENABLE>
+{
+	struct decoded_type
+	{
+	private:
+		u32 value;
+
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		bool enabled() const
+		{
+			return value > 0;
+		}
+	};
+
+	static std::string dump(const decoded_type& decoded)
+	{
+		return fmt::format("ZCULL: stats %s", print_boolean(decoded.enabled()));
+	}
+};
+
+template <>
+struct registers_decoder<NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE>
+{
+	struct decoded_type
+	{
+	private:
+		u32 value;
+
+	public:
+		decoded_type(u32 value) : value(value) {}
+
+		bool enabled() const
+		{
+			return value > 0;
+		}
+	};
+
+	static std::string dump(const decoded_type& decoded)
+	{
+		return fmt::format("ZCULL: pixel count %s", print_boolean(decoded.enabled()));
 	}
 };
 
@@ -4156,17 +4241,17 @@ struct transform_constant_helper
 	static constexpr u32 reg = index / 4;
 	static constexpr u8 subreg = index % 4;
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		auto get_subreg_name = [](u8 subreg) -> std::string
+		auto get_subreg_name = [](u8 subreg) -> std::string_view
 		{
-			return subreg == 0 ? "x" :
-				subreg == 1 ? "y" :
-				subreg == 2 ? "z" :
-				"w";
+			return subreg == 0 ? "x"sv :
+				subreg == 1 ? "y"sv :
+				subreg == 2 ? "z"sv :
+				"w"sv;
 		};
 
-		return "TransformConstant[base + " + std::to_string(reg) + "]." + get_subreg_name(subreg) + " = " + std::to_string(decoded_values.constant_value());
+		return fmt::format("TransformConstant[%u].%s: %g (0x%08x)", reg, get_subreg_name(subreg), decoded.constant_value(), std::bit_cast<u32>(decoded.constant_value()));
 	}
 };
 
@@ -4185,9 +4270,9 @@ struct transform_program_helper
 		decoded_type(u32 value) : value(value) {}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Transform Program (" + std::to_string(index) + "):"+ std::to_string(decoded_values.value);
+		return fmt::format("Transform Program (%u): 0x%08x", index, decoded.value);
 	}
 };
 
@@ -4208,9 +4293,9 @@ struct registers_decoder<NV4097_SET_TRANSFORM_PROGRAM_LOAD>
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Transform Program pointer :" + std::to_string(decoded_values.transform_program_load());
+		return fmt::format("Transform Program Load: %u", decoded.transform_program_load());
 	}
 };
 
@@ -4241,10 +4326,10 @@ struct registers_decoder<NV4097_DRAW_ARRAYS>
 		}
 	};
 
-	static std::string dump(decoded_type&& decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Draw vertexes range [" + std::to_string(decoded_values.start()) + ", " +
-			      std::to_string(decoded_values.start() + decoded_values.count()) + "]";
+		return "Draw vertexes range [" + std::to_string(decoded.start()) + ", " +
+			      std::to_string(decoded.start() + decoded.count()) + "]";
 	}
 };
 
@@ -4270,10 +4355,10 @@ struct registers_decoder<NV4097_DRAW_INDEX_ARRAY>
 		}
 	};
 
-	static std::string dump(decoded_type&& decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Draw vertexes range [IdxArray[" + std::to_string(decoded_values.start()) +
-			      "], IdxArray[" + std::to_string(decoded_values.start() + decoded_values.count()) + "}]";
+		return "Draw vertexes range [IdxArray[" + std::to_string(decoded.start()) +
+			      "], IdxArray[" + std::to_string(decoded.start() + decoded.count()) + "}]";
 	}
 };
 
@@ -4294,15 +4379,15 @@ struct registers_decoder<NV4097_SET_CONTROL0>
 		}
 	};
 
-	static std::string dump(decoded_type&& decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Depth float enabled: " + (decoded_values.depth_float() ? std::string("true") : std::string("false"));
+		return fmt::format("Depth float: %s", print_boolean(decoded.depth_float()));
 	}
 };
 
 #define TRANSFORM_PROGRAM(index) template<> struct registers_decoder<NV4097_SET_TRANSFORM_PROGRAM + index> : public transform_program_helper<index> {};
 #define DECLARE_TRANSFORM_PROGRAM(index) NV4097_SET_TRANSFORM_PROGRAM + index,
-EXPAND_RANGE_512(0, TRANSFORM_PROGRAM)
+EXPAND_RANGE_32(0, TRANSFORM_PROGRAM)
 
 template<u32 index>
 struct vertex_array_helper
@@ -4340,10 +4425,10 @@ struct vertex_array_helper
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		if (decoded_values.size() == 0)
-			return "(disabled)";
+		if (decoded.size() == 0)
+			return fmt::format("Vertex Data Array %u (disabled)", index);
 
 		auto print_vertex_attribute_format = [](rsx::vertex_base_type type) -> std::string
 		{
@@ -4360,10 +4445,10 @@ struct vertex_array_helper
 			fmt::throw_exception("Unexpected enum found");
 		};
 
-		return "Vertex array " + std::to_string(index) + ": Type = " + print_vertex_attribute_format(decoded_values.type()) +
-			" size = " + std::to_string(decoded_values.size()) +
-			" stride = " + std::to_string(decoded_values.stride()) +
-			" frequency = " + std::to_string(decoded_values.frequency());
+		return "Vertex array " + std::to_string(index) + ": Type = " + print_vertex_attribute_format(decoded.type()) +
+			" size = " + std::to_string(decoded.size()) +
+			" stride = " + std::to_string(decoded.stride()) +
+			" frequency = " + std::to_string(decoded.frequency());
 	}
 };
 
@@ -4388,9 +4473,9 @@ struct vertex_array_offset_helper
 		}
 	};
 
-	static std::string dump(decoded_type &&decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
-		return "Vertex array " + std::to_string(index) + ": Offset = " + std::to_string(decoded_values.offset());
+		return fmt::format("Vertex array %u: Offset: 0x%x", index, decoded.offset());
 	}
 };
 
@@ -4458,10 +4543,10 @@ struct register_vertex_helper
 	static constexpr usz attribute_index = index / increment_per_array_index;
 	static constexpr usz vertex_subreg = index % increment_per_array_index;
 
-	static std::string dump(decoded_type&& decoded_values)
+	static std::string dump(const decoded_type& decoded)
 	{
 		return "register vertex " + std::to_string(attribute_index) + " as " + register_vertex_printer<type, count>::type() + ": " +
-			register_vertex_printer<type, count>::value(decoded_values.value);
+			register_vertex_printer<type, count>::value(decoded.value);
 	}
 };
 
@@ -4502,4 +4587,237 @@ EXPAND_RANGE_16(0, VERTEX_DATA3F)
 EXPAND_RANGE_16(0, VERTEX_DATA4F)
 EXPAND_RANGE_16(0, VERTEX_DATA2S)
 EXPAND_RANGE_16(0, VERTEX_DATA4S)
+
+template <u32 index>
+struct texture_offset_helper
+{
+	struct decoded_type
+	{
+		const u32 value;
+
+		decoded_type(u32 value) : value(value) {}
+
+		u32 offset() const
+		{
+			return value;
+		}
+	};
+
+	static std::string dump(const decoded_type& decoded)
+	{
+		return fmt::format("Texture %u: Offset: 0x%x", index, decoded.offset());
+	}
+};
+
+template <u32 index>
+struct texture_format_helper
+{
+	struct decoded_type
+	{
+		const u32 value;
+
+		decoded_type(u32 value) : value(value) {}
+
+		CellGcmLocation location() const
+		{
+			return CellGcmLocation{(value & 3) - 1};
+		}
+
+		bool cubemap() const
+		{
+			return bf_decoder<2, 1, bool>(value);
+		}
+	
+		u8 border_type() const
+		{
+			return bf_decoder<3, 1>(value);
+		}
+
+		texture_dimension dimension() const
+		{
+			// Hack: avoid debugger crash on not-written value (needs checking on realhw)
+			// This is not the function RSX uses so it's safe
+			return rsx::to_texture_dimension(std::clamp<u8>(bf_decoder<4, 4>(value), 1, 3));
+		}
+
+		CellGcmTexture format() const
+		{
+			return CellGcmTexture{bf_decoder<8, 8>(value)};
+		}
+
+		u16 mipmap() const
+		{
+			return bf_decoder<16, 16>(value);
+		}
+	};
+
+	static std::string dump(const decoded_type& decoded)
+	{
+		return fmt::format("Texture %u: %s, Cubemap: %s, %s, %s, Mipmap: %u", index,
+				decoded.location(), decoded.cubemap(), decoded.dimension(), decoded.format(), decoded.mipmap());
+	}
+};
+
+template <u32 index>
+struct texture_image_rect_helper
+{
+	struct decoded_type
+	{
+		const u32 value;
+
+		decoded_type(u32 value) : value(value) {}
+
+		u16 height() const
+		{
+			return bf_decoder<0, 16>(value);
+		}
+
+		u16 width() const
+		{
+			return bf_decoder<16, 16>(value);
+		}
+	};
+
+	static std::string dump(const decoded_type& decoded)
+	{
+		return fmt::format("Texture %u: W: %u, H: %u", index, decoded.width(), decoded.height());
+	}
+};
+
+template <u32 index>
+struct texture_control0_helper
+{
+	struct decoded_type
+	{
+		const u32 value;
+
+		decoded_type(u32 value) : value(value) {}
+
+		bool enabled() const
+		{
+			return bf_decoder<31, 1, bool>(value);
+		}
+
+		f32 min_lod() const
+		{
+			return rsx::decode_fxp<4, 8, false>(bf_decoder<19, 12>(value));
+		}
+
+		f32 max_lod() const
+		{
+			return rsx::decode_fxp<4, 8, false>(bf_decoder<7, 12>(value));
+		}
+
+		texture_max_anisotropy max_aniso() const
+		{
+			return rsx::to_texture_max_anisotropy(bf_decoder<4, 3>(value));
+		}
+
+		bool alpha_kill_enabled() const
+		{
+			return bf_decoder<2, 1, bool>(value);
+		}
+	};
+
+	static std::string dump(const decoded_type& decoded)
+	{
+		return fmt::format("Texture %u: %s, Min/Max LOD: %g/%g, Max Aniso: %s, AKill: %s", index, print_boolean(decoded.enabled())
+			, decoded.min_lod(), decoded.max_lod(), decoded.max_aniso(), print_boolean(decoded.alpha_kill_enabled()));
+	}
+};
+
+template <u32 index>
+struct texture_control3_helper
+{
+	struct decoded_type
+	{
+		const u32 value;
+
+		decoded_type(u32 value) : value(value) {}
+
+		u16 depth() const
+		{
+			return bf_decoder<20, 12>(value);
+		}
+
+		u32 pitch() const
+		{
+			return bf_decoder<0, 16>(value);
+		}
+	};
+
+	static std::string dump(const decoded_type& decoded)
+	{
+		return fmt::format("Texture %u: Pitch: %u, Depth: %u", index, decoded.pitch(), decoded.depth());
+	}
+};
+
+#define TEXTURE_OFFSET(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_OFFSET + ((index) * 8)> : public texture_offset_helper<index> {};
+#define TEXTURE_FORMAT(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_FORMAT + ((index) * 8)> : public texture_format_helper<index> {};
+#define TEXTURE_IMAGE_RECT(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_IMAGE_RECT + ((index) * 8)> : public texture_image_rect_helper<index> {};
+#define TEXTURE_CONTROL0(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_CONTROL0 + ((index) * 8)> : public texture_control0_helper<index> {};
+#define TEXTURE_CONTROL3(index) \
+	template<> struct registers_decoder<NV4097_SET_TEXTURE_CONTROL3 + index> : public texture_control3_helper<index> {};
+
+#define DECLARE_TEXTURE_OFFSET(index) \
+	NV4097_SET_TEXTURE_OFFSET + ((index) * 8),
+#define DECLARE_TEXTURE_FORMAT(index) \
+	NV4097_SET_TEXTURE_FORMAT + ((index) * 8),
+#define DECLARE_TEXTURE_IMAGE_RECT(index) \
+	NV4097_SET_TEXTURE_IMAGE_RECT + ((index) * 8),
+#define DECLARE_TEXTURE_CONTROL0(index) \
+	NV4097_SET_TEXTURE_CONTROL0 + ((index) * 8),
+#define DECLARE_TEXTURE_CONTROL3(index) \
+	NV4097_SET_TEXTURE_CONTROL3 + index,
+
+EXPAND_RANGE_16(0, TEXTURE_OFFSET)
+EXPAND_RANGE_16(0, TEXTURE_FORMAT)
+EXPAND_RANGE_16(0, TEXTURE_IMAGE_RECT)
+EXPAND_RANGE_16(0, TEXTURE_CONTROL0)
+EXPAND_RANGE_16(0, TEXTURE_CONTROL3)
+
+template <u32 index>
+struct vertex_texture_control0_helper
+{
+	struct decoded_type
+	{
+		const u32 value;
+
+		decoded_type(u32 value) : value(value) {}
+
+		bool enabled() const
+		{
+			return bf_decoder<31, 1, bool>(value);
+		}
+
+		f32 min_lod() const
+		{
+			return rsx::decode_fxp<4, 8, false>(bf_decoder<19, 12>(value));
+		}
+
+		f32 max_lod() const
+		{
+			return rsx::decode_fxp<4, 8, false>(bf_decoder<7, 12>(value));
+		}
+	};
+
+	static std::string dump(const decoded_type& decoded)
+	{
+		return fmt::format("VTexture %u: %s, Min/Max LOD: %g/%g", index, print_boolean(decoded.enabled())
+			, decoded.min_lod(), decoded.max_lod());
+	}
+};
+
+#define VERTEX_TEXTURE_CONTROL0(index) \
+	template<> struct registers_decoder<NV4097_SET_VERTEX_TEXTURE_CONTROL0 + ((index) * 8)> : public vertex_texture_control0_helper<index> {};
+
+#define DECLARE_VERTEX_TEXTURE_CONTROL0(index) \
+	NV4097_SET_VERTEX_TEXTURE_CONTROL0 + ((index) * 8),
+
+EXPAND_RANGE_4(0, VERTEX_TEXTURE_CONTROL0)
+
 } // end namespace rsx

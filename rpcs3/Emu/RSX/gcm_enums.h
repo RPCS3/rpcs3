@@ -468,12 +468,6 @@ enum
 
 enum
 {
-	CELL_GCM_LOCATION_LOCAL = 0,
-	CELL_GCM_LOCATION_MAIN = 1,
-};
-
-enum
-{
 	CELL_GCM_FREQUENCY_MODULO = 1,
 	CELL_GCM_FREQUENCY_DIVIDE = 0,
 };
@@ -511,7 +505,7 @@ enum
 };
 
 // GCM Texture
-enum
+enum CellGcmTexture : u32
 {
 	// Color Flag
 	CELL_GCM_TEXTURE_B8 = 0x81,
@@ -815,8 +809,11 @@ enum
 };
 
 // GPU Class Handles
-enum
+enum CellGcmLocation : u32
 {
+	CELL_GCM_LOCATION_LOCAL = 0,
+	CELL_GCM_LOCATION_MAIN = 1,
+
 	CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER = 0xFEED0000, // Local memory
 	CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER = 0xFEED0001, // Main memory
 	CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL = 0x66626660,
@@ -830,7 +827,7 @@ enum
 	CELL_GCM_CONTEXT_DMA_DEVICE_R = 0x56616661
 };
 
-enum
+enum CellGcmMethod : u16
 {
 	// NV40_CHANNEL_DMA (NV406E)
 	NV406E_SET_REFERENCE = 0x00000050 >> 2,

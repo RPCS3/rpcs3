@@ -615,6 +615,8 @@ namespace rsx
 		// FIFO
 	public:
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
+		std::vector<std::pair<u32, u32>> dump_callstack() const;
+
 	protected:
 		FIFO::flattening_helper m_flattener;
 		u32 fifo_ret_addr = RSX_CALL_STACK_EMPTY;
@@ -652,6 +654,8 @@ namespace rsx
 		void recover_fifo();
 		static void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd() const;
+	
+		std::string dump_regs() const;
 
 		// Performance approximation counters
 		struct
