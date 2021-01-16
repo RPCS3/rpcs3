@@ -281,12 +281,17 @@ namespace vk
 	void create_dma_block(std::unique_ptr<dma_block>& block)
 	{
 #ifdef _WIN32
-		if (g_render_device->get_external_memory_host_support())
+		const bool allow_host_buffers = true;
+#else
+		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
+		const auto vendor = g_render_device->gpu().get_driver_vendor();
+		const bool allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV);
+#endif
+		if (g_render_device->get_external_memory_host_support() && allow_host_buffers)
 		{
 			block.reset(new dma_block_EXT());
 		}
 		else
-#endif
 		{
 			block.reset(new dma_block());
 		}
