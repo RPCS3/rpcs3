@@ -131,6 +131,7 @@ else()
 		target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
 	else()
 		# we don't have the system libusb, so we compile from submodule
+		unset(LIBUSB_LIBRARIES CACHE)
 		add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
 	endif()
 endif()
