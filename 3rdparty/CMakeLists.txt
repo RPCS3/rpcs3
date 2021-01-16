@@ -354,7 +354,7 @@ target_link_libraries(3rdparty_openal INTERFACE ${OPENAL_LIBRARY})
 set(FAUDIO_TARGET 3rdparty_dummy_lib)
 if(USE_FAUDIO)
 	# FAudio depends on SDL2
-	pkg_check_modules(SDL2 sdl2)
+	find_package(SDL2)
 	if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.0.9)
 		message("-- RPCS3: FAudio requires SDL 2.0.9 or newer.")
 	else()
