@@ -262,7 +262,7 @@ namespace utils
 		m_file = -1;
 
 		// Try to use 2MB pages for 2M-aligned shm
-		if constexpr (c_mfd_huge_2mb)
+		if constexpr (c_mfd_huge_2mb != 0)
 		{
 			if (m_size % 0x200000 == 0 && flags & 2)
 			{
