@@ -4001,6 +4001,35 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		}
 	}
 
+	// Splat scalar value from the preferred slot
+	template <typename T>
+	auto splat_scalar(T&& arg)
+	{
+		using VT = std::remove_extent_t<typename std::decay_t<T>::type>;
+
+		if constexpr (sizeof(VT) == 1)
+		{
+			return zshuffle(std::forward<T>(arg), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12);
+		}
+		else if constexpr (sizeof(VT) == 2)
+		{
+			return zshuffle(std::forward<T>(arg), 6, 6, 6, 6, 6, 6, 6, 6);
+		}
+		else if constexpr (sizeof(VT) == 4)
+		{
+			return zshuffle(std::forward<T>(arg), 3, 3, 3, 3);
+		}
+		else if constexpr (sizeof(VT) == 8)
+		{
+			return zshuffle(std::forward<T>(arg), 1, 1);
+		}
+		else
+		{
+			static_assert(sizeof(VT) == 16);
+			return std::forward<T>(arg);
+		}
+	}
+
 	void set_reg_fixed(u32 index, llvm::Value* value, bool fixup = true)
 	{
 		llvm::StoreInst* dummy{};
@@ -6468,27 +6497,27 @@ public:
 		{
 			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = (sc + (zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3)) & 0xf;
+			const auto sh = (sc + (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3)) & 0xf;
 			set_vr(op.rt, pshufb(as, sh));
 			return;
 		}
 
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = (sc - (zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3)) & 0xf;
+		const auto sh = (sc - (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3)) & 0xf;
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	void ROTQMBYBI(spu_opcode_t op)
 	{
 		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
-		const auto sh = sc + (-(zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3) & 0x1f);
+		const auto sh = sc + (-(splat_scalar(get_vr<u8[16]>(op.rb)) >> 3) & 0x1f);
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
 	void SHLQBYBI(spu_opcode_t op)
 	{
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = sc - (zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3);
+		const auto sh = sc - (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
@@ -6556,21 +6585,21 @@ public:
 	void ROTQBI(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
-		const auto b = zshuffle(get_vr(op.rb) & 0x7, 3, 3, 3, 3);
+		const auto b = splat_scalar(get_vr(op.rb) & 0x7);
 		set_vr(op.rt, fshl(a, zshuffle(a, 3, 0, 1, 2), b));
 	}
 
 	void ROTQMBI(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
-		const auto b = zshuffle(-get_vr(op.rb) & 0x7, 3, 3, 3, 3);
+		const auto b = splat_scalar(-get_vr(op.rb) & 0x7);
 		set_vr(op.rt, fshr(zshuffle(a, 1, 2, 3, 4), a, b));
 	}
 
 	void SHLQBI(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
-		const auto b = zshuffle(get_vr(op.rb) & 0x7, 3, 3, 3, 3);
+		const auto b = splat_scalar(get_vr(op.rb) & 0x7);
 		set_vr(op.rt, fshl(a, zshuffle(a, 4, 0, 1, 2), b));
 	}
 
@@ -6598,13 +6627,13 @@ public:
 		{
 			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = eval((sc + zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)) & 0xf);
+			const auto sh = eval((sc + splat_scalar(b)) & 0xf);
 			set_vr(op.rt, pshufb(as, sh));
 			return;
 		}
 
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = eval((sc - zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)) & 0xf);
+		const auto sh = eval((sc - splat_scalar(b)) & 0xf);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
@@ -6613,7 +6642,7 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
 		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
-		const auto sh = sc + (-zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f);
+		const auto sh = sc + (-splat_scalar(b) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
@@ -6622,7 +6651,7 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = sc - (zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f);
+		const auto sh = sc - (splat_scalar(b) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
