@@ -6463,6 +6463,23 @@ public:
 
 	void FSM(spu_opcode_t op)
 	{
+		// FSM following a comparison instruction
+		if (match_vr<s8[16], s16[8], s32[4], s64[2]>(op.ra, [&](auto c, auto MP)
+		{
+			using VT = typename decltype(MP)::type;
+
+			if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+			{
+					set_vr(op.rt, (splat_scalar(c)));
+					return true;
+			}
+
+			return false;
+		}))
+		{
+			return;
+		}
+
 		const auto v = extract(get_vr(op.ra), 3);
 		const auto m = bitcast<bool[4]>(trunc<i4>(v));
 		set_vr(op.rt, sext<s32[4]>(m));
