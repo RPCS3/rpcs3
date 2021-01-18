@@ -70,7 +70,6 @@ namespace vk
 		vk::clear_resolve_helpers();
 		vk::clear_dma_resources();
 		vk::vmm_reset();
-		vk::get_resource_manager()->destroy();
 		vk::clear_scratch_resources();
 
 		vk::get_upload_heap()->destroy();
@@ -86,6 +85,9 @@ namespace vk
 			p.second->destroy();
 		}
 		g_overlay_passes.clear();
+
+		// This must be the last item destroyed
+		vk::get_resource_manager()->destroy();
 	}
 
 	const vk::render_device *get_current_renderer()
@@ -262,8 +264,6 @@ namespace vk
 	{
 		return (g_num_processed_frames > 0)? g_num_processed_frames - 1: 0;
 	}
-
-
 
 	void do_query_cleanup(vk::command_buffer& cmd)
 	{

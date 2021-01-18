@@ -905,6 +905,8 @@ namespace vk
 				}
 
 				auto dma_mapping = vk::map_dma(cmd, static_cast<u32>(src_address), static_cast<u32>(data_length));
+
+				ensure(dma_mapping.second->size() >= (dma_mapping.first + data_length));
 				vk::load_dma(::narrow<u32>(src_address), data_length);
 
 				upload_buffer = dma_mapping.second;
@@ -927,7 +929,7 @@ namespace vk
 				}
 
 				// Copy from upload heap to scratch mem
-				if (!opt.deferred_cmds.empty())
+				if (opt.require_upload)
 				{
 					for (const auto& copy_cmd : opt.deferred_cmds)
 					{
@@ -953,7 +955,8 @@ namespace vk
 				scratch_offset += image_linear_size;
 				ensure((scratch_offset + image_linear_size) <= scratch_buf->size()); // "Out of scratch memory"
 			}
-			else if (opt.require_upload)
+
+			if (opt.require_upload)
 			{
 				if (upload_commands.empty() || upload_buffer->value != upload_commands.back().first)
 				{
@@ -974,7 +977,19 @@ namespace vk
 		{
 			ensure(scratch_buf);
 
-			vkCmdCopyBuffer(cmd, upload_buffer->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
+			if (upload_commands.size() > 1)
+			{
+				auto range_ptr = buffer_copies.data();
+				for (const auto& op : upload_commands)
+				{
+					vkCmdCopyBuffer(cmd, op.first, scratch_buf->value, op.second, range_ptr);
+					range_ptr += op.second;
+				}
+			}
+			else
+			{
+				vkCmdCopyBuffer(cmd, upload_buffer->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
+			}
 
 			insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, scratch_offset, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
@@ -1020,7 +1035,7 @@ namespace vk
 
 			vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
 		}
-		else if (opt.require_upload)
+		else if (upload_commands.size() > 1)
 		{
 			auto region_ptr = copy_regions.data();
 			for (const auto& op : upload_commands)
