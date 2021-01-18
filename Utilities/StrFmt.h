@@ -297,17 +297,15 @@ namespace fmt
 			raw_throw_exception({line, col, file, func}, reinterpret_cast<const char*>(fmt), type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 		}
 
-#ifdef _DEBUG
+#ifndef _MSC_VER
+#if defined(_DEBUG)
 		[[noreturn]] ~throw_exception()
 		{
-#ifdef _MSC_VER
-			__assume(false);
-#else
 			__builtin_unreachable();
-#endif
 		}
 #else
 		[[noreturn]] ~throw_exception();
+#endif
 #endif
 	};
 
