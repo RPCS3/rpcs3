@@ -297,7 +297,18 @@ namespace fmt
 			raw_throw_exception({line, col, file, func}, reinterpret_cast<const char*>(fmt), type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 		}
 
-		[[noreturn]] ~throw_exception() { std::abort(); } // Unreachable
+#ifdef _DEBUG
+		[[noreturn]] ~throw_exception()
+		{
+#ifdef _MSC_VER
+			__assume(false);
+#else
+			__builtin_unreachable();
+#endif
+		}
+#else
+		[[noreturn]] ~throw_exception();
+#endif
 	};
 
 	template <typename CharT, usz N, typename... Args>
