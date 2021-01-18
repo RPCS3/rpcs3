@@ -1188,11 +1188,15 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 
 void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip)
 {
+	if (g_cfg.core.spu_decoder > spu_decoder_type::fast)
+	{
+		fmt::throw_exception("Invalid SPU decoder");
+	}
+
 	// Select opcode table
-	const auto& table = *(
-		g_cfg.core.spu_decoder == spu_decoder_type::precise ? &g_spu_interpreter_precise.get_table() :
-		g_cfg.core.spu_decoder == spu_decoder_type::fast ? &g_spu_interpreter_fast.get_table() :
-		(fmt::throw_exception("Invalid SPU decoder"), nullptr));
+	const auto& table = *(g_cfg.core.spu_decoder == spu_decoder_type::precise
+		? &g_spu_interpreter_precise.get_table()
+		: &g_spu_interpreter_fast.get_table());
 
 	// LS pointer
 	const auto base = static_cast<const u8*>(ls);

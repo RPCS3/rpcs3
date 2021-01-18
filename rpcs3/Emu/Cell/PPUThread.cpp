@@ -126,11 +126,16 @@ static u64& ppu_ref(u32 addr)
 // Get interpreter cache value
 static u64 ppu_cache(u32 addr)
 {
+	if (g_cfg.core.ppu_decoder > ppu_decoder_type::fast)
+	{
+		fmt::throw_exception("Invalid PPU decoder");
+	}
+
 	// Select opcode table
 	const auto& table = *(
-		g_cfg.core.ppu_decoder == ppu_decoder_type::precise ? &g_ppu_interpreter_precise.get_table() :
-		g_cfg.core.ppu_decoder == ppu_decoder_type::fast ? &g_ppu_interpreter_fast.get_table() :
-		(fmt::throw_exception("Invalid PPU decoder"), nullptr));
+		g_cfg.core.ppu_decoder == ppu_decoder_type::precise
+		? &g_ppu_interpreter_precise.get_table()
+		: &g_ppu_interpreter_fast.get_table());
 
 	return reinterpret_cast<uptr>(table[ppu_decode(vm::read32(addr))]);
 }

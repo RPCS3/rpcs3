@@ -1,16 +1,16 @@
 #pragma once
 
-enum class ppu_decoder_type
+enum class ppu_decoder_type : unsigned
 {
-	precise,
-	fast,
+	precise = 0, // Don't change (0)
+	fast, // Don't change (1)
 	llvm,
 };
 
-enum class spu_decoder_type
+enum class spu_decoder_type : unsigned
 {
-	precise,
-	fast,
+	precise = 0, // Don't change (0)
+	fast, // Don't change (1)
 	asmjit,
 	llvm,
 };
