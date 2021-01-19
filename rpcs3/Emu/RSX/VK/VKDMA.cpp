@@ -4,6 +4,7 @@
 #include "vkutils/device.h"
 
 #include "Emu/Memory/vm.h"
+#include "Utilities/mutex.h"
 
 #include "util/asm.hpp"
 #include <unordered_map>
@@ -14,6 +15,10 @@ namespace vk
 	static constexpr u32 s_dma_block_mask   = 0xFFFF0000;
 
 	std::unordered_map<u32, std::unique_ptr<dma_block>> g_dma_pool;
+	shared_mutex g_dma_mutex;
+
+	// Validation
+	atomic_t<u64> s_allocated_dma_pool_size{ 0 };
 
 	dma_block::~dma_block()
 	{
@@ -55,12 +60,16 @@ namespace vk
 		allocated_memory = std::make_unique<vk::buffer>(dev, size,
 			dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+
+		s_allocated_dma_pool_size += allocated_memory->size();
 	}
 
 	void dma_block::free()
 	{
 		if (allocated_memory)
 		{
+			s_allocated_dma_pool_size -= allocated_memory->size();
+
 			auto gc = vk::get_resource_manager();
 			gc->dispose(allocated_memory);
 		}
@@ -68,15 +77,17 @@ namespace vk
 
 	void dma_block::init(const render_device& dev, u32 addr, usz size)
 	{
-		ensure(size);
-		ensure(!(size % s_dma_block_length));
+		ensure((size > 0) && !((size | addr) & ~s_dma_block_mask));
 		base_address = addr;
 
 		allocate(dev, size);
+		ensure(!inheritance_info.parent);
 	}
 
 	void dma_block::init(dma_block* parent, u32 addr, usz size)
 	{
+		ensure((size > 0) && !((size | addr) & ~s_dma_block_mask));
+
 		base_address = addr;
 		inheritance_info.parent = parent;
 		inheritance_info.block_offset = (addr - parent->base_address);
@@ -135,6 +146,7 @@ namespace vk
 	void dma_block::set_parent(const command_buffer& cmd, dma_block* parent)
 	{
 		ensure(parent);
+		ensure(parent->base_address < base_address);
 		if (inheritance_info.parent == parent)
 		{
 			// Nothing to do
@@ -149,9 +161,6 @@ namespace vk
 			// Acquired blocks are always to be assumed dirty. It is not possible to synchronize host access and inline
 			// buffer copies without causing weird issues. Overlapped incomplete data ends up overwriting host-uploaded data.
 			free();
-
-			//parent->set_page_info(inheritance_info.block_offset, page_info);
-			//page_info.clear();
 		}
 	}
 
@@ -162,9 +171,6 @@ namespace vk
 			return;
 
 		allocate(dev, new_size);
-
-		//const auto required_entries = new_size / s_bytes_per_entry;
-		//page_info.resize(required_entries, ~0ull);
 	}
 
 	u32 dma_block::start() const
@@ -193,6 +199,8 @@ namespace vk
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 			vm::get_super_ptr<void>(base_address),
 			size);
+
+		s_allocated_dma_pool_size += allocated_memory->size();
 	}
 
 	void* dma_block_EXT::map_range(const utils::address_range& range)
@@ -275,46 +283,42 @@ namespace vk
 
 	std::pair<u32, vk::buffer*> map_dma(const command_buffer& cmd, u32 local_address, u32 length)
 	{
+		// Not much contention expected here, avoid searching twice
+		std::lock_guard lock(g_dma_mutex);
+
 		const auto map_range = utils::address_range::start_length(local_address, length);
-		const auto first_block = (local_address & s_dma_block_mask);
-		const auto limit = local_address + length - 1;
-		auto last_block = (limit & s_dma_block_mask);
+		auto first_block = (local_address & s_dma_block_mask);
 
 		if (auto found = g_dma_pool.find(first_block); found != g_dma_pool.end())
 		{
-			if (found->second->end() >= limit)
+			if (found->second->end() >= map_range.end)
 			{
 				return found->second->get(map_range);
 			}
 		}
 
+		auto last_block = (map_range.end & s_dma_block_mask);
 		if (first_block == last_block) [[likely]]
 		{
 			auto &block_info = g_dma_pool[first_block];
 			ensure(!block_info);
+
 			create_dma_block(block_info, first_block, s_dma_block_length);
 			return block_info->get(map_range);
 		}
 
-		dma_block* block_head = nullptr;
-		auto block_end = utils::align(limit, s_dma_block_length);
-
-		if (g_render_device->gpu().get_driver_vendor() != driver_vendor::NVIDIA ||
-			rsx::get_location(local_address) == CELL_GCM_LOCATION_LOCAL)
+		// Scan range for overlapping sections and update 'chains' accordingly
+		for (auto block = first_block; block <= last_block; block += s_dma_block_length)
 		{
-			// Reverse scan to try and find the minimum required length in case of other chaining
-			for (auto block = last_block; block != first_block; block -= s_dma_block_length)
+			if (auto& entry = g_dma_pool[block])
 			{
-				if (auto found = g_dma_pool.find(block); found != g_dma_pool.end())
-				{
-					const auto end = found->second->end();
-					last_block = std::max(last_block, end & s_dma_block_mask);
-					block_end = std::max(block_end, end + 1);
-
-					break;
-				}
+				first_block = std::min(first_block, entry->head()->start() & s_dma_block_mask);
+				last_block = std::max(last_block, entry->end() & s_dma_block_mask);
 			}
 		}
+
+		std::vector<std::unique_ptr<dma_block>> stale_references;
+		dma_block* block_head = nullptr;
 
 		for (auto block = first_block; block <= last_block; block += s_dma_block_length)
 		{
@@ -323,23 +327,21 @@ namespace vk
 
 			if (block == first_block)
 			{
-				if (entry && entry->end() < limit)
+				if (entry)
 				{
 					// Then the references to this object do not go to the end of the list as will be done with this new allocation.
 					// A dumb release is therefore safe...
-					entry.reset();
+					ensure(entry->end() < map_range.end);
+					stale_references.push_back(std::move(entry));
 				}
 
-				if (!entry)
-				{
-					auto required_size = (block_end - block);
-					create_dma_block(entry, block, required_size);
-				}
-
+				auto required_size = (last_block - first_block + s_dma_block_length);
+				create_dma_block(entry, block, required_size);
 				block_head = entry->head();
 			}
 			else if (entry)
 			{
+				ensure((entry->end() & s_dma_block_mask) <= last_block);
 				entry->set_parent(cmd, block_head);
 			}
 			else
@@ -349,6 +351,10 @@ namespace vk
 			}
 		}
 
+		// Check that all the math adds up...
+		stale_references.clear();
+		ensure(s_allocated_dma_pool_size == g_dma_pool.size() * s_dma_block_length);
+
 		ensure(block_head);
 		return block_head->get(map_range);
 	}
@@ -356,6 +362,8 @@ namespace vk
 	template<bool load>
 	void sync_dma_impl(u32 local_address, u32 length)
 	{
+		reader_lock lock(g_dma_mutex);
+
 		const auto limit = local_address + length - 1;
 		while (length)
 		{
