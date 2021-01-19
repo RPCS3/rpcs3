@@ -649,7 +649,7 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 			reinterpret_cast<le_t<u32>&>(data[(index * 0x40) + 0x36]) = 0x69080F7F;
 		}
 		// Set the skylander infos
-		reinterpret_cast<le_t<u32>&>(data[0])    = (sky_id << 16) | sky_var;
+		reinterpret_cast<le_t<u16>&>(data[0])    = (sky_id | sky_var) + 1;
 		reinterpret_cast<le_t<u16>&>(data[0x10]) = sky_id;
 		reinterpret_cast<le_t<u16>&>(data[0x1C]) = sky_var;
 		// Set checksum
