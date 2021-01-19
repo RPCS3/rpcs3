@@ -914,15 +914,6 @@ void ppu_thread::exec_task()
 
 ppu_thread::~ppu_thread()
 {
-	// Deallocate Stack Area
-	ensure(vm::dealloc(stack_addr, vm::stack));
-
-	if (const auto dct = g_fxo->get<lv2_memory_container>())
-	{
-		dct->used -= stack_size;
-	}
-
-	perf_log.notice("Perf stats for STCX reload: successs %u, failure %u", last_succ, last_fail);
 }
 
 ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u32 prio, int detached)
