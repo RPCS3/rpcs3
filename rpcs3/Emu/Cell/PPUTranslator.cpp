@@ -1975,7 +1975,6 @@ void PPUTranslator::SC(ppu_opcode_t op)
 
 		if (index < 1024)
 		{
-			// Call the syscall directly
 			Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread)->setTailCallKind(llvm::CallInst::TCK_Tail);
 			m_ir->CreateRetVoid();
 			return;
@@ -2491,7 +2490,6 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 
 		if (pos >= 8 || 0x80u >> pos != op.crm)
 		{
-			CompilationError("MFOCRF: Undefined behaviour");
 			SetGpr(op.rd, UndefValue::get(GetType<u64>()));
 			return;
 		}
@@ -2771,7 +2769,6 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 
 		if (pos >= 8 || 0x80u >> pos != op.crm)
 		{
-			CompilationError("MTOCRF: Undefined behaviour");
 			return;
 		}
 	}
@@ -3220,7 +3217,6 @@ void PPUTranslator::LDBRX(ppu_opcode_t op)
 
 void PPUTranslator::LSWX(ppu_opcode_t op)
 {
-	CompilationError("Unsupported instruction LSWX. Please report.");
 	Call(GetType<void>(), "__lswx_not_supported", m_ir->getInt32(op.rd), RegLoad(m_cnt), op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb));
 }
 
@@ -3338,7 +3334,6 @@ void PPUTranslator::STDBRX(ppu_opcode_t op)
 
 void PPUTranslator::STSWX(ppu_opcode_t op)
 {
-	CompilationError("Unsupported instruction STSWX. Please report.");
 	Call(GetType<void>(), "__stswx_not_supported", m_ir->getInt32(op.rs), RegLoad(m_cnt), op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb));
 }
 
@@ -4154,8 +4149,6 @@ void PPUTranslator::FNMADDS(ppu_opcode_t op)
 
 void PPUTranslator::MTFSB1(ppu_opcode_t op)
 {
-	CompilationError("MTFSB1");
-
 	SetFPSCRBit(op.crbd, m_ir->getTrue(), true);
 
 	if (op.rc) SetCrFieldFPCC(1);
@@ -4163,8 +4156,6 @@ void PPUTranslator::MTFSB1(ppu_opcode_t op)
 
 void PPUTranslator::MCRFS(ppu_opcode_t op)
 {
-	CompilationError("MCRFS");
-
 	const auto lt = GetFPSCRBit(op.crfs * 4 + 0);
 	const auto gt = GetFPSCRBit(op.crfs * 4 + 1);
 	const auto eq = GetFPSCRBit(op.crfs * 4 + 2);
@@ -4174,8 +4165,6 @@ void PPUTranslator::MCRFS(ppu_opcode_t op)
 
 void PPUTranslator::MTFSB0(ppu_opcode_t op)
 {
-	CompilationError("MTFSB0");
-
 	SetFPSCRBit(op.crbd, m_ir->getFalse(), false);
 
 	if (op.rc) SetCrFieldFPCC(1);
@@ -4183,8 +4172,6 @@ void PPUTranslator::MTFSB0(ppu_opcode_t op)
 
 void PPUTranslator::MTFSFI(ppu_opcode_t op)
 {
-	CompilationError("MTFSFI");
-
 	SetFPSCRBit(op.crfd * 4 + 0, m_ir->getInt1((op.i & 8) != 0), false);
 	if (op.crfd != 0) SetFPSCRBit(op.crfd * 4 + 1, m_ir->getInt1((op.i & 4) != 0), false);
 	if (op.crfd != 0) SetFPSCRBit(op.crfd * 4 + 2, m_ir->getInt1((op.i & 2) != 0), false);
@@ -4195,8 +4182,6 @@ void PPUTranslator::MTFSFI(ppu_opcode_t op)
 
 void PPUTranslator::MFFS(ppu_opcode_t op)
 {
-	ppu_log.warning("LLVM: [0x%08x] Warning: MFFS", m_addr + (m_reloc ? m_reloc->addr : 0));
-
 	Value* result = m_ir->getInt64(0);
 
 	for (u32 i = 16; i < 20; i++)
@@ -4211,8 +4196,6 @@ void PPUTranslator::MFFS(ppu_opcode_t op)
 
 void PPUTranslator::MTFSF(ppu_opcode_t op)
 {
-	ppu_log.warning("LLVM: [0x%08x] Warning: MTFSF", m_addr + (m_reloc ? m_reloc->addr : 0));
-
 	const auto value = GetFpr(op.frb, 32, true);
 
 	for (u32 i = 16; i < 20; i++)

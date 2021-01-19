@@ -3,6 +3,7 @@
 
 #include "PPUOpcodes.h"
 #include "PPUModule.h"
+#include "Emu/system_config.h"
 
 #include <unordered_set>
 #include "util/yaml.hpp"
@@ -577,7 +578,6 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		func_queue.emplace_back(func);
 		func.addr = addr;
 		func.toc = toc;
-		func.name = fmt::format("__0x%x", func.addr);
 		ppu_log.trace("Function 0x%x added (toc=0x%x)", addr, toc);
 		return func;
 	};
@@ -1432,7 +1432,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		// Just ensure that functions don't overlap
 		if (func.addr + func.size > next)
 		{
-			ppu_log.warning("Function overlap: [0x%x] 0x%x -> 0x%x", func.addr, func.size, next - func.addr);
+			ppu_log.trace("Function overlap: [0x%x] 0x%x -> 0x%x", func.addr, func.size, next - func.addr);
 			continue; //func.size = next - func.addr;
 
 			// Also invalidate blocks
@@ -1502,7 +1502,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 
 			if (_ptr.addr() >= next)
 			{
-				ppu_log.warning("Function gap: [0x%x] 0x%x bytes at 0x%x", func.addr, next - start, start);
+				ppu_log.trace("Function gap: [0x%x] 0x%x bytes at 0x%x", func.addr, next - start, start);
 				break;
 			}
 		}
@@ -1522,15 +1522,200 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		}
 	}
 
-	// Convert map to vector (destructive)
-	for (auto&& pair : fmap)
+	ppu_log.notice("Function analysis: %zu functions (%zu enqueued)", fmap.size(), func_queue.size());
+
+	// Decompose functions to basic blocks
+	for (auto&& [_, func] : as_rvalue(std::move(fmap)))
 	{
-		auto& func = pair.second;
-		ppu_log.trace("Function %s (size=0x%x, toc=0x%x, attr %#x)", func.name, func.size, func.toc, func.attr);
-		funcs.emplace_back(std::move(func));
+		for (auto [addr, size] : func.blocks)
+		{
+			if (!size)
+			{
+				continue;
+			}
+
+			auto& block = fmap[addr];
+
+			if (block.addr || block.size)
+			{
+				ppu_log.trace("Block __0x%x exists (size=0x%x)", block.addr, block.size);
+				continue;
+			}
+
+			block.addr = addr;
+			block.size = size;
+			block.toc  = func.toc;
+			ppu_log.trace("Block __0x%x added (func=0x%x, size=0x%x, toc=0x%x)", block.addr, _, block.size, block.toc);
+		}
 	}
 
-	ppu_log.notice("Function analysis: %zu functions (%zu enqueued)", funcs.size(), func_queue.size());
+	// Simple callable block analysis
+	std::vector<std::pair<u32, u32>> block_queue;
+	block_queue.reserve(128000);
+
+	std::unordered_set<u32> block_set;
+
+	u32 exp = start;
+	u32 lim = end;
+
+	// Start with full scan
+	block_queue.emplace_back(exp, lim);
+
+	// block_queue may grow
+	for (usz i = 0; i < block_queue.size(); i++)
+	{
+		std::tie(exp, lim) = block_queue[i];
+
+		if (lim == 0)
+		{
+			// Find next function
+			const auto found = fmap.upper_bound(exp);
+
+			if (found != fmap.cend())
+			{
+				lim = found->first;
+			}
+
+			ppu_log.trace("Block rescan: addr=0x%x, lim=0x%x", exp, lim);
+		}
+
+		while (exp < lim)
+		{
+			u32 i_pos = exp;
+
+			bool is_good = true;
+
+			for (; i_pos < lim; i_pos += 4)
+			{
+				const u32 opc = vm::_ref<u32>(i_pos);
+
+				switch (auto type = s_ppu_itype.decode(opc))
+				{
+				case ppu_itype::UNK:
+				case ppu_itype::ECIWX:
+				case ppu_itype::ECOWX:
+				{
+					// Seemingly bad instruction, skip this block
+					is_good = false;
+					break;
+				}
+				case ppu_itype::TD:
+				case ppu_itype::TDI:
+				case ppu_itype::TW:
+				case ppu_itype::TWI:
+				case ppu_itype::B:
+				case ppu_itype::BC:
+				{
+					if (type == ppu_itype::B || type == ppu_itype::BC)
+					{
+						if (entry == 0 && ppu_opcode_t{opc}.aa)
+						{
+							// Ignore absolute branches in PIC (PRX)
+							is_good = false;
+							break;
+						}
+
+						const u32 target = (opc & 2 ? 0 : i_pos) + (type == ppu_itype::B ? +ppu_opcode_t{opc}.bt24 : +ppu_opcode_t{opc}.bt14);
+
+						if (target < start || target >= end)
+						{
+							// Sanity check
+							is_good = false;
+							break;
+						}
+
+						const auto found = fmap.find(target);
+
+						if (target != i_pos && found == fmap.cend())
+						{
+							if (block_set.count(target) == 0)
+							{
+								ppu_log.trace("Block target found: 0x%x (i_pos=0x%x)", target, i_pos);
+								block_queue.emplace_back(target, 0);
+								block_set.emplace(target);
+							}
+						}
+					}
+
+					[[fallthrough]];
+				}
+				case ppu_itype::BCCTR:
+				case ppu_itype::BCLR:
+				case ppu_itype::SC:
+				{
+					if (type == ppu_itype::SC && opc != ppu_instructions::SC(0))
+					{
+						// Strict garbage filter
+						is_good = false;
+						break;
+					}
+
+					if (type == ppu_itype::BCCTR && opc & 0xe000)
+					{
+						// Garbage filter
+						is_good = false;
+						break;
+					}
+
+					if (type == ppu_itype::BCLR && opc & 0xe000)
+					{
+						// Garbage filter
+						is_good = false;
+						break;
+					}
+
+					// Good block terminator found, add single block
+					break;
+				}
+				default:
+				{
+					// Normal instruction: keep scanning
+					continue;
+				}
+				}
+
+				break;
+			}
+
+			if (i_pos < lim)
+			{
+				i_pos += 4;
+			}
+
+			if (is_good)
+			{
+				auto& block = fmap[exp];
+
+				if (!block.addr)
+				{
+					block.addr = exp;
+					block.size = i_pos - exp;
+					ppu_log.trace("Block __0x%x added (size=0x%x)", block.addr, block.size);
+				}
+			}
+
+			exp = i_pos;
+		}
+	}
+
+	// Remove overlaps in blocks
+	for (auto it = fmap.begin(), end = fmap.end(); it != fmap.end(); it++)
+	{
+		const auto next = std::next(it);
+
+		if (next != end && next->first < it->first + it->second.size)
+		{
+			it->second.size = next->first - it->first;
+		}
+	}
+
+	// Convert map to vector (destructive)
+	for (auto&& pair : as_rvalue(std::move(fmap)))
+	{
+		funcs.emplace_back(std::move(pair.second));
+	}
+
+	ppu_log.notice("Block analysis: %zu blocks (%zu enqueued)", funcs.size(), block_queue.size());
 }
 
 void ppu_acontext::UNK(ppu_opcode_t op)

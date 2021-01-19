@@ -467,7 +467,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 
 				if (i < lib.num_func)
 				{
-					ppu_loader.notice("** Special: [%s] at 0x%x", ppu_get_function_name({}, nid), addr);
+					ppu_loader.notice("** Special: [%s] at 0x%x [0x%x, 0x%x]", ppu_get_function_name({}, nid), addr, vm::_ref<u32>(addr), vm::_ref<u32>(addr + 4));
 				}
 				else
 				{

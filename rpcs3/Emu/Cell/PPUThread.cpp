@@ -2595,30 +2595,41 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		// Overall block size in bytes
 		usz bsize = 0;
+		usz bcount = 0;
 
 		while (fpos < info.funcs.size())
 		{
 			auto& func = info.funcs[fpos];
 
+			if (!func.size)
+			{
+				fpos++;
+				continue;
+			}
+
 			if (bsize + func.size > 100 * 1024 && bsize)
 			{
-				break;
+				if (bcount >= 1000)
+				{
+					break;
+				}
 			}
 
-			for (auto&& block : func.blocks)
+			// Copy block or function entry
+			ppu_function& entry = part.funcs.emplace_back(func);
+
+			// Fixup some information
+			entry.name = fmt::format("__0x%x", entry.addr - reloc);
+
+			if (entry.blocks.empty())
 			{
-				bsize += block.second;
-
-				// Also split functions blocks into functions (TODO)
-				ppu_function entry;
-				entry.addr = block.first;
-				entry.size = block.second;
-				entry.toc  = func.toc;
-				fmt::append(entry.name, "__0x%x", block.first - reloc);
-				part.funcs.emplace_back(std::move(entry));
+				entry.blocks.emplace(func.addr, func.size);
 			}
+
+			bsize += func.size;
 
 			fpos++;
+			bcount++;
 		}
 
 		// Compute module hash to generate (hopefully) unique object name
@@ -2726,6 +2737,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				java_mode_handling,
 				accurate_cache_line_stores,
 				reservations_128_byte,
+				greedy_mode,
 
 				__bitset_enum_max
 			};
@@ -2736,25 +2748,17 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			settings += ppu_settings::non_win32;
 #endif
 			if (g_cfg.core.llvm_accurate_dfma)
-			{
 				settings += ppu_settings::accurate_fma;
-			}
 			if (g_cfg.core.llvm_ppu_accurate_vector_nan)
-			{
 				settings += ppu_settings::accurate_ppu_vector_nan;
-			}
 			if (g_cfg.core.llvm_ppu_jm_handling)
-			{
 				settings += ppu_settings::java_mode_handling;
-			}
 			if (has_dcbz == 2)
-			{
 				settings += ppu_settings::accurate_cache_line_stores;
-			}
 			if (g_cfg.core.ppu_128_reservations_loop_max_length)
-			{
 				settings += ppu_settings::reservations_128_byte;
-			}
+			if (g_cfg.core.ppu_llvm_greedy_mode)
+				settings += ppu_settings::greedy_mode;
 
 			// Write version, hash, CPU, settings
 			fmt::append(obj_name, "v3-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
@@ -2899,21 +2903,15 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		{
 			if (!func.size) continue;
 
-			for (const auto& block : func.blocks)
-			{
-				if (block.second)
-				{
-					const u64 addr = jit->get(fmt::format("__0x%x", block.first - reloc));
-					jit_mod.funcs.emplace_back(reinterpret_cast<ppu_function_t>(addr));
-					ppu_ref(block.first) = addr;
-				}
-			}
+			const u64 addr = ensure(jit->get(fmt::format("__0x%x", func.addr - reloc)));
+			jit_mod.funcs.emplace_back(reinterpret_cast<ppu_function_t>(addr));
+			ppu_ref(func.addr) = addr;
 		}
 
 		// Initialize global variables
 		for (auto& var : globals)
 		{
-			const u64 addr = jit->get(var.first);
+			const u64 addr = ensure(jit->get(var.first));
 
 			jit_mod.vars.emplace_back(reinterpret_cast<u64*>(addr));
 
@@ -2932,13 +2930,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		{
 			if (!func.size) continue;
 
-			for (const auto& block : func.blocks)
-			{
-				if (block.second)
-				{
-					ppu_ref(block.first) = reinterpret_cast<uptr>(jit_mod.funcs[index++]);
-				}
-			}
+			ppu_ref(func.addr) = ensure(reinterpret_cast<uptr>(jit_mod.funcs[index++]));
 		}
 
 		index = 0;
@@ -2989,6 +2981,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		{
 			const auto f = cast<Function>(_module->getOrInsertFunction(func.name, _func).getCallee());
 			f->addAttribute(1, Attribute::NoAlias);
+			f->addFnAttr(Attribute::NoUnwind);
 		}
 	}
 
