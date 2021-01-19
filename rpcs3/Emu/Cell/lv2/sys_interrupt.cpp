@@ -22,18 +22,14 @@ void lv2_int_serv::exec()
 	thread_ctrl::notify(*thread);
 }
 
-bool interrupt_thread_exit(ppu_thread& ppu)
-{
-	ppu.state += cpu_flag::exit;
-	return false;
-}
+bool ppu_thread_exit(ppu_thread& ppu);
 
 void lv2_int_serv::join()
 {
 	thread->cmd_list
 	({
 		{ ppu_cmd::ptr_call, 0 },
-		std::bit_cast<u64>(&interrupt_thread_exit)
+		std::bit_cast<u64>(&ppu_thread_exit)
 	});
 
 	thread_ctrl::notify(*thread);

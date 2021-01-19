@@ -1675,26 +1675,12 @@ void spu_thread::cpu_task()
 	}
 }
 
-spu_thread::~spu_thread()
+void spu_thread::cleanup()
 {
-	{
-		vm::writer_lock(0);
+	const u32 addr = group ? SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (id & 0xffffff) : RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index;
 
-		for (s32 i = -1; i < 2; i++)
-		{
-			// Unmap LS mirrors
-			shm->unmap_critical(ls + (i * SPU_LS_SIZE));
-		}
-	}
-
-	if (!group)
-	{
-		// Deallocate local storage (thread groups are handled in sys_spu.cpp)
-		ensure(vm::dealloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, vm::spu));
-	}
-
-	// Release LS mirrors area
-	utils::memory_release(ls - (SPU_LS_SIZE * 2), SPU_LS_SIZE * 5);
+	// Deallocate local storage
+	ensure(vm::dealloc(addr, vm::spu, &shm));
 
 	// Deallocate RawSPU ID
 	if (get_type() >= spu_type::raw)
@@ -1710,14 +1696,28 @@ spu_thread::~spu_thread()
 	perf_log.notice("Perf stats for PUTLLC reload: successs %u, failure %u", last_succ, last_fail);
 }
 
+spu_thread::~spu_thread()
+{
+	{
+		vm::writer_lock lock(0);
+
+		for (s32 i = -1; i < 2; i++)
+		{
+			// Unmap LS mirrors
+			shm->unmap_critical(ls + (i * SPU_LS_SIZE));
+		}
+	}
+
+	// Release LS mirrors area
+	utils::memory_release(ls - (SPU_LS_SIZE * 2), SPU_LS_SIZE * 5);
+}
+
 spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)
 	: cpu_thread(idm::last_id())
 	, index(index)
 	, shm(std::make_shared<utils::shm>(SPU_LS_SIZE))
 	, ls([&]()
 	{
-		const auto addr = static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 5));
-
 		if (!group)
 		{
 			ensure(vm::get(vm::spu)->falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, &shm));
@@ -1728,7 +1728,9 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 			ensure(vm::get(vm::spu)->falloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (cpu_thread::id & 0xffffff), SPU_LS_SIZE, &shm, 0x1000));
 		}
 
-		vm::writer_lock(0);
+		vm::writer_lock lock(0);
+
+		const auto addr = static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 5));
 
 		for (u32 i = 1; i < 4; i++)
 		{
