@@ -298,14 +298,7 @@ namespace fmt
 		}
 
 #ifndef _MSC_VER
-#if defined(_DEBUG)
-		[[noreturn]] ~throw_exception()
-		{
-			__builtin_unreachable();
-		}
-#else
 		[[noreturn]] ~throw_exception();
-#endif
 #endif
 	};
 
