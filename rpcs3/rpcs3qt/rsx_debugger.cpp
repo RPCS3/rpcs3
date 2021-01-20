@@ -744,7 +744,7 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 {
 	std::string disasm;
 
-#define DISASM(string, ...) { if(disasm.empty()) disasm = fmt::format((string), ##__VA_ARGS__); else disasm += (' ' + fmt::format((string), ##__VA_ARGS__)); }
+#define DISASM(string, ...) { disasm.empty() ? fmt::append(disasm, ("" string), ##__VA_ARGS__) : fmt::append(disasm, (" " string), ##__VA_ARGS__); }
 
 	if (cmd & RSX_METHOD_NON_METHOD_CMD_MASK)
 	{
@@ -780,7 +780,8 @@ QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr)
 	{
 		const auto args = vm::get_super_ptr<u32>(rsx::get_current_renderer()->iomap_table.get_addr(ioAddr + 4));
 
-		u32 index = 0;
+		[[maybe_unused]] u32 index = 0;
+
 		switch((cmd & 0x3ffff) >> 2)
 		{
 		case 0x3fead:

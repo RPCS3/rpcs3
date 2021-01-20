@@ -143,9 +143,22 @@ void fmt_class_string<CellGcmLocation>::format(std::string& out, u64 arg)
 		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER: return "Main-Buffer"; // Main memory for DMA operations
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL: return "Report Local";
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN: return  "Report Main";
-		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0: return "Notify"; // TODO
-
-		//case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0:
+		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0: return "_Notify0";
+		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_1: return "_Notify1";
+		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_2: return "_Notify2";
+		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_3: return "_Notify3";
+		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_4: return "_Notify4";
+		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_5: return "_Notify5";
+		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_6: return "_Notify6";
+		case CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_7: return "_Notify7";
+		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0: return "_Get-Notify0";
+		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY1: return "_Get-Notify1";
+		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY2: return "_Get-Notify2";
+		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY3: return "_Get-Notify3";
+		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY4: return "_Get-Notify4";
+		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY5: return "_Get-Notify5";
+		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY6: return "_Get-Notify6";
+		case CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY7: return "_Get-Notify7";
 		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW: return "SEMA-RW";
 		case CELL_GCM_CONTEXT_DMA_SEMAPHORE_R: return "SEMA-R";
 		case CELL_GCM_CONTEXT_DMA_DEVICE_RW: return "DEVICE-RW";
