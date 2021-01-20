@@ -272,7 +272,7 @@ public:
 	{
 		u16 in_register_mask = 0;
 
-		u16 tex2d_sampler_mask = 0;
+		u16 common_access_sampler_mask = 0;
 		u16 shadow_sampler_mask = 0;
 		u16 redirected_sampler_mask = 0;
 
