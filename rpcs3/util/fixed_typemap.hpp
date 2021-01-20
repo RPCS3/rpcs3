@@ -12,9 +12,8 @@ namespace stx
 		// Destroy list element
 		struct destroy_info
 		{
-			void** object_pointer;
+			std::shared_ptr<void>* object_pointer;
 			unsigned long long created;
-			void(*destroy)(void*& ptr) noexcept;
 
 			static void sort_by_reverse_creation_order(destroy_info* begin, destroy_info* end);
 		};
@@ -27,11 +26,10 @@ namespace stx
 		// Save default constructor and destructor
 		struct typeinfo
 		{
-			void(*create)(void*& ptr) noexcept;
-			void(*destroy)(void*& ptr) noexcept;
+			void(*create)(std::shared_ptr<void>& ptr) noexcept;
 
 			template <typename T>
-			static void call_ctor(void*& ptr) noexcept
+			static void call_ctor(std::shared_ptr<void>& ptr) noexcept
 			{
 				// Don't overwrite if already exists
 				if (!ptr)
@@ -39,16 +37,9 @@ namespace stx
 					// Call default constructor only if available
 					if constexpr (std::is_default_constructible_v<T>)
 					{
-						ptr = new T();
+						ptr = std::make_shared<T>();
 					}
 				}
-			}
-
-			template <typename T>
-			static void call_dtor(void*& ptr) noexcept
-			{
-				delete static_cast<T*>(ptr);
-				ptr = nullptr;
 			}
 
 			template <typename T>
@@ -56,13 +47,12 @@ namespace stx
 			{
 				typeinfo r;
 				r.create = &call_ctor<T>;
-				r.destroy = &call_dtor<T>;
 				return r;
 			}
 		};
 
-		// Raw pointers to existing objects (may be nullptr)
-		std::unique_ptr<void*[]> m_list;
+		// Smart pointers to existing objects (may be nullptr)
+		std::unique_ptr<std::shared_ptr<void>[]> m_list;
 
 		// Creation order for each object (used to reverse destruction order)
 		std::unique_ptr<unsigned long long[]> m_order;
@@ -111,7 +101,7 @@ namespace stx
 
 			if (!m_list)
 			{
-				m_list = std::make_unique<void*[]>(total_count);
+				m_list = std::make_unique<std::shared_ptr<void>[]>(total_count);
 				m_order = std::make_unique<unsigned long long[]>(total_count);
 				return;
 			}
@@ -134,7 +124,6 @@ namespace stx
 
 				all_data[_max].object_pointer = &m_list[type.index()];
 				all_data[_max].created = m_order[type.index()];
-				all_data[_max].destroy = type.destroy;
 
 				// Clear creation order
 				m_order[type.index()] = 0;
@@ -147,7 +136,7 @@ namespace stx
 			// Destroy objects in correct order
 			for (unsigned i = 0; i < _max; i++)
 			{
-				all_data[i].destroy(*all_data[i].object_pointer);
+				all_data[i].object_pointer->reset();
 			}
 
 			// Reset creation order since it now may be printed
@@ -185,15 +174,11 @@ namespace stx
 		{
 			auto& ptr = m_list[stx::typeindex<typeinfo, std::decay_t<T>>()];
 
-			if (ptr)
-			{
-				delete static_cast<T*>(ptr);
-			}
+			ptr.reset();
 
-			As* obj = new std::decay_t<As>(std::forward<Args>(args)...);
 			m_order[stx::typeindex<typeinfo, std::decay_t<T>>()] = ++m_init_count;
-			ptr = static_cast<T*>(obj);
-			return obj;
+			ptr = std::make_shared<std::decay_t<As>>(std::forward<Args>(args)...);
+			return static_cast<As*>(ptr.get());
 		}
 
 		// CTAD adaptor for init (see init description), accepts template not type
@@ -209,7 +194,14 @@ namespace stx
 		template <typename T>
 		T* get() const noexcept
 		{
-			return static_cast<T*>(m_list[stx::typeindex<typeinfo, std::decay_t<T>>()]);
+			return static_cast<T*>(m_list[stx::typeindex<typeinfo, std::decay_t<T>>()].get());
+		}
+
+		// Obtain weak object pointer (only safe to use on GUI thread)
+		template <typename T>
+		std::weak_ptr<T> smart() const noexcept
+		{
+			return std::static_pointer_cast<T>(m_list[stx::typeindex<typeinfo, std::decay_t<T>>()]);
 		}
 	};
 }
