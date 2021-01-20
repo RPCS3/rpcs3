@@ -35,9 +35,9 @@ public:
 	static std::string ip_to_string(u32 addr);
 	static std::string ether_to_string(std::array<u8, 6>& ether);
 	// Helpers for setting various structures from string
-	static void string_to_npid(const char* str, SceNpId* npid);
-	static void string_to_online_name(const char* str, SceNpOnlineName* online_name);
-	static void string_to_avatar_url(const char* str, SceNpAvatarUrl* avatar_url);
+	static void string_to_npid(const std::string&, SceNpId* npid);
+	static void string_to_online_name(const std::string&, SceNpOnlineName* online_name);
+	static void string_to_avatar_url(const std::string&, SceNpAvatarUrl* avatar_url);
 
 	// DNS hooking functions
 	void add_dns_spy(u32 sock);

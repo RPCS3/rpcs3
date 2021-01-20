@@ -282,24 +282,21 @@ std::string np_handler::ether_to_string(std::array<u8, 6>& ether)
 	return fmt::format("%02X:%02X:%02X:%02X:%02X:%02X", ether[0], ether[1], ether[2], ether[3], ether[4], ether[5]);
 }
 
-void np_handler::string_to_npid(const char* str, SceNpId* npid)
+void np_handler::string_to_npid(const std::string& str, SceNpId* npid)
 {
 	memset(npid, 0, sizeof(SceNpId));
-	strncpy(npid->handle.data, str, sizeof(npid->handle.data));
-	npid->handle.term = 0;
+	strcpy_trunc(npid->handle.data, str);
 	// npid->reserved[0] = 1;
 }
 
-void np_handler::string_to_online_name(const char* str, SceNpOnlineName* online_name)
+void np_handler::string_to_online_name(const std::string& str, SceNpOnlineName* online_name)
 {
-	strncpy(online_name->data, str, sizeof(online_name->data));
-	online_name->term = 0;
+	strcpy_trunc(online_name->data, str);
 }
 
-void np_handler::string_to_avatar_url(const char* str, SceNpAvatarUrl* avatar_url)
+void np_handler::string_to_avatar_url(const std::string& str, SceNpAvatarUrl* avatar_url)
 {
-	strncpy(avatar_url->data, str, sizeof(avatar_url->data));
-	avatar_url->term = 0;
+	strcpy_trunc(avatar_url->data, str);
 }
 
 void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
@@ -319,7 +316,7 @@ void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 		std::string s_npid = g_cfg_rpcn.get_npid();
 		ensure(!s_npid.empty()); // It should have been generated before this
 
-		np_handler::string_to_npid(s_npid.c_str(), &npid);
+		np_handler::string_to_npid(s_npid, &npid);
 		const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
 		sigh->set_self_sig_info(npid);
 	}
@@ -354,8 +351,8 @@ void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 			return;
 		}
 
-		np_handler::string_to_online_name(rpcn.get_online_name().c_str(), &online_name);
-		np_handler::string_to_avatar_url(rpcn.get_avatar_url().c_str(), &avatar_url);
+		np_handler::string_to_online_name(rpcn.get_online_name(), &online_name);
+		np_handler::string_to_avatar_url(rpcn.get_avatar_url(), &avatar_url);
 		public_ip_addr = rpcn.get_addr_sig();
 
 		break;

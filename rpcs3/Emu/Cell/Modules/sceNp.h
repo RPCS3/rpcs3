@@ -853,8 +853,7 @@ struct SceNpDrmOpenArg
 // NP communication ID structure
 struct SceNpCommunicationId
 {
-	char data[9];
-	char term;
+	char data[9 + 1]; // char term;
 	u8 num;
 	char dummy;
 };
@@ -862,8 +861,7 @@ struct SceNpCommunicationId
 // OnlineId structure
 struct SceNpOnlineId
 {
-	char data[16];
-	char term;
+	char data[16 + 1]; // char term;
 	char dummy[3];
 };
 
@@ -888,16 +886,14 @@ CHECK_SIZE_ALIGN(SceNpId, 0x24, 1);
 // Online Name structure
 struct SceNpOnlineName
 {
-	char data[48];
-	char term;
+	char data[48 + 1]; // char term;
 	char padding[3];
 };
 
 // Avatar structure
 struct SceNpAvatarUrl
 {
-	char data[127];
-	char term;
+	char data[127 + 1]; // char term;
 };
 
 // Avatar image structure
@@ -911,8 +907,7 @@ struct SceNpAvatarImage
 // Self introduction structure
 struct SceNpAboutMe
 {
-	char data[SCE_NET_NP_ABOUT_ME_MAX_LENGTH];
-	char term;
+	char data[SCE_NET_NP_ABOUT_ME_MAX_LENGTH + 1]; // char term;
 };
 
 // User information structure
