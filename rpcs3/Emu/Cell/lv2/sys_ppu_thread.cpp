@@ -99,7 +99,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 	if (old_status == ppu_join_status::joinable)
 	{
 		// Wait for termination
-		ppu.joiner.wait(ppu_join_status::zombie);
+		thread_ctrl::wait_on(ppu.joiner, ppu_join_status::zombie);
 	}
 
 	ppu_thread_exit(ppu);
