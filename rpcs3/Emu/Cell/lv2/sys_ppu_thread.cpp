@@ -49,7 +49,6 @@ bool ppu_thread_exit(ppu_thread& ppu)
 		dct->used -= ppu.stack_size;
 	}
 
-	perf_log.notice("Perf stats for STCX reload: successs %u, failure %u", ppu.last_succ, ppu.last_fail);
 	return false;
 }
 
