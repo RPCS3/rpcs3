@@ -224,10 +224,47 @@ void debugger_frame::hideEvent(QHideEvent * event)
 
 void debugger_frame::keyPressEvent(QKeyEvent* event)
 {
+	if (!isActiveWindow())
+	{
+		return;
+	}
+
 	const auto cpu = this->cpu.lock();
 	int i = m_debugger_list->currentRow();
 
-	if (!isActiveWindow() || !cpu)
+	switch (event->key())
+	{
+	case Qt::Key_F1:
+	{
+		QDialog* dlg = new QDialog(this);
+		dlg->setAttribute(Qt::WA_DeleteOnClose);
+		dlg->setWindowTitle(tr("Debugger Guide & Shortcuts"));
+
+		QLabel* l = new QLabel(tr(
+			"Keys Ctrl+G: Go to typed address."
+			"\nKeys Alt+S: Capture SPU images of selected SPU."
+			"\nKey E: Instruction Editor: click on the instruction you want to modify, then press E."
+			"\nKey F: Dedicated floating point mode switch for SPU threads."
+			"\nKey R: Registers Editor for selected thread."
+			"\nKey N: Show next instruction the thread will execute after marked instruction, does nothing if target is not predictable."
+			"\nKey M: Show the Memory Viewer with initial address pointing to the marked instruction."
+			"\nKey F10: Perform single-stepping on instructions."
+			"\nKey F11: Perform step-over on instructions. (skip function calls)"
+			"\nKey F1: Show this help dialog."));
+
+		l->setFont([](QFont f) { f.setPointSize(9); return f; }(l->font()));
+
+		QVBoxLayout* layout = new QVBoxLayout();
+		layout->addWidget(l);
+		dlg->setLayout(layout);
+		dlg->setFixedSize(dlg->sizeHint());
+		dlg->move(QCursor::pos());
+		dlg->exec();
+		return;
+	}
+	}
+
+	if (!cpu)
 	{
 		return;
 	}
@@ -564,9 +601,9 @@ void debugger_frame::WritePanels()
 
 void debugger_frame::ShowGotoAddressDialog()
 {
-	QDialog* diag = new QDialog(this);
-	diag->setWindowTitle(tr("Go To Address"));
-	diag->setModal(true);
+	QDialog* dlg = new QDialog(this);
+	dlg->setWindowTitle(tr("Go To Address"));
+	dlg->setModal(true);
 
 	// Panels
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
@@ -574,7 +611,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	QHBoxLayout* hbox_button_panel(new QHBoxLayout());
 
 	// Address expression input
-	QLineEdit* expression_input(new QLineEdit(diag));
+	QLineEdit* expression_input(new QLineEdit(dlg));
 	expression_input->setFont(m_mono);
 	expression_input->setMaxLength(18);
 
@@ -600,7 +637,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	vbox_panel->addSpacing(8);
 	vbox_panel->addLayout(hbox_button_panel);
 
-	diag->setLayout(vbox_panel);
+	dlg->setLayout(vbox_panel);
 
 	const auto cpu = this->cpu.lock();
 	const QFont font = expression_input->font();
@@ -610,18 +647,18 @@ void debugger_frame::ShowGotoAddressDialog()
 	expression_input->setPlaceholderText(QString("0x%1").arg(pc, 16, 16, QChar('0')));
 	expression_input->setFixedWidth(gui::utils::get_label_width(expression_input->placeholderText(), &font));
 
-	connect(button_ok, &QAbstractButton::clicked, diag, &QDialog::accept);
-	connect(button_cancel, &QAbstractButton::clicked, diag, &QDialog::reject);
+	connect(button_ok, &QAbstractButton::clicked, dlg, &QDialog::accept);
+	connect(button_cancel, &QAbstractButton::clicked, dlg, &QDialog::reject);
 
-	diag->move(QCursor::pos());
+	dlg->move(QCursor::pos());
 
-	if (diag->exec() == QDialog::Accepted)
+	if (dlg->exec() == QDialog::Accepted)
 	{
 		const u32 address = EvaluateExpression(expression_input->text());
 		m_debugger_list->ShowAddress(address);
 	}
 
-	diag->deleteLater();
+	dlg->deleteLater();
 }
 
 u64 debugger_frame::EvaluateExpression(const QString& expression)
