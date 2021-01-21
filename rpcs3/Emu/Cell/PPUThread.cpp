@@ -914,6 +914,7 @@ void ppu_thread::exec_task()
 
 ppu_thread::~ppu_thread()
 {
+	perf_log.notice("Perf stats for STCX reload: successs %u, failure %u", last_succ, last_fail);
 }
 
 ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u32 prio, int detached)
