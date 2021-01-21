@@ -2039,7 +2039,6 @@ namespace rsx
 
 		std::memset(display_buffers, 0, sizeof(display_buffers));
 
-		on_init_rsx();
 		m_rsx_thread_exiting = false;
 	}
 

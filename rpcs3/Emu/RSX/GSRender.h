@@ -26,7 +26,6 @@ public:
 	GSRender();
 	~GSRender() override;
 
-	void on_init_rsx() override;
 	void on_init_thread() override;
 	void on_exit() override;
 

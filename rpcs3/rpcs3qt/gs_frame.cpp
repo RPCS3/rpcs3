@@ -301,7 +301,7 @@ bool gs_frame::shown()
 
 void gs_frame::hide()
 {
-	Emu.CallAfter([this]() {QWindow::hide(); });
+	Emu.CallAfter([this]() { QWindow::hide(); });
 }
 
 void gs_frame::show()
@@ -398,6 +398,14 @@ int gs_frame::client_height()
 void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 {
 	static Timer fps_t;
+
+	if (!m_flip_showed_frame)
+	{
+		// Show on first flip
+		m_flip_showed_frame = true;
+		show();
+		fps_t.Start();
+	}
 
 	++m_frames;
 

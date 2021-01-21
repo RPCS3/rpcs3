@@ -809,7 +809,6 @@ namespace rsx
 		virtual void end();
 		virtual void execute_nop_draw();
 
-		virtual void on_init_rsx() = 0;
 		virtual void on_init_thread() = 0;
 		virtual void on_frame_end(u32 buffer, bool forced = false);
 		virtual void flip(const display_flip_info_t& info) = 0;
