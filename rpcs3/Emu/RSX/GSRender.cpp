@@ -25,14 +25,6 @@ GSRender::~GSRender()
 	}
 }
 
-void GSRender::on_init_rsx()
-{
-	if (m_frame)
-	{
-		m_frame->show();
-	}
-}
-
 void GSRender::on_init_thread()
 {
 	if (m_frame)
