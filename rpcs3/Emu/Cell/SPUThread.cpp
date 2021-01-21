@@ -1675,6 +1675,16 @@ void spu_thread::cpu_task()
 	}
 }
 
+struct raw_spu_cleanup
+{
+	~raw_spu_cleanup()
+	{
+		std::memset(spu_thread::g_raw_spu_id, 0, sizeof(spu_thread::g_raw_spu_id));
+		spu_thread::g_raw_spu_ctr = 0;
+		g_fxo->get<raw_spu_cleanup>(); // Register destructor
+	}
+};
+
 void spu_thread::cleanup()
 {
 	const u32 addr = group ? SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (id & 0xffffff) : RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index;
@@ -1689,11 +1699,8 @@ void spu_thread::cleanup()
 		g_raw_spu_ctr--;
 	}
 
-	// Free range lock
-	vm::free_range_lock(range_lock);
-
-	perf_log.notice("Perf stats for transactions: success %u, failure %u", stx, ftx);
-	perf_log.notice("Perf stats for PUTLLC reload: successs %u, failure %u", last_succ, last_fail);
+	// Free range lock (and signals cleanup was called to the destructor)
+	vm::free_range_lock(std::exchange(range_lock, nullptr));
 }
 
 spu_thread::~spu_thread()
@@ -1710,6 +1717,12 @@ spu_thread::~spu_thread()
 
 	// Release LS mirrors area
 	utils::memory_release(ls - (SPU_LS_SIZE * 2), SPU_LS_SIZE * 5);
+
+	// Free range lock if not freed already
+	if (range_lock) vm::free_range_lock(range_lock);
+
+	perf_log.notice("Perf stats for transactions: success %u, failure %u", stx, ftx);
+	perf_log.notice("Perf stats for PUTLLC reload: successs %u, failure %u", last_succ, last_fail);
 }
 
 spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)

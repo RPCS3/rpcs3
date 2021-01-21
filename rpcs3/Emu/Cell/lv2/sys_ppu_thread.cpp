@@ -28,7 +28,15 @@ struct ppu_thread_cleaner
 		{
 			if (u32 id = old_id.exchange(new_id)) [[likely]]
 			{
-				if (!idm::remove<named_thread<ppu_thread>>(id)) [[unlikely]]
+				auto ppu = idm::get<named_thread<ppu_thread>>(id);
+
+				if (ppu)
+				{
+					// Join thread
+					(*ppu)();
+				}
+
+				if (!ppu || !idm::remove_verify<named_thread<ppu_thread>>(id, std::move(ppu))) [[unlikely]]
 				{
 					sys_ppu_thread.fatal("Failed to remove detached thread 0x%x", id);
 				}
@@ -49,7 +57,6 @@ bool ppu_thread_exit(ppu_thread& ppu)
 		dct->used -= ppu.stack_size;
 	}
 
-	perf_log.notice("Perf stats for STCX reload: successs %u, failure %u", ppu.last_succ, ppu.last_fail);
 	return false;
 }
 
