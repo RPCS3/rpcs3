@@ -55,23 +55,17 @@ void lv2_rsx_config::send_event(u64 data1, u64 event_flags, u64 data3) const
 	{
 		auto cpu = get_current_cpu_thread();
 
-		if (cpu && cpu->id_type() != 1)
-		{
-			cpu = nullptr;
-		}
-
-		if (cpu)
+		if (cpu && cpu->id_type() == 1)
 		{
 			// Deschedule
 			lv2_obj::sleep(*cpu, 100);
 		}
-		else if (const auto rsx = rsx::get_current_renderer(); rsx->is_current_thread())
-		{
-			rsx->on_semaphore_acquire_wait();
-		}
 
 		// Wait a bit before resending event
 		thread_ctrl::wait_for(100);
+
+		if (cpu && cpu->id_type() == 0x55)
+			cpu->cpu_wait();
 
 		if (Emu.IsStopped() || (cpu && cpu->check_state()))
 		{

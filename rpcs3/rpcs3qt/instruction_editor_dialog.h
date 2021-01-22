@@ -23,7 +23,7 @@ private:
 	QLabel* m_preview;
 
 public:
-	std::weak_ptr<cpu_thread> cpu;
+	std::shared_ptr<cpu_thread> m_cpu;
 
 	instruction_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm);
 

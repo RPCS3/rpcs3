@@ -1261,9 +1261,7 @@ void main_window::OnEmuStop()
 	const QString play_tooltip = Emu.IsReady() ? tr("Play %0").arg(title) : tr("Resume %0").arg(title);
 	const QString restart_tooltip = tr("Restart %0").arg(title);
 
-	m_debugger_frame->EnableButtons(false);
-	m_debugger_frame->ClearBreakpoints();
-	m_debugger_frame->ClearCallStack();
+	m_debugger_frame->UpdateUI();
 
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play\tCtrl+E") : tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);

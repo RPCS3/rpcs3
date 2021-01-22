@@ -17,14 +17,13 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	: QDialog(parent)
 	, m_pc(_pc)
 	, m_disasm(_disasm)
-	, cpu(_cpu)
+	, m_cpu(_cpu)
 {
 	setWindowTitle(tr("Edit instruction"));
 	setAttribute(Qt::WA_DeleteOnClose);
 	setMinimumSize(300, sizeHint().height());
 
-	const auto cpu = _cpu.get();
-	m_cpu_offset = cpu->id_type() == 2 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
+	m_cpu_offset = m_cpu->id_type() == 2 ? static_cast<spu_thread&>(*m_cpu).ls : vm::g_sudo_addr;
 	QString instruction = qstr(fmt::format("%08x", *reinterpret_cast<be_t<u32>*>(m_cpu_offset + m_pc)));
 
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
@@ -81,7 +80,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 			QMessageBox::critical(this, tr("Error"), tr("Failed to parse PPU instruction."));
 			return;
 		}
-		else if (cpu->id_type() == 1)
+		else if (m_cpu->id_type() == 1)
 		{
 			if (!ppu_patch(m_pc, static_cast<u32>(opcode)))
 			{

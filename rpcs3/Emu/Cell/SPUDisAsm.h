@@ -71,7 +71,7 @@ static constexpr const char* spu_ch_name[128] =
 class SPUDisAsm final : public PPCDisAsm
 {
 public:
-	SPUDisAsm(CPUDisAsmMode mode, const u8* offset) : PPCDisAsm(mode, offset)
+	SPUDisAsm(cpu_disasm_mode mode, const u8* offset) : PPCDisAsm(mode, offset)
 	{
 	}
 
@@ -99,7 +99,7 @@ private:
 private:
 	std::string& FixOp(std::string& op)
 	{
-		if (m_mode != CPUDisAsm_NormalMode)
+		if (m_mode != cpu_disasm_mode::normal)
 		{
 			op.append(std::max<int>(10 - ::narrow<int>(op.size()), 0), ' ');
 		}

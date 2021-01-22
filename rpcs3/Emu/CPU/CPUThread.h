@@ -19,7 +19,6 @@ enum class cpu_flag : u32
 	memory, // Thread must unlock memory mutex
 
 	dbg_global_pause, // Emulation paused
-	dbg_global_stop, // Emulation stopped
 	dbg_pause, // Thread paused
 	dbg_step, // Thread forced to pause after one step (one instruction, etc)
 
@@ -64,7 +63,7 @@ public:
 	// Test stopped state
 	bool is_stopped() const
 	{
-		return !!(state & (cpu_flag::stop + cpu_flag::exit + cpu_flag::dbg_global_stop));
+		return !!(state & (cpu_flag::stop + cpu_flag::exit));
 	}
 
 	// Test paused state
@@ -121,6 +120,9 @@ public:
 
 	// Callback for cpu_flag::ret
 	virtual void cpu_return() {}
+
+	// Callback for thread_ctrl::wait or RSX wait
+	virtual void cpu_wait();
 
 	// For internal use
 	struct suspend_work
@@ -211,7 +213,7 @@ public:
 		}
 	}
 
-	// Stop all threads with cpu_flag::dbg_global_stop
+	// Stop all threads with cpu_flag::exit
 	static void stop_all() noexcept;
 
 	// Send signal to the profiler(s) to flush results

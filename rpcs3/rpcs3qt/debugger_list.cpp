@@ -1,15 +1,19 @@
 #include "debugger_list.h"
 #include "gui_settings.h"
+#include "qt_utils.h"
 #include "breakpoint_handler.h"
 
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/CPU/CPUThread.h"
+#include "Emu/RSX/RSXDisAsm.h"
 #include "Emu/System.h"
 
 #include <QMouseEvent>
 #include <QWheelEvent>
+#include <QVBoxLayout>
+#include <QLabel>
 
 #include <memory>
 
@@ -28,9 +32,9 @@ debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> sett
 	setSizeAdjustPolicy(QListWidget::AdjustToContents);
 }
 
-void debugger_list::UpdateCPUData(std::weak_ptr<cpu_thread> cpu, std::shared_ptr<CPUDisAsm> disasm)
+void debugger_list::UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm)
 {
-	this->cpu = cpu;
+	m_cpu = cpu;
 	m_disasm = disasm;
 }
 
@@ -43,13 +47,20 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 {
 	auto IsBreakpoint = [this](u32 pc)
 	{
-		return m_breakpoint_handler->HasBreakpoint(pc);
+		return m_cpu && m_cpu->id_type() == 1 && m_breakpoint_handler->HasBreakpoint(pc);
 	};
 
-	const bool center_pc = xgui_settings->GetValue(gui::d_centerPC).toBool();
+	bool center_pc = xgui_settings->GetValue(gui::d_centerPC).toBool();
 
 	// How many spaces addr can move down without us needing to move the entire view
 	const u32 addr_margin = (m_item_count / (center_pc ? 2 : 1) - 4); // 4 is just a buffer of 4 spaces at the bottom
+
+	if (m_cpu && m_cpu->id_type() == 0x55)
+	{
+		// RSX instructions' size is not consistent, this is the only valid mode for it
+		force = true;
+		center_pc = false;
+	}
 
 	if (force || addr - m_pc > addr_margin * 4) // 4 is the number of bytes in each instruction
 	{
@@ -63,12 +74,10 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 		}
 	}
 
-	const auto cpu = this->cpu.lock();
-
 	const auto default_foreground = palette().color(foregroundRole());
 	const auto default_background = palette().color(backgroundRole());
 
-	if (!cpu || !m_disasm)
+	if (!m_cpu || !m_disasm || +m_cpu->state + cpu_flag::exit + cpu_flag::wait == +m_cpu->state)
 	{
 		for (uint i = 0; i < m_item_count; ++i)
 		{
@@ -79,14 +88,14 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 	}
 	else
 	{
-		const bool is_spu = cpu->id_type() != 1;
+		const bool is_spu = m_cpu->id_type() == 2;
 		const u32 address_limits = (is_spu ? 0x3fffc : ~3);
 		m_pc &= address_limits;
 		u32 pc = m_pc;
 
 		for (uint i = 0, count = 4; i<m_item_count; ++i, pc = (pc + count) & address_limits)
 		{
-			if (cpu->is_paused() && pc == cpu->get_pc())
+			if (m_cpu->is_paused() && pc == m_cpu->get_pc())
 			{
 				item(i)->setForeground(m_text_color_pc);
 				item(i)->setBackground(m_color_pc);
@@ -102,14 +111,14 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 				item(i)->setBackground(default_background);
 			}
 
-			if (!is_spu && !vm::check_addr(pc))
+			if (m_cpu->id_type() == 1 && !vm::check_addr(pc))
 			{
 				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
 				count = 4;
 				continue;
 			}
 
-			if (!is_spu && !vm::check_addr(pc, vm::page_executable))
+			if (m_cpu->id_type() == 1 && !vm::check_addr(pc, vm::page_executable))
 			{
 				const u32 data = *vm::get_super_ptr<atomic_be_t<u32>>(pc);
 				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
@@ -123,11 +132,31 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 
 			count = m_disasm->disasm(pc);
 
+			if (!count)
+			{
+				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x] ???     ?? ??", pc)));
+				count = 4;
+				continue;
+			}
+
 			item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(m_disasm->last_opcode));
 		}
 	}
 
 	setLineWidth(-1);
+}
+
+void debugger_list::scroll(s32 steps)
+{
+	while (m_cpu && m_cpu->id_type() == 0x55 && steps > 0)
+	{
+		// If scrolling forwards (downwards), we can skip entire commands
+		// Backwards is impossible though
+		m_pc += std::max<u32>(m_disasm->disasm(m_pc), 4);
+		steps--;
+	}
+
+	ShowAddress(m_pc + (steps * 4), true);
 }
 
 void debugger_list::keyPressEvent(QKeyEvent* event)
@@ -139,12 +168,82 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 
 	switch (event->key())
 	{
-	case Qt::Key_PageUp:   ShowAddress(m_pc - (m_item_count * 4), true); return;
-	case Qt::Key_PageDown: ShowAddress(m_pc + (m_item_count * 4), true); return;
-	case Qt::Key_Up:       ShowAddress(m_pc - 4, true); return;
-	case Qt::Key_Down:     ShowAddress(m_pc + 4, true); return;
+	case Qt::Key_PageUp:   scroll(0 - m_item_count); return;
+	case Qt::Key_PageDown: scroll(m_item_count); return;
+	case Qt::Key_Up:       scroll(1); return;
+	case Qt::Key_Down:     scroll(-1); return;
+	case Qt::Key_I:
+	{
+		if (m_cpu && m_cpu->id_type() == 0x55)
+		{
+			create_rsx_command_detail(m_pc, currentRow());
+			return;
+		}
+		return;
+	}
+
 	default: break;
 	}
+}
+
+
+void debugger_list::showEvent(QShowEvent* event)
+{
+	if (m_cmd_detail) m_cmd_detail->show();
+	QListWidget::showEvent(event);
+}
+
+void debugger_list::hideEvent(QHideEvent* event)
+{
+	if (m_cmd_detail) m_cmd_detail->hide();
+	QListWidget::hideEvent(event);
+}
+
+void debugger_list::create_rsx_command_detail(u32 pc, int row)
+{
+	if (row < 0)
+	{
+		return;
+	}
+
+	for (; row > 0; row--)
+	{
+		// Skip methods
+		pc += std::max<u32>(m_disasm->disasm(pc), 4);
+	}
+
+	RSXDisAsm rsx_dis = CPUDisAsm::copy_and_change_mode(*static_cast<RSXDisAsm*>(m_disasm), cpu_disasm_mode::list);
+
+	// Either invalid or not a method
+	if (rsx_dis.disasm(pc) <= 4) return;
+
+	if (m_cmd_detail)
+	{
+		// Edit the existing dialog
+		m_detail_label->setText(QString::fromStdString(rsx_dis.last_opcode));
+		m_cmd_detail->setFixedSize(m_cmd_detail->sizeHint());
+		return;
+	}
+
+	m_cmd_detail = new QDialog(this);
+	m_cmd_detail->setWindowTitle(tr("RSX Command Detail"));
+
+	m_detail_label = new QLabel(QString::fromStdString(rsx_dis.last_opcode), this);
+	m_detail_label->setFont(font());
+	gui::utils::set_font_size(*m_detail_label, 10);
+	m_detail_label->setTextInteractionFlags(Qt::TextSelectableByMouse | Qt::TextSelectableByKeyboard);
+
+	QVBoxLayout* layout = new QVBoxLayout(this);
+	layout->addWidget(m_detail_label);
+	m_cmd_detail->setLayout(layout);
+	m_cmd_detail->setFixedSize(m_cmd_detail->sizeHint());
+	m_cmd_detail->show();
+
+	connect(m_cmd_detail, &QDialog::finished, [this](int)
+	{
+		// Cleanup
+		std::exchange(m_cmd_detail, nullptr)->deleteLater();
+	});
 }
 
 void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
@@ -169,7 +268,7 @@ void debugger_list::wheelEvent(QWheelEvent* event)
 	const int value = numSteps.y();
 	const auto direction = (event->modifiers() == Qt::ControlModifier);
 
-	ShowAddress(m_pc + (direction ? value : -value) * 4, true);
+	scroll(direction ? value : -value);
 }
 
 void debugger_list::resizeEvent(QResizeEvent* event)

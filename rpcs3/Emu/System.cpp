@@ -13,6 +13,7 @@
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/RawSPUThread.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -1788,6 +1789,7 @@ bool Emulator::Pause()
 
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
+	g_fxo->get<rsx::thread>()->state += cpu_flag::dbg_global_pause;
 
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();
@@ -1809,7 +1811,7 @@ void Emulator::Resume()
 	// Print and reset debug data collected
 	if (m_state == system_state::paused && g_cfg.core.ppu_debug)
 	{
-		PPUDisAsm dis_asm(CPUDisAsm_DumpMode, vm::g_sudo_addr);
+		PPUDisAsm dis_asm(cpu_disasm_mode::dump, vm::g_sudo_addr);
 
 		std::string dump;
 
@@ -1856,6 +1858,8 @@ void Emulator::Resume()
 
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
+	g_fxo->get<rsx::thread>()->state -= cpu_flag::dbg_global_pause;
+
 	GetCallbacks().on_resume();
 
 	if (g_cfg.misc.prevent_display_sleep)
@@ -1906,6 +1910,7 @@ void Emulator::Stop(bool restart)
 
 	GetCallbacks().on_stop();
 
+	g_fxo->get<rsx::thread>()->state += cpu_flag::exit;
 	cpu_thread::stop_all();
 	g_fxo->reset();
 
