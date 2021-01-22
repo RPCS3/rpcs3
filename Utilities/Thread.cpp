@@ -122,10 +122,6 @@ std::string dump_useful_thread_info()
 	{
 		result = cpu->dump_all();
 	}
-	else if (auto render = rsx::get_current_renderer(); render && render->is_current_thread())
-	{
-		result = render->dump_regs();
-	}
 
 	guard = false;
 	return result;
@@ -1423,7 +1419,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		return vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable);
 	};
 
-	if (cpu)
+	if (cpu && (cpu->id_type() == 1 || cpu->id_type() == 2))
 	{
 		vm::temporary_unlock(*cpu);
 		u32 pf_port_id = 0;

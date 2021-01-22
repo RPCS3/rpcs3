@@ -13,7 +13,7 @@ u64 get_guest_system_time();
 enum class localized_string_id;
 enum class video_renderer;
 
-enum class system_state
+enum class system_state : u32
 {
 	running,
 	paused,

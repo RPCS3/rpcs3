@@ -592,13 +592,14 @@ namespace rsx
 
 	struct sampled_image_descriptor_base;
 
-	class thread
+	class thread : public cpu_thread
 	{
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
 
 		display_flip_info_t m_queued_flip{};
 
+		void cpu_task() override;
 	protected:
 		std::thread::id m_rsx_thread;
 		atomic_t<bool> m_rsx_thread_exiting{ true };
@@ -615,7 +616,7 @@ namespace rsx
 		// FIFO
 	public:
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
-		std::vector<std::pair<u32, u32>> dump_callstack() const;
+		std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 
 	protected:
 		FIFO::flattening_helper m_flattener;
@@ -655,7 +656,8 @@ namespace rsx
 		static void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd() const;
 	
-		std::string dump_regs() const;
+		std::string dump_regs() const override;
+		void cpu_wait() override;
 
 		// Performance approximation counters
 		struct
@@ -783,7 +785,6 @@ namespace rsx
 
 		reports::conditional_render_eval cond_render_ctrl;
 
-		void operator()();
 		virtual u64 get_cycles() = 0;
 		virtual ~thread();
 

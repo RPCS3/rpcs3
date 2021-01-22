@@ -4,26 +4,30 @@
 #include <limits>
 #include "Utilities/StrFmt.h"
 
-enum CPUDisAsmMode
+enum class cpu_disasm_mode
 {
-	CPUDisAsm_DumpMode,
-	CPUDisAsm_InterpreterMode,
-	CPUDisAsm_NormalMode,
-	CPUDisAsm_CompilerElfMode,
+	dump,
+	interpreter,
+	normal,
+	compiler_elf,
+	list, // RSX exclusive
 };
+
+class cpu_thread;
 
 class CPUDisAsm
 {
 protected:
-	const CPUDisAsmMode m_mode;
+	const cpu_disasm_mode m_mode;
 	const std::add_pointer_t<const u8> m_offset;
+	const std::add_pointer_t<const cpu_thread> m_cpu;
 	u32 m_op = 0;
 
 	virtual void Write(const std::string& value)
 	{
 		switch (m_mode)
 		{
-			case CPUDisAsm_DumpMode:
+			case cpu_disasm_mode::dump:
 			{
 				last_opcode = fmt::format("\t%08x:\t%02x %02x %02x %02x\t%s\n", dump_pc,
 					static_cast<u8>(m_op >> 24),
@@ -33,7 +37,7 @@ protected:
 				break;
 			}
 
-			case CPUDisAsm_InterpreterMode:
+			case cpu_disasm_mode::interpreter:
 			{
 				last_opcode = fmt::format("[%08x]  %02x %02x %02x %02x: %s", dump_pc,
 					static_cast<u8>(m_op >> 24),
@@ -43,12 +47,12 @@ protected:
 				break;
 			}
 
-			case CPUDisAsm_CompilerElfMode:
+			case cpu_disasm_mode::compiler_elf:
 			{
 				last_opcode = value + '\n';
 				break;
 			}
-			case CPUDisAsm_NormalMode:
+			case cpu_disasm_mode::normal:
 			{
 				last_opcode = value;
 				break;
@@ -61,14 +65,21 @@ public:
 	std::string last_opcode;
 	u32 dump_pc;
 
+	template <typename T, std::enable_if_t<std::is_base_of_v<CPUDisAsm, T>, int> = 0>
+	static T copy_and_change_mode(const T& dis, cpu_disasm_mode mode)
+	{
+		return T{mode, dis.m_offset, dis.m_cpu};
+	}
+
 protected:
-	CPUDisAsm(CPUDisAsmMode mode, const u8* offset)
+	CPUDisAsm(cpu_disasm_mode mode, const u8* offset, const cpu_thread* cpu = nullptr)
 		: m_mode(mode)
 		, m_offset(offset)
+		, m_cpu(cpu)
 	{
 	}
 
-	virtual u32 DisAsmBranchTarget(const s32 imm) = 0;
+	virtual u32 DisAsmBranchTarget(const s32 imm) { return 0; };
 
 	// TODO: Add builtin fmt helpper for best performance
 	template <typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
@@ -95,7 +106,7 @@ protected:
 
 	std::string FixOp(std::string op) const
 	{
-		if (m_mode != CPUDisAsm_NormalMode)
+		if (m_mode != cpu_disasm_mode::normal)
 		{
 			op.resize(std::max<usz>(op.length(), 10), ' ');
 		}

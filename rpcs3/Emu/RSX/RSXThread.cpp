@@ -362,6 +362,7 @@ namespace rsx
 	}
 
 	thread::thread()
+		: cpu_thread(0x5555'5555)
 	{
 		g_access_violation_handler = [this](u32 address, bool is_writing)
 		{
@@ -380,6 +381,8 @@ namespace rsx
 		{
 			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
 		}
+
+		state -= cpu_flag::stop + cpu_flag::wait; // TODO: Remove workaround
 	}
 
 	void thread::capture_frame(const std::string &name)
@@ -498,7 +501,7 @@ namespace rsx
 		while (method_registers.current_draw_clause.next());
 	}
 
-	void thread::operator()()
+	void thread::cpu_task()
 	{
 		{
 			// Wait for startup (TODO)
@@ -512,7 +515,7 @@ namespace rsx
 
 				thread_ctrl::wait_for(1000);
 
-				if (Emu.IsStopped())
+				if (is_stopped())
 				{
 					return;
 				}
@@ -522,6 +525,17 @@ namespace rsx
 		}
 
 		on_exit();
+	}
+
+	void thread::cpu_wait()
+	{
+		if (external_interrupt_lock)
+		{
+			wait_pause();
+		}
+
+		on_semaphore_acquire_wait();
+		std::this_thread::yield();
 	}
 
 	void thread::on_task()
@@ -562,7 +576,7 @@ namespace rsx
 			u64 start_time = get_system_time();
 
 			// TODO: exit condition
-			while (!Emu.IsStopped() && !m_rsx_thread_exiting)
+			while (!is_stopped())
 			{
 				const u64 period_time = 1000000 / g_cfg.video.vblank_rate;
 				const u64 wait_sleep = period_time - u64{period_time >= host_min_quantum} * host_min_quantum;
@@ -604,7 +618,7 @@ namespace rsx
 					// Save the difference before pause
 					start_time = get_system_time() - start_time;
 
-					while (Emu.IsPaused() && !m_rsx_thread_exiting)
+					while (Emu.IsPaused() && !is_stopped())
 					{
 						thread_ctrl::wait_for(wait_sleep);
 					}
@@ -628,8 +642,7 @@ namespace rsx
 		// Round to nearest to deal with forward/reverse scaling
 		fesetround(FE_TONEAREST);
 
-		// TODO: exit condition
-		while (true)
+		while (!test_stopped())
 		{
 			// Wait for external pause events
 			if (external_interrupt_lock)
@@ -653,20 +666,6 @@ namespace rsx
 
 			// Execute FIFO queue
 			run_FIFO();
-
-			if (!Emu.IsRunning())
-			{
-				// Idle if emulation paused
-				while (Emu.IsPaused())
-				{
-					std::this_thread::sleep_for(1ms);
-				}
-
-				if (Emu.IsStopped())
-				{
-					break;
-				}
-			}
 		}
 	}
 
@@ -681,6 +680,7 @@ namespace rsx
 
 		m_rsx_thread_exiting = true;
 		g_fxo->get<rsx::dma_manager>()->join();
+		state += cpu_flag::exit;
 	}
 
 	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
@@ -2579,7 +2579,7 @@ namespace rsx
 		recovered_fifo_cmds_history.push({fifo_ctrl->last_cmd(), current_time});
 	}
 
-	std::vector<std::pair<u32, u32>> thread::dump_callstack() const
+	std::vector<std::pair<u32, u32>> thread::dump_callstack_list() const
 	{
 		std::vector<std::pair<u32, u32>> result;
 

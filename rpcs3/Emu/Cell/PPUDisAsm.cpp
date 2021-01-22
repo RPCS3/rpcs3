@@ -935,7 +935,7 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 	const u32 aa = op.aa;
 	const u32 lk = op.lk;
 
-	if (m_mode == CPUDisAsm_CompilerElfMode)
+	if (m_mode == cpu_disasm_mode::compiler_elf)
 	{
 		Write(fmt::format("bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk));
 		return;
@@ -995,7 +995,7 @@ void PPUDisAsm::B(ppu_opcode_t op)
 	const u32 aa = op.aa;
 	const u32 lk = op.lk;
 
-	if (m_mode == CPUDisAsm_CompilerElfMode)
+	if (m_mode == cpu_disasm_mode::compiler_elf)
 	{
 		Write(fmt::format("b 0x%x, %d, %d", li, aa, lk));
 		return;

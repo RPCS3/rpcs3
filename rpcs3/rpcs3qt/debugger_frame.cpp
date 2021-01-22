@@ -12,6 +12,7 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/RSXDisAsm.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUDisAsm.h"
@@ -42,7 +43,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	EnableUpdateTimer(true);
 
 	m_mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-	m_mono.setPointSize(10);
+	m_mono.setPointSize(9);
 
 	QVBoxLayout* vbox_p_main = new QVBoxLayout();
 	vbox_p_main->setContentsMargins(5, 5, 5, 5);
@@ -137,7 +138,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 
 	connect(m_btn_run, &QAbstractButton::clicked, [this]()
 	{
-		if (const auto cpu = this->cpu.lock())
+		if (const auto cpu = get_cpu())
 		{
 			// Alter dbg_pause bit state (disable->enable, enable->disable)
 			const auto old = cpu->state.xor_fetch(cpu_flag::dbg_pause);
@@ -229,7 +230,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		return;
 	}
 
-	const auto cpu = this->cpu.lock();
+	const auto cpu = get_cpu();
 	int i = m_debugger_list->currentRow();
 
 	switch (event->key())
@@ -248,11 +249,13 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			"\nKey R: Registers Editor for selected thread."
 			"\nKey N: Show next instruction the thread will execute after marked instruction, does nothing if target is not predictable."
 			"\nKey M: Show the Memory Viewer with initial address pointing to the marked instruction."
+			"\nKey I: Show RSX method detail." 
 			"\nKey F10: Perform single-stepping on instructions."
 			"\nKey F11: Perform step-over on instructions. (skip function calls)"
-			"\nKey F1: Show this help dialog."));
+			"\nKey F1: Show this help dialog."
+			"\nDouble-click: Set breakpoints."));
 
-		l->setFont([](QFont f) { f.setPointSize(9); return f; }(l->font()));
+		gui::utils::set_font_size(*l, 9);
 
 		QVBoxLayout* layout = new QVBoxLayout();
 		layout->addWidget(l);
@@ -291,8 +294,11 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		{
 		case Qt::Key_E:
 		{
-			instruction_editor_dialog* dlg = new instruction_editor_dialog(this, pc, cpu, m_disasm.get());
-			dlg->show();
+			if (m_cpu)
+			{
+				instruction_editor_dialog* dlg = new instruction_editor_dialog(this, pc, m_cpu, m_disasm.get());
+				dlg->show();
+			}
 			return;
 		}
 		case Qt::Key_F:
@@ -302,13 +308,16 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				return;
 			}
 
-			static_cast<spu_thread*>(cpu.get())->debugger_float_mode ^= 1; // Switch mode
+			static_cast<spu_thread*>(cpu)->debugger_float_mode ^= 1; // Switch mode
 			return;
 		}
 		case Qt::Key_R:
 		{
-			register_editor_dialog* dlg = new register_editor_dialog(this, cpu, m_disasm.get());
-			dlg->show();
+			if (m_cpu)
+			{
+				register_editor_dialog* dlg = new register_editor_dialog(this, m_cpu, m_disasm.get());
+				dlg->show();
+			}
 			return;
 		}
 		case Qt::Key_S:
@@ -320,7 +329,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					return;
 				}
 
-				static_cast<spu_thread*>(cpu.get())->capture_local_storage();
+				static_cast<spu_thread*>(cpu)->capture_local_storage();
 			}
 			return;
 		}
@@ -335,7 +344,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			{
 			case 2:
 			{
-				res = op_branch_targets(pc, spu_opcode_t{static_cast<spu_thread*>(cpu.get())->_ref<u32>(pc)});
+				res = op_branch_targets(pc, spu_opcode_t{static_cast<spu_thread*>(cpu)->_ref<u32>(pc)});
 				break;
 			}
 			case 1:
@@ -358,7 +367,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_M:
 		{
 			// Memory viewer
-			idm::make<memory_viewer_handle>(this, pc, cpu);
+			if (m_cpu) idm::make<memory_viewer_handle>(this, pc, m_cpu);
 			return;
 		}
 		case Qt::Key_F10:
@@ -375,8 +384,17 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	}
 }
 
-rsx::thread* debugger_frame::get_rsx()
+cpu_thread* debugger_frame::get_cpu()
 {
+	// Wait flag is raised by the thread itself, acknowledging exit
+	if (m_cpu)
+	{
+		if (+m_cpu->state + cpu_flag::wait + cpu_flag::exit != +m_cpu->state)
+		{
+			return m_cpu.get();
+		}
+	}
+
 	// m_rsx is raw pointer, when emulation is stopped it won't be cleared
 	// Therefore need to do invalidation checks manually
 
@@ -397,10 +415,9 @@ void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
 
-	const auto cpu = this->cpu.lock();
-	const auto rsx = this->get_rsx();
+	const auto cpu = get_cpu();
 
-	if (!cpu && !rsx)
+	if (!cpu)
 	{
 		if (m_last_pc != umax || !m_last_query_state.empty())
 		{
@@ -409,25 +426,17 @@ void debugger_frame::UpdateUI()
 			DoUpdate();
 		}
 	}
-	else if (rsx)
-	{
-		if (m_last_pc != rsx->ctrl->get || !m_last_query_state.empty())
-		{
-			m_last_query_state.clear();
-			m_last_pc = rsx->ctrl->get;
-			DoUpdate();
-		}
-	}
 	else
 	{
 		const auto cia = cpu->get_pc();
-		const auto size_context = cpu->id_type() == 1 ? sizeof(ppu_thread) : sizeof(spu_thread);
+		const auto size_context = cpu->id_type() == 1 ? sizeof(ppu_thread) :
+			cpu->id_type() == 2 ? sizeof(spu_thread) : sizeof(cpu_thread);
 
-		if (m_last_pc != cia || m_last_query_state.size() != size_context || std::memcmp(m_last_query_state.data(), cpu.get(), size_context))
+		if (m_last_pc != cia || m_last_query_state.size() != size_context || std::memcmp(m_last_query_state.data(), cpu, size_context))
 		{
 			// Copy thread data
 			m_last_query_state.resize(size_context);
-			std::memcpy(m_last_query_state.data(), cpu.get(), size_context);
+			std::memcpy(m_last_query_state.data(), cpu, size_context);
 
 			m_last_pc = cia;
 			DoUpdate();
@@ -455,11 +464,13 @@ void debugger_frame::UpdateUnitList()
 {
 	const u64 threads_created = cpu_thread::g_threads_created;
 	const u64 threads_deleted = cpu_thread::g_threads_deleted;
+	const system_state emu_state = Emu.GetStatus();
 
-	if (threads_created != m_threads_created || threads_deleted != m_threads_deleted)
+	if (threads_created != m_threads_created || threads_deleted != m_threads_deleted || emu_state != m_emu_state)
 	{
 		m_threads_created = threads_created;
 		m_threads_deleted = threads_deleted;
+		m_emu_state = emu_state;
 	}
 	else
 	{
@@ -472,6 +483,8 @@ void debugger_frame::UpdateUnitList()
 
 	const auto on_select = [&](u32 id, cpu_thread& cpu)
 	{
+		if (emu_state == system_state::stopped) return;
+
 		QVariant var_cpu = QVariant::fromValue<std::weak_ptr<cpu_thread>>(
 			id >> 24 == 1 ? static_cast<std::weak_ptr<cpu_thread>>(idm::get_unlocked<named_thread<ppu_thread>>(id)) : idm::get_unlocked<named_thread<spu_thread>>(id));
 
@@ -488,7 +501,7 @@ void debugger_frame::UpdateUnitList()
 		idm::select<named_thread<ppu_thread>>(on_select);
 		idm::select<named_thread<spu_thread>>(on_select);
 
-		if (auto render = g_fxo->get<rsx::thread>(); render && render->ctrl)
+		if (auto render = g_fxo->get<rsx::thread>(); emu_state != system_state::stopped && render && render->ctrl)
 		{
 			QVariant var_cpu = QVariant::fromValue<rsx::thread*>(render);
 			m_choice_units->addItem("RSX[0x55555555]", var_cpu);
@@ -503,24 +516,34 @@ void debugger_frame::UpdateUnitList()
 
 void debugger_frame::OnSelectUnit()
 {
-	if (m_choice_units->count() < 1) return;
+	if (m_choice_units->count() < 1)
+	{
+		m_debugger_list->UpdateCPUData(nullptr, nullptr);
+		m_breakpoint_list->UpdateCPUData(nullptr, nullptr);
+		m_disasm.reset();
+		m_cpu.reset();
+		return;
+	}
 
 	const auto weak = m_choice_units->currentData().value<std::weak_ptr<cpu_thread>>();
 	const auto render = m_choice_units->currentData().value<rsx::thread*>();
 
-	if (!render && !weak.owner_before(cpu) && !cpu.owner_before(weak))
+	if (m_emu_state != system_state::stopped)
 	{
-		// They match, nothing to do.
-		return;
-	}
+		if (!render && !weak.owner_before(m_cpu) && !m_cpu.owner_before(weak))
+		{
+			// They match, nothing to do.
+			return;
+		}
 
-	if (render && render == this->get_rsx())
-	{
-		return;
+		if (render && render == get_cpu())
+		{
+			return;
+		}
 	}
 
 	m_disasm.reset();
-	cpu.reset();
+	m_cpu.reset();
 	m_rsx = nullptr;
 
 	if (!weak.expired())
@@ -531,16 +554,16 @@ void debugger_frame::OnSelectUnit()
 			{
 				if (cpu0.get() == idm::check<named_thread<ppu_thread>>(cpu0->id))
 				{
-					cpu = cpu0;
-					m_disasm = std::make_unique<PPUDisAsm>(CPUDisAsm_InterpreterMode, vm::g_sudo_addr);
+					m_cpu = cpu0;
+					m_disasm = std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr);
 				}
 			}
 			else if (cpu0->id_type() == 2)
 			{
 				if (cpu0.get() == idm::check<named_thread<spu_thread>>(cpu0->id))
 				{
-					cpu = cpu0;
-					m_disasm = std::make_unique<SPUDisAsm>(CPUDisAsm_InterpreterMode, static_cast<const spu_thread*>(cpu0.get())->ls);
+					m_cpu = cpu0;
+					m_disasm = std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(cpu0.get())->ls);
 				}
 			}
 		}
@@ -548,13 +571,17 @@ void debugger_frame::OnSelectUnit()
 	else
 	{
 		m_rsx = render;
+
+		if (get_cpu())
+		{
+			m_disasm = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, m_rsx);
+		}
 	}
 
 	EnableButtons(true);
 
-	m_debugger_list->UpdateCPUData(this->cpu, m_disasm);
-	m_breakpoint_list->UpdateCPUData(this->cpu, m_disasm);
-	m_call_stack_list->UpdateCPUData(this->cpu, m_disasm);
+	m_debugger_list->UpdateCPUData(get_cpu(), m_disasm.get());
+	m_breakpoint_list->UpdateCPUData(get_cpu(), m_disasm.get());
 	DoUpdate();
 	UpdateUI();
 }
@@ -562,7 +589,7 @@ void debugger_frame::OnSelectUnit()
 void debugger_frame::DoUpdate()
 {
 	// Check if we need to disable a step over bp
-	if (auto cpu0 = cpu.lock(); cpu0 && m_last_step_over_breakpoint != umax && cpu0->get_pc() == m_last_step_over_breakpoint)
+	if (auto cpu0 = get_cpu(); cpu0 && m_last_step_over_breakpoint != umax && cpu0->get_pc() == m_last_step_over_breakpoint)
 	{
 		m_breakpoint_handler->RemoveBreakpoint(m_last_step_over_breakpoint);
 		m_last_step_over_breakpoint = -1;
@@ -574,10 +601,9 @@ void debugger_frame::DoUpdate()
 
 void debugger_frame::WritePanels()
 {
-	const auto cpu = this->cpu.lock();
-	const auto rsx = this->get_rsx();
+	const auto cpu = get_cpu();
 
-	if (!cpu && !rsx)
+	if (!cpu)
 	{
 		m_misc_state->clear();
 		m_regs->clear();
@@ -588,15 +614,15 @@ void debugger_frame::WritePanels()
 
 	loc = m_misc_state->verticalScrollBar()->value();
 	m_misc_state->clear();
-	m_misc_state->setText(qstr(rsx ? "" : cpu->dump_misc()));
+	m_misc_state->setText(qstr(cpu->dump_misc()));
 	m_misc_state->verticalScrollBar()->setValue(loc);
 
 	loc = m_regs->verticalScrollBar()->value();
 	m_regs->clear();
-	m_regs->setText(qstr(rsx ? rsx->dump_regs() : cpu->dump_regs()));
+	m_regs->setText(qstr(cpu->dump_regs()));
 	m_regs->verticalScrollBar()->setValue(loc);
 
-	Q_EMIT CallStackUpdateRequested(rsx ? rsx->dump_callstack() : cpu->dump_callstack_list());
+	Q_EMIT CallStackUpdateRequested(cpu->dump_callstack_list());
 }
 
 void debugger_frame::ShowGotoAddressDialog()
@@ -615,7 +641,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	expression_input->setFont(m_mono);
 	expression_input->setMaxLength(18);
 
-	if (auto thread = cpu.lock(); !thread || thread->id_type() != 2)
+	if (auto thread = get_cpu(); !thread || thread->id_type() != 2)
 	{
 		expression_input->setValidator(new QRegExpValidator(QRegExp("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
 	}
@@ -639,7 +665,7 @@ void debugger_frame::ShowGotoAddressDialog()
 
 	dlg->setLayout(vbox_panel);
 
-	const auto cpu = this->cpu.lock();
+	const auto cpu = get_cpu();
 	const QFont font = expression_input->font();
 
 	// -1 from get_pc() turns into 0
@@ -670,8 +696,7 @@ u64 debugger_frame::EvaluateExpression(const QString& expression)
 	const u64 res = static_cast<u64>(fixed_expression.toULong(&ok, 16));
 
 	if (ok) return res;
-	if (auto thread = get_rsx()) return thread->ctrl->get;
-	if (auto thread = cpu.lock()) return thread->get_pc();
+	if (auto thread = get_cpu()) return thread->get_pc();
 	return 0;
 }
 
@@ -687,17 +712,16 @@ void debugger_frame::ClearCallStack()
 
 void debugger_frame::ShowPC()
 {
-	const auto cpu0 = cpu.lock();
+	const auto cpu0 = get_cpu();
 
-	const u32 pc = get_rsx() ? +m_rsx->ctrl->get
-		: (cpu0 ? cpu0->get_pc() : 0);
+	const u32 pc = (cpu0 ? cpu0->get_pc() : 0);
 
 	m_debugger_list->ShowAddress(pc);
 }
 
 void debugger_frame::DoStep(bool stepOver)
 {
-	if (const auto cpu = this->cpu.lock())
+	if (const auto cpu = get_cpu())
 	{
 		bool should_step_over = stepOver && cpu->id_type() == 1;
 
@@ -741,7 +765,7 @@ void debugger_frame::EnableUpdateTimer(bool enable)
 
 void debugger_frame::EnableButtons(bool enable)
 {
-	if (cpu.expired()) enable = false;
+	if (!get_cpu()) enable = false;
 
 	m_go_to_addr->setEnabled(enable);
 	m_go_to_pc->setEnabled(enable);

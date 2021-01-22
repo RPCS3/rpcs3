@@ -443,19 +443,6 @@ std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 	return res;
 }
 
-std::string ppu_thread::dump_all() const
-{
-	std::string ret = cpu_thread::dump_misc();
-	ret += '\n';
-	ret += dump_misc();
-	ret += '\n';
-	ret += dump_regs();
-	ret += '\n';
-	ret += dump_callstack();
-
-	return ret;
-}
-
 std::string ppu_thread::dump_regs() const
 {
 	std::string ret;
@@ -505,7 +492,7 @@ std::string ppu_thread::dump_regs() const
 				}
 				else
 				{
-					PPUDisAsm dis_asm(CPUDisAsm_NormalMode, vm::g_sudo_addr);
+					PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
 					dis_asm.disasm(reg);
 					fmt::append(ret, " -> %s", dis_asm.last_opcode);
 				}
@@ -834,7 +821,7 @@ void ppu_thread::exec_task()
 {
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
-		while (!(state & (cpu_flag::ret + cpu_flag::exit + cpu_flag::stop + cpu_flag::dbg_global_stop)))
+		while (!(state & (cpu_flag::ret + cpu_flag::exit + cpu_flag::stop)))
 		{
 			reinterpret_cast<ppu_function_t>(ppu_ref(cia))(*this);
 		}

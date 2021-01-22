@@ -20,13 +20,12 @@ class register_editor_dialog : public QDialog
 	QLineEdit* m_value_line;
 
 public:
-	std::weak_ptr<cpu_thread> cpu;
-
-public:
 	register_editor_dialog(QWidget *parent, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm);
 
 private:
-	void OnOkay(const std::shared_ptr<cpu_thread>& _cpu);
+	void OnOkay();
+
+	std::shared_ptr<cpu_thread> m_cpu;
 
 private Q_SLOTS:
 	void updateRegister(int reg);
