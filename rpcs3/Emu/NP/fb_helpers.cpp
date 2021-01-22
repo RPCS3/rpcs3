@@ -41,7 +41,7 @@ void np_handler::RoomGroup_to_SceNpMatching2RoomGroup(const flatbuffers::Vector<
 void np_handler::UserInfo2_to_SceNpUserInfo2(const UserInfo2* user, SceNpUserInfo2* user_info)
 {
 	if (user->npId())
-		std::memcpy(user_info->npId.handle.data, user->npId()->c_str(), std::min<usz>(9, user->npId()->size()));
+		std::memcpy(user_info->npId.handle.data, user->npId()->c_str(), std::min<usz>(16, user->npId()->size()));
 
 	if (user->onlineName())
 	{
