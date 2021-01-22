@@ -286,12 +286,17 @@ bool gs_frame::get_mouse_lock_state()
 
 void gs_frame::close()
 {
-	if (!Emu.IsStopped())
+	Emu.CallAfter([this]()
 	{
-		Emu.Stop();
-	}
+		QWindow::hide(); // Workaround
 
-	Emu.CallAfter([this]() { deleteLater(); });
+		if (!Emu.IsStopped())
+		{
+			Emu.Stop();
+		}
+
+		deleteLater();
+	});
 }
 
 bool gs_frame::shown()
