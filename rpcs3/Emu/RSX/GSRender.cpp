@@ -20,7 +20,6 @@ GSRender::~GSRender()
 
 	if (m_frame)
 	{
-		m_frame->hide();
 		m_frame->close();
 	}
 }
