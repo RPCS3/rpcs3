@@ -1622,9 +1622,10 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp) noexcept
 	}
 
 	const auto ptr = reinterpret_cast<u8*>(pExp->ExceptionRecord->ExceptionInformation[1]);
-	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] != 0;
+	const bool is_writing = pExp->ExceptionRecord->ExceptionInformation[0] == 1;
+	const bool is_executing = pExp->ExceptionRecord->ExceptionInformation[0] == 8;
 
-	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
+	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION && !is_executing)
 	{
 		u32 addr = 0;
 
@@ -1656,7 +1657,9 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 
 	if (pExp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION)
 	{
-		const auto cause = pExp->ExceptionRecord->ExceptionInformation[0] != 0 ? "writing" : "reading";
+		const auto cause =
+			pExp->ExceptionRecord->ExceptionInformation[0] == 8 ? "executing" :
+			pExp->ExceptionRecord->ExceptionInformation[0] == 1 ? "writing" : "reading";
 
 		fmt::append(msg, "Segfault %s location %p at %p.\n", cause, pExp->ExceptionRecord->ExceptionInformation[1], pExp->ExceptionRecord->ExceptionAddress);
 	}
@@ -1768,21 +1771,24 @@ static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 	x64_context* context = static_cast<ucontext_t*>(uct);
 
 #ifdef __APPLE__
-	const bool is_writing = context->uc_mcontext->__es.__err & 0x2;
+	const u64 err = context->uc_mcontext->__es.__err;
 #elif defined(__DragonFly__) || defined(__FreeBSD__)
-	const bool is_writing = context->uc_mcontext.mc_err & 0x2;
+	const u64 err = context->uc_mcontext.mc_err;
 #elif defined(__OpenBSD__)
-	const bool is_writing = context->sc_err & 0x2;
+	const u64 err = context->sc_err;
 #elif defined(__NetBSD__)
-	const bool is_writing = context->uc_mcontext.__gregs[_REG_ERR] & 0x2;
+	const u64 err = context->uc_mcontext.__gregs[_REG_ERR];
 #else
-	const bool is_writing = context->uc_mcontext.gregs[REG_ERR] & 0x2;
+	const u64 err = context->uc_mcontext.gregs[REG_ERR];
 #endif
 
-	const u64 exec64 = (reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
-	const auto cause = is_writing ? "writing" : "reading";
+	const bool is_executing = err & 0x10;
+	const bool is_writing = err & 0x2;
 
-	if (auto [addr, ok] = vm::try_get_addr(info->si_addr); ok)
+	const u64 exec64 = (reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
+	const auto cause = is_executing ? "executing" : is_writing ? "writing" : "reading";
+
+	if (auto [addr, ok] = vm::try_get_addr(info->si_addr); ok && !is_executing)
 	{
 		// Try to process access violation
 		if (thread_ctrl::get_current() && handle_access_violation(addr, is_writing, context))
@@ -1791,7 +1797,7 @@ static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 		}
 	}
 
-	if (exec64 < 0x100000000ull)
+	if (exec64 < 0x100000000ull && !is_executing)
 	{
 		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(exec64), is_writing, context))
 		{
