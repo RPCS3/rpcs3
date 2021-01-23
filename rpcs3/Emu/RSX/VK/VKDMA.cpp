@@ -359,6 +359,40 @@ namespace vk
 		return block_head->get(map_range);
 	}
 
+	void unmap_dma(u32 local_address, u32 length)
+	{
+		std::lock_guard lock(g_dma_mutex);
+
+		const u32 start = (local_address & s_dma_block_mask);
+		const u32 end = utils::align(local_address + length, s_dma_block_length);
+
+		for (u32 block = start; block < end;)
+		{
+			if (auto found = g_dma_pool.find(block); found != g_dma_pool.end())
+			{
+				auto head = found->second->head();
+				if (dynamic_cast<dma_block_EXT*>(head))
+				{
+					// Passthrough block. Must unmap from GPU
+					const u32 start_block = head->start();
+					const u32 last_block = head->start() + head->size();
+
+					for (u32 block_ = start_block; block_ < last_block; block_ += s_dma_block_length)
+					{
+						g_dma_pool.erase(block_);
+					}
+
+					block = last_block;
+					continue;
+				}
+			}
+
+			block += s_dma_block_length;
+		}
+
+		ensure(s_allocated_dma_pool_size == g_dma_pool.size() * s_dma_block_length);
+	}
+
 	template<bool load>
 	void sync_dma_impl(u32 local_address, u32 length)
 	{

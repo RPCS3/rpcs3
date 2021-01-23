@@ -7,6 +7,7 @@ namespace vk
 	std::pair<u32, vk::buffer*> map_dma(const command_buffer& cmd, u32 local_address, u32 length);
 	void load_dma(u32 local_address, u32 length);
 	void flush_dma(u32 local_address, u32 length);
+	void unmap_dma(u32 local_address, u32 length);
 
 	void clear_dma_resources();
 
