@@ -225,24 +225,6 @@ namespace vk
 
 	bool test_host_pointer(u32 base_address, usz length)
 	{
-#if 0 // Unusable due to vm locks
-		auto block = vm::get(vm::any, base_address);
-		ensure(block);
-
-		if ((block->addr + block->size) < (base_address + length))
-		{
-			return false;
-		}
-
-		if (block->flags & 0x120)
-		{
-			return true;
-		}
-
-		auto range_info = block->peek(base_address, u32(length));
-		return !!range_info.second;
-#endif
-
 #ifdef _WIN32
 		MEMORY_BASIC_INFORMATION mem_info;
 		if (!::VirtualQuery(vm::get_super_ptr<const void>(base_address), &mem_info, sizeof(mem_info)))
@@ -263,7 +245,8 @@ namespace vk
 
 #ifdef _WIN32
 		const bool allow_host_buffers = (vendor == driver_vendor::NVIDIA) ?
-			test_host_pointer(base_address, expected_length) :
+			//test_host_pointer(base_address, expected_length) :
+			rsx::get_location(base_address) == CELL_GCM_LOCATION_LOCAL : // NVIDIA workaround
 			true;
 #else
 		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations		
