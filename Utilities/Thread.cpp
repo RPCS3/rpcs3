@@ -2081,6 +2081,8 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 	// Try to add self to thread pool
 	set_name("..pool");
 
+	thread_ctrl::set_native_priority(0);
+
 	static constexpr u64 s_stop_bit = 0x8000'0000'0000'0000ull;
 
 	static atomic_t<u64> s_pool_ctr = []
