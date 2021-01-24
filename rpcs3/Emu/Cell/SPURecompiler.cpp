@@ -521,6 +521,9 @@ void spu_cache::initialize()
 			result++;
 		}
 
+		// Restore default priority
+		thread_ctrl::set_native_priority(0);
+
 		return result;
 	});
 
