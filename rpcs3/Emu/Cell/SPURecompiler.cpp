@@ -6518,14 +6518,27 @@ public:
 		{
 			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = (sc + (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3)) & 0xf;
-			set_vr(op.rt, pshufb(as, sh));
+			const auto sh = sc + (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
+
+			if (m_use_avx512_icl)
+			{
+				set_vr(op.rt, vpermb(as, sh));
+				return;
+			}
+
+			set_vr(op.rt, pshufb(as, (sh & 0xf)));
+			return;
+		}
+		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sh = sc - (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
+
+		if (m_use_avx512_icl)
+		{
+			set_vr(op.rt, vpermb(a, sh));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = (sc - (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3)) & 0xf;
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb(a, (sh & 0xf)));
 	}
 
 	void ROTQMBYBI(spu_opcode_t op)
@@ -6648,14 +6661,28 @@ public:
 		{
 			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = eval((sc + splat_scalar(b)) & 0xf);
-			set_vr(op.rt, pshufb(as, sh));
+			const auto sh = eval(sc + splat_scalar(b));
+			
+			if (m_use_avx512_icl)
+			{
+				set_vr(op.rt, vpermb(as, sh));
+				return;
+			}
+
+			set_vr(op.rt, pshufb(as, (sh & 0xf)));
 			return;
 		}
 
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = eval((sc - splat_scalar(b)) & 0xf);
-		set_vr(op.rt, pshufb(a, sh));
+		const auto sh = eval(sc - splat_scalar(b));
+		
+		if (m_use_avx512_icl)
+		{
+			set_vr(op.rt, vpermb(a, sh));
+			return;
+		}
+
+		set_vr(op.rt, pshufb(a, (sh & 0xf)));
 	}
 
 	void ROTQMBY(spu_opcode_t op)
