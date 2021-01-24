@@ -2961,8 +2961,15 @@ void PPUTranslator::ADD(ppu_opcode_t op)
 	const auto b = GetGpr(op.rb);
 	const auto result = m_ir->CreateAdd(a, b);
 	SetGpr(op.rd, result);
+
+	if (op.oe)
+	{
+		//const auto s = m_ir->CreateCall(get_intrinsic<u64>(llvm::Intrinsic::sadd_with_overflow), {a, b});
+		//SetOverflow(m_ir->CreateExtractValue(s, {1}));
+		SetOverflow(m_ir->CreateICmpSLT(m_ir->CreateAnd(m_ir->CreateXor(a, m_ir->CreateNot(b)), m_ir->CreateXor(a, result)), m_ir->getInt64(0)));
+	}
+
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__add_get_ov", a, b));
 }
 
 void PPUTranslator::DCBT(ppu_opcode_t op)
