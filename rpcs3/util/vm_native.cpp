@@ -120,7 +120,7 @@ namespace utils
 
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0);
 
-		if (ptr == reinterpret_cast<void*>(-1))
+		if (ptr == reinterpret_cast<void*>(UINT64_MAX))
 		{
 			return nullptr;
 		}
@@ -179,7 +179,7 @@ namespace utils
 		ensure(::VirtualFree(pointer, size, MEM_DECOMMIT));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(-1));
+		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(UINT64_MAX));
 
 		if constexpr (c_madv_no_dump != 0)
 		{
@@ -195,7 +195,7 @@ namespace utils
 		memory_commit(pointer, size, prot);
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(-1));
+		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(UINT64_MAX));
 
 		if constexpr (c_madv_hugepage != 0)
 		{
@@ -373,6 +373,25 @@ namespace utils
 
 			return reinterpret_cast<u8*>(result);
 		}
+#endif
+	}
+
+	u8* shm::try_map(void* ptr, protection prot) const
+	{
+		// Non-null pointer shall be specified
+		const auto target = ensure(reinterpret_cast<u8*>(reinterpret_cast<u64>(ptr) & -0x10000));
+
+#ifdef _WIN32
+		return this->map(target, prot);
+#else
+		const auto result = reinterpret_cast<u8*>(::mmap(reinterpret_cast<void*>(target), m_size, +prot, MAP_SHARED, m_file, 0));
+
+		if (result == reinterpret_cast<void*>(UINT64_MAX))
+		{
+			[[unlikely]] return nullptr;
+		}
+
+		return result;
 #endif
 	}
 
