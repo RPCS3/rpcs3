@@ -434,7 +434,7 @@ void spu_cache::initialize()
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
 	{
 		// Set low priority
-		thread_ctrl::set_native_priority(-1);
+		thread_ctrl::scoped_priority low_prio(-1);
 
 		// Initialize compiler instances for parallel compilation
 		std::unique_ptr<spu_recompiler_base> compiler;
@@ -520,9 +520,6 @@ void spu_cache::initialize()
 
 			result++;
 		}
-
-		// Restore default priority
-		thread_ctrl::set_native_priority(0);
 
 		return result;
 	});
@@ -6665,7 +6662,7 @@ public:
 			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
 			const auto sh = eval(sc + splat_scalar(b));
-			
+
 			if (m_use_avx512_icl)
 			{
 				set_vr(op.rt, vpermb(as, sh));
@@ -6678,7 +6675,7 @@ public:
 
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 		const auto sh = eval(sc - splat_scalar(b));
-		
+
 		if (m_use_avx512_icl)
 		{
 			set_vr(op.rt, vpermb(a, sh));

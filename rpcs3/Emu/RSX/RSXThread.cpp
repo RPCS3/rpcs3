@@ -618,7 +618,7 @@ namespace rsx
 		});
 
 		// Raise priority above other threads
-		thread_ctrl::set_native_priority(1);
+		thread_ctrl::scoped_priority high_prio(+1);
 
 		if (g_cfg.core.thread_scheduler_enabled)
 		{

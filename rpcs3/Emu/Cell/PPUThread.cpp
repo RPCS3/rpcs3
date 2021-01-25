@@ -2358,7 +2358,7 @@ extern void ppu_initialize(const ppu_module& info)
 		named_thread_group threads(fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>()->index), thread_count, [&]()
 		{
 			// Set low priority
-			thread_ctrl::set_native_priority(-1);
+			thread_ctrl::scoped_priority low_prio(-1);
 
 			for (u32 i = work_cv++; i < workload.size(); i = work_cv++)
 			{

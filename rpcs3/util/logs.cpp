@@ -421,7 +421,7 @@ logs::file_writer::file_writer(const std::string& name, u64 max_size)
 
 	m_writer = std::thread([this]()
 	{
-		thread_ctrl::set_native_priority(-1);
+		thread_ctrl::scoped_priority low_prio(-1);
 
 		while (true)
 		{

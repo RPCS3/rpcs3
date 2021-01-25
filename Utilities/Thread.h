@@ -281,6 +281,24 @@ public:
 	// Get current thread stack addr and size
 	static std::pair<void*, usz> get_thread_stack();
 
+	// Sets the native thread priority and returns it to zero at destructor
+	struct scoped_priority
+	{
+		explicit scoped_priority(int prio)
+		{
+			set_native_priority(prio);
+		}
+
+		scoped_priority(const scoped_priority&) = delete;
+
+		scoped_priority& operator=(const scoped_priority&) = delete;
+
+		~scoped_priority()
+		{
+			set_native_priority(0);
+		}
+	};
+
 private:
 	// Miscellaneous
 	static const u64 process_affinity_mask;

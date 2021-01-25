@@ -600,7 +600,7 @@ void cell_audio_thread::update_config()
 
 void cell_audio_thread::operator()()
 {
-	thread_ctrl::set_native_priority(1);
+	thread_ctrl::scoped_priority high_prio(+1);
 
 	// Allocate ringbuffer
 	ringbuffer.reset(new audio_ringbuffer(cfg));
