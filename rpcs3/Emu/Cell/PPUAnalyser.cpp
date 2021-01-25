@@ -1555,6 +1555,46 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 
 	std::unordered_set<u32> block_set;
 
+	// Check relocations which may involve block addresses (usually it's type 1)
+	for (auto& rel : this->relocs)
+	{
+		// Disabled (TODO)
+		if (1 || !vm::check_addr<4>(rel.addr))
+		{
+			continue;
+		}
+
+		const u32 target = vm::_ref<u32>(rel.addr);
+
+		if (target % 4 || target < start || target >= end)
+		{
+			continue;
+		}
+
+		switch (rel.type)
+		{
+		case 1:
+		case 24:
+		case 26:
+		case 27:
+		case 28:
+		case 107:
+		case 108:
+		case 109:
+		case 110:
+		{
+			ppu_log.notice("Added block from reloc: 0x%x (0x%x, %u)", target, rel.addr, rel.type);
+			block_queue.emplace_back(target, 0);
+			block_set.emplace(target);
+			continue;
+		}
+		default:
+		{
+			continue;
+		}
+		}
+	}
+
 	u32 exp = start;
 	u32 lim = end;
 
