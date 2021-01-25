@@ -2083,6 +2083,8 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 
 	thread_ctrl::set_native_priority(0);
 
+	thread_ctrl::set_thread_affinity_mask(-1);
+
 	static constexpr u64 s_stop_bit = 0x8000'0000'0000'0000ull;
 
 	static atomic_t<u64> s_pool_ctr = []
@@ -2525,7 +2527,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 
 	if (const auto thread_count = std::thread::hardware_concurrency())
 	{
-		const u64 all_cores_mask = get_process_affinity_mask();
+		const u64 all_cores_mask = process_affinity_mask;
 
 		switch (g_native_core_layout)
 		{
@@ -2773,12 +2775,15 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 {
 #ifdef _WIN32
 	HANDLE _this_thread = GetCurrentThread();
-	SetThreadAffinityMask(_this_thread, mask);
+	if (!SetThreadAffinityMask(_this_thread, mask == umax ? process_affinity_mask : mask))
+	{
+		sig_log.error("Failed to set thread affinity 0x%x: error 0x%x.", mask, GetLastError());
+	}
 #elif __APPLE__
 	// Supports only one core
 	thread_affinity_policy_data_t policy = { static_cast<integer_t>(std::countr_zero(mask)) };
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
-	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&policy), 1);
+	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&policy), mask == umax ? 0 : 1);
 #elif defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__)
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
@@ -2811,7 +2816,7 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 u64 thread_ctrl::get_thread_affinity_mask()
 {
 #ifdef _WIN32
-	const u64 res = get_process_affinity_mask();
+	const u64 res = process_affinity_mask;
 
 	if (DWORD_PTR result = SetThreadAffinityMask(GetCurrentThread(), res))
 	{
