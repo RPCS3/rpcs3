@@ -26,7 +26,7 @@ namespace vm
 {
 	static u8* memory_reserve_4GiB(void* _addr, u64 size = 0x100000000)
 	{
-		for (u64 addr = reinterpret_cast<u64>(_addr) + 0x100000000;; addr += 0x100000000)
+		for (u64 addr = reinterpret_cast<u64>(_addr) + 0x100000000; addr < 0x8000'0000'0000; addr += 0x100000000)
 		{
 			if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr)))
 			{
@@ -34,8 +34,7 @@ namespace vm
 			}
 		}
 
-		// TODO: a condition to break loop
-		return static_cast<u8*>(utils::memory_reserve(size));
+		fmt::throw_exception("Failed to reserve vm memory");
 	}
 
 	// Emulated virtual memory
@@ -49,6 +48,9 @@ namespace vm
 
 	// Stats for debugging
 	u8* const g_stat_addr = memory_reserve_4GiB(g_exec_addr);
+
+	// For SPU
+	u8* const g_free_addr = g_stat_addr + 0x1'0000'0000;
 
 	// Reservation stats
 	alignas(4096) u8 g_reservations[65536 / 128 * 64]{0};
