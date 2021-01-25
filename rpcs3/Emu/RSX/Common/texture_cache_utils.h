@@ -459,7 +459,7 @@ namespace rsx
 	class ranged_storage
 	{
 	public:
-		static constexpr u32 block_size = 0x1000000;
+		static constexpr u32 block_size = 0x100000;
 		static_assert(block_size % 4096u == 0, "block_size must be a multiple of the page size");
 		static constexpr u32 num_blocks = u32{0x100000000ull / block_size};
 		static_assert((num_blocks > 0) && (u64{num_blocks} *block_size == 0x100000000ull), "Invalid block_size/num_blocks");
