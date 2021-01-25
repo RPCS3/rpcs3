@@ -406,6 +406,7 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/Common/ProgramStateCache.cpp
 	RSX/Common/surface_store.cpp
 	RSX/Common/TextureUtils.cpp
+	RSX/Common/texture_cache.cpp
 	RSX/Common/VertexProgramDecompiler.cpp
 	RSX/Null/NullGSRender.cpp
 	RSX/Overlays/overlay_animation.cpp

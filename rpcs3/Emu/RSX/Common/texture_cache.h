@@ -670,11 +670,7 @@ namespace rsx
 			u32 last_dirty_block = UINT32_MAX;
 			bool repeat_loop = false;
 
-			// Not having full-range protections means some textures will check the confirmed range and not the locked range
-			const bool not_full_range_protected = (buffered_section::guard_policy != protection_policy::protect_policy_full_range);
-			section_bounds range_it_bounds = not_full_range_protected ? confirmed_range : locked_range;
-
-			auto It = m_storage.range_begin(invalidate_range, range_it_bounds, true); // will iterate through locked sections only
+			auto It = m_storage.range_begin(invalidate_range, locked_range, true); // will iterate through locked sections only
 			while (It != m_storage.range_end())
 			{
 				const u32 base = It.get_block().get_start();
@@ -690,9 +686,16 @@ namespace rsx
 
 				if (tex.cache_tag != cache_tag) //flushable sections can be 'clean' but unlocked. TODO: Handle this better
 				{
+					tex.sync_protection();
+					if (!tex.is_locked())
+					{
+						It++;
+						continue;
+					}
+
 					const rsx::section_bounds bounds = tex.get_overlap_test_bounds();
 
-					if (range_it_bounds == bounds || tex.overlaps(invalidate_range, bounds))
+					if (locked_range == bounds || tex.overlaps(invalidate_range, bounds))
 					{
 						const auto new_range = tex.get_min_max(invalidate_range, bounds).to_page_range();
 						AUDIT(new_range.is_page_range() && invalidate_range.inside(new_range));
@@ -728,7 +731,7 @@ namespace rsx
 				// repeat_loop==true means some blocks are still dirty and we need to repeat the loop again
 				if (repeat_loop && It == m_storage.range_end())
 				{
-					It = m_storage.range_begin(invalidate_range, range_it_bounds, true);
+					It = m_storage.range_begin(invalidate_range, locked_range, true);
 					repeat_loop = false;
 				}
 			}
@@ -863,7 +866,7 @@ namespace rsx
 						// Write if and only if no one else has trashed section memory already
 						// TODO: Proper section management should prevent this from happening
 						// TODO: Blit engine section merge support and/or partial texture memory buffering
-						if (tex.is_dirty() || !tex.test_memory_head() || !tex.test_memory_tail())
+						if (tex.is_dirty())
 						{
 							// Contents clobbered, destroy this
 							if (!tex.is_dirty())
@@ -973,18 +976,17 @@ namespace rsx
 		{
 			std::vector<section_storage_type*> results;
 
-			for (auto It = m_storage.range_begin(test_range, full_range); It != m_storage.range_end(); It++)
+			for (auto It = m_storage.range_begin(test_range, full_range, check_unlocked); It != m_storage.range_end(); It++)
 			{
 				auto &tex = *It;
 
+				if constexpr (check_unlocked)
+				{
+					tex.sync_protection();
+				}
+
 				if (!tex.is_dirty() && (context_mask & static_cast<u32>(tex.get_context())))
 				{
-					if constexpr (check_unlocked)
-					{
-						if (!tex.is_locked())
-							continue;
-					}
-
 					if (required_pitch && !rsx::pitch_compatible<false>(&tex, required_pitch, UINT16_MAX))
 					{
 						continue;
@@ -1391,6 +1393,13 @@ namespace rsx
 			}
 
 			return false;
+		}
+
+		void trim_sections()
+		{
+			std::lock_guard lock(m_cache_mutex);
+
+			m_storage.trim_sections();
 		}
 
 		image_view_type create_temporary_subresource(commandbuffer_type &cmd, deferred_subresource& desc)

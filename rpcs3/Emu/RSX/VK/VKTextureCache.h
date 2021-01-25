@@ -1098,6 +1098,8 @@ namespace vk
 
 		void on_frame_end() override
 		{
+			trim_sections();
+
 			if (m_storage.m_unreleased_texture_objects >= m_max_zombie_objects ||
 				m_temporary_memory_size > 0x4000000) //If already holding over 64M in discardable memory, be frugal with memory resources
 			{

@@ -84,6 +84,7 @@
     <ClCompile Include="Emu\Io\pad_config_types.cpp" />
     <ClCompile Include="Emu\localized_string.cpp" />
     <ClCompile Include="Emu\NP\rpcn_config.cpp" />
+    <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp" />
