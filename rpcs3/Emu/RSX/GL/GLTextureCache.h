@@ -873,6 +873,8 @@ namespace gl
 
 		void on_frame_end() override
 		{
+			trim_sections();
+
 			if (m_storage.m_unreleased_texture_objects >= m_max_zombie_objects)
 			{
 				purge_unreleased_sections();

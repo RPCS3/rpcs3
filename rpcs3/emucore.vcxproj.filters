@@ -977,6 +977,9 @@
     <ClCompile Include="Emu\RSX\RSXDisAsm.cpp">
       <Filter>Emu\GPU\RSX</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Common\texture_cache.cpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

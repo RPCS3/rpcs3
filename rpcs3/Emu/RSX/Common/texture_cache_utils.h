@@ -10,6 +10,31 @@
 
 namespace rsx
 {
+	enum section_bounds
+	{
+		full_range,
+		locked_range,
+		confirmed_range
+	};
+
+	enum section_protection_strategy
+	{
+		lock,
+		hash
+	};
+
+	static inline void memory_protect(const address_range& range, utils::protection prot)
+	{
+		ensure(range.is_page_range());
+
+		//rsx_log.error("memory_protect(0x%x, 0x%x, %x)", static_cast<u32>(range.start), static_cast<u32>(range.length()), static_cast<u32>(prot));
+		utils::memory_protect(vm::base(range.start), range.length(), prot);
+
+#ifdef TEXTURE_CACHE_DEBUG
+		tex_cache_checker.set_protection(range, prot);
+#endif
+	}
+
 	/**
 	 * List structure used in Ranged Storage Blocks
 	 * List of Arrays
@@ -603,6 +628,24 @@ namespace rsx
 			return any_released;
 		}
 
+		void trim_sections()
+		{
+			for (auto it = m_in_use.begin(); it != m_in_use.end(); it++)
+			{
+				auto* block = *it;
+				if (block->get_locked_count() > 256)
+				{
+					for (auto& tex : *block)
+					{
+						if (tex.is_locked() && !tex.is_locked(true))
+						{
+							tex.sync_protection();
+						}
+					}
+				}
+			}
+		}
+
 
 		/**
 		 * Callbacks
@@ -854,7 +897,157 @@ namespace rsx
 
 	};
 
+	class buffered_section
+	{
+	private:
+		address_range locked_range;
+		address_range cpu_range = {};
+		address_range confirmed_range;
 
+		utils::protection protection = utils::protection::rw;
+
+		section_protection_strategy protection_strat = section_protection_strategy::lock;
+		u64 mem_hash = 0;
+
+		bool locked = false;
+		void init_lockable_range(const address_range& range);
+		u64  fast_hash_internal() const;
+
+	public:
+
+		buffered_section() = default;
+		~buffered_section() = default;
+
+		void reset(const address_range& memory_range);
+
+	protected:
+		void invalidate_range();
+
+	public:
+		void protect(utils::protection new_prot, bool force = false);
+		void protect(utils::protection prot, const std::pair<u32, u32>& new_confirm);
+		void unprotect();
+		bool sync();
+
+		void discard();
+		const address_range& get_bounds(section_bounds bounds) const;
+
+		bool is_locked(bool actual_page_flags = false) const;
+
+		/**
+		 * Overlapping checks
+		 */
+		inline bool overlaps(const u32 address, section_bounds bounds) const
+		{
+			return get_bounds(bounds).overlaps(address);
+		}
+
+		inline bool overlaps(const address_range& other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).overlaps(other);
+		}
+
+		inline bool overlaps(const address_range_vector& other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).overlaps(other);
+		}
+
+		inline bool overlaps(const buffered_section& other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).overlaps(other.get_bounds(bounds));
+		}
+
+		inline bool inside(const address_range& other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).inside(other);
+		}
+
+		inline bool inside(const address_range_vector& other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).inside(other);
+		}
+
+		inline bool inside(const buffered_section& other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).inside(other.get_bounds(bounds));
+		}
+
+		inline s32 signed_distance(const address_range& other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).signed_distance(other);
+		}
+
+		inline u32 distance(const address_range& other, section_bounds bounds) const
+		{
+			return get_bounds(bounds).distance(other);
+		}
+
+		/**
+		* Utilities
+		*/
+		inline bool valid_range() const
+		{
+			return cpu_range.valid();
+		}
+
+		inline u32 get_section_base() const
+		{
+			return cpu_range.start;
+		}
+
+		inline u32 get_section_size() const
+		{
+			return cpu_range.valid() ? cpu_range.length() : 0;
+		}
+
+		inline const address_range& get_locked_range() const
+		{
+			AUDIT(locked);
+			return locked_range;
+		}
+
+		inline const address_range& get_section_range() const
+		{
+			return cpu_range;
+		}
+
+		const address_range& get_confirmed_range() const
+		{
+			return confirmed_range.valid() ? confirmed_range : cpu_range;
+		}
+
+		const std::pair<u32, u32> get_confirmed_range_delta() const
+		{
+			if (!confirmed_range.valid())
+				return { 0, cpu_range.length() };
+
+			return { confirmed_range.start - cpu_range.start, confirmed_range.length() };
+		}
+
+		inline bool matches(const address_range& range) const
+		{
+			return cpu_range.valid() && cpu_range == range;
+		}
+
+		inline utils::protection get_protection() const
+		{
+			return protection;
+		}
+
+		inline address_range get_min_max(const address_range& current_min_max, section_bounds bounds) const
+		{
+			return get_bounds(bounds).get_min_max(current_min_max);
+		}
+
+		/**
+		 * Super Pointer
+		 */
+		template <typename T = void>
+		inline T* get_ptr(u32 address) const
+		{
+			return reinterpret_cast<T*>(vm::g_sudo_addr + address);
+		}
+	};
 
 	/**
 	 * Cached Texture Section
@@ -1287,6 +1480,15 @@ namespace rsx
 			flush_exclusions.clear();
 		}
 
+		void sync_protection()
+		{
+			if (!buffered_section::sync())
+			{
+				discard(true);
+				ensure(is_dirty());
+			}
+		}
+
 
 		/**
 		 * Flush
@@ -1522,13 +1724,7 @@ namespace rsx
 
 		rsx::section_bounds get_overlap_test_bounds() const
 		{
-			if (guard_policy == protection_policy::protect_policy_full_range)
-				return rsx::section_bounds::locked_range;
-
-			const bool strict_range_check = g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer;
-			return (strict_range_check || get_context() == rsx::texture_upload_context::blit_engine_dst) ?
-				rsx::section_bounds::confirmed_range :
-				rsx::section_bounds::locked_range;
+			return rsx::section_bounds::locked_range;
 		}
 
 		rsx::texture_dimension_extended get_image_type() const
