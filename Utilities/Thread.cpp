@@ -2773,6 +2773,8 @@ DECLARE(thread_ctrl::process_affinity_mask) = get_process_affinity_mask();
 
 void thread_ctrl::set_thread_affinity_mask(u64 mask)
 {
+	sig_log.trace("set_thread_affinity_mask called with mask=0x%x", mask);
+
 #ifdef _WIN32
 	HANDLE _this_thread = GetCurrentThread();
 	if (!SetThreadAffinityMask(_this_thread, !mask ? process_affinity_mask : mask))
