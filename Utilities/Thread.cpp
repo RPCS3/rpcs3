@@ -2417,7 +2417,7 @@ u64 thread_base::get_cycles()
 {
 	if (std::string info = dump_useful_thread_info(); !info.empty())
 	{
-		sys_log.notice("\%s", info);
+		sys_log.notice("\n%s", info);
 	}
 
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
