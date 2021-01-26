@@ -313,6 +313,12 @@ namespace vk
 			pack_unpack_swap_bytes = swap_bytes;
 		}
 
+		void set_rsx_pitch(u16 pitch)
+		{
+			ensure(!is_locked());
+			rsx_pitch = pitch;
+		}
+
 		bool is_synchronized() const
 		{
 			return synchronized;
@@ -761,11 +767,9 @@ namespace vk
 		cached_texture_section* create_new_texture(vk::command_buffer& cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps,  u16 pitch,
 			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::texture_create_flags flags) override
 		{
-			const u16 section_depth = depth;
-			const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
-			const VkFormat vk_format = get_compatible_sampler_format(m_formats_support, gcm_format);
-			const VkImageAspectFlags aspect_flags = get_aspect_flags(vk_format);
+			const auto section_depth = depth;
 
+			// Define desirable attributes based on type
 			VkImageType image_type;
 			VkImageViewType image_view_type;
 			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -801,29 +805,76 @@ namespace vk
 				fmt::throw_exception("Unreachable");
 			}
 
-			auto *image = new vk::viewable_image(*m_device, m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				image_type,
-				vk_format,
-				width, height, depth, mipmaps, layer, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, usage_flags, is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
-				rsx::classify_format(gcm_format));
-
-			image->native_component_map = apply_component_mapping_flags(gcm_format, flags, rsx::default_remap_vector);
-
-			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, { aspect_flags, 0, mipmaps, 0, layer });
-
-			cached_texture_section& region = *find_cached_texture(rsx_range, gcm_format, true, true, width, height, section_depth);
+			// Check what actually exists at that address
+			const rsx::image_section_attributes_t search_desc = { .gcm_format = gcm_format, .width = width, .height = height, .depth = section_depth, .mipmaps = mipmaps };
+			const bool allow_dirty = (context != rsx::texture_upload_context::framebuffer_storage);
+			cached_texture_section& region = *find_cached_texture(rsx_range, search_desc, true, true, allow_dirty);
 			ensure(!region.is_locked());
 
-			// New section, we must prepare it
-			region.reset(rsx_range);
-			region.set_context(context);
-			region.set_gcm_format(gcm_format);
-			region.set_image_type(type);
-			region.set_swizzled(swizzled);
+			vk::viewable_image* image = nullptr;
+			if (region.exists())
+			{
+				image = dynamic_cast<vk::viewable_image*>(region.get_raw_texture());
+				ensure(image);
+				ensure(region.is_managed());
 
-			region.create(width, height, section_depth, mipmaps, image, pitch, true, gcm_format);
+				if (region.get_image_type() != type || image->depth() != depth) // TODO
+				{
+					// Incompatible view/type
+					region.destroy();
+					image = nullptr;
+				}
+				else
+				{
+					// Reuse
+					region.set_rsx_pitch(pitch);
+
+					if (context != rsx::texture_upload_context::shader_read)
+					{
+						// Wipe memory
+						image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+						VkImageSubresourceRange range{ image->aspect(), 0, image->mipmaps(), 0, image->layers() };
+						if (image->aspect() & VK_IMAGE_ASPECT_COLOR_BIT)
+						{
+							VkClearColorValue color = { {0.f, 0.f, 0.f, 1.f} };
+							vkCmdClearColorImage(cmd, image->value, image->current_layout, &color, 1, &range);
+						}
+						else
+						{
+							VkClearDepthStencilValue clear{ 1.f, 255 };
+							vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &range);
+						}
+					}
+				}
+			}
+
+			if (!image)
+			{
+				const bool is_cubemap = type == rsx::texture_dimension_extended::texture_dimension_cubemap;
+				const VkFormat vk_format = get_compatible_sampler_format(m_formats_support, gcm_format);
+
+				image = new vk::viewable_image(*m_device, m_memory_types.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+					image_type,
+					vk_format,
+					width, height, depth, mipmaps, layer, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+					VK_IMAGE_TILING_OPTIMAL, usage_flags, is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
+					rsx::classify_format(gcm_format));
+
+				// New section, we must prepare it
+				region.reset(rsx_range);
+				region.set_gcm_format(gcm_format);
+				region.set_image_type(type);
+				region.create(width, height, section_depth, mipmaps, image, pitch, true, gcm_format);
+			}
+
+			region.set_view_flags(flags);
+			region.set_context(context);
+			region.set_swizzled(swizzled);
 			region.set_dirty(false);
+
+			image->native_component_map = apply_component_mapping_flags(gcm_format, flags, rsx::default_remap_vector);
+			image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 			// Its not necessary to lock blit dst textures as they are just reused as necessary
 			switch (context)
@@ -850,7 +901,7 @@ namespace vk
 
 		cached_texture_section* create_nul_section(vk::command_buffer& cmd, const utils::address_range& rsx_range, bool memory_load) override
 		{
-			auto& region = *find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, true, false);
+			auto& region = *find_cached_texture(rsx_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, true, false, false);
 			ensure(!region.is_locked());
 
 			// Prepare section

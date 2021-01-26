@@ -618,25 +618,9 @@ namespace gl
 			height = utils::align(height, 4);
 		}
 
-		GLenum target;
-		GLenum internal_format = get_sized_internal_format(gcm_format);
-		auto format_class = rsx::classify_format(gcm_format);
-
-		switch (type)
-		{
-		case rsx::texture_dimension_extended::texture_dimension_1d:
-			target = GL_TEXTURE_1D;
-			break;
-		case rsx::texture_dimension_extended::texture_dimension_2d:
-			target = GL_TEXTURE_2D;
-			break;
-		case rsx::texture_dimension_extended::texture_dimension_3d:
-			target = GL_TEXTURE_3D;
-			break;
-		case rsx::texture_dimension_extended::texture_dimension_cubemap:
-			target = GL_TEXTURE_CUBE_MAP;
-			break;
-		}
+		const GLenum target = get_target(type);
+		const GLenum internal_format = get_sized_internal_format(gcm_format);
+		const auto format_class = rsx::classify_format(gcm_format);
 
 		return new gl::viewable_image(target, width, height, depth, mipmaps, internal_format, format_class);
 	}

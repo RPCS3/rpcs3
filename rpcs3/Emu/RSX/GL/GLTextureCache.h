@@ -15,6 +15,7 @@ namespace gl
 	class blitter;
 
 	extern GLenum get_sized_internal_format(u32);
+	extern GLenum get_target(rsx::texture_dimension_extended type);
 	extern void copy_typeless(texture*, const texture*, const coord3u&, const coord3u&);
 	extern blitter *g_hw_blitter;
 
@@ -668,27 +669,67 @@ namespace gl
 			copy_transfer_regions_impl(cmd, dst->image(), region);
 		}
 
-		cached_texture_section* create_new_texture(gl::command_context&, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
+		cached_texture_section* create_new_texture(gl::command_context &cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
 			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::texture_create_flags flags) override
 		{
-			auto image = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
+			const rsx::image_section_attributes_t search_desc = { .gcm_format = gcm_format, .width = width, .height = height, .depth = depth, .mipmaps = mipmaps };
+			const bool allow_dirty = (context != rsx::texture_upload_context::framebuffer_storage);
+			auto& cached = *find_cached_texture(rsx_range, search_desc, true, true, allow_dirty);
+			ensure(!cached.is_locked());
+
+			gl::viewable_image* image = nullptr;
+			if (cached.exists())
+			{
+				// Try and reuse this image data. It is very likely to match our needs
+				image = dynamic_cast<gl::viewable_image*>(cached.get_raw_texture());
+				ensure(image);
+				ensure(cached.is_managed());
+
+				if (cached.get_image_type() != type)
+				{
+					// Type mismatch, discard
+					cached.destroy();
+					image = nullptr;
+				}
+				else
+				{
+					cached.set_dimensions(width, height, depth, pitch);
+					cached.set_format(texture::format::rgba, texture::type::ubyte, true);
+
+					// Clear the image before use if it is not going to be uploaded wholly from CPU
+					if (context != rsx::texture_upload_context::shader_read)
+					{
+						if (image->format_class() == RSX_FORMAT_CLASS_COLOR)
+						{
+							g_hw_blitter->fast_clear_image(cmd, image, color4f{});
+						}
+						else
+						{
+							g_hw_blitter->fast_clear_image(cmd, image, 1.f, 0);
+						}
+					}
+				}
+			}
+
+			if (!image)
+			{
+				ensure(!cached.exists());
+				image = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
+
+				// Prepare section
+				cached.reset(rsx_range);
+				cached.set_image_type(type);
+				cached.set_gcm_format(gcm_format);
+				cached.create(width, height, depth, mipmaps, image, pitch, true);
+			}
+
+			cached.set_view_flags(flags);
+			cached.set_context(context);
+			cached.set_swizzled(swizzled);
+			cached.set_dirty(false);
 
 			const auto swizzle = get_component_mapping(gcm_format, flags);
 			image->set_native_component_layout(swizzle);
-
-			auto& cached = *find_cached_texture(rsx_range, gcm_format, true, true, width, height, depth, mipmaps);
-			ensure(!cached.is_locked());
-
-			// Prepare section
-			cached.reset(rsx_range);
-			cached.set_view_flags(flags);
-			cached.set_context(context);
-			cached.set_image_type(type);
-			cached.set_gcm_format(gcm_format);
-			cached.set_swizzled(swizzled);
-
-			cached.create(width, height, depth, mipmaps, image, pitch, true);
-			cached.set_dirty(false);
 
 			if (context != rsx::texture_upload_context::blit_engine_dst)
 			{
@@ -737,7 +778,7 @@ namespace gl
 
 		cached_texture_section* create_nul_section(gl::command_context& /*cmd*/, const utils::address_range& rsx_range, bool /*memory_load*/) override
 		{
-			auto& cached = *find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, true, false);
+			auto& cached = *find_cached_texture(rsx_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, true, false, false);
 			ensure(!cached.is_locked());
 
 			// Prepare section
