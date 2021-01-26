@@ -2083,7 +2083,7 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 
 	thread_ctrl::set_native_priority(0);
 
-	thread_ctrl::set_thread_affinity_mask(-1);
+	thread_ctrl::set_thread_affinity_mask(0);
 
 	static constexpr u64 s_stop_bit = 0x8000'0000'0000'0000ull;
 
@@ -2775,7 +2775,7 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 {
 #ifdef _WIN32
 	HANDLE _this_thread = GetCurrentThread();
-	if (!SetThreadAffinityMask(_this_thread, mask == umax ? process_affinity_mask : mask))
+	if (!SetThreadAffinityMask(_this_thread, !mask ? process_affinity_mask : mask))
 	{
 		sig_log.error("Failed to set thread affinity 0x%x: error 0x%x.", mask, GetLastError());
 	}
@@ -2783,8 +2783,14 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 	// Supports only one core
 	thread_affinity_policy_data_t policy = { static_cast<integer_t>(std::countr_zero(mask)) };
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
-	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&policy), mask == umax ? 0 : 1);
+	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&policy), !mask ? 0 : 1);
 #elif defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__)
+	if (!mask)
+	{
+		// Reset affinity mask
+		mask = process_affinity_mask;
+	}
+
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
 
