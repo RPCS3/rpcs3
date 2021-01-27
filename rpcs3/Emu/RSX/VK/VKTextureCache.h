@@ -815,10 +815,7 @@ namespace vk
 			if (region.exists())
 			{
 				image = dynamic_cast<vk::viewable_image*>(region.get_raw_texture());
-				ensure(image);
-				ensure(region.is_managed());
-
-				if (region.get_image_type() != type || image->depth() != depth) // TODO
+				if (!image || region.get_image_type() != type || image->depth() != depth) // TODO
 				{
 					// Incompatible view/type
 					region.destroy();
@@ -826,6 +823,8 @@ namespace vk
 				}
 				else
 				{
+					ensure(region.is_managed());
+
 					// Reuse
 					region.set_rsx_pitch(pitch);
 
