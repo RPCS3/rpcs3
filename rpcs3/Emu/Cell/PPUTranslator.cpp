@@ -15,6 +15,7 @@
 using namespace llvm;
 
 const ppu_decoder<PPUTranslator> s_ppu_decoder;
+const ppu_decoder<ppu_itype> s_ppu_itype;
 const ppu_decoder<ppu_iname> s_ppu_iname;
 
 PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_module& info, ExecutionEngine& engine)
@@ -161,20 +162,60 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	const u64 base = m_reloc ? m_reloc->addr : 0;
 	m_addr = info.addr - base;
 
+	// Don't emit check in small blocks without terminator
+	bool need_check = info.size >= 16;
+
+	for (u32 addr = m_addr; addr < m_addr + info.size; addr += 4)
+	{
+		const u32 op = vm::read32(vm::cast(addr + base));
+
+		switch (s_ppu_itype.decode(op))
+		{
+		case ppu_itype::UNK:
+		case ppu_itype::ECIWX:
+		case ppu_itype::ECOWX:
+		case ppu_itype::TD:
+		case ppu_itype::TDI:
+		case ppu_itype::TW:
+		case ppu_itype::TWI:
+		case ppu_itype::B:
+		case ppu_itype::BC:
+		case ppu_itype::BCCTR:
+		case ppu_itype::BCLR:
+		case ppu_itype::SC:
+		{
+			need_check = true;
+			break;
+		}
+		default:
+		{
+			break;
+		}
+		}
+	}
+
 	m_thread = &*m_function->arg_begin();
 	m_base_loaded = m_ir->CreateLoad(m_base);
 
 	const auto body = BasicBlock::Create(m_context, "__body", m_function);
 
-	// Check status register in the entry block
-	const auto vstate = m_ir->CreateLoad(m_ir->CreateStructGEP(nullptr, m_thread, 1), true);
-	const auto vcheck = BasicBlock::Create(m_context, "__test", m_function);
-	m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), body, vcheck, m_md_likely);
+	if (need_check)
+	{
+		// Check status register in the entry block
+		const auto vstate = m_ir->CreateLoad(m_ir->CreateStructGEP(nullptr, m_thread, 1), true);
+		const auto vcheck = BasicBlock::Create(m_context, "__test", m_function);
+		m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), body, vcheck, m_md_likely);
 
-	// Create tail call to the check function
-	m_ir->SetInsertPoint(vcheck);
-	Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCallKind(llvm::CallInst::TCK_Tail);
-	m_ir->CreateRetVoid();
+		// Create tail call to the check function
+		m_ir->SetInsertPoint(vcheck);
+		Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCallKind(llvm::CallInst::TCK_Tail);
+		m_ir->CreateRetVoid();
+	}
+	else
+	{
+		m_ir->CreateBr(body);
+	}
+
 	m_ir->SetInsertPoint(body);
 
 	// Process blocks
@@ -2990,7 +3031,7 @@ void PPUTranslator::EQV(ppu_opcode_t op)
 
 void PPUTranslator::ECIWX(ppu_opcode_t op)
 {
-	SetGpr(op.rd, Call(GetType<u64>(), "__eciwx", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
+	UNK(op);
 }
 
 void PPUTranslator::LHZUX(ppu_opcode_t op)
@@ -3111,7 +3152,7 @@ void PPUTranslator::ORC(ppu_opcode_t op)
 
 void PPUTranslator::ECOWX(ppu_opcode_t op)
 {
-	Call(GetType<void>(), "__ecowx", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetGpr(op.rs, 32));
+	UNK(op);
 }
 
 void PPUTranslator::STHUX(ppu_opcode_t op)

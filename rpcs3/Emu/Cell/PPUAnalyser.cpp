@@ -633,7 +633,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			{
 				if (!_seg.addr) continue;
 
-				if (value >= _seg.addr && value < _seg.addr + _seg.size)
+				if (value >= start && value < end)
 				{
 					addr_heap.emplace(value);
 					break;
@@ -1527,6 +1527,25 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 	// Decompose functions to basic blocks
 	for (auto&& [_, func] : as_rvalue(std::move(fmap)))
 	{
+		if (func.attr & ppu_attr::no_size && entry)
+		{
+			// Disabled for PRX for now
+			const u32 lim = get_limit(func.addr);
+
+			ppu_log.warning("Function 0x%x will be compiled on per-instruction basis (next=0x%x)", func.addr, lim);
+
+			for (u32 addr = func.addr; addr < lim; addr += 4)
+			{
+				auto& block = fmap[addr];
+				block.addr = addr;
+				block.size = 4;
+				block.toc  = func.toc;
+				block.attr = ppu_attr::no_size;
+			}
+
+			continue;
+		}
+
 		for (auto [addr, size] : func.blocks)
 		{
 			if (!size)
@@ -1583,7 +1602,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 		case 109:
 		case 110:
 		{
-			ppu_log.notice("Added block from reloc: 0x%x (0x%x, %u)", target, rel.addr, rel.type);
+			ppu_log.trace("Added block from reloc: 0x%x (0x%x, %u) (heap=%d)", target, rel.addr, rel.type, addr_heap.count(target));
 			block_queue.emplace_back(target, 0);
 			block_set.emplace(target);
 			continue;
@@ -1598,8 +1617,11 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 	u32 exp = start;
 	u32 lim = end;
 
-	// Start with full scan
-	block_queue.emplace_back(exp, lim);
+	// Start with full scan (disabled for PRX for now)
+	if (entry)
+	{
+		block_queue.emplace_back(exp, lim);
+	}
 
 	// block_queue may grow
 	for (usz i = 0; i < block_queue.size(); i++)
@@ -1731,6 +1753,11 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 					block.addr = exp;
 					block.size = i_pos - exp;
 					ppu_log.trace("Block __0x%x added (size=0x%x)", block.addr, block.size);
+
+					if (get_limit(exp) == end)
+					{
+						block.attr += ppu_attr::no_size;
+					}
 				}
 			}
 
@@ -1750,9 +1777,26 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 	}
 
 	// Convert map to vector (destructive)
-	for (auto&& pair : as_rvalue(std::move(fmap)))
+	for (auto&& [_, block] : as_rvalue(std::move(fmap)))
 	{
-		funcs.emplace_back(std::move(pair.second));
+		if (block.attr & ppu_attr::no_size && block.size > 4 && entry)
+		{
+			// Disabled for PRX for now
+			ppu_log.warning("Block 0x%x will be compiled on per-instruction basis (size=0x%x)", block.addr, block.size);
+
+			for (u32 addr = block.addr; addr < block.addr + block.size; addr += 4)
+			{
+				auto& i = funcs.emplace_back();
+				i.addr = addr;
+				i.size = 4;
+				i.toc  = block.toc;
+				i.attr = ppu_attr::no_size;
+			}
+
+			continue;
+		}
+
+		funcs.emplace_back(std::move(block));
 	}
 
 	ppu_log.notice("Block analysis: %zu blocks (%zu enqueued)", funcs.size(), block_queue.size());
