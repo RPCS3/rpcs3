@@ -682,10 +682,7 @@ namespace gl
 			{
 				// Try and reuse this image data. It is very likely to match our needs
 				image = dynamic_cast<gl::viewable_image*>(cached.get_raw_texture());
-				ensure(image);
-				ensure(cached.is_managed());
-
-				if (cached.get_image_type() != type)
+				if (!image || cached.get_image_type() != type)
 				{
 					// Type mismatch, discard
 					cached.destroy();
@@ -693,6 +690,8 @@ namespace gl
 				}
 				else
 				{
+					ensure(cached.is_managed());
+
 					cached.set_dimensions(width, height, depth, pitch);
 					cached.set_format(texture::format::rgba, texture::type::ubyte, true);
 
