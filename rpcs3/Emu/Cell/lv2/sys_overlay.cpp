@@ -15,6 +15,7 @@
 extern std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object&, const std::string& path);
 
 extern void ppu_initialize(const ppu_module&);
+extern void ppu_finalize(const ppu_module&);
 
 LOG_CHANNEL(sys_overlay);
 
@@ -117,6 +118,8 @@ error_code sys_overlay_unload_module(u32 ovlmid)
 	{
 		vm::dealloc(seg.addr);
 	}
+
+	ppu_finalize(*_main);
 
 	return CELL_OK;
 }

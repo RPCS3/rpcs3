@@ -110,6 +110,7 @@ const ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast;
 const ppu_decoder<ppu_itype> g_ppu_itype;
 
 extern void ppu_initialize();
+extern void ppu_finalize(const ppu_module& info);
 extern void ppu_initialize(const ppu_module& info);
 static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
@@ -1921,6 +1922,83 @@ extern bool ppu_stdcx(ppu_thread& ppu, u32 addr, u64 reg_value)
 	return ppu_store_reservation<u64>(ppu, addr, reg_value);
 }
 
+#ifdef LLVM_AVAILABLE
+namespace
+{
+	// Compiled PPU module info
+	struct jit_module
+	{
+		std::vector<u64*> vars;
+		std::vector<ppu_function_t> funcs;
+		std::shared_ptr<jit_compiler> pjit;
+	};
+
+	struct jit_module_manager
+	{
+		shared_mutex mutex;
+		std::unordered_map<std::string, jit_module> map;
+
+		jit_module& get(const std::string& name)
+		{
+			std::lock_guard lock(mutex);
+			return map.emplace(name, jit_module{}).first->second;
+		}
+
+		void remove(const std::string& name) noexcept
+		{
+			std::lock_guard lock(mutex);
+
+			const auto found = map.find(name);
+
+			if (found == map.end()) [[unlikely]]
+			{
+				ppu_log.error("Failed to remove module %s", name);
+				return;
+			}
+
+			map.erase(found);
+		}
+	};
+}
+#endif
+
+extern void ppu_finalize(const ppu_module& info)
+{
+	// Get cache path for this executable
+	std::string cache_path;
+
+	if (info.name.empty())
+	{
+		// Don't remove main module from memory
+		return;
+	}
+	else
+	{
+		// Get PPU cache location
+		cache_path = fs::get_cache_dir() + "cache/";
+
+		const std::string dev_flash = vfs::get("/dev_flash/");
+
+		if (info.path.starts_with(dev_flash) || Emu.GetCat() == "1P")
+		{
+			// Don't remove dev_flash prx from memory
+			return;
+		}
+		else if (!Emu.GetTitleID().empty())
+		{
+			cache_path += Emu.GetTitleID();
+			cache_path += '/';
+		}
+
+		// Add PPU hash and filename
+		fmt::append(cache_path, "ppu-%s-%s/", fmt::base57(info.sha1), info.path.substr(info.path.find_last_of('/') + 1));
+	}
+
+#ifdef LLVM_AVAILABLE
+	g_fxo->get<jit_module_manager>()->remove(cache_path + info.name);
+#endif
+}
+
 extern void ppu_initialize()
 {
 	const auto _main = g_fxo->get<ppu_module>();
@@ -2056,14 +2134,6 @@ extern void ppu_initialize(const ppu_module& info)
 	// Initialize progress dialog
 	g_progr = "Compiling PPU modules...";
 
-	// Compiled PPU module info
-	struct jit_module
-	{
-		std::vector<u64*> vars;
-		std::vector<ppu_function_t> funcs;
-		std::shared_ptr<jit_compiler> pjit;
-	};
-
 	struct jit_core_allocator
 	{
 		const s32 thread_count = g_cfg.core.llvm_threads ? std::min<s32>(g_cfg.core.llvm_threads, limit()) : limit();
@@ -2074,18 +2144,6 @@ extern void ppu_initialize(const ppu_module& info)
 		static s32 limit()
 		{
 			return static_cast<s32>(std::thread::hardware_concurrency());
-		}
-	};
-
-	struct jit_module_manager
-	{
-		shared_mutex mutex;
-		std::unordered_map<std::string, jit_module> map;
-
-		jit_module& get(const std::string& name)
-		{
-			std::lock_guard lock(mutex);
-			return map.emplace(name, jit_module{}).first->second;
 		}
 	};
 

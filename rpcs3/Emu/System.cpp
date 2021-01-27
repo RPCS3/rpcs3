@@ -69,6 +69,7 @@ atomic_t<u64> g_watchdog_hold_ctr{0};
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void ppu_initialize(const ppu_module&);
+extern void ppu_finalize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 
@@ -1227,6 +1228,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 								idm::remove<lv2_obj, lv2_prx>(idm::last_id());
 								lock.lock();
 								ppu_unload_prx(*prx);
+								lock.unlock();
+								ppu_finalize(*prx);
 								g_progr_fdone++;
 								continue;
 							}
