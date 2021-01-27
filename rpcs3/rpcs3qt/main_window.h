@@ -84,6 +84,7 @@ public:
 	bool Init();
 	~main_window();
 	QIcon GetAppIcon();
+	bool OnMissingFw();
 
 Q_SIGNALS:
 	void RequestLanguageChange(const QString& language);

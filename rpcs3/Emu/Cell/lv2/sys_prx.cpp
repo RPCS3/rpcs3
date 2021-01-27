@@ -22,6 +22,7 @@ extern void ppu_finalize(const ppu_module&);
 
 LOG_CHANNEL(sys_prx);
 
+// <string: firmware sprx, int: should hle if 1>
 extern const std::map<std::string_view, int> g_prx_list
 {
 	{ "libaacenc.sprx", 0 },

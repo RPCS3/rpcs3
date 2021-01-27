@@ -222,14 +222,6 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 			title = tr("Exit RPCS3?");
 			message = tr("A game is currently running. Do you really want to close RPCS3?\n\nAny unsaved progress will be lost!\n");
 		}
-		else if (gui_save_entry == gui::ib_confirm_fw)
-		{
-			title = tr("Missing Firmware Detected!");
-			message = tr("Install the PS3 Firmware (Menu: File -> Install Firmware)."
-				"\n<br>For more information read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>."
-				"\nCommercial games do not work without firmware! Do you wish to continue!?");
-			icon = QMessageBox::Critical;
-		}
 
 		int result = QMessageBox::Yes;
 
