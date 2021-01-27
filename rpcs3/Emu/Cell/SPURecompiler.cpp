@@ -434,7 +434,7 @@ void spu_cache::initialize()
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
 	{
 		// Set low priority
-		thread_ctrl::set_native_priority(-1);
+		thread_ctrl::scoped_priority low_prio(-1);
 
 		// Initialize compiler instances for parallel compilation
 		std::unique_ptr<spu_recompiler_base> compiler;
@@ -1188,11 +1188,15 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 
 void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip)
 {
+	if (g_cfg.core.spu_decoder > spu_decoder_type::fast)
+	{
+		fmt::throw_exception("Invalid SPU decoder");
+	}
+
 	// Select opcode table
-	const auto& table = *(
-		g_cfg.core.spu_decoder == spu_decoder_type::precise ? &g_spu_interpreter_precise.get_table() :
-		g_cfg.core.spu_decoder == spu_decoder_type::fast ? &g_spu_interpreter_fast.get_table() :
-		(fmt::throw_exception("Invalid SPU decoder"), nullptr));
+	const auto& table = *(g_cfg.core.spu_decoder == spu_decoder_type::precise
+		? &g_spu_interpreter_precise.get_table()
+		: &g_spu_interpreter_fast.get_table());
 
 	// LS pointer
 	const auto base = static_cast<const u8*>(ls);
@@ -4001,6 +4005,35 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		}
 	}
 
+	// Splat scalar value from the preferred slot
+	template <typename T>
+	auto splat_scalar(T&& arg)
+	{
+		using VT = std::remove_extent_t<typename std::decay_t<T>::type>;
+
+		if constexpr (sizeof(VT) == 1)
+		{
+			return zshuffle(std::forward<T>(arg), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12);
+		}
+		else if constexpr (sizeof(VT) == 2)
+		{
+			return zshuffle(std::forward<T>(arg), 6, 6, 6, 6, 6, 6, 6, 6);
+		}
+		else if constexpr (sizeof(VT) == 4)
+		{
+			return zshuffle(std::forward<T>(arg), 3, 3, 3, 3);
+		}
+		else if constexpr (sizeof(VT) == 8)
+		{
+			return zshuffle(std::forward<T>(arg), 1, 1);
+		}
+		else
+		{
+			static_assert(sizeof(VT) == 16);
+			return std::forward<T>(arg);
+		}
+	}
+
 	void set_reg_fixed(u32 index, llvm::Value* value, bool fixup = true)
 	{
 		llvm::StoreInst* dummy{};
@@ -6434,6 +6467,23 @@ public:
 
 	void FSM(spu_opcode_t op)
 	{
+		// FSM following a comparison instruction
+		if (match_vr<s8[16], s16[8], s32[4], s64[2]>(op.ra, [&](auto c, auto MP)
+		{
+			using VT = typename decltype(MP)::type;
+
+			if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+			{
+					set_vr(op.rt, (splat_scalar(c)));
+					return true;
+			}
+
+			return false;
+		}))
+		{
+			return;
+		}
+
 		const auto v = extract(get_vr(op.ra), 3);
 		const auto m = bitcast<bool[4]>(trunc<i4>(v));
 		set_vr(op.rt, sext<s32[4]>(m));
@@ -6468,27 +6518,40 @@ public:
 		{
 			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = (sc + (zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3)) & 0xf;
-			set_vr(op.rt, pshufb(as, sh));
+			const auto sh = sc + (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
+
+			if (m_use_avx512_icl)
+			{
+				set_vr(op.rt, vpermb(as, sh));
+				return;
+			}
+
+			set_vr(op.rt, pshufb(as, (sh & 0xf)));
+			return;
+		}
+		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sh = sc - (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
+
+		if (m_use_avx512_icl)
+		{
+			set_vr(op.rt, vpermb(a, sh));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = (sc - (zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3)) & 0xf;
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb(a, (sh & 0xf)));
 	}
 
 	void ROTQMBYBI(spu_opcode_t op)
 	{
 		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
-		const auto sh = sc + (-(zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3) & 0x1f);
+		const auto sh = sc + (-(splat_scalar(get_vr<u8[16]>(op.rb)) >> 3) & 0x1f);
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
 	void SHLQBYBI(spu_opcode_t op)
 	{
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = sc - (zshuffle(get_vr<u8[16]>(op.rb), 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) >> 3);
+		const auto sh = sc - (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
 		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
 	}
 
@@ -6556,21 +6619,21 @@ public:
 	void ROTQBI(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
-		const auto b = zshuffle(get_vr(op.rb) & 0x7, 3, 3, 3, 3);
+		const auto b = splat_scalar(get_vr(op.rb) & 0x7);
 		set_vr(op.rt, fshl(a, zshuffle(a, 3, 0, 1, 2), b));
 	}
 
 	void ROTQMBI(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
-		const auto b = zshuffle(-get_vr(op.rb) & 0x7, 3, 3, 3, 3);
+		const auto b = splat_scalar(-get_vr(op.rb) & 0x7);
 		set_vr(op.rt, fshr(zshuffle(a, 1, 2, 3, 4), a, b));
 	}
 
 	void SHLQBI(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
-		const auto b = zshuffle(get_vr(op.rb) & 0x7, 3, 3, 3, 3);
+		const auto b = splat_scalar(get_vr(op.rb) & 0x7);
 		set_vr(op.rt, fshl(a, zshuffle(a, 4, 0, 1, 2), b));
 	}
 
@@ -6598,14 +6661,28 @@ public:
 		{
 			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = eval((sc + zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)) & 0xf);
-			set_vr(op.rt, pshufb(as, sh));
+			const auto sh = eval(sc + splat_scalar(b));
+
+			if (m_use_avx512_icl)
+			{
+				set_vr(op.rt, vpermb(as, sh));
+				return;
+			}
+
+			set_vr(op.rt, pshufb(as, (sh & 0xf)));
 			return;
 		}
 
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = eval((sc - zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)) & 0xf);
-		set_vr(op.rt, pshufb(a, sh));
+		const auto sh = eval(sc - splat_scalar(b));
+
+		if (m_use_avx512_icl)
+		{
+			set_vr(op.rt, vpermb(a, sh));
+			return;
+		}
+
+		set_vr(op.rt, pshufb(a, (sh & 0xf)));
 	}
 
 	void ROTQMBY(spu_opcode_t op)
@@ -6613,7 +6690,7 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
 		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
-		const auto sh = sc + (-zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f);
+		const auto sh = sc + (-splat_scalar(b) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 
@@ -6622,7 +6699,7 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = sc - (zshuffle(b, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12) & 0x1f);
+		const auto sh = sc - (splat_scalar(b) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
 	}
 

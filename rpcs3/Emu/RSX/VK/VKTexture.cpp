@@ -2,6 +2,7 @@
 #include "VKHelpers.h"
 #include "VKFormats.h"
 #include "VKCompute.h"
+#include "VKDMA.h"
 #include "VKRenderPass.h"
 #include "VKRenderTargets.h"
 
@@ -800,7 +801,7 @@ namespace vk
 		ensure(dst_offset <= scratch_buf->size());
 	}
 
-	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
+	void copy_mipmaped_image_using_buffer(const vk::command_buffer& cmd, vk::image* dst_image,
 		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align)
 	{
@@ -808,7 +809,7 @@ namespace vk
 		u32 block_in_pixel = rsx::get_format_block_size_in_texel(format);
 		u8  block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
 
-		rsx::texture_uploader_capabilities caps{ true, false, true, heap_align };
+		rsx::texture_uploader_capabilities caps{ .alignment = heap_align };
 		rsx::texture_memory_info opt{};
 		bool check_caps = true;
 
@@ -816,8 +817,12 @@ namespace vk
 		u32 scratch_offset = 0;
 		u32 row_pitch, image_linear_size;
 
+		vk::buffer* upload_buffer = nullptr;
+		usz offset_in_upload_buffer = 0;
+
 		std::vector<VkBufferImageCopy> copy_regions;
 		std::vector<VkBufferCopy> buffer_copies;
+		std::vector<std::pair<VkBuffer, u32>> upload_commands;
 		copy_regions.reserve(subresource_layout.size());
 
 		if (vk::is_renderpass_open(cmd))
@@ -850,14 +855,16 @@ namespace vk
 			image_linear_size = row_pitch * layout.height_in_block * layout.depth;
 
 			// Map with extra padding bytes in case of realignment
-			usz offset_in_buffer = upload_heap.alloc<512>(image_linear_size + 8);
-			void* mapped_buffer = upload_heap.map(offset_in_buffer, image_linear_size + 8);
+			offset_in_upload_buffer = upload_heap.alloc<512>(image_linear_size + 8);
+			void* mapped_buffer = upload_heap.map(offset_in_upload_buffer, image_linear_size + 8);
 
 			// Only do GPU-side conversion if occupancy is good
 			if (check_caps)
 			{
 				caps.supports_byteswap = (image_linear_size >= 1024);
 				caps.supports_hw_deswizzle = caps.supports_byteswap;
+				caps.supports_zero_copy = caps.supports_byteswap;
+				caps.supports_vtc_decoding = false;
 				check_caps = false;
 			}
 
@@ -867,7 +874,7 @@ namespace vk
 
 			copy_regions.push_back({});
 			auto& copy_info = copy_regions.back();
-			copy_info.bufferOffset = offset_in_buffer;
+			copy_info.bufferOffset = offset_in_upload_buffer;
 			copy_info.imageExtent.height = layout.height_in_texel;
 			copy_info.imageExtent.width = layout.width_in_texel;
 			copy_info.imageExtent.depth = layout.depth;
@@ -876,6 +883,36 @@ namespace vk
 			copy_info.imageSubresource.baseArrayLayer = layout.layer;
 			copy_info.imageSubresource.mipLevel = layout.level;
 			copy_info.bufferRowLength = std::max<u32>(block_in_pixel * row_pitch / block_size_in_bytes, layout.width_in_texel);
+
+			upload_buffer = upload_heap.heap.get();
+
+			if (opt.require_upload)
+			{
+				ensure(!opt.deferred_cmds.empty());
+
+				auto base_addr = static_cast<const char*>(opt.deferred_cmds.front().src);
+				auto end_addr = static_cast<const char*>(opt.deferred_cmds.back().src) + opt.deferred_cmds.back().length;
+				auto data_length = end_addr - base_addr;
+				u64 src_address = 0;
+
+				if (uptr(base_addr) > uptr(vm::g_sudo_addr))
+				{
+					src_address = uptr(base_addr) - uptr(vm::g_sudo_addr);
+				}
+				else
+				{
+					src_address = uptr(base_addr) - uptr(vm::g_base_addr);
+				}
+
+				auto dma_mapping = vk::map_dma(cmd, static_cast<u32>(src_address), static_cast<u32>(data_length));
+
+				ensure(dma_mapping.second->size() >= (dma_mapping.first + data_length));
+				vk::load_dma(::narrow<u32>(src_address), data_length);
+
+				upload_buffer = dma_mapping.second;
+				offset_in_upload_buffer = dma_mapping.first;
+				copy_info.bufferOffset = offset_in_upload_buffer;
+			}
 
 			if (opt.require_swap || opt.require_deswizzle || requires_depth_processing)
 			{
@@ -892,11 +929,25 @@ namespace vk
 				}
 
 				// Copy from upload heap to scratch mem
-				buffer_copies.push_back({});
-				auto& copy = buffer_copies.back();
-				copy.srcOffset = offset_in_buffer;
-				copy.dstOffset = scratch_offset;
-				copy.size = image_linear_size;
+				if (opt.require_upload)
+				{
+					for (const auto& copy_cmd : opt.deferred_cmds)
+					{
+						buffer_copies.push_back({});
+						auto& copy = buffer_copies.back();
+						copy.srcOffset = uptr(copy_cmd.dst) + offset_in_upload_buffer;
+						copy.dstOffset = scratch_offset;
+						copy.size = copy_cmd.length;
+					}
+				}
+				else
+				{
+					buffer_copies.push_back({});
+					auto& copy = buffer_copies.back();
+					copy.srcOffset = offset_in_upload_buffer;
+					copy.dstOffset = scratch_offset;
+					copy.size = image_linear_size;
+				}
 
 				// Point data source to scratch mem
 				copy_info.bufferOffset = scratch_offset;
@@ -904,12 +955,41 @@ namespace vk
 				scratch_offset += image_linear_size;
 				ensure((scratch_offset + image_linear_size) <= scratch_buf->size()); // "Out of scratch memory"
 			}
+
+			if (opt.require_upload)
+			{
+				if (upload_commands.empty() || upload_buffer->value != upload_commands.back().first)
+				{
+					upload_commands.emplace_back(upload_buffer->value, 1);
+				}
+				else
+				{
+					upload_commands.back().second++;
+				}
+
+				copy_info.bufferRowLength = std::max<u32>(block_in_pixel * layout.pitch_in_block, layout.width_in_texel);
+			}
 		}
+
+		ensure(upload_buffer);
 
 		if (opt.require_swap || opt.require_deswizzle || requires_depth_processing)
 		{
 			ensure(scratch_buf);
-			vkCmdCopyBuffer(cmd, upload_heap.heap->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
+
+			if (upload_commands.size() > 1)
+			{
+				auto range_ptr = buffer_copies.data();
+				for (const auto& op : upload_commands)
+				{
+					vkCmdCopyBuffer(cmd, op.first, scratch_buf->value, op.second, range_ptr);
+					range_ptr += op.second;
+				}
+			}
+			else
+			{
+				vkCmdCopyBuffer(cmd, upload_buffer->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
+			}
 
 			insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, scratch_offset, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
@@ -955,9 +1035,18 @@ namespace vk
 
 			vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
 		}
+		else if (upload_commands.size() > 1)
+		{
+			auto region_ptr = copy_regions.data();
+			for (const auto& op : upload_commands)
+			{
+				vkCmdCopyBufferToImage(cmd, op.first, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, op.second, region_ptr);
+				region_ptr += op.second;
+			}
+		}
 		else
 		{
-			vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
+			vkCmdCopyBufferToImage(cmd, upload_buffer->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
 		}
 	}
 

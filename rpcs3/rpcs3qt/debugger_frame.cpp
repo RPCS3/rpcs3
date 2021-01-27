@@ -11,6 +11,7 @@
 
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUDisAsm.h"
@@ -223,10 +224,47 @@ void debugger_frame::hideEvent(QHideEvent * event)
 
 void debugger_frame::keyPressEvent(QKeyEvent* event)
 {
+	if (!isActiveWindow())
+	{
+		return;
+	}
+
 	const auto cpu = this->cpu.lock();
 	int i = m_debugger_list->currentRow();
 
-	if (!isActiveWindow() || !cpu)
+	switch (event->key())
+	{
+	case Qt::Key_F1:
+	{
+		QDialog* dlg = new QDialog(this);
+		dlg->setAttribute(Qt::WA_DeleteOnClose);
+		dlg->setWindowTitle(tr("Debugger Guide & Shortcuts"));
+
+		QLabel* l = new QLabel(tr(
+			"Keys Ctrl+G: Go to typed address."
+			"\nKeys Alt+S: Capture SPU images of selected SPU."
+			"\nKey E: Instruction Editor: click on the instruction you want to modify, then press E."
+			"\nKey F: Dedicated floating point mode switch for SPU threads."
+			"\nKey R: Registers Editor for selected thread."
+			"\nKey N: Show next instruction the thread will execute after marked instruction, does nothing if target is not predictable."
+			"\nKey M: Show the Memory Viewer with initial address pointing to the marked instruction."
+			"\nKey F10: Perform single-stepping on instructions."
+			"\nKey F11: Perform step-over on instructions. (skip function calls)"
+			"\nKey F1: Show this help dialog."));
+
+		l->setFont([](QFont f) { f.setPointSize(9); return f; }(l->font()));
+
+		QVBoxLayout* layout = new QVBoxLayout();
+		layout->addWidget(l);
+		dlg->setLayout(layout);
+		dlg->setFixedSize(dlg->sizeHint());
+		dlg->move(QCursor::pos());
+		dlg->exec();
+		return;
+	}
+	}
+
+	if (!cpu)
 	{
 		return;
 	}
@@ -337,13 +375,32 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	}
 }
 
+rsx::thread* debugger_frame::get_rsx()
+{
+	// m_rsx is raw pointer, when emulation is stopped it won't be cleared
+	// Therefore need to do invalidation checks manually
+
+	if (g_fxo->get<rsx::thread>() != m_rsx)
+	{
+		m_rsx = nullptr;
+	}
+
+	if (m_rsx && !m_rsx->ctrl)
+	{
+		m_rsx = nullptr;
+	}
+
+	return m_rsx;
+}
+
 void debugger_frame::UpdateUI()
 {
 	UpdateUnitList();
 
 	const auto cpu = this->cpu.lock();
+	const auto rsx = this->get_rsx();
 
-	if (!cpu)
+	if (!cpu && !rsx)
 	{
 		if (m_last_pc != umax || !m_last_query_state.empty())
 		{
@@ -351,10 +408,15 @@ void debugger_frame::UpdateUI()
 			m_last_pc = -1;
 			DoUpdate();
 		}
-
-		m_btn_run->setEnabled(false);
-		m_btn_step->setEnabled(false);
-		m_btn_step_over->setEnabled(false);
+	}
+	else if (rsx)
+	{
+		if (m_last_pc != rsx->ctrl->get || !m_last_query_state.empty())
+		{
+			m_last_query_state.clear();
+			m_last_pc = rsx->ctrl->get;
+			DoUpdate();
+		}
 	}
 	else
 	{
@@ -387,6 +449,7 @@ void debugger_frame::UpdateUI()
 }
 
 Q_DECLARE_METATYPE(std::weak_ptr<cpu_thread>);
+Q_DECLARE_METATYPE(::rsx::thread*);
 
 void debugger_frame::UpdateUnitList()
 {
@@ -424,6 +487,13 @@ void debugger_frame::UpdateUnitList()
 
 		idm::select<named_thread<ppu_thread>>(on_select);
 		idm::select<named_thread<spu_thread>>(on_select);
+
+		if (auto render = g_fxo->get<rsx::thread>(); render && render->ctrl)
+		{
+			QVariant var_cpu = QVariant::fromValue<rsx::thread*>(render);
+			m_choice_units->addItem("RSX[0x55555555]", var_cpu);
+			if (old_cpu == var_cpu) m_choice_units->setCurrentIndex(m_choice_units->count() - 1);
+		}
 	}
 
 	OnSelectUnit();
@@ -436,15 +506,22 @@ void debugger_frame::OnSelectUnit()
 	if (m_choice_units->count() < 1) return;
 
 	const auto weak = m_choice_units->currentData().value<std::weak_ptr<cpu_thread>>();
+	const auto render = m_choice_units->currentData().value<rsx::thread*>();
 
-	if (!weak.owner_before(cpu) && !cpu.owner_before(weak))
+	if (!render && !weak.owner_before(cpu) && !cpu.owner_before(weak))
 	{
 		// They match, nothing to do.
 		return;
 	}
 
+	if (render && render == this->get_rsx())
+	{
+		return;
+	}
+
 	m_disasm.reset();
 	cpu.reset();
+	m_rsx = nullptr;
 
 	if (!weak.expired())
 	{
@@ -467,6 +544,10 @@ void debugger_frame::OnSelectUnit()
 				}
 			}
 		}
+	}
+	else
+	{
+		m_rsx = render;
 	}
 
 	EnableButtons(true);
@@ -494,8 +575,9 @@ void debugger_frame::DoUpdate()
 void debugger_frame::WritePanels()
 {
 	const auto cpu = this->cpu.lock();
+	const auto rsx = this->get_rsx();
 
-	if (!cpu)
+	if (!cpu && !rsx)
 	{
 		m_misc_state->clear();
 		m_regs->clear();
@@ -506,22 +588,22 @@ void debugger_frame::WritePanels()
 
 	loc = m_misc_state->verticalScrollBar()->value();
 	m_misc_state->clear();
-	m_misc_state->setText(qstr(cpu->dump_misc()));
+	m_misc_state->setText(qstr(rsx ? "" : cpu->dump_misc()));
 	m_misc_state->verticalScrollBar()->setValue(loc);
 
 	loc = m_regs->verticalScrollBar()->value();
 	m_regs->clear();
-	m_regs->setText(qstr(cpu->dump_regs()));
+	m_regs->setText(qstr(rsx ? rsx->dump_regs() : cpu->dump_regs()));
 	m_regs->verticalScrollBar()->setValue(loc);
 
-	Q_EMIT CallStackUpdateRequested(cpu->dump_callstack_list());
+	Q_EMIT CallStackUpdateRequested(rsx ? rsx->dump_callstack() : cpu->dump_callstack_list());
 }
 
 void debugger_frame::ShowGotoAddressDialog()
 {
-	QDialog* diag = new QDialog(this);
-	diag->setWindowTitle(tr("Go To Address"));
-	diag->setModal(true);
+	QDialog* dlg = new QDialog(this);
+	dlg->setWindowTitle(tr("Go To Address"));
+	dlg->setModal(true);
 
 	// Panels
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
@@ -529,7 +611,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	QHBoxLayout* hbox_button_panel(new QHBoxLayout());
 
 	// Address expression input
-	QLineEdit* expression_input(new QLineEdit(diag));
+	QLineEdit* expression_input(new QLineEdit(dlg));
 	expression_input->setFont(m_mono);
 	expression_input->setMaxLength(18);
 
@@ -555,7 +637,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	vbox_panel->addSpacing(8);
 	vbox_panel->addLayout(hbox_button_panel);
 
-	diag->setLayout(vbox_panel);
+	dlg->setLayout(vbox_panel);
 
 	const auto cpu = this->cpu.lock();
 	const QFont font = expression_input->font();
@@ -565,32 +647,32 @@ void debugger_frame::ShowGotoAddressDialog()
 	expression_input->setPlaceholderText(QString("0x%1").arg(pc, 16, 16, QChar('0')));
 	expression_input->setFixedWidth(gui::utils::get_label_width(expression_input->placeholderText(), &font));
 
-	connect(button_ok, &QAbstractButton::clicked, diag, &QDialog::accept);
-	connect(button_cancel, &QAbstractButton::clicked, diag, &QDialog::reject);
+	connect(button_ok, &QAbstractButton::clicked, dlg, &QDialog::accept);
+	connect(button_cancel, &QAbstractButton::clicked, dlg, &QDialog::reject);
 
-	diag->move(QCursor::pos());
+	dlg->move(QCursor::pos());
 
-	if (diag->exec() == QDialog::Accepted)
+	if (dlg->exec() == QDialog::Accepted)
 	{
 		const u32 address = EvaluateExpression(expression_input->text());
 		m_debugger_list->ShowAddress(address);
 	}
 
-	diag->deleteLater();
+	dlg->deleteLater();
 }
 
 u64 debugger_frame::EvaluateExpression(const QString& expression)
 {
-	auto thread = cpu.lock();
-
-	if (!thread) return 0;
-
 	bool ok = false;
 
 	// Parse expression(or at least used to, was nuked to remove the need for QtJsEngine)
 	const QString fixed_expression = QRegExp("^[A-Fa-f0-9]+$").exactMatch(expression) ? "0x" + expression : expression;
 	const u64 res = static_cast<u64>(fixed_expression.toULong(&ok, 16));
-	return ok ? res : thread->get_pc();
+
+	if (ok) return res;
+	if (auto thread = get_rsx()) return thread->ctrl->get;
+	if (auto thread = cpu.lock()) return thread->get_pc();
+	return 0;
 }
 
 void debugger_frame::ClearBreakpoints()
@@ -606,7 +688,11 @@ void debugger_frame::ClearCallStack()
 void debugger_frame::ShowPC()
 {
 	const auto cpu0 = cpu.lock();
-	m_debugger_list->ShowAddress(cpu0 ? cpu0->get_pc() : 0);
+
+	const u32 pc = get_rsx() ? +m_rsx->ctrl->get
+		: (cpu0 ? cpu0->get_pc() : 0);
+
+	m_debugger_list->ShowAddress(pc);
 }
 
 void debugger_frame::DoStep(bool stepOver)

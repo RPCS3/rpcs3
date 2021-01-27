@@ -969,7 +969,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		std::string swz_mask = "";
 		auto select = static_cast<u8>(type);
 
-		if (type == rsx::texture_dimension_extended::texture_dimension_2d)
+		if (type != rsx::texture_dimension_extended::texture_dimension_3d)
 		{
 			if (m_prog.shadow_textures & ref_mask)
 			{
@@ -979,7 +979,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			}
 			else
 			{
-				properties.tex2d_sampler_mask |= ref_mask;
+				properties.common_access_sampler_mask |= ref_mask;
 				if (m_prog.redirected_textures & ref_mask)
 				{
 					properties.redirected_sampler_mask |= ref_mask;
@@ -995,6 +995,14 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		}
 
 		auto function = functions[select];
+
+		if (function == FUNCTION::FUNCTION_TEXTURE_SHADOW2D &&
+			type == rsx::texture_dimension_extended::texture_dimension_cubemap)
+		{
+			// Cubemap shadow override
+			function = FUNCTION::FUNCTION_TEXTURE_SHADOWCUBE;
+		}
+
 		SetDst(getFunction(function) + swz_mask);
 
 		if (dst.exp_tex)

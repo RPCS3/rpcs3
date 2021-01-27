@@ -19,6 +19,7 @@ namespace vm
 	extern u8* const g_sudo_addr;
 	extern u8* const g_exec_addr;
 	extern u8* const g_stat_addr;
+	extern u8* const g_free_addr;
 	extern u8 g_reservations[];
 
 	struct writer_lock;
@@ -81,13 +82,10 @@ namespace vm
 	u32 alloc(u32 size, memory_location_t location, u32 align = 0x10000);
 
 	// Map memory at specified address (in optionally specified memory location)
-	u32 falloc(u32 addr, u32 size, memory_location_t location = any);
+	u32 falloc(u32 addr, u32 size, memory_location_t location = any, const std::shared_ptr<utils::shm>* src = nullptr);
 
 	// Unmap memory at specified address (in optionally specified memory location), return size
-	u32 dealloc(u32 addr, memory_location_t location = any);
-
-	// dealloc() with no return value and no exceptions
-	void dealloc_verbose_nothrow(u32 addr, memory_location_t location = any) noexcept;
+	u32 dealloc(u32 addr, memory_location_t location = any, const std::shared_ptr<utils::shm>* src = nullptr);
 
 	// utils::memory_lock wrapper for locking sudo memory
 	void lock_sudo(u32 addr, u32 size);

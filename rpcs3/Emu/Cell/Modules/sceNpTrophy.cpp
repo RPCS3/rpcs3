@@ -392,7 +392,7 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 		name_sv = name_sv.substr(0, pos);
 	}
 
-	sceNpTrophy.warning("sceNpTrophyCreateContext(): data='%s' term='%c' (0x%x) num=%d", name_sv, commId->term, commId->term, commId->num);
+	sceNpTrophy.warning("sceNpTrophyCreateContext(): data='%s' term='%c' (0x%x) num=%d", name_sv, commId->data[9], commId->data[9], commId->num);
 
 	// append the commId number as "_xx"
 	const std::string name = fmt::format("%s_%02d", name_sv, commId->num);

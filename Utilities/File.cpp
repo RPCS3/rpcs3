@@ -1055,14 +1055,17 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 		u64 seek(s64 offset, seek_mode whence) override
 		{
+			if (whence > seek_end)
+			{
+				fmt::throw_exception("Invalid whence (0x%x)", whence);
+			}
+
 			LARGE_INTEGER pos;
 			pos.QuadPart = offset;
 
 			const DWORD mode =
 				whence == seek_set ? FILE_BEGIN :
-				whence == seek_cur ? FILE_CURRENT :
-				whence == seek_end ? FILE_END :
-				(fmt::throw_exception("Invalid whence (0x%x)", whence), 0);
+				whence == seek_cur ? FILE_CURRENT : FILE_END;
 
 			if (!SetFilePointerEx(m_handle, pos, &pos, mode))
 			{
@@ -1196,11 +1199,14 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 		u64 seek(s64 offset, seek_mode whence) override
 		{
+			if (whence > seek_end)
+			{
+				fmt::throw_exception("Invalid whence (0x%x)", whence);
+			}
+
 			const int mode =
 				whence == seek_set ? SEEK_SET :
-				whence == seek_cur ? SEEK_CUR :
-				whence == seek_end ? SEEK_END :
-				(fmt::throw_exception("Invalid whence (0x%x)", whence), 0);
+				whence == seek_cur ? SEEK_CUR : SEEK_END;
 
 			const auto result = ::lseek(m_fd, offset, mode);
 

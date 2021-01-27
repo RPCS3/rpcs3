@@ -36,6 +36,8 @@ endif()
 
 if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 	add_definitions(-DNDEBUG)
+elseif(NOT MSVC)
+	add_definitions(-D_DEBUG)
 endif()
 
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)

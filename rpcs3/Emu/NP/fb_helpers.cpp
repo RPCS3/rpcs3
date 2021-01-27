@@ -41,17 +41,17 @@ void np_handler::RoomGroup_to_SceNpMatching2RoomGroup(const flatbuffers::Vector<
 void np_handler::UserInfo2_to_SceNpUserInfo2(const UserInfo2* user, SceNpUserInfo2* user_info)
 {
 	if (user->npId())
-		memcpy(user_info->npId.handle.data, user->npId()->c_str(), std::min(sizeof(user_info->npId.handle.data), static_cast<usz>(user->npId()->size())));
+		std::memcpy(user_info->npId.handle.data, user->npId()->c_str(), std::min<usz>(16, user->npId()->size()));
 
 	if (user->onlineName())
 	{
 		user_info->onlineName.set(allocate(sizeof(SceNpOnlineName)));
-		memcpy(user_info->onlineName->data, user->onlineName()->c_str(), std::min(sizeof(user_info->onlineName->data), static_cast<usz>(user->onlineName()->size())));
+		std::memcpy(user_info->onlineName->data, user->onlineName()->c_str(), std::min<usz>(48, user->onlineName()->size()));
 	}
 	if (user->avatarUrl())
 	{
 		user_info->avatarUrl.set(allocate(sizeof(SceNpAvatarUrl)));
-		memcpy(user_info->avatarUrl->data, user->avatarUrl()->c_str(), std::min(sizeof(user_info->avatarUrl->data), static_cast<usz>(user->avatarUrl()->size())));
+		std::memcpy(user_info->avatarUrl->data, user->avatarUrl()->c_str(), std::min<usz>(127, user->avatarUrl()->size()));
 	}
 }
 

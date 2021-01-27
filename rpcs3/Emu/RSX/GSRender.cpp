@@ -20,16 +20,7 @@ GSRender::~GSRender()
 
 	if (m_frame)
 	{
-		m_frame->hide();
 		m_frame->close();
-	}
-}
-
-void GSRender::on_init_rsx()
-{
-	if (m_frame)
-	{
-		m_frame->show();
 	}
 }
 

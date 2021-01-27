@@ -297,6 +297,55 @@ struct copy_rgb655_block_swizzled
 namespace
 {
 	/**
+	 * Generates copy instructions required to build the texture GPU side without actually copying anything.
+	 * Returns a set of addresses and data lengths to use. This can be used to generate a GPU task to avoid CPU doing the heavy lifting.
+	 */
+	std::vector<rsx::memory_transfer_cmd>
+	build_transfer_cmds(const void* src, u16 block_size_in_bytes, u16 width_in_block, u16 row_count, u16 depth, u8 border, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	{
+		std::vector<rsx::memory_transfer_cmd> result;
+
+		if (src_pitch_in_block == dst_pitch_in_block && !border)
+		{
+			// Fast copy
+			rsx::memory_transfer_cmd cmd;
+			cmd.src = src;
+			cmd.dst = nullptr;
+			cmd.length = src_pitch_in_block * block_size_in_bytes * row_count * depth;
+			return { cmd };
+		}
+
+		const u32 width_in_bytes = width_in_block * block_size_in_bytes;
+		const u32 src_pitch_in_bytes = src_pitch_in_block * block_size_in_bytes;
+		const u32 dst_pitch_in_bytes = dst_pitch_in_block * block_size_in_bytes;
+
+		const u32 h_porch = border * block_size_in_bytes;
+		const u32 v_porch = src_pitch_in_bytes * border;
+
+		auto src_ = static_cast<const char*>(src) + h_porch;
+		auto dst_ = static_cast<const char*>(nullptr);
+
+		for (int layer = 0; layer < depth; ++layer)
+		{
+			// Front
+			src_ += v_porch;
+
+			for (int row = 0; row < row_count; ++row)
+			{
+				rsx::memory_transfer_cmd cmd{ dst_, src_, width_in_bytes };
+				result.push_back(cmd);
+				src_ += src_pitch_in_bytes;
+				dst_ += dst_pitch_in_bytes;
+			}
+
+			// Back
+			src_ += v_porch;
+		}
+
+		return result;
+	}
+
+	/**
 	 * Texture upload template.
 	 *
 	 * Source textures are stored as following (for power of 2 textures):
@@ -533,7 +582,7 @@ namespace rsx
 		return get_subresources_layout_impl(texture);
 	}
 
-	texture_memory_info upload_texture_subresource(gsl::span<std::byte> dst_buffer, const rsx::subresource_layout& src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps)
+	texture_memory_info upload_texture_subresource(gsl::span<std::byte> dst_buffer, const rsx::subresource_layout& src_layout, int format, bool is_swizzled, texture_uploader_capabilities& caps)
 	{
 		u16 w = src_layout.width_in_block;
 		u16 h = src_layout.height_in_block;
@@ -644,6 +693,11 @@ namespace rsx
 				// Remove the VTC tiling to support ATI and Vulkan.
 				copy_unmodified_block_vtc::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), as_const_span<const u64>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
 			}
+			else if (caps.supports_zero_copy)
+			{
+				result.require_upload = true;
+				result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), 8, w, h, depth, 0, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
+			}
 			else
 			{
 				copy_unmodified_block::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), as_const_span<const u64>(src_layout.data), 1, w, h, depth, 0, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
@@ -661,6 +715,11 @@ namespace rsx
 				// Remove the VTC tiling to support ATI and Vulkan.
 				copy_unmodified_block_vtc::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), as_const_span<const u128>(src_layout.data), w, h, depth, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
 			}
+			else if (caps.supports_zero_copy)
+			{
+				result.require_upload = true;
+				result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), 16, w, h, depth, 0, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
+			}
 			else
 			{
 				copy_unmodified_block::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), as_const_span<const u128>(src_layout.data), 1, w, h, depth, 0, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
@@ -677,56 +736,73 @@ namespace rsx
 			if (word_size == 1)
 			{
 				if (is_swizzled)
+				{
 					copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), as_const_span<const u8>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
-				else
-					copy_unmodified_block::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), as_const_span<const u8>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-			}
-			else if (caps.supports_byteswap)
-			{
-				result.require_swap = true;
-				result.element_size = word_size;
-				result.block_length = words_per_block;
-
-				if (word_size == 2)
-				{
-					if (is_swizzled)
-					{
-						if (((word_size * words_per_block) & 3) == 0 && caps.supports_hw_deswizzle)
-						{
-							result.require_deswizzle = true;
-						}
-					}
-
-					if (is_swizzled && !result.require_deswizzle)
-						copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const u16>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
-					else
-						copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const u16>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 				}
-				else if (word_size == 4)
+				else if (caps.supports_zero_copy)
 				{
-					result.require_deswizzle = (is_swizzled && caps.supports_hw_deswizzle);
-
-					if (is_swizzled && !caps.supports_hw_deswizzle)
-						copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
-					else
-						copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+					result.require_upload = true;
+					result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+				}
+				else
+				{
+					copy_unmodified_block::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), as_const_span<const u8>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 				}
 			}
 			else
 			{
-				if (word_size == 2)
+				result.element_size = word_size;
+				result.block_length = words_per_block;
+
+				bool require_cpu_swizzle = !caps.supports_hw_deswizzle;
+				bool require_cpu_byteswap = !caps.supports_byteswap;
+
+				if (is_swizzled && caps.supports_hw_deswizzle)
 				{
-					if (is_swizzled)
-						copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+					if (word_size == 4 || (((word_size * words_per_block) & 3) == 0))
+					{
+						result.require_deswizzle = true;
+					}
 					else
-						copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+					{
+						require_cpu_swizzle = true;
+					}
 				}
-				else if (word_size == 4)
+
+				if (!require_cpu_byteswap && !require_cpu_swizzle)
 				{
-					if (is_swizzled)
-						copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
-					else
-						copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+					result.require_swap = true;
+
+					if (caps.supports_zero_copy)
+					{
+						result.require_upload = true;
+						result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), word_size * words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+					}
+					else if (word_size == 2)
+					{
+						copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const u16>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+					}
+					else if (word_size == 4)
+					{
+						copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+					}
+				}
+				else
+				{
+					if (word_size == 2)
+					{
+						if (is_swizzled)
+							copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+						else
+							copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+					}
+					else if (word_size == 4)
+					{
+						if (is_swizzled)
+							copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+						else
+							copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+					}
 				}
 			}
 		}

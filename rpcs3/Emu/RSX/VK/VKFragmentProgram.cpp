@@ -134,10 +134,14 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			if (properties.shadow_sampler_mask & mask)
 			{
-				if (properties.tex2d_sampler_mask & mask)
+				if (properties.common_access_sampler_mask & mask)
+				{
 					rsx_log.error("Texture unit %d is sampled as both a shadow texture and a depth texture", index);
+				}
 				else
-					samplerType = "sampler2DShadow";
+				{
+					samplerType += "Shadow";
+				}
 			}
 
 			vk::glsl::program_input in;

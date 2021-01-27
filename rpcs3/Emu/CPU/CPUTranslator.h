@@ -2801,6 +2801,44 @@ public:
 		return result;
 	}
 
+	template <typename T1, typename T2>
+	value_t<u8[16]> vpermb(T1 a, T2 b)
+	{
+		value_t<u8[16]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto index = b.eval(m_ir);
+		const auto zeros = llvm::ConstantAggregateZero::get(get_type<u8[16]>());
+
+		if (auto c = llvm::dyn_cast<llvm::Constant>(index))
+		{
+			// Convert VPERMB index back to LLVM vector shuffle mask
+			v128 mask{};
+
+			const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(c);
+
+			if (cv)
+			{
+				for (u32 i = 0; i < 16; i++)
+				{
+					const u64 b = cv->getElementAsInteger(i);
+					mask._u8[i] = b & 0xf;
+				}
+			}
+
+			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
+			{
+				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
+				result.value = m_ir->CreateShuffleVector(data0, zeros, result.value);
+				return result;
+			}
+		}
+
+		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_permvar_qi_128), {data0, index});
+		return result;
+	}
+
 	template <typename T1, typename T2, typename T3>
 	value_t<u8[16]> vperm2b(T1 a, T2 b, T3 c)
 	{
@@ -2813,11 +2851,23 @@ public:
 		if (auto c = llvm::dyn_cast<llvm::Constant>(index))
 		{
 			// Convert VPERM2B index back to LLVM vector shuffle mask
+			v128 mask{};
+
 			const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(c);
+
+			if (cv)
+			{
+				for (u32 i = 0; i < 16; i++)
+				{
+					const u64 b = cv->getElementAsInteger(i);
+					mask._u8[i] = b & 0x1f;
+				}
+			}
 
 			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
 			{
-				result.value = m_ir->CreateZExt(cv, get_type<u32[16]>());
+				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
 				result.value = m_ir->CreateShuffleVector(data0, data1, result.value);
 				return result;
 			}

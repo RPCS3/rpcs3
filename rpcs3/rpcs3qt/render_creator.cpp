@@ -38,7 +38,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 
 	std::thread enum_thread = std::thread([&]
 	{
-		thread_ctrl::set_native_priority(-1);
+		thread_ctrl::scoped_priority low_prio(-1);
 
 		vk::instance device_enum_context;
 		if (device_enum_context.create("RPCS3", true))

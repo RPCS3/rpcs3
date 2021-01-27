@@ -126,11 +126,16 @@ static u64& ppu_ref(u32 addr)
 // Get interpreter cache value
 static u64 ppu_cache(u32 addr)
 {
+	if (g_cfg.core.ppu_decoder > ppu_decoder_type::fast)
+	{
+		fmt::throw_exception("Invalid PPU decoder");
+	}
+
 	// Select opcode table
 	const auto& table = *(
-		g_cfg.core.ppu_decoder == ppu_decoder_type::precise ? &g_ppu_interpreter_precise.get_table() :
-		g_cfg.core.ppu_decoder == ppu_decoder_type::fast ? &g_ppu_interpreter_fast.get_table() :
-		(fmt::throw_exception("Invalid PPU decoder"), nullptr));
+		g_cfg.core.ppu_decoder == ppu_decoder_type::precise
+		? &g_ppu_interpreter_precise.get_table()
+		: &g_ppu_interpreter_fast.get_table());
 
 	return reinterpret_cast<uptr>(table[ppu_decode(vm::read32(addr))]);
 }
@@ -909,14 +914,6 @@ void ppu_thread::exec_task()
 
 ppu_thread::~ppu_thread()
 {
-	// Deallocate Stack Area
-	vm::dealloc_verbose_nothrow(stack_addr, vm::stack);
-
-	if (const auto dct = g_fxo->get<lv2_memory_container>())
-	{
-		dct->used -= stack_size;
-	}
-
 	perf_log.notice("Perf stats for STCX reload: successs %u, failure %u", last_succ, last_fail);
 }
 
@@ -2361,7 +2358,7 @@ extern void ppu_initialize(const ppu_module& info)
 		named_thread_group threads(fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>()->index), thread_count, [&]()
 		{
 			// Set low priority
-			thread_ctrl::set_native_priority(-1);
+			thread_ctrl::scoped_priority low_prio(-1);
 
 			for (u32 i = work_cv++; i < workload.size(); i = work_cv++)
 			{

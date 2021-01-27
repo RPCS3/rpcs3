@@ -436,13 +436,13 @@ namespace glsl
 		"	if (_test_bit(rop_control, 9))\n"
 		"	{\n"
 		"		// Convert x,y to linear address\n"
-		"		const ivec2 stipple_coord = ivec2(gl_FragCoord.xy) % ivec2(32, 32);\n"
-		"		const int address = stipple_coord.y * 32 + stipple_coord.x;\n"
-		"		const int bit_offset = (address & 31);\n"
-		"		const int word_index = _get_bits(address, 7, 3);\n"
-		"		const int sub_index = _get_bits(address, 5, 2);\n\n"
+		"		const uvec2 stipple_coord = uvec2(gl_FragCoord.xy) % uvec2(32, 32);\n"
+		"		const uint address = stipple_coord.y * 32u + stipple_coord.x;\n"
+		"		const uint bit_offset = (address & 31u);\n"
+		"		const uint word_index = _get_bits(address, 7, 3);\n"
+		"		const uint sub_index = _get_bits(address, 5, 2);\n\n"
 
-		"		if (_test_bit(stipple_pattern[word_index][sub_index], bit_offset))\n"
+		"		if (!_test_bit(stipple_pattern[word_index][sub_index], int(bit_offset)))\n"
 		"		{\n"
 		"			_kill();\n"
 		"		}\n"
@@ -859,14 +859,17 @@ namespace glsl
 			{
 				OS <<
 				"#define SHADOW_COORD(coord3, scale, flags) vec3(coord3.xy * scale, _test_bit(flags, DEPTH_FLOAT)? coord3.z : min(float(coord3.z), 1.0))\n"
+				"#define SHADOW_COORD4(coord4, scale, flags) vec4(SHADOW_COORD(coord4.xyz, scale, flags), coord4.w)\n"
 				"#define SHADOW_COORD_PROJ(coord4, scale, flags) vec4(coord4.xy * scale, _test_bit(flags, DEPTH_FLOAT)? coord4.z : min(coord4.z, coord4.w), coord4.w)\n"
 				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), SHADOW_COORD(coord3, texture_parameters[index].scale, TEX_FLAGS(index)))\n"
+				"#define TEX2D_SHADOWCUBE(index, coord4) texture(TEX_NAME(index), SHADOW_COORD4(coord4, texture_parameters[index].scale, TEX_FLAGS(index)))\n"
 				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), SHADOW_COORD_PROJ(coord4, texture_parameters[index].scale, TEX_FLAGS(index)))\n";
 			}
 			else
 			{
 				OS <<
 				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), coord3 * vec3(texture_parameters[index].scale, 1.))\n"
+				"#define TEX2D_SHADOWCUBE(index, coord4) texture(TEX_NAME(index), coord4 * vec3(texture_parameters[index].scale, 1., 1.))\n"
 				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.))\n";
 			}
 
@@ -940,6 +943,8 @@ namespace glsl
 			return "TEX2D_GRAD($_i, $0.xy, $1.xy, $2.xy)";
 		case FUNCTION::FUNCTION_TEXTURE_SHADOW2D:
 			return "TEX2D_SHADOW($_i, $0.xyz)";
+		case FUNCTION::FUNCTION_TEXTURE_SHADOWCUBE:
+			return "TEX2D_SHADOWCUBE($_i, $0)";
 		case FUNCTION::FUNCTION_TEXTURE_SHADOW2D_PROJ:
 			return "TEX2D_SHADOWPROJ($_i, $0)";
 		case FUNCTION::FUNCTION_TEXTURE_SAMPLECUBE:

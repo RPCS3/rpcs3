@@ -26,7 +26,7 @@ namespace vm
 {
 	static u8* memory_reserve_4GiB(void* _addr, u64 size = 0x100000000)
 	{
-		for (u64 addr = reinterpret_cast<u64>(_addr) + 0x100000000;; addr += 0x100000000)
+		for (u64 addr = reinterpret_cast<u64>(_addr) + 0x100000000; addr < 0x8000'0000'0000; addr += 0x100000000)
 		{
 			if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr)))
 			{
@@ -34,8 +34,7 @@ namespace vm
 			}
 		}
 
-		// TODO: a condition to break loop
-		return static_cast<u8*>(utils::memory_reserve(size));
+		fmt::throw_exception("Failed to reserve vm memory");
 	}
 
 	// Emulated virtual memory
@@ -49,6 +48,9 @@ namespace vm
 
 	// Stats for debugging
 	u8* const g_stat_addr = memory_reserve_4GiB(g_exec_addr);
+
+	// For SPU
+	u8* const g_free_addr = g_stat_addr + 0x1'0000'0000;
 
 	// Reservation stats
 	alignas(4096) u8 g_reservations[65536 / 128 * 64]{0};
@@ -998,51 +1000,40 @@ namespace vm
 
 		if (!block)
 		{
-			fmt::throw_exception("Invalid memory location (%u)", +location);
+			vm_log.error("vm::alloc(): Invalid memory location (%u)", +location);
+			ensure(location < memory_location_max); // The only allowed locations to fail
+			return 0;
 		}
 
 		return block->alloc(size, nullptr, align);
 	}
 
-	u32 falloc(u32 addr, u32 size, memory_location_t location)
+	u32 falloc(u32 addr, u32 size, memory_location_t location, const std::shared_ptr<utils::shm>* src)
 	{
 		const auto block = get(location, addr);
 
 		if (!block)
 		{
-			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)", +location, addr);
+			vm_log.error("vm::falloc(): Invalid memory location (%u, addr=0x%x)", +location, addr);
+			ensure(location == any || location < memory_location_max); // The only allowed locations to fail
+			return 0;
 		}
 
-		return block->falloc(addr, size);
+		return block->falloc(addr, size, src);
 	}
 
-	u32 dealloc(u32 addr, memory_location_t location)
+	u32 dealloc(u32 addr, memory_location_t location, const std::shared_ptr<utils::shm>* src)
 	{
 		const auto block = get(location, addr);
 
 		if (!block)
 		{
-			fmt::throw_exception("Invalid memory location (%u, addr=0x%x)", +location, addr);
+			vm_log.error("vm::dealloc(): Invalid memory location (%u, addr=0x%x)", +location, addr);
+			ensure(location == any || location < memory_location_max); // The only allowed locations to fail
+			return 0;
 		}
 
-		return block->dealloc(addr);
-	}
-
-	void dealloc_verbose_nothrow(u32 addr, memory_location_t location) noexcept
-	{
-		const auto block = get(location, addr);
-
-		if (!block)
-		{
-			vm_log.error("vm::dealloc(): invalid memory location (%u, addr=0x%x)\n", +location, addr);
-			return;
-		}
-
-		if (!block->dealloc(addr))
-		{
-			vm_log.error("vm::dealloc(): deallocation failed (addr=0x%x)\n", addr);
-			return;
-		}
+		return block->dealloc(addr, src);
 	}
 
 	void lock_sudo(u32 addr, u32 size)
@@ -1670,7 +1661,7 @@ namespace vm
 		g_locations.clear();
 
 		utils::memory_decommit(g_base_addr, 0x200000000);
-		utils::memory_decommit(g_exec_addr, 0x100000000);
+		utils::memory_decommit(g_exec_addr, 0x200000000);
 		utils::memory_decommit(g_stat_addr, 0x100000000);
 	}
 }

@@ -557,7 +557,7 @@ void signaling_handler::disconnect_sig2_users(u64 room_id)
 
 u32 signaling_handler::create_sig_infos(const SceNpId* npid)
 {
-	ensure(npid->handle.term == 0);
+	ensure(npid->handle.data[16] == 0);
 	std::string npid_str(reinterpret_cast<const char*>(npid->handle.data));
 
 	if (npid_to_conn_id.count(npid_str))
