@@ -546,6 +546,8 @@ namespace rsx
 			return fmt::format("RSX [0x%07x]", +rsx->ctrl->get);
 		};
 
+		method_registers.init();
+
 		rsx::overlays::reset_performance_overlay();
 
 		g_fxo->get<rsx::dma_manager>()->init();
@@ -2029,8 +2031,6 @@ namespace rsx
 
 	void thread::init(u32 ctrlAddress)
 	{
-		method_registers.init();
-
 		dma_address = ctrlAddress;
 		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
