@@ -51,6 +51,7 @@
 #include "Loader/TAR.h"
 
 #include "Utilities/Thread.h"
+#include "util/sysinfo.hpp"
 
 #include "ui_main_window.h"
 
@@ -247,6 +248,27 @@ QString main_window::GetCurrentTitle()
 QIcon main_window::GetAppIcon()
 {
 	return m_app_icon;
+}
+
+bool main_window::OnMissingFw()
+{
+	const QString title = tr("Missing Firmware Detected!");
+	const QString message = tr("Commercial games require the firmware (PS3UPDAT.PUP file) to be installed."
+				"\n<br>For information about how to obtain the required firmware read the <a href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.");
+
+	QMessageBox* mb = new QMessageBox(QMessageBox::Question, title, message, QMessageBox::Ok | QMessageBox::Cancel, this, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | Qt::WindowStaysOnTopHint);
+	mb->deleteLater();
+	mb->setTextFormat(Qt::RichText);
+
+	mb->button(QMessageBox::Ok)->setText(tr("Locate PS3UPDAT.PUP"));
+
+	if (mb->exec() == QMessageBox::Ok)
+	{
+		InstallPup();
+		return true;
+	}
+
+	return false;
 }
 
 void main_window::ResizeIcons(int index)
@@ -863,6 +885,18 @@ void main_window::HandlePupInstallation(QString file_path)
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::No)
 	{
 		return;
+	}
+
+	if (std::string installed = utils::get_firmware_version(); !installed.empty())
+	{
+		gui_log.warning("Reinstalling firmware: old=%s, new=%s", installed, version_string);
+
+		if (QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Firmware of version %1 has already been installed.\nOverwrite current installation with verion %2?").arg(qstr(installed), qstr(version_string)),
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::No)
+		{
+			gui_log.warning("Reinstallation of firmware aborted.");
+			return;
+		}
 	}
 
 	// Remove possibly PS3 fonts from database
