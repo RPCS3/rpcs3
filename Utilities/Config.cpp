@@ -4,7 +4,6 @@
 
 #include "util/yaml.hpp"
 
-#include <typeinfo>
 #include <charconv>
 
 LOG_CHANNEL(cfg_log, "CFG");

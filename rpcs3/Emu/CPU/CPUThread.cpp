@@ -856,7 +856,7 @@ std::vector<std::pair<u32, u32>> cpu_thread::dump_callstack_list() const
 
 std::string cpu_thread::dump_misc() const
 {
-	return fmt::format("Type: %s\n" "State: %s\n", typeid(*this).name(), state.load());
+	return fmt::format("Type: %s\n" "State: %s\n", id_type() == 1 ? "PPU" : id_type() == 2 ? "SPU" : "CPU", state.load());
 }
 
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept

@@ -39,7 +39,6 @@
 #include <cereal/types/unordered_map.hpp>
 
 #include <thread>
-#include <typeinfo>
 #include <queue>
 #include <fstream>
 #include <memory>

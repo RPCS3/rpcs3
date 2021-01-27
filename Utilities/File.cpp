@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <cstring>
 #include <cerrno>
-#include <typeinfo>
 #include <map>
 
 #include "util/asm.hpp"
@@ -228,7 +227,7 @@ namespace fs
 
 	stat_t file_base::stat()
 	{
-		fmt::throw_exception("fs::file::stat() not supported for %s", typeid(*this).name());
+		fmt::throw_exception("fs::file::stat() not supported.");
 	}
 
 	void file_base::sync()
