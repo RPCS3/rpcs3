@@ -2561,7 +2561,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	usz fpos = 0;
 
 	// Difference between function name and current location
-	const u32 reloc = info.name.empty() ? 0 : info.segs.at(0).addr;
+	const u32 reloc = info.relocs.empty() ? 0 : info.segs.at(0).addr;
 
 	// Info sent to threads
 	std::vector<std::pair<std::string, ppu_module>> workload;

@@ -27,7 +27,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 	cpu_translator::initialize(context, engine);
 
 	// There is no weak linkage on JIT, so let's create variables with different names for each module part
-	const u32 gsuffix = m_info.name.empty() ? info.funcs[0].addr : info.funcs[0].addr - m_info.segs[0].addr;
+	const u32 gsuffix = m_info.relocs.empty() ? info.funcs[0].addr : info.funcs[0].addr - m_info.segs[0].addr;
 
 	// Memory base
 	m_base = new GlobalVariable(*_module, ArrayType::get(GetType<char>(), 0x100000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__mptr%x", gsuffix));
@@ -130,7 +130,7 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 		}
 	}
 
-	if (!m_info.name.empty())
+	if (!m_info.relocs.empty())
 	{
 		m_reloc = &m_info.segs[0];
 	}
