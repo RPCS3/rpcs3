@@ -1480,13 +1480,16 @@ namespace rsx
 			flush_exclusions.clear();
 		}
 
-		void sync_protection()
+		bool sync_protection()
 		{
 			if (!buffered_section::sync())
 			{
 				discard(true);
 				ensure(is_dirty());
+				return false;
 			}
+
+			return true;
 		}
 
 
