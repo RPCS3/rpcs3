@@ -34,9 +34,7 @@
 #include "util/sysinfo.hpp"
 #include "util/yaml.hpp"
 #include "util/logs.hpp"
-
-#include "cereal/archives/binary.hpp"
-#include <cereal/types/unordered_map.hpp>
+#include "util/cereal.hpp"
 
 #include <thread>
 #include <queue>
@@ -521,14 +519,16 @@ std::string Emulator::PPUCache() const
 
 bool Emulator::BootRsxCapture(const std::string& path)
 {
-	if (!fs::is_file(path))
+	fs::file in_file(path);
+
+	if (!in_file)
+	{
 		return false;
+	}
 
-	std::fstream f(path, std::ios::in | std::ios::binary);
-
-	cereal::BinaryInputArchive archive(f);
 	std::unique_ptr<rsx::frame_capture_data> frame = std::make_unique<rsx::frame_capture_data>();
-	archive(*frame);
+	cereal_deserialize(*frame, in_file.to_string());
+	in_file.close();
 
 	if (frame->magic != rsx::FRAME_CAPTURE_MAGIC)
 	{

@@ -18,9 +18,7 @@
 #include "Utilities/span.h"
 #include "Utilities/StrUtil.h"
 
-#include <cereal/archives/binary.hpp>
-#include <cereal/types/unordered_map.hpp>
-
+#include "util/cereal.hpp"
 #include "util/asm.hpp"
 
 #include <sstream>
@@ -2899,17 +2897,19 @@ namespace rsx
 		else if (capture_current_frame)
 		{
 			capture_current_frame = false;
-			std::stringstream os;
-			cereal::BinaryOutputArchive archive(os);
-			const std::string& filePath = fs::get_config_dir() + "captures/" + Emu.GetTitleID() + "_" + date_time::current_time_narrow() + "_capture.rrc";
-			archive(frame_capture);
-			{
-				// todo: may want to compress this data?
-				fs::file f(filePath, fs::rewrite);
-				f.write(os.str());
-			}
 
-			rsx_log.success("capture successful: %s", filePath.c_str());
+			const std::string file_path = fs::get_config_dir() + "captures/" + Emu.GetTitleID() + "_" + date_time::current_time_narrow() + "_capture.rrc";
+			const std::string file_data = cereal_serialize(frame_capture);
+
+			// todo: may want to compress this data?
+			if (fs::write_file(file_path, fs::rewrite, file_data))
+			{
+				rsx_log.success("Capture successful: %s", file_path);
+			}
+			else
+			{
+				rsx_log.fatal("Capture failed: %s (%s)", file_path, fs::g_tls_error);
+			}
 
 			frame_capture.reset();
 			Emu.Pause();

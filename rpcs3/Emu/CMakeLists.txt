@@ -74,6 +74,11 @@ else()
 	set_source_files_properties("../util/yaml.cpp" PROPERTIES COMPILE_FLAGS -fexceptions)
 endif()
 
+if (MSVC)
+	set_source_files_properties("../util/cereal.cpp" PROPERTIES COMPILE_FLAGS /GR)
+else()
+	set_source_files_properties("../util/cereal.cpp" PROPERTIES COMPILE_FLAGS -frtti)
+endif()
 
 # Crypto
 target_sources(rpcs3_emu PRIVATE
