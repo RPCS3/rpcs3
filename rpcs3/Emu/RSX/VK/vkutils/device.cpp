@@ -229,6 +229,7 @@ namespace vk
 	// Render Device - The actual usable device
 	void render_device::create(vk::physical_device& pdev, u32 graphics_queue_idx)
 	{
+		std::string message_on_error;
 		float queue_priorities[1] = { 0.f };
 		pgpu = &pdev;
 
@@ -287,6 +288,7 @@ namespace vk
 				// TODO: Slow fallback to emulate this
 				// Just warn and let the driver decide whether to crash or not
 				rsx_log.fatal("Your GPU driver does not support some required MSAA features. Expect problems.");
+				message_on_error += "Your GPU driver does not support some required MSAA features.\nTry updating your GPU driver or disable Anti-Aliasing in the settings.";
 			}
 
 			enabled_features.sampleRateShading = VK_TRUE;
@@ -356,7 +358,7 @@ namespace vk
 			rsx_log.notice("GPU/driver lacks support for float16 data types. All float16_t arithmetic will be emulated with float32_t.");
 		}
 
-		CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
+		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);
 
 		// Import optional function endpoints
 		if (pgpu->conditional_render_support)

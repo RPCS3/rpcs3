@@ -3,7 +3,7 @@
 
 namespace vk
 {
-	void die_with_error(VkResult error_code,
+	void die_with_error(VkResult error_code, std::string message,
 		const char* file,
 		const char* func,
 		u32 line,
@@ -99,7 +99,8 @@ namespace vk
 		{
 		default:
 		case 0:
-			fmt::throw_exception("Assertion Failed! Vulkan API call failed with unrecoverable error: %s%s", error_message, src_loc{line, col, file, func});
+			if (!message.empty()) message += "\n\n";
+			fmt::throw_exception("%sAssertion Failed! Vulkan API call failed with unrecoverable error: %s%s", message, error_message, src_loc{line, col, file, func});
 		case 1:
 			rsx_log.error("Vulkan API call has failed with an error but will continue: %s%s", error_message, src_loc{line, col, file, func});
 			break;
