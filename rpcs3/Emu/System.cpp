@@ -1789,7 +1789,11 @@ bool Emulator::Pause()
 
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
-	g_fxo->get<rsx::thread>()->state += cpu_flag::dbg_global_pause;
+
+	if (auto rsx = g_fxo->get<rsx::thread>())
+	{
+		rsx->state += cpu_flag::dbg_global_pause;
+	}
 
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();
@@ -1858,7 +1862,12 @@ void Emulator::Resume()
 
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
-	g_fxo->get<rsx::thread>()->state -= cpu_flag::dbg_global_pause;
+
+	if (auto rsx = g_fxo->get<rsx::thread>())
+	{
+		// TODO: notify?
+		rsx->state -= cpu_flag::dbg_global_pause;
+	}
 
 	GetCallbacks().on_resume();
 
@@ -1910,7 +1919,12 @@ void Emulator::Stop(bool restart)
 
 	GetCallbacks().on_stop();
 
-	g_fxo->get<rsx::thread>()->state += cpu_flag::exit;
+	if (auto rsx = g_fxo->get<rsx::thread>())
+	{
+		// TODO: notify?
+		rsx->state += cpu_flag::exit;
+	}
+
 	cpu_thread::stop_all();
 	g_fxo->reset();
 
