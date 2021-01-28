@@ -1259,7 +1259,6 @@ void main_window::OnEmuStop()
 {
 	const QString title = GetCurrentTitle();
 	const QString play_tooltip = Emu.IsReady() ? tr("Play %0").arg(title) : tr("Resume %0").arg(title);
-	const QString restart_tooltip = tr("Restart %0").arg(title);
 
 	m_debugger_frame->UpdateUI();
 
@@ -1280,6 +1279,8 @@ void main_window::OnEmuStop()
 	}
 	else
 	{
+		const QString restart_tooltip = tr("Restart %0").arg(title);
+
 		ui->toolbar_start->setEnabled(true);
 		ui->toolbar_start->setIcon(m_icon_restart);
 		ui->toolbar_start->setText(tr("Restart"));
@@ -2339,7 +2340,12 @@ void main_window::CreateFirmwareCache()
 	}
 
 	Emu.SetForceBoot(true);
-	Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys/external/", "", true);
+
+	if (const game_boot_result error = Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys/external/", "", true);
+		error != game_boot_result::no_errors)
+	{
+		gui_log.error("Creating firmware cache failed: reason: %s", error);
+	}
 }
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)

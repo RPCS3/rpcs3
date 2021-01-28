@@ -493,13 +493,15 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
+	const bool has_no_gui = parser.isSet(arg_no_gui);
+
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 	{
 		gui_app->setAttribute(Qt::AA_UseHighDpiPixmaps);
 		gui_app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
 		gui_app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
 
-		gui_app->SetShowGui(!parser.isSet(arg_no_gui));
+		gui_app->SetShowGui(!has_no_gui);
 		gui_app->SetUseCliStyle(use_cli_style);
 		gui_app->Init();
 	}
@@ -507,6 +509,11 @@ int main(int argc, char** argv)
 	{
 		s_headless = true;
 		headless_app->Init();
+	}
+	else
+	{
+		// Should be unreachable
+		report_fatal_error("RPCS3 initialization failed!");
 	}
 
 #ifdef _WIN32
@@ -560,11 +567,20 @@ int main(int argc, char** argv)
 		}
 
 		// Ugly workaround
-		QTimer::singleShot(2, [config_override_path, path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
+		QTimer::singleShot(2, [config_override_path, has_no_gui, path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
 		{
 			Emu.argv = std::move(argv);
 			Emu.SetForceBoot(true);
-			Emu.BootGame(path, "", true);
+
+			if (const game_boot_result error = Emu.BootGame(path, "", true); error != game_boot_result::no_errors)
+			{
+				sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
+
+				if (s_headless || has_no_gui)
+				{
+					report_fatal_error(fmt::format("Booting '%s' failed!\n\nReason: %s", path, error));
+				}
+			}
 		});
 	}
 
