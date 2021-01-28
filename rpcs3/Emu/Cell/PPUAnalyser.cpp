@@ -529,11 +529,15 @@ namespace ppu_patterns
 	};
 }
 
-void ppu_module::analyse(u32 lib_toc, u32 entry)
+void ppu_module::analyse(u32 lib_toc, u32 entry, u32 end)
 {
 	// Assume first segment is executable
 	const u32 start = segs[0].addr;
-	const u32 end = segs[0].addr + segs[0].size;
+
+	if (end == umax)
+	{
+		end = segs[0].addr + segs[0].size;
+	}
 
 	// Known TOCs (usually only 1)
 	std::unordered_set<u32> TOCs;
@@ -1565,6 +1569,12 @@ void ppu_module::analyse(u32 lib_toc, u32 entry)
 			block.size = size;
 			block.toc  = func.toc;
 			ppu_log.trace("Block __0x%x added (func=0x%x, size=0x%x, toc=0x%x)", block.addr, _, block.size, block.toc);
+
+			if (!entry)
+			{
+				// Workaround for SPRX: update end to the last found function
+				end = block.addr + block.size;
+			}
 		}
 	}
 

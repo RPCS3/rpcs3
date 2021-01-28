@@ -1058,7 +1058,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		prx->specials = ppu_load_exports(link, lib_info->exports_start, lib_info->exports_end);
 		prx->imports = ppu_load_imports(prx->relocs, link, lib_info->imports_start, lib_info->imports_end);
 		std::stable_sort(prx->relocs.begin(), prx->relocs.end());
-		prx->analyse(lib_info->toc, 0);
+		prx->analyse(lib_info->toc, 0, std::min<u32>(lib_info.addr(), prx->segs[0].addr + prx->segs[0].size));
 	}
 	else
 	{
