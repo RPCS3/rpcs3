@@ -409,13 +409,18 @@ u64 utils::get_total_memory()
 
 u32 utils::get_thread_count()
 {
+	static const u32 g_count = []()
+	{
 #ifdef _WIN32
-	::SYSTEM_INFO sysInfo;
-	::GetNativeSystemInfo(&sysInfo);
-	return sysInfo.dwNumberOfProcessors;
+		::SYSTEM_INFO sysInfo;
+		::GetNativeSystemInfo(&sysInfo);
+		return sysInfo.dwNumberOfProcessors;
 #else
-	return ::sysconf(_SC_NPROCESSORS_ONLN);
+		return ::sysconf(_SC_NPROCESSORS_ONLN);
 #endif
+	}();
+
+	return g_count;
 }
 
 u32 utils::get_cpu_family()

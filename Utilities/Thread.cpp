@@ -2518,7 +2518,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 {
 	detect_cpu_layout();
 
-	if (const auto thread_count = std::thread::hardware_concurrency())
+	if (const auto thread_count = utils::get_thread_count())
 	{
 		const u64 all_cores_mask = process_affinity_mask;
 

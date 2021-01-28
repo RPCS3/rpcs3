@@ -1931,7 +1931,8 @@ std::string Emulator::GetFormattedTitle(double fps) const
 u32 Emulator::GetMaxThreads() const
 {
 	const u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
-	const u32 thread_count = max_threads > 0 ? std::min(max_threads, std::thread::hardware_concurrency()) : std::thread::hardware_concurrency();
+	const u32 hw_threads = utils::get_thread_count();
+	const u32 thread_count = max_threads > 0 ? std::min(max_threads, hw_threads) : hw_threads;
 	return thread_count;
 }
 

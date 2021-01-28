@@ -2344,7 +2344,7 @@ extern void ppu_initialize(const ppu_module& info)
 
 		static s32 limit()
 		{
-			return static_cast<s32>(std::thread::hardware_concurrency());
+			return static_cast<s32>(utils::get_thread_count());
 		}
 	};
 
