@@ -526,6 +526,7 @@ namespace rsx
 			// Copy ranges to result, merging them if possible
 			for (const auto &section : sections)
 			{
+				ensure(section->is_locked(true));
 				const auto &new_range = section->get_locked_range();
 				AUDIT(new_range.is_page_range());
 
@@ -583,6 +584,7 @@ namespace rsx
 				u32 no_access_count = 0;
 				for (const auto &excluded : data.sections_to_exclude)
 				{
+					ensure(excluded->is_locked(true));
 					address_range exclusion_range = excluded->get_locked_range();
 
 					// We need to make sure that the exclusion range is *inside* invalidate range
@@ -681,18 +683,18 @@ namespace rsx
 
 				auto &tex = *It;
 
+				if (!tex.is_locked(true))
+				{
+					// Ignore hash sections, they are not involved in page faults
+					It++;
+					continue;
+				}
+
 				AUDIT(tex.is_locked()); // we should be iterating locked sections only, but just to make sure...
 				AUDIT(tex.cache_tag != cache_tag || last_dirty_block != UINT32_MAX); // cache tag should not match during the first loop
 
 				if (tex.cache_tag != cache_tag) //flushable sections can be 'clean' but unlocked. TODO: Handle this better
 				{
-					tex.sync_protection();
-					if (!tex.is_locked())
-					{
-						It++;
-						continue;
-					}
-
 					const rsx::section_bounds bounds = tex.get_overlap_test_bounds();
 
 					if (locked_range == bounds || tex.overlaps(invalidate_range, bounds))
@@ -838,7 +840,7 @@ namespace rsx
 				{
 					auto &tex = *obj;
 
-					if (!tex.is_locked())
+					if (!tex.is_locked(true))
 						continue;
 
 					const rsx::section_bounds bounds = tex.get_overlap_test_bounds();
@@ -979,11 +981,7 @@ namespace rsx
 			for (auto It = m_storage.range_begin(test_range, full_range, check_unlocked); It != m_storage.range_end(); It++)
 			{
 				auto &tex = *It;
-
-				if constexpr (check_unlocked)
-				{
-					tex.sync_protection();
-				}
+				tex.sync_protection();
 
 				if (!tex.is_dirty() && (context_mask & static_cast<u32>(tex.get_context())))
 				{
@@ -1005,6 +1003,7 @@ namespace rsx
 			auto &block = m_storage.block_for(rsx_address);
 			for (auto &tex : block)
 			{
+				tex.sync_protection();
 				if constexpr (check_unlocked)
 				{
 					if (!tex.is_locked())
