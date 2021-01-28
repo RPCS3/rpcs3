@@ -918,12 +918,15 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	auto cmd = can_flush ? gl::command_context{ gl_state } : gl::command_context{};
 	auto result = m_gl_texture_cache.invalidate_address(cmd, address, cause);
 
-	if (!result.violation_handled)
-		return false;
-
+	if (result.invalidate_samplers)
 	{
 		std::lock_guard lock(m_sampler_mutex);
 		m_samplers_dirty.store(true);
+	}
+
+	if (!result.violation_handled)
+	{
+		return false;
 	}
 
 	if (result.num_flushable > 0)

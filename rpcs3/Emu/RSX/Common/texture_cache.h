@@ -53,6 +53,7 @@ namespace rsx
 		{
 			bool violation_handled = false;
 			bool flushed = false;
+			bool invalidate_samplers = false;
 			invalidation_cause cause;
 			std::vector<section_storage_type*> sections_to_flush; // Sections to be flushed
 			std::vector<section_storage_type*> sections_to_unprotect; // These sections are to be unpotected and discarded by caller
@@ -683,13 +684,6 @@ namespace rsx
 
 				auto &tex = *It;
 
-				if (!tex.is_locked(true))
-				{
-					// Ignore hash sections, they are not involved in page faults
-					It++;
-					continue;
-				}
-
 				AUDIT(tex.is_locked()); // we should be iterating locked sections only, but just to make sure...
 				AUDIT(tex.cache_tag != cache_tag || last_dirty_block != UINT32_MAX); // cache tag should not match during the first loop
 
@@ -799,6 +793,7 @@ namespace rsx
 						{
 							// Discard - this section won't be needed any more
 							tex.discard(/* set_dirty */ true);
+							result.invalidate_samplers = true;
 						}
 						else if (g_cfg.video.strict_texture_flushing && tex.is_flushable())
 						{
@@ -807,6 +802,7 @@ namespace rsx
 						else
 						{
 							tex.set_dirty(true);
+							result.invalidate_samplers = true;
 						}
 					}
 				}
@@ -821,6 +817,7 @@ namespace rsx
 				if (invalidate_range == fault_range)
 				{
 					result.violation_handled = true;
+					result.invalidate_samplers = true;
 #ifdef TEXTURE_CACHE_DEBUG
 					// Post-check the result
 					result.check_post_sanity();
@@ -840,7 +837,7 @@ namespace rsx
 				{
 					auto &tex = *obj;
 
-					if (!tex.is_locked(true))
+					if (!tex.is_locked())
 						continue;
 
 					const rsx::section_bounds bounds = tex.get_overlap_test_bounds();
@@ -859,7 +856,11 @@ namespace rsx
 					   )
 					{
 						// False positive
-						result.sections_to_exclude.push_back(&tex);
+						if (tex.is_locked(true))
+						{
+							// Do not exclude hashed pages from unprotect! They will cause protection holes
+							result.sections_to_exclude.push_back(&tex);
+						}
 						continue;
 					}
 
@@ -894,7 +895,17 @@ namespace rsx
 							tex.set_dirty(true);
 						}
 
-						result.sections_to_unprotect.push_back(&tex);
+						if (tex.is_locked(true))
+						{
+							result.sections_to_unprotect.push_back(&tex);
+						}
+						else
+						{
+							// No need to waste resources on hashed section, just discard immediately
+							tex.discard(true);
+							result.invalidate_samplers = true;
+						}
+
 						continue;
 					}
 
@@ -944,6 +955,8 @@ namespace rsx
 					result.violation_handled = false;
 				}
 
+				result.invalidate_samplers |= result.violation_handled;
+
 #ifdef TEXTURE_CACHE_DEBUG
 				// Post-check the result
 				result.check_post_sanity();
@@ -981,11 +994,15 @@ namespace rsx
 			for (auto It = m_storage.range_begin(test_range, full_range, check_unlocked); It != m_storage.range_end(); It++)
 			{
 				auto &tex = *It;
-				tex.sync_protection();
 
 				if (!tex.is_dirty() && (context_mask & static_cast<u32>(tex.get_context())))
 				{
 					if (required_pitch && !rsx::pitch_compatible<false>(&tex, required_pitch, UINT16_MAX))
+					{
+						continue;
+					}
+
+					if (!tex.sync_protection())
 					{
 						continue;
 					}
@@ -1003,14 +1020,17 @@ namespace rsx
 			auto &block = m_storage.block_for(rsx_address);
 			for (auto &tex : block)
 			{
-				tex.sync_protection();
 				if constexpr (check_unlocked)
 				{
 					if (!tex.is_locked())
+					{
 						continue;
+					}
 				}
 
-				if (!tex.is_dirty() && tex.matches(rsx_address, format, width, height, depth, mipmaps))
+				if (!tex.is_dirty() &&
+					tex.matches(rsx_address, format, width, height, depth, mipmaps) &&
+					tex.sync_protection())
 				{
 					return &tex;
 				}
@@ -1035,6 +1055,9 @@ namespace rsx
 			{
 				if (tex.matches(range))
 				{
+					// We must validate
+					tex.sync_protection();
+
 					if (allow_dirty || !tex.is_dirty())
 					{
 						if (!confirm_dimensions || tex.matches(attr.gcm_format, attr.width, attr.height, attr.depth, attr.mipmaps))

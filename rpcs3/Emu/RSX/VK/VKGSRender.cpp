@@ -660,12 +660,15 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		result = std::move(m_texture_cache.invalidate_address(m_secondary_command_buffer, address, cause));
 	}
 
-	if (!result.violation_handled)
-		return false;
-
+	if (result.invalidate_samplers)
 	{
 		std::lock_guard lock(m_sampler_mutex);
 		m_samplers_dirty.store(true);
+	}
+
+	if (!result.violation_handled)
+	{
+		return false;
 	}
 
 	if (result.num_flushable > 0)
