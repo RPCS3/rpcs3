@@ -1,12 +1,14 @@
 #pragma once
 
 #include "../VulkanAPI.h"
+#include <string>
 
 namespace vk
 {
 #define CHECK_RESULT(expr) { VkResult _res = (expr); if (_res != VK_SUCCESS) vk::die_with_error(_res); }
+#define CHECK_RESULT_EX(expr, msg) { VkResult _res = (expr); if (_res != VK_SUCCESS) vk::die_with_error(_res, msg); }
 
-	void die_with_error(VkResult error_code,
+	void die_with_error(VkResult error_code, std::string message = {},
 		const char* file = __builtin_FILE(),
 		const char* func = __builtin_FUNCTION(),
 		u32 line = __builtin_LINE(),
