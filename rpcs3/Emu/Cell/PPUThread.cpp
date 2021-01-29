@@ -2117,7 +2117,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue)
 
 					if (mself.read(hdr) && hdr.get_count(mself.size()))
 					{
-						for (u32 i = 0; i < hdr.count; i++)
+						for (u32 j = 0; j < hdr.count; j++)
 						{
 							mself_record rec{};
 
@@ -2154,7 +2154,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue)
 	{
 		for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++)
 		{
-			const auto& path = std::as_const(file_queue)[func_i].first;
+			std::string path = std::as_const(file_queue)[func_i].first;
 
 			ppu_log.notice("Trying to load SPRX: %s", path);
 
@@ -2165,6 +2165,9 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue)
 			{
 				// Adjust offset for MSELF
 				src.reset(std::make_unique<file_view>(std::move(src), off));
+
+				// Adjust path for MSELF too
+				fmt::append(path, "_x%x", off);
 			}
 
 			// Some files may fail to decrypt due to the lack of klic
