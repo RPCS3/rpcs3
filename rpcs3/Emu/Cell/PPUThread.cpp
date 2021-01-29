@@ -1,6 +1,10 @@
 ﻿#include "stdafx.h"
 #include "Utilities/JIT.h"
+#include "Utilities/StrUtil.h"
 #include "Crypto/sha1.h"
+#include "Crypto/unself.h"
+#include "Loader/ELF.h"
+#include "Loader/mself.hpp"
 #include "Emu/perf_meter.hpp"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/Memory/vm_locking.h"
@@ -74,6 +78,8 @@ extern u64 get_guest_system_time();
 extern atomic_t<u64> g_watchdog_hold_ctr;
 
 extern atomic_t<const char*> g_progr;
+extern atomic_t<u32> g_progr_ftotal;
+extern atomic_t<u32> g_progr_fdone;
 extern atomic_t<u32> g_progr_ptotal;
 extern atomic_t<u32> g_progr_pdone;
 
@@ -113,6 +119,8 @@ extern void ppu_initialize();
 extern void ppu_finalize(const ppu_module& info);
 extern void ppu_initialize(const ppu_module& info);
 static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name);
+extern void ppu_unload_prx(const lv2_prx&);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op);
 
@@ -1949,6 +1957,76 @@ namespace
 }
 #endif
 
+namespace
+{
+	// Read-only file view starting with specified offset (for MSELF)
+	struct file_view : fs::file_base
+	{
+		const fs::file m_file;
+		const u64 m_off;
+		u64 m_pos;
+
+		explicit file_view(fs::file&& _file, u64 offset)
+			: m_file(std::move(_file))
+			, m_off(offset)
+			, m_pos(0)
+		{
+		}
+
+		~file_view() override
+		{
+		}
+
+		fs::stat_t stat() override
+		{
+			return m_file.stat();
+		}
+
+		bool trunc(u64 length) override
+		{
+			return false;
+		}
+
+		u64 read(void* buffer, u64 size) override
+		{
+			const u64 old_pos = m_file.pos();
+			m_file.seek(m_off + m_pos);
+			const u64 result = m_file.read(buffer, size);
+			ensure(old_pos == m_file.seek(old_pos));
+
+			m_pos += result;
+			return result;
+		}
+
+		u64 write(const void* buffer, u64 size) override
+		{
+			return 0;
+		}
+
+		u64 seek(s64 offset, fs::seek_mode whence) override
+		{
+			const s64 new_pos =
+				whence == fs::seek_set ? offset :
+				whence == fs::seek_cur ? offset + m_pos :
+				whence == fs::seek_end ? offset + size() : -1;
+
+			if (new_pos < 0)
+			{
+				fs::g_tls_error = fs::error::inval;
+				return -1;
+			}
+
+			m_pos = new_pos;
+			return m_pos;
+		}
+
+		u64 size() override
+		{
+			return m_file.size();
+		}
+	};
+}
+
 extern void ppu_finalize(const ppu_module& info)
 {
 	// Get cache path for this executable
@@ -1984,6 +2062,142 @@ extern void ppu_finalize(const ppu_module& info)
 #ifdef LLVM_AVAILABLE
 	g_fxo->get<jit_module_manager>()->remove(cache_path + info.name);
 #endif
+}
+
+extern void ppu_precompile(std::vector<std::string>& dir_queue)
+{
+	std::vector<std::pair<std::string, u64>> file_queue;
+	file_queue.reserve(2000);
+
+	// Initialize progress dialog
+	g_progr = "Scanning directories for SPRX libraries...";
+
+	// Find all .sprx files recursively (TODO: process .mself files)
+	for (usz i = 0; i < dir_queue.size(); i++)
+	{
+		if (Emu.IsStopped())
+		{
+			break;
+		}
+
+		ppu_log.notice("Scanning directory: %s", dir_queue[i]);
+
+		for (auto&& entry : fs::dir(dir_queue[i]))
+		{
+			if (Emu.IsStopped())
+			{
+				break;
+			}
+
+			if (entry.is_directory)
+			{
+				if (entry.name != "." && entry.name != "..")
+				{
+					dir_queue.emplace_back(dir_queue[i] + entry.name + '/');
+				}
+
+				continue;
+			}
+
+			// Check .sprx filename
+			if (fmt::to_upper(entry.name).ends_with(".SPRX"))
+			{
+				// Get full path
+				file_queue.emplace_back(dir_queue[i] + entry.name, 0);
+				g_progr_ftotal++;
+				continue;
+			}
+
+			// Check .mself filename
+			if (fmt::to_upper(entry.name).ends_with(".MSELF"))
+			{
+				if (fs::file mself{dir_queue[i] + entry.name})
+				{
+					mself_header hdr{};
+
+					if (mself.read(hdr) && hdr.get_count(mself.size()))
+					{
+						for (u32 i = 0; i < hdr.count; i++)
+						{
+							mself_record rec{};
+
+							if (mself.read(rec) && rec.get_pos(mself.size()))
+							{
+								std::string name = rec.name;
+
+								if (fmt::to_upper(name).ends_with(".SPRX"))
+								{
+									// .sprx inside .mself found
+									file_queue.emplace_back(dir_queue[i] + entry.name, rec.off);
+									g_progr_ftotal++;
+								}
+							}
+							else
+							{
+								ppu_log.error("MSELF file is possibly truncated");
+								break;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	g_progr = "Compiling PPU modules";
+
+	atomic_t<usz> fnext = 0;
+
+	shared_mutex sprx_mtx;
+
+	named_thread_group workers("SPRX Worker ", utils::get_thread_count(), [&]
+	{
+		for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++)
+		{
+			const auto& path = std::as_const(file_queue)[func_i].first;
+
+			ppu_log.notice("Trying to load SPRX: %s", path);
+
+			// Load MSELF or SPRX
+			fs::file src{path};
+
+			if (u64 off = file_queue[func_i].second)
+			{
+				// Adjust offset for MSELF
+				src.reset(std::make_unique<file_view>(std::move(src), off));
+			}
+
+			// Some files may fail to decrypt due to the lack of klic
+			src = decrypt_self(std::move(src));
+
+			const ppu_prx_object obj = src;
+
+			if (obj == elf_error::ok)
+			{
+				std::unique_lock lock(sprx_mtx);
+
+				if (auto prx = ppu_load_prx(obj, path))
+				{
+					lock.unlock();
+					ppu_initialize(*prx);
+					idm::remove<lv2_obj, lv2_prx>(idm::last_id());
+					lock.lock();
+					ppu_unload_prx(*prx);
+					lock.unlock();
+					ppu_finalize(*prx);
+					g_progr_fdone++;
+					continue;
+				}
+			}
+
+			ppu_log.error("Failed to load SPRX '%s' (%s)", path, obj.get_error());
+			g_progr_fdone++;
+			continue;
+		}
+	});
+
+	// Join every thread
+	workers.join();
 }
 
 extern void ppu_initialize()

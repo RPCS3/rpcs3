@@ -66,6 +66,7 @@ atomic_t<u64> g_watchdog_hold_ctr{0};
 
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
+extern void ppu_precompile(std::vector<std::string>& dir_queue);
 extern void ppu_initialize(const ppu_module&);
 extern void ppu_finalize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
@@ -1115,55 +1116,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					}
 				}
 
-				std::vector<std::pair<std::string, u64>> file_queue;
-				file_queue.reserve(2000);
-
-				// Initialize progress dialog
-				g_progr = "Scanning directories for SPRX libraries...";
-
-				// Find all .sprx files recursively (TODO: process .mself files)
-				for (usz i = 0; i < dir_queue.size(); i++)
-				{
-					if (Emu.IsStopped())
-					{
-						break;
-					}
-
-					sys_log.notice("Scanning directory: %s", dir_queue[i]);
-
-					for (auto&& entry : fs::dir(dir_queue[i]))
-					{
-						if (Emu.IsStopped())
-						{
-							break;
-						}
-
-						if (entry.is_directory)
-						{
-							if (entry.name != "." && entry.name != "..")
-							{
-								dir_queue.emplace_back(dir_queue[i] + entry.name + '/');
-							}
-
-							continue;
-						}
-
-						// Check .sprx filename
-						if (fmt::to_upper(entry.name).ends_with(".SPRX"))
-						{
-							// Get full path
-							file_queue.emplace_back(dir_queue[i] + entry.name, 0);
-							g_progr_ftotal++;
-						}
-					}
-				}
-
-				g_progr = "Compiling PPU modules";
-
 				if (std::string path = m_path + "/USRDIR/EBOOT.BIN"; fs::is_file(path))
 				{
 					// Compile EBOOT.BIN first
-					sys_log.notice("Trying to load EBOOT.BIN: %s", path);
+					ppu_log.notice("Trying to load EBOOT.BIN: %s", path);
 
 					fs::file src{path};
 
@@ -1194,55 +1150,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					ensure(vm::falloc(0x10000, 0xf0000, vm::main));
 				}
 
-				atomic_t<usz> fnext = 0;
-
-				shared_mutex sprx_mtx;
-
-				named_thread_group workers("SPRX Worker ", GetMaxThreads(), [&]
-				{
-					for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++)
-					{
-						const auto& path = std::as_const(file_queue)[func_i].first;
-
-						sys_log.notice("Trying to load SPRX: %s", path);
-
-						// Load MSELF or SPRX
-						fs::file src{path};
-
-						if (file_queue[func_i].second == 0)
-						{
-							// Some files may fail to decrypt due to the lack of klic
-							src = decrypt_self(std::move(src));
-						}
-
-						const ppu_prx_object obj = src;
-
-						if (obj == elf_error::ok)
-						{
-							std::unique_lock lock(sprx_mtx);
-
-							if (auto prx = ppu_load_prx(obj, path))
-							{
-								lock.unlock();
-								ppu_initialize(*prx);
-								idm::remove<lv2_obj, lv2_prx>(idm::last_id());
-								lock.lock();
-								ppu_unload_prx(*prx);
-								lock.unlock();
-								ppu_finalize(*prx);
-								g_progr_fdone++;
-								continue;
-							}
-						}
-
-						sys_log.error("Failed to load SPRX '%s' (%s)", path, obj.get_error());
-						g_progr_fdone++;
-						continue;
-					}
-				});
-
-				// Join every thread
-				workers.join();
+				ppu_precompile(dir_queue);
 
 				// Exit "process"
 				Emu.CallAfter([]
