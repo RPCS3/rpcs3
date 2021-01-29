@@ -1150,6 +1150,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					ensure(vm::falloc(0x10000, 0xf0000, vm::main));
 				}
 
+				if (Emu.IsStopped())
+				{
+					return;
+				}
+
 				ppu_precompile(dir_queue, nullptr);
 
 				// Exit "process"

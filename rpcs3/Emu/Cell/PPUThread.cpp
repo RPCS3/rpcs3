@@ -2069,6 +2069,10 @@ extern void ppu_finalize(const ppu_module& info)
 
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx)
 {
+	// Remove duplicates
+	std::sort(dir_queue.begin(), dir_queue.end());
+	dir_queue.erase(std::unique(dir_queue.begin(), dir_queue.end()), dir_queue.end());
+
 	const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
 
 	// Map fixed address executables area, fake overlay support
@@ -2385,13 +2389,14 @@ extern void ppu_initialize()
 		dir_queue.emplace_back(firmware_sprx_path);
 	}
 
-	if (compile_main)
+	// Avoid compilation if main's cache exists or it is a standalone SELF with no PARAM.SFO
+	if (compile_main && !Emu.GetTitleID().empty())
 	{
 		dir_queue.emplace_back(vfs::get(Emu.GetDir()) + '/');
 
-		if (Emu.GetCat() == "DG" && !Emu.GetTitleID().empty())
+		if (const std::string dev_bdvd = vfs::get("/dev_bdvd/PS3_GAME"); !dev_bdvd.empty())
 		{
-			dir_queue.emplace_back(vfs::get("/dev_hdd0/game/") + Emu.GetTitleID() + '/');
+			dir_queue.emplace_back(dev_bdvd + '/');
 		}
 	}
 
