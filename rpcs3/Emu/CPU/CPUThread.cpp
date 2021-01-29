@@ -276,6 +276,14 @@ namespace cpu_counter
 {
 	void add(cpu_thread* _this) noexcept
 	{
+		switch (_this->id_type())
+		{
+		case 1:
+		case 2:
+			break;
+		default: return;
+		}
+
 		std::lock_guard lock(s_cpu_lock);
 
 		u32 id = -1;
