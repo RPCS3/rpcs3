@@ -1549,7 +1549,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			return true;
 		}
 
-		if (cpu->id_type() != 1)
+		if (cpu->id_type() == 2)
 		{
 			if (!g_tls_access_violation_recovered)
 			{
