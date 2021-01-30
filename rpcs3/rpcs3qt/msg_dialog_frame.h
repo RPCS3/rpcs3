@@ -44,6 +44,7 @@ public:
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) override;
 	virtual void ProgressBarReset(u32 progressBarIndex) override;
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) override;
+	virtual void ProgressBarSetValue(u32 progressBarIndex, u32 value) override;
 	virtual void ProgressBarSetLimit(u32 index, u32 limit) override;
 #ifdef HAVE_QTDBUS
 private:
