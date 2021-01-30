@@ -12,9 +12,9 @@
 #include "sys_overlay.h"
 #include "sys_fs.h"
 
-extern std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object&, const std::string& path);
+extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path);
 
-extern void ppu_initialize(const ppu_module&);
+extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
 
 LOG_CHANNEL(sys_overlay);
@@ -42,7 +42,12 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 		return {CELL_ENOEXEC, obj.operator elf_error()};
 	}
 
-	const auto ovlm = ppu_load_overlay(obj, vfs::get(vpath));
+	const auto [ovlm, error] = ppu_load_overlay(obj, vfs::get(vpath));
+
+	if (error)
+	{
+		return error;
+	}
 
 	ppu_initialize(*ovlm);
 
