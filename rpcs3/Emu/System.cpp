@@ -18,6 +18,7 @@
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
+#include "Emu/Cell/lv2/sys_overlay.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
@@ -64,13 +65,14 @@ std::string g_cfg_defaults;
 
 atomic_t<u64> g_watchdog_hold_ctr{0};
 
-extern void ppu_load_exec(const ppu_exec_object&);
+extern bool ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
+extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path);
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -1558,15 +1560,30 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			g_fxo->init<ppu_module>();
 
-			ppu_load_exec(ppu_exec);
+			if (ppu_load_exec(ppu_exec))
+			{
+				ConfigurePPUCache();
 
-			ConfigurePPUCache();
+				g_fxo->init();
+				Emu.GetCallbacks().init_gs_render();
+				Emu.GetCallbacks().init_pad_handler(m_title_id);
+				Emu.GetCallbacks().init_kb_handler();
+				Emu.GetCallbacks().init_mouse_handler();
+			}
+			// Overlay (OVL) executable (only load it)
+			else if (vm::map(0x3000'0000, 0x1000'0000, 0x200); !ppu_load_overlay(ppu_exec, m_path).first)
+			{
+				ppu_exec = fs::file{};
+			}
 
-			g_fxo->init();
-			Emu.GetCallbacks().init_gs_render();
-			Emu.GetCallbacks().init_pad_handler(m_title_id);
-			Emu.GetCallbacks().init_kb_handler();
-			Emu.GetCallbacks().init_mouse_handler();
+			if (ppu_exec != elf_error::ok)
+			{
+				Stop();
+
+				sys_log.error("Invalid or unsupported PPU executable format: %s", elf_path);
+
+				return game_boot_result::invalid_file_or_folder;
+			}
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{

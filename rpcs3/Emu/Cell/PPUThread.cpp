@@ -2082,7 +2082,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 	std::vector<std::pair<std::string, u64>> file_queue;
 	file_queue.reserve(2000);
 
-	// Find all .sprx files recursively (TODO: process .mself files)
+	// Find all .sprx files recursively
 	for (usz i = 0; i < dir_queue.size(); i++)
 	{
 		if (Emu.IsStopped())
