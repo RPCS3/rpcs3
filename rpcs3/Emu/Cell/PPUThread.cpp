@@ -2758,17 +2758,20 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			break;
 		}
 
-		globals.emplace_back(fmt::format("__mptr%x", suffix), reinterpret_cast<u64>(vm::g_base_addr));
-		globals.emplace_back(fmt::format("__cptr%x", suffix), reinterpret_cast<u64>(vm::g_exec_addr));
-
-		// Initialize segments for relocations
-		for (u32 i = 0, num = 0; i < info.segs.size(); i++)
+		if (!check_only)
 		{
-			if (!info.segs[i].addr) continue;
-			globals.emplace_back(fmt::format("__seg%u_%x", num++, suffix), info.segs[i].addr);
-		}
+			globals.emplace_back(fmt::format("__mptr%x", suffix), reinterpret_cast<u64>(vm::g_base_addr));
+			globals.emplace_back(fmt::format("__cptr%x", suffix), reinterpret_cast<u64>(vm::g_exec_addr));
 
-		link_workload.emplace_back(obj_name, false);
+			// Initialize segments for relocations
+			for (u32 i = 0, num = 0; i < info.segs.size(); i++)
+			{
+				if (!info.segs[i].addr) continue;
+				globals.emplace_back(fmt::format("__seg%u_%x", num++, suffix), info.segs[i].addr);
+			}
+
+			link_workload.emplace_back(obj_name, false);
+		}
 
 		// Check object file
 		if (jit_compiler::check(cache_path + obj_name))
@@ -2781,13 +2784,13 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			continue;
 		}
 
-		// Remember, used in ppu_initialize(void)
-		compiled_new = true;
-
 		if (check_only)
 		{
 			return true;
 		}
+
+		// Remember, used in ppu_initialize(void)
+		compiled_new = true;
 
 		// Adjust information (is_compiled)
 		link_workload.back().second = true;
