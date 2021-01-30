@@ -368,7 +368,6 @@ namespace
 				u32 fdone = 0;
 				u32 ptotal = 0;
 				u32 pdone = 0;
-				u32 value = 0;
 
 				// Update progress
 				while (thread_ctrl::state() != thread_state::aborting)
@@ -383,12 +382,7 @@ namespace
 						// Compute new progress in percents
 						const u32 total = ftotal + ptotal;
 						const u32 done = fdone + pdone;
-						const u32 new_value = static_cast<u32>(double(done) * 100. / double(total ? total : 1));
-
-						// Compute the difference
-						const u32 delta = new_value > value ? new_value - value : 0;
-
-						value += delta;
+						const double value = double(done) * 100. / double(total ? total : 1);
 
 						// Changes detected, send update
 						Emu.CallAfter([=]()
@@ -404,7 +398,7 @@ namespace
 							{
 								dlg->SetMsg(+g_progr);
 								dlg->ProgressBarSetMsg(0, progr);
-								dlg->ProgressBarInc(0, delta);
+								dlg->ProgressBarSetValue(0, std::floor(value));
 							}
 						});
 					}
