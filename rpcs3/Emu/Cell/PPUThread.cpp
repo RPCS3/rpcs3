@@ -2802,6 +2802,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		g_progr_ptotal++;
 	}
 
+	if (check_only)
+	{
+		return false;
+	}
+
 	// Create worker threads for compilation (TODO: how many threads)
 	{
 		u32 thread_count = Emu.GetMaxThreads();
