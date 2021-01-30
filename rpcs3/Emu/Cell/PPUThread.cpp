@@ -2265,7 +2265,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 			if (!src)
 			{
 				ppu_log.error("Failed to decrypt '%s'", path);
-				continue;		
+				continue;
 			}
 
 			elf_error prx_err{}, ovl_err{};
@@ -2289,7 +2289,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 				// Log error
 				prx_err = elf_error::header_type;
 			}
-				
+
 			if (const ppu_exec_object obj = src; (ovl_err = obj, obj == elf_error::ok))
 			{
 				while (ovl_err == elf_error::ok)
@@ -2776,7 +2776,6 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			if (!jit && !check_only)
 			{
 				ppu_log.success("LLVM: Module exists: %s", obj_name);
-				continue;
 			}
 
 			continue;
@@ -2822,26 +2821,26 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			// Set low priority
 			thread_ctrl::scoped_priority low_prio(-1);
 
-			for (u32 i = work_cv++; i < workload.size(); i = work_cv++)
+			for (u32 i = work_cv++; i < workload.size(); i = work_cv++, g_progr_pdone++)
 			{
+				if (Emu.IsStopped())
+				{
+					continue;
+				}
+
 				// Keep allocating workload
 				const auto [obj_name, part] = std::as_const(workload)[i];
 
 				// Allocate "core"
 				std::lock_guard jlock(g_fxo->get<jit_core_allocator>()->sem);
 
-				if (!Emu.IsStopped())
-				{
-					ppu_log.warning("LLVM: Compiling module %s%s", cache_path, obj_name);
+				ppu_log.warning("LLVM: Compiling module %s%s", cache_path, obj_name);
 
-					// Use another JIT instance
-					jit_compiler jit2({}, g_cfg.core.llvm_cpu, 0x1);
-					ppu_initialize2(jit2, part, cache_path, obj_name);
+				// Use another JIT instance
+				jit_compiler jit2({}, g_cfg.core.llvm_cpu, 0x1);
+				ppu_initialize2(jit2, part, cache_path, obj_name);
 
-					ppu_log.success("LLVM: Compiled module %s", obj_name);
-				}
-
-				g_progr_pdone++;
+				ppu_log.success("LLVM: Compiled module %s", obj_name);
 			}
 		});
 
