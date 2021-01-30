@@ -372,12 +372,17 @@ namespace
 				// Update progress
 				while (thread_ctrl::state() != thread_state::aborting)
 				{
-					if (ftotal != g_progr_ftotal || fdone != g_progr_fdone || ptotal != g_progr_ptotal || pdone != g_progr_pdone)
+					const u32 ftotal_new = g_progr_ftotal;
+					const u32 fdone_new  = g_progr_fdone;
+					const u32 ptotal_new = g_progr_ptotal;
+					const u32 pdone_new  = g_progr_pdone;
+
+					if (ftotal != ftotal_new || fdone != fdone_new || ptotal != ptotal_new || pdone != pdone_new)
 					{
-						ftotal = g_progr_ftotal;
-						fdone = g_progr_fdone;
-						ptotal = g_progr_ptotal;
-						pdone = g_progr_pdone;
+						ftotal = ftotal_new;
+						fdone  = fdone_new;
+						ptotal = ptotal_new;
+						pdone  = pdone_new;
 
 						// Compute new progress in percents
 						const u32 total = ftotal + ptotal;
@@ -418,9 +423,9 @@ namespace
 				}
 
 				// Cleanup
-				g_progr_ftotal -= fdone;
+				g_progr_ftotal -= ftotal;
 				g_progr_fdone  -= fdone;
-				g_progr_ptotal -= pdone;
+				g_progr_ptotal -= ptotal;
 				g_progr_pdone  -= pdone;
 
 				if (dlg)
