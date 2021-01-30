@@ -3,7 +3,6 @@
 
 #include "Utilities/bin_patch.h"
 #include "Utilities/StrUtil.h"
-#include "Utilities/address_range.h"
 #include "Crypto/sha1.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
@@ -31,7 +30,7 @@ extern std::string ppu_get_function_name(const std::string& _module, u32 fnid);
 extern std::string ppu_get_variable_name(const std::string& _module, u32 vnid);
 extern void ppu_register_range(u32 addr, u32 size);
 extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr);
-extern bool ppu_initialize(const ppu_module& info, bool = false);
+extern void ppu_initialize(const ppu_module& info);
 extern void ppu_initialize();
 
 extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
@@ -1649,33 +1648,16 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	}
 }
 
-std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object& elf, const std::string& path)
+std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const std::string& path)
 {
+	const auto ovlm = idm::make_ptr<lv2_obj, lv2_overlay>();
+
 	// Access linkage information object
 	const auto link = g_fxo->get<ppu_linkage_info>();
 
 	// Executable hash
 	sha1_context sha;
 	sha1_starts(&sha);
-
-	// Check if it is an overlay executable first
-	for (const auto& prog : elf.progs)
-	{
-		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
-		{
-			using addr_range = utils::address_range;
-
-			const addr_range r = addr_range::start_length(::narrow<u32>(prog.p_vaddr), ::narrow<u32>(prog.p_memsz));
-
-			if (!r.valid() || !r.inside(addr_range::start_length(0x30000000, 0x10000000)))
-			{
-				// TODO: Check error and if there's a better way to error check
-				return {nullptr, CELL_ENOEXEC};
-			}
-		}
-	}
-
-	const auto ovlm = std::make_shared<lv2_overlay>();
 
 	// Allocate memory at fixed positions
 	for (const auto& prog : elf.progs)
@@ -1700,18 +1682,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 				fmt::throw_exception("Invalid binary size (0x%llx, memsz=0x%x)", prog.bin.size(), size);
 
 			if (!vm::get(vm::any, 0x30000000)->falloc(addr, size))
-			{
-				ppu_loader.error("ppu_load_overlay(): vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
-
-				// Revert previous allocations
-				for (const auto& seg : ovlm->segs)
-				{
-					ensure(vm::dealloc(seg.addr));
-				}
-
-				// TODO: Check error code, maybe disallow more than one overlay instance completely
-				return {nullptr, CELL_EBUSY};
-			}
+				fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
 
 			// Copy segment data, hash it
 			std::memcpy(vm::base(addr), prog.bin.data(), prog.bin.size());
@@ -1874,6 +1845,5 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	ovlm->name = path.substr(path.find_last_of('/') + 1);
 	ovlm->path = path;
 
-	idm::import_existing<lv2_obj, lv2_overlay>(ovlm);
-	return {std::move(ovlm), {}};
+	return ovlm;
 }

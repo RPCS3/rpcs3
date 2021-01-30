@@ -66,8 +66,8 @@ atomic_t<u64> g_watchdog_hold_ctr{0};
 
 extern void ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
-extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx);
-extern bool ppu_initialize(const ppu_module&, bool = false);
+extern void ppu_precompile(std::vector<std::string>& dir_queue);
+extern void ppu_initialize(const ppu_module&);
 extern void ppu_finalize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
@@ -1150,12 +1150,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					ensure(vm::falloc(0x10000, 0xf0000, vm::main));
 				}
 
-				if (Emu.IsStopped())
-				{
-					return;
-				}
-
-				ppu_precompile(dir_queue, nullptr);
+				ppu_precompile(dir_queue);
 
 				// Exit "process"
 				Emu.CallAfter([]

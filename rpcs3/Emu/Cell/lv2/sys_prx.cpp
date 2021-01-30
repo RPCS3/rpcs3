@@ -17,7 +17,7 @@
 
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 extern void ppu_unload_prx(const lv2_prx& prx);
-extern bool ppu_initialize(const ppu_module&, bool = false);
+extern void ppu_initialize(const ppu_module&);
 extern void ppu_finalize(const ppu_module&);
 
 LOG_CHANNEL(sys_prx);
