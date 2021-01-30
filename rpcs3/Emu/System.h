@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <set>
 
 u64 get_system_time();
 u64 get_guest_system_time();
@@ -241,6 +242,8 @@ public:
 
 	void ConfigureLogs();
 	void ConfigurePPUCache();
+
+	std::set<std::string> GetGameDirs() const;
 
 private:
 	void LimitCacheSize();

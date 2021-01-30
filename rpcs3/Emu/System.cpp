@@ -1110,6 +1110,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					}
 				}
 
+				// Try to add all related directories
+				const std::set<std::string> dirs = GetGameDirs();
+				dir_queue.insert(std::end(dir_queue), std::begin(dirs), std::end(dirs));
+
 				if (std::string path = m_path + "/USRDIR/EBOOT.BIN"; fs::is_file(path))
 				{
 					// Compile EBOOT.BIN first
@@ -2040,6 +2044,52 @@ void Emulator::ConfigurePPUCache()
 	{
 		sys_log.notice("Cache: %s", _main->cache);
 	}
+}
+
+std::set<std::string> Emulator::GetGameDirs() const
+{
+	std::set<std::string> dirs;
+
+	// Add boot directory.
+	// For installed titles and disc titles with updates this is usually /dev_hdd0/game/<title_id>/
+	// For disc titles without updates this is /dev_bdvd/PS3_GAME/
+	if (const std::string dir = vfs::get(GetDir()); !dir.empty())
+	{
+		dirs.insert(dir + '/');
+	}
+
+	// Add more paths for disc titles.
+	if (const std::string dev_bdvd = vfs::get("/dev_bdvd/PS3_GAME");
+		!dev_bdvd.empty() && !GetTitleID().empty())
+	{
+		// Add the dev_bdvd dir if available. This is necessary for disc titles with installed updates.
+		dirs.insert(dev_bdvd + '/');
+
+		// Naive search for all matching game data dirs.
+		const std::string game_dir = vfs::get("/dev_hdd0/game/");
+		for (auto&& entry : fs::dir(game_dir))
+		{
+			if (entry.is_directory && entry.name.starts_with(GetTitleID()))
+			{
+				const std::string sfo_dir = game_dir + entry.name + '/';
+				const fs::file sfo_file(sfo_dir + "PARAM.SFO");
+				if (!sfo_file)
+				{
+					continue;
+				}
+
+				const psf::registry psf    = psf::load_object(sfo_file);
+				const std::string title_id = std::string(psf::get_string(psf, "TITLE_ID", ""));
+
+				if (title_id == GetTitleID())
+				{
+					dirs.insert(sfo_dir);
+				}
+			}
+		}
+	}
+
+	return dirs;
 }
 
 Emulator Emu;

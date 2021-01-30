@@ -5,6 +5,7 @@
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
 #include "Loader/mself.hpp"
+#include "Loader/PSF.h"
 #include "Emu/perf_meter.hpp"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/Memory/vm_locking.h"
@@ -2069,7 +2070,13 @@ extern void ppu_finalize(const ppu_module& info)
 
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx)
 {
-	// Remove duplicates
+	// Make sure we only have one '/' at the end and remove duplicates.
+	for (std::string& dir : dir_queue)
+	{
+		while (dir.back() == '/' || dir.back() == '\\')
+			dir.pop_back();
+		dir += '/';
+	}
 	std::sort(dir_queue.begin(), dir_queue.end());
 	dir_queue.erase(std::unique(dir_queue.begin(), dir_queue.end()), dir_queue.end());
 
@@ -2230,6 +2237,9 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 
 	named_thread_group workers("SPRX Worker ", std::min<u32>(utils::get_thread_count(), ::size32(file_queue)), [&]
 	{
+		// Set low priority
+		thread_ctrl::scoped_priority low_prio(-1);
+
 		for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++, g_progr_fdone++)
 		{
 			if (Emu.IsStopped())
@@ -2265,7 +2275,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 			if (!src)
 			{
 				ppu_log.error("Failed to decrypt '%s'", path);
-				continue;		
+				continue;
 			}
 
 			elf_error prx_err{}, ovl_err{};
@@ -2289,7 +2299,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 				// Log error
 				prx_err = elf_error::header_type;
 			}
-				
+
 			if (const ppu_exec_object obj = src; (ovl_err = obj, obj == elf_error::ok))
 			{
 				while (ovl_err == elf_error::ok)
@@ -2392,12 +2402,9 @@ extern void ppu_initialize()
 	// Avoid compilation if main's cache exists or it is a standalone SELF with no PARAM.SFO
 	if (compile_main && !Emu.GetTitleID().empty())
 	{
-		dir_queue.emplace_back(vfs::get(Emu.GetDir()) + '/');
-
-		if (const std::string dev_bdvd = vfs::get("/dev_bdvd/PS3_GAME"); !dev_bdvd.empty())
-		{
-			dir_queue.emplace_back(dev_bdvd + '/');
-		}
+		// Try to add all related directories
+		const std::set<std::string> dirs = Emu.GetGameDirs();
+		dir_queue.insert(std::end(dir_queue), std::begin(dirs), std::end(dirs));
 	}
 
 	ppu_precompile(dir_queue, &prx_list);
