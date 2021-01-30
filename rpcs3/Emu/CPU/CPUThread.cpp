@@ -431,6 +431,11 @@ void cpu_thread::operator()()
 
 	while (!g_fxo->get<cpu_profiler>())
 	{
+		if (Emu.IsStopped())
+		{
+			return;
+		}
+
 		// Can we have a little race, right? First thread is started concurrently with g_fxo->init()
 		std::this_thread::sleep_for(1ms);
 	}
