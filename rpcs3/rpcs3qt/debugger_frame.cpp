@@ -268,6 +268,10 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			"\nKey F10: Perform single-stepping on instructions."
 			"\nKey F11: Perform step-over on instructions. (skip function calls)"
 			"\nKey F1: Show this help dialog."
+			"\nKey Up: Scroll one instruction upwards. (address is decremented)"
+			"\nKey Down: Scroll one instruction downwards. (address is incremented)"
+			"\nKey Page-Up: Scroll upwards with steps count equal to the viewed instruction count."
+			"\nKey Page-Down: Scroll downwards with steps count equal to the viewed instruction count."
 			"\nDouble-click: Set breakpoints."));
 
 		gui::utils::set_font_size(*l, 9);
