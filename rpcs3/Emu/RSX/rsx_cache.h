@@ -521,10 +521,10 @@ namespace rsx
 
 					worker(stop_at);
 
-					// Only update the screen at about 10fps since updating it everytime slows down the process
+					// Only update the screen at about 60fps since updating it everytime slows down the process
 					steady_clock::time_point now = steady_clock::now();
 					processed_since_last_update += inc;
-					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (stop_at == entry_count))
+					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 16ms) || (stop_at == entry_count))
 					{
 						dlg->update_msg(step, get_message(step, stop_at, entry_count));
 						dlg->inc_value(step, processed_since_last_update);
@@ -544,7 +544,7 @@ namespace rsx
 				u32 last_update_progress = 0;
 				while ((current_progress < entry_count) && !Emu.IsStopped())
 				{
-					std::this_thread::sleep_for(100ms); // Around 10fps should be good enough
+					std::this_thread::sleep_for(16ms); // Around 60fps should be good enough
 
 					current_progress = std::min(processed.load(), entry_count);
 					processed_since_last_update = current_progress - last_update_progress;
