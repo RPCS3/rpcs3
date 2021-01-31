@@ -229,6 +229,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 			if (!p || m_pos > m_max) [[unlikely]]
 			{
 				*dst = nullptr;
+				jit_log.fatal("Out of memory (static asmjit)");
 				return asmjit::kErrorNoVirtualMemory;
 			}
 

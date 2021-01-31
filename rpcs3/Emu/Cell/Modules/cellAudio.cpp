@@ -188,7 +188,7 @@ void audio_ringbuffer::enqueue(const float* in_buffer)
 	const bool success = backend->AddData(buf, AUDIO_BUFFER_SAMPLES * cfg.audio_channels);
 	if (!success)
 	{
-		cellAudio.error("Could not enqueue buffer onto audio backend. Attempting to recover...");
+		cellAudio.warning("Could not enqueue buffer onto audio backend. Attempting to recover...");
 		flush();
 		return;
 	}
