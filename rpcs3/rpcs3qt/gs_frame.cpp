@@ -645,6 +645,19 @@ void gs_frame::progress_reset(bool reset_limit)
 	}
 }
 
+void gs_frame::progress_set_value(int value)
+{
+#ifdef _WIN32
+	if (m_tb_progress)
+	{
+		m_tb_progress->setValue(std::clamp(value, m_tb_progress->minimum(), m_tb_progress->maximum()));
+	}
+#elif HAVE_QTDBUS
+	m_progress_value = std::clamp(value, 0, m_gauge_max);
+	UpdateProgress(m_progress_value);
+#endif
+}
+
 void gs_frame::progress_increment(int delta)
 {
 	if (delta == 0)
@@ -655,11 +668,10 @@ void gs_frame::progress_increment(int delta)
 #ifdef _WIN32
 	if (m_tb_progress)
 	{
-		m_tb_progress->setValue(std::clamp(m_tb_progress->value() + delta, m_tb_progress->minimum(), m_tb_progress->maximum()));
+		progress_set_value(m_tb_progress->value() + delta);
 	}
 #elif HAVE_QTDBUS
-	m_progress_value = std::clamp(m_progress_value + delta, 0, m_gauge_max);
-	UpdateProgress(m_progress_value);
+	progress_set_value(m_progress_value + delta);
 #endif
 }
 
