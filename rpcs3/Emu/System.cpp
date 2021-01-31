@@ -78,7 +78,7 @@ std::array<std::deque<std::string>, 16> g_tty_input;
 std::mutex g_tty_mutex;
 
 // Progress display server synchronization variables
-atomic_t<const char*> g_progr{nullptr};
+atomic_t<const char*> g_progr{""};
 atomic_t<u32> g_progr_ftotal{0};
 atomic_t<u32> g_progr_fdone{0};
 atomic_t<u32> g_progr_ptotal{0};
