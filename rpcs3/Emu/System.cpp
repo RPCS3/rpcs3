@@ -385,9 +385,10 @@ namespace
 						pdone  = pdone_new;
 
 						// Compute new progress in percents
-						const u32 total = ftotal + ptotal;
-						const u32 done = fdone + pdone;
-						const double value = double(done) * 100. / double(total ? total : 1);
+						// Assume not all programs were found if files were not compiled (as it may contain more)
+						const u64 total = std::max<u64>(ptotal, 1) * std::max<u64>(ftotal, 1);
+						const u64 done = pdone * std::max<u64>(fdone, 1);
+						const double value = std::fmin(done * 100. / total, 100.);
 
 						// Changes detected, send update
 						Emu.CallAfter([=]()
