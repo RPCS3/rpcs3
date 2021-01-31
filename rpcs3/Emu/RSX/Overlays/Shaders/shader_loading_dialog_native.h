@@ -23,6 +23,7 @@ namespace rsx
 		void create(const std::string& msg, const std::string&/* title*/) override;
 		void update_msg(u32 index, const std::string& msg) override;
 		void inc_value(u32 index, u32 value) override;
+		void set_value(u32 index, u32 value) override;
 		void set_limit(u32 index, u32 limit) override;
 		void refresh() override;
 		void close() override;

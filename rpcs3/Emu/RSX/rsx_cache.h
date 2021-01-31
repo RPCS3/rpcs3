@@ -506,30 +506,25 @@ namespace rsx
 
 		void await_workers(uint nb_workers, u8 step, std::function<void(u32)>& worker, atomic_t<u32>& processed, u32 entry_count, shader_loading_dialog* dlg)
 		{
-			u32 processed_since_last_update = 0;
-
 			if (nb_workers == 1)
 			{
 				steady_clock::time_point last_update;
 
-				// Call the worker function directly, stoping it prematurely to be able update the screen
-				u8 inc = 10;
+				// Call the worker function directly, stopping it prematurely to be able update the screen
 				u32 stop_at = 0;
 				do
 				{
-					stop_at = std::min(stop_at + inc, entry_count);
+					stop_at = std::min(stop_at + 10, entry_count);
 
 					worker(stop_at);
 
-					// Only update the screen at about 10fps since updating it everytime slows down the process
+					// Only update the screen at about 60fps since updating it everytime slows down the process
 					steady_clock::time_point now = steady_clock::now();
-					processed_since_last_update += inc;
-					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (stop_at == entry_count))
+					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 16ms) || (stop_at == entry_count))
 					{
 						dlg->update_msg(step, get_message(step, stop_at, entry_count));
-						dlg->inc_value(step, processed_since_last_update);
+						dlg->set_value(step, stop_at);
 						last_update = now;
-						processed_since_last_update = 0;
 					}
 				} while (stop_at < entry_count && !Emu.IsStopped());
 			}
@@ -544,16 +539,15 @@ namespace rsx
 				u32 last_update_progress = 0;
 				while ((current_progress < entry_count) && !Emu.IsStopped())
 				{
-					std::this_thread::sleep_for(100ms); // Around 10fps should be good enough
+					std::this_thread::sleep_for(16ms); // Around 60fps should be good enough
 
 					current_progress = std::min(processed.load(), entry_count);
-					processed_since_last_update = current_progress - last_update_progress;
-					last_update_progress = current_progress;
 
-					if (processed_since_last_update > 0)
+					if (last_update_progress != current_progress)
 					{
+						last_update_progress = current_progress;
 						dlg->update_msg(step, get_message(step, current_progress, entry_count));
-						dlg->inc_value(step, processed_since_last_update);
+						dlg->set_value(step, current_progress);
 					}
 				}
 			}

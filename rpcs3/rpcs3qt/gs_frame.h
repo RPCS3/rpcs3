@@ -58,6 +58,7 @@ public:
 
 	// taskbar progress
 	void progress_reset(bool reset_limit = false);
+	void progress_set_value(int value);
 	void progress_increment(int delta);
 	void progress_set_limit(int limit);
 

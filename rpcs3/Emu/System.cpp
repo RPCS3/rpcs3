@@ -18,6 +18,7 @@
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
+#include "Emu/Cell/lv2/sys_overlay.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
@@ -64,13 +65,14 @@ std::string g_cfg_defaults;
 
 atomic_t<u64> g_watchdog_hold_ctr{0};
 
-extern void ppu_load_exec(const ppu_exec_object&);
+extern bool ppu_load_exec(const ppu_exec_object&);
 extern void spu_load_exec(const spu_exec_object&);
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
+extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path);
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -78,7 +80,7 @@ std::array<std::deque<std::string>, 16> g_tty_input;
 std::mutex g_tty_mutex;
 
 // Progress display server synchronization variables
-atomic_t<const char*> g_progr{nullptr};
+atomic_t<const char*> g_progr{""};
 atomic_t<u32> g_progr_ftotal{0};
 atomic_t<u32> g_progr_fdone{0};
 atomic_t<u32> g_progr_ptotal{0};
@@ -368,27 +370,27 @@ namespace
 				u32 fdone = 0;
 				u32 ptotal = 0;
 				u32 pdone = 0;
-				u32 value = 0;
 
 				// Update progress
 				while (thread_ctrl::state() != thread_state::aborting)
 				{
-					if (ftotal != g_progr_ftotal || fdone != g_progr_fdone || ptotal != g_progr_ptotal || pdone != g_progr_pdone)
+					const u32 ftotal_new = g_progr_ftotal;
+					const u32 fdone_new  = g_progr_fdone;
+					const u32 ptotal_new = g_progr_ptotal;
+					const u32 pdone_new  = g_progr_pdone;
+
+					if (ftotal != ftotal_new || fdone != fdone_new || ptotal != ptotal_new || pdone != pdone_new)
 					{
-						ftotal = g_progr_ftotal;
-						fdone = g_progr_fdone;
-						ptotal = g_progr_ptotal;
-						pdone = g_progr_pdone;
+						ftotal = ftotal_new;
+						fdone  = fdone_new;
+						ptotal = ptotal_new;
+						pdone  = pdone_new;
 
 						// Compute new progress in percents
-						const u32 total = ftotal + ptotal;
-						const u32 done = fdone + pdone;
-						const u32 new_value = static_cast<u32>(double(done) * 100. / double(total ? total : 1));
-
-						// Compute the difference
-						const u32 delta = new_value > value ? new_value - value : 0;
-
-						value += delta;
+						// Assume not all programs were found if files were not compiled (as it may contain more)
+						const u64 total = std::max<u64>(ptotal, 1) * std::max<u64>(ftotal, 1);
+						const u64 done = pdone * std::max<u64>(fdone, 1);
+						const double value = std::fmin(done * 100. / total, 100.);
 
 						// Changes detected, send update
 						Emu.CallAfter([=]()
@@ -404,7 +406,7 @@ namespace
 							{
 								dlg->SetMsg(+g_progr);
 								dlg->ProgressBarSetMsg(0, progr);
-								dlg->ProgressBarInc(0, delta);
+								dlg->ProgressBarSetValue(0, std::floor(value));
 							}
 						});
 					}
@@ -424,9 +426,9 @@ namespace
 				}
 
 				// Cleanup
-				g_progr_ftotal -= fdone;
+				g_progr_ftotal -= ftotal;
 				g_progr_fdone  -= fdone;
-				g_progr_ptotal -= pdone;
+				g_progr_ptotal -= ptotal;
 				g_progr_pdone  -= pdone;
 
 				if (dlg)
@@ -437,6 +439,14 @@ namespace
 					});
 				}
 			}
+		}
+
+		~progress_dialog_server()
+		{
+			g_progr_ftotal.release(0);
+			g_progr_fdone.release(0);
+			g_progr_ptotal.release(0);
+			g_progr_pdone.release(0);
 		}
 
 		static auto constexpr thread_name = "Progress Dialog Server"sv;
@@ -1116,6 +1126,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					}
 				}
 
+				// Try to add all related directories
+				const std::set<std::string> dirs = GetGameDirs();
+				dir_queue.insert(std::end(dir_queue), std::begin(dirs), std::end(dirs));
+
 				if (std::string path = m_path + "/USRDIR/EBOOT.BIN"; fs::is_file(path))
 				{
 					// Compile EBOOT.BIN first
@@ -1558,15 +1572,30 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			g_fxo->init<ppu_module>();
 
-			ppu_load_exec(ppu_exec);
+			if (ppu_load_exec(ppu_exec))
+			{
+				ConfigurePPUCache();
 
-			ConfigurePPUCache();
+				g_fxo->init();
+				Emu.GetCallbacks().init_gs_render();
+				Emu.GetCallbacks().init_pad_handler(m_title_id);
+				Emu.GetCallbacks().init_kb_handler();
+				Emu.GetCallbacks().init_mouse_handler();
+			}
+			// Overlay (OVL) executable (only load it)
+			else if (vm::map(0x3000'0000, 0x1000'0000, 0x200); !ppu_load_overlay(ppu_exec, m_path).first)
+			{
+				ppu_exec = fs::file{};
+			}
 
-			g_fxo->init();
-			Emu.GetCallbacks().init_gs_render();
-			Emu.GetCallbacks().init_pad_handler(m_title_id);
-			Emu.GetCallbacks().init_kb_handler();
-			Emu.GetCallbacks().init_mouse_handler();
+			if (ppu_exec != elf_error::ok)
+			{
+				Stop();
+
+				sys_log.error("Invalid or unsupported PPU executable format: %s", elf_path);
+
+				return game_boot_result::invalid_file_or_folder;
+			}
 		}
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
@@ -2046,6 +2075,52 @@ void Emulator::ConfigurePPUCache()
 	{
 		sys_log.notice("Cache: %s", _main->cache);
 	}
+}
+
+std::set<std::string> Emulator::GetGameDirs() const
+{
+	std::set<std::string> dirs;
+
+	// Add boot directory.
+	// For installed titles and disc titles with updates this is usually /dev_hdd0/game/<title_id>/
+	// For disc titles without updates this is /dev_bdvd/PS3_GAME/
+	if (const std::string dir = vfs::get(GetDir()); !dir.empty())
+	{
+		dirs.insert(dir + '/');
+	}
+
+	// Add more paths for disc titles.
+	if (const std::string dev_bdvd = vfs::get("/dev_bdvd/PS3_GAME");
+		!dev_bdvd.empty() && !GetTitleID().empty())
+	{
+		// Add the dev_bdvd dir if available. This is necessary for disc titles with installed updates.
+		dirs.insert(dev_bdvd + '/');
+
+		// Naive search for all matching game data dirs.
+		const std::string game_dir = vfs::get("/dev_hdd0/game/");
+		for (auto&& entry : fs::dir(game_dir))
+		{
+			if (entry.is_directory && entry.name.starts_with(GetTitleID()))
+			{
+				const std::string sfo_dir = game_dir + entry.name + '/';
+				const fs::file sfo_file(sfo_dir + "PARAM.SFO");
+				if (!sfo_file)
+				{
+					continue;
+				}
+
+				const psf::registry psf    = psf::load_object(sfo_file);
+				const std::string title_id = std::string(psf::get_string(psf, "TITLE_ID", ""));
+
+				if (title_id == GetTitleID())
+				{
+					dirs.insert(sfo_dir);
+				}
+			}
+		}
+	}
+
+	return dirs;
 }
 
 Emulator Emu;
