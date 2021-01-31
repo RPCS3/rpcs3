@@ -38,6 +38,12 @@ namespace rsx
 		owner->flip({});
 	}
 
+	void shader_loading_dialog_native::set_value(u32 index, u32 value)
+	{
+		dlg->progress_bar_set_value(index, static_cast<f32>(value));
+		owner->flip({});
+	}
+
 	void shader_loading_dialog_native::set_limit(u32 index, u32 limit)
 	{
 		dlg->progress_bar_set_limit(index, limit);

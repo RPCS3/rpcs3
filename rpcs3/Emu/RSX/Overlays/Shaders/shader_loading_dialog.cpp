@@ -65,6 +65,22 @@ namespace rsx
 		});
 	}
 
+	void shader_loading_dialog::set_value(u32 index, u32 value)
+	{
+		if (!dlg)
+		{
+			return;
+		}
+
+		ref_cnt++;
+
+		Emu.CallAfter([&, index, value]()
+		{
+			dlg->ProgressBarSetValue(index, value);
+			ref_cnt--;
+		});
+	}
+
 	void shader_loading_dialog::set_limit(u32 index, u32 limit)
 	{
 		if (!dlg)
