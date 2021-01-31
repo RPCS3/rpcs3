@@ -5,6 +5,7 @@
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
 #include "Loader/mself.hpp"
+#include "Loader/PSF.h"
 #include "Emu/perf_meter.hpp"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/Memory/vm_locking.h"
@@ -2069,7 +2070,13 @@ extern void ppu_finalize(const ppu_module& info)
 
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx)
 {
-	// Remove duplicates
+	// Make sure we only have one '/' at the end and remove duplicates.
+	for (std::string& dir : dir_queue)
+	{
+		while (dir.back() == '/' || dir.back() == '\\')
+			dir.pop_back();
+		dir += '/';
+	}
 	std::sort(dir_queue.begin(), dir_queue.end());
 	dir_queue.erase(std::unique(dir_queue.begin(), dir_queue.end()), dir_queue.end());
 
@@ -2082,7 +2089,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 	std::vector<std::pair<std::string, u64>> file_queue;
 	file_queue.reserve(2000);
 
-	// Find all .sprx files recursively (TODO: process .mself files)
+	// Find all .sprx files recursively
 	for (usz i = 0; i < dir_queue.size(); i++)
 	{
 		if (Emu.IsStopped())
@@ -2230,6 +2237,9 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 
 	named_thread_group workers("SPRX Worker ", std::min<u32>(utils::get_thread_count(), ::size32(file_queue)), [&]
 	{
+		// Set low priority
+		thread_ctrl::scoped_priority low_prio(-1);
+
 		for (usz func_i = fnext++; func_i < file_queue.size(); func_i = fnext++, g_progr_fdone++)
 		{
 			if (Emu.IsStopped())
@@ -2265,7 +2275,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 			if (!src)
 			{
 				ppu_log.error("Failed to decrypt '%s'", path);
-				continue;		
+				continue;
 			}
 
 			elf_error prx_err{}, ovl_err{};
@@ -2289,7 +2299,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 				// Log error
 				prx_err = elf_error::header_type;
 			}
-				
+
 			if (const ppu_exec_object obj = src; (ovl_err = obj, obj == elf_error::ok))
 			{
 				while (ovl_err == elf_error::ok)
@@ -2392,12 +2402,9 @@ extern void ppu_initialize()
 	// Avoid compilation if main's cache exists or it is a standalone SELF with no PARAM.SFO
 	if (compile_main && !Emu.GetTitleID().empty())
 	{
-		dir_queue.emplace_back(vfs::get(Emu.GetDir()) + '/');
-
-		if (const std::string dev_bdvd = vfs::get("/dev_bdvd/PS3_GAME"); !dev_bdvd.empty())
-		{
-			dir_queue.emplace_back(dev_bdvd + '/');
-		}
+		// Try to add all related directories
+		const std::set<std::string> dirs = Emu.GetGameDirs();
+		dir_queue.insert(std::end(dir_queue), std::begin(dirs), std::end(dirs));
 	}
 
 	ppu_precompile(dir_queue, &prx_list);
@@ -2758,17 +2765,20 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			break;
 		}
 
-		globals.emplace_back(fmt::format("__mptr%x", suffix), reinterpret_cast<u64>(vm::g_base_addr));
-		globals.emplace_back(fmt::format("__cptr%x", suffix), reinterpret_cast<u64>(vm::g_exec_addr));
-
-		// Initialize segments for relocations
-		for (u32 i = 0, num = 0; i < info.segs.size(); i++)
+		if (!check_only)
 		{
-			if (!info.segs[i].addr) continue;
-			globals.emplace_back(fmt::format("__seg%u_%x", num++, suffix), info.segs[i].addr);
-		}
+			globals.emplace_back(fmt::format("__mptr%x", suffix), reinterpret_cast<u64>(vm::g_base_addr));
+			globals.emplace_back(fmt::format("__cptr%x", suffix), reinterpret_cast<u64>(vm::g_exec_addr));
 
-		link_workload.emplace_back(obj_name, false);
+			// Initialize segments for relocations
+			for (u32 i = 0, num = 0; i < info.segs.size(); i++)
+			{
+				if (!info.segs[i].addr) continue;
+				globals.emplace_back(fmt::format("__seg%u_%x", num++, suffix), info.segs[i].addr);
+			}
+
+			link_workload.emplace_back(obj_name, false);
+		}
 
 		// Check object file
 		if (jit_compiler::check(cache_path + obj_name))
@@ -2776,19 +2786,18 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			if (!jit && !check_only)
 			{
 				ppu_log.success("LLVM: Module exists: %s", obj_name);
-				continue;
 			}
 
 			continue;
 		}
 
-		// Remember, used in ppu_initialize(void)
-		compiled_new = true;
-
 		if (check_only)
 		{
 			return true;
 		}
+
+		// Remember, used in ppu_initialize(void)
+		compiled_new = true;
 
 		// Adjust information (is_compiled)
 		link_workload.back().second = true;
@@ -2798,6 +2807,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		// Update progress dialog
 		g_progr_ptotal++;
+	}
+
+	if (check_only)
+	{
+		return false;
 	}
 
 	// Create worker threads for compilation (TODO: how many threads)
@@ -2822,26 +2836,26 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			// Set low priority
 			thread_ctrl::scoped_priority low_prio(-1);
 
-			for (u32 i = work_cv++; i < workload.size(); i = work_cv++)
+			for (u32 i = work_cv++; i < workload.size(); i = work_cv++, g_progr_pdone++)
 			{
+				if (Emu.IsStopped())
+				{
+					continue;
+				}
+
 				// Keep allocating workload
 				const auto [obj_name, part] = std::as_const(workload)[i];
 
 				// Allocate "core"
 				std::lock_guard jlock(g_fxo->get<jit_core_allocator>()->sem);
 
-				if (!Emu.IsStopped())
-				{
-					ppu_log.warning("LLVM: Compiling module %s%s", cache_path, obj_name);
+				ppu_log.warning("LLVM: Compiling module %s%s", cache_path, obj_name);
 
-					// Use another JIT instance
-					jit_compiler jit2({}, g_cfg.core.llvm_cpu, 0x1);
-					ppu_initialize2(jit2, part, cache_path, obj_name);
+				// Use another JIT instance
+				jit_compiler jit2({}, g_cfg.core.llvm_cpu, 0x1);
+				ppu_initialize2(jit2, part, cache_path, obj_name);
 
-					ppu_log.success("LLVM: Compiled module %s", obj_name);
-				}
-
-				g_progr_pdone++;
+				ppu_log.success("LLVM: Compiled module %s", obj_name);
 			}
 		});
 

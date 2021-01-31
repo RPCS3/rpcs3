@@ -457,13 +457,12 @@ void spu_cache::initialize()
 		std::vector<be_t<u32>> ls(0x10000);
 
 		// Build functions
-		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++)
+		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++, g_progr_pdone++)
 		{
 			const spu_program& func = std::as_const(func_list)[func_i];
 
 			if (Emu.IsStopped() || fail_flag)
 			{
-				g_progr_pdone++;
 				continue;
 			}
 
@@ -489,7 +488,6 @@ void spu_cache::initialize()
 				(inverse_bounds && (hash_start < g_cfg.core.spu_llvm_lower_bound && hash_start > g_cfg.core.spu_llvm_upper_bound)))
 			{
 				spu_log.error("[Debug] Skipped function %s", fmt::base57(hash_start));
-				g_progr_pdone++;
 				result++;
 				continue;
 			}
@@ -515,8 +513,6 @@ void spu_cache::initialize()
 
 			// Clear fake LS
 			std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
-
-			g_progr_pdone++;
 
 			result++;
 		}
