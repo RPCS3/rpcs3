@@ -439,6 +439,14 @@ namespace
 			}
 		}
 
+		~progress_dialog_server()
+		{
+			g_progr_ftotal.release(0);
+			g_progr_fdone.release(0);
+			g_progr_ptotal.release(0);
+			g_progr_pdone.release(0);
+		}
+
 		static auto constexpr thread_name = "Progress Dialog Server"sv;
 	};
 }
