@@ -130,6 +130,128 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op);
 
 extern void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
+const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>([](asmjit::X86Assembler& c, auto& args)
+{
+	// Gateway for PPU, converts from native to GHC calling convention, also saves RSP value for escape
+	using namespace asmjit;
+
+#ifdef _WIN32
+	c.push(x86::r15);
+	c.push(x86::r14);
+	c.push(x86::r13);
+	c.push(x86::r12);
+	c.push(x86::rsi);
+	c.push(x86::rdi);
+	c.push(x86::rbp);
+	c.push(x86::rbx);
+	c.sub(x86::rsp, 0xa8);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x90), x86::xmm15);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x80), x86::xmm14);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x70), x86::xmm13);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x60), x86::xmm12);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x50), x86::xmm11);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x40), x86::xmm10);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x30), x86::xmm9);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x20), x86::xmm8);
+	c.movaps(x86::oword_ptr(x86::rsp, 0x10), x86::xmm7);
+	c.movaps(x86::oword_ptr(x86::rsp, 0), x86::xmm6);
+#else
+	c.push(x86::rbp);
+	c.push(x86::r15);
+	c.push(x86::r14);
+	c.push(x86::r13);
+	c.push(x86::r12);
+	c.push(x86::rbx);
+	c.push(x86::rax);
+#endif
+
+	// Save native stack pointer for longjmp emulation
+	c.mov(x86::qword_ptr(args[0], ::offset32(&ppu_thread::saved_native_sp)), x86::rsp);
+
+	// Initialize args
+	c.mov(x86::r13, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_exec_addr)));
+	c.mov(x86::rbp, args[0]);
+	c.mov(x86::edx, x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia))); // Load PC
+
+	c.mov(x86::rax, x86::qword_ptr(x86::r13, x86::edx, 1, 0)); // Load call target
+	c.mov(x86::rdx, x86::rax);
+	c.shl(x86::rax, 17);
+	c.shr(x86::rax, 17);
+	c.shr(x86::rdx, 47);
+	c.shl(x86::rdx, 12);
+	c.mov(x86::r12d, x86::edx); // Load relocation base
+
+	c.mov(x86::rbx, x86::qword_ptr(reinterpret_cast<u64>(&vm::g_base_addr)));
+	c.mov(x86::r14, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 0))); // Load some registers
+	c.mov(x86::rsi, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 1)));
+	c.mov(x86::rdi, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 2)));
+
+	if (utils::has_avx())
+	{
+		c.vzeroupper();
+	}
+
+	c.call(x86::rax);
+
+	if (utils::has_avx())
+	{
+		c.vzeroupper();
+	}
+
+#ifdef _WIN32
+	c.movaps(x86::xmm6, x86::oword_ptr(x86::rsp, 0));
+	c.movaps(x86::xmm7, x86::oword_ptr(x86::rsp, 0x10));
+	c.movaps(x86::xmm8, x86::oword_ptr(x86::rsp, 0x20));
+	c.movaps(x86::xmm9, x86::oword_ptr(x86::rsp, 0x30));
+	c.movaps(x86::xmm10, x86::oword_ptr(x86::rsp, 0x40));
+	c.movaps(x86::xmm11, x86::oword_ptr(x86::rsp, 0x50));
+	c.movaps(x86::xmm12, x86::oword_ptr(x86::rsp, 0x60));
+	c.movaps(x86::xmm13, x86::oword_ptr(x86::rsp, 0x70));
+	c.movaps(x86::xmm14, x86::oword_ptr(x86::rsp, 0x80));
+	c.movaps(x86::xmm15, x86::oword_ptr(x86::rsp, 0x90));
+	c.add(x86::rsp, 0xa8);
+	c.pop(x86::rbx);
+	c.pop(x86::rbp);
+	c.pop(x86::rdi);
+	c.pop(x86::rsi);
+	c.pop(x86::r12);
+	c.pop(x86::r13);
+	c.pop(x86::r14);
+	c.pop(x86::r15);
+#else
+	c.add(x86::rsp, +8);
+	c.pop(x86::rbx);
+	c.pop(x86::r12);
+	c.pop(x86::r13);
+	c.pop(x86::r14);
+	c.pop(x86::r15);
+	c.pop(x86::rbp);
+#endif
+
+	c.ret();
+});
+
+const extern auto ppu_escape = build_function_asm<void(*)(ppu_thread*)>([](asmjit::X86Assembler& c, auto& args)
+{
+	using namespace asmjit;
+
+	// Restore native stack pointer (longjmp emulation)
+	c.mov(x86::rsp, x86::qword_ptr(args[0], ::offset32(&ppu_thread::saved_native_sp)));
+
+	// Return to the return location
+	c.jmp(x86::qword_ptr(x86::rsp, -8));
+});
+
+void ppu_recompiler_fallback(ppu_thread& ppu);
+
+const auto ppu_recompiler_fallback_ghc = build_function_asm<void(*)(ppu_thread& ppu)>([](asmjit::X86Assembler& c, auto& args)
+{
+	using namespace asmjit;
+
+	c.mov(args[0], x86::rbp);
+	c.jmp(imm_ptr(ppu_recompiler_fallback));
+});
+
 // Get pointer to executable cache
 static u64& ppu_ref(u32 addr)
 {
@@ -174,25 +296,32 @@ void ppu_recompiler_fallback(ppu_thread& ppu)
 
 	const auto& table = g_ppu_interpreter_fast.get_table();
 
+	u64 ctr = 0;
+
 	while (true)
 	{
 		// Run instructions in interpreter
-		if (const u32 op = vm::read32(ppu.cia); table[ppu_decode(op)](ppu, {op})) [[likely]]
+		if (const u32 op = vm::read32(ppu.cia); ctr++, table[ppu_decode(op)](ppu, {op})) [[likely]]
 		{
 			ppu.cia += 4;
 			continue;
 		}
 
-		if (uptr func = ppu_ref(ppu.cia); func != reinterpret_cast<uptr>(ppu_recompiler_fallback))
+		if (uptr func = ppu_ref(ppu.cia); (func << 17 >> 17) != reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
 		{
 			// We found a recompiler function at cia, return
-			return;
+			break;
 		}
 
 		if (ppu.test_stopped())
 		{
-			return;
+			break;
 		}
+	}
+
+	if (g_cfg.core.ppu_debug)
+	{
+		ppu_log.warning("Exiting interpreter at 0x%x (executed %u functions)", ppu.cia, ctr);
 	}
 }
 
@@ -262,12 +391,23 @@ extern void ppu_register_range(u32 addr, u32 size)
 	utils::memory_commit(&ppu_ref(addr), size * 2, utils::protection::rw);
 	vm::page_protect(addr, utils::align(size, 0x10000), 0, vm::page_executable);
 
-	const u64 fallback = g_cfg.core.ppu_decoder == ppu_decoder_type::llvm ? reinterpret_cast<uptr>(ppu_recompiler_fallback) : reinterpret_cast<uptr>(ppu_fallback);
+	const u64 fallback = reinterpret_cast<uptr>(ppu_fallback);
+	const u64 seg_base = addr;
 
 	size &= ~3; // Loop assumes `size = n * 4`, enforce that by rounding down
+
 	while (size)
 	{
-		ppu_ref(addr) = fallback;
+		if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
+		{
+			// Assume addr is the start of first segment of PRX
+			ppu_ref(addr) = reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc) | (seg_base << (32 + 3));
+		}
+		else
+		{
+			ppu_ref(addr) = fallback;
+		}
+
 		addr += 4;
 		size -= 4;
 	}
@@ -278,7 +418,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 	// Initialize specific function
 	if (ptr)
 	{
-		ppu_ref(addr) = reinterpret_cast<uptr>(ptr);
+		ppu_ref(addr) = (reinterpret_cast<uptr>(ptr) & 0x7fff'ffff'ffffu) | (ppu_ref(addr) & ~0x7fff'ffff'ffffu);
 		return;
 	}
 
@@ -833,9 +973,15 @@ void ppu_thread::exec_task()
 {
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
-		while (!(state & (cpu_flag::ret + cpu_flag::exit + cpu_flag::stop)))
+		while (true)
 		{
-			reinterpret_cast<ppu_function_t>(ppu_ref(cia))(*this);
+			if (state) [[unlikely]]
+			{
+				if (check_state())
+					break;
+			}
+
+			ppu_gateway(this);
 		}
 
 		return;
@@ -1927,9 +2073,9 @@ namespace
 	// Compiled PPU module info
 	struct jit_module
 	{
-		std::vector<u64*> vars;
 		std::vector<ppu_function_t> funcs;
 		std::shared_ptr<jit_compiler> pjit;
+		bool init = false;
 	};
 
 	struct jit_module_manager
@@ -2554,9 +2700,6 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	// Compiler instance (deferred initialization)
 	std::shared_ptr<jit_compiler>& jit = jit_mod.pjit;
 
-	// Global variables to initialize
-	std::vector<std::pair<std::string, u64>> globals;
-
 	// Split module into fragments <= 1 MiB
 	usz fpos = 0;
 
@@ -2574,7 +2717,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 	bool compiled_new = false;
 
-	while (jit_mod.vars.empty() && fpos < info.funcs.size())
+	while (!jit_mod.init && fpos < info.funcs.size())
 	{
 		// Initialize compiler instance
 		if (!jit && get_current_cpu_thread())
@@ -2582,16 +2725,10 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			jit = std::make_shared<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu);
 		}
 
-		// First function in current module part
-		const auto fstart = fpos;
-
 		// Copy module information (TODO: optimize)
 		ppu_module part;
 		part.copy_part(info);
 		part.funcs.reserve(16000);
-
-		// Unique suffix for each module part
-		const u32 suffix = info.funcs.at(fstart).addr - reloc;
 
 		// Overall block size in bytes
 		usz bsize = 0;
@@ -2761,7 +2898,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				settings += ppu_settings::greedy_mode;
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v3-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
+			fmt::append(obj_name, "v4-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
 		}
 
 		if (Emu.IsStopped())
@@ -2771,16 +2908,6 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		if (!check_only)
 		{
-			globals.emplace_back(fmt::format("__mptr%x", suffix), reinterpret_cast<u64>(vm::g_base_addr));
-			globals.emplace_back(fmt::format("__cptr%x", suffix), reinterpret_cast<u64>(vm::g_exec_addr));
-
-			// Initialize segments for relocations
-			for (u32 i = 0, num = 0; i < info.segs.size(); i++)
-			{
-				if (!info.segs[i].addr) continue;
-				globals.emplace_back(fmt::format("__seg%u_%x", num++, suffix), info.segs[i].addr);
-			}
-
 			link_workload.emplace_back(obj_name, false);
 		}
 
@@ -2894,7 +3021,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	}
 
 	// Jit can be null if the loop doesn't ever enter.
-	if (jit && jit_mod.vars.empty())
+	if (jit && !jit_mod.init)
 	{
 		jit->fin();
 
@@ -2903,23 +3030,16 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		{
 			if (!func.size) continue;
 
-			const u64 addr = ensure(jit->get(fmt::format("__0x%x", func.addr - reloc)));
+			const auto name = fmt::format("__0x%x", func.addr - reloc);
+			const u64 addr = ensure(jit->get(name));
 			jit_mod.funcs.emplace_back(reinterpret_cast<ppu_function_t>(addr));
-			ppu_ref(func.addr) = addr;
+			ppu_ref(func.addr) = (addr & 0x7fff'ffff'ffffu) | (ppu_ref(func.addr) & ~0x7fff'ffff'ffffu);
+
+			if (g_cfg.core.ppu_debug)
+				ppu_log.notice("Installing function %s at 0x%x: %p (reloc = 0x%x)", name, func.addr, ppu_ref(func.addr), reloc);
 		}
 
-		// Initialize global variables
-		for (auto& var : globals)
-		{
-			const u64 addr = ensure(jit->get(var.first));
-
-			jit_mod.vars.emplace_back(reinterpret_cast<u64*>(addr));
-
-			if (addr)
-			{
-				*reinterpret_cast<u64*>(addr) = var.second;
-			}
-		}
+		jit_mod.init = true;
 	}
 	else
 	{
@@ -2930,23 +3050,14 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		{
 			if (!func.size) continue;
 
-			ppu_ref(func.addr) = ensure(reinterpret_cast<uptr>(jit_mod.funcs[index++]));
+			const u64 addr = ensure(reinterpret_cast<uptr>(jit_mod.funcs[index++]));
+			ppu_ref(func.addr) = (addr & 0x7fff'ffff'ffffu) | (ppu_ref(func.addr) & ~0x7fff'ffff'ffffu);
+
+			if (g_cfg.core.ppu_debug)
+				ppu_log.notice("Reinstalling function at 0x%x: %p (reloc=0x%x)", func.addr, ppu_ref(func.addr), reloc);
 		}
 
 		index = 0;
-
-		// Rewrite global variables
-		while (index < jit_mod.vars.size())
-		{
-			*jit_mod.vars[index++] = reinterpret_cast<u64>(vm::g_base_addr);
-			*jit_mod.vars[index++] = reinterpret_cast<u64>(vm::g_exec_addr);
-
-			for (const auto& seg : info.segs)
-			{
-				if (!seg.addr) continue;
-				*jit_mod.vars[index++] = seg.addr;
-			}
-		}
 	}
 
 	return compiled_new;
@@ -2971,8 +3082,15 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 	PPUTranslator translator(jit.get_context(), _module.get(), module_part, jit.get_engine());
 
 	// Define some types
-	const auto _void = Type::getVoidTy(jit.get_context());
-	const auto _func = FunctionType::get(_void, {translator.GetContextType()->getPointerTo()}, false);
+	const auto _func = FunctionType::get(translator.get_type<void>(), {
+		translator.get_type<u8*>(), // Exec base
+		translator.GetContextType()->getPointerTo(), // PPU context
+		translator.get_type<u64>(), // Segment address (for PRX)
+		translator.get_type<u8*>(), // Memory base
+		translator.get_type<u64>(), // r0
+		translator.get_type<u64>(), // r1
+		translator.get_type<u64>(), // r2
+		}, false);
 
 	// Initialize function list
 	for (const auto& func : module_part.funcs)
@@ -2980,7 +3098,8 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module& module_part, co
 		if (func.size)
 		{
 			const auto f = cast<Function>(_module->getOrInsertFunction(func.name, _func).getCallee());
-			f->addAttribute(1, Attribute::NoAlias);
+			f->setCallingConv(CallingConv::GHC);
+			f->addAttribute(2, Attribute::NoAlias);
 			f->addFnAttr(Attribute::NoUnwind);
 		}
 	}

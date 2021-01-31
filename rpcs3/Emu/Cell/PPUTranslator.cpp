@@ -26,14 +26,6 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 	// Bind context
 	cpu_translator::initialize(context, engine);
 
-	// There is no weak linkage on JIT, so let's create variables with different names for each module part
-	const u32 gsuffix = m_info.relocs.empty() ? info.funcs[0].addr : info.funcs[0].addr - m_info.segs[0].addr;
-
-	// Memory base
-	m_base = new GlobalVariable(*_module, ArrayType::get(GetType<char>(), 0x100000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__mptr%x", gsuffix));
-	m_base->setInitializer(ConstantPointerNull::get(cast<PointerType>(m_base->getType()->getPointerElementType())));
-	m_base->setExternallyInitialized(true);
-
 	// Thread context struct (TODO: safer member access)
 	const u32 off0 = offset32(&ppu_thread::state);
 	const u32 off1 = offset32(&ppu_thread::gpr);
@@ -56,11 +48,6 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 
 	m_thread_type = StructType::create(m_context, thread_struct, "context_t");
 
-	// Callable
-	m_call = new GlobalVariable(*_module, ArrayType::get(GetType<u64>(), 0x40000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__cptr%x", gsuffix));
-	m_call->setInitializer(ConstantPointerNull::get(cast<PointerType>(m_call->getType()->getPointerElementType())));
-	m_call->setExternallyInitialized(true);
-
 	const auto md_name = MDString::get(m_context, "branch_weights");
 	const auto md_low = ValueAsMetadata::get(ConstantInt::get(GetType<u32>(), 1));
 	const auto md_high = ValueAsMetadata::get(ConstantInt::get(GetType<u32>(), 666));
@@ -68,16 +55,6 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_mo
 	// Metadata for branch weights
 	m_md_likely = MDTuple::get(m_context, {md_name, md_high, md_low});
 	m_md_unlikely = MDTuple::get(m_context, {md_name, md_low, md_high});
-
-	// Create segment variables
-	for (const auto& seg : m_info.segs)
-	{
-		if (!seg.addr) continue;
-		auto gv = new GlobalVariable(*_module, GetType<u64>(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__seg%u_%x", m_segs.size(), gsuffix));
-		gv->setInitializer(ConstantInt::get(GetType<u64>(), seg.addr));
-		gv->setExternallyInitialized(true);
-		m_segs.emplace_back(gv);
-	}
 
 	// Sort relevant relocations (TODO)
 	const auto caddr = m_info.segs[0].addr;
@@ -194,11 +171,18 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 		}
 	}
 
-	m_thread = &*m_function->arg_begin();
-	m_base_loaded = m_ir->CreateLoad(m_base);
+	m_thread = &*(m_function->arg_begin() + 1);
+	m_base = &*(m_function->arg_begin() + 3);
+	m_exec = &*(m_function->arg_begin() + 0);
+	m_seg0 = &*(m_function->arg_begin() + 2);
+
+	m_gpr[0] = &*(m_function->arg_begin() + 4);
+	m_gpr[1] = &*(m_function->arg_begin() + 5);
+	m_gpr[2] = &*(m_function->arg_begin() + 6);
 
 	const auto body = BasicBlock::Create(m_context, "__body", m_function);
 
+	//Call(GetType<void>(), "__trace", GetAddr());
 	if (need_check)
 	{
 		// Check status register in the entry block
@@ -302,7 +286,7 @@ Value* PPUTranslator::GetAddr(u64 _add)
 	if (m_reloc)
 	{
 		// Load segment address from global variable, compute actual instruction address
-		return m_ir->CreateAdd(m_ir->getInt64(m_addr + _add), m_ir->CreateLoad(m_segs[m_reloc - m_info.segs.data()]));
+		return m_ir->CreateAdd(m_ir->getInt64(m_addr + _add), m_seg0);
 	}
 
 	return m_ir->getInt64(m_addr + _add);
@@ -351,20 +335,23 @@ Value* PPUTranslator::RotateLeft(Value* arg, Value* n)
 
 void PPUTranslator::CallFunction(u64 target, Value* indirect)
 {
-	const auto type = FunctionType::get(GetType<void>(), {m_thread_type->getPointerTo()}, false);
+	const auto type = m_function->getFunctionType();
 	const auto block = m_ir->GetInsertBlock();
 
 	FunctionCallee callee;
 
+	auto seg0 = m_seg0;
+
 	if (!indirect)
 	{
-		if ((!m_reloc && target < 0x10000) || target >= u64{} - 0x10000)
+		if ((!m_reloc && target < 0x10000) || target >= 0x100000000u - 0x10000)
 		{
 			Trap();
 			return;
 		}
 
-		callee = m_module->getOrInsertFunction(fmt::format("__0x%llx", target), type);
+		callee = m_module->getOrInsertFunction(fmt::format("__0x%x", target), type);
+		cast<Function>(callee.getCallee())->setCallingConv(CallingConv::GHC);
 	}
 	else
 	{
@@ -379,13 +366,19 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 			}
 		}
 
-		const auto pos = m_ir->CreateLShr(indirect, 2, "", true);
-		const auto ptr = m_ir->CreateGEP(m_ir->CreateLoad(m_call), {m_ir->getInt64(0), pos});
-		callee = FunctionCallee(type, m_ir->CreateIntToPtr(m_ir->CreateLoad(ptr), type->getPointerTo()));
+		const auto pos = m_ir->CreateShl(indirect, 1);
+		const auto ptr = m_ir->CreateGEP(m_exec, pos);
+		const auto val = m_ir->CreateLoad(m_ir->CreateBitCast(ptr, get_type<u64*>()));
+		callee = FunctionCallee(type, m_ir->CreateIntToPtr(m_ir->CreateAnd(val, 0x7fff'ffff'ffff), type->getPointerTo()));
+
+		// Load new segment address
+		seg0 = m_ir->CreateShl(m_ir->CreateLShr(val, 47), 12);
 	}
 
 	m_ir->SetInsertPoint(block);
-	m_ir->CreateCall(callee, {m_thread})->setTailCallKind(llvm::CallInst::TCK_Tail);
+	const auto c = m_ir->CreateCall(callee, {m_exec, m_thread, seg0, m_base, GetGpr(0), GetGpr(1), GetGpr(2)});
+	c->setTailCallKind(llvm::CallInst::TCK_Tail);
+	c->setCallingConv(CallingConv::GHC);
 	m_ir->CreateRetVoid();
 }
 
@@ -627,7 +620,7 @@ void PPUTranslator::UseCondition(MDNode* hint, Value* cond)
 
 llvm::Value* PPUTranslator::GetMemory(llvm::Value* addr, llvm::Type* type)
 {
-	return bitcast(m_ir->CreateGEP(m_base_loaded, {m_ir->getInt64(0), addr}), type->getPointerTo());
+	return bitcast(m_ir->CreateGEP(m_base, addr), type->getPointerTo());
 }
 
 Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)

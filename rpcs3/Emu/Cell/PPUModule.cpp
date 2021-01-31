@@ -244,7 +244,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 	};
 
 	// Initialize double-purpose fake OPD array for HLE functions
-	const auto& hle_funcs = ppu_function_manager::get();
+	const auto& hle_funcs = ppu_function_manager::get(g_cfg.core.ppu_decoder == ppu_decoder_type::llvm);
 
 	// Allocate memory for the array (must be called after fixed allocations)
 	ppu_function_manager::addr = vm::alloc(::size32(hle_funcs) * 8, vm::main);

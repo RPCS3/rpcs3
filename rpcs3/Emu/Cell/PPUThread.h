@@ -267,6 +267,8 @@ public:
 	// Thread name
 	atomic_ptr<std::string> ppu_tname;
 
+	u64 saved_native_sp = 0; // Host thread's stack pointer for emulated longjmp
+
 	u64 last_ftsc = 0;
 	u64 last_ftime = 0;
 	u32 last_faddr = 0;
