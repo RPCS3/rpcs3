@@ -52,6 +52,7 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 static semaphore<> s_qt_init;
 
 static atomic_t<bool> s_headless = false;
+static atomic_t<bool> s_no_gui = false;
 static atomic_t<char*> s_argv0;
 
 #ifndef _WIN32
@@ -65,6 +66,10 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 {
 	if (s_headless)
 	{
+#ifdef _WIN32
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+			[[maybe_unused]] const auto con_out = freopen("conout$", "w", stderr);
+#endif
 		fprintf(stderr, "RPCS3: %s\n", text.c_str());
 		std::abort();
 	}
@@ -493,7 +498,7 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
-	const bool has_no_gui = parser.isSet(arg_no_gui);
+	s_no_gui = parser.isSet(arg_no_gui);
 
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 	{
@@ -501,7 +506,7 @@ int main(int argc, char** argv)
 		gui_app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
 		gui_app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
 
-		gui_app->SetShowGui(!has_no_gui);
+		gui_app->SetShowGui(!s_no_gui);
 		gui_app->SetUseCliStyle(use_cli_style);
 		gui_app->Init();
 	}
@@ -567,7 +572,7 @@ int main(int argc, char** argv)
 		}
 
 		// Ugly workaround
-		QTimer::singleShot(2, [config_override_path, has_no_gui, path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
+		QTimer::singleShot(2, [config_override_path, path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
 		{
 			Emu.argv = std::move(argv);
 			Emu.SetForceBoot(true);
@@ -576,7 +581,7 @@ int main(int argc, char** argv)
 			{
 				sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
 
-				if (s_headless || has_no_gui)
+				if (s_headless || s_no_gui)
 				{
 					report_fatal_error(fmt::format("Booting '%s' failed!\n\nReason: %s", path, error));
 				}
