@@ -122,7 +122,7 @@ public:
 		m_state = system_state::running;
 	}
 
-	void Init();
+	void Init(bool add_only = false);
 
 	std::vector<std::string> argv;
 	std::vector<std::string> envp;
