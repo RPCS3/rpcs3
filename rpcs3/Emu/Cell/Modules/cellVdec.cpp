@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/IdManager.h"
+#include "Emu/perf_meter.hpp"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
@@ -205,11 +206,29 @@ struct vdec_context final
 
 	void exec(ppu_thread& ppu, u32 vid)
 	{
+		perf_meter<"VDEC"_u32> perf0;
+
 		ppu_tid.release(ppu.id);
 
-		// pcmd can be nullptr
-		for (auto* pcmd : in_cmd)
+		for (auto slice = in_cmd.pop_all();; [&]
 		{
+			if (slice)
+			{
+				slice.pop_front();
+			}
+
+			if (slice || thread_ctrl::state() == thread_state::aborting)
+			{
+				return;
+			}
+
+			thread_ctrl::wait_on(in_cmd, nullptr);
+			slice = in_cmd.pop_all(); // Pop new command list
+		}())
+		{
+			// pcmd can be nullptr
+			auto* pcmd = slice.get();
+
 			if (thread_ctrl::state() == thread_state::aborting)
 			{
 				break;

@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/IdManager.h"
+#include "Emu/perf_meter.hpp"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/JIT.h"
@@ -8894,6 +8895,8 @@ struct spu_llvm_worker
 
 	void operator()()
 	{
+		perf_meter<"SPUW"_u32> perf0;
+
 		// SPU LLVM Recompiler instance
 		const auto compiler = spu_recompiler_base::make_llvm_recompiler();
 		compiler->init();
@@ -8901,8 +8904,24 @@ struct spu_llvm_worker
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
-		for (auto* prog : registered)
+		for (auto slice = registered.pop_all();; [&]
 		{
+			if (slice)
+			{
+				slice.pop_front();
+			}
+
+			if (slice || thread_ctrl::state() == thread_state::aborting)
+			{
+				return;
+			}
+
+			thread_ctrl::wait_on(registered, nullptr);
+			slice = registered.pop_all();
+		}())
+		{
+			auto* prog = slice.get();
+
 			if (thread_ctrl::state() == thread_state::aborting)
 			{
 				break;
