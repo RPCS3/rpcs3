@@ -5,7 +5,6 @@
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
 #include "Loader/mself.hpp"
-#include "Loader/PSF.h"
 #include "Emu/perf_meter.hpp"
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/Memory/vm_locking.h"
