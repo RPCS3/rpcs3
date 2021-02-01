@@ -669,24 +669,29 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	if (g_cfg.vfs.limit_cache_size)
 		LimitCacheSize();
 
-	static const char* boot_list[] =
+	if (!fs::exists(path))
 	{
-		"/eboot.bin",
-		"/EBOOT.BIN",
-		"/USRDIR/EBOOT.BIN",
-		"/USRDIR/ISO.BIN.EDAT",
-		"/PS3_GAME/USRDIR/EBOOT.BIN",
-	};
+		return game_boot_result::invalid_file_or_folder;
+	}
 
 	m_path_old = m_path;
 
-	if (direct && fs::exists(path))
+	if (direct || fs::is_file(path))
 	{
 		m_path = path;
 		return Load(title_id, add_only, force_global_config);
 	}
 
 	game_boot_result result = game_boot_result::nothing_to_boot;
+
+	static const char* boot_list[] =
+	{
+		"/EBOOT.BIN",
+		"/USRDIR/EBOOT.BIN",
+		"/USRDIR/ISO.BIN.EDAT",
+		"/PS3_GAME/USRDIR/EBOOT.BIN",
+	};
+
 	for (std::string elf : boot_list)
 	{
 		elf = path + elf;
