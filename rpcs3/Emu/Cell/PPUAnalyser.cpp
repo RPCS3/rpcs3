@@ -534,7 +534,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, u32 end)
 	// Assume first segment is executable
 	const u32 start = segs[0].addr;
 
-	if (end == umax)
+	if (!end)
 	{
 		end = segs[0].addr + segs[0].size;
 	}
