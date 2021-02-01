@@ -577,7 +577,7 @@ int main(int argc, char** argv)
 			Emu.argv = std::move(argv);
 			Emu.SetForceBoot(true);
 
-			if (const game_boot_result error = Emu.BootGame(path, "", true); error != game_boot_result::no_errors)
+			if (const game_boot_result error = Emu.BootGame(path, ""); error != game_boot_result::no_errors)
 			{
 				sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
 
