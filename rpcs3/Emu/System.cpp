@@ -121,7 +121,7 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 	});
 }
 
-void Emulator::Init()
+void Emulator::Init(bool add_only)
 {
 	jit_runtime::initialize();
 
@@ -243,6 +243,16 @@ void Emulator::Init()
 		make_path_verbose(dev_hdd1 + "caches/");
 	}
 
+	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
+	make_path_verbose(fs::get_cache_dir() + "spu_progs/");
+	make_path_verbose(fs::get_config_dir() + "captures/");
+
+	if (add_only)
+	{
+		// We don't need to initialize the rest if we only add games
+		return;
+	}
+
 	// Log user
 	if (m_usr.empty())
 	{
@@ -312,9 +322,9 @@ void Emulator::Init()
 		}
 	}
 
-	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
-	make_path_verbose(fs::get_config_dir() + "captures/");
-	make_path_verbose(fs::get_cache_dir() + "spu_progs/");
+	// Limit cache size
+	if (g_cfg.vfs.limit_cache_size)
+		LimitCacheSize();
 
 	// Initialize patch engine
 	g_fxo->init<patch_engine>()->append_global_patches();
@@ -666,9 +676,6 @@ void Emulator::LimitCacheSize()
 
 game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
 {
-	if (g_cfg.vfs.limit_cache_size)
-		LimitCacheSize();
-
 	if (!fs::exists(path))
 	{
 		return game_boot_result::invalid_file_or_folder;
@@ -905,7 +912,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 	}
 
 	{
-		Init();
+		Init(add_only);
 
 		// Load game list (maps ABCD12345 IDs to /dev_bdvd/ locations)
 		YAML::Node games;
