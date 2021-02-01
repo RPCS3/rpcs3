@@ -757,7 +757,7 @@ bool cpu_thread::check_state() noexcept
 				{
 					u64 ctr = g_suspend_counter;
 
-					if (ctr >> 2 == s_tls_sctr >> 2)
+					if (ctr >> 2 == s_tls_sctr >> 2 && state & cpu_flag::pause)
 					{
 						if (i < 20 || ctr & 1)
 						{
@@ -765,7 +765,8 @@ bool cpu_thread::check_state() noexcept
 						}
 						else
 						{
-							g_suspend_counter.wait(ctr, -4);
+							// TODO: fix the workaround
+							g_suspend_counter.wait(ctr, -4, atomic_wait_timeout{100});
 						}
 					}
 					else
