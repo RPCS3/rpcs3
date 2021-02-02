@@ -96,8 +96,8 @@ void emu_settings::LoadSettings(const std::string& title_id)
 
 	if (default_error.empty())
 	{
-		m_defaultSettings = default_config;
-		m_currentSettings = YAML::Clone(default_config);
+		m_default_settings = default_config;
+		m_current_settings = YAML::Clone(default_config);
 	}
 	else
 	{
@@ -114,7 +114,7 @@ void emu_settings::LoadSettings(const std::string& title_id)
 
 	if (global_error.empty())
 	{
-		m_currentSettings += global_config;
+		m_current_settings += global_config;
 	}
 	else
 	{
@@ -148,7 +148,7 @@ void emu_settings::LoadSettings(const std::string& title_id)
 
 				if (custom_error.empty())
 				{
-					m_currentSettings += custom_config;
+					m_current_settings += custom_config;
 				}
 				else
 				{
@@ -164,7 +164,7 @@ void emu_settings::LoadSettings(const std::string& title_id)
 void emu_settings::SaveSettings()
 {
 	YAML::Emitter out;
-	emit_data(out, m_currentSettings);
+	emit_data(out, m_current_settings);
 
 	std::string config_name;
 
@@ -652,12 +652,12 @@ void emu_settings::EnhanceRadioButton(QButtonGroup* button_group, emu_settings_t
 
 std::vector<std::string> emu_settings::GetLibrariesControl()
 {
-	return m_currentSettings["Core"]["Libraries Control"].as<std::vector<std::string>, std::initializer_list<std::string>>({});
+	return m_current_settings["Core"]["Libraries Control"].as<std::vector<std::string>, std::initializer_list<std::string>>({});
 }
 
 void emu_settings::SaveSelectedLibraries(const std::vector<std::string>& libs)
 {
-	m_currentSettings["Core"]["Libraries Control"] = libs;
+	m_current_settings["Core"]["Libraries Control"] = libs;
 }
 
 QStringList emu_settings::GetSettingOptions(emu_settings_type type) const
@@ -667,7 +667,7 @@ QStringList emu_settings::GetSettingOptions(emu_settings_type type) const
 
 std::string emu_settings::GetSettingDefault(emu_settings_type type) const
 {
-	if (auto node = cfg_adapter::get_node(m_defaultSettings, settings_location[type]); node && node.IsScalar())
+	if (auto node = cfg_adapter::get_node(m_default_settings, settings_location[type]); node && node.IsScalar())
 	{
 		return node.Scalar();
 	}
@@ -678,7 +678,7 @@ std::string emu_settings::GetSettingDefault(emu_settings_type type) const
 
 std::string emu_settings::GetSetting(emu_settings_type type) const
 {
-	if (auto node = cfg_adapter::get_node(m_currentSettings, settings_location[type]); node && node.IsScalar())
+	if (auto node = cfg_adapter::get_node(m_current_settings, settings_location[type]); node && node.IsScalar())
 	{
 		return node.Scalar();
 	}
@@ -689,7 +689,7 @@ std::string emu_settings::GetSetting(emu_settings_type type) const
 
 void emu_settings::SetSetting(emu_settings_type type, const std::string& val)
 {
-	cfg_adapter::get_node(m_currentSettings, settings_location[type]) = val;
+	cfg_adapter::get_node(m_current_settings, settings_location[type]) = val;
 }
 
 void emu_settings::OpenCorrectionDialog(QWidget* parent)
