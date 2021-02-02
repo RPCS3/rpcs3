@@ -529,7 +529,7 @@ namespace ppu_patterns
 	};
 }
 
-void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end)
+void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::basic_string<u32>& applied)
 {
 	// Assume first segment is executable
 	const u32 start = segs[0].addr;
@@ -1637,6 +1637,16 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end)
 		block_queue.emplace_back(exp, lim);
 	}
 
+	// Add entries from patches (on per-instruction basis)
+	for (u32 addr : applied)
+	{
+		if (addr % 4 == 0 && addr >= start && addr < segs[0].addr + segs[0].size && !block_set.count(addr))
+		{
+			block_queue.emplace_back(addr, addr + 4);
+			block_set.emplace(addr);
+		}
+	}
+
 	// block_queue may grow
 	for (usz i = 0; i < block_queue.size(); i++)
 	{
@@ -1693,7 +1703,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end)
 
 						const u32 target = (opc & 2 ? 0 : i_pos) + (type == ppu_itype::B ? +ppu_opcode_t{opc}.bt24 : +ppu_opcode_t{opc}.bt14);
 
-						if (target < start || target >= end)
+						if (target < segs[0].addr || target >= segs[0].addr + segs[0].size)
 						{
 							// Sanity check
 							is_good = false;
