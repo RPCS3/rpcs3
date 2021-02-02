@@ -1882,32 +1882,6 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 			}
 		}
 	}
-	else if (event->type() == QEvent::ToolTip)
-	{
-		QHelpEvent *help_event = static_cast<QHelpEvent *>(event);
-		QTableWidgetItem* item;
-
-		if (m_is_list_layout)
-		{
-			item = m_game_list->itemAt(help_event->globalPos());
-		}
-		else
-		{
-			item = m_game_grid->itemAt(help_event->globalPos());
-		}
-
-		if (item && !item->toolTip().isEmpty() && (!m_is_list_layout || item->column() == gui::column_name || item->column() == gui::column_serial))
-		{
-			QToolTip::showText(help_event->globalPos(), item->toolTip());
-		}
-		else
-		{
-			QToolTip::hideText();
-			event->ignore();
-		}
-
-		return true;
-	}
 
 	return QDockWidget::eventFilter(object, event);
 }
