@@ -26,7 +26,6 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/title.h"
-#include "Crypto/unself.h"
 
 #include <set>
 #include <unordered_set>
