@@ -529,15 +529,13 @@ namespace ppu_patterns
 	};
 }
 
-void ppu_module::analyse(u32 lib_toc, u32 entry, u32 end)
+void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end)
 {
 	// Assume first segment is executable
 	const u32 start = segs[0].addr;
 
-	if (!end)
-	{
-		end = segs[0].addr + segs[0].size;
-	}
+	// End of executable segment (may change)
+	u32 end = sec_end ? sec_end : segs[0].addr + segs[0].size;
 
 	// Known TOCs (usually only 1)
 	std::unordered_set<u32> TOCs;
@@ -1529,6 +1527,12 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, u32 end)
 	ppu_log.notice("Function analysis: %zu functions (%zu enqueued)", fmap.size(), func_queue.size());
 
 	// Decompose functions to basic blocks
+	if (!entry && !sec_end)
+	{
+		// Regenerate end from blocks
+		end = 0;
+	}
+
 	for (auto&& [_, func] : as_rvalue(std::move(fmap)))
 	{
 		if (func.attr & ppu_attr::no_size && entry)
@@ -1570,10 +1574,10 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, u32 end)
 			block.toc  = func.toc;
 			ppu_log.trace("Block __0x%x added (func=0x%x, size=0x%x, toc=0x%x)", block.addr, _, block.size, block.toc);
 
-			if (!entry)
+			if (!entry && !sec_end)
 			{
 				// Workaround for SPRX: update end to the last found function
-				end = block.addr + block.size;
+				end = std::max<u32>(end, block.addr + block.size);
 			}
 		}
 	}

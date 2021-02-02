@@ -868,7 +868,6 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 				if (prog.p_flags & 0x1)
 				{
 					ppu_register_range(addr, mem_size);
-					end = std::max<u32>(end, addr + mem_size);
 				}
 
 				_seg.addr = addr;
@@ -883,11 +882,6 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 		default: ppu_loader.error("Unknown segment type! 0x%08x", p_type);
 		}
-	}
-
-	if (!elf.shdrs.empty())
-	{
-		end = 0;
 	}
 
 	for (const auto& s : elf.shdrs)
@@ -915,7 +909,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 					_sec.filesz = 0;
 					prx->secs.emplace_back(_sec);
 
-					if (_sec.flags & 0x4)
+					if (_sec.flags & 0x4 && i == 0)
 					{
 						end = std::max<u32>(end, _sec.addr + _sec.size);
 					}
@@ -1271,17 +1265,11 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 			if (prog.p_flags & 0x1)
 			{
 				ppu_register_range(addr, size);
-				end = std::max<u32>(end, addr + size);
 			}
 
 			// Store only LOAD segments (TODO)
 			_main->segs.emplace_back(_seg);
 		}
-	}
-
-	if (!elf.shdrs.empty())
-	{
-		end = 0;
 	}
 
 	// Load section list, used by the analyser
@@ -1303,7 +1291,7 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 		{
 			_main->secs.emplace_back(_sec);
 
-			if (_sec.flags & 0x4)
+			if (_sec.flags & 0x4 && addr >= _main->segs[0].addr && addr + size <= _main->segs[0].addr + _main->segs[0].size)
 			{
 				end = std::max<u32>(end, addr + size);
 			}
@@ -1828,17 +1816,11 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 			if (prog.p_flags & 0x1)
 			{
 				ppu_register_range(addr, size);
-				end = std::max<u32>(end, addr + size);
 			}
 
 			// Store only LOAD segments (TODO)
 			ovlm->segs.emplace_back(_seg);
 		}
-	}
-
-	if (elf.shdrs.size())
-	{
-		end = 0;
 	}
 
 	// Load section list, used by the analyser
@@ -1860,7 +1842,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 		{
 			ovlm->secs.emplace_back(_sec);
 
-			if (_sec.flags & 0x4)
+			if (_sec.flags & 0x4 && addr >= ovlm->segs[0].addr && addr + size <= ovlm->segs[0].addr + ovlm->segs[0].size)
 			{
 				end = std::max<u32>(end, addr + size);
 			}
