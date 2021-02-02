@@ -1321,6 +1321,31 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
+	// Update LLVM's internal hash if a patch was applied
+	if (applied)
+	{
+		sha1_context sha2;
+		sha1_starts(&sha2);
+
+		usz i = 0;
+
+		for (auto& prog : elf.progs)
+		{
+			// Hash big-endian values
+			sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_type), sizeof(prog.p_type));
+			sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_flags), sizeof(prog.p_flags));
+
+			if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
+			{
+				sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_vaddr), sizeof(prog.p_vaddr));
+				sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_memsz), sizeof(prog.p_memsz));
+				sha1_update(&sha2, vm::get_super_ptr(_main->segs.at(i++).addr), prog.p_memsz);
+			}
+		}
+
+		sha1_finish(&sha2, _main->sha1);
+	}
+
 	ppu_loader.success("PPU executable hash: %s (<- %u)", hash, applied);
 
 	// Initialize HLE modules
@@ -1870,6 +1895,31 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	{
 		// Alternative patch
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
+	}
+
+	// Update LLVM's internal hash if a patch was applied
+	if (applied)
+	{
+		sha1_context sha2;
+		sha1_starts(&sha2);
+
+		usz i = 0;
+
+		for (auto& prog : elf.progs)
+		{
+			// Hash big-endian values
+			sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_type), sizeof(prog.p_type));
+			sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_flags), sizeof(prog.p_flags));
+
+			if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
+			{
+				sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_vaddr), sizeof(prog.p_vaddr));
+				sha1_update(&sha2, reinterpret_cast<const uchar*>(&prog.p_memsz), sizeof(prog.p_memsz));
+				sha1_update(&sha2, vm::get_super_ptr(ovlm->segs.at(i++).addr), prog.p_memsz);
+			}
+		}
+
+		sha1_finish(&sha2, ovlm->sha1);
 	}
 
 	// Embedded SPU elf patching
