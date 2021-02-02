@@ -823,6 +823,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	sha1_starts(&sha);
 
 	u32 end = 0;
+	u32 toc = 0;
 
 	for (const auto& prog : elf.progs)
 	{
@@ -1071,7 +1072,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		prx->specials = ppu_load_exports(link, lib_info->exports_start, lib_info->exports_end);
 		prx->imports = ppu_load_imports(prx->relocs, link, lib_info->imports_start, lib_info->imports_end);
 		std::stable_sort(prx->relocs.begin(), prx->relocs.end());
-		prx->analyse(lib_info->toc, 0, end);
+		toc = lib_info->toc;
 	}
 	else
 	{
@@ -1106,11 +1107,19 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
+	if (applied)
+	{
+		// TODO (invalidate constraints if patches were applied)
+		end = 0;
+	}
+
 	// Embedded SPU elf patching
 	for (const auto& seg : prx->segs)
 	{
 		ppu_check_patch_spu_images(seg);
 	}
+
+	prx->analyse(toc, 0, end);
 
 	ppu_loader.success("PRX library hash: %s (<- %u)", hash, applied);
 
@@ -1561,6 +1570,12 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 	_main->name.clear();
 	_main->path = vfs::get(Emu.argv[0]);
 
+	if (applied)
+	{
+		// TODO (invalidate constraints if patches were applied)
+		end = 0;
+	}
+
 	// Analyse executable (TODO)
 	_main->analyse(0, static_cast<u32>(elf.header.e_entry), end);
 
@@ -1964,6 +1979,12 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	}
 
 	ovlm->entry = static_cast<u32>(elf.header.e_entry);
+
+	if (applied)
+	{
+		// TODO (invalidate constraints if patches were applied)
+		end = 0;
+	}
 
 	// Analyse executable (TODO)
 	ovlm->analyse(0, ovlm->entry, end);
