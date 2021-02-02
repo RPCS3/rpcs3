@@ -717,7 +717,7 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 		std::string name;
 		std::string dump;
 
-		usz applied = 0;
+		std::basic_string<u32> applied;
 
 		// Executable hash
 		sha1_context sha2;
@@ -782,7 +782,7 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 			}
 		}
 
-		ppu_loader.success("SPU executable hash: %s (<- %u)%s", hash, applied, dump);
+		ppu_loader.success("SPU executable hash: %s (<- %u)%s", hash, applied.size(), dump);
 	}
 }
 
@@ -1107,7 +1107,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
-	if (applied)
+	if (!applied.empty())
 	{
 		// TODO (invalidate constraints if patches were applied)
 		end = 0;
@@ -1121,7 +1121,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 	prx->analyse(toc, 0, end);
 
-	ppu_loader.success("PRX library hash: %s (<- %u)", hash, applied);
+	ppu_loader.success("PRX library hash: %s (<- %u)", hash, applied.size());
 
 	try_spawn_ppu_if_exclusive_program(*prx);
 
@@ -1330,7 +1330,7 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
-	ppu_loader.success("PPU executable hash: %s (<- %u)", hash, applied);
+	ppu_loader.success("PPU executable hash: %s (<- %u)", hash, applied.size());
 
 	// Initialize HLE modules
 	ppu_initialize_modules(link);
@@ -1570,7 +1570,7 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 	_main->name.clear();
 	_main->path = vfs::get(Emu.argv[0]);
 
-	if (applied)
+	if (!applied.empty())
 	{
 		// TODO (invalidate constraints if patches were applied)
 		end = 0;
@@ -1893,7 +1893,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 		ppu_check_patch_spu_images(seg);
 	}
 
-	ppu_loader.success("OVL executable hash: %s (<- %u)", hash, applied);
+	ppu_loader.success("OVL executable hash: %s (<- %u)", hash, applied.size());
 
 	// Load other programs
 	for (auto& prog : elf.progs)
@@ -1980,7 +1980,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 
 	ovlm->entry = static_cast<u32>(elf.header.e_entry);
 
-	if (applied)
+	if (!applied.empty())
 	{
 		// TODO (invalidate constraints if patches were applied)
 		end = 0;

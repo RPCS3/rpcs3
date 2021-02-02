@@ -505,26 +505,27 @@ void patch_engine::append_title_patches(const std::string& title_id)
 	load(m_map, get_patches_path() + title_id + "_patch.yml");
 }
 
-usz patch_engine::apply(const std::string& name, u8* dst)
+std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst)
 {
 	return apply_patch<false>(name, dst, 0, 0);
 }
 
-usz patch_engine::apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
+std::basic_string<u32> patch_engine::apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
 {
 	return apply_patch<true>(name, dst, filesz, ls_addr);
 }
 
-template <bool check_local_storage>
-static usz apply_modification(const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 ls_addr)
+template <bool CheckLS>
+static std::basic_string<u32> apply_modification(const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 ls_addr)
 {
-	usz applied = 0;
+	std::basic_string<u32> applied;
 
 	for (const auto& p : patch.data_list)
 	{
 		u32 offset = p.offset;
+		u32 resval = 0;
 
-		if constexpr (check_local_storage)
+		if constexpr (CheckLS)
 		{
 			if (offset < ls_addr || offset >= (ls_addr + filesz))
 			{
@@ -583,6 +584,10 @@ static usz apply_modification(const patch_engine::patch_info& patch, u8* dst, u3
 		case patch_type::be32:
 		{
 			*reinterpret_cast<be_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
+
+			// Possibly an executable instruction
+			if constexpr (!CheckLS)
+				resval = offset;
 			break;
 		}
 		case patch_type::bef32:
@@ -602,21 +607,21 @@ static usz apply_modification(const patch_engine::patch_info& patch, u8* dst, u3
 		}
 		}
 
-		++applied;
+		applied.push_back(resval);
 	}
 
 	return applied;
 }
 
-template <bool check_local_storage>
-usz patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
+template <bool CheckLS>
+std::basic_string<u32> patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
 {
 	if (m_map.find(name) == m_map.cend())
 	{
-		return 0;
+		return {};
 	}
 
-	usz applied_total = 0;
+	std::basic_string<u32> applied_total;
 	const auto& container = m_map.at(name);
 	const auto serial = Emu.GetTitleID();
 	const auto app_version = Emu.GetAppVersion();
@@ -714,10 +719,11 @@ usz patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 
 			m_applied_groups.insert(patch.patch_group);
 		}
 
-		const usz applied = apply_modification<check_local_storage>(patch, dst, filesz, ls_addr);
+		auto applied = apply_modification<CheckLS>(patch, dst, filesz, ls_addr);
+
 		applied_total += applied;
 
-		patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %d)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied);
+		patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %u)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied.size());
 	}
 
 	return applied_total;
