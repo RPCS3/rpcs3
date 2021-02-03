@@ -268,7 +268,7 @@ namespace rsx
 								// Only update the screen at about 60fps since updating it everytime slows down the process
 								std::this_thread::sleep_for(16ms);
 
-								if (!g_fxo->get<display_manager>())
+								if (!g_fxo->is_init<display_manager>())
 								{
 									rsx_log.fatal("display_manager was improperly destroyed");
 									break;

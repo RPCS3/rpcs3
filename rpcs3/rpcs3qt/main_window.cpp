@@ -971,7 +971,7 @@ void main_window::DecryptSPRXLibraries()
 	// Always start with no KLIC
 	std::vector<u128> klics{u128{}};
 
-	if (const auto keys = g_fxo->get<loaded_npdrm_keys>())
+	if (const auto keys = g_fxo->try_get<loaded_npdrm_keys>())
 	{
 		// Second klic: get it from a running game
 		if (const u128 klic = keys->devKlic)

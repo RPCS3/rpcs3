@@ -718,7 +718,7 @@ namespace vm
 		// Notify rsx that range has become valid
 		// Note: This must be done *before* memory gets mapped while holding the vm lock, otherwise
 		//       the RSX might try to invalidate memory that got unmapped and remapped
-		if (const auto rsxthr = g_fxo->get<rsx::thread>())
+		if (const auto rsxthr = g_fxo->try_get<rsx::thread>())
 		{
 			rsxthr->on_notify_memory_mapped(addr, size);
 		}
@@ -906,7 +906,7 @@ namespace vm
 		// Notify rsx to invalidate range
 		// Note: This must be done *before* memory gets unmapped while holding the vm lock, otherwise
 		//       the RSX might try to call VirtualProtect on memory that is already unmapped
-		if (const auto rsxthr = g_fxo->get<rsx::thread>())
+		if (const auto rsxthr = g_fxo->get<rsx::thread>(); g_fxo->is_init<rsx::thread>())
 		{
 			rsxthr->on_notify_memory_unmapped(addr, size);
 		}

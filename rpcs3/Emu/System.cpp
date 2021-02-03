@@ -55,7 +55,8 @@
 
 LOG_CHANNEL(sys_log, "SYS");
 
-stx::manual_fixed_typemap<void> g_fixed_typemap;
+// Preallocate 32 MiB
+stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
 
 bool g_use_rtm = false;
 u64 g_rtm_tx_limit1 = 0;
@@ -138,7 +139,7 @@ void Emulator::Init(bool add_only)
 
 	idm::init();
 	g_fxo->reset();
-	g_fxo->init<named_thread<progress_dialog_server>>();
+	g_fxo->need<named_thread<progress_dialog_server>>();
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
@@ -569,7 +570,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
 	vm::init();
-	g_fxo->init();
+	g_fxo->init(false);
 
 	// PS3 'executable'
 	m_state = system_state::ready;
@@ -1095,7 +1096,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 			vm::init();
-			g_fxo->init();
+			g_fxo->init(false);
 			Run(false);
 			m_force_boot = false;
 
@@ -1591,7 +1592,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				ConfigurePPUCache();
 
-				g_fxo->init();
+				g_fxo->init(false);
 				Emu.GetCallbacks().init_gs_render();
 				Emu.GetCallbacks().init_pad_handler(m_title_id);
 				Emu.GetCallbacks().init_kb_handler();
@@ -1618,7 +1619,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 			vm::init();
-			g_fxo->init();
+			g_fxo->init(false);
 			ppu_load_prx(ppu_prx, m_path);
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
@@ -1627,7 +1628,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
 			vm::init();
-			g_fxo->init();
+			g_fxo->init(false);
 			spu_load_exec(spu_exec);
 		}
 		else
@@ -1706,7 +1707,7 @@ void Emulator::Run(bool start_playtime)
 		cpu.state.notify_one(cpu_flag::stop);
 	});
 
-	if (auto thr = g_fxo->get<named_thread<rsx::rsx_replay_thread>>())
+	if (auto thr = g_fxo->try_get<named_thread<rsx::rsx_replay_thread>>())
 	{
 		thr->state -= cpu_flag::stop;
 		thr->state.notify_one(cpu_flag::stop);
@@ -1747,7 +1748,7 @@ bool Emulator::Pause()
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
 
-	if (auto rsx = g_fxo->get<rsx::thread>())
+	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
 		rsx->state += cpu_flag::dbg_global_pause;
 	}
@@ -1820,7 +1821,7 @@ void Emulator::Resume()
 	idm::select<named_thread<ppu_thread>>(on_select);
 	idm::select<named_thread<spu_thread>>(on_select);
 
-	if (auto rsx = g_fxo->get<rsx::thread>())
+	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
 		// TODO: notify?
 		rsx->state -= cpu_flag::dbg_global_pause;
@@ -1876,7 +1877,7 @@ void Emulator::Stop(bool restart)
 
 	GetCallbacks().on_stop();
 
-	if (auto rsx = g_fxo->get<rsx::thread>())
+	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
 		// TODO: notify?
 		rsx->state += cpu_flag::exit;
@@ -1962,7 +1963,7 @@ bool Emulator::Quit(bool force_quit)
 	const auto on_exit = []()
 	{
 		// Deinitialize object manager to prevent any hanging objects at program exit
-		*g_fxo = {};
+		g_fxo->clear();
 	};
 	return GetCallbacks().try_to_quit(force_quit, on_exit);
 }

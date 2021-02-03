@@ -429,7 +429,7 @@ void cpu_thread::operator()()
 		}
 	}
 
-	while (!g_fxo->get<cpu_profiler>())
+	while (!g_fxo->is_init<cpu_profiler>())
 	{
 		if (Emu.IsStopped())
 		{
@@ -1151,7 +1151,7 @@ void cpu_thread::stop_all() noexcept
 
 void cpu_thread::flush_profilers() noexcept
 {
-	if (!g_fxo->get<cpu_profiler>())
+	if (!g_fxo->is_init<cpu_profiler>())
 	{
 		profiler.fatal("cpu_thread::flush_profilers() has been called incorrectly.");
 		return;

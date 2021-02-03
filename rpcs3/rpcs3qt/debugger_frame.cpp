@@ -264,7 +264,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			"\nKey R: Registers Editor for selected thread."
 			"\nKey N: Show next instruction the thread will execute after marked instruction, does nothing if target is not predictable."
 			"\nKey M: Show the Memory Viewer with initial address pointing to the marked instruction."
-			"\nKey I: Show RSX method detail." 
+			"\nKey I: Show RSX method detail."
 			"\nKey F10: Perform single-stepping on instructions."
 			"\nKey F11: Perform step-over on instructions. (skip function calls)"
 			"\nKey F1: Show this help dialog."
@@ -431,7 +431,7 @@ cpu_thread* debugger_frame::get_cpu()
 		return m_rsx;
 	}
 
-	if (g_fxo->get<rsx::thread>() != m_rsx)
+	if (!g_fxo->is_init<rsx::thread>())
 	{
 		m_rsx = nullptr;
 		return m_rsx;

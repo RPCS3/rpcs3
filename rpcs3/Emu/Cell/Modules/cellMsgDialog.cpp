@@ -107,7 +107,7 @@ struct msg_dlg_thread_info
 				thread_ctrl::wait_for(10'000);
 			}
 
-			if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
+			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 			{
 				if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 				{
@@ -149,7 +149,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 
 	const MsgDialogType _type{ type };
 
-	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
 		if (manager->get<rsx::overlays::message_dialog>())
 		{
@@ -433,7 +433,7 @@ error_code cellMsgDialogClose(f32 delay)
 
 	const u64 wait_until = get_guest_system_time() + static_cast<s64>(std::max<float>(delay, 0.0f) * 1000);
 
-	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
@@ -463,7 +463,7 @@ error_code cellMsgDialogAbort()
 {
 	cellSysutil.warning("cellMsgDialogAbort()");
 
-	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
@@ -514,7 +514,7 @@ error_code cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> m
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
 
-	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
@@ -546,7 +546,7 @@ error_code cellMsgDialogProgressBarReset(u32 progressBarIndex)
 {
 	cellSysutil.warning("cellMsgDialogProgressBarReset(progressBarIndex=%d)", progressBarIndex);
 
-	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
@@ -578,7 +578,7 @@ error_code cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 {
 	cellSysutil.warning("cellMsgDialogProgressBarInc(progressBarIndex=%d, delta=%d)", progressBarIndex, delta);
 
-	if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
+	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{

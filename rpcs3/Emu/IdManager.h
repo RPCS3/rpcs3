@@ -646,6 +646,6 @@ public:
 
 #include "util/fixed_typemap.hpp"
 
-extern stx::manual_fixed_typemap<void> g_fixed_typemap;
+extern stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
 
-constexpr stx::manual_fixed_typemap<void>* g_fxo = &g_fixed_typemap;
+constexpr auto* g_fxo = &g_fixed_typemap;
