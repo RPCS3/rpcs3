@@ -324,7 +324,7 @@ namespace stx
 
 		if constexpr (alignof(etype) > (__STDCPP_DEFAULT_NEW_ALIGNMENT__))
 		{
-			bytes = new (std::align_val_t{alignof(etype)}) std::byte[size];
+			bytes = static_cast<std::byte*>(::operator new(size, std::align_val_t{alignof(etype)}));
 		}
 		else
 		{
