@@ -1,5 +1,6 @@
 #pragma once
 
+#include "util/types.hpp"
 #include "util/typeindices.hpp"
 
 #include <utility>
@@ -8,41 +9,41 @@
 namespace stx
 {
 	// Simplified typemap with exactly one object of each used type, non-moveable.
-	template <typename Tag /*Tag should be unique*/>
-	class auto_typemap
+	template <typename Tag /*Tag should be unique*/, u32 Size = 0, u32 Align = (Size ? 64 : __STDCPP_DEFAULT_NEW_ALIGNMENT__)>
+	class alignas(Align) auto_typemap
 	{
 		// Save default constructor and destructor
 		struct typeinfo
 		{
-			void(*create)(void*& ptr, auto_typemap&) noexcept;
+			bool(*create)(uchar* ptr, auto_typemap&) noexcept;
 			void(*destroy)(void* ptr) noexcept;
 
 			template <typename T>
-			static void call_ctor(void*& ptr, auto_typemap& _this) noexcept
+			static bool call_ctor(uchar* ptr, auto_typemap& _this) noexcept
 			{
-				// Don't overwrite if already exists
-				if (!ptr)
 				{
 					// Allow passing reference to "this"
 					if constexpr (std::is_constructible_v<T, auto_typemap&>)
 					{
-						ptr = new T(_this);
-						return;
+						new (ptr) T(_this);
+						return true;
 					}
 
 					// Call default constructor only if available
 					if constexpr (std::is_default_constructible_v<T>)
 					{
-						ptr = new T();
-						return;
+						new (ptr) T();
+						return true;
 					}
 				}
+
+				return false;
 			}
 
 			template <typename T>
 			static void call_dtor(void* ptr) noexcept
 			{
-				delete static_cast<T*>(ptr);
+				std::launder(static_cast<T*>(ptr))->~T();
 			}
 
 			template <typename T>
@@ -55,8 +56,12 @@ namespace stx
 			}
 		};
 
-		// Raw pointers to existing objects (may be nullptr)
-		void** m_list;
+		// Objects
+		union
+		{
+			uchar* m_list;
+			mutable uchar m_data[Size ? Size : 1];
+		};
 
 		// Creation order for each object (used to reverse destruction order)
 		void** m_order;
@@ -64,23 +69,44 @@ namespace stx
 		// Helper for destroying in reverse order
 		const typeinfo** m_info;
 
+		// Indicates whether object is created at given index
+		bool* m_init;
+
 	public:
 		auto_typemap() noexcept
-			: m_list(new void*[stx::typelist<typeinfo>().count()]{})
-			, m_order(new void*[stx::typelist<typeinfo>().count()])
+			: m_order(new void*[stx::typelist<typeinfo>().count()])
 			, m_info(new const typeinfo*[stx::typelist<typeinfo>().count()])
+			, m_init(new bool[stx::typelist<typeinfo>().count()]{})
 		{
+			if constexpr (Size == 0)
+			{
+				if (stx::typelist<typeinfo>().align() > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+				{
+					m_list = static_cast<uchar*>(::operator new(usz{stx::typelist<typeinfo>().size()}, std::align_val_t{stx::typelist<typeinfo>().align()}));
+				}
+				else
+				{
+					m_list = new uchar[stx::typelist<typeinfo>().size()];
+				}
+			}
+			else
+			{
+				ensure(Size >= stx::typelist<typeinfo>().size());
+				ensure(Align >= stx::typelist<typeinfo>().align());
+				m_data[0] = 0;
+			}
+
 			for (const auto& type : stx::typelist<typeinfo>())
 			{
-				const unsigned id = type.index();
-
-				type.create(m_list[id], *this);
+				const u32 id = type.index();
+				uchar* data = (Size ? +m_data : m_list) + type.pos();
 
 				// Allocate initialization order id
-				if (m_list[id])
+				if (type.create(data, *this))
 				{
-					*m_order++ = m_list[id];
+					*m_order++ = data;
 					*m_info++ = &type;
+					m_init[id] = true;
 				}
 			}
 		}
@@ -92,11 +118,11 @@ namespace stx
 		~auto_typemap()
 		{
 			// Get actual number of created objects
-			unsigned _max = 0;
+			u32 _max = 0;
 
 			for (const auto& type : stx::typelist<typeinfo>())
 			{
-				if (m_list[type.index()])
+				if (m_init[type.index()])
 				{
 					// Skip object if not created
 					_max++;
@@ -110,16 +136,28 @@ namespace stx
 			}
 
 			// Pointers should be restored to their positions
+			delete[] m_init;
 			delete[] m_info;
 			delete[] m_order;
-			delete[] m_list;
+
+			if constexpr (Size == 0)
+			{
+				if (stx::typelist<typeinfo>().align() > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+				{
+					::operator delete[](m_list, std::align_val_t{stx::typelist<typeinfo>().align()});
+				}
+				else
+				{
+					delete[] m_list;
+				}
+			}
 		}
 
 		// Check if object is not initialized but shall be initialized first (to use in initializing other objects)
 		template <typename T>
 		void need() noexcept
 		{
-			if (!m_list[stx::typeindex<typeinfo, std::decay_t<T>>()])
+			if (!m_init[stx::typeindex<typeinfo, std::decay_t<T>>()])
 			{
 				if constexpr (std::is_constructible_v<T, auto_typemap&>)
 				{
@@ -139,18 +177,25 @@ namespace stx
 		template <typename T, typename As = T, typename... Args>
 		As* init(Args&&... args) noexcept
 		{
-			auto& ptr = m_list[stx::typeindex<typeinfo, std::decay_t<T>>()];
-
-			if (ptr)
+			if (std::exchange(m_init[stx::typeindex<typeinfo, std::decay_t<T>, std::decay_t<As>>()], true))
 			{
 				// Already exists, recreation is not supported (may be added later)
 				return nullptr;
 			}
 
-			As* obj = new std::decay_t<As>(std::forward<Args>(args)...);
+			As* obj = nullptr;
+
+			if constexpr (Size != 0)
+			{
+				obj = new (m_data + stx::typeoffset<typeinfo, std::decay_t<T>>()) std::decay_t<As>(std::forward<Args>(args)...);
+			}
+			else
+			{
+				obj = new (m_list + stx::typeoffset<typeinfo, std::decay_t<T>>()) std::decay_t<As>(std::forward<Args>(args)...);
+			}
+
 			*m_order++ = obj;
-			*m_info++ = &stx::typedata<typeinfo, std::decay_t<T>>();
-			ptr = static_cast<T*>(obj);
+			*m_info++ = &stx::typedata<typeinfo, std::decay_t<T>, std::decay_t<As>>();
 			return obj;
 		}
 
@@ -163,11 +208,36 @@ namespace stx
 			return init<T>(std::forward<Args>(args)...);
 		}
 
+		template <typename T>
+		bool is_init() const noexcept
+		{
+			return m_init[stx::typeindex<typeinfo, std::decay_t<T>>()];
+		}
+
 		// Obtain object reference
 		template <typename T>
 		T& get() const noexcept
 		{
-			return *static_cast<T*>(m_list[stx::typeindex<typeinfo, std::decay_t<T>>()]);
+			if constexpr (Size != 0)
+			{
+				return *std::launder(reinterpret_cast<T*>(m_data + stx::typeoffset<typeinfo, std::decay_t<T>>()));
+			}
+			else
+			{
+				return *std::launder(reinterpret_cast<T*>(m_list + stx::typeoffset<typeinfo, std::decay_t<T>>()));
+			}
+		}
+
+		// Obtain object pointer if initialized
+		template <typename T>
+		T* try_get() const noexcept
+		{
+			if (is_init<T>())
+			{
+				[[likely]] return &get<T>();
+			}
+
+			[[unlikely]] return nullptr;
 		}
 	};
 }
