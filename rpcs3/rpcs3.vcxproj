@@ -352,16 +352,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_basic_keyboard_handler.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_basic_mouse_handler.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_breakpoint_list.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -648,16 +638,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_auto_pause_settings_dialog.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_basic_keyboard_handler.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_basic_mouse_handler.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
@@ -972,16 +952,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_basic_keyboard_handler.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_basic_mouse_handler.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_breakpoint_list.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -1268,16 +1238,6 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_auto_pause_settings_dialog.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_basic_keyboard_handler.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_basic_mouse_handler.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
@@ -1653,42 +1613,8 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
     </CustomBuild>
-    <CustomBuild Include="Input\basic_keyboard_handler.h">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing basic_keyboard_handler.h...</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">Moc%27ing basic_keyboard_handler.h...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing basic_keyboard_handler.h...</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">Moc%27ing basic_keyboard_handler.h...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-    </CustomBuild>
-    <CustomBuild Include="Input\basic_mouse_handler.h">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing basic_mouse_handler.h...</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">Moc%27ing basic_mouse_handler.h...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing basic_mouse_handler.h...</Message>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">Moc%27ing basic_mouse_handler.h...</Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
-    </CustomBuild>
+    <ClInclude Include="Input\basic_keyboard_handler.h" />
+    <ClInclude Include="Input\basic_mouse_handler.h" />
     <ClInclude Include="display_sleep_control.h" />
     <ClInclude Include="Input\ds3_pad_handler.h" />
     <ClInclude Include="Input\ds4_pad_handler.h" />
@@ -1857,32 +1783,7 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
     </CustomBuild>
-    <CustomBuild Include="main_application.h">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-      </Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-      </Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-      </Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-      </Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-      </Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-      </Command>
-    </CustomBuild>
+    <ClInclude Include="main_application.h" />
     <ClInclude Include="Input/mm_joystick_handler.h" />
     <CustomBuild Include="rpcs3qt\cg_disasm_window.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing cg_disasm_window.h...</Message>
@@ -2019,32 +1920,7 @@
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\breakpoint_handler.h">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-      </Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-      </Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-      </Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-      </Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-      </Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-      </Command>
-    </CustomBuild>
+    <ClInclude Include="rpcs3qt\breakpoint_handler.h" />
     <CustomBuild Include="rpcs3qt\breakpoint_list.h">
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">Moc%27ing %(Identity)...</Message>
@@ -2636,32 +2512,7 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath);$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions)  "-I.\..\3rdparty\wolfssl" "-I.\..\3rdparty\curl\include" "-I.\..\3rdparty\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
     </CustomBuild>
-    <CustomBuild Include="rpcs3qt\progress_dialog.h">
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-      </Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-      </Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">
-      </Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-      </Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-      </Command>
-      <Message Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-      </Message>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-      </Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">
-      </Command>
-    </CustomBuild>
+    <ClInclude Include="rpcs3qt\progress_dialog.h" />
     <ClInclude Include="rpcs3qt\qt_utils.h" />
     <ClInclude Include="rpcs3qt\save_data_dialog.h" />
     <CustomBuild Include="rpcs3qt\register_editor_dialog.h">
