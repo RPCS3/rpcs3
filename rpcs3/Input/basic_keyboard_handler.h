@@ -6,9 +6,9 @@
 #include <QKeyEvent>
 #include <QWindow>
 
-class basic_keyboard_handler final : public QObject, public KeyboardHandlerBase
+class basic_keyboard_handler final : public KeyboardHandlerBase, public QObject
 {
-	Q_OBJECT
+	//Q_OBJECT
 public:
 	virtual void Init(const u32 max_connect) override;
 
