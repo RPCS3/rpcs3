@@ -123,7 +123,6 @@ private:
 	// Copies data into padData if status is NewData, otherwise buffer is untouched
 	DS4DataStatus GetRawData(const std::shared_ptr<DS4Device>& ds4Device);
 	// This function gets us usuable buffer from the rawbuffer of padData
-	// Todo: this currently only handles 'buttons' and not axis or sensors for the time being
 	bool GetCalibrationData(const std::shared_ptr<DS4Device>& ds4Device);
 	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
 	int SendVibrateData(const std::shared_ptr<DS4Device>& device);
