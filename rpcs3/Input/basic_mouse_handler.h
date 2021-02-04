@@ -9,7 +9,6 @@
 
 class basic_mouse_handler final : public MouseHandlerBase, public QObject
 {
-	//Q_OBJECT
 public:
 	virtual void Init(const u32 max_connect) override;
 

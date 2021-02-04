@@ -8,7 +8,6 @@
 
 class basic_keyboard_handler final : public KeyboardHandlerBase, public QObject
 {
-	//Q_OBJECT
 public:
 	virtual void Init(const u32 max_connect) override;
 
