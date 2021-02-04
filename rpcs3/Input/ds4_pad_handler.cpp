@@ -6,9 +6,6 @@ LOG_CHANNEL(ds4_log, "DS4");
 
 namespace
 {
-	//const auto THREAD_SLEEP = 1ms; //ds4 has new data every ~4ms,
-	//const auto THREAD_SLEEP_INACTIVE = 100ms;
-
 	const u32 DS4_ACC_RES_PER_G = 8192;
 	const u32 DS4_GYRO_RES_PER_DEG_S = 16; // technically this could be 1024, but keeping it at 16 keeps us within 16 bits of precision
 	const u32 DS4_FEATURE_REPORT_0x02_SIZE = 37;
@@ -922,8 +919,7 @@ void ds4_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 	pad->m_battery_level = ds4_device->batteryLevel;
 	pad->m_cable_state = ds4_device->cableState;
 
-	// these values come already calibrated from our ds4Thread,
-	// all we need to do is convert to ds3 range
+	// these values come already calibrated, all we need to do is convert to ds3 range
 
 	// accel
 	f32 accelX = static_cast<s16>((buf[20] << 8) | buf[19]) / static_cast<f32>(DS4_ACC_RES_PER_G) * -1;

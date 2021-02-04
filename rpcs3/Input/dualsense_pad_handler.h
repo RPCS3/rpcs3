@@ -42,6 +42,19 @@ class dualsense_pad_handler final : public PadHandlerBase
 		KeyCodeCount
 	};
 
+	enum DualSenseCalibIndex
+	{
+		// gyro
+		PITCH = 0,
+		YAW,
+		ROLL,
+
+		// accel
+		X,
+		Y,
+		Z,
+		COUNT
+	};
 
 	enum class DualSenseDataStatus
 	{
@@ -56,11 +69,20 @@ class dualsense_pad_handler final : public PadHandlerBase
 		Enhanced
 	};
 
+	struct DualSenseCalibData
+	{
+		s16 bias;
+		s32 sens_numer;
+		s32 sens_denom;
+	};
+
 	struct DualSenseDevice : public PadDevice
 	{
 		hid_device* hidDevice{ nullptr };
 		std::string path{ "" };
 		bool btCon{ false };
+		bool has_calib_data{false};
+		std::array<DualSenseCalibData, DualSenseCalibIndex::COUNT> calib_data{};
 		DualSenseDataMode dataMode{ DualSenseDataMode::Simple };
 		std::array<u8, 64> padData{};
 		bool newVibrateData{true};
@@ -91,6 +113,22 @@ private:
 	std::shared_ptr<DualSenseDevice> GetDualSenseDevice(const std::string& padId);
 
 	DualSenseDataStatus GetRawData(const std::shared_ptr<DualSenseDevice>& dualsenseDevice);
+	bool get_calibration_data(const std::shared_ptr<DualSenseDevice>& dualsense_device);
+
+	inline s16 apply_calibration(s32 rawValue, const DualSenseCalibData& calib_data)
+	{
+		const s32 biased = rawValue - calib_data.bias;
+		const s32 quot   = calib_data.sens_numer / calib_data.sens_denom;
+		const s32 rem    = calib_data.sens_numer % calib_data.sens_denom;
+		const s32 output = (quot * biased) + ((rem * biased) / calib_data.sens_denom);
+
+		if (output > INT16_MAX)
+			return INT16_MAX;
+		else if (output < INT16_MIN)
+			return INT16_MIN;
+		else
+			return static_cast<s16>(output);
+	}
 
 	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
 	int SendVibrateData(const std::shared_ptr<DualSenseDevice>& device);
@@ -102,5 +140,6 @@ private:
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
 	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
+	void get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
 	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
 };
