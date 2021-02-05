@@ -269,7 +269,7 @@ std::string VertexProgramDecompiler::GetRawCond()
 	swizzle += f[d0.mask_w];
 
 	swizzle = swizzle == "xyzw" ? "" : "." + swizzle;
-	return compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0., 0., 0., 0.)" + swizzle);
+	return compareFunction(cond_string_table[d0.cond], AddCondReg() + swizzle, getFloatTypeName(4) + "(0.)" + swizzle);
 }
 
 std::string VertexProgramDecompiler::GetCond()
@@ -320,12 +320,12 @@ std::string VertexProgramDecompiler::AddAddrReg()
 {
 	static const char f[] = { 'x', 'y', 'z', 'w' };
 	const auto mask = std::string(".") + f[d0.addr_swz];
-	return m_parr.AddParam(PF_PARAM_NONE, getIntTypeName(4), "a" + std::to_string(d0.addr_reg_sel_1), getIntTypeName(4) + "(0, 0, 0, 0)") + mask;
+	return m_parr.AddParam(PF_PARAM_NONE, getIntTypeName(4), "a" + std::to_string(d0.addr_reg_sel_1), getIntTypeName(4) + "(0)") + mask;
 }
 
 std::string VertexProgramDecompiler::AddCondReg()
 {
-	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "cc" + std::to_string(d0.cond_reg_sel_1), getFloatTypeName(4) + "(0., 0., 0., 0.)");
+	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "cc" + std::to_string(d0.cond_reg_sel_1), getFloatTypeName(4) + "(0.)");
 }
 
 u32 VertexProgramDecompiler::GetAddr()
@@ -383,11 +383,13 @@ std::string VertexProgramDecompiler::BuildCode()
 		lvl += m_instructions[i].open_scopes;
 	}
 
-	bool is_valid = m_parr.HasParam(PF_PARAM_OUT, getFloatTypeName(4), "dst_reg0");
-	if (!is_valid)
+	if (const auto float4_type = getFloatTypeName(4); !m_parr.HasParam(PF_PARAM_OUT, float4_type, "dst_reg0"))
 	{
 		rsx_log.warning("Vertex program has no POS output, shader will be NOPed");
 		main_body = "/*" + main_body + "*/";
+
+		// Initialize vertex output register to all 0, GPU hw does not always clear position register
+		m_parr.AddParam(PF_PARAM_OUT, float4_type, "dst_reg0", float4_type + "(0., 0., 0., 1.)");
 	}
 
 	std::stringstream OS;
