@@ -127,6 +127,7 @@ void main_window::Init()
 
 		if (msg.exec() == QMessageBox::No)
 		{
+			logs::stop();
 			std::exit(EXIT_SUCCESS);
 		}
 	}

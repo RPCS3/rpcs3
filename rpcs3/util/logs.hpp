@@ -122,6 +122,9 @@ namespace logs
 	// Log level control: set all channels to level::notice
 	void reset();
 
+	// Shut it down
+	void stop();
+
 	// Log level control: set all channels to level::always
 	void silence();
 

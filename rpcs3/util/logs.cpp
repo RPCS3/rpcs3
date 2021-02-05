@@ -184,6 +184,11 @@ namespace logs
 		}
 	}
 
+	void stop()
+	{
+		get_logger()->~root_listener();
+	}
+
 	void set_level(const std::string& ch_name, level value)
 	{
 		std::lock_guard lock(g_mutex);
