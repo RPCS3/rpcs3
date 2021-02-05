@@ -77,7 +77,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	const bool local = s_qt_init.try_lock();
 
 	// Possibly created and assigned here
-	QScopedPointer<QCoreApplication> app;
+	static QScopedPointer<QCoreApplication> app;
 
 	if (local)
 	{
@@ -110,7 +110,6 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		{
 			// Since we only show an error, we can hope for a graceful exit
 			show_report(text);
-			app.reset();
 			std::exit(0);
 		}
 		else
@@ -325,7 +324,7 @@ int main(int argc, char** argv)
 
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
 
-	fs::file instance_lock;
+	static fs::file instance_lock;
 
 	// True if an argument --updating found
 	const bool is_updating = find_arg(arg_updating, argc, argv) != 0;
@@ -374,7 +373,7 @@ int main(int argc, char** argv)
 	// Initialize thread pool finalizer (on first use)
 	named_thread("", []{})();
 
-	std::unique_ptr<logs::listener> log_file;
+	static std::unique_ptr<logs::listener> log_file;
 	{
 		// Check free space
 		fs::device_stat stats{};
@@ -388,7 +387,7 @@ int main(int argc, char** argv)
 		log_file = logs::make_file_listener(fs::get_cache_dir() + "RPCS3.log", stats.avail_free / 4);
 	}
 
-	std::unique_ptr<logs::listener> log_pauser = std::make_unique<pause_on_fatal>();
+	static std::unique_ptr<logs::listener> log_pauser = std::make_unique<pause_on_fatal>();
 	logs::listener::add(log_pauser.get());
 
 	{
@@ -456,7 +455,7 @@ int main(int argc, char** argv)
 	app->setApplicationName("RPCS3");
 
 	// Command line args
-	QCommandLineParser parser;
+	static QCommandLineParser parser;
 	parser.setApplicationDescription("Welcome to RPCS3 command line.");
 	parser.addPositionalArgument("(S)ELF", "Path for directly executing a (S)ELF");
 	parser.addPositionalArgument("[Args...]", "Optional args for the executable");
