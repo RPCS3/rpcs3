@@ -77,7 +77,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	const bool local = s_qt_init.try_lock();
 
 	// Possibly created and assigned here
-	QScopedPointer<QCoreApplication> app;
+	static QScopedPointer<QCoreApplication> app;
 
 	if (local)
 	{
@@ -110,7 +110,6 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		{
 			// Since we only show an error, we can hope for a graceful exit
 			show_report(text);
-			app.reset();
 			std::exit(0);
 		}
 		else
@@ -372,7 +371,7 @@ int main(int argc, char** argv)
 #endif
 
 	// Initialize thread pool finalizer (on first use)
-	static named_thread("", []{})();
+	named_thread("", []{})();
 
 	static std::unique_ptr<logs::listener> log_file;
 	{
@@ -451,12 +450,12 @@ int main(int argc, char** argv)
 	// but I haven't found an implicit way to check for style yet, so we naively check them both here for now.
 	const bool use_cli_style = find_arg(arg_style, argc, argv) || find_arg(arg_stylesheet, argc, argv);
 
-	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
+	static QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
 	app->setApplicationVersion(QString::fromStdString(rpcs3::get_version().to_string()));
 	app->setApplicationName("RPCS3");
 
 	// Command line args
-	QCommandLineParser parser;
+	static QCommandLineParser parser;
 	parser.setApplicationDescription("Welcome to RPCS3 command line.");
 	parser.addPositionalArgument("(S)ELF", "Path for directly executing a (S)ELF");
 	parser.addPositionalArgument("[Args...]", "Optional args for the executable");
