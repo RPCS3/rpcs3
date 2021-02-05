@@ -687,7 +687,7 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 		if (auto thread = t.get())
 		{
 			// Deallocate LS
-			ensure(vm::get(vm::spu)->dealloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (thread->id & 0xffffff), &thread->shm));
+			thread->cleanup();
 
 			// Remove ID from IDM (destruction will occur in group destructor)
 			idm::remove<named_thread<spu_thread>>(thread->id);
@@ -1989,7 +1989,16 @@ error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 
 	(*thread)();
 
-	if (!idm::remove_verify<named_thread<spu_thread>>(idm_id, std::move(thread.ptr)))
+	if (idm::withdraw<named_thread<spu_thread>>(idm_id, [&](spu_thread& spu) -> CellError
+	{
+		if (std::addressof(spu) != std::addressof(*thread))
+		{
+			return CELL_ESRCH;
+		}
+
+		spu.cleanup();
+		return {};
+	}).ret)
 	{
 		// Other thread destroyed beforehead
 		return CELL_ESRCH;

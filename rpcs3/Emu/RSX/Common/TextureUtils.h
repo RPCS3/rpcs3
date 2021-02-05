@@ -112,12 +112,22 @@ namespace rsx
 		u32 pitch_in_block;
 	};
 
+	struct memory_transfer_cmd
+	{
+		const void* dst;
+		const void* src;
+		u32 length;
+	};
+
 	struct texture_memory_info
 	{
 		int element_size;
 		int block_length;
 		bool require_swap;
 		bool require_deswizzle;
+		bool require_upload;
+
+		std::vector<memory_transfer_cmd> deferred_cmds;
 	};
 
 	struct texture_uploader_capabilities
@@ -125,6 +135,7 @@ namespace rsx
 		bool supports_byteswap;
 		bool supports_vtc_decoding;
 		bool supports_hw_deswizzle;
+		bool supports_zero_copy;
 		usz alignment;
 	};
 
@@ -143,7 +154,7 @@ namespace rsx
 	std::vector<subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture);
 	std::vector<subresource_layout> get_subresources_layout(const rsx::vertex_texture &texture);
 
-	texture_memory_info upload_texture_subresource(gsl::span<std::byte> dst_buffer, const subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps);
+	texture_memory_info upload_texture_subresource(gsl::span<std::byte> dst_buffer, const subresource_layout &src_layout, int format, bool is_swizzled, texture_uploader_capabilities& caps);
 
 	u8 get_format_block_size_in_bytes(int format);
 	u8 get_format_block_size_in_texel(int format);

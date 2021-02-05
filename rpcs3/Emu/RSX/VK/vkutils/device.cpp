@@ -56,6 +56,7 @@ namespace vk
 
 		stencil_export_support           = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		conditional_render_support       = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+		external_memory_host_support = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		unrestricted_depth_range_support = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 	}
 
@@ -228,6 +229,7 @@ namespace vk
 	// Render Device - The actual usable device
 	void render_device::create(vk::physical_device& pdev, u32 graphics_queue_idx)
 	{
+		std::string message_on_error;
 		float queue_priorities[1] = { 0.f };
 		pgpu = &pdev;
 
@@ -262,6 +264,12 @@ namespace vk
 			requested_extensions.push_back(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 		}
 
+		if (pgpu->external_memory_host_support)
+		{
+			requested_extensions.push_back(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME);
+			requested_extensions.push_back(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
+		}
+
 		enabled_features.robustBufferAccess = VK_TRUE;
 		enabled_features.fullDrawIndexUint32 = VK_TRUE;
 		enabled_features.independentBlend = VK_TRUE;
@@ -280,6 +288,7 @@ namespace vk
 				// TODO: Slow fallback to emulate this
 				// Just warn and let the driver decide whether to crash or not
 				rsx_log.fatal("Your GPU driver does not support some required MSAA features. Expect problems.");
+				message_on_error += "Your GPU driver does not support some required MSAA features.\nTry updating your GPU driver or disable Anti-Aliasing in the settings.";
 			}
 
 			enabled_features.sampleRateShading = VK_TRUE;
@@ -349,7 +358,7 @@ namespace vk
 			rsx_log.notice("GPU/driver lacks support for float16 data types. All float16_t arithmetic will be emulated with float32_t.");
 		}
 
-		CHECK_RESULT(vkCreateDevice(*pgpu, &device, nullptr, &dev));
+		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);
 
 		// Import optional function endpoints
 		if (pgpu->conditional_render_support)
@@ -361,6 +370,11 @@ namespace vk
 		memory_map = vk::get_memory_mapping(pdev);
 		m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
 		m_pipeline_binding_table = vk::get_pipeline_binding_table(pdev);
+
+		if (pgpu->external_memory_host_support)
+		{
+			memory_map.getMemoryHostPointerPropertiesEXT = reinterpret_cast<PFN_vkGetMemoryHostPointerPropertiesEXT>(vkGetDeviceProcAddr(dev, "vkGetMemoryHostPointerPropertiesEXT"));
+		}
 
 		if (g_cfg.video.disable_vulkan_mem_allocator)
 			m_allocator = std::make_unique<vk::mem_allocator_vk>(dev, pdev);
@@ -471,6 +485,11 @@ namespace vk
 	bool render_device::get_unrestricted_depth_range_support() const
 	{
 		return pgpu->unrestricted_depth_range_support;
+	}
+
+	bool render_device::get_external_memory_host_support() const
+	{
+		return pgpu->external_memory_host_support;
 	}
 
 	mem_allocator_base* render_device::get_allocator() const

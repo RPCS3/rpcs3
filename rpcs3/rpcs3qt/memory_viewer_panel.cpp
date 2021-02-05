@@ -5,6 +5,8 @@
 #include "memory_viewer_panel.h"
 
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/rsx_utils.h"
 #include "Emu/IdManager.h"
 #include <QVBoxLayout>
 #include <QPushButton>
@@ -20,14 +22,35 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr, const std::shared_ptr<cpu_thread>& cpu)
+memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr, std::function<cpu_thread*()> func)
 	: QDialog(parent)
 	, m_addr(addr)
-	, m_type(!cpu || cpu->id_type() != 2 ? thread_type::ppu : thread_type::spu)
-	, m_spu_shm(m_type == thread_type::spu ? static_cast<spu_thread*>(cpu.get())->shm : nullptr)
+	, m_get_cpu(std::move(func))
+	, m_type([&]()
+	{
+		const auto cpu = m_get_cpu();
+
+		if (!cpu) return thread_type::none;
+		if (cpu->id_type() == 1) return thread_type::ppu;
+		if (cpu->id_type() == 0x55) return thread_type::rsx;
+		if (cpu->id_type() == 2) return thread_type::spu;
+
+		fmt::throw_exception("Unknown CPU type (0x%x)", cpu->id_type());
+	}())
+	, m_rsx(m_type == thread_type::rsx ? static_cast<rsx::thread*>(m_get_cpu()) : nullptr)
+	, m_spu_shm([&]()
+	{
+		const auto cpu = m_get_cpu();
+		return cpu && m_type == thread_type::spu ? static_cast<spu_thread*>(cpu)->shm : nullptr;
+	}())
 	, m_addr_mask(m_type == thread_type::spu ? SPU_LS_SIZE - 1 : ~0)
 {
-	setWindowTitle(m_type != thread_type::spu ? tr("Memory Viewer") : tr("Memory Viewer Of %0").arg(qstr(cpu->get_name())));
+	const auto cpu = m_get_cpu();
+
+	setWindowTitle(
+		cpu && m_type == thread_type::spu ? tr("Memory Viewer Of %0").arg(qstr(cpu->get_name())) :
+		cpu && m_type == thread_type::rsx ? tr("Memory Viewer Of RSX[0x55555555]") :
+		tr("Memory Viewer"));
 
 	setObjectName("memory_viewer");
 	m_colcount = 4;
@@ -361,6 +384,83 @@ std::string memory_viewer_panel::getHeaderAtAddr(u32 addr)
 	return {};
 }
 
+void* memory_viewer_panel::to_ptr(u32 addr, u32 size)
+{
+	if (m_type >= thread_type::spu && !m_get_cpu())
+	{
+		return nullptr;
+	}
+
+	if (!size)
+	{
+		return nullptr;
+	}
+
+	switch (m_type)
+	{
+	case thread_type::none:
+	case thread_type::ppu:
+	{
+		if (vm::check_addr(addr, 0, size))
+		{
+			return vm::get_super_ptr(addr);
+		}
+
+		break;
+	}
+	case thread_type::spu:
+	{
+		if (size <= SPU_LS_SIZE && SPU_LS_SIZE - size >= (addr % SPU_LS_SIZE))
+		{
+			return m_spu_shm->map_self() + (addr % SPU_LS_SIZE);
+		}
+
+		break;
+	}
+	case thread_type::rsx:
+	{
+		u32 final_addr = 0;
+
+		if (size > 0x2000'0000 || rsx::constants::local_mem_base + 0x1000'0000 - size < addr)
+		{
+			break;
+		}
+
+		for (u32 i = addr; i >> 20 <= (addr + size - 1) >> 20; i += 0x100000)
+		{
+			const u32 temp = rsx::get_address(i, i < rsx::constants::local_mem_base ? CELL_GCM_LOCATION_MAIN : CELL_GCM_LOCATION_LOCAL, true);
+
+			if (!temp)
+			{
+				// Failure
+				final_addr = 0;
+				break;
+			}
+			else if (!final_addr)
+			{
+				// First time, save starting address for later checks
+				final_addr = temp;
+			}
+			else if (final_addr != temp - (i - addr))
+			{
+				// TODO: Non-contiguous memory
+				final_addr = 0;
+				break;
+			}
+		}
+
+		if (vm::check_addr(final_addr, 0, size))
+		{
+			return vm::get_super_ptr(final_addr);
+		}
+
+		break;
+	}
+	default: break;
+	}
+
+	return nullptr;
+}
 void memory_viewer_panel::ShowMemory()
 {
 	QString t_mem_addr_str;
@@ -436,9 +536,9 @@ void memory_viewer_panel::ShowMemory()
 
 			u32 addr = (m_addr + (row - spu_passed) * m_colcount * 4 + col * 4) & m_addr_mask;
 
-			if (m_spu_shm || vm::check_addr(addr, 0, 4))
+			if (auto ptr = this->to_ptr(addr))
 			{
-				const be_t<u32> rmem = m_spu_shm ? *reinterpret_cast<be_t<u32>*>(m_spu_shm->map_self() + addr) : *vm::get_super_ptr<u32>(addr);
+				const be_t<u32> rmem = *reinterpret_cast<be_t<u32>*>(ptr);
 				t_mem_hex_str += qstr(fmt::format("%02x %02x %02x %02x",
 					static_cast<u8>(rmem >> 24),
 					static_cast<u8>(rmem >> 16),
@@ -484,26 +584,17 @@ void memory_viewer_panel::SetPC(const uint pc)
 
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv)
 {
-	const u64 memsize = 4ull * width * height;
-
-	if (!memsize || memsize > m_addr_mask)
-	{
-		return;
-	}
+	// If exceeds 32-bits it is invalid as well, UINT32_MAX always fails checks
+	const u32 memsize = static_cast<u32>(std::min<u64>(4ull * width * height, UINT32_MAX));
 
 	std::shared_lock rlock(vm::g_mutex);
 
-	if (!m_spu_shm && !vm::check_addr(addr, 0, static_cast<u32>(memsize)))
-	{
-		return;
-	}
+	const auto originalBuffer  = static_cast<u8*>(this->to_ptr(addr, memsize));
+	const auto convertedBuffer = new (std::nothrow) u8[memsize];
 
-	const auto originalBuffer  = m_spu_shm ? (m_spu_shm->map_self() + addr) : vm::get_super_ptr<const u8>(addr);
-	const auto convertedBuffer = new (std::nothrow) u8[static_cast<u32>(memsize)];
-
-	if (!convertedBuffer)
+	if (!originalBuffer || !convertedBuffer)
 	{
-		// OOM, give up
+		// OOM or invalid memory address, give up
 		return;
 	}
 

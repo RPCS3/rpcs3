@@ -67,6 +67,9 @@ namespace utils
 		// Map shared memory
 		u8* map(void* ptr, protection prot = protection::rw) const;
 
+		// Attempt to map shared memory fix fixed pointer
+		u8* try_map(void* ptr, protection prot = protection::rw) const;
+
 		// Map shared memory over reserved memory region, which is unsafe (non-atomic) under Win32
 		u8* map_critical(void* ptr, protection prot = protection::rw);
 

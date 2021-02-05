@@ -1218,18 +1218,6 @@ spu_imm_table_t::spu_imm_table_t()
 	}
 }
 
-std::string spu_thread::dump_all() const
-{
-	std::string ret = cpu_thread::dump_misc();
-	ret += '\n';
-	ret += dump_misc();
-	ret += '\n';
-	ret += dump_regs();
-	ret += '\n';
-
-	return ret;
-}
-
 std::string spu_thread::dump_regs() const
 {
 	std::string ret;
@@ -1289,7 +1277,7 @@ std::string spu_thread::dump_regs() const
 
 		if (i3 >= 0x80 && is_exec_code(i3))
 		{
-			SPUDisAsm dis_asm(CPUDisAsm_NormalMode, ls);
+			SPUDisAsm dis_asm(cpu_disasm_mode::normal, ls);
 			dis_asm.disasm(i3);
 			fmt::append(ret, " -> %s", dis_asm.last_opcode);
 		}
@@ -1332,7 +1320,7 @@ std::string spu_thread::dump_regs() const
 	fmt::append(ret, "Reservation Data:\n");
 
 	be_t<u32> data[32]{};
-	std::memcpy(data, rdata, sizeof(rdata)); // Show the data even if the reservation was lost inside the atomic loop 
+	std::memcpy(data, rdata, sizeof(rdata)); // Show the data even if the reservation was lost inside the atomic loop
 
 	for (usz i = 0; i < std::size(data); i += 4)
 	{
@@ -1675,26 +1663,22 @@ void spu_thread::cpu_task()
 	}
 }
 
-spu_thread::~spu_thread()
+struct raw_spu_cleanup
 {
+	~raw_spu_cleanup()
 	{
-		vm::writer_lock(0);
-
-		for (s32 i = -1; i < 2; i++)
-		{
-			// Unmap LS mirrors
-			shm->unmap_critical(ls + (i * SPU_LS_SIZE));
-		}
+		std::memset(spu_thread::g_raw_spu_id, 0, sizeof(spu_thread::g_raw_spu_id));
+		spu_thread::g_raw_spu_ctr = 0;
+		g_fxo->get<raw_spu_cleanup>(); // Register destructor
 	}
+};
 
-	if (!group)
-	{
-		// Deallocate local storage (thread groups are handled in sys_spu.cpp)
-		ensure(vm::dealloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, vm::spu));
-	}
+void spu_thread::cleanup()
+{
+	const u32 addr = group ? SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (id & 0xffffff) : RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index;
 
-	// Release LS mirrors area
-	utils::memory_release(ls - (SPU_LS_SIZE * 2), SPU_LS_SIZE * 5);
+	// Deallocate local storage
+	ensure(vm::dealloc(addr, vm::spu, &shm));
 
 	// Deallocate RawSPU ID
 	if (get_type() >= spu_type::raw)
@@ -1703,8 +1687,19 @@ spu_thread::~spu_thread()
 		g_raw_spu_ctr--;
 	}
 
-	// Free range lock
+	// Free range lock (and signals cleanup was called to the destructor)
 	vm::free_range_lock(range_lock);
+
+	// Signal the debugger about the termination
+	state += cpu_flag::exit;
+}
+
+spu_thread::~spu_thread()
+{
+	// Unmap LS and its mirrors
+	shm->unmap(ls + SPU_LS_SIZE);
+	shm->unmap(ls);
+	shm->unmap(ls - SPU_LS_SIZE);
 
 	perf_log.notice("Perf stats for transactions: success %u, failure %u", stx, ftx);
 	perf_log.notice("Perf stats for PUTLLC reload: successs %u, failure %u", last_succ, last_fail);
@@ -1716,8 +1711,6 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	, shm(std::make_shared<utils::shm>(SPU_LS_SIZE))
 	, ls([&]()
 	{
-		const auto addr = static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 5));
-
 		if (!group)
 		{
 			ensure(vm::get(vm::spu)->falloc(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index, SPU_LS_SIZE, &shm));
@@ -1728,17 +1721,39 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 			ensure(vm::get(vm::spu)->falloc(SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (cpu_thread::id & 0xffffff), SPU_LS_SIZE, &shm, 0x1000));
 		}
 
-		vm::writer_lock(0);
+		// Try to guess free area
+		const auto start = vm::g_free_addr + SPU_LS_SIZE * (cpu_thread::id & 0xffffff) * 12;
 
-		for (u32 i = 1; i < 4; i++)
+		u32 total = 0;
+
+		// Map LS and its mirrors
+		for (u64 addr = reinterpret_cast<u64>(start); addr < 0x8000'0000'0000;)
 		{
-			// Map LS mirrors
-			const auto ptr = addr + (i * SPU_LS_SIZE);
-			ensure(shm->map_critical(ptr) == ptr);
+			if (auto ptr = shm->try_map(reinterpret_cast<u8*>(addr)))
+			{
+				if (++total == 3)
+				{
+					// Use the middle mirror
+					return ptr - SPU_LS_SIZE;
+				}
+
+				addr += SPU_LS_SIZE;
+			}
+			else
+			{
+				// Reset, cleanup and start again
+				for (u32 i = 1; i <= total; i++)
+				{
+					shm->unmap(reinterpret_cast<u8*>(addr - i * SPU_LS_SIZE));
+				}
+
+				total = 0;
+
+				addr += 0x10000;
+			}
 		}
 
-		// Use the middle mirror
-		return addr + (SPU_LS_SIZE * 2);
+		fmt::throw_exception("Failed to map SPU LS memory");
 	}())
 	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
 	, group(group)

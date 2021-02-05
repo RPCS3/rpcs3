@@ -30,6 +30,7 @@ namespace vk
 		std::unique_ptr<vk::memory_block> memory;
 
 		buffer(const vk::render_device& dev, u64 size, u32 memory_type_index, u32 access_flags, VkBufferUsageFlags usage, VkBufferCreateFlags flags);
+		buffer(const vk::render_device& dev, VkBufferUsageFlags usage, void* host_pointer, u64 size);
 		~buffer();
 
 		void* map(u64 offset, u64 size);

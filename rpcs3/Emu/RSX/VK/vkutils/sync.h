@@ -37,7 +37,7 @@ namespace vk
 	public:
 		event(const render_device& dev);
 		~event();
-		void signal(const command_buffer& cmd, VkPipelineStageFlags stages);
+		void signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access);
 		VkResult status() const;
 	};
 

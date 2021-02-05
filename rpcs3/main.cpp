@@ -52,6 +52,7 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 static semaphore<> s_qt_init;
 
 static atomic_t<bool> s_headless = false;
+static atomic_t<bool> s_no_gui = false;
 static atomic_t<char*> s_argv0;
 
 #ifndef _WIN32
@@ -65,6 +66,10 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 {
 	if (s_headless)
 	{
+#ifdef _WIN32
+		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+			[[maybe_unused]] const auto con_out = freopen("conout$", "w", stderr);
+#endif
 		fprintf(stderr, "RPCS3: %s\n", text.c_str());
 		std::abort();
 	}
@@ -72,7 +77,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	const bool local = s_qt_init.try_lock();
 
 	// Possibly created and assigned here
-	QScopedPointer<QCoreApplication> app;
+	static QScopedPointer<QCoreApplication> app;
 
 	if (local)
 	{
@@ -105,7 +110,6 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		{
 			// Since we only show an error, we can hope for a graceful exit
 			show_report(text);
-			app.reset();
 			std::exit(0);
 		}
 		else
@@ -320,7 +324,7 @@ int main(int argc, char** argv)
 
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
 
-	fs::file instance_lock;
+	static fs::file instance_lock;
 
 	// True if an argument --updating found
 	const bool is_updating = find_arg(arg_updating, argc, argv) != 0;
@@ -369,7 +373,7 @@ int main(int argc, char** argv)
 	// Initialize thread pool finalizer (on first use)
 	named_thread("", []{})();
 
-	std::unique_ptr<logs::listener> log_file;
+	static std::unique_ptr<logs::listener> log_file;
 	{
 		// Check free space
 		fs::device_stat stats{};
@@ -383,7 +387,7 @@ int main(int argc, char** argv)
 		log_file = logs::make_file_listener(fs::get_cache_dir() + "RPCS3.log", stats.avail_free / 4);
 	}
 
-	std::unique_ptr<logs::listener> log_pauser = std::make_unique<pause_on_fatal>();
+	static std::unique_ptr<logs::listener> log_pauser = std::make_unique<pause_on_fatal>();
 	logs::listener::add(log_pauser.get());
 
 	{
@@ -451,7 +455,7 @@ int main(int argc, char** argv)
 	app->setApplicationName("RPCS3");
 
 	// Command line args
-	QCommandLineParser parser;
+	static QCommandLineParser parser;
 	parser.setApplicationDescription("Welcome to RPCS3 command line.");
 	parser.addPositionalArgument("(S)ELF", "Path for directly executing a (S)ELF");
 	parser.addPositionalArgument("[Args...]", "Optional args for the executable");
@@ -493,20 +497,38 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
+	s_no_gui = parser.isSet(arg_no_gui);
+
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 	{
 		gui_app->setAttribute(Qt::AA_UseHighDpiPixmaps);
 		gui_app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
 		gui_app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
 
-		gui_app->SetShowGui(!parser.isSet(arg_no_gui));
+		gui_app->SetShowGui(!s_no_gui);
 		gui_app->SetUseCliStyle(use_cli_style);
-		gui_app->Init();
+
+		if (!gui_app->Init())
+		{
+			Emu.Quit(true);
+			return 0;
+		}
 	}
 	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
 	{
 		s_headless = true;
-		headless_app->Init();
+
+		if (!headless_app->Init())
+		{
+			Emu.Quit(true);
+			return 0;
+		}
+	}
+	else
+	{
+		// Should be unreachable
+		report_fatal_error("RPCS3 initialization failed!");
+		return 1;
 	}
 
 #ifdef _WIN32
@@ -564,7 +586,16 @@ int main(int argc, char** argv)
 		{
 			Emu.argv = std::move(argv);
 			Emu.SetForceBoot(true);
-			Emu.BootGame(path, "", true);
+
+			if (const game_boot_result error = Emu.BootGame(path, ""); error != game_boot_result::no_errors)
+			{
+				sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
+
+				if (s_headless || s_no_gui)
+				{
+					report_fatal_error(fmt::format("Booting '%s' failed!\n\nReason: %s", path, error));
+				}
+			}
 		});
 	}
 

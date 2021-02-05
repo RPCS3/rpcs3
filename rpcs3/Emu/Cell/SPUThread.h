@@ -626,7 +626,6 @@ enum class spu_type : u32
 class spu_thread : public cpu_thread
 {
 public:
-	virtual std::string dump_all() const override;
 	virtual std::string dump_regs() const override;
 	virtual std::string dump_callstack() const override;
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
@@ -634,6 +633,7 @@ public:
 	virtual void cpu_task() override final;
 	virtual void cpu_return() override;
 	virtual ~spu_thread() override;
+	void cleanup();
 	void cpu_init();
 
 	static const u32 id_base = 0x02000000; // TODO (used to determine thread type)

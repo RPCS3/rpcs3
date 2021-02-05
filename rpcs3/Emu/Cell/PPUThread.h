@@ -118,7 +118,6 @@ public:
 	static const u32 id_count = 100;
 	static constexpr std::pair<u32, u32> id_invl_range = {12, 12};
 
-	virtual std::string dump_all() const override;
 	virtual std::string dump_regs() const override;
 	virtual std::string dump_callstack() const override;
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
@@ -267,6 +266,8 @@ public:
 
 	// Thread name
 	atomic_ptr<std::string> ppu_tname;
+
+	u64 saved_native_sp = 0; // Host thread's stack pointer for emulated longjmp
 
 	u64 last_ftsc = 0;
 	u64 last_ftime = 0;

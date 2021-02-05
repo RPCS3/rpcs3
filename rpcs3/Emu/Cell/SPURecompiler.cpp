@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/IdManager.h"
+#include "Emu/perf_meter.hpp"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/JIT.h"
@@ -434,7 +435,7 @@ void spu_cache::initialize()
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
 	{
 		// Set low priority
-		thread_ctrl::set_native_priority(-1);
+		thread_ctrl::scoped_priority low_prio(-1);
 
 		// Initialize compiler instances for parallel compilation
 		std::unique_ptr<spu_recompiler_base> compiler;
@@ -457,13 +458,12 @@ void spu_cache::initialize()
 		std::vector<be_t<u32>> ls(0x10000);
 
 		// Build functions
-		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++)
+		for (usz func_i = fnext++; func_i < func_list.size(); func_i = fnext++, g_progr_pdone++)
 		{
 			const spu_program& func = std::as_const(func_list)[func_i];
 
 			if (Emu.IsStopped() || fail_flag)
 			{
-				g_progr_pdone++;
 				continue;
 			}
 
@@ -489,7 +489,6 @@ void spu_cache::initialize()
 				(inverse_bounds && (hash_start < g_cfg.core.spu_llvm_lower_bound && hash_start > g_cfg.core.spu_llvm_upper_bound)))
 			{
 				spu_log.error("[Debug] Skipped function %s", fmt::base57(hash_start));
-				g_progr_pdone++;
 				result++;
 				continue;
 			}
@@ -515,8 +514,6 @@ void spu_cache::initialize()
 
 			// Clear fake LS
 			std::memset(ls.data() + start / 4, 0, 4 * (size0 - 1));
-
-			g_progr_pdone++;
 
 			result++;
 		}
@@ -3151,7 +3148,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 {
-	SPUDisAsm dis_asm(CPUDisAsm_DumpMode, reinterpret_cast<const u8*>(result.data.data()) - result.lower_bound);
+	SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()) - result.lower_bound);
 
 	std::string hash;
 	{
@@ -6518,14 +6515,27 @@ public:
 		{
 			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = (sc + (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3)) & 0xf;
-			set_vr(op.rt, pshufb(as, sh));
+			const auto sh = sc + (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
+
+			if (m_use_avx512_icl)
+			{
+				set_vr(op.rt, vpermb(as, sh));
+				return;
+			}
+
+			set_vr(op.rt, pshufb(as, (sh & 0xf)));
+			return;
+		}
+		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sh = sc - (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
+
+		if (m_use_avx512_icl)
+		{
+			set_vr(op.rt, vpermb(a, sh));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = (sc - (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3)) & 0xf;
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb(a, (sh & 0xf)));
 	}
 
 	void ROTQMBYBI(spu_opcode_t op)
@@ -6648,14 +6658,28 @@ public:
 		{
 			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
-			const auto sh = eval((sc + splat_scalar(b)) & 0xf);
-			set_vr(op.rt, pshufb(as, sh));
+			const auto sh = eval(sc + splat_scalar(b));
+
+			if (m_use_avx512_icl)
+			{
+				set_vr(op.rt, vpermb(as, sh));
+				return;
+			}
+
+			set_vr(op.rt, pshufb(as, (sh & 0xf)));
 			return;
 		}
 
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = eval((sc - splat_scalar(b)) & 0xf);
-		set_vr(op.rt, pshufb(a, sh));
+		const auto sh = eval(sc - splat_scalar(b));
+
+		if (m_use_avx512_icl)
+		{
+			set_vr(op.rt, vpermb(a, sh));
+			return;
+		}
+
+		set_vr(op.rt, pshufb(a, (sh & 0xf)));
 	}
 
 	void ROTQMBY(spu_opcode_t op)
@@ -8871,6 +8895,8 @@ struct spu_llvm_worker
 
 	void operator()()
 	{
+		perf_meter<"SPUW"_u32> perf0;
+
 		// SPU LLVM Recompiler instance
 		const auto compiler = spu_recompiler_base::make_llvm_recompiler();
 		compiler->init();
@@ -8878,8 +8904,24 @@ struct spu_llvm_worker
 		// Fake LS
 		std::vector<be_t<u32>> ls(0x10000);
 
-		for (auto* prog : registered)
+		for (auto slice = registered.pop_all();; [&]
 		{
+			if (slice)
+			{
+				slice.pop_front();
+			}
+
+			if (slice || thread_ctrl::state() == thread_state::aborting)
+			{
+				return;
+			}
+
+			thread_ctrl::wait_on(registered, nullptr);
+			slice = registered.pop_all();
+		}())
+		{
+			auto* prog = slice.get();
+
 			if (thread_ctrl::state() == thread_state::aborting)
 			{
 				break;
@@ -9008,7 +9050,7 @@ struct spu_llvm
 
 		u32 worker_count = 1;
 
-		if (uint hc = std::thread::hardware_concurrency(); hc >= 12)
+		if (uint hc = utils::get_thread_count(); hc >= 12)
 		{
 			worker_count = hc - 10;
 		}

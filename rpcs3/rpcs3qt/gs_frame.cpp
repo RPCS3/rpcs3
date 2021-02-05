@@ -286,12 +286,17 @@ bool gs_frame::get_mouse_lock_state()
 
 void gs_frame::close()
 {
-	if (!Emu.IsStopped())
+	Emu.CallAfter([this]()
 	{
-		Emu.Stop();
-	}
+		QWindow::hide(); // Workaround
 
-	Emu.CallAfter([this]() { deleteLater(); });
+		if (!Emu.IsStopped())
+		{
+			Emu.Stop();
+		}
+
+		deleteLater();
+	});
 }
 
 bool gs_frame::shown()
@@ -301,7 +306,7 @@ bool gs_frame::shown()
 
 void gs_frame::hide()
 {
-	Emu.CallAfter([this]() {QWindow::hide(); });
+	Emu.CallAfter([this]() { QWindow::hide(); });
 }
 
 void gs_frame::show()
@@ -398,6 +403,14 @@ int gs_frame::client_height()
 void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 {
 	static Timer fps_t;
+
+	if (!m_flip_showed_frame)
+	{
+		// Show on first flip
+		m_flip_showed_frame = true;
+		show();
+		fps_t.Start();
+	}
 
 	++m_frames;
 
@@ -632,6 +645,19 @@ void gs_frame::progress_reset(bool reset_limit)
 	}
 }
 
+void gs_frame::progress_set_value(int value)
+{
+#ifdef _WIN32
+	if (m_tb_progress)
+	{
+		m_tb_progress->setValue(std::clamp(value, m_tb_progress->minimum(), m_tb_progress->maximum()));
+	}
+#elif HAVE_QTDBUS
+	m_progress_value = std::clamp(value, 0, m_gauge_max);
+	UpdateProgress(m_progress_value);
+#endif
+}
+
 void gs_frame::progress_increment(int delta)
 {
 	if (delta == 0)
@@ -642,11 +668,10 @@ void gs_frame::progress_increment(int delta)
 #ifdef _WIN32
 	if (m_tb_progress)
 	{
-		m_tb_progress->setValue(std::clamp(m_tb_progress->value() + delta, m_tb_progress->minimum(), m_tb_progress->maximum()));
+		progress_set_value(m_tb_progress->value() + delta);
 	}
 #elif HAVE_QTDBUS
-	m_progress_value = std::clamp(m_progress_value + delta, 0, m_gauge_max);
-	UpdateProgress(m_progress_value);
+	progress_set_value(m_progress_value + delta);
 #endif
 }
 

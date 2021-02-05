@@ -3,6 +3,7 @@
 
 #include "Utilities/bin_patch.h"
 #include "Utilities/StrUtil.h"
+#include "Utilities/address_range.h"
 #include "Crypto/sha1.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
@@ -30,7 +31,7 @@ extern std::string ppu_get_function_name(const std::string& _module, u32 fnid);
 extern std::string ppu_get_variable_name(const std::string& _module, u32 vnid);
 extern void ppu_register_range(u32 addr, u32 size);
 extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr);
-extern void ppu_initialize(const ppu_module& info);
+extern bool ppu_initialize(const ppu_module& info, bool = false);
 extern void ppu_initialize();
 
 extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
@@ -243,7 +244,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 	};
 
 	// Initialize double-purpose fake OPD array for HLE functions
-	const auto& hle_funcs = ppu_function_manager::get();
+	const auto& hle_funcs = ppu_function_manager::get(g_cfg.core.ppu_decoder == ppu_decoder_type::llvm);
 
 	// Allocate memory for the array (must be called after fixed allocations)
 	ppu_function_manager::addr = vm::alloc(::size32(hle_funcs) * 8, vm::main);
@@ -466,7 +467,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 
 				if (i < lib.num_func)
 				{
-					ppu_loader.notice("** Special: [%s] at 0x%x", ppu_get_function_name({}, nid), addr);
+					ppu_loader.notice("** Special: [%s] at 0x%x [0x%x, 0x%x]", ppu_get_function_name({}, nid), addr, vm::_ref<u32>(addr), vm::_ref<u32>(addr + 4));
 				}
 				else
 				{
@@ -785,6 +786,27 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 	}
 }
 
+void try_spawn_ppu_if_exclusive_program(const ppu_module& m)
+{
+	// If only PRX/OVL has been loaded at Emu.BootGame(), launch a single PPU thread so its memory can be viewed
+	if (Emu.IsReady() && g_fxo->get<ppu_module>()->segs.empty())
+	{
+		ppu_thread_params p
+		{
+		    .stack_addr = vm::cast(vm::alloc(0x100000, vm::stack, 4096)),
+		    .stack_size = 0x100000,
+		};
+
+		auto ppu = idm::make_ptr<named_thread<ppu_thread>>("PPU[0x1000000] Thread (test_thread)", p, "test_thread", 0);
+
+		ppu->cmd_push({ppu_cmd::initialize, 0});
+		ppu->cia = m.funcs[0].addr;
+
+		// For kernel explorer
+		g_fxo->init<lv2_memory_container>(4096);
+	}
+}
+
 std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::string& path)
 {
 	// Create new PRX object
@@ -799,6 +821,9 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	// Library hash
 	sha1_context sha;
 	sha1_starts(&sha);
+
+	u32 end = 0;
+	u32 toc = 0;
 
 	for (const auto& prog : elf.progs)
 	{
@@ -843,6 +868,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 				if (prog.p_flags & 0x1)
 				{
 					ppu_register_range(addr, mem_size);
+					end = std::max<u32>(end, addr + mem_size);
 				}
 
 				_seg.addr = addr;
@@ -857,6 +883,11 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 		default: ppu_loader.error("Unknown segment type! 0x%08x", p_type);
 		}
+	}
+
+	if (!elf.shdrs.empty())
+	{
+		end = 0;
 	}
 
 	for (const auto& s : elf.shdrs)
@@ -883,6 +914,11 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 					_sec.flags = static_cast<u32>(s.sh_flags & 7);
 					_sec.filesz = 0;
 					prx->secs.emplace_back(_sec);
+
+					if (_sec.flags & 0x4)
+					{
+						end = std::max<u32>(end, _sec.addr + _sec.size);
+					}
 					break;
 				}
 			}
@@ -1036,7 +1072,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		prx->specials = ppu_load_exports(link, lib_info->exports_start, lib_info->exports_end);
 		prx->imports = ppu_load_imports(prx->relocs, link, lib_info->imports_start, lib_info->imports_end);
 		std::stable_sort(prx->relocs.begin(), prx->relocs.end());
-		prx->analyse(lib_info->toc, 0);
+		toc = lib_info->toc;
 	}
 	else
 	{
@@ -1071,26 +1107,23 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, vm::g_base_addr);
 	}
 
+	if (applied)
+	{
+		// TODO (invalidate constraints if patches were applied)
+		end = 0;
+	}
+
 	// Embedded SPU elf patching
 	for (const auto& seg : prx->segs)
 	{
 		ppu_check_patch_spu_images(seg);
 	}
 
+	prx->analyse(toc, 0, end);
+
 	ppu_loader.success("PRX library hash: %s (<- %u)", hash, applied);
 
-	if (Emu.IsReady() && g_fxo->get<ppu_module>()->segs.empty())
-	{
-		// Special loading mode
-		ppu_thread_params p{
-		    .stack_addr = vm::cast(vm::alloc(0x100000, vm::stack, 4096)),
-		    .stack_size = 0x100000,
-		};
-
-		auto ppu = idm::make_ptr<named_thread<ppu_thread>>("PPU[0x1000000] Thread (test_thread)", p, "test_thread", 0);
-
-		ppu->cmd_push({ppu_cmd::initialize, 0});
-	}
+	try_spawn_ppu_if_exclusive_program(*prx);
 
 	return prx;
 }
@@ -1128,8 +1161,24 @@ void ppu_unload_prx(const lv2_prx& prx)
 	}
 }
 
-void ppu_load_exec(const ppu_exec_object& elf)
+bool ppu_load_exec(const ppu_exec_object& elf)
 {
+	// Check if it is a standalone executable first
+	for (const auto& prog : elf.progs)
+	{
+		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
+		{
+			using addr_range = utils::address_range;
+
+			const addr_range r = addr_range::start_length(static_cast<u32>(prog.p_vaddr), static_cast<u32>(prog.p_memsz));
+
+			if ((prog.p_vaddr | prog.p_memsz) > UINT32_MAX || !r.valid() || !r.inside(addr_range::start_length(0x00000000, 0x30000000)))
+			{
+				return false;
+			}
+		}
+	}
+
 	// Set for delayed initialization in ppu_initialize()
 	const auto _main = g_fxo->get<ppu_module>();
 
@@ -1148,9 +1197,33 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	u32 malloc_pagesize = 0x100000;
 	u32 ppc_seg = 0;
 
+	// Limit for analysis
+	u32 end = 0;
+
 	// Executable hash
 	sha1_context sha;
 	sha1_starts(&sha);
+
+	struct on_fatal_error
+	{
+		ppu_module* _main;
+		bool errored = true;
+
+		~on_fatal_error()
+		{
+			if (!errored)
+			{
+				return;
+			}
+
+			// Revert previous allocations on an error
+			for (const auto& seg : _main->segs)
+			{
+				vm::dealloc(seg.addr);
+			}
+		}
+
+	} error_handler{_main};
 
 	// Allocate memory at fixed positions
 	for (const auto& prog : elf.progs)
@@ -1172,7 +1245,10 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		if (type == 0x1 /* LOAD */ && prog.p_memsz)
 		{
 			if (prog.bin.size() > size || prog.bin.size() != prog.p_filesz)
-				fmt::throw_exception("Invalid binary size (0x%llx, memsz=0x%x)", prog.bin.size(), size);
+			{
+				ppu_loader.fatal("ppu_load_exec(): Invalid binary size (0x%llx, memsz=0x%x)", prog.bin.size(), size);
+				return false;
+			}
 
 			if (!vm::falloc(addr, size, vm::main))
 			{
@@ -1180,7 +1256,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 				if (!vm::falloc(addr, size))
 				{
-					fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
+					ppu_loader.fatal("ppu_load_exec(): vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
+					return false;
 				}
 			}
 
@@ -1194,11 +1271,17 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			if (prog.p_flags & 0x1)
 			{
 				ppu_register_range(addr, size);
+				end = std::max<u32>(end, addr + size);
 			}
 
 			// Store only LOAD segments (TODO)
 			_main->segs.emplace_back(_seg);
 		}
+	}
+
+	if (!elf.shdrs.empty())
+	{
+		end = 0;
 	}
 
 	// Load section list, used by the analyser
@@ -1219,6 +1302,11 @@ void ppu_load_exec(const ppu_exec_object& elf)
 		if (addr && size)
 		{
 			_main->secs.emplace_back(_sec);
+
+			if (_sec.flags & 0x4)
+			{
+				end = std::max<u32>(end, addr + size);
+			}
 		}
 	}
 
@@ -1298,11 +1386,17 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 		case 0x00000007: // TLS
 		{
+			ppu_loader.notice("TLS info segment found: tls-image=*0x%x, image-size=0x%x, tls-size=0x%x", prog.p_vaddr, prog.p_filesz, prog.p_memsz);
+
+			if ((prog.p_vaddr | prog.p_filesz | prog.p_memsz) > UINT32_MAX)
+			{
+				ppu_loader.fatal("ppu_load_exec(): TLS segment is invalid!");
+				return false;
+			}
+
 			tls_vaddr = vm::cast(prog.p_vaddr);
 			tls_fsize = ::narrow<u32>(prog.p_filesz);
 			tls_vsize = ::narrow<u32>(prog.p_memsz);
-
-			ppu_loader.notice("TLS info segment found: tls-image=*0x%x, image-size=0x%x, tls-size=0x%x", tls_vaddr, tls_fsize, tls_vsize);
 			break;
 		}
 
@@ -1387,7 +1481,8 @@ void ppu_load_exec(const ppu_exec_object& elf)
 
 				if (proc_prx_param.magic != 0x1b434cecu)
 				{
-					fmt::throw_exception("Bad magic! (0x%x)", proc_prx_param.magic);
+					ppu_loader.fatal("ppu_load_exec(): Bad magic! (0x%x)", proc_prx_param.magic);
+					return false;
 				}
 
 				ppu_load_exports(link, proc_prx_param.libent_start, proc_prx_param.libent_end);
@@ -1475,8 +1570,14 @@ void ppu_load_exec(const ppu_exec_object& elf)
 	_main->name.clear();
 	_main->path = vfs::get(Emu.argv[0]);
 
+	if (applied)
+	{
+		// TODO (invalidate constraints if patches were applied)
+		end = 0;
+	}
+
 	// Analyse executable (TODO)
-	_main->analyse(0, static_cast<u32>(elf.header.e_entry));
+	_main->analyse(0, static_cast<u32>(elf.header.e_entry), end);
 
 	// Validate analyser results (not required)
 	_main->validate(0);
@@ -1646,18 +1747,40 @@ void ppu_load_exec(const ppu_exec_object& elf)
 			ensure(vm::page_protect(addr, utils::align(size, 0x1000), 0, 0, vm::page_writable));
 		}
 	}
+
+	error_handler.errored = false;
+	return true;
 }
 
-std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const std::string& path)
+std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object& elf, const std::string& path)
 {
-	const auto ovlm = idm::make_ptr<lv2_obj, lv2_overlay>();
-
 	// Access linkage information object
 	const auto link = g_fxo->get<ppu_linkage_info>();
 
 	// Executable hash
 	sha1_context sha;
 	sha1_starts(&sha);
+
+	// Check if it is an overlay executable first
+	for (const auto& prog : elf.progs)
+	{
+		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
+		{
+			using addr_range = utils::address_range;
+
+			const addr_range r = addr_range::start_length(::narrow<u32>(prog.p_vaddr), ::narrow<u32>(prog.p_memsz));
+
+			if (!r.valid() || !r.inside(addr_range::start_length(0x30000000, 0x10000000)))
+			{
+				// TODO: Check error and if there's a better way to error check
+				return {nullptr, CELL_ENOEXEC};
+			}
+		}
+	}
+
+	const auto ovlm = std::make_shared<lv2_overlay>();
+
+	u32 end = 0;
 
 	// Allocate memory at fixed positions
 	for (const auto& prog : elf.progs)
@@ -1682,7 +1805,18 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 				fmt::throw_exception("Invalid binary size (0x%llx, memsz=0x%x)", prog.bin.size(), size);
 
 			if (!vm::get(vm::any, 0x30000000)->falloc(addr, size))
-				fmt::throw_exception("vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
+			{
+				ppu_loader.error("ppu_load_overlay(): vm::falloc() failed (addr=0x%x, memsz=0x%x)", addr, size);
+
+				// Revert previous allocations
+				for (const auto& seg : ovlm->segs)
+				{
+					ensure(vm::dealloc(seg.addr));
+				}
+
+				// TODO: Check error code, maybe disallow more than one overlay instance completely
+				return {nullptr, CELL_EBUSY};
+			}
 
 			// Copy segment data, hash it
 			std::memcpy(vm::base(addr), prog.bin.data(), prog.bin.size());
@@ -1694,11 +1828,17 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 			if (prog.p_flags & 0x1)
 			{
 				ppu_register_range(addr, size);
+				end = std::max<u32>(end, addr + size);
 			}
 
 			// Store only LOAD segments (TODO)
 			ovlm->segs.emplace_back(_seg);
 		}
+	}
+
+	if (elf.shdrs.size())
+	{
+		end = 0;
 	}
 
 	// Load section list, used by the analyser
@@ -1719,6 +1859,11 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 		if (addr && size)
 		{
 			ovlm->secs.emplace_back(_sec);
+
+			if (_sec.flags & 0x4)
+			{
+				end = std::max<u32>(end, addr + size);
+			}
 		}
 	}
 
@@ -1835,8 +1980,14 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 
 	ovlm->entry = static_cast<u32>(elf.header.e_entry);
 
+	if (applied)
+	{
+		// TODO (invalidate constraints if patches were applied)
+		end = 0;
+	}
+
 	// Analyse executable (TODO)
-	ovlm->analyse(0, ovlm->entry);
+	ovlm->analyse(0, ovlm->entry, end);
 
 	// Validate analyser results (not required)
 	ovlm->validate(0);
@@ -1845,5 +1996,9 @@ std::shared_ptr<lv2_overlay> ppu_load_overlay(const ppu_exec_object& elf, const 
 	ovlm->name = path.substr(path.find_last_of('/') + 1);
 	ovlm->path = path;
 
-	return ovlm;
+	idm::import_existing<lv2_obj, lv2_overlay>(ovlm);
+
+	try_spawn_ppu_if_exclusive_program(*ovlm);
+
+	return {std::move(ovlm), {}};
 }

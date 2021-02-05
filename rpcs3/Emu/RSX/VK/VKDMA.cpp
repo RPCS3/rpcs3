@@ -4,23 +4,27 @@
 #include "vkutils/device.h"
 
 #include "Emu/Memory/vm.h"
+#include "Utilities/mutex.h"
 
 #include "util/asm.hpp"
 #include <unordered_map>
 
 namespace vk
 {
-	static constexpr usz s_dma_block_length = 0x01000000;
-	static constexpr u32    s_dma_block_mask = 0xFF000000;
-	//static constexpr u32    s_dma_offset_mask = 0x00FFFFFF;
+	static constexpr usz s_dma_block_length = 0x00010000;
+	static constexpr u32 s_dma_block_mask   = 0xFFFF0000;
 
-	static constexpr u32    s_page_size = 16384;
-	static constexpr u32    s_page_align = s_page_size - 1;
-	static constexpr u32    s_pages_per_entry = 32;
-	static constexpr u32    s_bits_per_page = 2;
-	static constexpr u32    s_bytes_per_entry = (s_page_size * s_pages_per_entry);
+	std::unordered_map<u32, std::unique_ptr<dma_block>> g_dma_pool;
+	shared_mutex g_dma_mutex;
 
-	std::unordered_map<u32, dma_block> g_dma_pool;
+	// Validation
+	atomic_t<u64> s_allocated_dma_pool_size{ 0 };
+
+	dma_block::~dma_block()
+	{
+		// Use safe free (uses gc to clean up)
+		free();
+	}
 
 	void* dma_block::map_range(const utils::address_range& range)
 	{
@@ -47,85 +51,46 @@ namespace vk
 		}
 	}
 
-	void dma_block::init(const render_device& dev, u32 addr, usz size)
+	void dma_block::allocate(const render_device& dev, usz size)
 	{
-		ensure(size);
-		ensure(!(size % s_dma_block_length));
-		base_address = addr;
+		// Acquired blocks are always to be assumed dirty. It is not possible to synchronize host access and inline
+		// buffer copies without causing weird issues. Overlapped incomplete data ends up overwriting host-uploaded data.
+		free();
 
 		allocated_memory = std::make_unique<vk::buffer>(dev, size,
 			dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
 
-		page_info.resize(size / s_bytes_per_entry, ~0ull);
+		s_allocated_dma_pool_size += allocated_memory->size();
+	}
+
+	void dma_block::free()
+	{
+		if (allocated_memory)
+		{
+			s_allocated_dma_pool_size -= allocated_memory->size();
+
+			auto gc = vk::get_resource_manager();
+			gc->dispose(allocated_memory);
+		}
+	}
+
+	void dma_block::init(const render_device& dev, u32 addr, usz size)
+	{
+		ensure((size > 0) && !((size | addr) & ~s_dma_block_mask));
+		base_address = addr;
+
+		allocate(dev, size);
+		ensure(!inheritance_info.parent);
 	}
 
 	void dma_block::init(dma_block* parent, u32 addr, usz size)
 	{
+		ensure((size > 0) && !((size | addr) & ~s_dma_block_mask));
+
 		base_address = addr;
 		inheritance_info.parent = parent;
 		inheritance_info.block_offset = (addr - parent->base_address);
-	}
-
-	void dma_block::set_page_bit(u32 offset, u64 bits)
-	{
-		const auto entry = (offset / s_bytes_per_entry);
-		const auto word =  entry / s_pages_per_entry;
-		const auto shift = (entry % s_pages_per_entry) * s_bits_per_page;
-
-		page_info[word] &= ~(3 << shift);
-		page_info[word] |= (bits << shift);
-	}
-
-	bool dma_block::test_page_bit(u32 offset, u64 bits)
-	{
-		const auto entry = (offset / s_bytes_per_entry);
-		const auto word = entry / s_pages_per_entry;
-		const auto shift = (entry % s_pages_per_entry) * s_bits_per_page;
-
-		return !!(page_info[word] & (bits << shift));
-	}
-
-	void dma_block::mark_dirty(const utils::address_range& range)
-	{
-		if (!inheritance_info.parent)
-		{
-			const u32 start = utils::align(range.start, s_page_size);
-			const u32 end = ((range.end + 1) & s_page_align);
-
-			for (u32 page = start; page < end; page += s_page_size)
-			{
-				set_page_bit(page - base_address, page_bits::dirty);
-			}
-
-			if (start > range.start) [[unlikely]]
-			{
-				set_page_bit(start - s_page_size, page_bits::nocache);
-			}
-
-			if (end < range.end) [[unlikely]]
-			{
-				set_page_bit(end + s_page_size, page_bits::nocache);
-			}
-		}
-		else
-		{
-			inheritance_info.parent->mark_dirty(range);
-		}
-	}
-
-	void dma_block::set_page_info(u32 page_offset, const std::vector<u64>& bits)
-	{
-		if (!inheritance_info.parent)
-		{
-			auto bit_offset = page_offset / s_bytes_per_entry;
-			ensure(bit_offset + bits.size() <= page_info.size());
-			std::memcpy(page_info.data() + bit_offset, bits.data(), bits.size());
-		}
-		else
-		{
-			inheritance_info.parent->set_page_info(page_offset + inheritance_info.block_offset, bits);
-		}
 	}
 
 	void dma_block::flush(const utils::address_range& range)
@@ -178,9 +143,10 @@ namespace vk
 		return inheritance_info.parent->head();
 	}
 
-	void dma_block::set_parent(command_buffer& cmd, dma_block* parent)
+	void dma_block::set_parent(const command_buffer& cmd, dma_block* parent)
 	{
 		ensure(parent);
+		ensure(parent->base_address < base_address);
 		if (inheritance_info.parent == parent)
 		{
 			// Nothing to do
@@ -192,40 +158,19 @@ namespace vk
 
 		if (allocated_memory)
 		{
-			VkBufferCopy copy{};
-			copy.srcOffset = 0;
-			copy.dstOffset = inheritance_info.block_offset;
-			copy.size = allocated_memory->size();
-			vkCmdCopyBuffer(cmd, allocated_memory->value, parent->allocated_memory->value, 1, &copy);
-
-			auto gc = vk::get_resource_manager();
-			gc->dispose(allocated_memory);
-
-			parent->set_page_info(inheritance_info.block_offset, page_info);
-			page_info.clear();
+			// Acquired blocks are always to be assumed dirty. It is not possible to synchronize host access and inline
+			// buffer copies without causing weird issues. Overlapped incomplete data ends up overwriting host-uploaded data.
+			free();
 		}
 	}
 
-	void dma_block::extend(command_buffer& cmd, const render_device &dev, usz new_size)
+	void dma_block::extend(const command_buffer& cmd, const render_device& dev, usz new_size)
 	{
 		ensure(allocated_memory);
 		if (new_size <= allocated_memory->size())
 			return;
 
-		const auto required_entries = new_size / s_bytes_per_entry;
-		page_info.resize(required_entries, ~0ull);
-
-		auto new_allocation = std::make_unique<vk::buffer>(dev, new_size,
-			dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
-
-		VkBufferCopy copy{};
-		copy.size = allocated_memory->size();
-		vkCmdCopyBuffer(cmd, allocated_memory->value, new_allocation->value, 1, &copy);
-
-		auto gc = vk::get_resource_manager();
-		gc->dispose(allocated_memory);
-		allocated_memory = std::move(new_allocation);
+		allocate(dev, new_size);
 	}
 
 	u32 dma_block::start() const
@@ -244,100 +189,214 @@ namespace vk
 		return (allocated_memory) ? allocated_memory->size() : 0;
 	}
 
-	std::pair<u32, vk::buffer*> map_dma(command_buffer& cmd, u32 local_address, u32 length)
+	void dma_block_EXT::allocate(const render_device& dev, usz size)
 	{
-		const auto map_range = utils::address_range::start_length(local_address, length);
-		const auto first_block = (local_address & s_dma_block_mask);
-		const auto limit = local_address + length - 1;
-		auto last_block = (limit & s_dma_block_mask);
+		// Acquired blocks are always to be assumed dirty. It is not possible to synchronize host access and inline
+		// buffer copies without causing weird issues. Overlapped incomplete data ends up overwriting host-uploaded data.
+		free();
 
+		allocated_memory = std::make_unique<vk::buffer>(dev,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			vm::get_super_ptr<void>(base_address),
+			size);
+
+		s_allocated_dma_pool_size += allocated_memory->size();
+	}
+
+	void* dma_block_EXT::map_range(const utils::address_range& range)
+	{
+		return vm::get_super_ptr<void>(range.start);
+	}
+
+	void dma_block_EXT::unmap()
+	{
+		// NOP
+	}
+
+	void dma_block_EXT::flush(const utils::address_range& range)
+	{
+		// NOP
+	}
+
+	void dma_block_EXT::load(const utils::address_range& range)
+	{
+		// NOP
+	}
+
+	bool test_host_pointer(u32 base_address, usz length)
+	{
+#ifdef _WIN32
+		MEMORY_BASIC_INFORMATION mem_info;
+		if (!::VirtualQuery(vm::get_super_ptr<const void>(base_address), &mem_info, sizeof(mem_info)))
+		{
+			rsx_log.error("VirtualQuery failed! LastError=0x%x", GetLastError());
+			return false;
+		}
+
+		return (mem_info.RegionSize >= length);
+#else
+		return true; // *nix behavior is unknown with NVIDIA drivers
+#endif
+	}
+
+	void create_dma_block(std::unique_ptr<dma_block>& block, u32 base_address, u32 expected_length)
+	{
+		const auto vendor = g_render_device->gpu().get_driver_vendor();
+
+#ifdef _WIN32
+		const bool allow_host_buffers = (vendor == driver_vendor::NVIDIA) ?
+			//test_host_pointer(base_address, expected_length) :
+			rsx::get_location(base_address) == CELL_GCM_LOCATION_LOCAL : // NVIDIA workaround
+			true;
+#else
+		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations		
+		const bool allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV);
+#endif
+		if (allow_host_buffers && g_render_device->get_external_memory_host_support())
+		{
+			block.reset(new dma_block_EXT());
+		}
+		else
+		{
+			block.reset(new dma_block());
+		}
+
+		block->init(*g_render_device, base_address, expected_length);
+	}
+
+	std::pair<u32, vk::buffer*> map_dma(const command_buffer& cmd, u32 local_address, u32 length)
+	{
+		// Not much contention expected here, avoid searching twice
+		std::lock_guard lock(g_dma_mutex);
+
+		const auto map_range = utils::address_range::start_length(local_address, length);
+		auto first_block = (local_address & s_dma_block_mask);
+
+		if (auto found = g_dma_pool.find(first_block); found != g_dma_pool.end())
+		{
+			if (found->second->end() >= map_range.end)
+			{
+				return found->second->get(map_range);
+			}
+		}
+
+		auto last_block = (map_range.end & s_dma_block_mask);
 		if (first_block == last_block) [[likely]]
 		{
-			if (auto found = g_dma_pool.find(first_block); found != g_dma_pool.end())
-			{
-				return found->second.get(map_range);
-			}
-
 			auto &block_info = g_dma_pool[first_block];
-			block_info.init(*g_render_device, first_block, s_dma_block_length);
-			return block_info.get(map_range);
+			ensure(!block_info);
+
+			create_dma_block(block_info, first_block, s_dma_block_length);
+			return block_info->get(map_range);
 		}
 
-		dma_block* block_head = nullptr;
-		auto block_end = utils::align(limit, s_dma_block_length);
-
-		// Reverse scan to try and find the minimum required length in case of other chaining
-		for (auto block = last_block; block != first_block; block -= s_dma_block_length)
+		// Scan range for overlapping sections and update 'chains' accordingly
+		for (auto block = first_block; block <= last_block; block += s_dma_block_length)
 		{
-			if (auto found = g_dma_pool.find(block); found != g_dma_pool.end())
+			if (auto& entry = g_dma_pool[block])
 			{
-				const auto end = found->second.end();
-				last_block = std::max(last_block, end & s_dma_block_mask);
-				block_end = std::max(block_end, end + 1);
-				break;
+				first_block = std::min(first_block, entry->head()->start() & s_dma_block_mask);
+				last_block = std::max(last_block, entry->end() & s_dma_block_mask);
 			}
 		}
+
+		std::vector<std::unique_ptr<dma_block>> stale_references;
+		dma_block* block_head = nullptr;
 
 		for (auto block = first_block; block <= last_block; block += s_dma_block_length)
 		{
 			auto found = g_dma_pool.find(block);
-			const bool exists = (found != g_dma_pool.end());
-			auto entry = exists ? &found->second : &g_dma_pool[block];
+			auto &entry = g_dma_pool[block];
 
 			if (block == first_block)
 			{
-				block_head = entry->head();
+				if (entry)
+				{
+					// Then the references to this object do not go to the end of the list as will be done with this new allocation.
+					// A dumb release is therefore safe...
+					ensure(entry->end() < map_range.end);
+					stale_references.push_back(std::move(entry));
+				}
 
-				if (exists)
-				{
-					if (entry->end() < limit)
-					{
-						auto new_length = block_end - block_head->start();
-						block_head->extend(cmd, *g_render_device, new_length);
-					}
-				}
-				else
-				{
-					auto required_size = (block_end - block);
-					block_head->init(*g_render_device, block, required_size);
-				}
+				auto required_size = (last_block - first_block + s_dma_block_length);
+				create_dma_block(entry, block, required_size);
+				block_head = entry->head();
+			}
+			else if (entry)
+			{
+				ensure((entry->end() & s_dma_block_mask) <= last_block);
+				entry->set_parent(cmd, block_head);
 			}
 			else
 			{
-				if (exists)
-				{
-					entry->set_parent(cmd, block_head);
-				}
-				else
-				{
-					entry->init(block_head, block, s_dma_block_length);
-				}
+				entry.reset(new dma_block());
+				entry->init(block_head, block, s_dma_block_length);
 			}
 		}
+
+		// Check that all the math adds up...
+		stale_references.clear();
+		ensure(s_allocated_dma_pool_size == g_dma_pool.size() * s_dma_block_length);
 
 		ensure(block_head);
 		return block_head->get(map_range);
 	}
 
+	void unmap_dma(u32 local_address, u32 length)
+	{
+		std::lock_guard lock(g_dma_mutex);
+
+		const u32 start = (local_address & s_dma_block_mask);
+		const u32 end = utils::align(local_address + length, s_dma_block_length);
+
+		for (u32 block = start; block < end;)
+		{
+			if (auto found = g_dma_pool.find(block); found != g_dma_pool.end())
+			{
+				auto head = found->second->head();
+				if (dynamic_cast<dma_block_EXT*>(head))
+				{
+					// Passthrough block. Must unmap from GPU
+					const u32 start_block = head->start();
+					const u32 last_block = head->start() + head->size();
+
+					for (u32 block_ = start_block; block_ < last_block; block_ += s_dma_block_length)
+					{
+						g_dma_pool.erase(block_);
+					}
+
+					block = last_block;
+					continue;
+				}
+			}
+
+			block += s_dma_block_length;
+		}
+
+		ensure(s_allocated_dma_pool_size == g_dma_pool.size() * s_dma_block_length);
+	}
+
 	template<bool load>
 	void sync_dma_impl(u32 local_address, u32 length)
 	{
+		reader_lock lock(g_dma_mutex);
+
 		const auto limit = local_address + length - 1;
 		while (length)
 		{
 			u32 block = (local_address & s_dma_block_mask);
 			if (auto found = g_dma_pool.find(block); found != g_dma_pool.end())
 			{
-				const auto sync_end = std::min(limit, found->second.end());
+				const auto sync_end = std::min(limit, found->second->end());
 				const auto range = utils::address_range::start_end(local_address, sync_end);
 
 				if constexpr (load)
 				{
-					found->second.load(range);
+					found->second->load(range);
 				}
 				else
 				{
-					found->second.flush(range);
+					found->second->flush(range);
 				}
 
 				if (sync_end < limit) [[unlikely]]

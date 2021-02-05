@@ -38,7 +38,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 
 	std::thread enum_thread = std::thread([&]
 	{
-		thread_ctrl::set_native_priority(-1);
+		thread_ctrl::scoped_priority low_prio(-1);
 
 		vk::instance device_enum_context;
 		if (device_enum_context.create("RPCS3", true))
@@ -77,7 +77,10 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 
 		enum_thread.detach();
 		if (button != QMessageBox::Ignore)
-			std::exit(1);
+		{
+			abort_requested = true;
+			return;
+		}
 
 		supports_vulkan = false;
 	}

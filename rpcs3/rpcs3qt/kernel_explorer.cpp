@@ -149,9 +149,8 @@ static QTreeWidgetItem* add_solid_node(QTreeWidget* tree, QTreeWidgetItem *paren
 	return node;
 }
 
-kernel_explorer::kernel_explorer(QWidget* parent, std::function<void()> on_destroy)
+kernel_explorer::kernel_explorer(QWidget* parent)
 	: QDialog(parent)
-	, m_on_destroy(on_destroy)
 {
 	setWindowTitle(tr("Kernel Explorer"));
 	setObjectName("kernel_explorer");
@@ -180,11 +179,6 @@ kernel_explorer::kernel_explorer(QWidget* parent, std::function<void()> on_destr
 	connect(button_refresh, &QAbstractButton::clicked, this, &kernel_explorer::Update);
 
 	Update();
-}
-
-kernel_explorer::~kernel_explorer()
-{
-	m_on_destroy();
 }
 
 void kernel_explorer::Update()

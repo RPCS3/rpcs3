@@ -17,12 +17,17 @@ namespace utils
 	class shm;
 }
 
+namespace rsx
+{
+	class thread;
+}
+
 class memory_viewer_panel : public QDialog
 {
 	Q_OBJECT
 
 public:
-	memory_viewer_panel(QWidget* parent, u32 addr = 0, const std::shared_ptr<cpu_thread>& cpu = nullptr);
+	memory_viewer_panel(QWidget* parent, u32 addr = 0, std::function<cpu_thread*()> func = []() -> cpu_thread* { return {}; });
 	~memory_viewer_panel();
 
 	enum class color_format : int
@@ -53,17 +58,21 @@ private:
 
 	enum class thread_type
 	{
+		none,
 		ppu,
 		spu,
-		//rsx
+		rsx,
 	};
 
+	const std::function<cpu_thread*()> m_get_cpu;
 	const thread_type m_type;
+	const std::add_pointer_t<rsx::thread> m_rsx;
 	const std::shared_ptr<utils::shm> m_spu_shm;
 	const u32 m_addr_mask;
 
 	std::string getHeaderAtAddr(u32 addr);
 	void scroll(s32 steps);
+	void* to_ptr(u32 addr, u32 size = 1);
 	void SetPC(const uint pc);
 
 	virtual void ShowMemory();
@@ -84,7 +93,7 @@ struct memory_viewer_handle
 	{
 	}
 
-	~memory_viewer_handle() { m_mvp->deleteLater(); }
+	~memory_viewer_handle() { m_mvp->close(); m_mvp->deleteLater(); }
 
 private:
 	const std::add_pointer_t<memory_viewer_panel> m_mvp;

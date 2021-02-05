@@ -234,6 +234,23 @@ public:
 		_wait_for(-1, true);
 	}
 
+	// Wait for both thread sync var and provided atomic var
+	template <typename T, atomic_wait::op op = atomic_wait::op::eq, typename U>
+	static inline void wait_on(T& wait, U old, u64 usec = -1)
+	{
+		auto _this = g_tls_this_thread;
+
+		if (_this->m_sync.bit_test_reset(2))
+		{
+			return;
+		}
+
+		atomic_wait::list<2> list{};
+		list.set<0, op>(wait, old);
+		list.set<1>(_this->m_sync, 0, 4 + 1);
+		list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
+	}
+
 	// Exit.
 	[[noreturn]] static void emergency_exit(std::string_view reason);
 
@@ -263,6 +280,24 @@ public:
 
 	// Get current thread stack addr and size
 	static std::pair<void*, usz> get_thread_stack();
+
+	// Sets the native thread priority and returns it to zero at destructor
+	struct scoped_priority
+	{
+		explicit scoped_priority(int prio)
+		{
+			set_native_priority(prio);
+		}
+
+		scoped_priority(const scoped_priority&) = delete;
+
+		scoped_priority& operator=(const scoped_priority&) = delete;
+
+		~scoped_priority()
+		{
+			set_native_priority(0);
+		}
+	};
 
 private:
 	// Miscellaneous

@@ -15,7 +15,7 @@ class breakpoint_list : public QListWidget
 
 public:
 	breakpoint_list(QWidget* parent, breakpoint_handler* handler);
-	void UpdateCPUData(std::weak_ptr<cpu_thread> cpu, std::shared_ptr<CPUDisAsm> disasm);
+	void UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm);
 	void ClearBreakpoints();
 	void AddBreakpoint(u32 addr);
 	void RemoveBreakpoint(u32 addr);
@@ -33,6 +33,6 @@ private Q_SLOTS:
 private:
 	breakpoint_handler* m_breakpoint_handler;
 
-	std::weak_ptr<cpu_thread> cpu;
-	std::shared_ptr<CPUDisAsm> m_disasm;
+	cpu_thread* m_cpu;
+	CPUDisAsm* m_disasm;
 };

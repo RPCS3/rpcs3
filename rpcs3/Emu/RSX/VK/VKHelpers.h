@@ -68,7 +68,7 @@ namespace vk
 	* Then copy all layers into dst_image.
 	* dst_image must be in TRANSFER_DST_OPTIMAL layout and upload_buffer have TRANSFER_SRC_BIT usage flag.
 	*/
-	void copy_mipmaped_image_using_buffer(VkCommandBuffer cmd, vk::image* dst_image,
+	void copy_mipmaped_image_using_buffer(const vk::command_buffer& cmd, vk::image* dst_image,
 		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align = 0);
 

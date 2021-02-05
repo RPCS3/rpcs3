@@ -39,7 +39,7 @@ public:
 	}
 
 	/** Call this method before calling app.exec */
-	void Init() override;
+	bool Init() override;
 
 	std::unique_ptr<gs_frame> get_gs_frame();
 

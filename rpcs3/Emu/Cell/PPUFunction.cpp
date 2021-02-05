@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "PPUFunction.h"
+#include "Utilities/JIT.h"
 
 #include "PPUModule.h"
 
@@ -1888,7 +1889,7 @@ extern std::string ppu_get_variable_name(const std::string& _module, u32 vnid)
 	return fmt::format("0x%08X", vnid);
 }
 
-std::vector<ppu_function_t>& ppu_function_manager::access()
+std::vector<ppu_function_t>& ppu_function_manager::access(bool ghc)
 {
 	static std::vector<ppu_function_t> list
 	{
@@ -1907,14 +1908,42 @@ std::vector<ppu_function_t>& ppu_function_manager::access()
 		},
 	};
 
-	return list;
+	static std::vector<ppu_function_t> list_ghc
+	{
+		build_function_asm<ppu_function_t>([](asmjit::X86Assembler& c, auto& args)
+		{
+			using namespace asmjit;
+
+			c.mov(args[0], x86::rbp);
+			c.jmp(imm_ptr(list[0]));
+		}),
+		build_function_asm<ppu_function_t>([](asmjit::X86Assembler& c, auto& args)
+		{
+			using namespace asmjit;
+
+			c.mov(args[0], x86::rbp);
+			c.jmp(imm_ptr(list[1]));
+		}),
+	};
+
+	return ghc ? list_ghc : list;
 }
 
 u32 ppu_function_manager::add_function(ppu_function_t function)
 {
 	auto& list = access();
+	auto& list2 = access(true);
 
 	list.push_back(function);
+
+	// Generate trampoline
+	list2.push_back(build_function_asm<ppu_function_t>([&](asmjit::X86Assembler& c, auto& args)
+	{
+		using namespace asmjit;
+
+		c.mov(args[0], x86::rbp);
+		c.jmp(imm_ptr(function));
+	}));
 
 	return ::size32(list) - 1;
 }

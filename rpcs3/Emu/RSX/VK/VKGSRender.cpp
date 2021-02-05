@@ -738,13 +738,18 @@ void VKGSRender::on_invalidate_memory_range(const utils::address_range &range, r
 	auto data = std::move(m_texture_cache.invalidate_range(m_secondary_command_buffer, range, cause));
 	AUDIT(data.empty());
 
-	if (cause == rsx::invalidation_cause::unmap && data.violation_handled)
+	if (cause == rsx::invalidation_cause::unmap)
 	{
-		m_texture_cache.purge_unreleased_sections();
+		if (data.violation_handled)
 		{
-			std::lock_guard lock(m_sampler_mutex);
-			m_samplers_dirty.store(true);
+			m_texture_cache.purge_unreleased_sections();
+			{
+				std::lock_guard lock(m_sampler_mutex);
+				m_samplers_dirty.store(true);
+			}
 		}
+
+		vk::unmap_dma(range.start, range.length());
 	}
 }
 

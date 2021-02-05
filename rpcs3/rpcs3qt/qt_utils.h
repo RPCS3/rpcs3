@@ -49,6 +49,14 @@ namespace gui
 		// Returns the width of the text
 		int get_label_width(const QString& text, const QFont* font = nullptr);
 
+		template <typename T>
+		void set_font_size(T& qobj, int size)
+		{
+			QFont font = qobj.font();
+			font.setPointSize(size);
+			qobj.setFont(font);
+		}
+
 		// Returns the part of the image loaded from path that is inside the bounding box of its opaque areas
 		QImage get_opaque_image_area(const QString& path);
 

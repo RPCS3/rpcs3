@@ -23,9 +23,9 @@ breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) :
 /**
 * It's unfortunate I need a method like this to sync these.  Should ponder a cleaner way to do this.
 */
-void breakpoint_list::UpdateCPUData(std::weak_ptr<cpu_thread> cpu, std::shared_ptr<CPUDisAsm> disasm)
+void breakpoint_list::UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm)
 {
-	this->cpu = cpu;
+	m_cpu = cpu;
 	m_disasm = disasm;
 }
 
@@ -62,8 +62,6 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 {
 	m_breakpoint_handler->AddBreakpoint(pc);
 
-	const auto cpu = this->cpu.lock();
-
 	m_disasm->disasm(pc);
 
 	QString breakpointItemText = qstr(m_disasm->last_opcode);
@@ -86,9 +84,7 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 */
 void breakpoint_list::HandleBreakpointRequest(u32 loc)
 {
-	const auto cpu = this->cpu.lock();
-
-	if (!cpu || cpu->id_type() != 1 || !vm::check_addr(loc, vm::page_allocated | vm::page_executable))
+	if (!m_cpu || m_cpu->id_type() != 1 || !vm::check_addr(loc, vm::page_allocated | vm::page_executable))
 	{
 		// TODO: SPU breakpoints
 		return;

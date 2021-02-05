@@ -4,21 +4,16 @@
 
 namespace vk
 {
-	std::pair<u32, vk::buffer*> map_dma(command_buffer& cmd, u32 local_address, u32 length);
+	std::pair<u32, vk::buffer*> map_dma(const command_buffer& cmd, u32 local_address, u32 length);
 	void load_dma(u32 local_address, u32 length);
 	void flush_dma(u32 local_address, u32 length);
+	void unmap_dma(u32 local_address, u32 length);
 
 	void clear_dma_resources();
 
 	class dma_block
 	{
-		enum page_bits
-		{
-			synchronized = 0,
-			dirty = 1,
-			nocache = 3
-		};
-
+	protected:
 		struct
 		{
 			dma_block* parent = nullptr;
@@ -28,22 +23,21 @@ namespace vk
 
 		u32 base_address = 0;
 		std::unique_ptr<buffer> allocated_memory;
-		std::vector<u64> page_info;
 
-		void* map_range(const utils::address_range& range);
-		void unmap();
-
-		void set_page_bit(u32 page, u64 bits);
-		bool test_page_bit(u32 page, u64 bits);
-		void mark_dirty(const utils::address_range& range);
-		void set_page_info(u32 page_offset, const std::vector<u64>& bits);
+		virtual void allocate(const render_device& dev, usz size);
+		virtual void free();
+		virtual void* map_range(const utils::address_range& range);
+		virtual void unmap();
 
 	public:
 
-		void init(const render_device& dev, u32 addr, usz size);
-		void init(dma_block* parent, u32 addr, usz size);
-		void flush(const utils::address_range& range);
-		void load(const utils::address_range& range);
+		dma_block() = default;
+		virtual ~dma_block();
+
+		virtual void init(const render_device& dev, u32 addr, usz size);
+		virtual void init(dma_block* parent, u32 addr, usz size);
+		virtual void flush(const utils::address_range& range);
+		virtual void load(const utils::address_range& range);
 		std::pair<u32, buffer*> get(const utils::address_range& range);
 
 		u32 start() const;
@@ -52,7 +46,19 @@ namespace vk
 
 		dma_block* head();
 		const dma_block* head() const;
-		void set_parent(command_buffer& cmd, dma_block* parent);
-		void extend(command_buffer& cmd, const render_device& dev, usz new_size);
+		virtual void set_parent(const command_buffer& cmd, dma_block* parent);
+		virtual void extend(const command_buffer& cmd, const render_device& dev, usz new_size);
+	};
+
+	class dma_block_EXT: public dma_block
+	{
+	private:
+		void allocate(const render_device& dev, usz size) override;
+		void* map_range(const utils::address_range& range) override;
+		void unmap() override;
+
+	public:
+		void flush(const utils::address_range& range) override;
+		void load(const utils::address_range& range) override;
 	};
 }
