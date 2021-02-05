@@ -325,7 +325,7 @@ int main(int argc, char** argv)
 
 	const std::string lock_name = fs::get_cache_dir() + "RPCS3.buf";
 
-	fs::file instance_lock;
+	static fs::file instance_lock;
 
 	// True if an argument --updating found
 	const bool is_updating = find_arg(arg_updating, argc, argv) != 0;
@@ -372,7 +372,7 @@ int main(int argc, char** argv)
 #endif
 
 	// Initialize thread pool finalizer (on first use)
-	named_thread("", []{})();
+	static named_thread("", []{})();
 
 	static std::unique_ptr<logs::listener> log_file;
 	{
