@@ -450,7 +450,7 @@ int main(int argc, char** argv)
 	// but I haven't found an implicit way to check for style yet, so we naively check them both here for now.
 	const bool use_cli_style = find_arg(arg_style, argc, argv) || find_arg(arg_stylesheet, argc, argv);
 
-	static QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
+	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
 	app->setApplicationVersion(QString::fromStdString(rpcs3::get_version().to_string()));
 	app->setApplicationName("RPCS3");
 
