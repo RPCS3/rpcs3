@@ -786,7 +786,7 @@ error_code _sys_prx_get_module_id_by_name(ppu_thread& ppu, vm::cptr<char> name, 
 
 	//if (realName == "?") ...
 
-	return CELL_PRX_ERROR_UNKNOWN_MODULE;
+	return not_an_error(CELL_PRX_ERROR_UNKNOWN_MODULE);
 }
 
 error_code _sys_prx_get_module_id_by_address(ppu_thread& ppu, u32 addr)

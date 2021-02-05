@@ -2284,7 +2284,7 @@ error_code cellSaveDataUserFixedDelete(ppu_thread& ppu, u32 userId, PSetList set
 
 void cellSaveDataEnableOverlay(s32 enable)
 {
-	cellSaveData.error("cellSaveDataEnableOverlay(enable=%d)", enable);
+	cellSaveData.warning("cellSaveDataEnableOverlay(enable=%d)", enable);
 }
 
 
