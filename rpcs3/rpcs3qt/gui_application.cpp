@@ -50,13 +50,18 @@ gui_application::~gui_application()
 #endif
 }
 
-void gui_application::Init()
+bool gui_application::Init()
 {
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 
 	m_emu_settings.reset(new emu_settings());
 	m_gui_settings.reset(new gui_settings());
 	m_persistent_settings.reset(new persistent_settings());
+
+	if (!m_emu_settings->Init())
+	{
+		return false;
+	}
 
 	// Get deprecated active user (before August 2nd 2020)
 	QString active_user = m_gui_settings->GetValue(gui::um_active_user).toString();
@@ -91,9 +96,9 @@ void gui_application::Init()
 		welcome->exec();
 	}
 
-	if (m_main_window)
+	if (m_main_window && !m_main_window->Init())
 	{
-		m_main_window->Init();
+		return false;
 	}
 
 #ifdef WITH_DISCORD_RPC
@@ -103,6 +108,8 @@ void gui_application::Init()
 		discord::initialize();
 	}
 #endif
+
+	return true;
 }
 
 void gui_application::SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language_code)

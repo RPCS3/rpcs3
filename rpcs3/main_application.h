@@ -8,7 +8,7 @@ struct EmuCallbacks;
 class main_application
 {
 public:
-	virtual void Init() = 0;
+	virtual bool Init() = 0;
 
 	static bool InitializeEmulator(const std::string& user, bool force_init, bool show_gui);
 

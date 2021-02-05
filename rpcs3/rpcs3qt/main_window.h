@@ -81,7 +81,7 @@ class main_window : public QMainWindow
 
 public:
 	explicit main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent = 0);
-	void Init();
+	bool Init();
 	~main_window();
 	QIcon GetAppIcon();
 

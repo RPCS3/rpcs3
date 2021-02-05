@@ -11,6 +11,10 @@ class render_creator : public QObject
 	Q_OBJECT
 
 public:
+	render_creator(QObject* parent);
+
+	void update_names(const QStringList& names);
+
 	struct render_info
 	{
 		QString name;
@@ -31,14 +35,11 @@ public:
 			, has_msaa(has_msaa) {}
 	};
 
+	bool abort_requested = false;
 	bool supports_vulkan = false;
 	QStringList vulkan_adapters;
 	render_info Vulkan;
 	render_info OpenGL;
 	render_info NullRender;
 	std::vector<render_info*> renderers;
-
-	render_creator(QObject *parent);
-
-	void update_names(const QStringList& names);
 };
