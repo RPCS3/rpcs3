@@ -82,7 +82,7 @@ main_window::~main_window()
 /* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).
  * Simplifies logic a bit.
  */
-void main_window::Init()
+bool main_window::Init()
 {
 	setAcceptDrops(true);
 
@@ -127,7 +127,7 @@ void main_window::Init()
 
 		if (msg.exec() == QMessageBox::No)
 		{
-			std::exit(EXIT_SUCCESS);
+			return false;
 		}
 	}
 
@@ -227,6 +227,8 @@ void main_window::Init()
 		m_updater.check_for_updates(true, update_value != "true", this);
 	}
 #endif
+
+	return true;
 }
 
 QString main_window::GetCurrentTitle()

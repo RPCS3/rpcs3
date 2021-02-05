@@ -77,7 +77,10 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 
 		enum_thread.detach();
 		if (button != QMessageBox::Ignore)
-			std::exit(1);
+		{
+			abort_requested = true;
+			return;
+		}
 
 		supports_vulkan = false;
 	}

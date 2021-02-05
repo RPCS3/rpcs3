@@ -507,17 +507,28 @@ int main(int argc, char** argv)
 
 		gui_app->SetShowGui(!s_no_gui);
 		gui_app->SetUseCliStyle(use_cli_style);
-		gui_app->Init();
+
+		if (!gui_app->Init())
+		{
+			Emu.Quit(true);
+			return 0;
+		}
 	}
 	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
 	{
 		s_headless = true;
-		headless_app->Init();
+
+		if (!headless_app->Init())
+		{
+			Emu.Quit(true);
+			return 0;
+		}
 	}
 	else
 	{
 		// Should be unreachable
 		report_fatal_error("RPCS3 initialization failed!");
+		return 1;
 	}
 
 #ifdef _WIN32

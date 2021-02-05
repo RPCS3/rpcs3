@@ -63,11 +63,25 @@ namespace
 
 emu_settings::emu_settings()
 	: QObject()
-	, m_render_creator(new render_creator(this))
 {
+}
+
+emu_settings::~emu_settings()
+{
+}
+
+bool emu_settings::Init()
+{
+	m_render_creator = new render_creator(this);
+
 	if (!m_render_creator)
 	{
 		fmt::throw_exception("emu_settings::emu_settings() render_creator is null");
+	}
+
+	if (m_render_creator->abort_requested)
+	{
+		return false;
 	}
 
 	// Make Vulkan default setting if it is supported
@@ -78,10 +92,8 @@ emu_settings::emu_settings()
 		Emu.SetDefaultRenderer(video_renderer::vulkan);
 		Emu.SetDefaultGraphicsAdapter(adapter);
 	}
-}
 
-emu_settings::~emu_settings()
-{
+	return true;
 }
 
 void emu_settings::LoadSettings(const std::string& title_id)
