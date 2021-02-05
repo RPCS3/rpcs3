@@ -374,7 +374,7 @@ int main(int argc, char** argv)
 	// Initialize thread pool finalizer (on first use)
 	named_thread("", []{})();
 
-	std::unique_ptr<logs::listener> log_file;
+	static std::unique_ptr<logs::listener> log_file;
 	{
 		// Check free space
 		fs::device_stat stats{};
@@ -388,7 +388,7 @@ int main(int argc, char** argv)
 		log_file = logs::make_file_listener(fs::get_cache_dir() + "RPCS3.log", stats.avail_free / 4);
 	}
 
-	std::unique_ptr<logs::listener> log_pauser = std::make_unique<pause_on_fatal>();
+	static std::unique_ptr<logs::listener> log_pauser = std::make_unique<pause_on_fatal>();
 	logs::listener::add(log_pauser.get());
 
 	{
