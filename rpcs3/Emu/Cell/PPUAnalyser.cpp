@@ -1670,6 +1670,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			u32 i_pos = exp;
 
 			bool is_good = true;
+			bool is_fallback = true;
 
 			for (; i_pos < lim; i_pos += 4)
 			{
@@ -1692,6 +1693,11 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 				case ppu_itype::B:
 				case ppu_itype::BC:
 				{
+					if (type == ppu_itype::B)
+					{
+						is_fallback = false;
+					}
+
 					if (type == ppu_itype::B || type == ppu_itype::BC)
 					{
 						if (entry == 0 && ppu_opcode_t{opc}.aa)
@@ -1766,6 +1772,18 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 			if (i_pos < lim)
 			{
 				i_pos += 4;
+			}
+			else if (is_good && is_fallback && lim < end)
+			{
+				// Register fallback target
+				const auto found = fmap.find(lim);
+
+				if (found == fmap.cend() && block_set.count(lim) == 0)
+				{
+					ppu_log.trace("Block target found: 0x%x (i_pos=0x%x)", lim, i_pos);
+					block_queue.emplace_back(lim, 0);
+					block_set.emplace(lim);
+				}
 			}
 
 			if (is_good)
