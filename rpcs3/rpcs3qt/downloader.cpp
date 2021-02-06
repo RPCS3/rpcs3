@@ -48,14 +48,14 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 	m_curl_buf.clear();
 	m_curl_abort = false;
 
-	curl_easy_setopt(m_curl, CURLOPT_URL, url.c_str());
-	curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, curl_write_cb_compat);
-	curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, this);
-	curl_easy_setopt(m_curl, CURLOPT_FOLLOWLOCATION, follow_location ? 1 : 0);
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, url.c_str());
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEFUNCTION, curl_write_cb_compat);
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEDATA, this);
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_FOLLOWLOCATION, follow_location ? 1 : 0);
 
 	m_thread = QThread::create([this]
 	{
-		const auto result = curl_easy_perform(m_curl);
+		const auto result = curl_easy_perform(m_curl->get_curl());
 		m_curl_success = result == CURLE_OK;
 
 		if (!m_curl_success && !m_curl_abort)
@@ -179,7 +179,7 @@ usz downloader::update_buffer(char* data, usz size)
 
 	if (m_actual_download_size < 0)
 	{
-		if (curl_easy_getinfo(m_curl, CURLINFO_CONTENT_LENGTH_DOWNLOAD, &m_actual_download_size) == CURLE_OK && m_actual_download_size > 0)
+		if (curl_easy_getinfo(m_curl->get_curl(), CURLINFO_CONTENT_LENGTH_DOWNLOAD, &m_actual_download_size) == CURLE_OK && m_actual_download_size > 0)
 		{
 			max = static_cast<int>(m_actual_download_size);
 		}
