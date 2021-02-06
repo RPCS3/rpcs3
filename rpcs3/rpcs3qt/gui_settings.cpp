@@ -334,10 +334,11 @@ QStringList gui_settings::GetStylesheetEntries()
 #else
 	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
 #endif
+	res.append(gui::utils::get_dir_entries(QCoreApplication::applicationDirPath() + "/GuiConfigs/", name_filter));
 	res.append(gui::utils::get_dir_entries(platformStylesheetDir, name_filter));
 	res.removeDuplicates();
 #endif
-	res.sort(Qt::CaseInsensitive);
+	res.sort();
 	return res;
 }
 
@@ -356,7 +357,29 @@ QString gui_settings::GetCurrentStylesheetPath()
 		return "-";
 	}
 
-	return m_settings_dir.absoluteFilePath(stylesheet + ".qss");
+	QList<QDir> locs;
+	locs += m_settings_dir;
+
+#if !defined(_WIN32)
+#ifdef __APPLE__
+	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
+#else
+	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
+#endif
+	QDir appDir = QCoreApplication::applicationDirPath() + "/GuiConfigs/";
+	locs += platformStylesheetDir;
+	locs += appDir;
+#endif
+
+	for (auto&& dir : locs)
+	{
+		QString path = dir.absoluteFilePath(stylesheet + ".qss");
+		QFile test(path);
+		if (test.exists())
+			return path;
+	}
+
+	return "";
 }
 
 QSize gui_settings::SizeFromSlider(int pos)
