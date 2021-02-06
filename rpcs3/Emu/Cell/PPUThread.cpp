@@ -454,12 +454,10 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 // Breakpoint entry point
 static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 {
-	// Pause and wait if necessary
-	bool status = ppu.state.test_and_set(cpu_flag::dbg_pause);
-
-	g_fxo->get<gdb_server>()->pause_from(&ppu);
-
-	if (!status && ppu.check_state())
+	// Pause
+	ppu.state += cpu_flag::dbg_pause;
+	
+	if (ppu.check_state())
 	{
 		return false;
 	}
