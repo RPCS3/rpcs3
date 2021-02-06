@@ -21,7 +21,6 @@
 #include "lv2/sys_overlay.h"
 #include "lv2/sys_process.h"
 #include "lv2/sys_memory.h"
-#include "Emu/GDB.h"
 
 #ifdef LLVM_AVAILABLE
 #ifdef _MSC_VER
