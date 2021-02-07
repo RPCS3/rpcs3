@@ -404,6 +404,10 @@ void log_frame::LoadSettings()
 
 void log_frame::RepaintTextColors()
 {
+	// Backup old colors
+	QList<QColor> old_colors = m_color;
+	QColor old_stack_color = m_color_stack;
+
 	// Get text color. Do this once to prevent possible slowdown
 	m_color.clear();
 	m_color.append(gui::utils::get_label_color("log_level_always"));
@@ -417,13 +421,60 @@ void log_frame::RepaintTextColors()
 
 	m_color_stack = gui::utils::get_label_color("log_stack");
 
+	// Use new colors if the old colors weren't set yet
+	if (old_colors.empty())
+	{
+		old_colors = m_color;
+	}
+
+	if (!old_stack_color.isValid())
+	{
+		old_stack_color = m_color_stack;
+	}
+
 	// Repaint TTY with new colors
 	QTextCursor tty_cursor = m_tty->textCursor();
 	QTextCharFormat text_format = tty_cursor.charFormat();
 	text_format.setForeground(gui::utils::get_label_color("tty_text"));
 	m_tty->setTextCursor(tty_cursor);
 
-	// TODO: Repaint log with new colors
+	// Repaint log with new colors
+	QString html = m_log->document()->toHtml();
+
+	const QHash<int, QChar> log_chars
+	{
+		{ static_cast<int>(logs::level::always),  '-' },
+		{ static_cast<int>(logs::level::fatal),   'F' },
+		{ static_cast<int>(logs::level::error),   'E' },
+		{ static_cast<int>(logs::level::todo),    'U' },
+		{ static_cast<int>(logs::level::success), 'S' },
+		{ static_cast<int>(logs::level::warning), 'W' },
+		{ static_cast<int>(logs::level::notice),  '!' },
+		{ static_cast<int>(logs::level::trace),   'T' }
+	};
+
+	const auto replace_color = [&](logs::level lvl)
+	{
+		const QString old_style = QStringLiteral("color:") + old_colors[static_cast<int>(lvl)].name() + QStringLiteral(";\">") + log_chars[static_cast<int>(lvl)];
+		const QString new_style = QStringLiteral("color:") + m_color[static_cast<int>(lvl)].name() + QStringLiteral(";\">") + log_chars[static_cast<int>(lvl)];
+		html.replace(old_style, new_style);
+	};
+
+	replace_color(logs::level::always);
+	replace_color(logs::level::fatal);
+	replace_color(logs::level::error);
+	replace_color(logs::level::todo);
+	replace_color(logs::level::success);
+	replace_color(logs::level::warning);
+	replace_color(logs::level::notice);
+	replace_color(logs::level::trace);
+
+	// Special case: stack
+	const QString old_style = QStringLiteral("color:") + old_stack_color.name() + QStringLiteral(";\"> x");
+	const QString new_style = QStringLiteral("color:") + m_color_stack.name() + QStringLiteral(";\"> x");
+	html.replace(old_style, new_style);
+
+	m_log->document()->setHtml(html);
 }
 
 void log_frame::UpdateUI()
@@ -531,7 +582,7 @@ void log_frame::UpdateUI()
 			QString text;
 			switch (packet->sev)
 			{
-			case logs::level::always: break;
+			case logs::level::always: text = QStringLiteral("- "); break;
 			case logs::level::fatal: text = QStringLiteral("F "); break;
 			case logs::level::error: text = QStringLiteral("E "); break;
 			case logs::level::todo: text = QStringLiteral("U "); break;
