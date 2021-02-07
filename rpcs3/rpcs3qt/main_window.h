@@ -87,7 +87,7 @@ public:
 
 Q_SIGNALS:
 	void RequestLanguageChange(const QString& language);
-	void RequestGlobalStylesheetChange(const QString& stylesheet_path);
+	void RequestGlobalStylesheetChange();
 	void RequestTrophyManagerRepaint();
 	void NotifyEmuSettingsChange();
 

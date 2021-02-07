@@ -1926,7 +1926,7 @@ void settings_dialog::OnApplyStylesheet()
 {
 	m_current_stylesheet = ui->combo_stylesheets->currentData().toString();
 	m_gui_settings->SetValue(gui::m_currentStylesheet, m_current_stylesheet);
-	Q_EMIT GuiStylesheetRequest(m_gui_settings->GetCurrentStylesheetPath());
+	Q_EMIT GuiStylesheetRequest();
 }
 
 int settings_dialog::exec()
