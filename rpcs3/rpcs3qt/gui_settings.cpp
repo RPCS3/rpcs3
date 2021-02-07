@@ -4,6 +4,8 @@
 #include "localized.h"
 
 #include "Emu/System.h"
+#include "Utilities/File.h"
+#include "Utilities/StrUtil.h"
 
 #include <QCheckBox>
 #include <QCoreApplication>
@@ -376,7 +378,17 @@ QString gui_settings::GetCurrentStylesheetPath()
 		QString path = dir.absoluteFilePath(stylesheet + ".qss");
 		QFile test(path);
 		if (test.exists())
-			return path;
+		{
+			test.open(QIODevice::ReadOnly);
+			std::string result = fs::get_cache_dir() + "temp.qss";
+			std::string sheet = test.readAll().toStdString();
+
+			// Fixup paths (replace resources in GuiConfigs with absolute paths) and store in temp file.
+			path.truncate(path.size() - stylesheet.size() - 4);
+			fs::write_file(result, fs::rewrite, fmt::replace_all(sheet, "url(\"GuiConfigs/", "url(\"" + path.toStdString()));
+
+			return QString::fromUtf8(result.data(), result.size());
+		}
 	}
 
 	return "";
