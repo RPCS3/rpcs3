@@ -95,8 +95,8 @@ namespace gui
 	}
 
 	const QString Settings = "CurrentSettings";
-	const QString Default  = "default";
-	const QString None     = "none";
+	const QString DefaultStylesheet = "default";
+	const QString NoStylesheet = "none";
 
 	const QString main_window  = "main_window";
 	const QString game_list    = "GameList";
@@ -183,7 +183,7 @@ namespace gui
 	const gui_save rsx_states   = gui_save(rsx, "states",   QVariantMap());
 
 	const gui_save m_currentConfig     = gui_save(meta, "currentConfig",     Settings);
-	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", Default);
+	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", DefaultStylesheet);
 	const gui_save m_saveNotes         = gui_save(meta, "saveNotes",         QVariantMap()); // Deprecated
 	const gui_save m_showDebugTab      = gui_save(meta, "showDebugTab",      false);
 	const gui_save m_enableUIColors    = gui_save(meta, "enableUIColors",    false);

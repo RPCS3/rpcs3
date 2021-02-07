@@ -466,11 +466,11 @@ void gui_application::OnChangeStyleSheetRequest()
 
 	const QString stylesheet = m_gui_settings->GetValue(gui::m_currentStylesheet).toString();
 
-	if (stylesheet.isEmpty() || stylesheet == gui::Default)
+	if (stylesheet.isEmpty() || stylesheet == gui::DefaultStylesheet)
 	{
 		setStyleSheet(gui::stylesheets::default_style_sheet);
 	}
-	else if (stylesheet == gui::None)
+	else if (stylesheet == gui::NoStylesheet)
 	{
 		setStyleSheet("/* none */");
 	}

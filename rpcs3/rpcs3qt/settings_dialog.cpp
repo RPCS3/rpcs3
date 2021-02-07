@@ -1575,7 +1575,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			if (reset)
 			{
-				m_current_stylesheet = gui::Default;
+				m_current_stylesheet = gui::DefaultStylesheet;
 				ui->combo_configs->setCurrentIndex(0);
 				ui->combo_stylesheets->setCurrentIndex(0);
 			}
@@ -1837,12 +1837,12 @@ void settings_dialog::AddStylesheets()
 {
 	ui->combo_stylesheets->clear();
 
-	ui->combo_stylesheets->addItem(tr("None", "Stylesheets"), gui::None);
-	ui->combo_stylesheets->addItem(tr("Default (Bright)", "Stylesheets"), gui::Default);
+	ui->combo_stylesheets->addItem(tr("None", "Stylesheets"), gui::NoStylesheet);
+	ui->combo_stylesheets->addItem(tr("Default (Bright)", "Stylesheets"), gui::DefaultStylesheet);
 
 	for (const QString& entry : m_gui_settings->GetStylesheetEntries())
 	{
-		if (entry != gui::Default)
+		if (entry != gui::DefaultStylesheet)
 		{
 			ui->combo_stylesheets->addItem(entry, entry);
 		}
