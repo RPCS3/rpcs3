@@ -77,7 +77,7 @@ private:
 	bool m_use_cli_style = false;
 
 private Q_SLOTS:
-	void OnChangeStyleSheetRequest(const QString& path);
+	void OnChangeStyleSheetRequest();
 	void OnEmuSettingsChange();
 
 Q_SIGNALS:

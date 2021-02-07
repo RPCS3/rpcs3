@@ -4,8 +4,6 @@
 #include "localized.h"
 
 #include "Emu/System.h"
-#include "Utilities/File.h"
-#include "Utilities/StrUtil.h"
 
 #include <QCheckBox>
 #include <QCoreApplication>
@@ -342,56 +340,6 @@ QStringList gui_settings::GetStylesheetEntries()
 #endif
 	res.sort();
 	return res;
-}
-
-QString gui_settings::GetCurrentStylesheetPath()
-{
-	const Localized localized;
-
-	const QString stylesheet = GetValue(gui::m_currentStylesheet).toString();
-
-	if (stylesheet == gui::Default)
-	{
-		return "";
-	}
-	else if (stylesheet == gui::None)
-	{
-		return "-";
-	}
-
-	QList<QDir> locs;
-	locs += m_settings_dir;
-
-#if !defined(_WIN32)
-#ifdef __APPLE__
-	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
-#else
-	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
-#endif
-	QDir appDir = QCoreApplication::applicationDirPath() + "/GuiConfigs/";
-	locs += platformStylesheetDir;
-	locs += appDir;
-#endif
-
-	for (auto&& dir : locs)
-	{
-		QString path = dir.absoluteFilePath(stylesheet + ".qss");
-		QFile test(path);
-		if (test.exists())
-		{
-			test.open(QIODevice::ReadOnly);
-			std::string result = fs::get_cache_dir() + "temp.qss";
-			std::string sheet = test.readAll().toStdString();
-
-			// Fixup paths (replace resources in GuiConfigs with absolute paths) and store in temp file.
-			path.truncate(path.size() - stylesheet.size() - 4);
-			fs::write_file(result, fs::rewrite, fmt::replace_all(sheet, "url(\"GuiConfigs/", "url(\"" + path.toStdString()));
-
-			return QString::fromUtf8(result.data(), result.size());
-		}
-	}
-
-	return "";
 }
 
 QSize gui_settings::SizeFromSlider(int pos)

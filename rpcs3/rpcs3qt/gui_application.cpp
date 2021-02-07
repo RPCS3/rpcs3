@@ -447,10 +447,9 @@ void gui_application::StopPlaytime()
 }
 
 /*
-* Handle a request to change the stylesheet. May consider adding reporting of errors in future.
-* Empty string means default.
+* Handle a request to change the stylesheet based on the current entry in the settings.
 */
-void gui_application::OnChangeStyleSheetRequest(const QString& path)
+void gui_application::OnChangeStyleSheetRequest()
 {
 	// skip stylesheets on first repaint if a style was set from command line
 	if (m_use_cli_style && gui::stylesheet.isEmpty())
@@ -465,59 +464,71 @@ void gui_application::OnChangeStyleSheetRequest(const QString& path)
 		return;
 	}
 
-	QFile file(path);
+	const QString stylesheet = m_gui_settings->GetValue(gui::m_currentStylesheet).toString();
 
-	// If we can't open the file, try the /share or /Resources folder
-#if !defined(_WIN32)
-#ifdef __APPLE__
-	QString share_dir = QCoreApplication::applicationDirPath() + "/../Resources/";
-#else
-	QString share_dir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/";
-#endif
-	QFile share_file(share_dir + "GuiConfigs/" + QFileInfo(file.fileName()).fileName());
-#endif
-
-	if (path == "")
+	if (stylesheet.isEmpty() || stylesheet == gui::Default)
 	{
 		setStyleSheet(gui::stylesheets::default_style_sheet);
 	}
-	else if (path == "-")
+	else if (stylesheet == gui::None)
 	{
 		setStyleSheet("/* none */");
 	}
-	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
-	{
-		QString config_dir = qstr(fs::get_config_dir());
-
-		// Remove old fonts
-		QFontDatabase::removeAllApplicationFonts();
-
-		// Add PS3 fonts
-		QDirIterator ps3_font_it(qstr(g_cfg.vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
-		while (ps3_font_it.hasNext())
-			QFontDatabase::addApplicationFont(ps3_font_it.next());
-
-		// Add custom fonts
-		QDirIterator custom_font_it(config_dir + "fonts/", QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
-		while (custom_font_it.hasNext())
-			QFontDatabase::addApplicationFont(custom_font_it.next());
-
-		// Set root for stylesheets
-		QDir::setCurrent(config_dir);
-		setStyleSheet(file.readAll());
-		file.close();
-	}
-#if !defined(_WIN32)
-	else if (share_file.open(QIODevice::ReadOnly | QIODevice::Text))
-	{
-		QDir::setCurrent(share_dir);
-		setStyleSheet(share_file.readAll());
-		share_file.close();
-	}
-#endif
 	else
 	{
-		setStyleSheet(gui::stylesheets::default_style_sheet);
+		QString stylesheet_path;
+		QString stylesheet_dir;
+		QList<QDir> locs;
+		locs << m_gui_settings->GetSettingsDir();
+
+#if !defined(_WIN32)
+#ifdef __APPLE__
+		locs << QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
+#else
+		locs << QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
+#endif
+		locs << QCoreApplication::applicationDirPath() + "/GuiConfigs/";
+#endif
+
+		for (auto&& loc : locs)
+		{
+			QFileInfo file_info(loc.absoluteFilePath(stylesheet + QStringLiteral(".qss")));
+			if (file_info.exists())
+			{
+				loc.cdUp();
+				stylesheet_dir  = loc.absolutePath();
+				stylesheet_path = file_info.absoluteFilePath();
+				break;
+			}
+		}
+
+		if (QFile file(stylesheet_path); !stylesheet_path.isEmpty() && file.open(QIODevice::ReadOnly | QIODevice::Text))
+		{
+			const QString config_dir = qstr(fs::get_config_dir());
+
+			// Remove old fonts
+			QFontDatabase::removeAllApplicationFonts();
+
+			// Add PS3 fonts
+			QDirIterator ps3_font_it(qstr(g_cfg.vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+			while (ps3_font_it.hasNext())
+				QFontDatabase::addApplicationFont(ps3_font_it.next());
+
+			// Add custom fonts
+			QDirIterator custom_font_it(config_dir + "fonts/", QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+			while (custom_font_it.hasNext())
+				QFontDatabase::addApplicationFont(custom_font_it.next());
+
+			// Set root for stylesheets
+			QDir::setCurrent(stylesheet_dir);
+			setStyleSheet(file.readAll());
+			file.close();
+		}
+		else
+		{
+			gui_log.error("Could not find stylesheet '%s'. Using default.", stylesheet.toStdString());
+			setStyleSheet(gui::stylesheets::default_style_sheet);
+		}
 	}
 
 	gui::stylesheet = styleSheet();
