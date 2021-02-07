@@ -464,13 +464,13 @@ void gui_application::OnChangeStyleSheetRequest()
 		return;
 	}
 
-	const QString stylesheet = m_gui_settings->GetValue(gui::m_currentStylesheet).toString();
+	const QString stylesheet_name = m_gui_settings->GetValue(gui::m_currentStylesheet).toString();
 
-	if (stylesheet.isEmpty() || stylesheet == gui::DefaultStylesheet)
+	if (stylesheet_name.isEmpty() || stylesheet_name == gui::DefaultStylesheet)
 	{
 		setStyleSheet(gui::stylesheets::default_style_sheet);
 	}
-	else if (stylesheet == gui::NoStylesheet)
+	else if (stylesheet_name == gui::NoStylesheet)
 	{
 		setStyleSheet("/* none */");
 	}
@@ -492,7 +492,7 @@ void gui_application::OnChangeStyleSheetRequest()
 
 		for (auto&& loc : locs)
 		{
-			QFileInfo file_info(loc.absoluteFilePath(stylesheet + QStringLiteral(".qss")));
+			QFileInfo file_info(loc.absoluteFilePath(stylesheet_name + QStringLiteral(".qss")));
 			if (file_info.exists())
 			{
 				loc.cdUp();
@@ -519,14 +519,16 @@ void gui_application::OnChangeStyleSheetRequest()
 			while (custom_font_it.hasNext())
 				QFontDatabase::addApplicationFont(custom_font_it.next());
 
-			// Set root for stylesheets
-			QDir::setCurrent(stylesheet_dir);
-			setStyleSheet(file.readAll());
+			// Replace relative paths with absolute paths. Since relative paths should always be the same, we can just use simple string replacement.
+			// Another option would be to use QDir::setCurrent, but that changes current working directory for the whole process (We don't want that).
+			QString stylesheet = file.readAll();
+			stylesheet.replace(QStringLiteral("url(\"GuiConfigs/"), QStringLiteral("url(\"") + stylesheet_dir + QStringLiteral("/GuiConfigs/"));
+			setStyleSheet(stylesheet);
 			file.close();
 		}
 		else
 		{
-			gui_log.error("Could not find stylesheet '%s'. Using default.", stylesheet.toStdString());
+			gui_log.error("Could not find stylesheet '%s'. Using default.", stylesheet_name.toStdString());
 			setStyleSheet(gui::stylesheets::default_style_sheet);
 		}
 	}
