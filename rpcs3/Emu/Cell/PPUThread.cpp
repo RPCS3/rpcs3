@@ -385,14 +385,15 @@ extern void ppu_register_range(u32 addr, u32 size)
 		return;
 	}
 
+	size = utils::align(size + addr % 0x10000, 0x10000);
+	addr &= -0x10000;
+
 	// Register executable range at
-	utils::memory_commit(&ppu_ref(addr), size * 2, utils::protection::rw);
-	vm::page_protect(addr, utils::align(size, 0x10000), 0, vm::page_executable);
+	utils::memory_commit(&ppu_ref(addr), u64{size} * 2, utils::protection::rw);
+	vm::page_protect(addr, size, 0, vm::page_executable);
 
 	const u64 fallback = reinterpret_cast<uptr>(ppu_fallback);
 	const u64 seg_base = addr;
-
-	size &= ~3; // Loop assumes `size = n * 4`, enforce that by rounding down
 
 	while (size)
 	{
