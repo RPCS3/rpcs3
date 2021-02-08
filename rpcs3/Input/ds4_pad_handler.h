@@ -125,7 +125,7 @@ private:
 	// This function gets us usuable buffer from the rawbuffer of padData
 	bool GetCalibrationData(const std::shared_ptr<DS4Device>& ds4Device);
 	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
-	int SendVibrateData(const std::shared_ptr<DS4Device>& device);
+	int send_output_report(const std::shared_ptr<DS4Device>& device);
 	inline s16 ApplyCalibration(s32 rawValue, const DS4CalibData& calibData)
 	{
 		const s32 biased = rawValue - calibData.bias;
