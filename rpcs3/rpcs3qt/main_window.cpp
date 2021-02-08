@@ -35,6 +35,7 @@
 #include <QMimeData>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QFontDatabase>
 
 #include "rpcs3_version.h"
 #include "Emu/System.h"
@@ -855,6 +856,9 @@ void main_window::HandlePupInstallation(QString file_path)
 		return;
 	}
 
+	// Remove possibly PS3 fonts from database
+	QFontDatabase::removeAllApplicationFonts();
+
 	progress_dialog pdlg(tr("RPCS3 Firmware Installer"), tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(update_filenames.size()), false, this);
 	pdlg.show();
 
@@ -918,6 +922,9 @@ void main_window::HandlePupInstallation(QString file_path)
 			std::this_thread::sleep_for(100ms);
 		}
 	}
+
+	// Update with newly installed PS3 fonts
+	Q_EMIT RequestGlobalStylesheetChange();
 
 	if (progress > 0)
 	{
