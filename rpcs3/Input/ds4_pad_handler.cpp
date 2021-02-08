@@ -210,7 +210,7 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 	int index = 0;
 	for (uint i = 0; i < MAX_GAMEPADS; i++)
 	{
-		if (g_cfg_input.player[i]->handler == pad_handler::ds4)
+		if (g_cfg_input.player[i]->handler == m_type)
 		{
 			if (g_cfg_input.player[i]->device.to_string() == padId)
 			{
