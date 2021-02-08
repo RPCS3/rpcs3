@@ -464,6 +464,9 @@ void gui_application::OnChangeStyleSheetRequest()
 		return;
 	}
 
+	// Remove old fonts
+	QFontDatabase::removeAllApplicationFonts();
+
 	const QString stylesheet_name = m_gui_settings->GetValue(gui::m_currentStylesheet).toString();
 
 	if (stylesheet_name.isEmpty() || stylesheet_name == gui::DefaultStylesheet)
@@ -505,9 +508,6 @@ void gui_application::OnChangeStyleSheetRequest()
 		if (QFile file(stylesheet_path); !stylesheet_path.isEmpty() && file.open(QIODevice::ReadOnly | QIODevice::Text))
 		{
 			const QString config_dir = qstr(fs::get_config_dir());
-
-			// Remove old fonts
-			QFontDatabase::removeAllApplicationFonts();
 
 			// Add PS3 fonts
 			QDirIterator ps3_font_it(qstr(g_cfg.vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
