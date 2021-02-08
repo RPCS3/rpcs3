@@ -929,3 +929,41 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 		}
 	}
 }
+
+void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool /*battery_led*/, u32 /*battery_led_brightness*/)
+{
+	std::shared_ptr<DualSenseDevice> device = GetDualSenseDevice(padId);
+	if (device == nullptr || device->hidDevice == nullptr)
+		return;
+
+	// Set the device's motor speeds to our requested values 0-255
+	device->largeVibrate = largeMotor;
+	device->smallVibrate = smallMotor;
+
+	int index = 0;
+	for (uint i = 0; i < MAX_GAMEPADS; i++)
+	{
+		if (g_cfg_input.player[i]->handler == m_type)
+		{
+			if (g_cfg_input.player[i]->device.to_string() == padId)
+			{
+				m_pad_configs[index].load();
+				device->config = &m_pad_configs[index];
+				break;
+			}
+			index++;
+		}
+	}
+
+	// TODO: Set new LED color (see ds4_pad_handler)
+
+	if (r >= 0 && g >= 0 && b >= 0 && r <= 255 && g <= 255 && b <= 255)
+	{
+		device->config->colorR.set(r);
+		device->config->colorG.set(g);
+		device->config->colorB.set(b);
+	}
+
+	// Start/Stop the engines :)
+	send_output_report(device);
+}
