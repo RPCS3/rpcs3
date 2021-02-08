@@ -1336,7 +1336,7 @@ namespace vm
 
 		const auto upper = m_map.upper_bound(addr);
 
-		if (upper == m_map.begin())
+		if (upper == m_map.end() || upper == m_map.begin())
 		{
 			return {addr, nullptr};
 		}
