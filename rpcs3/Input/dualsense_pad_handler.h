@@ -90,6 +90,8 @@ class dualsense_pad_handler final : public PadHandlerBase
 		bool newVibrateData{true};
 		u8 largeVibrate{0};
 		u8 smallVibrate{0};
+		bool init_lightbar{true};
+		bool update_lightbar{true};
 	};
 
 	const u16 DUALSENSE_VID = 0x054C;

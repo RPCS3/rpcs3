@@ -14,6 +14,15 @@ namespace
 	const u32 DUALSENSE_COMMON_REPORT_SIZE = 47;
 	const u32 DUALSENSE_INPUT_REPORT_GYRO_X_OFFSET = 15;
 
+	enum
+	{
+		VALID_FLAG_0_COMPATIBLE_VIBRATION          = 0x1,
+		VALID_FLAG_0_HAPTICS_SELECT                = 0x2,
+		VALID_FLAG_1_LIGHTBAR_CONTROL_ENABLE       = 0x4,
+		VALID_FLAG_1_RELEASE_LEDS                  = 0x8,
+		VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE = 0x2,
+		LIGHTBAR_SETUP_LIGHT_OUT                   = 0x2,
+	};
 	
 	struct output_report_common
 	{
@@ -115,7 +124,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 	b_has_config = true;
 	b_has_rumble = true;
 	b_has_deadzones = true;
-	b_has_led = false;
+	b_has_led = true;
 	b_has_battery = false;
 
 	m_name_string = "DualSense Pad #";
@@ -911,10 +920,28 @@ int dualsense_pad_handler::send_output_report(const std::shared_ptr<DualSenseDev
 		return -2; // hid_write and hid_write_control return -1 on error
 
 	output_report_common common{};
-	common.valid_flag_0 |= 0x01; // Enable haptics
-	common.valid_flag_0 |= 0x02; // Enable vibration
+	common.valid_flag_0 |= VALID_FLAG_0_COMPATIBLE_VIBRATION;
+	common.valid_flag_0 |= VALID_FLAG_0_HAPTICS_SELECT;
 	common.motor_left  = device->largeVibrate;
 	common.motor_right = device->smallVibrate;
+
+	if (device->init_lightbar)
+	{
+		device->init_lightbar = false;
+
+		common.valid_flag_2   = VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE;
+		common.lightbar_setup = LIGHTBAR_SETUP_LIGHT_OUT; // Fade light out.
+	}
+
+	if (device->update_lightbar)
+	{
+		device->update_lightbar = false;
+
+		common.valid_flag_1 |= VALID_FLAG_1_LIGHTBAR_CONTROL_ENABLE;
+		common.lightbar_r = config->colorR; // red
+		common.lightbar_g = config->colorG; // green
+		common.lightbar_b = config->colorB; // blue
+	}
 
 	if (device->btCon)
 	{
@@ -1002,13 +1029,13 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor,
 		}
 	}
 
-	// TODO: Set new LED color (see ds4_pad_handler)
-
+	// Set new LED color (see ds4_pad_handler)
 	if (r >= 0 && g >= 0 && b >= 0 && r <= 255 && g <= 255 && b <= 255)
 	{
 		device->config->colorR.set(r);
 		device->config->colorG.set(g);
 		device->config->colorB.set(b);
+		device->update_lightbar = true;
 	}
 
 	// Start/Stop the engines :)
