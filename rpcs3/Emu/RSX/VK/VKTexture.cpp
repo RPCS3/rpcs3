@@ -574,6 +574,9 @@ namespace vk
 				const u32 typeless_w = std::max(dst_rect.width(), src_rect.width());
 				const u32 typeless_h = src_rect.height() + dst_rect.height();
 
+				const auto gpu_family = vk::get_chip_family();
+				const bool use_unsafe_transport = !g_cfg.video.strict_rendering_mode && (gpu_family != chip_class::NV_generic && gpu_family < chip_class::NV_turing);
+
 				switch (src->format())
 				{
 				case VK_FORMAT_D16_UNORM:
@@ -581,7 +584,7 @@ namespace vk
 					auto typeless = vk::get_typeless_helper(VK_FORMAT_R16_UNORM, RSX_FORMAT_CLASS_COLOR, typeless_w, typeless_h);
 					change_image_layout(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL);
 
-					if (vk::get_chip_family() < vk::chip_class::NV_ampere)
+					if (use_unsafe_transport)
 					{
 						stretch_image_typeless_unsafe(src, dst, typeless, src_rect, dst_rect, VK_IMAGE_ASPECT_DEPTH_BIT);
 					}
@@ -602,8 +605,7 @@ namespace vk
 				case VK_FORMAT_D24_UNORM_S8_UINT:
 				{
 					const VkImageAspectFlags depth_stencil = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-					if (const auto chip_family = vk::get_chip_family();
-						chip_family > vk::chip_class::NV_generic && chip_family < vk::chip_class::NV_turing)
+					if (use_unsafe_transport)
 					{
 						auto typeless = vk::get_typeless_helper(VK_FORMAT_B8G8R8A8_UNORM, RSX_FORMAT_CLASS_COLOR, typeless_w, typeless_h);
 						change_image_layout(cmd, typeless, VK_IMAGE_LAYOUT_GENERAL);
