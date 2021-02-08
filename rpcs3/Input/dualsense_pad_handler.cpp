@@ -44,6 +44,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 		{ DualSenseKeyCodes::Options,  "Options" },
 		{ DualSenseKeyCodes::Share,    "Share" },
 		{ DualSenseKeyCodes::PSButton, "PS Button" },
+		{ DualSenseKeyCodes::Mic,      "Mic" },
 		{ DualSenseKeyCodes::TouchPad, "Touch Pad" },
 		{ DualSenseKeyCodes::L1,       "L1" },
 		{ DualSenseKeyCodes::L2,       "L2" },
@@ -669,6 +670,8 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 		data = buf[5];
 		keyBuffer[DualSenseKeyCodes::L1]      = ((data & 0x01) != 0) ? 255 : 0;
 		keyBuffer[DualSenseKeyCodes::R1]      = ((data & 0x02) != 0) ? 255 : 0;
+		//keyBuffer[DualSenseKeyCodes::L2]      = ((data & 0x04) != 0) ? 255 : 0; // active when L2 is pressed
+		//keyBuffer[DualSenseKeyCodes::R2]      = ((data & 0x08) != 0) ? 255 : 0; // active when R2 is pressed
 		keyBuffer[DualSenseKeyCodes::Share]   = ((data & 0x10) != 0) ? 255 : 0;
 		keyBuffer[DualSenseKeyCodes::Options] = ((data & 0x20) != 0) ? 255 : 0;
 		keyBuffer[DualSenseKeyCodes::L3]      = ((data & 0x40) != 0) ? 255 : 0;
@@ -677,9 +680,10 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 		keyBuffer[DualSenseKeyCodes::L2] = buf[7];
 		keyBuffer[DualSenseKeyCodes::R2] = buf[8];
 
-		data = buf[6] & 0x03;
+		data = buf[6];
 		keyBuffer[DualSenseKeyCodes::PSButton] = ((data & 0x01) != 0) ? 255 : 0;
 		keyBuffer[DualSenseKeyCodes::TouchPad] = ((data & 0x02) != 0) ? 255 : 0;
+		keyBuffer[DualSenseKeyCodes::Mic]      = ((data & 0x04) != 0) ? 255 : 0;
 
 		return keyBuffer;
 	}
@@ -770,6 +774,8 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 	data = buf[8];
 	keyBuffer[DualSenseKeyCodes::L1]      = ((data & 0x01) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::R1]      = ((data & 0x02) != 0) ? 255 : 0;
+	//keyBuffer[DualSenseKeyCodes::L2]      = ((data & 0x04) != 0) ? 255 : 0; // active when L2 is pressed
+	//keyBuffer[DualSenseKeyCodes::R2]      = ((data & 0x08) != 0) ? 255 : 0; // active when R2 is pressed
 	keyBuffer[DualSenseKeyCodes::Share]   = ((data & 0x10) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::Options] = ((data & 0x20) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::L3]      = ((data & 0x40) != 0) ? 255 : 0;
@@ -778,9 +784,10 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 	keyBuffer[DualSenseKeyCodes::L2] = buf[4];
 	keyBuffer[DualSenseKeyCodes::R2] = buf[5];
 
-	data = buf[9] & 0x03;
+	data = buf[9];
 	keyBuffer[DualSenseKeyCodes::PSButton] = ((data & 0x01) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::TouchPad] = ((data & 0x02) != 0) ? 255 : 0;
+	keyBuffer[DualSenseKeyCodes::Mic]      = ((data & 0x04) != 0) ? 255 : 0;
 
 	return keyBuffer;
 }

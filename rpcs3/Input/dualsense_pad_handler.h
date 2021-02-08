@@ -25,6 +25,7 @@ class dualsense_pad_handler final : public PadHandlerBase
 		Share,
 		Options,
 		PSButton,
+		Mic,
 		TouchPad,
 
 		L2,
