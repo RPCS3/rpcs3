@@ -290,6 +290,18 @@ void kernel_explorer::Update()
 
 	add_solid_node(m_tree, find_node(m_tree, additional_nodes::process_info), qstr(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat())));
 
+	auto display_program_segments = [this](QTreeWidgetItem* tree, const ppu_module& m)
+	{
+		for (usz i = 0; i < m.segs.size(); i++)
+		{
+			const u32 addr = m.segs[i].addr;
+			const u32 size = m.segs[i].size;
+
+			add_leaf(tree, qstr(fmt::format("Segment %u: (0x%08x...0x%08x), Flags: 0x%x"
+				, i, addr, addr + std::max<u32>(size, 1) - 1, m.segs[i].flags)));
+		}
+	};
+
 	idm::select<lv2_obj>([&](u32 id, lv2_obj& obj)
 	{
 		auto node = find_node(m_tree, id >> 24);
@@ -366,16 +378,16 @@ void kernel_explorer::Update()
 		case SYS_PRX_OBJECT:
 		{
 			auto& prx = static_cast<lv2_prx&>(obj);
-			const u32 addr0 = !prx.segs.empty() ? prx.segs[0].addr : 0;
 
-			if (!addr0)
+			if (prx.segs.empty())
 			{
 				add_leaf(node, qstr(fmt::format("PRX 0x%08x: '%s' (HLE)", id, prx.name)));
 				break;
 			}
 
-			const u32 end0 = addr0 + prx.segs[0].size - 1;
-			add_leaf(node, qstr(fmt::format("PRX 0x%08x: '%s', Seg0: (0x%x...0x%x)", id, prx.name, addr0, end0)));
+			const QString text = qstr(fmt::format("PRX 0x%08x: '%s'", id, prx.name));
+			QTreeWidgetItem* prx_tree = add_solid_node(m_tree, node, text, text);
+			display_program_segments(prx_tree, prx);
 			break;
 		}
 		case SYS_SPUPORT_OBJECT:
@@ -386,7 +398,9 @@ void kernel_explorer::Update()
 		case SYS_OVERLAY_OBJECT:
 		{
 			auto& ovl = static_cast<lv2_overlay&>(obj);
-			add_leaf(node, qstr(fmt::format("OVL 0x%08x: '%s', Seg0: (0x%x...0x%x)", id, ovl.name, ovl.segs[0].addr, ovl.segs[0].addr + ovl.segs[0].size - 1)));
+			const QString text = qstr(fmt::format("OVL 0x%08x: '%s'", id, ovl.name));
+			QTreeWidgetItem* ovl_tree = add_solid_node(m_tree, node, text, text);
+			display_program_segments(ovl_tree, ovl);
 			break;
 		}
 		case SYS_LWMUTEX_OBJECT:
@@ -534,9 +548,9 @@ void kernel_explorer::Update()
 
 			if (pspurs && pspurs.try_read(spurs))
 			{
-				const QString branch_name = "SPURS";
+				const QString branch_name = tr("SPURS %1").arg(pspurs.addr());
 				const u32 wklEnabled = spurs.wklEnabled;
-				QTreeWidgetItem* spurs_tree = add_solid_node(m_tree, spu_tree, branch_name, branch_name + qstr(fmt::format(", Instance: *0x%x, LWMutex: 0x%x, LWCond: 0x%x, wklEnabled: 0x%x"
+				QTreeWidgetItem* spurs_tree = add_solid_node(m_tree, spu_tree, branch_name, qstr(fmt::format("SPURS, Instance: *0x%x, LWMutex: 0x%x, LWCond: 0x%x, wklEnabled: 0x%x"
 					, pspurs, spurs.mutex.sleep_queue, spurs.cond.lwcond_queue, wklEnabled)));
 
 				const u32 signal_mask = u32{spurs.wklSignal1} << 16 | spurs.wklSignal2;
@@ -561,7 +575,7 @@ void kernel_explorer::Update()
 					const u8 status = spurs.wklStatus(wid);
 					const auto has_signal = (signal_mask & (0x80000000u >> wid)) ? "Signalled"sv : "No Signal"sv;
 
-					QTreeWidgetItem* wkl_tree = add_solid_node(m_tree, spurs_tree, qstr(fmt::format("Work.%u", wid)), qstr(fmt::format("Work.%u, class: %s, %s, %s, Status: %#x, Event: %#x, %s, ReadyCnt: %u", wid, +name.nameClass, +name.nameInstance, state, status, evt, has_signal, ready_count)));
+					QTreeWidgetItem* wkl_tree = add_solid_node(m_tree, spurs_tree, branch_name + qstr(fmt::format(" Work.%u", wid)), qstr(fmt::format("Work.%u, class: %s, %s, %s, Status: %#x, Event: %#x, %s, ReadyCnt: %u", wid, +name.nameClass, +name.nameInstance, state, status, evt, has_signal, ready_count)));
 
 					auto contention = [&](u8 v)
 					{
