@@ -10,8 +10,51 @@ namespace
 	const u32 DUALSENSE_GYRO_RES_PER_DEG_S = 1024;
 	const u32 DUALSENSE_CALIBRATION_REPORT_SIZE = 41;
 	const u32 DUALSENSE_BLUETOOTH_REPORT_SIZE = 78;
-	const u32 DUALSENSE_USB_REPORT_SIZE = 48;
+	const u32 DUALSENSE_USB_REPORT_SIZE = 63;
+	const u32 DUALSENSE_COMMON_REPORT_SIZE = 47;
 	const u32 DUALSENSE_INPUT_REPORT_GYRO_X_OFFSET = 15;
+
+	
+	struct output_report_common
+	{
+		u8 valid_flag_0;
+		u8 valid_flag_1;
+		u8 motor_right;
+		u8 motor_left;
+		u8 reserved[4];
+		u8 mute_button_led;
+		u8 power_save_control;
+		u8 reserved_2[28];
+		u8 valid_flag_2;
+		u8 reserved_3[2];
+		u8 lightbar_setup;
+		u8 led_brightness;
+		u8 player_leds;
+		u8 lightbar_r;
+		u8 lightbar_g;
+		u8 lightbar_b;
+	};
+
+	struct output_report_bt
+	{
+		u8 report_id; // 0x31
+		u8 seq_tag;
+		u8 tag;
+		output_report_common common;
+		u8 reserved[24];
+		u8 crc32[4];
+	};
+
+	struct output_report_usb
+	{
+		u8 report_id; // 0x02
+		output_report_common common;
+		u8 reserved[15];
+	};
+
+	static_assert(sizeof(struct output_report_common) == DUALSENSE_COMMON_REPORT_SIZE);
+	static_assert(sizeof(struct output_report_bt) == DUALSENSE_BLUETOOTH_REPORT_SIZE);
+	static_assert(sizeof(struct output_report_usb) == DUALSENSE_USB_REPORT_SIZE);
 
 	inline s16 read_s16(const void* buf)
 	{
@@ -867,37 +910,41 @@ int dualsense_pad_handler::send_output_report(const std::shared_ptr<DualSenseDev
 	if (config == nullptr)
 		return -2; // hid_write and hid_write_control return -1 on error
 
+	output_report_common common{};
+	common.valid_flag_0 |= 0x01; // Enable haptics
+	common.valid_flag_0 |= 0x02; // Enable vibration
+	common.motor_left  = device->smallVibrate;
+	common.motor_right = device->largeVibrate;
+
 	if (device->btCon)
 	{
-		std::array<u8, DUALSENSE_BLUETOOTH_REPORT_SIZE> outputBuf{};
-		outputBuf[0] = 0x31;
-		outputBuf[1] = 0x02;
-		outputBuf[2] |= 0x03;
+		const u8 seq_tag = (device->bt_sequence << 4) | 0x0;
+		if (++device->bt_sequence >= 16) device->bt_sequence = 0;
 
-		outputBuf[4] = device->smallVibrate;
-		outputBuf[5] = device->largeVibrate;
+		output_report_bt report{};
+		report.report_id = 0x31; // report id for bluetooth
+		report.seq_tag   = seq_tag;
+		report.tag       = 0x10; // magic number
+		report.common    = std::move(common);
 
 		const u8 btHdr    = 0xA2;
 		const u32 crcHdr  = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
-		const u32 crcCalc = CRCPP::CRC::Calculate(outputBuf.data(), (DUALSENSE_BLUETOOTH_REPORT_SIZE - 4), crcTable, crcHdr);
+		const u32 crcCalc = CRCPP::CRC::Calculate(&report.report_id, (DUALSENSE_BLUETOOTH_REPORT_SIZE - 4), crcTable, crcHdr);
 
-		outputBuf[74] = (crcCalc >> 0) & 0xFF;
-		outputBuf[75] = (crcCalc >> 8) & 0xFF;
-		outputBuf[76] = (crcCalc >> 16) & 0xFF;
-		outputBuf[77] = (crcCalc >> 24) & 0xFF;
+		report.crc32[0] = (crcCalc >> 0) & 0xFF;
+		report.crc32[1] = (crcCalc >> 8) & 0xFF;
+		report.crc32[2] = (crcCalc >> 16) & 0xFF;
+		report.crc32[3] = (crcCalc >> 24) & 0xFF;
 
-		return hid_write(device->hidDevice, outputBuf.data(), DUALSENSE_BLUETOOTH_REPORT_SIZE);
+		return hid_write(device->hidDevice, &report.report_id, DUALSENSE_BLUETOOTH_REPORT_SIZE);
 	}
 	else
 	{
-		std::array<u8, DUALSENSE_USB_REPORT_SIZE> outputBuf{};
-		outputBuf[0] = 0x02;
-		outputBuf[1] |= 0x03;
+		output_report_usb report{};
+		report.report_id = 0x02; // report id for usb
+		report.common    = std::move(common);
 
-		outputBuf[3] = device->smallVibrate;
-		outputBuf[4] = device->largeVibrate;
-
-		return hid_write(device->hidDevice, outputBuf.data(), DUALSENSE_USB_REPORT_SIZE);
+		return hid_write(device->hidDevice, &report.report_id, DUALSENSE_USB_REPORT_SIZE);
 	}
 }
 
