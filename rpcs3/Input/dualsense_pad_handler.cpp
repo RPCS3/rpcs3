@@ -913,8 +913,8 @@ int dualsense_pad_handler::send_output_report(const std::shared_ptr<DualSenseDev
 	output_report_common common{};
 	common.valid_flag_0 |= 0x01; // Enable haptics
 	common.valid_flag_0 |= 0x02; // Enable vibration
-	common.motor_left  = device->smallVibrate;
-	common.motor_right = device->largeVibrate;
+	common.motor_left  = device->largeVibrate;
+	common.motor_right = device->smallVibrate;
 
 	if (device->btCon)
 	{
