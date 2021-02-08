@@ -82,6 +82,7 @@ class dualsense_pad_handler final : public PadHandlerBase
 		hid_device* hidDevice{ nullptr };
 		std::string path{ "" };
 		bool btCon{ false };
+		u8 bt_sequence{ 0 };
 		bool has_calib_data{false};
 		std::array<DualSenseCalibData, DualSenseCalibIndex::COUNT> calib_data{};
 		DualSenseDataMode dataMode{ DualSenseDataMode::Simple };
