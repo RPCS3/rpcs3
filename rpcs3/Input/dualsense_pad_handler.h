@@ -132,7 +132,7 @@ private:
 	}
 
 	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
-	int SendVibrateData(const std::shared_ptr<DualSenseDevice>& device);
+	int send_output_report(const std::shared_ptr<DualSenseDevice>& device);
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 	bool get_is_left_trigger(u64 keyCode) override;
 	bool get_is_right_trigger(u64 keyCode) override;

@@ -238,7 +238,7 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 	}
 
 	// Start/Stop the engines :)
-	SendVibrateData(device);
+	send_output_report(device);
 }
 
 std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDS4Device(const std::string& padId)
@@ -590,7 +590,7 @@ ds4_pad_handler::~ds4_pad_handler()
 			controller.second->largeVibrate = 0;
 			controller.second->led_delay_on = 0;
 			controller.second->led_delay_off = 0;
-			SendVibrateData(controller.second);
+			send_output_report(controller.second);
 
 			hid_close(controller.second->hidDevice);
 		}
@@ -601,7 +601,7 @@ ds4_pad_handler::~ds4_pad_handler()
 	}
 }
 
-int ds4_pad_handler::SendVibrateData(const std::shared_ptr<DS4Device>& device)
+int ds4_pad_handler::send_output_report(const std::shared_ptr<DS4Device>& device)
 {
 	if (!device)
 		return -2;
@@ -1004,7 +1004,7 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 	ds4_dev->largeVibrate = speed_large;
 	ds4_dev->smallVibrate = speed_small;
 
-	if (ds4_dev->newVibrateData && SendVibrateData(ds4_dev) >= 0)
+	if (ds4_dev->newVibrateData && send_output_report(ds4_dev) >= 0)
 	{
 		ds4_dev->newVibrateData = false;
 	}

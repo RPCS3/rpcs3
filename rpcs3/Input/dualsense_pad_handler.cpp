@@ -847,7 +847,7 @@ dualsense_pad_handler::~dualsense_pad_handler()
 			// Disable vibration
 			controller.second->smallVibrate = 0;
 			controller.second->largeVibrate = 0;
-			SendVibrateData(controller.second);
+			send_output_report(controller.second);
 
 			hid_close(controller.second->hidDevice);
 		}
@@ -858,7 +858,7 @@ dualsense_pad_handler::~dualsense_pad_handler()
 	}
 }
 
-int dualsense_pad_handler::SendVibrateData(const std::shared_ptr<DualSenseDevice>& device)
+int dualsense_pad_handler::send_output_report(const std::shared_ptr<DualSenseDevice>& device)
 {
 	if (!device)
 		return -2;
@@ -923,7 +923,7 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 
 	if (dualsense_dev->newVibrateData)
 	{
-		if (SendVibrateData(dualsense_dev) >= 0)
+		if (send_output_report(dualsense_dev) >= 0)
 		{
 			dualsense_dev->newVibrateData = false;
 		}
