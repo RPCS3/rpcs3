@@ -606,8 +606,8 @@ int ds4_pad_handler::send_output_report(const std::shared_ptr<DS4Device>& device
 	if (!device)
 		return -2;
 
-	auto p_profile = device->config;
-	if (p_profile == nullptr)
+	auto config = device->config;
+	if (config == nullptr)
 		return -2; // hid_write and hid_write_control return -1 on error
 
 	std::array<u8, 78> outputBuf{0};
@@ -619,9 +619,9 @@ int ds4_pad_handler::send_output_report(const std::shared_ptr<DS4Device>& device
 		outputBuf[3] = 0x07;
 		outputBuf[6] = device->smallVibrate;
 		outputBuf[7] = device->largeVibrate;
-		outputBuf[8] = p_profile->colorR; // red
-		outputBuf[9] = p_profile->colorG; // green
-		outputBuf[10] = p_profile->colorB; // blue
+		outputBuf[8]  = config->colorR; // red
+		outputBuf[9]  = config->colorG; // green
+		outputBuf[10] = config->colorB; // blue
 
 		// alternating blink states with values 0-255: only setting both to zero disables blinking
 		// 255 is roughly 2 seconds, so setting both values to 255 results in a 4 second interval
@@ -646,9 +646,9 @@ int ds4_pad_handler::send_output_report(const std::shared_ptr<DS4Device>& device
 		outputBuf[1] = 0x07;
 		outputBuf[4] = device->smallVibrate;
 		outputBuf[5] = device->largeVibrate;
-		outputBuf[6] = p_profile->colorR; // red
-		outputBuf[7] = p_profile->colorG; // green
-		outputBuf[8] = p_profile->colorB; // blue
+		outputBuf[6] = config->colorR; // red
+		outputBuf[7] = config->colorG; // green
+		outputBuf[8] = config->colorB; // blue
 		outputBuf[9] = device->led_delay_on;
 		outputBuf[10] = device->led_delay_off;
 
