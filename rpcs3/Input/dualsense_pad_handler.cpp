@@ -16,12 +16,16 @@ namespace
 
 	enum
 	{
-		VALID_FLAG_0_COMPATIBLE_VIBRATION          = 0x1,
-		VALID_FLAG_0_HAPTICS_SELECT                = 0x2,
-		VALID_FLAG_1_LIGHTBAR_CONTROL_ENABLE       = 0x4,
-		VALID_FLAG_1_RELEASE_LEDS                  = 0x8,
-		VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE = 0x2,
-		LIGHTBAR_SETUP_LIGHT_OUT                   = 0x2,
+		VALID_FLAG_0_COMPATIBLE_VIBRATION            = 0x01,
+		VALID_FLAG_0_HAPTICS_SELECT                  = 0x02,
+		VALID_FLAG_1_MIC_MUTE_LED_CONTROL_ENABLE     = 0x01,
+		VALID_FLAG_1_POWER_SAVE_CONTROL_ENABLE       = 0x02,
+		VALID_FLAG_1_LIGHTBAR_CONTROL_ENABLE         = 0x04,
+		VALID_FLAG_1_RELEASE_LEDS                    = 0x08,
+		VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE = 0x10,
+		VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE   = 0x02,
+		POWER_SAVE_CONTROL_MIC_MUTE                  = 0x10,
+		LIGHTBAR_SETUP_LIGHT_OUT                     = 0x02,
 	};
 	
 	struct output_report_common
@@ -929,7 +933,7 @@ int dualsense_pad_handler::send_output_report(const std::shared_ptr<DualSenseDev
 	{
 		device->init_lightbar = false;
 
-		common.valid_flag_2   = VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE;
+		common.valid_flag_2 |= VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE;
 		common.lightbar_setup = LIGHTBAR_SETUP_LIGHT_OUT; // Fade light out.
 	}
 
@@ -941,6 +945,16 @@ int dualsense_pad_handler::send_output_report(const std::shared_ptr<DualSenseDev
 		common.lightbar_r = config->colorR; // red
 		common.lightbar_g = config->colorG; // green
 		common.lightbar_b = config->colorB; // blue
+	}
+
+	if (device->update_player_leds)
+	{
+		device->update_player_leds = false;
+
+		// The dualsense controller uses 5 LEDs to indicate the player ID.
+		// Use OR with 0x1, 0x2, 0x4, 0x8 and 0x10 to enable the LEDs (from leftmost to rightmost).
+		common.valid_flag_1 |= VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE;
+		common.player_leds = 0; // TODO: We currently don't know which player uses this pad
 	}
 
 	if (device->btCon)
