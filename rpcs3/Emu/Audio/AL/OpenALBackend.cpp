@@ -14,10 +14,12 @@ LOG_CHANNEL(OpenAL);
 OpenALBackend::OpenALBackend()
 	: AudioBackend()
 {
+	ALCint attribs[] = {ALC_FREQUENCY, DEFAULT_AUDIO_SAMPLING_RATE, 0, 0};
+
 	ALCdevice* m_device = alcOpenDevice(nullptr);
 	checkForAlcError("alcOpenDevice");
 
-	ALCcontext* m_context = alcCreateContext(m_device, nullptr);
+	ALCcontext* m_context = alcCreateContext(m_device, attribs);
 	checkForAlcError("alcCreateContext");
 
 	alcMakeContextCurrent(m_context);
