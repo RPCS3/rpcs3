@@ -119,7 +119,7 @@ struct fmt_class_string
 	using type = T;
 
 	// Helper function (converts arg to object reference)
-	static SAFE_BUFFERS FORCE_INLINE const T& get_object(u64 arg)
+	static FORCE_INLINE SAFE_BUFFERS(const T&) get_object(u64 arg)
 	{
 		return *reinterpret_cast<const T*>(static_cast<uptr>(arg));
 	}
@@ -128,7 +128,7 @@ struct fmt_class_string
 	using convert_t = const char*(*)(T value);
 
 	// Helper function (safely converts arg to enum value)
-	static SAFE_BUFFERS FORCE_INLINE void format_enum(std::string& out, u64 arg, convert_t convert)
+	static FORCE_INLINE SAFE_BUFFERS(void) format_enum(std::string& out, u64 arg, convert_t convert)
 	{
 		const auto value = static_cast<std::underlying_type_t<T>>(arg);
 
@@ -147,7 +147,7 @@ struct fmt_class_string
 	}
 
 	// Helper function (bitset formatting)
-	static SAFE_BUFFERS FORCE_INLINE void format_bitset(std::string& out, u64 arg, const char* prefix, const char* delim, const char* suffix, void (*fmt)(std::string&, u64))
+	static FORCE_INLINE SAFE_BUFFERS(void) format_bitset(std::string& out, u64 arg, const char* prefix, const char* delim, const char* suffix, void (*fmt)(std::string&, u64))
 	{
 		// Start from raw value
 		fmt_class_string<u64>::format(out, arg);
@@ -249,7 +249,7 @@ namespace fmt
 	};
 
 	template <typename... Args>
-	SAFE_BUFFERS FORCE_INLINE const fmt_type_info* get_type_info()
+	FORCE_INLINE SAFE_BUFFERS(const fmt_type_info*) get_type_info()
 	{
 		// Constantly initialized null-terminated list of type-specific information
 		static constexpr fmt_type_info result[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
@@ -265,7 +265,7 @@ namespace fmt
 
 	// Formatting function
 	template <typename CharT, usz N, typename... Args>
-	SAFE_BUFFERS FORCE_INLINE void append(std::string& out, const CharT(&fmt)[N], const Args&... args)
+	FORCE_INLINE SAFE_BUFFERS(void) append(std::string& out, const CharT(&fmt)[N], const Args&... args)
 	{
 		static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
 		raw_append(out, reinterpret_cast<const char*>(fmt), type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
@@ -273,7 +273,7 @@ namespace fmt
 
 	// Formatting function
 	template <typename CharT, usz N, typename... Args>
-	SAFE_BUFFERS FORCE_INLINE std::string format(const CharT(&fmt)[N], const Args&... args)
+	FORCE_INLINE SAFE_BUFFERS(std::string) format(const CharT(&fmt)[N], const Args&... args)
 	{
 		std::string result;
 		append(result, fmt, args...);
@@ -287,7 +287,7 @@ namespace fmt
 	template <typename CharT, usz N, typename... Args>
 	struct throw_exception
 	{
-		[[noreturn]] SAFE_BUFFERS FORCE_INLINE throw_exception(const CharT(&fmt)[N], const Args&... args,
+		[[noreturn]] FORCE_INLINE SAFE_BUFFERS() throw_exception(const CharT(&fmt)[N], const Args&... args,
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),

@@ -88,7 +88,7 @@ class perf_stat final : public perf_stat_base
 	} g_tls_perf_stat;
 
 public:
-	static SAFE_BUFFERS FORCE_INLINE void push(u64 start_time) noexcept
+	static FORCE_INLINE SAFE_BUFFERS(void) push(u64 start_time) noexcept
 	{
 		perf_stat_base::push(g_tls_perf_stat.m_log, start_time, perf_name<ShortName>.data());
 	}
@@ -102,21 +102,21 @@ class perf_meter
 	u64 m_timestamps[1 + sizeof...(SubEvents)];
 
 public:
-	SAFE_BUFFERS FORCE_INLINE perf_meter() noexcept
+	FORCE_INLINE SAFE_BUFFERS() perf_meter() noexcept
 	{
 		restart();
 	}
 
 	// Copy first timestamp
 	template <auto SN, auto... S>
-	SAFE_BUFFERS FORCE_INLINE perf_meter(const perf_meter<SN, S...>& r) noexcept
+	FORCE_INLINE SAFE_BUFFERS() perf_meter(const perf_meter<SN, S...>& r) noexcept
 	{
 		m_timestamps[0] = r.get();
 		std::memset(m_timestamps + 1, 0, sizeof(m_timestamps) - sizeof(u64));
 	}
 
 	template <auto SN, auto... S>
-	SAFE_BUFFERS perf_meter(perf_meter<SN, S...>&& r) noexcept
+	SAFE_BUFFERS() perf_meter(perf_meter<SN, S...>&& r) noexcept
 	{
 		m_timestamps[0] = r.get();
 		r.reset();
@@ -124,14 +124,14 @@ public:
 
 	// Copy first timestamp
 	template <auto SN, auto... S>
-	SAFE_BUFFERS perf_meter& operator =(const perf_meter<SN, S...>& r) noexcept
+	SAFE_BUFFERS(perf_meter&) operator =(const perf_meter<SN, S...>& r) noexcept
 	{
 		m_timestamps[0] = r.get();
 		return *this;
 	}
 
 	template <auto SN, auto... S>
-	SAFE_BUFFERS perf_meter& operator =(perf_meter<SN, S...>& r) noexcept
+	SAFE_BUFFERS(perf_meter&) operator =(perf_meter<SN, S...>& r) noexcept
 	{
 		m_timestamps[0] = r.get();
 		r.reset();
@@ -140,7 +140,7 @@ public:
 
 	// Push subevent data in array
 	template <auto Event, usz Index = 0>
-	SAFE_BUFFERS void push() noexcept
+	SAFE_BUFFERS(void) push() noexcept
 	{
 		// TODO: should use more efficient search with type comparison, then value comparison, or pattern matching
 		if constexpr (std::array<bool, sizeof...(SubEvents)>{(SubEvents == Event)...}[Index])
@@ -162,19 +162,19 @@ public:
 	}
 
 	// Disable this counter
-	SAFE_BUFFERS FORCE_INLINE void reset() noexcept
+	FORCE_INLINE SAFE_BUFFERS(void) reset() noexcept
 	{
 		m_timestamps[0] = 0;
 	}
 
 	// Re-initialize first timestamp
-	SAFE_BUFFERS FORCE_INLINE void restart() noexcept
+	FORCE_INLINE SAFE_BUFFERS(void) restart() noexcept
 	{
 		m_timestamps[0] = get_tsc();
 		std::memset(m_timestamps + 1, 0, sizeof(m_timestamps) - sizeof(u64));
 	}
 
-	SAFE_BUFFERS ~perf_meter()
+	SAFE_BUFFERS() ~perf_meter()
 	{
 		// Disabled counter
 		if (!m_timestamps[0]) [[unlikely]]
