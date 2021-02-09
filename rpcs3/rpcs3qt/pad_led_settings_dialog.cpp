@@ -5,12 +5,13 @@
 #include <QPixmap>
 #include <QPainterPath>
 
-pad_led_settings_dialog::pad_led_settings_dialog(const int& colorR, const int& colorG, const int& colorB, const bool& led_low_battery_blink, const bool& led_battery_indicator, const int& led_battery_indicator_brightness, QDialog * parent)
+pad_led_settings_dialog::pad_led_settings_dialog(QDialog* parent, int colorR, int colorG, int colorB, bool has_battery, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness)
     : QDialog(parent)
     , ui(new Ui::pad_led_settings_dialog)
     , m_initial{colorR, colorG, colorB, led_low_battery_blink, led_battery_indicator, led_battery_indicator_brightness}
 {
 	ui->setupUi(this);
+	setModal(true);
 	m_new = m_initial;
 
 	ui->hs_indicator_brightness->setValue(m_new.battery_indicator_brightness);
@@ -19,6 +20,9 @@ pad_led_settings_dialog::pad_led_settings_dialog(const int& colorR, const int& c
 
 	switch_groupboxes(m_new.battery_indicator);
 	update_slider_label(m_new.battery_indicator_brightness);
+
+	ui->gb_battery_status->setEnabled(has_battery);
+	ui->gb_indicator_brightness->setEnabled(has_battery);
 
 	connect(ui->bb_dialog_buttons, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
 	{
