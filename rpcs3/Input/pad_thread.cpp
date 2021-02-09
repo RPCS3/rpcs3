@@ -145,6 +145,7 @@ void pad_thread::Init()
 			}
 			handlers.emplace(handler_type, cur_pad_handler);
 		}
+		cur_pad_handler->set_player(i);
 		cur_pad_handler->Init();
 
 		m_pads[i] = std::make_shared<Pad>(CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);

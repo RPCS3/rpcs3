@@ -954,7 +954,19 @@ int dualsense_pad_handler::send_output_report(const std::shared_ptr<DualSenseDev
 		// The dualsense controller uses 5 LEDs to indicate the player ID.
 		// Use OR with 0x1, 0x2, 0x4, 0x8 and 0x10 to enable the LEDs (from leftmost to rightmost).
 		common.valid_flag_1 |= VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE;
-		common.player_leds = 0; // TODO: We currently don't know which player uses this pad
+
+		switch (m_player_id)
+		{
+		case 0: common.player_leds = 0b00100; break;
+		case 1: common.player_leds = 0b01010; break;
+		case 2: common.player_leds = 0b10101; break;
+		case 3: common.player_leds = 0b11011; break;
+		case 4: common.player_leds = 0b11111; break;
+		case 5: common.player_leds = 0b10111; break;
+		case 6: common.player_leds = 0b11101; break;
+		default:
+			fmt::throw_exception("Dualsense is using forbidden player id %d", m_player_id);
+		}
 	}
 
 	if (device->btCon)
