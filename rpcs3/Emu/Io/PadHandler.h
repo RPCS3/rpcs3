@@ -68,6 +68,7 @@ protected:
 	std::array<bool, MAX_GAMEPADS> last_connection_status{{ false, false, false, false, false, false, false }};
 
 	std::string m_name_string;
+	u32 m_player_id = 0;
 	usz m_max_devices = 0;
 	int m_trigger_threshold = 0;
 	int m_thumb_threshold = 0;
@@ -144,6 +145,8 @@ public:
 	bool has_deadzones() const;
 	bool has_led() const;
 	bool has_battery() const;
+
+	void set_player(u32 player_id) { m_player_id = player_id; }
 
 	static std::string get_config_dir(pad_handler type, const std::string& title_id = "");
 	static std::string get_config_filename(int i, const std::string& title_id = "");
