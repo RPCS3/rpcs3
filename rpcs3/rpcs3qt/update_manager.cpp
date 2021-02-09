@@ -385,7 +385,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 	usz outBufferSize = 0;
 
 	// Creates temp folder for moving active files
-	const std::string tmp_folder = Emulator::GetEmuDir() + "rpcs3_old/";
+	const std::string tmp_folder = Emulator::GetExeDir() + "rpcs3_old/";
 	fs::create_dir(tmp_folder);
 
 	for (UInt32 i = 0; i < db.NumFiles; i++)
@@ -420,7 +420,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 		temp_u8[len] = 0;
 		std::string name((char*)temp_u8);
 
-		name = Emulator::GetEmuDir() + name;
+		name = Emulator::GetExeDir() + name;
 
 		if (!isDir)
 		{
