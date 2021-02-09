@@ -197,6 +197,10 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x044F, 0xB65E, 0xB65E, "Thrustmaster TRS");
 		check_device(0x044F, 0xB660, 0xB660, "Thrustmaster T500 RS Gear Shift");
 
+		// GT6
+		check_device(0x2833, 0x0001, 0x0001, "Oculus");
+		check_device(0x046D, 0xCA03, 0xCA03, "lgFF_ca03_ca03");
+
 		// Buzz controllers
 		check_device(0x054C, 0x1000, 0x1040, "buzzer0");
 		check_device(0x054C, 0x0001, 0x0041, "buzzer1");
