@@ -306,6 +306,31 @@ namespace vk
 		enabled_features.textureCompressionBC = VK_TRUE;
 		enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
+		// If we're on lavapipe / llvmpipe, disable unimplemented features:
+		// - samplerAnisotropy
+		// - shaderStorageBufferArrayDynamicIndexing
+		// - wideLines
+		// as of mesa 21.1.0-dev (aea36ee05e9, 2020-02-10)
+		// Several games work even if we disable these, testing purpose only
+		if (pgpu->get_name().find("llvmpipe") != umax)
+		{
+			if (!pgpu->features.samplerAnisotropy)
+			{
+				rsx_log.error("Running lavapipe without support for samplerAnisotropy");
+				enabled_features.samplerAnisotropy = VK_FALSE;
+			}
+			if (!pgpu->features.shaderStorageBufferArrayDynamicIndexing)
+			{
+				rsx_log.error("Running lavapipe without support for shaderStorageBufferArrayDynamicIndexing");
+				enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_FALSE;
+			}
+			if (!pgpu->features.wideLines)
+			{
+				rsx_log.error("Running lavapipe without support for wideLines");
+				enabled_features.wideLines = VK_FALSE;
+			}
+		}
+
 		// Optionally disable unsupported stuff
 		if (!pgpu->features.shaderFloat64)
 		{
