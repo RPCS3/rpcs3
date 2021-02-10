@@ -39,7 +39,7 @@ public:
 	}
 
 	/** Call this method before calling app.exec */
-	void Init() override;
+	bool Init() override;
 
 	std::unique_ptr<gs_frame> get_gs_frame();
 
@@ -77,7 +77,7 @@ private:
 	bool m_use_cli_style = false;
 
 private Q_SLOTS:
-	void OnChangeStyleSheetRequest(const QString& path);
+	void OnChangeStyleSheetRequest();
 	void OnEmuSettingsChange();
 
 Q_SIGNALS:

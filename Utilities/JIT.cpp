@@ -7,6 +7,7 @@
 #include "mutex.h"
 #include "util/vm.hpp"
 #include "util/asm.hpp"
+#include <charconv>
 #include <immintrin.h>
 #include <zlib.h>
 
@@ -228,6 +229,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 			if (!p || m_pos > m_max) [[unlikely]]
 			{
 				*dst = nullptr;
+				jit_log.fatal("Out of memory (static asmjit)");
 				return asmjit::kErrorNoVirtualMemory;
 			}
 
@@ -310,12 +312,29 @@ const bool jit_initialize = []() -> bool
 	fmt::throw_exception("Null function: %s", name);
 }
 
+namespace vm
+{
+	extern u8* const g_sudo_addr;
+}
+
 static shared_mutex null_mtx;
 
 static std::unordered_map<std::string, u64> null_funcs;
 
 static u64 make_null_function(const std::string& name)
 {
+	if (name.starts_with("__0x"))
+	{
+		u32 addr = -1;
+		auto res = std::from_chars(name.c_str() + 4, name.c_str() + name.size(), addr, 16);
+
+		if (res.ec == std::errc() && res.ptr == name.c_str() + name.size() && addr < 0x8000'0000)
+		{
+			// Point the garbage to reserved, non-executable memory
+			return reinterpret_cast<u64>(vm::g_sudo_addr + addr);
+		}
+	}
+
 	std::lock_guard lock(null_mtx);
 
 	if (u64& func_ptr = null_funcs[name]) [[likely]]
@@ -376,8 +395,12 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 
 		if (!addr)
 		{
-			jit_log.error("Function '%s' linked but not found.", name);
 			addr = make_null_function(name);
+
+			if (!addr)
+			{
+				fmt::throw_exception("Failed to link '%s'", name);
+			}
 		}
 
 		return {addr, llvm::JITSymbolFlags::Exported};
@@ -453,8 +476,12 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 
 		if (!addr)
 		{
-			jit_log.error("Function '%s' linked but not found.", name);
 			addr = make_null_function(name);
+
+			if (!addr)
+			{
+				fmt::throw_exception("Failed to link '%s' (MM2)", name);
+			}
 		}
 
 		return {addr, llvm::JITSymbolFlags::Exported};
@@ -730,7 +757,7 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 
 		for (auto&& [name, addr] : _link)
 		{
-			m_engine->addGlobalMapping(name, addr);
+			m_engine->updateGlobalMapping(name, addr);
 		}
 	}
 

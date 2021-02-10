@@ -13,6 +13,7 @@
 #include "rpcn_settings_dialog.h"
 #include "auto_pause_settings_dialog.h"
 #include "cg_disasm_window.h"
+#include "log_viewer.h"
 #include "memory_string_searcher.h"
 #include "memory_viewer_panel.h"
 #include "rsx_debugger.h"
@@ -35,6 +36,7 @@
 #include <QMimeData>
 #include <QMessageBox>
 #include <QFileDialog>
+#include <QFontDatabase>
 
 #include "rpcs3_version.h"
 #include "Emu/System.h"
@@ -82,7 +84,7 @@ main_window::~main_window()
 /* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).
  * Simplifies logic a bit.
  */
-void main_window::Init()
+bool main_window::Init()
 {
 	setAcceptDrops(true);
 
@@ -99,7 +101,7 @@ void main_window::Init()
 	setMinimumSize(350, minimumSizeHint().height());    // seems fine on win 10
 	setWindowTitle(QString::fromStdString("RPCS3 " + rpcs3::get_version().to_string()));
 
-	Q_EMIT RequestGlobalStylesheetChange(m_gui_settings->GetCurrentStylesheetPath());
+	Q_EMIT RequestGlobalStylesheetChange();
 	ConfigureGuiFromSettings(true);
 
 	if (const std::string_view branch_name = rpcs3::get_full_branch(); branch_name != "RPCS3/rpcs3/master" && branch_name != "local_build")
@@ -127,7 +129,7 @@ void main_window::Init()
 
 		if (msg.exec() == QMessageBox::No)
 		{
-			std::exit(EXIT_SUCCESS);
+			return false;
 		}
 	}
 
@@ -227,6 +229,8 @@ void main_window::Init()
 		m_updater.check_for_updates(true, update_value != "true", this);
 	}
 #endif
+
+	return true;
 }
 
 QString main_window::GetCurrentTitle()
@@ -853,6 +857,9 @@ void main_window::HandlePupInstallation(QString file_path)
 		return;
 	}
 
+	// Remove possibly PS3 fonts from database
+	QFontDatabase::removeAllApplicationFonts();
+
 	progress_dialog pdlg(tr("RPCS3 Firmware Installer"), tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(update_filenames.size()), false, this);
 	pdlg.show();
 
@@ -916,6 +923,9 @@ void main_window::HandlePupInstallation(QString file_path)
 			std::this_thread::sleep_for(100ms);
 		}
 	}
+
+	// Update with newly installed PS3 fonts
+	Q_EMIT RequestGlobalStylesheetChange();
 
 	if (progress > 0)
 	{
@@ -1259,11 +1269,8 @@ void main_window::OnEmuStop()
 {
 	const QString title = GetCurrentTitle();
 	const QString play_tooltip = Emu.IsReady() ? tr("Play %0").arg(title) : tr("Resume %0").arg(title);
-	const QString restart_tooltip = tr("Restart %0").arg(title);
 
-	m_debugger_frame->EnableButtons(false);
-	m_debugger_frame->ClearBreakpoints();
-	m_debugger_frame->ClearCallStack();
+	m_debugger_frame->UpdateUI();
 
 	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play\tCtrl+E") : tr("&Resume\tCtrl+E"));
 	ui->sysPauseAct->setIcon(m_icon_play);
@@ -1282,6 +1289,8 @@ void main_window::OnEmuStop()
 	}
 	else
 	{
+		const QString restart_tooltip = tr("Restart %0").arg(title);
+
 		ui->toolbar_start->setEnabled(true);
 		ui->toolbar_start->setIcon(m_icon_restart);
 		ui->toolbar_start->setText(tr("Restart"));
@@ -1824,14 +1833,18 @@ void main_window::CreateConnects()
 		cgdw->show();
 	});
 
+	connect(ui->actionLog_Viewer, &QAction::triggered, [this]
+	{
+		log_viewer* viewer = new log_viewer(m_gui_settings);
+		viewer->show();
+	});
+
 	connect(ui->toolskernel_explorerAct, &QAction::triggered, [this]
 	{
 		if (!m_kernel_explorer)
 		{
-			m_kernel_explorer = new kernel_explorer(this, [this]()
-			{
-				m_kernel_explorer = nullptr;
-			});
+			m_kernel_explorer = new kernel_explorer(this);
+			connect(m_kernel_explorer, &QDialog::finished, this, [this]() { m_kernel_explorer = nullptr; });
 		}
 
 		m_kernel_explorer->show();
@@ -2341,7 +2354,12 @@ void main_window::CreateFirmwareCache()
 	}
 
 	Emu.SetForceBoot(true);
-	Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys/external/", "", true);
+
+	if (const game_boot_result error = Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys/external/", "", true);
+		error != game_boot_result::no_errors)
+	{
+		gui_log.error("Creating firmware cache failed: reason: %s", error);
+	}
 }
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)

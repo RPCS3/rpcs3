@@ -26,7 +26,7 @@ public:
 	int exec() override;
 Q_SIGNALS:
 	void GuiSettingsSyncRequest(bool configure_all);
-	void GuiStylesheetRequest(const QString& path);
+	void GuiStylesheetRequest();
 	void GuiSettingsSaveRequest();
 	void GuiRepaintRequest();
 	void EmuSettingsApplied();

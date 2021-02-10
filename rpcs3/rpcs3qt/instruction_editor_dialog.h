@@ -22,10 +22,10 @@ private:
 	QLineEdit* m_instr;
 	QLabel* m_preview;
 
-public:
-	std::weak_ptr<cpu_thread> cpu;
+	const std::function<cpu_thread*()> m_get_cpu;
 
-	instruction_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm);
+public:
+	instruction_editor_dialog(QWidget *parent, u32 _pc, CPUDisAsm* _disasm, std::function<cpu_thread*()> func);
 
 	void updatePreview();
 };

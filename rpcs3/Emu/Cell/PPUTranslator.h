@@ -36,18 +36,17 @@ class PPUTranslator final : public cpu_translator
 
 	/* Variables */
 
-	// Segments
-	std::vector<llvm::GlobalVariable*> m_segs;
-
 	// Memory base
-	llvm::GlobalVariable* m_base;
-	llvm::Value* m_base_loaded;
+	llvm::Value* m_base;
 
 	// Thread context
 	llvm::Value* m_thread;
 
 	// Callable functions
-	llvm::GlobalVariable* m_call;
+	llvm::Value* m_exec;
+
+	// Segment 0 address
+	llvm::Value* m_seg0;
 
 	// Thread context struct
 	llvm::StructType* m_thread_type;

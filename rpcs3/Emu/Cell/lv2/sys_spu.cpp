@@ -176,7 +176,7 @@ void sys_spu_image::deploy(u8* loc, sys_spu_segment* segs, u32 nsegs)
 		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, loc);
 	}
 
-	spu_log.notice("Loaded SPU image: %s (<- %u)%s", hash, applied, dump);
+	spu_log.notice("Loaded SPU image: %s (<- %u)%s", hash, applied.size(), dump);
 }
 
 // Get spu thread ptr, returns group ptr as well for refcounting

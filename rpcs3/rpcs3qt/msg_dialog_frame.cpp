@@ -271,6 +271,37 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 	}
 }
 
+void msg_dialog_frame::ProgressBarSetValue(u32 index, u32 value)
+{
+	if (!m_dialog)
+	{
+		return;
+	}
+
+	if (index == 0 && m_gauge1)
+	{
+		m_gauge1->setValue(std::min(static_cast<int>(value), m_gauge1->maximum()));
+	}
+
+	if (index == 1 && m_gauge2)
+	{
+		m_gauge2->setValue(std::min(static_cast<int>(value), m_gauge2->maximum()));
+	}
+
+	if (index == taskbar_index + 0u || taskbar_index == -1)
+	{
+#ifdef _WIN32
+		if (m_tb_progress)
+		{
+			m_tb_progress->setValue(std::min(static_cast<int>(value), m_tb_progress->maximum()));
+		}
+#elif HAVE_QTDBUS
+		m_progress_value = std::min(static_cast<int>(value), m_gauge_max);
+		UpdateProgress(m_progress_value);
+#endif
+	}
+}
+
 void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
 {
 	if (!m_dialog)

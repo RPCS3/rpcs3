@@ -1041,7 +1041,7 @@ FORCE_INLINE auto root_info::slot_search(uptr iptr, u32 size, u64 thread_id, u12
 	}
 }
 
-SAFE_BUFFERS void atomic_wait_engine::wait(const void* data, u32 size, u128 old_value, u64 timeout, u128 mask, atomic_wait::info* ext)
+SAFE_BUFFERS(void) atomic_wait_engine::wait(const void* data, u32 size, u128 old_value, u64 timeout, u128 mask, atomic_wait::info* ext)
 {
 	const auto stamp0 = utils::get_unique_tsc();
 
@@ -1531,7 +1531,7 @@ void atomic_wait_engine::notify_one(const void* data, u32 size, u128 mask, u128 
 		s_tls_notify_cb(data, -1);
 }
 
-SAFE_BUFFERS void atomic_wait_engine::notify_all(const void* data, u32 size, u128 mask)
+SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 size, u128 mask)
 {
 	const uptr iptr = reinterpret_cast<uptr>(data) & (~s_ref_mask >> 17);
 

@@ -50,13 +50,18 @@ gui_application::~gui_application()
 #endif
 }
 
-void gui_application::Init()
+bool gui_application::Init()
 {
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 
 	m_emu_settings.reset(new emu_settings());
 	m_gui_settings.reset(new gui_settings());
 	m_persistent_settings.reset(new persistent_settings());
+
+	if (!m_emu_settings->Init())
+	{
+		return false;
+	}
 
 	// Get deprecated active user (before August 2nd 2020)
 	QString active_user = m_gui_settings->GetValue(gui::um_active_user).toString();
@@ -91,9 +96,9 @@ void gui_application::Init()
 		welcome->exec();
 	}
 
-	if (m_main_window)
+	if (m_main_window && !m_main_window->Init())
 	{
-		m_main_window->Init();
+		return false;
 	}
 
 #ifdef WITH_DISCORD_RPC
@@ -103,6 +108,8 @@ void gui_application::Init()
 		discord::initialize();
 	}
 #endif
+
+	return true;
 }
 
 void gui_application::SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language_code)
@@ -363,6 +370,7 @@ void gui_application::InitializeCallbacks()
 			case 0: static_cast<gs_frame*>(m_game_window)->progress_reset(value); break;
 			case 1: static_cast<gs_frame*>(m_game_window)->progress_increment(value); break;
 			case 2: static_cast<gs_frame*>(m_game_window)->progress_set_limit(value); break;
+			case 3: static_cast<gs_frame*>(m_game_window)->progress_set_value(value); break;
 			default: gui_log.fatal("Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value); break;
 			}
 		}
@@ -439,10 +447,9 @@ void gui_application::StopPlaytime()
 }
 
 /*
-* Handle a request to change the stylesheet. May consider adding reporting of errors in future.
-* Empty string means default.
+* Handle a request to change the stylesheet based on the current entry in the settings.
 */
-void gui_application::OnChangeStyleSheetRequest(const QString& path)
+void gui_application::OnChangeStyleSheetRequest()
 {
 	// skip stylesheets on first repaint if a style was set from command line
 	if (m_use_cli_style && gui::stylesheet.isEmpty())
@@ -457,59 +464,73 @@ void gui_application::OnChangeStyleSheetRequest(const QString& path)
 		return;
 	}
 
-	QFile file(path);
+	// Remove old fonts
+	QFontDatabase::removeAllApplicationFonts();
 
-	// If we can't open the file, try the /share or /Resources folder
-#if !defined(_WIN32)
-#ifdef __APPLE__
-	QString share_dir = QCoreApplication::applicationDirPath() + "/../Resources/";
-#else
-	QString share_dir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/";
-#endif
-	QFile share_file(share_dir + "GuiConfigs/" + QFileInfo(file.fileName()).fileName());
-#endif
+	const QString stylesheet_name = m_gui_settings->GetValue(gui::m_currentStylesheet).toString();
 
-	if (path == "")
+	if (stylesheet_name.isEmpty() || stylesheet_name == gui::DefaultStylesheet)
 	{
 		setStyleSheet(gui::stylesheets::default_style_sheet);
 	}
-	else if (path == "-")
+	else if (stylesheet_name == gui::NoStylesheet)
 	{
 		setStyleSheet("/* none */");
 	}
-	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
-	{
-		QString config_dir = qstr(fs::get_config_dir());
-
-		// Remove old fonts
-		QFontDatabase::removeAllApplicationFonts();
-
-		// Add PS3 fonts
-		QDirIterator ps3_font_it(qstr(g_cfg.vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
-		while (ps3_font_it.hasNext())
-			QFontDatabase::addApplicationFont(ps3_font_it.next());
-
-		// Add custom fonts
-		QDirIterator custom_font_it(config_dir + "fonts/", QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
-		while (custom_font_it.hasNext())
-			QFontDatabase::addApplicationFont(custom_font_it.next());
-
-		// Set root for stylesheets
-		QDir::setCurrent(config_dir);
-		setStyleSheet(file.readAll());
-		file.close();
-	}
-#if !defined(_WIN32)
-	else if (share_file.open(QIODevice::ReadOnly | QIODevice::Text))
-	{
-		QDir::setCurrent(share_dir);
-		setStyleSheet(share_file.readAll());
-		share_file.close();
-	}
-#endif
 	else
 	{
-		setStyleSheet(gui::stylesheets::default_style_sheet);
+		QString stylesheet_path;
+		QString stylesheet_dir;
+		QList<QDir> locs;
+		locs << m_gui_settings->GetSettingsDir();
+
+#if !defined(_WIN32)
+#ifdef __APPLE__
+		locs << QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
+#else
+		locs << QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
+#endif
+		locs << QCoreApplication::applicationDirPath() + "/GuiConfigs/";
+#endif
+
+		for (auto&& loc : locs)
+		{
+			QFileInfo file_info(loc.absoluteFilePath(stylesheet_name + QStringLiteral(".qss")));
+			if (file_info.exists())
+			{
+				loc.cdUp();
+				stylesheet_dir  = loc.absolutePath();
+				stylesheet_path = file_info.absoluteFilePath();
+				break;
+			}
+		}
+
+		if (QFile file(stylesheet_path); !stylesheet_path.isEmpty() && file.open(QIODevice::ReadOnly | QIODevice::Text))
+		{
+			const QString config_dir = qstr(fs::get_config_dir());
+
+			// Add PS3 fonts
+			QDirIterator ps3_font_it(qstr(g_cfg.vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+			while (ps3_font_it.hasNext())
+				QFontDatabase::addApplicationFont(ps3_font_it.next());
+
+			// Add custom fonts
+			QDirIterator custom_font_it(config_dir + "fonts/", QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+			while (custom_font_it.hasNext())
+				QFontDatabase::addApplicationFont(custom_font_it.next());
+
+			// Replace relative paths with absolute paths. Since relative paths should always be the same, we can just use simple string replacement.
+			// Another option would be to use QDir::setCurrent, but that changes current working directory for the whole process (We don't want that).
+			QString stylesheet = file.readAll();
+			stylesheet.replace(QStringLiteral("url(\"GuiConfigs/"), QStringLiteral("url(\"") + stylesheet_dir + QStringLiteral("/GuiConfigs/"));
+			setStyleSheet(stylesheet);
+			file.close();
+		}
+		else
+		{
+			gui_log.error("Could not find stylesheet '%s'. Using default.", stylesheet_name.toStdString());
+			setStyleSheet(gui::stylesheets::default_style_sheet);
+		}
 	}
 
 	gui::stylesheet = styleSheet();

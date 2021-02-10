@@ -209,6 +209,12 @@ bool update_manager::handle_json(bool automatic, bool check_only, const QByteArr
 	m_expected_hash = latest[os]["checksum"].toString().toStdString();
 	m_expected_size = latest[os]["size"].toInt();
 
+	if (!m_request_url.starts_with("https://github.com/RPCS3/rpcs3"))
+	{
+		update_log.fatal("Bad url: %s", m_request_url);
+		return false;
+	}
+
 	if (check_only)
 	{
 		m_downloader->close_progress_dialog();

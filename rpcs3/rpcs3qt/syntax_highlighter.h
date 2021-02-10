@@ -29,6 +29,14 @@ protected:
 	QTextCharFormat multiLineCommentFormat;
 };
 
+class LogHighlighter : public Highlighter
+{
+	Q_OBJECT
+
+public:
+	LogHighlighter(QTextDocument* parent = 0);
+};
+
 class AsmHighlighter : public Highlighter
 {
 	Q_OBJECT

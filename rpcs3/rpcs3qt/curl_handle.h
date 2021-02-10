@@ -17,4 +17,9 @@ public:
 	~curl_handle();
 
 	CURL* get_curl();
+
+	operator CURL*()
+	{
+		return get_curl();
+	}
 };

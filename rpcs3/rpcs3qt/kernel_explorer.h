@@ -26,12 +26,10 @@ class kernel_explorer : public QDialog
 	};
 
 public:
-	kernel_explorer(QWidget* parent, std::function<void()> on_destroy);
-	~kernel_explorer();
+	kernel_explorer(QWidget* parent);
 
 private:
 	QTreeWidget* m_tree;
-	std::function<void()> m_on_destroy;
 
 private Q_SLOTS:
 	void Update();

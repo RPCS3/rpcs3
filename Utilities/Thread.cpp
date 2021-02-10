@@ -8,7 +8,6 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Thread.h"
 #include "Utilities/JIT.h"
-#include <typeinfo>
 #include <thread>
 #include <sstream>
 
@@ -121,10 +120,6 @@ std::string dump_useful_thread_info()
 	if (auto cpu = get_current_cpu_thread())
 	{
 		result = cpu->dump_all();
-	}
-	else if (auto render = rsx::get_current_renderer(); render && render->is_current_thread())
-	{
-		result = render->dump_regs();
 	}
 
 	guard = false;
@@ -1403,7 +1398,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 	// Hack: allocate memory in case the emulator is stopping
 	const auto hack_alloc = [&]()
 	{
-		// If failed the value remains true and std::terminate should be called
 		g_tls_access_violation_recovered = true;
 
 		const auto area = vm::reserve_map(vm::any, addr & -0x10000, 0x10000);
@@ -1424,7 +1418,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		return vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable);
 	};
 
-	if (cpu)
+	if (cpu && (cpu->id_type() == 1 || cpu->id_type() == 2))
 	{
 		vm::temporary_unlock(*cpu);
 		u32 pf_port_id = 0;
@@ -1529,7 +1523,8 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 			if (sending_error)
 			{
-				vm_log.fatal("Unknown error 0x%x while trying to pass page fault.", +sending_error);
+				vm_log.error("Unknown error 0x%x while trying to pass page fault.", +sending_error);
+				return false;
 			}
 			else
 			{
@@ -1548,13 +1543,13 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			// Reschedule, test cpu state and try recovery if stopped
 			if (cpu->test_stopped() && !hack_alloc())
 			{
-				std::terminate();
+				return false;
 			}
 
 			return true;
 		}
 
-		if (cpu->id_type() != 1)
+		if (cpu->id_type() == 2)
 		{
 			if (!g_tls_access_violation_recovered)
 			{
@@ -1569,7 +1564,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 			if (cpu->check_state() && !hack_alloc())
 			{
-				std::terminate();
+				return false;
 			}
 
 			return true;
@@ -1606,7 +1601,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 	if (Emu.IsStopped() && !hack_alloc())
 	{
-		std::terminate();
+		return false;
 	}
 
 	return true;
@@ -1676,8 +1671,6 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 	if (thread_ctrl::get_current())
 	{
 		fmt::append(msg, "Emu Thread Name: '%s'.\n", thread_ctrl::get_name());
-
-		sys_log.notice("\n%s", dump_useful_thread_info());
 	}
 
 	// TODO: Report full thread name if not an emu thread
@@ -1739,14 +1732,7 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 
 	// TODO: print registers and the callstack
 
-	sys_log.fatal("\n%s", msg);
-
-	if (!IsDebuggerPresent())
-	{
-		report_fatal_error(msg);
-	}
-
-	return EXCEPTION_CONTINUE_SEARCH;
+	thread_ctrl::emergency_exit(msg);
 }
 
 const bool s_exception_handler_set = []() -> bool
@@ -1810,24 +1796,25 @@ static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 	if (thread_ctrl::get_current())
 	{
 		fmt::append(msg, "Emu Thread Name: '%s'.\n", thread_ctrl::get_name());
-		sys_log.notice("\n%s", dump_useful_thread_info());
 	}
 
 	// TODO: Report full thread name if not an emu thread
 
 	fmt::append(msg, "Thread id = %s.\n", std::this_thread::get_id());
 
-	sys_log.fatal("\n%s", msg);
-	std::fprintf(stderr, "%s\n", msg.c_str());
-
 	if (IsDebuggerPresent())
 	{
+		sys_log.fatal("\n%s", msg);
+		std::fprintf(stderr, "%s\n", msg.c_str());
+
+		sys_log.notice("\n%s", dump_useful_thread_info());
+
 		// Convert to SIGTRAP
 		raise(SIGTRAP);
 		return;
 	}
 
-	report_fatal_error(msg);
+	thread_ctrl::emergency_exit(msg);
 }
 
 void sigpipe_signaling_handler(int)
@@ -2531,7 +2518,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 {
 	detect_cpu_layout();
 
-	if (const auto thread_count = std::thread::hardware_concurrency())
+	if (const auto thread_count = utils::get_thread_count())
 	{
 		const u64 all_cores_mask = process_affinity_mask;
 

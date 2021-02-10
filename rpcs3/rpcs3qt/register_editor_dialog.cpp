@@ -58,10 +58,10 @@ enum registers : int
 	PC,
 };
 
-register_editor_dialog::register_editor_dialog(QWidget *parent, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
+register_editor_dialog::register_editor_dialog(QWidget *parent, CPUDisAsm* _disasm, std::function<cpu_thread*()> func)
 	: QDialog(parent)
 	, m_disasm(_disasm)
-	, cpu(_cpu)
+	, m_get_cpu(std::move(func))
 {
 	setWindowTitle(tr("Edit registers"));
 	setAttribute(Qt::WA_DeleteOnClose);
@@ -95,9 +95,9 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, const std::share
 	hbox_button_panel->addWidget(button_cancel);
 	hbox_button_panel->setAlignment(Qt::AlignCenter);
 
-	if (1)
+	if (const auto cpu = m_get_cpu())
 	{
-		if (_cpu->id_type() == 1)
+		if (cpu->id_type() == 1)
 		{
 			for (int i = ppu_r0; i <= ppu_r31; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i % 32)), i);
 			for (int i = ppu_f0; i <= ppu_f31; i++) m_register_combo->addItem(qstr(fmt::format("f%d", i % 32)), i);
@@ -113,7 +113,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, const std::share
 			m_register_combo->addItem("Priority", +PPU_PRIO);
 			//m_register_combo->addItem("Priority 2", +PPU_PRIO2);
 		}
-		else if (_cpu->id_type() == 2)
+		else if (cpu->id_type() == 2)
 		{
 			for (int i = spu_r0; i <= spu_r127; i++) m_register_combo->addItem(qstr(fmt::format("r%d", i % 128)), i);
 			m_register_combo->addItem("MFC Pending Events", +MFC_PEVENTS);
@@ -141,10 +141,9 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, const std::share
 	vbox_panel->addSpacing(10);
 	vbox_panel->addLayout(hbox_button_panel);
 	setLayout(vbox_panel);
-	setModal(true);
 
 	// Events
-	connect(button_ok, &QAbstractButton::clicked, this, [=, this](){OnOkay(_cpu); accept();});
+	connect(button_ok, &QAbstractButton::clicked, this, [this](){ OnOkay(); accept(); });
 	connect(button_cancel, &QAbstractButton::clicked, this, &register_editor_dialog::reject);
 	connect(m_register_combo, &QComboBox::currentTextChanged, this, [this](const QString&)
 	{
@@ -159,15 +158,16 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, const std::share
 
 void register_editor_dialog::updateRegister(int reg)
 {
-	const auto cpu = this->cpu.lock();
 	std::string str = sstr(tr("Error parsing register value!"));
+
+	const auto cpu = m_get_cpu();
 
 	if (!cpu)
 	{
 	}
 	else if (cpu->id_type() == 1)
 	{
-		const auto& ppu = *static_cast<const ppu_thread*>(cpu.get());
+		const auto& ppu = *static_cast<const ppu_thread*>(cpu);
 
 		if (reg >= ppu_r0 && reg <= ppu_v31)
 		{
@@ -192,7 +192,7 @@ void register_editor_dialog::updateRegister(int reg)
 	}
 	else if (cpu->id_type() == 2)
 	{
-		const auto& spu = *static_cast<const spu_thread*>(cpu.get());
+		const auto& spu = *static_cast<const spu_thread*>(cpu);
 
 		if (reg >= spu_r0 && reg <= spu_r127)
 		{
@@ -216,10 +216,8 @@ void register_editor_dialog::updateRegister(int reg)
 	m_value_line->setText(qstr(str));
 }
 
-void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
+void register_editor_dialog::OnOkay()
 {
-	const auto cpu = _cpu.get();
-
 	const int reg = m_register_combo->currentData().toInt();
 	std::string value = sstr(m_value_line->text());
 
@@ -247,8 +245,14 @@ void register_editor_dialog::OnOkay(const std::shared_ptr<cpu_thread>& _cpu)
 		}
 	}
 
+	const auto cpu = m_get_cpu();
+
 	if (!cpu || value.empty())
 	{
+		if (!cpu)
+		{
+			close();
+		}
 	}
 	else if (cpu->id_type() == 1)
 	{

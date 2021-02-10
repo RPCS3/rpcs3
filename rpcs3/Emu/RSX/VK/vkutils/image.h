@@ -69,6 +69,7 @@ namespace vk
 		u32 layers() const;
 		u8 samples() const;
 		VkFormat format() const;
+		VkImageType type() const;
 		VkImageAspectFlags aspect() const;
 		rsx::format_class format_class() const;
 

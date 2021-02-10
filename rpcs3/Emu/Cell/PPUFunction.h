@@ -256,7 +256,7 @@ class ppu_function_manager
 	};
 
 	// Access global function list
-	static std::vector<ppu_function_t>& access();
+	static std::vector<ppu_function_t>& access(bool ghc = false);
 
 	static u32 add_function(ppu_function_t function);
 
@@ -276,9 +276,9 @@ public:
 	}
 
 	// Read all registered functions
-	static inline const auto& get()
+	static inline const auto& get(bool llvm = false)
 	{
-		return access();
+		return access(llvm);
 	}
 
 	static inline u32 func_addr(u32 index)

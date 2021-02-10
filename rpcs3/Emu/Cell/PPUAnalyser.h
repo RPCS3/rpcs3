@@ -89,7 +89,7 @@ struct ppu_module
 		secs = info.secs;
 	}
 
-	void analyse(u32 lib_toc, u32 entry);
+	void analyse(u32 lib_toc, u32 entry, u32 end, const std::basic_string<u32>& applied);
 	void validate(u32 reloc);
 };
 

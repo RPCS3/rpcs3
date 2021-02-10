@@ -146,6 +146,11 @@ namespace vk
 		return info.format;
 	}
 
+	VkImageType image::type() const
+	{
+		return info.imageType;
+	}
+
 	VkImageAspectFlags image::aspect() const
 	{
 		return m_storage_aspect;

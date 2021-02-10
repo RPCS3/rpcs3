@@ -1,6 +1,16 @@
 #include "device.h"
 #include "memory.h"
 
+namespace
+{
+	// Copied from rsx_utils.h. Move to a more convenient location
+	template<typename T, typename U>
+	static inline T align2(T value, U alignment)
+	{
+		return ((value + alignment - 1) / alignment) * alignment;
+	}
+}
+
 namespace vk
 {
 	mem_allocator_vma::mem_allocator_vma(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev)
@@ -27,9 +37,10 @@ namespace vk
 		VmaAllocationCreateInfo create_info = {};
 
 		mem_req.memoryTypeBits = 1u << memory_type_index;
-		mem_req.size = block_sz;
+		mem_req.size = ::align2(block_sz, alignment);
 		mem_req.alignment = alignment;
 		create_info.memoryTypeBits = 1u << memory_type_index;
+		create_info.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_TIME_BIT;
 
 		if (VkResult result = vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr);
 			result != VK_SUCCESS)

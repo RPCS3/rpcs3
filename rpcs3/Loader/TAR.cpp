@@ -116,16 +116,6 @@ bool tar_object::extract(std::string path, std::string ignore)
 		{
 			auto data = get_file(header.name).release();
 
-			if (fs::file prev{result})
-			{
-				if (prev.to_vector<u8>() == static_cast<fs::container_stream<std::vector<u8>>*>(data.get())->obj)
-				{
-					// Workaround: avoid overwriting existing data if it's the same.
-					tar_log.notice("TAR Loader: skipped existing file %s", header.name);
-					break;
-				}
-			}
-
 			fs::file file(result, fs::rewrite);
 
 			if (file)

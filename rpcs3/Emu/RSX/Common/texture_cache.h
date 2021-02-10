@@ -53,6 +53,7 @@ namespace rsx
 		{
 			bool violation_handled = false;
 			bool flushed = false;
+			bool invalidate_samplers = false;
 			invalidation_cause cause;
 			std::vector<section_storage_type*> sections_to_flush; // Sections to be flushed
 			std::vector<section_storage_type*> sections_to_unprotect; // These sections are to be unpotected and discarded by caller
@@ -526,6 +527,7 @@ namespace rsx
 			// Copy ranges to result, merging them if possible
 			for (const auto &section : sections)
 			{
+				ensure(section->is_locked(true));
 				const auto &new_range = section->get_locked_range();
 				AUDIT(new_range.is_page_range());
 
@@ -583,6 +585,7 @@ namespace rsx
 				u32 no_access_count = 0;
 				for (const auto &excluded : data.sections_to_exclude)
 				{
+					ensure(excluded->is_locked(true));
 					address_range exclusion_range = excluded->get_locked_range();
 
 					// We need to make sure that the exclusion range is *inside* invalidate range
@@ -670,11 +673,7 @@ namespace rsx
 			u32 last_dirty_block = UINT32_MAX;
 			bool repeat_loop = false;
 
-			// Not having full-range protections means some textures will check the confirmed range and not the locked range
-			const bool not_full_range_protected = (buffered_section::guard_policy != protection_policy::protect_policy_full_range);
-			section_bounds range_it_bounds = not_full_range_protected ? confirmed_range : locked_range;
-
-			auto It = m_storage.range_begin(invalidate_range, range_it_bounds, true); // will iterate through locked sections only
+			auto It = m_storage.range_begin(invalidate_range, locked_range, true); // will iterate through locked sections only
 			while (It != m_storage.range_end())
 			{
 				const u32 base = It.get_block().get_start();
@@ -692,7 +691,7 @@ namespace rsx
 				{
 					const rsx::section_bounds bounds = tex.get_overlap_test_bounds();
 
-					if (range_it_bounds == bounds || tex.overlaps(invalidate_range, bounds))
+					if (locked_range == bounds || tex.overlaps(invalidate_range, bounds))
 					{
 						const auto new_range = tex.get_min_max(invalidate_range, bounds).to_page_range();
 						AUDIT(new_range.is_page_range() && invalidate_range.inside(new_range));
@@ -728,7 +727,7 @@ namespace rsx
 				// repeat_loop==true means some blocks are still dirty and we need to repeat the loop again
 				if (repeat_loop && It == m_storage.range_end())
 				{
-					It = m_storage.range_begin(invalidate_range, range_it_bounds, true);
+					It = m_storage.range_begin(invalidate_range, locked_range, true);
 					repeat_loop = false;
 				}
 			}
@@ -794,6 +793,7 @@ namespace rsx
 						{
 							// Discard - this section won't be needed any more
 							tex.discard(/* set_dirty */ true);
+							result.invalidate_samplers = true;
 						}
 						else if (g_cfg.video.strict_texture_flushing && tex.is_flushable())
 						{
@@ -802,6 +802,7 @@ namespace rsx
 						else
 						{
 							tex.set_dirty(true);
+							result.invalidate_samplers = true;
 						}
 					}
 				}
@@ -816,6 +817,7 @@ namespace rsx
 				if (invalidate_range == fault_range)
 				{
 					result.violation_handled = true;
+					result.invalidate_samplers = true;
 #ifdef TEXTURE_CACHE_DEBUG
 					// Post-check the result
 					result.check_post_sanity();
@@ -854,7 +856,11 @@ namespace rsx
 					   )
 					{
 						// False positive
-						result.sections_to_exclude.push_back(&tex);
+						if (tex.is_locked(true))
+						{
+							// Do not exclude hashed pages from unprotect! They will cause protection holes
+							result.sections_to_exclude.push_back(&tex);
+						}
 						continue;
 					}
 
@@ -863,7 +869,7 @@ namespace rsx
 						// Write if and only if no one else has trashed section memory already
 						// TODO: Proper section management should prevent this from happening
 						// TODO: Blit engine section merge support and/or partial texture memory buffering
-						if (tex.is_dirty() || !tex.test_memory_head() || !tex.test_memory_tail())
+						if (tex.is_dirty())
 						{
 							// Contents clobbered, destroy this
 							if (!tex.is_dirty())
@@ -889,7 +895,17 @@ namespace rsx
 							tex.set_dirty(true);
 						}
 
-						result.sections_to_unprotect.push_back(&tex);
+						if (tex.is_locked(true))
+						{
+							result.sections_to_unprotect.push_back(&tex);
+						}
+						else
+						{
+							// No need to waste resources on hashed section, just discard immediately
+							tex.discard(true);
+							result.invalidate_samplers = true;
+						}
+
 						continue;
 					}
 
@@ -939,6 +955,8 @@ namespace rsx
 					result.violation_handled = false;
 				}
 
+				result.invalidate_samplers |= result.violation_handled;
+
 #ifdef TEXTURE_CACHE_DEBUG
 				// Post-check the result
 				result.check_post_sanity();
@@ -973,19 +991,18 @@ namespace rsx
 		{
 			std::vector<section_storage_type*> results;
 
-			for (auto It = m_storage.range_begin(test_range, full_range); It != m_storage.range_end(); It++)
+			for (auto It = m_storage.range_begin(test_range, full_range, check_unlocked); It != m_storage.range_end(); It++)
 			{
 				auto &tex = *It;
 
 				if (!tex.is_dirty() && (context_mask & static_cast<u32>(tex.get_context())))
 				{
-					if constexpr (check_unlocked)
+					if (required_pitch && !rsx::pitch_compatible<false>(&tex, required_pitch, UINT16_MAX))
 					{
-						if (!tex.is_locked())
-							continue;
+						continue;
 					}
 
-					if (required_pitch && !rsx::pitch_compatible<false>(&tex, required_pitch, UINT16_MAX))
+					if (!tex.sync_protection())
 					{
 						continue;
 					}
@@ -1006,10 +1023,14 @@ namespace rsx
 				if constexpr (check_unlocked)
 				{
 					if (!tex.is_locked())
+					{
 						continue;
+					}
 				}
 
-				if (!tex.is_dirty() && tex.matches(rsx_address, format, width, height, depth, mipmaps))
+				if (!tex.is_dirty() &&
+					tex.matches(rsx_address, format, width, height, depth, mipmaps) &&
+					tex.sync_protection())
 				{
 					return &tex;
 				}
@@ -1018,7 +1039,7 @@ namespace rsx
 			return nullptr;
 		}
 
-		section_storage_type* find_cached_texture(const address_range &range, u32 gcm_format, bool create_if_not_found, bool confirm_dimensions, u16 width = 0, u16 height = 0, u16 depth = 0, u16 mipmaps = 0)
+		section_storage_type* find_cached_texture(const address_range &range, const image_section_attributes_t& attr, bool create_if_not_found, bool confirm_dimensions, bool allow_dirty)
 		{
 			auto &block = m_storage.block_for(range);
 
@@ -1034,9 +1055,12 @@ namespace rsx
 			{
 				if (tex.matches(range))
 				{
-					if (!tex.is_dirty())
+					// We must validate
+					tex.sync_protection();
+
+					if (allow_dirty || !tex.is_dirty())
 					{
-						if (!confirm_dimensions || tex.matches(gcm_format, width, height, depth, mipmaps))
+						if (!confirm_dimensions || tex.matches(attr.gcm_format, attr.width, attr.height, attr.depth, attr.mipmaps))
 						{
 #ifndef TEXTURE_CACHE_DEBUG
 							return &tex;
@@ -1071,7 +1095,7 @@ namespace rsx
 			{
 				auto &tex = *dimensions_mismatch;
 				rsx_log.warning("Cached object for address 0x%X was found, but it does not match stored parameters (width=%d vs %d; height=%d vs %d; depth=%d vs %d; mipmaps=%d vs %d)",
-					range.start, width, tex.get_width(), height, tex.get_height(), depth, tex.get_depth(), mipmaps, tex.get_mipmaps());
+					range.start, attr.width, tex.get_width(), attr.height, tex.get_height(), attr.depth, tex.get_depth(), attr.mipmaps, tex.get_mipmaps());
 			}
 
 			if (!create_if_not_found)
@@ -1121,14 +1145,15 @@ namespace rsx
 		}
 
 		template <typename ...FlushArgs, typename ...Args>
-		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, bool is_active_surface, u32 width, u32 height, u32 pitch, Args&&... extras)
+		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, bool is_active_surface, u16 width, u16 height, u16 pitch, Args&&... extras)
 		{
 			AUDIT(g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer); // this method is only called when either WCB or WDB are enabled
 
 			std::lock_guard lock(m_cache_mutex);
 
 			// Find a cached section to use
-			section_storage_type& region = *find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, true, true, width, height);
+			image_section_attributes_t search_desc = { .gcm_format = RSX_GCM_FORMAT_IGNORED, .width = width, .height = height };
+			section_storage_type& region = *find_cached_texture(rsx_range, search_desc, true, true, false);
 
 			// Prepare and initialize fbo region
 			if (region.exists() && region.get_context() != texture_upload_context::framebuffer_storage)
@@ -1205,7 +1230,7 @@ namespace rsx
 		{
 			if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
 			{
-				auto* region_ptr = find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, false, false);
+				auto* region_ptr = find_cached_texture(rsx_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false);
 				if (region_ptr && region_ptr->is_locked() && region_ptr->get_context() == texture_upload_context::framebuffer_storage)
 				{
 					ensure(region_ptr->get_protection() == utils::protection::no);
@@ -1218,7 +1243,7 @@ namespace rsx
 		{
 			std::lock_guard lock(m_cache_mutex);
 
-			auto* region_ptr = find_cached_texture(memory_range, RSX_GCM_FORMAT_IGNORED, false, false);
+			auto* region_ptr = find_cached_texture(memory_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false);
 			if (region_ptr == nullptr)
 			{
 				AUDIT(m_flush_always_cache.find(memory_range) == m_flush_always_cache.end());
@@ -1391,6 +1416,13 @@ namespace rsx
 			}
 
 			return false;
+		}
+
+		void trim_sections()
+		{
+			std::lock_guard lock(m_cache_mutex);
+
+			m_storage.trim_sections();
 		}
 
 		image_view_type create_temporary_subresource(commandbuffer_type &cmd, deferred_subresource& desc)
@@ -2806,7 +2838,7 @@ namespace rsx
 				// Reset this object's synchronization status if it is locked
 				lock.upgrade();
 
-				if (const auto found = find_cached_texture(dst_subres.surface->get_memory_range(), RSX_GCM_FORMAT_IGNORED, false, false))
+				if (const auto found = find_cached_texture(dst_subres.surface->get_memory_range(), { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false))
 				{
 					if (found->is_locked())
 					{

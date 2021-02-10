@@ -16,376 +16,10 @@
 #include <unordered_map>
 
 #include "util/vm.hpp"
+#include "util/sysinfo.hpp"
 
 namespace rsx
 {
-	enum protection_policy
-	{
-		protect_policy_one_page,     //Only guard one page, preferably one where this section 'wholly' fits
-		protect_policy_conservative, //Guards as much memory as possible that is guaranteed to only be covered by the defined range without sharing
-		protect_policy_full_range    //Guard the full memory range. Shared pages may be invalidated by access outside the object we're guarding
-	};
-
-	enum section_bounds
-	{
-		full_range,
-		locked_range,
-		confirmed_range
-	};
-
-	static inline void memory_protect(const address_range& range, utils::protection prot)
-	{
-		ensure(range.is_page_range());
-
-		//rsx_log.error("memory_protect(0x%x, 0x%x, %x)", static_cast<u32>(range.start), static_cast<u32>(range.length()), static_cast<u32>(prot));
-		utils::memory_protect(vm::base(range.start), range.length(), prot);
-
-#ifdef TEXTURE_CACHE_DEBUG
-		tex_cache_checker.set_protection(range, prot);
-#endif
-	}
-
-	class buffered_section
-	{
-	public:
-		static const protection_policy guard_policy = protect_policy_full_range;
-
-	private:
-		address_range locked_range;
-		address_range cpu_range = {};
-		address_range confirmed_range;
-
-		utils::protection protection = utils::protection::rw;
-
-		bool locked = false;
-
-		inline void init_lockable_range(const address_range &range)
-		{
-			locked_range = range.to_page_range();
-
-			if ((guard_policy != protect_policy_full_range) && (range.length() >= 4096))
-			{
-				const u32 block_start = (locked_range.start < range.start) ? (locked_range.start + 4096u) : locked_range.start;
-				const u32 block_end = locked_range.end;
-
-				if (block_start < block_end)
-				{
-					// protect unique page range
-					locked_range.start = block_start;
-					locked_range.end = block_end;
-				}
-
-				if (guard_policy == protect_policy_one_page)
-				{
-					// protect exactly one page
-					locked_range.set_length(4096u);
-				}
-			}
-
-			AUDIT( (locked_range.start == page_start(range.start)) || (locked_range.start == next_page(range.start)) );
-			AUDIT( locked_range.end <= page_end(range.end) );
-			ensure(locked_range.is_page_range());
-		}
-
-	public:
-
-		buffered_section() = default;
-		~buffered_section() = default;
-
-		void reset(const address_range &memory_range)
-		{
-			ensure(memory_range.valid() && locked == false);
-
-			cpu_range = address_range(memory_range);
-			confirmed_range.invalidate();
-			locked_range.invalidate();
-
-			protection = utils::protection::rw;
-			locked = false;
-
-			init_lockable_range(cpu_range);
-		}
-
-	protected:
-		void invalidate_range()
-		{
-			ensure(!locked);
-
-			cpu_range.invalidate();
-			confirmed_range.invalidate();
-			locked_range.invalidate();
-		}
-
-	public:
-		void protect(utils::protection new_prot, bool force = false)
-		{
-			if (new_prot == protection && !force) return;
-
-			ensure(locked_range.is_page_range());
-			AUDIT( !confirmed_range.valid() || confirmed_range.inside(cpu_range) );
-
-#ifdef TEXTURE_CACHE_DEBUG
-			if (new_prot != protection || force)
-			{
-				if (locked && !force) // When force=true, it is the responsibility of the caller to remove this section from the checker refcounting
-					tex_cache_checker.remove(locked_range, protection);
-				if (new_prot != utils::protection::rw)
-					tex_cache_checker.add(locked_range, new_prot);
-			}
-#endif // TEXTURE_CACHE_DEBUG
-
-			rsx::memory_protect(locked_range, new_prot);
-			protection = new_prot;
-			locked = (protection != utils::protection::rw);
-
-			if (protection == utils::protection::no)
-			{
-				tag_memory();
-			}
-			else
-			{
-				if (!locked)
-				{
-					//Unprotect range also invalidates secured range
-					confirmed_range.invalidate();
-				}
-			}
-
-		}
-
-		void protect(utils::protection prot, const std::pair<u32, u32>& new_confirm)
-		{
-			// new_confirm.first is an offset after cpu_range.start
-			// new_confirm.second is the length (after cpu_range.start + new_confirm.first)
-
-#ifdef TEXTURE_CACHE_DEBUG
-			// We need to remove the lockable range from page_info as we will be re-protecting with force==true
-			if (locked)
-				tex_cache_checker.remove(locked_range, protection);
-#endif
-
-			if (prot != utils::protection::rw)
-			{
-				if (confirmed_range.valid())
-				{
-					confirmed_range.start = std::min(confirmed_range.start, cpu_range.start + new_confirm.first);
-					confirmed_range.end = std::max(confirmed_range.end, cpu_range.start + new_confirm.first + new_confirm.second - 1);
-				}
-				else
-				{
-					confirmed_range = address_range::start_length(cpu_range.start + new_confirm.first, new_confirm.second);
-					ensure(!locked || locked_range.inside(confirmed_range.to_page_range()));
-				}
-
-				ensure(confirmed_range.inside(cpu_range));
-				init_lockable_range(confirmed_range);
-			}
-
-			protect(prot, true);
-		}
-
-		inline void unprotect()
-		{
-			AUDIT(protection != utils::protection::rw);
-			protect(utils::protection::rw);
-		}
-
-		inline void discard()
-		{
-#ifdef TEXTURE_CACHE_DEBUG
-			if (locked)
-				tex_cache_checker.remove(locked_range, protection);
-#endif
-
-			protection = utils::protection::rw;
-			confirmed_range.invalidate();
-			locked = false;
-		}
-
-		inline const address_range& get_bounds(section_bounds bounds) const
-		{
-			switch (bounds)
-			{
-			case section_bounds::full_range:
-				return cpu_range;
-			case section_bounds::locked_range:
-				return locked_range;
-			case section_bounds::confirmed_range:
-				return confirmed_range.valid() ? confirmed_range : cpu_range;
-			default:
-				fmt::throw_exception("Unreachable");
-			}
-		}
-
-
-		/**
-		 * Overlapping checks
-		 */
-		inline bool overlaps(const u32 address, section_bounds bounds) const
-		{
-			return get_bounds(bounds).overlaps(address);
-		}
-
-		inline bool overlaps(const address_range &other, section_bounds bounds) const
-		{
-			return get_bounds(bounds).overlaps(other);
-		}
-
-		inline bool overlaps(const address_range_vector &other, section_bounds bounds) const
-		{
-			return get_bounds(bounds).overlaps(other);
-		}
-
-		inline bool overlaps(const buffered_section &other, section_bounds bounds) const
-		{
-			return get_bounds(bounds).overlaps(other.get_bounds(bounds));
-		}
-
-		inline bool inside(const address_range &other, section_bounds bounds) const
-		{
-			return get_bounds(bounds).inside(other);
-		}
-
-		inline bool inside(const address_range_vector &other, section_bounds bounds) const
-		{
-			return get_bounds(bounds).inside(other);
-		}
-
-		inline bool inside(const buffered_section &other, section_bounds bounds) const
-		{
-			return get_bounds(bounds).inside(other.get_bounds(bounds));
-		}
-
-		inline s32 signed_distance(const address_range &other, section_bounds bounds) const
-		{
-			return get_bounds(bounds).signed_distance(other);
-		}
-
-		inline u32 distance(const address_range &other, section_bounds bounds) const
-		{
-			return get_bounds(bounds).distance(other);
-		}
-
-		/**
-		* Utilities
-		*/
-		inline bool valid_range() const
-		{
-			return cpu_range.valid();
-		}
-
-		inline bool is_locked() const
-		{
-			return locked;
-		}
-
-		inline u32 get_section_base() const
-		{
-			return cpu_range.start;
-		}
-
-		inline u32 get_section_size() const
-		{
-			return cpu_range.valid() ? cpu_range.length() : 0;
-		}
-
-		inline const address_range& get_locked_range() const
-		{
-			AUDIT( locked );
-			return locked_range;
-		}
-
-		inline const address_range& get_section_range() const
-		{
-			return cpu_range;
-		}
-
-		const address_range& get_confirmed_range() const
-		{
-			return confirmed_range.valid() ? confirmed_range : cpu_range;
-		}
-
-		const std::pair<u32, u32> get_confirmed_range_delta() const
-		{
-			if (!confirmed_range.valid())
-				return { 0, cpu_range.length() };
-
-			return { confirmed_range.start - cpu_range.start, confirmed_range.length() };
-		}
-
-		inline bool matches(const address_range &range) const
-		{
-			return cpu_range.valid() && cpu_range == range;
-		}
-
-		inline utils::protection get_protection() const
-		{
-			return protection;
-		}
-
-		inline address_range get_min_max(const address_range& current_min_max, section_bounds bounds) const
-		{
-			return get_bounds(bounds).get_min_max(current_min_max);
-		}
-
-		/**
-		 * Super Pointer
-		 */
-		template <typename T = void>
-		inline T* get_ptr(u32 address) const
-		{
-			return reinterpret_cast<T*>(vm::g_sudo_addr + address);
-		}
-
-		/**
-		 * Memory tagging
-		 */
-	private:
-		inline void tag_memory()
-		{
-			// We only need to tag memory if we are in full-range mode
-			if (guard_policy == protect_policy_full_range)
-				return;
-
-			AUDIT(locked);
-
-			const address_range& range = get_confirmed_range();
-
-			volatile u32* first = get_ptr<volatile u32>(range.start);
-			volatile u32* last = get_ptr<volatile u32>(range.end - 3);
-
-			*first = range.start;
-			*last = range.end;
-		}
-
-	public:
-		bool test_memory_head()
-		{
-			if (guard_policy == protect_policy_full_range)
-				return true;
-
-			AUDIT(locked);
-
-			const auto& range = get_confirmed_range();
-			volatile const u32* first = get_ptr<volatile const u32>(range.start);
-			return (*first == range.start);
-		}
-
-		bool test_memory_tail()
-		{
-			if (guard_policy == protect_policy_full_range)
-				return true;
-
-			AUDIT(locked);
-
-			const auto& range = get_confirmed_range();
-			volatile const u32* last = get_ptr<volatile const u32>(range.end-3);
-			return (*last == range.end);
-		}
-	};
-
-
-
 	template <typename pipeline_storage_type, typename backend_storage>
 	class shaders_cache
 	{
@@ -505,30 +139,25 @@ namespace rsx
 
 		void await_workers(uint nb_workers, u8 step, std::function<void(u32)>& worker, atomic_t<u32>& processed, u32 entry_count, shader_loading_dialog* dlg)
 		{
-			u32 processed_since_last_update = 0;
-
 			if (nb_workers == 1)
 			{
 				steady_clock::time_point last_update;
 
-				// Call the worker function directly, stoping it prematurely to be able update the screen
-				u8 inc = 10;
+				// Call the worker function directly, stopping it prematurely to be able update the screen
 				u32 stop_at = 0;
 				do
 				{
-					stop_at = std::min(stop_at + inc, entry_count);
+					stop_at = std::min(stop_at + 10, entry_count);
 
 					worker(stop_at);
 
-					// Only update the screen at about 10fps since updating it everytime slows down the process
+					// Only update the screen at about 60fps since updating it everytime slows down the process
 					steady_clock::time_point now = steady_clock::now();
-					processed_since_last_update += inc;
-					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 100ms) || (stop_at == entry_count))
+					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 16ms) || (stop_at == entry_count))
 					{
 						dlg->update_msg(step, get_message(step, stop_at, entry_count));
-						dlg->inc_value(step, processed_since_last_update);
+						dlg->set_value(step, stop_at);
 						last_update = now;
-						processed_since_last_update = 0;
 					}
 				} while (stop_at < entry_count && !Emu.IsStopped());
 			}
@@ -543,16 +172,15 @@ namespace rsx
 				u32 last_update_progress = 0;
 				while ((current_progress < entry_count) && !Emu.IsStopped())
 				{
-					std::this_thread::sleep_for(100ms); // Around 10fps should be good enough
+					std::this_thread::sleep_for(16ms); // Around 60fps should be good enough
 
 					current_progress = std::min(processed.load(), entry_count);
-					processed_since_last_update = current_progress - last_update_progress;
-					last_update_progress = current_progress;
 
-					if (processed_since_last_update > 0)
+					if (last_update_progress != current_progress)
 					{
+						last_update_progress = current_progress;
 						dlg->update_msg(step, get_message(step, current_progress, entry_count));
-						dlg->inc_value(step, processed_since_last_update);
+						dlg->set_value(step, current_progress);
 					}
 				}
 			}
@@ -628,7 +256,7 @@ namespace rsx
 
 			// Preload everything needed to compile the shaders
 			unpacked_type unpacked;
-			uint nb_workers = g_cfg.video.renderer == video_renderer::vulkan ? std::thread::hardware_concurrency() : 1;
+			uint nb_workers = g_cfg.video.renderer == video_renderer::vulkan ? utils::get_thread_count() : 1;
 
 			load_shaders(nb_workers, unpacked, directory_path, entries, entry_count, dlg);
 

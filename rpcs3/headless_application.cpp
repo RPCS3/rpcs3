@@ -13,7 +13,7 @@ headless_application::headless_application(int& argc, char** argv) : QCoreApplic
 {
 }
 
-void headless_application::Init()
+bool headless_application::Init()
 {
 	// Force init the emulator
 	InitializeEmulator("00000001", true, false); // TODO: get user from cli args if possible
@@ -26,6 +26,8 @@ void headless_application::Init()
 
 	// As per QT recommendations to avoid conflicts for POSIX functions
 	std::setlocale(LC_NUMERIC, "C");
+
+	return true;
 }
 
 void headless_application::InitializeConnects()

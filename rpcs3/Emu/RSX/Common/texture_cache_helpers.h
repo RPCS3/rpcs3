@@ -53,6 +53,7 @@ namespace rsx
 		u16 width;
 		u16 height;
 		u16 depth;
+		u16 mipmaps;
 		u16 pitch;
 		u16 slice_h;
 		u8  bpp;

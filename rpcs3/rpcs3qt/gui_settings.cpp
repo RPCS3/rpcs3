@@ -334,29 +334,12 @@ QStringList gui_settings::GetStylesheetEntries()
 #else
 	QDir platformStylesheetDir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
 #endif
+	res.append(gui::utils::get_dir_entries(QCoreApplication::applicationDirPath() + "/GuiConfigs/", name_filter));
 	res.append(gui::utils::get_dir_entries(platformStylesheetDir, name_filter));
 	res.removeDuplicates();
 #endif
-	res.sort(Qt::CaseInsensitive);
+	res.sort();
 	return res;
-}
-
-QString gui_settings::GetCurrentStylesheetPath()
-{
-	const Localized localized;
-
-	const QString stylesheet = GetValue(gui::m_currentStylesheet).toString();
-
-	if (stylesheet == gui::Default)
-	{
-		return "";
-	}
-	else if (stylesheet == gui::None)
-	{
-		return "-";
-	}
-
-	return m_settings_dir.absoluteFilePath(stylesheet + ".qss");
 }
 
 QSize gui_settings::SizeFromSlider(int pos)

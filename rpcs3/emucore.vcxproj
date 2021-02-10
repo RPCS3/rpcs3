@@ -84,10 +84,12 @@
     <ClCompile Include="Emu\Io\pad_config_types.cpp" />
     <ClCompile Include="Emu\localized_string.cpp" />
     <ClCompile Include="Emu\NP\rpcn_config.cpp" />
+    <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp" />
+    <ClCompile Include="Emu\RSX\RSXDisAsm.cpp" />
     <ClCompile Include="Emu\system_config_types.cpp" />
     <ClCompile Include="Emu\perf_meter.cpp" />
     <ClCompile Include="Emu\title.cpp" />
@@ -107,6 +109,7 @@
     </ClCompile>
     <ClCompile Include="util\cereal.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
     <ClCompile Include="util\fixed_typemap.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -462,6 +465,7 @@
     <ClInclude Include="Emu\NP\rpcn_config.h" />
     <ClInclude Include="Emu\RSX\Common\ShaderInterpreter.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
+    <ClInclude Include="Emu\RSX\Common\texture_cache_types.h" />
     <ClInclude Include="Emu\RSX\display.h" />
     <ClInclude Include="Emu\RSX\GSFrameBase.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_fonts.h" />
@@ -475,6 +479,7 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.h" />
+    <ClInclude Include="Emu\RSX\RSXDisAsm.h" />
     <ClInclude Include="Emu\title.h" />
     <ClInclude Include="Emu\system_config.h" />
     <ClInclude Include="Emu\system_config_types.h" />

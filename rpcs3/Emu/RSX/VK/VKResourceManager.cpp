@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "VKResourceManager.h"
 #include "VKGSRender.h"
+#include "VKCommandStream.h"
 
 namespace vk
 {
@@ -27,9 +28,17 @@ namespace vk
 		return g_event_ctr.load();
 	}
 
-	void on_event_completed(u64 event_id)
+	void on_event_completed(u64 event_id, bool flush)
 	{
-		// TODO: Offload this to a secondary thread
+		if (!flush && g_cfg.video.multithreaded_rsx)
+		{
+			auto offloader_thread = g_fxo->get<rsx::dma_manager>();
+			ensure(!offloader_thread->is_current_thread());
+
+			offloader_thread->backend_ctrl(rctrl_run_gc, reinterpret_cast<void*>(event_id));
+			return;
+		}
+
 		g_resource_manager.eid_completed(event_id);
 	}
 

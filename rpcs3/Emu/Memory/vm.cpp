@@ -1663,6 +1663,9 @@ namespace vm
 		utils::memory_decommit(g_base_addr, 0x200000000);
 		utils::memory_decommit(g_exec_addr, 0x200000000);
 		utils::memory_decommit(g_stat_addr, 0x100000000);
+
+		std::memset(g_range_lock_set, 0, sizeof(g_range_lock_set));
+		g_range_lock_bits = 0;
 	}
 }
 

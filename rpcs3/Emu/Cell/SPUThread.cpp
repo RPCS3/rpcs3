@@ -1218,18 +1218,6 @@ spu_imm_table_t::spu_imm_table_t()
 	}
 }
 
-std::string spu_thread::dump_all() const
-{
-	std::string ret = cpu_thread::dump_misc();
-	ret += '\n';
-	ret += dump_misc();
-	ret += '\n';
-	ret += dump_regs();
-	ret += '\n';
-
-	return ret;
-}
-
 std::string spu_thread::dump_regs() const
 {
 	std::string ret;
@@ -1289,7 +1277,7 @@ std::string spu_thread::dump_regs() const
 
 		if (i3 >= 0x80 && is_exec_code(i3))
 		{
-			SPUDisAsm dis_asm(CPUDisAsm_NormalMode, ls);
+			SPUDisAsm dis_asm(cpu_disasm_mode::normal, ls);
 			dis_asm.disasm(i3);
 			fmt::append(ret, " -> %s", dis_asm.last_opcode);
 		}
@@ -1700,7 +1688,10 @@ void spu_thread::cleanup()
 	}
 
 	// Free range lock (and signals cleanup was called to the destructor)
-	vm::free_range_lock(std::exchange(range_lock, nullptr));
+	vm::free_range_lock(range_lock);
+
+	// Signal the debugger about the termination
+	state += cpu_flag::exit;
 }
 
 spu_thread::~spu_thread()
@@ -1709,9 +1700,6 @@ spu_thread::~spu_thread()
 	shm->unmap(ls + SPU_LS_SIZE);
 	shm->unmap(ls);
 	shm->unmap(ls - SPU_LS_SIZE);
-
-	// Free range lock if not freed already
-	if (range_lock) vm::free_range_lock(range_lock);
 
 	perf_log.notice("Perf stats for transactions: success %u, failure %u", stx, ftx);
 	perf_log.notice("Perf stats for PUTLLC reload: successs %u, failure %u", last_succ, last_fail);

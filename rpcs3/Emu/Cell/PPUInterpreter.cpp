@@ -185,7 +185,7 @@ extern __m128 sse_log2_ps(__m128 A)
 	return _mm_add_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(_mm_mul_ps(x5, x6), x7), x4), _c), _mm_add_ps(_mm_mul_ps(x4, _c), x8));
 }
 
-extern SAFE_BUFFERS __m128i sse_pshufb(__m128i data, __m128i index)
+extern SAFE_BUFFERS(__m128i) sse_pshufb(__m128i data, __m128i index)
 {
 	v128 m = v128::fromV(_mm_and_si128(index, _mm_set1_epi8(0xf)));
 	v128 a = v128::fromV(data);
@@ -208,7 +208,7 @@ extern SSSE3_FUNC __m128i sse_altivec_vperm(__m128i A, __m128i B, __m128i C)
 	return _mm_or_si128(_mm_and_si128(mask, sa), _mm_andnot_si128(mask, sb));
 }
 
-extern SAFE_BUFFERS __m128i sse_altivec_vperm_v0(__m128i A, __m128i B, __m128i C)
+extern SAFE_BUFFERS(__m128i) sse_altivec_vperm_v0(__m128i A, __m128i B, __m128i C)
 {
 	__m128i ab[2]{B, A};
 	v128 index = v128::fromV(_mm_andnot_si128(C, _mm_set1_epi8(0x1f)));

@@ -129,15 +129,15 @@ public:
 	void append_title_patches(const std::string& title_id);
 
 	// Apply patch (returns the number of entries applied)
-	usz apply(const std::string& name, u8* dst);
+	std::basic_string<u32> apply(const std::string& name, u8* dst);
 
 	// Apply patch with a check that the address exists in SPU local storage
-	usz apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
+	std::basic_string<u32> apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
 
 private:
 	// Internal: Apply patch (returns the number of entries applied)
-	template <bool check_local_storage>
-	usz apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
+	template <bool CheckLS>
+	std::basic_string<u32> apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
 
 	// Database
 	patch_map m_map;

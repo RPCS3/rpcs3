@@ -35,6 +35,8 @@ public:
 	emu_settings();
 	~emu_settings();
 
+	bool Init();
+
 	/** Connects a combo box with the target settings type*/
 	void EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged = false, bool use_max = false, int max = 0, bool sorted = false);
 
@@ -75,7 +77,7 @@ public:
 	void SetSetting(emu_settings_type type, const std::string& val);
 
 	/** Gets all the renderer info for gpu settings.*/
-	render_creator* m_render_creator;
+	render_creator* m_render_creator = nullptr;
 
 	/** Gets a list of all the microphones available.*/
 	microphone_creator m_microphone_creator;
@@ -93,7 +95,7 @@ public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
 private:
-	YAML::Node m_defaultSettings; // The default settings as a YAML node.
-	YAML::Node m_currentSettings; // The current settings as a YAML node.
+	YAML::Node m_default_settings; // The default settings as a YAML node.
+	YAML::Node m_current_settings; // The current settings as a YAML node.
 	std::string m_title_id;
 };

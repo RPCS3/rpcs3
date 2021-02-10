@@ -196,7 +196,7 @@ public:
 		const QString keyboard_type           = tr("Sets the used keyboard layout.\nCurrently only US, Japanese and German layouts are fully supported at this moment.");
 		const QString enter_button_assignment = tr("The button used for enter/accept/confirm in system dialogs.\nChange this to use the Circle button instead, which is the default configuration on Japanese systems and in many Japanese games.\nIn these cases having the cross button assigned can often lead to confusion.");
 		const QString enable_host_root        = tr("Required for some Homebrew.\nIf unsure, don't use this option.");
-		const QString limit_cache_size        = tr("Automatically removes older files from disk cache on boot if it grows larger than the specified value.\nGames can use the cache folder to temporarily store data outside of system memory. It is not used for long-term storage.");
+		const QString limit_cache_size        = tr("Automatically removes older files from disk cache on boot if it grows larger than the specified value.\nGames can use the cache folder to temporarily store data outside of system memory. It is not used for long-term storage.\n\nThis setting is only available in the global configuration.");
 		const QString console_time_offset     = tr("Sets the time to be used within the console. This will be applied as an offset that tracks wall clock time.\nCan be reset to current wallclock time by clicking \"Set to Now\".");
 	} settings;
 
@@ -206,14 +206,14 @@ public:
 		const QString ldd_pad     = tr("This port is currently assigned to a custom controller by the application and can't be changed.");
 		const QString keyboard    = tr("While it is possible to use a keyboard as a pad in RPCS3, the use of an actual controller is strongly recommended.<br>To bind mouse movement to a button or joystick, click on the desired button to activate it, then click and hold while dragging the mouse to a direction.");
 		const QString ds3_windows = tr("In order to use the DualShock 3 handler, you need to install the official DualShock 3 driver first.<br>See the <a href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.");
-		const QString ds3_linux   = tr("In order to use the DualShock 3 handler, you might need to add udev rules to let RPCS3 access the controller.\nSee the <a href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.");
+		const QString ds3_linux   = tr("In order to use the DualShock 3 handler, you might need to add udev rules to let RPCS3 access the controller.<br>See the <a href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.");
 		const QString ds3_other   = tr("The DualShock 3 handler is recommended for official DualShock 3 controllers.");
 		const QString ds4_windows = tr("If you have any issues with the DualShock 4 handler, it might be caused by third-party tools such as DS4Windows. It's recommended that you disable them while using this handler.");
-		const QString ds4_linux   = tr("In order to use the DualShock 4 handler, you might need to add udev rules to let RPCS3 access the controller.\nSee the <a href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.");
+		const QString ds4_linux   = tr("In order to use the DualShock 4 handler, you might need to add udev rules to let RPCS3 access the controller.<br>See the <a href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.");
 		const QString ds4_other   = tr("The DualShock 4 handler is recommended for official DualShock 4 controllers.");
-		const QString dualsense_windows = tr("The DualSense handler is recommended for official DualSense controllers.");
-		const QString dualsense_linux   = tr("The DualSense handler is recommended for official DualSense controllers.");
-		const QString dualsense_other   = tr("The DualSense handler is recommended for official DualSense controllers.");
+		const QString dualsense_windows = tr("The DualSense handler is recommended for official DualSense controllers.<br><br>Battery settings are not supported yet.");
+		const QString dualsense_linux   = tr("The DualSense handler is recommended for official DualSense controllers.<br><br>Battery settings are not supported yet.");
+		const QString dualsense_other   = tr("The DualSense handler is recommended for official DualSense controllers.<br><br>Battery settings are not supported yet.");
 		const QString xinput      = tr("The XInput handler will work with Xbox controllers and many third-party PC-compatible controllers. Pressure sensitive buttons from SCP are supported when SCP's XInput1_3.dll is placed in the main RPCS3 directory. For more details, see the <a href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a>.");
 		const QString evdev       = tr("The evdev handler should work with any controller that has linux support.<br>If your joystick is not being centered properly, read the <a href=\"https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration\">RPCS3 Wiki</a> for instructions.");
 		const QString mmjoy       = tr("The MMJoystick handler should work with almost any controller recognized by Windows. However, it is recommended that you use the more specific handlers if you have a controller that supports them.");

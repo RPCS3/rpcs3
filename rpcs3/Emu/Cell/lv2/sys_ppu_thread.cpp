@@ -69,8 +69,6 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 
 	sys_ppu_thread.trace("_sys_ppu_thread_exit(errorcode=0x%llx)", errorcode);
 
-	ppu.state += cpu_flag::exit;
-
 	ppu_join_status old_status;
 	{
 		std::lock_guard lock(id_manager::g_mutex);
@@ -103,7 +101,7 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 
 	g_fxo->get<ppu_thread_cleaner>()->clean(old_status == ppu_join_status::detached ? ppu.id : 0);
 
-	if (old_status == ppu_join_status::joinable)
+	while (ppu.joiner == ppu_join_status::zombie && !ppu.is_stopped())
 	{
 		// Wait for termination
 		thread_ctrl::wait_on(ppu.joiner, ppu_join_status::zombie);

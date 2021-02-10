@@ -74,6 +74,11 @@ else()
 	set_source_files_properties("../util/yaml.cpp" PROPERTIES COMPILE_FLAGS -fexceptions)
 endif()
 
+if (MSVC)
+	set_source_files_properties("../util/cereal.cpp" PROPERTIES COMPILE_FLAGS /GR)
+else()
+	set_source_files_properties("../util/cereal.cpp" PROPERTIES COMPILE_FLAGS -frtti)
+endif()
 
 # Crypto
 target_sources(rpcs3_emu PRIVATE
@@ -394,12 +399,14 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/RSXTexture.cpp
 	RSX/RSXThread.cpp
 	RSX/rsx_utils.cpp
+	RSX/RSXDisAsm.cpp
 	RSX/Common/BufferUtils.cpp
 	RSX/Common/FragmentProgramDecompiler.cpp
 	RSX/Common/GLSLCommon.cpp
 	RSX/Common/ProgramStateCache.cpp
 	RSX/Common/surface_store.cpp
 	RSX/Common/TextureUtils.cpp
+	RSX/Common/texture_cache.cpp
 	RSX/Common/VertexProgramDecompiler.cpp
 	RSX/Null/NullGSRender.cpp
 	RSX/Overlays/overlay_animation.cpp

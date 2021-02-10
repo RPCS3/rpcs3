@@ -974,6 +974,12 @@
     <ClCompile Include="Emu\Io\interception.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\RSXDisAsm.cpp">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Common\texture_cache.cpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1564,9 +1570,6 @@
     <ClInclude Include="Emu\RSX\rsx_cache.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
-    <ClInclude Include="util\dyn_lib.hpp">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\version.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1896,6 +1899,15 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\display.h">
       <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\dyn_lib.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\RSXDisAsm.h">
+      <Filter>Emu\GPU\RSX</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\texture_cache_types.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -6,7 +6,7 @@
 class PPUDisAsm final : public PPCDisAsm
 {
 public:
-	PPUDisAsm(CPUDisAsmMode mode, const u8* offset) : PPCDisAsm(mode, offset)
+	PPUDisAsm(cpu_disasm_mode mode, const u8* offset) : PPCDisAsm(mode, offset)
 	{
 	}
 
@@ -107,7 +107,7 @@ private:
 	}
 	void DisAsm_F1_R2(const std::string& op, u32 f0, u32 r0, u32 r1)
 	{
-		if(m_mode == CPUDisAsm_CompilerElfMode)
+		if (m_mode == cpu_disasm_mode::compiler_elf)
 		{
 			Write(fmt::format("%s f%d,r%d,r%d", FixOp(op), f0, r0, r1));
 			return;
@@ -117,7 +117,7 @@ private:
 	}
 	void DisAsm_F1_IMM_R1_RC(const std::string& op, u32 f0, s32 imm0, u32 r0, u32 rc)
 	{
-		if(m_mode == CPUDisAsm_CompilerElfMode)
+		if (m_mode == cpu_disasm_mode::compiler_elf)
 		{
 			Write(fmt::format("%s f%d,r%d,%s", FixOp(op + (rc ? "." : "")), f0, r0, SignedHex(imm0)));
 			return;
@@ -195,7 +195,7 @@ private:
 	}
 	void DisAsm_R2_IMM(const std::string& op, u32 r0, u32 r1, s32 imm0)
 	{
-		if(m_mode == CPUDisAsm_CompilerElfMode)
+		if (m_mode == cpu_disasm_mode::compiler_elf)
 		{
 			Write(fmt::format("%s r%d,r%d,%s", FixOp(op), r0, r1, SignedHex(imm0)));
 			return;

@@ -394,8 +394,6 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 		deadzone_y = std::abs(m * deadzone_x);
 	}
 
-	input_log.error("movement_x=%d, movement_y=%d => deadzone_x=%d, deadzone_y=%d", movement_x, movement_y, deadzone_x, deadzone_y);
-
 	if (movement_x < 0)
 	{
 		Key(mouse::move_right, false);

@@ -18,9 +18,7 @@
 #include "Utilities/span.h"
 #include "Utilities/StrUtil.h"
 
-#include <cereal/archives/binary.hpp>
-#include <cereal/types/unordered_map.hpp>
-
+#include "util/cereal.hpp"
 #include "util/asm.hpp"
 
 #include <sstream>
@@ -45,7 +43,7 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
-	u32 get_address(u32 offset, u32 location, u32 line, u32 col, const char* file, const char* func)
+	u32 get_address(u32 offset, u32 location, bool allow_failure, u32 line, u32 col, const char* file, const char* func)
 	{
 		const auto render = get_current_renderer();
 		std::string_view msg;
@@ -150,6 +148,11 @@ namespace rsx
 			msg = "Invalid location!"sv;
 			break;
 		}
+		}
+
+		if (allow_failure)
+		{
+			return 0;
 		}
 
 		fmt::throw_exception("rsx::get_address(offset=0x%x, location=0x%x): %s%s", offset, location, msg, src_loc{line, col, file, func});
@@ -362,6 +365,7 @@ namespace rsx
 	}
 
 	thread::thread()
+		: cpu_thread(0x5555'5555)
 	{
 		g_access_violation_handler = [this](u32 address, bool is_writing)
 		{
@@ -380,6 +384,8 @@ namespace rsx
 		{
 			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
 		}
+
+		state -= cpu_flag::stop + cpu_flag::wait; // TODO: Remove workaround
 	}
 
 	void thread::capture_frame(const std::string &name)
@@ -498,7 +504,7 @@ namespace rsx
 		while (method_registers.current_draw_clause.next());
 	}
 
-	void thread::operator()()
+	void thread::cpu_task()
 	{
 		{
 			// Wait for startup (TODO)
@@ -512,7 +518,7 @@ namespace rsx
 
 				thread_ctrl::wait_for(1000);
 
-				if (Emu.IsStopped())
+				if (is_stopped())
 				{
 					return;
 				}
@@ -524,6 +530,17 @@ namespace rsx
 		on_exit();
 	}
 
+	void thread::cpu_wait()
+	{
+		if (external_interrupt_lock)
+		{
+			wait_pause();
+		}
+
+		on_semaphore_acquire_wait();
+		std::this_thread::yield();
+	}
+
 	void thread::on_task()
 	{
 		m_rsx_thread = std::this_thread::get_id();
@@ -533,6 +550,8 @@ namespace rsx
 			const auto rsx = get_current_renderer();
 			return fmt::format("RSX [0x%07x]", +rsx->ctrl->get);
 		};
+
+		method_registers.init();
 
 		rsx::overlays::reset_performance_overlay();
 
@@ -562,7 +581,7 @@ namespace rsx
 			u64 start_time = get_system_time();
 
 			// TODO: exit condition
-			while (!Emu.IsStopped() && !m_rsx_thread_exiting)
+			while (!is_stopped())
 			{
 				const u64 period_time = 1000000 / g_cfg.video.vblank_rate;
 				const u64 wait_sleep = period_time - u64{period_time >= host_min_quantum} * host_min_quantum;
@@ -604,7 +623,7 @@ namespace rsx
 					// Save the difference before pause
 					start_time = get_system_time() - start_time;
 
-					while (Emu.IsPaused() && !m_rsx_thread_exiting)
+					while (Emu.IsPaused() && !is_stopped())
 					{
 						thread_ctrl::wait_for(wait_sleep);
 					}
@@ -628,8 +647,7 @@ namespace rsx
 		// Round to nearest to deal with forward/reverse scaling
 		fesetround(FE_TONEAREST);
 
-		// TODO: exit condition
-		while (true)
+		while (!test_stopped())
 		{
 			// Wait for external pause events
 			if (external_interrupt_lock)
@@ -653,20 +671,6 @@ namespace rsx
 
 			// Execute FIFO queue
 			run_FIFO();
-
-			if (!Emu.IsRunning())
-			{
-				// Idle if emulation paused
-				while (Emu.IsPaused())
-				{
-					std::this_thread::sleep_for(1ms);
-				}
-
-				if (Emu.IsStopped())
-				{
-					break;
-				}
-			}
 		}
 	}
 
@@ -681,6 +685,7 @@ namespace rsx
 
 		m_rsx_thread_exiting = true;
 		g_fxo->get<rsx::dma_manager>()->join();
+		state += cpu_flag::exit;
 	}
 
 	void thread::fill_scale_offset_data(void *buffer, bool flip_y) const
@@ -2031,8 +2036,6 @@ namespace rsx
 
 	void thread::init(u32 ctrlAddress)
 	{
-		method_registers.init();
-
 		dma_address = ctrlAddress;
 		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
@@ -2579,7 +2582,7 @@ namespace rsx
 		recovered_fifo_cmds_history.push({fifo_ctrl->last_cmd(), current_time});
 	}
 
-	std::vector<std::pair<u32, u32>> thread::dump_callstack() const
+	std::vector<std::pair<u32, u32>> thread::dump_callstack_list() const
 	{
 		std::vector<std::pair<u32, u32>> result;
 
@@ -2899,17 +2902,19 @@ namespace rsx
 		else if (capture_current_frame)
 		{
 			capture_current_frame = false;
-			std::stringstream os;
-			cereal::BinaryOutputArchive archive(os);
-			const std::string& filePath = fs::get_config_dir() + "captures/" + Emu.GetTitleID() + "_" + date_time::current_time_narrow() + "_capture.rrc";
-			archive(frame_capture);
-			{
-				// todo: may want to compress this data?
-				fs::file f(filePath, fs::rewrite);
-				f.write(os.str());
-			}
 
-			rsx_log.success("capture successful: %s", filePath.c_str());
+			const std::string file_path = fs::get_config_dir() + "captures/" + Emu.GetTitleID() + "_" + date_time::current_time_narrow() + "_capture.rrc";
+			const std::string file_data = cereal_serialize(frame_capture);
+
+			// todo: may want to compress this data?
+			if (fs::write_file(file_path, fs::rewrite, file_data))
+			{
+				rsx_log.success("Capture successful: %s", file_path);
+			}
+			else
+			{
+				rsx_log.fatal("Capture failed: %s (%s)", file_path, fs::g_tls_error);
+			}
 
 			frame_capture.reset();
 			Emu.Pause();

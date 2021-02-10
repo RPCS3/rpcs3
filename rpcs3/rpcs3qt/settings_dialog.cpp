@@ -26,7 +26,6 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/title.h"
-#include "Crypto/unself.h"
 
 #include <set>
 #include <unordered_set>
@@ -877,7 +876,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->enableCacheClearing, emu_settings_type::LimitCacheSize);
 	SubscribeTooltip(ui->gb_DiskCacheClearing, tooltips.settings.limit_cache_size);
-	connect(ui->enableCacheClearing, &QCheckBox::stateChanged, ui->maximumCacheSize, &QSlider::setEnabled);
+	if (game)
+		ui->gb_DiskCacheClearing->setDisabled(true);
+	else
+		connect(ui->enableCacheClearing, &QCheckBox::stateChanged, ui->maximumCacheSize, &QSlider::setEnabled);
 
 	// Date Time Edit Box
 	m_emu_settings->EnhanceDateTimeEdit(ui->console_time_edit, emu_settings_type::ConsoleTimeOffset, tr("dd MMM yyyy HH:mm"), true, true, 15000);
@@ -1145,9 +1147,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// Comboboxes
 
-	m_emu_settings->EnhanceComboBox(ui->maxLLVMThreads, emu_settings_type::MaxLLVMThreads, true, true, std::thread::hardware_concurrency());
+	m_emu_settings->EnhanceComboBox(ui->maxLLVMThreads, emu_settings_type::MaxLLVMThreads, true, true, utils::get_thread_count());
 	SubscribeTooltip(ui->gb_max_llvm, tooltips.settings.max_llvm_threads);
-	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData(0), tr("All (%1)", "Max LLVM threads").arg(std::thread::hardware_concurrency()));
+	ui->maxLLVMThreads->setItemText(ui->maxLLVMThreads->findData(0), tr("All (%1)", "Max LLVM threads").arg(utils::get_thread_count()));
 
 	m_emu_settings->EnhanceComboBox(ui->perfOverlayDetailLevel, emu_settings_type::PerfOverlayDetailLevel);
 	SubscribeTooltip(ui->perf_overlay_detail_level, tooltips.settings.perf_overlay_detail_level);
@@ -1573,7 +1575,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			if (reset)
 			{
-				m_current_stylesheet = gui::Default;
+				m_current_stylesheet = gui::DefaultStylesheet;
 				ui->combo_configs->setCurrentIndex(0);
 				ui->combo_stylesheets->setCurrentIndex(0);
 			}
@@ -1835,12 +1837,12 @@ void settings_dialog::AddStylesheets()
 {
 	ui->combo_stylesheets->clear();
 
-	ui->combo_stylesheets->addItem(tr("None", "Stylesheets"), gui::None);
-	ui->combo_stylesheets->addItem(tr("Default (Bright)", "Stylesheets"), gui::Default);
+	ui->combo_stylesheets->addItem(tr("None", "Stylesheets"), gui::NoStylesheet);
+	ui->combo_stylesheets->addItem(tr("Default (Bright)", "Stylesheets"), gui::DefaultStylesheet);
 
 	for (const QString& entry : m_gui_settings->GetStylesheetEntries())
 	{
-		if (entry != gui::Default)
+		if (entry != gui::DefaultStylesheet)
 		{
 			ui->combo_stylesheets->addItem(entry, entry);
 		}
@@ -1924,7 +1926,7 @@ void settings_dialog::OnApplyStylesheet()
 {
 	m_current_stylesheet = ui->combo_stylesheets->currentData().toString();
 	m_gui_settings->SetValue(gui::m_currentStylesheet, m_current_stylesheet);
-	Q_EMIT GuiStylesheetRequest(m_gui_settings->GetCurrentStylesheetPath());
+	Q_EMIT GuiStylesheetRequest();
 }
 
 int settings_dialog::exec()
