@@ -547,26 +547,6 @@ std::pair<Value*, Value*> PPUTranslator::SaturateSigned(Value* value, u64 min, u
 	return{sat_h.first, m_ir->CreateOr(sat_l.second, sat_h.second)};
 }
 
-Value* PPUTranslator::Scale(Value* value, s32 scale)
-{
-	if (scale)
-	{
-		const auto type = value->getType();
-		const auto power = std::pow(2, scale);
-
-		if (auto v = dyn_cast<FixedVectorType>(type))
-		{
-			return m_ir->CreateFMul(value, ConstantVector::getSplat({v->getNumElements(), false}, ConstantFP::get(v->getElementType(), power)));
-		}
-		else
-		{
-			return m_ir->CreateFMul(value, ConstantFP::get(type, power));
-		}
-	}
-
-	return value;
-}
-
 Value* PPUTranslator::Shuffle(Value* left, Value* right, std::initializer_list<u32> indices)
 {
 	const auto type = left->getType();
@@ -698,23 +678,19 @@ void PPUTranslator::MTVSCR(ppu_opcode_t op)
 
 void PPUTranslator::VADDCUW(ppu_opcode_t op)
 {
-	const auto a = get_vr<u32[4]>(op.va);
-	const auto b = get_vr<u32[4]>(op.vb);
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
 	set_vr(op.vd, zext<u32[4]>(a + b < a));
 }
 
 void PPUTranslator::VADDFP(ppu_opcode_t op)
 {
-	const auto a = get_vr<f32[4]>(op.va);
-	const auto b = get_vr<f32[4]>(op.vb);
-
+	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
 	set_vr(op.vd, vec_handle_result(a + b));
 }
 
 void PPUTranslator::VADDSBS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s8[16]>(op.va);
-	const auto b = get_vr<s8[16]>(op.vb);
+	const auto [a, b] = get_vrs<s8[16]>(op.va, op.vb);
 	const auto r = add_sat(a, b);
 	set_vr(op.vd, r);
 	SetSat(IsNotZero(eval(r != (a + b)).value));
@@ -722,8 +698,7 @@ void PPUTranslator::VADDSBS(ppu_opcode_t op)
 
 void PPUTranslator::VADDSHS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s16[8]>(op.va);
-	const auto b = get_vr<s16[8]>(op.vb);
+	const auto [a, b] = get_vrs<s16[8]>(op.va, op.vb);
 	const auto r = add_sat(a, b);
 	set_vr(op.vd, r);
 	SetSat(IsNotZero(eval(r != (a + b)).value));
@@ -731,8 +706,7 @@ void PPUTranslator::VADDSHS(ppu_opcode_t op)
 
 void PPUTranslator::VADDSWS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s32[4]>(op.va);
-	const auto b = get_vr<s32[4]>(op.vb);
+	const auto [a, b] = get_vrs<s32[4]>(op.va, op.vb);
 	const auto r = add_sat(a, b);
 	set_vr(op.vd, r);
 	SetSat(IsNotZero(eval(r != (a + b)).value));
@@ -740,15 +714,13 @@ void PPUTranslator::VADDSWS(ppu_opcode_t op)
 
 void PPUTranslator::VADDUBM(ppu_opcode_t op)
 {
-	const auto a = get_vr<u8[16]>(op.va);
-	const auto b = get_vr<u8[16]>(op.vb);
-	set_vr(op.vd, eval(a + b));
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	set_vr(op.vd, a + b);
 }
 
 void PPUTranslator::VADDUBS(ppu_opcode_t op)
 {
-	const auto a = get_vr<u8[16]>(op.va);
-	const auto b = get_vr<u8[16]>(op.vb);
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
 	const auto r = add_sat(a, b);
 	set_vr(op.vd, r);
 	SetSat(IsNotZero(eval(r != (a + b)).value));
@@ -756,15 +728,13 @@ void PPUTranslator::VADDUBS(ppu_opcode_t op)
 
 void PPUTranslator::VADDUHM(ppu_opcode_t op)
 {
-	const auto a = get_vr<u16[8]>(op.va);
-	const auto b = get_vr<u16[8]>(op.vb);
-	set_vr(op.vd, eval(a + b));
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	set_vr(op.vd, a + b);
 }
 
 void PPUTranslator::VADDUHS(ppu_opcode_t op)
 {
-	const auto a = get_vr<u16[8]>(op.va);
-	const auto b = get_vr<u16[8]>(op.vb);
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
 	const auto r = add_sat(a, b);
 	set_vr(op.vd, r);
 	SetSat(IsNotZero(eval(r != (a + b)).value));
@@ -772,15 +742,13 @@ void PPUTranslator::VADDUHS(ppu_opcode_t op)
 
 void PPUTranslator::VADDUWM(ppu_opcode_t op)
 {
-	const auto a = get_vr<u32[4]>(op.va);
-	const auto b = get_vr<u32[4]>(op.vb);
-	set_vr(op.vd, eval(a + b));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, a + b);
 }
 
 void PPUTranslator::VADDUWS(ppu_opcode_t op)
 {
-	const auto a = get_vr<u32[4]>(op.va);
-	const auto b = get_vr<u32[4]>(op.vb);
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
 	const auto r = add_sat(a, b);
 	set_vr(op.vd, r);
 	SetSat(IsNotZero(eval(r != (a + b)).value));
@@ -788,208 +756,194 @@ void PPUTranslator::VADDUWS(ppu_opcode_t op)
 
 void PPUTranslator::VAND(ppu_opcode_t op)
 {
-	const auto a = get_vr<u32[4]>(op.va);
-	const auto b = get_vr<u32[4]>(op.vb);
-	set_vr(op.vd, eval(a & b));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, a & b);
 }
 
 void PPUTranslator::VANDC(ppu_opcode_t op)
 {
-	const auto a = get_vr<u32[4]>(op.va);
-	const auto b = get_vr<u32[4]>(op.vb);
-	set_vr(op.vd, eval(a & ~b));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, a & ~b);
 }
 
 void PPUTranslator::VAVGSB(ppu_opcode_t op)
 {
-	const auto a = get_vr<s8[16]>(op.va);
-	const auto b = get_vr<s8[16]>(op.vb);
-	set_vr(op.vd, eval(avg(a, b)));
+	const auto [a, b] = get_vrs<s8[16]>(op.va, op.vb);
+	set_vr(op.vd, avg(a, b));
 }
 
 void PPUTranslator::VAVGSH(ppu_opcode_t op)
 {
-	const auto a = get_vr<s16[8]>(op.va);
-	const auto b = get_vr<s16[8]>(op.vb);
-	set_vr(op.vd, eval(avg(a, b)));
+	const auto [a, b] = get_vrs<s16[8]>(op.va, op.vb);
+	set_vr(op.vd, avg(a, b));
 }
 
 void PPUTranslator::VAVGSW(ppu_opcode_t op)
 {
-	const auto a = get_vr<s32[4]>(op.va);
-	const auto b = get_vr<s32[4]>(op.vb);
-	set_vr(op.vd, eval(avg(a, b)));
+	const auto [a, b] = get_vrs<s32[4]>(op.va, op.vb);
+	set_vr(op.vd, avg(a, b));
 }
 
 void PPUTranslator::VAVGUB(ppu_opcode_t op)
 {
-	const auto a = get_vr<u8[16]>(op.va);
-	const auto b = get_vr<u8[16]>(op.vb);
-	set_vr(op.vd, eval(avg(a, b)));
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	set_vr(op.vd, avg(a, b));
 }
 
 void PPUTranslator::VAVGUH(ppu_opcode_t op)
 {
-	const auto a = get_vr<u16[8]>(op.va);
-	const auto b = get_vr<u16[8]>(op.vb);
-	set_vr(op.vd, eval(avg(a, b)));
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	set_vr(op.vd, avg(a, b));
 }
 
 void PPUTranslator::VAVGUW(ppu_opcode_t op)
 {
-	const auto a = get_vr<u32[4]>(op.va);
-	const auto b = get_vr<u32[4]>(op.vb);
-	set_vr(op.vd, eval(avg(a, b)));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, avg(a, b));
 }
 
 void PPUTranslator::VCFSX(ppu_opcode_t op)
 {
-	const auto b = GetVr(op.vb, VrType::vi32);
-	SetVr(op.vd, Scale(m_ir->CreateSIToFP(b, GetType<f32[4]>()), 0 - op.vuimm));
+	const auto b = get_vr<s32[4]>(op.vb);
+	set_vr(op.vd, fpcast<f32[4]>(b) * fsplat<f32[4]>(std::pow(2, -static_cast<int>(op.vuimm))));
 }
 
 void PPUTranslator::VCFUX(ppu_opcode_t op)
 {
-	const auto b = GetVr(op.vb, VrType::vi32);
-	SetVr(op.vd, Scale(m_ir->CreateUIToFP(b, GetType<f32[4]>()), 0 - op.vuimm));
+	const auto b = get_vr<u32[4]>(op.vb);
+	set_vr(op.vd, fpcast<f32[4]>(b) * fsplat<f32[4]>(std::pow(2, -static_cast<int>(op.vuimm))));
 }
 
 void PPUTranslator::VCMPBFP(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vf, op.va, op.vb);
-	const auto nle = m_ir->CreateFCmpUGT(ab[0], ab[1]);
-	const auto nge = m_ir->CreateFCmpULT(ab[0], m_ir->CreateFNeg(ab[1]));
-	const auto le_bit = m_ir->CreateShl(ZExt(nle, GetType<u32[4]>()), 31);
-	const auto ge_bit = m_ir->CreateShl(ZExt(nge, GetType<u32[4]>()), 30);
-	const auto result = m_ir->CreateOr(le_bit, ge_bit);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, m_ir->getFalse(), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
+	const auto nle = sext<s32[4]>(fcmp_uno(a > b)) & 0x8000'0000;
+	const auto nge = sext<s32[4]>(fcmp_uno(a < -b)) & 0x4000'0000;
+	const auto r = eval(nle | nge);
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, m_ir->getFalse(), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPEQFP(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vf, op.va, op.vb);
-	const auto result = m_ir->CreateFCmpOEQ(ab[0], ab[1]);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
+	const auto r = eval(sext<s32[4]>(fcmp_ord(a == b)));
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPEQUB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	const auto result = m_ir->CreateICmpEQ(ab[0], ab[1]);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	const auto r = eval(sext<s8[16]>(a == b));
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPEQUH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	const auto result = m_ir->CreateICmpEQ(ab[0], ab[1]);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	const auto r = eval(sext<s16[8]>(a == b));
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPEQUW(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	const auto result = m_ir->CreateICmpEQ(ab[0], ab[1]);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	const auto r = eval(sext<s32[4]>(a == b));
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGEFP(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vf, op.va, op.vb);
-	const auto result = m_ir->CreateFCmpOGE(ab[0], ab[1]);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
+	const auto r = eval(sext<s32[4]>(fcmp_ord(a >= b)));
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTFP(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vf, op.va, op.vb);
-	const auto result = m_ir->CreateFCmpOGT(ab[0], ab[1]);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
+	const auto r = eval(sext<s32[4]>(fcmp_ord(a > b)));
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTSB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	const auto result = m_ir->CreateICmpSGT(ab[0], ab[1]);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<s8[16]>(op.va, op.vb);
+	const auto r = eval(sext<s8[16]>(a > b));
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTSH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	const auto result = m_ir->CreateICmpSGT(ab[0], ab[1]);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<s16[8]>(op.va, op.vb);
+	const auto r = eval(sext<s16[8]>(a > b));
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTSW(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	const auto result = m_ir->CreateICmpSGT(ab[0], ab[1]);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<s32[4]>(op.va, op.vb);
+	const auto r = eval(sext<s32[4]>(a > b));
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTUB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	const auto result = m_ir->CreateICmpUGT(ab[0], ab[1]);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	const auto r = eval(sext<s8[16]>(a > b));
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTUH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	const auto result = m_ir->CreateICmpUGT(ab[0], ab[1]);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	const auto r = eval(sext<s16[8]>(a > b));
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
 
 void PPUTranslator::VCMPGTUW(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	const auto result = m_ir->CreateICmpUGT(ab[0], ab[1]);
-	SetVr(op.vd, result);
-	if (op.oe) SetCrField(6, IsOnes(result), m_ir->getFalse(), IsZero(result), m_ir->getFalse());
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	const auto r = eval(sext<s32[4]>(a > b));
+	set_vr(op.vd, r);
+	if (op.oe) SetCrField(6, IsOnes(r.value), m_ir->getFalse(), IsZero(r.value), m_ir->getFalse());
 }
-
-// TODO: remove this (wrong casts)
-#define FP_SAT_OP(fcmp, value) m_ir->CreateSelect(fcmp, cast<Constant>(cast<FCmpInst>(fcmp)->getOperand(1)), value)
 
 void PPUTranslator::VCTSXS(ppu_opcode_t op)
 {
-	const auto b = GetVr(op.vb, VrType::vf);
-	const auto scaled = Scale(b, op.vuimm);
-	//const auto const0 = ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0));
-	const auto const1 = ConstantVector::getSplat({4, false}, ConstantFP::get(GetType<f32>(), -std::pow(2, 31)));
-	//const auto is_nan = m_ir->CreateFCmpUNO(b, const0); // NaN -> 0.0
-	const auto sat_l = m_ir->CreateFCmpOLT(scaled, const1); // TODO ???
-	const auto sat_h = m_ir->CreateFCmpOGE(scaled, ConstantVector::getSplat({4, false}, ConstantFP::get(GetType<f32>(), std::pow(2, 31))));
-	const auto converted = m_ir->CreateFPToSI(m_ir->CreateSelect(sat_l, const1, scaled), GetType<s32[4]>());
-	SetVr(op.vd, m_ir->CreateSelect(sat_h, ConstantVector::getSplat({4, false}, m_ir->getInt32(0x7fffffff)), converted));
-	SetSat(IsNotZero(m_ir->CreateOr(sat_l, sat_h)));
+	const auto b = get_vr<f32[4]>(op.vb);
+	const auto scaled = b * fsplat<f32[4]>(std::pow(2, 0 + op.vuimm));
+	const auto const1 = fsplat<f32[4]>(-std::pow(2, 31));
+	//const auto is_nan = fcmp_uno(b == b); // NaN -> 0.0
+	const auto sat_l = fcmp_ord(scaled < const1); // TODO ???
+	const auto sat_h = fcmp_ord(scaled >= fsplat<f32[4]>(std::pow(2, 31)));
+	const auto converted = fpcast<s32[4]>(select(sat_l, const1, scaled));
+	set_vr(op.vd, select(sat_h, splat<s32[4]>(0x7fff'ffff), converted));
+	SetSat(IsNotZero(eval(sat_l | sat_h).value));
 }
 
 void PPUTranslator::VCTUXS(ppu_opcode_t op)
 {
-	const auto b = GetVr(op.vb, VrType::vf);
-	const auto scaled = Scale(b, op.vuimm);
-	const auto const0 = ConstantVector::getSplat({4, false}, ConstantFP::get(GetType<f32>(), 0.0));
-	//const auto is_nan = m_ir->CreateFCmpUNO(b, const0); // NaN -> 0.0
-	const auto sat_l = m_ir->CreateFCmpOLT(scaled, const0);
-	const auto sat_h = m_ir->CreateFCmpOGE(scaled, ConstantVector::getSplat({4, false}, ConstantFP::get(GetType<f32>(), std::pow(2, 32)))); // TODO ???
-	const auto converted = m_ir->CreateFPToUI(m_ir->CreateSelect(sat_l, const0, scaled), GetType<u32[4]>());
-	SetVr(op.vd, m_ir->CreateSelect(sat_h, ConstantVector::getSplat({4, false}, m_ir->getInt32(0xffffffff)), converted));
-	SetSat(IsNotZero(m_ir->CreateOr(sat_l, sat_h)));
+	const auto b = get_vr<f32[4]>(op.vb);
+	const auto scaled = b * fsplat<f32[4]>(std::pow(2, 0 + op.vuimm));
+	const auto const0 = fsplat<f32[4]>(0.);
+	//const auto is_nan = fcmp_uno(b == b); // NaN -> 0.0
+	const auto sat_l = fcmp_ord(scaled < const0);
+	const auto sat_h = fcmp_ord(scaled >= fsplat<f32[4]>(std::pow(2, 32))); // TODO ???
+	const auto converted = fpcast<u32[4]>(select(sat_l, const0, scaled));
+	set_vr(op.vd, select(sat_h, splat<u32[4]>(0xffff'ffff), converted));
+	SetSat(IsNotZero(eval(sat_l | sat_h).value));
 }
 
 void PPUTranslator::VEXPTEFP(ppu_opcode_t op)
@@ -1026,17 +980,17 @@ void PPUTranslator::VMADDFP(ppu_opcode_t op)
 
 	if (m_use_fma)
 	{
-		SetVr(op.vd, VecHandleResult(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { a.value, c.value, b.value })));
+		set_vr(op.vd, vec_handle_result(fmuladd(a, c, b)));
 		return;
 	}
 
-	// Emulated FMA via double precision
-	const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
-	const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
-	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
+	// Emulated FMA via double precision (caution: out-of-lane algorithm)
+	const auto xa = fpcast<f64[4]>(a);
+	const auto xb = fpcast<f64[4]>(b);
+	const auto xc = fpcast<f64[4]>(c);
 
-	const auto xr = m_ir->CreateCall(get_intrinsic<f64[4]>(llvm::Intrinsic::fmuladd), {xa, xc, xb});
-	SetVr(op.vd, VecHandleResult(m_ir->CreateFPTrunc(xr, get_type<f32[4]>())));
+	const auto xr = fmuladd(xa, xc, xb);
+	set_vr(op.vd, vec_handle_result(fpcast<f32[4]>(xr)));
 }
 
 void PPUTranslator::VMAXFP(ppu_opcode_t op)
@@ -1047,68 +1001,58 @@ void PPUTranslator::VMAXFP(ppu_opcode_t op)
 
 void PPUTranslator::VMAXSB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	SetVr(op.vd, Saturate(ab[0], CmpInst::ICMP_SLT, ab[1]).first);
+	const auto [a, b] = get_vrs<s8[16]>(op.va, op.vb);
+	set_vr(op.vd, max(a, b));
 }
 
 void PPUTranslator::VMAXSH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, Saturate(ab[0], CmpInst::ICMP_SLT, ab[1]).first);
+	const auto [a, b] = get_vrs<s16[8]>(op.va, op.vb);
+	set_vr(op.vd, max(a, b));
 }
 
 void PPUTranslator::VMAXSW(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, Saturate(ab[0], CmpInst::ICMP_SLT, ab[1]).first);
+	const auto [a, b] = get_vrs<s32[4]>(op.va, op.vb);
+	set_vr(op.vd, max(a, b));
 }
 
 void PPUTranslator::VMAXUB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	SetVr(op.vd, Saturate(ab[0], CmpInst::ICMP_ULT, ab[1]).first);
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	set_vr(op.vd, max(a, b));
 }
 
 void PPUTranslator::VMAXUH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, Saturate(ab[0], CmpInst::ICMP_ULT, ab[1]).first);
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	set_vr(op.vd, max(a, b));
 }
 
 void PPUTranslator::VMAXUW(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, Saturate(ab[0], CmpInst::ICMP_ULT, ab[1]).first);
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, max(a, b));
 }
 
 void PPUTranslator::VMHADDSHS(ppu_opcode_t op)
 {
-	const auto abc = SExt(GetVrs(VrType::vi16, op.va, op.vb, op.vc));
-	const auto result = m_ir->CreateAdd(m_ir->CreateAShr(m_ir->CreateMul(abc[0], abc[1]), 15), abc[2]);
-	const auto saturated = SaturateSigned(result, -0x8000, 0x7fff);
-	SetVr(op.vd, saturated.first);
-	SetSat(IsNotZero(saturated.second));
-
-	// const auto a = get_vr<s16[8]>(op.va);
-	// const auto b = get_vr<s16[8]>(op.vb);
-	// const auto c = get_vr<s16[8]>(op.vc);
-	// value_t<s16[8]> m;
-	// m.value = m_ir->CreateShl(Trunc(m_ir->CreateAShr(m_ir->CreateMul(SExt(a.value), SExt(b.value)), 16)), 1);
-	// m.value = m_ir->CreateOr(m.value, m_ir->CreateLShr(m_ir->CreateMul(a.value, b.value), 15));
-	// const auto s = eval(c + m);
-	// const auto z = eval((c >> 15) ^ 0x7fff);
-	// const auto x = eval(((m ^ s) & ~(c ^ m)) >> 15);
-	// set_vr(op.vd, eval((z & x) | (s & ~x)));
-	//SetSat(IsNotZero(saturated.second));
+	// Caution: out-of-lane algorithm
+	const auto [a, b, c] = get_vrs<s16[8]>(op.va, op.vb, op.vc);
+	const auto m = ((sext<s32[8]>(a) * sext<s32[8]>(b)) >> 15) + sext<s32[8]>(c);
+	const auto r = trunc<u16[8]>(min(max(m, splat<s32[8]>(-0x8000)), splat<s32[8]>(0x7fff)));
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval((m + 0x8000) >> 16).value));
 }
 
 void PPUTranslator::VMHRADDSHS(ppu_opcode_t op)
 {
-	const auto abc = SExt(GetVrs(VrType::vi16, op.va, op.vb, op.vc));
-	const auto result = m_ir->CreateAdd(m_ir->CreateAShr(m_ir->CreateAdd(m_ir->CreateMul(abc[0], abc[1]), ConstantVector::getSplat({8, false}, m_ir->getInt32(0x4000))), 15), abc[2]);
-	const auto saturated = SaturateSigned(result, -0x8000, 0x7fff);
-	SetVr(op.vd, saturated.first);
-	SetSat(IsNotZero(saturated.second));
+	// Caution: out-of-lane algorithm
+	const auto [a, b, c] = get_vrs<s16[8]>(op.va, op.vb, op.vc);
+	const auto m = ((sext<s32[8]>(a) * sext<s32[8]>(b) + splat<s32[8]>(0x4000)) >> 15) + sext<s32[8]>(c);
+	const auto r = trunc<u16[8]>(min(max(m, splat<s32[8]>(-0x8000)), splat<s32[8]>(0x7fff)));
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval((m + 0x8000) >> 16).value));
 }
 
 void PPUTranslator::VMINFP(ppu_opcode_t op)
@@ -1119,80 +1063,80 @@ void PPUTranslator::VMINFP(ppu_opcode_t op)
 
 void PPUTranslator::VMINSB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	SetVr(op.vd, Saturate(ab[0], CmpInst::ICMP_SGT, ab[1]).first);
+	const auto [a, b] = get_vrs<s8[16]>(op.va, op.vb);
+	set_vr(op.vd, min(a, b));
 }
 
 void PPUTranslator::VMINSH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, Saturate(ab[0], CmpInst::ICMP_SGT, ab[1]).first);
+	const auto [a, b] = get_vrs<s16[8]>(op.va, op.vb);
+	set_vr(op.vd, min(a, b));
 }
 
 void PPUTranslator::VMINSW(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, Saturate(ab[0], CmpInst::ICMP_SGT, ab[1]).first);
+	const auto [a, b] = get_vrs<s32[4]>(op.va, op.vb);
+	set_vr(op.vd, min(a, b));
 }
 
 void PPUTranslator::VMINUB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	SetVr(op.vd, Saturate(ab[0], CmpInst::ICMP_UGT, ab[1]).first);
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	set_vr(op.vd, min(a, b));
 }
 
 void PPUTranslator::VMINUH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, Saturate(ab[0], CmpInst::ICMP_UGT, ab[1]).first);
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	set_vr(op.vd, min(a, b));
 }
 
 void PPUTranslator::VMINUW(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, Saturate(ab[0], CmpInst::ICMP_UGT, ab[1]).first);
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, min(a, b));
 }
 
 void PPUTranslator::VMLADDUHM(ppu_opcode_t op)
 {
-	const auto abc = GetVrs(VrType::vi16, op.va, op.vb, op.vc);
-	SetVr(op.vd, m_ir->CreateAdd(m_ir->CreateMul(abc[0], abc[1]), abc[2]));
+	const auto [a, b, c] = get_vrs<u16[8]>(op.va, op.vb, op.vc);
+	set_vr(op.vd, a * b + c);
 }
 
 void PPUTranslator::VMRGHB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	SetVr(op.vd, Shuffle(ab[0], ab[1], { 0, 16, 1, 17, 2, 18, 3, 19, 4, 20, 5, 21, 6, 22, 7, 23 }));
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	set_vr(op.vd, shuffle2(a, b, 24, 8, 25, 9, 26, 10, 27, 11, 28, 12, 29, 13, 30, 14, 31, 15));
 }
 
 void PPUTranslator::VMRGHH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, Shuffle(ab[0], ab[1], { 0, 8, 1, 9, 2, 10, 3, 11 }));
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	set_vr(op.vd, shuffle2(a, b, 12, 4, 13, 5, 14, 6, 15, 7));
 }
 
 void PPUTranslator::VMRGHW(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, Shuffle(ab[0], ab[1], { 0, 4, 1, 5 }));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, shuffle2(a, b, 6, 2, 7, 3));
 }
 
 void PPUTranslator::VMRGLB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	SetVr(op.vd, Shuffle(ab[0], ab[1], { 8, 24, 9, 25, 10, 26, 11, 27, 12, 28, 13, 29, 14, 30, 15, 31 }));
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	set_vr(op.vd, shuffle2(a, b, 16, 0, 17, 1, 18, 2, 19, 3, 20, 4, 21, 5, 22, 6, 23, 7));
 }
 
 void PPUTranslator::VMRGLH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, Shuffle(ab[0], ab[1], { 4, 12, 5, 13, 6, 14, 7, 15 }));
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	set_vr(op.vd, shuffle2(a, b, 8, 0, 9, 1, 10, 2, 11, 3));
 }
 
 void PPUTranslator::VMRGLW(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, Shuffle(ab[0], ab[1], { 2, 6, 3, 7 }));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, shuffle2(a, b, 4, 0, 5, 1));
 }
 
 void PPUTranslator::VMSUMMBM(ppu_opcode_t op)
@@ -1202,26 +1146,22 @@ void PPUTranslator::VMSUMMBM(ppu_opcode_t op)
 	const auto c = get_vr<s32[4]>(op.vc);
 	const auto ml = bitcast<s32[4]>((a << 8 >> 8) * noncast<s16[8]>(b << 8 >> 8));
 	const auto mh = bitcast<s32[4]>((a >> 8) * noncast<s16[8]>(b >> 8));
-	set_vr(op.vd, eval(((ml << 16 >> 16) + (ml >> 16)) + ((mh << 16 >> 16) + (mh >> 16)) + c));
+	set_vr(op.vd, ((ml << 16 >> 16) + (ml >> 16)) + ((mh << 16 >> 16) + (mh >> 16)) + c);
 }
 
 void PPUTranslator::VMSUMSHM(ppu_opcode_t op)
 {
-	const auto a = get_vr<s32[4]>(op.va);
-	const auto b = get_vr<s32[4]>(op.vb);
-	const auto c = get_vr<s32[4]>(op.vc);
-	const auto ml = eval((a << 16 >> 16) * (b << 16 >> 16));
-	const auto mh = eval((a >> 16) * (b >> 16));
-	set_vr(op.vd, eval(ml + mh + c));
+	const auto [a, b, c] = get_vrs<s32[4]>(op.va, op.vb, op.vc);
+	const auto ml = (a << 16 >> 16) * (b << 16 >> 16);
+	const auto mh = (a >> 16) * (b >> 16);
+	set_vr(op.vd, ml + mh + c);
 }
 
 void PPUTranslator::VMSUMSHS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s32[4]>(op.va);
-	const auto b = get_vr<s32[4]>(op.vb);
-	const auto c = get_vr<s32[4]>(op.vc);
-	const auto ml = eval((a << 16 >> 16) * (b << 16 >> 16));
-	const auto mh = eval((a >> 16) * (b >> 16));
+	const auto [a, b, c] = get_vrs<s32[4]>(op.va, op.vb, op.vc);
+	const auto ml = (a << 16 >> 16) * (b << 16 >> 16);
+	const auto mh = (a >> 16) * (b >> 16);
 	const auto m = eval(ml + mh);
 	const auto s = eval(m + c);
 	const auto z = eval((c >> 31) ^ 0x7fffffff);
@@ -1233,8 +1173,7 @@ void PPUTranslator::VMSUMSHS(ppu_opcode_t op)
 
 void PPUTranslator::VMSUMUBM(ppu_opcode_t op)
 {
-	const auto a = get_vr<u16[8]>(op.va);
-	const auto b = get_vr<u16[8]>(op.vb);
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
 	const auto c = get_vr<u32[4]>(op.vc);
 	const auto ml = bitcast<u32[4]>((a << 8 >> 8) * (b << 8 >> 8));
 	const auto mh = bitcast<u32[4]>((a >> 8) * (b >> 8));
@@ -1243,21 +1182,17 @@ void PPUTranslator::VMSUMUBM(ppu_opcode_t op)
 
 void PPUTranslator::VMSUMUHM(ppu_opcode_t op)
 {
-	const auto a = get_vr<u32[4]>(op.va);
-	const auto b = get_vr<u32[4]>(op.vb);
-	const auto c = get_vr<u32[4]>(op.vc);
-	const auto ml = eval((a << 16 >> 16) * (b << 16 >> 16));
-	const auto mh = eval((a >> 16) * (b >> 16));
-	set_vr(op.vd, eval(ml + mh + c));
+	const auto [a, b, c] = get_vrs<u32[4]>(op.va, op.vb, op.vc);
+	const auto ml = (a << 16 >> 16) * (b << 16 >> 16);
+	const auto mh = (a >> 16) * (b >> 16);
+	set_vr(op.vd, ml + mh + c);
 }
 
 void PPUTranslator::VMSUMUHS(ppu_opcode_t op)
 {
-	const auto a = get_vr<u32[4]>(op.va);
-	const auto b = get_vr<u32[4]>(op.vb);
-	const auto c = get_vr<u32[4]>(op.vc);
-	const auto ml = noncast<u32[4]>((a << 16 >> 16) * (b << 16 >> 16));
-	const auto mh = noncast<u32[4]>((a >> 16) * (b >> 16));
+	const auto [a, b, c] = get_vrs<u32[4]>(op.va, op.vb, op.vc);
+	const auto ml = (a << 16 >> 16) * (b << 16 >> 16);
+	const auto mh = (a >> 16) * (b >> 16);
 	const auto s = eval(ml + mh);
 	const auto s2 = eval(s + c);
 	const auto x = eval((s < ml) | (s2 < s));
@@ -1267,50 +1202,50 @@ void PPUTranslator::VMSUMUHS(ppu_opcode_t op)
 
 void PPUTranslator::VMULESB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateAShr(ab[0], 8), m_ir->CreateAShr(ab[1], 8)));
+	const auto [a, b] = get_vrs<s16[8]>(op.va, op.vb);
+	set_vr(op.vd, (a >> 8) * (b >> 8));
 }
 
 void PPUTranslator::VMULESH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateAShr(ab[0], 16), m_ir->CreateAShr(ab[1], 16)));
+	const auto [a, b] = get_vrs<s32[4]>(op.va, op.vb);
+	set_vr(op.vd, (a >> 16) * (b >> 16));
 }
 
 void PPUTranslator::VMULEUB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateLShr(ab[0], 8), m_ir->CreateLShr(ab[1], 8)));
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	set_vr(op.vd, (a >> 8) * (b >> 8));
 }
 
 void PPUTranslator::VMULEUH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateLShr(ab[0], 16), m_ir->CreateLShr(ab[1], 16)));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, (a >> 16) * (b >> 16));
 }
 
 void PPUTranslator::VMULOSB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateAShr(m_ir->CreateShl(ab[0], 8), 8), m_ir->CreateAShr(m_ir->CreateShl(ab[1], 8), 8)));
+	const auto [a, b] = get_vrs<s16[8]>(op.va, op.vb);
+	set_vr(op.vd, (a << 8 >> 8) * (b << 8 >> 8));
 }
 
 void PPUTranslator::VMULOSH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateAShr(m_ir->CreateShl(ab[0], 16), 16), m_ir->CreateAShr(m_ir->CreateShl(ab[1], 16), 16)));
+	const auto [a, b] = get_vrs<s32[4]>(op.va, op.vb);
+	set_vr(op.vd, (a << 16 >> 16) * (b << 16 >> 16));
 }
 
 void PPUTranslator::VMULOUB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateLShr(m_ir->CreateShl(ab[0], 8), 8), m_ir->CreateLShr(m_ir->CreateShl(ab[1], 8), 8)));
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	set_vr(op.vd, (a << 8 >> 8) * (b << 8 >> 8));
 }
 
 void PPUTranslator::VMULOUH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, m_ir->CreateMul(m_ir->CreateLShr(m_ir->CreateShl(ab[0], 16), 16), m_ir->CreateLShr(m_ir->CreateShl(ab[1], 16), 16)));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, (a << 16 >> 16) * (b << 16 >> 16));
 }
 
 void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
@@ -1338,40 +1273,42 @@ void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 	// Differs from the emulated path with regards to negative zero
 	if (m_use_fma)
 	{
-		SetVr(op.vd, VecHandleResult(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { m_ir->CreateFNeg(a.value), c.value, b.value })));
+		set_vr(op.vd, vec_handle_result(fmuladd(-a, c, b)));
 		return;
 	}
 
-	// Emulated FMA via double precision
-	const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
-	const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
-	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
+	// Emulated FMA via double precision (caution: out-of-lane algorithm)
+	const auto xa = fpcast<f64[4]>(a);
+	const auto xb = fpcast<f64[4]>(b);
+	const auto xc = fpcast<f64[4]>(c);
 
-	const auto xr = m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(xa, xc), xb));
-	SetVr(op.vd, VecHandleResult(m_ir->CreateFPTrunc(xr, get_type<f32[4]>())));
+	const auto nr = xa * xc - xb;
+	set_vr(op.vd, vec_handle_result(fpcast<f32[4]>(-nr)));
 }
 
 void PPUTranslator::VNOR(ppu_opcode_t op)
 {
-	const auto a = get_vr<u32[4]>(op.va);
-	const auto b = get_vr<u32[4]>(op.vb);
-	set_vr(op.vd, eval(~(a | b)));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, ~(a | b));
 }
 
 void PPUTranslator::VOR(ppu_opcode_t op)
 {
-	const auto a = get_vr<u32[4]>(op.va);
-	const auto b = get_vr<u32[4]>(op.vb);
-	set_vr(op.vd, eval(a | b));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, a | b);
 }
 
 void PPUTranslator::VPERM(ppu_opcode_t op)
 {
-	const auto a = get_vr<u8[16]>(op.va);
-	const auto b = get_vr<u8[16]>(op.vb);
-	const auto c = get_vr<u8[16]>(op.vc);
+	const auto [a, b, c] = get_vrs<u8[16]>(op.va, op.vb, op.vc);
 
-	if (m_use_avx512_icl && op.ra != op.rb)
+	if (op.ra == op.rb)
+	{
+		set_vr(op.vd, pshufb(a, ~c & 0xf));
+		return;
+	}
+
+	if (m_use_avx512_icl)
 	{
 		const auto i = eval(~c);
 		set_vr(op.vd, vperm2b256to128(b, a, i));
@@ -1384,12 +1321,13 @@ void PPUTranslator::VPERM(ppu_opcode_t op)
 
 void PPUTranslator::VPKPX(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	const auto px = Shuffle(ab[0], ab[1], { 0, 1, 2, 3, 4, 5, 6, 7 });
-	const auto e1 = m_ir->CreateLShr(m_ir->CreateAnd(px, 0x01f80000), 9);
-	const auto e2 = m_ir->CreateLShr(m_ir->CreateAnd(px, 0xf800), 6);
-	const auto e3 = m_ir->CreateLShr(m_ir->CreateAnd(px, 0xf8), 3);
-	SetVr(op.vd, m_ir->CreateOr(m_ir->CreateOr(e1, e2), e3));
+	// Caution: out-of-lane algorithm
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	const auto ab = shuffle2(b, a, 0, 1, 2, 3, 4, 5, 6, 7);
+	const auto e1 = (ab & 0x01f80000) >> 9;
+	const auto e2 = (ab & 0xf800) >> 6;
+	const auto e3 = (ab & 0xf8) >> 3;
+	set_vr(op.vd, trunc<u16[8]>(e1 | e2 | e3));
 }
 
 void PPUTranslator::VPKSHSS(ppu_opcode_t op)
@@ -4703,6 +4641,7 @@ void PPUTranslator::SetVr(u32 vr, Value* value)
 		}
 	}
 
+	ensure(value->getType()->getPrimitiveSizeInBits() == 128);
 	RegStore(value, m_vr[vr]);
 }
 
