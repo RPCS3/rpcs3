@@ -34,6 +34,7 @@ set(SRC_FILES
 	localized.cpp
 	localized_emu.h
 	log_frame.cpp
+	log_viewer.cpp
 	main_window.cpp
 	memory_string_searcher.cpp
 	memory_viewer_panel.cpp
