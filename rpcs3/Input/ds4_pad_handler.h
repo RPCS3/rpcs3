@@ -71,7 +71,7 @@ private:
 	u32 get_battery_color(u8 battery_level, int brightness);
 
 	// Copies data into padData if status is NewData, otherwise buffer is untouched
-	DataStatus GetRawData(DS4Device* ds4Device);
+	DataStatus get_data(DS4Device* ds4Device);
 	// This function gets us usuable buffer from the rawbuffer of padData
 	bool GetCalibrationData(DS4Device* ds4Device);
 	int send_output_report(DS4Device* device);
