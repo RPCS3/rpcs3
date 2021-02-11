@@ -4,19 +4,24 @@
 
 LOG_CHANNEL(ds4_log, "DS4");
 
+constexpr u16 DS4_VID = 0x054C;
+constexpr u16 DS4_PID_0 = 0xBA0;
+constexpr u16 DS4_PID_1 = 0x5C4;
+constexpr u16 DS4_PID_2 = 0x09CC;
+
 namespace
 {
-	const u32 DS4_ACC_RES_PER_G = 8192;
-	const u32 DS4_GYRO_RES_PER_DEG_S = 16; // technically this could be 1024, but keeping it at 16 keeps us within 16 bits of precision
-	const u32 DS4_FEATURE_REPORT_0x02_SIZE = 37;
-	const u32 DS4_FEATURE_REPORT_0x05_SIZE = 41;
-	const u32 DS4_FEATURE_REPORT_0x12_SIZE = 16;
-	const u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
-	const u32 DS4_INPUT_REPORT_0x11_SIZE = 78;
-	const u32 DS4_OUTPUT_REPORT_0x05_SIZE = 32;
-	const u32 DS4_OUTPUT_REPORT_0x11_SIZE = 78;
-	const u32 DS4_INPUT_REPORT_GYRO_X_OFFSET = 13;
-	const u32 DS4_INPUT_REPORT_BATTERY_OFFSET = 30;
+	constexpr u32 DS4_ACC_RES_PER_G = 8192;
+	constexpr u32 DS4_GYRO_RES_PER_DEG_S = 16; // technically this could be 1024, but keeping it at 16 keeps us within 16 bits of precision
+	constexpr u32 DS4_FEATURE_REPORT_0x02_SIZE = 37;
+	constexpr u32 DS4_FEATURE_REPORT_0x05_SIZE = 41;
+	constexpr u32 DS4_FEATURE_REPORT_0x12_SIZE = 16;
+	constexpr u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
+	constexpr u32 DS4_INPUT_REPORT_0x11_SIZE = 78;
+	constexpr u32 DS4_OUTPUT_REPORT_0x05_SIZE = 32;
+	constexpr u32 DS4_OUTPUT_REPORT_0x11_SIZE = 78;
+	constexpr u32 DS4_INPUT_REPORT_GYRO_X_OFFSET = 13;
+	constexpr u32 DS4_INPUT_REPORT_BATTERY_OFFSET = 30;
 
 	// This tries to convert axis to give us the max even in the corners,
 	// this actually might work 'too' well, we end up actually getting diagonals of actual max/min, we need the corners still a bit rounded to match ds3
@@ -66,7 +71,7 @@ namespace
 }
 
 ds4_pad_handler::ds4_pad_handler()
-    : hid_pad_handler<DS4Device>(pad_handler::ds4, 0x054C, {0xBA0, 0x5C4, 0x09CC})
+    : hid_pad_handler<DS4Device>(pad_handler::ds4, DS4_VID, {DS4_PID_0, DS4_PID_1, DS4_PID_2})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =
@@ -195,8 +200,8 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 		return;
 
 	// Set the device's motor speeds to our requested values 0-255
-	device->largeVibrate = largeMotor;
-	device->smallVibrate = smallMotor;
+	device->large_motor = largeMotor;
+	device->small_motor = smallMotor;
 
 	int index = 0;
 	for (uint i = 0; i < MAX_GAMEPADS; i++)
@@ -497,24 +502,25 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 		return;
 	}
 
-	DS4Device* ds4_dev = nullptr;
+	DS4Device* device = nullptr;
 
 	for (auto& controller : m_controllers)
 	{
-		if (!controller.second || !controller.second->hidDevice)
+		ensure(controller.second);
+
+		if (!controller.second->hidDevice)
 		{
-			ds4_dev = controller.second.get();
+			device = controller.second.get();
 			break;
 		}
 	}
 
-	if (!ds4_dev)
+	if (!device)
 	{
 		return;
 	}
 
 	std::string serial;
-	ds4_dev->hidDevice = hidDevice;
 
 	// There isnt a nice 'portable' way with hidapi to detect bt vs wired as the pid/vid's are the same
 	// Let's try getting 0x81 feature report, which should will return mac address on wired, and should error on bluetooth
@@ -540,15 +546,18 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	}
 	else
 	{
-		ds4_dev->btCon = true;
+		device->btCon = true;
 		for (wchar_t ch : wide_serial)
 			serial += static_cast<uchar>(ch);
 	}
 
-	if (!GetCalibrationData(ds4_dev))
+	device->hidDevice = hidDevice;
+
+	if (!GetCalibrationData(device))
 	{
 		ds4_log.error("check_add_device: GetCalibrationData failed!");
 		hid_close(hidDevice);
+		device->hidDevice = nullptr;
 		return;
 	}
 
@@ -556,13 +565,14 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	{
 		ds4_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
 		hid_close(hidDevice);
+		device->hidDevice = nullptr;
 		return;
 	}
 
-	ds4_dev->hasCalibData = true;
-	ds4_dev->path         = path;
+	device->hasCalibData  = true;
+	device->path         = path;
 
-	send_output_report(ds4_dev);
+	send_output_report(device);
 }
 
 ds4_pad_handler::~ds4_pad_handler()
@@ -572,8 +582,8 @@ ds4_pad_handler::~ds4_pad_handler()
 		if (controller.second && controller.second->hidDevice)
 		{
 			// Disable blinking and vibration
-			controller.second->smallVibrate = 0;
-			controller.second->largeVibrate = 0;
+			controller.second->small_motor = 0;
+			controller.second->large_motor = 0;
 			controller.second->led_delay_on = 0;
 			controller.second->led_delay_off = 0;
 			send_output_report(controller.second.get());
@@ -597,8 +607,8 @@ int ds4_pad_handler::send_output_report(DS4Device* device)
 		outputBuf[0] = 0x11;
 		outputBuf[1] = 0xC4;
 		outputBuf[3] = 0x07;
-		outputBuf[6] = device->smallVibrate;
-		outputBuf[7] = device->largeVibrate;
+		outputBuf[6] = device->small_motor;
+		outputBuf[7] = device->large_motor;
 		outputBuf[8]  = config->colorR; // red
 		outputBuf[9]  = config->colorG; // green
 		outputBuf[10] = config->colorB; // blue
@@ -624,8 +634,8 @@ int ds4_pad_handler::send_output_report(DS4Device* device)
 	{
 		outputBuf[0] = 0x05;
 		outputBuf[1] = 0x07;
-		outputBuf[4] = device->smallVibrate;
-		outputBuf[5] = device->largeVibrate;
+		outputBuf[4] = device->small_motor;
+		outputBuf[5] = device->large_motor;
 		outputBuf[6] = config->colorR; // red
 		outputBuf[7] = config->colorG; // green
 		outputBuf[8] = config->colorB; // blue
@@ -636,7 +646,7 @@ int ds4_pad_handler::send_output_report(DS4Device* device)
 	}
 }
 
-ds4_pad_handler::DataStatus ds4_pad_handler::GetRawData(DS4Device* device)
+ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 {
 	if (!device || !device->hidDevice)
 		return DataStatus::ReadError;
@@ -795,7 +805,7 @@ PadHandlerBase::connection ds4_pad_handler::update_connection(const std::shared_
 		}
 	}
 
-	if (GetRawData(ds4_dev) == DataStatus::ReadError)
+	if (get_data(ds4_dev) == DataStatus::ReadError)
 	{
 		// this also can mean disconnected, either way deal with it on next loop and reconnect
 		hid_close(ds4_dev->hidDevice);
@@ -898,10 +908,10 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 		}
 	}
 
-	ds4_dev->newVibrateData |= ds4_dev->largeVibrate != speed_large || ds4_dev->smallVibrate != speed_small || newBlinkData;
+	ds4_dev->newVibrateData |= ds4_dev->large_motor != speed_large || ds4_dev->small_motor != speed_small || newBlinkData;
 
-	ds4_dev->largeVibrate = speed_large;
-	ds4_dev->smallVibrate = speed_small;
+	ds4_dev->large_motor = speed_large;
+	ds4_dev->small_motor = speed_small;
 
 	if (ds4_dev->newVibrateData && send_output_report(ds4_dev) >= 0)
 	{

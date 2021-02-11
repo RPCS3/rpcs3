@@ -31,8 +31,8 @@ class HidDevice : public PadDevice
 public:
 	hid_device* hidDevice{nullptr};
 	std::string path{""};
-	u8 largeVibrate{0};
-	u8 smallVibrate{0};
+	u8 large_motor{0};
+	u8 small_motor{0};
 	u8 led_delay_on{0};
 	u8 led_delay_off{0};
 };
@@ -72,6 +72,8 @@ protected:
 	std::shared_ptr<Device> get_hid_device(const std::string& padId);
 
 	virtual void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view serial) = 0;
+	virtual int send_output_report(Device* device) = 0;
+	virtual DataStatus get_data(Device* device) = 0;
 
 	inline s16 apply_calibration(s32 rawValue, const CalibData& calibData)
 	{
