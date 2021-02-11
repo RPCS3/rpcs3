@@ -63,19 +63,10 @@ namespace
 
 		return std::tuple<u16, u16>(Clamp0To255((outX + 1) * 127.f), Clamp0To255(((outY * -1) + 1) * 127.f));
 	}*/
-
-	inline s16 read_s16(const void* buf)
-	{
-		return *reinterpret_cast<const s16*>(buf);
-	}
-
-	inline u32 read_u32(const void* buf)
-	{
-		return *reinterpret_cast<const u32*>(buf);
-	}
 }
 
-ds4_pad_handler::ds4_pad_handler() : PadHandlerBase(pad_handler::ds4)
+ds4_pad_handler::ds4_pad_handler()
+    : hid_pad_handler<DS4Device>(pad_handler::ds4, 0x054C, {0xBA0, 0x5C4, 0x09CC})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =
@@ -189,7 +180,7 @@ void ds4_pad_handler::init_config(pad_config* cfg, const std::string& name)
 
 u32 ds4_pad_handler::get_battery_level(const std::string& padId)
 {
-	std::shared_ptr<DS4Device> device = GetDS4Device(padId);
+	std::shared_ptr<DS4Device> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
 	{
 		return 0;
@@ -199,7 +190,7 @@ u32 ds4_pad_handler::get_battery_level(const std::string& padId)
 
 void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
 {
-	std::shared_ptr<DS4Device> device = GetDS4Device(padId);
+	std::shared_ptr<DS4Device> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
 		return;
 
@@ -238,33 +229,13 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 	}
 
 	// Start/Stop the engines :)
-	send_output_report(device);
-}
-
-std::shared_ptr<ds4_pad_handler::DS4Device> ds4_pad_handler::GetDS4Device(const std::string& padId)
-{
-	if (!Init())
-		return nullptr;
-
-	std::shared_ptr<DS4Device> device = nullptr;
-
-	// Controllers 1-n in GUI
-	for (auto& cur_control : controllers)
-	{
-		if (padId == cur_control.first)
-		{
-			device = cur_control.second;
-			break;
-		}
-	}
-
-	return device;
+	send_output_report(device.get());
 }
 
 std::unordered_map<u64, u16> ds4_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
 	std::unordered_map<u64, u16> keyBuffer;
-	auto ds4_dev = std::static_pointer_cast<DS4Device>(device);
+	DS4Device* ds4_dev = static_cast<DS4Device*>(device.get());
 	if (!ds4_dev)
 		return keyBuffer;
 
@@ -387,7 +358,7 @@ pad_preview_values ds4_pad_handler::get_preview_values(const std::unordered_map<
 	};
 }
 
-bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4Dev)
+bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev)
 {
 	if (!ds4Dev || !ds4Dev->hidDevice)
 	{
@@ -435,9 +406,9 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 		}
 	}
 
-	ds4Dev->calibData[DS4CalibIndex::PITCH].bias = read_s16(&buf[1]);
-	ds4Dev->calibData[DS4CalibIndex::YAW].bias = read_s16(&buf[3]);
-	ds4Dev->calibData[DS4CalibIndex::ROLL].bias = read_s16(&buf[5]);
+	ds4Dev->calibData[CalibIndex::PITCH].bias = read_s16(&buf[1]);
+	ds4Dev->calibData[CalibIndex::YAW].bias = read_s16(&buf[3]);
+	ds4Dev->calibData[CalibIndex::ROLL].bias = read_s16(&buf[5]);
 
 	s16 pitchPlus, pitchNeg, rollPlus, rollNeg, yawPlus, yawNeg;
 
@@ -474,14 +445,14 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 
 	const s32 gyroSpeedScale = read_s16(&buf[19]) + read_s16(&buf[21]);
 
-	ds4Dev->calibData[DS4CalibIndex::PITCH].sensNumer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
-	ds4Dev->calibData[DS4CalibIndex::PITCH].sensDenom = pitchPlus - pitchNeg;
+	ds4Dev->calibData[CalibIndex::PITCH].sens_numer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
+	ds4Dev->calibData[CalibIndex::PITCH].sens_denom = pitchPlus - pitchNeg;
 
-	ds4Dev->calibData[DS4CalibIndex::YAW].sensNumer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
-	ds4Dev->calibData[DS4CalibIndex::YAW].sensDenom = yawPlus - yawNeg;
+	ds4Dev->calibData[CalibIndex::YAW].sens_numer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
+	ds4Dev->calibData[CalibIndex::YAW].sens_denom = yawPlus - yawNeg;
 
-	ds4Dev->calibData[DS4CalibIndex::ROLL].sensNumer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
-	ds4Dev->calibData[DS4CalibIndex::ROLL].sensDenom = rollPlus - rollNeg;
+	ds4Dev->calibData[CalibIndex::ROLL].sens_numer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
+	ds4Dev->calibData[CalibIndex::ROLL].sens_denom = rollPlus - rollNeg;
 
 	const s16 accelXPlus = read_s16(&buf[23]);
 	const s16 accelXNeg  = read_s16(&buf[25]);
@@ -491,25 +462,25 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 	const s16 accelZNeg  = read_s16(&buf[33]);
 
 	const s32 accelXRange = accelXPlus - accelXNeg;
-	ds4Dev->calibData[DS4CalibIndex::X].bias = accelXPlus - accelXRange / 2;
-	ds4Dev->calibData[DS4CalibIndex::X].sensNumer = 2 * DS4_ACC_RES_PER_G;
-	ds4Dev->calibData[DS4CalibIndex::X].sensDenom = accelXRange;
+	ds4Dev->calibData[CalibIndex::X].bias = accelXPlus - accelXRange / 2;
+	ds4Dev->calibData[CalibIndex::X].sens_numer = 2 * DS4_ACC_RES_PER_G;
+	ds4Dev->calibData[CalibIndex::X].sens_denom = accelXRange;
 
 	const s32 accelYRange = accelYPlus - accelYNeg;
-	ds4Dev->calibData[DS4CalibIndex::Y].bias = accelYPlus - accelYRange / 2;
-	ds4Dev->calibData[DS4CalibIndex::Y].sensNumer = 2 * DS4_ACC_RES_PER_G;
-	ds4Dev->calibData[DS4CalibIndex::Y].sensDenom = accelYRange;
+	ds4Dev->calibData[CalibIndex::Y].bias = accelYPlus - accelYRange / 2;
+	ds4Dev->calibData[CalibIndex::Y].sens_numer = 2 * DS4_ACC_RES_PER_G;
+	ds4Dev->calibData[CalibIndex::Y].sens_denom = accelYRange;
 
 	const s32 accelZRange = accelZPlus - accelZNeg;
-	ds4Dev->calibData[DS4CalibIndex::Z].bias = accelZPlus - accelZRange / 2;
-	ds4Dev->calibData[DS4CalibIndex::Z].sensNumer = 2 * DS4_ACC_RES_PER_G;
-	ds4Dev->calibData[DS4CalibIndex::Z].sensDenom = accelZRange;
+	ds4Dev->calibData[CalibIndex::Z].bias = accelZPlus - accelZRange / 2;
+	ds4Dev->calibData[CalibIndex::Z].sens_numer = 2 * DS4_ACC_RES_PER_G;
+	ds4Dev->calibData[CalibIndex::Z].sens_denom = accelZRange;
 
 	// Make sure data 'looks' valid, dongle will report invalid calibration data with no controller connected
 
 	for (const auto& data : ds4Dev->calibData)
 	{
-		if (data.sensDenom == 0)
+		if (data.sens_denom == 0)
 		{
 			ds4_log.error("GetCalibrationData: Failure: sensDenom == 0");
 			return false;
@@ -519,15 +490,20 @@ bool ds4_pad_handler::GetCalibrationData(const std::shared_ptr<DS4Device>& ds4De
 	return true;
 }
 
-void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial)
+void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial)
 {
-	std::shared_ptr<DS4Device> ds4_dev;
+	if (!hidDevice)
+	{
+		return;
+	}
 
-	for (auto& controller : controllers)
+	DS4Device* ds4_dev = nullptr;
+
+	for (auto& controller : m_controllers)
 	{
 		if (!controller.second || !controller.second->hidDevice)
 		{
-			ds4_dev = controller.second;
+			ds4_dev = controller.second.get();
 			break;
 		}
 	}
@@ -539,6 +515,7 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, std::string_view pat
 
 	std::string serial;
 	ds4_dev->hidDevice = hidDevice;
+
 	// There isnt a nice 'portable' way with hidapi to detect bt vs wired as the pid/vid's are the same
 	// Let's try getting 0x81 feature report, which should will return mac address on wired, and should error on bluetooth
 	std::array<u8, 64> buf{};
@@ -548,14 +525,14 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, std::string_view pat
 		if (bytes_read != DS4_FEATURE_REPORT_0x81_SIZE)
 		{
 			// Controller may not be genuine. These controllers do not have feature 0x81 implemented and calibration data is in bluetooth format even in USB mode!
-			ds4_log.warning("CheckAddDevice: DS4 controller may not be genuine. Workaround enabled.");
+			ds4_log.warning("check_add_device: DS4 controller may not be genuine. Workaround enabled.");
 
 			// Read feature report 0x12 instead which is what the console uses.
 			buf[0] = 0x12;
 			buf[1] = 0;
 			if (hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0x12_SIZE) == -1)
 			{
-				ds4_log.error("CheckAddDevice: hid_get_feature_report 0x12 failed! Reason: %s", hid_error(hidDevice));
+				ds4_log.error("check_add_device: hid_get_feature_report 0x12 failed! Reason: %s", hid_error(hidDevice));
 			}
 		}
 
@@ -570,14 +547,14 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, std::string_view pat
 
 	if (!GetCalibrationData(ds4_dev))
 	{
-		ds4_log.error("CheckAddDevice: GetCalibrationData failed!");
+		ds4_log.error("check_add_device: GetCalibrationData failed!");
 		hid_close(hidDevice);
 		return;
 	}
 
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
 	{
-		ds4_log.error("CheckAddDevice: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
+		ds4_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
 		hid_close(hidDevice);
 		return;
 	}
@@ -590,7 +567,7 @@ void ds4_pad_handler::CheckAddDevice(hid_device* hidDevice, std::string_view pat
 
 ds4_pad_handler::~ds4_pad_handler()
 {
-	for (auto& controller : controllers)
+	for (auto& controller : m_controllers)
 	{
 		if (controller.second && controller.second->hidDevice)
 		{
@@ -599,18 +576,12 @@ ds4_pad_handler::~ds4_pad_handler()
 			controller.second->largeVibrate = 0;
 			controller.second->led_delay_on = 0;
 			controller.second->led_delay_off = 0;
-			send_output_report(controller.second);
-
-			hid_close(controller.second->hidDevice);
+			send_output_report(controller.second.get());
 		}
-	}
-	if (hid_exit() != 0)
-	{
-		ds4_log.error("hid_exit failed!");
 	}
 }
 
-int ds4_pad_handler::send_output_report(const std::shared_ptr<DS4Device>& device)
+int ds4_pad_handler::send_output_report(DS4Device* device)
 {
 	if (!device || !device->hidDevice)
 		return -2;
@@ -665,147 +636,10 @@ int ds4_pad_handler::send_output_report(const std::shared_ptr<DS4Device>& device
 	}
 }
 
-void ds4_pad_handler::enumerate_devices()
+ds4_pad_handler::DataStatus ds4_pad_handler::GetRawData(DS4Device* device)
 {
-	std::set<std::string> device_paths;
-	std::map<std::string, std::wstring_view> serials;
-
-	for (auto pid : ds4Pids)
-	{
-		hid_device_info* dev_info = hid_enumerate(DS4_VID, pid);
-		hid_device_info* head     = dev_info;
-		while (dev_info)
-		{
-			ensure(dev_info->path != nullptr);
-			device_paths.insert(dev_info->path);
-			serials[dev_info->path] = dev_info->serial_number ? std::wstring_view(dev_info->serial_number) : std::wstring_view{};
-			dev_info = dev_info->next;
-		}
-		hid_free_enumeration(head);
-	}
-
-	if (m_last_enumerated_devices == device_paths)
-	{
-		return;
-	}
-
-	m_last_enumerated_devices = device_paths;
-
-	// Scrap devices that are not in the new list
-	for (auto it = controllers.begin(); it != controllers.end(); ++it)
-	{
-		if (it->second && !it->second->path.empty() && !device_paths.contains(it->second->path))
-		{
-			hid_close(it->second->hidDevice);
-			pad_config* config = it->second->config;
-			it->second.reset(new DS4Device());
-			it->second->config = config;
-		}
-	}
-
-	bool warn_about_drivers = false;
-
-	// Find and add new devices
-	for (const auto& path : device_paths)
-	{
-		// Check if we already have this controller
-		const auto it_found = std::find_if(controllers.cbegin(), controllers.cend(), [path](const auto& c) { return c.second && c.second->path == path; });
-
-		if (it_found == controllers.cend())
-		{
-			// Check if we have at least one virtual controller left
-			const auto it_free = std::find_if(controllers.cbegin(), controllers.cend(), [](const auto& c) { return !c.second || !c.second->hidDevice; });
-			if (it_free == controllers.cend())
-			{
-				break;
-			}
-
-			hid_device* dev = hid_open_path(path.c_str());
-			if (dev)
-			{
-				CheckAddDevice(dev, path, serials[path]);
-			}
-			else
-			{
-				ds4_log.error("hid_open_path failed! Reason: %s", hid_error(dev));
-				warn_about_drivers = true;
-			}
-		}
-	}
-
-	if (warn_about_drivers)
-	{
-		ds4_log.error("One or more DS4 pads were detected but couldn't be interacted with directly");
-#if defined(_WIN32) || defined(__linux__)
-		ds4_log.error("Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
-#endif
-	}
-	else
-	{
-		const size_t count = std::count_if(controllers.cbegin(), controllers.cend(), [](const auto& c) { return c.second && c.second->hidDevice; });
-		if (count > 0)
-		{
-			ds4_log.success("Controllers found: %d", count);
-		}
-		else
-		{
-			ds4_log.warning("No controllers found!");
-		}
-	}
-}
-
-bool ds4_pad_handler::Init()
-{
-	if (is_init)
-		return true;
-
-	const int res = hid_init();
-	if (res != 0)
-		fmt::throw_exception("hidapi-init error.threadproc");
-
-	for (size_t i = 1; i <= MAX_GAMEPADS; i++) // Controllers 1-n in GUI
-	{
-		controllers.emplace(m_name_string + std::to_string(i), std::make_shared<DS4Device>());
-	}
-
-	enumerate_devices();
-
-	is_init = true;
-	return true;
-}
-
-void ds4_pad_handler::ThreadProc()
-{
-	const auto now = std::chrono::system_clock::now();
-	const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_enumeration).count();
-	if (elapsed > 2000)
-	{
-		m_last_enumeration = now;
-		enumerate_devices();
-	}
-
-	PadHandlerBase::ThreadProc();
-}
-
-std::vector<std::string> ds4_pad_handler::ListDevices()
-{
-	std::vector<std::string> ds4_pads_list;
-
-	if (!Init())
-		return ds4_pads_list;
-
-	for (const auto& controller : controllers) // Controllers 1-n in GUI
-	{
-		ds4_pads_list.emplace_back(controller.first);
-	}
-
-	return ds4_pads_list;
-}
-
-ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr<DS4Device>& device)
-{
-	if (!device)
-		return DS4DataStatus::ReadError;
+	if (!device || !device->hidDevice)
+		return DataStatus::ReadError;
 
 	std::array<u8, 78> buf{};
 
@@ -813,12 +647,12 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 	if (res == -1)
 	{
 		// looks like controller disconnected or read error
-		return DS4DataStatus::ReadError;
+		return DataStatus::ReadError;
 	}
 
 	// no data? keep going
 	if (res == 0)
-		return DS4DataStatus::NoNewData;
+		return DataStatus::NoNewData;
 
 	// bt controller sends this until 0x02 feature report is sent back (happens on controller init/restart)
 	if (device->btCon && buf[0] == 0x1)
@@ -830,7 +664,7 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 		{
 			ds4_log.error("GetRawData: hid_get_feature_report 0x2 failed! Reason: %s", hid_error(device->hidDevice));
 		}
-		return DS4DataStatus::NoNewData;
+		return DataStatus::NoNewData;
 	}
 
 	int offset = 0;
@@ -846,7 +680,7 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 		if (crcCalc != crcReported)
 		{
 			ds4_log.warning("Data packet CRC check failed, ignoring! Received 0x%x, Expected 0x%x", crcReported, crcCalc);
-			return DS4DataStatus::NoNewData;
+			return DataStatus::NoNewData;
 		}
 	}
 	else if (!device->btCon && buf[0] == 0x01 && res == 64)
@@ -859,7 +693,7 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 		offset = 0;
 	}
 	else
-		return DS4DataStatus::NoNewData;
+		return DataStatus::NoNewData;
 
 	const int battery_offset = offset + DS4_INPUT_REPORT_BATTERY_OFFSET;
 	device->is_initialized = true;
@@ -869,26 +703,17 @@ ds4_pad_handler::DS4DataStatus ds4_pad_handler::GetRawData(const std::shared_ptr
 	if (device->hasCalibData)
 	{
 		int calibOffset = offset + DS4_INPUT_REPORT_GYRO_X_OFFSET;
-		for (int i = 0; i < DS4CalibIndex::COUNT; ++i)
+		for (int i = 0; i < CalibIndex::COUNT; ++i)
 		{
 			const s16 rawValue = read_s16(&buf[calibOffset]);
-			const s16 calValue = ApplyCalibration(rawValue, device->calibData[i]);
+			const s16 calValue = apply_calibration(rawValue, device->calibData[i]);
 			buf[calibOffset++] = (static_cast<u16>(calValue) >> 0) & 0xFF;
 			buf[calibOffset++] = (static_cast<u16>(calValue) >> 8) & 0xFF;
 		}
 	}
 	memcpy(device->padData.data(), &buf[offset], 64);
 
-	return DS4DataStatus::NewData;
-}
-
-std::shared_ptr<PadDevice> ds4_pad_handler::get_device(const std::string& device)
-{
-	std::shared_ptr<DS4Device> ds4device = GetDS4Device(device);
-	if (ds4device == nullptr)
-		return nullptr;
-
-	return ds4device;
+	return DataStatus::NewData;
 }
 
 bool ds4_pad_handler::get_is_left_trigger(u64 keyCode)
@@ -945,7 +770,7 @@ u32 ds4_pad_handler::get_battery_color(u8 battery_level, int brightness)
 
 PadHandlerBase::connection ds4_pad_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
-	auto ds4_dev = std::static_pointer_cast<DS4Device>(device);
+	DS4Device* ds4_dev = static_cast<DS4Device*>(device.get());
 	if (!ds4_dev || ds4_dev->path.empty())
 		return connection::disconnected;
 
@@ -970,9 +795,7 @@ PadHandlerBase::connection ds4_pad_handler::update_connection(const std::shared_
 		}
 	}
 
-	status = GetRawData(ds4_dev);
-
-	if (status == DS4DataStatus::ReadError)
+	if (GetRawData(ds4_dev) == DataStatus::ReadError)
 	{
 		// this also can mean disconnected, either way deal with it on next loop and reconnect
 		hid_close(ds4_dev->hidDevice);
@@ -986,7 +809,7 @@ PadHandlerBase::connection ds4_pad_handler::update_connection(const std::shared_
 
 void ds4_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
 {
-	auto ds4_device = std::static_pointer_cast<DS4Device>(device);
+	DS4Device* ds4_device = static_cast<DS4Device*>(device.get());
 	if (!ds4_device || !pad)
 		return;
 
@@ -1024,8 +847,8 @@ void ds4_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 
 void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
 {
-	auto ds4_dev = std::static_pointer_cast<DS4Device>(device);
-	if (!ds4_dev || !pad)
+	DS4Device* ds4_dev = static_cast<DS4Device*>(device.get());
+	if (!ds4_dev || !ds4_dev->hidDevice || !pad)
 		return;
 
 	auto config = ds4_dev->config;

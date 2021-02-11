@@ -332,6 +332,7 @@
   <ItemGroup>
     <ClCompile Include="display_sleep_control.cpp" />
     <ClCompile Include="Input\dualsense_pad_handler.cpp" />
+    <ClCompile Include="Input\hid_pad_handler.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="main_application.cpp" />
     <ClCompile Include="Input\basic_keyboard_handler.cpp" />
@@ -1641,6 +1642,7 @@
     <ClInclude Include="Input\ds4_pad_handler.h" />
     <ClInclude Include="Input\dualsense_pad_handler.h" />
     <ClInclude Include="Input\evdev_joystick_handler.h" />
+    <ClInclude Include="Input\hid_pad_handler.h" />
     <ClInclude Include="Input\keyboard_pad_handler.h" />
     <CustomBuild Include="rpcs3qt\gs_frame.h">
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing gs_frame.h...</Message>
