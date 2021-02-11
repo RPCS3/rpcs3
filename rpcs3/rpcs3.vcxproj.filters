@@ -1105,6 +1105,9 @@
     <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_log_viewer.cpp">
       <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
+    <ClCompile Include="Input\hid_pad_handler.cpp">
+      <Filter>Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1229,6 +1232,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\progress_dialog.h">
       <Filter>Gui\misc dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="Input\hid_pad_handler.h">
+      <Filter>Io</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

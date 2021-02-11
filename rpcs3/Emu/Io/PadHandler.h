@@ -12,8 +12,9 @@
 #include <memory>
 #include <unordered_map>
 
-struct PadDevice
+class PadDevice
 {
+public:
 	pad_config* config{ nullptr };
 };
 
