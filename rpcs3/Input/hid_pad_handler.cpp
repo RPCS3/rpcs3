@@ -9,10 +9,15 @@
 
 LOG_CHANNEL(hid_log, "HID");
 
+static std::mutex s_hid_mutex; // hid_pad_handler is created by pad_thread and pad_settings_dialog
+static u8 s_hid_instances{0};
+
 template <class Device>
 hid_pad_handler<Device>::hid_pad_handler(pad_handler type, u16 vid, std::vector<u16> pids)
     : PadHandlerBase(type), m_vid(vid), m_pids(std::move(pids))
 {
+	std::scoped_lock lock(s_hid_mutex);
+	ensure(s_hid_instances++ < 255);
 };
 
 template <class Device>
@@ -26,9 +31,16 @@ hid_pad_handler<Device>::~hid_pad_handler()
 		}
 	}
 
-	if (hid_exit() != 0)
+	std::scoped_lock lock(s_hid_mutex);
+	ensure(s_hid_instances-- > 0);
+	if (s_hid_instances == 0)
 	{
-		hid_log.error("%s hid_exit failed!", m_type);
+		// Call hid_exit after all hid_pad_handlers are finished
+		if (hid_exit() != 0)
+		{
+			hid_log.error("hid_exit failed!");
+		}
+		hid_log.error("hid_exit !");
 	}
 }
 
@@ -127,28 +139,23 @@ void hid_pad_handler<Device>::enumerate_devices()
 	// Find and add new devices
 	for (const auto& path : device_paths)
 	{
+		// Check if we have at least one virtual controller left
+		if (std::none_of(m_controllers.cbegin(), m_controllers.cend(), [](const auto& c) { return !c.second || !c.second->hidDevice; }))
+			break;
+
 		// Check if we already have this controller
-		const auto it_found = std::find_if(m_controllers.cbegin(), m_controllers.cend(), [path](const auto& c) { return c.second && c.second->path == path; });
+		if (std::any_of(m_controllers.cbegin(), m_controllers.cend(), [&path](const auto& c) { return c.second && c.second->path == path; }))
+			continue;
 
-		if (it_found == m_controllers.cend())
+		hid_device* dev = hid_open_path(path.c_str());
+		if (dev)
 		{
-			// Check if we have at least one virtual controller left
-			const auto it_free = std::find_if(m_controllers.cbegin(), m_controllers.cend(), [](const auto& c) { return !c.second || !c.second->hidDevice; });
-			if (it_free == m_controllers.cend())
-			{
-				break;
-			}
-
-			hid_device* dev = hid_open_path(path.c_str());
-			if (dev)
-			{
-				check_add_device(dev, path, serials[path]);
-			}
-			else
-			{
-				hid_log.error("%s hid_open_path failed! Reason: %s", m_type, hid_error(dev));
-				warn_about_drivers = true;
-			}
+			check_add_device(dev, path, serials[path]);
+		}
+		else
+		{
+			hid_log.error("%s hid_open_path failed! Reason: %s", m_type, hid_error(dev));
+			warn_about_drivers = true;
 		}
 	}
 
