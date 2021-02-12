@@ -214,14 +214,18 @@ protected:
 
 			lock.upgrade();
 			auto [it, inserted] = m_fragment_shader_cache.try_emplace(rsx_fp);
-			new_shader = &(it->second);
-			recompile = inserted;
+			new_shader          = &(it->second);
+			recompile           = inserted;
 
-			if (inserted)
+			if (recompile)
 			{
 				it->first.clone_data();
-				backend_traits::recompile_fragment_program(rsx_fp, *new_shader, m_next_id++);
 			}
+		}
+
+		if (recompile)
+		{
+			backend_traits::recompile_fragment_program(rsx_fp, *new_shader, m_next_id++);
 		}
 
 		return std::forward_as_tuple(*new_shader, false);
