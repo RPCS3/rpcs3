@@ -19,8 +19,6 @@ public:
 	bool has_calib_data{false};
 	std::array<CalibData, CalibIndex::COUNT> calib_data{};
 	DualSenseDataMode dataMode{DualSenseDataMode::Simple};
-	std::array<u8, 64> padData{};
-	bool newVibrateData{true};
 	bool init_lightbar{true};
 	bool update_lightbar{true};
 	bool update_player_leds{true};

@@ -11,12 +11,9 @@ public:
 	bool btCon{false};
 	bool hasCalibData{false};
 	std::array<CalibData, CalibIndex::COUNT> calibData{};
-	bool newVibrateData{true};
-	std::array<u8, 64> padData{};
 	u8 batteryLevel{0};
 	u8 last_battery_level{0};
 	u8 cableState{0};
-	bool is_initialized{false};
 };
 
 class ds4_pad_handler final : public hid_pad_handler<DS4Device>
