@@ -2423,13 +2423,14 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 
 			elf_error prx_err{}, ovl_err{};
 
-			if (const ppu_prx_object obj = src; (prx_err = obj, obj == elf_error::ok))
+			if (ppu_prx_object obj = src; (prx_err = obj, obj == elf_error::ok))
 			{
 				std::unique_lock lock(sprx_mtx);
 
 				if (auto prx = ppu_load_prx(obj, path))
 				{
 					lock.unlock();
+					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*prx);
 					idm::remove<lv2_obj, lv2_prx>(idm::last_id());
 					lock.lock();
@@ -2443,7 +2444,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 				prx_err = elf_error::header_type;
 			}
 
-			if (const ppu_exec_object obj = src; (ovl_err = obj, obj == elf_error::ok))
+			if (ppu_exec_object obj = src; (ovl_err = obj, obj == elf_error::ok))
 			{
 				while (ovl_err == elf_error::ok)
 				{
@@ -2458,6 +2459,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 						ovl_err = elf_error::header_type;
 						break;
 					}
+
+					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 
 					ppu_initialize(*ovlm);
 

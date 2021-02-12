@@ -266,7 +266,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	u128 klic = g_fxo->get<loaded_npdrm_keys>()->devKlic.load();
 
-	const ppu_prx_object obj = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic));
+	ppu_prx_object obj = decrypt_self(std::move(src), reinterpret_cast<u8*>(&klic));
 
 	if (obj != elf_error::ok)
 	{
@@ -274,6 +274,8 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	}
 
 	const auto prx = ppu_load_prx(obj, path);
+
+	obj.clear();
 
 	if (!prx)
 	{
