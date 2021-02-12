@@ -222,6 +222,7 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 		hid_close(hidDevice);
 		return;
 	}
+	device->report_id = buf[0];
 #endif
 
 	{
@@ -236,7 +237,6 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 		return;
 	}
 
-	device->report_id = buf[0];
 	device->path      = path;
 	device->hidDevice = hidDevice;
 

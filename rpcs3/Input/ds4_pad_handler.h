@@ -67,13 +67,13 @@ public:
 private:
 	u32 get_battery_color(u8 battery_level, int brightness);
 
-	// Copies data into padData if status is NewData, otherwise buffer is untouched
-	DataStatus get_data(DS4Device* ds4Device);
 	// This function gets us usuable buffer from the rawbuffer of padData
 	bool GetCalibrationData(DS4Device* ds4Device);
-	int send_output_report(DS4Device* device);
 
-	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view serial);
+	// Copies data into padData if status is NewData, otherwise buffer is untouched
+	DataStatus get_data(DS4Device* ds4Device) override;
+	int send_output_report(DS4Device* device) override;
+	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view serial) override;
 
 	bool get_is_left_trigger(u64 keyCode) override;
 	bool get_is_right_trigger(u64 keyCode) override;
