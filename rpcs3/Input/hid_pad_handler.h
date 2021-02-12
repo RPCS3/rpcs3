@@ -5,6 +5,8 @@
 
 #include "hidapi.h"
 
+#include <algorithm>
+
 struct CalibData
 {
 	s16 bias;
@@ -84,12 +86,7 @@ protected:
 		const s32 rem    = calibData.sens_numer % calibData.sens_denom;
 		const s32 output = (quot * biased) + ((rem * biased) / calibData.sens_denom);
 
-		if (output > INT16_MAX)
-			return INT16_MAX;
-		else if (output < INT16_MIN)
-			return INT16_MIN;
-		else
-			return static_cast<s16>(output);
+		return static_cast<s16>(std::clamp<s32>(output, INT16_MIN, INT16_MAX));
 	}
 
 	inline s16 read_s16(const void* buf)
