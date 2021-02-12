@@ -1,4 +1,5 @@
 #include "hid_pad_handler.h"
+#include "ds3_pad_handler.h"
 #include "ds4_pad_handler.h"
 #include "dualsense_pad_handler.h"
 #include "util/logs.hpp"
@@ -198,5 +199,6 @@ std::shared_ptr<PadDevice> hid_pad_handler<Device>::get_device(const std::string
 	return get_hid_device(device);
 }
 
+template class hid_pad_handler<ds3_device>;
 template class hid_pad_handler<DS4Device>;
 template class hid_pad_handler<DualSenseDevice>;
