@@ -248,28 +248,28 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 	if (!ds3dev)
 		return DataStatus::ReadError;
 
-	auto& dbuf = ds3dev->buf;
+	ds3dev->padData = {};
 
 #ifdef _WIN32
-	dbuf[0] = ds3dev->report_id;
-	const int result = hid_get_feature_report(ds3dev->hidDevice, dbuf, sizeof(dbuf));
+	ds3dev->padData[0] = ds3dev->report_id;
+	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->padData.data(), 64);
 #else
-	const int result = hid_read(ds3dev->hidDevice, dbuf, sizeof(dbuf));
+	const int result = hid_read(ds3dev->hidDevice, ds3dev->padData.data(), 64);
 #endif
 
 	if (result > 0)
 	{
 #ifdef _WIN32
-		if (dbuf[0] == ds3dev->report_id)
+		if (ds3dev->padData[0] == ds3dev->report_id)
 #else
-		if (dbuf[0] == 0x01 && dbuf[1] != 0xFF)
+		if (ds3dev->padData[0] == 0x01 && ds3dev->padData[1] != 0xFF)
 #endif
 		{
 			return DataStatus::NewData;
 		}
 		else
 		{
-			ds3_log.warning("Unknown packet received:0x%02x", dbuf[0]);
+			ds3_log.warning("Unknown packet received:0x%02x", ds3dev->padData[0]);
 			return DataStatus::NoNewData;
 		}
 	}
@@ -289,7 +289,7 @@ std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::share
 	if (!dev)
 		return key_buf;
 
-	auto& dbuf = dev->buf;
+	auto& dbuf = dev->padData;
 
 	const u8 lsx = dbuf[6 + DS3_HID_OFFSET];
 	const u8 lsy = dbuf[7 + DS3_HID_OFFSET];
@@ -358,14 +358,14 @@ void ds3_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 
 #ifdef _WIN32
 	// Official Sony Windows DS3 driver seems to do the same modification of this value as the ps3
-	pad->m_sensors[0].m_value = *reinterpret_cast<le_t<u16, 1>*>(&ds3dev->buf[41 + DS3_HID_OFFSET]);
+	pad->m_sensors[0].m_value = *reinterpret_cast<le_t<u16, 1>*>(&ds3dev->padData[41 + DS3_HID_OFFSET]);
 #else
 	// When getting raw values from the device this adjustement is needed
-	pad->m_sensors[0].m_value = 512 - (*reinterpret_cast<le_t<u16, 1>*>(&ds3dev->buf[41]) - 512);
+	pad->m_sensors[0].m_value = 512 - (*reinterpret_cast<le_t<u16, 1>*>(&ds3dev->padData[41]) - 512);
 #endif
-	pad->m_sensors[1].m_value = *reinterpret_cast<le_t<u16, 1>*>(&ds3dev->buf[45 + DS3_HID_OFFSET]);
-	pad->m_sensors[2].m_value = *reinterpret_cast<le_t<u16, 1>*>(&ds3dev->buf[43 + DS3_HID_OFFSET]);
-	pad->m_sensors[3].m_value = *reinterpret_cast<le_t<u16, 1>*>(&ds3dev->buf[47 + DS3_HID_OFFSET]);
+	pad->m_sensors[1].m_value = *reinterpret_cast<le_t<u16, 1>*>(&ds3dev->padData[45 + DS3_HID_OFFSET]);
+	pad->m_sensors[2].m_value = *reinterpret_cast<le_t<u16, 1>*>(&ds3dev->padData[43 + DS3_HID_OFFSET]);
+	pad->m_sensors[3].m_value = *reinterpret_cast<le_t<u16, 1>*>(&ds3dev->padData[47 + DS3_HID_OFFSET]);
 
 	// Those are formulas used to adjust sensor values in sys_hid code but I couldn't find all the vars.
 	//auto polish_value = [](s32 value, s32 dword_0x0, s32 dword_0x4, s32 dword_0x8, s32 dword_0xC, s32 dword_0x18, s32 dword_0x1C) -> u16
@@ -464,13 +464,27 @@ PadHandlerBase::connection ds3_pad_handler::update_connection(const std::shared_
 void ds3_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
 {
 	ds3_device* dev = static_cast<ds3_device*>(device.get());
-	if (!dev || !dev->hidDevice || !pad)
+	if (!dev || !dev->hidDevice || !dev->config || !pad)
 		return;
 
-	if (dev->large_motor != pad->m_vibrateMotors[0].m_value || dev->small_motor != pad->m_vibrateMotors[1].m_value)
+	pad_config* config = dev->config;
+
+	const int idx_l = config->switch_vibration_motors ? 1 : 0;
+	const int idx_s = config->switch_vibration_motors ? 0 : 1;
+
+	const int speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
+	const int speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
+
+	dev->new_output_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;
+
+	dev->large_motor = speed_large;
+	dev->small_motor = speed_small;
+
+	if (dev->new_output_data)
 	{
-		dev->large_motor = static_cast<u8>(pad->m_vibrateMotors[0].m_value);
-		dev->small_motor = static_cast<u8>(pad->m_vibrateMotors[1].m_value);
-		send_output_report(dev);
+		if (send_output_report(dev) >= 0)
+		{
+			dev->new_output_data = false;
+		}
 	}
 }

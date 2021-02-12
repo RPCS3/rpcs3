@@ -7,7 +7,6 @@
 class ds3_device : public HidDevice
 {
 public:
-	u8 buf[64]{0};
 #ifdef _WIN32
 	u8 report_id = 0;
 #endif

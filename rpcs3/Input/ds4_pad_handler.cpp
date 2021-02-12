@@ -706,7 +706,6 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 		return DataStatus::NoNewData;
 
 	const int battery_offset = offset + DS4_INPUT_REPORT_BATTERY_OFFSET;
-	device->is_initialized = true;
 	device->cableState = (buf[battery_offset] >> 4) & 0x01;
 	device->batteryLevel = buf[battery_offset] & 0x0F;
 
@@ -858,10 +857,10 @@ void ds4_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
 {
 	DS4Device* ds4_dev = static_cast<DS4Device*>(device.get());
-	if (!ds4_dev || !ds4_dev->hidDevice || !pad)
+	if (!ds4_dev || !ds4_dev->hidDevice || !ds4_dev->config || !pad)
 		return;
 
-	auto config = ds4_dev->config;
+	pad_config* config = ds4_dev->config;
 
 	// Attempt to send rumble no matter what
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;
@@ -874,8 +873,6 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 	const bool lowBattery = ds4_dev->batteryLevel < 2;
 	const bool isBlinking  = ds4_dev->led_delay_on > 0 || ds4_dev->led_delay_off > 0;
 
-	bool newBlinkData = false;
-
 	// Blink LED when battery is low
 	if (config->led_low_battery_blink)
 	{
@@ -884,14 +881,14 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 		{
 			ds4_dev->led_delay_on = 0;
 			ds4_dev->led_delay_off = 0;
-			newBlinkData = true;
+			ds4_dev->new_output_data = true;
 		}
 		// we are now wireless and low on battery -> blink
-		if (!isBlinking && wireless && lowBattery)
+		else if (!isBlinking && wireless && lowBattery)
 		{
 			ds4_dev->led_delay_on = 100;
 			ds4_dev->led_delay_off = 100;
-			newBlinkData = true;
+			ds4_dev->new_output_data = true;
 		}
 	}
 
@@ -905,16 +902,20 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 			config->colorR.set(combined_color >> 8);
 			config->colorG.set(combined_color & 0xff);
 			config->colorB.set(0);
+			ds4_dev->new_output_data = true;
 		}
 	}
 
-	ds4_dev->newVibrateData |= ds4_dev->large_motor != speed_large || ds4_dev->small_motor != speed_small || newBlinkData;
+	ds4_dev->new_output_data |= ds4_dev->large_motor != speed_large || ds4_dev->small_motor != speed_small;
 
 	ds4_dev->large_motor = speed_large;
 	ds4_dev->small_motor = speed_small;
 
-	if (ds4_dev->newVibrateData && send_output_report(ds4_dev) >= 0)
+	if (ds4_dev->new_output_data)
 	{
-		ds4_dev->newVibrateData = false;
+		if (send_output_report(ds4_dev) >= 0)
+		{
+			ds4_dev->new_output_data = false;
+		}
 	}
 }

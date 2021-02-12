@@ -918,10 +918,10 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
 {
 	DualSenseDevice* dualsense_dev = static_cast<DualSenseDevice*>(device.get());
-	if (!dualsense_dev || !dualsense_dev->hidDevice || !pad)
+	if (!dualsense_dev || !dualsense_dev->hidDevice || !dualsense_dev->config || !pad)
 		return;
 
-	auto config = dualsense_dev->config;
+	pad_config* config = dualsense_dev->config;
 
 	// Attempt to send rumble no matter what
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;
@@ -930,16 +930,16 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 	const int speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
 	const int speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
 
-	dualsense_dev->newVibrateData |= dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
+	dualsense_dev->new_output_data |= dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
 
 	dualsense_dev->large_motor = speed_large;
 	dualsense_dev->small_motor = speed_small;
 
-	if (dualsense_dev->newVibrateData)
+	if (dualsense_dev->new_output_data)
 	{
 		if (send_output_report(dualsense_dev) >= 0)
 		{
-			dualsense_dev->newVibrateData = false;
+			dualsense_dev->new_output_data = false;
 		}
 	}
 }
