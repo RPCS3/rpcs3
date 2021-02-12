@@ -1597,7 +1597,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			// Overlay (OVL) executable (only load it)
 			else if (vm::map(0x3000'0000, 0x1000'0000, 0x200); !ppu_load_overlay(ppu_exec, m_path).first)
 			{
-				ppu_exec = fs::file{};
+				ppu_exec.set_error(elf_error::header_type);
 			}
 
 			if (ppu_exec != elf_error::ok)
