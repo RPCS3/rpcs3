@@ -34,9 +34,12 @@ enum class patch_type
 	lef64,
 	be16,
 	be32,
+	bd32, // be32 with data hint (non-code)
 	be64,
+	bd64, // be64 with data hint (non-code)
 	bef32,
 	bef64,
+	utf8, // Text of string (not null-terminated automatically)
 };
 
 class patch_engine

@@ -44,9 +44,12 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		case patch_type::bef64: return "bef64";
 		case patch_type::be16: return "be16";
 		case patch_type::be32: return "be32";
+		case patch_type::bd32: return "bd32";
 		case patch_type::be64: return "be64";
+		case patch_type::bd64: return "bd64";
 		case patch_type::lef32: return "lef32";
 		case patch_type::lef64: return "lef64";
+		case patch_type::utf8: return "utf8";
 		}
 
 		return unknown;
@@ -427,6 +430,10 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 	switch (p_data.type)
 	{
+	case patch_type::utf8:
+	{
+		break;
+	}
 	case patch_type::bef32:
 	case patch_type::lef32:
 	case patch_type::bef64:
@@ -568,6 +575,11 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 			*reinterpret_cast<be_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
 			break;
 		}
+		case patch_type::bd32:
+		{
+			*reinterpret_cast<be_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
+			break;
+		}
 		case patch_type::be32:
 		{
 			*reinterpret_cast<be_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
@@ -577,6 +589,11 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 		case patch_type::bef32:
 		{
 			*reinterpret_cast<be_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
+			break;
+		}
+		case patch_type::bd64:
+		{
+			*reinterpret_cast<be_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
 			break;
 		}
 		case patch_type::be64:
@@ -595,6 +612,11 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 		case patch_type::bef64:
 		{
 			*reinterpret_cast<be_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
+			break;
+		}
+		case patch_type::utf8:
+		{
+			std::memcpy(ptr, p.original_value.data(), p.original_value.size());
 			break;
 		}
 		}
