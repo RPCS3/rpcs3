@@ -84,9 +84,9 @@ public:
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
-	ds3_pad_handler::DataStatus get_data(ds3_device* ds3dev);
-	int send_output_report(ds3_device* ds3dev);
-	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view serial);
+	ds3_pad_handler::DataStatus get_data(ds3_device* ds3dev) override;
+	int send_output_report(ds3_device* ds3dev) override;
+	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view serial) override;
 
 	bool get_is_left_trigger(u64 keyCode) override;
 	bool get_is_right_trigger(u64 keyCode) override;

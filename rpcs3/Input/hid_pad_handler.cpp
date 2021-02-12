@@ -28,7 +28,7 @@ hid_pad_handler<Device>::~hid_pad_handler()
 
 	if (hid_exit() != 0)
 	{
-		hid_log.error("hid_exit failed!");
+		hid_log.error("%s hid_exit failed!", m_type);
 	}
 }
 
@@ -40,7 +40,7 @@ bool hid_pad_handler<Device>::Init()
 
 	const int res = hid_init();
 	if (res != 0)
-		fmt::throw_exception("hidapi-init error.threadproc");
+		fmt::throw_exception("%s hidapi-init error.threadproc", m_type);
 
 	for (size_t i = 1; i <= MAX_GAMEPADS; i++) // Controllers 1-n in GUI
 	{
@@ -146,7 +146,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 			}
 			else
 			{
-				hid_log.error("hid_open_path failed! Reason: %s", hid_error(dev));
+				hid_log.error("%s hid_open_path failed! Reason: %s", m_type, hid_error(dev));
 				warn_about_drivers = true;
 			}
 		}
@@ -154,7 +154,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 
 	if (warn_about_drivers)
 	{
-		hid_log.error("One or more pads were detected but couldn't be interacted with directly");
+		hid_log.error("One or more %s pads were detected but couldn't be interacted with directly", m_type);
 #if defined(_WIN32) || defined(__linux__)
 		hid_log.error("Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
 #endif
@@ -164,11 +164,11 @@ void hid_pad_handler<Device>::enumerate_devices()
 		const size_t count = std::count_if(m_controllers.cbegin(), m_controllers.cend(), [](const auto& c) { return c.second && c.second->hidDevice; });
 		if (count > 0)
 		{
-			hid_log.success("Controllers found: %d", count);
+			hid_log.success("%s Controllers found: %d", m_type, count);
 		}
 		else
 		{
-			hid_log.warning("No controllers found!");
+			hid_log.warning("No %s controllers found!", m_type);
 		}
 	}
 }

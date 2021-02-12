@@ -69,11 +69,12 @@ public:
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
-	DataStatus get_data(DualSenseDevice* dualsenseDevice);
 	bool get_calibration_data(DualSenseDevice* dualsense_device);
 
-	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial);
-	int send_output_report(DualSenseDevice* device);
+	DataStatus get_data(DualSenseDevice* dualsenseDevice) override;
+	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial) override;
+	int send_output_report(DualSenseDevice* device) override;
+
 	bool get_is_left_trigger(u64 keyCode) override;
 	bool get_is_right_trigger(u64 keyCode) override;
 	bool get_is_left_stick(u64 keyCode) override;
