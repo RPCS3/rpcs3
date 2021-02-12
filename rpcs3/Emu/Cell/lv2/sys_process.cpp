@@ -336,17 +336,30 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 
 	sys_process.warning("_sys_process_exit(status=%d, arg2=0x%x, arg3=0x%x)", status, arg2, arg3);
 
-	Emu.CallAfter([]()
+	// Get shared ptr to current PPU
+	Emu.CallAfter([s_ppu = idm::get<named_thread<ppu_thread>>(ppu.id)]()
 	{
+		if (s_ppu->is_stopped())
+		{
+			// Stop() was already executed from a signal before
+			return;
+		}
+
 		sys_process.success("Process finished");
 		Emu.Stop();
 	});
 
-	ppu.state += cpu_flag::exit;
+	// Wait for GUI thread
+	while (!ppu.is_stopped())
+	{
+		thread_ctrl::wait();
+	}
 }
 
 void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> arg, u32 arg_size, u32 arg4)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_process.warning("_sys_process_exit2(status=%d, arg=*0x%x, arg_size=0x%x, arg4=0x%x)", status, arg, arg_size, arg4);
 
 	auto pstr = +arg->args;
@@ -390,10 +403,14 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 	if (disc.empty() && !Emu.GetTitleID().empty())
 		disc = vfs::get(Emu.GetDir());
 
-	ppu.state += cpu_flag::wait;
-
-	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc), hdd1 = std::move(hdd1), klic = g_fxo->get<loaded_npdrm_keys>()->devKlic.load()]() mutable
+	Emu.CallAfter([s_ppu = idm::get<named_thread<ppu_thread>>(ppu.id), path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc), hdd1 = std::move(hdd1), klic = g_fxo->get<loaded_npdrm_keys>()->devKlic.load()]() mutable
 	{
+		if (s_ppu->is_stopped())
+		{
+			// Stop() was already executed from a signal before
+			return;
+		}
+
 		sys_process.success("Process finished -> %s", argv[0]);
 		Emu.SetForceBoot(true);
 		Emu.Stop();
@@ -419,7 +436,11 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 		}
 	});
 
-	ppu.state += cpu_flag::exit;
+	// Wait for GUI thread
+	while (!ppu.is_stopped())
+	{
+		thread_ctrl::wait();
+	}
 }
 
 error_code sys_process_spawns_a_self2(vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data)
