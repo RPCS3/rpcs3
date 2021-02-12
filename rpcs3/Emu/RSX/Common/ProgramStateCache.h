@@ -195,7 +195,9 @@ protected:
 	std::tuple<const fragment_program_type&, bool> search_fragment_program(const RSXFragmentProgram& rsx_fp, bool force_load = true)
 	{
 		bool recompile = false;
+		typename binary_to_fragment_program::iterator it;
 		fragment_program_type* new_shader;
+
 		{
 			reader_lock lock(m_fragment_mutex);
 
@@ -213,18 +215,13 @@ protected:
 			rsx_log.notice("FP not found in buffer!");
 
 			lock.upgrade();
-			auto [it, inserted] = m_fragment_shader_cache.try_emplace(rsx_fp);
-			new_shader          = &(it->second);
-			recompile           = inserted;
-
-			if (recompile)
-			{
-				it->first.clone_data();
-			}
+			std::tie(it, recompile) = m_fragment_shader_cache.try_emplace(rsx_fp);
+			new_shader = &(it->second);
 		}
 
 		if (recompile)
 		{
+			it->first.clone_data();
 			backend_traits::recompile_fragment_program(rsx_fp, *new_shader, m_next_id++);
 		}
 
