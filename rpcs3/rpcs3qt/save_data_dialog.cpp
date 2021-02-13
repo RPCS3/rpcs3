@@ -35,11 +35,12 @@ s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries,
 		sdid.exec();
 		selection = sdid.GetSelection();
 		dlg_result = true;
+		dlg_result.notify_one();
 	});
 
-	while (!dlg_result)
+	while (!dlg_result && !Emu.IsStopped())
 	{
-		thread_ctrl::wait_for(1000);
+		thread_ctrl::wait_on(dlg_result, false);
 	}
 
 	input::SetIntercepted(false);
