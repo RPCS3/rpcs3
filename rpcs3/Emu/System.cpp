@@ -1873,6 +1873,9 @@ void Emulator::Stop(bool restart)
 
 	sys_log.notice("Stopping emulator...");
 
+	m_stop_ctr++;
+	m_stop_ctr.notify_all();
+
 	GetCallbacks().on_stop();
 
 	if (auto rsx = g_fxo->get<rsx::thread>())

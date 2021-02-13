@@ -138,7 +138,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		}
 	}
 
-	bool result = false;
+	atomic_t<bool> result = false;
 
 	osk->on_osk_close = [maxLength, wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
 	{
@@ -192,7 +192,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 				});
 
 				// wait for check callback
-				while (!done)
+				while (!done && !Emu.IsStopped())
 				{
 					std::this_thread::yield();
 				}
@@ -249,13 +249,14 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	{
 		osk->Create(get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE), message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel);
 		result = true;
+		result.notify_one();
 	});
 
 	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_LOADED, 0);
 
-	while (!result)
+	while (!result && !Emu.IsStopped())
 	{
-		thread_ctrl::wait_for(1000);
+		thread_ctrl::wait_on(result, false);
 	}
 
 	return CELL_OK;
