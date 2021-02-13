@@ -40,7 +40,6 @@ hid_pad_handler<Device>::~hid_pad_handler()
 		{
 			hid_log.error("hid_exit failed!");
 		}
-		hid_log.error("hid_exit !");
 	}
 }
 

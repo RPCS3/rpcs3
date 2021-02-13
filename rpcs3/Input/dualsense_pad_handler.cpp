@@ -4,6 +4,21 @@
 
 LOG_CHANNEL(dualsense_log, "DualSense");
 
+template <>
+void fmt_class_string<DualSenseDevice::DualSenseDataMode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto mode)
+	{
+		switch (mode)
+		{
+		case DualSenseDevice::DualSenseDataMode::Simple: return "Simple";
+		case DualSenseDevice::DualSenseDataMode::Enhanced: return "Enhanced";
+		}
+
+		return unknown;
+	});
+}
+
 namespace
 {
 	constexpr u32 DUALSENSE_ACC_RES_PER_G = 8192;
@@ -167,13 +182,13 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	if (hid_get_feature_report(hidDevice, buf.data(), 64) == 21)
 	{
 		serial = fmt::format("%x%x%x%x%x%x", buf[6], buf[5], buf[4], buf[3], buf[2], buf[1]);
-		device->dataMode = DualSenseDevice::DualSenseDataMode::Enhanced;
+		device->data_mode = DualSenseDevice::DualSenseDataMode::Enhanced;
 	}
 	else
 	{
 		// We're probably on Bluetooth in this case, but for whatever reason the feature report failed.
 		// This will give us a less capable fallback.
-		device->dataMode = DualSenseDevice::DualSenseDataMode::Simple;
+		device->data_mode = DualSenseDevice::DualSenseDataMode::Simple;
 		for (wchar_t ch : wide_serial)
 			serial += static_cast<uchar>(ch);
 	}
@@ -199,7 +214,13 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	device->has_calib_data = true;
 	device->path           = path;
 
+	// Activate
 	send_output_report(device);
+
+	// Get bluetooth information
+	get_data(device);
+
+	dualsense_log.notice("Added device: bluetooth=%d, data_mode=%s, serial='%s', path='%s'", device->bt_controller, device->data_mode, serial, device->path);
 }
 
 void dualsense_pad_handler::init_config(pad_config* cfg, const std::string& name)
@@ -283,22 +304,22 @@ dualsense_pad_handler::DataStatus dualsense_pad_handler::get_data(DualSenseDevic
 	{
 		if (res == DUALSENSE_BLUETOOTH_REPORT_SIZE)
 		{
-			device->dataMode = DualSenseDevice::DualSenseDataMode::Simple;
-			device->btCon = true;
+			device->data_mode     = DualSenseDevice::DualSenseDataMode::Simple;
+			device->bt_controller = true;
 			offset = 1;
 		}
 		else
 		{
-			device->dataMode = DualSenseDevice::DualSenseDataMode::Enhanced;
-			device->btCon = false;
+			device->data_mode     = DualSenseDevice::DualSenseDataMode::Enhanced;
+			device->bt_controller = false;
 			offset = 1;
 		}
 		break;
 	}
 	case 0x31:
 	{
-		device->dataMode = DualSenseDevice::DualSenseDataMode::Enhanced;
-		device->btCon = true;
+		device->data_mode     = DualSenseDevice::DualSenseDataMode::Enhanced;
+		device->bt_controller = true;
 		offset = 2;
 
 		const u8 btHdr = 0xA1;
@@ -341,7 +362,7 @@ bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_devi
 	}
 
 	std::array<u8, 64> buf;
-	if (dualsense_device->btCon)
+	if (dualsense_device->bt_controller)
 	{
 		for (int tries = 0; tries < 3; ++tries)
 		{
@@ -591,7 +612,7 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 
 	auto buf = dualsense_dev->padData;
 
-	if (dualsense_dev->dataMode == DualSenseDevice::DualSenseDataMode::Simple)
+	if (dualsense_dev->data_mode == DualSenseDevice::DualSenseDataMode::Simple)
 	{
 		// Left Stick X Axis
 		keyBuffer[DualSenseKeyCodes::LSXNeg] = Clamp0To255((127.5f - buf[0]) * 2.0f);
@@ -883,7 +904,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 		}
 	}
 
-	if (device->btCon)
+	if (device->bt_controller)
 	{
 		const u8 seq_tag = (device->bt_sequence << 4) | 0x0;
 		if (++device->bt_sequence >= 16) device->bt_sequence = 0;
