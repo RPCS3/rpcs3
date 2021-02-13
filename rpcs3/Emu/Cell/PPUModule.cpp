@@ -809,6 +809,11 @@ void try_spawn_ppu_if_exclusive_program(const ppu_module& m)
 
 std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::string& path)
 {
+	if (elf != elf_error::ok)
+	{
+		return nullptr;
+	}
+
 	// Create new PRX object
 	const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
 
@@ -1161,6 +1166,11 @@ void ppu_unload_prx(const lv2_prx& prx)
 
 bool ppu_load_exec(const ppu_exec_object& elf)
 {
+	if (elf != elf_error::ok)
+	{
+		return false;
+	}
+
 	// Check if it is a standalone executable first
 	for (const auto& prog : elf.progs)
 	{
@@ -1740,6 +1750,11 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 
 std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object& elf, const std::string& path)
 {
+	if (elf != elf_error::ok)
+	{
+		return {nullptr, CELL_ENOENT};
+	}
+
 	// Access linkage information object
 	const auto link = g_fxo->get<ppu_linkage_info>();
 
