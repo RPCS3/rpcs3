@@ -95,7 +95,7 @@ struct msg_dlg_thread_info
 
 			if (new_value == 0)
 			{
-				wait_until.wait(0);
+				thread_ctrl::wait_on(wait_until, 0);
 				continue;
 			}
 
@@ -217,14 +217,19 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 		lv2_obj::awake(&ppu);
 	});
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state))
 		{
-			return 0;
+			return {};
 		}
 
-		thread_ctrl::wait();
+		if (state & cpu_flag::signal)
+		{
+			break;
+		}
+
+		thread_ctrl::wait_on(ppu.state, state);
 	}
 
 	if (is_blocking)

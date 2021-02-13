@@ -1529,14 +1529,14 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			else
 			{
 				// Wait until the thread is recovered
-				while (!cpu->state.test_and_reset(cpu_flag::signal))
+				while (auto state = cpu->state.fetch_sub(cpu_flag::signal))
 				{
-					if (cpu->is_stopped())
+					if (is_stopped(state) || state & cpu_flag::signal)
 					{
 						break;
 					}
 
-					thread_ctrl::wait();
+					thread_ctrl::wait_on(cpu->state, state);
 				}
 			}
 

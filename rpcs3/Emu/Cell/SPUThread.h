@@ -305,7 +305,7 @@ public:
 				return -1;
 			}
 
-			data.wait(bit_wait);
+			thread_ctrl::wait_on(data, bit_wait);
 		}
 	}
 
@@ -345,7 +345,7 @@ public:
 				return false;
 			}
 
-			data.wait(state);
+			thread_ctrl::wait_on(data, state);
 		}
 	}
 

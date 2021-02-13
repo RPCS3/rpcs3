@@ -87,7 +87,7 @@ CellError lv2_event_queue::send(lv2_event event)
 		spu.ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
 
 		spu.state += cpu_flag::signal;
-		spu.notify();
+		spu.state.notify_one(cpu_flag::signal);
 	}
 
 	return {};
@@ -216,7 +216,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			{
 				static_cast<spu_thread&>(*cpu).ch_in_mbox.set_values(1, CELL_ECANCELED);
 				cpu->state += cpu_flag::signal;
-				cpu->notify();
+				cpu->state.notify_one(cpu_flag::signal);
 			}
 		}
 	}
@@ -307,11 +307,11 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 	}
 
 	// If cancelled, gpr[3] will be non-zero. Other registers must contain event data.
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state) || state & cpu_flag::signal)
 		{
-			return 0;
+			break;
 		}
 
 		if (timeout)
@@ -321,7 +321,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return 0;
+					return {};
 				}
 
 				std::lock_guard lock(queue->mutex);
@@ -337,7 +337,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 

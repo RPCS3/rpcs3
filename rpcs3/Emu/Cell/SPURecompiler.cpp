@@ -9076,7 +9076,7 @@ struct spu_llvm
 			{
 				// Interrupt profiler thread and put it to sleep
 				static_cast<void>(prof_mutex.reset());
-				atomic_wait::list(registered).wait(); // TODO
+				thread_ctrl::wait_on(registered, nullptr);
 				continue;
 			}
 

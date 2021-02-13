@@ -350,9 +350,14 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 	});
 
 	// Wait for GUI thread
-	while (!ppu.is_stopped())
+	while (auto state = +ppu.state)
 	{
-		thread_ctrl::wait();
+		if (is_stopped(state))
+		{
+			break;
+		}
+
+		thread_ctrl::wait_on(ppu.state, state);
 	}
 }
 
@@ -437,9 +442,14 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 	});
 
 	// Wait for GUI thread
-	while (!ppu.is_stopped())
+	while (auto state = +ppu.state)
 	{
-		thread_ctrl::wait();
+		if (is_stopped(state))
+		{
+			break;
+		}
+
+		thread_ctrl::wait_on(ppu.state, state);
 	}
 }
 
