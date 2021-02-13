@@ -219,6 +219,7 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	}
 	if (!got_report)
 	{
+		ds3_log.error("check_add_device: hid_get_feature_report failed! Reason: %s", hid_error(hidDevice));
 		hid_close(hidDevice);
 		return;
 	}
@@ -241,6 +242,12 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	device->hidDevice = hidDevice;
 
 	send_output_report(device);
+
+#ifdef _WIN32
+	ds3_log.notice("Added device: report_id=%d, serial='%s', path='%s'", device->report_id, serial, device->path);
+#else
+	ds3_log.notice("Added device: serial='%s', path='%s'", serial, device->path);
+#endif
 }
 
 ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)

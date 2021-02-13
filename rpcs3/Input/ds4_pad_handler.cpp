@@ -190,7 +190,7 @@ u32 ds4_pad_handler::get_battery_level(const std::string& padId)
 	{
 		return 0;
 	}
-	return std::min<u32>(device->batteryLevel * 10, 100);
+	return std::min<u32>(device->battery_level * 10, 100);
 }
 
 void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
@@ -221,7 +221,7 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 	// Set new LED color
 	if (battery_led)
 	{
-		const u32 combined_color = get_battery_color(device->batteryLevel, battery_led_brightness);
+		const u32 combined_color = get_battery_color(device->battery_level, battery_led_brightness);
 		device->config->colorR.set(combined_color >> 8);
 		device->config->colorG.set(combined_color & 0xff);
 		device->config->colorB.set(0);
@@ -372,7 +372,7 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev)
 	}
 
 	std::array<u8, 64> buf;
-	if (ds4Dev->btCon)
+	if (ds4Dev->bt_controller)
 	{
 		for (int tries = 0; tries < 3; ++tries)
 		{
@@ -411,9 +411,9 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev)
 		}
 	}
 
-	ds4Dev->calibData[CalibIndex::PITCH].bias = read_s16(&buf[1]);
-	ds4Dev->calibData[CalibIndex::YAW].bias = read_s16(&buf[3]);
-	ds4Dev->calibData[CalibIndex::ROLL].bias = read_s16(&buf[5]);
+	ds4Dev->calib_data[CalibIndex::PITCH].bias = read_s16(&buf[1]);
+	ds4Dev->calib_data[CalibIndex::YAW].bias   = read_s16(&buf[3]);
+	ds4Dev->calib_data[CalibIndex::ROLL].bias  = read_s16(&buf[5]);
 
 	s16 pitchPlus, pitchNeg, rollPlus, rollNeg, yawPlus, yawNeg;
 
@@ -450,14 +450,14 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev)
 
 	const s32 gyroSpeedScale = read_s16(&buf[19]) + read_s16(&buf[21]);
 
-	ds4Dev->calibData[CalibIndex::PITCH].sens_numer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
-	ds4Dev->calibData[CalibIndex::PITCH].sens_denom = pitchPlus - pitchNeg;
+	ds4Dev->calib_data[CalibIndex::PITCH].sens_numer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
+	ds4Dev->calib_data[CalibIndex::PITCH].sens_denom = pitchPlus - pitchNeg;
 
-	ds4Dev->calibData[CalibIndex::YAW].sens_numer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
-	ds4Dev->calibData[CalibIndex::YAW].sens_denom = yawPlus - yawNeg;
+	ds4Dev->calib_data[CalibIndex::YAW].sens_numer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
+	ds4Dev->calib_data[CalibIndex::YAW].sens_denom = yawPlus - yawNeg;
 
-	ds4Dev->calibData[CalibIndex::ROLL].sens_numer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
-	ds4Dev->calibData[CalibIndex::ROLL].sens_denom = rollPlus - rollNeg;
+	ds4Dev->calib_data[CalibIndex::ROLL].sens_numer = gyroSpeedScale * DS4_GYRO_RES_PER_DEG_S;
+	ds4Dev->calib_data[CalibIndex::ROLL].sens_denom = rollPlus - rollNeg;
 
 	const s16 accelXPlus = read_s16(&buf[23]);
 	const s16 accelXNeg  = read_s16(&buf[25]);
@@ -467,27 +467,27 @@ bool ds4_pad_handler::GetCalibrationData(DS4Device* ds4Dev)
 	const s16 accelZNeg  = read_s16(&buf[33]);
 
 	const s32 accelXRange = accelXPlus - accelXNeg;
-	ds4Dev->calibData[CalibIndex::X].bias = accelXPlus - accelXRange / 2;
-	ds4Dev->calibData[CalibIndex::X].sens_numer = 2 * DS4_ACC_RES_PER_G;
-	ds4Dev->calibData[CalibIndex::X].sens_denom = accelXRange;
+	ds4Dev->calib_data[CalibIndex::X].bias       = accelXPlus - accelXRange / 2;
+	ds4Dev->calib_data[CalibIndex::X].sens_numer = 2 * DS4_ACC_RES_PER_G;
+	ds4Dev->calib_data[CalibIndex::X].sens_denom = accelXRange;
 
 	const s32 accelYRange = accelYPlus - accelYNeg;
-	ds4Dev->calibData[CalibIndex::Y].bias = accelYPlus - accelYRange / 2;
-	ds4Dev->calibData[CalibIndex::Y].sens_numer = 2 * DS4_ACC_RES_PER_G;
-	ds4Dev->calibData[CalibIndex::Y].sens_denom = accelYRange;
+	ds4Dev->calib_data[CalibIndex::Y].bias       = accelYPlus - accelYRange / 2;
+	ds4Dev->calib_data[CalibIndex::Y].sens_numer = 2 * DS4_ACC_RES_PER_G;
+	ds4Dev->calib_data[CalibIndex::Y].sens_denom = accelYRange;
 
 	const s32 accelZRange = accelZPlus - accelZNeg;
-	ds4Dev->calibData[CalibIndex::Z].bias = accelZPlus - accelZRange / 2;
-	ds4Dev->calibData[CalibIndex::Z].sens_numer = 2 * DS4_ACC_RES_PER_G;
-	ds4Dev->calibData[CalibIndex::Z].sens_denom = accelZRange;
+	ds4Dev->calib_data[CalibIndex::Z].bias       = accelZPlus - accelZRange / 2;
+	ds4Dev->calib_data[CalibIndex::Z].sens_numer = 2 * DS4_ACC_RES_PER_G;
+	ds4Dev->calib_data[CalibIndex::Z].sens_denom = accelZRange;
 
 	// Make sure data 'looks' valid, dongle will report invalid calibration data with no controller connected
 
-	for (const auto& data : ds4Dev->calibData)
+	for (const auto& data : ds4Dev->calib_data)
 	{
 		if (data.sens_denom == 0)
 		{
-			ds4_log.error("GetCalibrationData: Failure: sensDenom == 0");
+			ds4_log.error("GetCalibrationData: Failure: sens_denom == 0");
 			return false;
 		}
 	}
@@ -546,7 +546,7 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	}
 	else
 	{
-		device->btCon = true;
+		device->bt_controller = true;
 		for (wchar_t ch : wide_serial)
 			serial += static_cast<uchar>(ch);
 	}
@@ -569,10 +569,12 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 		return;
 	}
 
-	device->hasCalibData  = true;
-	device->path         = path;
+	device->has_calib_data = true;
+	device->path           = path;
 
 	send_output_report(device);
+
+	ds4_log.notice("Added device: bluetooth=%d, serial='%s', path='%s'", device->bt_controller, serial, device->path);
 }
 
 ds4_pad_handler::~ds4_pad_handler()
@@ -602,7 +604,7 @@ int ds4_pad_handler::send_output_report(DS4Device* device)
 
 	std::array<u8, 78> outputBuf{0};
 	// write rumble state
-	if (device->btCon)
+	if (device->bt_controller)
 	{
 		outputBuf[0] = 0x11;
 		outputBuf[1] = 0xC4;
@@ -653,7 +655,7 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 
 	std::array<u8, 78> buf{};
 
-	const int res = hid_read(device->hidDevice, buf.data(), device->btCon ? 78 : 64);
+	const int res = hid_read(device->hidDevice, buf.data(), device->bt_controller ? 78 : 64);
 	if (res == -1)
 	{
 		// looks like controller disconnected or read error
@@ -665,7 +667,7 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 		return DataStatus::NoNewData;
 
 	// bt controller sends this until 0x02 feature report is sent back (happens on controller init/restart)
-	if (device->btCon && buf[0] == 0x1)
+	if (device->bt_controller && buf[0] == 0x1)
 	{
 		// tells controller to send 0x11 reports
 		std::array<u8, 64> buf_error{};
@@ -679,7 +681,7 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 
 	int offset = 0;
 	// check report and set offset
-	if (device->btCon && buf[0] == 0x11 && res == 78)
+	if (device->bt_controller && buf[0] == 0x11 && res == 78)
 	{
 		offset = 2;
 
@@ -693,12 +695,12 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 			return DataStatus::NoNewData;
 		}
 	}
-	else if (!device->btCon && buf[0] == 0x01 && res == 64)
+	else if (!device->bt_controller && buf[0] == 0x01 && res == 64)
 	{
 		// Ds4 Dongle uses this bit to actually report whether a controller is connected
 		const bool connected = (buf[31] & 0x04) ? false : true;
-		if (connected && !device->hasCalibData)
-			device->hasCalibData = GetCalibrationData(device);
+		if (connected && !device->has_calib_data)
+			device->has_calib_data = GetCalibrationData(device);
 
 		offset = 0;
 	}
@@ -706,16 +708,16 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 		return DataStatus::NoNewData;
 
 	const int battery_offset = offset + DS4_INPUT_REPORT_BATTERY_OFFSET;
-	device->cableState = (buf[battery_offset] >> 4) & 0x01;
-	device->batteryLevel = buf[battery_offset] & 0x0F;
+	device->cable_state = (buf[battery_offset] >> 4) & 0x01;
+	device->battery_level = buf[battery_offset] & 0x0F;
 
-	if (device->hasCalibData)
+	if (device->has_calib_data)
 	{
 		int calibOffset = offset + DS4_INPUT_REPORT_GYRO_X_OFFSET;
 		for (int i = 0; i < CalibIndex::COUNT; ++i)
 		{
 			const s16 rawValue = read_s16(&buf[calibOffset]);
-			const s16 calValue = apply_calibration(rawValue, device->calibData[i]);
+			const s16 calValue = apply_calibration(rawValue, device->calib_data[i]);
 			buf[calibOffset++] = (static_cast<u16>(calValue) >> 0) & 0xFF;
 			buf[calibOffset++] = (static_cast<u16>(calValue) >> 8) & 0xFF;
 		}
@@ -794,8 +796,8 @@ PadHandlerBase::connection ds4_pad_handler::update_connection(const std::shared_
 				ds4_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", ds4_dev->path, hid_error(dev));
 			}
 			ds4_dev->hidDevice = dev;
-			if (!ds4_dev->hasCalibData)
-				ds4_dev->hasCalibData = GetCalibrationData(ds4_dev);
+			if (!ds4_dev->has_calib_data)
+				ds4_dev->has_calib_data = GetCalibrationData(ds4_dev);
 		}
 		else
 		{
@@ -824,8 +826,8 @@ void ds4_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 
 	auto buf = ds4_device->padData;
 
-	pad->m_battery_level = ds4_device->batteryLevel;
-	pad->m_cable_state = ds4_device->cableState;
+	pad->m_battery_level = ds4_device->battery_level;
+	pad->m_cable_state   = ds4_device->cable_state;
 
 	// these values come already calibrated, all we need to do is convert to ds3 range
 
@@ -864,14 +866,14 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 
 	// Attempt to send rumble no matter what
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;
-	const int idx_s  = config->switch_vibration_motors ? 0 : 1;
+	const int idx_s = config->switch_vibration_motors ? 0 : 1;
 
 	const int speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
-	const int speed_small  = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
+	const int speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
 
-	const bool wireless = ds4_dev->cableState < 1;
-	const bool lowBattery = ds4_dev->batteryLevel < 2;
-	const bool isBlinking  = ds4_dev->led_delay_on > 0 || ds4_dev->led_delay_off > 0;
+	const bool wireless   = ds4_dev->cable_state < 1;
+	const bool lowBattery = ds4_dev->battery_level < 2;
+	const bool isBlinking = ds4_dev->led_delay_on > 0 || ds4_dev->led_delay_off > 0;
 
 	// Blink LED when battery is low
 	if (config->led_low_battery_blink)
@@ -896,9 +898,9 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 	if (config->led_battery_indicator)
 	{
 		// This makes sure that the LED color doesn't update every 1ms. DS4 only reports battery level in 10% increments
-		if (ds4_dev->last_battery_level != ds4_dev->batteryLevel)
+		if (ds4_dev->last_battery_level != ds4_dev->battery_level)
 		{
-			const u32 combined_color = get_battery_color(ds4_dev->batteryLevel, config->led_battery_indicator_brightness);
+			const u32 combined_color = get_battery_color(ds4_dev->battery_level, config->led_battery_indicator_brightness);
 			config->colorR.set(combined_color >> 8);
 			config->colorG.set(combined_color & 0xff);
 			config->colorB.set(0);

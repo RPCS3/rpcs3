@@ -14,11 +14,11 @@ public:
 		Enhanced
 	};
 
-	bool btCon{false};
+	bool bt_controller{false};
 	u8 bt_sequence{0};
 	bool has_calib_data{false};
 	std::array<CalibData, CalibIndex::COUNT> calib_data{};
-	DualSenseDataMode dataMode{DualSenseDataMode::Simple};
+	DualSenseDataMode data_mode{DualSenseDataMode::Simple};
 	bool init_lightbar{true};
 	bool update_lightbar{true};
 	bool update_player_leds{true};

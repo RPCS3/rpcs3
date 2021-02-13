@@ -8,12 +8,12 @@
 class DS4Device : public HidDevice
 {
 public:
-	bool btCon{false};
-	bool hasCalibData{false};
-	std::array<CalibData, CalibIndex::COUNT> calibData{};
-	u8 batteryLevel{0};
+	bool bt_controller{false};
+	bool has_calib_data{false};
+	std::array<CalibData, CalibIndex::COUNT> calib_data{};
+	u8 battery_level{0};
 	u8 last_battery_level{0};
-	u8 cableState{0};
+	u8 cable_state{0};
 };
 
 class ds4_pad_handler final : public hid_pad_handler<DS4Device>
