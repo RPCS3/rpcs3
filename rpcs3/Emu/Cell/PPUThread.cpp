@@ -633,6 +633,8 @@ std::string ppu_thread::dump_regs() const
 
 			std::string buf_tmp(gpr_buf, gpr_buf + max_str_len);
 
+			std::string_view sv(buf_tmp.data(), std::min<usz>(buf_tmp.size(), buf_tmp.find_first_of("\0\n"sv)));
+
 			if (is_function)
 			{
 				if (toc)
@@ -646,9 +648,12 @@ std::string ppu_thread::dump_regs() const
 					fmt::append(ret, " -> %s", dis_asm.last_opcode);
 				}
 			}
-			else if (std::isprint(static_cast<u8>(buf_tmp[0])) && std::isprint(static_cast<u8>(buf_tmp[1])) && std::isprint(static_cast<u8>(buf_tmp[2])))
+			// NTS: size of 3 and above is required
+			// If ends with a newline, only one character is required
+			else if ((sv.size() == buf_tmp.size() || (sv.size() >= (buf_tmp[sv.size()] == '\n' ? 1 : 3))) &&
+				std::all_of(sv.begin(), sv.end(), [](u8 c){ return std::isprint(c); }))
 			{
-				fmt::append(ret, " -> \"%s\"", buf_tmp.c_str());
+				fmt::append(ret, " -> \"%s\"", sv);
 			}
 			else
 			{
