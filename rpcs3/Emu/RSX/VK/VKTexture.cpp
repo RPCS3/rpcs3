@@ -894,7 +894,7 @@ namespace vk
 
 				auto base_addr = static_cast<const char*>(opt.deferred_cmds.front().src);
 				auto end_addr = static_cast<const char*>(opt.deferred_cmds.back().src) + opt.deferred_cmds.back().length;
-				auto data_length = end_addr - base_addr;
+				auto data_length = static_cast<u32>(end_addr - base_addr);
 				u64 src_address = 0;
 
 				if (uptr(base_addr) > uptr(vm::g_sudo_addr))
