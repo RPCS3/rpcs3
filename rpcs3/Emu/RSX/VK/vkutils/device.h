@@ -51,6 +51,7 @@ namespace vk
 		bool conditional_render_support = false;
 		bool external_memory_host_support = false;
 		bool unrestricted_depth_range_support = false;
+		bool surface_capabilities_2_support = false;
 
 		friend class render_device;
 	private:
@@ -116,6 +117,7 @@ namespace vk
 		bool get_conditional_render_support() const;
 		bool get_unrestricted_depth_range_support() const;
 		bool get_external_memory_host_support() const;
+		bool get_surface_capabilities_2_support() const;
 
 		mem_allocator_base* get_allocator() const;
 

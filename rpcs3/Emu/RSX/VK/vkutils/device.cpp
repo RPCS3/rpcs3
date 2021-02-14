@@ -56,8 +56,9 @@ namespace vk
 
 		stencil_export_support           = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		conditional_render_support       = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
-		external_memory_host_support = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
+		external_memory_host_support     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		unrestricted_depth_range_support = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
+		surface_capabilities_2_support   = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 	}
 
 	void physical_device::create(VkInstance context, VkPhysicalDevice pdev, bool allow_extensions)
@@ -515,6 +516,11 @@ namespace vk
 	bool render_device::get_external_memory_host_support() const
 	{
 		return pgpu->external_memory_host_support;
+	}
+
+	bool render_device::get_surface_capabilities_2_support() const
+	{
+		return pgpu->surface_capabilities_2_support;
 	}
 
 	mem_allocator_base* render_device::get_allocator() const
