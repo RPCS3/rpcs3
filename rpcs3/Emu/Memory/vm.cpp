@@ -1236,14 +1236,22 @@ namespace vm
 		// Determine minimal alignment
 		const u32 min_page_size = flags & 0x100 ? 0x1000 : 0x10000;
 
+		// Take address misalignment into account
+		const u32 size0 = orig_size + addr % min_page_size;
+
 		// Align to minimal page size
-		const u32 size = utils::align(orig_size, min_page_size);
+		const u32 size = utils::align(size0, min_page_size);
 
 		// return if addr or size is invalid
-		if (!size || addr < this->addr || orig_size > size || addr + u64{size} > this->addr + u64{this->size} || flags & 0x10)
+		// If shared memory is provided, addr/size must be aligned
+		if (!size || addr < this->addr || orig_size > size0 || orig_size > size ||
+			(addr - addr % min_page_size) + u64{size} > this->addr + u64{this->size} || (src && (orig_size | addr) % min_page_size) || flags & 0x10)
 		{
 			return 0;
 		}
+
+		// Force aligned address
+		addr -= addr % min_page_size;
 
 		u8 pflags = flags & 0x1000 ? 0 : page_readable | page_writable;
 
