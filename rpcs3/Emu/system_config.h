@@ -166,6 +166,7 @@ struct cfg_root : cfg::node
 			cfg::string adapter{ this, "Adapter" };
 			cfg::_bool force_fifo{ this, "Force FIFO present mode" };
 			cfg::_bool force_primitive_restart{ this, "Force primitive restart flag" };
+			cfg::_bool force_disable_exclusive_fullscreen_mode{this, "Force Disable Exclusive Fullscreen Mode"};
 
 		} vk{ this };
 
