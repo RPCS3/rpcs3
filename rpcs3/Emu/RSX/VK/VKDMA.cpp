@@ -239,7 +239,7 @@ namespace vk
 #endif
 	}
 
-	void create_dma_block(std::unique_ptr<dma_block>& block, u32 base_address, u32 expected_length)
+	void create_dma_block(std::unique_ptr<dma_block>& block, u32 base_address, usz expected_length)
 	{
 		const auto vendor = g_render_device->gpu().get_driver_vendor();
 
