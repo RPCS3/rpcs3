@@ -162,3 +162,25 @@ namespace vk
 	void destroy_pipe_compiler();
 	pipe_compiler* get_pipe_compiler();
 }
+
+namespace rpcs3
+{
+	template <>
+	inline usz hash_struct<vk::pipeline_props>(const vk::pipeline_props& pipelineProperties)
+	{
+		usz seed = hash_base(pipelineProperties.renderpass_key);
+		seed ^= hash_struct(pipelineProperties.state.ia);
+		seed ^= hash_struct(pipelineProperties.state.ds);
+		seed ^= hash_struct(pipelineProperties.state.rs);
+		seed ^= hash_struct(pipelineProperties.state.ms);
+		seed ^= hash_base(pipelineProperties.state.temp_storage.msaa_sample_mask);
+
+		// Do not compare pointers to memory!
+		VkPipelineColorBlendStateCreateInfo tmp;
+		memcpy(&tmp, &pipelineProperties.state.cs, sizeof(VkPipelineColorBlendStateCreateInfo));
+		tmp.pAttachments = nullptr;
+
+		seed ^= hash_struct(pipelineProperties.state.att_state[0]);
+		return hash_base(seed);
+	}
+}
