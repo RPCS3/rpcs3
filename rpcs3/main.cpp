@@ -399,7 +399,7 @@ int main(int argc, char** argv)
 
 	{
 		const std::string firmware_version = utils::get_firmware_version();
-		const std::string firmware_string  = firmware_version.empty() ? "" : (" | Firmware version: " + firmware_version);
+		const std::string firmware_string  = firmware_version.empty() ? " | Missing Firmware" : (" | Firmware version: " + firmware_version);
 
 		// Write initial message
 		logs::stored_message ver;
