@@ -31,6 +31,7 @@ else()
 	add_compile_options(-Werror=sign-compare)
 	add_compile_options(-Werror=reorder)
 	add_compile_options(-Werror=return-type)
+	add_compile_options(-Werror=overloaded-virtual)
 
 	#TODO Clean the code so these are removed
 	add_compile_options(-Wno-attributes)

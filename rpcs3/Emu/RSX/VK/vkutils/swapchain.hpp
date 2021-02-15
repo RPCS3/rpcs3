@@ -116,7 +116,7 @@ namespace vk
 			return false;
 		}
 
-		virtual bool init(u32 w, u32 h)
+		bool init(u32 w, u32 h)
 		{
 			m_width = w;
 			m_height = h;
