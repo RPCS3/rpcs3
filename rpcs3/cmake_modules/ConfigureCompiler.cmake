@@ -25,7 +25,6 @@ else()
 	add_compile_options(-Wall)
 	add_compile_options(-fno-exceptions)
 	add_compile_options(-fstack-protector)
-	add_compile_options(-ftemplate-depth=1024)
 	add_compile_options(-msse -msse2 -mcx16)
 
 	add_compile_options(-Werror=old-style-cast)
