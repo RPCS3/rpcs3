@@ -43,7 +43,7 @@ namespace input
 		unsigned int pclass_profile; // See CELL_PAD_PCLASS_PROFILE flags
 	};
 
-	static product_info get_product_info(product_type type)
+	inline product_info get_product_info(product_type type)
 	{
 		switch (type)
 		{
@@ -83,7 +83,7 @@ namespace input
 		}
 	}
 
-	static std::vector<product_info> get_products_by_class(int class_id)
+	inline std::vector<product_info> get_products_by_class(int class_id)
 	{
 		switch (class_id)
 		{

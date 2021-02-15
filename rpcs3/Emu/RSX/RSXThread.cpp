@@ -964,21 +964,6 @@ namespace rsx
 		}
 	}
 
-	namespace
-	{
-		bool is_int_type(rsx::vertex_base_type type)
-		{
-			switch (type)
-			{
-			case rsx::vertex_base_type::s32k:
-			case rsx::vertex_base_type::ub256:
-				return true;
-			default:
-				return false;
-			}
-		}
-	}
-
 	std::array<u32, 4> thread::get_color_surface_addresses() const
 	{
 		u32 offset_color[] =

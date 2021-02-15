@@ -36,7 +36,7 @@ inline u32 spu_ls_target(u32 pc, u32 imm = 0)
 	return (pc + (imm << 2)) & 0x3fff0;
 }
 
-static u32 spu_decode(u32 inst)
+inline u32 spu_decode(u32 inst)
 {
 	return inst >> 21;
 }

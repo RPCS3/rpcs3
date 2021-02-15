@@ -15,7 +15,8 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-constexpr auto qstr = QString::fromStdString;
+[[maybe_unused]] constexpr auto qstr = QString::fromStdString;
+
 inline std::string sstr(const QString& _in)
 {
 	return _in.toStdString();

@@ -34,7 +34,6 @@ else()
 	add_compile_options(-Werror=return-type)
 
 	#TODO Clean the code so these are removed
-	add_compile_options(-Wno-unused-function)
 	add_compile_options(-Wno-attributes)
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")

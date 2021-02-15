@@ -40,11 +40,11 @@ namespace utils
 #endif
 
 #ifdef MADV_FREE
-	constexpr int c_madv_free = MADV_FREE;
+	[[maybe_unused]] constexpr int c_madv_free = MADV_FREE;
 #elif defined(MADV_DONTNEED)
-	constexpr int c_madv_free = MADV_DONTNEED;
+	[[maybe_unused]] constexpr int c_madv_free = MADV_DONTNEED;
 #else
-	constexpr int c_madv_free = 0;
+	[[maybe_unused]] constexpr int c_madv_free = 0;
 #endif
 
 #ifdef MADV_HUGEPAGE
