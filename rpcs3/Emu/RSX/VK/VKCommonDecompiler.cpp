@@ -8,6 +8,10 @@
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
 #endif
 #include "SPIRV/GlslangToSpv.h"
 #include "spirv-tools/optimizer.hpp"

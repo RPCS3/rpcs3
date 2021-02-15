@@ -33,6 +33,12 @@ else()
 	add_compile_options(-Werror=return-type)
 	add_compile_options(-Werror=overloaded-virtual)
 
+	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+		add_compile_options(-Werror=inconsistent-missing-override)
+	else()
+		add_compile_options(-Werror=suggest-override)
+	endif()
+
 	#TODO Clean the code so these are removed
 	add_compile_options(-Wno-attributes)
 
