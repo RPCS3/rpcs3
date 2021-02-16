@@ -667,6 +667,25 @@ bool cpu_thread::check_state() noexcept
 				store = true;
 			}
 
+			if (flags & cpu_flag::dbg_step)
+			{
+				if (u32 pc = get_pc(), *pc2 = get_pc2(); pc != umax && pc2)
+				{
+					if (pc != *pc2)
+					{
+						flags -= cpu_flag::dbg_step;
+						flags += cpu_flag::dbg_pause;
+						store = true;
+					}
+				}
+				else
+				{
+					// Can't test, ignore flag
+					flags -= cpu_flag::dbg_step;
+					store = true;
+				}
+			}
+
 			// Atomically clean wait flag and escape
 			if (!(flags & (cpu_flag::exit + cpu_flag::ret + cpu_flag::stop)))
 			{
@@ -701,14 +720,6 @@ bool cpu_thread::check_state() noexcept
 				}
 
 				retval = cpu_can_stop;
-			}
-
-			if (cpu_can_stop && flags & cpu_flag::dbg_step)
-			{
-				// Can't process dbg_step if we only paused temporarily
-				flags += cpu_flag::dbg_pause;
-				flags -= cpu_flag::dbg_step;
-				store = true;
 			}
 
 			escape = true;
@@ -874,6 +885,29 @@ u32 cpu_thread::get_pc() const
 	}
 
 	return pc ? atomic_storage<u32>::load(*pc) : UINT32_MAX;
+}
+
+u32* cpu_thread::get_pc2()
+{
+	switch (id_type())
+	{
+	case 1:
+	{
+		return &static_cast<ppu_thread*>(this)->dbg_step_pc;
+	}
+	case 2:
+	{
+		return &static_cast<spu_thread*>(this)->dbg_step_pc;
+	}
+	case 0x55:
+	{
+		const auto ctrl = static_cast<rsx::thread*>(this)->ctrl;
+		return ctrl ? &static_cast<rsx::thread*>(this)->dbg_step_pc : nullptr;
+	}
+	default: break;
+	}
+
+	return nullptr;
 }
 
 std::string cpu_thread::dump_all() const

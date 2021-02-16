@@ -643,6 +643,7 @@ public:
 	spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated = false, u32 option = 0);
 
 	u32 pc = 0;
+	u32 dbg_step_pc = 0;
 
 	// May be used internally by recompilers.
 	u32 base_pc = 0;
