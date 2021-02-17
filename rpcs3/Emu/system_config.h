@@ -239,7 +239,7 @@ struct cfg_root : cfg::node
 		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false, true };
 		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
-		cfg::string microphone_devices{ this, "Microphone Devices", ";;;;" };
+		cfg::string microphone_devices{ this, "Microphone Devices", "@@@@@@@@@@@@" };
 	} audio{ this };
 
 	struct node_io : cfg::node
