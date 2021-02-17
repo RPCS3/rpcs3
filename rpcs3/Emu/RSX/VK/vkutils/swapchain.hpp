@@ -116,7 +116,7 @@ namespace vk
 			return false;
 		}
 
-		virtual bool init(u32 w, u32 h)
+		bool init(u32 w, u32 h)
 		{
 			m_width = w;
 			m_height = h;
@@ -574,6 +574,51 @@ namespace vk
 			}
 		}
 
+		std::pair<VkSurfaceCapabilitiesKHR, bool> init_surface_capabilities()
+		{
+#ifdef _WIN32
+			if (g_cfg.video.vk.force_disable_exclusive_fullscreen_mode && dev.get_surface_capabilities_2_support())
+			{
+				HMONITOR hmonitor = MonitorFromWindow(window_handle, MONITOR_DEFAULTTOPRIMARY);
+				if (hmonitor)
+				{
+					VkSurfaceCapabilities2KHR pSurfaceCapabilities = {};
+					pSurfaceCapabilities.sType                     = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR;
+
+					VkPhysicalDeviceSurfaceInfo2KHR pSurfaceInfo = {};
+					pSurfaceInfo.sType                           = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR;
+					pSurfaceInfo.surface                         = m_surface;
+
+					VkSurfaceCapabilitiesFullScreenExclusiveEXT full_screen_exclusive_capabilities = {};
+					VkSurfaceFullScreenExclusiveWin32InfoEXT full_screen_exclusive_win32_info      = {};
+					full_screen_exclusive_capabilities.sType                                       = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_FULL_SCREEN_EXCLUSIVE_EXT;
+
+					pSurfaceCapabilities.pNext = &full_screen_exclusive_capabilities;
+
+					full_screen_exclusive_win32_info.sType    = VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_WIN32_INFO_EXT;
+					full_screen_exclusive_win32_info.hmonitor = hmonitor;
+
+					pSurfaceInfo.pNext = &full_screen_exclusive_win32_info;
+
+					auto getPhysicalDeviceSurfaceCapabilities2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceSurfaceCapabilities2KHR>(
+						vkGetInstanceProcAddr(dev.gpu(), "vkGetPhysicalDeviceSurfaceCapabilities2KHR")
+					);
+					ensure(getPhysicalDeviceSurfaceCapabilities2KHR);
+					CHECK_RESULT(getPhysicalDeviceSurfaceCapabilities2KHR(dev.gpu(), &pSurfaceInfo, &pSurfaceCapabilities));
+
+					return { pSurfaceCapabilities.surfaceCapabilities, !!full_screen_exclusive_capabilities.fullScreenExclusiveSupported };
+				}
+				else
+				{
+					rsx_log.warning("Swapchain: failed to get monitor for the window");
+				}
+			}
+#endif
+			VkSurfaceCapabilitiesKHR surface_descriptors = {};
+			CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(dev.gpu(), m_surface, &surface_descriptors));
+			return { surface_descriptors, false };
+		}
+
 		using WSI_swapchain_base::init;
 		bool init() override
 		{
@@ -586,8 +631,7 @@ namespace vk
 			VkSwapchainKHR old_swapchain = m_vk_swapchain;
 			vk::physical_device& gpu = const_cast<vk::physical_device&>(dev.gpu());
 
-			VkSurfaceCapabilitiesKHR surface_descriptors = {};
-			CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, m_surface, &surface_descriptors));
+			auto [surface_descriptors, should_disable_exclusive_full_screen] = init_surface_capabilities();
 
 			if (surface_descriptors.maxImageExtent.width < m_width ||
 				surface_descriptors.maxImageExtent.height < m_height)
@@ -692,6 +736,19 @@ namespace vk
 
 			swap_info.imageExtent.width = std::max(m_width, surface_descriptors.minImageExtent.width);
 			swap_info.imageExtent.height = std::max(m_height, surface_descriptors.minImageExtent.height);
+
+	#ifdef _WIN32
+			VkSurfaceFullScreenExclusiveInfoEXT full_screen_exclusive_info = {};
+			if (should_disable_exclusive_full_screen)
+			{
+				full_screen_exclusive_info.sType               = VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_INFO_EXT;
+				full_screen_exclusive_info.fullScreenExclusive = VK_FULL_SCREEN_EXCLUSIVE_DISALLOWED_EXT;
+
+				swap_info.pNext = &full_screen_exclusive_info;
+			}
+
+			rsx_log.notice("Swapchain: requesting full screen exclusive mode %d.", static_cast<int>(full_screen_exclusive_info.fullScreenExclusive));
+	#endif
 
 			createSwapchainKHR(dev, &swap_info, nullptr, &m_vk_swapchain);
 

@@ -1783,6 +1783,26 @@ namespace rsx
 
 						if (result_is_valid)
 						{
+							// Check for possible duplicates
+							usz max_safe_sections = UINT32_MAX;
+							switch (result.external_subresource_desc.op)
+							{
+							case deferred_request_command::atlas_gather:
+								max_safe_sections = 8 + attr.mipmaps; break;
+							case deferred_request_command::cubemap_gather:
+								max_safe_sections = 8 * attr.mipmaps; break;
+							case deferred_request_command::_3d_gather:
+								max_safe_sections = (attr.depth * attr.mipmaps * 110) / 100; break; // 10% factor of safety
+							default:
+								break;
+							}
+
+							if (overlapping_fbos.size() > max_safe_sections)
+							{
+								rsx_log.error("[Performance warning] Texture gather routine encountered too many objects!");
+								m_rtts.check_for_duplicates(overlapping_fbos, memory_range);
+							}
+
 							// Optionally disallow caching if resource is being written to as it is being read from
 							for (const auto& section : overlapping_fbos)
 							{
@@ -1855,6 +1875,7 @@ namespace rsx
 			attributes.bpp = get_format_block_size_in_bytes(attributes.gcm_format);
 			attributes.width = tex.width();
 			attributes.height = tex.height();
+			attributes.mipmaps = tex.get_exact_mipmap_count();
 			attributes.swizzled = !(tex.format() & CELL_GCM_TEXTURE_LN);
 
 			const bool is_unnormalized = !!(tex.format() & CELL_GCM_TEXTURE_UN);

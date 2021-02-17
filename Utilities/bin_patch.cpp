@@ -44,9 +44,12 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		case patch_type::bef64: return "bef64";
 		case patch_type::be16: return "be16";
 		case patch_type::be32: return "be32";
+		case patch_type::bd32: return "bd32";
 		case patch_type::be64: return "be64";
+		case patch_type::bd64: return "bd64";
 		case patch_type::lef32: return "lef32";
 		case patch_type::lef64: return "lef64";
+		case patch_type::utf8: return "utf8";
 		}
 
 		return unknown;
@@ -427,6 +430,10 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 	switch (p_data.type)
 	{
+	case patch_type::utf8:
+	{
+		break;
+	}
 	case patch_type::bef32:
 	case patch_type::lef32:
 	case patch_type::bef64:
@@ -505,38 +512,25 @@ void patch_engine::append_title_patches(const std::string& title_id)
 	load(m_map, get_patches_path() + title_id + "_patch.yml");
 }
 
-std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst)
-{
-	return apply_patch<false>(name, dst, 0, 0);
-}
-
-std::basic_string<u32> patch_engine::apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
-{
-	return apply_patch<true>(name, dst, filesz, ls_addr);
-}
-
-template <bool CheckLS>
-static std::basic_string<u32> apply_modification(const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 ls_addr)
+static std::basic_string<u32> apply_modification(const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 min_addr)
 {
 	std::basic_string<u32> applied;
 
 	for (const auto& p : patch.data_list)
 	{
 		u32 offset = p.offset;
-		u32 resval = 0;
 
-		if constexpr (CheckLS)
+		if (offset < min_addr || offset - min_addr >= filesz)
 		{
-			if (offset < ls_addr || offset >= (ls_addr + filesz))
-			{
-				// This patch is out of range for this segment
-				continue;
-			}
-
-			offset -= ls_addr;
+			// This patch is out of range for this segment
+			continue;
 		}
 
+		offset -= min_addr;
+
 		auto ptr = dst + offset;
+
+		u32 resval = -1;
 
 		switch (p.type)
 		{
@@ -581,13 +575,15 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 			*reinterpret_cast<be_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
 			break;
 		}
+		case patch_type::bd32:
+		{
+			*reinterpret_cast<be_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
+			break;
+		}
 		case patch_type::be32:
 		{
 			*reinterpret_cast<be_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
-
-			// Possibly an executable instruction
-			if constexpr (!CheckLS)
-				resval = offset;
+			if (offset % 4 == 0) resval = offset;
 			break;
 		}
 		case patch_type::bef32:
@@ -595,9 +591,22 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 			*reinterpret_cast<be_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
 			break;
 		}
+		case patch_type::bd64:
+		{
+			*reinterpret_cast<be_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
+			break;
+		}
 		case patch_type::be64:
 		{
 			*reinterpret_cast<be_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
+
+			if (offset % 4)
+			{
+				break;
+			}
+
+			resval = offset;
+			applied.push_back((offset + 7) & -4); // Two 32-bit locations
 			break;
 		}
 		case patch_type::bef64:
@@ -605,16 +614,21 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 			*reinterpret_cast<be_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
 			break;
 		}
+		case patch_type::utf8:
+		{
+			std::memcpy(ptr, p.original_value.data(), p.original_value.size());
+			break;
+		}
 		}
 
+		// Possibly an executable instruction
 		applied.push_back(resval);
 	}
 
 	return applied;
 }
 
-template <bool CheckLS>
-std::basic_string<u32> patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
+std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32 filesz, u32 min_addr)
 {
 	if (m_map.find(name) == m_map.cend())
 	{
@@ -719,7 +733,7 @@ std::basic_string<u32> patch_engine::apply_patch(const std::string& name, u8* ds
 			m_applied_groups.insert(patch.patch_group);
 		}
 
-		auto applied = apply_modification<CheckLS>(patch, dst, filesz, ls_addr);
+		auto applied = apply_modification(patch, dst, filesz, min_addr);
 
 		applied_total += applied;
 

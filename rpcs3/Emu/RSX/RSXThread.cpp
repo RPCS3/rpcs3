@@ -530,7 +530,7 @@ namespace rsx
 		on_exit();
 	}
 
-	void thread::cpu_wait()
+	void thread::cpu_wait(bs_t<cpu_flag>)
 	{
 		if (external_interrupt_lock)
 		{
@@ -604,7 +604,7 @@ namespace rsx
 									{ ppu_cmd::sleep, 0 }
 								});
 
-								thread_ctrl::notify(*intr_thread);
+								intr_thread->cmd_notify.notify_one();
 							}
 						}
 						else
@@ -960,21 +960,6 @@ namespace rsx
 				{
 					handle_invalidated_memory_range();
 				}
-			}
-		}
-	}
-
-	namespace
-	{
-		bool is_int_type(rsx::vertex_base_type type)
-		{
-			switch (type)
-			{
-			case rsx::vertex_base_type::s32k:
-			case rsx::vertex_base_type::ub256:
-				return true;
-			default:
-				return false;
 			}
 		}
 	}
@@ -3079,7 +3064,8 @@ namespace rsx
 				{ ppu_cmd::sleep, 0 }
 			});
 
-			thread_ctrl::notify(*intr_thread);
+			intr_thread->cmd_notify++;
+			intr_thread->cmd_notify.notify_one();
 		}
 	}
 

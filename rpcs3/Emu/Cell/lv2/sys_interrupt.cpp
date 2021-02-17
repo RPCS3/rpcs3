@@ -19,7 +19,8 @@ void lv2_int_serv::exec()
 		{ ppu_cmd::sleep, 0 }
 	});
 
-	thread_ctrl::notify(*thread);
+	thread->cmd_notify++;
+	thread->cmd_notify.notify_one();
 }
 
 bool ppu_thread_exit(ppu_thread& ppu);
@@ -32,7 +33,8 @@ void lv2_int_serv::join()
 		std::bit_cast<u64>(&ppu_thread_exit)
 	});
 
-	thread_ctrl::notify(*thread);
+	thread->cmd_notify++;
+	thread->cmd_notify.notify_one();
 	(*thread)();
 
 	idm::remove_verify<named_thread<ppu_thread>>(thread->id, static_cast<std::weak_ptr<named_thread<ppu_thread>>>(thread));
@@ -114,7 +116,7 @@ error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32
 		result = std::make_shared<lv2_int_serv>(it, arg1, arg2);
 		tag->handler = result;
 		it->state -= cpu_flag::stop;
-		thread_ctrl::notify(*it);
+		it->state.notify_one(cpu_flag::stop);
 		return result;
 	});
 

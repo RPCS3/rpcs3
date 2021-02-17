@@ -9,7 +9,7 @@ protected:
 	{
 	}
 
-	virtual u32 DisAsmBranchTarget(const s32 imm)=0;
+	virtual u32 DisAsmBranchTarget(const s32 imm) override = 0;
 
 	void DisAsm_V4(const std::string& op, u32 v0, u32 v1, u32 v2, u32 v3)
 	{

@@ -34,9 +34,12 @@ enum class patch_type
 	lef64,
 	be16,
 	be32,
+	bd32, // be32 with data hint (non-code)
 	be64,
+	bd64, // be64 with data hint (non-code)
 	bef32,
 	bef64,
+	utf8, // Text of string (not null-terminated automatically)
 };
 
 class patch_engine
@@ -129,16 +132,9 @@ public:
 	void append_title_patches(const std::string& title_id);
 
 	// Apply patch (returns the number of entries applied)
-	std::basic_string<u32> apply(const std::string& name, u8* dst);
-
-	// Apply patch with a check that the address exists in SPU local storage
-	std::basic_string<u32> apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
+	std::basic_string<u32> apply(const std::string& name, u8* dst, u32 filesz = UINT32_MAX, u32 min_addr = 0);
 
 private:
-	// Internal: Apply patch (returns the number of entries applied)
-	template <bool CheckLS>
-	std::basic_string<u32> apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr);
-
 	// Database
 	patch_map m_map;
 

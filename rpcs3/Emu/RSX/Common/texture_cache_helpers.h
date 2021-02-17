@@ -166,7 +166,7 @@ namespace rsx
 			}
 		}
 
-		static blit_target_properties get_optimal_blit_target_properties(
+		static inline blit_target_properties get_optimal_blit_target_properties(
 			bool src_is_render_target,
 			address_range dst_range,
 			u32 dst_pitch,

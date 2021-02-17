@@ -14,7 +14,7 @@ public:
 	custom_table_widget_item(const std::string& text, int sort_role = Qt::DisplayRole, const QVariant& sort_value = 0);
 	custom_table_widget_item(const QString& text, int sort_role = Qt::DisplayRole, const QVariant& sort_value = 0);
 
-	bool operator<(const QTableWidgetItem& other) const;
+	bool operator<(const QTableWidgetItem& other) const override;
 
 	void setData(int role, const QVariant& value, bool assign_sort_role);
 };

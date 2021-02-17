@@ -770,7 +770,7 @@ error_code mmapper_thread_recover_page_fault(cpu_thread* cpu)
 	else
 	{
 		cpu->state += cpu_flag::signal;
-		cpu->notify();
+		cpu->state.notify_one(cpu_flag::signal);
 	}
 
 	return CELL_OK;

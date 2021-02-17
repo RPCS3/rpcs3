@@ -19,6 +19,10 @@
 
 LOG_CHANNEL(cellSpurs);
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+
 //----------------------------------------------------------------------------
 // Function prototypes
 //----------------------------------------------------------------------------

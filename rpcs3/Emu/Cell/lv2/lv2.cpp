@@ -1361,11 +1361,7 @@ void lv2_obj::schedule_all()
 				ppu_log.trace("schedule(): %s", target->id);
 				target->state ^= (cpu_flag::signal + cpu_flag::suspend);
 				target->start_time = 0;
-
-				if (target != get_current_cpu_thread())
-				{
-					target->notify();
-				}
+				target->state.notify_one(cpu_flag::signal + cpu_flag::suspend);
 			}
 		}
 	}

@@ -13,6 +13,7 @@ using ppu_function_t = bool(*)(ppu_thread&);
 	ppu.current_function = #func;\
 	std::memcpy(ppu.syscall_args, ppu.gpr + 3, sizeof(ppu.syscall_args)); \
 	ppu_func_detail::do_call(ppu, func);\
+	static_cast<void>(ppu.test_stopped());\
 	ppu.current_function = old_f;\
 	ppu.cia += 4;\
 	__VA_ARGS__;\

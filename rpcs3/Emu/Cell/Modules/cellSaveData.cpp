@@ -1168,7 +1168,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				// Reschedule after a blocking dialog returns
 				if (ppu.check_state())
 				{
-					return 0;
+					return {};
 				}
 
 				if (res != CELL_OK)

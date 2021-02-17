@@ -239,7 +239,7 @@ namespace vk
 #endif
 	}
 
-	void create_dma_block(std::unique_ptr<dma_block>& block, u32 base_address, u32 expected_length)
+	void create_dma_block(std::unique_ptr<dma_block>& block, u32 base_address, usz expected_length)
 	{
 		const auto vendor = g_render_device->gpu().get_driver_vendor();
 
@@ -249,7 +249,7 @@ namespace vk
 			rsx::get_location(base_address) == CELL_GCM_LOCATION_LOCAL : // NVIDIA workaround
 			true;
 #else
-		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations		
+		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
 		const bool allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV);
 #endif
 		if (allow_host_buffers && g_render_device->get_external_memory_host_support())
@@ -305,8 +305,7 @@ namespace vk
 
 		for (auto block = first_block; block <= last_block; block += s_dma_block_length)
 		{
-			auto found = g_dma_pool.find(block);
-			auto &entry = g_dma_pool[block];
+			auto& entry = g_dma_pool[block];
 
 			if (block == first_block)
 			{

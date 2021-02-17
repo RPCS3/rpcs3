@@ -119,3 +119,5 @@ yaml-cpp.pc
 
 # ssl certificate
 cacert.pem
+
+_ReSharper.*/
