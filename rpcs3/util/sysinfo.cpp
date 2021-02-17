@@ -347,7 +347,7 @@ ullong utils::get_tsc_freq()
 		constexpr int samples = 40;
 		ullong rdtsc_data[samples];
 		ullong timer_data[samples];
-		ullong error_data[samples];
+		[[maybe_unused]] ullong error_data[samples];
 
 		// Narrow thread affinity to a single core
 		const u64 old_aff = thread_ctrl::get_thread_affinity_mask();

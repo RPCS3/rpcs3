@@ -1069,7 +1069,7 @@ namespace rsx
 			u32 dst_dma = 0;
 			rsx::blit_engine::transfer_destination_format dst_color_format;
 			u32 out_pitch = 0;
-			u32 out_alignment = 64;
+			[[maybe_unused]] u32 out_alignment = 64;
 			bool is_block_transfer = false;
 
 			switch (method_registers.blit_engine_context_surface())

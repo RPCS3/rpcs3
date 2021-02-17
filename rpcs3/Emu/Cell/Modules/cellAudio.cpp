@@ -971,6 +971,7 @@ void cell_audio_thread::mix(float *out_buffer, s32 offset)
 					const float left       = buf[in + 0] * m;
 					const float right      = buf[in + 1] * m;
 					const float center     = buf[in + 2] * m;
+					[[maybe_unused]]
 					const float low_freq   = buf[in + 3] * m;
 					const float rear_left  = buf[in + 4] * m;
 					const float rear_right = buf[in + 5] * m;

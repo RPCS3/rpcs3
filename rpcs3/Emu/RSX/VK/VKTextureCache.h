@@ -771,7 +771,7 @@ namespace vk
 
 			// Define desirable attributes based on type
 			VkImageType image_type;
-			VkImageViewType image_view_type;
+			[[maybe_unused]] VkImageViewType image_view_type;
 			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			u8 layer = 0;
 

@@ -35,7 +35,7 @@ else()
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-Werror=inconsistent-missing-override)
-	else()
+	elseif(CMAKE_COMPILER_IS_GNUCXX)
 		add_compile_options(-Werror=suggest-override)
 	endif()
 
@@ -52,9 +52,7 @@ else()
 		add_compile_options(-Wno-delete-non-virtual-dtor)
 		add_compile_options(-Wno-unused-command-line-argument)
 	elseif(CMAKE_COMPILER_IS_GNUCXX)
-		add_compile_options(-Wno-maybe-uninitialized)
 		add_compile_options(-Wno-strict-aliasing)
-		add_compile_options(-Wno-unused-but-set-variable)
 		add_compile_options(-Wno-class-memaccess)
 	endif()
 

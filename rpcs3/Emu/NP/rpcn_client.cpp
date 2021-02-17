@@ -419,7 +419,7 @@ bool rpcn_client::manage_connection()
 				addr_sig = reinterpret_cast<const le_t<u32>&>(msg[0]);
 				port_sig = reinterpret_cast<const be_t<u16>&>(msg[4]);
 
-				in_addr orig{};
+				[[maybe_unused]] in_addr orig{};
 				orig.s_addr = addr_sig;
 
 				last_pong_time = now;

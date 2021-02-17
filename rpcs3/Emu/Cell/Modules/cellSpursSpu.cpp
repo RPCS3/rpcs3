@@ -1133,13 +1133,13 @@ void spursSysServiceUpdateShutdownCompletionEvents(spu_thread& spu, SpursKernelC
 	// Mark the workloads in wklShutdownBitSet as completed and also generate a bit set of the completed
 	// workloads that have a shutdown completion hook registered
 	u32 wklNotifyBitSet;
-	u8  spuPort;
+	[[maybe_unused]] u8 spuPort;
 	//vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]()
 	{
 		auto spurs = ctxt->spurs.get_ptr();
 
 		wklNotifyBitSet = 0;
-		spuPort = spurs->spuPort;;
+		spuPort = spurs->spuPort;
 		for (u32 i = 0; i < CELL_SPURS_MAX_WORKLOAD; i++)
 		{
 			if (wklShutdownBitSet & (0x80000000u >> i))

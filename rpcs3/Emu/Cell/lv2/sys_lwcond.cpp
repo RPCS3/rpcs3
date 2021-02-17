@@ -200,7 +200,7 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> s32
 	{
-		lv2_lwmutex* mutex;
+		lv2_lwmutex* mutex{};
 
 		if (mode != 2)
 		{

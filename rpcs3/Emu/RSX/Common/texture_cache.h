@@ -1883,8 +1883,8 @@ namespace rsx
 
 			options.is_compressed_format = helpers::is_compressed_gcm_format(attributes.gcm_format);
 
-			u32 tex_size = 0, required_surface_height;
-			u8 subsurface_count;
+			u32 tex_size = 0, required_surface_height = 1;
+			u8 subsurface_count = 1;
 			size2f scale{ 1.f, 1.f };
 
 			if (is_unnormalized)
@@ -2530,20 +2530,6 @@ namespace rsx
 				if (cached_dest && cached_dest->get_context() != texture_upload_context::dma)
 				{
 					// NOTE: DMA sections are plain memory blocks with no format!
-					if (src_is_render_target || is_format_convert)
-					{
-						bool src_is_depth;
-						if (is_format_convert)
-						{
-							src_is_depth = false;
-						}
-						else
-						{
-							ensure(src_is_render_target);
-							src_is_depth = (typeless_info.src_is_typeless) ? false : src_subres.is_depth;
-						}
-					}
-
 					if (cached_dest) [[likely]]
 					{
 						typeless_info.dst_gcm_format = cached_dest->get_gcm_format();

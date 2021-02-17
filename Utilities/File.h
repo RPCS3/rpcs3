@@ -96,6 +96,11 @@ namespace fs
 	struct dir_entry : stat_t
 	{
 		std::string name;
+
+		dir_entry()
+			: stat_t{}
+		{
+		}
 	};
 
 	// Directory handle base
