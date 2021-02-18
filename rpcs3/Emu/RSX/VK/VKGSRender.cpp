@@ -820,7 +820,7 @@ void VKGSRender::check_heap_status(u32 flags)
 			m_index_buffer_ring_info.is_critical() ||
 			m_raster_env_ring_info.is_critical();
 	}
-	else if (flags)
+	else
 	{
 		heap_critical = false;
 		u32 test = 1u << std::countr_zero(flags);

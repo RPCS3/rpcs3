@@ -44,7 +44,6 @@ else()
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-fconstexpr-steps=16777216)
-		add_compile_options(-Wno-sometimes-uninitialized)
 		add_compile_options(-Wno-unused-lambda-capture)
 		add_compile_options(-Wno-unused-private-field)
 		add_compile_options(-Wno-pessimizing-move)
