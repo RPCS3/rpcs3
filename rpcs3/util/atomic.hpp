@@ -348,29 +348,48 @@ struct atomic_storage
 	static constexpr int s_hle_rel = __ATOMIC_SEQ_CST;
 #endif
 
+// clang often thinks atomics are misaligned, GCC doesn't like reinterpret_cast for breaking strict aliasing
+#ifdef __clang__
+#define MAYBE_CAST(...) (reinterpret_cast<type*>(__VA_ARGS__))
+#else
+#define MAYBE_CAST(...) (__VA_ARGS__)
+#endif
+
 	static inline bool compare_exchange(T& dest, T& comp, T exch)
 	{
-		return __atomic_compare_exchange(reinterpret_cast<type*>(&dest), reinterpret_cast<type*>(&comp), reinterpret_cast<type*>(&exch), false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+		return __atomic_compare_exchange(MAYBE_CAST(&dest), MAYBE_CAST(&comp), MAYBE_CAST(&exch), false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 	}
 
 	static inline bool compare_exchange_hle_acq(T& dest, T& comp, T exch)
 	{
 		static_assert(sizeof(T) == 4 || sizeof(T) == 8);
-		return __atomic_compare_exchange(reinterpret_cast<type*>(&dest), reinterpret_cast<type*>(&comp), reinterpret_cast<type*>(&exch), false, s_hle_ack, s_hle_ack);
+		return __atomic_compare_exchange(MAYBE_CAST(&dest), MAYBE_CAST(&comp), MAYBE_CAST(&exch), false, s_hle_ack, s_hle_ack);
 	}
 
 	static inline T load(const T& dest)
 	{
-		T result;
-		__atomic_load(reinterpret_cast<const type*>(&dest), reinterpret_cast<type*>(&result), __ATOMIC_SEQ_CST);
+#ifdef __clang__
+		type result;
+		__atomic_load(reinterpret_cast<const type*>(&dest), MAYBE_CAST(&result), __ATOMIC_SEQ_CST);
+		return std::bit_cast<T>(result);
+#else
+		alignas(sizeof(T)) T result;
+		__atomic_load(&dest, &result, __ATOMIC_SEQ_CST);
 		return result;
+#endif
 	}
 
 	static inline T observe(const T& dest)
 	{
-		T result;
-		__atomic_load(reinterpret_cast<const type*>(&dest), reinterpret_cast<type*>(&result), __ATOMIC_RELAXED);
+#ifdef __clang__
+		type result;
+		__atomic_load(reinterpret_cast<const type*>(&dest), MAYBE_CAST(&result), __ATOMIC_RELAXED);
+		return std::bit_cast<T>(result);
+#else
+		alignas(sizeof(T)) T result;
+		__atomic_load(&dest, &result, __ATOMIC_RELAXED);
 		return result;
+#endif
 	}
 
 	static inline void store(T& dest, T value)
@@ -380,13 +399,13 @@ struct atomic_storage
 
 	static inline void release(T& dest, T value)
 	{
-		__atomic_store(reinterpret_cast<type*>(&dest), reinterpret_cast<type*>(&value), __ATOMIC_RELEASE);
+		__atomic_store(MAYBE_CAST(&dest), MAYBE_CAST(&value), __ATOMIC_RELEASE);
 	}
 
 	static inline T exchange(T& dest, T value)
 	{
-		T result;
-		__atomic_exchange(reinterpret_cast<type*>(&dest), reinterpret_cast<type*>(&value), reinterpret_cast<type*>(&result), __ATOMIC_SEQ_CST);
+		alignas(sizeof(T)) T result;
+		__atomic_exchange(MAYBE_CAST(&dest), MAYBE_CAST(&value), MAYBE_CAST(&result), __ATOMIC_SEQ_CST);
 		return result;
 	}
 
@@ -479,6 +498,7 @@ struct atomic_storage
 	{
 		return atomic_storage<T>::fetch_xor(dest, value) ^ value;
 	}
+#undef MAYBE_CAST
 #endif
 
 	/* Third part: fallbacks, may be hidden by subsequent atomic_storage<> specializations */
@@ -974,7 +994,7 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 #else
 	static inline T load(const T& dest)
 	{
-		T r;
+		alignas(16) T r;
 #ifdef __AVX__
 		__asm__ volatile("vmovdqa %1, %0;" : "=x" (r) : "m" (dest) : "memory");
 #else
@@ -1047,10 +1067,11 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 
 	static inline void release(T& dest, T value)
 	{
+		u128 val = std::bit_cast<u128>(value);
 #ifdef __AVX__
-		__asm__ volatile("vmovdqa %0, %1;" :: "x" (reinterpret_cast<u128&>(value)), "m" (dest) : "memory");
+		__asm__ volatile("vmovdqa %0, %1;" :: "x" (val), "m" (dest) : "memory");
 #else
-		__asm__ volatile("movdqa %0, %1;" :: "x" (reinterpret_cast<u128&>(value)), "m" (dest) : "memory");
+		__asm__ volatile("movdqa %0, %1;" :: "x" (val), "m" (dest) : "memory");
 #endif
 	}
 #endif

@@ -49,7 +49,6 @@ else()
 		add_compile_options(-Wno-delete-non-virtual-dtor)
 		add_compile_options(-Wno-unused-command-line-argument)
 	elseif(CMAKE_COMPILER_IS_GNUCXX)
-		add_compile_options(-Wno-strict-aliasing)
 		add_compile_options(-Wno-class-memaccess)
 	endif()
 
