@@ -621,7 +621,7 @@ namespace vk
 			else if (!temp)
 				resources.push_back(std::move(tex));
 			else
-				temp_image_cache[key] = std::move(std::make_pair(owner_uid, std::move(tex)));
+				temp_image_cache[key] = std::make_pair(owner_uid, std::move(tex));
 
 			return result;
 		}

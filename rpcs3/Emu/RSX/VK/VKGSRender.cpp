@@ -657,7 +657,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		std::lock_guard lock(m_secondary_cb_guard);
 
 		const rsx::invalidation_cause cause = is_writing ? rsx::invalidation_cause::deferred_write : rsx::invalidation_cause::deferred_read;
-		result = std::move(m_texture_cache.invalidate_address(m_secondary_command_buffer, address, cause));
+		result = m_texture_cache.invalidate_address(m_secondary_command_buffer, address, cause);
 	}
 
 	if (result.invalidate_samplers)
@@ -738,7 +738,7 @@ void VKGSRender::on_invalidate_memory_range(const utils::address_range &range, r
 {
 	std::lock_guard lock(m_secondary_cb_guard);
 
-	auto data = std::move(m_texture_cache.invalidate_range(m_secondary_command_buffer, range, cause));
+	auto data = m_texture_cache.invalidate_range(m_secondary_command_buffer, range, cause);
 	AUDIT(data.empty());
 
 	if (cause == rsx::invalidation_cause::unmap)

@@ -943,7 +943,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 void GLGSRender::on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause)
 {
 	gl::command_context cmd{ gl_state };
-	auto data = std::move(m_gl_texture_cache.invalidate_range(cmd, range, cause));
+	auto data = m_gl_texture_cache.invalidate_range(cmd, range, cause);
 	AUDIT(data.empty());
 
 	if (cause == rsx::invalidation_cause::unmap && data.violation_handled)
