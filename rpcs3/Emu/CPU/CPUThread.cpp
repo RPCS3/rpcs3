@@ -667,7 +667,8 @@ bool cpu_thread::check_state() noexcept
 				store = true;
 			}
 
-			if (flags & cpu_flag::dbg_step)
+			// Can't process dbg_step if we only paused temporarily
+			if (cpu_can_stop && flags & cpu_flag::dbg_step)
 			{
 				if (u32 pc = get_pc(), *pc2 = get_pc2(); pc != umax && pc2)
 				{
