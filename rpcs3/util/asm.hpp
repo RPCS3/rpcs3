@@ -374,21 +374,21 @@ namespace utils
 
 	// General purpose aligned division, the result is rounded up not truncated
 	template <typename T, typename = std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value>>
-	constexpr T aligned_div(T value, ullong align)
+	constexpr T aligned_div(T value, std::type_identity_t<T> align)
 	{
-		return static_cast<T>((value + align - 1) / align);
+		return static_cast<T>(value / align + T{!!(value % align)});
 	}
 
 	// General purpose aligned division, the result is rounded to nearest
 	template <typename T, typename = std::enable_if_t<std::is_integral<T>::value>>
-	constexpr T rounded_div(T value, std::conditional_t<std::is_signed<T>::value, llong, ullong> align)
+	constexpr T rounded_div(T value, std::type_identity_t<T> align)
 	{
 		if constexpr (std::is_unsigned<T>::value)
 		{
-			return static_cast<T>((value + (align / 2)) / align);
+			return static_cast<T>(value / align + T{(value % align) > (align / 2)});
 		}
 
-		return static_cast<T>((value + (value < 0 ? 0 - align : align) / 2) / align);
+		return static_cast<T>(value / align + (value > 0 ? T{(value % align) > (align / 2)} : 0 - T{(value % align) < (align / 2)}));
 	}
 } // namespace utils
 
