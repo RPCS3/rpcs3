@@ -30,7 +30,7 @@ namespace input
 		dance_dance_revolution_mat = 0x0140, // Dance Dance Revolution Dance Mat Controller
 		dj_hero_turntable          = 0x0140, // DJ Hero Turntable Controller
 		harmonix_rockband_guitar   = 0x0200, // Harmonix Guitar (Rock Band II Guitar Controller)
-		harmonix_rockband_drum_kit = 0x0210, // Harmonix Drum Kit (Rock Band II Drum Controller)
+		harmonix_rockband_drum_kit = 0x0218, // Harmonix Drum Kit (Rock Band II Drum Controller)
 		playstation_3_controller   = 0x0268, // PlayStation 3 Controller
 		rock_revolution_drum_kit   = 0x0300, // Rock Revolution Drum Controller
 	};
@@ -62,7 +62,7 @@ namespace input
 		}
 		case product_type::harmonix_rockband_drum_kit:
 		{
-			return product_info{ type, vendor_id::sony_cea, product_id::harmonix_rockband_drum_kit, 0x000000FF };
+			return product_info{ type, vendor_id::sony_cea, product_id::harmonix_rockband_drum_kit, 0x000000BF };
 		}
 		case product_type::harmonix_rockband_guitar:
 		{
