@@ -209,9 +209,12 @@ error_code sceNp2Init(u32 poolsize, vm::ptr<void> poolptr)
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (nph->is_NP2_init)
 	{
-		return SCE_NP_ERROR_ALREADY_INITIALIZED;
+		std::lock_guard lock(nph->mutex_status);
+		if (nph->is_NP2_init)
+		{
+			return SCE_NP_ERROR_ALREADY_INITIALIZED;
+		}
 	}
 
 	const u32 result = std::bit_cast<u32>(sceNpInit(poolsize, poolptr));
@@ -264,9 +267,12 @@ error_code sceNp2Term(ppu_thread& ppu)
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (!nph->is_NP2_init)
 	{
-		return SCE_NP_ERROR_NOT_INITIALIZED;
+		std::lock_guard lock(nph->mutex_status);
+		if (!nph->is_NP2_init)
+		{
+			return SCE_NP_ERROR_NOT_INITIALIZED;
+		}
 	}
 
 	// TODO: does this return on error_code ?
@@ -291,19 +297,22 @@ error_code sceNpMatching2Term2()
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (!nph->is_NP2_init)
 	{
-		return SCE_NP_ERROR_NOT_INITIALIZED;
-	}
+		std::lock_guard lock(nph->mutex_status);
+		if (!nph->is_NP2_init)
+		{
+			return SCE_NP_ERROR_NOT_INITIALIZED;
+		}
 
-	if (!nph->is_NP2_Match2_init)
-	{
-		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+		if (!nph->is_NP2_Match2_init)
+		{
+			return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+		}
+
+		nph->is_NP2_Match2_init = false;
 	}
 
 	// TODO: for all contexts: sceNpMatching2DestroyContext
-
-	nph->is_NP2_Match2_init = false;
 
 	return CELL_OK;
 }
