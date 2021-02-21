@@ -95,6 +95,13 @@ namespace vk
 
 	void dma_block::flush(const utils::address_range& range)
 	{
+		if (inheritance_info.parent)
+		{
+			// Parent may be a different type of block
+			inheritance_info.parent->flush(range);
+			return;
+		}
+
 		auto src = map_range(range);
 		auto dst = vm::get_super_ptr(range.start);
 		std::memcpy(dst, src, range.length());
@@ -105,6 +112,13 @@ namespace vk
 
 	void dma_block::load(const utils::address_range& range)
 	{
+		if (inheritance_info.parent)
+		{
+			// Parent may be a different type of block
+			inheritance_info.parent->load(range);
+			return;
+		}
+
 		auto src = vm::get_super_ptr(range.start);
 		auto dst = map_range(range);
 		std::memcpy(dst, src, range.length());
