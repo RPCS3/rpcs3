@@ -172,7 +172,9 @@ namespace rsx
 				u32 last_update_progress = 0;
 				while ((current_progress < entry_count) && !Emu.IsStopped())
 				{
-					std::this_thread::sleep_for(16ms); // Around 60fps should be good enough
+					thread_ctrl::wait_for(16'000); // Around 60fps should be good enough
+
+					if (Emu.IsStopped()) break;
 
 					current_progress = std::min(processed.load(), entry_count);
 

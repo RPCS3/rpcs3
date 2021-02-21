@@ -362,6 +362,11 @@ public:
 				}
 			}
 
+			if (auto cpu = get_current_cpu_thread(); cpu && cpu->is_stopped())
+			{
+				break;
+			}
+
 			if (thread_ctrl::state() == thread_state::aborting)
 			{
 				return false;

@@ -295,7 +295,7 @@ bool rpcn_client::connect(const std::string& host)
 	connected = true;
 
 	while (!server_info_received && connected && !is_abort())
-		std::this_thread::sleep_for(5ms);
+		thread_ctrl::wait_for(5000);
 
 	if (received_version != RPCN_PROTOCOL_VERSION)
 	{
@@ -561,7 +561,7 @@ bool rpcn_client::get_reply(const u32 expected_id, std::vector<u8>& data)
 	{
 		if (check_for_reply())
 			return true;
-		std::this_thread::sleep_for(5ms);
+		thread_ctrl::wait_for(5000);
 	}
 
 	if (check_for_reply())
