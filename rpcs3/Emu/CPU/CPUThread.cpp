@@ -437,7 +437,7 @@ void cpu_thread::operator()()
 		}
 
 		// Can we have a little race, right? First thread is started concurrently with g_fxo->init()
-		std::this_thread::sleep_for(1ms);
+		thread_ctrl::wait_for(1000);
 	}
 
 	switch (id_type())

@@ -664,7 +664,7 @@ void np_handler::operator()()
 	{
 		if (!rpcn.manage_connection())
 		{
-			std::this_thread::sleep_for(200ms);
+			thread_ctrl::wait_for(200'000);
 			continue;
 		}
 

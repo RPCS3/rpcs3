@@ -48,7 +48,7 @@ namespace vk
 				}
 			}
 
-			m_work_queue.wait();
+			thread_ctrl::wait_on(m_work_queue, nullptr);
 		}
 	}
 

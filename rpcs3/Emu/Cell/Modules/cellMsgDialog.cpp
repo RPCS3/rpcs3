@@ -104,7 +104,7 @@ struct msg_dlg_thread_info
 				if (wait_until.load() != new_value)
 					break;
 
-				std::this_thread::sleep_for(10ms);
+				thread_ctrl::wait_for(10'000);
 			}
 
 			if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
