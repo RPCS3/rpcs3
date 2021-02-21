@@ -602,6 +602,22 @@ namespace fs
 	// Get common cache directory
 	const std::string& get_cache_dir();
 
+	// Unique pending file creation destined to be renamed to the destination file
+	struct pending_file
+	{
+		fs::file file;
+
+		// This is meant to modify files atomically, overwriting is likely 
+		bool commit(bool overwrite = true);
+
+		pending_file(const std::string& path);
+		~pending_file();
+
+	private:
+		std::string m_path; // Pending file path
+		std::string m_dest; // Destination file path
+	};
+
 	// Get real path for comparisons (TODO: investigate std::filesystem::path::compare implementation)
 	std::string escape_path(std::string_view path);
 
