@@ -362,9 +362,9 @@ public:
 				}
 			}
 
-			if (auto cpu = get_current_cpu_thread(); cpu && cpu->is_stopped())
+			if (auto cpu0 = get_current_cpu_thread(); cpu0 && cpu0->is_stopped())
 			{
-				break;
+				return false;
 			}
 
 			if (thread_ctrl::state() == thread_state::aborting)
