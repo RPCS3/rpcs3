@@ -18,6 +18,11 @@ using namespace std::literals::string_literals;
 #include <cwchar>
 #include <Windows.h>
 
+namespace utils
+{
+	u64 get_unique_tsc();
+}
+
 static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 {
 	// String size + null terminator
@@ -1913,6 +1918,55 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 	fs::file result;
 	result.reset(std::make_unique<gather_stream>(std::move(files)));
 	return result;
+}
+
+fs::pending_file::pending_file(const std::string& path)
+{
+	do
+	{
+		m_path = fmt::format(u8"%s/＄%s.%s.tmp", get_parent_dir(path), std::string_view(path).substr(path.find_last_of(fs::delim) + 1), fmt::base57(utils::get_unique_tsc()));
+
+		if (file.open(m_path, fs::create + fs::write + fs::read + fs::excl))
+		{
+			m_dest = path;
+			break;
+		}
+
+		m_path.clear();
+	}
+	while (fs::g_tls_error == fs::error::exist); // Only retry if failed due to existing file
+}
+
+fs::pending_file::~pending_file()
+{
+	file.close();
+
+	if (!m_path.empty())
+	{
+		fs::remove_file(m_path);
+	}
+}
+
+bool fs::pending_file::commit(bool overwrite)
+{
+	if (!file || m_path.empty())
+	{
+		fs::g_tls_error = fs::error::noent;
+		return false;
+	}
+
+	// The temporary file's contents must be on disk before rename
+	file.sync();
+	file.close();
+
+	if (fs::rename(m_path, m_dest, overwrite))
+	{
+		// Disable the destructor
+		m_path.clear();
+		return true;
+	}
+
+	return false;
 }
 
 template<>

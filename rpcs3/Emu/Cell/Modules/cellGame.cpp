@@ -666,7 +666,9 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 	if (!perm->temp.empty())
 	{
 		// Create PARAM.SFO
-		psf::save_object(fs::file(perm->temp + "/PARAM.SFO", fs::rewrite), perm->sfo);
+		fs::pending_file temp(perm->temp + "/PARAM.SFO");
+		temp.file.write(psf::save_object(perm->sfo));
+		ensure(temp.commit());
 
 		// Make temporary directory persistent (atomically)
 		if (vfs::host::rename(perm->temp, vfs::get(dir), &g_mp_sys_dev_hdd0, false))
@@ -684,7 +686,9 @@ error_code cellGameContentPermit(vm::ptr<char[CELL_GAME_PATH_MAX]> contentInfoPa
 	else if (perm->can_create)
 	{
 		// Update PARAM.SFO
-		psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite), perm->sfo);
+		fs::pending_file temp(vfs::get(dir + "/PARAM.SFO"));
+		temp.file.write(psf::save_object(perm->sfo));
+		ensure(temp.commit());
 	}
 
 	// Cleanup
@@ -806,7 +810,9 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 				psf::assign(sfo, fmt::format("TITLE_%02d", i), psf::string(CELL_GAME_SYSP_TITLE_SIZE, setParam->titleLang[i]));
 			}
 
-			psf::save_object(fs::file(vfs::get(dir + "/PARAM.SFO"), fs::rewrite), sfo);
+			fs::pending_file temp(vfs::get(dir + "/PARAM.SFO"));
+			temp.file.write(psf::save_object(sfo));
+			ensure(temp.commit());
 		}
 
 		return CELL_OK;

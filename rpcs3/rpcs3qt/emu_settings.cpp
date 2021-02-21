@@ -190,8 +190,9 @@ void emu_settings::SaveSettings()
 	}
 
 	// Save config atomically
-	fs::file(config_name + ".tmp", fs::rewrite).write(out.c_str(), out.size());
-	fs::rename(config_name + ".tmp", config_name, true);
+	fs::pending_file temp(config_name);
+	temp.file.write(out.c_str(), out.size());
+	temp.commit();
 
 	// Check if the running config/title is the same as the edited config/title.
 	if (config_name == g_cfg.name || m_title_id == Emu.GetTitleID())
