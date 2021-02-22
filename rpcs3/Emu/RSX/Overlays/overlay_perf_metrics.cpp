@@ -555,7 +555,12 @@ namespace rsx
 
 		compiled_resource perf_metrics_overlay::get_compiled()
 		{
-			auto compiled_resources = m_body.get_compiled();
+			if (!visible)
+			{
+				return {};
+			}
+
+			compiled_resource compiled_resources = m_body.get_compiled();
 
 			compiled_resources.add(m_titles.get_compiled());
 
