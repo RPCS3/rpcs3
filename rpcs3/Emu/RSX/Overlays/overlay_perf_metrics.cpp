@@ -640,6 +640,8 @@ namespace rsx
 
 		void graph::record_datapoint(f32 datapoint)
 		{
+			ensure(datapoint >= 0.0f);
+
 			// std::dequeue is only faster for large sizes, so just use a std::vector and resize once in while
 
 			// Record datapoint
@@ -675,10 +677,10 @@ namespace rsx
 			refresh();
 			overlay_element::get_compiled();
 
-			const f32 normalize_factor = f32(h) / m_max;
+			const f32 normalize_factor = f32(h) / (m_max != 0.0f ? m_max : 1.0f);
 
 			// Don't show guide lines if they'd be more dense than 1 guide line every 3 pixels
-			const bool guides_too_dense = (m_max / m_guide_interval) > (h / 3);
+			const bool guides_too_dense = (m_max / m_guide_interval) > (h / 3.0f);
 
 			if (m_guide_interval > 0 && !guides_too_dense)
 			{
@@ -707,12 +709,12 @@ namespace rsx
 			auto& verts_graph = compiled_resources.draw_commands.back().verts;
 
 			const f32 x_stride = w * 1.f / m_datapoint_count;
-			const u32 tail_index_offset = ::size32(m_datapoints) - m_datapoint_count;
+			const usz tail_index_offset = m_datapoints.size() - m_datapoint_count;
 
 			for (u32 i = 0; i < m_datapoint_count; ++i)
 			{
 				const f32 x_line = x + i * x_stride;
-				const f32 y_line = y + h - (m_datapoints[tail_index_offset + i] * normalize_factor);
+				const f32 y_line = y + h - (m_datapoints[i + tail_index_offset] * normalize_factor);
 				verts_graph.emplace_back(x_line, y_line);
 			}
 
