@@ -31,7 +31,7 @@ namespace vk
 		u32 host_visible_coherent;
 		u32 device_local;
 
-		PFN_vkGetMemoryHostPointerPropertiesEXT getMemoryHostPointerPropertiesEXT;
+		PFN_vkGetMemoryHostPointerPropertiesEXT _vkGetMemoryHostPointerPropertiesEXT;
 	};
 
 	class physical_device
@@ -99,8 +99,8 @@ namespace vk
 
 	public:
 		// Exported device endpoints
-		PFN_vkCmdBeginConditionalRenderingEXT cmdBeginConditionalRenderingEXT = nullptr;
-		PFN_vkCmdEndConditionalRenderingEXT cmdEndConditionalRenderingEXT = nullptr;
+		PFN_vkCmdBeginConditionalRenderingEXT _vkCmdBeginConditionalRenderingEXT = nullptr;
+		PFN_vkCmdEndConditionalRenderingEXT _vkCmdEndConditionalRenderingEXT = nullptr;
 
 	public:
 		render_device() = default;
