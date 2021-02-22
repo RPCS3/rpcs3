@@ -44,9 +44,9 @@ namespace vk
 				features2.pNext         = &driver_properties;
 			}
 
-			auto getPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
-			ensure(getPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
-			getPhysicalDeviceFeatures2KHR(dev, &features2);
+			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
+			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
+			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
 
 			shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
 			shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
@@ -417,8 +417,8 @@ namespace vk
 		// Import optional function endpoints
 		if (pgpu->conditional_render_support)
 		{
-			cmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT"));
-			cmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
+			_vkCmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT"));
+			_vkCmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
 		}
 
 		memory_map = vk::get_memory_mapping(pdev);
@@ -427,7 +427,7 @@ namespace vk
 
 		if (pgpu->external_memory_host_support)
 		{
-			memory_map.getMemoryHostPointerPropertiesEXT = reinterpret_cast<PFN_vkGetMemoryHostPointerPropertiesEXT>(vkGetDeviceProcAddr(dev, "vkGetMemoryHostPointerPropertiesEXT"));
+			memory_map._vkGetMemoryHostPointerPropertiesEXT = reinterpret_cast<PFN_vkGetMemoryHostPointerPropertiesEXT>(vkGetDeviceProcAddr(dev, "vkGetMemoryHostPointerPropertiesEXT"));
 		}
 
 		if (g_cfg.video.disable_vulkan_mem_allocator)

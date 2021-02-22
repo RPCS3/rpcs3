@@ -87,11 +87,11 @@ namespace vk
 			u32 memory_type_index = memory_map.host_visible_coherent;
 			VkFlags access_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
 
-			ensure(memory_map.getMemoryHostPointerPropertiesEXT);
+			ensure(memory_map._vkGetMemoryHostPointerPropertiesEXT);
 
 			VkMemoryHostPointerPropertiesEXT memory_properties{};
 			memory_properties.sType = VK_STRUCTURE_TYPE_MEMORY_HOST_POINTER_PROPERTIES_EXT;
-			CHECK_RESULT(memory_map.getMemoryHostPointerPropertiesEXT(dev, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, host_pointer, &memory_properties));
+			CHECK_RESULT(memory_map._vkGetMemoryHostPointerPropertiesEXT(dev, VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT, host_pointer, &memory_properties));
 
 			VkMemoryRequirements memory_reqs;
 			vkGetBufferMemoryRequirements(m_device, value, &memory_reqs);
