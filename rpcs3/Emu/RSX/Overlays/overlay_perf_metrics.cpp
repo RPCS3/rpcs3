@@ -233,6 +233,12 @@ namespace rsx
 			reset_transforms();
 			force_next_update();
 
+			if (m_is_initialised)
+			{
+				update();
+				return;
+			}
+
 			m_update_timer.Start();
 			m_frametime_timer.Start();
 
@@ -382,7 +388,7 @@ namespace rsx
 
 			if (m_is_initialised)
 			{
-				if (m_frametime_graph_enabled)
+				if (m_frametime_graph_enabled && !m_force_update)
 				{
 					const auto elapsed_frame = m_frametime_timer.GetElapsedTimeInMilliSec();
 					m_frametime_timer.Start();
@@ -402,98 +408,79 @@ namespace rsx
 
 			if (elapsed_update >= m_update_interval || m_force_update)
 			{
-				if (!m_force_update)
+				// 1. Fetch/calculate metrics we'll need
+				if (!m_is_initialised || !m_force_update)
 				{
 					m_update_timer.Start();
-				}
 
-				f32 fps{0};
-				f32 frametime{0};
+					const auto rsx_thread = g_fxo->get<rsx::thread>();
 
-				u64 ppu_cycles{0};
-				u64 spu_cycles{0};
-				u64 rsx_cycles{0};
-				u64 total_cycles{0};
-
-				u32 ppus{0};
-				u32 spus{0};
-
-				f32 cpu_usage{-1.f};
-				u32 total_threads{0};
-
-				f32 ppu_usage{0};
-				f32 spu_usage{0};
-				f32 rsx_usage{0};
-				u32 rsx_load{0};
-
-				const auto rsx_thread = g_fxo->get<rsx::thread>();
-
-				std::string perf_text;
-
-				// 1. Fetch/calculate metrics we'll need
-				switch (m_detail)
-				{
-				case detail_level::high:
-				{
-					frametime = m_force_update ? 0.f : std::max(0.f, static_cast<float>(elapsed_update / m_frames));
-
-					rsx_load = rsx_thread->get_load();
-
-					total_threads = CPUStats::get_thread_count();
-
-					[[fallthrough]];
-				}
-				case detail_level::medium:
-				{
-					ppus = idm::select<named_thread<ppu_thread>>([&ppu_cycles](u32, named_thread<ppu_thread>& ppu)
+					switch (m_detail)
 					{
-						ppu_cycles += thread_ctrl::get_cycles(ppu);
-					});
-
-					spus = idm::select<named_thread<spu_thread>>([&spu_cycles](u32, named_thread<spu_thread>& spu)
+					case detail_level::high:
 					{
-						spu_cycles += thread_ctrl::get_cycles(spu);
-					});
+						m_frametime = std::max(0.f, static_cast<float>(elapsed_update / m_frames));
 
-					rsx_cycles += rsx_thread->get_cycles();
+						m_rsx_load = rsx_thread->get_load();
 
-					total_cycles = std::max<u64>(1, ppu_cycles + spu_cycles + rsx_cycles);
-					cpu_usage = static_cast<f32>(m_cpu_stats.get_usage());
+						m_total_threads = CPUStats::get_thread_count();
 
-					ppu_usage = std::clamp(cpu_usage * ppu_cycles / total_cycles, 0.f, 100.f);
-					spu_usage = std::clamp(cpu_usage * spu_cycles / total_cycles, 0.f, 100.f);
-					rsx_usage = std::clamp(cpu_usage * rsx_cycles / total_cycles, 0.f, 100.f);
+						[[fallthrough]];
+					}
+					case detail_level::medium:
+					{
+						m_ppus = idm::select<named_thread<ppu_thread>>([this](u32, named_thread<ppu_thread>& ppu)
+						{
+							m_ppu_cycles += thread_ctrl::get_cycles(ppu);
+						});
 
-					[[fallthrough]];
-				}
-				case detail_level::low:
-				{
-					if (cpu_usage < 0.)
-						cpu_usage = static_cast<f32>(m_cpu_stats.get_usage());
+						m_spus = idm::select<named_thread<spu_thread>>([this](u32, named_thread<spu_thread>& spu)
+						{
+							m_spu_cycles += thread_ctrl::get_cycles(spu);
+						});
 
-					[[fallthrough]];
-				}
-				case detail_level::minimal:
-				{
-					fps = m_force_update ? 0.f : std::max(0.f, static_cast<f32>(m_frames / (elapsed_update / 1000)));
-					if (m_is_initialised && m_framerate_graph_enabled)
-						m_fps_graph.record_datapoint(fps);
-				}
+						m_rsx_cycles += rsx_thread->get_cycles();
+
+						m_total_cycles = std::max<u64>(1, m_ppu_cycles + m_spu_cycles + m_rsx_cycles);
+						m_cpu_usage    = static_cast<f32>(m_cpu_stats.get_usage());
+
+						m_ppu_usage = std::clamp(m_cpu_usage * m_ppu_cycles / m_total_cycles, 0.f, 100.f);
+						m_spu_usage = std::clamp(m_cpu_usage * m_spu_cycles / m_total_cycles, 0.f, 100.f);
+						m_rsx_usage = std::clamp(m_cpu_usage * m_rsx_cycles / m_total_cycles, 0.f, 100.f);
+
+						[[fallthrough]];
+					}
+					case detail_level::low:
+					{
+						if (m_cpu_usage < 0.)
+							m_cpu_usage = static_cast<f32>(m_cpu_stats.get_usage());
+
+						[[fallthrough]];
+					}
+					case detail_level::minimal:
+					{
+						m_fps = std::max(0.f, static_cast<f32>(m_frames / (elapsed_update / 1000)));
+						if (m_is_initialised && m_framerate_graph_enabled)
+							m_fps_graph.record_datapoint(m_fps);
+					}
+					}
 				}
 
 				// 2. Format output string
+				std::string perf_text;
+
 				switch (m_detail)
 				{
 				case detail_level::minimal:
 				{
-					perf_text += fmt::format("FPS : %05.2f", fps);
+					perf_text += fmt::format("FPS : %05.2f", m_fps);
 					break;
 				}
 				case detail_level::low:
 				{
 					perf_text += fmt::format("FPS : %05.2f\n"
 					                         "CPU : %04.1f %%",
-					    fps, cpu_usage);
+					    m_fps, m_cpu_usage);
 					break;
 				}
 				case detail_level::medium:
@@ -504,7 +491,7 @@ namespace rsx
 					                         " SPU   : %04.1f %%\n"
 					                         " RSX   : %04.1f %%\n"
 					                         " Total : %04.1f %%",
-					    fps, std::string(title1_medium.size(), ' '), ppu_usage, spu_usage, rsx_usage, cpu_usage, std::string(title2.size(), ' '));
+					    m_fps, std::string(title1_medium.size(), ' '), m_ppu_usage, m_spu_usage, m_rsx_usage, m_cpu_usage, std::string(title2.size(), ' '));
 					break;
 				}
 				case detail_level::high:
@@ -517,7 +504,7 @@ namespace rsx
 					                         " Total : %04.1f %% (%2u)\n\n"
 					                         "%s\n"
 					                         " RSX   : %02u %%",
-					    fps, frametime, std::string(title1_high.size(), ' '), ppu_usage, ppus, spu_usage, spus, rsx_usage, cpu_usage, total_threads, std::string(title2.size(), ' '), rsx_load);
+					    m_fps, m_frametime, std::string(title1_high.size(), ' '), m_ppu_usage, m_ppus, m_spu_usage, m_spus, m_rsx_usage, m_cpu_usage, m_total_threads, std::string(title2.size(), ' '), m_rsx_load);
 					break;
 				}
 				}
@@ -755,11 +742,7 @@ namespace rsx
 					perf_overlay->set_title_colors(perf_settings.color_title, perf_settings.background_title);
 					perf_overlay->set_framerate_graph_enabled(perf_settings.framerate_graph_enabled.get());
 					perf_overlay->set_frametime_graph_enabled(perf_settings.frametime_graph_enabled.get());
-
-					if (!existed)
-					{
-						perf_overlay->init();
-					}
+					perf_overlay->init();
 				}
 				else if (perf_overlay)
 				{
