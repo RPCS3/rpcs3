@@ -165,7 +165,7 @@ namespace rsx
 			}
 
 			// Set body/titles transform
-			if (m_is_initialised && m_force_repaint)
+			if (m_force_repaint)
 			{
 				m_force_repaint = false;
 				reset_body(bottom_margin);
