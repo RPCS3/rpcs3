@@ -385,6 +385,7 @@ namespace rsx
 				if (m_frametime_graph_enabled)
 				{
 					const auto elapsed_frame = m_frametime_timer.GetElapsedTimeInMilliSec();
+					m_frametime_timer.Start();
 					m_frametime_graph.record_datapoint(static_cast<float>(elapsed_frame));
 				}
 
@@ -549,7 +550,6 @@ namespace rsx
 			if (m_frametime_graph_enabled)
 			{
 				m_frametime_graph.update();
-				m_frametime_timer.Start();
 			}
 		}
 
