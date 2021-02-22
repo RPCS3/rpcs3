@@ -157,7 +157,7 @@ namespace vk
 		return inheritance_info.parent->head();
 	}
 
-	void dma_block::set_parent(const command_buffer& cmd, dma_block* parent)
+	void dma_block::set_parent(dma_block* parent)
 	{
 		ensure(parent);
 		ensure(parent->base_address < base_address);
@@ -178,7 +178,7 @@ namespace vk
 		}
 	}
 
-	void dma_block::extend(const command_buffer& cmd, const render_device& dev, usz new_size)
+	void dma_block::extend(const render_device& dev, usz new_size)
 	{
 		ensure(allocated_memory);
 		if (new_size <= allocated_memory->size())
@@ -278,7 +278,7 @@ namespace vk
 		block->init(*g_render_device, base_address, expected_length);
 	}
 
-	std::pair<u32, vk::buffer*> map_dma(const command_buffer& cmd, u32 local_address, u32 length)
+	std::pair<u32, vk::buffer*> map_dma(u32 local_address, u32 length)
 	{
 		// Not much contention expected here, avoid searching twice
 		std::lock_guard lock(g_dma_mutex);
@@ -338,7 +338,7 @@ namespace vk
 			else if (entry)
 			{
 				ensure((entry->end() & s_dma_block_mask) <= last_block);
-				entry->set_parent(cmd, block_head);
+				entry->set_parent(block_head);
 			}
 			else
 			{

@@ -911,7 +911,7 @@ namespace vk
 
 			if (memory_load)
 			{
-				vk::map_dma(cmd, rsx_range.start, rsx_range.length());
+				vk::map_dma(rsx_range.start, rsx_range.length());
 				vk::load_dma(rsx_range.start, rsx_range.length());
 			}
 
