@@ -48,13 +48,32 @@ namespace rsx
 			std::string m_color_title;
 			std::string m_background_title;
 
-			bool m_force_update{};
+			bool m_force_update{}; // Used to update the overlay metrics without changing the data
 			bool m_force_repaint{};
 			bool m_is_initialised{};
 
 			const std::string title1_medium{ "CPU Utilization:" };
 			const std::string title1_high{ "Host Utilization (CPU):" };
 			const std::string title2{ "Guest Utilization (PS3):" };
+
+			f32 m_fps{0};
+			f32 m_frametime{0};
+
+			u64 m_ppu_cycles{0};
+			u64 m_spu_cycles{0};
+			u64 m_rsx_cycles{0};
+			u64 m_total_cycles{0};
+
+			u32 m_ppus{0};
+			u32 m_spus{0};
+
+			f32 m_cpu_usage{-1.f};
+			u32 m_total_threads{0};
+
+			f32 m_ppu_usage{0};
+			f32 m_spu_usage{0};
+			f32 m_rsx_usage{0};
+			u32 m_rsx_load{0};
 
 			void reset_transform(label& elm, u16 bottom_margin = 0) const;
 			void reset_transforms();
