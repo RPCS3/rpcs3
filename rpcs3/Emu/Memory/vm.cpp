@@ -741,12 +741,12 @@ namespace vm
 		if (flags & page_executable)
 		{
 			// TODO
-			utils::memory_commit(g_exec_addr + addr * 2, size * 2);
+			ensure(utils::memory_commit(g_exec_addr + addr * 2, size * 2));
 		}
 
 		if (g_cfg.core.ppu_debug)
 		{
-			utils::memory_commit(g_stat_addr + addr, size);
+			ensure(utils::memory_commit(g_stat_addr + addr, size));
 		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)

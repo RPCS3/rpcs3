@@ -389,7 +389,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 	addr &= -0x10000;
 
 	// Register executable range at
-	utils::memory_commit(&ppu_ref(addr), u64{size} * 2, utils::protection::rw);
+	ensure(utils::memory_commit(&ppu_ref(addr), u64{size} * 2, utils::protection::rw));
 	vm::page_protect(addr, size, 0, vm::page_executable);
 
 	const u64 fallback = reinterpret_cast<uptr>(ppu_fallback);

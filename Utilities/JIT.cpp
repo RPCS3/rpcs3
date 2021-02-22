@@ -17,15 +17,33 @@
 
 LOG_CHANNEL(jit_log, "JIT");
 
+static usz s_memory_limit = 0;
+
+[[noreturn]] void report_fatal_error(const std::string&);
+
 static u8* get_jit_memory()
 {
 	// Reserve 2G memory (magic static)
 	static void* const s_memory2 = []() -> void*
 	{
-		void* ptr = utils::memory_reserve(0x80000000);
-		utils::memory_commit(ptr, 0x80000000);
-		utils::memory_protect(ptr, 0x40000000, utils::protection::wx);
-		return ptr;
+		u8* ptr = static_cast<u8*>(utils::memory_reserve(0x8000'0000));
+
+		for (usz mem_lim = 0x4000'0000; mem_lim >= 0x800'0000; mem_lim /= 2)
+		{
+			// Test how much memory we can actually allocate in practice
+			// Use only half of it for executable code and dealloc the second half
+			if (utils::memory_commit(ptr, mem_lim) && utils::memory_commit(ptr + 0x4000'0000, mem_lim))
+			{
+				utils::memory_decommit(ptr + 0x4000'0000, mem_lim);
+				utils::memory_protect(ptr, mem_lim, utils::protection::wx);
+				s_memory_limit = mem_lim;
+				return ptr;
+			}
+
+			utils::memory_decommit(ptr, 0x8000'0000);
+		}
+
+		report_fatal_error("Not enough memory for RPCS3 process!");
 	}();
 
 	return static_cast<u8*>(s_memory2);
@@ -57,10 +75,10 @@ static u8* add_jit_memory(usz size, uint align)
 		const u64 _pos = utils::align(ctr & 0xffff'ffff, align);
 		const u64 _new = utils::align(_pos + size, align);
 
-		if (_new > 0x40000000) [[unlikely]]
+		if (_new > s_memory_limit) [[unlikely]]
 		{
 			// Sorry, we failed, and further attempts should fail too.
-			ctr |= 0x40000000;
+			ctr |= s_memory_limit;
 			return -1;
 		}
 
@@ -80,7 +98,7 @@ static u8* add_jit_memory(usz size, uint align)
 
 	if (pos == umax) [[unlikely]]
 	{
-		jit_log.error("Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
+		jit_log.error("Out of memory (size=0x%x, align=0x%x, off=0x%x, limit=0x%x)", size, align, Off, s_memory_limit);
 		return nullptr;
 	}
 
@@ -177,7 +195,7 @@ void jit_runtime::finalize() noexcept
 	// Reset JIT memory
 #ifdef CAN_OVERCOMMIT
 	utils::memory_reset(get_jit_memory(), 0x80000000);
-	utils::memory_protect(get_jit_memory(), 0x40000000, utils::protection::wx);
+	utils::memory_protect(get_jit_memory(), s_memory_limit, utils::protection::wx);
 #else
 	utils::memory_decommit(get_jit_memory(), 0x80000000);
 #endif

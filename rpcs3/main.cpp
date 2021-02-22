@@ -370,7 +370,7 @@ int main(int argc, char** argv)
 	}
 
 #ifdef _WIN32
-	if (!SetProcessWorkingSetSize(GetCurrentProcess(), 0x80000000, 0xC0000000)) // 2-3 GiB
+	if (!SetProcessWorkingSetSize(GetCurrentProcess(), 0x40000000, 0x80000000)) // 1-2 GiB
 	{
 		report_fatal_error("Not enough memory for RPCS3 process.");
 		return 2;

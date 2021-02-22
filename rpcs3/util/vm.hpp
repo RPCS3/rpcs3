@@ -26,7 +26,7 @@ namespace utils
 	* That is, bake reserved memory with physical memory.
 	* pointer should belong to a range of reserved memory.
 	*/
-	void memory_commit(void* pointer, usz size, protection prot = protection::rw);
+	bool memory_commit(void* pointer, usz size, protection prot = protection::rw);
 
 	// Decommit all memory committed via commit_page_memory.
 	void memory_decommit(void* pointer, usz size);

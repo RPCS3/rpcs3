@@ -162,14 +162,19 @@ namespace utils
 #endif
 	}
 
-	void memory_commit(void* pointer, usz size, protection prot)
+	bool memory_commit(void* pointer, usz size, protection prot)
 	{
 #ifdef _WIN32
-		ensure(::VirtualAlloc(pointer, size, MEM_COMMIT, +prot));
+		return ::VirtualAlloc(pointer, size, MEM_COMMIT, +prot);
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1);
+		if (::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) == -1)
+		{
+			return false;
+		}
+
 		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED | c_madv_dump) != -1);
+		return true;
 #endif
 	}
 
