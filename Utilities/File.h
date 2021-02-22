@@ -748,7 +748,7 @@ namespace fs
 		return result;
 	}
 
-	template <typename... Args>
+	template <bool Flush = false, typename... Args>
 	bool write_file(const std::string& path, bs_t<fs::open_mode> mode, const Args&... args)
 	{
 		// Always use write flag, remove read flag
@@ -758,14 +758,19 @@ namespace fs
 			{
 				// Specialization for [const void*, usz] args
 				f.write(args...);
-				return true;
 			}
 			else
 			{
 				// Write args sequentially
 				(f.write(args), ...);
-				return true;
 			}
+
+			if constexpr (Flush)
+			{
+				f.sync();
+			}
+
+			return true;
 		}
 
 		return false;
