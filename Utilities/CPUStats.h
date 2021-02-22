@@ -137,7 +137,7 @@ public:
 		DWORD const id = GetCurrentProcessId();
 
 		// then get a process list snapshot.
-		HANDLE const snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPALL, 0);
+		HANDLE const snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
 		// initialize the process entry structure.
 		PROCESSENTRY32 entry = {0};
