@@ -906,7 +906,7 @@ namespace vk
 					src_address = uptr(base_addr) - uptr(vm::g_base_addr);
 				}
 
-				auto dma_mapping = vk::map_dma(cmd, static_cast<u32>(src_address), static_cast<u32>(data_length));
+				auto dma_mapping = vk::map_dma(static_cast<u32>(src_address), static_cast<u32>(data_length));
 
 				ensure(dma_mapping.second->size() >= (dma_mapping.first + data_length));
 				vk::load_dma(::narrow<u32>(src_address), data_length);
