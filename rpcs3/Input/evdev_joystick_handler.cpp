@@ -517,7 +517,7 @@ void evdev_joystick_handler::SetPadData(const std::string& padId, u32 largeMotor
 		return;
 	}
 
-	SetRumble(dev, largeMotor, smallMotor);
+	SetRumble(static_cast<EvdevDevice*>(dev.get()), largeMotor, smallMotor);
 }
 
 int evdev_joystick_handler::GetButtonInfo(const input_event& evt, const std::shared_ptr<EvdevDevice>& device, int& value)
