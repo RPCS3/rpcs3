@@ -379,18 +379,6 @@ namespace vm
 		}
 	}
 
-	void cleanup_unlock(cpu_thread& cpu) noexcept
-	{
-		for (u32 i = 0, max = g_cfg.core.ppu_threads; i < max; i++)
-		{
-			if (g_locks[i] == &cpu)
-			{
-				g_locks[i].compare_and_swap_test(&cpu, nullptr);
-				return;
-			}
-		}
-	}
-
 	void temporary_unlock(cpu_thread& cpu) noexcept
 	{
 		if (!(cpu.state & cpu_flag::wait)) cpu.state += cpu_flag::wait;
