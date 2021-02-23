@@ -607,7 +607,7 @@ namespace fs
 	{
 		fs::file file;
 
-		// This is meant to modify files atomically, overwriting is likely 
+		// This is meant to modify files atomically, overwriting is likely
 		bool commit(bool overwrite = true);
 
 		pending_file(const std::string& path);

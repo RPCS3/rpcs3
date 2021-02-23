@@ -1530,6 +1530,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			// Read file into a vector and make a memory file
 			entry.name = vfs::unescape(entry.name);
+
+			if (entry.name == ".")
+			{
+				continue;
+			}
+
 			all_times.emplace(entry.name, std::make_pair(entry.atime, entry.mtime));
 			all_files.emplace(std::move(entry.name), fs::make_stream(fs::file(dir_path + entry.name).to_vector<uchar>()));
 		}
@@ -1910,7 +1916,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			if (auto file = pair.second.release())
 			{
-				auto fvec = static_cast<fs::container_stream<std::vector<uchar>>&>(*file);
+				auto&& fvec = static_cast<fs::container_stream<std::vector<uchar>>&>(*file);
 				ensure(fs::write_file<true>(new_path + vfs::escape(pair.first), fs::rewrite, fvec.obj));
 			}
 		}
