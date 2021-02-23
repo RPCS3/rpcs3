@@ -1467,6 +1467,11 @@ void pad_settings_dialog::HandleDeviceClassChange(int index)
 			ui->chooseProduct->addItem(tr("Rockband", "Harmonix Rockband Drum Kit"), static_cast<int>(product.type));
 			break;
 		}
+		case input::product_type::harmonix_rockband_drum_kit_2:
+		{
+			ui->chooseProduct->addItem(tr("Rockband Pro", "Harmonix Rockband Pro-Drum Kit"), static_cast<int>(product.type));
+			break;
+		}
 		case input::product_type::harmonix_rockband_guitar:
 		{
 			ui->chooseProduct->addItem(tr("Rockband", "Harmonix Rockband Guitar"), static_cast<int>(product.type));
