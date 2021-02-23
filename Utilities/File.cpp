@@ -946,6 +946,16 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 #endif
 }
 
+void fs::sync()
+{
+#ifdef _WIN32
+	fs::g_tls_error = fs::error::unknown;
+#else
+	::sync();
+	fs::g_tls_error = fs::error::ok;
+#endif
+}
+
 [[noreturn]] void fs::xnull(const src_loc& loc)
 {
 	fmt::throw_exception("Null object.%s", loc);

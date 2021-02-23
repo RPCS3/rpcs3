@@ -1929,6 +1929,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		// Remove old backup
 		fs::remove_all(old_path);
+		fs::sync();
 
 		// Backup old savedata
 		if (!vfs::host::rename(dir_path, old_path, &g_mp_sys_dev_hdd0, false))
