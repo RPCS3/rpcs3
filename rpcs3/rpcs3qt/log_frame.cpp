@@ -15,14 +15,14 @@
 
 #include <sstream>
 #include <deque>
-#include <mutex>
+
+#include "Emu/Cell/lv2/sys_tty.h"
+#include "Emu/IdManager.h"
+#include "Emu/System.h"
 
 #include "util/sysinfo.hpp"
 
-extern fs::file g_tty;
-extern atomic_t<s64> g_tty_size;
 extern std::array<std::deque<std::string>, 16> g_tty_input;
-extern std::mutex g_tty_mutex;
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -150,9 +150,6 @@ log_frame::log_frame(std::shared_ptr<gui_settings> guiSettings, QWidget *parent)
 	m_tabWidget->addTab(m_tty_container, tr("TTY"));
 
 	setWidget(m_tabWidget);
-
-	// Open or create TTY.log
-	m_tty_file.open(fs::get_cache_dir() + "TTY.log", fs::read + fs::create);
 
 	CreateAndConnectActions();
 
@@ -343,8 +340,11 @@ void log_frame::CreateAndConnectActions()
 	{
 		std::string text = m_tty_input->text().toStdString();
 
+		const auto tty = g_fxo->get<tty_t>();
+
+		if (tty)
 		{
-			std::lock_guard lock(g_tty_mutex);
+			std::lock_guard lock(tty->mtx);
 
 			if (m_tty_channel == -1)
 			{
@@ -369,11 +369,10 @@ void log_frame::CreateAndConnectActions()
 			text = fmt::format("Ch.%d > %s\n", m_tty_channel, text);
 		}
 
-		if (g_tty)
+		if (tty && tty->fd)
 		{
-			g_tty_size -= (1ll << 48);
-			g_tty.write(text.c_str(), text.size());
-			g_tty_size += (1ll << 48) + text.size();
+			reader_lock lock(tty->mtx); 
+			tty->fd.write(text);
 		}
 
 		m_tty_input->clear();
@@ -481,25 +480,25 @@ void log_frame::UpdateUI()
 {
 	const auto start = steady_clock::now();
 
+	const auto tty = g_fxo->get<tty_t>();
+
 	// Check TTY logs
-	while (const u64 size = std::max<s64>(0, g_tty_size.load() - (m_tty_file ? m_tty_file.pos() : 0)))
+	if (usz new_size = (tty && tty->fd ? tty->fd.size() : 0); new_size > m_tty_size)
 	{
-		std::string buf;
-		buf.resize(size);
-		buf.resize(m_tty_file.read(&buf.front(), buf.size()));
-
-		if (buf.find_first_of('\0') != umax)
+		if (m_TTYAct->isChecked())
 		{
-			m_tty_file.seek(s64{0} - buf.size(), fs::seek_mode::seek_cur);
-			break;
-		}
+			std::string buf;
+			{
+				std::lock_guard lock(tty->mtx);
+				const auto pos = tty->fd.pos();
+				tty->fd.seek(m_tty_size);
+				tty->fd.read(buf, new_size - m_tty_size);
+				tty->fd.seek(pos);
+			}
 
-		if (!buf.empty() && m_TTYAct->isChecked())
-		{
-			std::stringstream buf_stream;
-			buf_stream.str(buf);
-			std::string buf_line;
-			while (std::getline(buf_stream, buf_line))
+			// Process each line seperated by newlines
+			for (usz start_line = 0, end_line = buf.find_first_of('\n'); start_line < buf.size();
+				start_line = std::exchange(end_line, std::min<usz>(buf.size(), buf.find_first_of('\n', end_line + 1))) + 1)
 			{
 				// save old scroll bar state
 				QScrollBar* sb = m_tty->verticalScrollBar();
@@ -515,7 +514,7 @@ void log_frame::UpdateUI()
 				// clear selection or else it will get colorized as well
 				text_cursor.clearSelection();
 
-				const QString tty_text = QString::fromStdString(buf_line);
+				const QString tty_text = QString::fromStdString(buf.substr(start_line, end_line - start_line));
 
 				// create counter suffix and remove recurring line if needed
 				if (m_stack_tty)
@@ -557,11 +556,17 @@ void log_frame::UpdateUI()
 
 				// set scrollbar to max means auto-scroll
 				sb->setValue(is_max ? sb->maximum() : sb_pos);
+
+				// Limit processing time
+				if (steady_clock::now() >= start + 4ms)
+				{
+					new_size = m_tty_size + std::min<usz>(end_line + 1, buf.size());
+					break;
+				}
 			}
 		}
 
-		// Limit processing time
-		if (steady_clock::now() >= start + 4ms || buf.empty()) break;
+		m_tty_size = new_size;
 	}
 
 	const auto font_start_tag = [](const QColor& color) -> const QString { return QStringLiteral("<font color = \"") % color.name() % QStringLiteral("\">"); };

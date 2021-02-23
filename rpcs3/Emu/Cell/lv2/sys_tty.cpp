@@ -1,17 +1,61 @@
 #include "stdafx.h"
 #include "Emu/system_config.h"
+#include "Emu/IdManager.h"
+#include "Emu/System.h"
 
 #include "sys_tty.h"
 
 #include <deque>
-#include <mutex>
 
 LOG_CHANNEL(sys_tty);
 
-extern fs::file g_tty;
-extern atomic_t<s64> g_tty_size;
 extern std::array<std::deque<std::string>, 16> g_tty_input;
-extern std::mutex g_tty_mutex;
+
+tty_t::tty_t()
+{
+	const auto tty_path = fs::get_cache_dir() + "TTY.log";
+	fd.open(tty_path, fs::write + fs::read + fs::create);
+
+	if (!fd)
+	{
+		sys_tty.error("Failed to create TTY log: %s (%s)", tty_path, fs::g_tls_error);
+	}
+	else
+	{
+		m_start_pos = fd.seek(0, fs::seek_end);
+	}
+}
+
+void tty_t::write_header() const
+{
+	// Either title ID or name of the file
+	const std::string name = Emu.GetTitleID().empty() ? Emu.argv[0].substr(Emu.argv[0].find_last_of(fs::delim) + 1) : Emu.GetTitleID();
+
+	char last = '\n';
+
+	if (m_start_pos)
+	{
+		// Get last character
+		fd.seek(m_start_pos - 1);
+		fd.read(last);
+	}
+	
+	fd.write(fmt::format("%s[RPCS3] TTY of %s:\n", last != '\n' ? "\n" : "", name));
+}
+
+tty_t::~tty_t()
+{
+	std::string str;
+
+	if (fd)
+	{
+		fd.seek(m_start_pos);
+		fd.read(str, fd.size() - m_start_pos);
+	}
+
+	// Print TTY of current application
+	sys_tty.notice("\n%s", str);
+}
 
 error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadlen)
 {
@@ -37,7 +81,9 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 
 	if (len > 0)
 	{
-		std::lock_guard lock(g_tty_mutex);
+		const auto tty = g_fxo->get<tty_t>();
+
+		std::lock_guard lock(tty->mtx);
 
 		if (!g_tty_input[ch].empty())
 		{
@@ -127,12 +173,26 @@ error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwrit
 		{
 			sys_tty.notice(u8"sys_tty_write(): “%s”", msg);
 
-			if (g_tty)
+			const auto tty = g_fxo->get<tty_t>();
+
+			if (tty->fd)
 			{
-				// Lock size by making it negative
-				g_tty_size -= (1ll << 48);
-				g_tty.write(msg);
-				g_tty_size += (1ll << 48) + len;
+				reader_lock lock(tty->mtx);
+
+				if (tty->is_first.try_inc(1))
+				{
+					// First thread to write to TTY, write header
+					tty->write_header();
+					tty->is_first = 2;
+					tty->is_first.notify_all();
+				}
+				else if (tty->is_first == 1u)
+				{
+					// Wait for header to be written
+					tty->is_first.wait(1);
+				}
+
+				tty->fd.write(msg);
 			}
 		}
 		else if (g_cfg.core.debug_console_mode)

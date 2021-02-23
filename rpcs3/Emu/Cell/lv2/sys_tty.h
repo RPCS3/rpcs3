@@ -2,6 +2,27 @@
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Utilities/File.h"
+#include "Utilities/mutex.h"
+
+struct tty_t
+{
+	fs::file fd;
+	shared_mutex mtx;
+
+	// 0: Did not write header, first time
+	// 1: Header is currently being written, other writers should wait
+	// 2: Header was written
+	atomic_t<u32> is_first = 0;
+
+	tty_t();
+	~tty_t();
+
+	void write_header() const;
+
+private:
+	u64 m_start_pos = 0;
+};
 
 // TTY channels
 enum
