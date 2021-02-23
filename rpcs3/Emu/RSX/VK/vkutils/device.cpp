@@ -234,15 +234,14 @@ namespace vk
 		float queue_priorities[1] = { 0.f };
 		pgpu = &pdev;
 
-		ensure(graphics_queue_idx == present_queue_idx || present_queue_idx == UINT32_MAX); // TODO
+		ensure(graphics_queue_idx == present_queue_idx || present_queue_idx == umax); // TODO
 		m_graphics_queue_family = graphics_queue_idx;
 		m_present_queue_family = present_queue_idx;
 		m_transfer_queue_family = transfer_queue_idx;
 
 		std::vector<VkDeviceQueueCreateInfo> device_queues;
-		device_queues.push_back({});
 
-		auto & graphics_queue = device_queues.back();
+		auto& graphics_queue = device_queues.emplace_back();
 		graphics_queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 		graphics_queue.pNext = NULL;
 		graphics_queue.flags = 0;
@@ -250,12 +249,9 @@ namespace vk
 		graphics_queue.queueCount = 1;
 		graphics_queue.pQueuePriorities = queue_priorities;
 
-		if (graphics_queue_idx != transfer_queue_idx)
+		if (graphics_queue_idx != transfer_queue_idx && transfer_queue_idx != umax)
 		{
-			ensure(transfer_queue_idx != UINT32_MAX);
-
-			device_queues.push_back({});
-			auto & transfer_queue = device_queues.back();
+			auto& transfer_queue = device_queues.emplace_back();
 			transfer_queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 			transfer_queue.pNext = NULL;
 			transfer_queue.flags = 0;
