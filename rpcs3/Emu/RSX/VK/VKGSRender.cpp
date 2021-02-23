@@ -518,7 +518,7 @@ VKGSRender::VKGSRender() : GSRender()
 
 	m_current_frame = &frame_context_storage[0];
 
-	m_texture_cache.initialize((*m_device), m_device->get_graphics_queue(),
+	m_texture_cache.initialize((*m_device), m_swapchain->get_graphics_queue(),
 			m_texture_upload_buffer_ring_info);
 
 	vk::get_overlay_pass<vk::ui_overlay_renderer>()->init(*m_current_command_buffer, m_texture_upload_buffer_ring_info);
@@ -1960,7 +1960,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 
 			m_secondary_command_buffer.end();
 
-			m_secondary_command_buffer.submit(m_device->get_graphics_queue(),
+			m_secondary_command_buffer.submit(m_swapchain->get_graphics_queue(),
 				VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, force_flush);
 		}
 
@@ -1992,7 +1992,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	m_current_command_buffer->end();
 	m_current_command_buffer->tag();
 
-	m_current_command_buffer->submit(m_device->get_graphics_queue(),
+	m_current_command_buffer->submit(m_swapchain->get_graphics_queue(),
 		wait_semaphore, signal_semaphore, pFence, pipeline_stage_flags, force_flush);
 
 	if (force_flush)

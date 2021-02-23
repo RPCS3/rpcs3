@@ -89,14 +89,6 @@ namespace vk
 		std::unique_ptr<mem_allocator_base> m_allocator;
 		VkDevice dev = VK_NULL_HANDLE;
 
-		VkQueue m_graphics_queue = VK_NULL_HANDLE;
-		VkQueue m_present_queue = VK_NULL_HANDLE;
-		VkQueue m_transfer_queue = VK_NULL_HANDLE;
-
-		u32 m_graphics_queue_family = 0;
-		u32 m_present_queue_family = 0;
-		u32 m_transfer_queue_family = 0;
-
 	public:
 		// Exported device endpoints
 		PFN_vkCmdBeginConditionalRenderingEXT cmdBeginConditionalRenderingEXT = nullptr;
@@ -106,7 +98,7 @@ namespace vk
 		render_device() = default;
 		~render_device() = default;
 
-		void create(vk::physical_device& pdev, u32 graphics_queue_idx, u32 present_queue_idx, u32 transfer_queue_idx);
+		void create(vk::physical_device& pdev, u32 graphics_queue_idx);
 		void destroy();
 
 		const VkFormatProperties get_format_properties(VkFormat format);
@@ -126,13 +118,6 @@ namespace vk
 		bool get_unrestricted_depth_range_support() const;
 		bool get_external_memory_host_support() const;
 		bool get_surface_capabilities_2_support() const;
-
-		VkQueue get_present_queue() const;
-		VkQueue get_graphics_queue() const;
-		VkQueue get_transfer_queue() const;
-		u32 get_graphics_queue_family() const;
-		u32 get_present_queue_family() const;
-		u32 get_transfer_queue_family() const;
 
 		mem_allocator_base* get_allocator() const;
 

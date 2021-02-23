@@ -307,53 +307,61 @@ namespace vk
 #endif
 
 			u32 device_queues = dev.get_queue_count();
-			std::vector<VkBool32> supports_present(device_queues, VK_FALSE);
-			bool present_possible = true;
+			std::vector<VkBool32> supportsPresent(device_queues, VK_FALSE);
+			bool present_possible = false;
 
 			for (u32 index = 0; index < device_queues; index++)
 			{
-				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, m_surface, &supports_present[index]);
+				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, m_surface, &supportsPresent[index]);
 			}
 
+			for (const auto& value : supportsPresent)
+			{
+				if (value)
+				{
+					present_possible = true;
+					break;
+				}
+			}
+
+			if (!present_possible)
+			{
+				rsx_log.error("It is not possible for the currently selected GPU to present to the window (Likely caused by NVIDIA driver running the current display)");
+			}
+
+			// Search for a graphics and a present queue in the array of queue
+			// families, try to find one that supports both
 			u32 graphicsQueueNodeIndex = UINT32_MAX;
 			u32 presentQueueNodeIndex = UINT32_MAX;
-			u32 transferQueueNodeIndex = UINT32_MAX;
 
-			auto test_queue_family = [&](u32 index, u32 desired_flags)
+			for (u32 i = 0; i < device_queues; i++)
 			{
-				if (const auto flags = dev.get_queue_properties(index).queueFlags;
-					(flags & desired_flags) == desired_flags)
+				if ((dev.get_queue_properties(i).queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
 				{
-					return true;
-				}
+					if (graphicsQueueNodeIndex == UINT32_MAX)
+						graphicsQueueNodeIndex = i;
 
-				return false;
-			};
-
-			for (u32 i = 0; i < device_queues; ++i)
-			{
-				// 1. Test for a present queue possibly one that also supports present
-				if (presentQueueNodeIndex == UINT32_MAX && supports_present[i])
-				{
-					presentQueueNodeIndex = i;
-					if (test_queue_family(i, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
+					if (supportsPresent[i] == VK_TRUE)
 					{
 						graphicsQueueNodeIndex = i;
+						presentQueueNodeIndex = i;
+
+						break;
 					}
 				}
-				// 2. Check for graphics support
-				else if (graphicsQueueNodeIndex == UINT32_MAX && test_queue_family(i, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
+			}
+
+			if (presentQueueNodeIndex == UINT32_MAX)
+			{
+				// If didn't find a queue that supports both graphics and present, then
+				// find a separate present queue.
+				for (u32 i = 0; i < device_queues; ++i)
 				{
-					graphicsQueueNodeIndex = i;
-					if (supports_present[i])
+					if (supportsPresent[i] == VK_TRUE)
 					{
 						presentQueueNodeIndex = i;
+						break;
 					}
-				}
-				// 3. Check if transfer + compute is available
-				else if (transferQueueNodeIndex == UINT32_MAX && test_queue_family(i, VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT))
-				{
-					transferQueueNodeIndex = i;
 				}
 			}
 
@@ -365,16 +373,15 @@ namespace vk
 
 			if (graphicsQueueNodeIndex != presentQueueNodeIndex)
 			{
-				// Separate graphics and present, use headless fallback
+				//Separate graphics and present, use headless fallback
 				present_possible = false;
 			}
 
 			if (!present_possible)
 			{
 				//Native(sw) swapchain
-				rsx_log.error("It is not possible for the currently selected GPU to present to the window (Likely caused by NVIDIA driver running the current display)");
 				rsx_log.warning("Falling back to software present support (native windowing API)");
-				auto swapchain = new swapchain_NATIVE(dev, UINT32_MAX, graphicsQueueNodeIndex, transferQueueNodeIndex);
+				auto swapchain = new swapchain_NATIVE(dev, UINT32_MAX, graphicsQueueNodeIndex);
 				swapchain->create(window_handle);
 				return swapchain;
 			}
@@ -411,7 +418,7 @@ namespace vk
 
 			color_space = surfFormats[0].colorSpace;
 
-			return new swapchain_WSI(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, transferQueueNodeIndex, format, m_surface, color_space, force_wm_reporting_off);
+			return new swapchain_WSI(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, format, m_surface, color_space, force_wm_reporting_off);
 		}
 	};
 }
