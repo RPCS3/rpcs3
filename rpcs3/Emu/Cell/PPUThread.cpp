@@ -2222,6 +2222,11 @@ extern void ppu_finalize(const ppu_module& info)
 
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx)
 {
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
+	{
+		return;
+	}
+
 	// Make sure we only have one '/' at the end and remove duplicates.
 	for (std::string& dir : dir_queue)
 	{
