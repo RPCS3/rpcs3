@@ -149,6 +149,9 @@
     <ClCompile Include="util\sysinfo.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="util\cpu_stats.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\version.cpp" />
     <ClCompile Include="util\vm_native.cpp" />
@@ -508,6 +511,7 @@
     <ClInclude Include="util\slow_mutex.hpp" />
     <ClInclude Include="util\fifo_mutex.hpp" />
     <ClInclude Include="util\logs.hpp" />
+    <ClInclude Include="util\cpu_stats.hpp" />
     <ClInclude Include="..\Utilities\dyn_lib.hpp" />
     <ClInclude Include="..\Utilities\File.h" />
     <ClInclude Include="..\Utilities\Config.h" />

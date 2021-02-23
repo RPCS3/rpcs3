@@ -1,6 +1,7 @@
-#pragma once
-
 #include "util/types.hpp"
+#include "util/cpu_stats.hpp"
+#include "util/sysinfo.hpp"
+#include <algorithm>
 
 #ifdef _WIN32
 #include "windows.h"
@@ -43,34 +44,18 @@
 # endif
 #endif
 
-class CPUStats
+namespace utils
 {
-#ifdef _WIN32
-	HANDLE m_self;
-	using time_type = ULARGE_INTEGER;
-#else
-	using time_type = clock_t;
-#endif
-
-private:
-	s32 m_num_processors;
-	time_type m_last_cpu, m_sys_cpu, m_usr_cpu;
-
-public:
-	CPUStats()
+	cpu_stats::cpu_stats()
 	{
 #ifdef _WIN32
 		SYSTEM_INFO sysInfo;
 		FILETIME ftime, fsys, fuser;
 
-		GetSystemInfo(&sysInfo);
-		m_num_processors = sysInfo.dwNumberOfProcessors;
-
 		GetSystemTimeAsFileTime(&ftime);
 		memcpy(&m_last_cpu, &ftime, sizeof(FILETIME));
 
-		m_self = GetCurrentProcess();
-		GetProcessTimes(m_self, &ftime, &ftime, &fsys, &fuser);
+		GetProcessTimes(GetCurrentProcess(), &ftime, &ftime, &fsys, &fuser);
 		memcpy(&m_sys_cpu, &fsys, sizeof(FILETIME));
 		memcpy(&m_usr_cpu, &fuser, sizeof(FILETIME));
 #else
@@ -79,11 +64,10 @@ public:
 		m_last_cpu = times(&timeSample);
 		m_sys_cpu  = timeSample.tms_stime;
 		m_usr_cpu  = timeSample.tms_utime;
-		m_num_processors = sysconf(_SC_NPROCESSORS_ONLN);
 #endif
 	}
 
-	double get_usage()
+	double cpu_stats::get_usage()
 	{
 #ifdef _WIN32
 		FILETIME ftime, fsys, fusr;
@@ -92,16 +76,16 @@ public:
 		GetSystemTimeAsFileTime(&ftime);
 		memcpy(&now, &ftime, sizeof(FILETIME));
 
-		GetProcessTimes(m_self, &ftime, &ftime, &fsys, &fusr);
+		GetProcessTimes(GetCurrentProcess(), &ftime, &ftime, &fsys, &fusr);
 		memcpy(&sys, &fsys, sizeof(FILETIME));
 		memcpy(&usr, &fusr, sizeof(FILETIME));
-		double percent = double(sys.QuadPart - m_sys_cpu.QuadPart) + (usr.QuadPart - m_usr_cpu.QuadPart);
-		percent /= (now.QuadPart - m_last_cpu.QuadPart);
-		percent /= m_num_processors;
+		double percent = 1. * (sys.QuadPart - m_sys_cpu) + (usr.QuadPart - m_usr_cpu);
+		percent /= (now.QuadPart - m_last_cpu);
+		percent /= utils::get_thread_count();
 
-		m_last_cpu = now;
-		m_usr_cpu  = usr;
-		m_sys_cpu  = sys;
+		m_last_cpu = now.QuadPart;
+		m_usr_cpu  = usr.QuadPart;
+		m_sys_cpu  = sys.QuadPart;
 
 		return std::clamp(percent * 100, 0.0, 100.0);
 #else
@@ -110,7 +94,7 @@ public:
 		double percent;
 
 		now = times(&timeSample);
-		if (now <= m_last_cpu || timeSample.tms_stime < m_sys_cpu || timeSample.tms_utime < m_usr_cpu)
+		if (now <= static_cast<clock_t>(m_last_cpu) || timeSample.tms_stime < static_cast<clock_t>(m_sys_cpu) || timeSample.tms_utime < static_cast<clock_t>(m_usr_cpu))
 		{
 			// Overflow detection. Just skip this value.
 			percent = -1.0;
@@ -119,7 +103,7 @@ public:
 		{
 			percent = (timeSample.tms_stime - m_sys_cpu) + (timeSample.tms_utime - m_usr_cpu);
 			percent /= (now - m_last_cpu);
-			percent /= m_num_processors;
+			percent /= utils::get_thread_count();
 			percent *= 100;
 		}
 		m_last_cpu = now;
@@ -130,7 +114,7 @@ public:
 #endif
 	}
 
-	static u32 get_thread_count()
+	u32 cpu_stats::get_thread_count() // static
 	{
 #ifdef _WIN32
 		// first determine the id of the current process
@@ -240,4 +224,4 @@ public:
 		return 0;
 #endif
 	}
-};
+}

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "overlays.h"
-#include "Utilities/CPUStats.h"
+#include "util/cpu_stats.hpp"
 #include "Emu/system_config_types.h"
 
 namespace rsx
@@ -28,7 +28,7 @@ namespace rsx
 			graph m_fps_graph;
 			graph m_frametime_graph;
 
-			CPUStats m_cpu_stats{};
+			utils::cpu_stats m_cpu_stats{};
 			Timer m_update_timer{};
 			Timer m_frametime_timer{};
 			u32 m_update_interval{}; // in ms
