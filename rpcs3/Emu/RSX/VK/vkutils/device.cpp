@@ -235,10 +235,6 @@ namespace vk
 		pgpu = &pdev;
 
 		ensure(graphics_queue_idx == present_queue_idx || present_queue_idx == umax); // TODO
-		m_graphics_queue_family = graphics_queue_idx;
-		m_present_queue_family = present_queue_idx;
-		m_transfer_queue_family = transfer_queue_idx;
-
 		std::vector<VkDeviceQueueCreateInfo> device_queues;
 
 		auto& graphics_queue = device_queues.emplace_back();
@@ -249,7 +245,27 @@ namespace vk
 		graphics_queue.queueCount = 1;
 		graphics_queue.pQueuePriorities = queue_priorities;
 
-		if (graphics_queue_idx != transfer_queue_idx && transfer_queue_idx != umax)
+		u32 transfer_queue_sub_index = 0;
+		if (transfer_queue_idx == umax)
+		{
+			// Transfer queue must be a valid device queue
+			rsx_log.warning("Dedicated transfer+compute queue was not found on this GPU. Will use graphics queue instead.");
+			transfer_queue_idx = graphics_queue_idx;
+
+			// Check if we can at least get a second graphics queue
+			if (pdev.get_queue_properties(graphics_queue_idx).queueCount > 1)
+			{
+				rsx_log.notice("Will use a spare graphics queue to push transfer operations.");
+				graphics_queue.queueCount++;
+				transfer_queue_sub_index = 1;
+			}
+		}
+
+		m_graphics_queue_family = graphics_queue_idx;
+		m_present_queue_family = present_queue_idx;
+		m_transfer_queue_family = transfer_queue_idx;
+
+		if (graphics_queue_idx != transfer_queue_idx)
 		{
 			auto& transfer_queue = device_queues.emplace_back();
 			transfer_queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -407,7 +423,7 @@ namespace vk
 
 		// Initialize queues
 		vkGetDeviceQueue(dev, graphics_queue_idx, 0, &m_graphics_queue);
-		vkGetDeviceQueue(dev, transfer_queue_idx, 0, &m_transfer_queue);
+		vkGetDeviceQueue(dev, transfer_queue_idx, transfer_queue_sub_index, &m_transfer_queue);
 
 		if (present_queue_idx != UINT32_MAX)
 		{
