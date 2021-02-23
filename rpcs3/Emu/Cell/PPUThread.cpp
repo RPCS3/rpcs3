@@ -455,7 +455,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 {
 	// Pause
-	ppu.state += cpu_flag::dbg_pause;
+	ppu.state.atomic_op([](bs_t<cpu_flag>& state) { if (!(state & cpu_flag::dbg_step)) state += cpu_flag::dbg_pause; });
 	
 	if (ppu.check_state())
 	{
@@ -2222,6 +2222,11 @@ extern void ppu_finalize(const ppu_module& info)
 
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx)
 {
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
+	{
+		return;
+	}
+
 	// Make sure we only have one '/' at the end and remove duplicates.
 	for (std::string& dir : dir_queue)
 	{

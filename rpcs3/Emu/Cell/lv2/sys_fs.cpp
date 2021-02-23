@@ -768,6 +768,13 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 			// Preprocess entries
 			data.back().name = vfs::unescape(data.back().name);
 
+			if (!data.back().is_directory && data.back().name == "."sv)
+			{
+				// Files hidden from emulation
+				data.resize(data.size() - 1);
+				continue;
+			}
+
 			// Add additional entries for split file candidates (while ends with .66600)
 			while (data.back().name.ends_with(".66600"))
 			{

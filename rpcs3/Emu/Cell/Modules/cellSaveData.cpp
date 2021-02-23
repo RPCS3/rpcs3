@@ -569,7 +569,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	const auto lv2_sleep = [](ppu_thread& ppu, usz sleep_time)
 	{
 		lv2_obj::sleep(ppu);
-		std::this_thread::sleep_for(std::chrono::microseconds(sleep_time));
+		lv2_obj::wait_timeout(sleep_time);
 		ppu.check_state();
 	};
 
@@ -1312,7 +1312,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (!entry.is_directory)
 			{
-				if (entry.name == "PARAM.SFO" || entry.name == "PARAM.PFD")
+				if (entry.name == "."sv)
+				{
+					continue;
+				}
+
+				if (entry.name == "PARAM.SFO"sv || entry.name == "PARAM.PFD"sv)
 				{
 					continue; // system files are not included in the file list
 				}
@@ -1531,6 +1536,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		{
 			// Read file into a vector and make a memory file
 			entry.name = vfs::unescape(entry.name);
+
+			if (entry.name == ".")
+			{
+				continue;
+			}
+
 			all_times.emplace(entry.name, std::make_pair(entry.atime, entry.mtime));
 			all_files.emplace(std::move(entry.name), fs::make_stream(fs::file(dir_path + entry.name).to_vector<uchar>()));
 		}
@@ -1905,14 +1916,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		// Write all files in temporary directory
 		auto& fsfo = all_files["PARAM.SFO"];
 		fsfo = fs::make_stream<std::vector<uchar>>();
-		psf::save_object(fsfo, psf);
+		fsfo.write(psf::save_object(psf));
 
 		for (auto&& pair : all_files)
 		{
 			if (auto file = pair.second.release())
 			{
-				auto fvec = static_cast<fs::container_stream<std::vector<uchar>>&>(*file);
-				fs::file(new_path + vfs::escape(pair.first), fs::rewrite).write(fvec.obj);
+				auto&& fvec = static_cast<fs::container_stream<std::vector<uchar>>&>(*file);
+				ensure(fs::write_file<true>(new_path + vfs::escape(pair.first), fs::rewrite, fvec.obj));
 			}
 		}
 
@@ -1924,6 +1935,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		// Remove old backup
 		fs::remove_all(old_path);
+		fs::sync();
 
 		// Backup old savedata
 		if (!vfs::host::rename(dir_path, old_path, &g_mp_sys_dev_hdd0, false))

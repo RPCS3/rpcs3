@@ -85,7 +85,7 @@ error_code cellPadEnd()
 	return CELL_OK;
 }
 
-void clear_pad_buffer(const std::shared_ptr<Pad> pad)
+void clear_pad_buffer(const std::shared_ptr<Pad>& pad)
 {
 	if (!pad)
 		return;
@@ -159,7 +159,6 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto pad = pads[port_no];
-	const auto setting = config->port_setting[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
@@ -172,6 +171,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		return CELL_OK;
 	}
 
+	const auto setting = config->port_setting[port_no];
 	bool btnChanged = false;
 
 	if (rinfo.ignore_input)

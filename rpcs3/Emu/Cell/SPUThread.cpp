@@ -4661,21 +4661,34 @@ bool spu_thread::capture_local_storage() const
 	};
 
 	auto elf_path = get_filename();
-	fs::file dump_file(elf_path, fs::create + fs::excl + fs::write);
 
-	if (!dump_file)
+	if (fs::exists(elf_path))
 	{
 		// Wait 1 second so current_time_narrow() will return a different string
 		std::this_thread::sleep_for(1s);
 
-		if (elf_path = get_filename(); !dump_file.open(elf_path, fs::create + fs::excl + fs::write))
+		if (elf_path = get_filename(); fs::exists(elf_path))
 		{
 			spu_log.error("Failed to create '%s' (error=%s)", elf_path, fs::g_tls_error);
 			return false;
 		}
 	}
 
-	spu_exec.save(dump_file);
+	fs::pending_file temp(elf_path);
+
+	if (!temp.file)
+	{
+		spu_log.error("Failed to create temporary file for '%s' (error=%s)", elf_path, fs::g_tls_error);
+		return false;
+	}
+
+	temp.file.write(spu_exec.save());
+
+	if (!temp.commit(false))
+	{
+		spu_log.error("Failed to create rename temporary file to '%s' (error=%s)", elf_path, fs::g_tls_error);
+		return false;
+	}
 
 	spu_log.success("SPU Local Storage image saved to '%s'", elf_path);
 	return true;

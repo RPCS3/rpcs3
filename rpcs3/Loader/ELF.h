@@ -278,8 +278,10 @@ public:
 		return m_error = elf_error::ok;
 	}
 
-	void save(const fs::file& stream) const
+	std::vector<u8> save(std::vector<u8>&& init = std::vector<u8>{}) const
 	{
+		fs::file stream = fs::make_stream<std::vector<u8>>(std::move(init));
+
 		// Write header
 		ehdr_t header{};
 		header.e_magic = "\177ELF"_u32;
@@ -322,6 +324,8 @@ public:
 		{
 			stream.write(prog.bin);
 		}
+
+		return std::move(static_cast<fs::container_stream<std::vector<u8>>*>(stream.release().get())->obj);
 	}
 
 	elf_object& clear()

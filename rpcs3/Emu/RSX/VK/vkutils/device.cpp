@@ -228,18 +228,37 @@ namespace vk
 	}
 
 	// Render Device - The actual usable device
-	void render_device::create(vk::physical_device& pdev, u32 graphics_queue_idx)
+	void render_device::create(vk::physical_device& pdev, u32 graphics_queue_idx, u32 present_queue_idx, u32 transfer_queue_idx)
 	{
 		std::string message_on_error;
 		float queue_priorities[1] = { 0.f };
 		pgpu = &pdev;
 
-		VkDeviceQueueCreateInfo queue = {};
-		queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queue.pNext = NULL;
-		queue.queueFamilyIndex = graphics_queue_idx;
-		queue.queueCount = 1;
-		queue.pQueuePriorities = queue_priorities;
+		ensure(graphics_queue_idx == present_queue_idx || present_queue_idx == umax); // TODO
+		m_graphics_queue_family = graphics_queue_idx;
+		m_present_queue_family = present_queue_idx;
+		m_transfer_queue_family = transfer_queue_idx;
+
+		std::vector<VkDeviceQueueCreateInfo> device_queues;
+
+		auto& graphics_queue = device_queues.emplace_back();
+		graphics_queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		graphics_queue.pNext = NULL;
+		graphics_queue.flags = 0;
+		graphics_queue.queueFamilyIndex = graphics_queue_idx;
+		graphics_queue.queueCount = 1;
+		graphics_queue.pQueuePriorities = queue_priorities;
+
+		if (graphics_queue_idx != transfer_queue_idx && transfer_queue_idx != umax)
+		{
+			auto& transfer_queue = device_queues.emplace_back();
+			transfer_queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			transfer_queue.pNext = NULL;
+			transfer_queue.flags = 0;
+			transfer_queue.queueFamilyIndex = transfer_queue_idx;
+			transfer_queue.queueCount = 1;
+			transfer_queue.pQueuePriorities = queue_priorities;
+		}
 
 		// Set up instance information
 		std::vector<const char*> requested_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
@@ -361,8 +380,8 @@ namespace vk
 		VkDeviceCreateInfo device = {};
 		device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		device.pNext = nullptr;
-		device.queueCreateInfoCount = 1;
-		device.pQueueCreateInfos = &queue;
+		device.queueCreateInfoCount = ::size32(device_queues);
+		device.pQueueCreateInfos = device_queues.data();
 		device.enabledLayerCount = 0;
 		device.ppEnabledLayerNames = nullptr; // Deprecated
 		device.enabledExtensionCount = ::size32(requested_extensions);
@@ -385,6 +404,15 @@ namespace vk
 		}
 
 		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);
+
+		// Initialize queues
+		vkGetDeviceQueue(dev, graphics_queue_idx, 0, &m_graphics_queue);
+		vkGetDeviceQueue(dev, transfer_queue_idx, 0, &m_transfer_queue);
+
+		if (present_queue_idx != UINT32_MAX)
+		{
+			vkGetDeviceQueue(dev, present_queue_idx, 0, &m_present_queue);
+		}
 
 		// Import optional function endpoints
 		if (pgpu->conditional_render_support)
@@ -423,6 +451,36 @@ namespace vk
 			memory_map = {};
 			m_formats_support = {};
 		}
+	}
+
+	VkQueue render_device::get_present_queue() const
+	{
+		return m_present_queue;
+	}
+
+	VkQueue render_device::get_graphics_queue() const
+	{
+		return m_graphics_queue;
+	}
+
+	VkQueue render_device::get_transfer_queue() const
+	{
+		return m_transfer_queue;
+	}
+
+	u32 render_device::get_graphics_queue_family() const
+	{
+		return m_graphics_queue_family;
+	}
+
+	u32 render_device::get_present_queue_family() const
+	{
+		return m_graphics_queue_family;
+	}
+
+	u32 render_device::get_transfer_queue_family() const
+	{
+		return m_transfer_queue_family;
 	}
 
 	const VkFormatProperties render_device::get_format_properties(VkFormat format)

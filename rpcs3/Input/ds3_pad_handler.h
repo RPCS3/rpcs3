@@ -1,12 +1,18 @@
 #pragma once
 
-#include "Emu/Io/PadHandler.h"
-
-#include "hidapi.h"
+#include "hid_pad_handler.h"
 
 #include <unordered_map>
 
-class ds3_pad_handler final : public PadHandlerBase
+class ds3_device : public HidDevice
+{
+public:
+#ifdef _WIN32
+	u8 report_id = 0;
+#endif
+};
+
+class ds3_pad_handler final : public hid_pad_handler<ds3_device>
 {
 	enum DS3KeyCodes
 	{
@@ -64,60 +70,24 @@ class ds3_pad_handler final : public PadHandlerBase
 		DS3_ENDPOINT_IN = 0x81
 	};
 
-	enum DS3Status : u8
-	{
-		Disconnected,
-		Connected,
-		NewData
-	};
-
-	struct ds3_device : public PadDevice
-	{
-		std::string device = {};
-		hid_device *handle = nullptr;
-		u8 buf[64]{ 0 };
-		u8 large_motor = 0;
-		u8 small_motor = 0;
-		u8 status = DS3Status::Disconnected;
-#ifdef _WIN32
-		u8 report_id = 0;
-#endif
-	};
-
-	const u16 DS3_VID = 0x054C;
-	const u16 DS3_PID = 0x0268;
-
 #ifdef _WIN32
 	const u8 DS3_HID_OFFSET = 0x01;
 #else
 	const u8 DS3_HID_OFFSET = 0x00;
 #endif
 
-	// pseudo 'controller id' to keep track of unique controllers
-	std::vector<std::shared_ptr<ds3_device>> controllers;
-
 public:
 	ds3_pad_handler();
 	~ds3_pad_handler();
 
-	bool Init() override;
-
-	std::vector<std::string> ListDevices() override;
 	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
-	std::shared_ptr<ds3_device> get_ds3_device(const std::string& padId);
-	ds3_pad_handler::DS3Status get_data(const std::shared_ptr<ds3_device>& ds3dev);
-	void send_output_report(const std::shared_ptr<ds3_device>& ds3dev);
+	ds3_pad_handler::DataStatus get_data(ds3_device* ds3dev) override;
+	int send_output_report(ds3_device* ds3dev) override;
+	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view serial) override;
 
-private:
-	bool init_usb();
-
-private:
-	bool is_init = false;
-
-	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 	bool get_is_left_trigger(u64 keyCode) override;
 	bool get_is_right_trigger(u64 keyCode) override;
 	bool get_is_left_stick(u64 keyCode) override;

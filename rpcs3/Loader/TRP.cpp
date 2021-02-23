@@ -47,7 +47,7 @@ bool TRPLoader::Install(const std::string& dest, bool show)
 		}
 
 		// Create the file in the temporary directory
-		success = fs::write_file(temp + '/' + vfs::escape(entry.name), fs::create + fs::excl, buffer);
+		success = fs::write_file<true>(temp + '/' + vfs::escape(entry.name), fs::create + fs::excl, buffer);
 		if (!success)
 		{
 			break;

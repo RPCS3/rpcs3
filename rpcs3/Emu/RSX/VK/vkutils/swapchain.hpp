@@ -73,11 +73,6 @@ namespace vk
 	protected:
 		render_device dev;
 
-		u32 m_present_queue = UINT32_MAX;
-		u32 m_graphics_queue = UINT32_MAX;
-		VkQueue vk_graphics_queue = VK_NULL_HANDLE;
-		VkQueue vk_present_queue = VK_NULL_HANDLE;
-
 		display_handle_t window_handle{};
 		u32 m_width = 0;
 		u32 m_height = 0;
@@ -86,15 +81,9 @@ namespace vk
 		virtual void init_swapchain_images(render_device& dev, u32 count) = 0;
 
 	public:
-		swapchain_base(physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		swapchain_base(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
 		{
-			dev.create(gpu, _graphics_queue);
-
-			if (_graphics_queue < UINT32_MAX) vkGetDeviceQueue(dev, _graphics_queue, 0, &vk_graphics_queue);
-			if (_present_queue < UINT32_MAX) vkGetDeviceQueue(dev, _present_queue, 0, &vk_present_queue);
-
-			m_present_queue = _present_queue;
-			m_graphics_queue = _graphics_queue;
+			dev.create(gpu, graphics_queue, present_queue, transfer_queue);
 			m_surface_format = format;
 		}
 
@@ -128,16 +117,6 @@ namespace vk
 			return dev;
 		}
 
-		const VkQueue& get_present_queue()
-		{
-			return vk_present_queue;
-		}
-
-		const VkQueue& get_graphics_queue()
-		{
-			return vk_graphics_queue;
-		}
-
 		const VkFormat get_surface_format()
 		{
 			return m_surface_format;
@@ -145,7 +124,7 @@ namespace vk
 
 		const bool is_headless() const
 		{
-			return (vk_present_queue == VK_NULL_HANDLE);
+			return (dev.get_present_queue() == VK_NULL_HANDLE);
 		}
 	};
 
@@ -156,8 +135,8 @@ namespace vk
 		std::vector<T> swapchain_images;
 
 	public:
-		abstract_swapchain_impl(physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
-			: swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		abstract_swapchain_impl(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+			: swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 		{}
 
 		~abstract_swapchain_impl() override = default;
@@ -183,8 +162,8 @@ namespace vk
 		LPVOID hPtr = NULL;
 
 	public:
-		swapchain_WIN32(physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
-			: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		swapchain_WIN32(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+			: native_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 		{}
 
 		~swapchain_WIN32() {}
@@ -266,8 +245,8 @@ namespace vk
 		void* nsView = nullptr;
 
 	public:
-		swapchain_MacOS(physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
-			: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		swapchain_MacOS(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+			: native_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 		{}
 
 		~swapchain_MacOS() {}
@@ -316,8 +295,8 @@ namespace vk
 		int bit_depth = 24;
 
 	public:
-		swapchain_X11(physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
-			: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		swapchain_X11(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+			: native_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 		{}
 
 		~swapchain_X11() override = default;
@@ -418,8 +397,8 @@ namespace vk
 	{
 
 	public:
-		swapchain_Wayland(physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
-			: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		swapchain_Wayland(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+			: native_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 		{}
 
 		~swapchain_Wayland() {}
@@ -524,8 +503,8 @@ namespace vk
 		}
 
 	public:
-		swapchain_WSI(vk::physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space, bool force_wm_reporting_off)
-			: WSI_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		swapchain_WSI(vk::physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space, bool force_wm_reporting_off)
+			: WSI_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 		{
 			createSwapchainKHR = reinterpret_cast<PFN_vkCreateSwapchainKHR>(vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR"));
 			destroySwapchainKHR = reinterpret_cast<PFN_vkDestroySwapchainKHR>(vkGetDeviceProcAddr(dev, "vkDestroySwapchainKHR"));
@@ -622,7 +601,7 @@ namespace vk
 		using WSI_swapchain_base::init;
 		bool init() override
 		{
-			if (vk_present_queue == VK_NULL_HANDLE)
+			if (dev.get_present_queue() == VK_NULL_HANDLE)
 			{
 				rsx_log.error("Cannot create WSI swapchain without a present queue");
 				return false;
@@ -791,7 +770,7 @@ namespace vk
 			present.waitSemaphoreCount = 1;
 			present.pWaitSemaphores = &semaphore;
 
-			return queuePresentKHR(vk_present_queue, &present);
+			return queuePresentKHR(dev.get_present_queue(), &present);
 		}
 
 		VkImage get_image(u32 index) override

@@ -1558,7 +1558,6 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 	struct
 	{
 		alignas(16) char buf[sizeof(sys_net_sockaddr)];
-		bool changed = false;
 	} addr_buf;
 
 	const auto psa_in = reinterpret_cast<sys_net_sockaddr_in*>(addr_buf.buf);
@@ -1665,11 +1664,6 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 			name.sin_port        = std::bit_cast<u16, be_t<u16>>(53);
 			name.sin_addr.s_addr = nph->get_dns_ip();
 
-			// Overwrite arg (probably used to validate recvfrom addr)
-			psa_in->sin_family = SYS_NET_AF_INET;
-			psa_in->sin_port   = 53;
-			psa_in->sin_addr   = nph->get_dns_ip();
-			addr_buf.changed = true;
 			sys_net.notice("sys_net_bnet_connect: using DNS...");
 
 			nph->add_dns_spy(s);
@@ -1763,11 +1757,6 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 	if (!sock)
 	{
 		return -SYS_NET_EBADF;
-	}
-
-	if (addr_buf.changed)
-	{
-		std::memcpy(addr.get_ptr(), addr_buf.buf, sizeof(addr_buf.buf));
 	}
 
 	if (!sock.ret && result)

@@ -1,12 +1,22 @@
 #pragma once
 
-#include "Emu/Io/PadHandler.h"
+#include "hid_pad_handler.h"
 #include "Utilities/CRC.h"
-#include "hidapi.h"
 
 #include <unordered_map>
 
-class ds4_pad_handler final : public PadHandlerBase
+class DS4Device : public HidDevice
+{
+public:
+	bool bt_controller{false};
+	bool has_calib_data{false};
+	std::array<CalibData, CalibIndex::COUNT> calib_data{};
+	u8 battery_level{0};
+	u8 last_battery_level{0};
+	u8 cable_state{0};
+};
+
+class ds4_pad_handler final : public hid_pad_handler<DS4Device>
 {
 	// These are all the possible buttons on a standard DS4 controller
 	// The touchpad is restricted to its button for now (or forever?)
@@ -46,101 +56,25 @@ class ds4_pad_handler final : public PadHandlerBase
 		KeyCodeCount
 	};
 
-	enum DS4CalibIndex
-	{
-		// gyro
-		PITCH = 0,
-		YAW,
-		ROLL,
-
-		// accel
-		X,
-		Y,
-		Z,
-		COUNT
-	};
-
-	struct DS4CalibData
-	{
-		s16 bias;
-		s32 sensNumer;
-		s32 sensDenom;
-	};
-
-	enum class DS4DataStatus
-	{
-		NewData,
-		NoNewData,
-		ReadError,
-	};
-
-	struct DS4Device : public PadDevice
-	{
-		hid_device* hidDevice{ nullptr };
-		std::string path{ "" };
-		bool btCon{ false };
-		bool hasCalibData{ false };
-		std::array<DS4CalibData, DS4CalibIndex::COUNT> calibData{};
-		bool newVibrateData{ true };
-		u8 largeVibrate{ 0 };
-		u8 smallVibrate{ 0 };
-		std::array<u8, 64> padData{};
-		u8 batteryLevel{ 0 };
-		u8 last_battery_level { 0 };
-		u8 cableState{ 0 };
-		u8 led_delay_on{ 0 };
-		u8 led_delay_off{ 0 };
-		bool is_initialized{ false };
-	};
-
-	const u16 DS4_VID = 0x054C;
-
-	// pid's of connected ds4
-	const std::array<u16, 3> ds4Pids = { { 0xBA0, 0x5C4, 0x09CC } };
-
-	// pseudo 'controller id' to keep track of unique controllers
-	std::unordered_map<std::string, std::shared_ptr<DS4Device>> controllers;
-	CRCPP::CRC::Table<u32, 32> crcTable{ CRCPP::CRC::CRC_32() };
-
 public:
 	ds4_pad_handler();
 	~ds4_pad_handler();
 
-	bool Init() override;
-
-	std::vector<std::string> ListDevices() override;
 	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
 	u32 get_battery_level(const std::string& padId) override;
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
-	bool is_init = false;
-	DS4DataStatus status;
 	u32 get_battery_color(u8 battery_level, int brightness);
 
-private:
-	std::shared_ptr<DS4Device> GetDS4Device(const std::string& padId);
-	// Copies data into padData if status is NewData, otherwise buffer is untouched
-	DS4DataStatus GetRawData(const std::shared_ptr<DS4Device>& ds4Device);
 	// This function gets us usuable buffer from the rawbuffer of padData
-	bool GetCalibrationData(const std::shared_ptr<DS4Device>& ds4Device);
-	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
-	int send_output_report(const std::shared_ptr<DS4Device>& device);
-	inline s16 ApplyCalibration(s32 rawValue, const DS4CalibData& calibData)
-	{
-		const s32 biased = rawValue - calibData.bias;
-		const s32 quot = calibData.sensNumer / calibData.sensDenom;
-		const s32 rem = calibData.sensNumer % calibData.sensDenom;
-		const s32 output = (quot * biased) + ((rem * biased) / calibData.sensDenom);
+	bool GetCalibrationData(DS4Device* ds4Device);
 
-		if (output > INT16_MAX)
-			return INT16_MAX;
-		else if (output < INT16_MIN)
-			return INT16_MIN;
-		else return static_cast<s16>(output);
-	}
+	// Copies data into padData if status is NewData, otherwise buffer is untouched
+	DataStatus get_data(DS4Device* ds4Device) override;
+	int send_output_report(DS4Device* device) override;
+	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view serial) override;
 
-	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 	bool get_is_left_trigger(u64 keyCode) override;
 	bool get_is_right_trigger(u64 keyCode) override;
 	bool get_is_left_stick(u64 keyCode) override;

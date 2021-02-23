@@ -304,10 +304,7 @@ void usb_handler_thread::operator()()
 		}
 
 		// If there is no handled devices usb thread is not actively needed
-		if (handled_devices.empty())
-			std::this_thread::sleep_for(500ms);
-		else
-			std::this_thread::sleep_for(200us);
+		thread_ctrl::wait_for(handled_devices.empty() ? 500'000 : 200);
 	}
 }
 

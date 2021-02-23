@@ -113,6 +113,8 @@ namespace psf
 			return result;
 		}
 
+		stream.seek(0);
+
 		// Get header
 		header_t header;
 		ensure(stream.read(header));
@@ -186,8 +188,10 @@ namespace psf
 		return result;
 	}
 
-	void save_object(const fs::file& stream, const psf::registry& psf)
+	std::vector<u8> save_object(const psf::registry& psf, std::vector<u8>&& init)
 	{
+		fs::file stream = fs::make_stream<std::vector<u8>>(std::move(init));
+
 		std::vector<def_table_t> indices; indices.reserve(psf.size());
 
 		// Generate indices and calculate key table length
@@ -264,6 +268,8 @@ namespace psf
 				fmt::throw_exception("Invalid entry format (key='%s', fmt=0x%x)", entry.first, fmt);
 			}
 		}
+
+		return std::move(static_cast<fs::container_stream<std::vector<u8>>*>(stream.release().get())->obj);
 	}
 
 	std::string_view get_string(const registry& psf, const std::string& key, std::string_view def)

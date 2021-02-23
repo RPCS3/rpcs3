@@ -1198,7 +1198,7 @@ usz get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, usz d_
 
 		if (reg != X64_NOT_SET) // get "full" access size from RCX register
 		{
-			u64 counter;
+			u64 counter = 1;
 			if (!get_x64_reg_value(context, reg, 8, i_size, counter))
 			{
 				return -1;
@@ -1445,7 +1445,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			// We notify the game that a page fault occurred so it can rectify it.
 			// Note, for data3, were the memory readable AND we got a page fault, it must be due to a write violation since reads are allowed.
 			u64 data1 = addr;
-			u64 data2;
+			u64 data2 = 0;
 
 			if (cpu->id_type() == 1)
 			{

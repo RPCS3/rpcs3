@@ -69,6 +69,7 @@ class Emulator final
 
 	atomic_t<u64> m_pause_start_time{0}; // set when paused
 	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
+	atomic_t<u64> m_stop_ctr{0}; // Increments when emulation is stopped
 
 	video_renderer m_default_renderer;
 	std::string m_default_graphics_adapter;
@@ -109,9 +110,22 @@ public:
 	}
 
 	// Call from the GUI thread
-	void CallAfter(std::function<void()>&& func) const
+	void CallAfter(std::function<void()>&& func, bool track_emu_state = true) const
 	{
-		return m_cb.call_after(std::move(func));
+		if (!track_emu_state)
+		{
+			return m_cb.call_after(std::move(func));
+		}
+
+		std::function<void()> final_func = [this, before = IsStopped(), count = +m_stop_ctr, func = std::move(func)]
+		{
+			if (count == m_stop_ctr && before == IsStopped())
+			{
+				func();
+			}
+		};
+
+		return m_cb.call_after(std::move(final_func));
 	}
 
 	/** Set emulator mode to running unconditionnaly.
@@ -244,6 +258,17 @@ public:
 	void ConfigurePPUCache();
 
 	std::set<std::string> GetGameDirs() const;
+
+	u64 GetEmulationCounter() const
+	{
+		return m_stop_ctr;
+	}
+
+	void WaitEmulationCounter(u64 old = -1) const
+	{
+		if (old == umax) old = m_stop_ctr; // Use current if not specified
+		if (m_stop_ctr == old) m_stop_ctr.wait(old);
+	}
 
 private:
 	void LimitCacheSize();

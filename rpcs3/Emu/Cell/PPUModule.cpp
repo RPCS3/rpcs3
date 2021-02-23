@@ -765,8 +765,12 @@ static void ppu_check_patch_spu_images(const ppu_segment& seg)
 
 		if (g_cfg.core.spu_debug)
 		{
-			fs::file dump_file(fs::get_cache_dir() + "/spu_progs/" + vfs::escape(name.substr(name.find_last_of('/') + 1)) + '_' + hash.substr(4) + ".elf", fs::rewrite);
-			obj.save(dump_file);
+			fs::pending_file temp(fs::get_cache_dir() + "/spu_progs/" + vfs::escape(name.substr(name.find_last_of('/') + 1)) + '_' + hash.substr(4) + ".elf");
+
+			if (!temp.file || !(temp.file.write(obj.save()), temp.commit()))
+			{
+				ppu_loader.error("Failed to dump SPU program from PPU executable: name='%s', hash=%s", name, hash);
+			}
 		}
 
 		// Try to patch each segment, will only succeed if the address exists in SPU local storage

@@ -695,7 +695,7 @@ namespace rsx
 	{
 		// Converts a stream e.g [1, 2, 3, -1, 4, 5, 6] to a stream with degenerate splits
 		// Output is e.g [1, 2, 3, 3, 3, 4, 4, 5, 6] (5 bogus triangles)
-		T last_index, index;
+		T last_index{}, index;
 		u32 dst_index = 0;
 		for (int n = 0; n < count;)
 		{

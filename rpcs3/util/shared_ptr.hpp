@@ -779,7 +779,7 @@ namespace stx
 			}
 
 			// Result temp storage
-			std::conditional_t<std::is_void_v<RT>, int, RT> result;
+			[[maybe_unused]] std::conditional_t<std::is_void_v<RT>, int, RT> result;
 
 			// Invoke
 			if constexpr (std::is_void_v<RT>)

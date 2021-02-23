@@ -955,7 +955,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	u64 pts;
 	u64 dts;
 	u64 usrd;
-	u32 frc;
+	u32 frc = 0;
 	vm::ptr<CellVdecPicItem> info;
 	{
 		std::lock_guard lock(vdec->mutex);

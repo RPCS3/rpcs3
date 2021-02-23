@@ -136,7 +136,7 @@ std::string evdev_joystick_handler::get_device_name(const libevdev* dev)
 
 bool evdev_joystick_handler::update_device(const std::shared_ptr<PadDevice>& device)
 {
-	auto evdev_device = std::static_pointer_cast<EvdevDevice>(device);
+	EvdevDevice* evdev_device = static_cast<EvdevDevice*>(device.get());
 	if (!evdev_device)
 		return false;
 
@@ -193,7 +193,7 @@ void evdev_joystick_handler::Close()
 {
 	for (auto& binding : bindings)
 	{
-		auto evdev_device = std::static_pointer_cast<EvdevDevice>(binding.first);
+		EvdevDevice* evdev_device = static_cast<EvdevDevice*>(binding.first.get());
 		if (evdev_device)
 		{
 			auto& dev = evdev_device->device;
@@ -424,7 +424,7 @@ void evdev_joystick_handler::get_next_button_press(const std::string& padId, con
 // https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/InputCommon/ControllerInterface/evdev/evdev.cpp
 // https://github.com/reicast/reicast-emulator/blob/master/core/linux-dist/evdev.cpp
 // http://www.infradead.org/~mchehab/kernel_docs_pdf/linux-input.pdf
-void evdev_joystick_handler::SetRumble(std::shared_ptr<EvdevDevice> device, u16 large, u16 small)
+void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small)
 {
 	if (!device || !device->has_rumble || device->effect_id == -2)
 		return;
@@ -517,7 +517,7 @@ void evdev_joystick_handler::SetPadData(const std::string& padId, u32 largeMotor
 		return;
 	}
 
-	SetRumble(dev, largeMotor, smallMotor);
+	SetRumble(static_cast<EvdevDevice*>(dev.get()), largeMotor, smallMotor);
 }
 
 int evdev_joystick_handler::GetButtonInfo(const input_event& evt, const std::shared_ptr<EvdevDevice>& device, int& value)
@@ -658,7 +658,7 @@ int evdev_joystick_handler::add_device(const std::string& device, const std::sha
 				// It's a joystick. Now let's make sure we don't already have this one.
 				if (std::any_of(bindings.begin(), bindings.end(), [&path](std::pair<std::shared_ptr<PadDevice>, std::shared_ptr<Pad>> binding)
 				{
-					const auto device = std::static_pointer_cast<EvdevDevice>(binding.first);
+					EvdevDevice* device = static_cast<EvdevDevice*>(binding.first.get());
 					return device && path == device->path;
 				}))
 				{
@@ -703,7 +703,7 @@ PadHandlerBase::connection evdev_joystick_handler::update_connection(const std::
 	if (!update_device(device))
 		return connection::disconnected;
 
-	auto evdev_device = std::static_pointer_cast<EvdevDevice>(device);
+	EvdevDevice* evdev_device = static_cast<EvdevDevice*>(device.get());
 	if (!evdev_device || !evdev_device->device)
 		return connection::disconnected;
 
@@ -859,7 +859,7 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 
 void evdev_joystick_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
 {
-	auto evdev_device = std::static_pointer_cast<EvdevDevice>(device);
+	EvdevDevice* evdev_device = static_cast<EvdevDevice*>(device.get());
 	if (!evdev_device)
 		return;
 

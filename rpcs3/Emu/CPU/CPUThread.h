@@ -105,6 +105,7 @@ public:
 	}
 
 	u32 get_pc() const;
+	u32* get_pc2(); // Last PC before stepping for the debugger (may be null)
 
 	void notify();
 

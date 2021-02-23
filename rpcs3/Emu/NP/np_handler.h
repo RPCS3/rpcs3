@@ -114,6 +114,9 @@ public:
 	// For signaling
 	void req_sign_infos(const std::string& npid, u32 conn_id);
 
+	// Mutex for NP status change
+	shared_mutex mutex_status;
+
 	static constexpr std::string_view thread_name = "NP Handler Thread";
 
 protected:
