@@ -488,11 +488,8 @@ void log_frame::UpdateUI()
 		buf.resize(size);
 		buf.resize(m_tty_file.read(&buf.front(), buf.size()));
 
-		if (buf.find_first_of('\0') != umax)
-		{
-			m_tty_file.seek(s64{0} - buf.size(), fs::seek_mode::seek_cur);
-			break;
-		}
+		// Ignore control characters and greater/equal to 0x80
+		buf.erase(std::remove_if(buf.begin(), buf.end(), [](s8 c) { return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F); }), buf.end());
 
 		if (!buf.empty() && m_TTYAct->isChecked())
 		{
