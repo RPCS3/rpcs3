@@ -42,10 +42,20 @@ class need_wakeup {};
 template <class Context>
 class named_thread;
 
-template <typename T>
+template <typename Ctx, typename X = void, typename... Args>
 struct result_storage
 {
-	static_assert(std::is_default_constructible_v<T> && noexcept(T()));
+	static constexpr bool empty = true;
+
+	using type = void;
+};
+
+template <typename Ctx, typename... Args>
+struct result_storage<Ctx, std::enable_if_t<!std::is_void_v<std::invoke_result_t<Ctx, Args&&...>>>, Args...>
+{
+	using T = std::invoke_result_t<Ctx, Args&&...>;
+
+	static_assert(std::is_default_constructible_v<T>);
 
 	alignas(T) std::byte data[sizeof(T)];
 
@@ -68,17 +78,6 @@ struct result_storage
 		get()->~T();
 	}
 };
-
-template <>
-struct result_storage<void>
-{
-	static constexpr bool empty = true;
-
-	using type = void;
-};
-
-template <class Context, typename... Args>
-using result_storage_t = result_storage<std::invoke_result_t<Context, Args...>>;
 
 template <typename T, typename = void>
 struct thread_thread_name : std::bool_constant<false> {};
@@ -306,9 +305,9 @@ private:
 
 // Derived from the callable object Context, possibly a lambda
 template <class Context>
-class named_thread final : public Context, result_storage_t<Context>, thread_base
+class named_thread final : public Context, result_storage<Context>, thread_base
 {
-	using result = result_storage_t<Context>;
+	using result = result_storage<Context>;
 	using thread = thread_base;
 
 	static u64 entry_point(thread_base* _base)
