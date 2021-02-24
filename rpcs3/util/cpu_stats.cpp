@@ -72,6 +72,7 @@ namespace utils
 #ifdef _WIN32
 		FILETIME ftime, fsys, fusr;
 		ULARGE_INTEGER now, sys, usr;
+		double percent;
 
 		GetSystemTimeAsFileTime(&ftime);
 		memcpy(&now, &ftime, sizeof(FILETIME));
@@ -79,25 +80,34 @@ namespace utils
 		GetProcessTimes(GetCurrentProcess(), &ftime, &ftime, &fsys, &fusr);
 		memcpy(&sys, &fsys, sizeof(FILETIME));
 		memcpy(&usr, &fusr, sizeof(FILETIME));
-		double percent = 1. * (sys.QuadPart - m_sys_cpu) + (usr.QuadPart - m_usr_cpu);
-		percent /= (now.QuadPart - m_last_cpu);
-		percent /= utils::get_thread_count();
+
+		if (now.QuadPart <= m_last_cpu || sys.QuadPart < m_sys_cpu || usr.QuadPart < m_usr_cpu)
+		{
+			// Overflow detection. Just skip this value.
+			percent = 0.0;
+		}
+		else
+		{
+			percent = (sys.QuadPart - m_sys_cpu) + (usr.QuadPart - m_usr_cpu);
+			percent /= (now.QuadPart - m_last_cpu);
+			percent /= utils::get_thread_count(); // Let's assume this is at least 1
+			percent *= 100;
+		}
 
 		m_last_cpu = now.QuadPart;
 		m_usr_cpu  = usr.QuadPart;
 		m_sys_cpu  = sys.QuadPart;
 
-		return std::clamp(percent * 100, 0.0, 100.0);
+		return std::clamp(percent, 0.0, 100.0);
 #else
 		struct tms timeSample;
-		clock_t now;
+		clock_t now = times(&timeSample);
 		double percent;
 
-		now = times(&timeSample);
 		if (now <= static_cast<clock_t>(m_last_cpu) || timeSample.tms_stime < static_cast<clock_t>(m_sys_cpu) || timeSample.tms_utime < static_cast<clock_t>(m_usr_cpu))
 		{
 			// Overflow detection. Just skip this value.
-			percent = -1.0;
+			percent = 0.0;
 		}
 		else
 		{
@@ -110,7 +120,7 @@ namespace utils
 		m_sys_cpu  = timeSample.tms_stime;
 		m_usr_cpu  = timeSample.tms_utime;
 
-		return percent;
+		return std::clamp(percent, 0.0, 100.0);
 #endif
 	}
 
