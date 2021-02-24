@@ -1873,9 +1873,6 @@ void Emulator::Stop(bool restart)
 
 	sys_log.notice("Stopping emulator...");
 
-	m_stop_ctr++;
-	m_stop_ctr.notify_all();
-
 	GetCallbacks().on_stop();
 
 	if (auto rsx = g_fxo->get<rsx::thread>())
@@ -1922,6 +1919,9 @@ void Emulator::Stop(bool restart)
 	});
 
 	sys_log.notice("Atomic wait hashtable stats: [in_use=%u, used=%u, max_collision_weight=%u, total_collisions=%u]", aw_refs, aw_used, aw_colm, aw_colc);
+
+	m_stop_ctr++;
+	m_stop_ctr.notify_all();
 
 	if (restart)
 	{
