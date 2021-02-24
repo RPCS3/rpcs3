@@ -2336,16 +2336,14 @@ bool thread_base::join(bool dtor) const
 
 		if (i > 20 && Emu.IsStopped())
 		{
-			stamp0 = __rdtsc();
 			atomic_wait_engine::raw_notify(0, get_native_id());
-			stamp0 = __rdtsc() - stamp0;
 			warn = true;
 		}
 	}
 
 	if (warn)
 	{
-		sig_log.error(u8"Thread [%s] is too sleepy. Took %.3fµs to wake it up!", *m_tname.load(), stamp0 / (utils::get_tsc_freq() / 1000000.));
+		sig_log.error(u8"Thread [%s] is too sleepy. Took %.3fµs to wake it up!", *m_tname.load(), (__rdtsc() - stamp0) / (utils::get_tsc_freq() / 1000000.));
 	}
 
 	return (m_sync & 3) == 3;

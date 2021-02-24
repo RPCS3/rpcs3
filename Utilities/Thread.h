@@ -42,6 +42,8 @@ class need_wakeup {};
 template <class Context>
 class named_thread;
 
+class thread_base;
+
 template <typename Ctx, typename X = void, typename... Args>
 struct result_storage
 {
@@ -234,7 +236,7 @@ public:
 	}
 
 	// Wait for both thread sync var and provided atomic var
-	template <typename T, atomic_wait::op op = atomic_wait::op::eq, typename U>
+	template <atomic_wait::op Op = atomic_wait::op::eq, typename T, typename U>
 	static inline void wait_on(T& wait, U old, u64 usec = -1)
 	{
 		auto _this = g_tls_this_thread;
@@ -245,7 +247,7 @@ public:
 		}
 
 		atomic_wait::list<2> list{};
-		list.set<0, op>(wait, old);
+		list.set<0, Op>(wait, old);
 		list.set<1>(_this->m_sync, 0, 4 + 1);
 		list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
 	}
@@ -329,12 +331,23 @@ class named_thread final : public Context, result_storage<Context>, thread_base
 		if constexpr (result::empty)
 		{
 			// No result
-			Context::operator()();
+			if constexpr (std::is_invocable_v<Context>)
+			{
+				Context::operator()();
+			}
+			else
+			{
+				// Default event loop
+				while (thread_ctrl::state() != thread_state::aborting)
+				{
+					thread_ctrl::wait();
+				}
+			}
 		}
 		else
 		{
 			// Construct the result using placement new (copy elision should happen)
-			new (result::get()) typename result::type(Context::operator()());
+			new (result::get()) decltype(auto)(Context::operator()());
 		}
 
 		return thread::finalize(thread_state::finished);
