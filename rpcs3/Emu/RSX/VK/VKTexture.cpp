@@ -16,6 +16,22 @@
 
 namespace vk
 {
+	static void gpu_swap_bytes_impl(const vk::command_buffer& cmd, vk::buffer* buf, u32 element_size, u32 data_offset, u32 data_length)
+	{
+		if (element_size == 4)
+		{
+			vk::get_compute_task<vk::cs_shuffle_32>()->run(cmd, buf, data_length, data_offset);
+		}
+		else if (element_size == 2)
+		{
+			vk::get_compute_task<vk::cs_shuffle_16>()->run(cmd, buf, data_length, data_offset);
+		}
+		else
+		{
+			fmt::throw_exception("Unreachable");
+		}
+	}
+
 	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes)
 	{
 		// Always validate
@@ -671,7 +687,23 @@ namespace vk
 		if (src != dst) dst->pop_layout(cmd);
 	}
 
-	void gpu_deswizzle_sections_impl(VkCommandBuffer cmd, vk::buffer* scratch_buf, u32 dst_offset, int word_size, int word_count, bool swap_bytes, std::vector<VkBufferImageCopy>& sections)
+	template <typename WordType, bool SwapBytes>
+	cs_deswizzle_base* get_deswizzle_transformation(u32 block_size)
+	{
+		switch (block_size)
+		{
+		case 4:
+			return vk::get_compute_task<cs_deswizzle_3d<u32, WordType, SwapBytes>>();
+		case 8:
+			return vk::get_compute_task<cs_deswizzle_3d<u64, WordType, SwapBytes>>();
+		case 16:
+			return vk::get_compute_task<cs_deswizzle_3d<u128, WordType, SwapBytes>>();
+		default:
+			fmt::throw_exception("Unreachable");
+		}
+	}
+
+	static void gpu_deswizzle_sections_impl(VkCommandBuffer cmd, vk::buffer* scratch_buf, u32 dst_offset, int word_size, int word_count, bool swap_bytes, std::vector<VkBufferImageCopy>& sections)
 	{
 		// NOTE: This has to be done individually for every LOD
 		vk::cs_deswizzle_base* job = nullptr;
@@ -683,60 +715,22 @@ namespace vk
 		{
 			if (word_size == 4)
 			{
-				switch (block_size)
-				{
-				case 4:
-					job = vk::get_compute_task<cs_deswizzle_3d<u32, u32, false>>();
-					break;
-				case 8:
-					job = vk::get_compute_task<cs_deswizzle_3d<u64, u32, false>>();
-					break;
-				case 16:
-					job = vk::get_compute_task<cs_deswizzle_3d<u128, u32, false>>();
-					break;
-				}
+				job = get_deswizzle_transformation<u32, false>(block_size);
 			}
 			else
 			{
-				switch (block_size)
-				{
-				case 4:
-					job = vk::get_compute_task<cs_deswizzle_3d<u32, u16, false>>();
-					break;
-				case 8:
-					job = vk::get_compute_task<cs_deswizzle_3d<u64, u16, false>>();
-					break;
-				}
+				job = get_deswizzle_transformation<u16, false>(block_size);
 			}
 		}
 		else
 		{
 			if (word_size == 4)
 			{
-				switch (block_size)
-				{
-				case 4:
-					job = vk::get_compute_task<cs_deswizzle_3d<u32, u32, true>>();
-					break;
-				case 8:
-					job = vk::get_compute_task<cs_deswizzle_3d<u64, u32, true>>();
-					break;
-				case 16:
-					job = vk::get_compute_task<cs_deswizzle_3d<u128, u32, true>>();
-					break;
-				}
+				job = get_deswizzle_transformation<u32, true>(block_size);
 			}
 			else
 			{
-				switch (block_size)
-				{
-				case 4:
-					job = vk::get_compute_task<cs_deswizzle_3d<u32, u16, true>>();
-					break;
-				case 8:
-					job = vk::get_compute_task<cs_deswizzle_3d<u64, u16, true>>();
-					break;
-				}
+				job = get_deswizzle_transformation<u16, true>(block_size);
 			}
 		}
 
@@ -803,9 +797,45 @@ namespace vk
 		ensure(dst_offset <= scratch_buf->size());
 	}
 
-	void copy_mipmaped_image_using_buffer(const vk::command_buffer& cmd, vk::image* dst_image,
+	static const vk::command_buffer& prepare_for_transfer(const vk::command_buffer& primary_cb, vk::image* dst_image, rsx::flags32_t& flags)
+	{
+		const vk::command_buffer* pcmd = nullptr;
+#if 0
+		if (flags & image_upload_options::upload_contents_async)
+		{
+			auto cb = vk::async_transfer_get_current();
+			cb->begin();
+			pcmd = cb;
+
+			if (!(flags & image_upload_options::preserve_image_layout))
+			{
+				flags |= image_upload_options::initialize_image_layout;
+			}
+		}
+		else
+#endif
+		{
+			if (vk::is_renderpass_open(primary_cb))
+			{
+				vk::end_renderpass(primary_cb);
+			}
+
+			pcmd = &primary_cb;
+		}
+
+		ensure(pcmd);
+
+		if (flags & image_upload_options::initialize_image_layout)
+		{
+			dst_image->change_layout(*pcmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, pcmd->get_queue_family());
+		}
+
+		return *pcmd;
+	}
+
+	void upload_image(const vk::command_buffer& cmd, vk::image* dst_image,
 		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align)
+		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags)
 	{
 		const bool requires_depth_processing = (dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || (format == CELL_GCM_TEXTURE_DEPTH16_FLOAT);
 		u32 block_in_pixel = rsx::get_format_block_size_in_texel(format);
@@ -826,11 +856,6 @@ namespace vk
 		std::vector<VkBufferCopy> buffer_copies;
 		std::vector<std::pair<VkBuffer, u32>> upload_commands;
 		copy_regions.reserve(subresource_layout.size());
-
-		if (vk::is_renderpass_open(cmd))
-		{
-			vk::end_renderpass(cmd);
-		}
 
 		for (const rsx::subresource_layout &layout : subresource_layout)
 		{
@@ -974,6 +999,7 @@ namespace vk
 		}
 
 		ensure(upload_buffer);
+		auto& cmd2 = prepare_for_transfer(cmd, dst_image, image_setup_flags);
 
 		if (opt.require_swap || opt.require_deswizzle || requires_depth_processing)
 		{
@@ -984,38 +1010,27 @@ namespace vk
 				auto range_ptr = buffer_copies.data();
 				for (const auto& op : upload_commands)
 				{
-					vkCmdCopyBuffer(cmd, op.first, scratch_buf->value, op.second, range_ptr);
+					vkCmdCopyBuffer(cmd2, op.first, scratch_buf->value, op.second, range_ptr);
 					range_ptr += op.second;
 				}
 			}
 			else
 			{
-				vkCmdCopyBuffer(cmd, upload_buffer->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
+				vkCmdCopyBuffer(cmd2, upload_buffer->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
 			}
 
-			insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, scratch_offset, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			insert_buffer_memory_barrier(cmd2, scratch_buf->value, 0, scratch_offset, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 		}
 
-		// Swap and swizzle if requested
+		// Swap and deswizzle if requested
 		if (opt.require_deswizzle)
 		{
-			gpu_deswizzle_sections_impl(cmd, scratch_buf, scratch_offset, opt.element_size, opt.block_length, opt.require_swap, copy_regions);
+			gpu_deswizzle_sections_impl(cmd2, scratch_buf, scratch_offset, opt.element_size, opt.block_length, opt.require_swap, copy_regions);
 		}
 		else if (opt.require_swap)
 		{
-			if (opt.element_size == 4)
-			{
-				vk::get_compute_task<vk::cs_shuffle_32>()->run(cmd, scratch_buf, scratch_offset);
-			}
-			else if (opt.element_size == 2)
-			{
-				vk::get_compute_task<vk::cs_shuffle_16>()->run(cmd, scratch_buf, scratch_offset);
-			}
-			else
-			{
-				fmt::throw_exception("Unreachable");
-			}
+			gpu_swap_bytes_impl(cmd2, scratch_buf, opt.element_size, 0, scratch_offset);
 		}
 
 		// CopyBufferToImage routines
@@ -1024,7 +1039,7 @@ namespace vk
 			// Upload in reverse to avoid polluting data in lower space
 			for (auto rIt = copy_regions.crbegin(); rIt != copy_regions.crend(); ++rIt)
 			{
-				vk::copy_buffer_to_image(cmd, scratch_buf, dst_image, *rIt);
+				vk::copy_buffer_to_image(cmd2, scratch_buf, dst_image, *rIt);
 			}
 		}
 		else if (scratch_buf)
@@ -1032,23 +1047,23 @@ namespace vk
 			ensure(opt.require_deswizzle || opt.require_swap);
 
 			const auto block_start = copy_regions.front().bufferOffset;
-			insert_buffer_memory_barrier(cmd, scratch_buf->value, block_start, scratch_offset, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			insert_buffer_memory_barrier(cmd2, scratch_buf->value, block_start, scratch_offset, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 				VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
-			vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
+			vkCmdCopyBufferToImage(cmd2, scratch_buf->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
 		}
 		else if (upload_commands.size() > 1)
 		{
 			auto region_ptr = copy_regions.data();
 			for (const auto& op : upload_commands)
 			{
-				vkCmdCopyBufferToImage(cmd, op.first, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, op.second, region_ptr);
+				vkCmdCopyBufferToImage(cmd2, op.first, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, op.second, region_ptr);
 				region_ptr += op.second;
 			}
 		}
 		else
 		{
-			vkCmdCopyBufferToImage(cmd, upload_buffer->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
+			vkCmdCopyBufferToImage(cmd2, upload_buffer->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
 		}
 	}
 

@@ -247,7 +247,7 @@ namespace vk
 			if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 			{
 				push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-				vk::copy_mipmaped_image_using_buffer(cmd, this, { subres }, get_gcm_format(), is_swizzled, 1, aspect(), upload_heap, rsx_pitch);
+				vk::upload_image(cmd, this, { subres }, get_gcm_format(), is_swizzled, 1, aspect(), upload_heap, rsx_pitch, upload_contents_inline);
 				pop_layout(cmd);
 			}
 			else
@@ -272,7 +272,7 @@ namespace vk
 				}
 
 				// Load Cell data into temp buffer
-				vk::copy_mipmaped_image_using_buffer(cmd, content, { subres }, get_gcm_format(), is_swizzled, 1, aspect(), upload_heap, rsx_pitch);
+				vk::upload_image(cmd, content, { subres }, get_gcm_format(), is_swizzled, 1, aspect(), upload_heap, rsx_pitch, upload_contents_inline);
 
 				// Write into final image
 				if (content != final_dst)

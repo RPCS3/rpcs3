@@ -14,6 +14,7 @@
 #include "vkutils/chip_class.h"
 #include "Utilities/geometry.h"
 #include "Emu/RSX/Common/TextureUtils.h"
+#include "Emu/RSX/rsx_utils.h"
 
 #define DESCRIPTOR_MAX_DRAW_CALLS 16384
 #define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
@@ -63,14 +64,20 @@ namespace vk
 	void destroy_global_resources();
 	void reset_global_resources();
 
-	/**
-	* Allocate enough space in upload_buffer and write all mipmap/layer data into the subbuffer.
-	* Then copy all layers into dst_image.
-	* dst_image must be in TRANSFER_DST_OPTIMAL layout and upload_buffer have TRANSFER_SRC_BIT usage flag.
-	*/
-	void copy_mipmaped_image_using_buffer(const vk::command_buffer& cmd, vk::image* dst_image,
+	enum image_upload_options
+	{
+		upload_contents_async = 1,
+		initialize_image_layout = 2,
+		preserve_image_layout = 3,
+
+		// meta-flags
+		upload_contents_inline = 0,
+		upload_heap_align_default = 0
+	};
+
+	void upload_image(const vk::command_buffer& cmd, vk::image* dst_image,
 		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
-		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align = 0);
+		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags);
 
 	//Other texture management helpers
 	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes = false);
