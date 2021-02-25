@@ -11,6 +11,7 @@
 #include "Emu/Cell/Modules/cellScreenshot.h"
 
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <string>
@@ -447,7 +448,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 				return;
 			}
 
-			std::string filename = screen_path + "screenshot-" + date_time::current_time_narrow<'_'>() + ".png";
+			const std::string filename = screen_path + "screenshot-" + date_time::current_time_narrow<'_'>() + ".png";
 
 			fs::file sshot_file(filename, fs::open_mode::create + fs::open_mode::write + fs::open_mode::excl);
 			if (!sshot_file)
@@ -475,11 +476,57 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 				}
 			}
 
+			screenshot_manager manager;
+			{
+				const auto fxo = g_fxo->get<screenshot_manager>();
+				std::lock_guard<std::mutex> lock(fxo->mtx);
+				manager = *fxo;
+			}
+
 			std::vector<u8> encoded_png;
 
 			png_structp write_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 			png_infop info_ptr    = png_create_info_struct(write_ptr);
 			png_set_IHDR(write_ptr, info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+
+			png_text text[6] = {};
+			int num_text = 0;
+
+			const QDateTime date_time       = QDateTime::currentDateTime();
+		    const std::string creation_time = date_time.toString("yyyy:MM:dd hh:mm:ss").toStdString();
+			const std::string title_id      = Emu.GetTitleID();
+			const std::string photo_title   = manager.get_photo_title();
+			const std::string game_title    = manager.get_game_title();
+			const std::string game_comment  = manager.get_game_comment();
+
+			// Write tEXt chunk
+			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
+			text[num_text].key         = const_cast<char*>("Creation Time");
+			text[num_text].text        = const_cast<char*>(creation_time.c_str());
+			++num_text;
+			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
+			text[num_text].key         = const_cast<char*>("Source");
+			text[num_text].text        = const_cast<char*>("RPCS3"); // Originally PlayStation(R)3
+			++num_text;
+			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
+			text[num_text].key         = const_cast<char*>("Title ID");
+			text[num_text].text        = const_cast<char*>(title_id.c_str());
+			++num_text;
+
+			// Write tTXt chunk (they probably meant zTXt)
+			text[num_text].compression = PNG_TEXT_COMPRESSION_zTXt;
+			text[num_text].key         = const_cast<char*>("Title");
+			text[num_text].text        = const_cast<char*>(photo_title.c_str());
+			++num_text;
+			text[num_text].compression = PNG_TEXT_COMPRESSION_zTXt;
+			text[num_text].key         = const_cast<char*>("Game Title");
+			text[num_text].text        = const_cast<char*>(game_title.c_str());
+			++num_text;
+			text[num_text].compression = PNG_TEXT_COMPRESSION_zTXt;
+			text[num_text].key         = const_cast<char*>("Comment");
+			text[num_text].text        = const_cast<char*>(game_comment.c_str());
+
+			png_set_text(write_ptr, info_ptr, text, 6);
 
 			std::vector<u8*> rows(sshot_height);
 			for (usz y = 0; y < sshot_height; y++)
@@ -503,11 +550,9 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 			screenshot_log.success("Successfully saved screenshot to %s", filename);
 
-			const auto fxo = g_fxo->get<screenshot_manager>();
-
-			if (fxo->is_enabled)
+			if (manager.is_enabled)
 			{
-				const std::string cell_sshot_filename = fxo->get_screenshot_path();
+				const std::string cell_sshot_filename = manager.get_screenshot_path();
 				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
 
 				screenshot_log.notice("Saving cell screenshot to %s", cell_sshot_filename);
@@ -525,15 +570,12 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 					return;
 				}
 
-				const std::string cell_sshot_overlay_path = fxo->get_overlay_path();
+				const std::string cell_sshot_overlay_path = manager.get_overlay_path();
 				if (fs::is_file(cell_sshot_overlay_path))
 				{
 					screenshot_log.notice("Adding overlay to cell screenshot from %s", cell_sshot_overlay_path);
 					// TODO: add overlay to screenshot
 				}
-
-				// TODO: add tEXt chunk with creation time, source, title id
-				// TODO: add tTXt chunk with data procured from cellScreenShotSetParameter (get_photo_title, get_game_title, game_comment)
 
 				cell_sshot_file.write(encoded_png.data(), encoded_png.size());
 
