@@ -40,7 +40,8 @@
 #include <QtDBus/QDBusConnection>
 #endif
 
-LOG_CHANNEL(screenshot);
+LOG_CHANNEL(screenshot_log, "SCREENSHOT");
+LOG_CHANNEL(mark_log, "MARK");
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 
@@ -147,7 +148,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		if (keyEvent->modifiers() == Qt::AltModifier)
 		{
 			static int count = 0;
-			screenshot.success("Made forced mark %d in log", ++count);
+			mark_log.success("Made forced mark %d in log", ++count);
 			return;
 		}
 		else if (keyEvent->modifiers() == Qt::ControlModifier)
@@ -442,7 +443,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 			if (!fs::create_dir(screen_path) && fs::g_tls_error != fs::error::exist)
 			{
-				screenshot.error("Failed to create screenshot path \"%s\" : %s", screen_path, fs::g_tls_error);
+				screenshot_log.error("Failed to create screenshot path \"%s\" : %s", screen_path, fs::g_tls_error);
 				return;
 			}
 
@@ -451,7 +452,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 			fs::file sshot_file(filename, fs::open_mode::create + fs::open_mode::write + fs::open_mode::excl);
 			if (!sshot_file)
 			{
-				screenshot.error("[Screenshot] Failed to save screenshot \"%s\" : %s", filename, fs::g_tls_error);
+				screenshot_log.error("Failed to save screenshot \"%s\" : %s", filename, fs::g_tls_error);
 				return;
 			}
 
@@ -500,7 +501,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 			sshot_file.write(encoded_png.data(), encoded_png.size());
 
-			screenshot.success("[Screenshot] Successfully saved screenshot to %s", filename);
+			screenshot_log.success("Successfully saved screenshot to %s", filename);
 
 			const auto fxo = g_fxo->get<screenshot_manager>();
 
@@ -509,25 +510,25 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 				const std::string cell_sshot_filename = fxo->get_screenshot_path();
 				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
 
-				screenshot.notice("[Screenshot] Saving cell screenshot to %s", cell_sshot_filename);
+				screenshot_log.notice("Saving cell screenshot to %s", cell_sshot_filename);
 
 				if (!fs::create_path(cell_sshot_dir) && fs::g_tls_error != fs::error::exist)
 				{
-					screenshot.error("Failed to create cell screenshot dir \"%s\" : %s", cell_sshot_dir, fs::g_tls_error);
+					screenshot_log.error("Failed to create cell screenshot dir \"%s\" : %s", cell_sshot_dir, fs::g_tls_error);
 					return;
 				}
 
 				fs::file cell_sshot_file(cell_sshot_filename, fs::open_mode::create + fs::open_mode::write + fs::open_mode::excl);
 				if (!cell_sshot_file)
 				{
-					screenshot.error("[Screenshot] Failed to save cell screenshot \"%s\" : %s", cell_sshot_filename, fs::g_tls_error);
+					screenshot_log.error("Failed to save cell screenshot \"%s\" : %s", cell_sshot_filename, fs::g_tls_error);
 					return;
 				}
 
 				const std::string cell_sshot_overlay_path = fxo->get_overlay_path();
 				if (fs::is_file(cell_sshot_overlay_path))
 				{
-					screenshot.notice("[Screenshot] Adding overlay to cell screenshot from %s", cell_sshot_overlay_path);
+					screenshot_log.notice("Adding overlay to cell screenshot from %s", cell_sshot_overlay_path);
 					// TODO: add overlay to screenshot
 				}
 
@@ -536,7 +537,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 				cell_sshot_file.write(encoded_png.data(), encoded_png.size());
 
-				screenshot.success("[Screenshot] Successfully saved cell screenshot to %s", cell_sshot_filename);
+				screenshot_log.success("Successfully saved cell screenshot to %s", cell_sshot_filename);
 			}
 
 			return;
