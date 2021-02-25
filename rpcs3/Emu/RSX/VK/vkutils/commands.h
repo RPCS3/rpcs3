@@ -16,7 +16,7 @@ namespace vk
 		command_pool()  = default;
 		~command_pool() = default;
 
-		void create(vk::render_device& dev, u32 queue_family = 0);
+		void create(vk::render_device& dev, u32 queue_family);
 		void destroy();
 
 		vk::render_device& get_owner() const;

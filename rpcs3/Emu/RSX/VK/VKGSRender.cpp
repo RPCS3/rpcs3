@@ -399,7 +399,7 @@ VKGSRender::VKGSRender() : GSRender()
 	}
 
 	//create command buffer...
-	m_command_buffer_pool.create((*m_device));
+	m_command_buffer_pool.create((*m_device), m_device->get_graphics_queue_family());
 
 	for (auto &cb : m_primary_cb_list)
 	{
@@ -410,7 +410,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_current_command_buffer = &m_primary_cb_list[0];
 
 	//Create secondary command_buffer for parallel operations
-	m_secondary_command_buffer_pool.create((*m_device));
+	m_secondary_command_buffer_pool.create((*m_device), m_device->get_graphics_queue_family());
 	m_secondary_command_buffer.create(m_secondary_command_buffer_pool, true);
 	m_secondary_command_buffer.access_hint = vk::command_buffer::access_type_hint::all;
 
