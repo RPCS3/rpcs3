@@ -39,6 +39,7 @@ namespace vk
 		VkImage value = VK_NULL_HANDLE;
 		VkComponentMapping native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 		VkImageLayout current_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		u32 current_queue_family = VK_QUEUE_FAMILY_IGNORED;
 		VkImageCreateInfo info = {};
 		std::shared_ptr<vk::memory_block> memory;
 
@@ -77,7 +78,8 @@ namespace vk
 		void push_layout(VkCommandBuffer cmd, VkImageLayout layout);
 		void push_barrier(VkCommandBuffer cmd, VkImageLayout layout);
 		void pop_layout(VkCommandBuffer cmd);
-		void change_layout(command_buffer& cmd, VkImageLayout new_layout);
+		void change_layout(const command_buffer& cmd, VkImageLayout new_layout);
+		void change_layout(const command_buffer& cmd, VkImageLayout new_layout, u32 new_queue_family);
 
 	private:
 		VkDevice m_device;

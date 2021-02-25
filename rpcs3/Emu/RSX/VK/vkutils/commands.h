@@ -10,17 +10,19 @@ namespace vk
 	{
 		vk::render_device* owner = nullptr;
 		VkCommandPool pool       = nullptr;
+		u32 queue_family         = 0;
 
 	public:
 		command_pool()  = default;
 		~command_pool() = default;
 
-		void create(vk::render_device& dev);
+		void create(vk::render_device& dev, u32 queue_family = 0);
 		void destroy();
 
-		vk::render_device& get_owner();
+		vk::render_device& get_owner() const;
+		u32 get_queue_family() const;
 
-		operator VkCommandPool();
+		operator VkCommandPool() const;
 	};
 
 	class command_buffer
@@ -68,6 +70,11 @@ namespace vk
 		command_pool& get_command_pool() const
 		{
 			return *pool;
+		}
+
+		u32 get_queue_family() const
+		{
+			return pool->get_queue_family();
 		}
 
 		void clear_flags()
