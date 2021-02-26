@@ -29,7 +29,7 @@ struct CellScreenShotSetParam
 
 struct screenshot_manager
 {
-	std::mutex mtx;
+	shared_mutex mtx;
 
 	atomic_t<bool> is_enabled{false};
 

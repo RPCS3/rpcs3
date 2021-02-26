@@ -489,7 +489,7 @@ bool read_png_file(const std::string& filename, u32& width, u32& height, std::ve
 	row_pointers.resize(height, nullptr);
 
 	const size_t size = png_get_rowbytes(png, info);
-	for (int y = 0; y < height; y++)
+	for (u32 y = 0; y < height; y++)
 	{
 		row_pointers[y] = static_cast<u8*>(std::malloc(size));
 	}
@@ -547,11 +547,9 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 			screenshot_manager manager;
 			{
 				const auto fxo = g_fxo->get<screenshot_manager>();
-				std::lock_guard<std::mutex> lock(fxo->mtx);
+				std::lock_guard lock(fxo->mtx);
 				manager = *fxo;
 			}
-
-			std::vector<u8> encoded_png;
 
 			png_structp write_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 			png_infop info_ptr    = png_create_info_struct(write_ptr);
@@ -618,8 +616,8 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 					else if (static_cast<u32>(abs(manager.overlay_offset_x)) < sshot_width &&
 					         static_cast<u32>(abs(manager.overlay_offset_y)) < sshot_height)
 					{
-						const usz max_width = manager.overlay_offset_x > 0 ? sshot_width - static_cast<u32>(manager.overlay_offset_x) : sshot_width;
-						const usz max_height = std::min<s64>(sshot_height, manager.overlay_offset_y + static_cast<s64>(overlay_height));
+						const s64 max_width = manager.overlay_offset_x > 0 ? sshot_width - static_cast<u32>(manager.overlay_offset_x) : sshot_width;
+						const s64 max_height = std::min<s64>(sshot_height, manager.overlay_offset_y + static_cast<s64>(overlay_height));
 						const usz line_size = 4 * std::min<usz>(overlay_width, max_width);
 
 						for (s64 y = std::max<s64>(0, manager.overlay_offset_y); y < max_height; y++)
@@ -629,6 +627,8 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 					}
 				}
 			}
+
+			std::vector<u8> encoded_png;
 
 			png_set_rows(write_ptr, info_ptr, &rows[0]);
 			png_set_write_fn(write_ptr, &encoded_png,
