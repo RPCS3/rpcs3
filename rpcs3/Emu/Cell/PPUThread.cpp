@@ -392,6 +392,11 @@ extern void ppu_register_range(u32 addr, u32 size)
 	utils::memory_commit(&ppu_ref(addr), u64{size} * 2, utils::protection::rw);
 	vm::page_protect(addr, size, 0, vm::page_executable);
 
+	if (g_cfg.core.ppu_debug)
+	{
+		utils::memory_commit(vm::g_stat_addr + addr, size);
+	}
+
 	const u64 fallback = reinterpret_cast<uptr>(ppu_fallback);
 	const u64 seg_base = addr;
 

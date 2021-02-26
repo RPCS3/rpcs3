@@ -1779,7 +1779,7 @@ void Emulator::Resume()
 
 		for (u32 i = 0x10000; i < 0x20000000;)
 		{
-			if (vm::check_addr(i))
+			if (vm::check_addr(i, vm::page_executable))
 			{
 				if (auto& data = *reinterpret_cast<be_t<u32>*>(vm::g_stat_addr + i))
 				{

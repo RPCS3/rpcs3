@@ -3454,6 +3454,13 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="mfcDebug">
+              <property name="text">
+               <string>MFC Debug</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QCheckBox" name="setDAZandFTZ">
               <property name="text">
                <string>Set DAZ and FTZ</string>

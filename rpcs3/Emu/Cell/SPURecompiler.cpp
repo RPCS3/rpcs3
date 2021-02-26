@@ -5948,7 +5948,9 @@ public:
 
 					const auto mmio = llvm::BasicBlock::Create(m_context, "", m_function);
 					const auto copy = llvm::BasicBlock::Create(m_context, "", m_function);
-					m_ir->CreateCondBr(m_ir->CreateICmpUGE(eal.value, m_ir->getInt32(0xe0000000)), mmio, copy, m_md_unlikely);
+
+					// Always use interpreter function for MFC debug option
+					m_ir->CreateCondBr(m_ir->CreateICmpUGE(eal.value, m_ir->getInt32(g_cfg.core.mfc_debug ? 0 : 0xe0000000)), mmio, copy, m_md_unlikely);
 					m_ir->SetInsertPoint(mmio);
 					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
 					call("spu_exec_mfc_cmd", &exec_mfc_cmd, m_thread);
