@@ -46,7 +46,7 @@ struct screenshot_manager
 	std::string get_photo_title() const;
 	std::string get_game_title() const;
 	std::string get_game_comment() const;
-	std::string get_screenshot_path() const;
+	std::string get_screenshot_path(const std::string& date_path) const;
 
 	screenshot_manager& operator=(const screenshot_manager& other)
 	{

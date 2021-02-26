@@ -53,11 +53,18 @@ std::string screenshot_manager::get_game_comment() const
 	return game_comment;
 }
 
-std::string screenshot_manager::get_screenshot_path() const
+std::string screenshot_manager::get_screenshot_path(const std::string& date_path) const
 {
-	// TODO: make sure the file can be saved, add suffix and increase counter if file exists
-	// TODO: maybe find a proper home for these
-	return fs::get_config_dir() + "/screenshots/cell/" + get_photo_title() + ".png";
+	u32 counter = 0;
+	std::string path = vfs::get("/dev_hdd0/photo/") + date_path + "/" + get_photo_title();
+	std::string suffix = ".png";
+
+	while (!Emu.IsStopped() && fs::is_file(path + suffix))
+	{
+		suffix = fmt::format("_%d.png", ++counter);
+	}
+
+	return path + suffix;
 }
 
 

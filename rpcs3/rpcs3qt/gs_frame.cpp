@@ -493,7 +493,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 			int num_text = 0;
 
 			const QDateTime date_time       = QDateTime::currentDateTime();
-		    const std::string creation_time = date_time.toString("yyyy:MM:dd hh:mm:ss").toStdString();
+			const std::string creation_time = date_time.toString("yyyy:MM:dd hh:mm:ss").toStdString();
 			const std::string title_id      = Emu.GetTitleID();
 			const std::string photo_title   = manager.get_photo_title();
 			const std::string game_title    = manager.get_game_title();
@@ -552,7 +552,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 			if (manager.is_enabled)
 			{
-				const std::string cell_sshot_filename = manager.get_screenshot_path();
+				const std::string cell_sshot_filename = manager.get_screenshot_path(date_time.toString("yyyy/MM/dd").toStdString());
 				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
 
 				screenshot_log.notice("Saving cell screenshot to %s", cell_sshot_filename);
