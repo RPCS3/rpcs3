@@ -131,7 +131,12 @@ bool tar_object::extract(std::string path, std::string ignore)
 
 		case '5':
 		{
-			fs::create_dir(result);
+			if (!fs::create_path(result))
+			{
+				tar_log.error("TAR Loader: failed to create directory %s (%s)", header.name, fs::g_tls_error);
+				return false;
+			}
+
 			break;
 		}
 

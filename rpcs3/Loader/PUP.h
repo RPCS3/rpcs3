@@ -33,7 +33,7 @@ struct PUPHashEntry
 class pup_object
 {
 	const fs::file& m_file;
-	bool isValid = true;
+	bool isValid = false;
 
 	std::vector<PUPFileEntry> m_file_tbl;
 	std::vector<PUPHashEntry> m_hash_tbl;
