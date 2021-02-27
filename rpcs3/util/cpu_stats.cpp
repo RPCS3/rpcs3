@@ -49,7 +49,6 @@ namespace utils
 	cpu_stats::cpu_stats()
 	{
 #ifdef _WIN32
-		SYSTEM_INFO sysInfo;
 		FILETIME ftime, fsys, fuser;
 
 		GetSystemTimeAsFileTime(&ftime);
