@@ -378,7 +378,7 @@ void pad_settings_dialog::InitButtons()
 	{
 		// Allow LED battery indication while the dialog is open
 		m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, m_handler_cfg.led_battery_indicator.get(), m_handler_cfg.led_battery_indicator_brightness);
-		pad_led_settings_dialog dialog(this, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, m_handler->has_battery(), m_handler_cfg.led_low_battery_blink.get(), m_handler_cfg.led_battery_indicator.get(), m_handler_cfg.led_battery_indicator_brightness);
+		pad_led_settings_dialog dialog(this, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, m_handler->has_rgb(), m_handler->has_battery(), m_handler_cfg.led_low_battery_blink.get(), m_handler_cfg.led_battery_indicator.get(), m_handler_cfg.led_battery_indicator_brightness);
 		connect(&dialog, &pad_led_settings_dialog::pass_led_settings, this, &pad_settings_dialog::apply_led_settings);
 		dialog.exec();
 		m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, false, m_handler_cfg.led_battery_indicator_brightness);

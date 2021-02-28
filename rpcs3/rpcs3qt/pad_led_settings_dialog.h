@@ -14,7 +14,7 @@ class pad_led_settings_dialog : public QDialog
 	Q_OBJECT
 
 public:
-	explicit pad_led_settings_dialog(QDialog* parent, int colorR, int colorG, int colorB, bool has_battery, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness);
+	explicit pad_led_settings_dialog(QDialog* parent, int colorR, int colorG, int colorB, bool has_rgb, bool has_battery, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness);
 	~pad_led_settings_dialog();
 
 Q_SIGNALS:
@@ -22,7 +22,7 @@ Q_SIGNALS:
 
 private Q_SLOTS:
 	void update_slider_label(int val);
-	void switch_groupboxes(bool tick);
+	void battery_indicator_checked(bool checked);
 
 private:
 	void redraw_color_sample();

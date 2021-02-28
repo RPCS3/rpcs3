@@ -118,6 +118,7 @@ ds4_pad_handler::ds4_pad_handler()
 	b_has_rumble = true;
 	b_has_deadzones = true;
 	b_has_led = true;
+	b_has_rgb = true;
 	b_has_battery = true;
 
 	m_name_string = "DS4 Pad #";

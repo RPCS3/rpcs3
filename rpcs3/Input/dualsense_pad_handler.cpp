@@ -137,6 +137,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 	b_has_rumble = true;
 	b_has_deadzones = true;
 	b_has_led = true;
+	b_has_rgb = true;
 	b_has_battery = false;
 
 	m_name_string = "DualSense Pad #";
