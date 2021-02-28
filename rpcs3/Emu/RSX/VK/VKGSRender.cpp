@@ -558,6 +558,9 @@ VKGSRender::~VKGSRender()
 		return;
 	}
 
+	// Globals. TODO: Refactor lifetime management
+	g_fxo->get<vk::async_scheduler_thread>()->kill();
+
 	//Wait for device to finish up with resources
 	vkDeviceWaitIdle(*m_device);
 
