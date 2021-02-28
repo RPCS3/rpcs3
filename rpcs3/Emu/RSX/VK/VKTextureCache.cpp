@@ -137,7 +137,7 @@ namespace vk
 		src->pop_layout(cmd);
 
 		// Create event object for this transfer and queue signal op
-		dma_fence = std::make_unique<vk::event>(*m_device);
+		dma_fence = std::make_unique<vk::event>(*m_device, sync_domain::any);
 		dma_fence->signal(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
 
 		// Set cb flag for queued dma operations

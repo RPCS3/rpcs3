@@ -58,10 +58,10 @@ namespace vk
 		return (handle != VK_NULL_HANDLE);
 	}
 
-	event::event(const render_device& dev)
+	event::event(const render_device& dev, sync_domain domain)
 	{
 		m_device = dev;
-		if (dev.gpu().get_driver_vendor() != driver_vendor::AMD)
+		if (domain == sync_domain::gpu || dev.gpu().get_driver_vendor() != driver_vendor::AMD)
 		{
 			VkEventCreateInfo info
 			{
@@ -75,14 +75,14 @@ namespace vk
 		{
 			// Work around AMD's broken event signals
 			m_buffer = std::make_unique<buffer>
-				(
-					dev,
-					4,
-					dev.get_memory_mapping().host_visible_coherent,
-					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-					VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-					0
-					);
+			(
+				dev,
+				4,
+				dev.get_memory_mapping().host_visible_coherent,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+				VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				0
+			);
 
 			m_value = reinterpret_cast<u32*>(m_buffer->map(0, 4));
 			*m_value = 0xCAFEBABE;
@@ -113,6 +113,24 @@ namespace vk
 		{
 			insert_global_memory_barrier(cmd, stages, VK_PIPELINE_STAGE_TRANSFER_BIT, access, VK_ACCESS_TRANSFER_WRITE_BIT);
 			vkCmdFillBuffer(cmd, m_buffer->value, 0, 4, 0xDEADBEEF);
+		}
+	}
+
+	void event::host_signal() const
+	{
+		ensure(m_vk_event);
+		vkSetEvent(m_device, m_vk_event);
+	}
+
+	void event::reset() const
+	{
+		if (m_vk_event) [[likely]]
+		{
+			vkResetEvent(m_device, m_vk_event);
+		}
+		else
+		{
+			*m_value = 0xCAFEBABE;
 		}
 	}
 

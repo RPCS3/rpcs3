@@ -68,7 +68,7 @@ namespace vk
 	{
 		upload_contents_async = 1,
 		initialize_image_layout = 2,
-		preserve_image_layout = 3,
+		preserve_image_layout = 4,
 
 		// meta-flags
 		upload_contents_inline = 0,

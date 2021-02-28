@@ -11,6 +11,7 @@ namespace vk
 {
 	u64 get_event_id();
 	u64 current_event_id();
+	u64 last_completed_event_id();
 	void on_event_completed(u64 event_id, bool flush = false);
 
 	struct eid_scope_t

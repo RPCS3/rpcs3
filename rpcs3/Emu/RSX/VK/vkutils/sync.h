@@ -10,6 +10,12 @@ namespace vk
 {
 	class command_buffer;
 
+	enum class sync_domain
+	{
+		any = 0,
+		gpu = 1
+	};
+
 	struct fence
 	{
 		atomic_t<bool> flushed = false;
@@ -35,10 +41,13 @@ namespace vk
 		volatile u32* m_value = nullptr;
 
 	public:
-		event(const render_device& dev);
+		event(const render_device& dev, sync_domain domain);
 		~event();
+
 		void signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access);
+		void host_signal() const;
 		VkResult status() const;
+		void reset() const;
 	};
 
 	VkResult wait_for_fence(fence* pFence, u64 timeout = 0ull);
