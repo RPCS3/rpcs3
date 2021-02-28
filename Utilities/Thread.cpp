@@ -2336,9 +2336,8 @@ bool thread_base::join(bool dtor) const
 	}
 
 	// Hacked for too sleepy threads (1ms) TODO: make sure it's unneeded and remove
-	const auto timeout = dtor && Emu.IsStopped() ? atomic_wait_timeout{1'000'000} : atomic_wait_timeout::inf;
+	const auto timeout = dtor && !thread_ctrl::get_current() ? atomic_wait_timeout{1'000'000} : atomic_wait_timeout::inf;
 
-	bool warn = false;
 	auto stamp0 = __rdtsc();
 
 	for (u64 i = 0; (m_sync & 3) <= 1; i++)
@@ -2350,16 +2349,10 @@ bool thread_base::join(bool dtor) const
 			break;
 		}
 
-		if (i > 20 && Emu.IsStopped())
+		if (i && (i % 20) == 0 && timeout != atomic_wait_timeout::inf)
 		{
-			atomic_wait_engine::raw_notify(0, get_native_id());
-			warn = true;
+			sig_log.error(u8"Thread [%s] is too sleepy. Waiting for it %.3fµs already!", *m_tname.load(), (__rdtsc() - stamp0) / (utils::get_tsc_freq() / 1000000.));
 		}
-	}
-
-	if (warn)
-	{
-		sig_log.error(u8"Thread [%s] is too sleepy. Took %.3fµs to wake it up!", *m_tname.load(), (__rdtsc() - stamp0) / (utils::get_tsc_freq() / 1000000.));
 	}
 
 	return (m_sync & 3) == 3;
