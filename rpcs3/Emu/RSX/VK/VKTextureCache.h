@@ -873,7 +873,6 @@ namespace vk
 			region.set_dirty(false);
 
 			image->native_component_map = apply_component_mapping_flags(gcm_format, flags, rsx::default_remap_vector);
-			image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
 			// Its not necessary to lock blit dst textures as they are just reused as necessary
 			switch (context)
@@ -927,20 +926,6 @@ namespace vk
 					rsx::texture_create_flags::default_component_order);
 
 			auto image = section->get_raw_texture();
-			auto subres_range = section->get_raw_view()->info.subresourceRange;
-
-			switch (image->info.format)
-			{
-			case VK_FORMAT_D32_SFLOAT_S8_UINT:
-			case VK_FORMAT_D24_UNORM_S8_UINT:
-				subres_range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-				break;
-			default:
-				break;
-			}
-
-			change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subres_range);
-
 			vk::enter_uninterruptible();
 
 			bool input_swizzled = swizzled;
@@ -950,38 +935,43 @@ namespace vk
 				input_swizzled = false;
 			}
 
-			vk::upload_image(cmd, image, subresource_layout, gcm_format, input_swizzled, mipmaps, subres_range.aspectMask,
-				*m_texture_upload_heap, upload_heap_align_default, upload_contents_inline);
+			vk::upload_image(cmd, image, subresource_layout, gcm_format, input_swizzled, mipmaps, image->aspect(),
+				*m_texture_upload_heap, upload_heap_align_default, initialize_image_layout | upload_contents_inline);
 
 			vk::leave_uninterruptible();
 
-			// Insert appropriate barrier depending on use
-			VkImageLayout preferred_layout;
-			switch (context)
+			if (context != rsx::texture_upload_context::shader_read)
 			{
-			default:
-				preferred_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				break;
-			case rsx::texture_upload_context::blit_engine_dst:
-				preferred_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				break;
-			case rsx::texture_upload_context::blit_engine_src:
-				preferred_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-				break;
-			}
+				// Insert appropriate barrier depending on use. Shader read resources should be lazy-initialized before consuming.
+				// TODO: All texture resources should be initialized on use, this is wasteful
 
-			if (preferred_layout != image->current_layout)
-			{
-				change_image_layout(cmd, image, preferred_layout, subres_range);
-			}
-			else
-			{
-				// Insert ordering barrier
-				ensure(preferred_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-				insert_image_memory_barrier(cmd, image->value, image->current_layout, preferred_layout,
-					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-					VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-					subres_range);
+				VkImageLayout preferred_layout;
+				switch (context)
+				{
+				default:
+					preferred_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+					break;
+				case rsx::texture_upload_context::blit_engine_dst:
+					preferred_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					break;
+				case rsx::texture_upload_context::blit_engine_src:
+					preferred_layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+					break;
+				}
+
+				if (preferred_layout != image->current_layout)
+				{
+					image->change_layout(cmd, preferred_layout);
+				}
+				else
+				{
+					// Insert ordering barrier
+					ensure(preferred_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+					insert_image_memory_barrier(cmd, image->value, image->current_layout, preferred_layout,
+						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+						{ image->aspect(), 0, image->mipmaps(), 0, image->layers() });
+				}
 			}
 
 			section->last_write_tag = rsx::get_shared_tag();
