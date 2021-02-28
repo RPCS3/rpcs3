@@ -29,7 +29,7 @@ namespace vk
 
 		// Sync
 		event* m_sync_label = nullptr;
-		bool m_sync_required = false;
+		atomic_t<bool> m_sync_required = false;
 
 		static constexpr u32 events_pool_size = 16384;
 		std::vector<xqueue_event> m_events_pool;
