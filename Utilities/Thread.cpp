@@ -2336,7 +2336,7 @@ bool thread_base::join(bool dtor) const
 	}
 
 	// Hacked for too sleepy threads (1ms) TODO: make sure it's unneeded and remove
-	const auto timeout = dtor && !thread_ctrl::get_current() ? atomic_wait_timeout{1'000'000} : atomic_wait_timeout::inf;
+	const auto timeout = dtor && Emu.IsStopped() ? atomic_wait_timeout{1'000'000} : atomic_wait_timeout::inf;
 
 	auto stamp0 = __rdtsc();
 
