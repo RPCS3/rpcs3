@@ -240,6 +240,7 @@ void Emulator::Init(bool add_only)
 		make_path_verbose(dev_hdd0 + "disc/");
 		make_path_verbose(dev_hdd0 + "savedata/");
 		make_path_verbose(dev_hdd0 + "savedata/vmc/");
+		make_path_verbose(dev_hdd0 + "photo/");
 		make_path_verbose(dev_hdd1 + "caches/");
 	}
 

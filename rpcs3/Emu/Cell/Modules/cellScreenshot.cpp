@@ -26,10 +26,11 @@ void fmt_class_string<CellScreenShotError>::format(std::string& out, u64 arg)
 	});
 }
 
+shared_mutex screenshot_mtx;
 
 std::string screenshot_manager::get_overlay_path() const
 {
-	return vfs::get(overlay_dir_name + overlay_file_name);
+	return vfs::get(overlay_dir_name + "/" + overlay_file_name);
 }
 
 std::string screenshot_manager::get_photo_title() const
@@ -48,11 +49,23 @@ std::string screenshot_manager::get_game_title() const
 	return game;
 }
 
-std::string screenshot_manager::get_screenshot_path() const
+std::string screenshot_manager::get_game_comment() const
 {
-	// TODO: make sure the file can be saved, add suffix and increase counter if file exists
-	// TODO: maybe find a proper home for these
-	return fs::get_config_dir() + "/screenshots/cell/" + get_photo_title() + ".png";
+	return game_comment;
+}
+
+std::string screenshot_manager::get_screenshot_path(const std::string& date_path) const
+{
+	u32 counter = 0;
+	std::string path = vfs::get("/dev_hdd0/photo/" + date_path + "/" + get_photo_title());
+	std::string suffix = ".png";
+
+	while (!Emu.IsStopped() && fs::is_file(path + suffix))
+	{
+		suffix = fmt::format("_%d.png", ++counter);
+	}
+
+	return path + suffix;
 }
 
 
@@ -73,6 +86,7 @@ error_code cellScreenShotSetParameter(vm::cptr<CellScreenShotSetParam> param)
 		return CELL_SCREENSHOT_ERROR_PARAM;
 
 	const auto manager = g_fxo->get<screenshot_manager>();
+	std::lock_guard lock(screenshot_mtx);
 
 	if (param->photo_title && param->photo_title[0] != '\0')
 		manager->photo_title = std::string(param->photo_title.get_ptr());
@@ -110,6 +124,7 @@ error_code cellScreenShotSetOverlayImage(vm::cptr<char> srcDir, vm::cptr<char> s
 	}
 
 	const auto manager = g_fxo->get<screenshot_manager>();
+	std::lock_guard lock(screenshot_mtx);
 
 	manager->overlay_dir_name = std::string(srcDir.get_ptr());
 	manager->overlay_file_name = std::string(srcFile.get_ptr());
@@ -124,6 +139,8 @@ error_code cellScreenShotEnable()
 	cellScreenshot.warning("cellScreenShotEnable()");
 
 	const auto manager = g_fxo->get<screenshot_manager>();
+	std::lock_guard lock(screenshot_mtx);
+
 	manager->is_enabled = true;
 
 	return CELL_OK;
@@ -134,6 +151,8 @@ error_code cellScreenShotDisable()
 	cellScreenshot.warning("cellScreenShotDisable()");
 
 	const auto manager = g_fxo->get<screenshot_manager>();
+	std::lock_guard lock(screenshot_mtx);
+
 	manager->is_enabled = false;
 
 	return CELL_OK;
