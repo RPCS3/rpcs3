@@ -14,6 +14,8 @@
 #include <QDateTime>
 #include <QKeyEvent>
 #include <QMessageBox>
+#include <QPainter>
+
 #include <string>
 #include <thread>
 
@@ -435,74 +437,6 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 	}
 }
 
-bool read_png_file(const std::string& filename, u32& width, u32& height, std::vector<u8*>& row_pointers)
-{
-	const auto close_file = [](FILE* fp) { if (fp) fclose(fp); };
-	std::unique_ptr<FILE, decltype(close_file)> fp(fopen(filename.c_str(), "rb"), close_file);
-
-	if (!fp)
-		return false;
-
-	png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-	if (!png)
-		return false;
-
-	png_infop info = png_create_info_struct(png);
-	if (!info)
-		return false;
-
-	if (setjmp(png_jmpbuf(png)))
-		return false;
-
-	png_init_io(png, fp.get());
-	png_read_info(png, info);
-
-	width  = png_get_image_width(png, info);
-	height = png_get_image_height(png, info);
-
-	png_byte color_type = png_get_color_type(png, info);
-	png_byte bit_depth  = png_get_bit_depth(png, info);
-
-	if (bit_depth == 16)
-		png_set_strip_16(png);
-
-	if (color_type == PNG_COLOR_TYPE_PALETTE)
-		png_set_palette_to_rgb(png);
-
-	// PNG_COLOR_TYPE_GRAY_ALPHA is always 8 or 16bit depth.
-	if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8)
-		png_set_expand_gray_1_2_4_to_8(png);
-
-	if (png_get_valid(png, info, PNG_INFO_tRNS))
-		png_set_tRNS_to_alpha(png);
-
-	// These color_type don't have an alpha channel then fill it with 0xff.
-	if (color_type == PNG_COLOR_TYPE_RGB ||
-	    color_type == PNG_COLOR_TYPE_GRAY ||
-	    color_type == PNG_COLOR_TYPE_PALETTE)
-		png_set_filler(png, 0xFF, PNG_FILLER_AFTER);
-
-	if (color_type == PNG_COLOR_TYPE_GRAY ||
-	    color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
-		png_set_gray_to_rgb(png);
-
-	png_read_update_info(png, info);
-
-	row_pointers.resize(height, nullptr);
-
-	const size_t size = png_get_rowbytes(png, info);
-	for (u32 y = 0; y < height; y++)
-	{
-		row_pointers[y] = static_cast<u8*>(std::malloc(size));
-	}
-
-	png_read_image(png, &row_pointers[0]);
-
-	png_destroy_read_struct(&png, &info, nullptr);
-
-	return true;
-}
-
 void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height, bool is_bgra)
 {
 	std::thread(
@@ -544,16 +478,21 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 				}
 			}
 
-			screenshot_manager manager;
-			{
-				const auto fxo = g_fxo->get<screenshot_manager>();
-				std::lock_guard lock(fxo->mtx);
-				manager = *fxo;
-			}
+			screenshot_manager manager = *g_fxo->get<screenshot_manager>();
 
-			png_structp write_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-			png_infop info_ptr    = png_create_info_struct(write_ptr);
-			png_set_IHDR(write_ptr, info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+			struct scoped_png_ptrs
+			{
+				png_structp write_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+				png_infop info_ptr    = png_create_info_struct(write_ptr);
+
+				~scoped_png_ptrs()
+				{
+					png_free_data(write_ptr, info_ptr, PNG_FREE_ALL, -1);
+					png_destroy_write_struct(&write_ptr, &info_ptr);
+				}
+			} ptrs;
+
+			png_set_IHDR(ptrs.write_ptr, ptrs.info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 
 			png_text text[6] = {};
 			int num_text = 0;
@@ -592,7 +531,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 			text[num_text].key         = const_cast<char*>("Comment");
 			text[num_text].text        = const_cast<char*>(game_comment.c_str());
 
-			png_set_text(write_ptr, info_ptr, text, 6);
+			png_set_text(ptrs.write_ptr, ptrs.info_ptr, text, 6);
 
 			std::vector<u8*> rows(sshot_height);
 			for (usz y = 0; y < sshot_height; y++)
@@ -605,33 +544,32 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 				{
 					screenshot_log.notice("Adding overlay to cell screenshot from %s", cell_sshot_overlay_path);
 
-					u32 overlay_width  = 0;
-					u32 overlay_height = 0;
-					std::vector<u8*> overlay_data;
+					QImage overlay_img;
 
-					if (!read_png_file(cell_sshot_overlay_path, overlay_width, overlay_height, overlay_data))
+					if (!overlay_img.load(qstr(cell_sshot_overlay_path)))
 					{
 						screenshot_log.error("Failed to read cell screenshot overlay '%s' : %s", cell_sshot_overlay_path, fs::g_tls_error);
 					}
-					else if (static_cast<u32>(abs(manager.overlay_offset_x)) < sshot_width &&
-					         static_cast<u32>(abs(manager.overlay_offset_y)) < sshot_height)
+					else if (manager.overlay_offset_x < static_cast<s64>(sshot_width)
+					      && manager.overlay_offset_y < static_cast<s64>(sshot_height)
+					      && manager.overlay_offset_x + overlay_img.width() > 0
+					      && manager.overlay_offset_y + overlay_img.height() > 0)
 					{
-						const s64 max_width = manager.overlay_offset_x > 0 ? sshot_width - static_cast<u32>(manager.overlay_offset_x) : sshot_width;
-						const s64 max_height = std::min<s64>(sshot_height, manager.overlay_offset_y + static_cast<s64>(overlay_height));
-						const usz line_size = 4 * std::min<usz>(overlay_width, max_width);
+						QImage screenshot_img(rows[0], sshot_width, sshot_height, QImage::Format_RGBA8888);
+						QPainter painter(&screenshot_img);
+						painter.drawImage(manager.overlay_offset_x, manager.overlay_offset_y, overlay_img);
 
-						for (s64 y = std::max<s64>(0, manager.overlay_offset_y); y < max_height; y++)
-						{
-							std::memcpy(rows[y], overlay_data[y - manager.overlay_offset_y], line_size);
-						}
+						std::memcpy(rows[0], screenshot_img.constBits(), static_cast<usz>(sshot_height) * screenshot_img.bytesPerLine());
+
+						screenshot_log.success("Applied screenshot overlay '%s'", cell_sshot_overlay_path);
 					}
 				}
 			}
 
 			std::vector<u8> encoded_png;
 
-			png_set_rows(write_ptr, info_ptr, &rows[0]);
-			png_set_write_fn(write_ptr, &encoded_png,
+			png_set_rows(ptrs.write_ptr, ptrs.info_ptr, &rows[0]);
+			png_set_write_fn(ptrs.write_ptr, &encoded_png,
 				[](png_structp png_ptr, png_bytep data, png_size_t length)
 				{
 					std::vector<u8>* p = static_cast<std::vector<u8>*>(png_get_io_ptr(png_ptr));
@@ -639,13 +577,13 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 				},
 				nullptr);
 
-			png_write_png(write_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, nullptr);
+			png_write_png(ptrs.write_ptr, ptrs.info_ptr, PNG_TRANSFORM_IDENTITY, nullptr);
 
 			sshot_file.write(encoded_png.data(), encoded_png.size());
 
 			screenshot_log.success("Successfully saved screenshot to %s", filename);
 
-			while (manager.is_enabled)
+			if (manager.is_enabled)
 			{
 				const std::string cell_sshot_filename = manager.get_screenshot_path(date_time.toString("yyyy/MM/dd").toStdString());
 				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
@@ -655,24 +593,20 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 				if (!fs::create_path(cell_sshot_dir) && fs::g_tls_error != fs::error::exist)
 				{
 					screenshot_log.error("Failed to create cell screenshot dir \"%s\" : %s", cell_sshot_dir, fs::g_tls_error);
-					break;
+					return;
 				}
 
 				fs::file cell_sshot_file(cell_sshot_filename, fs::open_mode::create + fs::open_mode::write + fs::open_mode::excl);
 				if (!cell_sshot_file)
 				{
 					screenshot_log.error("Failed to save cell screenshot \"%s\" : %s", cell_sshot_filename, fs::g_tls_error);
-					break;
+					return;
 				}
 
 				cell_sshot_file.write(encoded_png.data(), encoded_png.size());
 
 				screenshot_log.success("Successfully saved cell screenshot to %s", cell_sshot_filename);
-				break;
 			}
-
-			png_free_data(write_ptr, info_ptr, PNG_FREE_ALL, -1);
-			png_destroy_write_struct(&write_ptr, &info_ptr);
 
 			return;
 		},

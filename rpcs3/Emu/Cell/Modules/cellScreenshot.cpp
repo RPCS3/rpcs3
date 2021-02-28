@@ -26,6 +26,7 @@ void fmt_class_string<CellScreenShotError>::format(std::string& out, u64 arg)
 	});
 }
 
+shared_mutex screenshot_mtx;
 
 std::string screenshot_manager::get_overlay_path() const
 {
@@ -85,7 +86,7 @@ error_code cellScreenShotSetParameter(vm::cptr<CellScreenShotSetParam> param)
 		return CELL_SCREENSHOT_ERROR_PARAM;
 
 	const auto manager = g_fxo->get<screenshot_manager>();
-	std::lock_guard lock(manager->mtx);
+	std::lock_guard lock(screenshot_mtx);
 
 	if (param->photo_title && param->photo_title[0] != '\0')
 		manager->photo_title = std::string(param->photo_title.get_ptr());
@@ -123,7 +124,7 @@ error_code cellScreenShotSetOverlayImage(vm::cptr<char> srcDir, vm::cptr<char> s
 	}
 
 	const auto manager = g_fxo->get<screenshot_manager>();
-	std::lock_guard lock(manager->mtx);
+	std::lock_guard lock(screenshot_mtx);
 
 	manager->overlay_dir_name = std::string(srcDir.get_ptr());
 	manager->overlay_file_name = std::string(srcFile.get_ptr());
@@ -138,7 +139,7 @@ error_code cellScreenShotEnable()
 	cellScreenshot.warning("cellScreenShotEnable()");
 
 	const auto manager = g_fxo->get<screenshot_manager>();
-	std::lock_guard lock(manager->mtx);
+	std::lock_guard lock(screenshot_mtx);
 
 	manager->is_enabled = true;
 
@@ -150,7 +151,7 @@ error_code cellScreenShotDisable()
 	cellScreenshot.warning("cellScreenShotDisable()");
 
 	const auto manager = g_fxo->get<screenshot_manager>();
-	std::lock_guard lock(manager->mtx);
+	std::lock_guard lock(screenshot_mtx);
 
 	manager->is_enabled = false;
 
