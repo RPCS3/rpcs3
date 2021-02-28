@@ -118,10 +118,9 @@ namespace vk
 
 	event* AsyncTaskScheduler::get_primary_sync_label()
 	{
-		std::lock_guard lock(m_submit_mutex);
-
-		if (m_sync_required)
+		if (m_sync_required) [[unlikely]]
 		{
+			std::lock_guard lock(m_submit_mutex); // For some reason this is inexplicably expensive. WTF!
 			ensure(m_current_cb);
 			insert_sync_event();
 			m_sync_required = false;
@@ -132,13 +131,12 @@ namespace vk
 
 	void AsyncTaskScheduler::flush(VkSemaphore wait_semaphore, VkPipelineStageFlags wait_dst_stage_mask)
 	{
-		std::lock_guard lock(m_submit_mutex);
-
 		if (!m_current_cb)
 		{
 			return;
 		}
 
+		std::lock_guard lock(m_submit_mutex);
 		if (m_sync_required)
 		{
 			insert_sync_event();
