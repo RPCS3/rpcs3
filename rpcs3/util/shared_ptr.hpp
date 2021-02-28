@@ -30,13 +30,13 @@ namespace stx
 		}
 		else if constexpr (std::is_convertible_v<U*, T*>)
 		{
-			const auto u = &sample<U>;
+			const auto u = std::addressof(sample<U>);
 			const volatile void* x = u;
 			return static_cast<T*>(u) == x;
 		}
 		else if constexpr (std::is_convertible_v<T*, U*>)
 		{
-			const auto t = &sample<T>;
+			const auto t = std::addressof(sample<T>);
 			const volatile void* x = t;
 			return static_cast<U*>(t) == x;
 		}
