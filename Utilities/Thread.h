@@ -65,19 +65,50 @@ struct result_storage<Ctx, std::enable_if_t<!std::is_void_v<std::invoke_result_t
 
 	using type = T;
 
-	T* get()
+	T* _get()
 	{
 		return reinterpret_cast<T*>(&data);
 	}
 
-	const T* get() const
+	const T* _get() const
 	{
 		return reinterpret_cast<const T*>(&data);
 	}
 
+	void init() noexcept
+	{
+		new (data) T();
+	}
+
 	void destroy() noexcept
 	{
-		get()->~T();
+		_get()->~T();
+	}
+};
+
+// Base class for task queue (linked list)
+class thread_future
+{
+	friend class thread_base;
+
+	shared_ptr<thread_future> next{};
+
+	shared_ptr<thread_future>* prev{};
+
+protected:
+	atomic_t<void(*)(thread_base*, thread_future*)> exec{};
+
+public:
+	// Get reference to the atomic variable for inspection and waiting for
+	const auto& get_wait() const
+	{
+		return exec;
+	}
+
+	// Wait (preset)
+	void wait() const
+	{
+		exec.wait<atomic_wait::op_ne>(nullptr);
 	}
 };
 
@@ -109,6 +140,9 @@ private:
 
 	// Thread name
 	atomic_ptr<std::string> m_tname;
+
+	// Thread task queue (reversed linked list)
+	atomic_ptr<thread_future> m_taskq{};
 
 	// Start thread
 	void start();
@@ -150,6 +184,13 @@ public:
 
 	// Get thread id
 	u64 get_native_id() const;
+
+	// Add work to the queue
+	void push(shared_ptr<thread_future>);
+
+private:
+	// Clear task queue (execute unless aborting)
+	void exec();
 };
 
 // Collection of global function for current thread
@@ -217,11 +258,8 @@ public:
 		return static_cast<thread_base&>(thread).get_native_id();
 	}
 
-	// Read current state
-	static inline thread_state state()
-	{
-		return static_cast<thread_state>(g_tls_this_thread->m_sync & 3);
-	}
+	// Read current state, possibly executing some tasks
+	static thread_state state();
 
 	// Wait once with timeout. May spuriously return false.
 	static inline void wait_for(u64 usec, bool alert = true)
@@ -241,14 +279,15 @@ public:
 	{
 		auto _this = g_tls_this_thread;
 
-		if (_this->m_sync.bit_test_reset(2))
+		if (_this->m_sync.bit_test_reset(2) || _this->m_taskq)
 		{
 			return;
 		}
 
-		atomic_wait::list<2> list{};
+		atomic_wait::list<3> list{};
 		list.set<0, Op>(wait, old);
 		list.set<1>(_this->m_sync, 0, 4 + 1);
+		list.set<2>(_this->m_taskq, nullptr);
 		list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
 	}
 
@@ -324,7 +363,7 @@ class named_thread final : public Context, result_storage<Context>, thread_base
 			if constexpr (!result::empty)
 			{
 				// Construct using default constructor in the case of failure
-				new (static_cast<result*>(static_cast<named_thread*>(thread_ctrl::get_current()))->get()) typename result::type();
+				static_cast<result*>(static_cast<named_thread*>(thread_ctrl::get_current()))->init();
 			}
 		});
 
@@ -347,7 +386,7 @@ class named_thread final : public Context, result_storage<Context>, thread_base
 		else
 		{
 			// Construct the result using placement new (copy elision should happen)
-			new (result::get()) decltype(auto)(Context::operator()());
+			new (result::_get()) decltype(auto)(Context::operator()());
 		}
 
 		return thread::finalize(thread_state::finished);
@@ -395,7 +434,7 @@ public:
 
 		if constexpr (!result::empty)
 		{
-			return *result::get();
+			return *result::_get();
 		}
 	}
 
@@ -406,7 +445,279 @@ public:
 
 		if constexpr (!result::empty)
 		{
-			return *result::get();
+			return *result::_get();
+		}
+	}
+
+	// Send command to the thread to invoke directly (references should be passed via std::ref())
+	template <bool Discard = true, typename Arg, typename... Args>
+	auto operator()(Arg&& arg, Args&&... args)
+	{
+		// Overloaded operator() of the Context.
+		constexpr bool v1 = std::is_invocable_v<Context, Arg&&, Args&&...>;
+
+		// Anything invocable, not necessarily involving the Context.
+		constexpr bool v2 = std::is_invocable_v<Arg&&, Args&&...>;
+
+		// Could be pointer to a non-static member function (or data member) of the Context.
+		constexpr bool v3 = std::is_member_pointer_v<std::decay_t<Arg>> && std::is_invocable_v<Arg, Context&, Args&&...>;
+
+		// Only one invocation type shall be valid, otherwise we don't know.
+		static_assert((v1 + v2 + v3) == 1, "Ambiguous or invalid named_thread call.");
+
+		if constexpr (v1)
+		{
+			class future : public thread_future, result_storage<Context, void, Arg, Args...>
+			{
+				// A tuple to store arguments
+				decltype(std::make_tuple(std::forward<Arg, Args...>(arg, args...))) m_args;
+
+			public:
+				future(Arg&& arg, Args&&... args)
+					: m_args(std::forward<Arg, Args...>(arg, args...))
+				{
+					thread_future::exec.raw() = +[](thread_base* tb, thread_future* tf)
+					{
+						const auto _this = static_cast<future*>(tf);
+
+						if (!tb) [[unlikely]]
+						{
+							if constexpr (!future::empty && !Discard)
+							{
+								_this->init();
+							}
+
+							return;
+						}
+
+						if constexpr (future::empty || Discard)
+						{
+							std::apply(*static_cast<Context*>(static_cast<named_thread*>(tb)), _this->m_args);
+						}
+						else
+						{
+							new (_this->_get()) decltype(auto)(std::apply(*static_cast<Context*>(static_cast<named_thread*>(tb)), _this->m_args));
+						}
+					};
+				}
+
+				future(const future&) = delete;
+
+				future& operator=(const future&) = delete;
+
+				~future()
+				{
+					if constexpr (!future::empty && !Discard)
+					{
+						// Should be set to null if executed
+						if (!this->exec)
+						{
+							this->destroy();
+						}
+					}
+				}
+
+				decltype(auto) get()
+				{
+					if constexpr (!future::empty && !Discard)
+					{
+						return *this->_get();
+					}
+				}
+
+				decltype(auto) get() const
+				{
+					if constexpr (!future::empty && !Discard)
+					{
+						return *this->_get();
+					}
+				}
+			};
+
+			single_ptr<future> target = make_single<future>(std::forward<Arg, Args...>(arg, args...));
+
+			if constexpr (!Discard)
+			{
+				shared_ptr<future> result = std::move(target);
+
+				// Copy result
+				thread::push(result);
+				return result;
+			}
+			else
+			{
+				// Move target
+				thread::push(std::move(target));
+				return;
+			}
+		}
+		else if constexpr (v2)
+		{
+			class future : public thread_future, result_storage<std::decay_t<Arg>, void, Args...>
+			{
+				decltype(std::make_tuple(std::forward<Args...>(args...))) m_args;
+
+				std::decay_t<Arg> m_func;
+
+			public:
+				future(Arg func, Args&&... args)
+					: m_args(std::forward<Args...>(args...))
+					, m_func(func)
+				{
+					thread_future::exec.raw() = +[](thread_base* tb, thread_future* tf)
+					{
+						const auto _this = static_cast<future*>(tf);
+
+						if (!tb) [[unlikely]]
+						{
+							if constexpr (!future::empty && !Discard)
+							{
+								_this->init();
+							}
+
+							return;
+						}
+
+						if constexpr (future::empty || Discard)
+						{
+							std::apply(_this->m_func, _this->m_args);
+						}
+						else
+						{
+							new (_this->_get()) decltype(auto)(std::apply(_this->m_func, _this->m_args));
+						}
+					};
+				}
+
+				future(const future&) = delete;
+
+				future& operator=(const future&) = delete;
+
+				~future()
+				{
+					if constexpr (!future::empty && !Discard)
+					{
+						if (!this->exec)
+						{
+							this->destroy();
+						}
+					}
+				}
+
+				decltype(auto) get()
+				{
+					if constexpr (!future::empty && !Discard)
+					{
+						return *this->_get();
+					}
+				}
+
+				decltype(auto) get() const
+				{
+					if constexpr (!future::empty && !Discard)
+					{
+						return *this->_get();
+					}
+				}
+			};
+
+			single_ptr<future> target = make_single<future>(std::forward<Arg, Args...>(arg, args...));
+
+			if constexpr (!Discard)
+			{
+				shared_ptr<future> result = std::move(target);
+				thread::push(result);
+				return result;
+			}
+			else
+			{
+				thread::push(std::move(target));
+				return;
+			}
+		}
+		else if constexpr (v3)
+		{
+			class future : public thread_future, result_storage<std::decay_t<Arg>, void, Context&, Args...>
+			{
+				decltype(std::make_tuple(std::forward<Args...>(args...))) m_args;
+
+				std::decay_t<Arg> m_func;
+
+			public:
+				future(Arg func, Args&&... args)
+					: m_args(std::forward<Args...>(args...))
+					, m_func(func)
+				{
+					thread_future::exec.raw() = +[](thread_base* tb, thread_future* tf)
+					{
+						const auto _this = static_cast<future*>(tf);
+
+						if (!tb) [[unlikely]]
+						{
+							if constexpr (!future::empty && !Discard)
+							{
+								_this->init();
+							}
+
+							return;
+						}
+
+						if constexpr (future::empty || Discard)
+						{
+							std::apply(_this->m_func, *static_cast<Context*>(static_cast<named_thread*>(tb)), _this->m_args);
+						}
+						else
+						{
+							new (_this->_get()) decltype(auto)(std::apply(_this->m_func, *static_cast<Context*>(static_cast<named_thread*>(tb)), _this->m_args));
+						}
+					};
+				}
+
+				future(const future&) = delete;
+
+				future& operator=(const future&) = delete;
+
+				~future()
+				{
+					if constexpr (!future::empty && !Discard)
+					{
+						if (!this->exec)
+						{
+							this->destroy();
+						}
+					}
+				}
+
+				decltype(auto) get()
+				{
+					if constexpr (!future::empty && !Discard)
+					{
+						return *this->_get();
+					}
+				}
+
+				decltype(auto) get() const
+				{
+					if constexpr (!future::empty && !Discard)
+					{
+						return *this->_get();
+					}
+				}
+			};
+
+			single_ptr<future> target = make_single<future>(std::forward<Arg, Args...>(arg, args...));
+
+			if constexpr (!Discard)
+			{
+				shared_ptr<future> result = std::move(target);
+				thread::push(result);
+				return result;
+			}
+			else
+			{
+				thread::push(std::move(target));
+				return;
+			}
 		}
 	}
 

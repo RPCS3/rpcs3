@@ -2207,6 +2207,16 @@ thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* 
 	});
 }
 
+thread_state thread_ctrl::state()
+{
+	auto _this = g_tls_this_thread;
+
+	// Drain execution queue
+	_this->exec();
+
+	return static_cast<thread_state>(_this->m_sync & 3);
+}
+
 void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 {
 	auto _this = g_tls_this_thread;
@@ -2256,13 +2266,16 @@ void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 	}
 #endif
 
-	if (_this->m_sync.bit_test_reset(2))
+	if (_this->m_sync.bit_test_reset(2) || _this->m_taskq)
 	{
 		return;
 	}
 
 	// Wait for signal and thread state abort
-	_this->m_sync.wait(0, 4 + 1, atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
+	atomic_wait::list<2> list{};
+	list.set<0>(_this->m_sync, 0, 4 + 1);
+	list.set<1>(_this->m_taskq, nullptr);
+	list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
 }
 
 std::string thread_ctrl::get_name_cached()
@@ -2298,6 +2311,9 @@ thread_base::thread_base(native_entry entry, std::string_view name)
 
 thread_base::~thread_base()
 {
+	// Cleanup abandoned tasks: initialize default results and signal
+	this->exec();
+
 	// Only cleanup on errored status
 	if ((m_sync & 3) == 2)
 	{
@@ -2401,6 +2417,80 @@ u64 thread_base::get_cycles()
 	else
 	{
 		return m_sync >> 3;
+	}
+}
+
+void thread_base::push(shared_ptr<thread_future> task)
+{
+	const auto next = &task->next;
+	m_taskq.push_head(*next, std::move(task));
+	m_taskq.notify_one();
+}
+
+void thread_base::exec()
+{
+	if (!m_taskq) [[likely]]
+	{
+		return;
+	}
+
+	while (shared_ptr<thread_future> head = m_taskq.exchange(null_ptr))
+	{
+		// TODO: check if adapting reverse algorithm is feasible here
+		shared_ptr<thread_future>* prev{};
+
+		for (auto ptr = head.get(); ptr; ptr = ptr->next.get())
+		{
+			utils::prefetch_exec(ptr->exec.load());
+
+			ptr->prev = prev;
+
+			if (ptr->next)
+			{
+				prev = &ptr->next;
+			}
+		}
+
+		if (!prev)
+		{
+			prev = &head;
+		}
+
+		for (auto ptr = prev->get(); ptr; ptr = ptr->prev->get())
+		{
+			if (auto task = ptr->exec.load()) [[likely]]
+			{
+				// Execute or discard (if aborting)
+				if ((m_sync & 3) == 0) [[likely]]
+				{
+					task(this, ptr);
+				}
+				else
+				{
+					task(nullptr, ptr);
+				}
+
+				// Notify waiters
+				ptr->exec.release(nullptr);
+				ptr->exec.notify_all();
+			}
+
+			if (ptr->next)
+			{
+				// Partial cleanup
+				ptr->next.reset();
+			}
+
+			if (!ptr->prev)
+			{
+				break;
+			}
+		}
+
+		if (!m_taskq) [[likely]]
+		{
+			return;
+		}
 	}
 }
 
