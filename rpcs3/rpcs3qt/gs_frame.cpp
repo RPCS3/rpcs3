@@ -9,6 +9,7 @@
 #include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
+#include "Emu/RSX/rsx_utils.h"
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -18,7 +19,6 @@
 
 #include <string>
 #include <thread>
-#include <unordered_map>
 
 #include "png.h"
 
@@ -579,21 +579,23 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 					// Games choose the overlay file and the offset based on the current video resolution.
 					// We need to scale the overlay if our resolution scaling causes the image to have a different size.
-					extern const std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map;
-					const auto [expected_width, expected_height] = g_video_out_resolution_map.at(g_cfg.video.resolution);
+					const auto avconf = g_fxo->get<rsx::avconf>();
 
-					if (static_cast<u32>(expected_width) != sshot_width || static_cast<u32>(expected_height) != sshot_height)
+					// TODO: handle weird PS3 resolutions (without resolution scaling)
+					if (avconf->resolution_x != sshot_width || avconf->resolution_y != sshot_height)
 					{
-						const double ratio_x = sshot_width / static_cast<double>(expected_width);
-						const double ratio_y = sshot_height / static_cast<double>(expected_height);
+						const int scale = rsx::get_resolution_scale_percent();
+						const int x = (scale * manager.overlay_offset_x) / 100;
+						const int y = (scale * manager.overlay_offset_y) / 100;
+						const int width = (scale * overlay_img.width()) / 100;
+						const int height = (scale * overlay_img.height()) / 100;
 
 						screenshot_log.notice("Scaling overlay from %dx%d at offset (%d,%d) to %dx%d at offset (%d,%d)",
-							overlay_img.width(), overlay_img.height(), manager.overlay_offset_x, manager.overlay_offset_y,
-							overlay_img.width() * ratio_x, overlay_img.height() * ratio_y, manager.overlay_offset_x * ratio_x, manager.overlay_offset_y * ratio_y);
+							overlay_img.width(), overlay_img.height(), manager.overlay_offset_x, manager.overlay_offset_y, width, height, x, y);
 
-						manager.overlay_offset_x *= ratio_x;
-						manager.overlay_offset_y *= ratio_y;
-						overlay_img = overlay_img.scaled(QSize(overlay_img.width() * ratio_x, overlay_img.height() * ratio_y), Qt::AspectRatioMode::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation);
+						manager.overlay_offset_x = x;
+						manager.overlay_offset_y = y;
+						overlay_img = overlay_img.scaled(QSize(width, height), Qt::AspectRatioMode::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation);
 					}
 
 					if (manager.overlay_offset_x < static_cast<s64>(sshot_width) &&
