@@ -4,6 +4,37 @@
 
 LOG_CHANNEL(ds3_log, "DS3");
 
+struct ds3_rumble
+{
+	u8 padding              = 0;
+	u8 small_motor_duration = 0xFF; // 0xff means forever
+	u8 small_motor_on       = 0;    // 0 or 1 (off/on)
+	u8 large_motor_duration = 0xFF; // 0xff means forever
+	u8 large_motor_force    = 0;    // 0 to 255
+};
+
+struct ds3_led
+{
+	u8 duration             = 0xFF; // total duration, 0xff means forever
+	u8 interval_duration    = 0xFF; // interval duration in deciseconds
+	u8 enabled              = 0x10;
+	u8 interval_portion_off = 0;    // in percent (100% = 0xFF)
+	u8 interval_portion_on  = 0xFF; // in percent (100% = 0xFF)
+};
+
+struct ds3_output_report
+{
+	u8 report_id = 0;
+#ifdef _WIN32
+	u8 idk_what_this_is[3] = {0x02, 0x00, 0x00};
+#endif
+	ds3_rumble rumble;
+	u8 padding[4]  = {0, 0, 0, 0};
+	u8 led_enabled = 0; // LED 1 = 0x02, LED 2 = 0x04, etc.
+	ds3_led led[4];
+	ds3_led led_5;      // reserved for another LED
+};
+
 constexpr u16 DS3_VID = 0x054C;
 constexpr u16 DS3_PID = 0x0268;
 
@@ -101,30 +132,24 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 	if (!ds3dev || !ds3dev->hidDevice)
 		return -2;
 
-#ifdef _WIN32
-	u8 report_buf[] = {
-		0x00,
-		0x02, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00
-	};
+	ds3_output_report output_report;
+	output_report.rumble.small_motor_on    = ds3dev->small_motor;
+	output_report.rumble.large_motor_force = ds3dev->large_motor;
 
-	report_buf[6] = ds3dev->small_motor;
-	report_buf[8] = ds3dev->large_motor;
-#else
-	u8 report_buf[] = {
-		0x01,
-		0x00, 0xff, 0x00, 0xff, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0x00, 0x00, 0x00, 0x00, 0x00
-	};
-	report_buf[3] = ds3dev->large_motor;
-	report_buf[5] = ds3dev->small_motor;
-#endif
+	switch (m_player_id)
+	{
+	case 0: output_report.led_enabled = 0b00000010; break;
+	case 1: output_report.led_enabled = 0b00000100; break;
+	case 2: output_report.led_enabled = 0b00001000; break;
+	case 3: output_report.led_enabled = 0b00010000; break;
+	case 4: output_report.led_enabled = 0b00010010; break;
+	case 5: output_report.led_enabled = 0b00010100; break;
+	case 6: output_report.led_enabled = 0b00011000; break;
+	default:
+		fmt::throw_exception("DS3 is using forbidden player id %d", m_player_id);
+	}
 
-	return hid_write(ds3dev->hidDevice, report_buf, sizeof(report_buf));
+	return hid_write(ds3dev->hidDevice, &output_report.report_id, sizeof(output_report));
 }
 
 void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
