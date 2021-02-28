@@ -95,6 +95,13 @@ namespace vk
 
 	void dma_block::flush(const utils::address_range& range)
 	{
+		if (inheritance_info.parent)
+		{
+			// Parent may be a different type of block
+			inheritance_info.parent->flush(range);
+			return;
+		}
+
 		auto src = map_range(range);
 		auto dst = vm::get_super_ptr(range.start);
 		std::memcpy(dst, src, range.length());
@@ -105,6 +112,13 @@ namespace vk
 
 	void dma_block::load(const utils::address_range& range)
 	{
+		if (inheritance_info.parent)
+		{
+			// Parent may be a different type of block
+			inheritance_info.parent->load(range);
+			return;
+		}
+
 		auto src = vm::get_super_ptr(range.start);
 		auto dst = map_range(range);
 		std::memcpy(dst, src, range.length());
@@ -143,7 +157,7 @@ namespace vk
 		return inheritance_info.parent->head();
 	}
 
-	void dma_block::set_parent(const command_buffer& cmd, dma_block* parent)
+	void dma_block::set_parent(dma_block* parent)
 	{
 		ensure(parent);
 		ensure(parent->base_address < base_address);
@@ -164,7 +178,7 @@ namespace vk
 		}
 	}
 
-	void dma_block::extend(const command_buffer& cmd, const render_device& dev, usz new_size)
+	void dma_block::extend(const render_device& dev, usz new_size)
 	{
 		ensure(allocated_memory);
 		if (new_size <= allocated_memory->size())
@@ -239,7 +253,7 @@ namespace vk
 #endif
 	}
 
-	void create_dma_block(std::unique_ptr<dma_block>& block, u32 base_address, u32 expected_length)
+	void create_dma_block(std::unique_ptr<dma_block>& block, u32 base_address, usz expected_length)
 	{
 		const auto vendor = g_render_device->gpu().get_driver_vendor();
 
@@ -249,7 +263,7 @@ namespace vk
 			rsx::get_location(base_address) == CELL_GCM_LOCATION_LOCAL : // NVIDIA workaround
 			true;
 #else
-		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations		
+		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
 		const bool allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV);
 #endif
 		if (allow_host_buffers && g_render_device->get_external_memory_host_support())
@@ -264,7 +278,7 @@ namespace vk
 		block->init(*g_render_device, base_address, expected_length);
 	}
 
-	std::pair<u32, vk::buffer*> map_dma(const command_buffer& cmd, u32 local_address, u32 length)
+	std::pair<u32, vk::buffer*> map_dma(u32 local_address, u32 length)
 	{
 		// Not much contention expected here, avoid searching twice
 		std::lock_guard lock(g_dma_mutex);
@@ -305,8 +319,7 @@ namespace vk
 
 		for (auto block = first_block; block <= last_block; block += s_dma_block_length)
 		{
-			auto found = g_dma_pool.find(block);
-			auto &entry = g_dma_pool[block];
+			auto& entry = g_dma_pool[block];
 
 			if (block == first_block)
 			{
@@ -325,7 +338,7 @@ namespace vk
 			else if (entry)
 			{
 				ensure((entry->end() & s_dma_block_mask) <= last_block);
-				entry->set_parent(cmd, block_head);
+				entry->set_parent(block_head);
 			}
 			else
 			{

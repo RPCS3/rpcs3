@@ -305,7 +305,7 @@ public:
 				return -1;
 			}
 
-			data.wait(bit_wait);
+			thread_ctrl::wait_on(data, bit_wait);
 		}
 	}
 
@@ -345,7 +345,7 @@ public:
 				return false;
 			}
 
-			data.wait(state);
+			thread_ctrl::wait_on(data, state);
 		}
 	}
 
@@ -643,6 +643,7 @@ public:
 	spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated = false, u32 option = 0);
 
 	u32 pc = 0;
+	u32 dbg_step_pc = 0;
 
 	// May be used internally by recompilers.
 	u32 base_pc = 0;

@@ -26,18 +26,22 @@ void microphone_creator::refresh_list()
 
 	if (alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT") == AL_TRUE)
 	{
-		const char* devices = alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
-
-		while (*devices != 0)
+		if (const char* devices = alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER); devices != nullptr)
 		{
-			m_microphone_list.append(qstr(devices));
-			devices += strlen(devices) + 1;
+			while (*devices != 0)
+			{
+				m_microphone_list.append(qstr(devices));
+				devices += strlen(devices) + 1;
+			}
 		}
 	}
 	else
 	{
 		// Without enumeration we can only use one device
-		m_microphone_list.append(qstr(alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER)));
+		if (const char* device = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER); device != nullptr)
+		{
+			m_microphone_list.append(qstr(device));
+		}
 	}
 }
 

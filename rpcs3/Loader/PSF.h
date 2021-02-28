@@ -53,7 +53,7 @@ namespace psf
 	registry load_object(const fs::file&);
 
 	// Convert PSF registry to SFO binary format
-	void save_object(const fs::file&, const registry&);
+	std::vector<u8> save_object(const registry&, std::vector<u8>&& init = std::vector<u8>{});
 
 	// Get string value or default value
 	std::string_view get_string(const registry& psf, const std::string& key, std::string_view def = ""sv);

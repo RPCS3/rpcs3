@@ -385,14 +385,15 @@ extern void ppu_register_range(u32 addr, u32 size)
 		return;
 	}
 
+	size = utils::align(size + addr % 0x10000, 0x10000);
+	addr &= -0x10000;
+
 	// Register executable range at
-	utils::memory_commit(&ppu_ref(addr), size * 2, utils::protection::rw);
-	vm::page_protect(addr, utils::align(size, 0x10000), 0, vm::page_executable);
+	utils::memory_commit(&ppu_ref(addr), u64{size} * 2, utils::protection::rw);
+	vm::page_protect(addr, size, 0, vm::page_executable);
 
 	const u64 fallback = reinterpret_cast<uptr>(ppu_fallback);
 	const u64 seg_base = addr;
-
-	size &= ~3; // Loop assumes `size = n * 4`, enforce that by rounding down
 
 	while (size)
 	{
@@ -454,7 +455,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 {
 	// Pause
-	ppu.state += cpu_flag::dbg_pause;
+	ppu.state.atomic_op([](bs_t<cpu_flag>& state) { if (!(state & cpu_flag::dbg_step)) state += cpu_flag::dbg_pause; });
 	
 	if (ppu.check_state())
 	{
@@ -632,6 +633,8 @@ std::string ppu_thread::dump_regs() const
 
 			std::string buf_tmp(gpr_buf, gpr_buf + max_str_len);
 
+			std::string_view sv(buf_tmp.data(), std::min<usz>(buf_tmp.size(), buf_tmp.find_first_of("\0\n"sv)));
+
 			if (is_function)
 			{
 				if (toc)
@@ -645,9 +648,12 @@ std::string ppu_thread::dump_regs() const
 					fmt::append(ret, " -> %s", dis_asm.last_opcode);
 				}
 			}
-			else if (std::isprint(static_cast<u8>(buf_tmp[0])) && std::isprint(static_cast<u8>(buf_tmp[1])) && std::isprint(static_cast<u8>(buf_tmp[2])))
+			// NTS: size of 3 and above is required
+			// If ends with a newline, only one character is required
+			else if ((sv.size() == buf_tmp.size() || (sv.size() >= (buf_tmp[sv.size()] == '\n' ? 1 : 3))) &&
+				std::all_of(sv.begin(), sv.end(), [](u8 c){ return std::isprint(c); }))
 			{
-				fmt::append(ret, " -> \"%s\"", buf_tmp.c_str());
+				fmt::append(ret, " -> \"%s\"", sv);
 			}
 			else
 			{
@@ -965,6 +971,23 @@ void ppu_thread::cpu_sleep()
 	lv2_obj::awake(this);
 }
 
+void ppu_thread::cpu_on_stop()
+{
+	if (current_function)
+	{
+		if (start_time)
+		{
+			ppu_log.warning("'%s' aborted (%fs)", current_function, (get_guest_system_time() - start_time) / 1000000.);
+		}
+		else
+		{
+			ppu_log.warning("'%s' aborted", current_function);
+		}
+
+		current_function = {};
+	}
+}
+
 void ppu_thread::exec_task()
 {
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
@@ -1132,20 +1155,18 @@ cmd64 ppu_thread::cmd_wait()
 {
 	while (true)
 	{
-		if (state) [[unlikely]]
-		{
-			if (is_stopped())
-			{
-				return cmd64{};
-			}
-		}
-
 		if (cmd64 result = cmd_queue[cmd_queue.peek()].exchange(cmd64{}))
 		{
 			return result;
 		}
 
-		thread_ctrl::wait();
+		if (is_stopped())
+		{
+			return {};
+		}
+
+		thread_ctrl::wait_on(cmd_notify, 0);
+		cmd_notify = 0;
 	}
 }
 
@@ -1199,18 +1220,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	{
 		if (std::uncaught_exceptions())
 		{
-			if (current_function)
-			{
-				if (start_time)
-				{
-					ppu_log.warning("'%s' aborted (%fs)", current_function, (get_guest_system_time() - start_time) / 1000000.);
-				}
-				else
-				{
-					ppu_log.warning("'%s' aborted", current_function);
-				}
-			}
-
+			cpu_on_stop();
 			current_function = old_func;
 		}
 		else
@@ -2212,6 +2222,11 @@ extern void ppu_finalize(const ppu_module& info)
 
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx)
 {
+	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
+	{
+		return;
+	}
+
 	// Make sure we only have one '/' at the end and remove duplicates.
 	for (std::string& dir : dir_queue)
 	{
@@ -2422,13 +2437,14 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 
 			elf_error prx_err{}, ovl_err{};
 
-			if (const ppu_prx_object obj = src; (prx_err = obj, obj == elf_error::ok))
+			if (ppu_prx_object obj = src; (prx_err = obj, obj == elf_error::ok))
 			{
 				std::unique_lock lock(sprx_mtx);
 
 				if (auto prx = ppu_load_prx(obj, path))
 				{
 					lock.unlock();
+					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*prx);
 					idm::remove<lv2_obj, lv2_prx>(idm::last_id());
 					lock.lock();
@@ -2442,7 +2458,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 				prx_err = elf_error::header_type;
 			}
 
-			if (const ppu_exec_object obj = src; (ovl_err = obj, obj == elf_error::ok))
+			if (ppu_exec_object obj = src; (ovl_err = obj, obj == elf_error::ok))
 			{
 				while (ovl_err == elf_error::ok)
 				{
@@ -2457,6 +2473,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 						ovl_err = elf_error::header_type;
 						break;
 					}
+
+					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 
 					ppu_initialize(*ovlm);
 

@@ -1250,16 +1250,6 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 
 namespace
 {
-	/**
-	* Get first index and index count from a draw indexed clause.
-	*/
-	std::tuple<u32, u32> get_first_count_from_draw_indexed_clause(const std::vector<std::pair<u32, u32>>& first_count_arguments)
-	{
-		u32 first = std::get<0>(first_count_arguments.front());
-		u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;
-		return std::make_tuple(first, count);
-	}
-
 	template<typename T>
 	std::tuple<T, T, u32> write_index_array_data_to_buffer_impl(gsl::span<T> dst,
 		gsl::span<const be_t<T>> src,

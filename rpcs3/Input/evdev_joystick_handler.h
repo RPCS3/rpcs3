@@ -374,7 +374,7 @@ private:
 	int add_device(const std::string& device, const std::shared_ptr<Pad>& pad, bool in_settings = false);
 	int GetButtonInfo(const input_event& evt, const std::shared_ptr<EvdevDevice>& device, int& button_code);
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(const std::shared_ptr<EvdevDevice>& device);
-	void SetRumble(std::shared_ptr<EvdevDevice> device, u16 large, u16 small);
+	void SetRumble(EvdevDevice* device, u16 large, u16 small);
 
 	// Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
 	int FindAxisDirection(const std::unordered_map<int, bool>& map, int index);

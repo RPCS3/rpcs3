@@ -240,6 +240,7 @@ void Emulator::Init(bool add_only)
 		make_path_verbose(dev_hdd0 + "disc/");
 		make_path_verbose(dev_hdd0 + "savedata/");
 		make_path_verbose(dev_hdd0 + "savedata/vmc/");
+		make_path_verbose(dev_hdd0 + "photo/");
 		make_path_verbose(dev_hdd1 + "caches/");
 	}
 
@@ -582,7 +583,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 
 	auto replay_thr = g_fxo->init<named_thread<rsx::rsx_replay_thread>>("RSX Replay"sv, std::move(frame));
 	replay_thr->state -= cpu_flag::stop;
-	thread_ctrl::notify(*replay_thr);
+	replay_thr->state.notify_one(cpu_flag::stop);
 
 	return true;
 }
@@ -1299,8 +1300,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			games[m_title_id] = bdvd_dir;
 			YAML::Emitter out;
 			out << games;
-			fs::file(fs::get_config_dir() + "/games.yml.tmp", fs::rewrite).write(out.c_str(), out.size());
-			fs::rename(fs::get_config_dir() + "/games.yml.tmp", fs::get_config_dir() + "/games.yml", true);
+
+			fs::pending_file temp(fs::get_config_dir() + "/games.yml");
+			temp.file.write(out.c_str(), out.size());
+			temp.commit();
 		}
 		else if (m_cat == "1P" && from_hdd0_game)
 		{
@@ -1597,7 +1600,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			// Overlay (OVL) executable (only load it)
 			else if (vm::map(0x3000'0000, 0x1000'0000, 0x200); !ppu_load_overlay(ppu_exec, m_path).first)
 			{
-				ppu_exec = fs::file{};
+				ppu_exec.set_error(elf_error::header_type);
 			}
 
 			if (ppu_exec != elf_error::ok)
@@ -1697,16 +1700,16 @@ void Emulator::Run(bool start_playtime)
 	ConfigureLogs();
 
 	// Run main thread
-	idm::check<named_thread<ppu_thread>>(ppu_thread::id_base, [](cpu_thread& cpu)
+	idm::check<named_thread<ppu_thread>>(ppu_thread::id_base, [](named_thread<ppu_thread>& cpu)
 	{
-		cpu.state -= cpu_flag::stop;
-		cpu.notify();
+		ensure(cpu.state.test_and_reset(cpu_flag::stop));
+		cpu.state.notify_one(cpu_flag::stop);
 	});
 
 	if (auto thr = g_fxo->get<named_thread<rsx::rsx_replay_thread>>())
 	{
 		thr->state -= cpu_flag::stop;
-		thread_ctrl::notify(*thr);
+		thr->state.notify_one(cpu_flag::stop);
 	}
 
 	if (g_cfg.misc.prevent_display_sleep)
@@ -1811,7 +1814,7 @@ void Emulator::Resume()
 	auto on_select = [](u32, cpu_thread& cpu)
 	{
 		cpu.state -= cpu_flag::dbg_global_pause;
-		cpu.notify();
+		cpu.state.notify_one(cpu_flag::dbg_global_pause);
 	};
 
 	idm::select<named_thread<ppu_thread>>(on_select);
@@ -1917,6 +1920,9 @@ void Emulator::Stop(bool restart)
 	});
 
 	sys_log.notice("Atomic wait hashtable stats: [in_use=%u, used=%u, max_collision_weight=%u, total_collisions=%u]", aw_refs, aw_used, aw_colm, aw_colc);
+
+	m_stop_ctr++;
+	m_stop_ctr.notify_all();
 
 	if (restart)
 	{

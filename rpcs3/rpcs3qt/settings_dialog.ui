@@ -1345,7 +1345,16 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="inputTabSpacerWidget" native="true"/>
+          <widget class="QGroupBox" name="gb_buzz_emulated">
+           <property name="title">
+            <string>Buzz! emulated controller</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_buzz_emulated_layout">
+            <item>
+             <widget class="QComboBox" name="buzzBox"/>
+            </item>
+           </layout>
+          </widget>
          </item>
         </layout>
        </item>

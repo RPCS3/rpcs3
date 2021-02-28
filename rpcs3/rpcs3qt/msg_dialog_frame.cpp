@@ -319,7 +319,7 @@ void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
 		m_gauge2->setMaximum(limit);
 	}
 
-	bool set_taskbar_limit = false;
+	[[maybe_unused]] bool set_taskbar_limit = false;
 
 	if (index == taskbar_index + 0u)
 	{

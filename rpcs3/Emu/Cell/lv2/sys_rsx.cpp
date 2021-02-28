@@ -65,7 +65,7 @@ void lv2_rsx_config::send_event(u64 data1, u64 event_flags, u64 data3) const
 		thread_ctrl::wait_for(100);
 
 		if (cpu && cpu->id_type() == 0x55)
-			cpu->cpu_wait();
+			cpu->cpu_wait({});
 
 		if (Emu.IsStopped() || (cpu && cpu->check_state()))
 		{

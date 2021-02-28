@@ -23,7 +23,7 @@ protected:
 	const std::add_pointer_t<const cpu_thread> m_cpu;
 	u32 m_op = 0;
 
-	virtual void Write(const std::string& value)
+	void Write(const std::string& value)
 	{
 		switch (m_mode)
 		{

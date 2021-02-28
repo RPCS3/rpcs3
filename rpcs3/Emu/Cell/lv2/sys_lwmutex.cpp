@@ -73,11 +73,11 @@ error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id)
 				continue;
 			}
 
-			mutex->lwcond_waiters.wait(old);
+			thread_ctrl::wait_on(mutex->lwcond_waiters, old);
 
 			if (ppu.is_stopped())
 			{
-				return 0;
+				return {};
 			}
 		}
 		else
@@ -153,11 +153,16 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		return not_an_error(ppu.gpr[3]);
 	}
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state))
 		{
-			return 0;
+			return {};
+		}
+
+		if (state & cpu_flag::signal)
+		{
+			break;
 		}
 
 		if (timeout)
@@ -167,7 +172,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return 0;
+					return {};
 				}
 
 				std::lock_guard lock(mutex->mutex);
@@ -183,7 +188,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 

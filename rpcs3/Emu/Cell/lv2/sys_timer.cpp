@@ -18,7 +18,9 @@ void lv2_timer_context::operator()()
 {
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		if (state == SYS_TIMER_STATE_RUN)
+		const u32 _state = +state;
+
+		if (_state == SYS_TIMER_STATE_RUN)
 		{
 			const u64 _now = get_guest_system_time();
 			u64 next = expire;
@@ -55,7 +57,7 @@ void lv2_timer_context::operator()()
 			continue;
 		}
 
-		thread_ctrl::wait();
+		thread_ctrl::wait_on(state, _state);
 	}
 }
 
@@ -166,7 +168,7 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 		timer.state  = SYS_TIMER_STATE_RUN;
 
 		lock.unlock();
-		thread_ctrl::notify(timer);
+		timer.state.notify_one();
 		return {};
 	});
 
@@ -301,11 +303,6 @@ error_code sys_timer_usleep(ppu_thread& ppu, u64 sleep_time)
 		lv2_obj::sleep(ppu, sleep_time);
 
 		lv2_obj::wait_timeout<true>(sleep_time);
-
-		if (ppu.is_stopped())
-		{
-			return 0;
-		}
 	}
 	else
 	{

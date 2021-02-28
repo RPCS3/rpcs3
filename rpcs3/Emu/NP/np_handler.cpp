@@ -103,13 +103,16 @@ np_handler::np_handler()
 
 bool np_handler::discover_ip_address()
 {
-	std::array<char, 1024> hostname;
+	hostname.clear();
+	hostname.resize(1024);
 
 	if (gethostname(hostname.data(), hostname.size()) == -1)
 	{
 		nph_log.error("gethostname failed in IP discovery!");
 		return false;
 	}
+
+	nph_log.notice("Hostname was determined to be %s", hostname);
 
 	hostent *host = gethostbyname(hostname.data());
 	if (!host)
@@ -219,6 +222,11 @@ bool np_handler::discover_ether_address()
 const std::array<u8, 6>& np_handler::get_ether_addr() const
 {
 	return ether_address;
+}
+
+const std::string& np_handler::get_hostname() const
+{
+	return hostname;
 }
 
 u32 np_handler::get_local_ip_addr() const
@@ -664,7 +672,7 @@ void np_handler::operator()()
 	{
 		if (!rpcn.manage_connection())
 		{
-			std::this_thread::sleep_for(200ms);
+			thread_ctrl::wait_for(200'000);
 			continue;
 		}
 

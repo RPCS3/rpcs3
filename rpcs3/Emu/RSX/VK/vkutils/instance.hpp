@@ -59,8 +59,8 @@ namespace vk
 		VkInstance m_instance = VK_NULL_HANDLE;
 		VkSurfaceKHR m_surface = VK_NULL_HANDLE;
 
-		PFN_vkDestroyDebugReportCallbackEXT destroyDebugReportCallback = nullptr;
-		PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback = nullptr;
+		PFN_vkDestroyDebugReportCallbackEXT _vkDestroyDebugReportCallback = nullptr;
+		PFN_vkCreateDebugReportCallbackEXT _vkCreateDebugReportCallback = nullptr;
 		VkDebugReportCallbackEXT m_debugger = nullptr;
 
 		bool extensions_loaded = false;
@@ -83,7 +83,7 @@ namespace vk
 
 			if (m_debugger)
 			{
-				destroyDebugReportCallback(m_instance, m_debugger, nullptr);
+				_vkDestroyDebugReportCallback(m_instance, m_debugger, nullptr);
 				m_debugger = nullptr;
 			}
 
@@ -103,15 +103,15 @@ namespace vk
 
 			PFN_vkDebugReportCallbackEXT callback = vk::dbgFunc;
 
-			createDebugReportCallback = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT"));
-			destroyDebugReportCallback = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(m_instance, "vkDestroyDebugReportCallbackEXT"));
+			_vkCreateDebugReportCallback = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT"));
+			_vkDestroyDebugReportCallback = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(m_instance, "vkDestroyDebugReportCallbackEXT"));
 
 			VkDebugReportCallbackCreateInfoEXT dbgCreateInfo = {};
 			dbgCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
 			dbgCreateInfo.pfnCallback = callback;
 			dbgCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
 
-			CHECK_RESULT(createDebugReportCallback(m_instance, &dbgCreateInfo, NULL, &m_debugger));
+			CHECK_RESULT(_vkCreateDebugReportCallback(m_instance, &dbgCreateInfo, NULL, &m_debugger));
 		}
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -153,6 +153,11 @@ namespace vk
 				if (support.is_supported(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME))
 				{
 					extensions.push_back(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+				}
+
+				if (support.is_supported(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME))
+				{
+					extensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
 				}
 #ifdef _WIN32
 				extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
@@ -212,7 +217,7 @@ namespace vk
 			// Register some global states
 			if (m_debugger)
 			{
-				destroyDebugReportCallback(m_instance, m_debugger, nullptr);
+				_vkDestroyDebugReportCallback(m_instance, m_debugger, nullptr);
 				m_debugger = nullptr;
 			}
 
@@ -302,81 +307,74 @@ namespace vk
 #endif
 
 			u32 device_queues = dev.get_queue_count();
-			std::vector<VkBool32> supportsPresent(device_queues, VK_FALSE);
-			bool present_possible = false;
+			std::vector<VkBool32> supports_present(device_queues, VK_FALSE);
+			bool present_possible = true;
 
 			for (u32 index = 0; index < device_queues; index++)
 			{
-				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, m_surface, &supportsPresent[index]);
+				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, m_surface, &supports_present[index]);
 			}
 
-			for (const auto& value : supportsPresent)
+			u32 graphics_queue_idx = UINT32_MAX;
+			u32 present_queue_idx = UINT32_MAX;
+			u32 transfer_queue_idx = UINT32_MAX;
+
+			auto test_queue_family = [&](u32 index, u32 desired_flags)
 			{
-				if (value)
+				if (const auto flags = dev.get_queue_properties(index).queueFlags;
+					(flags & desired_flags) == desired_flags)
 				{
-					present_possible = true;
-					break;
+					return true;
 				}
-			}
 
-			if (!present_possible)
+				return false;
+			};
+
+			for (u32 i = 0; i < device_queues; ++i)
 			{
-				rsx_log.error("It is not possible for the currently selected GPU to present to the window (Likely caused by NVIDIA driver running the current display)");
-			}
-
-			// Search for a graphics and a present queue in the array of queue
-			// families, try to find one that supports both
-			u32 graphicsQueueNodeIndex = UINT32_MAX;
-			u32 presentQueueNodeIndex = UINT32_MAX;
-
-			for (u32 i = 0; i < device_queues; i++)
-			{
-				if ((dev.get_queue_properties(i).queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+				// 1. Test for a present queue possibly one that also supports present
+				if (present_queue_idx == UINT32_MAX && supports_present[i])
 				{
-					if (graphicsQueueNodeIndex == UINT32_MAX)
-						graphicsQueueNodeIndex = i;
-
-					if (supportsPresent[i] == VK_TRUE)
+					present_queue_idx = i;
+					if (test_queue_family(i, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
 					{
-						graphicsQueueNodeIndex = i;
-						presentQueueNodeIndex = i;
-
-						break;
+						graphics_queue_idx = i;
 					}
 				}
-			}
-
-			if (presentQueueNodeIndex == UINT32_MAX)
-			{
-				// If didn't find a queue that supports both graphics and present, then
-				// find a separate present queue.
-				for (u32 i = 0; i < device_queues; ++i)
+				// 2. Check for graphics support
+				else if (graphics_queue_idx == UINT32_MAX && test_queue_family(i, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
 				{
-					if (supportsPresent[i] == VK_TRUE)
+					graphics_queue_idx = i;
+					if (supports_present[i])
 					{
-						presentQueueNodeIndex = i;
-						break;
+						present_queue_idx = i;
 					}
+				}
+				// 3. Check if transfer + compute is available
+				else if (transfer_queue_idx == UINT32_MAX && test_queue_family(i, VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT))
+				{
+					transfer_queue_idx = i;
 				}
 			}
 
-			if (graphicsQueueNodeIndex == UINT32_MAX)
+			if (graphics_queue_idx == UINT32_MAX)
 			{
 				rsx_log.fatal("Failed to find a suitable graphics queue");
 				return nullptr;
 			}
 
-			if (graphicsQueueNodeIndex != presentQueueNodeIndex)
+			if (graphics_queue_idx != present_queue_idx)
 			{
-				//Separate graphics and present, use headless fallback
+				// Separate graphics and present, use headless fallback
 				present_possible = false;
 			}
 
 			if (!present_possible)
 			{
 				//Native(sw) swapchain
+				rsx_log.error("It is not possible for the currently selected GPU to present to the window (Likely caused by NVIDIA driver running the current display)");
 				rsx_log.warning("Falling back to software present support (native windowing API)");
-				auto swapchain = new swapchain_NATIVE(dev, UINT32_MAX, graphicsQueueNodeIndex);
+				auto swapchain = new swapchain_NATIVE(dev, UINT32_MAX, graphics_queue_idx, transfer_queue_idx);
 				swapchain->create(window_handle);
 				return swapchain;
 			}
@@ -413,7 +411,7 @@ namespace vk
 
 			color_space = surfFormats[0].colorSpace;
 
-			return new swapchain_WSI(dev, presentQueueNodeIndex, graphicsQueueNodeIndex, format, m_surface, color_space, force_wm_reporting_off);
+			return new swapchain_WSI(dev, present_queue_idx, graphics_queue_idx, transfer_queue_idx, format, m_surface, color_space, force_wm_reporting_off);
 		}
 	};
 }

@@ -401,6 +401,8 @@ error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
+	std::lock_guard lock(nph->mutex_status);
+
 	if (nph->is_NP_init)
 	{
 		return SCE_NP_ERROR_ALREADY_INITIALIZED;
@@ -431,6 +433,8 @@ error_code sceNpTerm()
 	sceNp.warning("sceNpTerm()");
 
 	const auto nph = g_fxo->get<named_thread<np_handler>>();
+
+	std::lock_guard lock(nph->mutex_status);
 
 	if (!nph->is_NP_init)
 	{

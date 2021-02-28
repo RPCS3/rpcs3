@@ -125,7 +125,7 @@ std::array<u32, PadHandlerBase::button::button_count> mm_joystick_handler::get_m
 {
 	std::array<u32, button::button_count> mapping{ 0 };
 
-	auto joy_device = std::static_pointer_cast<MMJOYDevice>(device);
+	MMJOYDevice* joy_device = static_cast<MMJOYDevice*>(device.get());
 	if (!joy_device)
 		return mapping;
 
@@ -429,7 +429,7 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 
 std::unordered_map<u64, u16> mm_joystick_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
-	auto dev = std::static_pointer_cast<MMJOYDevice>(device);
+	MMJOYDevice* dev = static_cast<MMJOYDevice*>(device.get());
 	if (!dev)
 		return std::unordered_map<u64, u16>();
 	return GetButtonValues(dev->device_info, dev->device_caps);
@@ -508,14 +508,14 @@ bool mm_joystick_handler::get_is_right_stick(u64 keyCode)
 
 PadHandlerBase::connection mm_joystick_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
-	auto dev = std::static_pointer_cast<MMJOYDevice>(device);
+	MMJOYDevice* dev = static_cast<MMJOYDevice*>(device.get());
 	if (!dev)
 		return connection::disconnected;
 
 	const auto old_status = dev->device_status;
 	dev->device_status    = joyGetPosEx(dev->device_id, &dev->device_info);
 
-	if (dev->device_status == JOYERR_NOERROR && (old_status == JOYERR_NOERROR || GetMMJOYDevice(dev->device_id, dev.get())))
+	if (dev->device_status == JOYERR_NOERROR && (old_status == JOYERR_NOERROR || GetMMJOYDevice(dev->device_id, dev)))
 	{
 		return connection::connected;
 	}

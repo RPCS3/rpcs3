@@ -440,13 +440,13 @@ namespace rsx
 				is_compiled = false;
 			}
 
-			virtual void set_text(const std::u32string& text)
+			void set_text(const std::u32string& text)
 			{
 				this->text = text;
 				is_compiled = false;
 			}
 
-			virtual void set_text(localized_string_id id)
+			void set_text(localized_string_id id)
 			{
 				set_text(get_localized_u32string(id));
 			}

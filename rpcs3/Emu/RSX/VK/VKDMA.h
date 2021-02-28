@@ -4,7 +4,7 @@
 
 namespace vk
 {
-	std::pair<u32, vk::buffer*> map_dma(const command_buffer& cmd, u32 local_address, u32 length);
+	std::pair<u32, vk::buffer*> map_dma(u32 local_address, u32 length);
 	void load_dma(u32 local_address, u32 length);
 	void flush_dma(u32 local_address, u32 length);
 	void unmap_dma(u32 local_address, u32 length);
@@ -46,8 +46,8 @@ namespace vk
 
 		dma_block* head();
 		const dma_block* head() const;
-		virtual void set_parent(const command_buffer& cmd, dma_block* parent);
-		virtual void extend(const command_buffer& cmd, const render_device& dev, usz new_size);
+		virtual void set_parent(dma_block* parent);
+		virtual void extend(const render_device& dev, usz new_size);
 	};
 
 	class dma_block_EXT: public dma_block

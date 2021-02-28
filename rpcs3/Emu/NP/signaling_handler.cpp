@@ -50,7 +50,7 @@ void signaling_handler::set_sig_cb(u32 sig_cb_ctx, vm::ptr<SceNpSignalingHandler
 	this->sig_cb_arg = sig_cb_arg;
 }
 
-void signaling_handler::set_ext_sig_cb(u32 sig_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_ext_cb, vm::ptr<void> sig_ext_cb_arg)
+void signaling_handler::set_ext_sig_cb(u32 sig_ext_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_ext_cb, vm::ptr<void> sig_ext_cb_arg)
 {
 	std::lock_guard lock(data_mutex);
 	this->sig_ext_cb_ctx = sig_ext_cb_ctx;

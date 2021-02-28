@@ -185,7 +185,7 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 
 	if (ppu.test_stopped())
 	{
-		return 0;
+		return {};
 	}
 
 	// Get the exit status from the register
@@ -533,7 +533,8 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 	}
 	else
 	{
-		thread_ctrl::notify(*thread);
+		thread->cmd_notify++;
+		thread->cmd_notify.notify_one();
 
 		// Dirty hack for sound: confirm the creation of _mxr000 event queue
 		if (*thread->ppu_tname.load() == "_cellsurMixerMain"sv)
@@ -548,7 +549,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 			{
 				if (ppu.is_stopped())
 				{
-					return 0;
+					return {};
 				}
 
 				thread_ctrl::wait_for(50000);

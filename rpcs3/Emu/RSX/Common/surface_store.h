@@ -956,6 +956,49 @@ namespace rsx
 			return result;
 		}
 
+		void check_for_duplicates(std::vector<surface_overlap_info>& sections, const rsx::address_range& range)
+		{
+			// Generic painter's algorithm to detect obsolete sections
+			ensure(range.length() < 64 * 0x100000);
+			std::vector<u8> marker(range.length());
+			std::memset(marker.data(), 0, range.length());
+
+			for (auto it = sections.crbegin(); it != sections.crend(); ++it)
+			{
+				if (it->base_address < range.start)
+				{
+					continue;
+				}
+
+				const auto true_pitch_in_bytes = it->surface->get_surface_width(rsx::surface_metrics::bytes);
+				const auto true_height_in_rows = it->surface->get_surface_height(rsx::surface_metrics::samples);
+
+				bool valid = false;
+				auto addr = it->base_address - range.start;
+				auto data = marker.data();
+
+				for (usz row = 0; row < true_height_in_rows; ++row)
+				{
+					for (usz col = 0; col < true_pitch_in_bytes; ++col)
+					{
+						if (const auto loc = col + addr; !data[loc])
+						{
+							valid = true;
+							data[loc] = 1;
+						}
+					}
+
+					addr += true_pitch_in_bytes;
+				}
+
+				if (!valid)
+				{
+					rsx_log.error("Stale surface at address 0x%x will be deleted", it->base_address);
+					invalidate_surface_address(it->base_address, it->is_depth);
+				}
+			}
+		}
+
 		void on_write(const bool* color, bool z)
 		{
 			if (write_tag == cache_tag && m_skip_write_updates)

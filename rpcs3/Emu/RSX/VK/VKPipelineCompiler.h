@@ -166,7 +166,7 @@ namespace vk
 namespace rpcs3
 {
 	template <>
-	usz hash_struct<vk::pipeline_props>(const vk::pipeline_props &pipelineProperties)
+	inline usz hash_struct<vk::pipeline_props>(const vk::pipeline_props& pipelineProperties)
 	{
 		usz seed = hash_base(pipelineProperties.renderpass_key);
 		seed ^= hash_struct(pipelineProperties.state.ia);

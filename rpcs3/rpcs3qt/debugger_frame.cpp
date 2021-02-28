@@ -161,7 +161,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 			// Notify only if no pause flags are set after this change
 			if (!(old & s_pause_flags))
 			{
-				cpu->notify();
+				cpu->state.notify_one(s_pause_flags);
 			}
 		}
 		UpdateUI();
@@ -825,7 +825,7 @@ void debugger_frame::DoStep(bool stepOver)
 	{
 		bool should_step_over = stepOver && cpu->id_type() == 1;
 
-		if (cpu->state & s_pause_flags)
+		if (auto _state = +cpu->state; _state & s_pause_flags && _state & cpu_flag::wait && !(_state & cpu_flag::dbg_step))
 		{
 			if (should_step_over)
 			{
@@ -849,10 +849,17 @@ void debugger_frame::DoStep(bool stepOver)
 			{
 				state -= s_pause_flags;
 
-				if (!should_step_over) state += cpu_flag::dbg_step;
+				if (!should_step_over)
+				{
+					if (u32* ptr = cpu->get_pc2())
+					{
+						state += cpu_flag::dbg_step;
+						*ptr = cpu->get_pc();
+					}
+				}
 			});
 
-			cpu->notify();
+			cpu->state.notify_one(s_pause_flags);
 		}
 	}
 

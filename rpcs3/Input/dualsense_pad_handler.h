@@ -1,12 +1,30 @@
 #pragma once
 
-#include "Emu/Io/PadHandler.h"
+#include "hid_pad_handler.h"
 #include "Utilities/CRC.h"
-#include "hidapi.h"
 
 #include <unordered_map>
 
-class dualsense_pad_handler final : public PadHandlerBase
+class DualSenseDevice : public HidDevice
+{
+public:
+	enum class DualSenseDataMode
+	{
+		Simple,
+		Enhanced
+	};
+
+	bool bt_controller{false};
+	u8 bt_sequence{0};
+	bool has_calib_data{false};
+	std::array<CalibData, CalibIndex::COUNT> calib_data{};
+	DualSenseDataMode data_mode{DualSenseDataMode::Simple};
+	bool init_lightbar{true};
+	bool update_lightbar{true};
+	bool update_player_leds{true};
+};
+
+class dualsense_pad_handler final : public hid_pad_handler<DualSenseDevice>
 {
 	enum DualSenseKeyCodes
 	{
@@ -43,102 +61,20 @@ class dualsense_pad_handler final : public PadHandlerBase
 		KeyCodeCount
 	};
 
-	enum DualSenseCalibIndex
-	{
-		// gyro
-		PITCH = 0,
-		YAW,
-		ROLL,
-
-		// accel
-		X,
-		Y,
-		Z,
-		COUNT
-	};
-
-	enum class DualSenseDataStatus
-	{
-		NewData,
-		NoNewData,
-		ReadError,
-	};
-
-	enum class DualSenseDataMode
-	{
-		Simple,
-		Enhanced
-	};
-
-	struct DualSenseCalibData
-	{
-		s16 bias;
-		s32 sens_numer;
-		s32 sens_denom;
-	};
-
-	struct DualSenseDevice : public PadDevice
-	{
-		hid_device* hidDevice{ nullptr };
-		std::string path{ "" };
-		bool btCon{ false };
-		u8 bt_sequence{ 0 };
-		bool has_calib_data{false};
-		std::array<DualSenseCalibData, DualSenseCalibIndex::COUNT> calib_data{};
-		DualSenseDataMode dataMode{ DualSenseDataMode::Simple };
-		std::array<u8, 64> padData{};
-		bool newVibrateData{true};
-		u8 largeVibrate{0};
-		u8 smallVibrate{0};
-		bool init_lightbar{true};
-		bool update_lightbar{true};
-		bool update_player_leds{true};
-	};
-
-	const u16 DUALSENSE_VID = 0x054C;
-	const u16 DUALSENSE_PID = 0x0CE6;
-
-	std::unordered_map<std::string, std::shared_ptr<DualSenseDevice>> controllers;
-	CRCPP::CRC::Table<u32, 32> crcTable{CRCPP::CRC::CRC_32()};
-
 public:
 	dualsense_pad_handler();
 	~dualsense_pad_handler();
 
-	bool Init() override;
-
-	std::vector<std::string> ListDevices() override;
 	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
-	bool is_init = false;
-	DualSenseDataStatus status;
+	bool get_calibration_data(DualSenseDevice* dualsense_device);
 
-private:
-	std::shared_ptr<DualSenseDevice> GetDualSenseDevice(const std::string& padId);
+	DataStatus get_data(DualSenseDevice* dualsenseDevice) override;
+	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial) override;
+	int send_output_report(DualSenseDevice* device) override;
 
-	DualSenseDataStatus GetRawData(const std::shared_ptr<DualSenseDevice>& dualsenseDevice);
-	bool get_calibration_data(const std::shared_ptr<DualSenseDevice>& dualsense_device);
-
-	inline s16 apply_calibration(s32 rawValue, const DualSenseCalibData& calib_data)
-	{
-		const s32 biased = rawValue - calib_data.bias;
-		const s32 quot   = calib_data.sens_numer / calib_data.sens_denom;
-		const s32 rem    = calib_data.sens_numer % calib_data.sens_denom;
-		const s32 output = (quot * biased) + ((rem * biased) / calib_data.sens_denom);
-
-		if (output > INT16_MAX)
-			return INT16_MAX;
-		else if (output < INT16_MIN)
-			return INT16_MIN;
-		else
-			return static_cast<s16>(output);
-	}
-
-	void CheckAddDevice(hid_device* hidDevice, hid_device_info* hidDevInfo);
-	int send_output_report(const std::shared_ptr<DualSenseDevice>& device);
-	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 	bool get_is_left_trigger(u64 keyCode) override;
 	bool get_is_right_trigger(u64 keyCode) override;
 	bool get_is_left_stick(u64 keyCode) override;

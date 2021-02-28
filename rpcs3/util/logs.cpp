@@ -550,7 +550,7 @@ void logs::file_writer::log(const char* text, usz size)
 	// TODO: write bigger fragment directly in blocking manner
 	while (size && size <= 0xffffff)
 	{
-		u64 bufv;
+		u64 bufv = 0;
 
 		const auto pos = m_buf.atomic_op([&](u64& v) -> uchar*
 		{

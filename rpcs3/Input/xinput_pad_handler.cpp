@@ -162,7 +162,7 @@ int xinput_pad_handler::GetDeviceNumber(const std::string& padId)
 std::unordered_map<u64, u16> xinput_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
 	PadButtonValues values;
-	auto dev = std::static_pointer_cast<XInputDevice>(device);
+	XInputDevice* dev = static_cast<XInputDevice*>(device.get());
 	if (!dev || dev->state != ERROR_SUCCESS) // the state has to be aquired with update_connection before calling this function
 		return values;
 
@@ -426,7 +426,7 @@ bool xinput_pad_handler::get_is_right_stick(u64 keyCode)
 
 PadHandlerBase::connection xinput_pad_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
-	auto dev = std::static_pointer_cast<XInputDevice>(device);
+	XInputDevice* dev = static_cast<XInputDevice*>(device.get());
 	if (!dev)
 		return connection::disconnected;
 
@@ -451,7 +451,7 @@ PadHandlerBase::connection xinput_pad_handler::update_connection(const std::shar
 
 void xinput_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
 {
-	auto dev = std::static_pointer_cast<XInputDevice>(device);
+	XInputDevice* dev = static_cast<XInputDevice*>(device.get());
 	if (!dev || !pad)
 		return;
 
@@ -478,7 +478,7 @@ void xinput_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& dev
 
 void xinput_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
 {
-	auto dev = std::static_pointer_cast<XInputDevice>(device);
+	XInputDevice* dev = static_cast<XInputDevice*>(device.get());
 	if (!dev || !pad)
 		return;
 

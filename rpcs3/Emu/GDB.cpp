@@ -747,7 +747,7 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 		if (Emu.IsPaused()) {
 			Emu.Resume();
 		} else {
-			thread_ctrl::notify(*ppu);
+			ppu->state.notify_one();
 		}
 		wait_with_interrupts();
 		//we are in all-stop mode

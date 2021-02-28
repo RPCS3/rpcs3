@@ -542,7 +542,7 @@ namespace gl
 
 			save_binding_state(target target_)
 			{
-				GLenum pname;
+				GLenum pname{};
 				switch (target_)
 				{
 				case target::pixel_pack: pname = GL_PIXEL_PACK_BUFFER_BINDING; break;
@@ -552,6 +552,7 @@ namespace gl
 				case target::uniform: pname = GL_UNIFORM_BUFFER_BINDING; break;
 				case target::texture: pname = GL_TEXTURE_BUFFER_BINDING; break;
 				case target::ssbo: pname = GL_SHADER_STORAGE_BUFFER_BINDING; break;
+				default: fmt::throw_exception("Invalid binding state target (0x%x)", static_cast<int>(target_));
 				}
 
 				glGetIntegerv(pname, &m_last_binding);
@@ -2288,7 +2289,7 @@ public:
 				type = type_;
 				source = src;
 
-				GLenum shader_type;
+				GLenum shader_type{};
 				switch (type)
 				{
 				case ::glsl::program_domain::glsl_vertex_program:
@@ -2301,7 +2302,8 @@ public:
 					shader_type = GL_COMPUTE_SHADER;
 					break;
 				default:
-					rsx_log.fatal("gl::glsl::shader::compile(): Unhandled shader type");
+					rsx_log.fatal("gl::glsl::shader::compile(): Unhandled shader type (%d)", +type_);
+					return;
 				}
 
 				m_id = glCreateShader(shader_type);

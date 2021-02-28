@@ -8,12 +8,15 @@ namespace vk
 	// This queue flushing method to be implemented by the backend as behavior depends on config
 	void queue_submit(VkQueue queue, const VkSubmitInfo* info, fence* pfence, VkBool32 flush = VK_FALSE);
 
-	void command_pool::create(vk::render_device& dev)
+	void command_pool::create(vk::render_device& dev, u32 queue_family_id)
 	{
-		owner                         = &dev;
+		owner = &dev;
+		queue_family = queue_family_id;
+
 		VkCommandPoolCreateInfo infos = {};
-		infos.flags                   = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		infos.sType                   = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		infos.flags            = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		infos.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		infos.queueFamilyIndex = queue_family;
 
 		CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
 	}
@@ -27,12 +30,17 @@ namespace vk
 		pool = nullptr;
 	}
 
-	vk::render_device& command_pool::get_owner()
+	vk::render_device& command_pool::get_owner() const
 	{
 		return (*owner);
 	}
 
-	command_pool::operator VkCommandPool()
+	u32 command_pool::get_queue_family() const
+	{
+		return queue_family;
+	}
+
+	command_pool::operator VkCommandPool() const
 	{
 		return pool;
 	}

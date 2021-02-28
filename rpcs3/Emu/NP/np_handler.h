@@ -19,6 +19,7 @@ public:
 	np_handler();
 
 	const std::array<u8, 6>& get_ether_addr() const;
+	const std::string& get_hostname() const;
 	u32 get_local_ip_addr() const;
 	u32 get_public_ip_addr() const;
 	u32 get_dns_ip() const;
@@ -114,6 +115,9 @@ public:
 	// For signaling
 	void req_sign_infos(const std::string& npid, u32 conn_id);
 
+	// Mutex for NP status change
+	shared_mutex mutex_status;
+
 	static constexpr std::string_view thread_name = "NP Handler Thread";
 
 protected:
@@ -171,6 +175,7 @@ protected:
 	std::vector<u8> current_ticket;
 
 	// IP & DNS info
+	std::string hostname = "localhost";
 	std::array<u8, 6> ether_address{};
 	be_t<u32> local_ip_addr{};
 	be_t<u32> public_ip_addr{};

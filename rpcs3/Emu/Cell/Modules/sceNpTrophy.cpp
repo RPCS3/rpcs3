@@ -628,11 +628,11 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		for (u32 old_value; current < until && (old_value = *queued);
 			current = get_system_time())
 		{
-			queued->wait(old_value, atomic_wait_timeout{(until - current) * 1000});
+			thread_ctrl::wait_on(*queued, old_value, until - current);
 
 			if (ppu.is_stopped())
 			{
-				return 0;
+				return {};
 			}
 		}
 	}

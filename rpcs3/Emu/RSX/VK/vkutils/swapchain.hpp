@@ -73,11 +73,6 @@ namespace vk
 	protected:
 		render_device dev;
 
-		u32 m_present_queue = UINT32_MAX;
-		u32 m_graphics_queue = UINT32_MAX;
-		VkQueue vk_graphics_queue = VK_NULL_HANDLE;
-		VkQueue vk_present_queue = VK_NULL_HANDLE;
-
 		display_handle_t window_handle{};
 		u32 m_width = 0;
 		u32 m_height = 0;
@@ -86,15 +81,9 @@ namespace vk
 		virtual void init_swapchain_images(render_device& dev, u32 count) = 0;
 
 	public:
-		swapchain_base(physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+		swapchain_base(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
 		{
-			dev.create(gpu, _graphics_queue);
-
-			if (_graphics_queue < UINT32_MAX) vkGetDeviceQueue(dev, _graphics_queue, 0, &vk_graphics_queue);
-			if (_present_queue < UINT32_MAX) vkGetDeviceQueue(dev, _present_queue, 0, &vk_present_queue);
-
-			m_present_queue = _present_queue;
-			m_graphics_queue = _graphics_queue;
+			dev.create(gpu, graphics_queue, present_queue, transfer_queue);
 			m_surface_format = format;
 		}
 
@@ -116,7 +105,7 @@ namespace vk
 			return false;
 		}
 
-		virtual bool init(u32 w, u32 h)
+		bool init(u32 w, u32 h)
 		{
 			m_width = w;
 			m_height = h;
@@ -128,16 +117,6 @@ namespace vk
 			return dev;
 		}
 
-		const VkQueue& get_present_queue()
-		{
-			return vk_present_queue;
-		}
-
-		const VkQueue& get_graphics_queue()
-		{
-			return vk_graphics_queue;
-		}
-
 		const VkFormat get_surface_format()
 		{
 			return m_surface_format;
@@ -145,7 +124,7 @@ namespace vk
 
 		const bool is_headless() const
 		{
-			return (vk_present_queue == VK_NULL_HANDLE);
+			return (dev.get_present_queue() == VK_NULL_HANDLE);
 		}
 	};
 
@@ -156,8 +135,8 @@ namespace vk
 		std::vector<T> swapchain_images;
 
 	public:
-		abstract_swapchain_impl(physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
-			: swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		abstract_swapchain_impl(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+			: swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 		{}
 
 		~abstract_swapchain_impl() override = default;
@@ -183,8 +162,8 @@ namespace vk
 		LPVOID hPtr = NULL;
 
 	public:
-		swapchain_WIN32(physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
-			: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		swapchain_WIN32(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+			: native_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 		{}
 
 		~swapchain_WIN32() {}
@@ -266,8 +245,8 @@ namespace vk
 		void* nsView = nullptr;
 
 	public:
-		swapchain_MacOS(physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
-			: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		swapchain_MacOS(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+			: native_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 		{}
 
 		~swapchain_MacOS() {}
@@ -316,8 +295,8 @@ namespace vk
 		int bit_depth = 24;
 
 	public:
-		swapchain_X11(physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
-			: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		swapchain_X11(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+			: native_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 		{}
 
 		~swapchain_X11() override = default;
@@ -418,8 +397,8 @@ namespace vk
 	{
 
 	public:
-		swapchain_Wayland(physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
-			: native_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		swapchain_Wayland(physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format = VK_FORMAT_B8G8R8A8_UNORM)
+			: native_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 		{}
 
 		~swapchain_Wayland() {}
@@ -496,11 +475,11 @@ namespace vk
 		VkColorSpaceKHR m_color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
 		VkSwapchainKHR m_vk_swapchain = nullptr;
 
-		PFN_vkCreateSwapchainKHR createSwapchainKHR = nullptr;
-		PFN_vkDestroySwapchainKHR destroySwapchainKHR = nullptr;
-		PFN_vkGetSwapchainImagesKHR getSwapchainImagesKHR = nullptr;
-		PFN_vkAcquireNextImageKHR acquireNextImageKHR = nullptr;
-		PFN_vkQueuePresentKHR queuePresentKHR = nullptr;
+		PFN_vkCreateSwapchainKHR _vkCreateSwapchainKHR = nullptr;
+		PFN_vkDestroySwapchainKHR _vkDestroySwapchainKHR = nullptr;
+		PFN_vkGetSwapchainImagesKHR _vkGetSwapchainImagesKHR = nullptr;
+		PFN_vkAcquireNextImageKHR _vkAcquireNextImageKHR = nullptr;
+		PFN_vkQueuePresentKHR _vkQueuePresentKHR = nullptr;
 
 		bool m_wm_reports_flag = false;
 
@@ -508,13 +487,13 @@ namespace vk
 		void init_swapchain_images(render_device& dev, u32 /*preferred_count*/ = 0) override
 		{
 			u32 nb_swap_images = 0;
-			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
+			_vkGetSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, nullptr);
 
 			if (!nb_swap_images) fmt::throw_exception("Driver returned 0 images for swapchain");
 
 			std::vector<VkImage> vk_images;
 			vk_images.resize(nb_swap_images);
-			getSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, vk_images.data());
+			_vkGetSwapchainImagesKHR(dev, m_vk_swapchain, &nb_swap_images, vk_images.data());
 
 			swapchain_images.resize(nb_swap_images);
 			for (u32 i = 0; i < nb_swap_images; ++i)
@@ -524,14 +503,14 @@ namespace vk
 		}
 
 	public:
-		swapchain_WSI(vk::physical_device& gpu, u32 _present_queue, u32 _graphics_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space, bool force_wm_reporting_off)
-			: WSI_swapchain_base(gpu, _present_queue, _graphics_queue, format)
+		swapchain_WSI(vk::physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space, bool force_wm_reporting_off)
+			: WSI_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 		{
-			createSwapchainKHR = reinterpret_cast<PFN_vkCreateSwapchainKHR>(vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR"));
-			destroySwapchainKHR = reinterpret_cast<PFN_vkDestroySwapchainKHR>(vkGetDeviceProcAddr(dev, "vkDestroySwapchainKHR"));
-			getSwapchainImagesKHR = reinterpret_cast<PFN_vkGetSwapchainImagesKHR>(vkGetDeviceProcAddr(dev, "vkGetSwapchainImagesKHR"));
-			acquireNextImageKHR = reinterpret_cast<PFN_vkAcquireNextImageKHR>(vkGetDeviceProcAddr(dev, "vkAcquireNextImageKHR"));
-			queuePresentKHR = reinterpret_cast<PFN_vkQueuePresentKHR>(vkGetDeviceProcAddr(dev, "vkQueuePresentKHR"));
+			_vkCreateSwapchainKHR = reinterpret_cast<PFN_vkCreateSwapchainKHR>(vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR"));
+			_vkDestroySwapchainKHR = reinterpret_cast<PFN_vkDestroySwapchainKHR>(vkGetDeviceProcAddr(dev, "vkDestroySwapchainKHR"));
+			_vkGetSwapchainImagesKHR = reinterpret_cast<PFN_vkGetSwapchainImagesKHR>(vkGetDeviceProcAddr(dev, "vkGetSwapchainImagesKHR"));
+			_vkAcquireNextImageKHR = reinterpret_cast<PFN_vkAcquireNextImageKHR>(vkGetDeviceProcAddr(dev, "vkAcquireNextImageKHR"));
+			_vkQueuePresentKHR = reinterpret_cast<PFN_vkQueuePresentKHR>(vkGetDeviceProcAddr(dev, "vkQueuePresentKHR"));
 
 			m_surface = surface;
 			m_color_space = color_space;
@@ -567,17 +546,62 @@ namespace vk
 			{
 				if (m_vk_swapchain)
 				{
-					destroySwapchainKHR(pdev, m_vk_swapchain, nullptr);
+					_vkDestroySwapchainKHR(pdev, m_vk_swapchain, nullptr);
 				}
 
 				dev.destroy();
 			}
 		}
 
+		std::pair<VkSurfaceCapabilitiesKHR, bool> init_surface_capabilities()
+		{
+#ifdef _WIN32
+			if (g_cfg.video.vk.force_disable_exclusive_fullscreen_mode && dev.get_surface_capabilities_2_support())
+			{
+				HMONITOR hmonitor = MonitorFromWindow(window_handle, MONITOR_DEFAULTTOPRIMARY);
+				if (hmonitor)
+				{
+					VkSurfaceCapabilities2KHR pSurfaceCapabilities = {};
+					pSurfaceCapabilities.sType                     = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR;
+
+					VkPhysicalDeviceSurfaceInfo2KHR pSurfaceInfo = {};
+					pSurfaceInfo.sType                           = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR;
+					pSurfaceInfo.surface                         = m_surface;
+
+					VkSurfaceCapabilitiesFullScreenExclusiveEXT full_screen_exclusive_capabilities = {};
+					VkSurfaceFullScreenExclusiveWin32InfoEXT full_screen_exclusive_win32_info      = {};
+					full_screen_exclusive_capabilities.sType                                       = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_FULL_SCREEN_EXCLUSIVE_EXT;
+
+					pSurfaceCapabilities.pNext = &full_screen_exclusive_capabilities;
+
+					full_screen_exclusive_win32_info.sType    = VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_WIN32_INFO_EXT;
+					full_screen_exclusive_win32_info.hmonitor = hmonitor;
+
+					pSurfaceInfo.pNext = &full_screen_exclusive_win32_info;
+
+					auto getPhysicalDeviceSurfaceCapabilities2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceSurfaceCapabilities2KHR>(
+						vkGetInstanceProcAddr(dev.gpu(), "vkGetPhysicalDeviceSurfaceCapabilities2KHR")
+					);
+					ensure(getPhysicalDeviceSurfaceCapabilities2KHR);
+					CHECK_RESULT(getPhysicalDeviceSurfaceCapabilities2KHR(dev.gpu(), &pSurfaceInfo, &pSurfaceCapabilities));
+
+					return { pSurfaceCapabilities.surfaceCapabilities, !!full_screen_exclusive_capabilities.fullScreenExclusiveSupported };
+				}
+				else
+				{
+					rsx_log.warning("Swapchain: failed to get monitor for the window");
+				}
+			}
+#endif
+			VkSurfaceCapabilitiesKHR surface_descriptors = {};
+			CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(dev.gpu(), m_surface, &surface_descriptors));
+			return { surface_descriptors, false };
+		}
+
 		using WSI_swapchain_base::init;
 		bool init() override
 		{
-			if (vk_present_queue == VK_NULL_HANDLE)
+			if (dev.get_present_queue() == VK_NULL_HANDLE)
 			{
 				rsx_log.error("Cannot create WSI swapchain without a present queue");
 				return false;
@@ -586,8 +610,7 @@ namespace vk
 			VkSwapchainKHR old_swapchain = m_vk_swapchain;
 			vk::physical_device& gpu = const_cast<vk::physical_device&>(dev.gpu());
 
-			VkSurfaceCapabilitiesKHR surface_descriptors = {};
-			CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(gpu, m_surface, &surface_descriptors));
+			auto [surface_descriptors, should_disable_exclusive_full_screen] = init_surface_capabilities();
 
 			if (surface_descriptors.maxImageExtent.width < m_width ||
 				surface_descriptors.maxImageExtent.height < m_height)
@@ -693,7 +716,20 @@ namespace vk
 			swap_info.imageExtent.width = std::max(m_width, surface_descriptors.minImageExtent.width);
 			swap_info.imageExtent.height = std::max(m_height, surface_descriptors.minImageExtent.height);
 
-			createSwapchainKHR(dev, &swap_info, nullptr, &m_vk_swapchain);
+	#ifdef _WIN32
+			VkSurfaceFullScreenExclusiveInfoEXT full_screen_exclusive_info = {};
+			if (should_disable_exclusive_full_screen)
+			{
+				full_screen_exclusive_info.sType               = VK_STRUCTURE_TYPE_SURFACE_FULL_SCREEN_EXCLUSIVE_INFO_EXT;
+				full_screen_exclusive_info.fullScreenExclusive = VK_FULL_SCREEN_EXCLUSIVE_DISALLOWED_EXT;
+
+				swap_info.pNext = &full_screen_exclusive_info;
+			}
+
+			rsx_log.notice("Swapchain: requesting full screen exclusive mode %d.", static_cast<int>(full_screen_exclusive_info.fullScreenExclusive));
+	#endif
+
+			_vkCreateSwapchainKHR(dev, &swap_info, nullptr, &m_vk_swapchain);
 
 			if (old_swapchain)
 			{
@@ -702,7 +738,7 @@ namespace vk
 					swapchain_images.clear();
 				}
 
-				destroySwapchainKHR(dev, old_swapchain, nullptr);
+				_vkDestroySwapchainKHR(dev, old_swapchain, nullptr);
 			}
 
 			init_swapchain_images(dev);
@@ -734,7 +770,7 @@ namespace vk
 			present.waitSemaphoreCount = 1;
 			present.pWaitSemaphores = &semaphore;
 
-			return queuePresentKHR(vk_present_queue, &present);
+			return _vkQueuePresentKHR(dev.get_present_queue(), &present);
 		}
 
 		VkImage get_image(u32 index) override

@@ -762,7 +762,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 		if (thread && ran_threads--)
 		{
 			thread->state -= cpu_flag::stop;
-			thread_ctrl::notify(*thread);
+			thread->state.notify_one(cpu_flag::stop);
 		}
 	}
 
@@ -912,7 +912,7 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 		if (thread)
 		{
 			thread->state -= cpu_flag::suspend;
-			thread_ctrl::notify(*thread);
+			thread->state.notify_one(cpu_flag::suspend);
 		}
 	}
 
@@ -1029,9 +1029,7 @@ error_code sys_spu_thread_group_terminate(ppu_thread& ppu, u32 id, s32 value)
 	{
 		while (thread && group->running && thread->state & cpu_flag::wait)
 		{
-			// TODO: replace with proper solution
-			if (atomic_wait_engine::raw_notify(nullptr, thread_ctrl::get_native_id(*thread)))
-				break;
+			thread_ctrl::notify(*thread);
 		}
 	}
 
@@ -1103,14 +1101,16 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 		lv2_obj::sleep(ppu);
 		lock.unlock();
 
-		while (!ppu.state.test_and_reset(cpu_flag::signal))
+		while (true)
 		{
-			if (ppu.is_stopped())
+			const auto state = ppu.state.fetch_sub(cpu_flag::signal);
+
+			if (is_stopped(state) || state & cpu_flag::signal)
 			{
-				return 0;
+				break;
 			}
 
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 	while (0);

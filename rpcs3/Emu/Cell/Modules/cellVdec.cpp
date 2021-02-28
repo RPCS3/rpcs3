@@ -673,7 +673,7 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 	});
 
 	thrd->state -= cpu_flag::stop;
-	thread_ctrl::notify(*thrd);
+	thrd->state.notify_one(cpu_flag::stop);
 
 	return CELL_OK;
 }
@@ -955,7 +955,7 @@ error_code cellVdecGetPicItem(u32 handle, vm::pptr<CellVdecPicItem> picItem)
 	u64 pts;
 	u64 dts;
 	u64 usrd;
-	u32 frc;
+	u32 frc = 0;
 	vm::ptr<CellVdecPicItem> info;
 	{
 		std::lock_guard lock(vdec->mutex);

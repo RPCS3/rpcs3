@@ -18,6 +18,11 @@ using namespace std::literals::string_literals;
 #include <cwchar>
 #include <Windows.h>
 
+namespace utils
+{
+	u64 get_unique_tsc();
+}
+
 static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 {
 	// String size + null terminator
@@ -322,12 +327,53 @@ std::shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name,
 
 std::string fs::get_parent_dir(const std::string& path)
 {
-	// Get (basically) processed path
-	const auto real_path = fs::escape_path(path);
+	std::string_view result = path;
 
-	const auto pos = real_path.find_last_of(delim);
+	// Number of path components to remove
+	usz to_remove = 1;
 
-	return real_path.substr(0, pos == umax ? 0 : pos);
+	while (to_remove--)
+	{
+		// Trim contiguous delimiters at the end
+		if (usz sz = result.find_last_not_of(delim) + 1)
+		{
+			result = result.substr(0, sz);
+		}
+		else
+		{
+			return "/";
+		}
+
+		const auto elem = result.substr(result.find_last_of(delim) + 1);
+
+		if (elem.empty() || elem.size() == result.size())
+		{
+			break;
+		}
+
+		if (elem == ".")
+		{
+			to_remove += 1;
+		}
+
+		if (elem == "..")
+		{
+			to_remove += 2;
+		}
+
+		result.remove_suffix(elem.size());
+	}
+
+	if (usz sz = result.find_last_not_of(delim) + 1)
+	{
+		result = result.substr(0, sz);
+	}
+	else
+	{
+		return "/";
+	}
+
+	return std::string{result};
 }
 
 bool fs::stat(const std::string& path, stat_t& info)
@@ -897,6 +943,16 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 	}
 
 	return true;
+#endif
+}
+
+void fs::sync()
+{
+#ifdef _WIN32
+	fs::g_tls_error = fs::error::unknown;
+#else
+	::sync();
+	fs::g_tls_error = fs::error::ok;
 #endif
 }
 
@@ -1872,6 +1928,55 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 	fs::file result;
 	result.reset(std::make_unique<gather_stream>(std::move(files)));
 	return result;
+}
+
+fs::pending_file::pending_file(const std::string& path)
+{
+	do
+	{
+		m_path = fmt::format(u8"%s/＄%s.%s.tmp", get_parent_dir(path), std::string_view(path).substr(path.find_last_of(fs::delim) + 1), fmt::base57(utils::get_unique_tsc()));
+
+		if (file.open(m_path, fs::create + fs::write + fs::read + fs::excl))
+		{
+			m_dest = path;
+			break;
+		}
+
+		m_path.clear();
+	}
+	while (fs::g_tls_error == fs::error::exist); // Only retry if failed due to existing file
+}
+
+fs::pending_file::~pending_file()
+{
+	file.close();
+
+	if (!m_path.empty())
+	{
+		fs::remove_file(m_path);
+	}
+}
+
+bool fs::pending_file::commit(bool overwrite)
+{
+	if (!file || m_path.empty())
+	{
+		fs::g_tls_error = fs::error::noent;
+		return false;
+	}
+
+	// The temporary file's contents must be on disk before rename
+	file.sync();
+	file.close();
+
+	if (fs::rename(m_path, m_dest, overwrite))
+	{
+		// Disable the destructor
+		m_path.clear();
+		return true;
+	}
+
+	return false;
 }
 
 template<>

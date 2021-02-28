@@ -295,7 +295,12 @@ bool rpcn_client::connect(const std::string& host)
 	connected = true;
 
 	while (!server_info_received && connected && !is_abort())
-		std::this_thread::sleep_for(5ms);
+	{
+		if (in_config)
+			std::this_thread::sleep_for(5ms);
+		else
+			thread_ctrl::wait_for(5000);
+	}
 
 	if (received_version != RPCN_PROTOCOL_VERSION)
 	{
@@ -419,7 +424,7 @@ bool rpcn_client::manage_connection()
 				addr_sig = reinterpret_cast<const le_t<u32>&>(msg[0]);
 				port_sig = reinterpret_cast<const be_t<u16>&>(msg[4]);
 
-				in_addr orig{};
+				[[maybe_unused]] in_addr orig{};
 				orig.s_addr = addr_sig;
 
 				last_pong_time = now;
@@ -561,7 +566,11 @@ bool rpcn_client::get_reply(const u32 expected_id, std::vector<u8>& data)
 	{
 		if (check_for_reply())
 			return true;
-		std::this_thread::sleep_for(5ms);
+
+		if (in_config)
+			std::this_thread::sleep_for(5ms);
+		else
+			thread_ctrl::wait_for(5000);
 	}
 
 	if (check_for_reply())

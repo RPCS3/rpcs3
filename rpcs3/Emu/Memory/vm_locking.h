@@ -106,9 +106,6 @@ namespace vm
 	// Unregister reader
 	void passive_unlock(cpu_thread& cpu);
 
-	// Unregister reader (foreign thread)
-	void cleanup_unlock(cpu_thread& cpu) noexcept;
-
 	// Optimization (set cpu_flag::memory)
 	void temporary_unlock(cpu_thread& cpu) noexcept;
 	void temporary_unlock() noexcept;

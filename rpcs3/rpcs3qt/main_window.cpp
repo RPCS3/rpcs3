@@ -792,18 +792,26 @@ void main_window::HandlePupInstallation(QString file_path)
 	m_gui_settings->SetValue(gui::fd_install_pup, QFileInfo(file_path).path());
 	const std::string path = sstr(file_path);
 
+	auto critical = [this](QString str)
+	{
+		Emu.CallAfter([this, str = std::move(str)]()
+		{
+			QMessageBox::critical(this, tr("Firmware Installation Failed"), str);
+		}, false);
+	};
+
 	fs::file pup_f(path);
 	if (!pup_f)
 	{
 		gui_log.error("Error opening PUP file %s", path);
-		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The selected firmware file couldn't be opened."));
+		critical(tr("Firmware installation failed: The selected firmware file couldn't be opened."));
 		return;
 	}
 
 	if (pup_f.size() < sizeof(PUPHeader))
 	{
 		gui_log.error("Too small PUP file: %llu", pup_f.size());
-		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The provided file is empty."));
+		critical(tr("Firmware installation failed: The provided file is empty."));
 		return;
 	}
 
@@ -814,7 +822,7 @@ void main_window::HandlePupInstallation(QString file_path)
 	if (header.header_length + header.data_length != pup_f.size())
 	{
 		gui_log.error("Firmware size mismatch, expected: %llu + %llu, actual: %llu", header.header_length, header.data_length, pup_f.size());
-		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The provided file is incomplete. Try redownloading it."));
+		critical(tr("Firmware installation failed: The provided file is incomplete. Try redownloading it."));
 		return;
 	}
 
@@ -822,14 +830,14 @@ void main_window::HandlePupInstallation(QString file_path)
 	if (!pup)
 	{
 		gui_log.error("Error while installing firmware: PUP file is invalid.");
-		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The provided file is corrupted."));
+		critical(tr("Firmware installation failed: The provided file is corrupted."));
 		return;
 	}
 
 	if (!pup.validate_hashes())
 	{
 		gui_log.error("Error while installing firmware: Hash check failed.");
-		QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: The provided file's contents are corrupted."));
+		critical(tr("Firmware installation failed: The provided file's contents are corrupted."));
 		return;
 	}
 
@@ -864,15 +872,13 @@ void main_window::HandlePupInstallation(QString file_path)
 	pdlg.show();
 
 	// Synchronization variable
-	atomic_t<int> progress(0);
+	atomic_t<uint> progress(0);
 	{
 		// Run asynchronously
 		named_thread worker("Firmware Installer", [&]
 		{
 			for (const auto& update_filename : update_filenames)
 			{
-				if (progress == -1) break;
-
 				fs::file update_file = update_files.get_file(update_filename);
 
 				SCEDecrypter self_dec(update_file);
@@ -884,50 +890,59 @@ void main_window::HandlePupInstallation(QString file_path)
 				if (dev_flash_tar_f.size() < 3)
 				{
 					gui_log.error("Error while installing firmware: PUP contents are invalid.");
-					QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: Firmware could not be decompressed"));
+					critical(tr("Firmware installation failed: Firmware could not be decompressed"));
 					progress = -1;
+					return;
 				}
 
 				tar_object dev_flash_tar(dev_flash_tar_f[2]);
 				if (!dev_flash_tar.extract(g_cfg.vfs.get_dev_flash(), "dev_flash/"))
 				{
 					gui_log.error("Error while installing firmware: TAR contents are invalid.");
-					QMessageBox::critical(this, tr("Firmware Installation Failed"), tr("Firmware installation failed: Firmware contents could not be extracted."));
+					critical(tr("Firmware installation failed: Firmware contents could not be extracted."));
 					progress = -1;
+					return;
 				}
 
-				if (progress >= 0)
-					progress += 1;
+				if (!progress.try_inc(::narrow<uint>(update_filenames.size())))
+				{
+					// Installation was cancelled
+					return;
+				}
 			}
 		});
 
 		// Wait for the completion
-		while (std::this_thread::sleep_for(5ms), std::abs(progress) < pdlg.maximum())
+		for (uint value = progress.load(); value < update_filenames.size(); std::this_thread::sleep_for(5ms), value = progress)
 		{
 			if (pdlg.wasCanceled())
 			{
 				progress = -1;
 				break;
 			}
+
 			// Update progress window
-			pdlg.SetValue(static_cast<int>(progress));
+			pdlg.SetValue(static_cast<int>(value));
 			QCoreApplication::processEvents();
 		}
 
-		update_files_f.close();
-		pup_f.close();
+		// Join thread
+		worker();
+	}
 
-		if (progress > 0)
-		{
-			pdlg.SetValue(pdlg.maximum());
-			std::this_thread::sleep_for(100ms);
-		}
+	update_files_f.close();
+	pup_f.close();
+
+	if (progress == update_filenames.size())
+	{
+		pdlg.SetValue(pdlg.maximum());
+		std::this_thread::sleep_for(100ms);
 	}
 
 	// Update with newly installed PS3 fonts
 	Q_EMIT RequestGlobalStylesheetChange();
 
-	if (progress > 0)
+	if (progress == update_filenames.size())
 	{
 		gui_log.success("Successfully installed PS3 firmware version %s.", version_string);
 		m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), gui::ib_pup_success, this);

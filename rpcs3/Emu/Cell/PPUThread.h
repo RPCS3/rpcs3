@@ -124,6 +124,7 @@ public:
 	virtual std::string dump_misc() const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_sleep() override;
+	virtual void cpu_on_stop() override;
 	virtual ~ppu_thread() override;
 
 	ppu_thread(const ppu_thread_params&, std::string_view name, u32 prio, int detached = 0);
@@ -257,6 +258,7 @@ public:
 	void cmd_pop(u32 = 0);
 	cmd64 cmd_wait(); // Empty command means caller must return, like true from cpu_thread::check_status().
 	cmd64 cmd_get(u32 index) { return cmd_queue[cmd_queue.peek() + index].load(); }
+	atomic_t<u32> cmd_notify = 0;
 
 	const ppu_func_opd_t entry_func;
 	u64 start_time{0}; // Sleep start timepoint
@@ -274,6 +276,8 @@ public:
 	u32 last_faddr = 0;
 	u64 last_fail = 0;
 	u64 last_succ = 0;
+
+	u32 dbg_step_pc = 0;
 
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();

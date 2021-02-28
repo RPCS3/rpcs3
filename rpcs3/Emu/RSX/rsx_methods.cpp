@@ -90,7 +90,7 @@ namespace rsx
 
 						while (rsx->is_paused())
 						{
-							rsx->cpu_wait();
+							rsx->cpu_wait({});
 						}
 
 						// Reset
@@ -107,7 +107,7 @@ namespace rsx
 					}
 				}
 
-				rsx->cpu_wait();
+				rsx->cpu_wait({});
 			}
 
 			rsx->fifo_wake_delay();
@@ -1069,7 +1069,7 @@ namespace rsx
 			u32 dst_dma = 0;
 			rsx::blit_engine::transfer_destination_format dst_color_format;
 			u32 out_pitch = 0;
-			u32 out_alignment = 64;
+			[[maybe_unused]] u32 out_alignment = 64;
 			bool is_block_transfer = false;
 
 			switch (method_registers.blit_engine_context_surface())
@@ -1608,7 +1608,8 @@ namespace rsx
 				{ ppu_cmd::sleep, 0 }
 			});
 
-			thread_ctrl::notify(*rsx->intr_thread);
+			rsx->intr_thread->cmd_notify++;
+			rsx->intr_thread->cmd_notify.notify_one();
 		}
 	}
 

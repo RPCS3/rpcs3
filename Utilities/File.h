@@ -96,6 +96,11 @@ namespace fs
 	struct dir_entry : stat_t
 	{
 		std::string name;
+
+		dir_entry()
+			: stat_t{}
+		{
+		}
 	};
 
 	// Directory handle base
@@ -187,6 +192,9 @@ namespace fs
 
 	// Set file access/modification time
 	bool utime(const std::string& path, s64 atime, s64 mtime);
+
+	// Synchronize filesystems (TODO)
+	void sync();
 
 	class file final
 	{
@@ -597,6 +605,22 @@ namespace fs
 	// Get common cache directory
 	const std::string& get_cache_dir();
 
+	// Unique pending file creation destined to be renamed to the destination file
+	struct pending_file
+	{
+		fs::file file;
+
+		// This is meant to modify files atomically, overwriting is likely
+		bool commit(bool overwrite = true);
+
+		pending_file(const std::string& path);
+		~pending_file();
+
+	private:
+		std::string m_path; // Pending file path
+		std::string m_dest; // Destination file path
+	};
+
 	// Get real path for comparisons (TODO: investigate std::filesystem::path::compare implementation)
 	std::string escape_path(std::string_view path);
 
@@ -727,7 +751,7 @@ namespace fs
 		return result;
 	}
 
-	template <typename... Args>
+	template <bool Flush = false, typename... Args>
 	bool write_file(const std::string& path, bs_t<fs::open_mode> mode, const Args&... args)
 	{
 		// Always use write flag, remove read flag
@@ -737,14 +761,19 @@ namespace fs
 			{
 				// Specialization for [const void*, usz] args
 				f.write(args...);
-				return true;
 			}
 			else
 			{
 				// Write args sequentially
 				(f.write(args), ...);
-				return true;
 			}
+
+			if constexpr (Flush)
+			{
+				f.sync();
+			}
+
+			return true;
 		}
 
 		return false;

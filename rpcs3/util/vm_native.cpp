@@ -40,11 +40,11 @@ namespace utils
 #endif
 
 #ifdef MADV_FREE
-	constexpr int c_madv_free = MADV_FREE;
+	[[maybe_unused]] constexpr int c_madv_free = MADV_FREE;
 #elif defined(MADV_DONTNEED)
-	constexpr int c_madv_free = MADV_DONTNEED;
+	[[maybe_unused]] constexpr int c_madv_free = MADV_DONTNEED;
 #else
-	constexpr int c_madv_free = 0;
+	[[maybe_unused]] constexpr int c_madv_free = 0;
 #endif
 
 #ifdef MADV_HUGEPAGE
@@ -205,7 +205,7 @@ namespace utils
 			}
 		}
 
-		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
+		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED | c_madv_dump) != -1);
 #endif
 	}
 

@@ -40,6 +40,7 @@ target_sources(rpcs3_emu PRIVATE
 	../util/vm_native.cpp
 	../util/dyn_lib.cpp
 	../util/sysinfo.cpp
+	../util/cpu_stats.cpp
 	../../Utilities/bin_patch.cpp
 	../../Utilities/cheat_info.cpp
 	../../Utilities/cond.cpp

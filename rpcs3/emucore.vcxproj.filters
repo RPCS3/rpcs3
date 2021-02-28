@@ -884,6 +884,9 @@
     <ClCompile Include="util\fixed_typemap.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
+    <ClCompile Include="util\cpu_stats.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
     <ClCompile Include="Crypto\aesni.cpp">
       <Filter>Crypto</Filter>
     </ClCompile>
@@ -1853,6 +1856,9 @@
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="util\typeindices.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\cpu_stats.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\ShaderInterpreter.h">

@@ -849,6 +849,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->moveBox, emu_settings_type::Move);
 	SubscribeTooltip(ui->gb_move_handler, tooltips.settings.move);
 
+	m_emu_settings->EnhanceComboBox(ui->buzzBox, emu_settings_type::Buzz);
+	SubscribeTooltip(ui->gb_buzz_emulated, tooltips.settings.buzz);
+
 	//     _____           _                   _______    _
 	//    / ____|         | |                 |__   __|  | |
 	//   | (___  _   _ ___| |_ ___ _ __ ___      | | __ _| |__

@@ -9,10 +9,14 @@
 #include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
+#include "Emu/RSX/rsx_utils.h"
 
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QKeyEvent>
 #include <QMessageBox>
+#include <QPainter>
+
 #include <string>
 #include <thread>
 
@@ -40,7 +44,8 @@
 #include <QtDBus/QDBusConnection>
 #endif
 
-LOG_CHANNEL(screenshot);
+LOG_CHANNEL(screenshot_log, "SCREENSHOT");
+LOG_CHANNEL(mark_log, "MARK");
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 
@@ -147,7 +152,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		if (keyEvent->modifiers() == Qt::AltModifier)
 		{
 			static int count = 0;
-			screenshot.success("Made forced mark %d in log", ++count);
+			mark_log.success("Made forced mark %d in log", ++count);
 			return;
 		}
 		else if (keyEvent->modifiers() == Qt::ControlModifier)
@@ -438,20 +443,22 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 	std::thread(
 		[sshot_width, sshot_height, is_bgra](const std::vector<u8> sshot_data)
 		{
+			screenshot_log.notice("Taking screenshot (%dx%d)", sshot_width, sshot_height);
+
 			std::string screen_path = fs::get_config_dir() + "screenshots/";
 
 			if (!fs::create_dir(screen_path) && fs::g_tls_error != fs::error::exist)
 			{
-				screenshot.error("Failed to create screenshot path \"%s\" : %s", screen_path, fs::g_tls_error);
+				screenshot_log.error("Failed to create screenshot path \"%s\" : %s", screen_path, fs::g_tls_error);
 				return;
 			}
 
-			std::string filename = screen_path + "screenshot-" + date_time::current_time_narrow<'_'>() + ".png";
+			const std::string filename = screen_path + "screenshot-" + date_time::current_time_narrow<'_'>() + ".png";
 
 			fs::file sshot_file(filename, fs::open_mode::create + fs::open_mode::write + fs::open_mode::excl);
 			if (!sshot_file)
 			{
-				screenshot.error("[Screenshot] Failed to save screenshot \"%s\" : %s", filename, fs::g_tls_error);
+				screenshot_log.error("Failed to save screenshot \"%s\" : %s", filename, fs::g_tls_error);
 				return;
 			}
 
@@ -474,69 +481,161 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 				}
 			}
 
-			std::vector<u8> encoded_png;
+			screenshot_manager manager;
+			{
+				const auto fxo = g_fxo->get<screenshot_manager>();
+				std::lock_guard lock(screenshot_mtx);
+				manager = *fxo;
+			}
 
-			png_structp write_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
-			png_infop info_ptr    = png_create_info_struct(write_ptr);
-			png_set_IHDR(write_ptr, info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+			struct scoped_png_ptrs
+			{
+				png_structp write_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+				png_infop info_ptr    = png_create_info_struct(write_ptr);
+
+				~scoped_png_ptrs()
+				{
+					png_free_data(write_ptr, info_ptr, PNG_FREE_ALL, -1);
+					png_destroy_write_struct(&write_ptr, &info_ptr);
+				}
+			};
+
+			png_text text[6] = {};
+			int num_text = 0;
+
+			const QDateTime date_time       = QDateTime::currentDateTime();
+			const std::string creation_time = date_time.toString("yyyy:MM:dd hh:mm:ss").toStdString();
+			const std::string title_id      = Emu.GetTitleID();
+			const std::string photo_title   = manager.get_photo_title();
+			const std::string game_title    = manager.get_game_title();
+			const std::string game_comment  = manager.get_game_comment();
+
+			// Write tEXt chunk
+			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
+			text[num_text].key         = const_cast<char*>("Creation Time");
+			text[num_text].text        = const_cast<char*>(creation_time.c_str());
+			++num_text;
+			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
+			text[num_text].key         = const_cast<char*>("Source");
+			text[num_text].text        = const_cast<char*>("RPCS3"); // Originally PlayStation(R)3
+			++num_text;
+			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
+			text[num_text].key         = const_cast<char*>("Title ID");
+			text[num_text].text        = const_cast<char*>(title_id.c_str());
+			++num_text;
+
+			// Write tTXt chunk (they probably meant zTXt)
+			text[num_text].compression = PNG_TEXT_COMPRESSION_zTXt;
+			text[num_text].key         = const_cast<char*>("Title");
+			text[num_text].text        = const_cast<char*>(photo_title.c_str());
+			++num_text;
+			text[num_text].compression = PNG_TEXT_COMPRESSION_zTXt;
+			text[num_text].key         = const_cast<char*>("Game Title");
+			text[num_text].text        = const_cast<char*>(game_title.c_str());
+			++num_text;
+			text[num_text].compression = PNG_TEXT_COMPRESSION_zTXt;
+			text[num_text].key         = const_cast<char*>("Comment");
+			text[num_text].text        = const_cast<char*>(game_comment.c_str());
 
 			std::vector<u8*> rows(sshot_height);
 			for (usz y = 0; y < sshot_height; y++)
 				rows[y] = sshot_data_alpha.data() + y * sshot_width * 4;
 
-			png_set_rows(write_ptr, info_ptr, &rows[0]);
-			png_set_write_fn(write_ptr, &encoded_png,
-				[](png_structp png_ptr, png_bytep data, png_size_t length)
-				{
-					std::vector<u8>* p = static_cast<std::vector<u8>*>(png_get_io_ptr(png_ptr));
-					p->insert(p->end(), data, data + length);
-				},
-				nullptr);
+			std::vector<u8> encoded_png;
 
-			png_write_png(write_ptr, info_ptr, PNG_TRANSFORM_IDENTITY, nullptr);
+			const auto write_png = [&]()
+			{
+				scoped_png_ptrs ptrs;
+				png_set_IHDR(ptrs.write_ptr, ptrs.info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+				png_set_text(ptrs.write_ptr, ptrs.info_ptr, text, 6);
+				png_set_rows(ptrs.write_ptr, ptrs.info_ptr, &rows[0]);
+				png_set_write_fn(ptrs.write_ptr, &encoded_png, [](png_structp png_ptr, png_bytep data, png_size_t length)
+					{
+						std::vector<u8>* p = static_cast<std::vector<u8>*>(png_get_io_ptr(png_ptr));
+						p->insert(p->end(), data, data + length);
+					}, nullptr);
+				png_write_png(ptrs.write_ptr, ptrs.info_ptr, PNG_TRANSFORM_IDENTITY, nullptr);
+			};
 
-			png_free_data(write_ptr, info_ptr, PNG_FREE_ALL, -1);
-			png_destroy_write_struct(&write_ptr, nullptr);
-
+			write_png();
 			sshot_file.write(encoded_png.data(), encoded_png.size());
 
-			screenshot.success("[Screenshot] Successfully saved screenshot to %s", filename);
+			screenshot_log.success("Successfully saved screenshot to %s", filename);
 
-			const auto fxo = g_fxo->get<screenshot_manager>();
-
-			if (fxo->is_enabled)
+			if (manager.is_enabled)
 			{
-				const std::string cell_sshot_filename = fxo->get_screenshot_path();
+				const std::string cell_sshot_overlay_path = manager.get_overlay_path();
+				if (fs::is_file(cell_sshot_overlay_path))
+				{
+					screenshot_log.notice("Adding overlay to cell screenshot from %s", cell_sshot_overlay_path);
+
+					QImage overlay_img;
+
+					if (!overlay_img.load(qstr(cell_sshot_overlay_path)))
+					{
+						screenshot_log.error("Failed to read cell screenshot overlay '%s' : %s", cell_sshot_overlay_path, fs::g_tls_error);
+						return;
+					}
+
+					// Games choose the overlay file and the offset based on the current video resolution.
+					// We need to scale the overlay if our resolution scaling causes the image to have a different size.
+					const auto avconf = g_fxo->get<rsx::avconf>();
+
+					// TODO: handle wacky PS3 resolutions (without resolution scaling)
+					if (avconf->resolution_x != sshot_width || avconf->resolution_y != sshot_height)
+					{
+						const int scale = rsx::get_resolution_scale_percent();
+						const int x = (scale * manager.overlay_offset_x) / 100;
+						const int y = (scale * manager.overlay_offset_y) / 100;
+						const int width = (scale * overlay_img.width()) / 100;
+						const int height = (scale * overlay_img.height()) / 100;
+
+						screenshot_log.notice("Scaling overlay from %dx%d at offset (%d,%d) to %dx%d at offset (%d,%d)",
+							overlay_img.width(), overlay_img.height(), manager.overlay_offset_x, manager.overlay_offset_y, width, height, x, y);
+
+						manager.overlay_offset_x = x;
+						manager.overlay_offset_y = y;
+						overlay_img = overlay_img.scaled(QSize(width, height), Qt::AspectRatioMode::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation);
+					}
+
+					if (manager.overlay_offset_x < static_cast<s64>(sshot_width) &&
+					    manager.overlay_offset_y < static_cast<s64>(sshot_height) &&
+					    manager.overlay_offset_x + overlay_img.width() > 0 &&
+					    manager.overlay_offset_y + overlay_img.height() > 0)
+					{
+						QImage screenshot_img(rows[0], sshot_width, sshot_height, QImage::Format_RGBA8888);
+						QPainter painter(&screenshot_img);
+						painter.drawImage(manager.overlay_offset_x, manager.overlay_offset_y, overlay_img);
+
+						std::memcpy(rows[0], screenshot_img.constBits(), static_cast<usz>(sshot_height) * screenshot_img.bytesPerLine());
+
+						screenshot_log.success("Applied screenshot overlay '%s'", cell_sshot_overlay_path);
+					}
+				}
+
+				const std::string cell_sshot_filename = manager.get_screenshot_path(date_time.toString("yyyy/MM/dd").toStdString());
 				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
 
-				screenshot.notice("[Screenshot] Saving cell screenshot to %s", cell_sshot_filename);
+				screenshot_log.notice("Saving cell screenshot to %s", cell_sshot_filename);
 
 				if (!fs::create_path(cell_sshot_dir) && fs::g_tls_error != fs::error::exist)
 				{
-					screenshot.error("Failed to create cell screenshot dir \"%s\" : %s", cell_sshot_dir, fs::g_tls_error);
+					screenshot_log.error("Failed to create cell screenshot dir \"%s\" : %s", cell_sshot_dir, fs::g_tls_error);
 					return;
 				}
 
 				fs::file cell_sshot_file(cell_sshot_filename, fs::open_mode::create + fs::open_mode::write + fs::open_mode::excl);
 				if (!cell_sshot_file)
 				{
-					screenshot.error("[Screenshot] Failed to save cell screenshot \"%s\" : %s", cell_sshot_filename, fs::g_tls_error);
+					screenshot_log.error("Failed to save cell screenshot \"%s\" : %s", cell_sshot_filename, fs::g_tls_error);
 					return;
 				}
 
-				const std::string cell_sshot_overlay_path = fxo->get_overlay_path();
-				if (fs::is_file(cell_sshot_overlay_path))
-				{
-					screenshot.notice("[Screenshot] Adding overlay to cell screenshot from %s", cell_sshot_overlay_path);
-					// TODO: add overlay to screenshot
-				}
-
-				// TODO: add tEXt chunk with creation time, source, title id
-				// TODO: add tTXt chunk with data procured from cellScreenShotSetParameter (get_photo_title, get_game_title, game_comment)
-
+				encoded_png.clear();
+				write_png();
 				cell_sshot_file.write(encoded_png.data(), encoded_png.size());
 
-				screenshot.success("[Screenshot] Successfully saved cell screenshot to %s", cell_sshot_filename);
+				screenshot_log.success("Successfully saved cell screenshot to %s", cell_sshot_filename);
 			}
 
 			return;

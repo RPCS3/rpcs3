@@ -166,6 +166,7 @@ struct cfg_root : cfg::node
 			cfg::string adapter{ this, "Adapter" };
 			cfg::_bool force_fifo{ this, "Force FIFO present mode" };
 			cfg::_bool force_primitive_restart{ this, "Force primitive restart flag" };
+			cfg::_bool force_disable_exclusive_fullscreen_mode{this, "Force Disable Exclusive Fullscreen Mode"};
 
 		} vk{ this };
 
@@ -238,7 +239,7 @@ struct cfg_root : cfg::node
 		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false, true };
 		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
-		cfg::string microphone_devices{ this, "Microphone Devices", ";;;;" };
+		cfg::string microphone_devices{ this, "Microphone Devices", "@@@@@@@@@@@@" };
 	} audio{ this };
 
 	struct node_io : cfg::node
@@ -250,6 +251,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<camera_handler> camera{ this, "Camera", camera_handler::null };
 		cfg::_enum<fake_camera_type> camera_type{ this, "Camera type", fake_camera_type::unknown };
 		cfg::_enum<move_handler> move{ this, "Move", move_handler::null };
+		cfg::_enum<buzz_handler> buzz{ this, "Buzz emulated controller", buzz_handler::null };
 	} io{ this };
 
 	struct node_sys : cfg::node

@@ -1552,7 +1552,7 @@ namespace rsx
 				{
 					mapped_offset = 0;
 				}
-				else if (valid_offset)
+				else
 				{
 					const u32 offset_in_x = valid_offset % rsx_pitch;
 					const u32 offset_in_y = valid_offset / rsx_pitch;

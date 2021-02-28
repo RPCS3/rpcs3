@@ -145,7 +145,6 @@ usb_handler_thread::usb_handler_thread()
 
 	bool found_skylander = false;
 	bool found_ghltar    = false;
-	bool found_buzz      = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
 	{
@@ -199,14 +198,10 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x044F, 0xB660, 0xB660, "Thrustmaster T500 RS Gear Shift");
 
 		// Buzz controllers
-		if (check_device(0x054C, 0x1000, 0x1040, "buzzer0"))
-			found_buzz = true;
-		if (check_device(0x054C, 0x0001, 0x0041, "buzzer1"))
-			found_buzz = true;
-		if (check_device(0x054C, 0x0042, 0x0042, "buzzer2"))
-			found_buzz = true;
-		if (check_device(0x046D, 0xC220, 0xC220, "buzzer9"))
-			found_buzz = true;
+		check_device(0x054C, 0x1000, 0x1040, "buzzer0");
+		check_device(0x054C, 0x0001, 0x0041, "buzzer1");
+		check_device(0x054C, 0x0042, 0x0042, "buzzer2");
+		check_device(0x046D, 0xC220, 0xC220, "buzzer9");
 
 		// GCon3 Gun
 		check_device(0x0B9A, 0x0800, 0x0800, "guncon3");
@@ -229,12 +224,16 @@ usb_handler_thread::usb_handler_thread()
 		usb_devices.push_back(std::make_shared<usb_device_ghltar>());
 	}
 
-	if (!found_buzz)
+	if (g_cfg.io.buzz == buzz_handler::one_controller || g_cfg.io.buzz == buzz_handler::two_controllers)
 	{
-		sys_usbd.notice("Adding emulated Buzz! buzzer");
+		sys_usbd.notice("Adding emulated Buzz! buzzer (1-4 players)");
 		usb_devices.push_back(std::make_shared<usb_device_buzz>(0, 3));
+	}
+	if (g_cfg.io.buzz == buzz_handler::two_controllers)
+	{
 		// The current buzz emulation piggybacks on the pad input.
 		// Since there can only be 7 pads connected on a PS3 the 8th player is currently not supported
+		sys_usbd.notice("Adding emulated Buzz! buzzer (5-7 players)");
 		usb_devices.push_back(std::make_shared<usb_device_buzz>(4, 6));
 	}
 
@@ -304,10 +303,7 @@ void usb_handler_thread::operator()()
 		}
 
 		// If there is no handled devices usb thread is not actively needed
-		if (handled_devices.empty())
-			std::this_thread::sleep_for(500ms);
-		else
-			std::this_thread::sleep_for(200us);
+		thread_ctrl::wait_for(handled_devices.empty() ? 500'000 : 200);
 	}
 }
 
@@ -722,14 +718,19 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 		usbh->sq.emplace_back(&ppu);
 	}
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state))
 		{
-			return 0;
+			return {};
 		}
 
-		thread_ctrl::wait();
+		if (state & cpu_flag::signal)
+		{
+			break;
+		}
+
+		thread_ctrl::wait_on(ppu.state, state);
 	}
 
 	*arg1 = ppu.gpr[4];

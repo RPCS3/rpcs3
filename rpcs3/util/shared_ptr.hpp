@@ -6,9 +6,11 @@
 
 namespace stx
 {
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
 #ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wundefined-var-template"
+#pragma GCC diagnostic ignored "-Wundefined-var-template"
+#endif
 #endif
 
 	// Not defined anywhere (and produces a useless warning)
@@ -19,19 +21,22 @@ namespace stx
 	template <typename T, typename U>
 	constexpr bool is_same_ptr() noexcept
 	{
+#if !defined(_MSC_VER) && !defined(__clang__)
+		return true;
+#else
 		if constexpr (std::is_void_v<T> || std::is_void_v<U> || std::is_same_v<T, U>)
 		{
 			return true;
 		}
 		else if constexpr (std::is_convertible_v<U*, T*>)
 		{
-			const auto u = &sample<U>;
+			const auto u = std::addressof(sample<U>);
 			const volatile void* x = u;
 			return static_cast<T*>(u) == x;
 		}
 		else if constexpr (std::is_convertible_v<T*, U*>)
 		{
-			const auto t = &sample<T>;
+			const auto t = std::addressof(sample<T>);
 			const volatile void* x = t;
 			return static_cast<U*>(t) == x;
 		}
@@ -39,13 +44,14 @@ namespace stx
 		{
 			return false;
 		}
+#endif
 	}
 
 	template <typename T, typename U>
 	constexpr bool is_same_ptr_cast_v = std::is_convertible_v<U*, T*> && is_same_ptr<T, U>();
 
-#ifdef __clang__
-#pragma clang diagnostic pop
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
 #endif
 
 	template <typename T>
@@ -253,6 +259,11 @@ namespace stx
 		}
 	};
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+#endif
+
 	template <typename T, bool Init = true, typename... Args>
 	static std::enable_if_t<!(std::is_unbounded_array_v<T>) && (Init || !sizeof...(Args)), single_ptr<T>> make_single(Args&&... args) noexcept
 	{
@@ -361,6 +372,10 @@ namespace stx
 		reinterpret_cast<std::remove_extent_t<T>*&>(r) = std::launder(arr);
 		return r;
 	}
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 
 	// Simplified shared pointer
 	template <typename T>
@@ -779,7 +794,7 @@ namespace stx
 			}
 
 			// Result temp storage
-			std::conditional_t<std::is_void_v<RT>, int, RT> result;
+			[[maybe_unused]] std::conditional_t<std::is_void_v<RT>, int, RT> result;
 
 			// Invoke
 			if constexpr (std::is_void_v<RT>)
@@ -1033,6 +1048,41 @@ namespace stx
 		bool compare_and_swap_test(const single_ptr<U>& cmp, shared_type exch)
 		{
 			return compare_and_swap_test(reinterpret_cast<const shared_ptr<U>&>(cmp), std::move(exch));
+		}
+
+		// Helper utility
+		void push_head(shared_type& next, shared_type exch) noexcept
+		{
+			if (exch.m_ptr) [[likely]]
+			{
+				// Add missing references first
+				exch.d()->refs += c_ref_mask;
+			}
+
+			if (next.m_ptr) [[unlikely]]
+			{
+				// Just in case
+				next.reset();
+			}
+
+			atomic_ptr old;
+			old.m_val.raw() = m_val.load();
+
+			do
+			{
+				// Update old head with current value
+				next.m_ptr = reinterpret_cast<T*>(old.m_val.raw() >> c_ref_size);
+
+			} while (!m_val.compare_exchange(old.m_val.raw(), reinterpret_cast<uptr>(exch.m_ptr) << c_ref_size));
+
+			// This argument is consumed (moved from)
+			exch.m_ptr = nullptr;
+
+			if (next.m_ptr)
+			{
+				// Compensation for `next` assignment
+				old.m_val.raw() += 1;
+			}
 		}
 
 		// Simple atomic load is much more effective than load(), but it's a non-owning reference

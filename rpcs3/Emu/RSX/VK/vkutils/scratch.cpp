@@ -12,7 +12,22 @@ namespace vk
 	std::unordered_map<VkImageViewType, std::unique_ptr<viewable_image>> g_null_image_views;
 	std::unordered_map<u32, std::unique_ptr<image>> g_typeless_textures;
 	VkSampler g_null_sampler = nullptr;
-	std::unique_ptr<buffer> g_scratch_buffer;
+
+	// Scratch memory handling. Use double-buffered resource to significantly cut down on GPU stalls
+	struct scratch_buffer_pool_t
+	{
+		std::array<std::unique_ptr<buffer>, 2> scratch_buffers;
+		u32 current_index = 0;
+
+		std::unique_ptr<buffer>& get_buf()
+		{
+			auto& ret = scratch_buffers[current_index];
+			current_index ^= 1;
+			return ret;
+		}
+	};
+
+	std::unordered_map<u32, scratch_buffer_pool_t> g_scratch_buffers_pool;
 
 	VkSampler null_sampler()
 	{
@@ -130,29 +145,31 @@ namespace vk
 
 	vk::buffer* get_scratch_buffer(u32 min_required_size)
 	{
-		if (g_scratch_buffer && g_scratch_buffer->size() < min_required_size)
+		auto& scratch_buffer = g_scratch_buffers_pool[0 /*TODO: Replace with Queue Family ID*/].get_buf();
+
+		if (scratch_buffer && scratch_buffer->size() < min_required_size)
 		{
 			// Scratch heap cannot fit requirements. Discard it and allocate a new one.
-			vk::get_resource_manager()->dispose(g_scratch_buffer);
+			vk::get_resource_manager()->dispose(scratch_buffer);
 		}
 
-		if (!g_scratch_buffer)
+		if (!scratch_buffer)
 		{
 			// Choose optimal size
 			const u64 alloc_size = std::max<u64>(64 * 0x100000, utils::align(min_required_size, 0x100000));
 
-			g_scratch_buffer = std::make_unique<vk::buffer>(*g_render_device, alloc_size,
+			scratch_buffer = std::make_unique<vk::buffer>(*g_render_device, alloc_size,
 				g_render_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, 0);
 		}
 
-		return g_scratch_buffer.get();
+		return scratch_buffer.get();
 	}
 
 	void clear_scratch_resources()
 	{
 		g_null_image_views.clear();
-		g_scratch_buffer.reset();
+		g_scratch_buffers_pool.clear();
 
 		g_typeless_textures.clear();
 

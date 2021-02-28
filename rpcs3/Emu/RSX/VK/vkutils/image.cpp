@@ -182,13 +182,38 @@ namespace vk
 		change_image_layout(cmd, this, layout);
 	}
 
-	void image::change_layout(command_buffer& cmd, VkImageLayout new_layout)
+	void image::change_layout(const command_buffer& cmd, VkImageLayout new_layout)
 	{
 		if (current_layout == new_layout)
 			return;
 
 		ensure(m_layout_stack.empty());
 		change_image_layout(cmd, this, new_layout);
+	}
+
+	void image::change_layout(const command_buffer& cmd, VkImageLayout new_layout, u32 new_queue_family)
+	{
+		if (current_layout == new_layout && current_queue_family == new_queue_family)
+		{
+			// Nothing to do
+			return;
+		}
+
+		ensure(m_layout_stack.empty());
+		change_image_layout(cmd, this, new_layout);
+
+		u32 dst_queue = new_queue_family;
+		if (current_queue_family == VK_QUEUE_FAMILY_IGNORED)
+		 {
+			// Implicit acquisition
+			dst_queue = VK_QUEUE_FAMILY_IGNORED;
+		}
+
+		VkImageSubresourceRange range = { aspect(), 0, mipmaps(), 0, layers() };
+		change_image_layout(cmd, value, current_layout, new_layout, range, current_queue_family, dst_queue);
+
+		current_layout = new_layout;
+		current_queue_family = new_queue_family;
 	}
 
 	image_view::image_view(VkDevice dev, VkImage image, VkImageViewType view_type, VkFormat format, VkComponentMapping mapping, VkImageSubresourceRange range)

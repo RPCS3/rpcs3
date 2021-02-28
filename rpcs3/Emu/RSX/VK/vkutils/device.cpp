@@ -44,9 +44,9 @@ namespace vk
 				features2.pNext         = &driver_properties;
 			}
 
-			auto getPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
-			ensure(getPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
-			getPhysicalDeviceFeatures2KHR(dev, &features2);
+			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
+			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
+			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
 
 			shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
 			shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
@@ -56,8 +56,9 @@ namespace vk
 
 		stencil_export_support           = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		conditional_render_support       = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
-		external_memory_host_support = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
+		external_memory_host_support     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		unrestricted_depth_range_support = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
+		surface_capabilities_2_support   = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 	}
 
 	void physical_device::create(VkInstance context, VkPhysicalDevice pdev, bool allow_extensions)
@@ -227,18 +228,53 @@ namespace vk
 	}
 
 	// Render Device - The actual usable device
-	void render_device::create(vk::physical_device& pdev, u32 graphics_queue_idx)
+	void render_device::create(vk::physical_device& pdev, u32 graphics_queue_idx, u32 present_queue_idx, u32 transfer_queue_idx)
 	{
 		std::string message_on_error;
 		float queue_priorities[1] = { 0.f };
 		pgpu = &pdev;
 
-		VkDeviceQueueCreateInfo queue = {};
-		queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queue.pNext = NULL;
-		queue.queueFamilyIndex = graphics_queue_idx;
-		queue.queueCount = 1;
-		queue.pQueuePriorities = queue_priorities;
+		ensure(graphics_queue_idx == present_queue_idx || present_queue_idx == umax); // TODO
+		std::vector<VkDeviceQueueCreateInfo> device_queues;
+
+		auto& graphics_queue = device_queues.emplace_back();
+		graphics_queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		graphics_queue.pNext = NULL;
+		graphics_queue.flags = 0;
+		graphics_queue.queueFamilyIndex = graphics_queue_idx;
+		graphics_queue.queueCount = 1;
+		graphics_queue.pQueuePriorities = queue_priorities;
+
+		u32 transfer_queue_sub_index = 0;
+		if (transfer_queue_idx == umax)
+		{
+			// Transfer queue must be a valid device queue
+			rsx_log.warning("Dedicated transfer+compute queue was not found on this GPU. Will use graphics queue instead.");
+			transfer_queue_idx = graphics_queue_idx;
+
+			// Check if we can at least get a second graphics queue
+			if (pdev.get_queue_properties(graphics_queue_idx).queueCount > 1)
+			{
+				rsx_log.notice("Will use a spare graphics queue to push transfer operations.");
+				graphics_queue.queueCount++;
+				transfer_queue_sub_index = 1;
+			}
+		}
+
+		m_graphics_queue_family = graphics_queue_idx;
+		m_present_queue_family = present_queue_idx;
+		m_transfer_queue_family = transfer_queue_idx;
+
+		if (graphics_queue_idx != transfer_queue_idx)
+		{
+			auto& transfer_queue = device_queues.emplace_back();
+			transfer_queue.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			transfer_queue.pNext = NULL;
+			transfer_queue.flags = 0;
+			transfer_queue.queueFamilyIndex = transfer_queue_idx;
+			transfer_queue.queueCount = 1;
+			transfer_queue.pQueuePriorities = queue_priorities;
+		}
 
 		// Set up instance information
 		std::vector<const char*> requested_extensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
@@ -306,6 +342,31 @@ namespace vk
 		enabled_features.textureCompressionBC = VK_TRUE;
 		enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
+		// If we're on lavapipe / llvmpipe, disable unimplemented features:
+		// - samplerAnisotropy
+		// - shaderStorageBufferArrayDynamicIndexing
+		// - wideLines
+		// as of mesa 21.1.0-dev (aea36ee05e9, 2020-02-10)
+		// Several games work even if we disable these, testing purpose only
+		if (pgpu->get_name().find("llvmpipe") != umax)
+		{
+			if (!pgpu->features.samplerAnisotropy)
+			{
+				rsx_log.error("Running lavapipe without support for samplerAnisotropy");
+				enabled_features.samplerAnisotropy = VK_FALSE;
+			}
+			if (!pgpu->features.shaderStorageBufferArrayDynamicIndexing)
+			{
+				rsx_log.error("Running lavapipe without support for shaderStorageBufferArrayDynamicIndexing");
+				enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_FALSE;
+			}
+			if (!pgpu->features.wideLines)
+			{
+				rsx_log.error("Running lavapipe without support for wideLines");
+				enabled_features.wideLines = VK_FALSE;
+			}
+		}
+
 		// Optionally disable unsupported stuff
 		if (!pgpu->features.shaderFloat64)
 		{
@@ -335,8 +396,8 @@ namespace vk
 		VkDeviceCreateInfo device = {};
 		device.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		device.pNext = nullptr;
-		device.queueCreateInfoCount = 1;
-		device.pQueueCreateInfos = &queue;
+		device.queueCreateInfoCount = ::size32(device_queues);
+		device.pQueueCreateInfos = device_queues.data();
 		device.enabledLayerCount = 0;
 		device.ppEnabledLayerNames = nullptr; // Deprecated
 		device.enabledExtensionCount = ::size32(requested_extensions);
@@ -360,11 +421,20 @@ namespace vk
 
 		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);
 
+		// Initialize queues
+		vkGetDeviceQueue(dev, graphics_queue_idx, 0, &m_graphics_queue);
+		vkGetDeviceQueue(dev, transfer_queue_idx, transfer_queue_sub_index, &m_transfer_queue);
+
+		if (present_queue_idx != UINT32_MAX)
+		{
+			vkGetDeviceQueue(dev, present_queue_idx, 0, &m_present_queue);
+		}
+
 		// Import optional function endpoints
 		if (pgpu->conditional_render_support)
 		{
-			cmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT"));
-			cmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
+			_vkCmdBeginConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdBeginConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdBeginConditionalRenderingEXT"));
+			_vkCmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
 		}
 
 		memory_map = vk::get_memory_mapping(pdev);
@@ -373,7 +443,7 @@ namespace vk
 
 		if (pgpu->external_memory_host_support)
 		{
-			memory_map.getMemoryHostPointerPropertiesEXT = reinterpret_cast<PFN_vkGetMemoryHostPointerPropertiesEXT>(vkGetDeviceProcAddr(dev, "vkGetMemoryHostPointerPropertiesEXT"));
+			memory_map._vkGetMemoryHostPointerPropertiesEXT = reinterpret_cast<PFN_vkGetMemoryHostPointerPropertiesEXT>(vkGetDeviceProcAddr(dev, "vkGetMemoryHostPointerPropertiesEXT"));
 		}
 
 		if (g_cfg.video.disable_vulkan_mem_allocator)
@@ -397,6 +467,36 @@ namespace vk
 			memory_map = {};
 			m_formats_support = {};
 		}
+	}
+
+	VkQueue render_device::get_present_queue() const
+	{
+		return m_present_queue;
+	}
+
+	VkQueue render_device::get_graphics_queue() const
+	{
+		return m_graphics_queue;
+	}
+
+	VkQueue render_device::get_transfer_queue() const
+	{
+		return m_transfer_queue;
+	}
+
+	u32 render_device::get_graphics_queue_family() const
+	{
+		return m_graphics_queue_family;
+	}
+
+	u32 render_device::get_present_queue_family() const
+	{
+		return m_graphics_queue_family;
+	}
+
+	u32 render_device::get_transfer_queue_family() const
+	{
+		return m_transfer_queue_family;
 	}
 
 	const VkFormatProperties render_device::get_format_properties(VkFormat format)
@@ -490,6 +590,11 @@ namespace vk
 	bool render_device::get_external_memory_host_support() const
 	{
 		return pgpu->external_memory_host_support;
+	}
+
+	bool render_device::get_surface_capabilities_2_support() const
+	{
+		return pgpu->surface_capabilities_2_support;
 	}
 
 	mem_allocator_base* render_device::get_allocator() const
