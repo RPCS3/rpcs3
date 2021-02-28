@@ -67,18 +67,11 @@ namespace vk
 
 	AsyncTaskScheduler::~AsyncTaskScheduler()
 	{
-		*g_fxo->get<async_scheduler_thread>() = thread_state::aborting;
-		while (has_refs()) _mm_pause();
-
-		for (auto& cb : m_async_command_queue)
+		if (!m_async_command_queue.empty())
 		{
-			cb.destroy();
+			// Driver resources should be destroyed before driver is detached or you get crashes. RAII won't save you here.
+			rsx_log.error("Async task scheduler resources were not freed correctly!");
 		}
-
-		m_async_command_queue.clear();
-		m_next_cb_index = 0;
-		m_command_pool.destroy();
-		m_events_pool.clear();
 	}
 
 	command_buffer* AsyncTaskScheduler::get_current()
@@ -157,5 +150,21 @@ namespace vk
 		m_last_used_cb = m_current_cb;
 		m_current_cb = nullptr;
 		m_sync_required = false;
+	}
+
+	void AsyncTaskScheduler::kill()
+	{
+		*g_fxo->get<async_scheduler_thread>() = thread_state::aborting;
+		while (has_refs()) _mm_pause();
+
+		for (auto& cb : m_async_command_queue)
+		{
+			cb.destroy();
+		}
+
+		m_async_command_queue.clear();
+		m_next_cb_index = 0;
+		m_command_pool.destroy();
+		m_events_pool.clear();
 	}
 }
