@@ -437,6 +437,12 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 
 bool read_png_file(const std::string& filename, u32& width, u32& height, std::vector<u8*>& row_pointers)
 {
+	const auto close_file = [](FILE* fp) { if (fp) fclose(fp); };
+	std::unique_ptr<FILE, decltype(close_file)> fp(fopen(filename.c_str(), "rb"), close_file);
+
+	if (!fp)
+		return false;
+
 	png_structp png = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 	if (!png)
 		return false;
@@ -448,11 +454,7 @@ bool read_png_file(const std::string& filename, u32& width, u32& height, std::ve
 	if (setjmp(png_jmpbuf(png)))
 		return false;
 
-	FILE* fp = fopen(filename.c_str(), "rb");
-	if (!fp)
-		return false;
-
-	png_init_io(png, fp);
+	png_init_io(png, fp.get());
 	png_read_info(png, info);
 
 	width  = png_get_image_width(png, info);
@@ -495,8 +497,6 @@ bool read_png_file(const std::string& filename, u32& width, u32& height, std::ve
 	}
 
 	png_read_image(png, &row_pointers[0]);
-
-	fclose(fp);
 
 	png_destroy_read_struct(&png, &info, nullptr);
 
