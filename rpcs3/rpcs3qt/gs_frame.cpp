@@ -478,7 +478,12 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 				}
 			}
 
-			screenshot_manager manager = *g_fxo->get<screenshot_manager>();
+			screenshot_manager manager;
+			{
+				const auto fxo = g_fxo->get<screenshot_manager>();
+				std::lock_guard lock(screenshot_mtx);
+				manager = *fxo;
+			}
 
 			struct scoped_png_ptrs
 			{
@@ -567,6 +572,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 					{
 						screenshot_log.error("Failed to read cell screenshot overlay '%s' : %s", cell_sshot_overlay_path, fs::g_tls_error);
 					}
+					// TODO: the overlay and its offset need to be scaled based on image size, resolution scaling and video resolution
 					else if (manager.overlay_offset_x < static_cast<s64>(sshot_width)
 					      && manager.overlay_offset_y < static_cast<s64>(sshot_height)
 					      && manager.overlay_offset_x + overlay_img.width() > 0

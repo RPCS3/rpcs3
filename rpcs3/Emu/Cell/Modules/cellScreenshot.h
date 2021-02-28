@@ -27,6 +27,8 @@ struct CellScreenShotSetParam
 	vm::bptr<void> reserved;
 };
 
+extern shared_mutex screenshot_mtx;
+
 struct screenshot_manager
 {
 	bool is_enabled{false};
