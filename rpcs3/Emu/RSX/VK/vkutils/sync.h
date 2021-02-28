@@ -46,6 +46,7 @@ namespace vk
 
 		void signal(const command_buffer& cmd, VkPipelineStageFlags stages, VkAccessFlags access);
 		void host_signal() const;
+		void gpu_wait(const command_buffer& cmd) const;
 		VkResult status() const;
 		void reset() const;
 	};
