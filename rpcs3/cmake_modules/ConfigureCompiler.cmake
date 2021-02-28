@@ -40,7 +40,9 @@ else()
 	endif()
 
 	#TODO Clean the code so these are removed
-	add_compile_options(-Wno-attributes)
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.1 OR NOT CMAKE_COMPILER_IS_GNUCXX)
+		add_compile_options(-Wno-attributes)
+	endif()
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-fconstexpr-steps=16777216)
