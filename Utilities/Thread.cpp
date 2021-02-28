@@ -2349,7 +2349,7 @@ bool thread_base::join(bool dtor) const
 			break;
 		}
 
-		if (i && (i % 20) == 0 && timeout != atomic_wait_timeout::inf)
+		if (i >= 16 && !(i & (i - 1)) && timeout != atomic_wait_timeout::inf)
 		{
 			sig_log.error(u8"Thread [%s] is too sleepy. Waiting for it %.3fµs already!", *m_tname.load(), (__rdtsc() - stamp0) / (utils::get_tsc_freq() / 1000000.));
 		}
