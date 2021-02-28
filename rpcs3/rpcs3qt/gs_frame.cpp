@@ -581,7 +581,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 					// We need to scale the overlay if our resolution scaling causes the image to have a different size.
 					const auto avconf = g_fxo->get<rsx::avconf>();
 
-					// TODO: handle weird PS3 resolutions (without resolution scaling)
+					// TODO: handle wacky PS3 resolutions (without resolution scaling)
 					if (avconf->resolution_x != sshot_width || avconf->resolution_y != sshot_height)
 					{
 						const int scale = rsx::get_resolution_scale_percent();
