@@ -990,6 +990,8 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor,
 		}
 	}
 
+	ensure(device->config);
+
 	// Set new LED color (see ds4_pad_handler)
 	if (r >= 0 && g >= 0 && b >= 0 && r <= 255 && g <= 255 && b <= 255)
 	{

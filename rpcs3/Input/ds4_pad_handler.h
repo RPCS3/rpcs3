@@ -11,9 +11,6 @@ public:
 	bool bt_controller{false};
 	bool has_calib_data{false};
 	std::array<CalibData, CalibIndex::COUNT> calib_data{};
-	u8 battery_level{0};
-	u8 last_battery_level{0};
-	u8 cable_state{0};
 };
 
 class ds4_pad_handler final : public hid_pad_handler<DS4Device>
