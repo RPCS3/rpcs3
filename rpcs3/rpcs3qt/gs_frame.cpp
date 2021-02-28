@@ -490,9 +490,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 					png_free_data(write_ptr, info_ptr, PNG_FREE_ALL, -1);
 					png_destroy_write_struct(&write_ptr, &info_ptr);
 				}
-			} ptrs;
-
-			png_set_IHDR(ptrs.write_ptr, ptrs.info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+			};
 
 			png_text text[6] = {};
 			int num_text = 0;
@@ -531,11 +529,30 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 			text[num_text].key         = const_cast<char*>("Comment");
 			text[num_text].text        = const_cast<char*>(game_comment.c_str());
 
-			png_set_text(ptrs.write_ptr, ptrs.info_ptr, text, 6);
-
 			std::vector<u8*> rows(sshot_height);
 			for (usz y = 0; y < sshot_height; y++)
 				rows[y] = sshot_data_alpha.data() + y * sshot_width * 4;
+
+			std::vector<u8> encoded_png;
+
+			const auto write_png = [&]()
+			{
+				scoped_png_ptrs ptrs;
+				png_set_IHDR(ptrs.write_ptr, ptrs.info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+				png_set_text(ptrs.write_ptr, ptrs.info_ptr, text, 6);
+				png_set_rows(ptrs.write_ptr, ptrs.info_ptr, &rows[0]);
+				png_set_write_fn(ptrs.write_ptr, &encoded_png, [](png_structp png_ptr, png_bytep data, png_size_t length)
+					{
+						std::vector<u8>* p = static_cast<std::vector<u8>*>(png_get_io_ptr(png_ptr));
+						p->insert(p->end(), data, data + length);
+					}, nullptr);
+				png_write_png(ptrs.write_ptr, ptrs.info_ptr, PNG_TRANSFORM_IDENTITY, nullptr);
+			};
+
+			write_png();
+			sshot_file.write(encoded_png.data(), encoded_png.size());
+
+			screenshot_log.success("Successfully saved screenshot to %s", filename);
 
 			if (manager.is_enabled)
 			{
@@ -564,27 +581,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 						screenshot_log.success("Applied screenshot overlay '%s'", cell_sshot_overlay_path);
 					}
 				}
-			}
 
-			std::vector<u8> encoded_png;
-
-			png_set_rows(ptrs.write_ptr, ptrs.info_ptr, &rows[0]);
-			png_set_write_fn(ptrs.write_ptr, &encoded_png,
-				[](png_structp png_ptr, png_bytep data, png_size_t length)
-				{
-					std::vector<u8>* p = static_cast<std::vector<u8>*>(png_get_io_ptr(png_ptr));
-					p->insert(p->end(), data, data + length);
-				},
-				nullptr);
-
-			png_write_png(ptrs.write_ptr, ptrs.info_ptr, PNG_TRANSFORM_IDENTITY, nullptr);
-
-			sshot_file.write(encoded_png.data(), encoded_png.size());
-
-			screenshot_log.success("Successfully saved screenshot to %s", filename);
-
-			if (manager.is_enabled)
-			{
 				const std::string cell_sshot_filename = manager.get_screenshot_path(date_time.toString("yyyy/MM/dd").toStdString());
 				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
 
@@ -603,6 +600,8 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 					return;
 				}
 
+				encoded_png.clear();
+				write_png();
 				cell_sshot_file.write(encoded_png.data(), encoded_png.size());
 
 				screenshot_log.success("Successfully saved cell screenshot to %s", cell_sshot_filename);
