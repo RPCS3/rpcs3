@@ -223,6 +223,19 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	return CELL_OK;
 }
 
+struct netstart_hack
+{
+	static constexpr std::string_view thread_name = "NetStart Hack";
+
+	void operator()(int)
+	{
+		thread_ctrl::wait_for(500'000);
+
+		sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_LOADED, 0);
+		sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
+	}
+};
+
 error_code cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogParam> param)
 {
 	cellNetCtl.error("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
@@ -250,16 +263,7 @@ error_code cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogPa
 	}
 
 	// This is a hack for Diva F 2nd that registers the sysutil callback after calling this function.
-	g_fxo->init<named_thread>("Delayed cellNetCtlNetStartDialogLoadAsync messages", []()
-	{
-		lv2_obj::wait_timeout(500000, nullptr);
-
-		if (thread_ctrl::state() != thread_state::aborting)
-		{
-			sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_LOADED, 0);
-			sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_FINISHED, 0);
-		}
-	});
+	g_fxo->get<named_thread<netstart_hack>>()->operator()(0);
 
 	return CELL_OK;
 }
