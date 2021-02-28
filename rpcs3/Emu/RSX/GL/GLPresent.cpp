@@ -2,7 +2,7 @@
 #include "GLGSRender.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 
-LOG_CHANNEL(screenshot);
+LOG_CHANNEL(screenshot_log, "SCREENSHOT");
 
 gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig)
 {
@@ -227,7 +227,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				glGetTextureImageEXT(image_to_flip, GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, sshot_frame.data());
 
 			if (GLenum err; (err = glGetError()) != GL_NO_ERROR)
-				screenshot.error("Failed to capture image: 0x%x", err);
+				screenshot_log.error("Failed to capture image: 0x%x", err);
 			else
 				m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, false);
 		}

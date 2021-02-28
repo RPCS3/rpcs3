@@ -18,6 +18,7 @@
 
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 #include "png.h"
 
@@ -442,6 +443,8 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 	std::thread(
 		[sshot_width, sshot_height, is_bgra](const std::vector<u8> sshot_data)
 		{
+			screenshot_log.notice("Taking screenshot (%dx%d)", sshot_width, sshot_height);
+
 			std::string screen_path = fs::get_config_dir() + "screenshots/";
 
 			if (!fs::create_dir(screen_path) && fs::g_tls_error != fs::error::exist)
@@ -571,12 +574,32 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 					if (!overlay_img.load(qstr(cell_sshot_overlay_path)))
 					{
 						screenshot_log.error("Failed to read cell screenshot overlay '%s' : %s", cell_sshot_overlay_path, fs::g_tls_error);
+						return;
 					}
-					// TODO: the overlay and its offset need to be scaled based on image size, resolution scaling and video resolution
-					else if (manager.overlay_offset_x < static_cast<s64>(sshot_width)
-					      && manager.overlay_offset_y < static_cast<s64>(sshot_height)
-					      && manager.overlay_offset_x + overlay_img.width() > 0
-					      && manager.overlay_offset_y + overlay_img.height() > 0)
+
+					// Games choose the overlay file and the offset based on the current video resolution.
+					// We need to scale the overlay if our resolution scaling causes the image to have a different size.
+					extern const std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map;
+					const auto [expected_width, expected_height] = g_video_out_resolution_map.at(g_cfg.video.resolution);
+
+					if (static_cast<u32>(expected_width) != sshot_width || static_cast<u32>(expected_height) != sshot_height)
+					{
+						const double ratio_x = sshot_width / static_cast<double>(expected_width);
+						const double ratio_y = sshot_height / static_cast<double>(expected_height);
+
+						screenshot_log.notice("Scaling overlay from %dx%d at offset (%d,%d) to %dx%d at offset (%d,%d)",
+							overlay_img.width(), overlay_img.height(), manager.overlay_offset_x, manager.overlay_offset_y,
+							overlay_img.width() * ratio_x, overlay_img.height() * ratio_y, manager.overlay_offset_x * ratio_x, manager.overlay_offset_y * ratio_y);
+
+						manager.overlay_offset_x *= ratio_x;
+						manager.overlay_offset_y *= ratio_y;
+						overlay_img = overlay_img.scaled(QSize(overlay_img.width() * ratio_x, overlay_img.height() * ratio_y), Qt::AspectRatioMode::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation);
+					}
+
+					if (manager.overlay_offset_x < static_cast<s64>(sshot_width) &&
+					    manager.overlay_offset_y < static_cast<s64>(sshot_height) &&
+					    manager.overlay_offset_x + overlay_img.width() > 0 &&
+					    manager.overlay_offset_y + overlay_img.height() > 0)
 					{
 						QImage screenshot_img(rows[0], sshot_width, sshot_height, QImage::Format_RGBA8888);
 						QPainter painter(&screenshot_img);
