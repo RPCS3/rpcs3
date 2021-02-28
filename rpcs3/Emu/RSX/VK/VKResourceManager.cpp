@@ -10,6 +10,7 @@ namespace vk
 
 	resource_manager g_resource_manager;
 	atomic_t<u64> g_event_ctr;
+	atomic_t<u64> g_last_completed_event;
 
 	constexpr u64 s_vmm_warn_threshold_size = 2000 * 0x100000; // Warn if allocation on a single heap exceeds this value
 
@@ -28,6 +29,11 @@ namespace vk
 		return g_event_ctr.load();
 	}
 
+	u64 last_completed_event_id()
+	{
+		return g_last_completed_event.load();
+	}
+
 	void on_event_completed(u64 event_id, bool flush)
 	{
 		if (!flush && g_cfg.video.multithreaded_rsx)
@@ -40,6 +46,7 @@ namespace vk
 		}
 
 		g_resource_manager.eid_completed(event_id);
+		g_last_completed_event = std::max(event_id, g_last_completed_event.load());
 	}
 
 	static constexpr f32 size_in_GiB(u64 size)

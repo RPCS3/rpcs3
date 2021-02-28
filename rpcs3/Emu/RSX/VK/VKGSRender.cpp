@@ -1,13 +1,15 @@
 #include "stdafx.h"
 #include "../Overlays/overlay_shader_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
-#include "VKGSRender.h"
-#include "VKHelpers.h"
+
+#include "VKAsyncScheduler.h"
+#include "VKCommandStream.h"
 #include "VKCommonDecompiler.h"
 #include "VKCompute.h"
+#include "VKGSRender.h"
+#include "VKHelpers.h"
 #include "VKRenderPass.h"
 #include "VKResourceManager.h"
-#include "VKCommandStream.h"
 
 #include "vkutils/buffer_object.h"
 #include "vkutils/scratch.h"
@@ -500,6 +502,8 @@ VKGSRender::VKGSRender() : GSRender()
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
 
 	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.91");
+
+	g_fxo->init<vk::async_scheduler_thread>();
 
 	open_command_buffer();
 
@@ -1930,6 +1934,9 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	// TODO: Restructure command submission infrastructure to avoid this condition
 	const bool sync_success = g_fxo->get<rsx::dma_manager>().sync();
 	const VkBool32 force_flush = !sync_success;
+
+	// Flush any asynchronously scheduled jobs
+	g_fxo->get<vk::async_scheduler_thread>()->flush();
 
 	if (vk::test_status_interrupt(vk::heap_dirty))
 	{

@@ -64,6 +64,7 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\VK\VKOverlays.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKCompute.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKAsyncScheduler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
@@ -149,6 +150,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\image_helpers.h">
       <Filter>vkutils</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKAsyncScheduler.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="vkutils">
