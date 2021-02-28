@@ -122,6 +122,12 @@ namespace vk
 		vkSetEvent(m_device, m_vk_event);
 	}
 
+	void event::gpu_wait(const command_buffer& cmd) const
+	{
+		ensure(m_vk_event);
+		vkCmdWaitEvents(cmd, 1, &m_vk_event, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr);
+	}
+
 	void event::reset() const
 	{
 		if (m_vk_event) [[likely]]
