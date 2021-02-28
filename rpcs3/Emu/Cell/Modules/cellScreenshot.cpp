@@ -30,7 +30,7 @@ shared_mutex screenshot_mtx;
 
 std::string screenshot_manager::get_overlay_path() const
 {
-	return vfs::get(overlay_dir_name + overlay_file_name);
+	return vfs::get(overlay_dir_name + "/" + overlay_file_name);
 }
 
 std::string screenshot_manager::get_photo_title() const
@@ -57,7 +57,7 @@ std::string screenshot_manager::get_game_comment() const
 std::string screenshot_manager::get_screenshot_path(const std::string& date_path) const
 {
 	u32 counter = 0;
-	std::string path = vfs::get("/dev_hdd0/photo/") + date_path + "/" + get_photo_title();
+	std::string path = vfs::get("/dev_hdd0/photo/" + date_path + "/" + get_photo_title());
 	std::string suffix = ".png";
 
 	while (!Emu.IsStopped() && fs::is_file(path + suffix))
