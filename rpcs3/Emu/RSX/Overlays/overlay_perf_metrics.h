@@ -11,6 +11,8 @@ namespace rsx
 		struct perf_metrics_overlay : overlay
 		{
 		private:
+			// The detail level does not affect frame graphs apart from their width.
+			// none
 			// minimal - fps
 			// low - fps, total cpu usage
 			// medium - fps, detailed cpu usage

@@ -887,6 +887,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::PerfOverlayDetailLevel:
 		switch (static_cast<detail_level>(index))
 		{
+		case detail_level::none: return tr("None", "Detail Level");
 		case detail_level::minimal: return tr("Minimal", "Detail Level");
 		case detail_level::low: return tr("Low", "Detail Level");
 		case detail_level::medium: return tr("Medium", "Detail Level");

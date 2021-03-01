@@ -147,6 +147,7 @@ enum class msaa_level
 
 enum class detail_level
 {
+	none,
 	minimal,
 	low,
 	medium,
