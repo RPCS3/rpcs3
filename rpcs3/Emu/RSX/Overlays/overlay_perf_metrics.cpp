@@ -762,7 +762,12 @@ namespace rsx
 
 			auto& verts_graph = compiled_resources.draw_commands.back().verts;
 
-			const f32 x_stride = w * 1.f / m_datapoint_count;
+			f32 x_stride = w;
+			if (m_datapoint_count > 2)
+			{
+				x_stride /= (m_datapoint_count - 1);
+			}
+
 			const usz tail_index_offset = m_datapoints.size() - m_datapoint_count;
 
 			for (u32 i = 0; i < m_datapoint_count; ++i)
