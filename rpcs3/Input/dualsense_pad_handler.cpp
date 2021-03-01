@@ -575,8 +575,8 @@ void dualsense_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& 
 
 	auto buf = dualsense_device->padData;
 
-	//pad->m_battery_level = dualsense_device->batteryLevel;
-	//pad->m_cable_state   = dualsense_device->cableState;
+	pad->m_battery_level = dualsense_device->battery_level;
+	pad->m_cable_state   = dualsense_device->cable_state;
 
 	// these values come already calibrated, all we need to do is convert to ds3 range
 

@@ -334,6 +334,20 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 		if (ds3dev->padData[0] == 0x01 && ds3dev->padData[1] != 0xFF)
 #endif
 		{
+			const u8 battery_status = ds3dev->padData[12 + DS3_HID_OFFSET];
+
+			if (battery_status >= 0xEE)
+			{
+				// Charging (0xEE) or full (0xEF). Let's set the level to 100%.
+				ds3dev->battery_level = 100;
+				ds3dev->cable_state   = 1;
+			}
+			else
+			{
+				ds3dev->battery_level = battery_capacity[std::min<u8>(battery_status, 5)];
+				ds3dev->cable_state   = 0;
+			}
+
 			return DataStatus::NewData;
 		}
 		else
@@ -422,20 +436,6 @@ void ds3_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 	ds3_device* ds3dev = static_cast<ds3_device*>(device.get());
 	if (!ds3dev || !pad)
 		return;
-
-	const u8 battery_status = ds3dev->padData[12 + DS3_HID_OFFSET];
-
-	if (battery_status >= 0xEE)
-	{
-		// Charging (0xEE) or full (0xEF). Let's set the level to 100%.
-		ds3dev->battery_level = 100;
-		ds3dev->cable_state   = 1;
-	}
-	else
-	{
-		ds3dev->battery_level = battery_capacity[std::min<u8>(battery_status, 5)];
-		ds3dev->cable_state   = 0;
-	}
 
 	pad->m_battery_level = ds3dev->battery_level;
 	pad->m_cable_state   = ds3dev->cable_state;
