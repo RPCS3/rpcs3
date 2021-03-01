@@ -177,8 +177,8 @@ struct cfg_root : cfg::node
 			cfg::_bool perf_overlay_enabled{ this, "Enabled", false, true };
 			cfg::_bool framerate_graph_enabled{ this, "Enable Framerate Graph", false, true };
 			cfg::_bool frametime_graph_enabled{ this, "Enable Frametime Graph", false, true };
-			cfg::uint<1, 6000> framerate_datapoint_count{ this, "Framerate datapoints", 50, true };
-			cfg::uint<1, 6000> frametime_datapoint_count{ this, "Frametime datapoints", 170, true };
+			cfg::uint<2, 6000> framerate_datapoint_count{ this, "Framerate datapoints", 50, true };
+			cfg::uint<2, 6000> frametime_datapoint_count{ this, "Frametime datapoints", 170, true };
 			cfg::_enum<detail_level> level{ this, "Detail level", detail_level::medium, true };
 			cfg::uint<1, 5000> update_interval{ this, "Metrics update interval (ms)", 350, true };
 			cfg::uint<4, 36> font_size{ this, "Font size (px)", 10, true };
