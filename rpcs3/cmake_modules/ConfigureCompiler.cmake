@@ -42,6 +42,7 @@ else()
 	add_compile_options(-Wempty-body)
 
 	add_compile_options(-Wstrict-aliasing=1)
+	#add_compile_options(-Wnull-dereference)
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-Werror=inconsistent-missing-override)
