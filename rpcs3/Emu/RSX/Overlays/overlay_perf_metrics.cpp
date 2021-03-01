@@ -264,7 +264,7 @@ namespace rsx
 			visible = true;
 		}
 
-		void perf_metrics_overlay::set_framerate_graph_enabled(bool enabled)
+		void perf_metrics_overlay::set_framerate_graph_enabled(bool enabled, u32 datapoint_count)
 		{
 			if (m_framerate_graph_enabled == enabled)
 				return;
@@ -275,7 +275,7 @@ namespace rsx
 			{
 				m_fps_graph.set_title("   Framerate");
 				m_fps_graph.set_font_size(static_cast<u16>(m_font_size * 0.8));
-				m_fps_graph.set_count(50);
+				m_fps_graph.set_count(datapoint_count);
 				m_fps_graph.set_color(convert_color_code(m_color_body, m_opacity));
 				m_fps_graph.set_guide_interval(10);
 			}
@@ -283,7 +283,7 @@ namespace rsx
 			m_force_repaint = true;
 		}
 
-		void perf_metrics_overlay::set_frametime_graph_enabled(bool enabled)
+		void perf_metrics_overlay::set_frametime_graph_enabled(bool enabled, u32 datapoint_count)
 		{
 			if (m_frametime_graph_enabled == enabled)
 				return;
@@ -294,7 +294,7 @@ namespace rsx
 			{
 				m_frametime_graph.set_title("   Frametime");
 				m_frametime_graph.set_font_size(static_cast<u16>(m_font_size * 0.8));
-				m_frametime_graph.set_count(170);
+				m_frametime_graph.set_count(datapoint_count);
 				m_frametime_graph.set_color(convert_color_code(m_color_body, m_opacity));
 				m_frametime_graph.set_guide_interval(8);
 			}
@@ -773,8 +773,8 @@ namespace rsx
 					perf_overlay->set_opacity(perf_settings.opacity / 100.f);
 					perf_overlay->set_body_colors(perf_settings.color_body, perf_settings.background_body);
 					perf_overlay->set_title_colors(perf_settings.color_title, perf_settings.background_title);
-					perf_overlay->set_framerate_graph_enabled(perf_settings.framerate_graph_enabled.get());
-					perf_overlay->set_frametime_graph_enabled(perf_settings.frametime_graph_enabled.get());
+					perf_overlay->set_framerate_graph_enabled(perf_settings.framerate_graph_enabled.get(), perf_settings.framerate_datapoint_count);
+					perf_overlay->set_frametime_graph_enabled(perf_settings.frametime_graph_enabled.get(), perf_settings.frametime_datapoint_count);
 					perf_overlay->init();
 				}
 				else if (perf_overlay)
