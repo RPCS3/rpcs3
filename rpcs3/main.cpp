@@ -61,6 +61,8 @@ static atomic_t<bool> s_headless = false;
 static atomic_t<bool> s_no_gui = false;
 static atomic_t<char*> s_argv0;
 
+extern thread_local std::string(*g_tls_log_prefix)();
+
 #ifndef _WIN32
 extern char **environ;
 #endif
@@ -68,15 +70,29 @@ extern char **environ;
 LOG_CHANNEL(sys_log, "SYS");
 LOG_CHANNEL(q_debug, "QDEBUG");
 
-[[noreturn]] extern void report_fatal_error(const std::string& text)
+[[noreturn]] extern void report_fatal_error(std::string_view _text)
 {
+	std::string buf;
+
+	// Check if thread id is in string
+	if (_text.find("\nThread id = "sv) == umax)
+	{
+		// Copy only when needed 
+		buf = std::string(_text);
+
+		// Always print thread id
+		fmt::append(buf, "\nThread id = %s.", std::this_thread::get_id());
+	}
+
+	const std::string_view text = buf.empty() ? _text : buf;
+
 	if (s_headless)
 	{
 #ifdef _WIN32
 		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
 			[[maybe_unused]] const auto con_out = freopen("conout$", "w", stderr);
 #endif
-		fprintf(stderr, "RPCS3: %s\n", text.c_str());
+		std::fprintf(stderr, "RPCS3: %.*s\n", static_cast<int>(text.size()), text.data());
 		std::abort();
 	}
 
@@ -93,10 +109,10 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	}
 	else
 	{
-		fprintf(stderr, "RPCS3: %s\n", text.c_str());
+		std::fprintf(stderr, "RPCS3: %.*s\n", static_cast<int>(text.size()), text.data());
 	}
 
-	auto show_report = [](const std::string& text)
+	auto show_report = [](std::string_view text)
 	{
 		fatal_error_dialog dlg(text);
 		dlg.exec();
@@ -154,7 +170,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 			}
 			else
 			{
-				fprintf(stderr, "posix_spawn() failed: %d\n", ret);
+				std::fprintf(stderr, "posix_spawn() failed: %d\n", ret);
 			}
 #endif
 			std::abort();

@@ -2,6 +2,7 @@
 #include "Utilities/File.h"
 #include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
+#include "Utilities/StrFmt.h"
 #include <cstring>
 #include <cstdarg>
 #include <string>
@@ -25,13 +26,18 @@ using namespace std::literals::chrono_literals;
 
 #include <zlib.h>
 
-static std::string empty_string()
+static std::string default_string()
 {
-	return {};
+	if (thread_ctrl::is_main())
+	{
+		return {};
+	}
+
+	return fmt::format("TID: %s", std::this_thread::get_id());
 }
 
 // Thread-specific log prefix provider
-thread_local std::string(*g_tls_log_prefix)() = &empty_string;
+thread_local std::string(*g_tls_log_prefix)() = &default_string;
 
 // Another thread-specific callback
 thread_local void(*g_tls_log_control)(const char* fmt, u64 progress) = [](const char*, u64){};

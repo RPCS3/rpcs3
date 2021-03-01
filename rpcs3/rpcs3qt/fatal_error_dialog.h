@@ -2,12 +2,12 @@
 
 #include <QMessageBox>
 
-#include <string>
+#include <string_view>
 
 class fatal_error_dialog : public QMessageBox
 {
 	Q_OBJECT
 
 public:
-	fatal_error_dialog(const std::string& text);
+	fatal_error_dialog(std::string_view text);
 };

@@ -94,7 +94,7 @@ thread_local bool g_tls_access_violation_recovered = false;
 extern thread_local std::string(*g_tls_log_prefix)();
 
 // Report error and call std::abort(), defined in main.cpp
-[[noreturn]] void report_fatal_error(const std::string&);
+[[noreturn]] void report_fatal_error(std::string_view);
 
 template <>
 void fmt_class_string<std::thread::id>::format(std::string& out, u64 arg)
@@ -1609,6 +1609,22 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 	return true;
 }
 
+static void append_thread_name(std::string& msg)
+{
+	if (thread_ctrl::get_current())
+	{
+		fmt::append(msg, "Emu Thread Name: '%s'.\n", thread_ctrl::get_name());
+	}
+	else if (thread_ctrl::is_main())
+	{
+		fmt::append(msg, "Thread: Main Thread");
+	}
+	else
+	{
+		fmt::append(msg, "Thread id = %s.\n", std::this_thread::get_id());
+	}
+}
+
 #ifdef _WIN32
 
 static LONG exception_handler(PEXCEPTION_POINTERS pExp) noexcept
@@ -1670,14 +1686,7 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 		}
 	}
 
-	if (thread_ctrl::get_current())
-	{
-		fmt::append(msg, "Emu Thread Name: '%s'.\n", thread_ctrl::get_name());
-	}
-
-	// TODO: Report full thread name if not an emu thread
-
-	fmt::append(msg, "Thread id = %s.\n", std::this_thread::get_id());
+	append_thread_name(msg);
 
 	std::vector<HMODULE> modules;
 	for (DWORD size = 256; modules.size() != size; size /= sizeof(HMODULE))
@@ -1795,14 +1804,7 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 
 	std::string msg = fmt::format("Segfault %s location %p at %p.\n", cause, info->si_addr, RIP(context));
 
-	if (thread_ctrl::get_current())
-	{
-		fmt::append(msg, "Emu Thread Name: '%s'.\n", thread_ctrl::get_name());
-	}
-
-	// TODO: Report full thread name if not an emu thread
-
-	fmt::append(msg, "Thread id = %s.\n", std::this_thread::get_id());
+	append_thread_name(msg);
 
 	if (IsDebuggerPresent())
 	{
@@ -2542,8 +2544,7 @@ void thread_base::exec()
 #endif
 	}
 
-	// Assume main thread
-	report_fatal_error(std::string(reason));
+	report_fatal_error(reason);
 }
 
 void thread_ctrl::detect_cpu_layout()
