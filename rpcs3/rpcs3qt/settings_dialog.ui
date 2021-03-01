@@ -1983,8 +1983,7 @@
                  <enum>QLayout::SetNoConstraint</enum>
                 </property>
                 <item>
-                 <widget class="QLineEdit" name="searchBox">
-                 </widget>
+                 <widget class="QLineEdit" name="searchBox"/>
                 </item>
                 <item>
                  <widget class="QPushButton" name="resetLleList">
@@ -2850,6 +2849,64 @@
                  </item>
                  <item>
                   <widget class="QSlider" name="perfOverlayOpacity">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QWidget" name="perf_overlay_framerate_datapoints" native="true">
+                <layout class="QVBoxLayout" name="layout_perf_overlay_framerate_datapoints">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_framerate_datapoints">
+                   <property name="text">
+                    <string>Framerate datapoints:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSlider" name="slider_framerate_datapoints">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QWidget" name="perf_overlay_frametime_datapoints" native="true">
+                <layout class="QVBoxLayout" name="layout_perf_overlay_frametime_datapoints">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_frametime_datapoints">
+                   <property name="text">
+                    <string>Frametime datapoints:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSlider" name="slider_frametime_datapoints">
                    <property name="orientation">
                     <enum>Qt::Horizontal</enum>
                    </property>
