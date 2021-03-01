@@ -10,6 +10,7 @@ namespace stx
 #pragma GCC diagnostic push
 #ifdef __clang__
 #pragma GCC diagnostic ignored "-Wundefined-var-template"
+#pragma GCC diagnostic ignored "-Wundefined-internal"
 #endif
 #endif
 
@@ -21,7 +22,7 @@ namespace stx
 	template <typename T, typename U>
 	constexpr bool is_same_ptr() noexcept
 	{
-#if !defined(_MSC_VER) && !defined(__clang__)
+#ifdef _MSC_VER
 		return true;
 #else
 		if constexpr (std::is_void_v<T> || std::is_void_v<U> || std::is_same_v<T, U>)
@@ -30,14 +31,14 @@ namespace stx
 		}
 		else if constexpr (std::is_convertible_v<U*, T*>)
 		{
-			const auto u = std::addressof(sample<U>);
-			const volatile void* x = u;
+			constexpr auto u = std::addressof(sample<U>);
+			constexpr volatile void* x = u;
 			return static_cast<T*>(u) == x;
 		}
 		else if constexpr (std::is_convertible_v<T*, U*>)
 		{
-			const auto t = std::addressof(sample<T>);
-			const volatile void* x = t;
+			constexpr auto t = std::addressof(sample<T>);
+			constexpr volatile void* x = t;
 			return static_cast<U*>(t) == x;
 		}
 		else

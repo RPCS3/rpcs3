@@ -166,6 +166,11 @@ namespace rsx
 			close(true, true);
 		}
 
+		struct msg_dialog_thread
+		{
+			static constexpr auto thread_name = "MsgDialog Thread"sv;
+		};
+
 		error_code message_dialog::show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close)
 		{
 			visible = false;
@@ -246,7 +251,7 @@ namespace rsx
 			{
 				if (!exit)
 				{
-					g_fxo->init<named_thread>("MsgDialog Thread", [&, tbit = alloc_thread_bit()]()
+					g_fxo->get<named_thread<msg_dialog_thread>>()->operator()([&, tbit = alloc_thread_bit()]()
 					{
 						g_thread_bit = tbit;
 

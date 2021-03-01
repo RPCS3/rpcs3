@@ -2211,8 +2211,16 @@ thread_state thread_ctrl::state()
 {
 	auto _this = g_tls_this_thread;
 
+	// Guard for recursive calls (TODO: may be more effective to reuse one of m_sync bits)
+	static thread_local bool s_tls_exec = false;
+
 	// Drain execution queue
-	_this->exec();
+	if (!s_tls_exec)
+	{
+		s_tls_exec = true;
+		_this->exec();
+		s_tls_exec = false;
+	}
 
 	return static_cast<thread_state>(_this->m_sync & 3);
 }
