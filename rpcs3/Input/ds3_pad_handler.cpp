@@ -317,8 +317,6 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 	if (!ds3dev)
 		return DataStatus::ReadError;
 
-	ds3dev->padData = {};
-
 #ifdef _WIN32
 	ds3dev->padData[0] = ds3dev->report_id;
 	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->padData.data(), 64);
