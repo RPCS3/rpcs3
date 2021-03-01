@@ -158,11 +158,11 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 	if (ds3dev->config->led_battery_indicator)
 	{
 		if (ds3dev->battery_level >= 75)
-			output_report.led_enabled = 0b00010000;
+			output_report.led_enabled = 0b00011110;
 		else if (ds3dev->battery_level >= 50)
-			output_report.led_enabled = 0b00001000;
+			output_report.led_enabled = 0b00001110;
 		else if (ds3dev->battery_level >= 25)
-			output_report.led_enabled = 0b00000100;
+			output_report.led_enabled = 0b00000110;
 		else
 			output_report.led_enabled = 0b00000010;
 	}
@@ -334,7 +334,7 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 		if (ds3dev->padData[0] == 0x01 && ds3dev->padData[1] != 0xFF)
 #endif
 		{
-			const u8 battery_status = ds3dev->padData[12 + DS3_HID_OFFSET];
+			const u8 battery_status = ds3dev->padData[30 + DS3_HID_OFFSET];
 
 			if (battery_status >= 0xEE)
 			{
