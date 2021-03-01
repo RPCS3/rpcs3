@@ -88,7 +88,7 @@ atomic_t<u32> g_progr_ptotal{0};
 atomic_t<u32> g_progr_pdone{0};
 
 // Report error and call std::abort(), defined in main.cpp
-[[noreturn]] void report_fatal_error(const std::string&);
+[[noreturn]] void report_fatal_error(std::string_view);
 
 namespace
 {
