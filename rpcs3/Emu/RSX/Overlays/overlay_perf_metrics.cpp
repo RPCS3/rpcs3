@@ -183,7 +183,12 @@ namespace rsx
 				// Position the graphs within the body
 				const u16 graphs_width = m_body.w;
 				const u16 body_left = m_body.x;
-				u16 y_offset = m_body.y + m_body.h + perf_overlay_padding;
+				u16 y_offset = m_body.y;
+
+				if (m_body.h > 0)
+				{
+					y_offset += m_body.h + perf_overlay_padding;
+				}
 
 				if (m_framerate_graph_enabled)
 				{
@@ -220,7 +225,8 @@ namespace rsx
 
 			switch (m_detail)
 			{
-			case detail_level::minimal:
+			case detail_level::none: [[fallthrough]];
+			case detail_level::minimal: [[fallthrough]];
 			case detail_level::low: m_titles.set_text(""); break;
 			case detail_level::medium: m_titles.set_text(fmt::format("\n\n%s", title1_medium)); break;
 			case detail_level::high: m_titles.set_text(fmt::format("\n\n%s\n\n\n\n\n\n%s", title1_high, title2)); break;
@@ -460,9 +466,14 @@ namespace rsx
 					}
 					case detail_level::minimal:
 					{
+						[[fallthrough]];
+					}
+					case detail_level::none:
+					{
 						m_fps = std::max(0.f, static_cast<f32>(m_frames / (elapsed_update / 1000)));
 						if (m_is_initialised && m_framerate_graph_enabled)
 							m_fps_graph.record_datapoint(m_fps);
+						break;
 					}
 					}
 				}
@@ -472,6 +483,10 @@ namespace rsx
 
 				switch (m_detail)
 				{
+				case detail_level::none:
+				{
+					break;
+				}
 				case detail_level::minimal:
 				{
 					perf_text += fmt::format("FPS : %05.2f", m_fps);
@@ -512,7 +527,15 @@ namespace rsx
 
 				m_body.set_text(perf_text);
 
-				if (m_body.auto_resize())
+				if (perf_text.empty())
+				{
+					if (m_body.w > 0 || m_body.h > 0)
+					{
+						m_body.set_size(0, 0);
+						reset_transforms();
+					}
+				}
+				else if (m_body.auto_resize())
 				{
 					reset_transforms();
 				}

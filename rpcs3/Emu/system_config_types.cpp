@@ -132,6 +132,7 @@ void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
+		case detail_level::none: return "None";
 		case detail_level::minimal: return "Minimal";
 		case detail_level::low: return "Low";
 		case detail_level::medium: return "Medium";
