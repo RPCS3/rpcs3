@@ -168,7 +168,6 @@ namespace rsx
 			// Set body/titles transform
 			if (m_force_repaint)
 			{
-				m_force_repaint = false;
 				reset_body(bottom_margin);
 				reset_titles(bottom_margin);
 			}
@@ -192,6 +191,10 @@ namespace rsx
 
 				if (m_framerate_graph_enabled)
 				{
+					if (m_force_repaint)
+					{
+						m_fps_graph.set_font_size(static_cast<u16>(m_font_size * 0.8));
+					}
 					m_fps_graph.update();
 					m_fps_graph.set_pos(body_left, y_offset);
 					m_fps_graph.set_size(graphs_width, fps_graph_h);
@@ -201,11 +204,17 @@ namespace rsx
 
 				if (m_frametime_graph_enabled)
 				{
+					if (m_force_repaint)
+					{
+						m_frametime_graph.set_font_size(static_cast<u16>(m_font_size * 0.8));
+					}
 					m_frametime_graph.update();
 					m_frametime_graph.set_pos(body_left, y_offset);
 					m_frametime_graph.set_size(graphs_width, frametime_graph_h);
 				}
 			}
+
+			m_force_repaint = false;
 		}
 
 		void perf_metrics_overlay::reset_body(u16 bottom_margin)
