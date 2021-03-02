@@ -263,7 +263,7 @@ namespace vk
 		if (vendor == driver_vendor::NVIDIA)
 		{
 			allow_host_buffers = (chip != chip_class::NV_mobile_kepler) ?
-				rsx::get_location(base_address) == CELL_GCM_LOCATION_LOCAL :
+				test_host_pointer(base_address, expected_length) :
 				false;
 		}
 		else
