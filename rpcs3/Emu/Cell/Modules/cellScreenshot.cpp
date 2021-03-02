@@ -26,14 +26,12 @@ void fmt_class_string<CellScreenShotError>::format(std::string& out, u64 arg)
 	});
 }
 
-shared_mutex screenshot_mtx;
-
-std::string screenshot_manager::get_overlay_path() const
+std::string screenshot_info::get_overlay_path() const
 {
 	return vfs::get(overlay_dir_name + "/" + overlay_file_name);
 }
 
-std::string screenshot_manager::get_photo_title() const
+std::string screenshot_info::get_photo_title() const
 {
 	std::string photo = photo_title;
 	if (photo.empty())
@@ -41,7 +39,7 @@ std::string screenshot_manager::get_photo_title() const
 	return photo;
 }
 
-std::string screenshot_manager::get_game_title() const
+std::string screenshot_info::get_game_title() const
 {
 	std::string game = game_title;
 	if (game.empty())
@@ -49,12 +47,12 @@ std::string screenshot_manager::get_game_title() const
 	return game;
 }
 
-std::string screenshot_manager::get_game_comment() const
+std::string screenshot_info::get_game_comment() const
 {
 	return game_comment;
 }
 
-std::string screenshot_manager::get_screenshot_path(const std::string& date_path) const
+std::string screenshot_info::get_screenshot_path(const std::string& date_path) const
 {
 	u32 counter = 0;
 	std::string path = vfs::get("/dev_hdd0/photo/" + date_path + "/" + get_photo_title());
@@ -85,25 +83,25 @@ error_code cellScreenShotSetParameter(vm::cptr<CellScreenShotSetParam> param)
 	if (param->game_comment && !memchr(param->game_comment.get_ptr(), '\0', CELL_SCREENSHOT_GAME_COMMENT_MAX_SIZE))
 		return CELL_SCREENSHOT_ERROR_PARAM;
 
-	const auto manager = g_fxo->get<screenshot_manager>();
-	std::lock_guard lock(screenshot_mtx);
+	auto& manager = g_fxo->get<screenshot_manager>();
+	std::lock_guard lock(manager.mutex);
 
 	if (param->photo_title && param->photo_title[0] != '\0')
-		manager->photo_title = std::string(param->photo_title.get_ptr());
+		manager.photo_title = std::string(param->photo_title.get_ptr());
 	else
-		manager->photo_title = "";
+		manager.photo_title = "";
 
 	if (param->game_title && param->game_title[0] != '\0')
-		manager->game_title = std::string(param->game_title.get_ptr());
+		manager.game_title = std::string(param->game_title.get_ptr());
 	else
-		manager->game_title = "";
+		manager.game_title = "";
 
 	if (param->game_comment && param->game_comment[0] != '\0')
-		manager->game_comment = std::string(param->game_comment.get_ptr());
+		manager.game_comment = std::string(param->game_comment.get_ptr());
 	else
-		manager->game_comment = "";
+		manager.game_comment = "";
 
-	cellScreenshot.notice("cellScreenShotSetParameter(photo_title=%s, game_title=%s, game_comment=%s)", manager->photo_title, manager->game_title, manager->game_comment);
+	cellScreenshot.notice("cellScreenShotSetParameter(photo_title=%s, game_title=%s, game_comment=%s)", manager.photo_title, manager.game_title, manager.game_comment);
 
 	return CELL_OK;
 }
@@ -123,13 +121,13 @@ error_code cellScreenShotSetOverlayImage(vm::cptr<char> srcDir, vm::cptr<char> s
 		return CELL_SCREENSHOT_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<screenshot_manager>();
-	std::lock_guard lock(screenshot_mtx);
+	auto& manager = g_fxo->get<screenshot_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	manager->overlay_dir_name = std::string(srcDir.get_ptr());
-	manager->overlay_file_name = std::string(srcFile.get_ptr());
-	manager->overlay_offset_x = offset_x;
-	manager->overlay_offset_y = offset_y;
+	manager.overlay_dir_name = std::string(srcDir.get_ptr());
+	manager.overlay_file_name = std::string(srcFile.get_ptr());
+	manager.overlay_offset_x = offset_x;
+	manager.overlay_offset_y = offset_y;
 
 	return CELL_OK;
 }
@@ -138,10 +136,10 @@ error_code cellScreenShotEnable()
 {
 	cellScreenshot.warning("cellScreenShotEnable()");
 
-	const auto manager = g_fxo->get<screenshot_manager>();
-	std::lock_guard lock(screenshot_mtx);
+	auto& manager = g_fxo->get<screenshot_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	manager->is_enabled = true;
+	manager.is_enabled = true;
 
 	return CELL_OK;
 }
@@ -150,10 +148,10 @@ error_code cellScreenShotDisable()
 {
 	cellScreenshot.warning("cellScreenShotDisable()");
 
-	const auto manager = g_fxo->get<screenshot_manager>();
-	std::lock_guard lock(screenshot_mtx);
+	auto& manager = g_fxo->get<screenshot_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	manager->is_enabled = false;
+	manager.is_enabled = false;
 
 	return CELL_OK;
 }

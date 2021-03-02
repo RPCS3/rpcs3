@@ -7,6 +7,7 @@
 #include "breakpoint_list.h"
 #include "breakpoint_handler.h"
 #include "call_stack_list.h"
+#include "input_dialog.h"
 #include "qt_utils.h"
 
 #include "Emu/System.h"
@@ -28,6 +29,7 @@
 #include <QMenu>
 #include <QVBoxLayout>
 #include <QTimer>
+#include <charconv>
 
 #include "util/asm.hpp"
 
@@ -259,12 +261,13 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		QLabel* l = new QLabel(tr(
 			"Keys Ctrl+G: Go to typed address."
 			"\nKeys Alt+S: Capture SPU images of selected SPU."
+			"\nKey D: SPU MFC commands logger, MFC debug setting must be enabled."
 			"\nKey E: Instruction Editor: click on the instruction you want to modify, then press E."
 			"\nKey F: Dedicated floating point mode switch for SPU threads."
 			"\nKey R: Registers Editor for selected thread."
 			"\nKey N: Show next instruction the thread will execute after marked instruction, does nothing if target is not predictable."
 			"\nKey M: Show the Memory Viewer with initial address pointing to the marked instruction."
-			"\nKey I: Show RSX method detail." 
+			"\nKey I: Show RSX method detail."
 			"\nKey F10: Perform single-stepping on instructions."
 			"\nKey F11: Perform step-over on instructions. (skip function calls)"
 			"\nKey F1: Show this help dialog."
@@ -311,6 +314,76 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	{
 		switch (event->key())
 		{
+		case Qt::Key_D:
+		{
+			if (cpu->id_type() == 2 && g_cfg.core.mfc_debug && !cpu->is_stopped())
+			{
+				input_dialog dlg(4, "", tr("Max MFC cmds logged"),
+					tr("Decimal only, max allowed is 1820."), "0", this);
+
+				QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
+				mono.setPointSize(8);
+				dlg.set_input_font(mono, false);
+				dlg.set_clear_button_enabled(false);
+				dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, false);
+				dlg.set_validator(new QRegExpValidator(QRegExp("^[1-9][0-9]*$")));
+
+				u32 max = 0;
+
+				connect(&dlg, &input_dialog::text_changed, [&](const QString& changed)
+				{
+					bool ok = false;
+					const u32 dummy = changed.toUInt(&ok, 10);
+					ok = ok && dummy && dummy <= spu_thread::max_mfc_dump_idx;
+					dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, ok);
+
+					if (ok)
+					{
+						max = dummy;
+					}
+				});
+
+				if (dlg.exec() != QDialog::Accepted)
+				{
+					max = 0;
+				}
+
+				auto spu = static_cast<spu_thread*>(cpu);
+
+				auto ptr = reinterpret_cast<const mfc_cmd_dump*>(vm::g_stat_addr + spu->vm_offset());
+
+				std::string ret;
+
+				for (u64 count = 0, idx = spu->mfc_dump_idx - 1; idx != umax && count < max; count++, idx--)
+				{
+					auto dump = ptr[idx % spu_thread::max_mfc_dump_idx];
+
+					const u32 pc = std::exchange(dump.cmd.eah, 0);
+					fmt::append(ret, "\n(%d) PC 0x%05x: [%s]", count, pc, dump.cmd);
+
+					if (dump.cmd.cmd == MFC_PUTLLC_CMD)
+					{
+						fmt::append(ret, " %s", dump.cmd.tag == MFC_PUTLLC_SUCCESS ? "(passed)" : "(failed)");
+					}
+
+					const auto data = reinterpret_cast<const be_t<u32>*>(dump.data);
+
+					for (usz i = 0; i < utils::aligned_div(std::min<u32>(dump.cmd.size, 128), 4); i += 4)
+					{
+						fmt::append(ret, "\n[0x%02x] %08x %08x %08x %08x", i * sizeof(data[0])
+							, data[i + 0], data[i + 1], data[i + 2], data[i + 3]);
+					}
+				}
+
+				if (ret.empty())
+				{
+					ret = "No MFC commands have been logged";
+				}
+
+				spu_log.warning("SPU MFC dump of '%s': %s", spu->get_name(), ret);
+			}
+			return;
+		}
 		case Qt::Key_E:
 		{
 			if (cpu->id_type() == 1 || cpu->id_type() == 2)
@@ -431,7 +504,7 @@ cpu_thread* debugger_frame::get_cpu()
 		return m_rsx;
 	}
 
-	if (g_fxo->get<rsx::thread>() != m_rsx)
+	if (!g_fxo->is_init<rsx::thread>())
 	{
 		m_rsx = nullptr;
 		return m_rsx;
@@ -578,7 +651,7 @@ void debugger_frame::UpdateUnitList()
 		idm::select<named_thread<ppu_thread>>(on_select);
 		idm::select<named_thread<spu_thread>>(on_select);
 
-		if (auto render = g_fxo->get<rsx::thread>(); emu_state != system_state::stopped && render && render->ctrl)
+		if (auto render = g_fxo->try_get<rsx::thread>(); emu_state != system_state::stopped && render && render->ctrl)
 		{
 			on_select(render->id, *render);
 		}

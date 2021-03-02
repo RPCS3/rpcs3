@@ -35,9 +35,9 @@ error_code cellKbInit(u32 max_connect)
 {
 	sys_io.warning("cellKbInit(max_connect=%d)", max_connect);
 
-	const auto handler = g_fxo->get<KeyboardHandlerBase>();
+	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
-	const auto init = handler->init.init();
+	const auto init = handler.init.init();
 
 	if (!init)
 		return CELL_KB_ERROR_ALREADY_INITIALIZED;
@@ -46,7 +46,7 @@ error_code cellKbInit(u32 max_connect)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
 	libio_sys_config_init();
-	handler->Init(std::min(max_connect, 7u));
+	handler.Init(std::min(max_connect, 7u));
 
 	return CELL_OK;
 }
@@ -55,9 +55,9 @@ error_code cellKbEnd()
 {
 	sys_io.notice("cellKbEnd()");
 
-	const auto handler = g_fxo->get<KeyboardHandlerBase>();
+	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
-	const auto init = handler->init.reset();
+	const auto init = handler.init.reset();
 
 	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -71,9 +71,9 @@ error_code cellKbClearBuf(u32 port_no)
 {
 	sys_io.trace("cellKbClearBuf(port_no=%d)", port_no);
 
-	const auto handler = g_fxo->get<KeyboardHandlerBase>();
+	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -81,14 +81,14 @@ error_code cellKbClearBuf(u32 port_no)
 	if (port_no >= CELL_KB_MAX_KEYBOARDS)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	std::lock_guard<std::mutex> lock(handler->m_mutex);
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
 
-	const KbInfo& current_info = handler->GetInfo();
+	const KbInfo& current_info = handler.GetInfo();
 
-	if (port_no >= handler->GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
+	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return CELL_KB_ERROR_NO_DEVICE;
 
-	KbData& current_data = handler->GetData(port_no);
+	KbData& current_data = handler.GetData(port_no);
 	current_data.len = 0;
 	current_data.led = 0;
 	current_data.mkey = 0;
@@ -245,9 +245,9 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 {
 	sys_io.trace("cellKbGetInfo(info=*0x%x)", info);
 
-	const auto handler = g_fxo->get<KeyboardHandlerBase>();
+	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -257,9 +257,9 @@ error_code cellKbGetInfo(vm::ptr<CellKbInfo> info)
 
 	std::memset(info.get_ptr(), 0, info.size());
 
-	std::lock_guard<std::mutex> lock(handler->m_mutex);
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
 
-	const KbInfo& current_info = handler->GetInfo();
+	const KbInfo& current_info = handler.GetInfo();
 	info->max_connect = current_info.max_connect;
 	info->now_connect = current_info.now_connect;
 	info->info = current_info.info;
@@ -276,9 +276,9 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 {
 	sys_io.trace("cellKbRead(port_no=%d, data=*0x%x)", port_no, data);
 
-	const auto handler = g_fxo->get<KeyboardHandlerBase>();
+	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -286,14 +286,14 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 	if (port_no >= CELL_KB_MAX_KEYBOARDS || !data)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	std::lock_guard<std::mutex> lock(handler->m_mutex);
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
 
-	const KbInfo& current_info = handler->GetInfo();
+	const KbInfo& current_info = handler.GetInfo();
 
-	if (port_no >= handler->GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
+	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return CELL_KB_ERROR_NO_DEVICE;
 
-	KbData& current_data = handler->GetData(port_no);
+	KbData& current_data = handler.GetData(port_no);
 	data->led = current_data.led;
 	data->mkey = current_data.mkey;
 	data->len = std::min<s32>(CELL_KB_MAX_KEYCODES, current_data.len);
@@ -310,9 +310,9 @@ error_code cellKbSetCodeType(u32 port_no, u32 type)
 {
 	sys_io.trace("cellKbSetCodeType(port_no=%d, type=%d)", port_no, type);
 
-	const auto handler = g_fxo->get<KeyboardHandlerBase>();
+	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -320,12 +320,12 @@ error_code cellKbSetCodeType(u32 port_no, u32 type)
 	if (port_no >= CELL_KB_MAX_KEYBOARDS || type > CELL_KB_CODETYPE_ASCII)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	if (port_no >= handler->GetKeyboards().size())
+	if (port_no >= handler.GetKeyboards().size())
 		return CELL_OK;
 
-	std::lock_guard<std::mutex> lock(handler->m_mutex);
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
 
-	KbConfig& current_config = handler->GetConfig(port_no);
+	KbConfig& current_config = handler.GetConfig(port_no);
 	current_config.code_type = type;
 
 	// can also return CELL_KB_ERROR_SYS_SETTING_FAILED
@@ -337,9 +337,9 @@ error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 {
 	sys_io.trace("cellKbSetLEDStatus(port_no=%d, led=%d)", port_no, led);
 
-	const auto handler = g_fxo->get<KeyboardHandlerBase>();
+	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -350,12 +350,12 @@ error_code cellKbSetLEDStatus(u32 port_no, u8 led)
 	if (led > 7)
 		return CELL_KB_ERROR_SYS_SETTING_FAILED;
 
-	if (port_no >= handler->GetKeyboards().size() || handler->GetInfo().status[port_no] != CELL_KB_STATUS_CONNECTED)
+	if (port_no >= handler.GetKeyboards().size() || handler.GetInfo().status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return CELL_KB_ERROR_FATAL;
 
-	std::lock_guard<std::mutex> lock(handler->m_mutex);
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
 
-	KbData& current_data = handler->GetData(port_no);
+	KbData& current_data = handler.GetData(port_no);
 	current_data.led = static_cast<u32>(led);
 
 	return CELL_OK;
@@ -365,9 +365,9 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 {
 	sys_io.trace("cellKbSetReadMode(port_no=%d, rmode=%d)", port_no, rmode);
 
-	const auto handler = g_fxo->get<KeyboardHandlerBase>();
+	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -375,12 +375,12 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 	if (port_no >= CELL_KB_MAX_KEYBOARDS || rmode > CELL_KB_RMODE_PACKET)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	if (port_no >= handler->GetKeyboards().size())
+	if (port_no >= handler.GetKeyboards().size())
 		return CELL_OK;
 
-	std::lock_guard<std::mutex> lock(handler->m_mutex);
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
 
-	KbConfig& current_config = handler->GetConfig(port_no);
+	KbConfig& current_config = handler.GetConfig(port_no);
 	current_config.read_mode = rmode;
 
 	// can also return CELL_KB_ERROR_SYS_SETTING_FAILED
@@ -392,9 +392,9 @@ error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 {
 	sys_io.trace("cellKbGetConfiguration(port_no=%d, config=*0x%x)", port_no, config);
 
-	const auto handler = g_fxo->get<KeyboardHandlerBase>();
+	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_KB_ERROR_UNINITIALIZED;
@@ -402,18 +402,18 @@ error_code cellKbGetConfiguration(u32 port_no, vm::ptr<CellKbConfig> config)
 	if (port_no >= CELL_KB_MAX_KEYBOARDS)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	std::lock_guard<std::mutex> lock(handler->m_mutex);
+	std::lock_guard<std::mutex> lock(handler.m_mutex);
 
-	const KbInfo& current_info = handler->GetInfo();
+	const KbInfo& current_info = handler.GetInfo();
 
-	if (port_no >= handler->GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
+	if (port_no >= handler.GetKeyboards().size() || current_info.status[port_no] != CELL_KB_STATUS_CONNECTED)
 		return CELL_KB_ERROR_NO_DEVICE;
 
 	// tests show that config is checked only after the device's status
 	if (!config)
 		return CELL_KB_ERROR_INVALID_PARAMETER;
 
-	const KbConfig& current_config = handler->GetConfig(port_no);
+	const KbConfig& current_config = handler.GetConfig(port_no);
 	config->arrange = current_config.arrange;
 	config->read_mode = current_config.read_mode;
 	config->code_type = current_config.code_type;

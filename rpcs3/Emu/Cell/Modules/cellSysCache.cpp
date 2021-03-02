@@ -94,9 +94,9 @@ error_code cellSysCacheClear()
 {
 	cellSysutil.notice("cellSysCacheClear()");
 
-	const auto cache = g_fxo->get<syscache_info>();
+	auto& cache = g_fxo->get<syscache_info>();
 
-	const auto lock = cache->init.access();
+	const auto lock = cache.init.access();
 
 	if (!lock)
 	{
@@ -104,10 +104,10 @@ error_code cellSysCacheClear()
 	}
 
 	// Clear existing cache
-	if (!cache->cache_id.empty())
+	if (!cache.cache_id.empty())
 	{
 		std::lock_guard lock0(g_mp_sys_dev_hdd1.mutex);
-		cache->clear(false);
+		cache.clear(false);
 	}
 
 	return not_an_error(CELL_SYSCACHE_RET_OK_CLEARED);
@@ -117,7 +117,7 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 {
 	cellSysutil.notice("cellSysCacheMount(param=*0x%x)", param);
 
-	const auto cache = g_fxo->get<syscache_info>();
+	auto& cache = g_fxo->get<syscache_info>();
 
 	if (!param || (param->cacheId[0] && sysutil_check_name_string(param->cacheId, 1, CELL_SYSCACHE_ID_SIZE) != 0))
 	{
@@ -128,18 +128,18 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	std::string cache_id = vfs::escape(Emu.GetTitleID() + '_' + param->cacheId);
 
 	// Full path to virtual cache root (/dev_hdd1)
-	std::string new_path = cache->cache_root + cache_id + '/';
+	std::string new_path = cache.cache_root + cache_id + '/';
 
 	// Set fixed VFS path
 	strcpy_trunc(param->getCachePath, "/dev_hdd1");
 
 	// Lock pseudo-mutex
-	const auto lock = cache->init.init_always([&]
+	const auto lock = cache.init.init_always([&]
 	{
 	});
 
 	// Check if can reuse existing cache (won't if cache id is an empty string)
-	if (param->cacheId[0] && cache_id == cache->cache_id)
+	if (param->cacheId[0] && cache_id == cache.cache_id)
 	{
 		// Isn't mounted yet on first call to cellSysCacheMount
 		vfs::mount("/dev_hdd1", new_path);
@@ -151,13 +151,13 @@ error_code cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
 	std::lock_guard lock0(g_mp_sys_dev_hdd1.mutex);
 
 	// Clear existing cache
-	if (!cache->cache_id.empty())
+	if (!cache.cache_id.empty())
 	{
-		cache->clear(true);
+		cache.clear(true);
 	}
 
 	// Set new cache id
-	cache->cache_id = std::move(cache_id);
+	cache.cache_id = std::move(cache_id);
 	fs::create_dir(new_path);
 	vfs::mount("/dev_hdd1", new_path);
 

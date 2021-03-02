@@ -166,6 +166,11 @@ namespace rsx
 			close(true, true);
 		}
 
+		struct msg_dialog_thread
+		{
+			static constexpr auto thread_name = "MsgDialog Thread"sv;
+		};
+
 		error_code message_dialog::show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close)
 		{
 			visible = false;
@@ -246,13 +251,13 @@ namespace rsx
 			{
 				if (!exit)
 				{
-					g_fxo->init<named_thread>("MsgDialog Thread", [&, tbit = alloc_thread_bit()]()
+					g_fxo->get<named_thread<msg_dialog_thread>>()([&, tbit = alloc_thread_bit()]()
 					{
 						g_thread_bit = tbit;
 
 						if (interactive)
 						{
-							auto ref = g_fxo->get<display_manager>()->get(uid);
+							auto ref = g_fxo->get<display_manager>().get(uid);
 
 							if (auto error = run_input_loop())
 							{
@@ -268,7 +273,7 @@ namespace rsx
 								// Only update the screen at about 60fps since updating it everytime slows down the process
 								std::this_thread::sleep_for(16ms);
 
-								if (!g_fxo->get<display_manager>())
+								if (!g_fxo->is_init<display_manager>())
 								{
 									rsx_log.fatal("display_manager was improperly destroyed");
 									break;

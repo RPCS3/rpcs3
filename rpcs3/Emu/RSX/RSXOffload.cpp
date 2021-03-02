@@ -103,8 +103,8 @@ namespace rsx
 		}
 		else
 		{
-			g_fxo->get<dma_thread>()->m_enqueued_count++;
-			g_fxo->get<dma_thread>()->m_work_queue.push(dst, src, length);
+			g_fxo->get<dma_thread>().m_enqueued_count++;
+			g_fxo->get<dma_thread>().m_work_queue.push(dst, src, length);
 		}
 	}
 
@@ -116,8 +116,8 @@ namespace rsx
 		}
 		else
 		{
-			g_fxo->get<dma_thread>()->m_enqueued_count++;
-			g_fxo->get<dma_thread>()->m_work_queue.push(dst, src, length);
+			g_fxo->get<dma_thread>().m_enqueued_count++;
+			g_fxo->get<dma_thread>().m_work_queue.push(dst, src, length);
 		}
 	}
 
@@ -131,8 +131,8 @@ namespace rsx
 		}
 		else
 		{
-			g_fxo->get<dma_thread>()->m_enqueued_count++;
-			g_fxo->get<dma_thread>()->m_work_queue.push(dst, primitive, count);
+			g_fxo->get<dma_thread>().m_enqueued_count++;
+			g_fxo->get<dma_thread>().m_work_queue.push(dst, primitive, count);
 		}
 	}
 
@@ -141,21 +141,21 @@ namespace rsx
 	{
 		ensure(g_cfg.video.multithreaded_rsx);
 
-		g_fxo->get<dma_thread>()->m_enqueued_count++;
-		g_fxo->get<dma_thread>()->m_work_queue.push(request_code, args);
+		g_fxo->get<dma_thread>().m_enqueued_count++;
+		g_fxo->get<dma_thread>().m_work_queue.push(request_code, args);
 	}
 
 	// Synchronization
 	bool dma_manager::is_current_thread() const
 	{
-		return std::this_thread::get_id() == g_fxo->get<dma_thread>()->m_thread_id;
+		return std::this_thread::get_id() == g_fxo->get<dma_thread>().m_thread_id;
 	}
 
 	bool dma_manager::sync()
 	{
-		const auto _thr = g_fxo->get<dma_thread>();
+		auto& _thr = g_fxo->get<dma_thread>();
 
-		if (_thr->m_enqueued_count.load() <= _thr->m_processed_count.load()) [[likely]]
+		if (_thr.m_enqueued_count.load() <= _thr.m_processed_count.load()) [[likely]]
 		{
 			// Nothing to do
 			return true;
@@ -169,7 +169,7 @@ namespace rsx
 				return false;
 			}
 
-			while (_thr->m_enqueued_count.load() > _thr->m_processed_count.load())
+			while (_thr.m_enqueued_count.load() > _thr.m_processed_count.load())
 			{
 				rsxthr->on_semaphore_acquire_wait();
 				utils::pause();
@@ -177,7 +177,7 @@ namespace rsx
 		}
 		else
 		{
-			while (_thr->m_enqueued_count.load() > _thr->m_processed_count.load())
+			while (_thr.m_enqueued_count.load() > _thr.m_processed_count.load())
 				utils::pause();
 		}
 
@@ -186,7 +186,7 @@ namespace rsx
 
 	void dma_manager::join()
 	{
-		*g_fxo->get<dma_thread>() = thread_state::aborting;
+		g_fxo->get<dma_thread>() = thread_state::aborting;
 		sync();
 	}
 
@@ -205,7 +205,7 @@ namespace rsx
 	// Fault recovery
 	utils::address_range dma_manager::get_fault_range(bool writing) const
 	{
-		const auto m_current_job = (ensure(g_fxo->get<dma_thread>()->m_current_job));
+		const auto m_current_job = ensure(g_fxo->get<dma_thread>().m_current_job);
 
 		void *address = nullptr;
 		u32 range = m_current_job->length;

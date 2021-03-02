@@ -447,7 +447,8 @@ bool cheat_engine::is_addr_safe(const u32 offset)
 	if (Emu.IsStopped())
 		return false;
 
-	const auto ppum = g_fxo->get<ppu_module>();
+	const auto ppum = g_fxo->try_get<ppu_module>();
+
 	if (!ppum)
 	{
 		log_cheat.fatal("Failed to get ppu_module");

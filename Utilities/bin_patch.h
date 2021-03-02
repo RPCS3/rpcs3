@@ -89,6 +89,10 @@ public:
 
 	patch_engine();
 
+	patch_engine(const patch_engine&) = delete;
+
+	patch_engine& operator=(const patch_engine&) = delete;
+
 	// Returns the directory in which patch_config.yml is located
 	static std::string get_patch_config_path();
 

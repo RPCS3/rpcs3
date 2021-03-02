@@ -15,12 +15,12 @@ namespace input
 
 		pad::SetIntercepted(intercepted);
 
-		if (const auto handler = g_fxo->get<KeyboardHandlerBase>())
+		if (const auto handler = g_fxo->try_get<KeyboardHandlerBase>())
 		{
 			handler->SetIntercepted(intercepted);
 		}
 
-		if (const auto handler = g_fxo->get<MouseHandlerBase>())
+		if (const auto handler = g_fxo->try_get<MouseHandlerBase>())
 		{
 			handler->SetIntercepted(intercepted);
 		}

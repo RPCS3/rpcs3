@@ -344,6 +344,84 @@ private:
 	static const u64 process_affinity_mask;
 };
 
+// Used internally
+template <bool Discard, typename Ctx, typename... Args>
+class thread_future_t : public thread_future, result_storage<Ctx, std::conditional_t<Discard, int, void>, Args...>
+{
+	[[no_unique_address]] decltype(std::make_tuple(std::forward<Args>(std::declval<Args>())...)) m_args;
+
+	[[no_unique_address]] Ctx m_func;
+
+	using future = thread_future_t;
+
+public:
+	thread_future_t(Ctx&& func, Args&&... args)
+		: m_args(std::forward<Args>(args)...)
+		, m_func(std::forward<Ctx>(func))
+	{
+		thread_future::exec.raw() = +[](thread_base* tb, thread_future* tf)
+		{
+			const auto _this = static_cast<future*>(tf);
+
+			if (!tb) [[unlikely]]
+			{
+				if constexpr (!future::empty && !Discard)
+				{
+					_this->init();
+				}
+
+				return;
+			}
+
+			if constexpr (future::empty || Discard)
+			{
+				std::apply(_this->m_func, std::move(_this->m_args));
+			}
+			else
+			{
+				new (_this->_get()) decltype(auto)(std::apply(_this->m_func, std::move(_this->m_args)));
+			}
+		};
+	}
+
+	~thread_future_t()
+	{
+		if constexpr (!future::empty && !Discard)
+		{
+			if (!this->exec)
+			{
+				this->destroy();
+			}
+		}
+	}
+
+	decltype(auto) get()
+	{
+		while (this->exec)
+		{
+			this->wait();
+		}
+
+		if constexpr (!future::empty && !Discard)
+		{
+			return *this->_get();
+		}
+	}
+
+	decltype(auto) get() const
+	{
+		while (this->exec)
+		{
+			this->wait();
+		}
+
+		if constexpr (!future::empty && !Discard)
+		{
+			return *this->_get();
+		}
+	}
+};
+
 // Derived from the callable object Context, possibly a lambda
 template <class Context>
 class named_thread final : public Context, result_storage<Context>, thread_base
@@ -467,74 +545,9 @@ public:
 
 		if constexpr (v1)
 		{
-			class future : public thread_future, result_storage<Context, void, Arg, Args...>
-			{
-				// A tuple to store arguments
-				decltype(std::make_tuple(std::forward<Arg, Args...>(arg, args...))) m_args;
+			using future = thread_future_t<Discard, Context&, Arg, Args...>;
 
-			public:
-				future(Arg&& arg, Args&&... args)
-					: m_args(std::forward<Arg, Args...>(arg, args...))
-				{
-					thread_future::exec.raw() = +[](thread_base* tb, thread_future* tf)
-					{
-						const auto _this = static_cast<future*>(tf);
-
-						if (!tb) [[unlikely]]
-						{
-							if constexpr (!future::empty && !Discard)
-							{
-								_this->init();
-							}
-
-							return;
-						}
-
-						if constexpr (future::empty || Discard)
-						{
-							std::apply(*static_cast<Context*>(static_cast<named_thread*>(tb)), _this->m_args);
-						}
-						else
-						{
-							new (_this->_get()) decltype(auto)(std::apply(*static_cast<Context*>(static_cast<named_thread*>(tb)), _this->m_args));
-						}
-					};
-				}
-
-				future(const future&) = delete;
-
-				future& operator=(const future&) = delete;
-
-				~future()
-				{
-					if constexpr (!future::empty && !Discard)
-					{
-						// Should be set to null if executed
-						if (!this->exec)
-						{
-							this->destroy();
-						}
-					}
-				}
-
-				decltype(auto) get()
-				{
-					if constexpr (!future::empty && !Discard)
-					{
-						return *this->_get();
-					}
-				}
-
-				decltype(auto) get() const
-				{
-					if constexpr (!future::empty && !Discard)
-					{
-						return *this->_get();
-					}
-				}
-			};
-
-			single_ptr<future> target = make_single<future>(std::forward<Arg, Args...>(arg, args...));
+			single_ptr<future> target = make_single<future>(*static_cast<Context*>(this), std::forward<Arg>(arg), std::forward<Args>(args)...);
 
 			if constexpr (!Discard)
 			{
@@ -553,75 +566,9 @@ public:
 		}
 		else if constexpr (v2)
 		{
-			class future : public thread_future, result_storage<std::decay_t<Arg>, void, Args...>
-			{
-				decltype(std::make_tuple(std::forward<Args...>(args...))) m_args;
+			using future = thread_future_t<Discard, Arg, Args...>;
 
-				std::decay_t<Arg> m_func;
-
-			public:
-				future(Arg func, Args&&... args)
-					: m_args(std::forward<Args...>(args...))
-					, m_func(func)
-				{
-					thread_future::exec.raw() = +[](thread_base* tb, thread_future* tf)
-					{
-						const auto _this = static_cast<future*>(tf);
-
-						if (!tb) [[unlikely]]
-						{
-							if constexpr (!future::empty && !Discard)
-							{
-								_this->init();
-							}
-
-							return;
-						}
-
-						if constexpr (future::empty || Discard)
-						{
-							std::apply(_this->m_func, _this->m_args);
-						}
-						else
-						{
-							new (_this->_get()) decltype(auto)(std::apply(_this->m_func, _this->m_args));
-						}
-					};
-				}
-
-				future(const future&) = delete;
-
-				future& operator=(const future&) = delete;
-
-				~future()
-				{
-					if constexpr (!future::empty && !Discard)
-					{
-						if (!this->exec)
-						{
-							this->destroy();
-						}
-					}
-				}
-
-				decltype(auto) get()
-				{
-					if constexpr (!future::empty && !Discard)
-					{
-						return *this->_get();
-					}
-				}
-
-				decltype(auto) get() const
-				{
-					if constexpr (!future::empty && !Discard)
-					{
-						return *this->_get();
-					}
-				}
-			};
-
-			single_ptr<future> target = make_single<future>(std::forward<Arg, Args...>(arg, args...));
+			single_ptr<future> target = make_single<future>(std::forward<Arg>(arg), std::forward<Args>(args)...);
 
 			if constexpr (!Discard)
 			{
@@ -637,75 +584,9 @@ public:
 		}
 		else if constexpr (v3)
 		{
-			class future : public thread_future, result_storage<std::decay_t<Arg>, void, Context&, Args...>
-			{
-				decltype(std::make_tuple(std::forward<Args...>(args...))) m_args;
+			using future = thread_future_t<Discard, Arg, Context&, Args...>;
 
-				std::decay_t<Arg> m_func;
-
-			public:
-				future(Arg func, Args&&... args)
-					: m_args(std::forward<Args...>(args...))
-					, m_func(func)
-				{
-					thread_future::exec.raw() = +[](thread_base* tb, thread_future* tf)
-					{
-						const auto _this = static_cast<future*>(tf);
-
-						if (!tb) [[unlikely]]
-						{
-							if constexpr (!future::empty && !Discard)
-							{
-								_this->init();
-							}
-
-							return;
-						}
-
-						if constexpr (future::empty || Discard)
-						{
-							std::apply(_this->m_func, *static_cast<Context*>(static_cast<named_thread*>(tb)), _this->m_args);
-						}
-						else
-						{
-							new (_this->_get()) decltype(auto)(std::apply(_this->m_func, *static_cast<Context*>(static_cast<named_thread*>(tb)), _this->m_args));
-						}
-					};
-				}
-
-				future(const future&) = delete;
-
-				future& operator=(const future&) = delete;
-
-				~future()
-				{
-					if constexpr (!future::empty && !Discard)
-					{
-						if (!this->exec)
-						{
-							this->destroy();
-						}
-					}
-				}
-
-				decltype(auto) get()
-				{
-					if constexpr (!future::empty && !Discard)
-					{
-						return *this->_get();
-					}
-				}
-
-				decltype(auto) get() const
-				{
-					if constexpr (!future::empty && !Discard)
-					{
-						return *this->_get();
-					}
-				}
-			};
-
-			single_ptr<future> target = make_single<future>(std::forward<Arg, Args...>(arg, args...));
+			single_ptr<future> target = make_single<future>(std::forward<Arg>(arg), std::ref(*static_cast<Context*>(this)), std::forward<Args>(args)...);
 
 			if constexpr (!Discard)
 			{

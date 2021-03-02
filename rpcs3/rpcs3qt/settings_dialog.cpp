@@ -1751,6 +1751,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->spuDebug, emu_settings_type::SPUDebug);
 	SubscribeTooltip(ui->spuDebug, tooltips.settings.spu_debug);
 
+	m_emu_settings->EnhanceCheckBox(ui->mfcDebug, emu_settings_type::MFCDebug);
+	SubscribeTooltip(ui->mfcDebug, tooltips.settings.mfc_debug);
+
 	m_emu_settings->EnhanceCheckBox(ui->setDAZandFTZ, emu_settings_type::SetDAZandFTZ);
 	SubscribeTooltip(ui->setDAZandFTZ, tooltips.settings.set_daz_and_ftz);
 

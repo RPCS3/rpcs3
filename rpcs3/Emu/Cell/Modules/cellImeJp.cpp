@@ -128,10 +128,10 @@ error_code cellImeJpOpen(sys_memory_container_t container_id, vm::ptr<CellImeJpH
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (manager->is_initialized)
+	if (manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_ALREADY_OPEN;
 	}
@@ -140,11 +140,11 @@ error_code cellImeJpOpen(sys_memory_container_t container_id, vm::ptr<CellImeJpH
 	{
 		cellImeJp.warning("cellImeJpOpen dictionary path = %s", addDicPath->path);
 
-		manager->dictionary_paths.emplace_back(addDicPath->path);
+		manager.dictionary_paths.emplace_back(addDicPath->path);
 	}
 	*hImeJpHandle = vm::cast(ime_jp_address);
 
-	manager->is_initialized = true;
+	manager.is_initialized = true;
 
 	return CELL_OK;
 }
@@ -158,10 +158,10 @@ error_code cellImeJpOpen2(sys_memory_container_t container_id, vm::ptr<CellImeJp
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (manager->is_initialized)
+	if (manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_ALREADY_OPEN;
 	}
@@ -170,12 +170,12 @@ error_code cellImeJpOpen2(sys_memory_container_t container_id, vm::ptr<CellImeJp
 	{
 		cellImeJp.warning("cellImeJpOpen2 dictionary path = %s", addDicPath->path);
 
-		manager->dictionary_paths.emplace_back(addDicPath->path);
+		manager.dictionary_paths.emplace_back(addDicPath->path);
 	}
 
 	*hImeJpHandle = vm::cast(ime_jp_address);
 
-	manager->is_initialized = true;
+	manager.is_initialized = true;
 
 	return CELL_OK;
 }
@@ -189,10 +189,10 @@ error_code cellImeJpOpen3(sys_memory_container_t container_id, vm::ptr<CellImeJp
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (manager->is_initialized)
+	if (manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_ALREADY_OPEN;
 	}
@@ -205,14 +205,14 @@ error_code cellImeJpOpen3(sys_memory_container_t container_id, vm::ptr<CellImeJp
 			{
 				cellImeJp.warning("cellImeJpOpen3 dictionary %d path = %s", i, addDicPath[i]->path);
 
-				manager->dictionary_paths.emplace_back(addDicPath[i]->path);
+				manager.dictionary_paths.emplace_back(addDicPath[i]->path);
 			}
 		}
 	}
 
 	*hImeJpHandle = vm::cast(ime_jp_address);
 
-	manager->is_initialized = true;
+	manager.is_initialized = true;
 
 	return CELL_OK;
 }
@@ -227,21 +227,21 @@ error_code cellImeJpClose(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpClose(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	manager->input_state = CELL_IMEJP_BEFORE_INPUT;
-	manager->input_string.clear();
-	manager->converted_string.clear();
-	manager->confirmed_string.clear();
-	manager->cursor = 0;
-	manager->cursor_end = 0;
-	manager->is_initialized = false;
+	manager.input_state = CELL_IMEJP_BEFORE_INPUT;
+	manager.input_string.clear();
+	manager.converted_string.clear();
+	manager.confirmed_string.clear();
+	manager.cursor = 0;
+	manager.cursor_end = 0;
+	manager.is_initialized = false;
 
 	return CELL_OK;
 }
@@ -250,20 +250,20 @@ error_code cellImeJpSetKanaInputMode(CellImeJpHandle hImeJpHandle, s16 inputOpti
 {
 	cellImeJp.todo("cellImeJpSetKanaInputMode(hImeJpHandle=*0x%x, inputOption=%d)", hImeJpHandle, inputOption);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_BEFORE_INPUT)
+	if (manager.input_state != CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->kana_input_mode = inputOption;
+	manager.kana_input_mode = inputOption;
 
 	return CELL_OK;
 }
@@ -272,15 +272,15 @@ error_code cellImeJpSetInputCharType(CellImeJpHandle hImeJpHandle, s16 charTypeO
 {
 	cellImeJp.todo("cellImeJpSetInputCharType(hImeJpHandle=*0x%x, charTypeOption=%d)", hImeJpHandle, charTypeOption);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	manager->input_char_type = charTypeOption;
+	manager.input_char_type = charTypeOption;
 
 	return CELL_OK;
 }
@@ -289,15 +289,15 @@ error_code cellImeJpSetFixInputMode(CellImeJpHandle hImeJpHandle, s16 fixInputMo
 {
 	cellImeJp.todo("cellImeJpSetFixInputMode(hImeJpHandle=*0x%x, fixInputMode=%d)", hImeJpHandle, fixInputMode);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	manager->fix_input_mode = fixInputMode;
+	manager.fix_input_mode = fixInputMode;
 
 	return CELL_OK;
 }
@@ -306,20 +306,20 @@ error_code cellImeJpAllowExtensionCharacters(CellImeJpHandle hImeJpHandle, s16 e
 {
 	cellImeJp.todo("cellImeJpSetFixInputMode(hImeJpHandle=*0x%x, extensionCharacters=%d)", hImeJpHandle, extensionCharacters);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_BEFORE_INPUT)
+	if (manager.input_state != CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->allowed_extensions = extensionCharacters;
+	manager.allowed_extensions = extensionCharacters;
 
 	return CELL_OK;
 }
@@ -328,20 +328,20 @@ error_code cellImeJpReset(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpReset(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	manager->input_state = CELL_IMEJP_BEFORE_INPUT;
-	manager->input_string.clear();
-	manager->converted_string.clear();
-	manager->confirmed_string.clear();
-	manager->cursor = 0;
-	manager->cursor_end = 0;
+	manager.input_state = CELL_IMEJP_BEFORE_INPUT;
+	manager.input_string.clear();
+	manager.converted_string.clear();
+	manager.confirmed_string.clear();
+	manager.cursor = 0;
+	manager.cursor_end = 0;
 
 	return CELL_OK;
 }
@@ -355,15 +355,15 @@ error_code cellImeJpGetStatus(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pInputS
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	*pInputStatus = manager->input_state;
+	*pInputStatus = manager.input_state;
 
 	return CELL_OK;
 }
@@ -377,20 +377,20 @@ error_code cellImeJpEnterChar(CellImeJpHandle hImeJpHandle, u16 inputChar, vm::p
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_MOVE_CLAUSE_GAP)
+	if (manager.input_state == CELL_IMEJP_MOVE_CLAUSE_GAP)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->addChar(inputChar);
+	manager.addChar(inputChar);
 
 	*pOutputStatus = CELL_IMEJP_RET_CONFIRMED;
 
@@ -412,20 +412,20 @@ error_code cellImeJpEnterString(CellImeJpHandle hImeJpHandle, vm::cptr<u16> pInp
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_MOVE_CLAUSE_GAP)
+	if (manager.input_state == CELL_IMEJP_MOVE_CLAUSE_GAP)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->addString(pInputString);
+	manager.addString(pInputString);
 
 	*pOutputStatus = CELL_IMEJP_RET_CONFIRMED;
 
@@ -442,20 +442,20 @@ error_code cellImeJpModeCaretRight(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpModeCaretRight(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_BEFORE_CONVERT)
+	if (manager.input_state != CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->moveCursor(1);
+	manager.moveCursor(1);
 
 	return CELL_OK;
 }
@@ -464,20 +464,20 @@ error_code cellImeJpModeCaretLeft(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpModeCaretLeft(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_BEFORE_CONVERT)
+	if (manager.input_state != CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->moveCursor(-1);
+	manager.moveCursor(-1);
 
 	return CELL_OK;
 }
@@ -486,20 +486,20 @@ error_code cellImeJpBackspaceWord(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpBackspaceWord(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_BEFORE_CONVERT)
+	if (manager.input_state != CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->backspaceWord();
+	manager.backspaceWord();
 
 	return CELL_OK;
 }
@@ -508,20 +508,20 @@ error_code cellImeJpDeleteWord(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpDeleteWord(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_BEFORE_CONVERT)
+	if (manager.input_state != CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->deleteWord();
+	manager.deleteWord();
 
 	return CELL_OK;
 }
@@ -530,24 +530,24 @@ error_code cellImeJpAllDeleteConvertString(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpAllDeleteConvertString(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT)
+	if (manager.input_state == CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->cursor = 0;
-	manager->cursor_end = 0;
-	manager->input_string.clear();
-	manager->converted_string.clear();
-	manager->input_state = CELL_IMEJP_BEFORE_INPUT;
+	manager.cursor = 0;
+	manager.cursor_end = 0;
+	manager.input_string.clear();
+	manager.converted_string.clear();
+	manager.input_state = CELL_IMEJP_BEFORE_INPUT;
 
 	return CELL_OK;
 }
@@ -556,20 +556,20 @@ error_code cellImeJpConvertForward(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpConvertForward(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT)
+	if (manager.input_state == CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->input_state = CELL_IMEJP_CANDIDATES;
+	manager.input_state = CELL_IMEJP_CANDIDATES;
 
 	return CELL_OK;
 }
@@ -578,20 +578,20 @@ error_code cellImeJpConvertBackward(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpConvertBackward(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT)
+	if (manager.input_state == CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->input_state = CELL_IMEJP_CANDIDATES;
+	manager.input_state = CELL_IMEJP_CANDIDATES;
 
 	return CELL_OK;
 }
@@ -600,15 +600,15 @@ error_code cellImeJpCurrentPartConfirm(CellImeJpHandle hImeJpHandle, s16 listIte
 {
 	cellImeJp.todo("cellImeJpCurrentPartConfirm(hImeJpHandle=*0x%x, listItem=%d)", hImeJpHandle, listItem);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT)
+	if (manager.input_state == CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -620,26 +620,26 @@ error_code cellImeJpAllConfirm(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpAllConfirm(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT)
+	if (manager.input_state == CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
 	// Use input_string for now
-	manager->confirmed_string = manager->input_string;
-	manager->cursor = 0;
-	manager->cursor_end = 0;
-	manager->input_string.clear();
-	manager->converted_string.clear();
-	manager->input_state = CELL_IMEJP_BEFORE_INPUT;
+	manager.confirmed_string = manager.input_string;
+	manager.cursor = 0;
+	manager.cursor_end = 0;
+	manager.input_string.clear();
+	manager.converted_string.clear();
+	manager.input_state = CELL_IMEJP_BEFORE_INPUT;
 
 	return CELL_OK;
 }
@@ -648,21 +648,21 @@ error_code cellImeJpAllConvertCancel(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpAllConvertCancel(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT || manager->input_state == CELL_IMEJP_BEFORE_CONVERT)
+	if (manager.input_state == CELL_IMEJP_BEFORE_INPUT || manager.input_state == CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->converted_string.clear();
-	manager->input_state = CELL_IMEJP_BEFORE_CONVERT;
+	manager.converted_string.clear();
+	manager.input_state = CELL_IMEJP_BEFORE_CONVERT;
 
 	return CELL_OK;
 }
@@ -671,15 +671,15 @@ error_code cellImeJpConvertCancel(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpConvertCancel(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT || manager->input_state == CELL_IMEJP_BEFORE_CONVERT)
+	if (manager.input_state == CELL_IMEJP_BEFORE_INPUT || manager.input_state == CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -692,20 +692,20 @@ error_code cellImeJpExtendConvertArea(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpExtendConvertArea(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT || manager->input_state == CELL_IMEJP_BEFORE_CONVERT)
+	if (manager.input_state == CELL_IMEJP_BEFORE_INPUT || manager.input_state == CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->moveCursorEnd(1);
+	manager.moveCursorEnd(1);
 
 	return CELL_OK;
 }
@@ -714,20 +714,20 @@ error_code cellImeJpShortenConvertArea(CellImeJpHandle hImeJpHandle)
 {
 	cellImeJp.todo("cellImeJpShortenConvertArea(hImeJpHandle=*0x%x)", hImeJpHandle);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT || manager->input_state == CELL_IMEJP_BEFORE_CONVERT)
+	if (manager.input_state == CELL_IMEJP_BEFORE_INPUT || manager.input_state == CELL_IMEJP_BEFORE_CONVERT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
 
-	manager->moveCursorEnd(-1);
+	manager.moveCursorEnd(-1);
 
 	return CELL_OK;
 }
@@ -736,15 +736,15 @@ error_code cellImeJpTemporalConfirm(CellImeJpHandle hImeJpHandle, s16 selectInde
 {
 	cellImeJp.todo("cellImeJpTemporalConfirm(hImeJpHandle=*0x%x, selectIndex=%d)", hImeJpHandle, selectIndex);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_CANDIDATES)
+	if (manager.input_state != CELL_IMEJP_CANDIDATES)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -756,15 +756,15 @@ error_code cellImeJpPostConvert(CellImeJpHandle hImeJpHandle, s16 postType)
 {
 	cellImeJp.todo("cellImeJpPostConvert(hImeJpHandle=*0x%x, postType=%d)", hImeJpHandle, postType);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT)
+	if (manager.input_state == CELL_IMEJP_BEFORE_INPUT)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -776,15 +776,15 @@ error_code cellImeJpMoveFocusClause(CellImeJpHandle hImeJpHandle, s16 moveType)
 {
 	cellImeJp.todo("cellImeJpMoveFocusClause(hImeJpHandle=*0x%x, moveType=%d)", hImeJpHandle, moveType);
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state == CELL_IMEJP_BEFORE_INPUT || manager->input_state == CELL_IMEJP_BEFORE_CONVERT || manager->input_state == CELL_IMEJP_MOVE_CLAUSE_GAP)
+	if (manager.input_state == CELL_IMEJP_BEFORE_INPUT || manager.input_state == CELL_IMEJP_BEFORE_CONVERT || manager.input_state == CELL_IMEJP_MOVE_CLAUSE_GAP)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -792,23 +792,23 @@ error_code cellImeJpMoveFocusClause(CellImeJpHandle hImeJpHandle, s16 moveType)
 	switch (moveType)
 	{
 	case CELL_IMEJP_FOCUS_NEXT:
-		manager->moveCursor(1);
+		manager.moveCursor(1);
 		break;
 	case CELL_IMEJP_FOCUS_BEFORE:
-		manager->moveCursor(-1);
+		manager.moveCursor(-1);
 		break;
 	case CELL_IMEJP_FOCUS_TOP:
-		manager->moveCursor(-1 * ::narrow<s8>(manager->input_string.length()));
+		manager.moveCursor(-1 * ::narrow<s8>(manager.input_string.length()));
 		break;
 	case CELL_IMEJP_FOCUS_END:
-		manager->moveCursor(::narrow<s8>(manager->input_string.length()));
-		manager->moveCursor(-1);
+		manager.moveCursor(::narrow<s8>(manager.input_string.length()));
+		manager.moveCursor(-1);
 		break;
 	default:
 		break;
 	}
 
-	manager->input_state = CELL_IMEJP_CONVERTING;
+	manager.input_state = CELL_IMEJP_CONVERTING;
 
 	return CELL_OK;
 }
@@ -822,15 +822,15 @@ error_code cellImeJpGetFocusTop(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pFocu
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	*pFocusTop = static_cast<u16>(manager->cursor * 2); // offset in bytes
+	*pFocusTop = static_cast<u16>(manager.cursor * 2); // offset in bytes
 
 	return CELL_OK;
 }
@@ -844,21 +844,21 @@ error_code cellImeJpGetFocusLength(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pF
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->cursor >= (CELL_IMEJP_STRING_MAXLENGTH - 1))
+	if (manager.cursor >= (CELL_IMEJP_STRING_MAXLENGTH - 1))
 	{
 		*pFocusLength = 0;
 	}
 	else
 	{
-		*pFocusLength = static_cast<u16>((manager->cursor_end - manager->cursor + 1) * 2); // offset in bytes
+		*pFocusLength = static_cast<u16>((manager.cursor_end - manager.cursor + 1) * 2); // offset in bytes
 	}
 
 	return CELL_OK;
@@ -873,10 +873,10 @@ error_code cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
@@ -886,11 +886,11 @@ error_code cellImeJpGetConfirmYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 		pYomiString[i] = 0;
 	}
 
-	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager.confirmed_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
-		pYomiString[i] = manager->confirmed_string[i];
+		pYomiString[i] = manager.confirmed_string[i];
 	}
 
 	return CELL_OK;
@@ -905,10 +905,10 @@ error_code cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
@@ -918,11 +918,11 @@ error_code cellImeJpGetConfirmString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 		pConfirmString[i] = 0;
 	}
 
-	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->confirmed_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager.confirmed_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
-		pConfirmString[i] = manager->confirmed_string[i];
+		pConfirmString[i] = manager.confirmed_string[i];
 	}
 
 	return CELL_OK;
@@ -937,10 +937,10 @@ error_code cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
@@ -950,11 +950,11 @@ error_code cellImeJpGetConvertYomiString(CellImeJpHandle hImeJpHandle, vm::ptr<u
 		pYomiString[i] = 0;
 	}
 
-	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager.input_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
-		pYomiString[i] = manager->input_string[i];
+		pYomiString[i] = manager.input_string[i];
 	}
 
 	return CELL_OK;
@@ -969,10 +969,10 @@ error_code cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
@@ -982,11 +982,11 @@ error_code cellImeJpGetConvertString(CellImeJpHandle hImeJpHandle, vm::ptr<u16> 
 		pConvertString[i] = 0;
 	}
 
-	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager->input_string.length());
+	const usz max_len = std::min<usz>(CELL_IMEJP_STRING_MAXLENGTH - 1, manager.input_string.length());
 
 	for (u32 i = 0; i < max_len; i++)
 	{
-		pConvertString[i] = manager->input_string[i];
+		pConvertString[i] = manager.input_string[i];
 	}
 
 	return CELL_OK;
@@ -1001,15 +1001,15 @@ error_code cellImeJpGetCandidateListSize(CellImeJpHandle hImeJpHandle, vm::ptr<s
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_CANDIDATES)
+	if (manager.input_state != CELL_IMEJP_CANDIDATES)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -1028,15 +1028,15 @@ error_code cellImeJpGetCandidateList(CellImeJpHandle hImeJpHandle, vm::ptr<s16> 
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_CANDIDATES)
+	if (manager.input_state != CELL_IMEJP_CANDIDATES)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -1055,15 +1055,15 @@ error_code cellImeJpGetCandidateSelect(CellImeJpHandle hImeJpHandle, vm::ptr<s16
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
 
-	if (manager->input_state != CELL_IMEJP_CANDIDATES)
+	if (manager.input_state != CELL_IMEJP_CANDIDATES)
 	{
 		return CELL_IMEJP_ERROR_ERR;
 	}
@@ -1082,10 +1082,10 @@ error_code cellImeJpGetPredictList(CellImeJpHandle hImeJpHandle, vm::ptr<s16> pY
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}
@@ -1104,10 +1104,10 @@ error_code cellImeJpConfirmPrediction(CellImeJpHandle hImeJpHandle, vm::ptr<Cell
 		return CELL_IMEJP_ERROR_PARAM;
 	}
 
-	const auto manager = g_fxo->get<ime_jp_manager>();
-	std::lock_guard lock(manager->mutex);
+	auto& manager = g_fxo->get<ime_jp_manager>();
+	std::lock_guard lock(manager.mutex);
 
-	if (!manager->is_initialized)
+	if (!manager.is_initialized)
 	{
 		return CELL_IMEJP_ERROR_CONTEXT;
 	}

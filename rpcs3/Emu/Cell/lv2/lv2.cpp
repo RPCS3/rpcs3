@@ -1073,7 +1073,7 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 
 	if (code < g_ppu_syscall_table.size())
 	{
-		g_fxo->get<named_thread<ppu_syscall_usage>>()->stat[code]++;
+		g_fxo->get<named_thread<ppu_syscall_usage>>().stat[code]++;
 
 		if (auto func = g_ppu_syscall_table[code].first)
 		{

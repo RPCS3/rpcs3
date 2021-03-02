@@ -565,7 +565,12 @@ public:
 		}
 		}
 
-		fs::file(name, fs::rewrite).write(zbuf.get(), zsz - zs.avail_out);
+		if (!fs::write_file(name, fs::rewrite, zbuf.get(), zsz - zs.avail_out))
+		{
+				jit_log.error("LLVM: Failed to create module file: %s (%s)", name, fs::g_tls_error);
+				return;
+		}
+
 		jit_log.notice("LLVM: Created module: %s", _module->getName().data());
 	}
 

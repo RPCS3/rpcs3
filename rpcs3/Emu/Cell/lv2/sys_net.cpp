@@ -566,8 +566,8 @@ struct nt_p2p_port
 		// Adds to tcp timeout monitor to resend the message until an ack is received
 		if (require_ack)
 		{
-			auto tcpm = g_fxo->get<named_thread<tcp_timeout_monitor>>();
-			tcpm->add_message(sock_id, dst, std::move(data), seq);
+			auto& tcpm = g_fxo->get<named_thread<tcp_timeout_monitor>>();
+			tcpm.add_message(sock_id, dst, std::move(data), seq);
 		}
 	}
 
@@ -590,8 +590,8 @@ struct nt_p2p_port
 
 			if (tcp_header->flags == lv2_socket::p2ps_i::ACK)
 			{
-				auto tcpm = g_fxo->get<named_thread<tcp_timeout_monitor>>();
-				tcpm->confirm_data_received(sock_id, tcp_header->ack);
+				auto& tcpm = g_fxo->get<named_thread<tcp_timeout_monitor>>();
+				tcpm.confirm_data_received(sock_id, tcp_header->ack);
 			}
 
 			auto send_ack = [&]()
@@ -831,8 +831,8 @@ struct nt_p2p_port
 				sign_msgs.push_back(std::move(msg));
 			}
 
-			const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
-			sigh->wake_up();
+			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+			sigh.wake_up();
 
 			return true;
 		}
@@ -1142,11 +1142,11 @@ using network_context = named_thread<network_thread>;
 // Used by RPCN to send signaling packets to RPCN server(for UDP hole punching)
 s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& addr)
 {
-	s32 res       = 0;
-	const auto nc = g_fxo->get<network_context>();
+	s32 res{};
+	auto& nc = g_fxo->get<network_context>();
 	{
-		std::lock_guard list_lock(nc->list_p2p_ports_mutex);
-		auto& def_port = nc->list_p2p_ports.at(3658);
+		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
+		auto& def_port = nc.list_p2p_ports.at(3658);
 
 		res = ::sendto(def_port.p2p_socket, reinterpret_cast<const char*>(data.data()), data.size(), 0, reinterpret_cast<const sockaddr*>(&addr), sizeof(sockaddr_in));
 	}
@@ -1156,14 +1156,14 @@ s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& ad
 
 std::vector<std::vector<u8>> get_rpcn_msgs()
 {
-	auto msgs     = std::vector<std::vector<u8>>();
-	const auto nc = g_fxo->get<network_context>();
+	std::vector<std::vector<u8>> msgs;
+	auto& nc = g_fxo->get<network_context>();
 	{
-		std::lock_guard list_lock(nc->list_p2p_ports_mutex);
-		auto& def_port = nc->list_p2p_ports.at(3658);
+		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
+		auto& def_port = nc.list_p2p_ports.at(3658);
 		{
 			std::lock_guard lock(def_port.s_rpcn_mutex);
-			msgs               = std::move(def_port.rpcn_msgs);
+			msgs = std::move(def_port.rpcn_msgs);
 			def_port.rpcn_msgs.clear();
 		}
 	}
@@ -1173,11 +1173,11 @@ std::vector<std::vector<u8>> get_rpcn_msgs()
 
 std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> get_sign_msgs()
 {
-	auto msgs     = std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>>();
-	const auto nc = g_fxo->get<network_context>();
+	std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> msgs;
+	auto& nc = g_fxo->get<network_context>();
 	{
-		std::lock_guard list_lock(nc->list_p2p_ports_mutex);
-		auto& def_port = nc->list_p2p_ports.at(3658);
+		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
+		auto& def_port = nc.list_p2p_ports.at(3658);
 		{
 			std::lock_guard lock(def_port.s_sign_mutex);
 			msgs = std::move(def_port.sign_msgs);
@@ -1479,15 +1479,15 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 
 			lv2_socket::socket_type real_socket{};
 
-			const auto nc = g_fxo->get<network_context>();
+			auto& nc = g_fxo->get<network_context>();
 			{
-				std::lock_guard list_lock(nc->list_p2p_ports_mutex);
-				if (nc->list_p2p_ports.count(p2p_port) == 0)
+				std::lock_guard list_lock(nc.list_p2p_ports_mutex);
+				if (nc.list_p2p_ports.count(p2p_port) == 0)
 				{
-					nc->list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(p2p_port), std::forward_as_tuple(p2p_port));
+					nc.list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(p2p_port), std::forward_as_tuple(p2p_port));
 				}
 
-				auto& pport = nc->list_p2p_ports.at(p2p_port);
+				auto& pport = nc.list_p2p_ports.at(p2p_port);
 				real_socket = pport.p2p_socket;
 				{
 					std::lock_guard lock(pport.bound_p2p_vports_mutex);
@@ -1597,13 +1597,13 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 
 				lv2_socket::socket_type real_socket{};
 
-				const auto nc = g_fxo->get<network_context>();
+				auto& nc = g_fxo->get<network_context>();
 				{
-					std::lock_guard list_lock(nc->list_p2p_ports_mutex);
-					if (!nc->list_p2p_ports.count(sock.p2p.port))
-						nc->list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(sock.p2p.port), std::forward_as_tuple(sock.p2p.port));
+					std::lock_guard list_lock(nc.list_p2p_ports_mutex);
+					if (!nc.list_p2p_ports.count(sock.p2p.port))
+						nc.list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(sock.p2p.port), std::forward_as_tuple(sock.p2p.port));
 
-					auto& pport = nc->list_p2p_ports.at(sock.p2p.port);
+					auto& pport = nc.list_p2p_ports.at(sock.p2p.port);
 					real_socket = pport.p2p_socket;
 					{
 						std::lock_guard lock(pport.bound_p2p_vports_mutex);
@@ -1658,15 +1658,15 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 
 		if (psa_in->sin_port == 53)
 		{
-			const auto nph = g_fxo->get<named_thread<np_handler>>();
+			auto& nph = g_fxo->get<named_thread<np_handler>>();
 
 			// Hack for DNS
 			name.sin_port        = std::bit_cast<u16, be_t<u16>>(53);
-			name.sin_addr.s_addr = nph->get_dns_ip();
+			name.sin_addr.s_addr = nph.get_dns_ip();
 
 			sys_net.notice("sys_net_bnet_connect: using DNS...");
 
-			nph->add_dns_spy(s);
+			nph.add_dns_spy(s);
 		}
 		else if (_addr->sa_family != SYS_NET_AF_INET)
 		{
@@ -2245,10 +2245,10 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 		//if (!(sock.events & lv2_socket::poll::read))
 		{
-			const auto nph = g_fxo->get<named_thread<np_handler>>();
-			if (nph->is_dns(s) && nph->is_dns_queue(s))
+			auto& nph = g_fxo->get<named_thread<np_handler>>();
+			if (nph.is_dns(s) && nph.is_dns_queue(s))
 			{
-				const auto packet = nph->get_dns_packet(s);
+				const auto packet = nph.get_dns_packet(s);
 				ensure(packet.size() < len);
 
 				memcpy(buf.get_ptr(), packet.data(), packet.size());
@@ -2256,7 +2256,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 				native_addr.ss_family = AF_INET;
 				(reinterpret_cast<::sockaddr_in*>(&native_addr))->sin_port = std::bit_cast<u16, be_t<u16>>(53); // htons(53)
-				(reinterpret_cast<::sockaddr_in*>(&native_addr))->sin_addr.s_addr = nph->get_dns_ip();
+				(reinterpret_cast<::sockaddr_in*>(&native_addr))->sin_addr.s_addr = nph.get_dns_ip();
 
 				return true;
 			}
@@ -2655,18 +2655,18 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 		//if (!(sock.events & lv2_socket::poll::write))
 		{
-			const auto nph = g_fxo->get<named_thread<np_handler>>();
+			auto& nph = g_fxo->get<named_thread<np_handler>>();
 			if (addr && type == SYS_NET_SOCK_DGRAM && psa_in->sin_port == 53)
 			{
-				nph->add_dns_spy(s);
+				nph.add_dns_spy(s);
 			}
 
-			if (nph->is_dns(s))
+			if (nph.is_dns(s))
 			{
-				const s32 ret_analyzer = nph->analyze_dns_packet(s, reinterpret_cast<const u8*>(_buf.data()), len);
+				const s32 ret_analyzer = nph.analyze_dns_packet(s, reinterpret_cast<const u8*>(_buf.data()), len);
 
 				// If we're not connected just never send the packet and pretend we did
-				if (!nph->get_net_status())
+				if (!nph.get_net_status())
 				{
 					native_result = data_len;
 					return true;
@@ -3135,10 +3135,10 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 	// If it's a bound socket we "close" the vport
 	if ((sock->type == SYS_NET_SOCK_DGRAM_P2P || sock->type == SYS_NET_SOCK_STREAM_P2P) && sock->p2p.port && sock->p2p.vport)
 	{
-		const auto nc = g_fxo->get<network_context>();
+		auto& nc = g_fxo->get<network_context>();
 		{
-			std::lock_guard lock(nc->list_p2p_ports_mutex);
-			auto& p2p_port = nc->list_p2p_ports.at(sock->p2p.port);
+			std::lock_guard lock(nc.list_p2p_ports_mutex);
+			auto& p2p_port = nc.list_p2p_ports.at(sock->p2p.port);
 			{
 				std::lock_guard lock(p2p_port.bound_p2p_vports_mutex);
 				if (sock->type == SYS_NET_SOCK_DGRAM_P2P)
@@ -3162,8 +3162,8 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 		}
 	}
 
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
-	nph->remove_dns_spy(s);
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	nph.remove_dns_spy(s);
 
 	return CELL_OK;
 }
@@ -3189,7 +3189,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 	{
 		fds_buf.assign(fds.get_ptr(), fds.get_ptr() + nfds);
 
-		std::unique_lock nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
+		std::unique_lock nw_lock(g_fxo->get<network_context>().s_nw_mutex);
 
 		std::shared_lock lock(id_manager::g_mutex);
 
@@ -3254,8 +3254,8 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 				else
 				{
 					// Check for fake packet for dns interceptions
-					const auto nph = g_fxo->get<named_thread<np_handler>>();
-					if (fds_buf[i].events & SYS_NET_POLLIN && nph->is_dns(fds_buf[i].fd) && nph->is_dns_queue(fds_buf[i].fd))
+					auto& nph = g_fxo->get<named_thread<np_handler>>();
+					if (fds_buf[i].events & SYS_NET_POLLIN && nph.is_dns(fds_buf[i].fd) && nph.is_dns_queue(fds_buf[i].fd))
 						fds_buf[i].revents |= SYS_NET_POLLIN;
 
 					if (fds_buf[i].events & ~(SYS_NET_POLLIN | SYS_NET_POLLOUT | SYS_NET_POLLERR))
@@ -3342,7 +3342,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 							fds_buf[i].revents |= SYS_NET_POLLERR;
 
 						signaled++;
-						g_fxo->get<network_context>()->s_to_awake.emplace_back(&ppu);
+						g_fxo->get<network_context>().s_to_awake.emplace_back(&ppu);
 						return true;
 					}
 
@@ -3377,7 +3377,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 					return {};
 				}
 
-				std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
+				std::lock_guard nw_lock(g_fxo->get<network_context>().s_nw_mutex);
 
 				if (signaled)
 				{
@@ -3425,7 +3425,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 		if (exceptfds)
 			_exceptfds = *exceptfds;
 
-		std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
+		std::lock_guard nw_lock(g_fxo->get<network_context>().s_nw_mutex);
 
 		reader_lock lock(id_manager::g_mutex);
 
@@ -3558,7 +3558,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 						//	rexcept.set(i);
 
 						signaled++;
-						g_fxo->get<network_context>()->s_to_awake.emplace_back(&ppu);
+						g_fxo->get<network_context>().s_to_awake.emplace_back(&ppu);
 						return true;
 					}
 
@@ -3601,7 +3601,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 					return {};
 				}
 
-				std::lock_guard nw_lock(g_fxo->get<network_context>()->s_nw_mutex);
+				std::lock_guard nw_lock(g_fxo->get<network_context>().s_nw_mutex);
 
 				if (signaled)
 				{
@@ -3691,8 +3691,8 @@ error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 		char buffer[nameserver.size() + 80]{};
 		std::memcpy(buffer, nameserver.data(), nameserver.size());
 
-		const auto nph = g_fxo->get<named_thread<np_handler>>();
-		const auto dns_str = np_handler::ip_to_string(nph->get_dns_ip());
+		auto& nph = g_fxo->get<named_thread<np_handler>>();
+		const auto dns_str = np_handler::ip_to_string(nph.get_dns_ip());
 		std::memcpy(buffer + nameserver.size() - 1, dns_str.data(), dns_str.size());
 
 		std::string_view name{buffer};

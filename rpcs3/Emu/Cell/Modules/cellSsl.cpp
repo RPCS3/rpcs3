@@ -45,12 +45,12 @@ error_code cellSslInit(vm::ptr<void> pool, u32 poolSize)
 {
 	cellSsl.todo("cellSslInit(pool=*0x%x, poolSize=%d)", pool, poolSize);
 
-	const auto manager = g_fxo->get<ssl_manager>();
+	auto& manager = g_fxo->get<ssl_manager>();
 
-	if (manager->is_init)
+	if (manager.is_init)
 		return CELL_SSL_ERROR_ALREADY_INITIALIZED;
 
-	manager->is_init = true;
+	manager.is_init = true;
 
 	return CELL_OK;
 }
@@ -59,12 +59,12 @@ error_code cellSslEnd()
 {
 	cellSsl.todo("cellSslEnd()");
 
-	const auto manager = g_fxo->get<ssl_manager>();
+	auto& manager = g_fxo->get<ssl_manager>();
 
-	if (!manager->is_init)
+	if (!manager.is_init)
 		return CELL_SSL_ERROR_NOT_INITIALIZED;
 
-	manager->is_init = false;
+	manager.is_init = false;
 
 	return CELL_OK;
 }
@@ -142,7 +142,7 @@ error_code cellSslCertGetSerialNumber(vm::cptr<void> sslCert, vm::cpptr<u8> sboD
 {
 	cellSsl.todo("cellSslCertGetSerialNumber(sslCert=*0x%x, sboData=**0x%x, sboLength=*0x%x)", sslCert, sboData, sboLength);
 
-	if (!g_fxo->get<ssl_manager>()->is_init)
+	if (!g_fxo->get<ssl_manager>().is_init)
 		return CELL_SSL_ERROR_NOT_INITIALIZED;
 
 	if (!sslCert)
@@ -158,7 +158,7 @@ error_code cellSslCertGetPublicKey(vm::cptr<void> sslCert, vm::cpptr<u8> sboData
 {
 	cellSsl.todo("cellSslCertGetPublicKey(sslCert=*0x%x, sboData=**0x%x, sboLength=*0x%x)", sslCert, sboData, sboLength);
 
-	if (!g_fxo->get<ssl_manager>()->is_init)
+	if (!g_fxo->get<ssl_manager>().is_init)
 		return CELL_SSL_ERROR_NOT_INITIALIZED;
 
 	if (!sslCert)
@@ -174,7 +174,7 @@ error_code cellSslCertGetRsaPublicKeyModulus(vm::cptr<void> sslCert, vm::cpptr<u
 {
 	cellSsl.todo("cellSslCertGetRsaPublicKeyModulus(sslCert=*0x%x, sboData=**0x%x, sboLength=*0x%x)", sslCert, sboData, sboLength);
 
-	if (!g_fxo->get<ssl_manager>()->is_init)
+	if (!g_fxo->get<ssl_manager>().is_init)
 		return CELL_SSL_ERROR_NOT_INITIALIZED;
 
 	if (!sslCert)
@@ -190,7 +190,7 @@ error_code cellSslCertGetRsaPublicKeyExponent(vm::cptr<void> sslCert, vm::cpptr<
 {
 	cellSsl.todo("cellSslCertGetRsaPublicKeyExponent(sslCert=*0x%x, sboData=**0x%x, sboLength=*0x%x)", sslCert, sboData, sboLength);
 
-	if (!g_fxo->get<ssl_manager>()->is_init)
+	if (!g_fxo->get<ssl_manager>().is_init)
 		return CELL_SSL_ERROR_NOT_INITIALIZED;
 
 	if (!sslCert)
@@ -206,7 +206,7 @@ error_code cellSslCertGetNotBefore(vm::cptr<void> sslCert, vm::ptr<CellRtcTick> 
 {
 	cellSsl.todo("cellSslCertGetNotBefore(sslCert=*0x%x, begin=*0x%x)", sslCert, begin);
 
-	if (!g_fxo->get<ssl_manager>()->is_init)
+	if (!g_fxo->get<ssl_manager>().is_init)
 		return CELL_SSL_ERROR_NOT_INITIALIZED;
 
 	if (!sslCert)
@@ -222,7 +222,7 @@ error_code cellSslCertGetNotAfter(vm::cptr<void> sslCert, vm::ptr<CellRtcTick> l
 {
 	cellSsl.todo("cellSslCertGetNotAfter(sslCert=*0x%x, limit=*0x%x)", sslCert, limit);
 
-	if (!g_fxo->get<ssl_manager>()->is_init)
+	if (!g_fxo->get<ssl_manager>().is_init)
 		return CELL_SSL_ERROR_NOT_INITIALIZED;
 
 	if (!sslCert)
@@ -238,7 +238,7 @@ error_code cellSslCertGetSubjectName(vm::cptr<void> sslCert, vm::cpptr<void> cer
 {
 	cellSsl.todo("cellSslCertGetSubjectName(sslCert=*0x%x, certName=**0x%x)", sslCert, certName);
 
-	if (!g_fxo->get<ssl_manager>()->is_init)
+	if (!g_fxo->get<ssl_manager>().is_init)
 		return CELL_SSL_ERROR_NOT_INITIALIZED;
 
 	if (!sslCert)
@@ -254,7 +254,7 @@ error_code cellSslCertGetIssuerName(vm::cptr<void> sslCert, vm::cpptr<void> cert
 {
 	cellSsl.todo("cellSslCertGetIssuerName(sslCert=*0x%x, certName=**0x%x)", sslCert, certName);
 
-	if (!g_fxo->get<ssl_manager>()->is_init)
+	if (!g_fxo->get<ssl_manager>().is_init)
 		return CELL_SSL_ERROR_NOT_INITIALIZED;
 
 	if (!sslCert)
@@ -270,7 +270,7 @@ error_code cellSslCertGetNameEntryCount(vm::cptr<void> certName, vm::ptr<u32> en
 {
 	cellSsl.todo("cellSslCertGetNameEntryCount(certName=*0x%x, entryCount=*0x%x)", certName, entryCount);
 
-	if (!g_fxo->get<ssl_manager>()->is_init)
+	if (!g_fxo->get<ssl_manager>().is_init)
 		return CELL_SSL_ERROR_NOT_INITIALIZED;
 
 	if (!certName)
@@ -286,7 +286,7 @@ error_code cellSslCertGetNameEntryInfo(vm::cptr<void> certName, u32 entryNum, vm
 {
 	cellSsl.todo("cellSslCertGetNameEntryInfo(certName=*0x%x, entryNum=%d, oidName=**0x%x, value=**0x%x, valueLength=*0x%x, flag=0x%x)", certName, entryNum, oidName, value, valueLength, flag);
 
-	if (!g_fxo->get<ssl_manager>()->is_init)
+	if (!g_fxo->get<ssl_manager>().is_init)
 		return CELL_SSL_ERROR_NOT_INITIALIZED;
 
 	if (!certName)
@@ -302,7 +302,7 @@ error_code cellSslCertGetMd5Fingerprint(vm::cptr<void> sslCert, vm::cptr<u8> buf
 {
 	cellSsl.todo("cellSslCertGetMd5Fingerprint(sslCert=*0x%x, buf=*0x%x, plen=*0x%x)", sslCert, buf, plen);
 
-	if (!g_fxo->get<ssl_manager>()->is_init)
+	if (!g_fxo->get<ssl_manager>().is_init)
 		return CELL_SSL_ERROR_NOT_INITIALIZED;
 
 	if (!sslCert)

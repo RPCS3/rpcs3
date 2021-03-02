@@ -445,7 +445,7 @@ namespace rsx
 				{
 					m_update_timer.Start();
 
-					const auto rsx_thread = g_fxo->get<rsx::thread>();
+					auto& rsx_thread = g_fxo->get<rsx::thread>();
 
 					switch (m_detail)
 					{
@@ -453,7 +453,7 @@ namespace rsx
 					{
 						m_frametime = std::max(0.f, static_cast<float>(elapsed_update / m_frames));
 
-						m_rsx_load = rsx_thread->get_load();
+						m_rsx_load = rsx_thread.get_load();
 
 						m_total_threads = utils::cpu_stats::get_thread_count();
 
@@ -471,7 +471,7 @@ namespace rsx
 							m_spu_cycles += thread_ctrl::get_cycles(spu);
 						});
 
-						m_rsx_cycles += rsx_thread->get_cycles();
+						m_rsx_cycles += rsx_thread.get_cycles();
 
 						m_total_cycles = std::max<u64>(1, m_ppu_cycles + m_spu_cycles + m_rsx_cycles);
 						m_cpu_usage    = static_cast<f32>(m_cpu_stats.get_usage());
@@ -787,10 +787,10 @@ namespace rsx
 			if (!g_cfg.misc.use_native_interface)
 				return;
 
-			if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
+			if (auto& manager = g_fxo->get<rsx::overlays::display_manager>(); g_fxo->is_init<rsx::overlays::display_manager>())
 			{
 				auto& perf_settings = g_cfg.video.perf_overlay;
-				auto perf_overlay = manager->get<rsx::overlays::perf_metrics_overlay>();
+				auto perf_overlay = manager.get<rsx::overlays::perf_metrics_overlay>();
 
 				if (perf_settings.perf_overlay_enabled)
 				{
@@ -798,10 +798,10 @@ namespace rsx
 
 					if (!existed)
 					{
-						perf_overlay = manager->create<rsx::overlays::perf_metrics_overlay>();
+						perf_overlay = manager.create<rsx::overlays::perf_metrics_overlay>();
 					}
 
-					std::scoped_lock lock(*manager);
+					std::lock_guard lock(manager);
 
 					perf_overlay->set_detail_level(perf_settings.level);
 					perf_overlay->set_position(perf_settings.position);
@@ -820,7 +820,7 @@ namespace rsx
 				}
 				else if (perf_overlay)
 				{
-					manager->remove<rsx::overlays::perf_metrics_overlay>();
+					manager.remove<rsx::overlays::perf_metrics_overlay>();
 				}
 			}
 		}

@@ -36,9 +36,9 @@ error_code cellMouseInit(u32 max_connect)
 {
 	sys_io.warning("cellMouseInit(max_connect=%d)", max_connect);
 
-	const auto handler = g_fxo->get<MouseHandlerBase>();
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	const auto init = handler->init.init();
+	const auto init = handler.init.init();
 
 	if (!init)
 		return CELL_MOUSE_ERROR_ALREADY_INITIALIZED;
@@ -49,7 +49,7 @@ error_code cellMouseInit(u32 max_connect)
 	}
 
 	libio_sys_config_init();
-	handler->Init(std::min(max_connect, 7u));
+	handler.Init(std::min(max_connect, 7u));
 
 	return CELL_OK;
 }
@@ -58,9 +58,9 @@ error_code cellMouseClearBuf(u32 port_no)
 {
 	sys_io.trace("cellMouseClearBuf(port_no=%d)", port_no);
 
-	const auto handler = g_fxo->get<MouseHandlerBase>();
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
@@ -70,17 +70,17 @@ error_code cellMouseClearBuf(u32 port_no)
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	const MouseInfo& current_info = handler->GetInfo();
+	const MouseInfo& current_info = handler.GetInfo();
 
-	if (port_no >= handler->GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
 		return CELL_MOUSE_ERROR_NO_DEVICE;
 	}
 
-	handler->GetDataList(port_no).clear();
-	handler->GetTabletDataList(port_no).clear();
+	handler.GetDataList(port_no).clear();
+	handler.GetTabletDataList(port_no).clear();
 
-	MouseRawData& raw_data = handler->GetRawData(port_no);
+	MouseRawData& raw_data = handler.GetRawData(port_no);
 	raw_data.len = 0;
 
 	for (int i = 0; i < CELL_MOUSE_MAX_CODES; i++)
@@ -95,9 +95,9 @@ error_code cellMouseEnd()
 {
 	sys_io.notice("cellMouseEnd()");
 
-	const auto handler = g_fxo->get<MouseHandlerBase>();
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	const auto init = handler->init.reset();
+	const auto init = handler.init.reset();
 
 	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
@@ -111,9 +111,9 @@ error_code cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 {
 	sys_io.trace("cellMouseGetInfo(info=*0x%x)", info);
 
-	const auto handler = g_fxo->get<MouseHandlerBase>();
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
@@ -125,7 +125,7 @@ error_code cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
 
 	std::memset(info.get_ptr(), 0, info.size());
 
-	const MouseInfo& current_info = handler->GetInfo();
+	const MouseInfo& current_info = handler.GetInfo();
 	info->max_connect = current_info.max_connect;
 	info->now_connect = current_info.now_connect;
 	info->info = current_info.info;
@@ -144,9 +144,9 @@ error_code cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> inf
 {
 	sys_io.trace("cellMouseInfoTabletMode(port_no=%d, info=*0x%x)", port_no, info);
 
-	const auto handler = g_fxo->get<MouseHandlerBase>();
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
@@ -157,9 +157,9 @@ error_code cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> inf
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	const MouseInfo& current_info = handler->GetInfo();
+	const MouseInfo& current_info = handler.GetInfo();
 
-	if (port_no >= handler->GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
 		return CELL_MOUSE_ERROR_FATAL;
 	}
@@ -181,9 +181,9 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 {
 	sys_io.trace("cellMouseGetData(port_no=%d, data=*0x%x)", port_no, data);
 
-	const auto handler = g_fxo->get<MouseHandlerBase>();
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
@@ -193,11 +193,11 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	std::lock_guard lock(handler->mutex);
+	std::lock_guard lock(handler.mutex);
 
-	const MouseInfo& current_info = handler->GetInfo();
+	const MouseInfo& current_info = handler.GetInfo();
 
-	if (port_no >= handler->GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
 		return CELL_MOUSE_ERROR_NO_DEVICE;
 	}
@@ -206,7 +206,7 @@ error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 
 	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_MOUSE_MODE) has any impact
 
-	MouseDataList& data_list = handler->GetDataList(port_no);
+	MouseDataList& data_list = handler.GetDataList(port_no);
 
 	if (data_list.empty())
 	{
@@ -230,9 +230,9 @@ error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 {
 	sys_io.warning("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
 
-	const auto handler = g_fxo->get<MouseHandlerBase>();
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
@@ -242,18 +242,18 @@ error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	std::lock_guard lock(handler->mutex);
+	std::lock_guard lock(handler.mutex);
 
-	const MouseInfo& current_info = handler->GetInfo();
+	const MouseInfo& current_info = handler.GetInfo();
 
-	if (port_no >= handler->GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
 		return CELL_MOUSE_ERROR_NO_DEVICE;
 	}
 
 	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_MOUSE_MODE) has any impact
 
-	auto& list = handler->GetDataList(port_no);
+	auto& list = handler.GetDataList(port_no);
 	data->list_num = std::min<u32>(CELL_MOUSE_MAX_DATA_LIST_NUM, static_cast<u32>(list.size()));
 
 	int i = 0;
@@ -276,9 +276,9 @@ error_code cellMouseSetTabletMode(u32 port_no, u32 mode)
 {
 	sys_io.warning("cellMouseSetTabletMode(port_no=%d, mode=%d)", port_no, mode);
 
-	const auto handler = g_fxo->get<MouseHandlerBase>();
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
@@ -289,9 +289,9 @@ error_code cellMouseSetTabletMode(u32 port_no, u32 mode)
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	MouseInfo& current_info = handler->GetInfo();
+	MouseInfo& current_info = handler.GetInfo();
 
-	if (port_no >= handler->GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
 		return CELL_MOUSE_ERROR_FATAL;
 	}
@@ -312,9 +312,9 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 {
 	sys_io.warning("cellMouseGetTabletDataList(port_no=%d, data=0x%x)", port_no, data);
 
-	const auto handler = g_fxo->get<MouseHandlerBase>();
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
@@ -324,9 +324,9 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	const MouseInfo& current_info = handler->GetInfo();
+	const MouseInfo& current_info = handler.GetInfo();
 
-	if (port_no >= handler->GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
 		return CELL_MOUSE_ERROR_NO_DEVICE;
 	}
@@ -334,7 +334,7 @@ error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataLi
 	// TODO: decr tests show that CELL_MOUSE_ERROR_DATA_READ_FAILED is returned when a mouse is connected
 	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_TABLET_MODE) has any impact
 
-	auto& list = handler->GetTabletDataList(port_no);
+	auto& list = handler.GetTabletDataList(port_no);
 	data->list_num = std::min<u32>(CELL_MOUSE_MAX_DATA_LIST_NUM, static_cast<u32>(list.size()));
 
 	int i = 0;
@@ -357,9 +357,9 @@ error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 {
 	sys_io.warning("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
 
-	const auto handler = g_fxo->get<MouseHandlerBase>();
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	const auto init = handler->init.access();
+	const auto init = handler.init.access();
 
 	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
@@ -369,9 +369,9 @@ error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	const MouseInfo& current_info = handler->GetInfo();
+	const MouseInfo& current_info = handler.GetInfo();
 
-	if (port_no >= handler->GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
 		return CELL_MOUSE_ERROR_NO_DEVICE;
 	}
@@ -379,7 +379,7 @@ error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
 	// TODO: decr tests show that CELL_MOUSE_ERROR_DATA_READ_FAILED is returned when a mouse is connected
 	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_MOUSE_MODE) has any impact
 
-	MouseRawData& current_data = handler->GetRawData(port_no);
+	MouseRawData& current_data = handler.GetRawData(port_no);
 	data->len = current_data.len;
 	current_data.len = 0;
 

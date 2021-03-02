@@ -739,13 +739,14 @@ public:
 	spu_channel exit_status{}; // Threaded SPU exit status (not a channel, but the interface fits)
 	atomic_t<u32> last_exit_status; // Value to be written in exit_status after checking group termination
 
+private:
+	lv2_spu_group* const group; // SPU Thread Group (only safe to access in the spu thread itself)
+public:
+
 	const u32 index; // SPU index
 	std::shared_ptr<utils::shm> shm; // SPU memory
 	const std::add_pointer_t<u8> ls; // SPU LS pointer
 	const spu_type thread_type;
-private:
-	lv2_spu_group* const group; // SPU Thread Group (only safe to access in the spu thread itself)
-public:
 	const u32 option; // sys_spu_thread_initialize option
 	const u32 lv2_id; // The actual id that is used by syscalls
 
@@ -768,6 +769,9 @@ public:
 	u32 last_faddr = 0;
 	u64 last_fail = 0;
 	u64 last_succ = 0;
+
+	u64 mfc_dump_idx = 0;
+	static constexpr u32 max_mfc_dump_idx = SPU_LS_SIZE / sizeof(mfc_cmd_dump);
 
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
@@ -818,6 +822,11 @@ public:
 	spu_type get_type() const
 	{
 		return thread_type;
+	}
+
+	u32 vm_offset() const
+	{
+		return group ? SPU_FAKE_BASE_ADDR + SPU_LS_SIZE * (id & 0xffffff) : RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index;
 	}
 
 	// Returns true if reservation existed but was just discovered to be lost

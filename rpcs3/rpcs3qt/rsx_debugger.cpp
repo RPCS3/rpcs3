@@ -373,8 +373,8 @@ void Buffer::showImage(const QImage& image)
 
 void Buffer::ShowWindowed()
 {
-	const auto render = rsx::get_current_renderer();
-	if (!render)
+	//const auto render = rsx::get_current_renderer();
+	if (!g_fxo->is_init<rsx::thread>())
 		return;
 
 	// TODO: Is there any better way to choose the color buffers

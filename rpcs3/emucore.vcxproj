@@ -111,9 +111,6 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
-    <ClCompile Include="util\fixed_typemap.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="..\Utilities\bin_patch.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>

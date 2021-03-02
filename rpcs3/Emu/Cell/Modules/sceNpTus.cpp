@@ -148,15 +148,15 @@ error_code sceNpTusInit(s32 prio)
 {
 	sceNpTus.warning("sceNpTusInit(prio=%d)", prio);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (tus_manager->is_initialized)
+	if (tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED;
 	}
 
-	tus_manager->is_initialized = true;
+	tus_manager.is_initialized = true;
 
 	return CELL_OK;
 }
@@ -165,15 +165,15 @@ error_code sceNpTusTerm()
 {
 	sceNpTus.warning("sceNpTusTerm()");
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	tus_manager->terminate();
+	tus_manager.terminate();
 
 	return CELL_OK;
 }
@@ -182,10 +182,10 @@ error_code sceNpTusCreateTitleCtx(vm::cptr<SceNpCommunicationId> communicationId
 {
 	sceNpTus.todo("sceNpTusCreateTitleCtx(communicationId=*0x%x, passphrase=*0x%x, selfNpId=*0x%x)", communicationId, passphrase, selfNpId);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
@@ -195,7 +195,7 @@ error_code sceNpTusCreateTitleCtx(vm::cptr<SceNpCommunicationId> communicationId
 		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
 	}
 
-	const auto id = tus_manager->add_title_context();
+	const auto id = tus_manager.add_title_context();
 
 	if (id <= 0)
 	{
@@ -209,15 +209,15 @@ error_code sceNpTusDestroyTitleCtx(s32 titleCtxId)
 {
 	sceNpTus.todo("sceNpTusDestroyTitleCtx(titleCtxId=%d)", titleCtxId);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_title_context_id(titleCtxId))
+	if (!tus_manager.check_title_context_id(titleCtxId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -229,20 +229,20 @@ error_code sceNpTusCreateTransactionCtx(s32 titleCtxId)
 {
 	sceNpTus.todo("sceNpTusCreateTransactionCtx(titleCtxId=%d)", titleCtxId);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_title_context_id(titleCtxId))
+	if (!tus_manager.check_title_context_id(titleCtxId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
 
-	const auto id = tus_manager->add_transaction_context(titleCtxId);
+	const auto id = tus_manager.add_transaction_context(titleCtxId);
 
 	if (id <= 0)
 	{
@@ -256,15 +256,15 @@ error_code sceNpTusDestroyTransactionCtx(s32 transId)
 {
 	sceNpTus.todo("sceNpTusDestroyTransactionCtx(transId=%d)", transId);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->remove_transaction_context_id(transId))
+	if (!tus_manager.remove_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -276,16 +276,16 @@ error_code sceNpTusSetTimeout(s32 ctxId, u32 timeout)
 {
 	sceNpTus.todo("sceNpTusSetTimeout(ctxId=%d, timeout=%d)", ctxId, timeout);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	auto title_context       = tus_manager->get_title_context(ctxId);
-	auto transaction_context = title_context ? tus_manager->get_transaction_context(ctxId) : nullptr;
+	auto title_context       = tus_manager.get_title_context(ctxId);
+	auto transaction_context = title_context ? tus_manager.get_transaction_context(ctxId) : nullptr;
 
 	if (!title_context && !transaction_context)
 	{
@@ -316,15 +316,15 @@ error_code sceNpTusAbortTransaction(s32 transId)
 {
 	sceNpTus.todo("sceNpTusAbortTransaction(transId=%d)", transId);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	auto transaction_context = tus_manager->get_transaction_context(transId);
+	auto transaction_context = tus_manager.get_transaction_context(transId);
 
 	if (!transaction_context)
 	{
@@ -360,15 +360,15 @@ error_code sceNpTusSetMultiSlotVariable(s32 transId, vm::cptr<SceNpId> targetNpI
 {
 	sceNpTus.todo("sceNpTusSetMultiSlotVariable(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, variableArray, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -395,15 +395,15 @@ error_code sceNpTusSetMultiSlotVariableVUser(s32 transId, vm::cptr<SceNpTusVirtu
 {
 	sceNpTus.todo("sceNpTusSetMultiSlotVariableVUser(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, variableArray, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -430,15 +430,15 @@ error_code sceNpTusSetMultiSlotVariableAsync(s32 transId, vm::cptr<SceNpId> targ
 {
 	sceNpTus.todo("sceNpTusSetMultiSlotVariableAsync(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, variableArray, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -465,15 +465,15 @@ error_code sceNpTusSetMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNpTus
 {
 	sceNpTus.todo("sceNpTusSetMultiSlotVariableVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, variableArray, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -500,15 +500,15 @@ error_code sceNpTusGetMultiSlotVariable(s32 transId, vm::cptr<SceNpId> targetNpI
 {
 	sceNpTus.todo("sceNpTusGetMultiSlotVariable(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, variableArray, variableArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -536,15 +536,15 @@ error_code sceNpTusGetMultiSlotVariableVUser(s32 transId, vm::cptr<SceNpTusVirtu
 {
 	sceNpTus.todo("sceNpTusGetMultiSlotVariableVUser(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, variableArray, variableArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -572,15 +572,15 @@ error_code sceNpTusGetMultiSlotVariableAsync(s32 transId, vm::cptr<SceNpId> targ
 {
 	sceNpTus.todo("sceNpTusGetMultiSlotVariableAsync(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, variableArray, variableArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -607,15 +607,15 @@ error_code sceNpTusGetMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNpTus
 {
 	sceNpTus.todo("sceNpTusGetMultiSlotVariableVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, variableArray, variableArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -642,15 +642,15 @@ error_code sceNpTusGetMultiUserVariable(s32 transId, vm::cptr<SceNpId> targetNpI
 {
 	sceNpTus.todo("sceNpTusGetMultiUserVariable(transId=%d, targetNpIdArray=*0x%x, slotId=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpIdArray, slotId, variableArray, variableArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -678,15 +678,15 @@ error_code sceNpTusGetMultiUserVariableVUser(s32 transId, vm::cptr<SceNpTusVirtu
 {
 	sceNpTus.todo("sceNpTusGetMultiUserVariableVUser(transId=%d, targetVirtualUserIdArray=*0x%x, slotId=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserIdArray, slotId, variableArray, variableArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -714,15 +714,15 @@ error_code sceNpTusGetMultiUserVariableAsync(s32 transId, vm::cptr<SceNpId> targ
 {
 	sceNpTus.todo("sceNpTusGetMultiUserVariableAsync(transId=%d, targetNpIdArray=*0x%x, slotId=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpIdArray, slotId, variableArray, variableArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -749,15 +749,15 @@ error_code sceNpTusGetMultiUserVariableVUserAsync(s32 transId, vm::cptr<SceNpTus
 {
 	sceNpTus.todo("sceNpTusGetMultiUserVariableVUserAsync(transId=%d, targetVirtualUserIdArray=*0x%x, slotId=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserIdArray, slotId, variableArray, variableArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -784,15 +784,15 @@ error_code sceNpTusGetFriendsVariable(s32 transId, SceNpTusSlotId slotId, s32 in
 {
 	sceNpTus.todo("sceNpTusGetFriendsVariable(transId=%d, slotId=%d, includeSelf=%d, sortType=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, slotId, includeSelf, sortType, variableArray, variableArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -820,15 +820,15 @@ error_code sceNpTusGetFriendsVariableAsync(s32 transId, SceNpTusSlotId slotId, s
 {
 	sceNpTus.todo("sceNpTusGetFriendsVariableAsync(transId=%d, slotId=%d, includeSelf=%d, sortType=%d, variableArray=*0x%x, variableArraySize=%d, arrayNum=%d, option=*0x%x)", transId, slotId, includeSelf, sortType, variableArray, variableArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -855,15 +855,15 @@ error_code sceNpTusAddAndGetVariable(s32 transId, vm::cptr<SceNpId> targetNpId, 
 {
 	sceNpTus.todo("sceNpTusAddAndGetVariable(transId=%d, targetNpId=*0x%x, slotId=%d, inVariable=%d, outVariable=*0x%x, outVariableSize=%d, option=*0x%x)", transId, targetNpId, slotId, inVariable, outVariable, outVariableSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -885,15 +885,15 @@ error_code sceNpTusAddAndGetVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualU
 {
 	sceNpTus.todo("sceNpTusAddAndGetVariableVUser(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, inVariable=%d, outVariable=*0x%x, outVariableSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, inVariable, outVariable, outVariableSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -915,15 +915,15 @@ error_code sceNpTusAddAndGetVariableAsync(s32 transId, vm::cptr<SceNpId> targetN
 {
 	sceNpTus.todo("sceNpTusAddAndGetVariableAsync(transId=%d, targetNpId=*0x%x, slotId=%d, inVariable=%d, outVariable=*0x%x, outVariableSize=%d, option=*0x%x)", transId, targetNpId, slotId, inVariable, outVariable, outVariableSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -945,15 +945,15 @@ error_code sceNpTusAddAndGetVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVir
 {
 	sceNpTus.todo("sceNpTusAddAndGetVariableVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, inVariable=%d, outVariable=*0x%x, outVariableSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, inVariable, outVariable, outVariableSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -975,15 +975,15 @@ error_code sceNpTusTryAndSetVariable(s32 transId, vm::cptr<SceNpId> targetNpId, 
 {
 	sceNpTus.todo("sceNpTusTryAndSetVariable(transId=%d, targetNpId=*0x%x, slotId=%d, opeType=%d, variable=%d, resultVariable=*0x%x, resultVariableSize=%d, option=*0x%x)", transId, targetNpId, slotId, opeType, variable, resultVariable, resultVariableSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1005,15 +1005,15 @@ error_code sceNpTusTryAndSetVariableVUser(s32 transId, vm::cptr<SceNpTusVirtualU
 {
 	sceNpTus.todo("sceNpTusTryAndSetVariableVUser(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, opeType=%d, variable=%d, resultVariable=*0x%x, resultVariableSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, opeType, variable, resultVariable, resultVariableSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1035,15 +1035,15 @@ error_code sceNpTusTryAndSetVariableAsync(s32 transId, vm::cptr<SceNpId> targetN
 {
 	sceNpTus.todo("sceNpTusTryAndSetVariableAsync(transId=%d, targetNpId=*0x%x, slotId=%d, opeType=%d, variable=%d, resultVariable=*0x%x, resultVariableSize=%d, option=*0x%x)", transId, targetNpId, slotId, opeType, variable, resultVariable, resultVariableSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1065,15 +1065,15 @@ error_code sceNpTusTryAndSetVariableVUserAsync(s32 transId, vm::cptr<SceNpTusVir
 {
 	sceNpTus.todo("sceNpTusTryAndSetVariableVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, opeType=%d, variable=%d, resultVariable=*0x%x, resultVariableSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, opeType, variable, resultVariable, resultVariableSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1095,15 +1095,15 @@ error_code sceNpTusDeleteMultiSlotVariable(s32 transId, vm::cptr<SceNpId> target
 {
 	sceNpTus.todo("sceNpTusDeleteMultiSlotVariable(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1130,15 +1130,15 @@ error_code sceNpTusDeleteMultiSlotVariableVUser(s32 transId, vm::cptr<SceNpTusVi
 {
 	sceNpTus.todo("sceNpTusDeleteMultiSlotVariableVUser(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1165,15 +1165,15 @@ error_code sceNpTusDeleteMultiSlotVariableAsync(s32 transId, vm::cptr<SceNpId> t
 {
 	sceNpTus.todo("sceNpTusDeleteMultiSlotVariableAsync(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1200,15 +1200,15 @@ error_code sceNpTusDeleteMultiSlotVariableVUserAsync(s32 transId, vm::cptr<SceNp
 {
 	sceNpTus.todo("sceNpTusDeleteMultiSlotVariableVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1235,15 +1235,15 @@ error_code sceNpTusSetData(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSl
 {
 	sceNpTus.todo("sceNpTusSetData(transId=%d, targetNpId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetNpId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1266,15 +1266,15 @@ error_code sceNpTusSetDataVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> tar
 {
 	sceNpTus.todo("sceNpTusSetDataAsync(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1297,15 +1297,15 @@ error_code sceNpTusSetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNp
 {
 	sceNpTus.todo("sceNpTusSetDataAsync(transId=%d, targetNpId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetNpId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1327,15 +1327,15 @@ error_code sceNpTusSetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId
 {
 	sceNpTus.todo("sceNpTusSetDataAsync(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, totalSize=%d, sendSize=%d, data=*0x%x, info=*0x%x, infoStructSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, totalSize, sendSize, data, info, infoStructSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1357,15 +1357,15 @@ error_code sceNpTusGetData(s32 transId, vm::cptr<SceNpId> targetNpId, SceNpTusSl
 {
 	sceNpTus.todo("sceNpTusGetData(transId=%d, targetNpId=*0x%x, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, targetNpId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1388,15 +1388,15 @@ error_code sceNpTusGetDataVUser(s32 transId, vm::cptr<SceNpTusVirtualUserId> tar
 {
 	sceNpTus.todo("sceNpTusGetDataVUser(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1419,15 +1419,15 @@ error_code sceNpTusGetDataAsync(s32 transId, vm::cptr<SceNpId> targetNpId, SceNp
 {
 	sceNpTus.todo("sceNpTusGetDataAsync(transId=%d, targetNpId=*0x%x, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, targetNpId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1454,15 +1454,15 @@ error_code sceNpTusGetDataVUserAsync(s32 transId, vm::cptr<SceNpTusVirtualUserId
 {
 	sceNpTus.todo("sceNpTusGetDataVUser(transId=%d, targetVirtualUserId=*0x%x, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, targetVirtualUserId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1484,15 +1484,15 @@ error_code sceNpTusGetMultiSlotDataStatus(s32 transId, vm::cptr<SceNpId> targetN
 {
 	sceNpTus.todo("sceNpTusGetMultiSlotDataStatus(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, statusArray, statusArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1520,15 +1520,15 @@ error_code sceNpTusGetMultiSlotDataStatusVUser(s32 transId, vm::cptr<SceNpTusVir
 {
 	sceNpTus.todo("sceNpTusGetMultiSlotDataStatusVUser(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, statusArray, statusArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1556,15 +1556,15 @@ error_code sceNpTusGetMultiSlotDataStatusAsync(s32 transId, vm::cptr<SceNpId> ta
 {
 	sceNpTus.todo("sceNpTusGetMultiSlotDataStatusAsync(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, statusArray, statusArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1591,15 +1591,15 @@ error_code sceNpTusGetMultiSlotDataStatusVUserAsync(s32 transId, vm::cptr<SceNpT
 {
 	sceNpTus.todo("sceNpTusGetMultiSlotDataStatusVUser(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, statusArray, statusArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1626,15 +1626,15 @@ error_code sceNpTusGetMultiUserDataStatus(s32 transId, vm::cptr<SceNpId> targetN
 {
 	sceNpTus.todo("sceNpTusGetMultiUserDataStatus(transId=%d, targetNpIdArray=*0x%x, slotId=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpIdArray, slotId, statusArray, statusArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1662,15 +1662,15 @@ error_code sceNpTusGetMultiUserDataStatusVUser(s32 transId, vm::cptr<SceNpTusVir
 {
 	sceNpTus.todo("sceNpTusGetMultiUserDataStatusVUser(transId=%d, targetVirtualUserIdArray=*0x%x, slotId=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserIdArray, slotId, statusArray, statusArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1698,15 +1698,15 @@ error_code sceNpTusGetMultiUserDataStatusAsync(s32 transId, vm::cptr<SceNpId> ta
 {
 	sceNpTus.todo("sceNpTusGetMultiUserDataStatusAsync(transId=%d, targetNpIdArray=*0x%x, slotId=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetNpIdArray, slotId, statusArray, statusArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1733,15 +1733,15 @@ error_code sceNpTusGetMultiUserDataStatusVUserAsync(s32 transId, vm::cptr<SceNpT
 {
 	sceNpTus.todo("sceNpTusGetMultiUserDataStatusVUserAsync(transId=%d, targetVirtualUserIdArray=*0x%x, slotId=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserIdArray, slotId, statusArray, statusArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1768,15 +1768,15 @@ error_code sceNpTusGetFriendsDataStatus(s32 transId, SceNpTusSlotId slotId, s32 
 {
 	sceNpTus.todo("sceNpTusGetFriendsDataStatus(transId=%d, slotId=%d, includeSelf=%d, sortType=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, slotId, includeSelf, sortType, statusArray, statusArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1804,15 +1804,15 @@ error_code sceNpTusGetFriendsDataStatusAsync(s32 transId, SceNpTusSlotId slotId,
 {
 	sceNpTus.todo("sceNpTusGetFriendsDataStatusAsync(transId=%d, slotId=%d, includeSelf=%d, sortType=%d, statusArray=*0x%x, statusArraySize=%d, arrayNum=%d, option=*0x%x)", transId, slotId, includeSelf, sortType, statusArray, statusArraySize, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1839,15 +1839,15 @@ error_code sceNpTusDeleteMultiSlotData(s32 transId, vm::cptr<SceNpId> targetNpId
 {
 	sceNpTus.todo("sceNpTusDeleteMultiSlotData(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1874,15 +1874,15 @@ error_code sceNpTusDeleteMultiSlotDataVUser(s32 transId, vm::cptr<SceNpTusVirtua
 {
 	sceNpTus.todo("sceNpTusDeleteMultiSlotDataVUser(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1909,15 +1909,15 @@ error_code sceNpTusDeleteMultiSlotDataAsync(s32 transId, vm::cptr<SceNpId> targe
 {
 	sceNpTus.todo("sceNpTusDeleteMultiSlotDataAsync(transId=%d, targetNpId=*0x%x, slotIdArray=*0x%x, arrayNum=%d, option=*0x%x)", transId, targetNpId, slotIdArray, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1944,15 +1944,15 @@ error_code sceNpTusDeleteMultiSlotDataVUserAsync(s32 transId, vm::cptr<SceNpTusV
 {
 	sceNpTus.todo("sceNpTusDeleteMultiSlotDataVUserAsync(transId=%d, targetVirtualUserId=*0x%x, slotIdArray=*0x%x, arrayNum=%d, option=*0x%x)", transId, targetVirtualUserId, slotIdArray, arrayNum, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -1979,15 +1979,15 @@ error_code sceNpTssGetData(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssD
 {
 	sceNpTus.todo("sceNpTssGetData(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}
@@ -2004,15 +2004,15 @@ error_code sceNpTssGetDataAsync(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceN
 {
 	sceNpTus.todo("sceNpTssGetDataAsync(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
 
-	const auto tus_manager = g_fxo->get<sce_np_tus_manager>();
-	std::scoped_lock lock(tus_manager->mtx);
+	auto& tus_manager = g_fxo->get<sce_np_tus_manager>();
+	std::scoped_lock lock(tus_manager.mtx);
 
-	if (!tus_manager->is_initialized)
+	if (!tus_manager.is_initialized)
 	{
 		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!tus_manager->check_transaction_context_id(transId))
+	if (!tus_manager.check_transaction_context_id(transId))
 	{
 		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
 	}

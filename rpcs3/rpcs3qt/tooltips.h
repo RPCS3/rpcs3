@@ -74,6 +74,7 @@ public:
 
 		const QString ppu_debug                    = tr("Creates PPU logs.\nOnly useful to developers.\nNever use this.");
 		const QString spu_debug                    = tr("Creates SPU logs.\nOnly useful to developers.\nNever use this.");
+		const QString mfc_debug                    = tr("Creates MFC logs.\nOnly useful to developers.\nNever use this.");
 		const QString set_daz_and_ftz              = tr("Sets special MXCSR flags to debug errors in SSE operations.\nOnly used in PPU thread when it's not precise.\nOnly useful to developers.\nNever use this.");
 		const QString accurate_getllar             = tr("Accurately processes SPU MFC_GETLLAR operation.");
 		const QString accurate_spu_dma             = tr("Accurately processes SPU DMA operations.");

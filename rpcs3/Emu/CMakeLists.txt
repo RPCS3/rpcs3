@@ -33,7 +33,6 @@ target_include_directories(rpcs3_emu
 # Utilities
 target_sources(rpcs3_emu PRIVATE
 	../util/atomic.cpp
-	../util/fixed_typemap.cpp
 	../util/logs.cpp
 	../util/yaml.cpp
 	../util/cereal.cpp

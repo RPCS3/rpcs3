@@ -11,14 +11,14 @@ error_code sceNpUtilBandwidthTestInitStart(u32 prio, u64 stack)
 {
 	sceNpUtil.todo("sceNpUtilBandwidthTestInitStart(prio=%d, stack=%d)", prio, stack);
 
-	const auto util_manager = g_fxo->get<sce_np_util_manager>();
+	auto& util_manager = g_fxo->get<sce_np_util_manager>();
 
-	if (util_manager->is_initialized)
+	if (util_manager.is_initialized)
 	{
 		return SCE_NP_ERROR_ALREADY_INITIALIZED;
 	}
 
-	util_manager->is_initialized = true;
+	util_manager.is_initialized = true;
 
 	return CELL_OK;
 }
@@ -27,7 +27,7 @@ error_code sceNpUtilBandwidthTestGetStatus()
 {
 	sceNpUtil.todo("sceNpUtilBandwidthTestGetStatus()");
 
-	if (!g_fxo->get<sce_np_util_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_util_manager>().is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
@@ -39,14 +39,14 @@ error_code sceNpUtilBandwidthTestShutdown(vm::ptr<SceNpUtilBandwidthTestResult> 
 {
 	sceNpUtil.todo("sceNpUtilBandwidthTestShutdown(result=*0x%x)", result);
 
-	const auto util_manager = g_fxo->get<sce_np_util_manager>();
+	auto& util_manager = g_fxo->get<sce_np_util_manager>();
 
-	if (!util_manager->is_initialized)
+	if (!util_manager.is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}
 
-	util_manager->is_initialized = false;
+	util_manager.is_initialized = false;
 
 	return CELL_OK;
 }
@@ -55,7 +55,7 @@ error_code sceNpUtilBandwidthTestAbort()
 {
 	sceNpUtil.todo("sceNpUtilBandwidthTestAbort()");
 
-	if (!g_fxo->get<sce_np_util_manager>()->is_initialized)
+	if (!g_fxo->get<sce_np_util_manager>().is_initialized)
 	{
 		return SCE_NP_ERROR_NOT_INITIALIZED;
 	}

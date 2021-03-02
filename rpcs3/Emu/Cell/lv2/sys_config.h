@@ -352,7 +352,7 @@ class lv2_config_service_event
 			atomic_t<u32> next_id = 0;
 		};
 
-		return g_fxo->get<service_event_id>()->next_id++;
+		return g_fxo->get<service_event_id>().next_id++;
 	}
 
 public:
@@ -385,7 +385,7 @@ public:
 	{
 		auto ev = std::make_shared<lv2_config_service_event>(std::forward<Args>(args)...);
 
-		g_fxo->get<lv2_config>()->add_service_event(ev);
+		g_fxo->get<lv2_config>().add_service_event(ev);
 
 		return ev;
 	}
@@ -393,9 +393,9 @@ public:
 	// Destructor
 	~lv2_config_service_event()
 	{
-		if (auto global = g_fxo->get<lv2_config>())
+		if (auto& global = g_fxo->get<lv2_config>(); !Emu.IsStopped())
 		{
-			global->remove_service_event(id);
+			global.remove_service_event(id);
 		}
 	}
 

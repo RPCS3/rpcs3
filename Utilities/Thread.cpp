@@ -1423,13 +1423,13 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		vm::temporary_unlock(*cpu);
 		u32 pf_port_id = 0;
 
-		if (auto pf_entries = g_fxo->get<page_fault_notification_entries>(); true)
+		if (auto& pf_entries = g_fxo->get<page_fault_notification_entries>(); true)
 		{
 			if (auto mem = vm::get(vm::any, addr))
 			{
-				reader_lock lock(pf_entries->mutex);
+				reader_lock lock(pf_entries.mutex);
 
-				for (const auto& entry : pf_entries->entries)
+				for (const auto& entry : pf_entries.entries)
 				{
 					if (entry.start_addr == mem->addr)
 					{
@@ -1489,10 +1489,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			// Now, place the page fault event onto table so that other functions [sys_mmapper_free_address and pagefault recovery funcs etc]
 			// know that this thread is page faulted and where.
 
-			auto pf_events = g_fxo->get<page_fault_event_entries>();
+			auto& pf_events = g_fxo->get<page_fault_event_entries>();
 			{
-				std::lock_guard pf_lock(pf_events->pf_mutex);
-				pf_events->events.emplace(cpu, addr);
+				std::lock_guard pf_lock(pf_events.pf_mutex);
+				pf_events.events.emplace(cpu, addr);
 			}
 
 			sig_log.warning("Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
@@ -2211,8 +2211,16 @@ thread_state thread_ctrl::state()
 {
 	auto _this = g_tls_this_thread;
 
+	// Guard for recursive calls (TODO: may be more effective to reuse one of m_sync bits)
+	static thread_local bool s_tls_exec = false;
+
 	// Drain execution queue
-	_this->exec();
+	if (!s_tls_exec)
+	{
+		s_tls_exec = true;
+		_this->exec();
+		s_tls_exec = false;
+	}
 
 	return static_cast<thread_state>(_this->m_sync & 3);
 }

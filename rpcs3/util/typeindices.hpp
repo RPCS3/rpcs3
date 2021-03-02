@@ -1,5 +1,14 @@
 #pragma once
 
+#include "util/types.hpp"
+#include "util/shared_ptr.hpp"
+
+#ifndef _MSC_VER
+#define ATTR_PURE __attribute__((pure))
+#else
+#define ATTR_PURE /* nothing available */
+#endif
+
 namespace stx
 {
 	template <typename Info>
@@ -10,12 +19,19 @@ namespace stx
 	class type_info final : public Info
 	{
 		// Current type id (starts from 0)
-		unsigned type = 0u - 1;
+		u32 type = UINT32_MAX;
+
+		u32 size = 1;
+		u32 align = 1;
+		u32 begin = 0;
 
 		// Next typeinfo in linked list
 		type_info* next = nullptr;
 
-		type_info(Info info, decltype(sizeof(int))) noexcept;
+		// Auxiliary pointer to base type
+		const type_info* base = nullptr;
+
+		type_info(Info info, u32 size, u32 align, const type_info* base = nullptr) noexcept;
 
 		friend type_counter<Info>;
 
@@ -25,9 +41,19 @@ namespace stx
 		{
 		}
 
-		unsigned index() const
+		ATTR_PURE u32 index() const
 		{
 			return type;
+		}
+
+		ATTR_PURE u32 pos() const
+		{
+			return begin;
+		}
+
+		ATTR_PURE u32 end() const
+		{
+			return begin + size;
 		}
 	};
 
@@ -46,9 +72,35 @@ namespace stx
 	public:
 		constexpr type_counter() noexcept = default;
 
-		unsigned count() const
+		u32 count() const
 		{
 			return next->index() + 1;
+		}
+
+		u32 align() const
+		{
+			return first.align;
+		}
+
+		u32 size() const
+		{
+			// Get on first use
+			static const u32 sz = [&]()
+			{
+				u32 result = 0;
+
+				for (auto* ptr = first.next; ptr; ptr = ptr->next)
+				{
+					result = ((result + ptr->align - 1) & (u32{0} - ptr->align));
+					ptr->begin = result;
+
+					result = result + ptr->size;
+				}
+
+				return result;
+			}();
+
+			return sz;
 		}
 
 		class const_iterator
@@ -107,7 +159,11 @@ namespace stx
 
 		// Global type info instance
 		template <typename T>
-		static inline const type_info<Info> type{Info::template make_typeinfo<T>(), sizeof(T)};
+		static const type_info<Info> type;
+
+		// Helper for dynamic types
+		template <typename T, typename As>
+		static const type_info<Info> dyn_type;
 	};
 
 	// Global typecounter instance
@@ -118,28 +174,110 @@ namespace stx
 		return typelist_v;
 	}
 
+	// Helper for dynamic types
 	template <typename Info>
-	type_info<Info>::type_info(Info info, decltype(sizeof(int))) noexcept
-		: Info(info)
-		, type(typelist<Info>().count())
+	auto& dyn_typelist()
 	{
-		// Update linked list
+		static type_counter<Info> typelist_v;
+		return typelist_v;
+	}
+
+	template <typename Info> template <typename T>
+	const type_info<Info> type_counter<Info>::type{Info::template make_typeinfo<T>(), sizeof(T), alignof(T)};
+
+	template <typename Info> template <typename T, typename As>
+	const type_info<Info> type_counter<Info>::dyn_type{Info::template make_typeinfo<As>(), sizeof(As), alignof(As), &type_counter<Info>::template type<T>};
+
+	template <typename Info>
+	type_info<Info>::type_info(Info info, u32 _size, u32 _align, const type_info<Info>* cbase) noexcept
+		: Info(info)
+	{
 		auto& tl = typelist<Info>();
+
+		// Update type info
+		this->size = _size > this->size ? _size : this->size;
+		this->align = _align > this->align ? _align : this->align;
+		this->base = cbase;
+
+		// Update global max alignment
+		tl.first.align = _align > tl.first.align ? _align : tl.first.align;
+
+		auto& dl = dyn_typelist<Info>();
+
+		if (cbase)
+		{
+			dl.next->next = this;
+			dl.next       = this;
+
+			// Update base max size/align for dynamic types
+			for (auto ptr = tl.first.next; ptr; ptr = ptr->next)
+			{
+				if (cbase == ptr)
+				{
+					ptr->size = _size > ptr->size ? _size : ptr->size;
+					ptr->align = _align > ptr->align ? _align : ptr->align;
+					this->type = ptr->type;
+				}
+			}
+
+			return;
+		}
+
+		// Update type index
+		this->type = tl.next->type + 1;
+
+		// Update base max size/align for dynamic types
+		for (auto ptr = dl.first.next; ptr; ptr = ptr->next)
+		{
+			if (ptr->base == this)
+			{
+				this->size = ptr->size > this->size ? ptr->size : this->size;
+				this->align = ptr->align > this->align ? ptr->align : this->align;
+				ptr->type = this->type;
+			}
+		}
+
+		// Update linked list
 		tl.next->next = this;
 		tl.next       = this;
 	}
 
 	// Type index accessor
-	template <typename Info, typename T>
-	inline unsigned typeindex() noexcept
+	template <typename Info, typename T, typename As = T>
+	ATTR_PURE inline u32 typeindex() noexcept
 	{
-		return type_counter<Info>::template type<T>.index();
+		static_assert(sizeof(T) > 0);
+
+		if constexpr (std::is_same_v<T, As>)
+		{
+			return type_counter<Info>::template type<T>.index();
+		}
+		else
+		{
+			static_assert(sizeof(As) > 0);
+			static_assert(is_same_ptr<T, As>());
+			return type_counter<Info>::template dyn_type<T, As>.index();
+		}
+	}
+
+	// Type global offset
+	template <typename Info, typename T>
+	ATTR_PURE inline u32 typeoffset() noexcept
+	{
+		static_assert(sizeof(T) > 0);
+
+		return type_counter<Info>::template type<T>.pos();
 	}
 
 	// Type info accessor
-	template <typename Info, typename T>
-	inline const Info& typedata() noexcept
+	template <typename Info, typename T, typename As = T>
+	ATTR_PURE inline const Info& typedata() noexcept
 	{
-		return type_counter<Info>::template type<T>;
+		static_assert(sizeof(T) > 0 && sizeof(As) > 0);
+		static_assert(is_same_ptr<T, As>());
+
+		return type_counter<Info>::template dyn_type<T, As>;
 	}
 }
+
+#undef ATTR_PURE
