@@ -38,7 +38,12 @@ struct avconf_manager
 	std::vector<CellAudioInDeviceInfo> devices;
 
 	void copy_device_info(u32 num, vm::ptr<CellAudioInDeviceInfo> info);
+
 	avconf_manager();
+
+	avconf_manager(const avconf_manager&) = delete;
+
+	avconf_manager& operator=(const avconf_manager&) = delete;
 };
 
 avconf_manager::avconf_manager()

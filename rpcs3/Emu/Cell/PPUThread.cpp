@@ -2597,6 +2597,13 @@ extern void ppu_initialize()
 	}
 }
 
+struct ppu_toc_manager
+{
+	std::unordered_map<u32, u32> toc_map;
+
+	shared_mutex mutex;
+};
+
 bool ppu_initialize(const ppu_module& info, bool check_only)
 {
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
@@ -2607,7 +2614,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		}
 
 		// Temporarily
-		s_ppu_toc = &g_fxo->get<std::unordered_map<u32, u32>>();
+		s_ppu_toc = &g_fxo->get<ppu_toc_manager>().toc_map;
 
 		for (const auto& func : info.funcs)
 		{
@@ -2994,7 +3001,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				}
 
 				// Keep allocating workload
-				const auto [obj_name, part] = std::as_const(workload)[i];
+				const auto& [obj_name, part] = std::as_const(workload)[i];
 
 				// Allocate "core"
 				std::lock_guard jlock(g_fxo->get<jit_core_allocator>().sem);

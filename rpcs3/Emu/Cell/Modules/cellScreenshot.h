@@ -27,9 +27,7 @@ struct CellScreenShotSetParam
 	vm::bptr<void> reserved;
 };
 
-extern shared_mutex screenshot_mtx;
-
-struct screenshot_manager
+struct screenshot_info
 {
 	bool is_enabled{false};
 
@@ -47,4 +45,9 @@ struct screenshot_manager
 	std::string get_game_title() const;
 	std::string get_game_comment() const;
 	std::string get_screenshot_path(const std::string& date_path) const;
+};
+
+struct screenshot_manager : public screenshot_info
+{
+	shared_mutex mutex;
 };

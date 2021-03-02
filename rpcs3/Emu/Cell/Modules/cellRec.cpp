@@ -58,8 +58,10 @@ using CellRecCallback = void(s32 recStatus, s32 recError, vm::ptr<void> userdata
 
 struct rec_info
 {
-	vm::ptr<CellRecCallback> cb;
-	vm::ptr<void> cbUserData;
+	vm::ptr<CellRecCallback> cb{};
+	vm::ptr<void> cbUserData{};
+
+	shared_mutex mutex;
 };
 
 error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cptr<CellRecParam> pParam, u32 container, vm::ptr<CellRecCallback> cb, vm::ptr<void> cbUserData)

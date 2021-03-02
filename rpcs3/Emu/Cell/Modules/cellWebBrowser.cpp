@@ -8,8 +8,10 @@ LOG_CHANNEL(cellSysutil);
 
 struct browser_info
 {
-	vm::ptr<CellWebBrowserSystemCallback> system_cb;
-	vm::ptr<void> userData;
+	vm::ptr<CellWebBrowserSystemCallback> system_cb{};
+	vm::ptr<void> userData{};
+
+	shared_mutex mutex;
 };
 
 error_code cellWebBrowserActivate()

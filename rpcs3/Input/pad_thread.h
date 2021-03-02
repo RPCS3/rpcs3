@@ -17,6 +17,8 @@ class pad_thread
 {
 public:
 	pad_thread(void* _curthread, void* _curwindow, std::string_view title_id); // void * instead of QThread * and QWindow * because of include in emucore
+	pad_thread(const pad_thread&) = delete;
+	pad_thread& operator=(const pad_thread&) = delete;
 	~pad_thread();
 
 	PadInfo& GetInfo() { return m_info; }

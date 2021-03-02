@@ -63,8 +63,10 @@ void fmt_class_string<CellMusic2Error>::format(std::string& out, u64 arg)
 
 struct music_state
 {
-	vm::ptr<void(u32 event, vm::ptr<void> param, vm::ptr<void> userData)> func;
-	vm::ptr<void> userData;
+	shared_mutex mutex;
+
+	vm::ptr<void(u32 event, vm::ptr<void> param, vm::ptr<void> userData)> func{};
+	vm::ptr<void> userData{};
 };
 
 error_code cellMusicGetSelectionContext(vm::ptr<CellMusicSelectionContext> context)

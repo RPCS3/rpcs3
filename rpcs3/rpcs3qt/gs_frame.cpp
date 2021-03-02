@@ -481,11 +481,11 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 				}
 			}
 
-			screenshot_manager manager;
+			screenshot_info manager;
 			{
-				auto& fxo = g_fxo->get<screenshot_manager>();
-				std::lock_guard lock(screenshot_mtx);
-				manager = fxo;
+				auto& s = g_fxo->get<screenshot_manager>();
+				std::lock_guard lock(s.mutex);
+				manager = s;
 			}
 
 			struct scoped_png_ptrs

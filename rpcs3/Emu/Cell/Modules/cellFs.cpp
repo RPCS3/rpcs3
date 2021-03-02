@@ -938,6 +938,8 @@ struct fs_aio_thread : ppu_thread
 struct fs_aio_manager
 {
 	std::shared_ptr<fs_aio_thread> thread;
+
+	shared_mutex mutex;
 };
 
 s32 cellFsAioInit(vm::cptr<char> mount_point)

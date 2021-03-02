@@ -85,14 +85,18 @@ using CellMusicDecode2Callback = void(u32, vm::ptr<void> param, vm::ptr<void> us
 
 struct music_decode
 {
-	vm::ptr<CellMusicDecodeCallback> func;
-	vm::ptr<void> userData;
+	vm::ptr<CellMusicDecodeCallback> func{};
+	vm::ptr<void> userData{};
+
+	shared_mutex mutex;
 };
 
 struct music_decode2
 {
-	vm::ptr<CellMusicDecode2Callback> func;
-	vm::ptr<void> userData;
+	vm::ptr<CellMusicDecode2Callback> func{};
+	vm::ptr<void> userData{};
+
+	shared_mutex mutex;
 };
 
 error_code cellMusicDecodeInitialize(s32 mode, u32 container, s32 spuPriority, vm::ptr<CellMusicDecodeCallback> func, vm::ptr<void> userData)

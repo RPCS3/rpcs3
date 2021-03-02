@@ -55,7 +55,6 @@ void fmt_class_string<CellSearchError>::format(std::string& out, u64 arg)
 	});
 }
 
-namespace {
 enum class search_state
 {
 	not_initialized = 0,
@@ -94,8 +93,14 @@ struct search_content_t
 	} data;
 };
 
-using ContentIdType = std::pair<u64, std::shared_ptr<search_content_t>>;
-using ContentIdMap = std::unordered_map<u64, std::shared_ptr<search_content_t>>;
+using content_id_type = std::pair<u64, std::shared_ptr<search_content_t>>;
+
+struct content_id_map
+{
+	std::unordered_map<u64, std::shared_ptr<search_content_t>> map;
+
+	shared_mutex mutex;
+};
 
 struct search_object_t
 {
@@ -103,11 +108,10 @@ struct search_object_t
 	static const u32 id_base  = 1;
 	static const u32 id_step  = 1;
 	static const u32 id_count = 1024; // TODO
-	static const u32 invalid  = 0xFFFFFFFF;
 
-	std::vector<ContentIdType> content_ids;
+	std::vector<content_id_type> content_ids;
 };
-}
+
 error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<CellSearchSystemCallback> func, vm::ptr<void> userData)
 {
 	cellSearch.warning("cellSearchInitialize(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x)", +mode, container, func, userData);
@@ -242,7 +246,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 
 	const u32 id = *outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=, &content_map = g_fxo->get<ContentIdMap>(), &search](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &content_map = g_fxo->get<content_id_map>(), &search](ppu_thread& ppu) -> s32
 	{
 		auto curr_search = idm::get<search_object_t>(id);
 		vm::var<CellSearchResultParam> resultParam;
@@ -320,8 +324,8 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 				}
 
 				const u64 hash = std::hash<std::string>()(item_path);
-				auto found = content_map.find(hash);
-				if (found == content_map.end()) // content isn't yet being tracked
+				auto found = content_map.map.find(hash);
+				if (found == content_map.map.end()) // content isn't yet being tracked
 				{
 					//auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
 
@@ -391,7 +395,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 					}
 					}
 
-					content_map.emplace(hash, curr_find);
+					content_map.map.emplace(hash, curr_find);
 					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
 
 					cellSearch.notice("cellSearchStartListSearch(): Content ID: %08X   Path: \"%s\"", hash, item_path);
@@ -467,9 +471,9 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	auto& content_map = g_fxo->get<ContentIdMap>();
-	auto found = content_map.find(*reinterpret_cast<const u64*>(listId->data));
-	if (found == content_map.end())
+	auto& content_map = g_fxo->get<content_id_map>();
+	auto found = content_map.map.find(*reinterpret_cast<const u64*>(listId->data));
+	if (found == content_map.map.end())
 	{
 		// content ID not found, perform a search first
 		return CELL_SEARCH_ERROR_CONTENT_NOT_FOUND;
@@ -553,8 +557,8 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 				const std::string item_path(vpath + "/" + item.name);
 
 				const u64 hash = std::hash<std::string>()(item_path);
-				auto found = content_map.find(hash);
-				if (found == content_map.end()) // content isn't yet being tracked
+				auto found = content_map.map.find(hash);
+				if (found == content_map.map.end()) // content isn't yet being tracked
 				{
 					auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
 
@@ -783,7 +787,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
 					}
 
-					content_map.emplace(hash, curr_find);
+					content_map.map.emplace(hash, curr_find);
 					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
 
 					cellSearch.notice("cellSearchStartContentSearchInList(): Content ID: %08X   Path: \"%s\"", hash, item_path);
@@ -871,7 +875,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 
 	const u32 id = *outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=, &content_map = g_fxo->get<ContentIdMap>(), &search](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &content_map = g_fxo->get<content_id_map>(), &search](ppu_thread& ppu) -> s32
 	{
 		auto curr_search = idm::get<search_object_t>(id);
 		vm::var<CellSearchResultParam> resultParam;
@@ -906,8 +910,8 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 				const std::string item_path(relative_vpath + "/" + item.name);
 
 				const u64 hash = std::hash<std::string>()(item_path);
-				auto found = content_map.find(hash);
-				if (found == content_map.end()) // content isn't yet being tracked
+				auto found = content_map.map.find(hash);
+				if (found == content_map.map.end()) // content isn't yet being tracked
 				{
 					auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
 
@@ -985,7 +989,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
 					}
 
-					content_map.emplace(hash, curr_find);
+					content_map.map.emplace(hash, curr_find);
 					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
 
 					cellSearch.notice("cellSearchStartContentSearch(): Content ID: %08X   Path: \"%s\"", hash, item_path);
@@ -1228,9 +1232,9 @@ error_code cellSearchGetContentInfoByContentId(vm::cptr<CellSearchContentId> con
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	auto& content_map = g_fxo->get<ContentIdMap>();
-	auto found = content_map.find(*reinterpret_cast<const u64*>(contentId->data));
-	if (found != content_map.end())
+	auto& content_map = g_fxo->get<content_id_map>();
+	auto found = content_map.map.find(*reinterpret_cast<const u64*>(contentId->data));
+	if (found != content_map.map.end())
 	{
 		const auto& content_info = found->second;
 		switch (content_info->type)
@@ -1439,9 +1443,9 @@ error_code cellSearchGetContentInfoPath(vm::cptr<CellSearchContentId> contentId,
 	}
 
 	const u64 id = *reinterpret_cast<const u64*>(contentId->data);
-	auto& content_map = g_fxo->get<ContentIdMap>();
-	auto found = content_map.find(id);
-	if(found != content_map.end())
+	auto& content_map = g_fxo->get<content_id_map>();
+	auto found = content_map.map.find(id);
+	if(found != content_map.map.end())
 	{
 		std::memcpy(infoPath.get_ptr(), &found->second->infoPath, sizeof(found->second->infoPath));
 	}

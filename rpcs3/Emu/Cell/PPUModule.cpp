@@ -101,6 +101,12 @@ const ppu_static_module* ppu_module_manager::get_module(const std::string& name)
 // Global linkage information
 struct ppu_linkage_info
 {
+	ppu_linkage_info() = default;
+
+	ppu_linkage_info(const ppu_linkage_info&) = delete;
+
+	ppu_linkage_info& operator=(const ppu_linkage_info&) = delete;
+
 	struct module_data
 	{
 		struct info

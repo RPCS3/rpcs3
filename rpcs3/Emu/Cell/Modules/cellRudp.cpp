@@ -65,7 +65,9 @@ struct rudp_info
 
 	// event handler function
 	vm::ptr<CellRudpEventHandler> handler = vm::null;
-	vm::ptr<void> handler_arg;
+	vm::ptr<void> handler_arg{};
+
+	shared_mutex mutex;
 };
 
 error_code cellRudpInit(vm::ptr<CellRudpAllocator> allocator)

@@ -1665,6 +1665,12 @@ void spu_thread::cpu_task()
 
 struct raw_spu_cleanup
 {
+	raw_spu_cleanup() = default;
+
+	raw_spu_cleanup(const raw_spu_cleanup&) = delete;
+
+	raw_spu_cleanup& operator =(const raw_spu_cleanup&) = delete;
+
 	~raw_spu_cleanup()
 	{
 		std::memset(spu_thread::g_raw_spu_id, 0, sizeof(spu_thread::g_raw_spu_id));
