@@ -412,10 +412,7 @@ void pad_settings_dialog::InitButtons()
 			}
 		}
 
-		if (m_enable_battery)
-		{
-			ui->pb_battery->setValue(battery_level);
-		}
+		ui->pb_battery->setValue(m_enable_battery ? battery_level : 0);
 
 		if (val <= 0)
 		{
@@ -436,14 +433,14 @@ void pad_settings_dialog::InitButtons()
 	const auto& fail_callback = [this](const std::string& pad_name)
 	{
 		SwitchPadInfo(pad_name, false);
+
 		if (m_enable_buttons)
 		{
 			SwitchButtons(false);
 		}
-		if (m_enable_battery)
-		{
-			ui->pb_battery->setValue(0);
-		}
+
+		ui->pb_battery->setValue(0);
+
 		if (m_handler->has_deadzones())
 		{
 			ui->preview_trigger_left->setValue(0);
