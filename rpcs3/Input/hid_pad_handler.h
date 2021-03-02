@@ -102,6 +102,8 @@ protected:
 		return *reinterpret_cast<const u32*>(buf);
 	}
 
+	u32 get_battery_color(u8 battery_level, int brightness) const;
+
 private:
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 };

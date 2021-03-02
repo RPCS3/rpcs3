@@ -62,8 +62,6 @@ public:
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
-	u32 get_battery_color(u8 battery_level, int brightness);
-
 	// This function gets us usuable buffer from the rawbuffer of padData
 	bool GetCalibrationData(DS4Device* ds4Device);
 
