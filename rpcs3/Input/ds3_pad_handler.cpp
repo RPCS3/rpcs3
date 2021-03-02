@@ -6,11 +6,11 @@ LOG_CHANNEL(ds3_log, "DS3");
 
 struct ds3_rumble
 {
-	u8 padding              = 0;
+	u8 padding              = 0x00;
 	u8 small_motor_duration = 0xFF; // 0xff means forever
-	u8 small_motor_on       = 0;    // 0 or 1 (off/on)
+	u8 small_motor_on       = 0x00; // 0 or 1 (off/on)
 	u8 large_motor_duration = 0xFF; // 0xff means forever
-	u8 large_motor_force    = 0;    // 0 to 255
+	u8 large_motor_force    = 0x00; // 0 to 255
 };
 
 struct ds3_led
@@ -18,21 +18,23 @@ struct ds3_led
 	u8 duration             = 0xFF; // total duration, 0xff means forever
 	u8 interval_duration    = 0xFF; // interval duration in deciseconds
 	u8 enabled              = 0x10;
-	u8 interval_portion_off = 0;    // in percent (100% = 0xFF)
+	u8 interval_portion_off = 0x00; // in percent (100% = 0xFF)
 	u8 interval_portion_on  = 0xFF; // in percent (100% = 0xFF)
 };
 
 struct ds3_output_report
 {
-	u8 report_id = 0;
 #ifdef _WIN32
+	u8 report_id = 0x00;
 	u8 idk_what_this_is[3] = {0x02, 0x00, 0x00};
+#else
+	u8 report_id = 0x01;
 #endif
 	ds3_rumble rumble;
-	u8 padding[4]  = {0, 0, 0, 0};
-	u8 led_enabled = 0; // LED 1 = 0x02, LED 2 = 0x04, etc.
+	u8 padding[4]  = {0x00, 0x00, 0x00, 0x00};
+	u8 led_enabled = 0x00; // LED 1 = 0x02, LED 2 = 0x04, etc.
 	ds3_led led[4];
-	ds3_led led_5;      // reserved for another LED
+	ds3_led led_5;         // reserved for another LED
 };
 
 constexpr u8 battery_capacity[] = {0, 1, 25, 50, 75, 100};
@@ -156,11 +158,11 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 	if (ds3dev->config->led_battery_indicator)
 	{
 		if (ds3dev->battery_level >= 75)
-			output_report.led_enabled = 0b00010000;
+			output_report.led_enabled = 0b00011110;
 		else if (ds3dev->battery_level >= 50)
-			output_report.led_enabled = 0b00001000;
+			output_report.led_enabled = 0b00001110;
 		else if (ds3dev->battery_level >= 25)
-			output_report.led_enabled = 0b00000100;
+			output_report.led_enabled = 0b00000110;
 		else
 			output_report.led_enabled = 0b00000010;
 	}
@@ -332,7 +334,7 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 		if (ds3dev->padData[0] == 0x01 && ds3dev->padData[1] != 0xFF)
 #endif
 		{
-			const u8 battery_status = ds3dev->padData[12 + DS3_HID_OFFSET];
+			const u8 battery_status = ds3dev->padData[30 + DS3_HID_OFFSET];
 
 			if (battery_status >= 0xEE)
 			{
