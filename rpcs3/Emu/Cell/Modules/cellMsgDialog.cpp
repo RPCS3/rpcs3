@@ -119,7 +119,7 @@ struct msg_dlg_thread_info
 					dlg->close(true, true);
 				}
 			}
-			else if (const auto dlg = g_fxo->get<msg_info>()->get())
+			else if (const auto dlg = g_fxo->get<msg_info>().get())
 			{
 				if (!wait_until.compare_and_swap_test(new_value, 0))
 				{
@@ -173,7 +173,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 		return res;
 	}
 
-	const auto dlg = g_fxo->get<msg_info>()->make();
+	const auto dlg = g_fxo->get<msg_info>().make();
 
 	if (!dlg)
 	{
@@ -197,8 +197,8 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 				});
 			}
 
-			g_fxo->get<msg_dlg_thread>()->wait_until = 0;
-			g_fxo->get<msg_info>()->remove();
+			g_fxo->get<msg_dlg_thread>().wait_until = 0;
+			g_fxo->get<msg_info>().remove();
 		}
 
 		input::SetIntercepted(false);
@@ -234,7 +234,7 @@ error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString,
 
 	if (is_blocking)
 	{
-		while (auto dlg = g_fxo->get<msg_info>()->get())
+		while (auto dlg = g_fxo->get<msg_info>().get())
 		{
 			if (Emu.IsStopped() || dlg->state != MsgDialogState::Open)
 			{
@@ -437,25 +437,25 @@ error_code cellMsgDialogClose(f32 delay)
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
-			const auto thr = g_fxo->get<msg_dlg_thread>();
-			thr->wait_until = wait_until;
-			thr->wait_until.notify_one();
+			auto& thr = g_fxo->get<msg_dlg_thread>();
+			thr.wait_until = wait_until;
+			thr.wait_until.notify_one();
 			return CELL_OK;
 		}
 
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	const auto dlg = g_fxo->get<msg_info>()->get();
+	const auto dlg = g_fxo->get<msg_info>().get();
 
 	if (!dlg)
 	{
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	const auto thr = g_fxo->get<msg_dlg_thread>();
-	thr->wait_until = wait_until;
-	thr->wait_until.notify_one();
+	auto& thr = g_fxo->get<msg_dlg_thread>();
+	thr.wait_until = wait_until;
+	thr.wait_until.notify_one();
 	return CELL_OK;
 }
 
@@ -467,13 +467,13 @@ error_code cellMsgDialogAbort()
 	{
 		if (auto dlg = manager->get<rsx::overlays::message_dialog>())
 		{
-			g_fxo->get<msg_dlg_thread>()->wait_until = 0;
+			g_fxo->get<msg_dlg_thread>().wait_until = 0;
 			dlg->close(false, true);
 			return CELL_OK;
 		}
 	}
 
-	const auto dlg = g_fxo->get<msg_info>()->get();
+	const auto dlg = g_fxo->get<msg_info>().get();
 
 	if (!dlg)
 	{
@@ -485,8 +485,8 @@ error_code cellMsgDialogAbort()
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
 
-	g_fxo->get<msg_dlg_thread>()->wait_until = 0;
-	g_fxo->get<msg_info>()->remove(); // this shouldn't call on_close
+	g_fxo->get<msg_dlg_thread>().wait_until = 0;
+	g_fxo->get<msg_info>().remove(); // this shouldn't call on_close
 	input::SetIntercepted(false);     // so we need to reenable the pads here
 
 	return CELL_OK;
@@ -522,7 +522,7 @@ error_code cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> m
 		}
 	}
 
-	const auto dlg = g_fxo->get<msg_info>()->get();
+	const auto dlg = g_fxo->get<msg_info>().get();
 
 	if (!dlg)
 	{
@@ -554,7 +554,7 @@ error_code cellMsgDialogProgressBarReset(u32 progressBarIndex)
 		}
 	}
 
-	const auto dlg = g_fxo->get<msg_info>()->get();
+	const auto dlg = g_fxo->get<msg_info>().get();
 
 	if (!dlg)
 	{
@@ -586,7 +586,7 @@ error_code cellMsgDialogProgressBarInc(u32 progressBarIndex, u32 delta)
 		}
 	}
 
-	const auto dlg = g_fxo->get<msg_info>()->get();
+	const auto dlg = g_fxo->get<msg_info>().get();
 
 	if (!dlg)
 	{

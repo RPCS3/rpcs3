@@ -96,14 +96,14 @@ error_code cellNetCtlInit()
 {
 	cellNetCtl.warning("cellNetCtlInit()");
 
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (nph->is_netctl_init)
+	if (nph.is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_TERMINATED;
 	}
 
-	nph->is_netctl_init = true;
+	nph.is_netctl_init = true;
 
 	return CELL_OK;
 }
@@ -112,17 +112,18 @@ void cellNetCtlTerm()
 {
 	cellNetCtl.warning("cellNetCtlTerm()");
 
-	const auto nph      = g_fxo->get<named_thread<np_handler>>();
-	nph->is_netctl_init = false;
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	nph.is_netctl_init = false;
 }
 
 error_code cellNetCtlGetState(vm::ptr<s32> state)
 {
 	cellNetCtl.trace("cellNetCtlGetState(state=*0x%x)", state);
 
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (!nph->is_netctl_init)
+	if (!nph.is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -132,7 +133,7 @@ error_code cellNetCtlGetState(vm::ptr<s32> state)
 		return CELL_NET_CTL_ERROR_INVALID_ADDR;
 	}
 
-	*state = nph->get_net_status();
+	*state = nph.get_net_status();
 
 	return CELL_OK;
 }
@@ -141,9 +142,9 @@ error_code cellNetCtlAddHandler(vm::ptr<cellNetCtlHandler> handler, vm::ptr<void
 {
 	cellNetCtl.todo("cellNetCtlAddHandler(handler=*0x%x, arg=*0x%x, hid=*0x%x)", handler, arg, hid);
 
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (!nph->is_netctl_init)
+	if (!nph.is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -160,9 +161,9 @@ error_code cellNetCtlDelHandler(s32 hid)
 {
 	cellNetCtl.todo("cellNetCtlDelHandler(hid=0x%x)", hid);
 
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (!nph->is_netctl_init)
+	if (!nph.is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -179,9 +180,9 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
 	cellNetCtl.warning("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (!nph->is_netctl_init)
+	if (!nph.is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -193,11 +194,11 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 
 	if (code == CELL_NET_CTL_INFO_ETHER_ADDR)
 	{
-		memcpy(info->ether_addr.data, nph->get_ether_addr().data(), 6);
+		memcpy(info->ether_addr.data, nph.get_ether_addr().data(), 6);
 		return CELL_OK;
 	}
 
-	if (nph->get_net_status() == CELL_NET_CTL_STATE_Disconnected)
+	if (nph.get_net_status() == CELL_NET_CTL_STATE_Disconnected)
 	{
 		return CELL_NET_CTL_ERROR_NOT_CONNECTED;
 	}
@@ -211,12 +212,12 @@ error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 	case CELL_NET_CTL_INFO_LINK_TYPE: info->link_type = CELL_NET_CTL_LINK_TYPE_10BASE_FULL; break;
 	case CELL_NET_CTL_INFO_IP_CONFIG: info->ip_config = CELL_NET_CTL_IP_STATIC; break;
 	case CELL_NET_CTL_INFO_DEFAULT_ROUTE: strcpy_trunc(info->default_route, "192.168.1.1"); break;
-	case CELL_NET_CTL_INFO_PRIMARY_DNS: strcpy_trunc(info->primary_dns, np_handler::ip_to_string(nph->get_dns_ip())); break;
-	case CELL_NET_CTL_INFO_SECONDARY_DNS: strcpy_trunc(info->secondary_dns, np_handler::ip_to_string(nph->get_dns_ip())); break;
-	case CELL_NET_CTL_INFO_IP_ADDRESS: strcpy_trunc(info->ip_address, np_handler::ip_to_string(nph->get_local_ip_addr())); break;
+	case CELL_NET_CTL_INFO_PRIMARY_DNS: strcpy_trunc(info->primary_dns, np_handler::ip_to_string(nph.get_dns_ip())); break;
+	case CELL_NET_CTL_INFO_SECONDARY_DNS: strcpy_trunc(info->secondary_dns, np_handler::ip_to_string(nph.get_dns_ip())); break;
+	case CELL_NET_CTL_INFO_IP_ADDRESS: strcpy_trunc(info->ip_address, np_handler::ip_to_string(nph.get_local_ip_addr())); break;
 	case CELL_NET_CTL_INFO_NETMASK: strcpy_trunc(info->netmask, "255.255.255.255"); break;
 	case CELL_NET_CTL_INFO_HTTP_PROXY_CONFIG: info->http_proxy_config = 0; break;
-	case CELL_NET_CTL_INFO_DHCP_HOSTNAME: strcpy_trunc(info->dhcp_hostname, nph->get_hostname()); break;
+	case CELL_NET_CTL_INFO_DHCP_HOSTNAME: strcpy_trunc(info->dhcp_hostname, nph.get_hostname()); break;
 	default: cellNetCtl.error("Unsupported request: %s", InfoCodeToName(code)); break;
 	}
 
@@ -240,9 +241,9 @@ error_code cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogPa
 {
 	cellNetCtl.error("cellNetCtlNetStartDialogLoadAsync(param=*0x%x)", param);
 
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (!nph->is_netctl_init)
+	if (!nph.is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -263,7 +264,7 @@ error_code cellNetCtlNetStartDialogLoadAsync(vm::cptr<CellNetCtlNetStartDialogPa
 	}
 
 	// This is a hack for Diva F 2nd that registers the sysutil callback after calling this function.
-	g_fxo->get<named_thread<netstart_hack>>()->operator()(0);
+	g_fxo->get<named_thread<netstart_hack>>()(0);
 
 	return CELL_OK;
 }
@@ -272,9 +273,9 @@ error_code cellNetCtlNetStartDialogAbortAsync()
 {
 	cellNetCtl.error("cellNetCtlNetStartDialogAbortAsync()");
 
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (!nph->is_netctl_init)
+	if (!nph.is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -286,9 +287,9 @@ error_code cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogR
 {
 	cellNetCtl.warning("cellNetCtlNetStartDialogUnloadAsync(result=*0x%x)", result);
 
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (!nph->is_netctl_init)
+	if (!nph.is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}
@@ -303,7 +304,7 @@ error_code cellNetCtlNetStartDialogUnloadAsync(vm::ptr<CellNetCtlNetStartDialogR
 		return CELL_NET_CTL_ERROR_INVALID_SIZE;
 	}
 
-	result->result = nph->get_net_status() == CELL_NET_CTL_STATE_IPObtained ? 0 : CELL_NET_CTL_ERROR_DIALOG_CANCELED;
+	result->result = nph.get_net_status() == CELL_NET_CTL_STATE_IPObtained ? 0 : CELL_NET_CTL_ERROR_DIALOG_CANCELED;
 
 	sysutil_send_system_cmd(CELL_SYSUTIL_NET_CTL_NETSTART_UNLOADED, 0);
 	return CELL_OK;
@@ -313,9 +314,9 @@ error_code cellNetCtlGetNatInfo(vm::ptr<CellNetCtlNatInfo> natInfo)
 {
 	cellNetCtl.warning("cellNetCtlGetNatInfo(natInfo=*0x%x)", natInfo);
 
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
-	if (!nph->is_netctl_init)
+	if (!nph.is_netctl_init)
 	{
 		return CELL_NET_CTL_ERROR_NOT_INITIALIZED;
 	}

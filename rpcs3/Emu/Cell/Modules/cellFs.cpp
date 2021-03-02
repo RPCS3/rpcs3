@@ -967,16 +967,16 @@ s32 cellFsAioRead(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	// TODO: detect mount point and send AIO request to the AIO thread of this mount point
 
-	const auto m = g_fxo->get<fs_aio_manager>();
+	auto& m = g_fxo->get<fs_aio_manager>();
 
-	if (!m)
+	if (!m.thread)
 	{
 		return CELL_ENXIO;
 	}
 
 	const s32 xid = (*id = ++g_fs_aio_id);
 
-	m->thread->cmd_list
+	m.thread->cmd_list
 	({
 		{ 1, xid },
 		{ aio, func },
@@ -991,16 +991,16 @@ s32 cellFsAioWrite(vm::ptr<CellFsAio> aio, vm::ptr<s32> id, fs_aio_cb_t func)
 
 	// TODO: detect mount point and send AIO request to the AIO thread of this mount point
 
-	const auto m = g_fxo->get<fs_aio_manager>();
+	auto& m = g_fxo->get<fs_aio_manager>();
 
-	if (!m)
+	if (!m.thread)
 	{
 		return CELL_ENXIO;
 	}
 
 	const s32 xid = (*id = ++g_fs_aio_id);
 
-	m->thread->cmd_list
+	m.thread->cmd_list
 	({
 		{ 2, xid },
 		{ aio, func },

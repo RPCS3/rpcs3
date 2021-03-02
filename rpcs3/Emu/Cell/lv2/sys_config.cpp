@@ -263,10 +263,10 @@ error_code sys_config_open(u32 equeue_hdl, vm::ptr<u32> out_config_hdl)
 	}
 
 	// Initialize lv2_config global state
-	const auto global = g_fxo->get<lv2_config>();
+	auto& global = g_fxo->get<lv2_config>();
 	if (true)
 	{
-		global->initialize();
+		global.initialize();
 	}
 
 	// Create a lv2_config_handle object
@@ -307,7 +307,7 @@ error_code sys_config_get_service_event(u32 config_hdl, u32 event_id, vm::ptr<sy
 	}
 
 	// Find service_event object
-	const auto event = g_fxo->get<lv2_config>()->find_event(event_id);
+	const auto event = g_fxo->get<lv2_config>().find_event(event_id);
 	if (!event)
 	{
 		return CELL_ESRCH;

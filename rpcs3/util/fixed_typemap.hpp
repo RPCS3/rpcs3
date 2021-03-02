@@ -256,15 +256,15 @@ namespace stx
 
 		// Obtain object pointer (may be uninitialized memory)
 		template <typename T>
-		T* get() const noexcept
+		T& get() const noexcept
 		{
 			if constexpr (Size != 0)
 			{
-				return std::launder(reinterpret_cast<T*>(m_data + stx::typeoffset<typeinfo, std::decay_t<T>>()));
+				return *std::launder(reinterpret_cast<T*>(m_data + stx::typeoffset<typeinfo, std::decay_t<T>>()));
 			}
 			else
 			{
-				return std::launder(reinterpret_cast<T*>(m_list + stx::typeoffset<typeinfo, std::decay_t<T>>()));
+				return *std::launder(reinterpret_cast<T*>(m_list + stx::typeoffset<typeinfo, std::decay_t<T>>()));
 			}
 		}
 
@@ -274,7 +274,7 @@ namespace stx
 		{
 			if (is_init<T>())
 			{
-				[[likely]] return get<T>();
+				[[likely]] return &get<T>();
 			}
 
 			[[unlikely]] return nullptr;

@@ -209,11 +209,11 @@ error_code sceNpTrophyInit(vm::ptr<void> pool, u32 poolSize, u32 containerId, u6
 {
 	sceNpTrophy.warning("sceNpTrophyInit(pool=*0x%x, poolSize=0x%x, containerId=0x%x, options=0x%llx)", pool, poolSize, containerId, options);
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::scoped_lock lock(trophy_manager->mtx);
+	std::scoped_lock lock(trophy_manager.mtx);
 
-	if (trophy_manager->is_initialized)
+	if (trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_ALREADY_INITIALIZED;
 	}
@@ -223,7 +223,7 @@ error_code sceNpTrophyInit(vm::ptr<void> pool, u32 poolSize, u32 containerId, u6
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 	}
 
-	trophy_manager->is_initialized = true;
+	trophy_manager.is_initialized = true;
 
 	return CELL_OK;
 }
@@ -232,11 +232,11 @@ error_code sceNpTrophyTerm()
 {
 	sceNpTrophy.warning("sceNpTrophyTerm()");
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::scoped_lock lock(trophy_manager->mtx);
+	std::scoped_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
@@ -244,7 +244,7 @@ error_code sceNpTrophyTerm()
 	idm::clear<trophy_context_t>();
 	idm::clear<trophy_handle_t>();
 
-	trophy_manager->is_initialized = false;
+	trophy_manager.is_initialized = false;
 
 	return CELL_OK;
 }
@@ -253,11 +253,11 @@ error_code sceNpTrophyCreateHandle(vm::ptr<u32> handle)
 {
 	sceNpTrophy.warning("sceNpTrophyCreateHandle(handle=*0x%x)", handle);
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::scoped_lock lock(trophy_manager->mtx);
+	std::scoped_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
@@ -282,12 +282,12 @@ error_code sceNpTrophyDestroyHandle(u32 handle)
 {
 	sceNpTrophy.warning("sceNpTrophyDestroyHandle(handle=0x%x)", handle);
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::scoped_lock lock(trophy_manager->mtx);
+	std::scoped_lock lock(trophy_manager.mtx);
 
 	// TODO: find out if this is checked
-	//if (!trophy_manager->is_initialized)
+	//if (!trophy_manager.is_initialized)
 	//{
 	//	return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	//}
@@ -316,12 +316,12 @@ error_code sceNpTrophyAbortHandle(u32 handle)
 {
 	sceNpTrophy.todo("sceNpTrophyAbortHandle(handle=0x%x)", handle);
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::scoped_lock lock(trophy_manager->mtx);
+	std::scoped_lock lock(trophy_manager.mtx);
 
 	// TODO: find out if this is checked
-	//if (!trophy_manager->is_initialized)
+	//if (!trophy_manager.is_initialized)
 	//{
 	//	return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	//}
@@ -356,11 +356,11 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 
 	sceNpTrophy.notice("sceNpTrophyCreateContext(): commSign = %s", *commSign);
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::scoped_lock lock(trophy_manager->mtx);
+	std::scoped_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
@@ -434,11 +434,11 @@ error_code sceNpTrophyDestroyContext(u32 context)
 {
 	sceNpTrophy.warning("sceNpTrophyDestroyContext(context=0x%x)", context);
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::scoped_lock lock(trophy_manager->mtx);
+	std::scoped_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
@@ -461,16 +461,16 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 {
 	sceNpTrophy.error("sceNpTrophyRegisterContext(context=0x%x, handle=0x%x, statusCb=*0x%x, arg=*0x%x, options=0x%llx)", context, handle, statusCb, arg, options);
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	std::shared_lock lock(trophy_manager->mtx);
+	std::shared_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
 	const auto handle_ptr = idm::get<trophy_handle_t>(handle);
 
 	if (error)
@@ -543,16 +543,16 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		return SCE_NP_TROPHY_ERROR_PROCESSING_ABORTED;
 	}
 
-	std::unique_lock lock2(trophy_manager->mtx);
+	std::unique_lock lock2(trophy_manager.mtx);
 
 	// Rerun error checks, the callback could have changed stuff by calling sceNpTrophy functions internally
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt2, error2] = trophy_manager->get_context_ex(context, handle);
+	const auto [ctxt2, error2] = trophy_manager.get_context_ex(context, handle);
 
 	if (error2)
 	{
@@ -654,16 +654,16 @@ error_code sceNpTrophyGetRequiredDiskSpace(u32 context, u32 handle, vm::ptr<u64>
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 	}
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	reader_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
 
 	if (error)
 	{
@@ -710,16 +710,16 @@ error_code sceNpTrophySetSoundLevel(u32 context, u32 handle, u32 level, u64 opti
 		return SCE_NP_TROPHY_ERROR_NOT_SUPPORTED;
 	}
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	reader_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
 
 	if (error)
 	{
@@ -733,16 +733,16 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 {
 	sceNpTrophy.error("sceNpTrophyGetGameInfo(context=0x%x, handle=0x%x, details=*0x%x, data=*0x%x)", context, handle, details, data);
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	reader_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
 
 	if (error)
 	{
@@ -845,16 +845,16 @@ error_code sceNpTrophyUnlockTrophy(u32 context, u32 handle, s32 trophyId, vm::pt
 {
 	sceNpTrophy.error("sceNpTrophyUnlockTrophy(context=0x%x, handle=0x%x, trophyId=%d, platinumId=*0x%x)", context, handle, trophyId, platinumId);
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	reader_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
 
 	if (error)
 	{
@@ -931,16 +931,16 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	reader_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
 
 	if (error)
 	{
@@ -1092,16 +1092,16 @@ error_code sceNpTrophyGetTrophyInfo(u32 context, u32 handle, s32 trophyId, vm::p
 		return SCE_NP_TROPHY_ERROR_INVALID_TROPHY_ID;
 	}
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	reader_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
 
 	if (error)
 	{
@@ -1120,16 +1120,16 @@ error_code sceNpTrophyGetGameProgress(u32 context, u32 handle, vm::ptr<s32> perc
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	reader_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
 
 	if (error)
 	{
@@ -1160,16 +1160,16 @@ error_code sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer,
 {
 	sceNpTrophy.warning("sceNpTrophyGetGameIcon(context=0x%x, handle=0x%x, buffer=*0x%x, size=*0x%x)", context, handle, buffer, size);
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	reader_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
 
 	if (error)
 	{
@@ -1210,16 +1210,16 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 {
 	sceNpTrophy.warning("sceNpTrophyGetTrophyIcon(context=0x%x, handle=0x%x, trophyId=%d, buffer=*0x%x, size=*0x%x)", context, handle, trophyId, buffer, size);
 
-	const auto trophy_manager = g_fxo->get<sce_np_trophy_manager>();
+	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	reader_lock lock(trophy_manager->mtx);
+	reader_lock lock(trophy_manager.mtx);
 
-	if (!trophy_manager->is_initialized)
+	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager->get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
 
 	if (error)
 	{

@@ -530,15 +530,15 @@ const std::string Emulator::GetBackgroundPicturePath() const
 
 std::string Emulator::PPUCache() const
 {
-	const auto _main = g_fxo->get<ppu_module>();
+	auto& _main = g_fxo->get<ppu_module>();
 
-	if (!_main || _main->cache.empty())
+	if (!g_fxo->is_init<ppu_module>() || _main.cache.empty())
 	{
 		ppu_log.warning("PPU Cache location not initialized.");
 		return {};
 	}
 
-	return _main->cache;
+	return _main.cache;
 }
 
 bool Emulator::BootRsxCapture(const std::string& path)
@@ -1070,7 +1070,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 
 		// Load patches from different locations
-		g_fxo->get<patch_engine>()->append_title_patches(m_title_id);
+		g_fxo->get<patch_engine>().append_title_patches(m_title_id);
 
 		// Mount all devices
 		const std::string emu_dir = GetEmuDir();
@@ -1157,15 +1157,15 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 					if (obj == elf_error::ok)
 					{
-						const auto _main = g_fxo->get<ppu_module>();
+						auto& _main = g_fxo->get<ppu_module>();
 
 						ppu_load_exec(obj);
 
-						_main->path = path;
+						_main.path = path;
 
 						ConfigurePPUCache();
 
-						ppu_initialize(*_main);
+						ppu_initialize(_main);
 					}
 					else
 					{
@@ -2074,25 +2074,25 @@ void Emulator::ConfigureLogs()
 
 void Emulator::ConfigurePPUCache()
 {
-	const auto _main = g_fxo->get<ppu_module>();
+	auto& _main = g_fxo->get<ppu_module>();
 
-	_main->cache = GetCacheDir();
+	_main.cache = GetCacheDir();
 
 	if (!m_title_id.empty() && m_cat != "1P")
 	{
-		_main->cache += Emu.GetTitleID();
-		_main->cache += '/';
+		_main.cache += Emu.GetTitleID();
+		_main.cache += '/';
 	}
 
-	fmt::append(_main->cache, "ppu-%s-%s/", fmt::base57(_main->sha1), _main->path.substr(_main->path.find_last_of('/') + 1));
+	fmt::append(_main.cache, "ppu-%s-%s/", fmt::base57(_main.sha1), _main.path.substr(_main.path.find_last_of('/') + 1));
 
-	if (!fs::create_path(_main->cache))
+	if (!fs::create_path(_main.cache))
 	{
-		sys_log.error("Failed to create cache directory: %s (%s)", _main->cache, fs::g_tls_error);
+		sys_log.error("Failed to create cache directory: %s (%s)", _main.cache, fs::g_tls_error);
 	}
 	else
 	{
-		sys_log.notice("Cache: %s", _main->cache);
+		sys_log.notice("Cache: %s", _main.cache);
 	}
 }
 

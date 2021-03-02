@@ -4,7 +4,7 @@
 
 LOG_CHANNEL(screenshot_log, "SCREENSHOT");
 
-gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig)
+gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, const rsx::avconf& avconfig)
 {
 	gl::texture* image = nullptr;
 
@@ -79,10 +79,10 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 		m_gl_texture_cache.invalidate_range(cmd, range, rsx::invalidation_cause::read);
 
 		gl::texture::format fmt;
-		switch (avconfig->format)
+		switch (avconfig.format)
 		{
 		default:
-			rsx_log.error("Unhandled video output format 0x%x", avconfig->format);
+			rsx_log.error("Unhandled video output format 0x%x", avconfig.format);
 			[[fallthrough]];
 		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
 			fmt = gl::texture::format::bgra;
@@ -113,16 +113,16 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	u32 buffer_pitch = display_buffers[info.buffer].pitch;
 
 	u32 av_format;
-	const auto avconfig = g_fxo->get<rsx::avconf>();
+	auto& avconfig = g_fxo->get<rsx::avconf>();
 
-	if (avconfig->state)
+	if (avconfig.state)
 	{
-		av_format = avconfig->get_compatible_gcm_format();
+		av_format = avconfig.get_compatible_gcm_format();
 		if (!buffer_pitch)
-			buffer_pitch = buffer_width * avconfig->get_bpp();
+			buffer_pitch = buffer_width * avconfig.get_bpp();
 
-		const u32 video_frame_height = (!avconfig->_3d? avconfig->resolution_y : (avconfig->resolution_y - 30) / 2);
-		buffer_width = std::min(buffer_width, avconfig->resolution_x);
+		const u32 video_frame_height = (!avconfig._3d? avconfig.resolution_y : (avconfig.resolution_y - 30) / 2);
+		buffer_width = std::min(buffer_width, avconfig.resolution_x);
 		buffer_height = std::min(buffer_height, video_frame_height);
 	}
 	else
@@ -153,7 +153,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		const auto image_to_flip_ = get_present_source(&present_info, avconfig);
 		image_to_flip = image_to_flip_->id();
 
-		if (avconfig->_3d) [[unlikely]]
+		if (avconfig._3d) [[unlikely]]
 		{
 			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip_->height() < min_expected_height)
@@ -236,7 +236,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 
 		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
 
-		if (use_full_rgb_range_output && rsx::fcmp(avconfig->gamma, 1.f) && !avconfig->_3d)
+		if (use_full_rgb_range_output && rsx::fcmp(avconfig.gamma, 1.f) && !avconfig._3d)
 		{
 			// Blit source image to the screen
 			m_flip_fbo.recreate();
@@ -248,12 +248,12 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 		else
 		{
-			const f32 gamma = avconfig->gamma;
+			const f32 gamma = avconfig.gamma;
 			const bool limited_range = !use_full_rgb_range_output;
 			const rsx::simple_array<GLuint> images{ image_to_flip, image_to_flip2 };
 
 			gl::screen.bind();
-			m_video_output_pass.run(areau(aspect_ratio), images, gamma, limited_range, avconfig->_3d);
+			m_video_output_pass.run(areau(aspect_ratio), images, gamma, limited_range, avconfig._3d);
 		}
 	}
 

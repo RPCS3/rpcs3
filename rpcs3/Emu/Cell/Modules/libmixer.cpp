@@ -351,9 +351,9 @@ struct surmixer_thread : ppu_thread
 
 	void non_task()
 	{
-		const auto g_audio = g_fxo->get<cell_audio>();
+		auto& g_audio = g_fxo->get<cell_audio>();
 
-		audio_port& port = g_audio->ports[g_surmx.audio_port];
+		audio_port& port = g_audio.ports[g_surmx.audio_port];
 
 		while (port.state != audio_port_state::closed)
 		{
@@ -479,9 +479,9 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 {
 	libmixer.warning("cellSurMixerCreate(config=*0x%x)", config);
 
-	const auto g_audio = g_fxo->get<cell_audio>();
+	auto& g_audio = g_fxo->get<cell_audio>();
 
-	const auto port = g_audio->open_port();
+	const auto port = g_audio.open_port();
 
 	if (!port)
 	{
@@ -563,14 +563,14 @@ s32 cellSurMixerStart()
 {
 	libmixer.warning("cellSurMixerStart()");
 
-	const auto g_audio = g_fxo->get<cell_audio>();
+	auto& g_audio = g_fxo->get<cell_audio>();
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
 		return CELL_LIBMIXER_ERROR_NOT_INITIALIZED;
 	}
 
-	g_audio->ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::opened, audio_port_state::started);
+	g_audio.ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::opened, audio_port_state::started);
 
 	return CELL_OK;
 }
@@ -585,14 +585,14 @@ s32 cellSurMixerFinalize()
 {
 	libmixer.warning("cellSurMixerFinalize()");
 
-	const auto g_audio = g_fxo->get<cell_audio>();
+	auto& g_audio = g_fxo->get<cell_audio>();
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
 		return CELL_LIBMIXER_ERROR_NOT_INITIALIZED;
 	}
 
-	g_audio->ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::opened, audio_port_state::closed);
+	g_audio.ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::opened, audio_port_state::closed);
 
 	return CELL_OK;
 }
@@ -630,14 +630,14 @@ s32 cellSurMixerPause(u32 type)
 {
 	libmixer.warning("cellSurMixerPause(type=%d)", type);
 
-	const auto g_audio = g_fxo->get<cell_audio>();
+	auto& g_audio = g_fxo->get<cell_audio>();
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
 		return CELL_LIBMIXER_ERROR_NOT_INITIALIZED;
 	}
 
-	g_audio->ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::started, audio_port_state::opened);
+	g_audio.ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::started, audio_port_state::opened);
 
 	return CELL_OK;
 }
@@ -654,9 +654,9 @@ s32 cellSurMixerGetTimestamp(u64 tag, vm::ptr<u64> stamp)
 {
 	libmixer.error("cellSurMixerGetTimestamp(tag=0x%llx, stamp=*0x%x)", tag, stamp);
 
-	const auto g_audio = g_fxo->get<cell_audio>();
+	auto& g_audio = g_fxo->get<cell_audio>();
 
-	*stamp = g_audio->m_start_time + tag * AUDIO_BUFFER_SAMPLES * 1'000'000 / g_audio->cfg.audio_sampling_rate;
+	*stamp = g_audio.m_start_time + tag * AUDIO_BUFFER_SAMPLES * 1'000'000 / g_audio.cfg.audio_sampling_rate;
 
 	return CELL_OK;
 }

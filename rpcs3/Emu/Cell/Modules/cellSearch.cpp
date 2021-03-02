@@ -122,9 +122,9 @@ error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<Cell
 		return CELL_SEARCH_ERROR_UNKNOWN_MODE;
 	}
 
-	const auto search = g_fxo->get<search_info>();
+	auto& search = g_fxo->get<search_info>();
 
-	switch (search->state.compare_and_swap(search_state::not_initialized, search_state::initializing))
+	switch (search.state.compare_and_swap(search_state::not_initialized, search_state::initializing))
 	{
 	case search_state::not_initialized:
 		break;
@@ -136,12 +136,12 @@ error_code cellSearchInitialize(CellSearchMode mode, u32 container, vm::ptr<Cell
 		return CELL_SEARCH_ERROR_ALREADY_INITIALIZED;
 	}
 
-	search->func = func;
-	search->userData = userData;
+	search.func = func;
+	search.userData = userData;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &search](ppu_thread& ppu) -> s32
 	{
-		search->state.store(search_state::idle);
+		search.state.store(search_state::idle);
 		func(ppu, CELL_SEARCH_EVENT_INITIALIZE_RESULT, CELL_OK, vm::null, userData);
 		return CELL_OK;
 	});
@@ -153,9 +153,9 @@ error_code cellSearchFinalize()
 {
 	cellSearch.todo("cellSearchFinalize()");
 
-	const auto search = g_fxo->get<search_info>();
+	auto& search = g_fxo->get<search_info>();
 
-	switch (search->state.compare_and_swap(search_state::idle, search_state::finalizing))
+	switch (search.state.compare_and_swap(search_state::idle, search_state::finalizing))
 	{
 	case search_state::idle:
 		break;
@@ -171,14 +171,14 @@ error_code cellSearchFinalize()
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &search](ppu_thread& ppu) -> s32
 	{
 		{
-			std::lock_guard lock(search->links_mutex);
-			search->content_links.clear();
+			std::lock_guard lock(search.links_mutex);
+			search.content_links.clear();
 		}
-		search->state.store(search_state::not_initialized);
-		search->func(ppu, CELL_SEARCH_EVENT_FINALIZE_RESULT, CELL_OK, vm::null, search->userData);
+		search.state.store(search_state::not_initialized);
+		search.func(ppu, CELL_SEARCH_EVENT_FINALIZE_RESULT, CELL_OK, vm::null, search.userData);
 		return CELL_OK;
 	});
 
@@ -222,9 +222,9 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	const auto search = g_fxo->get<search_info>();
+	auto& search = g_fxo->get<search_info>();
 
-	switch (search->state.compare_and_swap(search_state::idle, search_state::in_progress))
+	switch (search.state.compare_and_swap(search_state::idle, search_state::in_progress))
 	{
 	case search_state::idle:
 		break;
@@ -242,7 +242,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 
 	const u32 id = *outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=, content_map = g_fxo->get<ContentIdMap>()](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &content_map = g_fxo->get<ContentIdMap>(), &search](ppu_thread& ppu) -> s32
 	{
 		auto curr_search = idm::get<search_object_t>(id);
 		vm::var<CellSearchResultParam> resultParam;
@@ -320,8 +320,8 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 				}
 
 				const u64 hash = std::hash<std::string>()(item_path);
-				auto found = content_map->find(hash);
-				if (found == content_map->end()) // content isn't yet being tracked
+				auto found = content_map.find(hash);
+				if (found == content_map.end()) // content isn't yet being tracked
 				{
 					//auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
 
@@ -334,8 +334,8 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 						// std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
 						// strcpy_trunc(curr_find->infoPath.contentPath, link);
 
-						// std::lock_guard lock(search->links_mutex);
-						// search->content_links.emplace(std::move(link), item_path);
+						// std::lock_guard lock(search.links_mutex);
+						// search.content_links.emplace(std::move(link), item_path);
 					}
 					else
 					{
@@ -391,7 +391,7 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 					}
 					}
 
-					content_map->emplace(hash, curr_find);
+					content_map.emplace(hash, curr_find);
 					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
 
 					cellSearch.notice("cellSearchStartListSearch(): Content ID: %08X   Path: \"%s\"", hash, item_path);
@@ -410,8 +410,8 @@ error_code cellSearchStartListSearch(CellSearchListSearchType type, CellSearchSo
 		searchInFolder(fmt::format("/dev_hdd0/%s", media_dir));
 		resultParam->resultNum = ::narrow<s32>(curr_search->content_ids.size());
 
-		search->state.store(search_state::idle);
-		search->func(ppu, CELL_SEARCH_EVENT_LISTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
+		search.state.store(search_state::idle);
+		search.func(ppu, CELL_SEARCH_EVENT_LISTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search.userData);
 		return CELL_OK;
 	});
 
@@ -449,9 +449,9 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	const auto search = g_fxo->get<search_info>();
+	auto& search = g_fxo->get<search_info>();
 
-	switch (search->state.compare_and_swap(search_state::idle, search_state::in_progress))
+	switch (search.state.compare_and_swap(search_state::idle, search_state::in_progress))
 	{
 	case search_state::idle:
 		break;
@@ -467,9 +467,9 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	const auto content_map = g_fxo->get<ContentIdMap>();
-	auto found = content_map->find(*reinterpret_cast<const u64*>(listId->data));
-	if (found == content_map->end())
+	auto& content_map = g_fxo->get<ContentIdMap>();
+	auto found = content_map.find(*reinterpret_cast<const u64*>(listId->data));
+	if (found == content_map.end())
 	{
 		// content ID not found, perform a search first
 		return CELL_SEARCH_ERROR_CONTENT_NOT_FOUND;
@@ -499,7 +499,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 
 	const u32 id = *outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=, list_path = std::string(content_info->infoPath.contentPath)](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, list_path = std::string(content_info->infoPath.contentPath), &search, &content_map](ppu_thread& ppu) -> s32
 	{
 		auto curr_search = idm::get<search_object_t>(id);
 		vm::var<CellSearchResultParam> resultParam;
@@ -553,8 +553,8 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 				const std::string item_path(vpath + "/" + item.name);
 
 				const u64 hash = std::hash<std::string>()(item_path);
-				auto found = content_map->find(hash);
-				if (found == content_map->end()) // content isn't yet being tracked
+				auto found = content_map.find(hash);
+				if (found == content_map.end()) // content isn't yet being tracked
 				{
 					auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
 
@@ -565,8 +565,8 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 						std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
 						strcpy_trunc(curr_find->infoPath.contentPath, link);
 
-						std::lock_guard lock(search->links_mutex);
-						search->content_links.emplace(std::move(link), item_path);
+						std::lock_guard lock(search.links_mutex);
+						search.content_links.emplace(std::move(link), item_path);
 					}
 					else
 					{
@@ -783,7 +783,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
 					}
 
-					content_map->emplace(hash, curr_find);
+					content_map.emplace(hash, curr_find);
 					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
 
 					cellSearch.notice("cellSearchStartContentSearchInList(): Content ID: %08X   Path: \"%s\"", hash, item_path);
@@ -802,8 +802,8 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 		searchInFolder(list_path);
 		resultParam->resultNum = ::narrow<s32>(curr_search->content_ids.size());
 
-		search->state.store(search_state::idle);
-		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_INLIST_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
+		search.state.store(search_state::idle);
+		search.func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_INLIST_RESULT, CELL_OK, vm::cast(resultParam.addr()), search.userData);
 		return CELL_OK;
 	});
 
@@ -851,9 +851,9 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	const auto search = g_fxo->get<search_info>();
+	auto& search = g_fxo->get<search_info>();
 
-	switch (search->state.compare_and_swap(search_state::idle, search_state::in_progress))
+	switch (search.state.compare_and_swap(search_state::idle, search_state::in_progress))
 	{
 	case search_state::idle:
 		break;
@@ -871,7 +871,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 
 	const u32 id = *outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=, content_map = g_fxo->get<ContentIdMap>()](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &content_map = g_fxo->get<ContentIdMap>(), &search](ppu_thread& ppu) -> s32
 	{
 		auto curr_search = idm::get<search_object_t>(id);
 		vm::var<CellSearchResultParam> resultParam;
@@ -906,8 +906,8 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 				const std::string item_path(relative_vpath + "/" + item.name);
 
 				const u64 hash = std::hash<std::string>()(item_path);
-				auto found = content_map->find(hash);
-				if (found == content_map->end()) // content isn't yet being tracked
+				auto found = content_map.find(hash);
+				if (found == content_map.end()) // content isn't yet being tracked
 				{
 					auto ext_offset = item.name.find_last_of('.'); // used later if no "Title" found
 
@@ -918,8 +918,8 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						std::string link = "/.tmp/" + std::to_string(hash) + item.name.substr(ext_offset);
 						strcpy_trunc(curr_find->infoPath.contentPath, link);
 
-						std::lock_guard lock(search->links_mutex);
-						search->content_links.emplace(std::move(link), item_path);
+						std::lock_guard lock(search.links_mutex);
+						search.content_links.emplace(std::move(link), item_path);
 					}
 					else
 					{
@@ -985,7 +985,7 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
 					}
 
-					content_map->emplace(hash, curr_find);
+					content_map.emplace(hash, curr_find);
 					curr_search->content_ids.emplace_back(hash, curr_find); // place this file's "ID" into the list of found types
 
 					cellSearch.notice("cellSearchStartContentSearch(): Content ID: %08X   Path: \"%s\"", hash, item_path);
@@ -1003,8 +1003,8 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 		searchInFolder(fmt::format("/dev_hdd0/%s", media_dir), "");
 		resultParam->resultNum = ::narrow<s32>(curr_search->content_ids.size());
 
-		search->state.store(search_state::idle);
-		search->func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
+		search.state.store(search_state::idle);
+		search.func(ppu, CELL_SEARCH_EVENT_CONTENTSEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search.userData);
 		return CELL_OK;
 	});
 
@@ -1038,9 +1038,9 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	const auto search = g_fxo->get<search_info>();
+	auto& search = g_fxo->get<search_info>();
 
-	switch (search->state.compare_and_swap(search_state::idle, search_state::in_progress))
+	switch (search.state.compare_and_swap(search_state::idle, search_state::in_progress))
 	{
 	case search_state::idle:
 		break;
@@ -1058,14 +1058,14 @@ error_code cellSearchStartSceneSearchInVideo(vm::cptr<CellSearchContentId> video
 
 	const u32 id = *outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &search](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = id;
 		resultParam->resultNum = 0; // TODO
 
-		search->state.store(search_state::idle);
-		search->func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_INVIDEO_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
+		search.state.store(search_state::idle);
+		search.func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_INVIDEO_RESULT, CELL_OK, vm::cast(resultParam.addr()), search.userData);
 		return CELL_OK;
 	});
 
@@ -1094,9 +1094,9 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	const auto search = g_fxo->get<search_info>();
+	auto& search = g_fxo->get<search_info>();
 
-	switch (search->state.compare_and_swap(search_state::idle, search_state::in_progress))
+	switch (search.state.compare_and_swap(search_state::idle, search_state::in_progress))
 	{
 	case search_state::idle:
 		break;
@@ -1114,14 +1114,14 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 
 	const u32 id = *outSearchId = idm::make<search_object_t>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &search](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellSearchResultParam> resultParam;
 		resultParam->searchId = id;
 		resultParam->resultNum = 0; // TODO
 
-		search->state.store(search_state::idle);
-		search->func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search->userData);
+		search.state.store(search_state::idle);
+		search.func(ppu, CELL_SEARCH_EVENT_SCENESEARCH_RESULT, CELL_OK, vm::cast(resultParam.addr()), search.userData);
 		return CELL_OK;
 	});
 
@@ -1144,7 +1144,7 @@ error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, v
 		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
 	}
 
-	switch (g_fxo->get<search_info>()->state.load())
+	switch (g_fxo->get<search_info>().state.load())
 	{
 	case search_state::idle:
 		break;
@@ -1212,7 +1212,7 @@ error_code cellSearchGetContentInfoByContentId(vm::cptr<CellSearchContentId> con
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (g_fxo->get<search_info>()->state.load())
+	switch (g_fxo->get<search_info>().state.load())
 	{
 	case search_state::idle:
 		break;
@@ -1228,9 +1228,9 @@ error_code cellSearchGetContentInfoByContentId(vm::cptr<CellSearchContentId> con
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	const auto content_map = g_fxo->get<ContentIdMap>();
-	auto found = content_map->find(*reinterpret_cast<const u64*>(contentId->data));
-	if (found != content_map->end())
+	auto& content_map = g_fxo->get<ContentIdMap>();
+	auto found = content_map.find(*reinterpret_cast<const u64*>(contentId->data));
+	if (found != content_map.end())
 	{
 		const auto& content_info = found->second;
 		switch (content_info->type)
@@ -1279,7 +1279,7 @@ error_code cellSearchGetOffsetByContentId(CellSearchId searchId, vm::cptr<CellSe
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (g_fxo->get<search_info>()->state.load())
+	switch (g_fxo->get<search_info>().state.load())
 	{
 	case search_state::idle:
 		break;
@@ -1333,7 +1333,7 @@ error_code cellSearchGetContentIdByOffset(CellSearchId searchId, s32 offset, vm:
 		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
 	}
 
-	switch (g_fxo->get<search_info>()->state.load())
+	switch (g_fxo->get<search_info>().state.load())
 	{
 	case search_state::idle:
 		break;
@@ -1422,7 +1422,7 @@ error_code cellSearchGetContentInfoPath(vm::cptr<CellSearchContentId> contentId,
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	switch (g_fxo->get<search_info>()->state.load())
+	switch (g_fxo->get<search_info>().state.load())
 	{
 	case search_state::idle:
 		break;
@@ -1439,9 +1439,9 @@ error_code cellSearchGetContentInfoPath(vm::cptr<CellSearchContentId> contentId,
 	}
 
 	const u64 id = *reinterpret_cast<const u64*>(contentId->data);
-	const auto content_map  = g_fxo->get<ContentIdMap>();
-	auto found = content_map->find(id);
-	if(found != content_map->end())
+	auto& content_map = g_fxo->get<ContentIdMap>();
+	auto found = content_map.find(id);
+	if(found != content_map.end())
 	{
 		std::memcpy(infoPath.get_ptr(), &found->second->infoPath, sizeof(found->second->infoPath));
 	}
@@ -1477,8 +1477,8 @@ error_code cellSearchPrepareFile(vm::cptr<char> path)
 		return CELL_SEARCH_ERROR_PARAM;
 	}
 
-	const auto search = g_fxo->get<search_info>();
-	switch (search->state.load())
+	auto& search = g_fxo->get<search_info>();
+	switch (search.state.load())
 	{
 	case search_state::idle:
 		break;
@@ -1494,9 +1494,9 @@ error_code cellSearchPrepareFile(vm::cptr<char> path)
 		return CELL_SEARCH_ERROR_GENERIC;
 	}
 
-	reader_lock lock(search->links_mutex);
-	auto found = search->content_links.find(path.get_ptr());
-	if (found != search->content_links.end())
+	reader_lock lock(search.links_mutex);
+	auto found = search.content_links.find(path.get_ptr());
+	if (found != search.content_links.end())
 	{
 		vfs::mount(found->first, vfs::get(found->second));
 	}
@@ -1539,7 +1539,7 @@ error_code cellSearchCancel(CellSearchId searchId)
 		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
 	}
 
-	switch (g_fxo->get<search_info>()->state.load())
+	switch (g_fxo->get<search_info>().state.load())
 	{
 	case search_state::in_progress:
 		break;
@@ -1565,7 +1565,7 @@ error_code cellSearchEnd(CellSearchId searchId)
 {
 	cellSearch.todo("cellSearchEnd(searchId=0x%x)", searchId);
 
-	switch (g_fxo->get<search_info>()->state.load())
+	switch (g_fxo->get<search_info>().state.load())
 	{
 	case search_state::idle:
 		break;

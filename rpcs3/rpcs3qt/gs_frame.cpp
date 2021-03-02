@@ -483,9 +483,9 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 			screenshot_manager manager;
 			{
-				const auto fxo = g_fxo->get<screenshot_manager>();
+				auto& fxo = g_fxo->get<screenshot_manager>();
 				std::lock_guard lock(screenshot_mtx);
-				manager = *fxo;
+				manager = fxo;
 			}
 
 			struct scoped_png_ptrs
@@ -579,10 +579,10 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 					// Games choose the overlay file and the offset based on the current video resolution.
 					// We need to scale the overlay if our resolution scaling causes the image to have a different size.
-					const auto avconf = g_fxo->get<rsx::avconf>();
+					auto& avconf = g_fxo->get<rsx::avconf>();
 
 					// TODO: handle wacky PS3 resolutions (without resolution scaling)
-					if (avconf->resolution_x != sshot_width || avconf->resolution_y != sshot_height)
+					if (avconf.resolution_x != sshot_width || avconf.resolution_y != sshot_height)
 					{
 						const int scale = rsx::get_resolution_scale_percent();
 						const int x = (scale * manager.overlay_offset_x) / 100;

@@ -456,7 +456,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
 {
 	// Pause
 	ppu.state.atomic_op([](bs_t<cpu_flag>& state) { if (!(state & cpu_flag::dbg_step)) state += cpu_flag::dbg_pause; });
-	
+
 	if (ppu.check_state())
 	{
 		return false;
@@ -2216,7 +2216,7 @@ extern void ppu_finalize(const ppu_module& info)
 	}
 
 #ifdef LLVM_AVAILABLE
-	g_fxo->get<jit_module_manager>()->remove(cache_path + info.name);
+	g_fxo->get<jit_module_manager>().remove(cache_path + info.name);
 #endif
 }
 
@@ -2515,9 +2515,9 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 
 extern void ppu_initialize()
 {
-	const auto _main = g_fxo->get<ppu_module>();
+	auto& _main = g_fxo->get<ppu_module>();
 
-	if (!_main)
+	if (!g_fxo->is_init<ppu_module>())
 	{
 		return;
 	}
@@ -2530,9 +2530,9 @@ extern void ppu_initialize()
 	bool compile_main = false;
 
 	// Check main module cache
-	if (!_main->segs.empty())
+	if (!_main.segs.empty())
 	{
-		compile_main = ppu_initialize(*_main, true);
+		compile_main = ppu_initialize(_main, true);
 	}
 
 	std::vector<lv2_prx*> prx_list;
@@ -2575,9 +2575,9 @@ extern void ppu_initialize()
 	}
 
 	// Initialize main module cache
-	if (!_main->segs.empty())
+	if (!_main.segs.empty())
 	{
-		ppu_initialize(*_main);
+		ppu_initialize(_main);
 	}
 
 	// Initialize preloaded libraries
@@ -2602,7 +2602,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		}
 
 		// Temporarily
-		s_ppu_toc = g_fxo->get<std::unordered_map<u32, u32>>();
+		s_ppu_toc = &g_fxo->get<std::unordered_map<u32, u32>>();
 
 		for (const auto& func : info.funcs)
 		{
@@ -2709,7 +2709,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	};
 
 	// Permanently loaded compiled PPU modules (name -> data)
-	jit_module& jit_mod = g_fxo->get<jit_module_manager>()->get(cache_path + info.name);
+	jit_module& jit_mod = g_fxo->get<jit_module_manager>().get(cache_path + info.name);
 
 	// Compiler instance (deferred initialization)
 	std::shared_ptr<jit_compiler>& jit = jit_mod.pjit;
@@ -2976,7 +2976,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		// Prevent watchdog thread from terminating
 		g_watchdog_hold_ctr++;
 
-		named_thread_group threads(fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>()->index), thread_count, [&]()
+		named_thread_group threads(fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>().index), thread_count, [&]()
 		{
 			// Set low priority
 			thread_ctrl::scoped_priority low_prio(-1);
@@ -2992,7 +2992,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				const auto [obj_name, part] = std::as_const(workload)[i];
 
 				// Allocate "core"
-				std::lock_guard jlock(g_fxo->get<jit_core_allocator>()->sem);
+				std::lock_guard jlock(g_fxo->get<jit_core_allocator>().sem);
 
 				ppu_log.warning("LLVM: Compiling module %s%s", cache_path, obj_name);
 

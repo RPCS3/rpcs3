@@ -444,14 +444,14 @@ void cpu_thread::operator()()
 	{
 	case 1:
 	{
-		//g_fxo->get<cpu_profiler>()->registered.push(id);
+		//g_fxo->get<cpu_profiler>().registered.push(id);
 		break;
 	}
 	case 2:
 	{
 		if (g_cfg.core.spu_prof)
 		{
-			g_fxo->get<cpu_profiler>()->registered.push(id);
+			g_fxo->get<cpu_profiler>().registered.push(id);
 		}
 
 		break;
@@ -763,7 +763,7 @@ bool cpu_thread::check_state() noexcept
 		{
 			if (state0 & cpu_flag::dbg_pause)
 			{
-				g_fxo->get<gdb_server>()->pause_from(this);
+				g_fxo->get<gdb_server>().pause_from(this);
 			}
 
 			cpu_wait(state1);
@@ -1159,6 +1159,6 @@ void cpu_thread::flush_profilers() noexcept
 
 	if (g_cfg.core.spu_prof || false)
 	{
-		g_fxo->get<cpu_profiler>()->registered.push(0);
+		g_fxo->get<cpu_profiler>().registered.push(0);
 	}
 }

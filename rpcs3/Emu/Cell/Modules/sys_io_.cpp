@@ -27,26 +27,26 @@ struct libio_sys_config
 // Only exists internally (has no name)
 extern void libio_sys_config_init()
 {
-	auto cfg = g_fxo->get<libio_sys_config>();
+	auto& cfg = g_fxo->get<libio_sys_config>();
 
-	std::lock_guard lock(cfg->mtx);
+	std::lock_guard lock(cfg.mtx);
 
-	if (cfg->init_ctr++ == 0)
+	if (cfg.init_ctr++ == 0)
 	{
 		// Belongs to "_cfg_evt_hndlr" thread (8k stack)
-		cfg->stack_addr = (ensure(vm::alloc(0x2000, vm::stack, 4096)));
+		cfg.stack_addr = ensure(vm::alloc(0x2000, vm::stack, 4096));
 	}
 }
 
 extern void libio_sys_config_end()
 {
-	auto cfg = g_fxo->get<libio_sys_config>();
+	auto& cfg = g_fxo->get<libio_sys_config>();
 
-	std::lock_guard lock(cfg->mtx);
+	std::lock_guard lock(cfg.mtx);
 
-	if (cfg->init_ctr-- == 1)
+	if (cfg.init_ctr-- == 1)
 	{
-		ensure(vm::dealloc(std::exchange(cfg->stack_addr, 0), vm::stack));
+		ensure(vm::dealloc(std::exchange(cfg.stack_addr, 0), vm::stack));
 	}
 }
 

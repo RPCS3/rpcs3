@@ -251,13 +251,13 @@ namespace rsx
 			{
 				if (!exit)
 				{
-					g_fxo->get<named_thread<msg_dialog_thread>>()->operator()([&, tbit = alloc_thread_bit()]()
+					g_fxo->get<named_thread<msg_dialog_thread>>()([&, tbit = alloc_thread_bit()]()
 					{
 						g_thread_bit = tbit;
 
 						if (interactive)
 						{
-							auto ref = g_fxo->get<display_manager>()->get(uid);
+							auto ref = g_fxo->get<display_manager>().get(uid);
 
 							if (auto error = run_input_loop())
 							{

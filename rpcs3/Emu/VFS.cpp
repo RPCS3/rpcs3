@@ -36,11 +36,11 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 	// Workaround
 	g_fxo->need<vfs_manager>();
 
-	const auto table = g_fxo->get<vfs_manager>();
+	auto& table = g_fxo->get<vfs_manager>();
 
 	// TODO: scan roots of mounted devices for undeleted vfs::host::unlink remnants, and try to delete them (_WIN32 only)
 
-	std::lock_guard lock(table->mutex);
+	std::lock_guard lock(table.mutex);
 
 	if (vpath.empty())
 	{
@@ -48,7 +48,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 		return false;
 	}
 
-	for (std::vector<vfs_directory*> list{&table->root};;)
+	for (std::vector<vfs_directory*> list{&table.root};;)
 	{
 		// Skip one or more '/'
 		const auto pos = vpath.find_first_not_of('/');
@@ -111,9 +111,9 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 
 std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, std::string* out_path)
 {
-	const auto table = g_fxo->get<vfs_manager>();
+	auto& table = g_fxo->get<vfs_manager>();
 
-	reader_lock lock(table->mutex);
+	reader_lock lock(table.mutex);
 
 	// Resulting path fragments: decoded ones
 	std::vector<std::string_view> result;
@@ -136,7 +136,7 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 		name_list.reserve(vpath.size() / 2);
 	}
 
-	for (std::vector<const vfs_directory*> list{&table->root};;)
+	for (std::vector<const vfs_directory*> list{&table.root};;)
 	{
 		// Skip one or more '/'
 		const auto pos = vpath.find_first_not_of('/');

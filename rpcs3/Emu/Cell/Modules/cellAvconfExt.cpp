@@ -175,12 +175,12 @@ error_code cellAudioInGetDeviceInfo(u32 deviceNumber, u32 deviceIndex, vm::ptr<C
 		return CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	auto av_manager = g_fxo->get<avconf_manager>();
+	auto& av_manager = g_fxo->get<avconf_manager>();
 
-	if (deviceNumber >= av_manager->devices.size())
+	if (deviceNumber >= av_manager.devices.size())
 		return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
 
-	av_manager->copy_device_info(deviceNumber, info);
+	av_manager.copy_device_info(deviceNumber, info);
 
 	return CELL_OK;
 }
@@ -201,8 +201,9 @@ error_code cellVideoOutGetGamma(u32 videoOut, vm::ptr<f32> gamma)
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 	}
 
-	auto conf = g_fxo->get<rsx::avconf>();
-	*gamma    = conf->gamma;
+	auto& conf = g_fxo->get<rsx::avconf>();
+
+	*gamma = conf.gamma;
 
 	return CELL_OK;
 }
@@ -216,13 +217,13 @@ error_code cellAudioInGetAvailableDeviceInfo(u32 count, vm::ptr<CellAudioInDevic
 		return CELL_AUDIO_IN_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	auto av_manager = g_fxo->get<avconf_manager>();
+	auto& av_manager = g_fxo->get<avconf_manager>();
 
-	u32 num_devices_returned = std::min<u32>(count, ::size32(av_manager->devices));
+	u32 num_devices_returned = std::min<u32>(count, ::size32(av_manager.devices));
 
 	for (u32 index = 0; index < num_devices_returned; index++)
 	{
-		av_manager->copy_device_info(index, device_info + index);
+		av_manager.copy_device_info(index, device_info + index);
 	}
 
 	return not_an_error(num_devices_returned);
@@ -248,8 +249,8 @@ error_code cellVideoOutSetGamma(u32 videoOut, f32 gamma)
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 	}
 
-	auto conf   = g_fxo->get<rsx::avconf>();
-	conf->gamma = gamma;
+	auto& conf = g_fxo->get<rsx::avconf>();
+	conf.gamma = gamma;
 
 	return CELL_OK;
 }
@@ -350,8 +351,8 @@ error_code cellVideoOutGetResolutionAvailability2()
 	return CELL_OK;
 }
 
-DECLARE(ppu_module_manager::cellAvconfExt)
-("cellSysutilAvconfExt", []() {
+DECLARE(ppu_module_manager::cellAvconfExt)("cellSysutilAvconfExt", []()
+{
 	REG_FUNC(cellSysutilAvconfExt, cellAudioOutUnregisterDevice);
 	REG_FUNC(cellSysutilAvconfExt, cellAudioOutGetDeviceInfo2);
 	REG_FUNC(cellSysutilAvconfExt, cellVideoOutSetXVColor);

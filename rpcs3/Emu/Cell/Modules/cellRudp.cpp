@@ -72,26 +72,26 @@ error_code cellRudpInit(vm::ptr<CellRudpAllocator> allocator)
 {
 	cellRudp.warning("cellRudpInit(allocator=*0x%x)", allocator);
 
-	const auto rudp = g_fxo->get<rudp_info>();
+	auto& rudp = g_fxo->get<rudp_info>();
 
-	if (rudp->malloc)
+	if (rudp.malloc)
 	{
 		return CELL_RUDP_ERROR_ALREADY_INITIALIZED;
 	}
 
 	if (allocator)
 	{
-		rudp->malloc = allocator->app_malloc;
-		rudp->free = allocator->app_free;
+		rudp.malloc = allocator->app_malloc;
+		rudp.free = allocator->app_free;
 	}
 	else
 	{
-		rudp->malloc = [](ppu_thread& ppu, u32 size)
+		rudp.malloc = [](ppu_thread& ppu, u32 size)
 		{
 			return vm::ptr<void>::make(vm::alloc(size, vm::main));
 		};
 
-		rudp->free = [](ppu_thread& ppu, vm::ptr<void> ptr)
+		rudp.free = [](ppu_thread& ppu, vm::ptr<void> ptr)
 		{
 			if (!vm::dealloc(ptr.addr(), vm::main))
 			{
@@ -107,16 +107,16 @@ error_code cellRudpEnd()
 {
 	cellRudp.warning("cellRudpEnd()");
 
-	const auto rudp = g_fxo->get<rudp_info>();
+	auto& rudp = g_fxo->get<rudp_info>();
 
-	if (!rudp->malloc)
+	if (!rudp.malloc)
 	{
 		return CELL_RUDP_ERROR_NOT_INITIALIZED;
 	}
 
-	rudp->malloc = nullptr;
-	rudp->free = nullptr;
-	rudp->handler = vm::null;
+	rudp.malloc = nullptr;
+	rudp.free = nullptr;
+	rudp.handler = vm::null;
 
 	return CELL_OK;
 }
@@ -131,15 +131,15 @@ error_code cellRudpSetEventHandler(vm::ptr<CellRudpEventHandler> handler, vm::pt
 {
 	cellRudp.todo("cellRudpSetEventHandler(handler=*0x%x, arg=*0x%x)", handler, arg);
 
-	const auto rudp = g_fxo->get<rudp_info>();
+	auto& rudp = g_fxo->get<rudp_info>();
 
-	if (!rudp->malloc)
+	if (!rudp.malloc)
 	{
 		return CELL_RUDP_ERROR_NOT_INITIALIZED;
 	}
 
-	rudp->handler = handler;
-	rudp->handler_arg = arg;
+	rudp.handler = handler;
+	rudp.handler_arg = arg;
 
 	return CELL_OK;
 }

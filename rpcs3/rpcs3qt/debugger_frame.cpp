@@ -578,7 +578,7 @@ void debugger_frame::UpdateUnitList()
 		idm::select<named_thread<ppu_thread>>(on_select);
 		idm::select<named_thread<spu_thread>>(on_select);
 
-		if (auto render = g_fxo->get<rsx::thread>(); emu_state != system_state::stopped && render && render->ctrl)
+		if (auto render = g_fxo->try_get<rsx::thread>(); emu_state != system_state::stopped && render && render->ctrl)
 		{
 			on_select(render->id, *render);
 		}

@@ -546,7 +546,7 @@ void spu_cache::initialize()
 	// Initialize global cache instance
 	if (g_cfg.core.spu_cache)
 	{
-		*g_fxo->get<spu_cache>() = std::move(cache);
+		g_fxo->get<spu_cache>() = std::move(cache);
 	}
 }
 
@@ -4208,7 +4208,7 @@ public:
 		// Initialize if necessary
 		if (!m_spurt)
 		{
-			m_spurt = g_fxo->get<spu_runtime>();
+			m_spurt = &g_fxo->get<spu_runtime>();
 			cpu_translator::initialize(m_jit.get_context(), m_jit.get_engine());
 
 			const auto md_name = llvm::MDString::get(m_context, "branch_weights");
@@ -4252,9 +4252,9 @@ public:
 
 		std::string log;
 
-		if (auto cache = g_fxo->get<spu_cache>(); *cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
+		if (auto& cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 		{
-			cache->add(func);
+			cache.add(func);
 		}
 
 		{
@@ -4849,7 +4849,7 @@ public:
 			fs::file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append).write(log);
 		}
 
-		if (*g_fxo->get<spu_cache>())
+		if (g_fxo->get<spu_cache>().operator bool())
 		{
 			spu_log.success("New block compiled successfully");
 		}
@@ -9124,7 +9124,7 @@ struct spu_fast : public spu_recompiler_base
 	{
 		if (!m_spurt)
 		{
-			m_spurt = g_fxo->get<spu_runtime>();
+			m_spurt = &g_fxo->get<spu_runtime>();
 		}
 	}
 
@@ -9460,7 +9460,7 @@ struct spu_fast : public spu_recompiler_base
 		else if (added)
 		{
 			// Send work to LLVM compiler thread
-			g_fxo->get<spu_llvm_thread>()->registered.push(m_hash_start, add_loc);
+			g_fxo->get<spu_llvm_thread>().registered.push(m_hash_start, add_loc);
 		}
 
 		// Rebuild trampoline if necessary

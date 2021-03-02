@@ -1017,7 +1017,7 @@ namespace rsx
 
 			update_panel();
 
-			g_fxo->get<named_thread<osk_dialog_thread>>()->operator()([this, tbit = alloc_thread_bit()]
+			g_fxo->get<named_thread<osk_dialog_thread>>()([this, tbit = alloc_thread_bit()]
 			{
 				g_thread_bit = tbit;
 

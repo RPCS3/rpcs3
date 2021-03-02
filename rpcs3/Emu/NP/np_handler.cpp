@@ -325,8 +325,8 @@ void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 		ensure(!s_npid.empty()); // It should have been generated before this
 
 		np_handler::string_to_npid(s_npid, &npid);
-		const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
-		sigh->set_self_sig_info(npid);
+		auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+		sigh.set_self_sig_info(npid);
 	}
 
 	switch (g_cfg.net.psn_status)
@@ -462,7 +462,8 @@ u32 np_handler::get_server_status(SceNpMatching2ContextId ctx_id, vm::cptr<SceNp
 	const auto cb_info = std::move(pending_requests.at(req_id));
 	pending_requests.erase(req_id);
 
-	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetServerInfo, event_key, 0, sizeof(SceNpMatching2GetServerInfoResponse), cb_info.cb_arg);
 		return 0;
 	});
@@ -478,7 +479,8 @@ u32 np_handler::create_server_context(SceNpMatching2ContextId ctx_id, vm::cptr<S
 	const auto cb_info = std::move(pending_requests.at(req_id));
 	pending_requests.erase(req_id);
 
-	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_CreateServerContext, event_key, 0, 0, cb_info.cb_arg);
 		return 0;
 	});
@@ -759,7 +761,8 @@ bool np_handler::reply_get_world_list(u32 req_id, std::vector<u8>& reply_data)
 		}
 	}
 
-	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetWorldInfoList, event_key, 0, sizeof(SceNpMatching2GetWorldInfoListResponse), cb_info.cb_arg);
 		return 0;
 	});
@@ -792,14 +795,15 @@ bool np_handler::reply_create_join_room(u32 req_id, std::vector<u8>& reply_data)
 	RoomDataInternal_to_SceNpMatching2RoomDataInternal(resp, room_info.get_ptr(), npid);
 
 	// Establish Matching2 self signaling info
-	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
-	sigh->set_self_sig2_info(room_info->roomId, 1);
-	sigh->set_sig2_infos(room_info->roomId, 1, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, rpcn.get_addr_sig(), rpcn.get_port_sig(), true);
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.set_self_sig2_info(room_info->roomId, 1);
+	sigh.set_sig2_infos(room_info->roomId, 1, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, rpcn.get_addr_sig(), rpcn.get_port_sig(), true);
 	// TODO? Should this send a message to Signaling CB? Is this even necessary?
 
 	extra_nps::print_create_room_resp(room_resp);
 
-	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_CreateJoinRoom, event_key, 0, sizeof(SceNpMatching2CreateJoinRoomResponse), cb_info.cb_arg);
 		return 0;
 	});
@@ -835,12 +839,13 @@ bool np_handler::reply_join_room(u32 req_id, std::vector<u8>& reply_data)
 	extra_nps::print_room_data_internal(room_resp->roomDataInternal.get_ptr());
 
 	// Establish Matching2 self signaling info
-	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
-	sigh->set_self_sig2_info(room_info->roomId, member_id);
-	sigh->set_sig2_infos(room_info->roomId, member_id, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, rpcn.get_addr_sig(), rpcn.get_port_sig(), true);
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.set_self_sig2_info(room_info->roomId, member_id);
+	sigh.set_sig2_infos(room_info->roomId, member_id, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, rpcn.get_addr_sig(), rpcn.get_port_sig(), true);
 	// TODO? Should this send a message to Signaling CB? Is this even necessary?
 
-	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_JoinRoom, event_key, 0, sizeof(SceNpMatching2JoinRoomResponse), cb_info.cb_arg);
 		return 0;
 	});
@@ -864,10 +869,11 @@ bool np_handler::reply_leave_room(u32 req_id, std::vector<u8>& reply_data)
 	u32 event_key = get_event_key(); // Unsure if necessary if there is no data
 
 	// Disconnect all users from that room
-	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
-	sigh->disconnect_sig2_users(room_id);
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.disconnect_sig2_users(room_id);
 
-	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_LeaveRoom, event_key, 0, 0, cb_info.cb_arg);
 		return 0;
 	});
@@ -895,7 +901,8 @@ bool np_handler::reply_search_room(u32 req_id, std::vector<u8>& reply_data)
 
 	SearchRoomReponse_to_SceNpMatching2SearchRoomResponse(resp, search_resp);
 
-	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SearchRoom, event_key, 0, sizeof(SceNpMatching2SearchRoomResponse), cb_info.cb_arg);
 		return 0;
 	});
@@ -913,7 +920,8 @@ bool np_handler::reply_set_roomdata_external(u32 req_id, std::vector<u8>& reply_
 
 	u32 event_key = get_event_key(); // Unsure if necessary if there is no data
 
-	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataExternal, event_key, 0, 0, cb_info.cb_arg);
 		return 0;
 	});
@@ -946,7 +954,8 @@ bool np_handler::reply_get_roomdata_internal(u32 req_id, std::vector<u8>& reply_
 
 	extra_nps::print_room_data_internal(room_resp->roomDataInternal.get_ptr());
 
-	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_GetRoomDataInternal, event_key, 0, sizeof(SceNpMatching2GetRoomDataInternalResponse), cb_info.cb_arg);
 		return 0;
 	});
@@ -964,7 +973,8 @@ bool np_handler::reply_set_roomdata_internal(u32 req_id, std::vector<u8>& reply_
 
 	u32 event_key = get_event_key(); // Unsure if necessary if there is no data
 
-	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomDataInternal, event_key, 0, 0, cb_info.cb_arg);
 		return 0;
 	});
@@ -993,7 +1003,8 @@ bool np_handler::reply_get_ping_info(u32 req_id, std::vector<u8>& reply_data)
 	SceNpMatching2SignalingGetPingInfoResponse* final_ping_resp = reinterpret_cast<SceNpMatching2SignalingGetPingInfoResponse*>(allocate_req_result(event_key, sizeof(SceNpMatching2SignalingGetPingInfoResponse)));
 	GetPingInfoResponse_to_SceNpMatching2SignalingGetPingInfoResponse(resp, final_ping_resp);
 
-	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SignalingGetPingInfo, event_key, 0, sizeof(SceNpMatching2SignalingGetPingInfoResponse), cb_info.cb_arg);
 		return 0;
 	});
@@ -1009,7 +1020,8 @@ bool np_handler::reply_send_room_message(u32 req_id, std::vector<u8>& reply_data
 	const auto cb_info = std::move(pending_requests.at(req_id));
 	pending_requests.erase(req_id);
 
-	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SendRoomMessage, 0, 0, 0, cb_info.cb_arg);
 		return 0;
 	});
@@ -1032,8 +1044,8 @@ bool np_handler::reply_req_sign_infos(u32 req_id, std::vector<u8>& reply_data)
 	if (reply.is_error())
 		return error_and_disconnect("Malformed reply to RequestSignalingInfos command");
 
-	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
-	sigh->start_sig(conn_id, addr, port);
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.start_sig(conn_id, addr, port);
 
 	return true;
 }
@@ -1082,7 +1094,8 @@ void np_handler::notif_user_joined_room(std::vector<u8>& data)
 	rpcn_log.notice("Received notification that user %s(%d) joined the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
 	extra_nps::print_room_member_data_internal(notif_data->roomMemberDataInternal.get_ptr());
 
-	sysutil_register_cb([room_event_cb = this->room_event_cb, room_id, event_key, room_event_cb_ctx = this->room_event_cb_ctx, room_event_cb_arg = this->room_event_cb_arg](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([room_event_cb = this->room_event_cb, room_id, event_key, room_event_cb_ctx = this->room_event_cb_ctx, room_event_cb_arg = this->room_event_cb_arg](ppu_thread& cb_ppu) -> s32
+	{
 		room_event_cb(cb_ppu, room_event_cb_ctx, room_id, SCE_NP_MATCHING2_ROOM_EVENT_MemberJoined, event_key, 0, sizeof(SceNpMatching2RoomMemberUpdateInfo), room_event_cb_arg);
 		return 0;
 	});
@@ -1109,7 +1122,8 @@ void np_handler::notif_user_left_room(std::vector<u8>& data)
 	rpcn_log.notice("Received notification that user %s(%d) left the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
 	extra_nps::print_room_member_data_internal(notif_data->roomMemberDataInternal.get_ptr());
 
-	sysutil_register_cb([room_event_cb = this->room_event_cb, room_event_cb_ctx = this->room_event_cb_ctx, room_id, event_key, room_event_cb_arg = this->room_event_cb_arg](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([room_event_cb = this->room_event_cb, room_event_cb_ctx = this->room_event_cb_ctx, room_id, event_key, room_event_cb_arg = this->room_event_cb_arg](ppu_thread& cb_ppu) -> s32
+	{
 		room_event_cb(cb_ppu, room_event_cb_ctx, room_id, SCE_NP_MATCHING2_ROOM_EVENT_MemberLeft, event_key, 0, sizeof(SceNpMatching2RoomMemberUpdateInfo), room_event_cb_arg);
 		return 0;
 	});
@@ -1135,10 +1149,11 @@ void np_handler::notif_room_destroyed(std::vector<u8>& data)
 
 	rpcn_log.notice("Received notification that room(%d) was destroyed", room_id);
 
-	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
-	sigh->disconnect_sig2_users(room_id);
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.disconnect_sig2_users(room_id);
 
-	sysutil_register_cb([room_event_cb = this->room_event_cb, room_event_cb_ctx = this->room_event_cb_ctx, room_id, event_key, room_event_cb_arg = this->room_event_cb_arg](ppu_thread& cb_ppu) -> s32 {
+	sysutil_register_cb([room_event_cb = this->room_event_cb, room_event_cb_ctx = this->room_event_cb_ctx, room_id, event_key, room_event_cb_arg = this->room_event_cb_arg](ppu_thread& cb_ppu) -> s32
+	{
 		room_event_cb(cb_ppu, room_event_cb_ctx, room_id, SCE_NP_MATCHING2_ROOM_EVENT_RoomDestroyed, event_key, 0, sizeof(SceNpMatching2RoomUpdateInfo), room_event_cb_arg);
 		return 0;
 	});
@@ -1160,9 +1175,9 @@ void np_handler::notif_p2p_connect(std::vector<u8>& data)
 	rpcn_log.notice("Received notification to connect to member(%d) of room(%d): %s:%d", member_id, room_id, ip_to_string(addr_p2p), port_p2p);
 
 	// Attempt Signaling
-	const auto sigh = g_fxo->get<named_thread<signaling_handler>>();
-	sigh->set_sig2_infos(room_id, member_id, SCE_NP_SIGNALING_CONN_STATUS_PENDING, addr_p2p, port_p2p);
-	sigh->start_sig2(room_id, member_id);
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.set_sig2_infos(room_id, member_id, SCE_NP_SIGNALING_CONN_STATUS_PENDING, addr_p2p, port_p2p);
+	sigh.start_sig2(room_id, member_id);
 }
 
 void np_handler::notif_room_message_received(std::vector<u8>& data)
@@ -1363,7 +1378,8 @@ u32 np_handler::add_players_to_history(vm::cptr<SceNpId> npids, u32 count)
 
 	// if (basic_handler)
 	// {
-	// 	sysutil_register_cb([basic_handler = this->basic_handler, req_id, basic_handler_arg = this->basic_handler_arg](ppu_thread& cb_ppu) -> s32 {
+	// 	sysutil_register_cb([basic_handler = this->basic_handler, req_id, basic_handler_arg = this->basic_handler_arg](ppu_thread& cb_ppu) -> s32
+	// 	{
 	// 		basic_handler(cb_ppu, SCE_NP_BASIC_EVENT_ADD_PLAYERS_HISTORY_RESULT, 0, req_id, basic_handler_arg);
 	// 		return 0;
 	// 	});

@@ -99,13 +99,13 @@ error_code cellMusicDecodeInitialize(s32 mode, u32 container, s32 spuPriority, v
 {
 	cellMusicDecode.todo("cellMusicDecodeInitialize(mode=0x%x, container=0x%x, spuPriority=0x%x, func=*0x%x, userData=*0x%x)", mode, container, spuPriority, func, userData);
 
-	const auto musicDecode = g_fxo->get<music_decode>();
-	musicDecode->func = func;
-	musicDecode->userData = userData;
+	auto& dec = g_fxo->get<music_decode>();
+	dec.func = func;
+	dec.userData = userData;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
 	{
-		musicDecode->func(ppu, CELL_MUSIC_DECODE_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
+		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
 		return CELL_OK;
 	});
 
@@ -116,13 +116,13 @@ error_code cellMusicDecodeInitializeSystemWorkload(s32 mode, u32 container, vm::
 {
 	cellMusicDecode.todo("cellMusicDecodeInitializeSystemWorkload(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x, spuUsageRate=0x%x, spurs=*0x%x, priority=*0x%x, attr=*0x%x)", mode, container, func, userData, spuUsageRate, spurs, priority, attr);
 
-	const auto musicDecode = g_fxo->get<music_decode>();
-	musicDecode->func = func;
-	musicDecode->userData = userData;
+	auto& dec = g_fxo->get<music_decode>();
+	dec.func = func;
+	dec.userData = userData;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
 	{
-		musicDecode->func(ppu, CELL_MUSIC_DECODE_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
+		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
 		return CELL_OK;
 	});
 
@@ -133,13 +133,13 @@ error_code cellMusicDecodeFinalize()
 {
 	cellMusicDecode.todo("cellMusicDecodeFinalize()");
 
-	const auto musicDecode = g_fxo->get<music_decode>();
+	auto& dec = g_fxo->get<music_decode>();
 
-	if (musicDecode->func)
+	if (dec.func)
 	{
-		sysutil_register_cb([=](ppu_thread& ppu) -> s32
+		sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
 		{
-			musicDecode->func(ppu, CELL_MUSIC_DECODE_EVENT_FINALIZE_RESULT, vm::addr_t(CELL_OK), musicDecode->userData);
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_FINALIZE_RESULT, vm::addr_t(CELL_OK), dec.userData);
 			return CELL_OK;
 		});
 	}
@@ -151,14 +151,14 @@ error_code cellMusicDecodeSelectContents()
 {
 	cellMusicDecode.todo("cellMusicDecodeSelectContents()");
 
-	const auto musicDecode = g_fxo->get<music_decode>();
+	auto& dec = g_fxo->get<music_decode>();
 
-	if (!musicDecode->func)
+	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
 	{
-		musicDecode->func(ppu, CELL_MUSIC_DECODE_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(CELL_OK), musicDecode->userData);
+		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(CELL_OK), dec.userData);
 		return CELL_OK;
 	});
 
@@ -169,14 +169,14 @@ error_code cellMusicDecodeSetDecodeCommand(s32 command)
 {
 	cellMusicDecode.todo("cellMusicDecodeSetDecodeCommand(command=0x%x)", command);
 
-	const auto musicDecode = g_fxo->get<music_decode>();
+	auto& dec = g_fxo->get<music_decode>();
 
-	if (!musicDecode->func)
+	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
 	{
-		musicDecode->func(ppu, CELL_MUSIC_DECODE_EVENT_SET_DECODE_COMMAND_RESULT, vm::addr_t(CELL_OK), musicDecode->userData);
+		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_DECODE_COMMAND_RESULT, vm::addr_t(CELL_OK), dec.userData);
 		return CELL_OK;
 	});
 
@@ -205,14 +205,14 @@ error_code cellMusicDecodeSetSelectionContext(vm::ptr<CellMusicSelectionContext>
 {
 	cellMusicDecode.todo("cellMusicDecodeSetSelectionContext(context=*0x%x)", context);
 
-	const auto musicDecode = g_fxo->get<music_decode>();
+	auto& dec = g_fxo->get<music_decode>();
 
-	if (!musicDecode->func)
+	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
 	{
-		musicDecode->func(ppu, CELL_MUSIC_DECODE_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(CELL_OK), musicDecode->userData);
+		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(CELL_OK), dec.userData);
 		return CELL_OK;
 	});
 
@@ -229,13 +229,13 @@ error_code cellMusicDecodeInitialize2(s32 mode, u32 container, s32 spuPriority, 
 {
 	cellMusicDecode.todo("cellMusicDecodeInitialize2(mode=0x%x, container=0x%x, spuPriority=0x%x, func=*0x%x, userData=*0x%x, speed=0x%x, bufsize=0x%x)", mode, container, spuPriority, func, userData, speed, bufsize);
 
-	const auto musicDecode = g_fxo->get<music_decode2>();
-	musicDecode->func = func;
-	musicDecode->userData = userData;
+	auto& dec = g_fxo->get<music_decode2>();
+	dec.func = func;
+	dec.userData = userData;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
 	{
-		musicDecode->func(ppu, CELL_MUSIC_DECODE2_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
+		dec.func(ppu, CELL_MUSIC_DECODE2_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
 		return CELL_OK;
 	});
 
@@ -246,13 +246,13 @@ error_code cellMusicDecodeInitialize2SystemWorkload(s32 mode, u32 container, vm:
 {
 	cellMusicDecode.todo("cellMusicDecodeInitialize2SystemWorkload(mode=0x%x, container=0x%x, func=*0x%x, userData=*0x%x, spuUsageRate=0x%x, bufsize=0x%x, spurs=*0x%x, priority=*0x%x, attr=*0x%x)", mode, container, func, userData, spuUsageRate, bufsize, spurs, priority, attr);
 
-	const auto musicDecode = g_fxo->get<music_decode2>();
-	musicDecode->func = func;
-	musicDecode->userData = userData;
+	auto& dec = g_fxo->get<music_decode2>();
+	dec.func = func;
+	dec.userData = userData;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
 	{
-		musicDecode->func(ppu, CELL_MUSIC_DECODE2_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
+		dec.func(ppu, CELL_MUSIC_DECODE2_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
 		return CELL_OK;
 	});
 
@@ -263,13 +263,13 @@ error_code cellMusicDecodeFinalize2()
 {
 	cellMusicDecode.todo("cellMusicDecodeFinalize2()");
 
-	const auto musicDecode = g_fxo->get<music_decode2>();
+	auto& dec = g_fxo->get<music_decode2>();
 
-	if (musicDecode->func)
+	if (dec.func)
 	{
-		sysutil_register_cb([=](ppu_thread& ppu) -> s32
+		sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
 		{
-			musicDecode->func(ppu, CELL_MUSIC_DECODE2_EVENT_FINALIZE_RESULT, vm::addr_t(CELL_OK), musicDecode->userData);
+			dec.func(ppu, CELL_MUSIC_DECODE2_EVENT_FINALIZE_RESULT, vm::addr_t(CELL_OK), dec.userData);
 			return CELL_OK;
 		});
 	}
@@ -281,14 +281,14 @@ error_code cellMusicDecodeSelectContents2()
 {
 	cellMusicDecode.todo("cellMusicDecodeSelectContents2()");
 
-	const auto musicDecode = g_fxo->get<music_decode2>();
+	auto& dec = g_fxo->get<music_decode2>();
 
-	if (!musicDecode->func)
+	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
 	{
-		musicDecode->func(ppu, CELL_MUSIC_DECODE2_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(CELL_OK), musicDecode->userData);
+		dec.func(ppu, CELL_MUSIC_DECODE2_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(CELL_OK), dec.userData);
 		return CELL_OK;
 	});
 
@@ -299,14 +299,14 @@ error_code cellMusicDecodeSetDecodeCommand2(s32 command)
 {
 	cellMusicDecode.todo("cellMusicDecodeSetDecodeCommand2(command=0x%x)", command);
 
-	const auto musicDecode = g_fxo->get<music_decode2>();
+	auto& dec = g_fxo->get<music_decode2>();
 
-	if (!musicDecode->func)
+	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
 	{
-		musicDecode->func(ppu, CELL_MUSIC_DECODE2_EVENT_SET_DECODE_COMMAND_RESULT, vm::addr_t(CELL_OK), musicDecode->userData);
+		dec.func(ppu, CELL_MUSIC_DECODE2_EVENT_SET_DECODE_COMMAND_RESULT, vm::addr_t(CELL_OK), dec.userData);
 		return CELL_OK;
 	});
 
@@ -335,14 +335,14 @@ error_code cellMusicDecodeSetSelectionContext2(vm::ptr<CellMusicSelectionContext
 {
 	cellMusicDecode.todo("cellMusicDecodeSetSelectionContext2(context=*0x%x)", context);
 
-	const auto musicDecode = g_fxo->get<music_decode2>();
+	auto& dec = g_fxo->get<music_decode2>();
 
-	if (!musicDecode->func)
+	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
 	{
-		musicDecode->func(ppu, CELL_MUSIC_DECODE2_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(CELL_OK), musicDecode->userData);
+		dec.func(ppu, CELL_MUSIC_DECODE2_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(CELL_OK), dec.userData);
 		return CELL_OK;
 	});
 
