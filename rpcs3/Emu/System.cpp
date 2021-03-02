@@ -1188,6 +1188,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				// Exit "process"
 				Emu.CallAfter([]
 				{
+					Emu.SetForceBoot(true);
 					Emu.Stop();
 				});
 			});
