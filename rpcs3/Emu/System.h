@@ -17,8 +17,8 @@ enum class video_renderer;
 enum class system_state : u32
 {
 	running,
-	paused,
 	stopped,
+	paused,
 	ready,
 };
 
@@ -238,7 +238,7 @@ public:
 	bool Quit(bool force_quit);
 
 	bool IsRunning() const { return m_state == system_state::running; }
-	bool IsPaused()  const { return m_state == system_state::paused; }
+	bool IsPaused()  const { return m_state >= system_state::paused; } // ready is also considered paused by this function
 	bool IsStopped() const { return m_state == system_state::stopped; }
 	bool IsReady()   const { return m_state == system_state::ready; }
 	auto GetStatus() const { return m_state.load(); }

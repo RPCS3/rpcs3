@@ -199,15 +199,19 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 	case Qt::Key_E:
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
 		{
-			if (Emu.IsReady())
+			switch (Emu.GetStatus())
+			{
+			case system_state::ready:
 			{
 				Emu.Run(true);
 				return;
 			}
-			else if (Emu.IsPaused())
+			case system_state::paused:
 			{
 				Emu.Resume();
 				return;
+			}
+			default: break;
 			}
 		}
 		break;

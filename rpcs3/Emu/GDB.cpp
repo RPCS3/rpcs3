@@ -741,7 +741,7 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 		}
 		ppu->state -= cpu_flag::dbg_pause;
 		//special case if app didn't start yet (only loaded)
-		if (!Emu.IsPaused() && !Emu.IsRunning()) {
+		if (Emu.IsReady()) {
 			Emu.Run(true);
 		}
 		if (Emu.IsPaused()) {

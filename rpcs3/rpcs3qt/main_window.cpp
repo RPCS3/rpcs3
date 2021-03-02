@@ -271,19 +271,12 @@ void main_window::ResizeIcons(int index)
 
 void main_window::OnPlayOrPause()
 {
-	if (Emu.IsReady())
+	switch (Emu.GetStatus())
 	{
-		Emu.Run(true);
-	}
-	else if (Emu.IsPaused())
-	{
-		Emu.Resume();
-	}
-	else if (Emu.IsRunning())
-	{
-		Emu.Pause();
-	}
-	else if (Emu.IsStopped())
+	case system_state::ready: Emu.Run(true); return;
+	case system_state::paused: Emu.Resume(); return;
+	case system_state::running: Emu.Pause(); return;
+	case system_state::stopped:
 	{
 		if (m_selected_game)
 		{
@@ -301,6 +294,10 @@ void main_window::OnPlayOrPause()
 		{
 			BootRecentAction(m_recent_game_acts.first());
 		}
+
+		return;
+	}
+	default: fmt::throw_exception("Unreachable");
 	}
 }
 
@@ -2388,7 +2385,15 @@ void main_window::keyPressEvent(QKeyEvent *keyEvent)
 	{
 		switch (keyEvent->key())
 		{
-		case Qt::Key_E: if (Emu.IsPaused()) Emu.Resume(); else if (Emu.IsReady()) Emu.Run(true); return;
+		case Qt::Key_E:
+		{
+			switch (Emu.GetStatus())
+			{
+			case system_state::paused: Emu.Resume(); return;
+			case system_state::ready: Emu.Run(true); return;
+			default: return;
+			}
+		}
 		case Qt::Key_P: if (Emu.IsRunning()) Emu.Pause(); return;
 		case Qt::Key_S: if (!Emu.IsStopped()) Emu.Stop(); return;
 		case Qt::Key_R: if (!Emu.GetBoot().empty()) Emu.Restart(); return;
