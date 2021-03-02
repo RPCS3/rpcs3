@@ -138,7 +138,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 	b_has_deadzones = true;
 	b_has_led = true;
 	b_has_rgb = true;
-	b_has_battery = false;
+	b_has_battery = true;
 
 	m_name_string = "DualSense Pad #";
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;
@@ -347,6 +347,35 @@ dualsense_pad_handler::DataStatus dualsense_pad_handler::get_data(DualSenseDevic
 			const s16 cal_value = apply_calibration(raw_value, device->calib_data[i]);
 			buf[calib_offset++] = (static_cast<u16>(cal_value) >> 0) & 0xFF;
 			buf[calib_offset++] = (static_cast<u16>(cal_value) >> 8) & 0xFF;
+		}
+	}
+
+	// For now let's only get battery info in enhanced mode
+	if (device->data_mode == DualSenseDevice::DualSenseDataMode::Enhanced)
+	{
+		const u8 battery_state = buf[offset + 52];
+		const u8 battery_value = battery_state & 0x0F; // 10% per unit, starting with 0-9%. So 100% equals unit 10
+		const u8 charge_info = (battery_state & 0xF0) >> 4;
+
+		switch (charge_info)
+		{
+		case 0x0:
+			device->battery_level = std::min(battery_value * 10 + 5, 100);
+			device->cable_state = 0;
+			break;
+		case 0x1:
+			device->battery_level = std::min(battery_value * 10 + 5, 100);
+			device->cable_state = 1;
+			break;
+		case 0x2:
+			device->battery_level = 100;
+			device->cable_state = 1;
+			break;
+		default:
+			// We don't care about the other values. Just set battery to 0.
+			device->battery_level = 0;
+			device->cable_state = 0;
+			break;
 		}
 	}
 
@@ -867,6 +896,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 
 	if (device->init_lightbar)
 	{
+		// TODO: these settings might need to be initialized on their own. Needs investigation.
 		device->init_lightbar = false;
 
 		common.valid_flag_2 |= VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE;
@@ -875,6 +905,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 
 	if (device->update_lightbar)
 	{
+		// TODO: battery blink
 		device->update_lightbar = false;
 
 		common.valid_flag_1 |= VALID_FLAG_1_LIGHTBAR_CONTROL_ENABLE;
@@ -952,6 +983,46 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 	const int speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
 	const int speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
 
+	const bool wireless    = dualsense_dev->cable_state == 0;
+	const bool low_battery = dualsense_dev->battery_level <= 15;
+	const bool is_blinking = dualsense_dev->led_delay_on > 0 || dualsense_dev->led_delay_off > 0;
+	
+	// Blink LED when battery is low
+	if (config->led_low_battery_blink)
+	{
+		// we are now wired or have okay battery level -> stop blinking
+		if (is_blinking && !(wireless && low_battery))
+		{
+			dualsense_dev->led_delay_on = 0;
+			dualsense_dev->led_delay_off = 0;
+			dualsense_dev->update_lightbar = true;
+			dualsense_dev->new_output_data = true;
+		}
+		// we are now wireless and low on battery -> blink
+		else if (!is_blinking && wireless && low_battery)
+		{
+			dualsense_dev->led_delay_on = 100;
+			dualsense_dev->led_delay_off = 100;
+			dualsense_dev->update_lightbar = true;
+			dualsense_dev->new_output_data = true;
+		}
+	}
+
+	// Use LEDs to indicate battery level
+	if (config->led_battery_indicator)
+	{
+		// This makes sure that the LED color doesn't update every 1ms. DS4 only reports battery level in 10% increments
+		if (dualsense_dev->last_battery_level != dualsense_dev->battery_level)
+		{
+			const u32 combined_color = get_battery_color(dualsense_dev->battery_level, config->led_battery_indicator_brightness);
+			config->colorR.set(combined_color >> 8);
+			config->colorG.set(combined_color & 0xff);
+			config->colorB.set(0);
+			dualsense_dev->update_lightbar = true;
+			dualsense_dev->new_output_data = true;
+		}
+	}
+
 	dualsense_dev->new_output_data |= dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
 
 	dualsense_dev->large_motor = speed_large;
@@ -966,7 +1037,7 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 	}
 }
 
-void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool /*battery_led*/, u32 /*battery_led_brightness*/)
+void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<DualSenseDevice> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
@@ -994,7 +1065,14 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor,
 	ensure(device->config);
 
 	// Set new LED color (see ds4_pad_handler)
-	if (r >= 0 && g >= 0 && b >= 0 && r <= 255 && g <= 255 && b <= 255)
+	if (battery_led)
+	{
+		const u32 combined_color = get_battery_color(device->battery_level, battery_led_brightness);
+		device->config->colorR.set(combined_color >> 8);
+		device->config->colorG.set(combined_color & 0xff);
+		device->config->colorB.set(0);
+	}
+	else if (r >= 0 && g >= 0 && b >= 0 && r <= 255 && g <= 255 && b <= 255)
 	{
 		device->config->colorR.set(r);
 		device->config->colorG.set(g);
@@ -1004,4 +1082,14 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor,
 
 	// Start/Stop the engines :)
 	send_output_report(device.get());
+}
+
+u32 dualsense_pad_handler::get_battery_level(const std::string& padId)
+{
+	std::shared_ptr<DualSenseDevice> device = get_hid_device(padId);
+	if (device == nullptr || device->hidDevice == nullptr)
+	{
+		return 0;
+	}
+	return std::min<u32>(device->battery_level, 100);
 }

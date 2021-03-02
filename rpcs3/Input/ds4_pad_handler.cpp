@@ -768,20 +768,6 @@ bool ds4_pad_handler::get_is_right_stick(u64 keyCode)
 	}
 }
 
-u32 ds4_pad_handler::get_battery_color(u8 battery_level, int brightness)
-{
-	static const std::array<u32, 12> battery_level_clr = {0xff00, 0xff33, 0xff66, 0xff99, 0xffcc, 0xffff, 0xccff, 0x99ff, 0x66ff, 0x33ff, 0x00ff, 0x00ff};
-	u32 combined_color = battery_level_clr[0];
-	// Check if we got a weird value
-	if (battery_level < battery_level_clr.size())
-	{
-		combined_color = battery_level_clr[battery_level];
-	}
-	const u32 red = (combined_color >> 8) * brightness / 100;
-	const u32 green = (combined_color & 0xff) * brightness / 100;
-	return ((red << 8) | green);
-}
-
 PadHandlerBase::connection ds4_pad_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
 	DS4Device* ds4_dev = static_cast<DS4Device*>(device.get());
