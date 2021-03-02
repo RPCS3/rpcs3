@@ -573,10 +573,10 @@ void dualsense_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& 
 	if (!dualsense_device || !pad)
 		return;
 
-	auto buf = dualsense_device->padData;
-
 	pad->m_battery_level = dualsense_device->battery_level;
 	pad->m_cable_state   = dualsense_device->cable_state;
+
+	auto& buf = dualsense_device->padData;
 
 	// these values come already calibrated, all we need to do is convert to ds3 range
 
@@ -709,13 +709,13 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 		keyBuffer[DualSenseKeyCodes::L3]      = ((data & 0x40) != 0) ? 255 : 0;
 		keyBuffer[DualSenseKeyCodes::R3]      = ((data & 0x80) != 0) ? 255 : 0;
 
-		keyBuffer[DualSenseKeyCodes::L2] = buf[7];
-		keyBuffer[DualSenseKeyCodes::R2] = buf[8];
-
 		data = buf[6];
 		keyBuffer[DualSenseKeyCodes::PSButton] = ((data & 0x01) != 0) ? 255 : 0;
 		keyBuffer[DualSenseKeyCodes::TouchPad] = ((data & 0x02) != 0) ? 255 : 0;
 		keyBuffer[DualSenseKeyCodes::Mic]      = ((data & 0x04) != 0) ? 255 : 0;
+
+		keyBuffer[DualSenseKeyCodes::L2] = buf[7];
+		keyBuffer[DualSenseKeyCodes::R2] = buf[8];
 
 		return keyBuffer;
 	}
@@ -735,6 +735,9 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 	// Right Stick Y Axis (Up is the negative for some reason)
 	keyBuffer[DualSenseKeyCodes::RSYNeg] = Clamp0To255((buf[3] - 127.5f) * 2.0f);
 	keyBuffer[DualSenseKeyCodes::RSYPos] = Clamp0To255((127.5f - buf[3]) * 2.0f);
+
+	keyBuffer[DualSenseKeyCodes::L2] = buf[4];
+	keyBuffer[DualSenseKeyCodes::R2] = buf[5];
 
 	u8 data = buf[7] & 0xf;
 	switch (data)
@@ -812,9 +815,6 @@ std::unordered_map<u64, u16> dualsense_pad_handler::get_button_values(const std:
 	keyBuffer[DualSenseKeyCodes::Options] = ((data & 0x20) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::L3]      = ((data & 0x40) != 0) ? 255 : 0;
 	keyBuffer[DualSenseKeyCodes::R3]      = ((data & 0x80) != 0) ? 255 : 0;
-
-	keyBuffer[DualSenseKeyCodes::L2] = buf[4];
-	keyBuffer[DualSenseKeyCodes::R2] = buf[5];
 
 	data = buf[9];
 	keyBuffer[DualSenseKeyCodes::PSButton] = ((data & 0x01) != 0) ? 255 : 0;
