@@ -48,7 +48,7 @@ namespace vk
 		command_buffer* get_current();
 		event* get_primary_sync_label();
 
-		void flush(VkSemaphore wait_semaphore = VK_NULL_HANDLE, VkPipelineStageFlags wait_dst_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+		void flush(VkBool32 force_flush, VkSemaphore wait_semaphore = VK_NULL_HANDLE, VkPipelineStageFlags wait_dst_stage_mask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 		void kill();
 
 		// Thread entry-point

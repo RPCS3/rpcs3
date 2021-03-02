@@ -203,7 +203,7 @@ namespace vk
 		u32 dst_queue = new_queue_family;
 
 		if (current_queue_family == VK_QUEUE_FAMILY_IGNORED)
-		 {
+		{
 			// Implicit acquisition
 			dst_queue = VK_QUEUE_FAMILY_IGNORED;
 		}

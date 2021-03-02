@@ -936,7 +936,7 @@ namespace vk
 			}
 
 			vk::upload_image(cmd, image, subresource_layout, gcm_format, input_swizzled, mipmaps, image->aspect(),
-				*m_texture_upload_heap, upload_heap_align_default, initialize_image_layout | upload_contents_inline);
+				*m_texture_upload_heap, upload_heap_align_default, initialize_image_layout | upload_contents_async);
 
 			vk::leave_uninterruptible();
 

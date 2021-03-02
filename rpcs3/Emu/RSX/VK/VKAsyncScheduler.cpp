@@ -129,7 +129,7 @@ namespace vk
 		return std::exchange(m_sync_label, nullptr);
 	}
 
-	void AsyncTaskScheduler::flush(VkSemaphore wait_semaphore, VkPipelineStageFlags wait_dst_stage_mask)
+	void AsyncTaskScheduler::flush(VkBool32 force_flush, VkSemaphore wait_semaphore, VkPipelineStageFlags wait_dst_stage_mask)
 	{
 		if (!m_current_cb)
 		{
@@ -143,7 +143,7 @@ namespace vk
 		}
 
 		m_current_cb->end();
-		m_current_cb->submit(get_current_renderer()->get_transfer_queue(), wait_semaphore, VK_NULL_HANDLE, nullptr, wait_dst_stage_mask, VK_FALSE);
+		m_current_cb->submit(get_current_renderer()->get_transfer_queue(), wait_semaphore, VK_NULL_HANDLE, nullptr, wait_dst_stage_mask, force_flush);
 
 		m_last_used_cb = m_current_cb;
 		m_current_cb = nullptr;

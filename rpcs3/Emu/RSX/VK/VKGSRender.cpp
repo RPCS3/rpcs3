@@ -1939,7 +1939,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	const VkBool32 force_flush = !sync_success;
 
 	// Flush any asynchronously scheduled jobs
-	g_fxo->get<vk::async_scheduler_thread>()->flush();
+	g_fxo->get<vk::async_scheduler_thread>()->flush(force_flush);
 
 	if (vk::test_status_interrupt(vk::heap_dirty))
 	{
