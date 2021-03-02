@@ -200,9 +200,8 @@ namespace vk
 		}
 
 		ensure(m_layout_stack.empty());
-		change_image_layout(cmd, this, new_layout);
-
 		u32 dst_queue = new_queue_family;
+
 		if (current_queue_family == VK_QUEUE_FAMILY_IGNORED)
 		 {
 			// Implicit acquisition
