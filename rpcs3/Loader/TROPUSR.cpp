@@ -107,30 +107,31 @@ bool TROPUSRLoader::LoadTables()
 // TODO: TROPUSRLoader::Save deletes the TROPUSR and creates it again. This is probably very slow.
 bool TROPUSRLoader::Save(const std::string& filepath)
 {
-	if (!m_file.open(vfs::get(filepath), fs::rewrite))
+	fs::pending_file temp(vfs::get(filepath));
+
+	if (!temp.file)
 	{
 		return false;
 	}
 
-	m_file.write(m_header);
+	temp.file.write(m_header);
 
 	for (const TROPUSRTableHeader& tableHeader : m_tableHeaders)
 	{
-		m_file.write(tableHeader);
+		temp.file.write(tableHeader);
 	}
 
 	for (const auto& entry : m_table4)
 	{
-		m_file.write(entry);
+		temp.file.write(entry);
 	}
 
 	for (const auto& entry : m_table6)
 	{
-		m_file.write(entry);
+		temp.file.write(entry);
 	}
 
-	m_file.release();
-	return true;
+	return temp.commit();
 }
 
 bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& configpath)
