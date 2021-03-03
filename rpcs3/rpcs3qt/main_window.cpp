@@ -789,7 +789,9 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 				else
 				{
 					gui_log.error("Failed to install %s.", file_name);
-					QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!").arg(package.path));
+					QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!"
+						"\nThis is very likely caused by external interference from a faulty anti-virus software."
+						"\nPlease add RPCS3 to your anti-virus\' whitelist or use better anti-virus software.").arg(package.path));
 				}
 			}
 			return;
@@ -1137,7 +1139,10 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 				if (!dev_flash_tar.extract())
 				{
 					gui_log.error("Error while installing firmware: TAR contents are invalid. (package=%s)", update_filename);
-					critical(tr("Firmware installation failed: Firmware contents could not be extracted."));
+					critical(tr("The firmware contents could not be extracted."
+						"\nThis is very likely caused by external interference from a faulty anti-virus software."
+						"\nPlease add RPCS3 to your anti-virus\' whitelist or use better anti-virus software."));
+
 					progress = -1;
 					return;
 				}
