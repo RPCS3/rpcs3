@@ -803,7 +803,7 @@ namespace vk
 		const vk::command_buffer* pcmd = nullptr;
 		if (flags & image_upload_options::upload_contents_async)
 		{
-			auto async_cmd = g_fxo->get<vk::async_scheduler_thread>()->get_current();
+			auto async_cmd = g_fxo->get<vk::async_scheduler_thread>().get_current();
 			async_cmd->begin();
 			pcmd = async_cmd;
 

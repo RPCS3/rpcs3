@@ -152,7 +152,7 @@ namespace vk
 
 	void AsyncTaskScheduler::kill()
 	{
-		*g_fxo->get<async_scheduler_thread>() = thread_state::aborting;
+		g_fxo->get<async_scheduler_thread>() = thread_state::aborting;
 		while (has_refs()) _mm_pause();
 
 		for (auto& cb : m_async_command_queue)
