@@ -5,6 +5,8 @@
 #include "sync.h"
 #include "shared.h"
 
+#include "util/sysinfo.hpp"
+
 extern u64 get_system_time();
 
 namespace vk
@@ -148,7 +150,7 @@ namespace vk
 		}
 		else
 		{
-			return (*m_value == 0xDEADBEEF) ? VK_EVENT_SET : VK_EVENT_RESET;
+			return (*m_value == 0xCAFEBABE) ? VK_EVENT_RESET : VK_EVENT_SET;
 		}
 	}
 
@@ -180,7 +182,10 @@ namespace vk
 
 	VkResult wait_for_event(event* pEvent, u64 timeout)
 	{
-		u64 t = 0;
+		// Convert timeout to TSC cycles. Timeout accuracy isn't super-important, only fast response when event is signaled (within 10us if possible)
+		timeout *= (utils::get_tsc_freq() / 1'000'000);
+		u64 start = 0;
+
 		while (true)
 		{
 			switch (const auto status = pEvent->status())
@@ -196,20 +201,21 @@ namespace vk
 
 			if (timeout)
 			{
-				if (!t)
+				if (!start)
 				{
-					t = get_system_time();
+					start = __rdtsc();
 					continue;
 				}
 
-				if ((get_system_time() - t) > timeout)
+				if (const auto now = __rdtsc();
+					(now > start) &&
+					(now - start) > timeout)
 				{
 					rsx_log.error("[vulkan] vk::wait_for_event has timed out!");
 					return VK_TIMEOUT;
 				}
 			}
 
-			//std::this_thread::yield();
 #ifdef _MSC_VER
 			_mm_pause();
 #else
