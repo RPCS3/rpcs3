@@ -20,7 +20,7 @@ namespace vm
 	template <typename T, typename AT>
 	class _ptr_base
 	{
-		AT m_addr;
+		AT m_addr{};
 
 		static_assert(!std::is_pointer<T>::value, "vm::_ptr_base<> error: invalid type (pointer)");
 		static_assert(!std::is_reference<T>::value, "vm::_ptr_base<> error: invalid type (reference)");
