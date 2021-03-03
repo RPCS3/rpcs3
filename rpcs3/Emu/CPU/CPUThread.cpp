@@ -614,6 +614,12 @@ cpu_thread::cpu_thread(u32 id)
 		break;
 	}
 
+	if (Emu.IsStopped())
+	{
+		// For similar race as above
+		state += cpu_flag::exit;
+	}
+
 	g_threads_created++;
 }
 
