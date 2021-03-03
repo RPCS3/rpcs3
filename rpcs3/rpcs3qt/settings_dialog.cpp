@@ -1255,6 +1255,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceSlider(emu_settings_type::PerfOverlayOpacity, ui->perfOverlayOpacity, ui->label_opacity, tr("Opacity: %0 %", "Performance overlay opacity"));
 	SubscribeTooltip(ui->perf_overlay_opacity, tooltips.settings.perf_overlay_opacity);
 
+	EnhanceSlider(emu_settings_type::PerfOverlayFramerateDatapoints, ui->slider_framerate_datapoints, ui->label_framerate_datapoints, tr("Framerate datapoints: %0", "Framerate graph datapoints"));
+	SubscribeTooltip(ui->perf_overlay_framerate_datapoints, tooltips.settings.perf_overlay_framerate_datapoints);
+
+	EnhanceSlider(emu_settings_type::PerfOverlayFrametimeDatapoints, ui->slider_frametime_datapoints, ui->label_frametime_datapoints, tr("Frametime datapoints: %0", "Frametime graph datapoints"));
+	SubscribeTooltip(ui->perf_overlay_frametime_datapoints, tooltips.settings.perf_overlay_frametime_datapoints);
+
 	EnhanceSlider(emu_settings_type::ShaderLoadBgDarkening, ui->shaderLoadBgDarkening, ui->label_shaderLoadBgDarkening, tr("Background darkening: %0 %", "Shader load background darkening"));
 	SubscribeTooltip(ui->shaderLoadBgDarkening, tooltips.settings.shader_load_bg_darkening);
 
