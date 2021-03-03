@@ -555,7 +555,7 @@ namespace rsx
 
 		rsx::overlays::reset_performance_overlay();
 
-		g_fxo->get<rsx::dma_manager>()->init();
+		g_fxo->get<rsx::dma_manager>().init();
 		on_init_thread();
 
 		if (!zcull_ctrl)
@@ -684,7 +684,7 @@ namespace rsx
 		do_local_task(rsx::FIFO_state::lock_wait);
 
 		m_rsx_thread_exiting = true;
-		g_fxo->get<rsx::dma_manager>()->join();
+		g_fxo->get<rsx::dma_manager>().join();
 		state += cpu_flag::exit;
 	}
 
@@ -2357,7 +2357,7 @@ namespace rsx
 				const u32 data_size = range.second * block.attribute_stride;
 				const u32 vertex_base = range.first * block.attribute_stride;
 
-				g_fxo->get<rsx::dma_manager>()->copy(persistent, vm::_ptr<char>(block.real_offset_address) + vertex_base, data_size);
+				g_fxo->get<rsx::dma_manager>().copy(persistent, vm::_ptr<char>(block.real_offset_address) + vertex_base, data_size);
 				persistent += data_size;
 			}
 		}
@@ -2510,7 +2510,7 @@ namespace rsx
 		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
 
 		// DMA sync; if you need this, don't use MTRSX
-		// g_fxo->get<rsx::dma_manager>()->sync();
+		// g_fxo->get<rsx::dma_manager>().sync();
 
 		//TODO: On sync every sub-unit should finish any pending tasks
 		//Might cause zcull lockup due to zombie 'unclaimed reports' which are not forcefully removed currently
@@ -2744,7 +2744,7 @@ namespace rsx
 					{
 						// Each 64 entries are grouped by a bit
 						const u64 io_event = SYS_RSX_EVENT_UNMAPPED_BASE << i;
-						g_fxo->get<lv2_rsx_config>()->send_event(0, io_event, to_unmap);
+						g_fxo->get<lv2_rsx_config>().send_event(0, io_event, to_unmap);
 					}
 				}
 			}
@@ -2757,13 +2757,13 @@ namespace rsx
 				{
 					io >>= 20;
 
-					const auto cfg = g_fxo->get<gcm_config>();
-					std::lock_guard lock(cfg->gcmio_mutex);
+					auto& cfg = g_fxo->get<gcm_config>();
+					std::lock_guard lock(cfg.gcmio_mutex);
 
 					for (const u32 end = ea + (size >> 20); ea < end;)
 					{
-						cfg->offsetTable.ioAddress[ea++] = 0xFFFF;
-						cfg->offsetTable.eaAddress[io++] = 0xFFFF;
+						cfg.offsetTable.ioAddress[ea++] = 0xFFFF;
+						cfg.offsetTable.eaAddress[io++] = 0xFFFF;
 					}
 				}
 			}
@@ -2828,7 +2828,7 @@ namespace rsx
 		{
 			if (g_cfg.video.multithreaded_rsx)
 			{
-				g_fxo->get<rsx::dma_manager>()->sync();
+				g_fxo->get<rsx::dma_manager>().sync();
 			}
 
 			external_interrupt_ack.store(true);

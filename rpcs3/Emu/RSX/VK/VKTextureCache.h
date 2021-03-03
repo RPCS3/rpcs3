@@ -898,7 +898,7 @@ namespace vk
 			return &region;
 		}
 
-		cached_texture_section* create_nul_section(vk::command_buffer& cmd, const utils::address_range& rsx_range, bool memory_load) override
+		cached_texture_section* create_nul_section(vk::command_buffer& /*cmd*/, const utils::address_range& rsx_range, bool memory_load) override
 		{
 			auto& region = *find_cached_texture(rsx_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, true, false, false);
 			ensure(!region.is_locked());
@@ -950,8 +950,8 @@ namespace vk
 				input_swizzled = false;
 			}
 
-			vk::copy_mipmaped_image_using_buffer(cmd, image, subresource_layout, gcm_format, input_swizzled, mipmaps, subres_range.aspectMask,
-				*m_texture_upload_heap);
+			vk::upload_image(cmd, image, subresource_layout, gcm_format, input_swizzled, mipmaps, subres_range.aspectMask,
+				*m_texture_upload_heap, upload_heap_align_default, upload_contents_inline);
 
 			vk::leave_uninterruptible();
 

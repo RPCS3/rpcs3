@@ -273,7 +273,7 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resou
 	vk::advance_completed_frame_counter();
 }
 
-vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const rsx::avconf* avconfig)
+vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const rsx::avconf& avconfig)
 {
 	vk::image* image_to_flip = nullptr;
 
@@ -352,10 +352,10 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 		}
 
 		VkFormat format;
-		switch (avconfig->format)
+		switch (avconfig.format)
 		{
 		default:
-			rsx_log.error("Unhandled video output format 0x%x", avconfig->format);
+			rsx_log.error("Unhandled video output format 0x%x", avconfig.format);
 			[[fallthrough]];
 		case CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8:
 			format = VK_FORMAT_B8G8R8A8_UNORM;
@@ -439,16 +439,16 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	u32 buffer_pitch = display_buffers[info.buffer].pitch;
 
 	u32 av_format;
-	const auto avconfig = g_fxo->get<rsx::avconf>();
+	auto& avconfig = g_fxo->get<rsx::avconf>();
 
-	if (avconfig->state)
+	if (avconfig.state)
 	{
-		av_format = avconfig->get_compatible_gcm_format();
+		av_format = avconfig.get_compatible_gcm_format();
 		if (!buffer_pitch)
-			buffer_pitch = buffer_width * avconfig->get_bpp();
+			buffer_pitch = buffer_width * avconfig.get_bpp();
 
-		const u32 video_frame_height = (!avconfig->_3d? avconfig->resolution_y : (avconfig->resolution_y - 30) / 2);
-		buffer_width = std::min(buffer_width, avconfig->resolution_x);
+		const u32 video_frame_height = (!avconfig._3d? avconfig.resolution_y : (avconfig.resolution_y - 30) / 2);
+		buffer_width = std::min(buffer_width, avconfig.resolution_x);
 		buffer_height = std::min(buffer_height, video_frame_height);
 	}
 	else
@@ -471,7 +471,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		image_to_flip = get_present_source(&present_info, avconfig);
 
-		if (avconfig->_3d) [[unlikely]]
+		if (avconfig._3d) [[unlikely]]
 		{
 			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
@@ -592,7 +592,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	{
 		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
 
-		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig->gamma, 1.f) || avconfig->_3d) [[unlikely]]
+		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig.gamma, 1.f) || avconfig._3d) [[unlikely]]
 		{
 			calibration_src.push_back(dynamic_cast<vk::viewable_image*>(image_to_flip));
 			ensure(calibration_src.front());
@@ -642,7 +642,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			vk::get_overlay_pass<vk::video_out_calibration_pass>()->run(
 				*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src,
-				avconfig->gamma, !use_full_rgb_range_output, avconfig->_3d, single_target_pass);
+				avconfig.gamma, !use_full_rgb_range_output, avconfig._3d, single_target_pass);
 
 			image_to_flip->pop_layout(*m_current_command_buffer);
 			direct_fbo->release();

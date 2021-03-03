@@ -17,6 +17,7 @@ enum class emu_settings_type
 	PreferredSPUThreads,
 	PPUDebug,
 	SPUDebug,
+	MFCDebug,
 	MaxLLVMThreads,
 	EnableTSX,
 	AccurateGETLLAR,
@@ -80,6 +81,8 @@ enum class emu_settings_type
 	PerfOverlayEnabled,
 	PerfOverlayFramerateGraphEnabled,
 	PerfOverlayFrametimeGraphEnabled,
+	PerfOverlayFramerateDatapoints,
+	PerfOverlayFrametimeDatapoints,
 	PerfOverlayDetailLevel,
 	PerfOverlayPosition,
 	PerfOverlayUpdateInterval,
@@ -114,6 +117,7 @@ enum class emu_settings_type
 	Camera,
 	CameraType,
 	Move,
+	Buzz,
 
 	// Misc
 	ExitRPCS3OnFinish,
@@ -162,6 +166,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::PreferredSPUThreads,      { "Core", "Preferred SPU Threads"}},
 	{ emu_settings_type::PPUDebug,                 { "Core", "PPU Debug"}},
 	{ emu_settings_type::SPUDebug,                 { "Core", "SPU Debug"}},
+	{ emu_settings_type::MFCDebug,                 { "Core", "MFC Debug"}},
 	{ emu_settings_type::MaxLLVMThreads,           { "Core", "Max LLVM Compile Threads"}},
 	{ emu_settings_type::EnableTSX,                { "Core", "Enable TSX"}},
 	{ emu_settings_type::AccurateGETLLAR,          { "Core", "Accurate GETLLAR"}},
@@ -224,6 +229,8 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::PerfOverlayEnabled,               { "Video", "Performance Overlay", "Enabled" } },
 	{ emu_settings_type::PerfOverlayFramerateGraphEnabled, { "Video", "Performance Overlay", "Enable Framerate Graph" } },
 	{ emu_settings_type::PerfOverlayFrametimeGraphEnabled, { "Video", "Performance Overlay", "Enable Frametime Graph" } },
+	{ emu_settings_type::PerfOverlayFramerateDatapoints,   { "Video", "Performance Overlay", "Framerate datapoints" } },
+	{ emu_settings_type::PerfOverlayFrametimeDatapoints,   { "Video", "Performance Overlay", "Frametime datapoints" } },
 	{ emu_settings_type::PerfOverlayDetailLevel,           { "Video", "Performance Overlay", "Detail level" } },
 	{ emu_settings_type::PerfOverlayPosition,              { "Video", "Performance Overlay", "Position" } },
 	{ emu_settings_type::PerfOverlayUpdateInterval,        { "Video", "Performance Overlay", "Metrics update interval (ms)" } },
@@ -258,6 +265,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::Camera,          { "Input/Output", "Camera"}},
 	{ emu_settings_type::CameraType,      { "Input/Output", "Camera type"}},
 	{ emu_settings_type::Move,            { "Input/Output", "Move" }},
+	{ emu_settings_type::Buzz,            { "Input/Output", "Buzz emulated controller" }},
 
 	// Misc
 	{ emu_settings_type::ExitRPCS3OnFinish,         { "Miscellaneous", "Exit RPCS3 when process finishes" }},

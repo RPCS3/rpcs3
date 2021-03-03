@@ -44,7 +44,7 @@ void spu_recompiler::init()
 	// Initialize if necessary
 	if (!m_spurt)
 	{
-		m_spurt = g_fxo->get<spu_runtime>();
+		m_spurt = &g_fxo->get<spu_runtime>();
 	}
 }
 
@@ -77,9 +77,9 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 		return add_loc->compiled;
 	}
 
-	if (auto cache = g_fxo->get<spu_cache>(); *cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
+	if (auto& cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 	{
-		cache->add(func);
+		cache.add(func);
 	}
 
 	{

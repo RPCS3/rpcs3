@@ -781,6 +781,11 @@ namespace rsx
 			return m_cached_resource;
 		}
 
+		struct osk_dialog_thread
+		{
+			static constexpr auto thread_name = "OSK Thread"sv;
+		};
+
 		void osk_dialog::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel)
 		{
 			state = OskDialogState::Open;
@@ -1012,7 +1017,7 @@ namespace rsx
 
 			update_panel();
 
-			g_fxo->init<named_thread>("OSK Thread", [this, tbit = alloc_thread_bit()]
+			g_fxo->get<named_thread<osk_dialog_thread>>()([this, tbit = alloc_thread_bit()]
 			{
 				g_thread_bit = tbit;
 

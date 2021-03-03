@@ -465,8 +465,8 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 			file.seek(0);
 			if (magic == "NPD\0"_u32)
 			{
-				auto edatkeys = g_fxo->get<loaded_npdrm_keys>();
-				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file), edatkeys->devKlic.load(), edatkeys->rifKey.load());
+				auto& edatkeys = g_fxo->get<loaded_npdrm_keys>();
+				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file), edatkeys.devKlic.load(), edatkeys.rifKey.load());
 				if (!sdata_file->ReadHeader())
 				{
 					return {CELL_EFSSPECIFIC};
@@ -553,7 +553,7 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 
 		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&ppath = ppath, &file = file, mode, flags, &real = real, &type = type]() -> std::shared_ptr<lv2_file>
 		{
-			if (!g_fxo->get<loaded_npdrm_keys>()->npdrm_fds.try_inc(16))
+			if (!g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
 			{
 				return nullptr;
 			}
@@ -681,7 +681,7 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 	{
 		if (file.type >= lv2_file_type::sdata)
 		{
-			g_fxo->get<loaded_npdrm_keys>()->npdrm_fds--;
+			g_fxo->get<loaded_npdrm_keys>().npdrm_fds--;
 		}
 	});
 
@@ -1350,7 +1350,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		stream.reset(std::move(sdata_file));
 		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&file = *file, &stream = stream]() -> std::shared_ptr<lv2_file>
 		{
-			if (!g_fxo->get<loaded_npdrm_keys>()->npdrm_fds.try_inc(16))
+			if (!g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
 			{
 				return nullptr;
 			}

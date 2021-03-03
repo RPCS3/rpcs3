@@ -56,17 +56,17 @@ error_code cellPadInit(u32 max_connect)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (config->max_connect)
+	if (config.max_connect)
 		return CELL_PAD_ERROR_ALREADY_INITIALIZED;
 
 	if (max_connect == 0 || max_connect > CELL_MAX_PADS)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	libio_sys_config_init();
-	config->max_connect = std::min<u32>(max_connect, CELL_PAD_MAX_PORT_NUM);
-	config->port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
+	config.max_connect = std::min<u32>(max_connect, CELL_PAD_MAX_PORT_NUM);
+	config.port_setting.fill(CELL_PAD_SETTING_PRESS_OFF | CELL_PAD_SETTING_SENSOR_OFF);
 	return CELL_OK;
 }
 
@@ -76,9 +76,9 @@ error_code cellPadEnd()
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect.exchange(0))
+	if (!config.max_connect.exchange(0))
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	libio_sys_config_end();
@@ -112,9 +112,9 @@ error_code cellPadClearBuf(u32 port_no)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -124,7 +124,7 @@ error_code cellPadClearBuf(u32 port_no)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config->max_connect)
+	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto pad = pads[port_no];
@@ -143,9 +143,9 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -155,7 +155,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config->max_connect)
+	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto pad = pads[port_no];
@@ -171,7 +171,7 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		return CELL_OK;
 	}
 
-	const auto setting = config->port_setting[port_no];
+	const auto setting = config.port_setting[port_no];
 	bool btnChanged = false;
 
 	if (rinfo.ignore_input)
@@ -419,9 +419,9 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -433,7 +433,7 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 
 	std::memset(info.get_ptr(), 0, sizeof(CellPadPeriphInfo));
 
-	info->max_connect = config->max_connect;
+	info->max_connect = config.max_connect;
 	info->now_connect = rinfo.now_connect;
 	info->system_info = rinfo.system_info;
 
@@ -441,12 +441,12 @@ error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
 
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
 	{
-		if (i >= config->max_connect)
+		if (i >= config.max_connect)
 			break;
 
 		info->port_status[i] = pads[i]->m_port_status;
 		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
-		info->port_setting[i] = config->port_setting[i];
+		info->port_setting[i] = config.port_setting[i];
 		info->device_capability[i] = pads[i]->m_device_capability;
 		info->device_type[i] = pads[i]->m_device_type;
 		info->pclass_type[i] = pads[i]->m_class_type;
@@ -462,9 +462,9 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -475,7 +475,7 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config->max_connect)
+	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto pad = pads[port_no];
@@ -496,9 +496,9 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -508,7 +508,7 @@ error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config->max_connect)
+	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto pad = pads[port_no];
@@ -527,9 +527,9 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -539,7 +539,7 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config->max_connect)
+	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto pad = pads[port_no];
@@ -568,9 +568,9 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -591,7 +591,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config->max_connect)
+	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto pad = pads[port_no];
@@ -614,9 +614,9 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -627,7 +627,7 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 	std::memset(info.get_ptr(), 0, sizeof(CellPadInfo));
 
 	const PadInfo& rinfo = handler->GetInfo();
-	info->max_connect = config->max_connect;
+	info->max_connect = config.max_connect;
 	info->now_connect = rinfo.now_connect;
 	info->system_info = rinfo.system_info;
 
@@ -635,7 +635,7 @@ error_code cellPadGetInfo(vm::ptr<CellPadInfo> info)
 
 	for (u32 i = 0; i < CELL_MAX_PADS; ++i)
 	{
-		if (i >= config->max_connect)
+		if (i >= config.max_connect)
 			break;
 
 		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES; // TODO: should ASSIGN flags be cleared here?
@@ -687,9 +687,9 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -700,7 +700,7 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 	std::memset(info.get_ptr(), 0, sizeof(CellPadInfo2));
 
 	const PadInfo& rinfo = handler->GetInfo();
-	info->max_connect = config->max_connect;
+	info->max_connect = config.max_connect;
 	info->now_connect = rinfo.now_connect;
 	info->system_info = rinfo.system_info;
 
@@ -708,12 +708,12 @@ error_code cellPadGetInfo2(vm::ptr<CellPadInfo2> info)
 
 	for (u32 i = 0; i < CELL_PAD_MAX_PORT_NUM; ++i)
 	{
-		if (i >= config->max_connect)
+		if (i >= config.max_connect)
 			break;
 
 		info->port_status[i] = pads[i]->m_port_status;
 		pads[i]->m_port_status &= ~CELL_PAD_STATUS_ASSIGN_CHANGES;
-		info->port_setting[i] = config->port_setting[i];
+		info->port_setting[i] = config.port_setting[i];
 		info->device_capability[i] = pads[i]->m_device_capability;
 		info->device_type[i] = pads[i]->m_device_type;
 	}
@@ -727,9 +727,9 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -739,7 +739,7 @@ error_code cellPadGetCapabilityInfo(u32 port_no, vm::ptr<CellPadCapabilityInfo> 
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config->max_connect)
+	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto pad = pads[port_no];
@@ -760,9 +760,9 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	if (port_no >= CELL_MAX_PADS)
@@ -772,7 +772,7 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 	if (port_no >= CELL_PAD_MAX_PORT_NUM)
 		return CELL_OK;
 
-	config->port_setting[port_no] = port_setting;
+	config.port_setting[port_no] = port_setting;
 
 	// can also return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD
 
@@ -785,9 +785,9 @@ error_code cellPadInfoPressMode(u32 port_no)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -797,7 +797,7 @@ error_code cellPadInfoPressMode(u32 port_no)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config->max_connect)
+	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto pad = pads[port_no];
@@ -814,9 +814,9 @@ error_code cellPadInfoSensorMode(u32 port_no)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -826,7 +826,7 @@ error_code cellPadInfoSensorMode(u32 port_no)
 
 	const auto& pads = handler->GetPads();
 
-	if (port_no >= config->max_connect)
+	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
 	const auto pad = pads[port_no];
@@ -843,9 +843,9 @@ error_code cellPadSetPressMode(u32 port_no, u32 mode)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -866,9 +866,9 @@ error_code cellPadSetPressMode(u32 port_no, u32 mode)
 		return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD;
 
 	if (mode)
-		config->port_setting[port_no] |= CELL_PAD_SETTING_PRESS_ON;
+		config.port_setting[port_no] |= CELL_PAD_SETTING_PRESS_ON;
 	else
-		config->port_setting[port_no] &= ~CELL_PAD_SETTING_PRESS_ON;
+		config.port_setting[port_no] &= ~CELL_PAD_SETTING_PRESS_ON;
 
 	return CELL_OK;
 }
@@ -879,9 +879,9 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -902,9 +902,9 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 		return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD;
 
 	if (mode)
-		config->port_setting[port_no] |= CELL_PAD_SETTING_SENSOR_ON;
+		config.port_setting[port_no] |= CELL_PAD_SETTING_SENSOR_ON;
 	else
-		config->port_setting[port_no] &= ~CELL_PAD_SETTING_SENSOR_ON;
+		config.port_setting[port_no] &= ~CELL_PAD_SETTING_SENSOR_ON;
 
 	return CELL_OK;
 }
@@ -915,9 +915,9 @@ error_code cellPadLddRegisterController()
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -927,7 +927,7 @@ error_code cellPadLddRegisterController()
 	if (handle < 0)
 		return CELL_PAD_ERROR_TOO_MANY_DEVICES;
 
-	config->port_setting[handle] = 0;
+	config.port_setting[handle] = 0;
 
 	return not_an_error(handle);
 }
@@ -938,9 +938,9 @@ error_code cellPadLddDataInsert(s32 handle, vm::ptr<CellPadData> data)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -963,9 +963,9 @@ error_code cellPadLddGetPortNo(s32 handle)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();
@@ -987,9 +987,9 @@ error_code cellPadLddUnregisterController(s32 handle)
 
 	std::lock_guard lock(pad::g_pad_mutex);
 
-	const auto config = g_fxo->get<pad_info>();
+	auto& config = g_fxo->get<pad_info>();
 
-	if (!config->max_connect)
+	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
 	const auto handler = pad::get_current_handler();

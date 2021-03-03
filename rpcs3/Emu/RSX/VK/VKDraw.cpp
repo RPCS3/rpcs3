@@ -835,7 +835,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 			info.sType = VK_STRUCTURE_TYPE_CONDITIONAL_RENDERING_BEGIN_INFO_EXT;
 			info.buffer = m_cond_render_buffer->value;
 
-			m_device->cmdBeginConditionalRenderingEXT(*m_current_command_buffer, &info);
+			m_device->_vkCmdBeginConditionalRenderingEXT(*m_current_command_buffer, &info);
 			m_current_command_buffer->flags |= vk::command_buffer::cb_has_conditional_render;
 		}
 	}
@@ -1029,7 +1029,7 @@ void VKGSRender::end()
 
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_conditional_render)
 	{
-		m_device->cmdEndConditionalRenderingEXT(*m_current_command_buffer);
+		m_device->_vkCmdEndConditionalRenderingEXT(*m_current_command_buffer);
 		m_current_command_buffer->flags &= ~(vk::command_buffer::cb_has_conditional_render);
 	}
 

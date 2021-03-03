@@ -117,6 +117,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 	}
 
 	m_thread->setObjectName("Download Thread");
+	m_thread->setParent(this);
 	m_thread->start();
 }
 

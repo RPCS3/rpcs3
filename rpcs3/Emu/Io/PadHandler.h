@@ -75,6 +75,7 @@ protected:
 	int m_thumb_threshold = 0;
 
 	bool b_has_led = false;
+	bool b_has_rgb = false;
 	bool b_has_battery = false;
 	bool b_has_deadzones = false;
 	bool b_has_rumble = false;
@@ -145,6 +146,7 @@ public:
 	bool has_rumble() const;
 	bool has_deadzones() const;
 	bool has_led() const;
+	bool has_rgb() const;
 	bool has_battery() const;
 
 	void set_player(u32 player_id) { m_player_id = player_id; }

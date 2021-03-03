@@ -1,8 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
-
-#include "yaml-cpp/yaml.h"
+#include "util/yaml.hpp"
 
 #include "microphone_creator.h"
 #include "render_creator.h"

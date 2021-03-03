@@ -881,9 +881,6 @@
     <ClCompile Include="util\cereal.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="util\fixed_typemap.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="util\cpu_stats.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>

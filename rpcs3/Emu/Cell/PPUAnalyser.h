@@ -69,6 +69,16 @@ struct ppu_segment
 // PPU Module Information
 struct ppu_module
 {
+	ppu_module() = default;
+
+	ppu_module(const ppu_module&) = delete;
+
+	ppu_module(ppu_module&&) = default;
+
+	ppu_module& operator=(const ppu_module&) = delete;
+
+	ppu_module& operator=(ppu_module&&) = default;
+
 	uchar sha1[20]{};
 	std::string name;
 	std::string path;

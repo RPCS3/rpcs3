@@ -168,12 +168,12 @@ void sys_spu_image::deploy(u8* loc, sys_spu_segment* segs, u32 nsegs)
 	}
 
 	// Apply the patch
-	auto applied = g_fxo->get<patch_engine>()->apply(hash, loc);
+	auto applied = g_fxo->get<patch_engine>().apply(hash, loc);
 
 	if (!Emu.GetTitleID().empty())
 	{
 		// Alternative patch
-		applied += g_fxo->get<patch_engine>()->apply(Emu.GetTitleID() + '-' + hash, loc);
+		applied += g_fxo->get<patch_engine>().apply(Emu.GetTitleID() + '-' + hash, loc);
 	}
 
 	spu_log.notice("Loaded SPU image: %s (<- %u)%s", hash, applied.size(), dump);
@@ -252,7 +252,7 @@ error_code sys_spu_image_open(ppu_thread& ppu, vm::ptr<sys_spu_image> img, vm::c
 		return {fs_error, path};
 	}
 
-	u128 klic = g_fxo->get<loaded_npdrm_keys>()->devKlic.load();
+	u128 klic = g_fxo->get<loaded_npdrm_keys>().devKlic.load();
 
 	const fs::file elf_file = decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic));
 
@@ -623,7 +623,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	}
 	else
 	{
-		ct = g_fxo->get<lv2_memory_container>();
+		ct = &g_fxo->get<lv2_memory_container>();
 
 		if (ct->take(mem_size) != mem_size)
 		{
@@ -1771,7 +1771,7 @@ error_code sys_spu_thread_group_log(ppu_thread& ppu, s32 command, vm::ptr<s32> s
 		atomic_t<s32> state = SYS_SPU_THREAD_GROUP_LOG_ON;
 	};
 
-	const auto state = g_fxo->get<spu_group_log_state_t>();
+	auto& state = g_fxo->get<spu_group_log_state_t>();
 
 	switch (command)
 	{
@@ -1782,13 +1782,13 @@ error_code sys_spu_thread_group_log(ppu_thread& ppu, s32 command, vm::ptr<s32> s
 			return CELL_EFAULT;
 		}
 
-		*stat = state->state;
+		*stat = state.state;
 		break;
 	}
 	case SYS_SPU_THREAD_GROUP_LOG_ON:
 	case SYS_SPU_THREAD_GROUP_LOG_OFF:
 	{
-		state->state.release(command);
+		state.state.release(command);
 		break;
 	}
 	default: return CELL_EINVAL;

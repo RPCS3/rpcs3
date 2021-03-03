@@ -9,23 +9,37 @@ pup_object::pup_object(const fs::file& file): m_file(file)
 {
 	if (!file)
 	{
-		isValid = false;
 		return;
 	}
 
 	m_file.seek(0);
-	PUPHeader m_header;
-	m_file.read(m_header);
-	if (m_header.magic != "SCEUF\0\0\0"_u64)
+	PUPHeader m_header{};
+
+	if (!m_file.read(m_header) || m_header.magic != "SCEUF\0\0\0"_u64)
 	{
-		isValid = false;
+		// Either file is not large enough to contain header or magic is invalid
+		return;
+	}
+
+	constexpr usz entry_size = sizeof(PUPFileEntry) + sizeof(PUPHashEntry);
+
+	if (!m_header.file_count || (m_file.size() - sizeof(PUPHeader)) / entry_size < m_header.file_count)
+	{
+		// These checks before read() are to avoid some std::bad_alloc exceptions when file_count is too large
+		// So we cannot rely on read() for error checking in such cases
 		return;
 	}
 
 	m_file_tbl.resize(m_header.file_count);
-	m_file.read(m_file_tbl);
 	m_hash_tbl.resize(m_header.file_count);
-	m_file.read(m_hash_tbl);
+
+	if (!m_file.read(m_file_tbl) || !m_file.read(m_hash_tbl))
+	{
+		// If these fail it is an unexpected filesystem error, because file size must suffice as we checked in previous checks
+		return;
+	}
+
+	isValid = true;
 }
 
 fs::file pup_object::get_file(u64 entry_id)
@@ -47,10 +61,18 @@ fs::file pup_object::get_file(u64 entry_id)
 
 bool pup_object::validate_hashes()
 {
+	if (!isValid) return false;
+
 	for (usz i = 0; i < m_file_tbl.size(); i++)
 	{
 		u8 *hash = m_hash_tbl[i].hash;
 		PUPFileEntry file = m_file_tbl[i];
+
+		// Sanity check for offset and length, use substraction to avoid overflows
+		if (usz size = m_file.size(); size < file.data_offset || size - file.data_offset < file.data_length)
+		{
+			return false;
+		}
 
 		std::vector<u8> buffer(file.data_length);
 		m_file.seek(file.data_offset);

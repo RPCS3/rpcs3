@@ -50,21 +50,20 @@ struct sysutil_cb_manager
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 {
-	const auto cbm = g_fxo->get<sysutil_cb_manager>();
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	cbm->registered.push(std::move(cb));
+	cbm.registered.push(std::move(cb));
 }
 
 extern void sysutil_send_system_cmd(u64 status, u64 param)
 {
-	// May be nullptr if emulation is stopped
-	if (const auto cbm = g_fxo->get<sysutil_cb_manager>())
+	if (auto& cbm = g_fxo->get<sysutil_cb_manager>(); g_fxo->is_init<sysutil_cb_manager>() && !Emu.IsStopped())
 	{
-		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
+		for (sysutil_cb_manager::registered_cb cb : cbm.callbacks)
 		{
 			if (cb.first)
 			{
-				cbm->registered.push([=](ppu_thread& ppu) -> s32
+				cbm.registered.push([=](ppu_thread& ppu) -> s32
 				{
 					// TODO: check it and find the source of the return value (void isn't equal to CELL_OK)
 					cb.first(ppu, status, param, cb.second);
@@ -401,9 +400,9 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 {
 	cellSysutil.trace("cellSysutilCheckCallback()");
 
-	const auto cbm = g_fxo->get<sysutil_cb_manager>();
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	for (auto&& func : cbm->registered.pop_all())
+	for (auto&& func : cbm.registered.pop_all())
 	{
 		if (s32 res = func(ppu))
 		{
@@ -429,9 +428,9 @@ error_code cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> fu
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	const auto cbm = g_fxo->get<sysutil_cb_manager>();
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	cbm->callbacks[slot].store({func, userdata});
+	cbm.callbacks[slot].store({func, userdata});
 
 	return CELL_OK;
 }
@@ -445,9 +444,9 @@ error_code cellSysutilUnregisterCallback(u32 slot)
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	const auto cbm = g_fxo->get<sysutil_cb_manager>();
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	cbm->callbacks[slot].store({});
+	cbm.callbacks[slot].store({});
 
 	return CELL_OK;
 }

@@ -8,8 +8,10 @@ LOG_CHANNEL(cellSysutil);
 
 struct browser_info
 {
-	vm::ptr<CellWebBrowserSystemCallback> system_cb;
-	vm::ptr<void> userData;
+	vm::ptr<CellWebBrowserSystemCallback> system_cb{};
+	vm::ptr<void> userData{};
+
+	shared_mutex mutex;
 };
 
 error_code cellWebBrowserActivate()
@@ -242,12 +244,12 @@ error_code cellWebBrowserInitialize(vm::ptr<CellWebBrowserSystemCallback> system
 {
 	cellSysutil.todo("cellWebBrowserInitialize(system_cb=*0x%x, container=0x%x)", system_cb, container);
 
-	const auto browser = g_fxo->get<browser_info>();
-	browser->system_cb = system_cb;
+	auto& browser = g_fxo->get<browser_info>();
+	browser.system_cb = system_cb;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &browser](ppu_thread& ppu) -> s32
 	{
-		system_cb(ppu, CELL_SYSUTIL_WEBBROWSER_INITIALIZING_FINISHED, browser->userData);
+		system_cb(ppu, CELL_SYSUTIL_WEBBROWSER_INITIALIZING_FINISHED, browser.userData);
 		return CELL_OK;
 	});
 
@@ -276,11 +278,11 @@ void cellWebBrowserShutdown()
 {
 	cellSysutil.todo("cellWebBrowserShutdown()");
 
-	const auto browser = g_fxo->get<browser_info>();
+	auto& browser = g_fxo->get<browser_info>();
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &browser](ppu_thread& ppu) -> s32
 	{
-		browser->system_cb(ppu, CELL_SYSUTIL_WEBBROWSER_SHUTDOWN_FINISHED, browser->userData);
+		browser.system_cb(ppu, CELL_SYSUTIL_WEBBROWSER_SHUTDOWN_FINISHED, browser.userData);
 		return CELL_OK;
 	});
 }

@@ -95,3 +95,10 @@ struct alignas(16) spu_mfc_cmd
 	u32 eal;
 	u32 eah;
 };
+
+struct mfc_cmd_dump
+{
+	spu_mfc_cmd cmd;
+
+	alignas(16) u8 data[128];
+};

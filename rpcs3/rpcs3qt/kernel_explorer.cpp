@@ -183,7 +183,7 @@ kernel_explorer::kernel_explorer(QWidget* parent)
 
 void kernel_explorer::Update()
 {
-	const auto dct = g_fxo->get<lv2_memory_container>();
+	const auto dct = g_fxo->try_get<lv2_memory_container>();
 
 	if (!dct)
 	{
@@ -606,7 +606,7 @@ void kernel_explorer::Update()
 	{
 		// Currently a single context is supported at a time
 		const auto rsx = rsx::get_current_renderer();
-		const auto context_info = g_fxo->get<lv2_rsx_config>();
+		const auto context_info = g_fxo->try_get<lv2_rsx_config>();
 
 		if (!rsx || !context_info)
 		{

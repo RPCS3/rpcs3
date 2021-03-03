@@ -39,6 +39,7 @@ struct cfg_root : cfg::node
 		cfg::_bool lower_spu_priority{ this, "Lower SPU thread priority" };
 		cfg::_bool spu_getllar_polling_detection{ this, "SPU GETLLAR polling detection", false, true };
 		cfg::_bool spu_debug{ this, "SPU Debug" };
+		cfg::_bool mfc_debug{ this, "MFC Debug" };
 		cfg::_int<0, 6> preferred_spu_threads{ this, "Preferred SPU Threads", 0, true }; // Number of hardware threads dedicated to heavy simultaneous spu tasks
 		cfg::_int<0, 16> spu_delay_penalty{ this, "SPU delay penalty", 3 }; // Number of milliseconds to block a thread if a virtual 'core' isn't free
 		cfg::_bool spu_loop_detection{ this, "SPU loop detection", true, true }; // Try to detect wait loops and trigger thread yield
@@ -177,16 +178,18 @@ struct cfg_root : cfg::node
 			cfg::_bool perf_overlay_enabled{ this, "Enabled", false, true };
 			cfg::_bool framerate_graph_enabled{ this, "Enable Framerate Graph", false, true };
 			cfg::_bool frametime_graph_enabled{ this, "Enable Frametime Graph", false, true };
+			cfg::uint<2, 6000> framerate_datapoint_count{ this, "Framerate datapoints", 50, true };
+			cfg::uint<2, 6000> frametime_datapoint_count{ this, "Frametime datapoints", 170, true };
 			cfg::_enum<detail_level> level{ this, "Detail level", detail_level::medium, true };
-			cfg::_int<1, 5000> update_interval{ this, "Metrics update interval (ms)", 350, true };
-			cfg::_int<4, 36> font_size{ this, "Font size (px)", 10, true };
+			cfg::uint<1, 5000> update_interval{ this, "Metrics update interval (ms)", 350, true };
+			cfg::uint<4, 36> font_size{ this, "Font size (px)", 10, true };
 			cfg::_enum<screen_quadrant> position{ this, "Position", screen_quadrant::top_left, true };
 			cfg::string font{ this, "Font", "n023055ms.ttf", true };
-			cfg::_int<0, 1280> margin_x{ this, "Horizontal Margin (px)", 50, true }; // horizontal distance to the screen border relative to the screen_quadrant in px
-			cfg::_int<0, 720> margin_y{ this, "Vertical Margin (px)", 50, true }; // vertical distance to the screen border relative to the screen_quadrant in px
+			cfg::uint<0, 1280> margin_x{ this, "Horizontal Margin (px)", 50, true }; // horizontal distance to the screen border relative to the screen_quadrant in px
+			cfg::uint<0, 720> margin_y{ this, "Vertical Margin (px)", 50, true }; // vertical distance to the screen border relative to the screen_quadrant in px
 			cfg::_bool center_x{ this, "Center Horizontally", false, true };
 			cfg::_bool center_y{ this, "Center Vertically", false, true };
-			cfg::_int<0, 100> opacity{ this, "Opacity (%)", 70, true };
+			cfg::uint<0, 100> opacity{ this, "Opacity (%)", 70, true };
 			cfg::string color_body{ this, "Body Color (hex)", "#FFE138FF", true };
 			cfg::string background_body{ this, "Body Background (hex)", "#002339FF", true };
 			cfg::string color_title{ this, "Title Color (hex)", "#F26C24FF", true };
@@ -251,6 +254,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<camera_handler> camera{ this, "Camera", camera_handler::null };
 		cfg::_enum<fake_camera_type> camera_type{ this, "Camera type", fake_camera_type::unknown };
 		cfg::_enum<move_handler> move{ this, "Move", move_handler::null };
+		cfg::_enum<buzz_handler> buzz{ this, "Buzz emulated controller", buzz_handler::null };
 	} io{ this };
 
 	struct node_sys : cfg::node

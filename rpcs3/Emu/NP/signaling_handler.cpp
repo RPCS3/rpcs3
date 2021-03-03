@@ -70,7 +70,8 @@ void signaling_handler::signal_sig_callback(u32 conn_id, int event)
 {
 	if (sig_cb)
 	{
-		sysutil_register_cb([sig_cb = this->sig_cb, sig_cb_ctx = this->sig_cb_ctx, conn_id, event, sig_cb_arg = this->sig_cb_arg](ppu_thread& cb_ppu) -> s32 {
+		sysutil_register_cb([sig_cb = this->sig_cb, sig_cb_ctx = this->sig_cb_ctx, conn_id, event, sig_cb_arg = this->sig_cb_arg](ppu_thread& cb_ppu) -> s32
+		{
 			sig_cb(cb_ppu, sig_cb_ctx, conn_id, event, 0, sig_cb_arg);
 			return 0;
 		});
@@ -85,7 +86,8 @@ void signaling_handler::signal_ext_sig_callback(u32 conn_id, int event)
 {
 	if (sig_ext_cb)
 	{
-		sysutil_register_cb([sig_ext_cb = this->sig_ext_cb, sig_ext_cb_ctx = this->sig_ext_cb_ctx, conn_id, event, sig_ext_cb_arg = this->sig_ext_cb_arg](ppu_thread& cb_ppu) -> s32 {
+		sysutil_register_cb([sig_ext_cb = this->sig_ext_cb, sig_ext_cb_ctx = this->sig_ext_cb_ctx, conn_id, event, sig_ext_cb_arg = this->sig_ext_cb_arg](ppu_thread& cb_ppu) -> s32
+		{
 			sig_ext_cb(cb_ppu, sig_ext_cb_ctx, conn_id, event, 0, sig_ext_cb_arg);
 			return 0;
 		});
@@ -98,7 +100,8 @@ void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMa
 	// Signal the callback
 	if (sig2_cb)
 	{
-		sysutil_register_cb([sig2_cb = this->sig2_cb, sig2_cb_ctx = this->sig2_cb_ctx, room_id, member_id, event, sig2_cb_arg = this->sig2_cb_arg](ppu_thread& cb_ppu) -> s32 {
+		sysutil_register_cb([sig2_cb = this->sig2_cb, sig2_cb_ctx = this->sig2_cb_ctx, room_id, member_id, event, sig2_cb_arg = this->sig2_cb_arg](ppu_thread& cb_ppu) -> s32
+		{
 			sig2_cb(cb_ppu, sig2_cb_ctx, room_id, member_id, event, 0, sig2_cb_arg);
 			return 0;
 		});
@@ -587,8 +590,8 @@ u32 signaling_handler::init_sig_infos(const SceNpId* npid)
 
 		// Request peer infos from RPCN
 		std::string npid_str(reinterpret_cast<const char*>(npid->handle.data));
-		const auto nph = g_fxo->get<named_thread<np_handler>>();
-		nph->req_sign_infos(npid_str, conn_id);
+		auto& nph = g_fxo->get<named_thread<np_handler>>();
+		nph.req_sign_infos(npid_str, conn_id);
 	}
 	else
 	{

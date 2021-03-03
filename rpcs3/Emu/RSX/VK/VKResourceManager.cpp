@@ -32,10 +32,10 @@ namespace vk
 	{
 		if (!flush && g_cfg.video.multithreaded_rsx)
 		{
-			auto offloader_thread = g_fxo->get<rsx::dma_manager>();
-			ensure(!offloader_thread->is_current_thread());
+			auto& offloader_thread = g_fxo->get<rsx::dma_manager>();
+			ensure(!offloader_thread.is_current_thread());
 
-			offloader_thread->backend_ctrl(rctrl_run_gc, reinterpret_cast<void*>(event_id));
+			offloader_thread.backend_ctrl(rctrl_run_gc, reinterpret_cast<void*>(event_id));
 			return;
 		}
 

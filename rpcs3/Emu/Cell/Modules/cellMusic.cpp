@@ -63,8 +63,10 @@ void fmt_class_string<CellMusic2Error>::format(std::string& out, u64 arg)
 
 struct music_state
 {
-	vm::ptr<void(u32 event, vm::ptr<void> param, vm::ptr<void> userData)> func;
-	vm::ptr<void> userData;
+	shared_mutex mutex;
+
+	vm::ptr<void(u32 event, vm::ptr<void> param, vm::ptr<void> userData)> func{};
+	vm::ptr<void> userData{};
 };
 
 error_code cellMusicGetSelectionContext(vm::ptr<CellMusicSelectionContext> context)
@@ -84,14 +86,14 @@ error_code cellMusicSetSelectionContext2(vm::ptr<CellMusicSelectionContext> cont
 	if (!context)
 		return CELL_MUSIC2_ERROR_PARAM;
 
-	const auto music = g_fxo->get<music_state>();
+	auto& music = g_fxo->get<music_state>();
 
-	if (!music->func)
+	if (!music.func)
 		return CELL_MUSIC2_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music->func(ppu, CELL_MUSIC2_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(CELL_OK), music->userData);
+		music.func(ppu, CELL_MUSIC2_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(CELL_OK), music.userData);
 		return CELL_OK;
 	});
 
@@ -104,14 +106,14 @@ error_code cellMusicSetVolume2(f32 level)
 
 	level = std::clamp(level, 0.0f, 1.0f);
 
-	const auto music = g_fxo->get<music_state>();
+	auto& music = g_fxo->get<music_state>();
 
-	if (!music->func)
+	if (!music.func)
 		return CELL_MUSIC2_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music->func(ppu, CELL_MUSIC2_EVENT_SET_VOLUME_RESULT, vm::addr_t(CELL_OK), music->userData);
+		music.func(ppu, CELL_MUSIC2_EVENT_SET_VOLUME_RESULT, vm::addr_t(CELL_OK), music.userData);
 		return CELL_OK;
 	});
 
@@ -135,14 +137,14 @@ error_code cellMusicSetSelectionContext(vm::ptr<CellMusicSelectionContext> conte
 	if (!context)
 		return CELL_MUSIC_ERROR_PARAM;
 
-	const auto music = g_fxo->get<music_state>();
+	auto& music = g_fxo->get<music_state>();
 
-	if (!music->func)
+	if (!music.func)
 		return CELL_MUSIC_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music->func(ppu, CELL_MUSIC_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(CELL_OK), music->userData);
+		music.func(ppu, CELL_MUSIC_EVENT_SET_SELECTION_CONTEXT_RESULT, vm::addr_t(CELL_OK), music.userData);
 		return CELL_OK;
 	});
 
@@ -162,13 +164,13 @@ error_code cellMusicInitialize2SystemWorkload(s32 mode, vm::ptr<CellMusic2Callba
 		return CELL_MUSIC2_ERROR_PARAM;
 	}
 
-	const auto music = g_fxo->get<music_state>();
-	music->func = func;
-	music->userData = userData;
+	auto& music = g_fxo->get<music_state>();
+	music.func = func;
+	music.userData = userData;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music->func(ppu, CELL_MUSIC2_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
+		music.func(ppu, CELL_MUSIC2_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
 		return CELL_OK;
 	});
 
@@ -199,13 +201,13 @@ error_code cellMusicFinalize()
 {
 	cellMusic.todo("cellMusicFinalize()");
 
-	const auto music = g_fxo->get<music_state>();
+	auto& music = g_fxo->get<music_state>();
 
-	if (music->func)
+	if (music.func)
 	{
-		sysutil_register_cb([=](ppu_thread& ppu) -> s32
+		sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 		{
-			music->func(ppu, CELL_MUSIC_EVENT_FINALIZE_RESULT, vm::addr_t(CELL_OK), music->userData);
+			music.func(ppu, CELL_MUSIC_EVENT_FINALIZE_RESULT, vm::addr_t(CELL_OK), music.userData);
 			return CELL_OK;
 		});
 	}
@@ -226,13 +228,13 @@ error_code cellMusicInitializeSystemWorkload(s32 mode, u32 container, vm::ptr<Ce
 		return CELL_MUSIC_ERROR_PARAM;
 	}
 
-	const auto music = g_fxo->get<music_state>();
-	music->func = func;
-	music->userData = userData;
+	auto& music = g_fxo->get<music_state>();
+	music.func = func;
+	music.userData = userData;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music->func(ppu, CELL_MUSIC_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
+		music.func(ppu, CELL_MUSIC_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
 		return CELL_OK;
 	});
 
@@ -252,13 +254,13 @@ error_code cellMusicInitialize(s32 mode, u32 container, s32 spuPriority, vm::ptr
 		return CELL_MUSIC_ERROR_PARAM;
 	}
 
-	const auto music = g_fxo->get<music_state>();
-	music->func = func;
-	music->userData = userData;
+	auto& music = g_fxo->get<music_state>();
+	music.func = func;
+	music.userData = userData;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music->func(ppu, CELL_MUSIC_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
+		music.func(ppu, CELL_MUSIC_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
 		return CELL_OK;
 	});
 
@@ -269,13 +271,13 @@ error_code cellMusicFinalize2()
 {
 	cellMusic.todo("cellMusicFinalize2()");
 
-	const auto music = g_fxo->get<music_state>();
+	auto& music = g_fxo->get<music_state>();
 
-	if (music->func)
+	if (music.func)
 	{
-		sysutil_register_cb([=](ppu_thread& ppu) -> s32
+		sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 		{
-			music->func(ppu, CELL_MUSIC2_EVENT_FINALIZE_RESULT, vm::addr_t(CELL_OK), music->userData);
+			music.func(ppu, CELL_MUSIC2_EVENT_FINALIZE_RESULT, vm::addr_t(CELL_OK), music.userData);
 			return CELL_OK;
 		});
 	}
@@ -320,14 +322,14 @@ error_code cellMusicSetPlaybackCommand2(s32 command, vm::ptr<void> param)
 	if (command < CELL_MUSIC_PB_CMD_STOP || command > CELL_MUSIC_PB_CMD_FASTREVERSE)
 		return CELL_MUSIC2_ERROR_PARAM;
 
-	const auto music = g_fxo->get<music_state>();
+	auto& music = g_fxo->get<music_state>();
 
-	if (!music->func)
+	if (!music.func)
 		return CELL_MUSIC2_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music->func(ppu, CELL_MUSIC2_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(CELL_OK), music->userData);
+		music.func(ppu, CELL_MUSIC2_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(CELL_OK), music.userData);
 		return CELL_OK;
 	});
 
@@ -341,14 +343,14 @@ error_code cellMusicSetPlaybackCommand(s32 command, vm::ptr<void> param)
 	if (command < CELL_MUSIC_PB_CMD_STOP || command > CELL_MUSIC_PB_CMD_FASTREVERSE)
 		return CELL_MUSIC_ERROR_PARAM;
 
-	const auto music = g_fxo->get<music_state>();
+	auto& music = g_fxo->get<music_state>();
 
-	if (!music->func)
+	if (!music.func)
 		return CELL_MUSIC_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music->func(ppu, CELL_MUSIC_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(CELL_OK), music->userData);
+		music.func(ppu, CELL_MUSIC_EVENT_SET_PLAYBACK_COMMAND_RESULT, vm::addr_t(CELL_OK), music.userData);
 		return CELL_OK;
 	});
 
@@ -359,14 +361,14 @@ error_code cellMusicSelectContents2()
 {
 	cellMusic.todo("cellMusicSelectContents2()");
 
-	const auto music = g_fxo->get<music_state>();
+	auto& music = g_fxo->get<music_state>();
 
-	if (!music->func)
+	if (!music.func)
 		return CELL_MUSIC2_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music->func(ppu, CELL_MUSIC2_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(CELL_OK), music->userData);
+		music.func(ppu, CELL_MUSIC2_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(CELL_OK), music.userData);
 		return CELL_OK;
 	});
 
@@ -377,14 +379,14 @@ error_code cellMusicSelectContents(u32 container)
 {
 	cellMusic.todo("cellMusicSelectContents(container=0x%x)", container);
 
-	const auto music = g_fxo->get<music_state>();
+	auto& music = g_fxo->get<music_state>();
 
-	if (!music->func)
+	if (!music.func)
 		return CELL_MUSIC_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music->func(ppu, CELL_MUSIC_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(CELL_OK), music->userData);
+		music.func(ppu, CELL_MUSIC_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(CELL_OK), music.userData);
 		return CELL_OK;
 	});
 
@@ -404,13 +406,13 @@ error_code cellMusicInitialize2(s32 mode, s32 spuPriority, vm::ptr<CellMusic2Cal
 		return CELL_MUSIC2_ERROR_PARAM;
 	}
 
-	const auto music = g_fxo->get<music_state>();
-	music->func = func;
-	music->userData = userData;
+	auto& music = g_fxo->get<music_state>();
+	music.func = func;
+	music.userData = userData;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music->func(ppu, CELL_MUSIC2_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
+		music.func(ppu, CELL_MUSIC2_EVENT_INITIALIZE_RESULT, vm::addr_t(CELL_OK), userData);
 		return CELL_OK;
 	});
 
@@ -423,14 +425,14 @@ error_code cellMusicSetVolume(f32 level)
 
 	level = std::clamp(level, 0.0f, 1.0f);
 
-	const auto music = g_fxo->get<music_state>();
+	auto& music = g_fxo->get<music_state>();
 
-	if (!music->func)
+	if (!music.func)
 		return CELL_MUSIC_ERROR_GENERIC;
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=, &music](ppu_thread& ppu) -> s32
 	{
-		music->func(ppu, CELL_MUSIC_EVENT_SET_VOLUME_RESULT, vm::addr_t(CELL_OK), music->userData);
+		music.func(ppu, CELL_MUSIC_EVENT_SET_VOLUME_RESULT, vm::addr_t(CELL_OK), music.userData);
 		return CELL_OK;
 	});
 

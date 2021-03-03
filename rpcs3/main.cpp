@@ -377,8 +377,11 @@ int main(int argc, char** argv)
 	}
 #endif
 
+	// Initialize TSC freq (in case it isn't)
+	static_cast<void>(utils::get_tsc_freq());
+
 	// Initialize thread pool finalizer (on first use)
-	named_thread("", []{})();
+	static_cast<void>(named_thread("", [](int) {}));
 
 	static std::unique_ptr<logs::listener> log_file;
 	{

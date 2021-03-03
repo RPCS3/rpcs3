@@ -22,6 +22,9 @@ public:
 	statichle_handler(int);
 	~statichle_handler();
 
+	statichle_handler(const statichle_handler&) = delete;
+	statichle_handler& operator=(const statichle_handler&) = delete;
+
 	bool load_patterns();
 	bool check_against_patterns(vm::cptr<u8>& data, u32 size, u32 addr);
 

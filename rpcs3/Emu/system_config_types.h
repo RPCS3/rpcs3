@@ -95,6 +95,13 @@ enum class move_handler
 	mouse,
 };
 
+enum class buzz_handler
+{
+	null,
+	one_controller,
+	two_controllers,
+};
+
 enum class microphone_handler
 {
 	null,
@@ -140,6 +147,7 @@ enum class msaa_level
 
 enum class detail_level
 {
+	none,
 	minimal,
 	low,
 	medium,

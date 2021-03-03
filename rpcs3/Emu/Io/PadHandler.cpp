@@ -278,6 +278,11 @@ bool PadHandlerBase::has_led() const
 	return b_has_led;
 }
 
+bool PadHandlerBase::has_rgb() const
+{
+	return b_has_rgb;
+}
+
 bool PadHandlerBase::has_battery() const
 {
 	return b_has_battery;

@@ -656,7 +656,7 @@ namespace rsx
 		void recover_fifo();
 		static void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd() const;
-	
+
 		std::string dump_regs() const override;
 		void cpu_wait(bs_t<cpu_flag> old) override;
 
@@ -974,7 +974,7 @@ namespace rsx
 
 	inline thread* get_current_renderer()
 	{
-		return g_fxo->get<rsx::thread>();
+		return g_fxo->try_get<rsx::thread>();
 	}
 
 	template<bool IsFullLock = false>

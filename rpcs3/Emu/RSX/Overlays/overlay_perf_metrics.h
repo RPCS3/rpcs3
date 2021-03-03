@@ -11,6 +11,8 @@ namespace rsx
 		struct perf_metrics_overlay : overlay
 		{
 		private:
+			// The detail level does not affect frame graphs apart from their width.
+			// none
 			// minimal - fps
 			// low - fps, total cpu usage
 			// medium - fps, detailed cpu usage
@@ -85,6 +87,8 @@ namespace rsx
 
 			void set_framerate_graph_enabled(bool enabled);
 			void set_frametime_graph_enabled(bool enabled);
+			void set_framerate_datapoint_count(u32 datapoint_count);
+			void set_frametime_datapoint_count(u32 datapoint_count);
 			void set_detail_level(detail_level level);
 			void set_position(screen_quadrant quadrant);
 			void set_update_interval(u32 update_interval);

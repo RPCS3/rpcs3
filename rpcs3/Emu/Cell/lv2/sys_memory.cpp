@@ -50,10 +50,10 @@ error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32
 	}
 
 	// Get "default" memory container
-	const auto dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = g_fxo->get<lv2_memory_container>();
 
 	// Try to get "physical memory"
-	if (!dct->take(size))
+	if (!dct.take(size))
 	{
 		return CELL_ENOMEM;
 	}
@@ -62,7 +62,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32
 	{
 		if (u32 addr = area->alloc(size, nullptr, align))
 		{
-			ensure(!g_fxo->get<sys_memory_address_table>()->addrs[addr >> 16].exchange(dct));
+			ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(&dct));
 
 			if (alloc_addr)
 			{
@@ -77,7 +77,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32
 		}
 	}
 
-	dct->used -= size;
+	dct.used -= size;
 	return CELL_ENOMEM;
 }
 
@@ -133,7 +133,7 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid
 	{
 		if (u32 addr = area->alloc(size))
 		{
-			ensure(!g_fxo->get<sys_memory_address_table>()->addrs[addr >> 16].exchange(ct.ptr.get()));
+			ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(ct.ptr.get()));
 
 			if (alloc_addr)
 			{
@@ -158,7 +158,7 @@ error_code sys_memory_free(cpu_thread& cpu, u32 addr)
 
 	sys_memory.warning("sys_memory_free(addr=0x%x)", addr);
 
-	const auto ct = addr % 0x10000 ? nullptr : g_fxo->get<sys_memory_address_table>()->addrs[addr >> 16].exchange(nullptr);
+	const auto ct = addr % 0x10000 ? nullptr : g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(nullptr);
 
 	if (!ct)
 	{
@@ -215,12 +215,12 @@ error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_i
 	sys_memory.warning("sys_memory_get_user_memory_size(mem_info=*0x%x)", mem_info);
 
 	// Get "default" memory container
-	const auto dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = g_fxo->get<lv2_memory_container>();
 
 	::reader_lock lock(s_memstats_mtx);
 
-	mem_info->total_user_memory = dct->size;
-	mem_info->available_user_memory = dct->size - dct->used;
+	mem_info->total_user_memory = dct.size;
+	mem_info->available_user_memory = dct.size - dct.used;
 
 	// Scan other memory containers
 	idm::select<lv2_memory_container>([&](u32, lv2_memory_container& ct)
@@ -254,12 +254,12 @@ error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 si
 		return CELL_ENOMEM;
 	}
 
-	const auto dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = g_fxo->get<lv2_memory_container>();
 
 	std::lock_guard lock(s_memstats_mtx);
 
 	// Try to obtain "physical memory" from the default container
-	if (!dct->take(size))
+	if (!dct.take(size))
 	{
 		return CELL_ENOMEM;
 	}
@@ -271,7 +271,7 @@ error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 si
 		return CELL_OK;
 	}
 
-	dct->used -= size;
+	dct.used -= size;
 	return CELL_EAGAIN;
 }
 
@@ -305,7 +305,7 @@ error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid)
 	}
 
 	// Return "physical memory" to the default container
-	g_fxo->get<lv2_memory_container>()->used -= ct->size;
+	g_fxo->get<lv2_memory_container>().used -= ct->size;
 
 	return CELL_OK;
 }

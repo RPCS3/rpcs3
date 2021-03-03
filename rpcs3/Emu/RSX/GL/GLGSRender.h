@@ -162,7 +162,7 @@ private:
 	void load_texture_env();
 	void bind_texture_env();
 
-	gl::texture* get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig);
+	gl::texture* get_present_source(gl::present_surface_info* info, const rsx::avconf& avconfig);
 
 public:
 	void set_viewport();

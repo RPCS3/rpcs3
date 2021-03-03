@@ -1423,13 +1423,13 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		vm::temporary_unlock(*cpu);
 		u32 pf_port_id = 0;
 
-		if (auto pf_entries = g_fxo->get<page_fault_notification_entries>(); true)
+		if (auto& pf_entries = g_fxo->get<page_fault_notification_entries>(); true)
 		{
 			if (auto mem = vm::get(vm::any, addr))
 			{
-				reader_lock lock(pf_entries->mutex);
+				reader_lock lock(pf_entries.mutex);
 
-				for (const auto& entry : pf_entries->entries)
+				for (const auto& entry : pf_entries.entries)
 				{
 					if (entry.start_addr == mem->addr)
 					{
@@ -1489,10 +1489,10 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			// Now, place the page fault event onto table so that other functions [sys_mmapper_free_address and pagefault recovery funcs etc]
 			// know that this thread is page faulted and where.
 
-			auto pf_events = g_fxo->get<page_fault_event_entries>();
+			auto& pf_events = g_fxo->get<page_fault_event_entries>();
 			{
-				std::lock_guard pf_lock(pf_events->pf_mutex);
-				pf_events->events.emplace(cpu, addr);
+				std::lock_guard pf_lock(pf_events.pf_mutex);
+				pf_events.events.emplace(cpu, addr);
 			}
 
 			sig_log.warning("Page_fault %s location 0x%x because of %s memory", is_writing ? "writing" : "reading",
@@ -2207,6 +2207,24 @@ thread_base::native_entry thread_base::make_trampoline(u64(*entry)(thread_base* 
 	});
 }
 
+thread_state thread_ctrl::state()
+{
+	auto _this = g_tls_this_thread;
+
+	// Guard for recursive calls (TODO: may be more effective to reuse one of m_sync bits)
+	static thread_local bool s_tls_exec = false;
+
+	// Drain execution queue
+	if (!s_tls_exec)
+	{
+		s_tls_exec = true;
+		_this->exec();
+		s_tls_exec = false;
+	}
+
+	return static_cast<thread_state>(_this->m_sync & 3);
+}
+
 void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 {
 	auto _this = g_tls_this_thread;
@@ -2256,13 +2274,16 @@ void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
 	}
 #endif
 
-	if (_this->m_sync.bit_test_reset(2))
+	if (_this->m_sync.bit_test_reset(2) || _this->m_taskq)
 	{
 		return;
 	}
 
 	// Wait for signal and thread state abort
-	_this->m_sync.wait(0, 4 + 1, atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
+	atomic_wait::list<2> list{};
+	list.set<0>(_this->m_sync, 0, 4 + 1);
+	list.set<1>(_this->m_taskq, nullptr);
+	list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
 }
 
 std::string thread_ctrl::get_name_cached()
@@ -2298,6 +2319,9 @@ thread_base::thread_base(native_entry entry, std::string_view name)
 
 thread_base::~thread_base()
 {
+	// Cleanup abandoned tasks: initialize default results and signal
+	this->exec();
+
 	// Only cleanup on errored status
 	if ((m_sync & 3) == 2)
 	{
@@ -2322,7 +2346,6 @@ bool thread_base::join(bool dtor) const
 	// Hacked for too sleepy threads (1ms) TODO: make sure it's unneeded and remove
 	const auto timeout = dtor && Emu.IsStopped() ? atomic_wait_timeout{1'000'000} : atomic_wait_timeout::inf;
 
-	bool warn = false;
 	auto stamp0 = __rdtsc();
 
 	for (u64 i = 0; (m_sync & 3) <= 1; i++)
@@ -2334,18 +2357,10 @@ bool thread_base::join(bool dtor) const
 			break;
 		}
 
-		if (i > 20 && Emu.IsStopped())
+		if (i >= 16 && !(i & (i - 1)) && timeout != atomic_wait_timeout::inf)
 		{
-			stamp0 = __rdtsc();
-			atomic_wait_engine::raw_notify(0, get_native_id());
-			stamp0 = __rdtsc() - stamp0;
-			warn = true;
+			sig_log.error(u8"Thread [%s] is too sleepy. Waiting for it %.3fµs already!", *m_tname.load(), (__rdtsc() - stamp0) / (utils::get_tsc_freq() / 1000000.));
 		}
-	}
-
-	if (warn)
-	{
-		sig_log.error(u8"Thread [%s] is too sleepy. Took %.3fµs to wake it up!", *m_tname.load(), stamp0 / (utils::get_tsc_freq() / 1000000.));
 	}
 
 	return (m_sync & 3) == 3;
@@ -2403,6 +2418,80 @@ u64 thread_base::get_cycles()
 	else
 	{
 		return m_sync >> 3;
+	}
+}
+
+void thread_base::push(shared_ptr<thread_future> task)
+{
+	const auto next = &task->next;
+	m_taskq.push_head(*next, std::move(task));
+	m_taskq.notify_one();
+}
+
+void thread_base::exec()
+{
+	if (!m_taskq) [[likely]]
+	{
+		return;
+	}
+
+	while (shared_ptr<thread_future> head = m_taskq.exchange(null_ptr))
+	{
+		// TODO: check if adapting reverse algorithm is feasible here
+		shared_ptr<thread_future>* prev{};
+
+		for (auto ptr = head.get(); ptr; ptr = ptr->next.get())
+		{
+			utils::prefetch_exec(ptr->exec.load());
+
+			ptr->prev = prev;
+
+			if (ptr->next)
+			{
+				prev = &ptr->next;
+			}
+		}
+
+		if (!prev)
+		{
+			prev = &head;
+		}
+
+		for (auto ptr = prev->get(); ptr; ptr = ptr->prev->get())
+		{
+			if (auto task = ptr->exec.load()) [[likely]]
+			{
+				// Execute or discard (if aborting)
+				if ((m_sync & 3) == 0) [[likely]]
+				{
+					task(this, ptr);
+				}
+				else
+				{
+					task(nullptr, ptr);
+				}
+
+				// Notify waiters
+				ptr->exec.release(nullptr);
+				ptr->exec.notify_all();
+			}
+
+			if (ptr->next)
+			{
+				// Partial cleanup
+				ptr->next.reset();
+			}
+
+			if (!ptr->prev)
+			{
+				break;
+			}
+		}
+
+		if (!m_taskq) [[likely]]
+		{
+			return;
+		}
 	}
 }
 

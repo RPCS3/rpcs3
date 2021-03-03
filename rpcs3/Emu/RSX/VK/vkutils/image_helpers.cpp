@@ -55,7 +55,8 @@ namespace vk
 		return{ final_mapping[1], final_mapping[2], final_mapping[3], final_mapping[0] };
 	}
 
-	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range)
+	void change_image_layout(VkCommandBuffer cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout, const VkImageSubresourceRange& range,
+		u32 src_queue_family, u32 dst_queue_family)
 	{
 		if (vk::is_renderpass_open(cmd))
 		{
@@ -70,8 +71,8 @@ namespace vk
 		barrier.image = image;
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = 0;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.srcQueueFamilyIndex = src_queue_family;
+		barrier.dstQueueFamilyIndex = dst_queue_family;
 		barrier.subresourceRange = range;
 
 		VkPipelineStageFlags src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;

@@ -137,6 +137,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 	b_has_rumble = true;
 	b_has_deadzones = true;
 	b_has_led = true;
+	b_has_rgb = true;
 	b_has_battery = false;
 
 	m_name_string = "DualSense Pad #";
@@ -574,8 +575,8 @@ void dualsense_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& 
 
 	auto buf = dualsense_device->padData;
 
-	//pad->m_battery_level = dualsense_device->batteryLevel;
-	//pad->m_cable_state   = dualsense_device->cableState;
+	pad->m_battery_level = dualsense_device->battery_level;
+	pad->m_cable_state   = dualsense_device->cable_state;
 
 	// these values come already calibrated, all we need to do is convert to ds3 range
 
@@ -989,6 +990,8 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor,
 			index++;
 		}
 	}
+
+	ensure(device->config);
 
 	// Set new LED color (see ds4_pad_handler)
 	if (r >= 0 && g >= 0 && b >= 0 && r <= 255 && g <= 255 && b <= 255)

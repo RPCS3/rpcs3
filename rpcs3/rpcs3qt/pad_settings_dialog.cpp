@@ -377,8 +377,9 @@ void pad_settings_dialog::InitButtons()
 	connect(ui->b_led_settings, &QPushButton::clicked, this, [this]()
 	{
 		// Allow LED battery indication while the dialog is open
+		ensure(m_handler);
 		m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, m_handler_cfg.led_battery_indicator.get(), m_handler_cfg.led_battery_indicator_brightness);
-		pad_led_settings_dialog dialog(this, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, m_handler->has_battery(), m_handler_cfg.led_low_battery_blink.get(), m_handler_cfg.led_battery_indicator.get(), m_handler_cfg.led_battery_indicator_brightness);
+		pad_led_settings_dialog dialog(this, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, m_handler->has_rgb(), m_handler->has_battery(), m_handler_cfg.led_low_battery_blink.get(), m_handler_cfg.led_battery_indicator.get(), m_handler_cfg.led_battery_indicator_brightness);
 		connect(&dialog, &pad_led_settings_dialog::pass_led_settings, this, &pad_settings_dialog::apply_led_settings);
 		dialog.exec();
 		m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, false, m_handler_cfg.led_battery_indicator_brightness);
@@ -494,6 +495,7 @@ void pad_settings_dialog::InitButtons()
 
 void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor)
 {
+	ensure(m_handler);
 	const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
 	m_handler->SetPadData(m_device_name, large_motor, small_motor, led_color.red(), led_color.green(), led_color.blue(), static_cast<bool>(m_handler_cfg.led_battery_indicator), m_handler_cfg.led_battery_indicator_brightness);
 }
@@ -501,6 +503,7 @@ void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor)
 // Slot to handle the data from a signal in the led settings dialog
 void pad_settings_dialog::apply_led_settings(int colorR, int colorG, int colorB, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness)
 {
+	ensure(m_handler);
 	m_handler_cfg.colorR.set(colorR);
 	m_handler_cfg.colorG.set(colorG);
 	m_handler_cfg.colorB.set(colorB);
@@ -961,8 +964,6 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		ui->slider_stick_right->setRange(0, m_handler->thumb_max);
 		ui->slider_stick_right->setValue(m_handler_cfg.rstickdeadzone);
 
-		m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, false, m_handler_cfg.led_battery_indicator_brightness);
-
 		// Update Mouse Deadzones
 		std::vector<std::string> mouse_dz_range_x = m_handler_cfg.mouse_deadzone_x.to_list();
 		ui->mouse_dz_x->setRange(std::stoi(mouse_dz_range_x.front()), std::stoi(mouse_dz_range_x.back()));
@@ -1122,47 +1123,38 @@ void pad_settings_dialog::OnTabChanged(int index)
 
 std::shared_ptr<PadHandlerBase> pad_settings_dialog::GetHandler(pad_handler type)
 {
-	std::shared_ptr<PadHandlerBase> ret_handler;
-
 	switch (type)
 	{
 	case pad_handler::null:
-		ret_handler = std::make_unique<NullPadHandler>();
-		break;
+		return std::make_unique<NullPadHandler>();
 	case pad_handler::keyboard:
-		ret_handler = std::make_unique<keyboard_pad_handler>();
-		break;
+		return std::make_unique<keyboard_pad_handler>();
 	case pad_handler::ds3:
-		ret_handler = std::make_unique<ds3_pad_handler>();
-		break;
+		return std::make_unique<ds3_pad_handler>();
 	case pad_handler::ds4:
-		ret_handler = std::make_unique<ds4_pad_handler>();
-		break;
+		return std::make_unique<ds4_pad_handler>();
 	case pad_handler::dualsense:
-		ret_handler = std::make_unique<dualsense_pad_handler>();
-		break;
+		return std::make_unique<dualsense_pad_handler>();
 #ifdef _WIN32
 	case pad_handler::xinput:
-		ret_handler = std::make_unique<xinput_pad_handler>();
-		break;
+		return std::make_unique<xinput_pad_handler>();
 	case pad_handler::mm:
-		ret_handler = std::make_unique<mm_joystick_handler>();
-		break;
+		return std::make_unique<mm_joystick_handler>();
 #endif
 #ifdef HAVE_LIBEVDEV
 	case pad_handler::evdev:
-		ret_handler = std::make_unique<evdev_joystick_handler>();
-		break;
+		return std::make_unique<evdev_joystick_handler>();
 #endif
 	}
 
-	return ret_handler;
+	return nullptr;
 }
 
 void pad_settings_dialog::ChangeInputType()
 {
 	bool force_enable = false; // enable configs even with disconnected devices
 	const int player = ui->tabWidget->currentIndex();
+	ensure(player >= 0);
 	const bool is_ldd_pad = GetIsLddPad(player);
 
 	std::string handler;
@@ -1194,6 +1186,7 @@ void pad_settings_dialog::ChangeInputType()
 	// Get this player's current handler and it's currently available devices
 	m_handler = GetHandler(g_cfg_input.player[player]->handler);
 	ensure(m_handler);
+	m_handler->set_player(player);
 	const auto device_list = m_handler->ListDevices();
 
 	// Localized tooltips

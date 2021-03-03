@@ -4,6 +4,41 @@
 
 LOG_CHANNEL(ds3_log, "DS3");
 
+struct ds3_rumble
+{
+	u8 padding              = 0x00;
+	u8 small_motor_duration = 0xFF; // 0xff means forever
+	u8 small_motor_on       = 0x00; // 0 or 1 (off/on)
+	u8 large_motor_duration = 0xFF; // 0xff means forever
+	u8 large_motor_force    = 0x00; // 0 to 255
+};
+
+struct ds3_led
+{
+	u8 duration             = 0xFF; // total duration, 0xff means forever
+	u8 interval_duration    = 0xFF; // interval duration in deciseconds
+	u8 enabled              = 0x10;
+	u8 interval_portion_off = 0x00; // in percent (100% = 0xFF)
+	u8 interval_portion_on  = 0xFF; // in percent (100% = 0xFF)
+};
+
+struct ds3_output_report
+{
+#ifdef _WIN32
+	u8 report_id = 0x00;
+	u8 idk_what_this_is[3] = {0x02, 0x00, 0x00};
+#else
+	u8 report_id = 0x01;
+#endif
+	ds3_rumble rumble;
+	u8 padding[4]  = {0x00, 0x00, 0x00, 0x00};
+	u8 led_enabled = 0x00; // LED 1 = 0x02, LED 2 = 0x04, etc.
+	ds3_led led[4];
+	ds3_led led_5;         // reserved for another LED
+};
+
+constexpr u8 battery_capacity[] = {0, 1, 25, 50, 75, 100};
+
 constexpr u16 DS3_VID = 0x054C;
 constexpr u16 DS3_PID = 0x0268;
 
@@ -45,6 +80,9 @@ ds3_pad_handler::ds3_pad_handler()
 	b_has_config = true;
 	b_has_rumble = true;
 	b_has_deadzones = true;
+	b_has_battery = true;
+	b_has_led = true;
+	b_has_rgb = false;
 
 	m_name_string = "DS3 Pad #";
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;
@@ -65,6 +103,16 @@ ds3_pad_handler::~ds3_pad_handler()
 			send_output_report(controller.second.get());
 		}
 	}
+}
+
+u32 ds3_pad_handler::get_battery_level(const std::string& padId)
+{
+	std::shared_ptr<ds3_device> device = get_hid_device(padId);
+	if (!device || !device->hidDevice)
+	{
+		return 0;
+	}
+	return std::clamp<u32>(device->battery_level, 0, 100);
 }
 
 void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
@@ -92,39 +140,56 @@ void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 		}
 	}
 
+	ensure(device->config);
+
 	// Start/Stop the engines :)
 	send_output_report(device.get());
 }
 
 int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 {
-	if (!ds3dev || !ds3dev->hidDevice)
+	if (!ds3dev || !ds3dev->hidDevice || !ds3dev->config)
 		return -2;
 
-#ifdef _WIN32
-	u8 report_buf[] = {
-		0x00,
-		0x02, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00
-	};
+	ds3_output_report output_report;
+	output_report.rumble.small_motor_on    = ds3dev->small_motor;
+	output_report.rumble.large_motor_force = ds3dev->large_motor;
 
-	report_buf[6] = ds3dev->small_motor;
-	report_buf[8] = ds3dev->large_motor;
-#else
-	u8 report_buf[] = {
-		0x01,
-		0x00, 0xff, 0x00, 0xff, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0x00, 0x00, 0x00, 0x00, 0x00
-	};
-	report_buf[3] = ds3dev->large_motor;
-	report_buf[5] = ds3dev->small_motor;
-#endif
+	if (ds3dev->config->led_battery_indicator)
+	{
+		if (ds3dev->battery_level >= 75)
+			output_report.led_enabled = 0b00011110;
+		else if (ds3dev->battery_level >= 50)
+			output_report.led_enabled = 0b00001110;
+		else if (ds3dev->battery_level >= 25)
+			output_report.led_enabled = 0b00000110;
+		else
+			output_report.led_enabled = 0b00000010;
+	}
+	else
+	{
+		switch (m_player_id)
+		{
+		case 0: output_report.led_enabled = 0b00000010; break;
+		case 1: output_report.led_enabled = 0b00000100; break;
+		case 2: output_report.led_enabled = 0b00001000; break;
+		case 3: output_report.led_enabled = 0b00010000; break;
+		case 4: output_report.led_enabled = 0b00010010; break;
+		case 5: output_report.led_enabled = 0b00010100; break;
+		case 6: output_report.led_enabled = 0b00011000; break;
+		default:
+			fmt::throw_exception("DS3 is using forbidden player id %d", m_player_id);
+		}
+	}
 
-	return hid_write(ds3dev->hidDevice, report_buf, sizeof(report_buf));
+	if (ds3dev->config->led_low_battery_blink && ds3dev->battery_level < 25)
+	{
+		output_report.led[3].interval_duration    = 0x14; // 2 seconds
+		output_report.led[3].interval_portion_on  = ds3dev->led_delay_on;
+		output_report.led[3].interval_portion_off = ds3dev->led_delay_off;
+	}
+
+	return hid_write(ds3dev->hidDevice, &output_report.report_id, sizeof(output_report));
 }
 
 void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
@@ -169,10 +234,9 @@ void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->lpadsquircling.def    = 0;
 	cfg->rpadsquircling.def    = 0;
 
-	// Set color value
-	cfg->colorR.def = 0;
-	cfg->colorG.def = 0;
-	cfg->colorB.def = 0;
+	// Set default LED options
+	cfg->led_battery_indicator.def = false;
+	cfg->led_low_battery_blink.def = true;
 
 	// apply defaults
 	cfg->from_default();
@@ -255,8 +319,6 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 	if (!ds3dev)
 		return DataStatus::ReadError;
 
-	ds3dev->padData = {};
-
 #ifdef _WIN32
 	ds3dev->padData[0] = ds3dev->report_id;
 	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->padData.data(), 64);
@@ -272,6 +334,20 @@ ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
 		if (ds3dev->padData[0] == 0x01 && ds3dev->padData[1] != 0xFF)
 #endif
 		{
+			const u8 battery_status = ds3dev->padData[30 + DS3_HID_OFFSET];
+
+			if (battery_status >= 0xEE)
+			{
+				// Charging (0xEE) or full (0xEF). Let's set the level to 100%.
+				ds3dev->battery_level = 100;
+				ds3dev->cable_state   = 1;
+			}
+			else
+			{
+				ds3dev->battery_level = battery_capacity[std::min<u8>(battery_status, 5)];
+				ds3dev->cable_state   = 0;
+			}
+
 			return DataStatus::NewData;
 		}
 		else
@@ -360,6 +436,9 @@ void ds3_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 	ds3_device* ds3dev = static_cast<ds3_device*>(device.get());
 	if (!ds3dev || !pad)
 		return;
+
+	pad->m_battery_level = ds3dev->battery_level;
+	pad->m_cable_state   = ds3dev->cable_state;
 
 	// For unknown reasons the sixaxis values seem to be in little endian on linux
 
@@ -481,6 +560,38 @@ void ds3_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 
 	const int speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
 	const int speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
+
+	const bool wireless    = dev->cable_state == 0;
+	const bool low_battery = dev->battery_level < 25;
+	const bool is_blinking = dev->led_delay_on > 0 || dev->led_delay_off > 0;
+
+	// Blink LED when battery is low
+	if (config->led_low_battery_blink)
+	{
+		// we are now wired or have okay battery level -> stop blinking
+		if (is_blinking && !(wireless && low_battery))
+		{
+			dev->led_delay_on    = 0;
+			dev->led_delay_off   = 0;
+			dev->new_output_data = true;
+		}
+		// we are now wireless and low on battery -> blink
+		else if (!is_blinking && wireless && low_battery)
+		{
+			dev->led_delay_on  = 0x80;
+			dev->led_delay_off = 0xFF - dev->led_delay_on;
+			dev->new_output_data = true;
+		}
+	}
+
+	// Use LEDs to indicate battery level
+	if (config->led_battery_indicator)
+	{
+		if (dev->last_battery_level != dev->battery_level)
+		{
+			dev->new_output_data = true;
+		}
+	}
 
 	dev->new_output_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;
 

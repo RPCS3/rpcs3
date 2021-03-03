@@ -39,6 +39,9 @@ public:
 	u8 small_motor{0};
 	u8 led_delay_on{0};
 	u8 led_delay_off{0};
+	u8 battery_level{0};
+	u8 last_battery_level{0};
+	u8 cable_state{0};
 };
 
 template <class Device>

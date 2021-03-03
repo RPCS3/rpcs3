@@ -216,15 +216,15 @@ namespace rsx
 			}
 
 			// NOTE: Object removal should be the last step
-			if (auto manager = g_fxo->get<display_manager>())
+			if (auto& manager = g_fxo->get<display_manager>(); g_fxo->is_init<display_manager>())
 			{
-				if (auto dlg = manager->get<rsx::overlays::message_dialog>())
+				if (auto dlg = manager.get<rsx::overlays::message_dialog>())
 				{
 					if (dlg->progress_bar_count())
 						Emu.GetCallbacks().handle_taskbar_progress(0, 1);
 				}
 
-				manager->remove(uid);
+				manager.remove(uid);
 			}
 		}
 

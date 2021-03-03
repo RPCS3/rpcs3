@@ -399,7 +399,7 @@ VKGSRender::VKGSRender() : GSRender()
 	}
 
 	//create command buffer...
-	m_command_buffer_pool.create((*m_device));
+	m_command_buffer_pool.create((*m_device), m_device->get_graphics_queue_family());
 
 	for (auto &cb : m_primary_cb_list)
 	{
@@ -410,7 +410,7 @@ VKGSRender::VKGSRender() : GSRender()
 	m_current_command_buffer = &m_primary_cb_list[0];
 
 	//Create secondary command_buffer for parallel operations
-	m_secondary_command_buffer_pool.create((*m_device));
+	m_secondary_command_buffer_pool.create((*m_device), m_device->get_graphics_queue_family());
 	m_secondary_command_buffer.create(m_secondary_command_buffer_pool, true);
 	m_secondary_command_buffer.access_hint = vk::command_buffer::access_type_hint::all;
 
@@ -673,15 +673,15 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 	if (result.num_flushable > 0)
 	{
-		if (g_fxo->get<rsx::dma_manager>()->is_current_thread())
+		if (g_fxo->get<rsx::dma_manager>().is_current_thread())
 		{
 			// The offloader thread cannot handle flush requests
 			ensure(!(m_queue_status & flush_queue_state::deadlock));
 
-			m_offloader_fault_range = g_fxo->get<rsx::dma_manager>()->get_fault_range(is_writing);
+			m_offloader_fault_range = g_fxo->get<rsx::dma_manager>().get_fault_range(is_writing);
 			m_offloader_fault_cause = (is_writing) ? rsx::invalidation_cause::write : rsx::invalidation_cause::read;
 
-			g_fxo->get<rsx::dma_manager>()->set_mem_fault_flag();
+			g_fxo->get<rsx::dma_manager>().set_mem_fault_flag();
 			m_queue_status |= flush_queue_state::deadlock;
 
 			// Wait for deadlock to clear
@@ -690,7 +690,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 				utils::pause();
 			}
 
-			g_fxo->get<rsx::dma_manager>()->clear_mem_fault_flag();
+			g_fxo->get<rsx::dma_manager>().clear_mem_fault_flag();
 			return true;
 		}
 
@@ -1928,7 +1928,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 
 	// Workaround for deadlock occuring during RSX offloader fault
 	// TODO: Restructure command submission infrastructure to avoid this condition
-	const bool sync_success = g_fxo->get<rsx::dma_manager>()->sync();
+	const bool sync_success = g_fxo->get<rsx::dma_manager>().sync();
 	const VkBool32 force_flush = !sync_success;
 
 	if (vk::test_status_interrupt(vk::heap_dirty))
@@ -1971,7 +1971,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_has_conditional_render)
 	{
 		ensure(m_render_pass_open);
-		m_device->cmdEndConditionalRenderingEXT(*m_current_command_buffer);
+		m_device->_vkCmdEndConditionalRenderingEXT(*m_current_command_buffer);
 	}
 #endif
 

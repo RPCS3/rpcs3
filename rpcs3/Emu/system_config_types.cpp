@@ -132,6 +132,7 @@ void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
+		case detail_level::none: return "None";
 		case detail_level::minimal: return "Minimal";
 		case detail_level::low: return "Low";
 		case detail_level::medium: return "Medium";
@@ -349,6 +350,22 @@ void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
 		case move_handler::null: return "Null";
 		case move_handler::fake: return "Fake";
 		case move_handler::mouse: return "Mouse";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<buzz_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case buzz_handler::null: return "Null";
+		case buzz_handler::one_controller: return "1 controller";
+		case buzz_handler::two_controllers: return "2 controllers";
 		}
 
 		return unknown;

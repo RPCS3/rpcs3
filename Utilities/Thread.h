@@ -42,10 +42,22 @@ class need_wakeup {};
 template <class Context>
 class named_thread;
 
-template <typename T>
+class thread_base;
+
+template <typename Ctx, typename X = void, typename... Args>
 struct result_storage
 {
-	static_assert(std::is_default_constructible_v<T> && noexcept(T()));
+	static constexpr bool empty = true;
+
+	using type = void;
+};
+
+template <typename Ctx, typename... Args>
+struct result_storage<Ctx, std::enable_if_t<!std::is_void_v<std::invoke_result_t<Ctx, Args&&...>>>, Args...>
+{
+	using T = std::invoke_result_t<Ctx, Args&&...>;
+
+	static_assert(std::is_default_constructible_v<T>);
 
 	alignas(T) std::byte data[sizeof(T)];
 
@@ -53,32 +65,52 @@ struct result_storage
 
 	using type = T;
 
-	T* get()
+	T* _get()
 	{
 		return reinterpret_cast<T*>(&data);
 	}
 
-	const T* get() const
+	const T* _get() const
 	{
 		return reinterpret_cast<const T*>(&data);
 	}
 
+	void init() noexcept
+	{
+		new (data) T();
+	}
+
 	void destroy() noexcept
 	{
-		get()->~T();
+		_get()->~T();
 	}
 };
 
-template <>
-struct result_storage<void>
+// Base class for task queue (linked list)
+class thread_future
 {
-	static constexpr bool empty = true;
+	friend class thread_base;
 
-	using type = void;
+	shared_ptr<thread_future> next{};
+
+	shared_ptr<thread_future>* prev{};
+
+protected:
+	atomic_t<void(*)(thread_base*, thread_future*)> exec{};
+
+public:
+	// Get reference to the atomic variable for inspection and waiting for
+	const auto& get_wait() const
+	{
+		return exec;
+	}
+
+	// Wait (preset)
+	void wait() const
+	{
+		exec.wait<atomic_wait::op_ne>(nullptr);
+	}
 };
-
-template <class Context, typename... Args>
-using result_storage_t = result_storage<std::invoke_result_t<Context, Args...>>;
 
 template <typename T, typename = void>
 struct thread_thread_name : std::bool_constant<false> {};
@@ -108,6 +140,9 @@ private:
 
 	// Thread name
 	atomic_ptr<std::string> m_tname;
+
+	// Thread task queue (reversed linked list)
+	atomic_ptr<thread_future> m_taskq{};
 
 	// Start thread
 	void start();
@@ -149,6 +184,13 @@ public:
 
 	// Get thread id
 	u64 get_native_id() const;
+
+	// Add work to the queue
+	void push(shared_ptr<thread_future>);
+
+private:
+	// Clear task queue (execute unless aborting)
+	void exec();
 };
 
 // Collection of global function for current thread
@@ -216,11 +258,8 @@ public:
 		return static_cast<thread_base&>(thread).get_native_id();
 	}
 
-	// Read current state
-	static inline thread_state state()
-	{
-		return static_cast<thread_state>(g_tls_this_thread->m_sync & 3);
-	}
+	// Read current state, possibly executing some tasks
+	static thread_state state();
 
 	// Wait once with timeout. May spuriously return false.
 	static inline void wait_for(u64 usec, bool alert = true)
@@ -235,19 +274,20 @@ public:
 	}
 
 	// Wait for both thread sync var and provided atomic var
-	template <typename T, atomic_wait::op op = atomic_wait::op::eq, typename U>
+	template <atomic_wait::op Op = atomic_wait::op::eq, typename T, typename U>
 	static inline void wait_on(T& wait, U old, u64 usec = -1)
 	{
 		auto _this = g_tls_this_thread;
 
-		if (_this->m_sync.bit_test_reset(2))
+		if (_this->m_sync.bit_test_reset(2) || _this->m_taskq)
 		{
 			return;
 		}
 
-		atomic_wait::list<2> list{};
-		list.set<0, op>(wait, old);
+		atomic_wait::list<3> list{};
+		list.set<0, Op>(wait, old);
 		list.set<1>(_this->m_sync, 0, 4 + 1);
+		list.set<2>(_this->m_taskq, nullptr);
 		list.wait(atomic_wait_timeout{usec <= 0xffff'ffff'ffff'ffff / 1000 ? usec * 1000 : 0xffff'ffff'ffff'ffff});
 	}
 
@@ -304,11 +344,89 @@ private:
 	static const u64 process_affinity_mask;
 };
 
+// Used internally
+template <bool Discard, typename Ctx, typename... Args>
+class thread_future_t : public thread_future, result_storage<Ctx, std::conditional_t<Discard, int, void>, Args...>
+{
+	[[no_unique_address]] decltype(std::make_tuple(std::forward<Args>(std::declval<Args>())...)) m_args;
+
+	[[no_unique_address]] Ctx m_func;
+
+	using future = thread_future_t;
+
+public:
+	thread_future_t(Ctx&& func, Args&&... args)
+		: m_args(std::forward<Args>(args)...)
+		, m_func(std::forward<Ctx>(func))
+	{
+		thread_future::exec.raw() = +[](thread_base* tb, thread_future* tf)
+		{
+			const auto _this = static_cast<future*>(tf);
+
+			if (!tb) [[unlikely]]
+			{
+				if constexpr (!future::empty && !Discard)
+				{
+					_this->init();
+				}
+
+				return;
+			}
+
+			if constexpr (future::empty || Discard)
+			{
+				std::apply(_this->m_func, std::move(_this->m_args));
+			}
+			else
+			{
+				new (_this->_get()) decltype(auto)(std::apply(_this->m_func, std::move(_this->m_args)));
+			}
+		};
+	}
+
+	~thread_future_t()
+	{
+		if constexpr (!future::empty && !Discard)
+		{
+			if (!this->exec)
+			{
+				this->destroy();
+			}
+		}
+	}
+
+	decltype(auto) get()
+	{
+		while (this->exec)
+		{
+			this->wait();
+		}
+
+		if constexpr (!future::empty && !Discard)
+		{
+			return *this->_get();
+		}
+	}
+
+	decltype(auto) get() const
+	{
+		while (this->exec)
+		{
+			this->wait();
+		}
+
+		if constexpr (!future::empty && !Discard)
+		{
+			return *this->_get();
+		}
+	}
+};
+
 // Derived from the callable object Context, possibly a lambda
 template <class Context>
-class named_thread final : public Context, result_storage_t<Context>, thread_base
+class named_thread final : public Context, result_storage<Context>, thread_base
 {
-	using result = result_storage_t<Context>;
+	using result = result_storage<Context>;
 	using thread = thread_base;
 
 	static u64 entry_point(thread_base* _base)
@@ -323,19 +441,30 @@ class named_thread final : public Context, result_storage_t<Context>, thread_bas
 			if constexpr (!result::empty)
 			{
 				// Construct using default constructor in the case of failure
-				new (static_cast<result*>(static_cast<named_thread*>(thread_ctrl::get_current()))->get()) typename result::type();
+				static_cast<result*>(static_cast<named_thread*>(thread_ctrl::get_current()))->init();
 			}
 		});
 
 		if constexpr (result::empty)
 		{
 			// No result
-			Context::operator()();
+			if constexpr (std::is_invocable_v<Context>)
+			{
+				Context::operator()();
+			}
+			else
+			{
+				// Default event loop
+				while (thread_ctrl::state() != thread_state::aborting)
+				{
+					thread_ctrl::wait();
+				}
+			}
 		}
 		else
 		{
 			// Construct the result using placement new (copy elision should happen)
-			new (result::get()) typename result::type(Context::operator()());
+			new (result::_get()) decltype(auto)(Context::operator()());
 		}
 
 		return thread::finalize(thread_state::finished);
@@ -383,7 +512,7 @@ public:
 
 		if constexpr (!result::empty)
 		{
-			return *result::get();
+			return *result::_get();
 		}
 	}
 
@@ -394,7 +523,82 @@ public:
 
 		if constexpr (!result::empty)
 		{
-			return *result::get();
+			return *result::_get();
+		}
+	}
+
+	// Send command to the thread to invoke directly (references should be passed via std::ref())
+	template <bool Discard = true, typename Arg, typename... Args>
+	auto operator()(Arg&& arg, Args&&... args)
+	{
+		// Overloaded operator() of the Context.
+		constexpr bool v1 = std::is_invocable_v<Context, Arg&&, Args&&...>;
+
+		// Anything invocable, not necessarily involving the Context.
+		constexpr bool v2 = std::is_invocable_v<Arg&&, Args&&...>;
+
+		// Could be pointer to a non-static member function (or data member) of the Context.
+		constexpr bool v3 = std::is_member_pointer_v<std::decay_t<Arg>> && std::is_invocable_v<Arg, Context&, Args&&...>;
+
+		// Only one invocation type shall be valid, otherwise we don't know.
+		static_assert((v1 + v2 + v3) == 1, "Ambiguous or invalid named_thread call.");
+
+		if constexpr (v1)
+		{
+			using future = thread_future_t<Discard, Context&, Arg, Args...>;
+
+			single_ptr<future> target = make_single<future>(*static_cast<Context*>(this), std::forward<Arg>(arg), std::forward<Args>(args)...);
+
+			if constexpr (!Discard)
+			{
+				shared_ptr<future> result = std::move(target);
+
+				// Copy result
+				thread::push(result);
+				return result;
+			}
+			else
+			{
+				// Move target
+				thread::push(std::move(target));
+				return;
+			}
+		}
+		else if constexpr (v2)
+		{
+			using future = thread_future_t<Discard, Arg, Args...>;
+
+			single_ptr<future> target = make_single<future>(std::forward<Arg>(arg), std::forward<Args>(args)...);
+
+			if constexpr (!Discard)
+			{
+				shared_ptr<future> result = std::move(target);
+				thread::push(result);
+				return result;
+			}
+			else
+			{
+				thread::push(std::move(target));
+				return;
+			}
+		}
+		else if constexpr (v3)
+		{
+			using future = thread_future_t<Discard, Arg, Context&, Args...>;
+
+			single_ptr<future> target = make_single<future>(std::forward<Arg>(arg), std::ref(*static_cast<Context*>(this)), std::forward<Args>(args)...);
+
+			if constexpr (!Discard)
+			{
+				shared_ptr<future> result = std::move(target);
+				thread::push(result);
+				return result;
+			}
+			else
+			{
+				thread::push(std::move(target));
+				return;
+			}
 		}
 	}
 

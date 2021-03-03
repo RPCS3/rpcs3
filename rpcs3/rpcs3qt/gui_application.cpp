@@ -248,9 +248,7 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 {
 	extern const std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map;
 
-	const auto size = g_video_out_resolution_map.at(g_cfg.video.resolution);
-	int w           = size.first;
-	int h           = size.second;
+	auto [w, h] = g_video_out_resolution_map.at(g_cfg.video.resolution);
 
 	if (m_gui_settings->GetValue(gui::gs_resize).toBool())
 	{

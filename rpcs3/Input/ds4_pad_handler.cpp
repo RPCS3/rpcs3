@@ -118,6 +118,7 @@ ds4_pad_handler::ds4_pad_handler()
 	b_has_rumble = true;
 	b_has_deadzones = true;
 	b_has_led = true;
+	b_has_rgb = true;
 	b_has_battery = true;
 
 	m_name_string = "DS4 Pad #";
@@ -196,7 +197,7 @@ u32 ds4_pad_handler::get_battery_level(const std::string& padId)
 void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<DS4Device> device = get_hid_device(padId);
-	if (device == nullptr || device->hidDevice == nullptr)
+	if (!device || !device->hidDevice || !device->config)
 		return;
 
 	// Set the device's motor speeds to our requested values 0-255
@@ -217,6 +218,8 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 			index++;
 		}
 	}
+
+	ensure(device->config);
 
 	// Set new LED color
 	if (battery_led)
@@ -709,7 +712,7 @@ ds4_pad_handler::DataStatus ds4_pad_handler::get_data(DS4Device* device)
 
 	const int battery_offset = offset + DS4_INPUT_REPORT_BATTERY_OFFSET;
 	device->cable_state = (buf[battery_offset] >> 4) & 0x01;
-	device->battery_level = buf[battery_offset] & 0x0F;
+	device->battery_level = buf[battery_offset] & 0x0F; // 0 - 9 while unplugged, 0 - 10 while plugged in, 11 charge complete
 
 	if (device->has_calib_data)
 	{
@@ -871,22 +874,22 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 	const int speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
 	const int speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
 
-	const bool wireless   = ds4_dev->cable_state < 1;
-	const bool lowBattery = ds4_dev->battery_level < 2;
-	const bool isBlinking = ds4_dev->led_delay_on > 0 || ds4_dev->led_delay_off > 0;
+	const bool wireless    = ds4_dev->cable_state == 0;
+	const bool low_battery = ds4_dev->battery_level < 2;
+	const bool is_blinking = ds4_dev->led_delay_on > 0 || ds4_dev->led_delay_off > 0;
 
 	// Blink LED when battery is low
 	if (config->led_low_battery_blink)
 	{
 		// we are now wired or have okay battery level -> stop blinking
-		if (isBlinking && !(wireless && lowBattery))
+		if (is_blinking && !(wireless && low_battery))
 		{
 			ds4_dev->led_delay_on = 0;
 			ds4_dev->led_delay_off = 0;
 			ds4_dev->new_output_data = true;
 		}
 		// we are now wireless and low on battery -> blink
-		else if (!isBlinking && wireless && lowBattery)
+		else if (!is_blinking && wireless && low_battery)
 		{
 			ds4_dev->led_delay_on = 100;
 			ds4_dev->led_delay_off = 100;
