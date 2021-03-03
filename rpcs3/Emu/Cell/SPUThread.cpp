@@ -133,8 +133,6 @@ static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 
 #ifdef _MSC_VER
 __forceinline
-#else
-__attribute__((always_inline))
 #endif
 extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs)
 {
@@ -189,8 +187,6 @@ static FORCE_INLINE void mov_rdata_avx(__m256i* dst, const __m256i* src)
 
 #ifdef _MSC_VER
 __forceinline
-#else
-__attribute__((always_inline))
 #endif
 extern void mov_rdata(spu_rdata_t& _dst, const spu_rdata_t& _src)
 {
