@@ -559,7 +559,7 @@ VKGSRender::~VKGSRender()
 	}
 
 	// Globals. TODO: Refactor lifetime management
-	g_fxo->get<vk::async_scheduler_thread>()->kill();
+	g_fxo->get<vk::async_scheduler_thread>().kill();
 
 	//Wait for device to finish up with resources
 	vkDeviceWaitIdle(*m_device);
@@ -1939,7 +1939,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	const VkBool32 force_flush = !sync_success;
 
 	// Flush any asynchronously scheduled jobs
-	g_fxo->get<vk::async_scheduler_thread>()->flush(force_flush);
+	g_fxo->get<vk::async_scheduler_thread>().flush(force_flush);
 
 	if (vk::test_status_interrupt(vk::heap_dirty))
 	{

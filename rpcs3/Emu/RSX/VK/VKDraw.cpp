@@ -963,7 +963,7 @@ void VKGSRender::end()
 	m_frame_stats.setup_time += m_profiler.duration();
 
 	// Sync any async scheduler tasks
-	if (auto ev = g_fxo->get<vk::async_scheduler_thread>()->get_primary_sync_label())
+	if (auto ev = g_fxo->get<vk::async_scheduler_thread>().get_primary_sync_label())
 	{
 		ev->gpu_wait(*m_current_command_buffer);
 	}
