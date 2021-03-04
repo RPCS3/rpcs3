@@ -39,13 +39,13 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
        <string>CPU</string>
       </attribute>
-      <layout class="QVBoxLayout" name="coreTabLayout">
+      <layout class="QVBoxLayout" name="coreTabLayout" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="coreTabItemLayout" stretch="1,1,1">
          <item>
@@ -325,7 +325,7 @@
       <attribute name="title">
        <string>GPU</string>
       </attribute>
-      <layout class="QVBoxLayout" name="gpuTab_layout">
+      <layout class="QVBoxLayout" name="gpuTab_layout" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="gpuTabLayout" stretch="1,1,1">
          <item>
@@ -1277,7 +1277,7 @@
       <attribute name="title">
        <string>I/O</string>
       </attribute>
-      <layout class="QVBoxLayout" name="inputTab_layout">
+      <layout class="QVBoxLayout" name="inputTab_layout" stretch="0,0,1,0">
        <item>
         <layout class="QHBoxLayout" name="inputTabLayoutTop" stretch="1,1,1">
          <item>
@@ -1408,7 +1408,7 @@
       <attribute name="title">
        <string>System</string>
       </attribute>
-      <layout class="QVBoxLayout" name="systemTab_layout">
+      <layout class="QVBoxLayout" name="systemTab_layout" stretch="0,0,0,0,1,0">
        <item>
         <layout class="QHBoxLayout" name="systemTabLayout1" stretch="1,1,1">
          <item>
@@ -1661,7 +1661,7 @@
       <attribute name="title">
        <string>Network</string>
       </attribute>
-      <layout class="QVBoxLayout" name="networkTab_layout">
+      <layout class="QVBoxLayout" name="networkTab_layout" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="networkTabLayout" stretch="0,0">
          <item>
@@ -1725,10 +1725,13 @@
               <property name="orientation">
                <enum>Qt::Vertical</enum>
               </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
+              </property>
               <property name="sizeHint" stdset="0">
                <size>
-                <width>20</width>
-                <height>40</height>
+                <width>0</width>
+                <height>0</height>
                </size>
               </property>
              </spacer>
@@ -1759,10 +1762,13 @@
               <property name="orientation">
                <enum>Qt::Vertical</enum>
               </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
+              </property>
               <property name="sizeHint" stdset="0">
                <size>
-                <width>20</width>
-                <height>40</height>
+                <width>0</width>
+                <height>0</height>
                </size>
               </property>
              </spacer>
@@ -1822,7 +1828,7 @@
       <attribute name="title">
        <string>Advanced</string>
       </attribute>
-      <layout class="QVBoxLayout" name="advancedTab_layout">
+      <layout class="QVBoxLayout" name="advancedTab_layout" stretch="1,0,0">
        <item>
         <layout class="QHBoxLayout" name="advancedTabLayout" stretch="1,1,1">
          <item>
@@ -1918,6 +1924,9 @@
              <property name="orientation">
               <enum>Qt::Vertical</enum>
              </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::MinimumExpanding</enum>
+             </property>
              <property name="sizeHint" stdset="0">
               <size>
                <width>0</width>
@@ -1932,12 +1941,6 @@
           <layout class="QVBoxLayout" name="advancedTabLayoutMiddle">
            <item>
             <widget class="QGroupBox" name="gb_libs">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
              <property name="title">
               <string>Firmware Libraries</string>
              </property>
@@ -2188,9 +2191,12 @@
             </widget>
            </item>
            <item>
-            <spacer name="verticalSpacer_22">
+            <spacer name="advancedTabSpacerRight">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::MinimumExpanding</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -2251,7 +2257,7 @@
       <attribute name="title">
        <string>Emulator</string>
       </attribute>
-      <layout class="QVBoxLayout" name="emulatorTab_layout">
+      <layout class="QVBoxLayout" name="emulatorTab_layout" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="emulatorTabLayout" stretch="1,1,1">
          <item>
@@ -2988,7 +2994,7 @@
       <attribute name="title">
        <string>GUI</string>
       </attribute>
-      <layout class="QVBoxLayout" name="guiTab_layout">
+      <layout class="QVBoxLayout" name="guiTab_layout" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="guiTabLayout" stretch="1,1,1">
          <item>
@@ -3392,7 +3398,7 @@
       <attribute name="title">
        <string>Debug</string>
       </attribute>
-      <layout class="QVBoxLayout" name="debugTab_layout">
+      <layout class="QVBoxLayout" name="debugTab_layout" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="debugTabLayout" stretch="1,1,1">
          <item>
@@ -3487,6 +3493,22 @@
               </property>
              </widget>
             </item>
+            <item>
+             <spacer name="verticalSpacerDebugGPU">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
            </layout>
           </widget>
          </item>
@@ -3564,6 +3586,9 @@
               <property name="orientation">
                <enum>Qt::Vertical</enum>
               </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
+              </property>
               <property name="sizeHint" stdset="0">
                <size>
                 <width>0</width>
@@ -3627,6 +3652,9 @@
         <spacer name="debugTabSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::MinimumExpanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
