@@ -1414,9 +1414,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 			QString glossary;
 
-			for (const auto& [format, description] : window_title_glossary)
+			for (const auto& entry : window_title_glossary)
 			{
-				glossary += format + "\t = " + description + "\n";
+				glossary += entry.first + "\t = " + entry.second + "\n";
 			}
 
 			return tr("Glossary:\n\n%0\nPreview:\n\n%1\n", "Game window title").arg(glossary).arg(game_window_title);
