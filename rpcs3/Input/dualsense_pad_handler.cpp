@@ -43,6 +43,7 @@ namespace
 		VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE = 0x10,
 		VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE   = 0x02,
 		POWER_SAVE_CONTROL_MIC_MUTE                  = 0x10,
+		LIGHTBAR_SETUP_LIGHT_ON                      = 0x01,
 		LIGHTBAR_SETUP_LIGHT_OUT                     = 0x02,
 	};
 	
@@ -904,10 +905,12 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 
 	output_report_common common{};
 
-	// Only initialize lightbar in the first output report. The controller didn't seem to update the player LEDs correctly otherwise.
+	// Only initialize lightbar in the first output report. The controller didn't seem to update the player LEDs correctly otherwise. (Might be placebo)
 	if (device->init_lightbar)
 	{
 		device->init_lightbar = false;
+		device->lightbar_on = true;
+		device->lightbar_on_old = true;
 
 		common.valid_flag_2 |= VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE;
 		common.lightbar_setup = LIGHTBAR_SETUP_LIGHT_OUT; // Fade light out.
@@ -921,13 +924,24 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 
 		if (device->update_lightbar)
 		{
-			// TODO: battery blink
 			device->update_lightbar = false;
 
 			common.valid_flag_1 |= VALID_FLAG_1_LIGHTBAR_CONTROL_ENABLE;
-			common.lightbar_r = config->colorR; // red
-			common.lightbar_g = config->colorG; // green
-			common.lightbar_b = config->colorB; // blue
+
+			if (device->lightbar_on)
+			{
+				common.lightbar_r = config->colorR; // red
+				common.lightbar_g = config->colorG; // green
+				common.lightbar_b = config->colorB; // blue
+			}
+			else
+			{
+				common.lightbar_r = 0;
+				common.lightbar_g = 0;
+				common.lightbar_b = 0;
+			}
+
+			device->lightbar_on_old = device->lightbar_on;
 		}
 
 		if (device->update_player_leds)
@@ -1010,6 +1024,7 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 		// we are now wired or have okay battery level -> stop blinking
 		if (is_blinking && !(wireless && low_battery))
 		{
+			dualsense_dev->lightbar_on = true;
 			dualsense_dev->led_delay_on = 0;
 			dualsense_dev->led_delay_off = 0;
 			dualsense_dev->update_lightbar = true;
@@ -1023,6 +1038,24 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 			dualsense_dev->update_lightbar = true;
 			dualsense_dev->new_output_data = true;
 		}
+
+		// Turn lightbar on and off in an interval. I wanted to do an automatic pulse, but I haven't found out how to do that yet.
+		if (dualsense_dev->led_delay_on > 0)
+		{
+			if (steady_clock::time_point now = steady_clock::now(); (now - dualsense_dev->last_lightbar_time) > 500ms)
+			{
+				dualsense_dev->lightbar_on = !dualsense_dev->lightbar_on;
+				dualsense_dev->last_lightbar_time = now;
+				dualsense_dev->update_lightbar = true;
+				dualsense_dev->new_output_data = true;
+			}
+		}
+	}
+	else if (!dualsense_dev->lightbar_on)
+	{
+		dualsense_dev->lightbar_on = true;
+		dualsense_dev->update_lightbar = true;
+		dualsense_dev->new_output_data = true;
 	}
 
 	// Use LEDs to indicate battery level
@@ -1037,6 +1070,7 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 			config->colorB.set(0);
 			dualsense_dev->update_lightbar = true;
 			dualsense_dev->new_output_data = true;
+			dualsense_dev->last_battery_level = dualsense_dev->battery_level;
 		}
 	}
 

@@ -22,6 +22,11 @@ public:
 	bool init_lightbar{true};
 	bool update_lightbar{true};
 	bool update_player_leds{true};
+
+	// Controls for lightbar pulse. This seems somewhat hacky for now, as I haven't found out a nicer way.
+	bool lightbar_on{false};
+	bool lightbar_on_old{false};
+	steady_clock::time_point last_lightbar_time;
 };
 
 class dualsense_pad_handler final : public hid_pad_handler<DualSenseDevice>
