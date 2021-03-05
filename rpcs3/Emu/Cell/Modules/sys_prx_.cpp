@@ -251,12 +251,12 @@ error_code sys_prx_exitspawn_with_level()
 	return CELL_OK;
 }
 
-error_code sys_prx_get_my_module_id(ppu_thread& ppu, ppu_thread& _do, ppu_thread& _not, ppu_thread& _call)
+error_code sys_prx_get_my_module_id(ppu_thread& ppu_do_not_call, ppu_thread&, ppu_thread&, ppu_thread&) // Do not call directly
 {
 	sysPrxForUser.trace("sys_prx_get_my_module_id()");
 
 	// Call the syscall using the LR
-	return _sys_prx_get_module_id_by_address(ppu, static_cast<u32>(ppu.lr));
+	return _sys_prx_get_module_id_by_address(ppu_do_not_call, static_cast<u32>(ppu_do_not_call.lr));
 }
 
 void sysPrxForUser_sys_prx_init()

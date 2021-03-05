@@ -485,7 +485,7 @@ void cpu_thread::operator()()
 		}
 	});
 
-	g_tls_log_control = [](const char* fmt, u64 progress)
+	g_tls_log_control = [](const char*, u64 progress)
 	{
 		static thread_local bool wait_set = false;
 
@@ -1006,7 +1006,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		// Copy snapshot for finalization
 		u128 copy2 = copy;
 
-		copy = cpu_counter::for_all_cpu(copy, [&](cpu_thread* cpu, u32 index)
+		copy = cpu_counter::for_all_cpu(copy, [&](cpu_thread* cpu, u32 /*index*/)
 		{
 			if (cpu->state.fetch_add(cpu_flag::pause) & cpu_flag::wait)
 			{
@@ -1020,7 +1020,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		while (copy)
 		{
 			// Check only CPUs which haven't acknowledged their waiting state yet
-			copy = cpu_counter::for_all_cpu(copy, [&](cpu_thread* cpu, u32 index)
+			copy = cpu_counter::for_all_cpu(copy, [&](cpu_thread* cpu, u32 /*index*/)
 			{
 				if (cpu->state & cpu_flag::wait)
 				{

@@ -334,7 +334,7 @@ static std::string get_confirmation_message(u32 operation, const SaveDataEntry& 
 
 static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirName,
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
-	PFuncFile funcFile, u32 container, u32 unk_op_flags, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
+	PFuncFile funcFile, u32 /*container*/, u32 unk_op_flags, vm::ptr<void> /*userdata*/, u32 userId, PFuncDone /*funcDone*/)
 {
 	if (version > CELL_SAVEDATA_VERSION_420)
 	{
@@ -2295,6 +2295,11 @@ error_code cellSaveDataListDelete(ppu_thread& ppu, PSetList setList, PSetBuf set
 
 	return savedata_op(ppu, SAVEDATA_OP_LIST_DELETE, 0, vm::null, 0, setList, setBuf, funcList, vm::null, vm::null, vm::null, container, 0x40, userdata, 0, funcDone);
 }
+
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 error_code cellSaveDataListImport(ppu_thread& ppu, PSetList setList, u32 maxSizeKB, PFuncDone funcDone, u32 container, vm::ptr<void> userdata)
 {

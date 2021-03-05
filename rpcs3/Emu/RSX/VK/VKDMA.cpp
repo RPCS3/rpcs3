@@ -227,17 +227,17 @@ namespace vk
 		// NOP
 	}
 
-	void dma_block_EXT::flush(const utils::address_range& range)
+	void dma_block_EXT::flush(const utils::address_range&)
 	{
 		// NOP
 	}
 
-	void dma_block_EXT::load(const utils::address_range& range)
+	void dma_block_EXT::load(const utils::address_range&)
 	{
 		// NOP
 	}
 
-	bool test_host_pointer(u32 base_address, usz length)
+	bool test_host_pointer([[maybe_unused]] u32 base_address, [[maybe_unused]] usz length)
 	{
 #ifdef _WIN32
 		MEMORY_BASIC_INFORMATION mem_info;

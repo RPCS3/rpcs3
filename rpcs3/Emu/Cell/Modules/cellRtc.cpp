@@ -1129,7 +1129,8 @@ error_code cellRtcConvertLocalTimeToUtc(vm::cptr<CellRtcTick> pLocalTime, vm::pt
 
 error_code cellRtcGetCurrentSecureTick(vm::ptr<CellRtcTick> tick)
 {
-	UNIMPLEMENTED_FUNC(cellRtc);
+	cellRtc.todo("cellRtcGetCurrentSecureTick(*0x%x)", tick);
+
 	return CELL_OK;
 }
 

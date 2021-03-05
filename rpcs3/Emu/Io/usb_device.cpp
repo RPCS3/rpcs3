@@ -102,7 +102,7 @@ bool usb_device_passthrough::set_interface(u8 int_num)
 	return (libusb_claim_interface(lusb_handle, int_num) == LIBUSB_SUCCESS);
 }
 
-void usb_device_passthrough::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
+void usb_device_passthrough::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 /*wLength*/, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
 	if (transfer->setup_buf.size() < buf_size + 8)
 		transfer->setup_buf.resize(buf_size + 8);
@@ -150,7 +150,7 @@ bool usb_device_emulated::open_device()
 	return true;
 }
 
-s32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* ptr, u32 max_size)
+s32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* ptr, u32 /*max_size*/)
 {
 	if (type == USB_DESCRIPTOR_STRING)
 	{
@@ -175,7 +175,7 @@ s32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* ptr, u32 max_size
 	return -1;
 }
 
-void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
+void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 /*wIndex*/, u16 /*wLength*/, u32 buf_size, u8* /*buf*/, UsbTransfer* transfer)
 {
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;
@@ -194,6 +194,11 @@ void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wV
 	default: sys_usbd.fatal("Unhandled control transfer: 0x%x", bmRequestType); break;
 	}
 }
+
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 void usb_device_emulated::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {

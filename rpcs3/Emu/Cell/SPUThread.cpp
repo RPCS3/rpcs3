@@ -2038,7 +2038,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				}
 			}())
 			{
-				const u64 time0 = vm::reservation_acquire(eal, size0);
+				const u64 time0 = vm::reservation_acquire(eal);
 
 				if (time0 & 127)
 				{
@@ -2103,7 +2103,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				}
 				}
 
-				if (time0 != vm::reservation_acquire(eal, size0) || (size0 == 128 && !cmp_rdata(*reinterpret_cast<spu_rdata_t*>(dst0), *reinterpret_cast<const spu_rdata_t*>(src))))
+				if (time0 != vm::reservation_acquire(eal) || (size0 == 128 && !cmp_rdata(*reinterpret_cast<spu_rdata_t*>(dst0), *reinterpret_cast<const spu_rdata_t*>(src))))
 				{
 					continue;
 				}
@@ -2158,7 +2158,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				}
 
 				// Lock each cache line
-				auto& res = vm::reservation_acquire(eal, size0);
+				auto& res = vm::reservation_acquire(eal);
 
 				// Lock each bit corresponding to a byte being written, using some free space in reservation memory
 				auto* bits = reinterpret_cast<atomic_t<u128>*>(vm::g_reservations + (eal & 0xff80) / 2 + 16);
@@ -2712,7 +2712,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		}
 
 		const auto& to_write = _ref<spu_rdata_t>(args.lsa & 0x3ff80);
-		auto& res = vm::reservation_acquire(addr, 128);
+		auto& res = vm::reservation_acquire(addr);
 
 		// TODO: Limit scope!!
 		rsx::reservation_lock rsx_lock(addr, 128);
@@ -2849,7 +2849,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		return success;
 	}())
 	{
-		vm::reservation_notifier(addr, 128).notify_all(-128);
+		vm::reservation_notifier(addr).notify_all(-128);
 		raddr = 0;
 		perf0.reset();
 		return true;
@@ -2894,7 +2894,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 		if (result == 0)
 		{
 			auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr);
-			auto& res = vm::reservation_acquire(addr, 128);
+			auto& res = vm::reservation_acquire(addr);
 
 			cpu_thread::suspend_all<+2>(cpu, {&res}, [&]
 			{
@@ -2954,10 +2954,10 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	}
 
 	do_cell_atomic_128_store(addr, _ptr<spu_rdata_t>(args.lsa & 0x3ff80));
-	vm::reservation_notifier(addr, 128).notify_all(-128);
+	vm::reservation_notifier(addr).notify_all(-128);
 }
 
-void spu_thread::do_mfc(bool wait)
+void spu_thread::do_mfc(bool /*wait*/)
 {
 	u32 removed = 0;
 	u32 barrier = 0;
@@ -3149,7 +3149,7 @@ bool spu_thread::process_mfc_cmd()
 			spu_log.trace(u8"GETLLAR after fail: addr=0x%x, time=%u c", last_faddr, (perf0.get() - last_ftsc));
 		}
 
-		if (addr == last_faddr && perf0.get() - last_ftsc < 1000 && (vm::reservation_acquire(addr, 128) & -128) == last_ftime)
+		if (addr == last_faddr && perf0.get() - last_ftsc < 1000 && (vm::reservation_acquire(addr) & -128) == last_ftime)
 		{
 			rtime = last_ftime;
 			raddr = last_faddr;
@@ -3165,7 +3165,7 @@ bool spu_thread::process_mfc_cmd()
 			last_faddr = 0;
 		}
 
-		if (addr == raddr && !g_use_rtm && g_cfg.core.spu_getllar_polling_detection && rtime == vm::reservation_acquire(addr, 128) && cmp_rdata(rdata, data))
+		if (addr == raddr && !g_use_rtm && g_cfg.core.spu_getllar_polling_detection && rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data))
 		{
 			// Spinning, might as well yield cpu resources
 			std::this_thread::yield();
@@ -3193,7 +3193,7 @@ bool spu_thread::process_mfc_cmd()
 				const bool ok = cpu_thread::if_suspended<0>(this, {&ntime}, [&]
 				{
 					// Guaranteed success
-					ntime = vm::reservation_acquire(addr, 128);
+					ntime = vm::reservation_acquire(addr);
 					mov_rdata_nt(rdata, sdata);
 				});
 
@@ -3218,7 +3218,7 @@ bool spu_thread::process_mfc_cmd()
 			}
 		}())
 		{
-			ntime = vm::reservation_acquire(addr, 128);
+			ntime = vm::reservation_acquire(addr);
 
 			if (ntime & vm::rsrv_unique_lock)
 			{
@@ -3247,7 +3247,7 @@ bool spu_thread::process_mfc_cmd()
 				mov_rdata(rdata, data);
 			}
 
-			if (u64 time0 = vm::reservation_acquire(addr, 128); (ntime & test_mask) != (time0 & test_mask))
+			if (u64 time0 = vm::reservation_acquire(addr); (ntime & test_mask) != (time0 & test_mask))
 			{
 				// Reservation data has been modified recently
 				if (time0 & vm::rsrv_unique_lock) i += 12;
@@ -3429,7 +3429,7 @@ bool spu_thread::process_mfc_cmd()
 
 			//if (g_cfg.core.mfc_debug)
 			//{
-			//  TODO: This needs a disambiguator with list elements dumping  
+			//  TODO: This needs a disambiguator with list elements dumping
 			//	auto& dump = reinterpret_cast<mfc_cmd_dump*>(vm::g_stat_addr + vm_offset())[mfc_dump_idx++ % spu_thread::max_mfc_dump_idx];
 			//	dump.cmd = ch_mfc_cmd;
 			//	dump.cmd.eah = pc;
@@ -3497,7 +3497,7 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data)
 		return false;
 	}
 
-	if ((vm::reservation_acquire(addr, 128) & -128) != rtime)
+	if ((vm::reservation_acquire(addr) & -128) != rtime)
 	{
 		return true;
 	}
@@ -3883,7 +3883,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					continue;
 				}
 
-				vm::reservation_notifier(raddr, 128).wait(rtime, -128, atomic_wait_timeout{100'000});
+				vm::reservation_notifier(raddr).wait(rtime, -128, atomic_wait_timeout{100'000});
 			}
 
 			check_state();

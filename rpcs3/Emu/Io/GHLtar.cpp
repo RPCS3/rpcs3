@@ -45,7 +45,7 @@ void usb_device_ghltar::control_transfer(u8 bmRequestType, u8 bRequest, u16 wVal
 	}
 }
 
-void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
+void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;

@@ -30,6 +30,7 @@
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -352,7 +353,7 @@ void ppu_reservation_fallback(ppu_thread& ppu)
 
 static std::unordered_map<u32, u32>* s_ppu_toc;
 
-static bool ppu_check_toc(ppu_thread& ppu, ppu_opcode_t op)
+static bool ppu_check_toc(ppu_thread& ppu, ppu_opcode_t)
 {
 	// Compare TOC with expected value
 	const auto found = s_ppu_toc->find(ppu.cia);
@@ -457,7 +458,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 }
 
 // Breakpoint entry point
-static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op)
+static bool ppu_break(ppu_thread& ppu, ppu_opcode_t)
 {
 	// Pause
 	ppu.state.atomic_op([](bs_t<cpu_flag>& state) { if (!(state & cpu_flag::dbg_step)) state += cpu_flag::dbg_pause; });
@@ -1428,7 +1429,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		ppu_log.trace(u8"LARX after fail: addr=0x%x, faddr=0x%x, time=%u c", addr, ppu.last_faddr, (perf0.get() - ppu.last_ftsc));
 	}
 
-	if ((addr & addr_mask) == (ppu.last_faddr & addr_mask) && (perf0.get() - ppu.last_ftsc) < 600 && (vm::reservation_acquire(addr, sizeof(T)) & -128) == ppu.last_ftime)
+	if ((addr & addr_mask) == (ppu.last_faddr & addr_mask) && (perf0.get() - ppu.last_ftsc) < 600 && (vm::reservation_acquire(addr) & -128) == ppu.last_ftime)
 	{
 		be_t<u64> rdata;
 		std::memcpy(&rdata, &ppu.rdata[addr & 0x78], 8);
@@ -1450,7 +1451,7 @@ static T ppu_load_acquire_reservation(ppu_thread& ppu, u32 addr)
 		ppu.last_faddr = 0;
 	}
 
-	ppu.rtime = vm::reservation_acquire(addr, sizeof(T)) & -128;
+	ppu.rtime = vm::reservation_acquire(addr) & -128;
 
 	be_t<u64> rdata;
 
@@ -1834,7 +1835,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 	}
 
 	auto& data = vm::_ref<atomic_be_t<u64>>(addr & -8);
-	auto& res = vm::reservation_acquire(addr, sizeof(T));
+	auto& res = vm::reservation_acquire(addr);
 	const u64 rtime = ppu.rtime;
 
 	be_t<u64> old_data = 0;
@@ -2143,7 +2144,7 @@ namespace
 			return m_file.stat();
 		}
 
-		bool trunc(u64 length) override
+		bool trunc(u64) override
 		{
 			return false;
 		}
@@ -2159,7 +2160,7 @@ namespace
 			return result;
 		}
 
-		u64 write(const void* buffer, u64 size) override
+		u64 write(const void*, u64) override
 		{
 			return 0;
 		}

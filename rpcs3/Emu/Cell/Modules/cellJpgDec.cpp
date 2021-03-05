@@ -11,6 +11,11 @@
 
 LOG_CHANNEL(cellJpgDec);
 
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 template <>
 void fmt_class_string<CellJpgDecError>::format(std::string& out, u64 arg)
 {

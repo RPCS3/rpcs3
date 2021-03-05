@@ -938,14 +938,14 @@ void ElementaryStream::reset()
 	raw_pos = 0;
 }
 
-void dmuxQueryAttr(u32 info_addr /* may be 0 */, vm::ptr<CellDmuxAttr> attr)
+void dmuxQueryAttr(u32 /* info_addr, may be 0 */, vm::ptr<CellDmuxAttr> attr)
 {
 	attr->demuxerVerLower = 0x280000; // TODO: check values
 	attr->demuxerVerUpper = 0x260000;
 	attr->memSize = 0x10000; // 0x3e8e6 from ps3
 }
 
-void dmuxQueryEsAttr(u32 info /* may be 0 */, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> attr)
+void dmuxQueryEsAttr(u32 /* info, may be 0 */, vm::cptr<CellCodecEsFilterId> esFilterId, u32 /*esSpecificInfo*/, vm::ptr<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
 	{

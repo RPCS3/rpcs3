@@ -514,7 +514,7 @@ namespace vk
 				ensure(!dst_rect.is_flipped());
 
 				auto stretch_image_typeless_unsafe = [&cmd, filter](vk::image* src, vk::image* dst, vk::image* typeless,
-						const areai& src_rect, const areai& dst_rect, VkImageAspectFlags aspect, VkImageAspectFlags transfer_flags = 0xFF)
+						const areai& src_rect, const areai& dst_rect, VkImageAspectFlags /*aspect*/, VkImageAspectFlags transfer_flags = 0xFF)
 				{
 					const auto src_w = src_rect.width();
 					const auto src_h = src_rect.height();
@@ -834,7 +834,7 @@ namespace vk
 	}
 
 	void upload_image(const vk::command_buffer& cmd, vk::image* dst_image,
-		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
+		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 /*mipmap_count*/,
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags)
 	{
 		const bool requires_depth_processing = (dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || (format == CELL_GCM_TEXTURE_DEPTH16_FLOAT);

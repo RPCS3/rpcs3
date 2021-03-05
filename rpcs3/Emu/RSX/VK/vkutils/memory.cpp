@@ -239,7 +239,7 @@ namespace vk
 		return 0ull;
 	}
 
-	void* memory_block_host::map(u64 offset, u64 size)
+	void* memory_block_host::map(u64 offset, u64 /*size*/)
 	{
 		return reinterpret_cast<char*>(m_host_pointer) + offset;
 	}

@@ -514,7 +514,7 @@ error_code cellMicInit()
 	return CELL_OK;
 }
 
-error_code cellMicEnd(ppu_thread& ppu)
+error_code cellMicEnd()
 {
 	cellMic.notice("cellMicEnd()");
 

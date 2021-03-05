@@ -61,8 +61,8 @@ namespace gl
 
 	// https://www.khronos.org/opengl/wiki/Debug_Output
 	void APIENTRY log_debug(GLenum source, GLenum type, GLuint id,
-	  GLenum severity, GLsizei length, const GLchar* message,
-	  const void* user_param)
+	  GLenum severity, GLsizei /*length*/, const GLchar* message,
+	  const void* /*user_param*/)
 	{
 		// Message source
 		std::string str_source;
@@ -631,7 +631,7 @@ namespace gl
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GL_NONE, 0);
 	}
 
-	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, float depth, u8 stencil)
+	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, float /*depth*/, u8 /*stencil*/)
 	{
 		GLenum attachment;
 		GLbitfield clear_mask;

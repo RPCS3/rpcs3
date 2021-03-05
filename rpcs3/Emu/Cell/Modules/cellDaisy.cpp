@@ -26,6 +26,11 @@ void fmt_class_string<CellDaisyError>::format(std::string& out, u64 arg)
 	});
 }
 
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 using LFQueue2 = struct CellDaisyLFQueue2;
 using Lock = struct CellDaisyLock;
 using ScatterGatherInterlock = struct CellDaisyScatterGatherInterlock;

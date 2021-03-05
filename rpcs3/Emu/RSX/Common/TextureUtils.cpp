@@ -140,7 +140,7 @@ struct copy_unmodified_block_swizzled
 struct copy_unmodified_block_vtc
 {
 	template<typename T, typename U>
-	static void copy_mipmap_level(gsl::span<T> dst, gsl::span<const U> src, u16 width_in_block, u16 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	static void copy_mipmap_level(gsl::span<T> dst, gsl::span<const U> src, u16 width_in_block, u16 row_count, u16 depth, u32 /*dst_pitch_in_block*/, u32 /*src_pitch_in_block*/)
 	{
 		static_assert(sizeof(T) == sizeof(U), "Type size doesn't match.");
 		u32 row_element_count = width_in_block * row_count;

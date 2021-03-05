@@ -285,7 +285,7 @@ error_code sceNp2Term(ppu_thread& ppu)
 	return CELL_OK;
 }
 
-error_code sceNpMatching2Term(ppu_thread& ppu)
+error_code sceNpMatching2Term(ppu_thread&)
 {
 	sceNp2.warning("sceNpMatching2Term()");
 	return sceNpMatching2Term2(); // > SDK 2.4.0
@@ -1529,7 +1529,7 @@ error_code sceNpAuthCreateOAuthRequest()
 
 error_code sceNpAuthDeleteOAuthRequest(SceNpAuthOAuthRequestId reqId)
 {
-	sceNp2.todo("sceNpAuthDeleteOAuthRequest(reqId=%d)");
+	sceNp2.todo("sceNpAuthDeleteOAuthRequest(reqId=%d)", reqId);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -1543,7 +1543,7 @@ error_code sceNpAuthDeleteOAuthRequest(SceNpAuthOAuthRequestId reqId)
 
 error_code sceNpAuthAbortOAuthRequest(SceNpAuthOAuthRequestId reqId)
 {
-	sceNp2.todo("sceNpAuthAbortOAuthRequest(reqId=%d)");
+	sceNp2.todo("sceNpAuthAbortOAuthRequest(reqId=%d)", reqId);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 

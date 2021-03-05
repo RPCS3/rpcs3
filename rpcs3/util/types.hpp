@@ -725,7 +725,7 @@ struct narrow_impl
 	static_assert(std::is_void<To>::value, "narrow_impl<> specialization not found");
 
 	// Returns true if value cannot be represented in type To
-	static constexpr bool test(const From& value)
+	static constexpr bool test(const From&)
 	{
 		// Unspecialized cases (including cast to void) always considered narrowing
 		return true;

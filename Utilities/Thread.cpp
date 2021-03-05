@@ -1752,7 +1752,7 @@ const bool s_exception_handler_set = []() -> bool
 
 #else
 
-static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
+static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 {
 	x64_context* context = static_cast<ucontext_t*>(uct);
 

@@ -272,7 +272,7 @@ error_code cellRescSetSrc(s32 idx, vm::cptr<CellRescSrc> src)
 	return CELL_OK;
 }
 
-error_code cellRescSetConvertAndFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> con, s32 idx)
+error_code cellRescSetConvertAndFlip(vm::ptr<CellGcmContextData> con, s32 idx)
 {
 	cellResc.todo("cellRescSetConvertAndFlip(con=*0x%x, idx=0x%x)", con, idx);
 

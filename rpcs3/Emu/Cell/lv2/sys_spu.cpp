@@ -2026,7 +2026,7 @@ error_code sys_isolated_spu_destroy(ppu_thread& ppu, u32 id)
 }
 
 template <bool isolated = false>
-error_code raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 hwthread, vm::ptr<u32> intrtag)
+error_code raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 /*hwthread*/, vm::ptr<u32> intrtag)
 {
 	if (class_id != 0 && class_id != 2)
 	{

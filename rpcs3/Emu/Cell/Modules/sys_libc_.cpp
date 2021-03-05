@@ -16,7 +16,7 @@ struct ps3_fmt_src
 	ppu_thread* ctx;
 	u32 g_count;
 
-	bool test(usz index) const
+	bool test(usz) const
 	{
 		return true;
 	}
@@ -40,7 +40,7 @@ struct ps3_fmt_src
 		return out.size() - start;
 	}
 
-	usz type(usz extra) const
+	usz type(usz) const
 	{
 		return 0;
 	}

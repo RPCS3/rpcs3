@@ -95,17 +95,20 @@ public:
 		stats.mtime = -1;
 		return stats;
 	}
-	bool trunc(u64 length) override
+
+	bool trunc(u64) override
 	{
-		return true;
+		return false;
 	}
+
 	u64 read(void* buffer, u64 size) override
 	{
 		u64 bytesRead = ReadData(pos, static_cast<u8*>(buffer), size);
 		pos += bytesRead;
 		return bytesRead;
 	}
-	u64 write(const void* buffer, u64 size) override
+
+	u64 write(const void*, u64) override
 	{
 		return 0;
 	}
@@ -126,5 +129,6 @@ public:
 		pos = new_pos;
 		return pos;
 	}
+
 	u64 size() override { return file_size; }
 };

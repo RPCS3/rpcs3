@@ -79,7 +79,7 @@ protected:
 	{
 	}
 
-	virtual u32 DisAsmBranchTarget(const s32 imm) { return 0; };
+	virtual u32 DisAsmBranchTarget(s32 /*imm*/) { return 0; };
 
 	// TODO: Add builtin fmt helpper for best performance
 	template <typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>

@@ -32,6 +32,7 @@ else()
 	add_compile_options(-Werror=reorder)
 	add_compile_options(-Werror=return-type)
 	add_compile_options(-Werror=overloaded-virtual)
+	add_compile_options(-Wunused-parameter)
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-Werror=inconsistent-missing-override)

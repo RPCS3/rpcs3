@@ -1296,7 +1296,7 @@ SAFE_BUFFERS(void) atomic_wait_engine::wait(const void* data, u32 size, u128 old
 }
 
 template <bool NoAlert = false>
-static u32 alert_sema(u32 cond_id, const void* data, u64 tid, u32 size, u128 mask, u128 phantom)
+static u32 alert_sema(u32 cond_id, u64 tid, u32 size, u128 mask, u128 phantom)
 {
 	ensure(cond_id);
 
@@ -1483,7 +1483,7 @@ bool atomic_wait_engine::raw_notify(const void* data, u64 thread_id)
 	root_info::slot_search(iptr, 0, thread_id, u128(-1), [&](u32 cond_id)
 	{
 		// Forced notification
-		if (alert_sema(cond_id, data, thread_id, 0, 0, 0))
+		if (alert_sema(cond_id, thread_id, 0, 0, 0))
 		{
 			if (s_tls_notify_cb)
 				s_tls_notify_cb(data, ++progress);
@@ -1517,7 +1517,7 @@ void atomic_wait_engine::notify_one(const void* data, u32 size, u128 mask, u128 
 
 	root_info::slot_search(iptr, size, 0, mask, [&](u32 cond_id)
 	{
-		if (alert_sema(cond_id, data, -1, size, mask, new_value))
+		if (alert_sema(cond_id, -1, size, mask, new_value))
 		{
 			if (s_tls_notify_cb)
 				s_tls_notify_cb(data, ++progress);
@@ -1548,7 +1548,7 @@ SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 size, u1
 
 	root_info::slot_search(iptr, size, 0, mask, [&](u32 cond_id)
 	{
-		u32 res = alert_sema<true>(cond_id, data, -1, size, mask, 0);
+		u32 res = alert_sema<true>(cond_id, -1, size, mask, 0);
 
 		if (res && ~res <= UINT16_MAX)
 		{

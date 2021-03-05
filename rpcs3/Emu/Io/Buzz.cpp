@@ -42,7 +42,7 @@ void usb_device_buzz::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue
 	}
 }
 
-void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
+void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/, UsbTransfer* transfer)
 {
 	transfer->fake            = true;
 	transfer->expected_count  = 5;

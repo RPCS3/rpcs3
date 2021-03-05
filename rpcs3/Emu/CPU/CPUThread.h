@@ -208,7 +208,7 @@ public:
 	}
 
 	template <u8 Prio = 0, typename F>
-	static suspend_work suspend_post(cpu_thread* _this, std::initializer_list<void*> hints, F& op)
+	static suspend_work suspend_post(cpu_thread* /*_this*/, std::initializer_list<void*> hints, F& op)
 	{
 		constexpr u8 prio = Prio > 3 ? 3 : Prio;
 

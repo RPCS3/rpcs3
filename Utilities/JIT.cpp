@@ -143,7 +143,7 @@ asmjit::Error jit_runtime::_add(void** dst, asmjit::CodeHolder* code) noexcept
 	return asmjit::kErrorOk;
 }
 
-asmjit::Error jit_runtime::_release(void* ptr) noexcept
+asmjit::Error jit_runtime::_release(void*) noexcept
 {
 	return asmjit::kErrorOk;
 }
@@ -249,7 +249,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 			return asmjit::kErrorOk;
 		}
 
-		asmjit::Error _release(void* ptr) noexcept override
+		asmjit::Error _release(void*) noexcept override
 		{
 			return asmjit::kErrorOk;
 		}
@@ -281,6 +281,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/FormattedStream.h"
@@ -292,12 +293,6 @@ asmjit::Runtime& asmjit::get_global_runtime()
 #pragma warning(pop)
 #else
 #pragma GCC diagnostic pop
-#endif
-
-#ifdef _WIN32
-#include <Windows.h>
-#else
-#include <sys/mman.h>
 #endif
 
 const bool jit_initialize = []() -> bool
@@ -439,12 +434,12 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 		return this->ptr + olda;
 	}
 
-	u8* allocateCodeSection(uptr size, uint align, uint sec_id, llvm::StringRef sec_name) override
+	u8* allocateCodeSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/) override
 	{
 		return allocate(code_ptr, size, align, utils::protection::wx);
 	}
 
-	u8* allocateDataSection(uptr size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
+	u8* allocateDataSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/, bool /*is_ro*/) override
 	{
 		return allocate(data_ptr, size, align, utils::protection::rw);
 	}
@@ -454,7 +449,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 		return false;
 	}
 
-	void registerEHFrames(u8* addr, u64 load_addr, usz size) override
+	void registerEHFrames(u8*, u64, usz) override
 	{
 	}
 
@@ -489,12 +484,12 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 		return {addr, llvm::JITSymbolFlags::Exported};
 	}
 
-	u8* allocateCodeSection(uptr size, uint align, uint sec_id, llvm::StringRef sec_name) override
+	u8* allocateCodeSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/) override
 	{
 		return jit_runtime::alloc(size, align, true);
 	}
 
-	u8* allocateDataSection(uptr size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
+	u8* allocateDataSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/, bool /*is_ro*/) override
 	{
 		return jit_runtime::alloc(size, align, false);
 	}
@@ -504,7 +499,7 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 		return false;
 	}
 
-	void registerEHFrames(u8* addr, u64 load_addr, usz size) override
+	void registerEHFrames(u8*, u64, usz) override
 	{
 	}
 
