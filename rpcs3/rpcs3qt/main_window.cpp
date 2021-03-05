@@ -836,7 +836,87 @@ void main_window::InstallPup(QString file_path)
 	}
 }
 
-void main_window::HandlePupInstallation(QString file_path)
+void main_window::ExtractPup()
+{
+	const QString path_last_pup = m_gui_settings->GetValue(gui::fd_install_pup).toString();
+	QString file_path = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To extract"), path_last_pup, tr("PS3 update file (PS3UPDAT.PUP);;All pup files (*.pup);;All files (*.*)"));
+
+	if (file_path.isEmpty())
+	{
+		return;
+	}
+
+	QString dir = QFileDialog::getExistingDirectory(this, tr("Extraction Directory"), QString{}, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+	if (!dir.isEmpty())
+	{
+		HandlePupInstallation(file_path, dir);
+	}
+}
+
+void main_window::ExtractTar()
+{
+	if (!m_gui_settings->GetBootConfirmation(this))
+	{
+		return;
+	}
+
+	Emu.SetForceBoot(true);
+	Emu.Stop();
+
+	const QString path_last_tar = m_gui_settings->GetValue(gui::fd_ext_tar).toString();
+	QStringList files = QFileDialog::getOpenFileNames(this, tr("Select TAR To extract"), path_last_tar, tr("All tar files (*.tar *.tar.aa.*);;All files (*.*)"));
+
+	if (files.isEmpty())
+	{
+		return;
+	}
+
+	QString dir = QFileDialog::getExistingDirectory(this, tr("Extraction Directory"), QString{}, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+	if (dir.isEmpty())
+	{
+		return;
+	}
+
+	m_gui_settings->SetValue(gui::fd_ext_tar, QFileInfo(files[0]).path());
+
+	progress_dialog pdlg(tr("TAR Extraction"), tr("Extracting encrypted TARs\nPlease wait..."), tr("Cancel"), 0, files.size(), false, this);
+	pdlg.show();
+
+	QString error;
+
+	for (const QString& file : files)
+	{
+		if (pdlg.wasCanceled())
+		{
+			break;
+		}
+
+		// Do not abort on failure here, in case the user selected a wrong file in multi-selection while the rest are valid
+		if (!extract_tar(sstr(file), sstr(dir) + '/'))
+		{
+			if (error.isEmpty())
+			{
+				error = tr("The following TAR file(s) could not be extracted:");
+			}
+
+			error += "\n";
+			error += file;
+		}
+
+		pdlg.SetValue(pdlg.value() + 1);
+		QApplication::processEvents();
+	}
+
+	if (!error.isEmpty())
+	{
+		pdlg.hide();
+		QMessageBox::critical(this, tr("Tar extraction failed"), error);
+	}
+}
+
+void main_window::HandlePupInstallation(QString file_path, QString dir_path)
 {
 	if (file_path.isEmpty())
 	{
@@ -852,6 +932,7 @@ void main_window::HandlePupInstallation(QString file_path)
 	Emu.Stop();
 
 	m_gui_settings->SetValue(gui::fd_install_pup, QFileInfo(file_path).path());
+
 	const std::string path = sstr(file_path);
 
 	auto critical = [this](QString str)
@@ -926,6 +1007,31 @@ void main_window::HandlePupInstallation(QString file_path)
 	}
 
 	tar_object update_files(update_files_f);
+
+	if (!dir_path.isEmpty())
+	{
+		// Extract only mode, extract direct TAR entries to a user directory
+
+		if (!vfs::mount("/pup_extract", sstr(dir_path) + '/'))
+		{
+			gui_log.error("Error while extracting firmware: Failed to mount '%s'", sstr(dir_path));
+			critical(tr("Firmware extraction failed: VFS mounting failed."));
+			return;	
+		}
+
+		if (!update_files.extract("/pup_extract"))
+		{
+			gui_log.error("Error while installing firmware: TAR contents are invalid.");
+			critical(tr("Firmware installation failed: Firmware contents could not be extracted."));
+		}
+
+		gui_log.success("Extracted PUP file to %s", sstr(dir_path));
+		return;
+	}
+
+	// In regular installation we select specfic entries from the main TAR which are prefixed with "dev_flash_"
+	// Those entries are TAR as well, we extract their packed files from them and that's what installed in /dev_flash
+
 	auto update_filenames = update_files.get_filenames();
 
 	update_filenames.erase(std::remove_if(
@@ -985,6 +1091,9 @@ void main_window::HandlePupInstallation(QString file_path)
 	progress_dialog pdlg(tr("RPCS3 Firmware Installer"), tr("Installing firmware version %1\nPlease wait...").arg(qstr(version_string)), tr("Cancel"), 0, static_cast<int>(update_filenames.size()), false, this);
 	pdlg.show();
 
+	// Used by tar_object::extract() as destination directory
+	vfs::mount("/dev_flash", g_cfg.vfs.get_dev_flash());
+
 	// Synchronization variable
 	atomic_t<uint> progress(0);
 	{
@@ -1010,9 +1119,9 @@ void main_window::HandlePupInstallation(QString file_path)
 				}
 
 				tar_object dev_flash_tar(dev_flash_tar_f[2]);
-				if (!dev_flash_tar.extract(g_cfg.vfs.get_dev_flash(), "dev_flash/"))
+				if (!dev_flash_tar.extract())
 				{
-					gui_log.error("Error while installing firmware: TAR contents are invalid.");
+					gui_log.error("Error while installing firmware: TAR contents are invalid. (package=%s)", update_filename);
 					critical(tr("Firmware installation failed: Firmware contents could not be extracted."));
 					progress = -1;
 					return;
@@ -1054,6 +1163,9 @@ void main_window::HandlePupInstallation(QString file_path)
 
 	// Update with newly installed PS3 fonts
 	Q_EMIT RequestGlobalStylesheetChange();
+
+	// Unmount
+	Emu.Init();
 
 	if (progress == update_filenames.size())
 	{
@@ -2008,6 +2120,10 @@ void main_window::CreateConnects()
 	connect(ui->toolsDecryptSprxLibsAct, &QAction::triggered, this, &main_window::DecryptSPRXLibraries);
 
 	connect(ui->toolsExtractMSELFAct, &QAction::triggered, this, &main_window::ExtractMSELF);
+
+	connect(ui->toolsExtractPUPAct, &QAction::triggered, this, &main_window::ExtractPup);
+
+	connect(ui->toolsExtractTARAct, &QAction::triggered, this, &main_window::ExtractTar);
 
 	connect(ui->showDebuggerAct, &QAction::triggered, this, [this](bool checked)
 	{

@@ -256,7 +256,10 @@
     <addaction name="toolsStringSearchAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
+    <addaction name="separator"/>
     <addaction name="toolsExtractMSELFAct"/>
+    <addaction name="toolsExtractPUPAct"/>
+    <addaction name="toolsExtractTARAct"/>
     <addaction name="separator"/>
     <addaction name="actionopen_rsx_capture"/>
     <addaction name="separator"/>
@@ -632,6 +635,19 @@
   <action name="toolsExtractMSELFAct">
    <property name="text">
     <string>Extract MSELF</string>
+   </property>
+  </action>
+  <action name="toolsExtractPUPAct">
+   <property name="text">
+    <string>Extract PUP</string>
+   </property>
+  </action>
+  <action name="toolsExtractTARAct">
+   <property name="text">
+    <string>Extract Encrypted TAR</string>
+   </property>
+   <property name="toolTip">
+    <string>Extract files from special .tar files inside PS3UPDAT.PUP</string>
    </property>
   </action>
   <action name="showDebuggerAct">

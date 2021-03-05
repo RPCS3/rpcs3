@@ -33,5 +33,9 @@ public:
 
 	fs::file get_file(const std::string& path);
 
-	bool extract(std::string path, std::string ignore = ""); // extract all files in archive to path
+	// Extract all files in archive to destination as VFS
+	// Allow to optionally specify explicit mount point (which may be directory meant for extraction)
+	bool extract(std::string vfs_mp = {});
 };
+
+bool extract_tar(const std::string& file_path, const std::string& dir_path);
