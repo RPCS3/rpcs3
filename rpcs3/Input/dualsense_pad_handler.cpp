@@ -374,15 +374,15 @@ dualsense_pad_handler::DataStatus dualsense_pad_handler::get_data(DualSenseDevic
 		switch (charge_info)
 		{
 		case 0x0:
-			device->battery_level = std::min(battery_value * 10 + 5, 100);
+			device->battery_level = battery_value;
 			device->cable_state = 0;
 			break;
 		case 0x1:
-			device->battery_level = std::min(battery_value * 10 + 5, 100);
+			device->battery_level = battery_value;
 			device->cable_state = 1;
 			break;
 		case 0x2:
-			device->battery_level = 100;
+			device->battery_level = 10;
 			device->cable_state = 1;
 			break;
 		default:
@@ -903,50 +903,53 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 		return -2; // hid_write and hid_write_control return -1 on error
 
 	output_report_common common{};
-	common.valid_flag_0 |= VALID_FLAG_0_COMPATIBLE_VIBRATION;
-	common.valid_flag_0 |= VALID_FLAG_0_HAPTICS_SELECT;
-	common.motor_left  = device->large_motor;
-	common.motor_right = device->small_motor;
 
+	// Only initialize lightbar in the first output report. The controller didn't seem to update the player LEDs correctly otherwise.
 	if (device->init_lightbar)
 	{
-		// TODO: these settings might need to be initialized on their own. Needs investigation.
 		device->init_lightbar = false;
 
 		common.valid_flag_2 |= VALID_FLAG_2_LIGHTBAR_SETUP_CONTROL_ENABLE;
 		common.lightbar_setup = LIGHTBAR_SETUP_LIGHT_OUT; // Fade light out.
 	}
-
-	if (device->update_lightbar)
+	else
 	{
-		// TODO: battery blink
-		device->update_lightbar = false;
+		common.valid_flag_0 |= VALID_FLAG_0_COMPATIBLE_VIBRATION;
+		common.valid_flag_0 |= VALID_FLAG_0_HAPTICS_SELECT;
+		common.motor_left  = device->large_motor;
+		common.motor_right = device->small_motor;
 
-		common.valid_flag_1 |= VALID_FLAG_1_LIGHTBAR_CONTROL_ENABLE;
-		common.lightbar_r = config->colorR; // red
-		common.lightbar_g = config->colorG; // green
-		common.lightbar_b = config->colorB; // blue
-	}
-
-	if (device->update_player_leds)
-	{
-		device->update_player_leds = false;
-
-		// The dualsense controller uses 5 LEDs to indicate the player ID.
-		// Use OR with 0x1, 0x2, 0x4, 0x8 and 0x10 to enable the LEDs (from leftmost to rightmost).
-		common.valid_flag_1 |= VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE;
-
-		switch (m_player_id)
+		if (device->update_lightbar)
 		{
-		case 0: common.player_leds = 0b00100; break;
-		case 1: common.player_leds = 0b01010; break;
-		case 2: common.player_leds = 0b10101; break;
-		case 3: common.player_leds = 0b11011; break;
-		case 4: common.player_leds = 0b11111; break;
-		case 5: common.player_leds = 0b10111; break;
-		case 6: common.player_leds = 0b11101; break;
-		default:
-			fmt::throw_exception("Dualsense is using forbidden player id %d", m_player_id);
+			// TODO: battery blink
+			device->update_lightbar = false;
+
+			common.valid_flag_1 |= VALID_FLAG_1_LIGHTBAR_CONTROL_ENABLE;
+			common.lightbar_r = config->colorR; // red
+			common.lightbar_g = config->colorG; // green
+			common.lightbar_b = config->colorB; // blue
+		}
+
+		if (device->update_player_leds)
+		{
+			device->update_player_leds = false;
+
+			// The dualsense controller uses 5 LEDs to indicate the player ID.
+			// Use OR with 0x1, 0x2, 0x4, 0x8 and 0x10 to enable the LEDs (from leftmost to rightmost).
+			common.valid_flag_1 |= VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE;
+
+			switch (m_player_id)
+			{
+			case 0: common.player_leds = 0b00100; break;
+			case 1: common.player_leds = 0b01010; break;
+			case 2: common.player_leds = 0b10101; break;
+			case 3: common.player_leds = 0b11011; break;
+			case 4: common.player_leds = 0b11111; break;
+			case 5: common.player_leds = 0b10111; break;
+			case 6: common.player_leds = 0b11101; break;
+			default:
+				fmt::throw_exception("Dualsense is using forbidden player id %d", m_player_id);
+			}
 		}
 	}
 
@@ -998,7 +1001,7 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 	const int speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
 
 	const bool wireless    = dualsense_dev->cable_state == 0;
-	const bool low_battery = dualsense_dev->battery_level <= 15;
+	const bool low_battery = dualsense_dev->battery_level <= 1;
 	const bool is_blinking = dualsense_dev->led_delay_on > 0 || dualsense_dev->led_delay_off > 0;
 	
 	// Blink LED when battery is low
@@ -1077,6 +1080,7 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor,
 	}
 
 	ensure(device->config);
+	device->update_lightbar = true;
 
 	// Set new LED color (see ds4_pad_handler)
 	if (battery_led)
@@ -1091,7 +1095,12 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor,
 		device->config->colorR.set(r);
 		device->config->colorG.set(g);
 		device->config->colorB.set(b);
-		device->update_lightbar = true;
+	}
+
+	if (device->init_lightbar)
+	{
+		// Initialize first
+		send_output_report(device.get());
 	}
 
 	// Start/Stop the engines :)
@@ -1105,5 +1114,5 @@ u32 dualsense_pad_handler::get_battery_level(const std::string& padId)
 	{
 		return 0;
 	}
-	return std::min<u32>(device->battery_level, 100);
+	return std::min<u32>(device->battery_level * 10 + 5, 100); // 10% per unit, starting with 0-9%. So 100% equals unit 10
 }
