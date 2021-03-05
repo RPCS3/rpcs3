@@ -174,7 +174,7 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 
 	std::string serial;
 
-	std::array<u8, 64> buf{};
+	std::array<u8, 65> buf{};
 	buf[0] = 0x09;
 
 	// This will give us the bluetooth mac address of the device, regardless if we are on wired or bluetooth.
@@ -204,6 +204,20 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 		return;
 	}
 
+	u32 hw_version{};
+	u32 fw_version{};
+
+	buf[0] = 0x20;
+	if (hid_get_feature_report(hidDevice, buf.data(), 64) == 65)
+	{
+		hw_version = read_u32(&buf[24]);
+		fw_version = read_u32(&buf[28]);
+	}
+	else
+	{
+		dualsense_log.error("Could not retrieve firmware version");
+	}
+
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
 	{
 		dualsense_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
@@ -221,7 +235,7 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	// Get bluetooth information
 	get_data(device);
 
-	dualsense_log.notice("Added device: bluetooth=%d, data_mode=%s, serial='%s', path='%s'", device->bt_controller, device->data_mode, serial, device->path);
+	dualsense_log.notice("Added device: bluetooth=%d, data_mode=%s, serial='%s', hw_version: 0x%x, fw_version: 0x%x, path='%s'", device->bt_controller, device->data_mode, serial, hw_version, fw_version, device->path);
 }
 
 void dualsense_pad_handler::init_config(pad_config* cfg, const std::string& name)
