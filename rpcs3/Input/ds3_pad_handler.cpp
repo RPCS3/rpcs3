@@ -590,6 +590,7 @@ void ds3_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 		if (dev->last_battery_level != dev->battery_level)
 		{
 			dev->new_output_data = true;
+			dev->last_battery_level = dev->battery_level;
 		}
 	}
 

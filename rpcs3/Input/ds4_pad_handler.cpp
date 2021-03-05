@@ -894,6 +894,7 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 			config->colorG.set(combined_color & 0xff);
 			config->colorB.set(0);
 			ds4_dev->new_output_data = true;
+			ds4_dev->last_battery_level = ds4_dev->battery_level;
 		}
 	}
 
