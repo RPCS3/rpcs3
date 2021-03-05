@@ -865,45 +865,66 @@ void main_window::HandlePupInstallation(QString file_path)
 	fs::file pup_f(path);
 	if (!pup_f)
 	{
-		gui_log.error("Error opening PUP file %s", path);
+		gui_log.error("Error opening PUP file %s (%s)", path, fs::g_tls_error);
 		critical(tr("Firmware installation failed: The selected firmware file couldn't be opened."));
 		return;
 	}
 
-	if (pup_f.size() < sizeof(PUPHeader))
+	pup_object pup(std::move(pup_f));
+
+	switch (pup.operator pup_error())
 	{
-		gui_log.error("Too small PUP file: %llu", pup_f.size());
+	case pup_error::header_read:
+	{
+		gui_log.error("%s", pup.get_formatted_error());
 		critical(tr("Firmware installation failed: The provided file is empty."));
 		return;
 	}
-
-	struct PUPHeader header = {};
-	pup_f.seek(0);
-	pup_f.read(header);
-
-	if (header.header_length + header.data_length != pup_f.size())
+	case pup_error::header_magic:
 	{
-		gui_log.error("Firmware size mismatch, expected: %llu + %llu, actual: %llu", header.header_length, header.data_length, pup_f.size());
+		gui_log.error("Error while installing firmware: provided file is not a PUP file.");
+		critical(tr("Firmware installation failed: The provided file is not a PUP file."));
+		return;
+	}
+	case pup_error::expected_size:
+	{
+		gui_log.error("%s", pup.get_formatted_error());
 		critical(tr("Firmware installation failed: The provided file is incomplete. Try redownloading it."));
 		return;
 	}
-
-	pup_object pup(pup_f);
-	if (!pup)
+	case pup_error::header_file_count:
+	case pup_error::file_entries:
+	default:
 	{
-		gui_log.error("Error while installing firmware: PUP file is invalid.");
+		std::string error = "Error while installing firmware: PUP file is invalid.";
+
+		if (!pup.get_formatted_error().empty())
+		{
+			fmt::append(error, "\n%s", pup.get_formatted_error());
+		}
+
+		gui_log.error("%s", error);
 		critical(tr("Firmware installation failed: The provided file is corrupted."));
 		return;
 	}
-
-	if (!pup.validate_hashes())
+	case pup_error::hash_mismatch:
 	{
 		gui_log.error("Error while installing firmware: Hash check failed.");
 		critical(tr("Firmware installation failed: The provided file's contents are corrupted."));
 		return;
 	}
+	case pup_error::ok: break;
+	}
 
 	fs::file update_files_f = pup.get_file(0x300);
+
+	if (!update_files_f)
+	{
+		gui_log.error("Error while installing firmware: Couldn't find installation packages database.");
+		critical(tr("Firmware installation failed: The provided file's contents are corrupted."));
+		return;
+	}
+
 	tar_object update_files(update_files_f);
 	auto update_filenames = update_files.get_filenames();
 
@@ -911,17 +932,36 @@ void main_window::HandlePupInstallation(QString file_path)
 		update_filenames.begin(), update_filenames.end(), [](std::string s) { return s.find("dev_flash_") == umax; }),
 		update_filenames.end());
 
-	std::string version_string = pup.get_file(0x100).to_string();
+	if (update_filenames.empty())
+	{
+		gui_log.error("Error while installing firmware: No dev_flash_* packages were found.");
+		critical(tr("Firmware installation failed: The provided file's contents are corrupted."));
+		return;
+	}
+
+	static constexpr std::string_view cur_version = "4.87";
+
+	std::string version_string;
+
+	if (fs::file version = pup.get_file(0x100))
+	{
+		version_string = version.to_string();
+	}
 
 	if (const usz version_pos = version_string.find('\n'); version_pos != umax)
 	{
 		version_string.erase(version_pos);
 	}
 
-	const std::string cur_version = "4.87";
+	if (version_string.empty())
+	{
+		gui_log.error("Error while installing firmware: No version data was found.");
+		critical(tr("Firmware installation failed: The provided file's contents are corrupted."));
+		return;
+	}
 
 	if (version_string < cur_version &&
-		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(qstr(cur_version), qstr(version_string)),
+		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(QString::fromUtf8(cur_version.data(), ::size32(cur_version)), qstr(version_string)),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::No)
 	{
 		return;
@@ -1005,7 +1045,6 @@ void main_window::HandlePupInstallation(QString file_path)
 	}
 
 	update_files_f.close();
-	pup_f.close();
 
 	if (progress == update_filenames.size())
 	{

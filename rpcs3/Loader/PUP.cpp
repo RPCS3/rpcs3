@@ -5,28 +5,48 @@
 
 #include "PUP.h"
 
-pup_object::pup_object(const fs::file& file): m_file(file)
+pup_object::pup_object(fs::file&& file) : m_file(std::move(file))
 {
-	if (!file)
+	if (!m_file)
 	{
+		m_error = pup_error::stream;
 		return;
 	}
 
 	m_file.seek(0);
 	PUPHeader m_header{};
 
-	if (!m_file.read(m_header) || m_header.magic != "SCEUF\0\0\0"_u64)
+	const usz file_size = m_file.size();
+
+	if (!m_file.read(m_header))
 	{
-		// Either file is not large enough to contain header or magic is invalid
+		// File is not large enough to contain header or magic is invalid
+		m_error = pup_error::header_read;
+		m_formatted_error = fmt::format("Too small PUP file to contain header: 0x%x", file_size);
+		return;
+	}
+
+	if (m_header.magic != "SCEUF\0\0\0"_u64)
+	{
+		m_error = pup_error::header_magic;
+		return;
+	}
+
+	// Check if file size is the expected size, use substraction to avoid overflows
+	if (file_size < m_header.header_length || file_size - m_header.header_length < m_header.data_length)
+	{
+		m_formatted_error = fmt::format("Firmware size mismatch, expected: 0x%x + 0x%x, actual: 0x%x", m_header.header_length, m_header.data_length, file_size);
+		m_error = pup_error::expected_size;
 		return;
 	}
 
 	constexpr usz entry_size = sizeof(PUPFileEntry) + sizeof(PUPHashEntry);
 
-	if (!m_header.file_count || (m_file.size() - sizeof(PUPHeader)) / entry_size < m_header.file_count)
+	if (!m_header.file_count || (file_size - sizeof(PUPHeader)) / entry_size < m_header.file_count)
 	{
 		// These checks before read() are to avoid some std::bad_alloc exceptions when file_count is too large
 		// So we cannot rely on read() for error checking in such cases
+		m_error = pup_error::header_file_count;
 		return;
 	}
 
@@ -36,17 +56,24 @@ pup_object::pup_object(const fs::file& file): m_file(file)
 	if (!m_file.read(m_file_tbl) || !m_file.read(m_hash_tbl))
 	{
 		// If these fail it is an unexpected filesystem error, because file size must suffice as we checked in previous checks
+		m_error = pup_error::file_entries;
 		return;
 	}
 
-	isValid = true;
+	if (pup_error err = validate_hashes(); err != pup_error::ok)
+	{
+		m_error = err;
+		return;
+	}
+
+	m_error = pup_error::ok;
 }
 
-fs::file pup_object::get_file(u64 entry_id)
+fs::file pup_object::get_file(u64 entry_id) const
 {
-	if (!isValid) return fs::file();
+	if (m_error != pup_error::ok) return {};
 
-	for (PUPFileEntry file_entry : m_file_tbl)
+	for (const PUPFileEntry& file_entry : m_file_tbl)
 	{
 		if (file_entry.entry_id == entry_id)
 		{
@@ -56,34 +83,41 @@ fs::file pup_object::get_file(u64 entry_id)
 			return fs::make_stream(std::move(file_buf));
 		}
 	}
-	return fs::file();
+
+	return {};
 }
 
-bool pup_object::validate_hashes()
+pup_error pup_object::validate_hashes()
 {
-	if (!isValid) return false;
+	AUDIT(m_error == pup_error::ok);
 
-	for (usz i = 0; i < m_file_tbl.size(); i++)
+	std::vector<u8> buffer;
+
+	const usz size = m_file.size();
+
+	for (const PUPFileEntry& file : m_file_tbl)
 	{
-		u8 *hash = m_hash_tbl[i].hash;
-		PUPFileEntry file = m_file_tbl[i];
-
 		// Sanity check for offset and length, use substraction to avoid overflows
-		if (usz size = m_file.size(); size < file.data_offset || size - file.data_offset < file.data_length)
+		if (size < file.data_offset || size - file.data_offset < file.data_length)
 		{
-			return false;
+			m_formatted_error = fmt::format("File database entry is invalid. (offset=0x%x, length=0x%x, PUP.size=0x%x)", file.data_offset, file.data_length, size);
+			return pup_error::file_entries;
 		}
 
-		std::vector<u8> buffer(file.data_length);
+		// Reuse buffer
+		buffer.resize(file.data_length);
 		m_file.seek(file.data_offset);
 		m_file.read(buffer.data(), file.data_length);
 
 		u8 output[20] = {};
 		sha1_hmac(PUP_KEY, sizeof(PUP_KEY), buffer.data(), buffer.size(), output);
-		if (memcmp(output, hash, 20) != 0)
+
+		// Compare to hash entry
+		if (std::memcmp(output, m_hash_tbl[&file - m_file_tbl.data()].hash, 20) != 0)
 		{
-			return false;
+			return pup_error::hash_mismatch;
 		}
 	}
-	return true;
+
+	return pup_error::ok;
 }
