@@ -1,5 +1,10 @@
 #include "stdafx.h"
 
+#include "Emu/VFS.h"
+#include "Emu/System.h"
+
+#include "Crypto/unself.h"
+
 #include "TAR.h"
 
 #include "util/asm.hpp"
@@ -137,7 +142,7 @@ fs::file tar_object::get_file(const std::string& path)
 	}
 }
 
-bool tar_object::extract(std::string path, std::string ignore)
+bool tar_object::extract(std::string vfs_mp)
 {
 	if (!m_file) return false;
 
@@ -148,11 +153,23 @@ bool tar_object::extract(std::string path, std::string ignore)
 		const TARHeader& header = iter.second.second;
 		const std::string& name = iter.first;
 
-		std::string result = path + name;
+		std::string result = name;
 
-		if (result.compare(path.size(), ignore.size(), ignore) == 0)
+		if (!vfs_mp.empty())
 		{
-			result.erase(path.size(), ignore.size());
+			result = fmt::format("/%s/%s", vfs_mp, result);
+		}
+		else
+		{
+			result.insert(result.begin(), '/');
+		}
+
+		result = vfs::get(result);
+
+		if (result.empty())
+		{
+			tar_log.error("Path of entry is not mounted: '%s' (vfs_mp='%s')", name, vfs_mp);
+			return false;
 		}
 
 		switch (header.filetype)
@@ -160,6 +177,13 @@ bool tar_object::extract(std::string path, std::string ignore)
 		case '\0':
 		case '0':
 		{
+			// Create the directories which should have been mount points if vfs_mp is not empty
+			if (!vfs_mp.empty() && !fs::create_path(fs::get_parent_dir(result)))
+			{
+				tar_log.error("TAR Loader: failed to create directory for file %s (%s)", name, fs::g_tls_error);
+				return false;
+			}
+
 			auto data = get_file(name).release();
 
 			fs::file file(result, fs::rewrite);
@@ -193,4 +217,66 @@ bool tar_object::extract(std::string path, std::string ignore)
 		}
 	}
 	return true;
+}
+
+bool extract_tar(const std::string& file_path, const std::string& dir_path)
+{
+	tar_log.notice("Extracting '%s' to directory '%s'...", file_path, dir_path);
+
+	fs::file file(file_path);
+
+	if (!file)
+	{
+		tar_log.error("Error opening file '%s' (%s)", file_path, fs::g_tls_error);
+		return false;
+	}
+
+	std::vector<fs::file> vec;
+
+	if (SCEDecrypter self_dec(file); self_dec.LoadHeaders())
+	{
+		// Encrypted file, decrypt
+		self_dec.LoadMetadata(SCEPKG_ERK, SCEPKG_RIV);
+
+		if (!self_dec.DecryptData())
+		{
+			tar_log.error("Failed to decrypt TAR.");
+			return false;
+		}
+
+		vec = self_dec.MakeFile();
+		if (vec.size() < 3)
+		{
+			tar_log.error("Failed to decrypt TAR.");
+			return false;
+		}
+	}
+	else
+	{
+		// Not an encrypted file
+		tar_log.warning("TAR is not encrypted, it may not be valid for this tool. Encrypted TAR are known to be found in PS3 Firmware files only.");
+	}
+
+	if (!vfs::mount("/tar_extract", dir_path))
+	{
+		tar_log.error("Failed to mount '%s'", dir_path);
+		return false;
+	}
+
+	tar_object tar(vec.empty() ? file : vec[2]);
+
+	const bool ok = tar.extract("/tar_extract");
+
+	if (ok)
+	{
+		tar_log.success("Extraction complete!");
+	}
+	else
+	{
+		tar_log.error("TAR contents are invalid.");
+	}
+
+	// Unmount
+	Emu.Init();
+	return ok;
 }

@@ -144,8 +144,10 @@ private:
 	void HandlePackageInstallation(QStringList file_paths);
 
 	void InstallPup(QString filePath = "");
-	void HandlePupInstallation(QString file_path = "");
+	void ExtractPup();
+	void HandlePupInstallation(QString file_path, QString dir_path = "");
 
+	void ExtractTar();
 	void ExtractMSELF();
 
 	drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
