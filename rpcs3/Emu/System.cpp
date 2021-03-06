@@ -1977,10 +1977,15 @@ bool Emulator::Quit(bool force_quit)
 	// The callback is only used if we actually quit RPCS3
 	const auto on_exit = []()
 	{
-		// Deinitialize object manager to prevent any hanging objects at program exit
-		g_fxo->clear();
+		Emu.CleanUp();
 	};
 	return GetCallbacks().try_to_quit(force_quit, on_exit);
+}
+
+void Emulator::CleanUp()
+{
+	// Deinitialize object manager to prevent any hanging objects at program exit
+	g_fxo->clear();
 }
 
 std::string Emulator::GetFormattedTitle(double fps) const

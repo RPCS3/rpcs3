@@ -236,6 +236,7 @@ public:
 	void Stop(bool restart = false);
 	void Restart() { Stop(true); }
 	bool Quit(bool force_quit);
+	void CleanUp();
 
 	bool IsRunning() const { return m_state == system_state::running; }
 	bool IsPaused()  const { return m_state == system_state::paused; }
