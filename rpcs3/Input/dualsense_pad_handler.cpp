@@ -1028,7 +1028,6 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 			dualsense_dev->led_delay_on = 0;
 			dualsense_dev->led_delay_off = 0;
 			dualsense_dev->update_lightbar = true;
-			dualsense_dev->new_output_data = true;
 		}
 		// we are now wireless and low on battery -> blink
 		else if (!is_blinking && wireless && low_battery)
@@ -1036,7 +1035,6 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 			dualsense_dev->led_delay_on = 100;
 			dualsense_dev->led_delay_off = 100;
 			dualsense_dev->update_lightbar = true;
-			dualsense_dev->new_output_data = true;
 		}
 
 		// Turn lightbar on and off in an interval. I wanted to do an automatic pulse, but I haven't found out how to do that yet.
@@ -1047,7 +1045,6 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 				dualsense_dev->lightbar_on = !dualsense_dev->lightbar_on;
 				dualsense_dev->last_lightbar_time = now;
 				dualsense_dev->update_lightbar = true;
-				dualsense_dev->new_output_data = true;
 			}
 		}
 	}
@@ -1055,7 +1052,6 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 	{
 		dualsense_dev->lightbar_on = true;
 		dualsense_dev->update_lightbar = true;
-		dualsense_dev->new_output_data = true;
 	}
 
 	// Use LEDs to indicate battery level
@@ -1069,12 +1065,11 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 			config->colorG.set(combined_color & 0xff);
 			config->colorB.set(0);
 			dualsense_dev->update_lightbar = true;
-			dualsense_dev->new_output_data = true;
 			dualsense_dev->last_battery_level = dualsense_dev->battery_level;
 		}
 	}
 
-	dualsense_dev->new_output_data |= dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
+	dualsense_dev->new_output_data |= dualsense_dev->update_lightbar || dualsense_dev->large_motor != speed_large || dualsense_dev->small_motor != speed_small;
 
 	dualsense_dev->large_motor = speed_large;
 	dualsense_dev->small_motor = speed_small;
