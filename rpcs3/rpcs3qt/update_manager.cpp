@@ -215,6 +215,8 @@ bool update_manager::handle_json(bool automatic, bool check_only, const QByteArr
 		return false;
 	}
 
+	update_log.notice("Update found: %s", m_request_url);
+
 	if (check_only)
 	{
 		m_downloader->close_progress_dialog();

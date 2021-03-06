@@ -434,6 +434,14 @@ int main(int argc, char** argv)
 	sys_log.notice("Initialization times before main(): %fs", intro_time / 1000000000.);
 #endif
 
+	std::string argument_str;
+	for (int i = 0; i < argc; i++)
+	{
+		argument_str += argv[i];
+		if (i != argc - 1) argument_str += " ";
+	}
+	sys_log.notice("argv: '%s'", argument_str);
+
 #ifdef __linux__
 	struct ::rlimit rlim;
 	rlim.rlim_cur = 4096;
@@ -738,7 +746,7 @@ int main(int argc, char** argv)
 
 	for (const auto& opt : parser.optionNames())
 	{
-		sys_log.notice("Option passed via command line: %s = %s", opt.toStdString(), parser.value(opt).toStdString());
+		sys_log.notice("Option passed via command line: %s %s", opt.toStdString(), parser.value(opt).toStdString());
 	}
 
 	if (const QStringList args = parser.positionalArguments(); !args.isEmpty())
