@@ -194,15 +194,15 @@ constexpr auto arg_commit_db  = "get-commit-db";
 int find_arg(std::string arg, int& argc, char* argv[])
 {
 	arg = "--" + arg;
-	for (int i = 1; i < argc; ++i)
+	for (int i = 0; i < argc; ++i) // It's not guaranteed that argv 0 is the executable.
 		if (!strcmp(arg.c_str(), argv[i]))
 			return i;
-	return 0;
+	return -1;
 }
 
 QCoreApplication* createApplication(int& argc, char* argv[])
 {
-	if (find_arg(arg_headless, argc, argv))
+	if (find_arg(arg_headless, argc, argv) != -1)
 		return new headless_application(argc, argv);
 
 #ifdef __linux__
@@ -221,8 +221,8 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 
 	bool use_high_dpi = true;
 
-	const auto i_hdpi = find_arg(arg_high_dpi, argc, argv);
-	if (i_hdpi)
+	const int i_hdpi = find_arg(arg_high_dpi, argc, argv);
+	if (i_hdpi != -1)
 	{
 		const std::string cmp_str = "0";
 		const auto i_hdpi_2 = (argc > (i_hdpi + 1)) ? (i_hdpi + 1) : 0;
@@ -240,11 +240,11 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 		// Set QT_SCALE_FACTOR_ROUNDING_POLICY from environment. Defaults to cli argument, which defaults to RoundPreferFloor.
 		auto rounding_val = Qt::HighDpiScaleFactorRoundingPolicy::PassThrough;
 		auto rounding_str = std::to_string(static_cast<int>(rounding_val));
-		const auto i_rounding = find_arg(arg_rounding, argc, argv);
+		const int i_rounding = find_arg(arg_rounding, argc, argv);
 
-		if (i_rounding)
+		if (i_rounding != -1)
 		{
-			const auto i_rounding_2 = (argc > (i_rounding + 1)) ? (i_rounding + 1) : 0;
+			const int i_rounding_2 = (argc > (i_rounding + 1)) ? (i_rounding + 1) : 0;
 
 			if (i_rounding_2)
 			{
@@ -315,7 +315,7 @@ int main(int argc, char** argv)
 	s_argv0 = argv[0]; // Save for report_fatal_error
 
 	// Only run RPCS3 to display an error
-	if (int err_pos = find_arg(arg_error, argc, argv))
+	if (int err_pos = find_arg(arg_error, argc, argv); err_pos != -1)
 	{
 		// Reconstruction of the error from multiple args
 		std::string error;
@@ -334,7 +334,7 @@ int main(int argc, char** argv)
 	static fs::file instance_lock;
 
 	// True if an argument --updating found
-	const bool is_updating = find_arg(arg_updating, argc, argv) != 0;
+	const bool is_updating = find_arg(arg_updating, argc, argv) != -1;
 
 	// Keep trying to lock the file for ~2s normally, and for ~10s in the case of --updating
 	for (u32 num = 0; num < (is_updating ? 500u : 100u) && !instance_lock.open(lock_name, fs::rewrite + fs::lock); num++)
@@ -439,10 +439,10 @@ int main(int argc, char** argv)
 	std::string argument_str;
 	for (int i = 0; i < argc; i++)
 	{
-		argument_str += argv[i];
+		argument_str += "'" + std::string(argv[i]) + "'";
 		if (i != argc - 1) argument_str += " ";
 	}
-	sys_log.notice("argv: '%s'", argument_str);
+	sys_log.notice("argc: %d, argv: %s", argc, argument_str);
 
 #ifdef __linux__
 	struct ::rlimit rlim;
@@ -468,7 +468,7 @@ int main(int argc, char** argv)
 	// The constructor of QApplication eats the --style and --stylesheet arguments.
 	// By checking for stylesheet().isEmpty() we could implicitly know if a stylesheet was passed,
 	// but I haven't found an implicit way to check for style yet, so we naively check them both here for now.
-	const bool use_cli_style = find_arg(arg_style, argc, argv) || find_arg(arg_stylesheet, argc, argv);
+	const bool use_cli_style = find_arg(arg_style, argc, argv) != -1 || find_arg(arg_stylesheet, argc, argv) != -1;
 
 	QScopedPointer<QCoreApplication> app(createApplication(argc, argv));
 	app->setApplicationVersion(QString::fromStdString(rpcs3::get_version().to_string()));
@@ -751,7 +751,7 @@ int main(int argc, char** argv)
 		sys_log.notice("Option passed via command line: %s %s", opt.toStdString(), parser.value(opt).toStdString());
 	}
 
-	if (const QStringList args = parser.positionalArguments(); !args.isEmpty())
+	if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating)
 	{
 		sys_log.notice("Booting application from command line: %s", args.at(0).toStdString());
 
