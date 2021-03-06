@@ -545,6 +545,10 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 
 	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!\nRPCS3 will now restart."));
 
+	Emu.SetForceBoot(true);
+	Emu.Stop();
+	Emu.CleanUp();
+
 #ifdef _WIN32
 	const int ret = _wexecl(wchar_orig_path.data(), L"--updating", nullptr);
 #else
