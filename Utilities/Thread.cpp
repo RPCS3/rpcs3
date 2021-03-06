@@ -2978,3 +2978,12 @@ std::pair<void*, usz> thread_ctrl::get_thread_stack()
 #endif
 	return {saddr, ssize};
 }
+
+u64 thread_ctrl::get_tid()
+{
+#ifdef _WIN32
+	return GetCurrentThreadId();
+#else
+	return reinterpret_cast<u64>(pthread_self());
+#endif
+}

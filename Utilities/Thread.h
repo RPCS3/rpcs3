@@ -339,6 +339,9 @@ public:
 		}
 	};
 
+	// Get thread ID (works for all threads)
+	static u64 get_tid();
+
 private:
 	// Miscellaneous
 	static const u64 process_affinity_mask;
