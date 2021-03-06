@@ -429,11 +429,10 @@ std::vector<std::string> fmt::split(std::string_view source, std::initializer_li
 
 		for (auto& separator : separators)
 		{
-			if (usz pos0 = source.find(separator, index); pos0 != umax)
+			if (usz pos0 = source.find(separator, index); pos0 < pos)
 			{
 				pos = pos0;
 				sep_size = separator.size();
-				break;
 			}
 		}
 
