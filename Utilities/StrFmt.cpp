@@ -455,6 +455,11 @@ std::vector<std::string> fmt::split(std::string_view source, std::initializer_li
 		result.emplace_back(std::string(piece));
 	}
 
+	if (result.empty() && !is_skip_empty)
+	{
+		result.emplace_back();
+	}
+
 	return result;
 }
 
