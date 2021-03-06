@@ -256,12 +256,20 @@ namespace vk
 	void create_dma_block(std::unique_ptr<dma_block>& block, u32 base_address, usz expected_length)
 	{
 		const auto vendor = g_render_device->gpu().get_driver_vendor();
+		const auto chip  = g_render_device->gpu().get_chip_class();
 
 #ifdef _WIN32
-		const bool allow_host_buffers = (vendor == driver_vendor::NVIDIA) ?
-			//test_host_pointer(base_address, expected_length) :
-			rsx::get_location(base_address) == CELL_GCM_LOCATION_LOCAL : // NVIDIA workaround
-			true;
+		bool allow_host_buffers;
+		if (vendor == driver_vendor::NVIDIA)
+		{
+			allow_host_buffers = (chip != chip_class::NV_mobile_kepler) ?
+				rsx::get_location(base_address) == CELL_GCM_LOCATION_LOCAL :
+				false;
+		}
+		else
+		{
+			allow_host_buffers = true;
+		}
 #else
 		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
 		const bool allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV);
