@@ -2987,3 +2987,8 @@ u64 thread_ctrl::get_tid()
 	return reinterpret_cast<u64>(pthread_self());
 #endif
 }
+
+bool thread_ctrl::is_main()
+{
+	return get_tid() == utils::main_tid;
+}

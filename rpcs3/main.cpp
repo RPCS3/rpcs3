@@ -377,6 +377,8 @@ int main(int argc, char** argv)
 	}
 #endif
 
+	ensure(thread_ctrl::is_main());
+
 	// Initialize TSC freq (in case it isn't)
 	static_cast<void>(utils::get_tsc_freq());
 
