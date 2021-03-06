@@ -229,10 +229,19 @@ bool update_manager::handle_json(bool automatic, bool check_only, const QByteArr
 
 void update_manager::update()
 {
+	ensure(m_downloader);
+
 	if (m_update_message.isEmpty() ||
 		QMessageBox::question(m_downloader->get_progress_dialog(), tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
 	{
 		m_downloader->close_progress_dialog();
+		return;
+	}
+
+	if (!Emu.IsStopped())
+	{
+		m_downloader->close_progress_dialog();
+		QMessageBox::warning(m_parent, tr("Auto-updater"), tr("Please stop the emulation before trying to update."));
 		return;
 	}
 
