@@ -116,7 +116,7 @@ bool cmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int i
 	return std::memcmp(out.get(), hash, hash_len) == 0;
 }
 
-void cmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash)
+void cmac_hash_forge(unsigned char *key, int /*key_len*/, unsigned char *in, int in_len, unsigned char *hash)
 {
 	aes_context ctx;
 	aes_setkey_enc(&ctx, key, 128);

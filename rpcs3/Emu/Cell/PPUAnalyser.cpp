@@ -1844,6 +1844,11 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 	ppu_log.notice("Block analysis: %zu blocks (%zu enqueued)", funcs.size(), block_queue.size());
 }
 
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 void ppu_acontext::UNK(ppu_opcode_t op)
 {
 	std::fill_n(gpr, 32, spec_gpr{});

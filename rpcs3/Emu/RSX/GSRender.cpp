@@ -44,7 +44,7 @@ void GSRender::on_exit()
 	rsx::thread::on_exit();
 }
 
-void GSRender::flip(const rsx::display_flip_info_t& info)
+void GSRender::flip(const rsx::display_flip_info_t&)
 {
 	if (m_frame)
 	{

@@ -11,7 +11,7 @@ TRPLoader::TRPLoader(const fs::file& f)
 {
 }
 
-bool TRPLoader::Install(const std::string& dest, bool show)
+bool TRPLoader::Install(const std::string& dest, bool /*show*/)
 {
 	if (!trp_f)
 	{

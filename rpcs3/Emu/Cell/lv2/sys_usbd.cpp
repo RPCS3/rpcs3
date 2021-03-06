@@ -625,7 +625,7 @@ error_code sys_usbd_register_ldd(ppu_thread& ppu, u32 handle, vm::ptr<char> s_pr
 	return CELL_OK;
 }
 
-error_code sys_usbd_unregister_ldd(ppu_thread& ppu)
+error_code sys_usbd_unregister_ldd(ppu_thread&)
 {
 	sys_usbd.todo("sys_usbd_unregister_ldd()");
 	return CELL_OK;

@@ -34,6 +34,11 @@ void fmt_class_string<CellSnd3Error>::format(std::string& out, u64 arg)
 	});
 }
 
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 error_code cellSnd3Init(u32 maxVoice, u32 samples, vm::ptr<CellSnd3RequestQueueCtx> queue)
 {
 	UNIMPLEMENTED_FUNC(libsnd3);

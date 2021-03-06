@@ -2571,7 +2571,7 @@ error_code sceNpManagerGetOnlineId(vm::ptr<SceNpOnlineId> onlineId)
 	return CELL_OK;
 }
 
-error_code sceNpManagerGetNpId(ppu_thread& ppu, vm::ptr<SceNpId> npId)
+error_code sceNpManagerGetNpId(ppu_thread&, vm::ptr<SceNpId> npId)
 {
 	sceNp.warning("sceNpManagerGetNpId(npId=*0x%x)", npId);
 

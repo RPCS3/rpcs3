@@ -1305,11 +1305,11 @@ void spu_recompiler::STOP(spu_opcode_t op)
 	}
 }
 
-void spu_recompiler::LNOP(spu_opcode_t op)
+void spu_recompiler::LNOP(spu_opcode_t)
 {
 }
 
-void spu_recompiler::SYNC(spu_opcode_t op)
+void spu_recompiler::SYNC(spu_opcode_t)
 {
 	// This instruction must be used following a store instruction that modifies the instruction stream.
 	c->lock().or_(asmjit::x86::dword_ptr(asmjit::x86::rsp), 0);
@@ -1324,7 +1324,7 @@ void spu_recompiler::SYNC(spu_opcode_t op)
 	}
 }
 
-void spu_recompiler::DSYNC(spu_opcode_t op)
+void spu_recompiler::DSYNC(spu_opcode_t)
 {
 	// This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
 	c->lock().or_(asmjit::x86::dword_ptr(asmjit::x86::rsp), 0);
@@ -2259,7 +2259,7 @@ void spu_recompiler::AVGB(spu_opcode_t op)
 	c->movdqa(SPU_OFF_128(gpr, op.rt), vb);
 }
 
-void spu_recompiler::MTSPR(spu_opcode_t op)
+void spu_recompiler::MTSPR(spu_opcode_t)
 {
 	// Check SPUInterpreter for notes.
 }
@@ -2581,7 +2581,7 @@ void spu_recompiler::BIHNZ(spu_opcode_t op)
 	});
 }
 
-void spu_recompiler::STOPD(spu_opcode_t op)
+void spu_recompiler::STOPD(spu_opcode_t)
 {
 	STOP(spu_opcode_t{0x3fff});
 }
@@ -2678,7 +2678,7 @@ void spu_recompiler::BISLED(spu_opcode_t op)
 	});
 }
 
-void spu_recompiler::HBR(spu_opcode_t op)
+void spu_recompiler::HBR([[maybe_unused]] spu_opcode_t op)
 {
 }
 
@@ -3186,7 +3186,7 @@ void spu_recompiler::SHLQBYI(spu_opcode_t op)
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
-void spu_recompiler::NOP(spu_opcode_t op)
+void spu_recompiler::NOP(spu_opcode_t)
 {
 }
 
@@ -3815,7 +3815,7 @@ void spu_recompiler::FRDS(spu_opcode_t op)
 	c->movaps(SPU_OFF_128(gpr, op.rt), va);
 }
 
-void spu_recompiler::FSCRWR(spu_opcode_t op)
+void spu_recompiler::FSCRWR(spu_opcode_t /*op*/)
 {
 	// nop (not implemented)
 }
@@ -4579,11 +4579,11 @@ void spu_recompiler::HEQI(spu_opcode_t op)
 	});
 }
 
-void spu_recompiler::HBRA(spu_opcode_t op)
+void spu_recompiler::HBRA([[maybe_unused]] spu_opcode_t op)
 {
 }
 
-void spu_recompiler::HBRR(spu_opcode_t op)
+void spu_recompiler::HBRR([[maybe_unused]] spu_opcode_t op)
 {
 }
 

@@ -1182,7 +1182,7 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	spu_runtime::g_tail_escape(&spu, func, rip);
 }
 
-void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* rip)
+void spu_recompiler_base::old_interpreter(spu_thread& spu, void* ls, u8* /*rip*/)
 {
 	if (g_cfg.core.spu_decoder > spu_decoder_type::fast)
 	{
@@ -3220,6 +3220,7 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -3765,7 +3766,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 	// Get pointer to the vector register (interpreter only)
 	template <typename T, uint I>
-	llvm::Value* init_vr(const bf_t<u32, I, 7>& index)
+	llvm::Value* init_vr(const bf_t<u32, I, 7>&)
 	{
 		if (!m_interp_magn)
 		{
@@ -5311,7 +5312,7 @@ public:
 		call(name, &exec_fall<F>, m_thread, m_ir->getInt32(op.opcode));
 	}
 
-	static void exec_unk(spu_thread* _spu, u32 op)
+	static void exec_unk(spu_thread*, u32 op)
 	{
 		fmt::throw_exception("Unknown/Illegal instruction (0x%08x)", op);
 	}
@@ -5364,7 +5365,7 @@ public:
 		}
 	}
 
-	void STOPD(spu_opcode_t op) //
+	void STOPD(spu_opcode_t) //
 	{
 		if (m_interp_magn)
 		{
@@ -6165,15 +6166,15 @@ public:
 		call("spu_write_channel", &exec_wrch, m_thread, m_ir->getInt32(op.ra), val.value);
 	}
 
-	void LNOP(spu_opcode_t op) //
+	void LNOP(spu_opcode_t) //
 	{
 	}
 
-	void NOP(spu_opcode_t op) //
+	void NOP(spu_opcode_t) //
 	{
 	}
 
-	void SYNC(spu_opcode_t op) //
+	void SYNC(spu_opcode_t) //
 	{
 		// This instruction must be used following a store instruction that modifies the instruction stream.
 		m_ir->CreateFence(llvm::AtomicOrdering::SequentiallyConsistent);
@@ -6186,7 +6187,7 @@ public:
 		}
 	}
 
-	void DSYNC(spu_opcode_t op) //
+	void DSYNC(spu_opcode_t) //
 	{
 		// This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
 		m_ir->CreateFence(llvm::AtomicOrdering::SequentiallyConsistent);
@@ -6198,7 +6199,7 @@ public:
 		set_vr(op.rt, splat<u32[4]>(0));
 	}
 
-	void MTSPR(spu_opcode_t op) //
+	void MTSPR(spu_opcode_t) //
 	{
 		// Check SPUInterpreter for notes.
 	}
@@ -6400,7 +6401,7 @@ public:
 
 	void AND(spu_opcode_t op)
 	{
-		if (match_vr<u8[16], u16[8], u64[2]>(op.ra, [&](auto a, auto MP1)
+		if (match_vr<u8[16], u16[8], u64[2]>(op.ra, [&](auto a, auto /*MP1*/)
 		{
 			if (auto b = match_vr_as(a, op.rb))
 			{
@@ -6408,7 +6409,7 @@ public:
 				return true;
 			}
 
-			return match_vr<u8[16], u16[8], u64[2]>(op.rb, [&](auto b, auto MP2)
+			return match_vr<u8[16], u16[8], u64[2]>(op.rb, [&](auto /*b*/, auto /*MP2*/)
 			{
 				set_vr(op.rt, a & get_vr_as(a, op.rb));
 				return true;
@@ -7441,7 +7442,7 @@ public:
 		set_vr(op.rt, splat<u32[4]>(0));
 	}
 
-	void FSCRWR(spu_opcode_t op) //
+	void FSCRWR(spu_opcode_t /*op*/) //
 	{
 		// Hack
 	}
@@ -8341,17 +8342,17 @@ public:
 		make_halt(cond);
 	}
 
-	void HBR(spu_opcode_t op) //
+	void HBR([[maybe_unused]] spu_opcode_t op) //
 	{
 		// TODO: use the hint.
 	}
 
-	void HBRA(spu_opcode_t op) //
+	void HBRA([[maybe_unused]] spu_opcode_t op) //
 	{
 		// TODO: use the hint.
 	}
 
-	void HBRR(spu_opcode_t op) //
+	void HBRR([[maybe_unused]] spu_opcode_t op) //
 	{
 		// TODO: use the hint.
 	}
@@ -9026,7 +9027,7 @@ struct spu_llvm
 					}
 
 					// Collect profiling samples
-					idm::select<named_thread<spu_thread>>([&](u32 id, spu_thread& spu)
+					idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
 					{
 						const u64 name = atomic_storage<u64>::load(spu.block_hash);
 

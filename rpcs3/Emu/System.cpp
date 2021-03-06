@@ -363,7 +363,7 @@ namespace
 					dlg->type.se_normal = true;
 					dlg->type.bg_invisible = true;
 					dlg->type.progress_bar_count = 1;
-					dlg->on_close = [](s32 status)
+					dlg->on_close = [](s32 /*status*/)
 					{
 						Emu.CallAfter([]()
 						{
@@ -1924,7 +1924,7 @@ void Emulator::Stop(bool restart)
 	aw_colc = 0;
 	aw_used = 0;
 
-	atomic_wait::parse_hashtable([](u64 id, u32 refs, u64 ptr, u32 maxc) -> bool
+	atomic_wait::parse_hashtable([](u64 /*id*/, u32 refs, u64 ptr, u32 maxc) -> bool
 	{
 		aw_refs += refs != 0;
 		aw_used += ptr != 0;
@@ -1977,10 +1977,15 @@ bool Emulator::Quit(bool force_quit)
 	// The callback is only used if we actually quit RPCS3
 	const auto on_exit = []()
 	{
-		// Deinitialize object manager to prevent any hanging objects at program exit
-		g_fxo->clear();
+		Emu.CleanUp();
 	};
 	return GetCallbacks().try_to_quit(force_quit, on_exit);
+}
+
+void Emulator::CleanUp()
+{
+	// Deinitialize object manager to prevent any hanging objects at program exit
+	g_fxo->clear();
 }
 
 std::string Emulator::GetFormattedTitle(double fps) const

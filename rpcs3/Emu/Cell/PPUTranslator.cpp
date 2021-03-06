@@ -2071,7 +2071,7 @@ void PPUTranslator::CRANDC(ppu_opcode_t op)
 	SetCrb(op.crbd, m_ir->CreateAnd(GetCrb(op.crba), m_ir->CreateNot(GetCrb(op.crbb))));
 }
 
-void PPUTranslator::ISYNC(ppu_opcode_t op)
+void PPUTranslator::ISYNC(ppu_opcode_t)
 {
 	m_ir->CreateFence(AtomicOrdering::Acquire);
 }
@@ -2081,7 +2081,7 @@ void PPUTranslator::CRXOR(ppu_opcode_t op)
 	SetCrb(op.crbd, m_ir->CreateXor(GetCrb(op.crba), GetCrb(op.crbb)));
 }
 
-void PPUTranslator::DCBI(ppu_opcode_t op)
+void PPUTranslator::DCBI(ppu_opcode_t)
 {
 }
 
@@ -2656,7 +2656,7 @@ void PPUTranslator::LDUX(ppu_opcode_t op)
 	SetGpr(op.ra, addr);
 }
 
-void PPUTranslator::DCBST(ppu_opcode_t op)
+void PPUTranslator::DCBST(ppu_opcode_t)
 {
 }
 
@@ -2723,7 +2723,7 @@ void PPUTranslator::LDARX(ppu_opcode_t op)
 	SetGpr(op.rd, Call(GetType<u64>(), "__ldarx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
 }
 
-void PPUTranslator::DCBF(ppu_opcode_t op)
+void PPUTranslator::DCBF(ppu_opcode_t)
 {
 }
 
@@ -2978,7 +2978,7 @@ void PPUTranslator::MULLW(ppu_opcode_t op)
 	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__mullw_get_ov", a, b));
 }
 
-void PPUTranslator::DCBTST(ppu_opcode_t op)
+void PPUTranslator::DCBTST(ppu_opcode_t)
 {
 }
 
@@ -3006,7 +3006,7 @@ void PPUTranslator::ADD(ppu_opcode_t op)
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
-void PPUTranslator::DCBT(ppu_opcode_t op)
+void PPUTranslator::DCBT(ppu_opcode_t)
 {
 }
 
@@ -3080,7 +3080,7 @@ void PPUTranslator::LWAX(ppu_opcode_t op)
 	SetGpr(op.rd, SExt(ReadMemory(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetType<s32>())));
 }
 
-void PPUTranslator::DST(ppu_opcode_t op)
+void PPUTranslator::DST(ppu_opcode_t)
 {
 }
 
@@ -3120,7 +3120,7 @@ void PPUTranslator::LWAUX(ppu_opcode_t op)
 	SetGpr(op.ra, addr);
 }
 
-void PPUTranslator::DSTST(ppu_opcode_t op)
+void PPUTranslator::DSTST(ppu_opcode_t)
 {
 }
 
@@ -3487,7 +3487,7 @@ void PPUTranslator::LVRXL(ppu_opcode_t op)
 	return LVRX(op);
 }
 
-void PPUTranslator::DSS(ppu_opcode_t op)
+void PPUTranslator::DSS(ppu_opcode_t)
 {
 }
 
@@ -3510,7 +3510,7 @@ void PPUTranslator::SRADI(ppu_opcode_t op)
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
-void PPUTranslator::EIEIO(ppu_opcode_t op)
+void PPUTranslator::EIEIO(ppu_opcode_t)
 {
 	// TODO
 	m_ir->CreateFence(AtomicOrdering::SequentiallyConsistent);
@@ -3557,7 +3557,7 @@ void PPUTranslator::EXTSW(ppu_opcode_t op)
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
-void PPUTranslator::ICBI(ppu_opcode_t op)
+void PPUTranslator::ICBI(ppu_opcode_t)
 {
 }
 
@@ -4734,7 +4734,7 @@ void PPUTranslator::SetFPCC(Value* lt, Value* gt, Value* eq, Value* un, bool set
 	if (set_cr) SetCrField(1, lt, gt, eq, un);
 }
 
-void PPUTranslator::SetFPRF(Value* value, bool set_cr)
+void PPUTranslator::SetFPRF(Value* value, bool /*set_cr*/)
 {
 	//const bool is32 =
 		value->getType()->isFloatTy() ? true :
@@ -4755,18 +4755,18 @@ void PPUTranslator::SetFPRF(Value* value, bool set_cr)
 	//SetFPCC(lt, gt, eq, un, set_cr);
 }
 
-void PPUTranslator::SetFPSCR_FR(Value* value)
+void PPUTranslator::SetFPSCR_FR(Value* /*value*/)
 {
 	//m_ir->CreateStore(value, m_fpscr_fr);
 }
 
-void PPUTranslator::SetFPSCR_FI(Value* value)
+void PPUTranslator::SetFPSCR_FI(Value* /*value*/)
 {
 	//m_ir->CreateStore(value, m_fpscr_fi);
 	//SetFPSCRException(m_fpscr_xx, value);
 }
 
-void PPUTranslator::SetFPSCRException(Value* ptr, Value* value)
+void PPUTranslator::SetFPSCRException(Value* /*ptr*/, Value* /*value*/)
 {
 	//m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(ptr), value), ptr);
 	//m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(m_fpscr_fx), value), m_fpscr_fx);
@@ -4808,7 +4808,7 @@ Value* PPUTranslator::GetFPSCRBit(u32 n)
 	return value;
 }
 
-void PPUTranslator::SetFPSCRBit(u32 n, Value* value, bool update_fx)
+void PPUTranslator::SetFPSCRBit(u32 n, Value* value, bool /*update_fx*/)
 {
 	if (n < 16 || n > 19)
 	{

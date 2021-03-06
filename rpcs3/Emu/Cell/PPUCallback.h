@@ -77,13 +77,13 @@ namespace ppu_cb_detail
 	{
 		static_assert(std::is_same<std::decay_t<T>, ppu_thread>::value, "Invalid callback argument type for ARG_CONTEXT");
 
-		FORCE_INLINE static void set_value(ppu_thread& CPU, const T& arg)
+		FORCE_INLINE static void set_value(ppu_thread&, const T&)
 		{
 		}
 	};
 
 	template<u32 g_count, u32 f_count, u32 v_count>
-	FORCE_INLINE static bool _bind_func_args(ppu_thread& CPU)
+	FORCE_INLINE static bool _bind_func_args(ppu_thread&)
 	{
 		// terminator
 		return false;

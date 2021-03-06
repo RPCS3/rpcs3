@@ -102,9 +102,9 @@ namespace ppu_func_detail
 	{
 		static_assert(std::is_same<std::decay_t<T>, ppu_va_args_t>::value, "Invalid function argument type for ARG_VARIADIC");
 
-		static FORCE_INLINE ppu_va_args_t get_arg(ppu_thread& ppu)
+		static FORCE_INLINE ppu_va_args_t get_arg(ppu_thread&)
 		{
-			return{ g_count };
+			return {g_count};
 		}
 	};
 

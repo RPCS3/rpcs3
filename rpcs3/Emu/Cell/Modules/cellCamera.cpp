@@ -36,6 +36,11 @@ void fmt_class_string<CellCameraError>::format(std::string& out, u64 arg)
 	});
 }
 
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 // **************
 // * Prototypes *
 // **************

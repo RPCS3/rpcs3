@@ -990,7 +990,7 @@ namespace
 		}
 
 		template <typename T, T... Index>
-		std::array<std::string(*)(u32, u32), 1 << 14> create_printing_table(std::integer_sequence<T, Index...> seq)
+		std::array<std::string(*)(u32, u32), 1 << 14> create_printing_table(std::integer_sequence<T, Index...>)
 		{
 			std::array<std::string(*)(u32, u32), 1 << 14> result{};
 

@@ -88,12 +88,12 @@ error_code cellRudpInit(vm::ptr<CellRudpAllocator> allocator)
 	}
 	else
 	{
-		rudp.malloc = [](ppu_thread& ppu, u32 size)
+		rudp.malloc = [](ppu_thread&, u32 size)
 		{
 			return vm::ptr<void>::make(vm::alloc(size, vm::main));
 		};
 
-		rudp.free = [](ppu_thread& ppu, vm::ptr<void> ptr)
+		rudp.free = [](ppu_thread&, vm::ptr<void> ptr)
 		{
 			if (!vm::dealloc(ptr.addr(), vm::main))
 			{

@@ -1125,7 +1125,7 @@ error_code cellAudioInit()
 	return CELL_OK;
 }
 
-error_code cellAudioQuit(ppu_thread& ppu)
+error_code cellAudioQuit()
 {
 	cellAudio.warning("cellAudioQuit()");
 

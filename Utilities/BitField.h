@@ -217,7 +217,7 @@ struct cf_t<void>
 	}
 
 	template<typename T>
-	static constexpr auto extract(const T& data) -> decltype(+T())
+	static constexpr auto extract(const T&) -> decltype(+T())
 	{
 		return 0;
 	}
@@ -237,7 +237,7 @@ struct ff_t : bf_base<T, N>
 	using vtype = typename ff_t::vtype;
 
 	// Return constant value
-	static constexpr vtype extract(const type& data)
+	static constexpr vtype extract(const type&)
 	{
 		static_assert((V & ff_t::vmask) == V, "ff_t<> error: V out of bounds");
 		return V;

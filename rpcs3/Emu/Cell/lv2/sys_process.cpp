@@ -272,7 +272,7 @@ error_code _sys_process_get_paramsfo(vm::ptr<char> buffer)
 	return CELL_OK;
 }
 
-s32 process_get_sdk_version(u32 pid, s32& ver)
+s32 process_get_sdk_version(u32 /*pid*/, s32& ver)
 {
 	// get correct SDK version for selected pid
 	ver = g_ps3_process_info.sdk_ver;

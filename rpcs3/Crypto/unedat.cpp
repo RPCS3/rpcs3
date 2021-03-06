@@ -326,7 +326,7 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 
 // EDAT/SDAT decryption.
 // reset file to beginning of data before calling
-int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool verbose)
+int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool /*verbose*/)
 {
 	const int total_blocks = static_cast<int>((edat->file_size + edat->block_size - 1) / edat->block_size);
 	u64 size_left = edat->file_size;

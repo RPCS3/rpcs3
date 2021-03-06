@@ -54,4 +54,6 @@ namespace utils
 	u32 get_cpu_family();
 
 	u32 get_cpu_model();
+
+	extern const u64 main_tid;
 }

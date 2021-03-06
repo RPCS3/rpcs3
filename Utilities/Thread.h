@@ -339,6 +339,12 @@ public:
 		}
 	};
 
+	// Get thread ID (works for all threads)
+	static u64 get_tid();
+
+	// Check whether current thread is main thread (usually Qt GUI)
+	static bool is_main();
+
 private:
 	// Miscellaneous
 	static const u64 process_affinity_mask;

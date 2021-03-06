@@ -1752,7 +1752,7 @@ const bool s_exception_handler_set = []() -> bool
 
 #else
 
-static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
+static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 {
 	x64_context* context = static_cast<ucontext_t*>(uct);
 
@@ -2977,4 +2977,18 @@ std::pair<void*, usz> thread_ctrl::get_thread_stack()
 #endif
 #endif
 	return {saddr, ssize};
+}
+
+u64 thread_ctrl::get_tid()
+{
+#ifdef _WIN32
+	return GetCurrentThreadId();
+#else
+	return reinterpret_cast<u64>(pthread_self());
+#endif
+}
+
+bool thread_ctrl::is_main()
+{
+	return get_tid() == utils::main_tid;
 }

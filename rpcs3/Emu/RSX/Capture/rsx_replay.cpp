@@ -54,7 +54,7 @@ namespace rsx
 		return contextInfo->context_id;
 	}
 
-	std::vector<u32> rsx_replay_thread::alloc_write_fifo(be_t<u32> context_id)
+	std::vector<u32> rsx_replay_thread::alloc_write_fifo(be_t<u32> /*context_id*/)
 	{
 		// copy commands into fifo buffer
 		// todo: could change rsx_command to just be values to avoid this loop,

@@ -3156,7 +3156,7 @@ bool ppu_interpreter::CRANDC(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::ISYNC(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::ISYNC(ppu_thread&, ppu_opcode_t)
 {
 	atomic_fence_acquire();
 	return true;
@@ -3514,7 +3514,7 @@ bool ppu_interpreter::LDUX(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::DCBST(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::DCBST(ppu_thread&, ppu_opcode_t)
 {
 	return true;
 }
@@ -3587,7 +3587,7 @@ bool ppu_interpreter::LDARX(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::DCBF(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::DCBF(ppu_thread&, ppu_opcode_t)
 {
 	return true;
 }
@@ -3850,7 +3850,7 @@ bool ppu_interpreter::MULLW(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::DCBTST(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::DCBTST(ppu_thread&, ppu_opcode_t)
 {
 	return true;
 }
@@ -3873,7 +3873,7 @@ bool ppu_interpreter::ADD(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::DCBT(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::DCBT(ppu_thread&, ppu_opcode_t)
 {
 	return true;
 }
@@ -3892,7 +3892,7 @@ bool ppu_interpreter::EQV(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::ECIWX(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::ECIWX(ppu_thread&, ppu_opcode_t)
 {
 	fmt::throw_exception("ECIWX");
 }
@@ -3938,7 +3938,7 @@ bool ppu_interpreter::LWAX(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::DST(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::DST(ppu_thread&, ppu_opcode_t)
 {
 	return true;
 }
@@ -3979,7 +3979,7 @@ bool ppu_interpreter::LWAUX(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::DSTST(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::DSTST(ppu_thread&, ppu_opcode_t)
 {
 	return true;
 }
@@ -4006,7 +4006,7 @@ bool ppu_interpreter::ORC(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::ECOWX(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::ECOWX(ppu_thread&, ppu_opcode_t)
 {
 	fmt::throw_exception("ECOWX");
 }
@@ -4070,7 +4070,7 @@ bool ppu_interpreter::MTSPR(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::DCBI(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::DCBI(ppu_thread&, ppu_opcode_t)
 {
 	return true;
 }
@@ -4222,7 +4222,7 @@ bool ppu_interpreter::LFSUX(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::SYNC(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::SYNC(ppu_thread&, ppu_opcode_t)
 {
 	atomic_fence_seq_cst();
 	return true;
@@ -4406,7 +4406,7 @@ bool ppu_interpreter::LVRXL(ppu_thread& ppu, ppu_opcode_t op)
 	return LVRX(ppu, op);
 }
 
-bool ppu_interpreter::DSS(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::DSS(ppu_thread&, ppu_opcode_t)
 {
 	return true;
 }
@@ -4432,7 +4432,7 @@ bool ppu_interpreter::SRADI(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::EIEIO(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::EIEIO(ppu_thread&, ppu_opcode_t)
 {
 	atomic_fence_seq_cst();
 	return true;
@@ -4483,7 +4483,7 @@ bool ppu_interpreter::EXTSW(ppu_thread& ppu, ppu_opcode_t op)
 	return true;
 }
 
-bool ppu_interpreter::ICBI(ppu_thread& ppu, ppu_opcode_t op)
+bool ppu_interpreter::ICBI(ppu_thread&, ppu_opcode_t)
 {
 	return true;
 }

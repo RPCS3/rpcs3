@@ -85,7 +85,7 @@ namespace vm
 	std::pair<bool, u64> try_reservation_update(u32 addr)
 	{
 		// Update reservation info with new timestamp
-		auto& res = reservation_acquire(addr, 1);
+		auto& res = reservation_acquire(addr);
 		const u64 rtime = res;
 
 		return {!(rtime & vm::rsrv_unique_lock) && res.compare_and_swap_test(rtime, rtime + 128), rtime};
@@ -609,7 +609,7 @@ namespace vm
 
 	void reservation_op_internal(u32 addr, std::function<bool()> func)
 	{
-		auto& res = vm::reservation_acquire(addr, 1);
+		auto& res = vm::reservation_acquire(addr);
 		auto* ptr = vm::get_super_ptr(addr & -128);
 
 		cpu_thread::suspend_all<+1>(get_current_cpu_thread(), {ptr, ptr + 64, &res}, [&]

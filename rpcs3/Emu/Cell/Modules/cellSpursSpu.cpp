@@ -19,8 +19,10 @@
 
 LOG_CHANNEL(cellSpurs);
 
+// Temporarily
 #ifndef _MSC_VER
 #pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
 //----------------------------------------------------------------------------
@@ -775,7 +777,7 @@ void spursSysServiceIdleHandler(spu_thread& spu, SpursKernelContext* ctxt)
 	while (true)
 	{
 		const auto spurs = spu._ptr<CellSpurs>(0x100);
-		//vm::reservation_acquire(spurs, vm::cast(ctxt->spurs.addr()), 128);
+		//vm::reservation_acquire(ctxt->spurs.addr());
 
 		// Find the number of SPUs that are idling in this SPURS instance
 		u32 nIdlingSpus = 0;
@@ -891,9 +893,9 @@ void spursSysServiceMain(spu_thread& spu, u32 pollStatus)
 	{
 		ctxt->sysSrvInitialised = 1;
 
-		//vm::reservation_acquire(ctxt, vm::cast(ctxt->spurs.addr()), 128);
+		//vm::reservation_acquire(ctxt->spurs.addr());
 
-		//vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), 128, [&]()
+		//vm::reservation_op(ctxt->spurs.ptr(&CellSpurs::wklState1).addr(), [&]()
 		{
 			auto spurs = ctxt->spurs.get_ptr();
 
@@ -1215,7 +1217,7 @@ void spursSysServiceTraceUpdate(spu_thread& spu, SpursKernelContext* ctxt, u32 a
 	// Get trace parameters from CellSpurs and store them in the LS
 	if (((sysSrvMsgUpdateTrace & (1 << ctxt->spuNum)) != 0) || (arg3 != 0))
 	{
-		//vm::reservation_acquire(spu._ptr<void>(0x80), ctxt->spurs.ptr(&CellSpurs::traceBuffer).addr(), 128);
+		//vm::reservation_acquire(ctxt->spurs.ptr(&CellSpurs::traceBuffer).addr());
 		auto spurs = spu._ptr<CellSpurs>(0x80 - offset32(&CellSpurs::traceBuffer));
 
 		if (ctxt->traceMsgCount != 0xffu || spurs->traceBuffer.addr() == 0u)

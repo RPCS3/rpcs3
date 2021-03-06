@@ -161,7 +161,8 @@ void lv2_config_service_listener::notify_all()
 	std::vector<std::shared_ptr<lv2_config_service>> services;
 
 	// Grab all events
-	idm::select<lv2_config_service>([&](u32 id, lv2_config_service& service) -> void {
+	idm::select<lv2_config_service>([&](u32 /*id*/, lv2_config_service& service)
+	{
 		if (check_service(service))
 		{
 			services.push_back(service.get_shared_ptr());
@@ -169,7 +170,8 @@ void lv2_config_service_listener::notify_all()
 	}, 0);
 
 	// Sort services by timestamp
-	sort(services.begin(), services.end(), [](const std::shared_ptr<lv2_config_service>& s1, const std::shared_ptr<lv2_config_service>& s2) -> bool {
+	sort(services.begin(), services.end(), [](const std::shared_ptr<lv2_config_service>& s1, const std::shared_ptr<lv2_config_service>& s2)
+	{
 		return s1->timestamp < s2->timestamp;
 	});
 
@@ -200,7 +202,8 @@ void lv2_config_service::notify() const
 
 	auto sptr = wkptr.lock();
 
-	idm::select<lv2_config_service_listener>([&](u32 id, lv2_config_service_listener& listener) -> void {
+	idm::select<lv2_config_service_listener>([&](u32 /*id*/, lv2_config_service_listener& listener)
+	{
 		if (listener.check_service(*sptr))
 			listeners.push_back(listener.get_shared_ptr());
 	});

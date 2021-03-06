@@ -160,6 +160,11 @@ void fmt_class_string<SpursWorkloadState>::format(std::string& out, u64 arg)
 
 error_code sys_spu_image_close(ppu_thread&, vm::ptr<sys_spu_image> img);
 
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 //----------------------------------------------------------------------------
 // Function prototypes
 //----------------------------------------------------------------------------

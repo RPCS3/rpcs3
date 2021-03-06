@@ -242,24 +242,35 @@ std::string utils::get_system_info()
 std::string utils::get_firmware_version()
 {
 	const std::string file_path = g_cfg.vfs.get_dev_flash() + "vsh/etc/version.txt";
-	if (fs::is_file(file_path))
+	if (fs::file version_file{file_path})
 	{
-		const fs::file version_file = fs::file(file_path);
-		std::string version = version_file.to_string();
+		const std::string version_str = version_file.to_string();
+		std::string_view version = version_str;
 
 		// Extract version
 		const usz start = version.find_first_of(':') + 1;
 		const usz end = version.find_first_of(':', start);
+
+		if (!start || end == umax)
+		{
+			return {};
+		}
+
 		version = version.substr(start, end - start);
 
 		// Trim version
 		const usz trim_start = version.find_first_not_of('0');
 		const usz trim_end = version.find_last_not_of('0');
-		version = version.substr(trim_start, trim_end);
 
-		return version;
+		if (trim_start == umax)
+		{
+			return {};
+		}
+
+		return std::string(version.substr(trim_start, trim_end));
 	}
-	return "";
+
+	return {};
 }
 
 std::string utils::get_OS_version()
@@ -464,4 +475,16 @@ u32 utils::get_cpu_model()
 	}();
 
 	return g_value;
+}
+
+namespace utils
+{
+	extern const u64 main_tid = []() -> u64
+	{
+	#ifdef _WIN32
+		return GetCurrentThreadId();
+	#else
+		return reinterpret_cast<u64>(pthread_self());
+	#endif
+	}();
 }

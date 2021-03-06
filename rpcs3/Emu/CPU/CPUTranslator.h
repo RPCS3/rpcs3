@@ -9,6 +9,7 @@
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
@@ -66,7 +67,7 @@ struct llvm_value_t
 		return llvm::Type::getVoidTy(context);
 	}
 
-	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	llvm::Value* eval(llvm::IRBuilder<>*) const
 	{
 		return value;
 	}
@@ -421,7 +422,7 @@ struct llvm_match_t
 		return value && ((value == args.value) && ...);
 	}
 
-	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	llvm::Value* eval(llvm::IRBuilder<>*) const
 	{
 		return value;
 	}
@@ -444,7 +445,7 @@ struct llvm_placeholder_t
 
 	using type = T;
 
-	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	llvm::Value* eval(llvm::IRBuilder<>*) const
 	{
 		return nullptr;
 	}

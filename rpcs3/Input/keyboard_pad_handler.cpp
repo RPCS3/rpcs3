@@ -613,7 +613,7 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 	return key_code;
 }
 
-int keyboard_pad_handler::native_scan_code_from_string(const std::string& key)
+int keyboard_pad_handler::native_scan_code_from_string([[maybe_unused]] const std::string& key)
 {
 	// NOTE: Qt throws a Ctrl key at us when using Alt Gr, so there is no point in distinguishing left and right Alt at the moment
 #ifdef _WIN32

@@ -480,7 +480,7 @@ bool gdb_thread::set_reg(ppu_thread* thread, u32 rid, std::string value)
 	}
 }
 
-u32 gdb_thread::get_reg_size(ppu_thread* thread, u32 rid)
+u32 gdb_thread::get_reg_size(ppu_thread*, u32 rid)
 {
 	switch (rid) {
 	case 66:
@@ -523,22 +523,22 @@ void gdb_thread::wait_with_interrupts()
 	}
 }
 
-bool gdb_thread::cmd_extended_mode(gdb_cmd& cmd)
+bool gdb_thread::cmd_extended_mode(gdb_cmd&)
 {
 	return send_cmd_ack("OK");
 }
 
-bool gdb_thread::cmd_reason(gdb_cmd& cmd)
+bool gdb_thread::cmd_reason(gdb_cmd&)
 {
 	return send_reason();
 }
 
-bool gdb_thread::cmd_supported(gdb_cmd& cmd)
+bool gdb_thread::cmd_supported(gdb_cmd&)
 {
 	return send_cmd_ack("PacketSize=1200");
 }
 
-bool gdb_thread::cmd_thread_info(gdb_cmd& cmd)
+bool gdb_thread::cmd_thread_info(gdb_cmd&)
 {
 	std::string result;
 	const auto on_select = [&](u32, cpu_thread& cpu)
@@ -557,7 +557,7 @@ bool gdb_thread::cmd_thread_info(gdb_cmd& cmd)
 	return send_cmd_ack(result);;
 }
 
-bool gdb_thread::cmd_current_thread(gdb_cmd& cmd)
+bool gdb_thread::cmd_current_thread(gdb_cmd&)
 {
 	return send_cmd_ack(selected_thread.expired() ? "" : ("QC" + u64_to_padded_hex(selected_thread.lock()->id)));
 }
@@ -657,7 +657,7 @@ bool gdb_thread::cmd_write_memory(gdb_cmd& cmd)
 	return send_cmd_ack("OK");
 }
 
-bool gdb_thread::cmd_read_all_registers(gdb_cmd& cmd)
+bool gdb_thread::cmd_read_all_registers(gdb_cmd&)
 {
 	std::string result;
 	select_thread(general_ops_thread_id);
@@ -711,19 +711,19 @@ bool gdb_thread::cmd_set_thread_ops(gdb_cmd& cmd)
 	return send_cmd_ack("E01");
 }
 
-bool gdb_thread::cmd_attached_to_what(gdb_cmd& cmd)
+bool gdb_thread::cmd_attached_to_what(gdb_cmd&)
 {
 	//creating processes from client is not available yet
 	return send_cmd_ack("1");
 }
 
-bool gdb_thread::cmd_kill(gdb_cmd& cmd)
+bool gdb_thread::cmd_kill(gdb_cmd&)
 {
 	Emu.Stop();
 	return true;
 }
 
-bool gdb_thread::cmd_continue_support(gdb_cmd& cmd)
+bool gdb_thread::cmd_continue_support(gdb_cmd&)
 {
 	return send_cmd_ack("vCont;c;s;C;S");
 }

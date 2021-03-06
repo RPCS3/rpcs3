@@ -106,7 +106,7 @@ namespace logs
 		~root_listener() override = default;
 
 		// Encode level, current thread name, channel name and write log message
-		void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override
+		void log(u64, const message&, const std::string&, const std::string&) override
 		{
 			// Do nothing
 		}
