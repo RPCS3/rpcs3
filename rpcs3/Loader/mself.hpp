@@ -12,10 +12,10 @@ struct mself_header
 	be_t<u32> header_size; // ???
 	u8 reserved[0x28];
 
-	u32 get_count(u64 file_size)
+	u32 get_count(u64 file_size) const
 	{
 		// Fast sanity check
-		if (magic != "MSF"_u32 || ver != u32{1} || this->size != file_size) [[unlikely]]
+		if (magic != "MSF"_u32 || ver != u32{1} || (file_size - sizeof(mself_header)) / 0x40 < count || this->size != file_size) [[unlikely]]
 			return 0;
 
 		return count;
@@ -31,7 +31,7 @@ struct mself_record
 	be_t<u64> size;
 	u8 reserved[0x10];
 
-	u64 get_pos(u64 file_size)
+	u64 get_pos(u64 file_size) const
 	{
 		// Fast sanity check
 		if (off < file_size && file_size - off >= size) [[likely]]
@@ -42,3 +42,5 @@ struct mself_record
 };
 
 CHECK_SIZE(mself_record, 0x40);
+
+bool extract_mself(const std::string& file, const std::string& extract_to);

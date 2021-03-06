@@ -99,6 +99,7 @@ target_sources(rpcs3_emu PRIVATE
 # Loader
 target_sources(rpcs3_emu PRIVATE
 	../Loader/ELF.cpp
+	../Loader/mself.cpp
 	../Loader/PSF.cpp
 	../Loader/PUP.cpp
 	../Loader/TAR.cpp

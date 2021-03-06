@@ -129,6 +129,7 @@ namespace gui
 	const gui_save fd_decrypt_sprx = gui_save(main_window, "lastExplorePathSPRX", "");
 	const gui_save fd_cg_disasm    = gui_save(main_window, "lastExplorePathCGD",  "");
 	const gui_save fd_log_viewer   = gui_save(main_window, "lastExplorePathLOG",  "");
+	const gui_save fd_ext_mself    = gui_save(main_window, "lastExplorePathExMSELF",  "");
 
 	const gui_save mw_debugger         = gui_save(main_window, "debuggerVisible",  false);
 	const gui_save mw_logger           = gui_save(main_window, "loggerVisible",    true);

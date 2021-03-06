@@ -776,6 +776,9 @@
     <ClCompile Include="Loader\TAR.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
+      <ClCompile Include="Loader\mself.cpp">
+    <Filter>Loader</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\GDB.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
