@@ -34,7 +34,7 @@ struct mself_record
 	u64 get_pos(u64 file_size)
 	{
 		// Fast sanity check
-		if (off < file_size && off + size <= file_size) [[likely]]
+		if (off < file_size && file_size - off >= size) [[likely]]
 			return off;
 
 		return 0;
