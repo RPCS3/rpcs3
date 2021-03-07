@@ -776,8 +776,8 @@
     <ClCompile Include="Loader\TAR.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
-      <ClCompile Include="Loader\mself.cpp">
-    <Filter>Loader</Filter>
+    <ClCompile Include="Loader\mself.cpp">
+      <Filter>Loader</Filter>
     </ClCompile>
     <ClCompile Include="Emu\GDB.cpp">
       <Filter>Emu</Filter>
@@ -1914,6 +1914,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\texture_cache_types.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\mself.hpp">
+      <Filter>Loader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

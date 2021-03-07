@@ -484,6 +484,7 @@
     <ClInclude Include="Emu\title.h" />
     <ClInclude Include="Emu\system_config.h" />
     <ClInclude Include="Emu\system_config_types.h" />
+    <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="util\v128.hpp" />
     <ClInclude Include="util\v128sse.hpp" />
