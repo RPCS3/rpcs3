@@ -66,7 +66,8 @@ error_code cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontCon
 
 error_code cellFontGetRevisionFlags(vm::ptr<u64> revisionFlags)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGetRevisionFlags(*0x%x)", revisionFlags);
+
 	return CELL_OK;
 }
 
@@ -118,7 +119,7 @@ error_code cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char>
 	return ret;
 }
 
-error_code cellFontOpenFontset(ppu_thread& ppu, vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
+error_code cellFontOpenFontset(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
 {
 	cellFont.warning("cellFontOpenFontset(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
 
@@ -458,7 +459,7 @@ error_code cellFontGraphicsSetFontRGBA()
 	return CELL_OK;
 }
 
-error_code cellFontOpenFontsetOnMemory(ppu_thread& ppu, vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
+error_code cellFontOpenFontsetOnMemory(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
 {
 	cellFont.todo("cellFontOpenFontsetOnMemory(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
 

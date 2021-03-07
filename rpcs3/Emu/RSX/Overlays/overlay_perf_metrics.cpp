@@ -659,7 +659,7 @@ namespace rsx
 
 			if (m_datapoints.empty())
 			{
-				m_datapoints.resize(m_datapoint_count, 0);
+				m_datapoints.resize(m_datapoint_count, -1.0f);
 			}
 			else if (m_datapoints.empty() || m_datapoint_count < m_datapoints.size())
 			{
@@ -668,7 +668,7 @@ namespace rsx
 			}
 			else
 			{
-				m_datapoints.insert(m_datapoints.begin(), m_datapoint_count - m_datapoints.size(), 0);
+				m_datapoints.insert(m_datapoints.begin(), m_datapoint_count - m_datapoints.size(), -1.0f);
 			}
 		}
 
@@ -702,9 +702,22 @@ namespace rsx
 			m_datapoints.push_back(datapoint);
 
 			// Calculate new min/max
+			m_min = std::numeric_limits<float>::max();
+			m_max = 0.0f;
+
 			// Make sure min/max reflects the data being displayed, not the entire datapoints vector
-			m_min = *std::min_element(m_datapoints.end() - m_datapoint_count, m_datapoints.end());
-			m_max = *std::max_element(m_datapoints.end() - m_datapoint_count, m_datapoints.end());
+			for (usz i = m_datapoints.size() - m_datapoint_count; i < m_datapoints.size(); i++)
+			{
+				const f32& dp = m_datapoints[i];
+
+				if (dp < 0) continue; // Skip initial negative values. They don't count.
+
+				m_min = std::min(m_min, dp);
+				m_max = std::max(m_max, dp);
+			}
+
+			// Sanitize min value
+			m_min = std::min(m_min, m_max);
 
 			// Cull vector when it gets large
 			if (m_datapoints.size() > m_datapoint_count * 16ull)
@@ -773,7 +786,7 @@ namespace rsx
 			for (u32 i = 0; i < m_datapoint_count; ++i)
 			{
 				const f32 x_line = x + i * x_stride;
-				const f32 y_line = y + h - (m_datapoints[i + tail_index_offset] * normalize_factor);
+				const f32 y_line = y + h - (std::max(0.0f, m_datapoints[i + tail_index_offset]) * normalize_factor);
 				verts_graph.emplace_back(x_line, y_line);
 			}
 

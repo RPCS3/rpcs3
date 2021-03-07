@@ -95,7 +95,7 @@ namespace
 		{
 		}
 
-		vertex_input_state operator()(const rsx::draw_array_command& command)
+		vertex_input_state operator()(const rsx::draw_array_command& /*command*/)
 		{
 			bool primitives_emulated = false;
 			VkPrimitiveTopology prims = vk::get_appropriate_topology(
@@ -195,7 +195,7 @@ namespace
 			return {prims, true, min_index, max_index, index_count, index_offset, index_info};
 		}
 
-		vertex_input_state operator()(const rsx::draw_inlined_array& command)
+		vertex_input_state operator()(const rsx::draw_inlined_array& /*command*/)
 		{
 			bool primitives_emulated = false;
 			auto &draw_clause = rsx::method_registers.current_draw_clause;

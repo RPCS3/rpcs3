@@ -761,12 +761,12 @@ namespace rsx
 	* Fill buffer with vertex program constants.
 	* Buffer must be at least 512 float4 wide.
 	*/
-	void thread::fill_vertex_program_constants_data(void *buffer)
+	void thread::fill_vertex_program_constants_data(void* buffer)
 	{
 		memcpy(buffer, rsx::method_registers.transform_constants.data(), 468 * 4 * sizeof(float));
 	}
 
-	void thread::fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program)
+	void thread::fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& /*fragment_program*/)
 	{
 		u32 rop_control = 0u;
 
@@ -842,7 +842,7 @@ namespace rsx
 		stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 
-	void thread::fill_fragment_texture_parameters(void *buffer, const RSXFragmentProgram &fragment_program)
+	void thread::fill_fragment_texture_parameters(void* buffer, const RSXFragmentProgram& fragment_program)
 	{
 		// Copy only the relevant section
 		if (current_fp_metadata.referenced_textures_mask)

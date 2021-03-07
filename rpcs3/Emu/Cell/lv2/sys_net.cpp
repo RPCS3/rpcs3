@@ -699,7 +699,7 @@ struct nt_p2p_port
 		return true;
 	}
 
-	bool handle_listening(s32 sock_id, lv2_socket::p2ps_i::encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr)
+	bool handle_listening(s32 sock_id, lv2_socket::p2ps_i::encapsulated_tcp* tcp_header, u8* /*data*/, ::sockaddr_storage* op_addr)
 	{
 		auto sock = idm::get<lv2_socket>(sock_id);
 		if (!sock)
@@ -3656,7 +3656,7 @@ error_code _sys_net_write_dump(ppu_thread& ppu, s32 id, vm::cptr<void> buf, s32 
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_net.todo(__func__);
+	sys_net.todo("_sys_net_write_dump(id=0x%x, buf=*0x%x, len=%d, unk=0x%x)", id, buf, len, unknown);
 	return CELL_OK;
 }
 

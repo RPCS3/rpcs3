@@ -1076,7 +1076,7 @@ void PPUDisAsm::CRANDC(ppu_opcode_t op)
 	DisAsm_BI3("crandc", op.crbd, op.crba, op.crbb);
 }
 
-void PPUDisAsm::ISYNC(ppu_opcode_t op)
+void PPUDisAsm::ISYNC(ppu_opcode_t)
 {
 	Write("isync");
 }
@@ -1938,7 +1938,7 @@ void PPUDisAsm::LVRXL(ppu_opcode_t op)
 	DisAsm_V1_R2("lvrxl", op.vd, op.ra, op.rb);
 }
 
-void PPUDisAsm::DSS(ppu_opcode_t op)
+void PPUDisAsm::DSS(ppu_opcode_t)
 {
 	Write("dss()");
 }
@@ -1953,7 +1953,7 @@ void PPUDisAsm::SRADI(ppu_opcode_t op)
 	DisAsm_R2_INT1_RC("sradi", op.ra, op.rs, op.sh64, op.rc);
 }
 
-void PPUDisAsm::EIEIO(ppu_opcode_t op)
+void PPUDisAsm::EIEIO(ppu_opcode_t)
 {
 	Write("eieio");
 }
@@ -2345,7 +2345,7 @@ void PPUDisAsm::FCFID(ppu_opcode_t op)
 
 extern std::vector<std::string> g_ppu_function_names;
 
-void PPUDisAsm::UNK(ppu_opcode_t op)
+void PPUDisAsm::UNK(ppu_opcode_t)
 {
 	if (ppu_function_manager::addr)
 	{

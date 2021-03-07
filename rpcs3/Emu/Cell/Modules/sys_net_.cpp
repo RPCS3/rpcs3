@@ -6,6 +6,11 @@
 
 LOG_CHANNEL(libnet);
 
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
 s32 sys_net_accept(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen)
 {
 	libnet.todo("accept(s=%d, addr=*0x%x, paddrlen=*0x%x)", s, addr, paddrlen);

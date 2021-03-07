@@ -79,7 +79,7 @@ struct syscache_info
 		// Poison opened files in /dev_hdd1 to return CELL_EIO on access
 		if (remove_root)
 		{
-			idm::select<lv2_fs_object, lv2_file>([](u32 id, lv2_file& file)
+			idm::select<lv2_fs_object, lv2_file>([](u32 /*id*/, lv2_file& file)
 			{
 				if (std::memcmp("/dev_hdd1", file.name.data(), 9) == 0)
 				{

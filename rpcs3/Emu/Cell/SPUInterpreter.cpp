@@ -93,7 +93,7 @@ namespace asmjit
 	}
 }
 
-bool spu_interpreter::UNK(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::UNK(spu_thread&, spu_opcode_t op)
 {
 	fmt::throw_exception("Unknown/Illegal instruction (0x%08x)", op.opcode);
 }
@@ -135,20 +135,20 @@ bool spu_interpreter::STOP(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter::LNOP(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::LNOP(spu_thread&, spu_opcode_t)
 {
 	return true;
 }
 
 // This instruction must be used following a store instruction that modifies the instruction stream.
-bool spu_interpreter::SYNC(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::SYNC(spu_thread&, spu_opcode_t)
 {
 	atomic_fence_seq_cst();
 	return true;
 }
 
 // This instruction forces all earlier load, store, and channel instructions to complete before proceeding.
-bool spu_interpreter::DSYNC(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::DSYNC(spu_thread&, spu_opcode_t)
 {
 	atomic_fence_seq_cst();
 	return true;
@@ -416,7 +416,7 @@ bool spu_interpreter::AVGB(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter::MTSPR(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::MTSPR(spu_thread&, spu_opcode_t)
 {
 	// SPR writes are ignored. TODO: check it.
 	return true;
@@ -482,7 +482,7 @@ bool spu_interpreter::BIHNZ(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter::STOPD(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::STOPD(spu_thread& spu, spu_opcode_t)
 {
 	return spu.stop_and_signal(0x3fff);
 }
@@ -531,7 +531,7 @@ bool spu_interpreter::BISLED(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter::HBR(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::HBR(spu_thread&, spu_opcode_t)
 {
 	return true;
 }
@@ -834,7 +834,7 @@ bool spu_interpreter::SHLQBYI(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter::NOP(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::NOP(spu_thread&, spu_opcode_t)
 {
 	return true;
 }
@@ -990,7 +990,7 @@ bool spu_interpreter_fast::FCGT(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter::DFCGT(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::DFCGT(spu_thread&, spu_opcode_t)
 {
 	fmt::throw_exception("Unexpected instruction");
 	return true;
@@ -1077,7 +1077,7 @@ bool spu_interpreter_fast::FCMGT(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter::DFCMGT(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::DFCMGT(spu_thread&, spu_opcode_t)
 {
 	fmt::throw_exception("Unexpected Instruction");
 	return true;
@@ -1220,12 +1220,12 @@ bool spu_interpreter_fast::FRDS(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter_fast::FSCRWR(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter_fast::FSCRWR(spu_thread&, spu_opcode_t)
 {
 	return true;
 }
 
-bool spu_interpreter::DFTSV(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::DFTSV(spu_thread&, spu_opcode_t)
 {
 	fmt::throw_exception("Unexpected instruction");
 	return true;
@@ -1237,7 +1237,7 @@ bool spu_interpreter_fast::FCEQ(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter::DFCEQ(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::DFCEQ(spu_thread&, spu_opcode_t)
 {
 	fmt::throw_exception("Unexpected instruction");
 	return true;
@@ -1281,7 +1281,7 @@ bool spu_interpreter_fast::FCMEQ(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-bool spu_interpreter::DFCMEQ(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::DFCMEQ(spu_thread&, spu_opcode_t)
 {
 	fmt::throw_exception("Unexpected instruction");
 	return true;
@@ -1667,12 +1667,12 @@ bool spu_interpreter::HEQI(spu_thread& spu, spu_opcode_t op)
 }
 
 
-bool spu_interpreter::HBRA(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::HBRA(spu_thread&, spu_opcode_t)
 {
 	return true;
 }
 
-bool spu_interpreter::HBRR(spu_thread& spu, spu_opcode_t op)
+bool spu_interpreter::HBRR(spu_thread&, spu_opcode_t)
 {
 	return true;
 }
@@ -1713,7 +1713,7 @@ bool spu_interpreter::SHUFB(spu_thread& spu, spu_opcode_t op)
 	return true;
 }
 
-const spu_inter_func_t optimized_shufb = build_function_asm<spu_inter_func_t>([](asmjit::X86Assembler& c, auto& args)
+const spu_inter_func_t optimized_shufb = build_function_asm<spu_inter_func_t>([](asmjit::X86Assembler& c, auto& /*args*/)
 {
 	using namespace asmjit;
 

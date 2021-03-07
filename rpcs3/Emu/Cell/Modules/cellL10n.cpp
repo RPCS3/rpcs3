@@ -343,7 +343,7 @@ s32 JISstoUTF8s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::pt
 
 s32 SjisZen2Han(vm::cptr<u16> src)
 {
-	cellL10n.todo("SjisZen2Han()");
+	cellL10n.todo("SjisZen2Han(src=*0x%x)", src);
 	return ConversionOK;
 }
 

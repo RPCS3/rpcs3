@@ -744,7 +744,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 		return path.starts_with(from) && (path.size() == from.size() || path[from.size()] == fs::delim[0] || path[from.size()] == fs::delim[1]);
 	};
 
-	idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
+	idm::select<lv2_fs_object, lv2_file>([&](u32 /*id*/, lv2_file& file)
 	{
 		if (check_path(fs::escape_path(file.real_path)))
 		{
@@ -773,7 +773,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	const auto fs_error = fs::g_tls_error;
 
-	idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
+	idm::select<lv2_fs_object, lv2_file>([&](u32 /*id*/, lv2_file& file)
 	{
 		const auto escaped_real = fs::escape_path(file.real_path);
 
@@ -797,7 +797,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 	return res;
 }
 
-bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
+bool vfs::host::unlink(const std::string& path, [[maybe_unused]] const std::string& dev_root)
 {
 #ifdef _WIN32
 	if (auto device = fs::get_virtual_device(path))
@@ -831,7 +831,7 @@ bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 #endif
 }
 
-bool vfs::host::remove_all(const std::string& path, const std::string& dev_root, const lv2_fs_mount_point* mp, bool remove_root)
+bool vfs::host::remove_all(const std::string& path, [[maybe_unused]] const std::string& dev_root, [[maybe_unused]] const lv2_fs_mount_point* mp, bool remove_root)
 {
 #ifdef _WIN32
 	if (remove_root)

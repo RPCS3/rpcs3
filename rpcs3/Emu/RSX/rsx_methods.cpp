@@ -15,20 +15,20 @@ namespace rsx
 
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 
-	void invalid_method(thread* rsx, u32 _reg, u32 arg)
+	void invalid_method(thread* rsx, u32 reg, u32 arg)
 	{
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
 		const u32 cmd = rsx->get_fifo_cmd();
-		rsx_log.error("Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg,
+		rsx_log.error("Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", reg << 2, arg,
 		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
 		rsx->recover_fifo();
 	}
 
-	static void trace_method(thread* rsx, u32 _reg, u32 arg)
+	static void trace_method(thread* /*rsx*/, u32 reg, u32 arg)
 	{
 		// For unknown yet valid methods
-		rsx_log.trace("RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
+		rsx_log.trace("RSX method 0x%x (arg=0x%x)", reg << 2, arg);
 	}
 
 	template<typename Type> struct vertex_data_type_from_element_type;
@@ -40,7 +40,7 @@ namespace rsx
 
 	namespace nv406e
 	{
-		void set_reference(thread* rsx, u32 _reg, u32 arg)
+		void set_reference(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			rsx->sync();
 
@@ -48,7 +48,7 @@ namespace rsx
 			vm::_ref<atomic_be_t<u64>>(rsx->dma_address + ::offset32(&RsxDmaControl::get)).store(u64{rsx->fifo_ctrl->get_pos()} << 32 | arg);
 		}
 
-		void semaphore_acquire(thread* rsx, u32 /*_reg*/, u32 arg)
+		void semaphore_acquire(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			rsx->sync_point_request.release(true);
 			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
@@ -114,7 +114,7 @@ namespace rsx
 			rsx->performance_counters.idle_time += (get_system_time() - start);
 		}
 
-		void semaphore_release(thread* rsx, u32 /*_reg*/, u32 arg)
+		void semaphore_release(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			rsx->sync();
 
@@ -150,7 +150,7 @@ namespace rsx
 
 	namespace nv4097
 	{
-		void clear(thread* rsx, u32 _reg, u32 arg)
+		void clear(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			rsx->clear_surface(arg);
 
@@ -160,7 +160,7 @@ namespace rsx
 			}
 		}
 
-		void clear_zcull(thread* rsx, u32 _reg, u32 arg)
+		void clear_zcull(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 		{
 			if (rsx->capture_current_frame)
 			{
@@ -168,9 +168,9 @@ namespace rsx
 			}
 		}
 
-		void set_cull_face(thread* rsx, u32 reg, u32 arg)
+		void set_cull_face(thread* /*rsx*/, u32 reg, u32 arg)
 		{
-			switch(arg)
+			switch (arg)
 			{
 			case CELL_GCM_FRONT_AND_BACK:
 			case CELL_GCM_FRONT:
@@ -182,7 +182,7 @@ namespace rsx
 			}
 		}
 
-		void set_notify(thread* rsx, u32 _reg, u32 arg)
+		void set_notify(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 		{
 			const u32 location = method_registers.context_dma_notify();
 			const u32 index = (location & 0x7) ^ 0x7;
@@ -204,7 +204,7 @@ namespace rsx
 			});
 		}
 
-		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
+		void texture_read_semaphore_release(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
 			g_fxo->get<rsx::dma_manager>().sync();
@@ -227,7 +227,7 @@ namespace rsx
 			vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097())).val = arg;
 		}
 
-		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
+		void back_end_write_semaphore_release(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			// Full pipeline barrier
 			g_fxo->get<rsx::dma_manager>().sync();
@@ -295,7 +295,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data4ub_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4UB_M, index, 4, 4, u8>(rsx, arg);
 			}
@@ -304,7 +304,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data1f_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 1, 1, f32>(rsx, arg);
 			}
@@ -313,7 +313,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data2f_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2F_M, index, 2, 2, f32>(rsx, arg);
 			}
@@ -322,7 +322,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data3f_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				//Register alignment is only 1, 2, or 4 (Rachet & Clank 2)
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA3F_M, index, 3, 4, f32>(rsx, arg);
@@ -332,7 +332,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data4f_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4F_M, index, 4, 4, f32>(rsx, arg);
 			}
@@ -341,7 +341,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data2s_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2S_M, index, 2, 2, u16>(rsx, arg);
 			}
@@ -350,7 +350,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data4s_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, 4, u16>(rsx, arg);
 			}
@@ -359,7 +359,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data_scaled4s_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA_SCALED4S_M, index, 4, 4, s16>(rsx, arg);
 			}
@@ -380,7 +380,7 @@ namespace rsx
 				rsx->append_array_element(arg);
 		}
 
-		void draw_arrays(thread* rsx, u32 _reg, u32 arg)
+		void draw_arrays(thread* /*rsx*/, u32 /*reg*/, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
 			rsx::registers_decoder<NV4097_DRAW_ARRAYS>::decoded_type v(arg);
@@ -388,7 +388,7 @@ namespace rsx
 			rsx::method_registers.current_draw_clause.append(v.start(), v.count());
 		}
 
-		void draw_index_array(thread* rsx, u32 _reg, u32 arg)
+		void draw_index_array(thread* /*rsx*/, u32 /*reg*/, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
 			rsx::registers_decoder<NV4097_DRAW_INDEX_ARRAY>::decoded_type v(arg);
@@ -396,7 +396,7 @@ namespace rsx
 			rsx::method_registers.current_draw_clause.append(v.start(), v.count());
 		}
 
-		void draw_inline_array(thread* rsx, u32 _reg, u32 arg)
+		void draw_inline_array(thread* /*rsx*/, u32 /*reg*/, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::inlined_array;
 			rsx::method_registers.current_draw_clause.inline_vertex_array.push_back(arg);
@@ -405,7 +405,7 @@ namespace rsx
 		template<u32 index>
 		struct set_transform_constant
 		{
-			static void impl(thread* rsx, u32 /*_reg*/, u32 /*arg*/)
+			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 			{
 				static constexpr u32 reg = index / 4;
 				static constexpr u8 subreg = index % 4;
@@ -451,7 +451,7 @@ namespace rsx
 		template<u32 index>
 		struct set_transform_program
 		{
-			static void impl(thread* rsx, u32 /*_reg*/, u32 /*arg*/)
+			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 			{
 				// Get real args count
 				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
@@ -496,7 +496,7 @@ namespace rsx
 			}
 		}
 
-		void set_begin_end(thread* rsxthr, u32 _reg, u32 arg)
+		void set_begin_end(thread* rsxthr, u32 /*reg*/, u32 arg)
 		{
 			// Ignore upper bits
 			if (const u8 prim = static_cast<u8>(arg))
@@ -575,7 +575,7 @@ namespace rsx
 			return vm::cast(get_address(offset, location));
 		}
 
-		void get_report(thread* rsx, u32 _reg, u32 arg)
+		void get_report(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			u8 type = arg >> 24;
 			u32 offset = arg & 0xffffff;
@@ -608,7 +608,7 @@ namespace rsx
 			}
 		}
 
-		void clear_report_value(thread* rsx, u32 _reg, u32 arg)
+		void clear_report_value(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			switch (arg)
 			{
@@ -790,7 +790,7 @@ namespace rsx
 			}
 		}
 
-		void set_blend_equation(thread* rsx, u32 reg, u32 arg)
+		void set_blend_equation(thread* /*rsx*/, u32 reg, u32 arg)
 		{
 			for (u32 i = 0; i < 32u; i += 16)
 			{
@@ -816,7 +816,7 @@ namespace rsx
 			}
 		}
 
-		void set_blend_factor(thread* rsx, u32 reg, u32 arg)
+		void set_blend_factor(thread* /*rsx*/, u32 reg, u32 arg)
 		{
 			for (u32 i = 0; i < 32u; i += 16)
 			{
@@ -850,7 +850,7 @@ namespace rsx
 		template<u32 index>
 		struct set_texture_dirty_bit
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 			{
 				rsx->m_textures_dirty[index] = true;
 
@@ -864,7 +864,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_texture_dirty_bit
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 			{
 				rsx->m_vertex_textures_dirty[index] = true;
 
@@ -881,7 +881,7 @@ namespace rsx
 		template<u32 index>
 		struct color
 		{
-			static void impl(thread* rsx, u32 /*_reg*/, u32 /*arg*/)
+			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 			{
 				const u32 out_x_max = method_registers.nv308a_size_out_x();
 
@@ -1002,7 +1002,7 @@ namespace rsx
 
 	namespace nv3089
 	{
-		void image_in(thread *rsx, u32 _reg, u32 arg)
+		void image_in(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 		{
 			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
 
@@ -1471,7 +1471,7 @@ namespace rsx
 
 	namespace nv0039
 	{
-		void buffer_notify(thread *rsx, u32, u32 arg)
+		void buffer_notify(thread* rsx, u32, u32 arg)
 		{
 			s32 in_pitch = method_registers.nv0039_input_pitch();
 			s32 out_pitch = method_registers.nv0039_output_pitch();
@@ -1618,7 +1618,7 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* /*rsx*/, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
 			}
@@ -1627,7 +1627,7 @@ namespace rsx
 		template<u32 index>
 		struct queue_flip
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* /*rsx*/, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}

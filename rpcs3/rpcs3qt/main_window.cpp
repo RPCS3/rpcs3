@@ -2017,11 +2017,6 @@ void main_window::CreateConnects()
 		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater currently isn't available for your os."));
 		return;
 #endif
-		if(!Emu.IsStopped())
-		{
-			QMessageBox::warning(this, tr("Auto-updater"), tr("Please stop the emulation before trying to update."));
-			return;
-		}
 		m_updater.check_for_updates(false, false, this);
 	});
 

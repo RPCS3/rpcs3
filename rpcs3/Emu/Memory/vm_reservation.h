@@ -36,7 +36,7 @@ namespace vm
 	};
 
 	// Get reservation status for further atomic update: last update timestamp
-	inline atomic_t<u64>& reservation_acquire(u32 addr, u32 size)
+	inline atomic_t<u64>& reservation_acquire(u32 addr)
 	{
 		// Access reservation info: stamp and the lock bit
 		return *reinterpret_cast<atomic_t<u64>*>(g_reservations + (addr & 0xff80) / 2);
@@ -46,7 +46,7 @@ namespace vm
 	void reservation_update(u32 addr);
 
 	// Get reservation sync variable
-	inline atomic_t<u64>& reservation_notifier(u32 addr, u32 size)
+	inline atomic_t<u64>& reservation_notifier(u32 addr)
 	{
 		return *reinterpret_cast<atomic_t<u64>*>(g_reservations + (addr & 0xff80) / 2);
 	}
@@ -67,7 +67,7 @@ namespace vm
 
 	inline std::pair<atomic_t<u64>&, u64> reservation_lock(u32 addr)
 	{
-		auto res = &vm::reservation_acquire(addr, 1);
+		auto res = &vm::reservation_acquire(addr);
 		auto rtime = res->load();
 
 		if (rtime & 127 || !reservation_try_lock(*res, rtime)) [[unlikely]]
@@ -105,7 +105,7 @@ namespace vm
 		// Use 128-byte aligned addr
 		const u32 addr = static_cast<u32>(ptr.addr()) & -128;
 
-		auto& res = vm::reservation_acquire(addr, 128);
+		auto& res = vm::reservation_acquire(addr);
 		//_m_prefetchw(&res);
 
 		if (g_use_rtm)
@@ -346,7 +346,7 @@ namespace vm
 				}
 			}
 
-			const u64 rtime = vm::reservation_acquire(addr, 128);
+			const u64 rtime = vm::reservation_acquire(addr);
 
 			if (rtime & 127)
 			{
@@ -358,7 +358,7 @@ namespace vm
 			{
 				std::invoke(op, *ptr);
 
-				if (rtime == vm::reservation_acquire(addr, 128))
+				if (rtime == vm::reservation_acquire(addr))
 				{
 					return;
 				}
@@ -367,7 +367,7 @@ namespace vm
 			{
 				auto res = std::invoke(op, *ptr);
 
-				if (rtime == vm::reservation_acquire(addr, 128))
+				if (rtime == vm::reservation_acquire(addr))
 				{
 					return res;
 				}
@@ -385,7 +385,7 @@ namespace vm
 		const auto sptr = vm::get_super_ptr<T>(addr);
 
 		// "Lock" reservation
-		auto& res = vm::reservation_acquire(addr, 128);
+		auto& res = vm::reservation_acquire(addr);
 
 		auto [_old, _ok] = res.fetch_op([&](u64& r)
 		{

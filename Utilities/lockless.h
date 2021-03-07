@@ -308,7 +308,7 @@ public:
 	}
 
 	template <atomic_wait::op Flags = atomic_wait::op::eq>
-	void wait(std::nullptr_t null = nullptr) noexcept
+	void wait(std::nullptr_t /*null*/ = nullptr) noexcept
 	{
 		if (m_head == nullptr)
 		{

@@ -99,7 +99,7 @@ u8 rsx::internals::get_pixel_size(rsx::surface_depth_format format)
 	fmt::throw_exception("Unknown depth format");
 }
 
-void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
+void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*skip_reading*/)
 {
 	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
 	if (m_current_framebuffer_context == context && !m_rtts_dirty && m_draw_fbo)

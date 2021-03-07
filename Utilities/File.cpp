@@ -1328,7 +1328,7 @@ fs::file::file(const void* ptr, usz size)
 		{
 		}
 
-		bool trunc(u64 length) override
+		bool trunc(u64) override
 		{
 			return false;
 		}
@@ -1349,7 +1349,7 @@ fs::file::file(const void* ptr, usz size)
 			return 0;
 		}
 
-		u64 write(const void* buffer, u64 count) override
+		u64 write(const void*, u64) override
 		{
 			return 0;
 		}
@@ -1854,7 +1854,7 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 			return result;
 		}
 
-		bool trunc(u64 length) override
+		bool trunc(u64) override
 		{
 			return false;
 		}
@@ -1897,7 +1897,7 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 			return 0;
 		}
 
-		u64 write(const void* buffer, u64 size) override
+		u64 write(const void*, u64) override
 		{
 			return 0;
 		}

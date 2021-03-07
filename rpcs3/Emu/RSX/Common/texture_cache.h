@@ -1226,7 +1226,7 @@ namespace rsx
 		}
 
 		template <typename ...Args>
-		void discard_framebuffer_memory_region(commandbuffer_type& cmd, const address_range& rsx_range, Args&&... extras)
+		void discard_framebuffer_memory_region(commandbuffer_type& /*cmd*/, const address_range& rsx_range, Args&&... /*extras*/)
 		{
 			if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
 			{
@@ -1565,7 +1565,7 @@ namespace rsx
 			}
 		}
 
-		template <typename surface_store_type, typename ...Args>
+		template <typename SurfaceStoreType, typename... Args>
 		sampled_image_descriptor fast_texture_search(
 			commandbuffer_type& cmd,
 			const image_section_attributes_t& attr,
@@ -1575,7 +1575,7 @@ namespace rsx
 			const texture_cache_search_options& options,
 			const utils::address_range& memory_range,
 			rsx::texture_dimension_extended extended_dimension,
-			surface_store_type& m_rtts, Args&& ... extras)
+			SurfaceStoreType& m_rtts, Args&&... /*extras*/)
 		{
 			if (options.is_compressed_format) [[likely]]
 			{
@@ -1609,7 +1609,7 @@ namespace rsx
 					}
 				}
 
-				std::vector<typename surface_store_type::surface_overlap_info> overlapping_fbos;
+				std::vector<typename SurfaceStoreType::surface_overlap_info> overlapping_fbos;
 				std::vector<section_storage_type*> overlapping_locals;
 
 				auto fast_fbo_check = [&]() -> sampled_image_descriptor
