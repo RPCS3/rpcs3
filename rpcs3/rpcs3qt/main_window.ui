@@ -256,6 +256,7 @@
     <addaction name="toolsStringSearchAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
+    <addaction name="toolsExtractMSELFAct"/>
     <addaction name="separator"/>
     <addaction name="actionopen_rsx_capture"/>
     <addaction name="separator"/>
@@ -624,6 +625,11 @@
   <action name="toolsDecryptSprxLibsAct">
    <property name="text">
     <string>Decrypt PS3 Binaries</string>
+   </property>
+  </action>
+  <action name="toolsExtractMSELFAct">
+   <property name="text">
+    <string>Extract MSELF</string>
    </property>
   </action>
   <action name="showDebuggerAct">
