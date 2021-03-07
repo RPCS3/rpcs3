@@ -33,6 +33,8 @@ else()
 	add_compile_options(-Werror=return-type)
 	add_compile_options(-Werror=overloaded-virtual)
 	add_compile_options(-Wunused-parameter)
+	add_compile_options(-Wignored-qualifiers)
+	#add_compile_options(-Wdeprecated-copy)
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-Werror=inconsistent-missing-override)

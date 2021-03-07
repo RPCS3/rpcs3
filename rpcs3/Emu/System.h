@@ -192,14 +192,14 @@ public:
 	}
 
 	// u32 for cell.
-	const u32 GetUsrId() const
+	u32 GetUsrId() const
 	{
 		return m_usrid;
 	}
 
-	const bool SetUsr(const std::string& user);
+	bool SetUsr(const std::string& user);
 
-	const std::string GetBackgroundPicturePath() const;
+	std::string GetBackgroundPicturePath() const;
 
 	u64 GetPauseTime()
 	{

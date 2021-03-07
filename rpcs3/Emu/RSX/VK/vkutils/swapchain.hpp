@@ -117,12 +117,12 @@ namespace vk
 			return dev;
 		}
 
-		const VkFormat get_surface_format()
+		VkFormat get_surface_format()
 		{
 			return m_surface_format;
 		}
 
-		const bool is_headless() const
+		bool is_headless() const
 		{
 			return (dev.get_present_queue() == VK_NULL_HANDLE);
 		}

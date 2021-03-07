@@ -97,7 +97,7 @@ DECLARE(spu_runtime::tr_interpreter) = []
 DECLARE(spu_runtime::g_dispatcher) = []
 {
 	// Allocate 2^20 positions in data area
-	const auto ptr = reinterpret_cast<decltype(g_dispatcher)>(jit_runtime::alloc(sizeof(*g_dispatcher), 64, false));
+	const auto ptr = reinterpret_cast<std::remove_const_t<decltype(spu_runtime::g_dispatcher)>>(jit_runtime::alloc(sizeof(*g_dispatcher), 64, false));
 
 	for (auto& x : *ptr)
 	{

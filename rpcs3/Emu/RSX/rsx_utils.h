@@ -578,12 +578,12 @@ namespace rsx
 		}
 	}
 
-	static inline const f32 get_resolution_scale()
+	static inline f32 get_resolution_scale()
 	{
 		return g_cfg.video.strict_rendering_mode ? 1.f : (g_cfg.video.resolution_scale_percent / 100.f);
 	}
 
-	static inline const int get_resolution_scale_percent()
+	static inline int get_resolution_scale_percent()
 	{
 		return g_cfg.video.strict_rendering_mode ? 100 : g_cfg.video.resolution_scale_percent;
 	}
@@ -951,8 +951,8 @@ namespace rsx
 	struct simple_array
 	{
 	public:
-		using iterator = Ty * ;
-		using const_iterator = Ty * const;
+		using iterator = Ty*;
+		using const_iterator = const Ty*;
 
 	private:
 		u32 _capacity = 0;

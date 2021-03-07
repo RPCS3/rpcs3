@@ -255,12 +255,12 @@ namespace vk
 		g_num_total_frames++;
 	}
 
-	const u64 get_current_frame_id()
+	u64 get_current_frame_id()
 	{
 		return g_num_total_frames;
 	}
 
-	const u64 get_last_completed_frame_id()
+	u64 get_last_completed_frame_id()
 	{
 		return (g_num_processed_frames > 0)? g_num_processed_frames - 1: 0;
 	}

@@ -465,7 +465,7 @@ namespace
 	};
 }
 
-const bool Emulator::SetUsr(const std::string& user)
+bool Emulator::SetUsr(const std::string& user)
 {
 	if (user.empty())
 	{
@@ -485,7 +485,7 @@ const bool Emulator::SetUsr(const std::string& user)
 	return true;
 }
 
-const std::string Emulator::GetBackgroundPicturePath() const
+std::string Emulator::GetBackgroundPicturePath() const
 {
 	// Try to find a custom icon first
 	std::string path = fs::get_config_dir() + "/Icons/game_icons/" + Emu.GetTitleID() + "/PIC1.PNG";
@@ -1661,7 +1661,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 					extern const std::map<std::string_view, int> g_prx_list;
 
-					// Check if there are any firmware SPRX which may be LLEd during emulation 
+					// Check if there are any firmware SPRX which may be LLEd during emulation
 					// Don't prompt GUI confirmation if there aren't any
 					if (std::any_of(g_prx_list.begin(), g_prx_list.end(), [&libs](auto& lib)
 					{

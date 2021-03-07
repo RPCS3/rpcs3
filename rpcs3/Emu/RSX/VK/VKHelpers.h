@@ -106,8 +106,8 @@ namespace vk
 
 	void advance_completed_frame_counter();
 	void advance_frame_counter();
-	const u64 get_current_frame_id();
-	const u64 get_last_completed_frame_id();
+	u64 get_current_frame_id();
+	u64 get_last_completed_frame_id();
 
 	// Handle unexpected submit with dangling occlusion query
 	// TODO: Move queries out of the renderer!
