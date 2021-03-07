@@ -919,7 +919,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* pad_configure = menu.addAction(gameinfo->hasCustomPadConfig
 		? tr("&Change Custom Gamepad Configuration")
 		: tr("&Create Custom Gamepad Configuration"));
-	QAction* configure_patches = menu.addAction(tr("&Configure Game Patches"));
+	QAction* configure_patches = menu.addAction(tr("&Manage Game Patches"));
 	QAction* create_ppu_cache = menu.addAction(tr("&Create PPU Cache"));
 	menu.addSeparator();
 	QAction* rename_title = menu.addAction(tr("&Rename In Game List"));
@@ -1099,7 +1099,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 		}
 	});
-	connect(configure_patches, &QAction::triggered, [this, current_game, gameinfo]()
+	connect(configure_patches, &QAction::triggered, [this, gameinfo]()
 	{
 		std::unordered_map<std::string, std::set<std::string>> games;
 		for (const auto& game : m_game_data)
@@ -1109,7 +1109,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 				games[game->info.serial].insert(game_list_frame::GetGameVersion(game));
 			}
 		}
-		patch_manager_dialog patch_manager(m_gui_settings, games, current_game.serial, this);
+		patch_manager_dialog patch_manager(m_gui_settings, games, gameinfo->info.serial, GetGameVersion(gameinfo), this);
 		patch_manager.exec();
 	});
 	connect(open_game_folder, &QAction::triggered, [current_game]()
