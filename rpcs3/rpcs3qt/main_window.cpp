@@ -1880,7 +1880,7 @@ void main_window::CreateConnects()
 				}
 			}
 		}
-		patch_manager_dialog patch_manager(m_gui_settings, games, "", this);
+		patch_manager_dialog patch_manager(m_gui_settings, games, "", "", this);
 		patch_manager.exec();
  	});
 

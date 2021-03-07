@@ -52,9 +52,11 @@ enum node_level : int
 	patch_level
 };
 
-patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::unordered_map<std::string, std::set<std::string>> games, const std::string& search_term, QWidget* parent)
+patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::unordered_map<std::string, std::set<std::string>> games, const std::string& title_id, const std::string& version, QWidget* parent)
 	: QDialog(parent)
 	, m_gui_settings(gui_settings)
+	, m_expand_current_match(!title_id.empty() && !version.empty()) // Expand first search results
+	, m_search_version(QString::fromStdString(version))
 	, m_owned_games(std::move(games))
 	, ui(new Ui::patch_manager_dialog)
 {
@@ -68,7 +70,7 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	m_show_owned_games_only = m_gui_settings->GetValue(gui::pm_show_owned).toBool();
 
 	// Initialize gui controls
-	ui->patch_filter->setText(QString::fromStdString(search_term));
+	ui->patch_filter->setText(QString::fromStdString(title_id));
 	ui->cb_owned_games_only->setChecked(m_show_owned_games_only);
 
 	ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setText(tr("Download latest patches"));
@@ -416,11 +418,61 @@ void patch_manager_dialog::filter_patches(const QString& term)
 		return visible_items;
 	};
 
+	bool found_version = false;
+
 	// Go through each top level item and try to find matches
 	for (auto top_level_item : ui->patch_tree->findItems(".*", Qt::MatchRegularExpression))
 	{
-		show_matches(top_level_item, false);
+		if (!top_level_item)
+			continue;
+
+		const int matches = show_matches(top_level_item, false);
+
+		if (matches <= 0 || !m_expand_current_match)
+			continue;
+
+		// Expand only items that match the serial and version
+		for (int i = 0; i < top_level_item->childCount(); i++)
+		{
+			if (const auto item = top_level_item->child(i);
+				item && !item->isHidden() && item->data(0, app_version_role).toString() == m_search_version)
+			{
+				// This should always be a serial level item
+				ensure(item->data(0, node_level_role) == node_level::serial_level);
+				top_level_item->setExpanded(true);
+				item->setExpanded(true);
+				found_version = true;
+				break;
+			}
+		}
 	}
+
+	if (m_expand_current_match && !found_version)
+	{
+		// Expand all matching top_level items if the correct version wasn't found
+		for (auto top_level_item : ui->patch_tree->findItems(".*", Qt::MatchRegularExpression))
+		{
+			if (!top_level_item || top_level_item->isHidden())
+				continue;
+
+			top_level_item->setExpanded(true);
+
+			// Expand the "All Versions" item
+			for (int i = 0; i < top_level_item->childCount(); i++)
+			{
+				if (const auto item = top_level_item->child(i);
+					item && !item->isHidden() && item->data(0, app_version_role).toString().toStdString() == patch_key::all)
+				{
+					// This should always be a serial level item
+					ensure(item->data(0, node_level_role) == node_level::serial_level);
+					item->setExpanded(true);
+					break;
+				}
+			}
+		}
+	}
+
+	m_expand_current_match = false;
 }
 
 void patch_manager_dialog::update_patch_info(const patch_manager_dialog::gui_patch_info& info)
