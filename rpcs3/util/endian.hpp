@@ -199,8 +199,6 @@ namespace stx
 			return value();
 		}
 
-		constexpr se_t& operator=(const se_t&) = default;
-
 		constexpr se_t& operator=(type value) noexcept
 		{
 			m_data = to_data(value);

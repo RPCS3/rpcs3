@@ -533,7 +533,7 @@ constexpr inline struct umax_helper
 #if __cpp_impl_three_way_comparison >= 201711 && !__INTELLISENSE__
 #else
 	template <typename T>
-	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator==(const T& lhs, const umax_helper& rhs)
+	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator==(const T& lhs, const umax_helper&)
 	{
 		return lhs == static_cast<simple_t<T>>(-1);
 	}
@@ -548,7 +548,7 @@ constexpr inline struct umax_helper
 	}
 
 	template <typename T>
-	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator!=(const T& lhs, const umax_helper& rhs)
+	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator!=(const T& lhs, const umax_helper&)
 	{
 		return lhs != static_cast<simple_t<T>>(-1);
 	}
