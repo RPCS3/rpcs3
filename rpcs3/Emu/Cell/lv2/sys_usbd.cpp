@@ -16,6 +16,7 @@
 #include "Emu/Io/Skylander.h"
 #include "Emu/Io/GHLtar.h"
 #include "Emu/Io/Buzz.h"
+#include "Emu/Io/Turntable.h"
 
 #include <libusb.h>
 
@@ -145,6 +146,7 @@ usb_handler_thread::usb_handler_thread()
 
 	bool found_skylander = false;
 	bool found_ghltar    = false;
+	bool found_turntable = false;
 
 	for (ssize_t index = 0; index < ndev; index++)
 	{
@@ -182,7 +184,10 @@ usb_handler_thread::usb_handler_thread()
 			found_ghltar = true;
 		}
 
-		check_device(0x12BA, 0x0140, 0x0140, "DJ Hero Turntable");
+		if (check_device(0x12BA, 0x0140, 0x0140, "DJ Hero Turntable"))
+		{
+			found_turntable = true;
+		}
 		check_device(0x12BA, 0x0200, 0x020F, "Harmonix Guitar");
 		check_device(0x12BA, 0x0210, 0x021F, "Harmonix Drums");
 		check_device(0x12BA, 0x2330, 0x233F, "Harmonix Keyboard");
@@ -226,6 +231,12 @@ usb_handler_thread::usb_handler_thread()
 	{
 		sys_usbd.notice("Adding emulated GHLtar");
 		usb_devices.push_back(std::make_shared<usb_device_ghltar>());
+	}
+
+	if (!found_turntable)
+	{
+		sys_usbd.notice("Adding emulated turntable");
+		usb_devices.push_back(std::make_shared<usb_device_turntable>());
 	}
 
 	if (g_cfg.io.buzz == buzz_handler::one_controller || g_cfg.io.buzz == buzz_handler::two_controllers)

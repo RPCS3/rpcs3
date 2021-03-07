@@ -369,6 +369,7 @@ target_sources(rpcs3_emu PRIVATE
 	Io/Skylander.cpp
 	Io/GHLtar.cpp
 	Io/Buzz.cpp
+	Io/Turntable.cpp
 )
 
 # Np
