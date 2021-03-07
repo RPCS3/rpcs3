@@ -6,7 +6,7 @@
 
 #include "mself.hpp"
 
-LOG_CHANNEL(mself_log);
+LOG_CHANNEL(mself_log, "MSELF");
 
 bool extract_mself(const std::string& file, const std::string& extract_to)
 {
@@ -69,9 +69,9 @@ bool extract_mself(const std::string& file, const std::string& extract_to)
 			return false;
 		}
 
-		mself_log.success("Extraction of %s from MSELF ccompleted. (its path: '%s')", name, extract_to + name);
+		mself_log.success("Extraction %s to '%s'", name, extract_to + name);
 	}
 
-	mself_log.success("MSELF extraction complete!");
+	mself_log.success("Extraction complete!");
 	return true;
 }
