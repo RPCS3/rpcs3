@@ -35,11 +35,14 @@ else()
 	add_compile_options(-Wunused-parameter)
 	add_compile_options(-Wignored-qualifiers)
 	#add_compile_options(-Wdeprecated-copy)
+	add_compile_options(-Wempty-body)
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-Werror=inconsistent-missing-override)
 	elseif(CMAKE_COMPILER_IS_GNUCXX)
 		add_compile_options(-Werror=suggest-override)
+		add_compile_options(-Wclobbered)
+		add_compile_options(-Wcast-function-type)
 	endif()
 
 	#TODO Clean the code so these are removed
