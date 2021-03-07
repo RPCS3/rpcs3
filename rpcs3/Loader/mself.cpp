@@ -69,7 +69,7 @@ bool extract_mself(const std::string& file, const std::string& extract_to)
 			return false;
 		}
 
-		mself_log.success("Extraction %s to '%s'", name, extract_to + name);
+		mself_log.success("Extracted '%s' to '%s'", name, extract_to + name);
 	}
 
 	mself_log.success("Extraction complete!");
