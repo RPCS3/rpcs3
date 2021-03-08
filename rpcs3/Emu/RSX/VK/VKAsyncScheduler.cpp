@@ -8,10 +8,15 @@
 
 #include <vector>
 
+#define WITH_CPU_SCHEDULER 1
+
 namespace vk
 {
 	void AsyncTaskScheduler::operator()()
 	{
+#if WITH_CPU_SCHEDULER
+		thread_ctrl::set_native_priority(1);
+
 		add_ref();
 
 		while (thread_ctrl::state() != thread_state::aborting)
@@ -24,6 +29,7 @@ namespace vk
 		}
 
 		release();
+#endif
 	}
 
 	void AsyncTaskScheduler::delayed_init()
@@ -61,8 +67,16 @@ namespace vk
 
 		sync_label->queue1_signal->signal(*m_current_cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0);
 
-		m_event_queue.push(sync_label);
-		m_sync_label = sync_label->queue2_signal.get();
+#if WITH_CPU_SCHEDULER
+		{
+			m_event_queue.push(sync_label);
+			m_sync_label = sync_label->queue2_signal.get();
+		}
+#else
+		{
+			m_sync_label = sync_label->queue1_signal.get();
+		}
+#endif
 	}
 
 	AsyncTaskScheduler::~AsyncTaskScheduler()
