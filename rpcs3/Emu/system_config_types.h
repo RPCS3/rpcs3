@@ -195,3 +195,9 @@ enum class shader_mode
 	async_with_interpreter,
 	interpreter_only
 };
+
+enum class vk_gpu_scheduler_mode
+{
+	host,
+	device
+};
