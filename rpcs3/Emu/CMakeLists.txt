@@ -319,6 +319,7 @@ target_sources(rpcs3_emu PRIVATE
 	Cell/Modules/sceNpTus.cpp
 	Cell/Modules/sceNpUtil.cpp
 	Cell/Modules/StaticHLE.cpp
+	Cell/Modules/sys_crashdump.cpp
 	Cell/Modules/sys_game.cpp
 	Cell/Modules/sys_heap.cpp
 	Cell/Modules/sys_io_.cpp

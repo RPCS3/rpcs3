@@ -261,6 +261,7 @@ public:
 	static const ppu_static_module sceNpTrophy;
 	static const ppu_static_module sceNpTus;
 	static const ppu_static_module sceNpUtil;
+	static const ppu_static_module sys_crashdump;
 	static const ppu_static_module sys_io;
 	static const ppu_static_module sys_net;
 	static const ppu_static_module sysPrxForUser;
