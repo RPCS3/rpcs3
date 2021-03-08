@@ -510,7 +510,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 		{
 			const u32 fnid = fnids[i];
 			const u32 faddr = faddrs[i];
-			ppu_loader.notice("**** %s export: [%s] at 0x%x", module_name, ppu_get_function_name(module_name, fnid), faddr);
+			ppu_loader.notice("**** %s export: [%s] (0x%08x) at 0x%x", module_name, ppu_get_function_name(module_name, fnid), fnid, faddr);
 
 			// Function linkage info
 			auto& flink = mlink.functions[fnid];
@@ -646,7 +646,7 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* l
 			const u32 fnid = fnids[i];
 			const u32 fstub = faddrs[i];
 			const u32 faddr = (faddrs + i).addr();
-			ppu_loader.notice("**** %s import: [%s] -> 0x%x", module_name, ppu_get_function_name(module_name, fnid), fstub);
+			ppu_loader.notice("**** %s import: [%s] (0x%08x) -> 0x%x", module_name, ppu_get_function_name(module_name, fnid), fnid, fstub);
 
 			// Function linkage info
 			auto& flink = link->modules[module_name].functions[fnid];
