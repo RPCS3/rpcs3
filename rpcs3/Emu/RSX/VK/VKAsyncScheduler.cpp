@@ -12,9 +12,11 @@ namespace vk
 {
 	void AsyncTaskScheduler::operator()()
 	{
+		init_config_options();
 		if (!m_use_host_scheduler)
 		{
 			// No need to keep the GPU alive using a CPU thread.
+			rsx_log.notice("Host scheduler is disabled. This thread will now exit.");
 			return;
 		}
 
@@ -36,8 +38,23 @@ namespace vk
 		release();
 	}
 
+	void AsyncTaskScheduler::init_config_options()
+	{
+		std::lock_guard lock(m_config_mutex);
+		if (std::exchange(m_options_initialized, true))
+		{
+			// Nothing to do
+			return;
+		}
+
+		m_use_host_scheduler = g_cfg.video.vk.asynchronous_scheduler == vk_gpu_scheduler_mode::host || g_cfg.video.strict_rendering_mode;
+		rsx_log.notice("Asynchronous task scheduler is active running in %s mode", m_use_host_scheduler? "'Host'" : "'Device'");
+	}
+
 	void AsyncTaskScheduler::delayed_init()
 	{
+		init_config_options();
+
 		auto pdev = get_current_renderer();
 		m_command_pool.create(*const_cast<render_device*>(pdev), pdev->get_transfer_queue_family());
 
@@ -45,20 +62,15 @@ namespace vk
 		{
 			auto ev1 = std::make_unique<event>(*get_current_renderer(), sync_domain::gpu);
 			auto ev2 = std::make_unique<event>(*get_current_renderer(), sync_domain::gpu);
-			m_events_pool.emplace_back(std::move(ev1), std::move(ev2), 0ull);
+			m_events_pool.emplace_back(ev1, ev2, 0ull);
 		}
-
-		m_use_host_scheduler = g_cfg.video.vk.asynchronous_scheduler == vk_gpu_scheduler_mode::host || g_cfg.video.strict_rendering_mode;
-		rsx_log.notice("Asynchronous task scheduler is active running in %s mode", m_use_host_scheduler? "'Host'" : "'Device'");
 	}
 
 	void AsyncTaskScheduler::insert_sync_event()
 	{
 		ensure(m_current_cb);
-
-		xqueue_event* sync_label;
 		ensure(m_next_event_id < events_pool_size);
-		sync_label = &m_events_pool[m_next_event_id];
+		auto sync_label = &m_events_pool[m_next_event_id];
 
 		if (++m_next_event_id == events_pool_size)
 		{
@@ -106,7 +118,6 @@ namespace vk
 		}
 
 		// 1. Check if there is a 'next' entry
-		auto pdev = get_current_renderer();
 		if (m_async_command_queue.empty())
 		{
 			delayed_init();
@@ -173,7 +184,7 @@ namespace vk
 	void AsyncTaskScheduler::kill()
 	{
 		g_fxo->get<async_scheduler_thread>() = thread_state::aborting;
-		while (has_refs()) _mm_pause();
+		while (has_refs());
 
 		for (auto& cb : m_async_command_queue)
 		{

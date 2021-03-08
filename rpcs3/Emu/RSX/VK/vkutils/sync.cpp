@@ -6,6 +6,7 @@
 #include "shared.h"
 
 #include "util/sysinfo.hpp"
+#include "util/asm.hpp"
 
 extern u64 get_system_time();
 
@@ -203,11 +204,11 @@ namespace vk
 			{
 				if (!start)
 				{
-					start = __rdtsc();
+					start = utils::get_tsc();
 					continue;
 				}
 
-				if (const auto now = __rdtsc();
+				if (const auto now = utils::get_tsc();
 					(now > start) &&
 					(now - start) > timeout)
 				{
