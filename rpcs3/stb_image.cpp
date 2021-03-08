@@ -16,6 +16,7 @@
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #include <stb_image.h>
 #include <stb_truetype.h>
 #pragma GCC diagnostic pop

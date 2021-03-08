@@ -1,5 +1,4 @@
 #pragma once
-#include "Utilities/hash.h"
 #include "Utilities/File.h"
 #include "Utilities/lockless.h"
 #include "Utilities/Thread.h"
@@ -17,6 +16,7 @@
 
 #include "util/vm.hpp"
 #include "util/sysinfo.hpp"
+#include "util/fnv_hash.hpp"
 
 namespace rsx
 {

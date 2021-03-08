@@ -2169,7 +2169,8 @@ namespace rsx
 		{
 			if (layout.attribute_placement[index] == attribute_buffer_placement::none)
 			{
-				reinterpret_cast<u64*>(buffer)[index] = 0;
+				static constexpr u64 zero = 0;
+				std::memcpy(buffer + index * 2, &zero, sizeof(zero));
 				continue;
 			}
 

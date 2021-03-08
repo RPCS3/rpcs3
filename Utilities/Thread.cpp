@@ -1261,7 +1261,9 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 	{
 		if (op == X64OP_NONE)
 		{
-			sig_log.error("decode_x64_reg_op(%p): unsupported opcode: %s", code, *reinterpret_cast<const be_t<v128, 1>*>(code));
+			be_t<v128> dump;
+			std::memcpy(&dump, code, sizeof(dump));
+			sig_log.error("decode_x64_reg_op(%p): unsupported opcode: %s", code, dump);
 		}
 	};
 

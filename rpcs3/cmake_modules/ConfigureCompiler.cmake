@@ -35,7 +35,13 @@ else()
 	add_compile_options(-Wunused-parameter)
 	add_compile_options(-Wignored-qualifiers)
 	#add_compile_options(-Wdeprecated-copy)
+	#add_compile_options(-Wtautological-compare)
+	#add_compile_options(-Wshadow)
+	#add_compile_options(-Wconversion)
+	#add_compile_options(-Wpadded)
 	add_compile_options(-Wempty-body)
+
+	add_compile_options(-Wstrict-aliasing=1)
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-Werror=inconsistent-missing-override)
@@ -43,6 +49,9 @@ else()
 		add_compile_options(-Werror=suggest-override)
 		add_compile_options(-Wclobbered)
 		add_compile_options(-Wcast-function-type)
+		#add_compile_options(-Wduplicated-branches)
+		#add_compile_options(-Wduplicated-cond)
+		#add_compile_options(-Wredundant-decls)
 	endif()
 
 	#TODO Clean the code so these are removed

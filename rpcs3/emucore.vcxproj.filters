@@ -1645,7 +1645,7 @@
     <ClInclude Include="Emu\RSX\Common\GLSLCommon.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\hash.h">
+    <ClInclude Include="util\fnv_hash.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\sys_gamepad.h">

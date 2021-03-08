@@ -258,6 +258,12 @@ namespace stx
 			r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
 			return r;
 		}
+
+		// Raw access for make_single()
+		auto& raw() noexcept
+		{
+			return m_ptr;
+		}
 	};
 
 #ifndef _MSC_VER
@@ -302,11 +308,11 @@ namespace stx
 
 		if constexpr (std::is_array_v<T>)
 		{
-			reinterpret_cast<etype*&>(r) = +ptr->m_data;
+			r.raw() = +ptr->m_data;
 		}
 		else
 		{
-			reinterpret_cast<etype*&>(r) = &ptr->m_data;
+			r.raw() = &ptr->m_data;
 		}
 
 		return r;
@@ -370,7 +376,7 @@ namespace stx
 		};
 
 		single_ptr<T> r;
-		reinterpret_cast<std::remove_extent_t<T>*&>(r) = std::launder(arr);
+		r.raw() = std::launder(arr);
 		return r;
 	}
 

@@ -211,6 +211,12 @@ namespace vm
 		{
 			return vm::try_access(vm::cast(m_addr), const_cast<T*>(&_in), sizeof(T), true);
 		}
+
+		// Don't use
+		auto& raw()
+		{
+			return m_addr;
+		}
 	};
 
 	template<typename AT, typename RT, typename... T>
@@ -260,6 +266,12 @@ namespace vm
 		_ptr_base<RT(T...), u32> operator +() const
 		{
 			return vm::cast(m_addr);
+		}
+
+		// Don't use
+		auto& raw()
+		{
+			return m_addr;
 		}
 
 		// Callback; defined in PPUCallback.h, passing context is mandatory

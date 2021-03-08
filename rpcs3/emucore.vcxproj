@@ -499,7 +499,7 @@
     <ClInclude Include="..\Utilities\CRC.h" />
     <ClInclude Include="..\Utilities\date_time.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
-    <ClInclude Include="..\Utilities\hash.h" />
+    <ClInclude Include="util\fnv_hash.hpp" />
     <ClInclude Include="..\Utilities\JIT.h" />
     <ClInclude Include="..\Utilities\lockless.h" />
     <ClInclude Include="..\Utilities\mutex.h" />

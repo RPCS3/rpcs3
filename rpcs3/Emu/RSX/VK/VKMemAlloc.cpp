@@ -45,6 +45,7 @@ private:
 #pragma GCC diagnostic ignored "-Wunused-variable"
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Winconsistent-missing-override"
 #endif

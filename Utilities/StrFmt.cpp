@@ -344,7 +344,9 @@ struct fmt::cfmt_src
 	template <typename T>
 	T get(usz index) const
 	{
-		return *reinterpret_cast<const T*>(reinterpret_cast<const u8*>(args + index));
+		T res{};
+		std::memcpy(&res, reinterpret_cast<const u8*>(args + index), sizeof(res));
+		return res;
 	}
 
 	void skip(usz extra)
