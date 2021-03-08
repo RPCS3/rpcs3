@@ -8,13 +8,18 @@
 
 #include <vector>
 
-#define WITH_CPU_SCHEDULER 1
-
 namespace vk
 {
 	void AsyncTaskScheduler::operator()()
 	{
-#if WITH_CPU_SCHEDULER
+		if (!m_use_host_scheduler)
+		{
+			// No need to keep the GPU alive using a CPU thread.
+			return;
+		}
+
+		// If this thread is unavailable for too long, your GPU will hard crash and force a full reset
+		// TODO: Investigate if this can be executed outside the application context. Attach a debugger to rpcs3 and boom - GPU reset. Not fun rebooting so often.
 		thread_ctrl::set_native_priority(1);
 
 		add_ref();
@@ -29,7 +34,6 @@ namespace vk
 		}
 
 		release();
-#endif
 	}
 
 	void AsyncTaskScheduler::delayed_init()
@@ -43,6 +47,9 @@ namespace vk
 			auto ev2 = std::make_unique<event>(*get_current_renderer(), sync_domain::gpu);
 			m_events_pool.emplace_back(std::move(ev1), std::move(ev2), 0ull);
 		}
+
+		m_use_host_scheduler = g_cfg.video.vk.asynchronous_scheduler == vk_gpu_scheduler_mode::host || g_cfg.video.strict_rendering_mode;
+		rsx_log.notice("Asynchronous task scheduler is active running in %s mode", m_use_host_scheduler? "'Host'" : "'Device'");
 	}
 
 	void AsyncTaskScheduler::insert_sync_event()
@@ -67,16 +74,15 @@ namespace vk
 
 		sync_label->queue1_signal->signal(*m_current_cb, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0);
 
-#if WITH_CPU_SCHEDULER
+		if (m_use_host_scheduler)
 		{
 			m_event_queue.push(sync_label);
 			m_sync_label = sync_label->queue2_signal.get();
 		}
-#else
+		else
 		{
 			m_sync_label = sync_label->queue1_signal.get();
 		}
-#endif
 	}
 
 	AsyncTaskScheduler::~AsyncTaskScheduler()

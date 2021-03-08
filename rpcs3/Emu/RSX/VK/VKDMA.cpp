@@ -262,9 +262,16 @@ namespace vk
 		bool allow_host_buffers;
 		if (vendor == driver_vendor::NVIDIA)
 		{
-			allow_host_buffers = (chip != chip_class::NV_mobile_kepler) ?
-				test_host_pointer(base_address, expected_length) :
-				false;
+			if (g_cfg.video.vk.asynchronous_texture_streaming)
+			{
+				allow_host_buffers = (chip != chip_class::NV_mobile_kepler) ?
+					test_host_pointer(base_address, expected_length) :
+					false;
+			}
+			else
+			{
+				allow_host_buffers = false;
+			}
 		}
 		else
 		{

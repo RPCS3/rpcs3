@@ -421,3 +421,18 @@ void fmt_class_string<audio_downmix>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+template <>
+void fmt_class_string<vk_gpu_scheduler_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](vk_gpu_scheduler_mode value)
+	{
+		switch (value)
+		{
+		case vk_gpu_scheduler_mode::host: return "Host";
+		case vk_gpu_scheduler_mode::device: return "Device";
+		}
+
+		return unknown;
+	});
+}

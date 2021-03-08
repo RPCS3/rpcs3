@@ -27,6 +27,9 @@ namespace vk
 		command_buffer* m_current_cb = nullptr;
 		usz m_next_cb_index = 0;
 
+		// Scheduler
+		bool m_use_host_scheduler = false;
+
 		// Sync
 		event* m_sync_label = nullptr;
 		atomic_t<bool> m_sync_required = false;
