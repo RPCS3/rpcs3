@@ -14,6 +14,11 @@ namespace vk
 		std::unique_ptr<event> queue1_signal;
 		std::unique_ptr<event> queue2_signal;
 		u64 completion_eid;
+
+		xqueue_event(): completion_eid(0) {}
+		xqueue_event(std::unique_ptr<event>& trigger, std::unique_ptr<event>& payload, u64 eid)
+			: queue1_signal(std::move(trigger)), queue2_signal(std::move(payload)), completion_eid(eid)
+		{}
 	};
 
 	class AsyncTaskScheduler : private rsx::ref_counted
@@ -28,6 +33,8 @@ namespace vk
 		usz m_next_cb_index = 0;
 
 		// Scheduler
+		shared_mutex m_config_mutex;
+		bool m_options_initialized = false;
 		bool m_use_host_scheduler = false;
 
 		// Sync
@@ -41,6 +48,7 @@ namespace vk
 		lf_queue<xqueue_event*> m_event_queue;
 		shared_mutex m_submit_mutex;
 
+		void init_config_options();
 		void delayed_init();
 		void insert_sync_event();
 
