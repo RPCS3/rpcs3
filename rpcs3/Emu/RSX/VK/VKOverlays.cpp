@@ -715,7 +715,6 @@ namespace vk
 			vk::data_heap& upload_heap, rsx::overlays::overlay& ui)
 	{
 		m_scale_offset = color4f(ui.virtual_width, ui.virtual_height, 1.f, 1.f);
-		m_time = static_cast<f32>(get_system_time() / 1000) * 0.005f;
 		m_viewport = { { static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1) }, { static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()) } };
 
 		std::vector<vk::image_view*> image_views
@@ -731,6 +730,7 @@ namespace vk
 			upload_vertex_data(command.verts.data(), num_drawable_elements);
 			set_primitive_type(command.config.primitives);
 
+			m_time = command.config.get_sinus_value();
 			m_skip_texture_read = false;
 			m_color = command.config.color;
 			m_pulse_glow = command.config.pulse_glow;

@@ -84,7 +84,6 @@ namespace rsx
 		public:
 			s32 return_code = 0; // CELL_OK
 
-		public:
 			void update() override {}
 
 			compiled_resource get_compiled() override = 0;

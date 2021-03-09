@@ -383,7 +383,7 @@ namespace rsx
 		{
 			const auto index_limit = (num_columns * num_rows) - 1;
 
-			auto on_accept = [&]()
+			const auto on_accept = [this]()
 			{
 				const u32 current_index = (selected_y * num_columns) + selected_x;
 				const auto& current_cell = m_grid[current_index];
@@ -441,11 +441,10 @@ namespace rsx
 					if (m_grid[get_cell_geometry(current_index).first].enabled)
 					{
 						update_selection_by_index(current_index);
-						m_update = true;
 						break;
 					}
 				}
-
+				m_reset_pulse = true;
 				break;
 			}
 			case pad_button::dpad_left:
@@ -461,7 +460,6 @@ namespace rsx
 						if (m_grid[get_cell_geometry(current_index).first].enabled)
 						{
 							update_selection_by_index(current_index);
-							m_update = true;
 							break;
 						}
 					}
@@ -470,6 +468,7 @@ namespace rsx
 						break;
 					}
 				}
+				m_reset_pulse = true;
 				break;
 			}
 			case pad_button::dpad_down:
@@ -486,10 +485,10 @@ namespace rsx
 					if (m_grid[get_cell_geometry(current_index).first].enabled)
 					{
 						update_selection_by_index(current_index);
-						m_update = true;
 						break;
 					}
 				}
+				m_reset_pulse = true;
 				break;
 			}
 			case pad_button::dpad_up:
@@ -501,10 +500,10 @@ namespace rsx
 					if (m_grid[get_cell_geometry(current_index).first].enabled)
 					{
 						update_selection_by_index(current_index);
-						m_update = true;
 						break;
 					}
 				}
+				m_reset_pulse = true;
 				break;
 			}
 			case pad_button::select:
@@ -530,6 +529,7 @@ namespace rsx
 			case pad_button::cross:
 			{
 				on_accept();
+				m_reset_pulse = true;
 				break;
 			}
 			case pad_button::circle:
@@ -549,6 +549,11 @@ namespace rsx
 			}
 			default:
 				break;
+			}
+
+			if (m_reset_pulse)
+			{
+				m_update = true;
 			}
 		}
 
@@ -706,6 +711,12 @@ namespace rsx
 				m_label.back_color = { 0.f, 0.f, 0.f, 0.f };
 				m_label.set_padding(0, 0, 10, 0);
 
+				if (m_reset_pulse)
+				{
+					// Reset the pulse slightly above 0 falling on each user interaction
+					m_key_pulse_cache.set_sinus_offset(0.6f);
+				}
+
 				for (const auto& c : m_grid)
 				{
 					u16 x = u16(c.pos.x);
@@ -764,16 +775,19 @@ namespace rsx
 					tmp.set_pos(x, y);
 					tmp.set_size(w, h);
 					tmp.pulse_effect_enabled = c.selected;
+					tmp.pulse_sinus_offset = m_key_pulse_cache.pulse_sinus_offset;
 
 					m_cached_resource.add(tmp.get_compiled());
 
 					if (render_label)
 					{
 						m_label.pulse_effect_enabled = c.selected;
+						m_label.pulse_sinus_offset = m_key_pulse_cache.pulse_sinus_offset;
 						m_cached_resource.add(m_label.get_compiled());
 					}
 				}
 
+				m_reset_pulse = false;
 				m_update = false;
 			}
 

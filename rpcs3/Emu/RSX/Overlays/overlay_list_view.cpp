@@ -108,10 +108,17 @@ namespace rsx
 		{
 			const s32 max_entry = m_elements_count - 1;
 
+			// Reset the pulse slightly below 1 rising on each user interaction
+			m_highlight_box->set_sinus_offset(1.6f);
+
 			if (m_selected_entry != entry)
 			{
 				m_selected_entry = std::max(0, std::min(entry, max_entry));
 				update_selection();
+			}
+			else
+			{
+				refresh();
 			}
 		}
 

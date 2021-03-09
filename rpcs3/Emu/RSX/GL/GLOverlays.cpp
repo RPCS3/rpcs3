@@ -1,7 +1,5 @@
 #include "GLOverlays.h"
 
-extern u64 get_system_time();
-
 namespace gl
 {
 	void overlay_pass::create()
@@ -514,12 +512,11 @@ namespace gl
 	{
 		program_handle.uniforms["viewport"] = color4f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()), static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1));
 		program_handle.uniforms["ui_scale"] = color4f(static_cast<f32>(ui.virtual_width), static_cast<f32>(ui.virtual_height), 1.f, 1.f);
-		program_handle.uniforms["time"] = static_cast<f32>(get_system_time() / 1000) * 0.005f;
 
 		saved_sampler_state save_30(30, m_sampler);
 		saved_sampler_state save_31(31, m_sampler);
 
-		for (auto &cmd : ui.get_compiled().draw_commands)
+		for (auto& cmd : ui.get_compiled().draw_commands)
 		{
 			set_primitive_type(cmd.config.primitives);
 			upload_vertex_data(cmd.verts.data(), ::size32(cmd.verts));
@@ -530,7 +527,7 @@ namespace gl
 			{
 			case rsx::overlays::image_resource_id::game_icon:
 			case rsx::overlays::image_resource_id::backbuffer:
-				//TODO
+				// TODO
 			case rsx::overlays::image_resource_id::none:
 			{
 				texture_read = GL_FALSE;
@@ -557,6 +554,7 @@ namespace gl
 			}
 			}
 
+			program_handle.uniforms["time"] = cmd.config.get_sinus_value();
 			program_handle.uniforms["color"] = cmd.config.color;
 			program_handle.uniforms["sampler_mode"] = texture_read;
 			program_handle.uniforms["pulse_glow"] = static_cast<s32>(cmd.config.pulse_glow);
