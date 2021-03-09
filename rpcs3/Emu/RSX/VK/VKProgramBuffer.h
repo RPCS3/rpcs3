@@ -2,9 +2,10 @@
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "../Common/ProgramStateCache.h"
-#include "Utilities/hash.h"
 #include "VKRenderPass.h"
 #include "VKPipelineCompiler.h"
+
+#include "util/fnv_hash.hpp"
 
 namespace vk
 {

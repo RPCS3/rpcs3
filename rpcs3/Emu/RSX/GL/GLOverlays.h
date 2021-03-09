@@ -115,10 +115,10 @@ namespace gl
 		virtual void bind_resources() {}
 		virtual void cleanup_resources() {}
 
-		virtual void upload_vertex_data(f32* data, u32 elements_count)
+		template <typename T>
+		void upload_vertex_data(T* data, u32 elements_count)
 		{
-			elements_count <<= 2;
-			m_vertex_data_buffer.data(elements_count, data);
+			m_vertex_data_buffer.data(elements_count * sizeof(T), data);
 		}
 
 		virtual void emit_geometry()
@@ -594,7 +594,7 @@ namespace gl
 			for (auto &cmd : ui.get_compiled().draw_commands)
 			{
 				set_primitive_type(cmd.config.primitives);
-				upload_vertex_data(reinterpret_cast<f32*>(cmd.verts.data()), ::size32(cmd.verts) * 4u);
+				upload_vertex_data(cmd.verts.data(), ::size32(cmd.verts));
 				num_drawable_elements = ::size32(cmd.verts);
 				GLint texture_read = GL_TRUE;
 

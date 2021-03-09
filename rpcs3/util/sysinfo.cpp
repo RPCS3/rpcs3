@@ -476,3 +476,15 @@ u32 utils::get_cpu_model()
 
 	return g_value;
 }
+
+namespace utils
+{
+	extern const u64 main_tid = []() -> u64
+	{
+	#ifdef _WIN32
+		return GetCurrentThreadId();
+	#else
+		return reinterpret_cast<u64>(pthread_self());
+	#endif
+	}();
+}

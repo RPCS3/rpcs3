@@ -465,7 +465,7 @@ namespace
 	};
 }
 
-const bool Emulator::SetUsr(const std::string& user)
+bool Emulator::SetUsr(const std::string& user)
 {
 	if (user.empty())
 	{
@@ -485,7 +485,7 @@ const bool Emulator::SetUsr(const std::string& user)
 	return true;
 }
 
-const std::string Emulator::GetBackgroundPicturePath() const
+std::string Emulator::GetBackgroundPicturePath() const
 {
 	// Try to find a custom icon first
 	std::string path = fs::get_config_dir() + "/Icons/game_icons/" + Emu.GetTitleID() + "/PIC1.PNG";
@@ -1197,9 +1197,19 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		// Detect boot location
 		constexpr usz game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
-		const std::string hdd0_game    = vfs::get("/dev_hdd0/game/");
-		const std::string hdd0_disc    = vfs::get("/dev_hdd0/disc/");
-		const bool from_hdd0_game      = m_path.find(hdd0_game) != umax;
+		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
+		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
+		const bool from_hdd0_game   = m_path.starts_with(hdd0_game);
+
+#ifdef _WIN32
+		// m_path might be passed from command line with differences in uppercase/lowercase on windows.
+		if (!from_hdd0_game && fmt::to_lower(m_path).starts_with(fmt::to_lower(hdd0_game)))
+		{
+			// Let's just abort to prevent errors down the line.
+			sys_log.error("The boot path seems to contain incorrectly cased characters. Please adjust the path and try again.");
+			return game_boot_result::invalid_file_or_folder;
+		}
+#endif
 
 		// Mount /dev_bdvd/ if necessary
 		if (bdvd_dir.empty() && disc.empty())
@@ -1651,7 +1661,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 					extern const std::map<std::string_view, int> g_prx_list;
 
-					// Check if there are any firmware SPRX which may be LLEd during emulation 
+					// Check if there are any firmware SPRX which may be LLEd during emulation
 					// Don't prompt GUI confirmation if there aren't any
 					if (std::any_of(g_prx_list.begin(), g_prx_list.end(), [&libs](auto& lib)
 					{
@@ -1977,10 +1987,15 @@ bool Emulator::Quit(bool force_quit)
 	// The callback is only used if we actually quit RPCS3
 	const auto on_exit = []()
 	{
-		// Deinitialize object manager to prevent any hanging objects at program exit
-		g_fxo->clear();
+		Emu.CleanUp();
 	};
 	return GetCallbacks().try_to_quit(force_quit, on_exit);
+}
+
+void Emulator::CleanUp()
+{
+	// Deinitialize object manager to prevent any hanging objects at program exit
+	g_fxo->clear();
 }
 
 std::string Emulator::GetFormattedTitle(double fps) const

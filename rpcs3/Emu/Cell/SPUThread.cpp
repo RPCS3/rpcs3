@@ -2161,7 +2161,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				auto& res = vm::reservation_acquire(eal);
 
 				// Lock each bit corresponding to a byte being written, using some free space in reservation memory
-				auto* bits = reinterpret_cast<atomic_t<u128>*>(vm::g_reservations + (eal & 0xff80) / 2 + 16);
+				auto* bits = reinterpret_cast<atomic_t<u128>*>(vm::g_reservations + ((eal & 0xff80) / 2 + 16));
 
 				// Get writing mask
 				const u128 wmask = (~u128{} << (eal & 127)) & (~u128{} >> (127 - ((eal + size0 - 1) & 127)));
@@ -4735,7 +4735,8 @@ bool spu_thread::capture_local_storage() const
 
 	for (; pc0; pc0 -= 4)
 	{
-		const u32 op = *std::launder(reinterpret_cast<be_t<u32, 1>*>(prog.bin.data() + pc0 - 4));
+		be_t<u32> op;
+		std::memcpy(&op, prog.bin.data() + pc0 - 4, 4);
 
 		// Try to find function entry (if they are placed sequentially search for BI $LR of previous function)
 		if (!op || op == 0x35000000u || s_spu_itype.decode(op) == spu_itype::UNK)

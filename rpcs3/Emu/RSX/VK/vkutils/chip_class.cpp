@@ -33,10 +33,18 @@ namespace vk
 
 		// NV cards. See https://envytools.readthedocs.io/en/latest/hw/pciid.html
 		// NOTE: Since NV device IDs are linearly incremented per generation, there is no need to carefully check all the ranges
-		table.add(0x1180, 0x11fa, chip_class::NV_kepler);  // GK104, 106
-		table.add(0x0FC0, 0x0FFF, chip_class::NV_kepler);  // GK107
+		table.add(0x1180, 0x1197, chip_class::NV_kepler);  // GK104, 106
+		table.add(0x1198, 0x11A9, chip_class::NV_mobile_kepler);  // Mobile GK104
+		table.add(0x11AA, 0x11DF, chip_class::NV_kepler);  // GK104, 106
+		table.add(0x11E0, 0x11E7, chip_class::NV_mobile_kepler);  // Mobile GK106
+		table.add(0x11E8, 0x11FA, chip_class::NV_kepler);  // GK104, 106
+		table.add(0x0FC0, 0x0FCC, chip_class::NV_kepler);  // GK107
+		table.add(0x0FCD, 0x0FEE, chip_class::NV_mobile_kepler);  // Mobile GK107
+		table.add(0x0FEF, 0x0FFF, chip_class::NV_kepler);  // GK107
 		table.add(0x1003, 0x1028, chip_class::NV_kepler);  // GK110
-		table.add(0x1280, 0x12BA, chip_class::NV_kepler);  // GK208
+		table.add(0x1280, 0x128F, chip_class::NV_kepler);  // GK208
+		table.add(0x1290, 0x129A, chip_class::NV_mobile_kepler);  // Mobile GK208
+		table.add(0x129B, 0x12BA, chip_class::NV_kepler);  // GK208
 		table.add(0x1381, 0x13B0, chip_class::NV_maxwell); // GM107
 		table.add(0x1340, 0x134D, chip_class::NV_maxwell); // GM108
 		table.add(0x13C0, 0x13D9, chip_class::NV_maxwell); // GM204
@@ -44,11 +52,11 @@ namespace vk
 		table.add(0x15F7, 0x15F9, chip_class::NV_pascal);  // GP100 (Tesla P100)
 		table.add(0x1B00, 0x1D80, chip_class::NV_pascal);
 		table.add(0x1D81, 0x1DBA, chip_class::NV_volta);
-		table.add(0x1E02, 0x1F54, chip_class::NV_turing); // TU102, TU104, TU106, TU106M, TU106GL (RTX 20 series)
-		table.add(0x1F82, 0x1FB9, chip_class::NV_turing); // TU117, TU117M, TU117GL
-		table.add(0x2182, 0x21D1, chip_class::NV_turing); // TU116, TU116M, TU116GL
-		table.add(0x20B0, 0x20BE, chip_class::NV_ampere); // GA100
-		table.add(0x2204, 0x25AF, chip_class::NV_ampere); // GA10x (RTX 30 series)
+		table.add(0x1E02, 0x1F54, chip_class::NV_turing);  // TU102, TU104, TU106, TU106M, TU106GL (RTX 20 series)
+		table.add(0x1F82, 0x1FB9, chip_class::NV_turing);  // TU117, TU117M, TU117GL
+		table.add(0x2182, 0x21D1, chip_class::NV_turing);  // TU116, TU116M, TU116GL
+		table.add(0x20B0, 0x20BE, chip_class::NV_ampere);  // GA100
+		table.add(0x2204, 0x25AF, chip_class::NV_ampere);  // GA10x (RTX 30 series)
 
 		return table;
 	}();

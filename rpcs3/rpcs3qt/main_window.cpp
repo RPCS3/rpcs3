@@ -41,6 +41,7 @@
 #include "rpcs3_version.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
+#include "Emu/VFS.h"
 #include "Emu/system_config.h"
 
 #include "Crypto/unpkg.h"
@@ -49,6 +50,7 @@
 
 #include "Loader/PUP.h"
 #include "Loader/TAR.h"
+#include "Loader/mself.hpp"
 
 #include "Utilities/Thread.h"
 #include "util/sysinfo.hpp"
@@ -766,6 +768,25 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 		{
 			return;
 		}
+	}
+}
+
+void main_window::ExtractMSELF()
+{
+	const QString path_last_mself = m_gui_settings->GetValue(gui::fd_ext_mself).toString();
+	QString file_path = QFileDialog::getOpenFileName(this, tr("Select MSELF To extract"), path_last_mself, tr("All mself files (*.mself);;All files (*.*)"));
+
+	if (file_path.isEmpty())
+	{
+		return;
+	}
+
+	QString dir = QFileDialog::getExistingDirectory(this, tr("Extraction Directory"), QString{}, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+	if (!dir.isEmpty())
+	{
+		m_gui_settings->SetValue(gui::fd_ext_mself, QFileInfo(file_path).path());
+		extract_mself(sstr(file_path), sstr(dir) + '/');
 	}
 }
 
@@ -1859,7 +1880,7 @@ void main_window::CreateConnects()
 				}
 			}
 		}
-		patch_manager_dialog patch_manager(m_gui_settings, games, "", this);
+		patch_manager_dialog patch_manager(m_gui_settings, games, "", "", this);
 		patch_manager.exec();
  	});
 
@@ -1918,6 +1939,8 @@ void main_window::CreateConnects()
 	});
 
 	connect(ui->toolsDecryptSprxLibsAct, &QAction::triggered, this, &main_window::DecryptSPRXLibraries);
+
+	connect(ui->toolsExtractMSELFAct, &QAction::triggered, this, &main_window::ExtractMSELF);
 
 	connect(ui->showDebuggerAct, &QAction::triggered, [this](bool checked)
 	{
@@ -1994,11 +2017,6 @@ void main_window::CreateConnects()
 		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater currently isn't available for your os."));
 		return;
 #endif
-		if(!Emu.IsStopped())
-		{
-			QMessageBox::warning(this, tr("Auto-updater"), tr("Please stop the emulation before trying to update."));
-			return;
-		}
 		m_updater.check_for_updates(false, false, this);
 	});
 

@@ -65,7 +65,6 @@ namespace utils
 	public:
 		// Constructors
 		constexpr address_range() = default;
-		constexpr address_range(const address_range &other) : start(other.start), end(other.end) {}
 
 		static constexpr address_range start_length(u32 _start, u32 _length)
 		{

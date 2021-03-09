@@ -1261,7 +1261,9 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 	{
 		if (op == X64OP_NONE)
 		{
-			sig_log.error("decode_x64_reg_op(%p): unsupported opcode: %s", code, *reinterpret_cast<const be_t<v128, 1>*>(code));
+			be_t<v128> dump;
+			std::memcpy(&dump, code, sizeof(dump));
+			sig_log.error("decode_x64_reg_op(%p): unsupported opcode: %s", code, dump);
 		}
 	};
 
@@ -2977,4 +2979,18 @@ std::pair<void*, usz> thread_ctrl::get_thread_stack()
 #endif
 #endif
 	return {saddr, ssize};
+}
+
+u64 thread_ctrl::get_tid()
+{
+#ifdef _WIN32
+	return GetCurrentThreadId();
+#else
+	return reinterpret_cast<u64>(pthread_self());
+#endif
+}
+
+bool thread_ctrl::is_main()
+{
+	return get_tid() == utils::main_tid;
 }

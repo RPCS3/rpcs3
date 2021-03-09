@@ -112,6 +112,7 @@ public:
 
 	std::vector<std::string> ListDevices() override;
 	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
+	u32 get_battery_level(const std::string& padId) override;
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:

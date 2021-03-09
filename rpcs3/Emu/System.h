@@ -192,14 +192,14 @@ public:
 	}
 
 	// u32 for cell.
-	const u32 GetUsrId() const
+	u32 GetUsrId() const
 	{
 		return m_usrid;
 	}
 
-	const bool SetUsr(const std::string& user);
+	bool SetUsr(const std::string& user);
 
-	const std::string GetBackgroundPicturePath() const;
+	std::string GetBackgroundPicturePath() const;
 
 	u64 GetPauseTime()
 	{
@@ -236,6 +236,7 @@ public:
 	void Stop(bool restart = false);
 	void Restart() { Stop(true); }
 	bool Quit(bool force_quit);
+	void CleanUp();
 
 	bool IsRunning() const { return m_state == system_state::running; }
 	bool IsPaused()  const { return m_state == system_state::paused; }

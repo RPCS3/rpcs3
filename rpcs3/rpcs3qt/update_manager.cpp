@@ -229,10 +229,19 @@ bool update_manager::handle_json(bool automatic, bool check_only, const QByteArr
 
 void update_manager::update()
 {
+	ensure(m_downloader);
+
 	if (m_update_message.isEmpty() ||
 		QMessageBox::question(m_downloader->get_progress_dialog(), tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
 	{
 		m_downloader->close_progress_dialog();
+		return;
+	}
+
+	if (!Emu.IsStopped())
+	{
+		m_downloader->close_progress_dialog();
+		QMessageBox::warning(m_parent, tr("Auto-updater"), tr("Please stop the emulation before trying to update."));
 		return;
 	}
 
@@ -545,10 +554,14 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 
 	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!\nRPCS3 will now restart."));
 
+	Emu.SetForceBoot(true);
+	Emu.Stop();
+	Emu.CleanUp();
+
 #ifdef _WIN32
-	const int ret = _wexecl(wchar_orig_path.data(), wchar_orig_path.data(), L"--updating", nullptr);
+	const int ret = _wexecl(wchar_orig_path.data(), L"--updating", nullptr);
 #else
-	const int ret = execl(replace_path.c_str(), replace_path.c_str(), "--updating", nullptr);
+	const int ret = execl(replace_path.c_str(), "--updating", nullptr);
 #endif
 	if (ret == -1)
 	{

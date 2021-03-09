@@ -146,6 +146,8 @@ private:
 	void InstallPup(QString filePath = "");
 	void HandlePupInstallation(QString file_path = "");
 
+	void ExtractMSELF();
+
 	drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
 	void AddGamesFromDir(const QString& path);
 

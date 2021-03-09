@@ -776,6 +776,9 @@
     <ClCompile Include="Loader\TAR.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\mself.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\GDB.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
@@ -979,6 +982,9 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\Modules\sys_crashdump.cpp">
+      <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1516,6 +1522,9 @@
     <ClInclude Include="Emu\Cell\Modules\sceNpUtil.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\Modules\sys_crashdump.h">
+      <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\sys_lv2dbg.h">
       <Filter>Emu\Cell\Modules</Filter>
     </ClInclude>
@@ -1636,7 +1645,7 @@
     <ClInclude Include="Emu\RSX\Common\GLSLCommon.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\hash.h">
+    <ClInclude Include="util\fnv_hash.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\sys_gamepad.h">
@@ -1911,6 +1920,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\texture_cache_types.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\mself.hpp">
+      <Filter>Loader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -648,7 +648,7 @@ QLabel#log_level_warning {
 }
 
 QLabel#log_level_notice {
-	color: #FFFFFF;
+	color: #455971;
 }
 
 QLabel#log_level_trace {
@@ -669,3 +669,12 @@ QLabel#thumbnail_icon_color {
 	color: #8500ae;
 }
 
+/* Debugger colors */
+QLabel#debugger_frame_breakpoint {
+	color: #000; /* Font Color: Black */
+	background-color: #ffff00; /* Yellow */
+}
+QLabel#debugger_frame_pc {
+	color: #000; /* Font Color: Black */
+	background-color: #00ff00; /* Green */
+}

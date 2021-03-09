@@ -14,8 +14,8 @@
 
 #include "../Overlays/overlays.h"
 
-#include "Utilities/hash.h"
 #include <unordered_map>
+#include "util/fnv_hash.hpp"
 
 #define VK_OVERLAY_MAX_DRAW_CALLS 1024
 
@@ -180,11 +180,12 @@ namespace vk
 			return {};
 		}
 
-		void upload_vertex_data(f32 *data, u32 count)
+		template <typename T>
+		void upload_vertex_data(T* data, u32 count)
 		{
 			check_heap();
 
-			const auto size = count * sizeof(f32);
+			const auto size = count * sizeof(T);
 			m_vao_offset = static_cast<u32>(m_vao.alloc<16>(size));
 			auto dst = m_vao.map(m_vao_offset, size);
 			std::memcpy(dst, data, size);
@@ -812,9 +813,8 @@ namespace vk
 			for (auto &command : ui.get_compiled().draw_commands)
 			{
 				num_drawable_elements = static_cast<u32>(command.verts.size());
-				const u32 value_count = num_drawable_elements * 4;
 
-				upload_vertex_data(reinterpret_cast<f32*>(command.verts.data()), value_count);
+				upload_vertex_data(command.verts.data(), num_drawable_elements);
 				set_primitive_type(command.config.primitives);
 
 				m_skip_texture_read = false;

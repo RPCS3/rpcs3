@@ -3,10 +3,10 @@
 #include "Emu/RSX/RSXFragmentProgram.h"
 #include "Emu/RSX/RSXVertexProgram.h"
 
-#include "Utilities/hash.h"
 #include "Utilities/mutex.h"
 #include "util/logs.hpp"
 #include "Utilities/span.h"
+#include "util/fnv_hash.hpp"
 
 #include <deque>
 #include <unordered_map>

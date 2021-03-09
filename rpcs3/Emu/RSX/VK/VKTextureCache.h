@@ -366,7 +366,7 @@ namespace vk
 			block_size = tex.get_section_size();
 		}
 
-		const bool test(u64 ref_frame) const
+		bool test(u64 ref_frame) const
 		{
 			return ref_frame > 0 && frame_tag <= ref_frame;
 		}
@@ -1258,12 +1258,12 @@ namespace vk
 			return false;
 		}
 
-		const u32 get_unreleased_textures_count() const override
+		u32 get_unreleased_textures_count() const override
 		{
 			return baseclass::get_unreleased_textures_count() + ::size32(m_temporary_storage);
 		}
 
-		const u32 get_temporary_memory_in_use()
+		u32 get_temporary_memory_in_use()
 		{
 			return m_temporary_memory_size;
 		}

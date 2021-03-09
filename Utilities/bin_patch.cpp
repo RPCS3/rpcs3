@@ -547,58 +547,70 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 		}
 		case patch_type::le16:
 		{
-			*reinterpret_cast<le_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
+			le_t<u16> val = static_cast<u16>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::le32:
 		{
-			*reinterpret_cast<le_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
+			le_t<u32> val = static_cast<u32>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::lef32:
 		{
-			*reinterpret_cast<le_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
+			le_t<f32> val = static_cast<f32>(p.value.double_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::le64:
 		{
-			*reinterpret_cast<le_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
+			le_t<u64> val = static_cast<u64>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::lef64:
 		{
-			*reinterpret_cast<le_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
+			le_t<f64> val = p.value.double_value;
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::be16:
 		{
-			*reinterpret_cast<be_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
+			be_t<u16> val = static_cast<u16>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::bd32:
 		{
-			*reinterpret_cast<be_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
+			be_t<u32> val = static_cast<u32>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::be32:
 		{
-			*reinterpret_cast<be_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
-			if (offset % 4 == 0) resval = offset;
+			be_t<u32> val = static_cast<u32>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
+			if (offset % 4 == 0)
+				resval = offset;
 			break;
 		}
 		case patch_type::bef32:
 		{
-			*reinterpret_cast<be_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
+			be_t<f32> val = static_cast<f32>(p.value.double_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::bd64:
 		{
-			*reinterpret_cast<be_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
+			be_t<u64> val = static_cast<u64>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::be64:
 		{
-			*reinterpret_cast<be_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
+			be_t<u64> val = static_cast<u64>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
 
 			if (offset % 4)
 			{
@@ -611,7 +623,8 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 		}
 		case patch_type::bef64:
 		{
-			*reinterpret_cast<be_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
+			be_t<f64> val = p.value.double_value;
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::utf8:

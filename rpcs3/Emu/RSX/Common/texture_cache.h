@@ -3037,12 +3037,12 @@ namespace rsx
 			}
 		}
 
-		virtual const u32 get_unreleased_textures_count() const
+		virtual u32 get_unreleased_textures_count() const
 		{
 			return m_storage.m_unreleased_texture_objects;
 		}
 
-		const u64 get_texture_memory_in_use() const
+		u64 get_texture_memory_in_use() const
 		{
 			return m_storage.m_texture_memory_in_use;
 		}

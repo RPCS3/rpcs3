@@ -71,5 +71,5 @@ public:
 	~AudioDumper();
 
 	void WriteData(const void* buffer, u32 size);
-	const u16 GetCh() const { return m_header.FMT.NumChannels; }
+	u16 GetCh() const { return m_header.FMT.NumChannels; }
 };

@@ -241,6 +241,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 		&ppu_module_manager::sceNpTrophy,
 		&ppu_module_manager::sceNpTus,
 		&ppu_module_manager::sceNpUtil,
+		&ppu_module_manager::sys_crashdump,
 		&ppu_module_manager::sys_io,
 		&ppu_module_manager::sys_net,
 		&ppu_module_manager::sysPrxForUser,
@@ -343,12 +344,8 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 				alloc_addr += variable.second.size;
 			}
 
-			if (variable.second.var)
-			{
-				variable.second.var->set(variable.second.addr);
-			}
-
-			ppu_loader.trace("Allocated HLE variable %s.%s at 0x%x", _module->name, variable.second.name, variable.second.var->addr());
+			*variable.second.var = variable.second.addr;
+			ppu_loader.trace("Allocated HLE variable %s.%s at 0x%x", _module->name, variable.second.name, *variable.second.var);
 
 			// Initialize HLE variable
 			if (variable.second.init)

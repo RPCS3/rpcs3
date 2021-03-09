@@ -628,3 +628,12 @@ QLabel#tty_text {
 	color: #f8f8f8;
 }
 
+/* Debugger colors */
+QLabel#debugger_frame_breakpoint {
+	color: #000; /* Font Color: Black */
+	background-color: #ffff00; /* Yellow */
+}
+QLabel#debugger_frame_pc {
+	color: #000; /* Font Color: Black */
+	background-color: #00ff00; /* Green */
+}
