@@ -1301,10 +1301,19 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			static_assert(sizeof(iovec) == sizeof(iovec_clone), "Weird iovec size");
 			static_assert(offsetof(iovec, iov_len) == offsetof(iovec_clone, iov_len), "Weird iovec::iov_len offset");
 
-			iovec arg;
-			std::memcpy(&arg, buffers, sizeof(arg));
-			const auto result = ::writev(m_fd, &arg, buf_count);
-			ensure(result != -1); // "file::write_gather"
+			u64 result = 0;
+
+			while (buf_count)
+			{
+				iovec arg[256];
+				const auto count = std::min<u64>(buf_count, 256);
+				std::memcpy(&arg, buffers, sizeof(iovec) * count);
+				const auto added = ::writev(m_fd, arg, count);
+				ensure(added != -1); // "file::write_gather"
+				result += added;
+				buf_count -= count;
+				buffers += count;
+			}
 
 			return result;
 		}
