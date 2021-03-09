@@ -4,6 +4,8 @@
 #include "Utilities/geometry.h"
 #include "overlay_utils.h"
 
+#include <functional>
+
 namespace rsx
 {
     namespace overlays

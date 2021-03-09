@@ -434,6 +434,7 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/GL/GLFragmentProgram.cpp
 	RSX/GL/GLGSRender.cpp
 	RSX/GL/GLHelpers.cpp
+	RSX/GL/GLOverlays.cpp
 	RSX/GL/GLPipelineCompiler.cpp
 	RSX/GL/GLPresent.cpp
 	RSX/GL/GLRenderTargets.cpp
