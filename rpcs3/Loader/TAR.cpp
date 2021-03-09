@@ -38,7 +38,7 @@ u64 octal_text_to_u64(std::string_view sv)
 	const auto ptr = std::from_chars(sv.data(), sv.data() + sv.size(), i, 8).ptr;
 
 	// Range must be terminated with either NUL or space
-	if (sv.empty() || (ptr != &sv.back() && (ptr > &sv.back() || (*ptr && *ptr != ' '))))
+	if (ptr == sv.data() + sv.size() || (*ptr && *ptr != ' '))
 	{
 		i = -1;
 	}
