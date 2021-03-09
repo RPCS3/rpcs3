@@ -87,7 +87,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 	{
 		supports_vulkan = device_found;
 		vulkan_adapters = std::move(compatible_gpus);
-		enum_thread->operator()();
+		(*enum_thread)();
 		delete enum_thread;
 	}
 #endif
