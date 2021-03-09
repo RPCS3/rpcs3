@@ -30,6 +30,17 @@ namespace vk
 		{
 			for (auto&& job : m_event_queue.pop_all())
 			{
+				if (job->type == xqueue_event_type::barrier)
+				{
+					// Blocks the queue from progressing until the work items are actually submitted to the GPU
+					// Avoids spamming the GPU with event requests when the events have not even been submitted yet
+					while (job->completion_eid == m_submit_count.load())
+					{
+						thread_ctrl::wait_for(100);
+					}
+					continue;
+				}
+
 				vk::wait_for_event(job->queue1_signal.get(), GENERAL_WAIT_TIMEOUT);
 				job->queue2_signal->host_signal();
 			}
@@ -62,7 +73,12 @@ namespace vk
 		{
 			auto ev1 = std::make_unique<event>(*get_current_renderer(), sync_domain::gpu);
 			auto ev2 = std::make_unique<event>(*get_current_renderer(), sync_domain::gpu);
-			m_events_pool.emplace_back(ev1, ev2, 0ull);
+			m_events_pool.emplace_back(ev1, ev2, 0ull, i);
+		}
+
+		for (usz i = 0; i < VK_MAX_ASYNC_COMPUTE_QUEUES; ++i)
+		{
+			m_barriers_pool.emplace_back(0ull, 0xFFFF0000 + i);
 		}
 	}
 
@@ -80,6 +96,7 @@ namespace vk
 
 		ensure(sync_label->completion_eid <= vk::last_completed_event_id());
 
+		m_sync_label_debug_uid = sync_label->uid;
 		sync_label->queue1_signal->reset();
 		sync_label->queue2_signal->reset();
 		sync_label->completion_eid = vk::current_event_id();
@@ -143,6 +160,11 @@ namespace vk
 			}
 		}
 
+		// 3. Insert a barrier for this CB. A job is about to be scheduled on it immediately.
+		auto barrier = &m_barriers_pool[m_next_cb_index];
+		barrier->completion_eid = m_submit_count;
+		m_event_queue.push(barrier);
+
 		m_next_cb_index++;
 		return m_current_cb;
 	}
@@ -160,6 +182,11 @@ namespace vk
 		return std::exchange(m_sync_label, nullptr);
 	}
 
+	u64 AsyncTaskScheduler::get_primary_sync_label_debug_uid()
+	{
+		return std::exchange(m_sync_label_debug_uid, ~0ull);
+	}
+
 	void AsyncTaskScheduler::flush(VkBool32 force_flush, VkSemaphore wait_semaphore, VkPipelineStageFlags wait_dst_stage_mask)
 	{
 		if (!m_current_cb)
@@ -175,6 +202,9 @@ namespace vk
 
 		m_current_cb->end();
 		m_current_cb->submit(get_current_renderer()->get_transfer_queue(), wait_semaphore, VK_NULL_HANDLE, nullptr, wait_dst_stage_mask, force_flush);
+
+		m_submit_count++;
+		thread_ctrl::notify(g_fxo->get<async_scheduler_thread>());
 
 		m_last_used_cb = m_current_cb;
 		m_current_cb = nullptr;
