@@ -1,8 +1,9 @@
 #pragma once
 
+#include "VKAsyncScheduler.h"
+#include "VKDMA.h"
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
-#include "VKDMA.h"
 #include "vkutils/image_helpers.h"
 
 #include "../Common/texture_cache.h"
@@ -1062,6 +1063,10 @@ namespace vk
 
 			if (cmd.access_hint != vk::command_buffer::access_type_hint::all)
 			{
+				// Flush any pending async jobs in case of blockers
+				// TODO: Context-level manager should handle this logic
+				g_fxo->get<async_scheduler_thread>().flush(VK_TRUE);
+
 				// Primary access command queue, must restart it after
 				vk::fence submit_fence(*m_device);
 				cmd.submit(m_submit_queue, VK_NULL_HANDLE, VK_NULL_HANDLE, &submit_fence, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_TRUE);
