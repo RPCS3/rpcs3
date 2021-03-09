@@ -36,7 +36,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 
 	static QStringList compatible_gpus;
 
-	std::thread enum_thread = std::thread([&]
+	auto enum_thread = new named_thread("Vulkan Device Enumeration Thread"sv, [&]()
 	{
 		thread_ctrl::scoped_priority low_prio(-1);
 
@@ -75,7 +75,6 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 				"Selecting ignore starts the emulator without Vulkan support."),
 			QMessageBox::Ignore | QMessageBox::Abort, QMessageBox::Abort);
 
-		enum_thread.detach();
 		if (button != QMessageBox::Ignore)
 		{
 			abort_requested = true;
@@ -88,7 +87,8 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 	{
 		supports_vulkan = device_found;
 		vulkan_adapters = std::move(compatible_gpus);
-		enum_thread.join();
+		enum_thread->join();
+		delete enum_thread;
 	}
 #endif
 
