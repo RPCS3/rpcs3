@@ -31,6 +31,8 @@ namespace rsx
 
 		void edit_text::move_caret(direction dir)
 		{
+			m_reset_caret_pulse = true;
+
 			switch (dir)
 			{
 			case direction::left:
@@ -112,6 +114,7 @@ namespace rsx
 			}
 
 			caret_position += ::narrow<u16>(str.length());
+			m_reset_caret_pulse = true;
 			refresh();
 		}
 
@@ -136,6 +139,7 @@ namespace rsx
 			}
 
 			caret_position--;
+			m_reset_caret_pulse = true;
 			refresh();
 		}
 
@@ -154,6 +158,13 @@ namespace rsx
 				caret.fore_color           = fore_color;
 				caret.back_color           = fore_color;
 				caret.pulse_effect_enabled = true;
+
+				if (m_reset_caret_pulse)
+				{
+					// Reset the pulse slightly below 1 rising on each user interaction
+					caret.set_sinus_offset(1.6f);
+					m_reset_caret_pulse = false;
+				}
 
 				compiled.add(caret.get_compiled());
 

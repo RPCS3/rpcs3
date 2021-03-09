@@ -66,6 +66,9 @@ namespace rsx
 			// Fade in/out
 			animation_color_interpolate fade_animation;
 
+			bool m_reset_pulse = false;
+			overlay_element m_key_pulse_cache; // Let's use this to store the pulse offset of the key, since we don't seem to cache the keys themselves.
+
 			bool m_update = true;
 			compiled_resource m_cached_resource;
 
