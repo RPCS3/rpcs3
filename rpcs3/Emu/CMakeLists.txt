@@ -463,6 +463,7 @@ if(TARGET 3rdparty_vulkan)
 		RSX/VK/vkutils/shared.cpp
 		RSX/VK/VKCommandStream.cpp
 		RSX/VK/VKCommonDecompiler.cpp
+		RSX/VK/VKCompute.cpp
 		RSX/VK/VKDMA.cpp
 		RSX/VK/VKDraw.cpp
 		RSX/VK/VKFormats.cpp

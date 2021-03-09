@@ -66,6 +66,7 @@
   <ItemGroup>
     <ClCompile Include="Emu\RSX\VK\VKCommandStream.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKCompute.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKDMA.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKDraw.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKFormats.cpp" />
