@@ -140,12 +140,13 @@ namespace
 			}
 		}
 
-		for (u32 i = 0; i < remaining; ++i)
+		if (remaining)
 		{
-			be_t<u32> val;
-			std::memcpy(&val, src_ptr + i * sizeof(val), sizeof(val));
-			le_t<u32> nval = +val;
-			std::memcpy(dst_ptr + i * sizeof(nval), &nval, sizeof(nval));
+			const auto src_ptr2 = reinterpret_cast<const se_t<u32, true, 1>*>(src_ptr);
+			const auto dst_ptr2 = reinterpret_cast<nse_t<u32, 1>*>(dst_ptr);
+
+			for (u32 i = 0; i < remaining; ++i)
+				dst_ptr2[i] = src_ptr2[i];
 		}
 	}
 
@@ -217,18 +218,20 @@ namespace
 
 		const u32 remaining = dword_count % 4;
 
-		for (u32 i = 0; i < remaining; ++i)
+		if (remaining)
 		{
-			be_t<u32> val;
-			std::memcpy(&val, src_ptr + i * sizeof(val), sizeof(val));
-			le_t<u32> nval;
-			std::memcpy(&nval, dst_ptr + i * sizeof(nval), sizeof(nval));
+			const auto src_ptr2 = reinterpret_cast<const se_t<u32, true, 1>*>(src_ptr);
+			const auto dst_ptr2 = reinterpret_cast<nse_t<u32, 1>*>(dst_ptr);
 
-			if (val != nval)
+			for (u32 i = 0; i < remaining; ++i)
 			{
-				nval = val;
-				std::memcpy(dst_ptr + i * sizeof(nval), &nval, sizeof(nval));
-				bits_diff = _mm_set1_epi64x(-1);
+				const u32 data = src_ptr2[i];
+
+				if (dst_ptr2[i] != data)
+				{
+					dst_ptr2[i] = data;
+					bits_diff = _mm_set1_epi64x(-1);
+				}
 			}
 		}
 
@@ -280,12 +283,13 @@ namespace
 			}
 		}
 
-		for (u32 i = 0; i < remaining; ++i)
+		if (remaining)
 		{
-			be_t<u16> val;
-			std::memcpy(&val, src_ptr + i * sizeof(val), sizeof(val));
-			le_t<u16> nval = +val;
-			std::memcpy(dst_ptr + i * sizeof(nval), &nval, sizeof(nval));
+			auto src_ptr2 = reinterpret_cast<const se_t<u16, true, 1>*>(src_ptr);
+			auto dst_ptr2 = reinterpret_cast<nse_t<u16, 1>*>(dst_ptr);
+
+			for (u32 i = 0; i < remaining; ++i)
+				dst_ptr2[i] = src_ptr2[i];
 		}
 	}
 
