@@ -3,6 +3,8 @@
 #include "VKCompute.h"
 #include "VKOverlays.h"
 
+#include "vkutils/image.h"
+
 namespace vk
 {
 	struct cs_resolve_base : compute_task

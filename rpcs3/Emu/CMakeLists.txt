@@ -430,10 +430,12 @@ target_sources(rpcs3_emu PRIVATE
 	RSX/Capture/rsx_capture.cpp
 	RSX/Capture/rsx_replay.cpp
 	RSX/GL/GLCommonDecompiler.cpp
+	RSX/GL/GLCompute.cpp
 	RSX/GL/GLDraw.cpp
 	RSX/GL/GLFragmentProgram.cpp
 	RSX/GL/GLGSRender.cpp
 	RSX/GL/GLHelpers.cpp
+	RSX/GL/GLOverlays.cpp
 	RSX/GL/GLPipelineCompiler.cpp
 	RSX/GL/GLPresent.cpp
 	RSX/GL/GLRenderTargets.cpp
@@ -462,6 +464,7 @@ if(TARGET 3rdparty_vulkan)
 		RSX/VK/vkutils/shared.cpp
 		RSX/VK/VKCommandStream.cpp
 		RSX/VK/VKCommonDecompiler.cpp
+		RSX/VK/VKCompute.cpp
 		RSX/VK/VKDMA.cpp
 		RSX/VK/VKDraw.cpp
 		RSX/VK/VKFormats.cpp
@@ -470,6 +473,7 @@ if(TARGET 3rdparty_vulkan)
 		RSX/VK/VKGSRender.cpp
 		RSX/VK/VKHelpers.cpp
 		RSX/VK/VKMemAlloc.cpp
+		RSX/VK/VKOverlays.cpp
 		RSX/VK/VKPipelineCompiler.cpp
 		RSX/VK/VKPresent.cpp
 		RSX/VK/VKProgramPipeline.cpp

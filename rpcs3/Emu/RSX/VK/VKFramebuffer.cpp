@@ -10,7 +10,7 @@ namespace vk
 {
 	std::unordered_map<u64, std::vector<std::unique_ptr<vk::framebuffer_holder>>> g_framebuffers_cache;
 
-	vk::framebuffer_holder *get_framebuffer(VkDevice dev, u16 width, u16 height, VkRenderPass renderpass, const std::vector<vk::image*>& image_list)
+	vk::framebuffer_holder* get_framebuffer(VkDevice dev, u16 width, u16 height, VkRenderPass renderpass, const std::vector<vk::image*>& image_list)
 	{
 		u64 key = u64(width) | (u64(height) << 16);
 		auto &queue = g_framebuffers_cache[key];
