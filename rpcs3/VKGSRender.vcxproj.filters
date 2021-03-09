@@ -62,6 +62,7 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\image_helpers.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\VKOverlays.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />

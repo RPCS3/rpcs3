@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "VKGSRender.h"
 #include "vkutils/buffer_object.h"
+#include "Emu/RSX/Overlays/overlays.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 
 #include "util/asm.hpp"
