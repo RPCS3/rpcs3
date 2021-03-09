@@ -16,6 +16,7 @@
     <ClCompile Include="Emu\RSX\GL\GLPipelineCompiler.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLTextureCache.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLOverlays.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLCompute.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
