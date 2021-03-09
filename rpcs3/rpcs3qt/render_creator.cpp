@@ -61,7 +61,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 		cond.notify_all();
 	});
 
-	std::unique_ptr<decltype(enum_thread_v)> enum_thread(enum_thread_v);
+	std::unique_ptr<decltype(*enum_thread_v)> enum_thread(enum_thread_v);
 	{
 		std::unique_lock lck(mtx);
 		cond.wait_for(lck, std::chrono::seconds(10), [&] { return !thread_running; });
