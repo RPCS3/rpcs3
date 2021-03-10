@@ -34,7 +34,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 
 	const auto data = std::make_shared<thread_data_t>();
 
-	auto enum_thread_v = new named_thread("Vulkan Device Enumeration Thread"sv, [this, data]()
+	auto enum_thread_v = new named_thread("Vulkan Device Enumeration Thread"sv, [adapters = &vulkan_adapters, data]()
 	{
 		thread_ctrl::scoped_priority low_prio(-1);
 
@@ -53,7 +53,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 			{
 				for (auto& gpu : gpus)
 				{
-					vulkan_adapters.append(qstr(gpu.get_name()));
+					adapters->append(qstr(gpu.get_name()));
 				}
 			}
 		}
