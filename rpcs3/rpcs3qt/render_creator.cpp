@@ -33,7 +33,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 	static std::condition_variable cond;
 	static bool work_done = false;
 
-	auto enum_thread_v = new named_thread("Vulkan Device Enumeration Thread"sv, [adapters = &vulkan_adapters, &]()
+	auto enum_thread_v = new named_thread("Vulkan Device Enumeration Thread"sv, [&, adapters = &this->vulkan_adapters]()
 	{
 		thread_ctrl::scoped_priority low_prio(-1);
 
