@@ -34,7 +34,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 
 	const auto data = std::make_shared<thread_data_t>();
 
-	auto enum_thread_v = new named_thread("Vulkan Device Enumeration Thread"sv, [&vulkan_adapters, data]()
+	auto enum_thread_v = new named_thread("Vulkan Device Enumeration Thread"sv, [this, data]()
 	{
 		thread_ctrl::scoped_priority low_prio(-1);
 
