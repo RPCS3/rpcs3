@@ -21,18 +21,17 @@ class tar_object
 {
 	const fs::file& m_file;
 
-	int initial_offset;
-	int largest_offset; //we store the largest offset so we can continue to scan from there.
-	std::map<std::string, u64> m_map; //maps path to offset of header of that file, so we only need to scan the entire file once.
+	usz largest_offset = 0; // We store the largest offset so we can continue to scan from there.
+	std::map<std::string, std::pair<u64, TARHeader>> m_map; // Maps path to offset of file data and its header
 
-	TARHeader read_header(u64 offset);
+	TARHeader read_header(u64 offset) const;
 
 public:
-	tar_object(const fs::file& file, usz offset = 0);
+	tar_object(const fs::file& file);
 
 	std::vector<std::string> get_filenames();
 
-	fs::file get_file(std::string path);
+	fs::file get_file(const std::string& path);
 
 	bool extract(std::string path, std::string ignore = ""); // extract all files in archive to path
 };
