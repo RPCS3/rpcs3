@@ -25,49 +25,57 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 	// plugged in. This whole contraption is for showing an error message in case that happens, so that user has
 	// some idea about why the emulator window isn't showing up.
 
-	static atomic_t<bool> was_called = false;
-	if (was_called.exchange(true))
-		fmt::throw_exception("Render_Creator cannot be created more than once");
+	struct thread_data_t
+	{
+		std::mutex mtx;
+		std::condition_variable cond;
+		bool work_done = false;
+	};
 
-	static std::mutex mtx;
-	static std::condition_variable cond;
-	static bool thread_running = true;
-	static bool device_found = false;
+	const auto data = std::make_shared<thread_data_t>();
 
-	static QStringList compatible_gpus;
-
-	auto enum_thread_v = new named_thread("Vulkan Device Enumeration Thread"sv, [&]()
+	auto enum_thread_v = new named_thread("Vulkan Device Enumeration Thread"sv, [&vulkan_adapters, data]()
 	{
 		thread_ctrl::scoped_priority low_prio(-1);
 
 		vk::instance device_enum_context;
+
+		std::unique_lock lock(data->mtx, std::defer_lock);
+
 		if (device_enum_context.create("RPCS3", true))
 		{
 			device_enum_context.bind();
 			std::vector<vk::physical_device>& gpus = device_enum_context.enumerate_devices();
 
+			lock.lock();
+
 			if (!gpus.empty())
 			{
-				device_found = true;
-
 				for (auto& gpu : gpus)
 				{
-					compatible_gpus.append(qstr(gpu.get_name()));
+					vulkan_adapters.append(qstr(gpu.get_name()));
 				}
 			}
 		}
+		else
+		{
+			lock.lock();
+		}
 
-		std::scoped_lock{ mtx }, thread_running = false;
-		cond.notify_all();
+		data->work_done = true;
+		lock.unlock();
+		data->cond.notify_all();
 	});
 
 	std::unique_ptr<std::remove_pointer_t<decltype(enum_thread_v)>> enum_thread(enum_thread_v);
 	{
-		std::unique_lock lck(mtx);
-		cond.wait_for(lck, std::chrono::seconds(10), [&] { return !thread_running; });
+		std::unique_lock lck(data->mtx);
+		cond.wait_for(lck, std::chrono::seconds(10), [&] { return data->work_done; });
 	}
 
-	if (thread_running)
+	data->mtx.lock(); // Lock forever so the thread will not wake up if did not already
+
+	if (!data->work_done)
 	{
 		enum_thread.release(); // Detach thread (destructor is not called)
 
@@ -88,8 +96,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 	}
 	else
 	{
-		supports_vulkan = device_found;
-		vulkan_adapters = std::move(compatible_gpus);
+		supports_vulkan = !vulkan_adapters.isEmpty();
 		enum_thread.reset(); // Join thread
 	}
 #endif
