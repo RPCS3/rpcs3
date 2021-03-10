@@ -1071,6 +1071,13 @@ namespace vk
 		vk::image* real_src = src;
 		vk::image* real_dst = dst;
 
+		if (dst->current_layout == VK_IMAGE_LAYOUT_UNDEFINED)
+		{
+			// Watch out for lazy init
+			ensure(src != dst);
+			dst->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		}
+
 		// Optimization pass; check for pass-through data transfer
 		if (!xfer_info.flip_horizontal && !xfer_info.flip_vertical && src_area.height() == dst_area.height())
 		{
