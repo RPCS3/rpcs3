@@ -49,7 +49,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 
 			lock.lock();
 
-			if (!gpus.empty())
+			if (!data->work_done) // The spawning thread gave up, do not attempt to modify vulkan_adapters
 			{
 				for (auto& gpu : gpus)
 				{
@@ -73,9 +73,7 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 		cond.wait_for(lck, std::chrono::seconds(10), [&] { return data->work_done; });
 	}
 
-	data->mtx.lock(); // Lock forever so the thread will not wake up if did not already
-
-	if (!data->work_done)
+	if (std::scoped_lock{data->mtx}, !std::exchange(data->work_done, true)) // If thread hasn't done its job yet, it won't anymore
 	{
 		enum_thread.release(); // Detach thread (destructor is not called)
 
