@@ -67,12 +67,13 @@ render_creator::render_creator(QObject *parent) : QObject(parent)
 	});
 
 	std::unique_ptr<std::remove_pointer_t<decltype(enum_thread_v)>> enum_thread(enum_thread_v);
+
+	if ([&]()
 	{
 		std::unique_lock lck(mtx);
 		cond.wait_for(lck, std::chrono::seconds(10), [&] { return work_done; });
-	}
-
-	if (std::scoped_lock{mtx}, !std::exchange(work_done, true)) // If thread hasn't done its job yet, it won't anymore
+		return !std::exchange(work_done, true); // If thread hasn't done its job yet, it won't anymore
+	}())
 	{
 		enum_thread.release(); // Detach thread (destructor is not called)
 
