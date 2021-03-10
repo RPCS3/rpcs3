@@ -3415,7 +3415,7 @@ bool ppu_interpreter::MFOCRF(ppu_thread& ppu, ppu_opcode_t op)
 		std::memcpy(&lane0, ppu.cr.bits, sizeof(v128));
 		std::memcpy(&lane1, ppu.cr.bits + 16, sizeof(v128));
 		const u32 mh = _mm_movemask_epi8(_mm_slli_epi64(lane0.value().vi, 7));
-		const u32 ml = _mm_movemask_epi8(_mm_slli_epi64(lane0.value().vi, 7));
+		const u32 ml = _mm_movemask_epi8(_mm_slli_epi64(lane1.value().vi, 7));
 
 		ppu.gpr[op.rd] = (mh << 16) | ml;
 	}
