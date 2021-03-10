@@ -390,6 +390,19 @@ namespace utils
 
 		return static_cast<T>(value / align + (value > 0 ? T{(value % align) > (align / 2)} : 0 - T{(value % align) < (align / 2)}));
 	}
+
+	// Hack. Pointer cast util to workaround UB. Use with extreme care.
+	template <typename T, typename U>
+	[[nodiscard]] T* bless(U* ptr)
+	{
+#ifdef _MSC_VER
+		return (T*)ptr;
+#else
+		T* result;
+		__asm__("movq %1, %0;" : "=r" (result) : "r" (ptr) : "memory");
+		return result;
+#endif
+	}
 } // namespace utils
 
 using utils::busy_wait;

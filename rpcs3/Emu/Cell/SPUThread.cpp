@@ -2161,7 +2161,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				auto& res = vm::reservation_acquire(eal);
 
 				// Lock each bit corresponding to a byte being written, using some free space in reservation memory
-				auto* bits = reinterpret_cast<atomic_t<u128>*>(vm::g_reservations + ((eal & 0xff80) / 2 + 16));
+				auto* bits = utils::bless<atomic_t<u128>>(vm::g_reservations + ((eal & 0xff80) / 2 + 16));
 
 				// Get writing mask
 				const u128 wmask = (~u128{} << (eal & 127)) & (~u128{} >> (127 - ((eal + size0 - 1) & 127)));

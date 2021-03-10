@@ -493,7 +493,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 			m_scratch_buffer.resize(draw_count * 24);
 			GLint* firsts = reinterpret_cast<GLint*>(m_scratch_buffer.data());
 			GLsizei* counts = (firsts + draw_count);
-			const GLvoid** offsets = reinterpret_cast<const GLvoid**>(counts + draw_count);
+			const GLvoid** offsets = utils::bless<const GLvoid*>(counts + draw_count);
 
 			u32 first = 0;
 			u32 dst_index = 0;
@@ -560,7 +560,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 			m_scratch_buffer.resize(draw_count * 16);
 
 			GLsizei *counts = reinterpret_cast<GLsizei*>(m_scratch_buffer.data());
-			const GLvoid** offsets = reinterpret_cast<const GLvoid**>(counts + draw_count);
+			const GLvoid** offsets = utils::bless<const GLvoid*>(counts + draw_count);
 			int dst_index = 0;
 
 			for (const auto &range : subranges)
