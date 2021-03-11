@@ -37,6 +37,7 @@ public:
 		const QString clocks_scale                 = tr("Changes the scale of emulated system time.\nAffects software which uses system time to calculate things such as dynamic timesteps.");
 		const QString wake_up_delay                = tr("Try fiddling with this setting when encountering unstable games. The higher value, the better stability it may provide.\nIncrements/Decrements for each test should be around 100μs to 200μs until finding the best value for optimal stability.\nValues above 1000μs may cause noticeable performance penalties, use with caution.");
 		const QString disabled_from_global         = tr("Do not change this setting globally.\nRight-click the game in game list and choose \"Configure\" instead.");
+		const QString vulkan_async_scheduler       = tr("Determines how to schedule GPU async compute jobs when using asynchronous streaming.\nUse 'Host' mode for more spec compliant behavior at the cost of CPU overhead.\nUse 'Device' to let your driver handle this. Beware that 'device' mode technically violates official spec but is the superior option.");
 
 		// audio
 
@@ -158,6 +159,8 @@ public:
 		const QString async_with_shader_interpreter   = tr("Hybrid rendering mode.\nIf a shader is not found in the cache, the interpreter will be used to render approximated graphics for this shader until it has compiled.");
 		const QString shader_interpreter_only         = tr("All rendering is handled by the interpreter with no attempt to compile native shaders.\nThis mode is very slow and experimental.");
 		const QString shader_compiler_threads         = tr("Number of threads to use for the shader compiler backend.\nOnly has an impact when shader mode is set to one of the asynchronous modes.");
+
+		const QString async_texture_streaming         = tr("Stream textures to GPU in parallel with 3D rendering.\nCan improve performance on more powerful GPUs that have spare headroom.\nOnly works with Vulkan renderer.");
 
 		// gui
 
