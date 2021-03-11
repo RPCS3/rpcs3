@@ -48,6 +48,7 @@ namespace vk
 		VkPhysicalDeviceDriverPropertiesKHR driver_properties{};
 
 		bool stencil_export_support = false;
+		bool framebuffer_loops_support = false;
 		bool conditional_render_support = false;
 		bool external_memory_host_support = false;
 		bool unrestricted_depth_range_support = false;
@@ -131,6 +132,7 @@ namespace vk
 		bool get_external_memory_host_support() const;
 		bool get_surface_capabilities_2_support() const;
 		bool get_debug_utils_support() const;
+		bool get_framebuffer_loops_support() const;
 
 		VkQueue get_present_queue() const;
 		VkQueue get_graphics_queue() const;

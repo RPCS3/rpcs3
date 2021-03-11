@@ -995,7 +995,9 @@ namespace vk
 
 		void insert_texture_barrier(vk::command_buffer& cmd, vk::image* tex, bool strong_ordering) override
 		{
-			if (!strong_ordering && tex->current_layout == VK_IMAGE_LAYOUT_GENERAL)
+			if (!strong_ordering &&
+			    (tex->current_layout == VK_IMAGE_LAYOUT_GENERAL ||
+				 tex->current_layout == VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_VALVE))
 			{
 				// A previous barrier already exists, do nothing
 				return;

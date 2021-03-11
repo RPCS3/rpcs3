@@ -395,6 +395,7 @@ void VKGSRender::bind_texture_env()
 					ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
 					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 					break;
+				case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_VALVE:
 				case VK_IMAGE_LAYOUT_GENERAL:
 					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
 					if (!sampler_state->is_cyclic_reference)
@@ -417,7 +418,7 @@ void VKGSRender::bind_texture_env()
 						vk::insert_image_memory_barrier(
 							*m_current_command_buffer,
 							raw->value,
-							VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+							raw->current_layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 							src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 							src_access, VK_ACCESS_SHADER_READ_BIT,
 							{ raw->aspect(), 0, 1, 0, 1 });
@@ -535,6 +536,7 @@ void VKGSRender::bind_texture_env()
 			ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
 			raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			break;
+		case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_VALVE:
 		case VK_IMAGE_LAYOUT_GENERAL:
 			ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
 			if (!sampler_state->is_cyclic_reference)
@@ -556,7 +558,7 @@ void VKGSRender::bind_texture_env()
 				vk::insert_image_memory_barrier(
 					*m_current_command_buffer,
 					raw->value,
-					VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					raw->current_layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					src_stage, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
 					src_access, VK_ACCESS_SHADER_READ_BIT,
 					{ raw->aspect(), 0, 1, 0, 1 });
@@ -643,6 +645,7 @@ void VKGSRender::bind_interpreter_texture_env()
 					ensure(sampler_state->upload_context == rsx::texture_upload_context::blit_engine_src);
 					raw->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 					break;
+				case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_VALVE:
 				case VK_IMAGE_LAYOUT_GENERAL:
 					ensure(sampler_state->upload_context == rsx::texture_upload_context::framebuffer_storage);
 					if (!sampler_state->is_cyclic_reference)
@@ -665,7 +668,7 @@ void VKGSRender::bind_interpreter_texture_env()
 						vk::insert_image_memory_barrier(
 							*m_current_command_buffer,
 							raw->value,
-							VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+							raw->current_layout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 							src_stage, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 							src_access, VK_ACCESS_SHADER_READ_BIT,
 							{ raw->aspect(), 0, 1, 0, 1 });

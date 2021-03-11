@@ -30,6 +30,7 @@ namespace vk
 			features2.pNext = nullptr;
 
 			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+			VkPhysicalDeviceAttachmentFeedbackLoopLayoutFeaturesVALVE fbo_loops_support_info{};
 
 			if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
 			{
@@ -44,6 +45,13 @@ namespace vk
 				features2.pNext         = &driver_properties;
 			}
 
+			if (device_extensions.is_supported(VK_VALVE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_EXTENSION_NAME))
+			{
+				fbo_loops_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ATTACHMENT_FEEDBACK_LOOP_LAYOUT_VALVE;
+				fbo_loops_support_info.pNext = features2.pNext;
+				features2.pNext              = &fbo_loops_support_info;
+			}
+
 			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
 			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
@@ -51,6 +59,7 @@ namespace vk
 			shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
 			shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
 			shader_types_support.allow_int8    = !!shader_support_info.shaderInt8;
+			framebuffer_loops_support          = !!fbo_loops_support_info.attachmentFeedbackLoopLayout;
 			features                           = features2.features;
 		}
 
@@ -608,6 +617,11 @@ namespace vk
 	bool render_device::get_debug_utils_support() const
 	{
 		return g_cfg.video.renderdoc_compatiblity && pgpu->debug_utils_support;
+	}
+
+	bool render_device::get_framebuffer_loops_support() const
+	{
+		return pgpu->framebuffer_loops_support;
 	}
 
 	mem_allocator_base* render_device::get_allocator() const

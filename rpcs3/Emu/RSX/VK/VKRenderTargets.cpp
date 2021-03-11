@@ -340,7 +340,10 @@ namespace vk
 			cyclic_reference_sync_tag = write_barrier_sync_tag;    // Match tags
 		}
 
-		vk::insert_texture_barrier(cmd, this, VK_IMAGE_LAYOUT_GENERAL);
+		const auto optimal_layout = get_current_renderer()->get_framebuffer_loops_support()?
+			VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_VALVE :
+			VK_IMAGE_LAYOUT_GENERAL;
+		vk::insert_texture_barrier(cmd, this, optimal_layout);
 	}
 
 	void render_target::reset_surface_counters()
@@ -386,7 +389,7 @@ namespace vk
 
 		if (access == rsx::surface_access::shader_write && write_barrier_sync_tag != 0)
 		{
-			if (current_layout == VK_IMAGE_LAYOUT_GENERAL)
+			if (current_layout == VK_IMAGE_LAYOUT_GENERAL || current_layout == VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_VALVE)
 			{
 				if (write_barrier_sync_tag != cyclic_reference_sync_tag)
 				{
@@ -410,7 +413,7 @@ namespace vk
 						dst_access = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 					}
 
-					vk::insert_image_memory_barrier(cmd, value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
+					vk::insert_image_memory_barrier(cmd, value, current_layout, current_layout,
 						src_stage, dst_stage, src_access, dst_access, { aspect(), 0, 1, 0, 1 });
 
 					write_barrier_sync_tag = 0; // Disable for next draw
