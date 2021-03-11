@@ -76,6 +76,8 @@ enum class emu_settings_type
 	VBlankRate,
 	RelaxedZCULL,
 	DriverWakeUpDelay,
+	VulkanAsyncTextureUploads,
+	VulkanAsyncSchedulerDriver,
 
 	// Performance Overlay
 	PerfOverlayEnabled,
@@ -224,6 +226,10 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::VulkanAdapter,              { "Video", "Vulkan", "Adapter"}},
 	{ emu_settings_type::VBlankRate,                 { "Video", "Vblank Rate"}},
 	{ emu_settings_type::DriverWakeUpDelay,          { "Video", "Driver Wake-Up Delay"}},
+
+	// Vulkan
+	{ emu_settings_type::VulkanAsyncTextureUploads,        { "Video", "Vulkan", "Asynchronous Texture Streaming"}},
+	{ emu_settings_type::VulkanAsyncSchedulerDriver,       { "Video", "Vulkan", "Asynchronous Queue Scheduler"}},
 
 	// Performance Overlay
 	{ emu_settings_type::PerfOverlayEnabled,               { "Video", "Performance Overlay", "Enabled" } },

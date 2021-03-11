@@ -441,8 +441,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->gb_resolutionScale->setEnabled(!checked);
 		ui->gb_minimumScalableDimension->setEnabled(!checked);
 		ui->gb_anisotropicFilter->setEnabled(!checked);
+		ui->vulkansched->setEnabled(!checked);
 	};
 	connect(ui->strictModeRendering, &QCheckBox::clicked, this, onStrictRenderingMode);
+
+	m_emu_settings->EnhanceCheckBox(ui->asyncTextureStreaming, emu_settings_type::VulkanAsyncTextureUploads);
+	SubscribeTooltip(ui->asyncTextureStreaming, tooltips.settings.async_texture_streaming);
 
 	// Radio buttons
 
@@ -638,15 +642,20 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->graphicsAdapterBox, &QComboBox::currentTextChanged, set_adapter);
 	connect(ui->renderBox, &QComboBox::currentTextChanged, set_renderer);
 
-	auto fix_gl_legacy = [=, this](const QString& text)
+	auto apply_renderer_specific_options = [=, this](const QString& text)
 	{
+		// OpenGL-only
 		ui->glLegacyBuffers->setEnabled(text == r_creator->OpenGL.name);
+
+		// Vulkan-only
+		ui->asyncTextureStreaming->setEnabled(text == r_creator->Vulkan.name);
+		ui->vulkansched->setEnabled(text == r_creator->Vulkan.name);
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
 	onStrictRenderingMode(ui->strictModeRendering->isChecked());
-	fix_gl_legacy(ui->renderBox->currentText()); // Init
-	connect(ui->renderBox, &QComboBox::currentTextChanged, fix_gl_legacy);
+	apply_renderer_specific_options(ui->renderBox->currentText()); // Init
+	connect(ui->renderBox, &QComboBox::currentTextChanged, apply_renderer_specific_options);
 
 	//                      _ _         _______    _
 	//       /\            | (_)       |__   __|  | |
@@ -982,6 +991,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->sleepTimersAccuracy, emu_settings_type::SleepTimersAccuracy);
 	SubscribeTooltip(ui->gb_sleep_timers_accuracy, tooltips.settings.sleep_timers_accuracy);
+
+	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
+	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
 
 	// Sliders
 
