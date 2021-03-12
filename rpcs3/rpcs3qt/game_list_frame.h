@@ -86,6 +86,7 @@ public Q_SLOTS:
 	void SetListMode(const bool& is_list);
 	void SetSearchText(const QString& text);
 	void SetShowCompatibilityInGrid(bool show);
+	void SetShowCustomIcons(bool show);
 
 private Q_SLOTS:
 	void OnColClicked(int col);
@@ -172,4 +173,5 @@ private:
 	qreal m_margin_factor;
 	qreal m_text_factor;
 	bool m_draw_compat_status_to_grid = false;
+	bool m_show_custom_icons = true;
 };

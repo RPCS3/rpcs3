@@ -163,6 +163,7 @@ namespace gui
 	const gui_save gl_show_hidden  = gui_save(game_list, "show_hidden",  false);
 	const gui_save gl_hidden_list  = gui_save(game_list, "hidden_list",  QStringList());
 	const gui_save gl_draw_compat  = gui_save(game_list, "draw_compat",  false);
+	const gui_save gl_custom_icon  = gui_save(game_list, "custom_icon",  true);
 
 	const gui_save fs_emulator_dir_list = gui_save(fs, "emulator_dir_list", QStringList());
 	const gui_save fs_dev_hdd0_list     = gui_save(fs, "dev_hdd0_list",     QStringList());
