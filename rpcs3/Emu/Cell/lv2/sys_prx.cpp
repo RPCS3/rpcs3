@@ -311,6 +311,13 @@ error_code _sys_prx_load_module_by_fd(ppu_thread& ppu, s32 fd, u64 offset, u64 f
 		return CELL_EBADF;
 	}
 
+	std::lock_guard lock(file->mp->mutex);
+
+	if (!file->file)
+	{
+		return CELL_EBADF;
+	}
+
 	return prx_load_module(fmt::format("%s_x%x", file->name.data(), offset), flags, pOpt, lv2_file::make_view(file, offset));
 }
 

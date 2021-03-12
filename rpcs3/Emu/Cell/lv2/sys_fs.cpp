@@ -603,6 +603,11 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 
 	std::lock_guard lock(file->mp->mutex);
 
+	if (!file->file)
+	{
+		return CELL_EBADF;
+	}
+
 	if (file->lock == 2)
 	{
 		nread.try_write(0);
@@ -648,6 +653,11 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 
 	std::lock_guard lock(file->mp->mutex);
 
+	if (!file->file)
+	{
+		return CELL_EBADF;
+	}
+
 	if (file->lock)
 	{
 		if (file->lock == 2)
@@ -677,15 +687,49 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 
 	sys_fs.trace("sys_fs_close(fd=%d)", fd);
 
-	const auto file = idm::withdraw<lv2_fs_object, lv2_file>(fd, [](lv2_file& file)
+	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
+
+	if (!file)
 	{
-		if (file.type >= lv2_file_type::sdata)
+		return CELL_EBADF;
+	}
+
+	{
+		std::lock_guard lock(file->mp->mutex);
+
+		if (!file->file)
+		{
+			return CELL_EBADF;
+		}
+
+		if (std::memcmp(file->name.data(), "/dev_hdd1/", 10) != 0
+			&& !(file->mp->flags & lv2_mp_flag::read_only) && file->flags & CELL_FS_O_ACCMODE)
+		{
+			// Special: Ensure temporary directory for gamedata writes will remain on disk before final gamedata commitment
+			file->file.sync(); // For cellGameContentPermit atomicity
+		}
+
+		// Ensure Host file handle won't be kept open after this syscall
+		file->file.close();
+	}
+
+	const auto ret = idm::withdraw<lv2_fs_object, lv2_file>(fd, [&](lv2_file& _file) -> CellError
+	{
+		if (file.get() != std::addressof(_file))
+		{
+			// Other thread destroyed the object inbetween
+			return CELL_EBADF;
+		}
+
+		if (_file.type >= lv2_file_type::sdata)
 		{
 			g_fxo->get<loaded_npdrm_keys>().npdrm_fds--;
 		}
+
+		return {};
 	});
 
-	if (!file)
+	if (!ret || ret.ret == CELL_EBADF)
 	{
 		return CELL_EBADF;
 	}
@@ -979,6 +1023,11 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 	}
 
 	std::lock_guard lock(file->mp->mutex);
+
+	if (!file->file)
+	{
+		return CELL_EBADF;
+	}
 
 	if (file->lock == 2)
 	{
@@ -1296,6 +1345,11 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		std::lock_guard lock(file->mp->mutex);
 
+		if (!file->file)
+		{
+			return CELL_EBADF;
+		}
+
 		if (file->lock == 2)
 		{
 			return CELL_EIO;
@@ -1338,6 +1392,11 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		}
 
 		std::lock_guard lock(file->mp->mutex);
+
+		if (!file->file)
+		{
+			return CELL_EBADF;
+		}
 
 		auto sdata_file = std::make_unique<EDATADecrypter>(lv2_file::make_view(file, arg->offset));
 
@@ -1668,12 +1727,17 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 		return CELL_EBADF;
 	}
 
+	std::lock_guard lock(file->mp->mutex);
+
+	if (!file->file)
+	{
+		return CELL_EBADF;
+	}
+
 	if (whence + 0u >= 3)
 	{
 		return {CELL_EINVAL, whence};
 	}
-
-	std::lock_guard lock(file->mp->mutex);
 
 	const u64 result = file->file.seek(offset, static_cast<fs::seek_mode>(whence));
 
@@ -1707,6 +1771,12 @@ error_code sys_fs_fdatasync(ppu_thread& ppu, u32 fd)
 	}
 
 	std::lock_guard lock(file->mp->mutex);
+
+	if (!file->file)
+	{
+		return CELL_EBADF;
+	}
+
 	file->file.sync();
 	return CELL_OK;
 }
@@ -1726,6 +1796,12 @@ error_code sys_fs_fsync(ppu_thread& ppu, u32 fd)
 	}
 
 	std::lock_guard lock(file->mp->mutex);
+
+	if (!file->file)
+	{
+		return CELL_EBADF;
+	}
+
 	file->file.sync();
 	return CELL_OK;
 }
@@ -1879,6 +1955,11 @@ error_code sys_fs_ftruncate(ppu_thread& ppu, u32 fd, u64 size)
 	}
 
 	std::lock_guard lock(file->mp->mutex);
+
+	if (!file->file)
+	{
+		return CELL_EBADF;
+	}
 
 	if (file->lock == 2)
 	{
