@@ -274,6 +274,8 @@
      <addaction name="setIconSizeSmallAct"/>
      <addaction name="setIconSizeMediumAct"/>
      <addaction name="setIconSizeLargeAct"/>
+     <addaction name="separator"/>
+     <addaction name="showCustomIconsAct"/>
     </widget>
     <widget class="QMenu" name="menuGame_List_Mode">
      <property name="title">
@@ -1120,6 +1122,17 @@
   <action name="actionLog_Viewer">
    <property name="text">
     <string>Log Viewer</string>
+   </property>
+  </action>
+  <action name="showCustomIconsAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Custom Icons</string>
    </property>
   </action>
  </widget>

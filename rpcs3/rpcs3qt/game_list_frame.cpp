@@ -210,6 +210,7 @@ void game_list_frame::LoadSettings()
 	m_sort_column = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
 	m_category_filters = m_gui_settings->GetGameListCategoryFilters();
 	m_draw_compat_status_to_grid = m_gui_settings->GetValue(gui::gl_draw_compat).toBool();
+	m_show_custom_icons = m_gui_settings->GetValue(gui::gl_custom_icon).toBool();
 
 	Refresh(true);
 
@@ -570,9 +571,13 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				game.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
 				game.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
 				game.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
-				game.icon_path    = fs::get_config_dir() + "/Icons/game_icons/" + game.serial + "/ICON0.PNG";
 
-				if (!fs::is_file(game.icon_path))
+				if (m_show_custom_icons)
+				{
+					game.icon_path = fs::get_config_dir() + "/Icons/game_icons/" + game.serial + "/ICON0.PNG";
+				}
+
+				if (!m_show_custom_icons || !fs::is_file(game.icon_path))
 				{
 					game.icon_path = sfo_dir + "/ICON0.PNG";
 				}
@@ -2309,6 +2314,16 @@ void game_list_frame::SetShowCompatibilityInGrid(bool show)
 	m_draw_compat_status_to_grid = show;
 	RepaintIcons();
 	m_gui_settings->SetValue(gui::gl_draw_compat, show);
+}
+
+void game_list_frame::SetShowCustomIcons(bool show)
+{
+	if (m_show_custom_icons != show)
+	{
+		m_show_custom_icons = show;
+		m_gui_settings->SetValue(gui::gl_custom_icon, show);
+		Refresh(true);
+	}
 }
 
 QList<game_info> game_list_frame::GetGameInfo() const
