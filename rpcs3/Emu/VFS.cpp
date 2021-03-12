@@ -749,7 +749,21 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 		if (check_path(fs::escape_path(file.real_path)))
 		{
 			ensure(file.mp == mp);
+
+			if (!file.file)
+			{
+				file.restore_data.seek_pos = -1;
+				return;
+			}
+
 			file.restore_data.seek_pos = file.file.pos();
+
+			if (std::memcmp(file.name.data(), "/dev_hdd1/", 10) != 0
+				&& !(file.mp->flags & lv2_mp_flag::read_only) && file.flags & CELL_FS_O_ACCMODE)
+			{
+				file.file.sync(); // For cellGameContentPermit atomicity
+			}
+
 			file.file.close(); // Actually close it!
 		}
 	});
@@ -779,6 +793,11 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 		if (check_path(escaped_real))
 		{
+			if (file.restore_data.seek_pos == umax)
+			{
+				return;
+			}
+
 			// Update internal path
 			if (res)
 			{

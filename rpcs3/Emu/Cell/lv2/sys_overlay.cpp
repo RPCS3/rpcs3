@@ -101,6 +101,13 @@ error_code sys_overlay_load_module_by_fd(vm::ptr<u32> ovlmid, u32 fd, u64 offset
 		return CELL_EBADF;
 	}
 
+	std::lock_guard lock(file->mp->mutex);
+
+	if (!file->file)
+	{
+		return CELL_EBADF;
+	}
+
 	return overlay_load_module(ovlmid, fmt::format("%s_x%x", file->name.data(), offset), flags, entry, lv2_file::make_view(file, offset));
 }
 
