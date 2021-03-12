@@ -16,6 +16,7 @@
 
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/Cell/lv2/sys_fs.h"
 
 #include <cmath>
 #include <shared_mutex>
@@ -1192,7 +1193,7 @@ error_code sceNpTrophyGetGameIcon(u32 context, u32 handle, vm::ptr<void> buffer,
 
 	if (buffer && *size >= icon_size)
 	{
-		icon_file.read(buffer.get_ptr(), icon_size);
+		lv2_file::op_read(icon_file, buffer, icon_size);
 	}
 
 	*size = icon_size;
@@ -1259,7 +1260,7 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 
 	if (buffer && *size >= icon_size)
 	{
-		icon_file.read(buffer.get_ptr(), icon_size);
+		lv2_file::op_read(icon_file, buffer, icon_size);
 	}
 
 	*size = icon_size;
