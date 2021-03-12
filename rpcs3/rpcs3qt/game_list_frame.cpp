@@ -40,6 +40,7 @@
 #include <QToolTip>
 #include <QApplication>
 #include <QClipboard>
+#include <QFileDialog>
 
 LOG_CHANNEL(game_list_log, "GameList");
 LOG_CHANNEL(sys_log, "SYS");
@@ -1011,17 +1012,74 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	QAction* download_compat = menu.addAction(tr("&Download Compatibility Database"));
 	menu.addSeparator();
 	QAction* edit_notes = menu.addAction(tr("&Edit Tooltip Notes"));
+
+	const std::string custom_icon_dir_path = fs::get_config_dir() + "/Icons/game_icons/" + current_game.serial;
+	const QString custom_icon_path = qstr(custom_icon_dir_path) + "/ICON0.PNG";
+
+	if (QFile::exists(custom_icon_path))
+	{
+		QMenu* icon_menu = menu.addMenu(tr("&Custom Icon"));
+		QAction* remove_icon = icon_menu->addAction(tr("&Remove Custom Icon"));
+		connect(remove_icon, &QAction::triggered, this, [this, custom_icon_path, serial]
+		{
+			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove custom icon of %0?").arg(serial)) == QMessageBox::Yes)
+			{
+				if (QFile file(custom_icon_path); !file.remove())
+				{
+					game_list_log.error("Could not remove custom icon: '%s'. %s", sstr(custom_icon_path), sstr(file.errorString()));
+					QMessageBox::warning(this, tr("Warning!"), tr("Failed to remove the custom icon!"));
+				}
+				else
+				{
+					game_list_log.success("Removed custom icon: '%s'", sstr(custom_icon_path));
+					Refresh(true);
+				}
+			}
+		});
+	}
+	else if (fs::create_path(custom_icon_dir_path))
+	{
+		QMenu* icon_menu = menu.addMenu(tr("&Custom Icon"));
+		QAction* import_icon = icon_menu->addAction(tr("&Import Custom Icon"));
+		connect(import_icon, &QAction::triggered, this, [this, custom_icon_path]
+		{
+			const QString icon_path = QFileDialog::getOpenFileName(this, tr("Select Icon"), "", tr("png (*.png);;All files (*.*)"));
+			if (!icon_path.isEmpty())
+			{
+				if (QFile file(custom_icon_path); file.exists() && !file.remove())
+				{
+					game_list_log.error("Could not remove old custom icon: '%s'", sstr(custom_icon_path), sstr(file.errorString()));
+					QMessageBox::warning(this, tr("Warning!"), tr("Failed to remove the old custom icon!"));
+				}
+				else if (QFile file(icon_path); !file.copy(icon_path, custom_icon_path))
+				{
+					game_list_log.error("Could not import custom icon '%s' to '%s'. %s", sstr(icon_path), sstr(custom_icon_path), sstr(file.errorString()));
+					QMessageBox::warning(this, tr("Warning!"), tr("Failed to import the custom icon!"));
+				}
+				else
+				{
+					game_list_log.success("Imported custom icon '%s' to '%s'", sstr(icon_path), sstr(custom_icon_path));
+					Refresh(true);
+				}
+			}
+		});
+	}
+	else
+	{
+		game_list_log.error("Could not create path '%s'", custom_icon_dir_path);
+	}
+
 	QMenu* info_menu = menu.addMenu(tr("&Copy Info"));
 	QAction* copy_info = info_menu->addAction(tr("&Copy Name + Serial"));
 	QAction* copy_name = info_menu->addAction(tr("&Copy Name"));
 	QAction* copy_serial = info_menu->addAction(tr("&Copy Serial"));
 
-	connect(boot, &QAction::triggered, [this, gameinfo]()
+	connect(boot, &QAction::triggered, this, [this, gameinfo]()
 	{
 		sys_log.notice("Booting from gamelist per context menu...");
 		Q_EMIT RequestBoot(gameinfo, gameinfo->hasCustomConfig);
 	});
-	connect(configure, &QAction::triggered, [this, current_game, gameinfo]()
+	connect(configure, &QAction::triggered, this, [this, current_game, gameinfo]()
 	{
 		settings_dialog dlg(m_gui_settings, m_emu_settings, 0, this, &current_game);
 		connect(&dlg, &settings_dialog::EmuSettingsApplied, [this, gameinfo]()
@@ -1035,7 +1093,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		});
 		dlg.exec();
 	});
-	connect(pad_configure, &QAction::triggered, [this, current_game, gameinfo]()
+	connect(pad_configure, &QAction::triggered, this, [this, current_game, gameinfo]()
 	{
 		pad_settings_dialog dlg(m_gui_settings, this, &current_game);
 
@@ -1045,7 +1103,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			ShowCustomConfigIcon(gameinfo);
 		}
 	});
-	connect(hide_serial, &QAction::triggered, [serial, this](bool checked)
+	connect(hide_serial, &QAction::triggered, this, [serial, this](bool checked)
 	{
 		if (checked)
 			m_hidden_list.insert(serial);
@@ -1055,14 +1113,14 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.values()));
 		Refresh();
 	});
-	connect(create_ppu_cache, &QAction::triggered, [gameinfo, this]
+	connect(create_ppu_cache, &QAction::triggered, this, [gameinfo, this]
 	{
 		if (m_gui_settings->GetBootConfirmation(this))
 		{
 			CreatePPUCache(gameinfo);
 		}
 	});
-	connect(remove_game, &QAction::triggered, [this, current_game, gameinfo, cache_base_dir, name]
+	connect(remove_game, &QAction::triggered, this, [this, current_game, gameinfo, cache_base_dir, name]
 	{
 		if (current_game.path.empty())
 		{
@@ -1099,7 +1157,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 		}
 	});
-	connect(configure_patches, &QAction::triggered, [this, gameinfo]()
+	connect(configure_patches, &QAction::triggered, this, [this, gameinfo]()
 	{
 		std::unordered_map<std::string, std::set<std::string>> games;
 		for (const auto& game : m_game_data)
@@ -1112,20 +1170,20 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		patch_manager_dialog patch_manager(m_gui_settings, games, gameinfo->info.serial, GetGameVersion(gameinfo), this);
 		patch_manager.exec();
 	});
-	connect(open_game_folder, &QAction::triggered, [current_game]()
+	connect(open_game_folder, &QAction::triggered, this, [current_game]()
 	{
 		gui::utils::open_dir(current_game.path);
 	});
-	connect(check_compat, &QAction::triggered, [serial]
+	connect(check_compat, &QAction::triggered, this, [serial]
 	{
 		const QString link = "https://rpcs3.net/compatibility?g=" + serial;
 		QDesktopServices::openUrl(QUrl(link));
 	});
-	connect(download_compat, &QAction::triggered, [this]
+	connect(download_compat, &QAction::triggered, this, [this]
 	{
 		m_game_compat->RequestCompatibility(true);
 	});
-	connect(rename_title, &QAction::triggered, [this, name, serial, global_pos]
+	connect(rename_title, &QAction::triggered, this, [this, name, serial, global_pos]
 	{
 		const QString custom_title = m_persistent_settings->GetValue(gui::persistent::titles, serial, "").toString();
 		const QString old_title = custom_title.isEmpty() ? name : custom_title;
@@ -1150,7 +1208,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			Refresh(true); // full refresh in order to reliably sort the list
 		}
 	});
-	connect(edit_notes, &QAction::triggered, [this, name, serial]
+	connect(edit_notes, &QAction::triggered, this, [this, name, serial]
 	{
 		bool accepted;
 		const QString old_notes = m_persistent_settings->GetValue(gui::persistent::notes, serial, "").toString();
@@ -1171,15 +1229,15 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			Refresh();
 		}
 	});
-	connect(copy_info, &QAction::triggered, [name, serial]
+	connect(copy_info, &QAction::triggered, this, [name, serial]
 	{
 		QApplication::clipboard()->setText(name % QStringLiteral(" [") % serial % QStringLiteral("]"));
 	});
-	connect(copy_name, &QAction::triggered, [name]
+	connect(copy_name, &QAction::triggered, this, [name]
 	{
 		QApplication::clipboard()->setText(name);
 	});
-	connect(copy_serial, &QAction::triggered, [serial]
+	connect(copy_serial, &QAction::triggered, this, [serial]
 	{
 		QApplication::clipboard()->setText(serial);
 	});
