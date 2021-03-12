@@ -1736,9 +1736,24 @@ void game_list_frame::BatchRemoveShaderCaches()
 QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
 {
 	const qreal device_pixel_ratio = devicePixelRatioF();
-	const QSize original_size = icon.size();
+	constexpr double target_ratio = 320.0 / 176.0; // Size of PS3 ICON0.PNG
+	QSize target_size(icon.size());
+	QPoint target_pos;
 
-	QPixmap canvas = QPixmap(original_size * device_pixel_ratio);
+	if (icon.width() > icon.height())
+	{
+		target_size.setHeight(icon.width() / target_ratio);
+		target_pos.setX((target_size.width() - icon.width()) / 2.0);
+		target_pos.setY((target_size.height() - icon.height()) / 2.0);
+	}
+	else if (icon.width() < icon.height())
+	{
+		target_size.setWidth(icon.height() * target_ratio);
+		target_pos.setX((target_size.width() - icon.width()) / 2.0);
+		target_pos.setY((target_size.height() - icon.height()) / 2.0);
+	}
+
+	QPixmap canvas(target_size * device_pixel_ratio);
 	canvas.setDevicePixelRatio(device_pixel_ratio);
 	canvas.fill(m_icon_color);
 
@@ -1747,13 +1762,13 @@ QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_ic
 
 	if (!icon.isNull())
 	{
-		painter.drawPixmap(QPoint(0, 0), icon);
+		painter.drawPixmap(target_pos, icon);
 	}
 
 	if (!m_is_list_layout && (paint_config_icon || paint_pad_config_icon))
 	{
-		const int width = original_size.width() * 0.2;
-		const QPoint origin = QPoint(original_size.width() - width, 0);
+		const int width = target_size.width() * 0.2;
+		const QPoint origin = QPoint(target_size.width() - width, 0);
 		QString icon_path;
 
 		if (paint_config_icon && paint_pad_config_icon)
@@ -1776,8 +1791,8 @@ QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_ic
 
 	if (compatibility_color.isValid())
 	{
-		const int size = original_size.height() * 0.2;
-		const int spacing = original_size.height() * 0.05;
+		const int size = target_size.height() * 0.2;
+		const int spacing = target_size.height() * 0.05;
 		QColor copyColor = QColor(compatibility_color);
 		copyColor.setAlpha(215); // ~85% opacity
 		painter.setRenderHint(QPainter::Antialiasing);

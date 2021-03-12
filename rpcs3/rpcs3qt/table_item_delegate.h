@@ -21,6 +21,10 @@ public:
 		{
 			// Don't highlight icons
 			option->state &= ~QStyle::State_Selected;
+
+			// Center icons
+			option->decorationAlignment = Qt::AlignCenter;
+			option->decorationPosition = QStyleOptionViewItem::Top;
 		}
 
 		QStyledItemDelegate::initStyleOption(option, index);
