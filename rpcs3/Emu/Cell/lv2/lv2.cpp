@@ -1333,6 +1333,11 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 		{
 			ppu_log.trace("suspend(): %s", target->id);
 			g_pending.emplace_back(target);
+
+			if (is_paused(target->state - cpu_flag::suspend))
+			{
+				target->state.notify_one(cpu_flag::suspend);
+			}
 		}
 	}
 
