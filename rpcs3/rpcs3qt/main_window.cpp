@@ -1373,6 +1373,11 @@ void main_window::OnEmuStop()
 	}
 	ui->actionManage_Users->setEnabled(true);
 
+	if (std::exchange(m_sys_menu_opened, false))
+	{
+		ui->sysSendOpenMenuAct->setText(tr("Send open system menu cmd"));
+	}
+
 	// Refresh game list in order to update time played
 	if (m_game_list_frame)
 	{
@@ -1781,15 +1786,19 @@ void main_window::CreateConnects()
 	connect(ui->sysStopAct, &QAction::triggered, [this]() { Emu.Stop(); });
 	connect(ui->sysRebootAct, &QAction::triggered, [this]() { Emu.Restart(); });
 
-	connect(ui->sysSendOpenMenuAct, &QAction::triggered, [this]()
+	connect(ui->sysSendOpenMenuAct, &QAction::triggered, this, [this]()
 	{
+		if (Emu.IsStopped()) return;
+
 		sysutil_send_system_cmd(m_sys_menu_opened ? 0x0132 /* CELL_SYSUTIL_SYSTEM_MENU_CLOSE */ : 0x0131 /* CELL_SYSUTIL_SYSTEM_MENU_OPEN */, 0);
-		m_sys_menu_opened = !m_sys_menu_opened;
+		m_sys_menu_opened ^= true;
 		ui->sysSendOpenMenuAct->setText(tr("Send &%0 system menu cmd").arg(m_sys_menu_opened ? tr("close") : tr("open")));
 	});
 
-	connect(ui->sysSendExitAct, &QAction::triggered, [this]()
+	connect(ui->sysSendExitAct, &QAction::triggered, this, []()
 	{
+		if (Emu.IsStopped()) return;
+
 		sysutil_send_system_cmd(0x0101 /* CELL_SYSUTIL_REQUEST_EXITGAME */, 0);
 	});
 
