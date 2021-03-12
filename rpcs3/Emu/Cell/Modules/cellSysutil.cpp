@@ -57,13 +57,13 @@ extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 
 extern void sysutil_send_system_cmd(u64 status, u64 param)
 {
-	if (auto& cbm = g_fxo->get<sysutil_cb_manager>(); g_fxo->is_init<sysutil_cb_manager>() && !Emu.IsStopped())
+	if (auto cbm = g_fxo->try_get<sysutil_cb_manager>())
 	{
-		for (sysutil_cb_manager::registered_cb cb : cbm.callbacks)
+		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
 		{
 			if (cb.first)
 			{
-				cbm.registered.push([=](ppu_thread& ppu) -> s32
+				cbm->registered.push([=](ppu_thread& ppu) -> s32
 				{
 					// TODO: check it and find the source of the return value (void isn't equal to CELL_OK)
 					cb.first(ppu, status, param, cb.second);
