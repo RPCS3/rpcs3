@@ -1738,42 +1738,57 @@ void game_list_frame::BatchRemoveShaderCaches()
 	QApplication::beep();
 }
 
-QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
+QPixmap game_list_frame::PaintedPixmap(QPixmap icon, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
 {
 	const qreal device_pixel_ratio = devicePixelRatioF();
-	constexpr double target_ratio = 320.0 / 176.0; // Size of PS3 ICON0.PNG
-	QSize target_size(icon.size());
+
+	// Let's upscale the original icon to at least fit into the outer rect of the size of PS3's ICON0.PNG
+	if (icon.width() < 320 || icon.height() < 176)
+	{
+		icon = icon.scaled(320, 176, Qt::KeepAspectRatio);
+	}
+
+	QSize canvas_size(icon.size());
 	QPoint target_pos;
 
-	if (icon.width() > icon.height())
+	// Calculate the centered size and position of the icon on our canvas.
+	if (icon.width() != 320 || icon.height() != 176)
 	{
-		target_size.setHeight(icon.width() / target_ratio);
-		target_pos.setX((target_size.width() - icon.width()) / 2.0);
-		target_pos.setY((target_size.height() - icon.height()) / 2.0);
-	}
-	else if (icon.width() < icon.height())
-	{
-		target_size.setWidth(icon.height() * target_ratio);
-		target_pos.setX((target_size.width() - icon.width()) / 2.0);
-		target_pos.setY((target_size.height() - icon.height()) / 2.0);
+		constexpr double target_ratio = 320.0 / 176.0; // aspect ratio 20:11
+
+		if (canvas_size.width() > canvas_size.height())
+		{
+			canvas_size.setHeight(icon.width() / target_ratio);
+		}
+		else
+		{
+			canvas_size.setWidth(icon.height() * target_ratio);
+		}
+
+		target_pos.setX((canvas_size.width() - icon.width()) / 2.0);
+		target_pos.setY((canvas_size.height() - icon.height()) / 2.0);
 	}
 
-	QPixmap canvas(target_size * device_pixel_ratio);
+	// Create a canvas large enough to fit our entire scaled icon
+	QPixmap canvas(canvas_size * device_pixel_ratio);
 	canvas.setDevicePixelRatio(device_pixel_ratio);
 	canvas.fill(m_icon_color);
 
+	// Create a painter for our canvas
 	QPainter painter(&canvas);
 	painter.setRenderHint(QPainter::SmoothPixmapTransform);
 
+	// Draw the icon onto our canvas
 	if (!icon.isNull())
 	{
 		painter.drawPixmap(target_pos, icon);
 	}
 
+	// Draw config icons if necessary
 	if (!m_is_list_layout && (paint_config_icon || paint_pad_config_icon))
 	{
-		const int width = target_size.width() * 0.2;
-		const QPoint origin = QPoint(target_size.width() - width, 0);
+		const int width = canvas_size.width() * 0.2;
+		const QPoint origin = QPoint(canvas_size.width() - width, 0);
 		QString icon_path;
 
 		if (paint_config_icon && paint_pad_config_icon)
@@ -1794,19 +1809,23 @@ QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_ic
 		painter.drawPixmap(origin, custom_config_icon.scaled(QSize(width, width) * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 	}
 
+	// Draw game compatibility icons if necessary
 	if (compatibility_color.isValid())
 	{
-		const int size = target_size.height() * 0.2;
-		const int spacing = target_size.height() * 0.05;
+		const int size = canvas_size.height() * 0.2;
+		const int spacing = canvas_size.height() * 0.05;
 		QColor copyColor = QColor(compatibility_color);
 		copyColor.setAlpha(215); // ~85% opacity
 		painter.setRenderHint(QPainter::Antialiasing);
 		painter.setBrush(QBrush(copyColor));
+		painter.setPen(QPen(Qt::black, std::max(canvas_size.width() / 320, canvas_size.height() / 176)));
 		painter.drawEllipse(spacing, spacing, size, size);
 	}
 
+	// Finish the painting
 	painter.end();
 
+	// Scale and return our final image
 	return canvas.scaled(m_icon_size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
 }
 
