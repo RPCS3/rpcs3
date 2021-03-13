@@ -2587,7 +2587,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		}
 		else if (info.suffix().toLower() == "rap")
 		{
-			if (drop_type != drop_type::drop_rap && drop_type != drop_type::drop_error)
+			if (info.size() < 0x10 || (drop_type != drop_type::drop_rap && drop_type != drop_type::drop_error))
 			{
 				return drop_type::drop_error;
 			}

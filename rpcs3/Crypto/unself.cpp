@@ -1335,7 +1335,12 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 	}
 
 	self_log.notice("Loading RAP file %s.rap", ci_str);
-	rap_file.read(rap_key, 0x10);
+
+	if (rap_file.read(rap_key, 0x10) != 0x10)
+	{
+		self_log.fatal("Failed to load %s: RAP file exists but is invalid. Try reinstalling it.", rap_path);
+		return false;
+	}
 
 	// Convert the RAP key.
 	rap_to_rif(rap_key, npdrm_key);
