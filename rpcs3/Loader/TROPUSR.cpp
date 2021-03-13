@@ -132,21 +132,9 @@ bool TROPUSRLoader::Save(const std::string& filepath)
 	}
 
 	temp.file.write(m_header);
-
-	for (const TROPUSRTableHeader& tableHeader : m_tableHeaders)
-	{
-		temp.file.write(tableHeader);
-	}
-
-	for (const auto& entry : m_table4)
-	{
-		temp.file.write(entry);
-	}
-
-	for (const auto& entry : m_table6)
-	{
-		temp.file.write(entry);
-	}
+	temp.file.write(m_tableHeaders);
+	temp.file.write(m_table4);
+	temp.file.write(m_table6);
 
 	return temp.commit();
 }
