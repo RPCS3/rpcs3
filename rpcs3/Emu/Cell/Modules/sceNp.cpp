@@ -557,7 +557,7 @@ error_code sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 
 	sceNp.warning(u8"sceNpDrmVerifyUpgradeLicense(): content_id=“%s”", content_id);
 
-	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_str + ".rap")))
+	if (fs::stat_t s{}; !fs::stat(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_str + ".rap"), s) || s.is_directory || s.size < 0x10)
 	{
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
@@ -580,7 +580,7 @@ error_code sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 
 	sceNp.warning(u8"sceNpDrmVerifyUpgradeLicense2(): content_id=“%s”", content_id);
 
-	if (!fs::is_file(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_str + ".rap")))
+	if (fs::stat_t s{}; !fs::stat(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_str + ".rap"), s) || s.is_directory || s.size < 0x10)
 	{
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
