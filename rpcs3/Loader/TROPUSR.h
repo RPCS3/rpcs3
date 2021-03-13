@@ -80,7 +80,13 @@ class TROPUSRLoader
 public:
 	virtual ~TROPUSRLoader() = default;
 
-	virtual bool Load(const std::string& filepath, const std::string& configpath);
+	struct load_result
+	{
+		bool discarded_existing;
+		bool success;
+	};
+
+	virtual load_result Load(const std::string& filepath, const std::string& configpath);
 	virtual bool Save(const std::string& filepath);
 
 	virtual u32 GetTrophiesCount();

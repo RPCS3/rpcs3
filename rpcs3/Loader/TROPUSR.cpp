@@ -5,25 +5,52 @@
 
 LOG_CHANNEL(trp_log, "Trophy");
 
-bool TROPUSRLoader::Load(const std::string& filepath, const std::string& configpath)
+enum : u32
+{
+	TROPUSR_MAGIC = 0x818F54AD
+};
+
+TROPUSRLoader::load_result TROPUSRLoader::Load(const std::string& filepath, const std::string& configpath)
 {
 	const std::string& path = vfs::get(filepath);
 
-	if (!m_file.open(path, fs::read))
+	load_result res{};
+
+	// Generate TROPUSR.DAT
+	auto generate = [&]
 	{
-		if (!Generate(filepath, configpath))
+		// Reset filesystem error
+		fs::g_tls_error = fs::error::ok;
+
+		// Generate TROPUSR.DAT if not existing
+		res.success = Generate(filepath, configpath);
+
+		if (!res.success)
 		{
-			return false;
+			trp_log.error("TROPUSRLoader::Load(): Failed to generate TROPUSR.DAT (path='%s', cfg='%s', %s)", path, configpath, fs::g_tls_error);
 		}
+
+		m_file.close();
+		return res;
+	};
+
+	if (!m_file.open(path))
+	{
+		return generate();
 	}
 
 	if (!LoadHeader() || !LoadTableHeaders() || !LoadTables())
 	{
-		return false;
+		// Ignore existing TROPUSR.DAT because it is invalid
+		m_file.close();
+		res.discarded_existing = true;
+		trp_log.error("TROPUSRLoader::Load(): Failed to load existing TROPUSR.DAT, trying to generate new file with empty trophies history! (path='%s')", path);
+		return generate();
 	}
 
-	m_file.release();
-	return true;
+	m_file.close();
+	res.success = true;
+	return res;
 }
 
 bool TROPUSRLoader::LoadHeader()
@@ -35,7 +62,7 @@ bool TROPUSRLoader::LoadHeader()
 
 	m_file.seek(0);
 
-	if (!m_file.read(m_header))
+	if (!m_file.read(m_header) || m_header.magic != TROPUSR_MAGIC)
 	{
 		return false;
 	}
@@ -180,14 +207,13 @@ bool TROPUSRLoader::Generate(const std::string& filepath, const std::string& con
 	m_tableHeaders.push_back(table4header);
 	m_tableHeaders.push_back(table6header);
 
-	m_header.magic = 0x818F54AD;
+	std::memset(&m_header, 0, sizeof(m_header));
+	m_header.magic = TROPUSR_MAGIC;
 	m_header.unk1 = 0x00010000;
 	m_header.tables_count = ::size32(m_tableHeaders);
 	m_header.unk2 = 0;
 
-	Save(filepath);
-
-	return true;
+	return Save(filepath);
 }
 
 u32 TROPUSRLoader::GetTrophiesCount()

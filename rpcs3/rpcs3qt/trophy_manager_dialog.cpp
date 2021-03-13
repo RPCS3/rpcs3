@@ -358,7 +358,7 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 	game_trophy_data->trop_usr.reset(new TROPUSRLoader());
 	const std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
 	const std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
-	const bool success = game_trophy_data->trop_usr->Load(trophyUsrPath, trophyConfPath);
+	const bool success = game_trophy_data->trop_usr->Load(trophyUsrPath, trophyConfPath).success;
 
 	fs::file config(vfs::get(trophyConfPath));
 
