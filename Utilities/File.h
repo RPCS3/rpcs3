@@ -446,8 +446,18 @@ namespace fs
 			const char* func = __builtin_FUNCTION()) const
 		{
 			std::basic_string<T> result;
-			result.resize(size() / sizeof(T));
-			if (seek(0), !read(result, file, func, line, col)) xfail({line, col, file, func});
+			u64 size0;
+
+			do
+			{
+				size0 = size(line, col, file, func);
+				result.resize(size0 / sizeof(T) + 1);
+				seek(0);
+			}
+			// Atomic loop
+			while (size0 != read(result.data(), result.size() * sizeof(T), line, col, file, func));
+
+			result.resize(size0 / sizeof(T));
 			return result;
 		}
 
@@ -460,8 +470,18 @@ namespace fs
 			const char* func = __builtin_FUNCTION()) const
 		{
 			std::vector<T> result;
-			result.resize(size() / sizeof(T));
-			if (seek(0), !read(result, file, func, line, col)) xfail({line, col, file, func});
+			u64 size0;
+
+			do
+			{
+				size0 = size(line, col, file, func);
+				result.resize(size0 / sizeof(T) + 1);
+				seek(0);
+			}
+			// Atomic loop
+			while (size0 != read(result.data(), result.size() * sizeof(T), line, col, file, func));
+
+			result.resize(size0 / sizeof(T));
 			return result;
 		}
 
