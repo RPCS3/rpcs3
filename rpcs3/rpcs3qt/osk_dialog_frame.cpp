@@ -2,6 +2,8 @@
 #include "custom_dialog.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
+#include "util/asm.hpp"
+
 #include <QDialogButtonBox>
 #include <QLabel>
 #include <QLineEdit>
@@ -173,7 +175,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 void osk_dialog_frame::SetOskText(const QString& text)
 {
-	std::memcpy(osk_text, reinterpret_cast<const char16_t*>(text.constData()), (text.size() + 1u) * sizeof(char16_t));
+	std::memcpy(osk_text, utils::bless<char16_t>(text.constData()), (text.size() + 1u) * sizeof(char16_t));
 }
 
 void osk_dialog_frame::Close(bool accepted)

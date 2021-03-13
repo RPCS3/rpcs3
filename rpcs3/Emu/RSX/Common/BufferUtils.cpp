@@ -5,6 +5,7 @@
 
 #include "util/to_endian.hpp"
 #include "util/sysinfo.hpp"
+#include "util/asm.hpp"
 
 #include "emmintrin.h"
 #include "immintrin.h"
@@ -142,8 +143,8 @@ namespace
 
 		if (remaining)
 		{
-			const auto src_ptr2 = reinterpret_cast<const se_t<u32, true, 1>*>(src_ptr);
-			const auto dst_ptr2 = reinterpret_cast<nse_t<u32, 1>*>(dst_ptr);
+			const auto src_ptr2 = utils::bless<const se_t<u32, true, 1>>(src_ptr);
+			const auto dst_ptr2 = utils::bless<nse_t<u32, 1>>(dst_ptr);
 
 			for (u32 i = 0; i < remaining; ++i)
 				dst_ptr2[i] = src_ptr2[i];
@@ -220,8 +221,8 @@ namespace
 
 		if (remaining)
 		{
-			const auto src_ptr2 = reinterpret_cast<const se_t<u32, true, 1>*>(src_ptr);
-			const auto dst_ptr2 = reinterpret_cast<nse_t<u32, 1>*>(dst_ptr);
+			const auto src_ptr2 = utils::bless<const se_t<u32, true, 1>>(src_ptr);
+			const auto dst_ptr2 = utils::bless<nse_t<u32, 1>>(dst_ptr);
 
 			for (u32 i = 0; i < remaining; ++i)
 			{
@@ -285,8 +286,8 @@ namespace
 
 		if (remaining)
 		{
-			auto src_ptr2 = reinterpret_cast<const se_t<u16, true, 1>*>(src_ptr);
-			auto dst_ptr2 = reinterpret_cast<nse_t<u16, 1>*>(dst_ptr);
+			auto src_ptr2 = utils::bless<const se_t<u16, true, 1>>(src_ptr);
+			auto dst_ptr2 = utils::bless<nse_t<u16, 1>>(dst_ptr);
 
 			for (u32 i = 0; i < remaining; ++i)
 				dst_ptr2[i] = src_ptr2[i];
@@ -349,8 +350,8 @@ namespace
 			const u8 attribute_sz = min_block_size >> 2;
 			for (u32 n = 0; n < remainder; ++n)
 			{
-				auto src_ptr2 = reinterpret_cast<const be_t<u32>*>(src_ptr);
-				auto dst_ptr2 = reinterpret_cast<u32*>(dst_ptr);
+				auto src_ptr2 = utils::bless<const be_t<u32>>(src_ptr);
+				auto dst_ptr2 = utils::bless<u32>(dst_ptr);
 
 				for (u32 v = 0; v < attribute_sz; ++v)
 					dst_ptr2[v] = src_ptr2[v];
@@ -415,8 +416,8 @@ namespace
 			const u8 attribute_sz = min_block_size >> 1;
 			for (u32 n = 0; n < remainder; ++n)
 			{
-				auto src_ptr2 = reinterpret_cast<const be_t<u16>*>(src_ptr);
-				auto dst_ptr2 = reinterpret_cast<u16*>(dst_ptr);
+				auto src_ptr2 = utils::bless<const be_t<u16>>(src_ptr);
+				auto dst_ptr2 = utils::bless<u16>(dst_ptr);
 
 				for (u32 v = 0; v < attribute_sz; ++v)
 					dst_ptr2[v] = src_ptr2[v];

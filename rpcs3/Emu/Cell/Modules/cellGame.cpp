@@ -16,6 +16,7 @@
 #include "Utilities/StrUtil.h"
 #include "Utilities/span.h"
 #include "util/init_mutex.hpp"
+#include "util/asm.hpp"
 
 #include <thread>
 
@@ -1343,7 +1344,7 @@ error_code cellDiscGameGetBootDiscInfo(vm::ptr<CellDiscGameSystemFileParam> getP
 	}
 
 	// Always sets 0 at first dword
-	reinterpret_cast<nse_t<u32, 1>*>(getParam->titleId)[0] = 0;
+	*utils::bless<nse_t<u32, 1>>(getParam->titleId + 0) = 0;
 
 	// This is also called by non-disc games, see NPUB90029
 	static const std::string dir = "/dev_bdvd/PS3_GAME"s;

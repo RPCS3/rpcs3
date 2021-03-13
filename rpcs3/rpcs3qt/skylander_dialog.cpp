@@ -6,6 +6,8 @@
 #include "skylander_dialog.h"
 #include "Emu/Io/Skylander.h"
 
+#include "util/asm.hpp"
+
 #include <QLabel>
 #include <QGroupBox>
 #include <QFileDialog>
@@ -643,17 +645,17 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 		std::array<u8, 0x40 * 0x10> buf{};
 		auto data = buf.data();
 		// Set the block permissions
-		reinterpret_cast<le_t<u32>&>(data[0x36]) = 0x690F0F0F;
+		*utils::bless<le_t<u32>>(&data[0x36]) = 0x690F0F0F;
 		for (u32 index = 1; index < 0x10; index++)
 		{
-			reinterpret_cast<le_t<u32>&>(data[(index * 0x40) + 0x36]) = 0x69080F7F;
+			*utils::bless<le_t<u32>>(&data[(index * 0x40) + 0x36]) = 0x69080F7F;
 		}
 		// Set the skylander infos
-		reinterpret_cast<le_t<u16>&>(data[0])    = (sky_id | sky_var) + 1;
-		reinterpret_cast<le_t<u16>&>(data[0x10]) = sky_id;
-		reinterpret_cast<le_t<u16>&>(data[0x1C]) = sky_var;
+		*utils::bless<le_t<u16>>(&data[0])    = (sky_id | sky_var) + 1;
+		*utils::bless<le_t<u16>>(&data[0x10]) = sky_id;
+		*utils::bless<le_t<u16>>(&data[0x1C]) = sky_var;
 		// Set checksum
-		reinterpret_cast<le_t<u16>&>(data[0x1E]) = skylander_crc16(0xFFFF, data, 0x1E);
+		*utils::bless<le_t<u16>>(&data[0x1E]) = skylander_crc16(0xFFFF, data, 0x1E);
 
 		sky_file.write(buf.data(), buf.size());
 		sky_file.close();

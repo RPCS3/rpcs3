@@ -16,6 +16,8 @@ typedef const char *HostCode;
 
 #include "cellL10n.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(cellL10n);
 
 // Translate code id to code name. some codepage may has another name.
@@ -235,7 +237,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 	if (dst != NULL)
 	{
 		usz dstLen = *dst_len;
-		usz ictd = iconv(ict, const_cast<char**>(reinterpret_cast<const char**>(&src)), &srcLen, reinterpret_cast<char**>(&dst), &dstLen);
+		usz ictd = iconv(ict, utils::bless<char*>(&src), &srcLen, utils::bless<char*>(&dst), &dstLen);
 		*dst_len -= dstLen;
 		if (ictd == umax)
 		{
@@ -260,7 +262,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 		{
 			//char *bufPtr = buf;
 			usz bufLeft = sizeof(buf);
-			usz ictd = iconv(ict, const_cast<char**>(reinterpret_cast<const char**>(&src)), &srcLen, reinterpret_cast<char**>(&dst), &bufLeft);
+			usz ictd = iconv(ict, utils::bless<char*>(&src), &srcLen, utils::bless<char*>(&dst), &bufLeft);
 			*dst_len += sizeof(buf) - bufLeft;
 			if (ictd == umax && errno != E2BIG)
 			{

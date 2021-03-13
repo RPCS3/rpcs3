@@ -548,7 +548,7 @@ struct nt_p2p_port
 
 		auto* hdr_ptr = reinterpret_cast<lv2_socket::p2ps_i::encapsulated_tcp *>(packet_data+sizeof(u16));
 		hdr_ptr->checksum = 0;
-		hdr_ptr->checksum = tcp_checksum(reinterpret_cast<u16 *>(hdr_ptr), sizeof(lv2_socket::p2ps_i::encapsulated_tcp) + datasize);
+		hdr_ptr->checksum = tcp_checksum(utils::bless<u16>(hdr_ptr), sizeof(lv2_socket::p2ps_i::encapsulated_tcp) + datasize);
 
 		return packet;
 	}

@@ -9,6 +9,8 @@
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "cellGifDec.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(cellGifDec);
 
 // Temporarily
@@ -131,8 +133,8 @@ error_code cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PI
 	}
 	}
 
-	if (*reinterpret_cast<be_t<u32>*>(buffer) != 0x47494638u ||
-		(*reinterpret_cast<le_t<u16>*>(buffer + 4) != 0x6139u && *reinterpret_cast<le_t<u16>*>(buffer + 4) != 0x6137u)) // Error: The first 6 bytes are not a valid GIF signature
+	if (*utils::bless<be_t<u32>>(buffer + 0) != 0x47494638u ||
+		(*utils::bless<le_t<u16>>(buffer + 4) != 0x6139u && *utils::bless<le_t<u16>>(buffer + 4) != 0x6137u)) // Error: The first 6 bytes are not a valid GIF signature
 	{
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT; // Surprisingly there is no error code related with headerss
 	}

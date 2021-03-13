@@ -2,6 +2,8 @@
 #include "Skylander.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(skylander_log, "skylander");
 
 sky_portal g_skyportal;
@@ -89,9 +91,9 @@ void sky_portal::get_status(u8* reply_buf)
 		status |= s.status;
 	}
 
-	memset(reply_buf, 0, 0x20);
+	std::memset(reply_buf, 0, 0x20);
 	reply_buf[0]                               = 0x53;
-	reinterpret_cast<le_t<u16>&>(reply_buf[1]) = status;
+	*utils::bless<le_t<u16>>(reply_buf + 1)    = status;
 	reply_buf[5]                               = interrupt_counter++;
 	reply_buf[6]                               = 0x01;
 }
@@ -157,7 +159,7 @@ u8 sky_portal::load_skylander(u8* buf, fs::file in_file)
 {
 	std::lock_guard lock(sky_mutex);
 
-	u32 sky_serial = reinterpret_cast<le_t<u32>&>(buf[0]);
+	u32 sky_serial = *utils::bless<le_t<u32>>(buf);
 	u8 found_slot  = 0xFF;
 
 	// mimics spot retaining on the portal

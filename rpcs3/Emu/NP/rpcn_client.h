@@ -5,6 +5,8 @@
 #include <chrono>
 #include "Utilities/mutex.h"
 
+#include "util/asm.hpp"
+
 #ifdef _WIN32
 #include <winsock2.h>
 #include <WS2tcpip.h>
@@ -45,7 +47,7 @@ public:
 			error = true;
 			return 0;
 		}
-		T res = reinterpret_cast<le_t<T>&>(vec[i]);
+		T res = *utils::bless<le_t<T, 1>>(&vec[i]);
 		i += sizeof(T);
 		return res;
 	}
@@ -84,7 +86,7 @@ public:
 	template <typename T>
 	void insert(T value)
 	{
-		value = reinterpret_cast<le_t<T>>(value);
+		value = std::bit_cast<le_t<T>, T>(value);
 		// resize + memcpy instead?
 		for (usz index = 0; index < sizeof(T); index++)
 		{
