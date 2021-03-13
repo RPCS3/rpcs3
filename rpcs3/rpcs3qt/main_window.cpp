@@ -2549,7 +2549,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 
 			drop_type = drop_type::drop_dir;
 		}
-		else if (info.fileName() == "PS3UPDAT.PUP")
+		else if (info.suffix() == "PUP")
 		{
 			if (list.size() != 1)
 			{
