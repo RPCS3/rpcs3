@@ -1018,60 +1018,118 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	menu.addSeparator();
 	QAction* edit_notes = menu.addAction(tr("&Edit Tooltip Notes"));
 
-	const std::string custom_icon_dir_path = fs::get_config_dir() + "/Icons/game_icons/" + current_game.serial;
-	const QString custom_icon_path = qstr(custom_icon_dir_path) + "/ICON0.PNG";
+	QMenu* icon_menu = menu.addMenu(tr("&Custom Images"));
+	const std::array<QAction*, 3> custom_icon_actions =
+	{
+		icon_menu->addAction(tr("&Import Custom Icon")),
+		icon_menu->addAction(tr("&Replace Custom Icon")),
+		icon_menu->addAction(tr("&Remove Custom Icon"))
+	};
+	icon_menu->addSeparator();
+	const std::array<QAction*, 3> custom_shader_icon_actions =
+	{
+		icon_menu->addAction(tr("&Import Custom Shader Loading Background")),
+		icon_menu->addAction(tr("&Replace Custom Shader Loading Background")),
+		icon_menu->addAction(tr("&Remove Custom Shader Loading Background"))
+	};
 
-	if (QFile::exists(custom_icon_path))
+	if (const std::string custom_icon_dir_path = fs::get_config_dir() + "/Icons/game_icons/" + current_game.serial;
+		fs::create_path(custom_icon_dir_path))
 	{
-		QMenu* icon_menu = menu.addMenu(tr("&Custom Icon"));
-		QAction* remove_icon = icon_menu->addAction(tr("&Remove Custom Icon"));
-		connect(remove_icon, &QAction::triggered, this, [this, custom_icon_path, serial]
+		enum class icon_action
 		{
-			if (QMessageBox::question(this, tr("Confirm Removal"), tr("Remove custom icon of %0?").arg(serial)) == QMessageBox::Yes)
+			add,
+			replace,
+			remove
+		};
+		enum class icon_type
+		{
+			game_list,
+			shader_load
+		};
+		
+		const auto handle_icon = [this, serial](const QString& game_icon_path, icon_action action, icon_type type)
+		{
+			QString icon_path;
+
+			if (action != icon_action::remove)
 			{
-				if (QFile file(custom_icon_path); !file.remove())
+				icon_path = QFileDialog::getOpenFileName(this, type == icon_type::game_list
+					? tr("Select Custom Icon")
+					: tr("Select Custom Shader Loading Background"), "", tr("png (*.png);;All files (*.*)"));
+			}
+			if (action == icon_action::remove || !icon_path.isEmpty())
+			{
+				bool refresh = false;
+
+				if (action == icon_action::replace || (action == icon_action::remove &&
+					QMessageBox::question(this, tr("Confirm Removal"), type == icon_type::game_list
+						? tr("Remove custom icon of %0?").arg(serial)
+						: tr("Remove Custom Shader Loading Background of %0?").arg(serial)) == QMessageBox::Yes))
 				{
-					game_list_log.error("Could not remove custom icon: '%s'. %s", sstr(custom_icon_path), sstr(file.errorString()));
-					QMessageBox::warning(this, tr("Warning!"), tr("Failed to remove the custom icon!"));
+					if (QFile file(game_icon_path); file.exists() && !file.remove())
+					{
+						game_list_log.error("Could not remove old image: '%s'", sstr(game_icon_path), sstr(file.errorString()));
+						QMessageBox::warning(this, tr("Warning!"), tr("Failed to remove the old image!"));
+						return;
+					}
+
+					game_list_log.success("Removed image: '%s'", sstr(game_icon_path));
+					if (action == icon_action::remove)
+					{
+						refresh = true;
+					}
 				}
-				else
+
+				if (action != icon_action::remove)
 				{
-					game_list_log.success("Removed custom icon: '%s'", sstr(custom_icon_path));
+					if (QFile file(icon_path); !file.copy(icon_path, game_icon_path))
+					{
+						game_list_log.error("Could not import image '%s' to '%s'. %s", sstr(icon_path), sstr(game_icon_path), sstr(file.errorString()));
+						QMessageBox::warning(this, tr("Warning!"), tr("Failed to import the new image!"));
+					}
+					else
+					{
+						game_list_log.success("Imported image '%s' to '%s'", sstr(icon_path), sstr(game_icon_path));
+						refresh = true;
+					}
+				}
+
+				if (refresh)
+				{
 					Refresh(true);
 				}
 			}
-		});
-	}
-	else if (fs::create_path(custom_icon_dir_path))
-	{
-		QMenu* icon_menu = menu.addMenu(tr("&Custom Icon"));
-		QAction* import_icon = icon_menu->addAction(tr("&Import Custom Icon"));
-		connect(import_icon, &QAction::triggered, this, [this, custom_icon_path]
+		};
+
+		const std::vector<std::tuple<icon_type, QString, const std::array<QAction*, 3>&>> icon_map =
 		{
-			const QString icon_path = QFileDialog::getOpenFileName(this, tr("Select Icon"), "", tr("png (*.png);;All files (*.*)"));
-			if (!icon_path.isEmpty())
+			{icon_type::game_list, "/ICON0.PNG", custom_icon_actions},
+			{icon_type::shader_load, "/PIC1.PNG", custom_shader_icon_actions},
+		};
+
+		for (const auto& [type, icon_name, actions] : icon_map)
+		{
+			const QString icon_path = qstr(custom_icon_dir_path) + icon_name;
+
+			if (QFile::exists(icon_path))
 			{
-				if (QFile file(custom_icon_path); file.exists() && !file.remove())
-				{
-					game_list_log.error("Could not remove old custom icon: '%s'", sstr(custom_icon_path), sstr(file.errorString()));
-					QMessageBox::warning(this, tr("Warning!"), tr("Failed to remove the old custom icon!"));
-				}
-				else if (QFile file(icon_path); !file.copy(icon_path, custom_icon_path))
-				{
-					game_list_log.error("Could not import custom icon '%s' to '%s'. %s", sstr(icon_path), sstr(custom_icon_path), sstr(file.errorString()));
-					QMessageBox::warning(this, tr("Warning!"), tr("Failed to import the custom icon!"));
-				}
-				else
-				{
-					game_list_log.success("Imported custom icon '%s' to '%s'", sstr(icon_path), sstr(custom_icon_path));
-					Refresh(true);
-				}
+				actions[static_cast<int>(icon_action::add)]->setVisible(false);
+				connect(actions[static_cast<int>(icon_action::replace)], &QAction::triggered, this, [handle_icon, icon_path, type] { handle_icon(icon_path, icon_action::replace, type); });
+				connect(actions[static_cast<int>(icon_action::remove)], &QAction::triggered, this, [handle_icon, icon_path, type] { handle_icon(icon_path, icon_action::remove, type); });
 			}
-		});
+			else
+			{
+				connect(actions[static_cast<int>(icon_action::add)], &QAction::triggered, this, [handle_icon, icon_path, type] { handle_icon(icon_path, icon_action::add, type); });
+				actions[static_cast<int>(icon_action::replace)]->setVisible(false);
+				actions[static_cast<int>(icon_action::remove)]->setEnabled(false);
+			}
+		}
 	}
 	else
 	{
 		game_list_log.error("Could not create path '%s'", custom_icon_dir_path);
+		icon_menu->setEnabled(false);
 	}
 
 	QMenu* info_menu = menu.addMenu(tr("&Copy Info"));
