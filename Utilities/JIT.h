@@ -15,6 +15,9 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#ifndef __clang__
+#pragma GCC diagnostic ignored "-Wduplicated-branches"
+#endif
 #include <asmjit/asmjit.h>
 #pragma GCC diagnostic pop
 #endif
