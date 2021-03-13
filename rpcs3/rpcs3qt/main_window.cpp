@@ -516,7 +516,25 @@ bool main_window::InstallRapFile(const QString& path, const std::string& filenam
 		return false;
 	}
 
-	return fs::copy_file(sstr(path), Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + filename.substr(0, filename.find_last_of('.')) + ".rap", true);
+	// Copy file atomically with thread/process-safe error checking for file size
+
+	fs::pending_file to(Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + filename.substr(0, filename.find_last_of('.')) + ".rap");
+	fs::file from(sstr(path));
+
+	if (!to.file || !from)
+	{
+		return false;
+	}
+
+	to.file.write(from.to_vector<u8>());
+
+	if (to.file.size() < 0x10)
+	{
+		// Not a RAP file
+		return false;
+	}
+
+	return to.commit();
 }
 
 void main_window::InstallPackages(QStringList file_paths)
