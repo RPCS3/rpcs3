@@ -51,7 +51,7 @@ else()
 		add_compile_options(-Wclobbered)
 		add_compile_options(-Wcast-function-type)
 		add_compile_options(-Wduplicated-branches)
-		#add_compile_options(-Wduplicated-cond)
+		add_compile_options(-Wduplicated-cond)
 		#add_compile_options(-Wredundant-decls)
 	endif()
 

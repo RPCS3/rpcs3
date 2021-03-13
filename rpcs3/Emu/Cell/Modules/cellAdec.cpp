@@ -719,8 +719,7 @@ next:
 
 		goto next;
 	}
-	// TODO:: Syphurith: I don't know whether we should keep this else-if now. Since the if condition is same with this one.
-	else if (adec.reader.size < static_cast<u32>(buf_size))
+	else if (adec.reader.size < static_cast<u32>(buf_size) && 0)
 	{
 		buf_size = adec.reader.size;
 	}
