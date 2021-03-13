@@ -515,7 +515,8 @@ bool main_window::InstallRapFile(const QString& path, const std::string& filenam
 	{
 		return false;
 	}
-	return fs::copy_file(sstr(path), Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + filename, true);
+
+	return fs::copy_file(sstr(path), Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + filename.substr(0, filename.find_last_of('.')) + ".rap", true);
 }
 
 void main_window::InstallPackages(QStringList file_paths)
@@ -585,7 +586,7 @@ void main_window::InstallPackages(QStringList file_paths)
 	}
 
 	// Install rap files if available
-	for (const auto& rap : file_paths.filter(QRegExp(".*\\.rap")))
+	for (const auto& rap : file_paths.filter(QRegExp(".*\\.rap", Qt::CaseInsensitive)))
 	{
 		const QFileInfo file_info(rap);
 		const std::string rapname = sstr(file_info.fileName());
@@ -2566,7 +2567,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 
 			drop_type = drop_type::drop_pkg;
 		}
-		else if (info.suffix() == "rap")
+		else if (info.suffix().toLower() == "rap")
 		{
 			if (drop_type != drop_type::drop_rap && drop_type != drop_type::drop_error)
 			{
