@@ -392,6 +392,25 @@ VKGSRender::VKGSRender() : GSRender()
 	m_device = const_cast<vk::render_device*>(&m_swapchain->get_device());
 	vk::set_current_renderer(m_swapchain->get_device());
 
+	// Device-specific overrides
+	if (g_cfg.video.vk.asynchronous_texture_streaming)
+	{
+		if (m_device->get_graphics_queue() == m_device->get_transfer_queue())
+		{
+			rsx_log.error("Cannot run graphics and async transfer in the same queue. Async uploads are disabled. This is a limitation of your GPU");
+			g_cfg.video.vk.asynchronous_texture_streaming.set(false);
+		}
+
+		if (auto chip_family = vk::get_chip_family();
+			chip_family == vk::chip_class::NV_kepler ||
+			chip_family == vk::chip_class::NV_mobile_kepler || // TODO: Deprecate this classification, it just complicates things
+			chip_family == vk::chip_class::NV_maxwell)
+		{
+			rsx_log.error("Older NVIDIA cards do not meet requirements for asynchronous compute due to some driver fakery.");
+			g_cfg.video.vk.asynchronous_texture_streaming.set(false);
+		}
+	}
+
 	m_swapchain_dims.width = m_frame->client_width();
 	m_swapchain_dims.height = m_frame->client_height();
 
