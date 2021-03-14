@@ -1799,33 +1799,37 @@ void game_list_frame::BatchRemoveShaderCaches()
 QPixmap game_list_frame::PaintedPixmap(QPixmap icon, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
 {
 	const qreal device_pixel_ratio = devicePixelRatioF();
-
-	// Let's upscale the original icon to at least fit into the outer rect of the size of PS3's ICON0.PNG
-	if (icon.width() < 320 || icon.height() < 176)
-	{
-		icon = icon.scaled(320, 176, Qt::KeepAspectRatio);
-	}
-
-	QSize canvas_size(icon.size());
+	QSize canvas_size(320, 176);
 	QPoint target_pos;
 
-	// Calculate the centered size and position of the icon on our canvas.
-	if (icon.width() != 320 || icon.height() != 176)
+	if (!icon.isNull())
 	{
-		ensure(icon.height() > 0);
-		constexpr double target_ratio = 320.0 / 176.0; // aspect ratio 20:11
-
-		if ((icon.width() / static_cast<double>(icon.height())) > target_ratio)
+		// Let's upscale the original icon to at least fit into the outer rect of the size of PS3's ICON0.PNG
+		if (icon.width() < 320 || icon.height() < 176)
 		{
-			canvas_size.setHeight(std::ceil(icon.width() * target_ratio));
-		}
-		else
-		{
-			canvas_size.setWidth(std::ceil(icon.height() * target_ratio));
+			icon = icon.scaled(320, 176, Qt::KeepAspectRatio); // The resulting icon can be smaller than 320x176
 		}
 
-		target_pos.setX(std::max<int>(0, (canvas_size.width() - icon.width()) / 2.0));
-		target_pos.setY(std::max<int>(0, (canvas_size.height() - icon.height()) / 2.0));
+		canvas_size = icon.size();
+
+		if (icon.width() != 320 || icon.height() != 176)
+		{
+			// Calculate the centered size and position of the icon on our canvas.
+			ensure(icon.height() > 0);
+			constexpr double target_ratio = 320.0 / 176.0; // aspect ratio 20:11
+
+			if ((icon.width() / static_cast<double>(icon.height())) > target_ratio)
+			{
+				canvas_size.setHeight(std::ceil(icon.width() * target_ratio));
+			}
+			else
+			{
+				canvas_size.setWidth(std::ceil(icon.height() * target_ratio));
+			}
+
+			target_pos.setX(std::max<int>(0, (canvas_size.width() - icon.width()) / 2.0));
+			target_pos.setY(std::max<int>(0, (canvas_size.height() - icon.height()) / 2.0));
+		}
 	}
 
 	// Create a canvas large enough to fit our entire scaled icon
