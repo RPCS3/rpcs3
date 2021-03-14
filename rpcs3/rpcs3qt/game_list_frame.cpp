@@ -1812,19 +1812,20 @@ QPixmap game_list_frame::PaintedPixmap(QPixmap icon, bool paint_config_icon, boo
 	// Calculate the centered size and position of the icon on our canvas.
 	if (icon.width() != 320 || icon.height() != 176)
 	{
+		ensure(icon.height() > 0);
 		constexpr double target_ratio = 320.0 / 176.0; // aspect ratio 20:11
 
-		if (canvas_size.width() > canvas_size.height())
+		if ((icon.width() / static_cast<double>(icon.height())) > target_ratio)
 		{
-			canvas_size.setHeight(icon.width() / target_ratio);
+			canvas_size.setHeight(std::ceil(icon.width() * target_ratio));
 		}
 		else
 		{
-			canvas_size.setWidth(icon.height() * target_ratio);
+			canvas_size.setWidth(std::ceil(icon.height() * target_ratio));
 		}
 
-		target_pos.setX((canvas_size.width() - icon.width()) / 2.0);
-		target_pos.setY((canvas_size.height() - icon.height()) / 2.0);
+		target_pos.setX(std::max<int>(0, (canvas_size.width() - icon.width()) / 2.0));
+		target_pos.setY(std::max<int>(0, (canvas_size.height() - icon.height()) / 2.0));
 	}
 
 	// Create a canvas large enough to fit our entire scaled icon
