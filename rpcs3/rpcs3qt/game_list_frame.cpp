@@ -1115,12 +1115,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			if (QFile::exists(icon_path))
 			{
 				actions[static_cast<int>(icon_action::add)]->setVisible(false);
-				connect(actions[static_cast<int>(icon_action::replace)], &QAction::triggered, this, [handle_icon, icon_path, type] { handle_icon(icon_path, icon_action::replace, type); });
-				connect(actions[static_cast<int>(icon_action::remove)], &QAction::triggered, this, [handle_icon, icon_path, type] { handle_icon(icon_path, icon_action::remove, type); });
+				connect(actions[static_cast<int>(icon_action::replace)], &QAction::triggered, this, [handle_icon, icon_path, t = type] { handle_icon(icon_path, icon_action::replace, t); });
+				connect(actions[static_cast<int>(icon_action::remove)], &QAction::triggered, this, [handle_icon, icon_path, t = type] { handle_icon(icon_path, icon_action::remove, t); });
 			}
 			else
 			{
-				connect(actions[static_cast<int>(icon_action::add)], &QAction::triggered, this, [handle_icon, icon_path, type] { handle_icon(icon_path, icon_action::add, type); });
+				connect(actions[static_cast<int>(icon_action::add)], &QAction::triggered, this, [handle_icon, icon_path, t = type] { handle_icon(icon_path, icon_action::add, t); });
 				actions[static_cast<int>(icon_action::replace)]->setVisible(false);
 				actions[static_cast<int>(icon_action::remove)]->setEnabled(false);
 			}
