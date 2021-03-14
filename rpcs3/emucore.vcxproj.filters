@@ -986,6 +986,9 @@
     <ClCompile Include="Emu\Cell\Modules\sys_crashdump.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\Turntable.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1920,6 +1923,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\texture_cache_types.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Turntable.h">
+      <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Loader\mself.hpp">
       <Filter>Loader</Filter>
