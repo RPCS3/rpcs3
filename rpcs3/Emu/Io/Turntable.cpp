@@ -170,74 +170,74 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 			{
 				switch (button.m_outKeyCode)
 				{
-				case CELL_PAD_CTRL_DOWN:
-					if (buf[2] == 0x02) // Right D-Pad
-					{
-						buf[2] = 0x03; // Right-Down D-Pad
-					}
-					else if (buf[2] == 0x06) // Left D-Pad
-					{
-						buf[2] = 0x05; // Left-Down D-Pad
-					}
-					else
-					{
-						buf[2] = 0x04; // Down D-Pad
-					}
-					buf[10] = ~buf[10]; // Down D-Pad;
-					break;
-				case CELL_PAD_CTRL_UP:
-					if (buf[2] == 0x02) // Right D-Pad
-					{
-						buf[2] = 0x01; // Right-Up D-Pad
-					}
-					else if (buf[2] == 0x06) // Left D-Pad
-					{
-						buf[2] = 0x07; // Left-Up D-Pad
-					}
-					else
-					{
-						buf[2] = 0x00; // Up D-Pad
-					}
-					buf[9] = ~buf[9]; // Up D-Pad;
-					break;
-				case CELL_PAD_CTRL_LEFT:
-					if (buf[2] == 0x00) // Up D-Pad
-					{
-						buf[2] = 0x07; // Left-Up D-Pad
-					}
-					else if (buf[2] == 0x04) // Down D-Pad
-					{
-						buf[2] = 0x05; // Left-Down D-Pad
-					}
-					else
-					{
-						buf[2] = 0x06; // Left D-Pad
-					}
-					buf[8] = ~buf[8]; // Left D-Pad;
-					break;
-				case CELL_PAD_CTRL_RIGHT:
-					if (buf[2] == 0x00) // Up D-Pad
-					{
-						buf[2] = 0x01; // Right-Up D-Pad
-					}
-					else if (buf[2] == 0x04) // Down D-Pad
-					{
-						buf[2] = 0x03; // Right-Down D-Pad
-					}
-					else
-					{
-						buf[2] = 0x02; // Right D-Pad
-					}
-					buf[7] = ~buf[7]; // Right D-Pad
-					break;
-				case CELL_PAD_CTRL_START:
-					buf[1] |= 0x02; // Start
-					break;
-				case CELL_PAD_CTRL_SELECT:
-					buf[1] |= 0x01; // Select
-					break;
-				default:
-					break;
+					case CELL_PAD_CTRL_DOWN:
+						if (buf[2] == 0x02) // Right D-Pad
+						{
+							buf[2] = 0x03; // Right-Down D-Pad
+						}
+						else if (buf[2] == 0x06) // Left D-Pad
+						{
+							buf[2] = 0x05; // Left-Down D-Pad
+						}
+						else
+						{
+							buf[2] = 0x04; // Down D-Pad
+						}
+						buf[10] = ~buf[10]; // Down D-Pad;
+						break;
+					case CELL_PAD_CTRL_UP:
+						if (buf[2] == 0x02) // Right D-Pad
+						{
+							buf[2] = 0x01; // Right-Up D-Pad
+						}
+						else if (buf[2] == 0x06) // Left D-Pad
+						{
+							buf[2] = 0x07; // Left-Up D-Pad
+						}
+						else
+						{
+							buf[2] = 0x00; // Up D-Pad
+						}
+						buf[9] = ~buf[9]; // Up D-Pad;
+						break;
+					case CELL_PAD_CTRL_LEFT:
+						if (buf[2] == 0x00) // Up D-Pad
+						{
+							buf[2] = 0x07; // Left-Up D-Pad
+						}
+						else if (buf[2] == 0x04) // Down D-Pad
+						{
+							buf[2] = 0x05; // Left-Down D-Pad
+						}
+						else
+						{
+							buf[2] = 0x06; // Left D-Pad
+						}
+						buf[8] = ~buf[8]; // Left D-Pad;
+						break;
+					case CELL_PAD_CTRL_RIGHT:
+						if (buf[2] == 0x00) // Up D-Pad
+						{
+							buf[2] = 0x01; // Right-Up D-Pad
+						}
+						else if (buf[2] == 0x04) // Down D-Pad
+						{
+							buf[2] = 0x03; // Right-Down D-Pad
+						}
+						else
+						{
+							buf[2] = 0x02; // Right D-Pad
+						}
+						buf[7] = ~buf[7]; // Right D-Pad
+						break;
+					case CELL_PAD_CTRL_START:
+						buf[1] |= 0x02; // Start
+						break;
+					case CELL_PAD_CTRL_SELECT:
+						buf[1] |= 0x01; // Select
+						break;
+					default:
+						break;
 				}
 			}
 		}
