@@ -71,6 +71,22 @@ namespace rsx
 						background_poster.set_size(1280, 720);
 						background_poster.set_raw_image(background_image.get());
 						background_poster.set_blur_strength(static_cast<u8>(g_cfg.video.shader_preloading_dialog.blur_strength));
+
+						ensure(background_image->w > 0);
+						ensure(background_image->h > 0);
+						ensure(background_poster.h > 0);
+
+						// Set padding in order to keep the aspect ratio
+						if ((background_image->w / static_cast<double>(background_image->h)) > (background_poster.w / static_cast<double>(background_poster.h)))
+						{
+							const int padding = (background_poster.h - (background_image->h * (background_poster.w / static_cast<double>(background_image->w)))) / 2;
+							background_poster.set_padding(0, 0, padding, padding);
+						}
+						else
+						{
+							const int padding = (background_poster.w - (background_image->w * (background_poster.h / static_cast<double>(background_image->h)))) / 2;
+							background_poster.set_padding(padding, padding, 0, 0);
+						}
 					}
 				}
 			}
