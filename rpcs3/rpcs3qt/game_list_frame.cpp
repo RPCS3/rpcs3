@@ -1800,35 +1800,36 @@ QPixmap game_list_frame::PaintedPixmap(QPixmap icon, bool paint_config_icon, boo
 {
 	const qreal device_pixel_ratio = devicePixelRatioF();
 	QSize canvas_size(320, 176);
+	QSize icon_size(icon.size());
 	QPoint target_pos;
 
 	if (!icon.isNull())
 	{
 		// Let's upscale the original icon to at least fit into the outer rect of the size of PS3's ICON0.PNG
-		if (icon.width() < 320 || icon.height() < 176)
+		if (icon_size.width() < 320 || icon_size.height() < 176)
 		{
-			icon = icon.scaled(320, 176, Qt::KeepAspectRatio); // The resulting icon can be smaller than 320x176
+			icon_size.scale(320, 176, Qt::KeepAspectRatio);
 		}
 
-		canvas_size = icon.size();
+		canvas_size = icon_size;
 
-		if (icon.width() != 320 || icon.height() != 176)
+		// Calculate the centered size and position of the icon on our canvas.
+		if (icon_size.width() != 320 || icon_size.height() != 176)
 		{
-			// Calculate the centered size and position of the icon on our canvas.
-			ensure(icon.height() > 0);
+			ensure(icon_size.height() > 0);
 			constexpr double target_ratio = 320.0 / 176.0; // aspect ratio 20:11
 
-			if ((icon.width() / static_cast<double>(icon.height())) > target_ratio)
+			if ((icon_size.width() / static_cast<double>(icon_size.height())) > target_ratio)
 			{
-				canvas_size.setHeight(std::ceil(icon.width() / target_ratio));
+				canvas_size.setHeight(std::ceil(icon_size.width() / target_ratio));
 			}
 			else
 			{
-				canvas_size.setWidth(std::ceil(icon.height() * target_ratio));
+				canvas_size.setWidth(std::ceil(icon_size.height() * target_ratio));
 			}
 
-			target_pos.setX(std::max<int>(0, (canvas_size.width() - icon.width()) / 2.0));
-			target_pos.setY(std::max<int>(0, (canvas_size.height() - icon.height()) / 2.0));
+			target_pos.setX(std::max<int>(0, (canvas_size.width() - icon_size.width()) / 2.0));
+			target_pos.setY(std::max<int>(0, (canvas_size.height() - icon_size.height()) / 2.0));
 		}
 	}
 
@@ -1844,7 +1845,7 @@ QPixmap game_list_frame::PaintedPixmap(QPixmap icon, bool paint_config_icon, boo
 	// Draw the icon onto our canvas
 	if (!icon.isNull())
 	{
-		painter.drawPixmap(target_pos, icon);
+		painter.drawPixmap(target_pos.x(), target_pos.y(), icon_size.width(), icon_size.height(), icon);
 	}
 
 	// Draw config icons if necessary
