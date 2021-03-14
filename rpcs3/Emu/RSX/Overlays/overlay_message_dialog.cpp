@@ -79,12 +79,12 @@ namespace rsx
 						// Set padding in order to keep the aspect ratio
 						if ((background_image->w / static_cast<double>(background_image->h)) > (background_poster.w / static_cast<double>(background_poster.h)))
 						{
-							const int padding = (background_poster.h - (background_image->h * (background_poster.w / static_cast<double>(background_image->w)))) / 2;
+							const int padding = (background_poster.h - static_cast<int>(background_image->h * (background_poster.w / static_cast<double>(background_image->w)))) / 2;
 							background_poster.set_padding(0, 0, padding, padding);
 						}
 						else
 						{
-							const int padding = (background_poster.w - (background_image->w * (background_poster.h / static_cast<double>(background_image->h)))) / 2;
+							const int padding = (background_poster.w - static_cast<int>(background_image->w * (background_poster.h / static_cast<double>(background_image->h)))) / 2;
 							background_poster.set_padding(padding, padding, 0, 0);
 						}
 					}
