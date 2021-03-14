@@ -1820,7 +1820,7 @@ QPixmap game_list_frame::PaintedPixmap(QPixmap icon, bool paint_config_icon, boo
 
 			if ((icon.width() / static_cast<double>(icon.height())) > target_ratio)
 			{
-				canvas_size.setHeight(std::ceil(icon.width() * target_ratio));
+				canvas_size.setHeight(std::ceil(icon.width() / target_ratio));
 			}
 			else
 			{
