@@ -17,17 +17,20 @@ QT_BASE_URL="${QT_HOST}${QT_PREFIX}qtbase${QT_SUFFIX}"
 QT_WINE_URL="${QT_HOST}${QT_PREFIX}qtwinextras${QT_SUFFIX}"
 QT_DECL_URL="${QT_HOST}${QT_PREFIX}qtdeclarative${QT_SUFFIX}"
 QT_TOOL_URL="${QT_HOST}${QT_PREFIX}qttools${QT_SUFFIX}"
+QT_MSBUILD_URL="https://drive.google.com/uc?export=download&id=1gzrdlhbmn826th2Km3CzXny55V8HP2Du"
+QT_MSBUILD_SHA_URL="https://drive.google.com/uc?export=download&id=1bvwTMJwk7lRqAVXDfDedwIEZMDMG_D96"
 LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z'
 GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'
 VULKAN_SDK_URL="https://www.dropbox.com/s/kn005de7gsv5whe/VulkanSDK-1.2.154.1-Installer.exe"
 
-DEP_URLS="         \
-    $QT_BASE_URL   \
-    $QT_WINE_URL   \
-    $QT_DECL_URL   \
-    $QT_TOOL_URL   \
-    $LLVMLIBS_URL  \
-    $GLSLANG_URL   \
+DEP_URLS="           \
+    $QT_MSBUILD_URL  \
+    $QT_BASE_URL     \
+    $QT_WINE_URL     \
+    $QT_DECL_URL     \
+    $QT_TOOL_URL     \
+    $LLVMLIBS_URL    \
+    $GLSLANG_URL     \
     $VULKAN_SDK_URL"
 
 # Azure pipelines doesn't make a cache dir if it doesn't exist, so we do it manually
@@ -74,6 +77,7 @@ for url in $DEP_URLS; do
 
     # shellcheck disable=SC1003
     case "$url" in
+    *1gzrdlhbmn826th2Km3CzXny55V8HP2Du*) checksum=$(curl -L "$QT_MSBUILD_SHA_URL"); algo="sha256"; fileName='QtMsBuild.7z'; outDir='C:\' ;;
     *qt*) checksum=$(curl -L "${url}.sha1"); algo="sha1"; outDir='C:\Qt\' ;;
     *llvm*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="." ;;
     *glslang*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="./lib/Release - LLVM-x64" ;;
