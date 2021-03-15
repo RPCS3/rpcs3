@@ -1617,7 +1617,7 @@ static void append_thread_name(std::string& msg)
 	}
 	else if (thread_ctrl::is_main())
 	{
-		fmt::append(msg, "Thread: Main Thread");
+		fmt::append(msg, "Thread: Main Thread.\n");
 	}
 	else
 	{
