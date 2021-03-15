@@ -38,7 +38,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros">
     <CmakeGenerator>"Visual Studio $(VisualStudioVersion.Substring(0,2))"</CmakeGenerator>
-    <CmakeCLI>cmake -G $(CmakeGenerator) -A x64 -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT -DSPIRV-Headers_SOURCE_DIR=$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../spirv-headers')) ../spirv-tools</CmakeCLI>
+    <CmakeCLI>cmake -G $(CmakeGenerator) -A x64 -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DSPIRV_WERROR=OFF -DSPIRV-Headers_SOURCE_DIR=$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)../spirv-headers')) ../spirv-tools</CmakeCLI>
     <PropsAbsPath>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\common_default.props'))</PropsAbsPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
