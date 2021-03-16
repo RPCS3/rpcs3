@@ -713,7 +713,7 @@ namespace fs
 			const auto src = static_cast<const value_type*>(buffer);
 
 			// Overwrite existing part
-			const u64 overlap = pos >= old_size ? 0 : std::min<u64>(old_size - pos, size);
+			const u64 overlap = std::min<u64>(obj.size() - pos, size);
 			std::copy(src, src + overlap, obj.begin() + pos);
 
 			// Append new data
