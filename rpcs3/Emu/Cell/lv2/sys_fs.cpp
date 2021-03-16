@@ -14,7 +14,7 @@ LOG_CHANNEL(sys_fs);
 lv2_fs_mount_point g_mp_sys_dev_root;
 lv2_fs_mount_point g_mp_sys_no_device;
 lv2_fs_mount_point g_mp_sys_dev_hdd0{"/dev_hdd0"};
-lv2_fs_mount_point g_mp_sys_dev_hdd1{"/dev_hdd1", 512, 32768, lv2_mp_flag::no_uid_gid};
+lv2_fs_mount_point g_mp_sys_dev_hdd1{"/dev_hdd1", 512, 32768, lv2_mp_flag::no_uid_gid + lv2_mp_flag::cache};
 lv2_fs_mount_point g_mp_sys_dev_usb{"", 512, 4096, lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_dev_bdvd{"", 2048, 65536, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid};
 lv2_fs_mount_point g_mp_sys_host_root{"", 512, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid};
@@ -702,8 +702,7 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 			return CELL_EBADF;
 		}
 
-		if (std::memcmp(file->name.data(), "/dev_hdd1/", 10) != 0
-			&& !(file->mp->flags & lv2_mp_flag::read_only) && file->flags & CELL_FS_O_ACCMODE)
+		if (!(file->mp->flags & (lv2_mp_flag::read_only + lv2_mp_flag::cache)) && file->flags & CELL_FS_O_ACCMODE)
 		{
 			// Special: Ensure temporary directory for gamedata writes will remain on disk before final gamedata commitment
 			file->file.sync(); // For cellGameContentPermit atomicity

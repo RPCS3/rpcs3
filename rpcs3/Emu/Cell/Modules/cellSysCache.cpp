@@ -81,7 +81,7 @@ struct syscache_info
 		{
 			idm::select<lv2_fs_object, lv2_file>([](u32 /*id*/, lv2_file& file)
 			{
-				if (file.file && std::memcmp("/dev_hdd1/", file.name.data(), 10) == 0)
+				if (file.file && file.mp->flags & lv2_mp_flag::cache)
 				{
 					file.lock = 2;
 				}
