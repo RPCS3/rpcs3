@@ -260,9 +260,9 @@ public:
 	cmd64 cmd_get(u32 index) { return cmd_queue[cmd_queue.peek() + index].load(); }
 	atomic_t<u32> cmd_notify = 0;
 
-	const ppu_func_opd_t entry_func;
+	alignas(64) const ppu_func_opd_t entry_func;
 	u64 start_time{0}; // Sleep start timepoint
-	alignas(64) u64 syscall_args[4]{0}; // Last syscall arguments stored
+	u64 syscall_args[8]{0}; // Last syscall arguments stored
 	const char* current_function{}; // Current function name for diagnosis, optimized for speed.
 	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
 

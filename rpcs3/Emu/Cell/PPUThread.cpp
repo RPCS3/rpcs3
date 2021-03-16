@@ -608,7 +608,7 @@ std::string ppu_thread::dump_regs() const
 		auto reg = gpr[i];
 
 		// Fixup for syscall arguments
-		if (current_function && i >= 3 && i <= 6) reg = syscall_args[i - 3];
+		if (current_function && i >= 3 && i <= 10) reg = syscall_args[i - 3];
 
 		fmt::append(ret, "r%d%s: 0x%-8llx", i, i <= 9 ? " " : "", reg);
 
@@ -836,7 +836,7 @@ std::string ppu_thread::dump_misc() const
 		ret += _func;
 		ret += '\n';
 
-		for (u32 i = 3; i <= 6; i++)
+		for (u32 i = 3; i <= 10; i++)
 			if (u64 v = gpr[i]; v != syscall_args[i - 3])
 				fmt::append(ret, " ** r%d: 0x%llx\n", i, v);
 	}
