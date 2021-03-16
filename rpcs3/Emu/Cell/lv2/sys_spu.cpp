@@ -1989,7 +1989,7 @@ error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 
 	(*thread)();
 
-	if (idm::withdraw<named_thread<spu_thread>>(idm_id, [&](spu_thread& spu) -> CellError
+	if (auto ret = idm::withdraw<named_thread<spu_thread>>(idm_id, [&](spu_thread& spu) -> CellError
 	{
 		if (std::addressof(spu) != std::addressof(*thread))
 		{
@@ -1998,7 +1998,7 @@ error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 
 		spu.cleanup();
 		return {};
-	}).ret)
+	}); !ret || ret.ret)
 	{
 		// Other thread destroyed beforehead
 		return CELL_ESRCH;
