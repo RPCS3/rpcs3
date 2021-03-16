@@ -696,13 +696,16 @@ namespace fs
 		{
 			const u64 old_size = obj.size();
 
-			if (old_size + size < old_size)
+			if (old_size + size < old_size || pos + size < pos)
 			{
 				xovfl();
 			}
 
 			if (pos > old_size)
 			{
+			 	// Reserve memory
+				obj.reserve(pos + size);
+
 				// Fill gap if necessary (default-initialized)
 				obj.resize(pos);
 			}
