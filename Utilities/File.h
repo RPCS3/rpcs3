@@ -696,25 +696,22 @@ namespace fs
 		{
 			const u64 old_size = obj.size();
 
-			if (old_size + size < old_size)
+			if (old_size + size < old_size || pos + size < pos)
 			{
 				xovfl();
 			}
 
-			if (pos > old_size)
+			if (pos + size > old_size)
 			{
 				// Fill gap if necessary (default-initialized)
-				obj.resize(pos);
+				obj.resize(pos + size);
 			}
 
 			const auto src = static_cast<const value_type*>(buffer);
 
 			// Overwrite existing part
-			const u64 overlap = std::min<u64>(obj.size() - pos, size);
-			std::copy(src, src + overlap, obj.begin() + pos);
+			std::copy(src, src + size, obj.begin() + pos);
 
-			// Append new data
-			obj.insert(obj.end(), src + overlap, src + size);
 			pos += size;
 
 			return size;
