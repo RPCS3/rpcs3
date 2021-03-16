@@ -159,12 +159,12 @@ QCheckBox::indicator:disabled {
 
 /* Scrollbars */
 QScrollBar {
-	width: 5px;
+	width: 10px;
 	background: #23262d;
 }
 
 QTableView QScrollBar {
-	width: 3px;
+	width: 10px;
 	height: 3px;
 }
 
