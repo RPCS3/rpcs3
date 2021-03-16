@@ -701,17 +701,23 @@ namespace fs
 				xovfl();
 			}
 
-			if (pos + size > old_size)
+			if (pos > old_size)
 			{
+			 	// Reserve memory
+				obj.reserve(pos + size);
+
 				// Fill gap if necessary (default-initialized)
-				obj.resize(pos + size);
+				obj.resize(pos);
 			}
 
 			const auto src = static_cast<const value_type*>(buffer);
 
 			// Overwrite existing part
-			std::copy(src, src + size, obj.begin() + pos);
+			const u64 overlap = pos >= old_size ? 0 : std::min<u64>(old_size - pos, size);
+			std::copy(src, src + overlap, obj.begin() + pos);
 
+			// Append new data
+			obj.insert(obj.end(), src + overlap, src + size);
 			pos += size;
 
 			return size;
