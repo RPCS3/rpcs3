@@ -189,11 +189,11 @@ QSlider#sizeSlider::handle:hover {
 
 /* Scrollbars */
 QScrollBar {
-	width: 5px;
+	width: 10px;
 }
 
 QTableView QScrollBar {
-	width: 3px;
+	width: 10px;
 	height: 3px;
 }
 
