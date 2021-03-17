@@ -243,13 +243,16 @@ public:
 
 	// Send signal to the profiler(s) to flush results
 	static void flush_profilers() noexcept;
+
+private:
+	static thread_local cpu_thread* g_tls_this_thread;
+
+	friend cpu_thread* get_current_cpu_thread() noexcept;
 };
 
 inline cpu_thread* get_current_cpu_thread() noexcept
 {
-	extern thread_local cpu_thread* g_tls_current_cpu_thread;
-
-	return g_tls_current_cpu_thread;
+	return cpu_thread::g_tls_this_thread;
 }
 
 class ppu_thread;

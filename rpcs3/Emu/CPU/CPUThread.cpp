@@ -252,7 +252,7 @@ struct cpu_prof
 
 using cpu_profiler = named_thread<cpu_prof>;
 
-thread_local cpu_thread* g_tls_current_cpu_thread = nullptr;
+thread_local DECLARE(cpu_thread::g_tls_this_thread) = nullptr;
 
 // Total number of CPU threads
 static atomic_t<u64, 64> s_cpu_counter{0};
@@ -403,7 +403,7 @@ namespace cpu_counter
 
 void cpu_thread::operator()()
 {
-	g_tls_current_cpu_thread = this;
+	g_tls_this_thread = this;
 
 	if (g_cfg.core.thread_scheduler_enabled)
 	{
@@ -535,7 +535,7 @@ void cpu_thread::operator()()
 
 			s_cpu_counter--;
 
-			g_tls_current_cpu_thread = nullptr;
+			g_tls_this_thread = nullptr;
 
 			g_threads_deleted++;
 
@@ -1119,7 +1119,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 
 void cpu_thread::stop_all() noexcept
 {
-	if (g_tls_current_cpu_thread)
+	if (g_tls_this_thread)
 	{
 		// Report unsupported but unnecessary case
 		sys_log.fatal("cpu_thread::stop_all() has been called from a CPU thread.");
