@@ -35,7 +35,7 @@ namespace rsx
 
 			compiled_resource get_compiled() override;
 
-			s32 show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet);
+			s32 show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet, bool enable_overlay);
 		};
 	}
 }
