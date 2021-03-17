@@ -29,7 +29,7 @@ namespace rsx
 
 			m_thread_id = std::this_thread::get_id();
 
-			if (g_cfg.core.thread_scheduler_enabled)
+			if (g_cfg.core.thread_scheduler != thread_scheduler_mode::os)
 			{
 				thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
 			}

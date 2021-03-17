@@ -2709,9 +2709,18 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 						break;
 					case 16:
 						// 1700, 1800, 2700, TR 1900X family
-						ppu_mask = 0b1111111100000000;
-						spu_mask = ppu_mask;
-						rsx_mask = 0b0000000000111100;
+						if (g_cfg.core.thread_scheduler == thread_scheduler_mode::alt)
+						{
+							ppu_mask = 0b0010000010000000;
+							spu_mask = 0b0000101010101010;
+							rsx_mask = 0b1000000000000000;
+						}
+						else
+						{
+							ppu_mask = 0b1111111100000000;
+							spu_mask = ppu_mask;
+							rsx_mask = 0b0000000000111100;
+						}
 						break;
 					case 12:
 						// 1600, 2600 family, Assign threads 3-12
@@ -2739,15 +2748,35 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 					spu_mask = 0b000000111111000000000000;
 					rsx_mask = 0b000000000000111111000000;
 					break;
-				default:
-					if (thread_count >= 16)
+				case 16:
+					// 5800X
+					if (g_cfg.core.thread_scheduler == thread_scheduler_mode::alt)
+					{
+						ppu_mask = 0b0000000011110000;
+						spu_mask = 0b1111111100000000;
+						rsx_mask = 0b0000000000001111;
+					}
+					else
 					{
 						// Verified by more than one windows user on 16-thread CPU
 						ppu_mask = spu_mask = rsx_mask = (0b10101010101010101010101010101010 & all_cores_mask);
 					}
+				case 12:
+					// 5600X
+					if (g_cfg.core.thread_scheduler == thread_scheduler_mode::alt)
+					{
+						ppu_mask = 0b000000001100;
+						spu_mask = 0b111111110000;
+						rsx_mask = 0b000000000011;
+					}
 					else
 					{
 						ppu_mask = spu_mask = rsx_mask = all_cores_mask;
+					}
+				default:
+					if (thread_count > 24)
+					{
+						ppu_mask = spu_mask = rsx_mask = (0b10101010101010101010101010101010 & all_cores_mask);
 					}
 					break;
 				}
@@ -2774,23 +2803,8 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 		}
 		case native_core_arrangement::intel_ht:
 		{
-			/* This has been disabled as it seems to degrade performance instead of improving it.
-			if (thread_count <= 4)
-			{
-				//i3 or worse
-				switch (group)
-				{
-				case thread_class::rsx:
-				case thread_class::ppu:
-					return (0b0101 & all_cores_mask);
-				case thread_class::spu:
-					return (0b1010 & all_cores_mask);
-				case thread_class::general:
-					return all_cores_mask;
-				}
-			}
-			*/
-
+			if (thread_count >= 12 && g_cfg.core.thread_scheduler == thread_scheduler_mode::alt)
+				return (0b10101010101010101010101010101010 & all_cores_mask); // Potentially improves performance by mimicking HT off
 			return all_cores_mask;
 		}
 		}

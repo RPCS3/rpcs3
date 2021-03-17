@@ -17,13 +17,6 @@ struct cfg_root : cfg::node
 		bool has_rtm() const;
 
 	public:
-		static constexpr bool thread_scheduler_enabled_def =
-#ifdef _WIN32
-			true;
-#else
-			false;
-#endif
-
 		node_core(cfg::node* _this) : cfg::node(_this, "Core") {}
 
 		cfg::_enum<ppu_decoder_type> ppu_decoder{ this, "PPU Decoder", ppu_decoder_type::llvm };
@@ -33,7 +26,7 @@ struct cfg_root : cfg::node
 		cfg::string llvm_cpu{ this, "Use LLVM CPU" };
 		cfg::_int<0, INT32_MAX> llvm_threads{ this, "Max LLVM Compile Threads", 0 };
 		cfg::_bool ppu_llvm_greedy_mode{ this, "PPU LLVM Greedy Mode", false, false };
-		cfg::_bool thread_scheduler_enabled{ this, "Enable thread scheduler", thread_scheduler_enabled_def };
+		cfg::_enum<thread_scheduler_mode> thread_scheduler{this, "Thread Scheduler Mode", thread_scheduler_mode::os};
 		cfg::_bool set_daz_and_ftz{ this, "Set DAZ and FTZ", false };
 		cfg::_enum<spu_decoder_type> spu_decoder{ this, "SPU Decoder", spu_decoder_type::llvm };
 		cfg::_bool lower_spu_priority{ this, "Lower SPU thread priority" };

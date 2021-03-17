@@ -193,9 +193,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->spuCache, emu_settings_type::SPUCache);
 	SubscribeTooltip(ui->spuCache, tooltips.settings.spu_cache);
 
-	m_emu_settings->EnhanceCheckBox(ui->enableScheduler, emu_settings_type::EnableThreadScheduler);
-	SubscribeTooltip(ui->enableScheduler, tooltips.settings.enable_thread_scheduler);
-
 	m_emu_settings->EnhanceCheckBox(ui->lowerSPUThrPrio, emu_settings_type::LowerSPUThreadPrio);
 	SubscribeTooltip(ui->lowerSPUThrPrio, tooltips.settings.lower_spu_thread_priority);
 
@@ -209,6 +206,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->spuBlockSize, emu_settings_type::SPUBlockSize);
 	SubscribeTooltip(ui->gb_spuBlockSize, tooltips.settings.spu_block_size);
+
+	m_emu_settings->EnhanceComboBox(ui->threadsched, emu_settings_type::ThreadSchedulerMode);
+	SubscribeTooltip(ui->gb_threadsched, tooltips.settings.enable_thread_scheduler);
+	if (u32 min_thread_count = 12; utils::get_thread_count() < min_thread_count)
+	{
+		ui->gb_threadsched->setDisabled(true);
+		ui->gb_threadsched->setToolTip(tr("This feature is disabled for CPUs with less than %0 threads").arg(min_thread_count));
+	}
 
 	m_emu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings_type::PreferredSPUThreads, true);
 	SubscribeTooltip(ui->gb_spu_threads, tooltips.settings.preferred_spu_threads);
