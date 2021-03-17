@@ -168,7 +168,7 @@ struct content_permission final
 
 error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName, u32 errDialog, vm::ptr<CellHddGameStatCallback> funcStat, u32 container)
 {
-	cellGame.error("cellHddGameCheck(version=%d, dirName=%s, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
+	cellGame.warning("cellHddGameCheck(version=%d, dirName=%s, errDialog=%d, funcStat=*0x%x, container=%d)", version, dirName, errDialog, funcStat, container);
 
 	if (!dirName || !funcStat || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{

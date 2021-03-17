@@ -50,7 +50,7 @@ error_code sys_mmapper_allocate_address(ppu_thread& ppu, u64 size, u64 flags, u6
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_mmapper.error("sys_mmapper_allocate_address(size=0x%x, flags=0x%x, alignment=0x%x, alloc_addr=*0x%x)", size, flags, alignment, alloc_addr);
+	sys_mmapper.warning("sys_mmapper_allocate_address(size=0x%x, flags=0x%x, alignment=0x%x, alloc_addr=*0x%x)", size, flags, alignment, alloc_addr);
 
 	if (size % 0x10000000)
 	{
@@ -93,7 +93,7 @@ error_code sys_mmapper_allocate_fixed_address(ppu_thread& ppu)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_mmapper.error("sys_mmapper_allocate_fixed_address()");
+	sys_mmapper.warning("sys_mmapper_allocate_fixed_address()");
 
 	if (!vm::map(0xB0000000, 0x10000000, SYS_MEMORY_PAGE_SIZE_1M))
 	{
@@ -459,7 +459,7 @@ error_code sys_mmapper_free_address(ppu_thread& ppu, u32 addr)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_mmapper.error("sys_mmapper_free_address(addr=0x%x)", addr);
+	sys_mmapper.warning("sys_mmapper_free_address(addr=0x%x)", addr);
 
 	if (addr < 0x20000000 || addr >= 0xC0000000)
 	{
