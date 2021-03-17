@@ -144,13 +144,6 @@
              </property>
              <layout class="QVBoxLayout" name="checkboxes_layout">
               <item>
-               <widget class="QCheckBox" name="enableScheduler">
-                <property name="text">
-                 <string>Enable thread scheduler</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QCheckBox" name="lowerSPUThrPrio">
                 <property name="text">
                  <string>Lower SPU thread priority</string>
@@ -200,7 +193,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="0,0,0,0">
+          <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="0,0,0,0,0">
            <item>
             <widget class="QGroupBox" name="gb_tsx">
              <property name="sizePolicy">
@@ -251,6 +244,24 @@
              <layout class="QVBoxLayout" name="gb_spu_threads_layout">
               <item>
                <widget class="QComboBox" name="preferredSPUThreads"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_threadsched">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="title">
+              <string>Thread Scheduler</string>
+             </property>
+             <layout class="QVBoxLayout" name="gb_threadsched_layout">
+              <item>
+               <widget class="QComboBox" name="threadsched"/>
               </item>
              </layout>
             </widget>

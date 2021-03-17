@@ -201,3 +201,10 @@ enum class vk_gpu_scheduler_mode
 	host,
 	device
 };
+
+enum class thread_scheduler_mode
+{
+	os,
+	old,
+	alt
+};
