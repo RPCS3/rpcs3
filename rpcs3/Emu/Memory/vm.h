@@ -101,7 +101,7 @@ namespace vm
 		bool try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&&);
 
 	public:
-		block_t(u32 addr, u32 size, u64 flags = 0);
+		block_t(u32 addr, u32 size, u64 flags);
 
 		~block_t();
 
