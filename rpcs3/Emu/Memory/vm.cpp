@@ -1642,7 +1642,7 @@ namespace vm
 				nullptr, // rsx context
 				std::make_shared<block_t>(0xC0000000, 0x10000000, 0x220), // video
 				std::make_shared<block_t>(0xD0000000, 0x10000000, 0x131), // stack
-				std::make_shared<block_t>(0xE0000000, 0x20000000), // SPU reserved
+				std::make_shared<block_t>(0xE0000000, 0x20000000, 0x200), // SPU reserved
 			};
 
 			std::memset(g_reservations, 0, sizeof(g_reservations));
