@@ -77,7 +77,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	// Check if thread id is in string
 	if (_text.find("\nThread id = "sv) == umax)
 	{
-		// Copy only when needed 
+		// Copy only when needed
 		buf = std::string(_text);
 
 		// Always print thread id
@@ -737,9 +737,12 @@ int main(int argc, char** argv)
 	}
 
 #ifdef _WIN32
+	// Create dummy permanent low resolution timer to workaround messing with system timer resolution
+	QTimer* dummy_timer = new QTimer(app.data());
+	dummy_timer->start(13);
+
 	// Set 0.5 msec timer resolution for best performance
 	// - As QT5 timers (QTimer) sets the timer resolution to 1 msec, override it here.
-	// - Don't bother "unsetting" the timer resolution after the emulator stops as QT5 will still require the timer resolution to be set to 1 msec.
 	ULONG min_res, max_res, orig_res, new_res;
 	if (NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0)
 	{
@@ -786,8 +789,8 @@ int main(int argc, char** argv)
 			}
 		}
 
-		// Ugly workaround
-		QTimer::singleShot(2, [config_override_path, path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
+		// Postpone startup to main event loop
+		Emu.CallAfter([config_override_path, path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
 		{
 			Emu.argv = std::move(argv);
 			Emu.SetForceBoot(true);
