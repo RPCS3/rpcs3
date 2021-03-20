@@ -1494,6 +1494,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		SubscribeTooltip(ui->cb_show_pup_install, tooltips.settings.show_pup_install);
 
+		SubscribeTooltip(ui->cb_show_obsolete_cfg_dialog, tooltips.settings.show_obsolete_cfg);
+
 		SubscribeTooltip(ui->gb_updates, tooltips.settings.check_update_start);
 
 		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);
@@ -1572,6 +1574,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->cb_show_boot_game->setChecked(m_gui_settings->GetValue(gui::ib_confirm_boot).toBool());
 		ui->cb_show_pkg_install->setChecked(m_gui_settings->GetValue(gui::ib_pkg_success).toBool());
 		ui->cb_show_pup_install->setChecked(m_gui_settings->GetValue(gui::ib_pup_success).toBool());
+		ui->cb_show_obsolete_cfg_dialog->setChecked(m_gui_settings->GetValue(gui::ib_obsolete_cfg).toBool());
 
 		const QString updates_yes        = tr("Yes", "Updates");
 		const QString updates_background = tr("Background", "Updates");
@@ -1658,6 +1661,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		connect(ui->cb_show_pup_install, &QCheckBox::clicked, [this](bool val)
 		{
 			m_gui_settings->SetValue(gui::ib_pup_success, val);
+		});
+		connect(ui->cb_show_obsolete_cfg_dialog, &QCheckBox::clicked, [this](bool val)
+		{
+			m_gui_settings->SetValue(gui::ib_obsolete_cfg, val);
 		});
 
 		connect(ui->cb_custom_colors, &QCheckBox::clicked, [this](bool val)
@@ -1963,7 +1970,29 @@ int settings_dialog::exec()
 	QTimer::singleShot(0, [this]{ ui->tab_widget_settings->setCurrentIndex(m_tab_index); });
 
 	// Open a dialog if your config file contained invalid entries
-	QTimer::singleShot(10, [this] { m_emu_settings->OpenCorrectionDialog(this); });
+	QTimer::singleShot(10, [this]
+	{
+		m_emu_settings->OpenCorrectionDialog(this);
+
+		if (!m_emu_settings->ValidateSettings(false))
+		{
+			int result = QMessageBox::No;
+			m_gui_settings->ShowConfirmationBox(
+				tr("Remove obsolete settings?"),
+				tr(
+					"Your config file contains one or more obsolete entries.\n"
+					"Consider that a removal might render them invalid for other versions of RPCS3.\n"
+					"\n"
+					"Do you wish to let the program remove them for you now?\n"
+					"This change will only be final when you save the config."
+				), gui::ib_obsolete_cfg, &result, this);
+
+			if (result == QMessageBox::Yes)
+			{
+				m_emu_settings->ValidateSettings(true);
+			}
+		}
+	});
 
 	return QDialog::exec();
 }

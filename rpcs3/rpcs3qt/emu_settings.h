@@ -90,12 +90,13 @@ public:
 	/** Get a localized and therefore freely adjustable version of the string used in config.yml.*/
 	QString GetLocalizedSetting(const QString& original, emu_settings_type type, int index) const;
 
+	/** Validates the settings and logs unused entries or cleans up the yaml*/
+	bool ValidateSettings(bool cleanup);
+
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
 private:
-	void ValidateSettings();
-
 	YAML::Node m_default_settings; // The default settings as a YAML node.
 	YAML::Node m_current_settings; // The current settings as a YAML node.
 	std::string m_title_id;
