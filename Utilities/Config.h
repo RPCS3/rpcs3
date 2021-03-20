@@ -98,7 +98,7 @@ namespace cfg
 	// Config tree node which contains another nodes
 	class node : public _base
 	{
-		std::vector<std::pair<std::string, _base*>> m_nodes;
+		std::vector<_base*> m_nodes;
 
 		friend class _base;
 

@@ -105,9 +105,9 @@ bool evdev_joystick_handler::Init()
 
 	for (const auto& node : m_pos_axis_config.get_nodes())
 	{
-		if (*static_cast<cfg::_bool*>(node.second))
+		if (*static_cast<cfg::_bool*>(node))
 		{
-			const auto name = node.first;
+			const auto name = node->get_name();
 			const int code  = libevdev_event_code_from_name(EV_ABS, name.c_str());
 			if (code < 0)
 				evdev_log.error("Failed to read axis name from %s. [code = %d] [name = %s]", m_pos_axis_config.cfg_name, code, name);

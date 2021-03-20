@@ -22,15 +22,15 @@ namespace cfg
 	_base::_base(type _type, node* owner, const std::string& name, bool dynamic)
 		: m_type(_type), m_dynamic(dynamic), m_name(name)
 	{
-		for (const auto& pair : owner->m_nodes)
+		for (const auto& node : owner->m_nodes)
 		{
-			if (pair.first == name)
+			if (node->get_name() == name)
 			{
 				cfg_log.fatal("Node already exists: %s", name);
 			}
 		}
 
-		owner->m_nodes.emplace_back(name, this);
+		owner->m_nodes.emplace_back(this);
 	}
 
 	bool _base::from_string(const std::string&, bool)
@@ -218,11 +218,11 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 	case type::node:
 	{
 		out << YAML::BeginMap;
-		for (const auto& np : static_cast<const node&>(rhs).get_nodes())
+		for (const auto& node : static_cast<const node&>(rhs).get_nodes())
 		{
-			out << YAML::Key << np.first;
+			out << YAML::Key << node->get_name();
 			out << YAML::Value;
-			encode(out, *np.second);
+			encode(out, *node);
 		}
 
 		out << YAML::EndMap;
@@ -281,11 +281,11 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 			if (!pair.first.IsScalar()) continue;
 
 			// Find the key among existing nodes
-			for (const auto& _pair : static_cast<node&>(rhs).get_nodes())
+			for (const auto& node : static_cast<node&>(rhs).get_nodes())
 			{
-				if (_pair.first == pair.first.Scalar())
+				if (node->get_name() == pair.first.Scalar())
 				{
-					decode(pair.second, *_pair.second, dynamic);
+					decode(pair.second, *node, dynamic);
 				}
 			}
 		}
@@ -366,7 +366,7 @@ void cfg::node::from_default()
 {
 	for (auto& node : m_nodes)
 	{
-		node.second->from_default();
+		node->from_default();
 	}
 }
 
