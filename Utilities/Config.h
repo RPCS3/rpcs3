@@ -52,6 +52,7 @@ namespace cfg
 
 	protected:
 		bool m_dynamic = true;
+		const std::string m_name;
 
 		// Ownerless entry constructor
 		_base(type _type);
@@ -66,6 +67,8 @@ namespace cfg
 
 		// Get type
 		type get_type() const { return m_type; }
+
+		const std::string& get_name() const { return m_name; };
 
 		// Get dynamic property for reloading configs during games
 		bool get_is_dynamic() const { return m_dynamic; };
@@ -391,8 +394,6 @@ namespace cfg
 	// Simple string entry with mutex
 	class string : public _base
 	{
-		const std::string m_name;
-
 		atomic_ptr<std::string> m_value;
 
 	public:
@@ -400,7 +401,6 @@ namespace cfg
 
 		string(node* owner, std::string name, std::string def = {}, bool dynamic = false)
 			: _base(type::string, owner, name, dynamic)
-			, m_name(std::move(name))
 			, m_value(def)
 			, def(std::move(def))
 		{
@@ -424,11 +424,6 @@ namespace cfg
 				static const std::string _empty;
 				return {_empty, {}};
 			}
-		}
-
-		const std::string& get_name() const
-		{
-			return m_name;
 		}
 
 		void from_default() override;
