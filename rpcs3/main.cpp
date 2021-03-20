@@ -774,24 +774,28 @@ int main(int argc, char** argv)
 	// Force install firmware first if specified through command-line
 	if (parser.isSet(arg_installfw))
 	{
-		firmware_path = parser.value(installfw_option).toStdString();
-		if (!fs::is_file(firmware_path))
+		if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 		{
-			report_fatal_error(fmt::format("No firmware file found: %s", firmware_path));
-			return 1;
+			if (s_no_gui)
+			{
+				report_fatal_error("Cannot install firmware in no-gui mode!");
+				return 1;
+			}
+
+			if (gui_app->m_main_window)
+			{
+				gui_app->m_main_window->HandlePupInstallation(parser.value(installfw_option));
+			}
+			else
+			{
+				report_fatal_error("Cannot install firmware. No main window found!");
+				return 1;
+			}
 		}
 		else
 		{
-			if (auto gui_app = qobject_cast<gui_application*>(app.data()))
-			{
-				main_window* main_window = gui_app->m_main_window;
-				if (!main_window)
-				{
-					report_fatal_error("Cannot install firmware, exiting !");
-					return 1;
-				}
-				main_window->HandlePupInstallation(QString::fromStdString(firmware_path));
-			}
+			report_fatal_error("Cannot install firmware in headless mode!");
+			return 1;
 		}
 	}
 
@@ -800,7 +804,7 @@ int main(int argc, char** argv)
 		sys_log.notice("Option passed via command line: %s %s", opt.toStdString(), parser.value(opt).toStdString());
 	}
 
-	if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating)
+	if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating && !parser.isSet(arg_installfw))
 	{
 		sys_log.notice("Booting application from command line: %s", args.at(0).toStdString());
 
