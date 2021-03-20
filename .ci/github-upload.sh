@@ -24,7 +24,7 @@ curl -s \
 cat release.json
 id=$(grep '"id"' release.json | cut -d ':' -f2 | head -n1 | awk '{$1=$1;print}')
 id=${id%?}
-echo ${id:?}
+echo "${id:?}"
 
 upload_file()
 {
