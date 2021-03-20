@@ -196,9 +196,9 @@ void emu_settings::ValidateSettings()
 
 			if (cfg_base && cfg_base->get_type() == cfg::type::node)
 			{
-				for (const auto& [name, node] : static_cast<const cfg::node*>(cfg_base)->get_nodes())
+				for (const auto& node : static_cast<const cfg::node*>(cfg_base)->get_nodes())
 				{
-					if (name == keys[level])
+					if (node->get_name() == keys[level])
 					{
 						cfg_node = node;
 						break;

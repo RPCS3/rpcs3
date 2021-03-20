@@ -12,11 +12,11 @@ namespace cfg_adapter
 	{
 		if (root.get_type() == cfg::type::node)
 		{
-			for (const auto& pair : static_cast<cfg::node&>(root).get_nodes())
+			for (const auto& node : static_cast<cfg::node&>(root).get_nodes())
 			{
-				if (pair.first == name)
+				if (node->get_name() == name)
 				{
-					return *pair.second;
+					return *node;
 				}
 			}
 		}
