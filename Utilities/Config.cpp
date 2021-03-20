@@ -20,7 +20,7 @@ namespace cfg
 	}
 
 	_base::_base(type _type, node* owner, const std::string& name, bool dynamic)
-		: m_type(_type), m_dynamic(dynamic)
+		: m_type(_type), m_dynamic(dynamic), m_name(name)
 	{
 		for (const auto& pair : owner->m_nodes)
 		{
