@@ -12,6 +12,7 @@
 
 #include "util/yaml.hpp"
 #include "Utilities/File.h"
+#include "Utilities/Config.h"
 
 LOG_CHANNEL(cfg_log, "CFG");
 
@@ -173,8 +174,64 @@ void emu_settings::LoadSettings(const std::string& title_id)
 	}
 }
 
+void emu_settings::ValidateSettings()
+{
+	std::function<void(int, const YAML::Node&, std::vector<std::string>&, cfg::_base*)> search_level;
+	search_level = [&search_level](int level, const YAML::Node& yml_node, std::vector<std::string>& keys, cfg::_base* cfg_base)
+	{
+		if (!yml_node || !yml_node.IsMap())
+		{
+			return;
+		}
+
+		const int next_level = level + 1;
+
+		for (const auto& yml_entry : yml_node)
+		{
+			const std::string key = yml_entry.first.Scalar();
+			cfg::_base* cfg_node = nullptr;
+
+			keys.resize(next_level);
+			keys[level] = key;
+
+			if (cfg_base && cfg_base->get_type() == cfg::type::node)
+			{
+				for (const auto& [name, node] : static_cast<const cfg::node*>(cfg_base)->get_nodes())
+				{
+					if (name == keys[level])
+					{
+						cfg_node = node;
+						break;
+					}
+				}
+			}
+
+			if (cfg_node)
+			{
+				search_level(next_level, yml_node[key], keys, cfg_node);
+			}
+			else
+			{
+				std::string key;
+				for (usz i = 0; i < keys.size(); i++)
+				{
+					key += keys[i];
+					if (i < keys.size() - 1) key += ": ";
+				}
+				cfg_log.warning("Unknown config entry found: %s", key);
+			}
+		}
+	};
+
+	cfg_root root;
+	std::vector<std::string> keys;
+	search_level(0, m_current_settings, keys, &root);
+}
+
 void emu_settings::SaveSettings()
 {
+	ValidateSettings();
+
 	YAML::Emitter out;
 	emit_data(out, m_current_settings);
 
