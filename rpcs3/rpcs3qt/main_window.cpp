@@ -918,8 +918,18 @@ void main_window::ExtractTar()
 
 void main_window::HandlePupInstallation(QString file_path, QString dir_path)
 {
+	const auto critical = [this](QString str)
+	{
+		Emu.CallAfter([this, str = std::move(str)]()
+		{
+			QMessageBox::critical(this, tr("Firmware Installation Failed"), str);
+		}, false);
+	};
+
 	if (file_path.isEmpty())
 	{
+		gui_log.error("Error while installing firmware: provided path is empty.");
+		critical(tr("Firmware installation failed: The provided path is empty."));
 		return;
 	}
 
@@ -934,14 +944,6 @@ void main_window::HandlePupInstallation(QString file_path, QString dir_path)
 	m_gui_settings->SetValue(gui::fd_install_pup, QFileInfo(file_path).path());
 
 	const std::string path = sstr(file_path);
-
-	auto critical = [this](QString str)
-	{
-		Emu.CallAfter([this, str = std::move(str)]()
-		{
-			QMessageBox::critical(this, tr("Firmware Installation Failed"), str);
-		}, false);
-	};
 
 	fs::file pup_f(path);
 	if (!pup_f)
