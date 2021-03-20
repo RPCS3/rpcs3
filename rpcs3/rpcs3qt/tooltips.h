@@ -173,6 +173,7 @@ public:
 		const QString show_boot_game     = tr("Shows a confirmation dialog when a game was booted while another game is running.");
 		const QString show_pkg_install   = tr("Shows a dialog when packages were installed successfully.");
 		const QString show_pup_install   = tr("Shows a dialog when firmware was installed successfully.");
+		const QString show_obsolete_cfg  = tr("Shows a dialog when obsolete settings were found.");
 		const QString check_update_start = tr("Checks if an update is available on startup and asks if you want to update.\nIf \"Background\" is selected, the check is done silently in the background and a new download option is shown in the top right corner of the menu if a new version was found.");
 		const QString use_rich_presence  = tr("Enables use of Discord Rich Presence to show what game you are playing on Discord.\nRequires a restart of RPCS3 to completely close the connection.");
 		const QString discord_state      = tr("Tell your friends what you are doing.");

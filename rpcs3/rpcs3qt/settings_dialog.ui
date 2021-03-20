@@ -39,7 +39,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>6</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -2068,8 +2068,8 @@
              </layout>
             </widget>
            </item>
-		   <item>
-		    <widget class="QGroupBox" name="gb_vulkansched">
+           <item>
+            <widget class="QGroupBox" name="gb_vulkansched">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
                <horstretch>0</horstretch>
@@ -2081,12 +2081,11 @@
              </property>
              <layout class="QVBoxLayout" name="gb_vksched_layout">
               <item>
-               <widget class="QComboBox" name="vulkansched">
-               </widget>
+               <widget class="QComboBox" name="vulkansched"/>
               </item>
              </layout>
             </widget>
-		   </item>
+           </item>
            <item>
             <widget class="QGroupBox" name="gb_wakeupDelay">
              <property name="sizePolicy">
@@ -3300,6 +3299,13 @@
                <widget class="QCheckBox" name="cb_show_pup_install">
                 <property name="text">
                  <string>Show PUP Installation Dialog</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="cb_show_obsolete_cfg_dialog">
+                <property name="text">
+                 <string>Show Obsolete Settings Dialog</string>
                 </property>
                </widget>
               </item>
