@@ -55,6 +55,8 @@ ninja; build_status=$?;
 
 cd ..
 
+shellcheck .ci/*.sh
+
 # If it compiled succesfully let's deploy depending on the build pipeline (Azure Pipelines).
 # Azure publishes PRs as artifacts only.
 {   [ "$IS_AZURE" = "true" ];
