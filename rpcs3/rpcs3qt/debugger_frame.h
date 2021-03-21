@@ -105,7 +105,7 @@ Q_SIGNALS:
 	void CallStackUpdateRequested(std::vector<std::pair<u32, u32>> call_stack);
 
 public Q_SLOTS:
-	void DoStep(bool stepOver = false);
+	void DoStep(bool step_over = false);
 
 private Q_SLOTS:
 	void OnSelectUnit();

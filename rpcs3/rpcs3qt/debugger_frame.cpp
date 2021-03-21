@@ -268,8 +268,8 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			"\nKey N: Show next instruction the thread will execute after marked instruction, does nothing if target is not predictable."
 			"\nKey M: Show the Memory Viewer with initial address pointing to the marked instruction."
 			"\nKey I: Show RSX method detail."
-			"\nKey F10: Perform single-stepping on instructions."
-			"\nKey F11: Perform step-over on instructions. (skip function calls)"
+			"\nKey F10: Perform step-over on instructions. (skip function calls)"
+			"\nKey F11: Perform single-stepping on instructions."
 			"\nKey F1: Show this help dialog."
 			"\nKey Up: Scroll one instruction upwards. (address is decremented)"
 			"\nKey Down: Scroll one instruction downwards. (address is incremented)"
@@ -892,11 +892,11 @@ void debugger_frame::ShowPC()
 	m_debugger_list->ShowAddress(pc);
 }
 
-void debugger_frame::DoStep(bool stepOver)
+void debugger_frame::DoStep(bool step_over)
 {
 	if (const auto cpu = get_cpu())
 	{
-		bool should_step_over = stepOver && cpu->id_type() == 1;
+		bool should_step_over = step_over && cpu->id_type() == 1;
 
 		if (auto _state = +cpu->state; _state & s_pause_flags && _state & cpu_flag::wait && !(_state & cpu_flag::dbg_step))
 		{
