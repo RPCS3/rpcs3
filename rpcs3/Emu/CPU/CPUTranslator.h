@@ -2804,6 +2804,16 @@ public:
 	}
 
 	template <typename T1, typename T2>
+	value_t<s32[4]> pmaddwd(T1 a, T2 b)
+	{
+		value_t<s32[4]> result;
+		const auto av = a.eval(m_ir);
+		const auto bv = b.eval(m_ir);		
+		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_sse2_pmadd_wd), {av, bv});
+		return result;
+	}
+
+	template <typename T1, typename T2>
 	value_t<u8[16]> vpermb(T1 a, T2 b)
 	{
 		value_t<u8[16]> result;

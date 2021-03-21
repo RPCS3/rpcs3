@@ -6931,7 +6931,9 @@ public:
 
 	void MPYHHA(spu_opcode_t op)
 	{
-		set_vr(op.rt, (get_vr<s32[4]>(op.ra) >> 16) * (get_vr<s32[4]>(op.rb) >> 16) + get_vr<s32[4]>(op.rt));
+		auto a = bitcast<s16[8]>(get_vr(op.ra) >> 16);
+		auto b = bitcast<s16[8]>(get_vr(op.rb) >> 16);
+		set_vr(op.rt, pmaddwd(a, b) + get_vr<s32[4]>(op.rt));
 	}
 
 	void MPYHHAU(spu_opcode_t op)
@@ -6941,7 +6943,9 @@ public:
 
 	void MPY(spu_opcode_t op)
 	{
-		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16));
+		auto a = bitcast<s16[8]>(get_vr(op.ra) << 16 >> 16);
+		auto b = bitcast<s16[8]>(get_vr(op.rb) << 16 >> 16);
+		set_vr(op.rt, pmaddwd(a, b));
 	}
 
 	void MPYH(spu_opcode_t op)
@@ -6951,7 +6955,9 @@ public:
 
 	void MPYHH(spu_opcode_t op)
 	{
-		set_vr(op.rt, (get_vr<s32[4]>(op.ra) >> 16) * (get_vr<s32[4]>(op.rb) >> 16));
+		auto a = bitcast<s16[8]>(get_vr(op.ra) >> 16);
+		auto b = bitcast<s16[8]>(get_vr(op.rb) >> 16);
+		set_vr(op.rt, pmaddwd(a, b));
 	}
 
 	void MPYS(spu_opcode_t op)
@@ -7434,7 +7440,9 @@ public:
 
 	void MPYA(spu_opcode_t op)
 	{
-		set_vr(op.rt4, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16) + get_vr<s32[4]>(op.rc));
+		auto a = bitcast<s16[8]>(get_vr(op.ra) << 16 >> 16);
+		auto b = bitcast<s16[8]>(get_vr(op.rb) << 16 >> 16);
+		set_vr(op.rt4, pmaddwd(a, b) + get_vr<s32[4]>(op.rc));
 	}
 
 	void FSCRRD(spu_opcode_t op) //
