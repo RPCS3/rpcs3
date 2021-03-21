@@ -813,7 +813,6 @@ void try_spawn_ppu_if_exclusive_program(const ppu_module& m)
 
 		auto ppu = idm::make_ptr<named_thread<ppu_thread>>("PPU[0x1000000] Thread (test_thread)", p, "test_thread", 0);
 
-		ppu->cmd_push({ppu_cmd::initialize, 0});
 		ppu->cia = m.funcs[0].addr;
 
 		// For kernel explorer
