@@ -200,6 +200,8 @@ namespace fs
 	{
 		std::unique_ptr<file_base> m_file;
 
+		bool strict_read_check(u64 size, u64 type_size) const;
+
 	public:
 		// Default constructor
 		file() = default;
@@ -377,15 +379,24 @@ namespace fs
 		}
 
 		// Read std::basic_string
-		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::basic_string<T>& str, usz size,
+		template <bool IsStrict = false, typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::basic_string<T>& str, usz _size,
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION(),
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN()) const
 		{
-			str.resize(size);
-			return read(&str[0], size * sizeof(T), line, col, file, func) == size * sizeof(T);
+			if (!m_file) xnull({line, col, file, func});
+			if (!_size) return true;
+
+			if constexpr (IsStrict)
+			{
+				// If _size arg is too high std::bad_alloc may happen in resize and then we cannot error check
+				if (!strict_read_check(_size, sizeof(T))) return false;
+			}
+
+			str.resize(_size);
+			return read(str.data(), sizeof(T) * _size, line, col, file, func) == sizeof(T) * _size;
 		}
 
 		// Read POD, sizeof(T) is used
@@ -412,15 +423,23 @@ namespace fs
 		}
 
 		// Read POD std::vector
-		template <typename T>
-		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec, usz size,
+		template <bool IsStrict = false, typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec, usz _size,
 			const char* file = __builtin_FILE(),
 			const char* func = __builtin_FUNCTION(),
 			u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN()) const
 		{
-			vec.resize(size);
-			return read(vec.data(), sizeof(T) * size, line, col, file, func) == sizeof(T) * size;
+			if (!m_file) xnull({line, col, file, func});
+			if (!_size) return true;
+
+			if constexpr (IsStrict)
+			{
+				if (!strict_read_check(_size, sizeof(T))) return false;
+			}
+
+			vec.resize(_size);
+			return read(vec.data(), sizeof(T) * _size, line, col, file, func) == sizeof(T) * _size;
 		}
 
 		// Read POD (experimental)
