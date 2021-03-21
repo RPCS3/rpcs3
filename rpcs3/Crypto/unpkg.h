@@ -305,6 +305,7 @@ public:
 	package_reader(const std::string& path);
 	~package_reader();
 
+	bool is_valid() const { return m_is_valid; }
 	package_error check_target_app_version();
 	bool extract_data(atomic_t<double>& sync);
 	psf::registry get_psf() const { return m_psf; }

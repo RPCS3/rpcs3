@@ -100,6 +100,8 @@ namespace compat
 	/** Concicely represents a specific pkg's localized information for use in the GUI */
 	struct package_info
 	{
+		bool is_valid = true;
+
 		QString path;        // File path
 		QString title_id;    // TEST12345
 		QString title;       // Localized

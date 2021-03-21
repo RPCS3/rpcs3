@@ -247,14 +247,21 @@ compat::status game_compatibility::GetStatusData(const QString& status)
 
 compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, game_compatibility* compat)
 {
+	compat::package_info info;
+
 	package_reader reader(pkg_path.toStdString());
+	if (!reader.is_valid())
+	{
+		info.is_valid = false;
+		return info;
+	}
+
 	psf::registry psf = reader.get_psf();
 
 	// TODO: localization of title and changelog
 	std::string title_key     = "TITLE";
 	std::string changelog_key = "paramhip";
 
-	compat::package_info info;
 	info.path     = pkg_path;
 	info.title    = qstr(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first
 	info.title_id = qstr(std::string(psf::get_string(psf, "TITLE_ID")));

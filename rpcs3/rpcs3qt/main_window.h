@@ -85,7 +85,8 @@ public:
 	bool Init();
 	QIcon GetAppIcon();
 	bool OnMissingFw();
-	void HandlePupInstallation(QString file_path, QString dir_path = "");
+	void InstallPackages(QStringList file_paths = QStringList());
+	void InstallPup(QString filePath = "");
 
 Q_SIGNALS:
 	void RequestLanguageChange(const QString& language);
@@ -141,10 +142,9 @@ private:
 
 	static bool InstallRapFile(const QString& path, const std::string& filename);
 
-	void InstallPackages(QStringList file_paths = QStringList());
 	void HandlePackageInstallation(QStringList file_paths);
 
-	void InstallPup(QString filePath = "");
+	void HandlePupInstallation(QString file_path, QString dir_path = "");
 	void ExtractPup();
 
 	void ExtractTar();
