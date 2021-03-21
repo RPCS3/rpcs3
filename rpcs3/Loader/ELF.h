@@ -241,17 +241,15 @@ public:
 
 		if (!(opts & elf_opt::no_programs))
 		{
-			_phdrs.resize(header.e_phnum);
 			stream.seek(offset + header.e_phoff);
-			if (!stream.read(_phdrs))
+			if (!stream.read<true>(_phdrs, header.e_phnum))
 				return set_error(elf_error::stream_phdrs);
 		}
 
 		if (!(opts & elf_opt::no_sections))
 		{
-			shdrs.resize(header.e_shnum);
 			stream.seek(offset + header.e_shoff);
-			if (!stream.read(shdrs))
+			if (!stream.read<true>(shdrs, header.e_shnum))
 				return set_error(elf_error::stream_shdrs);
 		}
 
@@ -265,9 +263,8 @@ public:
 
 			if (!(opts & elf_opt::no_data))
 			{
-				progs.back().bin.resize(hdr.p_filesz);
 				stream.seek(offset + hdr.p_offset);
-				if (!stream.read(progs.back().bin))
+				if (!stream.read<true>(progs.back().bin, hdr.p_filesz))
 					return set_error(elf_error::stream_data);
 			}
 		}

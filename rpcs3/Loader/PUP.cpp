@@ -40,23 +40,15 @@ pup_object::pup_object(fs::file&& file) : m_file(std::move(file))
 		return;
 	}
 
-	constexpr usz entry_size = sizeof(PUPFileEntry) + sizeof(PUPHashEntry);
-
-	if (!m_header.file_count || (file_size - sizeof(PUPHeader)) / entry_size < m_header.file_count)
+	if (!m_header.file_count)
 	{
-		// These checks before read() are to avoid some std::bad_alloc exceptions when file_count is too large
-		// So we cannot rely on read() for error checking in such cases
 		m_error = pup_error::header_file_count;
 		return;
 	}
 
-	m_file_tbl.resize(m_header.file_count);
-	m_hash_tbl.resize(m_header.file_count);
-
-	if (!m_file.read(m_file_tbl) || !m_file.read(m_hash_tbl))
+	if (!m_file.read<true>(m_file_tbl, m_header.file_count) || !m_file.read<true>(m_hash_tbl, m_header.file_count))
 	{
-		// If these fail it is an unexpected filesystem error, because file size must suffice as we checked in previous checks
-		m_error = pup_error::file_entries;
+		m_error = pup_error::header_file_count;
 		return;
 	}
 
