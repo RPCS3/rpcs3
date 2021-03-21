@@ -506,27 +506,12 @@ namespace rsx
 
 	void thread::cpu_task()
 	{
+		while (Emu.IsReady())
 		{
-			// Wait for startup (TODO)
-			while (m_rsx_thread_exiting)
-			{
-				// Wait for external pause events
-				if (external_interrupt_lock)
-				{
-					wait_pause();
-				}
-
-				thread_ctrl::wait_for(1000);
-
-				if (is_stopped())
-				{
-					return;
-				}
-			}
-
-			on_task();
+			thread_ctrl::wait_for(1000);
 		}
 
+		on_task();
 		on_exit();
 	}
 
@@ -548,7 +533,7 @@ namespace rsx
 		g_tls_log_prefix = []
 		{
 			const auto rsx = get_current_renderer();
-			return fmt::format("RSX [0x%07x]", +rsx->ctrl->get);
+			return fmt::format("RSX [0x%07x]", rsx->ctrl ? +rsx->ctrl->get : 0);
 		};
 
 		method_registers.init();
@@ -558,11 +543,41 @@ namespace rsx
 		g_fxo->get<rsx::dma_manager>().init();
 		on_init_thread();
 
+		is_inited = true;
+		is_inited.notify_all();
+
 		if (!zcull_ctrl)
 		{
 			//Backend did not provide an implementation, provide NULL object
 			zcull_ctrl = std::make_unique<::rsx::reports::ZCULL_control>();
 		}
+
+		performance_counters.state = FIFO_state::empty;
+
+		// Wait for startup (TODO)
+		while (m_rsx_thread_exiting)
+		{
+			// Wait for external pause events
+			if (external_interrupt_lock)
+			{
+				wait_pause();
+			}
+
+			// Execute backend-local tasks first
+			do_local_task(performance_counters.state);
+
+			// Update sub-units
+			zcull_ctrl->update(this);
+
+			if (is_stopped())
+			{
+				return;
+			}
+
+			thread_ctrl::wait_for(1000);
+		}
+
+		performance_counters.state = FIFO_state::running;
 
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 
@@ -643,9 +658,6 @@ namespace rsx
 		{
 			thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
 		}
-
-		// Round to nearest to deal with forward/reverse scaling
-		fesetround(FE_TONEAREST);
 
 		while (!test_stopped())
 		{
