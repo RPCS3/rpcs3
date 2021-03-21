@@ -13,6 +13,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QMessageBox>
 
 #include "rpcs3qt/gui_application.h"
 #include "rpcs3qt/fatal_error_dialog.h"
@@ -207,6 +208,7 @@ constexpr auto arg_q_debug    = "qDebug";
 constexpr auto arg_error      = "error";
 constexpr auto arg_updating   = "updating";
 constexpr auto arg_installfw  = "installfw";
+constexpr auto arg_installpkg = "installpkg";
 constexpr auto arg_commit_db  = "get-commit-db";
 
 int find_arg(std::string arg, int& argc, char* argv[])
@@ -511,6 +513,8 @@ int main(int argc, char** argv)
 	parser.addOption(config_option);
 	const QCommandLineOption installfw_option(arg_installfw, "Forces the emulator to install this firmware file.", "path", "");
 	parser.addOption(installfw_option);
+	const QCommandLineOption installpkg_option(arg_installpkg, "Forces the emulator to install this pkg file.", "path", "");
+	parser.addOption(installpkg_option);
 	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
 	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
@@ -769,32 +773,41 @@ int main(int argc, char** argv)
 		Emu.SetConfigOverride(config_override_path);
 	}
 
-	std::string firmware_path;
-
-	// Force install firmware first if specified through command-line
-	if (parser.isSet(arg_installfw))
+	// Force install firmware or pkg first if specified through command-line
+	if (parser.isSet(arg_installfw) || parser.isSet(arg_installpkg))
 	{
 		if (auto gui_app = qobject_cast<gui_application*>(app.data()))
 		{
 			if (s_no_gui)
 			{
-				report_fatal_error("Cannot install firmware in no-gui mode!");
+				report_fatal_error("Cannot perform installation in no-gui mode!");
 				return 1;
 			}
 
 			if (gui_app->m_main_window)
 			{
-				gui_app->m_main_window->HandlePupInstallation(parser.value(installfw_option));
+				if (parser.isSet(arg_installfw) && parser.isSet(arg_installpkg))
+				{
+					QMessageBox::warning(gui_app->m_main_window, QObject::tr("Invalid command-line arguments!"), QObject::tr("Cannot perform multiple installations at the same time!"));
+				}
+				else if (parser.isSet(arg_installfw))
+				{
+					gui_app->m_main_window->InstallPup(parser.value(installfw_option));
+				}
+				else
+				{
+					gui_app->m_main_window->InstallPackages({parser.value(installpkg_option)});
+				}
 			}
 			else
 			{
-				report_fatal_error("Cannot install firmware. No main window found!");
+				report_fatal_error("Cannot perform installation. No main window found!");
 				return 1;
 			}
 		}
 		else
 		{
-			report_fatal_error("Cannot install firmware in headless mode!");
+			report_fatal_error("Cannot perform installation in headless mode!");
 			return 1;
 		}
 	}
@@ -804,7 +817,7 @@ int main(int argc, char** argv)
 		sys_log.notice("Option passed via command line: %s %s", opt.toStdString(), parser.value(opt).toStdString());
 	}
 
-	if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating && !parser.isSet(arg_installfw))
+	if (const QStringList args = parser.positionalArguments(); !args.isEmpty() && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
 	{
 		sys_log.notice("Booting application from command line: %s", args.at(0).toStdString());
 

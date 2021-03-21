@@ -557,11 +557,17 @@ void main_window::InstallPackages(QStringList file_paths)
 	}
 	else if (file_paths.count() == 1)
 	{
-		// This can currently only happen by drag and drop.
+		// This can currently only happen by drag and drop and cli arg.
 		const QString file_path = file_paths.front();
 		const QFileInfo file_info(file_path);
 
 		compat::package_info info = game_compatibility::GetPkgInfo(file_path, m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr);
+
+		if (!info.is_valid)
+		{
+			QMessageBox::warning(this, QObject::tr("Invalid package!"), QObject::tr("The selected package is invalid!\n\nPath:\n%0").arg(file_path));
+			return;
+		}
 
 		if (info.type != compat::package_type::other)
 		{
@@ -634,6 +640,11 @@ void main_window::InstallPackages(QStringList file_paths)
 
 void main_window::HandlePackageInstallation(QStringList file_paths)
 {
+	if (file_paths.empty())
+	{
+		return;
+	}
+
 	std::vector<compat::package_info> packages;
 
 	game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
