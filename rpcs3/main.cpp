@@ -364,7 +364,7 @@ int main(int argc, char** argv)
 
 	if (!instance_lock)
 	{
-		if (fs::g_tls_error == fs::error::access && fs::exists(lock_name) && !instance_lock.open(lock_name))
+		if (fs::g_tls_error == fs::error::acces && fs::exists(lock_name) && !instance_lock.open(lock_name))
 		{
 			report_fatal_error("Another instance of RPCS3 is running. Close it or kill its process, if necessary.");
 		}
