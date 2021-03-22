@@ -364,7 +364,7 @@ int main(int argc, char** argv)
 
 	if (!instance_lock)
 	{
-		if (fs::g_tls_error == fs::error::acces && fs::exists(lock_name) && !instance_lock.open(lock_name))
+		if (fs::error fs_err = fs::g_tls_error; fs_err == fs::error::acces && fs::exists(lock_name) && !instance_lock.open(lock_name))
 		{
 			report_fatal_error("Another instance of RPCS3 is running. Close it or kill its process, if necessary.");
 		}
@@ -376,7 +376,7 @@ int main(int argc, char** argv)
 #else
 			"\nPlease, check RPCS3 permissions in '~/.config/rpcs3'."
 #endif
-			, fs::g_tls_error));
+			, fs_err));
 		}
 
 		return 1;
