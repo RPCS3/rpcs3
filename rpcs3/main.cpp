@@ -357,7 +357,7 @@ int main(int argc, char** argv)
 	const bool is_updating = find_arg(arg_updating, argc, argv) != -1;
 
 	// Keep trying to lock the file for ~2s normally, and for ~10s in the case of --updating
-	for (u32 num = 0; num < (is_updating ? 500u : 100u) && !instance_lock.open(lock_name, fs::rewrite + fs::lock); num++)
+	for (u32 num = 0; num < (is_updating ? 500u : 100u) && !instance_lock.open(lock_name, fs::read + fs::create + fs::unread); num++)
 	{
 		std::this_thread::sleep_for(20ms);
 	}
