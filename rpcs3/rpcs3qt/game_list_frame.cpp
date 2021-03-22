@@ -597,15 +597,18 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				if (last_played.isEmpty())
 				{
 					last_played = m_gui_settings->GetValue(gui::persistent::last_played, serial, "").toString();
+					m_gui_settings->RemoveValue(gui::persistent::last_played, serial);
 				}
 				if (playtime <= 0)
 				{
 					playtime = m_gui_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
+					m_gui_settings->RemoveValue(gui::persistent::playtime, serial);
 				}
 				// Deprecated values older than August 2nd 2020
 				if (note.isEmpty())
 				{
 					note = m_gui_settings->GetValue(gui::persistent::notes, serial, "").toString();
+					m_gui_settings->RemoveValue(gui::persistent::notes, serial);
 
 					// Move to persistent settings
 					if (!note.isEmpty())
@@ -616,6 +619,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				if (title.isEmpty())
 				{
 					title = m_gui_settings->GetValue(gui::persistent::titles, serial, "").toString().simplified();
+					m_gui_settings->RemoveValue(gui::persistent::titles, serial);
 
 					// Move to persistent settings
 					if (!title.isEmpty())

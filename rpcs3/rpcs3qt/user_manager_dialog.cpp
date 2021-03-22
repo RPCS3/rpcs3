@@ -131,6 +131,7 @@ void user_manager_dialog::Init()
 	if (m_active_user.empty())
 	{
 		m_active_user = m_gui_settings->GetValue(gui::um_active_user).toString().toStdString();
+		m_gui_settings->RemoveValue(gui::um_active_user);
 
 		if (!m_active_user.empty())
 		{

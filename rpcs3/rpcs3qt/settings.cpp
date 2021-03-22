@@ -39,14 +39,19 @@ void settings::RemoveValue(const QString& key, const QString& name)
 	}
 }
 
-QVariant settings::GetValue(const gui_save& entry) const
+void settings::RemoveValue(const gui_save& entry)
 {
-	return m_settings ? m_settings->value(entry.key + "/" + entry.name, entry.def) : entry.def;
+	RemoveValue(entry.key, entry.name);
 }
 
 QVariant settings::GetValue(const QString& key, const QString& name, const QVariant& def) const
 {
 	return m_settings ? m_settings->value(key + "/" + name, def) : def;
+}
+
+QVariant settings::GetValue(const gui_save& entry) const
+{
+	return GetValue(entry.key, entry.name, entry.def);
 }
 
 QVariant settings::List2Var(const q_pair_list& list)
