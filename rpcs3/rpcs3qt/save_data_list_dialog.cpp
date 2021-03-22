@@ -186,6 +186,7 @@ void save_data_list_dialog::UpdateList()
 	if (notes.isEmpty())
 	{
 		notes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
+		m_gui_settings->RemoveValue(gui::m_saveNotes);
 
 		// Move to persistent settings
 		if (!notes.isEmpty())
