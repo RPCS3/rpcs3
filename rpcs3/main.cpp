@@ -364,26 +364,19 @@ int main(int argc, char** argv)
 
 	if (!instance_lock)
 	{
-		if (fs::g_tls_error == fs::error::acces)
+		if (fs::g_tls_error == fs::error::access && fs::exists(lock_name) && !instance_lock.open(lock_name))
 		{
-			if (fs::exists(lock_name) && !instance_lock.open(lock_name))
-			{
-				report_fatal_error("Another instance of RPCS3 is running. Close it or kill its process, if necessary.");
-			}
-			else
-			{
-				report_fatal_error("Cannot create RPCS3.log (access denied)."
-#ifdef _WIN32
-				"\nNote that RPCS3 cannot be installed in Program Files or similar directories with limited permissions."
-#else
-				"\nPlease, check RPCS3 permissions in '~/.config/rpcs3'."
-#endif
-				);
-			}
+			report_fatal_error("Another instance of RPCS3 is running. Close it or kill its process, if necessary.");
 		}
 		else
 		{
-			report_fatal_error(fmt::format("Cannot create RPCS3.log (error %s)", fs::g_tls_error));
+			report_fatal_error(fmt::format("Cannot create RPCS3.log (error %s)."
+#ifdef _WIN32
+			"\nNote that RPCS3 cannot be installed in Program Files or similar directories with limited permissions."
+#else
+			"\nPlease, check RPCS3 permissions in '~/.config/rpcs3'."
+#endif
+			, fs::g_tls_error));
 		}
 
 		return 1;
