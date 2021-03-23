@@ -1409,7 +1409,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			return false;
 		}
 
-		if (vm::reader_lock rlock; area->flags & 0x120 || vm::check_addr(addr, 0))
+		if (vm::reader_lock rlock; vm::check_addr(addr, 0))
 		{
 			// For allocated memory with protection lower than required (such as protection::no or read-only while writing to it)
 			utils::memory_protect(vm::base(addr & -0x1000), 0x1000, utils::protection::rw);
