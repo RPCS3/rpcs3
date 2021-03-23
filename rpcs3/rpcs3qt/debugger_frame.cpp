@@ -184,7 +184,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 	connect(this, &debugger_frame::CallStackUpdateRequested, m_call_stack_list, &call_stack_list::HandleUpdate);
 	connect(m_call_stack_list, &call_stack_list::RequestShowAddress, m_debugger_list, &debugger_list::ShowAddress);
 
-	m_debugger_list->ShowAddress(m_debugger_list->m_pc);
+	m_debugger_list->ShowAddress(m_debugger_list->m_pc, false);
 	UpdateUnitList();
 }
 
@@ -460,7 +460,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			}
 
 			if (auto pos = std::basic_string_view<u32>(res.data(), 2).find_last_not_of(UINT32_MAX); pos != umax)
-				m_debugger_list->ShowAddress(res[pos] - std::max(i, 0) * 4, true);
+				m_debugger_list->ShowAddress(res[pos] - std::max(i, 0) * 4, true, true);
 
 			return;
 		}
@@ -854,7 +854,7 @@ void debugger_frame::ShowGotoAddressDialog()
 	if (dlg->exec() == QDialog::Accepted)
 	{
 		const u32 address = EvaluateExpression(expression_input->text());
-		m_debugger_list->ShowAddress(address);
+		m_debugger_list->ShowAddress(address, true);
 	}
 
 	dlg->deleteLater();
@@ -889,7 +889,7 @@ void debugger_frame::ShowPC()
 
 	const u32 pc = (cpu0 ? cpu0->get_pc() : 0);
 
-	m_debugger_list->ShowAddress(pc);
+	m_debugger_list->ShowAddress(pc, true);
 }
 
 void debugger_frame::DoStep(bool step_over)
