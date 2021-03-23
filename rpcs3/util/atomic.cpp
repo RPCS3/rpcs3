@@ -174,8 +174,8 @@ static NEVER_INLINE bool ptr_cmp(const void* data, u32 _size, u128 old128, u128 
 	else if (size == 16 && (flag == op::eq || flag == (op::eq | op_flag::inverse)))
 	{
 		u128 new_value = 0;
-		u128 old_value = std::bit_cast<u128>(old128);
-		u128 mask = std::bit_cast<u128>(mask128);
+		u128 old_value = old128;
+		u128 mask = mask128;
 
 		// Don't load memory on empty mask
 		if (mask) [[likely]]
@@ -186,9 +186,16 @@ static NEVER_INLINE bool ptr_cmp(const void* data, u32 _size, u128 old128, u128 
 		// TODO
 		result = !((old_value ^ new_value) & mask);
 	}
-	else if (size == 16)
+	else if (size > 16 && !~mask128 && (flag == op::eq || flag == (op::eq | op_flag::inverse)))
 	{
-		fmt::throw_exception("ptr_cmp(): no alternative operations are supported for 16-byte atomic wait yet.");
+		// Interpret old128 as a pointer to the old value
+		ensure(!(old128 >> (64 + 17)));
+
+		result = std::memcmp(data, reinterpret_cast<const void*>(static_cast<uptr>(old128)), size) == 0;
+	}
+	else
+	{
+		fmt::throw_exception("ptr_cmp(): no alternative operations are supported for non-standard atomic wait yet.");
 	}
 
 	if (flag & op_flag::inverse)
