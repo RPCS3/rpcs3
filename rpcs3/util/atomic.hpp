@@ -319,6 +319,11 @@ private:
 public:
 	static void set_wait_callback(bool(*cb)(const void* data, u64 attempts, u64 stamp0));
 	static void set_notify_callback(void(*cb)(const void* data, u64 progress));
+
+	static void notify_all(const void* data)
+	{
+		notify_all(data, 0, u128(-1));
+	}
 };
 
 template <uint Max, typename... T>

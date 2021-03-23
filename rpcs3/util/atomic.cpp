@@ -1245,7 +1245,7 @@ SAFE_BUFFERS(void) atomic_wait_engine::wait(const void* data, u32 size, u128 old
 }
 
 template <bool NoAlert = false>
-static u32 alert_sema(u32 cond_id, u128 mask)
+static u32 alert_sema(u32 cond_id, u32 size, u128 mask)
 {
 	ensure(cond_id);
 
@@ -1276,7 +1276,7 @@ static u32 alert_sema(u32 cond_id, u128 mask)
 					return ok;
 				}
 			}
-			else if (_new->wakeup(1))
+			else if (_new->wakeup(size ? 1 : 2))
 			{
 				ok = cond_id;
 				{
@@ -1313,7 +1313,7 @@ void atomic_wait_engine::set_notify_callback(void(*cb)(const void*, u64))
 	s_tls_notify_cb = cb;
 }
 
-void atomic_wait_engine::notify_one(const void* data, u32 /*size*/, u128 mask)
+void atomic_wait_engine::notify_one(const void* data, u32 size, u128 mask)
 {
 	const uptr iptr = reinterpret_cast<uptr>(data) & (~s_ref_mask >> 17);
 
@@ -1324,7 +1324,7 @@ void atomic_wait_engine::notify_one(const void* data, u32 /*size*/, u128 mask)
 
 	root_info::slot_search(iptr, mask, [&](u32 cond_id)
 	{
-		if (alert_sema(cond_id, mask))
+		if (alert_sema(cond_id, size, mask))
 		{
 			if (s_tls_notify_cb)
 				s_tls_notify_cb(data, ++progress);
@@ -1338,7 +1338,7 @@ void atomic_wait_engine::notify_one(const void* data, u32 /*size*/, u128 mask)
 		s_tls_notify_cb(data, -1);
 }
 
-SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 /*size*/, u128 mask)
+SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 size, u128 mask)
 {
 	const uptr iptr = reinterpret_cast<uptr>(data) & (~s_ref_mask >> 17);
 
@@ -1355,7 +1355,7 @@ SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 /*size*/
 
 	root_info::slot_search(iptr, mask, [&](u32 cond_id)
 	{
-		u32 res = alert_sema<true>(cond_id, mask);
+		u32 res = alert_sema<true>(cond_id, size, mask);
 
 		if (res && ~res <= UINT16_MAX)
 		{
@@ -1371,7 +1371,7 @@ SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 /*size*/
 	{
 		const u32 cond_id = *(std::end(cond_ids) - i - 1);
 
-		if (!s_cond_list[cond_id].wakeup(1))
+		if (!s_cond_list[cond_id].wakeup(size ? 1 : 2))
 		{
 			*(std::end(cond_ids) - i - 1) = ~cond_id;
 		}
