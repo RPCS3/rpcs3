@@ -102,6 +102,11 @@ namespace vm
 
 			if (ok || (old & -128) < (rtime & -128))
 			{
+				if (ok)
+				{
+					reservation_notifier(addr).notify_all();
+				}
+
 				return;
 			}
 
