@@ -6,8 +6,6 @@
 #include <QLineEdit>
 #include <QLabel>
 
-#include <memory>
-
 class CPUDisAsm;
 class cpu_thread;
 

@@ -26,9 +26,7 @@ private:
 	QTextEdit* m_disasm_text;
 	QTextEdit* m_glsl_text;
 
-	QAction *openCgBinaryProgram;
-
-	std::shared_ptr<gui_settings> xgui_settings;
+	std::shared_ptr<gui_settings> m_gui_settings;
 
 	AsmHighlighter* sh_asm;
 	GlslHighlighter* sh_glsl;

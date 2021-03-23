@@ -64,17 +64,14 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 
 	m_disasm->disasm(pc);
 
-	QString breakpointItemText = qstr(m_disasm->last_opcode);
+	QString text = qstr(m_disasm->last_opcode);
+	text.remove(10, 13);
 
-	breakpointItemText.remove(10, 13);
-
-	QListWidgetItem* breakpointItem = new QListWidgetItem(breakpointItemText);
-	breakpointItem->setForeground(m_text_color_bp);
-	breakpointItem->setBackground(m_color_bp);
-	QVariant pcVariant;
-	pcVariant.setValue(pc);
-	breakpointItem->setData(Qt::UserRole, pcVariant);
-	addItem(breakpointItem);
+	QListWidgetItem* breakpoint_item = new QListWidgetItem(text);
+	breakpoint_item->setForeground(m_text_color_bp);
+	breakpoint_item->setBackground(m_color_bp);
+	breakpoint_item->setData(Qt::UserRole, pc);
+	addItem(breakpoint_item);
 
 	Q_EMIT RequestShowAddress(pc);
 }
@@ -102,7 +99,7 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc)
 
 void breakpoint_list::OnBreakpointListDoubleClicked()
 {
-	u32 address = currentItem()->data(Qt::UserRole).value<u32>();
+	const u32 address = currentItem()->data(Qt::UserRole).value<u32>();
 	Q_EMIT RequestShowAddress(address);
 }
 
@@ -117,36 +114,28 @@ void breakpoint_list::OnBreakpointListRightClicked(const QPoint &pos)
 
 	if (selectedItems().count() == 1)
 	{
-		menu->addAction("Rename");
+		QAction* rename_action = menu->addAction(tr("&Rename"));
+		connect(rename_action, &QAction::triggered, this, [this]()
+		{
+			QListWidgetItem* current_item = selectedItems().first();
+			current_item->setFlags(current_item->flags() | Qt::ItemIsEditable);
+			editItem(current_item);
+		});
 		menu->addSeparator();
 	}
 
-	QAction* m_breakpoint_list_delete = new QAction("Delete", this);
-	m_breakpoint_list_delete->setShortcut(Qt::Key_Delete);
-	m_breakpoint_list_delete->setShortcutContext(Qt::WidgetShortcut);
-	addAction(m_breakpoint_list_delete);
-	connect(m_breakpoint_list_delete, &QAction::triggered, this, &breakpoint_list::OnBreakpointListDelete);
+	QAction* delete_action = new QAction(tr("&Delete"), this);
+	delete_action->setShortcut(Qt::Key_Delete);
+	delete_action->setShortcutContext(Qt::WidgetShortcut);
+	connect(delete_action, &QAction::triggered, this, &breakpoint_list::OnBreakpointListDelete);
+	menu->addAction(delete_action);
 
-	menu->addAction(m_breakpoint_list_delete);
-
-	QAction* selectedItem = menu->exec(viewport()->mapToGlobal(pos));
-	if (selectedItem)
-	{
-		if (selectedItem->text() == "Rename")
-		{
-			QListWidgetItem* currentItem = selectedItems().at(0);
-
-			currentItem->setFlags(currentItem->flags() | Qt::ItemIsEditable);
-			editItem(currentItem);
-		}
-	}
+	menu->exec(viewport()->mapToGlobal(pos));
 }
 
 void breakpoint_list::OnBreakpointListDelete()
 {
-	int selectedCount = selectedItems().count();
-
-	for (int i = selectedCount - 1; i >= 0; i--)
+	for (int i = selectedItems().count() - 1; i >= 0; i--)
 	{
 		RemoveBreakpoint(item(i)->data(Qt::UserRole).value<u32>());
 	}

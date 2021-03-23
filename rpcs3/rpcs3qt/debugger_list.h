@@ -46,7 +46,7 @@ private:
 	*/
 	u32 GetCenteredAddress(u32 address) const;
 
-	std::shared_ptr<gui_settings> xgui_settings;
+	std::shared_ptr<gui_settings> m_gui_settings;
 
 	breakpoint_handler* m_breakpoint_handler;
 	cpu_thread* m_cpu = nullptr;

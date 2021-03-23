@@ -20,10 +20,10 @@ void call_stack_list::HandleUpdate(std::vector<std::pair<u32, u32>> call_stack)
 
 	for (const auto& addr : call_stack)
 	{
-		const QString call_stack_item_text = qstr(fmt::format("0x%08llx (sp=0x%08llx)", addr.first, addr.second));
-		QListWidgetItem* callStackItem = new QListWidgetItem(call_stack_item_text);
-		callStackItem->setData(Qt::UserRole, { addr.first });
-		addItem(callStackItem);
+		const QString text = qstr(fmt::format("0x%08llx (sp=0x%08llx)", addr.first, addr.second));
+		QListWidgetItem* call_stack_item = new QListWidgetItem(text);
+		call_stack_item->setData(Qt::UserRole, { addr.first });
+		addItem(call_stack_item);
 	}
 }
 

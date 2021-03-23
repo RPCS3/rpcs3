@@ -31,7 +31,6 @@ public:
 	*/
 	bool AddBreakpoint(u32 loc);
 
-
 	/**
 	* Returns true if removed breakpoint at loc successfully.
 	*/

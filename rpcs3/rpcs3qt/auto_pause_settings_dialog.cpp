@@ -19,14 +19,14 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 {
 	QLabel *description = new QLabel(tr("To use auto pause: enter the ID(s) of a function or a system call.\nRestart of the game is required to apply. You can enable/disable this in the settings."), this);
 
-	pauseList = new QTableWidget(this);
-	pauseList->setColumnCount(2);
-	pauseList->setHorizontalHeaderLabels(QStringList() << tr("Call ID") << tr("Type"));
-	//pauseList->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-	pauseList->setSelectionBehavior(QAbstractItemView::SelectRows);
-	pauseList->setContextMenuPolicy(Qt::CustomContextMenu);
-	pauseList->setItemDelegate(new table_item_delegate(this));
-	pauseList->setShowGrid(false);
+	m_pause_list = new QTableWidget(this);
+	m_pause_list->setColumnCount(2);
+	m_pause_list->setHorizontalHeaderLabels(QStringList() << tr("Call ID") << tr("Type"));
+	//m_pause_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+	m_pause_list->setSelectionBehavior(QAbstractItemView::SelectRows);
+	m_pause_list->setContextMenuPolicy(Qt::CustomContextMenu);
+	m_pause_list->setItemDelegate(new table_item_delegate(this));
+	m_pause_list->setShowGrid(false);
 
 	QPushButton *clearButton = new QPushButton(tr("Clear"), this);
 	QPushButton *reloadButton = new QPushButton(tr("Reload"), this);
@@ -43,7 +43,7 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 
 	QVBoxLayout *mainLayout = new QVBoxLayout(this);
 	mainLayout->addWidget(description);
-	mainLayout->addWidget(pauseList);
+	mainLayout->addWidget(m_pause_list);
 	mainLayout->addLayout(buttonsLayout);
 	setLayout(mainLayout);
 
@@ -52,7 +52,7 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 	setObjectName("auto_pause_manager");
 
 	// Events
-	connect(pauseList, &QTableWidget::customContextMenuRequested, this, &auto_pause_settings_dialog::ShowContextMenu);
+	connect(m_pause_list, &QTableWidget::customContextMenuRequested, this, &auto_pause_settings_dialog::ShowContextMenu);
 	connect(clearButton, &QAbstractButton::clicked, [this](){ m_entries.clear(); UpdateList(); });
 	connect(reloadButton, &QAbstractButton::clicked, [this](){ LoadEntries(); UpdateList(); });
 	connect(saveButton, &QAbstractButton::clicked, [this]()
@@ -118,8 +118,8 @@ void auto_pause_settings_dialog::SaveEntries(void)
 void auto_pause_settings_dialog::UpdateList(void)
 {
 	const int entries_size = static_cast<int>(m_entries.size());
-	pauseList->clearContents();
-	pauseList->setRowCount(entries_size);
+	m_pause_list->clearContents();
+	m_pause_list->setRowCount(entries_size);
 	for (int i = 0; i < entries_size; ++i)
 	{
 		QTableWidgetItem* callItem = new QTableWidgetItem;
@@ -144,14 +144,14 @@ void auto_pause_settings_dialog::UpdateList(void)
 			typeItem->setData(Qt::DisplayRole, tr("Function Call"));
 		}
 
-		pauseList->setItem(i, 0, callItem);
-		pauseList->setItem(i, 1, typeItem);
+		m_pause_list->setItem(i, 0, callItem);
+		m_pause_list->setItem(i, 1, typeItem);
 	}
 }
 
 void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 {
-	const int row = pauseList->indexAt(pos).row();
+	const int row = m_pause_list->indexAt(pos).row();
 
 	QMenu myMenu;
 
@@ -175,22 +175,23 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 		UpdateList();
 	};
 
-	connect(add, &QAction::triggered, [=, this]() {
+	connect(add, &QAction::triggered, this, [=, this]()
+	{
 		m_entries.emplace_back(0xFFFFFFFF);
 		UpdateList();
 		int idx = static_cast<int>(m_entries.size()) - 1;
-		pauseList->selectRow(idx);
+		m_pause_list->selectRow(idx);
 		OnEntryConfig(idx, true);
 	});
 	connect(remove, &QAction::triggered, this, &auto_pause_settings_dialog::OnRemove);
-	connect(config, &QAction::triggered, [=, this]() {OnEntryConfig(row, false); });
+	connect(config, &QAction::triggered, this, [=, this]() {OnEntryConfig(row, false); });
 
-	myMenu.exec(pauseList->viewport()->mapToGlobal(pos));
+	myMenu.exec(m_pause_list->viewport()->mapToGlobal(pos));
 }
 
 void auto_pause_settings_dialog::OnRemove()
 {
-	QModelIndexList selection = pauseList->selectionModel()->selectedRows();
+	QModelIndexList selection = m_pause_list->selectionModel()->selectedRows();
 	std::sort(selection.begin(), selection.end());
 	for (int i = selection.count() - 1; i >= 0; i--)
 	{
