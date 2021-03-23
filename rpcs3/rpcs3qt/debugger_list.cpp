@@ -111,7 +111,7 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 				item(i)->setBackground(default_background);
 			}
 
-			if (m_cpu->id_type() == 1 && !vm::check_addr(pc))
+			if (m_cpu->id_type() == 1 && !vm::check_addr(pc, 0))
 			{
 				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
 				count = 4;
