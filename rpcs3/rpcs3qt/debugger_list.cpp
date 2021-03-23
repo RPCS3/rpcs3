@@ -21,7 +21,7 @@ constexpr auto qstr = QString::fromStdString;
 
 debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> settings, breakpoint_handler* handler)
 	: QListWidget(parent)
-	, xgui_settings(settings)
+	, m_gui_settings(settings)
 	, m_breakpoint_handler(handler)
 {
 	setWindowTitle(tr("ASM"));
@@ -50,7 +50,7 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 		return m_cpu && m_cpu->id_type() == 1 && m_breakpoint_handler->HasBreakpoint(pc);
 	};
 
-	bool center_pc = xgui_settings->GetValue(gui::d_centerPC).toBool();
+	bool center_pc = m_gui_settings->GetValue(gui::d_centerPC).toBool();
 
 	// How many spaces addr can move down without us needing to move the entire view
 	const u32 addr_margin = (m_item_count / (center_pc ? 2 : 1) - 4); // 4 is just a buffer of 4 spaces at the bottom
@@ -74,16 +74,17 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 		}
 	}
 
-	const auto default_foreground = palette().color(foregroundRole());
-	const auto default_background = palette().color(backgroundRole());
+	const auto& default_foreground = palette().color(foregroundRole());
+	const auto& default_background = palette().color(backgroundRole());
 
 	if (!m_cpu || !m_disasm || +m_cpu->state + cpu_flag::exit + cpu_flag::wait == +m_cpu->state)
 	{
 		for (uint i = 0; i < m_item_count; ++i)
 		{
-			item(i)->setText(qstr(fmt::format("   [%08x]  ?? ?? ?? ??:", 0)));
-			item(i)->setForeground(default_foreground);
-			item(i)->setBackground(default_background);
+			QListWidgetItem* list_item = item(i);
+			list_item->setText(qstr(fmt::format("   [%08x]  ?? ?? ?? ??:", 0)));
+			list_item->setForeground(default_foreground);
+			list_item->setBackground(default_background);
 		}
 	}
 	else
@@ -93,27 +94,29 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 		m_pc &= address_limits;
 		u32 pc = m_pc;
 
-		for (uint i = 0, count = 4; i<m_item_count; ++i, pc = (pc + count) & address_limits)
+		for (uint i = 0, count = 4; i < m_item_count; ++i, pc = (pc + count) & address_limits)
 		{
+			QListWidgetItem* list_item = item(i);
+
 			if (m_cpu->is_paused() && pc == m_cpu->get_pc())
 			{
-				item(i)->setForeground(m_text_color_pc);
-				item(i)->setBackground(m_color_pc);
+				list_item->setForeground(m_text_color_pc);
+				list_item->setBackground(m_color_pc);
 			}
 			else if (IsBreakpoint(pc))
 			{
-				item(i)->setForeground(m_text_color_bp);
-				item(i)->setBackground(m_color_bp);
+				list_item->setForeground(m_text_color_bp);
+				list_item->setBackground(m_color_bp);
 			}
 			else
 			{
-				item(i)->setForeground(default_foreground);
-				item(i)->setBackground(default_background);
+				list_item->setForeground(default_foreground);
+				list_item->setBackground(default_background);
 			}
 
 			if (m_cpu->id_type() == 1 && !vm::check_addr(pc, 0))
 			{
-				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
+				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
 				count = 4;
 				continue;
 			}
@@ -121,7 +124,7 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 			if (m_cpu->id_type() == 1 && !vm::check_addr(pc, vm::page_executable))
 			{
 				const u32 data = *vm::get_super_ptr<atomic_be_t<u32>>(pc);
-				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
+				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
 				static_cast<u8>(data >> 24),
 				static_cast<u8>(data >> 16),
 				static_cast<u8>(data >> 8),
@@ -134,12 +137,12 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 
 			if (!count)
 			{
-				item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x] ???     ?? ??", pc)));
+				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x] ???     ?? ??", pc)));
 				count = 4;
 				continue;
 			}
 
-			item(i)->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(m_disasm->last_opcode));
+			list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(m_disasm->last_opcode));
 		}
 	}
 
@@ -250,7 +253,7 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 {
 	if (event->button() == Qt::LeftButton)
 	{
-		int i = currentRow();
+		const int i = currentRow();
 		if (i < 0) return;
 
 		const u32 pc = m_pc + i * 4;
@@ -264,7 +267,7 @@ void debugger_list::mouseDoubleClickEvent(QMouseEvent* event)
 
 void debugger_list::wheelEvent(QWheelEvent* event)
 {
-	const QPoint numSteps = event->angleDelta() / 8 / 15;	// http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
+	const QPoint numSteps = event->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
 	const int value = numSteps.y();
 	const auto direction = (event->modifiers() == Qt::ControlModifier);
 

@@ -479,7 +479,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t)
 }
 
 // Set or remove breakpoint
-extern void ppu_breakpoint(u32 addr, bool isAdding)
+extern void ppu_breakpoint(u32 addr, bool is_adding)
 {
 	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
@@ -488,7 +488,7 @@ extern void ppu_breakpoint(u32 addr, bool isAdding)
 
 	const u64 _break = reinterpret_cast<uptr>(&ppu_break);
 
-	if (isAdding)
+	if (is_adding)
 	{
 		// Set breakpoint
 		ppu_ref(addr) = _break;

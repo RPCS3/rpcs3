@@ -3,7 +3,6 @@
 #include "util/types.hpp"
 
 #include <QListWidget>
-#include <memory>
 #include <vector>
 
 class cpu_thread;
