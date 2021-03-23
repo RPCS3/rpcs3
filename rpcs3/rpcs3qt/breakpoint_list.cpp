@@ -15,9 +15,14 @@ breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) :
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	setSelectionMode(QAbstractItemView::ExtendedSelection);
 
-	// connects
 	connect(this, &QListWidget::itemDoubleClicked, this, &breakpoint_list::OnBreakpointListDoubleClicked);
 	connect(this, &QListWidget::customContextMenuRequested, this, &breakpoint_list::OnBreakpointListRightClicked);
+
+	m_delete_action = new QAction(tr("&Delete"), this);
+	m_delete_action->setShortcut(Qt::Key_Delete);
+	m_delete_action->setShortcutContext(Qt::WidgetShortcut);
+	connect(m_delete_action, &QAction::triggered, this, &breakpoint_list::OnBreakpointListDelete);
+	addAction(m_delete_action);
 }
 
 /**
@@ -110,33 +115,35 @@ void breakpoint_list::OnBreakpointListRightClicked(const QPoint &pos)
 		return;
 	}
 
-	QMenu* menu = new QMenu();
+	m_context_menu = new QMenu();
 
 	if (selectedItems().count() == 1)
 	{
-		QAction* rename_action = menu->addAction(tr("&Rename"));
+		QAction* rename_action = m_context_menu->addAction(tr("&Rename"));
 		connect(rename_action, &QAction::triggered, this, [this]()
 		{
 			QListWidgetItem* current_item = selectedItems().first();
 			current_item->setFlags(current_item->flags() | Qt::ItemIsEditable);
 			editItem(current_item);
 		});
-		menu->addSeparator();
+		m_context_menu->addSeparator();
 	}
 
-	QAction* delete_action = new QAction(tr("&Delete"), this);
-	delete_action->setShortcut(Qt::Key_Delete);
-	delete_action->setShortcutContext(Qt::WidgetShortcut);
-	connect(delete_action, &QAction::triggered, this, &breakpoint_list::OnBreakpointListDelete);
-	menu->addAction(delete_action);
-
-	menu->exec(viewport()->mapToGlobal(pos));
+	m_context_menu->addAction(m_delete_action);
+	m_context_menu->exec(viewport()->mapToGlobal(pos));
+	m_context_menu->deleteLater();
+	m_context_menu = nullptr;
 }
 
 void breakpoint_list::OnBreakpointListDelete()
 {
 	for (int i = selectedItems().count() - 1; i >= 0; i--)
 	{
-		RemoveBreakpoint(item(i)->data(Qt::UserRole).value<u32>());
+		RemoveBreakpoint(selectedItems().at(i)->data(Qt::UserRole).value<u32>());
+	}
+
+	if (m_context_menu)
+	{
+		m_context_menu->close();
 	}
 }
