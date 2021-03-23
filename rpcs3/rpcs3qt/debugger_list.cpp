@@ -43,7 +43,7 @@ u32 debugger_list::GetCenteredAddress(u32 address) const
 	return address - ((m_item_count / 2) * 4);
 }
 
-void debugger_list::ShowAddress(u32 addr, bool force)
+void debugger_list::ShowAddress(u32 addr, bool select_addr, bool force)
 {
 	auto IsBreakpoint = [this](u32 pc)
 	{
@@ -114,6 +114,11 @@ void debugger_list::ShowAddress(u32 addr, bool force)
 				list_item->setBackground(default_background);
 			}
 
+			if (select_addr && pc == addr)
+			{
+				list_item->setSelected(true);
+			}
+
 			if (m_cpu->id_type() == 1 && !vm::check_addr(pc, 0))
 			{
 				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + qstr(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
@@ -159,7 +164,7 @@ void debugger_list::scroll(s32 steps)
 		steps--;
 	}
 
-	ShowAddress(m_pc + (steps * 4), true);
+	ShowAddress(m_pc + (steps * 4), false, true);
 }
 
 void debugger_list::keyPressEvent(QKeyEvent* event)
@@ -298,5 +303,5 @@ void debugger_list::resizeEvent(QResizeEvent* event)
 		delete item(m_item_count);
 	}
 
-	ShowAddress(m_pc);
+	ShowAddress(m_pc, false);
 }
