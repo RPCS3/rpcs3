@@ -722,6 +722,9 @@
     <ClCompile Include="Emu\Cell\PPUTranslator.cpp">
       <Filter>Emu\Cell</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\timers.hpp">
+      <Filter>Emu\Cell</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\CPU\CPUTranslator.cpp">
       <Filter>Emu\CPU</Filter>
     </ClCompile>

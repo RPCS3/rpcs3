@@ -3,14 +3,12 @@
 
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/RSXThread.h"
 #include "sys_event.h"
 
-
 LOG_CHANNEL(sys_rsx);
-
-extern u64 get_timebased_time();
 
 // Unknown error code returned by sys_rsx_context_attribute
 enum sys_rsx_error : s32

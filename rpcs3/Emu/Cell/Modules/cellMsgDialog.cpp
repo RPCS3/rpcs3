@@ -3,6 +3,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/Io/interception.h"
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
 
@@ -14,8 +15,6 @@
 #include "util/init_mutex.hpp"
 
 LOG_CHANNEL(cellSysutil);
-
-extern u64 get_guest_system_time();
 
 template<>
 void fmt_class_string<CellMsgDialogError>::format(std::string& out, u64 arg)

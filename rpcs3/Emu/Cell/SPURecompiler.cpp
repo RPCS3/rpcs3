@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/timers.hpp"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/JIT.h"
@@ -31,8 +32,6 @@ const spu_decoder<spu_iflag> s_spu_iflag;
 
 extern const spu_decoder<spu_interpreter_precise> g_spu_interpreter_precise{};
 extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast;
-
-extern u64 get_timebased_time();
 
 // Move 4 args for calling native function from a GHC calling convention function
 static u8* move_args_ghc_to_native(u8* raw)

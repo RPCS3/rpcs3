@@ -5,10 +5,10 @@
 #include "sync.h"
 #include "shared.h"
 
+#include "Emu/Cell/timers.hpp"
+
 #include "util/sysinfo.hpp"
 #include "util/asm.hpp"
-
-extern u64 get_system_time();
 
 namespace vk
 {

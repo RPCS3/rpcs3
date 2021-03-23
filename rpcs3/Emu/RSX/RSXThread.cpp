@@ -2,6 +2,7 @@
 #include "RSXThread.h"
 
 #include "Emu/Cell/PPUCallback.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "Common/BufferUtils.h"
 #include "Common/GLSLCommon.h"
@@ -12,6 +13,7 @@
 #include "rsx_utils.h"
 #include "gcm_printing.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
 #include "Overlays/overlay_perf_metrics.h"
 #include "Utilities/date_time.h"
@@ -36,8 +38,6 @@ rsx::frame_capture_data frame_capture;
 
 extern CellGcmOffsetTable offsetTable;
 extern thread_local std::string(*g_tls_log_prefix)();
-extern u64 sys_time_get_timebase_frequency();
-extern u64 get_timebased_time();
 
 namespace rsx
 {

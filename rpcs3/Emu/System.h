@@ -8,8 +8,7 @@
 #include <vector>
 #include <set>
 
-u64 get_system_time();
-u64 get_guest_system_time();
+#include "Emu/Cell/timers.hpp"
 
 enum class localized_string_id;
 enum class video_renderer;

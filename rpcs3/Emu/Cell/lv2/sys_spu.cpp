@@ -14,6 +14,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/RawSPUThread.h"
+#include "Emu/Cell/timers.hpp"
 #include "sys_interrupt.h"
 #include "sys_process.h"
 #include "sys_memory.h"
@@ -24,8 +25,6 @@
 #include "util/asm.hpp"
 
 LOG_CHANNEL(sys_spu);
-
-extern u64 get_timebased_time();
 
 template <>
 void fmt_class_string<spu_group_status>::format(std::string& out, u64 arg)

@@ -23,6 +23,7 @@
 #include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Cell/SPURecompiler.h"
 #include "Emu/Cell/RawSPUThread.h"
+#include "Emu/Cell/timers.hpp"
 
 #include <cmath>
 #include <cfenv>
@@ -281,9 +282,6 @@ extern void mov_rdata_nt(spu_rdata_t& _dst, const spu_rdata_t& _src)
 	_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 96), v2);
 	_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 112), v3);
 }
-
-extern u64 get_timebased_time();
-extern u64 get_system_time();
 
 void do_cell_atomic_128_store(u32 addr, const void* to_write);
 

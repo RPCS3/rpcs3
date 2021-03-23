@@ -6,7 +6,7 @@
 
 #include <unordered_map>
 
-extern u64 get_system_time();
+#include "Emu/Cell/timers.hpp"
 
 #define RSX_GCM_FORMAT_IGNORED 0
 

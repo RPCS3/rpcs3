@@ -3,6 +3,7 @@
 #include "overlay_controls.h"
 
 #include "Emu/IdManager.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "Utilities/mutex.h"
 #include "Utilities/Timer.h"
@@ -10,8 +11,6 @@
 #include <list>
 #include <mutex>
 
-// Utils
-extern u64 get_system_time();
 
 // Definition of user interface implementations
 namespace rsx

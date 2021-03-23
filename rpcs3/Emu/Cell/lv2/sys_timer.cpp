@@ -5,14 +5,13 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/timers.hpp"
 #include "sys_event.h"
 #include "sys_process.h"
 
 #include <thread>
 
 LOG_CHANNEL(sys_timer);
-
-extern u64 get_guest_system_time();
 
 void lv2_timer_context::operator()()
 {

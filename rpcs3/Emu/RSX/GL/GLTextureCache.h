@@ -14,10 +14,7 @@ namespace gl
 {
 	class blitter;
 
-	extern GLenum get_sized_internal_format(u32);
-	extern GLenum get_target(rsx::texture_dimension_extended type);
-	extern void copy_typeless(texture*, const texture*, const coord3u&, const coord3u&);
-	extern blitter *g_hw_blitter;
+	extern blitter* g_hw_blitter;
 
 	class cached_texture_section;
 	class texture_cache;
@@ -471,50 +468,7 @@ namespace gl
 		}
 
 		gl::texture_view* create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_type, u32 gcm_format,
-				u16 x, u16 y, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap, bool copy)
-		{
-			if (sized_internal_fmt == GL_NONE)
-			{
-				sized_internal_fmt = gl::get_sized_internal_format(gcm_format);
-			}
-
-			std::unique_ptr<gl::texture> dst = std::make_unique<gl::viewable_image>(dst_type, width, height, depth, mipmaps, sized_internal_fmt, rsx::classify_format(gcm_format));
-
-			if (copy)
-			{
-				std::vector<copy_region_descriptor> region =
-				{{
-					src,
-					rsx::surface_transform::coordinate_transform,
-					0,
-					x, y, 0, 0, 0,
-					width, height, width, height
-				}};
-
-				copy_transfer_regions_impl(cmd, dst.get(), region);
-			}
-
-			std::array<GLenum, 4> swizzle;
-			if (!src || static_cast<GLenum>(src->get_internal_format()) != sized_internal_fmt)
-			{
-				// Apply base component map onto the new texture if a data cast has been done
-				swizzle = get_component_mapping(gcm_format, rsx::texture_create_flags::default_component_order);
-			}
-			else
-			{
-				swizzle = src->get_native_component_layout();
-			}
-
-			if (memcmp(remap.first.data(), rsx::default_remap_vector.first.data(), 4) ||
-				memcmp(remap.second.data(), rsx::default_remap_vector.second.data(), 4))
-				swizzle = apply_swizzle_remap(swizzle, remap);
-
-			auto view = std::make_unique<gl::texture_view>(dst.get(), dst_type, sized_internal_fmt, swizzle.data());
-			auto result = view.get();
-
-			m_temporary_surfaces.emplace_back(dst, view);
-			return result;
-		}
+				u16 x, u16 y, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap, bool copy);
 
 		std::array<GLenum, 4> get_component_mapping(u32 gcm_format, rsx::texture_create_flags flags) const
 		{

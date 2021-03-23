@@ -8,6 +8,7 @@
 #include "overlay_fonts.h"
 
 #include "Emu/localized_string.h"
+#include "Emu/Cell/timers.hpp"
 
 #include <string>
 #include <vector>
@@ -29,8 +30,6 @@
 #if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
 #include <sys/sysctl.h>
 #endif
-
-extern u64 get_system_time();
 
 // Definitions for common UI controls and their routines
 namespace rsx

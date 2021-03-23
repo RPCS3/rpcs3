@@ -59,7 +59,6 @@ namespace vk
 
 	template<class T>
 	T* get_compute_task();
-	void reset_compute_tasks();
 
 	void destroy_global_resources();
 	void reset_global_resources();

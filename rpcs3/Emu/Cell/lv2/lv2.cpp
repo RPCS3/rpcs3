@@ -1106,8 +1106,6 @@ std::string ppu_get_syscall_name(u64 code)
 	return fmt::format("syscall_%u", code);
 }
 
-extern u64 get_guest_system_time();
-
 DECLARE(lv2_obj::g_mutex);
 DECLARE(lv2_obj::g_ppu);
 DECLARE(lv2_obj::g_pending);

@@ -6,6 +6,7 @@
 #include "PPUThread.h"
 #include "Emu/Cell/Common.h"
 #include "Emu/Cell/PPUFunction.h"
+#include "Emu/Cell/timers.hpp"
 
 #include <bit>
 #include <cmath>
@@ -387,7 +388,6 @@ static add_flags_result_t<u64> add64_flags(u64 a, u64 b, bool c)
 	return{ a, b, c };
 }
 
-extern u64 get_timebased_time();
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 
 extern u32 ppu_lwarx(ppu_thread& ppu, u32 addr);

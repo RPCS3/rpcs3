@@ -1,5 +1,6 @@
 #pragma once
 #include "Emu/RSX/GSRender.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "vkutils/descriptors.hpp"
 #include "vkutils/data_heap.h"
@@ -55,7 +56,6 @@ namespace vk
 #define VK_MAX_ASYNC_FRAMES 2
 
 using rsx::flags32_t;
-extern u64 get_system_time();
 
 namespace vk
 {

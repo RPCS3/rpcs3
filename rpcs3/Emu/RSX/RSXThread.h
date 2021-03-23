@@ -22,11 +22,9 @@
 #include "Capture/rsx_replay.h"
 
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/system_config.h"
-
-extern u64 get_guest_system_time();
-extern u64 get_system_time();
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern rsx::frame_trace_data frame_debug;

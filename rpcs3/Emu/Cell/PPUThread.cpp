@@ -16,6 +16,7 @@
 #include "PPUModule.h"
 #include "PPUDisAsm.h"
 #include "SPURecompiler.h"
+#include "timers.hpp"
 #include "lv2/sys_sync.h"
 #include "lv2/sys_prx.h"
 #include "lv2/sys_overlay.h"
@@ -75,8 +76,6 @@
 #include "util/sysinfo.hpp"
 
 const bool s_use_ssse3 = utils::has_ssse3();
-
-extern u64 get_guest_system_time();
 
 extern atomic_t<u64> g_watchdog_hold_ctr;
 
@@ -1293,7 +1292,6 @@ void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
 	ppu_log.error("Invalid thread");
 }
 
-extern u64 get_timebased_time();
 extern ppu_function_t ppu_get_syscall(u64 code);
 
 extern __m128 sse_exp2_ps(__m128 A);

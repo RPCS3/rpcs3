@@ -686,6 +686,7 @@
     <ClInclude Include="Emu\Cell\SPUOpcodes.h" />
     <ClInclude Include="Emu\Cell\SPURecompiler.h" />
     <ClInclude Include="Emu\Cell\SPUThread.h" />
+    <ClInclude Include="Emu\Cell\timers.hpp" />
     <ClInclude Include="Emu\CPU\CPUDisAsm.h" />
     <ClInclude Include="Emu\CPU\CPUThread.h" />
     <ClInclude Include="Emu\RSX\Capture\rsx_capture.h" />

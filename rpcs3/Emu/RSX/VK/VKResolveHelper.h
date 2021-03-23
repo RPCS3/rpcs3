@@ -541,8 +541,8 @@ namespace vk
 		}
 	};
 
-	void resolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
-	void unresolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
+	//void resolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
+	//void unresolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
 	void reset_resolve_resources();
 	void clear_resolve_helpers();
 }

@@ -42,6 +42,7 @@ else()
 	#add_compile_options(-Wconversion)
 	#add_compile_options(-Wpadded)
 	add_compile_options(-Wempty-body)
+	add_compile_options(-Wredundant-decls)
 
 	add_compile_options(-Wstrict-aliasing=1)
 	#add_compile_options(-Wnull-dereference)
@@ -54,7 +55,6 @@ else()
 		add_compile_options(-Wcast-function-type)
 		add_compile_options(-Wduplicated-branches)
 		add_compile_options(-Wduplicated-cond)
-		#add_compile_options(-Wredundant-decls)
 	endif()
 
 	#TODO Clean the code so these are removed

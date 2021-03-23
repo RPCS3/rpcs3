@@ -5,6 +5,7 @@
 
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
 #include "Emu/system_config.h"
@@ -303,8 +304,6 @@ public:
 
 		// Clamp
 		usec = std::min<u64>(usec, max_timeout);
-
-		extern u64 get_system_time();
 
 		u64 passed = 0;
 		u64 remaining;

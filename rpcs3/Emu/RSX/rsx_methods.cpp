@@ -2625,6 +2625,22 @@ namespace rsx
 		return registers[reg] == value;
 	}
 
+	void draw_clause::reset(primitive_type type)
+	{
+		current_range_index = ~0u;
+		last_execution_barrier_index = 0;
+
+		command = draw_command::none;
+		primitive = type;
+		primitive_barrier_enable = false;
+
+		draw_command_ranges.clear();
+		draw_command_barriers.clear();
+		inline_vertex_array.clear();
+
+		is_disjoint_primitive = is_primitive_disjointed(primitive);
+	}
+
 	u32 draw_clause::execute_pipeline_dependencies() const
 	{
 		u32 result = 0;

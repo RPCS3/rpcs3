@@ -12,9 +12,7 @@
 #include "rsx_vertex_data.h"
 #include "rsx_utils.h"
 #include "Utilities/geometry.h"
-
-extern u64 get_system_time();
-extern bool is_primitive_disjointed(rsx::primitive_type);
+#include "Emu/Cell/timers.hpp"
 
 namespace rsx
 {
@@ -297,21 +295,7 @@ namespace rsx
 			return count;
 		}
 
-		void reset(rsx::primitive_type type)
-		{
-			current_range_index = ~0u;
-			last_execution_barrier_index = 0;
-
-			command = draw_command::none;
-			primitive = type;
-			primitive_barrier_enable = false;
-
-			draw_command_ranges.clear();
-			draw_command_barriers.clear();
-			inline_vertex_array.clear();
-
-			is_disjoint_primitive = is_primitive_disjointed(primitive);
-		}
+		void reset(rsx::primitive_type type);
 
 		void begin()
 		{

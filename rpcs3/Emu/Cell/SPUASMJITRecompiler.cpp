@@ -3,6 +3,7 @@
 
 #include "Emu/system_config.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "SPUDisAsm.h"
 #include "SPUThread.h"
@@ -27,8 +28,6 @@
 
 extern const spu_decoder<spu_interpreter_fast> g_spu_interpreter_fast{}; // TODO: avoid
 const spu_decoder<spu_recompiler> s_spu_decoder;
-
-extern u64 get_timebased_time();
 
 std::unique_ptr<spu_recompiler_base> spu_recompiler_base::make_asmjit_recompiler()
 {

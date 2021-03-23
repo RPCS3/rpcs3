@@ -7,11 +7,10 @@
 #include "vkutils/image_helpers.h"
 
 #include "../Common/texture_cache.h"
+#include "Emu/Cell/timers.hpp"
 
 #include <memory>
 #include <vector>
-
-extern u64 get_system_time();
 
 namespace vk
 {
