@@ -139,6 +139,10 @@ void emu_settings::LoadSettings(const std::string& title_id)
 	// Add game config
 	if (!title_id.empty())
 	{
+		// Remove obsolete settings of the global config before adding the custom settings.
+		// Otherwise we'll always trigger the "obsolete settings dialog" when editing custom configs.
+		ValidateSettings(true);
+
 		const std::string config_path_new = Emulator::GetCustomConfigPath(m_title_id);
 		const std::string config_path_old = Emulator::GetCustomConfigPath(m_title_id, true);
 		std::string custom_config_path;
