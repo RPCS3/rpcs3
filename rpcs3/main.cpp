@@ -720,6 +720,7 @@ int main(int argc, char** argv)
 
 		gui_app->SetShowGui(!s_no_gui);
 		gui_app->SetUseCliStyle(use_cli_style);
+		gui_app->SetWithCliBoot(parser.isSet(arg_installfw) || parser.isSet(arg_installpkg) || !parser.positionalArguments().isEmpty());
 
 		if (!gui_app->Init())
 		{
