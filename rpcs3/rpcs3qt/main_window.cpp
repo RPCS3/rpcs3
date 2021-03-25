@@ -87,7 +87,7 @@ main_window::~main_window()
 /* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).
  * Simplifies logic a bit.
  */
-bool main_window::Init()
+bool main_window::Init(bool with_cli_boot)
 {
 	setAcceptDrops(true);
 
@@ -229,7 +229,8 @@ bool main_window::Init()
 #if defined(_WIN32) || defined(__linux__)
 	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != "false")
 	{
-		m_updater.check_for_updates(true, update_value != "true", this);
+		const bool in_background = with_cli_boot || update_value != "true";
+		m_updater.check_for_updates(true, in_background, this);
 	}
 #endif
 

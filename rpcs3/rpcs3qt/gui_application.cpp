@@ -96,7 +96,7 @@ bool gui_application::Init()
 		welcome->exec();
 	}
 
-	if (m_main_window && !m_main_window->Init())
+	if (m_main_window && !m_main_window->Init(m_with_cli_boot))
 	{
 		return false;
 	}
