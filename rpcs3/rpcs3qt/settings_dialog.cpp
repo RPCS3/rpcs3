@@ -208,12 +208,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_spuBlockSize, tooltips.settings.spu_block_size);
 
 	m_emu_settings->EnhanceComboBox(ui->threadsched, emu_settings_type::ThreadSchedulerMode);
-	SubscribeTooltip(ui->gb_threadsched, tooltips.settings.enable_thread_scheduler);
-	if (u32 min_thread_count = 12; utils::get_thread_count() < min_thread_count)
+	if (constexpr u32 min_thread_count = 12; utils::get_thread_count() < min_thread_count)
 	{
 		ui->gb_threadsched->setDisabled(true);
-		ui->gb_threadsched->setToolTip(tr("This feature is disabled for CPUs with less than %0 threads").arg(min_thread_count));
+		SubscribeTooltip(ui->gb_threadsched,
+			tr(
+				"Changing the thread scheduler is not supported on CPUs with less than %0 threads.\n"
+				"\n"
+				"Control how RPCS3 utilizes the threads of your system.\n"
+				"Each option heavily depends on the game and on your CPU, it's recommended to try each option to find out which performs the best."
+			).arg(min_thread_count));
 	}
+	else
+		SubscribeTooltip(ui->gb_threadsched, tooltips.settings.enable_thread_scheduler);
 
 	m_emu_settings->EnhanceComboBox(ui->preferredSPUThreads, emu_settings_type::PreferredSPUThreads, true);
 	SubscribeTooltip(ui->gb_spu_threads, tooltips.settings.preferred_spu_threads);
