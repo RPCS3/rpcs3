@@ -21,6 +21,11 @@ namespace utils
 	class shm;
 }
 
+namespace vm
+{
+	struct reservation_notifier;
+}
+
 // JIT Block
 using spu_function_t = void(*)(spu_thread&, void*, u8*);
 
@@ -681,6 +686,7 @@ public:
 	} mfc_prxy_write_state{};
 
 	// Reservation Data
+	vm::reservation_notifier* rinfo{};
 	u64 rtime = 0;
 	alignas(64) std::byte rdata[128]{};
 	u32 raddr = 0;
@@ -765,12 +771,11 @@ public:
 	u64 stx = 0; // Succeeded transactions (pure counters)
 
 	u64 last_ftsc = 0;
-	u64 last_ftime = 0;
-	u32 last_faddr = 0;
 	u64 last_fail = 0;
 	u64 last_succ = 0;
+	u32 last_faddr = 0;
 
-	u64 mfc_dump_idx = 0;
+	u32 mfc_dump_idx = 0;
 	static constexpr u32 max_mfc_dump_idx = SPU_LS_SIZE / sizeof(mfc_cmd_dump);
 
 	std::array<v128, 0x4000> stack_mirror; // Return address information

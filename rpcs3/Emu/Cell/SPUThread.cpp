@@ -512,12 +512,8 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
 	c.jc(fall);
 	c.xbegin(tx0);
-	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.test(x86::eax, vm::rsrv_unique_lock);
+	c.cmp(x86::qword_ptr(x86::rbx), 0);
 	c.jnz(skip);
-	c.and_(x86::rax, -128);
-	c.cmp(x86::rax, x86::r13);
-	c.jne(fail);
 
 	if (s_tsx_avx)
 	{
@@ -571,7 +567,6 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 		c.movaps(x86::oword_ptr(x86::rbp, 112), x86::xmm15);
 	}
 
-	c.sub(x86::qword_ptr(x86::rbx), -128);
 	c.xend();
 	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
 	build_get_tsc(c);
@@ -616,20 +611,14 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 	Label fall2 = c.newLabel();
 	Label fail2 = c.newLabel();
 	Label fail3 = c.newLabel();
+	Label fail4 = c.newLabel();
 
 	// Lightened transaction: only compare and swap data
 	c.bind(next);
 
 	// Try to "lock" reservation
-	c.mov(x86::eax, 1);
-	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
-	c.test(x86::eax, vm::rsrv_unique_lock);
-	c.jnz(fail2);
-
-	// Check if already updated
-	c.and_(x86::rax, -128);
-	c.cmp(x86::rax, x86::r13);
-	c.jne(fail2);
+	c.lock().bts(x86::qword_ptr(x86::rbx), 0);
+	c.jc(fail4);
 
 	// Exclude some time spent on touching memory: stamp1 contains last success or failure
 	c.mov(x86::rax, stamp1);
@@ -655,10 +644,6 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 	// Check pause flag
 	c.bt(x86::dword_ptr(args[2], ::offset32(&spu_thread::state) - ::offset32(&spu_thread::rdata)), static_cast<u32>(cpu_flag::pause));
 	c.jc(fall2);
-	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.and_(x86::rax, -128);
-	c.cmp(x86::rax, x86::r13);
-	c.jne(fail2);
 	c.xbegin(tx1);
 
 	if (s_tsx_avx)
@@ -715,7 +700,7 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 
 	c.xend();
 	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx) - ::offset32(&spu_thread::rdata)), 1);
-	c.lock().add(x86::qword_ptr(x86::rbx), 127);
+	c.lock().sub(x86::qword_ptr(x86::rbx), 1);
 	build_get_tsc(c);
 	c.sub(x86::rax, stamp0);
 	c.jmp(_ret);
@@ -748,6 +733,7 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 	c.jmp(fail2);
 
 	c.bind(fall2);
+	c.lock().sub(x86::qword_ptr(x86::rbx), 1);
 	c.mov(x86::rax, -1);
 	c.jmp(_ret);
 
@@ -775,8 +761,7 @@ const auto spu_putllc_tx = build_function_asm<u64(*)(u32 raddr, u64 rtime, void*
 		c.movaps(x86::oword_ptr(args[2], 112), x86::xmm7);
 	}
 
-	c.mov(x86::rax, -1);
-	c.mov(x86::qword_ptr(args[2], ::offset32(&spu_thread::last_ftime) - ::offset32(&spu_thread::rdata)), x86::rax);
+	c.bind(fail4);
 	c.xor_(x86::eax, x86::eax);
 	//c.jmp(_ret);
 
@@ -892,7 +877,7 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 		c.jae(fall);
 	});
 	c.xbegin(tx0);
-	c.test(x86::qword_ptr(x86::rbx), vm::rsrv_unique_lock);
+	c.cmp(x86::qword_ptr(x86::rbx), 0);
 	c.jnz(skip);
 
 	if (s_tsx_avx)
@@ -914,7 +899,6 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 		c.movaps(x86::oword_ptr(x86::rbp, 112), x86::xmm7);
 	}
 
-	c.sub(x86::qword_ptr(x86::rbx), -128);
 	c.xend();
 	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx)), 1);
 	build_get_tsc(c);
@@ -930,15 +914,14 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 	c.bind(fall);
 
 	Label fall2 = c.newLabel();
+	Label fail2 = c.newLabel();
 
 	// Lightened transaction
 	c.bind(next);
 
 	// Lock reservation
-	c.mov(x86::eax, 1);
-	c.lock().xadd(x86::qword_ptr(x86::rbx), x86::rax);
-	c.test(x86::eax, 127 - 1);
-	c.jnz(fall2);
+	c.lock().bts(x86::qword_ptr(x86::rbx), 0);
+	c.jc(fail2);
 
 	// Exclude some time spent on touching memory: stamp1 contains last success or failure
 	c.mov(x86::rax, stamp1);
@@ -963,9 +946,6 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 	// Check pause flag
 	c.bt(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::pause));
 	c.jc(fall2);
-	// Check contention
-	c.test(x86::qword_ptr(x86::rbx), 127 - 1);
-	c.jc(fall2);
 	c.xbegin(tx1);
 
 	if (s_tsx_avx)
@@ -989,12 +969,15 @@ const auto spu_putlluc_tx = build_function_asm<u64(*)(u32 raddr, const void* rda
 
 	c.xend();
 	c.add(x86::qword_ptr(args[2], ::offset32(&spu_thread::stx)), 1);
-	c.lock().add(x86::qword_ptr(x86::rbx), 127);
+	c.lock().sub(x86::qword_ptr(x86::rbx), 1);
 	build_get_tsc(c);
 	c.sub(x86::rax, stamp0);
 	c.jmp(_ret);
 
 	c.bind(fall2);
+	c.lock().sub(x86::qword_ptr(x86::rbx), 1);
+
+	c.bind(fail2);
 	c.xor_(x86::eax, x86::eax);
 	//c.jmp(_ret);
 
@@ -1073,10 +1056,6 @@ const extern auto spu_getllar_tx = build_function_asm<u64(*)(u32 raddr, void* rd
 	// Check pause flag
 	c.bt(x86::dword_ptr(args[2], ::offset32(&cpu_thread::state)), static_cast<u32>(cpu_flag::pause));
 	c.jc(fall);
-	c.mov(x86::rax, x86::qword_ptr(x86::rbx));
-	c.and_(x86::rax, ~vm::rsrv_shared_mask);
-	c.cmp(x86::rax, args[3]);
-	c.jne(fall);
 	c.xbegin(tx0);
 
 	// Just read data to registers
@@ -1479,6 +1458,7 @@ void spu_thread::cpu_init()
 	ch_events.raw() = {};
 	interrupts_enabled = false;
 	raddr = 0;
+	rinfo->reset();
 
 	ch_dec_start_timestamp = get_timebased_time();
 	ch_dec_value = option & SYS_SPU_THREAD_OPTION_DEC_SYNC_TB_ENABLE ? ~static_cast<u32>(ch_dec_start_timestamp) : 0;
@@ -1692,6 +1672,7 @@ void spu_thread::cleanup()
 
 	// Free range lock (and signals cleanup was called to the destructor)
 	vm::free_range_lock(range_lock);
+	vm::free_notifier(rinfo);
 
 	// Signal the debugger about the termination
 	state += cpu_flag::exit;
@@ -1794,6 +1775,7 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	}
 
 	range_lock = vm::alloc_range_lock();
+	rinfo      = vm::alloc_notifier();
 }
 
 void spu_thread::push_snr(u32 number, u32 value)
@@ -2048,7 +2030,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				alignas(64) u8 temp[128];
 				u8* dst0 = cpu && cpu->id_type() != 1 && (eal & -128) == cpu->raddr ? temp : dst;
 
-				if (dst0 == +temp && time0 != cpu->rtime)
+				if (dst0 == +temp && !cpu->rinfo->sh_addr)
 				{
 					// Validate rtime for read data
 					cpu->set_events(SPU_EVENT_LR);
@@ -2101,7 +2083,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				}
 				}
 
-				if (time0 != vm::reservation_acquire(eal) || (size0 == 128 && !cmp_rdata(*reinterpret_cast<spu_rdata_t*>(dst0), *reinterpret_cast<const spu_rdata_t*>(src))))
+				if (vm::reservation_acquire(eal) || (size0 == 128 && !cmp_rdata(*reinterpret_cast<spu_rdata_t*>(dst0), *reinterpret_cast<const spu_rdata_t*>(src))))
 				{
 					continue;
 				}
@@ -2116,6 +2098,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 					{
 						cpu->set_events(SPU_EVENT_LR);
 						cpu->raddr = 0;
+						cpu->rinfo->reset();
 					}
 				}
 
@@ -2158,100 +2141,8 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 				// Lock each cache line
 				auto& res = vm::reservation_acquire(eal);
 
-				// Lock each bit corresponding to a byte being written, using some free space in reservation memory
-				auto* bits = utils::bless<atomic_t<u128>>(vm::g_reservations + ((eal & 0xff80) / 2 + 16));
-
-				// Get writing mask
-				const u128 wmask = (~u128{} << (eal & 127)) & (~u128{} >> (127 - ((eal + size0 - 1) & 127)));
-				//const u64 start = (eal & 127) / 2;
-				//const u64 _end_ = ((eal + size0 - 1) & 127) / 2;
-				//const u64 wmask = (UINT64_MAX << start) & (UINT64_MAX >> (63 - _end_));
-
-				u128 old = 0;
-
-				for (u64 i = 0; i != umax; [&]()
-				{
-					if (_cpu->state & cpu_flag::pause)
-					{
-						const bool ok = cpu_thread::if_suspended<0>(_cpu, {dst, dst + 64, &res}, [&]
-						{
-							std::memcpy(dst, src, size0);
-							res += 128;
-						});
-
-						if (ok)
-						{
-							// Exit loop and function
-							i = -1;
-							bits = nullptr;
-							return;
-						}
-					}
-
-					if (++i < 10)
-					{
-						busy_wait(500);
-					}
-					else
-					{
-						// Wait
-						_cpu->state += cpu_flag::wait + cpu_flag::temp;
-						bits->wait(old, wmask);
-						_cpu->check_state();
-					}
-				}())
-				{
-					// Completed in suspend_all()
-					if (!bits)
-					{
-						break;
-					}
-
-					bool ok = false;
-
-					std::tie(old, ok) = bits->fetch_op([&](auto& v)
-					{
-						if (v & wmask)
-						{
-							return false;
-						}
-
-						v |= wmask;
-						return true;
-					});
-
-					if (ok) [[likely]]
-					{
-						break;
-					}
-				}
-
-				if (!bits)
-				{
-					if (size == size0)
-					{
-						break;
-					}
-
-					continue;
-				}
-
-				// Lock reservation (shared)
-				auto [_oldd, _ok] = res.fetch_op([&](u64& r)
-				{
-					if (r & vm::rsrv_unique_lock)
-					{
-						return false;
-					}
-
-					r += 1;
-					return true;
-				});
-
-				if (!_ok)
-				{
-					vm::reservation_shared_lock_internal(res);
-				}
+				// Lock reservation
+				vm::reservation_lock(eal);
 
 				// Obtain range lock as normal store
 				vm::range_lock(range_lock, eal, size0);
@@ -2304,15 +2195,7 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 
 				range_lock->release(0);
 
-				res += 127;
-
-				// Release bits and notify
-				bits->atomic_op([&](auto& v)
-				{
-					v &= ~wmask;
-				});
-
-				bits->notify_all(wmask);
+				res -= 1;
 
 				if (size == size0)
 				{
@@ -2704,7 +2587,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 	{
 		perf_meter<"PUTLLC."_u64> perf2 = perf0;
 
-		if (raddr != addr)
+		if (raddr != addr || !rinfo->sh_addr)
 		{
 			return false;
 		}
@@ -2715,20 +2598,15 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		// TODO: Limit scope!!
 		rsx::reservation_lock rsx_lock(addr, 128);
 
-		if (!g_use_rtm && rtime != res)
-		{
-			return false;
-		}
-
-		if (!g_use_rtm && cmp_rdata(to_write, rdata))
+		if (cmp_rdata(to_write, rdata))
 		{
 			// Writeback of unchanged data. Only check memory change
-			return cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && res.compare_and_swap_test(rtime, rtime + 128);
+			return cmp_rdata(rdata, vm::_ref<spu_rdata_t>(addr)) && !res;
 		}
 
 		if (g_use_rtm) [[likely]]
 		{
-			switch (u64 count = spu_putllc_tx(addr, rtime, rdata, to_write))
+			switch (u64 count = spu_putllc_tx(addr, 0, rdata, to_write))
 			{
 			case UINT64_MAX:
 			{
@@ -2736,19 +2614,17 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 				const bool ok = cpu_thread::suspend_all<+3>(this, {data, data + 64, &res}, [&]()
 				{
-					if ((res & -128) == rtime)
+					if (true)
 					{
 						if (cmp_rdata(rdata, data))
 						{
 							mov_rdata(data, to_write);
-							res += 127;
 							return true;
 						}
 					}
 
 					// Save previous data
 					mov_rdata_nt(rdata, data);
-					res -= 1;
 					return false;
 				});
 
@@ -2764,7 +2640,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 					break;
 				}
 
-				last_ftime = -1;
+				last_ftsc = -1;
 				[[fallthrough]];
 			}
 			case 0:
@@ -2774,7 +2650,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 					last_fail++;
 				}
 
-				if (last_ftime != umax)
+				if (last_ftsc != umax)
 				{
 					last_faddr = 0;
 					return false;
@@ -2783,7 +2659,6 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 				utils::prefetch_read(rdata);
 				utils::prefetch_read(rdata + 64);
 				last_faddr = addr;
-				last_ftime = res.load() & -128;
 				last_ftsc = __rdtsc();
 				return false;
 			}
@@ -2809,12 +2684,12 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 
 		auto [_oldd, _ok] = res.fetch_op([&](u64& r)
 		{
-			if ((r & -128) != rtime || (r & 127))
+			if (r)
 			{
 				return false;
 			}
 
-			r += vm::rsrv_unique_lock;
+			r += 1;
 			return true;
 		});
 
@@ -2836,19 +2711,20 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 			if (cmp_rdata(rdata, super_data))
 			{
 				mov_rdata(super_data, to_write);
-				res += 64;
+				res -= 1;
 				return true;
 			}
 
-			res -= 64;
+			res -= 1;
 			return false;
 		}();
 
 		return success;
 	}())
 	{
-		vm::reservation_notifier(addr).notify_all(-128);
+		vm::reservation_notify(addr);
 		raddr = 0;
+		rinfo->reset();
 		perf0.reset();
 		return true;
 	}
@@ -2873,6 +2749,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		}
 
 		raddr = 0;
+		rinfo->reset();
 		perf1.reset();
 		return false;
 	}
@@ -2897,7 +2774,6 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			cpu_thread::suspend_all<+2>(cpu, {&res}, [&]
 			{
 				mov_rdata_nt(sdata, *static_cast<const spu_rdata_t*>(to_write));
-				res += 127;
 			});
 		}
 
@@ -2926,7 +2802,7 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 			// TODO: vm::check_addr
 			vm::writer_lock lock(addr);
 			mov_rdata(super_data, *static_cast<const spu_rdata_t*>(to_write));
-			res += 64;
+			res -= 1;
 		}
 	}
 }
@@ -2952,7 +2828,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	}
 
 	do_cell_atomic_128_store(addr, _ptr<spu_rdata_t>(args.lsa & 0x3ff80));
-	vm::reservation_notifier(addr).notify_all(-128);
+	vm::reservation_notify(addr);
 }
 
 void spu_thread::do_mfc(bool /*wait*/)
@@ -3147,11 +3023,10 @@ bool spu_thread::process_mfc_cmd()
 			spu_log.trace(u8"GETLLAR after fail: addr=0x%x, time=%u c", last_faddr, (perf0.get() - last_ftsc));
 		}
 
-		if (addr == last_faddr && perf0.get() - last_ftsc < 1000 && (vm::reservation_acquire(addr) & -128) == last_ftime)
+		if (addr == last_faddr && perf0.get() - last_ftsc < 1000)
 		{
-			rtime = last_ftime;
 			raddr = last_faddr;
-			last_ftime = 0;
+			rinfo->init(raddr);
 			mov_rdata(_ref<spu_rdata_t>(ch_mfc_cmd.lsa & 0x3ff80), rdata);
 
 			ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
@@ -3163,7 +3038,7 @@ bool spu_thread::process_mfc_cmd()
 			last_faddr = 0;
 		}
 
-		if (addr == raddr && !g_use_rtm && g_cfg.core.spu_getllar_polling_detection && rtime == vm::reservation_acquire(addr) && cmp_rdata(rdata, data))
+		if (addr == raddr && g_cfg.core.spu_getllar_polling_detection && cmp_rdata(rdata, data))
 		{
 			// Spinning, might as well yield cpu resources
 			std::this_thread::yield();
@@ -3173,7 +3048,6 @@ bool spu_thread::process_mfc_cmd()
 		}
 
 		alignas(64) spu_rdata_t temp;
-		u64 ntime;
 		rsx::reservation_lock rsx_lock(addr, 128);
 
 		if (raddr)
@@ -3188,15 +3062,14 @@ bool spu_thread::process_mfc_cmd()
 			{
 				auto& sdata = *vm::get_super_ptr<spu_rdata_t>(addr);
 
-				const bool ok = cpu_thread::if_suspended<0>(this, {&ntime}, [&]
+				const bool ok = cpu_thread::if_suspended<0>(this, {}, [&]
 				{
 					// Guaranteed success
-					ntime = vm::reservation_acquire(addr);
 					mov_rdata_nt(rdata, sdata);
 				});
 
 				// Exit loop
-				if (ok && (ntime & 127) == 0)
+				if (ok)
 				{
 					atomic_fence_seq_cst();
 					i = -1;
@@ -3216,9 +3089,9 @@ bool spu_thread::process_mfc_cmd()
 			}
 		}())
 		{
-			ntime = vm::reservation_acquire(addr);
+			u64 ntime = vm::reservation_acquire(addr);
 
-			if (ntime & vm::rsrv_unique_lock)
+			if (ntime)
 			{
 				// There's an on-going reservation store, wait
 				continue;
@@ -3229,15 +3102,10 @@ bool spu_thread::process_mfc_cmd()
 			if (ntime & 127)
 			{
 				// Try to use TSX to obtain data atomically
-				if (!g_use_rtm || !spu_getllar_tx(addr, rdata, this, ntime & -128))
+				if (!g_use_rtm || !spu_getllar_tx(addr, rdata, this, 0))
 				{
 					// See previous ntime check.
 					continue;
-				}
-				else
-				{
-					// If succeeded, only need to check unique lock bit
-					test_mask = ~vm::rsrv_shared_mask;
 				}
 			}
 			else
@@ -3245,10 +3113,10 @@ bool spu_thread::process_mfc_cmd()
 				mov_rdata(rdata, data);
 			}
 
-			if (u64 time0 = vm::reservation_acquire(addr); (ntime & test_mask) != (time0 & test_mask))
+			if (vm::reservation_acquire(addr) & test_mask)
 			{
 				// Reservation data has been modified recently
-				if (time0 & vm::rsrv_unique_lock) i += 12;
+				i += 12;
 				continue;
 			}
 
@@ -3277,15 +3145,15 @@ bool spu_thread::process_mfc_cmd()
 		else if (raddr == addr)
 		{
 			// Lost previous reservation on polling
-			if (ntime != rtime || !cmp_rdata(rdata, temp))
+			if (!cmp_rdata(rdata, temp))
 			{
 				set_events(SPU_EVENT_LR);
 			}
 		}
 
 		raddr = addr;
-		rtime = ntime;
 		mov_rdata(_ref<spu_rdata_t>(ch_mfc_cmd.lsa & 0x3ff80), rdata);
+		rinfo->init(raddr);
 
 		ch_atomic_stat.set_value(MFC_GETLLAR_SUCCESS);
 
@@ -3495,8 +3363,9 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data)
 		return false;
 	}
 
-	if ((vm::reservation_acquire(addr) & -128) != rtime)
+	if (!rinfo->sh_addr)
 	{
+		// Reservation lost and signaled
 		return true;
 	}
 
@@ -3567,7 +3436,8 @@ bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data)
 		return true;
 	}
 
-	const bool res = cmp_rdata(data, vm::_ref<decltype(rdata)>(addr));
+	// TODO: verify sh_addr
+	const bool res = cmp_rdata(data, vm::_ref<decltype(rdata)>(addr)) && rinfo->sh_addr;
 
 	range_lock->release(0);
 	return !res;
@@ -3590,6 +3460,7 @@ retry:
 		{
 			collect |= SPU_EVENT_LR;
 			raddr = 0;
+			rinfo->reset();
 		}
 	}
 
@@ -3881,7 +3752,7 @@ s64 spu_thread::get_ch_value(u32 ch)
 					continue;
 				}
 
-				vm::reservation_notifier(raddr).wait(rtime, -128, atomic_wait_timeout{100'000});
+				rinfo->sh_addr.wait<atomic_wait::op_ne>(0, atomic_wait_timeout{100'000});
 			}
 
 			check_state();

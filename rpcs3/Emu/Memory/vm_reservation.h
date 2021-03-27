@@ -28,36 +28,53 @@ namespace vm
 #endif
 	}
 
-	enum : u64
+	struct reservation_notifier
 	{
-		rsrv_lock_mask = 127,
-		rsrv_unique_lock = 64,
-		rsrv_shared_mask = 63,
+		atomic_t<u64> sh_addr;
+		atomic_ptr<void> aux; // TODO
+
+		void init(u32 addr)
+		{
+			if (u64 is_shared = g_shmem[addr >> 16])
+			{
+				sh_addr = is_shared | (addr & 0xff80);
+			}
+			else
+			{
+				sh_addr = reinterpret_cast<uptr>(g_base_addr) | (addr & 0xff80);
+			}
+		}
+
+		void reset()
+		{
+			sh_addr.release(0);
+			aux.reset();
+		}
 	};
 
-	// Get reservation status for further atomic update: last update timestamp
+	// SPU internal
+	reservation_notifier* alloc_notifier();
+
+	// SPU internal
+	void free_notifier(reservation_notifier*) noexcept;
+
+	// Get reservation lock variable
 	inline atomic_t<u64>& reservation_acquire(u32 addr)
 	{
-		// Access reservation info: stamp and the lock bit
 		return *reinterpret_cast<atomic_t<u64>*>(g_reservations + (addr & 0xff80) / 2);
 	}
 
 	// Update reservation status
 	void reservation_update(u32 addr);
 
-	// Get reservation sync variable
-	inline atomic_t<u64>& reservation_notifier(u32 addr)
-	{
-		return *reinterpret_cast<atomic_t<u64>*>(g_reservations + (addr & 0xff80) / 2);
-	}
+	// Notify SPU threads waiting on reservation
+	void reservation_notify(u32 addr);
 
 	u64 reservation_lock_internal(u32, atomic_t<u64>&);
 
-	void reservation_shared_lock_internal(atomic_t<u64>&);
-
 	inline bool reservation_try_lock(atomic_t<u64>& res, u64 rtime)
 	{
-		if (res.compare_and_swap_test(rtime, rtime | rsrv_unique_lock)) [[likely]]
+		if (res.compare_and_swap_test(rtime, rtime | 1)) [[likely]]
 		{
 			return true;
 		}
@@ -70,7 +87,7 @@ namespace vm
 		auto res = &vm::reservation_acquire(addr);
 		auto rtime = res->load();
 
-		if (rtime & 127 || !reservation_try_lock(*res, rtime)) [[unlikely]]
+		if (rtime || !reservation_try_lock(*res, rtime)) [[unlikely]]
 		{
 			static atomic_t<u64> no_lock{};
 
@@ -86,7 +103,7 @@ namespace vm
 	}
 
 	// TODO: remove and make it external
-	void reservation_op_internal(u32 addr, std::function<bool()> func);
+	void reservation_op_internal(u32 addr, std::function<void()> func);
 
 	template <bool Ack = false, typename CPU, typename T, typename AT = u32, typename F>
 	inline SAFE_BUFFERS(auto) reservation_op(CPU& cpu, _ptr_base<T, AT> ptr, F op)
@@ -123,7 +140,7 @@ namespace vm
 			if (status == umax)
 #endif
 			{
-				if (res & rsrv_unique_lock)
+				if (res)
 				{
 #ifndef _MSC_VER
 					__asm__ volatile ("xend; mov $-1, %%eax;" ::: "memory");
@@ -136,28 +153,26 @@ namespace vm
 				if constexpr (std::is_void_v<std::invoke_result_t<F, T&>>)
 				{
 					std::invoke(op, *sptr);
-					res += 128;
 #ifndef _MSC_VER
 					__asm__ volatile ("xend;" ::: "memory");
 #else
 					_xend();
 #endif
 					if constexpr (Ack)
-						res.notify_all(-128);
+						vm::reservation_notify(addr);
 					return;
 				}
 				else
 				{
 					if (auto result = std::invoke(op, *sptr))
 					{
-						res += 128;
 #ifndef _MSC_VER
 						__asm__ volatile ("xend;" ::: "memory");
 #else
 						_xend();
 #endif
 						if constexpr (Ack)
-							res.notify_all(-128);
+							vm::reservation_notify(addr);
 						return result;
 					}
 					else
@@ -185,7 +200,7 @@ namespace vm
 			stamp2 = get_tsc() - (stamp1 - stamp0);
 
 			// Start lightened transaction
-			for (; !(_old & vm::rsrv_unique_lock) && stamp2 - stamp0 <= g_rtm_tx_limit2; stamp2 = get_tsc())
+			for (; !_old && stamp2 - stamp0 <= g_rtm_tx_limit2; stamp2 = get_tsc())
 			{
 				if (cpu.has_pause_flag())
 				{
@@ -210,9 +225,9 @@ namespace vm
 #else
 					_xend();
 #endif
-					res += 127;
+					res -= 1;
 					if (Ack)
-						res.notify_all(-128);
+						vm::reservation_notify(addr);
 					return;
 				}
 				else
@@ -224,9 +239,9 @@ namespace vm
 #else
 						_xend();
 #endif
-						res += 127;
+						res -= 1;
 						if (Ack)
-							res.notify_all(-128);
+							vm::reservation_notify(addr);
 						return result;
 					}
 					else
@@ -257,11 +272,10 @@ namespace vm
 				vm::reservation_op_internal(addr, [&]
 				{
 					std::invoke(op, *sptr);
-					return true;
 				});
 
 				if constexpr (Ack)
-					res.notify_all(-128);
+					vm::reservation_notify(addr);
 				return;
 			}
 			else
@@ -270,35 +284,28 @@ namespace vm
 
 				vm::reservation_op_internal(addr, [&]
 				{
-					if ((result = std::invoke(op, *sptr)))
-					{
-						return true;
-					}
-					else
-					{
-						return false;
-					}
+					result = std::invoke(op, *sptr);
 				});
 
 				if (Ack && result)
-					res.notify_all(-128);
+					vm::reservation_notify(addr);
 				return result;
 			}
 		}
 
 		// Lock reservation and perform heavyweight lock
-		reservation_shared_lock_internal(res);
+		reservation_lock(addr);
 
 		if constexpr (std::is_void_v<std::invoke_result_t<F, T&>>)
 		{
 			{
 				vm::writer_lock lock(addr);
 				std::invoke(op, *sptr);
-				res += 127;
+				res -= 1;
 			}
 
 			if constexpr (Ack)
-				res.notify_all(-128);
+				vm::reservation_notify(addr);
 			return;
 		}
 		else
@@ -306,19 +313,12 @@ namespace vm
 			auto result = std::invoke_result_t<F, T&>();
 			{
 				vm::writer_lock lock(addr);
-
-				if ((result = std::invoke(op, *sptr)))
-				{
-					res += 127;
-				}
-				else
-				{
-					res -= 1;
-				}
+				result = std::invoke(op, *sptr);
+				res -= 1;
 			}
 
 			if (Ack && result)
-				res.notify_all(-128);
+				vm::reservation_notify(addr);
 			return result;
 		}
 	}
@@ -348,7 +348,7 @@ namespace vm
 
 			const u64 rtime = vm::reservation_acquire(addr);
 
-			if (rtime & 127)
+			if (rtime)
 			{
 				continue;
 			}
@@ -387,42 +387,23 @@ namespace vm
 		// "Lock" reservation
 		auto& res = vm::reservation_acquire(addr);
 
-		auto [_old, _ok] = res.fetch_op([&](u64& r)
-		{
-			if (r & vm::rsrv_unique_lock)
-			{
-				return false;
-			}
-
-			r += 1;
-			return true;
-		});
-
-		if (!_ok) [[unlikely]]
-		{
-			vm::reservation_shared_lock_internal(res);
-		}
+		vm::reservation_lock(addr);
 
 		if constexpr (std::is_void_v<std::invoke_result_t<F, T&>>)
 		{
 			std::invoke(op, *sptr);
-			res += 127;
+			res -= 1;
 
 			if constexpr (Ack)
-			{
-				res.notify_all(-128);
-			}
+				vm::reservation_notify(addr);
 		}
 		else
 		{
 			auto result = std::invoke(op, *sptr);
-			res += 127;
+			res -= 1;
 
 			if constexpr (Ack)
-			{
-				res.notify_all(-128);
-			}
-
+				vm::reservation_notify(addr);
 			return result;
 		}
 	}

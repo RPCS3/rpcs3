@@ -74,10 +74,16 @@ namespace vm
 	std::array<atomic_t<cpu_thread*>, g_cfg.core.ppu_threads.max> g_locks{};
 
 	// Range lock slot allocation bits
-	atomic_t<u64> g_range_lock_bits{};
+	alignas(64) atomic_t<u64> g_range_lock_bits{};
 
 	// Memory range lock slots (sparse atomics)
 	atomic_t<u64, 64> g_range_lock_set[64]{};
+
+	// Reservation notifier slot allocation bits
+	alignas(64) atomic_t<u64> g_notifier_bits{};
+
+	// Reservation notifiers (not sparse, TODO)
+	reservation_notifier g_notifiers[64]{};
 
 	// Memory pages
 	std::array<memory_page, 0x100000000 / 4096> g_pages;
@@ -88,7 +94,7 @@ namespace vm
 		auto& res = reservation_acquire(addr);
 		const u64 rtime = res;
 
-		return {!(rtime & vm::rsrv_unique_lock) && res.compare_and_swap_test(rtime, rtime + 128), rtime};
+		return {!rtime && res.compare_and_swap_test(rtime, rtime + 1), rtime};
 	}
 
 	void reservation_update(u32 addr)
@@ -103,10 +109,7 @@ namespace vm
 			if (ok || (old & -128) < (rtime & -128))
 			{
 				if (ok)
-				{
-					reservation_notifier(addr).notify_all();
-				}
-
+					vm::reservation_notify(addr);
 				return;
 			}
 
@@ -115,6 +118,66 @@ namespace vm
 			if (cpu && cpu->test_stopped())
 			{
 				return;
+			}
+		}
+	}
+
+	reservation_notifier* alloc_notifier()
+	{
+		const auto [bits, ok] = g_notifier_bits.fetch_op([](u64& bits)
+		{
+			if (~bits) [[likely]]
+			{
+				bits |= bits + 1;
+				return true;
+			}
+
+			return false;
+		});
+
+		if (!ok) [[unlikely]]
+		{
+			fmt::throw_exception("Out of notifier bits");
+		}
+
+		return &g_notifiers[std::countr_one(bits)];
+	}
+
+	void free_notifier(reservation_notifier* x) noexcept
+	{
+		if (x < g_notifiers || x >= std::end(g_notifiers))
+		{
+			fmt::throw_exception("Invalid notifier");
+		}
+
+		x->sh_addr.release(0);
+		x->aux.reset();
+
+		// Use ptr difference to determine location
+		const auto diff = x - g_notifiers;
+		g_notifier_bits &= ~(1ull << diff);
+	}
+
+	void reservation_notify(u32 addr)
+	{
+		u64 cmp = addr & 0xff80;
+
+		if (u64 is_shared = g_shmem[addr >> 16])
+		{
+			cmp |= is_shared;
+		}
+		else
+		{
+			cmp |= reinterpret_cast<uptr>(g_base_addr);
+		}
+
+		for (u64 bits = g_notifier_bits; bits; bits &= bits - 1)
+		{
+			const u32 id = std::countr_zero(bits);
+
+			if (cmp == g_notifiers[id].sh_addr && g_notifiers[id].sh_addr.compare_and_swap_test(cmp, 0))
+			{
+				g_notifiers[id].sh_addr.notify_one();
 			}
 		}
 	}
@@ -577,58 +640,15 @@ namespace vm
 		}
 	}
 
-	void reservation_shared_lock_internal(atomic_t<u64>& res)
-	{
-		for (u64 i = 0;; i++)
-		{
-			auto [_oldd, _ok] = res.fetch_op([&](u64& r)
-			{
-				if (r & rsrv_unique_lock)
-				{
-					return false;
-				}
-
-				r += 1;
-				return true;
-			});
-
-			if (_ok) [[likely]]
-			{
-				return;
-			}
-
-			if (auto cpu = get_current_cpu_thread(); cpu && cpu->state)
-			{
-				cpu->check_state();
-			}
-			else if (i < 15)
-			{
-				busy_wait(500);
-			}
-			else
-			{
-				std::this_thread::yield();
-			}
-		}
-	}
-
-	void reservation_op_internal(u32 addr, std::function<bool()> func)
+	void reservation_op_internal(u32 addr, std::function<void()> func)
 	{
 		auto& res = vm::reservation_acquire(addr);
 		auto* ptr = vm::get_super_ptr(addr & -128);
 
 		cpu_thread::suspend_all<+1>(get_current_cpu_thread(), {ptr, ptr + 64, &res}, [&]
 		{
-			if (func())
-			{
-				// Success, release the lock and progress
-				res += 127;
-			}
-			else
-			{
-				// Only release the lock on failure
-				res -= 1;
-			}
+			func();
+			res -= 1;
 		});
 	}
 
@@ -1654,6 +1674,9 @@ namespace vm
 			std::memset(g_shmem, 0, sizeof(g_shmem));
 			std::memset(g_range_lock_set, 0, sizeof(g_range_lock_set));
 			g_range_lock_bits = 0;
+			for (auto& x : g_notifiers)
+				x.reset();
+			g_notifier_bits = 0;
 		}
 	}
 
@@ -1667,6 +1690,9 @@ namespace vm
 
 		std::memset(g_range_lock_set, 0, sizeof(g_range_lock_set));
 		g_range_lock_bits = 0;
+		for (auto& x : g_notifiers)
+				x.reset();
+		g_notifier_bits = 0;
 	}
 }
 

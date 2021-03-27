@@ -693,9 +693,10 @@ namespace stx
 		}
 
 		// Optimized value assignment
-		atomic_ptr& operator=(std::remove_cv_t<T> value) noexcept
+		template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<T, Args...>>>
+		atomic_ptr& operator=(Args&&... args) noexcept
 		{
-			shared_type r = make_single<T>(std::move(value));
+			shared_type r = make_single<T>(std::forward<Args>(args)...);
 			r.d()->refs.raw() += c_ref_mask;
 
 			atomic_ptr old;

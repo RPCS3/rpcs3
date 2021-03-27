@@ -241,7 +241,6 @@ public:
 	u32 jm_mask = 0x7f80'0000;
 
 	u32 raddr{0}; // Reservation addr
-	u64 rtime{0};
 	alignas(64) std::byte rdata[128]{}; // Reservation data
 	bool use_full_rdata{};
 
@@ -272,10 +271,9 @@ public:
 	u64 saved_native_sp = 0; // Host thread's stack pointer for emulated longjmp
 
 	u64 last_ftsc = 0;
-	u64 last_ftime = 0;
-	u32 last_faddr = 0;
 	u64 last_fail = 0;
 	u64 last_succ = 0;
+	u32 last_faddr = 0;
 
 	u32 dbg_step_pc = 0;
 
