@@ -38,24 +38,25 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros">
     <CmakeGenerator>"Visual Studio $(VisualStudioVersion.Substring(0,2))"</CmakeGenerator>
-    <CmakeCLI>cmake -G $(CmakeGenerator) -A x64 -DCMAKE_CONFIGURATION_TYPES="Debug;Release" -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT ../glslang</CmakeCLI>
+    <CmakeReleaseCLI>cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Release" -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT ../glslang</CmakeReleaseCLI>
+    <CmakeDebugCLI>cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Debug" -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT ../glslang</CmakeDebugCLI>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <NMakeBuildCommandLine>$(CmakeCLI)
+    <NMakeBuildCommandLine>$(CmakeReleaseCLI)
       msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Release /p:ForceImportBeforeCppTargets=$(SolutionDir)common_default.props /m</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>$(CmakeCLI)
+    <NMakeReBuildCommandLine>$(CmakeReleaseCLI)
       msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Release /p:ForceImportBeforeCppTargets=$(SolutionDir)common_default.props /m</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>$(CmakeCLI)
+    <NMakeCleanCommandLine>$(CmakeReleaseCLI)
       msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Release /p:ForceImportBeforeCppTargets=$(SolutionDir)common_default.props /m</NMakeCleanCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NMakeBuildCommandLine>$(CmakeCLI)
+    <NMakeBuildCommandLine>$(CmakeDebugCLI)
       msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug /p:ForceImportBeforeCppTargets=$(SolutionDir)common_default.props /m
     </NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>$(CmakeCLI)
+    <NMakeReBuildCommandLine>$(CmakeDebugCLI)
       msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Debug /p:ForceImportBeforeCppTargets=$(SolutionDir)common_default.props /m
     </NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>$(CmakeCLI)
+    <NMakeCleanCommandLine>$(CmakeDebugCLI)
       msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Debug /p:ForceImportBeforeCppTargets=$(SolutionDir)common_default.props /m
     </NMakeCleanCommandLine>
   </PropertyGroup>

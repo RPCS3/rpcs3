@@ -40,16 +40,6 @@
     <Filter Include="Io\MMJoystick">
       <UniqueIdentifier>{0f9f8411-9536-42d8-8f46-5537fb4aae6f}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Generated Files\Release - LLVM">
-      <UniqueIdentifier>{9dcc13d5-0080-4338-baad-070a544b63b6}</UniqueIdentifier>
-      <Extensions>cpp;moc</Extensions>
-      <SourceControlFiles>False</SourceControlFiles>
-    </Filter>
-    <Filter Include="Generated Files\Debug - LLVM">
-      <UniqueIdentifier>{ed43eb83-3470-4fec-9340-91385acd5d19}</UniqueIdentifier>
-      <Extensions>cpp;moc</Extensions>
-      <SourceControlFiles>False</SourceControlFiles>
-    </Filter>
     <Filter Include="Resource Files">
       <UniqueIdentifier>{D9D6E242-F8AF-46E4-B9FD-80ECBC20BA3E}</UniqueIdentifier>
       <Extensions>qrc;*</Extensions>
@@ -145,20 +135,11 @@
     <ClCompile Include="main.cpp">
       <Filter>rpcs3</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_auto_pause_settings_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_auto_pause_settings_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_auto_pause_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_auto_pause_settings_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_cg_disasm_window.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_cg_disasm_window.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -166,23 +147,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_cg_disasm_window.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_cg_disasm_window.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_debugger_frame.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_debugger_frame.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_debugger_frame.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_debugger_frame.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_emu_settings.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_emu_settings.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -190,23 +159,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_emu_settings.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_emu_settings.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_game_list_frame.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_frame.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_game_list_frame.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_game_list_frame.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_gs_frame.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_gs_frame.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -214,23 +171,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_gs_frame.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_gs_frame.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_gui_settings.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_gui_settings.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_gui_settings.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_gui_settings.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_kernel_explorer.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_kernel_explorer.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -238,23 +183,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_kernel_explorer.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_kernel_explorer.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_log_frame.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_log_frame.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_log_frame.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_log_frame.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_main_window.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_main_window.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -262,23 +195,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_main_window.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_main_window.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_memory_string_searcher.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_memory_string_searcher.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_memory_string_searcher.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_memory_string_searcher.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_pad_settings_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_pad_settings_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -286,32 +207,17 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_pad_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_pad_settings_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_rsx_debugger.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_rsx_debugger.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_rsx_debugger.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_rsx_debugger.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_settings_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_settings_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_settings_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="Input\basic_keyboard_handler.cpp">
       <Filter>Io\Basic</Filter>
@@ -328,23 +234,14 @@
     <ClCompile Include="Input\xinput_pad_handler.cpp">
       <Filter>Io\XInput</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_msg_dialog_frame.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_msg_dialog_frame.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_msg_dialog_frame.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_msg_dialog_frame.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\qrc_resources.cpp">
       <Filter>Generated Files</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_welcome_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_welcome_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -352,23 +249,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_welcome_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_welcome_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_game_list_grid.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_game_list_grid.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_game_list_grid.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_game_list_grid.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_vfs_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_vfs_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -376,23 +261,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_vfs_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_vfs_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_vfs_dialog_tab.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_vfs_dialog_tab.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_vfs_dialog_tab.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_vfs_dialog_tab.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_about_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_about_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -400,32 +273,17 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_about_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_about_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_save_data_info_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_save_data_info_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_save_data_info_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_save_data_info_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_save_data_list_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_save_data_list_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_save_data_list_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_save_data_list_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\save_data_dialog.cpp">
       <Filter>Gui\save</Filter>
@@ -442,17 +300,11 @@
     <ClCompile Include="rpcs3qt\trophy_notification_frame.cpp">
       <Filter>Gui\trophy</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_save_manager_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_save_manager_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_save_manager_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_save_manager_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="Input\pad_thread.cpp">
       <Filter>Io</Filter>
@@ -493,17 +345,11 @@
     <ClCompile Include="rpcs3qt\main_window.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_syntax_highlighter.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_syntax_highlighter.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_syntax_highlighter.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_syntax_highlighter.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\syntax_highlighter.cpp">
       <Filter>Gui\syntax highlighter</Filter>
@@ -559,17 +405,11 @@
     <ClCompile Include="rpcs3qt\progress_dialog.cpp">
       <Filter>Gui\misc dialogs</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_game_compatibility.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_game_compatibility.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_game_compatibility.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_game_compatibility.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\game_compatibility.cpp">
       <Filter>Gui\game list</Filter>
@@ -580,17 +420,11 @@
     <ClCompile Include="rpcs3qt\qt_utils.cpp">
       <Filter>Gui\utils</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_register_editor_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_register_editor_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_register_editor_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_register_editor_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\user_manager_dialog.cpp">
       <Filter>Gui\user accounts</Filter>
@@ -598,17 +432,11 @@
     <ClCompile Include="rpcs3qt\user_account.cpp">
       <Filter>Gui\user accounts</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_user_manager_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_user_manager_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_user_manager_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_user_manager_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\breakpoint_handler.cpp">
       <Filter>Gui\debugger</Filter>
@@ -616,17 +444,11 @@
     <ClCompile Include="rpcs3qt\debugger_list.cpp">
       <Filter>Gui\debugger</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_debugger_list.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_debugger_list.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_debugger_list.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_debugger_list.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\breakpoint_list.cpp">
       <Filter>Gui\debugger</Filter>
@@ -634,20 +456,11 @@
     <ClCompile Include="rpcs3qt\call_stack_list.cpp">
       <Filter>Gui\debugger</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_breakpoint_list.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_breakpoint_list.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_breakpoint_list.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_breakpoint_list.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_call_stack_list.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_call_stack_list.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -655,17 +468,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_call_stack_list.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_call_stack_list.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\qrc_windows.cpp">
       <Filter>Generated Files</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\_discord_utils.cpp">
       <Filter>Gui\utils</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_trophy_manager_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_trophy_manager_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -673,14 +480,8 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_trophy_manager_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_trophy_manager_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\input_dialog.cpp">
       <Filter>Gui\misc dialogs</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_input_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_input_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -688,14 +489,8 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_input_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_input_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\custom_dialog.cpp">
       <Filter>Gui\message dialog</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_custom_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_custom_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -703,14 +498,8 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_custom_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_custom_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\osk_dialog_frame.cpp">
       <Filter>Gui\message dialog</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_osk_dialog_frame.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_osk_dialog_frame.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -718,14 +507,8 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_osk_dialog_frame.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_osk_dialog_frame.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\gui_application.cpp">
       <Filter>Gui</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_gui_application.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_gui_application.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -733,23 +516,14 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_gui_application.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_gui_application.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="main_application.cpp">
       <Filter>rpcs3</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_headless_application.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_headless_application.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_headless_application.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_headless_application.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="headless_application.cpp">
       <Filter>rpcs3</Filter>
@@ -766,20 +540,11 @@
     <ClCompile Include="rpcs3qt\cheat_manager.cpp">
       <Filter>Gui\cheat manager</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_cheat_manager.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_cheat_manager.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_cheat_manager.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_cheat_manager.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_pkg_install_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_pkg_install_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -787,17 +552,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_pkg_install_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_pkg_install_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\pkg_install_dialog.cpp">
       <Filter>Gui\misc dialogs</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\settings.cpp">
       <Filter>Gui\settings</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_settings.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_settings.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -805,20 +564,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_settings.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_settings.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_persistent_settings.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_persistent_settings.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_persistent_settings.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_persistent_settings.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\persistent_settings.cpp">
       <Filter>Gui\settings</Filter>
@@ -829,29 +579,17 @@
     <ClCompile Include="Input\keyboard_pad_handler.cpp">
       <Filter>Io\Keyboard</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_tooltips.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_tooltips.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_tooltips.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_tooltips.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_localized.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_localized.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_localized.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_localized.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\localized.cpp">
       <Filter>Gui\settings</Filter>
@@ -862,20 +600,11 @@
     <ClCompile Include="rpcs3qt\pad_led_settings_dialog.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_pad_led_settings_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_pad_led_settings_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_pad_led_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_pad_led_settings_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_update_manager.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_update_manager.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -883,14 +612,8 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_update_manager.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_update_manager.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\screenshot_manager_dialog.cpp">
       <Filter>Gui\screenshot manager</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_screenshot_manager_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_screenshot_manager_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -898,14 +621,8 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_manager_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_screenshot_manager_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\screenshot_preview.cpp">
       <Filter>Gui\screenshot manager</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_screenshot_preview.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_screenshot_preview.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -913,23 +630,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_screenshot_preview.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_screenshot_preview.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_skylander_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_skylander_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_skylander_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_skylander_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_find_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_find_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -937,23 +642,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_find_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_find_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_memory_viewer_panel.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_memory_viewer_panel.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_memory_viewer_panel.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_memory_viewer_panel.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_instruction_editor_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_instruction_editor_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -961,23 +654,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_instruction_editor_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_instruction_editor_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_trophy_notification_frame.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_trophy_notification_frame.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_trophy_notification_frame.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_trophy_notification_frame.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_fatal_error_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_fatal_error_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -985,17 +666,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_fatal_error_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_fatal_error_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\fatal_error_dialog.cpp">
       <Filter>Gui\misc dialogs</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\microphone_creator.cpp">
       <Filter>Gui\settings</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_microphone_creator.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_microphone_creator.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -1003,14 +678,8 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_microphone_creator.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_microphone_creator.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\render_creator.cpp">
       <Filter>Gui\settings</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_render_creator.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_render_creator.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -1018,17 +687,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_render_creator.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_render_creator.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\config_adapter.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\patch_manager_dialog.cpp">
       <Filter>Gui\patch manager</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_patch_manager_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_patch_manager_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -1036,17 +699,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_patch_manager_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_patch_manager_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\curl_handle.cpp">
       <Filter>Gui\network</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\downloader.cpp">
       <Filter>Gui\network</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_downloader.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_downloader.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -1054,14 +711,8 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_downloader.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_downloader.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\rpcn_settings_dialog.cpp">
       <Filter>Gui\settings</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_rpcn_settings_dialog.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_rpcn_settings_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
@@ -1069,20 +720,11 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_rpcn_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_rpcn_settings_dialog.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_localized_emu.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_localized_emu.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_localized_emu.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_localized_emu.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="Input\dualsense_pad_handler.cpp">
       <Filter>Io\DualSense</Filter>
@@ -1093,17 +735,11 @@
     <ClCompile Include="rpcs3qt\log_viewer.cpp">
       <Filter>Gui\log</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release - LLVM\moc_log_viewer.cpp">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_log_viewer.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_log_viewer.cpp">
       <Filter>Generated Files\Release</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug - LLVM\moc_log_viewer.cpp">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </ClCompile>
     <ClCompile Include="Input\hid_pad_handler.cpp">
       <Filter>Io</Filter>
@@ -1459,17 +1095,11 @@
     <ResourceCompile Include="rpcs3.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="QTGeneratedFiles\Release - LLVM\pkg_install_dialog.moc">
-      <Filter>Generated Files\Release - LLVM</Filter>
-    </None>
     <None Include="QTGeneratedFiles\Debug\pkg_install_dialog.moc">
       <Filter>Generated Files\Debug</Filter>
     </None>
     <None Include="QTGeneratedFiles\Release\pkg_install_dialog.moc">
       <Filter>Generated Files\Release</Filter>
-    </None>
-    <None Include="QTGeneratedFiles\Debug - LLVM\pkg_install_dialog.moc">
-      <Filter>Generated Files\Debug - LLVM</Filter>
     </None>
   </ItemGroup>
 </Project>
