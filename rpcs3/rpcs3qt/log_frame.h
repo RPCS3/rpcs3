@@ -62,23 +62,25 @@ private:
 	QLineEdit* m_tty_input = nullptr;
 	int m_tty_channel = -1;
 
-	QAction* m_clearAct = nullptr;
-	QAction* m_clearTTYAct = nullptr;
+	QAction* m_clear_act = nullptr;
+	QAction* m_clear_tty_act = nullptr;
 
-	QActionGroup* m_logLevels = nullptr;
-	QAction* m_nothingAct = nullptr;
-	QAction* m_fatalAct = nullptr;
-	QAction* m_errorAct = nullptr;
-	QAction* m_todoAct = nullptr;
-	QAction* m_successAct = nullptr;
-	QAction* m_warningAct = nullptr;
-	QAction* m_noticeAct = nullptr;
-	QAction* m_traceAct = nullptr;
+	QActionGroup* m_log_level_acts = nullptr;
+	QAction* m_nothing_act = nullptr;
+	QAction* m_fatal_act = nullptr;
+	QAction* m_error_act = nullptr;
+	QAction* m_todo_act = nullptr;
+	QAction* m_success_act = nullptr;
+	QAction* m_warning_act = nullptr;
+	QAction* m_notice_act = nullptr;
+	QAction* m_trace_act = nullptr;
 
-	QAction* m_stackAct_log = nullptr;
-	QAction* m_stackAct_tty = nullptr;
+	QAction* m_stack_act_log = nullptr;
+	QAction* m_stack_act_tty = nullptr;
 
-	QAction* m_TTYAct = nullptr;
+	QAction* m_show_prefix_act = nullptr;
+
+	QAction* m_tty_act = nullptr;
 
 	QActionGroup* m_tty_channel_acts = nullptr;
 

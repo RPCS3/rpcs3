@@ -175,6 +175,7 @@ namespace gui
 
 	const gui_save l_tty       = gui_save(logger, "TTY",       true);
 	const gui_save l_level     = gui_save(logger, "level",     static_cast<uint>(logs::level::success));
+	const gui_save l_prefix    = gui_save(logger, "prefix_on", false);
 	const gui_save l_stack     = gui_save(logger, "stack",     true);
 	const gui_save l_stack_tty = gui_save(logger, "TTY_stack", false);
 	const gui_save l_limit     = gui_save(logger, "limit",     1000);

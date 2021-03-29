@@ -40,6 +40,8 @@ struct gui_listener : logs::listener
 
 	lf_queue<packet_t> queue;
 
+	atomic_t<bool> show_prefix{false};
+
 	gui_listener()
 		: logs::listener()
 	{
@@ -60,7 +62,7 @@ struct gui_listener : logs::listener
 			packet_t p,* _new = &p;
 			_new->sev = msg.sev;
 
-			if (!prefix.empty())
+			if (show_prefix && !prefix.empty())
 			{
 				_new->msg += "{";
 				_new->msg += prefix;
@@ -169,47 +171,47 @@ void log_frame::SetLogLevel(logs::level lev)
 	case logs::level::always:
 	case logs::level::fatal:
 	{
-		m_fatalAct->trigger();
+		m_fatal_act->trigger();
 		break;
 	}
 	case logs::level::error:
 	{
-		m_errorAct->trigger();
+		m_error_act->trigger();
 		break;
 	}
 	case logs::level::todo:
 	{
-		m_todoAct->trigger();
+		m_todo_act->trigger();
 		break;
 	}
 	case logs::level::success:
 	{
-		m_successAct->trigger();
+		m_success_act->trigger();
 		break;
 	}
 	case logs::level::warning:
 	{
-		m_warningAct->trigger();
+		m_warning_act->trigger();
 		break;
 	}
 	case logs::level::notice:
 	{
-		m_noticeAct->trigger();
+		m_notice_act->trigger();
 		break;
 	}
 	case logs::level::trace:
 	{
-		m_traceAct->trigger();
+		m_trace_act->trigger();
 		break;
 	}
 	default:
-		m_warningAct->trigger();
+		m_warning_act->trigger();
 	}
 }
 
 void log_frame::SetTTYLogging(bool val)
 {
-	m_TTYAct->setChecked(val);
+	m_tty_act->setChecked(val);
 }
 
 void log_frame::CreateAndConnectActions()
@@ -229,23 +231,23 @@ void log_frame::CreateAndConnectActions()
 		});
 	};
 
-	m_clearAct = new QAction(tr("Clear"), this);
-	connect(m_clearAct, &QAction::triggered, [this]()
+	m_clear_act = new QAction(tr("Clear"), this);
+	connect(m_clear_act, &QAction::triggered, [this]()
 	{
 		m_old_log_text = "";
 		m_log->clear();
 	});
 
-	m_clearTTYAct = new QAction(tr("Clear"), this);
-	connect(m_clearTTYAct, &QAction::triggered, [this]()
+	m_clear_tty_act = new QAction(tr("Clear"), this);
+	connect(m_clear_tty_act, &QAction::triggered, [this]()
 	{
 		m_old_tty_text = "";
 		m_tty->clear();
 	});
 
-	m_stackAct_tty = new QAction(tr("Stack Mode (TTY)"), this);
-	m_stackAct_tty->setCheckable(true);
-	connect(m_stackAct_tty, &QAction::toggled, [this](bool checked)
+	m_stack_act_tty = new QAction(tr("Stack Mode (TTY)"), this);
+	m_stack_act_tty->setCheckable(true);
+	connect(m_stack_act_tty, &QAction::toggled, [this](bool checked)
 	{
 		m_gui_settings->SetValue(gui::l_stack_tty, checked);
 		m_stack_tty = checked;
@@ -275,59 +277,68 @@ void log_frame::CreateAndConnectActions()
 	}
 
 	// Action groups make these actions mutually exclusive.
-	m_logLevels = new QActionGroup(this);
-	m_nothingAct = new QAction(tr("Nothing"), m_logLevels);
-	m_nothingAct->setVisible(false);
-	m_fatalAct = new QAction(tr("Fatal"), m_logLevels);
-	m_errorAct = new QAction(tr("Error"), m_logLevels);
-	m_todoAct = new QAction(tr("Todo"), m_logLevels);
-	m_successAct = new QAction(tr("Success"), m_logLevels);
-	m_warningAct = new QAction(tr("Warning"), m_logLevels);
-	m_noticeAct = new QAction(tr("Notice"), m_logLevels);
-	m_traceAct = new QAction(tr("Trace"), m_logLevels);
+	m_log_level_acts = new QActionGroup(this);
+	m_nothing_act = new QAction(tr("Nothing"), m_log_level_acts);
+	m_nothing_act->setVisible(false);
+	m_fatal_act = new QAction(tr("Fatal"), m_log_level_acts);
+	m_error_act = new QAction(tr("Error"), m_log_level_acts);
+	m_todo_act = new QAction(tr("Todo"), m_log_level_acts);
+	m_success_act = new QAction(tr("Success"), m_log_level_acts);
+	m_warning_act = new QAction(tr("Warning"), m_log_level_acts);
+	m_notice_act = new QAction(tr("Notice"), m_log_level_acts);
+	m_trace_act = new QAction(tr("Trace"), m_log_level_acts);
 
-	m_stackAct_log = new QAction(tr("Stack Mode (Log)"), this);
-	m_stackAct_log->setCheckable(true);
-	connect(m_stackAct_log, &QAction::toggled, [this](bool checked)
+	m_stack_act_log = new QAction(tr("Stack Mode (Log)"), this);
+	m_stack_act_log->setCheckable(true);
+	connect(m_stack_act_log, &QAction::toggled, [this](bool checked)
 	{
 		m_gui_settings->SetValue(gui::l_stack, checked);
 		m_stack_log = checked;
 	});
 
-	m_TTYAct = new QAction(tr("Enable TTY"), this);
-	m_TTYAct->setCheckable(true);
-	connect(m_TTYAct, &QAction::triggered, [this](bool checked)
+	m_show_prefix_act = new QAction(tr("Show Thread Prefix"), this);
+	m_show_prefix_act->setCheckable(true);
+	connect(m_show_prefix_act, &QAction::toggled, [this](bool checked)
+	{
+		m_gui_settings->SetValue(gui::l_prefix, checked);
+		s_gui_listener.show_prefix = checked;
+	});
+
+	m_tty_act = new QAction(tr("Enable TTY"), this);
+	m_tty_act->setCheckable(true);
+	connect(m_tty_act, &QAction::triggered, [this](bool checked)
 	{
 		m_gui_settings->SetValue(gui::l_tty, checked);
 	});
 
-	l_initAct(m_nothingAct, logs::level::fatal);
-	l_initAct(m_fatalAct, logs::level::fatal);
-	l_initAct(m_errorAct, logs::level::error);
-	l_initAct(m_todoAct, logs::level::todo);
-	l_initAct(m_successAct, logs::level::success);
-	l_initAct(m_warningAct, logs::level::warning);
-	l_initAct(m_noticeAct, logs::level::notice);
-	l_initAct(m_traceAct, logs::level::trace);
+	l_initAct(m_nothing_act, logs::level::fatal);
+	l_initAct(m_fatal_act, logs::level::fatal);
+	l_initAct(m_error_act, logs::level::error);
+	l_initAct(m_todo_act, logs::level::todo);
+	l_initAct(m_success_act, logs::level::success);
+	l_initAct(m_warning_act, logs::level::warning);
+	l_initAct(m_notice_act, logs::level::notice);
+	l_initAct(m_trace_act, logs::level::trace);
 
 	connect(m_log, &QWidget::customContextMenuRequested, [this](const QPoint& pos)
 	{
 		QMenu* menu = m_log->createStandardContextMenu();
-		menu->addAction(m_clearAct);
+		menu->addAction(m_clear_act);
 		menu->addSeparator();
-		menu->addActions(m_logLevels->actions());
+		menu->addActions(m_log_level_acts->actions());
 		menu->addSeparator();
-		menu->addAction(m_stackAct_log);
+		menu->addAction(m_stack_act_log);
+		menu->addAction(m_show_prefix_act);
 		menu->exec(m_log->viewport()->mapToGlobal(pos));
 	});
 
 	connect(m_tty, &QWidget::customContextMenuRequested, [this](const QPoint& pos)
 	{
 		QMenu* menu = m_tty->createStandardContextMenu();
-		menu->addAction(m_clearTTYAct);
+		menu->addAction(m_clear_tty_act);
 		menu->addSeparator();
-		menu->addAction(m_TTYAct);
-		menu->addAction(m_stackAct_tty);
+		menu->addAction(m_tty_act);
+		menu->addAction(m_stack_act_tty);
 		menu->addSeparator();
 		menu->addActions(m_tty_channel_acts->actions());
 		menu->exec(m_tty->viewport()->mapToGlobal(pos));
@@ -388,8 +399,11 @@ void log_frame::LoadSettings()
 	SetTTYLogging(m_gui_settings->GetValue(gui::l_tty).toBool());
 	m_stack_log = m_gui_settings->GetValue(gui::l_stack).toBool();
 	m_stack_tty = m_gui_settings->GetValue(gui::l_stack_tty).toBool();
-	m_stackAct_log->setChecked(m_stack_log);
-	m_stackAct_tty->setChecked(m_stack_tty);
+	m_stack_act_log->setChecked(m_stack_log);
+	m_stack_act_tty->setChecked(m_stack_tty);
+
+	s_gui_listener.show_prefix = m_gui_settings->GetValue(gui::l_prefix).toBool();
+	m_show_prefix_act->setChecked(s_gui_listener.show_prefix);
 
 	if (m_log)
 	{
@@ -491,7 +505,7 @@ void log_frame::UpdateUI()
 		// Ignore control characters and greater/equal to 0x80
 		buf.erase(std::remove_if(buf.begin(), buf.end(), [](s8 c) { return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F); }), buf.end());
 
-		if (!buf.empty() && m_TTYAct->isChecked())
+		if (!buf.empty() && m_tty_act->isChecked())
 		{
 			std::stringstream buf_stream;
 			buf_stream.str(buf);
