@@ -38,6 +38,8 @@ find_dialog::find_dialog(QTextEdit* edit, QWidget *parent, Qt::WindowFlags f) : 
 	connect(m_find_next, &QPushButton::clicked, this, &find_dialog::find_next);
 	connect(m_find_previous, &QPushButton::clicked, this, &find_dialog::find_previous);
 
+	m_find_next->setDefault(true);
+
 	show();
 }
 
