@@ -102,7 +102,7 @@ jobs:
         solution: 'rpcs3.sln'
         maximumCpuCount: true
         platform: x64
-        configuration: 'Release - LLVM'
+        configuration: 'Release'
       displayName: Compile RPCS3
 
     - bash: .ci/deploy-windows.sh

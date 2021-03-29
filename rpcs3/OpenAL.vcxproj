@@ -1,16 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug - LLVM|x64">
-      <Configuration>Debug - LLVM</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release - LLVM|x64">
-      <Configuration>Release - LLVM</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
@@ -60,7 +52,6 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>.\3rdparty\OpenAL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
     </ClCompile>
   </ItemDefinitionGroup>
