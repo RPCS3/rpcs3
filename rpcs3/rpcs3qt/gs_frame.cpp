@@ -16,6 +16,7 @@
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <QPainter>
+#include <QScreen>
 
 #include <string>
 #include <thread>
@@ -51,8 +52,10 @@ extern atomic_t<bool> g_user_asked_for_frame_capture;
 
 constexpr auto qstr = QString::fromStdString;
 
-gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
-	: QWindow(), m_gui_settings(gui_settings)
+gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
+	: QWindow()
+	, m_initial_geometry(geometry)
+	, m_gui_settings(gui_settings)
 {
 	m_disable_mouse = gui_settings->GetValue(gui::gs_disableMouse).toBool();
 	m_disable_kb_hotkeys = gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
@@ -75,6 +78,7 @@ gs_frame::gs_frame(const QRect& geometry, const QIcon& appIcon, const std::share
 
 	setMinimumWidth(160);
 	setMinimumHeight(90);
+	setScreen(screen);
 	setGeometry(geometry);
 	setTitle(m_window_title);
 	setVisibility(Hidden);
@@ -133,11 +137,11 @@ void gs_frame::paintEvent(QPaintEvent *event)
 void gs_frame::showEvent(QShowEvent *event)
 {
 	// we have to calculate new window positions, since the frame is only known once the window was created
-	// the left and right margins are too big on my setup for some reason yet unknown, so we'll have to ignore them
-	const int x = geometry().left(); //std::max(geometry().left(), frameMargins().left());
-	const int y = std::max(geometry().top(), frameMargins().top());
-
-	setPosition(x, y);
+	const QRect available_geometry = screen()->availableGeometry();
+	QPoint pos = m_initial_geometry.topLeft();
+	pos.setX(std::clamp(pos.x(), available_geometry.left(), available_geometry.width() - frameGeometry().width()));
+	pos.setY(std::clamp(pos.y(), available_geometry.top(), available_geometry.height() - frameGeometry().height()));
+	setFramePosition(pos);
 
 	QWindow::showEvent(event);
 }
