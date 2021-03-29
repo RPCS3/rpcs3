@@ -2,9 +2,11 @@
 
 #include <QLayout>
 #include <QTextDocument>
+#include <QIcon>
 
 fatal_error_dialog::fatal_error_dialog(std::string_view text) : QMessageBox()
 {
+	setWindowIcon(QIcon(":/rpcs3.ico"));
 	setWindowTitle(tr("RPCS3: Fatal Error"));
 	setIcon(QMessageBox::Icon::Critical);
 	setTextFormat(Qt::TextFormat::RichText);
