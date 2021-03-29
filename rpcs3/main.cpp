@@ -14,6 +14,7 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QMessageBox>
+#include <QMetaEnum>
 
 #include "rpcs3qt/gui_application.h"
 #include "rpcs3qt/fatal_error_dialog.h"
@@ -257,48 +258,60 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 
 	if (use_high_dpi)
 	{
-		// Set QT_SCALE_FACTOR_ROUNDING_POLICY from environment. Defaults to cli argument, which defaults to RoundPreferFloor.
-		auto rounding_val = Qt::HighDpiScaleFactorRoundingPolicy::PassThrough;
-		auto rounding_str = std::to_string(static_cast<int>(rounding_val));
-		const int i_rounding = find_arg(arg_rounding, argc, argv);
+		// Set QT_SCALE_FACTOR_ROUNDING_POLICY from environment. Defaults to cli argument, which defaults to PassThrough.
+		Qt::HighDpiScaleFactorRoundingPolicy rounding_val = Qt::HighDpiScaleFactorRoundingPolicy::PassThrough;
+		const QMetaEnum meta_enum = QMetaEnum::fromType<Qt::HighDpiScaleFactorRoundingPolicy>();
+		QString rounding_str_cli = meta_enum.valueToKey(static_cast<int>(rounding_val));
 
-		if (i_rounding != -1)
+		const auto check_dpi_rounding_arg = [&rounding_str_cli, &rounding_val, &meta_enum](const char* val) -> bool
 		{
-			const int i_rounding_2 = (argc > (i_rounding + 1)) ? (i_rounding + 1) : 0;
+			bool ok{false};
 
-			if (i_rounding_2)
+			// Try to find out if the argument is a valid string representation of Qt::HighDpiScaleFactorRoundingPolicy
+			if (const int enum_index = meta_enum.keyToValue(val, &ok); ok)
 			{
-				const auto arg_val = argv[i_rounding_2];
-				//const auto arg_len = std::strlen(arg_val);
-				s64 rounding_val_cli = 0;
-
-				if (!cfg::try_to_int64(&rounding_val_cli, arg_val, static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::Unset), static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough)))
+				rounding_str_cli = meta_enum.valueToKey(enum_index);
+				rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(enum_index);
+			}
+			// Try to find out if the argument is a valid integer representation of Qt::HighDpiScaleFactorRoundingPolicy
+			else if (const int enum_index = QString(val).toInt(&ok); ok)
+			{
+				if (const char* key = meta_enum.valueToKey(enum_index))
 				{
-					std::cout << "The value " << arg_val << " for " << arg_rounding << " is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.\n";
+					rounding_str_cli = key;
+					rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(enum_index);
 				}
 				else
 				{
-					rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(static_cast<int>(rounding_val_cli));
-					rounding_str = std::to_string(static_cast<int>(rounding_val));
+					return false;
+				}
+			}
+			return ok;
+		};
+
+		if (const int i_rounding = find_arg(arg_rounding, argc, argv); i_rounding != -1)
+		{
+			if (const int i_rounding_2 = (argc > (i_rounding + 1)) ? (i_rounding + 1) : 0; i_rounding_2)
+			{
+				if (const auto arg_val = argv[i_rounding_2]; !check_dpi_rounding_arg(arg_val))
+				{
+					const std::string msg = fmt::format("The command line value %s for %s is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.", arg_val, arg_rounding);
+					sys_log.error("%s", msg); // Don't exit with fatal error. The resulting dialog might be unreadable with dpi problems.
+					std::cerr << msg << std::endl;
 				}
 			}
 		}
 
+		// Get the environment variable. Fallback to cli argument.
+		rounding_str_cli = qEnvironmentVariable("QT_SCALE_FACTOR_ROUNDING_POLICY", rounding_str_cli);
+
+		if (!check_dpi_rounding_arg(rounding_str_cli.toStdString().c_str()))
 		{
-			rounding_str = qEnvironmentVariable("QT_SCALE_FACTOR_ROUNDING_POLICY", rounding_str.c_str()).toStdString();
-
-			s64 rounding_val_final = 0;
-
-			if (cfg::try_to_int64(&rounding_val_final, rounding_str, static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::Unset), static_cast<int>(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough)))
-			{
-				rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(static_cast<int>(rounding_val_final));
-				rounding_str = std::to_string(static_cast<int>(rounding_val));
-			}
-			else
-			{
-				std::cout << "The value " << rounding_str << " for " << arg_rounding << " is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.\n";
-			}
+			const std::string msg = fmt::format("The value %s for the environment variable QT_SCALE_FACTOR_ROUNDING_POLICY is not allowed. Please use a valid value for Qt::HighDpiScaleFactorRoundingPolicy.", rounding_str_cli.toStdString());
+			sys_log.error("%s", msg); // Don't exit with fatal error. The resulting dialog might be unreadable with dpi problems.
+			std::cerr << msg << std::endl;
 		}
+
 		QApplication::setHighDpiScaleFactorRoundingPolicy(rounding_val);
 	}
 
