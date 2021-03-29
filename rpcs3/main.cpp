@@ -265,26 +265,12 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 
 		const auto check_dpi_rounding_arg = [&rounding_str_cli, &rounding_val, &meta_enum](const char* val) -> bool
 		{
-			bool ok{false};
-
 			// Try to find out if the argument is a valid string representation of Qt::HighDpiScaleFactorRoundingPolicy
+			bool ok{false};
 			if (const int enum_index = meta_enum.keyToValue(val, &ok); ok)
 			{
 				rounding_str_cli = meta_enum.valueToKey(enum_index);
 				rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(enum_index);
-			}
-			// Try to find out if the argument is a valid integer representation of Qt::HighDpiScaleFactorRoundingPolicy
-			else if (const int enum_index = QString(val).toInt(&ok); ok)
-			{
-				if (const char* key = meta_enum.valueToKey(enum_index))
-				{
-					rounding_str_cli = key;
-					rounding_val = static_cast<Qt::HighDpiScaleFactorRoundingPolicy>(enum_index);
-				}
-				else
-				{
-					return false;
-				}
 			}
 			return ok;
 		};
