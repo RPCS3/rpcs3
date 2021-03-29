@@ -108,7 +108,7 @@ git submodule update --init
 
 #### Building the projects
 
-Open `rpcs3.sln`. The recommended build configuration is `Release` for all purposes. (On older revisions: `Release - LLVM`)
+Open `rpcs3.sln`. The recommended build configuration is `Release`. (On older revisions: `Release - LLVM`)
 
 You may want to download the precompiled [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z) and extract them to the root rpcs3 folder (which contains `rpcs3.sln`), as well as download and extract the [additional libs](https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z) to `lib\%CONFIGURATION%-x64\` to speed up compilation time (unoptimised/debug libs are currently not available precompiled).
 
