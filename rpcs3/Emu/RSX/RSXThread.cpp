@@ -390,11 +390,11 @@ namespace rsx
 
 	void thread::capture_frame(const std::string &name)
 	{
-		frame_trace_data::draw_state draw_state = {};
+		frame_trace_data::draw_state draw_state{};
 
 		draw_state.programs = get_programs();
 		draw_state.name = name;
-		frame_debug.draw_calls.push_back(draw_state);
+		frame_debug.draw_calls.emplace_back(std::move(draw_state));
 	}
 
 	void thread::begin()

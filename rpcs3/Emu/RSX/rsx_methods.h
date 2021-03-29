@@ -475,12 +475,21 @@ namespace rsx
 			return decoded_type<opcode>(register_value);
 		}
 
-		rsx_state &operator=(const rsx_state& in)
+		rsx_state& operator=(const rsx_state& in)
 		{
 			registers = in.registers;
 			transform_program = in.transform_program;
 			transform_constants = in.transform_constants;
 			register_vertex_info = in.register_vertex_info;
+			return *this;
+		}
+
+		rsx_state& operator=(rsx_state&& in)
+		{
+			registers = std::move(in.registers);
+			transform_program = std::move(in.transform_program);
+			transform_constants = std::move(in.transform_constants);
+			register_vertex_info = std::move(in.register_vertex_info);
 			return *this;
 		}
 
@@ -521,11 +530,23 @@ namespace rsx
 		}
 
 	public:
-		rsx_state() :
-			fragment_textures(fill_array<fragment_texture>(registers, std::make_index_sequence<16>())),
-			vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
-			vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
+		rsx_state()
+			: fragment_textures(fill_array<fragment_texture>(registers, std::make_index_sequence<16>()))
+			, vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>()))
+			, vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
 		{
+		}
+
+		rsx_state(const rsx_state& other)
+			: rsx_state()
+		{
+			this->operator=(other);
+		}
+
+		rsx_state(rsx_state&& other)
+			: rsx_state()
+		{
+			this->operator=(std::move(other));
 		}
 
 		~rsx_state() = default;
