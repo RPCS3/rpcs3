@@ -256,8 +256,9 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		h = m_gui_settings->GetValue(gui::gs_height).toInt();
 	}
 
-	const auto screen_geometry = m_main_window ? m_main_window->geometry() : primaryScreen()->geometry();
-	const auto frame_geometry  = gui::utils::create_centered_window_geometry(screen_geometry, w, h);
+	const auto screen = m_main_window ? m_main_window->screen() : primaryScreen();
+	const auto source_geometry = m_main_window ? m_main_window->geometry() : primaryScreen()->geometry();
+	const auto frame_geometry  = gui::utils::create_centered_window_geometry(screen, source_geometry, w, h);
 	const auto app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
 	gs_frame* frame;
@@ -266,13 +267,13 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	{
 	case video_renderer::opengl:
 	{
-		frame = new gl_gs_frame(frame_geometry, app_icon, m_gui_settings);
+		frame = new gl_gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
 	case video_renderer::null:
 	case video_renderer::vulkan:
 	{
-		frame = new gs_frame(frame_geometry, app_icon, m_gui_settings);
+		frame = new gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
 	default: fmt::throw_exception("Invalid video renderer: %s", type);

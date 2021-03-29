@@ -33,6 +33,8 @@ private:
 	void UpdateProgress(int progress, bool disable = false);
 #endif
 
+	QRect m_initial_geometry;
+
 	std::shared_ptr<gui_settings> m_gui_settings;
 	QTimer m_mousehide_timer;
 
@@ -48,7 +50,7 @@ private:
 	bool m_flip_showed_frame = false;
 
 public:
-	gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
+	explicit gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
 	~gs_frame();
 
 	draw_context_t make_context() override;

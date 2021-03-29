@@ -20,7 +20,7 @@ private:
 	GLContext *m_primary_context = nullptr;
 
 public:
-	gl_gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
+	explicit gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
 
 	draw_context_t make_context() override;
 	void set_current(draw_context_t context) override;
