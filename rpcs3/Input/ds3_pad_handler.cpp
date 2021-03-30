@@ -41,11 +41,10 @@ struct ds3_output_report
 
 constexpr u8 battery_capacity[] = {0, 1, 25, 50, 75, 100};
 
-constexpr u16 DS3_VID = 0x054C;
-constexpr u16 DS3_PID = 0x0268;
+constexpr id_pair SONY_DS3_ID_0 = {0x054C, 0x0268};
 
 ds3_pad_handler::ds3_pad_handler()
-    : hid_pad_handler(pad_handler::ds3, DS3_VID, {DS3_PID})
+    : hid_pad_handler(pad_handler::ds3, {SONY_DS3_ID_0})
 {
 	button_list =
 	{

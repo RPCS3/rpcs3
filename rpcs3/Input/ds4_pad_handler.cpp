@@ -4,10 +4,11 @@
 
 LOG_CHANNEL(ds4_log, "DS4");
 
-constexpr u16 DS4_VID = 0x054C;
-constexpr u16 DS4_PID_0 = 0xBA0;
-constexpr u16 DS4_PID_1 = 0x5C4;
-constexpr u16 DS4_PID_2 = 0x09CC;
+constexpr id_pair SONY_DS4_ID_0 = {0x054C, 0xBA0};
+constexpr id_pair SONY_DS4_ID_1 = {0x054C, 0x5C4};
+constexpr id_pair SONY_DS4_ID_2 = {0x054C, 0x09CC};
+
+constexpr id_pair ZEROPLUS_ID_0 = {0x0C12, 0x0E20};
 
 namespace
 {
@@ -71,7 +72,7 @@ namespace
 }
 
 ds4_pad_handler::ds4_pad_handler()
-    : hid_pad_handler<DS4Device>(pad_handler::ds4, DS4_VID, {DS4_PID_0, DS4_PID_1, DS4_PID_2})
+    : hid_pad_handler<DS4Device>(pad_handler::ds4, {SONY_DS4_ID_0, SONY_DS4_ID_1, SONY_DS4_ID_2, ZEROPLUS_ID_0})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =
