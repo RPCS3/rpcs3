@@ -943,7 +943,15 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::initialize:
 		{
-			cmd_pop(), ppu_initialize(), spu_cache::initialize();
+			cmd_pop();
+
+			while (!g_fxo->get<rsx::thread>().is_inited && !is_stopped())
+			{
+				// Wait for RSX to be initialized
+				thread_ctrl::wait_on(g_fxo->get<rsx::thread>().is_inited, false);
+			}
+
+			ppu_initialize(), spu_cache::initialize();
 			break;
 		}
 		case ppu_cmd::sleep:

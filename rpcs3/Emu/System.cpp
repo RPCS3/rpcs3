@@ -1188,6 +1188,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				// Exit "process"
 				Emu.CallAfter([]
 				{
+					Emu.SetForceBoot(true);
 					Emu.Stop();
 				});
 			});
@@ -1651,7 +1652,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			return game_boot_result::invalid_file_or_folder;
 		}
 
-		if ((m_force_boot || g_cfg.misc.autostart) && IsReady())
+		ensure(IsReady());
+
+		if (m_force_boot || g_cfg.misc.autostart)
 		{
 			if (ppu_exec == elf_error::ok)
 			{
@@ -1684,38 +1687,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			m_force_boot = false;
 		}
-		else if (IsPaused())
-		{
-			m_state = system_state::ready;
-			GetCallbacks().on_ready();
-		}
+
 		return game_boot_result::no_errors;
 	}
 }
 
 void Emulator::Run(bool start_playtime)
 {
-	if (!IsReady())
-	{
-		// Reload with prior configuration.
-		Load(m_title_id, false, m_force_global_config);
-
-		if (!IsReady())
-		{
-			return;
-		}
-	}
-
-	if (IsRunning())
-	{
-		Stop();
-	}
-
-	if (IsPaused())
-	{
-		Resume();
-		return;
-	}
+	ensure(IsReady());
 
 	GetCallbacks().on_run(start_playtime);
 

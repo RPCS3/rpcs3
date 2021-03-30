@@ -10,6 +10,7 @@
 #include "Utilities/JIT.h"
 #include <thread>
 #include <sstream>
+#include <cfenv>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -2081,6 +2082,8 @@ thread_base::native_entry thread_base::finalize(u64 _self) noexcept
 	thread_ctrl::set_native_priority(0);
 
 	thread_ctrl::set_thread_affinity_mask(0);
+
+	std::fesetround(FE_TONEAREST);
 
 	static constexpr u64 s_stop_bit = 0x8000'0000'0000'0000ull;
 

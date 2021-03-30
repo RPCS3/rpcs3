@@ -649,6 +649,7 @@ namespace rsx
 		u32 dbg_step_pc = 0;
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
+		atomic_t<bool> is_inited{ false };
 		bool is_fifo_idle() const;
 		void flush_fifo();
 		void recover_fifo();
