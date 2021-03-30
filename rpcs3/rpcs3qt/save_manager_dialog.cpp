@@ -55,11 +55,11 @@ namespace
 			}
 
 			// PSF parameters
-			const auto& psf = psf::load_object(fs::file(base_dir + entry.name + "/PARAM.SFO"));
+			const auto [psf, errc] = psf::load(base_dir + entry.name + "/PARAM.SFO");
 
 			if (psf.empty())
 			{
-				gui_log.error("Failed to load savedata: %s", base_dir + "/" + entry.name);
+				gui_log.error("Failed to load savedata: %s (%s)", base_dir + "/" + entry.name, errc);
 				continue;
 			}
 

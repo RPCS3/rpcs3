@@ -19,6 +19,14 @@ namespace psf
 		integer = 0x0404,
 	};
 
+	enum class error
+	{
+		ok,
+		stream,
+		not_psf,
+		corrupt,
+	};
+
 	class entry final
 	{
 		format m_type{};
@@ -49,8 +57,21 @@ namespace psf
 	// Define PSF registry as a sorted map of entries:
 	using registry = std::map<std::string, entry>;
 
+	struct load_result_t
+	{
+		registry sfo;
+		error errc;
+
+		explicit operator bool() const
+		{
+			return !sfo.empty();
+		}
+	};
+
 	// Load PSF registry from SFO binary format
-	registry load_object(const fs::file&);
+	load_result_t load(const fs::file&);
+	load_result_t load(const std::string& filename);
+	inline registry load_object(const fs::file& f) { return load(f).sfo; }
 
 	// Convert PSF registry to SFO binary format
 	std::vector<u8> save_object(const registry&, std::vector<u8>&& init = std::vector<u8>{});

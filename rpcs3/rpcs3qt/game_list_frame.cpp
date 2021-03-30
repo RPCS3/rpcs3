@@ -550,17 +550,20 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 			{
 				const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(dir, Emu.GetUsr());
-				const fs::file sfo_file(sfo_dir + "/PARAM.SFO");
-				if (!sfo_file)
+
+				const psf::registry psf = psf::load_object(fs::file(sfo_dir + "/PARAM.SFO"));
+
+				const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
+
+				if (title_id.empty())
 				{
+					// Do not care about invalid entries
 					return;
 				}
 
-				const auto psf = psf::load_object(sfo_file);
-
 				GameInfo game;
 				game.path         = dir;
-				game.serial       = std::string(psf::get_string(psf, "TITLE_ID", ""));
+				game.serial       = std::string(title_id);
 				game.name         = std::string(psf::get_string(psf, "TITLE", cat_unknown_localized));
 				game.app_ver      = std::string(psf::get_string(psf, "APP_VER", cat_unknown_localized));
 				game.version      = std::string(psf::get_string(psf, "VERSION", cat_unknown_localized));
