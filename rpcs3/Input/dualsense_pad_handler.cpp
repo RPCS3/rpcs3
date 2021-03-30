@@ -29,8 +29,7 @@ namespace
 	constexpr u32 DUALSENSE_COMMON_REPORT_SIZE = 47;
 	constexpr u32 DUALSENSE_INPUT_REPORT_GYRO_X_OFFSET = 15;
 
-	constexpr u16 DUALSENSE_VID = 0x054C;
-	constexpr u16 DUALSENSE_PID = 0x0CE6;
+	constexpr id_pair SONY_DUALSENSE_ID_0 = {0x054C, 0x0CE6};
 
 	enum
 	{
@@ -90,7 +89,7 @@ namespace
 }
 
 dualsense_pad_handler::dualsense_pad_handler()
-    : hid_pad_handler<DualSenseDevice>(pad_handler::dualsense, DUALSENSE_VID, {DUALSENSE_PID})
+    : hid_pad_handler<DualSenseDevice>(pad_handler::dualsense, {SONY_DUALSENSE_ID_0})
 {
 	// Unique names for the config files and our pad settings dialog
 	button_list =
