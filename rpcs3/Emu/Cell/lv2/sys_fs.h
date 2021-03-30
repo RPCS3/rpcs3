@@ -172,6 +172,8 @@ struct lv2_fs_object
 	{
 	}
 
+	virtual ~lv2_fs_object() = default;
+
 	static lv2_fs_mount_point* get_mp(std::string_view filename);
 
 	static std::array<char, 0x420> get_name(std::string_view filename)

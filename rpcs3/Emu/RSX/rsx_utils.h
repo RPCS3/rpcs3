@@ -893,11 +893,10 @@ namespace rsx
 	class atomic_bitmask_t
 	{
 	private:
-		atomic_t<bitmask_type> m_data;
+		atomic_t<bitmask_type> m_data{0};
 
 	public:
-		atomic_bitmask_t() { m_data.store(0); }
-		~atomic_bitmask_t() = default;
+		atomic_bitmask_t() = default;
 
 		T load() const
 		{
@@ -988,7 +987,7 @@ namespace rsx
 			}
 		}
 
-		simple_array(const simple_array<Ty>& other)
+		simple_array(const simple_array& other)
 		{
 			_capacity = other._capacity;
 			_size = other._size;
@@ -998,9 +997,25 @@ namespace rsx
 			std::memcpy(_data, other._data, size_bytes);
 		}
 
-		simple_array(simple_array<Ty>&& other) noexcept
+		simple_array(simple_array&& other) noexcept
 		{
 			swap(other);
+		}
+
+		simple_array& operator=(const simple_array& other)
+		{
+			if (&other != this)
+			{
+				simple_array{other}.swap(*this);
+			}
+
+			return *this;
+		}
+
+		simple_array& operator=(simple_array&& other) noexcept
+		{
+			swap(other);
+			return *this;
 		}
 
 		~simple_array()

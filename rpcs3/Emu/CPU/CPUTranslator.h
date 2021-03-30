@@ -11,6 +11,7 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Weffc++"
 #endif
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"

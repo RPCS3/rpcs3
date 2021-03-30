@@ -315,10 +315,6 @@ public:
 	auto fetch_or(const bs_t&) = delete;
 	auto or_fetch(const bs_t&) = delete;
 	auto operator |=(const bs_t&) = delete;
-	auto operator ++() = delete;
-	auto operator --() = delete;
-	auto operator ++(int) = delete;
-	auto operator --(int) = delete;
 
 	bs_t operator +(bs_t rhs) const
 	{

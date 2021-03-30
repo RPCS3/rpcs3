@@ -48,11 +48,11 @@ namespace cfg
 	// Config tree entry abstract base class
 	class _base
 	{
-		const type m_type;
+		const type m_type{};
 
 	protected:
 		bool m_dynamic = true;
-		const std::string m_name;
+		const std::string m_name{};
 
 		// Ownerless entry constructor
 		_base(type _type);
@@ -64,6 +64,8 @@ namespace cfg
 		_base(const _base&) = delete;
 
 		_base& operator=(const _base&) = delete;
+
+		virtual ~_base() = default;
 
 		// Get type
 		type get_type() const { return m_type; }
@@ -98,7 +100,7 @@ namespace cfg
 	// Config tree node which contains another nodes
 	class node : public _base
 	{
-		std::vector<_base*> m_nodes;
+		std::vector<_base*> m_nodes{};
 
 		friend class _base;
 
@@ -443,7 +445,7 @@ namespace cfg
 	// Simple set entry (TODO: template for various types)
 	class set_entry final : public _base
 	{
-		std::set<std::string> m_set;
+		std::set<std::string> m_set{};
 
 	public:
 		// Default value is empty list in current implementation
@@ -479,7 +481,7 @@ namespace cfg
 
 	class log_entry final : public _base
 	{
-		std::map<std::string, logs::level> m_map;
+		std::map<std::string, logs::level> m_map{};
 
 	public:
 		log_entry(node* owner, const std::string& name)

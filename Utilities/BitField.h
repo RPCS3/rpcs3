@@ -3,6 +3,11 @@
 #include "util/types.hpp"
 #include "Utilities/StrFmt.h"
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+#endif
+
 template<typename T, uint N>
 struct bf_base
 {
@@ -249,6 +254,10 @@ struct ff_t : bf_base<T, N>
 		return V;
 	}
 };
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 
 template<typename T, uint I, uint N>
 struct fmt_unveil<bf_t<T, I, N>, void>

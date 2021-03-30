@@ -49,12 +49,12 @@ public:
 	{
 		patch_type type = patch_type::load;
 		u32 offset = 0;
-		std::string original_value; // Used for import consistency (avoid rounding etc.)
+		std::string original_value{}; // Used for import consistency (avoid rounding etc.)
 		union
 		{
 			u64 long_value;
 			f64 double_value;
-		} value { 0 };
+		} value{0};
 	};
 
 	using patch_app_versions = std::unordered_map<std::string /*app_version*/, bool /*enabled*/>;
@@ -64,25 +64,25 @@ public:
 	struct patch_info
 	{
 		// Patch information
-		std::vector<patch_data> data_list;
-		patch_titles titles;
-		std::string description;
-		std::string patch_version;
-		std::string patch_group;
-		std::string author;
-		std::string notes;
-		std::string source_path;
+		std::vector<patch_data> data_list{};
+		patch_titles titles{};
+		std::string description{};
+		std::string patch_version{};
+		std::string patch_group{};
+		std::string author{};
+		std::string notes{};
+		std::string source_path{};
 
 		// Redundant information for accessibility (see patch_container)
-		std::string hash;
-		std::string version;
+		std::string hash{};
+		std::string version{};
 	};
 
 	struct patch_container
 	{
-		std::unordered_map<std::string /*description*/, patch_info> patch_info_map;
-		std::string hash;
-		std::string version;
+		std::unordered_map<std::string /*description*/, patch_info> patch_info_map{};
+		std::string hash{};
+		std::string version{};
 	};
 
 	using patch_map = std::unordered_map<std::string /*hash*/, patch_container>;
@@ -140,8 +140,8 @@ public:
 
 private:
 	// Database
-	patch_map m_map;
+	patch_map m_map{};
 
 	// Only one patch per patch group can be applied
-	std::set<std::string> m_applied_groups;
+	std::set<std::string> m_applied_groups{};
 };

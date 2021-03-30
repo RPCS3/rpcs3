@@ -4,6 +4,10 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Capture/rsx_capture.h"
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Weffc++"
+#endif
+
 #include "cereal/archives/binary.hpp"
 #include <cereal/types/vector.hpp>
 #include <cereal/types/array.hpp>

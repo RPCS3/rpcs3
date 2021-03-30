@@ -46,6 +46,9 @@ protected:
 	cpu_thread(u32 id);
 
 public:
+	cpu_thread(const cpu_thread&) = delete;
+	cpu_thread& operator=(const cpu_thread&) = delete;
+
 	virtual ~cpu_thread();
 	void operator()();
 

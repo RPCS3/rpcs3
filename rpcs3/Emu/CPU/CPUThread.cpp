@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CPUThread.h"
+#include "CPUDisAsm.h"
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -1184,4 +1185,10 @@ void cpu_thread::flush_profilers() noexcept
 	{
 		g_fxo->get<cpu_profiler>().registered.push(0);
 	}
+}
+
+u32 CPUDisAsm::DisAsmBranchTarget(s32 /*imm*/)
+{
+	// Unused
+	return 0;
 }

@@ -2,6 +2,11 @@
 
 #include "util/types.hpp"
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+#endif
+
 namespace stx
 {
 	template <typename T, usz Align = alignof(T), usz Size = sizeof(T)>
@@ -467,3 +472,7 @@ public:
 		}
 	};
 }
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif

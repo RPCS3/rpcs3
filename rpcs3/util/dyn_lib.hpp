@@ -12,6 +12,22 @@ namespace utils
 		dynamic_library() = default;
 		dynamic_library(const std::string& path);
 
+		dynamic_library(const dynamic_library&) = delete;
+
+		dynamic_library(dynamic_library&& other)
+			: m_handle(other.m_handle)
+		{
+			other.m_handle = nullptr;
+		}
+
+		dynamic_library& operator=(const dynamic_library&) = delete;
+
+		dynamic_library& operator=(dynamic_library&& other)
+		{
+			std::swap(m_handle, other.m_handle);
+			return *this;
+		}
+
 		~dynamic_library();
 
 		bool load(const std::string& path);

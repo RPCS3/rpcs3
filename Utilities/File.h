@@ -95,7 +95,7 @@ namespace fs
 	// Directory entry (TODO)
 	struct dir_entry : stat_t
 	{
-		std::string name;
+		std::string name{};
 
 		dir_entry()
 			: stat_t{}
@@ -198,7 +198,7 @@ namespace fs
 
 	class file final
 	{
-		std::unique_ptr<file_base> m_file;
+		std::unique_ptr<file_base> m_file{};
 
 		bool strict_read_check(u64 size, u64 type_size) const;
 
@@ -501,7 +501,7 @@ namespace fs
 
 	class dir final
 	{
-		std::unique_ptr<dir_base> m_dir;
+		std::unique_ptr<dir_base> m_dir{};
 
 	public:
 		dir() = default;
@@ -562,7 +562,7 @@ namespace fs
 		class iterator
 		{
 			const dir* m_parent;
-			dir_entry m_entry;
+			dir_entry m_entry{};
 
 		public:
 			enum class mode
@@ -589,6 +589,14 @@ namespace fs
 					m_parent = nullptr;
 				}
 			}
+
+			iterator(const iterator&) = default;
+
+			iterator(iterator&&) = default;
+
+			iterator& operator=(const iterator&) = default;
+
+			iterator& operator=(iterator&&) = default;
 
 			dir_entry& operator *()
 			{
@@ -627,7 +635,7 @@ namespace fs
 	// Unique pending file creation destined to be renamed to the destination file
 	struct pending_file
 	{
-		fs::file file;
+		fs::file file{};
 
 		// This is meant to modify files atomically, overwriting is likely
 		bool commit(bool overwrite = true);
@@ -636,8 +644,8 @@ namespace fs
 		~pending_file();
 
 	private:
-		std::string m_path; // Pending file path
-		std::string m_dest; // Destination file path
+		std::string m_path{}; // Pending file path
+		std::string m_dest{}; // Destination file path
 	};
 
 	// Get real path for comparisons (TODO: investigate std::filesystem::path::compare implementation)

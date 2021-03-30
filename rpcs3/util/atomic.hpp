@@ -1083,6 +1083,11 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	// TODO
 };
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+#endif
+
 // Atomic type with lock-free and standard layout guarantees (and appropriate limitations)
 template <typename T, usz Align = sizeof(T)>
 class atomic_t
@@ -1710,3 +1715,7 @@ namespace atomic_wait
 	template <usz Align>
 	constexpr u128 default_mask<atomic_t<bool, Align>> = 1;
 }
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif

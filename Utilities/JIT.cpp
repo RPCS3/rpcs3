@@ -284,6 +284,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Weffc++"
 #endif
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/FormattedStream.h"

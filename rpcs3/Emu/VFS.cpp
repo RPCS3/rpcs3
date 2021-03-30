@@ -17,18 +17,18 @@
 struct vfs_directory
 {
 	// Real path (empty if root or not exists)
-	std::string path;
+	std::string path{};
 
 	// Virtual subdirectories (vector because only vector allows incomplete types)
-	std::vector<std::pair<std::string, vfs_directory>> dirs;
+	std::vector<std::pair<std::string, vfs_directory>> dirs{};
 };
 
 struct vfs_manager
 {
-	shared_mutex mutex;
+	shared_mutex mutex{};
 
 	// VFS root
-	vfs_directory root;
+	vfs_directory root{};
 };
 
 bool vfs::mount(std::string_view vpath, std::string_view path)

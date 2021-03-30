@@ -210,9 +210,9 @@ namespace fs
 
 	class device_manager final
 	{
-		mutable shared_mutex m_mutex;
+		mutable shared_mutex m_mutex{};
 
-		std::unordered_map<std::string, std::shared_ptr<device_base>> m_map;
+		std::unordered_map<std::string, std::shared_ptr<device_base>> m_map{};
 
 	public:
 		std::shared_ptr<device_base> get_device(const std::string& path);
@@ -1339,6 +1339,10 @@ fs::file::file(const void* ptr, usz size)
 		{
 		}
 
+		memory_stream(const memory_stream&) = delete;
+
+		memory_stream& operator=(const memory_stream&) = delete;
+
 		bool trunc(u64) override
 		{
 			return false;
@@ -1508,6 +1512,10 @@ bool fs::dir::open(const std::string& path)
 			: m_dd(dd)
 		{
 		}
+
+		unix_dir(const unix_dir&) = delete;
+
+		unix_dir& operator=(const unix_dir&) = delete;
 
 		~unix_dir() override
 		{
@@ -1843,8 +1851,8 @@ fs::file fs::make_gather(std::vector<fs::file> files)
 	{
 		u64 pos = 0;
 		u64 end = 0;
-		std::vector<file> files;
-		std::map<u64, u64> ends; // Fragment End Offset -> Index
+		std::vector<file> files{};
+		std::map<u64, u64> ends{}; // Fragment End Offset -> Index
 
 		gather_stream(std::vector<fs::file> arg)
 			: files(std::move(arg))

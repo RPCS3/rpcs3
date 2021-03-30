@@ -16,6 +16,7 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Weffc++"
 #ifndef __clang__
 #pragma GCC diagnostic ignored "-Wduplicated-branches"
 #endif
@@ -186,6 +187,7 @@ inline FT build_function_asm(F&& builder)
 #pragma GCC diagnostic ignored "-Wsuggest-override"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Weffc++"
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Winconsistent-missing-override"
 #endif
