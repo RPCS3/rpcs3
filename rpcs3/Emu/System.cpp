@@ -138,7 +138,6 @@ void Emulator::Init(bool add_only)
 		}
 	}
 
-	idm::init();
 	g_fxo->reset();
 	g_fxo->need<named_thread<progress_dialog_server>>();
 
@@ -1620,6 +1619,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			return game_boot_result::decryption_error;
 		}
 
+		m_state = system_state::ready;
+		vm::init();
+
 		ppu_exec_object ppu_exec;
 		ppu_prx_object ppu_prx;
 		spu_exec_object spu_exec;
@@ -1627,10 +1629,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		if (ppu_exec.open(elf_file) == elf_error::ok)
 		{
 			// PS3 executable
-			m_state = system_state::ready;
 			GetCallbacks().on_ready();
-
-			vm::init();
 
 			if (argv.empty())
 			{
@@ -1669,6 +1668,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 
 			g_fxo->init<ppu_module>();
+			g_fxo->init<id_manager::id_map<lv2_obj>>();
+			g_fxo->init<id_manager::id_map<named_thread<ppu_thread>>>();
 
 			if (ppu_load_exec(ppu_exec))
 			{
@@ -1688,6 +1689,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			if (ppu_exec != elf_error::ok)
 			{
+				SetForceBoot(true);
 				Stop();
 
 				sys_log.error("Invalid or unsupported PPU executable format: %s", elf_path);
@@ -1698,18 +1700,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		else if (ppu_prx.open(elf_file) == elf_error::ok)
 		{
 			// PPU PRX (experimental)
-			m_state = system_state::ready;
 			GetCallbacks().on_ready();
-			vm::init();
 			g_fxo->init(false);
 			ppu_load_prx(ppu_prx, m_path);
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{
 			// SPU executable (experimental)
-			m_state = system_state::ready;
 			GetCallbacks().on_ready();
-			vm::init();
 			g_fxo->init(false);
 			spu_load_exec(spu_exec);
 		}
@@ -1720,6 +1718,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			sys_log.warning("** ppu_exec -> %s", ppu_exec.get_error());
 			sys_log.warning("** ppu_prx  -> %s", ppu_prx.get_error());
 			sys_log.warning("** spu_exec -> %s", spu_exec.get_error());
+
+			SetForceBoot(true);
+			Stop();
 			return game_boot_result::invalid_file_or_folder;
 		}
 
@@ -1973,7 +1974,6 @@ void Emulator::Stop(bool restart)
 	sys_log.notice("All threads have been stopped.");
 
 	lv2_obj::cleanup();
-	idm::clear();
 
 	sys_log.notice("Objects cleared...");
 
