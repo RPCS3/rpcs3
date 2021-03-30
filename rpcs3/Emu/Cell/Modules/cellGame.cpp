@@ -182,9 +182,9 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 	const std::string dir = "/dev_hdd0/game/" + game_dir;
 
-	psf::registry sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+	auto [sfo, psf_error] = psf::load(vfs::get(dir + "/PARAM.SFO"));
 
-	const u32 new_data = sfo.empty() && !fs::is_file(vfs::get(dir + "/PARAM.SFO")) ? CELL_GAMEDATA_ISNEWDATA_YES : CELL_GAMEDATA_ISNEWDATA_NO;
+	const u32 new_data = psf_error == psf::error::stream ? CELL_GAMEDATA_ISNEWDATA_YES : CELL_GAMEDATA_ISNEWDATA_NO;
 
 	if (!new_data)
 	{
@@ -586,7 +586,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		return CELL_GAME_ERROR_BUSY;
 	}
 
-	auto sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+	auto [sfo, psf_error] = psf::load(vfs::get(dir + "/PARAM.SFO"));
 
 	if (psf::get_string(sfo, "CATEGORY") != [&]()
 	{
@@ -599,7 +599,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		}
 	}())
 	{
-		if (fs::is_file(vfs::get(dir + "/PARAM.SFO")))
+		if (psf_error != psf::error::stream)
 		{
 			init.cancel();
 			return CELL_GAME_ERROR_BROKEN;
@@ -714,9 +714,9 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	const std::string game_dir = dirName.get_ptr();
 	const std::string dir = "/dev_hdd0/game/"s + game_dir;
 
-	psf::registry sfo = psf::load_object(fs::file(vfs::get(dir + "/PARAM.SFO")));
+	auto [sfo, psf_error] = psf::load(vfs::get(dir + "/PARAM.SFO"));
 
-	const u32 new_data = sfo.empty() && !fs::is_file(vfs::get(dir + "/PARAM.SFO")) ? CELL_GAMEDATA_ISNEWDATA_YES : CELL_GAMEDATA_ISNEWDATA_NO;
+	const u32 new_data = psf_error == psf::error::stream ? CELL_GAMEDATA_ISNEWDATA_YES : CELL_GAMEDATA_ISNEWDATA_NO;
 
 	if (!new_data)
 	{
@@ -961,9 +961,9 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 			return CELL_GAME_ERROR_NOTSUPPORTED;
 		}
 
-		psf::registry sfo = psf::load_object(fs::file(dir + "/PARAM.SFO"));
+		const auto [sfo, psf_error] = psf::load(dir + "/PARAM.SFO");
 
-		if (psf::get_string(sfo, "CATEGORY") != "GD" && fs::is_file(dir + "/PARAM.SFO"))
+		if (psf::get_string(sfo, "CATEGORY") != "GD" && psf_error != psf::error::stream)
 		{
 			return CELL_GAME_ERROR_NOTSUPPORTED;
 		}

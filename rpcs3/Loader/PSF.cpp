@@ -21,6 +21,23 @@ void fmt_class_string<psf::format>::format(std::string& out, u64 arg)
 	});
 }
 
+template<>
+void fmt_class_string<psf::error>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto fmt)
+	{
+		switch (fmt)
+		{
+		case psf::error::stream: return "File doesn't exist";
+		case psf::error::not_psf: return "File is not of PSF format";
+		case psf::error::corrupt: return "PSF is truncated or corrupted";
+		default: break;
+		}
+
+		return unknown;
+	});
+}
+
 namespace psf
 {
 	struct header_t
@@ -103,51 +120,52 @@ namespace psf
 		fmt::throw_exception("Invalid format (0x%x)", m_type);
 	}
 
-	registry load_object(const fs::file& stream)
+	load_result_t load(const fs::file& stream)
 	{
-		registry result;
+#define PSF_CHECK(cond, err) if (!static_cast<bool>(cond)) { if (error::err != error::stream) psf_log.error("Error loading PSF: %s%s", (errc = error::err), \
+			src_loc{__builtin_LINE(), __builtin_COLUMN(), __builtin_FILE(), __builtin_FUNCTION()}); \
+			return result.clear(), pair; }
 
-		// Hack for empty input (TODO)
-		if (!stream || !stream.size())
-		{
-			return result;
-		}
+		load_result_t pair{};
+		auto& [result, errc] = pair;
+
+		PSF_CHECK(stream, stream);
 
 		stream.seek(0);
 
 		// Get header
 		header_t header;
-		ensure(stream.read(header));
+		PSF_CHECK(stream.read(header), not_psf);
 
 		// Check magic and version
-		ensure(header.magic == "\0PSF"_u32);
-		ensure(header.version == 0x101u);
-		ensure(sizeof(header_t) + header.entries_num * sizeof(def_table_t) <= header.off_key_table);
-		ensure(header.off_key_table <= header.off_data_table);
-		ensure(header.off_data_table <= stream.size());
+		PSF_CHECK(header.magic == "\0PSF"_u32, not_psf);
+		PSF_CHECK(header.version == 0x101u, not_psf);
+		PSF_CHECK(header.off_key_table >= sizeof(header_t), corrupt);
+		PSF_CHECK(header.off_key_table <= header.off_data_table, corrupt);
+		PSF_CHECK(header.off_data_table <= stream.size(), corrupt);
 
 		// Get indices
 		std::vector<def_table_t> indices;
-		ensure(stream.read(indices, header.entries_num));
+		PSF_CHECK(stream.read<true>(indices, header.entries_num), corrupt);
 
 		// Get keys
 		std::string keys;
-		ensure(stream.seek(header.off_key_table) == header.off_key_table);
-		ensure(stream.read(keys, header.off_data_table - header.off_key_table));
+		PSF_CHECK(stream.seek(header.off_key_table) == header.off_key_table, corrupt);
+		PSF_CHECK(stream.read<true>(keys, header.off_data_table - header.off_key_table), corrupt);
 
 		// Load entries
 		for (u32 i = 0; i < header.entries_num; ++i)
 		{
-			ensure(indices[i].key_off < header.off_data_table - header.off_key_table);
+			PSF_CHECK(indices[i].key_off < header.off_data_table - header.off_key_table, corrupt);
 
 			// Get key name (null-terminated string)
 			std::string key(keys.data() + indices[i].key_off);
 
 			// Check entry
-			ensure(result.count(key) == 0);
-			ensure(indices[i].param_len <= indices[i].param_max);
-			ensure(indices[i].data_off < stream.size() - header.off_data_table);
-			ensure(indices[i].param_max < stream.size() - indices[i].data_off);
+			PSF_CHECK(result.count(key) == 0, corrupt);
+			PSF_CHECK(indices[i].param_len <= indices[i].param_max, corrupt);
+			PSF_CHECK(indices[i].data_off < stream.size() - header.off_data_table, corrupt);
+			PSF_CHECK(indices[i].param_max < stream.size() - indices[i].data_off, corrupt);
 
 			// Seek data pointer
 			stream.seek(header.off_data_table + indices[i].data_off);
@@ -156,7 +174,7 @@ namespace psf
 			{
 				// Integer data
 				le_t<u32> value;
-				ensure(stream.read(value));
+				PSF_CHECK(stream.read(value), corrupt);
 
 				result.emplace(std::piecewise_construct,
 					std::forward_as_tuple(std::move(key)),
@@ -166,7 +184,7 @@ namespace psf
 			{
 				// String/array data
 				std::string value;
-				ensure(stream.read(value, indices[i].param_len));
+				PSF_CHECK(stream.read<true>(value, indices[i].param_len), corrupt);
 
 				if (indices[i].param_fmt == format::string)
 				{
@@ -185,7 +203,13 @@ namespace psf
 			}
 		}
 
-		return result;
+#undef PSF_CHECK
+		return pair;
+	}
+
+	load_result_t load(const std::string& filename)
+	{
+		return load(fs::file(filename));
 	}
 
 	std::vector<u8> save_object(const psf::registry& psf, std::vector<u8>&& init)
