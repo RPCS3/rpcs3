@@ -127,7 +127,6 @@ enum class emu_settings_type
 	StartGameFullscreen,
 	PreventDisplaySleep,
 	ShowTrophyPopups,
-	UseNativeInterface,
 	ShowShaderCompilationHint,
 	WindowTitleFormat,
 
@@ -279,7 +278,6 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::StartGameFullscreen,       { "Miscellaneous", "Start games in fullscreen mode"}},
 	{ emu_settings_type::PreventDisplaySleep,       { "Miscellaneous", "Prevent display sleep while running games"}},
 	{ emu_settings_type::ShowTrophyPopups,          { "Miscellaneous", "Show trophy popups"}},
-	{ emu_settings_type::UseNativeInterface,        { "Miscellaneous", "Use native user interface"}},
 	{ emu_settings_type::ShowShaderCompilationHint, { "Miscellaneous", "Show shader compilation hint"}},
 	{ emu_settings_type::SilenceAllLogs,            { "Miscellaneous", "Silence All Logs" }},
 	{ emu_settings_type::WindowTitleFormat,         { "Miscellaneous", "Window Title Format" }},

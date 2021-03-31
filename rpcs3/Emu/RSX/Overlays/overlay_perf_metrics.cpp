@@ -797,10 +797,10 @@ namespace rsx
 
 		void reset_performance_overlay()
 		{
-			if (!g_cfg.misc.use_native_interface)
+			if (!g_fxo->is_init<rsx::overlays::display_manager>())
 				return;
 
-			if (auto& manager = g_fxo->get<rsx::overlays::display_manager>(); g_fxo->is_init<rsx::overlays::display_manager>())
+			if (auto& manager = g_fxo->get<rsx::overlays::display_manager>(); true)
 			{
 				auto& perf_settings = g_cfg.video.perf_overlay;
 				auto perf_overlay = manager.get<rsx::overlays::perf_metrics_overlay>();

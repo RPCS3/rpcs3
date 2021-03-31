@@ -2340,13 +2340,6 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="useNativeInterface">
-                <property name="text">
-                 <string>Use native user interface</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QCheckBox" name="showShaderCompilationHint">
                 <property name="text">
                  <string>Show shader compilation hint</string>
