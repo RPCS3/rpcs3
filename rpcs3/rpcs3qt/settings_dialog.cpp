@@ -1488,7 +1488,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	if (!game)
 	{
 		// Comboboxes
-		SubscribeTooltip(ui->combo_configs, tooltips.settings.configs);
 
 		SubscribeTooltip(ui->gb_stylesheets, tooltips.settings.stylesheets);
 
@@ -1612,14 +1611,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			if (reset)
 			{
 				m_current_stylesheet = gui::DefaultStylesheet;
-				ui->combo_configs->setCurrentIndex(0);
 				ui->combo_stylesheets->setCurrentIndex(0);
 			}
 			// Only attempt to load a config if changes occurred.
-			if (m_current_gui_config != ui->combo_configs->currentText())
-			{
-				OnApplyGuiConfig();
-			}
 			if (m_current_stylesheet != m_gui_settings->GetValue(gui::m_currentStylesheet).toString())
 			{
 				OnApplyStylesheet();
@@ -1631,28 +1625,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			apply_gui_options();
 		});
 
-		connect(ui->pb_reset_default, &QAbstractButton::clicked, [apply_gui_options, this]
-		{
-			if (QMessageBox::question(this, tr("Reset GUI to default?", "Reset"), tr("This will include your stylesheet as well. Do you wish to proceed?", "Reset"),
-				QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
-			{
-				apply_gui_options(true);
-				m_gui_settings->Reset(true);
-				Q_EMIT GuiSettingsSyncRequest(true);
-				AddGuiConfigs();
-				AddStylesheets();
-				apply_gui_options();
-			}
-		});
 
-		connect(ui->pb_backup_config, &QAbstractButton::clicked, this, &settings_dialog::OnBackupCurrentGuiConfig);
-		connect(ui->pb_apply_config, &QAbstractButton::clicked, this, &settings_dialog::OnApplyGuiConfig);
-		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
-
-		connect(ui->pb_open_folder, &QAbstractButton::clicked, [this]()
-		{
-			QDesktopServices::openUrl(m_gui_settings->GetSettingsDir());
-		});
 
 		connect(ui->cb_show_welcome, &QCheckBox::clicked, [this](bool val)
 		{
@@ -1860,20 +1833,6 @@ void settings_dialog::SnapSlider(QSlider *slider, int interval)
 
 void settings_dialog::AddGuiConfigs()
 {
-	ui->combo_configs->clear();
-	ui->combo_configs->addItems(m_gui_settings->GetConfigEntries());
-
-	m_current_gui_config = m_gui_settings->GetValue(gui::m_currentConfig).toString();
-
-	const int index = ui->combo_configs->findText(m_current_gui_config);
-	if (index >= 0)
-	{
-		ui->combo_configs->setCurrentIndex(index);
-	}
-	else
-	{
-		cfg_log.warning("Trying to set an invalid config index %d", index);
-	}
 }
 
 void settings_dialog::AddStylesheets()
@@ -1927,15 +1886,8 @@ void settings_dialog::OnBackupCurrentGuiConfig()
 			QMessageBox::warning(this, tr("Error", "Backup GUI config warning 2"), tr("Must choose a name with no '.'", "Backup GUI config warning 2"));
 			continue;
 		}
-		if (ui->combo_configs->findText(gui_config_name) != -1)
-		{
-			QMessageBox::warning(this, tr("Error", "Backup GUI config warning 3"), tr("Please choose a non-existing name", "Backup GUI config warning 3"));
-			continue;
-		}
 		Q_EMIT GuiSettingsSaveRequest();
 		m_gui_settings->SaveCurrentConfig(gui_config_name);
-		ui->combo_configs->addItem(gui_config_name);
-		ui->combo_configs->setCurrentText(gui_config_name);
 		m_current_gui_config = gui_config_name;
 		break;
 	}
@@ -1943,25 +1895,12 @@ void settings_dialog::OnBackupCurrentGuiConfig()
 
 void settings_dialog::OnApplyGuiConfig()
 {
-	const QString new_config = ui->combo_configs->currentText();
 
-	if (new_config == m_current_gui_config)
-	{
-		return;
-	}
 
 	// Backup current window states
 	Q_EMIT GuiSettingsSaveRequest();
 
-	if (!m_gui_settings->ChangeToConfig(new_config))
-	{
-		const int new_config_idx = ui->combo_configs->currentIndex();
-		ui->combo_configs->setCurrentText(m_current_gui_config);
-		ui->combo_configs->removeItem(new_config_idx);
-		return;
-	}
 
-	m_current_gui_config = new_config;
 	Q_EMIT GuiSettingsSyncRequest(true);
 }
 

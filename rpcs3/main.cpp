@@ -430,7 +430,7 @@ int main(int argc, char** argv)
 		ver.m.ch  = nullptr;
 		ver.m.sev = logs::level::always;
 		ver.stamp = 0;
-		ver.text  = fmt::format("RPCS3 v%s | %s%s\n%s", rpcs3::get_version().to_string(), rpcs3::get_branch(), firmware_string, utils::get_system_info());
+		ver.text  = fmt::format("RPCS3 April Fools 42069 | pepepepepepepepepepepepepepepepepepepepepepepepepepepepepepepepepe\nThe laws of physics forbid changing the look, but you may be able to do it by changing the exe...\nHappy April Fools from the team!");
 
 		// Write OS version
 		logs::stored_message os;

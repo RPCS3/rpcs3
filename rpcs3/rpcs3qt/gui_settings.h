@@ -94,7 +94,7 @@ namespace gui
 		return q_string_pair(path, title.simplified()); // simplified() forces single line text
 	}
 
-	const QString Settings = "CurrentSettings";
+	const QString Settings = "CurrentSettingsApril1";
 	const QString DefaultStylesheet = "default";
 	const QString NoStylesheet = "none";
 
@@ -188,7 +188,7 @@ namespace gui
 	const gui_save rsx_states   = gui_save(rsx, "states",   QVariantMap());
 
 	const gui_save m_currentConfig     = gui_save(meta, "currentConfig",     Settings);
-	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", DefaultStylesheet);
+	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", "Pepe_by_Jo_and_Loweys");
 	const gui_save m_saveNotes         = gui_save(meta, "saveNotes",         QVariantMap()); // Deprecated
 	const gui_save m_showDebugTab      = gui_save(meta, "showDebugTab",      false);
 	const gui_save m_enableUIColors    = gui_save(meta, "enableUIColors",    false);
