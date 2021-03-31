@@ -1690,40 +1690,46 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			return game_boot_result::invalid_file_or_folder;
 		}
 
-		ensure(IsReady());
-
-		if (m_force_boot || g_cfg.misc.autostart)
+		if (ppu_exec == elf_error::ok && !fs::is_file(g_cfg.vfs.get_dev_flash() + "sys/external/liblv2.sprx"))
 		{
-			if (ppu_exec == elf_error::ok)
+			const auto libs = g_cfg.core.libraries_control.get_set();
+
+			extern const std::map<std::string_view, int> g_prx_list;
+
+			// Check if there are any firmware SPRX which may be LLEd during emulation
+			// Don't prompt GUI confirmation if there aren't any
+			if (std::any_of(g_prx_list.begin(), g_prx_list.end(), [&libs](auto& lib)
 			{
-				if (!fs::is_file(g_cfg.vfs.get_dev_flash() + "sys/external/liblv2.sprx"))
+				return libs.count(std::string(lib.first) + ":lle") || (!lib.second && !libs.count(std::string(lib.first) + ":hle"));
+			}))
+			{
+				SetForceBoot(true);
+				Stop();
+
+				CallAfter([this]()
 				{
-					const auto libs = g_cfg.core.libraries_control.get_set();
+					GetCallbacks().on_missing_fw();
+				});
 
-					extern const std::map<std::string_view, int> g_prx_list;
+				return game_boot_result::firmware_missing;
+			}
+		}
 
-					// Check if there are any firmware SPRX which may be LLEd during emulation
-					// Don't prompt GUI confirmation if there aren't any
-					if (std::any_of(g_prx_list.begin(), g_prx_list.end(), [&libs](auto& lib)
-					{
-						return libs.count(std::string(lib.first) + ":lle") || (!lib.second && !libs.count(std::string(lib.first) + ":hle"));
-					}))
-					{
-						Stop();
+		const bool autostart = (std::exchange(m_force_boot, false) || g_cfg.misc.autostart);
 
-						CallAfter([this]()
-						{
-							GetCallbacks().on_missing_fw();
-						});
-
-						return game_boot_result::firmware_missing;
-					}
-				}
-
+		if (IsReady())
+		{
+			if (autostart)
+			{
 				Run(true);
 			}
-
-			m_force_boot = false;
+		}
+		else
+		{
+			ensure(m_state == system_state::paused);
+			Resume(); // Remove paused flag from threads
+			m_state = system_state::ready;
+			GetCallbacks().on_ready();
 		}
 
 		return game_boot_result::no_errors;
@@ -1768,7 +1774,10 @@ bool Emulator::Pause()
 	// Try to pause
 	if (!m_state.compare_and_swap_test(system_state::running, system_state::paused))
 	{
-		return m_state.compare_and_swap_test(system_state::ready, system_state::paused);
+		if (!m_state.compare_and_swap_test(system_state::ready, system_state::paused))
+		{
+			return false;
+		}
 	}
 
 	// Signal profilers to print results (if enabled)
