@@ -36,7 +36,7 @@ namespace psf
 
 	public:
 		// Construct string entry, assign the value
-		entry(format type, u32 max_size, const std::string& value = {});
+		entry(format type, u32 max_size, std::string_view value);
 
 		// Construct integer entry, assign the value
 		entry(u32 value);
@@ -46,7 +46,7 @@ namespace psf
 		const std::string& as_string() const;
 		u32 as_integer() const;
 
-		entry& operator =(const std::string& value);
+		entry& operator =(std::string_view value);
 		entry& operator =(u32 value);
 
 		format type() const { return m_type; }
@@ -100,12 +100,12 @@ namespace psf
 	// Make string entry
 	inline entry string(u32 max_size, std::string_view value)
 	{
-		return {format::string, max_size, std::string(value)};
+		return {format::string, max_size, value};
 	}
 
 	// Make array entry
 	inline entry array(u32 max_size, std::string_view value)
 	{
-		return {format::array, max_size, std::string(value)};
+		return {format::array, max_size, value};
 	}
 }
