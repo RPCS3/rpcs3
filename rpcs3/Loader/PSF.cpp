@@ -59,7 +59,7 @@ namespace psf
 	};
 
 
-	entry::entry(format type, u32 max_size, const std::string& value)
+	entry::entry(format type, u32 max_size, std::string_view value)
 		: m_type(type)
 		, m_max_size(max_size)
 		, m_value_string(value)
@@ -91,7 +91,7 @@ namespace psf
 		return m_value_integer;
 	}
 
-	entry& entry::operator =(const std::string& value)
+	entry& entry::operator =(std::string_view value)
 	{
 		ensure(m_type == format::string || m_type == format::array);
 		m_value_string = value;
