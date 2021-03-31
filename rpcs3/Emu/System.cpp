@@ -82,8 +82,7 @@ std::array<std::deque<std::string>, 16> g_tty_input;
 std::mutex g_tty_mutex;
 
 // Progress display server synchronization variables
-atomic_t<const char*> g_progr{""};
-atomic_t<bool> g_progr_show{false};
+atomic_t<const char*> g_progr{nullptr};
 atomic_t<u32> g_progr_ftotal{0};
 atomic_t<u32> g_progr_fdone{0};
 atomic_t<u32> g_progr_ptotal{0};
@@ -343,7 +342,9 @@ namespace
 			while (thread_ctrl::state() != thread_state::aborting)
 			{
 				// Wait for the start condition
-				while (!g_progr_show)
+				auto text0 = +g_progr;
+
+				while (!text0)
 				{
 					if (thread_ctrl::state() == thread_state::aborting)
 					{
@@ -351,6 +352,7 @@ namespace
 					}
 
 					std::this_thread::sleep_for(5ms);
+					text0 = +g_progr;
 				}
 
 				if (thread_ctrl::state() == thread_state::aborting)
@@ -374,7 +376,7 @@ namespace
 						type.progress_bar_count = 1;
 
 						native_dlg = manager->create<rsx::overlays::message_dialog>(!!g_cfg.video.shader_preloading_dialog.use_custom_background);
-						native_dlg->show(false, +g_progr, type, nullptr);
+						native_dlg->show(false, text0, type, nullptr);
 						native_dlg->progress_bar_set_message(0, "Please wait");
 					}
 				}
@@ -394,9 +396,9 @@ namespace
 						});
 					};
 
-					Emu.CallAfter([dlg]()
+					Emu.CallAfter([dlg, text0]()
 					{
-						dlg->Create(+g_progr, +g_progr);
+						dlg->Create(text0, text0);
 					});
 				}
 
@@ -404,6 +406,7 @@ namespace
 				u32 fdone = 0;
 				u32 ptotal = 0;
 				u32 pdone = 0;
+				auto text1 = text0;
 
 				// Update progress
 				while (thread_ctrl::state() != thread_state::aborting)
@@ -412,13 +415,15 @@ namespace
 					const u32 fdone_new  = g_progr_fdone;
 					const u32 ptotal_new = g_progr_ptotal;
 					const u32 pdone_new  = g_progr_pdone;
+					const auto text_new  = g_progr.load();
 
-					if (ftotal != ftotal_new || fdone != fdone_new || ptotal != ptotal_new || pdone != pdone_new)
+					if (ftotal != ftotal_new || fdone != fdone_new || ptotal != ptotal_new || pdone != pdone_new || text_new != text1)
 					{
 						ftotal = ftotal_new;
 						fdone  = fdone_new;
 						ptotal = ptotal_new;
 						pdone  = pdone_new;
+						text1  = text_new;
 
 						// Compute new progress in percents
 						// Assume not all programs were found if files were not compiled (as it may contain more)
@@ -438,20 +443,20 @@ namespace
 
 							if (native_dlg)
 							{
-								native_dlg->set_text(+g_progr);
+								native_dlg->set_text(text_new ? text_new : "");
 								native_dlg->progress_bar_set_message(0, progr);
 								native_dlg->progress_bar_set_value(0, std::floor(value));
 							}
 							else if (dlg)
 							{
-								dlg->SetMsg(+g_progr);
+								dlg->SetMsg(text_new ? text_new : "");
 								dlg->ProgressBarSetMsg(0, progr);
 								dlg->ProgressBarSetValue(0, std::floor(value));
 							}
 						});
 					}
 
-					if (!g_progr_show)
+					if (!text_new)
 					{
 						// Close dialog
 						break;
@@ -470,7 +475,6 @@ namespace
 				g_progr_fdone  -= fdone;
 				g_progr_ptotal -= ptotal;
 				g_progr_pdone  -= pdone;
-				g_progr_show    = false;
 
 				Emu.CallAfter([=]()
 				{
@@ -492,7 +496,7 @@ namespace
 			g_progr_fdone.release(0);
 			g_progr_ptotal.release(0);
 			g_progr_pdone.release(0);
-			g_progr_show.release(false);
+			g_progr.release(nullptr);
 		}
 
 		static auto constexpr thread_name = "Progress Dialog Server"sv;

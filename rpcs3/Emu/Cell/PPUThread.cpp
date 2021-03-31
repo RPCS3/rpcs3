@@ -70,6 +70,7 @@
 #include <thread>
 #include <cfenv>
 #include <cctype>
+#include <optional>
 #include "util/asm.hpp"
 #include "util/vm.hpp"
 #include "util/v128.hpp"
@@ -80,12 +81,7 @@ const bool s_use_ssse3 = utils::has_ssse3();
 
 extern atomic_t<u64> g_watchdog_hold_ctr;
 
-extern atomic_t<const char*> g_progr;
-extern atomic_t<bool> g_progr_show;
-extern atomic_t<u32> g_progr_ftotal;
-extern atomic_t<u32> g_progr_fdone;
-extern atomic_t<u32> g_progr_ptotal;
-extern atomic_t<u32> g_progr_pdone;
+#include "Emu/system_progress.hpp"
 
 // Should be of the same type
 using spu_rdata_t = decltype(ppu_thread::rdata);
@@ -2402,9 +2398,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 		}
 	}
 
-	g_progr = "Compiling PPU modules...";
 	g_progr_ftotal += file_queue.size();
-	g_progr_show = true;
+	scoped_progress_dialog progr = "Compiling PPU modules...";
 
 	atomic_t<usz> fnext = 0;
 
@@ -2521,8 +2516,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 	// Join every thread
 	workers.join();
 
-	g_progr_show = false;
-
 	// Revert changes
 
 	if (!had_ovl)
@@ -2547,16 +2540,7 @@ extern void ppu_initialize()
 		return;
 	}
 
-	g_progr = "Scanning PPU modules...";
-	g_progr_show = true;
-
-	struct scoped_dialog_control
-	{
-		~scoped_dialog_control()
-		{
-			g_progr_show = false;
-		}
-	} dialog_control;
+	scoped_progress_dialog progr = "Scanning PPU modules...";
 
 	bool compile_main = false;
 
@@ -2730,11 +2714,12 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	}
 
 #ifdef LLVM_AVAILABLE
+	std::optional<scoped_progress_dialog> progr;
+
 	if (!check_only)
 	{
 		// Initialize progress dialog
-		g_progr = "Loading PPU modules...";
-		g_progr_show = true;
+		progr.emplace("Loading PPU modules...");
 	}
 
 	struct jit_core_allocator
@@ -3057,7 +3042,6 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		if (Emu.IsStopped() || !get_current_cpu_thread())
 		{
-			g_progr_show = false;
 			return compiled_new;
 		}
 
@@ -3083,8 +3067,6 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			}
 		}
 	}
-
-	g_progr_show = false;
 
 	if (Emu.IsStopped() || !get_current_cpu_thread())
 	{
