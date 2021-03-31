@@ -73,6 +73,7 @@ class debugger_frame : public custom_dock_widget
 
 	cpu_thread* get_cpu();
 	std::function<cpu_thread*()> make_check_cpu(cpu_thread* cpu);
+	void open_breakpoints_settings();
 
 public:
 	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = 0);

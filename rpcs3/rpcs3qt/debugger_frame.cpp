@@ -29,6 +29,7 @@
 #include <QMenu>
 #include <QVBoxLayout>
 #include <QTimer>
+#include <QCheckBox>
 #include <charconv>
 
 #include "util/asm.hpp"
@@ -36,6 +37,8 @@
 constexpr auto qstr = QString::fromStdString;
 
 constexpr auto s_pause_flags = cpu_flag::dbg_pause + cpu_flag::dbg_global_pause;
+
+extern atomic_t<bool> g_debugger_pause_all_threads_on_bp;
 
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent)
 	: custom_dock_widget(tr("Debugger"), parent), xgui_settings(settings)
@@ -146,7 +149,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 		{
 			// If paused, unpause.
 			// If not paused, add dbg_pause.
-			const auto old = cpu->state.atomic_op([](bs_t<cpu_flag>& state)
+			const auto old = cpu->state.fetch_op([](bs_t<cpu_flag>& state)
 			{
 				if (state & s_pause_flags)
 				{
@@ -156,13 +159,17 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *
 				{
 					state += cpu_flag::dbg_pause;
 				}
-
-				return state;
 			});
 
 			// Notify only if no pause flags are set after this change
-			if (!(old & s_pause_flags))
+			if (old & s_pause_flags)
 			{
+				if (g_debugger_pause_all_threads_on_bp && Emu.IsPaused() && (old & s_pause_flags) == s_pause_flags)
+				{
+					// Resume all threads were paused by this breakpoint
+					Emu.Resume();
+				}
+
 				cpu->state.notify_one(s_pause_flags);
 			}
 		}
@@ -240,6 +247,31 @@ void debugger_frame::hideEvent(QHideEvent * event)
 	QDockWidget::hideEvent(event);
 }
 
+void debugger_frame::open_breakpoints_settings()
+{
+	QDialog* dlg = new QDialog(this);
+	dlg->setWindowTitle(tr("Breakpoint Settings"));
+	dlg->setModal(true);
+
+	QCheckBox* check_box = new QCheckBox(tr("Pause All Threads On Hit"), dlg);
+	check_box->setCheckable(true);
+	check_box->setChecked(g_debugger_pause_all_threads_on_bp ? Qt::Checked : Qt::Unchecked);
+	check_box->setToolTip(tr("When set: a breakpoint hit will pause the emulation instead of the current thread."
+		"\nApplies on all breakpoints in all threads regardless if set before or after changing this setting."));
+	
+	connect(check_box, &QCheckBox::clicked, dlg, [](bool checked) { g_debugger_pause_all_threads_on_bp = checked; });
+
+	QPushButton* button_ok = new QPushButton(tr("OK"), dlg);
+	connect(button_ok, &QAbstractButton::clicked, dlg, &QDialog::accept);
+
+	QHBoxLayout* hbox_layout = new QHBoxLayout(dlg);
+	hbox_layout->addWidget(check_box);
+	hbox_layout->addWidget(button_ok);
+	dlg->setLayout(hbox_layout);
+	dlg->setAttribute(Qt::WA_DeleteOnClose);
+	dlg->exec();
+}
+
 void debugger_frame::keyPressEvent(QKeyEvent* event)
 {
 	if (!isActiveWindow())
@@ -260,6 +292,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 		QLabel* l = new QLabel(tr(
 			"Keys Ctrl+G: Go to typed address."
+			"\nKeys Ctrl+B: Open breakpoints settings."
 			"\nKeys Alt+S: Capture SPU images of selected SPU."
 			"\nKey D: SPU MFC commands logger, MFC debug setting must be enabled."
 			"\nKey E: Instruction Editor: click on the instruction you want to modify, then press E."
@@ -306,6 +339,11 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		case Qt::Key_G:
 		{
 			ShowGotoAddressDialog();
+			return;
+		}
+		case Qt::Key_B:
+		{
+			open_breakpoints_settings();
 			return;
 		}
 		}

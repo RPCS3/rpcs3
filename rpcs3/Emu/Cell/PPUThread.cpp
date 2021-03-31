@@ -455,11 +455,25 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 	}
 }
 
+atomic_t<bool> g_debugger_pause_all_threads_on_bp = true;
+
 // Breakpoint entry point
 static bool ppu_break(ppu_thread& ppu, ppu_opcode_t)
 {
+	const bool pause_all = g_debugger_pause_all_threads_on_bp;
+
 	// Pause
-	ppu.state.atomic_op([](bs_t<cpu_flag>& state) { if (!(state & cpu_flag::dbg_step)) state += cpu_flag::dbg_pause; });
+	ppu.state.atomic_op([&](bs_t<cpu_flag>& state)
+	{
+		if (pause_all) state += cpu_flag::dbg_global_pause;
+		if (pause_all || !(state & cpu_flag::dbg_step)) state += cpu_flag::dbg_pause;
+	});
+
+	if (pause_all)
+	{
+		// Pause all other threads
+		Emu.CallAfter([]() { Emu.Pause(); });
+	}
 
 	if (ppu.check_state())
 	{
