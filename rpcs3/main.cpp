@@ -208,6 +208,7 @@ constexpr auto arg_config     = "config";
 constexpr auto arg_q_debug    = "qDebug";
 constexpr auto arg_error      = "error";
 constexpr auto arg_updating   = "updating";
+constexpr auto arg_user_id    = "user-id";
 constexpr auto arg_installfw  = "installfw";
 constexpr auto arg_installpkg = "installpkg";
 constexpr auto arg_commit_db  = "get-commit-db";
@@ -521,6 +522,8 @@ int main(int argc, char** argv)
 	parser.addOption(installfw_option);
 	const QCommandLineOption installpkg_option(arg_installpkg, "Forces the emulator to install this pkg file.", "path", "");
 	parser.addOption(installpkg_option);
+	const QCommandLineOption user_id_option(arg_user_id, "Start RPCS3 as this user.", "user id", "");
+	parser.addOption(user_id_option);
 	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
 	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
@@ -716,6 +719,19 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
+	std::string active_user;
+
+	if (parser.isSet(arg_user_id))
+	{
+		active_user = parser.value(arg_user_id).toStdString();
+
+		if (Emulator::CheckUsr(active_user) == 0)
+		{
+			report_fatal_error(fmt::format("Failed to set user ID '%s'.\nThe user ID must consist of 8 digits and cannot be 00000000.", active_user));
+			return 1;
+		}
+	}
+
 	s_no_gui = parser.isSet(arg_no_gui);
 
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
@@ -727,6 +743,7 @@ int main(int argc, char** argv)
 		gui_app->SetShowGui(!s_no_gui);
 		gui_app->SetUseCliStyle(use_cli_style);
 		gui_app->SetWithCliBoot(parser.isSet(arg_installfw) || parser.isSet(arg_installpkg) || !parser.positionalArguments().isEmpty());
+		gui_app->SetActiveUser(active_user);
 
 		if (!gui_app->Init())
 		{
@@ -737,6 +754,8 @@ int main(int argc, char** argv)
 	else if (auto headless_app = qobject_cast<headless_application*>(app.data()))
 	{
 		s_headless = true;
+
+		headless_app->SetActiveUser(active_user);
 
 		if (!headless_app->Init())
 		{
@@ -774,7 +793,7 @@ int main(int argc, char** argv)
 		if (!fs::is_file(config_override_path))
 		{
 			report_fatal_error(fmt::format("No config file found: %s", config_override_path));
-			return 0;
+			return 1;
 		}
 
 		Emu.SetConfigOverride(config_override_path);
