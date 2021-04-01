@@ -17,15 +17,13 @@
 #include <algorithm>
 #include <mutex>
 #include <thread>
+#include <optional>
 
 #include "util/v128.hpp"
 #include "util/v128sse.hpp"
 #include "util/sysinfo.hpp"
 
-extern atomic_t<const char*> g_progr;
-extern atomic_t<bool> g_progr_show;
-extern atomic_t<u32> g_progr_ptotal;
-extern atomic_t<u32> g_progr_pdone;
+#include "Emu/system_progress.hpp"
 
 const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iname> s_spu_iname;
@@ -417,6 +415,8 @@ void spu_cache::initialize()
 
 	u32 worker_count = 0;
 
+	std::optional<scoped_progress_dialog> progr;
+
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		// Initialize progress dialog (wait for previous progress done)
@@ -425,9 +425,8 @@ void spu_cache::initialize()
 			std::this_thread::sleep_for(5ms);
 		}
 
-		g_progr = "Building SPU cache...";
 		g_progr_ptotal += ::size32(func_list);
-		g_progr_show = true;
+		progr.emplace("Building SPU cache...");
 
 		worker_count = Emu.GetMaxThreads();
 	}
@@ -525,11 +524,6 @@ void spu_cache::initialize()
 	for (u32 i = 0; i < workers.size(); i++)
 	{
 		spu_log.notice("SPU Runtime: Worker %u built %u programs.", i + 1, workers[i]);
-	}
-
-	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
-	{
-		g_progr_show = false;
 	}
 
 	if (Emu.IsStopped())
