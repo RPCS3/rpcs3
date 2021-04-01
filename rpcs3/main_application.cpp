@@ -33,21 +33,12 @@
 
 LOG_CHANNEL(sys_log, "SYS");
 
-/** Emu.Init() wrapper for user manager */
-bool main_application::InitializeEmulator(const std::string& user, bool force_init, bool show_gui)
+/** Emu.Init() wrapper for user management */
+void main_application::InitializeEmulator(const std::string& user, bool show_gui)
 {
 	Emu.SetHasGui(show_gui);
-
-	// try to set a new user
-	const bool user_was_set = Emu.SetUsr(user);
-
-	// only init the emulation if forced or a user was set
-	if (user_was_set || force_init)
-	{
-		Emu.Init();
-	}
-
-	return user_was_set;
+	Emu.SetUsr(user);
+	Emu.Init();
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here. */

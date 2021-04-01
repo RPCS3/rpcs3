@@ -28,43 +28,6 @@ constexpr auto qstr = QString::fromStdString;
 
 LOG_CHANNEL(gui_log, "GUI");
 
-namespace
-{
-	std::map<u32, UserAccount> GetUserAccounts(const std::string& base_dir)
-	{
-		std::map<u32, UserAccount> user_list;
-
-		// I believe this gets the folder list sorted alphabetically by default,
-		// but I can't find proof of this always being true.
-		for (const auto& user_folder : fs::dir(base_dir))
-		{
-			if (!user_folder.is_directory)
-			{
-				continue;
-			}
-
-			// Is the folder name exactly 8 all-numerical characters long?
-			// We use strtoul to find any non-numeric characters in folder name.
-			char* non_numeric_char;
-			const u32 key = static_cast<u32>(std::strtoul(user_folder.name.c_str(), &non_numeric_char, 10));
-
-			if (key == 0 || user_folder.name.length() != 8 || *non_numeric_char != '\0')
-			{
-				continue;
-			}
-
-			// Does the localusername file exist?
-			if (!fs::is_file(base_dir + "/" + user_folder.name + "/localusername"))
-			{
-				continue;
-			}
-
-			user_list.emplace(key, UserAccount(user_folder.name));
-		}
-		return user_list;
-	}
-}
-
 user_manager_dialog::user_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
 	: QDialog(parent)
 	, m_gui_settings(gui_settings)
@@ -94,16 +57,16 @@ void user_manager_dialog::Init()
 	m_table->horizontalHeader()->setDefaultSectionSize(150);
 	m_table->installEventFilter(this);
 
-	QPushButton* push_remove_user = new QPushButton(tr("Delete User"), this);
+	QPushButton* push_remove_user = new QPushButton(tr("&Delete User"), this);
 	push_remove_user->setAutoDefault(false);
 
-	QPushButton* push_create_user = new QPushButton(tr("Create User"), this);
+	QPushButton* push_create_user = new QPushButton(tr("&Create User"), this);
 	push_create_user->setAutoDefault(false);
 
-	QPushButton* push_login_user = new QPushButton(tr("Log In User"), this);
+	QPushButton* push_login_user = new QPushButton(tr("&Log In User"), this);
 	push_login_user->setAutoDefault(false);
 
-	QPushButton* push_rename_user = new QPushButton(tr("Rename User"), this);
+	QPushButton* push_rename_user = new QPushButton(tr("&Rename User"), this);
 	push_rename_user->setAutoDefault(false);
 
 	QPushButton* push_close = new QPushButton(tr("&Close"), this);
@@ -139,12 +102,18 @@ void user_manager_dialog::Init()
 		}
 	}
 
+	// Get the real active user (might differ, set by cli)
+	if (m_active_user != Emu.GetUsr())
+	{
+		m_active_user = Emu.GetUsr();
+	}
+
 	UpdateTable();
 
 	restoreGeometry(m_gui_settings->GetValue(gui::um_geometry).toByteArray());
 
 	// Use this in multiple connects to protect the current user from deletion/rename.
-	auto enableButtons = [=, this]()
+	const auto enable_buttons = [=, this]()
 	{
 		const u32 key = GetUserKey();
 		if (key == 0)
@@ -162,7 +131,7 @@ void user_manager_dialog::Init()
 		push_remove_user->setEnabled(enable);
 	};
 
-	enableButtons();
+	enable_buttons();
 
 	// Connects and events
 	connect(push_close, &QAbstractButton::clicked, this, &user_manager_dialog::close);
@@ -170,11 +139,11 @@ void user_manager_dialog::Init()
 	connect(push_rename_user, &QAbstractButton::clicked, this, &user_manager_dialog::OnUserRename);
 	connect(push_create_user, &QAbstractButton::clicked, this, &user_manager_dialog::OnUserCreate);
 	connect(push_login_user, &QAbstractButton::clicked, this, &user_manager_dialog::OnUserLogin);
-	connect(this, &user_manager_dialog::OnUserLoginSuccess, this, enableButtons);
+	connect(this, &user_manager_dialog::OnUserLoginSuccess, this, enable_buttons);
 	connect(m_table->horizontalHeader(), &QHeaderView::sectionClicked, this, &user_manager_dialog::OnSort);
 	connect(m_table, &QTableWidget::customContextMenuRequested, this, &user_manager_dialog::ShowContextMenu);
 	connect(m_table, &QTableWidget::itemDoubleClicked, this, &user_manager_dialog::OnUserLogin);
-	connect(m_table, &QTableWidget::itemSelectionChanged, this, enableButtons);
+	connect(m_table, &QTableWidget::itemSelectionChanged, this, enable_buttons);
 }
 
 void user_manager_dialog::UpdateTable(bool mark_only)
@@ -185,7 +154,7 @@ void user_manager_dialog::UpdateTable(bool mark_only)
 
 	if (mark_only)
 	{
-		QString active_user = qstr(m_active_user);
+		const QString active_user = qstr(m_active_user);
 
 		for (int i = 0; i < m_table->rowCount(); i++)
 		{
@@ -209,26 +178,26 @@ void user_manager_dialog::UpdateTable(bool mark_only)
 
 	// Get the user folders in the home directory and the currently logged in user.
 	m_user_list.clear();
-	m_user_list = GetUserAccounts(Emulator::GetHddDir() + "home");
+	m_user_list = user_account::GetUserAccounts(Emulator::GetHddDir() + "home");
 
 	// Clear and then repopulate the table with the list gathered above.
 	m_table->setRowCount(static_cast<int>(m_user_list.size()));
 
 	int row = 0;
-	for (auto& user : m_user_list)
+	for (auto& [id, account] : m_user_list)
 	{
-		QTableWidgetItem* user_id_item = new QTableWidgetItem(qstr(user.second.GetUserId()));
-		user_id_item->setData(Qt::UserRole, user.first); // For sorting to work properly
+		QTableWidgetItem* user_id_item = new QTableWidgetItem(qstr(account.GetUserId()));
+		user_id_item->setData(Qt::UserRole, id); // For sorting to work properly
 		user_id_item->setFlags(user_id_item->flags() & ~Qt::ItemIsEditable);
 		m_table->setItem(row, 0, user_id_item);
 
-		QTableWidgetItem* username_item = new QTableWidgetItem(qstr(user.second.GetUsername()));
-		username_item->setData(Qt::UserRole, user.first); // For sorting to work properly
+		QTableWidgetItem* username_item = new QTableWidgetItem(qstr(account.GetUsername()));
+		username_item->setData(Qt::UserRole, id); // For sorting to work properly
 		username_item->setFlags(username_item->flags() & ~Qt::ItemIsEditable);
 		m_table->setItem(row, 1, username_item);
 
 		// Compare current config value with the one in this user (only 8 digits in userId)
-		if (m_active_user.starts_with(user.second.GetUserId()))
+		if (m_active_user.starts_with(account.GetUserId()))
 		{
 			user_id_item->setFont(bold_font);
 			username_item->setFont(bold_font);
@@ -240,12 +209,12 @@ void user_manager_dialog::UpdateTable(bool mark_only)
 	m_table->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_table->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
 
-	QSize table_size = QSize(
+	const QSize table_size(
 		m_table->verticalHeader()->width() + m_table->horizontalHeader()->length() + m_table->frameWidth() * 2,
 		m_table->horizontalHeader()->height() + m_table->verticalHeader()->length() + m_table->frameWidth() * 2);
 
-	QSize preferred_size = minimumSize().expandedTo(sizeHint() - m_table->sizeHint() + table_size).expandedTo(size());
-	QSize max_size = QSize(preferred_size.width(), static_cast<int>(QGuiApplication::primaryScreen()->size().height() * 0.6));
+	const QSize preferred_size = minimumSize().expandedTo(sizeHint() - m_table->sizeHint() + table_size).expandedTo(size());
+	const QSize max_size(preferred_size.width(), static_cast<int>(QGuiApplication::primaryScreen()->size().height() * 0.6));
 
 	resize(preferred_size.boundedTo(max_size));
 }
@@ -253,7 +222,7 @@ void user_manager_dialog::UpdateTable(bool mark_only)
 // Remove a user folder, needs to be confirmed.
 void user_manager_dialog::OnUserRemove()
 {
-	u32 key = GetUserKey();
+	const u32 key = GetUserKey();
 	if (key == 0)
 	{
 		return;
@@ -274,6 +243,8 @@ void user_manager_dialog::OnUserRemove()
 
 void user_manager_dialog::GenerateUser(const std::string& user_id, const std::string& username)
 {
+	ensure(Emulator::CheckUsr(user_id) > 0);
+
 	// Create user folders and such.
 	const std::string home_dir = Emulator::GetHddDir() + "home/";
 	const std::string user_dir = home_dir + user_id;
@@ -298,7 +269,7 @@ bool user_manager_dialog::ValidateUsername(const QString& text_to_validate)
 
 void user_manager_dialog::OnUserRename()
 {
-	u32 key = GetUserKey();
+	const u32 key = GetUserKey();
 	if (key == 0)
 	{
 		return;
@@ -318,7 +289,7 @@ void user_manager_dialog::OnUserRename()
 	{
 		dialog->resize(200, 100);
 
-		QString text_to_validate = dialog->textValue();
+		const QString text_to_validate = dialog->textValue();
 		if (!ValidateUsername(text_to_validate))
 		{
 			QMessageBox::warning(this, tr("Error"), tr("Name must be between 3 and 16 characters and only consist of letters, numbers, underscores, and hyphens."));
@@ -359,7 +330,14 @@ void user_manager_dialog::OnUserCreate()
 		}
 	}
 
+	if (smallest >= 100000000) // Only 8 digits allowed
+	{
+		QMessageBox::warning(this, tr("Error"), tr("Cannot add more users."));
+		return;
+	}
+
 	const std::string next_user_id = fmt::format("%08d", smallest);
+	ensure(Emulator::CheckUsr(next_user_id) > 0);
 
 	QInputDialog* dialog = new QInputDialog(this);
 	dialog->setWindowTitle(tr("New User"));
@@ -397,11 +375,7 @@ void user_manager_dialog::OnUserLogin()
 	const u32 key = GetUserKey();
 	const std::string new_user = m_user_list[key].GetUserId();
 
-	if (!main_application::InitializeEmulator(new_user, false, Emu.HasGui()))
-	{
-		gui_log.fatal("Failed to login user! username=%s key=%d", new_user, key);
-		return;
-	}
+	main_application::InitializeEmulator(new_user, Emu.HasGui());
 
 	m_active_user = new_user;
 	m_persistent_settings->SetValue(gui::persistent::active_user, qstr(m_active_user));
@@ -429,7 +403,7 @@ void user_manager_dialog::OnSort(int logicalIndex)
 
 void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 {
-	u32 key = GetUserKey();
+	const u32 key = GetUserKey();
 	if (key == 0)
 	{
 		return;
@@ -448,8 +422,7 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 	QAction* show_dir_act = menu->addAction(tr("&Open User Directory"));
 
 	// Only enable actions if selected user is not logged in user.
-	std::string idx_user = m_user_list[key].GetUserId();
-	bool enable = idx_user != m_active_user;
+	const bool enable = m_user_list[key].GetUserId() != m_active_user;
 
 	remove_act->setEnabled(enable);
 	rename_act->setEnabled(enable);
@@ -458,14 +431,14 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 	connect(remove_act, &QAction::triggered, this, &user_manager_dialog::OnUserRemove);
 	connect(rename_act, &QAction::triggered, this, &user_manager_dialog::OnUserRename);
 	connect(login_act, &QAction::triggered, this, &user_manager_dialog::OnUserLogin);
-	connect(show_dir_act, &QAction::triggered, [=, this]()
+	connect(show_dir_act, &QAction::triggered, this, [this, key]()
 	{
-		QString path = qstr(m_user_list[key].GetUserDir());
+		const QString path = qstr(m_user_list[key].GetUserDir());
 		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 	});
 
-	connect(user_id_act, &QAction::triggered, this, [=, this] {OnSort(0); });
-	connect(username_act, &QAction::triggered, this, [=, this] {OnSort(1); });
+	connect(user_id_act, &QAction::triggered, this, [this] {OnSort(0); });
+	connect(username_act, &QAction::triggered, this, [this] {OnSort(1); });
 
 	menu->exec(m_table->viewport()->mapToGlobal(pos));
 }
@@ -473,20 +446,20 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 // Returns the current user's key > 0. if no user is selected, return 0
 u32 user_manager_dialog::GetUserKey()
 {
-	int idx = m_table->currentRow();
+	const int idx = m_table->currentRow();
 	if (idx < 0)
 	{
 		return 0;
 	}
 
-	QTableWidgetItem* item = m_table->item(idx, 0);
+	const QTableWidgetItem* item = m_table->item(idx, 0);
 	if (!item)
 	{
 		return 0;
 	}
 
 	const u32 idx_real = item->data(Qt::UserRole).toUInt();
-	if (m_user_list.find(idx_real) == m_user_list.end())
+	if (!m_user_list.contains(idx_real))
 	{
 		return 0;
 	}

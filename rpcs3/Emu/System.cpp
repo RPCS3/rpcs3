@@ -503,24 +503,31 @@ namespace
 	};
 }
 
-bool Emulator::SetUsr(const std::string& user)
+u32 Emulator::CheckUsr(const std::string& user)
 {
-	if (user.empty())
+	u32 id = 0;
+
+	if (user.size() == 8)
 	{
-		return false;
+		std::from_chars(&user.front(), &user.back() + 1, id);
 	}
 
-	u32 id = 0;
-	std::from_chars(&user.front(), &user.back() + 1, id);
+	return id;
+}
+
+void Emulator::SetUsr(const std::string& user)
+{
+	sys_log.notice("Setting user ID '%s'", user);
+
+	const u32 id = CheckUsr(user);
 
 	if (id == 0)
 	{
-		return false;
+		fmt::throw_exception("Failed to set user ID '%s'", user);
 	}
 
 	m_usrid = id;
 	m_usr = user;
-	return true;
 }
 
 std::string Emulator::GetBackgroundPicturePath() const
@@ -2015,7 +2022,14 @@ bool Emulator::Quit(bool force_quit)
 	{
 		Emu.CleanUp();
 	};
-	return GetCallbacks().try_to_quit(force_quit, on_exit);
+
+	if (GetCallbacks().try_to_quit)
+	{
+		return GetCallbacks().try_to_quit(force_quit, on_exit);
+	}
+
+	on_exit();
+	return true;
 }
 
 void Emulator::CleanUp()

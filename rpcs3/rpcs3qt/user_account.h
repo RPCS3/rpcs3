@@ -1,20 +1,25 @@
 #pragma once
 
+#include "util/types.hpp"
+
+#include <map>
 #include <string>
 
 // Do not confuse this with the "user" in Emu/System.h. 
 // That user is read from config.yml, and it only represents the currently "logged in" user.
-// The UserAccount class will represent all users in the home directory for the User Manager dialog.
+// The user_account class will represent all users in the home directory for the User Manager dialog.
 // Selecting a user account in this dialog and saving writes it to config.yml.
-class UserAccount
+class user_account
 {
 public:
-	explicit UserAccount(const std::string& user_id = "00000001");
+	explicit user_account(const std::string& user_id = "00000001");
 
-	std::string GetUserId() { return m_user_id; }
-	std::string GetUserDir() { return m_user_dir; }
-	std::string GetUsername() { return m_username; }
-	~UserAccount();
+	std::string GetUserId() const { return m_user_id; }
+	std::string GetUserDir() const { return m_user_dir; }
+	std::string GetUsername() const { return m_username; }
+	~user_account();
+
+	static std::map<u32, user_account> GetUserAccounts(const std::string& base_dir);
 
 private:
 	std::string m_user_id;

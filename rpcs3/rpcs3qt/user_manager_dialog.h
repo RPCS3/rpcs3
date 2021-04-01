@@ -40,7 +40,7 @@ private:
 
 	QTableWidget* m_table;
 	std::string m_active_user;
-	std::map<u32, UserAccount> m_user_list;
+	std::map<u32, user_account> m_user_list;
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;

@@ -196,7 +196,9 @@ public:
 		return m_usrid;
 	}
 
-	bool SetUsr(const std::string& user);
+	static u32 CheckUsr(const std::string& user);
+
+	void SetUsr(const std::string& user);
 
 	std::string GetBackgroundPicturePath() const;
 
