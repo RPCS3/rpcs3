@@ -425,12 +425,19 @@ int main(int argc, char** argv)
 		const std::string firmware_version = utils::get_firmware_version();
 		const std::string firmware_string  = firmware_version.empty() ? " | Missing Firmware" : (" | Firmware version: " + firmware_version);
 
-		// Write initial message
+		// Write RPCS3 version
 		logs::stored_message ver;
 		ver.m.ch  = nullptr;
 		ver.m.sev = logs::level::always;
 		ver.stamp = 0;
-		ver.text  = fmt::format("RPCS3 v%s | %s%s\n%s", rpcs3::get_version().to_string(), rpcs3::get_branch(), firmware_string, utils::get_system_info());
+		ver.text  = fmt::format("RPCS3 v%s | %s%s", rpcs3::get_version().to_string(), rpcs3::get_branch(), firmware_string);
+
+		// Write System information
+		logs::stored_message sys;
+		sys.m.ch  = nullptr;
+		sys.m.sev = logs::level::always;
+		sys.stamp = 0;
+		sys.text  = utils::get_system_info();
 
 		// Write OS version
 		logs::stored_message os;
@@ -446,7 +453,7 @@ int main(int argc, char** argv)
 		qt.stamp = 0;
 		qt.text  = fmt::format("Qt version: Compiled against Qt %s | Run-time uses Qt %s", QT_VERSION_STR, qVersion());
 
-		logs::set_init({std::move(ver), std::move(os), std::move(qt)});
+		logs::set_init({std::move(ver), std::move(sys), std::move(os), std::move(qt)});
 	}
 
 #ifdef _WIN32
