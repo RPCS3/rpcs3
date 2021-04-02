@@ -1810,7 +1810,6 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 	if (IsDebuggerPresent())
 	{
 		sys_log.fatal("\n%s", msg);
-		std::fprintf(stderr, "%s\n", msg.c_str());
 
 		sys_log.notice("\n%s", dump_useful_thread_info());
 
@@ -2511,12 +2510,9 @@ void thread_base::exec()
 
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
 
-	std::fprintf(stderr, "Thread '%s' terminated due to fatal error: %s\n", g_tls_log_prefix().c_str(), std::string(reason).c_str());
-
 #ifdef _WIN32
 	if (IsDebuggerPresent())
 	{
-		OutputDebugStringA(fmt::format("Thread '%s' terminated due to fatal error: %s\n", g_tls_log_prefix(), reason).c_str());
 		__debugbreak();
 	}
 #else
