@@ -699,6 +699,16 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* l
 	return result;
 }
 
+// For _sys_prx_register_module
+void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size)
+{
+	auto& _main = g_fxo->get<ppu_module>();
+	auto& link = g_fxo->get<ppu_linkage_info>();
+
+	ppu_load_exports(&link, exports_start, exports_start + exports_size);
+	ppu_load_imports(_main.relocs, &link, imports_start, imports_start + imports_size);
+}
+
 static void ppu_check_patch_spu_images(const ppu_segment& seg)
 {
 	const std::string_view seg_view{vm::get_super_ptr<char>(seg.addr), seg.size};
