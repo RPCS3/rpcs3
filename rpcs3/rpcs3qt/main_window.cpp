@@ -1192,7 +1192,14 @@ extern void sysutil_send_system_cmd(u64 status, u64 param);
 
 void main_window::DecryptSPRXLibraries()
 {
-	const QString path_last_sprx = m_gui_settings->GetValue(gui::fd_decrypt_sprx).toString();
+	QString path_last_sprx = m_gui_settings->GetValue(gui::fd_decrypt_sprx).toString();
+
+	if (!fs::is_dir(sstr(path_last_sprx)))
+	{
+		// Default: redirect to userland firmware SPRX directory
+		path_last_sprx = qstr(g_cfg.vfs.get_dev_flash() + "sys/external");
+	}
+
 	const QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select binary files"), path_last_sprx, tr("All Binaries (*.BIN *.self *.sprx);;BIN files (*.BIN);;SELF files (*.self);;SPRX files (*.sprx);;All files (*.*)"));
 
 	if (modules.isEmpty())
