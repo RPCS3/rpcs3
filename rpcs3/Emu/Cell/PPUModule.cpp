@@ -1546,6 +1546,12 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 		load_libs.emplace("libsysmodule.sprx");
 	}
 
+	if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+	{
+		// Cannot be used with vsh.self (it self-manages itself)
+		load_libs.clear();
+	}
+
 	const std::string lle_dir = vfs::get("/dev_flash/sys/external/");
 
 	if (!fs::is_file(lle_dir + "liblv2.sprx"))
@@ -1686,7 +1692,6 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	// Initialize memory stats (according to sdk version)
-	// TODO: This is probably wrong with vsh.self
 	u32 mem_size;
 	if (sdk_version > 0x0021FFFF)
 	{
@@ -1719,11 +1724,18 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 		mem_size += 0xC000000;
 	}
 
+	if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+	{
+		// Because vsh.self comes before any generic application, more memory is available to it
+		// This is an estimation though (TODO)
+		mem_size += 0x800000;
+	}
+
 	g_fxo->init<lv2_memory_container>(mem_size)->used += primary_stacksize;
 
 	ppu->cmd_push({ppu_cmd::initialize, 0});
 
-	if (!entry)
+	if (!entry && g_ps3_process_info.get_cellos_appname() != "vsh.self"sv)
 	{
 		// Set TLS args, call sys_initialize_tls
 		ppu->cmd_list
@@ -1731,7 +1743,10 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 			{ ppu_cmd::set_args, 4 }, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
 			{ ppu_cmd::hle_call, FIND_FUNC(sys_initialize_tls) },
 		});
+	}
 
+	if (!entry)
+	{
 		entry = static_cast<u32>(elf.header.e_entry); // Run entry from elf
 	}
 
