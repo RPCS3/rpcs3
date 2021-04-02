@@ -95,7 +95,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
 			[[maybe_unused]] const auto con_out = freopen("conout$", "w", stderr);
 #endif
-		std::fprintf(stderr, "RPCS3: %.*s\n", static_cast<int>(text.size()), text.data());
+		std::cerr << fmt::format("RPCS3: %s\n", text);
 		std::abort();
 	}
 
@@ -112,7 +112,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	}
 	else
 	{
-		std::fprintf(stderr, "RPCS3: %.*s\n", static_cast<int>(text.size()), text.data());
+		std::cerr << fmt::format("RPCS3: %s\n", text);
 	}
 
 	auto show_report = [](std::string_view text)
@@ -183,14 +183,46 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	std::abort();
 }
 
-struct pause_on_fatal final : logs::listener
+struct fatal_errors_listener final : logs::listener
 {
-	~pause_on_fatal() override = default;
+	~fatal_errors_listener() override = default;
 
-	void log(u64 /*stamp*/, const logs::message& msg, const std::string& /*prefix*/, const std::string& /*text*/) override
+	void log(u64 /*stamp*/, const logs::message& msg, const std::string& prefix, const std::string& text) override
 	{
 		if (msg.sev == logs::level::fatal)
 		{
+			std::string _msg = "RPCS3: ";
+
+			if (!prefix.empty())
+			{
+				_msg += prefix;
+				_msg += ": ";
+			}
+
+			if (msg.ch && '\0' != *msg.ch->name)
+			{
+				_msg += msg.ch->name;
+				_msg += ": ";
+			}
+
+			_msg += text;
+			_msg += '\n';
+
+#ifdef _WIN32
+			// If launched from CMD
+			if (AttachConsole(ATTACH_PARENT_PROCESS))
+				[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stderr);
+#endif
+			// Output to error stream as is
+			std::cerr << _msg;
+
+#ifdef _WIN32
+			if (IsDebuggerPresent())
+			{
+				// Output string to attached debugger
+				OutputDebugStringA(_msg.c_str());
+			}
+#endif
 			// Pause emulation if fatal error encountered
 			Emu.Pause();
 		}
@@ -419,7 +451,7 @@ int main(int argc, char** argv)
 		log_file = logs::make_file_listener(fs::get_cache_dir() + "RPCS3.log", stats.avail_free / 4);
 	}
 
-	static std::unique_ptr<logs::listener> log_pauser = std::make_unique<pause_on_fatal>();
+	static std::unique_ptr<logs::listener> log_pauser = std::make_unique<fatal_errors_listener>();
 	logs::listener::add(log_pauser.get());
 
 	{
@@ -477,14 +509,14 @@ int main(int argc, char** argv)
 	rlim.rlim_max = 4096;
 #ifdef RLIMIT_NOFILE
 	if (::setrlimit(RLIMIT_NOFILE, &rlim) != 0)
-		std::fprintf(stderr, "Failed to set max open file limit (4096).\n");
+		std::cerr << "Failed to set max open file limit (4096).\n";
 #endif
 
 	rlim.rlim_cur = 0x80000000;
 	rlim.rlim_max = 0x80000000;
 #ifdef RLIMIT_MEMLOCK
 	if (::setrlimit(RLIMIT_MEMLOCK, &rlim) != 0)
-		std::fprintf(stderr, "Failed to set RLIMIT_MEMLOCK size to 2 GiB. Try to update your system configuration.\n");
+		std::cerr << "Failed to set RLIMIT_MEMLOCK size to 2 GiB. Try to update your system configuration.\n";
 #endif
 	// Work around crash on startup on KDE: https://bugs.kde.org/show_bug.cgi?id=401637
 	setenv( "KDE_DEBUG", "1", 0 );
