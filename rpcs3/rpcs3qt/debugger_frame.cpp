@@ -255,10 +255,10 @@ void debugger_frame::open_breakpoints_settings()
 
 	QCheckBox* check_box = new QCheckBox(tr("Pause All Threads On Hit"), dlg);
 	check_box->setCheckable(true);
-	check_box->setChecked(g_debugger_pause_all_threads_on_bp ? Qt::Checked : Qt::Unchecked);
+	check_box->setChecked(g_debugger_pause_all_threads_on_bp.load());
 	check_box->setToolTip(tr("When set: a breakpoint hit will pause the emulation instead of the current thread."
 		"\nApplies on all breakpoints in all threads regardless if set before or after changing this setting."));
-	
+
 	connect(check_box, &QCheckBox::clicked, dlg, [](bool checked) { g_debugger_pause_all_threads_on_bp = checked; });
 
 	QPushButton* button_ok = new QPushButton(tr("OK"), dlg);

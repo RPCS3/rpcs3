@@ -183,9 +183,9 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	std::abort();
 }
 
-struct fatal_errors_listener final : logs::listener
+struct fatal_error_listener final : logs::listener
 {
-	~fatal_errors_listener() override = default;
+	~fatal_error_listener() override = default;
 
 	void log(u64 /*stamp*/, const logs::message& msg, const std::string& prefix, const std::string& text) override
 	{
@@ -451,7 +451,7 @@ int main(int argc, char** argv)
 		log_file = logs::make_file_listener(fs::get_cache_dir() + "RPCS3.log", stats.avail_free / 4);
 	}
 
-	static std::unique_ptr<logs::listener> log_pauser = std::make_unique<fatal_errors_listener>();
+	static std::unique_ptr<logs::listener> log_pauser = std::make_unique<fatal_error_listener>();
 	logs::listener::add(log_pauser.get());
 
 	{
