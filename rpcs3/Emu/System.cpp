@@ -361,13 +361,17 @@ namespace
 				}
 
 				// Initialize message dialog
+				bool skip_this_one = false; // Workaround: do not open a progress dialog if there is already a cell message dialog open.
 				std::shared_ptr<MsgDialogBase> dlg;
 				std::shared_ptr<rsx::overlays::message_dialog> native_dlg;
 
 				if (const auto renderer = rsx::get_current_renderer();
 					renderer && renderer->is_inited)
 				{
-					if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+					auto manager = g_fxo->try_get<rsx::overlays::display_manager>();
+					skip_this_one = manager && manager->get<rsx::overlays::message_dialog>();
+
+					if (manager && !skip_this_one)
 					{
 						MsgDialogType type{};
 						type.se_normal = true;
@@ -381,7 +385,7 @@ namespace
 					}
 				}
 
-				if (!native_dlg)
+				if (!skip_this_one && !native_dlg)
 				{
 					dlg = Emu.GetCallbacks().get_msg_dialog();
 					dlg->type.se_normal = true;
@@ -411,6 +415,13 @@ namespace
 				// Update progress
 				while (thread_ctrl::state() != thread_state::aborting)
 				{
+					if (skip_this_one)
+					{
+						// Do nothing
+						std::this_thread::sleep_for(10ms);
+						continue;
+					}
+
 					const u32 ftotal_new = g_progr_ftotal;
 					const u32 fdone_new  = g_progr_fdone;
 					const u32 ptotal_new = g_progr_ptotal;
@@ -475,6 +486,12 @@ namespace
 				g_progr_fdone  -= fdone;
 				g_progr_ptotal -= ptotal;
 				g_progr_pdone  -= pdone;
+
+				if (skip_this_one)
+				{
+					// Do nothing
+					continue;
+				}
 
 				Emu.CallAfter([=]()
 				{

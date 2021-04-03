@@ -37,7 +37,7 @@ namespace rsx
 
 			void set_text(const std::string& text);
 
-			u32 progress_bar_count();
+			u32 progress_bar_count() const;
 			void progress_bar_set_taskbar_index(s32 index);
 			error_code progress_bar_set_message(u32 index, const std::string& msg);
 			error_code progress_bar_increment(u32 index, f32 value);
