@@ -311,7 +311,7 @@ namespace rsx
 			text_display.translate(0, -(text_h - 16));
 		}
 
-		u32 message_dialog::progress_bar_count()
+		u32 message_dialog::progress_bar_count() const
 		{
 			return num_progress_bars;
 		}
