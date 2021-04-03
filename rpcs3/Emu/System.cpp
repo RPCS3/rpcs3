@@ -424,6 +424,14 @@ namespace
 				// Update progress
 				while (thread_ctrl::state() != thread_state::aborting)
 				{
+					const auto text_new  = g_progr.load();
+
+					if (!text_new)
+					{
+						// Close dialog
+						break;
+					}
+
 					if (skip_this_one)
 					{
 						// Do nothing
@@ -435,7 +443,6 @@ namespace
 					const u32 fdone_new  = g_progr_fdone;
 					const u32 ptotal_new = g_progr_ptotal;
 					const u32 pdone_new  = g_progr_pdone;
-					const auto text_new  = g_progr.load();
 
 					if (ftotal != ftotal_new || fdone != fdone_new || ptotal != ptotal_new || pdone != pdone_new || text_new != text1)
 					{
@@ -461,7 +468,7 @@ namespace
 						// Changes detected, send update
 						if (native_dlg)
 						{
-							native_dlg->set_text(text_new ? text_new : "");
+							native_dlg->set_text(text_new);
 							native_dlg->progress_bar_set_message(0, progr);
 							native_dlg->progress_bar_set_value(0, std::floor(value));
 						}
@@ -469,18 +476,11 @@ namespace
 						{
 							Emu.CallAfter([=]()
 							{
-								dlg->SetMsg(text_new ? text_new : "");
+								dlg->SetMsg(text_new);
 								dlg->ProgressBarSetMsg(0, progr);
 								dlg->ProgressBarSetValue(0, std::floor(value));
 							});
 						}
-
-					}
-
-					if (!text_new)
-					{
-						// Close dialog
-						break;
 					}
 
 					std::this_thread::sleep_for(10ms);
@@ -491,19 +491,11 @@ namespace
 					break;
 				}
 
-				// Cleanup
-				g_progr_fdone  -= fdone;
-				g_progr_pdone  -= pdone;
-				g_progr_ftotal -= ftotal;
-				g_progr_ptotal -= ptotal;
-
 				if (skip_this_one)
 				{
 					// Do nothing
-					continue;
 				}
-
-				if (native_dlg)
+				else if (native_dlg)
 				{
 					native_dlg->close(false, false);
 				}
@@ -515,6 +507,11 @@ namespace
 					});
 				}
 
+				// Cleanup
+				g_progr_fdone  -= fdone;
+				g_progr_pdone  -= pdone;
+				g_progr_ftotal -= ftotal;
+				g_progr_ptotal -= ptotal;
 				g_progr_ptotal.notify_all();
 			}
 		}
