@@ -172,6 +172,10 @@ struct lv2_fs_object
 	{
 	}
 
+	lv2_fs_object(const lv2_fs_object&) = delete;
+
+	lv2_fs_object& operator=(const lv2_fs_object&) = delete;
+
 	virtual ~lv2_fs_object() = default;
 
 	static lv2_fs_mount_point* get_mp(std::string_view filename);

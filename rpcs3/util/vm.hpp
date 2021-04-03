@@ -47,13 +47,13 @@ namespace utils
 	class shm
 	{
 #ifdef _WIN32
-		void* m_handle;
+		void* m_handle{};
 #else
-		int m_file;
+		int m_file{};
 #endif
-		u32 m_size;
-		u32 m_flags;
-		atomic_t<void*> m_ptr;
+		u32 m_size{};
+		u32 m_flags{};
+		atomic_t<void*> m_ptr{nullptr};
 
 	public:
 		explicit shm(u32 size, u32 flags = 0);

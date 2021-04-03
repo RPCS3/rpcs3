@@ -63,8 +63,8 @@ struct WAVHeader
 
 class AudioDumper
 {
-	WAVHeader m_header;
-	fs::file m_output;
+	WAVHeader m_header{};
+	fs::file m_output{};
 
 public:
 	AudioDumper(u16 ch);

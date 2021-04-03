@@ -295,7 +295,7 @@ struct cfg_root : cfg::node
 
 	cfg::log_entry log{ this, "Log" };
 
-	std::string name;
+	std::string name{};
 };
 
 extern cfg_root g_cfg;

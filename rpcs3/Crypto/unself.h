@@ -359,18 +359,18 @@ protected:
 	const fs::file& sce_f;
 
 	// SCE headers.
-	SceHeader sce_hdr;
+	SceHeader sce_hdr{};
 
 	// Metadata structs.
-	MetadataInfo meta_info;
-	MetadataHeader meta_hdr;
-	std::vector<MetadataSectionHeader> meta_shdr;
+	MetadataInfo meta_info{};
+	MetadataHeader meta_hdr{};
+	std::vector<MetadataSectionHeader> meta_shdr{};
 
 	// Internal data buffers.
-	std::unique_ptr<u8[]> data_keys;
-	u32 data_keys_length;
-	std::unique_ptr<u8[]> data_buf;
-	u32 data_buf_length;
+	std::unique_ptr<u8[]> data_keys{};
+	u32 data_keys_length{};
+	std::unique_ptr<u8[]> data_buf{};
+	u32 data_buf_length{};
 
 public:
 	SCEDecrypter(const fs::file& s);
@@ -386,38 +386,38 @@ class SELFDecrypter
 	const fs::file& self_f;
 
 	// SCE, SELF and APP headers.
-	SceHeader sce_hdr;
-	SelfHeader self_hdr;
-	AppInfo app_info;
+	SceHeader sce_hdr{};
+	SelfHeader self_hdr{};
+	AppInfo app_info{};
 
 	// ELF64 header and program header/section header arrays.
-	Elf64_Ehdr elf64_hdr;
-	std::vector<Elf64_Shdr> shdr64_arr;
-	std::vector<Elf64_Phdr> phdr64_arr;
+	Elf64_Ehdr elf64_hdr{};
+	std::vector<Elf64_Shdr> shdr64_arr{};
+	std::vector<Elf64_Phdr> phdr64_arr{};
 
 	// ELF32 header and program header/section header arrays.
-	Elf32_Ehdr elf32_hdr;
-	std::vector<Elf32_Shdr> shdr32_arr;
-	std::vector<Elf32_Phdr> phdr32_arr;
+	Elf32_Ehdr elf32_hdr{};
+	std::vector<Elf32_Shdr> shdr32_arr{};
+	std::vector<Elf32_Phdr> phdr32_arr{};
 
 	// Decryption info structs.
-	std::vector<SectionInfo> secinfo_arr;
-	SCEVersionInfo scev_info;
-	std::vector<ControlInfo> ctrlinfo_arr;
+	std::vector<SectionInfo> secinfo_arr{};
+	SCEVersionInfo scev_info{};
+	std::vector<ControlInfo> ctrlinfo_arr{};
 
 	// Metadata structs.
-	MetadataInfo meta_info;
-	MetadataHeader meta_hdr;
-	std::vector<MetadataSectionHeader> meta_shdr;
+	MetadataInfo meta_info{};
+	MetadataHeader meta_hdr{};
+	std::vector<MetadataSectionHeader> meta_shdr{};
 
 	// Internal data buffers.
-	std::unique_ptr<u8[]> data_keys;
-	u32 data_keys_length;
-	std::unique_ptr<u8[]> data_buf;
-	u32 data_buf_length = 0;
+	std::unique_ptr<u8[]> data_keys{};
+	u32 data_keys_length{};
+	std::unique_ptr<u8[]> data_buf{};
+	u32 data_buf_length{};
 
 	// Main key vault instance.
-	KeyVault key_v;
+	KeyVault key_v{};
 
 public:
 	SELFDecrypter(const fs::file& s);

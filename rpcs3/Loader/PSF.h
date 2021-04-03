@@ -21,10 +21,10 @@ namespace psf
 
 	class entry final
 	{
-		format m_type;
-		u32 m_max_size; // Entry max size (supplementary info, stored in PSF format)
-		u32 m_value_integer; // TODO: is it really unsigned?
-		std::string m_value_string;
+		format m_type{};
+		u32 m_max_size{}; // Entry max size (supplementary info, stored in PSF format)
+		u32 m_value_integer{}; // TODO: is it really unsigned?
+		std::string m_value_string{};
 
 	public:
 		// Construct string entry, assign the value

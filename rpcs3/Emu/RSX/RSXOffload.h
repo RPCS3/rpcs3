@@ -20,13 +20,13 @@ namespace rsx
 
 		struct transport_packet
 		{
-			op type;
-			std::vector<u8> opt_storage;
-			void *src;
-			void *dst;
-			u32 length;
-			u32 aux_param0;
-			u32 aux_param1;
+			op type{};
+			std::vector<u8> opt_storage{};
+			void* src{};
+			void* dst{};
+			u32 length{};
+			u32 aux_param0{};
+			u32 aux_param1{};
 
 			transport_packet(void *_dst, void *_src, u32 len)
 				: type(op::raw_copy), src(_src), dst(_dst), length(len)

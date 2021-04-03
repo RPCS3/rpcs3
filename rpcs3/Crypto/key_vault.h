@@ -20,15 +20,15 @@ enum SELF_KEY_TYPE
 
 struct SELF_KEY
 {
-	u64 version_start;
-	u64 version_end;
-	u16 revision;
-	u32 self_type;
-	u8 erk[0x20];
-	u8 riv[0x10];
-	u8 pub[0x28];
-	u8 priv[0x15];
-	u32 curve_type;
+	u64 version_start{};
+	u64 version_end{};
+	u16 revision{};
+	u32 self_type{};
+	u8 erk[0x20]{};
+	u8 riv[0x10]{};
+	u8 pub[0x28]{};
+	u8 priv[0x15]{};
+	u32 curve_type{};
 
 	SELF_KEY(u64 ver_start, u64 ver_end, u16 rev, u32 type, const std::string& e, const std::string& r, const std::string& pb, const std::string& pr, u32 ct);
 };
@@ -182,15 +182,15 @@ constexpr u8 PUP_KEY[0x40] = {
 
 class KeyVault
 {
-	std::vector<SELF_KEY> sk_LV0_arr;
-	std::vector<SELF_KEY> sk_LV1_arr;
-	std::vector<SELF_KEY> sk_LV2_arr;
-	std::vector<SELF_KEY> sk_APP_arr;
-	std::vector<SELF_KEY> sk_ISO_arr;
-	std::vector<SELF_KEY> sk_LDR_arr;
-	std::vector<SELF_KEY> sk_UNK7_arr;
-	std::vector<SELF_KEY> sk_NPDRM_arr;
-	std::unique_ptr<u8[]> klicensee_key;
+	std::vector<SELF_KEY> sk_LV0_arr{};
+	std::vector<SELF_KEY> sk_LV1_arr{};
+	std::vector<SELF_KEY> sk_LV2_arr{};
+	std::vector<SELF_KEY> sk_APP_arr{};
+	std::vector<SELF_KEY> sk_ISO_arr{};
+	std::vector<SELF_KEY> sk_LDR_arr{};
+	std::vector<SELF_KEY> sk_UNK7_arr{};
+	std::vector<SELF_KEY> sk_NPDRM_arr{};
+	std::unique_ptr<u8[]> klicensee_key{};
 
 public:
 	KeyVault();

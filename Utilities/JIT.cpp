@@ -218,6 +218,10 @@ asmjit::Runtime& asmjit::get_global_runtime()
 			utils::memory_commit(m_pos, size, utils::protection::wx);
 		}
 
+		custom_runtime(const custom_runtime&) = delete;
+
+		custom_runtime& operator=(const custom_runtime&) = delete;
+
 		asmjit::Error _add(void** dst, asmjit::CodeHolder* code) noexcept override
 		{
 			usz codeSize = code->getCodeSize();
@@ -383,6 +387,10 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 	u64 data_ptr = c_max_size;
 
 	MemoryManager1() = default;
+
+	MemoryManager1(const MemoryManager1&) = delete;
+
+	MemoryManager1& operator=(const MemoryManager1&) = delete;
 
 	~MemoryManager1() override
 	{

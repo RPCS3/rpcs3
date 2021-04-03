@@ -10,13 +10,16 @@
 class FAudioBackend : public AudioBackend
 {
 private:
-	FAudio* m_instance;
-	FAudioMasteringVoice* m_master_voice;
-	FAudioSourceVoice* m_source_voice = nullptr;
+	FAudio* m_instance{};
+	FAudioMasteringVoice* m_master_voice{};
+	FAudioSourceVoice* m_source_voice{};
 
 public:
 	FAudioBackend();
 	virtual ~FAudioBackend() override;
+
+	FAudioBackend(const FAudioBackend&) = delete;
+	FAudioBackend& operator=(const FAudioBackend&) = delete;
 
 	virtual const char* GetName() const override
 	{

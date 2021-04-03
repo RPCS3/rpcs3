@@ -4,7 +4,7 @@
 
 #include "util/sysinfo.hpp"
 
-cfg_root g_cfg;
+cfg_root g_cfg{};
 
 bool cfg_root::node_core::has_rtm() const
 {

@@ -399,7 +399,7 @@ extern void ppu_trap(ppu_thread& ppu, u64 addr);
 
 class ppu_scale_table_t
 {
-	std::array<v128, 32 + 31> m_data;
+	std::array<v128, 32 + 31> m_data{};
 
 public:
 	ppu_scale_table_t()

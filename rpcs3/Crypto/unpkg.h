@@ -323,16 +323,16 @@ private:
 
 	bool m_is_valid = false;
 
-	std::string m_path;
-	std::string m_install_dir;
-	std::vector<fs::file> m_filelist;
+	std::string m_path{};
+	std::string m_install_dir{};
+	std::vector<fs::file> m_filelist{};
 	usz m_cur_file = 0;
 	u64 m_cur_offset = 0;
 	u64 m_cur_file_offset = 0;
-	std::unique_ptr<u128[]> m_buf;
+	std::unique_ptr<u128[]> m_buf{};
 	std::array<uchar, 16> m_dec_key{};
 
 	PKGHeader m_header{};
 	PKGMetaData m_metadata{};
-	psf::registry m_psf;
+	psf::registry m_psf{};
 };

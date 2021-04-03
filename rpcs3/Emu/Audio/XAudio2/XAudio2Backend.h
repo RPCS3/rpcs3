@@ -13,13 +13,16 @@
 class XAudio2Backend final : public AudioBackend
 {
 private:
-	Microsoft::WRL::ComPtr<IXAudio2> m_xaudio2_instance;
+	Microsoft::WRL::ComPtr<IXAudio2> m_xaudio2_instance{};
 	IXAudio2MasteringVoice* m_master_voice{};
 	IXAudio2SourceVoice* m_source_voice{};
 
 public:
 	XAudio2Backend();
 	virtual ~XAudio2Backend() override;
+
+	XAudio2Backend(const XAudio2Backend&) = delete;
+	XAudio2Backend& operator=(const XAudio2Backend&) = delete;
 
 	virtual const char* GetName() const override { return "XAudio2"; };
 

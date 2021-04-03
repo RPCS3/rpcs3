@@ -70,19 +70,19 @@ namespace logs
 
 	class file_writer
 	{
-		std::thread m_writer;
-		fs::file m_fout;
-		fs::file m_fout2;
-		u64 m_max_size;
+		std::thread m_writer{};
+		fs::file m_fout{};
+		fs::file m_fout2{};
+		u64 m_max_size{};
 
-		std::unique_ptr<uchar[]> m_fptr;
+		std::unique_ptr<uchar[]> m_fptr{};
 		z_stream m_zs{};
-		shared_mutex m_m;
+		shared_mutex m_m{};
 
 		alignas(128) atomic_t<u64> m_buf{0}; // MSB (40 bit): push begin, LSB (24 bis): push size
 		alignas(128) atomic_t<u64> m_out{0}; // Amount of bytes written to file
 
-		uchar m_zout[65536];
+		uchar m_zout[65536]{};
 
 		// Write buffered logs immediately
 		bool flush(u64 bufv);
@@ -118,10 +118,10 @@ namespace logs
 		}
 
 		// Channel registry
-		std::unordered_multimap<std::string, channel*> channels;
+		std::unordered_multimap<std::string, channel*> channels{};
 
 		// Messages for delayed listener initialization
-		std::vector<stored_message> messages;
+		std::vector<stored_message> messages{};
 	};
 
 	static root_listener* get_logger()

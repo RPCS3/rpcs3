@@ -7,10 +7,10 @@
 class OpenALBackend : public AudioBackend
 {
 private:
-	ALint m_format;
-	ALuint m_source;
-	ALuint m_buffers[MAX_AUDIO_BUFFERS];
-	ALsizei m_num_buffers;
+	ALint m_format{};
+	ALuint m_source{};
+	ALuint m_buffers[MAX_AUDIO_BUFFERS]{};
+	ALsizei m_num_buffers{};
 
 	u32 m_next_buffer = 0;
 	u32 m_num_unqueued = 0;
