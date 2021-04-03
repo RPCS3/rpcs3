@@ -333,6 +333,15 @@ void Emulator::Init(bool add_only)
 	g_fxo->init<patch_engine>()->append_global_patches();
 }
 
+namespace rsx::overlays
+{
+	class progress_dialog : public message_dialog
+	{
+	public:
+		using message_dialog::message_dialog;
+	};
+}
+
 namespace
 {
 	struct progress_dialog_server
@@ -363,7 +372,7 @@ namespace
 				// Initialize message dialog
 				bool skip_this_one = false; // Workaround: do not open a progress dialog if there is already a cell message dialog open.
 				std::shared_ptr<MsgDialogBase> dlg;
-				std::shared_ptr<rsx::overlays::message_dialog> native_dlg;
+				std::shared_ptr<rsx::overlays::progress_dialog> native_dlg;
 
 				if (const auto renderer = rsx::get_current_renderer();
 					renderer && renderer->is_inited)
@@ -379,7 +388,7 @@ namespace
 						type.disable_cancel = true;
 						type.progress_bar_count = 1;
 
-						native_dlg = manager->create<rsx::overlays::message_dialog>(!!g_cfg.video.shader_preloading_dialog.use_custom_background);
+						native_dlg = manager->create<rsx::overlays::progress_dialog>(!!g_cfg.video.shader_preloading_dialog.use_custom_background);
 						native_dlg->show(false, text0, type, nullptr);
 						native_dlg->progress_bar_set_message(0, "Please wait");
 					}
@@ -442,29 +451,30 @@ namespace
 						const u64 done = pdone * std::max<u64>(fdone, 1);
 						const double value = std::fmin(done * 100. / total, 100.);
 
+						std::string progr = "Progress:";
+
+						if (ftotal)
+							fmt::append(progr, " file %u of %u%s", fdone, ftotal, ptotal ? "," : "");
+						if (ptotal)
+							fmt::append(progr, " module %u of %u", pdone, ptotal);
+
 						// Changes detected, send update
-						Emu.CallAfter([=]()
+						if (native_dlg)
 						{
-							std::string progr = "Progress:";
-
-							if (ftotal)
-								fmt::append(progr, " file %u of %u%s", fdone, ftotal, ptotal ? "," : "");
-							if (ptotal)
-								fmt::append(progr, " module %u of %u", pdone, ptotal);
-
-							if (native_dlg)
-							{
-								native_dlg->set_text(text_new ? text_new : "");
-								native_dlg->progress_bar_set_message(0, progr);
-								native_dlg->progress_bar_set_value(0, std::floor(value));
-							}
-							else if (dlg)
+							native_dlg->set_text(text_new ? text_new : "");
+							native_dlg->progress_bar_set_message(0, progr);
+							native_dlg->progress_bar_set_value(0, std::floor(value));
+						}
+						else if (dlg)
+						{
+							Emu.CallAfter([=]()
 							{
 								dlg->SetMsg(text_new ? text_new : "");
 								dlg->ProgressBarSetMsg(0, progr);
 								dlg->ProgressBarSetValue(0, std::floor(value));
-							}
-						});
+							});
+						}
+
 					}
 
 					if (!text_new)
@@ -482,10 +492,10 @@ namespace
 				}
 
 				// Cleanup
-				g_progr_ftotal -= ftotal;
 				g_progr_fdone  -= fdone;
-				g_progr_ptotal -= ptotal;
 				g_progr_pdone  -= pdone;
+				g_progr_ftotal -= ftotal;
+				g_progr_ptotal -= ptotal;
 
 				if (skip_this_one)
 				{
@@ -493,17 +503,19 @@ namespace
 					continue;
 				}
 
-				Emu.CallAfter([=]()
+				if (native_dlg)
 				{
-					if (native_dlg)
-					{
-						native_dlg->close(false, false);
-					}
-					else if (dlg)
+					native_dlg->close(false, false);
+				}
+				else if (dlg)
+				{
+					Emu.CallAfter([=]()
 					{
 						dlg->Close(true);
-					}
-				});
+					});
+				}
+
+				g_progr_ptotal.notify_all();
 			}
 		}
 

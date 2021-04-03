@@ -422,7 +422,7 @@ void spu_cache::initialize()
 		// Initialize progress dialog (wait for previous progress done)
 		while (g_progr_ptotal)
 		{
-			std::this_thread::sleep_for(5ms);
+			g_progr_ptotal.wait<atomic_wait::op_ne>(0);
 		}
 
 		g_progr_ptotal += ::size32(func_list);
