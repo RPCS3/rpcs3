@@ -182,6 +182,16 @@ namespace rsx
 			close(true, true);
 		}
 
+		void message_dialog::close(bool use_callback, bool stop_pad_interception)
+		{
+			if (num_progress_bars > 0)
+			{
+				Emu.GetCallbacks().handle_taskbar_progress(0, 1);
+			}
+
+			user_interface::close(use_callback, stop_pad_interception);
+		}
+
 		struct msg_dialog_thread
 		{
 			static constexpr auto thread_name = "MsgDialog Thread"sv;

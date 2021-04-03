@@ -89,7 +89,7 @@ namespace rsx
 
 			virtual void on_button_pressed(pad_button /*button_press*/) {}
 
-			void close(bool use_callback, bool stop_pad_interception);
+			virtual void close(bool use_callback, bool stop_pad_interception);
 
 			s32 run_input_loop();
 		};
