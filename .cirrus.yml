@@ -1,5 +1,101 @@
 env:
   CIRRUS_CLONE_DEPTH: 0 # Unshallow clone to obtain proper GIT_VERSION
+  BUILD_REPOSITORY_NAME: $CIRRUS_REPO_FULL_NAME
+  SYSTEM_PULLREQUEST_SOURCEBRANCH: $CIRRUS_BRANCH
+  SYSTEM_PULLREQUEST_PULLREQUESTID: $CIRRUS_PR
+  BUILD_SOURCEVERSION: $CIRRUS_CHANGE_IN_REPO
+  RPCS3_TOKEN: ENCRYPTED[13a0f18de9285e6c880e3aecbb54258245a74872af7d0fcb92447fa1200ceb6a4dc8acc880ddbf5e653d46336563ca72] # Replace this when we're using Cirrus for master releases!!
+
+windows_task:
+  matrix:
+    - name: Cirrus Windows
+      windows_container:
+        image: cirrusci/windowsservercore:visualstudio2019
+        cpu: 8
+        memory: 16G
+  env:
+    CIRRUS_SHELL: "bash"
+    COMPILER: msvc
+    QT_VER_MAIN: '5'
+    BUILD_ARTIFACTSTAGINGDIRECTORY: ${CIRRUS_WORKING_DIR}\artifacts\
+    QT_VER: '5.15.2'
+    QT_VER_MSVC: 'msvc2019'
+    QT_DATE: '202011130602'
+    QTDIR: C:\Qt\${QT_VER}\${QT_VER_MSVC}_64
+    VULKAN_VER: '1.2.154.1'
+    VULKAN_SDK_SHA: 'b64471f3a720e649c1fae6535ea83b8c642655ebed1485bfdf15bf4d88f746d9'
+    VULKAN_SDK: C:\VulkanSDK\${VULKAN_VER}
+    CACHE_DIR: "./cache"
+    UPLOAD_COMMIT_HASH: 7d09e3be30805911226241afbb14f8cdc2eb054e
+    UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-win"
+  deps_cache:
+    folder: "./cache"
+  #obj_cache:
+  #  folder: "./tmp"
+  #obj2_cache:
+  #  folder: "./rpcs3/x64"
+  setup_script:
+    - './.ci/get_keys-windows.sh'
+    - './.ci/setup-windows.sh'
+#   - choco install -y python # Needed for SPIRV, use either this or make a new Docker image
+#  spirv_script:
+#   - export PATH=${PATH}:"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin"
+#   - cd "${CIRRUS_WORKING_DIR}/Vulkan/spirv-tools-build"
+#   - msbuild.exe spirv-tools-build.vcxproj //p:Configuration=Release //m
+  rpcs3_script:
+    - export PATH=${PATH}:"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin"
+    - msbuild.exe rpcs3.sln //p:Configuration=Release //m
+  deploy_script:
+    - mkdir artifacts
+    - source './.ci/export-cirrus-vars.sh'
+    - './.ci/deploy-windows.sh'
+  artifacts:
+    name: Artifact
+    path: "*.7z*"
+#  push_script: |
+#    if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ]; then
+#      source './.ci/export-cirrus-vars.sh'
+#      './.ci/github-upload.sh'
+#    fi;
+
+linux_task:
+  container:
+    image: rpcs3/rpcs3-travis-xenial:1.7
+    cpu: 4
+    memory: 16G
+  env:
+    BUILD_ARTIFACTSTAGINGDIRECTORY: ${CIRRUS_WORKING_DIR}/artifacts
+    CCACHE_DIR: "/tmp/ccache_dir"
+    CCACHE_MAXSIZE: 300M
+    CI_HAS_ARTIFACTS: true
+    UPLOAD_COMMIT_HASH: d812f1254a1157c80fd402f94446310560f54e5f
+    UPLOAD_REPO_FULL_NAME: "rpcs3/rpcs3-binaries-linux"
+    DEPLOY_APPIMAGE: true
+    APPDIR: "./appdir"
+    ARTDIR: ${CIRRUS_WORKING_DIR}/artifacts/
+    RELEASE_MESSAGE: "../GitHubReleaseMessage.txt"
+  ccache_cache:
+    folder: "/tmp/ccache_dir"
+  matrix:
+    - name: Cirrus Linux GCC
+      env:
+        COMPILER: gcc
+      gcc_script:
+        - mkdir artifacts
+        - ".ci/build-linux.sh"
+    - name: Cirrus Linux Clang
+      env:
+        COMPILER: clang
+      clang_script:
+        - mkdir artifacts
+        - ".ci/build-linux.sh"
+  artifacts:
+    name: Artifact
+    path: "artifacts/*"
+#  push_script: |
+#    if [ "$CIRRUS_REPO_OWNER" = "RPCS3" ] && [ -z "$CIRRUS_PR" ] && [ "$CIRRUS_BRANCH" = "master" ] && [ "$COMPILER" = "gcc" ]; then
+#      '.ci/github-upload.sh'
+#    fi;
 
 freebsd_task:
   matrix:
