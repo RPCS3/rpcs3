@@ -90,6 +90,31 @@ namespace vm
 	// utils::memory_lock wrapper for locking sudo memory
 	void lock_sudo(u32 addr, u32 size);
 
+	enum block_flags_3
+	{
+		page_hidden = 0x1000,
+	};
+	enum block_flags_2_page_size
+	{
+		page_size_4k   = 0x100, // SYS_MEMORY_PAGE_SIZE_4K
+		page_size_64k  = 0x200, // SYS_MEMORY_PAGE_SIZE_64K
+		page_size_1m   = 0x400, // SYS_MEMORY_PAGE_SIZE_1M
+
+		page_size_mask = 0xF00, // SYS_MEMORY_PAGE_SIZE_MASK
+	};
+	enum block_flags_1
+	{
+		stack_guarded = 0x10,
+		preallocated  = 0x20, // nonshareable
+	};
+	enum block_flags_0
+	{
+		bf0_0x1 = 0x1, // TODO: document
+		bf0_0x2 = 0x2, // TODO: document
+
+		bf0_mask = bf0_0x1 | bf0_0x2,
+	};
+
 	// Object that handles memory allocations inside specific constant bounds ("location")
 	class block_t final
 	{
@@ -108,7 +133,10 @@ namespace vm
 	public:
 		const u32 addr; // Start address
 		const u32 size; // Total size
-		const u64 flags; // Currently unused
+		const u64 flags; // Byte 0xF000: block_flags_3
+						 // Byte 0x0F00: block_flags_2_page_size (SYS_MEMORY_PAGE_SIZE_*)
+						 // Byte 0x00F0: block_flags_1
+						 // Byte 0x000F: block_flags_0
 
 		// Search and map memory (min alignment is 0x10000)
 		u32 alloc(u32 size, const std::shared_ptr<utils::shm>* = nullptr, u32 align = 0x10000, u64 flags = 0);
@@ -142,7 +170,7 @@ namespace vm
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0);
 
 	// Allocate segment at specified location, does nothing if exists already
-	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags = 0x200);
+	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags = page_size_64k);
 
 	// Get PS3 virtual memory address from the provided pointer (nullptr or pointer from outside is always converted to 0)
 	// Super memory is allowed as well
