@@ -377,7 +377,7 @@ namespace
 					renderer && renderer->is_inited)
 				{
 					auto manager = g_fxo->try_get<rsx::overlays::display_manager>();
-					skip_this_one = manager && manager->get<rsx::overlays::message_dialog>();
+					skip_this_one = g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog || (manager && manager->get<rsx::overlays::message_dialog>());
 
 					if (manager && !skip_this_one)
 					{
