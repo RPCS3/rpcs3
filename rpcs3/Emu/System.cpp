@@ -425,19 +425,6 @@ namespace
 				{
 					const auto text_new  = g_progr.load();
 
-					if (!text_new)
-					{
-						// Close dialog
-						break;
-					}
-
-					if (skip_this_one)
-					{
-						// Do nothing
-						std::this_thread::sleep_for(10ms);
-						continue;
-					}
-
 					const u32 ftotal_new = g_progr_ftotal;
 					const u32 fdone_new  = g_progr_fdone;
 					const u32 ptotal_new = g_progr_ptotal;
@@ -450,6 +437,19 @@ namespace
 						ptotal = ptotal_new;
 						pdone  = pdone_new;
 						text1  = text_new;
+
+						if (!text_new)
+						{
+							// Close dialog
+							break;
+						}
+
+						if (skip_this_one)
+						{
+							// Do nothing
+							std::this_thread::sleep_for(10ms);
+							continue;
+						}
 
 						// Compute new progress in percents
 						// Assume not all programs were found if files were not compiled (as it may contain more)
