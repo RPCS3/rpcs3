@@ -735,7 +735,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 {
 	// Lock mount point, close file descriptors, retry
 	const auto from0 = std::string_view(from).substr(0, from.find_last_not_of(fs::delim) + 1);
-	const auto escaped_from = fs::escape_path(from);
+	const auto escaped_from = Emu.GetCallbacks().resolve_path(from);
 
 	std::lock_guard lock(mp->mutex);
 
@@ -746,7 +746,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	idm::select<lv2_fs_object, lv2_file>([&](u32 /*id*/, lv2_file& file)
 	{
-		if (check_path(fs::escape_path(file.real_path)))
+		if (check_path(Emu.GetCallbacks().resolve_path(file.real_path)))
 		{
 			ensure(file.mp == mp);
 
@@ -788,7 +788,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	idm::select<lv2_fs_object, lv2_file>([&](u32 /*id*/, lv2_file& file)
 	{
-		const auto escaped_real = fs::escape_path(file.real_path);
+		const auto escaped_real = Emu.GetCallbacks().resolve_path(file.real_path);
 
 		if (check_path(escaped_real))
 		{

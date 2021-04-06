@@ -27,6 +27,7 @@
 #include <QFontDatabase>
 #include <QLibraryInfo>
 #include <QDirIterator>
+#include <QFileInfo>
 
 #include <clocale>
 
@@ -388,6 +389,11 @@ void gui_application::InitializeCallbacks()
 	callbacks.get_localized_u32string = [](localized_string_id id, const char* args) -> std::u32string
 	{
 		return localized_emu::get_u32string(id, args);
+	};
+
+	callbacks.resolve_path = [](std::string_view sv)
+	{
+		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
 	};
 
 	Emu.SetCallbacks(std::move(callbacks));
