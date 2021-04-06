@@ -964,6 +964,12 @@ void ppu_thread::cpu_task()
 			}
 
 			ppu_initialize(), spu_cache::initialize();
+
+			// Wait until the progress dialog is closed.
+			// We don't want to open a cell dialog while a native progress dialog is still open.
+			g_progr_ptotal.wait<atomic_wait::op_ne>(0);
+			g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog = true;
+
 			break;
 		}
 		case ppu_cmd::sleep:
