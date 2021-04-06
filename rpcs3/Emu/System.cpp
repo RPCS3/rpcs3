@@ -972,6 +972,7 @@ void Emulator::SetForceBoot(bool force_boot)
 game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool force_global_config, bool is_disc_patch)
 {
 	m_force_global_config = force_global_config;
+	const std::string resolved_path = GetCallbacks().resolve_path(m_path);
 
 	if (!IsStopped())
 	{
@@ -1048,7 +1049,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			_psf = psf::load_object(fs::file(m_sfo_dir + "/PARAM.SFO"));
 		}
 
-		m_title = std::string(psf::get_string(_psf, "TITLE", std::string_view(m_path).substr(m_path.find_last_of('/') + 1)));
+		m_title = std::string(psf::get_string(_psf, "TITLE", std::string_view(m_path).substr(m_path.find_last_of(fs::delim) + 1)));
 		m_title_id = std::string(psf::get_string(_psf, "TITLE_ID"));
 		m_cat = std::string(psf::get_string(_psf, "CATEGORY"));
 
@@ -1266,15 +1267,23 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			return game_boot_result::no_errors;
 		}
 
+		// Check if path is inside the specified directory 
+		auto is_path_inside_path = [this](std::string_view path, std::string_view dir)
+		{
+			return (GetCallbacks().resolve_path(path) + '/').starts_with(GetCallbacks().resolve_path(dir) + '/');
+		};
+	
 		// Detect boot location
 		constexpr usz game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
-		const bool from_hdd0_game   = m_path.starts_with(hdd0_game);
+		const bool from_hdd0_game   = is_path_inside_path(m_path, hdd0_game);
+		const bool from_dev_flash   = is_path_inside_path(m_path, g_cfg.vfs.get_dev_flash());
 
 #ifdef _WIN32
 		// m_path might be passed from command line with differences in uppercase/lowercase on windows.
-		if (!from_hdd0_game && fmt::to_lower(m_path).starts_with(fmt::to_lower(hdd0_game)))
+		if ((!from_hdd0_game && is_path_inside_path(fmt::to_lower(m_path), fmt::to_lower(hdd0_game))) ||
+			(!from_dev_flash && is_path_inside_path(fmt::to_lower(m_path), fmt::to_lower(g_cfg.vfs.get_dev_flash()))))
 		{
 			// Let's just abort to prevent errors down the line.
 			sys_log.error("The boot path seems to contain incorrectly cased characters. Please adjust the path and try again.");
@@ -1285,7 +1294,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Mount /dev_bdvd/ if necessary
 		if (bdvd_dir.empty() && disc.empty())
 		{
+			// Find /USRDIR position
+#ifdef _WIN32
+			if (const usz usrdir_pos = std::max<usz>(elf_dir.rfind("/USRDIR"sv) + 1, elf_dir.rfind("\\USRDIR"sv) + 1) - 1; usrdir_pos != umax)
+#else
 			if (const usz usrdir_pos = elf_dir.rfind("/USRDIR"); usrdir_pos != umax)
+#endif
 			{
 				const std::string main_dir = elf_dir.substr(0, usrdir_pos);
 
@@ -1313,7 +1327,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					bdvd_dir = sfb_dir + "/";
 
 					// Find game dir
-					if (const std::string main_dir_name = main_dir.substr(main_dir.find_last_of("/\\") + 1);
+					if (const std::string main_dir_name = main_dir.substr(main_dir.find_last_of(fs::delim) + 1);
 						main_dir_name.size() == game_dir_size)
 					{
 						m_game_dir = main_dir_name;
@@ -1525,7 +1539,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Check game updates
 		const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN";
 
-		if (disc.empty() && !bdvd_dir.empty() && m_path != hdd0_boot && fs::is_file(hdd0_boot))
+		if (disc.empty() && !bdvd_dir.empty() && GetCallbacks().resolve_path(m_path) != GetCallbacks().resolve_path(hdd0_boot) && fs::is_file(hdd0_boot))
 		{
 			// Booting game update
 			sys_log.success("Updates found at /dev_hdd0/game/%s/", m_title_id);
@@ -1638,30 +1652,55 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			if (argv[0].empty())
 			{
+				auto unescape = [](std::string_view path)
+				{
+					// Unescape from host FS
+					std::vector<std::string> escaped = fmt::split(path, {std::string_view{&fs::delim[0], 1}, std::string_view{&fs::delim[1], 1}});
+					std::vector<std::string> result;
+					for (auto& sv : escaped)
+						result.emplace_back(vfs::unescape(sv));
+
+					return fmt::merge(result, "/");
+				};
+
+				const std::string resolved_hdd0 = GetCallbacks().resolve_path(hdd0_game) + '/';
+
 				if (from_hdd0_game && m_cat == "DG")
 				{
-					argv[0] = "/dev_bdvd/PS3_GAME/" + m_path.substr(hdd0_game.size() + 10);
-					m_dir = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 10);
+					argv[0] = "/dev_bdvd/PS3_GAME/" + unescape(resolved_path.substr(resolved_hdd0.size() + 10));
+					m_dir = "/dev_hdd0/game/" + resolved_path.substr(resolved_hdd0.size(), 10);
 					sys_log.notice("Disc path: %s", m_dir);
 				}
 				else if (from_hdd0_game)
 				{
-					argv[0] = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size());
-					m_dir = "/dev_hdd0/game/" + m_path.substr(hdd0_game.size(), 10);
+					argv[0] = "/dev_hdd0/game/" + unescape(resolved_path.substr(resolved_hdd0.size()));
+					m_dir = "/dev_hdd0/game/" + resolved_path.substr(resolved_hdd0.size(), 10);
 					sys_log.notice("Boot path: %s", m_dir);
 				}
 				else if (!bdvd_dir.empty() && fs::is_dir(bdvd_dir))
 				{
 					// Disc games are on /dev_bdvd/
-					const usz pos = m_path.rfind(m_game_dir);
-					argv[0] = "/dev_bdvd/PS3_GAME/" + m_path.substr(pos + game_dir_size + 1);
+					const usz pos = resolved_path.rfind(m_game_dir);
+					argv[0] = "/dev_bdvd/PS3_GAME/" + unescape(resolved_path.substr(pos + game_dir_size + 1));
 					m_dir = "/dev_bdvd/PS3_GAME/";
+				}
+				else if (from_dev_flash)
+				{
+					// Firmware executables
+					argv[0] = "/dev_flash" + resolved_path.substr(GetCallbacks().resolve_path(g_cfg.vfs.get_dev_flash()).size());
+					m_dir = fs::get_parent_dir(argv[0]) + '/';
+				}
+				else if (g_cfg.vfs.host_root)
+				{
+					// For homebrew
+					argv[0] = "/host_root/" + resolved_path;
+					m_dir = "/host_root/" + elf_dir + '/';
 				}
 				else
 				{
-					// For homebrew
-					argv[0] = "/host_root/" + m_path;
-					m_dir = "/host_root/" + elf_dir + '/';
+					// Use /app_home if /host_root is disabled
+					argv[0] = "/app_home/" + resolved_path.substr(resolved_path.find_last_of(fs::delim) + 1);
+					m_dir = "/app_home/";
 				}
 
 				sys_log.notice("Elf path: %s", argv[0]);
