@@ -17,7 +17,7 @@ private Q_SLOTS:
 	void show_context_menu(const QPoint& pos);
 
 private:
-	void show_log();
+	void show_log() const;
 	bool is_valid_file(const QMimeData& md, bool save = false);
 
 	std::shared_ptr<gui_settings> m_gui_settings;

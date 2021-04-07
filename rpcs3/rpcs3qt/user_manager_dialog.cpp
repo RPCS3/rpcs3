@@ -30,8 +30,8 @@ LOG_CHANNEL(gui_log, "GUI");
 
 user_manager_dialog::user_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
 	: QDialog(parent)
-	, m_gui_settings(gui_settings)
-	, m_persistent_settings(persistent_settings)
+	, m_gui_settings(std::move(gui_settings))
+	, m_persistent_settings(std::move(persistent_settings))
 {
 	setWindowTitle(tr("User Manager"));
 	setMinimumSize(QSize(500, 400));
@@ -260,7 +260,7 @@ bool user_manager_dialog::ValidateUsername(const QString& text_to_validate)
 {
 	// "Entire string (^...$) must be between 3 and 16 characters
 	// and only consist of letters, numbers, underscores, and hyphens."
-	QRegExpValidator validator(QRegExp("^[A-Za-z0-9_-]{3,16}$"));
+	const QRegExpValidator validator(QRegExp("^[A-Za-z0-9_-]{3,16}$"));
 
 	int pos = 0;
 	QString text = text_to_validate;
@@ -324,10 +324,8 @@ void user_manager_dialog::OnUserCreate()
 		{
 			break;
 		}
-		else
-		{
-			smallest++;
-		}
+
+		smallest++;
 	}
 
 	if (smallest >= 100000000) // Only 8 digits allowed
@@ -444,7 +442,7 @@ void user_manager_dialog::ShowContextMenu(const QPoint &pos)
 }
 
 // Returns the current user's key > 0. if no user is selected, return 0
-u32 user_manager_dialog::GetUserKey()
+u32 user_manager_dialog::GetUserKey() const
 {
 	const int idx = m_table->currentRow();
 	if (idx < 0)

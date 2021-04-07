@@ -32,7 +32,7 @@ bool headless_application::Init()
 	return true;
 }
 
-void headless_application::InitializeConnects()
+void headless_application::InitializeConnects() const
 {
 	qRegisterMetaType<std::function<void()>>("std::function<void()>");
 	connect(this, &headless_application::RequestCallAfter, this, &headless_application::HandleCallAfter);
@@ -58,14 +58,14 @@ void headless_application::InitializeCallbacks()
 
 		return false;
 	};
-	callbacks.call_after = [=, this](std::function<void()> func)
+	callbacks.call_after = [this](std::function<void()> func)
 	{
 		RequestCallAfter(std::move(func));
 	};
 
 	callbacks.init_gs_render = []()
 	{
-		switch (video_renderer type = g_cfg.video.renderer)
+		switch (const video_renderer type = g_cfg.video.renderer)
 		{
 		case video_renderer::null:
 		{
@@ -78,6 +78,7 @@ void headless_application::InitializeCallbacks()
 #endif
 		{
 			fmt::throw_exception("Headless mode can only be used with the %s video renderer. Current renderer: %s", video_renderer::null, type);
+			[[fallthrough]];
 		}
 		default:
 		{

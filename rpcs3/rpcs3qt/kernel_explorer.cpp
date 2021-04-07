@@ -9,7 +9,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_mutex.h"
@@ -304,7 +303,7 @@ void kernel_explorer::Update()
 
 	idm::select<lv2_obj>([&](u32 id, lv2_obj& obj)
 	{
-		auto node = find_node(m_tree, id >> 24);
+		const auto node = find_node(m_tree, id >> 24);
 		if (!node)
 		{
 			return;
@@ -705,7 +704,7 @@ void kernel_explorer::Update()
 			}
 		}
 	}
-	while (0);
+	while (false);
 
 	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& fo)
 	{
@@ -726,7 +725,7 @@ void kernel_explorer::Update()
 				continue;
 			}
 
-			switch (int type = node->data(0, kernel_item_role::type_role).toInt())
+			switch (const int type = node->data(0, kernel_item_role::type_role).toInt())
 			{
 			case kernel_item_type::leaf:
 			{

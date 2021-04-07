@@ -21,7 +21,6 @@
 #include "lv2/sys_prx.h"
 #include "lv2/sys_overlay.h"
 #include "lv2/sys_process.h"
-#include "lv2/sys_memory.h"
 
 #ifdef LLVM_AVAILABLE
 #ifdef _MSC_VER
@@ -37,28 +36,14 @@
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/IR/LLVMContext.h"
-//#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LegacyPassManager.h"
-//#include "llvm/IR/Module.h"
-//#include "llvm/IR/Function.h"
-//#include "llvm/Analysis/Passes.h"
-//#include "llvm/Analysis/BasicAliasAnalysis.h"
-//#include "llvm/Analysis/TargetTransformInfo.h"
-//#include "llvm/Analysis/MemoryDependenceAnalysis.h"
-//#include "llvm/Analysis/LoopInfo.h"
-//#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/Lint.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Vectorize.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -3014,7 +2999,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 	// Create worker threads for compilation (TODO: how many threads)
 	{
-		u32 thread_count = Emu.GetMaxThreads();
+		u32 thread_count = Emulator::GetMaxThreads();
 
 		if (workload.size() < thread_count)
 		{

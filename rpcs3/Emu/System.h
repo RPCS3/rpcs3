@@ -220,7 +220,7 @@ public:
 
 	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
 	bool BootRsxCapture(const std::string& path);
-	bool InstallPkg(const std::string& path);
+	static bool InstallPkg(const std::string& path);
 
 #ifdef _WIN32
 	static std::string GetExeDir();
@@ -230,7 +230,7 @@ public:
 	static std::string GetHddDir();
 	static std::string GetHdd1Dir();
 	static std::string GetCacheDir();
-	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& user, const std::string& title_id = "");
+	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& title_id = "");
 	static std::string GetRapFilePath(const std::string& rap);
 
 	static std::string GetCustomConfigDir();
@@ -264,15 +264,15 @@ public:
 
 	std::string GetFormattedTitle(double fps) const;
 
-	u32 GetMaxThreads() const;
+	static u32 GetMaxThreads();
 
-	void ConfigureLogs();
+	static void ConfigureLogs();
 	void ConfigurePPUCache();
 
 	std::set<std::string> GetGameDirs() const;
 
 private:
-	void LimitCacheSize();
+	static void LimitCacheSize();
 };
 
 extern Emulator Emu;

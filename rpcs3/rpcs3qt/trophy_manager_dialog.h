@@ -10,6 +10,8 @@
 #include <QSlider>
 #include <QSplitter>
 
+#include <memory>
+
 class gui_settings;
 class TROPUSRLoader;
 
@@ -57,7 +59,7 @@ public Q_SLOTS:
 	void HandleRepaintUiRequest();
 
 private Q_SLOTS:
-	QPixmap GetResizedGameIcon(int index);
+	QPixmap GetResizedGameIcon(int index) const;
 	void ResizeGameIcons();
 	void ResizeTrophyIcons();
 	void ApplyFilter();
@@ -82,8 +84,8 @@ private:
 	*/
 	void PopulateTrophyTable();
 
-	void ReadjustGameTable();
-	void ReadjustTrophyTable();
+	void ReadjustGameTable() const;
+	void ReadjustTrophyTable() const;
 
 	void closeEvent(QCloseEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;

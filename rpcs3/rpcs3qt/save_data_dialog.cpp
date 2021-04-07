@@ -13,7 +13,7 @@ s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries,
 	// TODO: Install native shell as an Emu callback
 	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
-		auto result = manager->create<rsx::overlays::save_dialog>()->show(save_entries, focused, op, listSet, enable_overlay);
+		const s32 result = manager->create<rsx::overlays::save_dialog>()->show(save_entries, focused, op, listSet, enable_overlay);
 		if (result != rsx::overlays::user_interface::selection_code::error)
 			return result;
 	}
@@ -25,7 +25,7 @@ s32 save_data_dialog::ShowSaveDataList(std::vector<SaveDataEntry>& save_entries,
 
 	// Fall back to front-end GUI
 	atomic_t<bool> dlg_result(false);
-	atomic_t<s32> selection;
+	atomic_t<s32> selection = 0;
 
 	input::SetIntercepted(true);
 

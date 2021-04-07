@@ -24,7 +24,6 @@
 #include "Input/pad_thread.h"
 
 #include <algorithm>
-#include <iterator>
 #include <memory>
 #include <set>
 #include <regex>
@@ -37,7 +36,6 @@
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QInputDialog>
-#include <QToolTip>
 #include <QApplication>
 #include <QClipboard>
 #include <QFileDialog>
@@ -49,9 +47,9 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
 	: custom_dock_widget(tr("Game List"), parent)
-	, m_gui_settings(gui_settings)
-	, m_emu_settings(emu_settings)
-	, m_persistent_settings(persistent_settings)
+	, m_gui_settings(std::move(gui_settings))
+	, m_emu_settings(std::move(emu_settings))
+	, m_persistent_settings(std::move(persistent_settings))
 {
 	m_icon_size       = gui::gl_icon_size_min; // ensure a valid size
 	m_is_list_layout  = m_gui_settings->GetValue(gui::gl_listMode).toBool();
@@ -239,7 +237,7 @@ game_list_frame::~game_list_frame()
 	SaveSettings();
 }
 
-void game_list_frame::FixNarrowColumns()
+void game_list_frame::FixNarrowColumns() const
 {
 	qApp->processEvents();
 
@@ -258,7 +256,7 @@ void game_list_frame::FixNarrowColumns()
 	}
 }
 
-void game_list_frame::ResizeColumnsToContents(int spacing)
+void game_list_frame::ResizeColumnsToContents(int spacing) const
 {
 	if (!m_game_list)
 	{
@@ -316,11 +314,11 @@ bool game_list_frame::IsEntryVisible(const game_info& game)
 	};
 
 	const QString serial = qstr(game->info.serial);
-	bool is_visible = m_show_hidden || !m_hidden_list.contains(serial);
+	const bool is_visible = m_show_hidden || !m_hidden_list.contains(serial);
 	return is_visible && matches_category() && SearchMatchesApp(qstr(game->info.name), serial);
 }
 
-void game_list_frame::SortGameList()
+void game_list_frame::SortGameList() const
 {
 	// Back-up old header sizes to handle unwanted column resize in case of zero search results
 	QList<int> column_widths;
@@ -387,14 +385,14 @@ void game_list_frame::SortGameList()
 	m_game_list->resizeColumnToContents(gui::column_count - 1);
 }
 
-QString game_list_frame::GetLastPlayedBySerial(const QString& serial)
+QString game_list_frame::GetLastPlayedBySerial(const QString& serial) const
 {
 	return m_persistent_settings->GetLastPlayed(serial);
 }
 
 std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
 {
-	return Emu.GetCacheDir() + serial;
+	return Emulator::GetCacheDir() + serial;
 }
 
 std::string game_list_frame::GetDataDirBySerial(const std::string& serial)
@@ -414,7 +412,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		m_notes.clear();
 
 		const std::string _hdd = Emulator::GetHddDir();
-		const std::string cat_unknown = sstr(category::cat_unknown);
+		const std::string cat_unknown = sstr(cat::cat_unknown);
 		const std::string cat_unknown_localized = sstr(localized.category.unknown);
 
 		std::vector<std::string> path_list;
@@ -476,9 +474,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 		auto get_games = []() -> YAML::Node
 		{
-			fs::file games(fs::get_config_dir() + "/games.yml", fs::read + fs::create);
-
-			if (games)
+			if (const fs::file games = fs::file(fs::get_config_dir() + "/games.yml", fs::read + fs::create))
 			{
 				auto [result, error] = yaml_load(games.to_string());
 
@@ -490,12 +486,8 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 				return result;
 			}
-			else
-			{
-				game_list_log.error("Failed to load games.yml, check permissions.");
-				return {};
-			}
 
+			game_list_log.error("Failed to load games.yml, check permissions.");
 			return {};
 		};
 
@@ -549,7 +541,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			const Localized thread_localized;
 
 			{
-				const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(dir, Emu.GetUsr());
+				const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(dir);
 
 				const psf::registry psf = psf::load_object(fs::file(sfo_dir + "/PARAM.SFO"));
 
@@ -696,7 +688,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 		for (auto&& g : games.pop_all())
 		{
-			m_game_data.push_back(std::move(g));
+			m_game_data.push_back(g);
 		}
 
 		// Try to update the app version for disc games if there is a patch
@@ -1090,9 +1082,9 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 				if (action != icon_action::remove)
 				{
-					if (QFile file(icon_path); !file.copy(icon_path, game_icon_path))
+					if (!QFile::copy(icon_path, game_icon_path))
 					{
-						game_list_log.error("Could not import image '%s' to '%s'. %s", sstr(icon_path), sstr(game_icon_path), sstr(file.errorString()));
+						game_list_log.error("Could not import image '%s' to '%s'.", sstr(icon_path), sstr(game_icon_path));
 						QMessageBox::warning(this, tr("Warning!"), tr("Failed to import the new image!"));
 					}
 					else
@@ -1315,11 +1307,11 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	// Disable options depending on software category
 	const QString category = qstr(current_game.category);
 
-	if (category == cat_disc_game)
+	if (category == cat::cat_disc_game)
 	{
 		remove_game->setEnabled(false);
 	}
-	else if (category != cat_hdd_game)
+	else if (category != cat::cat_hdd_game)
 	{
 		check_compat->setEnabled(false);
 	}
@@ -1342,7 +1334,7 @@ bool game_list_frame::CreatePPUCache(const game_info& game)
 	return true;
 }
 
-bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, game_info game, bool is_interactive)
+bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, const game_info& game, bool is_interactive)
 {
 	const std::string config_path_new = Emulator::GetCustomConfigPath(title_id);
 	const std::string config_path_old = Emulator::GetCustomConfigPath(title_id, true);
@@ -1384,7 +1376,7 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, gam
 	return result;
 }
 
-bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, game_info game, bool is_interactive)
+bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, const game_info& game, bool is_interactive)
 {
 	const std::string config_dir = Emulator::GetCustomInputConfigDir(title_id);
 
@@ -1411,7 +1403,8 @@ bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, 
 		game_list_log.notice("Removed pad configuration directory: %s", config_dir);
 		return true;
 	}
-	else if (is_interactive)
+
+	if (is_interactive)
 	{
 		QMessageBox::warning(this, tr("Warning!"), tr("Failed to completely remove pad configuration directory!"));
 		game_list_log.fatal("Failed to completely remove pad configuration directory: %s\nError: %s", config_dir, fs::g_tls_error);
@@ -1803,7 +1796,7 @@ void game_list_frame::BatchRemoveShaderCaches()
 	QApplication::beep();
 }
 
-QPixmap game_list_frame::PaintedPixmap(QPixmap icon, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color)
+QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_icon, bool paint_pad_config_icon, const QColor& compatibility_color) const
 {
 	const qreal device_pixel_ratio = devicePixelRatioF();
 	QSize canvas_size(320, 176);
@@ -1900,7 +1893,7 @@ QPixmap game_list_frame::PaintedPixmap(QPixmap icon, bool paint_config_icon, boo
 	return canvas.scaled(m_icon_size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
 }
 
-void game_list_frame::ShowCustomConfigIcon(game_info game)
+void game_list_frame::ShowCustomConfigIcon(const game_info& game)
 {
 	if (!game)
 	{
@@ -1911,7 +1904,7 @@ void game_list_frame::ShowCustomConfigIcon(game_info game)
 	const bool has_custom_config    = game->hasCustomConfig;
 	const bool has_custom_pad_config = game->hasCustomPadConfig;
 
-	for (auto other_game : m_game_data)
+	for (const auto& other_game : m_game_data)
 	{
 		if (other_game->info.serial == serial)
 		{
@@ -2001,7 +1994,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 
 		if (wheel_event->modifiers() & Qt::ControlModifier)
 		{
-			QPoint num_steps = wheel_event->angleDelta() / 8 / 15;	// http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
+			const QPoint num_steps = wheel_event->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
 			const int value = num_steps.y();
 			Q_EMIT RequestIconSizeChange(value);
 			return true;
@@ -2038,7 +2031,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 				if (!item || !item->isSelected())
 					return false;
 
-				game_info gameinfo = GetGameInfoFromItem(item);
+				const game_info gameinfo = GetGameInfoFromItem(item);
 
 				if (!gameinfo)
 					return false;
@@ -2061,7 +2054,7 @@ void game_list_frame::PopulateGameList()
 {
 	int selected_row = -1;
 
-	std::string selected_item = CurrentSelectionPath();
+	const std::string selected_item = CurrentSelectionPath();
 
 	m_game_list->clearSelection();
 	m_game_list->clearContents();
@@ -2115,7 +2108,7 @@ void game_list_frame::PopulateGameList()
 		}
 
 		// Move Support (http://www.psdevwiki.com/ps3/PARAM.SFO#ATTRIBUTE)
-		bool supports_move = game->info.attr & 0x800000;
+		const bool supports_move = game->info.attr & 0x800000;
 
 		// Compatibility
 		custom_table_widget_item* compat_item = new custom_table_widget_item;
@@ -2316,8 +2309,7 @@ std::string game_list_frame::CurrentSelectionPath()
 
 		if (var.canConvert<game_info>())
 		{
-			auto game = var.value<game_info>();
-			if (game)
+			if (const game_info game = var.value<game_info>())
 			{
 				selection = game->info.path + game->info.icon_path;
 			}
@@ -2359,7 +2351,7 @@ std::string game_list_frame::GetStringFromU32(const u32& key, const std::map<u32
 	return sstr(string.join(", "));
 }
 
-game_info game_list_frame::GetGameInfoByMode(const QTableWidgetItem* item)
+game_info game_list_frame::GetGameInfoByMode(const QTableWidgetItem* item) const
 {
 	if (!item)
 	{
@@ -2390,7 +2382,7 @@ game_info game_list_frame::GetGameInfoFromItem(const QTableWidgetItem* item)
 	return var.value<game_info>();
 }
 
-QColor game_list_frame::getGridCompatibilityColor(const QString& string)
+QColor game_list_frame::getGridCompatibilityColor(const QString& string) const
 {
 	if (m_draw_compat_status_to_grid && !m_is_list_layout)
 	{

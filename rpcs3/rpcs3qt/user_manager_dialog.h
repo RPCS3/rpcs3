@@ -28,17 +28,17 @@ private Q_SLOTS:
 private:
 	void Init();
 	void UpdateTable(bool mark_only = false);
-	void GenerateUser(const std::string& user_id, const std::string& username);
-	bool ValidateUsername(const QString& text_to_validate);
+	static void GenerateUser(const std::string& user_id, const std::string& username);
+	static bool ValidateUsername(const QString& text_to_validate);
 
 	void ShowContextMenu(const QPoint &pos);
 
 	void closeEvent(QCloseEvent* event) override;
 	bool eventFilter(QObject* object, QEvent* event) override;
 
-	u32 GetUserKey();
+	u32 GetUserKey() const;
 
-	QTableWidget* m_table;
+	QTableWidget* m_table = nullptr;
 	std::string m_active_user;
 	std::map<u32, user_account> m_user_list;
 

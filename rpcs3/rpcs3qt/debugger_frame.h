@@ -69,17 +69,17 @@ class debugger_frame : public custom_dock_widget
 	instruction_editor_dialog* m_inst_editor = nullptr;
 	register_editor_dialog* m_reg_editor = nullptr;
 
-	std::shared_ptr<gui_settings> xgui_settings;
+	std::shared_ptr<gui_settings> m_gui_settings;
 
 	cpu_thread* get_cpu();
 	std::function<cpu_thread*()> make_check_cpu(cpu_thread* cpu);
 	void open_breakpoints_settings();
 
 public:
-	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = 0);
+	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = nullptr);
 
-	void SaveSettings();
-	void ChangeColors();
+	void SaveSettings() const;
+	void ChangeColors() const;
 
 	void UpdateUI();
 	void UpdateUnitList();
@@ -89,7 +89,7 @@ public:
 	void EnableButtons(bool enable);
 	void ShowGotoAddressDialog();
 	u64 EvaluateExpression(const QString& expression);
-	void ClearBreakpoints(); // Fallthrough method into breakpoint_list.
+	void ClearBreakpoints() const; // Fallthrough method into breakpoint_list.
 	void ClearCallStack();
 
 	/** Needed so key press events work when other objects are selected in debugger_frame. */
@@ -103,7 +103,7 @@ protected:
 
 Q_SIGNALS:
 	void DebugFrameClosed();
-	void CallStackUpdateRequested(std::vector<std::pair<u32, u32>> call_stack);
+	void CallStackUpdateRequested(const std::vector<std::pair<u32, u32>>& call_stack);
 
 public Q_SLOTS:
 	void DoStep(bool step_over = false);
@@ -111,7 +111,7 @@ public Q_SLOTS:
 private Q_SLOTS:
 	void OnSelectUnit();
 	void ShowPC();
-	void EnableUpdateTimer(bool state);
+	void EnableUpdateTimer(bool enable) const;
 };
 
 Q_DECLARE_METATYPE(u32)

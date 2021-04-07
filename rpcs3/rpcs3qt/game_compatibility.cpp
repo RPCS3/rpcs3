@@ -16,9 +16,9 @@ LOG_CHANNEL(compat_log, "Compat");
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-game_compatibility::game_compatibility(std::shared_ptr<gui_settings> settings, QWidget* parent)
+game_compatibility::game_compatibility(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
 	: QObject(parent)
-	, m_gui_settings(settings)
+	, m_gui_settings(std::move(gui_settings))
 {
 	m_filepath = m_gui_settings->GetSettingsDir() + "/compat_database.dat";
 	m_downloader = new downloader(parent);
@@ -33,12 +33,12 @@ void game_compatibility::handle_download_error(const QString& error)
 	Q_EMIT DownloadError(error);
 }
 
-void game_compatibility::handle_download_finished(const QByteArray& data)
+void game_compatibility::handle_download_finished(const QByteArray& content)
 {
 	compat_log.notice("Database download finished");
 
 	// Create new map from database and write database to file if database was valid
-	if (ReadJSON(QJsonDocument::fromJson(data).object(), true))
+	if (ReadJSON(QJsonDocument::fromJson(content).object(), true))
 	{
 		// We have a new database in map, therefore refresh gamelist to new state
 		Q_EMIT DownloadFinished();
@@ -57,7 +57,7 @@ void game_compatibility::handle_download_finished(const QByteArray& data)
 			return;
 		}
 
-		file.write(data);
+		file.write(content);
 		file.close();
 
 		compat_log.success("Wrote database to file: %s", sstr(m_filepath));
@@ -206,13 +206,13 @@ void game_compatibility::RequestCompatibility(bool online)
 			return;
 		}
 
-		const QByteArray data = file.readAll();
+		const QByteArray content = file.readAll();
 		file.close();
 
 		compat_log.notice("Finished reading database from file: %s", sstr(m_filepath));
 
 		// Create new map from database
-		ReadJSON(QJsonDocument::fromJson(data).object(), online);
+		ReadJSON(QJsonDocument::fromJson(content).object(), online);
 
 		return;
 	}
@@ -240,7 +240,7 @@ compat::status game_compatibility::GetCompatibility(const std::string& title_id)
 	return Status_Data.at("NoResult");
 }
 
-compat::status game_compatibility::GetStatusData(const QString& status)
+compat::status game_compatibility::GetStatusData(const QString& status) const
 {
 	return Status_Data.at(status);
 }
@@ -249,18 +249,18 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, gam
 {
 	compat::package_info info;
 
-	package_reader reader(pkg_path.toStdString());
+	const package_reader reader(pkg_path.toStdString());
 	if (!reader.is_valid())
 	{
 		info.is_valid = false;
 		return info;
 	}
 
-	psf::registry psf = reader.get_psf();
+	const psf::registry psf = reader.get_psf();
 
 	// TODO: localization of title and changelog
-	std::string title_key     = "TITLE";
-	std::string changelog_key = "paramhip";
+	const std::string title_key     = "TITLE";
+	const std::string changelog_key = "paramhip";
 
 	info.path     = pkg_path;
 	info.title    = qstr(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first

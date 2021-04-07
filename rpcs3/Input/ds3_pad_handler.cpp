@@ -109,7 +109,7 @@ ds3_pad_handler::~ds3_pad_handler()
 
 u32 ds3_pad_handler::get_battery_level(const std::string& padId)
 {
-	std::shared_ptr<ds3_device> device = get_hid_device(padId);
+	const std::shared_ptr<ds3_device> device = get_hid_device(padId);
 	if (!device || !device->hidDevice)
 	{
 		return 0;

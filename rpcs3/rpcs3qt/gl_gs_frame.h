@@ -1,7 +1,5 @@
 #pragma once
 
-#include "util/types.hpp"
-
 #include "gs_frame.h"
 
 #include <memory>
@@ -20,10 +18,10 @@ private:
 	GLContext *m_primary_context = nullptr;
 
 public:
-	explicit gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings);
+	explicit gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings);
 
 	draw_context_t make_context() override;
-	void set_current(draw_context_t context) override;
-	void delete_context(draw_context_t context) override;
+	void set_current(draw_context_t ctx) override;
+	void delete_context(draw_context_t ctx) override;
 	void flip(draw_context_t context, bool skip_frame=false) override;
 };

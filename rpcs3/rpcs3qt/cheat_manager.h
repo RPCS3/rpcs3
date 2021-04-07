@@ -43,7 +43,6 @@ public:
 	static bool is_addr_safe(const u32 offset);
 	static u32 reverse_lookup(const u32 addr, const u32 max_offset, const u32 max_depth, const u32 cur_depth = 0);
 
-public:
 	std::map<std::string, std::map<u32, cheat_info>> cheats;
 
 private:

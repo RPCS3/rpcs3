@@ -74,7 +74,7 @@ pad_led_settings_dialog::~pad_led_settings_dialog()
 	delete ui;
 }
 
-void pad_led_settings_dialog::redraw_color_sample()
+void pad_led_settings_dialog::redraw_color_sample() const
 {
 	const qreal dpr = devicePixelRatioF();
 	const qreal w = ui->w_color_sample->width();
@@ -105,13 +105,13 @@ void pad_led_settings_dialog::redraw_color_sample()
 	ui->w_color_sample->setPixmap(color_sample.scaled(w * dpr, h * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 }
 
-void pad_led_settings_dialog::update_slider_label(int val)
+void pad_led_settings_dialog::update_slider_label(int val) const
 {
 	const QString label = QString::number(val) + QStringLiteral("%");
 	ui->l_indicator_brightness->setText(label);
 }
 
-void pad_led_settings_dialog::battery_indicator_checked(bool checked)
+void pad_led_settings_dialog::battery_indicator_checked(bool checked) const
 {
 	ui->gb_indicator_brightness->setEnabled(checked);
 }

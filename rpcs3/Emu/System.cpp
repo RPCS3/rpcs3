@@ -7,19 +7,14 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/PPUCallback.h"
-#include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/RawSPUThread.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/lv2/sys_process.h"
-#include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_overlay.h"
-#include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Emu/title.h"
@@ -40,7 +35,6 @@
 #include "util/cereal.hpp"
 
 #include <thread>
-#include <queue>
 #include <fstream>
 #include <memory>
 #include <regex>
@@ -558,7 +552,7 @@ void Emulator::SetUsr(const std::string& user)
 std::string Emulator::GetBackgroundPicturePath() const
 {
 	// Try to find a custom icon first
-	std::string path = fs::get_config_dir() + "/Icons/game_icons/" + Emu.GetTitleID() + "/PIC1.PNG";
+	std::string path = fs::get_config_dir() + "/Icons/game_icons/" + GetTitleID() + "/PIC1.PNG";
 
 	if (fs::is_file(path))
 	{
@@ -646,8 +640,8 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	m_state = system_state::ready;
 	GetCallbacks().on_ready();
 
-	Emu.GetCallbacks().init_gs_render();
-	Emu.GetCallbacks().init_pad_handler("");
+	GetCallbacks().init_gs_render();
+	GetCallbacks().init_pad_handler("");
 
 	GetCallbacks().on_run(false);
 	m_state = system_state::running;
@@ -661,7 +655,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 
 void Emulator::LimitCacheSize()
 {
-	const std::string cache_location = Emulator::GetHdd1Dir() + "/caches";
+	const std::string cache_location = GetHdd1Dir() + "/caches";
 
 	if (!fs::is_dir(cache_location))
 	{
@@ -877,7 +871,7 @@ std::string Emulator::GetExeDir()
 }
 #endif
 
-std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& user, const std::string& title_id)
+std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& title_id)
 {
 	if (fs::is_file(game_path + "/PS3_DISC.SFB"))
 	{
@@ -1042,7 +1036,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			if (fs::is_dir(m_path))
 			{
 				// Special case (directory scan)
-				m_sfo_dir = GetSfoDirFromGamePath(m_path, GetUsr(), m_title_id);
+				m_sfo_dir = GetSfoDirFromGamePath(m_path, m_title_id);
 			}
 			else if (!disc.empty())
 			{
@@ -1057,12 +1051,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 				else
 				{
-					m_sfo_dir = GetSfoDirFromGamePath(disc, GetUsr(), m_title_id);
+					m_sfo_dir = GetSfoDirFromGamePath(disc, m_title_id);
 				}
 			}
 			else
 			{
-				m_sfo_dir = GetSfoDirFromGamePath(elf_dir + "/../", GetUsr(), m_title_id);
+				m_sfo_dir = GetSfoDirFromGamePath(elf_dir + "/../", m_title_id);
 			}
 
 			_psf = psf::load_object(fs::file(m_sfo_dir + "/PARAM.SFO"));
@@ -1268,7 +1262,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					ensure(vm::falloc(0x10000, 0xf0000, vm::main));
 				}
 
-				if (Emu.IsStopped())
+				if (IsStopped())
 				{
 					return;
 				}
@@ -1276,7 +1270,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				ppu_precompile(dir_queue, nullptr);
 
 				// Exit "process"
-				Emu.CallAfter([]
+				CallAfter([]
 				{
 					Emu.SetForceBoot(true);
 					Emu.Stop();
@@ -1336,11 +1330,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 							sys_log.success("Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
 							return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load(m_title_id, add_only, force_global_config);
 						}
-						else
-						{
-							sys_log.error("Failed to move disc game %s to /dev_hdd0/disc/ (%s)", m_title_id, fs::g_tls_error);
-							return game_boot_result::wrong_disc_location;
-						}
+
+						sys_log.error("Failed to move disc game %s to /dev_hdd0/disc/ (%s)", m_title_id, fs::g_tls_error);
+						return game_boot_result::wrong_disc_location;
 					}
 
 					bdvd_dir = sfb_dir + "/";
@@ -1739,10 +1731,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				ConfigurePPUCache();
 
 				g_fxo->init(false);
-				Emu.GetCallbacks().init_gs_render();
-				Emu.GetCallbacks().init_pad_handler(m_title_id);
-				Emu.GetCallbacks().init_kb_handler();
-				Emu.GetCallbacks().init_mouse_handler();
+				GetCallbacks().init_gs_render();
+				GetCallbacks().init_pad_handler(m_title_id);
+				GetCallbacks().init_kb_handler();
+				GetCallbacks().init_mouse_handler();
 			}
 			// Overlay (OVL) executable (only load it)
 			else if (vm::map(0x3000'0000, 0x1000'0000, 0x200); !ppu_load_overlay(ppu_exec, m_path).first)
@@ -2140,7 +2132,7 @@ std::string Emulator::GetFormattedTitle(double fps) const
 	return rpcs3::get_formatted_title(title_data);
 }
 
-u32 Emulator::GetMaxThreads() const
+u32 Emulator::GetMaxThreads()
 {
 	const u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
 	const u32 hw_threads = utils::get_thread_count();
@@ -2239,7 +2231,7 @@ void Emulator::ConfigurePPUCache()
 
 	if (!m_title_id.empty() && m_cat != "1P")
 	{
-		_main.cache += Emu.GetTitleID();
+		_main.cache += GetTitleID();
 		_main.cache += '/';
 	}
 

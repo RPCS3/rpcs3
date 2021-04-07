@@ -19,7 +19,7 @@ public:
 	std::vector<compat::package_info> GetPathsToInstall() const;
 
 private:
-	void MoveItem(int offset);
+	void MoveItem(int offset) const;
 
 	QListWidget* m_dir_list;
 };

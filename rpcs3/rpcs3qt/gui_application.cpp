@@ -266,9 +266,9 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	const auto frame_geometry  = gui::utils::create_centered_window_geometry(screen, source_geometry, w, h);
 	const auto app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
-	gs_frame* frame;
+	gs_frame* frame = nullptr;
 
-	switch (video_renderer type = g_cfg.video.renderer)
+	switch (g_cfg.video.renderer.get())
 	{
 	case video_renderer::opengl:
 	{
@@ -281,7 +281,6 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		frame = new gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
-	default: fmt::throw_exception("Invalid video renderer: %s", type);
 	}
 
 	m_game_window = frame;
@@ -322,7 +321,7 @@ void gui_application::InitializeCallbacks()
 
 	callbacks.init_gs_render = []()
 	{
-		switch (video_renderer type = g_cfg.video.renderer)
+		switch (g_cfg.video.renderer.get())
 		{
 		case video_renderer::null:
 		{
@@ -341,10 +340,6 @@ void gui_application::InitializeCallbacks()
 			break;
 		}
 #endif
-		default:
-		{
-			fmt::throw_exception("Invalid video renderer: %s", type);
-		}
 		}
 	};
 
@@ -565,7 +560,7 @@ void gui_application::OnEmuSettingsChange()
 		}
 	}
 
-	Emu.ConfigureLogs();
+	Emulator::ConfigureLogs();
 	audio::configure_audio();
 	rsx::overlays::reset_performance_overlay();
 }

@@ -38,7 +38,6 @@
 #endif
 
 #ifdef _WIN32
-#include <QWinTHumbnailToolbar>
 #include <QWinTHumbnailToolbutton>
 #elif HAVE_QTDBUS
 #include <QtDBus/QDBusMessage>
@@ -52,18 +51,18 @@ extern atomic_t<bool> g_user_asked_for_frame_capture;
 
 constexpr auto qstr = QString::fromStdString;
 
-gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
+gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings)
 	: QWindow()
 	, m_initial_geometry(geometry)
-	, m_gui_settings(gui_settings)
+	, m_gui_settings(std::move(gui_settings))
 {
-	m_disable_mouse = gui_settings->GetValue(gui::gs_disableMouse).toBool();
-	m_disable_kb_hotkeys = gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
-	m_show_mouse_in_fullscreen = gui_settings->GetValue(gui::gs_showMouseFs).toBool();
-	m_hide_mouse_after_idletime = gui_settings->GetValue(gui::gs_hideMouseIdle).toBool();
-	m_hide_mouse_idletime = gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
+	m_disable_mouse = m_gui_settings->GetValue(gui::gs_disableMouse).toBool();
+	m_disable_kb_hotkeys = m_gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
+	m_show_mouse_in_fullscreen = m_gui_settings->GetValue(gui::gs_showMouseFs).toBool();
+	m_hide_mouse_after_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool();
+	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
 
-	m_window_title = qstr(Emu.GetFormattedTitle(0));
+	m_window_title = Emu.GetFormattedTitle(0);
 
 	if (!appIcon.isNull())
 	{
@@ -80,7 +79,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	setMinimumHeight(90);
 	setScreen(screen);
 	setGeometry(geometry);
-	setTitle(m_window_title);
+	setTitle(qstr(m_window_title));
 	setVisibility(Hidden);
 	create();
 
@@ -131,7 +130,7 @@ gs_frame::~gs_frame()
 
 void gs_frame::paintEvent(QPaintEvent *event)
 {
-	Q_UNUSED(event);
+	Q_UNUSED(event)
 }
 
 void gs_frame::showEvent(QShowEvent *event)
@@ -379,21 +378,21 @@ draw_context_t gs_frame::make_context()
 	return nullptr;
 }
 
-void gs_frame::set_current(draw_context_t ctx)
+void gs_frame::set_current(draw_context_t context)
 {
-	Q_UNUSED(ctx);
+	Q_UNUSED(context)
 }
 
-void gs_frame::delete_context(draw_context_t ctx)
+void gs_frame::delete_context(draw_context_t context)
 {
-	Q_UNUSED(ctx);
+	Q_UNUSED(context)
 }
 
 int gs_frame::client_width()
 {
 #ifdef _WIN32
 	RECT rect;
-	if (GetClientRect(HWND(winId()), &rect))
+	if (GetClientRect(reinterpret_cast<HWND>(winId()), &rect))
 	{
 		return rect.right - rect.left;
 	}
@@ -405,7 +404,7 @@ int gs_frame::client_height()
 {
 #ifdef _WIN32
 	RECT rect;
-	if (GetClientRect(HWND(winId()), &rect))
+	if (GetClientRect(reinterpret_cast<HWND>(winId()), &rect))
 	{
 		return rect.bottom - rect.top;
 	}
@@ -429,7 +428,7 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{
-		const QString new_title = qstr(Emu.GetFormattedTitle(m_frames / fps_t.GetElapsedTimeInSec()));
+		std::string new_title = Emu.GetFormattedTitle(m_frames / fps_t.GetElapsedTimeInSec());
 
 		if (new_title != m_window_title)
 		{
@@ -437,7 +436,7 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 
 			Emu.CallAfter([this, title = std::move(new_title)]()
 			{
-				setTitle(title);
+				setTitle(qstr(title));
 			});
 		}
 
@@ -446,10 +445,10 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 	}
 }
 
-void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot_width, const u32 sshot_height, bool is_bgra)
+void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, const u32 sshot_height, bool is_bgra)
 {
 	std::thread(
-		[sshot_width, sshot_height, is_bgra](const std::vector<u8> sshot_data)
+		[sshot_width, sshot_height, is_bgra](std::vector<u8> sshot_data)
 		{
 			screenshot_log.notice("Taking screenshot (%dx%d)", sshot_width, sshot_height);
 
@@ -513,10 +512,10 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 			const QDateTime date_time       = QDateTime::currentDateTime();
 			const std::string creation_time = date_time.toString("yyyy:MM:dd hh:mm:ss").toStdString();
-			const std::string title_id      = Emu.GetTitleID();
 			const std::string photo_title   = manager.get_photo_title();
 			const std::string game_title    = manager.get_game_title();
 			const std::string game_comment  = manager.get_game_comment();
+			const std::string& title_id     = Emu.GetTitleID();
 
 			// Write tEXt chunk
 			text[num_text].compression = PNG_TEXT_COMPRESSION_NONE;
@@ -553,7 +552,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 			const auto write_png = [&]()
 			{
-				scoped_png_ptrs ptrs;
+				const scoped_png_ptrs ptrs;
 				png_set_IHDR(ptrs.write_ptr, ptrs.info_ptr, sshot_width, sshot_height, 8, PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 				png_set_text(ptrs.write_ptr, ptrs.info_ptr, text, 6);
 				png_set_rows(ptrs.write_ptr, ptrs.info_ptr, &rows[0]);
@@ -648,7 +647,7 @@ void gs_frame::take_screenshot(const std::vector<u8> sshot_data, const u32 sshot
 
 			return;
 		},
-		std::move(sshot_data))
+		std::move(data))
 		.detach();
 }
 

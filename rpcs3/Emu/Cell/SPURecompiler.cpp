@@ -425,7 +425,7 @@ void spu_cache::initialize()
 		g_progr_ptotal += ::size32(func_list);
 		progr.emplace("Building SPU cache...");
 
-		worker_count = Emu.GetMaxThreads();
+		worker_count = Emulator::GetMaxThreads();
 	}
 
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint

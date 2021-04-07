@@ -110,7 +110,6 @@ class mm_joystick_handler final : public PadHandlerBase
 
 public:
 	mm_joystick_handler();
-	~mm_joystick_handler();
 
 	bool Init() override;
 
@@ -121,7 +120,7 @@ public:
 private:
 	std::unordered_map<u64, u16> GetButtonValues(const JOYINFOEX& js_info, const JOYCAPS& js_caps);
 	int GetIDByName(const std::string& name);
-	bool GetMMJOYDevice(int index, MMJOYDevice* dev);
+	bool GetMMJOYDevice(int index, MMJOYDevice* dev) const;
 
 	bool is_init = false;
 

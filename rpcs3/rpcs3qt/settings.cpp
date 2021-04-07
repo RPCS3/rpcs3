@@ -24,12 +24,12 @@ QString settings::GetSettingsDir() const
 	return m_settings_dir.absolutePath();
 }
 
-QString settings::ComputeSettingsDir() const
+QString settings::ComputeSettingsDir()
 {
 	return QString::fromStdString(fs::get_config_dir()) + "/GuiConfigs/";
 }
 
-void settings::RemoveValue(const QString& key, const QString& name)
+void settings::RemoveValue(const QString& key, const QString& name) const
 {
 	if (m_settings)
 	{
@@ -39,7 +39,7 @@ void settings::RemoveValue(const QString& key, const QString& name)
 	}
 }
 
-void settings::RemoveValue(const gui_save& entry)
+void settings::RemoveValue(const gui_save& entry) const
 {
 	RemoveValue(entry.key, entry.name);
 }
@@ -71,7 +71,7 @@ q_pair_list settings::Var2List(const QVariant& var)
 	return list;
 }
 
-void settings::SetValue(const gui_save& entry, const QVariant& value)
+void settings::SetValue(const gui_save& entry, const QVariant& value) const
 {
 	if (m_settings)
 	{
@@ -81,7 +81,7 @@ void settings::SetValue(const gui_save& entry, const QVariant& value)
 	}
 }
 
-void settings::SetValue(const QString& key, const QVariant& value)
+void settings::SetValue(const QString& key, const QVariant& value) const
 {
 	if (m_settings)
 	{
@@ -89,7 +89,7 @@ void settings::SetValue(const QString& key, const QVariant& value)
 	}
 }
 
-void settings::SetValue(const QString& key, const QString& name, const QVariant& value)
+void settings::SetValue(const QString& key, const QString& name, const QVariant& value) const
 {
 	if (m_settings)
 	{

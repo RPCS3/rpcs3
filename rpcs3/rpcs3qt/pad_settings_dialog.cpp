@@ -1,12 +1,9 @@
 #include <QCheckBox>
-#include <QGroupBox>
 #include <QPushButton>
-#include <QVBoxLayout>
 #include <QPainter>
 #include <QPainterPath>
 #include <QInputDialog>
 #include <QMessageBox>
-#include <QColorDialog>
 
 #include "qt_utils.h"
 #include "pad_settings_dialog.h"
@@ -59,7 +56,9 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 }
 
 pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_settings, QWidget *parent, const GameInfo *game)
-	: QDialog(parent), ui(new Ui::pad_settings_dialog), m_gui_settings(gui_settings)
+	: QDialog(parent)
+	, ui(new Ui::pad_settings_dialog)
+	, m_gui_settings(std::move(gui_settings))
 {
 	pad::set_enabled(false);
 
@@ -402,12 +401,14 @@ void pad_settings_dialog::InitButtons()
 
 			if (m_lx != preview_values[2] || m_ly != preview_values[3])
 			{
-				m_lx = preview_values[2], m_ly = preview_values[3];
+				m_lx = preview_values[2];
+				m_ly = preview_values[3];
 				RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
 			}
 			if (m_rx != preview_values[4] || m_ry != preview_values[5])
 			{
-				m_rx = preview_values[4], m_ry = preview_values[5];
+				m_rx = preview_values[4];
+				m_ry = preview_values[5];
 				RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
 			}
 		}
@@ -448,12 +449,14 @@ void pad_settings_dialog::InitButtons()
 
 			if (m_lx != 0 || m_ly != 0)
 			{
-				m_lx = 0, m_ly = 0;
+				m_lx = 0;
+				m_ly = 0;
 				RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, ui->squircle_left->value(), ui->stick_multi_left->value());
 			}
 			if (m_rx != 0 || m_ry != 0)
 			{
-				m_rx = 0, m_ry = 0;
+				m_rx = 0;
+				m_ry = 0;
 				RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, ui->squircle_right->value(), ui->stick_multi_right->value());
 			}
 		}
@@ -627,7 +630,7 @@ void pad_settings_dialog::ReactivateButtons()
 	ui->chooseProduct->setFocusPolicy(Qt::WheelFocus);
 }
 
-void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier)
+void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier) const
 {
 	const int deadzone_max = m_handler ? m_handler->thumb_max : 255; // 255 used as fallback. The deadzone circle shall be small.
 
@@ -644,8 +647,8 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* l, int deadzone, int desir
 
 	const bool show_emulated_values = ui->chb_show_emulated_values->isChecked();
 
-	qreal ingame_x;
-	qreal ingame_y;
+	[[maybe_unused]] qreal ingame_x = 0.0;
+	[[maybe_unused]] qreal ingame_y = 0.0;
 
 	// Set up the canvas for our work of art
 	QPixmap pixmap(scaled_width, scaled_width);
@@ -728,7 +731,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 	}
 	else
 	{
-		m_cfg_entries[m_button_id].key = (static_cast<keyboard_pad_handler*>(m_handler.get()))->GetKeyName(keyEvent);
+		m_cfg_entries[m_button_id].key = keyboard_pad_handler::GetKeyName(keyEvent);
 		m_cfg_entries[m_button_id].text = qstr(m_cfg_entries[m_button_id].key);
 	}
 
@@ -844,9 +847,9 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* event)
 	}
 	else
 	{
-		QPoint mouse_pos = QCursor::pos();
-		int delta_x = mouse_pos.x() - m_last_pos.x();
-		int delta_y = mouse_pos.y() - m_last_pos.y();
+		const QPoint mouse_pos = QCursor::pos();
+		const int delta_x = mouse_pos.x() - m_last_pos.x();
+		const int delta_y = mouse_pos.y() - m_last_pos.y();
 
 		u32 key = 0;
 
@@ -1118,7 +1121,7 @@ void pad_settings_dialog::OnTabChanged(int index)
 	RefreshInputTypes();
 }
 
-std::shared_ptr<PadHandlerBase> pad_settings_dialog::GetHandler(pad_handler type)
+std::shared_ptr<PadHandlerBase> pad_settings_dialog::GetHandler(pad_handler type) const
 {
 	switch (type)
 	{
@@ -1187,7 +1190,7 @@ void pad_settings_dialog::ChangeInputType()
 	const auto device_list = m_handler->ListDevices();
 
 	// Localized tooltips
-	Tooltips tooltips;
+	const Tooltips tooltips;
 
 	// Change the description
 	switch (m_handler->m_type)
@@ -1230,8 +1233,6 @@ void pad_settings_dialog::ChangeInputType()
 	case pad_handler::evdev:
 		m_description = tooltips.gamepad_settings.evdev; break;
 #endif
-	default:
-		m_description = "";
 	}
 	ui->l_description->setText(m_description);
 
@@ -1269,9 +1270,9 @@ void pad_settings_dialog::ChangeInputType()
 	}
 	default:
 	{
-		for (usz i = 0; i < device_list.size(); i++)
+		for (const auto& device_name : device_list)
 		{
-			ui->chooseDevice->addItem(qstr(device_list[i]), QVariant::fromValue(pad_device_info{ device_list[i], true }));
+			ui->chooseDevice->addItem(qstr(device_name), QVariant::fromValue(pad_device_info{ device_name, true }));
 		}
 		break;
 	}
@@ -1401,8 +1402,6 @@ void pad_settings_dialog::ChangeProfile()
 		static_cast<evdev_joystick_handler*>(m_handler.get())->init_config(&m_handler_cfg, cfg_name);
 		break;
 #endif
-	default:
-		break;
 	}
 
 	// Load new config
@@ -1423,7 +1422,7 @@ void pad_settings_dialog::ChangeProfile()
 	}
 }
 
-void pad_settings_dialog::HandleDeviceClassChange(int index)
+void pad_settings_dialog::HandleDeviceClassChange(int index) const
 {
 	if (index < 0)
 	{
@@ -1436,7 +1435,6 @@ void pad_settings_dialog::HandleDeviceClassChange(int index)
 	{
 		switch (product.type)
 		{
-		default:
 		case input::product_type::playstation_3_controller:
 		{
 			ui->chooseProduct->addItem(tr("PS3 Controller", "PlayStation 3 Controller"), static_cast<int>(product.type));
@@ -1501,10 +1499,10 @@ void pad_settings_dialog::RefreshInputTypes()
 	else
 	{
 		const std::vector<std::string> str_inputs = g_cfg_input.player[0]->handler.to_list();
-		for (usz index = 0; index < str_inputs.size(); index++)
+		for (usz i = 0; i < str_inputs.size(); i++)
 		{
-			const QString item_data = qstr(str_inputs[index]);
-			ui->chooseHandler->addItem(GetLocalizedPadHandler(item_data, static_cast<pad_handler>(index)), QVariant(item_data));
+			const QString item_data = qstr(str_inputs[i]);
+			ui->chooseHandler->addItem(GetLocalizedPadHandler(item_data, static_cast<pad_handler>(i)), QVariant(item_data));
 		}
 
 		const auto& handler = g_cfg_input.player[index]->handler;
@@ -1613,8 +1611,6 @@ QString pad_settings_dialog::GetLocalizedPadHandler(const QString& original, pad
 #ifdef HAVE_LIBEVDEV
 		case pad_handler::evdev: return tr("Evdev");
 #endif
-	default:
-		break;
 	}
 	return original;
 }
@@ -1662,7 +1658,7 @@ void pad_settings_dialog::SubscribeTooltip(QObject* object, const QString& toolt
 void pad_settings_dialog::SubscribeTooltips()
 {
 	// Localized tooltips
-	Tooltips tooltips;
+	const Tooltips tooltips;
 
 	SubscribeTooltip(ui->gb_squircle, tooltips.gamepad_settings.squircle_factor);
 	SubscribeTooltip(ui->gb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
