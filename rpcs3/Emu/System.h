@@ -231,6 +231,7 @@ public:
 	static std::string GetHdd1Dir();
 	static std::string GetCacheDir();
 	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& user, const std::string& title_id = "");
+	static std::string GetRapFilePath(const std::string& rap);
 
 	static std::string GetCustomConfigDir();
 	static std::string GetCustomConfigPath(const std::string& title_id, bool get_deprecated_path = false);
@@ -269,17 +270,6 @@ public:
 	void ConfigurePPUCache();
 
 	std::set<std::string> GetGameDirs() const;
-
-	u64 GetEmulationCounter() const
-	{
-		return m_stop_ctr;
-	}
-
-	void WaitEmulationCounter(u64 old = -1) const
-	{
-		if (old == umax) old = m_stop_ctr; // Use current if not specified
-		if (m_stop_ctr == old) m_stop_ctr.wait(old);
-	}
 
 private:
 	void LimitCacheSize();

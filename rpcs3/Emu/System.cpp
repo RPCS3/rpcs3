@@ -916,15 +916,34 @@ std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const 
 	if (category == "HG" && !content_id.empty())
 	{
 		// This is a trial game. Check if the user has a RAP file to unlock it.
-		const std::string rap_path = GetHddDir() + "home/" + user + "/exdata/" + content_id + ".rap";
-		if (fs::is_file(rap_path) && fs::is_file(game_path + "/C00/PARAM.SFO"))
+		if (fs::is_file(game_path + "/C00/PARAM.SFO") && fs::is_file(GetRapFilePath(content_id)))
 		{
 			// Load full game data.
+			sys_log.notice("Found RAP file %s.rap for trial game %s", content_id, title_id);
 			return game_path + "/C00";
 		}
 	}
 
 	return game_path;
+}
+
+std::string Emulator::GetRapFilePath(const std::string& rap)
+{
+	const std::string home_dir = GetHddDir() + "/home";
+
+	for (auto&& entry : fs::dir(home_dir))
+	{
+		if (entry.is_directory && CheckUsr(entry.name))
+		{
+			std::string rap_path = fmt::format("%s/%s/exdata/%s.rap", home_dir, entry.name, rap);
+			if (fs::is_file(rap_path))
+			{
+				return rap_path;
+			}
+		}
+	}
+
+	return {};
 }
 
 std::string Emulator::GetCustomConfigDir()
