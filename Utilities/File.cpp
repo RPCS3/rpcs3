@@ -230,7 +230,7 @@ namespace fs
 	{
 	}
 
-	stat_t file_base::stat()
+	[[noreturn]] stat_t file_base::stat()
 	{
 		fmt::throw_exception("fs::file::stat() not supported.");
 	}

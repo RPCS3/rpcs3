@@ -489,22 +489,26 @@ error_code cellSailSourceNotifyMediaStateChanged()
 
 error_code cellSailSourceNotifyOpenCompleted()
 {
-	fmt::throw_exception("Unexpected function");
+	cellSail.fatal("cellSailSourceNotifyOpenCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailSourceNotifyStartCompleted()
 {
-	fmt::throw_exception("Unexpected function");
+	cellSail.fatal("cellSailSourceNotifyStartCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailSourceNotifyStopCompleted()
 {
-	fmt::throw_exception("Unexpected function");
+	cellSail.fatal("cellSailSourceNotifyStopCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailSourceNotifyReadCompleted()
 {
-	fmt::throw_exception("Unexpected function");
+	cellSail.fatal("cellSailSourceNotifyReadCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailSourceSetDiagHandler()
@@ -515,7 +519,8 @@ error_code cellSailSourceSetDiagHandler()
 
 error_code cellSailSourceNotifyCloseCompleted()
 {
-	fmt::throw_exception("Unexpected function");
+	cellSail.fatal("cellSailSourceNotifyCloseCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailMp4MovieGetBrand()

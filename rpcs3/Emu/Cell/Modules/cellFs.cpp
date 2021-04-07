@@ -945,7 +945,7 @@ s32 cellFsAioInit(vm::cptr<char> mount_point)
 	cellFs.warning("cellFsAioInit(mount_point=%s)", mount_point);
 
 	// TODO: create AIO thread (if not exists) for specified mount point
-	fmt::throw_exception("cellFsAio disabled, use LLE.");
+	cellFs.fatal("cellFsAio disabled, use LLE.");
 
 	return CELL_OK;
 }

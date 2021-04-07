@@ -189,6 +189,7 @@ inline FT build_function_asm(F&& builder)
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Winconsistent-missing-override"
 #endif

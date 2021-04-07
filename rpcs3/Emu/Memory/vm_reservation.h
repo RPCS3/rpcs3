@@ -324,7 +324,7 @@ namespace vm
 	}
 
 	// For internal usage
-	void reservation_escape_internal();
+	[[noreturn]] void reservation_escape_internal();
 
 	// Read memory value in pseudo-atomic manner
 	template <typename CPU, typename T, typename AT = u32, typename F>

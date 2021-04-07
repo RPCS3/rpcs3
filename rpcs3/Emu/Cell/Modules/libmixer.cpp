@@ -669,20 +669,20 @@ void cellSurMixerBeep(u32 arg)
 
 f32 cellSurMixerUtilGetLevelFromDB(f32 dB)
 {
-	libmixer.todo("cellSurMixerUtilGetLevelFromDB(dB=%f)", dB);
-	fmt::throw_exception("TODO");
+	libmixer.fatal("cellSurMixerUtilGetLevelFromDB(dB=%f)", dB);
+	return 0;
 }
 
 f32 cellSurMixerUtilGetLevelFromDBIndex(s32 index)
 {
-	libmixer.todo("cellSurMixerUtilGetLevelFromDBIndex(index=%d)", index);
-	fmt::throw_exception("TODO");
+	libmixer.fatal("cellSurMixerUtilGetLevelFromDBIndex(index=%d)", index);
+	return 0;
 }
 
 f32 cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 {
-	libmixer.todo("cellSurMixerUtilNoteToRatio(refNote=%d, note=%d)", refNote, note);
-	fmt::throw_exception("TODO");
+	libmixer.fatal("cellSurMixerUtilNoteToRatio(refNote=%d, note=%d)", refNote, note);
+	return 0;
 }
 
 DECLARE(ppu_module_manager::libmixer)("libmixer", []()

@@ -35,12 +35,14 @@ namespace cfg
 
 	bool _base::from_string(const std::string&, bool)
 	{
-		fmt::throw_exception("from_string() purecall");
+		cfg_log.fatal("cfg::_base::from_string() purecall");
+		return false;
 	}
 
 	bool _base::from_list(std::vector<std::string>&&)
 	{
-		fmt::throw_exception("from_list() purecall");
+		cfg_log.fatal("cfg::_base::from_list() purecall");
+		return false;
 	}
 
 	// Emit YAML

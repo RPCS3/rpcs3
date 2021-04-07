@@ -631,7 +631,7 @@ namespace vm
 		});
 	}
 
-	void reservation_escape_internal()
+	[[noreturn]] void reservation_escape_internal()
 	{
 		const auto _cpu = get_current_cpu_thread();
 

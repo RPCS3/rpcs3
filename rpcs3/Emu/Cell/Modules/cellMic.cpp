@@ -1009,7 +1009,8 @@ error_code cellMicGetStatus(s32 dev_num, vm::ptr<CellMicStatus> status)
 
 error_code cellMicStopEx()
 {
-	fmt::throw_exception("Unexpected function");
+	cellMic.fatal("cellMicStopEx: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellMicSysShareClose()

@@ -81,7 +81,7 @@ namespace fs
 	{
 		virtual ~file_base();
 
-		virtual stat_t stat();
+		[[noreturn]] virtual stat_t stat();
 		virtual void sync();
 		virtual bool trunc(u64 length) = 0;
 		virtual u64 read(void* buffer, u64 size) = 0;

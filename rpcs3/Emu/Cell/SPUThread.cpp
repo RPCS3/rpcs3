@@ -4675,7 +4675,8 @@ void spu_thread::halt()
 		spu_runtime::g_escape(this);
 	}
 
-	fmt::throw_exception("Halt");
+	spu_log.fatal("Halt");
+	spu_runtime::g_escape(this);
 }
 
 void spu_thread::fast_call(u32 ls_addr)

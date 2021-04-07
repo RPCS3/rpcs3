@@ -3220,6 +3220,7 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -5311,7 +5312,7 @@ public:
 		call(name, &exec_fall<F>, m_thread, m_ir->getInt32(op.opcode));
 	}
 
-	static void exec_unk(spu_thread*, u32 op)
+	[[noreturn]] static void exec_unk(spu_thread*, u32 op)
 	{
 		fmt::throw_exception("Unknown/Illegal instruction (0x%08x)", op);
 	}
