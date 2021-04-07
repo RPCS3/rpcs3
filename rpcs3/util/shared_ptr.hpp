@@ -6,54 +6,57 @@
 
 namespace stx
 {
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#ifdef __clang__
-#pragma GCC diagnostic ignored "-Wundefined-var-template"
-#pragma GCC diagnostic ignored "-Wundefined-internal"
-#endif
-#endif
+	namespace detail
+	{
+		template <typename T>
+		union fake_t
+		{
+			char dummy;
+			T data;
 
-	// Not defined anywhere (and produces a useless warning)
-	template <typename X>
-	extern X sample;
+			fake_t() noexcept {}
+			~fake_t() {}
+		};
+
+		template <typename T>
+		static const fake_t<std::remove_cv_t<T>> sample{};
+	}
+
+	template <typename X, typename Y>
+	constexpr bool is_same_ptr_test(const volatile Y*, ...)
+	{
+		// Can't sample abstract class
+		return false;
+	}
+
+	template <typename X, typename Y, std::enable_if_t<!std::is_abstract_v<Y>, int> = 0>
+	constexpr bool is_same_ptr_test(const volatile Y* ptr = std::addressof(detail::sample<Y>.data))
+	{
+		return static_cast<const volatile X*>(ptr) == static_cast<const volatile void*>(ptr);
+	}
 
 	// Checks whether the cast between two types is the same pointer
 	template <typename T, typename U>
 	constexpr bool is_same_ptr() noexcept
 	{
-#ifdef _MSC_VER
-		return true;
-#else
 		if constexpr (std::is_void_v<T> || std::is_void_v<U> || std::is_same_v<T, U>)
 		{
 			return true;
 		}
 		else if constexpr (std::is_convertible_v<U*, T*>)
 		{
-			constexpr auto u = std::addressof(sample<U>);
-			constexpr volatile void* x = u;
-			return static_cast<T*>(u) == x;
+			return is_same_ptr_test<T, U>();
 		}
 		else if constexpr (std::is_convertible_v<T*, U*>)
 		{
-			constexpr auto t = std::addressof(sample<T>);
-			constexpr volatile void* x = t;
-			return static_cast<U*>(t) == x;
+			return is_same_ptr_test<U, T>();
 		}
-		else
-		{
-			return false;
-		}
-#endif
+
+		return !std::is_class_v<T> && !std::is_class_v<U> && !std::is_union_v<T> && !std::is_union_v<U>;
 	}
 
 	template <typename T, typename U>
 	constexpr bool is_same_ptr_cast_v = std::is_convertible_v<U*, T*> && is_same_ptr<T, U>();
-
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif
 
 	template <typename T>
 	class single_ptr;
