@@ -1321,7 +1321,7 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 
 	// Try to find a matching RAP file under exdata folder.
 	const std::string ci_str = reinterpret_cast<const char*>(content_id);
-	const std::string rap_path = Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + ci_str + ".rap";
+	const std::string rap_path = Emulator::GetRapFilePath(ci_str);
 
 	// Open the RAP file and read the key.
 	const fs::file rap_file(rap_path);
@@ -1329,8 +1329,8 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 	if (!rap_file)
 	{
 		self_log.fatal("Failed to locate the game license file: %s."
-				  "\nEnsure the .rap license file is placed in the dev_hdd0/home/00000001/exdata folder with a lowercase file extension."
-				  "\nIf you need assistance on dumping the license file from your PS3, read our quickstart guide: https://rpcs3.net/quickstart", rap_path);
+				  "\nEnsure the .rap license file is placed in the dev_hdd0/home/%s/exdata folder with a lowercase file extension."
+				  "\nIf you need assistance on dumping the license file from your PS3, read our quickstart guide: https://rpcs3.net/quickstart", rap_path, Emu.GetUsr());
 		return false;
 	}
 
