@@ -8,6 +8,7 @@
 #include "util/asm.hpp"
 
 #include <unordered_map>
+#include <set>
 
 namespace rsx
 {
@@ -958,10 +959,8 @@ namespace rsx
 
 		void check_for_duplicates(std::vector<surface_overlap_info>& sections, const rsx::address_range& range)
 		{
-			// Generic painter's algorithm to detect obsolete sections
-			ensure(range.length() < 64 * 0x100000);
-			std::vector<u8> marker(range.length());
-			std::memset(marker.data(), 0, range.length());
+			std::set<u32> addrs; // Address begins and ends
+			std::set<u32> ends; // Only ends
 
 			for (auto it = sections.crbegin(); it != sections.crend(); ++it)
 			{
@@ -973,29 +972,34 @@ namespace rsx
 				const auto true_pitch_in_bytes = it->surface->get_surface_width(rsx::surface_metrics::bytes);
 				const auto true_height_in_rows = it->surface->get_surface_height(rsx::surface_metrics::samples);
 
-				bool valid = false;
-				auto addr = it->base_address - range.start;
-				auto data = marker.data();
+				const auto size = true_height_in_rows * true_pitch_in_bytes;
 
-				for (usz row = 0; row < true_height_in_rows; ++row)
+				if (!size) continue;
+
+				const auto addr = it->base_address - range.start;
+
+				if (addrs.emplace(addr).second)
 				{
-					for (usz col = 0; col < true_pitch_in_bytes; ++col)
+					if (size == 1u || addrs.emplace(addr + size - 1).second)
 					{
-						if (const auto loc = col + addr; !data[loc])
+						ends.emplace(addr + size - 1);
+
+						auto it0 = addrs.find(addr);
+						if (auto before = std::prev(it0); it0 == addrs.begin() || ends.contains(*before))
 						{
-							valid = true;
-							data[loc] = 1;
+							if (auto after = std::next(it0); size == 1u || after == addrs.end() || ends.contains(*after))
+								continue;
 						}
+
+						addrs.erase(addr + size - 1);
+						ends.erase(addr + size - 1);
 					}
 
-					addr += true_pitch_in_bytes;
+					addrs.erase(addr);
 				}
 
-				if (!valid)
-				{
-					rsx_log.error("Stale surface at address 0x%x will be deleted", it->base_address);
-					invalidate_surface_address(it->base_address, it->is_depth);
-				}
+				rsx_log.error("Stale surface at address 0x%x will be deleted", addr);
+				invalidate_surface_address(it->base_address, it->is_depth);
 			}
 		}
 
