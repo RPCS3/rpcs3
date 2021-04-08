@@ -92,23 +92,16 @@ namespace vm
 
 	enum block_flags_3
 	{
-		page_hidden = 0x1000,
-	};
-	enum block_flags_2_page_size
-	{
+		page_hidden    = 0x1000,
+
 		page_size_4k   = 0x100, // SYS_MEMORY_PAGE_SIZE_4K
 		page_size_64k  = 0x200, // SYS_MEMORY_PAGE_SIZE_64K
 		page_size_1m   = 0x400, // SYS_MEMORY_PAGE_SIZE_1M
-
 		page_size_mask = 0xF00, // SYS_MEMORY_PAGE_SIZE_MASK
-	};
-	enum block_flags_1
-	{
-		stack_guarded = 0x10,
-		preallocated  = 0x20, // nonshareable
-	};
-	enum block_flags_0
-	{
+
+		stack_guarded  = 0x10,
+		preallocated   = 0x20, // nonshareable
+
 		bf0_0x1 = 0x1, // TODO: document
 		bf0_0x2 = 0x2, // TODO: document
 
