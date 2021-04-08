@@ -19,7 +19,12 @@ namespace stx
 		};
 
 		template <typename T>
-		static const fake_t<std::remove_cv_t<T>> sample{};
+#ifdef _MSC_VER
+		static const
+#else
+		static thread_local const
+#endif
+		fake_t<std::remove_cv_t<T>> sample{};
 	}
 
 	template <typename X, typename Y>
