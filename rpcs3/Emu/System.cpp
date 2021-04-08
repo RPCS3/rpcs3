@@ -1705,6 +1705,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 				sys_log.notice("Elf path: %s", argv[0]);
 			}
+			
+			if (!argv[0].starts_with("/dev_hdd0/game"sv) && m_cat == "HG"sv)
+			{
+				sys_log.error("Booting HG category outside of HDD0!");
+			}
 
 			g_fxo->init<ppu_module>();
 			g_fxo->init<id_manager::id_map<lv2_obj>>();
