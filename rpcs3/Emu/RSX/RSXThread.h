@@ -1,5 +1,6 @@
 #pragma once
 
+#include <thread>
 #include <queue>
 #include <deque>
 #include <variant>
@@ -9,7 +10,6 @@
 #include "GCM.h"
 #include "rsx_cache.h"
 #include "RSXFIFO.h"
-#include "RSXTexture.h"
 #include "RSXOffload.h"
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
@@ -22,7 +22,6 @@
 #include "Capture/rsx_replay.h"
 
 #include "Emu/Cell/lv2/sys_rsx.h"
-#include "Emu/Cell/timers.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/system_config.h"
 
@@ -426,7 +425,7 @@ namespace rsx
 			std::unordered_map<u32, u32> m_statistics_map;
 
 			// Enables/disables the ZCULL unit
-			void set_active(class ::rsx::thread* ptimer, bool active, bool flush_queue);
+			void set_active(class ::rsx::thread* ptimer, bool state, bool flush_queue);
 
 			// Checks current state of the unit and applies changes
 			void check_state(class ::rsx::thread* ptimer, bool flush_queue);
@@ -805,7 +804,7 @@ namespace rsx
 		void run_FIFO();
 
 	public:
-		virtual void clear_surface(u32 /*arg*/) {};
+		virtual void clear_surface(u32 /*arg*/) {}
 		virtual void begin();
 		virtual void end();
 		virtual void execute_nop_draw();

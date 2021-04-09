@@ -4,7 +4,6 @@
 #include "overlay_utils.h"
 
 #include <vector>
-#include <unordered_map>
 
 // STB_IMAGE_IMPLEMENTATION and STB_TRUETYPE_IMPLEMENTATION defined externally
 #include <stb_image.h>
@@ -64,9 +63,9 @@ namespace rsx
 			}
 			codepage_cache;
 
-			language_class classify(char32_t page);
-			glyph_load_setup get_glyph_files(language_class class_);
-			codepage* initialize_codepage(char32_t page);
+			static language_class classify(char32_t codepage_id);
+			glyph_load_setup get_glyph_files(language_class class_) const;
+			codepage* initialize_codepage(char32_t codepage_id);
 		public:
 
 			font(const char* ttf_name, f32 size);
@@ -80,7 +79,7 @@ namespace rsx
 			std::pair<f32, f32> get_char_offset(const char32_t* text, u16 max_length, u16 max_width = UINT16_MAX, bool wrap = false);
 
 			bool matches(const char* name, int size) const { return font_name == name && static_cast<int>(size_pt) == size; }
-			std::string_view get_name() const { return font_name; };
+			std::string_view get_name() const { return font_name; }
 			f32 get_size_pt() const { return size_pt; }
 			f32 get_size_px() const { return size_px; }
 			f32 get_em_size() const { return em_size; }

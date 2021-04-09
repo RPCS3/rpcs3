@@ -8,7 +8,6 @@
 #include "cellAudioIn.h"
 #include "cellAudioOut.h"
 #include "cellVideoOut.h"
-#include "cellSysutil.h"
 
 LOG_CHANNEL(cellAvconfExt);
 
@@ -108,6 +107,7 @@ avconf_manager::avconf_manager()
 
 			curindex++;
 			break;
+		case microphone_handler::null:
 		default: break;
 		}
 	}

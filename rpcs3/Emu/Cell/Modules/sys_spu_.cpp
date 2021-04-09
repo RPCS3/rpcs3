@@ -2,7 +2,6 @@
 #include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_spu.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
@@ -23,7 +22,7 @@ struct spu_elf_ldr
 	be_t<u64> ehdr_off;
 	be_t<u64> phdr_off;
 
-	s32 get_ehdr(vm::ptr<elf_ehdr<elf_be, u64>> out)
+	s32 get_ehdr(vm::ptr<elf_ehdr<elf_be, u64>> out) const
 	{
 		if (!src)
 		{
@@ -57,7 +56,7 @@ struct spu_elf_ldr
 		return 0;
 	}
 
-	s32 get_phdr(vm::ptr<elf_phdr<elf_be, u64>> out, u32 count)
+	s32 get_phdr(vm::ptr<elf_phdr<elf_be, u64>> out, u32 count) const
 	{
 		if (!src)
 		{

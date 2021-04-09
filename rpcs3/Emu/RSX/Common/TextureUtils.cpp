@@ -370,10 +370,9 @@ namespace
 		std::vector<rsx::subresource_layout> result;
 		usz offset_in_src = 0;
 
-		u8 border_size = border ? (padded_row ? 1 : 4) : 0;
+		const u8 border_size = border ? (padded_row ? 1 : 4) : 0;
 		u32 src_pitch_in_block;
 		u32 full_height_in_block;
-		u32 slice_sz;
 
 		for (unsigned layer = 0; layer < layer_count; layer++)
 		{
@@ -417,7 +416,7 @@ namespace
 					full_height_in_block = rsx::next_pow2(current_subresource_layout.height_in_block + border_size + border_size);
 				}
 
-				slice_sz = src_pitch_in_block * block_size_in_bytes * full_height_in_block * depth;
+				const u32 slice_sz = src_pitch_in_block * block_size_in_bytes * full_height_in_block * depth;
 				current_subresource_layout.pitch_in_block = src_pitch_in_block;
 				current_subresource_layout.data = gsl::span<const std::byte>(texture_data_pointer + offset_in_src, slice_sz);
 

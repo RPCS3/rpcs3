@@ -14,7 +14,7 @@ struct cfg_root : cfg::node
 	{
 	private:
 		/** We don't wanna include the sysinfo header here */
-		bool has_rtm() const;
+		static bool has_rtm();
 
 	public:
 		node_core(cfg::node* _this) : cfg::node(_this, "Core") {}

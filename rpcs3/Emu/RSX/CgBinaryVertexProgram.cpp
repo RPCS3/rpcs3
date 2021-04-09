@@ -16,7 +16,7 @@ void CgBinaryDisasm::AddVecCodeDisasm(const std::string& code)
 	m_arb_shader += rsx_vp_vec_op_names[m_vec_opcode] + code + " ";
 }
 
-std::string CgBinaryDisasm::GetMaskDisasm(bool is_sca)
+std::string CgBinaryDisasm::GetMaskDisasm(bool is_sca) const
 {
 	std::string ret;
 	ret.reserve(5);
@@ -207,7 +207,7 @@ std::string CgBinaryDisasm::FormatDisasm(const std::string& code)
 	return fmt::replace_all(code, repl_list);
 }
 
-std::string CgBinaryDisasm::GetCondDisasm()
+std::string CgBinaryDisasm::GetCondDisasm() const
 {
 	enum
 	{
@@ -304,7 +304,7 @@ void CgBinaryDisasm::AddCodeCondDisasm(const std::string& dst, const std::string
 }
 
 
-std::string CgBinaryDisasm::AddAddrMaskDisasm()
+std::string CgBinaryDisasm::AddAddrMaskDisasm() const
 {
 	static constexpr std::string_view f = "xyzw";
 	return std::string(".") + f[d0.addr_swz];
@@ -316,7 +316,7 @@ std::string CgBinaryDisasm::AddAddrRegDisasm()
 	return fmt::format("A%d", d0.addr_reg_sel_1) + AddAddrMaskDisasm();
 }
 
-u32 CgBinaryDisasm::GetAddrDisasm()
+u32 CgBinaryDisasm::GetAddrDisasm() const
 {
 	return (d2.iaddrh << 3) | d3.iaddrl;
 }

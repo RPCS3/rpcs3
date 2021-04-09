@@ -176,7 +176,6 @@ inline FT build_function_asm(F&& builder)
 #include <unordered_map>
 
 #include "util/types.hpp"
-#include "mutex.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)

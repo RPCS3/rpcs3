@@ -3,12 +3,10 @@
 #include "overlay_controls.h"
 
 #include "Emu/IdManager.h"
-#include "Emu/Cell/timers.hpp"
 
 #include "Utilities/mutex.h"
 #include "Utilities/Timer.h"
 
-#include <list>
 #include <mutex>
 
 
@@ -34,7 +32,7 @@ namespace rsx
 			virtual void update() {}
 			virtual compiled_resource get_compiled() = 0;
 
-			void refresh();
+			void refresh() const;
 		};
 
 		// Interactable UI element

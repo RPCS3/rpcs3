@@ -610,7 +610,7 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		const u64 arg1 = ctx.args >= 1 ? src.template get<u64>(1) : 0;
 		const u64 arg2 = ctx.args >= 2 ? src.template get<u64>(2) : 0;
 
-		if (const usz _size = std::snprintf(0, 0, _fmt.c_str(), arg0, arg1, arg2))
+		if (const usz _size = std::snprintf(nullptr, 0, _fmt.c_str(), arg0, arg1, arg2))
 		{
 			out.resize(out.size() + _size);
 			std::snprintf(&out.front() + out.size() - _size, _size + 1, _fmt.c_str(), arg0, arg1, arg2);

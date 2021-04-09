@@ -42,9 +42,9 @@ struct lv2_cond final : lv2_obj
 	{
 	}
 
-	CellError on_id_create()
+	CellError on_id_create() const
 	{
-		if (!mutex->obj_count.fetch_op([](typename lv2_mutex::count_info& info)
+		if (!mutex->obj_count.fetch_op([](lv2_mutex::count_info& info)
 		{
 			if (info.mutex_count)
 				return info.cond_count++, true;

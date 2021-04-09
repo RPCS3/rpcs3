@@ -104,7 +104,7 @@ protected:
 	static float ScaledInput2(s32 raw_value, int minimum, int maximum);
 
 	// Get normalized trigger value based on the range defined by a threshold
-	u16 NormalizeTriggerInput(u16 value, int threshold);
+	u16 NormalizeTriggerInput(u16 value, int threshold) const;
 
 	// normalizes a directed input, meaning it will correspond to a single "button" and not an axis with two directions
 	// the input values must lie in 0+
@@ -173,16 +173,16 @@ public:
 	virtual void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
 
 private:
-	virtual std::shared_ptr<PadDevice> get_device(const std::string& /*device*/) { return nullptr; };
-	virtual bool get_is_left_trigger(u64 /*keyCode*/) { return false; };
-	virtual bool get_is_right_trigger(u64 /*keyCode*/) { return false; };
-	virtual bool get_is_left_stick(u64 /*keyCode*/) { return false; };
-	virtual bool get_is_right_stick(u64 /*keyCode*/) { return false; };
-	virtual PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& /*device*/) { return connection::disconnected; };
-	virtual void get_extended_info(const std::shared_ptr<PadDevice>& /*device*/, const std::shared_ptr<Pad>& /*pad*/) {};
-	virtual void apply_pad_data(const std::shared_ptr<PadDevice>& /*device*/, const std::shared_ptr<Pad>& /*pad*/) {};
-	virtual std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& /*device*/) { return {}; };
-	virtual pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& /*data*/) { return {}; };
+	virtual std::shared_ptr<PadDevice> get_device(const std::string& /*device*/) { return nullptr; }
+	virtual bool get_is_left_trigger(u64 /*keyCode*/) { return false; }
+	virtual bool get_is_right_trigger(u64 /*keyCode*/) { return false; }
+	virtual bool get_is_left_stick(u64 /*keyCode*/) { return false; }
+	virtual bool get_is_right_stick(u64 /*keyCode*/) { return false; }
+	virtual PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& /*device*/) { return connection::disconnected; }
+	virtual void get_extended_info(const std::shared_ptr<PadDevice>& /*device*/, const std::shared_ptr<Pad>& /*pad*/) {}
+	virtual void apply_pad_data(const std::shared_ptr<PadDevice>& /*device*/, const std::shared_ptr<Pad>& /*pad*/) {}
+	virtual std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& /*device*/) { return {}; }
+	virtual pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& /*data*/) { return {}; }
 
 protected:
 	virtual std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& /*device*/, const pad_config* profile);

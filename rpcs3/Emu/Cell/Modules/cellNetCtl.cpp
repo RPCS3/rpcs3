@@ -9,11 +9,8 @@
 #include "cellNetCtl.h"
 
 #include "Utilities/StrUtil.h"
-#include "Emu/IdManager.h"
 
 #include "Emu/NP/np_handler.h"
-
-#include <thread>
 
 LOG_CHANNEL(cellNetCtl);
 
@@ -228,7 +225,7 @@ struct netstart_hack
 {
 	static constexpr std::string_view thread_name = "NetStart Hack";
 
-	void operator()(int)
+	void operator()(int) const
 	{
 		thread_ctrl::wait_for(500'000);
 

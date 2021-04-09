@@ -13,7 +13,7 @@ AudioDumper::AudioDumper(u16 ch)
 		if (const std::string id = Emu.GetTitleID(); !id.empty())
 		{
 			path += id + "_";
-		};
+		}
 		path += date_time::current_time_narrow<'_'>() + ".wav";
 		m_output.open(path, fs::rewrite);
 		m_output.write(m_header); // write initial file header

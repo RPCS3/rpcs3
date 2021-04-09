@@ -213,7 +213,7 @@ namespace rsx
 		void cpu_task() override;
 	private:
 		be_t<u32> allocate_context();
-		std::vector<u32> alloc_write_fifo(be_t<u32> context_id);
+		std::vector<u32> alloc_write_fifo(be_t<u32> context_id) const;
 		void apply_frame_state(be_t<u32> context_id, const frame_capture_data::replay_command& replay_cmd);
 	};
 }

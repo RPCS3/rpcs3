@@ -155,6 +155,7 @@ void mic_context::load_config_and_init()
 			mic_list.at(0).add_device(device_list[0]);
 			break;
 		}
+		case microphone_handler::null:
 		default: break;
 		}
 	}
@@ -211,6 +212,7 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 		}
 		break;
 	case microphone_handler::rocksmith: num_channels = 1; break;
+	case microphone_handler::null:
 	default: ensure(false); break;
 	}
 
@@ -226,7 +228,7 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 			num_al_channels = AL_FORMAT_STEREO16;
 		break;
 	case 4:
-		if (alcIsExtensionPresent(NULL, "AL_EXT_MCFORMATS") == AL_TRUE)
+		if (alcIsExtensionPresent(nullptr, "AL_EXT_MCFORMATS") == AL_TRUE)
 		{
 			num_al_channels = AL_FORMAT_QUAD16;
 		}
@@ -437,6 +439,7 @@ void microphone_device::get_raw(const u32 num_samples)
 		}
 
 		break;
+	case microphone_handler::null:
 	default: ensure(false); break;
 	}
 
@@ -491,6 +494,7 @@ void microphone_device::get_dsp(const u32 num_samples)
 		}
 
 		break;
+	case microphone_handler::null:
 	default: ensure(false); break;
 	}
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "util/logs.hpp"
+#include "Utilities/StrFmt.h"
 #include "util/asm.hpp"
 
 /**

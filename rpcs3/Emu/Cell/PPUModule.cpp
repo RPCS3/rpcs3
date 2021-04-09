@@ -1063,6 +1063,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 
 			break;
 		}
+		default : break;
 		}
 	}
 

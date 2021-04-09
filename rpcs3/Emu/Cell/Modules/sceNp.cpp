@@ -2875,7 +2875,7 @@ error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serv
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	nph.req_ticket(0x00020001, npId.get_ptr(), serviceId.get_ptr(), reinterpret_cast<const u8 *>(cookie.get_ptr()), cookieSize, entitlementId.get_ptr(), consumedCount);
+	nph.req_ticket(0x00020001, npId.get_ptr(), serviceId.get_ptr(), static_cast<const u8*>(cookie.get_ptr()), cookieSize, entitlementId.get_ptr(), consumedCount);
 
 	return CELL_OK;
 }
@@ -2908,7 +2908,7 @@ error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTick
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	nph.req_ticket(0x00020001, npId.get_ptr(), serviceId.get_ptr(), reinterpret_cast<const u8 *>(cookie.get_ptr()), cookieSize, entitlementId.get_ptr(), consumedCount);
+	nph.req_ticket(0x00020001, npId.get_ptr(), serviceId.get_ptr(), static_cast<const u8*>(cookie.get_ptr()), cookieSize, entitlementId.get_ptr(), consumedCount);
 
 	return CELL_OK;
 }

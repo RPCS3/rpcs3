@@ -258,7 +258,7 @@ struct lv2_file final : lv2_fs_object
 	// File reading with intermediate buffer
 	static u64 op_read(const fs::file& file, vm::ptr<void> buf, u64 size);
 
-	u64 op_read(vm::ptr<void> buf, u64 size)
+	u64 op_read(vm::ptr<void> buf, u64 size) const
 	{
 		return op_read(file, buf, size);
 	}
@@ -266,7 +266,7 @@ struct lv2_file final : lv2_fs_object
 	// File writing with intermediate buffer
 	static u64 op_write(const fs::file& file, vm::cptr<void> buf, u64 size);
 
-	u64 op_write(vm::cptr<void> buf, u64 size)
+	u64 op_write(vm::cptr<void> buf, u64 size) const
 	{
 		return op_write(file, buf, size);
 	}

@@ -8,7 +8,6 @@
 #include "util/vm.hpp"
 #include "util/asm.hpp"
 #include <charconv>
-#include <immintrin.h>
 #include <zlib.h>
 
 #ifdef __linux__
@@ -272,10 +271,7 @@ asmjit::Runtime& asmjit::get_global_runtime()
 #ifdef LLVM_AVAILABLE
 
 #include <unordered_map>
-#include <map>
 #include <unordered_set>
-#include <set>
-#include <array>
 #include <deque>
 
 #ifdef _MSC_VER

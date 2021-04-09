@@ -4,7 +4,6 @@
 #include "sys_sync.h"
 
 #include <queue>
-#include <thread>
 #include "Emu/System.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"

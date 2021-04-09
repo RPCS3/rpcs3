@@ -1,9 +1,7 @@
 #pragma once
 #include "Emu/RSX/RSXVertexProgram.h"
 #include <vector>
-#include <set>
 #include <stack>
-#include <sstream>
 #include "ShaderParam.h"
 
 /**
@@ -66,8 +64,8 @@ struct VertexProgramDecompiler
 	const RSXVertexProgram& m_prog;
 	ParamArray m_parr;
 
-	std::string NotZeroPositive(const std::string& code);
-	std::string GetMask(bool is_sca);
+	static std::string NotZeroPositive(const std::string& code);
+	std::string GetMask(bool is_sca) const;
 	std::string GetVecMask();
 	std::string GetScaMask();
 	std::string GetDST(bool is_sca = false);
@@ -75,10 +73,10 @@ struct VertexProgramDecompiler
 	std::string GetTex();
 	std::string GetRawCond();
 	std::string GetCond();
-	std::string GetOptionalBranchCond();	//Conditional branch expression modified externally at runtime
+	std::string GetOptionalBranchCond() const;	//Conditional branch expression modified externally at runtime
 	std::string AddAddrReg();
 	std::string AddCondReg();
-	u32 GetAddr();
+	u32 GetAddr() const;
 	std::string Format(const std::string& code);
 
 	void AddCodeCond(const std::string& lhs, const std::string& rhs);

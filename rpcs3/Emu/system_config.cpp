@@ -7,7 +7,7 @@
 
 cfg_root g_cfg{};
 
-bool cfg_root::node_core::has_rtm() const
+bool cfg_root::node_core::has_rtm()
 {
 	return utils::has_rtm();
 }

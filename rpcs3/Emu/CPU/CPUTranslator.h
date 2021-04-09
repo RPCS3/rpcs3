@@ -29,15 +29,7 @@
 #include "util/types.hpp"
 #include "Utilities/StrFmt.h"
 #include "Utilities/BitField.h"
-#include "util/logs.hpp"
 #include "Utilities/JIT.h"
-
-#include <unordered_map>
-#include <map>
-#include <unordered_set>
-#include <set>
-#include <array>
-#include <vector>
 
 #include "util/v128.hpp"
 
@@ -846,6 +838,8 @@ struct llvm_neg
 		{
 			return ir->CreateFNeg(v1);
 		}
+
+		// TODO: return value ?
 	}
 
 	llvm_match_tuple<A1> match(llvm::Value*& value) const
@@ -2432,7 +2426,7 @@ protected:
 	bool m_use_avx512_icl = false;
 
 	// IR builder
-	llvm::IRBuilder<>* m_ir;
+	llvm::IRBuilder<>* m_ir = nullptr;
 
 	void initialize(llvm::LLVMContext& context, llvm::ExecutionEngine& engine);
 
@@ -2500,7 +2494,7 @@ public:
 	}
 
 	// Bitcast with immediate constant folding
-	llvm::Value* bitcast(llvm::Value* val, llvm::Type* type);
+	llvm::Value* bitcast(llvm::Value* val, llvm::Type* type) const;
 
 	template <typename T>
 	llvm::Value* bitcast(llvm::Value* val)

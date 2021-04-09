@@ -196,7 +196,7 @@ public:
 	KeyVault();
 	SELF_KEY FindSelfKey(u32 type, u16 revision, u64 version);
 	void SetKlicenseeKey(u8* key);
-	u8* GetKlicenseeKey();
+	u8* GetKlicenseeKey() const;
 
 private:
 	void LoadSelfLV0Keys();

@@ -73,7 +73,7 @@ bool AudioBackend::has_capability(u32 cap) const
 void AudioBackend::dump_capabilities(std::string& out) const
 {
 	u32 count = 0;
-	u32 capabilities = GetCapabilities();
+	const u32 capabilities = GetCapabilities();
 
 	if (capabilities & PLAY_PAUSE_FLUSH)
 	{

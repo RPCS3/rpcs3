@@ -44,7 +44,7 @@ void CgBinaryDisasm::AddCodeAsm(const std::string& code)
 	m_arb_shader += (op_name + " " + m_dst_reg_name + FormatDisAsm(code) + ";" + "\n");
 }
 
-std::string CgBinaryDisasm::GetMask()
+std::string CgBinaryDisasm::GetMask() const
 {
 	std::string ret;
 	ret.reserve(5);
@@ -60,7 +60,7 @@ std::string CgBinaryDisasm::GetMask()
 	return ret == "."sv || ret == ".xyzw"sv ? "" : (ret);
 }
 
-std::string CgBinaryDisasm::AddRegDisAsm(u32 index, int fp16)
+std::string CgBinaryDisasm::AddRegDisAsm(u32 index, int fp16) const
 {
 	return std::string(fp16 ? "H" : "R") + std::to_string(index);
 }
@@ -78,12 +78,12 @@ std::string CgBinaryDisasm::AddConstDisAsm()
 	return fmt::format("{0x%08x(%g), 0x%08x(%g), 0x%08x(%g), 0x%08x(%g)}", x, std::bit_cast<f32>(x), y, std::bit_cast<f32>(y), z, std::bit_cast<f32>(z), w, std::bit_cast<f32>(w));
 }
 
-std::string CgBinaryDisasm::AddTexDisAsm()
+std::string CgBinaryDisasm::AddTexDisAsm() const
 {
 	return (std::string("TEX") + std::to_string(dst.tex_num));
 }
 
-std::string CgBinaryDisasm::GetCondDisAsm()
+std::string CgBinaryDisasm::GetCondDisAsm() const
 {
 	static constexpr std::string_view f = "xyzw";
 

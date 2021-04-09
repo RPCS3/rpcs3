@@ -2,8 +2,6 @@
 #include "Emu/Cell/lv2/sys_tty.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Utilities/cfmt.h"
-#include <string.h>
-#include <ctype.h>
 
 LOG_CHANNEL(sysPrxForUser);
 
@@ -16,7 +14,7 @@ struct ps3_fmt_src
 	ppu_thread* ctx;
 	u32 g_count;
 
-	bool test(usz) const
+	static bool test(usz)
 	{
 		return true;
 	}
@@ -40,7 +38,7 @@ struct ps3_fmt_src
 		return out.size() - start;
 	}
 
-	usz type(usz) const
+	static usz type(usz)
 	{
 		return 0;
 	}

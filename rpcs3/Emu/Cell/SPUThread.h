@@ -5,7 +5,6 @@
 #include "Emu/Memory/vm.h"
 #include "MFC.h"
 
-#include <map>
 #include "util/v128.hpp"
 #include "util/logs.hpp"
 #include "util/to_endian.hpp"
@@ -354,12 +353,12 @@ public:
 		data.release(u64{count} << off_count | value);
 	}
 
-	u32 get_value()
+	u32 get_value() const
 	{
 		return static_cast<u32>(data);
 	}
 
-	u32 get_count()
+	u32 get_count() const
 	{
 		return static_cast<u32>(data >> off_count);
 	}
@@ -790,13 +789,13 @@ public:
 	void do_putlluc(const spu_mfc_cmd& args);
 	bool do_putllc(const spu_mfc_cmd& args);
 	void do_mfc(bool wait = true);
-	u32 get_mfc_completed();
+	u32 get_mfc_completed() const;
 
 	bool process_mfc_cmd();
 	ch_events_t get_events(u32 mask_hint = -1, bool waiting = false, bool reading = false);
 	void set_events(u32 bits);
 	void set_interrupt_status(bool enable);
-	bool check_mfc_interrupts(u32 nex_pc);
+	bool check_mfc_interrupts(u32 next_pc);
 	bool is_exec_code(u32 addr) const; // Only a hint, do not rely on it other than debugging purposes
 	u32 get_ch_count(u32 ch);
 	s64 get_ch_value(u32 ch);
@@ -834,7 +833,7 @@ public:
 
 	// Returns true if reservation existed but was just discovered to be lost
 	// It is safe to use on any address, even if not directly accessed by SPU (so it's slower)
-	bool reservation_check(u32 addr, const decltype(rdata)& data);
+	bool reservation_check(u32 addr, const decltype(rdata)& data) const;
 
 	bool read_reg(const u32 addr, u32& value);
 	bool write_reg(const u32 addr, const u32 value);

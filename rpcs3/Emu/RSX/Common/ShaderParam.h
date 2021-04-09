@@ -99,12 +99,10 @@ struct ParamType
 
 	bool SearchName(const std::string& name) const
 	{
-		for (const auto& item : items)
+		return std::any_of(items.cbegin(), items.cend(), [&name](const auto& item)
 		{
-			if (item.name == name) return true;
-		}
-
-		return false;
+			return item.name == name;
+		});
 	}
 };
 
@@ -125,13 +123,11 @@ struct ParamArray
 
 	bool HasParamTypeless(const ParamFlag flag, const std::string& name)
 	{
-		for (const auto& param : params[flag])
+		const auto& p = params[flag];
+		return std::any_of(p.cbegin(), p.cend(), [&name](const auto& param)
 		{
-			if (param.SearchName(name))
-				return true;
-		}
-
-		return false;
+			return param.SearchName(name);
+		});
 	}
 
 	bool HasParam(const ParamFlag flag, const std::string& type, const std::string& name)

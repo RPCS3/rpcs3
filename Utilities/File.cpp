@@ -6,7 +6,6 @@
 #include <unordered_map>
 #include <algorithm>
 #include <cstring>
-#include <cerrno>
 #include <map>
 
 #include "util/asm.hpp"
@@ -17,11 +16,6 @@ using namespace std::literals::string_literals;
 
 #include <cwchar>
 #include <Windows.h>
-
-namespace utils
-{
-	u64 get_unique_tsc();
-}
 
 static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 {
@@ -65,7 +59,7 @@ static void to_utf8(std::string& out, const wchar_t* source)
 	// Resize buffer
 	out.resize(buf_size - 1);
 
-	const int result = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &out.front(), buf_size, NULL, NULL);
+	const int result = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &out.front(), buf_size, nullptr, nullptr);
 
 	// Fix the size
 	out.resize(ensure(result) - 1);
@@ -593,7 +587,7 @@ bool fs::create_dir(const std::string& path)
 	}
 
 #ifdef _WIN32
-	if (!CreateDirectoryW(to_wchar(path).get(), NULL))
+	if (!CreateDirectoryW(to_wchar(path).get(), nullptr))
 	{
 		int res = GetLastError();
 
@@ -713,7 +707,7 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 				}
 
 				error1 = GetLastError();
-				CreateDirectoryW(ws2.get(), NULL); // TODO
+				CreateDirectoryW(ws2.get(), nullptr); // TODO
 			}
 			else
 			{
@@ -882,7 +876,7 @@ bool fs::truncate_file(const std::string& path, u64 length)
 
 #ifdef _WIN32
 	// Open the file
-	const auto handle = CreateFileW(to_wchar(path).get(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	const auto handle = CreateFileW(to_wchar(path).get(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		g_tls_error = to_error(GetLastError());
@@ -921,7 +915,7 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 
 #ifdef _WIN32
 	// Open the file
-	const auto handle = CreateFileW(to_wchar(path).get(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, NULL);
+	const auto handle = CreateFileW(to_wchar(path).get(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		g_tls_error = to_error(GetLastError());
@@ -1033,7 +1027,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		share |= FILE_SHARE_WRITE;
 	}
 
-	const HANDLE handle = CreateFileW(to_wchar(path).get(), access, share, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
+	const HANDLE handle = CreateFileW(to_wchar(path).get(), access, share, nullptr, disp, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -1100,7 +1094,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			const int size = narrow<int>(count);
 
 			DWORD nread;
-			ensure(ReadFile(m_handle, buffer, size, &nread, NULL)); // "file::read"
+			ensure(ReadFile(m_handle, buffer, size, &nread, nullptr)); // "file::read"
 
 			return nread;
 		}
@@ -1111,7 +1105,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			const int size = narrow<int>(count);
 
 			DWORD nwritten;
-			ensure(WriteFile(m_handle, buffer, size, &nwritten, NULL)); // "file::write"
+			ensure(WriteFile(m_handle, buffer, size, &nwritten, nullptr)); // "file::write"
 
 			return nwritten;
 		}
@@ -1439,7 +1433,7 @@ bool fs::dir::open(const std::string& path)
 
 #ifdef _WIN32
 	WIN32_FIND_DATAW found;
-	const auto handle = FindFirstFileExW(to_wchar(path + "/*").get(), FindExInfoBasic, &found, FindExSearchNameMatch, NULL, FIND_FIRST_EX_CASE_SENSITIVE | FIND_FIRST_EX_LARGE_FETCH);
+	const auto handle = FindFirstFileExW(to_wchar(path + "/*").get(), FindExInfoBasic, &found, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_CASE_SENSITIVE | FIND_FIRST_EX_LARGE_FETCH);
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -1594,9 +1588,9 @@ const std::string& fs::get_config_dir()
 		wchar_t buf[32768];
 		constexpr DWORD size = static_cast<DWORD>(std::size(buf));
 		if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf, size) - 1 >= size - 1 &&
-			GetModuleFileName(NULL, buf, size) - 1 >= size - 1)
+			GetModuleFileName(nullptr, buf, size) - 1 >= size - 1)
 		{
-			MessageBoxA(0, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+			MessageBoxA(nullptr, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
 			return dir; // empty
 		}
 

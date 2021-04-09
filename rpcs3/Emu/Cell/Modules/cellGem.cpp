@@ -124,7 +124,9 @@ struct gem_config
 			connected_controllers = 1;
 			break;
 		}
-		default: break;
+		case move_handler::null:
+		default:
+			break;
 		}
 
 		// Assign status and port number
@@ -143,7 +145,7 @@ struct gem_config
  */
 static bool check_gem_num(const u32 gem_num)
 {
-	return gem_num >= 0 && gem_num < CELL_GEM_MAX_NUM;
+	return gem_num < CELL_GEM_MAX_NUM;
 }
 
 /**

@@ -1,17 +1,12 @@
 #pragma once
 
 #include <array>
-#include <vector>
 #include <numeric>
-#include <deque>
-#include <set>
 
-#include "GCM.h"
 #include "rsx_decode.h"
 #include "RSXTexture.h"
 #include "rsx_vertex_data.h"
 #include "rsx_utils.h"
-#include "Utilities/geometry.h"
 #include "Emu/Cell/timers.hpp"
 
 namespace rsx
@@ -1604,7 +1599,7 @@ namespace rsx
 			return decode<NV0039_OFFSET_OUT>().output_offset();
 		}
 
-		u32 nv0039_output_location()
+		u32 nv0039_output_location() const
 		{
 			return decode<NV0039_SET_CONTEXT_DMA_BUFFER_OUT>().output_dma();
 		}

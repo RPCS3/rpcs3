@@ -200,7 +200,7 @@ void AppInfo::Load(const fs::file& f)
 	padding   = Read64(f);
 }
 
-void AppInfo::Show()
+void AppInfo::Show() const
 {
 	self_log.notice("AuthID: 0x%llx", authid);
 	self_log.notice("VendorID: 0x%08x", vendor_id);
@@ -218,7 +218,7 @@ void SectionInfo::Load(const fs::file& f)
 	encrypted  = Read32(f);
 }
 
-void SectionInfo::Show()
+void SectionInfo::Show() const
 {
 	self_log.notice("Offset: 0x%llx", offset);
 	self_log.notice("Size: 0x%llx", size);
@@ -236,7 +236,7 @@ void SCEVersionInfo::Load(const fs::file& f)
 	unknown        = Read32(f);
 }
 
-void SCEVersionInfo::Show()
+void SCEVersionInfo::Show() const
 {
 	self_log.notice("Sub-header type: 0x%08x", subheader_type);
 	self_log.notice("Present: 0x%08x", present);
@@ -290,7 +290,7 @@ void ControlInfo::Load(const fs::file& f)
 	}
 }
 
-void ControlInfo::Show()
+void ControlInfo::Show() const
 {
 	self_log.notice("Type: 0x%08x", type);
 	self_log.notice("Size: 0x%08x", size);
@@ -369,7 +369,7 @@ void MetadataInfo::Load(u8* in)
 	memcpy(iv_pad, in + 0x30, 0x10);
 }
 
-void MetadataInfo::Show()
+void MetadataInfo::Show() const
 {
 	std::string key_str;
 	std::string key_pad_str;
@@ -409,7 +409,7 @@ void MetadataHeader::Load(u8* in)
 	unknown3 = swap32(unknown3);
 }
 
-void MetadataHeader::Show()
+void MetadataHeader::Show() const
 {
 	self_log.notice("Signature input length: 0x%llx", signature_input_length);
 	self_log.notice("Unknown1: 0x%08x", unknown1);
@@ -446,7 +446,7 @@ void MetadataSectionHeader::Load(u8* in)
 	compressed = swap32(compressed);
 }
 
-void MetadataSectionHeader::Show()
+void MetadataSectionHeader::Show() const
 {
 	self_log.notice("Data offset: 0x%llx", data_offset);
 	self_log.notice("Data size: 0x%llx", data_size);
@@ -1395,7 +1395,7 @@ static bool CheckDebugSelf(fs::file& s)
 
 		// Copy the data.
 		char buf[2048];
-		while (u64 size = s.read(buf, 2048))
+		while (const u64 size = s.read(buf, 2048))
 		{
 			e.write(buf, size);
 		}
@@ -1426,7 +1426,7 @@ fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* ou
 	if (elf_or_self.size() >= 4 && elf_or_self.read<u32>() == "SCE\0"_u32 && !CheckDebugSelf(elf_or_self))
 	{
 		// Check the ELF file class (32 or 64 bit).
-		bool isElf32 = IsSelfElf32(elf_or_self);
+		const bool isElf32 = IsSelfElf32(elf_or_self);
 
 		// Start the decrypter on this SELF file.
 		SELFDecrypter self_dec(elf_or_self);
@@ -1469,7 +1469,7 @@ bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 	if (self.size() >= 4 && self.read<u32>() == "SCE\0"_u32)
 	{
 		// Check the ELF file class (32 or 64 bit).
-		bool isElf32 = IsSelfElf32(self);
+		const bool isElf32 = IsSelfElf32(self);
 
 		// Start the decrypter on this SELF file.
 		SELFDecrypter self_dec(self);

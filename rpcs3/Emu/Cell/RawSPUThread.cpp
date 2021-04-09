@@ -8,7 +8,7 @@ inline void try_start(spu_thread& spu)
 {
 	reader_lock lock(spu.run_ctrl_mtx);
 
-	if (spu.status_npc.fetch_op([](typename spu_thread::status_npc_sync_var& value)
+	if (spu.status_npc.fetch_op([](spu_thread::status_npc_sync_var& value)
 	{
 		if (value.status & SPU_STATUS_RUNNING)
 		{

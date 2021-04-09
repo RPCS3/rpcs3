@@ -148,6 +148,7 @@ u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u32 stream)
 	case 0x80: return CELL_PAMF_STREAM_TYPE_PAMF_LPCM;
 	case 0x81: return CELL_PAMF_STREAM_TYPE_AC3;
 	case 0xdd: return CELL_PAMF_STREAM_TYPE_USER_DATA;
+	default: break;
 	}
 
 	cellPamf.todo("pamfGetStreamType(): unsupported stream type found(0x%x)", header.type);
@@ -196,6 +197,7 @@ u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u32 stream)
 		ensure((header.fid_minor & 0xf0) == 0x20);
 		return header.fid_minor % 16;
 	}
+	default: break;
 	}
 
 	cellPamf.todo("pamfGetStreamChannel(): unsupported stream type found(0x%x)", header.type);

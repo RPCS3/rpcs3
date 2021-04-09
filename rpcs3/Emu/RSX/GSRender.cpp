@@ -3,6 +3,7 @@
 #include "GSRender.h"
 
 GSRender::GSRender()
+	: m_context(nullptr)
 {
 	if (auto gs_frame = Emu.GetCallbacks().get_gs_frame())
 	{

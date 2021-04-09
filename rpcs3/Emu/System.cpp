@@ -592,7 +592,7 @@ std::string Emulator::GetBackgroundPicturePath() const
 	return path;
 }
 
-std::string Emulator::PPUCache() const
+std::string Emulator::PPUCache()
 {
 	auto& _main = g_fxo->get<ppu_module>();
 
@@ -865,8 +865,8 @@ std::string Emulator::GetExeDir()
 	wchar_t buffer[32767];
 	GetModuleFileNameW(nullptr, buffer, sizeof(buffer)/2);
 
-	std::string path_to_exe = wchar_to_utf8(buffer);
-	usz last = path_to_exe.find_last_of("\\");
+	const std::string path_to_exe = wchar_to_utf8(buffer);
+	const usz last = path_to_exe.find_last_of('\\');
 	return last == std::string::npos ? std::string("") : path_to_exe.substr(0, last+1);
 }
 #endif
@@ -2222,7 +2222,7 @@ void Emulator::ConfigureLogs()
 	was_silenced = silenced;
 }
 
-void Emulator::ConfigurePPUCache()
+void Emulator::ConfigurePPUCache() const
 {
 	auto& _main = g_fxo->get<ppu_module>();
 
