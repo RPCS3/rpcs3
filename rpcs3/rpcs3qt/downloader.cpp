@@ -121,6 +121,93 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 	m_thread->start();
 }
 
+void downloader::startU(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title, bool keep_progress_dialog_open, int exptected_size)
+{
+	if (m_thread)
+	{
+		if (m_thread->isRunning())
+		{
+			m_curl_abort = true;
+			m_thread->wait();
+		}
+		m_thread->deleteLater();
+	}
+
+	m_keep_progress_dialog_open = keep_progress_dialog_open;
+	m_curl_buf.clear();
+	m_curl_abort = false;
+
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, url.c_str());
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEFUNCTION, curl_write_cb_compat);
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEDATA, this);
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_FOLLOWLOCATION, follow_location ? 1 : 0);
+	curl_easy_setopt(m_curl->get_curl(), CURLOPT_SSL_VERIFYPEER, 0);
+
+	m_thread = QThread::create([this] {
+		const auto result = curl_easy_perform(m_curl->get_curl());
+		m_curl_success    = result == CURLE_OK;
+
+		if (!m_curl_success && !m_curl_abort)
+		{
+			const std::string error = "Curl error: " + std::string{curl_easy_strerror(result)};
+			network_log.error("%s", error);
+			Q_EMIT signal_download_error(QString::fromStdString(error));
+		}
+	});
+
+	connect(m_thread, &QThread::finished, this, [this]() {
+		if (m_curl_abort)
+		{
+			return;
+		}
+
+		if (m_progress_dialog && (!m_keep_progress_dialog_open || !m_curl_success))
+		{
+			m_progress_dialog->close();
+			m_progress_dialog = nullptr;
+		}
+
+		if (m_curl_success)
+		{
+			Q_EMIT signal_download_finished(m_curl_buf);
+		}
+	});
+
+	// The downloader's signals are expected to be disconnected and customized before start is called.
+	// Therefore we need to (re)connect its signal(s) here and not in the constructor.
+	connect(this, &downloader::signal_buffer_update, this, &downloader::handle_buffer_update);
+
+	if (show_progress_dialog)
+	{
+		const int maximum = exptected_size > 0 ? exptected_size : 100;
+
+		if (m_progress_dialog)
+		{
+			m_progress_dialog->setWindowTitle(progress_dialog_title);
+			m_progress_dialog->setAutoClose(!m_keep_progress_dialog_open);
+			m_progress_dialog->setMaximum(maximum);
+		}
+		else
+		{
+			m_progress_dialog = new progress_dialog(progress_dialog_title, tr("Please wait..."), tr("Abort"), 0, maximum, true, m_parent);
+			m_progress_dialog->setAutoReset(false);
+			m_progress_dialog->setAutoClose(!m_keep_progress_dialog_open);
+			m_progress_dialog->show();
+
+			// Handle abort
+			connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]() {
+				m_curl_abort = true;
+				close_progress_dialog();
+			});
+			connect(m_progress_dialog, &QProgressDialog::finished, m_progress_dialog, &QProgressDialog::deleteLater);
+		}
+	}
+
+	m_thread->setObjectName("Download Thread");
+	m_thread->setParent(this);
+	m_thread->start();
+}
+
 void downloader::update_progress_dialog(const QString& title)
 {
 	if (m_progress_dialog)

@@ -130,6 +130,12 @@
     <Filter Include="Gui\custom items">
       <UniqueIdentifier>{949cff6d-9cc5-4a8a-a453-a5144da8ecf4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Gui\game update manager">
+      <UniqueIdentifier>{1654b6e5-5263-44aa-a9f1-5aa978779698}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pungixml">
+      <UniqueIdentifier>{e68060af-2c8b-4325-9453-9769404ee67b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -744,6 +750,18 @@
     <ClCompile Include="Input\hid_pad_handler.cpp">
       <Filter>Io</Filter>
     </ClCompile>
+    <ClCompile Include="game_update_manager_dialog.cpp">
+      <Filter>Gui\game update manager</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_game_update_manager_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_game_update_manager_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\..\..\Downloads\pugixml-1.11\pugixml-1.11\src\pugixml.cpp">
+      <Filter>pungixml</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -871,6 +889,15 @@
     </ClInclude>
     <ClInclude Include="Input\hid_pad_handler.h">
       <Filter>Io</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_game_update_manager_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Downloads\pugixml-1.11\pugixml-1.11\src\pugiconfig.hpp">
+      <Filter>pungixml</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\..\Downloads\pugixml-1.11\pugixml-1.11\src\pugixml.hpp">
+      <Filter>pungixml</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1086,6 +1113,12 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\log_viewer.h">
       <Filter>Gui\log</Filter>
+    </CustomBuild>
+    <CustomBuild Include="game_update_manager_dialog.h">
+      <Filter>Gui\game update manager</Filter>
+    </CustomBuild>
+    <CustomBuild Include="game_update_manager_dialog.ui">
+      <Filter>Form Files</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

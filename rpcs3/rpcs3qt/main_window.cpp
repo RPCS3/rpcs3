@@ -27,6 +27,7 @@
 #include "category.h"
 #include "gui_settings.h"
 #include "input_dialog.h"
+#include "game_update_manager_dialog.h"
 
 #include <thread>
 #include <charconv>
@@ -2051,7 +2052,21 @@ void main_window::CreateConnects()
 		connect(this, &main_window::RequestTrophyManagerRepaint, trop_manager, &trophy_manager_dialog::HandleRepaintUiRequest);
 		trop_manager->show();
 	});
-
+	connect(ui->actionManage_Game_Updates, &QAction::triggered, this, [this] {
+		if (!fs::is_dir(QCoreApplication::applicationDirPath().toStdString() + "//temp"))
+		{
+			fs::create_dir(QCoreApplication::applicationDirPath().toStdString() + "//temp");
+		}
+		if (!m_selected_game)
+		{
+			QMessageBox::warning(this, tr("Selection Error"), "No Game Selected, Please Select A Game");
+			return;
+		}
+		game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
+		game_update_manager_dialog game_update_manager = game_update_manager_dialog(m_selected_game->info, m_gui_settings, m_persistent_settings, compat);
+		game_update_manager.exec();
+	});
+	
 	connect(ui->actionManage_Skylanders_Portal, &QAction::triggered, this, [this]
 	{
 		skylander_dialog* sky_diag = skylander_dialog::get_dlg(this);

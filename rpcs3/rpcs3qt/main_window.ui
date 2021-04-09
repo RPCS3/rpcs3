@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>30</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -243,6 +243,7 @@
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
     <addaction name="actionManage_Screenshots"/>
+    <addaction name="actionManage_Game_Updates"/>
    </widget>
    <widget class="QMenu" name="menuUtilities">
     <property name="title">
@@ -1149,6 +1150,11 @@
    </property>
    <property name="text">
     <string>Show Custom Icons</string>
+   </property>
+  </action>
+  <action name="actionManage_Game_Updates">
+   <property name="text">
+    <string>Game Updates</string>
    </property>
   </action>
  </widget>

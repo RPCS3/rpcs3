@@ -15,6 +15,16 @@ public:
 	~downloader();
 
 	void start(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title = "", bool keep_progress_dialog_open = false, int expected_size = -1);
+	/// <summary>
+	///  Unsecure Version of Start, Disables SSL Verifying, Use Start unless you need SSL checking disabled
+	/// </summary>
+	/// <param name="url"></param>
+	/// <param name="follow_location"></param>
+	/// <param name="show_progress_dialog"></param>
+	/// <param name="progress_dialog_title"></param>
+	/// <param name="keep_progress_dialog_open"></param>
+	/// <param name="expected_size"></param>
+	void startU(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title = "", bool keep_progress_dialog_open = false, int expected_size = -1);
 	usz update_buffer(char* data, usz size);
 
 	void update_progress_dialog(const QString& title);

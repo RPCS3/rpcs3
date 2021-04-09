@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>game_update_manager_dialog</class>
+ <widget class="QDialog" name="game_update_manager_dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>706</width>
+    <height>422</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Game Upate Manager</string>
+  </property>
+  <widget class="QWidget" name="centralwidget" native="true">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>10</y>
+     <width>701</width>
+     <height>401</height>
+    </rect>
+   </property>
+   <widget class="QGroupBox" name="gb_patch_info">
+    <property name="geometry">
+     <rect>
+      <x>410</x>
+      <y>0</y>
+      <width>281</width>
+      <height>401</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Patch Information</string>
+    </property>
+    <layout class="QVBoxLayout" name="patch_info_gb_layout_2" stretch="0,0,0,0,0,0,0,0">
+     <item>
+      <widget class="QGroupBox" name="gb_gameID">
+       <property name="title">
+        <string>Game ID</string>
+       </property>
+       <layout class="QVBoxLayout" name="title_layout_3">
+        <item>
+         <widget class="QLabel" name="Label_GameID">
+          <property name="text">
+           <string/>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="gb_Game_Title">
+       <property name="title">
+        <string>Game Title</string>
+       </property>
+       <layout class="QVBoxLayout" name="title_layout_2">
+        <item>
+         <widget class="QLabel" name="Label_Game_Title">
+          <property name="text">
+           <string/>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="gb_app_version">
+       <property name="title">
+        <string>Current Game Version</string>
+       </property>
+       <layout class="QVBoxLayout" name="layout_app_version_2">
+        <item>
+         <widget class="QLabel" name="label_app_version">
+          <property name="text">
+           <string/>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="gb_size">
+       <property name="title">
+        <string>Size(MB)</string>
+       </property>
+       <layout class="QVBoxLayout" name="author_layout_3">
+        <item>
+         <widget class="QLabel" name="label_Size">
+          <property name="text">
+           <string/>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="gb_hash">
+       <property name="title">
+        <string>Hash(SHA1)</string>
+       </property>
+       <layout class="QVBoxLayout" name="hash_layout_2">
+        <item>
+         <widget class="QLabel" name="label_hash">
+          <property name="text">
+           <string/>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="gb_RSysVer">
+       <property name="title">
+        <string>Required System Software Version</string>
+       </property>
+       <layout class="QVBoxLayout" name="description_layout_2">
+        <item>
+         <widget class="QLabel" name="label_RSysVer">
+          <property name="text">
+           <string/>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QGroupBox" name="gb_patch_version">
+       <property name="title">
+        <string>Patch Version</string>
+       </property>
+       <layout class="QVBoxLayout" name="patch_version_layout_2">
+        <item>
+         <widget class="QLabel" name="label_patch_version">
+          <property name="text">
+           <string/>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="DLI">
+       <property name="text">
+        <string>Download And Install</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QTreeWidget" name="patches">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>10</y>
+      <width>391</width>
+      <height>391</height>
+     </rect>
+    </property>
+    <attribute name="headerVisible">
+     <bool>false</bool>
+    </attribute>
+    <column>
+     <property name="text">
+      <string notr="true">1</string>
+     </property>
+    </column>
+   </widget>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
