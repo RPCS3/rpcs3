@@ -1,5 +1,3 @@
-#include <QStringList>
-
 #include "config_adapter.h"
 #include "Emu/system_config.h"
 
@@ -24,12 +22,12 @@ namespace cfg_adapter
 		fmt::throw_exception("Node not found: %s", name);
 	}
 
-	static cfg::_base& get_cfg(cfg::_base& root, cfg_location::const_iterator begin, cfg_location::const_iterator end)
+	static cfg::_base& get_cfg(cfg::_base& root, const cfg_location::const_iterator begin, const cfg_location::const_iterator end)
 	{
 		return begin == end ? root : get_cfg(get_cfg(root, *begin), begin + 1, end);
 	}
 
-	YAML::Node get_node(const YAML::Node& node, cfg_location::const_iterator begin, cfg_location::const_iterator end)
+	YAML::Node get_node(const YAML::Node& node, const cfg_location::const_iterator begin, const cfg_location::const_iterator end)
 	{
 		if (begin == end)
 		{
@@ -45,28 +43,24 @@ namespace cfg_adapter
 		return get_node(node[*begin], begin + 1, end); // TODO
 	}
 
-	YAML::Node get_node(const YAML::Node& node, cfg_location loc)
+	YAML::Node get_node(const YAML::Node& node, const cfg_location& location)
 	{
-		return get_node(node, loc.cbegin(), loc.cend());
+		return get_node(node, location.cbegin(), location.cend());
 	}
 
-	QStringList get_options(cfg_location location)
+	QStringList get_options(const cfg_location& location)
 	{
 		QStringList values;
-		auto begin = location.cbegin();
-		auto end = location.cend();
-		for (const auto& v : cfg_adapter::get_cfg(g_cfg, begin, end).to_list())
+		for (const auto& v : cfg_adapter::get_cfg(g_cfg, location.cbegin(), location.cend()).to_list())
 		{
 			values.append(QString::fromStdString(v));
 		}
 		return values;
 	}
 	
-	static bool get_is_dynamic(cfg_location location)
+	static bool get_is_dynamic(const cfg_location& location)
 	{
-		auto begin = location.cbegin();
-		auto end = location.cend();
-		return cfg_adapter::get_cfg(g_cfg, begin, end).get_is_dynamic();
+		return cfg_adapter::get_cfg(g_cfg, location.cbegin(), location.cend()).get_is_dynamic();
 	}
 	
 	bool get_is_dynamic(emu_settings_type type)

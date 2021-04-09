@@ -50,7 +50,7 @@ private:
 
 	breakpoint_handler* m_breakpoint_handler;
 	cpu_thread* m_cpu = nullptr;
-	CPUDisAsm* m_disasm;
+	CPUDisAsm* m_disasm = nullptr;
 	QDialog* m_cmd_detail = nullptr;
 	QLabel* m_detail_label = nullptr;
 };

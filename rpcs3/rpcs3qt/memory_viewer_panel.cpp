@@ -55,7 +55,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr, std::functio
 	setObjectName("memory_viewer");
 	m_colcount = 4;
 	m_rowcount = 16;
-	int pSize = 10;
+	const int pSize = 10;
 
 	// Font
 	QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
@@ -93,7 +93,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr, std::functio
 	{
 	public:
 		words_spin_box(QWidget* parent = nullptr) : QSpinBox(parent) {}
-		~words_spin_box() override {};
+		~words_spin_box() override {}
 
 	private:
 		int valueFromText(const QString &text) const override
@@ -142,7 +142,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr, std::functio
 
 	// Tools: Raw Image Preview Options
 	QGroupBox* tools_img = new QGroupBox(tr("Raw Image Preview Options"));
-	QHBoxLayout* hbox_tools_img = new QHBoxLayout();;
+	QHBoxLayout* hbox_tools_img = new QHBoxLayout();
 
 	// Tools: Raw Image Preview Options : Size
 	QGroupBox* tools_img_size = new QGroupBox(tr("Size"));
@@ -300,13 +300,13 @@ memory_viewer_panel::~memory_viewer_panel()
 void memory_viewer_panel::wheelEvent(QWheelEvent *event)
 {
 	// Set some scrollspeed modifiers:
-	u32 stepSize = 1;
+	u32 step_size = 1;
 	if (event->modifiers().testFlag(Qt::ControlModifier))
-		stepSize *= m_rowcount;
+		step_size *= m_rowcount;
 
-	QPoint numSteps = event->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
+	const QPoint num_steps = event->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
 
-	scroll(stepSize * (0 - numSteps.y()));
+	scroll(step_size * (0 - num_steps.y()));
 }
 
 void memory_viewer_panel::scroll(s32 steps)
@@ -345,7 +345,7 @@ void memory_viewer_panel::resizeEvent(QResizeEvent *event)
 	}
 }
 
-std::string memory_viewer_panel::getHeaderAtAddr(u32 addr)
+std::string memory_viewer_panel::getHeaderAtAddr(u32 addr) const
 {
 	if (m_type == thread_type::spu) return {};
 
@@ -356,7 +356,7 @@ std::string memory_viewer_panel::getHeaderAtAddr(u32 addr)
 	{
 		std::shared_ptr<named_thread<spu_thread>> spu;
 
-		if (u32 raw_spu_index = (spu_boundary - RAW_SPU_BASE_ADDR) / SPU_LS_SIZE; raw_spu_index < 5)
+		if (const u32 raw_spu_index = (spu_boundary - RAW_SPU_BASE_ADDR) / SPU_LS_SIZE; raw_spu_index < 5)
 		{
 			spu = idm::get<named_thread<spu_thread>>(spu_thread::find_raw_spu(raw_spu_index));
 
@@ -365,7 +365,7 @@ std::string memory_viewer_panel::getHeaderAtAddr(u32 addr)
 				spu.reset();
 			}
 		}
-		else if (u32 spu_index = (spu_boundary - SPU_FAKE_BASE_ADDR) / SPU_LS_SIZE; spu_index < spu_thread::id_count)
+		else if (const u32 spu_index = (spu_boundary - SPU_FAKE_BASE_ADDR) / SPU_LS_SIZE; spu_index < spu_thread::id_count)
 		{
 			spu = idm::get<named_thread<spu_thread>>(spu_thread::id_base | spu_index);
 
@@ -384,7 +384,7 @@ std::string memory_viewer_panel::getHeaderAtAddr(u32 addr)
 	return {};
 }
 
-void* memory_viewer_panel::to_ptr(u32 addr, u32 size)
+void* memory_viewer_panel::to_ptr(u32 addr, u32 size) const
 {
 	if (m_type >= thread_type::spu && !m_get_cpu())
 	{
@@ -436,7 +436,8 @@ void* memory_viewer_panel::to_ptr(u32 addr, u32 size)
 				final_addr = 0;
 				break;
 			}
-			else if (!final_addr)
+
+			if (!final_addr)
 			{
 				// First time, save starting address for later checks
 				final_addr = temp;
@@ -456,7 +457,6 @@ void* memory_viewer_panel::to_ptr(u32 addr, u32 size)
 
 		break;
 	}
-	default: break;
 	}
 
 	return nullptr;
@@ -534,11 +534,11 @@ void memory_viewer_panel::ShowMemory()
 				t_mem_hex_str += "  ";
 			}
 
-			u32 addr = (m_addr + (row - spu_passed) * m_colcount * 4 + col * 4) & m_addr_mask;
+			const u32 addr = (m_addr + (row - spu_passed) * m_colcount * 4 + col * 4) & m_addr_mask;
 
-			if (auto ptr = this->to_ptr(addr))
+			if (const auto ptr = this->to_ptr(addr))
 			{
-				const be_t<u32> rmem = *reinterpret_cast<be_t<u32>*>(ptr);
+				const be_t<u32> rmem = *static_cast<be_t<u32>*>(ptr);
 				t_mem_hex_str += qstr(fmt::format("%02x %02x %02x %02x",
 					static_cast<u8>(rmem >> 24),
 					static_cast<u8>(rmem >> 16),
@@ -582,10 +582,14 @@ void memory_viewer_panel::SetPC(const uint pc)
 	m_addr = pc;
 }
 
-void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv)
+void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv) const
 {
 	// If exceeds 32-bits it is invalid as well, UINT32_MAX always fails checks
 	const u32 memsize = static_cast<u32>(std::min<u64>(4ull * width * height, UINT32_MAX));
+	if (memsize == 0)
+	{
+		return;
+	}
 
 	std::shared_lock rlock(vm::g_mutex);
 
@@ -671,7 +675,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 	rlock.unlock();
 
 	// Flip vertically
-	if (flipv && height > 1)
+	if (flipv && height > 1 && memsize > 1)
 	{
 		const u32 pitch = width * 4;
 		for (u32 y = 0; y < height / 2; y++)
@@ -687,7 +691,7 @@ void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format form
 		}
 	}
 
-	QImage image(convertedBuffer, width, height, QImage::Format_ARGB32, [](void* buffer){ delete[] static_cast<u8*>(buffer); }, convertedBuffer);
+	const QImage image(convertedBuffer, width, height, QImage::Format_ARGB32, [](void* buffer){ delete[] static_cast<u8*>(buffer); }, convertedBuffer);
 	if (image.isNull()) return;
 
 	QLabel* canvas = new QLabel();

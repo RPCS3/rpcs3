@@ -50,8 +50,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	: QDialog(parent)
 	, m_tab_index(tab_index)
 	, ui(new Ui::settings_dialog)
-	, m_gui_settings(gui_settings)
-	, m_emu_settings(emu_settings)
+	, m_gui_settings(std::move(gui_settings))
+	, m_emu_settings(std::move(emu_settings))
 {
 	ui->setupUi(this);
 	ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
@@ -127,7 +127,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			}
 		}
 
-		std::vector<std::string> selected_ls(selected.begin(), selected.end());
+		const std::vector<std::string> selected_ls(selected.begin(), selected.end());
 		m_emu_settings->SaveSelectedLibraries(selected_ls);
 		m_emu_settings->SaveSettings();
 
@@ -556,14 +556,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_old_renderer = ui->renderBox->currentText();
 
-	auto set_renderer = [r_creator, this](QString text)
+	const auto set_renderer = [r_creator, this](const QString& text)
 	{
 		if (text.isEmpty())
 		{
 			return;
 		}
 
-		auto switchTo = [r_creator, text, this](render_creator::render_info renderer)
+		const auto switchTo = [r_creator, text, this](const render_creator::render_info& renderer)
 		{
 			// Reset other adapters to old config
 			for (const auto& render : r_creator->renderers)
@@ -622,7 +622,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	};
 
-	auto set_adapter = [r_creator, this](QString text)
+	const auto set_adapter = [r_creator, this](const QString& text)
 	{
 		if (text.isEmpty())
 		{
@@ -727,7 +727,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			max = 1;
 			break;
 		case microphone_handler::null:
-		default:
 			break;
 		}
 
@@ -757,7 +756,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		change_microphone_type(ui->microphoneBox->currentIndex());
 	};
 
-	auto change_microphone_device = [mic_none, propagate_used_devices, this](u32 next_index, QString text)
+	const auto change_microphone_device = [mic_none, propagate_used_devices, this](u32 next_index, const QString& text)
 	{
 		m_emu_settings->SetSetting(emu_settings_type::MicrophoneDevices, m_emu_settings->m_microphone_creator.set_device(next_index, text));
 		if (next_index < 4 && text == mic_none)
@@ -1086,7 +1085,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->hleList, tooltips.settings.hle_list);
 	ui->searchBox->setPlaceholderText(tr("Search libraries", "Library search box"));
 
-	auto on_lib_state_changed = [this](QString text)
+	const auto on_lib_state_changed = [this](const QString& text)
 	{
 		const QString search_term = text.toLower();
 		std::vector<QListWidgetItem*> items, items2;
@@ -1596,7 +1595,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->combo_updates->addItem(updates_background, "background");
 		ui->combo_updates->addItem(updates_no, "false");
 		ui->combo_updates->setCurrentIndex(ui->combo_updates->findData(m_gui_settings->GetValue(gui::m_check_upd_start).toString()));
-		connect(ui->combo_updates, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [this](int index)
+		connect(ui->combo_updates, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
 		{
 			m_gui_settings->SetValue(gui::m_check_upd_start, ui->combo_updates->itemData(index));
 		});
@@ -1693,15 +1692,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			QColorDialog dlg(old_color, this);
 			dlg.setWindowTitle(title);
 			dlg.setOptions(QColorDialog::ShowAlphaChannel);
-			for (int i = 0; i < dlg.customCount(); i++)
+			for (int i = 0; i < QColorDialog::customCount(); i++)
 			{
-				dlg.setCustomColor(i, m_gui_settings->GetCustomColor(i));
+				QColorDialog::setCustomColor(i, m_gui_settings->GetCustomColor(i));
 			}
 			if (dlg.exec() == QColorDialog::Accepted)
 			{
-				for (int i = 0; i < dlg.customCount(); i++)
+				for (int i = 0; i < QColorDialog::customCount(); i++)
 				{
-					m_gui_settings->SetCustomColor(i, dlg.customColor(i));
+					m_gui_settings->SetCustomColor(i, QColorDialog::customColor(i));
 				}
 				m_gui_settings->SetValue(color, dlg.selectedColor());
 				button->setIcon(gui::utils::get_colorized_icon(button->icon(), old_color, dlg.selectedColor(), true));
@@ -1822,7 +1821,7 @@ settings_dialog::~settings_dialog()
 	delete ui;
 }
 
-void settings_dialog::EnhanceSlider(emu_settings_type settings_type, QSlider* slider, QLabel* label, const QString& label_text)
+void settings_dialog::EnhanceSlider(emu_settings_type settings_type, QSlider* slider, QLabel* label, const QString& label_text) const
 {
 	m_emu_settings->EnhanceSlider(slider, settings_type);
 

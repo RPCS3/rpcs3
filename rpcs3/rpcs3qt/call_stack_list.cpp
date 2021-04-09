@@ -14,7 +14,7 @@ call_stack_list::call_stack_list(QWidget* parent) : QListWidget(parent)
 	connect(this, &QListWidget::itemDoubleClicked, this, &call_stack_list::OnCallStackListDoubleClicked);
 }
 
-void call_stack_list::HandleUpdate(std::vector<std::pair<u32, u32>> call_stack)
+void call_stack_list::HandleUpdate(const std::vector<std::pair<u32, u32>>& call_stack)
 {
 	clear();
 

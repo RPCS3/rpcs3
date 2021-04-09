@@ -37,8 +37,8 @@ protected:
 private Q_SLOTS:
 	void UpdateUI();
 private:
-	void SetLogLevel(logs::level lev);
-	void SetTTYLogging(bool val);
+	void SetLogLevel(logs::level lev) const;
+	void SetTTYLogging(bool val) const;
 
 	void CreateAndConnectActions();
 

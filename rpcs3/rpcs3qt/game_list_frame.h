@@ -44,10 +44,10 @@ public:
 	~game_list_frame();
 
 	/** Fix columns with width smaller than the minimal section size */
-	void FixNarrowColumns();
+	void FixNarrowColumns() const;
 
 	/** Resizes the columns to their contents and adds a small spacing */
-	void ResizeColumnsToContents(int spacing = 20);
+	void ResizeColumnsToContents(int spacing = 20) const;
 
 	/** Refresh the gamelist with/without loading game data from files. Public so that main frame can refresh after vfs or install */
 	void Refresh(const bool from_drive = false, const bool scroll_after = true);
@@ -69,7 +69,7 @@ public:
 
 	void SetShowHidden(bool show);
 
-	game_compatibility* GetGameCompatibility() const { return m_game_compat; };
+	game_compatibility* GetGameCompatibility() const { return m_game_compat; }
 
 	QList<game_info> GetGameInfo() const;
 
@@ -105,30 +105,30 @@ protected:
 	void resizeEvent(QResizeEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
-	QPixmap PaintedPixmap(QPixmap icon, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor());
-	QColor getGridCompatibilityColor(const QString& string);
-	void ShowCustomConfigIcon(game_info game);
+	QPixmap PaintedPixmap(const QPixmap& icon, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor()) const;
+	QColor getGridCompatibilityColor(const QString& string) const;
+	void ShowCustomConfigIcon(const game_info& game);
 	void PopulateGameList();
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
 	bool IsEntryVisible(const game_info& game);
-	void SortGameList();
+	void SortGameList() const;
 	bool SearchMatchesApp(const QString& name, const QString& serial) const;
 
-	bool RemoveCustomConfiguration(const std::string& title_id, game_info game = nullptr, bool is_interactive = false);
-	bool RemoveCustomPadConfiguration(const std::string& title_id, game_info game = nullptr, bool is_interactive = false);
+	bool RemoveCustomConfiguration(const std::string& title_id, const game_info& game = nullptr, bool is_interactive = false);
+	bool RemoveCustomPadConfiguration(const std::string& title_id, const game_info& game = nullptr, bool is_interactive = false);
 	bool RemoveShadersCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
-	bool CreatePPUCache(const game_info& game);
+	static bool CreatePPUCache(const game_info& game);
 
-	QString GetLastPlayedBySerial(const QString& serial);
-	std::string GetCacheDirBySerial(const std::string& serial);
-	std::string GetDataDirBySerial(const std::string& serial);
+	QString GetLastPlayedBySerial(const QString& serial) const;
+	static std::string GetCacheDirBySerial(const std::string& serial);
+	static std::string GetDataDirBySerial(const std::string& serial);
 	std::string CurrentSelectionPath();
-	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
+	static std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
 
-	game_info GetGameInfoByMode(const QTableWidgetItem* item);
-	game_info GetGameInfoFromItem(const QTableWidgetItem* item);
+	game_info GetGameInfoByMode(const QTableWidgetItem* item) const;
+	static game_info GetGameInfoFromItem(const QTableWidgetItem* item);
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
 	QMainWindow* m_game_dock = nullptr;

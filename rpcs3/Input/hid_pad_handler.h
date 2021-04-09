@@ -82,7 +82,7 @@ protected:
 	virtual int send_output_report(Device* device) = 0;
 	virtual DataStatus get_data(Device* device) = 0;
 
-	inline s16 apply_calibration(s32 rawValue, const CalibData& calibData)
+	static s16 apply_calibration(s32 rawValue, const CalibData& calibData)
 	{
 		const s32 biased = rawValue - calibData.bias;
 		const s32 quot   = calibData.sens_numer / calibData.sens_denom;
@@ -92,17 +92,17 @@ protected:
 		return static_cast<s16>(std::clamp<s32>(output, INT16_MIN, INT16_MAX));
 	}
 
-	inline s16 read_s16(const void* buf)
+	static s16 read_s16(const void* buf)
 	{
-		return *reinterpret_cast<const s16*>(buf);
+		return *static_cast<const s16*>(buf);
 	}
 
-	inline u32 read_u32(const void* buf)
+	static u32 read_u32(const void* buf)
 	{
-		return *reinterpret_cast<const u32*>(buf);
+		return *static_cast<const u32*>(buf);
 	}
 
-	u32 get_battery_color(u8 battery_level, int brightness) const;
+	static u32 get_battery_color(u8 battery_level, int brightness);
 
 private:
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;

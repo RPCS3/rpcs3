@@ -22,8 +22,8 @@ inline std::string sstr(const QString& _in)
 	return _in.toStdString();
 }
 
-log_viewer::log_viewer(std::shared_ptr<gui_settings> settings)
-    : m_gui_settings(settings)
+log_viewer::log_viewer(std::shared_ptr<gui_settings> gui_settings)
+    : m_gui_settings(std::move(gui_settings))
 {
 	setWindowTitle(tr("Log Viewer"));
 	setObjectName("log_viewer");
@@ -95,7 +95,7 @@ void log_viewer::show_context_menu(const QPoint& pos)
 	menu.exec(origin);
 }
 
-void log_viewer::show_log()
+void log_viewer::show_log() const
 {
 	if (m_path_last.isEmpty())
 	{

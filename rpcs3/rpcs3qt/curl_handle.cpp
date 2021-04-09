@@ -23,7 +23,7 @@ curl_handle::~curl_handle()
 	curl_easy_cleanup(m_curl);
 }
 
-CURL* curl_handle::get_curl()
+CURL* curl_handle::get_curl() const
 {
 	return m_curl;
 }

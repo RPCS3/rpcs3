@@ -2,7 +2,6 @@
 
 #include "Emu/System.h"
 #include "Utilities/File.h"
-#include "Utilities/StrFmt.h"
 #include "util/logs.hpp"
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -31,10 +30,6 @@ user_account::user_account(const std::string& user_id)
 	{
 		gui_log.error("user_account: localusername file read error (userId=%s, userDir=%s).", m_user_id, m_user_dir);
 	}
-}
-
-user_account::~user_account()
-{
 }
 
 std::map<u32, user_account> user_account::GetUserAccounts(const std::string& base_dir)

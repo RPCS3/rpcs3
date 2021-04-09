@@ -9,5 +9,5 @@ class fatal_error_dialog : public QMessageBox
 	Q_OBJECT
 
 public:
-	fatal_error_dialog(std::string_view text);
+	explicit fatal_error_dialog(std::string_view text);
 };

@@ -78,7 +78,7 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 	value = Clamp0To255(value);
 
-	for (auto pad : bindings)
+	for (const auto& pad : m_bindings)
 	{
 		for (Button& button : pad->m_buttons)
 		{
@@ -316,7 +316,7 @@ void keyboard_pad_handler::mouseReleaseEvent(QMouseEvent* event)
 	event->ignore();
 }
 
-bool keyboard_pad_handler::get_mouse_lock_state()
+bool keyboard_pad_handler::get_mouse_lock_state() const
 {
 	if (auto game_frame = dynamic_cast<gs_frame*>(m_target))
 		return game_frame->get_mouse_lock_state();
@@ -388,7 +388,7 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 
 		const double a = m_deadzone_x;
 		const double b = m_deadzone_y;
-		const double m = double(movement_y) / double(movement_x);
+		const double m = static_cast<double>(movement_y) / static_cast<double>(movement_x);
 
 		deadzone_x = a * b / std::sqrt(std::pow(a, 2) * std::pow(m, 2) + std::pow(b, 2));
 		deadzone_y = std::abs(m * deadzone_x);
@@ -473,14 +473,14 @@ std::vector<std::string> keyboard_pad_handler::ListDevices()
 	return list_devices;
 }
 
-std::string keyboard_pad_handler::GetMouseName(const QMouseEvent* event)
+std::string keyboard_pad_handler::GetMouseName(const QMouseEvent* event) const
 {
 	return GetMouseName(event->button());
 }
 
-std::string keyboard_pad_handler::GetMouseName(u32 button)
+std::string keyboard_pad_handler::GetMouseName(u32 button) const
 {
-	if (auto it = mouse_list.find(button); it != mouse_list.end())
+	if (const auto it = mouse_list.find(button); it != mouse_list.cend())
 		return it->second;
 	return "FAIL";
 }
@@ -550,7 +550,7 @@ QStringList keyboard_pad_handler::GetKeyNames(const QKeyEvent* keyEvent)
 std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
 {
 	// Handle special cases first
-	if (const std::string name = native_scan_code_to_string(keyEvent->nativeScanCode()); !name.empty())
+	if (std::string name = native_scan_code_to_string(keyEvent->nativeScanCode()); !name.empty())
 	{
 		return name;
 	}
@@ -602,7 +602,7 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 	else if (keyName == "Meta")
 		return Qt::Key_Meta;
 
-	QKeySequence seq(keyName);
+	const QKeySequence seq(keyName);
 	u32 key_code = 0;
 
 	if (seq.count() == 1)
@@ -660,7 +660,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	if (device != pad::keyboard_device_name)
 		return false;
 
-	const int index = static_cast<int>(bindings.size());
+	const int index = static_cast<int>(m_bindings.size());
 	m_pad_configs[index].load();
 	pad_config* p_profile = &m_pad_configs[index];
 	if (p_profile == nullptr)
@@ -742,7 +742,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	pad->m_vibrateMotors.emplace_back(true, 0);
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
-	bindings.push_back(pad);
+	m_bindings.push_back(pad);
 
 	return true;
 }
@@ -806,12 +806,12 @@ void keyboard_pad_handler::ThreadProc()
 		return (v0 <= v1) ? std::ceil(res) : std::floor(res);
 	};
 
-	for (uint i = 0; i < bindings.size(); i++)
+	for (uint i = 0; i < m_bindings.size(); i++)
 	{
 		if (last_connection_status[i] == false)
 		{
-			bindings[i]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
-			bindings[i]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+			m_bindings[i]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
+			m_bindings[i]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 			last_connection_status[i] = true;
 			connected_devices++;
 		}
@@ -819,25 +819,25 @@ void keyboard_pad_handler::ThreadProc()
 		{
 			if (update_sticks)
 			{
-				for (int j = 0; j < static_cast<int>(bindings[i]->m_sticks.size()); j++)
+				for (int j = 0; j < static_cast<int>(m_bindings[i]->m_sticks.size()); j++)
 				{
 					const f32 stick_lerp_factor = (j < 2) ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
 
 					// we already applied the following values on keypress if we used factor 1
 					if (stick_lerp_factor < 1.0f)
 					{
-						const f32 v0 = static_cast<f32>(bindings[i]->m_sticks[j].m_value);
+						const f32 v0 = static_cast<f32>(m_bindings[i]->m_sticks[j].m_value);
 						const f32 v1 = static_cast<f32>(m_stick_val[j]);
 						const f32 res = get_lerped(v0, v1, stick_lerp_factor);
 
-						bindings[i]->m_sticks[j].m_value = static_cast<u16>(res);
+						m_bindings[i]->m_sticks[j].m_value = static_cast<u16>(res);
 					}
 				}
 			}
 
 			if (update_buttons)
 			{
-				for (auto& button : bindings[i]->m_buttons)
+				for (auto& button : m_bindings[i]->m_buttons)
 				{
 					if (button.m_analog)
 					{

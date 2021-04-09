@@ -54,16 +54,15 @@ int find_dialog::count_all()
 		return 0;
 	}
 
-	QTextCursor old_cursor = m_text_edit->textCursor();
+	const QTextCursor old_cursor = m_text_edit->textCursor();
 	m_text_edit->moveCursor(QTextCursor::Start);
 
 	int old_line_index = -1;
-	int new_line_index = 0;
 
 	while (m_text_edit->find(m_find_bar->text()))
 	{
 		m_count_total++;
-		new_line_index = m_text_edit->textCursor().blockNumber();
+		const int new_line_index = m_text_edit->textCursor().blockNumber();
 
 		if (new_line_index != old_line_index)
 		{
@@ -111,7 +110,7 @@ void find_dialog::find_previous()
 	m_text_edit->find(m_find_bar->text(), QTextDocument::FindBackward);
 }
 
-void find_dialog::show_count()
+void find_dialog::show_count() const
 {
 	m_label_count_lines->setText(tr("Counted in lines: %0").arg(m_count_lines));
 	m_label_count_total->setText(tr("Counted in total: %0").arg(m_count_total));

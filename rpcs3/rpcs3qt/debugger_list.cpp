@@ -19,9 +19,9 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> settings, breakpoint_handler* handler)
+debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> gui_settings, breakpoint_handler* handler)
 	: QListWidget(parent)
-	, m_gui_settings(settings)
+	, m_gui_settings(std::move(gui_settings))
 	, m_breakpoint_handler(handler)
 {
 	setWindowTitle(tr("ASM"));
@@ -189,7 +189,6 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 		}
 		return;
 	}
-
 	default: break;
 	}
 }
@@ -281,7 +280,7 @@ void debugger_list::wheelEvent(QWheelEvent* event)
 
 void debugger_list::resizeEvent(QResizeEvent* event)
 {
-	Q_UNUSED(event);
+	Q_UNUSED(event)
 
 	if (count() < 1 || visualItemRect(item(0)).height() < 1)
 	{

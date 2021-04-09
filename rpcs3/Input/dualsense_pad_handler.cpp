@@ -398,7 +398,7 @@ dualsense_pad_handler::DataStatus dualsense_pad_handler::get_data(DualSenseDevic
 	return DataStatus::NewData;
 }
 
-bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_device)
+bool dualsense_pad_handler::get_calibration_data(DualSenseDevice* dualsense_device) const
 {
 	if (!dualsense_device || !dualsense_device->hidDevice)
 	{
@@ -899,7 +899,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 	if (!device || !device->hidDevice)
 		return -2;
 
-	auto config = device->config;
+	const auto config = device->config;
 	if (config == nullptr)
 		return -2; // hid_write and hid_write_control return -1 on error
 
@@ -976,7 +976,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 		report.report_id = 0x31; // report id for bluetooth
 		report.seq_tag   = seq_tag;
 		report.tag       = 0x10; // magic number
-		report.common    = std::move(common);
+		report.common    = common;
 
 		const u8 btHdr    = 0xA2;
 		const u32 crcHdr  = CRCPP::CRC::Calculate(&btHdr, 1, crcTable);
@@ -993,7 +993,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 	{
 		output_report_usb report{};
 		report.report_id = 0x02; // report id for usb
-		report.common    = std::move(common);
+		report.common    = common;
 
 		return hid_write(device->hidDevice, &report.report_id, DUALSENSE_USB_REPORT_SIZE);
 	}
@@ -1040,7 +1040,7 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 		// Turn lightbar on and off in an interval. I wanted to do an automatic pulse, but I haven't found out how to do that yet.
 		if (dualsense_dev->led_delay_on > 0)
 		{
-			if (steady_clock::time_point now = steady_clock::now(); (now - dualsense_dev->last_lightbar_time) > 500ms)
+			if (const steady_clock::time_point now = steady_clock::now(); (now - dualsense_dev->last_lightbar_time) > 500ms)
 			{
 				dualsense_dev->lightbar_on = !dualsense_dev->lightbar_on;
 				dualsense_dev->last_lightbar_time = now;
@@ -1138,7 +1138,7 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor,
 
 u32 dualsense_pad_handler::get_battery_level(const std::string& padId)
 {
-	std::shared_ptr<DualSenseDevice> device = get_hid_device(padId);
+	const std::shared_ptr<DualSenseDevice> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
 	{
 		return 0;

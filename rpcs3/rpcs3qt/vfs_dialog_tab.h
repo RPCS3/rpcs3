@@ -31,14 +31,14 @@ class vfs_dialog_tab : public QWidget
 public:
 	explicit vfs_dialog_tab(vfs_settings_info info, std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent = nullptr);
 
-	void SetSettings();
+	void SetSettings() const;
 
 	// Reset this tab without saving the settings yet
-	void Reset();
+	void Reset() const;
 
 private:
-	void AddNewDirectory();
-	void RemoveDirectory();
+	void AddNewDirectory() const;
+	void RemoveDirectory() const;
 	void SetCurrentRow(int row) { m_currentRow = row; }
 
 	const QString EmptyPath = tr("Empty Path");

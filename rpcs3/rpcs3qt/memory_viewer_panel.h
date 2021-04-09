@@ -70,14 +70,14 @@ private:
 	const std::shared_ptr<utils::shm> m_spu_shm;
 	const u32 m_addr_mask;
 
-	std::string getHeaderAtAddr(u32 addr);
+	std::string getHeaderAtAddr(u32 addr) const;
 	void scroll(s32 steps);
-	void* to_ptr(u32 addr, u32 size = 1);
+	void* to_ptr(u32 addr, u32 size = 1) const;
 	void SetPC(const uint pc);
 
 	virtual void ShowMemory();
 
-	void ShowImage(QWidget* parent, u32 addr, color_format format, u32 sizex, u32 sizey, bool flipv);
+	void ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv) const;
 };
 
 // Lifetime management with IDM

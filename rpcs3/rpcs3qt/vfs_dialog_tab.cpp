@@ -73,7 +73,7 @@ vfs_dialog_tab::vfs_dialog_tab(vfs_settings_info settingsInfo, std::shared_ptr<g
 	});
 }
 
-void vfs_dialog_tab::SetSettings()
+void vfs_dialog_tab::SetSettings() const
 {
 	QStringList allDirs;
 	for (int i = 0; i < m_dirList->count(); ++i)
@@ -87,13 +87,13 @@ void vfs_dialog_tab::SetSettings()
 	m_emu_settings->SetSetting(m_info.settingLoc, new_dir);
 }
 
-void vfs_dialog_tab::Reset()
+void vfs_dialog_tab::Reset() const
 {
 	m_dirList->clear();
 	m_dirList->setCurrentItem(new QListWidgetItem(qstr(m_info.cfg_node->def), m_dirList));
 }
 
-void vfs_dialog_tab::AddNewDirectory()
+void vfs_dialog_tab::AddNewDirectory() const
 {
 	QString dir = QFileDialog::getExistingDirectory(nullptr, tr("Choose a directory"), QCoreApplication::applicationDirPath(), QFileDialog::DontResolveSymlinks);
 
@@ -106,7 +106,7 @@ void vfs_dialog_tab::AddNewDirectory()
 	m_dirList->setCurrentItem(new QListWidgetItem(dir, m_dirList));
 }
 
-void vfs_dialog_tab::RemoveDirectory()
+void vfs_dialog_tab::RemoveDirectory() const
 {
 	QListWidgetItem* item = m_dirList->takeItem(m_currentRow);
 	delete item;

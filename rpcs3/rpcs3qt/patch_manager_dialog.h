@@ -53,10 +53,10 @@ private:
 	void refresh(bool restore_layout = false);
 	void load_patches(bool show_error);
 	void populate_tree();
-	void save_config();
-	void update_patch_info(const gui_patch_info& info);
-	bool is_valid_file(const QMimeData& md, QStringList* drop_paths = nullptr);
-	void download_update();
+	void save_config() const;
+	void update_patch_info(const gui_patch_info& info) const;
+	static bool is_valid_file(const QMimeData& md, QStringList* drop_paths = nullptr);
+	void download_update() const;
 	bool handle_json(const QByteArray& data);
 
 	std::shared_ptr<gui_settings> m_gui_settings;

@@ -137,47 +137,44 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 			show_report(text);
 			std::exit(0);
 		}
+
+#ifdef _WIN32
+		wchar_t buffer[32767];
+		GetModuleFileNameW(nullptr, buffer, sizeof(buffer) / 2);
+		const std::wstring arg(text.cbegin(), text.cend()); // ignore unicode for now
+		_wspawnl(_P_WAIT, buffer, buffer, L"--error", arg.c_str(), nullptr);
+#else
+		pid_t pid;
+		std::vector<char> data(text.data(), text.data() + text.size() + 1);
+		std::string run_arg = +s_argv0;
+		std::string err_arg = "--error";
+
+		if (run_arg.find_first_of('/') == umax)
+		{
+			// AppImage has "rpcs3" in argv[0], can't just execute it
+#ifdef __linux__
+			char buffer[PATH_MAX]{};
+			if (::readlink("/proc/self/exe", buffer, sizeof(buffer) - 1) > 0)
+			{
+				printf("Found exec link: %s\n", buffer);
+				run_arg = buffer;
+			}
+#endif
+		}
+
+		char* argv[] = {run_arg.data(), err_arg.data(), data.data(), nullptr};
+		int ret = posix_spawn(&pid, run_arg.c_str(), nullptr, nullptr, argv, environ);
+
+		if (ret == 0)
+		{
+			int status;
+			waitpid(pid, &status, 0);
+		}
 		else
 		{
-#ifdef _WIN32
-			wchar_t buffer[32767];
-			GetModuleFileNameW(nullptr, buffer, sizeof(buffer) / 2);
-			std::wstring arg(text.cbegin(), text.cend()); // ignore unicode for now
-			_wspawnl(_P_WAIT, buffer, buffer, L"--error", arg.c_str(), nullptr);
-#else
-			pid_t pid;
-			std::vector<char> data(text.data(), text.data() + text.size() + 1);
-			std::string run_arg = +s_argv0;
-			std::string err_arg = "--error";
-
-			if (run_arg.find_first_of('/') == umax)
-			{
-				// AppImage has "rpcs3" in argv[0], can't just execute it
-#ifdef __linux__
-				char buffer[PATH_MAX]{};
-				if (::readlink("/proc/self/exe", buffer, sizeof(buffer) - 1) > 0)
-				{
-					printf("Found exec link: %s\n", buffer);
-					run_arg = buffer;
-				}
-#endif
-			}
-
-			char* argv[] = {run_arg.data(), err_arg.data(), data.data(), nullptr};
-			int ret = posix_spawn(&pid, run_arg.c_str(), nullptr, nullptr, argv, environ);
-
-			if (ret == 0)
-			{
-				int status;
-				waitpid(pid, &status, 0);
-			}
-			else
-			{
-				std::fprintf(stderr, "posix_spawn() failed: %d\n", ret);
-			}
-#endif
-			std::abort();
+			std::fprintf(stderr, "posix_spawn() failed: %d\n", ret);
 		}
+#endif
 	}
 
 	std::abort();
@@ -339,7 +336,7 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 
 void log_q_debug(QtMsgType type, const QMessageLogContext& context, const QString& msg)
 {
-	Q_UNUSED(context);
+	Q_UNUSED(context)
 
 	switch (type)
 	{
@@ -402,30 +399,23 @@ int main(int argc, char** argv)
 			{
 				report_fatal_error("Another instance of RPCS3 is running. Close it or kill its process, if necessary.");
 			}
-			else
-			{
-				report_fatal_error("Cannot create RPCS3.log (access denied)."
+
+			report_fatal_error("Cannot create RPCS3.log (access denied)."
 #ifdef _WIN32
 				"\nNote that RPCS3 cannot be installed in Program Files or similar directories with limited permissions."
 #else
 				"\nPlease, check RPCS3 permissions in '~/.config/rpcs3'."
 #endif
-				);
-			}
-		}
-		else
-		{
-			report_fatal_error(fmt::format("Cannot create RPCS3.log (error %s)", fs::g_tls_error));
+			);
 		}
 
-		return 1;
+		report_fatal_error(fmt::format("Cannot create RPCS3.log (error %s)", fs::g_tls_error));
 	}
 
 #ifdef _WIN32
 	if (!SetProcessWorkingSetSize(GetCurrentProcess(), 0x80000000, 0xC0000000)) // 2-3 GiB
 	{
 		report_fatal_error("Not enough memory for RPCS3 process.");
-		return 2;
 	}
 #endif
 
@@ -444,7 +434,6 @@ int main(int argc, char** argv)
 		if (!fs::statfs(fs::get_cache_dir(), stats) || stats.avail_free < 128 * 1024 * 1024)
 		{
 			report_fatal_error(fmt::format("Not enough free space (%f KB)", stats.avail_free / 1000000.));
-			return 1;
 		}
 
 		// Limit log size to ~25% of free space
@@ -613,7 +602,7 @@ int main(int argc, char** argv)
 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hhdr);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](const char* ptr, usz, usz size, void* json) -> usz
 			{
-				reinterpret_cast<QByteArray*>(json)->append(ptr, size);
+				static_cast<QByteArray*>(json)->append(ptr, size);
 				return size;
 			});
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
@@ -760,7 +749,6 @@ int main(int argc, char** argv)
 		if (Emulator::CheckUsr(active_user) == 0)
 		{
 			report_fatal_error(fmt::format("Failed to set user ID '%s'.\nThe user ID must consist of 8 digits and cannot be 00000000.", active_user));
-			return 1;
 		}
 	}
 
@@ -799,7 +787,6 @@ int main(int argc, char** argv)
 	{
 		// Should be unreachable
 		report_fatal_error("RPCS3 initialization failed!");
-		return 1;
 	}
 
 #ifdef _WIN32
@@ -816,16 +803,13 @@ int main(int argc, char** argv)
 	}
 #endif
 
-	std::string config_override_path;
-
 	if (parser.isSet(arg_config))
 	{
-		config_override_path = parser.value(config_option).toStdString();
+		const std::string config_override_path = parser.value(config_option).toStdString();
 
 		if (!fs::is_file(config_override_path))
 		{
 			report_fatal_error(fmt::format("No config file found: %s", config_override_path));
-			return 1;
 		}
 
 		Emu.SetConfigOverride(config_override_path);
@@ -839,7 +823,6 @@ int main(int argc, char** argv)
 			if (s_no_gui)
 			{
 				report_fatal_error("Cannot perform installation in no-gui mode!");
-				return 1;
 			}
 
 			if (gui_app->m_main_window)
@@ -860,13 +843,11 @@ int main(int argc, char** argv)
 			else
 			{
 				report_fatal_error("Cannot perform installation. No main window found!");
-				return 1;
 			}
 		}
 		else
 		{
 			report_fatal_error("Cannot perform installation in headless mode!");
-			return 1;
 		}
 	}
 
@@ -880,24 +861,24 @@ int main(int argc, char** argv)
 		sys_log.notice("Booting application from command line: %s", args.at(0).toStdString());
 
 		// Propagate command line arguments
-		std::vector<std::string> argv;
+		std::vector<std::string> rpcs3_argv;
 
 		if (args.length() > 1)
 		{
-			argv.emplace_back();
+			rpcs3_argv.emplace_back();
 
 			for (int i = 1; i < args.length(); i++)
 			{
 				const std::string arg = args[i].toStdString();
-				argv.emplace_back(arg);
+				rpcs3_argv.emplace_back(arg);
 				sys_log.notice("Optional command line argument %d: %s", i, arg);
 			}
 		}
 
 		// Postpone startup to main event loop
-		Emu.CallAfter([config_override_path, path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
+		Emu.CallAfter([path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv)]() mutable
 		{
-			Emu.argv = std::move(argv);
+			Emu.argv = std::move(rpcs3_argv);
 			Emu.SetForceBoot(true);
 
 			if (const game_boot_result error = Emu.BootGame(path, ""); error != game_boot_result::no_errors)
@@ -946,6 +927,7 @@ extern "C"
 				size--;
 				continue;
 			}
+			default: break;
 			}
 
 			break;
