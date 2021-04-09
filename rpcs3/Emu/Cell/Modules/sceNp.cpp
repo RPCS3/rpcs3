@@ -509,8 +509,8 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 			const std::string rap_file = Emulator::GetRapFilePath(contentID);
 			npdrmkeys.devKlic = k_licensee;
 
-			if (fs::is_file(vfs::get(rap_file)))
-				npdrmkeys.rifKey = GetEdatRifKeyFromRapFile(fs::file{vfs::get(rap_file)});
+			if (fs::is_file(rap_file))
+				npdrmkeys.rifKey = GetEdatRifKeyFromRapFile(fs::file{rap_file});
 			else
 				sceNp.warning(u8"npDrmIsAvailable(): Rap file not found: “%s”", rap_file.c_str());
 		}
