@@ -122,9 +122,11 @@ namespace psf
 
 	load_result_t load(const fs::file& stream)
 	{
-#define PSF_CHECK(cond, err) if (!static_cast<bool>(cond)) { if (error::err != error::stream) psf_log.error("Error loading PSF: %s%s", (errc = error::err), \
+#define PSF_CHECK(cond, err) if (!static_cast<bool>(cond)) { if (error::err != error::stream) psf_log.error("Error loading PSF: %s%s", error::err, \
 			src_loc{__builtin_LINE(), __builtin_COLUMN(), __builtin_FILE(), __builtin_FUNCTION()}); \
-			return result.clear(), pair; }
+			result.clear(); \
+			errc = error::err; \
+			return pair; }
 
 		load_result_t pair{};
 		auto& [result, errc] = pair;
