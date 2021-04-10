@@ -440,19 +440,16 @@ int main(int argc, char** argv)
 		log_file = logs::make_file_listener(fs::get_cache_dir() + "RPCS3.log", stats.avail_free / 4);
 	}
 
-	static std::unique_ptr<logs::listener> log_pauser = std::make_unique<fatal_error_listener>();
-	logs::listener::add(log_pauser.get());
+	static std::unique_ptr<logs::listener> fatal_listener = std::make_unique<fatal_error_listener>();
+	logs::listener::add(fatal_listener.get());
 
 	{
-		const std::string firmware_version = utils::get_firmware_version();
-		const std::string firmware_string  = firmware_version.empty() ? " | Missing Firmware" : (" | Firmware version: " + firmware_version);
-
 		// Write RPCS3 version
 		logs::stored_message ver;
 		ver.m.ch  = nullptr;
 		ver.m.sev = logs::level::always;
 		ver.stamp = 0;
-		ver.text  = fmt::format("RPCS3 v%s | %s%s", rpcs3::get_version().to_string(), rpcs3::get_branch(), firmware_string);
+		ver.text  = fmt::format("RPCS3 v%s | %s", rpcs3::get_version().to_string(), rpcs3::get_branch());
 
 		// Write System information
 		logs::stored_message sys;
