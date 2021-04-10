@@ -602,7 +602,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		if (psf_error != psf::error::stream)
 		{
 			init.cancel();
-			return CELL_GAME_ERROR_BROKEN;
+			return {CELL_GAME_ERROR_BROKEN, psf_error};
 		}
 	}
 
@@ -965,7 +965,7 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 
 		if (psf::get_string(sfo, "CATEGORY") != "GD" && psf_error != psf::error::stream)
 		{
-			return CELL_GAME_ERROR_NOTSUPPORTED;
+			return {CELL_GAME_ERROR_NOTSUPPORTED, psf_error};
 		}
 
 		if (sfo.empty())
