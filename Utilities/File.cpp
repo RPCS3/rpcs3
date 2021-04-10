@@ -595,7 +595,15 @@ bool fs::create_dir(const std::string& path)
 #ifdef _WIN32
 	if (!CreateDirectoryW(to_wchar(path).get(), NULL))
 	{
-		g_tls_error = to_error(GetLastError());
+		int res = GetLastError();
+
+		if (res == ERROR_ACCESS_DENIED && is_dir(path))
+		{
+			// May happen on drives
+			res = ERROR_ALREADY_EXISTS;
+		}
+
+		g_tls_error = to_error(res);
 		return false;
 	}
 
