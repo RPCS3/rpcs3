@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include "util/logs.hpp"
+#include "util/sysinfo.hpp"
 
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
@@ -38,6 +39,11 @@ void main_application::InitializeEmulator(const std::string& user, bool show_gui
 	Emu.SetHasGui(show_gui);
 	Emu.SetUsr(user);
 	Emu.Init();
+
+	// Log Firmware Version after Emu was initialized
+	const std::string firmware_version = utils::get_firmware_version();
+	const std::string firmware_string  = firmware_version.empty() ? "Missing Firmware" : ("Firmware version: " + firmware_version);
+	sys_log.always("%s", firmware_string);
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here. */
