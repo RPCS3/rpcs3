@@ -80,7 +80,7 @@ struct cfg_root : cfg::node
 	{
 		node_vfs(cfg::node* _this) : cfg::node(_this, "VFS") {}
 
-		std::string get(const cfg::string&, const char*) const;
+		std::string get(const cfg::string&, std::string_view emu_dir = {}) const;
 
 		cfg::string emulator_dir{ this, "$(EmulatorDir)" }; // Default (empty): taken from fs::get_config_dir()
 		cfg::string dev_hdd0{ this, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/" };
@@ -92,7 +92,7 @@ struct cfg_root : cfg::node
 
 		std::string get_dev_flash() const
 		{
-			return get(dev_flash, "dev_flash/");
+			return get(dev_flash);
 		}
 
 		cfg::_bool host_root{ this, "Enable /host_root/" };

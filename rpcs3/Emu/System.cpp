@@ -193,8 +193,8 @@ void Emulator::Init(bool add_only)
 	// Create directories (can be disabled if necessary)
 	const std::string emu_dir = GetEmuDir();
 	const std::string dev_hdd0 = GetHddDir();
-	const std::string dev_hdd1 = fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", emu_dir);
-	const std::string dev_usb = fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir);
+	const std::string dev_hdd1 = g_cfg.vfs.get(g_cfg.vfs.dev_hdd1, emu_dir);
+	const std::string dev_usb = g_cfg.vfs.get(g_cfg.vfs.dev_usb000, emu_dir);
 	const std::string dev_flsh = g_cfg.vfs.get_dev_flash();
 
 	auto make_path_verbose = [](const std::string& path)
@@ -846,12 +846,12 @@ std::string Emulator::GetEmuDir()
 
 std::string Emulator::GetHddDir()
 {
-	return fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", GetEmuDir());
+	return g_cfg.vfs.get(g_cfg.vfs.dev_hdd0, GetEmuDir());
 }
 
 std::string Emulator::GetHdd1Dir()
 {
-	return fmt::replace_all(g_cfg.vfs.dev_hdd1, "$(EmulatorDir)", GetEmuDir());
+	return g_cfg.vfs.get(g_cfg.vfs.dev_hdd1, GetEmuDir());
 }
 
 std::string Emulator::GetCacheDir()
@@ -1158,15 +1158,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		// Mount all devices
 		const std::string emu_dir = GetEmuDir();
-		const std::string home_dir = g_cfg.vfs.app_home;
 		std::string bdvd_dir = g_cfg.vfs.dev_bdvd;
 
 		// Mount default relative path to non-existent directory
-		vfs::mount("/dev_hdd0", fmt::replace_all(g_cfg.vfs.dev_hdd0, "$(EmulatorDir)", emu_dir));
+		vfs::mount("/dev_hdd0", g_cfg.vfs.get(g_cfg.vfs.dev_hdd0, emu_dir));
 		vfs::mount("/dev_flash", g_cfg.vfs.get_dev_flash());
-		vfs::mount("/dev_usb", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
-		vfs::mount("/dev_usb000", fmt::replace_all(g_cfg.vfs.dev_usb000, "$(EmulatorDir)", emu_dir));
-		vfs::mount("/app_home", home_dir.empty() ? elf_dir + '/' : fmt::replace_all(home_dir, "$(EmulatorDir)", emu_dir));
+		vfs::mount("/dev_usb", g_cfg.vfs.get(g_cfg.vfs.dev_usb000, emu_dir));
+		vfs::mount("/dev_usb000", g_cfg.vfs.get(g_cfg.vfs.dev_usb000, emu_dir));
+		vfs::mount("/app_home", g_cfg.vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg.vfs.get(g_cfg.vfs.app_home, emu_dir));
 
 		if (!hdd1.empty())
 		{
