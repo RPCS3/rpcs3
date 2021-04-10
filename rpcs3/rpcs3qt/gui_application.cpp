@@ -67,11 +67,8 @@ bool gui_application::Init()
 	// The user might be set by cli arg. If not, set another user.
 	if (m_active_user.empty())
 	{
-		// Get deprecated active user (before August 2nd 2020)
-		const QString active_user = m_gui_settings->GetValue(gui::um_active_user).toString();
-
-		// Get active user with deprecated active user as fallback
-		m_active_user = m_persistent_settings->GetCurrentUser(active_user.isEmpty() ? "00000001" : active_user).toStdString();
+		// Get active user with standard user as fallback
+		m_active_user = m_persistent_settings->GetCurrentUser("00000001").toStdString();
 	}
 
 	// Force init the emulator

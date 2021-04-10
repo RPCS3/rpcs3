@@ -230,7 +230,6 @@ namespace gui
 	const gui_save sd_icon_color = gui_save(savedata, "icon_color", gl_icon_color);
 
 	const gui_save um_geometry    = gui_save(users, "geometry",    QByteArray());
-	const gui_save um_active_user = gui_save(users, "active_user", ""); // Deprecated
 
 	const gui_save loc_language = gui_save(localization, "language", "en");
 
