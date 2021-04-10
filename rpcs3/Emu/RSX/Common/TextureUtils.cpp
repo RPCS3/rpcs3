@@ -200,33 +200,43 @@ struct copy_unmodified_block_vtc
 
 struct copy_decoded_rb_rg_block
 {
-	template<typename T, typename U>
-	static void copy_mipmap_level(gsl::span<T> dst, gsl::span<const U> src, u16 width_in_block, u16 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	template <bool SwapWords = false, typename T>
+	static void copy_mipmap_level(gsl::span<u32> dst, gsl::span<const T> src, u16 width_in_block, u16 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
 	{
 		static_assert(sizeof(T) == 4, "Type size doesn't match.");
-		static_assert(sizeof(U) == 2, "Type size doesn't match.");
 
 		u32 src_offset = 0;
 		u32 dst_offset = 0;
 
+		// Temporaries
+		u32 red0, red1, blue, green;
+
 		for (int row = 0; row < row_count * depth; ++row)
 		{
-			for (int col = 0; col < width_in_block; col += 2)
+			for (int col = 0; col < width_in_block; ++col)
 			{
-				// Process 2 pixels at a time and write in BGRA format
-				const u16 src0 = src[src_offset + col];     // R,B
-				const u16 src1 = src[src_offset + col + 1]; // R,G
-				const u32 blue = (src0 & 0xFF00) >> 8;
-				const u32 green = (src1 & 0xFF00);
-				const u32 data0 = blue | green | (src0 & 0xFF) << 16 | 0xFF << 24;
-				const u32 data1 = blue | green | (src1 & 0xFF) << 16 | 0xFF << 24;
+				// Decompress one block to 2 pixels at a time and write output in BGRA format
+				const auto data = src[src_offset + col];
 
-				dst[dst_offset + col] = data0;
-				if (!(width_in_block & 0x1))
+				if constexpr (SwapWords)
 				{
-					// If size is even, fill in the second pixel
-					dst[dst_offset + col + 1] = data1;
+					// BR_GR
+					blue = (data >> 0) & 0xFF;
+					red0 = (data >> 8) & 0xFF;
+					green = (data >> 16) & 0XFF;
+					red1 = (data >> 24) & 0xFF;
 				}
+				else
+				{
+					// RB_RG
+					red0 = (data >> 0) & 0xFF;
+					blue = (data >> 8) & 0xFF;
+					red1 = (data >> 16) & 0XFF;
+					green = (data >> 24) & 0xFF;
+				}
+
+				dst[dst_offset + (col * 2)] = blue | (green << 8) | (red0 << 16) | (0xFF << 24);
+				dst[dst_offset + (col * 2 + 1)] = blue | (green << 8) | (red1 << 16) | (0xFF << 24);
 			}
 
 			src_offset += src_pitch_in_block;
@@ -394,10 +404,16 @@ namespace
 					current_subresource_layout.width_in_block = miplevel_width_in_texel;
 					current_subresource_layout.height_in_block = miplevel_height_in_texel;
 				}
-				else
+				else if constexpr (block_edge_in_texel == 4)
 				{
 					current_subresource_layout.width_in_block = utils::aligned_div(miplevel_width_in_texel, block_edge_in_texel);
 					current_subresource_layout.height_in_block = utils::aligned_div(miplevel_height_in_texel, block_edge_in_texel);
+				}
+				else
+				{
+					// Only the width is compressed
+					current_subresource_layout.width_in_block = utils::aligned_div(miplevel_width_in_texel, block_edge_in_texel);
+					current_subresource_layout.height_in_block = miplevel_height_in_texel;
 				}
 
 				if (padded_row)
@@ -520,6 +536,7 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 		return get_subresources_layout_impl<1, u8>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+		return get_subresources_layout_impl<2, u32>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 	case CELL_GCM_TEXTURE_DEPTH16:
@@ -610,13 +627,13 @@ namespace rsx
 
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 		{
-			copy_decoded_rb_rg_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block);
+			copy_decoded_rb_rg_block::copy_mipmap_level<true>(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(src_layout.width_in_texel, caps.alignment), src_layout.pitch_in_block);
 			break;
 		}
 
 		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 		{
-			copy_decoded_rb_rg_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u16>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block);
+			copy_decoded_rb_rg_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(src_layout.width_in_texel, caps.alignment), src_layout.pitch_in_block);
 			break;
 		}
 
@@ -809,6 +826,46 @@ namespace rsx
 		return result;
 	}
 
+	bool is_compressed_host_format(u32 texture_format)
+	{
+		switch (texture_format)
+		{
+		case CELL_GCM_TEXTURE_B8:
+		case CELL_GCM_TEXTURE_A1R5G5B5:
+		case CELL_GCM_TEXTURE_A4R4G4B4:
+		case CELL_GCM_TEXTURE_R5G6B5:
+		case CELL_GCM_TEXTURE_A8R8G8B8:
+		case CELL_GCM_TEXTURE_G8B8:
+		case CELL_GCM_TEXTURE_R6G5B5:
+		case CELL_GCM_TEXTURE_DEPTH24_D8:
+		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+		case CELL_GCM_TEXTURE_DEPTH16:
+		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+		case CELL_GCM_TEXTURE_X16:
+		case CELL_GCM_TEXTURE_Y16_X16:
+		case CELL_GCM_TEXTURE_R5G5B5A1:
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+		case CELL_GCM_TEXTURE_X32_FLOAT:
+		case CELL_GCM_TEXTURE_D1R5G5B5:
+		case CELL_GCM_TEXTURE_D8R8G8B8:
+		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+		// The following formats are compressed in RSX/GCM but not on the host device.
+		// They are decompressed in sw before uploading
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+			return false;
+		// True compressed formats on the host device
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+			return true;
+		}
+		fmt::throw_exception("Unknown format 0x%x", texture_format);
+	}
+
 	/**
 	 * A texture is stored as an array of blocks, where a block is a pixel for standard texture
 	 * but is a structure containing several pixels for compressed format
@@ -875,9 +932,9 @@ namespace rsx
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 		case CELL_GCM_TEXTURE_X32_FLOAT:
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8: return 1;
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return 1;
+		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8: return 2;
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45: return 4;
