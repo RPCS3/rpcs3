@@ -157,7 +157,7 @@ enum class emu_settings_type
 };
 
 /** A helper map that keeps track of where a given setting type is located*/
-static const QMap<emu_settings_type, cfg_location> settings_location =
+inline static const QMap<emu_settings_type, cfg_location> settings_location =
 {
 	// Core Tab
 	{ emu_settings_type::PPUDecoder,               { "Core", "PPU Decoder"}},
