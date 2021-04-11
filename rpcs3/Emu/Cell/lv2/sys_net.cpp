@@ -96,7 +96,6 @@ void fmt_class_string<lv2_socket_type>::format(std::string& out, u64 arg)
 		case SYS_NET_SOCK_RAW: return "RAW";
 		case SYS_NET_SOCK_DGRAM_P2P: return "DGRAM-P2P";
 		case SYS_NET_SOCK_STREAM_P2P: return "STREAM-P2P";
-		default: break;
 		}
 
 		return unknown;
@@ -114,7 +113,6 @@ void fmt_class_string<lv2_socket_family>::format(std::string& out, u64 arg)
 		case SYS_NET_AF_LOCAL: return "LOCAL";
 		case SYS_NET_AF_INET: return "INET";
 		case SYS_NET_AF_INET6: return "INET6";
-		default: break;
 		}
 
 		return unknown;

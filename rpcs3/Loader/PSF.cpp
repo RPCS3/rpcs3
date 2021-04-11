@@ -28,10 +28,10 @@ void fmt_class_string<psf::error>::format(std::string& out, u64 arg)
 	{
 		switch (fmt)
 		{
+		case psf::error::ok: return "OK";
 		case psf::error::stream: return "File doesn't exist";
 		case psf::error::not_psf: return "File is not of PSF format";
 		case psf::error::corrupt: return "PSF is truncated or corrupted";
-		default: break;
 		}
 
 		return unknown;

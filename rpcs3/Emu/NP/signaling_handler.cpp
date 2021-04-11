@@ -20,7 +20,8 @@ s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& ad
 template <>
 void fmt_class_string<SignalingCommand>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](auto value) {
+	format_enum(out, arg, [](auto value)
+	{
 		switch (value)
 		{
 		case signal_ping: return "PING";
@@ -30,7 +31,6 @@ void fmt_class_string<SignalingCommand>::format(std::string& out, u64 arg)
 		case signal_confirm: return "CONFIRM";
 		case signal_finished: return "FINISHED";
 		case signal_finished_ack: return "FINISHED_ACK";
-		default: break;
 		}
 
 		return unknown;
