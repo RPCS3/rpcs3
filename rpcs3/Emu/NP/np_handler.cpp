@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include <thread>
 #include "Emu/system_config.h"
 #include "np_handler.h"
 #include "Emu/Cell/PPUModule.h"
@@ -276,13 +275,10 @@ const SceNpAvatarUrl& np_handler::get_avatar_url() const
 
 std::string np_handler::ip_to_string(u32 ip_addr)
 {
-	std::string result;
 	in_addr addr;
 	addr.s_addr = ip_addr;
 
-	result = inet_ntoa(addr);
-
-	return result;
+	return inet_ntoa(addr);
 }
 
 std::string np_handler::ether_to_string(std::array<u8, 6>& ether)

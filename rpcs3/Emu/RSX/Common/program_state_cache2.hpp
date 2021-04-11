@@ -3,7 +3,6 @@
 #include "ProgramStateCache.h"
 
 #include "emmintrin.h"
-#include "immintrin.h"
 #include "util/asm.hpp"
 
 template <typename Traits>
@@ -26,11 +25,10 @@ void program_state_cache<Traits>::fill_fragment_constants_buffer(gsl::span<f32> 
 		if (!patch_table.is_empty())
 		{
 			_mm_store_ps(tmp, _mm_castsi128_ps(shuffled_vector));
-			bool patched;
 
 			for (int i = 0; i < 4; ++i)
 			{
-				patched = false;
+				bool patched = false;
 				for (auto& e : patch_table.db)
 				{
 					//TODO: Use fp comparison with fabsf without hurting performance

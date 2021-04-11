@@ -2,7 +2,6 @@
 #include "rsx_utils.h"
 #include "rsx_methods.h"
 #include "Emu/RSX/GCM.h"
-#include "Common/BufferUtils.h"
 #include "Overlays/overlays.h"
 
 #ifdef _MSC_VER
@@ -34,7 +33,7 @@ namespace rsx
 		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear)
 	{
 		std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(src_width, src_height, src_format,
-			dst_width, dst_height, dst_format, bilinear ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
+			dst_width, dst_height, dst_format, bilinear ? SWS_FAST_BILINEAR : SWS_POINT, nullptr, nullptr, nullptr), sws_freeContext);
 
 		sws_scale(sws.get(), &src, &src_pitch, 0, src_slice_h, &dst, &dst_pitch);
 	}

@@ -1189,7 +1189,7 @@ struct ppu_acontext
 		}
 
 		// Range XOR
-		spec_gpr operator ^(const spec_gpr& rhs)
+		spec_gpr operator ^(const spec_gpr& rhs) const
 		{
 			return (~*this & rhs) | (*this & ~rhs);
 		}

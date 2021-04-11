@@ -71,7 +71,7 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 	}
 }
 
-llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type)
+llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type) const
 {
 	uint s1 = type->getScalarSizeInBits();
 	uint s2 = val->getType()->getScalarSizeInBits();
@@ -110,7 +110,7 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 	{
 		if (const auto ci = llvm::dyn_cast<llvm::ConstantInt>(c); ci && ci->getBitWidth() == 128)
 		{
-			auto cv = ci->getValue();
+			const auto& cv = ci->getValue();
 
 			result._u64[0] = cv.extractBitsAsZExtValue(64, 0);
 			result._u64[1] = cv.extractBitsAsZExtValue(64, 64);
@@ -213,23 +213,23 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t)
 	{
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(v._bytes), 16));
 	}
-	else if (sct->isIntegerTy(16))
+	if (sct->isIntegerTy(16))
 	{
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u16*>(v._bytes), 8));
 	}
-	else if (sct->isIntegerTy(32))
+	if (sct->isIntegerTy(32))
 	{
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u32*>(v._bytes), 4));
 	}
-	else if (sct->isIntegerTy(64))
+	if (sct->isIntegerTy(64))
 	{
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u64*>(v._bytes), 2));
 	}
-	else if (sct->isFloatTy())
+	if (sct->isFloatTy())
 	{
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const f32*>(v._bytes), 4));
 	}
-	else if (sct->isDoubleTy())
+	if (sct->isDoubleTy())
 	{
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const f64*>(v._bytes), 2));
 	}

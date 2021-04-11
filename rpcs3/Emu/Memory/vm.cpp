@@ -3,7 +3,6 @@
 #include "vm_ptr.h"
 #include "vm_ref.h"
 #include "vm_reservation.h"
-#include "vm_var.h"
 
 #include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
@@ -1044,7 +1043,7 @@ namespace vm
 	// Mapped regions: addr -> shm handle
 	constexpr auto block_map = &auto_typemap<block_t>::get<std::map<u32, std::pair<u32, std::shared_ptr<utils::shm>>>>;
 
-	bool block_t::try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&& shm)
+	bool block_t::try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&& shm) const
 	{
 		// Check if memory area is already mapped
 		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
@@ -1283,7 +1282,7 @@ namespace vm
 		return addr;
 	}
 
-	u32 block_t::dealloc(u32 addr, const std::shared_ptr<utils::shm>* src)
+	u32 block_t::dealloc(u32 addr, const std::shared_ptr<utils::shm>* src) const
 	{
 		auto& m_map = (m.*block_map)();
 		{
@@ -1328,7 +1327,7 @@ namespace vm
 		}
 	}
 
-	std::pair<u32, std::shared_ptr<utils::shm>> block_t::peek(u32 addr, u32 size)
+	std::pair<u32, std::shared_ptr<utils::shm>> block_t::peek(u32 addr, u32 size) const
 	{
 		if (addr < this->addr || addr + u64{size} > this->addr + u64{this->size})
 		{
@@ -1369,7 +1368,7 @@ namespace vm
 		return {found->first, found->second.second};
 	}
 
-	u32 block_t::imp_used(const vm::writer_lock&)
+	u32 block_t::imp_used(const vm::writer_lock&) const
 	{
 		u32 result = 0;
 

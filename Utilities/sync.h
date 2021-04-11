@@ -3,7 +3,6 @@
 /* For internal use. Don't include. */
 
 #include "util/types.hpp"
-#include "util/atomic.hpp"
 #include "util/dyn_lib.hpp"
 
 #ifdef _WIN32
@@ -11,7 +10,7 @@
 #define NOMINMAX
 #endif
 #include <Windows.h>
-#include <time.h>
+#include <ctime>
 #elif __linux__
 #include <errno.h>
 #include <sys/syscall.h>
@@ -21,7 +20,6 @@
 #include <fcntl.h>
 #endif
 #include <algorithm>
-#include <ctime>
 #include <chrono>
 #include <mutex>
 #include <condition_variable>

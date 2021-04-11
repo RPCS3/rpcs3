@@ -29,10 +29,6 @@ namespace utils
 #include "Utilities/StrFmt.h"
 
 #include <utility>
-#include <mutex>
-#include <condition_variable>
-#include <chrono>
-#include <cstdlib>
 #include <cstdint>
 #include <array>
 #include <random>
@@ -126,6 +122,7 @@ static NEVER_INLINE bool ptr_cmp(const void* data, u32 _size, u128 old128, u128 
 					new_value = stx::se_storage<u64>::swap(new_value);
 					old_value = stx::se_storage<u64>::swap(old_value);
 					mask = stx::se_storage<u64>::swap(mask);
+					break;
 				}
 				default:
 				{

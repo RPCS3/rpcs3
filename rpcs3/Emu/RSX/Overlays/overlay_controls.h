@@ -1072,7 +1072,7 @@ namespace rsx
 
 			void add_entry(std::unique_ptr<overlay_element>& entry);
 
-			int get_selected_index();
+			int get_selected_index() const;
 
 			std::u32string get_selected_item();
 

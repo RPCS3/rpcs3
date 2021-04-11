@@ -48,6 +48,7 @@ error_code cellSubDisplayGetRequiredMemory(vm::ptr<CellSubDisplayParam> pParam)
 		case CELL_SUBDISPLAY_VERSION_0001: return not_an_error(CELL_SUBDISPLAY_0001_MEMORY_CONTAINER_SIZE);
 		case CELL_SUBDISPLAY_VERSION_0002: return not_an_error(CELL_SUBDISPLAY_0002_MEMORY_CONTAINER_SIZE);
 		case CELL_SUBDISPLAY_VERSION_0003: return not_an_error(CELL_SUBDISPLAY_0003_MEMORY_CONTAINER_SIZE);
+		default: break;
 	}
 
 	return CELL_SUBDISPLAY_ERROR_INVALID_VALUE;

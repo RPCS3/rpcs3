@@ -119,8 +119,7 @@ namespace stx
 
 		template <typename... Args>
 		explicit constexpr shared_data(Args&&... args) noexcept
-			: m_ctr{}
-			, m_data(std::forward<Args>(args)...)
+			: m_data(std::forward<Args>(args)...)
 		{
 		}
 	};
@@ -1197,7 +1196,7 @@ namespace stx
 		template <atomic_wait::op Flags = atomic_wait::op::eq>
 		void wait(const volatile void* value, atomic_wait_timeout timeout = atomic_wait_timeout::inf)
 		{
-			m_val.template wait<Flags>(reinterpret_cast<uptr>(value) << c_ref_size, c_ptr_mask, timeout);
+			m_val.wait<Flags>(reinterpret_cast<uptr>(value) << c_ref_size, c_ptr_mask, timeout);
 		}
 
 		void notify_one()

@@ -211,12 +211,12 @@ public:
 
 	std::string GetBackgroundPicturePath() const;
 
-	u64 GetPauseTime()
+	u64 GetPauseTime() const
 	{
 		return m_pause_amend_time;
 	}
 
-	std::string PPUCache() const;
+	static std::string PPUCache();
 
 	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
 	bool BootRsxCapture(const std::string& path);
@@ -247,7 +247,7 @@ public:
 	void Stop(bool restart = false);
 	void Restart() { Stop(true); }
 	bool Quit(bool force_quit);
-	void CleanUp();
+	static void CleanUp();
 
 	bool IsRunning() const { return m_state == system_state::running; }
 	bool IsPaused()  const { return m_state >= system_state::paused; } // ready is also considered paused by this function
@@ -267,7 +267,7 @@ public:
 	static u32 GetMaxThreads();
 
 	static void ConfigureLogs();
-	void ConfigurePPUCache();
+	void ConfigurePPUCache() const;
 
 	std::set<std::string> GetGameDirs() const;
 

@@ -96,6 +96,7 @@ void fmt_class_string<lv2_socket_type>::format(std::string& out, u64 arg)
 		case SYS_NET_SOCK_RAW: return "RAW";
 		case SYS_NET_SOCK_DGRAM_P2P: return "DGRAM-P2P";
 		case SYS_NET_SOCK_STREAM_P2P: return "STREAM-P2P";
+		default: break;
 		}
 
 		return unknown;
@@ -113,6 +114,7 @@ void fmt_class_string<lv2_socket_family>::format(std::string& out, u64 arg)
 		case SYS_NET_AF_LOCAL: return "LOCAL";
 		case SYS_NET_AF_INET: return "INET";
 		case SYS_NET_AF_INET6: return "INET6";
+		default: break;
 		}
 
 		return unknown;
@@ -571,7 +573,7 @@ struct nt_p2p_port
 		}
 	}
 
-	void dump_packet(lv2_socket::p2ps_i::encapsulated_tcp* tcph)
+	static void dump_packet(lv2_socket::p2ps_i::encapsulated_tcp* tcph)
 	{
 		const std::string result = fmt::format("src_port: %d\ndst_port: %d\nflags: %d\nseq: %d\nack: %d\nlen: %d", tcph->src_port, tcph->dst_port, tcph->flags, tcph->seq, tcph->ack, tcph->length);
 		sys_net.trace("PACKET DUMP:\n%s", result);
@@ -1587,7 +1589,6 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 		if (sock.type == SYS_NET_SOCK_STREAM_P2P)
 		{
 			lv2_socket::p2ps_i::encapsulated_tcp send_hdr;
-			std::vector<u8> packet;
 			const auto psa_in_p2p = reinterpret_cast<sys_net_sockaddr_in_p2p*>(addr_buf.buf);
 			{
 				std::lock_guard lock(sock.mutex);
@@ -1646,7 +1647,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 				sock.p2ps.received_data.clear();
 				sock.p2ps.status       = lv2_socket::p2ps_i::stream_status::stream_handshaking;
 
-				packet = nt_p2p_port::generate_u2s_packet(send_hdr, nullptr, 0);
+				std::vector<u8> packet = nt_p2p_port::generate_u2s_packet(send_hdr, nullptr, 0);
 				name.sin_port = std::bit_cast<u16>(psa_in_p2p->sin_vport); // not a bug
 				nt_p2p_port::send_u2s_packet(sock, s, std::move(packet), reinterpret_cast<::sockaddr_in*>(&name), send_hdr.seq);
 			}
@@ -2357,11 +2358,11 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 					return false;
 				}
 
-				get_data(reinterpret_cast<unsigned char *>(buf.get_ptr()));
+				get_data(static_cast<unsigned char *>(buf.get_ptr()));
 				return true;
 			}
 
-			native_result = ::recvfrom(sock.socket, reinterpret_cast<char*>(buf.get_ptr()), len, native_flags, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
+			native_result = ::recvfrom(sock.socket, static_cast<char*>(buf.get_ptr()), len, native_flags, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen);
 
 			if (native_result >= 0)
 			{
@@ -2772,16 +2773,16 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 	switch(optlen)
 	{
 		case 1:
-			sys_net.warning("optval: 0x%02X", *reinterpret_cast<const u8 *>(optval.get_ptr()));
+			sys_net.warning("optval: 0x%02X", *static_cast<const u8 *>(optval.get_ptr()));
 			break;
 		case 2:
-			sys_net.warning("optval: 0x%04X", *reinterpret_cast<const be_t<u16> *>(optval.get_ptr()));
+			sys_net.warning("optval: 0x%04X", *static_cast<const be_t<u16> *>(optval.get_ptr()));
 			break;
 		case 4:
-			sys_net.warning("optval: 0x%08X", *reinterpret_cast<const be_t<u32> *>(optval.get_ptr()));
+			sys_net.warning("optval: 0x%08X", *static_cast<const be_t<u32> *>(optval.get_ptr()));
 			break;
 		case 8:
-			sys_net.warning("optval: 0x%016X", *reinterpret_cast<const be_t<u64> *>(optval.get_ptr()));
+			sys_net.warning("optval: 0x%016X", *static_cast<const be_t<u64> *>(optval.get_ptr()));
 			break;
 	}
 
@@ -2972,7 +2973,7 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 			return SYS_NET_EINVAL;
 		}
 
-		if (::setsockopt(sock.socket, native_level, native_opt, reinterpret_cast<const char*>(native_val), native_len) == 0)
+		if (::setsockopt(sock.socket, native_level, native_opt, static_cast<const char*>(native_val), native_len) == 0)
 		{
 			return {};
 		}
@@ -3080,6 +3081,7 @@ error_code sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protoc
 			protocol == SYS_NET_IPPROTO_UDP ? IPPROTO_UDP :
 			protocol == SYS_NET_IPPROTO_ICMPV6 ? IPPROTO_ICMPV6 : 0;
 
+		// TODO: native_domain is always AF_INET
 		if (native_domain == AF_UNSPEC && type == SYS_NET_SOCK_DGRAM)
 		{
 			// Windows gets all errory if you try a unspec socket with protocol 0
@@ -3100,7 +3102,7 @@ error_code sys_net_bnet_socket(ppu_thread& ppu, s32 family, s32 type, s32 protoc
 			sys_net.error("Error setting default SO_SNDBUF on sys_net_bnet_socket socket");
 	}
 
-	auto sock_lv2 = std::make_shared<lv2_socket>(native_socket, type, family);
+	const auto sock_lv2 = std::make_shared<lv2_socket>(native_socket, type, family);
 	if (type == SYS_NET_SOCK_STREAM_P2P)
 	{
 		sock_lv2->p2p.port = 3658; // Default value if unspecified later

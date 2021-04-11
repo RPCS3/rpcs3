@@ -164,7 +164,7 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 	return {};
 }
 
-typename SPUDisAsm::insert_mask_info SPUDisAsm::try_get_insert_mask_info(const v128& mask)
+SPUDisAsm::insert_mask_info SPUDisAsm::try_get_insert_mask_info(const v128& mask)
 {
 	if ((mask & v128::from8p(0xe0)) != v128{})
 	{

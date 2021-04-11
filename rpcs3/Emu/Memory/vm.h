@@ -116,7 +116,7 @@ namespace vm
 		// Common mapped region for special cases
 		std::shared_ptr<utils::shm> m_common;
 
-		bool try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&&);
+		bool try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&&) const;
 
 	public:
 		block_t(u32 addr, u32 size, u64 flags);
@@ -138,16 +138,16 @@ namespace vm
 		u32 falloc(u32 addr, u32 size, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
 
 		// Unmap memory at specified location previously returned by alloc(), return size
-		u32 dealloc(u32 addr, const std::shared_ptr<utils::shm>* = nullptr);
+		u32 dealloc(u32 addr, const std::shared_ptr<utils::shm>* = nullptr) const;
 
 		// Get memory at specified address (if size = 0, addr assumed exact)
-		std::pair<u32, std::shared_ptr<utils::shm>> peek(u32 addr, u32 size = 0);
+		std::pair<u32, std::shared_ptr<utils::shm>> peek(u32 addr, u32 size = 0) const;
 
 		// Get allocated memory count
 		u32 used();
 
 		// Internal
-		u32 imp_used(const vm::writer_lock&);
+		u32 imp_used(const vm::writer_lock&) const;
 	};
 
 	// Create new memory block with specified parameters and return it

@@ -72,7 +72,7 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 	rec.cb = cb;
 	rec.cbUserData = cbUserData;
 
-	sysutil_register_cb([=, &rec](ppu_thread& ppu) -> s32
+	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		cb(ppu, CELL_REC_STATUS_OPEN, CELL_OK, cbUserData);
 		return CELL_OK;

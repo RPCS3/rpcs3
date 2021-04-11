@@ -2,9 +2,9 @@
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
-
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "png.h"
+#include "cellPng.h"
 #include "cellPngDec.h"
 
 #if PNG_LIBPNG_VER_MAJOR >= 1 && (PNG_LIBPNG_VER_MINOR < 5 \
@@ -579,7 +579,7 @@ error_code pngDecSetParameter(PStream stream, PInParam in_param, POutParam out_p
 	}
 
 	// flag to keep unknown chunks
-	png_set_keep_unknown_chunks(stream->png_ptr, PNG_HANDLE_CHUNK_IF_SAFE, 0, 0);
+	png_set_keep_unknown_chunks(stream->png_ptr, PNG_HANDLE_CHUNK_IF_SAFE, nullptr, 0);
 
 	// Scale 16 bit depth down to 8 bit depth.
 	if (stream->info.bitDepth == 16u && in_param->outputBitDepth == 8u)

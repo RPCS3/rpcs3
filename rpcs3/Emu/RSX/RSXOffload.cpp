@@ -95,7 +95,7 @@ namespace rsx
 	}
 
 	// General transport
-	void dma_manager::copy(void *dst, std::vector<u8>& src, u32 length)
+	void dma_manager::copy(void *dst, std::vector<u8>& src, u32 length) const
 	{
 		if (length <= max_immediate_transfer_size || !g_cfg.video.multithreaded_rsx)
 		{
@@ -108,7 +108,7 @@ namespace rsx
 		}
 	}
 
-	void dma_manager::copy(void *dst, void *src, u32 length)
+	void dma_manager::copy(void *dst, void *src, u32 length) const
 	{
 		if (length <= max_immediate_transfer_size || !g_cfg.video.multithreaded_rsx)
 		{
@@ -127,7 +127,7 @@ namespace rsx
 		if (!g_cfg.video.multithreaded_rsx)
 		{
 			write_index_array_for_non_indexed_non_native_primitive_to_buffer(
-				reinterpret_cast<char*>(dst), primitive, count);
+				static_cast<char*>(dst), primitive, count);
 		}
 		else
 		{
@@ -146,12 +146,12 @@ namespace rsx
 	}
 
 	// Synchronization
-	bool dma_manager::is_current_thread() const
+	bool dma_manager::is_current_thread()
 	{
 		return std::this_thread::get_id() == g_fxo->get<dma_thread>().m_thread_id;
 	}
 
-	bool dma_manager::sync()
+	bool dma_manager::sync() const
 	{
 		auto& _thr = g_fxo->get<dma_thread>();
 
@@ -203,7 +203,7 @@ namespace rsx
 	}
 
 	// Fault recovery
-	utils::address_range dma_manager::get_fault_range(bool writing) const
+	utils::address_range dma_manager::get_fault_range(bool writing)
 	{
 		const auto m_current_job = ensure(g_fxo->get<dma_thread>().m_current_job);
 

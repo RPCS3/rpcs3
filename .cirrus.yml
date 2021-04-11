@@ -4,7 +4,7 @@ env:
   SYSTEM_PULLREQUEST_SOURCEBRANCH: $CIRRUS_BRANCH
   SYSTEM_PULLREQUEST_PULLREQUESTID: $CIRRUS_PR
   BUILD_SOURCEVERSION: $CIRRUS_CHANGE_IN_REPO
-  RPCS3_TOKEN: ENCRYPTED[13a0f18de9285e6c880e3aecbb54258245a74872af7d0fcb92447fa1200ceb6a4dc8acc880ddbf5e653d46336563ca72] # Replace this when we're using Cirrus for master releases!!
+#  RPCS3_TOKEN: ENCRYPTED[13a0f18de9285e6c880e3aecbb54258245a74872af7d0fcb92447fa1200ceb6a4dc8acc880ddbf5e653d46336563ca72] # Replace this when we're using Cirrus for master releases!!
 
 windows_task:
   matrix:

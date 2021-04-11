@@ -18,7 +18,7 @@ struct AppInfo
 	u64 padding;
 
 	void Load(const fs::file& f);
-	void Show();
+	void Show() const;
 };
 
 struct SectionInfo
@@ -31,7 +31,7 @@ struct SectionInfo
 	u32 encrypted;
 
 	void Load(const fs::file& f);
-	void Show();
+	void Show() const;
 };
 
 struct SCEVersionInfo
@@ -42,7 +42,7 @@ struct SCEVersionInfo
 	u32 unknown;
 
 	void Load(const fs::file& f);
-	void Show();
+	void Show() const;
 };
 
 struct ControlInfo
@@ -102,7 +102,7 @@ struct ControlInfo
 	};
 
 	void Load(const fs::file& f);
-	void Show();
+	void Show() const;
 };
 
 
@@ -114,7 +114,7 @@ struct MetadataInfo
 	u8 iv_pad[0x10];
 
 	void Load(u8* in);
-	void Show();
+	void Show() const;
 };
 
 struct MetadataHeader
@@ -128,7 +128,7 @@ struct MetadataHeader
 	u32 unknown3;
 
 	void Load(u8* in);
-	void Show();
+	void Show() const;
 };
 
 struct MetadataSectionHeader
@@ -145,7 +145,7 @@ struct MetadataSectionHeader
 	u32 compressed;
 
 	void Load(u8* in);
-	void Show();
+	void Show() const;
 };
 
 struct SectionHash
@@ -213,7 +213,7 @@ struct Elf32_Ehdr
 	u16 e_shstrndx;
 
 	void Load(const fs::file& f);
-	void Show() {}
+	static void Show() {}
 	bool IsLittleEndian() const { return e_data == 1; }
 	bool CheckMagic() const { return e_magic == 0x7F454C46; }
 	u32 GetEntry() const { return e_entry; }
@@ -234,7 +234,7 @@ struct Elf32_Shdr
 
 	void Load(const fs::file& f);
 	void LoadLE(const fs::file& f);
-	void Show() {}
+	static void Show() {}
 };
 
 struct Elf32_Phdr
@@ -250,7 +250,7 @@ struct Elf32_Phdr
 
 	void Load(const fs::file& f);
 	void LoadLE(const fs::file& f);
-	void Show() {}
+	static void Show() {}
 };
 
 struct Elf64_Ehdr
@@ -276,7 +276,7 @@ struct Elf64_Ehdr
 	u16 e_shstrndx;
 
 	void Load(const fs::file& f);
-	void Show() {}
+	static void Show() {}
 	bool CheckMagic() const { return e_magic == 0x7F454C46; }
 	u64 GetEntry() const { return e_entry; }
 };
@@ -295,7 +295,7 @@ struct Elf64_Shdr
 	u64 sh_entsize;
 
 	void Load(const fs::file& f);
-	void Show(){}
+	static void Show(){}
 };
 
 struct Elf64_Phdr
@@ -310,7 +310,7 @@ struct Elf64_Phdr
 	u64 p_align;
 
 	void Load(const fs::file& f);
-	void Show(){}
+	static void Show(){}
 };
 
 struct SceHeader
@@ -324,7 +324,7 @@ struct SceHeader
 	u64 se_esize;
 
 	void Load(const fs::file& f);
-	void Show(){}
+	static void Show(){}
 	bool CheckMagic() const { return se_magic == 0x53434500; }
 };
 
@@ -342,7 +342,7 @@ struct SelfHeader
 	u64 pad;
 
 	void Load(const fs::file& f);
-	void Show(){}
+	static void Show(){}
 };
 
 struct SelfAdditionalInfo
@@ -427,7 +427,7 @@ public:
 	bool LoadMetadata(u8* klic_key);
 	bool DecryptData();
 	bool DecryptNPDRM(u8 *metadata, u32 metadata_size);
-	bool GetKeyFromRap(u8 *content_id, u8 *npdrm_key);
+	static bool GetKeyFromRap(u8 *content_id, u8 *npdrm_key);
 
 private:
 	template<typename EHdr, typename SHdr, typename PHdr>
@@ -466,7 +466,7 @@ private:
 
 					// Use zlib uncompress on the new buffer.
 					// decomp_buf_length changes inside the call to uncompress
-					int rv = uncompress(decomp_buf.get(), &decomp_buf_length, zlib_buf.get() + data_buf_offset, data_buf_length);
+					const int rv = uncompress(decomp_buf.get(), &decomp_buf_length, zlib_buf.get() + data_buf_offset, data_buf_length);
 
 					// Check for errors (TODO: Probably safe to remove this once these changes have passed testing.)
 					switch (rv)

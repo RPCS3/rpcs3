@@ -22,7 +22,6 @@
 #include "sys_rwlock.h"
 #include "sys_semaphore.h"
 #include "sys_timer.h"
-#include "sys_trace.h"
 #include "sys_fs.h"
 #include "sys_vm.h"
 #include "sys_spu.h"

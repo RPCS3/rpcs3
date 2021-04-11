@@ -69,22 +69,22 @@ namespace vm
 			return get_ref() = right;
 		}
 
-		decltype(auto) operator ++(int)
+		decltype(auto) operator ++(int) const
 		{
 			return get_ref()++;
 		}
 
-		decltype(auto) operator ++()
+		decltype(auto) operator ++() const
 		{
 			return ++get_ref();
 		}
 
-		decltype(auto) operator --(int)
+		decltype(auto) operator --(int) const
 		{
 			return get_ref()--;
 		}
 
-		decltype(auto) operator --()
+		decltype(auto) operator --() const
 		{
 			return --get_ref();
 		}

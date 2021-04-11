@@ -167,12 +167,11 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 s32 _OEM2Wide(HostCode oem_code, const std::string& src, std::wstring& dst)
 {
 	//Such length returned should include the '\0' character.
-	s32 length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, NULL, 0);
+	const s32 length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, nullptr, 0);
 	wchar_t *store = new wchar_t[length]();
 
-	MultiByteToWideChar(oem_code, 0, src.c_str(), -1, (LPWSTR)store, length);
-	std::wstring result(store);
-	dst = result;
+	MultiByteToWideChar(oem_code, 0, src.c_str(), -1, static_cast<LPWSTR>(store), length);
+	dst = std::wstring(store);
 
 	delete[] store;
 	store = nullptr;
@@ -184,12 +183,11 @@ s32 _OEM2Wide(HostCode oem_code, const std::string& src, std::wstring& dst)
 s32 _Wide2OEM(HostCode oem_code, const std::wstring& src, std::string& dst)
 {
 	//Such length returned should include the '\0' character.
-	s32 length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, NULL, 0, NULL, NULL);
+	const s32 length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, nullptr, 0, nullptr, nullptr);
 	char *store = new char[length]();
 
-	WideCharToMultiByte(oem_code, 0, src.c_str(), -1, store, length, NULL, NULL);
-	std::string result(store);
-	dst = result;
+	WideCharToMultiByte(oem_code, 0, src.c_str(), -1, store, length, nullptr, nullptr);
+	dst = std::string(store);
 
 	delete[] store;
 	store = nullptr;
@@ -219,10 +217,10 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 		return ConverterUnknown;
 
 #ifdef _MSC_VER
-	std::string wrapped_source = std::string(static_cast<const char *>(src), src_len);
-	std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
+	const std::string wrapped_source = std::string(static_cast<const char *>(src), src_len);
+	const std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
 
-	if (dst != NULL)
+	if (dst != nullptr)
 	{
 		if (target.length() > *dst_len) return DSTExhausted;
 		memcpy(dst, target.c_str(), target.length());

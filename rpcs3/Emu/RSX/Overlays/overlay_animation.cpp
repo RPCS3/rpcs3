@@ -3,8 +3,6 @@
 #include "overlay_controls.h"
 #include "Emu/system_config.h"
 
-#include <numeric>
-
 namespace rsx
 {
     namespace overlays

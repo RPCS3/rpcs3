@@ -249,7 +249,7 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 	while (queue->sq.empty() && count < size && !queue->events.empty())
 	{
 		auto& dest = event_array[count++];
-		auto event = queue->events.front();
+		const auto event = queue->events.front();
 		queue->events.pop_front();
 
 		std::tie(dest.source, dest.data1, dest.data2, dest.data3) = event;

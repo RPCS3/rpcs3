@@ -446,7 +446,7 @@ public:
 	{
 	}
 
-	u32 get_max_size() const
+	static u32 get_max_size()
 	{
 		return sq_size;
 	}

@@ -7,8 +7,6 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "cellFs.h"
 
-#include "Utilities/StrUtil.h"
-
 #include <mutex>
 
 LOG_CHANNEL(cellFs);

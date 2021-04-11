@@ -1159,7 +1159,7 @@ namespace rsx
 		case rsx::surface_raster_type::swizzle:
 			packed_render = true;
 			break;
-		};
+		}
 
 		if (!packed_render)
 		{

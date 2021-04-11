@@ -151,4 +151,4 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u32 io, u32 
 error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6);
 error_code sys_rsx_device_map(cpu_thread& cpu, vm::ptr<u64> dev_addr, vm::ptr<u64> a2, u32 dev_id);
 error_code sys_rsx_device_unmap(cpu_thread& cpu, u32 dev_id);
-error_code sys_rsx_attribute(cpu_thread& cpu, u32 a1, u32 a2, u32 a3, u32 a4, u32 a5);
+error_code sys_rsx_attribute(cpu_thread& cpu, u32 packageId, u32 a2, u32 a3, u32 a4, u32 a5);

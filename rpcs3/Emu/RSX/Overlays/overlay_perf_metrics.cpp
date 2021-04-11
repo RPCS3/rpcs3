@@ -2,14 +2,12 @@
 #include "overlay_perf_metrics.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/PPUThread.h"
 
 #include <algorithm>
 #include <utility>
 #include <charconv>
 
-#include "util/sysinfo.hpp"
 #include "util/cpu_stats.hpp"
 
 namespace rsx

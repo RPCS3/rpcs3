@@ -154,7 +154,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 	{
 		// Set up a temporary buffer (sliding window).
 		memset(tmp, 0x80, 0xCA8);
-		while (1)
+		while (true)
 		{
 			// Start reading at 0xB68.
 			tmp_sect1 = tmp + offset + 0xB68;

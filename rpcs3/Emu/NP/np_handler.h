@@ -7,7 +7,6 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
-#include "Emu/Cell/Modules/sceNpCommerce2.h"
 
 #include "Emu/NP/rpcn_client.h"
 #include "generated/np2_structs_generated.h"
@@ -109,7 +108,7 @@ public:
 
 	// Misc stuff
 	void req_ticket(u32 version, const SceNpId *npid, const char *service_id, const u8 *cookie, u32 cookie_size, const char *entitlement_id, u32 consumed_count);
-	const std::vector<u8>& get_ticket() { return current_ticket; }
+	const std::vector<u8>& get_ticket() const { return current_ticket; }
 	u32 add_players_to_history(vm::cptr<SceNpId> npids, u32 count);
 
 	// For signaling

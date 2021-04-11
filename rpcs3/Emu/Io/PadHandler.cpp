@@ -116,7 +116,7 @@ float PadHandlerBase::ScaledInput2(s32 raw_value, int minimum, int maximum)
 }
 
 // Get normalized trigger value based on the range defined by a threshold
-u16 PadHandlerBase::NormalizeTriggerInput(u16 value, int threshold)
+u16 PadHandlerBase::NormalizeTriggerInput(u16 value, int threshold) const
 {
 	if (value <= threshold || threshold >= trigger_max)
 	{

@@ -757,7 +757,7 @@ void KeyVault::SetKlicenseeKey(u8* key)
 	memcpy(klicensee_key.get(), key, 0x10);
 }
 
-u8* KeyVault::GetKlicenseeKey()
+u8* KeyVault::GetKlicenseeKey() const
 {
 	return klicensee_key.get();
 }
@@ -782,21 +782,21 @@ void rap_to_rif(unsigned char* rap, unsigned char* rif)
 	{
 		for (i = 0; i < 16; ++i)
 		{
-			int p = RAP_PBOX[i];
+			const int p = RAP_PBOX[i];
 			key[p] ^= RAP_E1[p];
 		}
 		for (i = 15; i >= 1; --i)
 		{
-			int p  = RAP_PBOX[i];
-			int pp = RAP_PBOX[i - 1];
+			const int p  = RAP_PBOX[i];
+			const int pp = RAP_PBOX[i - 1];
 			key[p] ^= key[pp];
 		}
 		int o = 0;
 		for (i = 0; i < 16; ++i)
 		{
-			int p             = RAP_PBOX[i];
-			unsigned char kc  = key[p] - o;
-			unsigned char ec2 = RAP_E2[p];
+			const int p             = RAP_PBOX[i];
+			const unsigned char kc  = key[p] - o;
+			const unsigned char ec2 = RAP_E2[p];
 			if (o != 1 || kc != 0xFF)
 			{
 				o      = kc < ec2 ? 1 : 0;

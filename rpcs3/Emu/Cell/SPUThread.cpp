@@ -20,9 +20,7 @@
 #include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/Cell/SPUAnalyser.h"
 #include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/SPUInterpreter.h"
 #include "Emu/Cell/SPURecompiler.h"
-#include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/timers.hpp"
 
 #include <cmath>
@@ -3106,7 +3104,7 @@ bool spu_thread::is_exec_code(u32 addr) const
 	return true;
 }
 
-u32 spu_thread::get_mfc_completed()
+u32 spu_thread::get_mfc_completed() const
 {
 	return ch_tag_mask & ~mfc_fence;
 }
@@ -3123,7 +3121,7 @@ bool spu_thread::process_mfc_cmd()
 			return false;
 		}
 
-		thread_ctrl::wait_on(state, old);;
+		thread_ctrl::wait_on(state, old);
 	}
 
 	spu::scheduler::concurrent_execution_watchdog watchdog(*this);
@@ -3487,7 +3485,7 @@ bool spu_thread::process_mfc_cmd()
 		ch_mfc_cmd.cmd, ch_mfc_cmd.lsa, ch_mfc_cmd.eal, ch_mfc_cmd.tag, ch_mfc_cmd.size);
 }
 
-bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data)
+bool spu_thread::reservation_check(u32 addr, const decltype(rdata)& data) const
 {
 	if (!addr)
 	{

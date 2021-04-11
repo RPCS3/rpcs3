@@ -103,7 +103,7 @@ public:
 
 	u64 read(void* buffer, u64 size) override
 	{
-		u64 bytesRead = ReadData(pos, static_cast<u8*>(buffer), size);
+		const u64 bytesRead = ReadData(pos, static_cast<u8*>(buffer), size);
 		pos += bytesRead;
 		return bytesRead;
 	}

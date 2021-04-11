@@ -17,7 +17,6 @@
 #include "util/sysinfo.hpp"
 
 #include <cmath>
-#include <mutex>
 #include <thread>
 
 #define SPU_OFF_128(x, ...) asmjit::x86::oword_ptr(*cpu, offset32(&spu_thread::x, ##__VA_ARGS__))
@@ -1514,6 +1513,7 @@ void spu_recompiler::RDCH(spu_opcode_t op)
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vr);
 		return;
 	}
+	default: break;
 	}
 
 	c->lea(addr->r64(), get_pc(m_pos));
@@ -2505,6 +2505,7 @@ void spu_recompiler::WRCH(spu_opcode_t op)
 	{
 		return;
 	}
+	default: break;
 	}
 
 	c->lea(addr->r64(), get_pc(m_pos));

@@ -52,10 +52,10 @@ rpcn_client::~rpcn_client()
 	disconnect();
 }
 
-std::string rpcn_client::get_wolfssl_error(int error)
+std::string rpcn_client::get_wolfssl_error(int error) const
 {
 	char error_string[80]{};
-	auto wssl_err = wolfSSL_get_error(wssl, error);
+	const auto wssl_err = wolfSSL_get_error(wssl, error);
 	wolfSSL_ERR_error_string(wssl_err, &error_string[0]);
 	return std::string(error_string);
 }
@@ -220,7 +220,7 @@ bool rpcn_client::connect(const std::string& host)
 			return false;
 		}
 
-		wolfSSL_CTX_set_verify(wssl_ctx, SSL_VERIFY_NONE, 0);
+		wolfSSL_CTX_set_verify(wssl_ctx, SSL_VERIFY_NONE, nullptr);
 
 		if ((wssl = wolfSSL_new(wssl_ctx)) == nullptr)
 		{
@@ -505,7 +505,7 @@ bool rpcn_client::manage_connection()
 	case PacketType::Notification:
 	{
 		std::lock_guard lock(mutex_notifs);
-		notifications.push_back(std::make_pair(command, std::move(data)));
+		notifications.emplace_back(std::make_pair(command, std::move(data)));
 		break;
 	}
 	case PacketType::ServerInfo:
@@ -1130,6 +1130,7 @@ bool rpcn_client::is_error(ErrorType err) const
 	case ErrorLogin: rpcn_log.error("Sent password/token was incorrect!"); break;
 	case ErrorCreate: rpcn_log.error("Error creating an account!"); break;
 	case AlreadyLoggedIn: rpcn_log.error("User is already logged in!"); break;
+	case AlreadyJoined: rpcn_log.error("User has already joined!"); break;
 	case DbFail: rpcn_log.error("A db query failed on the server!"); break;
 	case NotFound: rpcn_log.error("A request replied not found!"); return false;
 	case Unsupported: rpcn_log.error("An unsupported operation was attempted!"); return false;
@@ -1146,7 +1147,7 @@ bool rpcn_client::error_and_disconnect(const std::string& error_msg)
 	return false;
 }
 
-bool rpcn_client::is_abort()
+bool rpcn_client::is_abort() const
 {
 	if (in_config)
 	{

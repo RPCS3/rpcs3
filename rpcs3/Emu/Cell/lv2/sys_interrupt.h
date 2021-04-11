@@ -28,8 +28,8 @@ struct lv2_int_serv final : lv2_obj
 	{
 	}
 
-	void exec();
-	void join();
+	void exec() const;
+	void join() const;
 };
 
 // Syscalls

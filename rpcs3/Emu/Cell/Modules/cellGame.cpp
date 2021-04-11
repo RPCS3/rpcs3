@@ -18,8 +18,6 @@
 #include "util/init_mutex.hpp"
 #include "util/asm.hpp"
 
-#include <thread>
-
 LOG_CHANNEL(cellGame);
 
 template<>

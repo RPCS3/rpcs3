@@ -433,9 +433,7 @@ error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys
 			return CELL_PRX_ERROR_ERROR;
 		}
 
-		pOpt->entry.set(prx->start ? prx->start.addr() : ~0ull);
-		pOpt->entry2.set(prx->prologue ? prx->prologue.addr() : ~0ull);
-		return CELL_OK;
+		break;
 	}
 	case 2:
 	{
@@ -565,8 +563,6 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 	default:
 		return CELL_PRX_ERROR_ERROR;
 	}
-
-	return CELL_OK;
 }
 
 error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_prx_unload_module_option_t> pOpt)

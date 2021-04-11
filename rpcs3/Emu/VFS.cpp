@@ -493,6 +493,7 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 
 				break;
 			}
+			default: break;
 			}
 
 			result += c;

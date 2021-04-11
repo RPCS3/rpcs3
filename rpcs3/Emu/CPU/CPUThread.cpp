@@ -17,7 +17,6 @@
 #include <unordered_map>
 #include <map>
 
-#include <immintrin.h>
 #include <emmintrin.h>
 
 DECLARE(cpu_thread::g_threads_created){0};
@@ -875,14 +874,13 @@ std::string cpu_thread::get_name() const
 	{
 		return thread_ctrl::get_name(*static_cast<const named_thread<ppu_thread>*>(this));
 	}
-	else if (id_type() == 2)
+
+	if (id_type() == 2)
 	{
 		return thread_ctrl::get_name(*static_cast<const named_thread<spu_thread>*>(this));
 	}
-	else
-	{
-		fmt::throw_exception("Invalid cpu_thread type");
-	}
+
+	fmt::throw_exception("Invalid cpu_thread type");
 }
 
 u32 cpu_thread::get_pc() const
@@ -1181,7 +1179,7 @@ void cpu_thread::flush_profilers() noexcept
 		return;
 	}
 
-	if (g_cfg.core.spu_prof || false)
+	if (g_cfg.core.spu_prof)
 	{
 		g_fxo->get<cpu_profiler>().registered.push(0);
 	}

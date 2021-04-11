@@ -6,7 +6,6 @@
 #include "libmixer.h"
 
 #include <cmath>
-#include <thread>
 #include <mutex>
 
 LOG_CHANNEL(libmixer);
