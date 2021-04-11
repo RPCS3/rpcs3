@@ -5,7 +5,7 @@
 
 namespace vk
 {
-	VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support, rsx::surface_depth_format2 format)
+	VkFormat get_compatible_depth_surface_format(const gpu_formats_support& support, rsx::surface_depth_format2 format)
 	{
 		switch (format)
 		{
@@ -42,10 +42,8 @@ namespace vk
 		case rsx::texture_minify_filter::linear_linear: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, true };
 		case rsx::texture_minify_filter::convolution_min: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
 		default:
-			break;
+			fmt::throw_exception("Invalid min filter");
 		}
-
-		fmt::throw_exception("Invalid min filter");
 	}
 
 	VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter)
@@ -80,19 +78,17 @@ namespace vk
 		}
 		default:
 		{
-			auto color4 = rsx::decode_border_color(color);
+			const auto color4 = rsx::decode_border_color(color);
 			if ((color4.r + color4.g + color4.b) > 1.35f)
 			{
 				//If color elements are brighter than roughly 0.5 average, use white border
 				return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 			}
-			else
-			{
-				if (color4.a > 0.5f)
-					return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
-				else
-					return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
-			}
+
+			if (color4.a > 0.5f)
+				return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+
+			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 		}
 		}
 	}
@@ -110,10 +106,8 @@ namespace vk
 		case rsx::texture_wrap_mode::mirror_once_border: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 		case rsx::texture_wrap_mode::mirror_once_clamp: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 		default:
-			break;
+			fmt::throw_exception("Unhandled texture clamp mode");
 		}
-
-		fmt::throw_exception("Unhandled texture clamp mode");
 	}
 
 	float max_aniso(rsx::texture_max_anisotropy gcm_aniso)
@@ -207,7 +201,7 @@ namespace vk
 		return mapping;
 	}
 
-	VkFormat get_compatible_sampler_format(const gpu_formats_support &support, u32 format)
+	VkFormat get_compatible_sampler_format(const gpu_formats_support& support, u32 format)
 	{
 		switch (format)
 		{

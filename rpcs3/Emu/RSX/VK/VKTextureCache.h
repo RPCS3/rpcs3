@@ -765,14 +765,13 @@ namespace vk
 			dst->pop_layout(cmd);
 		}
 
-		cached_texture_section* create_new_texture(vk::command_buffer& cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps,  u16 pitch,
+		cached_texture_section* create_new_texture(vk::command_buffer& cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
 			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::texture_create_flags flags) override
 		{
 			const auto section_depth = depth;
 
 			// Define desirable attributes based on type
 			VkImageType image_type;
-			[[maybe_unused]] VkImageViewType image_view_type;
 			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			u8 layer = 0;
 
@@ -780,26 +779,22 @@ namespace vk
 			{
 			case rsx::texture_dimension_extended::texture_dimension_1d:
 				image_type = VK_IMAGE_TYPE_1D;
-				image_view_type = VK_IMAGE_VIEW_TYPE_1D;
 				height = 1;
 				depth = 1;
 				layer = 1;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_2d:
 				image_type = VK_IMAGE_TYPE_2D;
-				image_view_type = VK_IMAGE_VIEW_TYPE_2D;
 				depth = 1;
 				layer = 1;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_cubemap:
 				image_type = VK_IMAGE_TYPE_2D;
-				image_view_type = VK_IMAGE_VIEW_TYPE_CUBE;
 				depth = 1;
 				layer = 6;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_3d:
 				image_type = VK_IMAGE_TYPE_3D;
-				image_view_type = VK_IMAGE_VIEW_TYPE_3D;
 				layer = 1;
 				break;
 			default:

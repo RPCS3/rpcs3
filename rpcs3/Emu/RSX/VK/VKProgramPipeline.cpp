@@ -149,15 +149,13 @@ namespace vk
 			return *this;
 		}
 
-		bool program::has_uniform(program_input_type type, const std::string &uniform_name)
+		bool program::has_uniform(program_input_type type, const std::string& uniform_name)
 		{
-			for (const auto &uniform : uniforms[type])
+			const auto& uniform = uniforms[type];
+			return std::any_of(uniform.cbegin(), uniform.cend(), [&uniform_name](const auto& u)
 			{
-				if (uniform.name == uniform_name)
-					return true;
-			}
-
-			return false;
+				return u.name == uniform_name;
+			});
 		}
 
 		void program::bind_uniform(const VkDescriptorImageInfo &image_descriptor, const std::string& uniform_name, VkDescriptorType type, VkDescriptorSet &descriptor_set)

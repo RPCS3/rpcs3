@@ -53,7 +53,7 @@ namespace vk
 		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
 		vk::glsl::program_input in;
 
-		in.location = binding_table.vertex_params_bind_slot;;
+		in.location = binding_table.vertex_params_bind_slot;
 		in.domain = ::glsl::glsl_vertex_program;
 		in.name = "VertexContextBuffer";
 		in.type = vk::glsl::input_type_uniform_buffer;

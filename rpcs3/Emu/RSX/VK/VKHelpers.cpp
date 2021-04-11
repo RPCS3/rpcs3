@@ -13,8 +13,6 @@
 #include "vkutils/scratch.h"
 #include "vkutils/device.h"
 #include "Emu/RSX/rsx_methods.h"
-#include "Utilities/mutex.h"
-#include "Utilities/lockless.h"
 #include <unordered_map>
 
 namespace vk
