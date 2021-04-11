@@ -331,7 +331,7 @@ namespace vk
 
 		void set_rsx_pitch(u32 pitch)
 		{
-			ensure(!is_locked());
+			// ensure(!is_locked());
 			rsx_pitch = pitch;
 		}
 
