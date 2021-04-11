@@ -194,11 +194,6 @@ namespace gl
 			}
 		}
 
-		[[maybe_unused]] ::glsl::shader_properties properties{};
-		properties.domain = ::glsl::program_domain::glsl_fragment_program;
-		properties.require_depth_conversion = true;
-		properties.require_wpos = true;
-
 		u32 len;
 		ParamArray arr;
 		std::string shader_str;

@@ -95,8 +95,8 @@ u8 rsx::internals::get_pixel_size(rsx::surface_depth_format format)
 	{
 	case rsx::surface_depth_format::z16: return 2;
 	case rsx::surface_depth_format::z24s8: return 4;
+	default: fmt::throw_exception("Unknown depth format");
 	}
-	fmt::throw_exception("Unknown depth format");
 }
 
 void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*skip_reading*/)

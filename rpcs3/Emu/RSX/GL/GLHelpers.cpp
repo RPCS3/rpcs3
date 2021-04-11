@@ -447,13 +447,10 @@ namespace gl
 
 	bool fbo::references_any(const std::vector<GLuint>& resources) const
 	{
-		for (const auto &e : m_resource_bindings)
+		return std::any_of(m_resource_bindings.cbegin(), m_resource_bindings.cend(), [&resources](const auto& e)
 		{
-			if (std::find(resources.begin(), resources.end(), e.second) != resources.end())
-				return true;
-		}
-
-		return false;
+			return std::find(resources.cbegin(), resources.cend(), e.second) != resources.cend();
+		});
 	}
 
 	bool is_primitive_native(rsx::primitive_type in)
