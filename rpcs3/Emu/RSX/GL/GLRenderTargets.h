@@ -47,8 +47,6 @@ namespace gl
 {
 	class render_target : public viewable_image, public rsx::ref_counted, public rsx::render_target_descriptor<texture*>
 	{
-		u16 surface_pixel_size = 0;
-
 		void clear_memory(gl::command_context& cmd);
 		void load_memory(gl::command_context& cmd);
 		void initialize_memory(gl::command_context& cmd, bool read_access);

@@ -2,7 +2,6 @@
 #include "GLFragmentProgram.h"
 
 #include "Emu/system_config.h"
-#include "GLFragmentProgram.h"
 #include "GLCommonDecompiler.h"
 #include "../GCM.h"
 #include "../Common/GLSLCommon.h"

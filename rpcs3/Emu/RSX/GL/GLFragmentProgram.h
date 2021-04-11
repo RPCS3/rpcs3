@@ -64,7 +64,6 @@ public:
 	/**
 	 * Decompile a fragment shader located in the PS3's Memory.  This function operates synchronously.
 	 * @param prog RSXShaderProgram specifying the location and size of the shader in memory
-	 * @param td texture dimensions of input textures
 	 */
 	void Decompile(const RSXFragmentProgram& prog);
 

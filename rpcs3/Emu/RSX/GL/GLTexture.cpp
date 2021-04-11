@@ -955,6 +955,7 @@ namespace gl
 					case GL_FLOAT:
 						pack_info.type = GL_HALF_FLOAT;
 						break;
+					default: break;
 					}
 				}
 			};

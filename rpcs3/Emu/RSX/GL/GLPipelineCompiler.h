@@ -62,7 +62,7 @@ namespace gl
 	void initialize_pipe_compiler(
 		std::function<draw_context_t()> context_create_func,
 		std::function<void(draw_context_t)> context_bind_func,
-		std::function<void(draw_context_t)> contextdestroy_func,
+		std::function<void(draw_context_t)> context_destroy_func,
 		int num_worker_threads = -1);
 
 	void destroy_pipe_compiler();

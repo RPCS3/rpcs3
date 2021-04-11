@@ -58,9 +58,6 @@ namespace
 
 	struct draw_command_visitor
 	{
-		using attribute_storage = std::vector<
-			std::variant<rsx::vertex_array_buffer, rsx::vertex_array_register, rsx::empty_vertex_array>>;
-
 		draw_command_visitor(gl::ring_buffer& index_ring_buffer, rsx::vertex_input_layout& vertex_layout)
 			: m_index_ring_buffer(index_ring_buffer)
 			, m_vertex_layout(vertex_layout)
