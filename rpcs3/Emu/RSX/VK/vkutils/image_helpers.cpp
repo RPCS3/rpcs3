@@ -120,9 +120,9 @@ namespace vk
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
 			dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 			break;
-		default:
 		case VK_IMAGE_LAYOUT_UNDEFINED:
 		case VK_IMAGE_LAYOUT_PREINITIALIZED:
+		default:
 			fmt::throw_exception("Attempted to transition to an invalid layout");
 		}
 

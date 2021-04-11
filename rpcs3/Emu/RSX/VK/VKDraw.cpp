@@ -21,7 +21,7 @@ namespace vk
 		case rsx::texture_dimension_extended::texture_dimension_3d:
 			return VK_IMAGE_VIEW_TYPE_3D;
 		default: fmt::throw_exception("Unreachable");
-		};
+		}
 	}
 
 	VkCompareOp get_compare_func(rsx::comparison_function op, bool reverse_direction = false)

@@ -66,7 +66,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "};\n\n";
 
 	vk::glsl::program_input in;
-	in.location = m_binding_table.vertex_params_bind_slot;;
+	in.location = m_binding_table.vertex_params_bind_slot;
 	in.domain = glsl::glsl_vertex_program;
 	in.name = "VertexContextBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;

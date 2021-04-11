@@ -22,7 +22,7 @@ struct VKVertexDecompilerThread : public VertexProgramDecompiler
 
 	struct
 	{
-		bool emulate_conditional_rendering;
+		bool emulate_conditional_rendering{false};
 	}
 	m_device_props;
 

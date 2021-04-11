@@ -621,13 +621,7 @@ namespace vk
 				return false;
 			}
 
-			VkExtent2D swapchainExtent;
-			if (surface_descriptors.currentExtent.width == UINT32_MAX)
-			{
-				swapchainExtent.width = m_width;
-				swapchainExtent.height = m_height;
-			}
-			else
+			if (surface_descriptors.currentExtent.width != UINT32_MAX)
 			{
 				if (surface_descriptors.currentExtent.width == 0 || surface_descriptors.currentExtent.height == 0)
 				{
@@ -635,7 +629,6 @@ namespace vk
 					return false;
 				}
 
-				swapchainExtent = surface_descriptors.currentExtent;
 				m_width = surface_descriptors.currentExtent.width;
 				m_height = surface_descriptors.currentExtent.height;
 			}
