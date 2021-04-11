@@ -65,6 +65,8 @@
 *.vcxproj.user
 enc_temp_folder/*
 CMakeSettings.json
+*PVS-Studio*
+PVS/*
 
 # Ignore other system generated files
 x64/*
