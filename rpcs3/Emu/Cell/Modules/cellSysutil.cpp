@@ -157,7 +157,6 @@ void fmt_class_string<CellSysutilParamId>::format(std::string& out, u64 arg)
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_x1011: return "ID_x1011";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_x1012: return "ID_x1012";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_x1024: return "ID_x1024";
-		default: break;
 		}
 
 		return unknown;
