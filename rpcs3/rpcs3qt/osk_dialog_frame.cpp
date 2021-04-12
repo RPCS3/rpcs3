@@ -22,7 +22,7 @@ osk_dialog_frame::~osk_dialog_frame()
 	}
 }
 
-void osk_dialog_frame::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 /*panel_flag*/, u32 /*first_view_panel*/)
+void osk_dialog_frame::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 /*first_view_panel*/)
 {
 	state = OskDialogState::Open;
 
@@ -62,6 +62,11 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 		input->setMaxLength(charlimit);
 		input->setText(input_text);
 		input->setFocus();
+
+		if (panel_flag & CELL_OSKDIALOG_PANELMODE_PASSWORD)
+		{
+			input->setEchoMode(QLineEdit::Password); // Let's assume that games only use the password mode with single-line edit fields
+		}
 
 		if (prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
 		{
