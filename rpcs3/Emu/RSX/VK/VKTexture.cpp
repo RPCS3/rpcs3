@@ -856,8 +856,8 @@ namespace vk
 			if (!rsx::is_compressed_host_format(format))
 			{
 				const auto host_texel_width = vk::get_format_texel_width(dst_image->format());
-				const auto host_packed_pitch = host_texel_width * dst_image->width();
-				row_pitch = std::max(row_pitch, host_packed_pitch);
+				const auto host_packed_pitch = host_texel_width * layout.width_in_texel;
+				row_pitch = std::max<u32>(row_pitch, host_packed_pitch);
 				upload_pitch_in_texel = row_pitch / host_texel_width;
 			}
 			else
