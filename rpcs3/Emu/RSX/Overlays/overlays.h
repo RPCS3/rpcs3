@@ -8,6 +8,7 @@
 #include "Utilities/Timer.h"
 
 #include <mutex>
+#include <set>
 
 
 // Definition of user interface implementations
@@ -69,6 +70,7 @@ namespace rsx
 
 		protected:
 			Timer input_timer;
+			std::set<u8> auto_repeat_buttons = { pad_button::dpad_up, pad_button::dpad_down, pad_button::dpad_left, pad_button::dpad_right };
 			atomic_t<bool> exit = false;
 			atomic_t<u64> thread_bits = 0;
 

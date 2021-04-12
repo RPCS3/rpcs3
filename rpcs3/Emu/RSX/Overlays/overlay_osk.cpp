@@ -10,6 +10,15 @@ namespace rsx
 {
 	namespace overlays
 	{
+		osk_dialog::osk_dialog()
+		{
+			auto_repeat_buttons.insert(pad_button::L1);
+			auto_repeat_buttons.insert(pad_button::R1);
+			auto_repeat_buttons.insert(pad_button::cross);
+			auto_repeat_buttons.insert(pad_button::triangle);
+			auto_repeat_buttons.insert(pad_button::square);
+		}
+
 		void osk_dialog::Close(bool ok)
 		{
 			fade_animation.current = color4f(1.f);
