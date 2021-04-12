@@ -4366,25 +4366,48 @@ public:
 				}
 			}
 
+			u32 stride;
+			u32 elements;
+			u32 dwords;
+
+			if (m_use_avx512 && g_cfg.core.full_width_avx512)
+			{
+				stride = 64;
+				elements = 16;
+				dwords = 8;
+			}
+			else if (true) 
+			{
+				stride = 32;
+				elements = 8;
+				dwords = 4;
+			}
+			else // TODO: Use this path when the cpu doesn't support AVX
+			{
+				stride = 16;
+				elements = 4;
+				dwords = 2;
+			}
+
 			// Get actual pc corresponding to the found beginning of the data
 			llvm::Value* starta_pc = m_ir->CreateAnd(get_pc(starta), 0x3fffc);
 			llvm::Value* data_addr = m_ir->CreateGEP(m_lsptr, starta_pc);
 
 			llvm::Value* acc = nullptr;
 
-			for (u32 j = starta; j < end; j += 32)
+			for (u32 j = starta; j < end; j += stride)
 			{
-				int indices[8];
+				int indices[16];
 				bool holes = false;
 				bool data = false;
 
-				for (u32 i = 0; i < 8; i++)
+				for (u32 i = 0; i < elements; i++)
 				{
 					const u32 k = j + i * 4;
 
 					if (k < start || k >= end || !func.data[(k - start) / 4])
 					{
-						indices[i] = 8;
+						indices[i] = elements;
 						holes      = true;
 					}
 					else
@@ -4400,35 +4423,62 @@ public:
 					continue;
 				}
 
+				llvm::Value* vls = nullptr;
+
 				// Load unaligned code block from LS
-				llvm::Value* vls = m_ir->CreateAlignedLoad(_ptr<u32[8]>(data_addr, j - starta), llvm::MaybeAlign{4});
+				if (m_use_avx512 && g_cfg.core.full_width_avx512)
+				{
+					vls = m_ir->CreateAlignedLoad(_ptr<u32[16]>(data_addr, j - starta), llvm::MaybeAlign{4});
+				}
+				else if (true)
+				{
+					vls = m_ir->CreateAlignedLoad(_ptr<u32[8]>(data_addr, j - starta), llvm::MaybeAlign{4});
+				}
+				else
+				{
+					vls = m_ir->CreateAlignedLoad(_ptr<u32[4]>(data_addr, j - starta), llvm::MaybeAlign{4});
+				}
 
 				// Mask if necessary
 				if (holes)
 				{
-					vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), indices);
+					vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), llvm::makeArrayRef(indices, elements));
 				}
 
 				// Perform bitwise comparison and accumulate
-				u32 words[8];
+				u32 words[16];
 
-				for (u32 i = 0; i < 8; i++)
+				for (u32 i = 0; i < elements; i++)
 				{
 					const u32 k = j + i * 4;
 					words[i] = k >= start && k < end ? func.data[(k - start) / 4] : 0;
 				}
 
-				vls = m_ir->CreateXor(vls, ConstantDataVector::get(m_context, words));
+				vls = m_ir->CreateXor(vls, ConstantDataVector::get(m_context, llvm::makeArrayRef(words, elements)));
 				acc = acc ? m_ir->CreateOr(acc, vls) : vls;
 				check_iterations++;
 			}
 
 			// Pattern for PTEST
-			acc = m_ir->CreateBitCast(acc, get_type<u64[4]>());
+			if (m_use_avx512 && g_cfg.core.full_width_avx512)
+			{
+				acc = m_ir->CreateBitCast(acc, get_type<u64[8]>());
+			}
+			else if (true)
+			{
+				acc = m_ir->CreateBitCast(acc, get_type<u64[4]>());
+			}
+			else
+			{
+				acc = m_ir->CreateBitCast(acc, get_type<u64[2]>());
+			}
+
 			llvm::Value* elem = m_ir->CreateExtractElement(acc, u64{0});
-			elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, 1));
-			elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, 2));
-			elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, 3));
+
+			for (u32 i = 1; i < dwords; i++)
+			{
+				elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, i));
+			}
 
 			// Compare result with zero
 			const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
