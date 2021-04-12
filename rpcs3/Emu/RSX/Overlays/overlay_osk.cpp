@@ -250,26 +250,27 @@ namespace rsx
 			m_update = true;
 		}
 
-		void osk_dialog::initialize_layout(const std::u32string & title, const std::u32string & initial_text)
+		void osk_dialog::initialize_layout(const std::u32string& title, const std::u32string& initial_text)
 		{
 			m_background.set_size(1280, 720);
 			m_background.back_color.a = 0.8f;
 
 			m_frame.back_color = { 0.2f, 0.2f, 0.2f, 1.f };
 
-			m_title.set_text(title);
+			m_title.set_unicode_text(title);
 			m_title.back_color.a = 0.f;
 
-			if (initial_text.empty())
+			m_preview.set_placeholder(get_placeholder());
+			m_preview.set_unicode_text(initial_text);
+
+			if (m_preview.value.empty())
 			{
-				m_preview.set_text(get_placeholder());
 				m_preview.caret_position = 0;
 				m_preview.fore_color.a = 0.5f; // Muted contrast for hint text
 			}
 			else
 			{
-				m_preview.set_text(initial_text);
-				m_preview.caret_position = ::narrow<u16>(initial_text.length());
+				m_preview.caret_position = ::narrow<u16>(m_preview.value.length());
 				m_preview.fore_color.a = 1.f;
 			}
 
@@ -343,14 +344,12 @@ namespace rsx
 			{
 				const auto current_index = (start_index + count);
 				ensure(current_index <= index_limit);
+				++count;
 
 				if (m_grid[current_index].flags & border_flags::right)
 				{
-					++count;
 					break;
 				}
-
-				++count;
 			}
 
 			return std::make_pair(start_index, count);
@@ -559,7 +558,7 @@ namespace rsx
 
 		void osk_dialog::on_text_changed()
 		{
-			const auto ws = u32string_to_utf16(m_preview.text);
+			const auto ws = u32string_to_utf16(m_preview.value);
 			const auto length = (ws.length() + 1) * sizeof(char16_t);
 			memcpy(osk_text, ws.c_str(), length);
 
@@ -567,6 +566,9 @@ namespace rsx
 			{
 				on_osk_input_entered();
 			}
+
+			// Muted contrast for placeholder text
+			m_preview.fore_color.a = m_preview.value.empty() ? 0.5f : 1.f;
 
 			m_update = true;
 		}
@@ -579,20 +581,19 @@ namespace rsx
 			}
 
 			// Append to output text
-			if (m_preview.text == get_placeholder())
+			if (m_preview.value.empty())
 			{
 				m_preview.caret_position = ::narrow<u16>(str.length());
-				m_preview.set_text(str);
-				m_preview.fore_color.a = 1.f;
+				m_preview.set_unicode_text(str);
 			}
 			else
 			{
-				if (m_preview.text.length() == char_limit)
+				if (m_preview.value.length() == char_limit)
 				{
 					return;
 				}
 
-				const auto new_str = m_preview.text + str;
+				const auto new_str = m_preview.value + str;
 				if (new_str.length() <= char_limit)
 				{
 					m_preview.insert_text(str);
@@ -641,12 +642,6 @@ namespace rsx
 		void osk_dialog::on_backspace(const std::u32string&)
 		{
 			m_preview.erase();
-
-			if (m_preview.text.empty())
-			{
-				m_preview.set_text(get_placeholder());
-			}
-
 			on_text_changed();
 		}
 
@@ -752,7 +747,7 @@ namespace rsx
 							m_label.fore_color = c.enabled ? normal_fore_color : disabled_fore_color;
 
 							const auto _z = (selected_z < output_count) ? selected_z : output_count - 1u;
-							m_label.set_text(c.outputs[m_selected_charset][_z]);
+							m_label.set_unicode_text(c.outputs[m_selected_charset][_z]);
 							m_label.align_text(rsx::overlays::overlay_element::text_align::center);
 							render_label = true;
 						}
