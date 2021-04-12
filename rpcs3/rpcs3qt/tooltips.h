@@ -71,6 +71,7 @@ public:
 		const QString enable_tsx                = tr("Enable usage of TSX instructions.\nNeeds to be forced on some Haswell or Broadwell CPUs.\nForcing this on older Hardware can lead to system instability, use it with caution.");
 		const QString spu_block_size            = tr("This option controls the SPU analyser, particularly the size of compiled units. The Mega and Giga modes may improve performance by tying smaller units together, decreasing the number of compiled units but increasing their size.\nUse the Safe mode for maximum compatibility.");
 		const QString preferred_spu_threads     = tr("Some SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value.");
+		const QString full_width_avx512         = tr("Enables the use of code with full width AVX-512.\nThis code can be executed much faster, but may cause a loss in performance if your CPU model experiences downclocking on wide AVX-512 loads.\nNote that AVX-512 instructions will be used regardless of this option, just at 128 and 256 bit width.");
 
 		// debug
 

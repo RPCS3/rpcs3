@@ -171,6 +171,13 @@
                 </property>
                </widget>
               </item>
+              <item>
+               <widget class="QCheckBox" name="fullWidthAVX512">
+                <property name="text">
+                 <string>Full Width AVX-512</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>

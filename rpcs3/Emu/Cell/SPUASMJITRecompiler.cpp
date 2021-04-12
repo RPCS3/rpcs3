@@ -281,9 +281,9 @@ spu_function_t spu_recompiler::compile(spu_program&& _func)
 			c->vzeroupper();
 		}
 	}
-	else if (utils::has_avx512() && false)
+	else if (utils::has_avx512() && g_cfg.core.full_width_avx512)
 	{
-		// AVX-512 optimized check using 512-bit registers (disabled)
+		// AVX-512 optimized check using 512-bit registers
 		words_align = 64;
 
 		const u32 starta = start & -64;
