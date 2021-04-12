@@ -300,10 +300,8 @@ void Emulator::Init(bool add_only)
 					sys_log.fatal("Failed to fix save data: %s (%s)", pending, fs::g_tls_error);
 					continue;
 				}
-				else
-				{
-					sys_log.success("Fixed save data: %s", desired);
-				}
+
+				sys_log.success("Fixed save data: %s", desired);
 			}
 
 			// Remove pending backup data

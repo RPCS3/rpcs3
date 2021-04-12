@@ -153,8 +153,8 @@ namespace rsx
 				auto renderer        = get_font();
 				const auto caret_loc = renderer->get_char_offset(text.c_str(), caret_position, clip_text ? w : UINT16_MAX, wrap_text);
 
-				caret.set_pos(u16(caret_loc.first + padding_left + x), u16(caret_loc.second + padding_top + y));
-				caret.set_size(1, u16(renderer->get_size_px() + 2));
+				caret.set_pos(static_cast<u16>(caret_loc.first) + padding_left + x, static_cast<u16>(caret_loc.second) + padding_top + y);
+				caret.set_size(1, static_cast<u16>(renderer->get_size_px() + 2));
 				caret.fore_color           = fore_color;
 				caret.back_color           = fore_color;
 				caret.pulse_effect_enabled = true;
@@ -172,7 +172,7 @@ namespace rsx
 				{
 					// TODO: Scrolling by using scroll offset
 					cmd.config.clip_region = true;
-					cmd.config.clip_rect   = {f32(x), f32(y), f32(x + w), f32(y + h)};
+					cmd.config.clip_rect   = {static_cast<f32>(x), static_cast<f32>(y), static_cast<f32>(x + w), static_cast<f32>(y + h)};
 				}
 
 				is_compiled = true;
