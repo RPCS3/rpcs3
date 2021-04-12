@@ -20,7 +20,7 @@ namespace patch_key
 	static const std::string version = "Version";
 }
 
-static const std::string patch_engine_version = "1.2";
+inline static const std::string patch_engine_version = "1.2";
 
 enum class patch_type
 {
