@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 
@@ -385,15 +386,21 @@ public:
 	template <typename... Args>
 	T* push(Args&&... args) noexcept
 	{
-		auto _old = m_head.load();
-		auto item = new lf_queue_item<T>(_old, std::forward<Args>(args)...);
+		try {
+			auto _old = m_head.load();
+			auto item = new lf_queue_item<T>(_old, std::forward<Args>(args)...);
 
-		while (!m_head.compare_exchange(_old, item))
-		{
-			item->m_link = _old;
-		}
+			while (!m_head.compare_exchange(_old, item))
+			{
+				item->m_link = _old;
+			}
 
-		return &item->m_data;
+			return &item->m_data;
+
+		} catch (const std::bad_alloc&) { 		
+			std::cerr << "Bad item allocation in lockless::push." << std::endl;
+			return -1;
+		} 
 	}
 
 	// Add if pred(item, all_items) is true for all existing items
