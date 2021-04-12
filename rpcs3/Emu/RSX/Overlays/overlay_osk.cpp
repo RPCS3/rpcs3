@@ -260,6 +260,7 @@ namespace rsx
 			m_title.set_unicode_text(title);
 			m_title.back_color.a = 0.f;
 
+			m_preview.password_mode = m_password_mode;
 			m_preview.set_placeholder(get_placeholder());
 			m_preview.set_unicode_text(initial_text);
 
@@ -813,8 +814,6 @@ namespace rsx
 				// first_view_panel can be ignored
 
 				add_panel(osk_panel_password(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
-
-				// TODO: hide entered text with *
 
 				m_password_mode = true;
 			}

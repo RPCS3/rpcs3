@@ -1102,6 +1102,7 @@ namespace rsx
 			u16 vertical_scroll_offset = 0;
 
 			bool m_reset_caret_pulse = false;
+			bool password_mode = false;
 
 			std::u32string value;
 			std::u32string placeholder;

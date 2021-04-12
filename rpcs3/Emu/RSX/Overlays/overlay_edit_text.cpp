@@ -108,6 +108,10 @@ namespace rsx
 			{
 				overlay_element::set_unicode_text(placeholder);
 			}
+			else if (password_mode)
+			{
+				overlay_element::set_unicode_text(std::u32string(value.size(), U"＊"[0]));
+			}
 			else
 			{
 				overlay_element::set_unicode_text(value);
