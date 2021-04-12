@@ -135,8 +135,9 @@ namespace stx
 		constexpr shared_data() noexcept = default;
 	};
 
-	// Simplified unique pointer. Wwell, not simplified, std::unique_ptr is preferred.
-	// This one is shared_ptr counterpart, it has a control block with refs = 1.
+	// Simplified unique pointer. In some cases, std::unique_ptr is preferred.
+	// This one is shared_ptr counterpart, it has a control block with refs and deleter.
+	// It's trivially convertible to shared_ptr, and back if refs == 1.
 	template <typename T>
 	class single_ptr
 	{
@@ -166,6 +167,14 @@ namespace stx
 
 		single_ptr(const single_ptr&) = delete;
 
+		// Default constructor or null_ptr should be used instead
+		[[deprecated("Use null_ptr")]] single_ptr(std::nullptr_t) = delete;
+
+		explicit single_ptr(shared_data<T>&, pointer ptr) noexcept
+			: m_ptr(ptr)
+		{
+		}
+
 		single_ptr(single_ptr&& r) noexcept
 			: m_ptr(r.m_ptr)
 		{
@@ -188,6 +197,8 @@ namespace stx
 		}
 
 		single_ptr& operator=(const single_ptr&) = delete;
+
+		[[deprecated("Use null_ptr")]] single_ptr& operator=(std::nullptr_t) = delete;
 
 		single_ptr& operator=(single_ptr&& r) noexcept
 		{
@@ -279,12 +290,6 @@ namespace stx
 			r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
 			return r;
 		}
-
-		// Raw access for make_single()
-		auto& raw() noexcept
-		{
-			return m_ptr;
-		}
 	};
 
 #ifndef _MSC_VER
@@ -325,18 +330,7 @@ namespace stx
 			delete reinterpret_cast<shared_data<T>*>(reinterpret_cast<u64>(_this) - offsetof(shared_data<T>, m_ctr));
 		};
 
-		single_ptr<T> r;
-
-		if constexpr (std::is_array_v<T>)
-		{
-			r.raw() = +ptr->m_data;
-		}
-		else
-		{
-			r.raw() = &ptr->m_data;
-		}
-
-		return r;
+		return single_ptr<T>(*ptr, &ptr->m_data);
 	}
 
 	template <typename T, bool Init = true>
@@ -396,9 +390,7 @@ namespace stx
 			}
 		};
 
-		single_ptr<T> r;
-		r.raw() = std::launder(arr);
-		return r;
+		return single_ptr<T>(*ptr, std::launder(arr));
 	}
 
 #ifndef _MSC_VER
@@ -435,6 +427,18 @@ namespace stx
 		{
 			if (m_ptr)
 				d()->refs++;
+		}
+
+		// Default constructor or null_ptr constant should be used instead
+		[[deprecated("Use null_ptr")]] shared_ptr(std::nullptr_t) = delete;
+
+		// Not-so-aliasing constructor: emulates std::enable_shared_from_this without its overhead
+		explicit shared_ptr(T* _this) noexcept
+			: m_ptr(_this)
+		{
+			// Random checks which may fail on invalid pointer
+			ensure((reinterpret_cast<u64>(d()->destroy) - 0x10000) >> 47 == 0);
+			ensure((d()->refs++ - 1) >> 58 == 0);
 		}
 
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
@@ -484,6 +488,8 @@ namespace stx
 			shared_ptr(r).swap(*this);
 			return *this;
 		}
+
+		[[deprecated("Use null_ptr")]] shared_ptr& operator=(std::nullptr_t) = delete;
 
 		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
 		shared_ptr& operator=(const shared_ptr<U>& r) noexcept

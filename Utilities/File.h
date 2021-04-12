@@ -1,6 +1,7 @@
 #pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
 #include "util/types.hpp"
+#include "util/shared_ptr.hpp"
 #include "bit_set.h"
 
 #include <memory>
@@ -124,16 +125,19 @@ namespace fs
 	// Virtual device
 	struct device_base
 	{
+		const std::string fs_prefix;
+
+		device_base();
 		virtual ~device_base();
 
 		virtual bool stat(const std::string& path, stat_t& info) = 0;
 		virtual bool statfs(const std::string& path, device_stat& info) = 0;
-		virtual bool remove_dir(const std::string& path) = 0;
-		virtual bool create_dir(const std::string& path) = 0;
-		virtual bool rename(const std::string& from, const std::string& to) = 0;
-		virtual bool remove(const std::string& path) = 0;
-		virtual bool trunc(const std::string& path, u64 length) = 0;
-		virtual bool utime(const std::string& path, s64 atime, s64 mtime) = 0;
+		virtual bool remove_dir(const std::string& path);
+		virtual bool create_dir(const std::string& path);
+		virtual bool rename(const std::string& from, const std::string& to);
+		virtual bool remove(const std::string& path);
+		virtual bool trunc(const std::string& path, u64 length);
+		virtual bool utime(const std::string& path, s64 atime, s64 mtime);
 
 		virtual std::unique_ptr<file_base> open(const std::string& path, bs_t<open_mode> mode) = 0;
 		virtual std::unique_ptr<dir_base> open_dir(const std::string& path) = 0;
@@ -146,10 +150,10 @@ namespace fs
 	constexpr struct pod_tag_t{} pod_tag;
 
 	// Get virtual device for specified path (nullptr for real path)
-	std::shared_ptr<device_base> get_virtual_device(const std::string& path);
+	shared_ptr<device_base> get_virtual_device(const std::string& path);
 
 	// Set virtual device with specified name (nullptr for deletion)
-	std::shared_ptr<device_base> set_virtual_device(const std::string& root_name, const std::shared_ptr<device_base>&);
+	shared_ptr<device_base> set_virtual_device(const std::string& name, shared_ptr<device_base> device);
 
 	// Try to get parent directory (returns empty string on failure)
 	std::string get_parent_dir(const std::string& path);

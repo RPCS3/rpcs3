@@ -206,11 +206,11 @@ namespace fs
 	{
 		mutable shared_mutex m_mutex{};
 
-		std::unordered_map<std::string, std::shared_ptr<device_base>> m_map{};
+		std::unordered_map<std::string, shared_ptr<device_base>> m_map{};
 
 	public:
-		std::shared_ptr<device_base> get_device(const std::string& path);
-		std::shared_ptr<device_base> set_device(const std::string& name, const std::shared_ptr<device_base>&);
+		shared_ptr<device_base> get_device(const std::string& path);
+		shared_ptr<device_base> set_device(const std::string& name, shared_ptr<device_base>);
 	};
 
 	static device_manager& get_device_manager()
@@ -275,48 +275,112 @@ namespace fs
 	{
 	}
 
+	device_base::device_base()
+		: fs_prefix(fmt::format("/vfsv0_%s%s_", fmt::base57(reinterpret_cast<u64>(this)), fmt::base57(utils::get_unique_tsc())))
+	{
+	}
+
 	device_base::~device_base()
 	{
 	}
+
+	bool device_base::remove_dir(const std::string&)
+	{
+		g_tls_error = error::readonly;
+		return false;
+	}
+
+	bool device_base::create_dir(const std::string&)
+	{
+		g_tls_error = error::readonly;
+		return false;
+	}
+
+	bool device_base::rename(const std::string&, const std::string&)
+	{
+		g_tls_error = error::readonly;
+		return false;
+	}
+
+	bool device_base::remove(const std::string&)
+	{
+		g_tls_error = error::readonly;
+		return false;
+	}
+
+	bool device_base::trunc(const std::string&, u64)
+	{
+		g_tls_error = error::readonly;
+		return false;
+	}
+
+	bool device_base::utime(const std::string&, s64, s64)
+	{
+		g_tls_error = error::readonly;
+		return false;
+	}
 }
 
-std::shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& path)
+shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& path)
 {
 	reader_lock lock(m_mutex);
 
-	const auto found = m_map.find(path.substr(0, path.find_first_of('/', 2)));
+	const usz prefix = path.find_first_of('_', 7) + 1;
 
-	if (found == m_map.end())
+	const auto found = m_map.find(path.substr(prefix, path.find_first_of('/', 1) - prefix));
+
+	if (found == m_map.end() || !path.starts_with(found->second->fs_prefix))
 	{
-		return nullptr;
+		return null_ptr;
 	}
 
 	return found->second;
 }
 
-std::shared_ptr<fs::device_base> fs::device_manager::set_device(const std::string& name, const std::shared_ptr<device_base>& device)
+shared_ptr<fs::device_base> fs::device_manager::set_device(const std::string& name, shared_ptr<device_base> device)
 {
 	std::lock_guard lock(m_mutex);
 
-	return m_map[name] = device;
+	if (device)
+	{
+		// Adding
+		if (auto [it, ok] = m_map.try_emplace(name, std::move(device)); ok)
+		{
+			return it->second;
+		}
+
+		g_tls_error = error::exist;
+	}
+	else
+	{
+		// Removing
+		if (auto found = m_map.find(name); found != m_map.end())
+		{
+			device = std::move(found->second);
+			m_map.erase(found);
+			return device;
+		}
+
+		g_tls_error = error::noent;
+	}
+
+	return null_ptr;
 }
 
-std::shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
+shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
 {
-	// Every virtual device path must have "//" at the beginning
-	if (path.starts_with("//"))
+	// Every virtual device path must have specific name at the beginning
+	if (path.starts_with("/vfsv0_") && path.size() >= 8 + 22 && path[29] == '_' && path.find_first_of('/', 1) > 29)
 	{
 		return get_device_manager().get_device(path);
 	}
 
-	return nullptr;
+	return null_ptr;
 }
 
-std::shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, const std::shared_ptr<device_base>& device)
+shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, shared_ptr<device_base> device)
 {
-	ensure(name.starts_with("//") && name[2] != '/');
-
-	return get_device_manager().set_device(name, device);
+	return get_device_manager().set_device(name, std::move(device));
 }
 
 std::string fs::get_parent_dir(const std::string& path)
