@@ -231,7 +231,7 @@ void CgBinaryDisasm::TaskFP()
 {
 	m_size = 0;
 	u32* data = reinterpret_cast<u32*>(&m_buffer[m_offset]);
-	ensure((m_buffer_size - m_offset)  % sizeof(u32) == 0);
+	ensure((m_buffer_size - m_offset) % sizeof(u32) == 0);
 	for (u32 i = 0; i < (m_buffer_size - m_offset) / sizeof(u32); i++)
 	{
 		// Get BE data
