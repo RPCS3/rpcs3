@@ -14,7 +14,7 @@ struct cfg_root : cfg::node
 	{
 	private:
 		/** We don't wanna include the sysinfo header here */
-		bool has_rtm() const;
+		static bool has_rtm();
 
 	public:
 		node_core(cfg::node* _this) : cfg::node(_this, "Core") {}
@@ -26,6 +26,7 @@ struct cfg_root : cfg::node
 		cfg::string llvm_cpu{ this, "Use LLVM CPU" };
 		cfg::_int<0, INT32_MAX> llvm_threads{ this, "Max LLVM Compile Threads", 0 };
 		cfg::_bool ppu_llvm_greedy_mode{ this, "PPU LLVM Greedy Mode", false, false };
+		cfg::_bool ppu_llvm_precompilation{ this, "PPU LLVM Precompilation", true };
 		cfg::_enum<thread_scheduler_mode> thread_scheduler{this, "Thread Scheduler Mode", thread_scheduler_mode::os};
 		cfg::_bool set_daz_and_ftz{ this, "Set DAZ and FTZ", false };
 		cfg::_enum<spu_decoder_type> spu_decoder{ this, "SPU Decoder", spu_decoder_type::llvm };
@@ -79,7 +80,7 @@ struct cfg_root : cfg::node
 	{
 		node_vfs(cfg::node* _this) : cfg::node(_this, "VFS") {}
 
-		std::string get(const cfg::string&, const char*) const;
+		std::string get(const cfg::string&, std::string_view emu_dir = {}) const;
 
 		cfg::string emulator_dir{ this, "$(EmulatorDir)" }; // Default (empty): taken from fs::get_config_dir()
 		cfg::string dev_hdd0{ this, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/" };
@@ -91,7 +92,7 @@ struct cfg_root : cfg::node
 
 		std::string get_dev_flash() const
 		{
-			return get(dev_flash, "dev_flash/");
+			return get(dev_flash);
 		}
 
 		cfg::_bool host_root{ this, "Enable /host_root/" };
@@ -206,8 +207,8 @@ struct cfg_root : cfg::node
 			node_shader_preloading_dialog(cfg::node* _this) : cfg::node(_this, "Shader Loading Dialog") {}
 
 			cfg::_bool use_custom_background{ this, "Allow custom background", true, true };
-			cfg::_int<0, 100> darkening_strength{ this, "Darkening effect strength", 30, true };
-			cfg::_int<0, 100> blur_strength{ this, "Blur effect strength", 0, true };
+			cfg::uint<0, 100> darkening_strength{ this, "Darkening effect strength", 30, true };
+			cfg::uint<0, 100> blur_strength{ this, "Blur effect strength", 0, true };
 
 		} shader_preloading_dialog{ this };
 
@@ -295,7 +296,7 @@ struct cfg_root : cfg::node
 
 	cfg::log_entry log{ this, "Log" };
 
-	std::string name;
+	std::string name{};
 };
 
 extern cfg_root g_cfg;

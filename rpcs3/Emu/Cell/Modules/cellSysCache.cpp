@@ -68,7 +68,7 @@ struct syscache_info
 		}
 	}
 
-	void clear(bool remove_root) noexcept
+	void clear(bool remove_root) const noexcept
 	{
 		// Clear cache
 		if (!vfs::host::remove_all(cache_root + cache_id, cache_root, &g_mp_sys_dev_hdd1, remove_root))

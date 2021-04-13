@@ -2,7 +2,6 @@
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
-#include <mutex>
 
 // Mutex that tries to maintain the order of acquisition
 class fifo_mutex

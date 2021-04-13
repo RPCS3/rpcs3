@@ -12,7 +12,6 @@
 
 #include <deque>
 #include <thread>
-#include <string_view>
 
 // attr_protocol (waiting scheduling policy)
 enum lv2_protocol : u32
@@ -78,7 +77,7 @@ private:
 	};
 
 	// Function executed under IDM mutex, error will make the object creation fail and the error will be returned
-	CellError on_id_create()
+	static CellError on_id_create()
 	{
 		return {};
 	}
@@ -95,7 +94,7 @@ public:
 		str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !std::isprint(c); }), str.end());
 
 		return str;
-	};
+	}
 
 	// Find and remove the object from the container (deque or vector)
 	template <typename T, typename E>
@@ -306,7 +305,6 @@ public:
 		usec = std::min<u64>(usec, max_timeout);
 
 		u64 passed = 0;
-		u64 remaining;
 
 		const u64 start_time = get_system_time();
 
@@ -327,7 +325,7 @@ public:
 
 		while (usec >= passed)
 		{
-			remaining = usec - passed;
+			u64 remaining = usec - passed;
 #ifdef __linux__
 			// NOTE: Assumption that timer initialization has succeeded
 			u64 host_min_quantum = IsUsleep && remaining <= 1000 ? 10 : 50;

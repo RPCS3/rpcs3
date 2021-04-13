@@ -12,6 +12,11 @@ error_code sys_sm_get_params(vm::ptr<u8> a, vm::ptr<u8> b, vm::ptr<u32> c, vm::p
 {
 	sys_sm.todo("sys_sm_get_params(a=*0x%x, b=*0x%x, c=*0x%x, d=*0x%x)", a, b, c, d);
 
+	if (a) *a = 0; else return CELL_EFAULT;
+	if (b) *b = 0; else return CELL_EFAULT;
+	if (c) *c = 0x200; else return CELL_EFAULT;
+	if (d) *d = 7; else return CELL_EFAULT;
+
 	return CELL_OK;
 }
 

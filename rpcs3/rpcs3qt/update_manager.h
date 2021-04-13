@@ -27,7 +27,7 @@ private:
 	bool handle_rpcs3(const QByteArray& data);
 
 public:
-	update_manager();
+	update_manager() = default;
 	void check_for_updates(bool automatic, bool check_only, QWidget* parent = nullptr);
 	void update();
 

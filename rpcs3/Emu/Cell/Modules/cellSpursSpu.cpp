@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Loader/ELF.h"
-#include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Memory/vm_reservation.h"
 #include "Emu/Cell/SPUThread.h"
@@ -9,9 +8,6 @@
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_spu.h"
 #include "cellSpurs.h"
-
-#include <thread>
-#include <mutex>
 
 #include "util/asm.hpp"
 #include "util/v128.hpp"

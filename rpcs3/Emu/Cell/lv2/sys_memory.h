@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Emu/Memory/vm_ptr.h"
-#include "Emu/IdManager.h"
 #include "Emu/Cell/ErrorCodes.h"
 
 class cpu_thread;
@@ -26,8 +25,9 @@ enum : u64
 
 enum : u64
 {
-	SYS_MEMORY_PAGE_SIZE_1M   = 0x400ull,
+	SYS_MEMORY_PAGE_SIZE_4K   = 0x100ull,
 	SYS_MEMORY_PAGE_SIZE_64K  = 0x200ull,
+	SYS_MEMORY_PAGE_SIZE_1M   = 0x400ull,
 	SYS_MEMORY_PAGE_SIZE_MASK = 0xf00ull,
 };
 

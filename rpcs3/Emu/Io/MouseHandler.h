@@ -125,9 +125,6 @@ struct Mouse
 		: x_pos(0)
 		, y_pos(0)
 		, buttons(0)
-		, m_tablet_datalist()
-		, m_datalist()
-		, m_rawdata()
 	{
 	}
 };

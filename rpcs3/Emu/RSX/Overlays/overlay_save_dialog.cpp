@@ -208,13 +208,11 @@ namespace rsx
 
 			if (listSet && listSet->newData)
 			{
-				std::unique_ptr<overlay_element> new_stub;
-
 				const char* title = "Create New";
 
 				int id = resource_config::standard_image_resource::new_entry;
 
-				if (auto picon = +listSet->newData->icon)
+				if (const auto picon = +listSet->newData->icon)
 				{
 					if (picon->title)
 						title = picon->title.get_ptr();
@@ -232,7 +230,7 @@ namespace rsx
 					id = image_resource_id::raw_image;
 				}
 
-				new_stub = std::make_unique<save_dialog_entry>(title, "Select to create a new entry", "", id, icon);
+				std::unique_ptr<overlay_element> new_stub = std::make_unique<save_dialog_entry>(title, "Select to create a new entry", "", id, icon);
 
 				m_list->add_entry(new_stub);
 			}

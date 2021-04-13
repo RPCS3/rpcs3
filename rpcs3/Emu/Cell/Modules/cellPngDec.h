@@ -1,7 +1,5 @@
 #pragma once
 
-#include "cellPng.h"
-
 #include "Emu/Memory/vm_ptr.h"
 
 #include "png.h"

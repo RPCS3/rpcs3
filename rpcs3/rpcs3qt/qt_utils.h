@@ -25,7 +25,7 @@ namespace gui
 
 		// Creates a frame geometry rectangle with given width height that's centered inside the origin,
 		// while still considering screen boundaries.
-		QRect create_centered_window_geometry(const QRect& origin, s32 width, s32 height);
+		QRect create_centered_window_geometry(const QScreen* screen, const QRect& origin, s32 width, s32 height);
 
 		// Returns a custom colored QPixmap based on another QPixmap.
 		// use colorize_all to repaint every opaque pixel with the chosen color

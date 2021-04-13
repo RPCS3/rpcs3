@@ -30,9 +30,9 @@ class Buffer : public QGroupBox
 	QSize m_image_size;
 
 public:
-	Buffer(bool isTex, u32 id, const QString& name, QWidget* parent = 0);
+	Buffer(bool isTex, u32 id, const QString& name, QWidget* parent = nullptr);
 	void showImage(const QImage& image = QImage());
-	void ShowWindowed();
+	void ShowWindowed() const;
 };
 
 class rsx_debugger : public QDialog
@@ -65,14 +65,14 @@ class rsx_debugger : public QDialog
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 public:
-	rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = 0);
-	~rsx_debugger();
+	explicit rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = nullptr);
+	~rsx_debugger() = default;
 
-	virtual void UpdateInformation();
-	virtual void GetMemory();
-	virtual void GetBuffers();
+	void UpdateInformation() const;
+	void GetMemory() const;
+	void GetBuffers() const;
 
-	QString DisAsmCommand(u32 cmd, u32 count, u32 ioAddr);
+	QString DisAsmCommand(u32 cmd, u32 count, u32 ioAddr) const;
 
 	void SetPC(const uint pc);
 
@@ -80,9 +80,9 @@ public Q_SLOTS:
 	virtual void OnClickDrawCalls();
 
 protected:
-	virtual void closeEvent(QCloseEvent* event) override;
-	virtual void keyPressEvent(QKeyEvent* event) override;
-	virtual bool eventFilter(QObject* object, QEvent* event) override;
+	void closeEvent(QCloseEvent* event) override;
+	void keyPressEvent(QKeyEvent* event) override;
+	bool eventFilter(QObject* object, QEvent* event) override;
 
 private:
 	void PerformJump(u32 address);

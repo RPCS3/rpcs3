@@ -24,9 +24,9 @@ class auto_pause_settings_dialog : public QDialog
 
 public:
 	explicit auto_pause_settings_dialog(QWidget* parent);
-	void UpdateList(void);
-	void LoadEntries(void);
-	void SaveEntries(void);
+	void UpdateList();
+	void LoadEntries();
+	void SaveEntries();
 
 public Q_SLOTS:
 	void OnRemove();
@@ -52,5 +52,5 @@ public:
 private Q_SLOTS:
 	void OnOk();
 	void OnCancel();
-	void OnUpdateValue();
+	void OnUpdateValue() const;
 };

@@ -21,7 +21,6 @@
 #include "lv2/sys_prx.h"
 #include "lv2/sys_overlay.h"
 #include "lv2/sys_process.h"
-#include "lv2/sys_memory.h"
 
 #ifdef LLVM_AVAILABLE
 #ifdef _MSC_VER
@@ -33,30 +32,18 @@
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/IR/LLVMContext.h"
-//#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LegacyPassManager.h"
-//#include "llvm/IR/Module.h"
-//#include "llvm/IR/Function.h"
-//#include "llvm/Analysis/Passes.h"
-//#include "llvm/Analysis/BasicAliasAnalysis.h"
-//#include "llvm/Analysis/TargetTransformInfo.h"
-//#include "llvm/Analysis/MemoryDependenceAnalysis.h"
-//#include "llvm/Analysis/LoopInfo.h"
-//#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/Lint.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Vectorize.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -69,6 +56,7 @@
 #include <thread>
 #include <cfenv>
 #include <cctype>
+#include <optional>
 #include "util/asm.hpp"
 #include "util/vm.hpp"
 #include "util/v128.hpp"
@@ -79,11 +67,7 @@ const bool s_use_ssse3 = utils::has_ssse3();
 
 extern atomic_t<u64> g_watchdog_hold_ctr;
 
-extern atomic_t<const char*> g_progr;
-extern atomic_t<u32> g_progr_ftotal;
-extern atomic_t<u32> g_progr_fdone;
-extern atomic_t<u32> g_progr_ptotal;
-extern atomic_t<u32> g_progr_pdone;
+#include "Emu/system_progress.hpp"
 
 // Should be of the same type
 using spu_rdata_t = decltype(ppu_thread::rdata);
@@ -457,11 +441,25 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 	}
 }
 
+atomic_t<bool> g_debugger_pause_all_threads_on_bp = true;
+
 // Breakpoint entry point
 static bool ppu_break(ppu_thread& ppu, ppu_opcode_t)
 {
+	const bool pause_all = g_debugger_pause_all_threads_on_bp;
+
 	// Pause
-	ppu.state.atomic_op([](bs_t<cpu_flag>& state) { if (!(state & cpu_flag::dbg_step)) state += cpu_flag::dbg_pause; });
+	ppu.state.atomic_op([&](bs_t<cpu_flag>& state)
+	{
+		if (pause_all) state += cpu_flag::dbg_global_pause;
+		if (pause_all || !(state & cpu_flag::dbg_step)) state += cpu_flag::dbg_pause;
+	});
+
+	if (pause_all)
+	{
+		// Pause all other threads
+		Emu.CallAfter([]() { Emu.Pause(); });
+	}
 
 	if (ppu.check_state())
 	{
@@ -952,6 +950,12 @@ void ppu_thread::cpu_task()
 			}
 
 			ppu_initialize(), spu_cache::initialize();
+
+			// Wait until the progress dialog is closed.
+			// We don't want to open a cell dialog while a native progress dialog is still open.
+			g_progr_ptotal.wait<atomic_wait::op_ne>(0);
+			g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog = true;
+
 			break;
 		}
 		case ppu_cmd::sleep:
@@ -2400,9 +2404,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 		}
 	}
 
-	g_progr = "Compiling PPU modules";
-
 	g_progr_ftotal += file_queue.size();
+	scoped_progress_dialog progr = "Compiling PPU modules...";
 
 	atomic_t<usz> fnext = 0;
 
@@ -2543,6 +2546,8 @@ extern void ppu_initialize()
 		return;
 	}
 
+	scoped_progress_dialog progr = "Scanning PPU modules...";
+
 	bool compile_main = false;
 
 	// Check main module cache
@@ -2576,7 +2581,7 @@ extern void ppu_initialize()
 	}
 
 	// Avoid compilation if main's cache exists or it is a standalone SELF with no PARAM.SFO
-	if (compile_main && !Emu.GetTitleID().empty())
+	if (compile_main && g_cfg.core.ppu_llvm_precompilation && !Emu.GetTitleID().empty())
 	{
 		// Try to add all related directories
 		const std::set<std::string> dirs = Emu.GetGameDirs();
@@ -2715,8 +2720,13 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 	}
 
 #ifdef LLVM_AVAILABLE
-	// Initialize progress dialog
-	g_progr = "Compiling PPU modules...";
+	std::optional<scoped_progress_dialog> progr;
+
+	if (!check_only)
+	{
+		// Initialize progress dialog
+		progr.emplace("Loading PPU modules...");
+	}
 
 	struct jit_core_allocator
 	{
@@ -2945,6 +2955,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		if (!check_only)
 		{
+			// Update progress dialog
+			g_progr_ptotal++;
+
 			link_workload.emplace_back(obj_name, false);
 		}
 
@@ -2972,9 +2985,6 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 		// Fill workload list for compilation
 		workload.emplace_back(std::move(obj_name), std::move(part));
-
-		// Update progress dialog
-		g_progr_ptotal++;
 	}
 
 	if (check_only)
@@ -2982,9 +2992,14 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		return false;
 	}
 
+	if (!workload.empty())
+	{
+		g_progr = "Compiling PPU modules...";
+	}
+
 	// Create worker threads for compilation (TODO: how many threads)
 	{
-		u32 thread_count = Emu.GetMaxThreads();
+		u32 thread_count = Emulator::GetMaxThreads();
 
 		if (workload.size() < thread_count)
 		{
@@ -3036,6 +3051,12 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			return compiled_new;
 		}
 
+		if (workload.size() < link_workload.size())
+		{
+			// Only show this message if this task is relevant
+			g_progr = "Linking PPU modules...";
+		}
+
 		for (auto [obj_name, is_compiled] : link_workload)
 		{
 			if (Emu.IsStopped())
@@ -3048,6 +3069,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			if (!is_compiled)
 			{
 				ppu_log.success("LLVM: Loaded module %s", obj_name);
+				g_progr_pdone++;
 			}
 		}
 	}

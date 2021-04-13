@@ -21,12 +21,12 @@ namespace rsx
 	template<typename Traits>
 	struct surface_store
 	{
-		constexpr u32 get_aa_factor_u(surface_antialiasing aa_mode)
+		static constexpr u32 get_aa_factor_u(surface_antialiasing aa_mode)
 		{
 			return (aa_mode == surface_antialiasing::center_1_sample)? 1 : 2;
 		}
 
-		constexpr u32 get_aa_factor_v(surface_antialiasing aa_mode)
+		static constexpr u32 get_aa_factor_v(surface_antialiasing aa_mode)
 		{
 			switch (aa_mode)
 			{

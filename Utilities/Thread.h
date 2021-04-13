@@ -5,8 +5,6 @@
 #include "util/shared_ptr.hpp"
 
 #include <string>
-#include <memory>
-#include <string_view>
 
 #include "mutex.h"
 #include "lockless.h"

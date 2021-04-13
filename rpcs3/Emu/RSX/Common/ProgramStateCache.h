@@ -8,7 +8,6 @@
 #include "Utilities/span.h"
 #include "util/fnv_hash.hpp"
 
-#include <deque>
 #include <unordered_map>
 
 enum class SHADER_TYPE

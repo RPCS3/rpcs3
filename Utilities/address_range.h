@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include "StrFmt.h"
 #include <vector>
+#include <algorithm>
 
 
 namespace utils
@@ -271,10 +272,10 @@ namespace utils
 	class address_range_vector
 	{
 	public:
-		using vector_type = typename std::vector<address_range>;
-		using iterator = typename vector_type::iterator;
-		using const_iterator = typename vector_type::const_iterator;
-		using size_type = typename vector_type::size_type;
+		using vector_type = std::vector<address_range>;
+		using iterator = vector_type::iterator;
+		using const_iterator = vector_type::const_iterator;
+		using size_type = vector_type::size_type;
 
 	private:
 		vector_type data;
@@ -455,7 +456,7 @@ namespace utils
 		// Will fail if ranges within the vector overlap our touch each-other
 		bool check_consistency() const
 		{
-			usz _size = data.size();
+			const usz _size = data.size();
 
 			for (usz i = 0; i < _size; ++i)
 			{
@@ -485,20 +486,10 @@ namespace utils
 		// Test for overlap with a given range
 		bool overlaps(const address_range &range) const
 		{
-			for (const address_range &current : data)
+			return std::any_of(data.cbegin(), data.cend(), [&range](const address_range& cur)
 			{
-				if (!current.valid())
-				{
-					continue;
-				}
-
-				if (current.overlaps(range))
-				{
-					return true;
-				}
-			}
-
-			return false;
+				return cur.valid() && cur.overlaps(range);
+			});
 		}
 
 		// Test for overlap with a given address_range vector
@@ -530,37 +521,19 @@ namespace utils
 		// Test if a given range is fully contained inside this vector
 		bool contains(const address_range &range) const
 		{
-			for (const address_range &cur : *this)
+			return std::any_of(this->begin(), this->end(), [&range](const address_range& cur)
 			{
-				if (!cur.valid())
-				{
-					continue;
-				}
-
-				if (range.inside(cur))
-				{
-					return true;
-				}
-			}
-			return false;
+				return cur.valid() && cur.inside(range);
+			});
 		}
 
 		// Test if all ranges in this vector are full contained inside a specific range
 		bool inside(const address_range &range) const
 		{
-			for (const address_range &cur : *this)
+			return std::all_of(this->begin(), this->end(), [&range](const address_range& cur)
 			{
-				if (!cur.valid())
-				{
-					continue;
-				}
-
-				if (!cur.inside(range))
-				{
-					return false;
-				}
-			}
-			return true;
+				return !cur.valid() || cur.inside(range);
+			});
 		}
 	};
 

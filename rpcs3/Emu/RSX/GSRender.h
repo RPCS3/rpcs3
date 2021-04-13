@@ -31,5 +31,5 @@ public:
 
 	void flip(const rsx::display_flip_info_t& info) override;
 
-	GSFrameBase* get_frame() { return m_frame; }
+	GSFrameBase* get_frame() const { return m_frame; }
 };

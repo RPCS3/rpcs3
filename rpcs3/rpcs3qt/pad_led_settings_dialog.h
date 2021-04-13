@@ -21,11 +21,11 @@ Q_SIGNALS:
 	void pass_led_settings(int m_cR, int m_cG, int m_cB, bool m_low_battery_blink, bool m_battery_indicator, int m_battery_indicator_brightness);
 
 private Q_SLOTS:
-	void update_slider_label(int val);
-	void battery_indicator_checked(bool checked);
+	void update_slider_label(int val) const;
+	void battery_indicator_checked(bool checked) const;
 
 private:
-	void redraw_color_sample();
+	void redraw_color_sample() const;
 	void read_form_values();
 	Ui::pad_led_settings_dialog *ui;
 	struct led_settings

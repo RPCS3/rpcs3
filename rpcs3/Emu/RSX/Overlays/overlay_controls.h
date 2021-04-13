@@ -923,10 +923,16 @@ namespace rsx
 				external_ref = nullptr;
 			}
 
-			void set_raw_image(image_info *raw_image)
+			void set_raw_image(image_info* raw_image)
 			{
 				image_resource_ref = image_resource_id::raw_image;
 				external_ref = raw_image;
+			}
+
+			void clear_image()
+			{
+				image_resource_ref = image_resource_id::none;
+				external_ref = nullptr;
 			}
 
 			void set_blur_strength(u8 strength)
@@ -1072,7 +1078,7 @@ namespace rsx
 
 			void add_entry(std::unique_ptr<overlay_element>& entry);
 
-			int get_selected_index();
+			int get_selected_index() const;
 
 			std::u32string get_selected_item();
 

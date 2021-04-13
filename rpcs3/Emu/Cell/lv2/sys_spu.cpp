@@ -12,7 +12,6 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/timers.hpp"
 #include "sys_interrupt.h"
@@ -101,7 +100,7 @@ void sys_spu_image::load(const fs::file& stream)
 	vm::page_protect(segs.addr(), utils::align(mem_size, 4096), 0, 0, vm::page_writable);
 }
 
-void sys_spu_image::free()
+void sys_spu_image::free() const
 {
 	if (type == SYS_SPU_IMAGE_TYPE_KERNEL)
 	{
@@ -1112,7 +1111,7 @@ error_code sys_spu_thread_group_join(ppu_thread& ppu, u32 id, vm::ptr<u32> cause
 			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
-	while (0);
+	while (false);
 
 	if (!cause)
 	{

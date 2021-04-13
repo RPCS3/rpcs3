@@ -243,6 +243,18 @@ struct RSXFragmentProgram
 
 		data_storage_helper(const data_storage_helper& other)
 		{
+			this->operator=(other);
+		}
+
+		data_storage_helper(data_storage_helper&& other)
+			: data_ptr(other.data_ptr)
+			, local_storage(std::move(other.local_storage))
+		{
+			other.data_ptr = nullptr;
+		}
+
+		data_storage_helper& operator=(const data_storage_helper& other)
+		{
 			if (other.data_ptr == other.local_storage.data())
 			{
 				local_storage = other.local_storage;
@@ -253,6 +265,20 @@ struct RSXFragmentProgram
 				data_ptr = other.data_ptr;
 				local_storage.clear();
 			}
+
+			return *this;
+		}
+
+		data_storage_helper& operator=(data_storage_helper&& other)
+		{
+			if (this != &other)
+			{
+				data_ptr = other.data_ptr;
+				local_storage = std::move(other.local_storage);
+				other.data_ptr = nullptr;
+			}
+
+			return *this;
 		}
 
 		void deep_copy(u32 max_length)

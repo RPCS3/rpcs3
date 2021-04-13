@@ -15,11 +15,11 @@ public:
 	input_dialog(int max_length, const QString& text, const QString& title, const QString& label, const QString& placeholder, QWidget *parent = nullptr, Qt::WindowFlags f = Qt::WindowFlags());
 	~input_dialog();
 
-	void set_label_text(const QString& text);
-	void set_validator(const QValidator* validator);
-	void set_clear_button_enabled(bool enable);
-	void set_input_font(const QFont& font, bool fix_width, char sample = '\0');
-	void set_button_enabled(QDialogButtonBox::StandardButton id, bool enabled);
+	void set_label_text(const QString& text) const;
+	void set_validator(const QValidator* validator) const;
+	void set_clear_button_enabled(bool enable) const;
+	void set_input_font(const QFont& font, bool fix_width, char sample = '\0') const;
+	void set_button_enabled(QDialogButtonBox::StandardButton id, bool enabled) const;
 	QString get_input_text() const;
 
 private:

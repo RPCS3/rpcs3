@@ -92,7 +92,7 @@ namespace rsx
 			}
 		}
 
-		glyph_load_setup font::get_glyph_files(language_class class_)
+		glyph_load_setup font::get_glyph_files(language_class class_) const
 		{
 			glyph_load_setup result;
 			result.font_names.push_back(font_name);

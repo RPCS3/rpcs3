@@ -23,7 +23,7 @@ class gdb_thread
 	//initialize server socket and start listening
 	void start_server();
 	//read at most cnt bytes to buf, returns number of bytes actually read
-	int read(void* buf, int cnt);
+	int read(void* buf, int cnt) const;
 	//reads one character
 	char read_char();
 	//reads pairs of hex characters and returns their integer value
@@ -39,7 +39,7 @@ class gdb_thread
 	//chance of getting correct command is low
 	bool read_cmd(gdb_cmd& out_cmd);
 	//send cnt bytes from buf to client
-	void send(const char* buf, int cnt);
+	void send(const char* buf, int cnt) const;
 	//send character to client
 	void send_char(char c);
 	//acknowledge packet, either as accepted or declined
@@ -80,7 +80,7 @@ class gdb_thread
 	bool cmd_write_all_registers(gdb_cmd& cmd);
 	bool cmd_set_thread_ops(gdb_cmd& cmd);
 	bool cmd_attached_to_what(gdb_cmd& cmd);
-	bool cmd_kill(gdb_cmd& cmd);
+	static bool cmd_kill(gdb_cmd& cmd);
 	bool cmd_continue_support(gdb_cmd& cmd);
 	bool cmd_vcont(gdb_cmd& cmd);
 	bool cmd_set_breakpoint(gdb_cmd& cmd);
@@ -89,7 +89,7 @@ class gdb_thread
 public:
 	bool from_breakpoint = true;
 	bool paused = false;
-	u64 pausedBy;
+	u64 pausedBy = 0;
 
 	gdb_thread() noexcept;
 	~gdb_thread();

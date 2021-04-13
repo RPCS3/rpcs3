@@ -6,8 +6,6 @@
 #include <QComboBox>
 #include <QLineEdit>
 
-#include <memory>
-
 class CPUDisAsm;
 class cpu_thread;
 
@@ -28,5 +26,5 @@ private:
 	void OnOkay();
 
 private Q_SLOTS:
-	void updateRegister(int reg);
+	void updateRegister(int reg) const;
 };

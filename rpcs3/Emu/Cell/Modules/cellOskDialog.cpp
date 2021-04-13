@@ -140,7 +140,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	atomic_t<bool> result = false;
 
-	osk->on_osk_close = [maxLength, wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
+	osk->on_osk_close = [wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
 	{
 		const auto osk = wptr.lock();
 

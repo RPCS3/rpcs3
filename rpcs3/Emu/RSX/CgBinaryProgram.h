@@ -148,26 +148,26 @@ public:
 	std::string GetGlslShader() const { return m_glsl_shader; }
 
 	// FP functions
-	std::string GetMask();
+	std::string GetMask() const;
 	void AddCodeAsm(const std::string& code);
-	std::string AddRegDisAsm(u32 index, int fp16);
+	std::string AddRegDisAsm(u32 index, int fp16) const;
 	std::string AddConstDisAsm();
-	std::string AddTexDisAsm();
+	std::string AddTexDisAsm() const;
 	std::string FormatDisAsm(const std::string& code);
-	std::string GetCondDisAsm();
+	std::string GetCondDisAsm() const;
 	template<typename T> std::string GetSrcDisAsm(T src);
 
 	// VP functions
-	std::string GetMaskDisasm(bool is_sca);
+	std::string GetMaskDisasm(bool is_sca) const;
 	std::string GetVecMaskDisasm();
 	std::string GetScaMaskDisasm();
 	std::string GetDSTDisasm(bool is_sca = false);
 	std::string GetSRCDisasm(u32 n);
-	std::string GetTexDisasm();
-	std::string GetCondDisasm();
-	std::string AddAddrMaskDisasm();
+	static std::string GetTexDisasm();
+	std::string GetCondDisasm() const;
+	std::string AddAddrMaskDisasm() const;
 	std::string AddAddrRegDisasm();
-	u32 GetAddrDisasm();
+	u32 GetAddrDisasm() const;
 	std::string FormatDisasm(const std::string& code);
 	void AddScaCodeDisasm(const std::string& code = "");
 	void AddVecCodeDisasm(const std::string& code = "");
@@ -195,7 +195,7 @@ public:
 		delete[] m_buffer;
 	}
 
-	std::string GetCgParamType(u32 type) const
+	static std::string GetCgParamType(u32 type)
 	{
 		switch (type)
 		{
@@ -367,7 +367,7 @@ public:
 		}
 	}
 
-	u32 GetData(const u32 d) const { return d << 16 | d >> 16; }
+	static u32 GetData(const u32 d) { return d << 16 | d >> 16; }
 	void TaskFP();
 	void TaskVP();
 };

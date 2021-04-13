@@ -17,7 +17,7 @@ namespace rsx
 		type.disable_cancel = true;
 		type.progress_bar_count = 2;
 
-		dlg = g_fxo->get<rsx::overlays::display_manager>().create<rsx::overlays::message_dialog>(!!g_cfg.video.shader_preloading_dialog.use_custom_background);
+		dlg = g_fxo->get<rsx::overlays::display_manager>().create<rsx::overlays::message_dialog>(true);
 		dlg->progress_bar_set_taskbar_index(-1);
 		dlg->show(false, msg, type, [](s32 status)
 		{

@@ -16,7 +16,7 @@ private:
 
 	auto decode_reg() const
 	{
-		const typename rsx::registers_decoder<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT>::decoded_type
+		const rsx::registers_decoder<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT>::decoded_type
 			   decoded_value(registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + index]);
 		return decoded_value;
 	}
@@ -74,7 +74,7 @@ struct push_buffer_vertex_info
 		}
 	}
 
-	u8 get_vertex_size_in_dwords(vertex_base_type type)
+	u8 get_vertex_size_in_dwords(vertex_base_type type) const
 	{
 		//NOTE: Types are always provided to fit into 32-bits
 		//i.e no less than 4 8-bit values and no less than 2 16-bit values

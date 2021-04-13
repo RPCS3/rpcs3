@@ -29,10 +29,6 @@ namespace utils
 #include "Utilities/StrFmt.h"
 
 #include <utility>
-#include <mutex>
-#include <condition_variable>
-#include <chrono>
-#include <cstdlib>
 #include <cstdint>
 #include <array>
 #include <random>
@@ -126,6 +122,7 @@ static NEVER_INLINE bool ptr_cmp(const void* data, u32 _size, u128 old128, u128 
 					new_value = stx::se_storage<u64>::swap(new_value);
 					old_value = stx::se_storage<u64>::swap(old_value);
 					mask = stx::se_storage<u64>::swap(mask);
+					break;
 				}
 				default:
 				{
@@ -783,7 +780,7 @@ namespace
 		}
 
 		// Advance: linearly to prevent self-collisions, but always switch between two big 2^16 chunks
-		void operator++(int) noexcept
+		void advance() noexcept
 		{
 			if (id >= 0x10000)
 			{
@@ -840,7 +837,7 @@ atomic_t<u16>* root_info::slot_alloc(uptr ptr) noexcept
 
 	u32 limit = 0;
 
-	for (hash_engine _this(ptr);; _this++)
+	for (hash_engine _this(ptr);; _this.advance())
 	{
 		slot = _this->bits.atomic_op([&](slot_allocator& bits) -> atomic_t<u16>*
 		{
@@ -919,7 +916,7 @@ void root_info::slot_free(uptr iptr, atomic_t<u16>* slot, u32 tls_slot) noexcept
 		cond_free(cond_id, tls_slot);
 	}
 
-	for (hash_engine curr(iptr);; curr++)
+	for (hash_engine curr(iptr);; curr.advance())
 	{
 		// Reset reference counter and allocation bit in every slot
 		curr->bits.atomic_op([&](slot_allocator& bits)
@@ -945,7 +942,7 @@ FORCE_INLINE auto root_info::slot_search(uptr iptr, u128 mask, F func) noexcept
 	u32 index = 0;
 	u32 total = 0;
 
-	for (hash_engine _this(iptr);; _this++)
+	for (hash_engine _this(iptr);; _this.advance())
 	{
 		const auto bits = _this->bits.load();
 

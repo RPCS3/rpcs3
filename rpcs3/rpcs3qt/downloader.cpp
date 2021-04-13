@@ -12,7 +12,7 @@ LOG_CHANNEL(network_log, "NETWORK");
 
 usz curl_write_cb_compat(char* ptr, usz /*size*/, usz nmemb, void* userdata)
 {
-	downloader* download = reinterpret_cast<downloader*>(userdata);
+	downloader* download = static_cast<downloader*>(userdata);
 	return download->update_buffer(ptr, nmemb);
 }
 
@@ -32,7 +32,7 @@ downloader::~downloader()
 	}
 }
 
-void downloader::start(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title, bool keep_progress_dialog_open, int exptected_size)
+void downloader::start(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title, bool keep_progress_dialog_open, int expected_size)
 {
 	if (m_thread)
 	{
@@ -91,7 +91,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 
 	if (show_progress_dialog)
 	{
-		const int maximum = exptected_size > 0 ? exptected_size : 100;
+		const int maximum = expected_size > 0 ? expected_size : 100;
 
 		if (m_progress_dialog)
 		{
@@ -121,7 +121,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 	m_thread->start();
 }
 
-void downloader::update_progress_dialog(const QString& title)
+void downloader::update_progress_dialog(const QString& title) const
 {
 	if (m_progress_dialog)
 	{
@@ -191,7 +191,7 @@ usz downloader::update_buffer(char* data, usz size)
 	return size;
 }
 
-void downloader::handle_buffer_update(int size, int max)
+void downloader::handle_buffer_update(int size, int max) const
 {
 	if (m_curl_abort)
 	{

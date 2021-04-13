@@ -10,7 +10,7 @@
 class basic_mouse_handler final : public MouseHandlerBase, public QObject
 {
 public:
-	virtual void Init(const u32 max_connect) override;
+	void Init(const u32 max_connect) override;
 
 	basic_mouse_handler();
 
@@ -23,5 +23,5 @@ public:
 	bool eventFilter(QObject* obj, QEvent* ev) override;
 private:
 	QWindow* m_target = nullptr;
-	bool get_mouse_lock_state();
+	bool get_mouse_lock_state() const;
 };

@@ -9,8 +9,6 @@
 
 #include "util/asm.hpp"
 
-#include <cmath>
-#include <cstdlib>
 #include <charconv>
 
 LOG_CHANNEL(tar_log, "TAR");

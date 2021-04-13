@@ -51,16 +51,16 @@ namespace rsx
 	public:
 		void add_ref()
 		{
-			ref_count++;
+			++ref_count;
 			idle_time = 0;
 		}
 
 		void release()
 		{
-			ref_count--;
+			--ref_count;
 		}
 
-		bool has_refs()
+		bool has_refs() const
 		{
 			return (ref_count > 0);
 		}
@@ -161,7 +161,7 @@ namespace rsx
 		u32 resolution_y = 720;    // Y RES
 		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
 
-		u32 get_compatible_gcm_format()
+		u32 get_compatible_gcm_format() const
 		{
 			switch (format)
 			{
@@ -176,7 +176,7 @@ namespace rsx
 			}
 		}
 
-		u8 get_bpp()
+		u8 get_bpp() const
 		{
 			switch (format)
 			{
@@ -893,11 +893,10 @@ namespace rsx
 	class atomic_bitmask_t
 	{
 	private:
-		atomic_t<bitmask_type> m_data;
+		atomic_t<bitmask_type> m_data{0};
 
 	public:
-		atomic_bitmask_t() { m_data.store(0); }
-		~atomic_bitmask_t() = default;
+		atomic_bitmask_t() = default;
 
 		T load() const
 		{
@@ -988,7 +987,7 @@ namespace rsx
 			}
 		}
 
-		simple_array(const simple_array<Ty>& other)
+		simple_array(const simple_array& other)
 		{
 			_capacity = other._capacity;
 			_size = other._size;
@@ -998,9 +997,25 @@ namespace rsx
 			std::memcpy(_data, other._data, size_bytes);
 		}
 
-		simple_array(simple_array<Ty>&& other) noexcept
+		simple_array(simple_array&& other) noexcept
 		{
 			swap(other);
+		}
+
+		simple_array& operator=(const simple_array& other)
+		{
+			if (&other != this)
+			{
+				simple_array{other}.swap(*this);
+			}
+
+			return *this;
+		}
+
+		simple_array& operator=(simple_array&& other) noexcept
+		{
+			swap(other);
+			return *this;
 		}
 
 		~simple_array()

@@ -16,7 +16,6 @@
 #include "Utilities/StrUtil.h"
 #include "Utilities/span.h"
 
-#include <thread>
 #include <mutex>
 #include <algorithm>
 

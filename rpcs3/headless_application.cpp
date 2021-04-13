@@ -8,6 +8,8 @@
 
 #include <clocale>
 
+#include <QFileInfo>
+
 // For now, a trivial constructor/destructor. May add command line usage later.
 headless_application::headless_application(int& argc, char** argv) : QCoreApplication(argc, argv)
 {
@@ -16,7 +18,7 @@ headless_application::headless_application(int& argc, char** argv) : QCoreApplic
 bool headless_application::Init()
 {
 	// Force init the emulator
-	InitializeEmulator("00000001", true, false); // TODO: get user from cli args if possible
+	InitializeEmulator(m_active_user.empty() ? "00000001" : m_active_user, false);
 
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
@@ -24,13 +26,13 @@ bool headless_application::Init()
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
 
-	// As per QT recommendations to avoid conflicts for POSIX functions
+	// As per Qt recommendations to avoid conflicts for POSIX functions
 	std::setlocale(LC_NUMERIC, "C");
 
 	return true;
 }
 
-void headless_application::InitializeConnects()
+void headless_application::InitializeConnects() const
 {
 	qRegisterMetaType<std::function<void()>>("std::function<void()>");
 	connect(this, &headless_application::RequestCallAfter, this, &headless_application::HandleCallAfter);
@@ -56,14 +58,14 @@ void headless_application::InitializeCallbacks()
 
 		return false;
 	};
-	callbacks.call_after = [=, this](std::function<void()> func)
+	callbacks.call_after = [this](std::function<void()> func)
 	{
 		RequestCallAfter(std::move(func));
 	};
 
 	callbacks.init_gs_render = []()
 	{
-		switch (video_renderer type = g_cfg.video.renderer)
+		switch (const video_renderer type = g_cfg.video.renderer)
 		{
 		case video_renderer::null:
 		{
@@ -76,6 +78,7 @@ void headless_application::InitializeCallbacks()
 #endif
 		{
 			fmt::throw_exception("Headless mode can only be used with the %s video renderer. Current renderer: %s", video_renderer::null, type);
+			[[fallthrough]];
 		}
 		default:
 		{
@@ -106,6 +109,11 @@ void headless_application::InitializeCallbacks()
 
 	callbacks.get_localized_string    = [](localized_string_id, const char*) -> std::string { return {}; };
 	callbacks.get_localized_u32string = [](localized_string_id, const char*) -> std::u32string { return {}; };
+
+	callbacks.resolve_path = [](std::string_view sv)
+	{
+		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
+	};
 
 	Emu.SetCallbacks(std::move(callbacks));
 }

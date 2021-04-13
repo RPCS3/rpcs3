@@ -3,7 +3,6 @@
 #include "util/types.hpp"
 #include "util/logs.hpp"
 #include "system_config.h"
-#include "IdManager.h"
 #include <array>
 #include <cmath>
 
@@ -39,13 +38,13 @@ class perf_stat_base
 
 protected:
 	// Print accumulated values
-	void print(const char* name) noexcept;
+	void print(const char* name) const noexcept;
 
 	// Accumulate values from a thread
 	void push(u64 ns[66]) noexcept;
 
 	// Get end time; accumulate value to the TLS
-	static void push(u64 ns[66], u64 start_time, const char* name) noexcept;
+	static void push(u64 data[66], u64 start_time, const char* name) noexcept;
 
 	// Register TLS storage for stats
 	static void add(u64 ns[66], const char* name) noexcept;

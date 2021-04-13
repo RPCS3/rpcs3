@@ -67,10 +67,6 @@ emu_settings::emu_settings()
 {
 }
 
-emu_settings::~emu_settings()
-{
-}
-
 bool emu_settings::Init()
 {
 	m_render_creator = new render_creator(this);
@@ -265,7 +261,7 @@ bool emu_settings::ValidateSettings(bool cleanup)
 	return is_clean;
 }
 
-void emu_settings::SaveSettings()
+void emu_settings::SaveSettings() const
 {
 	YAML::Emitter out;
 	emit_data(out, m_current_settings);
@@ -342,7 +338,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 	}
 
 	// Since the QComboBox has localised strings, we can't just findText / findData, so we need to manually iterate through it to find our index
-	auto find_index = [&](const QString& value)
+	const auto find_index = [&](const QString& value)
 	{
 		for (int i = 0; i < combobox->count(); i++)
 		{
@@ -359,7 +355,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 
 	const std::string selected = GetSetting(type);
 	const QString selected_q = qstr(selected);
-	int index = -1;
+	int index;
 
 	if (is_ranged)
 	{
@@ -389,7 +385,7 @@ void emu_settings::EnhanceComboBox(QComboBox* combobox, emu_settings_type type, 
 
 	combobox->setCurrentIndex(index);
 
-	connect(combobox, static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [=, this](int index)
+	connect(combobox, QOverload<int>::of(&QComboBox::currentIndexChanged), combobox, [this, is_ranged, combobox, type](int index)
 	{
 		if (is_ranged)
 		{
@@ -765,14 +761,14 @@ void emu_settings::SaveSelectedLibraries(const std::vector<std::string>& libs)
 	m_current_settings["Core"]["Libraries Control"] = libs;
 }
 
-QStringList emu_settings::GetSettingOptions(emu_settings_type type) const
+QStringList emu_settings::GetSettingOptions(emu_settings_type type)
 {
 	return cfg_adapter::get_options(const_cast<cfg_location&&>(settings_location[type]));
 }
 
 std::string emu_settings::GetSettingDefault(emu_settings_type type) const
 {
-	if (auto node = cfg_adapter::get_node(m_default_settings, settings_location[type]); node && node.IsScalar())
+	if (const auto node = cfg_adapter::get_node(m_default_settings, settings_location[type]); node && node.IsScalar())
 	{
 		return node.Scalar();
 	}
@@ -783,7 +779,7 @@ std::string emu_settings::GetSettingDefault(emu_settings_type type) const
 
 std::string emu_settings::GetSetting(emu_settings_type type) const
 {
-	if (auto node = cfg_adapter::get_node(m_current_settings, settings_location[type]); node && node.IsScalar())
+	if (const auto node = cfg_adapter::get_node(m_current_settings, settings_location[type]); node && node.IsScalar())
 	{
 		return node.Scalar();
 	}
@@ -792,7 +788,7 @@ std::string emu_settings::GetSetting(emu_settings_type type) const
 	return "";
 }
 
-void emu_settings::SetSetting(emu_settings_type type, const std::string& val)
+void emu_settings::SetSetting(emu_settings_type type, const std::string& val) const
 {
 	cfg_adapter::get_node(m_current_settings, settings_location[type]) = val;
 }

@@ -26,7 +26,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 	const auto cpu = m_get_cpu();
 
 	m_cpu_offset = cpu && cpu->id_type() == 2 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
-	QString instruction = qstr(fmt::format("%08x", *reinterpret_cast<be_t<u32>*>(m_cpu_offset + m_pc)));
+	const QString instruction = qstr(fmt::format("%08x", *reinterpret_cast<be_t<u32>*>(m_cpu_offset + m_pc)));
 
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
 	QHBoxLayout* hbox_panel(new QHBoxLayout());
@@ -72,7 +72,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 	setLayout(vbox_panel);
 
 	// Events
-	connect(button_ok, &QAbstractButton::clicked, [=, this]()
+	connect(button_ok, &QAbstractButton::clicked, [this]()
 	{
 		const auto cpu = m_get_cpu();
 
@@ -83,13 +83,14 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 		}
 
 		bool ok;
-		ulong opcode = m_instr->text().toULong(&ok, 16);
+		const ulong opcode = m_instr->text().toULong(&ok, 16);
 		if (!ok || opcode > UINT32_MAX)
 		{
 			QMessageBox::critical(this, tr("Error"), tr("Failed to parse PPU instruction."));
 			return;
 		}
-		else if (cpu->id_type() == 1)
+
+		if (cpu->id_type() == 1)
 		{
 			if (!ppu_patch(m_pc, static_cast<u32>(opcode)))
 			{
@@ -111,11 +112,11 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 	updatePreview();
 }
 
-void instruction_editor_dialog::updatePreview()
+void instruction_editor_dialog::updatePreview() const
 {
 	bool ok;
 	ulong opcode = m_instr->text().toULong(&ok, 16);
-	Q_UNUSED(opcode);
+	Q_UNUSED(opcode)
 
 	if (ok)
 	{

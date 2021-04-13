@@ -58,7 +58,7 @@ private:
 
 	void SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language_code);
 	void LoadLanguage(const QString& language_code);
-	QStringList GetAvailableLanguageCodes();
+	static QStringList GetAvailableLanguageCodes();
 
 	void InitializeCallbacks();
 	void InitializeConnects();
@@ -84,7 +84,7 @@ private:
 
 private Q_SLOTS:
 	void OnChangeStyleSheetRequest();
-	void OnEmuSettingsChange();
+	static void OnEmuSettingsChange();
 
 Q_SIGNALS:
 	void OnEmulatorRun(bool start_playtime);
@@ -96,5 +96,5 @@ Q_SIGNALS:
 	void RequestCallAfter(const std::function<void()>& func);
 
 private Q_SLOTS:
-	void HandleCallAfter(const std::function<void()>& func);
+	static void HandleCallAfter(const std::function<void()>& func);
 };

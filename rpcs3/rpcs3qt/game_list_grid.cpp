@@ -5,8 +5,13 @@
 #include <QHeaderView>
 #include <QScrollBar>
 
-game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText)
-	: game_list(), m_icon_size(icon_size), m_icon_color(icon_color), m_margin_factor(margin_factor), m_text_factor(text_factor), m_text_enabled(showText)
+game_list_grid::game_list_grid(const QSize& icon_size, QColor icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText)
+	: game_list()
+	, m_icon_size(icon_size)
+	, m_icon_color(std::move(icon_color))
+	, m_margin_factor(margin_factor)
+	, m_text_factor(text_factor)
+	, m_text_enabled(showText)
 {
 	setObjectName("game_grid");
 
@@ -35,16 +40,12 @@ game_list_grid::game_list_grid(const QSize& icon_size, const QColor& icon_color,
 	setShowGrid(false);
 }
 
-game_list_grid::~game_list_grid()
-{
-}
-
 void game_list_grid::enableText(const bool& enabled)
 {
 	m_text_enabled = enabled;
 }
 
-void game_list_grid::setIconSize(const QSize& size)
+void game_list_grid::setIconSize(const QSize& size) const
 {
 	if (m_text_enabled)
 	{
@@ -72,7 +73,7 @@ void game_list_grid::addItem(const QPixmap& img, const QString& name, const int&
 	}
 
 	// define offset for raw image placement
-	QPoint offset = QPoint(m_icon_size.width() * m_margin_factor, m_icon_size.height() * m_margin_factor);
+	const QPoint offset = QPoint(m_icon_size.width() * m_margin_factor, m_icon_size.height() * m_margin_factor);
 
 	// create empty canvas for expanded image
 	QImage exp_img = QImage((exp_size * device_pixel_ratio).toSize(), QImage::Format_ARGB32);
@@ -103,7 +104,7 @@ void game_list_grid::addItem(const QPixmap& img, const QString& name, const int&
 	setItem(row, col, item);
 }
 
-qreal game_list_grid::getMarginFactor()
+qreal game_list_grid::getMarginFactor() const
 {
 	return m_margin_factor;
 }

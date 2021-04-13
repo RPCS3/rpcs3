@@ -1,5 +1,4 @@
 #include <QMessageBox>
-#include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QPushButton>
@@ -85,8 +84,8 @@ rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 			}
 		}
 
-		std::string pass_str = password.toStdString();
-		std::string salt_str = "No matter where you go, everybody's connected.";
+		const std::string pass_str = password.toStdString();
+		const std::string salt_str = "No matter where you go, everybody's connected.";
 
 		u8 salted_pass[SHA_DIGEST_SIZE];
 
@@ -129,12 +128,7 @@ bool rpcn_settings_dialog::save_config()
 		if (input.length() < 3 || input.length() > 16)
 			return false;
 
-		for (const auto c : input)
-		{
-			if (!std::isalnum(c) && c != '-' && c != '_')
-				return false;
-		}
-		return true;
+		return std::all_of(input.cbegin(), input.cend(), [](const char c) { return std::isalnum(c) || c == '-' || c == '_'; });
 	};
 
 	if (host.empty())
@@ -177,7 +171,7 @@ bool rpcn_settings_dialog::create_account()
 		return false;
 
 	QString email;
-	QRegExpValidator simple_email_validator(QRegExp("^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$"));
+	const QRegExpValidator simple_email_validator(QRegExp("^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$"));
 
 	while (true)
 	{

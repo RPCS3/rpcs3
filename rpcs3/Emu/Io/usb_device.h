@@ -122,7 +122,7 @@ struct UsbDescriptorNode
 
 	std::vector<UsbDescriptorNode> subnodes;
 
-	UsbDescriptorNode(){};
+	UsbDescriptorNode(){}
 	template <typename T>
 	UsbDescriptorNode(u8 _bDescriptorType, const T& _data)
 	    : bLength(sizeof(T) + 2)

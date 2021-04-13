@@ -5,13 +5,9 @@ game_list_grid_delegate::game_list_grid_delegate(const QSize& size, const qreal&
 {
 }
 
-game_list_grid_delegate::~game_list_grid_delegate()
-{
-}
-
 void game_list_grid_delegate::initStyleOption(QStyleOptionViewItem * option, const QModelIndex & index) const
 {
-	Q_UNUSED(index);
+	Q_UNUSED(index)
 
 	// Remove the focus frame around selected items
 	option->state &= ~QStyle::State_HasFocus;
@@ -22,13 +18,13 @@ void game_list_grid_delegate::initStyleOption(QStyleOptionViewItem * option, con
 
 void game_list_grid_delegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-	QRect r = option.rect;
+	const QRect r = option.rect;
 
 	painter->setRenderHints(QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
 	painter->eraseRect(r);
 
 	// Get title and image
-	QPixmap image = qvariant_cast<QPixmap>(index.data(Qt::DecorationRole));
+	const QPixmap image = qvariant_cast<QPixmap>(index.data(Qt::DecorationRole));
 	const QString title = index.data(Qt::DisplayRole).toString();
 
 	// Paint from our stylesheet
@@ -60,8 +56,8 @@ void game_list_grid_delegate::paint(QPainter *painter, const QStyleOptionViewIte
 
 QSize game_list_grid_delegate::sizeHint(const QStyleOptionViewItem & option, const QModelIndex & index) const
 {
-	Q_UNUSED(option);
-	Q_UNUSED(index);
+	Q_UNUSED(option)
+	Q_UNUSED(index)
 	return m_size;
 }
 

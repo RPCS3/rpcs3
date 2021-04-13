@@ -95,7 +95,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
 			[[maybe_unused]] const auto con_out = freopen("conout$", "w", stderr);
 #endif
-		std::fprintf(stderr, "RPCS3: %.*s\n", static_cast<int>(text.size()), text.data());
+		std::cerr << fmt::format("RPCS3: %s\n", text);
 		std::abort();
 	}
 
@@ -112,7 +112,7 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 	}
 	else
 	{
-		std::fprintf(stderr, "RPCS3: %.*s\n", static_cast<int>(text.size()), text.data());
+		std::cerr << fmt::format("RPCS3: %s\n", text);
 	}
 
 	auto show_report = [](std::string_view text)
@@ -137,60 +137,89 @@ LOG_CHANNEL(q_debug, "QDEBUG");
 			show_report(text);
 			std::exit(0);
 		}
+
+#ifdef _WIN32
+		wchar_t buffer[32767];
+		GetModuleFileNameW(nullptr, buffer, sizeof(buffer) / 2);
+		const std::wstring arg(text.cbegin(), text.cend()); // ignore unicode for now
+		_wspawnl(_P_WAIT, buffer, buffer, L"--error", arg.c_str(), nullptr);
+#else
+		pid_t pid;
+		std::vector<char> data(text.data(), text.data() + text.size() + 1);
+		std::string run_arg = +s_argv0;
+		std::string err_arg = "--error";
+
+		if (run_arg.find_first_of('/') == umax)
+		{
+			// AppImage has "rpcs3" in argv[0], can't just execute it
+#ifdef __linux__
+			char buffer[PATH_MAX]{};
+			if (::readlink("/proc/self/exe", buffer, sizeof(buffer) - 1) > 0)
+			{
+				printf("Found exec link: %s\n", buffer);
+				run_arg = buffer;
+			}
+#endif
+		}
+
+		char* argv[] = {run_arg.data(), err_arg.data(), data.data(), nullptr};
+		int ret = posix_spawn(&pid, run_arg.c_str(), nullptr, nullptr, argv, environ);
+
+		if (ret == 0)
+		{
+			int status;
+			waitpid(pid, &status, 0);
+		}
 		else
 		{
-#ifdef _WIN32
-			wchar_t buffer[32767];
-			GetModuleFileNameW(nullptr, buffer, sizeof(buffer) / 2);
-			std::wstring arg(text.cbegin(), text.cend()); // ignore unicode for now
-			_wspawnl(_P_WAIT, buffer, buffer, L"--error", arg.c_str(), nullptr);
-#else
-			pid_t pid;
-			std::vector<char> data(text.data(), text.data() + text.size() + 1);
-			std::string run_arg = +s_argv0;
-			std::string err_arg = "--error";
-
-			if (run_arg.find_first_of('/') == umax)
-			{
-				// AppImage has "rpcs3" in argv[0], can't just execute it
-#ifdef __linux__
-				char buffer[PATH_MAX]{};
-				if (::readlink("/proc/self/exe", buffer, sizeof(buffer) - 1) > 0)
-				{
-					printf("Found exec link: %s\n", buffer);
-					run_arg = buffer;
-				}
-#endif
-			}
-
-			char* argv[] = {run_arg.data(), err_arg.data(), data.data(), nullptr};
-			int ret = posix_spawn(&pid, run_arg.c_str(), nullptr, nullptr, argv, environ);
-
-			if (ret == 0)
-			{
-				int status;
-				waitpid(pid, &status, 0);
-			}
-			else
-			{
-				std::fprintf(stderr, "posix_spawn() failed: %d\n", ret);
-			}
-#endif
-			std::abort();
+			std::fprintf(stderr, "posix_spawn() failed: %d\n", ret);
 		}
+#endif
 	}
 
 	std::abort();
 }
 
-struct pause_on_fatal final : logs::listener
+struct fatal_error_listener final : logs::listener
 {
-	~pause_on_fatal() override = default;
+	~fatal_error_listener() override = default;
 
-	void log(u64 /*stamp*/, const logs::message& msg, const std::string& /*prefix*/, const std::string& /*text*/) override
+	void log(u64 /*stamp*/, const logs::message& msg, const std::string& prefix, const std::string& text) override
 	{
 		if (msg.sev == logs::level::fatal)
 		{
+			std::string _msg = "RPCS3: ";
+
+			if (!prefix.empty())
+			{
+				_msg += prefix;
+				_msg += ": ";
+			}
+
+			if (msg.ch && '\0' != *msg.ch->name)
+			{
+				_msg += msg.ch->name;
+				_msg += ": ";
+			}
+
+			_msg += text;
+			_msg += '\n';
+
+#ifdef _WIN32
+			// If launched from CMD
+			if (AttachConsole(ATTACH_PARENT_PROCESS))
+				[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stderr);
+#endif
+			// Output to error stream as is
+			std::cerr << _msg;
+
+#ifdef _WIN32
+			if (IsDebuggerPresent())
+			{
+				// Output string to attached debugger
+				OutputDebugStringA(_msg.c_str());
+			}
+#endif
 			// Pause emulation if fatal error encountered
 			Emu.Pause();
 		}
@@ -208,6 +237,7 @@ constexpr auto arg_config     = "config";
 constexpr auto arg_q_debug    = "qDebug";
 constexpr auto arg_error      = "error";
 constexpr auto arg_updating   = "updating";
+constexpr auto arg_user_id    = "user-id";
 constexpr auto arg_installfw  = "installfw";
 constexpr auto arg_installpkg = "installpkg";
 constexpr auto arg_commit_db  = "get-commit-db";
@@ -306,7 +336,7 @@ QCoreApplication* createApplication(int& argc, char* argv[])
 
 void log_q_debug(QtMsgType type, const QMessageLogContext& context, const QString& msg)
 {
-	Q_UNUSED(context);
+	Q_UNUSED(context)
 
 	switch (type)
 	{
@@ -369,30 +399,23 @@ int main(int argc, char** argv)
 			{
 				report_fatal_error("Another instance of RPCS3 is running. Close it or kill its process, if necessary.");
 			}
-			else
-			{
-				report_fatal_error("Cannot create RPCS3.log (access denied)."
+
+			report_fatal_error("Cannot create RPCS3.log (access denied)."
 #ifdef _WIN32
 				"\nNote that RPCS3 cannot be installed in Program Files or similar directories with limited permissions."
 #else
 				"\nPlease, check RPCS3 permissions in '~/.config/rpcs3'."
 #endif
-				);
-			}
-		}
-		else
-		{
-			report_fatal_error(fmt::format("Cannot create RPCS3.log (error %s)", fs::g_tls_error));
+			);
 		}
 
-		return 1;
+		report_fatal_error(fmt::format("Cannot create RPCS3.log (error %s)", fs::g_tls_error));
 	}
 
 #ifdef _WIN32
 	if (!SetProcessWorkingSetSize(GetCurrentProcess(), 0x80000000, 0xC0000000)) // 2-3 GiB
 	{
 		report_fatal_error("Not enough memory for RPCS3 process.");
-		return 2;
 	}
 #endif
 
@@ -411,26 +434,29 @@ int main(int argc, char** argv)
 		if (!fs::statfs(fs::get_cache_dir(), stats) || stats.avail_free < 128 * 1024 * 1024)
 		{
 			report_fatal_error(fmt::format("Not enough free space (%f KB)", stats.avail_free / 1000000.));
-			return 1;
 		}
 
 		// Limit log size to ~25% of free space
 		log_file = logs::make_file_listener(fs::get_cache_dir() + "RPCS3.log", stats.avail_free / 4);
 	}
 
-	static std::unique_ptr<logs::listener> log_pauser = std::make_unique<pause_on_fatal>();
-	logs::listener::add(log_pauser.get());
+	static std::unique_ptr<logs::listener> fatal_listener = std::make_unique<fatal_error_listener>();
+	logs::listener::add(fatal_listener.get());
 
 	{
-		const std::string firmware_version = utils::get_firmware_version();
-		const std::string firmware_string  = firmware_version.empty() ? " | Missing Firmware" : (" | Firmware version: " + firmware_version);
-
-		// Write initial message
+		// Write RPCS3 version
 		logs::stored_message ver;
 		ver.m.ch  = nullptr;
 		ver.m.sev = logs::level::always;
 		ver.stamp = 0;
-		ver.text  = fmt::format("RPCS3 v%s | %s%s\n%s", rpcs3::get_version().to_string(), rpcs3::get_branch(), firmware_string, utils::get_system_info());
+		ver.text  = fmt::format("RPCS3 v%s | %s", rpcs3::get_version().to_string(), rpcs3::get_branch());
+
+		// Write System information
+		logs::stored_message sys;
+		sys.m.ch  = nullptr;
+		sys.m.sev = logs::level::always;
+		sys.stamp = 0;
+		sys.text  = utils::get_system_info();
 
 		// Write OS version
 		logs::stored_message os;
@@ -446,7 +472,7 @@ int main(int argc, char** argv)
 		qt.stamp = 0;
 		qt.text  = fmt::format("Qt version: Compiled against Qt %s | Run-time uses Qt %s", QT_VERSION_STR, qVersion());
 
-		logs::set_init({std::move(ver), std::move(os), std::move(qt)});
+		logs::set_init({std::move(ver), std::move(sys), std::move(os), std::move(qt)});
 	}
 
 #ifdef _WIN32
@@ -469,14 +495,14 @@ int main(int argc, char** argv)
 	rlim.rlim_max = 4096;
 #ifdef RLIMIT_NOFILE
 	if (::setrlimit(RLIMIT_NOFILE, &rlim) != 0)
-		std::fprintf(stderr, "Failed to set max open file limit (4096).\n");
+		std::cerr << "Failed to set max open file limit (4096).\n";
 #endif
 
 	rlim.rlim_cur = 0x80000000;
 	rlim.rlim_max = 0x80000000;
 #ifdef RLIMIT_MEMLOCK
 	if (::setrlimit(RLIMIT_MEMLOCK, &rlim) != 0)
-		std::fprintf(stderr, "Failed to set RLIMIT_MEMLOCK size to 2 GiB. Try to update your system configuration.\n");
+		std::cerr << "Failed to set RLIMIT_MEMLOCK size to 2 GiB. Try to update your system configuration.\n";
 #endif
 	// Work around crash on startup on KDE: https://bugs.kde.org/show_bug.cgi?id=401637
 	setenv( "KDE_DEBUG", "1", 0 );
@@ -514,6 +540,8 @@ int main(int argc, char** argv)
 	parser.addOption(installfw_option);
 	const QCommandLineOption installpkg_option(arg_installpkg, "Forces the emulator to install this pkg file.", "path", "");
 	parser.addOption(installpkg_option);
+	const QCommandLineOption user_id_option(arg_user_id, "Start RPCS3 as this user.", "user id", "");
+	parser.addOption(user_id_option);
 	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
 	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
@@ -571,7 +599,7 @@ int main(int argc, char** argv)
 			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hhdr);
 			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](const char* ptr, usz, usz size, void* json) -> usz
 			{
-				reinterpret_cast<QByteArray*>(json)->append(ptr, size);
+				static_cast<QByteArray*>(json)->append(ptr, size);
 				return size;
 			});
 			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
@@ -709,6 +737,18 @@ int main(int argc, char** argv)
 		return 0;
 	}
 
+	std::string active_user;
+
+	if (parser.isSet(arg_user_id))
+	{
+		active_user = parser.value(arg_user_id).toStdString();
+
+		if (Emulator::CheckUsr(active_user) == 0)
+		{
+			report_fatal_error(fmt::format("Failed to set user ID '%s'.\nThe user ID must consist of 8 digits and cannot be 00000000.", active_user));
+		}
+	}
+
 	s_no_gui = parser.isSet(arg_no_gui);
 
 	if (auto gui_app = qobject_cast<gui_application*>(app.data()))
@@ -720,6 +760,7 @@ int main(int argc, char** argv)
 		gui_app->SetShowGui(!s_no_gui);
 		gui_app->SetUseCliStyle(use_cli_style);
 		gui_app->SetWithCliBoot(parser.isSet(arg_installfw) || parser.isSet(arg_installpkg) || !parser.positionalArguments().isEmpty());
+		gui_app->SetActiveUser(active_user);
 
 		if (!gui_app->Init())
 		{
@@ -731,6 +772,8 @@ int main(int argc, char** argv)
 	{
 		s_headless = true;
 
+		headless_app->SetActiveUser(active_user);
+
 		if (!headless_app->Init())
 		{
 			Emu.Quit(true);
@@ -741,7 +784,6 @@ int main(int argc, char** argv)
 	{
 		// Should be unreachable
 		report_fatal_error("RPCS3 initialization failed!");
-		return 1;
 	}
 
 #ifdef _WIN32
@@ -758,16 +800,13 @@ int main(int argc, char** argv)
 	}
 #endif
 
-	std::string config_override_path;
-
 	if (parser.isSet(arg_config))
 	{
-		config_override_path = parser.value(config_option).toStdString();
+		const std::string config_override_path = parser.value(config_option).toStdString();
 
 		if (!fs::is_file(config_override_path))
 		{
 			report_fatal_error(fmt::format("No config file found: %s", config_override_path));
-			return 0;
 		}
 
 		Emu.SetConfigOverride(config_override_path);
@@ -781,7 +820,6 @@ int main(int argc, char** argv)
 			if (s_no_gui)
 			{
 				report_fatal_error("Cannot perform installation in no-gui mode!");
-				return 1;
 			}
 
 			if (gui_app->m_main_window)
@@ -802,13 +840,11 @@ int main(int argc, char** argv)
 			else
 			{
 				report_fatal_error("Cannot perform installation. No main window found!");
-				return 1;
 			}
 		}
 		else
 		{
 			report_fatal_error("Cannot perform installation in headless mode!");
-			return 1;
 		}
 	}
 
@@ -822,24 +858,24 @@ int main(int argc, char** argv)
 		sys_log.notice("Booting application from command line: %s", args.at(0).toStdString());
 
 		// Propagate command line arguments
-		std::vector<std::string> argv;
+		std::vector<std::string> rpcs3_argv;
 
 		if (args.length() > 1)
 		{
-			argv.emplace_back();
+			rpcs3_argv.emplace_back();
 
 			for (int i = 1; i < args.length(); i++)
 			{
 				const std::string arg = args[i].toStdString();
-				argv.emplace_back(arg);
+				rpcs3_argv.emplace_back(arg);
 				sys_log.notice("Optional command line argument %d: %s", i, arg);
 			}
 		}
 
 		// Postpone startup to main event loop
-		Emu.CallAfter([config_override_path, path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), argv = std::move(argv)]() mutable
+		Emu.CallAfter([path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv)]() mutable
 		{
-			Emu.argv = std::move(argv);
+			Emu.argv = std::move(rpcs3_argv);
 			Emu.SetForceBoot(true);
 
 			if (const game_boot_result error = Emu.BootGame(path, ""); error != game_boot_result::no_errors)
@@ -888,6 +924,7 @@ extern "C"
 				size--;
 				continue;
 			}
+			default: break;
 			}
 
 			break;

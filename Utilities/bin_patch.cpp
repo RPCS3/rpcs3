@@ -650,8 +650,8 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 
 	std::basic_string<u32> applied_total;
 	const auto& container = m_map.at(name);
-	const auto serial = Emu.GetTitleID();
-	const auto app_version = Emu.GetAppVersion();
+	const auto& serial = Emu.GetTitleID();
+	const auto& app_version = Emu.GetAppVersion();
 
 	// Different containers in order to seperate the patches
 	std::vector<patch_engine::patch_info> patches_for_this_serial_and_this_version;
@@ -793,7 +793,7 @@ void patch_engine::save_config(const patch_map& patches_map)
 			}
 		}
 
-		if (const auto& enabled_patches = config_map[hash].patch_info_map; enabled_patches.size() > 0)
+		if (const auto& enabled_patches = config_map[hash].patch_info_map; !enabled_patches.empty())
 		{
 			out << hash << YAML::BeginMap;
 

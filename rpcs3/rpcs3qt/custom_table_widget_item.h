@@ -10,7 +10,7 @@ private:
 public:
 	using QTableWidgetItem::setData;
 
-	custom_table_widget_item(){}
+	custom_table_widget_item() = default;
 	custom_table_widget_item(const std::string& text, int sort_role = Qt::DisplayRole, const QVariant& sort_value = 0);
 	custom_table_widget_item(const QString& text, int sort_role = Qt::DisplayRole, const QVariant& sort_value = 0);
 

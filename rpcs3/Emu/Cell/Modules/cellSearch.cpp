@@ -591,7 +591,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 						av_format_ctx = avformat_alloc_context();
 
 						// Open input file
-						if (avformat_open_input(&av_format_ctx, (vfs::get(vpath) + "/" + item.name).c_str(), 0, &av_dict_opts) < 0)
+						if (avformat_open_input(&av_format_ctx, (vfs::get(vpath) + "/" + item.name).c_str(), nullptr, &av_dict_opts) < 0)
 						{
 							// Failed to open file
 							av_dict_free(&av_dict_opts);
@@ -601,7 +601,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 						av_dict_free(&av_dict_opts);
 
 						// Find stream information
-						if (avformat_find_stream_info(av_format_ctx, 0) < 0)
+						if (avformat_find_stream_info(av_format_ctx, nullptr) < 0)
 						{
 							// Failed to load stream information
 							avformat_free_context(av_format_ctx);
@@ -671,14 +671,14 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 						std::string value;
 
 						info.trackNumber = 0;
-						tag = av_dict_get(av_format_ctx->metadata, "track", 0, AV_DICT_IGNORE_SUFFIX);
+						tag = av_dict_get(av_format_ctx->metadata, "track", nullptr, AV_DICT_IGNORE_SUFFIX);
 						if (tag != nullptr)
 						{
 							std::string tmp(tag->value);
-							info.trackNumber = stoi(tmp.substr(0, tmp.find("/")));
+							info.trackNumber = stoi(tmp.substr(0, tmp.find('/')));
 						}
 
-						tag = av_dict_get(av_format_ctx->metadata, "album", 0, AV_DICT_IGNORE_SUFFIX);
+						tag = av_dict_get(av_format_ctx->metadata, "album", nullptr, AV_DICT_IGNORE_SUFFIX);
 						if (tag != nullptr)
 						{
 							value = tag->value;
@@ -718,7 +718,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 							}
 						}
 
-						tag = av_dict_get(av_format_ctx->metadata, "artist", 0, AV_DICT_IGNORE_SUFFIX);
+						tag = av_dict_get(av_format_ctx->metadata, "artist", nullptr, AV_DICT_IGNORE_SUFFIX);
 						if (tag != nullptr)
 						{
 							value = tag->value;
@@ -733,7 +733,7 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 							strcpy_trunc(info.artistName, "Unknown Artist");
 						}
 
-						tag = av_dict_get(av_format_ctx->metadata, "genre", 0, AV_DICT_IGNORE_SUFFIX);
+						tag = av_dict_get(av_format_ctx->metadata, "genre", nullptr, AV_DICT_IGNORE_SUFFIX);
 						if (tag != nullptr)
 						{
 							value = tag->value;

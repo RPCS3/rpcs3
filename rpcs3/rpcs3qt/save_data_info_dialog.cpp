@@ -7,8 +7,9 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget* parent)
-	: QDialog(parent), m_entry(save)
+save_data_info_dialog::save_data_info_dialog(SaveDataEntry save, QWidget* parent)
+	: QDialog(parent)
+	, m_entry(std::move(save))
 {
 	setWindowTitle(tr("Save Data Information"));
 
@@ -42,21 +43,21 @@ save_data_info_dialog::save_data_info_dialog(const SaveDataEntry& save, QWidget*
 	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
 
-	QSize tableSize = QSize
+	const QSize table_size
 	(
 		m_list->verticalHeader()->width() + m_list->horizontalHeader()->length() + m_list->frameWidth() * 2,
 		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2
 	);
 
 	// no minimum size needed because we always have same table size and row count
-	resize(sizeHint() - m_list->sizeHint() + tableSize);
+	resize(sizeHint() - m_list->sizeHint() + table_size);
 }
 
 //This is intended to write the information of save data to QTableView.
 void save_data_info_dialog::UpdateData()
 {
 	m_list->clearContents();
-	int num_entries = 4; // set this to number of members in struct
+	const int num_entries = 4; // set this to number of members in struct
 	m_list->setRowCount(num_entries);
 
 	//Maybe there should be more details of save data.

@@ -9,8 +9,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/RawSPUThread.h"
-#include "Emu/Cell/SPUThread.h"
 
 #ifdef _WIN32
 #include <WinSock2.h>
@@ -29,7 +27,6 @@
 #include <sys/un.h> // sockaddr_un
 #endif
 
-#include <algorithm>
 #include <regex>
 #include <charconv>
 
@@ -205,11 +202,11 @@ void gdb_thread::start_server()
 	GDB.notice("Started listening on Unix socket '%s'.", sname);
 }
 
-int gdb_thread::read(void* buf, int cnt)
+int gdb_thread::read(void* buf, int cnt) const
 {
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		int result = recv(client_socket, reinterpret_cast<char*>(buf), cnt, 0);
+		const int result = recv(client_socket, static_cast<char*>(buf), cnt, 0);
 
 		if (result == -1)
 		{
@@ -313,7 +310,7 @@ bool gdb_thread::read_cmd(gdb_cmd& out_cmd)
 	}
 }
 
-void gdb_thread::send(const char* buf, int cnt)
+void gdb_thread::send(const char* buf, int cnt) const
 {
 	GDB.trace("Sending %s (%d bytes).", buf, cnt);
 
@@ -554,7 +551,7 @@ bool gdb_thread::cmd_thread_info(gdb_cmd&)
 	//todo: this may exceed max command length
 	result = "m" + result + "l";
 
-	return send_cmd_ack(result);;
+	return send_cmd_ack(result);
 }
 
 bool gdb_thread::cmd_current_thread(gdb_cmd&)
@@ -892,7 +889,8 @@ void gdb_thread::operator()()
 				PROCESS_CMD("Z", cmd_set_breakpoint);
 
 				GDB.trace("Unsupported command received: '%s'.", cmd.cmd);
-				if (!send_cmd_ack("")) {
+				if (!send_cmd_ack(""))
+				{
 					break;
 				}
 			}

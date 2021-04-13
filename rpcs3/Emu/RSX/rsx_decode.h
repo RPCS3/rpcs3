@@ -4,7 +4,6 @@
 #include "Utilities/BitField.h"
 #include "Utilities/StrFmt.h"
 #include <tuple>
-#include <climits>
 #include <algorithm>
 #include "gcm_enums.h"
 #include "rsx_utils.h"

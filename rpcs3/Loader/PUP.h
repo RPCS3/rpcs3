@@ -46,13 +46,13 @@ enum class pup_error : u32
 
 class pup_object
 {
-	fs::file m_file;
+	fs::file m_file{};
 
 	pup_error m_error{};
-	std::string m_formatted_error;
+	std::string m_formatted_error{};
 
-	std::vector<PUPFileEntry> m_file_tbl;
-	std::vector<PUPHashEntry> m_hash_tbl;
+	std::vector<PUPFileEntry> m_file_tbl{};
+	std::vector<PUPHashEntry> m_hash_tbl{};
 
 	pup_error validate_hashes();
 

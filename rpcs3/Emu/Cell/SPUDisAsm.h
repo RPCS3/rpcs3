@@ -96,8 +96,7 @@ private:
 		}
 	}
 
-private:
-	std::string& FixOp(std::string& op)
+	std::string& FixOp(std::string& op) const
 	{
 		if (m_mode != cpu_disasm_mode::normal)
 		{

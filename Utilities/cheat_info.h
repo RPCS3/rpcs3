@@ -21,11 +21,11 @@ constexpr u8 cheat_type_max = static_cast<u8>(cheat_type::max);
 
 struct cheat_info
 {
-	std::string game;
-	std::string description;
+	std::string game{};
+	std::string description{};
 	cheat_type type = cheat_type::max;
 	u32 offset{};
-	std::string red_script;
+	std::string red_script{};
 
 	bool from_str(const std::string& cheat_line);
 	std::string to_str() const;

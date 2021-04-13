@@ -3,7 +3,6 @@
 
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
-#include "Emu/Cell/lv2/sys_mutex.h"
 #include "Emu/Cell/lv2/sys_cond.h"
 #include "sysPrxForUser.h"
 
@@ -100,7 +99,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 	}
 
 	// if locking succeeded
-	lwmutex->lock_var.atomic_op([](typename sys_lwmutex_t::sync_var_t& var)
+	lwmutex->lock_var.atomic_op([](sys_lwmutex_t::sync_var_t& var)
 	{
 		var.waiter++;
 		var.owner = lwmutex_reserved;
@@ -114,7 +113,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 			return 0;
 		}
 
-		lwmutex->lock_var.atomic_op([&](typename sys_lwmutex_t::sync_var_t& var)
+		lwmutex->lock_var.atomic_op([&](sys_lwmutex_t::sync_var_t& var)
 		{
 			var.waiter--;
 			var.owner = ppu.id;
@@ -253,7 +252,7 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 	}
 
 	// if locking succeeded
-	lwmutex->lock_var.atomic_op([](typename sys_lwmutex_t::sync_var_t& var)
+	lwmutex->lock_var.atomic_op([](sys_lwmutex_t::sync_var_t& var)
 	{
 		var.waiter++;
 		var.owner = lwmutex_reserved;
@@ -267,7 +266,7 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 			return 0;
 		}
 
-		lwmutex->lock_var.atomic_op([&](typename sys_lwmutex_t::sync_var_t& var)
+		lwmutex->lock_var.atomic_op([&](sys_lwmutex_t::sync_var_t& var)
 		{
 			var.waiter--;
 			var.owner = ppu.id;

@@ -6,7 +6,7 @@ namespace utils
 {
 	class cpu_stats
 	{
-		u64 m_last_cpu, m_sys_cpu, m_usr_cpu;
+		u64 m_last_cpu = 0, m_sys_cpu = 0, m_usr_cpu = 0;
 
 	public:
 		cpu_stats();

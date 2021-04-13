@@ -772,7 +772,7 @@ struct alignas(128) CellSpurs
 		}
 	}
 
-	u8 wklStatus(u32 wid)
+	u8 wklStatus(u32 wid) const
 	{
 		if (wid & 0x10)
 		{

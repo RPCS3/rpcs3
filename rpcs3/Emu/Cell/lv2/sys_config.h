@@ -146,9 +146,9 @@ public:
 	{
 		reader_lock lock(m_mutex);
 
-		auto it = events.find(id);
+		const auto it = events.find(id);
 
-		if (it == events.end())
+		if (it == events.cend())
 			return nullptr;
 
 		if (auto event = it->second.lock())
@@ -270,7 +270,7 @@ public:
 
 	// Utilities
 	usz get_size() const { return sizeof(sys_config_service_event_t)-1 + data.size(); }
-	std::shared_ptr<lv2_config_service> get_shared_ptr () const { return wkptr.lock(); };
+	std::shared_ptr<lv2_config_service> get_shared_ptr () const { return wkptr.lock(); }
 	u32 get_id() const { return idm_id; }
 };
 
@@ -327,7 +327,7 @@ public:
 	}
 
 	// Check whether service matches
-	bool check_service(const lv2_config_service& service);
+	bool check_service(const lv2_config_service& service) const;
 
 	// Register new event, and notify queue
 	bool notify(const std::shared_ptr<lv2_config_service>& service);
@@ -337,7 +337,7 @@ public:
 
 	// Utilities
 	u32 get_id() const { return idm_id; }
-	std::shared_ptr<lv2_config_service_listener> get_shared_ptr() const { return wkptr.lock(); };
+	std::shared_ptr<lv2_config_service_listener> get_shared_ptr() const { return wkptr.lock(); }
 };
 
 /*
@@ -403,7 +403,7 @@ public:
 	bool notify() const;
 
 	// Write event to buffer
-	void write(sys_config_service_event_t *dst);
+	void write(sys_config_service_event_t *dst) const;
 
 	// Check if the buffer can fit the current event, return false otherwise
 	bool check_buffer_size(usz size) const { return service->get_size() <= size; }

@@ -63,7 +63,6 @@ bool statichle_handler::load_patterns()
 
 		auto char_to_u8 = [&](u8 char1, u8 char2) -> u16
 		{
-			u8 hv, lv;
 			if (char1 == '.' && char2 == '.')
 				return 0xFFFF;
 
@@ -73,8 +72,8 @@ bool statichle_handler::load_patterns()
 				return -1;
 			}
 
-			hv = char1 > '9' ? char1 - 'A' + 10 : char1 - '0';
-			lv = char2 > '9' ? char2 - 'A' + 10 : char2 - '0';
+			const u8 hv = char1 > '9' ? char1 - 'A' + 10 : char1 - '0';
+			const u8 lv = char2 > '9' ? char2 - 'A' + 10 : char2 - '0';
 
 			return (hv << 4) | lv;
 		};
@@ -101,7 +100,6 @@ bool statichle_handler::load_patterns()
 
 u16 statichle_handler::gen_CRC16(const u8* data_p, usz length)
 {
-	unsigned char i;
 	unsigned int data;
 
 	if (length == 0)
@@ -110,7 +108,7 @@ u16 statichle_handler::gen_CRC16(const u8* data_p, usz length)
 	do
 	{
 		data = *data_p++;
-		for (i = 0; i < 8; i++)
+		for (unsigned char i = 0; i < 8; i++)
 		{
 			if ((crc ^ data) & 1)
 				crc = (crc >> 1) ^ POLY;

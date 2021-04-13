@@ -662,7 +662,7 @@ namespace rsx
 			}
 		}
 
-		std::u32string osk_dialog::get_placeholder()
+		std::u32string osk_dialog::get_placeholder() const
 		{
 			const localized_string_id id = m_password_mode
 				? localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ENTER_PASSWORD

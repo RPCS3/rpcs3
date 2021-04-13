@@ -2,7 +2,7 @@
 
 #include "util/types.hpp"
 #include "util/logs.hpp"
-#include "util/atomic.hpp"
+#include "util/sysinfo.hpp"
 
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
@@ -33,21 +33,17 @@
 
 LOG_CHANNEL(sys_log, "SYS");
 
-/** Emu.Init() wrapper for user manager */
-bool main_application::InitializeEmulator(const std::string& user, bool force_init, bool show_gui)
+/** Emu.Init() wrapper for user management */
+void main_application::InitializeEmulator(const std::string& user, bool show_gui)
 {
 	Emu.SetHasGui(show_gui);
+	Emu.SetUsr(user);
+	Emu.Init();
 
-	// try to set a new user
-	const bool user_was_set = Emu.SetUsr(user);
-
-	// only init the emulation if forced or a user was set
-	if (user_was_set || force_init)
-	{
-		Emu.Init();
-	}
-
-	return user_was_set;
+	// Log Firmware Version after Emu was initialized
+	const std::string firmware_version = utils::get_firmware_version();
+	const std::string firmware_string  = firmware_version.empty() ? "Missing Firmware" : ("Firmware version: " + firmware_version);
+	sys_log.always("%s", firmware_string);
 }
 
 /** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here. */
@@ -57,7 +53,7 @@ EmuCallbacks main_application::CreateCallbacks()
 
 	callbacks.init_kb_handler = [this]()
 	{
-		switch (keyboard_handler type = g_cfg.io.keyboard)
+		switch (g_cfg.io.keyboard.get())
 		{
 		case keyboard_handler::null:
 		{
@@ -71,13 +67,12 @@ EmuCallbacks main_application::CreateCallbacks()
 			ret->SetTargetWindow(m_game_window);
 			break;
 		}
-		default: fmt::throw_exception("Invalid keyboard handler: %s", type);
 		}
 	};
 
 	callbacks.init_mouse_handler = [this]()
 	{
-		switch (mouse_handler type = g_cfg.io.mouse)
+		switch (g_cfg.io.mouse.get())
 		{
 		case mouse_handler::null:
 		{
@@ -99,7 +94,6 @@ EmuCallbacks main_application::CreateCallbacks()
 			ret->SetTargetWindow(m_game_window);
 			break;
 		}
-		default: fmt::throw_exception("Invalid mouse handler: %s", type);
 		}
 	};
 
@@ -111,7 +105,7 @@ EmuCallbacks main_application::CreateCallbacks()
 	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>
 	{
 		std::shared_ptr<AudioBackend> result;
-		switch (audio_renderer type = g_cfg.audio.renderer)
+		switch (g_cfg.audio.renderer.get())
 		{
 		case audio_renderer::null: result = std::make_shared<NullAudioBackend>(); break;
 #ifdef _WIN32
@@ -128,7 +122,6 @@ EmuCallbacks main_application::CreateCallbacks()
 #ifdef HAVE_FAUDIO
 		case audio_renderer::faudio: result = std::make_shared<FAudioBackend>(); break;
 #endif
-		default: fmt::throw_exception("Invalid audio renderer: %s", type);
 		}
 
 		if (!result->Initialized())

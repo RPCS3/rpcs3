@@ -113,6 +113,7 @@ namespace rsx
 							case CELL_PAD_CTRL_START:
 								button_id = pad_button::start;
 								break;
+							default: break;
 							}
 						}
 						else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
@@ -143,6 +144,7 @@ namespace rsx
 							case CELL_PAD_CTRL_R2:
 								button_id = pad_button::R2;
 								break;
+							default: break;
 							}
 						}
 
@@ -218,17 +220,11 @@ namespace rsx
 			// NOTE: Object removal should be the last step
 			if (auto& manager = g_fxo->get<display_manager>(); g_fxo->is_init<display_manager>())
 			{
-				if (auto dlg = manager.get<rsx::overlays::message_dialog>())
-				{
-					if (dlg->progress_bar_count())
-						Emu.GetCallbacks().handle_taskbar_progress(0, 1);
-				}
-
 				manager.remove(uid);
 			}
 		}
 
-		void overlay::refresh()
+		void overlay::refresh() const
 		{
 			if (auto rsxthr = rsx::get_current_renderer())
 			{

@@ -115,7 +115,7 @@ void lv2_config::remove_service_event(u32 id)
 
 
 // LV2 Config Service Listener
-bool lv2_config_service_listener::check_service(const lv2_config_service& service)
+bool lv2_config_service_listener::check_service(const lv2_config_service& service) const
 {
 	// Filter by type
 	if (type == SYS_CONFIG_SERVICE_LISTENER_ONCE && !service_events.empty())
@@ -152,7 +152,7 @@ bool lv2_config_service_listener::notify(const std::shared_ptr<lv2_config_servic
 		return false;
 
 	// Create service event and notify queue!
-	auto event = lv2_config_service_event::create(handle, service, *this);
+	const auto event = lv2_config_service_event::create(handle, service, *this);
 	return notify(event);
 }
 
@@ -216,7 +216,7 @@ void lv2_config_service::notify() const
 
 bool lv2_config_service_event::notify() const
 {
-	auto _handle = handle.lock();
+	const auto _handle = handle.lock();
 	if (!_handle)
 	{
 		return false;
@@ -228,9 +228,9 @@ bool lv2_config_service_event::notify() const
 
 
 // LV2 Config Service Event
-void lv2_config_service_event::write(sys_config_service_event_t *dst)
+void lv2_config_service_event::write(sys_config_service_event_t *dst) const
 {
-	auto registered = service->is_registered();
+	const auto registered = service->is_registered();
 
 	dst->service_listener_handle = listener.get_id();
 	dst->registered = registered;
@@ -242,7 +242,7 @@ void lv2_config_service_event::write(sys_config_service_event_t *dst)
 		dst->verbosity = service->verbosity;
 		dst->padding = service->padding;
 
-		auto size = service->data.size();
+		const auto size = service->data.size();
 		dst->data_size = static_cast<u32>(size);
 		memcpy(dst->data, service->data.data(), size);
 	}
@@ -390,7 +390,7 @@ error_code sys_config_register_service(u32 config_hdl, sys_config_service_id ser
 	}
 
 	// Create service
-	auto service = lv2_config_service::create(service_id, user_id, verbosity, 0, data_buf.get_ptr(), size);
+	const auto service = lv2_config_service::create(service_id, user_id, verbosity, 0, data_buf.get_ptr(), size);
 	if (!service)
 	{
 		return CELL_EAGAIN;

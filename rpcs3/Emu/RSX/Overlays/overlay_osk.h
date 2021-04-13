@@ -104,7 +104,7 @@ namespace rsx
 			void on_backspace(const std::u32string&);
 			void on_enter(const std::u32string&);
 
-			std::u32string get_placeholder();
+			std::u32string get_placeholder() const;
 
 			std::pair<u32, u32> get_cell_geometry(u32 index);
 

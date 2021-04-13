@@ -2,7 +2,6 @@
 #include "breakpoint_handler.h"
 
 #include "Emu/CPU/CPUDisAsm.h"
-#include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
 
 #include <QMenu>
@@ -39,7 +38,7 @@ void breakpoint_list::ClearBreakpoints()
 	while (count())
 	{
 		auto* currentItem = takeItem(0);
-		u32 loc = currentItem->data(Qt::UserRole).value<u32>();
+		const u32 loc = currentItem->data(Qt::UserRole).value<u32>();
 		m_breakpoint_handler->RemoveBreakpoint(loc);
 		delete currentItem;
 	}

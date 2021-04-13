@@ -204,7 +204,7 @@ std::shared_ptr<PadDevice> hid_pad_handler<Device>::get_device(const std::string
 }
 
 template <class Device>
-u32 hid_pad_handler<Device>::get_battery_color(u8 battery_level, int brightness) const
+u32 hid_pad_handler<Device>::get_battery_color(u8 battery_level, int brightness)
 {
 	static const std::array<u32, 12> battery_level_clr = {0xff00, 0xff33, 0xff66, 0xff99, 0xffcc, 0xffff, 0xccff, 0x99ff, 0x66ff, 0x33ff, 0x00ff, 0x00ff};
 

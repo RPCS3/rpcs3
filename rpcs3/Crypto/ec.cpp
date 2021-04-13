@@ -120,7 +120,7 @@ static void bn_mon_muladd_dig(u8* d, u8* a, u8 b, u8* N, u32 n)
 	u32 dig;
 	u32 i;
 
-	u8 z = -(d[n - 1] + a[n - 1] * b) * inv256[N[n - 1] / 2];
+	const u8 z = -(d[n - 1] + a[n - 1] * b) * inv256[N[n - 1] / 2];
 
 	dig = d[n - 1] + a[n - 1] * b + N[n - 1] * z;
 	dig >>= 8;

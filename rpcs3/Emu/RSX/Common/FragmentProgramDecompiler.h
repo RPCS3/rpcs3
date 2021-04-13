@@ -93,7 +93,7 @@ struct temp_register
 		return false;
 	}
 
-	std::string gather_r()
+	std::string gather_r() const
 	{
 		std::string h0 = "h" + std::to_string(real_index << 1);
 		std::string h1 = "h" + std::to_string(real_index << 1 | 1);
@@ -157,7 +157,7 @@ class FragmentProgramDecompiler
 
 	std::array<temp_register, 64> temp_registers;
 
-	std::string GetMask();
+	std::string GetMask() const;
 
 	void SetDst(std::string code, u32 flags = 0);
 	void AddCode(const std::string& code);
@@ -181,7 +181,7 @@ class FragmentProgramDecompiler
 	/**
 	* Returns true if the dst set is not a vector (i.e only a single component)
 	*/
-	bool DstExpectsSca();
+	bool DstExpectsSca() const;
 
 	void AddCodeCond(const std::string& lhs, const std::string& rhs);
 	std::string GetRawCond();
@@ -189,7 +189,7 @@ class FragmentProgramDecompiler
 	template<typename T> std::string GetSRC(T src);
 	std::string BuildCode();
 
-	u32 GetData(const u32 d) const { return d << 16 | d >> 16; }
+	static u32 GetData(const u32 d) { return d << 16 | d >> 16; }
 
 	/**
 	 * Emits code if opcode is an SCT/SCB one and returns true,

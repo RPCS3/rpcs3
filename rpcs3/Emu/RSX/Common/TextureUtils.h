@@ -161,6 +161,7 @@ namespace rsx
 	u8 get_format_block_size_in_bytes(rsx::surface_color_format format);
 	u8 get_format_block_size_in_bytes(rsx::surface_depth_format2 format);
 
+	bool is_compressed_host_format(u32 format); // Returns true for host-compressed formats (DXT)
 	u8 get_format_sample_count(rsx::surface_antialiasing antialias);
 	u32 get_max_depth_value(rsx::surface_depth_format2 format);
 	bool is_depth_stencil_format(rsx::surface_depth_format2 format);

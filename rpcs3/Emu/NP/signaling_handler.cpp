@@ -2,10 +2,8 @@
 #include "Emu/Cell/PPUModule.h"
 #include "signaling_handler.h"
 #include "Emu/IdManager.h"
-#include "Emu/System.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "np_handler.h"
-#include <queue>
 
 #ifdef _WIN32
 #include <winsock2.h>
@@ -32,6 +30,7 @@ void fmt_class_string<SignalingCommand>::format(std::string& out, u64 arg)
 		case signal_confirm: return "CONFIRM";
 		case signal_finished: return "FINISHED";
 		case signal_finished_ack: return "FINISHED_ACK";
+		default: break;
 		}
 
 		return unknown;
@@ -82,7 +81,7 @@ void signaling_handler::signal_sig_callback(u32 conn_id, int event)
 	signal_ext_sig_callback(conn_id, event);
 }
 
-void signaling_handler::signal_ext_sig_callback(u32 conn_id, int event)
+void signaling_handler::signal_ext_sig_callback(u32 conn_id, int event) const
 {
 	if (sig_ext_cb)
 	{
@@ -95,7 +94,7 @@ void signaling_handler::signal_ext_sig_callback(u32 conn_id, int event)
 	}
 }
 
-void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event)
+void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event) const
 {
 	// Signal the callback
 	if (sig2_cb)
@@ -317,7 +316,7 @@ void signaling_handler::operator()()
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		std::unique_lock<std::mutex> lock(data_mutex);
-		if (qpackets.size())
+		if (!qpackets.empty())
 			wakey.wait_until(lock, qpackets.begin()->first);
 		else
 			wakey.wait(lock);
@@ -444,10 +443,10 @@ void signaling_handler::set_self_sig2_info(u64 room_id, u16 member_id)
 	sig2_packet.V2.member_id = member_id;
 }
 
-void signaling_handler::send_signaling_packet(signaling_packet& sp, u32 addr, u16 port)
+void signaling_handler::send_signaling_packet(signaling_packet& sp, u32 addr, u16 port) const
 {
 	std::vector<u8> packet(sizeof(signaling_packet) + sizeof(u16));
-	reinterpret_cast<le_t<u16>&>(packet.data()[0]) = 65535;
+	reinterpret_cast<le_t<u16>&>(packet[0]) = 65535;
 	memcpy(packet.data() + sizeof(u16), &sp, sizeof(signaling_packet));
 
 	sockaddr_in dest;
@@ -467,7 +466,7 @@ void signaling_handler::send_signaling_packet(signaling_packet& sp, u32 addr, u1
 void signaling_handler::queue_signaling_packet(signaling_packet& sp, std::shared_ptr<signaling_info> si, steady_clock::time_point wakeup_time)
 {
 	queued_packet qp;
-	qp.sig_info = si;
+	qp.sig_info = std::move(si);
 	qp.packet   = sp;
 	qpackets.emplace(wakeup_time, std::move(qp));
 }

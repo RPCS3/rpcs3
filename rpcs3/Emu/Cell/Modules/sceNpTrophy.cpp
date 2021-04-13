@@ -18,7 +18,6 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_fs.h"
 
-#include <cmath>
 #include <shared_mutex>
 #include "util/asm.hpp"
 
@@ -827,6 +826,7 @@ error_code sceNpTrophyGetGameInfo(u32 context, u32 handle, vm::ptr<SceNpTrophyGa
 					case 'S': data->unlockedSilver++;   break;
 					case 'G': data->unlockedGold++;     break;
 					case 'P': data->unlockedPlatinum++; break;
+					default: break;
 					}
 				}
 			}
@@ -1038,6 +1038,7 @@ static error_code NpTrophyGetTrophyInfo(const trophy_context_t* ctxt, s32 trophy
 				case 'S': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   break;
 				case 'G': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     break;
 				case 'P': tmp_details.trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; break;
+				default: break;
 				}
 
 				for (std::shared_ptr<rXmlNode> n2 = n->GetChildren(); n2; n2 = n2->GetNext())

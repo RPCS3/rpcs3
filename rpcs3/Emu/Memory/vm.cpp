@@ -3,13 +3,11 @@
 #include "vm_ptr.h"
 #include "vm_ref.h"
 #include "vm_reservation.h"
-#include "vm_var.h"
 
 #include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
 #include "Utilities/address_range.h"
 #include "Emu/CPU/CPUThread.h"
-#include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPURecompiler.h"
 #include "Emu/perf_meter.hpp"
@@ -632,7 +630,7 @@ namespace vm
 		});
 	}
 
-	void reservation_escape_internal()
+	[[noreturn]] void reservation_escape_internal()
 	{
 		const auto _cpu = get_current_cpu_thread();
 
@@ -1045,7 +1043,7 @@ namespace vm
 	// Mapped regions: addr -> shm handle
 	constexpr auto block_map = &auto_typemap<block_t>::get<std::map<u32, std::pair<u32, std::shared_ptr<utils::shm>>>>;
 
-	bool block_t::try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&& shm)
+	bool block_t::try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&& shm) const
 	{
 		// Check if memory area is already mapped
 		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
@@ -1056,10 +1054,10 @@ namespace vm
 			}
 		}
 
-		const u32 page_addr = addr + (this->flags & 0x10 ? 0x1000 : 0);
-		const u32 page_size = size - (this->flags & 0x10 ? 0x2000 : 0);
+		const u32 page_addr = addr + (this->flags & stack_guarded ? 0x1000 : 0);
+		const u32 page_size = size - (this->flags & stack_guarded ? 0x2000 : 0);
 
-		if (this->flags & 0x10)
+		if (this->flags & stack_guarded)
 		{
 			// Mark overflow/underflow guard pages as allocated
 			ensure(!g_pages[addr / 4096].exchange(page_allocated));
@@ -1074,7 +1072,7 @@ namespace vm
 			std::remove_reference_t<decltype(map)>::value_type* result = nullptr;
 
 			// Check eligibility
-			if (!_this || !(SYS_MEMORY_PAGE_SIZE_MASK & _this->flags) || _this->addr < 0x20000000 || _this->addr >= 0xC0000000)
+			if (!_this || !(page_size_mask & _this->flags) || _this->addr < 0x20000000 || _this->addr >= 0xC0000000)
 			{
 				return result;
 			}
@@ -1092,7 +1090,7 @@ namespace vm
 		});
 
 		// Fill stack guards with STACKGRD
-		if (this->flags & 0x10)
+		if (this->flags & stack_guarded)
 		{
 			auto fill64 = [](u8* ptr, u64 data, usz count)
 			{
@@ -1122,7 +1120,7 @@ namespace vm
 		, size(size)
 		, flags(flags)
 	{
-		if (flags & 0x100 || flags & 0x20)
+		if (flags & page_size_4k || flags & preallocated)
 		{
 			// Special path for whole-allocated areas allowing 4k granularity
 			m_common = std::make_shared<utils::shm>(size);
@@ -1164,10 +1162,10 @@ namespace vm
 		}
 
 		// Determine minimal alignment
-		const u32 min_page_size = flags & 0x100 ? 0x1000 : 0x10000;
+		const u32 min_page_size = flags & page_size_4k ? 0x1000 : 0x10000;
 
 		// Align to minimal page size
-		const u32 size = utils::align(orig_size, min_page_size) + (flags & 0x10 ? 0x2000 : 0);
+		const u32 size = utils::align(orig_size, min_page_size) + (flags & stack_guarded ? 0x2000 : 0);
 
 		// Check alignment (it's page allocation, so passing small values there is just silly)
 		if (align < min_page_size || align != (0x80000000u >> std::countl_zero(align)))
@@ -1181,13 +1179,13 @@ namespace vm
 			return 0;
 		}
 
-		u8 pflags = flags & 0x1000 ? 0 : page_readable | page_writable;
+		u8 pflags = flags & page_hidden ? 0 : page_readable | page_writable;
 
-		if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
+		if ((flags & page_size_64k) == page_size_64k)
 		{
 			pflags |= page_64k_size;
 		}
-		else if (!(flags & (SYS_MEMORY_PAGE_SIZE_MASK & ~SYS_MEMORY_PAGE_SIZE_1M)))
+		else if (!(flags & (page_size_mask & ~page_size_1m)))
 		{
 			pflags |= page_1m_size;
 		}
@@ -1211,7 +1209,7 @@ namespace vm
 		{
 			if (try_alloc(addr, pflags, size, std::move(shm)))
 			{
-				return addr + (flags & 0x10 ? 0x1000 : 0);
+				return addr + (flags & stack_guarded ? 0x1000 : 0);
 			}
 		}
 
@@ -1227,7 +1225,7 @@ namespace vm
 		}
 
 		// Determine minimal alignment
-		const u32 min_page_size = flags & 0x100 ? 0x1000 : 0x10000;
+		const u32 min_page_size = flags & page_size_4k ? 0x1000 : 0x10000;
 
 		// Take address misalignment into account
 		const u32 size0 = orig_size + addr % min_page_size;
@@ -1235,10 +1233,15 @@ namespace vm
 		// Align to minimal page size
 		const u32 size = utils::align(size0, min_page_size);
 
-		// return if addr or size is invalid
+		// Return if addr or size is invalid
 		// If shared memory is provided, addr/size must be aligned
-		if (!size || addr < this->addr || orig_size > size0 || orig_size > size ||
-			(addr - addr % min_page_size) + u64{size} > this->addr + u64{this->size} || (src && (orig_size | addr) % min_page_size) || flags & 0x10)
+		if (!size ||
+			addr < this->addr ||
+			orig_size > size0 ||
+			orig_size > size ||
+			(addr - addr % min_page_size) + u64{size} > this->addr + u64{this->size} ||
+			(src && (orig_size | addr) % min_page_size) ||
+			flags & stack_guarded)
 		{
 			return 0;
 		}
@@ -1246,13 +1249,13 @@ namespace vm
 		// Force aligned address
 		addr -= addr % min_page_size;
 
-		u8 pflags = flags & 0x1000 ? 0 : page_readable | page_writable;
+		u8 pflags = flags & page_hidden ? 0 : page_readable | page_writable;
 
-		if ((flags & SYS_MEMORY_PAGE_SIZE_64K) == SYS_MEMORY_PAGE_SIZE_64K)
+		if ((flags & page_size_64k) == page_size_64k)
 		{
 			pflags |= page_64k_size;
 		}
-		else if (!(flags & (SYS_MEMORY_PAGE_SIZE_MASK & ~SYS_MEMORY_PAGE_SIZE_1M)))
+		else if (!(flags & (page_size_mask & ~page_size_1m)))
 		{
 			pflags |= page_1m_size;
 		}
@@ -1279,13 +1282,13 @@ namespace vm
 		return addr;
 	}
 
-	u32 block_t::dealloc(u32 addr, const std::shared_ptr<utils::shm>* src)
+	u32 block_t::dealloc(u32 addr, const std::shared_ptr<utils::shm>* src) const
 	{
 		auto& m_map = (m.*block_map)();
 		{
 			vm::writer_lock lock(0);
 
-			const auto found = m_map.find(addr - (flags & 0x10 ? 0x1000 : 0));
+			const auto found = m_map.find(addr - (flags & stack_guarded ? 0x1000 : 0));
 
 			if (found == m_map.end())
 			{
@@ -1298,9 +1301,9 @@ namespace vm
 			}
 
 			// Get allocation size
-			const auto size = found->second.first - (flags & 0x10 ? 0x2000 : 0);
+			const auto size = found->second.first - (flags & stack_guarded ? 0x2000 : 0);
 
-			if (flags & 0x10)
+			if (flags & stack_guarded)
 			{
 				// Clear guard pages
 				ensure(g_pages[addr / 4096 - 1].exchange(0) == page_allocated);
@@ -1311,7 +1314,7 @@ namespace vm
 			ensure(size == _page_unmap(addr, size, found->second.second.get()));
 
 			// Clear stack guards
-			if (flags & 0x10)
+			if (flags & stack_guarded)
 			{
 				std::memset(g_sudo_addr + addr - 4096, 0, 4096);
 				std::memset(g_sudo_addr + addr + size, 0, 4096);
@@ -1324,7 +1327,7 @@ namespace vm
 		}
 	}
 
-	std::pair<u32, std::shared_ptr<utils::shm>> block_t::peek(u32 addr, u32 size)
+	std::pair<u32, std::shared_ptr<utils::shm>> block_t::peek(u32 addr, u32 size) const
 	{
 		if (addr < this->addr || addr + u64{size} > this->addr + u64{this->size})
 		{
@@ -1365,13 +1368,13 @@ namespace vm
 		return {found->first, found->second.second};
 	}
 
-	u32 block_t::imp_used(const vm::writer_lock&)
+	u32 block_t::imp_used(const vm::writer_lock&) const
 	{
 		u32 result = 0;
 
 		for (auto& entry : (m.*block_map)())
 		{
-			result += entry.second.first - (flags & 0x10 ? 0x2000 : 0);
+			result += entry.second.first - (flags & stack_guarded ? 0x2000 : 0);
 		}
 
 		return result;
@@ -1515,12 +1518,12 @@ namespace vm
 		{
 			if (*it && (*it)->addr == addr)
 			{
-				if (must_be_empty && (*it)->flags & 0x3)
+				if (must_be_empty && (*it)->flags & bf0_mask)
 				{
 					continue;
 				}
 
-				if (!must_be_empty && ((*it)->flags & 0x3) != 2)
+				if (!must_be_empty && ((*it)->flags & bf0_mask) != bf0_0x2)
 				{
 					continue;
 				}
@@ -1641,13 +1644,13 @@ namespace vm
 
 			g_locations =
 			{
-				std::make_shared<block_t>(0x00010000, 0x1FFF0000, 0x220), // main
-				std::make_shared<block_t>(0x20000000, 0x10000000, 0x201), // user 64k pages
-				nullptr, // user 1m pages
-				nullptr, // rsx context
-				std::make_shared<block_t>(0xC0000000, 0x10000000, 0x220), // video
-				std::make_shared<block_t>(0xD0000000, 0x10000000, 0x131), // stack
-				std::make_shared<block_t>(0xE0000000, 0x20000000, 0x200), // SPU reserved
+				std::make_shared<block_t>(0x00010000, 0x1FFF0000, page_size_64k | preallocated), // main
+				std::make_shared<block_t>(0x20000000, 0x10000000, page_size_64k | bf0_0x1),		 // user 64k pages
+				nullptr,                                                                         // user 1m pages
+				nullptr,                                                                         // rsx context
+				std::make_shared<block_t>(0xC0000000, 0x10000000, page_size_64k | preallocated), // video
+				std::make_shared<block_t>(0xD0000000, 0x10000000, page_size_4k  | preallocated | stack_guarded | bf0_0x1), // stack
+				std::make_shared<block_t>(0xE0000000, 0x20000000, page_size_64k),                // SPU reserved
 			};
 
 			std::memset(g_reservations, 0, sizeof(g_reservations));

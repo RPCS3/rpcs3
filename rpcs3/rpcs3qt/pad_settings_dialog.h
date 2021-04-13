@@ -3,7 +3,6 @@
 #include <QButtonGroup>
 #include <QDialog>
 #include <QLabel>
-#include <QTabWidget>
 #include <QTimer>
 
 #include "Emu/Io/pad_config.h"
@@ -99,7 +98,7 @@ private Q_SLOTS:
 	void OnTabChanged(int index);
 	void RefreshInputTypes();
 	void ChangeInputType();
-	void HandleDeviceClassChange(int index);
+	void HandleDeviceClassChange(int index) const;
 	/** Save the Pad Configuration to the current Pad Handler Config File */
 	void SaveProfile();
 
@@ -177,9 +176,9 @@ private:
 	void ChangeProfile();
 
 	/** Repaints a stick deadzone preview label */
-	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier);
+	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier) const;
 
-	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
+	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type) const;
 
 	QString GetLocalizedPadHandler(const QString& original, pad_handler handler);
 

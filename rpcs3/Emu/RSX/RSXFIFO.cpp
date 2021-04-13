@@ -15,7 +15,7 @@ namespace rsx
 			m_iotable = &pctrl->iomap_table;
 		}
 
-		void FIFO_control::sync_get()
+		void FIFO_control::sync_get() const
 		{
 			m_ctrl->get.release(m_internal_get);
 		}
@@ -38,7 +38,7 @@ namespace rsx
 		}
 
 		template <bool full>
-		inline u32 FIFO_control::read_put()
+		inline u32 FIFO_control::read_put() const
 		{
 			if constexpr (!full)
 			{

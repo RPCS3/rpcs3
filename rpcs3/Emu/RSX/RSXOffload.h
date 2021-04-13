@@ -20,13 +20,13 @@ namespace rsx
 
 		struct transport_packet
 		{
-			op type;
-			std::vector<u8> opt_storage;
-			void *src;
-			void *dst;
-			u32 length;
-			u32 aux_param0;
-			u32 aux_param1;
+			op type{};
+			std::vector<u8> opt_storage{};
+			void* src{};
+			void* dst{};
+			u32 length{};
+			u32 aux_param0{};
+			u32 aux_param1{};
 
 			transport_packet(void *_dst, void *_src, u32 len)
 				: type(op::raw_copy), src(_src), dst(_dst), length(len)
@@ -57,24 +57,24 @@ namespace rsx
 		void init();
 
 		// General tranport
-		void copy(void *dst, std::vector<u8>& src, u32 length);
-		void copy(void *dst, void *src, u32 length);
+		void copy(void *dst, std::vector<u8>& src, u32 length) const;
+		void copy(void *dst, void *src, u32 length) const;
 
 		// Vertex utilities
-		void emulate_as_indexed(void *dst, rsx::primitive_type primitive, u32 count);
+		static void emulate_as_indexed(void *dst, rsx::primitive_type primitive, u32 count);
 
 		// Renderer callback
-		void backend_ctrl(u32 request_code, void* args);
+		static void backend_ctrl(u32 request_code, void* args);
 
 		// Synchronization
-		bool is_current_thread() const;
-		bool sync();
+		static bool is_current_thread();
+		bool sync() const;
 		void join();
 		void set_mem_fault_flag();
 		void clear_mem_fault_flag();
 
 		// Fault recovery
-		utils::address_range get_fault_range(bool writing) const;
+		static utils::address_range get_fault_range(bool writing);
 
 		struct offload_thread;
 	};

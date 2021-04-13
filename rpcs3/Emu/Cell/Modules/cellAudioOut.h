@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Emu/Memory/vm_ptr.h"
-
 // Error codes
 enum CellAudioOutError
 {

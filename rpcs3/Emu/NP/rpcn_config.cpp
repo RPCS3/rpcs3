@@ -70,7 +70,7 @@ std::string cfg_rpcn::get_host() const
 std::string cfg_rpcn::get_npid()
 {
 	std::string final_npid = npid.to_string();
-	if (final_npid == "")
+	if (final_npid.empty())
 	{
 		final_npid = cfg_rpcn::generate_npid();
 		save();

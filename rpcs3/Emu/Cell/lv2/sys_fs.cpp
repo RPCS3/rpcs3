@@ -297,6 +297,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 	case CELL_FS_O_RDONLY: open_mode += fs::read; break;
 	case CELL_FS_O_WRONLY: open_mode += fs::write; break;
 	case CELL_FS_O_RDWR: open_mode += fs::read + fs::write; break;
+	default: break;
 	}
 
 	if (mp->flags & lv2_mp_flag::read_only)
@@ -777,11 +778,11 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 
 	std::lock_guard lock(mp->mutex);
 
-	fs::dir dir(local_path);
+	const fs::dir dir(local_path);
 
 	if (!dir)
 	{
-		switch (auto error = fs::g_tls_error)
+		switch (const auto error = fs::g_tls_error)
 		{
 		case fs::error::noent:
 		{

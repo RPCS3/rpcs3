@@ -9,7 +9,6 @@
 #include "cheat_manager.h"
 
 #include "Emu/System.h"
-#include "Emu/system_config.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/CPU/CPUThread.h"
 
@@ -88,8 +87,6 @@ cheat_engine::cheat_engine()
 
 			for (const auto& yml_offset : yml_cheat.second)
 			{
-				std::string error;
-
 				const u32 offset = get_yaml_node_value<u32>(yml_offset.first, error);
 				if (!error.empty())
 				{
@@ -179,12 +176,9 @@ std::string cheat_engine::export_cheats_to_str() const
 	return cheats_str;
 }
 
-bool cheat_engine::exist(const std::string& name, const u32 offset) const
+bool cheat_engine::exist(const std::string& game, const u32 offset) const
 {
-	if (cheats.count(name) && cheats.at(name).count(offset))
-		return true;
-
-	return false;
+	return cheats.contains(game) && cheats.at(game).contains(offset);
 }
 
 void cheat_engine::add(const std::string& game, const std::string& description, const cheat_type type, const u32 offset, const std::string& red_script)
@@ -246,7 +240,7 @@ bool cheat_engine::resolve_script(u32& final_offset, const u32 offset, const std
 				num_string += red_script[index];
 			}
 
-			u32 num_value = std::stoul(num_string);
+			const u32 num_value = std::stoul(num_string);
 			do_operation(cur_op, final_offset, num_value);
 		}
 		else
@@ -288,7 +282,7 @@ bool cheat_engine::resolve_script(u32& final_offset, const u32 offset, const std
 
 				// Tries to get value at resolved address
 				bool success;
-				u32 res_value = get_value<u32>(res_addr, success);
+				const u32 res_value = get_value<u32>(res_addr, success);
 
 				if (!success)
 					return false;
@@ -482,8 +476,6 @@ bool cheat_engine::is_addr_safe(const u32 offset)
 
 u32 cheat_engine::reverse_lookup(const u32 addr, const u32 max_offset, const u32 max_depth, const u32 cur_depth)
 {
-	u32 result;
-
 	for (u32 index = 0; index <= max_offset; index += 4)
 	{
 		std::vector<u32> ptrs = search(addr - index, {});
@@ -501,7 +493,7 @@ u32 cheat_engine::reverse_lookup(const u32 addr, const u32 max_offset, const u32
 		{
 			for (const auto& ptr : ptrs)
 			{
-				result = reverse_lookup(ptr, max_offset, max_depth, cur_depth + 1);
+				const u32 result = reverse_lookup(ptr, max_offset, max_depth, cur_depth + 1);
 				if (result)
 					return result;
 			}
@@ -683,7 +675,7 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 
 	connect(tbl_cheats, &QTableWidget::customContextMenuRequested, [this](const QPoint& loc)
 	{
-		QPoint globalPos       = tbl_cheats->mapToGlobal(loc);
+		const QPoint globalPos = tbl_cheats->mapToGlobal(loc);
 		QMenu* menu            = new QMenu();
 		QAction* delete_cheats = new QAction(tr("Delete"), menu);
 		QAction* import_cheats = new QAction(tr("Import Cheats"));
@@ -855,9 +847,8 @@ cheat_manager_dialog::cheat_manager_dialog(QWidget* parent)
 
 		const u32 offset       = offsets_found[current_row];
 		const cheat_type type  = static_cast<cheat_type>(cbx_cheat_search_type->currentIndex());
-		const std::string name = Emu.GetTitle();
 
-		connect(add_to_cheat_list, &QAction::triggered, [name, offset, type, this]()
+		connect(add_to_cheat_list, &QAction::triggered, [name = Emu.GetTitle(), offset, type, this]()
 		{
 			if (g_cheat.exist(name, offset))
 			{
@@ -1073,9 +1064,7 @@ QString cheat_manager_dialog::get_localized_cheat_type(cheat_type type)
 	case cheat_type::signed_16_cheat: return tr("Signed 16 bits");
 	case cheat_type::signed_32_cheat: return tr("Signed 32 bits");
 	case cheat_type::signed_64_cheat: return tr("Signed 64 bits");
-	case cheat_type::max:
-	default:
-		break;
+	case cheat_type::max: break;
 	}
 	std::string type_formatted;
 	fmt::append(type_formatted, "%s", type);

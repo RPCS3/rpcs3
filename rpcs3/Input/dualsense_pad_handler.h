@@ -1,7 +1,6 @@
 #pragma once
 
 #include "hid_pad_handler.h"
-#include "Utilities/CRC.h"
 
 #include <unordered_map>
 
@@ -75,9 +74,9 @@ public:
 	void init_config(pad_config* cfg, const std::string& name) override;
 
 private:
-	bool get_calibration_data(DualSenseDevice* dualsense_device);
+	bool get_calibration_data(DualSenseDevice* dualsense_device) const;
 
-	DataStatus get_data(DualSenseDevice* dualsenseDevice) override;
+	DataStatus get_data(DualSenseDevice* device) override;
 	void check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial) override;
 	int send_output_report(DualSenseDevice* device) override;
 

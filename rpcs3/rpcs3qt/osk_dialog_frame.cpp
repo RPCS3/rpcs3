@@ -14,10 +14,6 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-osk_dialog_frame::osk_dialog_frame()
-{
-}
-
 osk_dialog_frame::~osk_dialog_frame()
 {
 	if (m_dialog)
@@ -48,8 +44,8 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	QLabel* message_label = new QLabel(QString::fromStdU16String(message));
 
 	// Text Input Counter
-	const QString text = QString::fromStdU16String(std::u16string(init_text));
-	QLabel* input_count_label = new QLabel(QString("%1/%2").arg(text.length()).arg(charlimit));
+	const QString input_text = QString::fromStdU16String(std::u16string(init_text));
+	QLabel* input_count_label = new QLabel(QString("%1/%2").arg(input_text.length()).arg(charlimit));
 
 	// Button Layout
 	QDialogButtonBox* button_box = new QDialogButtonBox(QDialogButtonBox::Ok);
@@ -64,7 +60,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 		QLineEdit* input = new QLineEdit(m_dialog);
 		input->setFixedWidth(lineEditWidth());
 		input->setMaxLength(charlimit);
-		input->setText(text);
+		input->setText(input_text);
 		input->setFocus();
 
 		if (prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
@@ -72,7 +68,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 			input->setValidator(new QRegExpValidator(QRegExp("^\\S*$"), this));
 		}
 
-		connect(input, &QLineEdit::textChanged, [=, this](const QString& text)
+		connect(input, &QLineEdit::textChanged, input_count_label, [input_count_label, charlimit, this](const QString& text)
 		{
 			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
@@ -86,10 +82,10 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	{
 		QTextEdit* input = new QTextEdit(m_dialog);
 		input->setFixedWidth(lineEditWidth());
-		input->setText(text);
+		input->setText(input_text);
 		input->setFocus();
 		input->moveCursor(QTextCursor::End);
-		m_text_old = text;
+		m_text_old = input_text;
 
 		connect(input, &QTextEdit::textChanged, [=, this]()
 		{

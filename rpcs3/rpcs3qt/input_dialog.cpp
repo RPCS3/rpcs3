@@ -41,14 +41,14 @@ input_dialog::~input_dialog()
 {
 }
 
-void input_dialog::set_clear_button_enabled(bool enabled)
+void input_dialog::set_clear_button_enabled(bool enabled) const
 {
 	m_input->setClearButtonEnabled(enabled);
 }
 
-void input_dialog::set_input_font(const QFont& font, bool fix_width, char sample)
+void input_dialog::set_input_font(const QFont& font, bool fix_width, char sample) const
 {
-	if (int max = m_input->maxLength(); max > 0 && fix_width && std::isprint(static_cast<uchar>(sample)))
+	if (const int max = m_input->maxLength(); max > 0 && fix_width && std::isprint(static_cast<uchar>(sample)))
 	{
 		const QString str = qstr(std::string(static_cast<usz>(max), sample));
 		m_input->setFixedWidth(gui::utils::get_label_width(str, &font));
@@ -57,12 +57,12 @@ void input_dialog::set_input_font(const QFont& font, bool fix_width, char sample
 	m_input->setFont(font);
 }
 
-void input_dialog::set_validator(const QValidator* validator)
+void input_dialog::set_validator(const QValidator* validator) const
 {
 	m_input->setValidator(validator);
 }
 
-void input_dialog::set_button_enabled(QDialogButtonBox::StandardButton id, bool enabled)
+void input_dialog::set_button_enabled(QDialogButtonBox::StandardButton id, bool enabled) const
 {
 	if (QPushButton* button = m_button_box->button(id))
 	{
@@ -70,7 +70,7 @@ void input_dialog::set_button_enabled(QDialogButtonBox::StandardButton id, bool 
 	}
 }
 
-void input_dialog::set_label_text(const QString& text)
+void input_dialog::set_label_text(const QString& text) const
 {
 	m_label->setText(text);
 }

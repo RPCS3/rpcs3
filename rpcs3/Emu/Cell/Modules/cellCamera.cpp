@@ -547,7 +547,7 @@ error_code cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
 
-	switch (g_cfg.io.camera_type)
+	switch (g_cfg.io.camera_type.get())
 	{
 	case fake_camera_type::unknown: *type = CELL_CAMERA_TYPE_UNKNOWN; break;
 	case fake_camera_type::eyetoy:  *type = CELL_CAMERA_EYETOY; break;

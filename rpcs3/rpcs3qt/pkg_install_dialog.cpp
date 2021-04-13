@@ -166,7 +166,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 	setObjectName("pkg_install_dialog");
 }
 
-void pkg_install_dialog::MoveItem(int offset)
+void pkg_install_dialog::MoveItem(int offset) const
 {
 	const int src_index = m_dir_list->currentRow();
 	const int dest_index = src_index + offset;

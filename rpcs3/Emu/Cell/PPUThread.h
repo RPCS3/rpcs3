@@ -129,6 +129,9 @@ public:
 
 	ppu_thread(const ppu_thread_params&, std::string_view name, u32 prio, int detached = 0);
 
+	ppu_thread(const ppu_thread&) = delete;
+	ppu_thread& operator=(const ppu_thread&) = delete;
+
 	u64 gpr[32] = {}; // General-Purpose Registers
 	f64 fpr[32] = {}; // Floating Point Registers
 	v128 vr[32] = {}; // Vector Registers

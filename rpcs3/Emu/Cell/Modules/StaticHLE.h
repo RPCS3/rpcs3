@@ -29,7 +29,7 @@ public:
 	bool check_against_patterns(vm::cptr<u8>& data, u32 size, u32 addr);
 
 protected:
-	u16 gen_CRC16(const u8* data_p, usz length);
+	static u16 gen_CRC16(const u8* data_p, usz length);
 
 	std::vector<shle_pattern> hle_patterns;
 };

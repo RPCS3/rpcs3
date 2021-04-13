@@ -20,7 +20,7 @@ void perf_stat_base::push(u64 ns[66]) noexcept
 	}
 }
 
-void perf_stat_base::print(const char* name) noexcept
+void perf_stat_base::print(const char* name) const noexcept
 {
 	if (u64 num_total = m_log[0].load())
 	{

@@ -7,7 +7,6 @@
 #include "cellAudio.h"
 
 #include "emmintrin.h"
-#include "immintrin.h"
 #include <cmath>
 
 LOG_CHANNEL(cellAudio);
@@ -65,7 +64,7 @@ void cell_audio_config::reset()
 
 	desired_buffer_duration = raw.desired_buffer_duration * 1000llu;
 
-	buffering_enabled = raw.buffering_enabled && backend->has_capability(AudioBackend::PLAY_PAUSE_FLUSH | AudioBackend::IS_PLAYING);;
+	buffering_enabled = raw.buffering_enabled && backend->has_capability(AudioBackend::PLAY_PAUSE_FLUSH | AudioBackend::IS_PLAYING);
 
 	minimum_block_period = audio_block_period / 2;
 	maximum_block_period = (6 * audio_block_period) / 5;
@@ -160,7 +159,7 @@ f32 audio_ringbuffer::set_frequency_ratio(f32 new_ratio)
 	return frequency_ratio;
 }
 
-u64 audio_ringbuffer::get_timestamp() const
+u64 audio_ringbuffer::get_timestamp()
 {
 	return get_system_time() - Emu.GetPauseTime();
 }

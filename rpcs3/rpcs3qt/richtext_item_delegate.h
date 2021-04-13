@@ -11,7 +11,7 @@ private:
 	QTextDocument* m_document;
 
 public:
-	explicit richtext_item_delegate(QObject* parent = 0)
+	explicit richtext_item_delegate(QObject* parent = nullptr)
 		: QStyledItemDelegate(parent)
 		, m_document(new QTextDocument(this))
 	{
@@ -51,7 +51,7 @@ public:
 		painter->setClipRect(text_rect.translated(-text_rect.topLeft()));
 
 		// Create a context for our painter
-		QAbstractTextDocumentLayout::PaintContext context;
+		const QAbstractTextDocumentLayout::PaintContext context;
 
 		// We can change the text color based on state (Unused because it didn't look good)
 		//context.palette.setColor(QPalette::Text, option.palette.color(QPalette::Active, (option.state & QStyle::State_Selected) ? QPalette::HighlightedText : QPalette::Text));

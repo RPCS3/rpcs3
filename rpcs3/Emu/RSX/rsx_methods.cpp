@@ -2717,6 +2717,7 @@ namespace rsx
 	}
 
 	// TODO: implement this as virtual function: rsx::thread::init_methods() or something
+	// TODO: this is unused
 	static const bool s_methods_init = []() -> bool
 	{
 		using namespace method_detail;

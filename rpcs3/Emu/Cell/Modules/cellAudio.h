@@ -307,7 +307,7 @@ public:
 		return buffer[num].get();
 	}
 
-	u64 get_timestamp() const;
+	static u64 get_timestamp();
 
 	float* get_current_buffer() const
 	{

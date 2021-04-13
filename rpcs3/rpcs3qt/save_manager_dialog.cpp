@@ -6,7 +6,6 @@
 #include "persistent_settings.h"
 
 #include "Emu/System.h"
-#include "Emu/Memory/vm.h"
 #include "Loader/PSF.h"
 
 #include <QtConcurrent>
@@ -55,11 +54,11 @@ namespace
 			}
 
 			// PSF parameters
-			const auto& psf = psf::load_object(fs::file(base_dir + entry.name + "/PARAM.SFO"));
+			const auto [psf, errc] = psf::load(base_dir + entry.name + "/PARAM.SFO");
 
 			if (psf.empty())
 			{
-				gui_log.error("Failed to load savedata: %s", base_dir + "/" + entry.name);
+				gui_log.error("Failed to load savedata: %s (%s)", base_dir + "/" + entry.name, errc);
 				continue;
 			}
 
@@ -83,9 +82,8 @@ namespace
 			if (fs::is_file(base_dir + entry.name + "/ICON0.PNG"))
 			{
 				fs::file icon = fs::file(base_dir + entry.name + "/ICON0.PNG");
-				u32 iconSize = icon.size();
 				std::vector<uchar> iconData;
-				icon.read(iconData, iconSize);
+				icon.read(iconData, icon.size());
 				save_entry2.iconBuf = iconData;
 			}
 			save_entry2.isNew = false;
@@ -98,20 +96,20 @@ namespace
 save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, std::string dir, QWidget* parent)
 	: QDialog(parent)
 	, m_dir(dir)
-	, m_gui_settings(gui_settings)
-	, m_persistent_settings(persistent_settings)
+	, m_gui_settings(std::move(gui_settings))
+	, m_persistent_settings(std::move(persistent_settings))
 {
 	setWindowTitle(tr("Save Manager"));
 	setMinimumSize(QSize(400, 400));
 	setAttribute(Qt::WA_DeleteOnClose);
 
-	Init(dir);
+	Init();
 }
 
 /*
  * Future proofing.  Makes it easier in future if I add ability to change directories
  */
-void save_manager_dialog::Init(std::string /*dir*/)
+void save_manager_dialog::Init()
 {
 	// Table
 	m_list = new QTableWidget(this);
@@ -126,7 +124,7 @@ void save_manager_dialog::Init(std::string /*dir*/)
 	m_list->horizontalHeader()->setStretchLastSection(true);
 
 	// Bottom bar
-	int icon_size = m_gui_settings->GetValue(gui::sd_icon_size).toInt();
+	const int icon_size = m_gui_settings->GetValue(gui::sd_icon_size).toInt();
 	m_icon_size = QSize(icon_size, icon_size);
 	QLabel* label_icon_size = new QLabel(tr("Icon size:"), this);
 	QSlider* slider_icon_size = new QSlider(Qt::Horizontal, this);
@@ -231,7 +229,7 @@ void save_manager_dialog::Init(std::string /*dir*/)
 
 void save_manager_dialog::UpdateList()
 {
-	if (m_dir == "")
+	if (m_dir.empty())
 	{
 		m_dir = Emulator::GetHddDir() + "home/" + Emu.GetUsr() + "/savedata/";
 	}
@@ -256,7 +254,7 @@ void save_manager_dialog::UpdateList()
 	for (usz i = 0; i < m_save_entries.size(); ++i)
 		indices.append(static_cast<int>(i));
 
-	std::function<QPixmap(const int&)> get_icon = [this](const int& row)
+	const std::function<QPixmap(const int&)> get_icon = [this](const int& row)
 	{
 		const auto& entry = m_save_entries[row];
 		QPixmap icon = QPixmap(320, 176);
@@ -310,13 +308,13 @@ void save_manager_dialog::UpdateList()
 	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
 
-	QSize tableSize = QSize(
+	const QSize tableSize(
 		m_list->verticalHeader()->width() + m_list->horizontalHeader()->length() + m_list->frameWidth() * 2,
 		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2);
 
-	QSize preferredSize = minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize);
+	const QSize preferredSize = minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize);
 
-	QSize maxSize = QSize(preferredSize.width(), static_cast<int>(QGuiApplication::primaryScreen()->geometry().height() * 0.6));
+	const QSize maxSize(preferredSize.width(), static_cast<int>(QGuiApplication::primaryScreen()->geometry().height() * 0.6));
 
 	resize(preferredSize.boundedTo(maxSize));
 }
@@ -332,7 +330,7 @@ void save_manager_dialog::HandleRepaintUiRequest()
 	resize(window_size);
 }
 
-QPixmap save_manager_dialog::GetResizedIcon(int i)
+QPixmap save_manager_dialog::GetResizedIcon(int i) const
 {
 	const qreal dpr = devicePixelRatioF();
 	const int width = m_icon_size.width() * dpr;
@@ -343,7 +341,7 @@ QPixmap save_manager_dialog::GetResizedIcon(int i)
 	{
 		return QPixmap();
 	}
-	QPixmap data = item->data(Qt::UserRole).value<QPixmap>();
+	const QPixmap data = item->data(Qt::UserRole).value<QPixmap>();
 
 	QPixmap icon = QPixmap(data.size() * dpr);
 	icon.setDevicePixelRatio(dpr);
@@ -361,7 +359,7 @@ void save_manager_dialog::UpdateIcons()
 	for (int i = 0; i < m_list->rowCount(); ++i)
 		indices.append(i);
 
-	std::function<QPixmap(const int&)> get_scaled = [this](const int& i)
+	const std::function<QPixmap(const int&)> get_scaled = [this](const int& i)
 	{
 		return GetResizedIcon(i);
 	};
@@ -395,7 +393,7 @@ void save_manager_dialog::OnSort(int logicalIndex)
 			m_sort_ascending = true;
 		}
 		m_sort_column = logicalIndex;
-		Qt::SortOrder sort_order = m_sort_ascending ? Qt::AscendingOrder : Qt::DescendingOrder;
+		const Qt::SortOrder sort_order = m_sort_ascending ? Qt::AscendingOrder : Qt::DescendingOrder;
 		m_list->sortByColumn(m_sort_column, sort_order);
 	}
 }
@@ -403,7 +401,7 @@ void save_manager_dialog::OnSort(int logicalIndex)
 // Remove a save file, need to be confirmed.
 void save_manager_dialog::OnEntryRemove()
 {
-	int idx = m_list->currentRow();
+	const int idx = m_list->currentRow();
 	if (idx != -1)
 	{
 		QTableWidgetItem* item = m_list->item(idx, 1);
@@ -454,7 +452,7 @@ void save_manager_dialog::OnEntriesRemove()
 // Pop-up a small context-menu, being a replacement for save_data_manage_dialog
 void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 {
-	int idx = m_list->currentRow();
+	const int idx = m_list->currentRow();
 	if (idx == -1)
 	{
 		return;
@@ -505,7 +503,7 @@ void save_manager_dialog::closeEvent(QCloseEvent *event)
 
 void save_manager_dialog::UpdateDetails()
 {
-	int selected = m_list->selectionModel()->selectedRows().size();
+	const int selected = m_list->selectionModel()->selectedRows().size();
 
 	if (selected != 1)
 	{

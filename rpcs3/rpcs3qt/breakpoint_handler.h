@@ -17,8 +17,8 @@ class breakpoint_handler
 {
 
 public:
-	breakpoint_handler();
-	~breakpoint_handler();
+	breakpoint_handler() = default;
+	~breakpoint_handler() = default;
 
 	/**
 	* Returns true iff breakpoint exists at loc.

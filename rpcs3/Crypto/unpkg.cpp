@@ -554,7 +554,7 @@ bool package_reader::read_param_sfo()
 }
 
 // TODO: maybe also check if VERSION matches
-package_error package_reader::check_target_app_version()
+package_error package_reader::check_target_app_version() const
 {
 	if (!m_is_valid)
 	{

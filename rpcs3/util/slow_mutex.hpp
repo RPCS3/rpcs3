@@ -3,7 +3,6 @@
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "Utilities/StrFmt.h"
-#include <mutex>
 
 // Pessimistic mutex for slow operation, does not spin wait, occupies only one byte
 class slow_mutex

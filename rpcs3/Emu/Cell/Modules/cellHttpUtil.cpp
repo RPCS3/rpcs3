@@ -6,7 +6,6 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#include <winhttp.h>
 #include <codecvt>
 #pragma comment(lib, "Winhttp.lib")
 #endif

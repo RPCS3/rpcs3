@@ -489,22 +489,26 @@ error_code cellSailSourceNotifyMediaStateChanged()
 
 error_code cellSailSourceNotifyOpenCompleted()
 {
-	fmt::throw_exception("Unexpected function");
+	cellSail.fatal("cellSailSourceNotifyOpenCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailSourceNotifyStartCompleted()
 {
-	fmt::throw_exception("Unexpected function");
+	cellSail.fatal("cellSailSourceNotifyStartCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailSourceNotifyStopCompleted()
 {
-	fmt::throw_exception("Unexpected function");
+	cellSail.fatal("cellSailSourceNotifyStopCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailSourceNotifyReadCompleted()
 {
-	fmt::throw_exception("Unexpected function");
+	cellSail.fatal("cellSailSourceNotifyReadCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailSourceSetDiagHandler()
@@ -515,7 +519,8 @@ error_code cellSailSourceSetDiagHandler()
 
 error_code cellSailSourceNotifyCloseCompleted()
 {
-	fmt::throw_exception("Unexpected function");
+	cellSail.fatal("cellSailSourceNotifyCloseCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailMp4MovieGetBrand()
@@ -638,7 +643,7 @@ error_code cellSailPlayerInitialize2(ppu_thread& ppu,
 		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
 		event.u32x2.minor = 0;
 		pSelf->callback(ppu, pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_INITIALIZED, 0);
-	};
+	}
 
 	return CELL_OK;
 }
@@ -777,7 +782,7 @@ error_code cellSailPlayerBoot(ppu_thread& ppu, vm::ptr<CellSailPlayer> pSelf, u6
 		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
 		event.u32x2.minor = 0;
 		pSelf->callback(ppu, pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
-	};
+	}
 
 	// TODO: Do stuff here
 	pSelf->booted = true;
@@ -787,7 +792,7 @@ error_code cellSailPlayerBoot(ppu_thread& ppu, vm::ptr<CellSailPlayer> pSelf, u6
 		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
 		event.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
 		pSelf->callback(ppu, pSelf->callbackArg, event, 0, 0);
-	};
+	}
 
 	return CELL_OK;
 }

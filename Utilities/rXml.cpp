@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "Utilities/rXml.h"
 
-rXmlNode::rXmlNode() : handle()
+rXmlNode::rXmlNode()
 {
 }
 
@@ -55,7 +55,7 @@ std::string rXmlNode::GetNodeContent()
 	return handle.text().get();
 }
 
-rXmlDocument::rXmlDocument() : handle()
+rXmlDocument::rXmlDocument()
 {
 }
 

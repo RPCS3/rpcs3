@@ -80,21 +80,21 @@ public:
 	void mouseMoveEvent(QMouseEvent* event);
 	void mouseWheelEvent(QWheelEvent* event);
 
-	bool eventFilter(QObject* obj, QEvent* ev) override;
+	bool eventFilter(QObject* target, QEvent* ev) override;
 
 	void init_config(pad_config* cfg, const std::string& name) override;
 	std::vector<std::string> ListDevices() override;
-	void get_next_button_press(const std::string& /*padId*/, const pad_callback& /*callback*/, const pad_fail_callback& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) override {};
+	void get_next_button_press(const std::string& /*padId*/, const pad_callback& /*callback*/, const pad_fail_callback& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) override {}
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
 	void ThreadProc() override;
 
-	std::string GetMouseName(const QMouseEvent* event);
-	std::string GetMouseName(u32 button);
-	QStringList GetKeyNames(const QKeyEvent* keyEvent);
-	std::string GetKeyName(const QKeyEvent* keyEvent);
-	std::string GetKeyName(const u32& keyCode);
-	u32 GetKeyCode(const std::string& keyName);
-	u32 GetKeyCode(const QString& keyName);
+	std::string GetMouseName(const QMouseEvent* event) const;
+	std::string GetMouseName(u32 button) const;
+	static QStringList GetKeyNames(const QKeyEvent* keyEvent);
+	static std::string GetKeyName(const QKeyEvent* keyEvent);
+	static std::string GetKeyName(const u32& keyCode);
+	static u32 GetKeyCode(const std::string& keyName);
+	static u32 GetKeyCode(const QString& keyName);
 
 	static int native_scan_code_from_string(const std::string& key);
 	static std::string native_scan_code_to_string(int native_scan_code);
@@ -105,9 +105,9 @@ protected:
 private:
 	QWindow* m_target = nullptr;
 	bool m_mouse_move_used = false;
-	bool get_mouse_lock_state();
+	bool get_mouse_lock_state() const;
 
-	std::vector<std::shared_ptr<Pad>> bindings;
+	std::vector<std::shared_ptr<Pad>> m_bindings;
 
 	// Button Movements
 	steady_clock::time_point m_button_time;

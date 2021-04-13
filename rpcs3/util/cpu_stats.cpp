@@ -127,10 +127,10 @@ namespace utils
 	{
 #ifdef _WIN32
 		// first determine the id of the current process
-		DWORD const id = GetCurrentProcessId();
+		const DWORD id = GetCurrentProcessId();
 
 		// then get a process list snapshot.
-		HANDLE const snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+		const HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 
 		// initialize the process entry structure.
 		PROCESSENTRY32 entry = {0};

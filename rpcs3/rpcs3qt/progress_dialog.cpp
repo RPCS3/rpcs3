@@ -4,7 +4,6 @@
 #include <QLabel>
 
 #ifdef _WIN32
-#include <QWinTHumbnailToolbar>
 #include <QWinTHumbnailToolbutton>
 #elif HAVE_QTDBUS
 #include <QtDBus/QDBusMessage>
@@ -61,7 +60,7 @@ void progress_dialog::SetValue(int progress)
 	QProgressDialog::setValue(value);
 }
 
-void progress_dialog::SignalFailure()
+void progress_dialog::SignalFailure() const
 {
 #ifdef _WIN32
 	m_tb_progress->stop();

@@ -24,8 +24,8 @@ struct TRPEntry
 class TRPLoader final
 {
 	const fs::file& trp_f;
-	TRPHeader m_header;
-	std::vector<TRPEntry> m_entries;
+	TRPHeader m_header{};
+	std::vector<TRPEntry> m_entries{};
 
 public:
 	TRPLoader(const fs::file& f);

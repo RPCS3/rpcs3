@@ -26,10 +26,6 @@ mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
 	m_thumb_threshold = thumb_max / 2;
 }
 
-mm_joystick_handler::~mm_joystick_handler()
-{
-}
-
 void mm_joystick_handler::init_config(pad_config* cfg, const std::string& name)
 {
 	if (!cfg) return;
@@ -82,8 +78,8 @@ bool mm_joystick_handler::Init()
 		return true;
 
 	m_devices.clear();
-	u32 supported_joysticks = joyGetNumDevs();
 
+	const u32 supported_joysticks = joyGetNumDevs();
 	if (supported_joysticks <= 0)
 	{
 		input_log.error("mmjoy: Driver doesn't support Joysticks");
@@ -113,7 +109,7 @@ std::vector<std::string> mm_joystick_handler::ListDevices()
 	if (!Init())
 		return devices;
 
-	for (auto dev : m_devices)
+	for (const auto& dev : m_devices)
 	{
 		devices.emplace_back(dev.second.device_name);
 	}
@@ -129,7 +125,7 @@ std::array<u32, PadHandlerBase::button::button_count> mm_joystick_handler::get_m
 	if (!joy_device)
 		return mapping;
 
-	auto find_key = [=](const cfg::string& name)
+	auto find_key = [this](const cfg::string& name)
 	{
 		long key = FindKeyCode(button_list, name, false);
 		if (key < 0)
@@ -191,7 +187,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 		return;
 	}
 
-	static std::string cur_pad = "";
+	static std::string cur_pad;
 	static int id = -1;
 
 	if (cur_pad != padId)
@@ -213,7 +209,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 	js_info.dwFlags = JOY_RETURNALL;
 	joyGetDevCaps(id, &js_caps, sizeof(js_caps));
 
-	MMRESULT status = joyGetPosEx(id, &js_info);
+	const MMRESULT status = joyGetPosEx(id, &js_info);
 
 	switch (status)
 	{
@@ -299,7 +295,7 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 			return;
 		}
 
-		auto find_key = [=](const std::string& name)
+		auto find_key = [this](const std::string& name)
 		{
 			long key = FindKeyCodeByString(axis_list, name, false);
 			if (key < 0)
@@ -339,7 +335,7 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 {
 	std::unordered_map<u64, u16> button_values;
 
-	for (auto entry : button_list)
+	for (const auto& entry : button_list)
 	{
 		button_values.emplace(entry.first, js_info.dwButtons & entry.first ? 255 : 0);
 	}
@@ -371,19 +367,19 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 					}
 				};
 
-				float rad = static_cast<float>(js_info.dwPOV / 100 * acos(-1) / 180);
+				const float rad = static_cast<float>(js_info.dwPOV / 100 * acos(-1) / 180);
 				emplacePOVs(cosf(rad) * 255.0f, JOY_POVBACKWARD, JOY_POVFORWARD);
 				emplacePOVs(sinf(rad) * 255.0f, JOY_POVLEFT, JOY_POVRIGHT);
 			}
 		}
 		else if (js_caps.wCaps & JOYCAPS_POV4DIR)
 		{
-			int val = static_cast<int>(js_info.dwPOV);
+			const int val = static_cast<int>(js_info.dwPOV);
 
 			auto emplacePOV = [&button_values, &val](int pov)
 			{
-				int cw = pov + 4500, ccw = pov - 4500;
-				bool pressed = (val == pov) || (val == cw) || (ccw < 0 ? val == 36000 - std::abs(ccw) : val == ccw);
+				const int cw = pov + 4500, ccw = pov - 4500;
+				const bool pressed = (val == pov) || (val == cw) || (ccw < 0 ? val == 36000 - std::abs(ccw) : val == ccw);
 				button_values.emplace(pov, pressed ? 255 : 0);
 			};
 
@@ -396,7 +392,7 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 
 	auto add_axis_value = [&](DWORD axis, UINT min, UINT max, u64 pos, u64 neg)
 	{
-		float val = ScaledInput2(axis, min, max);
+		const float val = ScaledInput2(axis, min, max);
 		if (val < 0)
 		{
 			button_values.emplace(pos, 0);
@@ -437,7 +433,7 @@ std::unordered_map<u64, u16> mm_joystick_handler::get_button_values(const std::s
 
 int mm_joystick_handler::GetIDByName(const std::string& name)
 {
-	for (auto dev : m_devices)
+	for (const auto& dev : m_devices)
 	{
 		if (dev.second.device_name == name)
 			return dev.first;
@@ -445,7 +441,7 @@ int mm_joystick_handler::GetIDByName(const std::string& name)
 	return -1;
 }
 
-bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev)
+bool mm_joystick_handler::GetMMJOYDevice(int index, MMJOYDevice* dev) const
 {
 	if (!dev)
 		return false;
@@ -478,7 +474,7 @@ std::shared_ptr<PadDevice> mm_joystick_handler::get_device(const std::string& de
 	if (!Init())
 		return nullptr;
 
-	int id = GetIDByName(device);
+	const int id = GetIDByName(device);
 	if (id < 0)
 		return nullptr;
 

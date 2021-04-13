@@ -15,7 +15,7 @@ void basic_keyboard_handler::Init(const u32 max_connect)
 {
 	for (u32 i = 0; i < max_connect; i++)
 	{
-		Keyboard kb = Keyboard();
+		Keyboard kb;
 
 		kb.m_config.arrange = g_cfg.sys.keyboard_type;
 
@@ -51,24 +51,24 @@ void basic_keyboard_handler::SetTargetWindow(QWindow* target)
 	}
 }
 
-bool basic_keyboard_handler::eventFilter(QObject* target, QEvent* ev)
+bool basic_keyboard_handler::eventFilter(QObject* watched, QEvent* event)
 {
-	if (!ev || input::g_intercepted)
+	if (!event || input::g_intercepted)
 	{
 		return false;
 	}
 
 	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
 	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
-	if (!m_target || !m_target->isVisible() || target == m_target)
+	if (!m_target || !m_target->isVisible() || watched == m_target)
 	{
-		if (ev->type() == QEvent::KeyPress)
+		if (event->type() == QEvent::KeyPress)
 		{
-			keyPressEvent(static_cast<QKeyEvent*>(ev));
+			keyPressEvent(static_cast<QKeyEvent*>(event));
 		}
-		else if (ev->type() == QEvent::KeyRelease)
+		else if (event->type() == QEvent::KeyRelease)
 		{
-			keyReleaseEvent(static_cast<QKeyEvent*>(ev));
+			keyReleaseEvent(static_cast<QKeyEvent*>(event));
 		}
 	}
 	return false;
@@ -137,7 +137,7 @@ s32 basic_keyboard_handler::getUnmodifiedKey(QKeyEvent* keyEvent)
 #ifdef _WIN32
 	if (keyEvent->modifiers() != Qt::NoModifier && !keyEvent->text().isEmpty())
 	{
-		u32 mapped_key = (u32)MapVirtualKeyA((UINT)keyEvent->nativeVirtualKey(), MAPVK_VK_TO_CHAR);
+		u32 mapped_key = static_cast<u32>(MapVirtualKeyA(static_cast<UINT>(keyEvent->nativeVirtualKey()), MAPVK_VK_TO_CHAR));
 
 		if (raw_key != mapped_key)
 		{

@@ -9,7 +9,7 @@
 
 LOG_CHANNEL(sys_interrupt);
 
-void lv2_int_serv::exec()
+void lv2_int_serv::exec() const
 {
 	thread->cmd_list
 	({
@@ -25,7 +25,7 @@ void lv2_int_serv::exec()
 
 bool ppu_thread_exit(ppu_thread& ppu);
 
-void lv2_int_serv::join()
+void lv2_int_serv::join() const
 {
 	thread->cmd_list
 	({

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vector>
-
 #include "Utilities/span.h"
 #include "../gcm_enums.h"
 

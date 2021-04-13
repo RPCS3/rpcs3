@@ -358,43 +358,6 @@ namespace gl
 		set_parameteri(GL_TEXTURE_COMPARE_MODE, GL_NONE);
 	}
 
-	bool is_compressed_format(u32 texture_format)
-	{
-		switch (texture_format)
-		{
-		case CELL_GCM_TEXTURE_B8:
-		case CELL_GCM_TEXTURE_A1R5G5B5:
-		case CELL_GCM_TEXTURE_A4R4G4B4:
-		case CELL_GCM_TEXTURE_R5G6B5:
-		case CELL_GCM_TEXTURE_A8R8G8B8:
-		case CELL_GCM_TEXTURE_G8B8:
-		case CELL_GCM_TEXTURE_R6G5B5:
-		case CELL_GCM_TEXTURE_DEPTH24_D8:
-		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-		case CELL_GCM_TEXTURE_DEPTH16:
-		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-		case CELL_GCM_TEXTURE_X16:
-		case CELL_GCM_TEXTURE_Y16_X16:
-		case CELL_GCM_TEXTURE_R5G5B5A1:
-		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-		case CELL_GCM_TEXTURE_X32_FLOAT:
-		case CELL_GCM_TEXTURE_D1R5G5B5:
-		case CELL_GCM_TEXTURE_D8R8G8B8:
-		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
-		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
-		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
-		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-			return false;
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
-		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-			return true;
-		}
-		fmt::throw_exception("Unknown format 0x%x", texture_format);
-	}
-
 	std::array<GLenum, 4> get_swizzle_remap(u32 texture_format)
 	{
 		// NOTE: This must be in ARGB order in all forms below.
@@ -610,7 +573,7 @@ namespace gl
 	gl::viewable_image* create_texture(u32 gcm_format, u16 width, u16 height, u16 depth, u16 mipmaps,
 			rsx::texture_dimension_extended type)
 	{
-		if (is_compressed_format(gcm_format))
+		if (rsx::is_compressed_host_format(gcm_format))
 		{
 			//Compressed formats have a 4-byte alignment
 			//TODO: Verify that samplers are not affected by the padding
@@ -634,7 +597,7 @@ namespace gl
 		pixel_unpack_settings unpack_settings;
 		unpack_settings.row_length(0).alignment(4);
 
-		if (is_compressed_format(format)) [[likely]]
+		if (rsx::is_compressed_host_format(format)) [[likely]]
 		{
 			caps.supports_vtc_decoding = gl::get_driver_caps().vendor_NVIDIA;
 

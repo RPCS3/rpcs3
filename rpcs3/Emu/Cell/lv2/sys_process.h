@@ -48,6 +48,7 @@ struct ps3_process_info_t
 	bool has_root_perm() const;
 	bool has_debug_perm() const;
 	bool debug_or_root() const;
+	std::string_view get_cellos_appname() const;
 };
 
 extern ps3_process_info_t  g_ps3_process_info;

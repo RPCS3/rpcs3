@@ -95,10 +95,9 @@ namespace rsx
 			AUDIT(deferred_flush());
 			if (cause == deferred_read)
 				return read;
-			else if (cause == deferred_write)
+			if (cause == deferred_write)
 				return write;
-			else
-				fmt::throw_exception("Unreachable");
+			fmt::throw_exception("Unreachable");
 		}
 
 		constexpr invalidation_cause defer() const
@@ -106,10 +105,9 @@ namespace rsx
 			AUDIT(!deferred_flush());
 			if (cause == read)
 				return deferred_read;
-			else if (cause == write)
+			if (cause == write)
 				return deferred_write;
-			else
-				fmt::throw_exception("Unreachable");
+			fmt::throw_exception("Unreachable");
 		}
 
 		constexpr invalidation_cause() : cause(invalid) {}

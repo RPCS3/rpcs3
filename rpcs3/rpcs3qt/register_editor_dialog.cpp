@@ -147,7 +147,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, CPUDisAsm* _disa
 	connect(button_cancel, &QAbstractButton::clicked, this, &register_editor_dialog::reject);
 	connect(m_register_combo, &QComboBox::currentTextChanged, this, [this](const QString&)
 	{
-		if (auto qvar = m_register_combo->currentData(); qvar.canConvert(QMetaType::Int))
+		if (const auto qvar = m_register_combo->currentData(); qvar.canConvert(QMetaType::Int))
 		{
 			updateRegister(qvar.toInt());
 		}
@@ -156,7 +156,7 @@ register_editor_dialog::register_editor_dialog(QWidget *parent, CPUDisAsm* _disa
 	updateRegister(m_register_combo->currentData().toInt());
 }
 
-void register_editor_dialog::updateRegister(int reg)
+void register_editor_dialog::updateRegister(int reg) const
 {
 	std::string str = sstr(tr("Error parsing register value!"));
 
@@ -178,7 +178,7 @@ void register_editor_dialog::updateRegister(int reg)
 			else if (reg >= ppu_f0 && reg <= ppu_f31) str = fmt::format("%016llx", std::bit_cast<u64>(ppu.fpr[reg_index]));
 			else if (reg >= ppu_v0 && reg <= ppu_v31)
 			{
-				const auto r = ppu.vr[reg_index];
+				const v128 r = ppu.vr[reg_index];
 				str = !r._u ? fmt::format("%08x$", r._u32[0]) : fmt::format("%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
 			}
 		}
@@ -197,7 +197,7 @@ void register_editor_dialog::updateRegister(int reg)
 		if (reg >= spu_r0 && reg <= spu_r127)
 		{
 			const u32 reg_index = reg % 128;
-			const auto r = spu.gpr[reg_index];
+			const v128 r = spu.gpr[reg_index];
 			str = !r._u ? fmt::format("%08x$", r._u32[0]) : fmt::format("%08x %08x %08x %08x", r.u32r[0], r.u32r[1], r.u32r[2], r.u32r[3]);
 		}
 		else if (reg == MFC_PEVENTS) str = fmt::format("%08x", +spu.ch_events.load().events);
@@ -276,7 +276,7 @@ void register_editor_dialog::OnOkay()
 			else if (reg >= ppu_ff0 && reg <= ppu_ff31)
 			{
 				char* end{};
-				if (double reg_value = std::strtod(value.c_str(), &end); end != value.c_str())
+				if (const double reg_value = std::strtod(value.c_str(), &end); end != value.c_str())
 				{
 					ppu.fpr[reg_index] = static_cast<f64>(reg_value);
 					return;
@@ -337,7 +337,7 @@ void register_editor_dialog::OnOkay()
 		}
 		else if (reg == RESERVATION_LOST)
 		{
-			if (u32 raddr = ppu.raddr) vm::reservation_update(raddr);
+			if (const u32 raddr = ppu.raddr) vm::reservation_update(raddr);
 			return;
 		}
 	}
@@ -378,9 +378,9 @@ void register_editor_dialog::OnOkay()
 			if (u32 reg_value; check_res(std::from_chars(value.c_str() + 24, value.c_str() + 32, reg_value, 16), value.c_str() + 32))
 			{
 				bool ok = true;
-				if (reg == MFC_PEVENTS && !(reg_value & ~SPU_EVENT_IMPLEMENTED)) spu.ch_events.atomic_op([&](typename spu_thread::ch_events_t& events){ events.events = reg_value; });
-				else if (reg == MFC_EVENTS_MASK && !(reg_value & ~SPU_EVENT_IMPLEMENTED)) spu.ch_events.atomic_op([&](typename spu_thread::ch_events_t& events){ events.mask = reg_value; });
-				else if (reg == MFC_EVENTS_COUNT && reg_value <= 1u) spu.ch_events.atomic_op([&](typename spu_thread::ch_events_t& events){ events.count = reg_value; });
+				if (reg == MFC_PEVENTS && !(reg_value & ~SPU_EVENT_IMPLEMENTED)) spu.ch_events.atomic_op([&](spu_thread::ch_events_t& events){ events.events = reg_value; });
+				else if (reg == MFC_EVENTS_MASK && !(reg_value & ~SPU_EVENT_IMPLEMENTED)) spu.ch_events.atomic_op([&](spu_thread::ch_events_t& events){ events.mask = reg_value; });
+				else if (reg == MFC_EVENTS_COUNT && reg_value <= 1u) spu.ch_events.atomic_op([&](spu_thread::ch_events_t& events){ events.count = reg_value; });
 				else if (reg == MFC_TAG_MASK) spu.ch_tag_mask = reg_value;
 				else if (reg == SPU_SRR0 && !(reg_value & ~0x3fffc)) spu.srr0 = reg_value;
 				else if (reg == PC && !(reg_value & ~0x3fffc)) spu.pc = reg_value;
@@ -410,7 +410,7 @@ void register_editor_dialog::OnOkay()
 		}
 		else if (reg == RESERVATION_LOST)
 		{
-			if (u32 raddr = spu.raddr) vm::reservation_update(raddr);
+			if (const u32 raddr = spu.raddr) vm::reservation_update(raddr);
 			return;
 		}
 	}

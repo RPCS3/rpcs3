@@ -72,35 +72,24 @@ u32 sys_gamepad_ycon_if(u8 packet_id, vm::ptr<u8> in, vm::ptr<u8> out)
 	{
 	case 0:
 		return sys_gamepad_ycon_initalize(in, out);
-		break;
 	case 1:
 		return sys_gamepad_ycon_finalize(in, out);
-		break;
 	case 2:
 		return sys_gamepad_ycon_has_input_ownership(in, out);
-		break;
 	case 3:
 		return sys_gamepad_ycon_enumerate_device(in, out);
-		break;
 	case 4:
 		return sys_gamepad_ycon_get_device_info(in, out);
-		break;
 	case 5:
 		return sys_gamepad_ycon_read_raw_report(in, out);
-		break;
 	case 6:
 		return sys_gamepad_ycon_write_raw_report(in, out);
-		break;
 	case 7:
 		return sys_gamepad_ycon_get_feature(in, out);
-		break;
 	case 8:
 		return sys_gamepad_ycon_set_feature(in, out);
-		break;
 	case 9:
 		return sys_gamepad_ycon_is_gem(in, out);
-		break;
-
 	default:
 		sys_gamepad.error("sys_gamepad_ycon_if(packet_id=*%d, in=%d, out=%d), unknown packet id", packet_id, in, out);
 		break;

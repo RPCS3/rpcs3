@@ -19,6 +19,7 @@ enum class emu_settings_type
 	SPUDebug,
 	MFCDebug,
 	MaxLLVMThreads,
+	PPULLVMPrecompilation,
 	EnableTSX,
 	AccurateGETLLAR,
 	AccurateSpuDMA,
@@ -156,7 +157,7 @@ enum class emu_settings_type
 };
 
 /** A helper map that keeps track of where a given setting type is located*/
-static const QMap<emu_settings_type, cfg_location> settings_location =
+inline static const QMap<emu_settings_type, cfg_location> settings_location =
 {
 	// Core Tab
 	{ emu_settings_type::PPUDecoder,               { "Core", "PPU Decoder"}},
@@ -170,6 +171,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::SPUDebug,                 { "Core", "SPU Debug"}},
 	{ emu_settings_type::MFCDebug,                 { "Core", "MFC Debug"}},
 	{ emu_settings_type::MaxLLVMThreads,           { "Core", "Max LLVM Compile Threads"}},
+	{ emu_settings_type::PPULLVMPrecompilation,    { "Core", "PPU LLVM Precompilation"}},
 	{ emu_settings_type::EnableTSX,                { "Core", "Enable TSX"}},
 	{ emu_settings_type::AccurateGETLLAR,          { "Core", "Accurate GETLLAR"}},
 	{ emu_settings_type::AccurateSpuDMA,           { "Core", "Accurate SPU DMA"}},

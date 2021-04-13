@@ -57,11 +57,11 @@ struct EDATADecrypter final : fs::file_base
 	u32 total_blocks{0};
 	u64 pos{0};
 
-	NPD_HEADER npdHeader;
-	EDAT_HEADER edatHeader;
+	NPD_HEADER npdHeader{};
+	EDAT_HEADER edatHeader{};
 
 	// Internal data buffers.
-	std::unique_ptr<u8[]> data_buf;
+	std::unique_ptr<u8[]> data_buf{};
 	u64 data_buf_size{0};
 
 	u128 dec_key{};
@@ -103,7 +103,7 @@ public:
 
 	u64 read(void* buffer, u64 size) override
 	{
-		u64 bytesRead = ReadData(pos, static_cast<u8*>(buffer), size);
+		const u64 bytesRead = ReadData(pos, static_cast<u8*>(buffer), size);
 		pos += bytesRead;
 		return bytesRead;
 	}

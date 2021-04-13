@@ -23,7 +23,7 @@ const auto s_time_aux_info = []() -> time_aux_info_t
 	LARGE_INTEGER freq;
 	if (!QueryPerformanceFrequency(&freq))
 	{
-		MessageBox(0, L"Your hardware doesn't support a high-resolution performance counter", L"Error", MB_OK | MB_ICONERROR);
+		MessageBox(nullptr, L"Your hardware doesn't support a high-resolution performance counter", L"Error", MB_OK | MB_ICONERROR);
 		return {};
 	}
 

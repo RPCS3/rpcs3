@@ -475,8 +475,6 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 	auto& npdrmkeys = g_fxo->get<loaded_npdrm_keys>();
 
-	std::string rap_dir_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/";
-
 	const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
 	const fs::file enc_file(enc_drm_path_local);
 
@@ -508,11 +506,11 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, reinterpret_cast<u8*>(&k_licensee), &contentID))
 		{
-			const std::string rap_file = rap_dir_path + contentID + ".rap";
+			const std::string rap_file = Emulator::GetRapFilePath(contentID);
 			npdrmkeys.devKlic = k_licensee;
 
-			if (fs::is_file(vfs::get(rap_file)))
-				npdrmkeys.rifKey = GetEdatRifKeyFromRapFile(fs::file{vfs::get(rap_file)});
+			if (fs::is_file(rap_file))
+				npdrmkeys.rifKey = GetEdatRifKeyFromRapFile(fs::file{rap_file});
 			else
 				sceNp.warning(u8"npDrmIsAvailable(): Rap file not found: “%s”", rap_file.c_str());
 		}
@@ -554,10 +552,11 @@ error_code sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 	}
 
 	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
+	const std::string rap_file = Emulator::GetRapFilePath(content_str);
 
 	sceNp.warning(u8"sceNpDrmVerifyUpgradeLicense(): content_id=“%s”", content_id);
 
-	if (fs::stat_t s{}; !fs::stat(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_str + ".rap"), s) || s.is_directory || s.size < 0x10)
+	if (fs::stat_t s{}; !fs::stat(rap_file, s) || s.is_directory || s.size < 0x10)
 	{
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
@@ -577,10 +576,11 @@ error_code sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 	}
 
 	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
+	const std::string rap_file = Emulator::GetRapFilePath(content_str);
 
 	sceNp.warning(u8"sceNpDrmVerifyUpgradeLicense2(): content_id=“%s”", content_id);
 
-	if (fs::stat_t s{}; !fs::stat(vfs::get("/dev_hdd0/home/" + Emu.GetUsr() + "/exdata/" + content_str + ".rap"), s) || s.is_directory || s.size < 0x10)
+	if (fs::stat_t s{}; !fs::stat(rap_file, s) || s.is_directory || s.size < 0x10)
 	{
 		// Game hasn't been purchased therefore no RAP file present
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
@@ -2875,7 +2875,7 @@ error_code sceNpManagerRequestTicket(vm::cptr<SceNpId> npId, vm::cptr<char> serv
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	nph.req_ticket(0x00020001, npId.get_ptr(), serviceId.get_ptr(), reinterpret_cast<const u8 *>(cookie.get_ptr()), cookieSize, entitlementId.get_ptr(), consumedCount);
+	nph.req_ticket(0x00020001, npId.get_ptr(), serviceId.get_ptr(), static_cast<const u8*>(cookie.get_ptr()), cookieSize, entitlementId.get_ptr(), consumedCount);
 
 	return CELL_OK;
 }
@@ -2908,7 +2908,7 @@ error_code sceNpManagerRequestTicket2(vm::cptr<SceNpId> npId, vm::cptr<SceNpTick
 		return SCE_NP_ERROR_INVALID_STATE;
 	}
 
-	nph.req_ticket(0x00020001, npId.get_ptr(), serviceId.get_ptr(), reinterpret_cast<const u8 *>(cookie.get_ptr()), cookieSize, entitlementId.get_ptr(), consumedCount);
+	nph.req_ticket(0x00020001, npId.get_ptr(), serviceId.get_ptr(), static_cast<const u8*>(cookie.get_ptr()), cookieSize, entitlementId.get_ptr(), consumedCount);
 
 	return CELL_OK;
 }

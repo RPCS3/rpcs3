@@ -33,7 +33,8 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     printf "#include <bits/stdc++.h>\nint main(){std::make_exception_ptr(0);std::pmr::get_default_resource();}" | $CXX -x c++ -std=c++2a -o ./appdir/usr/optional/checker -
 
     # Package it up and send it off
-    ./squashfs-root/usr/bin/appimagetool /rpcs3/build/appdir
+    ./squashfs-root/usr/bin/appimagetool "$APPDIR"
+    
     ls
 
     COMM_TAG="$(grep 'version{.*}' ../rpcs3/rpcs3_version.cpp | awk -F[\{,] '{printf "%d.%d.%d", $2, $3, $4}')"
@@ -43,14 +44,14 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 
     mv ./RPCS3*.AppImage "$RPCS3_APPIMAGE"
 
-    # If we're building using Azure Pipelines, let's copy over the AppImage artifact
+    # If we're building using a CI, let's copy over the AppImage artifact
     if [ -n "$BUILD_ARTIFACTSTAGINGDIRECTORY" ]; then
-        cp "$RPCS3_APPIMAGE" ~/artifacts
+        cp "$RPCS3_APPIMAGE" "$ARTDIR"
     fi
 
     FILESIZE=$(stat -c %s ./rpcs3*.AppImage)
     SHA256SUM=$(sha256sum ./rpcs3*.AppImage | awk '{ print $1 }')
-    echo "${SHA256SUM};${FILESIZE}B" > /rpcs3/GitHubReleaseMessage.txt
+    echo "${SHA256SUM};${FILESIZE}B" > "$RELEASE_MESSAGE"
     
 fi
 

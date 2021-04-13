@@ -27,6 +27,7 @@
 #include <QFontDatabase>
 #include <QLibraryInfo>
 #include <QDirIterator>
+#include <QFileInfo>
 
 #include <clocale>
 
@@ -63,14 +64,15 @@ bool gui_application::Init()
 		return false;
 	}
 
-	// Get deprecated active user (before August 2nd 2020)
-	QString active_user = m_gui_settings->GetValue(gui::um_active_user).toString();
-
-	// Get active user with deprecated active user as fallback
-	active_user = m_persistent_settings->GetCurrentUser(active_user.isEmpty() ? "00000001" : active_user);
+	// The user might be set by cli arg. If not, set another user.
+	if (m_active_user.empty())
+	{
+		// Get active user with standard user as fallback
+		m_active_user = m_persistent_settings->GetCurrentUser("00000001").toStdString();
+	}
 
 	// Force init the emulator
-	InitializeEmulator(active_user.toStdString(), true, m_show_gui);
+	InitializeEmulator(m_active_user, m_show_gui);
 
 	// Create the main window
 	if (m_show_gui)
@@ -256,26 +258,26 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		h = m_gui_settings->GetValue(gui::gs_height).toInt();
 	}
 
-	const auto screen_geometry = m_main_window ? m_main_window->geometry() : primaryScreen()->geometry();
-	const auto frame_geometry  = gui::utils::create_centered_window_geometry(screen_geometry, w, h);
+	const auto screen = m_main_window ? m_main_window->screen() : primaryScreen();
+	const auto source_geometry = m_main_window ? m_main_window->geometry() : primaryScreen()->geometry();
+	const auto frame_geometry  = gui::utils::create_centered_window_geometry(screen, source_geometry, w, h);
 	const auto app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
-	gs_frame* frame;
+	gs_frame* frame = nullptr;
 
-	switch (video_renderer type = g_cfg.video.renderer)
+	switch (g_cfg.video.renderer.get())
 	{
 	case video_renderer::opengl:
 	{
-		frame = new gl_gs_frame(frame_geometry, app_icon, m_gui_settings);
+		frame = new gl_gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
 	case video_renderer::null:
 	case video_renderer::vulkan:
 	{
-		frame = new gs_frame(frame_geometry, app_icon, m_gui_settings);
+		frame = new gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
-	default: fmt::throw_exception("Invalid video renderer: %s", type);
 	}
 
 	m_game_window = frame;
@@ -316,7 +318,7 @@ void gui_application::InitializeCallbacks()
 
 	callbacks.init_gs_render = []()
 	{
-		switch (video_renderer type = g_cfg.video.renderer)
+		switch (g_cfg.video.renderer.get())
 		{
 		case video_renderer::null:
 		{
@@ -335,10 +337,6 @@ void gui_application::InitializeCallbacks()
 			break;
 		}
 #endif
-		default:
-		{
-			fmt::throw_exception("Invalid video renderer: %s", type);
-		}
 		}
 	};
 
@@ -383,6 +381,11 @@ void gui_application::InitializeCallbacks()
 	callbacks.get_localized_u32string = [](localized_string_id id, const char* args) -> std::u32string
 	{
 		return localized_emu::get_u32string(id, args);
+	};
+
+	callbacks.resolve_path = [](std::string_view sv)
+	{
+		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
 	};
 
 	Emu.SetCallbacks(std::move(callbacks));
@@ -554,7 +557,7 @@ void gui_application::OnEmuSettingsChange()
 		}
 	}
 
-	Emu.ConfigureLogs();
+	Emulator::ConfigureLogs();
 	audio::configure_audio();
 	rsx::overlays::reset_performance_overlay();
 }

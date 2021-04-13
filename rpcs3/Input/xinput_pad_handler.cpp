@@ -188,7 +188,7 @@ int xinput_pad_handler::GetDeviceNumber(const std::string& padId)
 	if (pos == umax)
 		return -1;
 
-	int device_number = std::stoul(padId.substr(pos + 12)) - 1; // Controllers 1-n in GUI
+	const int device_number = std::stoul(padId.substr(pos + 12)) - 1; // Controllers 1-n in GUI
 	if (device_number >= XUSER_MAX_COUNT)
 		return -1;
 
@@ -242,7 +242,7 @@ xinput_pad_handler::PadButtonValues xinput_pad_handler::get_button_values_base(c
 	values[XInputKeyCodes::RSYPos] = ry > 0 ? ry : 0;
 
 	// Buttons
-	WORD buttons = state.Gamepad.wButtons;
+	const WORD buttons = state.Gamepad.wButtons;
 
 	// A, B, X, Y
 	values[XInputKeyCodes::A] = buttons & XINPUT_GAMEPAD_A ? 255 : 0;
@@ -518,16 +518,16 @@ void xinput_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device
 	if (!dev || !pad)
 		return;
 
-	auto padnum = dev->deviceNumber;
-	auto profile = dev->config;
+	const auto padnum = dev->deviceNumber;
+	const auto profile = dev->config;
 
 	// The left motor is the low-frequency rumble motor. The right motor is the high-frequency rumble motor.
 	// The two motors are not the same, and they create different vibration effects. Values range between 0 to 65535.
-	usz idx_l = profile->switch_vibration_motors ? 1 : 0;
-	usz idx_s = profile->switch_vibration_motors ? 0 : 1;
+	const usz idx_l = profile->switch_vibration_motors ? 1 : 0;
+	const usz idx_s = profile->switch_vibration_motors ? 0 : 1;
 
-	u16 speed_large = profile->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : static_cast<u16>(vibration_min);
-	u16 speed_small = profile->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : static_cast<u16>(vibration_min);
+	const u16 speed_large = profile->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : static_cast<u16>(vibration_min);
+	const u16 speed_small = profile->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : static_cast<u16>(vibration_min);
 
 	dev->newVibrateData |= dev->largeVibrate != speed_large || dev->smallVibrate != speed_small;
 

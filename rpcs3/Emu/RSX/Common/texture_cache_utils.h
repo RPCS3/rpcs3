@@ -5,6 +5,8 @@
 #include "texture_cache_predictor.h"
 #include "TextureUtils.h"
 
+#include "Emu/Memory/vm.h"
+
 #include <list>
 #include <unordered_set>
 
@@ -47,8 +49,8 @@ namespace rsx
 
 	public:
 		using value_type = section_storage_type;
-		using array_type = typename std::array<value_type, array_size>;
-		using list_type = typename std::list<array_type>;
+		using array_type = std::array<value_type, array_size>;
+		using list_type = std::list<array_type>;
 		using size_type = u32;
 
 		// Iterator
@@ -133,7 +135,8 @@ namespace rsx
 		// Constructor, Destructor
 		ranged_storage_block_list() :
 			m_data_it(m_data.end()),
-			m_array_idx(UINT32_MAX)
+			m_array_idx(UINT32_MAX),
+			m_capacity(0)
 		{}
 
 		// Iterator
@@ -927,7 +930,7 @@ namespace rsx
 		void protect(utils::protection new_prot, bool force = false);
 		void protect(utils::protection prot, const std::pair<u32, u32>& new_confirm);
 		void unprotect();
-		bool sync();
+		bool sync() const;
 
 		void discard();
 		const address_range& get_bounds(section_bounds bounds) const;

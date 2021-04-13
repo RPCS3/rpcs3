@@ -13,6 +13,9 @@ public:
 	PulseBackend();
 	virtual ~PulseBackend() override;
 
+	PulseBackend(const PulseBackend&) = delete;
+	PulseBackend& operator=(const PulseBackend&) = delete;
+
 	virtual const char* GetName() const override { return "Pulse"; }
 
 	static const u32 capabilities = 0;
@@ -24,5 +27,5 @@ public:
 	virtual bool AddData(const void* src, u32 num_samples) override;
 
 private:
-	pa_simple *connection = nullptr;
+	pa_simple* connection{};
 };

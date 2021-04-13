@@ -3,7 +3,6 @@
 #include "util/types.hpp"
 
 #include <QListWidget>
-#include <memory>
 
 class CPUDisAsm;
 class cpu_thread;
@@ -17,7 +16,7 @@ public:
 	breakpoint_list(QWidget* parent, breakpoint_handler* handler);
 	void UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm);
 	void ClearBreakpoints();
-	void AddBreakpoint(u32 addr);
+	void AddBreakpoint(u32 pc);
 	void RemoveBreakpoint(u32 addr);
 
 	QColor m_text_color_bp;
@@ -25,7 +24,7 @@ public:
 Q_SIGNALS:
 	void RequestShowAddress(u32 addr, bool select_addr = true, bool force = false);
 public Q_SLOTS:
-	void HandleBreakpointRequest(u32 addr);
+	void HandleBreakpointRequest(u32 loc);
 private Q_SLOTS:
 	void OnBreakpointListDoubleClicked();
 	void OnBreakpointListRightClicked(const QPoint &pos);
@@ -34,6 +33,6 @@ private:
 	breakpoint_handler* m_breakpoint_handler;
 	QMenu* m_context_menu = nullptr;
 	QAction* m_delete_action;
-	cpu_thread* m_cpu;
-	CPUDisAsm* m_disasm;
+	cpu_thread* m_cpu = nullptr;
+	CPUDisAsm* m_disasm = nullptr;
 };

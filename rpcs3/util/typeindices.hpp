@@ -255,7 +255,7 @@ namespace stx
 		else
 		{
 			static_assert(sizeof(As) > 0);
-			static_assert(is_same_ptr<T, As>());
+			static_assert(is_same_ptr<T, As>() == same_ptr::yes); // TODO
 			return type_counter<Info>::template dyn_type<T, As>.index();
 		}
 	}
@@ -274,7 +274,7 @@ namespace stx
 	ATTR_PURE inline const Info& typedata() noexcept
 	{
 		static_assert(sizeof(T) > 0 && sizeof(As) > 0);
-		static_assert(is_same_ptr<T, As>());
+		static_assert(is_same_ptr<T, As>() == same_ptr::yes); // TODO
 
 		return type_counter<Info>::template dyn_type<T, As>;
 	}

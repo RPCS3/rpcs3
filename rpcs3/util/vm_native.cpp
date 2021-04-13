@@ -259,10 +259,9 @@ namespace utils
 	shm::shm(u32 size, u32 flags)
 		: m_size(utils::align(size, 0x10000))
 		, m_flags(flags)
-		, m_ptr(nullptr)
 	{
 #ifdef _WIN32
-		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, m_size, NULL);
+		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE, 0, m_size, nullptr);
 		ensure(m_handle != INVALID_HANDLE_VALUE);
 #elif __linux__
 		m_file = -1;

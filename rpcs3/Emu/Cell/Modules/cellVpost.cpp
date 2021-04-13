@@ -277,14 +277,14 @@ error_code cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostC
 
 	//u64 stamp1 = get_guest_system_time();
 
-	vpost->sws = sws_getCachedContext(vpost->sws, w, h, AV_PIX_FMT_YUVA420P, ow, oh, AV_PIX_FMT_RGBA, SWS_BILINEAR, NULL, NULL, NULL);
+	vpost->sws = sws_getCachedContext(vpost->sws, w, h, AV_PIX_FMT_YUVA420P, ow, oh, AV_PIX_FMT_RGBA, SWS_BILINEAR, nullptr, nullptr, nullptr);
 
 	//u64 stamp2 = get_guest_system_time();
 
 	const u8* in_data[4] = { &inPicBuff[0], &inPicBuff[w * h], &inPicBuff[w * h * 5 / 4], pA.get() };
 	int ws = w;
 	int in_line[4] = { ws, ws/2, ws/2, ws };
-	u8* out_data[4] = { outPicBuff.get_ptr(), NULL, NULL, NULL };
+	u8* out_data[4] = { outPicBuff.get_ptr(), nullptr, nullptr, nullptr };
 	int out_line[4] = { static_cast<int>(ow * 4), 0, 0, 0 };
 
 	sws_scale(vpost->sws, in_data, in_line, 0, h, out_data, out_line);

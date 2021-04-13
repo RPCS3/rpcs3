@@ -3,9 +3,9 @@
 
 #include "VertexProgramDecompiler.h"
 
-#include <algorithm>
+#include <sstream>
 
-std::string VertexProgramDecompiler::GetMask(bool is_sca)
+std::string VertexProgramDecompiler::GetMask(bool is_sca) const
 {
 	std::string ret;
 
@@ -280,7 +280,7 @@ std::string VertexProgramDecompiler::GetCond()
 	return "any(" + GetRawCond() + ")";
 }
 
-std::string VertexProgramDecompiler::GetOptionalBranchCond()
+std::string VertexProgramDecompiler::GetOptionalBranchCond() const
 {
 	std::string cond_operator = d3.brb_cond_true ? " != " : " == ";
 	std::string cond = "(transform_branch_bits & (1u << " + std::to_string(d3.branch_index) + "))" + cond_operator + "0";
@@ -328,7 +328,7 @@ std::string VertexProgramDecompiler::AddCondReg()
 	return m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "cc" + std::to_string(d0.cond_reg_sel_1), getFloatTypeName(4) + "(0.)");
 }
 
-u32 VertexProgramDecompiler::GetAddr()
+u32 VertexProgramDecompiler::GetAddr() const
 {
 	return (d2.iaddrh << 3) | d3.iaddrl;
 }

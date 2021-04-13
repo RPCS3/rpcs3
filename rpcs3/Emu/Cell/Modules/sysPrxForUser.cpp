@@ -140,7 +140,8 @@ error_code cellSysconfPs1emu_EFDDAF6C()
 
 error_code sys_lv2coredump_D725F320()
 {
-	fmt::throw_exception("Unknown, unimplemented.");
+	sysPrxForUser.fatal("sys_lv2coredump_D725F320");
+	return CELL_OK;
 }
 
 error_code sys_get_bd_media_id()

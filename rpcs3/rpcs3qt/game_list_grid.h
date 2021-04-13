@@ -15,14 +15,13 @@ class game_list_grid : public game_list
 	bool m_text_enabled = true;
 
 public:
-	explicit game_list_grid(const QSize& icon_size, const QColor& icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText);
-	~game_list_grid();
+	explicit game_list_grid(const QSize& icon_size, QColor icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText);
 
 	void enableText(const bool& enabled);
-	void setIconSize(const QSize& size);
+	void setIconSize(const QSize& size) const;
 	void addItem(const QPixmap& img, const QString& name, const int& row, const int& col);
 
-	qreal getMarginFactor();
+	qreal getMarginFactor() const;
 
 private:
 	game_list_grid_delegate* grid_item_delegate; 

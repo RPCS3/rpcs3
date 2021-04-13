@@ -9,15 +9,12 @@
 
 typedef std::map<const QString, const QString> localized_cat;
 
-using namespace category;
-
 class Localized : public QObject
 {
 	Q_OBJECT
 
 public:
-
-	Localized();
+	Localized() {}
 
 	QString GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days = false) const;
 
@@ -63,31 +60,31 @@ public:
 
 		const localized_cat cat_boot =
 		{
-			{ cat_app_music, app_music }, // media
-			{ cat_app_photo, app_photo }, // media
-			{ cat_app_tv   , app_tv    }, // media
-			{ cat_app_video, app_video }, // media
-			{ cat_bc_video , bc_video  }, // media
-			{ cat_web_tv   , web_tv    }, // media
-			{ cat_home     , home      }, // home
-			{ cat_network  , network   }, // other
-			{ cat_store_fe , store_fe  }, // other
-			{ cat_disc_game, disc_game }, // disc_game
-			{ cat_hdd_game , hdd_game  }, // hdd_game
-			{ cat_ps2_game , ps2_game  }, // ps2_games
-			{ cat_ps2_inst , ps2_inst  }, // ps2_games
-			{ cat_ps1_game , ps1_game  }, // ps1_game
-			{ cat_psp_game , psp_game  }, // psp_games
-			{ cat_psp_mini , psp_mini  }, // psp_games
-			{ cat_psp_rema , psp_rema  }, // psp_games
+			{ cat::cat_app_music, app_music }, // media
+			{ cat::cat_app_photo, app_photo }, // media
+			{ cat::cat_app_tv   , app_tv    }, // media
+			{ cat::cat_app_video, app_video }, // media
+			{ cat::cat_bc_video , bc_video  }, // media
+			{ cat::cat_web_tv   , web_tv    }, // media
+			{ cat::cat_home     , home      }, // home
+			{ cat::cat_network  , network   }, // other
+			{ cat::cat_store_fe , store_fe  }, // other
+			{ cat::cat_disc_game, disc_game }, // disc_game
+			{ cat::cat_hdd_game , hdd_game  }, // hdd_game
+			{ cat::cat_ps2_game , ps2_game  }, // ps2_games
+			{ cat::cat_ps2_inst , ps2_inst  }, // ps2_games
+			{ cat::cat_ps1_game , ps1_game  }, // ps1_game
+			{ cat::cat_psp_game , psp_game  }, // psp_games
+			{ cat::cat_psp_mini , psp_mini  }, // psp_games
+			{ cat::cat_psp_rema , psp_rema  }, // psp_games
 		};
 
 		const localized_cat cat_data =
 		{
-			{ cat_ps3_data, ps3_data }, // data
-			{ cat_ps2_data, ps2_data }, // data
-			{ cat_ps3_save, ps3_save }, // data
-			{ cat_psp_save, psp_save }  // data
+			{ cat::cat_ps3_data, ps3_data }, // data
+			{ cat::cat_ps2_data, ps2_data }, // data
+			{ cat::cat_ps3_save, ps3_save }, // data
+			{ cat::cat_psp_save, psp_save }  // data
 		};
 	} category;
 

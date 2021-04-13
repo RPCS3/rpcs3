@@ -16,8 +16,8 @@ LOG_CHANNEL(gui_log, "GUI");
 constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> xSettings)
-	: m_gui_settings(xSettings)
+cg_disasm_window::cg_disasm_window(std::shared_ptr<gui_settings> gui_settings)
+	: m_gui_settings(std::move(gui_settings))
 {
 	setWindowTitle(tr("Cg Disasm"));
 	setObjectName("cg_disasm");
@@ -107,7 +107,7 @@ void cg_disasm_window::ShowContextMenu(const QPoint &pos)
 	menu.exec(origin);
 }
 
-void cg_disasm_window::ShowDisasm()
+void cg_disasm_window::ShowDisasm() const
 {
 	if (QFileInfo(m_path_last).isFile())
 	{

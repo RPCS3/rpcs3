@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -24,8 +23,7 @@ inline void strcpy_trunc(D& dst, const T& src)
 
 namespace fmt
 {
-	std::string replace_first(const std::string& src, const std::string& from, const std::string& to);
-	std::string replace_all(const std::string& src, const std::string& from, const std::string& to);
+	std::string replace_all(std::string_view src, std::string_view from, std::string_view to, usz count = -1);
 
 	template <usz list_size>
 	std::string replace_all(std::string src, const std::pair<std::string, std::string> (&list)[list_size])
