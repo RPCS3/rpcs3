@@ -10,10 +10,12 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Crypto/unedat.h"
 #include "Utilities/StrUtil.h"
-#include "Utilities/span.h"
 #include "sys_fs.h"
 #include "sys_process.h"
 #include "sys_memory.h"
+
+#include <span>
+//#include "Utilities/span.h"
 
 extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
 extern void ppu_unload_prx(const lv2_prx& prx);
@@ -805,7 +807,7 @@ error_code _sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<
 	pOpt->info->all_segments_num = ::size32(prx->segs);
 	if (pOpt->info->filename)
 	{
-		gsl::span dst(pOpt->info->filename.get_ptr(), pOpt->info->filename_size);
+		std::span dst(pOpt->info->filename.get_ptr(), pOpt->info->filename_size);
 		strcpy_trunc(dst, prx->name);
 	}
 

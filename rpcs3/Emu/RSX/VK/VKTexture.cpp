@@ -15,6 +15,8 @@
 
 #include "util/asm.hpp"
 
+#include <span>
+
 namespace vk
 {
 	static void gpu_swap_bytes_impl(const vk::command_buffer& cmd, vk::buffer* buf, u32 element_size, u32 data_offset, u32 data_length)
@@ -918,7 +920,7 @@ namespace vk
 				check_caps = false;
 			}
 
-			gsl::span<std::byte> mapped{ static_cast<std::byte*>(mapped_buffer), image_linear_size };
+			std::span<std::byte> mapped{ static_cast<std::byte*>(mapped_buffer), image_linear_size };
 			opt = upload_texture_subresource(mapped, layout, format, is_swizzled, caps);
 			upload_heap.unmap();
 

@@ -14,9 +14,11 @@
 
 #include "Loader/PSF.h"
 #include "Utilities/StrUtil.h"
-#include "Utilities/span.h"
 #include "util/init_mutex.hpp"
 #include "util/asm.hpp"
+
+#include <span>
+//#include "Utilities/span.h"
 
 LOG_CHANNEL(cellGame);
 
@@ -1150,7 +1152,7 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 		cellGame.warning("cellGameGetParamString(): id=%d was not found", id);
 	}
 
-	gsl::span dst(buf.get_ptr(), bufsize);
+	std::span dst(buf.get_ptr(), bufsize);
 	strcpy_trunc(dst, value);
 	return CELL_OK;
 }

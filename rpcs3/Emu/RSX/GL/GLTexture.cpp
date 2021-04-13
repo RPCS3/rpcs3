@@ -8,6 +8,8 @@
 
 #include "util/asm.hpp"
 
+#include <span>
+
 namespace gl
 {
 	buffer g_typeless_transfer_buffer;
@@ -654,7 +656,7 @@ namespace gl
 			image_memory_requirements mem_info;
 			pixel_buffer_layout mem_layout;
 
-			gsl::span<gsl::byte> dst_buffer = staging_buffer;
+			std::span<std::byte> dst_buffer = staging_buffer;
 			void* out_pointer = staging_buffer.data();
 			u8 block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
 			u64 image_linear_size;
@@ -693,7 +695,7 @@ namespace gl
 				{
 					const u64 row_pitch = rsx::align2<u64, u64>(layout.width_in_block * block_size_in_bytes, caps.alignment);
 					image_linear_size = row_pitch * layout.height_in_block * layout.depth;
-					dst_buffer = { reinterpret_cast<gsl::byte*>(upload_scratch_mem.map(buffer::access::write)), image_linear_size };
+					dst_buffer = { reinterpret_cast<std::byte*>(upload_scratch_mem.map(buffer::access::write)), image_linear_size };
 				}
 
 				auto op = upload_texture_subresource(dst_buffer, layout, format, is_swizzled, caps);
