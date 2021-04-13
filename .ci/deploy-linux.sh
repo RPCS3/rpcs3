@@ -12,7 +12,6 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     ./squashfs-root/AppRun ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs
     ls ./appdir/usr/lib/
     rm -r ./appdir/usr/share/doc
-    rm ./appdir/usr/lib/libxcb*
     cp "$(readlink -f /lib/x86_64-linux-gnu/libnsl.so.1)" ./appdir/usr/lib/libnsl.so.1
     export PATH=/rpcs3/build/squashfs-root/usr/bin/:${PATH}
 

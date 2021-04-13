@@ -1,14 +1,14 @@
-cmake_minimum_required(VERSION 3.14.1)
+cmake_minimum_required(VERSION 3.16.9)
 
 project(rpcs3)
 
 if(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
-        message(FATAL_ERROR "RPCS3 requires at least gcc-9.")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10)
+        message(FATAL_ERROR "RPCS3 requires at least gcc-10.")
     endif()
 elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11.0)
-        message(FATAL_ERROR "RPCS3 requires at least clang-11.0.")
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
+        message(FATAL_ERROR "RPCS3 requires at least clang-12.0.")
     endif()
 endif()
 

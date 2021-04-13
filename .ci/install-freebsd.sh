@@ -9,7 +9,7 @@ export ASSUME_ALWAYS_YES=true
 pkg info # debug
 
 # Prefer newer Clang than in base system (see also .ci/build-freebsd.sh)
-pkg install llvm11
+pkg install llvm12
 
 # Mandatory dependencies (qt5-dbus and qt5-gui are pulled via qt5-widgets)
 pkg install git ccache cmake ninja qt5-qmake qt5-buildtools qt5-widgets qt5-concurrent glew openal-soft ffmpeg
