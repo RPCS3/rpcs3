@@ -1894,7 +1894,7 @@
               <item>
                <widget class="QCheckBox" name="ppuPrecompilation">
                 <property name="text">
-                 <string>PPU LLVM Precompliation</string>
+                 <string>PPU LLVM Precompilation</string>
                 </property>
                </widget>
               </item>
