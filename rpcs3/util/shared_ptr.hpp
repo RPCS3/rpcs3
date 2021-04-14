@@ -1053,15 +1053,8 @@ namespace stx
 				ensure(is_same_ptr_test<T, U>(cmp.m_ptr));
 
 			shared_type old = cmp;
-
-			if (compare_exchange(old, std::move(exch)))
-			{
-				return old;
-			}
-			else
-			{
-				return old;
-			}
+			static_cast<void>(compare_exchange(old, std::move(exch)));
+			return old;
 		}
 
 		// More lightweight than compare_exchange
@@ -1114,15 +1107,8 @@ namespace stx
 				ensure(is_same_ptr_test<T, U>(cmp.m_ptr));
 
 			shared_type old = cmp;
-
-			if (compare_exchange(old, std::move(exch)))
-			{
-				return old;
-			}
-			else
-			{
-				return old;
-			}
+			static_cast<void>(compare_exchange(old, std::move(exch)));
+			return old;
 		}
 
 		// Supplementary
