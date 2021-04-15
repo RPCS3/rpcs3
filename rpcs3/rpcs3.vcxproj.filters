@@ -872,6 +872,9 @@
     <ClInclude Include="Input\hid_pad_handler.h">
       <Filter>Io</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\movie_item.h">
+      <Filter>Gui\custom items</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="debug\moc_predefs.h.cbt">

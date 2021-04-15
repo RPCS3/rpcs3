@@ -96,6 +96,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_list->setAlternatingRowColors(true);
 	m_game_list->installEventFilter(this);
 	m_game_list->setColumnCount(gui::column_count);
+	m_game_list->setMouseTracking(true);
 
 	m_game_compat = new game_compatibility(m_gui_settings, this);
 
@@ -132,6 +133,19 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 	connect(m_game_list, &QTableWidget::itemSelectionChanged, this, &game_list_frame::itemSelectionChangedSlot);
 	connect(m_game_list, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
+	connect(m_game_list, &QTableWidget::cellEntered, this, [this](int row, int column)
+	{
+		if (auto old_item = static_cast<movie_item*>(m_game_list->item(m_game_list->m_last_entered_row, m_game_list->m_last_entered_col)))
+		{
+			old_item->set_active(false);
+		}
+		if (auto new_item = static_cast<movie_item*>(m_game_list->item(row, column)))
+		{
+			new_item->set_active(true);
+		}
+		m_game_list->m_last_entered_row = row;
+		m_game_list->m_last_entered_col = column;
+	});
 
 	connect(m_game_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
 	connect(m_game_list->horizontalHeader(), &QHeaderView::customContextMenuRequested, [this](const QPoint& pos)
@@ -209,6 +223,7 @@ void game_list_frame::LoadSettings()
 	m_category_filters = m_gui_settings->GetGameListCategoryFilters();
 	m_draw_compat_status_to_grid = m_gui_settings->GetValue(gui::gl_draw_compat).toBool();
 	m_show_custom_icons = m_gui_settings->GetValue(gui::gl_custom_icon).toBool();
+	m_play_hover_movies = m_gui_settings->GetValue(gui::gl_hover_gifs).toBool();
 
 	Refresh(true);
 
@@ -531,10 +546,9 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		path_list.erase(unique(path_list.begin(), path_list.end()), path_list.end());
 
 		QSet<QString> serials;
-
 		QMutex mutex_cat;
-
 		lf_queue<game_info> games;
+		const std::string game_icon_path = m_play_hover_movies ? fs::get_config_dir() + "/Icons/game_icons/" : "";
 
 		QtConcurrent::blockingMap(path_list, [&](const std::string& dir)
 		{
@@ -678,11 +692,12 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 				const bool hasCustomConfig = fs::is_file(Emulator::GetCustomConfigPath(game.serial)) || fs::is_file(Emulator::GetCustomConfigPath(game.serial, true));
 				const bool hasCustomPadConfig = fs::is_file(Emulator::GetCustomInputConfigPath(game.serial));
+				const bool has_hover_gif =  fs::is_file(game_icon_path + game.serial + "/hover.gif");
 
 				const QColor color = getGridCompatibilityColor(compat.color);
 				const QPixmap pxmap = PaintedPixmap(icon, hasCustomConfig, hasCustomPadConfig, color);
 
-				games.push(std::make_shared<gui_game_info>(gui_game_info{game, qt_cat, compat, icon, pxmap, hasCustomConfig, hasCustomPadConfig}));
+				games.push(std::make_shared<gui_game_info>(gui_game_info{game, qt_cat, compat, icon, pxmap, hasCustomConfig, hasCustomPadConfig, has_hover_gif}));
 			}
 		});
 
@@ -1025,6 +1040,13 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		icon_menu->addAction(tr("&Remove Custom Icon"))
 	};
 	icon_menu->addSeparator();
+	const std::array<QAction*, 3> custom_gif_actions =
+	{
+		icon_menu->addAction(tr("&Import Hover Gif")),
+		icon_menu->addAction(tr("&Replace Hover Gif")),
+		icon_menu->addAction(tr("&Remove Hover Gif"))
+	};
+	icon_menu->addSeparator();
 	const std::array<QAction*, 3> custom_shader_icon_actions =
 	{
 		icon_menu->addAction(tr("&Import Custom Shader Loading Background")),
@@ -1044,36 +1066,60 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		enum class icon_type
 		{
 			game_list,
+			hover_gif,
 			shader_load
 		};
 		
-		const auto handle_icon = [this, serial](const QString& game_icon_path, icon_action action, icon_type type)
+		const auto handle_icon = [this, serial](const QString& game_icon_path, const QString& suffix, icon_action action, icon_type type)
 		{
 			QString icon_path;
 
 			if (action != icon_action::remove)
 			{
-				icon_path = QFileDialog::getOpenFileName(this, type == icon_type::game_list
-					? tr("Select Custom Icon")
-					: tr("Select Custom Shader Loading Background"), "", tr("png (*.png);;All files (*.*)"));
+				QString msg;
+				switch (type)
+				{
+				case icon_type::game_list:
+					msg = tr("Select Custom Icon");
+					break;
+				case icon_type::hover_gif:
+					msg = tr("Select Custom Hover Gif");
+					break;
+				case icon_type::shader_load:
+					msg = tr("Select Custom Shader Loading Background");
+					break;
+				}
+				icon_path = QFileDialog::getOpenFileName(this, msg, "", tr("%0 (*.%0);;All files (*.*)").arg(suffix));
 			}
 			if (action == icon_action::remove || !icon_path.isEmpty())
 			{
 				bool refresh = false;
 
+				QString msg;
+				switch (type)
+				{
+				case icon_type::game_list:
+					msg = tr("Remove Custom Icon of %0?").arg(serial);
+					break;
+				case icon_type::hover_gif:
+					msg = tr("Remove Custom Hover Gif of %0?").arg(serial);
+					break;
+				case icon_type::shader_load:
+					msg = tr("Remove Custom Shader Loading Background of %0?").arg(serial);
+					break;
+				}
+
 				if (action == icon_action::replace || (action == icon_action::remove &&
-					QMessageBox::question(this, tr("Confirm Removal"), type == icon_type::game_list
-						? tr("Remove custom icon of %0?").arg(serial)
-						: tr("Remove Custom Shader Loading Background of %0?").arg(serial)) == QMessageBox::Yes))
+					QMessageBox::question(this, tr("Confirm Removal"), msg) == QMessageBox::Yes))
 				{
 					if (QFile file(game_icon_path); file.exists() && !file.remove())
 					{
-						game_list_log.error("Could not remove old image: '%s'", sstr(game_icon_path), sstr(file.errorString()));
-						QMessageBox::warning(this, tr("Warning!"), tr("Failed to remove the old image!"));
+						game_list_log.error("Could not remove old file: '%s'", sstr(game_icon_path), sstr(file.errorString()));
+						QMessageBox::warning(this, tr("Warning!"), tr("Failed to remove the old file!"));
 						return;
 					}
 
-					game_list_log.success("Removed image: '%s'", sstr(game_icon_path));
+					game_list_log.success("Removed file: '%s'", sstr(game_icon_path));
 					if (action == icon_action::remove)
 					{
 						refresh = true;
@@ -1084,12 +1130,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 				{
 					if (!QFile::copy(icon_path, game_icon_path))
 					{
-						game_list_log.error("Could not import image '%s' to '%s'.", sstr(icon_path), sstr(game_icon_path));
-						QMessageBox::warning(this, tr("Warning!"), tr("Failed to import the new image!"));
+						game_list_log.error("Could not import file '%s' to '%s'.", sstr(icon_path), sstr(game_icon_path));
+						QMessageBox::warning(this, tr("Warning!"), tr("Failed to import the new file!"));
 					}
 					else
 					{
-						game_list_log.success("Imported image '%s' to '%s'", sstr(icon_path), sstr(game_icon_path));
+						game_list_log.success("Imported file '%s' to '%s'", sstr(icon_path), sstr(game_icon_path));
 						refresh = true;
 					}
 				}
@@ -1101,25 +1147,26 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			}
 		};
 
-		const std::vector<std::tuple<icon_type, QString, const std::array<QAction*, 3>&>> icon_map =
+		const std::vector<std::tuple<icon_type, QString, QString, const std::array<QAction*, 3>&>> icon_map =
 		{
-			{icon_type::game_list, "/ICON0.PNG", custom_icon_actions},
-			{icon_type::shader_load, "/PIC1.PNG", custom_shader_icon_actions},
+			{icon_type::game_list, "/ICON0.PNG", "png", custom_icon_actions},
+			{icon_type::hover_gif, "/hover.gif", "gif", custom_gif_actions},
+			{icon_type::shader_load, "/PIC1.PNG", "png", custom_shader_icon_actions},
 		};
 
-		for (const auto& [type, icon_name, actions] : icon_map)
+		for (const auto& [type, icon_name, suffix, actions] : icon_map)
 		{
 			const QString icon_path = qstr(custom_icon_dir_path) + icon_name;
 
 			if (QFile::exists(icon_path))
 			{
 				actions[static_cast<int>(icon_action::add)]->setVisible(false);
-				connect(actions[static_cast<int>(icon_action::replace)], &QAction::triggered, this, [handle_icon, icon_path, t = type] { handle_icon(icon_path, icon_action::replace, t); });
-				connect(actions[static_cast<int>(icon_action::remove)], &QAction::triggered, this, [handle_icon, icon_path, t = type] { handle_icon(icon_path, icon_action::remove, t); });
+				connect(actions[static_cast<int>(icon_action::replace)], &QAction::triggered, this, [handle_icon, icon_path, t = type, s = suffix] { handle_icon(icon_path, s, icon_action::replace, t); });
+				connect(actions[static_cast<int>(icon_action::remove)], &QAction::triggered, this, [handle_icon, icon_path, t = type, s = suffix] { handle_icon(icon_path, s, icon_action::remove, t); });
 			}
 			else
 			{
-				connect(actions[static_cast<int>(icon_action::add)], &QAction::triggered, this, [handle_icon, icon_path, t = type] { handle_icon(icon_path, icon_action::add, t); });
+				connect(actions[static_cast<int>(icon_action::add)], &QAction::triggered, this, [handle_icon, icon_path, t = type, s = suffix] { handle_icon(icon_path, s, icon_action::add, t); });
 				actions[static_cast<int>(icon_action::replace)]->setVisible(false);
 				actions[static_cast<int>(icon_action::remove)]->setEnabled(false);
 			}
@@ -2011,7 +2058,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 				Q_EMIT RequestIconSizeChange(1);
 				return true;
 			}
-			else if (key_event->key() == Qt::Key_Minus)
+			if (key_event->key() == Qt::Key_Minus)
 			{
 				Q_EMIT RequestIconSizeChange(-1);
 				return true;
@@ -2064,7 +2111,14 @@ void game_list_frame::PopulateGameList()
 	const QLocale locale{};
 	const Localized localized;
 
-	int row = 0, index = -1;
+	const QString game_icon_path = m_play_hover_movies ? qstr(fs::get_config_dir() + "/Icons/game_icons/") : "";
+
+	static QIcon icon_combo_config_bordered(":/Icons/combo_config_bordered.png");
+	static QIcon icon_custom_config(":/Icons/custom_config.png");
+	static QIcon icon_controllers(":/Icons/controllers.png");
+
+	int row = 0;
+	int index = -1;
 	for (const auto& game : m_game_data)
 	{
 		index++;
@@ -2078,23 +2132,46 @@ void game_list_frame::PopulateGameList()
 
 		// Icon
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
-		icon_item->setData(Qt::DecorationRole, game->pxmap);
+
+		icon_item->set_icon_func([this, icon_item, game](int)
+		{
+			ensure(icon_item);
+
+			if (QMovie* movie = icon_item->movie(); movie && icon_item->get_active())
+			{
+				icon_item->setData(Qt::DecorationRole, movie->currentPixmap().scaled(m_icon_size, Qt::KeepAspectRatio));
+			}
+			else
+			{
+				icon_item->setData(Qt::DecorationRole, game->pxmap);
+				if (movie)
+				{
+					movie->stop();
+				}
+			}
+		});
+
+		if (m_play_hover_movies && game->has_hover_gif)
+		{
+			icon_item->init_movie(game_icon_path % serial % "/hover.gif");
+		}
+
 		icon_item->setData(Qt::UserRole, index, true);
-		icon_item->setData(gui::game_role, QVariant::fromValue(game));
+		icon_item->setData(gui::custom_roles::game_role, QVariant::fromValue(game));
 
 		// Title
 		custom_table_widget_item* title_item = new custom_table_widget_item(title);
 		if (game->hasCustomConfig && game->hasCustomPadConfig)
 		{
-			title_item->setIcon(QIcon(":/Icons/combo_config_bordered.png"));
+			title_item->setIcon(icon_combo_config_bordered);
 		}
 		else if (game->hasCustomConfig)
 		{
-			title_item->setIcon(QIcon(":/Icons/custom_config.png"));
+			title_item->setIcon(icon_custom_config);
 		}
 		else if (game->hasCustomPadConfig)
 		{
-			title_item->setIcon(QIcon(":/Icons/controllers.png"));
+			title_item->setIcon(icon_controllers);
 		}
 
 		// Serial
@@ -2112,7 +2189,7 @@ void game_list_frame::PopulateGameList()
 
 		// Compatibility
 		custom_table_widget_item* compat_item = new custom_table_widget_item;
-		compat_item->setText(game->compat.text + (game->compat.date.isEmpty() ? "" : " (" + game->compat.date + ")"));
+		compat_item->setText(game->compat.text % (game->compat.date.isEmpty() ? QStringLiteral("") : " (" % game->compat.date % ")"));
 		compat_item->setData(Qt::UserRole, game->compat.index, true);
 		compat_item->setToolTip(game->compat.tooltip);
 		if (!game->compat.color.isEmpty())
@@ -2223,13 +2300,15 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 	m_game_grid->setRowCount(max_rows);
 	m_game_grid->setColumnCount(maxCols);
 
+	const QString game_icon_path = m_play_hover_movies ? qstr(fs::get_config_dir() + "/Icons/game_icons/") : "";
+
 	for (const auto& app : matching_apps)
 	{
 		const QString serial = qstr(app->info.serial);
 		const QString title = m_titles.value(serial, qstr(app->info.name));
 		const QString notes = m_notes.value(serial);
 
-		m_game_grid->addItem(app->pxmap, title, r, c);
+		m_game_grid->addItem(app, title, (m_play_hover_movies && app->has_hover_gif) ? (game_icon_path % serial % "/hover.gif") : QStringLiteral(""), r, c);
 		m_game_grid->item(r, c)->setData(gui::game_role, QVariant::fromValue(app));
 
 		if (!notes.isEmpty())
@@ -2305,9 +2384,7 @@ std::string game_list_frame::CurrentSelectionPath()
 
 	if (item)
 	{
-		const QVariant var = item->data(gui::game_role);
-
-		if (var.canConvert<game_info>())
+		if (const QVariant var = item->data(gui::game_role); var.canConvert<game_info>())
 		{
 			if (const game_info game = var.value<game_info>())
 			{
@@ -2404,6 +2481,16 @@ void game_list_frame::SetShowCustomIcons(bool show)
 	{
 		m_show_custom_icons = show;
 		m_gui_settings->SetValue(gui::gl_custom_icon, show);
+		Refresh(true);
+	}
+}
+
+void game_list_frame::SetPlayHoverGifs(bool play)
+{
+	if (m_play_hover_movies != play)
+	{
+		m_play_hover_movies = play;
+		m_gui_settings->SetValue(gui::gl_hover_gifs, play);
 		Refresh(true);
 	}
 }

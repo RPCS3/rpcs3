@@ -1,8 +1,8 @@
 #pragma once
 
-#include <QTableWidgetItem>
+#include "movie_item.h"
 
-class custom_table_widget_item : public QTableWidgetItem
+class custom_table_widget_item : public movie_item
 {
 private:
 	int m_sort_role = Qt::DisplayRole;
