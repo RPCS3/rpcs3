@@ -3,13 +3,12 @@
 #include "overlay_controls.h"
 
 #include "Emu/IdManager.h"
-#include "Emu/Cell/timers.hpp"
 
 #include "Utilities/mutex.h"
 #include "Utilities/Timer.h"
 
-#include <list>
 #include <mutex>
+#include <set>
 
 
 // Definition of user interface implementations
@@ -34,7 +33,7 @@ namespace rsx
 			virtual void update() {}
 			virtual compiled_resource get_compiled() = 0;
 
-			void refresh();
+			void refresh() const;
 		};
 
 		// Interactable UI element
@@ -71,6 +70,7 @@ namespace rsx
 
 		protected:
 			Timer input_timer;
+			std::set<u8> auto_repeat_buttons = { pad_button::dpad_up, pad_button::dpad_down, pad_button::dpad_left, pad_button::dpad_right };
 			atomic_t<bool> exit = false;
 			atomic_t<u64> thread_bits = 0;
 
@@ -89,7 +89,7 @@ namespace rsx
 
 			virtual void on_button_pressed(pad_button /*button_press*/) {}
 
-			void close(bool use_callback, bool stop_pad_interception);
+			virtual void close(bool use_callback, bool stop_pad_interception);
 
 			s32 run_input_loop();
 		};

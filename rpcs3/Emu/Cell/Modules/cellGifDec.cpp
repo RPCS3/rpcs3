@@ -93,6 +93,7 @@ error_code cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc sr
 		current_subHandle.fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
 		break;
 	}
+	default: break; // TODO
 	}
 
 	subHandle->set(vm::alloc(sizeof(GifStream), vm::main));
@@ -131,6 +132,7 @@ error_code cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PI
 		file->file.read(buffer, sizeof(buffer));
 		break;
 	}
+	default: break; // TODO
 	}
 
 	if (*utils::bless<be_t<u32>>(buffer + 0) != 0x47494638u ||
@@ -217,6 +219,7 @@ error_code cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm
 		file->file.read(gif.get(), fileSize);
 		break;
 	}
+	default: break; // TODO
 	}
 
 	//Decode GIF file. (TODO: Is there any faster alternative? Can we do it without external libraries?)

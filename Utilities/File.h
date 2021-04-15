@@ -81,7 +81,7 @@ namespace fs
 	{
 		virtual ~file_base();
 
-		virtual stat_t stat();
+		[[noreturn]] virtual stat_t stat();
 		virtual void sync();
 		virtual bool trunc(u64 length) = 0;
 		virtual u64 read(void* buffer, u64 size) = 0;
@@ -647,9 +647,6 @@ namespace fs
 		std::string m_path{}; // Pending file path
 		std::string m_dest{}; // Destination file path
 	};
-
-	// Get real path for comparisons (TODO: investigate std::filesystem::path::compare implementation)
-	std::string escape_path(std::string_view path);
 
 	// Delete directory and all its contents recursively
 	bool remove_all(const std::string& path, bool remove_root = true);

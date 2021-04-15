@@ -46,7 +46,7 @@ namespace rsx
 			}
 			case direction::right:
 			{
-				if (caret_position < text.length())
+				if (caret_position < value.length())
 				{
 					caret_position++;
 					refresh();
@@ -55,7 +55,7 @@ namespace rsx
 			}
 			case direction::up:
 			{
-				const usz current_line_start = get_line_start(text, caret_position);
+				const usz current_line_start = get_line_start(value, caret_position);
 				if (current_line_start == 0)
 				{
 					// This is the first line, so caret moves to the very beginning
@@ -65,7 +65,7 @@ namespace rsx
 				}
 				const usz caret_pos_in_line = caret_position - current_line_start;
 				const usz prev_line_end     = current_line_start - 1;
-				const usz prev_line_start   = get_line_start(text, prev_line_end);
+				const usz prev_line_start   = get_line_start(value, prev_line_end);
 				// TODO : Save caret position to some kind of buffer, so after switching back and forward, caret would be on initial position
 				caret_position = std::min(prev_line_end, prev_line_start + caret_pos_in_line);
 
@@ -74,18 +74,18 @@ namespace rsx
 			}
 			case direction::down:
 			{
-				const usz current_line_end = get_line_end(text, caret_position);
-				if (current_line_end == text.length())
+				const usz current_line_end = get_line_end(value, caret_position);
+				if (current_line_end == value.length())
 				{
 					// This is the last line, so caret moves to the very end
 					caret_position = current_line_end;
 					refresh();
 					break;
 				}
-				const usz current_line_start = get_line_start(text, caret_position);
+				const usz current_line_start = get_line_start(value, caret_position);
 				const usz caret_pos_in_line  = caret_position - current_line_start;
 				const usz next_line_start    = current_line_end + 1;
-				const usz next_line_end      = get_line_end(text, next_line_start);
+				const usz next_line_end      = get_line_end(value, next_line_start);
 				// TODO : Save caret position to some kind of buffer, so after switching back and forward, caret would be on initial position
 				caret_position = std::min(next_line_end, next_line_start + caret_pos_in_line);
 
@@ -95,26 +95,55 @@ namespace rsx
 			}
 		}
 
+		void edit_text::set_text(const std::string& text)
+		{
+			set_unicode_text(utf8_to_u32string(text));
+		}
+
+		void edit_text::set_unicode_text(const std::u32string& text)
+		{
+			value = text;
+
+			if (value.empty())
+			{
+				overlay_element::set_unicode_text(placeholder);
+			}
+			else if (password_mode)
+			{
+				overlay_element::set_unicode_text(std::u32string(value.size(), U"＊"[0]));
+			}
+			else
+			{
+				overlay_element::set_unicode_text(value);
+			}
+		}
+
+		void edit_text::set_placeholder(const std::u32string& placeholder_text)
+		{
+			placeholder = placeholder_text;
+		}
+
 		void edit_text::insert_text(const std::u32string& str)
 		{
 			if (caret_position == 0)
 			{
 				// Start
-				text = str + text;
+				value = str + text;
 			}
 			else if (caret_position == text.length())
 			{
 				// End
-				text += str;
+				value += str;
 			}
 			else
 			{
 				// Middle
-				text.insert(caret_position, str);
+				value.insert(caret_position, str);
 			}
 
 			caret_position += ::narrow<u16>(str.length());
 			m_reset_caret_pulse = true;
+			set_unicode_text(value);
 			refresh();
 		}
 
@@ -127,19 +156,20 @@ namespace rsx
 
 			if (caret_position == 1)
 			{
-				text = text.length() > 1 ? text.substr(1) : U"";
+				value = value.length() > 1 ? value.substr(1) : U"";
 			}
 			else if (caret_position == text.length())
 			{
-				text = text.substr(0, caret_position - 1);
+				value = value.substr(0, caret_position - 1);
 			}
 			else
 			{
-				text = text.substr(0, caret_position - 1) + text.substr(caret_position);
+				value = value.substr(0, caret_position - 1) + value.substr(caret_position);
 			}
 
 			caret_position--;
 			m_reset_caret_pulse = true;
+			set_unicode_text(value);
 			refresh();
 		}
 
@@ -153,8 +183,8 @@ namespace rsx
 				auto renderer        = get_font();
 				const auto caret_loc = renderer->get_char_offset(text.c_str(), caret_position, clip_text ? w : UINT16_MAX, wrap_text);
 
-				caret.set_pos(u16(caret_loc.first + padding_left + x), u16(caret_loc.second + padding_top + y));
-				caret.set_size(1, u16(renderer->get_size_px() + 2));
+				caret.set_pos(static_cast<u16>(caret_loc.first) + padding_left + x, static_cast<u16>(caret_loc.second) + padding_top + y);
+				caret.set_size(1, static_cast<u16>(renderer->get_size_px() + 2));
 				caret.fore_color           = fore_color;
 				caret.back_color           = fore_color;
 				caret.pulse_effect_enabled = true;
@@ -172,7 +202,7 @@ namespace rsx
 				{
 					// TODO: Scrolling by using scroll offset
 					cmd.config.clip_region = true;
-					cmd.config.clip_rect   = {f32(x), f32(y), f32(x + w), f32(y + h)};
+					cmd.config.clip_rect   = {static_cast<f32>(x), static_cast<f32>(y), static_cast<f32>(x + w), static_cast<f32>(y + h)};
 				}
 
 				is_compiled = true;

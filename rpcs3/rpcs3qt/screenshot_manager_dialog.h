@@ -20,13 +20,13 @@ protected:
 	void resizeEvent(QResizeEvent* event) override;
 
 private Q_SLOTS:
-	void update_icon(int index);
+	void update_icon(int index) const;
 
 Q_SIGNALS:
 	void signal_icon_change(int index, const QString& path);
 
 private:
-	void show_preview(QListWidgetItem* item);
+	static void show_preview(QListWidgetItem* item);
 	void update_icons(int value);
 
 	enum item_role

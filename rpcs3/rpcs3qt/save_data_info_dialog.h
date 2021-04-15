@@ -12,7 +12,7 @@ class save_data_info_dialog :public QDialog
 	Q_OBJECT
 
 public:
-	explicit save_data_info_dialog(const SaveDataEntry& save, QWidget* parent = nullptr);
+	explicit save_data_info_dialog(SaveDataEntry save, QWidget* parent = nullptr);
 private:
 	void UpdateData();
 

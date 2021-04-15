@@ -420,15 +420,12 @@ void spu_cache::initialize()
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		// Initialize progress dialog (wait for previous progress done)
-		while (g_progr_ptotal)
-		{
-			std::this_thread::sleep_for(5ms);
-		}
+		g_progr_ptotal.wait<atomic_wait::op_ne>(0);
 
 		g_progr_ptotal += ::size32(func_list);
 		progr.emplace("Building SPU cache...");
 
-		worker_count = Emu.GetMaxThreads();
+		worker_count = Emulator::GetMaxThreads();
 	}
 
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
@@ -741,7 +738,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		workload.back().size  = size0;
 		workload.back().level = 0;
 		workload.back().from  = -1;
-		workload.back().rel32 = 0;
+		workload.back().rel32 = nullptr;
 		workload.back().beg   = beg;
 		workload.back().end   = _end;
 
@@ -1763,6 +1760,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				m_use_rb[pos / 4] = s_reg_mfc_eal;
 				break;
 			}
+			default: break;
 			}
 
 			break;
@@ -3223,16 +3221,14 @@ void spu_recompiler_base::dump(const spu_program& result, std::string& out)
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/InlineAsm.h"
-#include "llvm/Analysis/Lint.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Vectorize.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -5314,7 +5310,7 @@ public:
 		call(name, &exec_fall<F>, m_thread, m_ir->getInt32(op.opcode));
 	}
 
-	static void exec_unk(spu_thread*, u32 op)
+	[[noreturn]] static void exec_unk(spu_thread*, u32 op)
 	{
 		fmt::throw_exception("Unknown/Illegal instruction (0x%08x)", op);
 	}
@@ -6162,6 +6158,7 @@ public:
 		{
 			return;
 		}
+		default: break;
 		}
 
 		update_pc();

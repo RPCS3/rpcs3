@@ -93,17 +93,10 @@ s32 sce_np_tus_manager::add_transaction_context(s32 titleCtxId)
 
 bool sce_np_tus_manager::check_transaction_context_id(s32 transId)
 {
-	for (const auto& title_context : title_contexts)
+	return std::any_of(title_contexts.cbegin(), title_contexts.cend(), [&transId](const auto& c)
 	{
-		const auto& transactions = title_context.second.transaction_contexts;
-
-		if (transactions.find(transId) != transactions.end())
-		{
-			return true;
-		}
-	}
-
-	return false;
+		return c.second.transaction_contexts.contains(transId);
+	});
 }
 
 bool sce_np_tus_manager::remove_transaction_context_id(s32 transId)
@@ -202,7 +195,7 @@ error_code sceNpTusCreateTitleCtx(vm::cptr<SceNpCommunicationId> communicationId
 		return SCE_NP_COMMUNITY_ERROR_TOO_MANY_OBJECTS;
 	}
 
-	return not_an_error(id);;
+	return not_an_error(id);
 }
 
 error_code sceNpTusDestroyTitleCtx(s32 titleCtxId)

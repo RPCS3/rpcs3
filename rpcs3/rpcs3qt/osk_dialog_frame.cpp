@@ -14,10 +14,6 @@
 
 constexpr auto qstr = QString::fromStdString;
 
-osk_dialog_frame::osk_dialog_frame()
-{
-}
-
 osk_dialog_frame::~osk_dialog_frame()
 {
 	if (m_dialog)
@@ -26,7 +22,7 @@ osk_dialog_frame::~osk_dialog_frame()
 	}
 }
 
-void osk_dialog_frame::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 /*panel_flag*/, u32 /*first_view_panel*/)
+void osk_dialog_frame::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 /*first_view_panel*/)
 {
 	state = OskDialogState::Open;
 
@@ -48,8 +44,8 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	QLabel* message_label = new QLabel(QString::fromStdU16String(message));
 
 	// Text Input Counter
-	const QString text = QString::fromStdU16String(std::u16string(init_text));
-	QLabel* input_count_label = new QLabel(QString("%1/%2").arg(text.length()).arg(charlimit));
+	const QString input_text = QString::fromStdU16String(std::u16string(init_text));
+	QLabel* input_count_label = new QLabel(QString("%1/%2").arg(input_text.length()).arg(charlimit));
 
 	// Button Layout
 	QDialogButtonBox* button_box = new QDialogButtonBox(QDialogButtonBox::Ok);
@@ -64,15 +60,20 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 		QLineEdit* input = new QLineEdit(m_dialog);
 		input->setFixedWidth(lineEditWidth());
 		input->setMaxLength(charlimit);
-		input->setText(text);
+		input->setText(input_text);
 		input->setFocus();
+
+		if (panel_flag & CELL_OSKDIALOG_PANELMODE_PASSWORD)
+		{
+			input->setEchoMode(QLineEdit::Password); // Let's assume that games only use the password mode with single-line edit fields
+		}
 
 		if (prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
 		{
 			input->setValidator(new QRegExpValidator(QRegExp("^\\S*$"), this));
 		}
 
-		connect(input, &QLineEdit::textChanged, [=, this](const QString& text)
+		connect(input, &QLineEdit::textChanged, input_count_label, [input_count_label, charlimit, this](const QString& text)
 		{
 			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
@@ -86,10 +87,10 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	{
 		QTextEdit* input = new QTextEdit(m_dialog);
 		input->setFixedWidth(lineEditWidth());
-		input->setText(text);
+		input->setText(input_text);
 		input->setFocus();
 		input->moveCursor(QTextCursor::End);
-		m_text_old = text;
+		m_text_old = input_text;
 
 		connect(input, &QTextEdit::textChanged, [=, this]()
 		{

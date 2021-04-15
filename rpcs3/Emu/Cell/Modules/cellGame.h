@@ -354,7 +354,7 @@ struct CellHddGameStatSet
 
 typedef void(CellHddGameStatCallback)(vm::ptr<CellHddGameCBResult> cbResult, vm::ptr<CellHddGameStatGet> get, vm::ptr<CellHddGameStatSet> set);
 typedef void(CellGameThemeInstallCallback)(u32 fileOffset, u32 readSize, vm::ptr<void> buf);
-typedef void(CellGameDiscEjectCallback)(void);
+typedef void(CellGameDiscEjectCallback)();
 typedef void(CellGameDiscInsertCallback)(u32 discType, vm::ptr<char> titleId);
-typedef void(CellDiscGameDiscEjectCallback)(void);
+typedef void(CellDiscGameDiscEjectCallback)();
 typedef void(CellDiscGameDiscInsertCallback)(u32 discType, vm::ptr<char> titleId);

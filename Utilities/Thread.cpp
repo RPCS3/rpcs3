@@ -2,7 +2,6 @@
 #include "Emu/System.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/RSX/RSXThread.h"
@@ -451,7 +450,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 		}
 		case 0x7f:
 		{
-			if ((repe && !oso) || (!repe && oso)) // MOVDQU/MOVDQA xmm/m, xmm
+			if (repe != oso) // MOVDQU/MOVDQA xmm/m, xmm
 			{
 				out_op = X64OP_STORE;
 				out_reg = get_modRM_reg_xmm(code, rex);
@@ -1810,7 +1809,6 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 	if (IsDebuggerPresent())
 	{
 		sys_log.fatal("\n%s", msg);
-		std::fprintf(stderr, "%s\n", msg.c_str());
 
 		sys_log.notice("\n%s", dump_useful_thread_info());
 
@@ -2511,12 +2509,9 @@ void thread_base::exec()
 
 	sig_log.fatal("Thread terminated due to fatal error: %s", reason);
 
-	std::fprintf(stderr, "Thread '%s' terminated due to fatal error: %s\n", g_tls_log_prefix().c_str(), std::string(reason).c_str());
-
 #ifdef _WIN32
 	if (IsDebuggerPresent())
 	{
-		OutputDebugStringA(fmt::format("Thread '%s' terminated due to fatal error: %s\n", g_tls_log_prefix(), reason).c_str());
 		__debugbreak();
 	}
 #else
@@ -2764,6 +2759,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 						// Verified by more than one windows user on 16-thread CPU
 						ppu_mask = spu_mask = rsx_mask = (0b10101010101010101010101010101010 & all_cores_mask);
 					}
+					break;
 				case 12:
 					// 5600X
 					if (g_cfg.core.thread_scheduler == thread_scheduler_mode::alt)
@@ -2776,6 +2772,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 					{
 						ppu_mask = spu_mask = rsx_mask = all_cores_mask;
 					}
+					break;
 				default:
 					if (thread_count > 24)
 					{

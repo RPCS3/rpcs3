@@ -13,7 +13,7 @@ class skylander_creator_dialog : public QDialog
 	Q_OBJECT
 
 public:
-	skylander_creator_dialog(QWidget* parent);
+	explicit skylander_creator_dialog(QWidget* parent);
 	QString get_file_path() const;
 
 protected:
@@ -25,7 +25,7 @@ class skylander_dialog : public QDialog
 	Q_OBJECT
 
 public:
-	skylander_dialog(QWidget* parent);
+	explicit skylander_dialog(QWidget* parent);
 	~skylander_dialog();
 	static skylander_dialog* get_dlg(QWidget* parent);
 

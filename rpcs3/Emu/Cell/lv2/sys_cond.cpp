@@ -26,11 +26,10 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 
 	const auto _attr = *attr;
 
-	if (auto error = lv2_obj::create<lv2_cond>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
+	if (const auto error = lv2_obj::create<lv2_cond>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
 	{
 		return std::make_shared<lv2_cond>(
 			_attr.pshared,
-			_attr.flags,
 			_attr.ipc_key,
 			_attr.name_u64,
 			mutex_id,
@@ -59,7 +58,7 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 			return CELL_EBUSY;
 		}
 
-		cond.mutex->obj_count.atomic_op([](typename lv2_mutex::count_info& info){ info.cond_count--; });
+		cond.mutex->obj_count.atomic_op([](lv2_mutex::count_info& info){ info.cond_count--; });
 		return {};
 	});
 
@@ -224,7 +223,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		// Unlock the mutex
 		const auto count = cond.mutex->lock_count.exchange(0);
 
-		if (auto cpu = cond.mutex->reown<ppu_thread>())
+		if (const auto cpu = cond.mutex->reown<ppu_thread>())
 		{
 			cond.mutex->append(cpu);
 		}

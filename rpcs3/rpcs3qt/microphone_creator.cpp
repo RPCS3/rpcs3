@@ -24,9 +24,9 @@ void microphone_creator::refresh_list()
 	m_microphone_list.clear();
 	m_microphone_list.append(get_none());
 
-	if (alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT") == AL_TRUE)
+	if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT") == AL_TRUE)
 	{
-		if (const char* devices = alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER); devices != nullptr)
+		if (const char* devices = alcGetString(nullptr, ALC_CAPTURE_DEVICE_SPECIFIER); devices != nullptr)
 		{
 			while (*devices != 0)
 			{
@@ -38,19 +38,19 @@ void microphone_creator::refresh_list()
 	else
 	{
 		// Without enumeration we can only use one device
-		if (const char* device = alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER); device != nullptr)
+		if (const char* device = alcGetString(nullptr, ALC_DEFAULT_DEVICE_SPECIFIER); device != nullptr)
 		{
 			m_microphone_list.append(qstr(device));
 		}
 	}
 }
 
-QStringList microphone_creator::get_microphone_list()
+QStringList microphone_creator::get_microphone_list() const
 {
 	return m_microphone_list;
 }
 
-std::array<std::string, 4> microphone_creator::get_selection_list()
+std::array<std::string, 4> microphone_creator::get_selection_list() const
 {
 	return m_sel_list;
 }
@@ -62,8 +62,7 @@ std::string microphone_creator::set_device(u32 num, const QString& text)
 	else
 		m_sel_list[num - 1] = text.toStdString();
 
-	const std::string final_list = m_sel_list[0] + "@@@" + m_sel_list[1] + "@@@" + m_sel_list[2] + "@@@" + m_sel_list[3] + "@@@";
-	return final_list;
+	return m_sel_list[0] + "@@@" + m_sel_list[1] + "@@@" + m_sel_list[2] + "@@@" + m_sel_list[3] + "@@@";
 }
 
 void microphone_creator::parse_devices(const std::string& list)

@@ -152,7 +152,7 @@ namespace rsx
 			update_selection();
 		}
 
-		int list_view::get_selected_index()
+		int list_view::get_selected_index() const
 		{
 			return m_selected_entry;
 		}

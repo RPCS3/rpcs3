@@ -12,7 +12,7 @@ public:
 
 	static void InitializeEmulator(const std::string& user, bool show_gui);
 
-	void SetActiveUser(std::string user)
+	void SetActiveUser(const std::string& user)
 	{
 		m_active_user = user;
 	}

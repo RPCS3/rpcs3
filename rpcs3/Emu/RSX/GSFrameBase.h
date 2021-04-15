@@ -2,7 +2,6 @@
 
 #include "util/types.hpp"
 #include "util/atomic.hpp"
-#include <memory>
 #include <vector>
 
 #include "display.h"

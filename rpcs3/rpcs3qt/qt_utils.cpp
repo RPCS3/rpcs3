@@ -47,13 +47,13 @@ namespace gui
 
 			if (colorize_all)
 			{
-				QBitmap mask = pixmap.createMaskFromColor(Qt::transparent, Qt::MaskInColor);
+				const QBitmap mask = pixmap.createMaskFromColor(Qt::transparent, Qt::MaskInColor);
 				pixmap.fill(new_color);
 				pixmap.setMask(mask);
 				return pixmap;
 			}
 
-			QBitmap mask = pixmap.createMaskFromColor(old_color, Qt::MaskOutColor);
+			const QBitmap mask = pixmap.createMaskFromColor(old_color, Qt::MaskOutColor);
 			pixmap.fill(new_color);
 			pixmap.setMask(mask);
 
@@ -76,9 +76,9 @@ namespace gui
 				//test_pixmap.fill(saturatedColor(new_color, 0.6f));
 				//test_pixmap.setMask(test_mask);
 
-				QColor white_color(Qt::white);
+				const QColor white_color(Qt::white);
 				QPixmap white_pixmap = old_pixmap;
-				QBitmap white_mask = white_pixmap.createMaskFromColor(white_color, Qt::MaskOutColor);
+				const QBitmap white_mask = white_pixmap.createMaskFromColor(white_color, Qt::MaskOutColor);
 				white_pixmap.fill(white_color);
 				white_pixmap.setMask(white_mask);
 
@@ -174,7 +174,7 @@ namespace gui
 		void resize_combo_box_view(QComboBox* combo)
 		{
 			int max_width = 0;
-			QFontMetrics font_metrics(combo->font());
+			const QFontMetrics font_metrics(combo->font());
 
 			for (int i = 0; i < combo->count(); ++i)
 			{
@@ -261,7 +261,7 @@ namespace gui
 						continue;
 					}
 
-					const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(pth, Emu.GetUsr(), title_id);
+					const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(pth, title_id);
 					icon_path = sfo_dir + "/ICON0.PNG";
 					found_file = fs::is_file(icon_path);
 
@@ -275,12 +275,12 @@ namespace gui
 			if (found_file)
 			{
 				// load the image from path. It will most likely be a rectangle
-				QImage source = QImage(qstr(icon_path));
+				const QImage source = QImage(qstr(icon_path));
 				const int edge_max = std::max(source.width(), source.height());
 
 				// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
-				QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
-				QImage dest = QImage(edge_max, edge_max, format);
+				const QImage::Format format = source.format() == QImage::Format_RGB32 ? QImage::Format_ARGB32 : source.format();
+				QImage dest(edge_max, edge_max, format);
 				dest.fill(Qt::transparent);
 
 				// get the location to draw the source image centered within the dest image.
@@ -409,7 +409,7 @@ namespace gui
 			{
 				for (int i = parent->childCount() - 1; i >= 0; i--)
 				{
-					if (auto item = parent->child(i))
+					if (const auto item = parent->child(i))
 					{
 						bool match = true;
 

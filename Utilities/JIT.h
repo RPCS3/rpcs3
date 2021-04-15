@@ -16,6 +16,7 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 #pragma GCC diagnostic ignored "-Weffc++"
 #ifndef __clang__
 #pragma GCC diagnostic ignored "-Wduplicated-branches"
@@ -175,7 +176,6 @@ inline FT build_function_asm(F&& builder)
 #include <unordered_map>
 
 #include "util/types.hpp"
-#include "mutex.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -188,6 +188,7 @@ inline FT build_function_asm(F&& builder)
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Winconsistent-missing-override"
 #endif
@@ -205,13 +206,13 @@ inline FT build_function_asm(F&& builder)
 class jit_compiler final
 {
 	// Local LLVM context
-	llvm::LLVMContext m_context;
+	llvm::LLVMContext m_context{};
 
 	// Execution instance
-	std::unique_ptr<llvm::ExecutionEngine> m_engine;
+	std::unique_ptr<llvm::ExecutionEngine> m_engine{};
 
 	// Arch
-	std::string m_cpu;
+	std::string m_cpu{};
 
 public:
 	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags = 0);

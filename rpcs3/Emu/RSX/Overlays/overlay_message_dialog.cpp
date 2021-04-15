@@ -12,7 +12,8 @@ namespace rsx
 {
 	namespace overlays
 	{
-		message_dialog::message_dialog(bool use_custom_background)
+		message_dialog::message_dialog(bool allow_custom_background)
+			: custom_background_allowed(allow_custom_background)
 		{
 			background.set_size(1280, 720);
 			background.back_color.a = 0.85f;
@@ -54,42 +55,7 @@ namespace rsx
 				btn_cancel.set_image_resource(resource_config::standard_image_resource::circle);
 			}
 
-			if (use_custom_background)
-			{
-				const auto picture_path = Emu.GetBackgroundPicturePath();
-
-				if (fs::exists(picture_path))
-				{
-					background_image = std::make_unique<image_info>(picture_path.c_str());
-
-					if (background_image->data)
-					{
-						const f32 color              = (100 - g_cfg.video.shader_preloading_dialog.darkening_strength) / 100.f;
-						background_poster.fore_color = color4f(color, color, color, 1.);
-						background.back_color.a      = 0.f;
-
-						background_poster.set_size(1280, 720);
-						background_poster.set_raw_image(background_image.get());
-						background_poster.set_blur_strength(static_cast<u8>(g_cfg.video.shader_preloading_dialog.blur_strength));
-
-						ensure(background_image->w > 0);
-						ensure(background_image->h > 0);
-						ensure(background_poster.h > 0);
-
-						// Set padding in order to keep the aspect ratio
-						if ((background_image->w / static_cast<double>(background_image->h)) > (background_poster.w / static_cast<double>(background_poster.h)))
-						{
-							const int padding = (background_poster.h - static_cast<int>(background_image->h * (background_poster.w / static_cast<double>(background_image->w)))) / 2;
-							background_poster.set_padding(0, 0, padding, padding);
-						}
-						else
-						{
-							const int padding = (background_poster.w - static_cast<int>(background_image->w * (background_poster.h / static_cast<double>(background_image->h)))) / 2;
-							background_poster.set_padding(padding, padding, 0, 0);
-						}
-					}
-				}
-			}
+			update_custom_background();
 
 			return_code = CELL_MSGDIALOG_BUTTON_NONE;
 		}
@@ -102,6 +68,8 @@ namespace rsx
 			}
 
 			compiled_resource result;
+
+			update_custom_background();
 
 			if (background_image && background_image->data)
 			{
@@ -180,6 +148,16 @@ namespace rsx
 			}
 
 			close(true, true);
+		}
+
+		void message_dialog::close(bool use_callback, bool stop_pad_interception)
+		{
+			if (num_progress_bars > 0)
+			{
+				Emu.GetCallbacks().handle_taskbar_progress(0, 1);
+			}
+
+			user_interface::close(use_callback, stop_pad_interception);
 		}
 
 		struct msg_dialog_thread
@@ -311,7 +289,61 @@ namespace rsx
 			text_display.translate(0, -(text_h - 16));
 		}
 
-		u32 message_dialog::progress_bar_count()
+		void message_dialog::update_custom_background()
+		{
+			if (custom_background_allowed && g_cfg.video.shader_preloading_dialog.use_custom_background)
+			{
+				bool dirty = std::exchange(background_blur_strength, g_cfg.video.shader_preloading_dialog.blur_strength.get());
+				dirty     |= std::exchange(background_darkening_strength, g_cfg.video.shader_preloading_dialog.darkening_strength.get());
+
+				if (!background_image)
+				{
+					if (const auto picture_path = Emu.GetBackgroundPicturePath(); fs::exists(picture_path))
+					{
+						background_image = std::make_unique<image_info>(picture_path.c_str());
+						dirty |= !!background_image->data;
+					}
+				}
+
+				if (dirty && background_image && background_image->data)
+				{
+					const f32 color              = (100 - background_darkening_strength) / 100.f;
+					background_poster.fore_color = color4f(color, color, color, 1.);
+					background.back_color.a      = 0.f;
+
+					background_poster.set_size(1280, 720);
+					background_poster.set_raw_image(background_image.get());
+					background_poster.set_blur_strength(static_cast<u8>(background_blur_strength));
+
+					ensure(background_image->w > 0);
+					ensure(background_image->h > 0);
+					ensure(background_poster.h > 0);
+
+					// Set padding in order to keep the aspect ratio
+					if ((background_image->w / static_cast<double>(background_image->h)) > (background_poster.w / static_cast<double>(background_poster.h)))
+					{
+						const int padding = (background_poster.h - static_cast<int>(background_image->h * (background_poster.w / static_cast<double>(background_image->w)))) / 2;
+						background_poster.set_padding(0, 0, padding, padding);
+					}
+					else
+					{
+						const int padding = (background_poster.w - static_cast<int>(background_image->w * (background_poster.h / static_cast<double>(background_image->h)))) / 2;
+						background_poster.set_padding(padding, padding, 0, 0);
+					}
+				}
+			}
+			else
+			{
+				if (background_image)
+				{
+					background_poster.clear_image();
+					background_image.reset();
+				}
+				background.back_color.a = 0.85f;
+			}
+		}
+
+		u32 message_dialog::progress_bar_count() const
 		{
 			return num_progress_bars;
 		}

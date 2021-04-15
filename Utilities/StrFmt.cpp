@@ -396,25 +396,28 @@ void fmt::raw_append(std::string& out, const char* fmt, const fmt_type_info* sup
 	cfmt_append(out, fmt, cfmt_src{sup, args});
 }
 
-std::string fmt::replace_first(const std::string& src, const std::string& from, const std::string& to)
+std::string fmt::replace_all(std::string_view src, std::string_view from, std::string_view to, usz count)
 {
-	auto pos = src.find(from);
+	std::string target;
+	target.reserve(src.size() + to.size());
 
-	if (pos == umax)
+	for (usz i = 0, replaced = 0; i < src.size();)
 	{
-		return src;
-	}
+		const usz pos = src.find(from, i);
 
-	return (pos ? src.substr(0, pos) + to : to) + std::string(src.c_str() + pos + from.length());
-}
+		if (pos == umax || replaced++ >= count)
+		{
+			// No match or too many encountered, append the rest of the string as is
+			target.append(src.substr(i));
+			break;
+		}
 
-std::string fmt::replace_all(const std::string& src, const std::string& from, const std::string& to)
-{
-	std::string target = src;
-	for (auto pos = target.find(from); pos != umax; pos = target.find(from, pos + 1))
-	{
-		target = (pos ? target.substr(0, pos) + to : to) + std::string(target.c_str() + pos + from.length());
-		pos += to.length();
+		// Append source until the matched string position
+		target.append(src.substr(i, pos - i));
+
+		// Replace string
+		target.append(to);
+		i = pos + from.size();
 	}
 
 	return target;

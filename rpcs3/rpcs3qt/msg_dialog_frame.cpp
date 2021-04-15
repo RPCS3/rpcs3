@@ -6,7 +6,6 @@
 #include <QFormLayout>
 
 #ifdef _WIN32
-#include <QWinTHumbnailToolbar>
 #include <QWinTHumbnailToolbutton>
 #elif HAVE_QTDBUS
 #include <QtDBus/QDBusMessage>
@@ -35,7 +34,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	layout->setFormAlignment(Qt::AlignHCenter);
 	layout->addRow(m_text);
 
-	auto l_AddGauge = [=, this](QProgressBar* &bar, QLabel* &text)
+	auto l_AddGauge = [this, layout](QProgressBar* &bar, QLabel* &text)
 	{
 		text = new QLabel("", m_dialog);
 		bar = new QProgressBar(m_dialog);
@@ -168,8 +167,6 @@ void msg_dialog_frame::Close(bool success)
 		m_dialog->deleteLater();
 	}
 }
-
-msg_dialog_frame::msg_dialog_frame() {}
 
 msg_dialog_frame::~msg_dialog_frame()
 {

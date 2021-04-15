@@ -19,7 +19,7 @@ private Q_SLOTS:
 	void ShowContextMenu(const QPoint &pos);
 
 private:
-	void ShowDisasm();
+	void ShowDisasm() const;
 	bool IsValidFile(const QMimeData& md, bool save = false);
 
 	QString m_path_last;

@@ -8,13 +8,13 @@
 // Helper methods to interact with YAML and the config settings.
 namespace cfg_adapter
 {
-	YAML::Node get_node(const YAML::Node& node, cfg_location::const_iterator begin, cfg_location::const_iterator end);
+	YAML::Node get_node(const YAML::Node& node, const cfg_location::const_iterator begin, const cfg_location::const_iterator end);
 
 	/** Syntactic sugar to get a setting at a given config location. */
-	YAML::Node get_node(const YAML::Node& node, cfg_location loc);
+	YAML::Node get_node(const YAML::Node& node, const cfg_location& location);
 
 	/** Returns possible options for values for some particular setting.*/
-	QStringList get_options(cfg_location location);
+	QStringList get_options(const cfg_location& location);
 
 	/** Returns dynamic property for some particular setting.*/
 	bool get_is_dynamic(emu_settings_type type);

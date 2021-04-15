@@ -80,8 +80,6 @@ struct Keyboard
 	std::vector<KbButton> m_buttons;
 
 	Keyboard()
-		: m_data()
-		, m_config()
 	{
 	}
 };
@@ -102,7 +100,7 @@ public:
 	void Key(u32 code, bool pressed);
 	void SetIntercepted(bool intercepted);
 
-	bool IsMetaKey(u32 code);
+	static bool IsMetaKey(u32 code);
 
 	KbInfo& GetInfo() { return m_info; }
 	std::vector<Keyboard>& GetKeyboards() { return m_keyboards; }

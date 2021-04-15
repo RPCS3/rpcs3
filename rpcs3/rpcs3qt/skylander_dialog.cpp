@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include <mutex>
 #include "Utilities/File.h"
 #include "Crypto/md5.h"
 #include "Crypto/aes.h"
@@ -519,12 +518,11 @@ u16 skylander_crc16(u16 init_value, const u8* buffer, u32 size)
 	    0xFB1E, 0x8BF9, 0x9BD8, 0xABBB, 0xBB9A, 0x4A75, 0x5A54, 0x6A37, 0x7A16, 0x0AF1, 0x1AD0, 0x2AB3, 0x3A92, 0xFD2E, 0xED0F, 0xDD6C, 0xCD4D, 0xBDAA, 0xAD8B, 0x9DE8, 0x8DC9, 0x7C26, 0x6C07, 0x5C64,
 	    0x4C45, 0x3CA2, 0x2C83, 0x1CE0, 0x0CC1, 0xEF1F, 0xFF3E, 0xCF5D, 0xDF7C, 0xAF9B, 0xBFBA, 0x8FD9, 0x9FF8, 0x6E17, 0x7E36, 0x4E55, 0x5E74, 0x2E93, 0x3EB2, 0x0ED1, 0x1EF0};
 
-	u16 tmp;
 	u16 crc = init_value;
 
 	for (u32 i = 0; i < size; i++)
 	{
-		tmp = (crc >> 8) ^ buffer[i];
+		const u16 tmp = (crc >> 8) ^ buffer[i];
 		crc = (crc << 8) ^ CRC_CCITT_TABLE[tmp];
 	}
 
@@ -544,7 +542,7 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 	QStringList filterlist;
 	for (const auto& entry : list_skylanders)
 	{
-		uint qvar = (entry.first.first << 16) | entry.first.second;
+		const uint qvar = (entry.first.first << 16) | entry.first.second;
 		combo_skylist->addItem(QString::fromStdString(entry.second), QVariant(qvar));
 		filterlist << entry.second.c_str();
 	}
@@ -619,7 +617,7 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 		}
 
 		QString predef_name = last_skylander_path;
-		auto found_sky      = list_skylanders.find(std::make_pair(sky_id, sky_var));
+		const auto found_sky = list_skylanders.find(std::make_pair(sky_id, sky_var));
 		if (found_sky != list_skylanders.end())
 		{
 			predef_name += QString::fromStdString(found_sky->second + ".sky");
@@ -643,7 +641,7 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 		}
 
 		std::array<u8, 0x40 * 0x10> buf{};
-		auto data = buf.data();
+		const auto data = buf.data();
 		// Set the block permissions
 		*utils::bless<le_t<u32>>(&data[0x36]) = 0x690F0F0F;
 		for (u32 index = 1; index < 0x10; index++)
@@ -715,9 +713,9 @@ skylander_dialog::skylander_dialog(QWidget* parent)
 		QPushButton* create_btn = new QPushButton(tr("Create"));
 		QPushButton* load_btn   = new QPushButton(tr("Load"));
 
-		connect(clear_btn, &QAbstractButton::clicked, this, [=, this]() { this->clear_skylander(i); });
-		connect(create_btn, &QAbstractButton::clicked, this, [=, this]() { this->create_skylander(i); });
-		connect(load_btn, &QAbstractButton::clicked, this, [=, this]() { this->load_skylander(i); });
+		connect(clear_btn, &QAbstractButton::clicked, this, [this, i]() { clear_skylander(i); });
+		connect(create_btn, &QAbstractButton::clicked, this, [this, i]() { create_skylander(i); });
+		connect(load_btn, &QAbstractButton::clicked, this, [this, i]() { load_skylander(i); });
 
 		hbox_skylander->addWidget(label_skyname);
 		hbox_skylander->addWidget(edit_skylanders[i]);
@@ -764,8 +762,7 @@ void skylander_dialog::create_skylander(u8 slot)
 	skylander_creator_dialog create_dlg(this);
 	if (create_dlg.exec() == Accepted)
 	{
-		QString created_path = create_dlg.get_file_path();
-		load_skylander_path(slot, created_path);
+		load_skylander_path(slot, create_dlg.get_file_path());
 	}
 }
 

@@ -6,7 +6,6 @@
 #include <unordered_map>
 #include <algorithm>
 #include <cstring>
-#include <cerrno>
 #include <map>
 
 #include "util/asm.hpp"
@@ -17,11 +16,6 @@ using namespace std::literals::string_literals;
 
 #include <cwchar>
 #include <Windows.h>
-
-namespace utils
-{
-	u64 get_unique_tsc();
-}
 
 static std::unique_ptr<wchar_t[]> to_wchar(const std::string& source)
 {
@@ -65,7 +59,7 @@ static void to_utf8(std::string& out, const wchar_t* source)
 	// Resize buffer
 	out.resize(buf_size - 1);
 
-	const int result = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &out.front(), buf_size, NULL, NULL);
+	const int result = WideCharToMultiByte(CP_UTF8, 0, source, static_cast<int>(length) + 1, &out.front(), buf_size, nullptr, nullptr);
 
 	// Fix the size
 	out.resize(ensure(result) - 1);
@@ -230,7 +224,7 @@ namespace fs
 	{
 	}
 
-	stat_t file_base::stat()
+	[[noreturn]] stat_t file_base::stat()
 	{
 		fmt::throw_exception("fs::file::stat() not supported.");
 	}
@@ -593,9 +587,17 @@ bool fs::create_dir(const std::string& path)
 	}
 
 #ifdef _WIN32
-	if (!CreateDirectoryW(to_wchar(path).get(), NULL))
+	if (!CreateDirectoryW(to_wchar(path).get(), nullptr))
 	{
-		g_tls_error = to_error(GetLastError());
+		int res = GetLastError();
+
+		if (res == ERROR_ACCESS_DENIED && is_dir(path))
+		{
+			// May happen on drives
+			res = ERROR_ALREADY_EXISTS;
+		}
+
+		g_tls_error = to_error(res);
 		return false;
 	}
 
@@ -705,7 +707,7 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 				}
 
 				error1 = GetLastError();
-				CreateDirectoryW(ws2.get(), NULL); // TODO
+				CreateDirectoryW(ws2.get(), nullptr); // TODO
 			}
 			else
 			{
@@ -874,7 +876,7 @@ bool fs::truncate_file(const std::string& path, u64 length)
 
 #ifdef _WIN32
 	// Open the file
-	const auto handle = CreateFileW(to_wchar(path).get(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	const auto handle = CreateFileW(to_wchar(path).get(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		g_tls_error = to_error(GetLastError());
@@ -913,7 +915,7 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 
 #ifdef _WIN32
 	// Open the file
-	const auto handle = CreateFileW(to_wchar(path).get(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, NULL);
+	const auto handle = CreateFileW(to_wchar(path).get(), FILE_WRITE_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_ATTRIBUTE_NORMAL, NULL);
 	if (handle == INVALID_HANDLE_VALUE)
 	{
 		g_tls_error = to_error(GetLastError());
@@ -1025,7 +1027,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		share |= FILE_SHARE_WRITE;
 	}
 
-	const HANDLE handle = CreateFileW(to_wchar(path).get(), access, share, NULL, disp, FILE_ATTRIBUTE_NORMAL, NULL);
+	const HANDLE handle = CreateFileW(to_wchar(path).get(), access, share, nullptr, disp, FILE_ATTRIBUTE_NORMAL, NULL);
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -1092,7 +1094,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			const int size = narrow<int>(count);
 
 			DWORD nread;
-			ensure(ReadFile(m_handle, buffer, size, &nread, NULL)); // "file::read"
+			ensure(ReadFile(m_handle, buffer, size, &nread, nullptr)); // "file::read"
 
 			return nread;
 		}
@@ -1103,7 +1105,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			const int size = narrow<int>(count);
 
 			DWORD nwritten;
-			ensure(WriteFile(m_handle, buffer, size, &nwritten, NULL)); // "file::write"
+			ensure(WriteFile(m_handle, buffer, size, &nwritten, nullptr)); // "file::write"
 
 			return nwritten;
 		}
@@ -1431,7 +1433,7 @@ bool fs::dir::open(const std::string& path)
 
 #ifdef _WIN32
 	WIN32_FIND_DATAW found;
-	const auto handle = FindFirstFileExW(to_wchar(path + "/*").get(), FindExInfoBasic, &found, FindExSearchNameMatch, NULL, FIND_FIRST_EX_CASE_SENSITIVE | FIND_FIRST_EX_LARGE_FETCH);
+	const auto handle = FindFirstFileExW(to_wchar(path + "/*").get(), FindExInfoBasic, &found, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_CASE_SENSITIVE | FIND_FIRST_EX_LARGE_FETCH);
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -1586,9 +1588,9 @@ const std::string& fs::get_config_dir()
 		wchar_t buf[32768];
 		constexpr DWORD size = static_cast<DWORD>(std::size(buf));
 		if (GetEnvironmentVariable(L"RPCS3_CONFIG_DIR", buf, size) - 1 >= size - 1 &&
-			GetModuleFileName(NULL, buf, size) - 1 >= size - 1)
+			GetModuleFileName(nullptr, buf, size) - 1 >= size - 1)
 		{
-			MessageBoxA(0, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
+			MessageBoxA(nullptr, fmt::format("GetModuleFileName() failed: error %u.", GetLastError()).c_str(), "fs::get_config_dir()", MB_ICONERROR);
 			return dir; // empty
 		}
 
@@ -1701,110 +1703,6 @@ bool fs::remove_all(const std::string& path, bool remove_root)
 	}
 
 	return true;
-}
-
-std::string fs::escape_path(std::string_view path)
-{
-	std::string real; real.resize(path.size());
-
-	auto get_char = [&](usz& from, usz& to, usz count)
-	{
-		std::memcpy(&real[to], &path[from], count);
-		from += count, to += count;
-	};
-
-	usz i = 0, j = -1, pos_nondelim = 0, after_delim = 0;
-
-	if (i < path.size())
-	{
-		j = 0;
-	}
-
-	for (; i < path.size();)
-	{
-		real[j] = path[i];
-#ifdef _Win32
-		if (real[j] == '\\')
-		{
-			real[j] = '/';
-		}
-#endif
-		// If the current character was preceeded by a delimiter special treatment is required:
-		// If another deleimiter is encountered, remove it (do not write it to output string)
-		// Otherwise test if it is a "." or ".." sequence.
-		if (std::exchange(after_delim, path[i] == delim[0] || path[i] == delim[1]))
-		{
-			if (!after_delim)
-			{
-				if (real[j] == '.')
-				{
-					if (i + 1 == path.size())
-					{
-						break;
-					}
-
-					get_char(i, j, 1);
-
-					switch (real[j])
-					{
-					case '.':
-					{
-						bool remove_element = true;
-						usz k = 1;
-
-						for (; k + i != path.size(); k++)
-						{
-							switch (path[i + k])
-							{
-							case '.': continue;
-							case delim[0]: case delim[1]: break;
-							default: remove_element = false; break;
-							}
-						}
-
-						if (remove_element)
-						{
-							if (i == 1u)
-							{
-								j = pos_nondelim;
-								real[j] = '\0';// Ensure termination at this posistion
-								after_delim = true;
-								i += k;
-								continue;
-							}
-						}
-
-						get_char(i, j, k);
-						continue;
-					}
-					case '/':
-					{
-						i++;
-						after_delim = true;
-						continue;
-					}
-					default: get_char(i, j, 1); continue;
-					}
-				}
-
-				pos_nondelim = j;
-				get_char(i, j, 1);
-			}
-			else
-			{
-				i++;
-			}
-		}
-		else
-		{
-			get_char(i, j, 1);
-		}
-	}
-
-	if (j != umax && (real[j] == delim[0] || real[j] == delim[1])) j--; // Do not include a delmiter at the end
-
-	real.resize(j + 1);
-	return real;
 }
 
 u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment)

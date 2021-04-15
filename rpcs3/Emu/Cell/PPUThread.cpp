@@ -21,7 +21,6 @@
 #include "lv2/sys_prx.h"
 #include "lv2/sys_overlay.h"
 #include "lv2/sys_process.h"
-#include "lv2/sys_memory.h"
 
 #ifdef LLVM_AVAILABLE
 #ifdef _MSC_VER
@@ -34,30 +33,17 @@
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 #pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/IR/LLVMContext.h"
-//#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LegacyPassManager.h"
-//#include "llvm/IR/Module.h"
-//#include "llvm/IR/Function.h"
-//#include "llvm/Analysis/Passes.h"
-//#include "llvm/Analysis/BasicAliasAnalysis.h"
-//#include "llvm/Analysis/TargetTransformInfo.h"
-//#include "llvm/Analysis/MemoryDependenceAnalysis.h"
-//#include "llvm/Analysis/LoopInfo.h"
-//#include "llvm/Analysis/ScalarEvolution.h"
-#include "llvm/Analysis/Lint.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/Vectorize.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -964,6 +950,12 @@ void ppu_thread::cpu_task()
 			}
 
 			ppu_initialize(), spu_cache::initialize();
+
+			// Wait until the progress dialog is closed.
+			// We don't want to open a cell dialog while a native progress dialog is still open.
+			g_progr_ptotal.wait<atomic_wait::op_ne>(0);
+			g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog = true;
+
 			break;
 		}
 		case ppu_cmd::sleep:
@@ -2589,7 +2581,7 @@ extern void ppu_initialize()
 	}
 
 	// Avoid compilation if main's cache exists or it is a standalone SELF with no PARAM.SFO
-	if (compile_main && !Emu.GetTitleID().empty())
+	if (compile_main && g_cfg.core.ppu_llvm_precompilation && !Emu.GetTitleID().empty())
 	{
 		// Try to add all related directories
 		const std::set<std::string> dirs = Emu.GetGameDirs();
@@ -3007,7 +2999,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 	// Create worker threads for compilation (TODO: how many threads)
 	{
-		u32 thread_count = Emu.GetMaxThreads();
+		u32 thread_count = Emulator::GetMaxThreads();
 
 		if (workload.size() < thread_count)
 		{

@@ -17,7 +17,7 @@ enum Category
 	Others,
 };
 
-namespace category
+namespace cat
 {
 	const QString cat_app_music = "AM";
 	const QString cat_app_photo = "AP";

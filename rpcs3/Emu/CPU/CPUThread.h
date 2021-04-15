@@ -147,7 +147,7 @@ public:
 	virtual void cpu_return() {}
 
 	// Callback for thread_ctrl::wait or RSX wait
-	virtual void cpu_wait(bs_t<cpu_flag> flags);
+	virtual void cpu_wait(bs_t<cpu_flag> old);
 
 	// Callback for function abortion stats on Emu.Stop()
 	virtual void cpu_on_stop() {}
@@ -175,9 +175,6 @@ public:
 
 		// Internal method
 		bool push(cpu_thread* _this) noexcept;
-
-		// Called after suspend_post
-		void post() noexcept;
 	};
 
 	// Suspend all threads and execute op (may be executed by other thread than caller!)

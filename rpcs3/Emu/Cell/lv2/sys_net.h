@@ -182,7 +182,7 @@ struct sys_net_fd_set
 {
 	be_t<u32> fds_bits[32];
 
-	u32 bit(s32 s)
+	u32 bit(s32 s) const
 	{
 		return (fds_bits[(s >> 5) & 31] >> (s & 31)) & 1u;
 	}

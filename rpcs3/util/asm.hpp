@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include <functional>
 
 extern bool g_use_rtm;
 extern u64 g_rtm_tx_limit1;
@@ -113,7 +114,7 @@ namespace utils
 		const void* ptr = reinterpret_cast<const void*>(value);
 
 #ifdef _MSC_VER
-		return _mm_prefetch(reinterpret_cast<const char*>(ptr), 2);
+		return _mm_prefetch(static_cast<const char*>(ptr), 2);
 #else
 		return __builtin_prefetch(ptr, 0, 2);
 #endif
@@ -128,7 +129,7 @@ namespace utils
 		}
 
 #ifdef _MSC_VER
-		return _mm_prefetch(reinterpret_cast<const char*>(ptr), 3);
+		return _mm_prefetch(static_cast<const char*>(ptr), 3);
 #else
 		return __builtin_prefetch(ptr, 0, 3);
 #endif

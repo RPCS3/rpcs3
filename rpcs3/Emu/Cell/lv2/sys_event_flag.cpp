@@ -42,13 +42,12 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 		return CELL_EINVAL;
 	}
 
-	if (auto error = lv2_obj::create<lv2_event_flag>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
+	if (const auto error = lv2_obj::create<lv2_event_flag>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
 	{
 		return std::make_shared<lv2_event_flag>(
 			_attr.protocol,
 			_attr.pshared,
 			_attr.ipc_key,
-			_attr.flags,
 			_attr.type,
 			_attr.name_u64,
 			init);

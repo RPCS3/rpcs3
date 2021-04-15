@@ -1,8 +1,5 @@
 #include "cond.h"
 #include "sync.h"
-#include "lockless.h"
-
-#include <climits>
 
 // use constants, increase signal space
 

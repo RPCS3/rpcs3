@@ -132,10 +132,10 @@ void memory_string_searcher::OnSearch()
 			wstr += part;
 		}
 
-		if (usz pos = wstr.find_first_not_of(hex_chars); pos != umax)
+		if (const usz pos = wstr.find_first_not_of(hex_chars); pos != umax)
 		{
-			gui_log.error("String '%s' cannot be interpreted as hexadecimal byte string due to unknown character '%s'."
-				, m_addr_line->text().toStdString(), std::string_view{&wstr[pos], 1});
+			gui_log.error("String '%s' cannot be interpreted as hexadecimal byte string due to unknown character '%s'.",
+				m_addr_line->text().toStdString(), std::string_view{&wstr[pos], 1});
 			return;
 		}
 
@@ -196,7 +196,7 @@ void memory_string_searcher::OnSearch()
 
 	vm::reader_lock rlock;
 
-	named_thread_group workers("String Searcher "sv, max_threads, [&]()
+	 const named_thread_group workers("String Searcher "sv, max_threads, [&]()
 	{
 		u32 local_found = 0;
 

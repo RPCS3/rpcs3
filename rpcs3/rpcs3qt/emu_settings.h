@@ -32,7 +32,6 @@ public:
 	* Settings are only written when SaveSettings is called.
 	*/
 	emu_settings();
-	~emu_settings();
 
 	bool Init();
 
@@ -49,10 +48,10 @@ public:
 	void EnhanceSlider(QSlider* slider, emu_settings_type type);
 
 	/** Connects an integer spin box with the target settings type*/
-	void EnhanceSpinBox(QSpinBox* slider, emu_settings_type type, const QString& prefix = "", const QString& suffix = "");
+	void EnhanceSpinBox(QSpinBox* spinbox, emu_settings_type type, const QString& prefix = "", const QString& suffix = "");
 
 	/** Connects a double spin box with the target settings type*/
-	void EnhanceDoubleSpinBox(QDoubleSpinBox* slider, emu_settings_type type, const QString& prefix = "", const QString& suffix = "");
+	void EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_type type, const QString& prefix = "", const QString& suffix = "");
 
 	/** Connects a line edit with the target settings type*/
 	void EnhanceLineEdit(QLineEdit* edit, emu_settings_type type);
@@ -64,7 +63,7 @@ public:
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
 
 	/** Returns the valid options for a given setting.*/
-	QStringList GetSettingOptions(emu_settings_type type) const;
+	static QStringList GetSettingOptions(emu_settings_type type);
 
 	/** Returns the default value of the setting type.*/
 	std::string GetSettingDefault(emu_settings_type type) const;
@@ -73,7 +72,7 @@ public:
 	std::string GetSetting(emu_settings_type type) const;
 
 	/** Sets the setting type to a given value.*/
-	void SetSetting(emu_settings_type type, const std::string& val);
+	void SetSetting(emu_settings_type type, const std::string& val) const;
 
 	/** Gets all the renderer info for gpu settings.*/
 	render_creator* m_render_creator = nullptr;
@@ -95,7 +94,7 @@ public:
 
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
-	void SaveSettings();
+	void SaveSettings() const;
 private:
 	YAML::Node m_default_settings; // The default settings as a YAML node.
 	YAML::Node m_current_settings; // The current settings as a YAML node.

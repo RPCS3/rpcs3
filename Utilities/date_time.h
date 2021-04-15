@@ -20,7 +20,7 @@ namespace date_time
 	static inline std::string current_time()
 	{
 		char str[80];
-		tm now = get_time(0);
+		tm now = get_time(nullptr);
 		strftime(str, sizeof(str), "%c", &now);
 		return str;
 	}
@@ -29,7 +29,7 @@ namespace date_time
 	static inline std::string current_time_narrow()
 	{
 		char str[80];
-		tm now = get_time(0);
+		tm now = get_time(nullptr);
 
 		std::string parse_buf;
 

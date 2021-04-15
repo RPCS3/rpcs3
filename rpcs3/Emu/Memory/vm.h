@@ -90,6 +90,24 @@ namespace vm
 	// utils::memory_lock wrapper for locking sudo memory
 	void lock_sudo(u32 addr, u32 size);
 
+	enum block_flags_3
+	{
+		page_hidden    = 0x1000,
+
+		page_size_4k   = 0x100, // SYS_MEMORY_PAGE_SIZE_4K
+		page_size_64k  = 0x200, // SYS_MEMORY_PAGE_SIZE_64K
+		page_size_1m   = 0x400, // SYS_MEMORY_PAGE_SIZE_1M
+		page_size_mask = 0xF00, // SYS_MEMORY_PAGE_SIZE_MASK
+
+		stack_guarded  = 0x10,
+		preallocated   = 0x20, // nonshareable
+
+		bf0_0x1 = 0x1, // TODO: document
+		bf0_0x2 = 0x2, // TODO: document
+
+		bf0_mask = bf0_0x1 | bf0_0x2,
+	};
+
 	// Object that handles memory allocations inside specific constant bounds ("location")
 	class block_t final
 	{
@@ -98,7 +116,7 @@ namespace vm
 		// Common mapped region for special cases
 		std::shared_ptr<utils::shm> m_common;
 
-		bool try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&&);
+		bool try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&&) const;
 
 	public:
 		block_t(u32 addr, u32 size, u64 flags);
@@ -108,7 +126,10 @@ namespace vm
 	public:
 		const u32 addr; // Start address
 		const u32 size; // Total size
-		const u64 flags; // Currently unused
+		const u64 flags; // Byte 0xF000: block_flags_3
+						 // Byte 0x0F00: block_flags_2_page_size (SYS_MEMORY_PAGE_SIZE_*)
+						 // Byte 0x00F0: block_flags_1
+						 // Byte 0x000F: block_flags_0
 
 		// Search and map memory (min alignment is 0x10000)
 		u32 alloc(u32 size, const std::shared_ptr<utils::shm>* = nullptr, u32 align = 0x10000, u64 flags = 0);
@@ -117,16 +138,16 @@ namespace vm
 		u32 falloc(u32 addr, u32 size, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
 
 		// Unmap memory at specified location previously returned by alloc(), return size
-		u32 dealloc(u32 addr, const std::shared_ptr<utils::shm>* = nullptr);
+		u32 dealloc(u32 addr, const std::shared_ptr<utils::shm>* = nullptr) const;
 
 		// Get memory at specified address (if size = 0, addr assumed exact)
-		std::pair<u32, std::shared_ptr<utils::shm>> peek(u32 addr, u32 size = 0);
+		std::pair<u32, std::shared_ptr<utils::shm>> peek(u32 addr, u32 size = 0) const;
 
 		// Get allocated memory count
 		u32 used();
 
 		// Internal
-		u32 imp_used(const vm::writer_lock&);
+		u32 imp_used(const vm::writer_lock&) const;
 	};
 
 	// Create new memory block with specified parameters and return it
@@ -142,7 +163,7 @@ namespace vm
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0);
 
 	// Allocate segment at specified location, does nothing if exists already
-	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags = 0x200);
+	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags = page_size_64k);
 
 	// Get PS3 virtual memory address from the provided pointer (nullptr or pointer from outside is always converted to 0)
 	// Super memory is allowed as well

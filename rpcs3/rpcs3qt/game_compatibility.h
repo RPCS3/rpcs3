@@ -37,13 +37,13 @@ namespace compat
 
 		std::string get_changelog(const std::string& type) const
 		{
-			if (auto it = std::find_if(changelogs.begin(), changelogs.end(), [type](const pkg_changelog& cl) { return cl.type == type; });
-				it != changelogs.end())
+			if (const auto it = std::find_if(changelogs.cbegin(), changelogs.cend(), [type](const pkg_changelog& cl) { return cl.type == type; });
+				it != changelogs.cend())
 			{
 				return it->content;
 			}
-			if (auto it = std::find_if(changelogs.begin(), changelogs.end(), [](const pkg_changelog& cl) { return cl.type == "paramhip"; });
-				it != changelogs.end())
+			if (const auto it = std::find_if(changelogs.cbegin(), changelogs.cend(), [](const pkg_changelog& cl) { return cl.type == "paramhip"; });
+				it != changelogs.cend())
 			{
 				return it->content;
 			}
@@ -52,12 +52,12 @@ namespace compat
 
 		std::string get_title(const std::string& type) const
 		{
-			if (auto it = std::find_if(titles.begin(), titles.end(), [type](const pkg_title& t) { return t.type == type; });
-				it != titles.end())
+			if (const auto it = std::find_if(titles.cbegin(), titles.cend(), [type](const pkg_title& t) { return t.type == type; });
+				it != titles.cend())
 			{
 				return it->title;
 			}
-			if (auto it = std::find_if(titles.begin(), titles.end(), [](const pkg_title& t) { return t.type == "TITLE"; });
+			if (const auto it = std::find_if(titles.cbegin(), titles.cend(), [](const pkg_title& t) { return t.type == "TITLE"; });
 				it != titles.end())
 			{
 				return it->title;
@@ -80,7 +80,7 @@ namespace compat
 	/** Represents the json object that contains an app's information and some additional info that is used in the GUI */
 	struct status
 	{
-		int index;
+		int index = 0;
 		QString date;
 		QString color;
 		QString text;
@@ -149,7 +149,7 @@ public:
 	compat::status GetCompatibility(const std::string& title_id);
 
 	/** Returns the data for the requested status */
-	compat::status GetStatusData(const QString& status);
+	compat::status GetStatusData(const QString& status) const;
 
 	/** Returns package information like title, version, changelog etc. */
 	static compat::package_info GetPkgInfo(const QString& pkg_path, game_compatibility* compat);
@@ -161,13 +161,13 @@ Q_SIGNALS:
 
 private Q_SLOTS:
 	void handle_download_error(const QString& error);
-	void handle_download_finished(const QByteArray& data);
+	void handle_download_finished(const QByteArray& content);
 };
 
 class compat_pixmap : public QPixmap
 {
 public:
-	compat_pixmap(const QColor& color, qreal pixel_ratio) : QPixmap(16 * pixel_ratio, 16 * pixel_ratio)
+	compat_pixmap(const QColor& color, qreal pixel_ratio) : QPixmap(pixel_ratio * 16, pixel_ratio * 16)
 	{
 		fill(Qt::transparent);
 

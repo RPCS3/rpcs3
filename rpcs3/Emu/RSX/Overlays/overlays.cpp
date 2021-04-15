@@ -51,10 +51,13 @@ namespace rsx
 			std::array<steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> initial_timestamp;
 			initial_timestamp.fill(steady_clock::now());
 
-			std::array<std::array<bool, pad_button::pad_button_max_enum>, CELL_PAD_MAX_PORT_NUM> button_state;
-			for (auto& state : button_state)
+			std::array<u8, CELL_PAD_MAX_PORT_NUM> last_auto_repeat_button;
+			last_auto_repeat_button.fill(pad_button::pad_button_max_enum);
+
+			std::array<std::array<bool, pad_button::pad_button_max_enum>, CELL_PAD_MAX_PORT_NUM> last_button_state;
+			for (auto& state : last_button_state)
 			{
-				state.fill(true);
+				state.fill(false);
 			}
 
 			input_timer.Start();
@@ -90,7 +93,7 @@ namespace rsx
 
 					for (auto &button : pad->m_buttons)
 					{
-						u8 button_id = 255;
+						u8 button_id = pad_button::pad_button_max_enum;
 						if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
 						{
 							switch (button.m_outKeyCode)
@@ -113,6 +116,7 @@ namespace rsx
 							case CELL_PAD_CTRL_START:
 								button_id = pad_button::start;
 								break;
+							default: break;
 							}
 						}
 						else if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2)
@@ -143,37 +147,48 @@ namespace rsx
 							case CELL_PAD_CTRL_R2:
 								button_id = pad_button::R2;
 								break;
+							default: break;
 							}
 						}
 
-						if (button_id < 255)
+						if (button_id < pad_button::pad_button_max_enum)
 						{
 							if (button.m_pressed)
 							{
-								if (button_id < 4) // d-pad button
+								const bool is_auto_repeat_button = auto_repeat_buttons.contains(button_id);
+
+								if (!last_button_state[pad_index][button_id])
 								{
-									if (!button_state[pad_index][button_id])
-									{
-										// the d-pad button was not pressed before, so this is a new button press
-										timestamp[pad_index] = steady_clock::now();
-										initial_timestamp[pad_index] = timestamp[pad_index];
-										on_button_pressed(static_cast<pad_button>(button_id));
-									}
-									else if (input_timer.GetMsSince(initial_timestamp[pad_index]) > ms_threshold && input_timer.GetMsSince(timestamp[pad_index]) > ms_interval)
-									{
-										// the d-pad button was pressed for at least the given threshold in ms and will trigger at an interval
-										timestamp[pad_index] = steady_clock::now();
-										on_button_pressed(static_cast<pad_button>(button_id));
-									}
-								}
-								else if (!button_state[pad_index][button_id])
-								{
-									// the button was not pressed before, so this is a new button press
+									// The button was not pressed before, so this is a new button press. Reset auto-repeat.
+									timestamp[pad_index] = steady_clock::now();
+									initial_timestamp[pad_index] = timestamp[pad_index];
+									last_auto_repeat_button[pad_index] = is_auto_repeat_button ? button_id : pad_button::pad_button_max_enum;
 									on_button_pressed(static_cast<pad_button>(button_id));
 								}
+								else if (is_auto_repeat_button)
+								{
+									if (last_auto_repeat_button[pad_index] == button_id
+									    && input_timer.GetMsSince(initial_timestamp[pad_index]) > ms_threshold
+									    && input_timer.GetMsSince(timestamp[pad_index]) > ms_interval)
+									{
+										// The auto-repeat button was pressed for at least the given threshold in ms and will trigger at an interval.
+										timestamp[pad_index] = steady_clock::now();
+										on_button_pressed(static_cast<pad_button>(button_id));
+									}
+									else if (last_auto_repeat_button[pad_index] == pad_button::pad_button_max_enum)
+									{
+										// An auto-repeat button was already pressed before and will now start triggering again after the next threshold.
+										last_auto_repeat_button[pad_index] = button_id;
+									}
+								}
+							}
+							else if (last_button_state[pad_index][button_id] && last_auto_repeat_button[pad_index] == button_id)
+							{
+								// We stopped pressing an auto-repeat button, so re-enable auto-repeat for other buttons.
+								last_auto_repeat_button[pad_index] = pad_button::pad_button_max_enum;
 							}
 
-							button_state[pad_index][button_id] = button.m_pressed;
+							last_button_state[pad_index][button_id] = button.m_pressed;
 						}
 
 						if (exit)
@@ -218,17 +233,11 @@ namespace rsx
 			// NOTE: Object removal should be the last step
 			if (auto& manager = g_fxo->get<display_manager>(); g_fxo->is_init<display_manager>())
 			{
-				if (auto dlg = manager.get<rsx::overlays::message_dialog>())
-				{
-					if (dlg->progress_bar_count())
-						Emu.GetCallbacks().handle_taskbar_progress(0, 1);
-				}
-
 				manager.remove(uid);
 			}
 		}
 
-		void overlay::refresh()
+		void overlay::refresh() const
 		{
 			if (auto rsxthr = rsx::get_current_renderer())
 			{

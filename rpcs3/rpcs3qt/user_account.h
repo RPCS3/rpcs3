@@ -17,7 +17,6 @@ public:
 	std::string GetUserId() const { return m_user_id; }
 	std::string GetUserDir() const { return m_user_dir; }
 	std::string GetUsername() const { return m_username; }
-	~user_account();
 
 	static std::map<u32, user_account> GetUserAccounts(const std::string& base_dir);
 

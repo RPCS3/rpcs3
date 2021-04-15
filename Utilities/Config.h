@@ -70,10 +70,10 @@ namespace cfg
 		// Get type
 		type get_type() const { return m_type; }
 
-		const std::string& get_name() const { return m_name; };
+		const std::string& get_name() const { return m_name; }
 
 		// Get dynamic property for reloading configs during games
-		bool get_is_dynamic() const { return m_dynamic; };
+		bool get_is_dynamic() const { return m_dynamic; }
 
 		// Reset defaults
 		virtual void from_default() = 0;

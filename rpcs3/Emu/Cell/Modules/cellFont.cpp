@@ -354,10 +354,9 @@ error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::pt
 	}
 
 	// Get the baseLineY value
-	s32 baseLineY;
 	s32 ascent, descent, lineGap;
 	stbtt_GetFontVMetrics(font->stbfont, &ascent, &descent, &lineGap);
-	baseLineY = static_cast<int>(ascent * scale); // ???
+	const s32 baseLineY = static_cast<int>(ascent * scale); // ???
 
 	// Move the rendered character to the surface
 	unsigned char* buffer = vm::_ptr<unsigned char>(surface->buffer.addr());
@@ -375,7 +374,7 @@ error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::pt
 			buffer[(static_cast<s32>(y) + ypos + yoff + baseLineY) * surface->width + static_cast<s32>(x) + xpos] = box[ypos * width + xpos];
 		}
 	}
-	stbtt_FreeBitmap(box, 0);
+	stbtt_FreeBitmap(box, nullptr);
 	return CELL_OK;
 }
 
@@ -389,7 +388,7 @@ error_code cellFontSetEffectSlant(vm::ptr<CellFont> font, float slantParam)
 {
 	cellFont.trace("cellFontSetEffectSlant(font=*0x%x, slantParam=%f)", font, slantParam);
 
-	if (slantParam < -1.0 || slantParam > 1.0)
+	if (slantParam < -1.0f || slantParam > 1.0f)
 	{
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	}

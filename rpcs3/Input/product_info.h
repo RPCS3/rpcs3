@@ -49,11 +49,6 @@ namespace input
 	{
 		switch (type)
 		{
-		default:
-		case product_type::playstation_3_controller:
-		{
-			return product_info{ type, vendor_id::sony_corp, product_id::playstation_3_controller, 0x0 };
-		}
 		case product_type::dance_dance_revolution_mat:
 		{
 			return product_info{ type, vendor_id::konami_de, product_id::dance_dance_revolution_mat, 0x000000FF };
@@ -85,6 +80,11 @@ namespace input
 		case product_type::rock_revolution_drum_kit:
 		{
 			return product_info{ type, vendor_id::sony_cea, product_id::rock_revolution_drum_kit, 0x000000FB };
+		}
+		case product_type::playstation_3_controller:
+		default: // GCC doesn't like it when there is no return value if if all enum values are covered
+		{
+			return product_info{ type, vendor_id::sony_corp, product_id::playstation_3_controller, 0x0 };
 		}
 		}
 	}

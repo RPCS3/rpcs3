@@ -295,7 +295,7 @@ namespace CRCPP
 		static CRCType Finalize(CRCType remainder, CRCType finalXOR, bool reflectOutput);
 
 		template <typename CRCType, crcpp_uint16 CRCWidth>
-		static CRCType UndoFinalize(CRCType remainder, CRCType finalXOR, bool reflectOutput);
+		static CRCType UndoFinalize(CRCType crc, CRCType finalXOR, bool reflectOutput);
 
 		template <typename CRCType, crcpp_uint16 CRCWidth>
 		static CRCType CalculateRemainder(const void * data, crcpp_size size, const Parameters<CRCType, CRCWidth> & parameters, CRCType remainder);
@@ -771,8 +771,6 @@ namespace CRCPP
 	in a function even in a branch will never be executed. This also means we don't need pragmas
 	to get rid of warnings, but it still can be computed at compile-time. Win-win!
 	@param[in] x Compile-time expression to bound
-	@tparam CRCType Integer type for storing the CRC result
-	@tparam CRCWidth Number of bits in the CRC
 	@return Non-negative compile-time expression
 	*/
 	template <typename IntegerType>

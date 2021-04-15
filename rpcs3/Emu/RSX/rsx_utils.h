@@ -51,16 +51,16 @@ namespace rsx
 	public:
 		void add_ref()
 		{
-			ref_count++;
+			++ref_count;
 			idle_time = 0;
 		}
 
 		void release()
 		{
-			ref_count--;
+			--ref_count;
 		}
 
-		bool has_refs()
+		bool has_refs() const
 		{
 			return (ref_count > 0);
 		}
@@ -161,7 +161,7 @@ namespace rsx
 		u32 resolution_y = 720;    // Y RES
 		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
 
-		u32 get_compatible_gcm_format()
+		u32 get_compatible_gcm_format() const
 		{
 			switch (format)
 			{
@@ -176,7 +176,7 @@ namespace rsx
 			}
 		}
 
-		u8 get_bpp()
+		u8 get_bpp() const
 		{
 			switch (format)
 			{

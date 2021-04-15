@@ -255,6 +255,8 @@ struct RSXFragmentProgram
 
 		data_storage_helper& operator=(const data_storage_helper& other)
 		{
+			if (this == &other) return *this;
+
 			if (other.data_ptr == other.local_storage.data())
 			{
 				local_storage = other.local_storage;
@@ -271,12 +273,11 @@ struct RSXFragmentProgram
 
 		data_storage_helper& operator=(data_storage_helper&& other)
 		{
-			if (this != &other)
-			{
-				data_ptr = other.data_ptr;
-				local_storage = std::move(other.local_storage);
-				other.data_ptr = nullptr;
-			}
+			if (this == &other) return *this;
+
+			data_ptr = other.data_ptr;
+			local_storage = std::move(other.local_storage);
+			other.data_ptr = nullptr;
 
 			return *this;
 		}

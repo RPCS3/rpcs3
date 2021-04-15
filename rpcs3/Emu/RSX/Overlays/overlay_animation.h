@@ -30,7 +30,7 @@ namespace rsx
             f32 get_progress_ratio(u64 frame) const;
 
             template<typename T>
-            T lerp(const T& a, const T& b, f32 t) const
+            static T lerp(const T& a, const T& b, f32 t)
             {
                 return (a * (1.f - t)) + (b * t);
             }

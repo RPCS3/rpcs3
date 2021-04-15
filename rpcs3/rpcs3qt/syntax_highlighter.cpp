@@ -37,7 +37,7 @@ void Highlighter::highlightBlock(const QString &text)
 	{
 		const QRegularExpressionMatch match = commentEndExpression.match(text, startIndex);
 		const int endIndex = match.capturedStart();
-		int commentLength = 0;
+		int commentLength;
 
 		if (endIndex == -1)
 		{

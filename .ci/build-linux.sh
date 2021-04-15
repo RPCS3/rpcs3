@@ -5,7 +5,9 @@ export QT_BASE_DIR=/opt/qt${QTVERMIN}
 export PATH=$QT_BASE_DIR/bin:$PATH
 export LD_LIBRARY_PATH=$QT_BASE_DIR/lib/x86_64-linux-gnu:$QT_BASE_DIR/lib
 
-cd rpcs3 || exit 1
+if [ -z "$CIRRUS_CI" ]; then
+   cd rpcs3 || exit 1
+fi
 
 # Pull all the submodules except llvm, since it is built separately and we just download that build
 # Note: Tried to use git submodule status, but it takes over 20 seconds
@@ -57,9 +59,9 @@ cd ..
 
 shellcheck .ci/*.sh
 
-# If it compiled succesfully let's deploy depending on the build pipeline (Azure Pipelines).
-# Azure publishes PRs as artifacts only.
-{   [ "$IS_AZURE" = "true" ];
+# If it compiled succesfully let's deploy.
+# Azure and Cirrus publish PRs as artifacts only.
+{   [ "$CI_HAS_ARTIFACTS" = "true" ];
 } && SHOULD_DEPLOY="true" || SHOULD_DEPLOY="false"
 
 if [ "$build_status" -eq 0 ] && [ "$SHOULD_DEPLOY" = "true" ]; then

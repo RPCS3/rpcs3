@@ -10,6 +10,14 @@
 
 #include "Emu/Cell/timers.hpp"
 
+struct progress_dialog_workaround
+{
+	// WORKAROUND:
+	// We don't want to show the native dialog during gameplay.
+	// This can currently interfere with cell dialogs.
+	atomic_t<bool> skip_the_progress_dialog = false;
+};
+
 enum class localized_string_id;
 enum class video_renderer;
 
@@ -58,6 +66,7 @@ struct EmuCallbacks
 	std::function<std::unique_ptr<class TrophyNotificationBase>()> get_trophy_notification_dialog;
 	std::function<std::string(localized_string_id, const char*)> get_localized_string;
 	std::function<std::u32string(localized_string_id, const char*)> get_localized_u32string;
+	std::string(*resolve_path)(std::string_view) = nullptr; // Resolve path using Qt
 };
 
 class Emulator final
@@ -202,16 +211,16 @@ public:
 
 	std::string GetBackgroundPicturePath() const;
 
-	u64 GetPauseTime()
+	u64 GetPauseTime() const
 	{
 		return m_pause_amend_time;
 	}
 
-	std::string PPUCache() const;
+	static std::string PPUCache();
 
 	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
 	bool BootRsxCapture(const std::string& path);
-	bool InstallPkg(const std::string& path);
+	static bool InstallPkg(const std::string& path);
 
 #ifdef _WIN32
 	static std::string GetExeDir();
@@ -221,7 +230,8 @@ public:
 	static std::string GetHddDir();
 	static std::string GetHdd1Dir();
 	static std::string GetCacheDir();
-	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& user, const std::string& title_id = "");
+	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& title_id = "");
+	static std::string GetRapFilePath(const std::string& rap);
 
 	static std::string GetCustomConfigDir();
 	static std::string GetCustomConfigPath(const std::string& title_id, bool get_deprecated_path = false);
@@ -237,7 +247,7 @@ public:
 	void Stop(bool restart = false);
 	void Restart() { Stop(true); }
 	bool Quit(bool force_quit);
-	void CleanUp();
+	static void CleanUp();
 
 	bool IsRunning() const { return m_state == system_state::running; }
 	bool IsPaused()  const { return m_state >= system_state::paused; } // ready is also considered paused by this function
@@ -254,26 +264,15 @@ public:
 
 	std::string GetFormattedTitle(double fps) const;
 
-	u32 GetMaxThreads() const;
+	static u32 GetMaxThreads();
 
-	void ConfigureLogs();
-	void ConfigurePPUCache();
+	static void ConfigureLogs();
+	void ConfigurePPUCache() const;
 
 	std::set<std::string> GetGameDirs() const;
 
-	u64 GetEmulationCounter() const
-	{
-		return m_stop_ctr;
-	}
-
-	void WaitEmulationCounter(u64 old = -1) const
-	{
-		if (old == umax) old = m_stop_ctr; // Use current if not specified
-		if (m_stop_ctr == old) m_stop_ctr.wait(old);
-	}
-
 private:
-	void LimitCacheSize();
+	static void LimitCacheSize();
 };
 
 extern Emulator Emu;

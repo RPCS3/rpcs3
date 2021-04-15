@@ -23,7 +23,6 @@ struct lv2_cond final : lv2_obj
 	static const u32 id_base = 0x86000000;
 
 	const u32 shared;
-	const s32 flags;
 	const u64 key;
 	const u64 name;
 	const u32 mtx_id;
@@ -32,9 +31,8 @@ struct lv2_cond final : lv2_obj
 	atomic_t<u32> waiters{0};
 	std::deque<cpu_thread*> sq;
 
-	lv2_cond(u32 shared, s32 flags, u64 key, u64 name, u32 mtx_id, std::shared_ptr<lv2_mutex> mutex)
+	lv2_cond(u32 shared, u64 key, u64 name, u32 mtx_id, std::shared_ptr<lv2_mutex> mutex)
 		: shared(shared)
-		, flags(flags)
 		, key(key)
 		, name(name)
 		, mtx_id(mtx_id)
@@ -42,9 +40,9 @@ struct lv2_cond final : lv2_obj
 	{
 	}
 
-	CellError on_id_create()
+	CellError on_id_create() const
 	{
-		if (!mutex->obj_count.fetch_op([](typename lv2_mutex::count_info& info)
+		if (!mutex->obj_count.fetch_op([](lv2_mutex::count_info& info)
 		{
 			if (info.mutex_count)
 				return info.cond_count++, true;

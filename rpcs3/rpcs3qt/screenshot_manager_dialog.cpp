@@ -90,7 +90,7 @@ void screenshot_manager_dialog::show_preview(QListWidgetItem* item)
 	preview->show();
 }
 
-void screenshot_manager_dialog::update_icon(int index)
+void screenshot_manager_dialog::update_icon(int index) const
 {
 	const thumbnail tn = m_icon_loader->resultAt(index);
 
@@ -141,9 +141,9 @@ void screenshot_manager_dialog::update_icons(int value)
 		m_icon_loader->waitForFinished();
 	}
 
-	std::function<thumbnail(thumbnail)> load = [icon_size = m_icon_size](thumbnail tn) -> thumbnail
+	const std::function<thumbnail(thumbnail)> load = [icon_size = m_icon_size](thumbnail tn) -> thumbnail
 	{
-		QPixmap pixmap(tn.path);
+		const QPixmap pixmap(tn.path);
 		tn.icon = QIcon(pixmap.scaled(icon_size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
 		return tn;
 	};

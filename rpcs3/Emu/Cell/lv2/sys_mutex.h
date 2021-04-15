@@ -31,7 +31,6 @@ struct lv2_mutex final : lv2_obj
 	const u32 adaptive;
 	const u64 key;
 	const u64 name;
-	const s32 flags;
 
 	struct alignas(8) count_info
 	{
@@ -45,14 +44,13 @@ struct lv2_mutex final : lv2_obj
 	atomic_t<count_info> obj_count{};
 	std::deque<cpu_thread*> sq;
 
-	lv2_mutex(u32 protocol, u32 recursive, u32 shared, u32 adaptive, u64 key, s32 flags, u64 name)
+	lv2_mutex(u32 protocol, u32 recursive, u32 shared, u32 adaptive, u64 key, u64 name)
 		: protocol{protocol}
 		, recursive(recursive)
 		, shared(shared)
 		, adaptive(adaptive)
 		, key(key)
 		, name(name)
-		, flags(flags)
 	{
 	}
 

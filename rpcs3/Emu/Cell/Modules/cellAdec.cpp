@@ -30,7 +30,6 @@ extern "C"
 #include "cellAdec.h"
 
 #include <mutex>
-#include <thread>
 
 extern std::mutex g_mutex_avcodec_open2;
 
@@ -356,7 +355,7 @@ public:
 			fmt::throw_exception("avformat_alloc_context() failed");
 		}
 		io_buf = static_cast<u8*>(av_malloc(4096));
-		fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, NULL, NULL);
+		fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, nullptr, nullptr);
 		if (!fmt->pb)
 		{
 			fmt::throw_exception("avio_alloc_context() failed");
@@ -466,7 +465,7 @@ public:
 						}
 						else
 						{
-							data = NULL;
+							data = nullptr;
 							size = 0;
 						}
 					}
@@ -490,7 +489,7 @@ public:
 				{
 					AVDictionary* opts = nullptr;
 					av_dict_set(&opts, "probesize", "96", 0);
-					err = avformat_open_input(&fmt, NULL, input_format, &opts);
+					err = avformat_open_input(&fmt, nullptr, input_format, &opts);
 					if (err || opts)
 					{
 						fmt::throw_exception("avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
@@ -687,9 +686,8 @@ next:
 		case adecClose:
 		{
 			buf_size = adec.reader.size;
+			break;
 		}
-		break;
-
 		case adecDecodeAu:
 		{
 			std::memcpy(buf, vm::base(adec.reader.addr), adec.reader.size);
@@ -706,9 +704,9 @@ next:
 			adec.reader.size = adec.task.au.size;
 			adec.reader.has_ats = adec.use_ats_headers;
 			//cellAdec.notice("Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
+			break;
 		}
-		break;
-
+		case adecStartSeq: // TODO ?
 		default:
 		{
 			cellAdec.error("adecRawRead(): unknown task (%d)", +task.type);
@@ -728,14 +726,12 @@ next:
 	{
 		return res;
 	}
-	else
-	{
-		std::memcpy(buf, vm::base(adec.reader.addr), buf_size);
 
-		adec.reader.addr += buf_size;
-		adec.reader.size -= buf_size;
-		return res + buf_size;
-	}
+	std::memcpy(buf, vm::base(adec.reader.addr), buf_size);
+
+	adec.reader.addr += buf_size;
+	adec.reader.size -= buf_size;
+	return res + buf_size;
 }
 
 bool adecCheckType(s32 type)

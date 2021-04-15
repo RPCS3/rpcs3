@@ -2,14 +2,6 @@
 
 extern void ppu_breakpoint(u32 loc, bool is_adding);
 
-breakpoint_handler::breakpoint_handler()
-{
-}
-
-breakpoint_handler::~breakpoint_handler()
-{
-}
-
 bool breakpoint_handler::HasBreakpoint(u32 loc) const
 {
 	return m_breakpoints.contains(loc);

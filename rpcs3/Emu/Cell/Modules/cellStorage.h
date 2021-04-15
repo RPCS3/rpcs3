@@ -24,8 +24,8 @@ enum CellStorageDataParamSize
 	CELL_STORAGEDATA_TITLE_MAX      = 256
 };
 
-const char* CELL_STORAGEDATA_IMPORT_FILENAME = "IMPORT.BIN";
-const char* CELL_STORAGEDATA_EXPORT_FILENAME = "EXPORT.BIN";
+inline const char* CELL_STORAGEDATA_IMPORT_FILENAME = "IMPORT.BIN";
+inline const char* CELL_STORAGEDATA_EXPORT_FILENAME = "EXPORT.BIN";
 
 struct CellStorageDataSetParam
 {

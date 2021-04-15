@@ -40,7 +40,7 @@ void generate_key(int crypto_mode, int version, unsigned char *key_final, unsign
 		memcpy(key_final, key, 0x10);
 		memcpy(iv_final, iv, 0x10);
 		break;
-	};
+	}
 }
 
 void generate_hash(int hash_mode, int version, unsigned char *hash_final, unsigned char *hash)
@@ -662,7 +662,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 	if (memcmp(&NPD.magic, npd_magic, 4))
 	{
 		edat_log.error("EDAT: %s has invalid NPD header or already decrypted.", input_file_name);
-		return 1;
+		return true;
 	}
 
 	if (verbose)
@@ -709,7 +709,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 			if ((EDAT.flags & EDAT_DEBUG_DATA_FLAG) != EDAT_DEBUG_DATA_FLAG)
 			{
 				edat_log.error("EDAT: NPD hash validation failed!");
-				return 1;
+				return true;
 			}
 		}
 
@@ -724,7 +724,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 			if (!key)
 			{
 				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file! (local activation)");
-				return 1;
+				return true;
 			}
 		}
 		else if ((NPD.license & 0x1) == 0x1)      // Type 1: Use network activation.
@@ -735,7 +735,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 			if (!key)
 			{
 				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file! (network activation)");
-				return 1;
+				return true;
 			}
 		}
 
@@ -759,17 +759,17 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 	if (check_data(reinterpret_cast<uchar*>(&key), &EDAT, &NPD, input, verbose))
 	{
 		edat_log.error("EDAT: Data parsing failed!");
-		return 1;
+		return true;
 	}
 
 	input->seek(0);
 	if (decrypt_data(input, output, &EDAT, &NPD, reinterpret_cast<uchar*>(&key), verbose))
 	{
 		edat_log.error("EDAT: Data decryption failed!");
-		return 1;
+		return true;
 	}
 
-	return 0;
+	return false;
 }
 
 u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file)
@@ -878,7 +878,7 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 	// Read the RAP file, if provided.
 	if (!rap_file_name.empty())
 	{
-		fs::file rap(rap_file_name);
+		const fs::file rap(rap_file_name);
 
 		rifKey = GetEdatRifKeyFromRapFile(rap);
 	}

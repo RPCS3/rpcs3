@@ -170,7 +170,7 @@ void FragmentProgramDecompiler::AddCode(const std::string& code)
 	main.append(m_code_level, '\t') += Format(code) + "\n";
 }
 
-std::string FragmentProgramDecompiler::GetMask()
+std::string FragmentProgramDecompiler::GetMask() const
 {
 	std::string ret;
 	ret.reserve(5);
@@ -299,7 +299,7 @@ std::string FragmentProgramDecompiler::ClampValue(const std::string& code, u32 p
 	return code;
 }
 
-bool FragmentProgramDecompiler::DstExpectsSca()
+bool FragmentProgramDecompiler::DstExpectsSca() const
 {
 	int writes = 0;
 

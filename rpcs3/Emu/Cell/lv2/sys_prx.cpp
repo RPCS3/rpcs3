@@ -433,9 +433,7 @@ error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys
 			return CELL_PRX_ERROR_ERROR;
 		}
 
-		pOpt->entry.set(prx->start ? prx->start.addr() : ~0ull);
-		pOpt->entry2.set(prx->prologue ? prx->prologue.addr() : ~0ull);
-		return CELL_OK;
+		break;
 	}
 	case 2:
 	{
@@ -565,8 +563,6 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 	default:
 		return CELL_PRX_ERROR_ERROR;
 	}
-
-	return CELL_OK;
 }
 
 error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_prx_unload_module_option_t> pOpt)
@@ -608,11 +604,64 @@ error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sy
 	return CELL_OK;
 }
 
-error_code _sys_prx_register_module(ppu_thread& ppu)
+void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size);
+
+error_code _sys_prx_register_module(ppu_thread& ppu, vm::cptr<char> name, vm::ptr<void> opt)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_prx.todo("_sys_prx_register_module()");
+	sys_prx.todo("_sys_prx_register_module(name=%s, opt=*0x%x)", name, opt);
+
+	if (!opt)
+	{
+		return CELL_EINVAL;
+	}
+
+	sys_prx_register_module_0x30_type_1_t info{};
+
+	switch (const u64 size_struct = vm::read64(opt.addr()))
+	{
+	case 0x1c:
+	case 0x20:
+	{
+		const auto _info = vm::static_ptr_cast<sys_prx_register_module_0x20_t>(opt);
+
+		sys_prx.todo("_sys_prx_register_module(): opt size is 0x%x", size_struct);
+
+		// Rebuild info with corresponding members of old structures
+		// Weird that type is set to 0 because 0 means NO-OP in this syscall
+		info.size = 0x30;
+		info.lib_stub_size = _info->stubs_size;
+		info.lib_stub_ea = _info->stubs_ea;
+		info.error_handler = _info->error_handler;
+		info.type = 0;
+		break;
+	}
+	case 0x30:
+	{
+		std::memcpy(&info, opt.get_ptr(), sizeof(info));
+		break;
+	}
+	default: return CELL_EINVAL;
+	}
+
+	sys_prx.warning("opt: size=0x%x, type=0x%x, unk3=0x%x, unk4=0x%x, lib_entries_ea=%s, lib_entries_size=0x%x"
+		", lib_stub_ea=%s, lib_stub_size=0x%x, error_handler=%s", info.size, info.type, info.unk3, info.unk4
+		, info.lib_entries_ea, info.lib_entries_size, info.lib_stub_ea, info.lib_stub_size, info.error_handler);
+
+	if (info.type & 0x1)
+	{
+		if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+		{
+			ppu_manual_load_imports_exports(info.lib_stub_ea.addr(), info.lib_stub_size, info.lib_entries_ea.addr(), info.lib_entries_size);
+		}
+		else
+		{
+			// Only VSH is allowed to load it manually
+			return not_an_error(CELL_PRX_ERROR_ELF_IS_REGISTERED);
+		}
+	}
+
 	return CELL_OK;
 }
 
