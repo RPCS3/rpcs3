@@ -300,10 +300,8 @@ void Emulator::Init(bool add_only)
 					sys_log.fatal("Failed to fix save data: %s (%s)", pending, fs::g_tls_error);
 					continue;
 				}
-				else
-				{
-					sys_log.success("Fixed save data: %s", desired);
-				}
+
+				sys_log.success("Fixed save data: %s", desired);
 			}
 
 			// Remove pending backup data
@@ -381,7 +379,7 @@ namespace
 						type.disable_cancel = true;
 						type.progress_bar_count = 1;
 
-						native_dlg = manager->create<rsx::overlays::progress_dialog>(!!g_cfg.video.shader_preloading_dialog.use_custom_background);
+						native_dlg = manager->create<rsx::overlays::progress_dialog>(true);
 						native_dlg->show(false, text0, type, nullptr);
 						native_dlg->progress_bar_set_message(0, "Please wait");
 					}

@@ -207,8 +207,8 @@ struct cfg_root : cfg::node
 			node_shader_preloading_dialog(cfg::node* _this) : cfg::node(_this, "Shader Loading Dialog") {}
 
 			cfg::_bool use_custom_background{ this, "Allow custom background", true, true };
-			cfg::_int<0, 100> darkening_strength{ this, "Darkening effect strength", 30, true };
-			cfg::_int<0, 100> blur_strength{ this, "Blur effect strength", 0, true };
+			cfg::uint<0, 100> darkening_strength{ this, "Darkening effect strength", 30, true };
+			cfg::uint<0, 100> blur_strength{ this, "Blur effect strength", 0, true };
 
 		} shader_preloading_dialog{ this };
 

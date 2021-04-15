@@ -30,7 +30,6 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 	{
 		return std::make_shared<lv2_cond>(
 			_attr.pshared,
-			_attr.flags,
 			_attr.ipc_key,
 			_attr.name_u64,
 			mutex_id,

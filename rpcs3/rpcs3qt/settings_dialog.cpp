@@ -1251,6 +1251,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->perfOverlayCenterY->setEnabled(enabled);
 		ui->perfOverlayFramerateGraphEnabled->setEnabled(enabled);
 		ui->perfOverlayFrametimeGraphEnabled->setEnabled(enabled);
+		ui->perf_overlay_framerate_datapoints->setEnabled(enabled);
+		ui->perf_overlay_frametime_datapoints->setEnabled(enabled);
 	};
 	enable_perf_overlay_options(ui->perfOverlayEnabled->isChecked());
 	connect(ui->perfOverlayEnabled, &QCheckBox::clicked, enable_perf_overlay_options);

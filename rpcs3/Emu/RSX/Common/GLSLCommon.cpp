@@ -616,7 +616,7 @@ namespace glsl
 				// Forward mapping eqn is d' = d * (f - n) + n, where d' is the stored Z value (this) and d is the normalized API value.
 				"vec4 apply_zclip_xform(const in vec4 pos, const in float near_plane, const in float far_plane)\n"
 				"{\n"
-				"	if (far_plane != 0.0)\n"
+				"	if (far_plane != 0.0 && pos.w != 0.0)\n"
 				"	{\n"
 				"		double z_range = (far_plane > near_plane)? (far_plane - near_plane) : far_plane;\n"
 				"		double inv_range = rcp_precise(z_range);\n"
@@ -646,7 +646,7 @@ namespace glsl
 				"		// Compress Z and store towards highest end of the range\n"
 				"		d = min(1., 0.99 + (0.01 * (pos.z - near_plane) / (far_plane - near_plane)));\n"
 				"	}\n"
-				"	else\n"
+				"	else\n" // This catch-call also handles w=0 since d=inf
 				"	{\n"
 				"		return pos;\n"
 				"	}\n"

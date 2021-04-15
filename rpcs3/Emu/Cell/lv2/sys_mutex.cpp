@@ -62,7 +62,6 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 			_attr.pshared,
 			_attr.adaptive,
 			_attr.ipc_key,
-			_attr.flags,
 			_attr.name_u64);
 	}))
 	{

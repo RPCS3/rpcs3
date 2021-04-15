@@ -468,7 +468,7 @@ namespace rsx
 				is_compiled = false;
 			}
 
-			void set_text(const std::u32string& text)
+			virtual void set_unicode_text(const std::u32string& text)
 			{
 				this->text = text;
 				is_compiled = false;
@@ -476,7 +476,7 @@ namespace rsx
 
 			void set_text(localized_string_id id)
 			{
-				set_text(get_localized_u32string(id));
+				set_unicode_text(get_localized_u32string(id));
 			}
 
 			virtual void set_font(const char* font_name, u16 font_size)
@@ -923,10 +923,16 @@ namespace rsx
 				external_ref = nullptr;
 			}
 
-			void set_raw_image(image_info *raw_image)
+			void set_raw_image(image_info* raw_image)
 			{
 				image_resource_ref = image_resource_id::raw_image;
 				external_ref = raw_image;
+			}
+
+			void clear_image()
+			{
+				image_resource_ref = image_resource_id::none;
+				external_ref = nullptr;
 			}
 
 			void set_blur_strength(u8 strength)
@@ -1095,9 +1101,18 @@ namespace rsx
 			u16 caret_position = 0;
 			u16 vertical_scroll_offset = 0;
 
-			bool m_reset_caret_pulse = 0;
+			bool m_reset_caret_pulse = false;
+			bool password_mode = false;
+
+			std::u32string value;
+			std::u32string placeholder;
 
 			using label::label;
+
+			void set_text(const std::string& text) override;
+			void set_unicode_text(const std::u32string& text) override;
+
+			void set_placeholder(const std::u32string& placeholder_text);
 
 			void move_caret(direction dir);
 			void insert_text(const std::u32string& str);
