@@ -1132,7 +1132,7 @@ void VKGSRender::clear_surface(u32 mask)
 			{
 				ensure(depth_stencil_mask);
 
-				if (!g_cfg.video.read_depth_buffer)
+				if (!g_cfg.video.read_buffers)
 				{
 					// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
 					if (mask == 1)
@@ -2062,7 +2062,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
 		// Flush old address if we keep missing it
-		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
+		if (m_surface_info[i].pitch && g_cfg.video.write_buffers)
 		{
 			const utils::address_range rsx_range = m_surface_info[i].get_memory_range();
 			m_texture_cache.set_memory_read_flags(rsx_range, rsx::memory_read_flags::flush_once);
@@ -2079,7 +2079,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	//Process depth surface as well
 	{
-		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
+		if (m_depth_surface_info.pitch && g_cfg.video.write_buffers)
 		{
 			const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
 			m_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
@@ -2148,7 +2148,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
 
 		const utils::address_range surface_range = m_surface_info[index].get_memory_range();
-		if (g_cfg.video.write_color_buffers)
+		if (g_cfg.video.write_buffers)
 		{
 			m_texture_cache.lock_memory_region(
 				*m_current_command_buffer, m_rtts.m_bound_render_targets[index].second, surface_range, true,
@@ -2164,7 +2164,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 	{
 		const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
-		if (g_cfg.video.write_depth_buffer)
+		if (g_cfg.video.write_buffers)
 		{
 			const u32 gcm_format = (m_depth_surface_info.depth_format != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
 			m_texture_cache.lock_memory_region(
@@ -2184,10 +2184,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 		for (auto& surface : m_rtts.orphaned_surfaces)
 		{
-			const bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
-				!!g_cfg.video.write_color_buffers;
-
-			if (!lock) [[likely]]
+			if (!g_cfg.video.write_buffers) [[likely]]
 			{
 				m_texture_cache.commit_framebuffer_memory_region(*m_current_command_buffer, surface->get_memory_range());
 				continue;

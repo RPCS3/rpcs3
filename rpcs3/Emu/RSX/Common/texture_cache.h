@@ -1184,7 +1184,7 @@ namespace rsx
 		template <typename ...FlushArgs, typename ...Args>
 		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range &rsx_range, bool is_active_surface, u16 width, u16 height, u16 pitch, Args&&... extras)
 		{
-			AUDIT(g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer); // this method is only called when either WCB or WDB are enabled
+			AUDIT(g_cfg.video.write_buffers); // this method is only called when either WCB or WDB are enabled
 
 			std::lock_guard lock(m_cache_mutex);
 
@@ -1253,7 +1253,7 @@ namespace rsx
 		template <typename ...Args>
 		void commit_framebuffer_memory_region(commandbuffer_type& cmd, const address_range &rsx_range, Args&&... extras)
 		{
-			AUDIT(!g_cfg.video.write_color_buffers || !g_cfg.video.write_depth_buffer);
+			AUDIT(!g_cfg.video.write_buffers);
 
 			if (!region_intersects_cache(rsx_range, true))
 				return;
@@ -1265,7 +1265,7 @@ namespace rsx
 		template <typename ...Args>
 		void discard_framebuffer_memory_region(commandbuffer_type& /*cmd*/, const address_range& rsx_range, Args&&... /*extras*/)
 		{
-			if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
+			if (g_cfg.video.write_buffers)
 			{
 				auto* region_ptr = find_cached_texture(rsx_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false);
 				if (region_ptr && region_ptr->is_locked() && region_ptr->get_context() == texture_upload_context::framebuffer_storage)
@@ -1808,7 +1808,7 @@ namespace rsx
 						section_count > 0)
 					{
 						bool result_is_valid = result.atlas_covers_target_area(section_count == 1 ? 99 : 90);
-						if (!result_is_valid && _pool == 0 && !g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
+						if (!result_is_valid && _pool == 0 && !g_cfg.video.write_buffers)
 						{
 							// HACK: Avoid WCB requirement for some games with wrongly declared sampler dimensions.
 							// TODO: Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).

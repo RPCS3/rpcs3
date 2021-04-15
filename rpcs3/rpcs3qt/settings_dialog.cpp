@@ -430,8 +430,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->shaderCompilerThreads->setItemText(ui->shaderCompilerThreads->findData(0), tr("Auto", "Number of Shader Compiler Threads"));
 
 	// Checkboxes: main options
-	m_emu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings_type::WriteColorBuffers);
-	SubscribeTooltip(ui->dumpColor, tooltips.settings.dump_color);
+	m_emu_settings->EnhanceCheckBox(ui->dumpBuffers, emu_settings_type::WriteBuffers);
+	SubscribeTooltip(ui->dumpBuffers, tooltips.settings.dump_buffers);
+
+	m_emu_settings->EnhanceCheckBox(ui->loadBuffers, emu_settings_type::ReadBuffers);
+	SubscribeTooltip(ui->loadBuffers, tooltips.settings.load_buffers);
 
 	m_emu_settings->EnhanceCheckBox(ui->vsync, emu_settings_type::VSync);
 	SubscribeTooltip(ui->vsync, tooltips.settings.vsync);
@@ -982,15 +985,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->silenceAllLogs, emu_settings_type::SilenceAllLogs);
 	SubscribeTooltip(ui->silenceAllLogs, tooltips.settings.silence_all_logs);
-
-	m_emu_settings->EnhanceCheckBox(ui->readColor, emu_settings_type::ReadColorBuffers);
-	SubscribeTooltip(ui->readColor, tooltips.settings.read_color);
-
-	m_emu_settings->EnhanceCheckBox(ui->readDepth, emu_settings_type::ReadDepthBuffer);
-	SubscribeTooltip(ui->readDepth, tooltips.settings.read_depth);
-
-	m_emu_settings->EnhanceCheckBox(ui->dumpDepth, emu_settings_type::WriteDepthBuffer);
-	SubscribeTooltip(ui->dumpDepth, tooltips.settings.dump_depth);
 
 	m_emu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings_type::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, tooltips.settings.disable_on_disk_shader_cache);

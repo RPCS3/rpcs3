@@ -128,10 +128,8 @@ struct cfg_root : cfg::node
 		cfg::_enum<msaa_level> antialiasing_level{ this, "MSAA", msaa_level::_auto };
 		cfg::_enum<shader_mode> shadermode{ this, "Shader Mode", shader_mode::async_recompiler };
 
-		cfg::_bool write_color_buffers{ this, "Write Color Buffers" };
-		cfg::_bool write_depth_buffer{ this, "Write Depth Buffer" };
-		cfg::_bool read_color_buffers{ this, "Read Color Buffers" };
-		cfg::_bool read_depth_buffer{ this, "Read Depth Buffer" };
+		cfg::_bool write_buffers{ this, "Write Buffers" };
+		cfg::_bool read_buffers{ this, "Read Buffers" };
 		cfg::_bool log_programs{ this, "Log shader programs" };
 		cfg::_bool vsync{ this, "VSync" };
 		cfg::_bool debug_output{ this, "Debug output" };

@@ -300,11 +300,7 @@ namespace vk
 
 		void initialize_memory(vk::command_buffer& cmd, bool read_access)
 		{
-			const bool memory_load = is_depth_surface() ?
-				!!g_cfg.video.read_depth_buffer :
-				!!g_cfg.video.read_color_buffers;
-
-			if (!memory_load)
+			if (!g_cfg.video.read_buffers)
 			{
 				clear_memory(cmd, this);
 
@@ -397,8 +393,7 @@ namespace vk
 			const bool read_access = (access != rsx::surface_access::write);
 			const bool is_depth = is_depth_surface();
 
-			if ((g_cfg.video.read_color_buffers && !is_depth) ||
-				(g_cfg.video.read_depth_buffer && is_depth))
+			if (g_cfg.video.read_buffers)
 			{
 				// TODO: Decide what to do when memory loads are disabled but the underlying has memory changed
 				// NOTE: Assume test() is expensive when in a pinch

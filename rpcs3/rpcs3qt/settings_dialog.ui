@@ -39,7 +39,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -731,9 +731,16 @@
              </property>
              <layout class="QVBoxLayout" name="gb_additional_settings_layout">
               <item>
-               <widget class="QCheckBox" name="dumpColor">
+               <widget class="QCheckBox" name="dumpBuffers">
                 <property name="text">
-                 <string>Write Color Buffers</string>
+                 <string>Write Buffers</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="loadBuffers">
+                <property name="text">
+                 <string>Read Buffers</string>
                 </property>
                </widget>
               </item>
@@ -2048,27 +2055,6 @@
               <string>GPU</string>
              </property>
              <layout class="QVBoxLayout" name="gb_advanced_gpu_layout">
-              <item>
-               <widget class="QCheckBox" name="readDepth">
-                <property name="text">
-                 <string>Read Depth Buffers</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="dumpDepth">
-                <property name="text">
-                 <string>Write Depth Buffers</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="readColor">
-                <property name="text">
-                 <string>Read Color Buffers</string>
-                </property>
-               </widget>
-              </item>
               <item>
                <widget class="QCheckBox" name="disableOnDiskShaderCache">
                 <property name="text">

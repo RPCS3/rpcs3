@@ -147,7 +147,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 	for (int i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
-		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
+		if (m_surface_info[i].pitch && g_cfg.video.write_buffers)
 		{
 			const utils::address_range surface_range = m_surface_info[i].get_memory_range();
 			m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
@@ -176,7 +176,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		}
 	}
 
-	if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
+	if (m_depth_surface_info.pitch && g_cfg.video.write_buffers)
 	{
 		const utils::address_range surface_range = m_depth_surface_info.get_memory_range();
 		m_gl_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
@@ -315,7 +315,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
 
 		const auto surface_range = m_surface_info[i].get_memory_range();
-		if (g_cfg.video.write_color_buffers)
+		if (g_cfg.video.write_buffers)
 		{
 			// Mark buffer regions as NO_ACCESS on Cell-visible side
 			m_gl_texture_cache.lock_memory_region(
@@ -332,7 +332,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 	if (m_depth_surface_info.address && m_depth_surface_info.pitch)
 	{
 		const auto surface_range = m_depth_surface_info.get_memory_range();
-		if (g_cfg.video.write_depth_buffer)
+		if (g_cfg.video.write_buffers)
 		{
 			const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(m_framebuffer_layout.depth_format);
 			m_gl_texture_cache.lock_memory_region(
@@ -354,10 +354,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 		for (auto& surface : m_rtts.orphaned_surfaces)
 		{
-			const bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
-				!!g_cfg.video.write_color_buffers;
-
-			if (!lock) [[likely]]
+			if (!g_cfg.video.write_buffers) [[likely]]
 			{
 				m_gl_texture_cache.commit_framebuffer_memory_region(cmd, surface->get_memory_range());
 				continue;
@@ -450,11 +447,7 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 
 void gl::render_target::initialize_memory(gl::command_context& cmd, bool /*read_access*/)
 {
-	const bool memory_load = is_depth_surface() ?
-		!!g_cfg.video.read_depth_buffer :
-		!!g_cfg.video.read_color_buffers;
-
-	if (!memory_load)
+	if (!g_cfg.video.read_buffers)
 	{
 		clear_memory(cmd);
 	}
