@@ -1,9 +1,7 @@
 #pragma once
 
-#include "Emu/GameInfo.h"
-
+#include "game_list.h"
 #include "custom_dock_widget.h"
-#include "game_compatibility.h"
 #include "gui_save.h"
 
 #include <QMainWindow>
@@ -14,26 +12,10 @@
 
 #include <memory>
 
-class game_list;
 class game_list_grid;
 class gui_settings;
 class emu_settings;
 class persistent_settings;
-
-/* Having the icons associated with the game info simplifies logic internally */
-struct gui_game_info
-{
-	GameInfo info;
-	QString localized_category;
-	compat::status compat;
-	QPixmap icon;
-	QPixmap pxmap;
-	bool hasCustomConfig;
-	bool hasCustomPadConfig;
-};
-
-typedef std::shared_ptr<gui_game_info> game_info;
-Q_DECLARE_METATYPE(game_info)
 
 class game_list_frame : public custom_dock_widget
 {
@@ -87,6 +69,7 @@ public Q_SLOTS:
 	void SetSearchText(const QString& text);
 	void SetShowCompatibilityInGrid(bool show);
 	void SetShowCustomIcons(bool show);
+	void SetPlayHoverGifs(bool play);
 
 private Q_SLOTS:
 	void OnColClicked(int col);
@@ -174,4 +157,5 @@ private:
 	qreal m_text_factor;
 	bool m_draw_compat_status_to_grid = false;
 	bool m_show_custom_icons = true;
+	bool m_play_hover_movies = true;
 };

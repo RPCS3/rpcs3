@@ -19,9 +19,9 @@ public:
 
 	void enableText(const bool& enabled);
 	void setIconSize(const QSize& size) const;
-	void addItem(const QPixmap& img, const QString& name, const int& row, const int& col);
+	void addItem(const game_info& app, const QString& name, const QString& movie_path, const int& row, const int& col);
 
-	qreal getMarginFactor() const;
+	[[nodiscard]] qreal getMarginFactor() const;
 
 private:
 	game_list_grid_delegate* grid_item_delegate; 
