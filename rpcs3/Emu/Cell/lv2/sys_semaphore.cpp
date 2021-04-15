@@ -40,7 +40,7 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 
 	if (auto error = lv2_obj::create<lv2_sema>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
 	{
-		return std::make_shared<lv2_sema>(protocol, _attr.pshared, _attr.ipc_key, _attr.flags, _attr.name_u64, max_val, initial_val);
+		return std::make_shared<lv2_sema>(protocol, _attr.pshared, _attr.ipc_key, _attr.name_u64, max_val, initial_val);
 	}))
 	{
 		return error;

@@ -48,7 +48,6 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 			_attr.protocol,
 			_attr.pshared,
 			_attr.ipc_key,
-			_attr.flags,
 			_attr.type,
 			_attr.name_u64,
 			init);
