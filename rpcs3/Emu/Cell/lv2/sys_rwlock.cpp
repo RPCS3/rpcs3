@@ -34,7 +34,7 @@ error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<s
 
 	if (auto error = lv2_obj::create<lv2_rwlock>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
 	{
-		return std::make_shared<lv2_rwlock>(protocol, _attr.pshared, _attr.ipc_key, _attr.flags, _attr.name_u64);
+		return std::make_shared<lv2_rwlock>(protocol, _attr.pshared, _attr.ipc_key, _attr.name_u64);
 	}))
 	{
 		return error;

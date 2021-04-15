@@ -27,19 +27,17 @@ struct lv2_sema final : lv2_obj
 	const u32 shared;
 	const u64 key;
 	const u64 name;
-	const s32 flags;
 	const s32 max;
 
 	shared_mutex mutex;
 	atomic_t<s32> val;
 	std::deque<cpu_thread*> sq;
 
-	lv2_sema(u32 protocol, u32 shared, u64 key, s32 flags, u64 name, s32 max, s32 value)
+	lv2_sema(u32 protocol, u32 shared, u64 key, u64 name, s32 max, s32 value)
 		: protocol{protocol}
 		, shared(shared)
 		, key(key)
 		, name(name)
-		, flags(flags)
 		, max(max)
 		, val(value)
 	{
