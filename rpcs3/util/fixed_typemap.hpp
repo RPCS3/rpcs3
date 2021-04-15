@@ -14,11 +14,51 @@ namespace stx
 	template <typename Tag /*Tag should be unique*/, u32 Size = 0, u32 Align = (Size ? 64 : __STDCPP_DEFAULT_NEW_ALIGNMENT__)>
 	class alignas(Align) manual_typemap
 	{
+		static constexpr std::string_view parse_type(std::string_view pretty_name)
+		{
+#ifdef _MSC_VER
+			const auto pos = pretty_name.find("::typeinfo::make_typeinfo<");
+			const auto end = pretty_name.rfind(">(void)");
+			return pretty_name.substr(pos + 26, end - pos - 26);
+#else
+			const auto pos = pretty_name.find("T = ");
+
+			if (pos + 1)
+			{
+				pretty_name.remove_prefix(pos + 4);
+
+				auto end = pretty_name.find("; Tag =");
+
+				if (end + 1)
+				{
+					return pretty_name.substr(0, end);
+				}
+
+				end = pretty_name.find(", Tag =");
+
+				if (end + 1)
+				{
+					return pretty_name.substr(0, end);
+				}
+
+				if (!pretty_name.empty() && pretty_name.back() == ']')
+				{
+					pretty_name.remove_suffix(1);
+				}
+
+				return pretty_name;
+			}
+
+			return {};
+#endif
+		}
+
 		// Save default constructor and destructor
 		struct typeinfo
 		{
 			bool(*create)(uchar* ptr, manual_typemap&) noexcept;
 			void(*destroy)(void* ptr) noexcept;
+			std::string_view name;
 
 			template <typename T>
 			static bool call_ctor(uchar* ptr, manual_typemap& _this) noexcept
@@ -54,6 +94,12 @@ namespace stx
 				typeinfo r;
 				r.create = &call_ctor<T>;
 				r.destroy = &call_dtor<T>;
+#ifdef _MSC_VER
+				constexpr std::string_view name = parse_type(__FUNCSIG__);
+#else
+				constexpr std::string_view name = parse_type(__PRETTY_FUNCTION__);
+#endif
+				r.name = name;
 				return r;
 			}
 		};
