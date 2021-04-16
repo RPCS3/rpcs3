@@ -744,6 +744,9 @@
     <ClCompile Include="Input\hid_pad_handler.cpp">
       <Filter>Io</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\game_list.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">

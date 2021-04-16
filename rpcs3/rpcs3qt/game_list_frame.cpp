@@ -133,19 +133,6 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(m_game_list, &QTableWidget::customContextMenuRequested, this, &game_list_frame::ShowContextMenu);
 	connect(m_game_list, &QTableWidget::itemSelectionChanged, this, &game_list_frame::itemSelectionChangedSlot);
 	connect(m_game_list, &QTableWidget::itemDoubleClicked, this, &game_list_frame::doubleClickedSlot);
-	connect(m_game_list, &QTableWidget::cellEntered, this, [this](int row, int column)
-	{
-		if (auto old_item = static_cast<movie_item*>(m_game_list->item(m_game_list->m_last_entered_row, m_game_list->m_last_entered_col)))
-		{
-			old_item->set_active(false);
-		}
-		if (auto new_item = static_cast<movie_item*>(m_game_list->item(row, column)))
-		{
-			new_item->set_active(true);
-		}
-		m_game_list->m_last_entered_row = row;
-		m_game_list->m_last_entered_col = column;
-	});
 
 	connect(m_game_list->horizontalHeader(), &QHeaderView::sectionClicked, this, &game_list_frame::OnColClicked);
 	connect(m_game_list->horizontalHeader(), &QHeaderView::customContextMenuRequested, [this](const QPoint& pos)

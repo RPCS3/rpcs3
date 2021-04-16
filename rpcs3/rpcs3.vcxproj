@@ -564,6 +564,7 @@
     <ClCompile Include="rpcs3qt\debugger_list.cpp" />
     <ClCompile Include="rpcs3qt\downloader.cpp" />
     <ClCompile Include="rpcs3qt\fatal_error_dialog.cpp" />
+    <ClCompile Include="rpcs3qt\game_list.cpp" />
     <ClCompile Include="rpcs3qt\gui_application.cpp" />
     <ClCompile Include="rpcs3qt\input_dialog.cpp" />
     <ClCompile Include="rpcs3qt\localized.cpp" />

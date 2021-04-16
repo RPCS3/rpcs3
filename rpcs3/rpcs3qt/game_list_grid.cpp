@@ -40,20 +40,6 @@ game_list_grid::game_list_grid(const QSize& icon_size, QColor icon_color, const 
 	horizontalHeader()->setVisible(false);
 	setShowGrid(false);
 	setMouseTracking(true);
-
-	connect(this, &QTableWidget::cellEntered, this, [this](int row, int column)
-	{
-		if (auto old_item = dynamic_cast<movie_item*>(item(m_last_entered_row, m_last_entered_col)))
-		{
-			old_item->set_active(false);
-		}
-		if (auto new_item = dynamic_cast<movie_item*>(item(row, column)))
-		{
-			new_item->set_active(true);
-		}
-		m_last_entered_row = row;
-		m_last_entered_col = column;
-	});
 }
 
 void game_list_grid::enableText(const bool& enabled)

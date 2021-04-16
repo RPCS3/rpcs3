@@ -23,24 +23,18 @@ struct gui_game_info
 typedef std::shared_ptr<gui_game_info> game_info;
 Q_DECLARE_METATYPE(game_info)
 
+class movie_item;
+
 /*
-	class used in order to get deselection
+	class used in order to get deselection and hover change
 	if you know a simpler way, tell @Megamouse
 */
 class game_list : public QTableWidget
 {
-public:
-	int m_last_entered_row = -1;
-	int m_last_entered_col = -1;
+protected:
+	movie_item* m_last_hover_item = nullptr;
 
-private:
-	void mousePressEvent(QMouseEvent *event) override
-	{
-		if (!indexAt(event->pos()).isValid() || !itemAt(event->pos())->data(Qt::UserRole).isValid())
-		{
-			clearSelection();
-			setCurrentItem(nullptr); // Needed for currentItemChanged
-		}
-		QTableWidget::mousePressEvent(event);
-	}
+	void mousePressEvent(QMouseEvent *event) override;
+	void mouseMoveEvent(QMouseEvent *event) override;
+	void leaveEvent(QEvent *event) override;
 };
