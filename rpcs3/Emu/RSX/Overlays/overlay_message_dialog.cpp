@@ -293,8 +293,8 @@ namespace rsx
 		{
 			if (custom_background_allowed && g_cfg.video.shader_preloading_dialog.use_custom_background)
 			{
-				bool dirty = std::exchange(background_blur_strength, g_cfg.video.shader_preloading_dialog.blur_strength.get());
-				dirty     |= std::exchange(background_darkening_strength, g_cfg.video.shader_preloading_dialog.darkening_strength.get());
+				bool dirty = std::exchange(background_blur_strength, g_cfg.video.shader_preloading_dialog.blur_strength.get()) != background_blur_strength;
+				dirty     |= std::exchange(background_darkening_strength, g_cfg.video.shader_preloading_dialog.darkening_strength.get()) != background_darkening_strength;
 
 				if (!background_image)
 				{
