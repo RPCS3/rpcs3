@@ -19,6 +19,7 @@
 #include <QDesktopServices>
 #include <QPainter>
 #include <QScreen>
+#include <QScrollBar>
 
 #include "Utilities/File.h"
 
@@ -119,6 +120,10 @@ void save_manager_dialog::Init()
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_list->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_list->setColumnCount(5);
+	m_list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_list->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_list->verticalScrollBar()->setSingleStep(20);
+	m_list->horizontalScrollBar()->setSingleStep(10);
 	m_list->setHorizontalHeaderLabels(QStringList() << tr("Icon") << tr("Title & Subtitle") << tr("Last Modified") << tr("Save ID") << tr("Notes"));
 	m_list->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
 	m_list->horizontalHeader()->setStretchLastSection(true);
