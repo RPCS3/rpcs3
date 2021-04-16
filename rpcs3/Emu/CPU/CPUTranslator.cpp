@@ -59,6 +59,7 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "tigerlake")
 	{
 		m_use_fma = true;
+		m_use_avx512 = true;
 	}
 
 	// Test AVX-512_icelake features (TODO)

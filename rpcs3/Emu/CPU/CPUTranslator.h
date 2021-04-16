@@ -2422,6 +2422,9 @@ protected:
 	// Allow FMA
 	bool m_use_fma = false;
 
+	// Allow skylake-x tier AVX-512
+	bool m_use_avx512 = false;
+
 	// Allow Icelake tier AVX-512
 	bool m_use_avx512_icl = false;
 
