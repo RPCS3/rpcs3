@@ -3,12 +3,14 @@
 #include "game_list.h"
 #include "custom_dock_widget.h"
 #include "gui_save.h"
+#include "Utilities/lockless.h"
 
 #include <QMainWindow>
 #include <QToolBar>
 #include <QStackedWidget>
 #include <QSet>
 #include <QTableWidgetItem>
+#include <QFutureWatcher>
 
 #include <memory>
 
@@ -72,10 +74,12 @@ public Q_SLOTS:
 	void SetPlayHoverGifs(bool play);
 
 private Q_SLOTS:
+	void OnRefreshFinished();
+	void OnRepaintFinished();
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
 	void doubleClickedSlot(QTableWidgetItem *item);
-	void itemSelectionChangedSlot();
+	void ItemSelectionChangedSlot();
 Q_SIGNALS:
 	void GameListFrameClosed();
 	void NotifyGameSelection(const game_info& game);
@@ -144,6 +148,12 @@ private:
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;
 	QList<game_info> m_game_data;
+	std::vector<std::string> m_path_list;
+	QSet<QString> m_serials;
+	QMutex m_mutex_cat;
+	lf_queue<game_info> m_games;
+	QFutureWatcher<void> m_refresh_watcher;
+	QFutureWatcher<movie_item*> m_repaint_watcher;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};
 
