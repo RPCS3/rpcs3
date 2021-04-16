@@ -239,7 +239,7 @@ void save_manager_dialog::UpdateList()
 	m_list->clearContents();
 	m_list->setRowCount(static_cast<int>(m_save_entries.size()));
 
-	QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
+	const QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
 
 	if (m_gui_settings->GetValue(gui::m_enableUIColors).toBool())
 	{
@@ -267,7 +267,7 @@ void save_manager_dialog::UpdateList()
 		return icon;
 	};
 
-	QList<QPixmap> icons = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_icon);
+	const QList<QPixmap> icons = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_icon);
 
 	for (int i = 0; i < icons.count(); ++i)
 	{
@@ -368,8 +368,7 @@ void save_manager_dialog::UpdateIcons()
 
 	for (int i = 0; i < m_list->rowCount() && i < scaled.count(); ++i)
 	{
-		QTableWidgetItem* icon_item = m_list->item(i, 0);
-		if (icon_item)
+		if (QTableWidgetItem* icon_item = m_list->item(i, 0))
 			icon_item->setData(Qt::DecorationRole, scaled[i]);
 	}
 
@@ -503,9 +502,7 @@ void save_manager_dialog::closeEvent(QCloseEvent *event)
 
 void save_manager_dialog::UpdateDetails()
 {
-	const int selected = m_list->selectionModel()->selectedRows().size();
-
-	if (selected != 1)
+	if (const int selected = m_list->selectionModel()->selectedRows().size(); selected != 1)
 	{
 		m_details_icon->setPixmap(QPixmap());
 		m_details_subtitle->setText("");
@@ -545,9 +542,11 @@ void save_manager_dialog::UpdateDetails()
 		m_details_modified->setText(tr("Last modified: %1").arg(FormatTimestamp(save.mtime)));
 		m_details_details->setText(tr("Details:\n").append(qstr(save.details)));
 		QString note = tr("Note:\n");
-		QVariantMap map = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
-		if (map.contains(qstr(save.dirName)))
+		if (const QVariantMap map = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
+			map.contains(qstr(save.dirName)))
+		{
 			note.append(map[qstr(save.dirName)].toString());
+		}
 		m_details_note->setText(note);
 
 		m_button_delete->setDisabled(false);
