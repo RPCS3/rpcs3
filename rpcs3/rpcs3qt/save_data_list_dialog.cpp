@@ -180,20 +180,7 @@ void save_data_list_dialog::UpdateList()
 	m_list->clearContents();
 	m_list->setRowCount(::narrow<int>(m_save_entries.size()));
 
-	QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
-
-	// Find deprecated values (older than August 2nd 2020)
-	if (notes.isEmpty())
-	{
-		notes = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
-		m_gui_settings->RemoveValue(gui::m_saveNotes);
-
-		// Move to persistent settings
-		if (!notes.isEmpty())
-		{
-			m_persistent_settings->SetValue(gui::persistent::save_notes, notes);
-		}
-	}
+	const QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
 
 	int row = 0;
 	for (const SaveDataEntry& entry: m_save_entries)

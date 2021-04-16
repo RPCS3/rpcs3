@@ -596,8 +596,8 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				const QString serial = qstr(game.serial);
 
 				// Read persistent_settings values
-				QString note        = m_persistent_settings->GetValue(gui::persistent::notes, serial, "").toString();
-				QString title       = m_persistent_settings->GetValue(gui::persistent::titles, serial, "").toString().simplified();
+				const QString note  = m_persistent_settings->GetValue(gui::persistent::notes, serial, "").toString();
+				const QString title = m_persistent_settings->GetValue(gui::persistent::titles, serial, "").toString().simplified();
 				QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
 				quint64 playtime    = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
 
@@ -612,29 +612,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 				{
 					playtime = m_gui_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
 					m_gui_settings->RemoveValue(gui::persistent::playtime, serial);
-				}
-				// Deprecated values older than August 2nd 2020
-				if (note.isEmpty())
-				{
-					note = m_gui_settings->GetValue(gui::persistent::notes, serial, "").toString();
-					m_gui_settings->RemoveValue(gui::persistent::notes, serial);
-
-					// Move to persistent settings
-					if (!note.isEmpty())
-					{
-						m_persistent_settings->SetValue(gui::persistent::notes, serial, note);
-					}
-				}
-				if (title.isEmpty())
-				{
-					title = m_gui_settings->GetValue(gui::persistent::titles, serial, "").toString().simplified();
-					m_gui_settings->RemoveValue(gui::persistent::titles, serial);
-
-					// Move to persistent settings
-					if (!title.isEmpty())
-					{
-						m_persistent_settings->SetValue(gui::persistent::titles, serial, title);
-					}
 				}
 
 				// Set persistent_settings values if values exist
