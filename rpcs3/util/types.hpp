@@ -208,22 +208,6 @@ using atomic_be_t = atomic_t<be_t<T>, Align>;
 template <typename T, usz Align = alignof(T)>
 using atomic_le_t = atomic_t<le_t<T>, Align>;
 
-// Extract T::simple_type if available, remove cv qualifiers
-template <typename T, typename = void>
-struct simple_type_helper
-{
-	using type = typename std::remove_cv<T>::type;
-};
-
-template <typename T>
-struct simple_type_helper<T, std::void_t<typename T::simple_type>>
-{
-	using type = typename T::simple_type;
-};
-
-template <typename T>
-using simple_t = typename simple_type_helper<T>::type;
-
 // Bool type equivalent
 class b8
 {
@@ -524,7 +508,7 @@ constexpr inline struct umax_helper
 {
 	constexpr umax_helper() noexcept = default;
 
-	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
+	template <typename T, typename S = std::common_type_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator==(const T& rhs) const
 	{
 		return rhs == static_cast<S>(-1);
@@ -533,24 +517,24 @@ constexpr inline struct umax_helper
 #if __cpp_impl_three_way_comparison >= 201711 && !__INTELLISENSE__
 #else
 	template <typename T>
-	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator==(const T& lhs, const umax_helper&)
+	friend constexpr std::enable_if_t<std::is_unsigned_v<std::common_type_t<T>>, bool> operator==(const T& lhs, const umax_helper&)
 	{
-		return lhs == static_cast<simple_t<T>>(-1);
+		return lhs == static_cast<std::common_type_t<T>>(-1);
 	}
 #endif
 
 #if __cpp_impl_three_way_comparison >= 201711
 #else
-	template <typename T, typename S = simple_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
+	template <typename T, typename S = std::common_type_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
 	constexpr bool operator!=(const T& rhs) const
 	{
 		return rhs != static_cast<S>(-1);
 	}
 
 	template <typename T>
-	friend constexpr std::enable_if_t<std::is_unsigned_v<simple_t<T>>, bool> operator!=(const T& lhs, const umax_helper&)
+	friend constexpr std::enable_if_t<std::is_unsigned_v<std::common_type_t<T>>, bool> operator!=(const T& lhs, const umax_helper&)
 	{
-		return lhs != static_cast<simple_t<T>>(-1);
+		return lhs != static_cast<std::common_type_t<T>>(-1);
 	}
 #endif
 } umax;
@@ -784,8 +768,8 @@ struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std
 
 // Simple type enabled (TODO: allow for To as well)
 template <typename From, typename To>
-struct narrow_impl<From, To, std::void_t<typename From::simple_type>>
-	: narrow_impl<simple_t<From>, To>
+struct narrow_impl<From, To, std::enable_if_t<!std::is_same_v<std::common_type_t<From>, From>>>
+	: narrow_impl<std::common_type_t<From>, To>
 {
 };
 
