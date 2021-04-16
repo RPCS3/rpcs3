@@ -258,7 +258,7 @@ namespace vk
 		const auto vendor = g_render_device->gpu().get_driver_vendor();
 		[[maybe_unused]] const auto chip  = g_render_device->gpu().get_chip_class();
 
-#ifdef _WIN32
+#if defined(_WIN32)
 		bool allow_host_buffers;
 		if (vendor == driver_vendor::NVIDIA)
 		{
@@ -277,9 +277,13 @@ namespace vk
 		{
 			allow_host_buffers = true;
 		}
-#else
+#elif defined(__linux__)
 		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
 		const bool allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV);
+#else
+		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
+		// Intel chipsets woulf fail in most cases and DRM_IOCTL_i915_GEM_USERPTR unimplemented
+		const bool allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV && vendor != driver_vendor::INTEL);
 #endif
 		if (allow_host_buffers && g_render_device->get_external_memory_host_support())
 		{
