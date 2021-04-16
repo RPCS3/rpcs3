@@ -155,7 +155,7 @@ struct any32
 {
 	u32 m_data;
 
-	template <typename T, typename T2 = simple_t<T>>
+	template <typename T, typename T2 = std::common_type_t<T>>
 	any32(const T& value)
 		: m_data(std::bit_cast<u32, T2>(value))
 	{

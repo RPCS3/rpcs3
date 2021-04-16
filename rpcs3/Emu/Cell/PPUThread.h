@@ -74,7 +74,7 @@ struct cmd64
 		u32 arg2;
 	};
 
-	template <typename T, typename T2 = simple_t<T>>
+	template <typename T, typename T2 = std::common_type_t<T>>
 	cmd64(const T& value)
 		: m_data(std::bit_cast<u64, T2>(value))
 	{

@@ -1119,9 +1119,6 @@ public:
 
 	atomic_t& operator =(const atomic_t&) = delete;
 
-	// Define simple type
-	using simple_type = simple_t<T>;
-
 	constexpr atomic_t(const type& value) noexcept
 		: m_data(value)
 	{
@@ -1229,7 +1226,7 @@ public:
 	}
 
 	// Atomically read data
-	operator simple_type() const
+	operator std::common_type_t<T>() const
 	{
 		return atomic_storage<type>::load(m_data);
 	}
@@ -1517,7 +1514,7 @@ public:
 	}
 
 	// Conditionally decrement
-	bool try_dec(simple_type greater_than)
+	bool try_dec(std::common_type_t<T> greater_than)
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
 
@@ -1540,7 +1537,7 @@ public:
 	}
 
 	// Conditionally increment
-	bool try_inc(simple_type less_than)
+	bool try_inc(std::common_type_t<T> less_than)
 	{
 		type _new, old = atomic_storage<type>::load(m_data);
 
@@ -1628,8 +1625,6 @@ class atomic_t<bool, Align> : private atomic_t<uchar, Align>
 public:
 	static constexpr usz align = Align;
 
-	using simple_type = bool;
-
 	atomic_t() noexcept = default;
 
 	atomic_t(const atomic_t&) = delete;
@@ -1645,6 +1640,9 @@ public:
 	{
 		return base::load() != 0;
 	}
+
+	// Override implicit conversion from the parent type
+	explicit operator uchar() const = delete;
 
 	operator bool() const noexcept
 	{
@@ -1709,6 +1707,17 @@ public:
 		base::notify_all(1);
 	}
 };
+
+// Specializations
+
+template <typename T, usz Align, typename T2, usz Align2>
+struct std::common_type<atomic_t<T, Align>, atomic_t<T2, Align2>> : std::common_type<T, T2> {};
+
+template <typename T, usz Align, typename T2>
+struct std::common_type<atomic_t<T, Align>, T2> : std::common_type<T, std::common_type_t<T2>> {};
+
+template <typename T, typename T2, usz Align2>
+struct std::common_type<T, atomic_t<T2, Align2>> : std::common_type<std::common_type_t<T>, T2> {};
 
 namespace atomic_wait
 {

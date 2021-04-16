@@ -49,7 +49,7 @@ namespace vm
 			return vm::cast(m_addr);
 		}
 
-		operator simple_t<T>() const
+		operator std::common_type_t<T>() const
 		{
 			return get_ref();
 		}
@@ -64,7 +64,7 @@ namespace vm
 			return get_ref() = right.get_ref();
 		}
 
-		T& operator =(const simple_t<T>& right) const
+		T& operator =(const std::common_type_t<T>& right) const
 		{
 			return get_ref() = right;
 		}

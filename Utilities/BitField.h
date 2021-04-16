@@ -12,7 +12,7 @@ template<typename T, uint N>
 struct bf_base
 {
 	using type = T;
-	using vtype = simple_t<type>;
+	using vtype = std::common_type_t<type>;
 	using utype = typename std::make_unsigned<vtype>::type;
 
 	// Datatype bitsize
@@ -262,7 +262,7 @@ struct ff_t : bf_base<T, N>
 template<typename T, uint I, uint N>
 struct fmt_unveil<bf_t<T, I, N>, void>
 {
-	using type = typename fmt_unveil<simple_t<T>>::type;
+	using type = typename fmt_unveil<std::common_type_t<T>>::type;
 
 	static inline auto get(const bf_t<T, I, N>& bf)
 	{
@@ -273,7 +273,7 @@ struct fmt_unveil<bf_t<T, I, N>, void>
 template<typename F, typename... Fields>
 struct fmt_unveil<cf_t<F, Fields...>, void>
 {
-	using type = typename fmt_unveil<simple_t<typename F::type>>::type;
+	using type = typename fmt_unveil<std::common_type_t<typename F::type>>::type;
 
 	static inline auto get(const cf_t<F, Fields...>& cf)
 	{
@@ -284,7 +284,7 @@ struct fmt_unveil<cf_t<F, Fields...>, void>
 template<typename T, T V, uint N>
 struct fmt_unveil<ff_t<T, V, N>, void>
 {
-	using type = typename fmt_unveil<simple_t<T>>::type;
+	using type = typename fmt_unveil<std::common_type_t<T>>::type;
 
 	static inline auto get(const ff_t<T, V, N>& ff)
 	{
