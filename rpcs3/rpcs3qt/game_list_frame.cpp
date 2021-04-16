@@ -826,7 +826,6 @@ void game_list_frame::SaveSettings()
 	}
 	m_gui_settings->SetValue(gui::gl_sortCol, m_sort_column);
 	m_gui_settings->SetValue(gui::gl_sortAsc, m_col_sort_order == Qt::AscendingOrder);
-
 	m_gui_settings->SetValue(gui::gl_state, m_game_list->horizontalHeader()->saveState());
 }
 
@@ -1991,7 +1990,32 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 		game->pxmap = PaintedPixmap(game->icon, game->hasCustomConfig, game->hasCustomPadConfig, color);
 	});
 
-	Refresh();
+	if (m_is_list_layout)
+	{
+		// We don't need a full Refresh just for the icons, so let's just trigger the icon callback of each icon.
+		for (int row = 0; row < m_game_list->rowCount(); ++row)
+		{
+			if (const auto item = static_cast<custom_table_widget_item*>(m_game_list->item(row, gui::column_icon)))
+			{
+				item->call_icon_func();
+			}
+		}
+
+		// Fixate vertical header and row height
+		m_game_list->verticalHeader()->setMinimumSectionSize(m_icon_size.height());
+		m_game_list->verticalHeader()->setMaximumSectionSize(m_icon_size.height());
+
+		// Resize the icon column
+		m_game_list->resizeColumnToContents(gui::column_icon);
+
+		// Shorten the last section to remove horizontal scrollbar if possible
+		m_game_list->resizeColumnToContents(gui::column_count - 1);
+	}
+	else
+	{
+		// The game grid needs to be recreated from scratch
+		Refresh();
+	}
 }
 
 void game_list_frame::SetShowHidden(bool show)
@@ -2263,15 +2287,15 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	m_game_grid->deleteLater();
 
-	const bool showText = m_icon_size_index > gui::gl_max_slider_pos * 2 / 5;
+	const bool show_text = m_icon_size_index > gui::gl_max_slider_pos * 2 / 5;
 
 	if (m_icon_size_index < gui::gl_max_slider_pos * 2 / 3)
 	{
-		m_game_grid = new game_list_grid(image_size, image_color, m_margin_factor, m_text_factor * 2, showText);
+		m_game_grid = new game_list_grid(image_size, image_color, m_margin_factor, m_text_factor * 2, show_text);
 	}
 	else
 	{
-		m_game_grid = new game_list_grid(image_size, image_color, m_margin_factor, m_text_factor, showText);
+		m_game_grid = new game_list_grid(image_size, image_color, m_margin_factor, m_text_factor, show_text);
 	}
 
 	// Get list of matching apps
@@ -2308,21 +2332,22 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 		const QString title = m_titles.value(serial, qstr(app->info.name));
 		const QString notes = m_notes.value(serial);
 
-		m_game_grid->addItem(app, title, (m_play_hover_movies && app->has_hover_gif) ? (game_icon_path % serial % "/hover.gif") : QStringLiteral(""), r, c);
-		m_game_grid->item(r, c)->setData(gui::game_role, QVariant::fromValue(app));
+		QTableWidgetItem* item = m_game_grid->addItem(app, title, (m_play_hover_movies && app->has_hover_gif) ? (game_icon_path % serial % "/hover.gif") : QStringLiteral(""), r, c);
+		ensure(item);
+		item->setData(gui::game_role, QVariant::fromValue(app));
 
 		if (!notes.isEmpty())
 		{
-			m_game_grid->item(r, c)->setToolTip(tr("%0 [%1]\n\nNotes:\n%2").arg(title).arg(serial).arg(notes));
+			item->setToolTip(tr("%0 [%1]\n\nNotes:\n%2").arg(title).arg(serial).arg(notes));
 		}
 		else
 		{
-			m_game_grid->item(r, c)->setToolTip(tr("%0 [%1]").arg(title).arg(serial));
+			item->setToolTip(tr("%0 [%1]").arg(title).arg(serial));
 		}
 
 		if (selected_item == app->info.path + app->info.icon_path)
 		{
-			m_game_grid->setCurrentCell(r, c);
+			m_game_grid->setCurrentItem(item);
 		}
 
 		if (++c >= maxCols)
