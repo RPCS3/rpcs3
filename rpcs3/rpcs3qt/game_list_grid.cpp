@@ -73,7 +73,7 @@ void game_list_grid::setIconSize(const QSize& size) const
 	}
 }
 
-void game_list_grid::addItem(const game_info& app, const QString& name, const QString& movie_path, const int& row, const int& col)
+QTableWidgetItem* game_list_grid::addItem(const game_info& app, const QString& name, const QString& movie_path, const int& row, const int& col)
 {
 	// create item with expanded image, title and position
 	movie_item* item = new movie_item;
@@ -151,6 +151,7 @@ void game_list_grid::addItem(const game_info& app, const QString& name, const QS
 	}
 
 	setItem(row, col, item);
+	return item;
 }
 
 qreal game_list_grid::getMarginFactor() const

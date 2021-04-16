@@ -19,7 +19,7 @@ public:
 
 	void enableText(const bool& enabled);
 	void setIconSize(const QSize& size) const;
-	void addItem(const game_info& app, const QString& name, const QString& movie_path, const int& row, const int& col);
+	QTableWidgetItem* addItem(const game_info& app, const QString& name, const QString& movie_path, const int& row, const int& col);
 
 	[[nodiscard]] qreal getMarginFactor() const;
 

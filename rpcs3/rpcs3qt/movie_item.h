@@ -66,14 +66,18 @@ public:
 		QObject::connect(m_movie, &QMovie::frameChanged, m_movie, m_icon_callback);
 	}
 
-	void set_icon_func(const icon_callback_t& func)
+	void call_icon_func() const
 	{
-		m_icon_callback = func;
-
 		if (m_icon_callback)
 		{
 			m_icon_callback(0);
 		}
+	}
+
+	void set_icon_func(const icon_callback_t& func)
+	{
+		m_icon_callback = func;
+		call_icon_func();
 	}
 
 private:
