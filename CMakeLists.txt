@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.14.1)
 
 project(rpcs3)
 
-if(CMAKE_COMPILER_IS_GNUCXX)
+if(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
 	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
 		message(FATAL_ERROR "RPCS3 requires at least gcc-9.")
 	endif()
