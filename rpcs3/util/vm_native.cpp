@@ -56,6 +56,9 @@ namespace utils
 #if defined(MADV_DONTDUMP) && defined(MADV_DODUMP)
 	constexpr int c_madv_no_dump = MADV_DONTDUMP;
 	constexpr int c_madv_dump = MADV_DODUMP;
+#elif defined(MADV_NOCORE) && defined(MADV_CORE)
+	constexpr int c_madv_no_dump = MADV_NOCORE;
+	constexpr int c_madv_dump = MADV_CORE;
 #else
 	constexpr int c_madv_no_dump = 0;
 	constexpr int c_madv_dump = 0;
