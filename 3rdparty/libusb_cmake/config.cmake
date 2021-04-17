@@ -2,7 +2,7 @@ include(CheckCXXCompilerFlag)
 include(CheckIncludeFiles)
 include(CheckTypeSize)
 
-if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+if (${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
 	if (NOT OS_WINDOWS)
 		# mingw appears to print a bunch of warnings about this
 		check_cxx_compiler_flag("-fvisibility=hidden" HAVE_VISIBILITY)

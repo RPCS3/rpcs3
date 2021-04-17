@@ -50,7 +50,7 @@ else()
 
 	if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 		add_compile_options(-Werror=inconsistent-missing-override)
-	elseif(CMAKE_COMPILER_IS_GNUCXX)
+	elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
 		add_compile_options(-Werror=suggest-override)
 		add_compile_options(-Wclobbered)
 		add_compile_options(-Wcast-function-type)
@@ -59,7 +59,7 @@ else()
 	endif()
 
 	#TODO Clean the code so these are removed
-	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.1 OR NOT CMAKE_COMPILER_IS_GNUCXX)
+	if ((not ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU") OR (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.1))
 		add_compile_options(-Wno-attributes)
 	endif()
 
@@ -69,7 +69,7 @@ else()
 		add_compile_options(-Wno-unused-private-field)
 		add_compile_options(-Wno-delete-non-virtual-dtor)
 		add_compile_options(-Wno-unused-command-line-argument)
-	elseif(CMAKE_COMPILER_IS_GNUCXX)
+	elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
 		add_compile_options(-Wno-class-memaccess)
 	endif()
 
