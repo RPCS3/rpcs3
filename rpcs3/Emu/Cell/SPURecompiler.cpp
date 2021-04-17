@@ -4376,7 +4376,7 @@ public:
 				elements = 16;
 				dwords = 8;
 			}
-			else if (true) 
+			else if (true)
 			{
 				stride = 32;
 				elements = 8;
@@ -9080,7 +9080,7 @@ struct spu_llvm
 					{
 						const u64 name = atomic_storage<u64>::load(spu.block_hash);
 
-						if (auto state = +spu.state; !::is_paused(state) && !::is_stopped(state) && !(state & cpu_flag::wait))
+						if (auto state = +spu.state; !::is_paused(state) && !::is_stopped(state) && cpu_flag::wait - state)
 						{
 							const auto found = std::as_const(samples).find(name);
 

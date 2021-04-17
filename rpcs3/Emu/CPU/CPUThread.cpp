@@ -469,7 +469,7 @@ void cpu_thread::operator()()
 		cpu_thread* _cpu = get_current_cpu_thread();
 
 		// Wait flag isn't set asynchronously so this should be thread-safe
-		if (progress == 0 && !(_cpu->state & cpu_flag::wait))
+		if (progress == 0 && cpu_flag::wait - _cpu->state)
 		{
 			// Operation just started and syscall is imminent
 			_cpu->state += cpu_flag::wait + cpu_flag::temp;
@@ -491,7 +491,7 @@ void cpu_thread::operator()()
 
 		cpu_thread* _cpu = get_current_cpu_thread();
 
-		if (progress == 0 && !(_cpu->state & cpu_flag::wait))
+		if (progress == 0 && cpu_flag::wait - _cpu->state)
 		{
 			_cpu->state += cpu_flag::wait + cpu_flag::temp;
 			wait_set = true;
