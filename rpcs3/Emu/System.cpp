@@ -196,6 +196,8 @@ void Emulator::Init(bool add_only)
 	const std::string dev_hdd1 = g_cfg.vfs.get(g_cfg.vfs.dev_hdd1, emu_dir);
 	const std::string dev_usb = g_cfg.vfs.get(g_cfg.vfs.dev_usb000, emu_dir);
 	const std::string dev_flsh = g_cfg.vfs.get_dev_flash();
+	const std::string dev_flsh2 = g_cfg.vfs.get_dev_flash2();
+	const std::string dev_flsh3 = g_cfg.vfs.get_dev_flash3();
 
 	auto make_path_verbose = [](const std::string& path)
 	{
@@ -213,6 +215,8 @@ void Emulator::Init(bool add_only)
 		make_path_verbose(dev_hdd0);
 		make_path_verbose(dev_hdd1);
 		make_path_verbose(dev_flsh);
+		make_path_verbose(dev_flsh2);
+		make_path_verbose(dev_flsh3);
 		make_path_verbose(dev_usb);
 		make_path_verbose(dev_hdd0 + "game/");
 		make_path_verbose(dev_hdd0 + "game/TEST12345/");
@@ -1161,6 +1165,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Mount default relative path to non-existent directory
 		vfs::mount("/dev_hdd0", g_cfg.vfs.get(g_cfg.vfs.dev_hdd0, emu_dir));
 		vfs::mount("/dev_flash", g_cfg.vfs.get_dev_flash());
+		vfs::mount("/dev_flash2", g_cfg.vfs.get_dev_flash2());
+		vfs::mount("/dev_flash3", g_cfg.vfs.get_dev_flash3());
 		vfs::mount("/dev_usb", g_cfg.vfs.get(g_cfg.vfs.dev_usb000, emu_dir));
 		vfs::mount("/dev_usb000", g_cfg.vfs.get(g_cfg.vfs.dev_usb000, emu_dir));
 		vfs::mount("/app_home", g_cfg.vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg.vfs.get(g_cfg.vfs.app_home, emu_dir));

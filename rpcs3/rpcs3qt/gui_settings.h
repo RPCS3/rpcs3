@@ -173,6 +173,8 @@ namespace gui
 	const gui_save fs_dev_hdd0_list     = gui_save(fs, "dev_hdd0_list",     QStringList());
 	const gui_save fs_dev_hdd1_list     = gui_save(fs, "dev_hdd1_list",     QStringList());
 	const gui_save fs_dev_flash_list    = gui_save(fs, "dev_flash_list",    QStringList());
+	const gui_save fs_dev_flash2_list   = gui_save(fs, "dev_flash2_list",   QStringList());
+	const gui_save fs_dev_flash3_list   = gui_save(fs, "dev_flash3_list",   QStringList());
 	const gui_save fs_dev_usb000_list   = gui_save(fs, "dev_usb000_list",   QStringList());
 
 	const gui_save l_tty       = gui_save(logger, "TTY",       true);

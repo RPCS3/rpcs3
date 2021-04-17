@@ -154,6 +154,8 @@ enum class emu_settings_type
 	dev_hdd0Location,
 	dev_hdd1Location,
 	dev_flashLocation,
+	dev_flash2Location,
+	dev_flash3Location,
 	dev_usb000Location,
 };
 
@@ -309,5 +311,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::dev_hdd0Location,   { "VFS", "/dev_hdd0/" }},
 	{ emu_settings_type::dev_hdd1Location,   { "VFS", "/dev_hdd1/" }},
 	{ emu_settings_type::dev_flashLocation,  { "VFS", "/dev_flash/"}},
+	{ emu_settings_type::dev_flash2Location, { "VFS", "/dev_flash2/"}},
+	{ emu_settings_type::dev_flash3Location, { "VFS", "/dev_flash3/"}},
 	{ emu_settings_type::dev_usb000Location, { "VFS", "/dev_usb000/"}},
 };
