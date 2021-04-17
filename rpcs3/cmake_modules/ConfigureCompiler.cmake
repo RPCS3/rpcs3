@@ -59,7 +59,7 @@ else()
 	endif()
 
 	#TODO Clean the code so these are removed
-	if ((not ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU") OR (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.1))
+	if (NOT (${CMAKE_CXX_COMPILER_ID} MATCHES "GNU") OR (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.1))
 		add_compile_options(-Wno-attributes)
 	endif()
 
