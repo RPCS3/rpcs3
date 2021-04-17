@@ -86,10 +86,6 @@ struct Keyboard
 
 class KeyboardHandlerBase
 {
-protected:
-	KbInfo m_info;
-	std::vector<Keyboard> m_keyboards;
-
 public:
 	std::mutex m_mutex;
 
@@ -109,4 +105,10 @@ public:
 	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
 
 	stx::init_mutex init;
+
+protected:
+	void ReleaseAllKeys();
+
+	KbInfo m_info;
+	std::vector<Keyboard> m_keyboards;
 };

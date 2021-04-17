@@ -186,3 +186,14 @@ void KeyboardHandlerBase::SetIntercepted(bool intercepted)
 		}
 	}
 }
+
+void KeyboardHandlerBase::ReleaseAllKeys()
+{
+	for (const Keyboard& keyboard : m_keyboards)
+	{
+		for (const KbButton& button : keyboard.m_buttons)
+		{
+			Key(button.m_keyCode, false);
+		}
+	}
+}
