@@ -26,10 +26,16 @@ Intersection (&) and symmetric difference (^) is also available.
 #include "Utilities/StrFmt.h"
 
 template <typename T>
+concept BitSetEnum = std::is_enum_v<T> && requires(T x)
+{
+	T::__bitset_enum_max;
+};
+
+template <BitSetEnum T>
 class atomic_bs_t;
 
 // Bitset type for enum class with available bits [0, T::__bitset_enum_max)
-template <typename T>
+template <BitSetEnum T>
 class bs_t final
 {
 public:
@@ -165,70 +171,70 @@ public:
 };
 
 // Unary '+' operator: promote plain enum value to bitset value
-template <typename T, typename = decltype(T::__bitset_enum_max)>
+template <BitSetEnum T>
 constexpr bs_t<T> operator +(T bit)
 {
 	return bs_t<T>(bit);
 }
 
 // Binary '+' operator: bitset union
-template <typename T, typename U, typename = decltype(T::__bitset_enum_max)>
-constexpr std::enable_if_t<std::is_constructible_v<bs_t<T>, U>, bs_t<T>> operator +(T lhs, const U& rhs)
+template <BitSetEnum T, typename U> requires (std::is_constructible_v<bs_t<T>, U>)
+constexpr bs_t<T> operator +(T lhs, const U& rhs)
 {
 	return bs_t<T>(lhs) + bs_t<T>(rhs);
 }
 
 // Binary '+' operator: bitset union
-template <typename U, typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr std::enable_if_t<(std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>), bs_t<T>> operator +(const U& lhs, T rhs)
+template <typename U, BitSetEnum T> requires (std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
+constexpr bs_t<T> operator +(const U& lhs, T rhs)
 {
 	return bs_t<T>(lhs) + bs_t<T>(rhs);
 }
 
 // Binary '-' operator: bitset difference
-template <typename T, typename U, typename = decltype(T::__bitset_enum_max)>
-constexpr std::enable_if_t<std::is_constructible_v<bs_t<T>, U>, bs_t<T>> operator -(T lhs, const U& rhs)
+template <BitSetEnum T, typename U> requires (std::is_constructible_v<bs_t<T>, U>)
+constexpr bs_t<T> operator -(T lhs, const U& rhs)
 {
 	return bs_t<T>(lhs) - bs_t<T>(rhs);
 }
 
 // Binary '-' operator: bitset difference
-template <typename U, typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr std::enable_if_t<(std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>), bs_t<T>> operator -(const U& lhs, T rhs)
+template <typename U, BitSetEnum T> requires (std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
+constexpr bs_t<T> operator -(const U& lhs, T rhs)
 {
 	return bs_t<T>(lhs) - bs_t<T>(rhs);
 }
 
 // Binary '&' operator: bitset intersection
-template <typename T, typename U, typename = decltype(T::__bitset_enum_max)>
-constexpr std::enable_if_t<std::is_constructible_v<bs_t<T>, U>, bs_t<T>> operator &(T lhs, const U& rhs)
+template <BitSetEnum T, typename U> requires (std::is_constructible_v<bs_t<T>, U>)
+constexpr bs_t<T> operator &(T lhs, const U& rhs)
 {
 	return bs_t<T>(lhs) & bs_t<T>(rhs);
 }
 
 // Binary '&' operator: bitset intersection
-template <typename U, typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr std::enable_if_t<(std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>), bs_t<T>> operator &(const U& lhs, T rhs)
+template <typename U, BitSetEnum T> requires (std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
+constexpr bs_t<T> operator &(const U& lhs, T rhs)
 {
 	return bs_t<T>(lhs) & bs_t<T>(rhs);
 }
 
 // Binary '^' operator: bitset symmetric difference
-template <typename T, typename U, typename = decltype(T::__bitset_enum_max)>
-constexpr std::enable_if_t<std::is_constructible_v<bs_t<T>, U>, bs_t<T>> operator ^(T lhs, const U& rhs)
+template <BitSetEnum T, typename U> requires (std::is_constructible_v<bs_t<T>, U>)
+constexpr bs_t<T> operator ^(T lhs, const U& rhs)
 {
 	return bs_t<T>(lhs) ^ bs_t<T>(rhs);
 }
 
 // Binary '^' operator: bitset symmetric difference
-template <typename U, typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr std::enable_if_t<(std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>), bs_t<T>> operator ^(const U& lhs, T rhs)
+template <typename U, BitSetEnum T> requires (std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
+constexpr bs_t<T> operator ^(const U& lhs, T rhs)
 {
 	return bs_t<T>(lhs) ^ bs_t<T>(rhs);
 }
 
 // Atomic bitset specialization with optimized operations
-template <typename T>
+template <BitSetEnum T>
 class atomic_bs_t : public atomic_t<::bs_t<T>>
 {
 	// Corresponding bitset type
