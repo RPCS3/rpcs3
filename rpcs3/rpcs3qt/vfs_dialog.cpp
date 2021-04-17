@@ -35,6 +35,12 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 	vfs_dialog_tab* dev_flash_tab = new vfs_dialog_tab({ "dev_flash", emu_settings_type::dev_flashLocation, gui::fs_dev_flash_list, &g_cfg.vfs.dev_flash },
 		m_gui_settings, m_emu_settings, this);
 
+	vfs_dialog_tab* dev_flash2_tab = new vfs_dialog_tab({ "dev_flash2", emu_settings_type::dev_flash2Location, gui::fs_dev_flash2_list, &g_cfg.vfs.dev_flash2 },
+		m_gui_settings, m_emu_settings, this);
+
+	vfs_dialog_tab* dev_flash3_tab = new vfs_dialog_tab({ "dev_flash3", emu_settings_type::dev_flash3Location, gui::fs_dev_flash3_list, &g_cfg.vfs.dev_flash3 },
+		m_gui_settings, m_emu_settings, this);
+
 	vfs_dialog_tab* dev_usb000_tab = new vfs_dialog_tab({ "dev_usb000", emu_settings_type::dev_usb000Location, gui::fs_dev_usb000_list, &g_cfg.vfs.dev_usb000 },
 		m_gui_settings, m_emu_settings, this);
 
@@ -42,6 +48,8 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> guiSettings, std::shared_pt
 	tabs->addTab(dev_hdd0_tab, "dev_hdd0");
 	tabs->addTab(dev_hdd1_tab, "dev_hdd1");
 	tabs->addTab(dev_flash_tab, "dev_flash");
+	tabs->addTab(dev_flash2_tab, "dev_flash2");
+	tabs->addTab(dev_flash3_tab, "dev_flash3");
 	tabs->addTab(dev_usb000_tab, "dev_usb000");
 
 	// Create buttons

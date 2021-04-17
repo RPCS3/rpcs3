@@ -87,6 +87,8 @@ struct cfg_root : cfg::node
 		cfg::string dev_hdd0{ this, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/" };
 		cfg::string dev_hdd1{ this, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/" };
 		cfg::string dev_flash{ this, "/dev_flash/", "$(EmulatorDir)dev_flash/" };
+		cfg::string dev_flash2{ this, "/dev_flash2/", "$(EmulatorDir)dev_flash2/" };
+		cfg::string dev_flash3{ this, "/dev_flash3/", "$(EmulatorDir)dev_flash3/" };
 		cfg::string dev_usb000{ this, "/dev_usb000/", "$(EmulatorDir)dev_usb000/" };
 		cfg::string dev_bdvd{ this, "/dev_bdvd/" }; // Not mounted
 		cfg::string app_home{ this, "/app_home/" }; // Not mounted
@@ -94,6 +96,16 @@ struct cfg_root : cfg::node
 		std::string get_dev_flash() const
 		{
 			return get(dev_flash);
+		}
+
+		std::string get_dev_flash2() const
+		{
+			return get(dev_flash2);
+		}
+
+		std::string get_dev_flash3() const
+		{
+			return get(dev_flash3);
 		}
 
 		cfg::_bool host_root{ this, "Enable /host_root/" };
