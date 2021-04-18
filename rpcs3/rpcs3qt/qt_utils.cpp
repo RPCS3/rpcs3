@@ -7,7 +7,6 @@
 #include <QProcess>
 #include <QScreen>
 #include <QUrl>
-#include <QDebug>
 
 #include "Emu/System.h"
 #include "Utilities/File.h"
@@ -19,7 +18,7 @@ namespace gui
 {
 	namespace utils
 	{
-		QRect create_centered_window_geometry(const QScreen* screen, const QRect& origin, s32 width, s32 height)
+		QRect create_centered_window_geometry(const QScreen* screen, const QRect& base, s32 target_width, s32 target_height)
 		{
 			ensure(screen);
 
@@ -28,17 +27,17 @@ namespace gui
 			// into account, so they don't go offscreen
 			const QRect screen_geometry = screen->availableGeometry();
 			const s32 min_screen_x = screen_geometry.x();
-			const s32 max_screen_x = screen_geometry.x() + screen_geometry.width() - width;
+			const s32 max_screen_x = screen_geometry.x() + screen_geometry.width() - target_width;
 			const s32 min_screen_y = screen_geometry.y();
-			const s32 max_screen_y = screen_geometry.y() + screen_geometry.height() - height;
+			const s32 max_screen_y = screen_geometry.y() + screen_geometry.height() - target_height;
 
-			const s32 frame_x_raw = origin.left() + ((origin.width() - width) / 2);
-			const s32 frame_y_raw = origin.top() + ((origin.height() - height) / 2);
+			const s32 frame_x_raw = base.left() + ((base.width() - target_width) / 2);
+			const s32 frame_y_raw = base.top() + ((base.height() - target_height) / 2);
 
 			const s32 frame_x = std::clamp(frame_x_raw, min_screen_x, max_screen_x);
 			const s32 frame_y = std::clamp(frame_y_raw, min_screen_y, max_screen_y);
 
-			return QRect(frame_x, frame_y, width, height);
+			return QRect(frame_x, frame_y, target_width, target_height);
 		}
 
 		QPixmap get_colorized_pixmap(const QPixmap& old_pixmap, const QColor& old_color, const QColor& new_color, bool use_special_masks, bool colorize_all)
