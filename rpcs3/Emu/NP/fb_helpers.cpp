@@ -195,7 +195,7 @@ u16 np_handler::RoomDataInternal_to_SceNpMatching2RoomDataInternal(const RoomDat
 			{
 				if (room_info->roomGroup[g_index].groupId == member->roomGroup())
 				{
-					member_info->roomGroup = vm::cast(room_info->roomGroup.addr() + (sizeof(SceNpMatching2RoomGroup) * g_index));
+					member_info->roomGroup = vm::cast(room_info->roomGroup.addr() + (u32{sizeof(SceNpMatching2RoomGroup)} * g_index));
 					found                  = true;
 				}
 			}

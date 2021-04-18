@@ -2984,9 +2984,12 @@ std::pair<void*, usz> thread_ctrl::get_thread_stack()
 	void* saddr = 0;
 	usz ssize = 0;
 	pthread_attr_t attr;
-#ifdef __linux__
+#if defined(__linux__)
 	pthread_getattr_np(pthread_self(), &attr);
 	pthread_attr_getstack(&attr, &saddr, &ssize);
+#elif defined(__APPLE__)
+	saddr = pthread_get_stackaddr_np(pthread_self());
+	ssize = pthread_get_stacksize_np(pthread_self());
 #else
 	pthread_attr_get_np(pthread_self(), &attr);
 	pthread_attr_getstackaddr(&attr, &saddr);

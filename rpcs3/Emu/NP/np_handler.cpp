@@ -26,7 +26,7 @@
 #include <unistd.h>
 #endif
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__APPLE__)
 #include <ifaddrs.h>
 #include <net/if_dl.h>
 #endif
@@ -139,7 +139,7 @@ bool np_handler::discover_ip_address()
 
 bool np_handler::discover_ether_address()
 {
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__) || defined(__APPLE__)
 	ifaddrs* ifap;
 
 	if (getifaddrs(&ifap) == 0)
