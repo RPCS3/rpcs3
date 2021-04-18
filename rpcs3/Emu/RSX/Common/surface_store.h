@@ -279,6 +279,7 @@ namespace rsx
 					}
 
 					result.push_back({ e.first, surface });
+					ensure(e.first == surface->base_addr);
 				}
 
 				return result;
@@ -327,10 +328,6 @@ namespace rsx
 			}
 
 			// TODO: Modify deferred_clip_region::direct_copy() to take a few more things into account!
-			const areau child_region = new_surface->get_normalized_memory_area();
-			const auto child_w = child_region.width();
-			const auto child_h = child_region.height();
-
 			const auto pitch = new_surface->get_rsx_pitch();
 			for (const auto &e: surface_info)
 			{
@@ -367,41 +364,8 @@ namespace rsx
 					ensure(this_address);
 				}
 
-				const auto parent_region = surface->get_normalized_memory_area();
-				const auto parent_w = parent_region.width();
-				const auto parent_h = parent_region.height();
-				const auto rect = rsx::intersect_region(this_address, parent_w, parent_h, 1, address, child_w, child_h, 1, pitch);
-
-				const auto src_offset = std::get<0>(rect);
-				const auto dst_offset = std::get<1>(rect);
-				const auto size = std::get<2>(rect);
-
-				if (src_offset.x >= parent_w || src_offset.y >= parent_h)
-				{
-					continue;
-				}
-
-				if (dst_offset.x >= child_w || dst_offset.y >= child_h)
-				{
-					continue;
-				}
-
-				// TODO: Eventually need to stack all the overlapping regions, but for now just do the latest rect in the space
-				deferred_clipped_region<surface_type> region;
-				region.src_x = src_offset.x;
-				region.src_y = src_offset.y;
-				region.dst_x = dst_offset.x;
-				region.dst_y = dst_offset.y;
-				region.width = size.width;
-				region.height = size.height;
-				region.source = surface;
-				region.target = new_surface;
-
-				new_surface->set_old_contents_region(region, true);
-
-				if (surface->memory_usage_flags == surface_usage_flags::storage &&
-					region.width == parent_w &&
-					region.height == parent_h &&
+				if (new_surface->inherit_surface_contents(surface) == surface_inheritance_result::full &&
+					surface->memory_usage_flags == surface_usage_flags::storage &&
 					surface != prev_surface &&
 					surface == e.second)
 				{
@@ -409,8 +373,6 @@ namespace rsx
 					auto &storage = surface->is_depth_surface() ? m_depth_stencil_storage : m_render_targets_storage;
 					auto &object = storage[e.first];
 
-					ensure(!src_offset.x);
-					ensure(!src_offset.y);
 					ensure(object);
 					if (!surface->old_contents.empty()) [[unlikely]]
 					{
