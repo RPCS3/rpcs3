@@ -1,6 +1,13 @@
 #include "game_list.h"
 #include "movie_item.h"
 
+void game_list::clear_list()
+{
+	m_last_hover_item = nullptr;
+	clearSelection();
+	clearContents();
+}
+
 void game_list::mousePressEvent(QMouseEvent *event)
 {
 	if (!indexAt(event->pos()).isValid() || !itemAt(event->pos())->data(Qt::UserRole).isValid())

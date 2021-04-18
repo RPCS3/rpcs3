@@ -2091,8 +2091,7 @@ void game_list_frame::PopulateGameList()
 
 	const std::string selected_item = CurrentSelectionPath();
 
-	m_game_list->clearSelection();
-	m_game_list->clearContents();
+	m_game_list->clear_list();
 	m_game_list->setRowCount(m_game_data.size());
 
 	// Default locale. Uses current Qt application language.
@@ -2296,7 +2295,7 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 		const QString title = m_titles.value(serial, qstr(app->info.name));
 		const QString notes = m_notes.value(serial);
 
-		QTableWidgetItem* item = m_game_grid->addItem(app, title, (m_play_hover_movies && app->has_hover_gif) ? (game_icon_path % serial % "/hover.gif") : QStringLiteral(""), r, c);
+		movie_item* item = m_game_grid->addItem(app, title, (m_play_hover_movies && app->has_hover_gif) ? (game_icon_path % serial % "/hover.gif") : QStringLiteral(""), r, c);
 		ensure(item);
 		item->setData(gui::game_role, QVariant::fromValue(app));
 
@@ -2325,9 +2324,9 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 	{ // if left over games exist -- if empty entries exist
 		for (int col = c; col < maxCols; ++col)
 		{
-			QTableWidgetItem* emptyItem = new QTableWidgetItem();
-			emptyItem->setFlags(Qt::NoItemFlags);
-			m_game_grid->setItem(r, col, emptyItem);
+			movie_item* empty_item = new movie_item();
+			empty_item->setFlags(Qt::NoItemFlags);
+			m_game_grid->setItem(r, col, empty_item);
 		}
 	}
 
