@@ -511,6 +511,7 @@ namespace utils
 			return;
 		}
 #else
+		// This method is faster but leaves mapped remnants of the shm (until overwritten)
 		ensure(::mprotect(target, m_size, PROT_NONE) != -1);
 #endif
 	}

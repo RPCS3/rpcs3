@@ -923,7 +923,9 @@ namespace vm
 		else
 		{
 			shm->unmap_critical(g_base_addr + addr);
+#ifdef _WIN32
 			shm->unmap_critical(g_sudo_addr + addr);
+#endif
 		}
 
 		if (is_exec)
@@ -1148,7 +1150,9 @@ namespace vm
 			if (m_common)
 			{
 				m_common->unmap_critical(vm::base(addr));
+#ifdef _WIN32
 				m_common->unmap_critical(vm::get_super_ptr(addr));
+#endif
 			}
 		}
 	}
