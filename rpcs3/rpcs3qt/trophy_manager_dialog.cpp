@@ -783,7 +783,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 
 	m_game_progress->setText(tr("Progress: %1% (%2/%3)").arg(percentage).arg(unlocked_trophies).arg(all_trophies));
 
-	m_trophy_table->clearContents();
+	m_trophy_table->clear_list();
 	m_trophy_table->setRowCount(all_trophies);
 	m_trophy_table->setSortingEnabled(false); // Disable sorting before using setItem calls
 

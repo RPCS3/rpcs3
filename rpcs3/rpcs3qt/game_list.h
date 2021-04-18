@@ -31,6 +31,9 @@ class movie_item;
 */
 class game_list : public QTableWidget
 {
+public:
+	void clear_list(); // Use this instead of clearContents
+
 protected:
 	movie_item* m_last_hover_item = nullptr;
 

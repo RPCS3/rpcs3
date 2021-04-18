@@ -12,6 +12,7 @@
 
 #include <memory>
 
+class game_list;
 class gui_settings;
 class TROPUSRLoader;
 
@@ -96,7 +97,7 @@ private:
 	QComboBox* m_game_combo; //! Lets you choose a game
 	QLabel* m_game_progress; //! Shows you the current game's progress
 	QSplitter* m_splitter; //! Contains the game and trophy tables
-	QTableWidget* m_trophy_table; //! UI element to display trophy stuff.
+	game_list* m_trophy_table; //! UI element to display trophy stuff.
 	QTableWidget* m_game_table; //! UI element to display games.
 
 	bool m_show_hidden_trophies = false;

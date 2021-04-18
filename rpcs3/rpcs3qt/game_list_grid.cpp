@@ -59,7 +59,7 @@ void game_list_grid::setIconSize(const QSize& size) const
 	}
 }
 
-QTableWidgetItem* game_list_grid::addItem(const game_info& app, const QString& name, const QString& movie_path, const int& row, const int& col)
+movie_item* game_list_grid::addItem(const game_info& app, const QString& name, const QString& movie_path, const int& row, const int& col)
 {
 	// create item with expanded image, title and position
 	movie_item* item = new movie_item;
