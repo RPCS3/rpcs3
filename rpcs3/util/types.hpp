@@ -80,11 +80,7 @@ using ulong  = unsigned long;
 using ullong = unsigned long long;
 using llong  = long long;
 
-#if __APPLE__
-using uptr = std::uint64_t;
-#else
 using uptr = std::uintptr_t;
-#endif
 
 using u8  = std::uint8_t;
 using u16 = std::uint16_t;
@@ -96,53 +92,6 @@ using s8  = std::int8_t;
 using s16 = std::int16_t;
 using s32 = std::int32_t;
 using s64 = std::int64_t;
-
-#if __APPLE__
-namespace std
-{
-	template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-	constexpr int countr_zero(T x) noexcept
-	{
-		if (x == 0)
-			return sizeof(T) * 8;
-		if constexpr (sizeof(T) <= sizeof(uint))
-			return __builtin_ctz(x);
-		else if constexpr (sizeof(T) <= sizeof(ulong))
-			return __builtin_ctzl(x);
-		else if constexpr (sizeof(T) <= sizeof(ullong))
-			return __builtin_ctzll(x);
-		else
-			static_assert(sizeof(T) <= sizeof(ullong));
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-	constexpr int countr_one(T x) noexcept
-	{
-		return countr_zero<T>(~x);
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-	constexpr int countl_zero(T x) noexcept
-	{
-		if (x == 0)
-			return sizeof(T) * 8;
-		if constexpr (sizeof(T) <= sizeof(uint))
-			return __builtin_clz(x) - (sizeof(uint) - sizeof(T)) * 8;
-		else if constexpr (sizeof(T) <= sizeof(ulong))
-			return __builtin_clzl(x) - (sizeof(ulong) - sizeof(T)) * 8;
-		else if constexpr (sizeof(T) <= sizeof(ullong))
-			return __builtin_clzll(x) - (sizeof(ullong) - sizeof(T)) * 8;
-		else
-			static_assert(sizeof(T) <= sizeof(ullong));
-	}
-
-	template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-	constexpr int countl_one(T x) noexcept
-	{
-		return countl_zero<T>(~x);
-	}
-}
-#endif
 
 // Get integral type from type size
 template <usz N>
