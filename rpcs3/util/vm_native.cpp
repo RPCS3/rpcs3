@@ -160,6 +160,10 @@ namespace utils
 		{
 			ensure(::madvise(ptr, orig_size, c_madv_no_dump) != -1);
 		}
+		else
+		{
+			ensure(::madvise(ptr, orig_size, c_madv_free) != -1);
+		}
 
 		return ptr;
 #endif
@@ -172,7 +176,15 @@ namespace utils
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
 		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1);
-		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED | c_madv_dump) != -1);
+
+		if constexpr (c_madv_dump != 0)
+		{
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_dump) != -1);
+		}
+		else
+		{
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
+		}
 #endif
 	}
 
@@ -187,6 +199,10 @@ namespace utils
 		if constexpr (c_madv_no_dump != 0)
 		{
 			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_no_dump) != -1);
+		}
+		else
+		{
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_free) != -1);
 		}
 #endif
 	}
@@ -208,7 +224,14 @@ namespace utils
 			}
 		}
 
-		ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED | c_madv_dump) != -1);
+		if constexpr (c_madv_dump != 0)
+		{
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_dump) != -1);
+		}
+		else
+		{
+			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
+		}
 #endif
 	}
 
