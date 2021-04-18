@@ -27,6 +27,7 @@
  */
 
 #include "sha256.h"
+#include "utils.h"
 
 #include <string.h>
 
@@ -70,14 +71,6 @@ do {                                                    \
 } while( 0 )
 #endif
 
-/* Implementation that should never be optimized out by the compiler */
-static void mbedtls_zeroize_sha256(void* v, size_t n)
-{
-	auto p = const_cast<volatile char*>(static_cast<char*>(v));
-	while (n--)
-		*p++ = 0;
-}
-
 void mbedtls_sha256_init( mbedtls_sha256_context *ctx )
 {
     SHA256_VALIDATE( ctx != NULL );
@@ -90,7 +83,7 @@ void mbedtls_sha256_free( mbedtls_sha256_context *ctx )
     if( ctx == NULL )
         return;
 
-    mbedtls_zeroize_sha256(ctx, sizeof(mbedtls_sha256_context));
+    mbedtls_zeroize(ctx, sizeof(mbedtls_sha256_context));
 }
 
 void mbedtls_sha256_clone( mbedtls_sha256_context *dst,
