@@ -19,10 +19,17 @@ namespace rsx
 		require_unresolve = 4
 	};
 
-	enum surface_sample_layout : u32
+	enum class surface_sample_layout : u32
 	{
 		null = 0,
 		ps3 = 1
+	};
+
+	enum class surface_inheritance_result : u32
+	{
+		none = 0,
+		partial,
+		full
 	};
 
 	template <typename surface_type>
@@ -502,6 +509,47 @@ namespace rsx
 				std::tie(slice.src_x, slice.src_y) = rsx::apply_resolution_scale<false>(slice.src_x, slice.src_y, slice.source->width(), slice.source->height());
 				std::tie(slice.dst_x, slice.dst_y) = rsx::apply_resolution_scale<false>(slice.dst_x, slice.dst_y, slice.target->width(), slice.target->height());
 			}
+		}
+
+		template <typename T>
+		surface_inheritance_result inherit_surface_contents(T* surface)
+		{
+			const auto child_w = get_surface_width(rsx::surface_metrics::bytes);
+			const auto child_h = get_surface_height(rsx::surface_metrics::bytes);
+
+			const auto parent_w = surface->get_surface_width(rsx::surface_metrics::bytes);
+			const auto parent_h = surface->get_surface_height(rsx::surface_metrics::bytes);
+
+			const auto rect = rsx::intersect_region(surface->base_addr, parent_w, parent_h, 1, base_addr, child_w, child_h, 1, get_rsx_pitch());
+			const auto src_offset = std::get<0>(rect);
+			const auto dst_offset = std::get<1>(rect);
+			const auto size = std::get<2>(rect);
+
+			if (src_offset.x >= parent_w || src_offset.y >= parent_h)
+			{
+				return surface_inheritance_result::none;
+			}
+
+			if (dst_offset.x >= child_w || dst_offset.y >= child_h)
+			{
+				return surface_inheritance_result::none;
+			}
+
+			// TODO: Eventually need to stack all the overlapping regions, but for now just do the latest rect in the space
+			deferred_clipped_region<T*> region;
+			region.src_x = src_offset.x;
+			region.src_y = src_offset.y;
+			region.dst_x = dst_offset.x;
+			region.dst_y = dst_offset.y;
+			region.width = size.width;
+			region.height = size.height;
+			region.source = surface;
+			region.target = static_cast<T*>(this);
+
+			set_old_contents_region(region, true);
+			return (region.width == parent_w && region.height == parent_h) ?
+				surface_inheritance_result::full :
+				surface_inheritance_result::partial;
 		}
 
 		void on_write(u64 write_tag = 0,
