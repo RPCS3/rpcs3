@@ -52,3 +52,4 @@ bool hmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int i
 void hmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash);
 bool cmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash, int hash_len);
 void cmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash);
+void mbedtls_zeroize(void *v, size_t n);
