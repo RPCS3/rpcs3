@@ -89,7 +89,7 @@ target_link_libraries(rpcs3 3rdparty::discord-rpc 3rdparty::qt5 3rdparty::hidapi
 target_link_libraries(rpcs3 ${ADDITIONAL_LIBS})
 
 # Win resource file
-if (WIN32)
+if(WIN32)
 	target_sources(rpcs3 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.rc")
 endif()
 

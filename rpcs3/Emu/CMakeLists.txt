@@ -62,19 +62,19 @@ target_link_libraries(rpcs3_emu
 		3rdparty::pugixml
 		3rdparty::span)
 
-if (MSVC)
+if(MSVC)
 	set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES COMPILE_FLAGS /GR-)
 else()
 	set_source_files_properties("../../Utilities/JIT.cpp" PROPERTIES COMPILE_FLAGS -fno-rtti)
 endif()
 
-if (MSVC)
+if(MSVC)
 	set_source_files_properties("../util/yaml.cpp" PROPERTIES COMPILE_FLAGS /EHsc)
 else()
 	set_source_files_properties("../util/yaml.cpp" PROPERTIES COMPILE_FLAGS -fexceptions)
 endif()
 
-if (MSVC)
+if(MSVC)
 	set_source_files_properties("../util/cereal.cpp" PROPERTIES COMPILE_FLAGS /GR)
 else()
 	set_source_files_properties("../util/cereal.cpp" PROPERTIES COMPILE_FLAGS -frtti)
@@ -502,8 +502,8 @@ target_link_libraries(rpcs3_emu
 )
 
 
-if (USE_PRECOMPILED_HEADERS)
-	if (COMMAND target_precompile_headers)
+if(USE_PRECOMPILED_HEADERS)
+	if(COMMAND target_precompile_headers)
 		target_precompile_headers(rpcs3_emu PRIVATE "${RPCS3_SRC_DIR}/stdafx.h")
 	else()
 		# Setup cotire
