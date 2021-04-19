@@ -454,6 +454,11 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 
 void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
 {
+	if (!m_mouse_wheel_used)
+	{
+		return;
+	}
+
 	const QPoint direction = event->angleDelta();
 
 	if (direction.isNull())
@@ -695,6 +700,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 		return false;
 
 	m_mouse_move_used = false;
+	m_mouse_wheel_used = false;
 	m_deadzone_x = p_profile->mouse_deadzone_x;
 	m_deadzone_y = p_profile->mouse_deadzone_y;
 	m_multi_x = p_profile->mouse_acceleration_x / 100.0;
@@ -713,6 +719,8 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 			key = 0;
 		else if (!m_mouse_move_used && (key == mouse::move_left || key == mouse::move_right || key == mouse::move_up || key == mouse::move_down))
 			m_mouse_move_used = true;
+		else if (!m_mouse_wheel_used && (key == mouse::wheel_left || key == mouse::wheel_right || key == mouse::wheel_up || key == mouse::wheel_down))
+			m_mouse_wheel_used = true;
 		return key;
 	};
 
@@ -777,16 +785,11 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 
 void keyboard_pad_handler::ThreadProc()
 {
-	static const double mouse_interval = 30.0;
 	static const double stick_interval = 10.0;
 	static const double button_interval = 10.0;
 
 	const auto now = steady_clock::now();
 
-	const double elapsed_left = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_left).count() / 1000.0;
-	const double elapsed_right = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_right).count() / 1000.0;
-	const double elapsed_up = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_up).count() / 1000.0;
-	const double elapsed_down = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_down).count() / 1000.0;
 	const double elapsed_stick = std::chrono::duration_cast<std::chrono::microseconds>(now - m_stick_time).count() / 1000.0;
 	const double elapsed_button = std::chrono::duration_cast<std::chrono::microseconds>(now - m_button_time).count() / 1000.0;
 
@@ -803,26 +806,36 @@ void keyboard_pad_handler::ThreadProc()
 		m_button_time = now;
 	}
 
-	// roughly 1-2 frames to process the next mouse move
-	if (elapsed_left > mouse_interval)
+	if (m_mouse_move_used)
 	{
-		Key(mouse::move_left, false);
-		m_last_mouse_move_left = now;
-	}
-	if (elapsed_right > mouse_interval)
-	{
-		Key(mouse::move_right, false);
-		m_last_mouse_move_right = now;
-	}
-	if (elapsed_up > mouse_interval)
-	{
-		Key(mouse::move_up, false);
-		m_last_mouse_move_up = now;
-	}
-	if (elapsed_down > mouse_interval)
-	{
-		Key(mouse::move_down, false);
-		m_last_mouse_move_down = now;
+		static const double mouse_interval = 30.0;
+
+		const double elapsed_left  = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_left).count() / 1000.0;
+		const double elapsed_right = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_right).count() / 1000.0;
+		const double elapsed_up    = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_up).count() / 1000.0;
+		const double elapsed_down  = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_down).count() / 1000.0;
+
+		// roughly 1-2 frames to process the next mouse move
+		if (elapsed_left > mouse_interval)
+		{
+			Key(mouse::move_left, false);
+			m_last_mouse_move_left = now;
+		}
+		if (elapsed_right > mouse_interval)
+		{
+			Key(mouse::move_right, false);
+			m_last_mouse_move_right = now;
+		}
+		if (elapsed_up > mouse_interval)
+		{
+			Key(mouse::move_up, false);
+			m_last_mouse_move_up = now;
+		}
+		if (elapsed_down > mouse_interval)
+		{
+			Key(mouse::move_down, false);
+			m_last_mouse_move_down = now;
+		}
 	}
 
 	const auto get_lerped = [](f32 v0, f32 v1, f32 lerp_factor)
@@ -896,6 +909,11 @@ void keyboard_pad_handler::ThreadProc()
 				}
 			}
 		}
+	}
+
+	if (!m_mouse_wheel_used)
+	{
+		return;
 	}
 
 	// Releases the wheel buttons 0,1 sec after they've been triggered

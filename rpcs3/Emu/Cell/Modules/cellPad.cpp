@@ -191,8 +191,8 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	}
 	else
 	{
-		u16 d1Initial = pad->m_digital_1;
-		u16 d2Initial = pad->m_digital_2;
+		const u16 d1Initial = pad->m_digital_1;
+		const u16 d2Initial = pad->m_digital_2;
 
 		for (Button& button : pad->m_buttons)
 		{
