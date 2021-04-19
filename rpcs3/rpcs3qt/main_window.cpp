@@ -2113,6 +2113,7 @@ void main_window::CreateConnects()
 	{
 		log_viewer* viewer = new log_viewer(m_gui_settings);
 		viewer->show();
+		viewer->show_log();
 	});
 
 	connect(ui->toolskernel_explorerAct, &QAction::triggered, this, [this]
