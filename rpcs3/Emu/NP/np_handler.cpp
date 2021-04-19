@@ -111,7 +111,7 @@ bool np_handler::discover_ip_address()
 		return false;
 	}
 
-	nph_log.notice("Hostname was determined to be %s", hostname);
+	nph_log.notice("Hostname was determined to be %s", hostname.c_str());
 
 	hostent *host = gethostbyname(hostname.data());
 	if (!host)
