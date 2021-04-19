@@ -40,12 +40,12 @@ namespace rsx
 	{
 		std::array<atomic_t<u32>, 4096> ea;
 		std::array<atomic_t<u32>, 4096> io;
-		std::array<shared_mutex, 4096> rs;
+		std::array<shared_mutex, 4096> rs{};
 
 		rsx_iomap_table() noexcept
+			: ea(fill_array(-1))
+			, io(fill_array(-1))
 		{
-			std::memset(ea.data(), -1, sizeof(ea));
-			std::memset(io.data(), -1, sizeof(io));
 		}
 
 		// Try to get the real address given a mapped address

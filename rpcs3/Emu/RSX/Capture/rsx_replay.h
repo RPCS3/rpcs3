@@ -14,7 +14,8 @@ namespace rsx
 	{
 		struct memory_block_data
 		{
-			std::vector<u8> data;
+			std::vector<u8> data{};
+
 			template<typename Archive>
 			void serialize(Archive& ar)
 			{
@@ -96,8 +97,8 @@ namespace rsx
 		// bleh, may need to break these out, might be unnecessary to do both always
 		struct tile_state
 		{
-			tile_info tiles[15];
-			zcull_info zculls[8];
+			tile_info tiles[15]{};
+			zcull_info zculls[8]{};
 
 			template<typename Archive>
 			void serialize(Archive & ar)
@@ -126,7 +127,7 @@ namespace rsx
 
 		struct display_buffers_state
 		{
-			std::array<buffer_state, 8> buffers;
+			std::array<buffer_state, 8> buffers{};
 			u32 count{0};
 
 			template<typename Archive>
@@ -195,12 +196,12 @@ namespace rsx
 		{
 			u64 tile_hash{0};
 			u64 display_buffer_hash{0};
-			frame_capture_data::display_buffers_state buffer_state;
-			frame_capture_data::tile_state tile_state;
+			frame_capture_data::display_buffers_state buffer_state{};
+			frame_capture_data::tile_state tile_state{};
 		};
 
-		u32 user_mem_addr;
-		current_state cs;
+		u32 user_mem_addr{};
+		current_state cs{};
 		std::unique_ptr<frame_capture_data> frame;
 
 	public:

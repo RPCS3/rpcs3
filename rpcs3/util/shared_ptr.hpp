@@ -113,7 +113,7 @@ namespace stx
 	class alignas(T) shared_data final : align_filler<sizeof(shared_counter), alignof(T)>
 	{
 	public:
-		shared_counter m_ctr;
+		shared_counter m_ctr{};
 
 		T m_data;
 
@@ -128,9 +128,9 @@ namespace stx
 	class alignas(T) shared_data<T[]> final : align_filler<sizeof(shared_counter) + sizeof(usz), alignof(T)>
 	{
 	public:
-		usz m_count;
+		usz m_count{};
 
-		shared_counter m_ctr;
+		shared_counter m_ctr{};
 
 		constexpr shared_data() noexcept = default;
 	};

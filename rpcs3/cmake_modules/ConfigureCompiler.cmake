@@ -48,6 +48,7 @@ else()
 	#add_compile_options(-Wpadded)
 	add_compile_options(-Wempty-body)
 	add_compile_options(-Wredundant-decls)
+	#add_compile_options(-Weffc++)
 
 	add_compile_options(-Wstrict-aliasing=1)
 	#add_compile_options(-Wnull-dereference)

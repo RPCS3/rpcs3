@@ -16,7 +16,7 @@ namespace rsx
 	struct shader_loading_dialog_native : rsx::shader_loading_dialog
 	{
 		rsx::thread* owner = nullptr;
-		std::shared_ptr<rsx::overlays::message_dialog> dlg;
+		std::shared_ptr<rsx::overlays::message_dialog> dlg{};
 
 		shader_loading_dialog_native(GSRender* ptr);
 
