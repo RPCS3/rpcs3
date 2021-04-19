@@ -114,20 +114,20 @@ struct ppu_linkage_info
 			ppu_static_function* static_func = nullptr;
 			ppu_static_variable* static_var = nullptr;
 			u32 export_addr = 0;
-			std::set<u32> imports;
-			std::set<u32> frefss;
+			std::set<u32> imports{};
+			std::set<u32> frefss{};
 		};
 
 		// FNID -> (export; [imports...])
-		std::unordered_map<u32, info, value_hash<u32>> functions;
-		std::unordered_map<u32, info, value_hash<u32>> variables;
+		std::unordered_map<u32, info, value_hash<u32>> functions{};
+		std::unordered_map<u32, info, value_hash<u32>> variables{};
 
 		// Obsolete
 		bool imported = false;
 	};
 
 	// Module map
-	std::unordered_map<std::string, module_data> modules;
+	std::unordered_map<std::string, module_data> modules{};
 };
 
 // Initialize static modules.

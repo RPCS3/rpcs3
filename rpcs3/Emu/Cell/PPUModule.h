@@ -75,8 +75,8 @@ class ppu_static_module final
 public:
 	const std::string name;
 
-	std::unordered_map<u32, ppu_static_function, value_hash<u32>> functions;
-	std::unordered_map<u32, ppu_static_variable, value_hash<u32>> variables;
+	std::unordered_map<u32, ppu_static_function, value_hash<u32>> functions{};
+	std::unordered_map<u32, ppu_static_variable, value_hash<u32>> variables{};
 
 public:
 	ppu_static_module(const char* name);

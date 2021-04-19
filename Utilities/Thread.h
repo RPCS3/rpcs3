@@ -480,8 +480,7 @@ class named_thread final : public Context, result_storage<Context>, thread_base
 
 public:
 	// Default constructor
-	template <bool Valid = std::is_default_constructible_v<Context> && thread_thread_name<Context>(), typename = std::enable_if_t<Valid>>
-	named_thread()
+	named_thread() requires (std::is_default_constructible_v<Context>) && (thread_thread_name<Context>::value)
 		: Context()
 		, thread(trampoline, Context::thread_name)
 	{

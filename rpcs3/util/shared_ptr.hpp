@@ -97,13 +97,13 @@ namespace stx
 		atomic_t<usz> refs{1};
 	};
 
-	template <usz Size, usz Align, typename = void>
+	template <usz Size, usz Align>
 	struct align_filler
 	{
 	};
 
-	template <usz Size, usz Align>
-	struct align_filler<Size, Align, std::enable_if_t<(Align > Size)>>
+	template <usz Size, usz Align> requires (Align > Size)
+	struct align_filler<Size, Align>
 	{
 		char dummy[Align - Size];
 	};
@@ -236,16 +236,9 @@ namespace stx
 			return m_ptr;
 		}
 
-		decltype(auto) operator*() const noexcept
+		decltype(auto) operator*() const noexcept requires (!std::is_void_v<element_type>)
 		{
-			if constexpr (std::is_void_v<element_type>)
-			{
-				return;
-			}
-			else
-			{
-				return *m_ptr;
-			}
+			return *m_ptr;
 		}
 
 		element_type* operator->() const noexcept
@@ -253,13 +246,9 @@ namespace stx
 			return m_ptr;
 		}
 
-		decltype(auto) operator[](std::ptrdiff_t idx) const noexcept
+		decltype(auto) operator[](std::ptrdiff_t idx) const noexcept requires (!std::is_void_v<element_type>)
 		{
-			if constexpr (std::is_void_v<element_type>)
-			{
-				return;
-			}
-			else if constexpr (std::is_array_v<T>)
+			if constexpr (std::is_array_v<T>)
 			{
 				return m_ptr[idx];
 			}
@@ -572,16 +561,9 @@ namespace stx
 			return m_ptr;
 		}
 
-		decltype(auto) operator*() const noexcept
+		decltype(auto) operator*() const noexcept requires (!std::is_void_v<element_type>)
 		{
-			if constexpr (std::is_void_v<element_type>)
-			{
-				return;
-			}
-			else
-			{
-				return *m_ptr;
-			}
+			return *m_ptr;
 		}
 
 		element_type* operator->() const noexcept
@@ -589,13 +571,9 @@ namespace stx
 			return m_ptr;
 		}
 
-		decltype(auto) operator[](std::ptrdiff_t idx) const noexcept
+		decltype(auto) operator[](std::ptrdiff_t idx) const noexcept requires (!std::is_void_v<element_type>)
 		{
-			if constexpr (std::is_void_v<element_type>)
-			{
-				return;
-			}
-			else if constexpr (std::is_array_v<T>)
+			if constexpr (std::is_array_v<T>)
 			{
 				return m_ptr[idx];
 			}

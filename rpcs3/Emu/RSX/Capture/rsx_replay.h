@@ -41,9 +41,9 @@ namespace rsx
 
 		struct replay_command
 		{
-			std::pair<u32, u32> rsx_command;      // fifo command
-			std::unordered_set<u64> memory_state; // index into memory_map for the various memory blocks that need applying before this command can run
-			u64 tile_state{0};                    // tile state for this command
+			std::pair<u32, u32> rsx_command{};      // fifo command
+			std::unordered_set<u64> memory_state{}; // index into memory_map for the various memory blocks that need applying before this command can run
+			u64 tile_state{0};                      // tile state for this command
 			u64 display_buffer_state{0};
 
 			template<typename Archive>

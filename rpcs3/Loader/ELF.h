@@ -99,7 +99,7 @@ struct elf_phdr<en_t, u32>
 template<template<typename T> class en_t, typename sz_t>
 struct elf_prog final : elf_phdr<en_t, sz_t>
 {
-	std::vector<uchar> bin;
+	std::vector<uchar> bin{};
 
 	using base = elf_phdr<en_t, sz_t>;
 
@@ -180,8 +180,8 @@ public:
 
 	ehdr_t header{};
 
-	std::vector<prog_t> progs;
-	std::vector<shdr_t> shdrs;
+	std::vector<prog_t> progs{};
+	std::vector<shdr_t> shdrs{};
 
 public:
 	elf_object() = default;
