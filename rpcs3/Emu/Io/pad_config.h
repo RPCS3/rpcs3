@@ -41,7 +41,7 @@ struct cfg_input final : cfg::node
 
 struct pad_config final : cfg::node
 {
-	std::string cfg_name = "";
+	std::string cfg_name{};
 
 	cfg::string ls_left{ this, "Left Stick Left", "" };
 	cfg::string ls_down{ this, "Left Stick Down", "" };
@@ -69,14 +69,14 @@ struct pad_config final : cfg::node
 	cfg::string l2{ this, "L2", "" };
 	cfg::string l3{ this, "L3", "" };
 
-	cfg::_int<0, 200> lstickmultiplier{ this, "Left Stick Multiplier", 100 };
-	cfg::_int<0, 200> rstickmultiplier{ this, "Right Stick Multiplier", 100 };
-	cfg::_int<0, 1000000> lstickdeadzone{ this, "Left Stick Deadzone", 0 };
-	cfg::_int<0, 1000000> rstickdeadzone{ this, "Right Stick Deadzone", 0 };
-	cfg::_int<0, 1000000> ltriggerthreshold{ this, "Left Trigger Threshold", 0 };
-	cfg::_int<0, 1000000> rtriggerthreshold{ this, "Right Trigger Threshold", 0 };
-	cfg::_int<0, 1000000> lpadsquircling{ this, "Left Pad Squircling Factor", 0 };
-	cfg::_int<0, 1000000> rpadsquircling{ this, "Right Pad Squircling Factor", 0 };
+	cfg::uint<0, 200> lstickmultiplier{ this, "Left Stick Multiplier", 100 };
+	cfg::uint<0, 200> rstickmultiplier{ this, "Right Stick Multiplier", 100 };
+	cfg::uint<0, 1000000> lstickdeadzone{ this, "Left Stick Deadzone", 0 };
+	cfg::uint<0, 1000000> rstickdeadzone{ this, "Right Stick Deadzone", 0 };
+	cfg::uint<0, 1000000> ltriggerthreshold{ this, "Left Trigger Threshold", 0 };
+	cfg::uint<0, 1000000> rtriggerthreshold{ this, "Right Trigger Threshold", 0 };
+	cfg::uint<0, 1000000> lpadsquircling{ this, "Left Pad Squircling Factor", 0 };
+	cfg::uint<0, 1000000> rpadsquircling{ this, "Right Pad Squircling Factor", 0 };
 
 	cfg::uint<0, 255> colorR{ this, "Color Value R", 0 };
 	cfg::uint<0, 255> colorG{ this, "Color Value G", 0 };
@@ -84,25 +84,25 @@ struct pad_config final : cfg::node
 
 	cfg::_bool led_low_battery_blink{ this, "Blink LED when battery is below 20%", true };
 	cfg::_bool led_battery_indicator{ this, "Use LED as a battery indicator", false };
-	cfg::_int<0, 100> led_battery_indicator_brightness{ this, "LED battery indicator brightness", 50 };
+	cfg::uint<0, 100> led_battery_indicator_brightness{ this, "LED battery indicator brightness", 50 };
 
 	cfg::_bool enable_vibration_motor_large{ this, "Enable Large Vibration Motor", true };
 	cfg::_bool enable_vibration_motor_small{ this, "Enable Small Vibration Motor", true };
 	cfg::_bool switch_vibration_motors{ this, "Switch Vibration Motors", false };
 
-	cfg::_int<0, 255> mouse_deadzone_x{ this, "Mouse Deadzone X Axis", 60 };
-	cfg::_int<0, 255> mouse_deadzone_y{ this, "Mouse Deadzone Y Axis", 60 };
-	cfg::_int<0, 3000> mouse_acceleration_x{ this, "Mouse Acceleration X Axis", 200 };
-	cfg::_int<0, 3000> mouse_acceleration_y{ this, "Mouse Acceleration Y Axis", 250 };
+	cfg::uint<0, 255> mouse_deadzone_x{ this, "Mouse Deadzone X Axis", 60 };
+	cfg::uint<0, 255> mouse_deadzone_y{ this, "Mouse Deadzone Y Axis", 60 };
+	cfg::uint<0, 3000> mouse_acceleration_x{ this, "Mouse Acceleration X Axis", 200 };
+	cfg::uint<0, 3000> mouse_acceleration_y{ this, "Mouse Acceleration Y Axis", 250 };
 
-	cfg::_int<0, 100> l_stick_lerp_factor{ this, "Left Stick Lerp Factor", 100 };
-	cfg::_int<0, 100> r_stick_lerp_factor{ this, "Right Stick Lerp Factor", 100 };
-	cfg::_int<0, 100> analog_lerp_factor{ this, "Analog Button Lerp Factor", 100 };
-	cfg::_int<0, 100> trigger_lerp_factor{ this, "Trigger Lerp Factor", 100 };
+	cfg::uint<0, 100> l_stick_lerp_factor{ this, "Left Stick Lerp Factor", 100 };
+	cfg::uint<0, 100> r_stick_lerp_factor{ this, "Right Stick Lerp Factor", 100 };
+	cfg::uint<0, 100> analog_lerp_factor{ this, "Analog Button Lerp Factor", 100 };
+	cfg::uint<0, 100> trigger_lerp_factor{ this, "Trigger Lerp Factor", 100 };
 
-	cfg::_int<0, 5> device_class_type{ this, "Device Class Type", 0 };
-	cfg::_int<0, 65535> vendor_id{ this, "Vendor ID", 0 };
-	cfg::_int<0, 65535> product_id{ this, "Product ID", 0 };
+	cfg::uint<0, 5> device_class_type{ this, "Device Class Type", 0 };
+	cfg::uint<0, 65535> vendor_id{ this, "Vendor ID", 0 };
+	cfg::uint<0, 65535> product_id{ this, "Product ID", 0 };
 
 	bool exist() const;
 	bool load();

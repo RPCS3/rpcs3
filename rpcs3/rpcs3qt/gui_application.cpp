@@ -259,8 +259,8 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	}
 
 	const auto screen = m_main_window ? m_main_window->screen() : primaryScreen();
-	const auto source_geometry = m_main_window ? m_main_window->geometry() : primaryScreen()->geometry();
-	const auto frame_geometry  = gui::utils::create_centered_window_geometry(screen, source_geometry, w, h);
+	const auto base_geometry  = m_main_window ? m_main_window->frameGeometry() : primaryScreen()->geometry();
+	const auto frame_geometry = gui::utils::create_centered_window_geometry(screen, base_geometry, w, h);
 	const auto app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
 	gs_frame* frame = nullptr;

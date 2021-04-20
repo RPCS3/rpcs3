@@ -57,7 +57,8 @@ namespace rsx
 			std::array<std::array<bool, pad_button::pad_button_max_enum>, CELL_PAD_MAX_PORT_NUM> last_button_state;
 			for (auto& state : last_button_state)
 			{
-				state.fill(false);
+				// Initialize last button states as pressed to avoid unwanted button presses when entering the dialog.
+				state.fill(true);
 			}
 
 			input_timer.Start();

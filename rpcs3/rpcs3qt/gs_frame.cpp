@@ -135,11 +135,13 @@ void gs_frame::paintEvent(QPaintEvent *event)
 
 void gs_frame::showEvent(QShowEvent *event)
 {
-	// we have to calculate new window positions, since the frame is only known once the window was created
+	// We have to calculate new window positions, since the frame is only known once the window was created
 	const QRect available_geometry = screen()->availableGeometry();
 	QPoint pos = m_initial_geometry.topLeft();
-	pos.setX(std::clamp(pos.x(), available_geometry.left(), available_geometry.width() - frameGeometry().width()));
-	pos.setY(std::clamp(pos.y(), available_geometry.top(), available_geometry.height() - frameGeometry().height()));
+	pos.setX(std::min(std::max(pos.x() - ((frameGeometry().width() - width()) / 2), available_geometry.left()),
+	                  available_geometry.left() + available_geometry.width() - frameGeometry().width()));
+	pos.setY(std::min(std::max(pos.y() - ((frameGeometry().height() - height()) / 2), available_geometry.top()),
+	                  available_geometry.top() + available_geometry.height() - frameGeometry().height()));
 	setFramePosition(pos);
 
 	QWindow::showEvent(event);
@@ -185,21 +187,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			return;
 		}
 		break;
-	case Qt::Key_S:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && !Emu.IsStopped())
-		{
-			Emu.Stop();
-			return;
-		}
-		break;
 	case Qt::Key_R:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && !Emu.GetBoot().empty())
-		{
-			Emu.Restart();
-			return;
-		}
-		break;
-	case Qt::Key_E:
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
 		{
 			switch (Emu.GetStatus())

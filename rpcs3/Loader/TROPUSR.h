@@ -78,6 +78,8 @@ class TROPUSRLoader
 	virtual bool LoadTables();
 
 public:
+	virtual ~TROPUSRLoader() = default;
+
 	virtual bool Load(const std::string& filepath, const std::string& configpath);
 	virtual bool Save(const std::string& filepath);
 

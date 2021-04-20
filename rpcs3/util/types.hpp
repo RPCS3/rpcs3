@@ -7,6 +7,7 @@
 #include <utility>
 #include <chrono>
 #include <array>
+#include <tuple>
 
 using std::chrono::steady_clock;
 
@@ -457,16 +458,16 @@ constexpr inline struct umax_helper
 {
 	constexpr umax_helper() noexcept = default;
 
-	template <typename T, typename S = std::common_type_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
-	constexpr bool operator==(const T& rhs) const
+	template <typename T> requires (std::is_unsigned_v<std::common_type_t<T>>) || (std::is_same_v<std::common_type_t<T>, u128>)
+	friend constexpr bool operator==(const umax_helper&, const T& rhs)
 	{
-		return rhs == static_cast<S>(-1);
+		return rhs == static_cast<std::common_type_t<T>>(-1);
 	}
 
 #if __cpp_impl_three_way_comparison >= 201711 && !__INTELLISENSE__
 #else
-	template <typename T>
-	friend constexpr std::enable_if_t<std::is_unsigned_v<std::common_type_t<T>>, bool> operator==(const T& lhs, const umax_helper&)
+	template <typename T> requires (std::is_unsigned_v<std::common_type_t<T>>) || (std::is_same_v<std::common_type_t<T>, u128>)
+	friend constexpr bool operator==(const T& lhs, const umax_helper&)
 	{
 		return lhs == static_cast<std::common_type_t<T>>(-1);
 	}
@@ -474,14 +475,14 @@ constexpr inline struct umax_helper
 
 #if __cpp_impl_three_way_comparison >= 201711
 #else
-	template <typename T, typename S = std::common_type_t<T>, typename = std::enable_if_t<std::is_unsigned_v<S>>>
-	constexpr bool operator!=(const T& rhs) const
+	template <typename T> requires (std::is_unsigned_v<std::common_type_t<T>>) || (std::is_same_v<std::common_type_t<T>, u128>)
+	friend constexpr bool operator!=(const umax_helper&, const T& rhs)
 	{
-		return rhs != static_cast<S>(-1);
+		return rhs != static_cast<std::common_type_t<T>>(-1);
 	}
 
-	template <typename T>
-	friend constexpr std::enable_if_t<std::is_unsigned_v<std::common_type_t<T>>, bool> operator!=(const T& lhs, const umax_helper&)
+	template <typename T> requires (std::is_unsigned_v<std::common_type_t<T>>) || (std::is_same_v<std::common_type_t<T>, u128>)
+	friend constexpr bool operator!=(const T& lhs, const umax_helper&)
 	{
 		return lhs != static_cast<std::common_type_t<T>>(-1);
 	}
@@ -767,3 +768,33 @@ struct value_hash
 		return static_cast<usz>(value) >> Shift;
 	}
 };
+
+template <typename... T>
+struct fill_array_t
+{
+	std::tuple<T...> args;
+
+	template <typename V, usz Num>
+	constexpr std::unwrap_reference_t<V> get() const
+	{
+		return std::get<Num>(args);
+	}
+
+	template <typename U, usz N, usz... M, usz... Idx>
+	constexpr std::array<U, N> fill(std::index_sequence<M...>, std::index_sequence<Idx...>) const
+	{
+		return{(static_cast<void>(Idx), U(get<T, M>()...))...};
+	}
+
+	template <typename U, usz N>
+	constexpr operator std::array<U, N>() const
+	{
+		return fill<U, N>(std::make_index_sequence<sizeof...(T)>(), std::make_index_sequence<N>());
+	}
+};
+
+template <typename... T>
+constexpr auto fill_array(const T&... args)
+{
+	return fill_array_t<T...>{{args...}};
+}

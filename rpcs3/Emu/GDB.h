@@ -16,7 +16,7 @@ class gdb_thread
 
 	int server_socket = -1;
 	int client_socket = -1;
-	std::weak_ptr<cpu_thread> selected_thread;
+	std::weak_ptr<cpu_thread> selected_thread{};
 	u64 continue_ops_thread_id = ANY_THREAD;
 	u64 general_ops_thread_id = ANY_THREAD;
 

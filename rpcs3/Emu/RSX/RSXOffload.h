@@ -43,6 +43,9 @@ namespace rsx
 			transport_packet(u32 command, void* args)
 				: type(op::callback), src(args), aux_param0(command)
 			{}
+
+			transport_packet(const transport_packet&) = delete;
+			transport_packet& operator=(const transport_packet&) = delete;
 		};
 
 		atomic_t<bool> m_mem_fault_flag = false;

@@ -40,12 +40,12 @@ namespace rsx
 	{
 		std::array<atomic_t<u32>, 4096> ea;
 		std::array<atomic_t<u32>, 4096> io;
-		std::array<shared_mutex, 4096> rs;
+		std::array<shared_mutex, 4096> rs{};
 
 		rsx_iomap_table() noexcept
+			: ea(fill_array(-1))
+			, io(fill_array(-1))
 		{
-			std::memset(ea.data(), -1, sizeof(ea));
-			std::memset(io.data(), -1, sizeof(io));
 		}
 
 		// Try to get the real address given a mapped address
@@ -256,16 +256,13 @@ namespace rsx
 
 	struct vertex_input_layout
 	{
-		std::vector<interleaved_range_info> interleaved_blocks;  // Interleaved blocks to be uploaded as-is
-		std::vector<std::pair<u8, u32>> volatile_blocks;         // Volatile data blocks (immediate draw vertex data for example)
-		rsx::simple_array<u8> referenced_registers;              // Volatile register data
+		std::vector<interleaved_range_info> interleaved_blocks{};  // Interleaved blocks to be uploaded as-is
+		std::vector<std::pair<u8, u32>> volatile_blocks{};         // Volatile data blocks (immediate draw vertex data for example)
+		rsx::simple_array<u8> referenced_registers{};              // Volatile register data
 
-		std::array<attribute_buffer_placement, 16> attribute_placement;
+		std::array<attribute_buffer_placement, 16> attribute_placement = fill_array(attribute_buffer_placement::none);
 
-		vertex_input_layout()
-		{
-			attribute_placement.fill(attribute_buffer_placement::none);
-		}
+		vertex_input_layout() = default;
 
 		void clear()
 		{
@@ -408,7 +405,7 @@ namespace rsx
 			bool host_queries_active = false;    // The backend/host is gathering Z data for the ZCULL unit
 
 			std::array<occlusion_query_info, 1024> m_occlusion_query_data = {};
-			std::stack<occlusion_query_info*> m_free_occlusion_pool;
+			std::stack<occlusion_query_info*> m_free_occlusion_pool{};
 
 			occlusion_query_info* m_current_task = nullptr;
 			u32 m_statistics_tag_id = 0;
@@ -421,8 +418,8 @@ namespace rsx
 			u64 m_sync_tag = 0;
 			u64 m_timer = 0;
 
-			std::vector<queued_report_write> m_pending_writes;
-			std::unordered_map<u32, u32> m_statistics_map;
+			std::vector<queued_report_write> m_pending_writes{};
+			std::unordered_map<u32, u32> m_statistics_map{};
 
 			// Enables/disables the ZCULL unit
 			void set_active(class ::rsx::thread* ptimer, bool state, bool flush_queue);
@@ -446,7 +443,10 @@ namespace rsx
 		public:
 
 			ZCULL_control();
-			~ZCULL_control();
+			virtual ~ZCULL_control();
+
+			ZCULL_control(const ZCULL_control&) = delete;
+			ZCULL_control& operator=(const ZCULL_control&) = delete;
 
 			void set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
 			void set_status(class ::rsx::thread* ptimer, bool surface_active, bool zpass_active, bool zcull_stats_active, bool flush_queue = false);
@@ -804,6 +804,9 @@ namespace rsx
 		void run_FIFO();
 
 	public:
+		thread(const thread&) = delete;
+		thread& operator=(const thread&) = delete;
+
 		virtual void clear_surface(u32 /*arg*/) {}
 		virtual void begin();
 		virtual void end();

@@ -231,7 +231,7 @@ struct RSXFragmentProgram
 	struct data_storage_helper
 	{
 		void* data_ptr = nullptr;
-		std::vector<char> local_storage;
+		std::vector<char> local_storage{};
 
 		data_storage_helper() = default;
 
@@ -292,7 +292,7 @@ struct RSXFragmentProgram
 			}
 		}
 
-	} mutable data;
+	} mutable data{};
 
 	u32 offset = 0;
 	u32 ucode_length = 0;
@@ -305,7 +305,7 @@ struct RSXFragmentProgram
 	u32 texture_dimensions = 0;
 	u32 texcoord_control_mask = 0;
 
-	float texture_scale[16][4];
+	float texture_scale[16][4]{};
 
 	bool valid = false;
 
@@ -327,7 +327,6 @@ struct RSXFragmentProgram
 
 	RSXFragmentProgram()
 	{
-		std::memset(texture_scale, 0, sizeof(float) * 16 * 4);
 	}
 
 	static RSXFragmentProgram clone(const RSXFragmentProgram& prog)
