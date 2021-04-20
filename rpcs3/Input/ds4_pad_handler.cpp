@@ -5,7 +5,7 @@
 LOG_CHANNEL(ds4_log, "DS4");
 
 constexpr id_pair SONY_DS4_ID_0 = {0x054C, 0xBA0};
-constexpr id_pair SONY_DS4_ID_1 = {0x054C, 0x5C4};
+constexpr id_pair SONY_DS4_ID_1 = {0x054C, 0x05C4};
 constexpr id_pair SONY_DS4_ID_2 = {0x054C, 0x09CC};
 
 constexpr id_pair ZEROPLUS_ID_0 = {0x0C12, 0x0E20};
