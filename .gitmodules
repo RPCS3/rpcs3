@@ -53,7 +53,7 @@
 	url = https://github.com/glennrp/libpng.git
 	ignore = dirty
 [submodule "3rdparty/libusb"]
-	path = 3rdparty/libusb
+	path = 3rdparty/libusb/src
 	url = https://github.com/libusb/libusb.git
 	ignore = dirty
 [submodule "3rdparty/FAudio"]
