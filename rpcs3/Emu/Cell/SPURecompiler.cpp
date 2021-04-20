@@ -7423,16 +7423,7 @@ public:
 				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
 				const auto as = byteswap(a);
 				const auto bs = byteswap(b);
-
-				if (m_use_avx512_icl && (op.ra != op.rb))
-				{
-					const auto m = gf2p8affineqb(c, build<u8[16]>(0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04), 0x7f);
-					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-					const auto ab = vperm2b(as, bs, c);
-					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
-					return;
-				}
-
+				
 				const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
 				const auto ax = pshufb(as, c);
 				const auto bx = pshufb(bs, c);
@@ -7470,16 +7461,6 @@ public:
 					return;
 				}
 			}
-		}
-
-		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
-		{
-			const auto m = gf2p8affineqb(c, build<u8[16]>(0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04), 0x7f);
-			const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-			const auto cr = eval(~c);
-			const auto ab = vperm2b(b, a, cr);
-			set_vr(op.rt4, select(noncast<s8[16]>(cr) >= 0, mm, ab));
-			return;
 		}
 
 		const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
