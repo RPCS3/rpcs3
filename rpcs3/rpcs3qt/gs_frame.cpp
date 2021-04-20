@@ -187,21 +187,7 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 			return;
 		}
 		break;
-	case Qt::Key_S:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && !Emu.IsStopped())
-		{
-			Emu.Stop();
-			return;
-		}
-		break;
 	case Qt::Key_R:
-		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && !Emu.GetBoot().empty())
-		{
-			Emu.Restart();
-			return;
-		}
-		break;
-	case Qt::Key_E:
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
 		{
 			switch (Emu.GetStatus())
