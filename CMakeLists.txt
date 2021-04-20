@@ -25,7 +25,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
 
-if(NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+if(NOT CMAKE_BUILD_TYPE MATCHES "Debug")
     add_definitions(-DNDEBUG)
 elseif(NOT MSVC)
     add_definitions(-D_DEBUG)
