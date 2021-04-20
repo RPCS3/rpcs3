@@ -6562,9 +6562,8 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 
 		// Data with swapped endian from a load instruction
-		if (auto [ok, v0] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
 			const auto sh = sc + (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
 
@@ -6705,9 +6704,8 @@ public:
 		}
 
 		// Data with swapped endian from a load instruction
-		if (auto [ok, v0] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
 			const auto sh = eval(sc + splat_scalar(b));
 
@@ -7416,14 +7414,10 @@ public:
 		const auto b = get_vr<u8[16]>(op.rb);
 
 		// Data with swapped endian from a load instruction
-		if (auto [ok, v0] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			if (auto [ok, v1] = match_expr(b, byteswap(match<u8[16]>())); ok)
+			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 			{
-				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
-				const auto as = byteswap(a);
-				const auto bs = byteswap(b);
-				
 				const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
 				const auto ax = pshufb(as, c);
 				const auto bx = pshufb(bs, c);
@@ -7438,7 +7432,6 @@ public:
 				{
 					// See above
 					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
-					const auto as = byteswap(a);
 					const auto ax = pshufb(as, c);
 					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, b) | x);
 					return;
@@ -7446,7 +7439,7 @@ public:
 			}
 		}
 
-		if (auto [ok, v0] = match_expr(b, byteswap(match<u8[16]>())); ok)
+		if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 		{
 			if (auto [ok, data] = get_const_vector(a.value, m_pos, 7000); ok)
 			{
@@ -7455,7 +7448,6 @@ public:
 				{
 					// See above
 					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
-					const auto bs = byteswap(b);
 					const auto bx = pshufb(bs, c);
 					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, a, bx) | x);
 					return;
