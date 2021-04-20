@@ -1,5 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.8.2)
-
+﻿
 if(USE_PRECOMPILED_HEADERS AND NOT COMMAND target_precompile_headers)
     include(cotire)
 endif()
