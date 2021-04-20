@@ -15,7 +15,7 @@ endif()
 # include build options
 include(options.cmake)
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/rpcs3/cmake_modules")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake_modules")
 
 set(CMAKE_CXX_STANDARD 20)
 include(CheckCXXCompilerFlag)
