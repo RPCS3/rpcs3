@@ -7418,6 +7418,8 @@ public:
 		{
 			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 			{
+				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
+
 				if (m_use_avx512_icl && (op.ra != op.rb))
 				{
 					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
@@ -7426,7 +7428,7 @@ public:
 					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
 					return;
 				}
-				
+
 				const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
 				const auto ax = pshufb(as, c);
 				const auto bx = pshufb(bs, c);
