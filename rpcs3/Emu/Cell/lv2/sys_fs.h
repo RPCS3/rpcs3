@@ -382,6 +382,24 @@ struct lv2_file_op_09 : lv2_file_op
 
 CHECK_SIZE(lv2_file_op_09, 0x40);
 
+struct lv2_file_e0000025 : lv2_file_op
+{
+	be_t<u32> size; // 0x30
+	be_t<u32> _x4;  // 0x10
+	be_t<u32> _x8;  // 0x28 - offset of out_code
+	be_t<u32> name_size;
+	vm::bcptr<char> name;
+	be_t<u32> _x14;
+	be_t<u32> _x18;  // 0
+	be_t<u32> _x1c;  // 0
+	be_t<u32> _x20;  // 16
+	be_t<u32> _x24;  // unk, seems to be memory location
+	be_t<u32> out_code;  // out_code
+	be_t<u32> fd;  // 0xffffffff - likely fd out
+};
+
+CHECK_SIZE(lv2_file_e0000025, 0x30);
+
 // sys_fs_fnctl: cellFsGetDirectoryEntries
 struct lv2_file_op_dir : lv2_file_op
 {
