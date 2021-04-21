@@ -96,8 +96,8 @@ namespace rsx
 			m_time_thingy->set_pos(1000, 30);
 			m_time_thingy->set_text(date_time::current_time());
 
-			static_cast<label*>(m_description.get())->auto_resize();
-			static_cast<label*>(m_time_thingy.get())->auto_resize();
+			m_description->auto_resize();
+			m_time_thingy->auto_resize();
 
 			m_dim_background->back_color.a = 0.5f;
 			m_description->back_color.a    = 0.f;
@@ -109,7 +109,7 @@ namespace rsx
 		void save_dialog::update()
 		{
 			m_time_thingy->set_text(date_time::current_time());
-			static_cast<label*>(m_time_thingy.get())->auto_resize();
+			m_time_thingy->auto_resize();
 		}
 
 		void save_dialog::on_button_pressed(pad_button button_press)
@@ -138,6 +138,7 @@ namespace rsx
 				break;
 			default:
 				rsx_log.trace("[ui] Button %d pressed", static_cast<u8>(button_press));
+				break;
 			}
 		}
 
@@ -166,7 +167,7 @@ namespace rsx
 
 			if (enable_overlay)
 			{
-				m_dim_background->back_color.a = 1.0f;
+				m_dim_background->back_color.a = 0.9f;
 			}
 			else
 			{
@@ -261,10 +262,10 @@ namespace rsx
 				m_list->select_entry(focused);
 			}
 
-			static_cast<label*>(m_description.get())->auto_resize();
+			m_description->auto_resize();
 			visible = true;
 
-			if (auto err = run_input_loop())
+			if (const auto err = run_input_loop())
 				return err;
 
 			if (return_code >= 0)
@@ -273,7 +274,7 @@ namespace rsx
 				{
 					return return_code - 1;
 				}
-				else if (static_cast<usz>(return_code) == entries.size())
+				if (static_cast<usz>(return_code) == entries.size())
 				{
 					return selection_code::new_save;
 				}

@@ -133,7 +133,8 @@ namespace rsx
 					// Ignore cancel operation for Ok-only
 					return;
 				}
-				else if (cancel_only)
+
+				if (cancel_only)
 				{
 					return_code = CELL_MSGDIALOG_BUTTON_ESCAPE;
 				}
@@ -220,7 +221,7 @@ namespace rsx
 			{
 				if (interactive)
 				{
-					if (auto error = run_input_loop())
+					if (const auto error = run_input_loop())
 					{
 						rsx_log.error("Dialog input loop exited with error code=%d", error);
 						return error;
@@ -249,7 +250,7 @@ namespace rsx
 						{
 							auto ref = g_fxo->get<display_manager>().get(uid);
 
-							if (auto error = run_input_loop())
+							if (const auto error = run_input_loop())
 							{
 								rsx_log.error("Dialog input loop exited with error code=%d", error);
 							}
