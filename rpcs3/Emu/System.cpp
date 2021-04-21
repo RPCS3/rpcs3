@@ -3,6 +3,8 @@
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
+#include "Emu/system_progress.hpp"
+#include "Emu/system_utils.hpp"
 #include "Emu/perf_meter.hpp"
 
 #include "Emu/Cell/ErrorCodes.h"
@@ -15,12 +17,10 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_overlay.h"
-#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include "Emu/title.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Capture/rsx_replay.h"
-#include "Emu/RSX/Overlays/overlay_message_dialog.h"
 
 #include "Loader/PSF.h"
 #include "Loader/ELF.h"
@@ -28,17 +28,13 @@
 #include "Utilities/StrUtil.h"
 
 #include "../Crypto/unself.h"
-#include "../Crypto/unpkg.h"
-#include "util/sysinfo.hpp"
 #include "util/yaml.hpp"
 #include "util/logs.hpp"
 #include "util/cereal.hpp"
 
-#include <thread>
 #include <fstream>
 #include <memory>
 #include <regex>
-#include <charconv>
 
 #include "Utilities/JIT.h"
 
@@ -75,20 +71,8 @@ atomic_t<s64> g_tty_size{0};
 std::array<std::deque<std::string>, 16> g_tty_input;
 std::mutex g_tty_mutex;
 
-// Progress display server synchronization variables
-atomic_t<const char*> g_progr{nullptr};
-atomic_t<u32> g_progr_ftotal{0};
-atomic_t<u32> g_progr_fdone{0};
-atomic_t<u32> g_progr_ptotal{0};
-atomic_t<u32> g_progr_pdone{0};
-
 // Report error and call std::abort(), defined in main.cpp
 [[noreturn]] void report_fatal_error(std::string_view);
-
-namespace
-{
-	struct progress_dialog_server;
-}
 
 namespace atomic_wait
 {
@@ -191,8 +175,8 @@ void Emulator::Init(bool add_only)
 	}
 
 	// Create directories (can be disabled if necessary)
-	const std::string emu_dir = GetEmuDir();
-	const std::string dev_hdd0 = GetHddDir();
+	const std::string emu_dir = rpcs3::utils::get_emu_dir();
+	const std::string dev_hdd0 = rpcs3::utils::get_hdd0_dir();
 	const std::string dev_hdd1 = g_cfg.vfs.get(g_cfg.vfs.dev_hdd1, emu_dir);
 	const std::string dev_usb = g_cfg.vfs.get(g_cfg.vfs.dev_usb000, emu_dir);
 	const std::string dev_flsh = g_cfg.vfs.get_dev_flash();
@@ -322,225 +306,17 @@ void Emulator::Init(bool add_only)
 
 	// Limit cache size
 	if (g_cfg.vfs.limit_cache_size)
-		LimitCacheSize();
+		rpcs3::cache::limit_cache_size();
 
 	// Initialize patch engine
 	g_fxo->init<patch_engine>()->append_global_patches();
-}
-
-namespace rsx::overlays
-{
-	class progress_dialog : public message_dialog
-	{
-	public:
-		using message_dialog::message_dialog;
-	};
-}
-
-namespace
-{
-	struct progress_dialog_server
-	{
-		void operator()()
-		{
-			while (thread_ctrl::state() != thread_state::aborting)
-			{
-				// Wait for the start condition
-				auto text0 = +g_progr;
-
-				while (!text0)
-				{
-					if (thread_ctrl::state() == thread_state::aborting)
-					{
-						break;
-					}
-
-					std::this_thread::sleep_for(5ms);
-					text0 = +g_progr;
-				}
-
-				if (thread_ctrl::state() == thread_state::aborting)
-				{
-					break;
-				}
-
-				// Initialize message dialog
-				bool skip_this_one = false; // Workaround: do not open a progress dialog if there is already a cell message dialog open.
-				std::shared_ptr<MsgDialogBase> dlg;
-				std::shared_ptr<rsx::overlays::progress_dialog> native_dlg;
-
-				if (const auto renderer = rsx::get_current_renderer();
-					renderer && renderer->is_inited)
-				{
-					auto manager = g_fxo->try_get<rsx::overlays::display_manager>();
-					skip_this_one = g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog || (manager && manager->get<rsx::overlays::message_dialog>());
-
-					if (manager && !skip_this_one)
-					{
-						MsgDialogType type{};
-						type.se_normal = true;
-						type.bg_invisible = true;
-						type.disable_cancel = true;
-						type.progress_bar_count = 1;
-
-						native_dlg = manager->create<rsx::overlays::progress_dialog>(true);
-						native_dlg->show(false, text0, type, nullptr);
-						native_dlg->progress_bar_set_message(0, "Please wait");
-					}
-				}
-
-				if (!skip_this_one && !native_dlg)
-				{
-					dlg = Emu.GetCallbacks().get_msg_dialog();
-					dlg->type.se_normal = true;
-					dlg->type.bg_invisible = true;
-					dlg->type.progress_bar_count = 1;
-					dlg->on_close = [](s32 /*status*/)
-					{
-						Emu.CallAfter([]()
-						{
-							// Abort everything
-							Emu.Stop();
-						});
-					};
-
-					Emu.CallAfter([dlg, text0]()
-					{
-						dlg->Create(text0, text0);
-					});
-				}
-
-				u32 ftotal = 0;
-				u32 fdone = 0;
-				u32 ptotal = 0;
-				u32 pdone = 0;
-				auto text1 = text0;
-
-				// Update progress
-				while (thread_ctrl::state() != thread_state::aborting)
-				{
-					const auto text_new  = g_progr.load();
-
-					const u32 ftotal_new = g_progr_ftotal;
-					const u32 fdone_new  = g_progr_fdone;
-					const u32 ptotal_new = g_progr_ptotal;
-					const u32 pdone_new  = g_progr_pdone;
-
-					if (ftotal != ftotal_new || fdone != fdone_new || ptotal != ptotal_new || pdone != pdone_new || text_new != text1)
-					{
-						ftotal = ftotal_new;
-						fdone  = fdone_new;
-						ptotal = ptotal_new;
-						pdone  = pdone_new;
-						text1  = text_new;
-
-						if (!text_new)
-						{
-							// Close dialog
-							break;
-						}
-
-						if (skip_this_one)
-						{
-							// Do nothing
-							std::this_thread::sleep_for(10ms);
-							continue;
-						}
-
-						// Compute new progress in percents
-						// Assume not all programs were found if files were not compiled (as it may contain more)
-						const u64 total = std::max<u64>(ptotal, 1) * std::max<u64>(ftotal, 1);
-						const u64 done = pdone * std::max<u64>(fdone, 1);
-						const double value = std::fmin(done * 100. / total, 100.);
-
-						std::string progr = "Progress:";
-
-						if (ftotal)
-							fmt::append(progr, " file %u of %u%s", fdone, ftotal, ptotal ? "," : "");
-						if (ptotal)
-							fmt::append(progr, " module %u of %u", pdone, ptotal);
-
-						// Changes detected, send update
-						if (native_dlg)
-						{
-							native_dlg->set_text(text_new);
-							native_dlg->progress_bar_set_message(0, progr);
-							native_dlg->progress_bar_set_value(0, std::floor(value));
-						}
-						else if (dlg)
-						{
-							Emu.CallAfter([=]()
-							{
-								dlg->SetMsg(text_new);
-								dlg->ProgressBarSetMsg(0, progr);
-								dlg->ProgressBarSetValue(0, std::floor(value));
-							});
-						}
-					}
-
-					std::this_thread::sleep_for(10ms);
-				}
-
-				if (thread_ctrl::state() == thread_state::aborting)
-				{
-					break;
-				}
-
-				if (skip_this_one)
-				{
-					// Do nothing
-				}
-				else if (native_dlg)
-				{
-					native_dlg->close(false, false);
-				}
-				else if (dlg)
-				{
-					Emu.CallAfter([=]()
-					{
-						dlg->Close(true);
-					});
-				}
-
-				// Cleanup
-				g_progr_fdone  -= fdone;
-				g_progr_pdone  -= pdone;
-				g_progr_ftotal -= ftotal;
-				g_progr_ptotal -= ptotal;
-				g_progr_ptotal.notify_all();
-			}
-		}
-
-		~progress_dialog_server()
-		{
-			g_progr_ftotal.release(0);
-			g_progr_fdone.release(0);
-			g_progr_ptotal.release(0);
-			g_progr_pdone.release(0);
-			g_progr.release(nullptr);
-		}
-
-		static auto constexpr thread_name = "Progress Dialog Server"sv;
-	};
-}
-
-u32 Emulator::CheckUsr(const std::string& user)
-{
-	u32 id = 0;
-
-	if (user.size() == 8)
-	{
-		std::from_chars(&user.front(), &user.back() + 1, id);
-	}
-
-	return id;
 }
 
 void Emulator::SetUsr(const std::string& user)
 {
 	sys_log.notice("Setting user ID '%s'", user);
 
-	const u32 id = CheckUsr(user);
+	const u32 id = rpcs3::utils::check_user(user);
 
 	if (id == 0)
 	{
@@ -594,19 +370,6 @@ std::string Emulator::GetBackgroundPicturePath() const
 	return path;
 }
 
-std::string Emulator::PPUCache()
-{
-	auto& _main = g_fxo->get<ppu_module>();
-
-	if (!g_fxo->is_init<ppu_module>() || _main.cache.empty())
-	{
-		ppu_log.warning("PPU Cache location not initialized.");
-		return {};
-	}
-
-	return _main.cache;
-}
-
 bool Emulator::BootRsxCapture(const std::string& path)
 {
 	fs::file in_file(path);
@@ -653,93 +416,6 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	replay_thr->state.notify_one(cpu_flag::stop);
 
 	return true;
-}
-
-void Emulator::LimitCacheSize()
-{
-	const std::string cache_location = GetHdd1Dir() + "/caches";
-
-	if (!fs::is_dir(cache_location))
-	{
-		sys_log.warning("Cache does not exist (%s)", cache_location);
-		return;
-	}
-
-	const u64 size = fs::get_dir_size(cache_location);
-
-	if (size == umax)
-	{
-		sys_log.error("Could not calculate cache directory '%s' size (%s)", cache_location, fs::g_tls_error);
-		return;
-	}
-
-	const u64 max_size = static_cast<u64>(g_cfg.vfs.cache_max_size) * 1024 * 1024;
-
-	if (max_size == 0) // Everything must go, so no need to do checks
-	{
-		fs::remove_all(cache_location, false);
-		sys_log.success("Cleared disk cache");
-		return;
-	}
-
-	if (size <= max_size)
-	{
-		sys_log.trace("Cache size below limit: %llu/%llu", size, max_size);
-		return;
-	}
-
-	sys_log.success("Cleaning disk cache...");
-	std::vector<fs::dir_entry> file_list{};
-	fs::dir cache_dir(cache_location);
-	if (!cache_dir)
-	{
-		sys_log.error("Could not open cache directory '%s' (%s)", cache_location, fs::g_tls_error);
-		return;
-	}
-
-	// retrieve items to delete
-	for (const auto &item : cache_dir)
-	{
-		if (item.name != "." && item.name != "..")
-			file_list.push_back(item);
-	}
-
-	cache_dir.close();
-
-	// sort oldest first
-	std::sort(file_list.begin(), file_list.end(), [](auto left, auto right)
-	{
-		return left.mtime < right.mtime;
-	});
-
-	// keep removing until cache is empty or enough bytes have been cleared
-	// cache is cleared down to 80% of limit to increase interval between clears
-	const u64 to_remove = static_cast<u64>(size - max_size * 0.8);
-	u64 removed = 0;
-	for (const auto &item : file_list)
-	{
-		const std::string &name = cache_location + "/" + item.name;
-		const bool is_dir = fs::is_dir(name);
-		const u64 item_size = is_dir ? fs::get_dir_size(name) : item.size;
-
-		if (is_dir && item_size == umax)
-		{
-			sys_log.error("Failed to calculate '%s' item '%s' size (%s)", cache_location, item.name, fs::g_tls_error);
-			break;
-		}
-
-		if (is_dir ? !fs::remove_all(name, true) : !fs::remove_file(name))
-		{
-			sys_log.error("Could not remove cache directory '%s' item '%s' (%s)", cache_location, item.name, fs::g_tls_error);
-			break;
-		}
-
-		removed += item_size;
-		if (removed >= to_remove)
-			break;
-	}
-
-	sys_log.success("Cleaned disk cache, removed %.2f MB", size / 1024.0 / 1024.0);
 }
 
 game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
@@ -806,179 +482,6 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	return result;
 }
 
-bool Emulator::InstallPkg(const std::string& path)
-{
-	sys_log.success("Installing package: %s", path);
-
-	atomic_t<double> progress(0.);
-	int int_progress = 0;
-
-	// Run PKG unpacking asynchronously
-	named_thread worker("PKG Installer", [&]
-	{
-		package_reader reader(path);
-		return reader.extract_data(progress);
-	});
-
-	{
-		// Wait for the completion
-		while (std::this_thread::sleep_for(5ms), worker <= thread_state::aborting)
-		{
-			// TODO: update unified progress dialog
-			double pval = progress;
-			pval < 0 ? pval += 1. : pval;
-			pval *= 100.;
-
-			if (static_cast<int>(pval) > int_progress)
-			{
-				int_progress = static_cast<int>(pval);
-				sys_log.success("... %u%%", int_progress);
-			}
-		}
-	}
-
-	return worker();
-}
-
-std::string Emulator::GetEmuDir()
-{
-	const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
-	return emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
-}
-
-std::string Emulator::GetHddDir()
-{
-	return g_cfg.vfs.get(g_cfg.vfs.dev_hdd0, GetEmuDir());
-}
-
-std::string Emulator::GetHdd1Dir()
-{
-	return g_cfg.vfs.get(g_cfg.vfs.dev_hdd1, GetEmuDir());
-}
-
-std::string Emulator::GetCacheDir()
-{
-	return fs::get_cache_dir() + "cache/";
-}
-
-#ifdef _WIN32
-std::string Emulator::GetExeDir()
-{
-	wchar_t buffer[32767];
-	GetModuleFileNameW(nullptr, buffer, sizeof(buffer)/2);
-
-	const std::string path_to_exe = wchar_to_utf8(buffer);
-	const usz last = path_to_exe.find_last_of('\\');
-	return last == std::string::npos ? std::string("") : path_to_exe.substr(0, last+1);
-}
-#endif
-
-std::string Emulator::GetSfoDirFromGamePath(const std::string& game_path, const std::string& title_id)
-{
-	if (fs::is_file(game_path + "/PS3_DISC.SFB"))
-	{
-		// This is a disc game.
-		if (!title_id.empty())
-		{
-			for (auto&& entry : fs::dir{game_path})
-			{
-				if (entry.name == "." || entry.name == "..")
-				{
-					continue;
-				}
-
-				const std::string sfo_path = game_path + "/" + entry.name + "/PARAM.SFO";
-
-				if (entry.is_directory && fs::is_file(sfo_path))
-				{
-					const auto psf = psf::load_object(fs::file(sfo_path));
-					const auto serial = psf::get_string(psf, "TITLE_ID");
-					if (serial == title_id)
-					{
-						return game_path + "/" + entry.name;
-					}
-				}
-			}
-		}
-
-		return game_path + "/PS3_GAME";
-	}
-
-	const auto psf = psf::load_object(fs::file(game_path + "/PARAM.SFO"));
-
-	const auto category = psf::get_string(psf, "CATEGORY");
-	const auto content_id = std::string(psf::get_string(psf, "CONTENT_ID"));
-
-	if (category == "HG" && !content_id.empty())
-	{
-		// This is a trial game. Check if the user has a RAP file to unlock it.
-		if (fs::is_file(game_path + "/C00/PARAM.SFO") && fs::is_file(GetRapFilePath(content_id)))
-		{
-			// Load full game data.
-			sys_log.notice("Found RAP file %s.rap for trial game %s", content_id, title_id);
-			return game_path + "/C00";
-		}
-	}
-
-	return game_path;
-}
-
-std::string Emulator::GetRapFilePath(const std::string& rap)
-{
-	const std::string home_dir = GetHddDir() + "/home";
-
-	for (auto&& entry : fs::dir(home_dir))
-	{
-		if (entry.is_directory && CheckUsr(entry.name))
-		{
-			std::string rap_path = fmt::format("%s/%s/exdata/%s.rap", home_dir, entry.name, rap);
-			if (fs::is_file(rap_path))
-			{
-				return rap_path;
-			}
-		}
-	}
-
-	return {};
-}
-
-std::string Emulator::GetCustomConfigDir()
-{
-#ifdef _WIN32
-	return fs::get_config_dir() + "config/custom_configs/";
-#else
-	return fs::get_config_dir() + "custom_configs/";
-#endif
-}
-
-std::string Emulator::GetCustomConfigPath(const std::string& title_id, bool get_deprecated_path)
-{
-	std::string path;
-
-	if (get_deprecated_path)
-		path = fs::get_config_dir() + "data/" + title_id + "/config.yml";
-	else
-		path = GetCustomConfigDir() + "config_" + title_id + ".yml";
-
-	return path;
-}
-
-std::string Emulator::GetCustomInputConfigDir(const std::string& title_id)
-{
-	// Notice: the extra folder for each title id may be removed at a later stage
-	// Warning: make sure to change any function that removes this directory as well
-#ifdef _WIN32
-	return fs::get_config_dir() + "config/custom_input_configs/" + title_id + "/";
-#else
-	return fs::get_config_dir() + "custom_input_configs/" + title_id + "/";
-#endif
-}
-
-std::string Emulator::GetCustomInputConfigPath(const std::string& title_id)
-{
-	return GetCustomInputConfigDir(title_id) + "/config_input_" + title_id + ".yml";
-}
-
 void Emulator::SetForceBoot(bool force_boot)
 {
 	m_force_boot = force_boot;
@@ -1038,7 +541,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			if (fs::is_dir(m_path))
 			{
 				// Special case (directory scan)
-				m_sfo_dir = GetSfoDirFromGamePath(m_path, m_title_id);
+				m_sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(m_path, m_title_id);
 			}
 			else if (!disc.empty())
 			{
@@ -1049,16 +552,16 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 				else if (m_cat == "GD")
 				{
-					m_sfo_dir = GetHddDir() + "game/" + m_title_id;
+					m_sfo_dir = rpcs3::utils::get_hdd0_dir() + "game/" + m_title_id;
 				}
 				else
 				{
-					m_sfo_dir = GetSfoDirFromGamePath(disc, m_title_id);
+					m_sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(disc, m_title_id);
 				}
 			}
 			else
 			{
-				m_sfo_dir = GetSfoDirFromGamePath(elf_dir + "/../", m_title_id);
+				m_sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(elf_dir + "/../", m_title_id);
 			}
 
 			_psf = psf::load_object(fs::file(m_sfo_dir + "/PARAM.SFO"));
@@ -1085,8 +588,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		if (!add_only && !force_global_config && m_config_override_path.empty())
 		{
-			const std::string config_path_new = GetCustomConfigPath(m_title_id);
-			const std::string config_path_old = GetCustomConfigPath(m_title_id, true);
+			const std::string config_path_new = rpcs3::utils::get_custom_config_path(m_title_id);
+			const std::string config_path_old = rpcs3::utils::get_custom_config_path(m_title_id, true);
 
 			// Load custom config-1
 			if (fs::file cfg_file{ config_path_old })
@@ -1159,7 +662,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		g_fxo->get<patch_engine>().append_title_patches(m_title_id);
 
 		// Mount all devices
-		const std::string emu_dir = GetEmuDir();
+		const std::string emu_dir = rpcs3::utils::get_emu_dir();
 		std::string bdvd_dir = g_cfg.vfs.dev_bdvd;
 
 		// Mount default relative path to non-existent directory
@@ -1503,7 +1006,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				for (auto&& entry : fs::dir{ins_dir})
 				{
 					const std::string pkg = ins_dir + entry.name;
-					if (!entry.is_directory && entry.name.ends_with(".PKG") && !InstallPkg(pkg))
+					if (!entry.is_directory && entry.name.ends_with(".PKG") && !rpcs3::utils::install_pkg(pkg))
 					{
 						sys_log.error("Failed to install %s", pkg);
 						return game_boot_result::install_failed;
@@ -1521,7 +1024,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					{
 						const std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
 
-						if (fs::is_file(pkg_file) && !InstallPkg(pkg_file))
+						if (fs::is_file(pkg_file) && !rpcs3::utils::install_pkg(pkg_file))
 						{
 							sys_log.error("Failed to install %s", pkg_file);
 							return game_boot_result::install_failed;
@@ -1540,7 +1043,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					{
 						const std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
 
-						if (fs::is_file(pkg_file) && !InstallPkg(pkg_file))
+						if (fs::is_file(pkg_file) && !rpcs3::utils::install_pkg(pkg_file))
 						{
 							sys_log.error("Failed to install %s", pkg_file);
 							return game_boot_result::install_failed;
@@ -1838,7 +1341,7 @@ void Emulator::Run(bool start_playtime)
 	m_pause_amend_time = 0;
 	m_state = system_state::running;
 
-	ConfigureLogs();
+	rpcs3::utils::configure_logs();
 
 	// Run main thread
 	idm::check<named_thread<ppu_thread>>(ppu_thread::id_base, [](named_thread<ppu_thread>& cpu)
@@ -2135,14 +1638,6 @@ std::string Emulator::GetFormattedTitle(double fps) const
 	return rpcs3::get_formatted_title(title_data);
 }
 
-u32 Emulator::GetMaxThreads()
-{
-	const u32 max_threads = static_cast<u32>(g_cfg.core.llvm_threads);
-	const u32 hw_threads = utils::get_thread_count();
-	const u32 thread_count = max_threads > 0 ? std::min(max_threads, hw_threads) : hw_threads;
-	return thread_count;
-}
-
 s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)
 {
 	static thread_local std::unordered_map<std::string, usz> g_tls_error_stats;
@@ -2197,40 +1692,11 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 	return static_cast<s32>(arg);
 }
 
-void Emulator::ConfigureLogs()
-{
-	static bool was_silenced = false;
-
-	const bool silenced = g_cfg.misc.silence_all_logs.get();
-
-	if (silenced)
-	{
-		if (!was_silenced)
-		{
-			sys_log.notice("Disabling logging...");
-		}
-
-		logs::silence();
-	}
-	else
-	{
-		logs::reset();
-		logs::set_channel_levels(g_cfg.log.get_map());
-
-		if (was_silenced)
-		{
-			sys_log.notice("Logging enabled");
-		}
-	}
-
-	was_silenced = silenced;
-}
-
 void Emulator::ConfigurePPUCache() const
 {
 	auto& _main = g_fxo->get<ppu_module>();
 
-	_main.cache = GetCacheDir();
+	_main.cache = rpcs3::utils::get_cache_dir();
 
 	if (!m_title_id.empty() && m_cat != "1P")
 	{

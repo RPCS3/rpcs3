@@ -8,7 +8,7 @@
 #include <QScreen>
 #include <QUrl>
 
-#include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
@@ -260,7 +260,7 @@ namespace gui
 						continue;
 					}
 
-					const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(pth, title_id);
+					const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(pth, title_id);
 					icon_path = sfo_dir + "/ICON0.PNG";
 					found_file = fs::is_file(icon_path);
 

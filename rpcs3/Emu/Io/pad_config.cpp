@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "pad_config.h"
-#include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 
 cfg_input::cfg_input()
 	: cfg_name(fs::get_config_dir() + "/config_input.yml")
@@ -9,7 +9,7 @@ cfg_input::cfg_input()
 
 bool cfg_input::load(const std::string& title_id)
 {
-	cfg_name = Emulator::GetCustomInputConfigPath(title_id);
+	cfg_name = rpcs3::utils::get_custom_input_config_path(title_id);
 
 	if (!fs::is_file(cfg_name))
 	{
@@ -38,7 +38,7 @@ void cfg_input::save(const std::string& title_id)
 	}
 	else
 	{
-		cfg_name = Emulator::GetCustomInputConfigPath(title_id);
+		cfg_name = rpcs3::utils::get_custom_input_config_path(title_id);
 	}
 	fs::file(cfg_name, fs::rewrite).write(to_string());
 }

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -22,7 +23,7 @@ std::string get_username(const u32 user_id)
 {
 	std::string username;
 
-	if (const fs::file file{Emulator::GetHddDir() + fmt::format("home/%08d/localusername", user_id)})
+	if (const fs::file file{rpcs3::utils::get_hdd0_dir() + fmt::format("home/%08d/localusername", user_id)})
 	{
 		username = file.to_string();
 		username.resize(CELL_USERINFO_USERNAME_SIZE); // TODO: investigate
@@ -119,7 +120,7 @@ error_code cellUserInfoSelectUser_ListType(vm::ptr<CellUserInfoTypeSet> listType
 	}
 
 	std::vector<u32> user_ids;
-	const std::string home_dir = Emulator::GetHddDir() + "home";
+	const std::string home_dir = rpcs3::utils::get_hdd0_dir() + "home";
 
 	for (const auto& user_folder : fs::dir(home_dir))
 	{
@@ -129,7 +130,7 @@ error_code cellUserInfoSelectUser_ListType(vm::ptr<CellUserInfoTypeSet> listType
 		}
 
 		// Is the folder name exactly 8 all-numerical characters long?
-		const u32 user_id = Emulator::CheckUsr(user_folder.name);
+		const u32 user_id = rpcs3::utils::check_user(user_folder.name);
 
 		if (user_id == 0)
 		{
@@ -330,7 +331,7 @@ error_code cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserLis
 		}
 	}
 
-	const std::string home_dir = Emulator::GetHddDir() + "home";
+	const std::string home_dir = rpcs3::utils::get_hdd0_dir() + "home";
 	std::vector<u32> user_ids;
 
 	for (const auto& user_folder : fs::dir(home_dir))
@@ -341,7 +342,7 @@ error_code cellUserInfoGetList(vm::ptr<u32> listNum, vm::ptr<CellUserInfoUserLis
 		}
 
 		// Is the folder name exactly 8 all-numerical characters long?
-		const u32 user_id = Emulator::CheckUsr(user_folder.name);
+		const u32 user_id = rpcs3::utils::check_user(user_folder.name);
 
 		if (user_id == 0)
 		{

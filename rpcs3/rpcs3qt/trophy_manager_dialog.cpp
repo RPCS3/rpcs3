@@ -10,6 +10,7 @@
 #include "Utilities/File.h"
 #include "Emu/VFS.h"
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 
 #include "Loader/TROPUSR.h"
@@ -60,7 +61,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_show_platinum_trophies = m_gui_settings->GetValue(gui::tr_show_platinum).toBool();
 
 	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
-	vfs::mount("/dev_hdd0", Emulator::GetHddDir());
+	vfs::mount("/dev_hdd0", rpcs3::utils::get_hdd0_dir());
 
 	// Get the currently selected user's trophy path.
 	m_trophy_dir = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/";

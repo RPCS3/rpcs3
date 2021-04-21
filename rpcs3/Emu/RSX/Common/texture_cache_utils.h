@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../rsx_cache.h"
 #include "texture_cache_types.h"
 #include "texture_cache_predictor.h"
 #include "TextureUtils.h"
 
 #include "Emu/Memory/vm.h"
+#include "util/vm.hpp"
 
 #include <list>
 #include <unordered_set>

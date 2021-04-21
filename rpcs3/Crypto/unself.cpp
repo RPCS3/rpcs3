@@ -4,6 +4,7 @@
 #include "unself.h"
 #include "Emu/VFS.h"
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 
 #include <algorithm>
 #include <zlib.h>
@@ -1320,7 +1321,7 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 
 	// Try to find a matching RAP file under exdata folder.
 	const std::string ci_str = reinterpret_cast<const char*>(content_id);
-	const std::string rap_path = Emulator::GetRapFilePath(ci_str);
+	const std::string rap_path = rpcs3::utils::get_rap_file_path(ci_str);
 
 	// Open the RAP file and read the key.
 	const fs::file rap_file(rap_path);

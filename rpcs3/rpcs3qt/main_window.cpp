@@ -43,6 +43,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
 #include "Emu/system_config.h"
+#include "Emu/system_utils.hpp"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
@@ -518,7 +519,7 @@ bool main_window::InstallRapFile(const QString& path, const std::string& filenam
 
 	// Copy file atomically with thread/process-safe error checking for file size
 
-	fs::pending_file to(Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + filename.substr(0, filename.find_last_of('.')) + ".rap");
+	fs::pending_file to(rpcs3::utils::get_hdd0_dir() + "/home/" + Emu.GetUsr() + "/exdata/" + filename.substr(0, filename.find_last_of('.')) + ".rap");
 	const fs::file from(sstr(path));
 
 	if (!to.file || !from)
@@ -2573,7 +2574,7 @@ void main_window::SetIconSizeActions(int idx) const
 
 void main_window::RemoveDiskCache()
 {
-	const std::string cache_dir = Emulator::GetHdd1Dir() + "/caches";
+	const std::string cache_dir = rpcs3::utils::get_hdd1_dir() + "/caches";
 
 	if (fs::is_dir(cache_dir) && fs::remove_all(cache_dir, false))
 	{
@@ -2587,7 +2588,7 @@ void main_window::RemoveDiskCache()
 
 void main_window::RemoveFirmwareCache()
 {
-	const std::string cache_dir = Emulator::GetCacheDir();
+	const std::string cache_dir = rpcs3::utils::get_cache_dir();
 
 	if (!fs::is_dir(cache_dir))
 		return;
