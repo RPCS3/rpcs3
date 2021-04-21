@@ -8,6 +8,7 @@
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/Cell/Modules/cellSysutil.h"
 
 #include "util/yaml.hpp"
@@ -98,7 +99,7 @@ void emu_settings::LoadSettings(const std::string& title_id)
 	m_title_id = title_id;
 
 	// Create config path if necessary
-	fs::create_path(title_id.empty() ? fs::get_config_dir() : Emulator::GetCustomConfigDir());
+	fs::create_path(title_id.empty() ? fs::get_config_dir() : rpcs3::utils::get_custom_config_dir());
 
 	// Load default config
 	auto [default_config, default_error] = yaml_load(g_cfg_defaults);
@@ -139,8 +140,8 @@ void emu_settings::LoadSettings(const std::string& title_id)
 		// Otherwise we'll always trigger the "obsolete settings dialog" when editing custom configs.
 		ValidateSettings(true);
 
-		const std::string config_path_new = Emulator::GetCustomConfigPath(m_title_id);
-		const std::string config_path_old = Emulator::GetCustomConfigPath(m_title_id, true);
+		const std::string config_path_new = rpcs3::utils::get_custom_config_path(m_title_id);
+		const std::string config_path_old = rpcs3::utils::get_custom_config_path(m_title_id, true);
 		std::string custom_config_path;
 
 		if (fs::is_file(config_path_new))
@@ -274,7 +275,7 @@ void emu_settings::SaveSettings() const
 	}
 	else
 	{
-		config_name = Emulator::GetCustomConfigPath(m_title_id);
+		config_name = rpcs3::utils::get_custom_config_path(m_title_id);
 	}
 
 	// Save config atomically

@@ -1,9 +1,12 @@
 ﻿add_library(rpcs3_emu
+    cache_utils.cpp
     IdManager.cpp
     localized_string.cpp
     System.cpp
     system_config.cpp
     system_config_types.cpp
+    system_progress.cpp
+    system_utils.cpp
     VFS.cpp
     GDB.cpp
     title.cpp

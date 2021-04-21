@@ -17,6 +17,7 @@
 
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/RSX/Overlays/overlay_perf_metrics.h"
+#include "Emu/system_utils.hpp"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
@@ -557,7 +558,7 @@ void gui_application::OnEmuSettingsChange()
 		}
 	}
 
-	Emulator::ConfigureLogs();
+	rpcs3::utils::configure_logs();
 	audio::configure_audio();
 	rsx::overlays::reset_performance_overlay();
 }

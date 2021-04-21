@@ -30,3 +30,11 @@ public:
 		g_progr.release(m_prev);
 	}
 };
+
+struct progress_dialog_server
+{
+	void operator()();
+	~progress_dialog_server();
+
+	static auto constexpr thread_name = "Progress Dialog Server"sv;
+};

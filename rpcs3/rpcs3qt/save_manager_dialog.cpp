@@ -6,6 +6,7 @@
 #include "persistent_settings.h"
 
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Loader/PSF.h"
 
 #include <QtConcurrent>
@@ -236,7 +237,7 @@ void save_manager_dialog::UpdateList()
 {
 	if (m_dir.empty())
 	{
-		m_dir = Emulator::GetHddDir() + "home/" + Emu.GetUsr() + "/savedata/";
+		m_dir = rpcs3::utils::get_hdd0_dir() + "home/" + Emu.GetUsr() + "/savedata/";
 	}
 
 	m_save_entries = GetSaveEntries(m_dir);

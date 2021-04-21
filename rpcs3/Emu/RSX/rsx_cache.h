@@ -4,6 +4,7 @@
 #include "Utilities/Thread.h"
 #include "Common/ProgramStateCache.h"
 #include "Emu/System.h"
+#include "Emu/cache_utils.hpp"
 #include "Common/texture_cache_checker.h"
 #include "Overlays/Shaders/shader_loading_dialog.h"
 
@@ -11,7 +12,6 @@
 #include <chrono>
 #include <unordered_map>
 
-#include "util/vm.hpp"
 #include "util/sysinfo.hpp"
 #include "util/fnv_hash.hpp"
 
@@ -199,7 +199,7 @@ namespace rsx
 		{
 			if (!g_cfg.video.disable_on_disk_shader_cache)
 			{
-				root_path = Emu.PPUCache() + "shaders_cache";
+				root_path = rpcs3::cache::get_ppu_cache() + "shaders_cache";
 			}
 		}
 

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -32,7 +33,7 @@ extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
 
 struct syscache_info
 {
-	const std::string cache_root = Emu.GetHdd1Dir() + "/caches/";
+	const std::string cache_root = rpcs3::utils::get_hdd1_dir() + "/caches/";
 
 	stx::init_mutex init;
 

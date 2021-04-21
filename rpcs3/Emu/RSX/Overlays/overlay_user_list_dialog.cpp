@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "overlay_user_list_dialog.h"
-#include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/system_utils.hpp"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
 
@@ -152,7 +152,7 @@ namespace rsx
 			std::vector<u8> icon;
 			std::vector<std::unique_ptr<overlay_element>> entries;
 
-			const std::string home_dir = Emulator::GetHddDir() + "home/";
+			const std::string home_dir = rpcs3::utils::get_hdd0_dir() + "home/";
 			s32 selected_index = 0;
 
 			for (const auto& id : user_ids)

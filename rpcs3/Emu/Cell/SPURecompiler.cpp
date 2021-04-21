@@ -3,6 +3,9 @@
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/system_progress.hpp"
+#include "Emu/system_utils.hpp"
+#include "Emu/cache_utils.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/timers.hpp"
 #include "Crypto/sha1.h"
@@ -22,8 +25,6 @@
 #include "util/v128.hpp"
 #include "util/v128sse.hpp"
 #include "util/sysinfo.hpp"
-
-#include "Emu/system_progress.hpp"
 
 const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iname> s_spu_iname;
@@ -368,7 +369,7 @@ void spu_cache::initialize()
 		}
 	}
 
-	const std::string ppu_cache = Emu.PPUCache();
+	const std::string ppu_cache = rpcs3::cache::get_ppu_cache();
 
 	if (ppu_cache.empty())
 	{
@@ -425,7 +426,7 @@ void spu_cache::initialize()
 		g_progr_ptotal += ::size32(func_list);
 		progr.emplace("Building SPU cache...");
 
-		worker_count = Emulator::GetMaxThreads();
+		worker_count = rpcs3::utils::get_max_threads();
 	}
 
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
@@ -585,7 +586,7 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 spu_runtime::spu_runtime()
 {
 	// Clear LLVM output
-	m_cache_path = Emu.PPUCache();
+	m_cache_path = rpcs3::cache::get_ppu_cache();
 
 	if (m_cache_path.empty())
 	{

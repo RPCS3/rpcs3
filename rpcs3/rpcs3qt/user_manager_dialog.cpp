@@ -19,6 +19,7 @@
 #include "persistent_settings.h"
 
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 
 #include "Utilities/StrUtil.h"
 #include "Utilities/File.h"
@@ -167,7 +168,7 @@ void user_manager_dialog::UpdateTable(bool mark_only)
 
 	// Get the user folders in the home directory and the currently logged in user.
 	m_user_list.clear();
-	m_user_list = user_account::GetUserAccounts(Emulator::GetHddDir() + "home");
+	m_user_list = user_account::GetUserAccounts(rpcs3::utils::get_hdd0_dir() + "home");
 
 	// Clear and then repopulate the table with the list gathered above.
 	m_table->setRowCount(static_cast<int>(m_user_list.size()));
@@ -232,10 +233,10 @@ void user_manager_dialog::OnUserRemove()
 
 void user_manager_dialog::GenerateUser(const std::string& user_id, const std::string& username)
 {
-	ensure(Emulator::CheckUsr(user_id) > 0);
+	ensure(rpcs3::utils::check_user(user_id) > 0);
 
 	// Create user folders and such.
-	const std::string home_dir = Emulator::GetHddDir() + "home/";
+	const std::string home_dir = rpcs3::utils::get_hdd0_dir() + "home/";
 	const std::string user_dir = home_dir + user_id;
 	fs::create_dir(home_dir);
 	fs::create_dir(user_dir + "/");
@@ -285,7 +286,7 @@ void user_manager_dialog::OnUserRename()
 			continue;
 		}
 
-		const std::string username_file = Emulator::GetHddDir() + "home/" + user_id + "/localusername";
+		const std::string username_file = rpcs3::utils::get_hdd0_dir() + "home/" + user_id + "/localusername";
 		const std::string new_username = text_to_validate.toStdString();
 
 		if (fs::write_file(username_file, fs::rewrite, new_username))
@@ -324,7 +325,7 @@ void user_manager_dialog::OnUserCreate()
 	}
 
 	const std::string next_user_id = fmt::format("%08d", smallest);
-	ensure(Emulator::CheckUsr(next_user_id) > 0);
+	ensure(rpcs3::utils::check_user(next_user_id) > 0);
 
 	QInputDialog* dialog = new QInputDialog(this);
 	dialog->setWindowTitle(tr("New User"));

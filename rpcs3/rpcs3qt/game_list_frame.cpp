@@ -16,6 +16,7 @@
 
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Loader/PSF.h"
 #include "util/types.hpp"
 #include "Utilities/lockless.h"
@@ -394,7 +395,7 @@ QString game_list_frame::GetLastPlayedBySerial(const QString& serial) const
 
 std::string game_list_frame::GetCacheDirBySerial(const std::string& serial)
 {
-	return Emulator::GetCacheDir() + serial;
+	return rpcs3::utils::get_cache_dir() + serial;
 }
 
 std::string game_list_frame::GetDataDirBySerial(const std::string& serial)
@@ -413,7 +414,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 		m_game_data.clear();
 		m_notes.clear();
 
-		const std::string _hdd = Emulator::GetHddDir();
+		const std::string _hdd = rpcs3::utils::get_hdd0_dir();
 		const std::string cat_unknown = sstr(cat::cat_unknown);
 		const std::string cat_unknown_localized = sstr(localized.category.unknown);
 
@@ -542,7 +543,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			const Localized thread_localized;
 
 			{
-				const std::string sfo_dir = Emulator::GetSfoDirFromGamePath(dir);
+				const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(dir);
 
 				const psf::registry psf = psf::load_object(fs::file(sfo_dir + "/PARAM.SFO"));
 
@@ -654,8 +655,8 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 				const auto compat = m_game_compat->GetCompatibility(game.serial);
 
-				const bool hasCustomConfig = fs::is_file(Emulator::GetCustomConfigPath(game.serial)) || fs::is_file(Emulator::GetCustomConfigPath(game.serial, true));
-				const bool hasCustomPadConfig = fs::is_file(Emulator::GetCustomInputConfigPath(game.serial));
+				const bool hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial)) || fs::is_file(rpcs3::utils::get_custom_config_path(game.serial, true));
+				const bool hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
 				const bool has_hover_gif =  fs::is_file(game_icon_path + game.serial + "/hover.gif");
 
 				const QColor color = getGridCompatibilityColor(compat.color);
@@ -970,12 +971,12 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QAction* open_config_dir = menu.addAction(tr("&Open Custom Config Folder"));
 		connect(open_config_dir, &QAction::triggered, [current_game]()
 		{
-			const std::string new_config_path = Emulator::GetCustomConfigPath(current_game.serial);
+			const std::string new_config_path = rpcs3::utils::get_custom_config_path(current_game.serial);
 
 			if (fs::is_file(new_config_path))
 				gui::utils::open_dir(new_config_path);
 
-			const std::string old_config_path = Emulator::GetCustomConfigPath(current_game.serial, true);
+			const std::string old_config_path = rpcs3::utils::get_custom_config_path(current_game.serial, true);
 
 			if (fs::is_file(old_config_path))
 				gui::utils::open_dir(old_config_path);
@@ -1346,8 +1347,8 @@ bool game_list_frame::CreatePPUCache(const game_info& game)
 
 bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, const game_info& game, bool is_interactive)
 {
-	const std::string config_path_new = Emulator::GetCustomConfigPath(title_id);
-	const std::string config_path_old = Emulator::GetCustomConfigPath(title_id, true);
+	const std::string config_path_new = rpcs3::utils::get_custom_config_path(title_id);
+	const std::string config_path_old = rpcs3::utils::get_custom_config_path(title_id, true);
 
 	if (!fs::is_file(config_path_new) && !fs::is_file(config_path_old))
 		return true;
@@ -1388,7 +1389,7 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, con
 
 bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, const game_info& game, bool is_interactive)
 {
-	const std::string config_dir = Emulator::GetCustomInputConfigDir(title_id);
+	const std::string config_dir = rpcs3::utils::get_custom_input_config_dir(title_id);
 
 	if (!fs::is_dir(config_dir))
 		return true;

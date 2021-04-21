@@ -992,6 +992,15 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_user_list_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\system_utils.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\cache_utils.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\system_progress.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1938,6 +1947,15 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_user_list_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\system_utils.hpp">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\cache_utils.hpp">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\system_progress.hpp">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

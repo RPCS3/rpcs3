@@ -1,7 +1,7 @@
 #include "persistent_settings.h"
 
 #include "util/logs.hpp"
-#include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 
 LOG_CHANNEL(cfg_log, "CFG");
 
@@ -49,7 +49,7 @@ QString persistent_settings::GetCurrentUser(const QString& fallback) const
 	}
 
 	// Set user if valid
-	if (Emulator::CheckUsr(user.toStdString()) > 0)
+	if (rpcs3::utils::check_user(user.toStdString()) > 0)
 	{
 		return user;
 	}
