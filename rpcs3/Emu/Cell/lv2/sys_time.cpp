@@ -47,8 +47,10 @@ const auto s_time_aux_info = []() -> time_aux_info_t
 #define TIMER_ABSTIME -1
 // The opengroup spec isn't clear on the mapping from REALTIME to CALENDAR being appropriate or not.
 // http://pubs.opengroup.org/onlinepubs/009695299/basedefs/time.h.html
+#ifndef CLOCK_REALTIME
 #define CLOCK_REALTIME  1 // #define CALENDAR_CLOCK 1 from mach/clock_types.h
 #define CLOCK_MONOTONIC 0 // #define SYSTEM_CLOCK 0
+#endif
 
 // the mach kernel uses struct mach_timespec, so struct timespec is loaded from <sys/_types/_timespec.h> for compatability
 // struct timespec { time_t tv_sec; long tv_nsec; };
