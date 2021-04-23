@@ -80,13 +80,13 @@ struct ppu_module
 	ppu_module& operator=(ppu_module&&) = default;
 
 	uchar sha1[20]{};
-	std::string name;
-	std::string path;
-	std::string cache;
-	std::vector<ppu_reloc> relocs;
-	std::vector<ppu_segment> segs;
-	std::vector<ppu_segment> secs;
-	std::vector<ppu_function> funcs;
+	std::string name{};
+	std::string path{};
+	std::string cache{};
+	std::vector<ppu_reloc> relocs{};
+	std::vector<ppu_segment> segs{};
+	std::vector<ppu_segment> secs{};
+	std::vector<ppu_function> funcs{};
 
 	// Copy info without functions
 	void copy_part(const ppu_module& info)

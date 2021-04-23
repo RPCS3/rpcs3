@@ -23,8 +23,8 @@ private:
 
 public:
 	data_array_format_info(int id, std::array<u32, 0x10000 / 4>& r)
-		   : index(id)
-		   , registers(r)
+		: index(id)
+		, registers(r)
 	{
 	}
 
@@ -124,7 +124,7 @@ struct register_vertex_data_info
 	vertex_base_type type = vertex_base_type::f;
 
 	register_vertex_data_info() = default;
-	std::array<u32, 4> data;
+	std::array<u32, 4> data{};
 };
 
 }

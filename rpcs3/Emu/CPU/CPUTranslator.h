@@ -198,9 +198,9 @@ struct llvm_value_t<u16> : llvm_value_t<s16>
 };
 
 template <>
-struct llvm_value_t<s32> : llvm_value_t<s8>
+struct llvm_value_t<int> : llvm_value_t<s8>
 {
-	using type = s32;
+	using type = int;
 	using base = llvm_value_t<s8>;
 	using base::base;
 
@@ -213,10 +213,10 @@ struct llvm_value_t<s32> : llvm_value_t<s8>
 };
 
 template <>
-struct llvm_value_t<u32> : llvm_value_t<s32>
+struct llvm_value_t<uint> : llvm_value_t<int>
 {
-	using type = u32;
-	using base = llvm_value_t<s32>;
+	using type = uint;
+	using base = llvm_value_t<int>;
 	using base::base;
 
 	static constexpr bool is_sint = false;
@@ -224,9 +224,35 @@ struct llvm_value_t<u32> : llvm_value_t<s32>
 };
 
 template <>
-struct llvm_value_t<s64> : llvm_value_t<s8>
+struct llvm_value_t<long> : llvm_value_t<s8>
 {
-	using type = s64;
+	using type = long;
+	using base = llvm_value_t<s8>;
+	using base::base;
+
+	static constexpr uint esize = 8 * sizeof(long);
+
+	static llvm::Type* get_type(llvm::LLVMContext& context)
+	{
+		return llvm::Type::getInt64Ty(context);
+	}
+};
+
+template <>
+struct llvm_value_t<ulong> : llvm_value_t<long>
+{
+	using type = ulong;
+	using base = llvm_value_t<long>;
+	using base::base;
+
+	static constexpr bool is_sint = false;
+	static constexpr bool is_uint = true;
+};
+
+template <>
+struct llvm_value_t<llong> : llvm_value_t<s8>
+{
+	using type = llong;
 	using base = llvm_value_t<s8>;
 	using base::base;
 
@@ -239,10 +265,10 @@ struct llvm_value_t<s64> : llvm_value_t<s8>
 };
 
 template <>
-struct llvm_value_t<u64> : llvm_value_t<s64>
+struct llvm_value_t<ullong> : llvm_value_t<llong>
 {
-	using type = u64;
-	using base = llvm_value_t<s64>;
+	using type = ullong;
+	using base = llvm_value_t<llong>;
 	using base::base;
 
 	static constexpr bool is_sint = false;

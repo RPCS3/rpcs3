@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
+#include "Emu/IdManager.h"
 #include "Emu/localized_string.h"
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -97,7 +98,7 @@ vm::gvar<savedata_context> g_savedata_context;
 struct savedata_manager
 {
 	semaphore<> mutex;
-	atomic_t<bool> enable_overlay;
+	atomic_t<bool> enable_overlay{false};
 };
 
 static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, const std::string& prefix)
@@ -931,7 +932,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					return {CELL_SAVEDATA_ERROR_PARAM, "34"};
 				}
 
-				//TODO: If adding the new data to the save_entries vector
+				// TODO: If adding the new data to the save_entries vector
 				// to be displayed in the save mangaer UI, it should be focused here
 				break;
 			}

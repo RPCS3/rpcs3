@@ -617,11 +617,11 @@ void debugger_frame::UpdateUI()
 		const auto size_context = cpu->id_type() == 1 ? sizeof(ppu_thread) :
 			cpu->id_type() == 2 ? sizeof(spu_thread) : sizeof(cpu_thread);
 
-		if (m_last_pc != cia || m_last_query_state.size() != size_context || std::memcmp(m_last_query_state.data(), cpu, size_context))
+		if (m_last_pc != cia || m_last_query_state.size() != size_context || std::memcmp(m_last_query_state.data(), static_cast<void *>(cpu), size_context))
 		{
 			// Copy thread data
 			m_last_query_state.resize(size_context);
-			std::memcpy(m_last_query_state.data(), cpu, size_context);
+			std::memcpy(m_last_query_state.data(), static_cast<void *>(cpu), size_context);
 
 			m_last_pc = cia;
 			DoUpdate();

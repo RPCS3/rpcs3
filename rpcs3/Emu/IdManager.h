@@ -141,8 +141,8 @@ namespace id_manager
 	template <typename T>
 	struct id_map
 	{
-		std::vector<std::pair<id_key, std::shared_ptr<void>>> vec;
-		shared_mutex mutex; // TODO: Use this instead of global mutex
+		std::vector<std::pair<id_key, std::shared_ptr<void>>> vec{};
+		shared_mutex mutex{}; // TODO: Use this instead of global mutex
 
 		id_map()
 		{

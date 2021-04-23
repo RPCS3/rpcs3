@@ -63,16 +63,16 @@ namespace rsx
 	class draw_clause
 	{
 		// Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
-		simple_array<draw_range_t> draw_command_ranges;
+		simple_array<draw_range_t> draw_command_ranges{};
 
 		// Stores rasterization barriers for primitive types sensitive to adjacency
-		simple_array<barrier_t> draw_command_barriers;
+		simple_array<barrier_t> draw_command_barriers{};
 
 		// Counter used to parse the commands in order
-		u32 current_range_index;
+		u32 current_range_index{};
 
 		// Location of last execution barrier
-		u32 last_execution_barrier_index;
+		u32 last_execution_barrier_index{};
 
 		// Helper functions
 		// Add a new draw command
@@ -102,14 +102,14 @@ namespace rsx
 		}
 
 	public:
-		primitive_type primitive;
-		draw_command command;
+		primitive_type primitive{};
+		draw_command command{};
 
-		bool is_immediate_draw;          // Set if part of the draw is submitted via push registers
-		bool is_disjoint_primitive;      // Set if primitive type does not rely on adjacency information
-		bool primitive_barrier_enable;   // Set once to signal that a primitive restart barrier can be inserted
+		bool is_immediate_draw{};          // Set if part of the draw is submitted via push registers
+		bool is_disjoint_primitive{};      // Set if primitive type does not rely on adjacency information
+		bool primitive_barrier_enable{};   // Set once to signal that a primitive restart barrier can be inserted
 
-		simple_array<u32> inline_vertex_array;
+		simple_array<u32> inline_vertex_array{};
 
 		void insert_command_barrier(command_barrier_type type, u32 arg)
 		{
@@ -457,8 +457,8 @@ namespace rsx
 	struct rsx_state
 	{
 	public:
-		std::array<u32, 0x10000 / 4> registers;
-		u32 register_previous_value;
+		std::array<u32, 0x10000 / 4> registers{};
+		u32 register_previous_value{};
 
 		template<u32 opcode>
 		using decoded_type = typename registers_decoder<opcode>::decoded_type;
@@ -492,10 +492,10 @@ namespace rsx
 		std::array<vertex_texture, 4> vertex_textures;
 
 
-		std::array<u32, 512 * 4> transform_program;
-		std::array<u32[4], 512> transform_constants;
+		std::array<u32, 512 * 4> transform_program{};
+		std::array<u32[4], 512> transform_constants{};
 
-		draw_clause current_draw_clause;
+		draw_clause current_draw_clause{};
 
 		/**
 		* RSX can sources vertex attributes from 2 places:
@@ -514,7 +514,7 @@ namespace rsx
 		* Note that behavior when both vertex array and immediate value system are disabled but vertex attrib mask
 		* request inputs is unknown.
 		*/
-		std::array<register_vertex_data_info, 16> register_vertex_info;
+		std::array<register_vertex_data_info, 16> register_vertex_info{};
 		std::array<data_array_format_info, 16> vertex_arrays_info;
 
 	private:

@@ -263,7 +263,8 @@ namespace vk
 			// Synchronize, reset dma_fence after waiting
 			vk::wait_for_event(dma_fence.get(), GENERAL_WAIT_TIMEOUT);
 
-			const auto range = get_confirmed_range();
+			// Calculate smallest range to flush - for framebuffers, the raster region is enough
+			const auto range = (context == rsx::texture_upload_context::framebuffer_storage)? get_section_range() : get_confirmed_range();
 			vk::flush_dma(range.start, range.length());
 
 			if (is_swizzled())

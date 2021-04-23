@@ -7,10 +7,15 @@ namespace rsx
 	{
 	protected:
 		const u8 m_index;
-		std::array<u32, 0x10000 / 4> &registers;
+		std::array<u32, 0x10000 / 4>& registers;
 
 	public:
-		fragment_texture(u8 idx, std::array<u32, 0x10000 / 4> &r) : m_index(idx), registers(r) { }
+		fragment_texture(u8 idx, std::array<u32, 0x10000 / 4>& r)
+			: m_index(idx)
+			, registers(r)
+		{
+		}
+
 		fragment_texture() = delete;
 
 		// Offset
@@ -87,10 +92,15 @@ namespace rsx
 	{
 	protected:
 		const u8 m_index;
-		std::array<u32, 0x10000 / 4> &registers;
+		std::array<u32, 0x10000 / 4>& registers;
 
 	public:
-		vertex_texture(u8 idx, std::array<u32, 0x10000 / 4> &r) : m_index(idx), registers(r) { }
+		vertex_texture(u8 idx, std::array<u32, 0x10000 / 4> &r)
+			: m_index(idx)
+			, registers(r)
+		{
+		}
+
 		vertex_texture() = delete;
 
 		// Offset

@@ -56,9 +56,9 @@ namespace stx
 		// Save default constructor and destructor
 		struct typeinfo
 		{
-			bool(*create)(uchar* ptr, manual_typemap&) noexcept;
-			void(*destroy)(void* ptr) noexcept;
-			std::string_view name;
+			bool(*create)(uchar* ptr, manual_typemap&) noexcept = nullptr;
+			void(*destroy)(void* ptr) noexcept = nullptr;
+			std::string_view name{};
 
 			template <typename T>
 			static bool call_ctor(uchar* ptr, manual_typemap& _this) noexcept

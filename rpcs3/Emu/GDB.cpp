@@ -63,9 +63,9 @@ void set_nonblocking(int s)
 
 struct gdb_cmd
 {
-	std::string cmd;
-	std::string data;
-	u8 checksum;
+	std::string cmd{};
+	std::string data{};
+	u8 checksum{};
 };
 
 bool check_errno_again()

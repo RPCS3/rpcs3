@@ -22,7 +22,7 @@ class tar_object
 	const fs::file& m_file;
 
 	usz largest_offset = 0; // We store the largest offset so we can continue to scan from there.
-	std::map<std::string, std::pair<u64, TARHeader>> m_map; // Maps path to offset of file data and its header
+	std::map<std::string, std::pair<u64, TARHeader>> m_map{}; // Maps path to offset of file data and its header
 
 	TARHeader read_header(u64 offset) const;
 

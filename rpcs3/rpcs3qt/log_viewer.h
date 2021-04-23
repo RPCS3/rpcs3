@@ -1,6 +1,6 @@
 #pragma once
 
-#include <QTextEdit>
+#include <QPlainTextEdit>
 #include <QDropEvent>
 
 #include <memory>
@@ -13,21 +13,21 @@ class log_viewer : public QWidget
 {
 	Q_OBJECT
 
+public:
+	explicit log_viewer(std::shared_ptr<gui_settings> gui_settings);
+	void show_log() const;
+
 private Q_SLOTS:
 	void show_context_menu(const QPoint& pos);
 
 private:
-	void show_log() const;
 	bool is_valid_file(const QMimeData& md, bool save = false);
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 	QString m_path_last;
-	QTextEdit* m_log_text;
+	QPlainTextEdit* m_log_text;
 	LogHighlighter* m_log_highlighter;
 	std::unique_ptr<find_dialog> m_find_dialog;
-
-public:
-	explicit log_viewer(std::shared_ptr<gui_settings> settings);
 
 protected:
 	void dropEvent(QDropEvent* ev) override;

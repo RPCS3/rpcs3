@@ -2450,7 +2450,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 
 			if (!src)
 			{
-				ppu_log.error("Failed to decrypt '%s'", path);
+				ppu_log.notice("Failed to decrypt '%s'", path);
 				continue;
 			}
 
@@ -2514,7 +2514,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 				}
 			}
 
-			ppu_log.error("Failed to precompile '%s' (prx: %s, ovl: %s)", path, prx_err, ovl_err);
+			ppu_log.notice("Failed to precompile '%s' (prx: %s, ovl: %s)", path, prx_err, ovl_err);
 			continue;
 		}
 	});
