@@ -7,7 +7,6 @@
 #include <QTreeWidgetItem>
 
 #include "Emu/IdManager.h"
-#include "Emu/IPC.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/lv2/sys_lwmutex.h"
@@ -366,7 +365,7 @@ void kernel_explorer::Update()
 
 			if (lv2_event_queue::check(queue))
 			{
-				if (queue.get() == idm::check_unlocked<lv2_obj, lv2_event_queue>(ep.queue_id));
+				if (queue.get() == idm::check_unlocked<lv2_obj, lv2_event_queue>(ep.queue_id))
 				{
 					// Type must be LOCAL here, but refer to the note below for why it is showed
 					add_leaf(node, qstr(fmt::format("Event Port 0x%08x: %s, Name: %#llx, Event Queue (ID): 0x%08x", id, type, ep.name, ep.queue_id)));
