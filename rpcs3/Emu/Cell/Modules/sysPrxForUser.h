@@ -3,6 +3,11 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 
+enum
+{
+	RANDOM_NUMBER_MAX_SIZE = 4096
+};
+
 using spu_printf_cb_t = vm::ptr<s32(u32 arg)>;
 
 // Aux
