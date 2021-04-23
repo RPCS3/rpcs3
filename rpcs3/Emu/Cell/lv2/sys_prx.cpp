@@ -892,6 +892,7 @@ void fmt_class_string<CellPrxError>::format(std::string& out, u64 arg)
 		STR_CASE(CELL_PRX_ERROR_UNDEFINED_SYMBOL);
 		STR_CASE(CELL_PRX_ERROR_UNSUPPORTED_RELOCATION_TYPE);
 		STR_CASE(CELL_PRX_ERROR_ELF_IS_REGISTERED);
+		STR_CASE(CELL_PRX_ERROR_NO_EXIT_ENTRY);
 		}
 
 		return unknown;
