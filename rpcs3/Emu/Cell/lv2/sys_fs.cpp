@@ -1728,45 +1728,27 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		}
 
 		std::string_view vpath{ arg->name.get_ptr(), arg->name_size };
+		vpath = vpath.substr(0, vpath.find_last_not_of('\0') + 1);
 
 		sys_fs.notice("sys_fs_fcntl(0xe0000025): %s", vpath);
 
-		vm::var<u32> fd;
-		arg->out_code = sys_fs_open(ppu, arg->name, 0, fd, 0, vm::null, 0);
-		arg->fd = vm::cast<u32>(*fd);
+		be_t<u64> sdata_identifier = 0x18000000010;
 
-		const auto file = idm::get<lv2_fs_object, lv2_file>(arg->fd);
+		lv2_file::open_result_t result = lv2_file::open(vpath, 0, 0, &sdata_identifier, 8);
 
-		if (!file)
+		if (result.error)
 		{
-			return CELL_EBADF;
+			return result.error;
 		}
 
-		std::lock_guard lock(file->mp->mutex);
-
-		if (!file->file)
-		{
-			return CELL_EBADF;
-		}
-
-		//auto sdata_file = std::make_unique<EDATADecrypter>(lv2_file::make_view(file, arg->offset));
-		auto sdata_file = std::make_unique<EDATADecrypter>(lv2_file::make_view(file, 0));
-
-		if (!sdata_file->ReadHeader())
-		{
-			return CELL_EFSSPECIFIC;
-		}
-
-		fs::file stream;
-		stream.reset(std::move(sdata_file));
-		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&file = *file, &stream = stream]()->std::shared_ptr<lv2_file>
+		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&]() -> std::shared_ptr<lv2_file>
 		{
 			if (!g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
 			{
 				return nullptr;
 			}
 
-			return std::make_shared<lv2_file>(file, std::move(stream), file.mode, file.flags, file.real_path, lv2_file_type::sdata);
+			return std::make_shared<lv2_file>(result.ppath, std::move(result.file), 0,  0, std::move(result.real_path), lv2_file_type::sdata);
 		}))
 		{
 			arg->out_code = CELL_OK;
