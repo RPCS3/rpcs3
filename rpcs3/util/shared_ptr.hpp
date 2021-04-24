@@ -258,6 +258,12 @@ namespace stx
 			}
 		}
 
+		template <typename... Args> requires (std::is_invocable_v<T, Args&&...>)
+		decltype(auto) operator()(Args&&... args) const noexcept
+		{
+			return std::invoke(*m_ptr, std::forward<Args>(args)...);
+		}
+
 		operator element_type*() const noexcept
 		{
 			return m_ptr;
@@ -581,6 +587,12 @@ namespace stx
 			{
 				return *m_ptr;
 			}
+		}
+
+		template <typename... Args> requires (std::is_invocable_v<T, Args&&...>)
+		decltype(auto) operator()(Args&&... args) const noexcept
+		{
+			return std::invoke(*m_ptr, std::forward<Args>(args)...);
 		}
 
 		usz use_count() const noexcept
