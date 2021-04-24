@@ -75,7 +75,7 @@ namespace rsx
 			m_description = std::make_unique<label>();
 			m_description->set_font("Arial", 20);
 			m_description->set_pos(20, 37);
-			m_description->set_text("Select user");
+			m_description->set_text("Select user"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
 			m_description->back_color.a	= 0.f;
 
