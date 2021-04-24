@@ -352,6 +352,9 @@ struct SaveDataEntry
 	s64 ctime{0};
 	std::vector<uchar> iconBuf;
 	bool isNew{false};
+
+	std::string date() const;
+	std::string data_size() const;
 };
 
 class SaveDialogBase

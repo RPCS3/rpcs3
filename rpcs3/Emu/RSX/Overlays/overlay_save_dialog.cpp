@@ -178,9 +178,9 @@ namespace rsx
 
 			for (auto& entry : save_entries)
 			{
-				const std::string modification_time = date_time::fmt_time("%c", entry.mtime);
+				const std::string date_and_size = fmt::format("%s   %s", entry.date(), entry.data_size());
 				std::unique_ptr<overlay_element> e;
-				e = std::make_unique<save_dialog_entry>(entry.subtitle, modification_time, entry.details, image_resource_id::raw_image, entry.iconBuf);
+				e = std::make_unique<save_dialog_entry>(entry.subtitle, date_and_size, entry.details, image_resource_id::raw_image, entry.iconBuf);
 				entries.emplace_back(std::move(e));
 			}
 
