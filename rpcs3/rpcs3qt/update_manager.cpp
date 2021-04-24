@@ -227,7 +227,7 @@ void update_manager::update()
 	ensure(m_downloader);
 
 	if (m_update_message.isEmpty() ||
-		QMessageBox::question(m_downloader->get_progress_dialog(), tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
+		QMessageBox::question(m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
 	{
 		m_downloader->close_progress_dialog();
 		return;
