@@ -1712,7 +1712,6 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 	case 0xe0000025: // cellFsSdataOpenWithVersion
 	{
-
 		const auto arg = vm::static_ptr_cast<lv2_file_e0000025>(_arg);
 
 		if (arg->size != 0x30u)
