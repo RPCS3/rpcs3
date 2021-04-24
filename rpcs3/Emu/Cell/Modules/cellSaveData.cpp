@@ -1023,7 +1023,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			// UI returns -1 for new save games
 			if (selected == -1)
 			{
-				message = get_localized_string(localized_string_id::CELL_SAVEDATA_CREATE_CONFIRMATION);
+				message = get_localized_string(localized_string_id::CELL_SAVEDATA_SAVE_CONFIRMATION);
 				save_entry.dirName = listSet->newData->dirName.get_ptr();
 				save_entry.escaped = vfs::escape(save_entry.dirName);
 			}
@@ -1155,7 +1155,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 				if (selected == -1)
 				{
-					message = get_localized_string(localized_string_id::CELL_SAVEDATA_CREATE_CONFIRMATION);
+					message = get_localized_string(localized_string_id::CELL_SAVEDATA_SAVE_CONFIRMATION);
 				}
 				else
 				{
