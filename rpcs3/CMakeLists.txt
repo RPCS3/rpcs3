@@ -8,6 +8,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 
 # Check for a sufficient compiler and set build options
 include(ConfigureCompiler)
+include(CheckFunctionExists)
 
 set(ADDITIONAL_LIBS "")
 if(CMAKE_SYSTEM MATCHES "Linux")
