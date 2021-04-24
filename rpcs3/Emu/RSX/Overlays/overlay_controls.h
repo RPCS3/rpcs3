@@ -336,7 +336,8 @@ namespace rsx
 			enum text_align
 			{
 				left = 0,
-				center
+				center,
+				right
 			};
 
 			u16 x = 0;
@@ -524,10 +525,10 @@ namespace rsx
 						v.values[1] += y + padding_top + static_cast<f32>(renderer->get_size_px());
 					}
 
-					if (alignment == center)
+					if (alignment != text_align::left)
 					{
 						// Scan for lines and measure them
-						// Reposition them to the center
+						// Reposition them to the center or right depending on the alignment
 						std::vector<std::pair<u32, u32>> lines;
 						u32 line_begin = 0;
 						u32 ctr = 0;
@@ -549,6 +550,7 @@ namespace rsx
 
 						lines.emplace_back(line_begin, ctr);
 						const auto max_region_w = std::max<f32>(text_extents_w, w);
+						const f32 offset_extent = (alignment == text_align::center ? 0.5f : 1.0f);
 
 						for (auto p : lines)
 						{
@@ -563,7 +565,7 @@ namespace rsx
 
 							if (line_length < max_region_w)
 							{
-								f32 offset = (max_region_w - line_length) * 0.5f;
+								const f32 offset = (max_region_w - line_length) * offset_extent;
 								for (auto n = p.first; n < p.second; ++n)
 								{
 									result[n].values[0] += offset;
