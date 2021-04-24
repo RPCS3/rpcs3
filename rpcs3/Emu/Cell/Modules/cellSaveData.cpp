@@ -1053,6 +1053,10 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 			if (g_last_user_response != CELL_MSGDIALOG_BUTTON_YES)
 			{
+				if (selected >= 0)
+				{
+					focused = selected;
+				}
 				continue;
 			}
 
