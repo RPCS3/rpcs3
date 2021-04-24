@@ -17,6 +17,20 @@ namespace date_time
 		return buf;
 	}
 
+	static inline std::string fmt_time(const char* fmt, const s64 time)
+	{
+		tm buf;
+		time_t t = time;
+#ifdef _MSC_VER
+		localtime_s(&buf, &t);
+#else
+		buf = *localtime(&t);
+#endif
+		char str[80];
+		strftime(str, sizeof(str), fmt, &buf);
+		return str;
+	}
+
 	static inline std::string current_time()
 	{
 		char str[80];
