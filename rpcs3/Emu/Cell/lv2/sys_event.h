@@ -29,6 +29,7 @@ enum : u64
 enum : s32
 {
 	SYS_EVENT_PORT_LOCAL = 1,
+	SYS_EVENT_PORT_IPC   = 3, // Unofficial name
 };
 
 // Event Port Name
@@ -124,8 +125,9 @@ struct lv2_event_port final : lv2_obj
 {
 	static const u32 id_base = 0x0e000000;
 
-	const s32 type; // Port type, must be SYS_EVENT_PORT_LOCAL
+	const s32 type; // Port type, either IPC or local
 	const u64 name; // Event source (generated from id and process id if not set)
+	u32 queue_id = 0; // Event queue ID (if IPC is used this value is meaningless)
 
 	std::weak_ptr<lv2_event_queue> queue; // Event queue this port is connected to
 

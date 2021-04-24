@@ -1567,6 +1567,8 @@ void Emulator::Stop(bool restart)
 
 	sys_log.notice("Atomic wait hashtable stats: [in_use=%u, used=%u, max_collision_weight=%u, total_collisions=%u]", aw_refs, aw_used, aw_colm, aw_colc);
 
+	stop_watchdog = thread_state::aborting;
+
 	m_stop_ctr++;
 	m_stop_ctr.notify_all();
 
