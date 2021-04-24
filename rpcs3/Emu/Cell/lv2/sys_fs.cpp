@@ -1727,7 +1727,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		}
 
 		std::string_view vpath{ arg->name.get_ptr(), arg->name_size };
-		vpath = vpath.substr(0, vpath.find_last_not_of('\0') + 1);
+		vpath = vpath.substr(0, vpath.find_first_of('\0'));
 
 		sys_fs.notice("sys_fs_fcntl(0xe0000025): %s", vpath);
 
