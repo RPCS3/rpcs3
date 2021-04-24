@@ -204,6 +204,7 @@ extern "C"
 	uchar _subborrow_u64(uchar, u64, u64, u64*);
 	u64 __shiftleft128(u64, u64, uchar);
 	u64 __shiftright128(u64, u64, uchar);
+	u64 _umul128(u64, u64, u64*);
 }
 
 // Unsigned 128-bit integer implementation (TODO)
@@ -248,6 +249,13 @@ struct alignas(16) u128
 	{
 		u128 value = l;
 		value -= r;
+		return value;
+	}
+
+	constexpr friend u128 operator*(const u128& l, const u128& r)
+	{
+		u128 value = l;
+		value *= r;
 		return value;
 	}
 
@@ -362,6 +370,24 @@ struct alignas(16) u128
 			_subborrow_u64(_subborrow_u64(0, lo, r.lo, &lo), hi, r.hi, &hi);
 		}
 
+		return *this;
+	}
+
+	constexpr u128& operator*=(const u128& r)
+	{
+		const u64 _hi = r.hi * lo + r.lo * hi;
+
+		if (std::is_constant_evaluated())
+		{
+			hi = (lo >> 32) * (r.lo >> 32) + (((lo >> 32) * (r.lo & 0xffffffff)) >> 32) + (((r.lo >> 32) * (lo & 0xffffffff)) >> 32);
+			lo = lo * r.lo;
+		}
+		else
+		{
+			lo = _umul128(lo, r.lo, &hi);
+		}
+
+		hi += _hi;
 		return *this;
 	}
 
