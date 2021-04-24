@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include "util/asm.hpp"
 
 static const usz size_dropped = -1;
 
@@ -56,36 +57,65 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		return result;
 	};
 
-	const auto write_octal = [&](u64 value, u64 min_num)
+	const auto write_octal = [&](auto value, u64 min_num)
 	{
-		out.resize(out.size() + std::max<u64>(min_num, 66 / 3 - (std::countl_zero<u64>(value | 1) + 2) / 3), '0');
+		if constexpr (sizeof(value) == 16)
+		{
+			out.resize(out.size() + std::max<u64>(min_num, 129 / 3 - (utils::clz128(value | 1) + 1) / 3), '0');
+		}
+		else
+		{
+			out.resize(out.size() + std::max<u64>(min_num, 66 / 3 - (std::countl_zero<u64>(value | 1) + 2) / 3), '0');
+		}
 
 		// Write in reversed order
-		for (auto i = out.rbegin(); value; i++, value /= 8)
+		for (auto i = out.rbegin(); value; i++, value >>= 3)
 		{
-			*i = value % 8 + '0';
+			*i = static_cast<char>(static_cast<u64>(value) & 7) + '0';
 		}
 	};
 
-	const auto write_hex = [&](u64 value, bool upper, u64 min_num)
+	const auto write_hex = [&](auto value, bool upper, u64 min_num)
 	{
-		out.resize(out.size() + std::max<u64>(min_num, 64 / 4 - std::countl_zero<u64>(value | 1) / 4), '0');
+		if constexpr (sizeof(value) == 16)
+		{
+			out.resize(out.size() + std::max<u64>(min_num, 128 / 4 - utils::clz128(value | 1) / 4), '0');
+		}
+		else
+		{
+			out.resize(out.size() + std::max<u64>(min_num, 64 / 4 - std::countl_zero<u64>(value | 1) / 4), '0');
+		}
 
 		// Write in reversed order
-		for (auto i = out.rbegin(); value; i++, value /= 16)
+		for (auto i = out.rbegin(); value; i++, value >>= 4)
 		{
-			*i = (upper ? "0123456789ABCDEF" : "0123456789abcdef")[value % 16];
+			*i = (upper ? "0123456789ABCDEF" : "0123456789abcdef")[static_cast<usz>(value & 0xf)];
 		}
 	};
 
-	const auto write_decimal = [&](u64 value, s64 min_size)
+	const auto write_decimal = [&](auto value, s64 min_size)
 	{
 		const usz start = out.size();
 
 		do
 		{
-			out.push_back(value % 10 + '0');
-			value /= 10;
+			if constexpr (sizeof(value) == 16)
+			{
+				const u128 v0 = value;
+				value >>= 1;
+				constexpr u128 by_five = 0x3333'3333'3333'3333;
+				const u128 v1 = (value >> 64) * by_five;
+				const u128 v2 = ((value >> 64) * by_five) >> 64;
+				const u128 v3 = (static_cast<u64>(value) * by_five) >> 64;
+				value = v1 + v2 + v3;
+
+				out.push_back(static_cast<char>(static_cast<u64>(v0 - (value * 10))) + '0');
+			}
+			else
+			{
+				out.push_back(value % 10 + '0');
+				value /= 10;
+			}
 		}
 		while (0 < --min_size || value);
 
@@ -369,7 +399,16 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 				out.push_back(' ');
 			}
 
-			write_decimal(negative ? 0 - val : val, ctx.prec);
+			if (ctx.type == 16)
+			{
+				// TODO: support negative values (s128)
+				u128 val2 = *reinterpret_cast<u128*>(val);
+				write_decimal(val2, ctx.prec);
+			}
+			else
+			{
+				write_decimal(negative ? 0 - val : val, ctx.prec);
+			}
 		}
 
 		const usz size2 = out.size() - start;
@@ -425,14 +464,23 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		{
 			out.push_back('0');
 
-			if (val)
+			if (ctx.prec)
 			{
-				write_octal(val, ctx.prec ? ctx.prec - 1 : 0);
+				ctx.prec--;
 			}
 		}
-		else if (!ctx.dot || ctx.prec)
+
+		if ((ctx.alter && val) || !ctx.dot || ctx.prec)
 		{
-			write_octal(val, ctx.prec);
+			if (ctx.type == 16)
+			{
+				u128 val2 = *reinterpret_cast<u128*>(val);
+				write_octal(val2, ctx.prec);
+			}
+			else
+			{
+				write_octal(val, ctx.prec);
+			}
 		}
 
 		const usz size2 = out.size() - start;
@@ -485,12 +533,20 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 			if (val)
 			{
 				out.push_back(ch); // Prepend 0x or 0X
-				write_hex(val, ch == 'X', ctx.prec);
 			}
 		}
-		else if (!ctx.dot || ctx.prec)
+
+		if ((ctx.alter && val) || !ctx.dot || ctx.prec)
 		{
-			write_hex(val, ch == 'X', ctx.prec);
+			if (ctx.type == 16)
+			{
+				u128 val2 = *reinterpret_cast<u128*>(val);
+				write_hex(val2, ch == 'X', ctx.prec);
+			}
+			else
+			{
+				write_hex(val, ch == 'X', ctx.prec);
+			}
 		}
 
 		const usz size2 = out.size() - start;
@@ -544,7 +600,15 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 		if (!ctx.dot || ctx.prec)
 		{
-			write_decimal(val, ctx.prec);
+			if (ctx.type == 16)
+			{
+				u128 val2 = *reinterpret_cast<u128*>(val);
+				write_decimal(val2, ctx.prec);
+			}
+			else
+			{
+				write_decimal(val, ctx.prec);
+			}
 		}
 
 		const usz size2 = out.size() - start;
