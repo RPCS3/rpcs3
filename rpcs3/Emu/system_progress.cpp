@@ -75,14 +75,17 @@ void progress_dialog_server::operator()()
 			dlg->type.se_normal          = true;
 			dlg->type.bg_invisible       = true;
 			dlg->type.progress_bar_count = 1;
-			dlg->on_close                = [](s32 /*status*/) {
-                Emu.CallAfter([]() {
-                    // Abort everything
-                    Emu.Stop();
-                });
+			dlg->on_close = [](s32 /*status*/)
+			{
+				Emu.CallAfter([]()
+				{
+					// Abort everything
+					Emu.Stop();
+				});
 			};
 
-			Emu.CallAfter([dlg, text0]() {
+			Emu.CallAfter([dlg, text0]()
+			{
 				dlg->Create(text0, text0);
 			});
 		}
@@ -146,7 +149,8 @@ void progress_dialog_server::operator()()
 				}
 				else if (dlg)
 				{
-					Emu.CallAfter([=]() {
+					Emu.CallAfter([=]()
+					{
 						dlg->SetMsg(text_new);
 						dlg->ProgressBarSetMsg(0, progr);
 						dlg->ProgressBarSetValue(0, std::floor(value));
@@ -172,7 +176,8 @@ void progress_dialog_server::operator()()
 		}
 		else if (dlg)
 		{
-			Emu.CallAfter([=]() {
+			Emu.CallAfter([=]()
+			{
 				dlg->Close(true);
 			});
 		}
