@@ -174,13 +174,13 @@ namespace rsx
 				m_dim_background->back_color.a = 0.5f;
 			}
 
-			std::vector<u8> icon;
 			std::vector<std::unique_ptr<overlay_element>> entries;
 
 			for (auto& entry : save_entries)
 			{
+				const std::string modification_time = date_time::fmt_time("%c", entry.mtime);
 				std::unique_ptr<overlay_element> e;
-				e = std::make_unique<save_dialog_entry>(entry.title, entry.subtitle, entry.details, image_resource_id::raw_image, entry.iconBuf);
+				e = std::make_unique<save_dialog_entry>(entry.subtitle, modification_time, entry.details, image_resource_id::raw_image, entry.iconBuf);
 				entries.emplace_back(std::move(e));
 			}
 
@@ -211,6 +211,7 @@ namespace rsx
 			{
 				const char* title = "Create New";
 
+				std::vector<u8> icon;
 				int id = resource_config::standard_image_resource::new_entry;
 
 				if (const auto picon = +listSet->newData->icon)
