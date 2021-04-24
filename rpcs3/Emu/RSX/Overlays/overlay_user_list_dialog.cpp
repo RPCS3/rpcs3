@@ -87,6 +87,9 @@ namespace rsx
 			switch (button_press)
 			{
 			case pad_button::cross:
+				if (m_list->m_items.empty())
+					break;
+
 				if (const usz index = static_cast<usz>(m_list->get_selected_index()); index < m_entry_ids.size())
 				{
 					return_code = static_cast<s32>(m_entry_ids[index]);
