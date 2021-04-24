@@ -16,6 +16,7 @@
 #include "Loader/PSF.h"
 #include "Utilities/StrUtil.h"
 #include "Utilities/span.h"
+#include "Utilities/date_time.h"
 
 #include <mutex>
 #include <algorithm>
@@ -51,6 +52,23 @@ void fmt_class_string<CellSaveDataError>::format(std::string& out, u64 arg)
 
 SaveDialogBase::~SaveDialogBase()
 {
+}
+
+std::string SaveDataEntry::date() const
+{
+	return date_time::fmt_time("%c", mtime);
+}
+
+std::string SaveDataEntry::data_size() const
+{
+	std::string metric = "KB";
+	u64 sz = utils::aligned_div(size, 1000);
+	if (sz > 1000)
+	{
+		metric = "MB";
+		sz = utils::aligned_div(sz, 1000);
+	}
+	return fmt::format("%lu %s", sz, metric);
 }
 
 // cellSaveData aliases (only for cellSaveData.cpp)
@@ -315,7 +333,7 @@ static error_code display_callback_result_error_message(ppu_thread& ppu, const C
 
 static std::string get_confirmation_message(u32 operation, const SaveDataEntry& entry)
 {
-	const std::string info = entry.title + "\n" + entry.subtitle + "\n" + entry.details;
+	const std::string info = fmt::format("%s\n%s\n%s\n%s\n\n%s", entry.title, entry.subtitle, entry.date(), entry.data_size(), entry.details);
 
 	if (operation == SAVEDATA_OP_LIST_DELETE || operation == SAVEDATA_OP_FIXED_DELETE)
 	{
