@@ -786,12 +786,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			return game_boot_result::no_errors;
 		}
 
-		// Check if path is inside the specified directory 
+		// Check if path is inside the specified directory
 		auto is_path_inside_path = [this](std::string_view path, std::string_view dir)
 		{
 			return (GetCallbacks().resolve_path(path) + '/').starts_with(GetCallbacks().resolve_path(dir) + '/');
 		};
-	
+
 		// Detect boot location
 		constexpr usz game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
@@ -1222,7 +1222,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 				sys_log.notice("Elf path: %s", argv[0]);
 			}
-			
+
 			if (!argv[0].starts_with("/dev_hdd0/game"sv) && m_cat == "HG"sv)
 			{
 				sys_log.error("Booting HG category outside of HDD0!");

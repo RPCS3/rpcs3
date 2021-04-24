@@ -388,6 +388,12 @@ namespace stx
 		return single_ptr<T>(*ptr, std::launder(arr));
 	}
 
+	template <typename T>
+	static single_ptr<std::remove_reference_t<T>> make_single_value(T&& value)
+	{
+		return make_single<std::remove_reference_t<T>>(std::forward<T>(value));
+	}
+
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
 #endif
@@ -657,6 +663,12 @@ namespace stx
 	static std::enable_if_t<std::is_unbounded_array_v<T>, shared_ptr<T>> make_shared(usz count) noexcept
 	{
 		return make_single<T, Init>(count);
+	}
+
+	template <typename T>
+	static shared_ptr<std::remove_reference_t<T>> make_shared_value(T&& value)
+	{
+		return make_single_value(std::forward<T>(value));
 	}
 
 	// Atomic simplified shared pointer
@@ -1263,3 +1275,5 @@ using stx::single_ptr;
 using stx::shared_ptr;
 using stx::atomic_ptr;
 using stx::make_single;
+using stx::make_single_value;
+using stx::make_shared_value;
