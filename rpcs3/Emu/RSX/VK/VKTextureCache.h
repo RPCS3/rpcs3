@@ -292,12 +292,6 @@ namespace vk
 					rsx_log.error("Unexpected swizzled texture format 0x%x", gcm_format);
 				}
 			}
-
-			if (context == rsx::texture_upload_context::framebuffer_storage)
-			{
-				// Update memory tag
-				static_cast<vk::render_target*>(vram_texture)->sync_tag();
-			}
 		}
 
 		void *map_synchronized(u32, u32)
@@ -318,6 +312,38 @@ namespace vk
 		{
 			ensure(!is_locked());
 			rsx_pitch = pitch;
+		}
+
+		void sync_surface_memory(const std::vector<cached_texture_section*>& surfaces)
+		{
+			auto rtt = vk::as_rtt(vram_texture);
+			rtt->sync_tag();
+
+			if (rtt->old_contents.empty()) [[likely]]
+			{
+				for (auto& surface : surfaces)
+				{
+					rtt->inherit_surface_contents(vk::as_rtt(surface->vram_texture));
+				}
+			}
+			else
+			{
+				for (auto& surface : surfaces)
+				{
+					const auto src_rtt = vk::as_rtt(surface->vram_texture);
+					if (std::any_of(rtt->old_contents.begin(), rtt->old_contents.end(),
+						[&src_rtt](const auto& region)
+						{
+							return (region.source == src_rtt);
+						}
+					))
+					{
+						continue;
+					}
+
+					rtt->inherit_surface_contents(src_rtt);
+				}
+			}
 		}
 
 		bool is_synchronized() const

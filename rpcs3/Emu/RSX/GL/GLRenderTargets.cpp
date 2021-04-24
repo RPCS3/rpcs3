@@ -484,12 +484,22 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 	const bool dst_is_depth = !!(aspect() & gl::image_aspect::depth);
 	const auto dst_bpp = get_bpp();
 	unsigned first = prepare_rw_barrier_for_transfer(this);
+	const bool accept_all = (last_use_tag && test());
 	u64 newest_tag = 0;
 
 	for (auto i = first; i < old_contents.size(); ++i)
 	{
 		auto &section = old_contents[i];
 		auto src_texture = gl::as_rtt(section.source);
+		src_texture->read_barrier(cmd);
+
+		if (!accept_all && !src_texture->test()) [[likely]]
+		{
+			// If this surface is intact, accept all incoming data as it is guaranteed to be safe
+			// If this surface has not been initialized or is dirty, do not add more dirty data to it
+			continue;
+		}
+
 		const auto src_bpp = src_texture->get_bpp();
 		rsx::typeless_xfer typeless_info{};
 
@@ -533,6 +543,16 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 			!dst_is_depth, typeless_info);
 
 		newest_tag = src_texture->last_use_tag;
+	}
+
+	if (!newest_tag) [[unlikely]]
+	{
+		// Underlying memory has been modified and we could not find valid data to fill it
+		clear_rw_barrier();
+
+		state_flags |= rsx::surface_state_flags::erase_bkgnd;
+		initialize_memory(cmd, read_access);
+		ensure(state_flags == rsx::surface_state_flags::ready);
 	}
 
 	// Memory has been transferred, discard old contents and update memory flags
