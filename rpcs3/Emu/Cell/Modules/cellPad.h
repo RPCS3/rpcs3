@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Io/pad_types.h"
+
 #include <array>
 
 enum CellPadError : u32
@@ -196,3 +198,7 @@ struct pad_info
 	atomic_t<u32> max_connect = 0;
 	std::array<u32, CELL_PAD_MAX_PORT_NUM> port_setting{ 0 };
 };
+
+error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data);
+error_code cellPadInit(u32 max_connect);
+error_code cellPadSetPortSetting(u32 port_no, u32 port_setting);
