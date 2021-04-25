@@ -109,7 +109,5 @@ freebsd_task:
     CCACHE_DIR: /tmp/ccache_dir
   ccache_cache:
     folder: /tmp/ccache_dir
-  packages_cache:
-    folder: /var/cache/pkg
   install_script: "sh -ex ./.ci/install-freebsd.sh"
   script: "./.ci/build-freebsd.sh"
