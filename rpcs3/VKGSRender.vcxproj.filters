@@ -65,6 +65,7 @@
     <ClCompile Include="Emu\RSX\VK\VKOverlays.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKCompute.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKAsyncScheduler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKRenderTargets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />

@@ -485,6 +485,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKProgramPipeline.cpp
         RSX/VK/VKQueryPool.cpp
         RSX/VK/VKRenderPass.cpp
+        RSX/VK/VKRenderTargets.cpp
         RSX/VK/VKResolveHelper.cpp
         RSX/VK/VKResourceManager.cpp
         RSX/VK/VKShaderInterpreter.cpp
