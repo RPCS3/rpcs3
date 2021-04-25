@@ -4,6 +4,7 @@
 #include "sys_process.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/timers.hpp"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -144,7 +145,43 @@ s32 sys_ss_get_open_psid(vm::ptr<CellSsOpenPSID> psid)
 
 error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 {
-	sys_ss.todo("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
+	sys_ss.warning("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
+
+	if (!buffer)
+	{
+		return CELL_EFAULT;
+	}
+
+	switch (code)
+	{
+	case 0x19002:
+	{
+		// AIM_get_device_type
+	}
+	case 0x19003:
+	{
+		// AIM_get_device_id
+		constexpr u8 idps[] = { 0x00, 0x00, 0x00, 0x01, 0x00, 0x89, 0x00, 0x0B, 0x14, 0x00, 0xEF, 0xDD, 0xCA, 0x25, 0x52, 0x66 };
+		std::memcpy(buffer.get_ptr(), idps, 16);
+		break;
+	}
+	case 0x19004:
+	{
+		// AIM_get_ps_code
+		constexpr u8 pscode[] = { 0x00, 0x01, 0x00, 0x85, 0x00, 0x07, 0x00, 0x04 };
+		std::memcpy(buffer.get_ptr(), pscode, 8);
+		break;
+	}
+	case 0x19005:
+	{
+		// AIM_get_open_ps_id
+	}
+	case 0x19006:
+	{
+		// qa values (dex only) ??
+	}
+	default: sys_ss.todo("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
+	}
 
 	return CELL_OK;
 }
@@ -153,19 +190,62 @@ error_code sys_ss_get_cache_of_product_mode(vm::ptr<u8> ptr)
 {
 	sys_ss.todo("sys_ss_get_cache_of_product_mode(ptr=*0x%x)", ptr);
 
+	s32 pid = 1;
+
+	if (!ptr)
+	{
+		return CELL_EINVAL;
+	}
+	// 0xff Happens when hypervisor call returns an error
+	// 0 - disabled
+	// 1 - enabled
+
+	// except something segfaults when using 0, so error it is!
+	*ptr = 0xFF;
+
 	return CELL_OK;
 }
 
 error_code sys_ss_secure_rtc(u64 cmd, u64 a2, u64 a3, u64 a4)
 {
-	sys_ss.todo("sys_ss_secure_rtc(cmd=0x%llx, a2=0x%x, a3=0x%x, a4=0x%x)", cmd, a2, a3, a4);
+	sys_ss.todo("sys_ss_secure_rtc(cmd=0x%llx, a2=0x%x, a3=0x%llx, a4=0x%llx)", cmd, a2, a3, a4);
+	if (cmd == 0x3001)
+	{
+		if (a3 != 0x20)
+			return 0x80010500; // bad packet id
 
-	return CELL_OK;
+		return CELL_OK;
+	}
+	else if (cmd == 0x3002)
+	{
+		// Get time
+		if (a2 > 1)
+			return 0x80010500; // bad packet id
+
+		// a3 is actual output, not 100% sure, but best guess is its tb val
+		vm::write64(a3, get_timebased_time());
+		// a4 is a pointer to status, non 0 on error
+		vm::write64(a4, 0);
+		return CELL_OK;
+	}
+	else if (cmd == 0x3003)
+	{
+		return CELL_OK;
+	}
+
+	return 0x80010500; // bad packet id
 }
 
 error_code sys_ss_get_cache_of_flash_ext_flag(vm::ptr<u64> flag)
 {
 	sys_ss.todo("sys_ss_get_cache_of_flash_ext_flag(flag=*0x%x)", flag);
+
+	if (!flag)
+	{
+		return CELL_EFAULT;
+	}
+
+	*flag = 0xFE; // nand vs nor from lsb
 
 	return CELL_OK;
 }
@@ -174,12 +254,59 @@ error_code sys_ss_get_boot_device(vm::ptr<u64> dev)
 {
 	sys_ss.todo("sys_ss_get_boot_device(dev=*0x%x)", dev);
 
+	if (!dev)
+	{
+		return CELL_EINVAL;
+	}
+
+	*dev = 0x190;
+
 	return CELL_OK;
 }
 
 error_code sys_ss_update_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 a6)
 {
-	sys_ss.todo("sys_ss_update_manager(pkg=0x%llx, a1=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x, a6=0x%x)", pkg_id, a1, a2, a3, a4, a5, a6);
+	sys_ss.todo("sys_ss_update_manager(pkg=0x%x, a1=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x, a6=0x%x)", pkg_id, a1, a2, a3, a4, a5, a6);
+
+	if (pkg_id == 0x600B)
+	{
+		// read eeprom
+		// a1 == offset
+		// a2 == *value
+		if (a1 == 0x48C06)
+		{
+			// fself ctrl?
+			vm::write8(a2, 0xFF);
+		}
+		else if (a1 == 0x48C42)
+		{
+			// hddcopymode
+			vm::write8(a2, 0xFF);
+		}
+		else if (a1 >= 0x48C1C && a1 <= 0x48C1F)
+		{
+			// vsh target? (seems it can be 0xFFFFFFFE, 0xFFFFFFFF, 0x00000001 default: 0x00000000 /maybe QA,Debug,Retail,Kiosk?)
+			vm::write8(a2, a1 == 0x48C1F ? 0x1 : 0);
+		}
+		else if (a1 >= 0x48C18 && a1 <= 0x48C1B)
+		{
+			// system language
+			// *i think* this gives english
+			vm::write8(a2, a1 == 0x48C1B ? 0x1 : 0);
+		}
+	}
+	else if (pkg_id == 0x600C)
+	{
+		// write eeprom
+	}
+	else if (pkg_id == 0x6009)
+	{
+		// get seed token
+	}
+	else if (pkg_id == 0x600A)
+	{
+		// set seed token
+	}
 
 	return CELL_OK;
 }
