@@ -1330,6 +1330,18 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 	switch (op)
 	{
+	case 0x80000004: // Unknown
+	{
+		if (_size > 4)
+		{
+			return CELL_EINVAL;
+		}
+
+		const auto arg = vm::static_ptr_cast<u32>(_arg);
+		*arg = 0;
+		break;
+	}
+
 	case 0x80000006: // cellFsAllocateFileAreaByFdWithInitialData
 	{
 		break;
@@ -2326,12 +2338,72 @@ error_code sys_fs_get_mount_info_size(ppu_thread&, vm::ptr<u64> len)
 {
 	sys_fs.todo("sys_fs_get_mount_info_size(len=*0x%x)", len);
 
+	if (!len)
+	{
+		return CELL_EFAULT;
+	}
+
+	*len = 0x7;
+
 	return CELL_OK;
 }
 
 error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u32 len, vm::ptr<u64> out_len)
 {
 	sys_fs.todo("sys_fs_get_mount_info(info=*0x%x, len=0x%x, out_len=*0x%x)", info, len, out_len);
+
+	if (!out_len)
+	{
+		return CELL_EFAULT;
+	}
+
+	// TODO there is a case where 'something' happens if info or len == 0
+	if (!info || len == 0)
+	{
+		sys_fs.todo("sys_fs_get_mount_info special case TODO");
+	}
+
+	// unsure what out_len represents, but we'll just set it to len
+	*out_len = len;
+
+	// most of the unk variables seem to always be zero
+	memset(info.get_ptr(), 0, sizeof(CellFsMountInfo) * len);
+
+	strcpy(info[0].mount_path, "/");
+	strcpy(info[0].filesystem, "CELL_FS_ADMINFS");
+	strcpy(info[0].dev_name, "CELL_FS_ADMINFS:");
+	info[0].unk5 = 0x10000000;
+
+	// these are CELL_FS_HOST when mounted 
+	strcpy(info[1].mount_path, "/app_home");
+	strcpy(info[1].filesystem, "CELL_FS_DUMMY");
+	strcpy(info[1].dev_name, "CELL_FS_DUMMY:");
+
+	strcpy(info[2].mount_path, "/host_root");
+	strcpy(info[2].filesystem, "CELL_FS_DUMMY");
+	strcpy(info[2].dev_name, "CELL_FS_DUMMY:/");
+
+	strcpy(info[3].mount_path, "/dev_flash");
+	strcpy(info[3].filesystem, "CELL_FS_FAT");
+	strcpy(info[3].dev_name, "CELL_FS_IOS:BUILTIN_FLSH1");
+	info[3].unk5 = 0x10000000;
+
+	strcpy(info[4].mount_path, "/dev_flash2");
+	strcpy(info[4].filesystem, "CELL_FS_FAT");
+	strcpy(info[4].dev_name, "CELL_FS_IOS:BUILTIN_FLSH2");
+
+	strcpy(info[5].mount_path, "/dev_flash3");
+	strcpy(info[5].filesystem, "CELL_FS_FAT");
+	strcpy(info[5].dev_name, "CELL_FS_IOS:BUILTIN_FLSH3");
+
+	strcpy(info[6].mount_path, "/dev_hdd0");
+	strcpy(info[6].filesystem, "CELL_FS_UFS");
+	strcpy(info[6].dev_name, "CELL_FS_UTILITY:HDD0");
+
+	/*
+		strcpy(info[6].mount_path, "/dev_bdvd");
+	strcpy(info[6].filesystem, "CELL_FS_ISO9660");
+	strcpy(info[6].dev_name, "CELL_FS_IOS:PATA0_BDVD_DRIVE");*/
 
 	return CELL_OK;
 }
