@@ -81,6 +81,9 @@ namespace vk
 		void change_layout(const command_buffer& cmd, VkImageLayout new_layout);
 		void change_layout(const command_buffer& cmd, VkImageLayout new_layout, u32 new_queue_family);
 
+		// Debug utils
+		void set_debug_name(const std::string& name);
+
 	private:
 		VkDevice m_device;
 	};
