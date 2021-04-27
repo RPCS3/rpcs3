@@ -927,6 +927,8 @@ namespace vk
 					rsx::texture_create_flags::default_component_order);
 
 			auto image = section->get_raw_texture();
+			image->set_debug_name(fmt::format("Raw Texture @0x%x", rsx_range.start));
+
 			vk::enter_uninterruptible();
 
 			bool input_swizzled = swizzled;

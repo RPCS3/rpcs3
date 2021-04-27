@@ -120,6 +120,7 @@ namespace rsx
 				usage_flags,
 				0, RSX_FORMAT_CLASS_COLOR);
 
+			rtt->set_debug_name(fmt::format("RTV @0x%x", address));
 			rtt->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 			rtt->set_format(format);
@@ -180,6 +181,7 @@ namespace rsx
 				usage_flags,
 				0, rsx::classify_format(format));
 
+			ds->set_debug_name(fmt::format("DSV @0x%x", address));
 			ds->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			ds->set_format(format);

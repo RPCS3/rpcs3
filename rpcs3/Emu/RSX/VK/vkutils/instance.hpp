@@ -159,6 +159,12 @@ namespace vk
 				{
 					extensions.push_back(VK_KHR_GET_SURFACE_CAPABILITIES_2_EXTENSION_NAME);
 				}
+
+				if (g_cfg.video.renderdoc_compatiblity && support.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME))
+				{
+					extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+				}
+
 #ifdef _WIN32
 				extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(__APPLE__)
