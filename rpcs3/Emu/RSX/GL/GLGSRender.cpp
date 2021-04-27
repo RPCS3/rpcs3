@@ -197,10 +197,10 @@ void GLGSRender::on_init_thread()
 	{
 		rsx_log.warning("Forcing use of legacy OpenGL buffers because ARB_buffer_storage is not supported");
 		// TODO: do not modify config options
-		g_cfg.video.gl_legacy_buffers.from_string("true");
+		g_cfg.video.renderdoc_compatiblity.from_string("true");
 	}
 
-	if (g_cfg.video.gl_legacy_buffers)
+	if (g_cfg.video.renderdoc_compatiblity)
 	{
 		rsx_log.warning("Using legacy openGL buffers.");
 		manually_flush_ring_buffers = true;
