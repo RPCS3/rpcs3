@@ -108,6 +108,8 @@ static int clock_gettime(int clk_id, struct timespec* tp)
 
 #ifndef _WIN32
 
+#include <sys/time.h>
+
 static struct timespec start_time = []()
 {
 	struct timespec ts;
@@ -117,6 +119,8 @@ static struct timespec start_time = []()
 		// Fatal error
 		std::terminate();
 	}
+
+	tzset();
 
 	return ts;
 }();
@@ -179,10 +183,67 @@ u64 get_guest_system_time()
 // Functions
 error_code sys_time_get_timezone(vm::ptr<s32> timezone, vm::ptr<s32> summertime)
 {
-	sys_time.warning("sys_time_get_timezone(timezone=*0x%x, summertime=*0x%x)", timezone, summertime);
+	sys_time.notice("sys_time_get_timezone(timezone=*0x%x, summertime=*0x%x)", timezone, summertime);
 
-	*timezone   = 180;
+#ifdef _WIN32
+	TIME_ZONE_INFORMATION tz{};
+	switch (GetTimeZoneInformation(&tz))
+	{
+	case TIME_ZONE_ID_UNKNOWN:
+	{
+		*timezone = -tz.Bias;
+		*summertime = 0;
+		break;
+	}
+	case TIME_ZONE_ID_STANDARD:
+	{
+		*timezone = -tz.Bias;
+		*summertime = -tz.StandardBias;
+
+		if (tz.StandardBias)
+		{
+			sys_time.error("Unexpected timezone bias (base=%d, std=%d, daylight=%d)", tz.Bias, tz.StandardBias, tz.DaylightBias);
+		}
+		break;
+	}
+	case TIME_ZONE_ID_DAYLIGHT:
+	{
+		*timezone = -tz.Bias;
+		*summertime = -tz.DaylightBias;
+		break;
+	}
+	default:
+	{
+		ensure(0);
+	}
+	}
+#elif __linux__
+	tzset();
+	*timezone = ::narrow<s32>(-::timezone / 60);
 	*summertime = 0;
+
+	if (::daylight)
+	{
+		struct tm test{};
+		ensure(&test == localtime_r(&start_time.tv_sec, &test));
+
+		// Check bounds [0,1]
+		if (test.tm_isdst & -2)
+		{
+			sys_time.error("No information for timezone DST bias (timezone=%.2fh, tm_gmtoff=%d)", -::timezone / 3600.0, test.tm_gmtoff);
+		}
+		else
+		{
+			*summertime = ::narrow<s32>(test.tm_isdst ? (test.tm_gmtoff + ::timezone) / 60 : 0);
+		}
+	}
+#else
+	struct timeval _tv{};
+	struct timezone tz{};
+	ensure(gettimeofday(&_tv, &tz) == 0);
+	*timezone = -tz.tz_minuteswest;
+	*summertime = tz.tz_dsttime ? 60 : 0; // TODO
+#endif
 
 	return CELL_OK;
 }
