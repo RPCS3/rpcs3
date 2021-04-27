@@ -660,9 +660,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	auto apply_renderer_specific_options = [=, this](const QString& text)
 	{
-		// OpenGL-only
-		ui->glLegacyBuffers->setEnabled(text == r_creator->OpenGL.name);
-
 		// Vulkan-only
 		ui->asyncTextureStreaming->setEnabled(text == r_creator->Vulkan.name);
 		ui->vulkansched->setEnabled(text == r_creator->Vulkan.name);
@@ -1741,8 +1738,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	//                            |___/
 
 	// Checkboxes: gpu debug options
-	m_emu_settings->EnhanceCheckBox(ui->glLegacyBuffers, emu_settings_type::LegacyBuffers);
-	SubscribeTooltip(ui->glLegacyBuffers, tooltips.settings.gl_legacy_buffers);
+	m_emu_settings->EnhanceCheckBox(ui->renderdocCompatibility, emu_settings_type::RenderdocCompatibility);
+	SubscribeTooltip(ui->renderdocCompatibility, tooltips.settings.renderdoc_compatibility);
 
 	m_emu_settings->EnhanceCheckBox(ui->forceHighpZ, emu_settings_type::ForceHighpZ);
 	SubscribeTooltip(ui->forceHighpZ, tooltips.settings.force_high_pz);

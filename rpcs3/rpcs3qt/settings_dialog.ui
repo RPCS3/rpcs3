@@ -39,7 +39,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>9</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -3471,12 +3471,12 @@
            </property>
            <layout class="QVBoxLayout" name="gb_debug_gpu_layout">
             <item alignment="Qt::AlignTop">
-             <widget class="QCheckBox" name="glLegacyBuffers">
+             <widget class="QCheckBox" name="renderdocCompatibility">
               <property name="enabled">
-               <bool>false</bool>
+               <bool>true</bool>
               </property>
               <property name="text">
-               <string>Use Legacy OpenGL Buffers</string>
+               <string>Renderdoc Compatibility Mode</string>
               </property>
              </widget>
             </item>
