@@ -138,7 +138,7 @@ bool cfg::try_to_uint64(u64* out, const std::string& value, u64 min, u64 max)
 
 bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, const std::string& value)
 {
-	u64 max = -1;
+	u64 max = umax;
 
 	for (u64 i = 0;; i++)
 	{

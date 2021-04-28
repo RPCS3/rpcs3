@@ -7,8 +7,6 @@
 #include <algorithm>
 #include "util/asm.hpp"
 
-static const usz size_dropped = -1;
-
 /*
 C-style format parser. Appends formatted string to `out`, returns number of characters written.
 `out`: mutable reference to std::string, std::vector<char> or other compatible container
@@ -43,7 +41,7 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 	const auto drop_sequence = [&]
 	{
 		out.insert(out.end(), fmt - ctx.size, fmt);
-		ctx.size = size_dropped;
+		ctx.size = umax;
 	};
 
 	const auto read_decimal = [&](uint result) -> uint
@@ -143,7 +141,7 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 		ctx = {0};
 		out.push_back(ch);
 	}
-	else if (ctx.size == size_dropped)
+	else if (ctx.size == umax)
 	{
 		out.push_back(ch);
 	}
@@ -694,7 +692,7 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 	}
 
 	// Handle unfinished sequence
-	if (ctx.size && ctx.size != size_dropped)
+	if (ctx.size && ctx.size != umax)
 	{
 		fmt--, drop_sequence();
 	}
