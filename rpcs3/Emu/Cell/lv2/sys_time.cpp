@@ -218,11 +218,8 @@ error_code sys_time_get_timezone(vm::ptr<s32> timezone, vm::ptr<s32> summertime)
 	}
 	}
 #elif __linux__
-	tzset();
-	*timezone = ::narrow<s32>(-::timezone / 60);
-	*summertime = 0;
-
-	if (::daylight)
+	*timezone = ::narrow<s16>(-::timezone / 60);
+	*summertime = !::daylight ? 0 : []() -> s32
 	{
 		struct tm test{};
 		ensure(&test == localtime_r(&start_time.tv_sec, &test));
@@ -231,18 +228,25 @@ error_code sys_time_get_timezone(vm::ptr<s32> timezone, vm::ptr<s32> summertime)
 		if (test.tm_isdst & -2)
 		{
 			sys_time.error("No information for timezone DST bias (timezone=%.2fh, tm_gmtoff=%d)", -::timezone / 3600.0, test.tm_gmtoff);
+			return 0;
 		}
 		else
 		{
-			*summertime = ::narrow<s32>(test.tm_isdst ? (test.tm_gmtoff + ::timezone) / 60 : 0);
+			return test.tm_isdst ? ::narrow<s16>((test.tm_gmtoff + ::timezone) / 60) : 0;
 		}
-	}
+	}();
 #else
-	struct timeval _tv{};
+	// gettimeofday doesn't return timezone on linux anymore, but this should work on other OSes?
 	struct timezone tz{};
-	ensure(gettimeofday(&_tv, &tz) == 0);
-	*timezone = -tz.tz_minuteswest;
-	*summertime = tz.tz_dsttime ? 60 : 0; // TODO
+	ensure(gettimeofday(nullptr, &tz) == 0);
+	*timezone = ::narrow<s16>(-tz.tz_minuteswest);
+	*summertime = !tz.tz_dsttime ? 0 : [&]() -> s32
+	{
+		struct tm test{};
+		ensure(&test == localtime_r(&start_time.tv_sec, &test));
+
+		return test.tm_isdst ? ::narrow<s16>(test.tm_gmtoff / 60 + tz.tz_minuteswest) : 0;
+	}();
 #endif
 
 	return CELL_OK;
