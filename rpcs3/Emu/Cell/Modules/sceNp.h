@@ -1,11 +1,52 @@
 #pragma once
 
-
-
 #include "cellRtc.h"
+#include "Emu/Cell/ErrorCodes.h"
+
+error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr);
+error_code sceNpTerm();
+
+using np_in_addr_t   = u32;
+using np_in_port_t   = u16;
+using np_sa_family_t = u8;
+using np_socklen_t   = u32;
+
+struct np_in_addr
+{
+	np_in_addr_t np_s_addr; // TODO: alignment?
+};
+
+using sys_memory_container_t = u32;
+
+using system_time_t = s64;
+using second_t = u32;
+using usecond_t = u64;
+
+using SceNpBasicAttachmentDataId = u32;
+using SceNpBasicMessageId = u64;
+using SceNpBasicMessageRecvAction = u32;
+
+using SceNpClanId = u32;
+using SceNpClansMessageId = u32;
+using SceNpClansMemberStatus = s32;
+
+using SceNpCustomMenuIndexMask = u32;
+using SceNpCustomMenuSelectedType = u32;
+
+using SceNpFriendlistCustomOptions = u64;
+
+using SceNpPlatformType = s32;
+
+using SceNpScoreBoardId = u32;
+using SceNpScoreClansBoardId = u32;
+using SceNpScorePcId = s32;
+using SceNpScoreRankNumber = u32;
+using SceNpScoreValue = s64;
+
+using SceNpTime = s64;
 
 // Error Codes
-enum
+enum SceNpError : u32
 {
 	// NP Manager Utility
 	SCE_NP_ERROR_NOT_INITIALIZED            = 0x8002aa01,
@@ -83,6 +124,30 @@ enum
 	SCE_NP_UTIL_ERROR_UNKNOWN_TYPE          = 0x8002ab0d,
 	SCE_NP_UTIL_ERROR_UNKNOWN               = 0x8002ab0e,
 	SCE_NP_UTIL_ERROR_NOT_MATCH             = 0x8002ab0f,
+	SCE_NP_UTIL_ERROR_UNKNOWN_PLATFORM_TYPE = 0x8002ab10,
+
+	// NP Friendlist Utility
+	SCE_NP_FRIENDLIST_ERROR_ALREADY_INITIALIZED      = 0x8002ab20,
+	SCE_NP_FRIENDLIST_ERROR_NOT_INITIALIZED          = 0x8002ab21,
+	SCE_NP_FRIENDLIST_ERROR_OUT_OF_MEMORY            = 0x8002ab22,
+	SCE_NP_FRIENDLIST_ERROR_INVALID_MEMORY_CONTAINER = 0x8002ab23,
+	SCE_NP_FRIENDLIST_ERROR_INSUFFICIENT             = 0x8002ab24,
+	SCE_NP_FRIENDLIST_ERROR_CANCEL                   = 0x8002ab25,
+	SCE_NP_FRIENDLIST_ERROR_STATUS                   = 0x8002ab26,
+	SCE_NP_FRIENDLIST_ERROR_BUSY                     = 0x8002ab27,
+	SCE_NP_FRIENDLIST_ERROR_INVALID_ARGUMENT         = 0x8002ab28,
+
+	// NP Profile Utility
+	SCE_NP_PROFILE_ERROR_ALREADY_INITIALIZED = 0x8002ab40,
+	SCE_NP_PROFILE_ERROR_NOT_INITIALIZED     = 0x8002ab41,
+	SCE_NP_PROFILE_ERROR_OUT_OF_MEMORY       = 0x8002ab42,
+	SCE_NP_PROFILE_ERROR_NOT_SUPPORTED       = 0x8002ab43,
+	SCE_NP_PROFILE_ERROR_INSUFFICIENT        = 0x8002ab44,
+	SCE_NP_PROFILE_ERROR_CANCEL              = 0x8002ab45,
+	SCE_NP_PROFILE_ERROR_STATUS              = 0x8002ab46,
+	SCE_NP_PROFILE_ERROR_BUSY                = 0x8002ab47,
+	SCE_NP_PROFILE_ERROR_INVALID_ARGUMENT    = 0x8002ab48,
+	SCE_NP_PROFILE_ERROR_ABORT               = 0x8002ab49,
 
 	// NP Community Utility
 	SCE_NP_COMMUNITY_ERROR_ALREADY_INITIALIZED          = 0x8002a101,
@@ -117,8 +182,65 @@ enum
 	SCE_NP_COMMUNITY_ERROR_INVALID_PARTITION            = 0x8002a1af,
 	SCE_NP_COMMUNITY_ERROR_TOO_MANY_SLOTID              = 0x8002a1b1,
 
+	// NP Community Server
+	SCE_NP_COMMUNITY_SERVER_ERROR_BAD_REQUEST                         = 0x8002a401,
+	SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_TICKET                      = 0x8002a402,
+	SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_SIGNATURE                   = 0x8002a403,
+	SCE_NP_COMMUNITY_SERVER_ERROR_EXPIRED_TICKET                      = 0x8002a404,
+	SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_NPID                        = 0x8002a405,
+	SCE_NP_COMMUNITY_SERVER_ERROR_FORBIDDEN                           = 0x8002a406,
+	SCE_NP_COMMUNITY_SERVER_ERROR_INTERNAL_SERVER_ERROR               = 0x8002a407,
+	SCE_NP_COMMUNITY_SERVER_ERROR_VERSION_NOT_SUPPORTED               = 0x8002a408,
+	SCE_NP_COMMUNITY_SERVER_ERROR_SERVICE_UNAVAILABLE                 = 0x8002a409,
+	SCE_NP_COMMUNITY_SERVER_ERROR_PLAYER_BANNED                       = 0x8002a40a,
+	SCE_NP_COMMUNITY_SERVER_ERROR_CENSORED                            = 0x8002a40b,
+	SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_RECORD_FORBIDDEN            = 0x8002a40c,
+	SCE_NP_COMMUNITY_SERVER_ERROR_USER_PROFILE_NOT_FOUND              = 0x8002a40d,
+	SCE_NP_COMMUNITY_SERVER_ERROR_UPLOADER_DATA_NOT_FOUND             = 0x8002a40e,
+	SCE_NP_COMMUNITY_SERVER_ERROR_QUOTA_MASTER_NOT_FOUND              = 0x8002a40f,
+	SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_TITLE_NOT_FOUND             = 0x8002a410,
+	SCE_NP_COMMUNITY_SERVER_ERROR_BLACKLISTED_USER_ID                 = 0x8002a411,
+	SCE_NP_COMMUNITY_SERVER_ERROR_GAME_RANKING_NOT_FOUND              = 0x8002a412,
+	SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_STORE_NOT_FOUND             = 0x8002a414,
+	SCE_NP_COMMUNITY_SERVER_ERROR_NOT_BEST_SCORE                      = 0x8002a415,
+	SCE_NP_COMMUNITY_SERVER_ERROR_LATEST_UPDATE_NOT_FOUND             = 0x8002a416,
+	SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_BOARD_MASTER_NOT_FOUND      = 0x8002a417,
+	SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_GAME_DATA_MASTER_NOT_FOUND  = 0x8002a418,
+	SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_ANTICHEAT_DATA              = 0x8002a419,
+	SCE_NP_COMMUNITY_SERVER_ERROR_TOO_LARGE_DATA                      = 0x8002a41a,
+	SCE_NP_COMMUNITY_SERVER_ERROR_NO_SUCH_USER_NPID                   = 0x8002a41b,
+	SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_ENVIRONMENT                 = 0x8002a41d,
+	SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_ONLINE_NAME_CHARACTER       = 0x8002a41f,
+	SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_ONLINE_NAME_LENGTH          = 0x8002a420,
+	SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_ABOUT_ME_CHARACTER          = 0x8002a421,
+	SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_ABOUT_ME_LENGTH             = 0x8002a422,
+	SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_SCORE                       = 0x8002a423,
+	SCE_NP_COMMUNITY_SERVER_ERROR_OVER_THE_RANKING_LIMIT              = 0x8002a424,
+	SCE_NP_COMMUNITY_SERVER_ERROR_FAIL_TO_CREATE_SIGNATURE            = 0x8002a426,
+	SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_MASTER_INFO_NOT_FOUND       = 0x8002a427,
+	SCE_NP_COMMUNITY_SERVER_ERROR_OVER_THE_GAME_DATA_LIMIT            = 0x8002a428,
+	SCE_NP_COMMUNITY_SERVER_ERROR_SELF_DATA_NOT_FOUND                 = 0x8002a42a,
+	SCE_NP_COMMUNITY_SERVER_ERROR_USER_NOT_ASSIGNED                   = 0x8002a42b,
+	SCE_NP_COMMUNITY_SERVER_ERROR_GAME_DATA_ALREADY_EXISTS            = 0x8002a42c,
+	SCE_NP_COMMUNITY_SERVER_ERROR_TOO_MANY_RESULTS                    = 0x8002a42d,
+	SCE_NP_COMMUNITY_SERVER_ERROR_NOT_RECORDABLE_VERSION              = 0x8002a42e,
+	SCE_NP_COMMUNITY_SERVER_ERROR_USER_STORAGE_TITLE_MASTER_NOT_FOUND = 0x8002a448,
+	SCE_NP_COMMUNITY_SERVER_ERROR_INVALID_VIRTUAL_USER                = 0x8002a449,
+	SCE_NP_COMMUNITY_SERVER_ERROR_USER_STORAGE_DATA_NOT_FOUND         = 0x8002a44a,
+	SCE_NP_COMMUNITY_SERVER_ERROR_CONDITIONS_NOT_SATISFIED            = 0x8002a473,
+	SCE_NP_COMMUNITY_SERVER_ERROR_MATCHING_BEFORE_SERVICE             = 0x8002a4a0,
+	SCE_NP_COMMUNITY_SERVER_ERROR_MATCHING_END_OF_SERVICE             = 0x8002a4a1,
+	SCE_NP_COMMUNITY_SERVER_ERROR_MATCHING_MAINTENANCE                = 0x8002a4a2,
+	SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_BEFORE_SERVICE              = 0x8002a4a3,
+	SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_END_OF_SERVICE              = 0x8002a4a4,
+	SCE_NP_COMMUNITY_SERVER_ERROR_RANKING_MAINTENANCE                 = 0x8002a4a5,
+	SCE_NP_COMMUNITY_SERVER_ERROR_NO_SUCH_TITLE                       = 0x8002a4a6,
+	SCE_NP_COMMUNITY_SERVER_ERROR_TITLE_USER_STORAGE_BEFORE_SERVICE   = 0x8002a4aa,
+	SCE_NP_COMMUNITY_SERVER_ERROR_TITLE_USER_STORAGE_END_OF_SERVICE   = 0x8002a4ab,
+	SCE_NP_COMMUNITY_SERVER_ERROR_TITLE_USER_STORAGE_MAINTENANCE      = 0x8002a4ac,
+	SCE_NP_COMMUNITY_SERVER_ERROR_UNSPECIFIED                         = 0x8002a4ff,
+
 	// DRM
-	SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND                  = 0x80029521,
 	SCE_NP_DRM_ERROR_OUT_OF_MEMORY                      = 0x80029501,
 	SCE_NP_DRM_ERROR_INVALID_PARAM                      = 0x80029502,
 	SCE_NP_DRM_ERROR_SERVER_RESPONSE                    = 0x80029509,
@@ -134,13 +256,276 @@ enum
 	SCE_NP_DRM_ERROR_DIFFERENT_DRM_TYPE                 = 0x8002951d,
 	SCE_NP_DRM_ERROR_SERVICE_NOT_STARTED                = 0x8002951e,
 	SCE_NP_DRM_ERROR_BUSY                               = 0x80029520,
+	SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND                  = 0x80029521,
 	SCE_NP_DRM_ERROR_IO                                 = 0x80029525,
 	SCE_NP_DRM_ERROR_FORMAT                             = 0x80029530,
 	SCE_NP_DRM_ERROR_FILENAME                           = 0x80029533,
 	SCE_NP_DRM_ERROR_K_LICENSEE                         = 0x80029534,
+
+	// DRM Server
+	SCE_NP_DRM_SERVER_ERROR_SERVICE_IS_END                 = 0x80029700,
+	SCE_NP_DRM_SERVER_ERROR_SERVICE_STOP_TEMPORARILY       = 0x80029701,
+	SCE_NP_DRM_SERVER_ERROR_SERVICE_IS_BUSY                = 0x80029702,
+	SCE_NP_DRM_SERVER_ERROR_INVALID_USER_CREDENTIAL        = 0x80029721,
+	SCE_NP_DRM_SERVER_ERROR_INVALID_PRODUCT_ID             = 0x80029722,
+	SCE_NP_DRM_SERVER_ERROR_ACCOUNT_IS_CLOSED              = 0x80029730,
+	SCE_NP_DRM_SERVER_ERROR_ACCOUNT_IS_SUSPENDED           = 0x80029731,
+	SCE_NP_DRM_SERVER_ERROR_ACTIVATED_CONSOLE_IS_FULL      = 0x80029750,
+	SCE_NP_DRM_SERVER_ERROR_CONSOLE_NOT_ACTIVATED          = 0x80029751,
+	SCE_NP_DRM_SERVER_ERROR_PRIMARY_CONSOLE_CANNOT_CHANGED = 0x80029752,
+	SCE_NP_DRM_SERVER_ERROR_UNKNOWN                        = 0x80029780,
+
+	// DRM Install
+	SCE_NP_DRM_INSTALL_ERROR_FORMAT      = 0x80029563,
+	SCE_NP_DRM_INSTALL_ERROR_CHECK       = 0x80029564,
+	SCE_NP_DRM_INSTALL_ERROR_UNSUPPORTED = 0x80029566,
+
+	// Game purchase processing
+	GAME_ERR_NOT_XMBBUY_CONTENT = 0x80028F81,
+
+	// Auth
+	SCE_NP_AUTH_EINVAL            = 0x8002a002,
+	SCE_NP_AUTH_ENOMEM            = 0x8002a004,
+	SCE_NP_AUTH_ESRCH             = 0x8002a005,
+	SCE_NP_AUTH_EBUSY             = 0x8002a00a,
+	SCE_NP_AUTH_EABORT            = 0x8002a00c,
+	SCE_NP_AUTH_EEXIST            = 0x8002a014,
+	SCE_NP_AUTH_EINVALID_ARGUMENT =	0x8002a015,
+
+	// Auth extended
+	SCE_NP_AUTH_ERROR_SERVICE_END             = 0x8002a200,
+	SCE_NP_AUTH_ERROR_SERVICE_DOWN            = 0x8002a201,
+	SCE_NP_AUTH_ERROR_SERVICE_BUSY            = 0x8002a202,
+	SCE_NP_AUTH_ERROR_SERVER_MAINTENANCE      = 0x8002a203,
+	SCE_NP_AUTH_ERROR_INVALID_DATA_LENGTH     = 0x8002a210,
+	SCE_NP_AUTH_ERROR_INVALID_USER_AGENT      = 0x8002a211,
+	SCE_NP_AUTH_ERROR_INVALID_VERSION         = 0x8002a212,
+	SCE_NP_AUTH_ERROR_INVALID_SERVICE_ID      = 0x8002a220,
+	SCE_NP_AUTH_ERROR_INVALID_CREDENTIAL      = 0x8002a221,
+	SCE_NP_AUTH_ERROR_INVALID_ENTITLEMENT_ID  = 0x8002a222,
+	SCE_NP_AUTH_ERROR_INVALID_CONSUMED_COUNT  = 0x8002a223,
+	SCE_NP_AUTH_ERROR_INVALID_CONSOLE_ID      = 0x8002a224,
+	SCE_NP_AUTH_ERROR_CONSOLE_ID_SUSPENDED    = 0x8002a227,
+	SCE_NP_AUTH_ERROR_ACCOUNT_CLOSED          = 0x8002a230,
+	SCE_NP_AUTH_ERROR_ACCOUNT_SUSPENDED       = 0x8002a231,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_EULA      = 0x8002a232,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT1  = 0x8002a240,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT2  = 0x8002a241,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT3  = 0x8002a242,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT4  = 0x8002a243,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT5  = 0x8002a244,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT6  = 0x8002a245,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT7  = 0x8002a246,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT8  = 0x8002a247,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT9  = 0x8002a248,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT10 = 0x8002a249,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT11 = 0x8002a24a,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT12 = 0x8002a24b,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT13 = 0x8002a24c,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT14 = 0x8002a24d,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT15 = 0x8002a24e,
+	SCE_NP_AUTH_ERROR_ACCOUNT_RENEW_ACCOUNT16 = 0x8002a24f,
+	SCE_NP_AUTH_ERROR_UNKNOWN                 = 0x8002a280,
+
+	// Core Utility
+	SCE_NP_CORE_UTIL_ERROR_INVALID_ARGUMENT    = 0x8002a501,
+	SCE_NP_CORE_UTIL_ERROR_OUT_OF_MEMORY       = 0x8002a502,
+	SCE_NP_CORE_UTIL_ERROR_INSUFFICIENT        = 0x8002a503,
+	SCE_NP_CORE_UTIL_ERROR_PARSER_FAILED       = 0x8002a504,
+	SCE_NP_CORE_UTIL_ERROR_INVALID_PROTOCOL_ID = 0x8002a505,
+	SCE_NP_CORE_UTIL_ERROR_INVALID_EXTENSION   = 0x8002a506,
+	SCE_NP_CORE_UTIL_ERROR_INVALID_TEXT        = 0x8002a507,
+	SCE_NP_CORE_UTIL_ERROR_UNKNOWN_TYPE        = 0x8002a508,
+	SCE_NP_CORE_UTIL_ERROR_UNKNOWN             = 0x8002a509,
+
+	// Core Parser
+	SCE_NP_CORE_PARSER_ERROR_NOT_INITIALIZED     = 0x8002a511,
+	SCE_NP_CORE_PARSER_ERROR_ALREADY_INITIALIZED = 0x8002a512,
+	SCE_NP_CORE_PARSER_ERROR_OUT_OF_MEMORY       = 0x8002a513,
+	SCE_NP_CORE_PARSER_ERROR_INSUFFICIENT        = 0x8002a514,
+	SCE_NP_CORE_PARSER_ERROR_INVALID_FORMAT      = 0x8002a515,
+	SCE_NP_CORE_PARSER_ERROR_INVALID_ARGUMENT    = 0x8002a516,
+	SCE_NP_CORE_PARSER_ERROR_INVALID_HANDLE      = 0x8002a517,
+	SCE_NP_CORE_PARSER_ERROR_INVALID_ICON        = 0x8002a518,
+	SCE_NP_CORE_PARSER_ERROR_UNKNOWN             = 0x8002a519,
+
+	// Core Errors
+	SCE_NP_CORE_ERROR_ALREADY_INITIALIZED       = 0x8002a521,
+	SCE_NP_CORE_ERROR_NOT_INITIALIZED           = 0x8002a522,
+	SCE_NP_CORE_ERROR_INVALID_ARGUMENT          = 0x8002a523,
+	SCE_NP_CORE_ERROR_OUT_OF_MEMORY             = 0x8002a524,
+	SCE_NP_CORE_ERROR_ID_NOT_AVAILABLE          = 0x8002a525,
+	SCE_NP_CORE_ERROR_USER_OFFLINE              = 0x8002a526,
+	SCE_NP_CORE_ERROR_SESSION_RUNNING           = 0x8002a527,
+	SCE_NP_CORE_ERROR_SESSION_NOT_ESTABLISHED   = 0x8002a528,
+	SCE_NP_CORE_ERROR_SESSION_INVALID_STATE     = 0x8002a529,
+	SCE_NP_CORE_ERROR_SESSION_ID_TOO_LONG       = 0x8002a52a,
+	SCE_NP_CORE_ERROR_SESSION_INVALID_NAMESPACE = 0x8002a52b,
+	SCE_NP_CORE_ERROR_CONNECTION_TIMEOUT        = 0x8002a52c,
+	SCE_NP_CORE_ERROR_GETSOCKOPT                = 0x8002a52d,
+	SCE_NP_CORE_ERROR_SSL_NOT_INITIALIZED       = 0x8002a52e,
+	SCE_NP_CORE_ERROR_SSL_ALREADY_INITIALIZED   = 0x8002a52f,
+	SCE_NP_CORE_ERROR_SSL_NO_CERT               = 0x8002a530,
+	SCE_NP_CORE_ERROR_SSL_NO_TRUSTWORTHY_CA     = 0x8002a531,
+	SCE_NP_CORE_ERROR_SSL_INVALID_CERT          = 0x8002a532,
+	SCE_NP_CORE_ERROR_SSL_CERT_VERIFY           = 0x8002a533,
+	SCE_NP_CORE_ERROR_SSL_CN_CHECK              = 0x8002a534,
+	SCE_NP_CORE_ERROR_SSL_HANDSHAKE_FAILED      = 0x8002a535,
+	SCE_NP_CORE_ERROR_SSL_SEND                  = 0x8002a536,
+	SCE_NP_CORE_ERROR_SSL_RECV                  = 0x8002a537,
+	SCE_NP_CORE_ERROR_SSL_CREATE_CTX            = 0x8002a538,
+	SCE_NP_CORE_ERROR_PARSE_PEM                 = 0x8002a539,
+	SCE_NP_CORE_ERROR_INVALID_INITIATE_STREAM   = 0x8002a53a,
+	SCE_NP_CORE_ERROR_SASL_NOT_SUPPORTED        = 0x8002a53b,
+	SCE_NP_CORE_ERROR_NAMESPACE_ALREADY_EXISTS  = 0x8002a53c,
+	SCE_NP_CORE_ERROR_FROM_ALREADY_EXISTS       = 0x8002a53d,
+	SCE_NP_CORE_ERROR_MODULE_NOT_REGISTERED     = 0x8002a53e,
+	SCE_NP_CORE_ERROR_MODULE_FROM_NOT_FOUND     = 0x8002a53f,
+	SCE_NP_CORE_ERROR_UNKNOWN_NAMESPACE         = 0x8002a540,
+	SCE_NP_CORE_ERROR_INVALID_VERSION           = 0x8002a541,
+	SCE_NP_CORE_ERROR_LOGIN_TIMEOUT             = 0x8002a542,
+	SCE_NP_CORE_ERROR_TOO_MANY_SESSIONS         = 0x8002a543,
+	SCE_NP_CORE_ERROR_SENDLIST_NOT_FOUND        = 0x8002a544,
+	SCE_NP_CORE_ERROR_NO_ID                     = 0x8002a545,
+	SCE_NP_CORE_ERROR_LOAD_CERTS                = 0x8002a546,
+	SCE_NP_CORE_ERROR_NET_SELECT                = 0x8002a547,
+	SCE_NP_CORE_ERROR_DISCONNECTED              = 0x8002a548,
+	SCE_NP_CORE_ERROR_TICKET_TOO_SMALL          = 0x8002a549,
+	SCE_NP_CORE_ERROR_INVALID_TICKET            = 0x8002a54a,
+	SCE_NP_CORE_ERROR_INVALID_ONLINEID          = 0x8002a54b,
+	SCE_NP_CORE_ERROR_GETHOSTBYNAME             = 0x8002a54c,
+	SCE_NP_CORE_ERROR_UNDEFINED_STREAM_ERROR    = 0x8002a54d,
+	SCE_NP_CORE_ERROR_INTERNAL                  = 0x8002a5ff,
+
+	// Core DNS
+	SCE_NP_CORE_ERROR_DNS_HOST_NOT_FOUND = 0x8002af01,
+	SCE_NP_CORE_ERROR_DNS_TRY_AGAIN      = 0x8002af02,
+	SCE_NP_CORE_ERROR_DNS_NO_RECOVERY    = 0x8002af03,
+	SCE_NP_CORE_ERROR_DNS_NO_DATA        = 0x8002af04,
+	SCE_NP_CORE_ERROR_DNS_NO_ADDRESS     = 0x8002afff,
+
+	// Core Server
+	SCE_NP_CORE_SERVER_ERROR_CONFLICT                   = 0x8002a303,
+	SCE_NP_CORE_SERVER_ERROR_NOT_AUTHORIZED             = 0x8002a30d,
+	SCE_NP_CORE_SERVER_ERROR_REMOTE_CONNECTION_FAILED   = 0x8002a30f,
+	SCE_NP_CORE_SERVER_ERROR_RESOURCE_CONSTRAINT        = 0x8002a310,
+	SCE_NP_CORE_SERVER_ERROR_SYSTEM_SHUTDOWN            = 0x8002a313,
+	SCE_NP_CORE_SERVER_ERROR_UNSUPPORTED_CLIENT_VERSION = 0x8002a319,
+
+	// Signaling
+	SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED       = 0x8002a801,
+	SCE_NP_SIGNALING_ERROR_ALREADY_INITIALIZED   = 0x8002a802,
+	SCE_NP_SIGNALING_ERROR_OUT_OF_MEMORY         = 0x8002a803,
+	SCE_NP_SIGNALING_ERROR_CTXID_NOT_AVAILABLE   = 0x8002a804,
+	SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND         = 0x8002a805,
+	SCE_NP_SIGNALING_ERROR_REQID_NOT_AVAILABLE   = 0x8002a806,
+	SCE_NP_SIGNALING_ERROR_REQ_NOT_FOUND         = 0x8002a807,
+	SCE_NP_SIGNALING_ERROR_PARSER_CREATE_FAILED  = 0x8002a808,
+	SCE_NP_SIGNALING_ERROR_PARSER_FAILED         = 0x8002a809,
+	SCE_NP_SIGNALING_ERROR_INVALID_NAMESPACE     = 0x8002a80a,
+	SCE_NP_SIGNALING_ERROR_NETINFO_NOT_AVAILABLE = 0x8002a80b,
+	SCE_NP_SIGNALING_ERROR_PEER_NOT_RESPONDING   = 0x8002a80c,
+	SCE_NP_SIGNALING_ERROR_CONNID_NOT_AVAILABLE  = 0x8002a80d,
+	SCE_NP_SIGNALING_ERROR_CONN_NOT_FOUND        = 0x8002a80e,
+	SCE_NP_SIGNALING_ERROR_PEER_UNREACHABLE      = 0x8002a80f,
+	SCE_NP_SIGNALING_ERROR_TERMINATED_BY_PEER    = 0x8002a810,
+	SCE_NP_SIGNALING_ERROR_TIMEOUT               = 0x8002a811,
+	SCE_NP_SIGNALING_ERROR_CTX_MAX               = 0x8002a812,
+	SCE_NP_SIGNALING_ERROR_RESULT_NOT_FOUND      = 0x8002a813,
+	SCE_NP_SIGNALING_ERROR_CONN_IN_PROGRESS      = 0x8002a814,
+	SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT      = 0x8002a815,
+	SCE_NP_SIGNALING_ERROR_OWN_NP_ID             = 0x8002a816,
+	SCE_NP_SIGNALING_ERROR_TOO_MANY_CONN         = 0x8002a817,
+	SCE_NP_SIGNALING_ERROR_TERMINATED_BY_MYSELF  = 0x8002a818,
+
+	// Custom Menu
+	SCE_NP_CUSTOM_MENU_ERROR_ALREADY_INITIALIZED = 0x80023b01,
+	SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED     = 0x80023b02,
+	SCE_NP_CUSTOM_MENU_ERROR_OUT_OF_MEMORY       = 0x80023b03,
+	SCE_NP_CUSTOM_MENU_ERROR_NOT_SUPPORTED       = 0x80023b04,
+	SCE_NP_CUSTOM_MENU_ERROR_INSUFFICIENT        = 0x80023b05,
+	SCE_NP_CUSTOM_MENU_ERROR_CANCEL              = 0x80023b06,
+	SCE_NP_CUSTOM_MENU_ERROR_STATUS              = 0x80023b07,
+	SCE_NP_CUSTOM_MENU_ERROR_BUSY                = 0x80023b08,
+	SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT    = 0x80023b09,
+	SCE_NP_CUSTOM_MENU_ERROR_ABORT               = 0x80023b0a,
+	SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED      = 0x80023b0b,
+	SCE_NP_CUSTOM_MENU_ERROR_EXCEEDS_MAX         = 0x80023b0c,
+	SCE_NP_CUSTOM_MENU_ERROR_INVALID_CHARACTER   = 0x80023b0d,
 };
 
-using SceNpBasicEventHandler = s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg);
+// Basic presence options
+enum
+{
+	SCE_NP_BASIC_PRESENCE_OPTIONS_SET_DATA    = 0x00000001,
+	SCE_NP_BASIC_PRESENCE_OPTIONS_SET_STATUS  = 0x00000002,
+	SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS = 0x00000003, // sum of all other options
+};
+
+// Basic presence states
+enum
+{
+	SCE_NP_BASIC_PRESENCE_STATE_OFFLINE        = 0,
+	SCE_NP_BASIC_PRESENCE_STATE_OUT_OF_CONTEXT = 1,
+	SCE_NP_BASIC_PRESENCE_STATE_IN_CONTEXT     = 2
+};
+
+// Basic player options
+enum
+{
+	SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_BY_NP_COMM_ID = 0,
+	SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_ALL           = 1
+};
+
+// Custom menu selection types
+enum : SceNpCustomMenuSelectedType
+{
+	SCE_NP_CUSTOM_MENU_SELECTED_TYPE_ME     = 1,
+	SCE_NP_CUSTOM_MENU_SELECTED_TYPE_FRIEND = 2,
+	SCE_NP_CUSTOM_MENU_SELECTED_TYPE_PLAYER = 3,
+};
+
+// Custom menu action masks
+enum SceNpCustomMenuActionMask : u32
+{
+	SCE_NP_CUSTOM_MENU_ACTION_MASK_ME     = 0x00000001,
+	SCE_NP_CUSTOM_MENU_ACTION_MASK_FRIEND = 0x00000002,
+	SCE_NP_CUSTOM_MENU_ACTION_MASK_PLAYER = 0x00000004,
+	SCE_NP_CUSTOM_MENU_ACTION_MASK_ALL    = 0x00000007 // sum of all other masks
+};
+
+// Custom menu index mask
+enum
+{
+	SCE_NP_CUSTOM_MENU_INDEX_BITS       = (sizeof(SceNpCustomMenuIndexMask) * 8),
+	SCE_NP_CUSTOM_MENU_INDEX_BITS_ALL   = (static_cast<SceNpCustomMenuIndexMask>(-1)),
+	SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT = 5,
+	SCE_NP_CUSTOM_MENU_INDEX_BITS_MASK  = (SCE_NP_CUSTOM_MENU_INDEX_BITS - 1),
+	SCE_NP_CUSTOM_MENU_INDEX_BITS_MAX   = 127,
+	SCE_NP_CUSTOM_MENU_INDEX_SETSIZE    = 128,
+};
+
+#define SCE_NP_CUSTOM_MENU_INDEX_SET(n, p) ((p)->index_bits[(n) >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT] |= (1 << ((n) & SCE_NP_CUSTOM_MENU_INDEX_BITS_MASK)))
+#define SCE_NP_CUSTOM_MENU_INDEX_CLR(n, p) ((p)->index_bits[(n) >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT] &= ~(1 << ((n) & SCE_NP_CUSTOM_MENU_INDEX_BITS_MASK)))
+#define SCE_NP_CUSTOM_MENU_INDEX_ISSET(n, p) ((p)->index_bits[(n) >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT] & (1 << ((n) & SCE_NP_CUSTOM_MENU_INDEX_BITS_MASK)))
+#define SCE_NP_CUSTOM_MENU_INDEX_ZERO(p) ( for (u32 i = 0; i < (SCE_NP_CUSTOM_MENU_INDEX_SETSIZE >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT); i++) p->index_bits[i] = 0; )
+#define SCE_NP_CUSTOM_MENU_INDEX_SET_ALL(p) ( for (u32 i = 0; i < (SCE_NP_CUSTOM_MENU_INDEX_SETSIZE >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT); i++) p->index_bits[i] = SCE_NP_CUSTOM_MENU_INDEX_BITS_ALL; )
+
+enum
+{
+	SCE_NP_MIN_POOLSIZE = 128 * 1024
+};
+
+enum
+{
+	SCE_NP_DRM_OPEN_FLAG = 2,
+};
+
+enum : u64
+{
+	SCE_NP_DRM_EXITSPAWN2_EXIT_WO_FINI = 0x4000000000000000ULL,
+	SCE_NP_DRM_TIME_INFO_ENDLESS       = 0x7FFFFFFFFFFFFFFFULL
+};
 
 // NP Manager Utility statuses
 enum
@@ -151,6 +536,8 @@ enum
 	SCE_NP_MANAGER_STATUS_LOGGING_IN      = 2,
 	SCE_NP_MANAGER_STATUS_ONLINE          = 3,
 };
+
+#define SCE_NP_MANAGER_EVENT_GOT_TICKET 255
 
 // Event types
 enum
@@ -185,9 +572,10 @@ enum
 };
 
 // IDs for attachment data objects
-enum
+enum : SceNpBasicAttachmentDataId
 {
 	SCE_NP_BASIC_INVALID_ATTACHMENT_DATA_ID = 0,
+	SCE_NP_BASIC_INVALID_MESSAGE_ID			= 0,
 	SCE_NP_BASIC_SELECTED_INVITATION_DATA   = 1,
 	SCE_NP_BASIC_SELECTED_MESSAGE_DATA      = 2,
 };
@@ -202,7 +590,7 @@ enum
 };
 
 // Main types of messages
-enum
+enum SceNpBasicMessageMainType : u16
 {
 	SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT = 0,
 	SCE_NP_BASIC_MESSAGE_MAIN_TYPE_GENERAL         = 1,
@@ -213,7 +601,7 @@ enum
 };
 
 // Sub types of messages
-enum
+enum SceNpBasicMessageSubType : u16
 {
 	SCE_NP_BASIC_MESSAGE_DATA_ATTACHMENT_SUBTYPE_ACTION_USE = 0,
 	SCE_NP_BASIC_MESSAGE_GENERAL_SUBTYPE_NONE               = 0,
@@ -225,15 +613,21 @@ enum
 };
 
 // Applicable features of messages
-enum
+#define SCE_NP_BASIC_MESSAGE_FEATURES_EXP_MIN(min) (((static_cast<u32>(min) << 16) | (0 << 15)) & 0xFFFF8000)
+enum SceNpBasicMessageFeatures : u32
 {
 	SCE_NP_BASIC_MESSAGE_FEATURES_MULTI_RECEIPIENTS = 0x00000001,
 	SCE_NP_BASIC_MESSAGE_FEATURES_BOOTABLE          = 0x00000002,
 	SCE_NP_BASIC_MESSAGE_FEATURES_ASSUME_SEND       = 0x00000004,
+	SCE_NP_BASIC_MESSAGE_FEATURES_ALL_FEATURES      =
+		SCE_NP_BASIC_MESSAGE_FEATURES_MULTI_RECEIPIENTS |
+		SCE_NP_BASIC_MESSAGE_FEATURES_BOOTABLE |
+		SCE_NP_BASIC_MESSAGE_FEATURES_ASSUME_SEND |
+		SCE_NP_BASIC_MESSAGE_FEATURES_EXP_MIN(0xffff)
 };
 
 // Types of messages
-enum
+enum SceNpBasicMessageInfoType : u32
 {
 	SCE_NP_BASIC_MESSAGE_INFO_TYPE_MESSAGE_ATTACHMENT           = 0,
 	SCE_NP_BASIC_MESSAGE_INFO_TYPE_MATCHING_INVITATION          = 1,
@@ -307,6 +701,15 @@ enum
 	SCE_NP_SIGNALING_NETINFO_NPPORT_STATUS_OPEN   = 1,
 };
 
+// NP Receive message options
+enum SceNpBasicMessageRecvOptions : u32
+{
+	SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE         = 0x00000001,
+	SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_INCLUDE_BOOTABLE = 0x00000002,
+	SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_ASSUME_LATEST    = 0x00000004,
+	SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_ALL_OPTIONS      = 0x00000007 // sum of all other options
+};
+
 // Constants for common NP functions and structures
 enum
 {
@@ -323,6 +726,13 @@ enum
 	SCE_NET_NP_COMMUNICATION_PASSPHRASE_SIZE = 128,
 	SCE_NP_COMMUNICATION_SIGNATURE_SIZE      = 160,
 	SCE_NP_COMMUNICATION_PASSPHRASE_SIZE     = SCE_NET_NP_COMMUNICATION_PASSPHRASE_SIZE,
+};
+
+enum SceNpAvatarSizeType
+{
+	SCE_NP_AVATAR_SIZE_LARGE,
+	SCE_NP_AVATAR_SIZE_MIDDLE,
+	SCE_NP_AVATAR_SIZE_SMALL
 };
 
 // Constants for basic NP functions and structures
@@ -357,10 +767,10 @@ enum
 // Constants for custom menu functions and structures
 enum
 {
-	SCE_NP_CUSTOM_MENU_ACTION_CHARACTER_MAX = 21,
-	SCE_NP_CUSTOM_MENU_ACTION_ITEMS_MAX = 7,
+	SCE_NP_CUSTOM_MENU_ACTION_CHARACTER_MAX   = 21,
+	SCE_NP_CUSTOM_MENU_ACTION_ITEMS_MAX       = 7,
 	SCE_NP_CUSTOM_MENU_ACTION_ITEMS_TOTAL_MAX = 16,
-	SCE_NP_CUSTOM_MENU_EXCEPTION_ITEMS_MAX = 256,
+	SCE_NP_CUSTOM_MENU_EXCEPTION_ITEMS_MAX    = 256,
 };
 
 // Constants for manager functions and structures
@@ -375,14 +785,30 @@ enum
 // Constants for ranking (score) functions and structures
 enum
 {
-	SCE_NP_SCORE_COMMENT_MAXLEN          = 63,
-	SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN   = 255,
-	SCE_NP_SCORE_SANITIZE_COMMENT_MAXLEN = 255,
-	SCE_NP_SCORE_GAMEINFO_SIZE           = 64,
-	SCE_NP_SCORE_MAX_CTX_NUM             = 32,
-	SCE_NP_SCORE_MAX_RANGE_NUM_PER_TRANS = 100,
-	SCE_NP_SCORE_MAX_NPID_NUM_PER_TRANS  = 101,
-	SCE_NP_SCORE_MAX_CLAN_NUM_PER_TRANS  = 101,
+	SCE_NP_SCORE_MAX_CTX_NUM                    = 32,
+	SCE_NP_SCORE_COMMENT_MAXLEN                 = 63,
+	SCE_NP_SCORE_GAMEDATA_ID_LEN                = 63,
+	SCE_NP_SCORE_GAMEINFO_SIZE                  = 64,
+	SCE_NP_SCORE_PASSPHRASE_SIZE                = 128,
+	SCE_NP_SCORE_CENSOR_COMMENT_MAXLEN          = 255,
+	SCE_NP_SCORE_SANITIZE_COMMENT_MAXLEN        = 255,
+	SCE_NP_SCORE_MAX_RANGE_NUM_PER_TRANS        = 100,
+	SCE_NP_SCORE_MAX_NPID_NUM_PER_TRANS         = 101,
+	SCE_NP_SCORE_MAX_CLAN_NUM_PER_TRANS         = 101,
+	SCE_NP_SCORE_MAX_SELECTED_FRIENDS_NUM       = 100,
+	SCE_NP_SCORE_VARIABLE_SIZE_GAMEINFO_MAXSIZE = 189,
+};
+
+enum
+{
+	SCE_NP_SCORE_NORMAL_UPDATE = 0,
+	SCE_NP_SCORE_FORCE_UPDATE = 1
+};
+
+enum
+{
+	SCE_NP_SCORE_DESCENDING_ORDER = 0,
+	SCE_NP_SCORE_ASCENDING_ORDER = 1
 };
 
 // Constants for signaling functions and structures
@@ -391,11 +817,43 @@ enum
 	SCE_NP_SIGNALING_CTX_MAX = 8,
 };
 
+enum : SceNpPlatformType
+{
+	SCE_NP_PLATFORM_TYPE_NONE = 0,
+	SCE_NP_PLATFORM_TYPE_PS3  = 1,
+	SCE_NP_PLATFORM_TYPE_VITA = 2,
+	SCE_NP_PLATFORM_TYPE_PS4 = 3, // Note: unknown on which fw versions it appears, but sdk version is unchecked
+};
+
+enum
+{
+	SCE_NP_MATCHING_GUI_EVENT_CREATE_ROOM         = 0x0001,
+	SCE_NP_MATCHING_GUI_EVENT_JOIN_ROOM           = 0x0002,
+	SCE_NP_MATCHING_GUI_EVENT_RESERVED2           = 0x0003,
+	SCE_NP_MATCHING_GUI_EVENT_SEARCH_JOIN         = 0x0004,
+	SCE_NP_MATCHING_GUI_EVENT_QUICK_MATCH         = 0x0005,
+	SCE_NP_MATCHING_GUI_EVENT_SEND_INVITATION     = 0x0006,
+	SCE_NP_MATCHING_GUI_EVENT_ACCEPT_INVITATION   = 0x0007,
+	SCE_NP_MATCHING_GUI_EVENT_COMMON_LOAD         = 0x0008,
+	SCE_NP_MATCHING_GUI_EVENT_COMMON_UNLOAD       = 0x0009,
+	SCE_NP_MATCHING_GUI_EVENT_RESERVED3           = 0x000a,
+	SCE_NP_MATCHING_GUI_EVENT_GET_ROOM_LIST_LIMIT = 0x000b
+};
+
+struct SceNpDrmKey
+{
+	u8 keydata[16];
+};
+
+struct SceNpDrmOpenArg
+{
+	be_t<u64> flag;
+};
+
 // NP communication ID structure
 struct SceNpCommunicationId
 {
-	char data[9];
-	char term;
+	char data[9 + 1]; // char term;
 	u8 num;
 	char dummy;
 };
@@ -403,8 +861,7 @@ struct SceNpCommunicationId
 // OnlineId structure
 struct SceNpOnlineId
 {
-	char data[16];
-	char term;
+	char data[16 + 1]; // char term;
 	char dummy[3];
 };
 
@@ -412,23 +869,31 @@ struct SceNpOnlineId
 struct SceNpId
 {
 	SceNpOnlineId handle;
-	u8 opt[8];
+
+	union
+	{
+		// This field (system reserved) seems to be combined of two parts
+		// The second is used by sceNpUtilSetPlatformType and sceNpUtilGetPlatformType
+		u8 opt[8];
+		nse_t<u32, 1> unk1[2];
+	};
+
 	u8 reserved[8];
 };
+
+CHECK_SIZE_ALIGN(SceNpId, 0x24, 1);
 
 // Online Name structure
 struct SceNpOnlineName
 {
-	char data[48];
-	char term;
+	char data[48 + 1]; // char term;
 	char padding[3];
 };
 
 // Avatar structure
 struct SceNpAvatarUrl
 {
-	char data[127];
-	char term;
+	char data[127 + 1]; // char term;
 };
 
 // Avatar image structure
@@ -442,8 +907,7 @@ struct SceNpAvatarImage
 // Self introduction structure
 struct SceNpAboutMe
 {
-	char data[SCE_NET_NP_ABOUT_ME_MAX_LENGTH];
-	char term;
+	char data[SCE_NET_NP_ABOUT_ME_MAX_LENGTH + 1]; // char term;
 };
 
 // User information structure
@@ -508,7 +972,7 @@ struct SceNpBasicExtendedAttachmentData
 	SceNpBasicAttachmentData data;
 	be_t<u32> userAction;
 	b8 markedAsUsed;
-	//be_t<u8> reserved[3];
+	u8 reserved[3];
 };
 
 // Message structure
@@ -572,7 +1036,7 @@ struct SceNpEntitlementId
 };
 
 // Callback for getting the connection status
-using SceNpManagerCallback = void(s32 event, s32 result, u32 arg_addr);
+using SceNpManagerCallback = void(s32 event, s32 result, vm::ptr<void> arg);
 
 // Score data unique to the application
 struct SceNpScoreGameInfo
@@ -676,10 +1140,11 @@ union SceNpSignalingConnectionInfo
 	be_t<u32> rtt;
 	be_t<u32> bandwidth;
 	SceNpId npId;
-	struct address {
-		be_t<u32> addr; // in_addr
-		be_t<u16> port; // in_port_t
-	};
+	struct
+	{
+		np_in_addr addr; // in_addr
+		np_in_port_t port; // in_port_t
+	} address;
 	be_t<u32> packet_loss;
 };
 
@@ -695,5 +1160,162 @@ struct SceNpSignalingNetInfo
 	be_t<u16> npport;
 };
 
-// NP signaling callback function
-typedef void(*SceNpSignalingHandler)(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, u32 arg_addr);
+struct SceNpCustomMenuAction
+{
+	be_t<u32> options;
+	char name[SCE_NP_CUSTOM_MENU_ACTION_CHARACTER_MAX];
+	be_t<SceNpCustomMenuActionMask> mask;
+};
+
+struct SceNpCustomMenu
+{
+	be_t<u64> options;
+	vm::bptr<SceNpCustomMenuAction> actions;
+	be_t<u32> numActions;
+};
+
+struct SceNpCustomMenuIndexArray
+{
+	be_t<SceNpCustomMenuIndexMask> index_bits[SCE_NP_CUSTOM_MENU_INDEX_SETSIZE >> SCE_NP_CUSTOM_MENU_INDEX_BITS_SHIFT];
+};
+
+struct SceNpCustomMenuActionExceptions
+{
+	be_t<u32> options;
+	SceNpId npid;
+	SceNpCustomMenuIndexArray actions;
+	u8 reserved[4];
+};
+
+struct SceNpCommerceProductCategory
+{
+	be_t<u32> version;
+	vm::bcptr<void> data;
+	be_t<u64> dataSize;
+	be_t<u32> dval;
+	u8 reserved[16];
+};
+
+struct SceNpCommerceProductSkuInfo
+{
+	vm::bptr<SceNpCommerceProductCategory> pc;
+	vm::bcptr<void> data;
+	u8 reserved[8];
+};
+
+struct SceNpCommerceCategoryInfo
+{
+	vm::bptr<SceNpCommerceProductCategory> pc;
+	vm::bcptr<void> data;
+	u8 reserved[8];
+};
+
+struct SceNpCommerceCurrencyInfo
+{
+	vm::bptr<SceNpCommerceProductCategory> pc;
+	vm::bcptr<void> data;
+	u8 reserved[8];
+};
+
+struct SceNpCommercePrice
+{
+	be_t<u32> integer;
+	be_t<u32> fractional;
+};
+
+struct SceNpTicketVersion
+{
+	be_t<u16> major;
+	be_t<u16> minor;
+};
+
+union SceNpTicketParam
+{
+	be_t<s32> i32;
+	be_t<s64> i64;
+	be_t<u32> ui32;
+	be_t<u64> ui64;
+	SceNpDate date;
+	u8 data[SCE_NP_TICKET_PARAM_DATA_LEN];
+};
+
+struct SceNpEntitlement
+{
+	SceNpEntitlementId id;
+	be_t<SceNpTime> created_date;
+	be_t<SceNpTime> expire_date;
+	be_t<u32> type;
+	be_t<s32> remaining_count;
+	be_t<u32> consumed_count;
+	u8 padding[4];
+};
+
+struct SceNpLobbyId
+{
+	u8 opt[28];
+	u8 reserved[8];
+};
+
+struct SceNpRoomId
+{
+	u8 opt[28];
+	u8 reserved[8];
+};
+
+struct SceNpMatchingAttr
+{
+	vm::bptr<SceNpMatchingAttr> next;
+	be_t<s32> type;
+	be_t<u32> id;
+	union
+	{
+		be_t<u32> num;
+		struct
+		{
+			vm::bptr<void> ptr;
+			be_t<u64> size;
+		} data;
+	} value;
+};
+
+struct SceNpMatchingSearchCondition
+{
+	vm::bptr<SceNpMatchingSearchCondition> next;
+	be_t<s32> target_attr_type;
+	be_t<u32> target_attr_id;
+	be_t<s32> comp_op;
+	be_t<s32> comp_type;
+	SceNpMatchingAttr compared;
+};
+
+struct SceNpMatchingReqRange
+{
+	be_t<u32> start;
+	be_t<u32> max;
+};
+
+struct SceNpScoreVariableSizeGameInfo
+{
+	be_t<u64> infoSize;
+	u8 data[SCE_NP_SCORE_VARIABLE_SIZE_GAMEINFO_MAXSIZE];
+	u8 pad[3];
+};
+
+struct SceNpScoreRecordOptParam
+{
+	be_t<u64> size;
+	vm::bptr<SceNpScoreVariableSizeGameInfo> vsInfo;
+	vm::bptr<CellRtcTick> reserved;
+};
+
+// NP callback functions
+using SceNpCustomMenuEventHandler = s32(s32 retCode, u32 index, vm::cptr<SceNpId> npid, SceNpCustomMenuSelectedType type, vm::ptr<void> arg);
+using SceNpBasicEventHandler = s32(s32 event, s32 retCode, u32 reqId, vm::ptr<void> arg);
+using SceNpCommerceHandler = void(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, vm::ptr<void> arg);
+using SceNpSignalingHandler = void(u32 ctx_id, u32 subject_id, s32 event, s32 error_code, vm::ptr<void> arg);
+using SceNpFriendlistResultHandler = s32(s32 retCode, vm::ptr<void> arg);
+using SceNpMatchingHandler = void(u32 ctx_id, u32 req_id, s32 event, s32 error_code, vm::ptr<void> arg);
+using SceNpMatchingGUIHandler = void(u32 ctx_id, s32 event, s32 error_code, vm::ptr<void> arg);
+using SceNpProfileResultHandler = s32(s32 result, vm::ptr<void> arg);
+
+using SceNpManagerSubSigninCallback = void(s32 result, vm::ptr<SceNpId> npId, vm::ptr<void> cb_arg);

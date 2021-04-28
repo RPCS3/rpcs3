@@ -1,31 +1,81 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include <bitset>
 #include <string>
 
+#include "cellSsl.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Utilities/File.h"
 #include "Emu/VFS.h"
+#include "Emu/IdManager.h"
 
-logs::channel cellSsl("cellSsl");
+#include "cellRtc.h"
 
+LOG_CHANNEL(cellSsl);
 
-
-enum SpecialCerts { BaltimoreCert = 6, Class3G2V2Cert = 13, ClassSSV4Cert = 15, EntrustNetCert = 18, GTECyberTrustGlobalCert = 23 };
-
-s32 cellSslInit(vm::ptr<void> pool, u32 poolSize)
+template<>
+void fmt_class_string<CellSslError>::format(std::string& out, u64 arg)
 {
-	cellSsl.todo("cellSslInit(pool=0x%x, poolSize=%d)", pool, poolSize);
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_SSL_ERROR_NOT_INITIALIZED);
+			STR_CASE(CELL_SSL_ERROR_ALREADY_INITIALIZED);
+			STR_CASE(CELL_SSL_ERROR_INITIALIZATION_FAILED);
+			STR_CASE(CELL_SSL_ERROR_NO_BUFFER);
+			STR_CASE(CELL_SSL_ERROR_INVALID_CERTIFICATE);
+			STR_CASE(CELL_SSL_ERROR_UNRETRIEVABLE);
+			STR_CASE(CELL_SSL_ERROR_INVALID_FORMAT);
+			STR_CASE(CELL_SSL_ERROR_NOT_FOUND);
+			STR_CASE(CELL_SSL_ERROR_INVALID_TIME);
+			STR_CASE(CELL_SSL_ERROR_INAVLID_NEGATIVE_TIME);
+			STR_CASE(CELL_SSL_ERROR_INCORRECT_TIME);
+			STR_CASE(CELL_SSL_ERROR_UNDEFINED_TIME_TYPE);
+			STR_CASE(CELL_SSL_ERROR_NO_MEMORY);
+			STR_CASE(CELL_SSL_ERROR_NO_STRING);
+			STR_CASE(CELL_SSL_ERROR_UNKNOWN_LOAD_CERT);
+		}
+
+		return unknown;
+	});
+}
+
+error_code cellSslInit(vm::ptr<void> pool, u32 poolSize)
+{
+	cellSsl.todo("cellSslInit(pool=*0x%x, poolSize=%d)", pool, poolSize);
+
+	auto& manager = g_fxo->get<ssl_manager>();
+
+	if (manager.is_init)
+		return CELL_SSL_ERROR_ALREADY_INITIALIZED;
+
+	manager.is_init = true;
+
 	return CELL_OK;
 }
 
-s32 cellSslEnd()
+error_code cellSslEnd()
+{
+	cellSsl.todo("cellSslEnd()");
+
+	auto& manager = g_fxo->get<ssl_manager>();
+
+	if (!manager.is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	manager.is_init = false;
+
+	return CELL_OK;
+}
+
+error_code cellSslGetMemoryInfo()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-std::string getCert(const std::string certPath, const int certID, const bool isNormalCert)
+std::string getCert(const std::string& certPath, const int certID, const bool isNormalCert)
 {
 	int newID = certID;
 
@@ -52,28 +102,28 @@ std::string getCert(const std::string certPath, const int certID, const bool isN
 	return fs::file(filePath).to_string();
 }
 
-s32 cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm::ptr<u32> required)
+error_code cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm::ptr<u32> required)
 {
-	cellSsl.trace("cellSslCertificateLoader(flag=%llu, buffer=0x%x, size=%zu, required=0x%x)", flag, buffer, size, required);
+	cellSsl.trace("cellSslCertificateLoader(flag=%llu, buffer=*0x%x, size=%zu, required=*0x%x)", flag, buffer, size, required);
 
 	const std::bitset<58> flagBits(flag);
-	const std::string certPath = vfs::get("/dev_flash/") + "data/cert/";
+	const std::string certPath = vfs::get("/dev_flash/data/cert/");
 
 	if (required)
 	{
 		*required = 0;
-		for (int i = 1; i <= flagBits.size(); i++)
+		for (uint i = 1; i <= flagBits.size(); i++)
 		{
 			if (!flagBits[i-1])
 				continue;
 			// If we're loading cert 6 (the baltimore cert), then we need set that we're loading the 'normal' set of certs.
-			*required += (u32)(getCert(certPath, i, flagBits[BaltimoreCert-1]).size());
+			*required += ::size32(getCert(certPath, i, flagBits[BaltimoreCert-1]));
 		}
 	}
 	else
 	{
 		std::string final;
-		for (int i = 1; i <= flagBits.size(); i++)
+		for (uint i = 1; i <= flagBits.size(); i++)
 		{
 			if (!flagBits[i-1])
 				continue;
@@ -88,571 +138,681 @@ s32 cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm::ptr<u
 	return CELL_OK;
 }
 
-s32 cellSslCertGetSerialNumber()
+error_code cellSslCertGetSerialNumber(vm::cptr<void> sslCert, vm::cpptr<u8> sboData, vm::ptr<u64> sboLength)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetSerialNumber(sslCert=*0x%x, sboData=**0x%x, sboLength=*0x%x)", sslCert, sboData, sboLength);
+
+	if (!g_fxo->get<ssl_manager>().is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!sboData || !sboLength)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetPublicKey()
+error_code cellSslCertGetPublicKey(vm::cptr<void> sslCert, vm::cpptr<u8> sboData, vm::ptr<u64> sboLength)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetPublicKey(sslCert=*0x%x, sboData=**0x%x, sboLength=*0x%x)", sslCert, sboData, sboLength);
+
+	if (!g_fxo->get<ssl_manager>().is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!sboData || !sboLength)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetRsaPublicKeyModulus()
+error_code cellSslCertGetRsaPublicKeyModulus(vm::cptr<void> sslCert, vm::cpptr<u8> sboData, vm::ptr<u64> sboLength)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetRsaPublicKeyModulus(sslCert=*0x%x, sboData=**0x%x, sboLength=*0x%x)", sslCert, sboData, sboLength);
+
+	if (!g_fxo->get<ssl_manager>().is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!sboData || !sboLength)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetRsaPublicKeyExponent()
+error_code cellSslCertGetRsaPublicKeyExponent(vm::cptr<void> sslCert, vm::cpptr<u8> sboData, vm::ptr<u64> sboLength)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetRsaPublicKeyExponent(sslCert=*0x%x, sboData=**0x%x, sboLength=*0x%x)", sslCert, sboData, sboLength);
+
+	if (!g_fxo->get<ssl_manager>().is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!sboData || !sboLength)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetNotBefore()
+error_code cellSslCertGetNotBefore(vm::cptr<void> sslCert, vm::ptr<CellRtcTick> begin)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetNotBefore(sslCert=*0x%x, begin=*0x%x)", sslCert, begin);
+
+	if (!g_fxo->get<ssl_manager>().is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!begin)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetNotAfter()
+error_code cellSslCertGetNotAfter(vm::cptr<void> sslCert, vm::ptr<CellRtcTick> limit)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetNotAfter(sslCert=*0x%x, limit=*0x%x)", sslCert, limit);
+
+	if (!g_fxo->get<ssl_manager>().is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!limit)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetSubjectName()
+error_code cellSslCertGetSubjectName(vm::cptr<void> sslCert, vm::cpptr<void> certName)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetSubjectName(sslCert=*0x%x, certName=**0x%x)", sslCert, certName);
+
+	if (!g_fxo->get<ssl_manager>().is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!certName)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetIssuerName()
+error_code cellSslCertGetIssuerName(vm::cptr<void> sslCert, vm::cpptr<void> certName)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetIssuerName(sslCert=*0x%x, certName=**0x%x)", sslCert, certName);
+
+	if (!g_fxo->get<ssl_manager>().is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!certName)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetNameEntryCount()
+error_code cellSslCertGetNameEntryCount(vm::cptr<void> certName, vm::ptr<u32> entryCount)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetNameEntryCount(certName=*0x%x, entryCount=*0x%x)", certName, entryCount);
+
+	if (!g_fxo->get<ssl_manager>().is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!certName)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!entryCount)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetNameEntryInfo()
+error_code cellSslCertGetNameEntryInfo(vm::cptr<void> certName, u32 entryNum, vm::cpptr<char> oidName, vm::cpptr<u8> value, vm::ptr<u64> valueLength, s32 flag)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetNameEntryInfo(certName=*0x%x, entryNum=%d, oidName=**0x%x, value=**0x%x, valueLength=*0x%x, flag=0x%x)", certName, entryNum, oidName, value, valueLength, flag);
+
+	if (!g_fxo->get<ssl_manager>().is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!certName)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!oidName || !value || !valueLength)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 cellSslCertGetMd5Fingerprint()
+error_code cellSslCertGetMd5Fingerprint(vm::cptr<void> sslCert, vm::cptr<u8> buf, vm::cptr<u32> plen)
 {
-	UNIMPLEMENTED_FUNC(cellSsl);
+	cellSsl.todo("cellSslCertGetMd5Fingerprint(sslCert=*0x%x, buf=*0x%x, plen=*0x%x)", sslCert, buf, plen);
+
+	if (!g_fxo->get<ssl_manager>().is_init)
+		return CELL_SSL_ERROR_NOT_INITIALIZED;
+
+	if (!sslCert)
+		return CELL_SSL_ERROR_INVALID_CERTIFICATE;
+
+	if (!buf || !plen)
+		return CELL_SSL_ERROR_NO_BUFFER;
+
 	return CELL_OK;
 }
 
-s32 _cellSslConvertCipherId()
+error_code _cellSslConvertCipherId()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 _cellSslConvertSslVersion()
+error_code _cellSslConvertSslVersion()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 _cellSslIsInitd()
+error_code _cellSslIsInitd()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 _cellSslPemReadPrivateKey()
+error_code _cellSslPemReadPrivateKey()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 _cellSslPemReadX509()
+error_code _cellSslPemReadX509()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BER_read_item()
+error_code BER_read_item()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_ctrl()
+error_code BIO_ctrl()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_dump()
+error_code BIO_dump()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_free()
+error_code BIO_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_get_cb_arg()
+error_code BIO_get_cb_arg()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_get_retry_reason()
+error_code BIO_get_retry_reason()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_new_mem()
+error_code BIO_new_mem()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_new_socket()
+error_code BIO_new_socket()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_printf()
+error_code BIO_printf()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_ptr_ctrl()
+error_code BIO_ptr_ctrl()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 BIO_set_cb_arg()
+error_code BIO_set_cb_arg()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 ERR_clear_error()
+error_code ERR_clear_error()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 ERR_get_error()
+error_code ERR_get_error()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 ERR_error_string()
+error_code ERR_error_string()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 ERR_func_error_string()
+error_code ERR_func_error_string()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 ERR_peek_error()
+error_code ERR_peek_error()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 EVP_PKEY_free()
+error_code EVP_PKEY_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 R_time()
+error_code R_time()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 R_time_cmp()
+error_code R_time_cmp()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 R_time_export()
+error_code R_time_export()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 R_time_free()
+error_code R_time_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 R_time_import()
+error_code R_time_import()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 R_time_new()
+error_code R_time_new()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CIPHER_description()
+error_code SSL_CIPHER_description()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CIPHER_get_bits()
+error_code SSL_CIPHER_get_bits()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CIPHER_get_id()
+error_code SSL_CIPHER_get_id()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CIPHER_get_name()
+error_code SSL_CIPHER_get_name()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CIPHER_get_version()
+error_code SSL_CIPHER_get_version()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_ctrl()
+error_code SSL_CTX_ctrl()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_free()
+error_code SSL_CTX_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_new()
+error_code SSL_CTX_new()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_set_app_verify_cb()
+error_code SSL_CTX_set_app_verify_cb()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_set_info_cb()
+error_code SSL_CTX_set_info_cb()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_set_options()
+error_code SSL_CTX_set_options()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_set_verify_mode()
+error_code SSL_CTX_set_verify_mode()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_use_certificate()
+error_code SSL_CTX_use_certificate()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_CTX_use_PrivateKey()
+error_code SSL_CTX_use_PrivateKey()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_SESSION_free()
+error_code SSL_SESSION_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_alert_desc_string_long()
+error_code SSL_alert_desc_string_long()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_alert_type_string_long()
+error_code SSL_alert_type_string_long()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_clear()
+error_code SSL_clear()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32	SSL_do_handshake()
+error_code	SSL_do_handshake()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_free()
+error_code SSL_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_get_current_cipher()
+error_code SSL_get_current_cipher()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_get_error()
+error_code SSL_get_error()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_get_rbio()
+error_code SSL_get_rbio()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_get_version()
+error_code SSL_get_version()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_new()
+error_code SSL_new()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_peek()
+error_code SSL_peek()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_read()
+error_code SSL_read()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_set_bio()
+error_code SSL_set_bio()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_set_connect_state()
+error_code SSL_set_connect_state()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_set_session()
+error_code SSL_set_session()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_set_ssl_method()
+error_code SSL_set_ssl_method()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_shutdown()
+error_code SSL_shutdown()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_state()
+error_code SSL_state()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_state_string_long()
+error_code SSL_state_string_long()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_version()
+error_code SSL_version()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_want()
+error_code SSL_want()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSL_write()
+error_code SSL_write()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_check_private_key()
+error_code SSLCERT_check_private_key()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_free()
+error_code SSLCERT_free()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_from_binary()
+error_code SSLCERT_from_binary()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_basic_constraints_int()
+error_code SSLCERT_get_basic_constraints_int()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_extension()
+error_code SSLCERT_get_extension()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_issuer_name()
+error_code SSLCERT_get_issuer_name()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_notAfter()
+error_code SSLCERT_get_notAfter()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_notBefore()
+error_code SSLCERT_get_notBefore()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_pubkey()
+error_code SSLCERT_get_pubkey()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_get_subject_name()
+error_code SSLCERT_get_subject_name()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_NAME_cmp()
+error_code SSLCERT_NAME_cmp()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_NAME_ENTRY_get_info()
+error_code SSLCERT_NAME_ENTRY_get_info()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_NAME_get_entry()
+error_code SSLCERT_NAME_get_entry()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_NAME_get_entry_count()
+error_code SSLCERT_NAME_get_entry_count()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_NAME_oneline()
+error_code SSLCERT_NAME_oneline()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_OID_to_string()
+error_code SSLCERT_OID_to_string()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLCERT_verify()
+error_code SSLCERT_verify()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 SSLv3_client_method()
+error_code SSLv3_client_method()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
 }
 
-s32 TLSv1_client_method()
+error_code TLSv1_client_method()
 {
 	UNIMPLEMENTED_FUNC(cellSsl);
 	return CELL_OK;
@@ -662,6 +822,7 @@ DECLARE(ppu_module_manager::cellSsl)("cellSsl", []()
 {
 	REG_FUNC(cellSsl, cellSslInit);
 	REG_FUNC(cellSsl, cellSslEnd);
+	REG_FUNC(cellSsl, cellSslGetMemoryInfo);
 
 	REG_FUNC(cellSsl, cellSslCertificateLoader);
 

@@ -1,13 +1,27 @@
 #pragma once
 #include "../Common/FragmentProgramDecompiler.h"
+#include "../Common/GLSLTypes.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
-#include "Utilities/Thread.h"
-#include "OpenGL.h"
+#include "GLHelpers.h"
+
+namespace glsl
+{
+	struct shader_properties;
+}
+
+namespace gl
+{
+	class shader_interpreter;
+}
 
 struct GLFragmentDecompilerThread : public FragmentProgramDecompiler
 {
+	friend class gl::shader_interpreter;
+
 	std::string& m_shader;
 	ParamArray& m_parrDummy;
+	glsl::shader_properties m_shader_props{};
+
 public:
 	GLFragmentDecompilerThread(std::string& shader, ParamArray& parr, const RSXFragmentProgram &prog, u32& size)
 		: FragmentProgramDecompiler(prog, size)
@@ -19,18 +33,18 @@ public:
 	void Task();
 
 protected:
-	virtual std::string getFloatTypeName(size_t elementCount) override;
-	virtual std::string getFunction(FUNCTION) override;
-	virtual std::string saturate(const std::string &code) override;
-	virtual std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
+	std::string getFloatTypeName(usz elementCount) override;
+	std::string getHalfTypeName(usz elementCount) override;
+	std::string getFunction(FUNCTION) override;
+	std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
 
-	virtual void insertHeader(std::stringstream &OS) override;
-	virtual void insertIntputs(std::stringstream &OS) override;
-	virtual void insertOutputs(std::stringstream &OS) override;
-	virtual void insertConstants(std::stringstream &OS) override;
-	virtual void insertGlobalFunctions(std::stringstream &OS) override;
-	virtual void insertMainStart(std::stringstream &OS) override;
-	virtual void insertMainEnd(std::stringstream &OS) override;
+	void insertHeader(std::stringstream &OS) override;
+	void insertInputs(std::stringstream &OS) override;
+	void insertOutputs(std::stringstream &OS) override;
+	void insertConstants(std::stringstream &OS) override;
+	void insertGlobalFunctions(std::stringstream &OS) override;
+	void insertMainStart(std::stringstream &OS) override;
+	void insertMainEnd(std::stringstream &OS) override;
 };
 
 /** Storage for an Fragment Program in the process of of recompilation.
@@ -43,9 +57,9 @@ public:
 	~GLFragmentProgram();
 
 	ParamArray parr;
-	u32 id = 0;
-	std::string shader;
-	std::vector<size_t> FragmentConstantOffsetCache;
+	u32 id;
+	gl::glsl::shader shader;
+	std::vector<usz> FragmentConstantOffsetCache;
 
 	/**
 	 * Decompile a fragment shader located in the PS3's Memory.  This function operates synchronously.
@@ -53,9 +67,6 @@ public:
 	 * @param td texture dimensions of input textures
 	 */
 	void Decompile(const RSXFragmentProgram& prog);
-
-	/** Compile the decompiled fragment shader into a format we can use with OpenGL. */
-	void Compile();
 
 private:
 	/** Deletes the shader and any stored information */

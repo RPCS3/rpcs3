@@ -1,28 +1,30 @@
 #ifdef LLVM_AVAILABLE
 
+#include "Emu/system_config.h"
 #include "PPUTranslator.h"
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
 
-#include "../Utilities/Log.h"
+#include "util/types.hpp"
+#include "util/endian.hpp"
+#include "util/logs.hpp"
+#include "util/v128.hpp"
+#include "util/v128sse.hpp"
 #include <algorithm>
 
 using namespace llvm;
 
 const ppu_decoder<PPUTranslator> s_ppu_decoder;
+const ppu_decoder<ppu_itype> s_ppu_itype;
+const ppu_decoder<ppu_iname> s_ppu_iname;
 
-PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_module& info)
-	: cpu_translator(context, module, false)
+PPUTranslator::PPUTranslator(LLVMContext& context, Module* _module, const ppu_module& info, ExecutionEngine& engine)
+	: cpu_translator(_module, false)
 	, m_info(info)
-	, m_pure_attr(AttributeSet::get(m_context, AttributeSet::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadNone}))
+	, m_pure_attr(AttributeList::get(m_context, AttributeList::FunctionIndex, {Attribute::NoUnwind, Attribute::ReadNone}))
 {
-	// There is no weak linkage on JIT, so let's create variables with different names for each module part
-	const u32 gsuffix = m_info.name.empty() ? info.funcs[0].addr : info.funcs[0].addr - m_info.segs[0].addr;
-
-	// Memory base
-	m_base = new GlobalVariable(*module, ArrayType::get(GetType<char>(), 0x100000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__mptr%x", gsuffix));
-	m_base->setInitializer(ConstantPointerNull::get(cast<PointerType>(m_base->getType()->getPointerElementType())));
-	m_base->setExternallyInitialized(true);
+	// Bind context
+	cpu_translator::initialize(context, engine);
 
 	// Thread context struct (TODO: safer member access)
 	const u32 off0 = offset32(&ppu_thread::state);
@@ -41,13 +43,10 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 	thread_struct.insert(thread_struct.end(), 3, GetType<bool>()); // so, ov, ca
 	thread_struct.insert(thread_struct.end(), 1, GetType<u8>()); // cnt
 	thread_struct.insert(thread_struct.end(), 2, GetType<bool>()); // sat, nj
+	thread_struct.emplace_back(ArrayType::get(GetType<char>(), 2)); // Padding
+	thread_struct.insert(thread_struct.end(), 1, GetType<u32>()); // jm_mask
 
 	m_thread_type = StructType::create(m_context, thread_struct, "context_t");
-
-	// Callable
-	m_call = new GlobalVariable(*module, ArrayType::get(GetType<u32>(), 0x40000000)->getPointerTo(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__cptr%x", gsuffix));
-	m_call->setInitializer(ConstantPointerNull::get(cast<PointerType>(m_call->getType()->getPointerElementType())));
-	m_call->setExternallyInitialized(true);
 
 	const auto md_name = MDString::get(m_context, "branch_weights");
 	const auto md_low = ValueAsMetadata::get(ConstantInt::get(GetType<u32>(), 1));
@@ -56,15 +55,6 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 	// Metadata for branch weights
 	m_md_likely = MDTuple::get(m_context, {md_name, md_high, md_low});
 	m_md_unlikely = MDTuple::get(m_context, {md_name, md_low, md_high});
-
-	// Create segment variables
-	for (const auto& seg : m_info.segs)
-	{
-		auto gv = new GlobalVariable(*module, GetType<u64>(), true, GlobalValue::ExternalLinkage, 0, fmt::format("__seg%u_%x", m_segs.size(), gsuffix));
-		gv->setInitializer(ConstantInt::get(GetType<u64>(), seg.addr));
-		gv->setExternallyInitialized(true);
-		m_segs.emplace_back(gv);
-	}
 
 	// Sort relevant relocations (TODO)
 	const auto caddr = m_info.segs[0].addr;
@@ -78,16 +68,16 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 			switch (rel.type)
 			{
 
-			// Ignore relative relocations, they are handled in emmitted code
+			// Ignore relative relocations, they are handled in emitted code
 			// Comment out types we haven't confirmed as used and working
-			// case 10:
+			case 10:
 			case 11:
 			// case 12:
 			// case 13:
 			// case 26:
 			// case 28:
 			{
-				LOG_NOTICE(PPU, "Ignoring relative relocation at 0x%x (%u)", rel.addr, rel.type);
+				ppu_log.notice("Ignoring relative relocation at 0x%x (%u)", rel.addr, rel.type);
 				continue;
 			}
 
@@ -104,23 +94,27 @@ PPUTranslator::PPUTranslator(LLVMContext& context, Module* module, const ppu_mod
 			case 73:
 			case 78:
 			{
-				LOG_ERROR(PPU, "Ignoring 64-bit relocation at 0x%x (%u)", rel.addr, rel.type);
+				ppu_log.error("Ignoring 64-bit relocation at 0x%x (%u)", rel.addr, rel.type);
 				continue;
 			}
+			default: break;
 			}
 
 			// Align relocation address (TODO)
 			if (!m_relocs.emplace(rel.addr & ~3, &rel).second)
 			{
-				LOG_ERROR(PPU, "Relocation repeated at 0x%x (%u)", rel.addr, rel.type);
+				ppu_log.error("Relocation repeated at 0x%x (%u)", rel.addr, rel.type);
 			}
 		}
 	}
 
-	if (!m_info.name.empty())
+	if (!m_info.relocs.empty())
 	{
 		m_reloc = &m_info.segs[0];
 	}
+
+	const auto nan_v = v128::from32p(0x7FC00000u);
+	nan_vec4 = make_const_vector(nan_v, get_type<f32[4]>());
 }
 
 PPUTranslator::~PPUTranslator()
@@ -139,28 +133,75 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	std::fill(std::begin(m_globals), std::end(m_globals), nullptr);
 	std::fill(std::begin(m_locals), std::end(m_locals), nullptr);
 
-	IRBuilder<> irb(m_entry = BasicBlock::Create(m_context, "__entry", m_function));
+	IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function));
 	m_ir = &irb;
 
 	// Instruction address is (m_addr + base)
 	const u64 base = m_reloc ? m_reloc->addr : 0;
 	m_addr = info.addr - base;
 
-	m_thread = &*m_function->arg_begin();
-	m_base_loaded = m_ir->CreateLoad(m_base);
+	// Don't emit check in small blocks without terminator
+	bool need_check = info.size >= 16;
 
-	m_body = BasicBlock::Create(m_context, "__body", m_function);
+	for (u32 addr = m_addr; addr < m_addr + info.size; addr += 4)
+	{
+		const u32 op = vm::read32(vm::cast(addr + base));
 
-	// Check status register in the entry block
-	const auto vstate = m_ir->CreateLoad(m_ir->CreateStructGEP(nullptr, m_thread, 1), true);
-	const auto vcheck = BasicBlock::Create(m_context, "__test", m_function);
-	m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), m_body, vcheck, m_md_likely);
+		switch (s_ppu_itype.decode(op))
+		{
+		case ppu_itype::UNK:
+		case ppu_itype::ECIWX:
+		case ppu_itype::ECOWX:
+		case ppu_itype::TD:
+		case ppu_itype::TDI:
+		case ppu_itype::TW:
+		case ppu_itype::TWI:
+		case ppu_itype::B:
+		case ppu_itype::BC:
+		case ppu_itype::BCCTR:
+		case ppu_itype::BCLR:
+		case ppu_itype::SC:
+		{
+			need_check = true;
+			break;
+		}
+		default:
+		{
+			break;
+		}
+		}
+	}
 
-	// Create tail call to the check function
-	m_ir->SetInsertPoint(vcheck);
-	Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCallKind(llvm::CallInst::TCK_Tail);
-	m_ir->CreateRetVoid();
-	m_ir->SetInsertPoint(m_body);
+	m_thread = &*(m_function->arg_begin() + 1);
+	m_base = &*(m_function->arg_begin() + 3);
+	m_exec = &*(m_function->arg_begin() + 0);
+	m_seg0 = &*(m_function->arg_begin() + 2);
+
+	m_gpr[0] = &*(m_function->arg_begin() + 4);
+	m_gpr[1] = &*(m_function->arg_begin() + 5);
+	m_gpr[2] = &*(m_function->arg_begin() + 6);
+
+	const auto body = BasicBlock::Create(m_context, "__body", m_function);
+
+	//Call(GetType<void>(), "__trace", GetAddr());
+	if (need_check)
+	{
+		// Check status register in the entry block
+		const auto vstate = m_ir->CreateLoad(m_ir->CreateStructGEP(nullptr, m_thread, 1), true);
+		const auto vcheck = BasicBlock::Create(m_context, "__test", m_function);
+		m_ir->CreateCondBr(m_ir->CreateIsNull(vstate), body, vcheck, m_md_likely);
+
+		// Create tail call to the check function
+		m_ir->SetInsertPoint(vcheck);
+		Call(GetType<void>(), "__check", m_thread, GetAddr())->setTailCallKind(llvm::CallInst::TCK_Tail);
+		m_ir->CreateRetVoid();
+	}
+	else
+	{
+		m_ir->CreateBr(body);
+	}
+
+	m_ir->SetInsertPoint(body);
 
 	// Process blocks
 	const auto block = std::make_pair(info.addr, info.size);
@@ -174,7 +215,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 		// Process the instructions
 		for (m_addr = block.first - base; m_addr < block.first + block.second - base; m_addr += 4)
 		{
-			if (m_body->getTerminator())
+			if (m_ir->GetInsertBlock()->getTerminator())
 			{
 				break;
 			}
@@ -197,13 +238,13 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 			if (m_rel)
 			{
 				// This is very bad. m_rel is normally set to nullptr after a relocation is handled (so it wasn't)
-				LOG_ERROR(PPU, "LLVM: [0x%x] Unsupported relocation(%u) in '%s'. Please report.", rel_found->first, m_rel->type, m_info.name);
+				ppu_log.error("LLVM: [0x%x] Unsupported relocation(%u) in '%s' (opcode=0x%x '%s'). Please report.", rel_found->first, m_rel->type, m_info.name, op, s_ppu_iname.decode(op));
 				return nullptr;
 			}
 		}
 
 		// Finalize current block if necessary (create branch to the next address)
-		if (!m_body->getTerminator())
+		if (!m_ir->GetInsertBlock()->getTerminator())
 		{
 			FlushRegisters();
 			CallFunction(m_addr);
@@ -213,12 +254,40 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	return m_function;
 }
 
+Value* PPUTranslator::VecHandleNan(Value* val)
+{
+	const auto is_nan = m_ir->CreateFCmpUNO(val, val);
+
+	val = m_ir->CreateSelect(is_nan, nan_vec4, val);
+
+	return val;
+}
+
+Value* PPUTranslator::VecHandleDenormal(Value* val)
+{
+	const auto type = val->getType();
+	const auto value = bitcast(val, GetType<u32[4]>());
+
+	const auto mask = SExt(m_ir->CreateICmpEQ(m_ir->CreateAnd(value, Broadcast(RegLoad(m_jm_mask), 4)), ConstantAggregateZero::get(value->getType())), GetType<s32[4]>());
+	const auto nz = m_ir->CreateLShr(mask, 1);
+	const auto result = m_ir->CreateAnd(m_ir->CreateNot(nz), value);
+
+	return bitcast(result, type);
+}
+
+Value* PPUTranslator::VecHandleResult(Value* val)
+{
+	val = g_cfg.core.llvm_ppu_accurate_vector_nan ? VecHandleNan(val) : val;
+	val = g_cfg.core.llvm_ppu_jm_handling ? VecHandleDenormal(val) : val;
+	return val;
+}
+
 Value* PPUTranslator::GetAddr(u64 _add)
 {
 	if (m_reloc)
 	{
 		// Load segment address from global variable, compute actual instruction address
-		return m_ir->CreateAdd(m_ir->getInt64(m_addr + _add), m_ir->CreateLoad(m_segs[m_reloc - m_info.segs.data()]));
+		return m_ir->CreateAdd(m_ir->getInt64(m_addr + _add), m_seg0);
 	}
 
 	return m_ir->getInt64(m_addr + _add);
@@ -226,10 +295,25 @@ Value* PPUTranslator::GetAddr(u64 _add)
 
 Type* PPUTranslator::ScaleType(Type* type, s32 pow2)
 {
-	verify(HERE), (type->getScalarType()->isIntegerTy());
+	ensure(type->getScalarType()->isIntegerTy());
+	ensure(pow2 > -32 && pow2 < 32);
 
-	const auto new_type = m_ir->getIntNTy(type->getScalarSizeInBits() * std::pow(2, pow2));
-	return type->isVectorTy() ? VectorType::get(new_type, type->getVectorNumElements()) : cast<Type>(new_type);
+	uint scaled = type->getScalarSizeInBits();
+	ensure((scaled & (scaled - 1)) == 0);
+
+	if (pow2 > 0)
+	{
+		scaled <<= pow2;
+	}
+	else if (pow2 < 0)
+	{
+		scaled >>= -pow2;
+	}
+
+	ensure(scaled);
+	const auto new_type = m_ir->getIntNTy(scaled);
+	const auto vec_type = dyn_cast<VectorType>(type);
+	return vec_type ? VectorType::get(new_type, vec_type->getNumElements(), false) : cast<Type>(new_type);
 }
 
 Value* PPUTranslator::DuplicateExt(Value* arg)
@@ -252,21 +336,28 @@ Value* PPUTranslator::RotateLeft(Value* arg, Value* n)
 
 void PPUTranslator::CallFunction(u64 target, Value* indirect)
 {
-	const auto type = FunctionType::get(GetType<void>(), {m_thread_type->getPointerTo()}, false);
+	const auto type = m_function->getFunctionType();
 	const auto block = m_ir->GetInsertBlock();
+
+	FunctionCallee callee;
+
+	auto seg0 = m_seg0;
 
 	if (!indirect)
 	{
-		if ((!m_reloc && target < 0x10000) || target >= -0x10000)
+		if ((!m_reloc && target < 0x10000) || target >= 0x100000000u - 0x10000)
 		{
 			Trap();
 			return;
 		}
 
-		indirect = m_module->getOrInsertFunction(fmt::format("__0x%llx", target), type);
+		callee = m_module->getOrInsertFunction(fmt::format("__0x%x", target), type);
+		cast<Function>(callee.getCallee())->setCallingConv(CallingConv::GHC);
 	}
 	else
 	{
+		m_ir->CreateStore(Trunc(indirect, GetType<u32>()), m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(&m_cia - m_locals)), true);
+
 		// Try to optimize
 		if (auto inst = dyn_cast_or_null<Instruction>(indirect))
 		{
@@ -276,13 +367,19 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 			}
 		}
 
-		const auto pos = m_ir->CreateLShr(indirect, 2, "", true);
-		const auto ptr = m_ir->CreateGEP(m_ir->CreateLoad(m_call), {m_ir->getInt64(0), pos});
-		indirect = m_ir->CreateIntToPtr(m_ir->CreateLoad(ptr), type->getPointerTo());
+		const auto pos = m_ir->CreateShl(indirect, 1);
+		const auto ptr = m_ir->CreateGEP(m_exec, pos);
+		const auto val = m_ir->CreateLoad(m_ir->CreateBitCast(ptr, get_type<u64*>()));
+		callee = FunctionCallee(type, m_ir->CreateIntToPtr(m_ir->CreateAnd(val, 0x7fff'ffff'ffff), type->getPointerTo()));
+
+		// Load new segment address
+		seg0 = m_ir->CreateShl(m_ir->CreateLShr(val, 47), 12);
 	}
 
 	m_ir->SetInsertPoint(block);
-	m_ir->CreateCall(indirect, {m_thread})->setTailCallKind(llvm::CallInst::TCK_Tail);
+	const auto c = m_ir->CreateCall(callee, {m_exec, m_thread, seg0, m_base, GetGpr(0), GetGpr(1), GetGpr(2)});
+	c->setTailCallKind(llvm::CallInst::TCK_Tail);
+	c->setCallingConv(CallingConv::GHC);
 	m_ir->CreateRetVoid();
 }
 
@@ -318,7 +415,7 @@ Value* PPUTranslator::RegLoad(Value*& local)
 
 void PPUTranslator::RegStore(llvm::Value* value, llvm::Value*& local)
 {
-	const auto glb = RegInit(local);
+	RegInit(local);
 	local = value;
 }
 
@@ -342,7 +439,7 @@ void PPUTranslator::FlushRegisters()
 				m_ir->SetInsertPoint(block);
 			}
 
-			m_ir->CreateStore(local, m_ir->CreateBitCast(m_globals[index], local->getType()->getPointerTo()));
+			m_ir->CreateStore(local, bitcast(m_globals[index], local->getType()->getPointerTo()));
 			m_globals[index] = nullptr;
 		}
 	}
@@ -352,26 +449,26 @@ void PPUTranslator::FlushRegisters()
 
 Value* PPUTranslator::Solid(Value* value)
 {
-	const u32 size = value->getType()->getPrimitiveSizeInBits();
+	const u32 size = ::narrow<u32>(+value->getType()->getPrimitiveSizeInBits());
 
 	/* Workarounds (casting bool vectors directly may produce invalid code) */
 
 	if (value->getType() == GetType<bool[4]>())
 	{
-		return m_ir->CreateBitCast(SExt(value, GetType<u32[4]>()), m_ir->getIntNTy(128));
+		return bitcast(SExt(value, GetType<u32[4]>()), m_ir->getIntNTy(128));
 	}
 
 	if (value->getType() == GetType<bool[8]>())
 	{
-		return m_ir->CreateBitCast(SExt(value, GetType<u16[8]>()), m_ir->getIntNTy(128));
+		return bitcast(SExt(value, GetType<u16[8]>()), m_ir->getIntNTy(128));
 	}
 
 	if (value->getType() == GetType<bool[16]>())
 	{
-		return m_ir->CreateBitCast(SExt(value, GetType<u8[16]>()), m_ir->getIntNTy(128));
+		return bitcast(SExt(value, GetType<u8[16]>()), m_ir->getIntNTy(128));
 	}
 
-	return m_ir->CreateBitCast(value, m_ir->getIntNTy(size));
+	return bitcast(value, m_ir->getIntNTy(size));
 }
 
 Value* PPUTranslator::IsZero(Value* value)
@@ -400,7 +497,7 @@ Value* PPUTranslator::Broadcast(Value* value, u32 count)
 {
 	if (const auto cv = dyn_cast<Constant>(value))
 	{
-		return ConstantVector::getSplat(count, cv);
+		return ConstantVector::getSplat({count, false}, cv);
 	}
 
 	return m_ir->CreateVectorSplat(count, value);
@@ -409,10 +506,10 @@ Value* PPUTranslator::Broadcast(Value* value, u32 count)
 std::pair<Value*, Value*> PPUTranslator::Saturate(Value* value, CmpInst::Predicate inst, Value* extreme)
 {
 	// Modify args
-	if (value->getType()->isVectorTy() && !extreme->getType()->isVectorTy())
-		extreme = Broadcast(extreme, value->getType()->getVectorNumElements());
-	if (extreme->getType()->isVectorTy() && !value->getType()->isVectorTy())
-		value = Broadcast(value, extreme->getType()->getVectorNumElements());
+	if (auto v = dyn_cast<VectorType>(value->getType()); v && !extreme->getType()->isVectorTy())
+		extreme = Broadcast(extreme, v->getNumElements());
+	if (auto e = dyn_cast<VectorType>(extreme->getType()); e && !value->getType()->isVectorTy())
+		value = Broadcast(value, e->getNumElements());
 
 	// Compare args
 	const auto cmp = m_ir->CreateICmp(inst, value, extreme);
@@ -438,9 +535,9 @@ Value* PPUTranslator::Scale(Value* value, s32 scale)
 		const auto type = value->getType();
 		const auto power = std::pow(2, scale);
 
-		if (type->isVectorTy())
+		if (auto v = dyn_cast<VectorType>(type))
 		{
-			return m_ir->CreateFMul(value, ConstantVector::getSplat(type->getVectorNumElements(), ConstantFP::get(type->getVectorElementType(), power)));
+			return m_ir->CreateFMul(value, ConstantVector::getSplat({v->getNumElements(), false}, ConstantFP::get(v->getElementType(), power)));
 		}
 		else
 		{
@@ -464,10 +561,10 @@ Value* PPUTranslator::Shuffle(Value* left, Value* right, std::initializer_list<u
 	{
 		std::vector<u32> data; data.reserve(indices.size());
 
-		const u32 mask = type->getVectorNumElements() - 1;
+		const u32 mask = cast<VectorType>(type)->getNumElements() - 1;
 
 		// Transform indices (works for vectors with size 2^N)
-		for (std::size_t i = 0; i < indices.size(); i++)
+		for (usz i = 0; i < indices.size(); i++)
 		{
 			data.push_back(indices.end()[~i] ^ mask);
 		}
@@ -480,12 +577,14 @@ Value* PPUTranslator::Shuffle(Value* left, Value* right, std::initializer_list<u
 
 Value* PPUTranslator::SExt(Value* value, Type* type)
 {
-	return m_ir->CreateSExt(value, type ? type : ScaleType(value->getType(), 1));
+	type = type ? type : ScaleType(value->getType(), 1);
+	return value->getType() != type ? m_ir->CreateSExt(value, type) : value;
 }
 
 Value* PPUTranslator::ZExt(Value* value, Type* type)
 {
-	return m_ir->CreateZExt(value, type ? type : ScaleType(value->getType(), 1));
+	type = type ? type : ScaleType(value->getType(), 1);
+	return value->getType() != type ? m_ir->CreateZExt(value, type) : value;
 }
 
 Value* PPUTranslator::Add(std::initializer_list<Value*> args)
@@ -501,7 +600,8 @@ Value* PPUTranslator::Add(std::initializer_list<Value*> args)
 
 Value* PPUTranslator::Trunc(Value* value, Type* type)
 {
-	return m_ir->CreateTrunc(value, type ? type : ScaleType(value->getType(), -1));
+	type = type ? type : ScaleType(value->getType(), -1);
+	return type != value->getType() ? m_ir->CreateTrunc(value, type) : value;
 }
 
 void PPUTranslator::UseCondition(MDNode* hint, Value* cond)
@@ -521,57 +621,59 @@ void PPUTranslator::UseCondition(MDNode* hint, Value* cond)
 
 llvm::Value* PPUTranslator::GetMemory(llvm::Value* addr, llvm::Type* type)
 {
-	return m_ir->CreateBitCast(m_ir->CreateGEP(m_base_loaded, {m_ir->getInt64(0), addr}), type->getPointerTo());
+	return bitcast(m_ir->CreateGEP(m_base, addr), type->getPointerTo());
 }
 
 Value* PPUTranslator::ReadMemory(Value* addr, Type* type, bool is_be, u32 align)
 {
-	const auto size = type->getPrimitiveSizeInBits();
+	const u32 size = ::narrow<u32>(+type->getPrimitiveSizeInBits());
 
 	if (is_be ^ m_is_be && size > 8)
 	{
 		// Read, byteswap, bitcast
 		const auto int_type = m_ir->getIntNTy(size);
-		const auto value = m_ir->CreateAlignedLoad(GetMemory(addr, int_type), align, true);
-		return m_ir->CreateBitCast(Call(int_type, fmt::format("llvm.bswap.i%u", size), value), type);
+		const auto value = m_ir->CreateAlignedLoad(GetMemory(addr, int_type), llvm::MaybeAlign{align}, true);
+		return bitcast(Call(int_type, fmt::format("llvm.bswap.i%u", size), value), type);
 	}
 
 	// Read normally
-	return m_ir->CreateAlignedLoad(GetMemory(addr, type), align, true);
+	return m_ir->CreateAlignedLoad(GetMemory(addr, type), llvm::MaybeAlign{align}, true);
 }
 
 void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align)
 {
 	const auto type = value->getType();
-	const auto size = type->getPrimitiveSizeInBits();
+	const u32 size = ::narrow<u32>(+type->getPrimitiveSizeInBits());
 
 	if (is_be ^ m_is_be && size > 8)
 	{
 		// Bitcast, byteswap
 		const auto int_type = m_ir->getIntNTy(size);
-		value = Call(int_type, fmt::format("llvm.bswap.i%u", size), m_ir->CreateBitCast(value, int_type));
+		value = Call(int_type, fmt::format("llvm.bswap.i%u", size), bitcast(value, int_type));
 	}
 
 	// Write
-	m_ir->CreateAlignedStore(value, GetMemory(addr, value->getType()), align, true);
+	m_ir->CreateAlignedStore(value, GetMemory(addr, value->getType()), llvm::MaybeAlign{align}, true);
 }
 
 void PPUTranslator::CompilationError(const std::string& error)
 {
-	LOG_ERROR(PPU, "LLVM: [0x%08x] Error: %s", m_addr + (m_reloc ? m_reloc->addr : 0), error);
+	ppu_log.error("LLVM: [0x%08x] Error: %s", m_addr + (m_reloc ? m_reloc->addr : 0), error);
 }
 
 
 void PPUTranslator::MFVSCR(ppu_opcode_t op)
 {
 	const auto vscr = m_ir->CreateOr(ZExt(RegLoad(m_sat), GetType<u32>()), m_ir->CreateShl(ZExt(RegLoad(m_nj), GetType<u32>()), 16));
-	SetVr(op.vd, m_ir->CreateInsertElement(ConstantVector::getSplat(4, m_ir->getInt32(0)), vscr, m_ir->getInt32(m_is_be ? 3 : 0)));
+	SetVr(op.vd, m_ir->CreateInsertElement(ConstantAggregateZero::get(GetType<u32[4]>()), vscr, m_ir->getInt32(m_is_be ? 3 : 0)));
 }
 
 void PPUTranslator::MTVSCR(ppu_opcode_t op)
 {
 	const auto vscr = m_ir->CreateExtractElement(GetVr(op.vb, VrType::vi32), m_ir->getInt32(m_is_be ? 3 : 0));
-	RegStore(Trunc(m_ir->CreateLShr(vscr, 16), GetType<bool>()), m_nj);
+	const auto nj = Trunc(m_ir->CreateLShr(vscr, 16), GetType<bool>());
+	RegStore(nj, m_nj);
+	if (g_cfg.core.llvm_ppu_jm_handling) RegStore(m_ir->CreateSelect(nj, m_ir->getInt32(0x7f80'0000), m_ir->getInt32(0x7fff'ffff)), m_jm_mask);
 	RegStore(Trunc(vscr, GetType<bool>()), m_sat);
 }
 
@@ -579,47 +681,42 @@ void PPUTranslator::VADDCUW(ppu_opcode_t op)
 {
 	const auto a = get_vr<u32[4]>(op.va);
 	const auto b = get_vr<u32[4]>(op.vb);
-	set_vr(op.vd, eval(ucarry(a, b, eval(a + b)) >> 31));
+	set_vr(op.vd, zext<u32[4]>(a + b < a));
 }
 
 void PPUTranslator::VADDFP(ppu_opcode_t op)
 {
 	const auto a = get_vr<f32[4]>(op.va);
 	const auto b = get_vr<f32[4]>(op.vb);
-	set_vr(op.vd, eval(a + b));
+
+	set_vr(op.vd, vec_handle_result(a + b));
 }
 
 void PPUTranslator::VADDSBS(ppu_opcode_t op)
 {
 	const auto a = get_vr<s8[16]>(op.va);
 	const auto b = get_vr<s8[16]>(op.vb);
-	const auto s = eval(a + b);
-	const auto z = eval((a >> 7) ^ 0x7f);
-	const auto x = eval(scarry(a, b, s) >> 7);
-	set_vr(op.vd, eval(merge(x, z, s)));
-	SetSat(IsNotZero(x.value));
+	const auto r = add_sat(a, b);
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(r != (a + b)).value));
 }
 
 void PPUTranslator::VADDSHS(ppu_opcode_t op)
 {
 	const auto a = get_vr<s16[8]>(op.va);
 	const auto b = get_vr<s16[8]>(op.vb);
-	const auto s = eval(a + b);
-	const auto z = eval((a >> 15) ^ 0x7fff);
-	const auto x = eval(scarry(a, b, s) >> 15);
-	set_vr(op.vd, eval(merge(x, z, s)));
-	SetSat(IsNotZero(x.value));
+	const auto r = add_sat(a, b);
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(r != (a + b)).value));
 }
 
 void PPUTranslator::VADDSWS(ppu_opcode_t op)
 {
 	const auto a = get_vr<s32[4]>(op.va);
 	const auto b = get_vr<s32[4]>(op.vb);
-	const auto s = eval(a + b);
-	const auto z = eval((a >> 31) ^ 0x7fffffff);
-	const auto x = eval(scarry(a, b, s) >> 31);
-	set_vr(op.vd, eval(merge(x, z, s)));
-	SetSat(IsNotZero(x.value));
+	const auto r = add_sat(a, b);
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(r != (a + b)).value));
 }
 
 void PPUTranslator::VADDUBM(ppu_opcode_t op)
@@ -631,12 +728,11 @@ void PPUTranslator::VADDUBM(ppu_opcode_t op)
 
 void PPUTranslator::VADDUBS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s8[16]>(op.va);
-	const auto b = get_vr<s8[16]>(op.vb);
-	const auto s = eval(a + b);
-	const auto x = eval(ucarry(a, b, s) >> 7);
-	set_vr(op.vd, eval(s | x));
-	SetSat(IsNotZero(x.value));
+	const auto a = get_vr<u8[16]>(op.va);
+	const auto b = get_vr<u8[16]>(op.vb);
+	const auto r = add_sat(a, b);
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(r != (a + b)).value));
 }
 
 void PPUTranslator::VADDUHM(ppu_opcode_t op)
@@ -648,12 +744,11 @@ void PPUTranslator::VADDUHM(ppu_opcode_t op)
 
 void PPUTranslator::VADDUHS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s16[8]>(op.va);
-	const auto b = get_vr<s16[8]>(op.vb);
-	const auto s = eval(a + b);
-	const auto x = eval(ucarry(a, b, s) >> 15);
-	set_vr(op.vd, eval(s | x));
-	SetSat(IsNotZero(x.value));
+	const auto a = get_vr<u16[8]>(op.va);
+	const auto b = get_vr<u16[8]>(op.vb);
+	const auto r = add_sat(a, b);
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(r != (a + b)).value));
 }
 
 void PPUTranslator::VADDUWM(ppu_opcode_t op)
@@ -665,12 +760,11 @@ void PPUTranslator::VADDUWM(ppu_opcode_t op)
 
 void PPUTranslator::VADDUWS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s32[4]>(op.va);
-	const auto b = get_vr<s32[4]>(op.vb);
-	const auto s = eval(a + b);
-	const auto x = eval(ucarry(a, b, s) >> 31);
-	set_vr(op.vd, eval(s | x));
-	SetSat(IsNotZero(x.value));
+	const auto a = get_vr<u32[4]>(op.va);
+	const auto b = get_vr<u32[4]>(op.vb);
+	const auto r = add_sat(a, b);
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(r != (a + b)).value));
 }
 
 void PPUTranslator::VAND(ppu_opcode_t op)
@@ -857,12 +951,12 @@ void PPUTranslator::VCTSXS(ppu_opcode_t op)
 	const auto b = GetVr(op.vb, VrType::vf);
 	const auto scaled = Scale(b, op.vuimm);
 	//const auto const0 = ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0));
-	const auto const1 = ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), -std::pow(2, 31)));
+	const auto const1 = ConstantVector::getSplat({4, false}, ConstantFP::get(GetType<f32>(), -std::pow(2, 31)));
 	//const auto is_nan = m_ir->CreateFCmpUNO(b, const0); // NaN -> 0.0
 	const auto sat_l = m_ir->CreateFCmpOLT(scaled, const1); // TODO ???
-	const auto sat_h = m_ir->CreateFCmpOGE(scaled, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), std::pow(2, 31))));
+	const auto sat_h = m_ir->CreateFCmpOGE(scaled, ConstantVector::getSplat({4, false}, ConstantFP::get(GetType<f32>(), std::pow(2, 31))));
 	const auto converted = m_ir->CreateFPToSI(m_ir->CreateSelect(sat_l, const1, scaled), GetType<s32[4]>());
-	SetVr(op.vd, m_ir->CreateSelect(sat_h, ConstantVector::getSplat(4, m_ir->getInt32(0x7fffffff)), converted));
+	SetVr(op.vd, m_ir->CreateSelect(sat_h, ConstantVector::getSplat({4, false}, m_ir->getInt32(0x7fffffff)), converted));
 	SetSat(IsNotZero(m_ir->CreateOr(sat_l, sat_h)));
 }
 
@@ -870,12 +964,12 @@ void PPUTranslator::VCTUXS(ppu_opcode_t op)
 {
 	const auto b = GetVr(op.vb, VrType::vf);
 	const auto scaled = Scale(b, op.vuimm);
-	const auto const0 = ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 0.0));
+	const auto const0 = ConstantVector::getSplat({4, false}, ConstantFP::get(GetType<f32>(), 0.0));
 	//const auto is_nan = m_ir->CreateFCmpUNO(b, const0); // NaN -> 0.0
 	const auto sat_l = m_ir->CreateFCmpOLT(scaled, const0);
-	const auto sat_h = m_ir->CreateFCmpOGE(scaled, ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), std::pow(2, 32)))); // TODO ???
+	const auto sat_h = m_ir->CreateFCmpOGE(scaled, ConstantVector::getSplat({4, false}, ConstantFP::get(GetType<f32>(), std::pow(2, 32)))); // TODO ???
 	const auto converted = m_ir->CreateFPToUI(m_ir->CreateSelect(sat_l, const0, scaled), GetType<u32[4]>());
-	SetVr(op.vd, m_ir->CreateSelect(sat_h, ConstantVector::getSplat(4, m_ir->getInt32(0xffffffff)), converted));
+	SetVr(op.vd, m_ir->CreateSelect(sat_h, ConstantVector::getSplat({4, false}, m_ir->getInt32(0xffffffff)), converted));
 	SetSat(IsNotZero(m_ir->CreateOr(sat_l, sat_h)));
 }
 
@@ -891,14 +985,45 @@ void PPUTranslator::VLOGEFP(ppu_opcode_t op)
 
 void PPUTranslator::VMADDFP(ppu_opcode_t op)
 {
-	const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
-	SetVr(op.vd, m_ir->CreateFAdd(m_ir->CreateFMul(acb[0], acb[1]), acb[2]));
+	auto [a, b, c] = get_vrs<f32[4]>(op.va, op.vb, op.vc);
+
+	// Optimization: Emit only a floating multiply if the addend is zero
+	if (auto [ok, data] = get_const_vector(b.value, m_addr, 2000); ok)
+	{
+		if (data == v128::from32p(1u << 31))
+		{
+			set_vr(op.vd, vec_handle_result(a * c));
+			ppu_log.notice("LLVM: VMADDFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			return;
+		}
+
+		if (!m_use_fma && data == v128{})
+		{
+			set_vr(op.vd, vec_handle_result(a * c + fsplat<f32[4]>(0.f)));
+			ppu_log.notice("LLVM: VMADDFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			return;
+		}
+	}
+
+	if (m_use_fma)
+	{
+		SetVr(op.vd, VecHandleResult(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { a.value, c.value, b.value })));
+		return;
+	}
+
+	// Emulated FMA via double precision
+	const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
+	const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
+	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
+
+	const auto xr = m_ir->CreateCall(get_intrinsic<f64[4]>(llvm::Intrinsic::fmuladd), {xa, xc, xb});
+	SetVr(op.vd, VecHandleResult(m_ir->CreateFPTrunc(xr, get_type<f32[4]>())));
 }
 
 void PPUTranslator::VMAXFP(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vf, op.va, op.vb);
-	SetVr(op.vd, m_ir->CreateSelect(m_ir->CreateFCmpOGT(ab[0], ab[1]), ab[0], ab[1]));
+	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
+	set_vr(op.vd, vec_handle_result(select(bitcast<u32[4]>(fmin(a, b)) == bitcast<u32[4]>(a), b, a)));
 }
 
 void PPUTranslator::VMAXSB(ppu_opcode_t op)
@@ -944,12 +1069,24 @@ void PPUTranslator::VMHADDSHS(ppu_opcode_t op)
 	const auto saturated = SaturateSigned(result, -0x8000, 0x7fff);
 	SetVr(op.vd, saturated.first);
 	SetSat(IsNotZero(saturated.second));
+
+	// const auto a = get_vr<s16[8]>(op.va);
+	// const auto b = get_vr<s16[8]>(op.vb);
+	// const auto c = get_vr<s16[8]>(op.vc);
+	// value_t<s16[8]> m;
+	// m.value = m_ir->CreateShl(Trunc(m_ir->CreateAShr(m_ir->CreateMul(SExt(a.value), SExt(b.value)), 16)), 1);
+	// m.value = m_ir->CreateOr(m.value, m_ir->CreateLShr(m_ir->CreateMul(a.value, b.value), 15));
+	// const auto s = eval(c + m);
+	// const auto z = eval((c >> 15) ^ 0x7fff);
+	// const auto x = eval(((m ^ s) & ~(c ^ m)) >> 15);
+	// set_vr(op.vd, eval((z & x) | (s & ~x)));
+	//SetSat(IsNotZero(saturated.second));
 }
 
 void PPUTranslator::VMHRADDSHS(ppu_opcode_t op)
 {
 	const auto abc = SExt(GetVrs(VrType::vi16, op.va, op.vb, op.vc));
-	const auto result = m_ir->CreateAdd(m_ir->CreateAShr(m_ir->CreateAdd(m_ir->CreateMul(abc[0], abc[1]), ConstantVector::getSplat(8, m_ir->getInt32(0x4000))), 15), abc[2]);
+	const auto result = m_ir->CreateAdd(m_ir->CreateAShr(m_ir->CreateAdd(m_ir->CreateMul(abc[0], abc[1]), ConstantVector::getSplat({8, false}, m_ir->getInt32(0x4000))), 15), abc[2]);
 	const auto saturated = SaturateSigned(result, -0x8000, 0x7fff);
 	SetVr(op.vd, saturated.first);
 	SetSat(IsNotZero(saturated.second));
@@ -957,8 +1094,8 @@ void PPUTranslator::VMHRADDSHS(ppu_opcode_t op)
 
 void PPUTranslator::VMINFP(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vf, op.va, op.vb);
-	SetVr(op.vd, m_ir->CreateSelect(m_ir->CreateFCmpOLT(ab[0], ab[1]), ab[0], ab[1]));
+	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
+	set_vr(op.vd, vec_handle_result(select(bitcast<u32[4]>(fmax(a, b)) == bitcast<u32[4]>(a), b, a)));
 }
 
 void PPUTranslator::VMINSB(ppu_opcode_t op)
@@ -1041,74 +1178,72 @@ void PPUTranslator::VMRGLW(ppu_opcode_t op)
 
 void PPUTranslator::VMSUMMBM(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	const auto a = SExt(ab[0], GetType<s32[16]>());
-	const auto b = ZExt(ab[1], GetType<u32[16]>());
-	const auto p = m_ir->CreateMul(a, b);
-	const auto c = GetVr(op.vc, VrType::vi32);
-	const auto e0 = Shuffle(p, nullptr, { 0, 4, 8, 12 });
-	const auto e1 = Shuffle(p, nullptr, { 1, 5, 9, 13 });
-	const auto e2 = Shuffle(p, nullptr, { 2, 6, 10, 14 });
-	const auto e3 = Shuffle(p, nullptr, { 3, 7, 11, 15 });
-	SetVr(op.vd, Add({ c, e0, e1, e2, e3 }));
+	const auto a = get_vr<s16[8]>(op.va);
+	const auto b = get_vr<u16[8]>(op.vb);
+	const auto c = get_vr<s32[4]>(op.vc);
+	const auto ml = bitcast<s32[4]>((a << 8 >> 8) * noncast<s16[8]>(b << 8 >> 8));
+	const auto mh = bitcast<s32[4]>((a >> 8) * noncast<s16[8]>(b >> 8));
+	set_vr(op.vd, eval(((ml << 16 >> 16) + (ml >> 16)) + ((mh << 16 >> 16) + (mh >> 16)) + c));
 }
 
 void PPUTranslator::VMSUMSHM(ppu_opcode_t op)
 {
-	const auto ab = SExt(GetVrs(VrType::vi16, op.va, op.vb));
-	const auto p = m_ir->CreateMul(ab[0], ab[1]);
-	const auto c = GetVr(op.vc, VrType::vi32);
-	const auto e0 = Shuffle(p, nullptr, { 0, 2, 4, 6 });
-	const auto e1 = Shuffle(p, nullptr, { 1, 3, 5, 7 });
-	SetVr(op.vd, Add({ c, e0, e1 }));
+	const auto a = get_vr<s32[4]>(op.va);
+	const auto b = get_vr<s32[4]>(op.vb);
+	const auto c = get_vr<s32[4]>(op.vc);
+	const auto ml = eval((a << 16 >> 16) * (b << 16 >> 16));
+	const auto mh = eval((a >> 16) * (b >> 16));
+	set_vr(op.vd, eval(ml + mh + c));
 }
 
 void PPUTranslator::VMSUMSHS(ppu_opcode_t op)
 {
-	const auto ab = SExt(GetVrs(VrType::vi16, op.va, op.vb));
-	const auto p = m_ir->CreateMul(ab[0], ab[1]);
-	const auto c = GetVr(op.vc, VrType::vi32);
-	const auto e0 = Shuffle(p, nullptr, { 0, 2, 4, 6 });
-	const auto e1 = Shuffle(p, nullptr, { 1, 3, 5, 7 });
-	const auto result = Add({ SExt(c), SExt(e0), SExt(e1) });
-	const auto saturated = SaturateSigned(result, -0x80000000ll, 0x7fffffff);
-	SetVr(op.vd, saturated.first);
-	SetSat(IsNotZero(saturated.second));
+	const auto a = get_vr<s32[4]>(op.va);
+	const auto b = get_vr<s32[4]>(op.vb);
+	const auto c = get_vr<s32[4]>(op.vc);
+	const auto ml = eval((a << 16 >> 16) * (b << 16 >> 16));
+	const auto mh = eval((a >> 16) * (b >> 16));
+	const auto m = eval(ml + mh);
+	const auto s = eval(m + c);
+	const auto z = eval((c >> 31) ^ 0x7fffffff);
+	const auto mx = eval(m ^ sext<s32[4]>(m == 0x80000000u));
+	const auto x = eval(((mx ^ s) & ~(c ^ mx)) >> 31);
+	set_vr(op.vd, eval((z & x) | (s & ~x)));
+	SetSat(IsNotZero(x.value));
 }
 
 void PPUTranslator::VMSUMUBM(ppu_opcode_t op)
 {
-	const auto ab = ZExt(GetVrs(VrType::vi8, op.va, op.vb), GetType<u32[16]>());
-	const auto p = m_ir->CreateMul(ab[0], ab[1]);
-	const auto c = GetVr(op.vc, VrType::vi32);
-	const auto e0 = Shuffle(p, nullptr, { 0, 4, 8, 12 });
-	const auto e1 = Shuffle(p, nullptr, { 1, 5, 9, 13 });
-	const auto e2 = Shuffle(p, nullptr, { 2, 6, 10, 14 });
-	const auto e3 = Shuffle(p, nullptr, { 3, 7, 11, 15 });
-	SetVr(op.vd, Add({ c, e0, e1, e2, e3 }));
+	const auto a = get_vr<u16[8]>(op.va);
+	const auto b = get_vr<u16[8]>(op.vb);
+	const auto c = get_vr<u32[4]>(op.vc);
+	const auto ml = bitcast<u32[4]>((a << 8 >> 8) * (b << 8 >> 8));
+	const auto mh = bitcast<u32[4]>((a >> 8) * (b >> 8));
+	set_vr(op.vd, eval(((ml << 16 >> 16) + (ml >> 16)) + ((mh << 16 >> 16) + (mh >> 16)) + c));
 }
 
 void PPUTranslator::VMSUMUHM(ppu_opcode_t op)
 {
-	const auto ab = ZExt(GetVrs(VrType::vi16, op.va, op.vb));
-	const auto p = m_ir->CreateMul(ab[0], ab[1]);
-	const auto c = GetVr(op.vc, VrType::vi32);
-	const auto e0 = Shuffle(p, nullptr, { 0, 2, 4, 6 });
-	const auto e1 = Shuffle(p, nullptr, { 1, 3, 5, 7 });
-	SetVr(op.vd, Add({ c, e0, e1 }));
+	const auto a = get_vr<u32[4]>(op.va);
+	const auto b = get_vr<u32[4]>(op.vb);
+	const auto c = get_vr<u32[4]>(op.vc);
+	const auto ml = eval((a << 16 >> 16) * (b << 16 >> 16));
+	const auto mh = eval((a >> 16) * (b >> 16));
+	set_vr(op.vd, eval(ml + mh + c));
 }
 
 void PPUTranslator::VMSUMUHS(ppu_opcode_t op)
 {
-	const auto ab = ZExt(GetVrs(VrType::vi16, op.va, op.vb));
-	const auto p = m_ir->CreateMul(ab[0], ab[1]);
-	const auto c = GetVr(op.vc, VrType::vi32);
-	const auto e0 = Shuffle(p, nullptr, { 0, 2, 4, 6 });
-	const auto e1 = Shuffle(p, nullptr, { 1, 3, 5, 7 });
-	const auto result = Add({ ZExt(c), ZExt(e0), ZExt(e1) });
-	const auto saturated = Saturate(result, ICmpInst::ICMP_UGT, m_ir->getInt64(0xffffffff));
-	SetVr(op.vd, saturated.first);
-	SetSat(IsNotZero(saturated.second));
+	const auto a = get_vr<u32[4]>(op.va);
+	const auto b = get_vr<u32[4]>(op.vb);
+	const auto c = get_vr<u32[4]>(op.vc);
+	const auto ml = noncast<u32[4]>((a << 16 >> 16) * (b << 16 >> 16));
+	const auto mh = noncast<u32[4]>((a >> 16) * (b >> 16));
+	const auto s = eval(ml + mh);
+	const auto s2 = eval(s + c);
+	const auto x = eval((s < ml) | (s2 < s));
+	set_vr(op.vd, select(x, splat<u32[4]>(-1), s2));
+	SetSat(IsNotZero(x.value));
 }
 
 void PPUTranslator::VMULESB(ppu_opcode_t op)
@@ -1161,8 +1296,40 @@ void PPUTranslator::VMULOUH(ppu_opcode_t op)
 
 void PPUTranslator::VNMSUBFP(ppu_opcode_t op)
 {
-	const auto acb = GetVrs(VrType::vf, op.va, op.vc, op.vb);
-	SetVr(op.vd, m_ir->CreateFSub(acb[2], m_ir->CreateFMul(acb[0], acb[1])));
+	auto [a, b, c] = get_vrs<f32[4]>(op.va, op.vb, op.vc);
+
+	// Optimization: Emit only a floating multiply if the addend is zero
+	if (const auto [ok, data] = get_const_vector(b.value, m_addr, 2004); ok)
+	{
+		if (data == v128{})
+		{
+			set_vr(op.vd, vec_handle_result(-a * c));
+			ppu_log.notice("LLVM: VNMSUBFP with 0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			return;
+		}
+
+		if (!m_use_fma && data == v128::from32p(1u << 31))
+		{
+			set_vr(op.vd, vec_handle_result(-a * c + fsplat<f32[4]>(0.f)));
+			ppu_log.notice("LLVM: VNMSUBFP with -0 addend at [0x%08x]", m_addr + (m_reloc ? m_reloc->addr : 0));
+			return;
+		}
+	}
+
+	// Differs from the emulated path with regards to negative zero
+	if (m_use_fma)
+	{
+		SetVr(op.vd, VecHandleResult(m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), { m_ir->CreateFNeg(a.value), c.value, b.value })));
+		return;
+	}
+
+	// Emulated FMA via double precision
+	const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
+	const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
+	const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
+
+	const auto xr = m_ir->CreateFNeg(m_ir->CreateFSub(m_ir->CreateFMul(xa, xc), xb));
+	SetVr(op.vd, VecHandleResult(m_ir->CreateFPTrunc(xr, get_type<f32[4]>())));
 }
 
 void PPUTranslator::VNOR(ppu_opcode_t op)
@@ -1181,8 +1348,19 @@ void PPUTranslator::VOR(ppu_opcode_t op)
 
 void PPUTranslator::VPERM(ppu_opcode_t op)
 {
-	const auto abc = GetVrs(VrType::vi8, op.va, op.vb, op.vc);
-	SetVr(op.vd, Call(GetType<u8[16]>(), m_pure_attr, "__vperm", abc[0], abc[1], abc[2]));
+	const auto a = get_vr<u8[16]>(op.va);
+	const auto b = get_vr<u8[16]>(op.vb);
+	const auto c = get_vr<u8[16]>(op.vc);
+
+	if (m_use_avx512_icl && op.ra != op.rb)
+	{
+		const auto i = eval(~c);
+		set_vr(op.vd, vperm2b(b, a, i));
+		return;
+	}
+
+	const auto i = eval(~c & 0x1f);
+	set_vr(op.vd, select(noncast<s8[16]>(c << 3) >= 0, pshufb(a, i), pshufb(b, i)));
 }
 
 void PPUTranslator::VPKPX(ppu_opcode_t op)
@@ -1265,58 +1443,114 @@ void PPUTranslator::VPKUWUS(ppu_opcode_t op)
 
 void PPUTranslator::VREFP(ppu_opcode_t op)
 {
-	const auto result = m_ir->CreateFDiv(ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 1.0)), GetVr(op.vb, VrType::vf));
+	const auto result = VecHandleResult(m_ir->CreateFDiv(ConstantVector::getSplat({4, false}, ConstantFP::get(GetType<f32>(), 1.0)), GetVr(op.vb, VrType::vf)));
 	SetVr(op.vd, result);
 }
 
 void PPUTranslator::VRFIM(ppu_opcode_t op)
 {
-	SetVr(op.vd, Call(GetType<f32[4]>(), "llvm.floor.v4f32", GetVr(op.vb, VrType::vf)));
+	SetVr(op.vd, VecHandleResult(Call(GetType<f32[4]>(), "llvm.floor.v4f32", GetVr(op.vb, VrType::vf))));
 }
 
 void PPUTranslator::VRFIN(ppu_opcode_t op)
 {
-	SetVr(op.vd, Call(GetType<f32[4]>(), "llvm.nearbyint.v4f32", GetVr(op.vb, VrType::vf)));
+	SetVr(op.vd, VecHandleResult(Call(GetType<f32[4]>(), "llvm.nearbyint.v4f32", GetVr(op.vb, VrType::vf))));
 }
 
 void PPUTranslator::VRFIP(ppu_opcode_t op)
 {
-	SetVr(op.vd, Call(GetType<f32[4]>(), "llvm.ceil.v4f32", GetVr(op.vb, VrType::vf)));
+	SetVr(op.vd, VecHandleResult(Call(GetType<f32[4]>(), "llvm.ceil.v4f32", GetVr(op.vb, VrType::vf))));
 }
 
 void PPUTranslator::VRFIZ(ppu_opcode_t op)
 {
-	SetVr(op.vd, Call(GetType<f32[4]>(), "llvm.trunc.v4f32", GetVr(op.vb, VrType::vf)));
+	SetVr(op.vd, VecHandleResult(Call(GetType<f32[4]>(), "llvm.trunc.v4f32", GetVr(op.vb, VrType::vf))));
 }
 
 void PPUTranslator::VRLB(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi8, op.va, op.vb);
-	SetVr(op.vd, RotateLeft(ab[0], ab[1]));
+	const auto [a, b] = get_vrs<u8[16]>(op.va, op.vb);
+	set_vr(op.vd, rol(a, b));
 }
 
 void PPUTranslator::VRLH(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	SetVr(op.vd, RotateLeft(ab[0], ab[1]));
+	const auto [a, b] = get_vrs<u16[8]>(op.va, op.vb);
+	set_vr(op.vd, rol(a, b));
 }
 
 void PPUTranslator::VRLW(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	SetVr(op.vd, RotateLeft(ab[0], ab[1]));
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, rol(a, b));
 }
 
 void PPUTranslator::VRSQRTEFP(ppu_opcode_t op)
 {
-	const auto result = m_ir->CreateFDiv(ConstantVector::getSplat(4, ConstantFP::get(GetType<f32>(), 1.0)), Call(GetType<f32[4]>(), "llvm.sqrt.v4f32", GetVr(op.vb, VrType::vf)));
-	SetVr(op.vd, result);
+	const auto result = m_ir->CreateFDiv(ConstantVector::getSplat({4, false}, ConstantFP::get(GetType<f32>(), 1.0)), Call(GetType<f32[4]>(), "llvm.sqrt.v4f32", GetVr(op.vb, VrType::vf)));
+
+	SetVr(op.vd, VecHandleResult(result));
 }
 
 void PPUTranslator::VSEL(ppu_opcode_t op)
 {
-	const auto abc = GetVrs(VrType::vi32, op.va, op.vb, op.vc);
-	SetVr(op.vd, m_ir->CreateOr(m_ir->CreateAnd(abc[1], abc[2]), m_ir->CreateAnd(abc[0], m_ir->CreateNot(abc[2]))));
+	const auto c = get_vr<u32[4]>(op.vc);
+
+	// Check if the constant mask doesn't require bit granularity
+	if (auto [ok, mask] = get_const_vector(c.value, m_addr, 9000); ok)
+	{
+		bool sel_32 = true;
+		for (u32 i = 0; i < 4; i++)
+		{
+			if (mask._u32[i] && mask._u32[i] != 0xFFFFFFFF)
+			{
+				sel_32 = false;
+				break;
+			}
+		}
+
+		if (sel_32)
+		{
+			set_vr(op.vd, select(noncast<s32[4]>(c) != 0, get_vr<u32[4]>(op.vb), get_vr<u32[4]>(op.va)));
+			return;
+		}
+
+		bool sel_16 = true;
+		for (u32 i = 0; i < 8; i++)
+		{
+			if (mask._u16[i] && mask._u16[i] != 0xFFFF)
+			{
+				sel_16 = false;
+				break;
+			}
+		}
+
+		if (sel_16)
+		{
+			set_vr(op.vd, select(bitcast<s16[8]>(c) != 0, get_vr<u16[8]>(op.vb), get_vr<u16[8]>(op.va)));
+			return;
+		}
+
+
+		bool sel_8 = true;
+		for (u32 i = 0; i < 16; i++)
+		{
+			if (mask._u8[i] && mask._u8[i] != 0xFF)
+			{
+				sel_8 = false;
+				break;
+			}
+		}
+
+		if (sel_8)
+		{
+			set_vr(op.vd, select(bitcast<s8[16]>(c) != 0,get_vr<u8[16]>(op.vb), get_vr<u8[16]>(op.va)));
+			return;
+		}
+	}
+
+	const auto [a, b] = get_vrs<u32[4]>(op.va, op.vb);
+	set_vr(op.vd, eval((b & c) | (a & ~c)));
 }
 
 void PPUTranslator::VSL(ppu_opcode_t op)
@@ -1367,7 +1601,7 @@ void PPUTranslator::VSLH(ppu_opcode_t op)
 void PPUTranslator::VSLO(ppu_opcode_t op)
 {
 	// TODO (rare)
-	SetVr(op.vd, m_ir->CreateShl(GetVr(op.va, VrType::i128), m_ir->CreateShl(m_ir->CreateAnd(GetVr(op.vb, VrType::i128), 15), 3)));
+	SetVr(op.vd, m_ir->CreateShl(GetVr(op.va, VrType::i128), m_ir->CreateAnd(GetVr(op.vb, VrType::i128), 0x78)));
 }
 
 void PPUTranslator::VSLW(ppu_opcode_t op)
@@ -1390,17 +1624,17 @@ void PPUTranslator::VSPLTH(ppu_opcode_t op)
 
 void PPUTranslator::VSPLTISB(ppu_opcode_t op)
 {
-	SetVr(op.vd, ConstantVector::getSplat(16, m_ir->getInt8(op.vsimm)));
+	SetVr(op.vd, ConstantVector::getSplat({16, false}, m_ir->getInt8(op.vsimm)));
 }
 
 void PPUTranslator::VSPLTISH(ppu_opcode_t op)
 {
-	SetVr(op.vd, ConstantVector::getSplat(8, m_ir->getInt16(op.vsimm)));
+	SetVr(op.vd, ConstantVector::getSplat({8, false}, m_ir->getInt16(op.vsimm)));
 }
 
 void PPUTranslator::VSPLTISW(ppu_opcode_t op)
 {
-	SetVr(op.vd, ConstantVector::getSplat(4, m_ir->getInt32(op.vsimm)));
+	SetVr(op.vd, ConstantVector::getSplat({4, false}, m_ir->getInt32(op.vsimm)));
 }
 
 void PPUTranslator::VSPLTW(ppu_opcode_t op)
@@ -1448,7 +1682,7 @@ void PPUTranslator::VSRH(ppu_opcode_t op)
 void PPUTranslator::VSRO(ppu_opcode_t op)
 {
 	// TODO (very rare)
-	SetVr(op.vd, m_ir->CreateLShr(GetVr(op.va, VrType::i128), m_ir->CreateShl(m_ir->CreateAnd(GetVr(op.vb, VrType::i128), 15), 3)));
+	SetVr(op.vd, m_ir->CreateLShr(GetVr(op.va, VrType::i128), m_ir->CreateAnd(GetVr(op.vb, VrType::i128), 0x78)));
 }
 
 void PPUTranslator::VSRW(ppu_opcode_t op)
@@ -1461,47 +1695,41 @@ void PPUTranslator::VSUBCUW(ppu_opcode_t op)
 {
 	const auto a = get_vr<u32[4]>(op.va);
 	const auto b = get_vr<u32[4]>(op.vb);
-	set_vr(op.vd, eval(~ucarry(b, eval(a - b), a) >> 31));
+	set_vr(op.vd, zext<u32[4]>(a >= b));
 }
 
 void PPUTranslator::VSUBFP(ppu_opcode_t op)
 {
 	const auto a = get_vr<f32[4]>(op.va);
 	const auto b = get_vr<f32[4]>(op.vb);
-	set_vr(op.vd, eval(a - b));
+	SetVr(op.vd, VecHandleResult(eval(a - b).eval(m_ir)));
 }
 
 void PPUTranslator::VSUBSBS(ppu_opcode_t op)
 {
 	const auto a = get_vr<s8[16]>(op.va);
 	const auto b = get_vr<s8[16]>(op.vb);
-	const auto d = eval(a - b);
-	const auto z = eval((a >> 7) ^ 0x7f);
-	const auto x = eval(sborrow(a, b, d) >> 7);
-	set_vr(op.vd, eval(merge(x, z, d)));
-	SetSat(IsNotZero(x.value));
+	const auto r = sub_sat(a, b);
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(r != (a - b)).value));
 }
 
 void PPUTranslator::VSUBSHS(ppu_opcode_t op)
 {
 	const auto a = get_vr<s16[8]>(op.va);
 	const auto b = get_vr<s16[8]>(op.vb);
-	const auto d = eval(a - b);
-	const auto z = eval((a >> 15) ^ 0x7fff);
-	const auto x = eval(sborrow(a, b, d) >> 15);
-	set_vr(op.vd, eval(merge(x, z, d)));
-	SetSat(IsNotZero(x.value));
+	const auto r = sub_sat(a, b);
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(r != (a - b)).value));
 }
 
 void PPUTranslator::VSUBSWS(ppu_opcode_t op)
 {
 	const auto a = get_vr<s32[4]>(op.va);
 	const auto b = get_vr<s32[4]>(op.vb);
-	const auto d = eval(a - b);
-	const auto z = eval((a >> 31) ^ 0x7fffffff);
-	const auto x = eval(sborrow(a, b, d) >> 31);
-	set_vr(op.vd, eval(merge(x, z, d)));
-	SetSat(IsNotZero(x.value));
+	const auto r = sub_sat(a, b);
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(r != (a - b)).value));
 }
 
 void PPUTranslator::VSUBUBM(ppu_opcode_t op)
@@ -1513,12 +1741,11 @@ void PPUTranslator::VSUBUBM(ppu_opcode_t op)
 
 void PPUTranslator::VSUBUBS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s8[16]>(op.va);
-	const auto b = get_vr<s8[16]>(op.vb);
-	const auto d = eval(a - b);
-	const auto x = eval(ucarry(b, d, a) >> 7);
-	set_vr(op.vd, eval(d & ~x));
-	SetSat(IsNotZero(x.value));
+	const auto a = get_vr<u8[16]>(op.va);
+	const auto b = get_vr<u8[16]>(op.vb);
+	const auto r = sub_sat(a, b);
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(r != (a - b)).value));
 }
 
 void PPUTranslator::VSUBUHM(ppu_opcode_t op)
@@ -1530,12 +1757,11 @@ void PPUTranslator::VSUBUHM(ppu_opcode_t op)
 
 void PPUTranslator::VSUBUHS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s16[8]>(op.va);
-	const auto b = get_vr<s16[8]>(op.vb);
-	const auto d = eval(a - b);
-	const auto x = eval(ucarry(b, d, a) >> 15);
-	set_vr(op.vd, eval(d & ~x));
-	SetSat(IsNotZero(x.value));
+	const auto a = get_vr<u16[8]>(op.va);
+	const auto b = get_vr<u16[8]>(op.vb);
+	const auto r = sub_sat(a, b);
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(r != (a - b)).value));
 }
 
 void PPUTranslator::VSUBUWM(ppu_opcode_t op)
@@ -1547,12 +1773,11 @@ void PPUTranslator::VSUBUWM(ppu_opcode_t op)
 
 void PPUTranslator::VSUBUWS(ppu_opcode_t op)
 {
-	const auto a = get_vr<s32[4]>(op.va);
-	const auto b = get_vr<s32[4]>(op.vb);
-	const auto d = eval(a - b);
-	const auto x = eval(ucarry(b, d, a) >> 31);
-	set_vr(op.vd, eval(d & ~x));
-	SetSat(IsNotZero(x.value));
+	const auto a = get_vr<u32[4]>(op.va);
+	const auto b = get_vr<u32[4]>(op.vb);
+	const auto r = sub_sat(a, b);
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(r != (a - b)).value));
 }
 
 void PPUTranslator::VSUMSWS(ppu_opcode_t op)
@@ -1617,7 +1842,7 @@ void PPUTranslator::VSUM4UBS(ppu_opcode_t op)
 	const auto e3 = Shuffle(a, nullptr, { 3, 7, 11, 15 });
 	const auto r = Add({ b, e0, e1, e2, e3 }); // Summ, (e0+e1+e2+e3) is small
 	const auto s = m_ir->CreateICmpULT(r, b); // Carry (saturation)
-	SetVr(op.vd, m_ir->CreateSelect(s, ConstantVector::getSplat(4, m_ir->getInt32(0xffffffff)), r));
+	SetVr(op.vd, m_ir->CreateSelect(s, ConstantVector::getSplat({4, false}, m_ir->getInt32(0xffffffff)), r));
 	SetSat(IsNotZero(s));
 }
 
@@ -1660,7 +1885,7 @@ void PPUTranslator::VXOR(ppu_opcode_t op)
 	if (op.va == op.vb)
 	{
 		// Assign zero, break dependencies
-		SetVr(op.vd, ConstantVector::getSplat(4, m_ir->getInt32(0)));
+		SetVr(op.vd, ConstantAggregateZero::get(GetType<u32[4]>()));
 		return;
 	}
 
@@ -1708,7 +1933,7 @@ void PPUTranslator::ADDIC(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -1725,7 +1950,7 @@ void PPUTranslator::ADDI(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -1738,7 +1963,7 @@ void PPUTranslator::ADDIS(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16 << 16);
 
-	if (m_rel && m_rel->type == 6)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = m_ir->CreateShl(SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>()), 16);
 		m_rel = nullptr;
@@ -1749,19 +1974,20 @@ void PPUTranslator::ADDIS(ppu_opcode_t op)
 
 void PPUTranslator::BC(ppu_opcode_t op)
 {
-	const u64 target = (op.aa ? 0 : m_addr) + op.bt14;
+	const s32 bt14 = op.bt14; // Workaround for VS 16.5
+	const u64 target = (op.aa ? 0 : m_addr) + bt14;
 
 	if (op.aa && m_reloc)
 	{
 		CompilationError("Branch with absolute address");
 	}
 
-	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
-
 	if (op.lk)
 	{
-		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(nullptr, m_thread, &m_lr - m_locals));
+		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(&m_lr - m_locals)));
 	}
+
+	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
 
 	CallFunction(target);
 }
@@ -1784,7 +2010,6 @@ void PPUTranslator::SC(ppu_opcode_t op)
 
 		if (index < 1024)
 		{
-			// Call the syscall directly
 			Call(GetType<void>(), fmt::format("%s", ppu_syscall_code(index)), m_thread)->setTailCallKind(llvm::CallInst::TCK_Tail);
 			m_ir->CreateRetVoid();
 			return;
@@ -1797,7 +2022,8 @@ void PPUTranslator::SC(ppu_opcode_t op)
 
 void PPUTranslator::B(ppu_opcode_t op)
 {
-	const u64 target = (op.aa ? 0 : m_addr) + op.bt24;
+	const s32 bt24 = op.bt24; // Workaround for VS 16.5
+	const u64 target = (op.aa ? 0 : m_addr) + bt24;
 
 	if (op.aa && m_reloc)
 	{
@@ -1826,12 +2052,12 @@ void PPUTranslator::BCLR(ppu_opcode_t op)
 {
 	const auto target = RegLoad(m_lr);
 
-	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
-
 	if (op.lk)
 	{
-		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(nullptr, m_thread, &m_lr - m_locals));
+		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(&m_lr - m_locals)));
 	}
+
+	UseCondition(CheckBranchProbability(op.bo), CheckBranchCondition(op.bo, op.bi));
 
 	CallFunction(0, target);
 }
@@ -1846,9 +2072,9 @@ void PPUTranslator::CRANDC(ppu_opcode_t op)
 	SetCrb(op.crbd, m_ir->CreateAnd(GetCrb(op.crba), m_ir->CreateNot(GetCrb(op.crbb))));
 }
 
-void PPUTranslator::ISYNC(ppu_opcode_t op)
+void PPUTranslator::ISYNC(ppu_opcode_t)
 {
-	m_ir->CreateFence(AtomicOrdering::SequentiallyConsistent);
+	m_ir->CreateFence(AtomicOrdering::Acquire);
 }
 
 void PPUTranslator::CRXOR(ppu_opcode_t op)
@@ -1856,7 +2082,7 @@ void PPUTranslator::CRXOR(ppu_opcode_t op)
 	SetCrb(op.crbd, m_ir->CreateXor(GetCrb(op.crba), GetCrb(op.crbb)));
 }
 
-void PPUTranslator::DCBI(ppu_opcode_t op)
+void PPUTranslator::DCBI(ppu_opcode_t)
 {
 }
 
@@ -1889,12 +2115,12 @@ void PPUTranslator::BCCTR(ppu_opcode_t op)
 {
 	const auto target = RegLoad(m_ctr);
 
-	UseCondition(CheckBranchProbability(op.bo | 0x4), CheckBranchCondition(op.bo | 0x4, op.bi));
-
 	if (op.lk)
 	{
-		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(nullptr, m_thread, &m_lr - m_locals));
+		m_ir->CreateStore(GetAddr(+4), m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(&m_lr - m_locals)));
 	}
+
+	UseCondition(CheckBranchProbability(op.bo | 0x4), CheckBranchCondition(op.bo | 0x4, op.bi));
 
 	CallFunction(0, target);
 }
@@ -1943,7 +2169,7 @@ void PPUTranslator::RLWIMI(ppu_opcode_t op)
 		result = m_ir->CreateAnd(RotateLeft(DuplicateExt(GetGpr(op.rs, 32)), op.sh32), mask);
 	}
 
-	if (mask != -1)
+	if (mask != umax)
 	{
 		// Insertion
 		result = m_ir->CreateOr(result, m_ir->CreateAnd(GetGpr(op.ra), ~mask));
@@ -2039,7 +2265,7 @@ void PPUTranslator::ORI(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.uimm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = ZExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -2052,13 +2278,7 @@ void PPUTranslator::ORIS(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.uimm16 << 16);
 
-	if (m_rel && m_rel->type == 5)
-	{
-		imm = m_ir->CreateShl(ZExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>()), 16);
-		m_rel = nullptr;
-	}
-
-	if (m_rel && m_rel->type == 6)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = m_ir->CreateShl(ZExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>()), 16);
 		m_rel = nullptr;
@@ -2193,7 +2413,7 @@ void PPUTranslator::RLDIMI(ppu_opcode_t op)
 		result = m_ir->CreateAnd(RotateLeft(GetGpr(op.rs), sh), mask);
 	}
 
-	if (mask != -1)
+	if (mask != umax)
 	{
 		// Insertion
 		result = m_ir->CreateOr(result, m_ir->CreateAnd(GetGpr(op.ra), ~mask));
@@ -2253,9 +2473,7 @@ void PPUTranslator::LVSL(ppu_opcode_t op)
 
 void PPUTranslator::LVEBX(ppu_opcode_t op)
 {
-	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb);
-	const auto pos = m_ir->CreateXor(m_ir->CreateAnd(addr, 15), m_is_be ? 0 : 15);
-	SetVr(op.vd, m_ir->CreateInsertElement(ConstantVector::getSplat(16, m_ir->getInt8(0)), ReadMemory(addr, GetType<u8>()), pos));
+	return LVX(op);
 }
 
 void PPUTranslator::SUBFC(ppu_opcode_t op)
@@ -2294,7 +2512,7 @@ void PPUTranslator::MULHWU(ppu_opcode_t op)
 	const auto a = ZExt(GetGpr(op.ra, 32));
 	const auto b = ZExt(GetGpr(op.rb, 32));
 	SetGpr(op.rd, m_ir->CreateLShr(m_ir->CreateMul(a, b), 32));
-	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 }
 
 void PPUTranslator::MFOCRF(ppu_opcode_t op)
@@ -2305,9 +2523,8 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 
 		const u64 pos = countLeadingZeros<u32>(op.crm, ZB_Width) - 24;
 
-		if (pos >= 8 || 0x80 >> pos != op.crm)
+		if (pos >= 8 || 0x80u >> pos != op.crm)
 		{
-			CompilationError("MFOCRF: Undefined behaviour");
 			SetGpr(op.rd, UndefValue::get(GetType<u64>()));
 			return;
 		}
@@ -2350,6 +2567,15 @@ void PPUTranslator::MFOCRF(ppu_opcode_t op)
 
 void PPUTranslator::LWARX(ppu_opcode_t op)
 {
+	if (g_cfg.core.ppu_128_reservations_loop_max_length)
+	{
+		RegStore(Trunc(GetAddr()), m_cia);
+		FlushRegisters();
+		Call(GetType<void>(), "__resinterp", m_thread)->setTailCallKind(llvm::CallInst::TCK_Tail);
+		m_ir->CreateRetVoid();
+		return;
+	}
+
 	SetGpr(op.rd, Call(GetType<u32>(), "__lwarx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
 }
 
@@ -2411,9 +2637,7 @@ void PPUTranslator::LVSR(ppu_opcode_t op)
 
 void PPUTranslator::LVEHX(ppu_opcode_t op)
 {
-	const auto addr = m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -2);
-	const auto pos = m_ir->CreateLShr(m_ir->CreateXor(m_ir->CreateAnd(addr, 15), m_is_be ? 0 : 15), 1);
-	SetVr(op.vd, m_ir->CreateInsertElement(ConstantVector::getSplat(8, m_ir->getInt16(0)), ReadMemory(addr, GetType<u16>(), true, 2), pos));
+	return LVX(op);
 }
 
 void PPUTranslator::SUBF(ppu_opcode_t op)
@@ -2433,7 +2657,7 @@ void PPUTranslator::LDUX(ppu_opcode_t op)
 	SetGpr(op.ra, addr);
 }
 
-void PPUTranslator::DCBST(ppu_opcode_t op)
+void PPUTranslator::DCBST(ppu_opcode_t)
 {
 }
 
@@ -2466,9 +2690,7 @@ void PPUTranslator::TD(ppu_opcode_t op)
 
 void PPUTranslator::LVEWX(ppu_opcode_t op)
 {
-	const auto addr = m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -4);
-	const auto pos = m_ir->CreateLShr(m_ir->CreateXor(m_ir->CreateAnd(addr, 15), m_is_be ? 0 : 15), 2);
-	SetVr(op.vd, m_ir->CreateInsertElement(ConstantVector::getSplat(4, m_ir->getInt32(0)), ReadMemory(addr, GetType<u32>(), true, 4), pos));
+	return LVX(op);
 }
 
 void PPUTranslator::MULHD(ppu_opcode_t op)
@@ -2485,15 +2707,24 @@ void PPUTranslator::MULHW(ppu_opcode_t op)
 	const auto a = SExt(GetGpr(op.ra, 32));
 	const auto b = SExt(GetGpr(op.rb, 32));
 	SetGpr(op.rd, m_ir->CreateAShr(m_ir->CreateMul(a, b), 32));
-	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 }
 
 void PPUTranslator::LDARX(ppu_opcode_t op)
 {
+	if (g_cfg.core.ppu_128_reservations_loop_max_length)
+	{
+		RegStore(Trunc(GetAddr()), m_cia);
+		FlushRegisters();
+		Call(GetType<void>(), "__resinterp", m_thread)->setTailCallKind(llvm::CallInst::TCK_Tail);
+		m_ir->CreateRetVoid();
+		return;
+	}
+
 	SetGpr(op.rd, Call(GetType<u64>(), "__ldarx", m_thread, op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
 }
 
-void PPUTranslator::DCBF(ppu_opcode_t op)
+void PPUTranslator::DCBF(ppu_opcode_t)
 {
 }
 
@@ -2504,7 +2735,8 @@ void PPUTranslator::LBZX(ppu_opcode_t op)
 
 void PPUTranslator::LVX(ppu_opcode_t op)
 {
-	const auto data = ReadMemory(m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -16), GetType<u8[16]>(), m_is_be, 16);
+	const auto addr = m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), ~0xfull);
+	const auto data = ReadMemory(addr, GetType<u8[16]>(), m_is_be, 16);
 	SetVr(op.vd, m_is_be ? data : Shuffle(data, nullptr, { 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }));
 }
 
@@ -2570,9 +2802,8 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 		// MTOCRF
 		const u64 pos = countLeadingZeros<u32>(op.crm, ZB_Width) - 24;
 
-		if (pos >= 8 || 128 >> pos != op.crm)
+		if (pos >= 8 || 0x80u >> pos != op.crm)
 		{
-			CompilationError("MTOCRF: Undefined behaviour");
 			return;
 		}
 	}
@@ -2618,8 +2849,8 @@ void PPUTranslator::MTOCRF(ppu_opcode_t op)
 
 			const auto index = m_ir->CreateAnd(m_ir->CreateLShr(value, 28 - i * 4), 15);
 			const auto src = m_ir->CreateGEP(m_mtocr_table, {m_ir->getInt32(0), m_ir->CreateShl(index, 2)});
-			const auto dst = m_ir->CreateBitCast(m_ir->CreateStructGEP(nullptr, m_thread, m_cr - m_locals + i * 4), GetType<u8*>());
-			Call(GetType<void>(), "llvm.memcpy.p0i8.p0i8.i32", dst, src, m_ir->getInt32(4), m_ir->getInt32(4), m_ir->getFalse());
+			const auto dst = bitcast(m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(m_cr - m_locals) + i * 4), GetType<u8*>());
+			Call(GetType<void>(), "llvm.memcpy.p0i8.p0i8.i32", dst, src, m_ir->getInt32(4), m_ir->getFalse());
 		}
 	}
 }
@@ -2748,7 +2979,7 @@ void PPUTranslator::MULLW(ppu_opcode_t op)
 	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__mullw_get_ov", a, b));
 }
 
-void PPUTranslator::DCBTST(ppu_opcode_t op)
+void PPUTranslator::DCBTST(ppu_opcode_t)
 {
 }
 
@@ -2765,11 +2996,18 @@ void PPUTranslator::ADD(ppu_opcode_t op)
 	const auto b = GetGpr(op.rb);
 	const auto result = m_ir->CreateAdd(a, b);
 	SetGpr(op.rd, result);
+
+	if (op.oe)
+	{
+		//const auto s = m_ir->CreateCall(get_intrinsic<u64>(llvm::Intrinsic::sadd_with_overflow), {a, b});
+		//SetOverflow(m_ir->CreateExtractValue(s, {1}));
+		SetOverflow(m_ir->CreateICmpSLT(m_ir->CreateAnd(m_ir->CreateXor(a, m_ir->CreateNot(b)), m_ir->CreateXor(a, result)), m_ir->getInt64(0)));
+	}
+
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
-	if (op.oe) SetOverflow(Call(GetType<bool>(), m_pure_attr, "__add_get_ov", a, b));
 }
 
-void PPUTranslator::DCBT(ppu_opcode_t op)
+void PPUTranslator::DCBT(ppu_opcode_t)
 {
 }
 
@@ -2787,7 +3025,7 @@ void PPUTranslator::EQV(ppu_opcode_t op)
 
 void PPUTranslator::ECIWX(ppu_opcode_t op)
 {
-	SetGpr(op.rd, Call(GetType<u64>(), "__eciwx", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb)));
+	UNK(op);
 }
 
 void PPUTranslator::LHZUX(ppu_opcode_t op)
@@ -2799,7 +3037,7 @@ void PPUTranslator::LHZUX(ppu_opcode_t op)
 
 void PPUTranslator::XOR(ppu_opcode_t op)
 {
-	const auto result = op.rs == op.rb ? (Value*)m_ir->getInt64(0) : m_ir->CreateXor(GetGpr(op.rs), GetGpr(op.rb));
+	const auto result = op.rs == op.rb ? static_cast<Value*>(m_ir->getInt64(0)) : m_ir->CreateXor(GetGpr(op.rs), GetGpr(op.rb));
 	SetGpr(op.ra, result);
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
@@ -2843,7 +3081,7 @@ void PPUTranslator::LWAX(ppu_opcode_t op)
 	SetGpr(op.rd, SExt(ReadMemory(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetType<s32>())));
 }
 
-void PPUTranslator::DST(ppu_opcode_t op)
+void PPUTranslator::DST(ppu_opcode_t)
 {
 }
 
@@ -2883,7 +3121,7 @@ void PPUTranslator::LWAUX(ppu_opcode_t op)
 	SetGpr(op.ra, addr);
 }
 
-void PPUTranslator::DSTST(ppu_opcode_t op)
+void PPUTranslator::DSTST(ppu_opcode_t)
 {
 }
 
@@ -2901,14 +3139,14 @@ void PPUTranslator::STHX(ppu_opcode_t op)
 
 void PPUTranslator::ORC(ppu_opcode_t op)
 {
-	const auto result = op.rs == op.rb ? (Value*)m_ir->getInt64(-1) : m_ir->CreateOr(GetGpr(op.rs), m_ir->CreateNot(GetGpr(op.rb)));
+	const auto result = op.rs == op.rb ? static_cast<Value*>(m_ir->getInt64(-1)) : m_ir->CreateOr(GetGpr(op.rs), m_ir->CreateNot(GetGpr(op.rb)));
 	SetGpr(op.ra, result);
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
 void PPUTranslator::ECOWX(ppu_opcode_t op)
 {
-	Call(GetType<void>(), "__ecowx", op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), GetGpr(op.rs, 32));
+	UNK(op);
 }
 
 void PPUTranslator::STHUX(ppu_opcode_t op)
@@ -2932,7 +3170,7 @@ void PPUTranslator::DIVDU(ppu_opcode_t op)
 	const auto o = IsZero(b);
 	const auto result = m_ir->CreateUDiv(a, m_ir->CreateSelect(o, m_ir->getInt64(-1), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt64(0), result));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
 
@@ -2943,7 +3181,7 @@ void PPUTranslator::DIVWU(ppu_opcode_t op)
 	const auto o = IsZero(b);
 	const auto result = m_ir->CreateUDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(0xffffffff), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt32(0), result));
-	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
 
@@ -2993,7 +3231,7 @@ void PPUTranslator::DIVD(ppu_opcode_t op)
 	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt64(1ull << 63)), IsOnes(b)));
 	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt64(1ull << 63), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt64(0), result));
-	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
 
@@ -3001,10 +3239,10 @@ void PPUTranslator::DIVW(ppu_opcode_t op)
 {
 	const auto a = GetGpr(op.ra, 32);
 	const auto b = GetGpr(op.rb, 32);
-	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt32(1 << 31)), IsOnes(b)));
-	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(1 << 31), b));
+	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt32(INT32_MIN)), IsOnes(b)));
+	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(INT32_MIN), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt32(0), result));
-	if (op.rc) SetCrField(0, GetUndef<bool>(), GetUndef<bool>(), GetUndef<bool>());
+	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
 }
 
@@ -3021,7 +3259,6 @@ void PPUTranslator::LDBRX(ppu_opcode_t op)
 
 void PPUTranslator::LSWX(ppu_opcode_t op)
 {
-	CompilationError("Unsupported instruction LSWX. Please report.");
 	Call(GetType<void>(), "__lswx_not_supported", m_ir->getInt32(op.rd), RegLoad(m_cnt), op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb));
 }
 
@@ -3091,6 +3328,7 @@ void PPUTranslator::LSWI(ppu_opcode_t op)
 				if (--index)
 				{
 					addr = m_ir->CreateAdd(addr, m_ir->getInt64(1));
+					i--;
 				}
 			}
 
@@ -3109,7 +3347,9 @@ void PPUTranslator::LFSUX(ppu_opcode_t op)
 
 void PPUTranslator::SYNC(ppu_opcode_t op)
 {
-	m_ir->CreateFence(AtomicOrdering::SequentiallyConsistent);
+	// sync: Full seq cst barrier
+	// lwsync: Acq/Release barrier
+	m_ir->CreateFence(op.l10 ? AtomicOrdering::AcquireRelease : AtomicOrdering::SequentiallyConsistent);
 }
 
 void PPUTranslator::LFDX(ppu_opcode_t op)
@@ -3136,7 +3376,6 @@ void PPUTranslator::STDBRX(ppu_opcode_t op)
 
 void PPUTranslator::STSWX(ppu_opcode_t op)
 {
-	CompilationError("Unsupported instruction STSWX. Please report.");
 	Call(GetType<void>(), "__stswx_not_supported", m_ir->getInt32(op.rs), RegLoad(m_cnt), op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb));
 }
 
@@ -3186,7 +3425,7 @@ void PPUTranslator::STSWI(ppu_opcode_t op)
 
 			while (index)
 			{
-				WriteMemory(addr, m_ir->CreateLShr(buf, 24));
+				WriteMemory(addr, Trunc(m_ir->CreateLShr(buf, 24), GetType<u8>()));
 
 				if (--index)
 				{
@@ -3249,7 +3488,7 @@ void PPUTranslator::LVRXL(ppu_opcode_t op)
 	return LVRX(op);
 }
 
-void PPUTranslator::DSS(ppu_opcode_t op)
+void PPUTranslator::DSS(ppu_opcode_t)
 {
 }
 
@@ -3272,7 +3511,7 @@ void PPUTranslator::SRADI(ppu_opcode_t op)
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
-void PPUTranslator::EIEIO(ppu_opcode_t op)
+void PPUTranslator::EIEIO(ppu_opcode_t)
 {
 	// TODO
 	m_ir->CreateFence(AtomicOrdering::SequentiallyConsistent);
@@ -3319,21 +3558,29 @@ void PPUTranslator::EXTSW(ppu_opcode_t op)
 	if (op.rc) SetCrFieldSignedCmp(0, result, m_ir->getInt64(0));
 }
 
-void PPUTranslator::ICBI(ppu_opcode_t op)
+void PPUTranslator::ICBI(ppu_opcode_t)
 {
 }
 
 void PPUTranslator::DCBZ(ppu_opcode_t op)
 {
-	const auto ptr = GetMemory(m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -128), GetType<u8>());
-	Call(GetType<void>(), "llvm.memset.p0i8.i32", ptr, m_ir->getInt8(0), m_ir->getInt32(128), m_ir->getInt32(16), m_ir->getTrue());
+	const auto addr = m_ir->CreateAnd(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), GetGpr(op.rb)) : GetGpr(op.rb), -128);
+
+	if (g_cfg.core.accurate_cache_line_stores)
+	{
+		Call(GetType<void>(), "__dcbz", addr);
+	}
+	else
+	{
+		Call(GetType<void>(), "llvm.memset.p0i8.i32", GetMemory(addr, GetType<u8>()), m_ir->getInt8(0), m_ir->getInt32(128), m_ir->getTrue());
+	}
 }
 
 void PPUTranslator::LWZ(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3346,7 +3593,7 @@ void PPUTranslator::LWZU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3361,7 +3608,7 @@ void PPUTranslator::LBZ(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3374,7 +3621,7 @@ void PPUTranslator::LBZU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3389,20 +3636,31 @@ void PPUTranslator::STW(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
 	}
 
-	WriteMemory(op.ra ? m_ir->CreateAdd(GetGpr(op.ra), imm) : imm, GetGpr(op.rs, 32));
+	const auto value = GetGpr(op.rs, 32);
+	const auto addr = op.ra ? m_ir->CreateAdd(GetGpr(op.ra), imm) : imm;
+	WriteMemory(addr, value);
+
+	//Insomniac engine v3 & v4 (newer R&C, Fuse, Resitance 3)
+	if (auto ci = llvm::dyn_cast<ConstantInt>(value))
+	{
+		if (ci->getZExtValue() == 0xAAAAAAAA)
+		{
+			Call(GetType<void>(), "__resupdate", addr, m_ir->getInt32(128));
+		}
+	}
 }
 
 void PPUTranslator::STWU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3417,7 +3675,7 @@ void PPUTranslator::STB(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3430,7 +3688,7 @@ void PPUTranslator::STBU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3445,7 +3703,7 @@ void PPUTranslator::LHZ(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3458,7 +3716,7 @@ void PPUTranslator::LHZU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3473,7 +3731,7 @@ void PPUTranslator::LHA(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3486,7 +3744,7 @@ void PPUTranslator::LHAU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3501,7 +3759,7 @@ void PPUTranslator::STH(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3514,7 +3772,7 @@ void PPUTranslator::STHU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3545,7 +3803,7 @@ void PPUTranslator::LFS(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3558,7 +3816,7 @@ void PPUTranslator::LFSU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3573,7 +3831,7 @@ void PPUTranslator::LFD(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3586,7 +3844,7 @@ void PPUTranslator::LFDU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3601,7 +3859,7 @@ void PPUTranslator::STFS(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3614,7 +3872,7 @@ void PPUTranslator::STFSU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3629,7 +3887,7 @@ void PPUTranslator::STFD(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3642,7 +3900,7 @@ void PPUTranslator::STFDU(ppu_opcode_t op)
 {
 	Value* imm = m_ir->getInt64(op.simm16);
 
-	if (m_rel && m_rel->type == 4)
+	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
 		imm = SExt(ReadMemory(GetAddr(+2), GetType<u16>()), GetType<u64>());
 		m_rel = nullptr;
@@ -3824,8 +4082,18 @@ void PPUTranslator::FMADDS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b), GetType<f32>());
-	SetFpr(op.frd, result);
+
+	llvm::Value* result;
+	if (g_cfg.core.llvm_accurate_dfma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
+	}
+	else
+	{
+		result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
+	}
+
+	SetFpr(op.frd, m_ir->CreateFPTrunc(result, GetType<f32>()));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c));
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
@@ -3842,8 +4110,18 @@ void PPUTranslator::FMSUBS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFSub(m_ir->CreateFMul(a, c), b), GetType<f32>());
-	SetFpr(op.frd, result);
+
+	llvm::Value* result;
+	if (g_cfg.core.llvm_accurate_dfma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
+	}
+	else
+	{
+		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+	}
+
+	SetFpr(op.frd, m_ir->CreateFPTrunc(result, GetType<f32>()));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
@@ -3860,8 +4138,18 @@ void PPUTranslator::FNMSUBS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFSub(b, m_ir->CreateFMul(a, c)), GetType<f32>());
-	SetFpr(op.frd, result);
+
+	llvm::Value* result;
+	if (g_cfg.core.llvm_accurate_dfma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
+	}
+	else
+	{
+		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+	}
+
+	SetFpr(op.frd, m_ir->CreateFPTrunc(m_ir->CreateFNeg(result), GetType<f32>()));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
@@ -3878,8 +4166,18 @@ void PPUTranslator::FNMADDS(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFPTrunc(m_ir->CreateFNeg(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b)), GetType<f32>());
-	SetFpr(op.frd, result);
+
+	llvm::Value* result;
+	if (g_cfg.core.llvm_accurate_dfma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
+	}
+	else
+	{
+		result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
+	}
+
+	SetFpr(op.frd, m_ir->CreateFPTrunc(m_ir->CreateFNeg(result), GetType<f32>()));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fr", a, b, c)); // TODO ???
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadds_get_fi", a, b, c));
@@ -3893,8 +4191,6 @@ void PPUTranslator::FNMADDS(ppu_opcode_t op)
 
 void PPUTranslator::MTFSB1(ppu_opcode_t op)
 {
-	CompilationError("MTFSB1");
-
 	SetFPSCRBit(op.crbd, m_ir->getTrue(), true);
 
 	if (op.rc) SetCrFieldFPCC(1);
@@ -3902,8 +4198,6 @@ void PPUTranslator::MTFSB1(ppu_opcode_t op)
 
 void PPUTranslator::MCRFS(ppu_opcode_t op)
 {
-	CompilationError("MCRFS");
-
 	const auto lt = GetFPSCRBit(op.crfs * 4 + 0);
 	const auto gt = GetFPSCRBit(op.crfs * 4 + 1);
 	const auto eq = GetFPSCRBit(op.crfs * 4 + 2);
@@ -3913,8 +4207,6 @@ void PPUTranslator::MCRFS(ppu_opcode_t op)
 
 void PPUTranslator::MTFSB0(ppu_opcode_t op)
 {
-	CompilationError("MTFSB0");
-
 	SetFPSCRBit(op.crbd, m_ir->getFalse(), false);
 
 	if (op.rc) SetCrFieldFPCC(1);
@@ -3922,8 +4214,6 @@ void PPUTranslator::MTFSB0(ppu_opcode_t op)
 
 void PPUTranslator::MTFSFI(ppu_opcode_t op)
 {
-	CompilationError("MTFSFI");
-
 	SetFPSCRBit(op.crfd * 4 + 0, m_ir->getInt1((op.i & 8) != 0), false);
 	if (op.crfd != 0) SetFPSCRBit(op.crfd * 4 + 1, m_ir->getInt1((op.i & 4) != 0), false);
 	if (op.crfd != 0) SetFPSCRBit(op.crfd * 4 + 2, m_ir->getInt1((op.i & 2) != 0), false);
@@ -3934,8 +4224,6 @@ void PPUTranslator::MTFSFI(ppu_opcode_t op)
 
 void PPUTranslator::MFFS(ppu_opcode_t op)
 {
-	CompilationError("MFFS");
-
 	Value* result = m_ir->getInt64(0);
 
 	for (u32 i = 16; i < 20; i++)
@@ -3950,8 +4238,6 @@ void PPUTranslator::MFFS(ppu_opcode_t op)
 
 void PPUTranslator::MTFSF(ppu_opcode_t op)
 {
-	CompilationError("MTFSF");
-
 	const auto value = GetFpr(op.frb, 32, true);
 
 	for (u32 i = 16; i < 20; i++)
@@ -3995,11 +4281,10 @@ void PPUTranslator::FRSP(ppu_opcode_t op)
 void PPUTranslator::FCTIW(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	//const auto sat_l = m_ir->CreateFCmpULT(b, ConstantFP::get(GetType<f64>(), -std::pow(2, 31))); // TODO ???
-	//const auto sat_h = m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::pow(2, 31)));
-	//const auto converted = m_ir->CreateFPToSI(FP_SAT_OP(sat_l, b), GetType<s64>());
-	//SetFpr(op.frd, m_ir->CreateSelect(sat_h, m_ir->getInt64(0x7fffffff), converted));
-	SetFpr(op.frd, Call(GetType<s32>(), "llvm.x86.sse2.cvtsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, uint64_t{0})));
+	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(31.))), GetType<s32>());
+
+	// fix result saturation (0x80000000 -> 0x7fffffff)
+	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s32>(), "llvm.x86.sse2.cvtsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fr", b));
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fctiw_get_fi", b));
@@ -4012,7 +4297,10 @@ void PPUTranslator::FCTIW(ppu_opcode_t op)
 void PPUTranslator::FCTIWZ(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	SetFpr(op.frd, Call(GetType<s32>(), "llvm.x86.sse2.cvttsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, uint64_t{0})));
+	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(31.))), GetType<s32>());
+
+	// fix result saturation (0x80000000 -> 0x7fffffff)
+	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s32>(), "llvm.x86.sse2.cvttsd2si", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
 }
 
 void PPUTranslator::FDIV(ppu_opcode_t op)
@@ -4126,7 +4414,17 @@ void PPUTranslator::FMSUB(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+
+	llvm::Value* result;
+	if (g_cfg.core.llvm_accurate_dfma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
+	}
+	else
+	{
+		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+	}
+
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
@@ -4144,7 +4442,17 @@ void PPUTranslator::FMADD(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
+
+	llvm::Value* result;
+	if (g_cfg.core.llvm_accurate_dfma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), { a, c, b });
+	}
+	else
+	{
+		result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
+	}
+
 	SetFpr(op.frd, result);
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c));
@@ -4162,8 +4470,18 @@ void PPUTranslator::FNMSUB(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFSub(b, m_ir->CreateFMul(a, c));
-	SetFpr(op.frd, result);
+
+	llvm::Value* result;
+	if (g_cfg.core.llvm_accurate_dfma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, m_ir->CreateFNeg(b)});
+	}
+	else
+	{
+		result = m_ir->CreateFSub(m_ir->CreateFMul(a, c), b);
+	}
+
+	SetFpr(op.frd, m_ir->CreateFNeg(result));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fi", a, b, c));
@@ -4180,8 +4498,18 @@ void PPUTranslator::FNMADD(ppu_opcode_t op)
 	const auto a = GetFpr(op.fra);
 	const auto b = GetFpr(op.frb);
 	const auto c = GetFpr(op.frc);
-	const auto result = m_ir->CreateFNeg(m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b));
-	SetFpr(op.frd, result);
+
+	llvm::Value* result;
+	if (g_cfg.core.llvm_accurate_dfma)
+	{
+		result = m_ir->CreateCall(get_intrinsic<f64>(llvm::Intrinsic::fma), {a, c, b});
+	}
+	else
+	{
+		result = m_ir->CreateFAdd(m_ir->CreateFMul(a, c), b);
+	}
+
+	SetFpr(op.frd, m_ir->CreateFNeg(result));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fr", a, b, c)); // TODO ???
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fmadd_get_fi", a, b, c));
@@ -4239,11 +4567,10 @@ void PPUTranslator::FABS(ppu_opcode_t op)
 void PPUTranslator::FCTID(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	//const auto sat_l = m_ir->CreateFCmpULT(b, ConstantFP::get(GetType<f64>(), -std::pow(2, 63)));
-	//const auto sat_h = m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::pow(2, 63)));
-	//const auto converted = m_ir->CreateFPToSI(FP_SAT_OP(sat_l, b), GetType<s64>());
-	//SetFpr(op.frd, m_ir->CreateSelect(sat_h, m_ir->getInt64(0x7fffffffffffffff), converted));
-	SetFpr(op.frd, Call(GetType<s64>(), "llvm.x86.sse2.cvtsd2si64", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, uint64_t{0})));
+	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(63.))), GetType<s64>());
+
+	// fix result saturation (0x8000000000000000 -> 0x7fffffffffffffff)
+	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s64>(), "llvm.x86.sse2.cvtsd2si64", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
 
 	//SetFPSCR_FR(Call(GetType<bool>(), m_pure_attr, "__fctid_get_fr", b));
 	//SetFPSCR_FI(Call(GetType<bool>(), m_pure_attr, "__fctid_get_fi", b));
@@ -4256,7 +4583,10 @@ void PPUTranslator::FCTID(ppu_opcode_t op)
 void PPUTranslator::FCTIDZ(ppu_opcode_t op)
 {
 	const auto b = GetFpr(op.frb);
-	SetFpr(op.frd, Call(GetType<s64>(), "llvm.x86.sse2.cvttsd2si64", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, uint64_t{0})));
+	const auto xormask = m_ir->CreateSExt(m_ir->CreateFCmpOGE(b, ConstantFP::get(GetType<f64>(), std::exp2l(63.))), GetType<s64>());
+
+	// fix result saturation (0x8000000000000000 -> 0x7fffffffffffffff)
+	SetFpr(op.frd, m_ir->CreateXor(xormask, Call(GetType<s64>(), "llvm.x86.sse2.cvttsd2si64", m_ir->CreateInsertElement(GetUndef<f64[2]>(), b, u64{0}))));
 }
 
 void PPUTranslator::FCFID(ppu_opcode_t op)
@@ -4280,12 +4610,12 @@ void PPUTranslator::UNK(ppu_opcode_t op)
 
 Value* PPUTranslator::GetGpr(u32 r, u32 num_bits)
 {
-	return m_ir->CreateTrunc(RegLoad(m_gpr[r]), m_ir->getIntNTy(num_bits));
+	return Trunc(RegLoad(m_gpr[r]), m_ir->getIntNTy(num_bits));
 }
 
 void PPUTranslator::SetGpr(u32 r, Value* value)
 {
-	RegStore(m_ir->CreateZExt(value, GetType<u64>()), m_gpr[r]);
+	RegStore(ZExt(value, GetType<u64>()), m_gpr[r]);
 }
 
 Value* PPUTranslator::GetFpr(u32 r, u32 bits, bool as_int)
@@ -4302,15 +4632,15 @@ Value* PPUTranslator::GetFpr(u32 r, u32 bits, bool as_int)
 	}
 	else
 	{
-		return m_ir->CreateTrunc(m_ir->CreateBitCast(value, GetType<u64>()), m_ir->getIntNTy(bits));
+		return Trunc(bitcast(value, GetType<u64>()), m_ir->getIntNTy(bits));
 	}
 }
 
 void PPUTranslator::SetFpr(u32 r, Value* val)
 {
 	const auto f64_val =
-		val->getType() == GetType<s32>() ? m_ir->CreateBitCast(SExt(val), GetType<f64>()) :
-		val->getType() == GetType<s64>() ? m_ir->CreateBitCast(val, GetType<f64>()) :
+		val->getType() == GetType<s32>() ? bitcast(SExt(val), GetType<f64>()) :
+		val->getType() == GetType<s64>() ? bitcast(val, GetType<f64>()) :
 		val->getType() == GetType<f32>() ? m_ir->CreateFPExt(val, GetType<f64>()) : val;
 
 	RegStore(f64_val, m_fpr[r]);
@@ -4320,16 +4650,19 @@ Value* PPUTranslator::GetVr(u32 vr, VrType type)
 {
 	const auto value = RegLoad(m_vr[vr]);
 
+	llvm::Type* _type{};
+
 	switch (type)
 	{
-	case VrType::vi32: return m_ir->CreateBitCast(value, GetType<u32[4]>());
-	case VrType::vi8: return m_ir->CreateBitCast(value, GetType<u8[16]>());
-	case VrType::vi16: return m_ir->CreateBitCast(value, GetType<u16[8]>());
-	case VrType::vf: return m_ir->CreateBitCast(value, GetType<f32[4]>());
-	case VrType::i128: return m_ir->CreateBitCast(value, GetType<u128>());
+	case VrType::vi32: _type = GetType<u32[4]>(); break;
+	case VrType::vi8 : _type = GetType<u8[16]>(); break;
+	case VrType::vi16: _type = GetType<u16[8]>(); break;
+	case VrType::vf  : _type = GetType<f32[4]>(); break;
+	case VrType::i128: _type = GetType<u128>(); break;
+	default: ensure(false);
 	}
 
-	throw std::logic_error("GetVr(): invalid type");
+	return bitcast(value, _type);
 }
 
 void PPUTranslator::SetVr(u32 vr, Value* value)
@@ -4342,12 +4675,12 @@ void PPUTranslator::SetVr(u32 vr, Value* value)
 		if (type->getScalarType()->isIntegerTy(1))
 		{
 			// Sign-extend bool values
-			value = SExt(value, ScaleType(type, 7 - s32(std::log2(size))));
+			value = SExt(value, ScaleType(type, 7 - s32(std::log2(+size))));
 		}
 		else if (size == 256 || size == 512)
 		{
 			// Truncate big vectors
-			value = Trunc(value, ScaleType(type, 7 - s32(std::log2(size))));
+			value = Trunc(value, ScaleType(type, 7 - s32(std::log2(+size))));
 		}
 	}
 
@@ -4402,12 +4735,11 @@ void PPUTranslator::SetFPCC(Value* lt, Value* gt, Value* eq, Value* un, bool set
 	if (set_cr) SetCrField(1, lt, gt, eq, un);
 }
 
-void PPUTranslator::SetFPRF(Value* value, bool set_cr)
+void PPUTranslator::SetFPRF(Value* value, bool /*set_cr*/)
 {
-	const bool is32 =
+	//const bool is32 =
 		value->getType()->isFloatTy() ? true :
-		value->getType()->isDoubleTy() ? false :
-		throw std::logic_error("SetFPRF(): invalid value type");
+		value->getType()->isDoubleTy() ? false : ensure(false);
 
 	//const auto zero = ConstantFP::get(value->getType(), 0.0);
 	//const auto is_nan = m_ir->CreateFCmpUNO(value, zero);
@@ -4424,18 +4756,18 @@ void PPUTranslator::SetFPRF(Value* value, bool set_cr)
 	//SetFPCC(lt, gt, eq, un, set_cr);
 }
 
-void PPUTranslator::SetFPSCR_FR(Value* value)
+void PPUTranslator::SetFPSCR_FR(Value* /*value*/)
 {
 	//m_ir->CreateStore(value, m_fpscr_fr);
 }
 
-void PPUTranslator::SetFPSCR_FI(Value* value)
+void PPUTranslator::SetFPSCR_FI(Value* /*value*/)
 {
 	//m_ir->CreateStore(value, m_fpscr_fi);
 	//SetFPSCRException(m_fpscr_xx, value);
 }
 
-void PPUTranslator::SetFPSCRException(Value* ptr, Value* value)
+void PPUTranslator::SetFPSCRException(Value* /*ptr*/, Value* /*value*/)
 {
 	//m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(ptr), value), ptr);
 	//m_ir->CreateStore(m_ir->CreateOr(m_ir->CreateLoad(m_fpscr_fx), value), m_fpscr_fx);
@@ -4477,7 +4809,7 @@ Value* PPUTranslator::GetFPSCRBit(u32 n)
 	return value;
 }
 
-void PPUTranslator::SetFPSCRBit(u32 n, Value* value, bool update_fx)
+void PPUTranslator::SetFPSCRBit(u32 n, Value* value, bool /*update_fx*/)
 {
 	if (n < 16 || n > 19)
 	{

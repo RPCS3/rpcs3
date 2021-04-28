@@ -3,7 +3,7 @@
 
 
 // Return Codes
-enum
+enum CellUsbdError : u32
 {
 	CELL_USBD_ERROR_NOT_INITIALIZED        = 0x80110001,
 	CELL_USBD_ERROR_ALREADY_INITIALIZED    = 0x80110002,

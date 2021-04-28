@@ -1,58 +1,67 @@
 #include "game_list_grid_delegate.h"
 
-game_list_grid_delegate::game_list_grid_delegate(const QSize& size, const qreal& margin_factor, const qreal& text_factor, const QFont& font, const QColor& font_color, QObject *parent)
-	 : QAbstractItemDelegate(parent), m_size(size), m_margin_factor(margin_factor), m_text_factor(text_factor), m_font(font), m_font_color(font_color)
+game_list_grid_delegate::game_list_grid_delegate(const QSize& size, const qreal& margin_factor, const qreal& text_factor, QObject *parent)
+	 : QStyledItemDelegate(parent), m_size(size), m_margin_factor(margin_factor), m_text_factor(text_factor)
 {
 }
 
-game_list_grid_delegate::~game_list_grid_delegate()
+void game_list_grid_delegate::initStyleOption(QStyleOptionViewItem* option, const QModelIndex& index) const
 {
+	Q_UNUSED(index)
+
+	// Remove the focus frame around selected items
+	option->state &= ~QStyle::State_HasFocus;
+
+	// Call initStyleOption without a model index, since we want to paint the relevant data ourselves
+	QStyledItemDelegate::initStyleOption(option, QModelIndex());
 }
 
-void game_list_grid_delegate::paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index) const
+void game_list_grid_delegate::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
-	QRect r = option.rect;
+	const QRect r = option.rect;
 
+	painter->setRenderHints(QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform);
 	painter->eraseRect(r);
 
-	//Get title and image
-	QPixmap image = (qvariant_cast<QPixmap>(index.data(Qt::DecorationRole)));
-	QString title = index.data(Qt::DisplayRole).toString();
+	// Get title and image
+	const QPixmap image = qvariant_cast<QPixmap>(index.data(Qt::DecorationRole));
+	const QString title = index.data(Qt::DisplayRole).toString();
+
+	// Paint from our stylesheet
+	QStyledItemDelegate::paint(painter, option, index);
 
 	// image
 	if (image.isNull() == false)
 	{
-		painter->drawPixmap(r, image);
+		painter->drawPixmap(option.rect, image);
 	}
 
-	// Add selection overlay
-	if (option.state & QStyle::State_Selected)
-	{
-		QLinearGradient gradientSelected(r.left(), r.top(), r.left(), r.height() + r.top());
-		gradientSelected.setColorAt(0.0, QColor::fromRgba(qRgba(119, 213, 247, 128)));
-		gradientSelected.setColorAt(0.9, QColor::fromRgba(qRgba(27, 134, 183, 128)));
-		gradientSelected.setColorAt(1.0, QColor::fromRgba(qRgba(0, 120, 174, 128)));
-		painter->fillRect(r, gradientSelected);
-	}
-
-	int h = r.height() / (1 + m_margin_factor + m_margin_factor*m_text_factor);
-	int height = r.height() - h - h * m_margin_factor;
-	int top = r.bottom() - height;
+	const int h = r.height() / (1 + m_margin_factor + m_margin_factor * m_text_factor);
+	const int height = r.height() - h - h * m_margin_factor;
+	const int top = r.bottom() - height;
 
 	// title
-	painter->setPen(QPen(m_font_color, 1, Qt::SolidLine));
-	painter->setFont(m_font);
-	painter->drawText(QRect(r.left(), top, r.width(), height), Qt::TextWordWrap | Qt::AlignCenter, title);
+	if (option.state & QStyle::State_Selected)
+	{
+		painter->setPen(QPen(option.palette.color(QPalette::HighlightedText), 1, Qt::SolidLine));
+	}
+	else
+	{
+		painter->setPen(QPen(option.palette.color(QPalette::WindowText), 1, Qt::SolidLine));
+	}
+
+	painter->setFont(option.font);
+	painter->drawText(QRect(r.left(), top, r.width(), height), +Qt::TextWordWrap | +Qt::AlignCenter, title);
 }
 
-QSize game_list_grid_delegate::sizeHint(const QStyleOptionViewItem & option, const QModelIndex & index) const
+QSize game_list_grid_delegate::sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
-	Q_UNUSED(option);
-	Q_UNUSED(index);
+	Q_UNUSED(option)
+	Q_UNUSED(index)
 	return m_size;
 }
 
-void game_list_grid_delegate::setItemSize(const QSize & size)
+void game_list_grid_delegate::setItemSize(const QSize& size)
 {
 	m_size = size;
 }

@@ -1,9 +1,13 @@
-﻿#pragma once
+#pragma once
 
-
+#include "util/types.hpp"
+#include "util/endian.hpp"
+#include "Emu/Memory/vm_ptr.h"
+#include <string>
+#include <vector>
 
 // Return codes
-enum
+enum CellSaveDataError : u32
 {
 	CELL_SAVEDATA_ERROR_CBRESULT        = 0x8002b401,
 	CELL_SAVEDATA_ERROR_ACCESS_ERROR    = 0x8002b402,
@@ -30,6 +34,24 @@ enum
 	CELL_SAVEDATA_CBRESULT_ERR_BROKEN         = -3,
 	CELL_SAVEDATA_CBRESULT_ERR_NODATA         = -4,
 	CELL_SAVEDATA_CBRESULT_ERR_INVALID        = -5,
+};
+
+// Bind stat return codes
+enum
+{
+	CELL_SAVEDATA_BINDSTAT_OK             = 0,
+	CELL_SAVEDATA_BINDSTAT_ERR_CONSOLE    = 1 << 0,
+	CELL_SAVEDATA_BINDSTAT_ERR_DISC       = 1 << 1,
+	CELL_SAVEDATA_BINDSTAT_ERR_PROGRAM    = 1 << 2,
+	CELL_SAVEDATA_BINDSTAT_ERR_NOACCOUNTI = 1 << 3,
+	CELL_SAVEDATA_BINDSTAT_ERR_NOUSER     = 1 << 3,
+	CELL_SAVEDATA_BINDSTAT_ERR_ACCOUNTID  = 1 << 4,
+	CELL_SAVEDATA_BINDSTAT_ERR_OTHERS     = 1 << 4,
+	CELL_SAVEDATA_BINDSTAT_ERR_NOUSERID   = 1 << 5,
+	CELL_SAVEDATA_BINDSTAT_ERR_USERID     = 1 << 6,
+	CELL_SAVEDATA_BINDSTAT_ERR_NOOWNER    = 1 << 8,
+	CELL_SAVEDATA_BINDSTAT_ERR_OWNER      = 1 << 9,
+	CELL_SAVEDATA_BINDSTAT_ERR_LOCALOWNER = 1 << 10,
 };
 
 // Constants
@@ -86,12 +108,50 @@ enum
 	CELL_SAVEDATA_FILETYPE_CONTENT_PIC1   = 4,
 	CELL_SAVEDATA_FILETYPE_CONTENT_SND0   = 5,
 
+	// CellSaveDataSystemFileParam attribute
+	CELL_SAVEDATA_ATTR_NORMAL              = 0,
+	CELL_SAVEDATA_ATTR_NODUPLICATE         = 1,
+
 	// reCreateMode
 	CELL_SAVEDATA_RECREATE_NO              = 0,
 	CELL_SAVEDATA_RECREATE_NO_NOBROKEN     = 1,
 	CELL_SAVEDATA_RECREATE_YES             = 2,
 	CELL_SAVEDATA_RECREATE_YES_RESET_OWNER = 3,
-	CELL_SAVEDATA_RECREATE_MASK            = 0xffff,
+	CELL_SAVEDATA_RECREATE_MASK            = 0xfffeffff,
+
+	// Version
+	CELL_SAVEDATA_VERSION_OLD = 0,
+	CELL_SAVEDATA_VERSION_420 = 1,
+
+	// Error Dialog
+	CELL_SAVEDATA_ERRDIALOG_NONE     = 0,
+	CELL_SAVEDATA_ERRDIALOG_ALWAYS   = 1,
+	CELL_SAVEDATA_ERRDIALOG_NOREPEAT = 2,
+
+	// Options for funcFixed dialog
+	CELL_SAVEDATA_OPTION_NONE      = 0,
+	CELL_SAVEDATA_OPTION_NOCONFIRM = 1,
+
+	// CellSaveDataAutoIndicatorDispPosition
+	CELL_SAVEDATA_INDICATORPOS_LOWER_RIGHT = 0,
+	CELL_SAVEDATA_INDICATORPOS_LOWER_LEFT  = 1,
+	CELL_SAVEDATA_INDICATORPOS_UPPER_RIGHT = 2,
+	CELL_SAVEDATA_INDICATORPOS_UPPER_LEFT  = 3,
+	CELL_SAVEDATA_INDICATORPOS_CENTER      = 4,
+
+	// CellSaveDataAutoIndicatorDispMsgAlign
+	CELL_SAVEDATA_INDICATORPOS_MSGALIGN_LEFT   = 0 << 4,
+	CELL_SAVEDATA_INDICATORPOS_MSGALIGN_RIGHT  = 1 << 4,
+	CELL_SAVEDATA_INDICATORPOS_MSGALIGN_CENTER = 2 << 4,
+
+	// CellSaveDataAutoIndicatorDispMode
+	CELL_SAVEDATA_INDICATORMODE_FIXED      = 0,
+	CELL_SAVEDATA_INDICATORMODE_BLINK      = 1,
+	CELL_SAVEDATA_INDICATORMODE_BLINK_FAST = 2,
+	CELL_SAVEDATA_INDICATORMODE_BLINK_SLOW = 3,
+
+	// Trophy ownership
+	CELL_SAVEDATA_DISABLE_TROPHY_OWNERSHIP_CHECK = 1 << 16,
 };
 
 // CellSaveDataListNewData::iconPosition
@@ -173,7 +233,7 @@ struct CellSaveDataSystemFileParam
 	char subTitle[CELL_SAVEDATA_SYSP_SUBTITLE_SIZE];
 	char detail[CELL_SAVEDATA_SYSP_DETAIL_SIZE];
 	be_t<u32> attribute;
-	char reserved2[4];
+	be_t<u32> parental_level; // char reserved2[4] in firmware 3.70 or higher
 	char listParam[CELL_SAVEDATA_SYSP_LPARAM_SIZE];
 	char reserved[256];
 };
@@ -241,7 +301,7 @@ struct CellSaveDataFileSet
 	be_t<u32> fileOperation;
 	vm::bptr<void> reserved;
 	be_t<u32> fileType;
-	u8 secureFileId[CELL_SAVEDATA_SECUREFILEID_SIZE];
+	be_t<u128, 1> secureFileId;
 	vm::bptr<char> fileName;
 	be_t<u32> fileOffset;
 	be_t<u32> fileSize;
@@ -279,17 +339,19 @@ using CellSaveDataDoneCallback = void(vm::ptr<CellSaveDataCBResult> cbResult, vm
 // Auxiliary Structs
 struct SaveDataEntry
 {
+	std::string escaped;
+
 	std::string dirName;
 	std::string listParam;
 	std::string title;
 	std::string subtitle;
 	std::string details;
-	u64 size;
-	s64 atime;
-	s64 mtime;
-	s64 ctime;
+	u64 size{0};
+	s64 atime{0};
+	s64 mtime{0};
+	s64 ctime{0};
 	std::vector<uchar> iconBuf;
-	bool isNew;
+	bool isNew{false};
 };
 
 class SaveDialogBase
@@ -297,5 +359,5 @@ class SaveDialogBase
 public:
 	virtual ~SaveDialogBase();
 
-	virtual s32 ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet) = 0;
+	virtual s32 ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet, bool enable_overlay) = 0;
 };

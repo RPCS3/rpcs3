@@ -1,12 +1,18 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 
 #include "GSRender.h"
 
 GSRender::GSRender()
+	: m_context(nullptr)
 {
-	m_frame = Emu.GetCallbacks().get_gs_frame().release();
+	if (auto gs_frame = Emu.GetCallbacks().get_gs_frame())
+	{
+		m_frame = gs_frame.release();
+	}
+	else
+	{
+		m_frame = nullptr;
+	}
 }
 
 GSRender::~GSRender()
@@ -15,16 +21,7 @@ GSRender::~GSRender()
 
 	if (m_frame)
 	{
-		m_frame->hide();
 		m_frame->close();
-	}
-}
-
-void GSRender::on_init_rsx()
-{
-	if (m_frame)
-	{
-		m_frame->show();
 	}
 }
 
@@ -41,8 +38,6 @@ void GSRender::on_exit()
 {
 	if (m_frame)
 	{
-		m_frame->disable_wm_event_queue();
-		m_frame->clear_wm_events();
 		m_frame->delete_context(m_context);
 		m_context = nullptr;
 	}
@@ -50,7 +45,7 @@ void GSRender::on_exit()
 	rsx::thread::on_exit();
 }
 
-void GSRender::flip(int buffer)
+void GSRender::flip(const rsx::display_flip_info_t&)
 {
 	if (m_frame)
 	{

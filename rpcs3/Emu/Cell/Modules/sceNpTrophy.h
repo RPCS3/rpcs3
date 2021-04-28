@@ -1,6 +1,10 @@
 #pragma once
 
-
+#include "util/types.hpp"
+#include "util/endian.hpp"
+#include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
+#include <vector>
 
 // Error codes
 enum SceNpTrophyError : u32
@@ -63,7 +67,11 @@ enum
 
 	SCE_NP_TROPHY_INVALID_CONTEXT      = 0,
 	SCE_NP_TROPHY_INVALID_HANDLE       = 0,
-	SCE_NP_TROPHY_INVALID_TROPHY_ID    = -1,
+};
+
+enum : u32
+{
+	SCE_NP_TROPHY_INVALID_TROPHY_ID    = 0xffffffff,
 };
 
 enum SceNpTrophyGrade
@@ -73,6 +81,11 @@ enum SceNpTrophyGrade
 	SCE_NP_TROPHY_GRADE_GOLD           = 2,
 	SCE_NP_TROPHY_GRADE_SILVER         = 3,
 	SCE_NP_TROPHY_GRADE_BRONZE         = 4,
+};
+
+enum
+{
+	SCE_NP_TROPHY_OPTIONS_CREATE_CONTEXT_READ_ONLY = 1,
 };
 
 struct SceNpTrophyGameDetails
@@ -116,7 +129,7 @@ struct SceNpTrophyData
 
 struct SceNpTrophyFlagArray
 {
-	u32 flag_bits[SCE_NP_TROPHY_FLAG_SETSIZE >> SCE_NP_TROPHY_FLAG_BITS_SHIFT];
+	be_t<u32> flag_bits[SCE_NP_TROPHY_FLAG_SETSIZE >> SCE_NP_TROPHY_FLAG_BITS_SHIFT];
 };
 
 enum

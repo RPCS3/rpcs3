@@ -1,14 +1,25 @@
 #pragma once
 
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 extern "C"
 {
 #include "libswscale/swscale.h"
 }
-
-
+#ifdef _MSC_VER
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
+#endif
 
 // Error Codes
-enum
+enum CellVpostError : u32
 {
 	CELL_VPOST_ERROR_Q_ARG_CFG_NULL              = 0x80610410,
 	CELL_VPOST_ERROR_Q_ARG_CFG_INVALID           = 0x80610411,

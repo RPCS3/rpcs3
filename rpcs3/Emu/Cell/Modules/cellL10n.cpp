@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Memory/vm_ref.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -15,7 +16,9 @@ typedef const char *HostCode;
 
 #include "cellL10n.h"
 
-logs::channel cellL10n("cellL10n");
+#include "util/asm.hpp"
+
+LOG_CHANNEL(cellL10n);
 
 // Translate code id to code name. some codepage may has another name.
 // If this makes your compilation fail, try replace the string code with one in "iconv -l"
@@ -53,8 +56,8 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 	case L10N_CODEPAGE_866:     retCode = 866;          return true;
 	case L10N_CODEPAGE_932:     retCode = 932;          return true;
 	case L10N_CODEPAGE_936:     retCode = 936;          return true; // GBK
-	case L10N_GBK:              retCode = 936;          return true; 
-	case L10N_CODEPAGE_949:     retCode = 949;          return true; // UHC 
+	case L10N_GBK:              retCode = 936;          return true;
+	case L10N_CODEPAGE_949:     retCode = 949;          return true; // UHC
 	case L10N_UHC:              retCode = 949;          return true; // UHC
 	case L10N_CODEPAGE_950:     retCode = 950;          return true;
 	case L10N_CODEPAGE_1251:    retCode = 1251;         return true; // CYRL
@@ -164,12 +167,11 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 s32 _OEM2Wide(HostCode oem_code, const std::string& src, std::wstring& dst)
 {
 	//Such length returned should include the '\0' character.
-	s32 length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, NULL, 0);
+	const s32 length = MultiByteToWideChar(oem_code, 0, src.c_str(), -1, nullptr, 0);
 	wchar_t *store = new wchar_t[length]();
 
-	MultiByteToWideChar(oem_code, 0, src.c_str(), -1, (LPWSTR)store, length);
-	std::wstring result(store);
-	dst = result;
+	MultiByteToWideChar(oem_code, 0, src.c_str(), -1, static_cast<LPWSTR>(store), length);
+	dst = std::wstring(store);
 
 	delete[] store;
 	store = nullptr;
@@ -181,12 +183,11 @@ s32 _OEM2Wide(HostCode oem_code, const std::string& src, std::wstring& dst)
 s32 _Wide2OEM(HostCode oem_code, const std::wstring& src, std::string& dst)
 {
 	//Such length returned should include the '\0' character.
-	s32 length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, NULL, 0, NULL, NULL);
+	const s32 length = WideCharToMultiByte(oem_code, 0, src.c_str(), -1, nullptr, 0, nullptr, nullptr);
 	char *store = new char[length]();
 
-	WideCharToMultiByte(oem_code, 0, src.c_str(), -1, store, length, NULL, NULL);
-	std::string result(store);
-	dst = result;
+	WideCharToMultiByte(oem_code, 0, src.c_str(), -1, store, length, nullptr, nullptr);
+	dst = std::string(store);
 
 	delete[] store;
 	store = nullptr;
@@ -216,27 +217,27 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 		return ConverterUnknown;
 
 #ifdef _MSC_VER
-	std::string wrapped_source = std::string(static_cast<const char *>(src), src_len);
-	std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
+	const std::string wrapped_source = std::string(static_cast<const char *>(src), src_len);
+	const std::string target = _OemToOem(srcCode, dstCode, wrapped_source);
 
-	if (dst != NULL)
+	if (dst != nullptr)
 	{
 		if (target.length() > *dst_len) return DSTExhausted;
 		memcpy(dst, target.c_str(), target.length());
 	}
-	*dst_len = target.length();
+	*dst_len = ::narrow<s32>(target.size());
 
 	return ConversionOK;
 #else
 	s32 retValue = ConversionOK;
 	iconv_t ict = iconv_open(dstCode, srcCode);
-	size_t srcLen = src_len;
+	usz srcLen = src_len;
 	if (dst != NULL)
 	{
-		size_t dstLen = *dst_len;
-		size_t ictd = iconv(ict, (char **)&src, &srcLen, (char **)&dst, &dstLen);
+		usz dstLen = *dst_len;
+		usz ictd = iconv(ict, utils::bless<char*>(&src), &srcLen, utils::bless<char*>(&dst), &dstLen);
 		*dst_len -= dstLen;
-		if (ictd == -1)
+		if (ictd == umax)
 		{
 			if (errno == EILSEQ)
 				retValue = SRCIllegal;  //Invalid multi-byte sequence
@@ -257,11 +258,11 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 		char buf[16];
 		while (srcLen > 0)
 		{
-			char *bufPtr = buf;
-			size_t bufLeft = sizeof(buf);
-			size_t ictd = iconv(ict, (char **)&src, &srcLen, (char **)&bufPtr, &bufLeft);
+			//char *bufPtr = buf;
+			usz bufLeft = sizeof(buf);
+			usz ictd = iconv(ict, utils::bless<char*>(&src), &srcLen, utils::bless<char*>(&dst), &bufLeft);
 			*dst_len += sizeof(buf) - bufLeft;
-			if (ictd == -1 && errno != E2BIG)
+			if (ictd == umax && errno != E2BIG)
 			{
 				if (errno == EILSEQ)
 					retValue = SRCIllegal;
@@ -284,7 +285,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 s32 _L10nConvertStr(s32 src_code, vm::cptr<void> src, vm::cptr<s32> src_len, s32 dst_code, vm::ptr<void> dst, vm::ptr<s32> dst_len)
 {
 	s32 dstLen = *dst_len;
-	s32 result = _ConvertStr(src_code, src.get_ptr(), *src_len, dst_code, dst == vm::null ? NULL : dst.get_ptr(), &dstLen, false);
+	s32 result = _ConvertStr(src_code, src.get_ptr(), *src_len, dst_code, dst ? dst.get_ptr() : nullptr, &dstLen, false);
 	*dst_len = dstLen;
 	return result;
 }
@@ -300,7 +301,7 @@ s32 _L10nConvertChar(s32 src_code, const void *src, s32 src_len, s32 dst_code, v
 s32 _L10nConvertCharNoResult(s32 src_code, const void *src, s32 src_len, s32 dst_code, vm::ptr<void> dst)
 {
 	s32 dstLen = 0x7FFFFFFF;
-	s32 result = _ConvertStr(src_code, src, src_len, dst_code, dst.get_ptr(), &dstLen, true);
+	[[maybe_unused]] s32 result = _ConvertStr(src_code, src, src_len, dst_code, dst.get_ptr(), &dstLen, true);
 	return dstLen;
 }
 
@@ -342,7 +343,7 @@ s32 JISstoUTF8s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::pt
 
 s32 SjisZen2Han(vm::cptr<u16> src)
 {
-	cellL10n.todo("SjisZen2Han()");
+	cellL10n.todo("SjisZen2Han(src=*0x%x)", src);
 	return ConversionOK;
 }
 
@@ -409,23 +410,23 @@ s32 jis2sjis()
 s32 jstrnchk(vm::cptr<u8> src, s32 src_len)
 {
 	u8 r = 0;
-	
-	for (u32 len = 0; len < src_len; len++)
+
+	for (s32 len = 0; len < src_len; len++)
 	{
-		if (src != vm::null)
+		if (src)
 		{
 			if (*src >= 0xa1 && *src <= 0xfe)
 			{
 				cellL10n.warning("jstrnchk: EUCJP (src=*0x%x, src_len=*0x%x)", src, src_len);
 				r |= L10N_STR_EUCJP;
-			} 
-			else if( ((*src >=  0x81 && *src <= 0x9f) || (*src >= 0xe0 && *src <= 0xfc)) || (*src >= 0x40 && *src <= 0xfc && *src != 0x7f) ) 
+			}
+			else if( ((*src >=  0x81 && *src <= 0x9f) || (*src >= 0xe0 && *src <= 0xfc)) || (*src >= 0x40 && *src <= 0xfc && *src != 0x7f) )
 			{
 				cellL10n.warning("jstrnchk: SJIS (src=*0x%x, src_len=*0x%x)", src, src_len);
 				r |= L10N_STR_SJIS;
 			}
 			// ISO-2022-JP. (JIS X 0202) That's an inaccurate general range which (contains ASCII and UTF-8 characters?).
-			else if (*src >= 0x21 && *src <= 0x7e) 
+			else if (*src >= 0x21 && *src <= 0x7e)
 			{
 				cellL10n.warning("jstrnchk: JIS (src=*0x%x, src_len=*0x%x)", src, src_len);
 				r |= L10N_STR_JIS;
@@ -437,7 +438,7 @@ s32 jstrnchk(vm::cptr<u8> src, s32 src_len)
 			// TODO:
 			// L10N_STR_ASCII
 			// L10N_STR_UTF8
-			
+
 			// L10N_STR_UNKNOWN
 			// L10N_STR_ILLEGAL
 			// L10N_STR_ERROR
@@ -485,7 +486,8 @@ s32 GBKtoUCS2()
 
 s32 eucjp2jis()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("eucjp2jis()");
+	return CELL_OK;
 }
 
 s32 UTF32stoUTF8s(vm::cptr<u32> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::ptr<s32> dst_len)
@@ -683,7 +685,7 @@ s32 EUCKRtoUHC()
 s32 UCS2toSJIS(u16 ch, vm::ptr<void> dst)
 {
 	cellL10n.todo("UCS2toSJIS(ch=%d, dst=*0x%x)", ch, dst);
-	// Should be L10N_UCS2 (16bit) not L10N_UTF8 (8bit) and L10N_SHIFT_JIS 
+	// Should be L10N_UCS2 (16bit) not L10N_UTF8 (8bit) and L10N_SHIFT_JIS
 	// return _L10nConvertCharNoResult(L10N_UTF8, &ch, sizeof(ch), L10N_CODEPAGE_932, dst);
 	return 0;
 }
@@ -1212,7 +1214,8 @@ s32 BIG5stoUTF8s(vm::cptr<u8> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm::p
 
 s32 EUCCNtoUCS2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellL10n.todo("EUCCNtoUCS2()");
+	return CELL_OK;
 }
 
 s32 UTF8stoSBCSs()
@@ -1257,7 +1260,7 @@ s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ref<s32> utf16_len, vm::ptr<u8> utf8,
 
 	const u32 max_len = utf8_len; utf8_len = 0;
 
-	for (u32 i = 0, len = 0; i < utf16_len; i++, utf8_len = len)
+	for (u32 i = 0, len = 0; i < static_cast<u32>(utf16_len); i++, utf8_len = len)
 	{
 		const u16 ch = utf16[i];
 
@@ -1271,7 +1274,7 @@ s32 UTF16stoUTF8s(vm::cptr<u16> utf16, vm::ref<s32> utf16_len, vm::ptr<u8> utf8,
 		//	return SRCIllegal;
 		//}
 
-		if (utf8 != vm::null)
+		if (utf8)
 		{
 			if (len > max_len)
 			{

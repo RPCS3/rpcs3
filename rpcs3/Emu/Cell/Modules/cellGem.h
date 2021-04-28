@@ -1,11 +1,9 @@
 #pragma once
 
-
-
 static const float CELL_GEM_SPHERE_RADIUS_MM = 22.5f;
 
 // Error codes
-enum
+enum CellGemError : u32
 {
 	CELL_GEM_ERROR_RESOURCE_ALLOCATION_FAILED = 0x80121801,
 	CELL_GEM_ERROR_ALREADY_INITIALIZED        = 0x80121802,
@@ -21,7 +19,7 @@ enum
 };
 
 // Runtime statuses
-enum
+enum CellGemStatus : u32
 {
 	CELL_GEM_NOT_CONNECTED              = 1,
 	CELL_GEM_SPHERE_NOT_CALIBRATED      = 2,
@@ -139,16 +137,16 @@ struct CellGemExtPortData
 
 struct CellGemImageState
 {
-	be_t<u64> frame_timestamp;
-	be_t<u64> timestamp;
-	be_t<f32> u;         // horizontal screen position in pixels
-	be_t<f32> v;         // vertical screen position in pixels
-	be_t<f32> r;         // size of sphere on screen in pixels
+	be_t<u64> frame_timestamp; // time the frame was captured by libCamera (usecs)
+	be_t<u64> timestamp;       // time processing of the frame was finished (usecs)
+	be_t<f32> u;               // horizontal screen position in pixels
+	be_t<f32> v;               // vertical screen position in pixels
+	be_t<f32> r;               // size of sphere on screen in pixels
 	be_t<f32> projectionx;
 	be_t<f32> projectiony;
-	be_t<f32> distance;
-	u8 visible;
-	u8 r_valid;
+	be_t<f32> distance;        // Move sphere distance from camera (probably)
+	u8 visible;                // whether the sphere is visible in the current frame
+	u8 r_valid;                // whether `r` contains valid size
 };
 
 struct CellGemPadData
@@ -159,10 +157,10 @@ struct CellGemPadData
 
 struct CellGemInertialState
 {
-	be_t<f32> accelerometer[4];
-	be_t<f32> gyro[4];
-	be_t<f32> accelerometer_bias[4];
-	be_t<f32> gyro_bias[4];
+	be_t<f32> accelerometer[4];      // accelerometer readings including accelerometer_bias (G units)
+	be_t<f32> gyro[4];               // gyro readings including gyro_bias (radians/s)
+	be_t<f32> accelerometer_bias[4]; // accelerometer bias (G units)
+	be_t<f32> gyro_bias[4];          // gyro bias (radians/s)
 	CellGemPadData pad;
 	CellGemExtPortData ext;
 	be_t<u64> timestamp;
@@ -178,17 +176,21 @@ struct CellGemInfo
 	be_t<u32> port[CELL_GEM_MAX_NUM];
 };
 
+// origin is the center of the camera
+// x increases to right (facing the camera)
+// y increases upwards
+// z increases towards user (away from the camera)
 struct CellGemState
 {
-	be_t<f32> pos[4];
-	be_t<f32> vel[4];
-	be_t<f32> accel[4];
-	be_t<f32> quat[4];
-	be_t<f32> angvel[4];
-	be_t<f32> angaccel[4];
-	be_t<f32> handle_pos[4];
-	be_t<f32> handle_vel[4];
-	be_t<f32> handle_accel[4];
+	be_t<f32> pos[4];          // center of sphere (mm)
+	be_t<f32> vel[4];          // velocity of sphere (mm/s)
+	be_t<f32> accel[4];        // acceleration of sphere (mm/s²)
+	be_t<f32> quat[4];         // quaternion orientation (x,y,z,w) of controller relative to default (facing the camera with buttons up)
+	be_t<f32> angvel[4];       // angular velocity of controller (radians/s)
+	be_t<f32> angaccel[4];     // angular acceleration of controller (radians/s²)
+	be_t<f32> handle_pos[4];   // center of controller handle (mm)
+	be_t<f32> handle_vel[4];   // velocity of controller handle (mm/s)
+	be_t<f32> handle_accel[4]; // acceleration of controller handle (mm/s²)
 	CellGemPadData pad;
 	CellGemExtPortData ext;
 	be_t<u64> timestamp;

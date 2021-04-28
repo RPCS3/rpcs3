@@ -1,11 +1,16 @@
 #pragma once
 
+#include <type_traits>
+#include "vm.h"
+
+#include "util/to_endian.hpp"
+
 namespace vm
 {
-	template<typename T, typename AT>
+	template <typename T, typename AT>
 	class _ptr_base;
 
-	template<typename T, typename AT = u32>
+	template <typename T, typename AT>
 	class _ref_base
 	{
 		AT m_addr;
@@ -35,16 +40,16 @@ namespace vm
 
 		T& get_ref() const
 		{
-			return *static_cast<T*>(vm::base(vm::cast(m_addr, HERE)));
+			return *static_cast<T*>(vm::base(vm::cast(m_addr)));
 		}
 
 		// convert to vm pointer
 		vm::_ptr_base<T, u32> ptr() const
 		{
-			return vm::cast(m_addr, HERE);
+			return vm::cast(m_addr);
 		}
 
-		operator simple_t<T>() const
+		operator std::common_type_t<T>() const
 		{
 			return get_ref();
 		}
@@ -59,27 +64,27 @@ namespace vm
 			return get_ref() = right.get_ref();
 		}
 
-		T& operator =(const simple_t<T>& right) const
+		T& operator =(const std::common_type_t<T>& right) const
 		{
 			return get_ref() = right;
 		}
 
-		decltype(auto) operator ++(int)
+		decltype(auto) operator ++(int) const
 		{
 			return get_ref()++;
 		}
 
-		decltype(auto) operator ++()
+		decltype(auto) operator ++() const
 		{
 			return ++get_ref();
 		}
 
-		decltype(auto) operator --(int)
+		decltype(auto) operator --(int) const
 		{
 			return get_ref()--;
 		}
 
-		decltype(auto) operator --()
+		decltype(auto) operator --() const
 		{
 			return --get_ref();
 		}

@@ -1,10 +1,10 @@
 #include "stdafx.h"
-#include "Emu/System.h"
+#include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
-
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "png.h"
+#include "cellPng.h"
 #include "cellPngDec.h"
 
 #if PNG_LIBPNG_VER_MAJOR >= 1 && (PNG_LIBPNG_VER_MINOR < 5 \
@@ -19,7 +19,35 @@ typedef png_bytep iCCP_profile_type;
 typedef png_charp iCCP_profile_type;
 #endif
 
-logs::channel cellPngDec("cellPngDec");
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
+LOG_CHANNEL(cellPngDec);
+
+template <>
+void fmt_class_string<CellPngDecError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](CellPngDecError value)
+	{
+		switch (value)
+		{
+		STR_CASE(CELL_PNGDEC_ERROR_HEADER);
+		STR_CASE(CELL_PNGDEC_ERROR_STREAM_FORMAT);
+		STR_CASE(CELL_PNGDEC_ERROR_ARG);
+		STR_CASE(CELL_PNGDEC_ERROR_SEQ);
+		STR_CASE(CELL_PNGDEC_ERROR_BUSY);
+		STR_CASE(CELL_PNGDEC_ERROR_FATAL);
+		STR_CASE(CELL_PNGDEC_ERROR_OPEN_FILE);
+		STR_CASE(CELL_PNGDEC_ERROR_SPU_UNSUPPORT);
+		STR_CASE(CELL_PNGDEC_ERROR_SPU_ERROR);
+		STR_CASE(CELL_PNGDEC_ERROR_CB_PARAM);
+		}
+
+		return unknown;
+	});
+}
 
 // cellPngDec aliases to improve readability
 using PPHandle           = vm::pptr<PngHandle>;
@@ -59,7 +87,7 @@ void pngDecReadBuffer(png_structp png_ptr, png_bytep out, png_size_t length)
 	}
 
 	// Cast the IO pointer to our custom structure
-	PngBuffer& buffer = *(PngBuffer*)io_ptr;
+	PngBuffer& buffer = *static_cast<PngBuffer*>(io_ptr);
 
 	// Read froma  file or a buffer
 	if (buffer.file)
@@ -85,8 +113,8 @@ void pngDecReadBuffer(png_structp png_ptr, png_bytep out, png_size_t length)
 
 void pngDecRowCallback(png_structp png_ptr, png_bytep new_row, png_uint_32 row_num, int pass)
 {
-	PngStream* stream = (PngStream*)png_get_progressive_ptr(png_ptr);
-	if (!stream) 
+	PngStream* stream = static_cast<PngStream*>(png_get_progressive_ptr(png_ptr));
+	if (!stream)
 	{
 		cellPngDec.error("Failed to obtain streamPtr in rowCallback.");
 		return;
@@ -98,9 +126,9 @@ void pngDecRowCallback(png_structp png_ptr, png_bytep new_row, png_uint_32 row_n
 
 	if (stream->ppuContext && (stream->nextRow == row_num  || pass > 0))
 	{
-		if (pass > 0 ) 
+		if (pass > 0 )
 		{
-			stream->cbDispInfo->scanPassCount = pass; 
+			stream->cbDispInfo->scanPassCount = pass;
 			stream->cbDispInfo->nextOutputStartY = row_num;
 		}
 		else {
@@ -113,7 +141,7 @@ void pngDecRowCallback(png_structp png_ptr, png_bytep new_row, png_uint_32 row_n
 		stream->cbDispInfo->outputStartY = row_num;
 	}
 	u8* data;
-	if (pass > 0) 
+	if (pass > 0)
 		data = static_cast<u8*>(stream->cbDispParam->nextOutputImage.get_ptr());
 	else
 		data = static_cast<u8*>(stream->cbDispParam->nextOutputImage.get_ptr()) + ((row_num - stream->cbDispInfo->outputStartY) * stream->cbDispInfo->outputFrameWidthByte);
@@ -121,23 +149,23 @@ void pngDecRowCallback(png_structp png_ptr, png_bytep new_row, png_uint_32 row_n
 	png_progressive_combine_row(png_ptr, data, new_row);
 }
 
-void pngDecInfoCallback(png_structp png_ptr, png_infop info) 
+void pngDecInfoCallback(png_structp png_ptr, png_infop info)
 {
-	PngStream* stream = (PngStream*)png_get_progressive_ptr(png_ptr);
-	if (!stream) 
+	PngStream* stream = static_cast<PngStream*>(png_get_progressive_ptr(png_ptr));
+	if (!stream)
 	{
 		cellPngDec.error("Failed to obtain streamPtr in rowCallback.");
 		return;
 	}
 
-	const size_t remaining = png_process_data_pause(png_ptr, false);
+	const usz remaining = png_process_data_pause(png_ptr, false);
 	stream->buffer->cursor += (stream->buffer->length - remaining);
 }
 
 void pngDecEndCallback(png_structp png_ptr, png_infop info)
 {
-	PngStream* stream = (PngStream*)png_get_progressive_ptr(png_ptr);
-	if (!stream) 
+	PngStream* stream = static_cast<PngStream*>(png_get_progressive_ptr(png_ptr));
+	if (!stream)
 	{
 		cellPngDec.error("Failed to obtain streamPtr in endCallback.");
 		return;
@@ -147,17 +175,17 @@ void pngDecEndCallback(png_structp png_ptr, png_infop info)
 }
 
 // Custom error handler for libpng
-void pngDecError(png_structp png_ptr, png_const_charp error_message)
+[[noreturn]] void pngDecError(png_structp png_ptr, png_const_charp error_message)
 {
-	cellPngDec.error(error_message);
+	cellPngDec.error("%s", error_message);
 	// we can't return here or libpng blows up
-	throw LibPngCustomException("Fatal Error in libpng");
+	fmt::throw_exception("Fatal Error in libpng: %s", error_message);
 }
 
 // Custom warning handler for libpng
 void pngDecWarning(png_structp png_ptr, png_const_charp error_message)
 {
-	cellPngDec.warning(error_message);
+	cellPngDec.warning("%s", error_message);
 }
 
 // Get the chunk information of the PNG file. IDAT is marked as existing, only after decoding or reading the header.
@@ -286,7 +314,7 @@ be_t<u32> pngDecGetChunkInformation(PngStream* stream, bool IDAT = false)
 		chunk_information |= 1 << 11; // sRGB
 	}
 
-	if (png_get_iCCP(stream->png_ptr, stream->info_ptr, &name, &compression_type, &profile, (png_uint_32*)&proflen))
+	if (png_get_iCCP(stream->png_ptr, stream->info_ptr, &name, &compression_type, &profile, &proflen))
 	{
 		chunk_information |= 1 << 12; // iCCP
 	}
@@ -309,12 +337,12 @@ be_t<u32> pngDecGetChunkInformation(PngStream* stream, bool IDAT = false)
 	return chunk_information;
 }
 
-s32 pngDecCreate(ppu_thread& ppu, PPHandle png_handle, PThreadInParam thread_in_param, PThreadOutParam thread_out_param, PExtThreadInParam extra_thread_in_param = vm::null, PExtThreadOutParam extra_thread_out_param = vm::null)
+error_code pngDecCreate(ppu_thread& ppu, PPHandle png_handle, PThreadInParam thread_in_param, PThreadOutParam thread_out_param, PExtThreadInParam extra_thread_in_param = vm::null, PExtThreadOutParam extra_thread_out_param = vm::null)
 {
 	// Check if partial image decoding is used
 	if (extra_thread_out_param)
 	{
-		fmt::throw_exception("Partial image decoding is not supported." HERE);
+		fmt::throw_exception("Partial image decoding is not supported.");
 	}
 
 	// Allocate memory for the decoder handle
@@ -342,7 +370,7 @@ s32 pngDecCreate(ppu_thread& ppu, PPHandle png_handle, PThreadInParam thread_in_
 	return CELL_OK;
 }
 
-s32 pngDecDestroy(ppu_thread& ppu, PHandle handle)
+error_code pngDecDestroy(ppu_thread& ppu, PHandle handle)
 {
 	// Deallocate the decoder handle memory
 	if (handle->free_(ppu, handle, handle->free_arg) != 0)
@@ -354,7 +382,7 @@ s32 pngDecDestroy(ppu_thread& ppu, PHandle handle)
 	return CELL_OK;
 }
 
-s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source, POpenInfo open_info, PCbControlStream control_stream = vm::null, POpenParam open_param = vm::null)
+error_code pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source, POpenInfo open_info, PCbControlStream control_stream = vm::null, POpenParam open_param = vm::null)
 {
 	// partial decoding only supported with buffer type
 	if (source->srcSelect != CELL_PNGDEC_BUFFER && control_stream)
@@ -388,7 +416,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	// Check for if the buffer structure allocation failed
 	if (!buffer)
 	{
-		fmt::throw_exception("Memory allocation for the PNG buffer structure failed." HERE);
+		fmt::throw_exception("Memory allocation for the PNG buffer structure failed.");
 	}
 
 	// We might not be reading from a file stream
@@ -403,15 +431,17 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	// Need to test it somewhere
 	if (stream->source.fileOffset != 0)
 	{
-		fmt::throw_exception("Non-0 file offset not supported." HERE);
+		fmt::throw_exception("Non-0 file offset not supported.");
 	}
 
 	// Depending on the source type, get the first 8 bytes
 	if (source->srcSelect == CELL_PNGDEC_FILE)
 	{
+		const auto real_path = vfs::get(stream->source.fileName.get_ptr());
+
 		// Open a file stream
-		fs::file file_stream(vfs::get(stream->source.fileName.get_ptr()));
-		
+		fs::file file_stream(real_path);
+
 		// Check if opening of the PNG file failed
 		if (!file_stream)
 		{
@@ -427,7 +457,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 		}
 
 		// Get the file descriptor
-		buffer->fd = idm::make<lv2_fs_object, lv2_file>(stream->source.fileName.get_ptr(), std::move(file_stream), 0, 0);
+		buffer->fd = idm::make<lv2_fs_object, lv2_file>(stream->source.fileName.get_ptr(), std::move(file_stream), 0, 0, real_path);
 
 		// Indicate that we need to read from a file stream
 		buffer->file = true;
@@ -461,11 +491,11 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	// Check if the creation of the structure failed
 	if (!stream->info_ptr)
 	{
-		fmt::throw_exception("Creation of png_infop failed." HERE);
+		fmt::throw_exception("Creation of png_infop failed.");
 	}
 
 	// We must indicate, that we allocated more memory
-	open_info->initSpaceAllocated += sizeof(PngBuffer);
+	open_info->initSpaceAllocated += u32{sizeof(PngBuffer)};
 
 	if (source->srcSelect == CELL_PNGDEC_BUFFER)
 	{
@@ -475,27 +505,20 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	}
 
 	// Set the custom read function for decoding
-	if (control_stream) 
+	if (control_stream)
 	{
-		if (open_param && open_param->selectChunk != 0)
+		if (open_param && open_param->selectChunk != 0u)
 			fmt::throw_exception("Partial Decoding with selectChunk not supported yet.");
 
 		stream->cbCtrlStream.cbCtrlStrmArg = control_stream->cbCtrlStrmArg;
 		stream->cbCtrlStream.cbCtrlStrmFunc = control_stream->cbCtrlStrmFunc;
 
-		png_set_progressive_read_fn(stream->png_ptr, (void *)stream.get_ptr(), pngDecInfoCallback, pngDecRowCallback, pngDecEndCallback);
+		png_set_progressive_read_fn(stream->png_ptr, stream.get_ptr(), pngDecInfoCallback, pngDecRowCallback, pngDecEndCallback);
 
 		// push header tag to libpng to keep us in sync
-		try 
-		{
-			png_process_data(stream->png_ptr, stream->info_ptr, header, 8);
-		}
-		catch (LibPngCustomException&)
-		{
-			return CELL_PNGDEC_ERROR_HEADER;
-		}
+		png_process_data(stream->png_ptr, stream->info_ptr, header, 8);
 	}
-	else 
+	else
 	{
 		png_set_read_fn(stream->png_ptr, buffer.get_ptr(), pngDecReadBuffer);
 
@@ -506,7 +529,7 @@ s32 pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc source
 	return CELL_OK;
 }
 
-s32 pngDecClose(ppu_thread& ppu, PHandle handle, PStream stream)
+error_code pngDecClose(ppu_thread& ppu, PHandle handle, PStream stream)
 {
 	// Remove the file descriptor, if a file descriptor was used for decoding
 	if (stream->buffer->file)
@@ -548,46 +571,46 @@ void pngSetHeader(PngStream* stream)
 	stream->info.chunkInformation = pngDecGetChunkInformation(stream);
 }
 
-s32 pngDecSetParameter(PStream stream, PInParam in_param, POutParam out_param, PExtInParam extra_in_param = vm::null, PExtOutParam extra_out_param = vm::null)
+error_code pngDecSetParameter(PStream stream, PInParam in_param, POutParam out_param, PExtInParam extra_in_param = vm::null, PExtOutParam extra_out_param = vm::null)
 {
 	if (in_param->outputPackFlag == CELL_PNGDEC_1BYTE_PER_NPIXEL)
 	{
-		fmt::throw_exception("Packing not supported! (%d)" HERE, in_param->outputPackFlag);
+		fmt::throw_exception("Packing not supported! (%d)", in_param->outputPackFlag);
 	}
 
 	// flag to keep unknown chunks
-	png_set_keep_unknown_chunks(stream->png_ptr, PNG_HANDLE_CHUNK_IF_SAFE, 0, 0);
+	png_set_keep_unknown_chunks(stream->png_ptr, PNG_HANDLE_CHUNK_IF_SAFE, nullptr, 0);
 
 	// Scale 16 bit depth down to 8 bit depth.
-	if (stream->info.bitDepth == 16 && in_param->outputBitDepth == 8) 
+	if (stream->info.bitDepth == 16u && in_param->outputBitDepth == 8u)
 	{
 		// PS3 uses png_set_strip_16, since png_set_scale_16 wasn't available back then.
 		png_set_strip_16(stream->png_ptr);
 	}
 
 	// This shouldnt ever happen, but not sure what to do if it does, just want it logged for now
-	if (stream->info.bitDepth != 16 && in_param->outputBitDepth == 16)
+	if (stream->info.bitDepth != 16u && in_param->outputBitDepth == 16u)
 		cellPngDec.error("Output depth of 16 with non input depth of 16 specified!");
-	if (in_param->commandPtr != vm::null)
+	if (in_param->commandPtr)
 		cellPngDec.warning("Ignoring CommandPtr.");
-	
-	if (stream->info.colorSpace != in_param->outputColorSpace) 
+
+	if (stream->info.colorSpace != in_param->outputColorSpace)
 	{
-		// check if we need to set alpha 
+		// check if we need to set alpha
 		const bool inputHasAlpha = cellPngColorSpaceHasAlpha(stream->info.colorSpace);
 		const bool outputWantsAlpha = cellPngColorSpaceHasAlpha(in_param->outputColorSpace);
 
-		if (outputWantsAlpha && !inputHasAlpha) 
+		if (outputWantsAlpha && !inputHasAlpha)
 		{
 			if (in_param->outputAlphaSelect == CELL_PNGDEC_FIX_ALPHA)
 				png_set_add_alpha(stream->png_ptr, in_param->outputColorAlpha, in_param->outputColorSpace == CELL_PNGDEC_ARGB ? PNG_FILLER_BEFORE : PNG_FILLER_AFTER);
-			else 
+			else
 			{
 				// Check if we can steal the alpha from a trns block
 				if (png_get_valid(stream->png_ptr, stream->info_ptr, PNG_INFO_tRNS))
 					png_set_tRNS_to_alpha(stream->png_ptr);
 				// if not, just set default of 0xff
-				else 
+				else
 					png_set_add_alpha(stream->png_ptr, 0xff, in_param->outputColorSpace == CELL_PNGDEC_ARGB ? PNG_FILLER_BEFORE : PNG_FILLER_AFTER);
 			}
 		}
@@ -606,21 +629,21 @@ s32 pngDecSetParameter(PStream stream, PInParam in_param, POutParam out_param, P
 			if (stream->info.colorSpace == CELL_PNGDEC_PALETTE)
 				png_set_palette_to_rgb(stream->png_ptr);
 			if ((stream->info.colorSpace == CELL_PNGDEC_GRAYSCALE || stream->info.colorSpace == CELL_PNGDEC_GRAYSCALE_ALPHA)
-				&& stream->info.bitDepth < 8) 
+				&& stream->info.bitDepth < 8)
 				png_set_expand_gray_1_2_4_to_8(stream->png_ptr);
 		}
 		// grayscale output
-		else 
+		else
 		{
 			if (stream->info.colorSpace == CELL_PNGDEC_ARGB
 				|| stream->info.colorSpace == CELL_PNGDEC_RGBA
-				|| stream->info.colorSpace == CELL_PNGDEC_RGB) 
+				|| stream->info.colorSpace == CELL_PNGDEC_RGB)
 			{
 
 				png_set_rgb_to_gray(stream->png_ptr, PNG_ERROR_ACTION_NONE, PNG_RGB_TO_GRAY_DEFAULT, PNG_RGB_TO_GRAY_DEFAULT);
 			}
 			else {
-				// not sure what to do here 
+				// not sure what to do here
 				cellPngDec.error("Grayscale / Palette to Grayscale / Palette conversion currently unsupported.");
 			}
 		}
@@ -645,7 +668,7 @@ s32 pngDecSetParameter(PStream stream, PInParam in_param, POutParam out_param, P
 	// Set the memory usage. We currently don't actually allocate memory for libpng through the callbacks, due to libpng needing a lot more memory compared to PS3 variant.
 	stream->out_param.useMemorySpace = 0;
 
-	if (extra_in_param) 
+	if (extra_in_param)
 	{
 		if (extra_in_param->bufferMode != CELL_PNGDEC_LINE_MODE)
 		{
@@ -664,28 +687,28 @@ s32 pngDecSetParameter(PStream stream, PInParam in_param, POutParam out_param, P
 		{
 			if (stream->outputCounts == 0)
 				extra_out_param->outputHeight = stream->out_param.outputHeight;
-			else 
+			else
 				extra_out_param->outputHeight = std::min(stream->outputCounts, stream->out_param.outputHeight.value());
 			extra_out_param->outputWidthByte = stream->out_param.outputWidthByte;
 		}
 	}
 
 	*out_param = stream->out_param;
-	
+
 	return CELL_OK;
 }
 
-s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> data, PDataControlParam data_control_param, PDataOutInfo data_out_info, PCbControlDisp cb_control_disp = vm::null, PDispParam disp_param = vm::null)
+error_code pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> data, PDataControlParam data_control_param, PDataOutInfo data_out_info, PCbControlDisp cb_control_disp = vm::null, PDispParam disp_param = vm::null)
 {
 	// Indicate, that the PNG decoding is stopped/failed. This is incase, we return an error code in the middle of decoding
 	data_out_info->status = CELL_PNGDEC_DEC_STATUS_STOP;
 
-	const u32 bytes_per_line = data_control_param->outputBytesPerLine;
+	const u32 bytes_per_line = ::narrow<u32>(data_control_param->outputBytesPerLine);
 
 	// Log this for now
 	if (bytes_per_line < stream->out_param.outputWidthByte)
 	{
-		fmt::throw_exception("Bytes per line less than expected output! Got: %d, expected: %d" HERE, bytes_per_line, stream->out_param.outputWidthByte);
+		fmt::throw_exception("Bytes per line less than expected output! Got: %d, expected: %d", bytes_per_line, stream->out_param.outputWidthByte);
 	}
 
 	// partial decoding
@@ -724,21 +747,13 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 
 		stream->cbDispParam->nextOutputImage = disp_param->nextOutputImage;
 
-		streamInfo->decodedStrmSize = stream->buffer->cursor;
+		streamInfo->decodedStrmSize = ::narrow<u32>(stream->buffer->cursor);
 		// push the rest of the buffer we have
 		if (stream->buffer->length > stream->buffer->cursor)
 		{
 			u8* data = static_cast<u8*>(stream->buffer->data.get_ptr()) + stream->buffer->cursor;
-			try 
-			{
-				png_process_data(stream->png_ptr, stream->info_ptr, data, stream->buffer->length - stream->buffer->cursor);
-			}
-			catch (LibPngCustomException&)
-			{
-				freeMem();
-				return CELL_PNGDEC_ERROR_FATAL;
-			}
-			streamInfo->decodedStrmSize = stream->buffer->length;
+			png_process_data(stream->png_ptr, stream->info_ptr, data, stream->buffer->length - stream->buffer->cursor);
+			streamInfo->decodedStrmSize = ::narrow<u32>(stream->buffer->length);
 		}
 
 		// todo: commandPtr
@@ -747,15 +762,7 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 		{
 			stream->cbCtrlStream.cbCtrlStrmFunc(ppu, streamInfo, streamParam, stream->cbCtrlStream.cbCtrlStrmArg);
 			streamInfo->decodedStrmSize += streamParam->strmSize;
-			try 
-			{
-				png_process_data(stream->png_ptr, stream->info_ptr, static_cast<u8*>(streamParam->strmPtr.get_ptr()), streamParam->strmSize);
-			}
-			catch (LibPngCustomException&)
-			{
-				freeMem();
-				return CELL_PNGDEC_ERROR_FATAL;
-			}
+			png_process_data(stream->png_ptr, stream->info_ptr, static_cast<u8*>(streamParam->strmPtr.get_ptr()), streamParam->strmSize);
 		}
 
 		freeMem();
@@ -767,11 +774,10 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 
 		// Decode the image
 		// todo: commandptr
-		try 
 		{
-			for (int j = 0; j < stream->passes; j++)
+			for (u32 j = 0; j < stream->passes; j++)
 			{
-				for (int i = 0; i < stream->out_param.outputHeight; ++i)
+				for (u32 i = 0; i < stream->out_param.outputHeight; ++i)
 				{
 					const u32 line = flip ? stream->out_param.outputHeight - i - 1 : i;
 					png_read_row(stream->png_ptr, &data[line*bytes_per_line], nullptr);
@@ -779,17 +785,13 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 			}
 			png_read_end(stream->png_ptr, stream->info_ptr);
 		}
-		catch (LibPngCustomException&)
-		{
-			return CELL_PNGDEC_ERROR_FATAL;
-		}
 	}
 
 	// Get the number of iTXt, tEXt and zTXt chunks
 	const s32 text_chunks = png_get_text(stream->png_ptr, stream->info_ptr, nullptr, nullptr);
 
 	// Set the chunk information and the previously obtained number of text chunks
-	data_out_info->numText = (u32)text_chunks;
+	data_out_info->numText = static_cast<u32>(text_chunks);
 	data_out_info->chunkInformation = pngDecGetChunkInformation(stream.get_ptr(), true);
 	png_unknown_chunkp unknowns;
 	const int num_unknowns = png_get_unknown_chunks(stream->png_ptr, stream->info_ptr, &unknowns);
@@ -801,43 +803,43 @@ s32 pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> d
 	return CELL_OK;
 }
 
-s32 cellPngDecCreate(ppu_thread& ppu, PPHandle handle, PThreadInParam threadInParam, PThreadOutParam threadOutParam)
+error_code cellPngDecCreate(ppu_thread& ppu, PPHandle handle, PThreadInParam threadInParam, PThreadOutParam threadOutParam)
 {
 	cellPngDec.warning("cellPngDecCreate(handle=**0x%x, threadInParam=*0x%x, threadOutParam=*0x%x)", handle, threadInParam, threadOutParam);
 	return pngDecCreate(ppu, handle, threadInParam, threadOutParam);
 }
 
-s32 cellPngDecExtCreate(ppu_thread& ppu, PPHandle handle, PThreadInParam threadInParam, PThreadOutParam threadOutParam, PExtThreadInParam extThreadInParam, PExtThreadOutParam extThreadOutParam)
+error_code cellPngDecExtCreate(ppu_thread& ppu, PPHandle handle, PThreadInParam threadInParam, PThreadOutParam threadOutParam, PExtThreadInParam extThreadInParam, PExtThreadOutParam extThreadOutParam)
 {
 	cellPngDec.warning("cellPngDecExtCreate(mainHandle=**0x%x, threadInParam=*0x%x, threadOutParam=*0x%x, extThreadInParam=*0x%x, extThreadOutParam=*0x%x)", handle, threadInParam, threadOutParam, extThreadInParam, extThreadOutParam);
 	return pngDecCreate(ppu, handle, threadInParam, threadOutParam, extThreadInParam, extThreadOutParam);
 }
 
-s32 cellPngDecDestroy(ppu_thread& ppu, PHandle handle)
+error_code cellPngDecDestroy(ppu_thread& ppu, PHandle handle)
 {
 	cellPngDec.warning("cellPngDecDestroy(mainHandle=*0x%x)", handle);
 	return pngDecDestroy(ppu, handle);
 }
 
-s32 cellPngDecOpen(ppu_thread& ppu, PHandle handle, PPStream stream, PSrc src, POpenInfo openInfo)
+error_code cellPngDecOpen(ppu_thread& ppu, PHandle handle, PPStream stream, PSrc src, POpenInfo openInfo)
 {
 	cellPngDec.warning("cellPngDecOpen(handle=*0x%x, stream=**0x%x, src=*0x%x, openInfo=*0x%x)", handle, stream, src, openInfo);
 	return pngDecOpen(ppu, handle, stream, src, openInfo);
 }
 
-s32 cellPngDecExtOpen(ppu_thread& ppu, PHandle handle, PPStream stream, PSrc src, POpenInfo openInfo, PCbControlStream cbCtrlStrm, POpenParam opnParam)
+error_code cellPngDecExtOpen(ppu_thread& ppu, PHandle handle, PPStream stream, PSrc src, POpenInfo openInfo, PCbControlStream cbCtrlStrm, POpenParam opnParam)
 {
 	cellPngDec.warning("cellPngDecExtOpen(handle=*0x%x, stream=**0x%x, src=*0x%x, openInfo=*0x%x, cbCtrlStrm=*0x%x, opnParam=*0x%x)", handle, stream, src, openInfo, cbCtrlStrm, opnParam);
 	return pngDecOpen(ppu, handle, stream, src, openInfo, cbCtrlStrm, opnParam);
 }
 
-s32 cellPngDecClose(ppu_thread& ppu, PHandle handle, PStream stream)
+error_code cellPngDecClose(ppu_thread& ppu, PHandle handle, PStream stream)
 {
 	cellPngDec.warning("cellPngDecClose(handle=*0x%x, stream=*0x%x)", handle, stream);
 	return pngDecClose(ppu, handle, stream);
 }
 
-s32 cellPngDecReadHeader(PHandle handle, PStream stream, PInfo info)
+error_code cellPngDecReadHeader(PHandle handle, PStream stream, PInfo info)
 {
 	cellPngDec.warning("cellPngDecReadHeader(handle=*0x%x, stream=*0x%x, info=*0x%x)", handle, stream, info);
 
@@ -851,7 +853,7 @@ s32 cellPngDecReadHeader(PHandle handle, PStream stream, PInfo info)
 	return CELL_OK;
 }
 
-s32 cellPngDecExtReadHeader(PHandle handle, PStream stream, PInfo info, PExtInfo extInfo)
+error_code cellPngDecExtReadHeader(PHandle handle, PStream stream, PInfo info, PExtInfo extInfo)
 {
 	cellPngDec.warning("cellPngDecExtReadHeader(handle=*0x%x, stream=*0x%x, info=*0x%x, extInfo=*0x%x)", handle, stream, info, extInfo);
 	// Set the reserved value to 0, if passed to the function. (Should this be arg error if they dont pass?)
@@ -862,21 +864,14 @@ s32 cellPngDecExtReadHeader(PHandle handle, PStream stream, PInfo info, PExtInfo
 
 	// lets push what we have so far
 	u8* data = static_cast<u8*>(stream->buffer->data.get_ptr()) + stream->buffer->cursor;
-	try 
-	{
-		png_process_data(stream->png_ptr, stream->info_ptr, data, stream->buffer->length);
-	}
-	catch (LibPngCustomException&)
-	{
-		return CELL_PNGDEC_ERROR_HEADER;
-	}
+	png_process_data(stream->png_ptr, stream->info_ptr, data, stream->buffer->length);
 
 	// lets hope we pushed enough for callback
 	pngSetHeader(stream.get_ptr());
 
 	// png doesnt allow empty image, so quick check for 0 verifys if we got the header
 	// not sure exactly what should happen if we dont have header, ask for more data with callback?
-	if (stream->info.imageWidth == 0)
+	if (stream->info.imageWidth == 0u)
 	{
 		fmt::throw_exception("Invalid or not enough data sent to get header");
 		return CELL_PNGDEC_ERROR_HEADER;
@@ -887,113 +882,130 @@ s32 cellPngDecExtReadHeader(PHandle handle, PStream stream, PInfo info, PExtInfo
 	return CELL_OK;
 }
 
-s32 cellPngDecSetParameter(PHandle handle, PStream stream, PInParam inParam, POutParam outParam)
+error_code cellPngDecSetParameter(PHandle handle, PStream stream, PInParam inParam, POutParam outParam)
 {
 	cellPngDec.warning("cellPngDecSetParameter(handle=*0x%x, stream=*0x%x, inParam=*0x%x, outParam=*0x%x)", handle, stream, inParam, outParam);
 	return pngDecSetParameter(stream, inParam, outParam);
 }
 
-s32 cellPngDecExtSetParameter(PHandle handle, PStream stream, PInParam inParam, POutParam outParam, PExtInParam extInParam, PExtOutParam extOutParam)
+error_code cellPngDecExtSetParameter(PHandle handle, PStream stream, PInParam inParam, POutParam outParam, PExtInParam extInParam, PExtOutParam extOutParam)
 {
 	cellPngDec.warning("cellPngDecExtSetParameter(handle=*0x%x, stream=*0x%x, inParam=*0x%x, outParam=*0x%x, extInParam=*0x%x, extOutParam=*0x%x", handle, stream, inParam, outParam, extInParam, extOutParam);
 	return pngDecSetParameter(stream, inParam, outParam, extInParam, extOutParam);
 }
 
-s32 cellPngDecDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> data, PDataControlParam dataCtrlParam, PDataOutInfo dataOutInfo)
+error_code cellPngDecDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> data, PDataControlParam dataCtrlParam, PDataOutInfo dataOutInfo)
 {
 	cellPngDec.warning("cellPngDecDecodeData(handle=*0x%x, stream=*0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x)", handle, stream, data, dataCtrlParam, dataOutInfo);
 	return pngDecodeData(ppu, handle, stream, data, dataCtrlParam, dataOutInfo);
 }
 
-s32 cellPngDecExtDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> data, PDataControlParam dataCtrlParam, PDataOutInfo dataOutInfo, PCbControlDisp cbCtrlDisp, PDispParam dispParam)
+error_code cellPngDecExtDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::ptr<u8> data, PDataControlParam dataCtrlParam, PDataOutInfo dataOutInfo, PCbControlDisp cbCtrlDisp, PDispParam dispParam)
 {
 	cellPngDec.warning("cellPngDecExtDecodeData(handle=*0x%x, stream=*0x%x, data=*0x%x, dataCtrlParam=*0x%x, dataOutInfo=*0x%x, cbCtrlDisp=*0x%x, dispParam=*0x%x)", handle, stream, data, dataCtrlParam, dataOutInfo, cbCtrlDisp, dispParam);
 	return pngDecodeData(ppu, handle, stream, data, dataCtrlParam, dataOutInfo, cbCtrlDisp, dispParam);
 }
 
-s32 cellPngDecGetUnknownChunks(PHandle handle, PStream stream, vm::pptr<CellPngUnknownChunk> unknownChunk, vm::ptr<u32> unknownChunkNumber)
+error_code cellPngDecGetUnknownChunks(PHandle handle, PStream stream, vm::pptr<CellPngUnknownChunk> unknownChunk, vm::ptr<u32> unknownChunkNumber)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetUnknownChunks()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetpCAL(PHandle handle, PStream stream, vm::ptr<CellPngPCAL> pcal)
+error_code cellPngDecGetpCAL(PHandle handle, PStream stream, vm::ptr<CellPngPCAL> pcal)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetpCAL()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetcHRM(PHandle handle, PStream stream, vm::ptr<CellPngCHRM> chrm)
+error_code cellPngDecGetcHRM(PHandle handle, PStream stream, vm::ptr<CellPngCHRM> chrm)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetcHRM()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetsCAL(PHandle handle, PStream stream, vm::ptr<CellPngSCAL> scal)
+error_code cellPngDecGetsCAL(PHandle handle, PStream stream, vm::ptr<CellPngSCAL> scal)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetsCAL()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetpHYs(PHandle handle, PStream stream, vm::ptr<CellPngPHYS> phys)
+error_code cellPngDecGetpHYs(PHandle handle, PStream stream, vm::ptr<CellPngPHYS> phys)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetpHYs()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetoFFs(PHandle handle, PStream stream, vm::ptr<CellPngOFFS> offs)
+error_code cellPngDecGetoFFs(PHandle handle, PStream stream, vm::ptr<CellPngOFFS> offs)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetoFFs()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetsPLT(PHandle handle, PStream stream, vm::ptr<CellPngSPLT> splt)
+error_code cellPngDecGetsPLT(PHandle handle, PStream stream, vm::ptr<CellPngSPLT> splt)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetsPLT()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetbKGD(PHandle handle, PStream stream, vm::ptr<CellPngBKGD> bkgd)
+error_code cellPngDecGetbKGD(PHandle handle, PStream stream, vm::ptr<CellPngBKGD> bkgd)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetbKGD()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGettIME(PHandle handle, PStream stream, vm::ptr<CellPngTIME> time)
+error_code cellPngDecGettIME(PHandle handle, PStream stream, vm::ptr<CellPngTIME> time)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGettIME()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGethIST(PHandle handle, PStream stream, vm::ptr<CellPngHIST> hist)
+error_code cellPngDecGethIST(PHandle handle, PStream stream, vm::ptr<CellPngHIST> hist)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGethIST()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGettRNS(PHandle handle, PStream stream, vm::ptr<CellPngTRNS> trns)
+error_code cellPngDecGettRNS(PHandle handle, PStream stream, vm::ptr<CellPngTRNS> trns)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGettRNS()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetsBIT(PHandle handle, PStream stream, vm::ptr<CellPngSBIT> sbit)
+error_code cellPngDecGetsBIT(PHandle handle, PStream stream, vm::ptr<CellPngSBIT> sbit)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetsBIT()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetiCCP(PHandle handle, PStream stream, vm::ptr<CellPngICCP> iccp)
+error_code cellPngDecGetiCCP(PHandle handle, PStream stream, vm::ptr<CellPngICCP> iccp)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetiCCP()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetsRGB(PHandle handle, PStream stream, vm::ptr<CellPngSRGB> srgb)
+error_code cellPngDecGetsRGB(PHandle handle, PStream stream, vm::ptr<CellPngSRGB> srgb)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetsRGB()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetgAMA(PHandle handle, PStream stream, vm::ptr<CellPngGAMA> gama)
+error_code cellPngDecGetgAMA(PHandle handle, PStream stream, vm::ptr<CellPngGAMA> gama)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetgAMA()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetPLTE(PHandle handle, PStream stream, vm::ptr<CellPngPLTE> plte)
+error_code cellPngDecGetPLTE(PHandle handle, PStream stream, vm::ptr<CellPngPLTE> plte)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetPLTE()");
+	return CELL_OK;
 }
 
-s32 cellPngDecGetTextChunk(PHandle handle, PStream stream, vm::ptr<u32> textInfoNum, vm::pptr<CellPngTextInfo> textInfo)
+error_code cellPngDecGetTextChunk(PHandle handle, PStream stream, vm::ptr<u32> textInfoNum, vm::pptr<CellPngTextInfo> textInfo)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellPngDec.todo("cellPngDecGetTextChunk()");
+	return CELL_OK;
 }
 
 DECLARE(ppu_module_manager::cellPngDec)("cellPngDec", []()

@@ -1,512 +1,1582 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
 
 #include "sceNp.h"
 #include "sceNp2.h"
+#include "Emu/NP/np_handler.h"
+#include "Emu/NP/np_contexts.h"
+#include "cellSysutil.h"
 
-logs::channel sceNp2("sceNp2");
+LOG_CHANNEL(sceNp2);
 
-s32 sceNp2Init(u32 poolsize, vm::ptr<void> poolptr)
+template <>
+void fmt_class_string<SceNpMatching2Error>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error) {
+		switch (error)
+		{
+			STR_CASE(SCE_NP_MATCHING2_ERROR_OUT_OF_MEMORY);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_ALREADY_INITIALIZED);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_CONTEXT_MAX);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_CONTEXT_ALREADY_EXISTS);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_CONTEXT_ALREADY_STARTED);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_STARTED);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_SERVER_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_SERVER_ID);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_WORLD_ID);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_LOBBY_ID);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_ROOM_ID);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_MEMBER_ID);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_ATTRIBUTE_ID);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_CASTTYPE);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_SORT_METHOD);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_MAX_SLOT);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_MATCHING_SPACE);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_BLOCK_KICK_FLAG);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_MESSAGE_TARGET);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_RANGE_FILTER_MAX);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INSUFFICIENT_BUFFER);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_DESTINATION_DISAPPEARED);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_REQUEST_TIMEOUT);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_ALIGNMENT);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_REQUEST_CB_QUEUE_OVERFLOW);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_EVENT_CB_QUEUE_OVERFLOW);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_MSG_CB_QUEUE_OVERFLOW);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_CONNECTION_CLOSED_BY_SERVER);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_SSL_VERIFY_FAILED);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_SSL_HANDSHAKE);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_SSL_SEND);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_SSL_RECV);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_JOINED_SESSION_MAX);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_ALREADY_JOINED);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_SESSION_TYPE);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_CLAN_LOBBY_NOT_EXIST);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_NP_SIGNED_OUT);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_CONTEXT_UNAVAILABLE);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_SERVER_NOT_AVAILABLE);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_NOT_ALLOWED);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_ABORTED);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_REQUEST_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_SESSION_DESTROYED);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_CONTEXT_STOPPED);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_REQUEST_PARAMETER);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_NOT_NP_SIGN_IN);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_ROOM_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_ROOM_MEMBER_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_LOBBY_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_LOBBY_MEMBER_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_EVENT_DATA_NOT_FOUND);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_KEEPALIVE_TIMEOUT);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_TIMEOUT_TOO_SHORT);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_TIMEDOUT);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_CREATE_HEAP);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_INVALID_ATTRIBUTE_SIZE);
+			STR_CASE(SCE_NP_MATCHING2_ERROR_CANNOT_ABORT);
+			STR_CASE(SCE_NP_MATCHING2_RESOLVER_ERROR_NO_DNS_SERVER);
+			STR_CASE(SCE_NP_MATCHING2_RESOLVER_ERROR_INVALID_PACKET);
+			STR_CASE(SCE_NP_MATCHING2_RESOLVER_ERROR_TIMEOUT);
+			STR_CASE(SCE_NP_MATCHING2_RESOLVER_ERROR_NO_RECORD);
+			STR_CASE(SCE_NP_MATCHING2_RESOLVER_ERROR_RES_PACKET_FORMAT);
+			STR_CASE(SCE_NP_MATCHING2_RESOLVER_ERROR_RES_SERVER_FAILURE);
+			STR_CASE(SCE_NP_MATCHING2_RESOLVER_ERROR_NO_HOST);
+			STR_CASE(SCE_NP_MATCHING2_RESOLVER_ERROR_RES_NOT_IMPLEMENTED);
+			STR_CASE(SCE_NP_MATCHING2_RESOLVER_ERROR_RES_SERVER_REFUSED);
+			STR_CASE(SCE_NP_MATCHING2_RESOLVER_ERROR_RESP_TRUNCATED);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_BAD_REQUEST);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_SERVICE_UNAVAILABLE);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_BUSY);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_END_OF_SERVICE);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_INTERNAL_SERVER_ERROR);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_PLAYER_BANNED);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_FORBIDDEN);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_BLOCKED);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_UNSUPPORTED_NP_ENV);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_INVALID_TICKET);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_INVALID_SIGNATURE);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_EXPIRED_TICKET);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_ENTITLEMENT_REQUIRED);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_CONTEXT);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_CLOSED);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_TITLE);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_WORLD);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_LOBBY);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_LOBBY_INSTANCE);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_ROOM_INSTANCE);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_PASSWORD_MISMATCH);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_LOBBY_FULL);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_ROOM_FULL);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_GROUP_FULL);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_USER);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_TITLE_PASSPHRASE_MISMATCH);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_DUPLICATE_LOBBY);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_DUPLICATE_ROOM);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_NO_JOIN_GROUP_LABEL);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_NO_SUCH_GROUP);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_NO_PASSWORD);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_MAX_OVER_SLOT_GROUP);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_MAX_OVER_PASSWORD_MASK);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_DUPLICATE_GROUP_LABEL);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_REQUEST_OVERFLOW);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_ALREADY_JOINED);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_NAT_TYPE_MISMATCH);
+			STR_CASE(SCE_NP_MATCHING2_SERVER_ERROR_ROOM_INCONSISTENCY);
+			// STR_CASE(SCE_NP_MATCHING2_NET_ERRNO_BASE);
+			// STR_CASE(SCE_NP_MATCHING2_NET_H_ERRNO_BASE);
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<SceNpOauthError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error) {
+		switch (error)
+		{
+			STR_CASE(SCE_NP_OAUTH_ERROR_UNKNOWN);
+			STR_CASE(SCE_NP_OAUTH_ERROR_ALREADY_INITIALIZED);
+			STR_CASE(SCE_NP_OAUTH_ERROR_NOT_INITIALIZED);
+			STR_CASE(SCE_NP_OAUTH_ERROR_INVALID_ARGUMENT);
+			STR_CASE(SCE_NP_OAUTH_ERROR_OUT_OF_MEMORY);
+			STR_CASE(SCE_NP_OAUTH_ERROR_OUT_OF_BUFFER);
+			STR_CASE(SCE_NP_OAUTH_ERROR_BAD_RESPONSE);
+			STR_CASE(SCE_NP_OAUTH_ERROR_ABORTED);
+			STR_CASE(SCE_NP_OAUTH_ERROR_SIGNED_OUT);
+			STR_CASE(SCE_NP_OAUTH_ERROR_REQUEST_NOT_FOUND);
+			STR_CASE(SCE_NP_OAUTH_ERROR_SSL_ERR_CN_CHECK);
+			STR_CASE(SCE_NP_OAUTH_ERROR_SSL_ERR_UNKNOWN_CA);
+			STR_CASE(SCE_NP_OAUTH_ERROR_SSL_ERR_NOT_AFTER_CHECK);
+			STR_CASE(SCE_NP_OAUTH_ERROR_SSL_ERR_NOT_BEFORE_CHECK);
+			STR_CASE(SCE_NP_OAUTH_ERROR_SSL_ERR_INVALID_CERT);
+			STR_CASE(SCE_NP_OAUTH_ERROR_SSL_ERR_INTERNAL);
+			STR_CASE(SCE_NP_OAUTH_ERROR_REQUEST_MAX);
+			STR_CASE(SCE_NP_OAUTH_SERVER_ERROR_BANNED_CONSOLE);
+			STR_CASE(SCE_NP_OAUTH_SERVER_ERROR_INVALID_LOGIN);
+			STR_CASE(SCE_NP_OAUTH_SERVER_ERROR_INACTIVE_ACCOUNT);
+			STR_CASE(SCE_NP_OAUTH_SERVER_ERROR_SUSPENDED_ACCOUNT);
+			STR_CASE(SCE_NP_OAUTH_SERVER_ERROR_SUSPENDED_DEVICE);
+			STR_CASE(SCE_NP_OAUTH_SERVER_ERROR_PASSWORD_EXPIRED);
+			STR_CASE(SCE_NP_OAUTH_SERVER_ERROR_TOSUA_MUST_BE_RE_ACCEPTED);
+			STR_CASE(SCE_NP_OAUTH_SERVER_ERROR_TOSUA_MUST_BE_RE_ACCEPTED_FOR_SUBACCOUNT);
+			STR_CASE(SCE_NP_OAUTH_SERVER_ERROR_BANNED_ACCOUNT);
+			STR_CASE(SCE_NP_OAUTH_SERVER_ERROR_SERVICE_END);
+			STR_CASE(SCE_NP_OAUTH_SERVER_ERROR_SERVICE_UNAVAILABLE);
+		}
+
+		return unknown;
+	});
+}
+
+error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param);
+error_code sceNpMatching2Term(ppu_thread& ppu);
+error_code sceNpMatching2Term2();
+
+error_code generic_match2_error_check(const named_thread<np_handler>& nph, SceNpMatching2ContextId ctxId, vm::cptr<void> reqParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
+{
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!reqParam || !assignedReqId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (!ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	if (!check_match2_context(ctxId))
+	{
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+	}
+
+	return CELL_OK;
+}
+
+error_code sceNp2Init(u32 poolsize, vm::ptr<void> poolptr)
 {
 	sceNp2.warning("sceNp2Init(poolsize=0x%x, poolptr=*0x%x)", poolsize, poolptr);
 
-	if (poolsize == 0)
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
 	{
-		return SCE_NP_ERROR_INVALID_ARGUMENT;
-	}
-	else if (poolsize < 128 * 1024)
-	{
-		return SCE_NP_ERROR_INSUFFICIENT_BUFFER;
+		std::lock_guard lock(nph.mutex_status);
+		if (nph.is_NP2_init)
+		{
+			return SCE_NP_ERROR_ALREADY_INITIALIZED;
+		}
 	}
 
-	if (!poolptr)
+	const u32 result = std::bit_cast<u32>(sceNpInit(poolsize, poolptr));
+
+	if (result && result != SCE_NP_ERROR_ALREADY_INITIALIZED)
 	{
-		return SCE_NP_ERROR_INVALID_ARGUMENT;
+		return result;
 	}
+
+	nph.is_NP2_init = true;
 
 	return CELL_OK;
 }
 
-s32 sceNpMatching2Init(u32 poolsize, s32 priority)
+error_code sceNpMatching2Init(u32 stackSize, s32 priority)
 {
-	sceNp2.todo("sceNpMatching2Init(poolsize=0x%x, priority=%d)", poolsize, priority);
-
-	return CELL_OK;
+	sceNp2.todo("sceNpMatching2Init(stackSize=0x%x, priority=%d)", stackSize, priority);
+	return sceNpMatching2Init2(stackSize, priority, vm::null); // > SDK 2.4.0
 }
 
-s32 sceNpMatching2Init2(u32 poolsize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)
+error_code sceNpMatching2Init2(u64 stackSize, s32 priority, vm::ptr<SceNpMatching2UtilityInitParam> param)
 {
-	sceNp2.todo("sceNpMatching2Init2(poolsize=0x%x, priority=%d, param=*0x%x)", poolsize, priority, param);
+	sceNp2.todo("sceNpMatching2Init2(stackSize=0x%x, priority=%d, param=*0x%x)", stackSize, priority, param);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_init)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
+	if (nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_ALREADY_INITIALIZED;
+	}
 
 	// TODO:
 	// 1. Create an internal thread
 	// 2. Create heap area to be used by the NP matching 2 utility
 	// 3. Set maximum lengths for the event data queues in the system
 
+	nph.is_NP2_Match2_init = true;
+
 	return CELL_OK;
 }
 
-s32 sceNp2Term()
+error_code sceNp2Term(ppu_thread& ppu)
 {
 	sceNp2.warning("sceNp2Term()");
 
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	{
+		std::lock_guard lock(nph.mutex_status);
+		if (!nph.is_NP2_init)
+		{
+			return SCE_NP_ERROR_NOT_INITIALIZED;
+		}
+	}
+
+	// TODO: does this return on error_code ?
+	sceNpMatching2Term(ppu);
+	//	cellSysutilUnregisterCallbackDispatcher();
+	sceNpTerm();
+
+	nph.is_NP2_init = false;
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2Term(ppu_thread& ppu)
+error_code sceNpMatching2Term(ppu_thread&)
 {
 	sceNp2.warning("sceNpMatching2Term()");
-
-	return CELL_OK;
+	return sceNpMatching2Term2(); // > SDK 2.4.0
 }
 
-s32 sceNpMatching2Term2()
+error_code sceNpMatching2Term2()
 {
 	sceNp2.warning("sceNpMatching2Term2()");
 
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	{
+		std::lock_guard lock(nph.mutex_status);
+		if (!nph.is_NP2_init)
+		{
+			return SCE_NP_ERROR_NOT_INITIALIZED;
+		}
+
+		if (!nph.is_NP2_Match2_init)
+		{
+			return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+		}
+
+		nph.is_NP2_Match2_init = false;
+	}
+
+	// TODO: for all contexts: sceNpMatching2DestroyContext
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2DestroyContext()
+error_code sceNpMatching2DestroyContext(SceNpMatching2ContextId ctxId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2DestroyContext(ctxId=%d)", ctxId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!destroy_match2_context(ctxId))
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2LeaveLobby()
+error_code sceNpMatching2LeaveLobby(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2LeaveLobbyRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2LeaveLobby(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2RegisterLobbyMessageCallback()
+error_code sceNpMatching2RegisterLobbyMessageCallback(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2LobbyMessageCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2RegisterLobbyMessageCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetWorldInfoList()
+error_code sceNpMatching2GetWorldInfoList(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetWorldInfoListRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2GetWorldInfoList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	if (reqParam->serverId == 0)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_SERVER_ID;
+	}
+
+	*assignedReqId = nph.get_world_list(ctxId, optParam, reqParam->serverId);
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2RegisterLobbyEventCallback()
+error_code sceNpMatching2RegisterLobbyEventCallback(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2LobbyEventCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2RegisterLobbyEventCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetLobbyMemberDataInternalList()
+error_code sceNpMatching2GetLobbyMemberDataInternalList(SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetLobbyMemberDataInternalListRequest> reqParam,
+    vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetLobbyMemberDataInternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SearchRoom()
+error_code sceNpMatching2SearchRoom(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SearchRoomRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2SearchRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	*assignedReqId = nph.search_room(ctxId, optParam, reqParam.get_ptr());
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SignalingGetConnectionStatus()
+error_code sceNpMatching2SignalingGetConnectionStatus(
+    SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, SceNpMatching2RoomMemberId memberId, vm::ptr<int> connStatus, vm::ptr<np_in_addr> peerAddr, vm::ptr<np_in_port_t> peerPort)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2SignalingGetConnectionStatus(ctxId=%d, roomId=%d, memberId=%d, connStatus=*0x%x, peerAddr=*0x%x, peerPort=*0x%x)", ctxId, roomId, memberId, connStatus, peerAddr, peerPort);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!connStatus)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+
+	const auto si = sigh.get_sig2_infos(roomId, memberId);
+
+	*connStatus = si.connStatus;
+
+	if (peerAddr)
+	{
+		(*peerAddr).np_s_addr = si.addr; // infos.addr is already BE
+	}
+
+	if (peerPort)
+	{
+		*peerPort = si.port;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SetUserInfo()
+error_code sceNpMatching2SetUserInfo(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SetUserInfoRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SetUserInfo(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetClanLobbyId()
+error_code sceNpMatching2GetClanLobbyId(SceNpMatching2ContextId ctxId, SceNpClanId clanId, vm::ptr<SceNpMatching2LobbyId> lobbyId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetClanLobbyId(ctxId=%d, clanId=%d, lobbyId=*0x%x)", ctxId, clanId, lobbyId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetLobbyMemberDataInternal()
+error_code sceNpMatching2GetLobbyMemberDataInternal(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetLobbyMemberDataInternalRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetLobbyMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2ContextStart()
+error_code sceNpMatching2ContextStart(SceNpMatching2ContextId ctxId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2ContextStart(ctxId=%d)", ctxId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	const auto ctx = get_match2_context(ctxId);
+	if (!ctx)
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+
+	if (ctx->context_callback)
+	{
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		{
+			ctx->context_callback(cb_ppu, ctxId, SCE_NP_MATCHING2_CONTEXT_EVENT_Start, SCE_NP_MATCHING2_EVENT_CAUSE_CONTEXT_ACTION, 0, ctx->context_callback_param);
+			return 0;
+		});
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2CreateServerContext()
+error_code sceNpMatching2CreateServerContext(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2CreateServerContextRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2CreateServerContext(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	if (reqParam->serverId == 0)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_SERVER_ID;
+	}
+
+	*assignedReqId = nph.create_server_context(ctxId, optParam, reqParam->serverId);
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetMemoryInfo()
+error_code sceNpMatching2GetMemoryInfo(vm::ptr<SceNpMatching2MemoryInfo> memInfo) // TODO
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetMemoryInfo(memInfo=*0x%x)", memInfo);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2LeaveRoom()
+error_code sceNpMatching2LeaveRoom(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2LeaveRoomRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2LeaveRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	*assignedReqId = nph.leave_room(ctxId, optParam, reqParam.get_ptr());
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SetRoomDataExternal()
+error_code sceNpMatching2SetRoomDataExternal(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SetRoomDataExternalRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2SetRoomDataExternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	*assignedReqId = nph.set_roomdata_external(ctxId, optParam, reqParam.get_ptr());
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SignalingGetConnectionInfo()
+error_code sceNpMatching2SignalingGetConnectionInfo(
+    SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, SceNpMatching2RoomMemberId memberId, s32 code, vm::ptr<SceNpSignalingConnectionInfo> connInfo)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SignalingGetConnectionInfo(ctxId=%d, roomId=%d, memberId=%d, code=%d, connInfo=*0x%x)", ctxId, roomId, memberId, code, connInfo);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	switch (code)
+	{
+		case 1:
+		{
+			connInfo->rtt = 20000; // HACK
+			break;
+		}
+		case 2:
+		{
+			connInfo->bandwidth = 10'000'000; // 10 MBPS HACK
+			break;
+		}
+		case 5:
+		{
+			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+			const auto si = sigh.get_sig2_infos(roomId, memberId);
+			connInfo->address.port = std::bit_cast<u16, be_t<u16>>(si.port);
+			connInfo->address.addr.np_s_addr = si.addr;
+			break;
+		}
+		case 6:
+		{
+			connInfo->packet_loss = 1; // HACK
+			break;
+		}
+		default:
+		{
+			sceNp2.fatal("sceNpMatching2SignalingGetConnectionInfo Unimplemented code: %d", code);
+			return CELL_OK;
+		}
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SendRoomMessage()
+error_code sceNpMatching2SendRoomMessage(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SendRoomMessageRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SendRoomMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	*assignedReqId = nph.send_room_message(ctxId, optParam, reqParam.get_ptr());
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2JoinLobby()
+error_code sceNpMatching2JoinLobby(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2JoinLobbyRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2JoinLobby(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetRoomMemberDataExternalList()
+error_code sceNpMatching2GetRoomMemberDataExternalList(SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetRoomMemberDataExternalListRequest> reqParam,
+    vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetRoomMemberDataExternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2AbortRequest()
+error_code sceNpMatching2AbortRequest(SceNpMatching2ContextId ctxId, SceNpMatching2RequestId reqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2AbortRequest(ctxId=%d, reqId=%d)", ctxId, reqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetServerInfo()
+error_code sceNpMatching2GetServerInfo(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetServerInfoRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2GetServerInfo(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	*assignedReqId = nph.get_server_status(ctxId, optParam, reqParam->serverId);
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetEventData()
+error_code sceNpMatching2GetEventData(SceNpMatching2ContextId ctxId, SceNpMatching2EventKey eventKey, vm::ptr<void> buf, u64 bufLen)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
-	return CELL_OK;
+	sceNp2.notice("sceNpMatching2GetEventData(ctxId=%d, eventKey=%d, buf=*0x%x, bufLen=%d)", ctxId, eventKey, buf, bufLen);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!buf)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	return not_an_error(nph.get_match2_event(eventKey, static_cast<u8 *>(buf.get_ptr()), bufLen));
 }
 
-s32 sceNpMatching2GetRoomSlotInfoLocal()
+error_code sceNpMatching2GetRoomSlotInfoLocal(SceNpMatching2ContextId ctxId, const SceNpMatching2RoomId roomId, vm::ptr<SceNpMatching2RoomSlotInfo> roomSlotInfo)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetRoomSlotInfoLocal(ctxId=%d, roomId=%d, roomSlotInfo=*0x%x)", ctxId, roomId, roomSlotInfo);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SendLobbyChatMessage()
+error_code sceNpMatching2SendLobbyChatMessage(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SendLobbyChatMessageRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SendLobbyChatMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2AbortContextStart()
+error_code sceNpMatching2AbortContextStart(SceNpMatching2ContextId ctxId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2AbortContextStart(ctxId=%d)", ctxId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetRoomMemberIdListLocal()
+error_code sceNpMatching2GetRoomMemberIdListLocal(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, s32 sortMethod, vm::ptr<SceNpMatching2RoomMemberId> memberId, u32 memberIdNum)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetRoomMemberIdListLocal(ctxId=%d, roomId=%d, sortMethod=%d, memberId=*0x%x, memberIdNum=%d)", ctxId, roomId, sortMethod, memberId, memberIdNum);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2JoinRoom()
+error_code sceNpMatching2JoinRoom(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2JoinRoomRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2JoinRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	*assignedReqId = nph.join_room(ctxId, optParam, reqParam.get_ptr());
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetRoomMemberDataInternalLocal()
+error_code sceNpMatching2GetRoomMemberDataInternalLocal(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, SceNpMatching2RoomMemberId memberId, vm::cptr<SceNpMatching2AttributeId> attrId,
+    u32 attrIdNum, vm::ptr<SceNpMatching2RoomMemberDataInternal> member, vm::ptr<char> buf, u64 bufLen)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetRoomMemberDataInternalLocal(ctxId=%d, roomId=%d, memberId=%d, attrId=*0x%x, attrIdNum=%d, member=*0x%x, buf=*0x%x, bufLen=%d)", ctxId, roomId, memberId, attrId,
+	    attrIdNum, member, buf, bufLen);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetCbQueueInfo()
+error_code sceNpMatching2GetCbQueueInfo(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2CbQueueInfo> queueInfo)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetCbQueueInfo(ctxId=%d, queueInfo=*0x%x)", ctxId, queueInfo);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2KickoutRoomMember()
+error_code sceNpMatching2KickoutRoomMember(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2KickoutRoomMemberRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2KickoutRoomMember(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2ContextStartAsync()
+error_code sceNpMatching2ContextStartAsync(SceNpMatching2ContextId ctxId, u32 timeout)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2ContextStartAsync(ctxId=%d, timeout=%d)", ctxId, timeout);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	const auto ctx = get_match2_context(ctxId);
+	if (!ctx)
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+
+	if (ctx->context_callback)
+	{
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		{
+			ctx->context_callback(cb_ppu, ctxId, SCE_NP_MATCHING2_CONTEXT_EVENT_Start, SCE_NP_MATCHING2_EVENT_CAUSE_CONTEXT_ACTION, 0, ctx->context_callback_param);
+			return 0;
+		});
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SetSignalingOptParam()
+error_code sceNpMatching2SetSignalingOptParam(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SetSignalingOptParamRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SetSignalingOptParam(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2RegisterContextCallback()
+error_code sceNpMatching2RegisterContextCallback(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2ContextCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2RegisterContextCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	const auto ctx = get_match2_context(ctxId);
+	if (!ctx)
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+
+	ctx->context_callback = cbFunc;
+	ctx->context_callback_param = cbFuncArg;
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SendRoomChatMessage()
+error_code sceNpMatching2SendRoomChatMessage(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SendRoomChatMessageRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SendRoomChatMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SetRoomDataInternal()
+error_code sceNpMatching2SetRoomDataInternal(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SetRoomDataInternalRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SetRoomDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	*assignedReqId = nph.set_roomdata_internal(ctxId, optParam, reqParam.get_ptr());
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetRoomDataInternal()
+error_code sceNpMatching2GetRoomDataInternal(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetRoomDataInternalRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetRoomDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	*assignedReqId = nph.get_roomdata_internal(ctxId, optParam, reqParam.get_ptr());
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SignalingGetPingInfo()
+error_code sceNpMatching2SignalingGetPingInfo(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SignalingGetPingInfoRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2SignalingGetPingInfo(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	*assignedReqId = nph.get_ping_info(ctxId, optParam, reqParam.get_ptr());
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetServerIdListLocal()
+error_code sceNpMatching2GetServerIdListLocal(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2ServerId> serverId, u32 serverIdNum)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetServerIdListLocal(ctxId=%d, serverId=*0x%x, serverIdNum=%d)", ctxId, serverId, serverIdNum);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!check_match2_context(ctxId))
+	{
+		return SCE_NP_MATCHING2_ERROR_CONTEXT_NOT_FOUND;
+	}
+
+	const auto slist = nph.get_match2_server_list(ctxId);
+
+	u32 num_servs = std::min(static_cast<u32>(slist.size()), serverIdNum);
+
+	if (serverId)
+	{
+		for (u32 i = 0; i < num_servs; i++)
+		{
+			serverId[i] = slist[i];
+		}
+	}
+
+	return not_an_error(static_cast<s32>(slist.size()));
+}
+
+error_code sceNpUtilBuildCdnUrl(vm::cptr<char> url, vm::ptr<char> buf, u64 bufSize, vm::ptr<u64> required, vm::ptr<void> option)
+{
+	sceNp2.todo("sceNpUtilBuildCdnUrl(url=%s, buf=*0x%x, bufSize=%d, required=*0x%x, option=*0x%x)", url, buf, bufSize, required, option);
+
+	if (!url || option) // option check at least until fw 4.71
+	{
+		// TODO: check url for '?'
+		return SCE_NP_UTIL_ERROR_INVALID_ARGUMENT;
+	}
+
+	//	if (offline)
+	//{
+	//	return SCE_NP_ERROR_OFFLINE;
+	//}
+
 	return CELL_OK;
 }
 
-s32 sceNpUtilBuildCdnUrl()
+error_code sceNpMatching2GrantRoomOwner(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GrantRoomOwnerRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GrantRoomOwner(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GrantRoomOwner()
+error_code sceNpMatching2CreateContext(
+    vm::cptr<SceNpId> npId, vm::cptr<SceNpCommunicationId> commId, vm::cptr<SceNpCommunicationPassphrase> passPhrase, vm::ptr<SceNpMatching2ContextId> ctxId, s32 option)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2CreateContext(npId=*0x%x, commId=*0x%x(%s), passPhrase=*0x%x, ctxId=*0x%x, option=%d)", npId, commId, commId->data, ctxId, option);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!npId || !commId || !passPhrase || !ctxId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	*ctxId = create_match2_context(commId, passPhrase);
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2CreateContext()
+error_code sceNpMatching2GetSignalingOptParamLocal(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, vm::ptr<SceNpMatching2SignalingOptParam> signalingOptParam)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetSignalingOptParamLocal(ctxId=%d, roomId=%d, signalingOptParam=*0x%x)", ctxId, roomId, signalingOptParam);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetSignalingOptParamLocal()
+error_code sceNpMatching2RegisterSignalingCallback(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2SignalingCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.notice("sceNpMatching2RegisterSignalingCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.set_sig2_cb(ctxId, cbFunc, cbFuncArg);
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2RegisterSignalingCallback()
+error_code sceNpMatching2ClearEventData(SceNpMatching2ContextId ctxId, SceNpMatching2EventKey eventKey)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2ClearEventData(ctxId=%d, eventKey=%d)", ctxId, eventKey);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2ClearEventData()
+error_code sceNpMatching2GetUserInfoList(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetUserInfoListRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetUserInfoList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetUserInfoList()
+error_code sceNpMatching2GetRoomMemberDataInternal(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetRoomMemberDataInternalRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetRoomMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetRoomMemberDataInternal()
+error_code sceNpMatching2SetRoomMemberDataInternal(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SetRoomMemberDataInternalRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SetRoomMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SetRoomMemberDataInternal()
+error_code sceNpMatching2JoinProhibitiveRoom(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2JoinProhibitiveRoomRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2JoinProhibitiveRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	// TODO: add blocked users
+	*assignedReqId = nph.join_room(ctxId, optParam, &reqParam->joinParam);
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2JoinProhibitiveRoom()
+error_code sceNpMatching2SignalingSetCtxOpt(SceNpMatching2ContextId ctxId, s32 optname, s32 optval)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SignalingSetCtxOpt(ctxId=%d, optname=%d, optval=%d)", ctxId, optname, optval);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SignalingSetCtxOpt()
+error_code sceNpMatching2DeleteServerContext(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2DeleteServerContextRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2DeleteServerContext(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2DeleteServerContext()
+error_code sceNpMatching2SetDefaultRequestOptParam(SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2RequestOptParam> optParam)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2SetDefaultRequestOptParam(ctxId=%d, optParam=*0x%x)", ctxId, optParam);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!optParam)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
+	const auto ctx = get_match2_context(ctxId);
+	if (!ctx)
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+
+	memcpy(&ctx->default_match2_optparam, optParam.get_ptr(), sizeof(SceNpMatching2RequestOptParam));
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SetDefaultRequestOptParam()
+error_code sceNpMatching2RegisterRoomEventCallback(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2RoomEventCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2RegisterRoomEventCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	nph.room_event_cb     = cbFunc;
+	nph.room_event_cb_ctx = ctxId;
+	nph.room_event_cb_arg = cbFuncArg;
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2RegisterRoomEventCallback()
+error_code sceNpMatching2GetRoomPasswordLocal(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, vm::ptr<b8> withPassword, vm::ptr<SceNpMatching2SessionPassword> roomPassword)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetRoomPasswordLocal(ctxId=%d, roomId=%d, withPassword=*0x%x, roomPassword=*0x%x)", ctxId, roomId, withPassword, roomPassword);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetRoomPasswordLocal()
+error_code sceNpMatching2GetRoomDataExternalList(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetRoomDataExternalListRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetRoomDataExternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetRoomDataExternalList()
+error_code sceNpMatching2CreateJoinRoom(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2CreateJoinRoomRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.warning("sceNpMatching2CreateJoinRoom(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
+	*assignedReqId = nph.create_join_room(ctxId, optParam, reqParam.get_ptr());
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2CreateJoinRoom()
+error_code sceNpMatching2SignalingGetCtxOpt(SceNpMatching2ContextId ctxId, s32 optname, vm::ptr<s32> optval)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SignalingGetCtxOpt(ctxId=%d, optname=%d, optval=*0x%x)", ctxId, optname, optval);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SignalingGetCtxOpt()
+error_code sceNpMatching2GetLobbyInfoList(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetLobbyInfoListRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetLobbyInfoList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetLobbyInfoList()
+error_code sceNpMatching2GetLobbyMemberIdListLocal(
+    SceNpMatching2ContextId ctxId, SceNpMatching2LobbyId lobbyId, vm::ptr<SceNpMatching2LobbyMemberId> memberId, u32 memberIdNum, vm::ptr<SceNpMatching2LobbyMemberId> me)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2GetLobbyMemberIdListLocal(ctxId=%d, lobbyId=%d, memberId=*0x%x, memberIdNum=%d, me=*0x%x)", ctxId, lobbyId, memberId, memberIdNum, me);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2GetLobbyMemberIdListLocal()
+error_code sceNpMatching2SendLobbyInvitation(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SendLobbyInvitationRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SendLobbyInvitation(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SendLobbyInvitation()
+error_code sceNpMatching2ContextStop(SceNpMatching2ContextId ctxId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2ContextStop(ctxId=%d)", ctxId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	const auto ctx = get_match2_context(ctxId);
+
+	if (!ctx)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_CONTEXT_ID;
+	}
+
+	if (ctx->context_callback)
+	{
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		{
+			ctx->context_callback(cb_ppu, ctxId, SCE_NP_MATCHING2_CONTEXT_EVENT_Stop, SCE_NP_MATCHING2_EVENT_CAUSE_CONTEXT_ACTION, 0, ctx->context_callback_param);
+			return 0;
+		});
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2ContextStop()
+error_code sceNpMatching2SetLobbyMemberDataInternal(
+    SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SetLobbyMemberDataInternalRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SetLobbyMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SetLobbyMemberDataInternal()
+error_code sceNpMatching2RegisterRoomMessageCallback(SceNpMatching2ContextId ctxId, vm::ptr<SceNpMatching2RoomMessageCallback> cbFunc, vm::ptr<void> cbFuncArg)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2RegisterRoomMessageCallback(ctxId=%d, cbFunc=*0x%x, cbFuncArg=*0x%x)", ctxId, cbFunc, cbFuncArg);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	nph.room_msg_cb     = cbFunc;
+	nph.room_msg_cb_ctx = ctxId;
+	nph.room_msg_cb_arg = cbFuncArg;
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2RegisterRoomMessageCallback()
+error_code sceNpMatching2SignalingCancelPeerNetInfo(SceNpMatching2ContextId ctxId, SceNpMatching2SignalingRequestId reqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SignalingCancelPeerNetInfo(ctxId=%d, reqId=%d)", ctxId, reqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SignalingCancelPeerNetInfo()
+error_code sceNpMatching2SignalingGetLocalNetInfo(vm::ptr<SceNpMatching2SignalingNetInfo> netinfo)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SignalingGetLocalNetInfo(netinfo=*0x%x)", netinfo);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!netinfo)
+	{
+		// TODO: check netinfo->size
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SignalingGetLocalNetInfo()
+error_code sceNpMatching2SignalingGetPeerNetInfo(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, SceNpMatching2RoomMemberId roomMemberId, vm::ptr<SceNpMatching2SignalingRequestId> reqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SignalingGetPeerNetInfo(ctxId=%d, roomId=%d, roomMemberId=%d, reqId=*0x%x)", ctxId, roomId, roomMemberId, reqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!reqId)
+	{
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SignalingGetPeerNetInfo()
+error_code sceNpMatching2SignalingGetPeerNetInfoResult(SceNpMatching2ContextId ctxId, SceNpMatching2SignalingRequestId reqId, vm::ptr<SceNpMatching2SignalingNetInfo> netinfo)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpMatching2SignalingGetPeerNetInfoResult(ctxId=%d, reqId=%d, netinfo=*0x%x)", ctxId, reqId, netinfo);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP2_Match2_init)
+	{
+		return SCE_NP_MATCHING2_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!netinfo)
+	{
+		// TODO: check netinfo->size
+		return SCE_NP_MATCHING2_ERROR_INVALID_ARGUMENT;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpMatching2SignalingGetPeerNetInfoResult()
+error_code sceNpAuthOAuthInit()
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpAuthOAuthInit()");
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (nph.is_NP_Auth_init)
+	{
+		return SCE_NP_OAUTH_ERROR_ALREADY_INITIALIZED;
+	}
+
+	nph.is_NP_Auth_init = true;
+
 	return CELL_OK;
 }
 
-s32 sceNpAuthOAuthInit()
+error_code sceNpAuthOAuthTerm()
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpAuthOAuthTerm()");
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	// TODO: check if this might throw SCE_NP_OAUTH_ERROR_NOT_INITIALIZED
+	nph.is_NP_Auth_init = false;
+
 	return CELL_OK;
 }
 
-s32 sceNpAuthOAuthTerm()
+error_code sceNpAuthCreateOAuthRequest()
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpAuthCreateOAuthRequest()");
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP_Auth_init)
+	{
+		return SCE_NP_OAUTH_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpAuthCreateOAuthRequest()
+error_code sceNpAuthDeleteOAuthRequest(SceNpAuthOAuthRequestId reqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpAuthDeleteOAuthRequest(reqId=%d)", reqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP_Auth_init)
+	{
+		return SCE_NP_OAUTH_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpAuthDeleteOAuthRequest()
+error_code sceNpAuthAbortOAuthRequest(SceNpAuthOAuthRequestId reqId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpAuthAbortOAuthRequest(reqId=%d)", reqId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP_Auth_init)
+	{
+		return SCE_NP_OAUTH_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpAuthAbortOAuthRequest()
+error_code sceNpAuthGetAuthorizationCode(SceNpAuthOAuthRequestId reqId, vm::cptr<SceNpAuthGetAuthorizationCodeParameter> param, vm::ptr<SceNpAuthorizationCode> authCode, vm::ptr<s32> issuerId)
 {
-	UNIMPLEMENTED_FUNC(sceNp2);
+	sceNp2.todo("sceNpAuthGetAuthorizationCode(reqId=%d, param=*0x%x, authCode=*0x%x, issuerId=%d)", reqId, param, authCode, issuerId);
+
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP_Auth_init)
+	{
+		return SCE_NP_OAUTH_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 
-s32 sceNpAuthGetAuthorizationCode()
+error_code sceNpAuthGetAuthorizationCode2()
 {
 	UNIMPLEMENTED_FUNC(sceNp2);
 	return CELL_OK;
 }
 
-DECLARE(ppu_module_manager::sceNp2)("sceNp2", []()
-{
+DECLARE(ppu_module_manager::sceNp2)
+("sceNp2", []() {
 	REG_FUNC(sceNp2, sceNpMatching2DestroyContext);
 	REG_FUNC(sceNp2, sceNpMatching2LeaveLobby);
 	REG_FUNC(sceNp2, sceNpMatching2RegisterLobbyMessageCallback);
@@ -587,4 +1657,5 @@ DECLARE(ppu_module_manager::sceNp2)("sceNp2", []()
 	REG_FUNC(sceNp2, sceNpAuthDeleteOAuthRequest);
 	REG_FUNC(sceNp2, sceNpAuthAbortOAuthRequest);
 	REG_FUNC(sceNp2, sceNpAuthGetAuthorizationCode);
+	REG_FUNC(sceNp2, sceNpAuthGetAuthorizationCode2);
 });

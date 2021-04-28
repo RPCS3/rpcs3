@@ -1,25 +1,31 @@
 #pragma once
 
-#include "types.h"
+#include "util/types.hpp"
+#include "Utilities/StrFmt.h"
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+#endif
 
 template<typename T, uint N>
 struct bf_base
 {
 	using type = T;
-	using vtype = simple_t<type>;
+	using vtype = std::common_type_t<type>;
 	using utype = typename std::make_unsigned<vtype>::type;
 
 	// Datatype bitsize
 	static constexpr uint bitmax = sizeof(T) * 8; static_assert(N - 1 < bitmax, "bf_base<> error: N out of bounds");
-	
+
 	// Field bitsize
 	static constexpr uint bitsize = N;
 
-	// Value mask
-	static constexpr utype vmask = static_cast<utype>(~utype{} >> (bitmax - bitsize));
-
 	// All ones mask
-	static constexpr utype mask1 = static_cast<utype>(~utype{});
+	static constexpr utype mask1 = static_cast<utype>(~static_cast<utype>(0));
+
+	// Value mask
+	static constexpr utype vmask = mask1 >> (bitmax - bitsize);
 
 protected:
 	type m_data;
@@ -96,7 +102,7 @@ struct bf_t : bf_base<T, N>
 	// Optimized bool conversion (must be removed if inappropriate)
 	explicit constexpr operator bool() const
 	{
-		return unshifted() != 0;
+		return unshifted() != 0u;
 	}
 
 	// Store bitfield value
@@ -147,7 +153,7 @@ struct bf_t : bf_base<T, N>
 
 	bf_t& operator &=(vtype right)
 	{
-		this->m_data &= static_cast<vtype>((static_cast<utype>(right) & bf_t::vmask) << bitpos);
+		this->m_data &= static_cast<vtype>(((static_cast<utype>(right) & bf_t::vmask) << bitpos) | ~(bf_t::vmask << bitpos));
 		return *this;
 	}
 
@@ -216,13 +222,13 @@ struct cf_t<void>
 	}
 
 	template<typename T>
-	static constexpr auto extract(const T& data) -> decltype(+T())
+	static constexpr auto extract(const T&) -> decltype(+T())
 	{
 		return 0;
 	}
 
 	template<typename T>
-	static constexpr T insert(T value)
+	static constexpr T insert(T /*value*/)
 	{
 		return 0;
 	}
@@ -236,7 +242,7 @@ struct ff_t : bf_base<T, N>
 	using vtype = typename ff_t::vtype;
 
 	// Return constant value
-	static constexpr vtype extract(const type& data)
+	static constexpr vtype extract(const type&)
 	{
 		static_assert((V & ff_t::vmask) == V, "ff_t<> error: V out of bounds");
 		return V;
@@ -249,10 +255,14 @@ struct ff_t : bf_base<T, N>
 	}
 };
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+
 template<typename T, uint I, uint N>
 struct fmt_unveil<bf_t<T, I, N>, void>
 {
-	using type = typename fmt_unveil<simple_t<T>>::type;
+	using type = typename fmt_unveil<std::common_type_t<T>>::type;
 
 	static inline auto get(const bf_t<T, I, N>& bf)
 	{
@@ -263,7 +273,7 @@ struct fmt_unveil<bf_t<T, I, N>, void>
 template<typename F, typename... Fields>
 struct fmt_unveil<cf_t<F, Fields...>, void>
 {
-	using type = typename fmt_unveil<simple_t<typename F::type>>::type;
+	using type = typename fmt_unveil<std::common_type_t<typename F::type>>::type;
 
 	static inline auto get(const cf_t<F, Fields...>& cf)
 	{
@@ -274,7 +284,7 @@ struct fmt_unveil<cf_t<F, Fields...>, void>
 template<typename T, T V, uint N>
 struct fmt_unveil<ff_t<T, V, N>, void>
 {
-	using type = typename fmt_unveil<simple_t<T>>::type;
+	using type = typename fmt_unveil<std::common_type_t<T>>::type;
 
 	static inline auto get(const ff_t<T, V, N>& ff)
 	{

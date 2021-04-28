@@ -1,11 +1,11 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // libHttp_Util: 0x80711001 - 0x807110ff
 
 // Error Codes
-enum
+enum CellHttpUtilError : u32
 {
 	CELL_HTTP_UTIL_ERROR_NO_MEMORY         = 0x80711001,
 	CELL_HTTP_UTIL_ERROR_NO_BUFFER         = 0x80711002,

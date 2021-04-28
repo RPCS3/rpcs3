@@ -1,16 +1,15 @@
 #pragma once
 
-
-
-enum
+enum CellRescError : u32
 {
-	CELL_RESC_ERROR_NOT_INITIALIZED = 0x80210301,
-	CELL_RESC_ERROR_REINITIALIZED = 0x80210302,
-	CELL_RESC_ERROR_BAD_ALIGNMENT = 0x80210303,
-	CELL_RESC_ERROR_BAD_ARGUMENT = 0x80210304,
-	CELL_RESC_ERROR_LESS_MEMORY = 0x80210305,
+	CELL_RESC_ERROR_NOT_INITIALIZED   = 0x80210301,
+	CELL_RESC_ERROR_REINITIALIZED     = 0x80210302,
+	CELL_RESC_ERROR_BAD_ALIGNMENT     = 0x80210303,
+	CELL_RESC_ERROR_BAD_ARGUMENT      = 0x80210304,
+	CELL_RESC_ERROR_LESS_MEMORY       = 0x80210305,
 	CELL_RESC_ERROR_GCM_FLIP_QUE_FULL = 0x80210306,
-	CELL_RESC_ERROR_BAD_COMBINATION = 0x80210307,
+	CELL_RESC_ERROR_BAD_COMBINATION   = 0x80210307,
+	CELL_RESC_ERROR_x308              = 0x80210308, // TODO: find proper name
 };
 
 enum
@@ -66,6 +65,7 @@ enum CellRescResourcePolicy
 {
 	CELL_RESC_CONSTANT_VRAM          = 0x0,
 	CELL_RESC_MINIMUM_VRAM           = 0x1,
+	CELL_RESC_CONSTANT_GPU_LOAD      = 0x0,
 	CELL_RESC_MINIMUM_GPU_LOAD       = 0x2,
 };
 
@@ -87,7 +87,7 @@ struct CellRescDsts
 
 struct CellRescInitConfig
 {
-	be_t<u32> size; // size_t
+	be_t<u32> size; // usz
 	be_t<u32> resourcePolicy;
 	be_t<u32> supportModes;
 	be_t<u32> ratioMode;
@@ -103,4 +103,22 @@ struct CellRescSrc
 	be_t<u16> width;
 	be_t<u16> height;
 	be_t<u32> offset;
+};
+
+struct cell_resc_manager
+{
+	atomic_t<bool> is_initialized = false;
+
+	u32 buffer_mode{};
+
+	struct
+	{
+		u32 size{};
+		u32 resource_policy{};
+		u32 support_modes{};
+		u32 ratio_mode{};
+		u32 pal_temporal_mode{};
+		u32 interlace_mode{};
+		u32 flip_mode{};
+	} config;
 };

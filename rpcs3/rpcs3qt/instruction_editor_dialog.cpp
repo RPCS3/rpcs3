@@ -1,24 +1,32 @@
-
 #include "instruction_editor_dialog.h"
+
+#include "Emu/Cell/SPUThread.h"
+#include "Emu/CPU/CPUThread.h"
+#include "Emu/CPU/CPUDisAsm.h"
+
 #include <QFontDatabase>
+#include <QVBoxLayout>
+#include <QMessageBox>
+#include <QPushButton>
 
 constexpr auto qstr = QString::fromStdString;
 
 extern bool ppu_patch(u32 addr, u32 value);
 
-instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
+instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, CPUDisAsm* _disasm, std::function<cpu_thread*()> func)
 	: QDialog(parent)
 	, m_pc(_pc)
-	, cpu(_cpu)
 	, m_disasm(_disasm)
+	, m_get_cpu(std::move(func))
 {
 	setWindowTitle(tr("Edit instruction"));
 	setAttribute(Qt::WA_DeleteOnClose);
 	setMinimumSize(300, sizeHint().height());
 
-	const auto cpu = _cpu.get();
-	m_cpu_offset = cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
-	QString instruction = qstr(fmt::format("%08x", vm::read32(m_cpu_offset + m_pc).value()));
+	const auto cpu = m_get_cpu();
+
+	m_cpu_offset = cpu && cpu->id_type() == 2 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
+	const QString instruction = qstr(fmt::format("%08x", *reinterpret_cast<be_t<u32>*>(m_cpu_offset + m_pc)));
 
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
 	QHBoxLayout* hbox_panel(new QHBoxLayout());
@@ -26,7 +34,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	QVBoxLayout* vbox_right_panel(new QVBoxLayout());
 	QHBoxLayout* hbox_b_panel(new QHBoxLayout());
 
-	QPushButton* button_ok(new QPushButton(tr("Ok")));
+	QPushButton* button_ok(new QPushButton(tr("OK")));
 	QPushButton* button_cancel(new QPushButton(tr("Cancel")));
 	button_ok->setFixedWidth(80);
 	button_cancel->setFixedWidth(80);
@@ -62,21 +70,29 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	vbox_panel->addSpacing(10);
 	vbox_panel->addLayout(hbox_b_panel);
 	setLayout(vbox_panel);
-	setModal(true);
 
 	// Events
-	connect(button_ok, &QAbstractButton::pressed, [=]()
+	connect(button_ok, &QAbstractButton::clicked, [this]()
 	{
+		const auto cpu = m_get_cpu();
+
+		if (!cpu)
+		{
+			close();
+			return;
+		}
+
 		bool ok;
-		ulong opcode = m_instr->text().toULong(&ok, 16);
+		const ulong opcode = m_instr->text().toULong(&ok, 16);
 		if (!ok || opcode > UINT32_MAX)
 		{
 			QMessageBox::critical(this, tr("Error"), tr("Failed to parse PPU instruction."));
 			return;
 		}
-		else if (cpu->id_type() == 1)
+
+		if (cpu->id_type() == 1)
 		{
-			if (!ppu_patch(m_cpu_offset + m_pc, static_cast<u32>(opcode)))
+			if (!ppu_patch(m_pc, static_cast<u32>(opcode)))
 			{
 				QMessageBox::critical(this, tr("Error"), tr("Failed to patch PPU instruction."));
 				return;
@@ -84,22 +100,23 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 		}
 		else
 		{
-			vm::write32(m_cpu_offset + m_pc, static_cast<u32>(opcode));
+			const be_t<u32> swapped{static_cast<u32>(opcode)};
+			std::memcpy(m_cpu_offset + m_pc, &swapped, 4);
 		}
 
 		accept();
 	});
-	connect(button_cancel, &QAbstractButton::pressed, this, &instruction_editor_dialog::reject);
+	connect(button_cancel, &QAbstractButton::clicked, this, &instruction_editor_dialog::reject);
 	connect(m_instr, &QLineEdit::textChanged, this, &instruction_editor_dialog::updatePreview);
 
 	updatePreview();
 }
 
-void instruction_editor_dialog::updatePreview()
+void instruction_editor_dialog::updatePreview() const
 {
 	bool ok;
 	ulong opcode = m_instr->text().toULong(&ok, 16);
-	Q_UNUSED(opcode);
+	Q_UNUSED(opcode)
 
 	if (ok)
 	{

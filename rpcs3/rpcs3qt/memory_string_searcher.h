@@ -1,22 +1,21 @@
 #pragma once
 
-#include "stdafx.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
-
 #include <QDialog>
-#include <QLineEdit>
-#include <QPushButton>
-#include <QHBoxLayout>
+
+class QLineEdit;
+class QCheckBox;
+class QComboBox;
 
 class memory_string_searcher : public QDialog
 {
 	Q_OBJECT
 
-	QLineEdit* m_addr_line;
+	QLineEdit* m_addr_line = nullptr;
+	QCheckBox* m_chkbox_case_insensitive = nullptr;
+	QComboBox* m_cbox_input_mode = nullptr;
 
 public:
-	memory_string_searcher(QWidget* parent);
+	explicit memory_string_searcher(QWidget* parent);
 
 private Q_SLOTS:
 	void OnSearch();

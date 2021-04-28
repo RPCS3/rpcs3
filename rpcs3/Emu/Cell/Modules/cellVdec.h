@@ -1,9 +1,7 @@
 #pragma once
 
-
-
 // Error Codes
-enum
+enum CellVdecError : u32
 {
 	CELL_VDEC_ERROR_ARG   = 0x80610101,
 	CELL_VDEC_ERROR_SEQ   = 0x80610102,
@@ -24,10 +22,10 @@ enum CellVdecCodecType : s32
 // Callback Messages
 enum CellVdecMsgType : s32
 {
-	CELL_VDEC_MSG_TYPE_AUDONE, // decoding finished
-	CELL_VDEC_MSG_TYPE_PICOUT, // picture done
-	CELL_VDEC_MSG_TYPE_SEQDONE, // finishing done
-	CELL_VDEC_MSG_TYPE_ERROR,
+	CELL_VDEC_MSG_TYPE_AUDONE  = 0, // decoding finished
+	CELL_VDEC_MSG_TYPE_PICOUT  = 1, // picture done
+	CELL_VDEC_MSG_TYPE_SEQDONE = 2, // finishing done
+	CELL_VDEC_MSG_TYPE_ERROR   = 3, // fatal error
 };
 
 // Decoder Operation Mode
@@ -39,7 +37,7 @@ enum CellVdecDecodeMode : s32
 };
 
 // Output Picture Format Type
-enum CellVdecPicFormatType : s32
+enum CellVdecPicFormatType : u32
 {
 	CELL_VDEC_PICFMT_ARGB32_ILV,
 	CELL_VDEC_PICFMT_RGBA32_ILV,
@@ -48,7 +46,7 @@ enum CellVdecPicFormatType : s32
 };
 
 // Output Color Matrix Coef
-enum CellVdecColorMatrixType : s32
+enum CellVdecColorMatrixType : u32
 {
 	CELL_VDEC_COLOR_MATRIX_TYPE_BT601,
 	CELL_VDEC_COLOR_MATRIX_TYPE_BT709,
@@ -157,15 +155,15 @@ struct CellVdecPicItem
 // Output Picture Format
 struct CellVdecPicFormat
 {
-	be_t<s32> formatType; // CellVdecPicFormatType
-	be_t<s32> colorMatrixType; // CellVdecColorMatrixType
+	be_t<u32> formatType; // CellVdecPicFormatType
+	be_t<u32> colorMatrixType; // CellVdecColorMatrixType
 	u8 alpha;
 };
 
 struct CellVdecPicFormat2
 {
-	be_t<s32> formatType; // CellVdecPicFormatType
-	be_t<s32> colorMatrixType; // CellVdecColorMatrixType
+	be_t<u32> formatType; // CellVdecPicFormatType
+	be_t<u32> colorMatrixType; // CellVdecColorMatrixType
 	be_t<u32> unk0;
 	u8 alpha;
 	be_t<u32> unk1;

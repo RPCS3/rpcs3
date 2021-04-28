@@ -2,32 +2,40 @@
 
 /* For internal use. Don't include. */
 
-#include "types.h"
-#include "Atomic.h"
-#include "dynamic_library.h"
+#include "util/types.hpp"
+#include "util/dyn_lib.hpp"
 
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <Windows.h>
-#include <time.h>
+#include <ctime>
 #elif __linux__
 #include <errno.h>
 #include <sys/syscall.h>
 #include <linux/futex.h>
 #include <sys/time.h>
 #include <unistd.h>
-#else
+#include <fcntl.h>
 #endif
-#include <ctime>
+#include <algorithm>
 #include <chrono>
 #include <mutex>
 #include <condition_variable>
 #include <unordered_map>
 
 #ifdef _WIN32
-DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution));
-DYNAMIC_IMPORT("ntdll.dll", NtWaitForKeyedEvent, NTSTATUS(HANDLE Handle, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
-DYNAMIC_IMPORT("ntdll.dll", NtReleaseKeyedEvent, NTSTATUS(HANDLE Handle, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
+DYNAMIC_IMPORT("ntdll.dll", NtWaitForKeyedEvent, NTSTATUS(HANDLE, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
+DYNAMIC_IMPORT("ntdll.dll", NtReleaseKeyedEvent, NTSTATUS(HANDLE, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
+DYNAMIC_IMPORT("ntdll.dll", NtWaitForSingleObject, NTSTATUS(HANDLE Handle, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtDelayExecution, NTSTATUS(BOOLEAN Alertable, PLARGE_INTEGER DelayInterval));
+DYNAMIC_IMPORT("ntdll.dll", NtWaitForAlertByThreadId, NTSTATUS(PVOID Address, PLARGE_INTEGER Timeout));
+DYNAMIC_IMPORT("ntdll.dll", NtAlertThreadByThreadId, NTSTATUS(DWORD_PTR ThreadId));
+
+constexpr NTSTATUS NTSTATUS_SUCCESS = 0;
+constexpr NTSTATUS NTSTATUS_ALERTED = 0x101;
+constexpr NTSTATUS NTSTATUS_TIMEOUT = 0x102;
 #endif
 
 #ifndef __linux__
@@ -46,37 +54,37 @@ enum
 };
 #endif
 
-inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int* uaddr2, int val3)
+inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* timeout = nullptr, uint mask = 0)
 {
 #ifdef __linux__
-	return syscall(SYS_futex, uaddr, futex_op, val, timeout, uaddr, val3);
+	return syscall(SYS_futex, uaddr, futex_op, static_cast<int>(val), timeout, nullptr, static_cast<int>(mask));
 #else
-	static struct futex_map
+	static struct futex_manager
 	{
 		struct waiter
 		{
-			 int val;
+			 uint val;
 			 uint mask;
 			 std::condition_variable cv;
 		};
 
 		std::mutex mutex;
-		std::unordered_multimap<int*, waiter*, pointer_hash<int>> map;
+		std::unordered_multimap<volatile void*, waiter*> map;
 
-		int operator()(int* uaddr, int futex_op, int val, const timespec* timeout, int*, uint val3)
+		int operator()(volatile void* uaddr, int futex_op, uint val, const timespec* timeout, uint mask)
 		{
-			std::unique_lock<std::mutex> lock(mutex);
+			std::unique_lock lock(mutex);
 
 			switch (futex_op)
 			{
-			case FUTEX_WAIT:
+			case FUTEX_WAIT_PRIVATE:
 			{
-				val3 = -1;
-				// Fallthrough
+				mask = -1;
+				[[fallthrough]];
 			}
-			case FUTEX_WAIT_BITSET:
+			case FUTEX_WAIT_BITSET_PRIVATE:
 			{
-				if (*(volatile int*)uaddr != val)
+				if (*reinterpret_cast<volatile uint*>(uaddr) != val)
 				{
 					errno = EAGAIN;
 					return -1;
@@ -84,7 +92,7 @@ inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int
 
 				waiter rec;
 				rec.val = val;
-				rec.mask = val3;
+				rec.mask = mask;
 				const auto& ref = *map.emplace(uaddr, &rec);
 
 				int res = 0;
@@ -107,25 +115,25 @@ inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int
 				{
 					// TODO
 				}
-				
+
 				map.erase(std::find(map.find(uaddr), map.end(), ref));
 				return res;
 			}
 
-			case FUTEX_WAKE:
+			case FUTEX_WAKE_PRIVATE:
 			{
-				val3 = -1;
-				// Fallthrough
+				mask = -1;
+				[[fallthrough]];
 			}
-			case FUTEX_WAKE_BITSET:
+			case FUTEX_WAKE_BITSET_PRIVATE:
 			{
 				int res = 0;
 
 				for (auto range = map.equal_range(uaddr); val && range.first != range.second; range.first++)
 				{
 					auto& entry = *range.first->second;
-					
-					if (entry.mask & val3)
+
+					if (entry.mask & mask)
 					{
 						entry.cv.notify_one();
 						entry.mask = 0;
@@ -143,6 +151,6 @@ inline int futex(int* uaddr, int futex_op, int val, const timespec* timeout, int
 		}
 	} g_futex;
 
-	return g_futex(uaddr, futex_op, val, timeout, uaddr2, val3);
+	return g_futex(uaddr, futex_op, val, timeout, mask);
 #endif
 }

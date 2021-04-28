@@ -1,64 +1,63 @@
-﻿#include "stdafx.h"
-#include "Emu/System.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel libmedi("libmedi");
+LOG_CHANNEL(libmedi);
 
-s32 cellMediatorCloseContext()
+error_code cellMediatorCloseContext()
 {
 	libmedi.todo("cellMediatorCloseContext");
 	return CELL_OK;
 }
 
-s32 cellMediatorCreateContext()
+error_code cellMediatorCreateContext()
 {
 	libmedi.todo("cellMediatorCreateContext");
 	return CELL_OK;
 }
 
-s32 cellMediatorFlushCache()
+error_code cellMediatorFlushCache()
 {
 	libmedi.todo("cellMediatorFlushCache");
 	return CELL_OK;
 }
 
-s32 cellMediatorGetProviderUrl()
+error_code cellMediatorGetProviderUrl()
 {
 	libmedi.todo("cellMediatorGetProviderUrl");
 	return CELL_OK;
 }
 
-s32 cellMediatorGetSignatureLength()
+error_code cellMediatorGetSignatureLength()
 {
 	libmedi.todo("cellMediatorGetSignatureLength");
 	return CELL_OK;
 }
 
-s32 cellMediatorGetStatus()
+error_code cellMediatorGetStatus()
 {
 	libmedi.todo("cellMediatorGetStatus");
 	return CELL_OK;
 }
 
-s32 cellMediatorGetUserInfo()
+error_code cellMediatorGetUserInfo()
 {
 	libmedi.todo("cellMediatorGetUserInfo");
 	return CELL_OK;
 }
 
-s32 cellMediatorPostReports()
+error_code cellMediatorPostReports()
 {
 	libmedi.todo("cellMediatorPostReports");
 	return CELL_OK;
 }
 
-s32 cellMediatorReliablePostReports()
+error_code cellMediatorReliablePostReports()
 {
 	libmedi.todo("cellMediatorReliablePostReports");
 	return CELL_OK;
 }
 
-s32 cellMediatorSign()
+error_code cellMediatorSign()
 {
 	libmedi.todo("cellMediatorSign");
 	return CELL_OK;

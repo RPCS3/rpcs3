@@ -2,6 +2,8 @@
 
 #include "sys_sync.h"
 
+#include "Emu/Memory/vm_ptr.h"
+
 struct sys_mutex_attribute_t
 {
 	be_t<u32> protocol; // SYS_SYNC_FIFO, SYS_SYNC_PRIORITY or SYS_SYNC_PRIORITY_INHERIT
@@ -14,8 +16,8 @@ struct sys_mutex_attribute_t
 
 	union
 	{
-		char name[8];
-		u64 name_u64;
+		nse_t<u64, 1> name_u64;
+		char name[sizeof(u64)];
 	};
 };
 
@@ -23,29 +25,39 @@ struct lv2_mutex final : lv2_obj
 {
 	static const u32 id_base = 0x85000000;
 
-	const u32 protocol;
+	const lv2_protocol protocol;
 	const u32 recursive;
 	const u32 shared;
 	const u32 adaptive;
 	const u64 key;
 	const u64 name;
-	const s32 flags;
 
-	semaphore<> mutex;
-	atomic_t<u32> owner{0}; // Owner Thread ID
+	struct alignas(8) count_info
+	{
+		u32 mutex_count; // Mutex copies count (0 means doesn't exist anymore)
+		u32 cond_count; // Condition Variables
+	};
+
+	shared_mutex mutex;
+	atomic_t<u32> owner{0};
 	atomic_t<u32> lock_count{0}; // Recursive Locks
-	atomic_t<u32> cond_count{0}; // Condition Variables
+	atomic_t<count_info> obj_count{};
 	std::deque<cpu_thread*> sq;
 
-	lv2_mutex(u32 protocol, u32 recursive, u32 shared, u32 adaptive, u64 key, s32 flags, u64 name)
-		: protocol(protocol)
+	lv2_mutex(u32 protocol, u32 recursive, u32 shared, u32 adaptive, u64 key, u64 name)
+		: protocol{protocol}
 		, recursive(recursive)
 		, shared(shared)
 		, adaptive(adaptive)
 		, key(key)
-		, flags(flags)
 		, name(name)
 	{
+	}
+
+	CellError on_id_create()
+	{
+		obj_count.atomic_op([](count_info& info){ info.mutex_count++; });
+		return {};
 	}
 
 	CellError try_lock(u32 id)
@@ -147,8 +159,8 @@ class ppu_thread;
 
 // Syscalls
 
-error_code sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr);
-error_code sys_mutex_destroy(u32 mutex_id);
+error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr);
+error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id);
 error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout);
 error_code sys_mutex_trylock(ppu_thread& ppu, u32 mutex_id);
 error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id);

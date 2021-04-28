@@ -1,23 +1,20 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
+#include "sys_mutex.h"
+
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sys_mutex.h"
 
-
-
-logs::channel sys_mutex("sys_mutex");
+LOG_CHANNEL(sys_mutex);
 
 template<> DECLARE(ipc_manager<lv2_mutex, u64>::g_ipc) {};
 
-extern u64 get_system_time();
-
-error_code sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
+error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_mutex.warning("sys_mutex_create(mutex_id=*0x%x, attr=*0x%x)", mutex_id, attr);
 
 	if (!mutex_id || !attr)
@@ -25,46 +22,47 @@ error_code sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t
 		return CELL_EFAULT;
 	}
 
-	switch (attr->protocol)
+	const auto _attr = *attr;
+
+	switch (_attr.protocol)
 	{
 	case SYS_SYNC_FIFO: break;
 	case SYS_SYNC_PRIORITY: break;
 	case SYS_SYNC_PRIORITY_INHERIT:
-		sys_mutex.fatal("sys_mutex_create(): SYS_SYNC_PRIORITY_INHERIT");
+		sys_mutex.warning("sys_mutex_create(): SYS_SYNC_PRIORITY_INHERIT");
 		break;
 	default:
 	{
-		sys_mutex.error("sys_mutex_create(): unknown protocol (0x%x)", attr->protocol);
+		sys_mutex.error("sys_mutex_create(): unknown protocol (0x%x)", _attr.protocol);
 		return CELL_EINVAL;
 	}
 	}
 
-	switch (attr->recursive)
+	switch (_attr.recursive)
 	{
 	case SYS_SYNC_RECURSIVE: break;
 	case SYS_SYNC_NOT_RECURSIVE: break;
 	default:
 	{
-		sys_mutex.error("sys_mutex_create(): unknown recursive (0x%x)", attr->recursive);
+		sys_mutex.error("sys_mutex_create(): unknown recursive (0x%x)", _attr.recursive);
 		return CELL_EINVAL;
 	}
 	}
 
-	if (attr->adaptive != SYS_SYNC_NOT_ADAPTIVE)
+	if (_attr.adaptive != SYS_SYNC_NOT_ADAPTIVE)
 	{
-		sys_mutex.todo("sys_mutex_create(): unexpected adaptive (0x%x)", attr->adaptive);
+		sys_mutex.todo("sys_mutex_create(): unexpected adaptive (0x%x)", _attr.adaptive);
 	}
 
-	if (auto error = lv2_obj::create<lv2_mutex>(attr->pshared, attr->ipc_key, attr->flags, [&]()
+	if (auto error = lv2_obj::create<lv2_mutex>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]()
 	{
 		return std::make_shared<lv2_mutex>(
-			attr->protocol,
-			attr->recursive,
-			attr->pshared,
-			attr->adaptive,
-			attr->ipc_key,
-			attr->flags,
-			attr->name_u64);
+			_attr.protocol,
+			_attr.recursive,
+			_attr.pshared,
+			_attr.adaptive,
+			_attr.ipc_key,
+			_attr.name_u64);
 	}))
 	{
 		return error;
@@ -74,18 +72,32 @@ error_code sys_mutex_create(vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t
 	return CELL_OK;
 }
 
-error_code sys_mutex_destroy(u32 mutex_id)
+error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_mutex.warning("sys_mutex_destroy(mutex_id=0x%x)", mutex_id);
 
 	const auto mutex = idm::withdraw<lv2_obj, lv2_mutex>(mutex_id, [](lv2_mutex& mutex) -> CellError
 	{
+		std::lock_guard lock(mutex.mutex);
+
 		if (mutex.owner || mutex.lock_count)
 		{
 			return CELL_EBUSY;
 		}
 
-		if (mutex.cond_count)
+		if (!mutex.obj_count.fetch_op([](lv2_mutex::count_info& info)
+		{
+			if (info.cond_count)
+			{
+				return false;
+			}
+
+			// Decrement mutex copies count
+			info.mutex_count--;
+			return true;
+		}).second)
 		{
 			return CELL_EPERM;
 		}
@@ -108,6 +120,8 @@ error_code sys_mutex_destroy(u32 mutex_id)
 
 error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_mutex.trace("sys_mutex_lock(mutex_id=0x%x, timeout=0x%llx)", mutex_id, timeout);
 
 	const auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id, [&](lv2_mutex& mutex)
@@ -116,7 +130,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 		if (result == CELL_EBUSY)
 		{
-			semaphore_lock lock(mutex.mutex);
+			std::lock_guard lock(mutex.mutex);
 
 			if (mutex.try_own(ppu, ppu.id))
 			{
@@ -150,31 +164,37 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 	ppu.gpr[3] = CELL_OK;
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
+		if (is_stopped(state) || state & cpu_flag::signal)
+		{
+			break;
+		}
+
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
-				semaphore_lock lock(mutex->mutex);
+				// Wait for rescheduling
+				if (ppu.check_state())
+				{
+					return {};
+				}
+
+				std::lock_guard lock(mutex->mutex);
 
 				if (!mutex->unqueue(mutex->sq, &ppu))
 				{
-					timeout = 0;
-					continue;
+					break;
 				}
 
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 
@@ -183,6 +203,8 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 error_code sys_mutex_trylock(ppu_thread& ppu, u32 mutex_id)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_mutex.trace("sys_mutex_trylock(mutex_id=0x%x)", mutex_id);
 
 	const auto mutex = idm::check<lv2_obj, lv2_mutex>(mutex_id, [&](lv2_mutex& mutex)
@@ -210,6 +232,8 @@ error_code sys_mutex_trylock(ppu_thread& ppu, u32 mutex_id)
 
 error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_mutex.trace("sys_mutex_unlock(mutex_id=0x%x)", mutex_id);
 
 	const auto mutex = idm::check<lv2_obj, lv2_mutex>(mutex_id, [&](lv2_mutex& mutex)
@@ -224,11 +248,11 @@ error_code sys_mutex_unlock(ppu_thread& ppu, u32 mutex_id)
 
 	if (mutex.ret == CELL_EBUSY)
 	{
-		semaphore_lock lock(mutex->mutex);
+		std::lock_guard lock(mutex->mutex);
 
 		if (auto cpu = mutex->reown<ppu_thread>())
 		{
-			mutex->awake(*cpu);
+			mutex->awake(cpu);
 		}
 	}
 	else if (mutex.ret)

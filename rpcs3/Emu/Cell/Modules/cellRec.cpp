@@ -3,9 +3,7 @@
 #include "Emu/IdManager.h"
 #include "cellSysutil.h"
 
-
-
-logs::channel cellRec("cellRec");
+LOG_CHANNEL(cellRec);
 
 enum
 {
@@ -58,19 +56,21 @@ struct CellRecParam
 
 using CellRecCallback = void(s32 recStatus, s32 recError, vm::ptr<void> userdata);
 
-struct rec_t
+struct rec_info
 {
-	vm::ptr<CellRecCallback> cb;
-	vm::ptr<void> cbUserData;
+	vm::ptr<CellRecCallback> cb{};
+	vm::ptr<void> cbUserData{};
+
+	shared_mutex mutex;
 };
 
 error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cptr<CellRecParam> pParam, u32 container, vm::ptr<CellRecCallback> cb, vm::ptr<void> cbUserData)
 {
 	cellRec.todo("cellRecOpen(pDirName=%s, pFileName=%s, pParam=*0x%x, container=0x%x, cb=*0x%x, cbUserData=*0x%x)", pDirName, pFileName, pParam, container, cb, cbUserData);
 
-	const auto rec = fxm::make_always<rec_t>();
-	rec->cb = cb;
-	rec->cbUserData = cbUserData;
+	auto& rec = g_fxo->get<rec_info>();
+	rec.cb = cb;
+	rec.cbUserData = cbUserData;
 
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
@@ -85,10 +85,11 @@ error_code cellRecClose(s32 isDiscard)
 {
 	cellRec.todo("cellRecClose(isDiscard=0x%x)", isDiscard);
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	auto& rec = g_fxo->get<rec_info>();
+
+	sysutil_register_cb([=, &rec](ppu_thread& ppu) -> s32
 	{
-		const auto rec = fxm::get_always<rec_t>();
-		rec->cb(ppu, CELL_REC_STATUS_CLOSE, CELL_OK, rec->cbUserData);
+		rec.cb(ppu, CELL_REC_STATUS_CLOSE, CELL_OK, rec.cbUserData);
 		return CELL_OK;
 	});
 
@@ -104,10 +105,11 @@ error_code cellRecStop()
 {
 	cellRec.todo("cellRecStop()");
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	auto& rec = g_fxo->get<rec_info>();
+
+	sysutil_register_cb([=, &rec](ppu_thread& ppu) -> s32
 	{
-		const auto rec = fxm::get_always<rec_t>();
-		rec->cb(ppu, CELL_REC_STATUS_STOP, CELL_OK, rec->cbUserData);
+		rec.cb(ppu, CELL_REC_STATUS_STOP, CELL_OK, rec.cbUserData);
 		return CELL_OK;
 	});
 
@@ -118,10 +120,11 @@ error_code cellRecStart()
 {
 	cellRec.todo("cellRecStart()");
 
-	sysutil_register_cb([=](ppu_thread& ppu) -> s32
+	auto& rec = g_fxo->get<rec_info>();
+
+	sysutil_register_cb([=, &rec](ppu_thread& ppu) -> s32
 	{
-		const auto rec = fxm::get_always<rec_t>();
-		rec->cb(ppu, CELL_REC_STATUS_START, CELL_OK, rec->cbUserData);
+		rec.cb(ppu, CELL_REC_STATUS_START, CELL_OK, rec.cbUserData);
 		return CELL_OK;
 	});
 

@@ -1,10 +1,21 @@
 #pragma once
 
+#include "util/types.hpp"
+#include "util/atomic.hpp"
 #include "Utilities/BitField.h"
+#include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
-
+#include <string>
+#include <functional>
 
 enum
+{
+	CELL_MSGDIALOG_PROGRESSBAR_STRING_SIZE = 64,
+	CELL_MSGDIALOG_STRING_SIZE             = 512,
+};
+
+enum CellMsgDialogError : u32
 {
 	CELL_MSGDIALOG_ERROR_PARAM             = 0x8002b301,
 	CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED = 0x8002b302,
@@ -49,6 +60,13 @@ enum : s32
 	CELL_MSGDIALOG_BUTTON_ESCAPE  = 3,
 };
 
+enum CellMsgDialogProgressBarIndex
+{
+	CELL_MSGDIALOG_PROGRESSBAR_INDEX_SINGLE       = 0, // the only bar in a single bar dialog
+	CELL_MSGDIALOG_PROGRESSBAR_INDEX_DOUBLE_UPPER = 0, // the upper bar in a double bar dialog
+	CELL_MSGDIALOG_PROGRESSBAR_INDEX_DOUBLE_LOWER = 1, // the lower bar in a double bar dialog
+};
+
 using CellMsgDialogCallback = void(s32 buttonType, vm::ptr<void> userData);
 
 union MsgDialogType
@@ -71,21 +89,36 @@ enum class MsgDialogState
 	Close,
 };
 
+extern atomic_t<s32> g_last_user_response;
+
+error_code open_msg_dialog(bool is_blocking, u32 type, vm::cptr<char> msgString, vm::ptr<CellMsgDialogCallback> callback = vm::null, vm::ptr<void> userData = vm::null, vm::ptr<void> extParam = vm::null);
+error_code open_exit_dialog(const std::string& message, bool is_exit_requested);
+
 class MsgDialogBase
 {
+protected:
+	// the progressbar that will be represented in the taskbar. Use -1 to combine the progress.
+	s32 taskbar_index = 0;
+
 public:
-	atomic_t<MsgDialogState> state{ MsgDialogState::Open };
+	atomic_t<MsgDialogState> state{ MsgDialogState::Close };
 
 	MsgDialogType type{};
 
 	std::function<void(s32 status)> on_close;
-	std::function<void()> on_osk_input_entered;
 
 	virtual ~MsgDialogBase();
-	virtual void Create(const std::string& msg) = 0;
-	virtual void CreateOsk(const std::string& msg, char16_t* osk_text, u32 charlimit) = 0;
+	virtual void Create(const std::string& msg, const std::string& title = "") = 0;
+	virtual void Close(bool success) = 0;
 	virtual void SetMsg(const std::string& msg) = 0;
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) = 0;
 	virtual void ProgressBarReset(u32 progressBarIndex) = 0;
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) = 0;
+	virtual void ProgressBarSetValue(u32 progressBarIndex, u32 value) = 0;
+	virtual void ProgressBarSetLimit(u32 index, u32 limit) = 0;
+
+	void ProgressBarSetTaskbarIndex(s32 index)
+	{
+		taskbar_index = index;
+	}
 };

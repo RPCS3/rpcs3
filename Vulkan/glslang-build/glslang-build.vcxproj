@@ -13,18 +13,17 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8F85B6CC-250F-4ACA-A617-E820A74E3E3C}</ProjectGuid>
     <Keyword>MakeFileProj</Keyword>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
+  <Import Project="..\..\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="..\..\common_default_macros.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -37,27 +36,28 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Label="UserMacros">
+    <CmakeGenerator>"Visual Studio $(VisualStudioVersion.Substring(0,2))"</CmakeGenerator>
+    <CmakeReleaseCLI>cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Release" -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT ../glslang</CmakeReleaseCLI>
+    <CmakeDebugCLI>cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Debug" -DLLVM_USE_CRT_DEBUG=MTd -DLLVM_USE_CRT_RELEASE=MT ../glslang</CmakeDebugCLI>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <NMakeBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ../glslang
-msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Release /m</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ../glslang
-msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Release /m</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ../glslang
-msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Release /m</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine>$(CmakeReleaseCLI)
+      msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Release /p:ForceImportBeforeCppTargets=$(SolutionDir)common_default.props /m</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>$(CmakeReleaseCLI)
+      msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Release /p:ForceImportBeforeCppTargets=$(SolutionDir)common_default.props /m</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>$(CmakeReleaseCLI)
+      msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Release /p:ForceImportBeforeCppTargets=$(SolutionDir)common_default.props /m</NMakeCleanCommandLine>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NMakeBuildCommandLine>
-      cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ../glslang
-      msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug /m
+    <NMakeBuildCommandLine>$(CmakeDebugCLI)
+      msbuild.exe ALL_BUILD.vcxproj /t:build /p:Configuration=Debug /p:ForceImportBeforeCppTargets=$(SolutionDir)common_default.props /m
     </NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>
-      cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ../glslang
-      msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Debug /m
+    <NMakeReBuildCommandLine>$(CmakeDebugCLI)
+      msbuild.exe ALL_BUILD.vcxproj /t:rebuild /p:Configuration=Debug /p:ForceImportBeforeCppTargets=$(SolutionDir)common_default.props /m
     </NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>
-      cmake -G "Visual Studio 14 2015 Win64" -DCMAKE_CONFIGURATION_TYPES="Debug;Release" ../glslang
-      msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Debug /m
+    <NMakeCleanCommandLine>$(CmakeDebugCLI)
+      msbuild.exe ALL_BUILD.vcxproj /t:clean /p:Configuration=Debug /p:ForceImportBeforeCppTargets=$(SolutionDir)common_default.props /m
     </NMakeCleanCommandLine>
   </PropertyGroup>
   <ItemDefinitionGroup>

@@ -1,44 +1,78 @@
 [submodule "rpcs3-ffmpeg"]
 	path = 3rdparty/ffmpeg
-	url = https://github.com/hrydgard/ppsspp-ffmpeg
+	url = https://github.com/RPCS3/ffmpeg-core
+	ignore = dirty
 [submodule "asmjit"]
 	path = asmjit
-	url = https://github.com/kobalicek/asmjit
+	url = https://github.com/asmjit/asmjit
+	branch = oldstable
 	ignore = dirty
 [submodule "llvm"]
 	path = llvm
-	url = https://github.com/RPCS3/llvm
-	branch = release_60
-[submodule "GSL"]
-	path = 3rdparty/GSL
-	url = https://github.com/Microsoft/GSL.git
-[submodule "libpng"]
-	path = 3rdparty/libpng
-	url = https://github.com/RPCS3/libpng
+	url = https://github.com/RPCS3/llvm-mirror
 	ignore = dirty
 [submodule "Vulkan/glslang"]
 	path = Vulkan/glslang
 	url = https://github.com/KhronosGroup/glslang.git
-[submodule "Vulkan/Vulkan-LoaderAndValidationLayers"]
-	path = Vulkan/Vulkan-LoaderAndValidationLayers
-	url = https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers
-[submodule "Utilities/yaml-cpp"]
-	path = Utilities/yaml-cpp
-	url = https://github.com/RPCS3/yaml-cpp
+	ignore = dirty
+[submodule "Vulkan/spirv-tools"]
+	path = Vulkan/spirv-tools
+	url = https://github.com/KhronosGroup/SPIRV-Tools.git
+	ignore = dirty
+[submodule "Vulkan/spirv-headers"]
+	path = Vulkan/spirv-headers
+	url = https://github.com/KhronosGroup/SPIRV-Headers.git
+	ignore = dirty
 [submodule "3rdparty/cereal"]
 	path = 3rdparty/cereal
-	url = https://github.com/USCiLab/cereal.git
+	url = https://github.com/RPCS3/cereal.git
+	ignore = dirty
 [submodule "3rdparty/zlib"]
 	path = 3rdparty/zlib
 	url = https://github.com/madler/zlib
+	ignore = dirty
 [submodule "3rdparty/hidapi"]
 	path = 3rdparty/hidapi
 	url = https://github.com/RPCS3/hidapi
 	branch = master
 	ignore = dirty
-[submodule "3rdparty/Optional"]
-	path = 3rdparty/Optional
-	url = https://github.com/akrzemi1/Optional.git
 [submodule "3rdparty/pugixml"]
 	path = 3rdparty/pugixml
 	url = https://github.com/zeux/pugixml
+	ignore = dirty
+[submodule "3rdparty/xxHash"]
+	path = 3rdparty/xxHash
+	url = https://github.com/Cyan4973/xxHash
+	ignore = dirty
+[submodule "3rdparty/yaml-cpp"]
+	path = 3rdparty/yaml-cpp
+	url = https://github.com/RPCS3/yaml-cpp.git
+	ignore = dirty
+[submodule "3rdparty/libpng"]
+	path = 3rdparty/libpng
+	url = https://github.com/glennrp/libpng.git
+	ignore = dirty
+[submodule "3rdparty/libusb"]
+	path = 3rdparty/libusb
+	url = https://github.com/libusb/libusb.git
+	ignore = dirty
+[submodule "3rdparty/FAudio"]
+	path = 3rdparty/FAudio
+	url = https://github.com/FNA-XNA/FAudio.git
+	ignore = dirty
+[submodule "3rdparty/span"]
+	path = 3rdparty/span
+	url = https://github.com/tcbrindle/span
+	ignore = dirty
+[submodule "3rdparty/curl"]
+	path = 3rdparty/curl
+	url = https://github.com/curl/curl.git
+	ignore = dirty
+[submodule "3rdparty/wolfssl"]
+	path = 3rdparty/wolfssl
+	url = https://github.com/wolfSSL/wolfssl.git
+	ignore = dirty
+[submodule "3rdparty/flatbuffers"]
+	path = 3rdparty/flatbuffers
+	url = https://github.com/google/flatbuffers.git
+	ignore = dirty

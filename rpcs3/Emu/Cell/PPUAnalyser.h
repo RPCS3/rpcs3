@@ -3,9 +3,10 @@
 #include <string>
 #include <map>
 #include <set>
+#include "util/types.hpp"
+#include "util/endian.hpp"
 
 #include "Utilities/bit_set.h"
-#include "Utilities/BEType.h"
 #include "PPUOpcodes.h"
 
 // PPU Function Attributes
@@ -30,10 +31,10 @@ struct ppu_function
 	u32 stack_frame = 0;
 	u32 trampoline = 0;
 
-	std::map<u32, u32> blocks; // Basic blocks: addr -> size
-	std::set<u32> calls; // Set of called functions
-	std::set<u32> callers;
-	std::string name; // Function name
+	std::map<u32, u32> blocks{}; // Basic blocks: addr -> size
+	std::set<u32> calls{}; // Set of called functions
+	std::set<u32> callers{};
+	std::string name{}; // Function name
 };
 
 // PPU Relocation Information
@@ -68,13 +69,24 @@ struct ppu_segment
 // PPU Module Information
 struct ppu_module
 {
-	uchar sha1[20];
-	std::string name;
-	std::string path;
-	std::vector<ppu_reloc> relocs;
-	std::vector<ppu_segment> segs;
-	std::vector<ppu_segment> secs;
-	std::vector<ppu_function> funcs;
+	ppu_module() = default;
+
+	ppu_module(const ppu_module&) = delete;
+
+	ppu_module(ppu_module&&) = default;
+
+	ppu_module& operator=(const ppu_module&) = delete;
+
+	ppu_module& operator=(ppu_module&&) = default;
+
+	uchar sha1[20]{};
+	std::string name{};
+	std::string path{};
+	std::string cache{};
+	std::vector<ppu_reloc> relocs{};
+	std::vector<ppu_segment> segs{};
+	std::vector<ppu_segment> secs{};
+	std::vector<ppu_function> funcs{};
 
 	// Copy info without functions
 	void copy_part(const ppu_module& info)
@@ -87,7 +99,7 @@ struct ppu_module
 		secs = info.secs;
 	}
 
-	void analyse(u32 lib_toc, u32 entry);
+	void analyse(u32 lib_toc, u32 entry, u32 end, const std::basic_string<u32>& applied);
 	void validate(u32 reloc);
 };
 
@@ -115,9 +127,9 @@ struct ppu_pattern
 struct ppu_pattern_array
 {
 	const ppu_pattern* ptr;
-	std::size_t count;
+	usz count;
 
-	template <std::size_t N>
+	template <usz N>
 	constexpr ppu_pattern_array(const ppu_pattern(&array)[N])
 		: ptr(array)
 		, count(N)
@@ -138,9 +150,9 @@ struct ppu_pattern_array
 struct ppu_pattern_matrix
 {
 	const ppu_pattern_array* ptr;
-	std::size_t count;
+	usz count;
 
-	template <std::size_t N>
+	template <usz N>
 	constexpr ppu_pattern_matrix(const ppu_pattern_array(&array)[N])
 		: ptr(array)
 		, count(N)
@@ -553,18 +565,9 @@ struct ppu_itype
 	}
 };
 
-// Encode instruction name: 6 bits per character (0x20..0x5f), max 10
-static constexpr u64 ppu_iname_encode(const char* ptr, u64 value = 0)
-{
-	return *ptr == '\0' ? value : ppu_iname_encode(ptr + 1, (*ptr - 0x20) | (value << 6));
-}
-
 struct ppu_iname
 {
-#define NAME(x) x = ppu_iname_encode(#x),
-
-	enum type : u64
-	{
+#define NAME(x) static constexpr const char& x = *#x;
 	NAME(UNK)
 	NAME(MFVSCR)
 	NAME(MTVSCR)
@@ -945,15 +948,7 @@ struct ppu_iname
 	NAME(FCTID)
 	NAME(FCTIDZ)
 	NAME(FCFID)
-	};
-
 #undef NAME
-
-	// Enable address-of operator for ppu_decoder<>
-	friend constexpr type operator &(type value)
-	{
-		return value;
-	}
 };
 
 // PPU Analyser Context
@@ -965,10 +960,10 @@ struct ppu_acontext
 		// Integral range: normalized undef = (0;UINT64_MAX), unnormalized undefs are possible (when max = min - 1)
 		// Bit range: constant 0 = (0;0), constant 1 = (1;1), normalized undef = (0;1), unnormalized undef = (1;0)
 
-		u64 imin = 0; // Integral range begin
-		u64 imax = -1; // Integral range end
-		u64 bmin = 0; // Bit range begin
-		u64 bmax = -1; // Bit range end
+		u64 imin = 0ull; // Integral range begin
+		u64 imax = ~0ull; // Integral range end
+		u64 bmin = 0ull; // Bit range begin
+		u64 bmax = ~0ull; // Bit range end
 
 		void set_undef()
 		{
@@ -1005,7 +1000,7 @@ struct ppu_acontext
 		// Return number of trailing zero bits
 		u64 tz() const
 		{
-			return ::cnttz64(mask());
+			return std::countr_zero(mask());
 		}
 
 		// Range NOT
@@ -1028,7 +1023,7 @@ struct ppu_acontext
 			const u64 bdiv = rhs.div();
 
 			// Check overflow, generate normalized range
-			if (adiv != -1 && bdiv != -1 && adiv <= adiv + bdiv)
+			if (adiv != umax && bdiv != umax && adiv <= adiv + bdiv)
 			{
 				r = range(imin + rhs.imin, imax + rhs.imax);
 			}
@@ -1194,7 +1189,7 @@ struct ppu_acontext
 		}
 
 		// Range XOR
-		spec_gpr operator ^(const spec_gpr& rhs)
+		spec_gpr operator ^(const spec_gpr& rhs) const
 		{
 			return (~*this & rhs) | (*this & ~rhs);
 		}
@@ -1254,19 +1249,19 @@ struct ppu_acontext
 			if (min < max)
 			{
 				// Inverted constant MSB mask
-				const u64 mix = ~0ull >> ::cntlz64(min ^ max, true);
+				const u64 mix = ~0ull >> std::countl_zero(min ^ max);
 				r.bmin |= min & ~mix;
 				r.bmax &= max | mix;
 
 				r.imin = (min + ~mask) & mask;
 				r.imax = max & mask;
-				verify("Impossible range" HERE), r.imin <= r.imax;
+				ensure(r.imin <= r.imax); // "Impossible range"
 			}
 			else
 			{
 				r.imin = min & mask;
 				r.imax = (max + ~mask) & mask;
-				verify("Impossible range" HERE), r.imin >= r.imax;
+				ensure(r.imin >= r.imax); // "Impossible range"
 			}
 
 			// Fix const values

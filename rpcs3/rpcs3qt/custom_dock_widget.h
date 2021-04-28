@@ -6,16 +6,46 @@
 
 class custom_dock_widget : public QDockWidget
 {
+private:
+	std::shared_ptr<QWidget> m_title_bar_widget;
+	bool m_is_title_bar_visible = true;
+
 public:
 	explicit custom_dock_widget(const QString &title, QWidget *parent = Q_NULLPTR, Qt::WindowFlags flags = Qt::WindowFlags())
 		: QDockWidget(title, parent, flags)
 	{
+		m_title_bar_widget.reset(titleBarWidget());
+
 		connect(this, &QDockWidget::topLevelChanged, [this](bool/* topLevel*/)
 		{
+			SetTitleBarVisible(m_is_title_bar_visible);
 			style()->unpolish(this);
 			style()->polish(this);
 		});
-	};
+	}
+
+	void SetTitleBarVisible(bool visible)
+	{
+		if (visible || isFloating())
+		{
+			if (m_title_bar_widget.get() != titleBarWidget())
+			{
+				setTitleBarWidget(m_title_bar_widget.get());
+				QMargins margins = widget()->contentsMargins();
+				margins.setTop(0);
+				widget()->setContentsMargins(margins);
+			}
+		}
+		else
+		{
+			setTitleBarWidget(new QWidget());
+			QMargins margins = widget()->contentsMargins();
+			margins.setTop(1);
+			widget()->setContentsMargins(margins);
+		}
+
+		m_is_title_bar_visible = visible;
+	}
 
 protected:
 	void paintEvent(QPaintEvent* event) override

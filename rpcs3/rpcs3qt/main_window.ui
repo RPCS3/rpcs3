@@ -54,7 +54,7 @@
      </rect>
     </property>
     <property name="sizePolicy">
-     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+     <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
       <horstretch>0</horstretch>
       <verstretch>0</verstretch>
      </sizepolicy>
@@ -85,16 +85,16 @@
       <x>280</x>
       <y>10</y>
       <width>181</width>
-      <height>21</height>
+      <height>31</height>
      </rect>
     </property>
     <property name="sizePolicy">
-     <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+     <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
       <horstretch>0</horstretch>
       <verstretch>0</verstretch>
      </sizepolicy>
     </property>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QHBoxLayout" name="sizeSliderContainer_layout">
      <property name="spacing">
       <number>0</number>
      </property>
@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>26</height>
+     <height>25</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -165,12 +165,38 @@
      <addaction name="freezeRecentAct"/>
      <addaction name="separator"/>
     </widget>
+    <widget class="QMenu" name="menuBatch">
+     <property name="title">
+      <string>All Titles</string>
+     </property>
+     <addaction name="batchCreatePPUCachesAct"/>
+     <addaction name="separator"/>
+     <addaction name="batchRemoveCustomConfigurationsAct"/>
+     <addaction name="batchRemoveCustomPadConfigurationsAct"/>
+     <addaction name="batchRemovePPUCachesAct"/>
+     <addaction name="batchRemoveSPUCachesAct"/>
+     <addaction name="batchRemoveShaderCachesAct"/>
+     <addaction name="separator"/>
+     <addaction name="removeDiskCacheAct"/>
+    </widget>
+    <widget class="QMenu" name="menuFirmware">
+     <property name="title">
+      <string>Firmware</string>
+     </property>
+     <addaction name="createFirmwareCacheAct"/>
+     <addaction name="removeFirmwareCacheAct"/>
+    </widget>
     <addaction name="bootElfAct"/>
     <addaction name="bootGameAct"/>
     <addaction name="bootRecentMenu"/>
     <addaction name="separator"/>
+    <addaction name="addGamesAct"/>
+    <addaction name="separator"/>
     <addaction name="bootInstallPkgAct"/>
     <addaction name="bootInstallPupAct"/>
+    <addaction name="separator"/>
+    <addaction name="menuBatch"/>
+    <addaction name="menuFirmware"/>
     <addaction name="separator"/>
     <addaction name="exitAct"/>
    </widget>
@@ -196,7 +222,11 @@
     <addaction name="confAudioAct"/>
     <addaction name="confIOAct"/>
     <addaction name="confSystemAct"/>
+    <addaction name="confAdvAct"/>
+    <addaction name="confEmuAct"/>
+    <addaction name="confGuiAct"/>
     <addaction name="separator"/>
+    <addaction name="confRPCNAct"/>
     <addaction name="confAutopauseManagerAct"/>
    </widget>
    <widget class="QMenu" name="menuManage">
@@ -207,13 +237,18 @@
     <addaction name="separator"/>
     <addaction name="actionManage_Users"/>
     <addaction name="confSavedataManagerAct"/>
-    <addaction name="actionManage_RAP_Licences"/>
+    <addaction name="actionManage_RAP_Licenses"/>
     <addaction name="actionManage_Trophy_Data"/>
+    <addaction name="actionManage_Skylanders_Portal"/>
+    <addaction name="actionManage_Cheats"/>
+    <addaction name="actionManage_Game_Patches"/>
+    <addaction name="actionManage_Screenshots"/>
    </widget>
    <widget class="QMenu" name="menuUtilities">
     <property name="title">
      <string>Utilities</string>
     </property>
+    <addaction name="actionLog_Viewer"/>
     <addaction name="toolsCgDisasmAct"/>
     <addaction name="toolskernel_explorerAct"/>
     <addaction name="toolsmemory_viewerAct"/>
@@ -221,6 +256,14 @@
     <addaction name="toolsStringSearchAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
+    <addaction name="separator"/>
+    <addaction name="toolsExtractMSELFAct"/>
+    <addaction name="toolsExtractPUPAct"/>
+    <addaction name="toolsExtractTARAct"/>
+    <addaction name="separator"/>
+    <addaction name="actionopen_rsx_capture"/>
+    <addaction name="separator"/>
+    <addaction name="actionCreate_RSX_Capture"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -234,6 +277,9 @@
      <addaction name="setIconSizeSmallAct"/>
      <addaction name="setIconSizeMediumAct"/>
      <addaction name="setIconSizeLargeAct"/>
+     <addaction name="separator"/>
+     <addaction name="showCustomIconsAct"/>
+     <addaction name="playHoverGifsAct"/>
     </widget>
     <widget class="QMenu" name="menuGame_List_Mode">
      <property name="title">
@@ -248,6 +294,9 @@
      </property>
      <addaction name="showCatHDDGameAct"/>
      <addaction name="showCatDiscGameAct"/>
+     <addaction name="showCatPS1GamesAct"/>
+     <addaction name="showCatPS2GamesAct"/>
+     <addaction name="showCatPSPGamesAct"/>
      <addaction name="showCatHomeAct"/>
      <addaction name="showCatAudioVideoAct"/>
      <addaction name="showCatGameDataAct"/>
@@ -257,11 +306,14 @@
     <addaction name="showDebuggerAct"/>
     <addaction name="showLogAct"/>
     <addaction name="separator"/>
+    <addaction name="showTitleBarsAct"/>
     <addaction name="showToolBarAct"/>
     <addaction name="separator"/>
     <addaction name="showGameListAct"/>
     <addaction name="separator"/>
     <addaction name="showHiddenEntriesAct"/>
+    <addaction name="separator"/>
+    <addaction name="showCompatibilityInGridAct"/>
     <addaction name="separator"/>
     <addaction name="refreshGameListAct"/>
     <addaction name="menuGame_List_Mode"/>
@@ -272,7 +324,15 @@
     <property name="title">
      <string>Help</string>
     </property>
-    <addaction name="actionCheck_for_Updates"/>
+    <widget class="QMenu" name="languageMenu">
+     <property name="title">
+      <string>Language</string>
+     </property>
+     <addaction name="languageAct0"/>
+    </widget>
+    <addaction name="updateAct"/>
+    <addaction name="separator"/>
+    <addaction name="languageMenu"/>
     <addaction name="separator"/>
     <addaction name="aboutAct"/>
     <addaction name="aboutQtAct"/>
@@ -311,7 +371,7 @@
     </size>
    </property>
    <property name="toolButtonStyle">
-    <enum>Qt::ToolButtonIconOnly</enum>
+    <enum>Qt::ToolButtonTextUnderIcon</enum>
    </property>
    <property name="floatable">
     <bool>false</bool>
@@ -322,21 +382,15 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="toolbar_disc"/>
+   <addaction name="toolbar_open"/>
+   <addaction name="toolbar_refresh"/>
    <addaction name="toolbar_fullscreen"/>
-   <addaction name="toolbar_snap"/>
-   <addaction name="separator"/>
    <addaction name="toolbar_stop"/>
    <addaction name="toolbar_start"/>
-   <addaction name="separator"/>
-   <addaction name="toolbar_controls"/>
    <addaction name="toolbar_config"/>
-   <addaction name="separator"/>
-   <addaction name="toolbar_refresh"/>
+   <addaction name="toolbar_controls"/>
    <addaction name="toolbar_list"/>
    <addaction name="toolbar_grid"/>
-   <addaction name="toolbar_sort"/>
-   <addaction name="separator"/>
   </widget>
   <action name="bootElfAct">
    <property name="text">
@@ -350,10 +404,10 @@
   </action>
   <action name="bootInstallPkgAct">
    <property name="text">
-    <string>Install .pkg</string>
+    <string>Install Packages/Raps</string>
    </property>
    <property name="toolTip">
-    <string>Install application from pkg file</string>
+    <string>Install application from a .pkg file</string>
    </property>
   </action>
   <action name="bootInstallPupAct">
@@ -376,7 +430,7 @@
     <string>Pause</string>
    </property>
    <property name="toolTip">
-    <string>Start Emulation</string>
+    <string>Start emulation</string>
    </property>
   </action>
   <action name="sysStopAct">
@@ -391,7 +445,7 @@
     <string>Stop</string>
    </property>
    <property name="toolTip">
-    <string>Stop Emulation</string>
+    <string>Stop emulation</string>
    </property>
   </action>
   <action name="sysSendOpenMenuAct">
@@ -423,7 +477,7 @@
     <string>GPU</string>
    </property>
    <property name="toolTip">
-    <string>Configure Graphics</string>
+    <string>Configure graphics</string>
    </property>
   </action>
   <action name="confPadsAct">
@@ -434,7 +488,7 @@
     <string>Pads</string>
    </property>
    <property name="toolTip">
-    <string>Configure Controls</string>
+    <string>Configure controls</string>
    </property>
   </action>
   <action name="confAudioAct">
@@ -442,7 +496,7 @@
     <string>Audio</string>
    </property>
    <property name="toolTip">
-    <string>Configure Audio</string>
+    <string>Configure audio</string>
    </property>
   </action>
   <action name="confIOAct">
@@ -458,7 +512,31 @@
     <string>System</string>
    </property>
    <property name="toolTip">
-    <string>Configure System</string>
+    <string>Configure system</string>
+   </property>
+  </action>
+  <action name="confAdvAct">
+   <property name="text">
+    <string>Advanced</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure advanced emulator settings</string>
+   </property>
+  </action>
+  <action name="confEmuAct">
+   <property name="text">
+    <string>Emulator</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Emulator settings</string>
+   </property>
+  </action>
+  <action name="confGuiAct">
+   <property name="text">
+    <string>GUI</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure GUI settings</string>
    </property>
   </action>
   <action name="confAutopauseManagerAct">
@@ -480,7 +558,7 @@
     <string>Exit RPCS3</string>
    </property>
    <property name="statusTip">
-    <string>Exit the application</string>
+    <string>Exit the application.</string>
    </property>
   </action>
   <action name="confSavedataManagerAct">
@@ -491,7 +569,7 @@
     <string>Save Data</string>
    </property>
    <property name="toolTip">
-    <string>Manage Save Data</string>
+    <string>Manage save data</string>
    </property>
   </action>
   <action name="actionManage_Trophy_Data">
@@ -502,18 +580,15 @@
     <string>Trophies</string>
    </property>
    <property name="toolTip">
-    <string>Manage Trophies</string>
+    <string>Manage trophies</string>
    </property>
   </action>
   <action name="actionManage_Users">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
    <property name="text">
     <string>User Accounts</string>
    </property>
    <property name="toolTip">
-    <string>Manage User Accounts</string>
+    <string>Manage user accounts</string>
    </property>
   </action>
   <action name="toolsCgDisasmAct">
@@ -555,7 +630,25 @@
   </action>
   <action name="toolsDecryptSprxLibsAct">
    <property name="text">
-    <string>SPRX Decryption</string>
+    <string>Decrypt PS3 Binaries</string>
+   </property>
+  </action>
+  <action name="toolsExtractMSELFAct">
+   <property name="text">
+    <string>Extract MSELF</string>
+   </property>
+  </action>
+  <action name="toolsExtractPUPAct">
+   <property name="text">
+    <string>Extract PUP</string>
+   </property>
+  </action>
+  <action name="toolsExtractTARAct">
+   <property name="text">
+    <string>Extract Encrypted TAR</string>
+   </property>
+   <property name="toolTip">
+    <string>Extract files from special .tar files inside PS3UPDAT.PUP</string>
    </property>
   </action>
   <action name="showDebuggerAct">
@@ -600,12 +693,20 @@
     <string>Show Tool Bar</string>
    </property>
   </action>
+  <action name="showCompatibilityInGridAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Game Compatibility in Grid Mode</string>
+   </property>
+  </action>
   <action name="refreshGameListAct">
    <property name="text">
     <string>Game List Refresh</string>
    </property>
   </action>
-  <action name="actionManage_RAP_Licences">
+  <action name="actionManage_RAP_Licenses">
    <property name="enabled">
     <bool>false</bool>
    </property>
@@ -613,10 +714,7 @@
     <string>RAP Files</string>
    </property>
   </action>
-  <action name="actionCheck_for_Updates">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
+  <action name="updateAct">
    <property name="text">
     <string>Check for Updates</string>
    </property>
@@ -727,6 +825,39 @@
     <string>Disc Games</string>
    </property>
   </action>
+  <action name="showCatPS1GamesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PS1 Games</string>
+   </property>
+  </action>
+  <action name="showCatPS2GamesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PS2 Games</string>
+   </property>
+  </action>
+  <action name="showCatPSPGamesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>PSP Games</string>
+   </property>
+  </action>
   <action name="showCatHomeAct">
    <property name="checkable">
     <bool>true</bool>
@@ -774,13 +905,13 @@
   <action name="toolbar_start">
    <property name="icon">
     <iconset resource="../resources.qrc">
-     <normaloff>:/Icons/pause.png</normaloff>:/Icons/pause.png</iconset>
+     <normaloff>:/Icons/play.png</normaloff>:/Icons/play.png</iconset>
    </property>
    <property name="text">
-    <string>start</string>
+    <string>Start</string>
    </property>
    <property name="toolTip">
-    <string>Pause emulation</string>
+    <string>Start emulation</string>
    </property>
   </action>
   <action name="toolbar_stop">
@@ -789,7 +920,7 @@
      <normaloff>:/Icons/stop.png</normaloff>:/Icons/stop.png</iconset>
    </property>
    <property name="text">
-    <string>stop</string>
+    <string>Stop</string>
    </property>
    <property name="toolTip">
     <string>Stop emulation</string>
@@ -801,46 +932,22 @@
      <normaloff>:/Icons/configure.png</normaloff>:/Icons/configure.png</iconset>
    </property>
    <property name="text">
-    <string>config</string>
+    <string>Config</string>
    </property>
    <property name="toolTip">
-    <string>Configuration</string>
+    <string>Configure the emulator</string>
    </property>
   </action>
   <action name="toolbar_controls">
    <property name="icon">
     <iconset resource="../resources.qrc">
-     <normaloff>:/Icons/controls.png</normaloff>:/Icons/controls.png</iconset>
+     <normaloff>:/Icons/controllers.png</normaloff>:/Icons/controllers.png</iconset>
    </property>
    <property name="text">
-    <string>Controls</string>
-   </property>
-   <property name="iconText">
-    <string>Controls</string>
+    <string>Pads</string>
    </property>
    <property name="toolTip">
     <string>Configure controls</string>
-   </property>
-  </action>
-  <action name="toolbar_snap">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="../resources.qrc">
-     <normaloff>:/Icons/screenshot.png</normaloff>:/Icons/screenshot.png</iconset>
-   </property>
-   <property name="text">
-    <string>snap</string>
-   </property>
-   <property name="toolTip">
-    <string>Capture frame</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
-   <property name="iconVisibleInMenu">
-    <bool>true</bool>
    </property>
   </action>
   <action name="toolbar_fullscreen">
@@ -849,7 +956,7 @@
      <normaloff>:/Icons/fullscreen.png</normaloff>:/Icons/fullscreen.png</iconset>
    </property>
    <property name="text">
-    <string>fullscreen</string>
+    <string>FullScr</string>
    </property>
    <property name="toolTip">
     <string>Toggle fullscreen</string>
@@ -861,7 +968,7 @@
      <normaloff>:/Icons/list.png</normaloff>:/Icons/list.png</iconset>
    </property>
    <property name="text">
-    <string>list</string>
+    <string>List</string>
    </property>
    <property name="toolTip">
     <string>Switch to list mode</string>
@@ -873,31 +980,10 @@
      <normaloff>:/Icons/grid.png</normaloff>:/Icons/grid.png</iconset>
    </property>
    <property name="text">
-    <string>grid</string>
+    <string>Grid</string>
    </property>
    <property name="toolTip">
     <string>Switch to grid mode</string>
-   </property>
-  </action>
-  <action name="toolbar_sort">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="icon">
-    <iconset resource="../resources.qrc">
-     <normaloff>:/Icons/sort.png</normaloff>:/Icons/sort.png</iconset>
-   </property>
-   <property name="text">
-    <string>sort</string>
-   </property>
-   <property name="toolTip">
-    <string>Sort options</string>
-   </property>
-   <property name="visible">
-    <bool>false</bool>
-   </property>
-   <property name="iconVisibleInMenu">
-    <bool>true</bool>
    </property>
   </action>
   <action name="toolbar_refresh">
@@ -906,22 +992,22 @@
      <normaloff>:/Icons/refresh.png</normaloff>:/Icons/refresh.png</iconset>
    </property>
    <property name="text">
-    <string>refresh</string>
+    <string>Refresh</string>
    </property>
    <property name="toolTip">
     <string>Refresh gamelist</string>
    </property>
   </action>
-  <action name="toolbar_disc">
+  <action name="toolbar_open">
    <property name="icon">
     <iconset resource="../resources.qrc">
-     <normaloff>:/Icons/disc.png</normaloff>:/Icons/disc.png</iconset>
+     <normaloff>:/Icons/open.png</normaloff>:/Icons/open.png</iconset>
    </property>
    <property name="text">
-    <string>disc</string>
+    <string>Open</string>
    </property>
    <property name="toolTip">
-    <string>Boot game</string>
+    <string>Boot a game</string>
    </property>
   </action>
   <action name="showCatOtherAct">
@@ -935,20 +1021,146 @@
     <string>Other</string>
    </property>
   </action>
-  <action name="showGameToolBarAct">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Show Game Tool Bar</string>
-   </property>
-  </action>
   <action name="showHiddenEntriesAct">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
     <string>Show Hidden Entries</string>
+   </property>
+  </action>
+  <action name="actionopen_rsx_capture">
+   <property name="text">
+    <string>Open RSX Capture</string>
+   </property>
+  </action>
+  <action name="addGamesAct">
+   <property name="text">
+    <string>Add Games</string>
+   </property>
+  </action>
+  <action name="showTitleBarsAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Title Bars</string>
+   </property>
+  </action>
+  <action name="batchCreatePPUCachesAct">
+   <property name="text">
+    <string>Create PPU Caches</string>
+   </property>
+  </action>
+  <action name="batchRemoveCustomConfigurationsAct">
+   <property name="text">
+    <string>Remove Custom Configurations</string>
+   </property>
+  </action>
+  <action name="batchRemovePPUCachesAct">
+   <property name="text">
+    <string>Remove PPU Caches</string>
+   </property>
+  </action>
+  <action name="batchRemoveSPUCachesAct">
+   <property name="text">
+    <string>Remove SPU Caches</string>
+   </property>
+  </action>
+  <action name="batchRemoveShaderCachesAct">
+   <property name="text">
+    <string>Remove Shader Caches</string>
+   </property>
+  </action>
+  <action name="batchRemoveCustomPadConfigurationsAct">
+   <property name="text">
+    <string>Remove Custom Pad Configurations</string>
+   </property>
+  </action>
+  <action name="removeDiskCacheAct">
+   <property name="text">
+    <string>Remove Disk Cache</string>
+   </property>
+  </action>
+  <action name="actionManage_Skylanders_Portal">
+   <property name="text">
+    <string>Skylanders Portal</string>
+   </property>
+  </action>
+  <action name="actionManage_Cheats">
+   <property name="text">
+    <string>Cheats</string>
+   </property>
+  </action>
+  <action name="languageAct0">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>English</string>
+   </property>
+  </action>
+  <action name="actionManage_Screenshots">
+   <property name="text">
+    <string>Screenshots</string>
+   </property>
+  </action>
+  <action name="removeFirmwareCacheAct">
+   <property name="text">
+    <string>Remove Firmware Cache</string>
+   </property>
+  </action>
+  <action name="createFirmwareCacheAct">
+   <property name="text">
+    <string>Create Firmware Cache</string>
+   </property>
+  </action>
+  <action name="actionCreate_RSX_Capture">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Create RSX Capture</string>
+   </property>
+  </action>
+  <action name="actionManage_Game_Patches">
+   <property name="text">
+    <string>Game Patches</string>
+   </property>
+  </action>
+  <action name="confRPCNAct">
+   <property name="text">
+    <string>RPCN</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure RPCN</string>
+   </property>
+  </action>
+  <action name="actionLog_Viewer">
+   <property name="text">
+    <string>Log Viewer</string>
+   </property>
+  </action>
+  <action name="showCustomIconsAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Custom Icons</string>
+   </property>
+  </action>
+  <action name="playHoverGifsAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Play Hover Gifs</string>
    </property>
   </action>
  </widget>

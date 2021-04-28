@@ -1,6 +1,7 @@
-#pragma once
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
-#include "types.h"
+#include "util/types.hpp"
+#include "util/shared_ptr.hpp"
 #include "bit_set.h"
 
 #include <memory>
@@ -11,8 +12,12 @@
 namespace fs
 {
 #ifdef _WIN32
+	static constexpr auto& delim = "/\\";
+	static constexpr auto& wdelim = L"/\\";
 	using native_handle = void*;
 #else
+	static constexpr auto& delim = "/";
+	static constexpr auto& wdelim = L"/";
 	using native_handle = int;
 #endif
 
@@ -65,10 +70,11 @@ namespace fs
 		s64 ctime;
 	};
 
-	// Native handle getter
-	struct get_native_handle
+	// Helper, layout is equal to iovec struct
+	struct iovec_clone
 	{
-		virtual native_handle get() = 0;
+		const void* iov_base;
+		usz iov_len;
 	};
 
 	// File handle base
@@ -76,19 +82,26 @@ namespace fs
 	{
 		virtual ~file_base();
 
-		virtual stat_t stat();
+		[[noreturn]] virtual stat_t stat();
 		virtual void sync();
 		virtual bool trunc(u64 length) = 0;
 		virtual u64 read(void* buffer, u64 size) = 0;
 		virtual u64 write(const void* buffer, u64 size) = 0;
 		virtual u64 seek(s64 offset, seek_mode whence) = 0;
 		virtual u64 size() = 0;
+		virtual native_handle get_handle();
+		virtual u64 write_gather(const iovec_clone* buffers, u64 buf_count);
 	};
 
 	// Directory entry (TODO)
 	struct dir_entry : stat_t
 	{
-		std::string name;
+		std::string name{};
+
+		dir_entry()
+			: stat_t{}
+		{
+		}
 	};
 
 	// Directory handle base
@@ -112,26 +125,35 @@ namespace fs
 	// Virtual device
 	struct device_base
 	{
+		const std::string fs_prefix;
+
+		device_base();
 		virtual ~device_base();
 
 		virtual bool stat(const std::string& path, stat_t& info) = 0;
 		virtual bool statfs(const std::string& path, device_stat& info) = 0;
-		virtual bool remove_dir(const std::string& path) = 0;
-		virtual bool create_dir(const std::string& path) = 0;
-		virtual bool rename(const std::string& from, const std::string& to) = 0;
-		virtual bool remove(const std::string& path) = 0;
-		virtual bool trunc(const std::string& path, u64 length) = 0;
-		virtual bool utime(const std::string& path, s64 atime, s64 mtime) = 0;
+		virtual bool remove_dir(const std::string& path);
+		virtual bool create_dir(const std::string& path);
+		virtual bool rename(const std::string& from, const std::string& to);
+		virtual bool remove(const std::string& path);
+		virtual bool trunc(const std::string& path, u64 length);
+		virtual bool utime(const std::string& path, s64 atime, s64 mtime);
 
 		virtual std::unique_ptr<file_base> open(const std::string& path, bs_t<open_mode> mode) = 0;
 		virtual std::unique_ptr<dir_base> open_dir(const std::string& path) = 0;
 	};
 
+	[[noreturn]] void xnull(const src_loc&);
+	[[noreturn]] void xfail(const src_loc&);
+	[[noreturn]] void xovfl();
+
+	constexpr struct pod_tag_t{} pod_tag;
+
 	// Get virtual device for specified path (nullptr for real path)
-	std::shared_ptr<device_base> get_virtual_device(const std::string& path);
+	shared_ptr<device_base> get_virtual_device(const std::string& path);
 
 	// Set virtual device with specified name (nullptr for deletion)
-	std::shared_ptr<device_base> set_virtual_device(const std::string& root_name, const std::shared_ptr<device_base>&);
+	shared_ptr<device_base> set_virtual_device(const std::string& name, shared_ptr<device_base> device);
 
 	// Try to get parent directory (returns empty string on failure)
 	std::string get_parent_dir(const std::string& path);
@@ -175,12 +197,14 @@ namespace fs
 	// Set file access/modification time
 	bool utime(const std::string& path, s64 atime, s64 mtime);
 
+	// Synchronize filesystems (TODO)
+	void sync();
+
 	class file final
 	{
-		std::unique_ptr<file_base> m_file;
+		std::unique_ptr<file_base> m_file{};
 
-		[[noreturn]] void xnull() const;
-		[[noreturn]] void xfail() const;
+		bool strict_read_check(u64 size, u64 type_size) const;
 
 	public:
 		// Default constructor
@@ -190,7 +214,7 @@ namespace fs
 		explicit file(const std::string& path, bs_t<open_mode> mode = ::fs::read);
 
 		// Open memory for read
-		explicit file(const void* ptr, std::size_t size);
+		explicit file(const void* ptr, usz size);
 
 		// Open file with specified args (forward to constructor)
 		template <typename... Args>
@@ -223,156 +247,265 @@ namespace fs
 		}
 
 		// Change file size (possibly appending zero bytes)
-		bool trunc(u64 length) const
+		bool trunc(u64 length,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (!m_file) xnull();
+			if (!m_file) xnull({line, col, file, func});
 			return m_file->trunc(length);
 		}
 
 		// Get file information
-		stat_t stat() const
+		stat_t stat(
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (!m_file) xnull();
+			if (!m_file) xnull({line, col, file, func});
 			return m_file->stat();
 		}
 
 		// Sync file buffers
-		void sync() const
+		void sync(
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (!m_file) xnull();
+			if (!m_file) xnull({line, col, file, func});
 			return m_file->sync();
 		}
 
 		// Read the data from the file and return the amount of data written in buffer
-		u64 read(void* buffer, u64 count) const
+		u64 read(void* buffer, u64 count,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (!m_file) xnull();
+			if (!m_file) xnull({line, col, file, func});
 			return m_file->read(buffer, count);
 		}
 
 		// Write the data to the file and return the amount of data actually written
-		u64 write(const void* buffer, u64 count) const
+		u64 write(const void* buffer, u64 count,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (!m_file) xnull();
+			if (!m_file) xnull({line, col, file, func});
 			return m_file->write(buffer, count);
 		}
 
 		// Change current position, returns resulting position
-		u64 seek(s64 offset, seek_mode whence = seek_set) const
+		u64 seek(s64 offset, seek_mode whence = seek_set,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (!m_file) xnull();
+			if (!m_file) xnull({line, col, file, func});
 			return m_file->seek(offset, whence);
 		}
 
 		// Get file size
-		u64 size() const
+		u64 size(
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (!m_file) xnull();
+			if (!m_file) xnull({line, col, file, func});
 			return m_file->size();
 		}
 
 		// Get current position
-		u64 pos() const
+		u64 pos(
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (!m_file) xnull();
+			if (!m_file) xnull({line, col, file, func});
 			return m_file->seek(0, seek_cur);
 		}
 
-		// Write std::string unconditionally
-		const file& write(const std::string& str) const
+		// Write std::basic_string unconditionally
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const std::basic_string<T>& str,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (write(str.data(), str.size()) != str.size()) xfail();
+			if (write(str.data(), str.size() * sizeof(T), line, col, file, func) != str.size() * sizeof(T)) xfail({line, col, file, func});
 			return *this;
 		}
 
 		// Write POD unconditionally
-		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, const file&> write(const T& data) const
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const T& data,
+			pod_tag_t = pod_tag,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (write(std::addressof(data), sizeof(T)) != sizeof(T)) xfail();
+			if (write(std::addressof(data), sizeof(T), line, col, file, func) != sizeof(T)) xfail({line, col, file, func});
 			return *this;
 		}
 
 		// Write POD std::vector unconditionally
-		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, const file&> write(const std::vector<T>& vec) const
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, const file&> write(const std::vector<T>& vec,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (write(vec.data(), vec.size() * sizeof(T)) != vec.size() * sizeof(T)) xfail();
+			if (write(vec.data(), vec.size() * sizeof(T), line, col, file, func) != vec.size() * sizeof(T)) xfail({line, col, file, func});
 			return *this;
 		}
 
-		// Read std::string, size must be set by resize() method
-		bool read(std::string& str) const
+		// Read std::basic_string, size must be set by resize() method
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::basic_string<T>& str,
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION(),
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN()) const
 		{
-			return read(&str[0], str.size()) == str.size();
+			return read(&str[0], str.size() * sizeof(T), line, col, file, func) == str.size() * sizeof(T);
 		}
 
-		// Read std::string
-		bool read(std::string& str, std::size_t size) const
+		// Read std::basic_string
+		template <bool IsStrict = false, typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::basic_string<T>& str, usz _size,
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION(),
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN()) const
 		{
-			str.resize(size);
-			return read(&str[0], size) == size;
+			if (!m_file) xnull({line, col, file, func});
+			if (!_size) return true;
+
+			if constexpr (IsStrict)
+			{
+				// If _size arg is too high std::bad_alloc may happen in resize and then we cannot error check
+				if (!strict_read_check(_size, sizeof(T))) return false;
+			}
+
+			str.resize(_size);
+			return read(str.data(), sizeof(T) * _size, line, col, file, func) == sizeof(T) * _size;
 		}
 
 		// Read POD, sizeof(T) is used
-		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, bool> read(T& data) const
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(T& data,
+			pod_tag_t = pod_tag,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			return read(&data, sizeof(T)) == sizeof(T);
+			return read(&data, sizeof(T), line, col, file, func) == sizeof(T);
 		}
 
 		// Read POD std::vector, size must be set by resize() method
-		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, bool> read(std::vector<T>& vec) const
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec,
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION(),
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN()) const
 		{
-			return read(vec.data(), sizeof(T) * vec.size()) == sizeof(T) * vec.size();
+			return read(vec.data(), sizeof(T) * vec.size(), line, col, file, func) == sizeof(T) * vec.size();
 		}
 
 		// Read POD std::vector
-		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, bool> read(std::vector<T>& vec, std::size_t size) const
+		template <bool IsStrict = false, typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, bool> read(std::vector<T>& vec, usz _size,
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION(),
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN()) const
 		{
-			vec.resize(size);
-			return read(vec.data(), sizeof(T) * size) == sizeof(T) * size;
+			if (!m_file) xnull({line, col, file, func});
+			if (!_size) return true;
+
+			if constexpr (IsStrict)
+			{
+				if (!strict_read_check(_size, sizeof(T))) return false;
+			}
+
+			vec.resize(_size);
+			return read(vec.data(), sizeof(T) * _size, line, col, file, func) == sizeof(T) * _size;
 		}
 
 		// Read POD (experimental)
-		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, T> read() const
+		template <typename T>
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, T> read(
+			pod_tag_t = pod_tag,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
 			T result;
-			if (!read(result)) xfail();
+			if (!read(result, pod_tag, line, col, file, func)) xfail({line, col, file, func});
 			return result;
 		}
 
-		// Read full file to std::string
-		std::string to_string() const
+		// Read full file to std::basic_string
+		template <typename T = char>
+		std::basic_string<T> to_string(
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			std::string result;
-			result.resize(size());
-			if (seek(0), !read(result)) xfail();
+			std::basic_string<T> result;
+			result.resize(size() / sizeof(T));
+			if (seek(0), !read(result, file, func, line, col)) xfail({line, col, file, func});
 			return result;
 		}
 
 		// Read full file to std::vector
 		template<typename T>
-		std::enable_if_t<std::is_pod<T>::value && !std::is_pointer<T>::value, std::vector<T>> to_vector() const
+		std::enable_if_t<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>, std::vector<T>> to_vector(
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
 			std::vector<T> result;
 			result.resize(size() / sizeof(T));
-			if (seek(0), !read(result)) xfail();
+			if (seek(0), !read(result, file, func, line, col)) xfail({line, col, file, func});
 			return result;
 		}
 
 		// Get native handle if available
 		native_handle get_handle() const;
+
+		// Gathered write
+		u64 write_gather(const iovec_clone* buffers, u64 buf_count,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
+		{
+			if (!m_file) xnull({line, col, file, func});
+			return m_file->write_gather(buffers, buf_count);
+		}
 	};
 
 	class dir final
 	{
-		std::unique_ptr<dir_base> m_dir;
-
-		[[noreturn]] void xnull() const;
+		std::unique_ptr<dir_base> m_dir{};
 
 	public:
 		dir() = default;
@@ -409,23 +542,31 @@ namespace fs
 		}
 
 		// Get next directory entry
-		bool read(dir_entry& out) const
+		bool read(dir_entry& out,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (!m_dir) xnull();
+			if (!m_dir) xnull({line, col, file, func});
 			return m_dir->read(out);
 		}
 
 		// Reset to the beginning
-		void rewind() const
+		void rewind(
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION()) const
 		{
-			if (!m_dir) xnull();
+			if (!m_dir) xnull({line, col, file, func});
 			return m_dir->rewind();
 		}
 
 		class iterator
 		{
 			const dir* m_parent;
-			dir_entry m_entry;
+			dir_entry m_entry{};
 
 		public:
 			enum class mode
@@ -452,6 +593,14 @@ namespace fs
 					m_parent = nullptr;
 				}
 			}
+
+			iterator(const iterator&) = default;
+
+			iterator(iterator&&) = default;
+
+			iterator& operator=(const iterator&) = default;
+
+			iterator& operator=(iterator&&) = default;
 
 			dir_entry& operator *()
 			{
@@ -484,17 +633,30 @@ namespace fs
 	// Get configuration directory
 	const std::string& get_config_dir();
 
-	// Get data/cache directory for specified prefix and suffix
-	std::string get_data_dir(const std::string& prefix, const std::string& location, const std::string& suffix);
+	// Get common cache directory
+	const std::string& get_cache_dir();
 
-	// Get data/cache directory for specified prefix and path (suffix will be filename)
-	std::string get_data_dir(const std::string& prefix, const std::string& path);
+	// Unique pending file creation destined to be renamed to the destination file
+	struct pending_file
+	{
+		fs::file file{};
+
+		// This is meant to modify files atomically, overwriting is likely
+		bool commit(bool overwrite = true);
+
+		pending_file(const std::string& path);
+		~pending_file();
+
+	private:
+		std::string m_path{}; // Pending file path
+		std::string m_dest{}; // Destination file path
+	};
 
 	// Delete directory and all its contents recursively
-	void remove_all(const std::string& path, bool remove_root = true);
+	bool remove_all(const std::string& path, bool remove_root = true);
 
 	// Get size of all files recursively
-	u64 get_dir_size(const std::string& path);
+	u64 get_dir_size(const std::string& path, u64 rounding_alignment = 1);
 
 	enum class error : uint
 	{
@@ -505,6 +667,11 @@ namespace fs
 		exist,
 		acces,
 		notempty,
+		readonly,
+		isdir,
+		toolong,
+		nospace,
+		unknown
 	};
 
 	// Error code returned
@@ -557,13 +724,16 @@ namespace fs
 		{
 			const u64 old_size = obj.size();
 
-			if (old_size + size < old_size)
+			if (old_size + size < old_size || pos + size < pos)
 			{
-				fmt::raw_error("fs::container_stream<>::write(): overflow");
+				xovfl();
 			}
 
 			if (pos > old_size)
 			{
+			 	// Reserve memory
+				obj.reserve(pos + size);
+
 				// Fill gap if necessary (default-initialized)
 				obj.resize(pos);
 			}
@@ -586,8 +756,7 @@ namespace fs
 			const s64 new_pos =
 				whence == fs::seek_set ? offset :
 				whence == fs::seek_cur ? offset + pos :
-				whence == fs::seek_end ? offset + size() :
-				(fmt::raw_error("fs::container_stream<>::seek(): invalid whence"), 0);
+				whence == fs::seek_end ? offset + size() : -1;
 
 			if (new_pos < 0)
 			{
@@ -613,16 +782,33 @@ namespace fs
 		return result;
 	}
 
-	template <typename... Args>
+	template <bool Flush = false, typename... Args>
 	bool write_file(const std::string& path, bs_t<fs::open_mode> mode, const Args&... args)
 	{
-		if (fs::file f{path, mode})
+		// Always use write flag, remove read flag
+		if (fs::file f{path, mode + fs::write - fs::read})
 		{
-			// Write args sequentially
-			int seq[]{ (f.write(args), 0)... };
+			if constexpr (sizeof...(args) == 2u && (std::is_pointer_v<Args> || ...))
+			{
+				// Specialization for [const void*, usz] args
+				f.write(args...);
+			}
+			else
+			{
+				// Write args sequentially
+				(f.write(args), ...);
+			}
+
+			if constexpr (Flush)
+			{
+				f.sync();
+			}
+
 			return true;
 		}
 
 		return false;
 	}
+
+	file make_gather(std::vector<file>);
 }

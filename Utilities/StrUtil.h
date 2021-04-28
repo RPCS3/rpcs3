@@ -1,48 +1,38 @@
 #pragma once
 
-#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <vector>
 #include <functional>
+#include <string_view>
 
-// Copy null-terminated string from std::string to char array with truncation
-template <std::size_t N>
-inline void strcpy_trunc(char (&dst)[N], const std::string& src)
-{
-	const std::size_t count = src.size() >= N ? N - 1 : src.size();
-	std::memcpy(dst, src.c_str(), count);
-	dst[count] = '\0';
-}
+#ifdef _WIN32
+std::string wchar_to_utf8(wchar_t *src);
+std::string wchar_path_to_ansi_path(const std::wstring& src);
+std::string utf8_path_to_ansi_path(const std::string& src);
+#endif
 
-// Copy null-terminated string from char array to another char array with truncation
-template <std::size_t N, std::size_t N2>
-inline void strcpy_trunc(char (&dst)[N], const char (&src)[N2])
+// Copy null-terminated string from a std::string or a char array to a char array with truncation
+template <typename D, typename T>
+inline void strcpy_trunc(D& dst, const T& src)
 {
-	const std::size_t count = N2 >= N ? N - 1 : N2;
-	std::memcpy(dst, src, count);
-	dst[count] = '\0';
-}
-
-template <std::size_t N>
-inline bool ends_with(const std::string& src, const char (&end)[N])
-{
-	return src.size() >= N - 1 && src.compare(src.size() - (N - 1), N - 1, end, N - 1) == 0;
+	const usz count = std::size(src) >= std::size(dst) ? std::size(dst) - 1 : std::size(src);
+	std::memcpy(std::data(dst), std::data(src), count);
+	std::memset(std::data(dst) + count, 0, std::size(dst) - count);
 }
 
 namespace fmt
 {
-	std::string replace_first(const std::string& src, const std::string& from, const std::string& to);
-	std::string replace_all(const std::string& src, const std::string& from, const std::string& to);
+	std::string replace_all(std::string_view src, std::string_view from, std::string_view to, usz count = -1);
 
-	template <size_t list_size>
+	template <usz list_size>
 	std::string replace_all(std::string src, const std::pair<std::string, std::string> (&list)[list_size])
 	{
-		for (size_t pos = 0; pos < src.length(); ++pos)
+		for (usz pos = 0; pos < src.length(); ++pos)
 		{
-			for (size_t i = 0; i < list_size; ++i)
+			for (usz i = 0; i < list_size; ++i)
 			{
-				const size_t comp_length = list[i].first.length();
+				const usz comp_length = list[i].first.length();
 
 				if (src.length() - pos < comp_length)
 					continue;
@@ -59,14 +49,14 @@ namespace fmt
 		return src;
 	}
 
-	template <size_t list_size>
+	template <usz list_size>
 	std::string replace_all(std::string src, const std::pair<std::string, std::function<std::string()>> (&list)[list_size])
 	{
-		for (size_t pos = 0; pos < src.length(); ++pos)
+		for (usz pos = 0; pos < src.length(); ++pos)
 		{
-			for (size_t i = 0; i < list_size; ++i)
+			for (usz i = 0; i < list_size; ++i)
 			{
-				const size_t comp_length = list[i].first.length();
+				const usz comp_length = list[i].first.length();
 
 				if (src.length() - pos < comp_length)
 					continue;
@@ -83,13 +73,13 @@ namespace fmt
 		return src;
 	}
 
-	std::vector<std::string> split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty = true);
+	std::vector<std::string> split(std::string_view source, std::initializer_list<std::string_view> separators, bool is_skip_empty = true);
 	std::string trim(const std::string& source, const std::string& values = " \t");
 
 	template <typename T>
 	std::string merge(const T& source, const std::string& separator)
 	{
-		if (!source.size())
+		if (source.empty())
 		{
 			return {};
 		}
@@ -100,10 +90,10 @@ namespace fmt
 		auto end = source.end();
 		for (--end; it != end; ++it)
 		{
-			result += *it + separator;
+			result += std::string{*it} + separator;
 		}
 
-		return result + source.back();
+		return result + std::string{source.back()};
 	}
 
 	template <typename T>
@@ -134,6 +124,7 @@ namespace fmt
 	}
 
 	std::string to_upper(const std::string& string);
+	std::string to_lower(const std::string& string);
 
 	bool match(const std::string& source, const std::string& mask);
 }

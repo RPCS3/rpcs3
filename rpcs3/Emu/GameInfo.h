@@ -1,5 +1,8 @@
 #pragma once
 
+#include "util/types.hpp"
+#include <string>
+
 struct GameInfo
 {
 	std::string path;
@@ -8,14 +11,15 @@ struct GameInfo
 	std::string name;
 	std::string serial;
 	std::string app_ver;
+	std::string version;
 	std::string category;
 	std::string fw;
 
-	u32 attr;
-	u32 bootable;
-	u32 parental_lvl;
-	u32 sound_format;
-	u32 resolution;
+	u32 attr = 0;
+	u32 bootable = 0;
+	u32 parental_lvl = 0;
+	u32 sound_format = 0;
+	u32 resolution = 0;
 
 	GameInfo()
 	{
@@ -24,11 +28,12 @@ struct GameInfo
 
 	void Reset()
 	{
-		path = "";
+		path.clear();
 
 		name = "Unknown";
 		serial = "Unknown";
 		app_ver = "Unknown";
+		version = "Unknown";
 		category = "Unknown";
 		fw = "Unknown";
 

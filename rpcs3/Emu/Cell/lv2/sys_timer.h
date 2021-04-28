@@ -1,6 +1,10 @@
 #pragma once
 
+#include "sys_event.h"
+
 #include "Utilities/Thread.h"
+#include "Emu/Memory/vm_ptr.h"
+
 
 // Timer State
 enum : u32
@@ -17,14 +21,13 @@ struct sys_timer_information_t
 	be_t<u32> pad;
 };
 
-struct lv2_timer final : public lv2_obj, public named_thread
+struct lv2_timer_context : lv2_obj
 {
 	static const u32 id_base = 0x11000000;
 
-	void on_task() override;
-	void on_stop() override;
+	void operator()();
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 	atomic_t<u32> state{SYS_TIMER_STATE_STOP};
 
 	std::weak_ptr<lv2_event_queue> port;
@@ -34,18 +37,38 @@ struct lv2_timer final : public lv2_obj, public named_thread
 
 	atomic_t<u64> expire{0}; // Next expiration time
 	atomic_t<u64> period{0}; // Period (oneshot if 0)
+
+	void get_information(sys_timer_information_t& info)
+	{
+		reader_lock lock(mutex);
+
+		if (state == SYS_TIMER_STATE_RUN)
+		{
+			info.timer_state = SYS_TIMER_STATE_RUN;
+			info.next_expire = expire;
+			info.period      = period;
+		}
+		else
+		{
+			info.timer_state = SYS_TIMER_STATE_STOP;
+			info.next_expire = 0;
+			info.period      = 0;
+		}
+	}
 };
+
+using lv2_timer = named_thread<lv2_timer_context>;
 
 class ppu_thread;
 
 // Syscalls
 
-error_code sys_timer_create(vm::ptr<u32> timer_id);
-error_code sys_timer_destroy(u32 timer_id);
-error_code sys_timer_get_information(u32 timer_id, vm::ptr<sys_timer_information_t> info);
-error_code _sys_timer_start(u32 timer_id, u64 basetime, u64 period); // basetime type changed from s64
-error_code sys_timer_stop(u32 timer_id);
-error_code sys_timer_connect_event_queue(u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2);
-error_code sys_timer_disconnect_event_queue(u32 timer_id);
+error_code sys_timer_create(ppu_thread&, vm::ptr<u32> timer_id);
+error_code sys_timer_destroy(ppu_thread&, u32 timer_id);
+error_code sys_timer_get_information(ppu_thread&, u32 timer_id, vm::ptr<sys_timer_information_t> info);
+error_code _sys_timer_start(ppu_thread&, u32 timer_id, u64 basetime, u64 period); // basetime type changed from s64
+error_code sys_timer_stop(ppu_thread&, u32 timer_id);
+error_code sys_timer_connect_event_queue(ppu_thread&, u32 timer_id, u32 queue_id, u64 name, u64 data1, u64 data2);
+error_code sys_timer_disconnect_event_queue(ppu_thread&, u32 timer_id);
 error_code sys_timer_sleep(ppu_thread&, u32 sleep_time);
 error_code sys_timer_usleep(ppu_thread&, u64 sleep_time);

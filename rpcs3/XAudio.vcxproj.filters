@@ -7,18 +7,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\rpcs3\Emu\Audio\XAudio2\XAudio2Thread.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Audio\XAudio2\XAudio28Thread.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\Audio\XAudio2\XAudio27Thread.cpp">
+    <ClCompile Include="Emu\Audio\XAudio2\XAudio2Backend.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\rpcs3\Emu\Audio\XAudio2\XAudio2Thread.h">
+    <ClInclude Include="Emu\Audio\XAudio2\XAudio2Backend.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>

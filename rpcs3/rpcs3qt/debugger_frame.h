@@ -1,32 +1,38 @@
 #pragma once
 
-#include "stdafx.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
-#include "Emu/IdManager.h"
-#include "Emu/CPU/CPUThread.h"
-#include "Emu/CPU/CPUDisAsm.h"
-#include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/RawSPUThread.h"
-#include "Emu/Cell/PPUDisAsm.h"
-#include "Emu/Cell/SPUDisAsm.h"
-#include "Emu/Cell/PPUInterpreter.h"
+#include "util/types.hpp"
 
-#include "breakpoint_handler.h"
 #include "custom_dock_widget.h"
-#include "instruction_editor_dialog.h"
-#include "register_editor_dialog.h"
-#include "gui_settings.h"
-#include "debugger_list.h"
-#include "breakpoint_list.h"
 
 #include <QSplitter>
 #include <QTextEdit>
+#include <QPushButton>
+#include <QComboBox>
+
+#include <memory>
+#include <vector>
+
+class CPUDisAsm;
+class cpu_thread;
+class gui_settings;
+class debugger_list;
+class breakpoint_list;
+class breakpoint_handler;
+class call_stack_list;
+
+namespace rsx
+{
+	class thread;
+}
+
+enum class system_state : u32;
+
+class instruction_editor_dialog;
+class register_editor_dialog;
 
 class debugger_frame : public custom_dock_widget
 {
-	Q_OBJECT;
+	Q_OBJECT
 
 	const QString NoThreadString = tr("No Thread");
 	const QString RunString = tr("Run");
@@ -35,52 +41,59 @@ class debugger_frame : public custom_dock_widget
 	debugger_list* m_debugger_list;
 	QSplitter* m_right_splitter;
 	QFont m_mono;
+	QTextEdit* m_misc_state;
 	QTextEdit* m_regs;
 	QPushButton* m_go_to_addr;
 	QPushButton* m_go_to_pc;
-	QPushButton* m_btn_capture;
 	QPushButton* m_btn_step;
 	QPushButton* m_btn_step_over;
 	QPushButton* m_btn_run;
 	QComboBox* m_choice_units;
-	QString m_current_choice;
 	QTimer* m_update;
 	QSplitter* m_splitter;
 
-	u64 m_threads_created = 0;
-	u64 m_threads_deleted = 0;
+	u64 m_threads_created = -1;
+	u64 m_threads_deleted = -1;
+	system_state m_emu_state{};
 	u32 m_last_pc = -1;
-	u32 m_last_stat = 0;
+	std::vector<char> m_last_query_state;
 	u32 m_last_step_over_breakpoint = -1;
-	bool m_no_thread_selected = true;
 
-	std::shared_ptr<CPUDisAsm> m_disasm;
-	std::weak_ptr<cpu_thread> cpu;
+	std::shared_ptr<CPUDisAsm> m_disasm; // Only shared to allow base/derived functionality
+	std::shared_ptr<cpu_thread> m_cpu;
+	rsx::thread* m_rsx = nullptr;
 
 	breakpoint_list* m_breakpoint_list;
 	breakpoint_handler* m_breakpoint_handler;
+	call_stack_list* m_call_stack_list;
+	instruction_editor_dialog* m_inst_editor = nullptr;
+	register_editor_dialog* m_reg_editor = nullptr;
 
-	std::shared_ptr<gui_settings> xgui_settings;
+	std::shared_ptr<gui_settings> m_gui_settings;
+
+	cpu_thread* get_cpu();
+	std::function<cpu_thread*()> make_check_cpu(cpu_thread* cpu);
+	void open_breakpoints_settings();
 
 public:
-	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = 0);
+	explicit debugger_frame(std::shared_ptr<gui_settings> settings, QWidget *parent = nullptr);
 
-	void SaveSettings();
-	void ChangeColors();
+	void SaveSettings() const;
+	void ChangeColors() const;
 
 	void UpdateUI();
 	void UpdateUnitList();
 
-	u32 GetPc() const;
 	void DoUpdate();
-	void WriteRegs();
+	void WritePanels();
 	void EnableButtons(bool enable);
 	void ShowGotoAddressDialog();
 	u64 EvaluateExpression(const QString& expression);
-	void ClearBreakpoints(); // Fallthrough method into breakpoint_list.
+	void ClearBreakpoints() const; // Fallthrough method into breakpoint_list.
+	void ClearCallStack();
 
 	/** Needed so key press events work when other objects are selected in debugger_frame. */
-	bool eventFilter(QObject* object, QEvent* event) override; 
+	bool eventFilter(QObject* object, QEvent* event) override;
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
@@ -90,14 +103,15 @@ protected:
 
 Q_SIGNALS:
 	void DebugFrameClosed();
+	void CallStackUpdateRequested(const std::vector<std::pair<u32, u32>>& call_stack);
 
 public Q_SLOTS:
-	void DoStep(bool stepOver = false);
+	void DoStep(bool step_over = false);
 
 private Q_SLOTS:
 	void OnSelectUnit();
 	void ShowPC();
-	void EnableUpdateTimer(bool state);
+	void EnableUpdateTimer(bool enable) const;
 };
 
-Q_DECLARE_METATYPE(u32);
+Q_DECLARE_METATYPE(u32)

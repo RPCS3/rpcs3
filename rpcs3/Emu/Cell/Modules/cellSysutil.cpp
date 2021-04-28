@@ -1,61 +1,68 @@
 #include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
+#include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "Emu/Cell/lv2/sys_process.h"
 #include "cellSysutil.h"
 
 #include "Utilities/StrUtil.h"
+#include "Utilities/lockless.h"
+#include "Utilities/span.h"
 
-#include <mutex>
-#include <queue>
+LOG_CHANNEL(cellSysutil);
 
-logs::channel cellSysutil("cellSysutil");
+template<>
+void fmt_class_string<CellSysutilError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_SYSUTIL_ERROR_TYPE);
+			STR_CASE(CELL_SYSUTIL_ERROR_VALUE);
+			STR_CASE(CELL_SYSUTIL_ERROR_SIZE);
+			STR_CASE(CELL_SYSUTIL_ERROR_NUM);
+			STR_CASE(CELL_SYSUTIL_ERROR_BUSY);
+			STR_CASE(CELL_SYSUTIL_ERROR_STATUS);
+			STR_CASE(CELL_SYSUTIL_ERROR_MEMORY);
+			STR_CASE(CELL_SYSUTIL_ERROR_3D_SUPPORT);
+		}
+
+		return unknown;
+	});
+}
 
 struct sysutil_cb_manager
 {
-	std::mutex mutex;
-
-	std::array<std::pair<vm::ptr<CellSysutilCallback>, vm::ptr<void>>, 4> callbacks;
-
-	std::queue<std::function<s32(ppu_thread&)>> registered;
-
-	std::function<s32(ppu_thread&)> get_cb()
+	struct alignas(8) registered_cb
 	{
-		std::lock_guard<std::mutex> lock(mutex);
+		vm::ptr<CellSysutilCallback> first;
+		vm::ptr<void> second;
+	};
 
-		if (registered.empty())
-		{
-			return nullptr;
-		}
+	atomic_t<registered_cb> callbacks[4]{};
 
-		auto func = std::move(registered.front());
-
-		registered.pop();
-
-		return func;
-	}
+	lf_queue<std::function<s32(ppu_thread&)>> registered;
 };
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 {
-	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	std::lock_guard<std::mutex> lock(cbm->mutex);
-
-	cbm->registered.push(std::move(cb));
+	cbm.registered.push(std::move(cb));
 }
 
 extern void sysutil_send_system_cmd(u64 status, u64 param)
 {
-	if (const auto cbm = fxm::get<sysutil_cb_manager>())
+	if (auto cbm = g_fxo->try_get<sysutil_cb_manager>())
 	{
-		for (auto& cb : cbm->callbacks)
+		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
 		{
 			if (cb.first)
 			{
-				std::lock_guard<std::mutex> lock(cbm->mutex);
-
 				cbm->registered.push([=](ppu_thread& ppu) -> s32
 				{
 					// TODO: check it and find the source of the return value (void isn't equal to CELL_OK)
@@ -81,19 +88,39 @@ void fmt_class_string<CellSysutilLang>::format(std::string& out, u64 arg)
 		case CELL_SYSUTIL_LANG_GERMAN: return "German";
 		case CELL_SYSUTIL_LANG_ITALIAN: return "Italian";
 		case CELL_SYSUTIL_LANG_DUTCH: return "Dutch";
-		case CELL_SYSUTIL_LANG_PORTUGUESE_PT: return "Portuguese (PT)";
+		case CELL_SYSUTIL_LANG_PORTUGUESE_PT: return "Portuguese (Portugal)";
 		case CELL_SYSUTIL_LANG_RUSSIAN: return "Russian";
 		case CELL_SYSUTIL_LANG_KOREAN: return "Korean";
-		case CELL_SYSUTIL_LANG_CHINESE_T: return "Chinese (Trad.)";
-		case CELL_SYSUTIL_LANG_CHINESE_S: return "Chinese (Simp.)";
+		case CELL_SYSUTIL_LANG_CHINESE_T: return "Chinese (Traditional)";
+		case CELL_SYSUTIL_LANG_CHINESE_S: return "Chinese (Simplified)";
 		case CELL_SYSUTIL_LANG_FINNISH: return "Finnish";
 		case CELL_SYSUTIL_LANG_SWEDISH: return "Swedish";
 		case CELL_SYSUTIL_LANG_DANISH: return "Danish";
 		case CELL_SYSUTIL_LANG_NORWEGIAN: return "Norwegian";
 		case CELL_SYSUTIL_LANG_POLISH: return "Polish";
 		case CELL_SYSUTIL_LANG_ENGLISH_GB: return "English (UK)";
-		case CELL_SYSUTIL_LANG_PORTUGUESE_BR: return "Portuguese (BR)";
+		case CELL_SYSUTIL_LANG_PORTUGUESE_BR: return "Portuguese (Brazil)";
 		case CELL_SYSUTIL_LANG_TURKISH: return "Turkish";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<CellSysutilLicenseArea>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](CellSysutilLicenseArea value)
+	{
+		switch (value)
+		{
+		case CELL_SYSUTIL_LICENSE_AREA_J: return "SCEJ";
+		case CELL_SYSUTIL_LICENSE_AREA_A: return "SCEA";
+		case CELL_SYSUTIL_LICENSE_AREA_E: return "SCEE";
+		case CELL_SYSUTIL_LICENSE_AREA_H: return "SCEH";
+		case CELL_SYSUTIL_LICENSE_AREA_K: return "SCEK";
+		case CELL_SYSUTIL_LICENSE_AREA_C: return "SCH";
+		case CELL_SYSUTIL_LICENSE_AREA_OTHER: return "Other";
 		}
 
 		return unknown;
@@ -114,6 +141,7 @@ void fmt_class_string<CellSysutilParamId>::format(std::string& out, u64 arg)
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE: return "ID_TIMEZONE";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME: return "ID_SUMMERTIME";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL: return "ID_GAME_PARENTAL_LEVEL";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_LICENSE_AREA: return "ID_LICENSE_AREA";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT: return "ID_GAME_PARENTAL_LEVEL0_RESTRICT";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT: return "ID_CURRENT_USER_HAS_NP_ACCOUNT";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ: return "ID_CAMERA_PLFREQ";
@@ -122,17 +150,91 @@ void fmt_class_string<CellSysutilParamId>::format(std::string& out, u64 arg)
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD: return "ID_JAPANESE_KEYBOARD_ENTRY_METHOD";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD: return "ID_CHINESE_KEYBOARD_ENTRY_METHOD";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF: return "ID_PAD_AUTOOFF";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_MAGNETOMETER: return "ID_MAGNETOMETER";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME: return "ID_NICKNAME";
 		case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME: return "ID_CURRENT_USERNAME";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_x1008: return "ID_x1008";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_x1011: return "ID_x1011";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_x1012: return "ID_x1012";
+		case CELL_SYSUTIL_SYSTEMPARAM_ID_x1024: return "ID_x1024";
 		}
 
 		return unknown;
 	});
 }
 
-s32 cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> value)
+// Common string checks used in libsysutil functions
+s32 sysutil_check_name_string(const char* src, s32 minlen, s32 maxlen)
+{
+	s32 lastpos;
+
+	if (g_ps3_process_info.sdk_ver > 0x36FFFF)
+	{
+		// Limit null terminator boundary to before buffer max size
+		lastpos = std::max(maxlen - 1, 0);
+	}
+	else
+	{
+		// Limit null terminator boundary to one after buffer max size
+		lastpos = maxlen;
+	}
+
+	char cur = src[0];
+
+	if (cur == '_')
+	{
+		// Invalid character at start
+		return -1;
+	}
+
+	for (s32 index = 0;; cur = src[++index])
+	{
+		if (cur == '\0' || index == maxlen)
+		{
+			if (minlen > index || (maxlen == index && src[lastpos]))
+			{
+				// String length is invalid
+				return -2;
+			}
+
+			// OK
+			return 0;
+		}
+
+		if (cur >= 'A' && cur <= 'Z')
+		{
+			continue;
+		}
+
+		if (cur >= '0' && cur <= '9')
+		{
+			continue;
+		}
+
+		if (cur == '-' || cur == '_')
+		{
+			continue;
+		}
+
+		// Invalid character found
+		return -1;
+	}
+}
+
+error_code _cellSysutilGetSystemParamInt()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+error_code cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> value)
 {
 	cellSysutil.warning("cellSysutilGetSystemParamInt(id=0x%x(%s), value=*0x%x)", id, id, value);
+
+	if (!value)
+	{
+		return CELL_SYSUTIL_ERROR_VALUE;
+	}
 
 	// TODO: load this information from config (preferably "sys/" group)
 
@@ -140,118 +242,184 @@ s32 cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> value)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_LANG:
 		*value = g_cfg.sys.language;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_ENTER_BUTTON_ASSIGN:
-		*value = CELL_SYSUTIL_ENTER_BUTTON_ASSIGN_CROSS;
-	break;
+		*value = static_cast<s32>(g_cfg.sys.enter_button_assignment.get());
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_DATE_FORMAT:
 		*value = CELL_SYSUTIL_DATE_FMT_DDMMYYYY;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIME_FORMAT:
 		*value = CELL_SYSUTIL_TIME_FMT_CLOCK24;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_TIMEZONE:
 		*value = 180;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_SUMMERTIME:
 		*value = 0;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL:
 		*value = CELL_SYSUTIL_GAME_PARENTAL_OFF;
-	break;
+		break;
+
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_LICENSE_AREA:
+	{
+		if (g_ps3_process_info.sdk_ver > 0x23FFFFu)
+		{
+			return CELL_SYSUTIL_ERROR_VALUE;
+		}
+
+		extern s32 cellSysutilGetLicenseArea();
+
+		// Identical until proved otherwise
+		*value = cellSysutilGetLicenseArea();
+		break;
+	}
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_GAME_PARENTAL_LEVEL0_RESTRICT:
 		*value = CELL_SYSUTIL_GAME_PARENTAL_LEVEL0_RESTRICT_OFF;
-	break;
+		break;
 
+	// Report user has an NP account when np_psn_status is Fake or RPCN
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USER_HAS_NP_ACCOUNT:
-		*value = 0;
-	break;
+		*value = g_cfg.net.psn_status != np_psn_status::disabled;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CAMERA_PLFREQ:
 		*value = CELL_SYSUTIL_CAMERA_PLFREQ_DISABLED;
-	break;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_RUMBLE:
-		*value = CELL_SYSUTIL_PAD_RUMBLE_OFF;
-	break;
+		*value = CELL_SYSUTIL_PAD_RUMBLE_ON;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_KEYBOARD_TYPE:
-		*value = 0;
-	break;
+		*value = g_cfg.sys.keyboard_type;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_JAPANESE_KEYBOARD_ENTRY_METHOD:
-		*value = 0;
-	break;
+		*value = CELL_SYSUTIL_KEYBOARD_ENTRY_METHOD_ROMAJI_INPUT;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_CHINESE_KEYBOARD_ENTRY_METHOD:
-		*value = 0;
-	break;
+		*value = CELL_SYSUTIL_KEYBOARD_ENTRY_METHOD_ZHUYIN_INPUT;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_PAD_AUTOOFF:
-		*value = 0;
-	break;
+		*value = CELL_SYSUTIL_PAD_AUTOOFF_OFF;
+		break;
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_MAGNETOMETER:
-		*value = 0;
-	break;
+		*value = CELL_SYSUTIL_MAGNETOMETER_OFF;
+		break;
 
 	default:
-		return CELL_EINVAL;
+		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
 	return CELL_OK;
 }
 
-s32 cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> buf, u32 bufsize)
+error_code cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> buf, u32 bufsize)
 {
 	cellSysutil.trace("cellSysutilGetSystemParamString(id=0x%x(%s), buf=*0x%x, bufsize=%d)", id, id, buf, bufsize);
 
-	memset(buf.get_ptr(), 0, bufsize);
+	if (!buf)
+	{
+		return CELL_SYSUTIL_ERROR_VALUE;
+	}
+
+	u32 copy_size;
+	std::string param_str = "Unknown";
+	bool report_use = false;
 
 	switch (id)
 	{
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_NICKNAME:
-		memcpy(buf.get_ptr(), "Unknown", 8); // for example
-	break;
-
-	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME:
-		memcpy(buf.get_ptr(), "Unknown", 8);
-	break;
-
-	default:
-		return CELL_EINVAL;
+	{
+		copy_size = CELL_SYSUTIL_SYSTEMPARAM_NICKNAME_SIZE;
+		break;
 	}
 
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_CURRENT_USERNAME:
+	{
+		const fs::file username(vfs::get(fmt::format("/dev_hdd0/home/%08u/localusername", Emu.GetUsrId())));
+
+		if (!username)
+		{
+			cellSysutil.error("cellSysutilGetSystemParamString(): Username for user %08u doesn't exist. Did you delete the username file?", Emu.GetUsrId());
+		}
+		else
+		{
+			// Read current username
+			param_str = username.to_string();
+		}
+
+		copy_size = CELL_SYSUTIL_SYSTEMPARAM_CURRENT_USERNAME_SIZE;
+		break;
+	}
+
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_x1011: // Same as x1012
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_x1012: copy_size = 0x400; report_use = true; break;
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_x1024:	copy_size = 0x100; report_use = true; break;
+	case CELL_SYSUTIL_SYSTEMPARAM_ID_x1008: copy_size = 0x4; report_use = true; break;
+	default:
+	{
+		return CELL_SYSUTIL_ERROR_VALUE;
+	}
+	}
+
+	if (bufsize != copy_size)
+	{
+		return CELL_SYSUTIL_ERROR_SIZE;
+	}
+
+	if (report_use)
+	{
+		cellSysutil.error("cellSysutilGetSystemParamString: Unknown ParamId 0x%x", id);
+	}
+
+	gsl::span dst(buf.get_ptr(), copy_size);
+	strcpy_trunc(dst, param_str);
 	return CELL_OK;
 }
 
-s32 cellSysutilCheckCallback(ppu_thread& ppu)
+// Note: the way we do things here is inaccurate(but maybe sufficient)
+// The real function goes over a table of 0x20 entries[ event_code:u32 callback_addr:u32 ]
+// Those callbacks are registered through cellSysutilRegisterCallbackDispatcher(u32 event_code, vm::ptr<void> func_addr)
+// The function goes through all the callback looking for one callback associated with event 0x100, if any is found it is called with parameters r3=0x101 r4=0
+// This particular CB seems to be associated with sysutil itself
+// Then it checks for events on an event_queue associated with sysutil, checks if any cb is associated with that event and calls them with parameters that come from the event
+error_code cellSysutilCheckCallback(ppu_thread& ppu)
 {
 	cellSysutil.trace("cellSysutilCheckCallback()");
 
-	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	while (auto&& func = cbm->get_cb())
+	for (auto&& func : cbm.registered.pop_all())
 	{
 		if (s32 res = func(ppu))
 		{
-			return res;
+			// Currently impossible
+			return not_an_error(res);
 		}
 
-		thread_ctrl::test();
+		if (ppu.is_stopped())
+		{
+			return {};
+		}
 	}
 
 	return CELL_OK;
 }
 
-s32 cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm::ptr<void> userdata)
+error_code cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm::ptr<void> userdata)
 {
 	cellSysutil.warning("cellSysutilRegisterCallback(slot=%d, func=*0x%x, userdata=*0x%x)", slot, func, userdata);
 
@@ -260,14 +428,14 @@ s32 cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> func, vm:
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	cbm->callbacks[slot] = std::make_pair(func, userdata);
+	cbm.callbacks[slot].store({func, userdata});
 
 	return CELL_OK;
 }
 
-s32 cellSysutilUnregisterCallback(u32 slot)
+error_code cellSysutilUnregisterCallback(u32 slot)
 {
 	cellSysutil.warning("cellSysutilUnregisterCallback(slot=%d)", slot);
 
@@ -276,63 +444,16 @@ s32 cellSysutilUnregisterCallback(u32 slot)
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	const auto cbm = fxm::get_always<sysutil_cb_manager>();
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	cbm->callbacks[slot] = std::make_pair(vm::null, vm::null);
+	cbm.callbacks[slot].store({});
 
 	return CELL_OK;
 }
 
-s32 cellSysCacheClear()
-{
-
-	cellSysutil.warning("cellSysCacheClear()");
-
-	// Get the param as a shared ptr, then decipher the cacheid from it
-	// (Instead of assuming naively that the param is passed as argument)
-	std::shared_ptr<CellSysCacheParam> param = fxm::get<CellSysCacheParam>();
-
-	// Unit test for param ptr, since it may be null at the time of get()
-	if (!param)
-	{
-		return CELL_SYSCACHE_ERROR_NOTMOUNTED;
-	}
-
-	const std::string& cache_id = param->cacheId;
-
-	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
-	const std::string& dir_path = vfs::get(cache_path);
-
-	if (!fs::exists(dir_path) || !fs::is_dir(dir_path))
-	{
-		return CELL_SYSCACHE_ERROR_ACCESS_ERROR;
-	}
-
-	fs::remove_all(dir_path, true);
-
-	return CELL_SYSCACHE_RET_OK_CLEARED;
-}
-
-s32 cellSysCacheMount(vm::ptr<CellSysCacheParam> param)
-{
-	cellSysutil.warning("cellSysCacheMount(param=*0x%x)", param);
-
-	const std::string& cache_id = param->cacheId;
-	verify(HERE), cache_id.size() < sizeof(param->cacheId);
-
-	const std::string& cache_path = "/dev_hdd1/cache/" + cache_id + '/';
-	strcpy_trunc(param->getCachePath, cache_path);
-
-	// TODO: implement (what?)
-	fs::create_dir(vfs::get(cache_path));
-	fxm::make_always<CellSysCacheParam>(*param);
-
-	return CELL_SYSCACHE_RET_OK_RELAYED;
-}
-
 bool g_bgm_playback_enabled = true;
 
-s32 cellSysutilEnableBgmPlayback()
+error_code cellSysutilEnableBgmPlayback()
 {
 	cellSysutil.warning("cellSysutilEnableBgmPlayback()");
 
@@ -342,7 +463,7 @@ s32 cellSysutilEnableBgmPlayback()
 	return CELL_OK;
 }
 
-s32 cellSysutilEnableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> param)
+error_code cellSysutilEnableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> param)
 {
 	cellSysutil.warning("cellSysutilEnableBgmPlaybackEx(param=*0x%x)", param);
 
@@ -352,7 +473,7 @@ s32 cellSysutilEnableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> par
 	return CELL_OK;
 }
 
-s32 cellSysutilDisableBgmPlayback()
+error_code cellSysutilDisableBgmPlayback()
 {
 	cellSysutil.warning("cellSysutilDisableBgmPlayback()");
 
@@ -362,7 +483,7 @@ s32 cellSysutilDisableBgmPlayback()
 	return CELL_OK;
 }
 
-s32 cellSysutilDisableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> param)
+error_code cellSysutilDisableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> param)
 {
 	cellSysutil.warning("cellSysutilDisableBgmPlaybackEx(param=*0x%x)", param);
 
@@ -372,9 +493,9 @@ s32 cellSysutilDisableBgmPlaybackEx(vm::ptr<CellSysutilBgmPlaybackExtraParam> pa
 	return CELL_OK;
 }
 
-s32 cellSysutilGetBgmPlaybackStatus(vm::ptr<CellSysutilBgmPlaybackStatus> status)
+error_code cellSysutilGetBgmPlaybackStatus(vm::ptr<CellSysutilBgmPlaybackStatus> status)
 {
-	cellSysutil.warning("cellSysutilGetBgmPlaybackStatus(status=*0x%x)", status);
+	cellSysutil.trace("cellSysutilGetBgmPlaybackStatus(status=*0x%x)", status);
 
 	// TODO
 	status->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
@@ -386,9 +507,9 @@ s32 cellSysutilGetBgmPlaybackStatus(vm::ptr<CellSysutilBgmPlaybackStatus> status
 	return CELL_OK;
 }
 
-s32 cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus2> status2)
+error_code cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus2> status2)
 {
-	cellSysutil.warning("cellSysutilGetBgmPlaybackStatus2(status2=*0x%x)", status2);
+	cellSysutil.trace("cellSysutilGetBgmPlaybackStatus2(status2=*0x%x)", status2);
 
 	// TODO
 	status2->playerState = CELL_SYSUTIL_BGMPLAYBACK_STATUS_STOP;
@@ -397,258 +518,283 @@ s32 cellSysutilGetBgmPlaybackStatus2(vm::ptr<CellSysutilBgmPlaybackStatus2> stat
 	return CELL_OK;
 }
 
-s32 cellSysutilSetBgmPlaybackExtraParam()
+error_code cellSysutilSetBgmPlaybackExtraParam()
 {
 	cellSysutil.todo("cellSysutilSetBgmPlaybackExtraParam()");
 	return CELL_OK;
 }
 
-s32 cellSysutilRegisterCallbackDispatcher()
+error_code cellSysutilRegisterCallbackDispatcher()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilRegisterCallbackDispatcher()");
+	return CELL_OK;
 }
 
-s32 cellSysutilUnregisterCallbackDispatcher()
+error_code cellSysutilUnregisterCallbackDispatcher()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilUnregisterCallbackDispatcher()");
+	return CELL_OK;
 }
 
-s32 cellSysutilPacketRead()
+error_code cellSysutilPacketRead()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilPacketRead()");
+	return CELL_OK;
 }
 
-s32 cellSysutilPacketWrite()
+error_code cellSysutilPacketWrite()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilPacketWrite()");
+	return CELL_OK;
 }
 
-s32 cellSysutilPacketBegin()
+error_code cellSysutilPacketBegin()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilPacketBegin()");
+	return CELL_OK;
 }
 
-s32 cellSysutilPacketEnd()
+error_code cellSysutilPacketEnd()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilPacketEnd()");
+	return CELL_OK;
 }
 
-s32 cellSysutilGameDataAssignVmc()
+error_code cellSysutilGameDataAssignVmc()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilGameDataAssignVmc()");
+	return CELL_OK;
 }
 
-s32 cellSysutilGameDataExit()
+error_code cellSysutilGameDataExit()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilGameDataExit()");
+	return CELL_OK;
 }
 
-s32 cellSysutilGameExit_I()
+error_code cellSysutilGameExit_I()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilGameExit_I()");
+	return CELL_OK;
 }
 
-s32 cellSysutilGamePowerOff_I()
+error_code cellSysutilGamePowerOff_I()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilGamePowerOff_I()");
+	return CELL_OK;
 }
 
-s32 cellSysutilGameReboot_I()
+error_code cellSysutilGameReboot_I()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilGameReboot_I()");
+	return CELL_OK;
 }
 
-s32 cellSysutilSharedMemoryAlloc()
+error_code cellSysutilSharedMemoryAlloc()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilSharedMemoryAlloc()");
+	return CELL_OK;
 }
 
-s32 cellSysutilSharedMemoryFree()
+error_code cellSysutilSharedMemoryFree()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellSysutilSharedMemoryFree()");
+	return CELL_OK;
 }
 
-s32 _ZN4cxml7Element11AppendChildERS0_()
+error_code cellSysutilNotification()
+{
+	cellSysutil.todo("cellSysutilNotification()");
+	return CELL_OK;
+}
+
+error_code _ZN4cxml7Element11AppendChildERS0_()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN4cxml8DocumentC1Ev()
+error_code _ZN4cxml8DocumentC1Ev()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN4cxml8DocumentD1Ev()
+error_code _ZN4cxml8DocumentD1Ev()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN4cxml8Document5ClearEv()
+error_code _ZN4cxml8Document5ClearEv()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN4cxml8Document5WriteEPFiPKvjPvES3_()
+error_code _ZN4cxml8Document5WriteEPFiPKvjPvES3_()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN4cxml8Document12RegisterFileEPKvjPNS_4FileE()
+error_code _ZN4cxml8Document12RegisterFileEPKvjPNS_4FileE()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN4cxml8Document13CreateElementEPKciPNS_7ElementE()
+error_code _ZN4cxml8Document13CreateElementEPKciPNS_7ElementE()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN4cxml8Document14SetHeaderMagicEPKc()
+error_code _ZN4cxml8Document14SetHeaderMagicEPKc()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN4cxml8Document16CreateFromBufferEPKvjb()
+error_code _ZN4cxml8Document16CreateFromBufferEPKvjb()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN4cxml8Document18GetDocumentElementEv()
+error_code _ZN4cxml8Document18GetDocumentElementEv()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZNK4cxml4File7GetAddrEv()
+error_code _ZNK4cxml4File7GetAddrEv()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZNK4cxml7Element12GetAttributeEPKcPNS_9AttributeE()
+error_code _ZNK4cxml7Element12GetAttributeEPKcPNS_9AttributeE()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZNK4cxml7Element13GetFirstChildEv()
+error_code _ZNK4cxml7Element13GetFirstChildEv()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZNK4cxml7Element14GetNextSiblingEv()
+error_code _ZNK4cxml7Element14GetNextSiblingEv()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZNK4cxml9Attribute6GetIntEPi()
+error_code _ZNK4cxml9Attribute6GetIntEPi()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZNK4cxml9Attribute7GetFileEPNS_4FileE()
+error_code _ZNK4cxml9Attribute7GetFileEPNS_4FileE()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN8cxmlutil6SetIntERKN4cxml7ElementEPKci()
+error_code _ZN8cxmlutil6SetIntERKN4cxml7ElementEPKci()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN8cxmlutil6GetIntERKN4cxml7ElementEPKcPi()
+error_code _ZN8cxmlutil6GetIntERKN4cxml7ElementEPKcPi()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN8cxmlutil7SetFileERKN4cxml7ElementEPKcRKNS0_4FileE()
+error_code _ZN8cxmlutil7SetFileERKN4cxml7ElementEPKcRKNS0_4FileE()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN8cxmlutil8GetFloatERKN4cxml7ElementEPKcPf()
+error_code _ZN8cxmlutil8GetFloatERKN4cxml7ElementEPKcPf()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN8cxmlutil9GetStringERKN4cxml7ElementEPKcPS5_Pj()
+error_code _ZN8cxmlutil8SetFloatERKN4cxml7ElementEPKcf()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN8cxmlutil9SetStringERKN4cxml7ElementEPKcS5_()
+error_code _ZN8cxmlutil9GetStringERKN4cxml7ElementEPKcPS5_Pj()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN8cxmlutil16CheckElementNameERKN4cxml7ElementEPKc()
+error_code _ZN8cxmlutil9SetStringERKN4cxml7ElementEPKcS5_()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN8cxmlutil16FindChildElementERKN4cxml7ElementEPKcS5_S5_()
+error_code _ZN8cxmlutil16CheckElementNameERKN4cxml7ElementEPKc()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN8cxmlutil7GetFileERKN4cxml7ElementEPKcPNS0_4FileE()
+error_code _ZN8cxmlutil16FindChildElementERKN4cxml7ElementEPKcS5_S5_()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN16sysutil_cxmlutil11FixedMemory3EndEi()
+error_code _ZN8cxmlutil7GetFileERKN4cxml7ElementEPKcPNS0_4FileE()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN16sysutil_cxmlutil11FixedMemory5BeginEi()
+error_code _ZN16sysutil_cxmlutil11FixedMemory3EndEi()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN16sysutil_cxmlutil11FixedMemory8AllocateEN4cxml14AllocationTypeEPvS3_jPS3_Pj()
+error_code _ZN16sysutil_cxmlutil11FixedMemory5BeginEi()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN16sysutil_cxmlutil12PacketWriter5WriteEPKvjPv()
+error_code _ZN16sysutil_cxmlutil11FixedMemory8AllocateEN4cxml14AllocationTypeEPvS3_jPS3_Pj()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 _ZN16sysutil_cxmlutil12PacketWriterC1EiiRN4cxml8DocumentE()
+error_code _ZN16sysutil_cxmlutil12PacketWriter5WriteEPKvjPv()
 {
 	UNIMPLEMENTED_FUNC(cellSysutil);
 	return CELL_OK;
 }
 
-s32 cellSysutil_E1EC7B6A(vm::ptr<u32> unk)
+error_code _ZN16sysutil_cxmlutil12PacketWriterC1EiiRN4cxml8DocumentE()
+{
+	UNIMPLEMENTED_FUNC(cellSysutil);
+	return CELL_OK;
+}
+
+error_code cellSysutil_E1EC7B6A(vm::ptr<u32> unk)
 {
 	cellSysutil.todo("cellSysutil_E1EC7B6A(unk=*0x%x)", unk);
 	*unk = 0;
@@ -665,6 +811,7 @@ extern void cellSysutil_SysutilAvc_init();
 extern void cellSysutil_WebBrowser_init();
 extern void cellSysutil_AudioOut_init();
 extern void cellSysutil_VideoOut_init();
+extern void cellSysutil_SysCache_init();
 
 DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 {
@@ -678,7 +825,9 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	cellSysutil_WebBrowser_init(); // cellWebBrowser, cellWebComponent functions
 	cellSysutil_AudioOut_init(); // cellAudioOut functions
 	cellSysutil_VideoOut_init(); // cellVideoOut functions
+	cellSysutil_SysCache_init(); // cellSysCache functions
 
+	REG_FUNC(cellSysutil, _cellSysutilGetSystemParamInt);
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamInt);
 	REG_FUNC(cellSysutil, cellSysutilGetSystemParamString);
 
@@ -693,9 +842,6 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, cellSysutilDisableBgmPlayback);
 	REG_FUNC(cellSysutil, cellSysutilDisableBgmPlaybackEx);
 	REG_FUNC(cellSysutil, cellSysutilSetBgmPlaybackExtraParam);
-
-	REG_FUNC(cellSysutil, cellSysCacheMount);
-	REG_FUNC(cellSysutil, cellSysCacheClear);
 
 	REG_FUNC(cellSysutil, cellSysutilRegisterCallbackDispatcher);
 	REG_FUNC(cellSysutil, cellSysutilUnregisterCallbackDispatcher);
@@ -712,6 +858,8 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 
 	REG_FUNC(cellSysutil, cellSysutilSharedMemoryAlloc);
 	REG_FUNC(cellSysutil, cellSysutilSharedMemoryFree);
+
+	REG_FUNC(cellSysutil, cellSysutilNotification);
 
 	REG_FUNC(cellSysutil, _ZN4cxml7Element11AppendChildERS0_);
 
@@ -736,6 +884,7 @@ DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 	REG_FUNC(cellSysutil, _ZN8cxmlutil6GetIntERKN4cxml7ElementEPKcPi);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil7SetFileERKN4cxml7ElementEPKcRKNS0_4FileE);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil8GetFloatERKN4cxml7ElementEPKcPf);
+	REG_FUNC(cellSysutil, _ZN8cxmlutil8SetFloatERKN4cxml7ElementEPKcf);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil9GetStringERKN4cxml7ElementEPKcPS5_Pj);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil9SetStringERKN4cxml7ElementEPKcS5_);
 	REG_FUNC(cellSysutil, _ZN8cxmlutil16CheckElementNameERKN4cxml7ElementEPKc);

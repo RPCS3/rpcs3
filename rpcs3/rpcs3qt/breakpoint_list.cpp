@@ -1,6 +1,8 @@
 #include "breakpoint_list.h"
+#include "breakpoint_handler.h"
 
-#include "Emu/Cell/SPUThread.h"
+#include "Emu/CPU/CPUDisAsm.h"
+#include "Emu/Cell/PPUThread.h"
 
 #include <QMenu>
 
@@ -12,17 +14,22 @@ breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) :
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	setSelectionMode(QAbstractItemView::ExtendedSelection);
 
-	// connects
 	connect(this, &QListWidget::itemDoubleClicked, this, &breakpoint_list::OnBreakpointListDoubleClicked);
 	connect(this, &QListWidget::customContextMenuRequested, this, &breakpoint_list::OnBreakpointListRightClicked);
+
+	m_delete_action = new QAction(tr("&Delete"), this);
+	m_delete_action->setShortcut(Qt::Key_Delete);
+	m_delete_action->setShortcutContext(Qt::WidgetShortcut);
+	connect(m_delete_action, &QAction::triggered, this, &breakpoint_list::OnBreakpointListDelete);
+	addAction(m_delete_action);
 }
 
-/** 
+/**
 * It's unfortunate I need a method like this to sync these.  Should ponder a cleaner way to do this.
 */
-void breakpoint_list::UpdateCPUData(std::weak_ptr<cpu_thread> cpu, std::shared_ptr<CPUDisAsm> disasm)
+void breakpoint_list::UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm)
 {
-	this->cpu = cpu;
+	m_cpu = cpu;
 	m_disasm = disasm;
 }
 
@@ -31,7 +38,7 @@ void breakpoint_list::ClearBreakpoints()
 	while (count())
 	{
 		auto* currentItem = takeItem(0);
-		u32 loc = currentItem->data(Qt::UserRole).value<u32>();
+		const u32 loc = currentItem->data(Qt::UserRole).value<u32>();
 		m_breakpoint_handler->RemoveBreakpoint(loc);
 		delete currentItem;
 	}
@@ -59,23 +66,18 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 {
 	m_breakpoint_handler->AddBreakpoint(pc);
 
-	const auto cpu = this->cpu.lock();
-	const u32 cpu_offset = cpu->id_type() != 1 ? static_cast<SPUThread&>(*cpu).offset : 0;
-	m_disasm->offset = (u8*)vm::base(cpu_offset);
+	m_disasm->disasm(pc);
 
-	m_disasm->disasm(m_disasm->dump_pc = pc);
+	QString text = qstr(m_disasm->last_opcode);
+	text.remove(10, 13);
 
-	QString breakpointItemText = qstr(m_disasm->last_opcode);
+	QListWidgetItem* breakpoint_item = new QListWidgetItem(text);
+	breakpoint_item->setForeground(m_text_color_bp);
+	breakpoint_item->setBackground(m_color_bp);
+	breakpoint_item->setData(Qt::UserRole, pc);
+	addItem(breakpoint_item);
 
-	breakpointItemText.remove(10, 13);
-
-	QListWidgetItem* breakpointItem = new QListWidgetItem(breakpointItemText);
-	breakpointItem->setTextColor(m_text_color_bp);
-	breakpointItem->setBackgroundColor(m_color_bp);
-	QVariant pcVariant;
-	pcVariant.setValue(pc);
-	breakpointItem->setData(Qt::UserRole, pcVariant);
-	addItem(breakpointItem);
+	Q_EMIT RequestShowAddress(pc);
 }
 
 /**
@@ -83,24 +85,25 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 */
 void breakpoint_list::HandleBreakpointRequest(u32 loc)
 {
+	if (!m_cpu || m_cpu->id_type() != 1 || !vm::check_addr(loc, vm::page_allocated | vm::page_executable))
+	{
+		// TODO: SPU breakpoints
+		return;
+	}
+
 	if (m_breakpoint_handler->HasBreakpoint(loc))
 	{
 		RemoveBreakpoint(loc);
 	}
 	else
 	{
-		const auto cpu = this->cpu.lock();
-
-		if (cpu->id_type() == 1 && vm::check_addr(loc))
-		{
-			AddBreakpoint(loc);
-		}
+		AddBreakpoint(loc);
 	}
 }
 
 void breakpoint_list::OnBreakpointListDoubleClicked()
 {
-	u32 address = currentItem()->data(Qt::UserRole).value<u32>();
+	const u32 address = currentItem()->data(Qt::UserRole).value<u32>();
 	Q_EMIT RequestShowAddress(address);
 }
 
@@ -111,41 +114,35 @@ void breakpoint_list::OnBreakpointListRightClicked(const QPoint &pos)
 		return;
 	}
 
-	QMenu* menu = new QMenu();
+	m_context_menu = new QMenu();
 
 	if (selectedItems().count() == 1)
 	{
-		menu->addAction("Rename");
-		menu->addSeparator();
-	}
-
-	QAction* m_breakpoint_list_delete = new QAction("Delete", this);
-	m_breakpoint_list_delete->setShortcut(Qt::Key_Delete);
-	m_breakpoint_list_delete->setShortcutContext(Qt::WidgetShortcut);
-	addAction(m_breakpoint_list_delete);
-	connect(m_breakpoint_list_delete, &QAction::triggered, this, &breakpoint_list::OnBreakpointListDelete);
-
-	menu->addAction(m_breakpoint_list_delete);
-
-	QAction* selectedItem = menu->exec(QCursor::pos());
-	if (selectedItem)
-	{
-		if (selectedItem->text() == "Rename")
+		QAction* rename_action = m_context_menu->addAction(tr("&Rename"));
+		connect(rename_action, &QAction::triggered, this, [this]()
 		{
-			QListWidgetItem* currentItem = selectedItems().at(0);
-
-			currentItem->setFlags(currentItem->flags() | Qt::ItemIsEditable);
-			editItem(currentItem);
-		}
+			QListWidgetItem* current_item = selectedItems().first();
+			current_item->setFlags(current_item->flags() | Qt::ItemIsEditable);
+			editItem(current_item);
+		});
+		m_context_menu->addSeparator();
 	}
+
+	m_context_menu->addAction(m_delete_action);
+	m_context_menu->exec(viewport()->mapToGlobal(pos));
+	m_context_menu->deleteLater();
+	m_context_menu = nullptr;
 }
 
 void breakpoint_list::OnBreakpointListDelete()
 {
-	int selectedCount = selectedItems().count();
-
-	for (int i = selectedCount - 1; i >= 0; i--)
+	for (int i = selectedItems().count() - 1; i >= 0; i--)
 	{
-		RemoveBreakpoint(item(i)->data(Qt::UserRole).value<u32>());
+		RemoveBreakpoint(selectedItems().at(i)->data(Qt::UserRole).value<u32>());
+	}
+
+	if (m_context_menu)
+	{
+		m_context_menu->close();
 	}
 }

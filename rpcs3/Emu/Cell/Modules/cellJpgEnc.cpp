@@ -3,7 +3,30 @@
 
 #include "cellJpgEnc.h"
 
-logs::channel cellJpgEnc("cellJpgEnc");
+LOG_CHANNEL(cellJpgEnc);
+
+template <>
+void fmt_class_string<CellJpgEncError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_JPGENC_ERROR_ARG);
+			STR_CASE(CELL_JPGENC_ERROR_SEQ);
+			STR_CASE(CELL_JPGENC_ERROR_BUSY);
+			STR_CASE(CELL_JPGENC_ERROR_EMPTY);
+			STR_CASE(CELL_JPGENC_ERROR_RESET);
+			STR_CASE(CELL_JPGENC_ERROR_FATAL);
+			STR_CASE(CELL_JPGENC_ERROR_STREAM_ABORT);
+			STR_CASE(CELL_JPGENC_ERROR_STREAM_SKIP);
+			STR_CASE(CELL_JPGENC_ERROR_STREAM_OVERFLOW);
+			STR_CASE(CELL_JPGENC_ERROR_STREAM_FILE_OPEN);
+		}
+
+		return unknown;
+	});
+}
 
 
 s32 cellJpgEncQueryAttr()

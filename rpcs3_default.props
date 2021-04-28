@@ -3,7 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>.\;..\;..\asmjit\src\asmjit;..\Utilities\yaml-cpp\include;..\3rdparty\ffmpeg\WindowsInclude;..\3rdparty\cereal\include;..\3rdparty\ffmpeg\Windows\x86_64\Include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\minidx12\Include;..\3rdparty\GSL\include;..\3rdparty\libpng;..\3rdparty\GL;..\3rdparty\stblib;..\3rdparty\OpenAL\include;..\3rdparty\pugixml\src;..\3rdparty\hidapi\hidapi;..\3rdparty\Optional</IncludePath>
+    <IncludePath>.\;..\;..\asmjit\src;..\3rdparty\yaml-cpp\include;..\3rdparty\ffmpeg\include;..\3rdparty\cereal\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\span\include;..\3rdparty\libpng;..\3rdparty\GL;..\3rdparty\stblib;..\3rdparty\OpenAL\include;..\3rdparty\pugixml\src;..\3rdparty\hidapi\hidapi;..\3rdparty\Optional;..\3rdparty\xxhash</IncludePath>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
@@ -13,16 +13,20 @@
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
     </Lib>
     <ClCompile>
+      <PreprocessorDefinitions>NOMINMAX;PUGIXML_HEADER_ONLY;_ENABLE_EXTENDED_ALIGNED_STORAGE;_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
+      <ExceptionHandling>false</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <AdditionalOptions>/Zc:throwingNew</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /Zc:throwingNew- /constexpr:steps16777216 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>ws2_32.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>..\3rdparty\ffmpeg\Windows\x86_64\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>xxhash.lib;ws2_32.lib;Iphlpapi.lib;Bcrypt.lib;avcodec.lib;avformat.lib;avutil.lib;swresample.lib;swscale.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>..\3rdparty\ffmpeg\windows\x86_64</AdditionalLibraryDirectories>
+      <StackReserveSize>8388608</StackReserveSize>
+      <StackCommitSize>1048576</StackCommitSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />

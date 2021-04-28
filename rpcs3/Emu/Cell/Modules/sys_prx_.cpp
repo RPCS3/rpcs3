@@ -1,95 +1,90 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
+#include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 extern vm::gvar<sys_lwmutex_t> g_ppu_prx_lwm;
 
 // Convert the array of 32-bit pointers to 64-bit pointers using stack allocation
 static auto convert_path_list(vm::cpptr<char> path_list, s32 count)
 {
-	vm::var<vm::cptr<char, u64>[]> result(count);
-
-	for (s32 i = 0; i < count; i++)
-	{
-		result[i] = path_list[i];
-	}
-
-	return std::move(result);
+	return vm::var<vm::cptr<char, u64>[]>(count, path_list.get_ptr());
 }
 
 // Execute start or stop module function
 static void entryx(ppu_thread& ppu, vm::ptr<sys_prx_start_stop_module_option_t> opt, u32 args, vm::ptr<void> argp, vm::ptr<s32> res)
 {
-	if (opt->entry2.addr() != -1)
+	if (opt->entry2.addr() != umax)
 	{
 		*res = opt->entry2(ppu, opt->entry, args, argp);
 		return;
 	}
 
-	if (opt->entry.addr() != -1)
+	if (opt->entry.addr() != umax)
 	{
 		*res = opt->entry(ppu, args, argp);
 		return;
 	}
+
+	*res = 0;
 }
 
 error_code sys_prx_load_module(ppu_thread& ppu, vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
 	sysPrxForUser.warning("sys_prx_load_module(path=%s, flags=0x%x, pOpt=*0x%x)", path, flags, pOpt);
 
-	sys_lwmutex_locker(ppu, g_ppu_prx_lwm);
+	sys_lwmutex_locker lock(ppu, g_ppu_prx_lwm);
 
-	return _sys_prx_load_module(path, flags, pOpt);
+	return _sys_prx_load_module(ppu, path, flags, pOpt);
 }
 
 error_code sys_prx_load_module_by_fd(ppu_thread& ppu, s32 fd, u64 offset, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
 	sysPrxForUser.warning("sys_prx_load_module_by_fd(fd=%d, offset=0x%x, flags=0x%x, pOpt=*0x%x)", fd, offset, flags, pOpt);
 
-	sys_lwmutex_locker(ppu, g_ppu_prx_lwm);
+	sys_lwmutex_locker lock(ppu, g_ppu_prx_lwm);
 
-	return _sys_prx_load_module_by_fd(fd, offset, flags, pOpt);
+	return _sys_prx_load_module_by_fd(ppu, fd, offset, flags, pOpt);
 }
 
 error_code sys_prx_load_module_on_memcontainer(ppu_thread& ppu, vm::cptr<char> path, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
 	sysPrxForUser.warning("sys_prx_load_module_on_memcontainer(path=%s, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x)", path, mem_ct, flags, pOpt);
 
-	sys_lwmutex_locker(ppu, g_ppu_prx_lwm);
+	sys_lwmutex_locker lock(ppu, g_ppu_prx_lwm);
 
-	return _sys_prx_load_module_on_memcontainer(path, mem_ct, flags, pOpt);
+	return _sys_prx_load_module_on_memcontainer(ppu, path, mem_ct, flags, pOpt);
 }
 
 error_code sys_prx_load_module_on_memcontainer_by_fd(ppu_thread& ppu, s32 fd, u64 offset, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
 {
 	sysPrxForUser.warning("sys_prx_load_module_on_memcontainer_by_fd(fd=%d, offset=0x%x, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x)", fd, offset, mem_ct, flags, pOpt);
 
-	sys_lwmutex_locker(ppu, g_ppu_prx_lwm);
+	sys_lwmutex_locker lock(ppu, g_ppu_prx_lwm);
 
-	return _sys_prx_load_module_on_memcontainer_by_fd(fd, offset, mem_ct, flags, pOpt);
+	return _sys_prx_load_module_on_memcontainer_by_fd(ppu, fd, offset, mem_ct, flags, pOpt);
 }
 
 error_code sys_prx_load_module_list(ppu_thread& ppu, s32 count, vm::cpptr<char> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
 {
 	sysPrxForUser.todo("sys_prx_load_module_list(count=%d, path_list=**0x%x, flags=0x%x, pOpt=*0x%x, id_list=*0x%x)", count, path_list, flags, pOpt, id_list);
 
-	sys_lwmutex_locker(ppu, g_ppu_prx_lwm);
+	sys_lwmutex_locker lock(ppu, g_ppu_prx_lwm);
 
-	return _sys_prx_load_module_list(count, convert_path_list(path_list, count), flags, pOpt, id_list);
+	return _sys_prx_load_module_list(ppu, count, convert_path_list(path_list, count), flags, pOpt, id_list);
 }
 
 error_code sys_prx_load_module_list_on_memcontainer(ppu_thread& ppu, s32 count, vm::cpptr<char> path_list, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list)
 {
 	sysPrxForUser.todo("sys_prx_load_module_list_on_memcontainer(count=%d, path_list=**0x%x, mem_ct=0x%x, flags=0x%x, pOpt=*0x%x, id_list=*0x%x)", count, path_list, mem_ct, flags, pOpt, id_list);
 
-	sys_lwmutex_locker(ppu, g_ppu_prx_lwm);
+	sys_lwmutex_locker lock(ppu, g_ppu_prx_lwm);
 
-	return _sys_prx_load_module_list_on_memcontainer(count, convert_path_list(path_list, count), mem_ct, flags, pOpt, id_list);
+	return _sys_prx_load_module_list_on_memcontainer(ppu, count, convert_path_list(path_list, count), mem_ct, flags, pOpt, id_list);
 }
 
 error_code sys_prx_start_module(ppu_thread& ppu, u32 id, u32 args, vm::ptr<void> argp, vm::ptr<s32> result, u64 flags, vm::ptr<void> pOpt)
@@ -101,14 +96,14 @@ error_code sys_prx_start_module(ppu_thread& ppu, u32 id, u32 args, vm::ptr<void>
 		return CELL_EINVAL;
 	}
 
-	sys_lwmutex_locker(ppu, g_ppu_prx_lwm);
+	sys_lwmutex_locker lock(ppu, g_ppu_prx_lwm);
 
 	vm::var<sys_prx_start_stop_module_option_t> opt;
 	opt->size = opt.size();
 	opt->cmd  = 1;
 	opt->entry2.set(-1);
 
-	const error_code res = _sys_prx_start_module(id, flags, opt);
+	const error_code res = _sys_prx_start_module(ppu, id, flags, opt);
 
 	if (res < 0)
 	{
@@ -120,7 +115,7 @@ error_code sys_prx_start_module(ppu_thread& ppu, u32 id, u32 args, vm::ptr<void>
 	opt->cmd = 2;
 	opt->res = *result;
 
-	_sys_prx_start_module(id, flags, opt);
+	_sys_prx_start_module(ppu, id, flags, opt);
 
 	return CELL_OK;
 }
@@ -134,14 +129,14 @@ error_code sys_prx_stop_module(ppu_thread& ppu, u32 id, u32 args, vm::ptr<void> 
 		return CELL_EINVAL;
 	}
 
-	sys_lwmutex_locker(ppu, g_ppu_prx_lwm);
+	sys_lwmutex_locker lock(ppu, g_ppu_prx_lwm);
 
 	vm::var<sys_prx_start_stop_module_option_t> opt;
 	opt->size = opt.size();
 	opt->cmd  = 1;
 	opt->entry2.set(-1);
 
-	const error_code res = _sys_prx_stop_module(id, flags, opt);
+	const error_code res = _sys_prx_stop_module(ppu, id, flags, opt);
 
 	if (res < 0)
 	{
@@ -153,7 +148,7 @@ error_code sys_prx_stop_module(ppu_thread& ppu, u32 id, u32 args, vm::ptr<void> 
 	opt->cmd = 2;
 	opt->res = *result;
 
-	_sys_prx_stop_module(id, flags, opt);
+	_sys_prx_stop_module(ppu, id, flags, opt);
 
 	return CELL_OK;
 }
@@ -162,27 +157,27 @@ error_code sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys
 {
 	sysPrxForUser.warning("sys_prx_unload_module(id=0x%x, flags=0x%x, pOpt=*0x%x)", id, flags, pOpt);
 
-	sys_lwmutex_locker(ppu, g_ppu_prx_lwm);
+	sys_lwmutex_locker lock(ppu, g_ppu_prx_lwm);
 
-	return _sys_prx_unload_module(id, flags, pOpt);
+	return _sys_prx_unload_module(ppu, id, flags, pOpt);
 }
 
 error_code sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> lib_entry)
 {
 	sysPrxForUser.warning("sys_prx_register_library(lib_entry=*0x%x)", lib_entry);
 
-	sys_lwmutex_locker(ppu, g_ppu_prx_lwm);
+	sys_lwmutex_locker lock(ppu, g_ppu_prx_lwm);
 
-	return _sys_prx_register_library(lib_entry);
+	return _sys_prx_register_library(ppu, lib_entry);
 }
 
 error_code sys_prx_unregister_library(ppu_thread& ppu, vm::ptr<void> lib_entry)
 {
 	sysPrxForUser.warning("sys_prx_unregister_library(lib_entry=*0x%x)", lib_entry);
 
-	sys_lwmutex_locker(ppu, g_ppu_prx_lwm);
+	sys_lwmutex_locker lock(ppu, g_ppu_prx_lwm);
 
-	return _sys_prx_unregister_library(lib_entry);
+	return _sys_prx_unregister_library(ppu, lib_entry);
 }
 
 error_code sys_prx_get_module_list(ppu_thread& ppu, u64 flags, vm::ptr<sys_prx_get_module_list_t> info)
@@ -203,7 +198,7 @@ error_code sys_prx_get_module_list(ppu_thread& ppu, u64 flags, vm::ptr<sys_prx_g
 	opt->unk    = 0;
 
 	// Call the syscall
-	const s32 res = _sys_prx_get_module_list(2, opt);
+	const s32 res = _sys_prx_get_module_list(ppu, 2, opt);
 
 	info->max   = opt->max;
 	info->count = opt->count;
@@ -226,10 +221,10 @@ error_code sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<s
 	opt->info = info;
 
 	// Call the syscall
-	return _sys_prx_get_module_info(id, 0, opt);
+	return _sys_prx_get_module_info(ppu, id, 0, opt);
 }
 
-error_code sys_prx_get_module_id_by_name(vm::cptr<char> name, u64 flags, vm::ptr<sys_prx_get_module_id_by_name_option_t> pOpt)
+error_code sys_prx_get_module_id_by_name(ppu_thread& ppu, vm::cptr<char> name, u64 flags, vm::ptr<sys_prx_get_module_id_by_name_option_t> pOpt)
 {
 	sysPrxForUser.trace("sys_prx_get_module_id_by_name(name=%s, flags=0x%x, pOpt=*0x%x)", name, flags, pOpt);
 
@@ -239,15 +234,15 @@ error_code sys_prx_get_module_id_by_name(vm::cptr<char> name, u64 flags, vm::ptr
 	}
 
 	// Call the syscall
-	return _sys_prx_get_module_id_by_name(name, u64{0}, vm::null);
+	return _sys_prx_get_module_id_by_name(ppu, name, u64{0}, vm::null);
 }
 
-error_code sys_prx_get_module_id_by_address(u32 addr)
+error_code sys_prx_get_module_id_by_address(ppu_thread& ppu, u32 addr)
 {
 	sysPrxForUser.trace("sys_prx_get_module_id_by_address()");
 
 	// Call the syscall
-	return _sys_prx_get_module_id_by_address(addr);
+	return _sys_prx_get_module_id_by_address(ppu, addr);
 }
 
 error_code sys_prx_exitspawn_with_level()
@@ -256,12 +251,12 @@ error_code sys_prx_exitspawn_with_level()
 	return CELL_OK;
 }
 
-error_code sys_prx_get_my_module_id(ppu_thread& ppu, ppu_thread& _do, ppu_thread& _not, ppu_thread& _call)
+error_code sys_prx_get_my_module_id(ppu_thread& ppu_do_not_call, ppu_thread&, ppu_thread&, ppu_thread&) // Do not call directly
 {
 	sysPrxForUser.trace("sys_prx_get_my_module_id()");
 
 	// Call the syscall using the LR
-	return _sys_prx_get_module_id_by_address(static_cast<u32>(ppu.lr));
+	return _sys_prx_get_module_id_by_address(ppu_do_not_call, static_cast<u32>(ppu_do_not_call.lr));
 }
 
 void sysPrxForUser_sys_prx_init()

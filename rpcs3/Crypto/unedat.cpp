@@ -1,18 +1,31 @@
 #include "stdafx.h"
 #include "key_vault.h"
 #include "unedat.h"
+#include "sha1.h"
+#include "lz.h"
+#include "ec.h"
 
+#include "Utilities/mutex.h"
 #include <cmath>
+
+#include "util/asm.hpp"
+
+LOG_CHANNEL(edat_log, "EDAT");
+
+// Static variables are being modified concurrently in ec.cpp, for now use a mutex
+static shared_mutex ec_mtx;
 
 void generate_key(int crypto_mode, int version, unsigned char *key_final, unsigned char *iv_final, unsigned char *key, unsigned char *iv)
 {
-	int mode = (int)(crypto_mode & 0xF0000000);
+	int mode = crypto_mode & 0xF0000000;
+	uchar temp_iv[16]{};
 	switch (mode)
 	{
 	case 0x10000000:
 		// Encrypted ERK.
 		// Decrypt the key with EDAT_KEY + EDAT_IV and copy the original IV.
-		aescbc128_decrypt(version ? EDAT_KEY_1 : EDAT_KEY_0, EDAT_IV, key, key_final, 0x10);
+		memcpy(temp_iv, EDAT_IV, 0x10);
+		aescbc128_decrypt(const_cast<u8*>(version ? EDAT_KEY_1 : EDAT_KEY_0), temp_iv, key, key_final, 0x10);
 		memcpy(iv_final, iv, 0x10);
 		break;
 	case 0x20000000:
@@ -27,18 +40,20 @@ void generate_key(int crypto_mode, int version, unsigned char *key_final, unsign
 		memcpy(key_final, key, 0x10);
 		memcpy(iv_final, iv, 0x10);
 		break;
-	};
+	}
 }
 
 void generate_hash(int hash_mode, int version, unsigned char *hash_final, unsigned char *hash)
 {
-	int mode = (int)(hash_mode & 0xF0000000);
+	int mode = hash_mode & 0xF0000000;
+	uchar temp_iv[16]{};
 	switch (mode)
 	{
 	case 0x10000000:
 		// Encrypted HASH.
 		// Decrypt the hash with EDAT_KEY + EDAT_IV.
-		aescbc128_decrypt(version ? EDAT_KEY_1 : EDAT_KEY_0, EDAT_IV, hash, hash_final, 0x10);
+		memcpy(temp_iv, EDAT_IV, 0x10);
+		aescbc128_decrypt(const_cast<u8*>(version ? EDAT_KEY_1 : EDAT_KEY_0), temp_iv, hash, hash_final, 0x10);
 		break;
 	case 0x20000000:
 		// Default HASH.
@@ -78,10 +93,10 @@ bool decrypt(int hash_mode, int crypto_mode, int version, unsigned char *in, uns
 	}
 	else
 	{
-		LOG_ERROR(LOADER, "EDAT: Unknown crypto algorithm!");
+		edat_log.error("EDAT: Unknown crypto algorithm!");
 		return false;
 	}
-	
+
 	if ((hash_mode & 0xFF) == 0x01) // 0x14 SHA1-HMAC
 	{
 		return hmac_hash_compare(hash_final_14, 0x14, in, length, test_hash, 0x14);
@@ -96,7 +111,7 @@ bool decrypt(int hash_mode, int crypto_mode, int version, unsigned char *in, uns
 	}
 	else
 	{
-		LOG_ERROR(LOADER, "EDAT: Unknown hashing algorithm!");
+		edat_log.error("EDAT: Unknown hashing algorithm!");
 		return false;
 	}
 }
@@ -122,22 +137,22 @@ std::tuple<u64, s32, s32> dec_section(unsigned char* metadata)
 	dec[0x0E] = (metadata[0x6] ^ metadata[0x2] ^ metadata[0x1E]);
 	dec[0x0F] = (metadata[0x7] ^ metadata[0x3] ^ metadata[0x1F]);
 
-	u64 offset = swap64(*(u64*)&dec[0]);
-	s32 length = swap32(*(s32*)&dec[8]);
-	s32 compression_end = swap32(*(s32*)&dec[12]);
+	u64 offset = swap64(*reinterpret_cast<u64*>(&dec[0]));
+	s32 length = swap32(*reinterpret_cast<s32*>(&dec[8]));
+	s32 compression_end = swap32(*reinterpret_cast<s32*>(&dec[12]));
 
 	return std::make_tuple(offset, length, compression_end);
 }
 
-std::array<u8, 0x10> get_block_key(int block, NPD_HEADER *npd)
+u128 get_block_key(int block, NPD_HEADER *npd)
 {
 	unsigned char empty_key[0x10] = {};
 	unsigned char *src_key = (npd->version <= 1) ? empty_key : npd->dev_hash;
-	std::array<u8, 0x10> dest_key{};
-	memcpy(dest_key.data(), src_key, 0xC);
+	u128 dest_key{};
+	std::memcpy(&dest_key, src_key, 0xC);
 
 	s32 swappedBlock = swap32(block);
-	memcpy(&dest_key[0xC], &swappedBlock, sizeof(swappedBlock));
+	std::memcpy(reinterpret_cast<uchar*>(&dest_key) + 0xC, &swappedBlock, sizeof(swappedBlock));
 	return dest_key;
 }
 
@@ -168,7 +183,7 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 	// Decrypt the metadata.
 	if ((edat->flags & EDAT_COMPRESSED_FLAG) != 0)
 	{
-		metadata_sec_offset = metadata_offset + (unsigned long long) block_num * metadata_section_size;
+		metadata_sec_offset = metadata_offset + u64{block_num} * metadata_section_size;
 
 		in->seek(file_offset + metadata_sec_offset);
 
@@ -180,9 +195,9 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 		// NOTE: For NPD version 1 the metadata is not encrypted.
 		if (npd->version <= 1)
 		{
-			offset = swap64(*(unsigned long long*)&metadata[0x10]);
-			length = swap32(*(int*)&metadata[0x18]);
-			compression_end = swap32(*(int*)&metadata[0x1C]);
+			offset = swap64(*reinterpret_cast<u64*>(&metadata[0x10]));
+			length = swap32(*reinterpret_cast<s32*>(&metadata[0x18]));
+			compression_end = swap32(*reinterpret_cast<s32*>(&metadata[0x1C]));
 		}
 		else
 		{
@@ -194,7 +209,7 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 	else if ((edat->flags & EDAT_FLAG_0x20) != 0)
 	{
 		// If FLAG 0x20, the metadata precedes each data block.
-		metadata_sec_offset = metadata_offset + (u64) block_num * (metadata_section_size + edat->block_size);
+		metadata_sec_offset = metadata_offset + u64{block_num} * (metadata_section_size + edat->block_size);
 		in->seek(file_offset + metadata_sec_offset);
 
 		unsigned char metadata[0x20];
@@ -204,30 +219,30 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 
 		// If FLAG 0x20 is set, apply custom xor.
 		for (int j = 0; j < 0x10; j++)
-			hash_result[j] = (unsigned char)(metadata[j] ^ metadata[j + 0x10]);
+			hash_result[j] = metadata[j] ^ metadata[j + 0x10];
 
 		offset = metadata_sec_offset + 0x20;
 		length = edat->block_size;
 
 		if ((block_num == (total_blocks - 1)) && (edat->file_size % edat->block_size))
-			length = (int)(edat->file_size % edat->block_size);
+			length = static_cast<s32>(edat->file_size % edat->block_size);
 	}
 	else
 	{
-		metadata_sec_offset = metadata_offset + (u64) block_num * metadata_section_size;
+		metadata_sec_offset = metadata_offset + u64{block_num} * metadata_section_size;
 		in->seek(file_offset + metadata_sec_offset);
 
 		in->read(hash_result, 0x10);
-		offset = metadata_offset + (u64) block_num * edat->block_size + total_blocks * metadata_section_size;
+		offset = metadata_offset + u64{block_num} * edat->block_size + total_blocks * metadata_section_size;
 		length = edat->block_size;
 
 		if ((block_num == (total_blocks - 1)) && (edat->file_size % edat->block_size))
-			length = (int)(edat->file_size % edat->block_size);
+			length = static_cast<s32>(edat->file_size % edat->block_size);
 	}
 
 	// Locate the real data.
 	const int pad_length = length;
-	length = (int)((pad_length + 0xF) & 0xFFFFFFF0);
+	length = (pad_length + 0xF) & 0xFFFFFFF0;
 
 	// Setup buffers for decryption and read the data.
 	enc_data.reset(new u8[length]{ 0 });
@@ -239,10 +254,10 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 	in->read(enc_data.get(), length);
 
 	// Generate a key for the current block.
-	std::array<u8, 0x10> b_key = get_block_key(block_num, npd);
+	auto b_key = get_block_key(block_num, npd);
 
 	// Encrypt the block key with the crypto key.
-	aesecb128_encrypt(crypt_key, b_key.data(), key_result);
+	aesecb128_encrypt(crypt_key, reinterpret_cast<uchar*>(&b_key), key_result);
 	if ((edat->flags & EDAT_FLAG_0x10) != 0)
 		aesecb128_encrypt(crypt_key, key_result, hash);  // If FLAG 0x10 is set, encrypt again to get the final hash.
 	else
@@ -280,7 +295,7 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 		// Call main crypto routine on this data block.
 		if (!decrypt(hash_mode, crypto_mode, (npd->version == 4), enc_data.get(), dec_data.get(), length, key_result, iv, hash, hash_result))
 		{
-			LOG_ERROR(LOADER, "EDAT: Block at offset 0x%llx has invalid hash!", (u64)offset);
+			edat_log.error("EDAT: Block at offset 0x%llx has invalid hash!", offset);
 			return -1;
 		}
 	}
@@ -296,7 +311,7 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 		{
 			if (res < 0)
 			{
-				LOG_ERROR(LOADER, "EDAT: Decompression failed!");
+				edat_log.error("EDAT: Decompression failed!");
 				return -1;
 			}
 		}
@@ -311,10 +326,10 @@ s64 decrypt_block(const fs::file* in, u8* out, EDAT_HEADER *edat, NPD_HEADER *np
 
 // EDAT/SDAT decryption.
 // reset file to beginning of data before calling
-int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool verbose)
+int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD_HEADER *npd, unsigned char* crypt_key, bool /*verbose*/)
 {
-	const int total_blocks = (int)((edat->file_size + edat->block_size - 1) / edat->block_size);
-	u64 size_left = (int)edat->file_size;
+	const int total_blocks = static_cast<int>((edat->file_size + edat->block_size - 1) / edat->block_size);
+	u64 size_left = edat->file_size;
 	std::unique_ptr<u8[]> data(new u8[edat->block_size]);
 
 	for (int i = 0; i < total_blocks; i++)
@@ -322,9 +337,9 @@ int decrypt_data(const fs::file* in, const fs::file* out, EDAT_HEADER *edat, NPD
 		in->seek(0);
 		memset(data.get(), 0, edat->block_size);
 		u64 res = decrypt_block(in, data.get(), edat, npd, crypt_key, i, total_blocks, size_left);
-		if (res == -1)
+		if (res == umax)
 		{
-			LOG_ERROR(LOADER, "EDAT: Decrypt Block failed!");
+			edat_log.error("EDAT: Decrypt Block failed!");
 			return 1;
 		}
 		size_left -= res;
@@ -341,7 +356,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	u8 empty_header[0xA0] = { 0 };
 	u8 header_hash[0x10] = { 0 };
 	u8 metadata_hash[0x10] = { 0 };
-	
+
 	const u64 file_offset = f->pos();
 
 	// Check NPD version and flags.
@@ -349,7 +364,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	{
 		if (edat->flags & 0x7EFFFFFE)
 		{
-			LOG_ERROR(LOADER, "EDAT: Bad header flags!");
+			edat_log.error("EDAT: Bad header flags!");
 			return 1;
 		}
 	}
@@ -357,7 +372,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	{
 		if (edat->flags & 0x7EFFFFE0)
 		{
-			LOG_ERROR(LOADER, "EDAT: Bad header flags!");
+			edat_log.error("EDAT: Bad header flags!");
 			return 1;
 		}
 	}
@@ -365,13 +380,13 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	{
 		if (edat->flags & 0x7EFFFFC0)
 		{
-			LOG_ERROR(LOADER, "EDAT: Bad header flags!");
+			edat_log.error("EDAT: Bad header flags!");
 			return 1;
 		}
 	}
 	else
 	{
-		LOG_ERROR(LOADER, "EDAT: Unknown version!");
+		edat_log.error("EDAT: Unknown version!");
 		return 1;
 	}
 
@@ -391,23 +406,23 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 		hash_mode |= 0x01000000;
 
 		if (verbose)
-			LOG_WARNING(LOADER, "EDAT: DEBUG data detected!");
+			edat_log.warning("EDAT: DEBUG data detected!");
 	}
 
 	// Setup header key and iv buffers.
 	unsigned char header_key[0x10] = { 0 };
 	unsigned char header_iv[0x10] = { 0 };
-	
+
 	// Test the header hash (located at offset 0xA0).
 	if (!decrypt(hash_mode, crypto_mode, (npd->version == 4), header, empty_header, 0xA0, header_key, header_iv, key, header_hash))
 	{
 		if (verbose)
-			LOG_WARNING(LOADER, "EDAT: Header hash is invalid!");
+			edat_log.warning("EDAT: Header hash is invalid!");
 
 		// If the header hash test fails and the data is not DEBUG, then RAP/RIF/KLIC key is invalid.
 		if ((edat->flags & EDAT_DEBUG_DATA_FLAG) != EDAT_DEBUG_DATA_FLAG)
 		{
-			LOG_ERROR(LOADER, "EDAT: RAP/RIF/KLIC key is invalid!");
+			edat_log.error("EDAT: RAP/RIF/KLIC key is invalid!");
 			return 1;
 		}
 	}
@@ -417,10 +432,10 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	if (((edat->flags & EDAT_COMPRESSED_FLAG) != 0))
 	{
 		if (verbose)
-			LOG_WARNING(LOADER, "EDAT: COMPRESSED data detected!");
+			edat_log.warning("EDAT: COMPRESSED data detected!");
 	}
 
-	const int block_num = (int)((edat->file_size + edat->block_size - 1) / edat->block_size);
+	const int block_num = static_cast<int>((edat->file_size + edat->block_size - 1) / edat->block_size);
 	const int metadata_offset = 0x100;
 	const int metadata_size = metadata_section_size * block_num;
 	u64 metadata_section_offset = metadata_offset;
@@ -452,7 +467,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 	if (!decrypt(hash_mode, crypto_mode, (npd->version == 4), metadata.get(), empty_metadata.get(), metadata_size, header_key, header_iv, key, metadata_hash))
 	{
 		if (verbose)
-			LOG_WARNING(LOADER, "EDAT: Metadata section hash is invalid!");
+			edat_log.warning("EDAT: Metadata section hash is invalid!");
 	}
 
 	// Checking ECDSA signatures.
@@ -465,7 +480,9 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 		unsigned char signature_r[0x15] = { 0 };
 		unsigned char signature_s[0x15] = { 0 };
 		unsigned char zero_buf[0x15] = { 0 };
-		
+
+		std::lock_guard lock(ec_mtx);
+
 		// Setup ECDSA curve and public key.
 		ecdsa_set_curve(VSH_CURVE_P, VSH_CURVE_A, VSH_CURVE_B, VSH_CURVE_N, VSH_CURVE_GX, VSH_CURVE_GY);
 		ecdsa_set_pub(VSH_PUB);
@@ -480,7 +497,7 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 		memcpy(signature_r + 01, metadata_signature, 0x14);
 		memcpy(signature_s + 01, metadata_signature + 0x14, 0x14);
 		if ((!memcmp(signature_r, zero_buf, 0x15)) || (!memcmp(signature_s, zero_buf, 0x15)))
-			LOG_WARNING(LOADER, "EDAT: Metadata signature is invalid!");
+			edat_log.warning("EDAT: Metadata signature is invalid!");
 		else
 		{
 			// Setup signature hash.
@@ -497,9 +514,9 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 
 			if (!ecdsa_verify(signature_hash, signature_r, signature_s))
 			{
-				LOG_WARNING(LOADER, "EDAT: Metadata signature is invalid!");
-				if (((unsigned long long)edat->block_size * block_num) > 0x100000000)
-					LOG_WARNING(LOADER, "EDAT: *Due to large file size, metadata signature status may be incorrect!");
+				edat_log.warning("EDAT: Metadata signature is invalid!");
+				if (((edat->block_size + 0ull) * block_num) > 0x100000000)
+					edat_log.warning("EDAT: *Due to large file size, metadata signature status may be incorrect!");
 			}
 		}
 
@@ -511,28 +528,27 @@ int check_data(unsigned char *key, EDAT_HEADER *edat, NPD_HEADER *npd, const fs:
 		memcpy(signature_s + 01, header_signature + 0x14, 0x14);
 
 		if ((!memcmp(signature_r, zero_buf, 0x15)) || (!memcmp(signature_s, zero_buf, 0x15)))
-			LOG_WARNING(LOADER, "EDAT: Header signature is invalid!");
+			edat_log.warning("EDAT: Header signature is invalid!");
 		else
 		{
 			// Setup header signature hash.
 			memset(signature_hash, 0, 20);
-			std::unique_ptr<u8[]> header_buf(new u8[0xD8]);
+			u8 header_buf[0xD8];
 			f->seek(file_offset);
-			f->read(header_buf.get(), 0xD8);
-			sha1(header_buf.get(), 0xD8, signature_hash );
+			f->read(header_buf, 0xD8);
+			sha1(header_buf, 0xD8, signature_hash);
 
 			if (!ecdsa_verify(signature_hash, signature_r, signature_s))
-				LOG_WARNING(LOADER, "EDAT: Header signature is invalid!");
+				edat_log.warning("EDAT: Header signature is invalid!");
 		}
 	}
 
 	return 0;
 }
 
-int validate_dev_klic(const u8* klicensee, NPD_HEADER *npd)
+bool validate_dev_klic(const u8* klicensee, NPD_HEADER *npd)
 {
 	unsigned char dev[0x60] = { 0 };
-	unsigned char key[0x10] = { 0 };
 
 	// Build the dev buffer (first 0x60 bytes of NPD header in big-endian).
 	memcpy(dev, npd, 0x60);
@@ -546,58 +562,68 @@ int validate_dev_klic(const u8* klicensee, NPD_HEADER *npd)
 	memcpy(dev + 0xC, &type, 4);
 
 	// Check for an empty dev_hash (can't validate if devklic is NULL);
-	bool isDevklicEmpty = true;
-	for (int i = 0; i < 0x10; i++)
-	{
-		if (klicensee[i] != 0)
-		{
-			isDevklicEmpty = false;
-			break;
-		}
-	}
+	u128 klic;
+	std::memcpy(&klic, klicensee, sizeof(klic));
 
-	if (isDevklicEmpty)
+	if (!klic)
 	{
 		// Allow empty dev hash.
-		return 1;
+		return true;
 	}
-	else
-	{
-		// Generate klicensee xor key.
-		xor_key(key, klicensee, NP_OMAC_KEY_2);
 
-		// Hash with generated key and compare with dev_hash.
-		return cmac_hash_compare(key, 0x10, dev, 0x60, npd->dev_hash, 0x10);
-	}
+	// Generate klicensee xor key.
+	u128 key = klic ^ std::bit_cast<u128>(NP_OMAC_KEY_2);
+
+	// Hash with generated key and compare with dev_hash.
+	return cmac_hash_compare(reinterpret_cast<uchar*>(&key), 0x10, dev, 0x60, npd->dev_hash, 0x10);
 }
 
-int validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *npd, bool verbose)
+bool validate_npd_hashes(const char* file_name, const u8* klicensee, NPD_HEADER *npd, bool verbose)
 {
-	int title_hash_result = 0;
-	int dev_hash_result = 0;
+	if (!file_name)
+	{
+		fmt::throw_exception("Empty filename");
+	}
 
-	const int file_name_length = (int) strlen(file_name);
-	std::unique_ptr<u8[]> buf(new u8[0x30 + file_name_length]);
-	
+	const usz file_name_length = std::strlen(file_name);
+	const usz buf_len = 0x30 + file_name_length;
+
+	std::unique_ptr<u8[]> buf(new u8[buf_len]);
+	std::unique_ptr<u8[]> buf_lower(new u8[buf_len]);
+	std::unique_ptr<u8[]> buf_upper(new u8[buf_len]);
+
 	// Build the title buffer (content_id + file_name).
-	memcpy(buf.get(), npd->content_id, 0x30);
-	memcpy(buf.get() + 0x30, file_name, file_name_length);
+	std::memcpy(buf.get(), npd->content_id, 0x30);
+	std::memcpy(buf.get() + 0x30, file_name, file_name_length);
+
+	std::memcpy(buf_lower.get(), buf.get(), buf_len);
+	std::memcpy(buf_upper.get(), buf.get(), buf_len);
+
+	for (usz i = std::basic_string_view<u8>(buf.get() + 0x30, file_name_length).find_last_of('.'); i < buf_len; i++)
+	{
+		const u8 c = static_cast<u8>(buf[i]);
+		buf_upper[i] = std::toupper(c);
+		buf_lower[i] = std::tolower(c);
+	}
 
 	// Hash with NPDRM_OMAC_KEY_3 and compare with title_hash.
-	title_hash_result = cmac_hash_compare(NP_OMAC_KEY_3, 0x10, buf.get(), 0x30 + file_name_length, npd->title_hash, 0x10);
+	// Try to ignore case sensivity with file extension
+	const bool title_hash_result =
+		cmac_hash_compare(const_cast<u8*>(NP_OMAC_KEY_3), 0x10, buf.get(), buf_len, npd->title_hash, 0x10) ||
+		cmac_hash_compare(const_cast<u8*>(NP_OMAC_KEY_3), 0x10, buf_lower.get(), buf_len, npd->title_hash, 0x10) ||
+		cmac_hash_compare(const_cast<u8*>(NP_OMAC_KEY_3), 0x10, buf_upper.get(), buf_len, npd->title_hash, 0x10);
 
 	if (verbose)
 	{
 		if (title_hash_result)
-			LOG_NOTICE(LOADER, "EDAT: NPD title hash is valid!");
+			edat_log.notice("EDAT: NPD title hash is valid!");
 		else
-			LOG_WARNING(LOADER, "EDAT: NPD title hash is invalid!");
+			edat_log.warning("EDAT: NPD title hash is invalid!");
 	}
 
-	
-	dev_hash_result = validate_dev_klic(klicensee, npd);
+	const bool dev_hash_result = validate_dev_klic(klicensee, npd);
 
-	return (title_hash_result && dev_hash_result);
+	return title_hash_result && dev_hash_result;
 }
 
 void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& EDAT)
@@ -608,19 +634,19 @@ void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& E
 	input->read(edat_header, sizeof(edat_header));
 
 	memcpy(&NPD.magic, npd_header, 4);
-	NPD.version = swap32(*(int*)&npd_header[4]);
-	NPD.license = swap32(*(int*)&npd_header[8]);
-	NPD.type = swap32(*(int*)&npd_header[12]);
-	memcpy(NPD.content_id, (unsigned char*)&npd_header[16], 0x30);
-	memcpy(NPD.digest, (unsigned char*)&npd_header[64], 0x10);
-	memcpy(NPD.title_hash, (unsigned char*)&npd_header[80], 0x10);
-	memcpy(NPD.dev_hash, (unsigned char*)&npd_header[96], 0x10);
-	NPD.unk1 = swap64(*(u64*)&npd_header[112]);
-	NPD.unk2 = swap64(*(u64*)&npd_header[120]);
+	NPD.version = swap32(*reinterpret_cast<s32*>(&npd_header[4]));
+	NPD.license = swap32(*reinterpret_cast<s32*>(&npd_header[8]));
+	NPD.type = swap32(*reinterpret_cast<s32*>(&npd_header[12]));
+	memcpy(NPD.content_id, &npd_header[16], 0x30);
+	memcpy(NPD.digest, &npd_header[64], 0x10);
+	memcpy(NPD.title_hash, &npd_header[80], 0x10);
+	memcpy(NPD.dev_hash, &npd_header[96], 0x10);
+	NPD.unk1 = swap64(*reinterpret_cast<u64*>(&npd_header[112]));
+	NPD.unk2 = swap64(*reinterpret_cast<u64*>(&npd_header[120]));
 
-	EDAT.flags = swap32(*(int*)&edat_header[0]);
-	EDAT.block_size = swap32(*(int*)&edat_header[4]);
-	EDAT.file_size = swap64(*(u64*)&edat_header[8]);
+	EDAT.flags = swap32(*reinterpret_cast<s32*>(&edat_header[0]));
+	EDAT.block_size = swap32(*reinterpret_cast<s32*>(&edat_header[4]));
+	EDAT.file_size = swap64(*reinterpret_cast<u64*>(&edat_header[8]));
 }
 
 bool extract_all_data(const fs::file* input, const fs::file* output, const char* input_file_name, unsigned char* devklic, unsigned char* rifkey, bool verbose)
@@ -635,139 +661,130 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 	unsigned char npd_magic[4] = {0x4E, 0x50, 0x44, 0x00};  //NPD0
 	if (memcmp(&NPD.magic, npd_magic, 4))
 	{
-		LOG_ERROR(LOADER, "EDAT: %s has invalid NPD header or already decrypted.", input_file_name);
-		return 1;
+		edat_log.error("EDAT: %s has invalid NPD header or already decrypted.", input_file_name);
+		return true;
 	}
 
 	if (verbose)
 	{
-		LOG_NOTICE(LOADER, "NPD HEADER");
-		LOG_NOTICE(LOADER, "NPD version: %d", NPD.version);
-		LOG_NOTICE(LOADER, "NPD license: %d", NPD.license);
-		LOG_NOTICE(LOADER, "NPD type: %d", NPD.type);
+		edat_log.notice("NPD HEADER");
+		edat_log.notice("NPD version: %d", NPD.version);
+		edat_log.notice("NPD license: %d", NPD.license);
+		edat_log.notice("NPD type: %d", NPD.type);
 	}
 
 	// Set decryption key.
-	u8 key[0x10] = { 0 };
+	u128 key{};
 
 	// Check EDAT/SDAT flag.
 	if ((EDAT.flags & SDAT_FLAG) == SDAT_FLAG)
 	{
 		if (verbose)
 		{
-			LOG_NOTICE(LOADER, "SDAT HEADER");
-			LOG_NOTICE(LOADER, "SDAT flags: 0x%08X", EDAT.flags);
-			LOG_NOTICE(LOADER, "SDAT block size: 0x%08X", EDAT.block_size);
-			LOG_NOTICE(LOADER, "SDAT file size: 0x%08X", (u64)EDAT.file_size);
+			edat_log.notice("SDAT HEADER");
+			edat_log.notice("SDAT flags: 0x%08X", EDAT.flags);
+			edat_log.notice("SDAT block size: 0x%08X", EDAT.block_size);
+			edat_log.notice("SDAT file size: 0x%08X", EDAT.file_size);
 		}
 
 		// Generate SDAT key.
-		xor_key(key, NPD.dev_hash, SDAT_KEY);
+		key = std::bit_cast<u128>(NPD.dev_hash) ^ std::bit_cast<u128>(SDAT_KEY);
 	}
 	else
 	{
 		if (verbose)
 		{
-			LOG_NOTICE(LOADER, "EDAT HEADER");
-			LOG_NOTICE(LOADER, "EDAT flags: 0x%08X", EDAT.flags);
-			LOG_NOTICE(LOADER, "EDAT block size: 0x%08X", EDAT.block_size);
-			LOG_NOTICE(LOADER, "EDAT file size: 0x%08X", (u64)EDAT.file_size);
+			edat_log.notice("EDAT HEADER");
+			edat_log.notice("EDAT flags: 0x%08X", EDAT.flags);
+			edat_log.notice("EDAT block size: 0x%08X", EDAT.block_size);
+			edat_log.notice("EDAT file size: 0x%08X", EDAT.file_size);
 		}
 
 		// Perform header validation (EDAT only).
-		char real_file_name[MAX_PATH];
+		char real_file_name[CRYPTO_MAX_PATH];
 		extract_file_name(input_file_name, real_file_name);
 		if (!validate_npd_hashes(real_file_name, devklic, &NPD, verbose))
 		{
 			// Ignore header validation in DEBUG data.
 			if ((EDAT.flags & EDAT_DEBUG_DATA_FLAG) != EDAT_DEBUG_DATA_FLAG)
 			{
-				LOG_ERROR(LOADER, "EDAT: NPD hash validation failed!");
-				return 1;
+				edat_log.error("EDAT: NPD hash validation failed!");
+				return true;
 			}
 		}
 
 		// Select EDAT key.
 		if ((NPD.license & 0x3) == 0x3)           // Type 3: Use supplied devklic.
-			memcpy(key, devklic, 0x10);
+			memcpy(&key, devklic, 0x10);
 		else if ((NPD.license & 0x2) == 0x2)      // Type 2: Use key from RAP file (RIF key).
 		{
-			memcpy(key, rifkey, 0x10);
+			memcpy(&key, rifkey, 0x10);
 
 			// Make sure we don't have an empty RIF key.
-			int i, test = 0;
-			for (i = 0; i < 0x10; i++)
+			if (!key)
 			{
-				if (key[i] != 0)
-				{
-					test = 1;
-					break;
-				}
-			}
-
-			if (!test)
-			{
-				LOG_ERROR(LOADER, "EDAT: A valid RAP file is needed for this EDAT file!");
-				return 1;
+				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file! (local activation)");
+				return true;
 			}
 		}
 		else if ((NPD.license & 0x1) == 0x1)      // Type 1: Use network activation.
 		{
-			LOG_ERROR(LOADER, "EDAT: Network license not supported!");
-			return 1;
+			memcpy(&key, rifkey, 0x10);
+
+			// Make sure we don't have an empty RIF key.
+			if (!key)
+			{
+				edat_log.error("EDAT: A valid RAP file is needed for this EDAT file! (network activation)");
+				return true;
+			}
 		}
 
 		if (verbose)
 		{
-			int i;
-			LOG_NOTICE(LOADER, "DEVKLIC: ");
-			for (i = 0; i < 0x10; i++)
-				LOG_NOTICE(LOADER, "%02X", devklic[i]);
+			be_t<u128> data;
 
-			LOG_NOTICE(LOADER, "RIF KEY: ");
-			for (i = 0; i < 0x10; i++)
-				LOG_NOTICE(LOADER, "%02X", rifkey[i]);
+			std::memcpy(&data, devklic, sizeof(data));
+			edat_log.notice("DEVKLIC: %s", data);
+			std::memcpy(&data, rifkey, sizeof(data));
+			edat_log.notice("RIF KEY: %s", data);
 		}
 	}
 
 	if (verbose)
 	{
-		int i;
-		LOG_NOTICE(LOADER, "DECRYPTION KEY: ");
-		for (i = 0; i < 0x10; i++)
-			LOG_NOTICE(LOADER, "%02X", key[i]);
+		edat_log.notice("DECRYPTION KEY: %s", std::bit_cast<be_t<u128>>(key));
 	}
 
 	input->seek(0);
-	if (check_data(key, &EDAT, &NPD, input, verbose))
+	if (check_data(reinterpret_cast<uchar*>(&key), &EDAT, &NPD, input, verbose))
 	{
-		LOG_ERROR(LOADER, "EDAT: Data parsing failed!");
-		return 1;
+		edat_log.error("EDAT: Data parsing failed!");
+		return true;
 	}
 
 	input->seek(0);
-	if (decrypt_data(input, output, &EDAT, &NPD, key, verbose))
+	if (decrypt_data(input, output, &EDAT, &NPD, reinterpret_cast<uchar*>(&key), verbose))
 	{
-		LOG_ERROR(LOADER, "EDAT: Data decryption failed!");
-		return 1;
+		edat_log.error("EDAT: Data decryption failed!");
+		return true;
 	}
 
-	return 0;
+	return false;
 }
 
-std::array<u8, 0x10> GetEdatRifKeyFromRapFile(const fs::file& rap_file)
+u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file)
 {
-	std::array<u8, 0x10> rapkey{ 0 };
-	std::array<u8, 0x10> rifkey{ 0 };
+	u128 rapkey{};
+	u128 rifkey{};
 
-	rap_file.read<std::array<u8, 0x10>>(rapkey);
+	rap_file.read<u128>(rapkey);
 
-	rap_to_rif(rapkey.data(), rifkey.data());
+	rap_to_rif(reinterpret_cast<uchar*>(&rapkey), reinterpret_cast<uchar*>(&rifkey));
 
 	return rifkey;
 }
 
-bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const std::array<u8, 0x10>& custom_klic, std::string* contentID)
+bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, std::string* contentID)
 {
 	// Setup NPD and EDAT/SDAT structs.
 	NPD_HEADER NPD;
@@ -779,25 +796,25 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 	unsigned char npd_magic[4] = { 0x4E, 0x50, 0x44, 0x00 };  //NPD0
 	if (memcmp(&NPD.magic, npd_magic, 4))
 	{
-		LOG_ERROR(LOADER, "EDAT: %s has invalid NPD header or already decrypted.", input_file_name);
+		edat_log.error("EDAT: %s has invalid NPD header or already decrypted.", input_file_name);
 		return false;
 	}
 
 	if ((EDAT.flags & SDAT_FLAG) == SDAT_FLAG)
 	{
-		LOG_ERROR(LOADER, "EDAT: SDATA file given to edat function");
+		edat_log.error("EDAT: SDATA file given to edat function");
 		return false;
 	}
 
 	// Perform header validation (EDAT only).
-	char real_file_name[MAX_PATH];
+	char real_file_name[CRYPTO_MAX_PATH];
 	extract_file_name(input_file_name.c_str(), real_file_name);
-	if (!validate_npd_hashes(real_file_name, custom_klic.data(), &NPD, false))
+	if (!validate_npd_hashes(real_file_name, custom_klic, &NPD, false))
 	{
 		// Ignore header validation in DEBUG data.
 		if ((EDAT.flags & EDAT_DEBUG_DATA_FLAG) != EDAT_DEBUG_DATA_FLAG)
 		{
-			LOG_ERROR(LOADER, "EDAT: NPD hash validation failed!");
+			edat_log.error("EDAT: NPD hash validation failed!");
 			return false;
 		}
 	}
@@ -813,67 +830,67 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 	input.seek(0);
 
 	// Set keys (RIF and DEVKLIC).
-	std::array<u8, 0x10> rifKey{ 0 };
-	unsigned char devklic[0x10] = { 0 };
-	
+	u128 rifKey{};
+	u128 devklic{};
+
 	// Select the EDAT key mode.
-	switch (mode) 
+	switch (mode)
 	{
 	case 0:
 		break;
 	case 1:
-		memcpy(devklic, NP_KLIC_FREE, 0x10);
+		memcpy(&devklic, NP_KLIC_FREE, 0x10);
 		break;
 	case 2:
-		memcpy(devklic, NP_OMAC_KEY_2, 0x10);
+		memcpy(&devklic, NP_OMAC_KEY_2, 0x10);
 		break;
 	case 3:
-		memcpy(devklic, NP_OMAC_KEY_3, 0x10);
+		memcpy(&devklic, NP_OMAC_KEY_3, 0x10);
 		break;
 	case 4:
-		memcpy(devklic, NP_KLIC_KEY, 0x10);
+		memcpy(&devklic, NP_KLIC_KEY, 0x10);
 		break;
 	case 5:
-		memcpy(devklic, NP_PSX_KEY, 0x10);
+		memcpy(&devklic, NP_PSX_KEY, 0x10);
 		break;
 	case 6:
-		memcpy(devklic, NP_PSP_KEY_1, 0x10);
+		memcpy(&devklic, NP_PSP_KEY_1, 0x10);
 		break;
 	case 7:
-		memcpy(devklic, NP_PSP_KEY_2, 0x10);
+		memcpy(&devklic, NP_PSP_KEY_2, 0x10);
 		break;
-	case 8: 
+	case 8:
 		{
 			if (custom_klic != NULL)
-				memcpy(devklic, custom_klic, 0x10);
+				memcpy(&devklic, custom_klic, 0x10);
 			else
 			{
-				LOG_ERROR(LOADER, "EDAT: Invalid custom klic!");
+				edat_log.error("EDAT: Invalid custom klic!");
 				return fs::file{};
 			}
 			break;
 		}
 	default:
-		LOG_ERROR(LOADER, "EDAT: Invalid mode!");
+		edat_log.error("EDAT: Invalid mode!");
 		return fs::file{};
 	}
 
 	// Read the RAP file, if provided.
-	if (rap_file_name.size())
+	if (!rap_file_name.empty())
 	{
-		fs::file rap(rap_file_name);
+		const fs::file rap(rap_file_name);
 
 		rifKey = GetEdatRifKeyFromRapFile(rap);
 	}
 
 	// Delete the bad output file if any errors arise.
 	fs::file output = fs::make_stream<std::vector<u8>>();
-	if (extract_all_data(&input, &output, input_file_name.c_str(), devklic, rifKey.data(), verbose))
+	if (extract_all_data(&input, &output, input_file_name.c_str(), reinterpret_cast<uchar*>(&devklic), reinterpret_cast<uchar*>(&rifKey), verbose))
 	{
 		output.release();
 		return fs::file{};
 	}
-	
+
 	output.seek(0);
 	return output;
 }
@@ -894,14 +911,14 @@ bool EDATADecrypter::ReadHeader()
 	if ((edatHeader.flags & SDAT_FLAG) == SDAT_FLAG)
 	{
 		// Generate SDAT key.
-		xor_key(dec_key.data(), npdHeader.dev_hash, SDAT_KEY);
+		dec_key = std::bit_cast<u128>(npdHeader.dev_hash) ^ std::bit_cast<u128>(SDAT_KEY);
 	}
 	else
 	{
 		// verify key
-		if (validate_dev_klic(dev_key.data(), &npdHeader) == 0)
+		if (!validate_dev_klic(reinterpret_cast<uchar*>(&dev_key), &npdHeader))
 		{
-			LOG_ERROR(LOADER, "EDAT: Failed validating klic");
+			edat_log.error("EDAT: Failed validating klic");
 			return false;
 		}
 
@@ -911,16 +928,20 @@ bool EDATADecrypter::ReadHeader()
 		else if ((npdHeader.license & 0x2) == 0x2)      // Type 2: Use key from RAP file (RIF key).
 		{
 			dec_key = std::move(rif_key);
-			
-			if (dec_key == std::array<u8, 0x10>{0})
+
+			if (!dec_key)
 			{
-				LOG_WARNING(LOADER, "EDAT: Empty Dec key!");
+				edat_log.warning("EDAT: Empty Dec key for local activation!");
 			}
 		}
 		else if ((npdHeader.license & 0x1) == 0x1)      // Type 1: Use network activation.
 		{
-			LOG_ERROR(LOADER, "EDAT: Network license not supported!");
-			return false;
+			dec_key = std::move(rif_key);
+
+			if (!dec_key)
+			{
+				edat_log.warning("EDAT: Empty Dec key for network activation!");
+			}
 		}
 	}
 
@@ -929,13 +950,13 @@ bool EDATADecrypter::ReadHeader()
 	// k the ecdsa_verify function in this check_data function takes a ridiculous amount of time
 	// like it slows down load time by a factor of x20, at least, so its ignored for now
 
-	/*if (check_data(dec_key.data(), &edatHeader, &npdHeader, &sdata_file, false))
+	/*if (check_data(dec_key._bytes, &edatHeader, &npdHeader, &sdata_file, false))
 	{
 		return false;
 	}*/
 
 	file_size = edatHeader.file_size;
-	total_blocks = (u32)((edatHeader.file_size + edatHeader.block_size - 1) / edatHeader.block_size);
+	total_blocks = utils::aligned_div(edatHeader.file_size, edatHeader.block_size);
 
 	return true;
 }
@@ -948,7 +969,7 @@ u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
 	// now we need to offset things to account for the actual 'range' requested
 	const u64 startOffset = pos % edatHeader.block_size;
 
-	const u32 num_blocks = static_cast<u32>(std::ceil((startOffset + size) / (double)edatHeader.block_size));
+	const u32 num_blocks = static_cast<u32>(utils::aligned_div(startOffset + size, edatHeader.block_size));
 	const u64 bufSize = num_blocks*edatHeader.block_size;
 	if (data_buf_size < (bufSize))
 	{
@@ -963,10 +984,10 @@ u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
 	for (u32 i = starting_block; i < ending_block; ++i)
 	{
 		edata_file.seek(0);
-		u64 res = decrypt_block(&edata_file, &data_buf[writeOffset], &edatHeader, &npdHeader, dec_key.data(), i, total_blocks, edatHeader.file_size);
-		if (res == -1)
+		u64 res = decrypt_block(&edata_file, &data_buf[writeOffset], &edatHeader, &npdHeader, reinterpret_cast<uchar*>(&dec_key), i, total_blocks, edatHeader.file_size);
+		if (res == umax)
 		{
-			LOG_ERROR(LOADER, "Error Decrypting data");
+			edat_log.error("Error Decrypting data");
 			return 0;
 		}
 		writeOffset += res;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/types.hpp"
+
 // Floating-point rounding mode (for both PPU and SPU)
 enum FPSCR_RN
 {
@@ -12,5 +14,5 @@ enum FPSCR_RN
 // Get the exponent of a float
 inline int fexpf(float x)
 {
-	return ((u32&)x >> 23) & 0xFF;
+	return (std::bit_cast<u32>(x) >> 23) & 0xff;
 }

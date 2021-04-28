@@ -1,16 +1,27 @@
 #pragma once
 #include "../Common/FragmentProgramDecompiler.h"
+#include "../Common/GLSLTypes.h"
 #include "Emu/RSX/RSXFragmentProgram.h"
-#include "Utilities/Thread.h"
 #include "VulkanAPI.h"
-#include "../VK/VKHelpers.h"
+#include "VKProgramPipeline.h"
+#include "vkutils/pipeline_binding_table.h"
+
+namespace vk
+{
+	class shader_interpreter;
+}
 
 struct VKFragmentDecompilerThread : public FragmentProgramDecompiler
 {
+	friend class vk::shader_interpreter;
+
 	std::string& m_shader;
 	ParamArray& m_parrDummy;
 	std::vector<vk::glsl::program_input> inputs;
 	class VKFragmentProgram *vk_prog;
+	glsl::shader_properties m_shader_props{};
+	vk::pipeline_binding_table m_binding_table{};
+
 public:
 	VKFragmentDecompilerThread(std::string& shader, ParamArray& parr, const RSXFragmentProgram &prog, u32& size, class VKFragmentProgram& dst)
 		: FragmentProgramDecompiler(prog, size)
@@ -23,18 +34,18 @@ public:
 	void Task();
 	const std::vector<vk::glsl::program_input>& get_inputs() { return inputs; }
 protected:
-	virtual std::string getFloatTypeName(size_t elementCount) override;
-	virtual std::string getFunction(FUNCTION) override;
-	virtual std::string saturate(const std::string &code) override;
-	virtual std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
+	std::string getFloatTypeName(usz elementCount) override;
+	std::string getHalfTypeName(usz elementCount) override;
+	std::string getFunction(FUNCTION) override;
+	std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
 
-	virtual void insertHeader(std::stringstream &OS) override;
-	virtual void insertIntputs(std::stringstream &OS) override;
-	virtual void insertOutputs(std::stringstream &OS) override;
-	virtual void insertConstants(std::stringstream &OS) override;
-	virtual void insertGlobalFunctions(std::stringstream &OS) override;
-	virtual void insertMainStart(std::stringstream &OS) override;
-	virtual void insertMainEnd(std::stringstream &OS) override;
+	void insertHeader(std::stringstream &OS) override;
+	void insertInputs(std::stringstream &OS) override;
+	void insertOutputs(std::stringstream &OS) override;
+	void insertConstants(std::stringstream &OS) override;
+	void insertGlobalFunctions(std::stringstream &OS) override;
+	void insertMainStart(std::stringstream &OS) override;
+	void insertMainEnd(std::stringstream &OS) override;
 };
 
 /** Storage for an Fragment Program in the process of of recompilation.
@@ -49,13 +60,13 @@ public:
 	ParamArray parr;
 	VkShaderModule handle = nullptr;
 	u32 id;
-	std::string shader;
-	std::vector<size_t> FragmentConstantOffsetCache;
+	vk::glsl::shader shader;
+	std::vector<usz> FragmentConstantOffsetCache;
 
 	std::array<u32, 4> output_color_masks{ {} };
 
 	std::vector<vk::glsl::program_input> uniforms;
-	void SetInputs(std::vector<vk::glsl::program_input>& uniforms);
+	void SetInputs(std::vector<vk::glsl::program_input>& inputs);
 	/**
 	 * Decompile a fragment shader located in the PS3's Memory.  This function operates synchronously.
 	 * @param prog RSXShaderProgram specifying the location and size of the shader in memory

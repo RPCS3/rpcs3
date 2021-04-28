@@ -1,5 +1,6 @@
 #include "sema.h"
-#include "sync.h"
+
+#include "util/asm.hpp"
 
 void semaphore_base::imp_wait()
 {
@@ -15,18 +16,10 @@ void semaphore_base::imp_wait()
 		}
 	}
 
-#ifdef _WIN32
-	const s32 value = m_value.fetch_sub(1);
-
-	if (value <= 0)
-	{
-		NtWaitForKeyedEvent(nullptr, &m_value, false, nullptr);
-	}
-#else
 	while (true)
 	{
 		// Try hard way
-		const s32 value = m_value.op_fetch([](s32& value)
+		const s32 value = m_value.atomic_op([](s32& value)
 		{
 			// Use sign bit to acknowledge waiter presence
 			if (value && value > INT32_MIN)
@@ -44,43 +37,26 @@ void semaphore_base::imp_wait()
 				// Set sign bit
 				value = INT32_MIN;
 			}
+
+			return value;
 		});
 
 		if (value >= 0)
 		{
 			// Signal other waiter to wake up or to restore sign bit
-			futex(&m_value.raw(), FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
+			m_value.notify_one();
 			return;
 		}
 
-		futex(&m_value.raw(), FUTEX_WAIT_PRIVATE, value, nullptr, nullptr, 0);
+		m_value.wait(value);
 	}
-#endif
 }
 
 void semaphore_base::imp_post(s32 _old)
 {
-	verify("semaphore_base: overflow" HERE), _old < 0;
+	ensure(_old < 0); // "semaphore_base: overflow"
 
-#ifdef _WIN32
-	NtReleaseKeyedEvent(nullptr, &m_value, false, nullptr);
-#else
-	futex(&m_value.raw(), FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
-#endif
-}
-
-bool semaphore_base::try_wait()
-{
-	// Conditional decrement
-	const s32 value = m_value.fetch_op([](s32& value)
-	{
-		if (value > 0)
-		{
-			value -= 1;
-		}
-	});
-
-	return value > 0;
+	m_value.notify_one();
 }
 
 bool semaphore_base::try_post(s32 _max)

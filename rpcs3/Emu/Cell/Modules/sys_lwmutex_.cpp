@@ -1,6 +1,4 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -8,11 +6,11 @@
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+#include "util/asm.hpp"
 
-extern bool g_avoid_lwm;
+LOG_CHANNEL(sysPrxForUser);
 
-error_code sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)
+error_code sys_lwmutex_create(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr)
 {
 	sysPrxForUser.trace("sys_lwmutex_create(lwmutex=*0x%x, attr=*0x%x)", lwmutex, attr);
 
@@ -36,7 +34,7 @@ error_code sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmute
 
 	vm::var<u32> out_id;
 	vm::var<sys_mutex_attribute_t> attrs;
-	attrs->protocol  = attr->protocol;
+	attrs->protocol  = protocol == SYS_SYNC_FIFO ? SYS_SYNC_FIFO : SYS_SYNC_PRIORITY;
 	attrs->recursive = attr->recursive;
 	attrs->pshared   = SYS_SYNC_NOT_PROCESS_SHARED;
 	attrs->adaptive  = SYS_SYNC_NOT_ADAPTIVE;
@@ -44,7 +42,7 @@ error_code sys_lwmutex_create(vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmute
 	attrs->flags     = 0;
 	attrs->name_u64  = attr->name_u64;
 
-	if (error_code res = g_avoid_lwm ? sys_mutex_create(out_id, attrs) : _sys_lwmutex_create(out_id, protocol, lwmutex, 0x80000001, attr->name_u64, 0))
+	if (error_code res = g_cfg.core.hle_lwmutex ? sys_mutex_create(ppu, out_id, attrs) : _sys_lwmutex_create(ppu, out_id, protocol, lwmutex, 0x80000001, std::bit_cast<be_t<u64>>(attr->name_u64)))
 	{
 		return res;
 	}
@@ -60,9 +58,9 @@ error_code sys_lwmutex_destroy(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.trace("sys_lwmutex_destroy(lwmutex=*0x%x)", lwmutex);
 
-	if (g_avoid_lwm)
+	if (g_cfg.core.hle_lwmutex)
 	{
-		return sys_mutex_destroy(lwmutex->sleep_queue);
+		return sys_mutex_destroy(ppu, lwmutex->sleep_queue);
 	}
 
 	// check to prevent recursive locking in the next call
@@ -78,7 +76,7 @@ error_code sys_lwmutex_destroy(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	}
 
 	// call the syscall
-	if (error_code res = _sys_lwmutex_destroy(lwmutex->sleep_queue))
+	if (error_code res = _sys_lwmutex_destroy(ppu, lwmutex->sleep_queue))
 	{
 		// unlock the mutex if failed
 		sys_lwmutex_unlock(ppu, lwmutex);
@@ -87,7 +85,7 @@ error_code sys_lwmutex_destroy(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	}
 
 	// deleting succeeded
-	lwmutex->vars.owner.exchange(lwmutex_dead);
+	lwmutex->vars.owner.release(lwmutex_dead);
 
 	return CELL_OK;
 }
@@ -96,7 +94,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 {
 	sysPrxForUser.trace("sys_lwmutex_lock(lwmutex=*0x%x, timeout=0x%llx)", lwmutex, timeout);
 
-	if (g_avoid_lwm)
+	if (g_cfg.core.hle_lwmutex)
 	{
 		return sys_mutex_lock(ppu, lwmutex->sleep_queue, timeout);
 	}
@@ -116,13 +114,13 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 	{
 		// recursive locking
 
-		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0)
+		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0u)
 		{
 			// if not recursive
 			return CELL_EDEADLK;
 		}
 
-		if (lwmutex->recursive_count == -1)
+		if (lwmutex->recursive_count == umax)
 		{
 			// if recursion limit reached
 			return CELL_EKRESOURCE;
@@ -130,7 +128,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 
 		// recursive locking succeeded
 		lwmutex->recursive_count++;
-		_mm_mfence();
+		atomic_fence_acq_rel();
 
 		return CELL_OK;
 	}
@@ -169,6 +167,11 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 	// lock using the syscall
 	const error_code res = _sys_lwmutex_lock(ppu, lwmutex->sleep_queue, timeout);
 
+	if (ppu.test_stopped())
+	{
+		return 0;
+	}
+
 	lwmutex->all_info--;
 
 	if (res == CELL_OK)
@@ -178,16 +181,70 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 
 		if (old != lwmutex_reserved)
 		{
-			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
+			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 		}
 
 		return CELL_OK;
 	}
 
-	if (res == CELL_EBUSY && lwmutex->attribute & SYS_SYNC_RETRY)
+	if (res + 0u == CELL_EBUSY && lwmutex->attribute & SYS_SYNC_RETRY)
 	{
-		// TODO (protocol is ignored in current implementation)
-		fmt::throw_exception("Unimplemented" HERE);
+		while (true)
+		{
+			for (u32 i = 0; i < 10; i++)
+			{
+				busy_wait();
+
+				if (lwmutex->vars.owner.load() == lwmutex_free)
+				{
+					if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
+					{
+						return CELL_OK;
+					}
+				}
+			}
+
+			lwmutex->all_info++;
+
+			if (lwmutex->vars.owner.compare_and_swap_test(lwmutex_free, tid))
+			{
+				lwmutex->all_info--;
+				return CELL_OK;
+			}
+
+			const u64 time0 = timeout ? get_guest_system_time() : 0;
+
+			const error_code res_ = _sys_lwmutex_lock(ppu, lwmutex->sleep_queue, timeout);
+
+			if (ppu.test_stopped())
+			{
+				return 0;
+			}
+
+			if (res_ == CELL_OK)
+			{
+				lwmutex->vars.owner.release(tid);
+			}
+			else if (timeout && res_ + 0u != CELL_ETIMEDOUT)
+			{
+				const u64 time_diff = get_guest_system_time() - time0;
+
+				if (timeout <= time_diff)
+				{
+					lwmutex->all_info--;
+					return not_an_error(CELL_ETIMEDOUT);
+				}
+
+				timeout -= time_diff;
+			}
+
+			lwmutex->all_info--;
+
+			if (res_ + 0u != CELL_EBUSY)
+			{
+				return res_;
+			}
+		}
 	}
 
 	return res;
@@ -197,7 +254,7 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.trace("sys_lwmutex_trylock(lwmutex=*0x%x)", lwmutex);
 
-	if (g_avoid_lwm)
+	if (g_cfg.core.hle_lwmutex)
 	{
 		return sys_mutex_trylock(ppu, lwmutex->sleep_queue);
 	}
@@ -217,13 +274,13 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	{
 		// recursive locking
 
-		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0)
+		if ((lwmutex->attribute & SYS_SYNC_RECURSIVE) == 0u)
 		{
 			// if not recursive
 			return CELL_EDEADLK;
 		}
 
-		if (lwmutex->recursive_count == -1)
+		if (lwmutex->recursive_count == umax)
 		{
 			// if recursion limit reached
 			return CELL_EKRESOURCE;
@@ -231,7 +288,7 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 
 		// recursive locking succeeded
 		lwmutex->recursive_count++;
-		_mm_mfence();
+		atomic_fence_acq_rel();
 
 		return CELL_OK;
 	}
@@ -245,7 +302,7 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	if (old_owner == lwmutex_reserved)
 	{
 		// should be locked by the syscall
-		const error_code res = _sys_lwmutex_trylock(lwmutex->sleep_queue);
+		const error_code res = _sys_lwmutex_trylock(ppu, lwmutex->sleep_queue);
 
 		if (res == CELL_OK)
 		{
@@ -254,7 +311,7 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 
 			if (old != lwmutex_reserved)
 			{
-				fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
+				fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 			}
 		}
 
@@ -269,7 +326,7 @@ error_code sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 {
 	sysPrxForUser.trace("sys_lwmutex_unlock(lwmutex=*0x%x)", lwmutex);
 
-	if (g_avoid_lwm)
+	if (g_cfg.core.hle_lwmutex)
 	{
 		return sys_mutex_unlock(ppu, lwmutex->sleep_queue);
 	}
@@ -299,14 +356,22 @@ error_code sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 
 	if (lwmutex->attribute & SYS_SYNC_RETRY)
 	{
-		// TODO (protocol is ignored in current implementation)
+		lwmutex->vars.owner.release(lwmutex_free);
+
+		// Call the alternative syscall
+		if (_sys_lwmutex_unlock2(ppu, lwmutex->sleep_queue) + 0u == CELL_ESRCH)
+		{
+			return CELL_ESRCH;
+		}
+
+		return CELL_OK;
 	}
 
 	// set special value
-	lwmutex->vars.owner.exchange(lwmutex_reserved);
+	lwmutex->vars.owner.release(lwmutex_reserved);
 
 	// call the syscall
-	if (_sys_lwmutex_unlock(ppu, lwmutex->sleep_queue) == CELL_ESRCH)
+	if (_sys_lwmutex_unlock(ppu, lwmutex->sleep_queue) + 0u == CELL_ESRCH)
 	{
 		return CELL_ESRCH;
 	}
@@ -316,9 +381,9 @@ error_code sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 
 void sysPrxForUser_sys_lwmutex_init()
 {
-	REG_FUNC(sysPrxForUser, sys_lwmutex_create);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_destroy);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_lock);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_lock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
 }

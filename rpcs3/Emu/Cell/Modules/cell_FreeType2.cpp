@@ -1,905 +1,934 @@
-﻿#include "stdafx.h"
-#include "Emu/System.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cell_FreeType2("cell_FreeType2");
+LOG_CHANNEL(cell_FreeType2);
 
 // Functions
-s32 cellFreeType2Ex()
+error_code cellFreeType2Ex()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Activate_Size()
+error_code FT_Activate_Size()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Add_Default_Modules()
+error_code FT_Add_Default_Modules()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Add_Module()
+error_code FT_Add_Module()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Angle_Diff()
+error_code FT_Alloc()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Atan2()
+error_code FT_Angle_Diff()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Attach_File()
+error_code FT_Atan2()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Attach_Stream()
+error_code FT_Attach_File()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Bitmap_Convert()
+error_code FT_Attach_Stream()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Bitmap_Copy()
+error_code FT_Bitmap_Convert()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Bitmap_Done()
+error_code FT_Bitmap_Copy()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Bitmap_Embolden()
+error_code FT_Bitmap_Done()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Bitmap_New()
+error_code FT_Bitmap_Embolden()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FTC_CMapCache_Lookup()
+error_code FT_Bitmap_New()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FTC_CMapCache_New()
+error_code FTC_CMapCache_Lookup()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_CeilFix()
+error_code FTC_CMapCache_New()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FTC_ImageCache_Lookup()
+error_code FT_CeilFix()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FTC_ImageCache_New()
+error_code FTC_ImageCache_Lookup()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FTC_Manager_Done()
+error_code FTC_ImageCache_New()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FTC_Manager_LookupFace()
+error_code FTC_Manager_Done()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FTC_Manager_LookupSize()
+error_code FTC_Manager_LookupFace()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FTC_Manager_New()
+error_code FTC_Manager_LookupSize()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FTC_Manager_RemoveFaceID()
+error_code FTC_Manager_New()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FTC_Node_Unref()
+error_code FTC_Manager_RemoveFaceID()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Cos()
+error_code FTC_Node_Unref()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FTC_SBitCache_Lookup()
+error_code FT_Cos()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FTC_SBitCache_New()
+error_code FTC_SBitCache_Lookup()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_DivFix()
+error_code FTC_SBitCache_New()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Done_Face()
+error_code FT_DivFix()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Done_FreeType()
+error_code FT_Done_Face()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Done_Glyph()
+error_code FT_Done_FreeType()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Done_Library()
+error_code FT_Done_Glyph()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Done_Size()
+error_code FT_Done_Library()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_FloorFix()
+error_code FT_Done_Size()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_BDF_Charset_ID()
+error_code FT_FloorFix()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_BDF_Property()
+error_code FT_Free()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Char_Index()
+error_code FT_Get_BDF_Charset_ID()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Charmap_Index()
+error_code FT_Get_BDF_Property()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_CMap_Language_ID()
+error_code FT_Get_Char_Index()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_First_Char()
+error_code FT_Get_Charmap_Index()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Glyph()
+error_code FT_Get_CMap_Language_ID()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Glyph_Name()
+error_code FT_Get_First_Char()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Kerning()
+error_code FT_Get_Glyph()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_MM_Var()
+error_code FT_Get_Glyph_Name()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Module()
+error_code FT_Get_Kerning()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Multi_Master()
+error_code FT_Get_MM_Var()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Name_Index()
+error_code FT_Get_Module()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Next_Char()
+error_code FT_Get_Multi_Master()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_PFR_Advance()
+error_code FT_Get_Name_Index()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_PFR_Kerning()
+error_code FT_Get_Next_Char()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_PFR_Metrics()
+error_code FT_Get_PFR_Advance()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Postscript_Name()
+error_code FT_Get_PFR_Kerning()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_PS_Font_Info()
+error_code FT_Get_PFR_Metrics()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_PS_Font_Private()
+error_code FT_Get_Postscript_Name()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Renderer()
+error_code FT_Get_PS_Font_Info()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Sfnt_Name()
+error_code FT_Get_PS_Font_Private()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Sfnt_Name_Count()
+error_code FT_Get_Renderer()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Sfnt_Table()
+error_code FT_Get_Sfnt_Name()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_SubGlyph_Info()
+error_code FT_Get_Sfnt_Name_Count()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_Track_Kerning()
+error_code FT_Get_Sfnt_Table()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_TrueType_Engine_Type()
+error_code FT_Get_SubGlyph_Info()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Get_WinFNT_Header()
+error_code FT_Get_Track_Kerning()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Glyph_Copy()
+error_code FT_Get_TrueType_Engine_Type()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Glyph_Get_CBox()
+error_code FT_Get_X11_Font_Format()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_GlyphSlot_Own_Bitmap()
+error_code FT_Get_WinFNT_Header()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Glyph_Stroke()
+error_code FT_Glyph_Copy()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Glyph_StrokeBorder()
+error_code FT_Glyph_Get_CBox()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Glyph_To_Bitmap()
+error_code FT_GlyphSlot_Own_Bitmap()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Glyph_Transform()
+error_code FT_Glyph_Stroke()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Has_PS_Glyph_Names()
+error_code FT_Glyph_StrokeBorder()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Init_FreeType()
+error_code FT_Glyph_To_Bitmap()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Library_Version()
+error_code FT_Glyph_Transform()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_List_Add()
+error_code FT_Has_PS_Glyph_Names()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_List_Finalize()
+error_code FT_Init_FreeType()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_List_Find()
+error_code FT_Library_Version()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_List_Insert()
+error_code FT_List_Add()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_List_Iterate()
+error_code FT_List_Finalize()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_List_Remove()
+error_code FT_List_Find()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_List_Up()
+error_code FT_List_Insert()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Load_Char()
+error_code FT_List_Iterate()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Load_Glyph()
+error_code FT_List_Remove()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Load_Sfnt_Table()
+error_code FT_List_Up()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Matrix_Invert()
+error_code FT_Load_Char()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Matrix_Multiply()
+error_code FT_Load_Glyph()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_MulDiv()
+error_code FT_Load_Sfnt_Table()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_MulFix()
+error_code FT_Matrix_Invert()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_New_Face()
+error_code FT_Matrix_Multiply()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_New_Library()
+error_code FT_MulDiv()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_New_Memory_Face()
+error_code FT_MulFix()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_New_Size()
+error_code FT_New_Face()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Open_Face()
+error_code FT_New_Library()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_OpenType_Free()
+error_code FT_New_Memory()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_OpenType_Validate()
+error_code FT_New_Memory_Face()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Check()
+error_code FT_New_Size()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Copy()
+error_code FT_Open_Face()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Decompose()
+error_code FT_OpenType_Free()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Done()
+error_code FT_OpenType_Validate()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Embolden()
+error_code FT_Outline_Check()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Get_BBox()
+error_code FT_Outline_Copy()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Get_Bitmap()
+error_code FT_Outline_Decompose()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Get_CBox()
+error_code FT_Outline_Done()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_GetInsideBorder()
+error_code FT_Outline_Embolden()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Get_Orientation()
+error_code FT_Outline_Get_BBox()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_GetOutsideBorder()
+error_code FT_Outline_Get_Bitmap()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_New()
+error_code FT_Outline_Get_CBox()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Render()
+error_code FT_Outline_GetInsideBorder()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Reverse()
+error_code FT_Outline_Get_Orientation()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Transform()
+error_code FT_Outline_GetOutsideBorder()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Outline_Translate()
+error_code FT_Outline_New()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Remove_Module()
+error_code FT_Outline_Render()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Render_Glyph()
+error_code FT_Outline_Reverse()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Request_Size()
+error_code FT_Outline_Transform()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_RoundFix()
+error_code FT_Outline_Translate()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Select_Charmap()
+error_code FT_Realloc()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Select_Size()
+error_code FT_Remove_Module()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Set_Charmap()
+error_code FT_Render_Glyph()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Set_Char_Size()
+error_code FT_Request_Size()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Set_Debug_Hook()
+error_code FT_RoundFix()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Set_MM_Blend_Coordinates()
+error_code FT_Select_Charmap()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Set_MM_Design_Coordinates()
+error_code FT_Select_Size()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Set_Pixel_Sizes()
+error_code FT_Set_Charmap()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Set_Renderer()
+error_code FT_Set_Char_Size()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Set_Transform()
+error_code FT_Set_Debug_Hook()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Set_Var_Blend_Coordinates()
+error_code FT_Set_MM_Blend_Coordinates()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Set_Var_Design_Coordinates()
+error_code FT_Set_MM_Design_Coordinates()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Sfnt_Table_Info()
+error_code FT_Set_Pixel_Sizes()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Sin()
+error_code FT_Set_Renderer()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stream_OpenGzip()
+error_code FT_Set_Transform()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stream_OpenLZW()
+error_code FT_Set_Var_Blend_Coordinates()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_BeginSubPath()
+error_code FT_Set_Var_Design_Coordinates()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_ConicTo()
+error_code FT_Sfnt_Table_Info()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_CubicTo()
+error_code FT_Sin()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_Done()
+error_code FT_Stream_OpenGzip()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_EndSubPath()
+error_code FT_Stream_OpenLZW()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_Export()
+error_code FT_Stroker_BeginSubPath()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_ExportBorder()
+error_code FT_Stroker_ConicTo()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_GetBorderCounts()
+error_code FT_Stroker_CubicTo()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_GetCounts()
+error_code FT_Stroker_Done()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_LineTo()
+error_code FT_Stroker_EndSubPath()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_New()
+error_code FT_Stroker_Export()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_ParseOutline()
+error_code FT_Stroker_ExportBorder()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_Rewind()
+error_code FT_Stroker_GetBorderCounts()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Stroker_Set()
+error_code FT_Stroker_GetCounts()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Tan()
+error_code FT_Stroker_LineTo()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Vector_From_Polar()
+error_code FT_Stroker_New()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Vector_Length()
+error_code FT_Stroker_ParseOutline()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Vector_Polarize()
+error_code FT_Stroker_Rewind()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Vector_Rotate()
+error_code FT_Stroker_Set()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Vector_Transform()
+error_code FT_Tan()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
 }
 
-s32 FT_Vector_Unit()
+error_code FT_Vector_From_Polar()
+{
+	UNIMPLEMENTED_FUNC(cell_FreeType2);
+	return CELL_OK;
+}
+
+error_code FT_Vector_Length()
+{
+	UNIMPLEMENTED_FUNC(cell_FreeType2);
+	return CELL_OK;
+}
+
+error_code FT_Vector_Polarize()
+{
+	UNIMPLEMENTED_FUNC(cell_FreeType2);
+	return CELL_OK;
+}
+
+error_code FT_Vector_Rotate()
+{
+	UNIMPLEMENTED_FUNC(cell_FreeType2);
+	return CELL_OK;
+}
+
+error_code FT_Vector_Transform()
+{
+	UNIMPLEMENTED_FUNC(cell_FreeType2);
+	return CELL_OK;
+}
+
+error_code FT_Vector_Unit()
 {
 	UNIMPLEMENTED_FUNC(cell_FreeType2);
 	return CELL_OK;
@@ -913,6 +942,7 @@ DECLARE(ppu_module_manager::cell_FreeType2)("cell_FreeType2", []()
 	REG_FUNC(cell_FreeType2, FT_Activate_Size);
 	REG_FUNC(cell_FreeType2, FT_Add_Default_Modules);
 	REG_FUNC(cell_FreeType2, FT_Add_Module);
+	REG_FUNC(cell_FreeType2, FT_Alloc);
 	REG_FUNC(cell_FreeType2, FT_Angle_Diff);
 	REG_FUNC(cell_FreeType2, FT_Atan2);
 	REG_FUNC(cell_FreeType2, FT_Attach_File);
@@ -943,6 +973,7 @@ DECLARE(ppu_module_manager::cell_FreeType2)("cell_FreeType2", []()
 	REG_FUNC(cell_FreeType2, FT_Done_Library);
 	REG_FUNC(cell_FreeType2, FT_Done_Size);
 	REG_FUNC(cell_FreeType2, FT_FloorFix);
+	REG_FUNC(cell_FreeType2, FT_Free);
 	REG_FUNC(cell_FreeType2, FT_Get_BDF_Charset_ID);
 	REG_FUNC(cell_FreeType2, FT_Get_BDF_Property);
 	REG_FUNC(cell_FreeType2, FT_Get_Char_Index);
@@ -971,6 +1002,7 @@ DECLARE(ppu_module_manager::cell_FreeType2)("cell_FreeType2", []()
 	REG_FUNC(cell_FreeType2, FT_Get_Track_Kerning);
 	REG_FUNC(cell_FreeType2, FT_Get_TrueType_Engine_Type);
 	REG_FUNC(cell_FreeType2, FT_Get_WinFNT_Header);
+	REG_FUNC(cell_FreeType2, FT_Get_X11_Font_Format);
 	REG_FUNC(cell_FreeType2, FT_Glyph_Copy);
 	REG_FUNC(cell_FreeType2, FT_Glyph_Get_CBox);
 	REG_FUNC(cell_FreeType2, FT_GlyphSlot_Own_Bitmap);
@@ -997,6 +1029,7 @@ DECLARE(ppu_module_manager::cell_FreeType2)("cell_FreeType2", []()
 	REG_FUNC(cell_FreeType2, FT_MulFix);
 	REG_FUNC(cell_FreeType2, FT_New_Face);
 	REG_FUNC(cell_FreeType2, FT_New_Library);
+	REG_FUNC(cell_FreeType2, FT_New_Memory);
 	REG_FUNC(cell_FreeType2, FT_New_Memory_Face);
 	REG_FUNC(cell_FreeType2, FT_New_Size);
 	REG_FUNC(cell_FreeType2, FT_Open_Face);
@@ -1018,6 +1051,7 @@ DECLARE(ppu_module_manager::cell_FreeType2)("cell_FreeType2", []()
 	REG_FUNC(cell_FreeType2, FT_Outline_Reverse);
 	REG_FUNC(cell_FreeType2, FT_Outline_Transform);
 	REG_FUNC(cell_FreeType2, FT_Outline_Translate);
+	REG_FUNC(cell_FreeType2, FT_Realloc);
 	REG_FUNC(cell_FreeType2, FT_Remove_Module);
 	REG_FUNC(cell_FreeType2, FT_Render_Glyph);
 	REG_FUNC(cell_FreeType2, FT_Request_Size);

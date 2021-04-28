@@ -1,6 +1,7 @@
 #pragma once
 
-#include "sys_sync.h"
+#include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 class ppu_thread;
 
@@ -25,7 +26,7 @@ struct sys_ppu_thread_stack_t
 
 struct ppu_thread_param_t
 {
-	be_t<u32> entry; // vm::bptr<void(u64)>
+	vm::bptr<void(u64)> entry;
 	be_t<u32> tls; // vm::bptr<void>
 };
 
@@ -55,17 +56,17 @@ enum : u32
 // Syscalls
 
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode);
-void sys_ppu_thread_yield(ppu_thread& ppu);
+s32 sys_ppu_thread_yield(ppu_thread& ppu); // Return value is ignored by the library
 error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr);
-error_code sys_ppu_thread_detach(u32 thread_id);
-void sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable);
+error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id);
+error_code sys_ppu_thread_get_join_state(ppu_thread& ppu, vm::ptr<s32> isjoinable); // Error code is ignored by the library
 error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio);
-error_code sys_ppu_thread_get_priority(u32 thread_id, vm::ptr<s32> priop);
+error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s32> priop);
 error_code sys_ppu_thread_get_stack_information(ppu_thread& ppu, vm::ptr<sys_ppu_thread_stack_t> sp);
-error_code sys_ppu_thread_stop(u32 thread_id);
-error_code sys_ppu_thread_restart(u32 thread_id);
-error_code _sys_ppu_thread_create(vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 arg4, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname);
+error_code sys_ppu_thread_stop(ppu_thread& ppu, u32 thread_id);
+error_code sys_ppu_thread_restart(ppu_thread& ppu);
+error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 arg4, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname);
 error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id);
-error_code sys_ppu_thread_rename(u32 thread_id, vm::cptr<char> name);
-error_code sys_ppu_thread_recover_page_fault(u32 thread_id);
-error_code sys_ppu_thread_get_page_fault_context(u32 thread_id, vm::ptr<sys_ppu_thread_icontext_t> ctxt);
+error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> name);
+error_code sys_ppu_thread_recover_page_fault(ppu_thread& ppu, u32 thread_id);
+error_code sys_ppu_thread_get_page_fault_context(ppu_thread& ppu, u32 thread_id, vm::ptr<sys_ppu_thread_icontext_t> ctxt);

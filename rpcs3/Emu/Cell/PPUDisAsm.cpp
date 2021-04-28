@@ -6,9 +6,148 @@ const ppu_decoder<PPUDisAsm> s_ppu_disasm;
 
 u32 PPUDisAsm::disasm(u32 pc)
 {
-	const u32 op = *(be_t<u32>*)(offset + pc);
-	(this->*(s_ppu_disasm.decode(op)))({ op });
+	dump_pc = pc;
+	be_t<u32> op{};
+	std::memcpy(&op, m_offset + pc, 4);
+	m_op = op;
+	(this->*(s_ppu_disasm.decode(m_op)))({ m_op });
 	return 4;
+}
+
+constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
+{
+	std::pair<const char*, char> info{};
+
+	switch (bo)
+	{
+	case 0b00000:
+	case 0b00001:
+	{
+		info = {"bdnzf", 'f'}; break;
+	}
+	case 0b00010:
+	case 0b00011:
+	{
+		info = {"bdzf", 'f'}; break;
+	}
+	case 0b01000:
+	case 0b01001:
+	{
+		info = {"bdnzt", 't'}; break;
+	}
+	case 0b01010:
+	case 0b01011:
+	{
+		info = {"bdzt", 't'}; break;
+	}
+	case 0b10010:
+	{
+		info.first = "bdz"; break;
+	}
+	case 0b11010:
+	{
+		info = {"bdz", '-'}; break;
+	}
+	case 0b11011:
+	{
+		info = {"bdz", '+'}; break;
+	}
+	case 0b10000:
+	{
+		info.first = "bdnz"; break;
+	}
+	case 0b11000:
+	{
+		info = {"bdnz", '-'}; break;
+	}
+	case 0b11001:
+	{
+		info = {"bdnz", '+'}; break;
+	}
+	case 0b00100:
+	{
+		switch (bi % 4)
+		{
+		case 0x0: info.first = "bge"; break;
+		case 0x1: info.first = "ble"; break;
+		case 0x2: info.first = "bne"; break;
+		case 0x3: info.first = "bns"; break;
+		default: fmt::throw_exception("Unreachable");
+		}
+		break;
+	}
+	case 0b00110:
+	{
+		info.second = '-';
+		switch (bi % 4)
+		{
+		case 0x0: info.first = "bge"; break;
+		case 0x1: info.first = "ble"; break;
+		case 0x2: info.first = "bne"; break;
+		case 0x3: info.first = "bns"; break;
+		default: fmt::throw_exception("Unreachable");
+		}
+		break;
+	}
+	case 0b00111:
+	{
+		info.second = '+';
+		switch (bi % 4)
+		{
+		case 0x0: info.first = "bge"; break;
+		case 0x1: info.first = "ble"; break;
+		case 0x2: info.first = "bne"; break;
+		case 0x3: info.first = "bns"; break;
+		default: fmt::throw_exception("Unreachable");
+		}
+		break;
+	}
+	case 0b01100:
+	{
+		switch (bi % 4)
+		{
+		case 0x0: info.first = "blt"; break;
+		case 0x1: info.first = "bgt"; break;
+		case 0x2: info.first = "beq"; break;
+		case 0x3: info.first = "bso"; break;
+		default: fmt::throw_exception("Unreachable");
+		}
+		break;
+	}
+	case 0b01110:
+	{
+		info.second = '-';
+		switch (bi % 4)
+		{
+		case 0x0: info.first = "blt"; break;
+		case 0x1: info.first = "bgt"; break;
+		case 0x2: info.first = "beq"; break;
+		case 0x3: info.first = "bso"; break;
+		default: fmt::throw_exception("Unreachable");
+		}
+		break;
+	}
+	case 0b01111:
+	{
+		info.second = '+';
+		switch (bi % 4)
+		{
+		case 0x0: info.first = "blt"; break;
+		case 0x1: info.first = "bgt"; break;
+		case 0x2: info.first = "beq"; break;
+		case 0x3: info.first = "bso"; break;
+		default: fmt::throw_exception("Unreachable");
+		}
+		break;
+	}
+	//case 0b10100:
+	//{
+	//	info.first = "b"; break;
+	//}
+	default: break;
+	}
+
+	return info;
 }
 
 void PPUDisAsm::MFVSCR(ppu_opcode_t op)
@@ -798,99 +937,48 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 	const u32 aa = op.aa;
 	const u32 lk = op.lk;
 
-	if (m_mode == CPUDisAsm_CompilerElfMode)
+	if (m_mode == cpu_disasm_mode::compiler_elf)
 	{
 		Write(fmt::format("bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk));
 		return;
 	}
 
-	//TODO: aa lk
-	const u8 bo0 = (bo & 0x10) ? 1 : 0;
-	const u8 bo1 = (bo & 0x08) ? 1 : 0;
-	const u8 bo2 = (bo & 0x04) ? 1 : 0;
-	const u8 bo3 = (bo & 0x02) ? 1 : 0;
-	const u8 bo4 = (bo & 0x01) ? 1 : 0;
+	const auto [inst, sign] = get_BC_info(bo, bi);
 
-	if (bo0 && !bo1 && !bo2 && bo3 && !bo4)
+	if (!inst)
 	{
-		DisAsm_CR_BRANCH("bdz", bi / 4, bd); return;
-	}
-	else if (bo0 && bo1 && !bo2 && bo3 && !bo4)
-	{
-		DisAsm_CR_BRANCH("bdz-", bi / 4, bd); return;
-	}
-	else if (bo0 && bo1 && !bo2 && bo3 && bo4)
-	{
-		DisAsm_CR_BRANCH("bdz+", bi / 4, bd); return;
-	}
-	else if (bo0 && !bo1 && !bo2 && !bo3 && !bo4)
-	{
-		DisAsm_CR_BRANCH("bdnz", bi / 4, bd); return;
-	}
-	else if (bo0 && bo1 && !bo2 && !bo3 && !bo4)
-	{
-		DisAsm_CR_BRANCH("bdnz-", bi / 4, bd); return;
-	}
-	else if (bo0 && bo1 && !bo2 && !bo3 && bo4)
-	{
-		DisAsm_CR_BRANCH("bdnz+", bi / 4, bd); return;
-	}
-	else if (!bo0 && !bo1 && bo2 && !bo3 && !bo4)
-	{
-		switch (bi % 4)
-		{
-		case 0x0: DisAsm_CR_BRANCH("bge", bi / 4, bd); return;
-		case 0x1: DisAsm_CR_BRANCH("ble", bi / 4, bd); return;
-		case 0x2: DisAsm_CR_BRANCH("bne", bi / 4, bd); return;
-		}
-	}
-	else if (!bo0 && !bo1 && bo2 && bo3 && !bo4)
-	{
-		switch (bi % 4)
-		{
-		case 0x0: DisAsm_CR_BRANCH("bge-", bi / 4, bd); return;
-		case 0x1: DisAsm_CR_BRANCH("ble-", bi / 4, bd); return;
-		case 0x2: DisAsm_CR_BRANCH("bne-", bi / 4, bd); return;
-		}
-	}
-	else if (!bo0 && !bo1 && bo2 && bo3 && bo4)
-	{
-		switch (bi % 4)
-		{
-		case 0x0: DisAsm_CR_BRANCH("bge+", bi / 4, bd); return;
-		case 0x1: DisAsm_CR_BRANCH("ble+", bi / 4, bd); return;
-		case 0x2: DisAsm_CR_BRANCH("bne+", bi / 4, bd); return;
-		}
-	}
-	else if (!bo0 && bo1 && bo2 && !bo3 && !bo4)
-	{
-		switch (bi % 4)
-		{
-		case 0x0: DisAsm_CR_BRANCH("blt", bi / 4, bd); return;
-		case 0x1: DisAsm_CR_BRANCH("bgt", bi / 4, bd); return;
-		case 0x2: DisAsm_CR_BRANCH("beq", bi / 4, bd); return;
-		}
-	}
-	else if (!bo0 && bo1 && bo2 && bo3 && !bo4)
-	{
-		switch (bi % 4)
-		{
-		case 0x0: DisAsm_CR_BRANCH("blt-", bi / 4, bd); return;
-		case 0x1: DisAsm_CR_BRANCH("bgt-", bi / 4, bd); return;
-		case 0x2: DisAsm_CR_BRANCH("beq-", bi / 4, bd); return;
-		}
-	}
-	else if (!bo0 && bo1 && bo2 && bo3 && bo4)
-	{
-		switch (bi % 4)
-		{
-		case 0x0: DisAsm_CR_BRANCH("blt+", bi / 4, bd); return;
-		case 0x1: DisAsm_CR_BRANCH("bgt+", bi / 4, bd); return;
-		case 0x2: DisAsm_CR_BRANCH("beq+", bi / 4, bd); return;
-		}
+		Write(fmt::format("bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk));
+		return;
 	}
 
-	Write(fmt::format("bc [%x:%x:%x:%x:%x], cr%d[%x], 0x%x, %d, %d", bo0, bo1, bo2, bo3, bo4, bi / 4, bi % 4, bd, aa, lk));
+	std::string final = inst;
+	if (lk) final += 'l';
+	if (aa) final += 'a';
+	if (sign) final += sign;
+
+	// Check if need to display full BI value
+	if (sign == 't' || sign == 'f')
+	{
+		if (aa)
+		{
+			DisAsm_BI_BRANCH_A(final, bi, bd);
+		}
+		else
+		{
+			DisAsm_BI_BRANCH(final, bi, bd);
+		}
+
+		return;
+	}
+
+	if (aa)
+	{
+		DisAsm_CR_BRANCH_A(final, bi / 4, bd);
+	}
+	else
+	{
+		DisAsm_CR_BRANCH(final, bi / 4, bd);
+	}
 }
 
 void PPUDisAsm::SC(ppu_opcode_t op)
@@ -905,11 +993,11 @@ void PPUDisAsm::SC(ppu_opcode_t op)
 
 void PPUDisAsm::B(ppu_opcode_t op)
 {
-	const u32 li = op.li;
+	const u32 li = op.bt24;
 	const u32 aa = op.aa;
 	const u32 lk = op.lk;
 
-	if (m_mode == CPUDisAsm_CompilerElfMode)
+	if (m_mode == cpu_disasm_mode::compiler_elf)
 	{
 		Write(fmt::format("b 0x%x, %d, %d", li, aa, lk));
 		return;
@@ -944,59 +1032,103 @@ void PPUDisAsm::BCLR(ppu_opcode_t op)
 {
 	const u32 bo = op.bo;
 	const u32 bi = op.bi;
+	const u32 bh = op.bh;
+	const u32 lk = op.lk;
 
-	const u8 bo0 = (bo & 0x10) ? 1 : 0;
-	const u8 bo1 = (bo & 0x08) ? 1 : 0;
-	const u8 bo2 = (bo & 0x04) ? 1 : 0;
-	const u8 bo3 = (bo & 0x02) ? 1 : 0;
+	if (bo == 0b10100)
+	{
+		Write(lk ? "blrl" : "blr");
+		return;
+	}
 
-	if (bo0 && !bo1 && bo2 && !bo3) { Write("blr"); return; }
-	Write(fmt::format("bclr [%x:%x:%x:%x], cr%d[%x], %d, %d", bo0, bo1, bo2, bo3, bi / 4, bi % 4, op.bh, op.lk));
+	const auto [inst, sign] = get_BC_info(bo, bi);
+
+	if (!inst)
+	{
+		Write(fmt::format("bclr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk));
+		return;
+	}
+
+	std::string final = std::string(inst) + (lk ? "lrl" : "lr");
+	if (sign) final += sign;
+
+	// Check if need to display full BI value
+	if (sign == 't' || sign == 'f')
+	{
+		DisAsm_BI_BRANCH(final, bi, bh);
+		return;
+	}
+
+	DisAsm_CR_BRANCH(final, bi / 4, bh);
 }
 
 void PPUDisAsm::CRNOR(ppu_opcode_t op)
 {
-	DisAsm_INT3("crnor", op.crbd, op.crba, op.crbb);
+	if (op.crba == op.crbb)
+	{
+		DisAsm_BI2("crnot", op.crbd, op.crba);
+		return;
+	}
+
+	DisAsm_BI3("crnor", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::CRANDC(ppu_opcode_t op)
 {
-	DisAsm_INT3("crandc", op.crbd, op.crba, op.crbb);
+	DisAsm_BI3("crandc", op.crbd, op.crba, op.crbb);
 }
 
-void PPUDisAsm::ISYNC(ppu_opcode_t op)
+void PPUDisAsm::ISYNC(ppu_opcode_t)
 {
 	Write("isync");
 }
 
 void PPUDisAsm::CRXOR(ppu_opcode_t op)
 {
-	DisAsm_INT3("crxor", op.crbd, op.crba, op.crbb);
+	if (op.crba == op.crbb && op.crba == op.crbd)
+	{
+		DisAsm_BI1("crclr", op.crbd);
+		return;
+	}
+
+	DisAsm_BI3("crxor", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::CRNAND(ppu_opcode_t op)
 {
-	DisAsm_INT3("crnand", op.crbd, op.crba, op.crbb);
+	DisAsm_BI3("crnand", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::CRAND(ppu_opcode_t op)
 {
-	DisAsm_INT3("crand", op.crbd, op.crba, op.crbb);
+	DisAsm_BI3("crand", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::CREQV(ppu_opcode_t op)
 {
-	DisAsm_INT3("creqv", op.crbd, op.crba, op.crbb);
+	if (op.crba == op.crbb && op.crba == op.crbd)
+	{
+		DisAsm_BI1("crset", op.crbd);
+		return;
+	}
+
+	DisAsm_BI3("creqv", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::CRORC(ppu_opcode_t op)
 {
-	DisAsm_INT3("crorc", op.crbd, op.crba, op.crbb);
+	DisAsm_BI3("crorc", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::CROR(ppu_opcode_t op)
 {
-	DisAsm_INT3("cror", op.crbd, op.crba, op.crbb);
+	if (op.crba == op.crbb)
+	{
+		DisAsm_BI2("crmove", op.crbd, op.crba);
+		return;
+	}
+
+	DisAsm_BI3("cror", op.crbd, op.crba, op.crbb);
 }
 
 void PPUDisAsm::BCCTR(ppu_opcode_t op)
@@ -1004,12 +1136,28 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 	const u32 bo = op.bo;
 	const u32 bi = op.bi;
 	const u32 bh = op.bh;
+	const u32 lk = op.lk;
 
-	switch (op.lk)
+	if (bo == 0b10100)
 	{
-	case 0: DisAsm_INT3("bcctr", bo, bi, bh); break;
-	case 1: DisAsm_INT3("bcctrl", bo, bi, bh); break;
+		Write(lk ? "bctrl" : "bctr");
+		return;
 	}
+
+	const auto [inst, sign] = get_BC_info(bo, bi);
+
+	if (!inst || inst[1] == 'd')
+	{
+		// Invalid or unknown bcctr form
+		Write(fmt::format("bcctr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk));
+		return;
+	}
+
+	std::string final = inst;
+	final += lk ? "ctrl"sv : "ctr"sv;
+	if (sign) final += sign;
+
+	DisAsm_CR_BRANCH(final, bi / 4, bh);
 }
 
 void PPUDisAsm::RLWIMI(ppu_opcode_t op)
@@ -1019,7 +1167,18 @@ void PPUDisAsm::RLWIMI(ppu_opcode_t op)
 
 void PPUDisAsm::RLWINM(ppu_opcode_t op)
 {
-	DisAsm_R2_INT3_RC("rlwinm", op.ra, op.rs, op.sh32, op.mb32, op.me32, op.rc);
+	if (op.mb32 == 0 && op.sh32 == 31 - op.me32)
+	{
+		DisAsm_R2_INT1_RC("slwi", op.ra, op.rs, op.sh32, op.rc);
+	}
+	else if (op.me32 == 31 && op.sh32 == 32 - op.mb32)
+	{
+		DisAsm_R2_INT1_RC("srwi", op.ra, op.rs, 32 - op.sh32, op.rc);
+	}
+	else
+	{
+		DisAsm_R2_INT3_RC("rlwinm", op.ra, op.rs, op.sh32, op.mb32, op.me32, op.rc);
+	}
 }
 
 void PPUDisAsm::RLWNM(ppu_opcode_t op)
@@ -1030,13 +1189,14 @@ void PPUDisAsm::RLWNM(ppu_opcode_t op)
 void PPUDisAsm::ORI(ppu_opcode_t op)
 {
 	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) return Write("nop");
-	DisAsm_R2_IMM("ori", op.rs, op.ra, op.uimm16);
+	if (op.uimm16 == 0) return DisAsm_R2("mr", op.ra, op.rs);
+	DisAsm_R2_IMM("ori", op.ra, op.rs, op.uimm16);
 }
 
 void PPUDisAsm::ORIS(ppu_opcode_t op)
 {
 	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) return Write("nop");
-	DisAsm_R2_IMM("oris", op.rs, op.ra, op.uimm16);
+	DisAsm_R2_IMM("oris", op.ra, op.rs, op.uimm16);
 }
 
 void PPUDisAsm::XORI(ppu_opcode_t op)
@@ -1087,7 +1247,14 @@ void PPUDisAsm::RLDICR(ppu_opcode_t op)
 	const u32 sh = op.sh64;
 	const u32 me = op.mbe64;
 
-	DisAsm_R2_INT2_RC("rldicr", op.ra, op.rs, sh, me, op.rc);
+	if (sh == 63 - me)
+	{
+		DisAsm_R2_INT1_RC("sldi", op.ra, op.rs, sh, op.rc);
+	}
+	else
+	{
+		DisAsm_R2_INT2_RC("rldicr", op.ra, op.rs, sh, me, op.rc);
+	}
 }
 
 void PPUDisAsm::RLDIC(ppu_opcode_t op)
@@ -1164,7 +1331,18 @@ void PPUDisAsm::MFOCRF(ppu_opcode_t op)
 {
 	if (op.l11)
 	{
-		DisAsm_R1_IMM("mfocrf", op.rd, op.crm);
+		const u8 crm = static_cast<u8>(op.crm);
+		const int cr = std::countl_zero<u8>(crm);
+
+		if (cr >= 8 || crm & (crm - 1))
+		{
+			// Note: invalid form
+			DisAsm_R1_IMM("mfocrf", op.rd, crm);
+		}
+		else
+		{
+			DisAsm_R1_CR1("mfocrf", op.rd, cr);
+		}
 	}
 	else
 	{
@@ -1331,19 +1509,30 @@ void PPUDisAsm::ADDE(ppu_opcode_t op)
 
 void PPUDisAsm::MTOCRF(ppu_opcode_t op)
 {
-	if (op.l11)
+	const u8 crm = static_cast<u8>(op.crm);
+
+	if (!op.l11 && crm == 0xff)
 	{
-		DisAsm_INT1_R1("mtocrf", op.crm, op.rs);
+		DisAsm_R1("mtcr", op.rs);
+		return;
+	}
+
+	const int cr = std::countl_zero<u8>(crm);
+	const auto name = op.l11 ? "mtocrf" : "mtcrf";
+
+	if (cr >= 8 || crm & (crm - 1))
+	{
+		DisAsm_INT1_R1(name, crm, op.rs);
 	}
 	else
 	{
-		DisAsm_INT1_R1("mtcrf", op.crm, op.rs);
+		DisAsm_CR1_R1(name, cr, op.rs);
 	}
 }
 
 void PPUDisAsm::STDX(ppu_opcode_t op)
 {
-	DisAsm_R3("stdx.", op.rs, op.ra, op.rb);
+	DisAsm_R3("stdx", op.rs, op.ra, op.rb);
 }
 
 void PPUDisAsm::STWCX(ppu_opcode_t op)
@@ -1549,12 +1738,12 @@ void PPUDisAsm::OR(ppu_opcode_t op)
 	if (op.rs == op.rb)
 	{
 		switch (op.opcode)
-		{	
+		{
 		case 0x7f9ce378: return Write("db8cyc");
 		case 0x7fbdeb78: return Write("db10cyc");
 		case 0x7fdef378: return Write("db12cyc");
 		case 0x7ffffb78: return Write("db16cyc");
-		default : DisAsm_R2_RC("mr", op.ra, op.rb, op.rc);
+		default: DisAsm_R2_RC("mr", op.ra, op.rb, op.rc);
 		}
 	}
 	else
@@ -1663,7 +1852,7 @@ void PPUDisAsm::LFSUX(ppu_opcode_t op)
 
 void PPUDisAsm::SYNC(ppu_opcode_t op)
 {
-	Write("sync");
+	Write(op.l10 ? "lwsync" : "sync");
 }
 
 void PPUDisAsm::LFDX(ppu_opcode_t op)
@@ -1751,7 +1940,7 @@ void PPUDisAsm::LVRXL(ppu_opcode_t op)
 	DisAsm_V1_R2("lvrxl", op.vd, op.ra, op.rb);
 }
 
-void PPUDisAsm::DSS(ppu_opcode_t op)
+void PPUDisAsm::DSS(ppu_opcode_t)
 {
 	Write("dss()");
 }
@@ -1766,7 +1955,7 @@ void PPUDisAsm::SRADI(ppu_opcode_t op)
 	DisAsm_R2_INT1_RC("sradi", op.ra, op.rs, op.sh64, op.rc);
 }
 
-void PPUDisAsm::EIEIO(ppu_opcode_t op)
+void PPUDisAsm::EIEIO(ppu_opcode_t)
 {
 	Write("eieio");
 }
@@ -2158,19 +2347,19 @@ void PPUDisAsm::FCFID(ppu_opcode_t op)
 
 extern std::vector<std::string> g_ppu_function_names;
 
-void PPUDisAsm::UNK(ppu_opcode_t op)
+void PPUDisAsm::UNK(ppu_opcode_t)
 {
-	if (op.opcode == dump_pc && ppu_function_manager::addr)
+	if (ppu_function_manager::addr)
 	{
 		// HLE function index
 		const u32 index = (dump_pc - ppu_function_manager::addr) / 8;
 
-		if (index < ppu_function_manager::get().size())
+		if (dump_pc % 8 == 4 && index < ppu_function_manager::get().size())
 		{
 			Write(fmt::format("Function : %s (index %u)", index < g_ppu_function_names.size() ? g_ppu_function_names[index].c_str() : "?", index));
 			return;
 		}
 	}
 
-	Write(fmt::format("Unknown/Illegal opcode! (0x%08x)", op.opcode));
+	Write("?? ??");
 }

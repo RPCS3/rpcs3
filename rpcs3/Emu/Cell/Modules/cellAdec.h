@@ -1,9 +1,9 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // Error Codes
-enum
+enum CellAdecError : u32
 {
 	CELL_ADEC_ERROR_FATAL   = 0x80610001,
 	CELL_ADEC_ERROR_SEQ     = 0x80610002,

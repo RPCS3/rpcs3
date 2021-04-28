@@ -1,582 +1,13 @@
 #include "stdafx.h"
+#include "PPUFunction.h"
+#include "Utilities/JIT.h"
+
 #include "PPUModule.h"
 
-extern std::string ppu_get_syscall_name(u64 code)
-{
-	switch (code)
-	{
-	case 1: return "sys_process_getpid";
-	case 2: return "sys_process_wait_for_child";
-	case 4: return "sys_process_get_status";
-	case 5: return "sys_process_detach_child";
-	case 12: return "sys_process_get_number_of_object";
-	case 13: return "sys_process_get_id";
-	case 14: return "sys_process_is_spu_lock_line_reservation_address";
-	case 18: return "sys_process_getppid";
-	case 19: return "sys_process_kill";
-	case 21: return "_sys_process_spawn";
-	case 22: return "_sys_process_exit";
-	case 23: return "sys_process_wait_for_child2";
-	case 25: return "sys_process_get_sdk_version";
-	case 26: return "_sys_process_exit2";
-	case 28: return "_sys_process_get_number_of_object";
-	case 29: return "sys_process_get_id";
-	case 30: return "_sys_process_get_paramsfo";
-	case 31: return "sys_process_get_ppu_guid";
-	case 41: return "_sys_ppu_thread_exit";
-	case 43: return "sys_ppu_thread_yield";
-	case 44: return "sys_ppu_thread_join";
-	case 45: return "sys_ppu_thread_detach";
-	case 46: return "sys_ppu_thread_get_join_state";
-	case 47: return "sys_ppu_thread_set_priority";
-	case 48: return "sys_ppu_thread_get_priority";
-	case 49: return "sys_ppu_thread_get_stack_information";
-	case 50: return "sys_ppu_thread_stop";
-	case 51: return "sys_ppu_thread_restart";
-	case 52: return "_sys_ppu_thread_create";
-	case 53: return "sys_ppu_thread_start";
-	case 56: return "sys_ppu_thread_rename";
-	case 57: return "sys_ppu_thread_recover_page_fault";
-	case 58: return "sys_ppu_thread_get_page_fault_context";
-	case 60: return "sys_trace_create";
-	case 61: return "sys_trace_start";
-	case 62: return "sys_trace_stop";
-	case 63: return "sys_trace_update_top_index";
-	case 64: return "sys_trace_destroy";
-	case 65: return "sys_trace_drain";
-	case 66: return "sys_trace_attach_process";
-	case 67: return "sys_trace_allocate_buffer";
-	case 68: return "sys_trace_free_buffer";
-	case 69: return "sys_trace_create2";
-	case 70: return "sys_timer_create";
-	case 71: return "sys_timer_destroy";
-	case 72: return "sys_timer_get_information";
-	case 73: return "_sys_timer_start";
-	case 74: return "sys_timer_stop";
-	case 75: return "sys_timer_connect_event_queue";
-	case 76: return "sys_timer_disconnect_event_queue";
-	case 77: return "sys_trace_create2_in_cbepm";
-	case 80: return "sys_interrupt_tag_create";
-	case 81: return "sys_interrupt_tag_destroy";
-	case 82: return "sys_event_flag_create";
-	case 83: return "sys_event_flag_destroy";
-	case 84: return "_sys_interrupt_thread_establish";
-	case 85: return "sys_event_flag_wait";
-	case 86: return "sys_event_flag_trywait";
-	case 87: return "sys_event_flag_set";
-	case 88: return "sys_interrupt_thread_eoi";
-	case 89: return "_sys_interrupt_thread_disestablish";
-	case 90: return "sys_semaphore_create";
-	case 91: return "sys_semaphore_destroy";
-	case 92: return "sys_semaphore_wait";
-	case 93: return "sys_semaphore_trywait";
-	case 94: return "sys_semaphore_post";
-	case 95: return "_sys_lwmutex_create";
-	case 96: return "_sys_lwmutex_destroy";
-	case 97: return "_sys_lwmutex_lock";
-	case 98: return "_sys_lwmutex_unlock";
-	case 99: return "_sys_lwmutex_trylock";
-	case 100: return "sys_mutex_create";
-	case 101: return "sys_mutex_destroy";
-	case 102: return "sys_mutex_lock";
-	case 103: return "sys_mutex_trylock";
-	case 104: return "sys_mutex_unlock";
-	case 105: return "sys_cond_create";
-	case 106: return "sys_cond_destroy";
-	case 107: return "sys_cond_wait";
-	case 108: return "sys_cond_signal";
-	case 109: return "sys_cond_signal_all";
-	case 110: return "sys_cond_signal_to";
-	case 111: return "_sys_lwcond_create";
-	case 112: return "_sys_lwcond_destroy";
-	case 113: return "_sys_lwcond_queue_wait";
-	case 114: return "sys_semaphore_get_value";
-	case 115: return "_sys_lwcond_signal";
-	case 116: return "_sys_lwcond_signal_all";
-	case 118: return "sys_event_flag_clear";
-	case 120: return "sys_rwlock_create";
-	case 121: return "sys_rwlock_destroy";
-	case 122: return "sys_rwlock_rlock";
-	case 123: return "sys_rwlock_tryrlock";
-	case 124: return "sys_rwlock_runlock";
-	case 125: return "sys_rwlock_wlock";
-	case 126: return "sys_rwlock_trywlock";
-	case 127: return "sys_rwlock_wunlock";
-	case 128: return "sys_event_queue_create";
-	case 129: return "sys_event_queue_destroy";
-	case 130: return "sys_event_queue_receive";
-	case 131: return "sys_event_queue_tryreceive";
-	case 132: return "sys_event_flag_cancel";
-	case 133: return "sys_event_queue_drain";
-	case 134: return "sys_event_port_create";
-	case 135: return "sys_event_port_destroy";
-	case 136: return "sys_event_port_connect_local";
-	case 137: return "sys_event_port_disconnect";
-	case 138: return "sys_event_port_send";
-	case 139: return "sys_event_flag_get";
-	case 140: return "sys_event_port_connect_ipc";
-	case 141: return "sys_timer_usleep";
-	case 142: return "sys_timer_sleep";
-	case 143: return "sys_time_set_timezone";
-	case 144: return "sys_time_get_timezone";
-	case 145: return "sys_time_get_current_time";
-	case 146: return "sys_time_get_system_time";
-	case 147: return "sys_time_get_timebase_frequency";
-	case 148: return "_sys_rwlock_trywlock";
-	case 150: return "sys_raw_spu_create_interrupt_tag";
-	case 151: return "sys_raw_spu_set_int_mask";
-	case 152: return "sys_raw_spu_get_int_mask";
-	case 153: return "sys_raw_spu_set_int_stat";
-	case 154: return "sys_raw_spu_get_int_stat";
-	case 155: return "_sys_spu_image_get_information";
-	case 156: return "sys_spu_image_open";
-	case 157: return "_sys_spu_image_import";
-	case 158: return "_sys_spu_image_close";
-	case 159: return "_sys_spu_image_get_segments";
-	case 160: return "sys_raw_spu_create";
-	case 161: return "sys_raw_spu_destroy";
-	case 163: return "sys_raw_spu_read_puint_mb";
-	case 165: return "sys_spu_thread_get_exit_status";
-	case 166: return "sys_spu_thread_set_argument";
-	case 167: return "sys_spu_thread_group_start_on_exit";
-	case 169: return "sys_spu_initialize";
-	case 170: return "sys_spu_thread_group_create";
-	case 171: return "sys_spu_thread_group_destroy";
-	case 172: return "sys_spu_thread_initialize";
-	case 173: return "sys_spu_thread_group_start";
-	case 174: return "sys_spu_thread_group_suspend";
-	case 175: return "sys_spu_thread_group_resume";
-	case 176: return "sys_spu_thread_group_yield";
-	case 177: return "sys_spu_thread_group_terminate";
-	case 178: return "sys_spu_thread_group_join";
-	case 179: return "sys_spu_thread_group_set_priority";
-	case 180: return "sys_spu_thread_group_get_priority";
-	case 181: return "sys_spu_thread_write_ls";
-	case 182: return "sys_spu_thread_read_ls";
-	case 184: return "sys_spu_thread_write_snr";
-	case 185: return "sys_spu_thread_group_connect_event";
-	case 186: return "sys_spu_thread_group_disconnect_event";
-	case 187: return "sys_spu_thread_set_spu_cfg";
-	case 188: return "sys_spu_thread_get_spu_cfg";
-	case 190: return "sys_spu_thread_write_spu_mb";
-	case 191: return "sys_spu_thread_connect_event";
-	case 192: return "sys_spu_thread_disconnect_event";
-	case 193: return "sys_spu_thread_bind_queue";
-	case 194: return "sys_spu_thread_unbind_queue";
-	case 196: return "sys_raw_spu_set_spu_cfg";
-	case 197: return "sys_raw_spu_get_spu_cfg";
-	case 198: return "sys_spu_thread_recover_page_fault";
-	case 199: return "sys_raw_spu_recover_page_fault";
-	case 215: return "sys_dbg_mat_set_condition";
-	case 216: return "sys_dbg_mat_get_condition";
-	case 230: return "sys_isolated_spu_create";
-	case 231: return "sys_isolated_spu_destroy";
-	case 232: return "sys_isolated_spu_start";
-	case 233: return "sys_isolated_spu_create_interrupt_tag";
-	case 234: return "sys_isolated_spu_set_int_mask";
-	case 235: return "sys_isolated_spu_get_int_mask";
-	case 236: return "sys_isolated_spu_set_int_stat";
-	case 237: return "sys_isolated_spu_get_int_stat";
-	case 238: return "sys_isolated_spu_set_spu_cfg";
-	case 239: return "sys_isolated_spu_get_spu_cfg";
-	case 240: return "sys_isolated_spu_read_puint_mb";
-	case 244: return "sys_spu_thread_group_system_set_next_group";
-	case 245: return "sys_spu_thread_group_system_unset_next_group";
-	case 246: return "sys_spu_thread_group_system_set_switch_group";
-	case 247: return "sys_spu_thread_group_system_unset_switch_group";
-	case 250: return "sys_spu_thread_group_set_cooperative_victims";
-	case 251: return "sys_spu_thread_group_connect_event_all_threads";
-	case 252: return "sys_spu_thread_group_disconnect_event_all_threads";
-	case 254: return "sys_spu_thread_group_log";
-	case 260: return "sys_spu_image_open_by_fd";
-	case 300: return "sys_vm_memory_map";
-	case 301: return "sys_vm_unmap";
-	case 302: return "sys_vm_append_memory";
-	case 303: return "sys_vm_return_memory";
-	case 304: return "sys_vm_lock";
-	case 305: return "sys_vm_unlock";
-	case 306: return "sys_vm_touch";
-	case 307: return "sys_vm_flush";
-	case 308: return "sys_vm_invalidate";
-	case 309: return "sys_vm_store";
-	case 310: return "sys_vm_sync";
-	case 311: return "sys_vm_test";
-	case 312: return "sys_vm_get_statistics";
-	case 313: return "sys_vm_memory_map_different";
-	case 324: return "sys_memory_container_create";
-	case 325: return "sys_memory_container_destroy";
-	case 326: return "sys_mmapper_allocate_fixed_address";
-	case 327: return "sys_mmapper_enable_page_fault_notification";
-	case 329: return "sys_mmapper_free_shared_memory";
-	case 330: return "sys_mmapper_allocate_address";
-	case 331: return "sys_mmapper_free_address";
-	case 332: return "sys_mmapper_allocate_shared_memory";
-	case 333: return "sys_mmapper_set_shared_memory_flag";
-	case 334: return "sys_mmapper_map_shared_memory";
-	case 335: return "sys_mmapper_unmap_shared_memory";
-	case 336: return "sys_mmapper_change_address_access_right";
-	case 337: return "sys_mmapper_search_and_map";
-	case 338: return "sys_mmapper_get_shared_memory_attribute";
-	case 341: return "sys_memory_container_create";
-	case 342: return "sys_memory_container_destroy";
-	case 343: return "sys_memory_container_get_size";
-	case 344: return "sys_memory_budget_set";
-	case 348: return "sys_memory_allocate";
-	case 349: return "sys_memory_free";
-	case 350: return "sys_memory_allocate_from_container";
-	case 351: return "sys_memory_get_page_attribute";
-	case 352: return "sys_memory_get_user_memory_size";
-	case 353: return "sys_memory_get_user_memory_stat";
-	case 356: return "sys_memory_allocate_colored";
-	case 361: return "sys_memory_allocate_from_container_colored";
-	case 362: return "sys_mmapper_allocate_shared_memory_from_container";
-	case 367: return "sys_uart_initialize";
-	case 368: return "sys_uart_receive";
-	case 369: return "sys_uart_send";
-	case 370: return "sys_uart_get_params";
-	case 372: return "sys_game_watchdog_start";
-	case 373: return "sys_game_watchdog_stop";
-	case 374: return "sys_game_watchdog_clear";
-	case 375: return "sys_game_set_system_sw_version";
-	case 376: return "sys_game_get_system_sw_version";
-	case 377: return "sys_sm_set_shop_mode";
-	case 378: return "sys_sm_get_ext_event2";
-	case 379: return "sys_sm_shutdown";
-	case 380: return "sys_sm_get_params";
-	case 381: return "sys_sm_get_inter_lpar_parameter";
-	case 383: return "sys_game_get_temperature";
-	case 384: return "sys_sm_get_tzpb";
-	case 385: return "sys_sm_request_led";
-	case 386: return "sys_sm_control_led";
-	case 387: return "sys_sm_get_platform_info";
-	case 388: return "sys_sm_ring_buzzer";
-	case 389: return "sys_sm_set_fan_policy";
-	case 390: return "sys_sm_request_error_log";
-	case 391: return "sys_sm_request_be_count";
-	case 392: return "sys_sm_ring_buzzer";
-	case 393: return "sys_sm_get_hw_config";
-	case 394: return "sys_sm_request_scversion";
-	case 395: return "sys_sm_request_system_event_log";
-	case 396: return "sys_sm_set_rtc_alarm";
-	case 397: return "sys_sm_get_rtc_alarm";
-	case 398: return "sys_console_write";
-	case 402: return "sys_tty_read";
-	case 403: return "sys_tty_write";
-	case 408: return "sys_sm_get_tzpb";
-	case 409: return "sys_sm_get_fan_policy";
-	case 410: return "sys_game_board_storage_read";
-	case 411: return "sys_game_board_storage_write";
-	case 412: return "sys_game_get_rtc_status";
-	case 450: return "sys_overlay_load_module";
-	case 451: return "sys_overlay_unload_module";
-	case 452: return "sys_overlay_get_module_list";
-	case 453: return "sys_overlay_get_module_info";
-	case 454: return "sys_overlay_load_module_by_fd";
-	case 455: return "sys_overlay_get_module_info2";
-	case 456: return "sys_overlay_get_sdk_version";
-	case 457: return "sys_overlay_get_module_dbg_info";
-	case 458: return "sys_overlay_get_module_dbg_info";
-	case 460: return "sys_prx_dbg_get_module_id_list";
-	case 461: return "_sys_prx_get_module_id_by_address";
-	case 463: return "_sys_prx_load_module_by_fd";
-	case 464: return "_sys_prx_load_module_on_memcontainer_by_fd";
-	case 465: return "_sys_prx_load_module_list";
-	case 466: return "_sys_prx_load_module_list_on_memcontainer";
-	case 467: return "sys_prx_get_ppu_guid";
-	case 480: return "_sys_prx_load_module";
-	case 481: return "_sys_prx_start_module";
-	case 482: return "_sys_prx_stop_module";
-	case 483: return "_sys_prx_unload_module";
-	case 484: return "_sys_prx_register_module";
-	case 485: return "_sys_prx_query_module";
-	case 486: return "_sys_prx_register_library";
-	case 487: return "_sys_prx_unregister_library";
-	case 488: return "_sys_prx_link_library";
-	case 489: return "_sys_prx_unlink_library";
-	case 490: return "_sys_prx_query_library";
-	case 493: return "sys_prx_dbg_get_module_info";
-	case 494: return "_sys_prx_get_module_list";
-	case 495: return "_sys_prx_get_module_info";
-	case 496: return "_sys_prx_get_module_id_by_name";
-	case 497: return "_sys_prx_load_module_on_memcontainer";
-	case 498: return "_sys_prx_start";
-	case 499: return "_sys_prx_stop";
-	case 500: return "sys_hid_manager_open";
-	case 501: return "sys_hid_manager_close";
-	case 502: return "sys_hid_manager_read";
-	case 503: return "sys_hid_manager_ioctl";
-	case 504: return "sys_hid_manager_map_logical_id_to_port_id";
-	case 505: return "sys_hid_manager_unmap_logical_id_to_port_id";
-	case 506: return "sys_hid_manager_add_hot_key_observer";
-	case 507: return "sys_hid_manager_remove_hot_key_observer";
-	case 508: return "sys_hid_manager_grab_focus";
-	case 509: return "sys_hid_manager_release_focus";
-	case 516: return "sys_config_open";
-	case 517: return "sys_config_close";
-	case 518: return "sys_config_get_service_event";
-	case 519: return "sys_config_add_service_listener";
-	case 520: return "sys_config_remove_service_listener";
-	case 521: return "sys_config_register_service";
-	case 522: return "sys_config_unregister_service";
-	case 523: return "sys_config_io_event";
-	case 530: return "sys_usbd_initialize";
-	case 531: return "sys_usbd_finalize";
-	case 532: return "sys_usbd_get_device_list";
-	case 533: return "sys_usbd_get_descriptor_size";
-	case 534: return "sys_usbd_get_descriptor";
-	case 535: return "sys_usbd_register_ldd";
-	case 536: return "sys_usbd_unregister_ldd";
-	case 537: return "sys_usbd_open_pipe";
-	case 538: return "sys_usbd_open_default_pipe";
-	case 539: return "sys_usbd_close_pipe";
-	case 540: return "sys_usbd_receive_event";
-	case 541: return "sys_usbd_detect_event";
-	case 542: return "sys_usbd_attach";
-	case 543: return "sys_usbd_transfer_data";
-	case 544: return "sys_usbd_isochronous_transfer_data";
-	case 545: return "sys_usbd_get_transfer_status";
-	case 546: return "sys_usbd_get_isochronous_transfer_status";
-	case 547: return "sys_usbd_get_device_location";
-	case 548: return "sys_usbd_send_event";
-	case 550: return "sys_usbd_allocate_memory";
-	case 551: return "sys_usbd_free_memory";
-	case 556: return "sys_usbd_get_device_speed";
-	case 559: return "sys_usbd_register_extra_ldd";
-	case 571: return "sys_pad_ldd_unregister_controller";
-	case 572: return "sys_pad_ldd_data_insert";
-	case 573: return "sys_pad_dbg_ldd_set_data_insert_mode";
-	case 574: return "sys_pad_ldd_register_controller";
-	case 575: return "sys_pad_ldd_get_port_no";
-	case 577: return "sys_pad_manager_...";
-	case 600: return "sys_storage_open";
-	case 601: return "sys_storage_close";
-	case 602: return "sys_storage_read";
-	case 603: return "sys_storage_write";
-	case 604: return "sys_storage_send_device_command";
-	case 605: return "sys_storage_async_configure";
-	case 606: return "sys_storage_async_read";
-	case 607: return "sys_storage_async_write";
-	case 608: return "sys_storage_async_cancel";
-	case 609: return "sys_storage_get_device_info";
-	case 610: return "sys_storage_get_device_config";
-	case 611: return "sys_storage_report_devices";
-	case 612: return "sys_storage_configure_medium_event";
-	case 613: return "sys_storage_set_medium_polling_interval";
-	case 614: return "sys_storage_create_region";
-	case 615: return "sys_storage_delete_region";
-	case 616: return "sys_storage_execute_device_command";
-	case 617: return "sys_storage_check_region_acl";
-	case 618: return "sys_storage_set_region_acl";
-	case 619: return "sys_storage_async_send_device_command";
-	case 621: return "sys_gamepad_ycon_if";
-	case 622: return "sys_storage_get_region_offset";
-	case 623: return "sys_storage_set_emulated_speed";
-	case 624: return "sys_io_buffer_create";
-	case 625: return "sys_io_buffer_destroy";
-	case 626: return "sys_io_buffer_allocate";
-	case 627: return "sys_io_buffer_free";
-	case 630: return "sys_gpio_set";
-	case 631: return "sys_gpio_get";
-	case 633: return "sys_fsw_connect_event";
-	case 634: return "sys_fsw_disconnect_event";
-	case 635: return "sys_btsetting_if";
-	case 650: return "sys_rsxaudio_initialize";
-	case 651: return "sys_rsxaudio_finalize";
-	case 652: return "sys_rsxaudio_import_shared_memory";
-	case 653: return "sys_rsxaudio_unimport_shared_memory";
-	case 654: return "sys_rsxaudio_create_connection";
-	case 655: return "sys_rsxaudio_close_connection";
-	case 656: return "sys_rsxaudio_prepare_process";
-	case 657: return "sys_rsxaudio_start_process";
-	case 658: return "sys_rsxaudio_stop_process";
-	case 666: return "sys_rsx_device_open";
-	case 667: return "sys_rsx_device_close";
-	case 668: return "sys_rsx_memory_allocate";
-	case 669: return "sys_rsx_memory_free";
-	case 670: return "sys_rsx_context_allocate";
-	case 671: return "sys_rsx_context_free";
-	case 672: return "sys_rsx_context_iomap";
-	case 673: return "sys_rsx_context_iounmap";
-	case 674: return "sys_rsx_context_attribute";
-	case 675: return "sys_rsx_device_map";
-	case 676: return "sys_rsx_device_unmap";
-	case 677: return "sys_rsx_attribute";
-	case 699: return "sys_bdemu_send_command";
-	case 700: return "sys_net_bnet_accept";
-	case 701: return "sys_net_bnet_bind";
-	case 702: return "sys_net_bnet_connect";
-	case 703: return "sys_net_bnet_getpeername";
-	case 704: return "sys_net_bnet_getsockname";
-	case 705: return "sys_net_bnet_getsockopt";
-	case 706: return "sys_net_bnet_listen";
-	case 707: return "sys_net_bnet_recvfrom";
-	case 708: return "sys_net_bnet_recvmsg";
-	case 709: return "sys_net_bnet_sendmsg";
-	case 710: return "sys_net_bnet_sendto";
-	case 711: return "sys_net_bnet_setsockopt";
-	case 712: return "sys_net_bnet_shutdown";
-	case 713: return "sys_net_bnet_socket";
-	case 714: return "sys_net_bnet_close";
-	case 715: return "sys_net_bnet_poll";
-	case 716: return "sys_net_bnet_select";
-	case 717: return "_sys_net_open_dump";
-	case 718: return "_sys_net_read_dump";
-	case 719: return "_sys_net_close_dump";
-	case 720: return "_sys_net_write_dump";
-	case 721: return "sys_net_abort";
-	case 722: return "sys_net_infoctl";
-	case 723: return "sys_net_control";
-	case 724: return "sys_net_bnet_ioctl";
-	case 725: return "sys_net_bnet_sysctl";
-	case 726: return "sys_net_eurus_post_command";
-	case 800: return "sys_fs_test";
-	case 801: return "sys_fs_open";
-	case 802: return "sys_fs_read";
-	case 803: return "sys_fs_write";
-	case 804: return "sys_fs_close";
-	case 805: return "sys_fs_opendir";
-	case 806: return "sys_fs_readdir";
-	case 807: return "sys_fs_closedir";
-	case 808: return "sys_fs_stat";
-	case 809: return "sys_fs_fstat";
-	case 810: return "sys_fs_link";
-	case 811: return "sys_fs_mkdir";
-	case 812: return "sys_fs_rename";
-	case 813: return "sys_fs_rmdir";
-	case 814: return "sys_fs_unlink";
-	case 815: return "sys_fs_utime";
-	case 816: return "sys_fs_access";
-	case 817: return "sys_fs_fcntl";
-	case 818: return "sys_fs_lseek";
-	case 819: return "sys_fs_fdatasync";
-	case 820: return "sys_fs_fsync";
-	case 821: return "sys_fs_fget_block_size";
-	case 822: return "sys_fs_get_block_size";
-	case 823: return "sys_fs_acl_read";
-	case 824: return "sys_fs_acl_write";
-	case 825: return "sys_fs_lsn_get_cda_size";
-	case 826: return "sys_fs_lsn_get_cda";
-	case 827: return "sys_fs_lsn_lock";
-	case 828: return "sys_fs_lsn_unlock";
-	case 829: return "sys_fs_lsn_read";
-	case 830: return "sys_fs_lsn_write";
-	case 831: return "sys_fs_truncate";
-	case 832: return "sys_fs_ftruncate";
-	case 833: return "sys_fs_symbolic_link";
-	case 834: return "sys_fs_chmod";
-	case 835: return "sys_fs_chown";
-	case 836: return "sys_fs_newfs";
-	case 837: return "sys_fs_mount";
-	case 838: return "sys_fs_unmount";
-	case 839: return "sys_fs_sync";
-	case 840: return "sys_fs_disk_free";
-	case 841: return "sys_fs_get_mount_info_size";
-	case 842: return "sys_fs_get_mount_info";
-	case 843: return "sys_fs_get_fs_info_size";
-	case 844: return "sys_fs_get_fs_info";
-	case 845: return "sys_fs_mapped_allocate";
-	case 846: return "sys_fs_mapped_free";
-	case 847: return "sys_fs_truncate2";
-	case 860: return "sys_ss_get_cache_of_analog_sunset_flag";
-	case 865: return "sys_ss_random_number_generator";
-	case 870: return "sys_ss_get_console_id";
-	case 871: return "sys_ss_access_control_engine";
-	case 872: return "sys_ss_get_open_psid";
-	case 873: return "sys_ss_get_cache_of_product_mode";
-	case 874: return "sys_ss_get_cache_of_flash_ext_flag";
-	case 875: return "sys_ss_get_boot_device";
-	case 876: return "sys_ss_disc_access_control";
-	case 877: return "sys_ss_~utoken_if";
-	case 878: return "sys_ss_ad_sign";
-	case 879: return "sys_ss_media_id";
-	case 880: return "sys_deci3_open";
-	case 881: return "sys_deci3_create_event_path";
-	case 882: return "sys_deci3_close";
-	case 883: return "sys_deci3_send";
-	case 884: return "sys_deci3_receive";
-	case 885: return "sys_deci3_open2";
-	case 890: return "sys_deci3_initialize";
-	case 891: return "sys_deci3_terminate";
-	case 892: return "sys_deci3_debug_mode";
-	case 893: return "sys_deci3_show_status";
-	case 894: return "sys_deci3_echo_test";
-	case 895: return "sys_deci3_send_dcmp_packet";
-	case 896: return "sys_deci3_dump_cp_register";
-	case 897: return "sys_deci3_dump_cp_buffer";
-	case 899: return "sys_deci3_test";
-	case 900: return "sys_dbg_stop_processes";
-	case 901: return "sys_dbg_continue_processes";
-	case 902: return "sys_dbg_stop_threads";
-	case 903: return "sys_dbg_continue_threads";
-	case 904: return "sys_dbg_read_process_memory";
-	case 905: return "sys_dbg_write_process_memory";
-	case 906: return "sys_dbg_read_thread_register";
-	case 907: return "sys_dbg_write_thread_register";
-	case 908: return "sys_dbg_get_process_list";
-	case 909: return "sys_dbg_get_thread_list";
-	case 910: return "sys_dbg_get_thread_info";
-	case 911: return "sys_dbg_spu_thread_read_from_ls";
-	case 912: return "sys_dbg_spu_thread_write_to_ls";
-	case 913: return "sys_dbg_kill_process";
-	case 914: return "sys_dbg_get_process_info";
-	case 915: return "sys_dbg_set_run_control_bit_to_spu";
-	case 916: return "sys_dbg_spu_thread_get_exception_cause";
-	case 917: return "sys_dbg_create_kernel_event_queue";
-	case 918: return "sys_dbg_read_kernel_event_queue";
-	case 919: return "sys_dbg_destroy_kernel_event_queue";
-	case 920: return "sys_dbg_get_process_event_ctrl_flag";
-	case 921: return "sys_dbg_set_process_event_cntl_flag";
-	case 922: return "sys_dbg_get_spu_thread_group_event_cntl_flag";
-	case 923: return "sys_dbg_set_spu_thread_group_event_cntl_flag";
-	case 925: return "sys_dbg_get_raw_spu_list";
-	case 932: return "sys_dbg_get_mutex_list";
-	case 933: return "sys_dbg_get_mutex_information";
-	case 934: return "sys_dbg_get_cond_list";
-	case 935: return "sys_dbg_get_cond_information";
-	case 936: return "sys_dbg_get_rwlock_list";
-	case 937: return "sys_dbg_get_rwlock_information";
-	case 938: return "sys_dbg_get_lwmutex_list";
-	case 939: return "sys_dbg_get_address_from_dabr";
-	case 940: return "sys_dbg_set_address_to_dabr";
-	case 941: return "sys_dbg_get_lwmutex_information";
-	case 942: return "sys_dbg_get_event_queue_list";
-	case 943: return "sys_dbg_get_event_queue_information";
-	case 944: return "sys_dbg_initialize_ppu_exception_handler";
-	case 945: return "sys_dbg_finalize_ppu_exception_handler";
-	case 946: return "sys_dbg_get_semaphore_list";
-	case 947: return "sys_dbg_get_semaphore_information";
-	case 948: return "sys_dbg_get_kernel_thread_list";
-	case 949: return "sys_dbg_get_kernel_thread_info";
-	case 950: return "sys_dbg_get_lwcond_list";
-	case 951: return "sys_dbg_get_lwcond_information";
-	case 952: return "sys_dbg_create_scratch_data_area_ext";
-	case 953: return "sys_dbg_vm_get_page_information";
-	case 954: return "sys_dbg_vm_get_info";
-	case 955: return "sys_dbg_enable_floating_point_enabled_exception";
-	case 956: return "sys_dbg_disable_floating_point_enabled_exception";
-	case 960: return "sys_dbg_perfomance_monitor";
-	case 970: return "sys_dbg_get_event_flag_list";
-	case 971: return "sys_dbg_get_event_flag_information";
-	case 975: return "sys_dbg_read_spu_thread_context2";
-	case 976: return "sys_crypto_engine_create";
-	case 977: return "sys_crypto_engine_destroy";
-	case 978: return "sys_crypto_engine_hasher_prepare";
-	case 979: return "sys_crypto_engine_hasher_run";
-	case 980: return "sys_crypto_engine_hasher_get_hash";
-	case 981: return "sys_crypto_engine_cipher_prepare";
-	case 982: return "sys_crypto_engine_cipher_run";
-	case 983: return "sys_crypto_engine_cipher_get_hash";
-	case 984: return "sys_crypto_engine_random_generate";
-	case 985: return "sys_dbg_get_console_type";
-	}
-
-	return fmt::format("syscall_%llu", code);
-}
-
 // Get function name by FNID
-extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
+extern std::string ppu_get_function_name(const std::string& _module, u32 fnid)
 {
-	if (module == "") switch (fnid)
+	if (_module.empty()) switch (fnid)
 	{
 	case 0x0d10fd3f: return "module_prologue";
 	case 0x330f7005: return "module_epilogue";
@@ -586,7 +17,7 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	}
 
 	// Check known FNIDs
-	if (module == "sys_libc" || module == "sys_libm") switch (fnid)
+	if (_module == "sys_libc" || _module == "sys_libm") switch (fnid)
 	{
 	case 0x00acf0e5: return "spu_printf_finalize";
 	case 0x00fb4a6b: return "spu_thread_sprintf";
@@ -1661,7 +1092,7 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	case 0xfffe79bf: return "_LCmulcc";
 	}
 
-	if (module == "sys_libstdcxx") switch (fnid)
+	if (_module == "sys_libstdcxx") switch (fnid)
 	{
 	case 0x002c338b: return "_ZNKSt8time_getIcSt19istreambuf_iteratorIcSt11char_traitsIcEEE16do_get_monthnameES3_S3_RSt8ios_baseRNSt5_IosbIiE8_IostateEPSt2tm";
 	case 0x002e18d8: return "_ZNSt6locale7_LocimpD0Ev";
@@ -2221,7 +1652,7 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	case 0xfff6ef55: return "_ZNKSt7num_getIwSt19istreambuf_iteratorIwSt11char_traitsIwEEE6do_getES3_S3_RSt8ios_baseRNSt5_IosbIiE8_IostateERb";
 	}
 
-	if (module == "sysPrxForUser") switch (fnid)
+	if (_module == "sysPrxForUser") switch (fnid)
 	{
 	case 0x02e20ec1: return "__sys_printf_basename";
 	case 0x0341bb97: return "sys_prx_get_module_id_by_address";
@@ -2356,7 +1787,7 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 	}
 
 	// Check registered functions
-	if (const auto sm = ppu_module_manager::get_module(module))
+	if (const auto sm = ppu_module_manager::get_module(_module))
 	{
 		const auto found = sm->functions.find(fnid);
 
@@ -2370,15 +1801,15 @@ extern std::string ppu_get_function_name(const std::string& module, u32 fnid)
 }
 
 // Get variable name by VNID
-extern std::string ppu_get_variable_name(const std::string& module, u32 vnid)
+extern std::string ppu_get_variable_name(const std::string& _module, u32 vnid)
 {
-	if (module == "") switch (vnid)
+	if (_module.empty()) switch (vnid)
 	{
 	// these arent the actual hash, but its close enough
 	case 0xd7f43016: return "module_info";
 	}
 	// Check known FNIDs
-	if (module == "sys_libc") switch (vnid)
+	if (_module == "sys_libc") switch (vnid)
 	{
 	case 0x071928b0: return "_LNan";
 	case 0x0a331920: return "_Clocale";
@@ -2430,7 +1861,7 @@ extern std::string ppu_get_variable_name(const std::string& module, u32 vnid)
 	case 0xff2f0cc7: return "_FEps";
 	}
 
-	if (module == "sys_libm") switch (vnid)
+	if (_module == "sys_libm") switch (vnid)
 	{
 	case 0x1cf745bc: return "_LErf_one";
 	case 0x2259ef96: return "_LGamma_big";
@@ -2445,7 +1876,7 @@ extern std::string ppu_get_variable_name(const std::string& module, u32 vnid)
 	}
 
 	// Check registered variables
-	if (const auto sm = ppu_module_manager::get_module(module))
+	if (const auto sm = ppu_module_manager::get_module(_module))
 	{
 		const auto found = sm->variables.find(vnid);
 
@@ -2458,31 +1889,61 @@ extern std::string ppu_get_variable_name(const std::string& module, u32 vnid)
 	return fmt::format("0x%08X", vnid);
 }
 
-std::vector<ppu_function_t>& ppu_function_manager::access()
+std::vector<ppu_function_t>& ppu_function_manager::access(bool ghc)
 {
 	static std::vector<ppu_function_t> list
 	{
 		[](ppu_thread& ppu) -> bool
 		{
-			LOG_ERROR(PPU, "Unregistered function called (LR=0x%x)", ppu.lr);
+			ppu_log.error("Unregistered function called (LR=0x%x)", ppu.lr);
 			ppu.gpr[3] = 0;
-			return true;
+			ppu.cia = static_cast<u32>(ppu.lr) & ~3;
+			return false;
 		},
 		[](ppu_thread& ppu) -> bool
 		{
 			ppu.state += cpu_flag::ret;
-			return true;
+			ppu.cia += 4;
+			return false;
 		},
 	};
 
-	return list;
+	static std::vector<ppu_function_t> list_ghc
+	{
+		build_function_asm<ppu_function_t>([](asmjit::X86Assembler& c, auto& args)
+		{
+			using namespace asmjit;
+
+			c.mov(args[0], x86::rbp);
+			c.jmp(imm_ptr(list[0]));
+		}),
+		build_function_asm<ppu_function_t>([](asmjit::X86Assembler& c, auto& args)
+		{
+			using namespace asmjit;
+
+			c.mov(args[0], x86::rbp);
+			c.jmp(imm_ptr(list[1]));
+		}),
+	};
+
+	return ghc ? list_ghc : list;
 }
 
 u32 ppu_function_manager::add_function(ppu_function_t function)
 {
 	auto& list = access();
+	auto& list2 = access(true);
 
 	list.push_back(function);
+
+	// Generate trampoline
+	list2.push_back(build_function_asm<ppu_function_t>([&](asmjit::X86Assembler& c, auto& args)
+	{
+		using namespace asmjit;
+
+		c.mov(args[0], x86::rbp);
+		c.jmp(imm_ptr(function));
+	}));
 
 	return ::size32(list) - 1;
 }

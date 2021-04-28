@@ -6,8 +6,6 @@
 
 static const int TROPHY_TIMEOUT_MS = 7500;
 
-constexpr auto qstr = QString::fromStdString;
-
 trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& imgBuffer, const SceNpTrophyDetails& trophy, int height) : QWidget()
 {
 	setObjectName("trophy_notification_frame");
@@ -25,7 +23,7 @@ trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& i
 	trophyImgLabel->setPalette(black_background);
 
 	QImage trophyImg;
-	if (imgBuffer.size() > 0 && trophyImg.loadFromData((uchar*)&imgBuffer[0], imgBuffer.size(), "PNG"))
+	if (!imgBuffer.empty() && trophyImg.loadFromData(imgBuffer.data(), static_cast<int>(imgBuffer.size()), "PNG"))
 	{
 		trophyImg = trophyImg.scaledToHeight(height); // I might consider adding ability to change size since on hidpi this will be rather small.
 		trophyImgLabel->setPixmap(QPixmap::fromImage(trophyImg));
@@ -40,17 +38,17 @@ trophy_notification_frame::trophy_notification_frame(const std::vector<uchar>& i
 	trophyName->setWordWrap(true);
 	trophyName->setAlignment(Qt::AlignCenter);
 
-	QString trophyType = "";
+	QString trophy_string;
 	switch (trophy.trophyGrade)
 	{
-	case SCE_NP_TROPHY_GRADE_BRONZE:   trophyType = "bronze";   break;
-	case SCE_NP_TROPHY_GRADE_SILVER:   trophyType = "silver";   break;
-	case SCE_NP_TROPHY_GRADE_GOLD:     trophyType = "gold";     break;
-	case SCE_NP_TROPHY_GRADE_PLATINUM: trophyType = "platinum"; break;
+	case SCE_NP_TROPHY_GRADE_BRONZE:   trophy_string = tr("You have earned the Bronze trophy.\n%1").arg(trophy.name);   break;
+	case SCE_NP_TROPHY_GRADE_SILVER:   trophy_string = tr("You have earned the Silver trophy.\n%1").arg(trophy.name);   break;
+	case SCE_NP_TROPHY_GRADE_GOLD:     trophy_string = tr("You have earned the Gold trophy.\n%1").arg(trophy.name);     break;
+	case SCE_NP_TROPHY_GRADE_PLATINUM: trophy_string = tr("You have earned the Platinum trophy.\n%1").arg(trophy.name); break;
 	default: break;
 	}
 
-	trophyName->setText(tr("You have earned the %1 trophy\n").arg(trophyType) + qstr(trophy.name));
+	trophyName->setText(trophy_string);
 	trophyName->setAutoFillBackground(true);
 	trophyName->setPalette(black_background);
 

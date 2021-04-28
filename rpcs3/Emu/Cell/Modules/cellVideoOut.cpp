@@ -1,13 +1,15 @@
 #include "stdafx.h"
-#include "Emu/System.h"
+#include "Emu/system_config_types.h"
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/rsx_utils.h"
 
 #include "cellVideoOut.h"
 
-extern logs::channel cellSysutil;
+LOG_CHANNEL(cellSysutil);
 
+// NOTE: Unused in this module, but used by gs_frame to determine window size
 const extern std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map
 {
 	{ video_resolution::_1080,      { 1920, 1080 } },
@@ -34,7 +36,6 @@ const extern std::unordered_map<video_resolution, CellVideoOutResolutionId, valu
 
 const extern std::unordered_map<video_aspect, CellVideoOutDisplayAspect, value_hash<video_aspect>> g_video_out_aspect_id
 {
-	{ video_aspect::_auto, CELL_VIDEO_OUT_ASPECT_AUTO },
 	{ video_aspect::_16_9, CELL_VIDEO_OUT_ASPECT_16_9 },
 	{ video_aspect::_4_3,  CELL_VIDEO_OUT_ASPECT_4_3 },
 };
@@ -61,23 +62,74 @@ void fmt_class_string<CellVideoOutError>::format(std::string& out, u64 arg)
 	});
 }
 
+error_code cellVideoOutGetNumberOfDevice(u32 videoOut);
+
+error_code _IntGetResolutionInfo(u8 resolution_id, CellVideoOutResolution* resolution)
+{
+	// NOTE: Some resolution IDs that return values on hw have unknown resolution enumerants
+	switch (resolution_id)
+	{
+	case CELL_VIDEO_OUT_RESOLUTION_1080:       *resolution = { 0x780, 0x438 }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_720:        *resolution = { 0x500, 0x2d0 }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_480:        *resolution = { 0x2d0, 0x1e0 }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_576:        *resolution = { 0x2d0, 0x240 }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_1600x1080:  *resolution = { 0x640, 0x438 }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_1440x1080:  *resolution = { 0x5a0, 0x438 }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_1280x1080:  *resolution = { 0x500, 0x438 }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_960x1080:   *resolution = { 0x3c0, 0x438 }; break;
+	case 0x64:                                 *resolution = { 0x550, 0x300 }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING:       *resolution = { 0x500, 0x5be }; break;
+	case 0x82:                                                 *resolution = { 0x780, 0x438 }; break;
+	case 0x83:                                                 *resolution = { 0x780, 0x89d }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_640x720_3D_FRAME_PACKING:   *resolution = { 0x280, 0x5be }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_800x720_3D_FRAME_PACKING:   *resolution = { 0x320, 0x5be }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_960x720_3D_FRAME_PACKING:   *resolution = { 0x3c0, 0x5be }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_1024x720_3D_FRAME_PACKING:  *resolution = { 0x400, 0x5be }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_720_DUALVIEW_FRAME_PACKING: *resolution = { 0x500, 0x5be }; break;
+	case 0x92:                                                 *resolution = { 0x780, 0x438 }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_640x720_DUALVIEW_FRAME_PACKING:  *resolution = { 0x280, 0x5be }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_800x720_DUALVIEW_FRAME_PACKING:  *resolution = { 0x320, 0x5be }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_960x720_DUALVIEW_FRAME_PACKING:  *resolution = { 0x3c0, 0x5be }; break;
+	case CELL_VIDEO_OUT_RESOLUTION_1024x720_DUALVIEW_FRAME_PACKING: *resolution = { 0x400, 0x5be }; break;
+	case 0xa1:                                                      *resolution = { 0x780, 0x438 }; break;
+
+	default: return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	return CELL_OK;
+}
+
 error_code cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideoOutState> state)
 {
 	cellSysutil.trace("cellVideoOutGetState(videoOut=%d, deviceIndex=%d, state=*0x%x)", videoOut, deviceIndex, state);
 
-	if (deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+	if (!state)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	const auto device_count = cellVideoOutGetNumberOfDevice(videoOut);
+
+	if (device_count < 0 || deviceIndex >= static_cast<u32>(device_count))
+	{
+		return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+	}
 
 	switch (videoOut)
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
+	{
+		auto& conf = g_fxo->get<rsx::avconf>();
 		state->state = CELL_VIDEO_OUT_OUTPUT_STATE_ENABLED;
 		state->colorSpace = CELL_VIDEO_OUT_COLOR_SPACE_RGB;
-		state->displayMode.resolutionId = g_video_out_resolution_id.at(g_cfg.video.resolution); // TODO
+		state->displayMode.resolutionId = conf.state ? conf.resolution_id : g_video_out_resolution_id.at(g_cfg.video.resolution);
 		state->displayMode.scanMode = CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE;
 		state->displayMode.conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
-		state->displayMode.aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio); // TODO
+		state->displayMode.aspect = conf.state ? conf.aspect : g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
 		state->displayMode.refreshRates = CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ;
+
 		return CELL_OK;
+	}
 
 	case CELL_VIDEO_OUT_SECONDARY:
 		*state = { CELL_VIDEO_OUT_OUTPUT_STATE_DISABLED }; // ???
@@ -96,41 +148,20 @@ error_code cellVideoOutGetResolution(u32 resolutionId, vm::ptr<CellVideoOutResol
 		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
 	}
 
-	switch (resolutionId)
+	CellVideoOutResolution res;
+	error_code result;
+
+	if (result = _IntGetResolutionInfo(resolutionId, &res); result == CELL_OK)
 	{
-	case 0x01: *resolution = { 0x780, 0x438 }; break;
-	case 0x02: *resolution = { 0x500, 0x2d0 }; break;
-	case 0x04: *resolution = { 0x2d0, 0x1e0 }; break;
-	case 0x05: *resolution = { 0x2d0, 0x240 }; break;
-	case 0x0a: *resolution = { 0x640, 0x438 }; break;
-	case 0x0b: *resolution = { 0x5a0, 0x438 }; break;
-	case 0x0c: *resolution = { 0x500, 0x438 }; break;
-	case 0x0d: *resolution = { 0x3c0, 0x438 }; break;
-	case 0x64: *resolution = { 0x550, 0x300 }; break;
-	case 0x81: *resolution = { 0x500, 0x5be }; break;
-	case 0x82: *resolution = { 0x780, 0x438 }; break;
-	case 0x83: *resolution = { 0x780, 0x89d }; break;
-	case 0x8b: *resolution = { 0x280, 0x5be }; break;
-	case 0x8a: *resolution = { 0x320, 0x5be }; break;
-	case 0x89: *resolution = { 0x3c0, 0x5be }; break;
-	case 0x88: *resolution = { 0x400, 0x5be }; break;
-	case 0x91: *resolution = { 0x500, 0x5be }; break;
-	case 0x92: *resolution = { 0x780, 0x438 }; break;
-	case 0x9b: *resolution = { 0x280, 0x5be }; break;
-	case 0x9a: *resolution = { 0x320, 0x5be }; break;
-	case 0x99: *resolution = { 0x3c0, 0x5be }; break;
-	case 0x98: *resolution = { 0x400, 0x5be }; break;
-	case 0xa1: *resolution = { 0x780, 0x438 }; break;
-		
-	default: return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+		*resolution = res;
 	}
 
-	return CELL_OK;
+	return result;
 }
 
 error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration> config, vm::ptr<CellVideoOutOption> option, u32 waitForEvent)
 {
-	cellSysutil.todo("cellVideoOutConfigure(videoOut=%d, config=*0x%x, option=*0x%x, waitForEvent=%d)", videoOut, config, option, waitForEvent);
+	cellSysutil.warning("cellVideoOutConfigure(videoOut=%d, config=*0x%x, option=*0x%x, waitForEvent=%d)", videoOut, config, option, waitForEvent);
 
 	if (!config)
 	{
@@ -147,10 +178,32 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 		return CELL_VIDEO_OUT_ERROR_ILLEGAL_CONFIGURATION;
 	}
 
-	auto conf = fxm::get_always<rsx::avconf>();
-	conf->aspect = config->aspect;
-	conf->format = config->format;
-	conf->scanline_pitch = config->pitch;
+	CellVideoOutResolution res;
+	if (_IntGetResolutionInfo(config->resolutionId, &res) != CELL_OK ||
+		(config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING && !g_cfg.video.enable_3d))
+	{
+		// Resolution not supported
+		cellSysutil.error("Unusual resolution requested: 0x%x", config->resolutionId);
+		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_DISPLAY_MODE;
+	}
+
+	auto& conf = g_fxo->get<rsx::avconf>();
+	conf.resolution_id = config->resolutionId;
+	conf._3d = config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING;
+	conf.aspect = config->aspect;
+	conf.format = config->format;
+	conf.scanline_pitch = config->pitch;
+	conf.resolution_x = res.width;
+	conf.resolution_y = res.height;
+	conf.state = 1;
+
+	if (conf.aspect == CELL_VIDEO_OUT_ASPECT_AUTO)
+	{
+		// Resolve 'auto' option to actual aspect ratio
+		conf.aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
+	}
+
+	cellSysutil.notice("Selected video resolution 0x%x", config->resolutionId);
 
 	return CELL_OK;
 }
@@ -159,18 +212,39 @@ error_code cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfig
 {
 	cellSysutil.warning("cellVideoOutGetConfiguration(videoOut=%d, config=*0x%x, option=*0x%x)", videoOut, config, option);
 
+	if (!config)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
 	if (option) *option = {};
 	*config = {};
 
 	switch (videoOut)
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
-		config->resolutionId = g_video_out_resolution_id.at(g_cfg.video.resolution);
-		config->format = CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8;
-		config->aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
-		config->pitch = 4 * g_video_out_resolution_map.at(g_cfg.video.resolution).first;
+	{
+		if (auto& conf = g_fxo->get<rsx::avconf>(); conf.state)
+		{
+			config->resolutionId = conf.resolution_id;
+			config->format = conf.format;
+			config->aspect = conf.aspect;
+			config->pitch = conf.scanline_pitch;
+		}
+		else
+		{
+			config->resolutionId = g_video_out_resolution_id.at(g_cfg.video.resolution);
+			config->format = CELL_VIDEO_OUT_BUFFER_COLOR_FORMAT_X8R8G8B8;
+			config->aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
+
+			CellVideoOutResolution res;
+			ensure(_IntGetResolutionInfo(config->resolutionId, &res) == CELL_OK); // "Invalid video configuration"
+
+			config->pitch = 4 * res.width;
+		}
 
 		return CELL_OK;
+	}
 
 	case CELL_VIDEO_OUT_SECONDARY:
 
@@ -184,7 +258,17 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 {
 	cellSysutil.warning("cellVideoOutGetDeviceInfo(videoOut=%d, deviceIndex=%d, info=*0x%x)", videoOut, deviceIndex, info);
 
-	if (deviceIndex) return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+	if (!info)
+	{
+		return CELL_VIDEO_OUT_ERROR_ILLEGAL_PARAMETER;
+	}
+
+	const auto device_count = cellVideoOutGetNumberOfDevice(videoOut);
+
+	if (device_count < 0 || deviceIndex >= static_cast<u32>(device_count))
+	{
+		return CELL_VIDEO_OUT_ERROR_DEVICE_NOT_FOUND;
+	}
 
 	// Use standard dummy values for now.
 	info->portType = CELL_VIDEO_OUT_PORT_HDMI;
@@ -207,6 +291,16 @@ error_code cellVideoOutGetDeviceInfo(u32 videoOut, u32 deviceIndex, vm::ptr<Cell
 	info->availableModes[0].refreshRates =  CELL_VIDEO_OUT_REFRESH_RATE_60HZ | CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ;
 	info->availableModes[0].resolutionId = g_video_out_resolution_id.at(g_cfg.video.resolution);
 	info->availableModes[0].scanMode = CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE;
+
+	if (g_cfg.video.enable_3d && g_cfg.video.resolution == video_resolution::_720)
+	{
+		// Register 3D-capable display mode
+		info->availableModes[1] = info->availableModes[0];
+		info->availableModes[1].conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_TO_720_3D_FRAME_PACKING;
+		info->availableModes[1].resolutionId = CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING;
+		info->availableModeCount++;
+	}
+
 	return CELL_OK;
 }
 
@@ -229,34 +323,71 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 
 	switch (videoOut)
 	{
-	case CELL_VIDEO_OUT_PRIMARY: return not_an_error(
-		resolutionId == g_video_out_resolution_id.at(g_cfg.video.resolution)
-		&& (aspect == CELL_VIDEO_OUT_ASPECT_AUTO || aspect == g_video_out_aspect_id.at(g_cfg.video.aspect_ratio))
-	);
+	case CELL_VIDEO_OUT_PRIMARY:
+	{
+		// NOTE: Result is boolean
+		if (aspect != CELL_VIDEO_OUT_ASPECT_AUTO && aspect != static_cast<u32>(g_video_out_aspect_id.at(g_cfg.video.aspect_ratio)))
+		{
+			return not_an_error(0);
+		}
+
+		if (resolutionId == static_cast<u32>(g_video_out_resolution_id.at(g_cfg.video.resolution)))
+		{
+			// Perfect match
+			return not_an_error(1);
+		}
+
+		if (g_cfg.video.enable_3d && g_cfg.video.resolution == video_resolution::_720)
+		{
+			switch (resolutionId)
+			{
+			case CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING:
+			case CELL_VIDEO_OUT_RESOLUTION_1024x720_3D_FRAME_PACKING:
+			case CELL_VIDEO_OUT_RESOLUTION_960x720_3D_FRAME_PACKING:
+			case CELL_VIDEO_OUT_RESOLUTION_800x720_3D_FRAME_PACKING:
+			case CELL_VIDEO_OUT_RESOLUTION_640x720_3D_FRAME_PACKING:
+				return not_an_error(1);
+			default:
+				break;
+			}
+		}
+
+		return not_an_error(0);
+	}
+
 	case CELL_VIDEO_OUT_SECONDARY: return not_an_error(0);
 	}
 
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
 
-s32 cellVideoOutGetConvertCursorColorInfo(vm::ptr<u8> rgbOutputRange)
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
+
+error_code cellVideoOutGetConvertCursorColorInfo(vm::ptr<u8> rgbOutputRange)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutGetConvertCursorColorInfo()");
+	return CELL_OK;
 }
 
-s32 cellVideoOutDebugSetMonitorType(u32 videoOut, u32 monitorType)
+error_code cellVideoOutDebugSetMonitorType(u32 videoOut, u32 monitorType)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutDebugSetMonitorType()");
+	return CELL_OK;
 }
 
-s32 cellVideoOutRegisterCallback(u32 slot, vm::ptr<CellVideoOutCallback> function, vm::ptr<void> userData)
+error_code cellVideoOutRegisterCallback(u32 slot, vm::ptr<CellVideoOutCallback> function, vm::ptr<void> userData)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutRegisterCallback()");
+	return CELL_OK;
 }
 
-s32 cellVideoOutUnregisterCallback(u32 slot)
+error_code cellVideoOutUnregisterCallback(u32 slot)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellSysutil.todo("cellVideoOutUnregisterCallback()");
+	return CELL_OK;
 }
 
 

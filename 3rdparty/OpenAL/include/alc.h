@@ -31,9 +31,9 @@ extern "C" {
 #define ALC_VERSION_0_1                          1
 
 /** Opaque device handle */
-typedef struct ALCdevice_struct ALCdevice;
+typedef struct ALCdevice ALCdevice;
 /** Opaque context handle */
-typedef struct ALCcontext_struct ALCcontext;
+typedef struct ALCcontext ALCcontext;
 
 /** 8-bit boolean */
 typedef char ALCboolean;

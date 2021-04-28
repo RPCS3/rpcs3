@@ -1,6 +1,7 @@
 #pragma once
-#include "GCM.h"
-#include "RSXTexture.h"
+
+#include "gcm_enums.h"
+#include "util/types.hpp"
 
 enum register_type
 {
@@ -8,6 +9,16 @@ enum register_type
 	RSX_FP_REGISTER_TYPE_INPUT = 1,
 	RSX_FP_REGISTER_TYPE_CONSTANT = 2,
 	RSX_FP_REGISTER_TYPE_UNKNOWN = 3,
+};
+
+enum register_precision
+{
+	RSX_FP_PRECISION_REAL = 0,
+	RSX_FP_PRECISION_HALF = 1,
+	RSX_FP_PRECISION_FIXED12 = 2,
+	RSX_FP_PRECISION_FIXED9 = 3,
+	RSX_FP_PRECISION_SATURATE = 4,
+	RSX_FP_PRECISION_UNKNOWN = 5 // Unknown what this actually does; seems to do nothing on hwtests but then why would their compiler emit it?
 };
 
 enum fp_opcode
@@ -147,8 +158,9 @@ union SRC1
 		u32 swizzle_w        : 2;
 		u32 neg              : 1;
 		u32 abs              : 1;
-		u32 input_prec_mod   : 3; // Looks to be a precision clamping modifier affecting all inputs (tested with Dark Souls II)
-		u32                  : 6;
+		u32 src0_prec_mod    : 3; // Precision modifier for src0 (many games)
+		u32 src1_prec_mod    : 3; // Precision modifier for src1 (CoD:MW series)
+		u32 src2_prec_mod    : 3; // Precision modifier for src2 (unproven, should affect MAD instruction)
 		u32 scale            : 3;
 		u32 opcode_is_branch : 1;
 	};
@@ -193,7 +205,7 @@ union SRC2
 	};
 };
 
-static const char* rsx_fp_input_attr_regs[] =
+constexpr const char* rsx_fp_input_attr_regs[] =
 {
 	"WPOS", "COL0", "COL1", "FOGC", "TEX0",
 	"TEX1", "TEX2", "TEX3", "TEX4", "TEX5",
@@ -216,42 +228,122 @@ static const std::string rsx_fp_op_names[] =
 
 struct RSXFragmentProgram
 {
-	u32 size;
-	void *addr;
-	u32 offset;
-	u32 ctrl;
-	u16 unnormalized_coords;
-	u16 redirected_textures;
-	u16 shadow_textures;
-	bool front_back_color_enabled : 1;
-	bool back_color_diffuse_output : 1;
-	bool back_color_specular_output : 1;
-	bool front_color_diffuse_output : 1;
-	bool front_color_specular_output : 1;
-	u32 texture_dimensions;
+	struct data_storage_helper
+	{
+		void* data_ptr = nullptr;
+		std::vector<char> local_storage{};
 
-	std::array<float, 4> texture_scale[16];
-	u8 textures_alpha_kill[16];
-	u8 textures_zfunc[16];
+		data_storage_helper() = default;
 
-	bool valid;
+		data_storage_helper(void* ptr)
+		{
+			data_ptr = ptr;
+			local_storage.clear();
+		}
+
+		data_storage_helper(const data_storage_helper& other)
+		{
+			this->operator=(other);
+		}
+
+		data_storage_helper(data_storage_helper&& other)
+			: data_ptr(other.data_ptr)
+			, local_storage(std::move(other.local_storage))
+		{
+			other.data_ptr = nullptr;
+		}
+
+		data_storage_helper& operator=(const data_storage_helper& other)
+		{
+			if (this == &other) return *this;
+
+			if (other.data_ptr == other.local_storage.data())
+			{
+				local_storage = other.local_storage;
+				data_ptr = local_storage.data();
+			}
+			else
+			{
+				data_ptr = other.data_ptr;
+				local_storage.clear();
+			}
+
+			return *this;
+		}
+
+		data_storage_helper& operator=(data_storage_helper&& other)
+		{
+			if (this == &other) return *this;
+
+			data_ptr = other.data_ptr;
+			local_storage = std::move(other.local_storage);
+			other.data_ptr = nullptr;
+
+			return *this;
+		}
+
+		void deep_copy(u32 max_length)
+		{
+			if (local_storage.empty() && data_ptr)
+			{
+				local_storage.resize(max_length);
+				std::memcpy(local_storage.data(), data_ptr, max_length);
+				data_ptr = local_storage.data();
+			}
+		}
+
+	} mutable data{};
+
+	u32 offset = 0;
+	u32 ucode_length = 0;
+	u32 total_length = 0;
+	u32 ctrl = 0;
+	u16 unnormalized_coords = 0;
+	u16 redirected_textures = 0;
+	u16 shadow_textures = 0;
+	bool two_sided_lighting = false;
+	u32 texture_dimensions = 0;
+	u32 texcoord_control_mask = 0;
+
+	float texture_scale[16][4]{};
+
+	bool valid = false;
 
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const
 	{
-		return (rsx::texture_dimension_extended)((texture_dimensions >> (id * 2)) & 0x3);
+		return rsx::texture_dimension_extended{static_cast<u8>((texture_dimensions >> (id * 2)) & 0x3)};
 	}
 
-	void set_texture_dimension(const std::array<rsx::texture_dimension_extended, 16> &dimensions)
+	bool texcoord_is_2d(u8 index) const
 	{
-		texture_dimensions = 0;
-		for (u32 i = 0, offset = 0; i < 16; ++i, offset += 2)
-		{
-			texture_dimensions |= (u32)dimensions[i] << offset;
-		}
+		return !!(texcoord_control_mask & (1u << index));
+	}
+
+	bool texcoord_is_point_coord(u8 index) const
+	{
+		index += 16;
+		return !!(texcoord_control_mask & (1u << index));
 	}
 
 	RSXFragmentProgram()
 	{
-		memset(this, 0, sizeof(RSXFragmentProgram));
+	}
+
+	static RSXFragmentProgram clone(const RSXFragmentProgram& prog)
+	{
+		auto result = prog;
+		result.clone_data();
+		return result;
+	}
+
+	void* get_data() const
+	{
+		return data.data_ptr;
+	}
+
+	void clone_data() const
+	{
+		ensure(ucode_length);
+		data.deep_copy(ucode_length);
 	}
 };

@@ -1,12 +1,12 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
+
 extern vm::gvar<u32> g_ppu_exit_mutex;
 extern vm::gvar<vm::ptr<void()>> g_ppu_atexitspawn;
 extern vm::gvar<vm::ptr<void()>> g_ppu_at_Exitspawn;
@@ -21,10 +21,10 @@ static u32 get_string_array_size(vm::cpptr<char> list, u32& out_count)
 		if (const vm::cptr<char> str = list[i])
 		{
 			out_count++;
-			result += (((u32)std::strlen(str.get_ptr()) + 0x10) & -0x10) + 8;
+			result += ((static_cast<u32>(std::strlen(str.get_ptr())) + 0x10) & -0x10) + 8;
 			continue;
 		}
-		break;		
+		break;
 	}
 
 	return result;
@@ -35,7 +35,7 @@ static u32 get_exitspawn_size(vm::cptr<char> path, vm::cpptr<char> argv, vm::cpp
 	arg_count = 1;
 	env_count = 0;
 
-	u32 result = (((u32)std::strlen(path.get_ptr()) + 0x10) & -0x10) + 8;
+	u32 result = ((static_cast<u32>(std::strlen(path.get_ptr())) + 0x10) & -0x10) + 8;
 	result += get_string_array_size(argv, arg_count);
 	result += get_string_array_size(envp, env_count);
 
@@ -43,7 +43,7 @@ static u32 get_exitspawn_size(vm::cptr<char> path, vm::cpptr<char> argv, vm::cpp
 	{
 		result += 8;
 	}
-	
+
 	return result;
 }
 
@@ -51,7 +51,7 @@ static void put_string_array(vm::pptr<char, u32, u64> pstr, vm::ptr<char>& str, 
 {
 	for (u32 i = 0; i < count; i++)
 	{
-		const u32 len = (u32)std::strlen(list[i].get_ptr());
+		const u32 len = static_cast<u32>(std::strlen(list[i].get_ptr()));
 		std::memcpy(str.get_ptr(), list[i].get_ptr(), len + 1);
 		pstr[i] = str;
 		str += (len + 0x10) & -0x10;
@@ -65,7 +65,7 @@ static void put_exitspawn(vm::ptr<void> out, vm::cptr<char> path, u32 argc, vm::
 	vm::pptr<char, u32, u64> pstr = vm::cast(out.addr());
 	vm::ptr<char> str = vm::static_ptr_cast<char>(out) + (argc + envc + (argc + envc) % 2) * 8 + 0x10;
 
-	const u32 len = (u32)std::strlen(path.get_ptr());
+	const u32 len = static_cast<u32>(std::strlen(path.get_ptr()));
 	std::memcpy(str.get_ptr(), path.get_ptr(), len + 1);
 	*pstr++ = str;
 	str += (len + 0x10) & -0x10;
@@ -134,7 +134,7 @@ static void exitspawn(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr<char> argv
 	}
 
 	// TODO (process atexit)
-	return _sys_process_exit2(ppu, 0, arg, alloc_size, 0x10000000);	
+	return _sys_process_exit2(ppu, 0, arg, alloc_size, 0x10000000);
 }
 
 void sys_game_process_exitspawn(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags)
@@ -151,44 +151,52 @@ void sys_game_process_exitspawn2(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr
 	return exitspawn(ppu, path, argv, envp, data, data_size, prio, (flags >> 62) >= 2 ? flags & 0xf0 : flags & 0xc0000000000000f0ull);
 }
 
-s32 sys_game_board_storage_read()
+error_code sys_game_board_storage_read()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_board_storage_read()");
+	return CELL_OK;
 }
 
-s32 sys_game_board_storage_write()
+error_code sys_game_board_storage_write()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_board_storage_write()");
+	return CELL_OK;
 }
 
-s32 sys_game_get_rtc_status()
+error_code sys_game_get_rtc_status()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_get_rtc_status()");
+	return CELL_OK;
 }
 
-s32 sys_game_get_system_sw_version()
+error_code sys_game_get_system_sw_version()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_get_system_sw_version()");
+	return CELL_OK;
 }
 
-s32 sys_game_get_temperature()
+error_code sys_game_get_temperature()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_get_temperature()");
+	return CELL_OK;
 }
 
-s32 sys_game_watchdog_clear()
+error_code sys_game_watchdog_clear()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_watchdog_clear()");
+	return CELL_OK;
 }
 
-s32 sys_game_watchdog_start()
+error_code sys_game_watchdog_start()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_watchdog_start()");
+	return CELL_OK;
 }
 
-s32 sys_game_watchdog_stop()
+error_code sys_game_watchdog_stop()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	sysPrxForUser.todo("sys_game_watchdog_stop()");
+	return CELL_OK;
 }
 
 

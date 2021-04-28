@@ -1,8 +1,11 @@
 #pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "GLHelpers.h"
 #include "../Common/TextGlyphs.h"
+#include <string>
+#include <vector>
+#include <unordered_map>
 
 namespace gl
 {
@@ -52,36 +55,33 @@ namespace gl
 				"}\n"
 			};
 
-			m_fs.create(gl::glsl::shader::type::fragment);
-			m_fs.source(fs);
+			m_fs.create(::glsl::program_domain::glsl_fragment_program, fs);
 			m_fs.compile();
 
-			m_vs.create(gl::glsl::shader::type::vertex);
-			m_vs.source(vs);
+			m_vs.create(::glsl::program_domain::glsl_vertex_program, vs);
 			m_vs.compile();
 
 			m_program.create();
 			m_program.attach(m_vs);
 			m_program.attach(m_fs);
-			m_program.make();
+			m_program.link();
 		}
 
-		void load_program(float scale_x, float scale_y, float *offsets, size_t nb_offsets, color4f color)
+		void load_program(float scale_x, float scale_y, float *offsets, usz nb_offsets, color4f color)
 		{
 			float scale[] = { scale_x, scale_y };
 
 			m_program.use();
 
 			m_program.uniforms["draw_color"] = color;
-			glProgramUniform2fv(m_program.id(), m_program.uniforms["offsets"].location(), (GLsizei)nb_offsets, offsets);
+			glProgramUniform2fv(m_program.id(), m_program.uniforms["offsets"].location(), static_cast<GLsizei>(nb_offsets), offsets);
 			glProgramUniform2fv(m_program.id(), m_program.uniforms["scale"].location(), 1, scale);
 		}
 
 	public:
 
-		text_writer() {}
-
-		~text_writer(){}
+		text_writer() = default;
+		~text_writer() = default;
 
 		void init()
 		{
@@ -91,7 +91,7 @@ namespace gl
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
 
-			const size_t buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
+			const usz buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
 
 			m_text_buffer.data(buffer_size, points.data());
 			m_offsets = glyph_source.get_glyph_offsets();
@@ -121,11 +121,16 @@ namespace gl
 			enabled = state;
 		}
 
+		bool is_enabled()
+		{
+			return enabled;
+		}
+
 		void print_text(int x, int y, int target_w, int target_h, const std::string &text, color4f color = { 0.3f, 1.f, 0.3f, 1.f })
 		{
 			if (!enabled) return;
 
-			verify(HERE), initialized;
+			ensure(initialized);
 
 			std::vector<GLint> offsets;
 			std::vector<GLsizei> counts;
@@ -142,9 +147,8 @@ namespace gl
 			float base_offset = 0.f;
 			shader_offsets.reserve(text.length() * 2);
 
-			while (*s)
+			while (u8 offset = static_cast<u8>(*s))
 			{
-				u8 offset = (u8)*s;
 				bool to_draw = false;	//Can be false for space or unsupported characters
 
 				auto o = m_offsets.find(offset);
@@ -184,7 +188,7 @@ namespace gl
 
 			m_vao.bind();
 
-			glMultiDrawArrays(GL_POINTS, (const GLint*)offsets.data(), (const GLsizei*)counts.data(), (GLsizei)counts.size());
+			glMultiDrawArrays(GL_POINTS, offsets.data(), counts.data(), static_cast<GLsizei>(counts.size()));
 			glBindVertexArray(old_vao);
 		}
 

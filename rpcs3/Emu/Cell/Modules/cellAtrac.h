@@ -1,9 +1,9 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // Return Codes
-enum
+enum CellAtracError : u32
 {
 	CELL_ATRAC_ERROR_API_FAIL                    = 0x80610301,
 	CELL_ATRAC_ERROR_READSIZE_OVER_BUFFER        = 0x80610311,
@@ -34,6 +34,11 @@ enum : s32
 	CELL_ATRAC_ALLDATA_IS_ON_MEMORY             = -1,
 	CELL_ATRAC_NONLOOP_STREAM_DATA_IS_ON_MEMORY = -2,
 	CELL_ATRAC_LOOP_STREAM_DATA_IS_ON_MEMORY    = -3,
+};
+
+enum
+{
+	CELL_ATRAC_HANDLE_SIZE = 512
 };
 
 struct alignas(8) CellAtracHandle

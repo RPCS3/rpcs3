@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Io/Keyboard.h"
+
 enum CellKbError : u32
 {
 	CELL_KB_ERROR_FATAL                      = 0x80121001,
@@ -12,7 +14,25 @@ enum CellKbError : u32
 	CELL_KB_ERROR_SYS_SETTING_FAILED         = 0x80121008,
 };
 
-static const u32 CELL_KB_MAX_KEYBOARDS = 127;
+enum CellKbLedMode
+{
+	CELL_KB_LED_MODE_MANUAL = 0,
+	CELL_KB_LED_MODE_AUTO1  = 1,
+	CELL_KB_LED_MODE_AUTO2  = 2,
+};
+
+enum
+{
+	CELL_KB_RAWDAT = 0x8000U,
+	CELL_KB_KEYPAD = 0x4000U,
+};
+
+enum
+{
+	CELL_KB_ARRANGEMENT_101      = CELL_KB_MAPPING_101,
+	CELL_KB_ARRANGEMENT_106      = CELL_KB_MAPPING_106,
+	CELL_KB_ARRANGEMENT_106_KANA = CELL_KB_MAPPING_106_KANA,
+};
 
 struct CellKbInfo
 {
@@ -21,8 +41,6 @@ struct CellKbInfo
 	be_t<u32> info;
 	u8 status[CELL_KB_MAX_KEYBOARDS];
 };
-
-static const u32 CELL_KB_MAX_KEYCODES = 62;
 
 struct CellKbData
 {

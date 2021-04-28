@@ -1,14 +1,18 @@
 #pragma once
 
 #include "Utilities/bit_set.h"
-#include "Utilities/sema.h"
+#include "Utilities/mutex.h"
+
+#include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 #include <vector>
 #include <utility>
 #include <functional>
+#include <queue>
 
 // Error codes
-enum
+enum sys_net_error : s32
 {
 	SYS_NET_ENOENT          = 2,
 	SYS_NET_EINTR           = 4,
@@ -50,8 +54,13 @@ enum
 	SYS_NET_EHOSTUNREACH    = 65,
 };
 
+static constexpr sys_net_error operator-(sys_net_error v)
+{
+	return sys_net_error{-+v};
+}
+
 // Socket types (prefixed with SYS_NET_)
-enum
+enum lv2_socket_type : s32
 {
 	SYS_NET_SOCK_STREAM     = 1,
 	SYS_NET_SOCK_DGRAM      = 2,
@@ -88,7 +97,7 @@ enum
 };
 
 // Family (prefixed with SYS_NET_)
-enum
+enum lv2_socket_family : s32
 {
 	SYS_NET_AF_UNSPEC       = 0,
 	SYS_NET_AF_LOCAL        = 1,
@@ -173,7 +182,7 @@ struct sys_net_fd_set
 {
 	be_t<u32> fds_bits[32];
 
-	u32 bit(s32 s)
+	u32 bit(s32 s) const
 	{
 		return (fds_bits[(s >> 5) & 31] >> (s & 31)) & 1u;
 	}
@@ -302,7 +311,7 @@ struct sys_net_linger
 struct lv2_socket final
 {
 #ifdef _WIN32
-	using socket_type = std::uintptr_t;
+	using socket_type = uptr;
 #else
 	using socket_type = int;
 #endif
@@ -321,21 +330,21 @@ struct lv2_socket final
 		__bitset_enum_max
 	};
 
-	lv2_socket(socket_type s);
+	lv2_socket(socket_type s, s32 s_type, s32 family);
 	~lv2_socket();
 
-	semaphore<> mutex;
+	shared_mutex mutex;
 
 #ifdef _WIN32
-	// Remember events (WSAEnumNetworkEvents)
-	u32 ev_set = 0;
+	// Tracks connect for WSAPoll workaround
+	bool is_connecting = false;
 #endif
 
 	// Native socket (must be non-blocking)
 	socket_type socket;
 
 	// Events selected for polling
-	atomic_t<bs_t<poll>> events{};
+	atomic_bs_t<poll> events{};
 
 	// Non-blocking IO option
 	s32 so_nbio = 0;
@@ -345,6 +354,71 @@ struct lv2_socket final
 
 	// Unsupported option
 	s32 so_tcp_maxseg = 1500;
+
+	const lv2_socket_type type;
+	const lv2_socket_family family;
+
+	// SYS_NET_SOCK_DGRAM_P2P and SYS_NET_SOCK_STREAM_P2P socket specific information
+	struct p2p_i
+	{
+		// Port(actual bound port) and Virtual Port(indicated by u16 at the start of the packet)
+		u16 port = 0, vport = 0;
+		// Queue containing received packets from network_thread for SYS_NET_SOCK_DGRAM_P2P sockets
+		std::queue<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>> data{};
+	} p2p;
+
+	struct p2ps_i
+	{
+		enum tcp_flags : u8
+		{
+			FIN = (1 << 0),
+			SYN = (1 << 1),
+			RST = (1 << 2),
+			PSH = (1 << 3),
+			ACK = (1 << 4),
+			URG = (1 << 5),
+			ECE = (1 << 6),
+			CWR = (1 << 7),
+		};
+
+		static constexpr be_t<u32> U2S_sig = (static_cast<u32>('U') << 24 | static_cast<u32>('2') << 16 | static_cast<u32>('S') << 8 | static_cast<u32>('0'));
+		static constexpr usz MAX_RECEIVED_BUFFER = (1024*1024*10);
+
+		// P2P stream socket specific
+		struct encapsulated_tcp
+		{
+			be_t<u32> signature = lv2_socket::p2ps_i::U2S_sig; // Signature to verify it's P2P Stream data
+			be_t<u32> length = 0; // Length of data
+			be_t<u64> seq = 0; // This should be u32 but changed to u64 for simplicity
+			be_t<u64> ack = 0;
+			be_t<u16> src_port = 0; // fake source tcp port
+			be_t<u16> dst_port = 0; // fake dest tcp port(should be == vport)
+			be_t<u16> checksum = 0;
+			u8 flags = 0;
+		};
+
+		enum stream_status
+		{
+			stream_closed, // Default when port is not listening nor connected
+			stream_listening, // Stream is listening, accepting SYN packets
+			stream_handshaking, // Currently handshaking
+			stream_connected, // This is an established connection(after tcp handshake)
+		};
+
+		stream_status status = stream_status::stream_closed;
+
+		usz max_backlog = 0; // set on listen
+		std::queue<s32> backlog;
+
+		u16 op_port = 0, op_vport = 0;
+		u32 op_addr = 0;
+
+		u64 data_beg_seq = 0; // Seq of first byte of received_data
+		u32 data_available = 0; // Amount of continuous data available(calculated on ACK send)
+		std::map<u64, std::vector<u8>> received_data; // holds seq/data of data received
+
+		u32 cur_seq = 0; // SEQ of next packet to be sent
+	} p2ps;
 
 	// Value keepers
 #ifdef _WIN32
@@ -360,30 +434,30 @@ class ppu_thread;
 
 // Syscalls
 
-s32 sys_net_bnet_accept(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
-s32 sys_net_bnet_bind(ppu_thread&, s32 s, vm::cptr<sys_net_sockaddr> addr, u32 addrlen);
-s32 sys_net_bnet_connect(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, u32 addrlen);
-s32 sys_net_bnet_getpeername(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
-s32 sys_net_bnet_getsockname(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
-s32 sys_net_bnet_getsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::ptr<void> optval, vm::ptr<u32> optlen);
-s32 sys_net_bnet_listen(ppu_thread&, s32 s, s32 backlog);
-s32 sys_net_bnet_recvfrom(ppu_thread&, s32 s, vm::ptr<void> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
-s32 sys_net_bnet_recvmsg(ppu_thread&, s32 s, vm::ptr<sys_net_msghdr> msg, s32 flags);
-s32 sys_net_bnet_sendmsg(ppu_thread&, s32 s, vm::cptr<sys_net_msghdr> msg, s32 flags);
-s32 sys_net_bnet_sendto(ppu_thread&, s32 s, vm::cptr<void> buf, u32 len, s32 flags, vm::cptr<sys_net_sockaddr> addr, u32 addrlen);
-s32 sys_net_bnet_setsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::cptr<void> optval, u32 optlen);
-s32 sys_net_bnet_shutdown(ppu_thread&, s32 s, s32 how);
-s32 sys_net_bnet_socket(ppu_thread&, s32 family, s32 type, s32 protocol);
-s32 sys_net_bnet_close(ppu_thread&, s32 s);
-s32 sys_net_bnet_poll(ppu_thread&, vm::ptr<sys_net_pollfd> fds, s32 nfds, s32 ms);
-s32 sys_net_bnet_select(ppu_thread&, s32 nfds, vm::ptr<sys_net_fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<sys_net_timeval> timeout);
-s32 _sys_net_open_dump(ppu_thread&, s32 len, s32 flags);
-s32 _sys_net_read_dump(ppu_thread&, s32 id, vm::ptr<void> buf, s32 len, vm::ptr<s32> pflags);
-s32 _sys_net_close_dump(ppu_thread&, s32 id, vm::ptr<s32> pflags);
-s32 _sys_net_write_dump(ppu_thread&, s32 id, vm::cptr<void> buf, s32 len, u32 unknown);
-s32 sys_net_abort(ppu_thread&, s32 type, u64 arg, s32 flags);
-s32 sys_net_infoctl(ppu_thread&, s32 cmd, vm::ptr<void> arg);
-s32 sys_net_control(ppu_thread&, u32 arg1, s32 arg2, vm::ptr<void> arg3, s32 arg4);
-s32 sys_net_bnet_ioctl(ppu_thread&, s32 arg1, u32 arg2, u32 arg3);
-s32 sys_net_bnet_sysctl(ppu_thread&, u32 arg1, u32 arg2, u32 arg3, vm::ptr<void> arg4, u32 arg5, u32 arg6);
-s32 sys_net_eurus_post_command(ppu_thread&, s32 arg1, u32 arg2, u32 arg3);
+error_code sys_net_bnet_accept(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
+error_code sys_net_bnet_bind(ppu_thread&, s32 s, vm::cptr<sys_net_sockaddr> addr, u32 addrlen);
+error_code sys_net_bnet_connect(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, u32 addrlen);
+error_code sys_net_bnet_getpeername(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
+error_code sys_net_bnet_getsockname(ppu_thread&, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
+error_code sys_net_bnet_getsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::ptr<void> optval, vm::ptr<u32> optlen);
+error_code sys_net_bnet_listen(ppu_thread&, s32 s, s32 backlog);
+error_code sys_net_bnet_recvfrom(ppu_thread&, s32 s, vm::ptr<void> buf, u32 len, s32 flags, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen);
+error_code sys_net_bnet_recvmsg(ppu_thread&, s32 s, vm::ptr<sys_net_msghdr> msg, s32 flags);
+error_code sys_net_bnet_sendmsg(ppu_thread&, s32 s, vm::cptr<sys_net_msghdr> msg, s32 flags);
+error_code sys_net_bnet_sendto(ppu_thread&, s32 s, vm::cptr<void> buf, u32 len, s32 flags, vm::cptr<sys_net_sockaddr> addr, u32 addrlen);
+error_code sys_net_bnet_setsockopt(ppu_thread&, s32 s, s32 level, s32 optname, vm::cptr<void> optval, u32 optlen);
+error_code sys_net_bnet_shutdown(ppu_thread&, s32 s, s32 how);
+error_code sys_net_bnet_socket(ppu_thread&, s32 family, s32 type, s32 protocol);
+error_code sys_net_bnet_close(ppu_thread&, s32 s);
+error_code sys_net_bnet_poll(ppu_thread&, vm::ptr<sys_net_pollfd> fds, s32 nfds, s32 ms);
+error_code sys_net_bnet_select(ppu_thread&, s32 nfds, vm::ptr<sys_net_fd_set> readfds, vm::ptr<sys_net_fd_set> writefds, vm::ptr<sys_net_fd_set> exceptfds, vm::ptr<sys_net_timeval> timeout);
+error_code _sys_net_open_dump(ppu_thread&, s32 len, s32 flags);
+error_code _sys_net_read_dump(ppu_thread&, s32 id, vm::ptr<void> buf, s32 len, vm::ptr<s32> pflags);
+error_code _sys_net_close_dump(ppu_thread&, s32 id, vm::ptr<s32> pflags);
+error_code _sys_net_write_dump(ppu_thread&, s32 id, vm::cptr<void> buf, s32 len, u32 unknown);
+error_code sys_net_abort(ppu_thread&, s32 type, u64 arg, s32 flags);
+error_code sys_net_infoctl(ppu_thread&, s32 cmd, vm::ptr<void> arg);
+error_code sys_net_control(ppu_thread&, u32 arg1, s32 arg2, vm::ptr<void> arg3, s32 arg4);
+error_code sys_net_bnet_ioctl(ppu_thread&, s32 arg1, u32 arg2, u32 arg3);
+error_code sys_net_bnet_sysctl(ppu_thread&, u32 arg1, u32 arg2, u32 arg3, vm::ptr<void> arg4, u32 arg5, u32 arg6);
+error_code sys_net_eurus_post_command(ppu_thread&, s32 arg1, u32 arg2, u32 arg3);

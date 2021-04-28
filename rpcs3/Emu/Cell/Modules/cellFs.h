@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Emu/Cell/lv2/sys_fs.h"
+#include "Emu/Memory/vm_ptr.h"
 
 // CellFsRingBuffer.copy
 enum : s32

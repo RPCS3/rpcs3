@@ -1,45 +1,48 @@
 #include "stdafx.h"
 #include "Config.h"
+#include "util/types.hpp"
 
-#include "yaml-cpp/yaml.h"
+#include "util/yaml.hpp"
 
-#include <typeinfo>
+#include <charconv>
+
+LOG_CHANNEL(cfg_log, "CFG");
 
 namespace cfg
 {
-	logs::channel cfg("CFG");
-
 	_base::_base(type _type)
 		: m_type(_type)
 	{
 		if (_type != type::node)
 		{
-			fmt::throw_exception<std::logic_error>("Invalid root node" HERE);
+			cfg_log.fatal("Invalid root node");
 		}
 	}
 
-	_base::_base(type _type, node* owner, const std::string& name)
-		: m_type(_type)
+	_base::_base(type _type, node* owner, const std::string& name, bool dynamic)
+		: m_type(_type), m_dynamic(dynamic), m_name(name)
 	{
-		for (const auto& pair : owner->m_nodes)
+		for (const auto& node : owner->m_nodes)
 		{
-			if (pair.first == name)
+			if (node->get_name() == name)
 			{
-				fmt::throw_exception<std::logic_error>("Node already exists: %s" HERE, name);
+				cfg_log.fatal("Node already exists: %s", name);
 			}
 		}
 
-		owner->m_nodes.emplace_back(name, this);
+		owner->m_nodes.emplace_back(this);
 	}
 
-	bool _base::from_string(const std::string&)
+	bool _base::from_string(const std::string&, bool)
 	{
-		fmt::throw_exception<std::logic_error>("from_string() purecall" HERE);
+		cfg_log.fatal("cfg::_base::from_string() purecall");
+		return false;
 	}
 
 	bool _base::from_list(std::vector<std::string>&&)
 	{
-		fmt::throw_exception<std::logic_error>("from_list() purecall" HERE);
+		cfg_log.fatal("cfg::_base::from_list() purecall");
+		return false;
 	}
 
 	// Emit YAML
@@ -47,7 +50,7 @@ namespace cfg
 
 	// Incrementally load config entries from YAML::Node.
 	// The config value is preserved if the corresponding YAML node doesn't exist.
-	static void decode(const YAML::Node& data, class _base& rhs);
+	static void decode(const YAML::Node& data, class _base& rhs, bool dynamic = false);
 }
 
 std::vector<std::string> cfg::make_int_range(s64 min, s64 max)
@@ -57,29 +60,75 @@ std::vector<std::string> cfg::make_int_range(s64 min, s64 max)
 
 bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 {
-	// TODO: this could be rewritten without exceptions (but it should be as safe as possible and provide logs)
 	s64 result;
-	std::size_t pos;
+	const char* start = &value.front();
+	const char* end = &value.back() + 1;
+	int base = 10;
+	int sign = +1;
 
-	try
+	if (start[0] == '-')
 	{
-		result = std::stoll(value, &pos, 0 /* Auto-detect numeric base */);
+		sign = -1;
+		start += 1;
 	}
-	catch (const std::exception& e)
+
+	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
 	{
-		if (out) cfg.error("cfg::try_to_int('%s'): exception: %s", value, e.what());
+		// Limited hex support
+		base = 16;
+		start += 2;
+	}
+
+	const auto ret = std::from_chars(start, end, result, base);
+
+	if (ret.ec != std::errc() || ret.ptr != end || (start[0] == '-' && sign < 0))
+	{
+		if (out) cfg_log.error("cfg::try_to_int64('%s'): invalid integer", value);
 		return false;
 	}
 
-	if (pos != value.size())
+	result *= sign;
+
+	if (result < min || result > max)
 	{
-		if (out) cfg.error("cfg::try_to_int('%s'): unexpected characters (pos=%zu)", value, pos);
+		if (out) cfg_log.error("cfg::try_to_int64('%s'): out of bounds (%d..%d)", value, min, max);
+		return false;
+	}
+
+	if (out) *out = result;
+	return true;
+}
+
+std::vector<std::string> cfg::make_uint_range(u64 min, u64 max)
+{
+	return {std::to_string(min), std::to_string(max)};
+}
+
+bool cfg::try_to_uint64(u64* out, const std::string& value, u64 min, u64 max)
+{
+	u64 result;
+	const char* start = &value.front();
+	const char* end = &value.back() + 1;
+	int base = 10;
+
+	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
+	{
+		// Limited hex support
+		base = 16;
+		start += 2;
+	}
+
+	const auto ret = std::from_chars(start, end, result, base);
+
+	if (ret.ec != std::errc() || ret.ptr != end)
+	{
+		if (out) cfg_log.error("cfg::try_to_uint64('%s'): invalid integer", value);
 		return false;
 	}
 
 	if (result < min || result > max)
 	{
-		if (out) cfg.error("cfg::try_to_int('%s'): out of bounds (%lld..%lld)", value, min, max);
+		if (out) cfg_log.error("cfg::try_to_uint64('%s'): out of bounds (%u..%u)", value, min, max);
 		return false;
 	}
 
@@ -112,31 +161,34 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 		max = i;
 	}
 
-	try
+	u64 result;
+	const char* start = &value.front();
+	const char* end = &value.back() + 1;
+	int base = 10;
+
+	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
 	{
-		std::size_t pos;
-		const auto val = std::stoull(value, &pos, 0);
-
-		if (pos != value.size())
-		{
-			if (out) cfg.error("cfg::try_to_enum_value('%s'): unexpected characters (pos=%zu)", value, pos);
-			return false;
-		}
-
-		if (val > max)
-		{
-			if (out) cfg.error("cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
-			return false;
-		}
-
-		if (out) *out = val;
-		return true;
+		// Limited hex support
+		base = 16;
+		start += 2;
 	}
-	catch (const std::exception& e)
+
+	const auto ret = std::from_chars(start, end, result, base);
+
+	if (ret.ec != std::errc() || ret.ptr != end)
 	{
-		if (out) cfg.error("cfg::try_to_enum_value('%s'): invalid enum value: %s", value, e.what());
+		if (out) cfg_log.error("cfg::try_to_enum_value('%s'): invalid enum or integer", value);
 		return false;
 	}
+
+	if (result > max)
+	{
+		if (out) cfg_log.error("cfg::try_to_enum_value('%s'): out of bounds(0..%u)", value, max);
+		return false;
+	}
+
+	if (out) *out = result;
+	return true;
 }
 
 std::vector<std::string> cfg::try_to_enum_list(decltype(&fmt_class_string<int>::format) func)
@@ -168,11 +220,11 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 	case type::node:
 	{
 		out << YAML::BeginMap;
-		for (const auto& np : static_cast<const node&>(rhs).get_nodes())
+		for (const auto& node : static_cast<const node&>(rhs).get_nodes())
 		{
-			out << YAML::Key << np.first;
+			out << YAML::Key << node->get_name();
 			out << YAML::Value;
-			encode(out, *np.second);
+			encode(out, *node);
 		}
 
 		out << YAML::EndMap;
@@ -210,8 +262,13 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 	}
 }
 
-void cfg::decode(const YAML::Node& data, cfg::_base& rhs)
+void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 {
+	if (dynamic && !rhs.get_is_dynamic())
+	{
+		return;
+	}
+
 	switch (rhs.get_type())
 	{
 	case type::node:
@@ -226,11 +283,11 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs)
 			if (!pair.first.IsScalar()) continue;
 
 			// Find the key among existing nodes
-			for (const auto& _pair : static_cast<node&>(rhs).get_nodes())
+			for (const auto& node : static_cast<node&>(rhs).get_nodes())
 			{
-				if (_pair.first == pair.first.Scalar())
+				if (node->get_name() == pair.first.Scalar())
 				{
-					decode(pair.second, *_pair.second);
+					decode(pair.second, *node, dynamic);
 				}
 			}
 		}
@@ -277,7 +334,7 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs)
 
 		if (YAML::convert<std::string>::decode(data, value))
 		{
-			rhs.from_string(value);
+			rhs.from_string(value, dynamic);
 		}
 
 		break; // ???
@@ -293,14 +350,17 @@ std::string cfg::node::to_string() const
 	return {out.c_str(), out.size()};
 }
 
-bool cfg::node::from_string(const std::string& value) try
+bool cfg::node::from_string(const std::string& value, bool dynamic)
 {
-	cfg::decode(YAML::Load(value), *this);
-	return true;
-}
-catch (const std::exception& e)
-{
-	cfg.fatal("%s thrown: %s", typeid(e).name(), e.what());
+	auto [result, error] = yaml_load(value);
+
+	if (error.empty())
+	{
+		cfg::decode(result, *this, dynamic);
+		return true;
+	}
+
+	cfg_log.fatal("Failed to load node: %s", error);
 	return false;
 }
 
@@ -308,7 +368,7 @@ void cfg::node::from_default()
 {
 	for (auto& node : m_nodes)
 	{
-		node.second->from_default();
+		node->from_default();
 	}
 }
 
@@ -329,12 +389,7 @@ void cfg::set_entry::from_default()
 
 void cfg::log_entry::set_map(std::map<std::string, logs::level>&& map)
 {
-	logs::reset();
-
-	for (auto&& pair : (m_map = std::move(map)))
-	{
-		logs::set_level(pair.first, pair.second);
-	}
+	m_map = std::move(map);
 }
 
 void cfg::log_entry::from_default()

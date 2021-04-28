@@ -4,7 +4,32 @@
 #include "cellVideoUpload.h"
 #include "cellSysutil.h"
 
-logs::channel cellVideoUpload("cellVideoUpload");
+LOG_CHANNEL(cellVideoUpload);
+
+template<>
+void fmt_class_string<CellVideoUploadError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_VIDEO_UPLOAD_ERROR_CANCEL);
+			STR_CASE(CELL_VIDEO_UPLOAD_ERROR_NETWORK);
+			STR_CASE(CELL_VIDEO_UPLOAD_ERROR_SERVICE_STOP);
+			STR_CASE(CELL_VIDEO_UPLOAD_ERROR_SERVICE_BUSY);
+			STR_CASE(CELL_VIDEO_UPLOAD_ERROR_SERVICE_UNAVAILABLE);
+			STR_CASE(CELL_VIDEO_UPLOAD_ERROR_SERVICE_QUOTA);
+			STR_CASE(CELL_VIDEO_UPLOAD_ERROR_ACCOUNT_STOP);
+			STR_CASE(CELL_VIDEO_UPLOAD_ERROR_OUT_OF_MEMORY);
+			STR_CASE(CELL_VIDEO_UPLOAD_ERROR_FATAL);
+			STR_CASE(CELL_VIDEO_UPLOAD_ERROR_INVALID_VALUE);
+			STR_CASE(CELL_VIDEO_UPLOAD_ERROR_FILE_OPEN);
+			STR_CASE(CELL_VIDEO_UPLOAD_ERROR_INVALID_STATE);
+		}
+
+		return unknown;
+	});
+}
 
 error_code cellVideoUploadInitialize(vm::cptr<CellVideoUploadParam> pParam, vm::ptr<CellVideoUploadCallback> cb, vm::ptr<void> userdata)
 {

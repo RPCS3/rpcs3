@@ -1,8 +1,6 @@
 #pragma once
 
 // I just want the struct for the save data.
-#include "stdafx.h"
-#include "Emu/Memory/Memory.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 
 #include <QDialog>
@@ -14,7 +12,7 @@ class save_data_info_dialog :public QDialog
 	Q_OBJECT
 
 public:
-	explicit save_data_info_dialog(const SaveDataEntry& save, QWidget* parent = nullptr);
+	explicit save_data_info_dialog(SaveDataEntry save, QWidget* parent = nullptr);
 private:
 	void UpdateData();
 

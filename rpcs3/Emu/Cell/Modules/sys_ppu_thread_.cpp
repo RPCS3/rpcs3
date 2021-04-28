@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 
@@ -9,7 +8,7 @@
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 vm::gvar<sys_lwmutex_t> g_ppu_atexit_lwm;
 vm::gvar<vm::ptr<void()>[8]> g_ppu_atexit;
@@ -35,7 +34,7 @@ static u32 ppu_alloc_tls()
 		{
 			// Default (small) TLS allocation
 			addr = s_tls_area + i * s_tls_size;
-			break;			
+			break;
 		}
 	}
 
@@ -59,7 +58,7 @@ static void ppu_free_tls(u32 addr)
 	if (addr < s_tls_area || i >= s_tls_max || (addr - s_tls_area) % s_tls_size)
 	{
 		// Alternative TLS allocation detected
-		vm::dealloc_verbose_nothrow(addr, vm::main);
+		ensure(vm::dealloc(addr, vm::main));
 		return;
 	}
 
@@ -101,7 +100,7 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 	lwa->protocol   = SYS_SYNC_PRIORITY;
 	lwa->recursive  = SYS_SYNC_RECURSIVE;
 	lwa->name_u64   = "atexit!\0"_u64;
-	sys_lwmutex_create(g_ppu_atexit_lwm, lwa);
+	sys_lwmutex_create(ppu, g_ppu_atexit_lwm, lwa);
 
 	vm::var<sys_mutex_attribute_t> attr;
 	attr->protocol  = SYS_SYNC_PRIORITY;
@@ -111,21 +110,23 @@ void sys_initialize_tls(ppu_thread& ppu, u64 main_thread_id, u32 tls_seg_addr, u
 	attr->ipc_key   = 0;
 	attr->flags     = 0;
 	attr->name_u64  = "_lv2ppu\0"_u64;
-	sys_mutex_create(g_ppu_once_mutex, attr);
+	sys_mutex_create(ppu, g_ppu_once_mutex, attr);
 
 	attr->recursive = SYS_SYNC_RECURSIVE;
 	attr->name_u64  = "_lv2tls\0"_u64;
-	sys_mutex_create(g_ppu_exit_mutex, attr);
+	sys_mutex_create(ppu, g_ppu_exit_mutex, attr);
 
 	lwa->protocol   = SYS_SYNC_PRIORITY;
 	lwa->recursive  = SYS_SYNC_RECURSIVE;
 	lwa->name_u64   = "_lv2prx\0"_u64;
-	sys_lwmutex_create(g_ppu_prx_lwm, lwa);
+	sys_lwmutex_create(ppu, g_ppu_prx_lwm, lwa);
 	// TODO: missing prx initialization
 }
 
 error_code sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 entry, u64 arg, s32 prio, u32 stacksize, u64 flags, vm::cptr<char> threadname)
 {
+	ppu.state += cpu_flag::wait;
+
 	sysPrxForUser.warning("sys_ppu_thread_create(thread_id=*0x%x, entry=0x%x, arg=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=%s)",
 		thread_id, entry, arg, prio, stacksize, flags, threadname);
 
@@ -138,7 +139,7 @@ error_code sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 en
 	}
 
 	// Call the syscall
-	if (error_code res = _sys_ppu_thread_create(thread_id, vm::make_var(ppu_thread_param_t{ entry, tls_addr + 0x7030 }), arg, 0, prio, stacksize, flags, threadname))
+	if (error_code res = _sys_ppu_thread_create(ppu, thread_id, vm::make_var(ppu_thread_param_t{ vm::cast(entry), tls_addr + 0x7030 }), arg, 0, prio, stacksize, flags, threadname))
 	{
 		return res;
 	}
@@ -171,7 +172,7 @@ void sys_ppu_thread_exit(ppu_thread& ppu, u64 val)
 	sysPrxForUser.trace("sys_ppu_thread_exit(val=0x%llx)", val);
 
 	// Call registered atexit functions
-	verify(HERE), !sys_lwmutex_lock(ppu, g_ppu_atexit_lwm, 0);
+	ensure(!sys_lwmutex_lock(ppu, g_ppu_atexit_lwm, 0));
 
 	for (auto ptr : *g_ppu_atexit)
 	{
@@ -181,10 +182,10 @@ void sys_ppu_thread_exit(ppu_thread& ppu, u64 val)
 		}
 	}
 
-	verify(HERE), !sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm);
-	
+	ensure(!sys_lwmutex_unlock(ppu, g_ppu_atexit_lwm));
+
 	// Deallocate TLS
-	ppu_free_tls(vm::cast(ppu.gpr[13], HERE) - 0x7030);
+	ppu_free_tls(vm::cast(ppu.gpr[13]) - 0x7030);
 
 	// Call the syscall
 	_sys_ppu_thread_exit(ppu, val);
@@ -204,11 +205,11 @@ error_code sys_ppu_thread_register_atexit(ppu_thread& ppu, vm::ptr<void()> func)
 		}
 	}
 
-	for (auto& pp : *g_ppu_atexit)
+	for (auto& pf : *g_ppu_atexit)
 	{
-		if (pp == vm::null)
+		if (!pf)
 		{
-			pp = func;
+			pf = func;
 			return CELL_OK;
 		}
 	}
@@ -238,7 +239,7 @@ void sys_ppu_thread_once(ppu_thread& ppu, vm::ptr<s32> once_ctrl, vm::ptr<void()
 {
 	sysPrxForUser.notice("sys_ppu_thread_once(once_ctrl=*0x%x, init=*0x%x)", once_ctrl, init);
 
-	verify(HERE), sys_mutex_lock(ppu, *g_ppu_once_mutex, 0) == CELL_OK;
+	ensure(sys_mutex_lock(ppu, *g_ppu_once_mutex, 0) == CELL_OK);
 
 	if (*once_ctrl == SYS_PPU_THREAD_ONCE_INIT)
 	{
@@ -247,7 +248,7 @@ void sys_ppu_thread_once(ppu_thread& ppu, vm::ptr<s32> once_ctrl, vm::ptr<void()
 		*once_ctrl = SYS_PPU_THREAD_DONE_INIT;
 	}
 
-	verify(HERE), sys_mutex_unlock(ppu, *g_ppu_once_mutex) == CELL_OK;
+	ensure(sys_mutex_unlock(ppu, *g_ppu_once_mutex) == CELL_OK);
 }
 
 error_code sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih)
@@ -264,7 +265,7 @@ error_code sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih)
 	}
 
 	// Deallocate TLS
-	ppu_free_tls(vm::cast(*r13, HERE) - 0x7030);
+	ppu_free_tls(vm::cast(*r13) - 0x7030);
 	return CELL_OK;
 }
 

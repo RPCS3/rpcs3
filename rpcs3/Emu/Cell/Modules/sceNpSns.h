@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // Return codes
 enum sceNpSnsError : u32
@@ -25,13 +25,20 @@ enum sceNpSnsError : u32
 	SCE_NP_SNS_FB_ERROR_ACCESS_NOT_ALLOWED           = 0x8002451c,
 };
 
+// Access token param options
+enum
+{
+	SCE_NP_SNS_FB_ACCESS_TOKEN_PARAM_OPTIONS_SILENT = 0x00000001
+};
+
 // Constants for SNS functions
 enum
 {
-	SCE_NP_SNS_FB_INVALID_HANDLE          = 0,
-	SCE_NP_SNS_FB_HANDLE_SLOT_MAX         = 4,
-	SCE_NP_SNS_FB_PERMISSIONS_LENGTH_MAX  = 255,
-	SCE_NP_SNS_FB_ACCESS_TOKEN_LENGTH_MAX = 255
+	SCE_NP_SNS_FB_INVALID_HANDLE               = 0,
+	SCE_NP_SNS_FB_HANDLE_SLOT_MAX              = 4,
+	SCE_NP_SNS_FB_PERMISSIONS_LENGTH_MAX       = 255,
+	SCE_NP_SNS_FB_ACCESS_TOKEN_LENGTH_MAX      = 255,
+	SCE_NP_SNS_FB_LONG_ACCESS_TOKEN_LENGTH_MAX = 4096
 };
 
 struct sns_fb_handle_t
@@ -60,4 +67,17 @@ struct SceNpSnsFbAccessTokenResult
 {
 	be_t<u64> expiration;
 	char access_token[SCE_NP_SNS_FB_ACCESS_TOKEN_LENGTH_MAX + 1];
+};
+
+struct SceNpSnsFbLongAccessTokenResult
+{
+	be_t<u64> expiration;
+	char access_token[SCE_NP_SNS_FB_LONG_ACCESS_TOKEN_LENGTH_MAX + 1];
+};
+
+// fxm objects
+
+struct sce_np_sns_manager
+{
+	atomic_t<bool> is_initialized = false;
 };

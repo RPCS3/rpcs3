@@ -1,0 +1,181 @@
+#ifndef HAVE_FAUDIO
+#error "FAudio support disabled but still being built."
+#endif
+
+#include "stdafx.h"
+#include "FAudioBackend.h"
+#include "Emu/system_config.h"
+#include "Emu/System.h"
+
+LOG_CHANNEL(FAudio_, "FAudio");
+
+FAudioBackend::FAudioBackend()
+	: AudioBackend()
+{
+	u32 res = FAudioCreate(&m_instance, 0, FAUDIO_DEFAULT_PROCESSOR);
+	if (res)
+	{
+		FAudio_.fatal("FAudioCreate() failed(0x%08x)", res);
+		return;
+	}
+
+	res = FAudio_CreateMasteringVoice(m_instance, &m_master_voice, m_channels, 48000, 0, 0, nullptr);
+	if (res)
+	{
+		FAudio_.fatal("FAudio_CreateMasteringVoice() failed(0x%08x)", res);
+		return;
+	}
+}
+
+FAudioBackend::~FAudioBackend()
+{
+	if (m_source_voice != nullptr)
+	{
+		FAudioSourceVoice_Stop(m_source_voice, 0, FAUDIO_COMMIT_NOW);
+		FAudioVoice_DestroyVoice(m_source_voice);
+	}
+
+	if (m_master_voice != nullptr)
+	{
+		FAudioVoice_DestroyVoice(m_master_voice);
+	}
+
+	if (m_instance != nullptr)
+	{
+		FAudio_StopEngine(m_instance);
+		FAudio_Release(m_instance);
+	}
+}
+
+void FAudioBackend::Play()
+{
+	AUDIT(m_source_voice != nullptr);
+
+	const u32 res = FAudioSourceVoice_Start(m_source_voice, 0, FAUDIO_COMMIT_NOW);
+	if (res)
+	{
+		FAudio_.error("FAudioSourceVoice_Start() failed(0x%08x)", res);
+		Emu.Pause();
+	}
+}
+
+void FAudioBackend::Pause()
+{
+	AUDIT(m_source_voice != nullptr);
+
+	const u32 res = FAudioSourceVoice_Stop(m_source_voice, 0, FAUDIO_COMMIT_NOW);
+	if (res)
+	{
+		FAudio_.error("FAudioSourceVoice_Stop() failed(0x%08x)", res);
+		Emu.Pause();
+	}
+}
+
+void FAudioBackend::Flush()
+{
+	AUDIT(m_source_voice != nullptr);
+
+	const u32 res = FAudioSourceVoice_FlushSourceBuffers(m_source_voice);
+	if (res)
+	{
+		FAudio_.error("FAudioSourceVoice_FlushSourceBuffers() failed(0x%08x)", res);
+		Emu.Pause();
+	}
+}
+
+bool FAudioBackend::IsPlaying()
+{
+	AUDIT(m_source_voice != nullptr);
+
+	FAudioVoiceState state;
+	FAudioSourceVoice_GetState(m_source_voice, &state, FAUDIO_VOICE_NOSAMPLESPLAYED);
+
+	return state.BuffersQueued > 0 || state.pCurrentBufferContext != nullptr;
+}
+
+void FAudioBackend::Close()
+{
+	Pause();
+	Flush();
+}
+
+void FAudioBackend::Open(u32 /* num_buffers */)
+{
+	FAudioWaveFormatEx waveformatex;
+	waveformatex.wFormatTag      = m_convert_to_u16 ? FAUDIO_FORMAT_PCM : FAUDIO_FORMAT_IEEE_FLOAT;
+	waveformatex.nChannels       = m_channels;
+	waveformatex.nSamplesPerSec  = m_sampling_rate;
+	waveformatex.nAvgBytesPerSec = static_cast<u32>(m_sampling_rate * m_channels * m_sample_size);
+	waveformatex.nBlockAlign     = m_channels * m_sample_size;
+	waveformatex.wBitsPerSample  = m_sample_size * 8;
+	waveformatex.cbSize          = 0;
+
+	const u32 res = FAudio_CreateSourceVoice(m_instance, &m_source_voice, &waveformatex, 0, FAUDIO_DEFAULT_FREQ_RATIO, nullptr, nullptr, nullptr);
+	if (res)
+	{
+		FAudio_.error("FAudio_CreateSourceVoice() failed(0x%08x)", res);
+		Emu.Pause();
+	}
+
+	AUDIT(m_source_voice != nullptr);
+	FAudioVoice_SetVolume(m_source_voice, 1.0f, FAUDIO_COMMIT_NOW);
+}
+
+bool FAudioBackend::AddData(const void* src, u32 num_samples)
+{
+	AUDIT(m_source_voice != nullptr);
+
+	FAudioVoiceState state;
+	FAudioSourceVoice_GetState(m_source_voice, &state, FAUDIO_VOICE_NOSAMPLESPLAYED);
+
+	if (state.BuffersQueued >= MAX_AUDIO_BUFFERS)
+	{
+		FAudio_.warning("Too many buffers enqueued (%d)", state.BuffersQueued);
+		return false;
+	}
+
+	FAudioBuffer buffer;
+	buffer.AudioBytes = num_samples * m_sample_size;
+	buffer.Flags      = 0;
+	buffer.LoopBegin  = FAUDIO_NO_LOOP_REGION;
+	buffer.LoopCount  = 0;
+	buffer.LoopLength = 0;
+	buffer.pAudioData = static_cast<const u8*>(src);
+	buffer.pContext   = nullptr;
+	buffer.PlayBegin  = 0;
+	buffer.PlayLength = AUDIO_BUFFER_SAMPLES;
+
+	const u32 res = FAudioSourceVoice_SubmitSourceBuffer(m_source_voice, &buffer, nullptr);
+	if (res)
+	{
+		FAudio_.error("FAudioSourceVoice_SubmitSourceBuffer() failed(0x%08x)", res);
+		Emu.Pause();
+		return false;
+	}
+
+	return true;
+}
+
+u64 FAudioBackend::GetNumEnqueuedSamples()
+{
+	FAudioVoiceState state;
+	FAudioSourceVoice_GetState(m_source_voice, &state, 0);
+
+	// all buffers contain AUDIO_BUFFER_SAMPLES, so we can easily calculate how many samples there are remaining
+	return (AUDIO_BUFFER_SAMPLES - state.SamplesPlayed % AUDIO_BUFFER_SAMPLES) + (state.BuffersQueued * AUDIO_BUFFER_SAMPLES);
+}
+
+f32 FAudioBackend::SetFrequencyRatio(f32 new_ratio)
+{
+	new_ratio = std::clamp(new_ratio, FAUDIO_MIN_FREQ_RATIO, FAUDIO_DEFAULT_FREQ_RATIO);
+
+	const u32 res = FAudioSourceVoice_SetFrequencyRatio(m_source_voice, new_ratio, FAUDIO_COMMIT_NOW);
+	if (res)
+	{
+		FAudio_.error("FAudioSourceVoice_SetFrequencyRatio() failed(0x%08x)", res);
+		Emu.Pause();
+		return 1.0f;
+	}
+
+	return new_ratio;
+}

@@ -195,11 +195,14 @@ QLabel#l_controller {
 }
 
 /* Game Grid Font */
-QLabel#gamegrid_font {
+QTableWidget#game_grid {
 	font-weight: 600;
 	font-size: 8pt;
 	font-family: Lucida Grande;
 	color: #fff;
+}
+QTableWidget#game_grid::item:selected:!active {
+	selection-background-color: #354454;
 }
 
 /* Slider on toolbar */
@@ -207,12 +210,23 @@ QWidget#sizeSliderContainer {
 	background: transparent;
 }
 
+QSlider#sizeSlider::groove:horizontal {
+	border: 0em solid transparent;
+	height: .3em;
+	background: #fff;
+}
+
+QSlider#sizeSlider::handle:horizontal {
+	width: 1em;
+	margin: -.8em 0;
+}
+
 /* Debug UI Settings buttons */
 QLabel#color_button {
 	background: transparent;
 }
 
-/* Seachbar on main toolbar */
+/* Search bar on main toolbar */
 QLineEdit#mw_searchbar { 
 	margin-left: 0.7em; 
 	color: #ecf0f1;
@@ -221,7 +235,6 @@ QLineEdit#mw_searchbar {
 /* Uniform colors in Toolbar */
 QToolButton {
 	background: transparent;
-	color: transparent;
 	border-radius: 0.125em;
 	padding: 0.09375em;
 	margin-left: 0.125em;
@@ -323,4 +336,29 @@ QLabel#debugger_frame_breakpoint {
 QLabel#debugger_frame_pc {
 	color: #000; /* Font Color: Black */
 	background-color: #333b44; /* Green */
+}
+
+/* Tree view changes*/
+QTreeView::branch:has-children:!has-siblings:closed,
+QTreeView::branch:closed:has-children:has-siblings {
+    border-image: none;
+    image: url("GuiConfigs/list_arrow_white.png");
+}
+
+QTreeView::branch:open:has-children:!has-siblings,
+QTreeView::branch:open:has-children:has-siblings  {
+    border-image: none;
+    image: url("GuiConfigs/list_arrow_down_white.png");
+}
+
+QTreeView::branch:has-children:!has-siblings:closed:hover,
+QTreeView::branch:closed:has-children:has-siblings:hover {
+    border-image: none;
+    image: url("GuiConfigs/list_arrow_blue.png");
+}
+
+QTreeView::branch:open:has-children:!has-siblings:hover,
+QTreeView::branch:open:has-children:has-siblings:hover  {
+    border-image: none;
+    image: url("GuiConfigs/list_arrow_down_blue.png");
 }

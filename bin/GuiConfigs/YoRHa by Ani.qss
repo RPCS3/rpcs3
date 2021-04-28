@@ -25,7 +25,7 @@ aea993
 
 /* Every widget */
 QWidget {
-	font-family: SCE-PS3 Rodin LATIN, Arial;
+	font-family: SCE-PS3 Rodin LATIN;
 	font-size: 9.00pt;
 
 	color: #292929;
@@ -71,6 +71,22 @@ QWidget {
 	color: #4d4940;
 }
 
+/* Style QTreeWidget checkboxes */
+QTreeWidget::indicator {
+	border: 0.05em solid #4d4940;
+}
+QTreeWidget::indicator::unchecked {
+	background-color: #b3ac98;
+}
+QTreeWidget::indicator::checked {
+	background-color: #4d4940;
+}
+QTreeWidget::indicator::disabled {
+	background-color: #828790;
+}
+QTreeWidget::item::selected {
+	color: #4d4940;
+}
 
 /* Mouse Tooltips */
 QToolTip {
@@ -80,14 +96,8 @@ QToolTip {
 }
 
 
-/* CG Disasm: background-image doesn't work, use static color */
-QWidget#cg_disasm {
-	background: #b3ac98;
-}
-
-
-/* Main Window, Dialogs and Trophy Manager which isn't a dialog */
-QDialog, QWidget#trophy_manager, QMainWindow#main_window {
+/* Main Window, Dialogs and some Dialogs that are actually widgets */
+QDialog, QWidget#trophy_manager, QWidget#cg_disasm, QMainWindow#main_window {
 	border-image: url("GuiConfigs/YoRHa-background.jpg");
 }
 
@@ -236,7 +246,8 @@ QPushButton::disabled {
 
 
 /* QSpinBox (Settings -> Emulator -> width/height) */
-QSpinBox {
+/* QDoubleSpinBox (Pads -> Mouse Acceleration -> x/y) */ 
+QSpinBox, QDoubleSpinBox {
 	/* background: transparent; - This hits a weird bug in Qt where background flickers */
 	background-color: #b3ac98;
 	border: 0.05em solid #4d4940;
@@ -249,11 +260,17 @@ QSlider::groove:horizontal {
 	border: 0.10em solid #4d4940;
 	border-radius: 0.10em;
 }
+
 QSlider::handle:horizontal {
 	background: #4d4940;
 	width: 0.50em;
 }
 
+QSlider#sizeSlider::groove:horizontal {
+	border: 0.10em solid #4d4940;
+	border-radius: 0.10em;
+	height: 1.5em;
+}
 
 /* Log and Debugger borders */
 QTextEdit {
@@ -333,10 +350,17 @@ QLabel#l_controller {
 
 
 /* Game Grid Font */
-QLabel#gamegrid_font {
+QTableWidget#game_grid {
 	font-weight: 600;
 	color: #4d4940;
 	text-transform: uppercase;
+	selection-color: #aea993;
+}
+QTableWidget#game_grid::item:selected:active {
+	selection-background-color: #4d4940;
+}
+QTableWidget#game_grid::item:selected:!active {
+	selection-background-color: #615c51;
 }
 
 
@@ -346,7 +370,7 @@ QLabel#color_button {
 }
 
 
-/* Searchbar on main Toolbar */
+/* Search bar on main Toolbar */
 QLineEdit#mw_searchbar {
 	margin-left: 0.7em;
 	color: #4d4940;
@@ -357,7 +381,7 @@ QLineEdit#mw_searchbar {
 /* Uniform colors in Toolbar */
 QToolButton {
 	background: transparent;
-	color: transparent;
+	text-transform: uppercase;
 }
 QToolButton::hover {
 	background-color: #b3ac98;

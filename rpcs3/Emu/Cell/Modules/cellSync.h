@@ -1,8 +1,8 @@
 #pragma once
 
+#include "Emu/Memory/vm_ptr.h"
+
 #include "Utilities/BitField.h"
-
-
 
 // Return Codes
 enum CellSyncError : u32
@@ -36,34 +36,34 @@ enum CellSyncError1 : u32
 
 struct CellSyncMutex
 {
-	struct alignas(4) ctrl_t
+	struct Counter
 	{
 		be_t<u16> rel;
 		be_t<u16> acq;
-	};
 
-	atomic_t<ctrl_t> ctrl;
-
-	static inline auto lock_begin(ctrl_t& ctrl)
-	{
-		return ctrl.acq++;
-	}
-
-	static inline bool try_lock(ctrl_t& ctrl)
-	{
-		if (UNLIKELY(ctrl.rel != ctrl.acq))
+		auto lock_begin()
 		{
-			return false;
+			return acq++;
 		}
 
-		ctrl.acq++;
-		return true;
-	}
+		bool try_lock()
+		{
+			if (rel != acq) [[unlikely]]
+			{
+				return false;
+			}
 
-	static inline void unlock(ctrl_t& ctrl)
-	{
-		ctrl.rel++;
-	}
+			acq++;
+			return true;
+		}
+
+		void unlock()
+		{
+			rel++;
+		}
+	};
+
+	atomic_t<Counter> ctrl;
 };
 
 CHECK_SIZE_ALIGN(CellSyncMutex, 4, 4);
@@ -91,7 +91,7 @@ struct CellSyncBarrier
 		}
 
 		return true;
-	};
+	}
 
 	static inline bool try_wait(ctrl_t& ctrl)
 	{
@@ -162,7 +162,7 @@ CHECK_SIZE_ALIGN(CellSyncRwm, 16, 16);
 
 struct alignas(32) CellSyncQueue
 {
-	struct alignas(8) ctrl_t
+	struct ctrl_t
 	{
 		union
 		{
@@ -194,7 +194,7 @@ struct alignas(32) CellSyncQueue
 
 		if (data.next > depth || data.count > depth)
 		{
-			fmt::throw_exception("Invalid queue pointers" HERE);
+			fmt::throw_exception("Invalid queue pointers");
 		}
 
 		return depth;
@@ -290,7 +290,7 @@ enum CellSyncQueueDirection : u32 // CellSyncLFQueueDirection
 
 struct alignas(128) CellSyncLFQueue
 {
-	struct alignas(8) pop1_t
+	struct pop1_t
 	{
 		be_t<u16> m_h1;
 		be_t<u16> m_h2;
@@ -303,13 +303,13 @@ struct alignas(128) CellSyncLFQueue
 		be_t<u16> pack;
 	};
 
-	struct alignas(4) pop3_t
+	struct pop3_t
 	{
 		be_t<u16> m_h1;
 		be_t<u16> m_h2;
 	};
 
-	struct alignas(8) push1_t
+	struct push1_t
 	{
 		be_t<u16> m_h5;
 		be_t<u16> m_h6;
@@ -322,7 +322,7 @@ struct alignas(128) CellSyncLFQueue
 		be_t<u16> pack;
 	};
 
-	struct alignas(4) push3_t
+	struct push3_t
 	{
 		be_t<u16> m_h5;
 		be_t<u16> m_h6;

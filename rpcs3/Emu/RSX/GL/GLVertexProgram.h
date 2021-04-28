@@ -1,8 +1,9 @@
 #pragma once
 #include "../Common/VertexProgramDecompiler.h"
 #include "Emu/RSX/RSXVertexProgram.h"
-#include "Utilities/Thread.h"
-#include "OpenGL.h"
+#include "GLHelpers.h"
+
+#include <unordered_map>
 
 enum
 {
@@ -13,21 +14,28 @@ enum
 	GL_VP_SINT_MASK = (GL_VP_ATTRIB_S16_INT|GL_VP_ATTRIB_S32_INT)
 };
 
+namespace gl
+{
+	class shader_interpreter;
+};
+
 struct GLVertexDecompilerThread : public VertexProgramDecompiler
 {
+	friend class gl::shader_interpreter;
+
 	std::string &m_shader;
 protected:
-	virtual std::string getFloatTypeName(size_t elementCount) override;
-	std::string getIntTypeName(size_t elementCount) override;
-	virtual std::string getFunction(FUNCTION) override;
-	virtual std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
+	std::string getFloatTypeName(usz elementCount) override;
+	std::string getIntTypeName(usz elementCount) override;
+	std::string getFunction(FUNCTION) override;
+	std::string compareFunction(COMPARE, const std::string&, const std::string&, bool scalar) override;
 
-	virtual void insertHeader(std::stringstream &OS) override;
-	virtual void insertInputs(std::stringstream &OS, const std::vector<ParamType> &inputs) override;
-	virtual void insertConstants(std::stringstream &OS, const std::vector<ParamType> &constants) override;
-	virtual void insertOutputs(std::stringstream &OS, const std::vector<ParamType> &outputs) override;
-	virtual void insertMainStart(std::stringstream &OS) override;
-	virtual void insertMainEnd(std::stringstream &OS) override;
+	void insertHeader(std::stringstream &OS) override;
+	void insertInputs(std::stringstream &OS, const std::vector<ParamType> &inputs) override;
+	void insertConstants(std::stringstream &OS, const std::vector<ParamType> &constants) override;
+	void insertOutputs(std::stringstream &OS, const std::vector<ParamType> &outputs) override;
+	void insertMainStart(std::stringstream &OS) override;
+	void insertMainEnd(std::stringstream &OS) override;
 
 	const RSXVertexProgram &rsx_vertex_program;
 	std::unordered_map<std::string, int> input_locations;
@@ -43,18 +51,16 @@ public:
 };
 
 class GLVertexProgram
-{ 
+{
 public:
 	GLVertexProgram();
 	~GLVertexProgram();
 
 	ParamArray parr;
-	u32 id = 0;
-	std::string shader;
-	bool interleaved;
+	u32 id;
+	gl::glsl::shader shader;
 
 	void Decompile(const RSXVertexProgram& prog);
-	void Compile();
 
 private:
 	void Delete();

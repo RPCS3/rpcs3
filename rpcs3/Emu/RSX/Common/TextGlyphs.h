@@ -1,8 +1,11 @@
 #pragma once
 
-#include <vector>
+#include <array>
+#include <charconv>
 #include <unordered_map>
-#include <Utilities/types.h>
+#include <vector>
+
+#include "util/types.hpp"
 
 /**
 * FONT GLYPHS GO HERE
@@ -12,7 +15,7 @@
 * This example is the GNU unifont glyph set
 */
 
-const static std::string GNU_UNIFONT_GLYPHS[128] =
+constexpr std::array<std::string_view, 128> GNU_UNIFONT_GLYPHS =
 {
 	"0000 : AAAA00018000000180004A51EA505A51C99E0001800000018000000180005555",
 	"0001 : AAAA00018000000180003993C252325F8A527193800000018000000180005555",
@@ -153,40 +156,37 @@ private:
 		u8 character;
 		u32 glyph_point_offset;
 		u32 points_count;
-		std::vector<u8> plot;
+		std::array<u8, 16> plot;
 	};
 
-	std::unordered_map<u8, glyph> glyph_map;
+	std::vector<glyph> glyph_map;
 
-	void decode_glyph_map(const std::string glyphs[128])
+	void decode_glyph_map(const std::array<std::string_view, 128>& font_glyphs)
 	{
-		for (int i = 0; i < 128; ++i)
+		glyph_map.reserve(font_glyphs.size());
+
+		for (const auto &font_glyph : font_glyphs)
 		{
-			std::string character = glyphs[i];
-			std::string index = character.substr(0, 4);
-			std::string glyph_data = character.substr(7);
+			glyph this_glyph{};
 
-			glyph this_glyph;
-			this_glyph.character = (u8)strtol(index.c_str(), nullptr, 16);
-			this_glyph.plot.reserve(16);
+			const auto index = font_glyph.substr(0, 4);
+			std::from_chars(index.data(), index.data() + index.size(), this_glyph.character, 16);
 
+			const auto glyph_data = font_glyph.substr(7);
 			if (glyph_data.length() == 32)
 			{
-				for (int n = 0; n < 16; ++n)
+				for (usz n = 0; n < this_glyph.plot.size(); ++n)
 				{
-					std::string line = glyph_data.substr(n * 2, 2);
-					u8 value = (u8)strtol(line.c_str(), nullptr, 16);
-					this_glyph.plot.push_back(value);
+					const auto line = glyph_data.substr(n * 2, 2);
+					std::from_chars(line.data(), line.data() + line.size(), this_glyph.plot[n], 16);
 				}
 			}
 			else
 			{
-				//TODO: Support 16-wide characters
-				for (int n = 0; n < 16; ++n)
-					this_glyph.plot.push_back(0);
+				// TODO: Support 16-wide characters
 			}
 
-			glyph_map[this_glyph.character] = this_glyph;
+			glyph_map.push_back(this_glyph);
 		}
 	}
 
@@ -197,13 +197,12 @@ public:
 		float x;
 		float y;
 
-		glyph_point(float _x, float _y) : x(_x), y(_y)
+		explicit glyph_point(float _x, float _y) : x(_x), y(_y)
 		{}
 	};
 
 	GlyphManager()
 	{
-		glyph_map = {};
 		decode_glyph_map(GNU_UNIFONT_GLYPHS);
 	}
 
@@ -213,12 +212,11 @@ public:
 
 		for (auto &entry : glyph_map)
 		{
-			glyph& text = entry.second;
-			text.glyph_point_offset = (u32)result.size();
+			entry.glyph_point_offset = ::size32(result);
 
-			for (int j = 0; j < 16; ++j)
+			for (usz j = 0; j < entry.plot.size(); ++j)
 			{
-				auto &line = text.plot[j];
+				const auto &line = entry.plot[j];
 				if (line == 0)
 					continue;
 
@@ -226,26 +224,27 @@ public:
 				{
 					if (line & (1 << i))
 					{
-						//Font is inverted, so we correct it for conventional renderers
-						float x = (float)(7 - i);
-						float y = (float)(15 - j);
-						result.push_back({ x, y });
+						// Font is inverted, so we correct it for conventional renderers
+						const auto x = static_cast<float>(7 - i);
+						const auto y = static_cast<float>(15 - j);
+						result.emplace_back(x, y);
 					}
 				}
 			}
 
-			text.points_count = (u32)result.size() - text.glyph_point_offset;
+			entry.points_count = ::size32(result) - entry.glyph_point_offset;
 		}
 
 		return result;
 	}
 
-	std::unordered_map<u8, std::pair<u32, u32>> get_glyph_offsets()
+	std::unordered_map<u8, std::pair<u32, u32>> get_glyph_offsets() const
 	{
 		std::unordered_map<u8, std::pair<u32, u32>> result = {};
-		for (auto &entry : glyph_map)
+
+		for (const auto &entry : glyph_map)
 		{
-			result[entry.second.character] = std::make_pair(entry.second.glyph_point_offset, entry.second.points_count);
+			result[entry.character] = std::make_pair(entry.glyph_point_offset, entry.points_count);
 		}
 
 		return result;

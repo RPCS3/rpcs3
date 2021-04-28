@@ -1,9 +1,9 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // Return Codes
-enum
+enum CellSync2Error : u32
 {
 	CELL_SYNC2_ERROR_AGAIN = 0x80410C01,
 	CELL_SYNC2_ERROR_INVAL = 0x80410C02,
@@ -94,4 +94,39 @@ struct CellSync2Notifier
 	be_t<u16> threadTypeId;
 	vm::bptr<s32(u64, u64)> sendSignal;
 	be_t<u64> callbackArg;
+};
+
+struct alignas(128) CellSync2Mutex
+{
+	u8 skip[128];
+};
+
+CHECK_SIZE_ALIGN(CellSync2Mutex, 128, 128);
+
+struct alignas(128) CellSync2Cond
+{
+	u8 skip[128];
+};
+
+CHECK_SIZE_ALIGN(CellSync2Cond, 128, 128);
+
+struct alignas(128) CellSync2Semaphore
+{
+	u8 skip[128];
+};
+
+CHECK_SIZE_ALIGN(CellSync2Semaphore, 128, 128);
+
+struct alignas(128) CellSync2Queue
+{
+	u8 skip[128];
+};
+
+CHECK_SIZE_ALIGN(CellSync2Queue, 128, 128);
+
+struct CellSync2ThreadConfig
+{
+	vm::bptr<CellSync2CallerThreadType> callerThreadType;
+	vm::bpptr<CellSync2Notifier> notifierTable;
+	be_t<u32> numNotifier;
 };

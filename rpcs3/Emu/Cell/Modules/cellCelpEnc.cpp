@@ -1,63 +1,86 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellCelpEnc.h"
 
-logs::channel cellCelpEnc("cellCelpEnc");
+LOG_CHANNEL(cellCelpEnc);
 
-
-s32 cellCelpEncQueryAttr()
+template <>
+void fmt_class_string<CellCelpEncError>::format(std::string& out, u64 arg)
 {
-	UNIMPLEMENTED_FUNC(cellCelpEnc);
+	format_enum(out, arg, [](CellCelpEncError value)
+	{
+		switch (value)
+		{
+		STR_CASE(CELL_CELPENC_ERROR_FAILED);
+		STR_CASE(CELL_CELPENC_ERROR_SEQ);
+		STR_CASE(CELL_CELPENC_ERROR_ARG);
+		STR_CASE(CELL_CELPENC_ERROR_CORE_FAILED);
+		STR_CASE(CELL_CELPENC_ERROR_CORE_SEQ);
+		STR_CASE(CELL_CELPENC_ERROR_CORE_ARG);
+		}
+
+		return unknown;
+	});
+}
+
+error_code cellCelpEncQueryAttr(vm::ptr<CellCelpEncAttr> attr)
+{
+	cellCelpEnc.todo("cellCelpEncQueryAttr(attr=*0x%x)", attr);
 	return CELL_OK;
 }
 
-s32 cellCelpEncOpen()
+error_code cellCelpEncOpen(vm::ptr<CellCelpEncResource> res, vm::ptr<void> handle)
 {
-	UNIMPLEMENTED_FUNC(cellCelpEnc);
+	cellCelpEnc.todo("cellCelpEncOpen(res=*0x%x ,attr=*0x%x)", res, handle);
 	return CELL_OK;
 }
 
-s32 cellCelpEncOpenEx()
+error_code cellCelpEncOpenEx(vm::ptr<CellCelpEncResourceEx> res, vm::ptr<void> handle)
 {
-	UNIMPLEMENTED_FUNC(cellCelpEnc);
+	cellCelpEnc.todo("cellCelpEncOpenEx(res=*0x%x ,attr=*0x%x)", res, handle);
 	return CELL_OK;
 }
 
-s32 cellCelpEncClose()
+error_code cellCelpEncOpenExt()
 {
-	UNIMPLEMENTED_FUNC(cellCelpEnc);
+	cellCelpEnc.todo("cellCelpEncOpenExt()");
 	return CELL_OK;
 }
 
-s32 cellCelpEncStart()
+error_code cellCelpEncClose(vm::ptr<void> handle)
 {
-	UNIMPLEMENTED_FUNC(cellCelpEnc);
+	cellCelpEnc.todo("cellCelpEncClose(handle=*0x%x)", handle);
 	return CELL_OK;
 }
 
-s32 cellCelpEncEnd()
+error_code cellCelpEncStart(vm::ptr<void> handle, vm::ptr<CellCelpEncParam> param)
 {
-	UNIMPLEMENTED_FUNC(cellCelpEnc);
+	cellCelpEnc.todo("cellCelpEncStart(handle=*0x%x, attr=*0x%x)", handle, param);
 	return CELL_OK;
 }
 
-s32 cellCelpEncEncodeFrame()
+error_code cellCelpEncEnd(vm::ptr<void> handle)
 {
-	UNIMPLEMENTED_FUNC(cellCelpEnc);
+	cellCelpEnc.todo("cellCelpEncEnd(handle=*0x%x)", handle);
 	return CELL_OK;
 }
 
-s32 cellCelpEncWaitForOutput()
+error_code cellCelpEncEncodeFrame(vm::ptr<void> handle, vm::ptr<CellCelpEncPcmInfo> frameInfo)
 {
-	UNIMPLEMENTED_FUNC(cellCelpEnc);
+	cellCelpEnc.todo("cellCelpEncEncodeFrame(handle=*0x%x, frameInfo=*0x%x)", handle, frameInfo);
 	return CELL_OK;
 }
 
-s32 cellCelpEncGetAu()
+error_code cellCelpEncWaitForOutput(vm::ptr<void> handle)
 {
-	UNIMPLEMENTED_FUNC(cellCelpEnc);
+	cellCelpEnc.todo("cellCelpEncWaitForOutput(handle=*0x%x)", handle);
+	return CELL_OK;
+}
+
+error_code cellCelpEncGetAu(vm::ptr<void> handle, vm::ptr<void> outBuffer, vm::ptr<CellCelpEncAuInfo> auItem)
+{
+	cellCelpEnc.todo("cellCelpEncGetAu(handle=*0x%x, outBuffer=*0x%x, auItem=*0x%x)", handle, outBuffer, auItem);
 	return CELL_OK;
 }
 
@@ -66,6 +89,7 @@ DECLARE(ppu_module_manager::cellCelpEnc)("cellCelpEnc", []()
 	REG_FUNC(cellCelpEnc, cellCelpEncQueryAttr);
 	REG_FUNC(cellCelpEnc, cellCelpEncOpen);
 	REG_FUNC(cellCelpEnc, cellCelpEncOpenEx);
+	REG_FUNC(cellCelpEnc, cellCelpEncOpenExt);
 	REG_FUNC(cellCelpEnc, cellCelpEncClose);
 	REG_FUNC(cellCelpEnc, cellCelpEncStart);
 	REG_FUNC(cellCelpEnc, cellCelpEncEnd);

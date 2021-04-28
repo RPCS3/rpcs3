@@ -1,19 +1,19 @@
-#include "stdafx.h"
 #include "gl_gs_frame.h"
-#include "Emu/System.h"
+
+#include "Emu/system_config.h"
 
 #include <QOpenGLContext>
-#include <QWindow>
+#include <QOffscreenSurface>
 
-gl_gs_frame::gl_gs_frame(const QRect& geometry, QIcon appIcon, bool disableMouse)
-	: gs_frame("OpenGL", geometry, appIcon, disableMouse)
+gl_gs_frame::gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings)
+	: gs_frame(screen, geometry, appIcon, std::move(gui_settings))
 {
 	setSurfaceType(QSurface::OpenGLSurface);
 
 	m_format.setMajorVersion(4);
 	m_format.setMinorVersion(3);
 	m_format.setProfile(QSurfaceFormat::CoreProfile);
-	m_format.setDepthBufferSize(16);
+	m_format.setDepthBufferSize(0);
 	m_format.setSwapBehavior(QSurfaceFormat::SwapBehavior::DoubleBuffer);
 	if (g_cfg.video.debug_output)
 	{
@@ -24,42 +24,88 @@ gl_gs_frame::gl_gs_frame(const QRect& geometry, QIcon appIcon, bool disableMouse
 
 draw_context_t gl_gs_frame::make_context()
 {
-	auto context = new QOpenGLContext();
-	context->setFormat(m_format);
-	context->create();
+	auto context = new GLContext();
+	context->handle = new QOpenGLContext();
+
+	if (m_primary_context)
+	{
+		auto surface = new QOffscreenSurface();
+		surface->setFormat(m_format);
+		surface->create();
+
+		// Share resources with the first created context
+		context->handle->setShareContext(m_primary_context->handle);
+		context->surface = surface;
+		context->owner = true;
+	}
+	else
+	{
+		// This is the first created context, all others will share resources with this one
+		m_primary_context = context;
+		context->surface = this;
+		context->owner = false;
+	}
+
+	context->handle->setFormat(m_format);
+	context->handle->create();
 
 	return context;
 }
 
 void gl_gs_frame::set_current(draw_context_t ctx)
 {
-	if (!((QOpenGLContext*)ctx)->makeCurrent(this))
+	if (!ctx)
 	{
-		create();
-		((QOpenGLContext*)ctx)->makeCurrent(this);
+		fmt::throw_exception("Null context handle passed to set_current");
+	}
+
+	const auto context = static_cast<GLContext*>(ctx);
+
+	if (!context->handle->makeCurrent(context->surface))
+	{
+		if (!context->owner)
+		{
+			create();
+		}
+		else if (!context->handle->isValid())
+		{
+			context->handle->create();
+		}
+
+		if (!context->handle->makeCurrent(context->surface))
+		{
+			fmt::throw_exception("Could not bind OpenGL context");
+		}
 	}
 }
 
 void gl_gs_frame::delete_context(draw_context_t ctx)
 {
+	const auto gl_ctx = static_cast<GLContext*>(ctx);
 
-	auto gl_ctx = (QOpenGLContext*)ctx;
-	gl_ctx->doneCurrent();
+	gl_ctx->handle->doneCurrent();
 
-#ifndef _WIN32
-	delete gl_ctx;
-#else
+#ifdef _MSC_VER
 	//AMD driver crashes when executing wglDeleteContext
 	//Catch with SEH
 	__try
 	{
-		delete gl_ctx;
+		delete gl_ctx->handle;
 	}
 	__except(GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 	{
-		LOG_FATAL(RSX, "Your graphics driver just crashed whilst cleaning up. All consumed VRAM should have been released, but you may want to restart the emulator just in case");
+		rsx_log.fatal("Your graphics driver just crashed whilst cleaning up. All consumed VRAM should have been released, but you may want to restart the emulator just in case");
 	}
+#else
+	delete gl_ctx->handle;
 #endif
+
+	if (gl_ctx->owner)
+	{
+		delete gl_ctx->surface;
+	}
+
+	delete gl_ctx;
 }
 
 void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
@@ -69,5 +115,7 @@ void gl_gs_frame::flip(draw_context_t context, bool skip_frame)
 	//Do not swap buffers if frame skip is active
 	if (skip_frame) return;
 
-	((QOpenGLContext*)context)->swapBuffers(this);
+	const auto gl_ctx = static_cast<GLContext*>(context);
+
+	gl_ctx->handle->swapBuffers(gl_ctx->surface);
 }

@@ -1,10 +1,8 @@
 #include "stdafx.h"
-#include "Emu/System.h"
-#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "cellSysutil.h"
 
-logs::channel cellPrint("cellPrint");
+LOG_CHANNEL(cellPrint);
 
 // Error Codes
 enum

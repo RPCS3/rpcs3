@@ -1,0 +1,944 @@
+#include "keyboard_pad_handler.h"
+#include "pad_thread.h"
+#include "Emu/Io/pad_config.h"
+#include "Input/product_info.h"
+#include "rpcs3qt/gs_frame.h"
+
+#include <QApplication>
+
+LOG_CHANNEL(input_log, "Input");
+
+inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+constexpr auto qstr = QString::fromStdString;
+
+bool keyboard_pad_handler::Init()
+{
+	const steady_clock::time_point now = steady_clock::now();
+	m_last_mouse_move_left  = now;
+	m_last_mouse_move_right = now;
+	m_last_mouse_move_up    = now;
+	m_last_mouse_move_down  = now;
+	return true;
+}
+
+keyboard_pad_handler::keyboard_pad_handler()
+	: QObject()
+	, PadHandlerBase(pad_handler::keyboard)
+{
+	init_configs();
+
+	// set capabilities
+	b_has_config = true;
+}
+
+void keyboard_pad_handler::init_config(pad_config* cfg, const std::string& name)
+{
+	if (!cfg) return;
+
+	// Set this profile's save location
+	cfg->cfg_name = name;
+
+	// Set default button mapping
+	cfg->ls_left.def  = GetKeyName(Qt::Key_A);
+	cfg->ls_down.def  = GetKeyName(Qt::Key_S);
+	cfg->ls_right.def = GetKeyName(Qt::Key_D);
+	cfg->ls_up.def    = GetKeyName(Qt::Key_W);
+	cfg->rs_left.def  = GetKeyName(Qt::Key_Home);
+	cfg->rs_down.def  = GetKeyName(Qt::Key_PageDown);
+	cfg->rs_right.def = GetKeyName(Qt::Key_End);
+	cfg->rs_up.def    = GetKeyName(Qt::Key_PageUp);
+	cfg->start.def    = GetKeyName(Qt::Key_Return);
+	cfg->select.def   = GetKeyName(Qt::Key_Space);
+	cfg->ps.def       = GetKeyName(Qt::Key_Backspace);
+	cfg->square.def   = GetKeyName(Qt::Key_Z);
+	cfg->cross.def    = GetKeyName(Qt::Key_X);
+	cfg->circle.def   = GetKeyName(Qt::Key_C);
+	cfg->triangle.def = GetKeyName(Qt::Key_V);
+	cfg->left.def     = GetKeyName(Qt::Key_Left);
+	cfg->down.def     = GetKeyName(Qt::Key_Down);
+	cfg->right.def    = GetKeyName(Qt::Key_Right);
+	cfg->up.def       = GetKeyName(Qt::Key_Up);
+	cfg->r1.def       = GetKeyName(Qt::Key_E);
+	cfg->r2.def       = GetKeyName(Qt::Key_T);
+	cfg->r3.def       = GetKeyName(Qt::Key_G);
+	cfg->l1.def       = GetKeyName(Qt::Key_Q);
+	cfg->l2.def       = GetKeyName(Qt::Key_R);
+	cfg->l3.def       = GetKeyName(Qt::Key_F);
+
+	// apply defaults
+	cfg->from_default();
+}
+
+void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
+{
+	if (!pad::g_enabled)
+	{
+		return;
+	}
+
+	value = Clamp0To255(value);
+
+	for (const auto& pad : m_bindings)
+	{
+		for (Button& button : pad->m_buttons)
+		{
+			if (button.m_keyCode != code)
+				continue;
+
+			button.m_actual_value = pressed ? value : 0;
+
+			bool update_button = true;
+
+			// to get the fastest response time possible we don't wanna use any lerp with factor 1
+			if (button.m_analog)
+			{
+				update_button = m_analog_lerp_factor >= 1.0f;
+			}
+			else if (button.m_trigger)
+			{
+				update_button = m_trigger_lerp_factor >= 1.0f;
+			}
+
+			if (update_button)
+			{
+				button.m_value = pressed ? value : 0;
+				button.m_pressed = pressed;
+			}
+		}
+
+		for (usz i = 0; i < pad->m_sticks.size(); i++)
+		{
+			const bool is_max = pad->m_sticks[i].m_keyCodeMax == code;
+			const bool is_min = pad->m_sticks[i].m_keyCodeMin == code;
+
+			const u16 normalized_value = std::max<u16>(1, static_cast<u16>(std::floor(value / 2.0)));
+
+			if (is_max)
+				m_stick_max[i] = pressed ? 128 + normalized_value : 128;
+
+			if (is_min)
+				m_stick_min[i] = pressed ? normalized_value : 0;
+
+			if (is_max || is_min)
+			{
+				m_stick_val[i] = m_stick_max[i] - m_stick_min[i];
+
+				const f32 stick_lerp_factor = (i < 2) ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
+
+				// to get the fastest response time possible we don't wanna use any lerp with factor 1
+				if (stick_lerp_factor >= 1.0f)
+				{
+					pad->m_sticks[i].m_value = m_stick_val[i];
+				}
+			}
+		}
+	}
+}
+
+void keyboard_pad_handler::release_all_keys()
+{
+	for (const auto& pad : m_bindings)
+	{
+		for (Button& button : pad->m_buttons)
+		{
+			button.m_pressed = false;
+			button.m_value = 0;
+			button.m_actual_value = 0;
+		}
+
+		for (usz i = 0; i < pad->m_sticks.size(); i++)
+		{
+			m_stick_min[i] = 0;
+			m_stick_max[i] = 128;
+			m_stick_val[i] = 128;
+			pad->m_sticks[i].m_value = 128;
+		}
+	}
+}
+
+bool keyboard_pad_handler::eventFilter(QObject* target, QEvent* ev)
+{
+	// !m_target is for future proofing when gsrender isn't automatically initialized on load.
+	// !m_target->isVisible() is a hack since currently a guiless application will STILL inititialize a gsrender (providing a valid target)
+	if (!m_target || !m_target->isVisible()|| target == m_target)
+	{
+		switch (ev->type())
+		{
+		case QEvent::KeyPress:
+			keyPressEvent(static_cast<QKeyEvent*>(ev));
+			break;
+		case QEvent::KeyRelease:
+			keyReleaseEvent(static_cast<QKeyEvent*>(ev));
+			break;
+		case QEvent::MouseButtonPress:
+			mousePressEvent(static_cast<QMouseEvent*>(ev));
+			break;
+		case QEvent::MouseButtonRelease:
+			mouseReleaseEvent(static_cast<QMouseEvent*>(ev));
+			break;
+		case QEvent::MouseMove:
+			mouseMoveEvent(static_cast<QMouseEvent*>(ev));
+			break;
+		case QEvent::Wheel:
+			mouseWheelEvent(static_cast<QWheelEvent*>(ev));
+			break;
+		case QEvent::FocusOut:
+			release_all_keys();
+			break;
+		default:
+			break;
+		}
+	}
+	return false;
+}
+
+/* Sets the target window for the event handler, and also installs an event filter on the target. */
+void keyboard_pad_handler::SetTargetWindow(QWindow* target)
+{
+	if (target != nullptr)
+	{
+		m_target = target;
+		target->installEventFilter(this);
+	}
+	else
+	{
+		QApplication::instance()->installEventFilter(this);
+		// If this is hit, it probably means that some refactoring occurs because currently a gsframe is created in Load.
+		// We still want events so filter from application instead since target is null.
+		input_log.error("Trying to set pad handler to a null target window.");
+	}
+}
+
+void keyboard_pad_handler::processKeyEvent(QKeyEvent* event, bool pressed)
+{
+	if (event->isAutoRepeat())
+	{
+		event->ignore();
+		return;
+	}
+
+	auto handle_key = [this, pressed, event]()
+	{
+		QStringList list = GetKeyNames(event);
+		if (list.isEmpty())
+			return;
+
+		const bool is_num_key = list.contains("Num");
+		if (is_num_key)
+			list.removeAll("Num");
+
+		const QString name = qstr(GetKeyName(event));
+
+		// TODO: Edge case: switching numlock keeps numpad keys pressed due to now different modifier
+
+		// Handle every possible key combination, for example: ctrl+A -> {ctrl, A, ctrl+A}
+		for (const auto& keyname : list)
+		{
+			// skip the 'original keys' when handling numpad keys
+			if (is_num_key && !keyname.contains("Num"))
+				continue;
+			// skip held modifiers when handling another key
+			if (keyname != name && list.count() > 1 && (keyname == "Alt" || keyname == "AltGr" || keyname == "Ctrl" || keyname == "Meta" || keyname == "Shift"))
+				continue;
+			Key(GetKeyCode(keyname), pressed);
+		}
+	};
+
+	// We need to ignore keys when using rpcs3 keyboard shortcuts
+	// NOTE: needs to be updated with gs_frame::keyPressEvent
+	switch (event->key())
+	{
+	case Qt::Key_Escape:
+	case Qt::Key_F12:
+		break;
+	case Qt::Key_L:
+		if (event->modifiers() != Qt::AltModifier && event->modifiers() != Qt::ControlModifier)
+			handle_key();
+		break;
+	case Qt::Key_Return:
+		if (event->modifiers() != Qt::AltModifier)
+			handle_key();
+		break;
+	case Qt::Key_P:
+	case Qt::Key_S:
+	case Qt::Key_R:
+	case Qt::Key_E:
+		if (event->modifiers() != Qt::ControlModifier)
+			handle_key();
+		break;
+	default:
+		handle_key();
+		break;
+	}
+	event->ignore();
+}
+
+void keyboard_pad_handler::keyPressEvent(QKeyEvent* event)
+{
+	if (event->modifiers() & Qt::AltModifier)
+	{
+		switch (event->key())
+		{
+		case Qt::Key_I:
+			m_deadzone_y = std::min(m_deadzone_y + 1, 255);
+			input_log.success("mouse move adjustment: deadzone y = %d", m_deadzone_y);
+			event->ignore();
+			return;
+		case Qt::Key_U:
+			m_deadzone_y = std::max(0, m_deadzone_y - 1);
+			input_log.success("mouse move adjustment: deadzone y = %d", m_deadzone_y);
+			event->ignore();
+			return;
+		case Qt::Key_Y:
+			m_deadzone_x = std::min(m_deadzone_x + 1, 255);
+			input_log.success("mouse move adjustment: deadzone x = %d", m_deadzone_x);
+			event->ignore();
+			return;
+		case Qt::Key_T:
+			m_deadzone_x = std::max(0, m_deadzone_x - 1);
+			input_log.success("mouse move adjustment: deadzone x = %d", m_deadzone_x);
+			event->ignore();
+			return;
+		case Qt::Key_K:
+			m_multi_y = std::min(m_multi_y + 0.1, 5.0);
+			input_log.success("mouse move adjustment: multiplier y = %d", static_cast<int>(m_multi_y * 100));
+			event->ignore();
+			return;
+		case Qt::Key_J:
+			m_multi_y = std::max(0.0, m_multi_y - 0.1);
+			input_log.success("mouse move adjustment: multiplier y = %d", static_cast<int>(m_multi_y * 100));
+			event->ignore();
+			return;
+		case Qt::Key_H:
+			m_multi_x = std::min(m_multi_x + 0.1, 5.0);
+			input_log.success("mouse move adjustment: multiplier x = %d", static_cast<int>(m_multi_x * 100));
+			event->ignore();
+			return;
+		case Qt::Key_G:
+			m_multi_x = std::max(0.0, m_multi_x - 0.1);
+			input_log.success("mouse move adjustment: multiplier x = %d", static_cast<int>(m_multi_x * 100));
+			event->ignore();
+			return;
+		default:
+			break;
+		}
+	}
+	processKeyEvent(event, true);
+}
+
+void keyboard_pad_handler::keyReleaseEvent(QKeyEvent* event)
+{
+	processKeyEvent(event, false);
+}
+
+void keyboard_pad_handler::mousePressEvent(QMouseEvent* event)
+{
+	Key(event->button(), true);
+	event->ignore();
+}
+
+void keyboard_pad_handler::mouseReleaseEvent(QMouseEvent* event)
+{
+	Key(event->button(), false, 0);
+	event->ignore();
+}
+
+bool keyboard_pad_handler::get_mouse_lock_state() const
+{
+	if (auto game_frame = dynamic_cast<gs_frame*>(m_target))
+		return game_frame->get_mouse_lock_state();
+	return false;
+}
+
+void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
+{
+	if (!m_mouse_move_used)
+	{
+		event->ignore();
+		return;
+	}
+
+	static int movement_x = 0;
+	static int movement_y = 0;
+
+	if (m_target && m_target->isActive() && get_mouse_lock_state())
+	{
+		// get the screen dimensions
+		const QSize screen = m_target->size();
+
+		// get the center of the screen in global coordinates
+		QPoint p_center = m_target->geometry().topLeft() + QPoint(screen.width() / 2, screen.height() / 2);
+
+		// reset the mouse to the center for consistent results since edge movement won't be registered
+		QCursor::setPos(m_target->screen(), p_center);
+
+		// convert the center into screen coordinates
+		p_center = m_target->mapFromGlobal(p_center);
+
+		// get the delta of the mouse position to the screen center
+		const QPoint p_delta = event->pos() - p_center;
+
+		movement_x = p_delta.x();
+		movement_y = p_delta.y();
+	}
+	else
+	{
+		static int last_pos_x = 0;
+		static int last_pos_y = 0;
+
+		movement_x = event->x() - last_pos_x;
+		movement_y = event->y() - last_pos_y;
+
+		last_pos_x = event->x();
+		last_pos_y = event->y();
+	}
+
+	movement_x = m_multi_x * movement_x;
+	movement_y = m_multi_y * movement_y;
+
+	int deadzone_x = 0;
+	int deadzone_y = 0;
+
+	if (movement_x == 0 && movement_y != 0)
+	{
+		deadzone_y = m_deadzone_y;
+	}
+	else if (movement_y == 0 && movement_x != 0)
+	{
+		deadzone_x = m_deadzone_x;
+	}
+	else if (movement_x != 0 && movement_y != 0 && m_deadzone_x != 0 && m_deadzone_y != 0)
+	{
+		// Calculate the point on our deadzone ellipsis intersected with the line (0, 0)(movement_x, movement_y)
+		// Ellipsis: 1 = (x²/a²) + (y²/b²)     ; where: a = m_deadzone_x and b = m_deadzone_y
+		// Line:     y = mx + t                ; where: t = 0 and m = (movement_y / movement_x)
+		// Combined: x = +-(a*b)/sqrt(a²m²+b²) ; where +- is always +, since we only want the magnitude
+
+		const double a = m_deadzone_x;
+		const double b = m_deadzone_y;
+		const double m = static_cast<double>(movement_y) / static_cast<double>(movement_x);
+
+		deadzone_x = a * b / std::sqrt(std::pow(a, 2) * std::pow(m, 2) + std::pow(b, 2));
+		deadzone_y = std::abs(m * deadzone_x);
+	}
+
+	if (movement_x < 0)
+	{
+		Key(mouse::move_right, false);
+		Key(mouse::move_left, true, std::min(deadzone_x + std::abs(movement_x), 255));
+		m_last_mouse_move_left = steady_clock::now();
+	}
+	else if (movement_x > 0)
+	{
+		Key(mouse::move_left, false);
+		Key(mouse::move_right, true, std::min(deadzone_x + movement_x, 255));
+		m_last_mouse_move_right = steady_clock::now();
+	}
+
+	// in Qt mouse up is equivalent to movement_y < 0
+	if (movement_y < 0)
+	{
+		Key(mouse::move_down, false);
+		Key(mouse::move_up, true, std::min(deadzone_y + std::abs(movement_y), 255));
+		m_last_mouse_move_up = steady_clock::now();
+	}
+	else if (movement_y > 0)
+	{
+		Key(mouse::move_up, false);
+		Key(mouse::move_down, true, std::min(deadzone_y + movement_y, 255));
+		m_last_mouse_move_down = steady_clock::now();
+	}
+
+	event->ignore();
+}
+
+void keyboard_pad_handler::mouseWheelEvent(QWheelEvent* event)
+{
+	if (!m_mouse_wheel_used)
+	{
+		return;
+	}
+
+	const QPoint direction = event->angleDelta();
+
+	if (direction.isNull())
+	{
+		// Scrolling started/ended event, no direction given
+		return;
+	}
+
+	if (const int x = direction.x())
+	{
+		const bool to_left = event->inverted() ? x < 0 : x > 0;
+
+		if (to_left)
+		{
+			Key(mouse::wheel_left, true);
+			m_last_wheel_move_left = steady_clock::now();
+		}
+		else
+		{
+			Key(mouse::wheel_right, true);
+			m_last_wheel_move_right = steady_clock::now();
+		}
+	}
+	if (const int y = direction.y())
+	{
+		const bool to_up = event->inverted() ? y < 0 : y > 0;
+
+		if (to_up)
+		{
+			Key(mouse::wheel_up, true);
+			m_last_wheel_move_up = steady_clock::now();
+		}
+		else
+		{
+			Key(mouse::wheel_down, true);
+			m_last_wheel_move_down = steady_clock::now();
+		}
+	}
+}
+
+std::vector<std::string> keyboard_pad_handler::ListDevices()
+{
+	std::vector<std::string> list_devices;
+	list_devices.emplace_back(pad::keyboard_device_name);
+	return list_devices;
+}
+
+std::string keyboard_pad_handler::GetMouseName(const QMouseEvent* event) const
+{
+	return GetMouseName(event->button());
+}
+
+std::string keyboard_pad_handler::GetMouseName(u32 button) const
+{
+	if (const auto it = mouse_list.find(button); it != mouse_list.cend())
+		return it->second;
+	return "FAIL";
+}
+
+QStringList keyboard_pad_handler::GetKeyNames(const QKeyEvent* keyEvent)
+{
+	QStringList list;
+
+	if (keyEvent->modifiers() & Qt::ShiftModifier)
+	{
+		list.append("Shift");
+		list.append(QKeySequence(keyEvent->key() | Qt::ShiftModifier).toString(QKeySequence::NativeText));
+	}
+	if (keyEvent->modifiers() & Qt::AltModifier)
+	{
+		list.append("Alt");
+		list.append(QKeySequence(keyEvent->key() | Qt::AltModifier).toString(QKeySequence::NativeText));
+	}
+	if (keyEvent->modifiers() & Qt::ControlModifier)
+	{
+		list.append("Ctrl");
+		list.append(QKeySequence(keyEvent->key() | Qt::ControlModifier).toString(QKeySequence::NativeText));
+	}
+	if (keyEvent->modifiers() & Qt::MetaModifier)
+	{
+		list.append("Meta");
+		list.append(QKeySequence(keyEvent->key() | Qt::MetaModifier).toString(QKeySequence::NativeText));
+	}
+	if (keyEvent->modifiers() & Qt::KeypadModifier)
+	{
+		list.append("Num"); // helper object, not used as actual key
+		list.append(QKeySequence(keyEvent->key() | Qt::KeypadModifier).toString(QKeySequence::NativeText));
+	}
+
+	// Handle special cases
+	if (const std::string name = native_scan_code_to_string(keyEvent->nativeScanCode()); !name.empty())
+	{
+		list.append(qstr(name));
+	}
+
+	switch (keyEvent->key())
+	{
+	case Qt::Key_Alt:
+		list.append("Alt");
+		break;
+	case Qt::Key_AltGr:
+		list.append("AltGr");
+		break;
+	case Qt::Key_Shift:
+		list.append("Shift");
+		break;
+	case Qt::Key_Control:
+		list.append("Ctrl");
+		break;
+	case Qt::Key_Meta:
+		list.append("Meta");
+		break;
+	default:
+		list.append(QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText));
+		break;
+	}
+
+	list.removeDuplicates();
+	return list;
+}
+
+std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent)
+{
+	// Handle special cases first
+	if (std::string name = native_scan_code_to_string(keyEvent->nativeScanCode()); !name.empty())
+	{
+		return name;
+	}
+
+	switch (keyEvent->key())
+	{
+	case Qt::Key_Alt:
+		return "Alt";
+	case Qt::Key_AltGr:
+		return "AltGr";
+	case Qt::Key_Shift:
+		return "Shift";
+	case Qt::Key_Control:
+		return "Ctrl";
+	case Qt::Key_Meta:
+		return "Meta";
+	case Qt::Key_NumLock:
+		return sstr(QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText));
+	default:
+		break;
+	}
+	return sstr(QKeySequence(keyEvent->key() | keyEvent->modifiers()).toString(QKeySequence::NativeText));
+}
+
+std::string keyboard_pad_handler::GetKeyName(const u32& keyCode)
+{
+	return sstr(QKeySequence(keyCode).toString(QKeySequence::NativeText));
+}
+
+u32 keyboard_pad_handler::GetKeyCode(const std::string& keyName)
+{
+	return GetKeyCode(qstr(keyName));
+}
+
+u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
+{
+	if (keyName.isEmpty())
+		return 0;
+	if (const int native_scan_code = native_scan_code_from_string(sstr(keyName)); native_scan_code >= 0)
+		return Qt::Key_unknown + native_scan_code; // Special cases that can't be expressed with Qt::Key
+	if (keyName == "Alt")
+		return Qt::Key_Alt;
+	if (keyName == "AltGr")
+		return Qt::Key_AltGr;
+	if (keyName == "Shift")
+		return Qt::Key_Shift;
+	if (keyName == "Ctrl")
+		return Qt::Key_Control;
+	if (keyName == "Meta")
+		return Qt::Key_Meta;
+
+	const QKeySequence seq(keyName);
+	u32 key_code = 0;
+
+	if (seq.count() == 1)
+		key_code = seq[0];
+	else
+		input_log.notice("GetKeyCode(%s): seq.count() = %d", sstr(keyName), seq.count());
+
+	return key_code;
+}
+
+int keyboard_pad_handler::native_scan_code_from_string([[maybe_unused]] const std::string& key)
+{
+	// NOTE: Qt throws a Ctrl key at us when using Alt Gr, so there is no point in distinguishing left and right Alt at the moment
+#ifdef _WIN32
+	if (key == "Shift Left")
+		return 42;
+	if (key == "Shift Right")
+		return 54;
+	if (key == "Ctrl Left")
+		return 29;
+	if (key == "Ctrl Right")
+		return 285;
+#else
+		// TODO
+#endif
+	return -1;
+}
+
+std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_code)
+{
+	switch (native_scan_code)
+	{
+#ifdef _WIN32
+	// NOTE: the other Qt function "nativeVirtualKey" does not distinguish between VK_SHIFT and VK_RSHIFT key in Qt at the moment
+	// NOTE: Qt throws a Ctrl key at us when using Alt Gr, so there is no point in distinguishing left and right Alt at the moment
+	case 42:
+		return "Shift Left";
+	case 54:
+		return "Shift Right";
+	case 29:
+		return "Ctrl Left";
+	case 285:
+		return "Ctrl Right";
+#else
+	// TODO
+	// NOTE for MacOs: nativeScanCode may not work
+#endif
+	default:
+		return "";
+	}
+}
+
+bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
+{
+	if (device != pad::keyboard_device_name)
+		return false;
+
+	const int index = static_cast<int>(m_bindings.size());
+	m_pad_configs[index].load();
+	pad_config* p_profile = &m_pad_configs[index];
+	if (p_profile == nullptr)
+		return false;
+
+	m_mouse_move_used = false;
+	m_mouse_wheel_used = false;
+	m_deadzone_x = p_profile->mouse_deadzone_x;
+	m_deadzone_y = p_profile->mouse_deadzone_y;
+	m_multi_x = p_profile->mouse_acceleration_x / 100.0;
+	m_multi_y = p_profile->mouse_acceleration_y / 100.0;
+	m_l_stick_lerp_factor = p_profile->l_stick_lerp_factor / 100.0f;
+	m_r_stick_lerp_factor = p_profile->r_stick_lerp_factor / 100.0f;
+	m_analog_lerp_factor  = p_profile->analog_lerp_factor / 100.0f;
+	m_trigger_lerp_factor = p_profile->trigger_lerp_factor / 100.0f;
+
+	const auto find_key = [this](const cfg::string& name)
+	{
+		int key = FindKeyCode(mouse_list, name, false);
+		if (key < 0)
+			key = GetKeyCode(name);
+		if (key < 0)
+			key = 0;
+		else if (!m_mouse_move_used && (key == mouse::move_left || key == mouse::move_right || key == mouse::move_up || key == mouse::move_down))
+			m_mouse_move_used = true;
+		else if (!m_mouse_wheel_used && (key == mouse::wheel_left || key == mouse::wheel_right || key == mouse::wheel_up || key == mouse::wheel_down))
+			m_mouse_wheel_used = true;
+		return key;
+	};
+
+	u32 pclass_profile = 0x0;
+
+	for (const auto product : input::get_products_by_class(p_profile->device_class_type))
+	{
+		if (product.vendor_id == p_profile->vendor_id && product.product_id == p_profile->product_id)
+		{
+			pclass_profile = product.pclass_profile;
+		}
+	}
+
+	// Fixed assign change, default is both sensor and press off
+	pad->Init
+	(
+		CELL_PAD_STATUS_DISCONNECTED,
+		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
+		CELL_PAD_DEV_TYPE_STANDARD,
+		p_profile->device_class_type,
+		pclass_profile,
+		p_profile->vendor_id,
+		p_profile->product_id
+	);
+
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->left),     CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->down),     CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->right),    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->up),       CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->start),    CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->r3),       CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->l3),       CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->select),   CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0,                             0x0); // Reserved (and currently not in use by rpcs3 at all)
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->square),   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->cross),    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->circle),   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->triangle), CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->r1),       CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->l1),       CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->r2),       CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->l2),       CELL_PAD_CTRL_L2);
+
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_key(p_profile->ls_left), find_key(p_profile->ls_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_key(p_profile->ls_up),   find_key(p_profile->ls_down));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_key(p_profile->rs_left), find_key(p_profile->rs_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_key(p_profile->rs_up),   find_key(p_profile->rs_down));
+
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 512);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 399);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Z, 512);
+	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_G, 512);
+
+	pad->m_vibrateMotors.emplace_back(true, 0);
+	pad->m_vibrateMotors.emplace_back(false, 0);
+
+	m_bindings.push_back(pad);
+
+	return true;
+}
+
+void keyboard_pad_handler::ThreadProc()
+{
+	static const double stick_interval = 10.0;
+	static const double button_interval = 10.0;
+
+	const auto now = steady_clock::now();
+
+	const double elapsed_stick = std::chrono::duration_cast<std::chrono::microseconds>(now - m_stick_time).count() / 1000.0;
+	const double elapsed_button = std::chrono::duration_cast<std::chrono::microseconds>(now - m_button_time).count() / 1000.0;
+
+	const bool update_sticks = elapsed_stick > stick_interval;
+	const bool update_buttons = elapsed_button > button_interval;
+
+	if (update_sticks)
+	{
+		m_stick_time = now;
+	}
+
+	if (update_buttons)
+	{
+		m_button_time = now;
+	}
+
+	if (m_mouse_move_used)
+	{
+		static const double mouse_interval = 30.0;
+
+		const double elapsed_left  = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_left).count() / 1000.0;
+		const double elapsed_right = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_right).count() / 1000.0;
+		const double elapsed_up    = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_up).count() / 1000.0;
+		const double elapsed_down  = std::chrono::duration_cast<std::chrono::microseconds>(now - m_last_mouse_move_down).count() / 1000.0;
+
+		// roughly 1-2 frames to process the next mouse move
+		if (elapsed_left > mouse_interval)
+		{
+			Key(mouse::move_left, false);
+			m_last_mouse_move_left = now;
+		}
+		if (elapsed_right > mouse_interval)
+		{
+			Key(mouse::move_right, false);
+			m_last_mouse_move_right = now;
+		}
+		if (elapsed_up > mouse_interval)
+		{
+			Key(mouse::move_up, false);
+			m_last_mouse_move_up = now;
+		}
+		if (elapsed_down > mouse_interval)
+		{
+			Key(mouse::move_down, false);
+			m_last_mouse_move_down = now;
+		}
+	}
+
+	const auto get_lerped = [](f32 v0, f32 v1, f32 lerp_factor)
+	{
+		// linear interpolation from the current value v0 to the desired value v1
+		const f32 res = std::lerp(v0, v1, lerp_factor);
+
+		// round to the correct direction to prevent sticky values on small factors
+		return (v0 <= v1) ? std::ceil(res) : std::floor(res);
+	};
+
+	for (uint i = 0; i < m_bindings.size(); i++)
+	{
+		if (last_connection_status[i] == false)
+		{
+			m_bindings[i]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
+			m_bindings[i]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+			last_connection_status[i] = true;
+			connected_devices++;
+		}
+		else
+		{
+			if (update_sticks)
+			{
+				for (int j = 0; j < static_cast<int>(m_bindings[i]->m_sticks.size()); j++)
+				{
+					const f32 stick_lerp_factor = (j < 2) ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
+
+					// we already applied the following values on keypress if we used factor 1
+					if (stick_lerp_factor < 1.0f)
+					{
+						const f32 v0 = static_cast<f32>(m_bindings[i]->m_sticks[j].m_value);
+						const f32 v1 = static_cast<f32>(m_stick_val[j]);
+						const f32 res = get_lerped(v0, v1, stick_lerp_factor);
+
+						m_bindings[i]->m_sticks[j].m_value = static_cast<u16>(res);
+					}
+				}
+			}
+
+			if (update_buttons)
+			{
+				for (auto& button : m_bindings[i]->m_buttons)
+				{
+					if (button.m_analog)
+					{
+						// we already applied the following values on keypress if we used factor 1
+						if (m_analog_lerp_factor < 1.0f)
+						{
+							const f32 v0 = static_cast<f32>(button.m_value);
+							const f32 v1 = static_cast<f32>(button.m_actual_value);
+							const f32 res = get_lerped(v0, v1, m_analog_lerp_factor);
+
+							button.m_value = static_cast<u16>(res);
+							button.m_pressed = button.m_value > 0;
+						}
+					}
+					else if (button.m_trigger)
+					{
+						// we already applied the following values on keypress if we used factor 1
+						if (m_trigger_lerp_factor < 1.0f)
+						{
+							const f32 v0 = static_cast<f32>(button.m_value);
+							const f32 v1 = static_cast<f32>(button.m_actual_value);
+							const f32 res = get_lerped(v0, v1, m_trigger_lerp_factor);
+
+							button.m_value = static_cast<u16>(res);
+							button.m_pressed = button.m_value > 0;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (!m_mouse_wheel_used)
+	{
+		return;
+	}
+
+	// Releases the wheel buttons 0,1 sec after they've been triggered
+	// Next activation is set to distant future to avoid activating this on every proc
+	const auto update_threshold = now - std::chrono::milliseconds(100);
+	const auto distant_future = now + std::chrono::hours(24);
+
+	if (update_threshold >= m_last_wheel_move_up)
+	{
+		Key(mouse::wheel_up, false);
+		m_last_wheel_move_up = distant_future;
+	}
+	if (update_threshold >= m_last_wheel_move_down)
+	{
+		Key(mouse::wheel_down, false);
+		m_last_wheel_move_down = distant_future;
+	}
+	if (update_threshold >= m_last_wheel_move_left)
+	{
+		Key(mouse::wheel_left, false);
+		m_last_wheel_move_left = distant_future;
+	}
+	if (update_threshold >= m_last_wheel_move_right)
+	{
+		Key(mouse::wheel_right, false);
+		m_last_wheel_move_right = distant_future;
+	}
+}

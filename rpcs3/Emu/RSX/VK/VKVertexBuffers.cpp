@@ -1,13 +1,12 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
 #include "VKGSRender.h"
-#include "../rsx_methods.h"
 #include "../Common/BufferUtils.h"
+#include "../rsx_methods.h"
+#include "vkutils/buffer_object.h"
 
 namespace vk
 {
-	VkPrimitiveTopology get_appropriate_topology(rsx::primitive_type& mode, bool &requires_modification)
+	VkPrimitiveTopology get_appropriate_topology(rsx::primitive_type mode, bool &requires_modification)
 	{
 		requires_modification = false;
 
@@ -34,7 +33,7 @@ namespace vk
 			requires_modification = true;
 			return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		default:
-			fmt::throw_exception("Unsupported primitive topology 0x%x", (u8)mode);
+			fmt::throw_exception("Unsupported primitive topology 0x%x", static_cast<u8>(mode));
 		}
 	}
 
@@ -54,16 +53,15 @@ namespace vk
 		case rsx::index_array_type::u16:
 			return VK_INDEX_TYPE_UINT16;
 		}
-		throw;
+		fmt::throw_exception("Invalid index array type (%u)", static_cast<u8>(type));
 	}
 }
 
 namespace
 {
-
 	std::tuple<u32, std::tuple<VkDeviceSize, VkIndexType>> generate_emulating_index_buffer(
 		const rsx::draw_clause& clause, u32 vertex_count,
-		vk::vk_data_heap& m_index_buffer_ring_info)
+		vk::data_heap& m_index_buffer_ring_info)
 	{
 		u32 index_count = get_index_count(clause.primitive, vertex_count);
 		u32 upload_size = index_count * sizeof(u16);
@@ -71,8 +69,7 @@ namespace
 		VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
 		void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
-		write_index_array_for_non_indexed_non_native_primitive_to_buffer(
-			reinterpret_cast<char*>(buf), clause.primitive, vertex_count);
+		g_fxo->get<rsx::dma_manager>().emulate_as_indexed(buf, clause.primitive, vertex_count);
 
 		m_index_buffer_ring_info.unmap();
 		return std::make_tuple(
@@ -82,29 +79,31 @@ namespace
 	struct vertex_input_state
 	{
 		VkPrimitiveTopology native_primitive_type;
+		bool index_rebase;
+		u32 min_index;
+		u32 max_index;
 		u32 vertex_draw_count;
-		u32 allocated_vertex_count;
-		u32 vertex_data_base;
-		u32 vertex_index_base;
+		u32 vertex_index_offset;
 		std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info;
 	};
 
 	struct draw_command_visitor
 	{
-		draw_command_visitor(vk::vk_data_heap& index_buffer_ring_info, rsx::vertex_input_layout& layout)
+		draw_command_visitor(vk::data_heap& index_buffer_ring_info, rsx::vertex_input_layout& layout)
 			: m_index_buffer_ring_info(index_buffer_ring_info)
 			, m_vertex_layout(layout)
 		{
 		}
 
-		vertex_input_state operator()(const rsx::draw_array_command& command)
+		vertex_input_state operator()(const rsx::draw_array_command& /*command*/)
 		{
 			bool primitives_emulated = false;
 			VkPrimitiveTopology prims = vk::get_appropriate_topology(
 				rsx::method_registers.current_draw_clause.primitive, primitives_emulated);
 
 			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
-			const u32 min_index = rsx::method_registers.current_draw_clause.first_count_commands.front().first;
+			const u32 min_index = rsx::method_registers.current_draw_clause.min_index();
+			const u32 max_index = (min_index + vertex_count) - 1;
 
 			if (primitives_emulated)
 			{
@@ -115,51 +114,46 @@ namespace
 					generate_emulating_index_buffer(rsx::method_registers.current_draw_clause,
 						vertex_count, m_index_buffer_ring_info);
 
-				return{ prims, index_count, vertex_count, min_index, 0, index_info };
+				return{ prims, false, min_index, max_index, index_count, 0, index_info };
 			}
 
-			return{ prims, vertex_count, vertex_count, min_index, 0, {} };
+			return{ prims, false, min_index, max_index, vertex_count, 0, {} };
 		}
 
 		vertex_input_state operator()(const rsx::draw_indexed_array_command& command)
 		{
-			const bool primitive_restart_enabled = rsx::method_registers.restart_index_enabled();
-			const bool emulate_primitive_restart = primitive_restart_enabled && vk::emulate_primitive_restart();
-			const bool expand_indices_to_32bit = primitive_restart_enabled && !emulate_primitive_restart && vk::force_32bit_index_buffer();
-
 			bool primitives_emulated = false;
-			VkPrimitiveTopology prims = vk::get_appropriate_topology(
-				rsx::method_registers.current_draw_clause.primitive, primitives_emulated);
+			auto primitive = rsx::method_registers.current_draw_clause.primitive;
+			const VkPrimitiveTopology prims = vk::get_appropriate_topology(primitive, primitives_emulated);
+			const bool emulate_restart = rsx::method_registers.restart_index_enabled() && vk::emulate_primitive_restart(primitive);
 
 			rsx::index_array_type index_type = rsx::method_registers.current_draw_clause.is_immediate_draw ?
 				rsx::index_array_type::u32 :
 				rsx::method_registers.index_type();
 
-			rsx::index_array_type upload_type = expand_indices_to_32bit ? rsx::index_array_type::u32 : index_type;
-			u32 type_size = gsl::narrow<u32>(get_index_type_size(upload_type));
+			u32 type_size = get_index_type_size(index_type);
 
 			u32 index_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			if (primitives_emulated)
 				index_count = get_index_count(rsx::method_registers.current_draw_clause.primitive, index_count);
 			u32 upload_size = index_count * type_size;
 
-			VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
+			if (emulate_restart) upload_size *= 2;
+
+			VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<4>(upload_size);
 			void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
 
-			gsl::span<gsl::byte> dst;
-			std::vector<gsl::byte> tmp;
-			if (emulate_primitive_restart || (expand_indices_to_32bit && index_type == rsx::index_array_type::u16))
+			gsl::span<std::byte> dst;
+			std::vector<std::byte> tmp;
+			if (emulate_restart)
 			{
 				tmp.resize(upload_size);
 				dst = tmp;
 			}
 			else
 			{
-				dst = gsl::span<gsl::byte>(static_cast<gsl::byte*>(buf), upload_size);
+				dst = gsl::span<std::byte>(static_cast<std::byte*>(buf), upload_size);
 			}
-
-			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info =
-				std::make_tuple(offset_in_index_buffer, vk::get_index_type(upload_type));
 
 			/**
 			* Upload index (and expands it if primitive type is not natively supported).
@@ -170,103 +164,82 @@ namespace
 				command.raw_index_buffer, index_type,
 				rsx::method_registers.current_draw_clause.primitive,
 				rsx::method_registers.restart_index_enabled(),
-				rsx::method_registers.restart_index(), command.ranges_to_fetch_in_index_buffer,
-				rsx::method_registers.vertex_data_base_index(), [](auto prim) { return !vk::is_primitive_native(prim); });
+				rsx::method_registers.restart_index(),
+				[](auto prim) { return !vk::is_primitive_native(prim); });
 
 			if (min_index >= max_index)
 			{
 				//empty set, do not draw
 				m_index_buffer_ring_info.unmap();
-				return{ prims, 0, 0, 0, 0, index_info };
+				return{ prims, false, 0, 0, 0, 0, {} };
 			}
 
-			if (tmp.size() > 0)
+			if (emulate_restart)
 			{
-				if (emulate_primitive_restart)
+				if (index_type == rsx::index_array_type::u16)
 				{
-					//Emulate primitive restart by breaking up the draw calls
-					rsx::method_registers.current_draw_clause.alternate_first_count_commands.resize(0);
-					rsx::method_registers.current_draw_clause.alternate_first_count_commands.reserve(index_count / 3);
-
-					if (index_type == rsx::index_array_type::u16)
-						rsx::split_index_list(reinterpret_cast<u16*>(tmp.data()), index_count, (u16)UINT16_MAX, rsx::method_registers.current_draw_clause.alternate_first_count_commands);
-					else
-						rsx::split_index_list(reinterpret_cast<u32*>(tmp.data()), index_count, (u32)UINT32_MAX, rsx::method_registers.current_draw_clause.alternate_first_count_commands);
-
-					memcpy(buf, tmp.data(), tmp.size());
+					index_count = rsx::remove_restart_index(static_cast<u16*>(buf), reinterpret_cast<u16*>(tmp.data()), index_count, u16{UINT16_MAX});
 				}
 				else
 				{
-					//Force 32-bit indices
-					verify(HERE), index_type == rsx::index_array_type::u16;
-					u32* dst = reinterpret_cast<u32*>(buf);
-					u16* src = reinterpret_cast<u16*>(tmp.data());
-					for (u32 n = 0; n < index_count; ++n)
-					{
-						const auto index = src[n];
-						if (index == UINT16_MAX)
-							dst[n] = UINT32_MAX;
-						else
-							dst[n] = index;
-					}
+					index_count = rsx::remove_restart_index(static_cast<u32*>(buf), reinterpret_cast<u32*>(tmp.data()), index_count, u32{UINT32_MAX});
 				}
 			}
 
 			m_index_buffer_ring_info.unmap();
 
-			//check for vertex arrays with frquency modifiers
-			for (auto &block : m_vertex_layout.interleaved_blocks)
-			{
-				if (block.min_divisor > 1)
-				{
-					//Ignore base offsets and return real results
-					//The upload function will optimize the uploaded range anyway
-					return{ prims, index_count, max_index, 0, 0, index_info };
-				}
-			}
+			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info =
+				std::make_tuple(offset_in_index_buffer, vk::get_index_type(index_type));
 
-			return {prims, index_count, (max_index - min_index + 1), min_index, min_index, index_info};
+			const auto index_offset = rsx::method_registers.vertex_data_base_index();
+			return {prims, true, min_index, max_index, index_count, index_offset, index_info};
 		}
 
-		vertex_input_state operator()(const rsx::draw_inlined_array& command)
+		vertex_input_state operator()(const rsx::draw_inlined_array& /*command*/)
 		{
 			bool primitives_emulated = false;
 			auto &draw_clause = rsx::method_registers.current_draw_clause;
 			VkPrimitiveTopology prims = vk::get_appropriate_topology(draw_clause.primitive, primitives_emulated);
-			
-			const u32 vertex_count = (u32)command.inline_vertex_array.size() * sizeof(u32) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
+
+			const auto stream_length = rsx::method_registers.current_draw_clause.inline_vertex_array.size();
+			const u32 vertex_count = u32(stream_length * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
 
 			if (!primitives_emulated)
 			{
-				return{ prims, vertex_count, vertex_count, 0, 0, {} };
+				return{ prims, false, 0, vertex_count - 1, vertex_count, 0, {} };
 			}
 
 			u32 index_count;
 			std::optional<std::tuple<VkDeviceSize, VkIndexType>> index_info;
 			std::tie(index_count, index_info) = generate_emulating_index_buffer(draw_clause, vertex_count, m_index_buffer_ring_info);
-			return{ prims, index_count, vertex_count, 0, 0, index_info };
+			return{ prims, false, 0, vertex_count - 1, index_count, 0, index_info };
 		}
 
 	private:
-		vk::vk_data_heap& m_index_buffer_ring_info;
+		vk::data_heap& m_index_buffer_ring_info;
 		rsx::vertex_input_layout& m_vertex_layout;
 	};
 }
 
 vk::vertex_upload_info VKGSRender::upload_vertex_data()
 {
-	m_vertex_layout = analyse_inputs_interleaved();
-
 	draw_command_visitor visitor(m_index_buffer_ring_info, m_vertex_layout);
-	auto result = std::apply_visitor(visitor, get_draw_command(rsx::method_registers));
+	auto result = std::visit(visitor, get_draw_command(rsx::method_registers));
 
-	auto &vertex_count = result.allocated_vertex_count;
-	auto &vertex_base = result.vertex_data_base;
+	const u32 vertex_count = (result.max_index - result.min_index) + 1;
+	u32 vertex_base = result.min_index;
+	u32 index_base = 0;
+
+	if (result.index_rebase)
+	{
+		vertex_base = rsx::get_index_from_base(vertex_base, rsx::method_registers.vertex_data_base_index());
+		index_base = result.min_index;
+	}
 
 	//Do actual vertex upload
-	auto required = calculate_memory_requirements(m_vertex_layout, vertex_count);
+	auto required = calculate_memory_requirements(m_vertex_layout, vertex_base, vertex_count);
 	u32 persistent_range_base = UINT32_MAX, volatile_range_base = UINT32_MAX;
-	size_t persistent_offset = UINT64_MAX, volatile_offset = UINT64_MAX;
+	usz persistent_offset = UINT64_MAX, volatile_offset = UINT64_MAX;
 
 	if (required.first > 0)
 	{
@@ -280,9 +253,13 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		if (m_vertex_layout.interleaved_blocks.size() == 1 &&
 			rsx::method_registers.current_draw_clause.command != rsx::draw_command::inlined_array)
 		{
-			storage_address = m_vertex_layout.interleaved_blocks[0].real_offset_address + vertex_base;
+			const auto data_offset = (vertex_base * m_vertex_layout.interleaved_blocks[0].attribute_stride);
+			storage_address = m_vertex_layout.interleaved_blocks[0].real_offset_address + data_offset;
+
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, VK_FORMAT_R8_UINT, required.first))
 			{
+				ensure(cached->local_address == storage_address);
+
 				in_cache = true;
 				persistent_range_base = cached->offset_in_heap;
 			}
@@ -294,33 +271,33 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 
 		if (!in_cache)
 		{
-			persistent_offset = (u32)m_attrib_ring_info.alloc<256>(required.first);
-			persistent_range_base = (u32)persistent_offset;
+			persistent_offset = static_cast<u32>(m_attrib_ring_info.alloc<256>(required.first));
+			persistent_range_base = static_cast<u32>(persistent_offset);
 
 			if (to_store)
 			{
 				//store ref in vertex cache
-				m_vertex_cache->store_range(storage_address, VK_FORMAT_R8_UINT, required.first, (u32)persistent_offset);
+				m_vertex_cache->store_range(storage_address, VK_FORMAT_R8_UINT, required.first, static_cast<u32>(persistent_offset));
 			}
 		}
 	}
 
 	if (required.second > 0)
 	{
-		volatile_offset = (u32)m_attrib_ring_info.alloc<256>(required.second);
-		volatile_range_base = (u32)volatile_offset;
+		volatile_offset = static_cast<u32>(m_attrib_ring_info.alloc<256>(required.second));
+		volatile_range_base = static_cast<u32>(volatile_offset);
 	}
 
 	//Write all the data once if possible
 	if (required.first && required.second && volatile_offset > persistent_offset)
 	{
 		//Do this once for both to save time on map/unmap cycles
-		const size_t block_end = (volatile_offset + required.second);
-		const size_t block_size = block_end - persistent_offset;
-		const size_t volatile_offset_in_block = volatile_offset - persistent_offset;
+		const usz block_end = (volatile_offset + required.second);
+		const usz block_size = block_end - persistent_offset;
+		const usz volatile_offset_in_block = volatile_offset - persistent_offset;
 
 		void *block_mapping = m_attrib_ring_info.map(persistent_offset, block_size);
-		write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, block_mapping, (char*)block_mapping + volatile_offset_in_block);
+		write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, block_mapping, static_cast<char*>(block_mapping) + volatile_offset_in_block);
 		m_attrib_ring_info.unmap();
 	}
 	else
@@ -340,15 +317,35 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		}
 	}
 
+	if (vk::test_status_interrupt(vk::heap_changed))
+	{
+		// Check for validity
+		if (m_persistent_attribute_storage &&
+			m_persistent_attribute_storage->info.buffer != m_attrib_ring_info.heap->value)
+		{
+			m_current_frame->buffer_views_to_clean.push_back(std::move(m_persistent_attribute_storage));
+		}
+
+		if (m_volatile_attribute_storage &&
+			m_volatile_attribute_storage->info.buffer != m_attrib_ring_info.heap->value)
+		{
+			m_current_frame->buffer_views_to_clean.push_back(std::move(m_volatile_attribute_storage));
+		}
+
+		vk::clear_status_interrupt(vk::heap_changed);
+	}
+
 	if (persistent_range_base != UINT32_MAX)
 	{
 		if (!m_persistent_attribute_storage || !m_persistent_attribute_storage->in_range(persistent_range_base, required.first, persistent_range_base))
 		{
+			ensure(m_texbuffer_view_size >= required.first); // "Incompatible driver (MacOS?)"
+
 			if (m_persistent_attribute_storage)
 				m_current_frame->buffer_views_to_clean.push_back(std::move(m_persistent_attribute_storage));
 
 			//View 64M blocks at a time (different drivers will only allow a fixed viewable heap size, 64M should be safe)
-			const size_t view_size = (persistent_range_base + 0x4000000) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - persistent_range_base : 0x4000000;
+			const usz view_size = (persistent_range_base + m_texbuffer_view_size) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - persistent_range_base : m_texbuffer_view_size;
 			m_persistent_attribute_storage = std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, persistent_range_base, view_size);
 			persistent_range_base = 0;
 		}
@@ -358,14 +355,23 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 	{
 		if (!m_volatile_attribute_storage || !m_volatile_attribute_storage->in_range(volatile_range_base, required.second, volatile_range_base))
 		{
+			ensure(m_texbuffer_view_size >= required.second); // "Incompatible driver (MacOS?)"
+
 			if (m_volatile_attribute_storage)
 				m_current_frame->buffer_views_to_clean.push_back(std::move(m_volatile_attribute_storage));
 
-			const size_t view_size = (volatile_range_base + 0x4000000) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - volatile_range_base : 0x4000000;
+			const usz view_size = (volatile_range_base + m_texbuffer_view_size) > m_attrib_ring_info.size() ? m_attrib_ring_info.size() - volatile_range_base : m_texbuffer_view_size;
 			m_volatile_attribute_storage = std::make_unique<vk::buffer_view>(*m_device, m_attrib_ring_info.heap->value, VK_FORMAT_R8_UINT, volatile_range_base, view_size);
 			volatile_range_base = 0;
 		}
 	}
 
-	return{ result.native_primitive_type, result.vertex_draw_count, result.allocated_vertex_count, result.vertex_index_base, persistent_range_base, volatile_range_base, result.index_info };
+	return{ result.native_primitive_type,                 // Primitive
+			result.vertex_draw_count,                     // Vertex count
+			vertex_count,                                 // Allocated vertex count
+			vertex_base,                                  // First vertex in stream
+			index_base,                                   // Index of vertex at data location 0
+			result.vertex_index_offset,                   // Index offset
+			persistent_range_base, volatile_range_base,   // Binding range
+			result.index_info };                          // Index buffer info
 }

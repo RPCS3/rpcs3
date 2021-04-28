@@ -1,41 +1,15 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 
 #include "sys_net_.h"
 
+LOG_CHANNEL(libnet);
 
-
-logs::channel libnet("libnet");
-
-struct sys_net_tls_data
-{
-	be_t<s32> _errno;
-	be_t<s32> _h_errno;
-	char addr[16];
-};
-
-// TODO
-thread_local vm::ptr<sys_net_tls_data> g_tls_net_data{};
-
-static NEVER_INLINE vm::ptr<sys_net_tls_data> get_tls()
-{
-	// Allocate if not initialized
-	if (!g_tls_net_data)
-	{
-		g_tls_net_data.set(vm::alloc(sizeof(decltype(g_tls_net_data)::type), vm::main));
-
-		// Initial values
-		g_tls_net_data->_errno = SYS_NET_EBUSY;
-
-		thread_ctrl::atexit([addr = g_tls_net_data.addr()]
-		{
-			vm::dealloc_verbose_nothrow(addr, vm::main);
-		});
-	}
-
-	return g_tls_net_data;
-}
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 s32 sys_net_accept(s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen)
 {
@@ -314,11 +288,12 @@ s32 sys_net_show_nameserver()
 	return CELL_OK;
 }
 
-vm::ptr<s32> _sys_net_errno_loc()
+vm::ptr<s32> _sys_net_errno_loc(ppu_thread& ppu)
 {
 	libnet.warning("_sys_net_errno_loc()");
 
-	return get_tls().ptr(&sys_net_tls_data::_errno);
+	// Return fake location from system TLS area
+	return vm::cast(ppu.gpr[13] - 0x7030 + 0x2c);
 }
 
 s32 sys_net_set_resolver_configurations()
@@ -388,11 +363,12 @@ s32 sys_net_finalize_network()
 	return CELL_OK;
 }
 
-vm::ptr<s32> _sys_net_h_errno_loc()
+vm::ptr<s32> _sys_net_h_errno_loc(ppu_thread& ppu)
 {
 	libnet.warning("_sys_net_h_errno_loc()");
 
-	return get_tls().ptr(&sys_net_tls_data::_h_errno);
+	// Return fake location from system TLS area
+	return vm::cast(ppu.gpr[13] - 0x7030 + 0x28);
 }
 
 s32 sys_net_set_netemu_test_param()

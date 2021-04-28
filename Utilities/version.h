@@ -1,6 +1,6 @@
 #pragma once
 
-#include "types.h"
+#include "util/types.hpp"
 #include <string>
 
 namespace utils
@@ -69,4 +69,7 @@ namespace utils
 		uint to_hex() const;
 		std::string to_string() const;
 	};
+
+	// Generic version comparison (e.g. 0.0.5 vs 1.3)
+	int compare_versions(const std::string& v1, const std::string& v2, bool& ok);
 }

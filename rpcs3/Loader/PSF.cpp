@@ -1,6 +1,10 @@
 #include "stdafx.h"
 #include "PSF.h"
 
+#include "util/asm.hpp"
+
+LOG_CHANNEL(psf_log, "PSF");
+
 template<>
 void fmt_class_string<psf::format>::format(std::string& out, u64 arg)
 {
@@ -17,10 +21,25 @@ void fmt_class_string<psf::format>::format(std::string& out, u64 arg)
 	});
 }
 
+template<>
+void fmt_class_string<psf::error>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto fmt)
+	{
+		switch (fmt)
+		{
+		case psf::error::ok: return "OK";
+		case psf::error::stream: return "File doesn't exist";
+		case psf::error::not_psf: return "File is not of PSF format";
+		case psf::error::corrupt: return "PSF is truncated or corrupted";
+		}
+
+		return unknown;
+	});
+}
+
 namespace psf
 {
-	logs::channel log("PSF");
-
 	struct header_t
 	{
 		le_t<u32> magic;
@@ -40,12 +59,13 @@ namespace psf
 	};
 
 
-	entry::entry(format type, u32 max_size, const std::string& value)
+	entry::entry(format type, u32 max_size, std::string_view value)
 		: m_type(type)
 		, m_max_size(max_size)
 		, m_value_string(value)
 	{
-		verify(HERE), type == format::string || type == format::array, max_size;
+		ensure(type == format::string || type == format::array);
+		ensure(max_size);
 	}
 
 	entry::entry(u32 value)
@@ -61,26 +81,26 @@ namespace psf
 
 	const std::string& entry::as_string() const
 	{
-		verify(HERE), m_type == format::string || m_type == format::array;
+		ensure(m_type == format::string || m_type == format::array);
 		return m_value_string;
 	}
 
 	u32 entry::as_integer() const
 	{
-		verify(HERE), m_type == format::integer;
+		ensure(m_type == format::integer);
 		return m_value_integer;
 	}
 
-	entry& entry::operator =(const std::string& value)
+	entry& entry::operator =(std::string_view value)
 	{
-		verify(HERE), m_type == format::string || m_type == format::array;
+		ensure(m_type == format::string || m_type == format::array);
 		m_value_string = value;
 		return *this;
 	}
 
 	entry& entry::operator =(u32 value)
 	{
-		verify(HERE), m_type == format::integer;
+		ensure(m_type == format::integer);
 		m_value_integer = value;
 		return *this;
 	}
@@ -94,57 +114,60 @@ namespace psf
 			return std::min(m_max_size, ::narrow<u32>(m_value_string.size() + (m_type == format::string)));
 
 		case format::integer:
-			return SIZE_32(u32);
+			return sizeof(u32);
 		}
 
-		fmt::throw_exception("Invalid format (0x%x)" HERE, m_type);
+		fmt::throw_exception("Invalid format (0x%x)", m_type);
 	}
 
-	registry load_object(const fs::file& stream)
+	load_result_t load(const fs::file& stream)
 	{
-		registry result;
+#define PSF_CHECK(cond, err) if (!static_cast<bool>(cond)) { if (error::err != error::stream) psf_log.error("Error loading PSF: %s%s", error::err, \
+			src_loc{__builtin_LINE(), __builtin_COLUMN(), __builtin_FILE(), __builtin_FUNCTION()}); \
+			result.clear(); \
+			errc = error::err; \
+			return pair; }
 
-		// Hack for empty input (TODO)
-		if (!stream)
-		{
-			return result;
-		}
+		load_result_t pair{};
+		auto& [result, errc] = pair;
+
+		PSF_CHECK(stream, stream);
+
+		stream.seek(0);
 
 		// Get header
 		header_t header;
-		verify(HERE), stream.read(header);
+		PSF_CHECK(stream.read(header), not_psf);
 
 		// Check magic and version
-		verify(HERE),
-			header.magic == "\0PSF"_u32,
-			header.version == 0x101,
-			sizeof(header_t) + header.entries_num * sizeof(def_table_t) <= header.off_key_table,
-			header.off_key_table <= header.off_data_table,
-			header.off_data_table <= stream.size();
+		PSF_CHECK(header.magic == "\0PSF"_u32, not_psf);
+		PSF_CHECK(header.version == 0x101u, not_psf);
+		PSF_CHECK(header.off_key_table >= sizeof(header_t), corrupt);
+		PSF_CHECK(header.off_key_table <= header.off_data_table, corrupt);
+		PSF_CHECK(header.off_data_table <= stream.size(), corrupt);
 
 		// Get indices
 		std::vector<def_table_t> indices;
-		verify(HERE), stream.read(indices, header.entries_num);
+		PSF_CHECK(stream.read<true>(indices, header.entries_num), corrupt);
 
 		// Get keys
 		std::string keys;
-		verify(HERE), stream.seek(header.off_key_table) == header.off_key_table;
-		verify(HERE), stream.read(keys, header.off_data_table - header.off_key_table);
+		PSF_CHECK(stream.seek(header.off_key_table) == header.off_key_table, corrupt);
+		PSF_CHECK(stream.read<true>(keys, header.off_data_table - header.off_key_table), corrupt);
 
 		// Load entries
 		for (u32 i = 0; i < header.entries_num; ++i)
 		{
-			verify(HERE), indices[i].key_off < header.off_data_table - header.off_key_table;
+			PSF_CHECK(indices[i].key_off < header.off_data_table - header.off_key_table, corrupt);
 
 			// Get key name (null-terminated string)
 			std::string key(keys.data() + indices[i].key_off);
 
 			// Check entry
-			verify(HERE),
-				result.count(key) == 0,
-				indices[i].param_len <= indices[i].param_max,
-				indices[i].data_off < stream.size() - header.off_data_table,
-				indices[i].param_max < stream.size() - indices[i].data_off;
+			PSF_CHECK(result.count(key) == 0, corrupt);
+			PSF_CHECK(indices[i].param_len <= indices[i].param_max, corrupt);
+			PSF_CHECK(indices[i].data_off < stream.size() - header.off_data_table, corrupt);
+			PSF_CHECK(indices[i].param_max < stream.size() - indices[i].data_off, corrupt);
 
 			// Seek data pointer
 			stream.seek(header.off_data_table + indices[i].data_off);
@@ -153,7 +176,7 @@ namespace psf
 			{
 				// Integer data
 				le_t<u32> value;
-				verify(HERE), stream.read(value);
+				PSF_CHECK(stream.read(value), corrupt);
 
 				result.emplace(std::piecewise_construct,
 					std::forward_as_tuple(std::move(key)),
@@ -163,7 +186,7 @@ namespace psf
 			{
 				// String/array data
 				std::string value;
-				verify(HERE), stream.read(value, indices[i].param_len);
+				PSF_CHECK(stream.read<true>(value, indices[i].param_len), corrupt);
 
 				if (indices[i].param_fmt == format::string)
 				{
@@ -178,19 +201,27 @@ namespace psf
 			else
 			{
 				// Possibly unsupported format, entry ignored
-				log.error("Unknown entry format (key='%s', fmt=0x%x, len=0x%x, max=0x%x)", key, indices[i].param_fmt, indices[i].param_len, indices[i].param_max);
+				psf_log.error("Unknown entry format (key='%s', fmt=0x%x, len=0x%x, max=0x%x)", key, indices[i].param_fmt, indices[i].param_len, indices[i].param_max);
 			}
 		}
 
-		return result;
+#undef PSF_CHECK
+		return pair;
 	}
 
-	void save_object(const fs::file& stream, const psf::registry& psf)
+	load_result_t load(const std::string& filename)
 	{
+		return load(fs::file(filename));
+	}
+
+	std::vector<u8> save_object(const psf::registry& psf, std::vector<u8>&& init)
+	{
+		fs::file stream = fs::make_stream<std::vector<u8>>(std::move(init));
+
 		std::vector<def_table_t> indices; indices.reserve(psf.size());
 
 		// Generate indices and calculate key table length
-		std::size_t key_offset = 0, data_offset = 0;
+		usz key_offset = 0, data_offset = 0;
 
 		for (const auto& entry : psf)
 		{
@@ -209,7 +240,7 @@ namespace psf
 		}
 
 		// Align next section (data) offset
-		key_offset = ::align(key_offset, 4);
+		key_offset = utils::align(key_offset, 4);
 
 		// Generate header
 		header_t header;
@@ -247,12 +278,12 @@ namespace psf
 			else if (fmt == format::string || fmt == format::array)
 			{
 				const std::string& value = entry.second.as_string();
-				const std::size_t size = std::min<std::size_t>(max, value.size());
+				const usz size = std::min<usz>(max, value.size());
 
 				if (value.size() + (fmt == format::string) > max)
 				{
 					// TODO: check real limitations of PSF format
-					log.error("Entry value shrinkage (key='%s', value='%s', size=0x%zx, max=0x%x)", entry.first, value, size, max);
+					psf_log.error("Entry value shrinkage (key='%s', value='%s', size=0x%zx, max=0x%x)", entry.first, value, size, max);
 				}
 
 				stream.write(value);
@@ -260,12 +291,14 @@ namespace psf
 			}
 			else
 			{
-				fmt::throw_exception("Invalid entry format (key='%s', fmt=0x%x)" HERE, entry.first, fmt);
+				fmt::throw_exception("Invalid entry format (key='%s', fmt=0x%x)", entry.first, fmt);
 			}
 		}
+
+		return std::move(static_cast<fs::container_stream<std::vector<u8>>*>(stream.release().get())->obj);
 	}
 
-	std::string get_string(const registry& psf, const std::string& key, const std::string& def)
+	std::string_view get_string(const registry& psf, const std::string& key, std::string_view def)
 	{
 		const auto found = psf.find(key);
 

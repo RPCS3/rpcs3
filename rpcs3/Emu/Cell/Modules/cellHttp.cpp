@@ -1,695 +1,725 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellHttp.h"
 
-logs::channel cellHttp("cellHttp");
+LOG_CHANNEL(cellHttp);
 
-s32 cellHttpAuthCacheExport()
+error_code cellHttpAuthCacheExport()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpAuthCacheFlush()
+error_code cellHttpAuthCacheFlush()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpAuthCacheGetEntryMax()
+error_code cellHttpAuthCacheGetEntryMax()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpAuthCacheImport()
+error_code cellHttpAuthCacheImport()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpAuthCacheSetEntryMax()
+error_code cellHttpAuthCacheSetEntryMax()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpInit()
+error_code cellHttpInit()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpEnd()
+error_code cellHttpEnd()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpsInit()
+error_code cellHttpsInit()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpsEnd()
+error_code cellHttpsEnd()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpSetProxy()
+error_code cellHttpSetProxy()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpGetCookie()
+error_code cellHttpGetCookie()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpGetProxy()
+error_code cellHttpGetProxy()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpInitCookie()
+error_code cellHttpInitCookie()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpEndCookie()
+error_code cellHttpEndCookie()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpAddCookieWithClientId()
+error_code cellHttpAddCookieWithClientId()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpSessionCookieFlush()
+error_code cellHttpSessionCookieFlush()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpCookieExport()
+error_code cellHttpCookieExport()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpCookieExportWithClientId()
+error_code cellHttpCookieExportWithClientId()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpCookieFlush()
+error_code cellHttpCookieFlush()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpCookieImport()
+error_code cellHttpCookieImport()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpCookieImportWithClientId()
+error_code cellHttpCookieImportWithClientId()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetCookieSendCallback()
+error_code cellHttpClientSetCookieSendCallback()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetCookieRecvCallback()
+error_code cellHttpClientSetCookieRecvCallback()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpCreateClient()
+error_code cellHttpCreateClient()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpDestroyClient()
+error_code cellHttpDestroyClient()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetAuthenticationCallback()
+error_code cellHttpClientSetAuthenticationCallback()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetTransactionStateCallback()
+error_code cellHttpClientSetTransactionStateCallback()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetRedirectCallback()
+error_code cellHttpClientSetRedirectCallback()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetProxy()
+error_code cellHttpClientSetProxy()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetProxy()
+error_code cellHttpClientGetProxy()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetVersion()
+error_code cellHttpClientSetVersion()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetVersion()
+error_code cellHttpClientGetVersion()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetPipeline()
+error_code cellHttpClientSetPipeline()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetPipeline()
+error_code cellHttpClientGetPipeline()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetKeepAlive()
+error_code cellHttpClientSetKeepAlive()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetKeepAlive()
+error_code cellHttpClientGetKeepAlive()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetAutoRedirect()
+error_code cellHttpClientSetAutoRedirect()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetAutoRedirect()
+error_code cellHttpClientGetAutoRedirect()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetAutoAuthentication()
+error_code cellHttpClientSetAutoAuthentication()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetAutoAuthentication()
+error_code cellHttpClientGetAutoAuthentication()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetAuthenticationCacheStatus()
+error_code cellHttpClientSetAuthenticationCacheStatus()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetAuthenticationCacheStatus()
+error_code cellHttpClientGetAuthenticationCacheStatus()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetCookieStatus()
+error_code cellHttpClientSetCookieStatus()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetCookieStatus()
+error_code cellHttpClientGetCookieStatus()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetUserAgent()
+error_code cellHttpClientSetUserAgent()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetUserAgent()
+error_code cellHttpClientGetUserAgent()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetResponseBufferMax()
+error_code cellHttpClientSetResponseBufferMax()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetResponseBufferMax()
+error_code cellHttpClientGetResponseBufferMax()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientCloseAllConnections()
+error_code cellHttpClientCloseAllConnections()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientCloseConnections()
+error_code cellHttpClientCloseConnections()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientPollConnections()
+error_code cellHttpClientPollConnections()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetConnectionStateCallback()
+error_code cellHttpClientSetConnectionStateCallback()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetConnectionWaitStatus()
+error_code cellHttpClientSetConnectionWaitStatus()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetConnectionWaitStatus()
+error_code cellHttpClientGetConnectionWaitStatus()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetConnectionWaitTimeout()
+error_code cellHttpClientSetConnectionWaitTimeout()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetConnectionWaitTimeout()
+error_code cellHttpClientGetConnectionWaitTimeout()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetRecvTimeout()
+error_code cellHttpClientSetRecvTimeout()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetRecvTimeout()
+error_code cellHttpClientGetRecvTimeout()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetSendTimeout()
+error_code cellHttpClientSetSendTimeout()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetSendTimeout()
+error_code cellHttpClientGetSendTimeout()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetConnTimeout()
+error_code cellHttpClientSetConnTimeout()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetConnTimeout()
+error_code cellHttpClientGetConnTimeout()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetTotalPoolSize()
+error_code cellHttpClientSetTotalPoolSize()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetTotalPoolSize()
+error_code cellHttpClientGetTotalPoolSize()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetPerHostPoolSize()
+error_code cellHttpClientSetPerHostPoolSize()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetPerHostPoolSize()
+error_code cellHttpClientGetPerHostPoolSize()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetPerHostKeepAliveMax()
+error_code cellHttpClientSetPerHostKeepAliveMax()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetPerHostKeepAliveMax()
+error_code cellHttpClientGetPerHostKeepAliveMax()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetPerPipelineMax()
+error_code cellHttpClientSetPerPipelineMax()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetPerPipelineMax()
+error_code cellHttpClientGetPerPipelineMax()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetRecvBufferSize()
+error_code cellHttpClientSetRecvBufferSize()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetRecvBufferSize()
+error_code cellHttpClientGetRecvBufferSize()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetSendBufferSize()
+error_code cellHttpClientSetSendBufferSize()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetSendBufferSize()
+error_code cellHttpClientGetSendBufferSize()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetAllHeaders()
+error_code cellHttpClientGetAllHeaders()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetHeader()
+error_code cellHttpClientSetHeader()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetHeader()
+error_code cellHttpClientGetHeader()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientAddHeader()
+error_code cellHttpClientAddHeader()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientDeleteHeader()
+error_code cellHttpClientDeleteHeader()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetSslCallback()
+error_code cellHttpClientSetSslCallback()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetSslClientCertificate()
+error_code cellHttpClientSetSslClientCertificate()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpCreateTransaction()
+error_code cellHttpCreateTransaction()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpDestroyTransaction()
+error_code cellHttpDestroyTransaction()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpTransactionGetUri()
+error_code cellHttpTransactionGetUri()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpTransactionCloseConnection()
+error_code cellHttpTransactionCloseConnection()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpTransactionReleaseConnection()
+error_code cellHttpTransactionReleaseConnection()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpTransactionAbortConnection()
+error_code cellHttpTransactionAbortConnection()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpSendRequest()
+error_code cellHttpSendRequest()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpRequestSetContentLength()
+error_code cellHttpRequestSetContentLength()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpRequestGetContentLength()
+error_code cellHttpRequestGetContentLength()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpRequestSetChunkedTransferStatus()
+error_code cellHttpRequestSetChunkedTransferStatus()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpRequestGetChunkedTransferStatus()
+error_code cellHttpRequestGetChunkedTransferStatus()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpRequestGetAllHeaders()
+error_code cellHttpRequestGetAllHeaders()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpRequestSetHeader()
+error_code cellHttpRequestSetHeader()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpRequestGetHeader()
+error_code cellHttpRequestGetHeader()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpRequestAddHeader()
+error_code cellHttpRequestAddHeader()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpRequestDeleteHeader()
+error_code cellHttpRequestDeleteHeader()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpRecvResponse()
+error_code cellHttpRecvResponse()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpResponseGetAllHeaders()
+error_code cellHttpResponseGetAllHeaders()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpResponseGetHeader()
+error_code cellHttpResponseGetHeader()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpResponseGetContentLength()
+error_code cellHttpResponseGetContentLength()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpResponseGetStatusCode()
+error_code cellHttpResponseGetStatusCode()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpResponseGetStatusLine()
+error_code cellHttpResponseGetStatusLine()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpTransactionGetSslCipherName()
+error_code cellHttpTransactionGetSslCipherName()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpTransactionGetSslCipherId()
+error_code cellHttpTransactionGetSslCipherId()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpTransactionGetSslCipherVersion()
+error_code cellHttpTransactionGetSslCipherVersion()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpTransactionGetSslCipherBits()
+error_code cellHttpTransactionGetSslCipherBits()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpTransactionGetSslCipherString()
+error_code cellHttpTransactionGetSslCipherString()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpTransactionGetSslVersion()
+error_code cellHttpTransactionGetSslVersion()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpTransactionGetSslId()
+error_code cellHttpTransactionGetSslId()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetMinSslVersion()
+error_code cellHttpClientSetMinSslVersion()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetMinSslVersion()
+error_code cellHttpClientGetMinSslVersion()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetSslVersion()
+error_code cellHttpClientSetSslVersion()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientGetSslVersion()
+error_code cellHttpClientGetSslVersion()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
 }
 
-s32 cellHttpClientSetSslIdDestroyCallback()
+error_code cellHttpClientSetSslIdDestroyCallback()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+error_code cellHttpFlushCache()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+error_code cellHttpEndCache()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+error_code cellHttpInitCache()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+error_code cellHttpGetCacheInfo()
+{
+	UNIMPLEMENTED_FUNC(cellHttp);
+	return CELL_OK;
+}
+
+error_code cellHttpGetMemoryInfo()
 {
 	UNIMPLEMENTED_FUNC(cellHttp);
 	return CELL_OK;
@@ -826,6 +856,12 @@ DECLARE(ppu_module_manager::cellHttp)("cellHttp", []()
 	REG_FUNC(cellHttp, cellHttpClientSetSslVersion);
 	REG_FUNC(cellHttp, cellHttpClientGetSslVersion);
 	REG_FUNC(cellHttp, cellHttpClientSetSslIdDestroyCallback);
+
+	REG_FUNC(cellHttp, cellHttpFlushCache);
+	REG_FUNC(cellHttp, cellHttpEndCache);
+	REG_FUNC(cellHttp, cellHttpInitCache);
+	REG_FUNC(cellHttp, cellHttpGetCacheInfo);
+	REG_FUNC(cellHttp, cellHttpGetMemoryInfo);
 });
 
 DECLARE(ppu_module_manager::cellHttps)("cellHttps", []()

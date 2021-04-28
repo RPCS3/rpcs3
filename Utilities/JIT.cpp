@@ -1,357 +1,518 @@
+#include "util/types.hpp"
+#include "util/sysinfo.hpp"
+#include "JIT.h"
+#include "StrFmt.h"
+#include "File.h"
+#include "util/logs.hpp"
+#include "mutex.h"
+#include "util/vm.hpp"
+#include "util/asm.hpp"
+#include <charconv>
+#include <zlib.h>
+
+#ifdef __linux__
+#define CAN_OVERCOMMIT
+#endif
+
+LOG_CHANNEL(jit_log, "JIT");
+
+static u8* get_jit_memory()
+{
+	// Reserve 2G memory (magic static)
+	static void* const s_memory2 = []() -> void*
+	{
+		void* ptr = utils::memory_reserve(0x80000000);
+#ifdef CAN_OVERCOMMIT
+		utils::memory_commit(ptr, 0x80000000);
+		utils::memory_protect(ptr, 0x40000000, utils::protection::wx);
+#endif
+		return ptr;
+	}();
+
+	return static_cast<u8*>(s_memory2);
+}
+
+// Allocation counters (1G code, 1G data subranges)
+static atomic_t<u64> s_code_pos{0}, s_data_pos{0};
+
+// Snapshot of code generated before main()
+static std::vector<u8> s_code_init, s_data_init;
+
+template <atomic_t<u64>& Ctr, uint Off, utils::protection Prot>
+static u8* add_jit_memory(usz size, uint align)
+{
+	// Select subrange
+	u8* pointer = get_jit_memory() + Off;
+
+	if (!size && !align) [[unlikely]]
+	{
+		// Return subrange info
+		return pointer;
+	}
+
+	u64 olda, newa;
+
+	// Simple allocation by incrementing pointer to the next free data
+	const u64 pos = Ctr.atomic_op([&](u64& ctr) -> u64
+	{
+		const u64 _pos = utils::align(ctr & 0xffff'ffff, align);
+		const u64 _new = utils::align(_pos + size, align);
+
+		if (_new > 0x40000000) [[unlikely]]
+		{
+			// Sorry, we failed, and further attempts should fail too.
+			ctr |= 0x40000000;
+			return -1;
+		}
+
+		// Last allocation is stored in highest bits
+		olda = ctr >> 32;
+		newa = olda;
+
+		// Check the necessity to commit more memory
+		if (_new > olda) [[unlikely]]
+		{
+			newa = utils::align(_new, 0x200000);
+		}
+
+		ctr += _new - (ctr & 0xffff'ffff);
+		return _pos;
+	});
+
+	if (pos == umax) [[unlikely]]
+	{
+		jit_log.error("Out of memory (size=0x%x, align=0x%x, off=0x%x)", size, align, Off);
+		return nullptr;
+	}
+
+	if (olda != newa) [[unlikely]]
+	{
+#ifndef CAN_OVERCOMMIT
+		// Commit more memory
+		utils::memory_commit(pointer + olda, newa - olda, Prot);
+#endif
+		// Acknowledge committed memory
+		Ctr.atomic_op([&](u64& ctr)
+		{
+			if ((ctr >> 32) < newa)
+			{
+				ctr += (newa - (ctr >> 32)) << 32;
+			}
+		});
+	}
+
+	return pointer + pos;
+}
+
+jit_runtime::jit_runtime()
+	: HostRuntime()
+{
+}
+
+jit_runtime::~jit_runtime()
+{
+}
+
+asmjit::Error jit_runtime::_add(void** dst, asmjit::CodeHolder* code) noexcept
+{
+	usz codeSize = code->getCodeSize();
+	if (!codeSize) [[unlikely]]
+	{
+		*dst = nullptr;
+		return asmjit::kErrorNoCodeGenerated;
+	}
+
+	void* p = jit_runtime::alloc(codeSize, 16);
+	if (!p) [[unlikely]]
+	{
+		*dst = nullptr;
+		return asmjit::kErrorNoVirtualMemory;
+	}
+
+	usz relocSize = code->relocate(p);
+	if (!relocSize) [[unlikely]]
+	{
+		*dst = nullptr;
+		return asmjit::kErrorInvalidState;
+	}
+
+	flush(p, relocSize);
+	*dst = p;
+
+	return asmjit::kErrorOk;
+}
+
+asmjit::Error jit_runtime::_release(void*) noexcept
+{
+	return asmjit::kErrorOk;
+}
+
+u8* jit_runtime::alloc(usz size, uint align, bool exec) noexcept
+{
+	if (exec)
+	{
+		return add_jit_memory<s_code_pos, 0x0, utils::protection::wx>(size, align);
+	}
+	else
+	{
+		return add_jit_memory<s_data_pos, 0x40000000, utils::protection::rw>(size, align);
+	}
+}
+
+void jit_runtime::initialize()
+{
+	if (!s_code_init.empty() || !s_data_init.empty())
+	{
+		return;
+	}
+
+	// Create code/data snapshot
+	s_code_init.resize(s_code_pos & 0xffff'ffff);
+	std::memcpy(s_code_init.data(), alloc(0, 0, true), s_code_init.size());
+	s_data_init.resize(s_data_pos & 0xffff'ffff);
+	std::memcpy(s_data_init.data(), alloc(0, 0, false), s_data_init.size());
+}
+
+void jit_runtime::finalize() noexcept
+{
+	// Reset JIT memory
+#ifdef CAN_OVERCOMMIT
+	utils::memory_reset(get_jit_memory(), 0x80000000);
+	utils::memory_protect(get_jit_memory(), 0x40000000, utils::protection::wx);
+#else
+	utils::memory_decommit(get_jit_memory(), 0x80000000);
+#endif
+
+	s_code_pos = 0;
+	s_data_pos = 0;
+
+	// Restore code/data snapshot
+	std::memcpy(alloc(s_code_init.size(), 1, true), s_code_init.data(), s_code_init.size());
+	std::memcpy(alloc(s_data_init.size(), 1, false), s_data_init.data(), s_data_init.size());
+}
+
+asmjit::Runtime& asmjit::get_global_runtime()
+{
+	// 16 MiB for internal needs
+	static constexpr u64 size = 1024 * 1024 * 16;
+
+	struct custom_runtime final : asmjit::HostRuntime
+	{
+		custom_runtime() noexcept
+		{
+			// Search starting in first 2 GiB of memory
+			for (u64 addr = size;; addr += size)
+			{
+				if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr)))
+				{
+					m_pos.raw() = static_cast<std::byte*>(ptr);
+					break;
+				}
+			}
+
+			// Initialize "end" pointer
+			m_max = m_pos + size;
+
+			// Make memory writable + executable
+			utils::memory_commit(m_pos, size, utils::protection::wx);
+		}
+
+		custom_runtime(const custom_runtime&) = delete;
+
+		custom_runtime& operator=(const custom_runtime&) = delete;
+
+		asmjit::Error _add(void** dst, asmjit::CodeHolder* code) noexcept override
+		{
+			usz codeSize = code->getCodeSize();
+			if (!codeSize) [[unlikely]]
+			{
+				*dst = nullptr;
+				return asmjit::kErrorNoCodeGenerated;
+			}
+
+			void* p = m_pos.fetch_add(utils::align(codeSize, 4096));
+			if (!p || m_pos > m_max) [[unlikely]]
+			{
+				*dst = nullptr;
+				jit_log.fatal("Out of memory (static asmjit)");
+				return asmjit::kErrorNoVirtualMemory;
+			}
+
+			usz relocSize = code->relocate(p);
+			if (!relocSize) [[unlikely]]
+			{
+				*dst = nullptr;
+				return asmjit::kErrorInvalidState;
+			}
+
+			utils::memory_protect(p, utils::align(codeSize, 4096), utils::protection::rx);
+			flush(p, relocSize);
+			*dst = p;
+
+			return asmjit::kErrorOk;
+		}
+
+		asmjit::Error _release(void*) noexcept override
+		{
+			return asmjit::kErrorOk;
+		}
+
+	private:
+		atomic_t<std::byte*> m_pos{};
+
+		std::byte* m_max{};
+	};
+
+	// Magic static
+	static custom_runtime g_rt;
+	return g_rt;
+}
+
 #ifdef LLVM_AVAILABLE
 
 #include <unordered_map>
-#include <map>
 #include <unordered_set>
-#include <set>
-#include <array>
 #include <deque>
-
-#include "types.h"
-#include "StrFmt.h"
-#include "File.h"
-#include "Log.h"
-#include "mutex.h"
-#include "sysinfo.h"
-#include "VirtualMemory.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #endif
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/Host.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
-#include "llvm/ExecutionEngine/JITEventListener.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
 #ifdef _MSC_VER
 #pragma warning(pop)
-#endif
-
-#ifdef _WIN32
-#include <Windows.h>
 #else
-#include <sys/mman.h>
+#pragma GCC diagnostic pop
 #endif
 
-#include "JIT.h"
-
-// Memory manager mutex
-shared_mutex s_mutex;
-
-// Size of virtual memory area reserved: 512 MB
-static const u64 s_memory_size = 0x20000000;
-
-// Try to reserve a portion of virtual memory in the first 2 GB address space beforehand, if possible.
-static void* const s_memory = []() -> void*
+const bool jit_initialize = []() -> bool
 {
 	llvm::InitializeNativeTarget();
 	llvm::InitializeNativeTargetAsmPrinter();
+	llvm::InitializeNativeTargetAsmParser();
 	LLVMLinkInMCJIT();
-
-#ifdef MAP_32BIT
-	auto ptr = ::mmap(nullptr, s_memory_size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_32BIT, -1, 0);
-	if (ptr != MAP_FAILED)
-		return ptr;
-#else
-	for (u64 addr = 0x10000000; addr <= 0x80000000 - s_memory_size; addr += 0x1000000)
-	{
-		if (auto ptr = utils::memory_reserve(s_memory_size, (void*)addr))
-		{
-			return ptr;
-		}
-	}
-#endif
-
-	return utils::memory_reserve(s_memory_size);
+	return true;
 }();
 
-static void* s_next = s_memory;
-
-#ifdef _WIN32
-static std::deque<std::vector<RUNTIME_FUNCTION>> s_unwater;
-static std::vector<std::vector<RUNTIME_FUNCTION>> s_unwind; // .pdata
-#else
-static std::deque<std::tuple<u8*, u64, std::size_t>> s_unfire;
-#endif
-
-// Reset memory manager
-extern void jit_finalize()
+[[noreturn]] static void null(const char* name)
 {
-#ifdef _WIN32
-	for (auto&& unwind : s_unwind)
-	{
-		if (!RtlDeleteFunctionTable(unwind.data()))
-		{
-			LOG_FATAL(GENERAL, "RtlDeleteFunctionTable() failed! Error %u", GetLastError());
-		}
-	}
-
-	s_unwind.clear();
-#else
-	struct MemoryManager : llvm::RTDyldMemoryManager
-	{
-		u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
-		{
-			return nullptr;
-		}
-
-		u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
-		{
-			return nullptr;
-		}
-
-		bool finalizeMemory(std::string* = nullptr) override
-		{
-			return false;
-		}
-	} mem;
-
-	for (auto&& t : s_unfire)
-	{
-		mem.deregisterEHFrames(std::get<0>(t), std::get<1>(t), std::get<2>(t));
-	}
-
-	s_unfire.clear();
-#endif
-
-	utils::memory_decommit(s_memory, s_memory_size);
-
-	s_next = s_memory;
+	fmt::throw_exception("Null function: %s", name);
 }
 
-// Helper class
-struct MemoryManager : llvm::RTDyldMemoryManager
+namespace vm
 {
-	std::unordered_map<std::string, u64>& m_link;
+	extern u8* const g_sudo_addr;
+}
 
-	std::array<u8, 16>* m_tramps{};
+static shared_mutex null_mtx;
 
-	u8* m_code_addr{}; // TODO
+static std::unordered_map<std::string, u64> null_funcs;
 
-	MemoryManager(std::unordered_map<std::string, u64>& table)
-		: m_link(table)
+static u64 make_null_function(const std::string& name)
+{
+	if (name.starts_with("__0x"))
 	{
+		u32 addr = -1;
+		auto res = std::from_chars(name.c_str() + 4, name.c_str() + name.size(), addr, 16);
+
+		if (res.ec == std::errc() && res.ptr == name.c_str() + name.size() && addr < 0x8000'0000)
+		{
+			// Point the garbage to reserved, non-executable memory
+			return reinterpret_cast<u64>(vm::g_sudo_addr + addr);
+		}
 	}
 
-	[[noreturn]] static void null()
+	std::lock_guard lock(null_mtx);
+
+	if (u64& func_ptr = null_funcs[name]) [[likely]]
 	{
-		fmt::throw_exception("Null function" HERE);
+		// Already exists
+		return func_ptr;
+	}
+	else
+	{
+		using namespace asmjit;
+
+		// Build a "null" function that contains its name
+		const auto func = build_function_asm<void (*)()>([&](X86Assembler& c, auto& args)
+		{
+			Label data = c.newLabel();
+			c.lea(args[0], x86::qword_ptr(data, 0));
+			c.jmp(imm_ptr(&null));
+			c.align(kAlignCode, 16);
+			c.bind(data);
+
+			// Copy function name bytes
+			for (char ch : name)
+				c.db(ch);
+			c.db(0);
+			c.align(kAlignData, 16);
+		});
+
+		func_ptr = reinterpret_cast<u64>(func);
+		return func_ptr;
+	}
+}
+
+// Simple memory manager
+struct MemoryManager1 : llvm::RTDyldMemoryManager
+{
+	// 256 MiB for code or data
+	static constexpr u64 c_max_size = 0x20000000 / 2;
+
+	// Allocation unit (2M)
+	static constexpr u64 c_page_size = 2 * 1024 * 1024;
+
+	// Reserve 512 MiB
+	u8* const ptr = static_cast<u8*>(utils::memory_reserve(c_max_size * 2));
+
+	u64 code_ptr = 0;
+	u64 data_ptr = c_max_size;
+
+	MemoryManager1() = default;
+
+	MemoryManager1(const MemoryManager1&) = delete;
+
+	MemoryManager1& operator=(const MemoryManager1&) = delete;
+
+	~MemoryManager1() override
+	{
+		utils::memory_release(ptr, c_max_size * 2);
 	}
 
 	llvm::JITSymbol findSymbol(const std::string& name) override
 	{
-		auto& addr = m_link[name];
+		u64 addr = RTDyldMemoryManager::getSymbolAddress(name);
 
-		// Find function address
 		if (!addr)
 		{
-			addr = RTDyldMemoryManager::getSymbolAddress(name);
+			addr = make_null_function(name);
 
-			if (addr)
+			if (!addr)
 			{
-				LOG_WARNING(GENERAL, "LLVM: Symbol requested: %s -> 0x%016llx", name, addr);
-			}
-			else
-			{
-				LOG_ERROR(GENERAL, "LLVM: Linkage failed: %s", name);
-				addr = (u64)null;
-			}
-		}
-
-		// Verify address for small code model
-		if ((u64)s_memory > 0x80000000 - s_memory_size ? (u64)addr - (u64)s_memory >= s_memory_size : addr >= 0x80000000)
-		{
-			// Lock memory manager
-			writer_lock lock(s_mutex);
-
-			// Allocate memory for trampolines
-			if (!m_tramps)
-			{
-				m_tramps = reinterpret_cast<decltype(m_tramps)>(s_next);
-				utils::memory_commit(s_next, 4096, utils::protection::wx);
-				s_next = (u8*)((u64)s_next + 4096);
-			}
-
-			// Create a trampoline
-			auto& data = *m_tramps++;
-			data[0x0] = 0xff; // JMP [rip+2]
-			data[0x1] = 0x25;
-			data[0x2] = 0x02;
-			data[0x3] = 0x00;
-			data[0x4] = 0x00;
-			data[0x5] = 0x00;
-			data[0x6] = 0x48; // MOV rax, imm64 (not executed)
-			data[0x7] = 0xb8;
-			std::memcpy(data.data() + 8, &addr, 8);
-			addr = (u64)&data;
-
-			// Reset pointer (memory page exhausted)
-			if (((u64)m_tramps % 4096) == 0)
-			{
-				m_tramps = nullptr;
+				fmt::throw_exception("Failed to link '%s'", name);
 			}
 		}
 
 		return {addr, llvm::JITSymbolFlags::Exported};
 	}
 
-	u8* allocateCodeSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name) override
+	u8* allocate(u64& oldp, uptr size, uint align, utils::protection prot)
 	{
-		// Lock memory manager
-		writer_lock lock(s_mutex);
-
-		// Simple allocation
-		const u64 next = ::align((u64)s_next + size, 4096);
-
-		if (next > (u64)s_memory + s_memory_size)
+		if (align > c_page_size)
 		{
-			LOG_FATAL(GENERAL, "LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
+			jit_log.fatal("Unsupported alignment (size=0x%x, align=0x%x)", size, align);
 			return nullptr;
 		}
 
-		utils::memory_commit(s_next, size, utils::protection::wx);
-		m_code_addr = (u8*)s_next;
+		const u64 olda = utils::align(oldp, align);
+		const u64 newp = utils::align(olda + size, align);
 
-		LOG_NOTICE(GENERAL, "LLVM: Code section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x)", sec_id, sec_name.data(), s_next, size, align);
-		return (u8*)std::exchange(s_next, (void*)next);
+		if ((newp - 1) / c_max_size != oldp / c_max_size)
+		{
+			jit_log.fatal("Out of memory (size=0x%x, align=0x%x)", size, align);
+			return nullptr;
+		}
+
+		if ((oldp - 1) / c_page_size != (newp - 1) / c_page_size)
+		{
+			// Allocate pages on demand
+			const u64 pagea = utils::align(oldp, c_page_size);
+			const u64 psize = utils::align(newp - pagea, c_page_size);
+			utils::memory_commit(this->ptr + pagea, psize, prot);
+		}
+
+		// Update allocation counter
+		oldp = newp;
+
+		return this->ptr + olda;
 	}
 
-	u8* allocateDataSection(std::uintptr_t size, uint align, uint sec_id, llvm::StringRef sec_name, bool is_ro) override
+	u8* allocateCodeSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/) override
 	{
-		// Lock memory manager
-		writer_lock lock(s_mutex);
+		return allocate(code_ptr, size, align, utils::protection::wx);
+	}
 
-		// Simple allocation
-		const u64 next = ::align((u64)s_next + size, 4096);
-
-		if (next > (u64)s_memory + s_memory_size)
-		{
-			LOG_FATAL(GENERAL, "LLVM: Out of memory (size=0x%llx, aligned 0x%x)", size, align);
-			return nullptr;
-		}
-
-		if (!is_ro)
-		{
-			LOG_ERROR(GENERAL, "LLVM: Writeable data section not supported!");
-		}
-
-		utils::memory_commit(s_next, size);
-
-		LOG_NOTICE(GENERAL, "LLVM: Data section %u '%s' allocated -> %p (size=0x%llx, aligned 0x%x, %s)", sec_id, sec_name.data(), s_next, size, align, is_ro ? "ro" : "rw");
-		return (u8*)std::exchange(s_next, (void*)next);
+	u8* allocateDataSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/, bool /*is_ro*/) override
+	{
+		return allocate(data_ptr, size, align, utils::protection::rw);
 	}
 
 	bool finalizeMemory(std::string* = nullptr) override
 	{
-		// Lock memory manager
-		writer_lock lock(s_mutex);
-
-		// TODO: make only read-only sections read-only
-//#ifdef _WIN32
-//		DWORD op;
-//		VirtualProtect(s_memory, (u64)m_next - (u64)s_memory, PAGE_READONLY, &op);
-//		VirtualProtect(s_code_addr, s_code_size, PAGE_EXECUTE_READ, &op);
-//#else
-//		::mprotect(s_memory, (u64)m_next - (u64)s_memory, PROT_READ);
-//		::mprotect(s_code_addr, s_code_size, PROT_READ | PROT_EXEC);
-//#endif
 		return false;
 	}
 
-	void registerEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	void registerEHFrames(u8*, u64, usz) override
 	{
-#ifdef _WIN32
-		// Lock memory manager
-		writer_lock lock(s_mutex);
-
-		// Use s_memory as a BASE, compute the difference
-		const u64 unwind_diff = (u64)addr - (u64)s_memory;
-
-		// Fix RUNTIME_FUNCTION records (.pdata section)
-		auto pdata = std::move(s_unwater.front());
-		s_unwater.pop_front();
-
-		for (auto& rf : pdata)
-		{
-			rf.UnwindData += static_cast<DWORD>(unwind_diff);
-		}
-
-		// Register .xdata UNWIND_INFO structs
-		if (!RtlAddFunctionTable(pdata.data(), (DWORD)pdata.size(), (u64)s_memory))
-		{
-			LOG_ERROR(GENERAL, "RtlAddFunctionTable() failed! Error %u", GetLastError());
-		}
-		else
-		{
-			s_unwind.emplace_back(std::move(pdata));
-		}
-#else
-		s_unfire.push_front(std::make_tuple(addr, load_addr, size));
-#endif
-
-		return RTDyldMemoryManager::registerEHFrames(addr, load_addr, size);
 	}
 
-	void deregisterEHFrames(u8* addr, u64 load_addr, std::size_t size) override
+	void deregisterEHFrames() override
 	{
 	}
 };
 
-// Helper class
-struct EventListener : llvm::JITEventListener
+// Simple memory manager
+struct MemoryManager2 : llvm::RTDyldMemoryManager
 {
-	MemoryManager& m_mem;
+	MemoryManager2() = default;
 
-	EventListener(MemoryManager& mem)
-		: m_mem(mem)
+	~MemoryManager2() override
 	{
 	}
 
-	void NotifyObjectEmitted(const llvm::object::ObjectFile& obj, const llvm::RuntimeDyld::LoadedObjectInfo& inf) override
+	llvm::JITSymbol findSymbol(const std::string& name) override
 	{
-#ifdef _WIN32
-		for (auto it = obj.section_begin(), end = obj.section_end(); it != end; ++it)
+		u64 addr = RTDyldMemoryManager::getSymbolAddress(name);
+
+		if (!addr)
 		{
-			llvm::StringRef name;
-			it->getName(name);
+			addr = make_null_function(name);
 
-			if (name == ".pdata")
+			if (!addr)
 			{
-				llvm::StringRef data;
-				it->getContents(data);
-
-				std::vector<RUNTIME_FUNCTION> rfs(data.size() / sizeof(RUNTIME_FUNCTION));
-
-				auto offsets = reinterpret_cast<DWORD*>(rfs.data());
-
-				// Initialize .pdata section using relocation info
-				for (auto ri = it->relocation_begin(), end = it->relocation_end(); ri != end; ++ri)
-				{
-					if (ri->getType() == 3 /*R_X86_64_GOT32*/)
-					{
-						const u64 value = *reinterpret_cast<const DWORD*>(data.data() + ri->getOffset());
-						offsets[ri->getOffset() / sizeof(DWORD)] = static_cast<DWORD>(value + ri->getSymbol()->getAddress().get());
-					}
-				}
-
-				// Lock memory manager
-				writer_lock lock(s_mutex);
-
-				// Use s_memory as a BASE, compute the difference
-				const u64 code_diff = (u64)m_mem.m_code_addr - (u64)s_memory;
-
-				// Fix RUNTIME_FUNCTION records (.pdata section)
-				for (auto& rf : rfs)
-				{
-					rf.BeginAddress += static_cast<DWORD>(code_diff);
-					rf.EndAddress   += static_cast<DWORD>(code_diff);
-				}
-
-				s_unwater.emplace_back(std::move(rfs));
+				fmt::throw_exception("Failed to link '%s' (MM2)", name);
 			}
 		}
-#endif
+
+		return {addr, llvm::JITSymbolFlags::Exported};
+	}
+
+	u8* allocateCodeSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/) override
+	{
+		return jit_runtime::alloc(size, align, true);
+	}
+
+	u8* allocateDataSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/, bool /*is_ro*/) override
+	{
+		return jit_runtime::alloc(size, align, false);
+	}
+
+	bool finalizeMemory(std::string* = nullptr) override
+	{
+		return false;
+	}
+
+	void registerEHFrames(u8*, u64, usz) override
+	{
+	}
+
+	void deregisterEHFrames() override
+	{
 	}
 };
 
@@ -368,34 +529,137 @@ public:
 
 	~ObjectCache() override = default;
 
-	void notifyObjectCompiled(const llvm::Module* module, llvm::MemoryBufferRef obj) override
+	void notifyObjectCompiled(const llvm::Module* _module, llvm::MemoryBufferRef obj) override
 	{
 		std::string name = m_path;
-		name.append(module->getName());
-		fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
-		LOG_SUCCESS(GENERAL, "LLVM: Created module: %s", module->getName().data());
+		name.append(_module->getName().data());
+		//fs::file(name, fs::rewrite).write(obj.getBufferStart(), obj.getBufferSize());
+		name.append(".gz");
+
+		z_stream zs{};
+		uLong zsz = compressBound(::narrow<u32>(obj.getBufferSize())) + 256;
+		auto zbuf = std::make_unique<uchar[]>(zsz);
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+		deflateInit2(&zs, 9, Z_DEFLATED, 16 + 15, 9, Z_DEFAULT_STRATEGY);
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+		zs.avail_in  = static_cast<uInt>(obj.getBufferSize());
+		zs.next_in   = reinterpret_cast<uchar*>(const_cast<char*>(obj.getBufferStart()));
+		zs.avail_out = static_cast<uInt>(zsz);
+		zs.next_out  = zbuf.get();
+
+		switch (deflate(&zs, Z_FINISH))
+		{
+		case Z_OK:
+		case Z_STREAM_END:
+		{
+			deflateEnd(&zs);
+			break;
+		}
+		default:
+		{
+			jit_log.error("LLVM: Failed to compress module: %s", _module->getName().data());
+			deflateEnd(&zs);
+			return;
+		}
+		}
+
+		if (!fs::write_file(name, fs::rewrite, zbuf.get(), zsz - zs.avail_out))
+		{
+				jit_log.error("LLVM: Failed to create module file: %s (%s)", name, fs::g_tls_error);
+				return;
+		}
+
+		jit_log.notice("LLVM: Created module: %s", _module->getName().data());
 	}
 
 	static std::unique_ptr<llvm::MemoryBuffer> load(const std::string& path)
 	{
+		if (fs::file cached{path + ".gz", fs::read})
+		{
+			std::vector<uchar> gz = cached.to_vector<uchar>();
+			std::vector<uchar> out;
+			z_stream zs{};
+
+			if (gz.empty()) [[unlikely]]
+			{
+				return nullptr;
+			}
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
+			inflateInit2(&zs, 16 + 15);
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+			zs.avail_in = static_cast<uInt>(gz.size());
+			zs.next_in  = gz.data();
+			out.resize(gz.size() * 6);
+			zs.avail_out = static_cast<uInt>(out.size());
+			zs.next_out  = out.data();
+
+			while (zs.avail_in)
+			{
+				switch (inflate(&zs, Z_FINISH))
+				{
+				case Z_OK: break;
+				case Z_STREAM_END: break;
+				case Z_BUF_ERROR:
+				{
+					if (zs.avail_in)
+						break;
+					[[fallthrough]];
+				}
+				default:
+					inflateEnd(&zs);
+					return nullptr;
+				}
+
+				if (zs.avail_in)
+				{
+					auto cur_size = zs.next_out - out.data();
+					out.resize(out.size() + 65536);
+					zs.avail_out = static_cast<uInt>(out.size() - cur_size);
+					zs.next_out = out.data() + cur_size;
+				}
+			}
+
+			out.resize(zs.next_out - out.data());
+			inflateEnd(&zs);
+
+			auto buf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(out.size());
+			std::memcpy(buf->getBufferStart(), out.data(), out.size());
+			return buf;
+		}
+
 		if (fs::file cached{path, fs::read})
 		{
-			auto buf = llvm::MemoryBuffer::getNewUninitMemBuffer(cached.size());
-			cached.read(const_cast<char*>(buf->getBufferStart()), buf->getBufferSize());
+			if (cached.size() == 0) [[unlikely]]
+			{
+				return nullptr;
+			}
+
+			auto buf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(cached.size());
+			cached.read(buf->getBufferStart(), buf->getBufferSize());
 			return buf;
 		}
 
 		return nullptr;
 	}
 
-	std::unique_ptr<llvm::MemoryBuffer> getObject(const llvm::Module* module) override
+	std::unique_ptr<llvm::MemoryBuffer> getObject(const llvm::Module* _module) override
 	{
 		std::string path = m_path;
-		path.append(module->getName());
+		path.append(_module->getName().data());
 
 		if (auto buf = load(path))
 		{
-			LOG_SUCCESS(GENERAL, "LLVM: Loaded module: %s", module->getName().data());
+			jit_log.notice("LLVM: Loaded module: %s", _module->getName().data());
 			return buf;
 		}
 
@@ -409,7 +673,7 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 
 	if (m_cpu.empty())
 	{
-		m_cpu = llvm::sys::getHostCPUName();
+		m_cpu = llvm::sys::getHostCPUName().operator std::string();
 
 		if (m_cpu == "sandybridge" ||
 			m_cpu == "ivybridge" ||
@@ -417,51 +681,93 @@ std::string jit_compiler::cpu(const std::string& _cpu)
 			m_cpu == "broadwell" ||
 			m_cpu == "skylake" ||
 			m_cpu == "skylake-avx512" ||
-			m_cpu == "cannonlake")
+			m_cpu == "cascadelake" ||
+			m_cpu == "cooperlake" ||
+			m_cpu == "cannonlake" ||
+			m_cpu == "icelake" ||
+			m_cpu == "icelake-client" ||
+			m_cpu == "icelake-server" ||
+			m_cpu == "tigerlake")
 		{
+			// Downgrade if AVX is not supported by some chips
 			if (!utils::has_avx())
 			{
 				m_cpu = "nehalem";
 			}
+		}
+
+		if (m_cpu == "skylake-avx512" ||
+			m_cpu == "cascadelake" ||
+			m_cpu == "cooperlake" ||
+			m_cpu == "cannonlake" ||
+			m_cpu == "icelake" ||
+			m_cpu == "icelake-client" ||
+			m_cpu == "icelake-server" ||
+			m_cpu == "tigerlake")
+		{
+			// Downgrade if AVX-512 is disabled or not supported
+			if (!utils::has_avx512())
+			{
+				m_cpu = "skylake";
+			}
+		}
+
+		if (m_cpu == "znver1" && utils::has_clwb())
+		{
+			// Upgrade
+			m_cpu = "znver2";
 		}
 	}
 
 	return m_cpu;
 }
 
-jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu)
-	: m_link(_link)
-	, m_cpu(cpu(_cpu))
+jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags)
+	: m_cpu(cpu(_cpu))
 {
 	std::string result;
 
-	if (m_link.empty())
+	auto null_mod = std::make_unique<llvm::Module> ("null_", m_context);
+
+	if (_link.empty())
 	{
+		std::unique_ptr<llvm::RTDyldMemoryManager> mem;
+
+		if (flags & 0x1)
+		{
+			mem = std::make_unique<MemoryManager1>();
+		}
+		else
+		{
+			mem = std::make_unique<MemoryManager2>();
+			null_mod->setTargetTriple(llvm::Triple::normalize("x86_64-unknown-linux-gnu"));
+		}
+
 		// Auxiliary JIT (does not use custom memory manager, only writes the objects)
-		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null_", m_context))
+		m_engine.reset(llvm::EngineBuilder(std::move(null_mod))
 			.setErrorStr(&result)
+			.setEngineKind(llvm::EngineKind::JIT)
+			.setMCJITMemoryManager(std::move(mem))
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
-			.setCodeModel(llvm::CodeModel::Small)
+			.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 			.setMCPU(m_cpu)
 			.create());
 	}
 	else
 	{
 		// Primary JIT
-		auto mem = std::make_unique<MemoryManager>(m_link);
-		m_jit_el = std::make_unique<EventListener>(*mem);
-
-		m_engine.reset(llvm::EngineBuilder(std::make_unique<llvm::Module>("null", m_context))
+		m_engine.reset(llvm::EngineBuilder(std::move(null_mod))
 			.setErrorStr(&result)
-			.setMCJITMemoryManager(std::move(mem))
+			.setEngineKind(llvm::EngineKind::JIT)
+			.setMCJITMemoryManager(std::make_unique<MemoryManager1>())
 			.setOptLevel(llvm::CodeGenOpt::Aggressive)
-			.setCodeModel(llvm::CodeModel::Small)
+			.setCodeModel(flags & 0x2 ? llvm::CodeModel::Large : llvm::CodeModel::Small)
 			.setMCPU(m_cpu)
 			.create());
 
-		if (m_engine)
+		for (auto&& [name, addr] : _link)
 		{
-			m_engine->RegisterJITEventListener(m_jit_el.get());
+			m_engine->updateGlobalMapping(name, addr);
 		}
 	}
 
@@ -475,13 +781,13 @@ jit_compiler::~jit_compiler()
 {
 }
 
-void jit_compiler::add(std::unique_ptr<llvm::Module> module, const std::string& path)
+void jit_compiler::add(std::unique_ptr<llvm::Module> _module, const std::string& path)
 {
 	ObjectCache cache{path};
 	m_engine->setObjectCache(&cache);
 
-	const auto ptr = module.get();
-	m_engine->addModule(std::move(module));
+	const auto ptr = _module.get();
+	m_engine->addModule(std::move(_module));
 	m_engine->generateCodeForModule(ptr);
 	m_engine->setObjectCache(nullptr);
 
@@ -492,9 +798,49 @@ void jit_compiler::add(std::unique_ptr<llvm::Module> module, const std::string& 
 	}
 }
 
+void jit_compiler::add(std::unique_ptr<llvm::Module> _module)
+{
+	const auto ptr = _module.get();
+	m_engine->addModule(std::move(_module));
+	m_engine->generateCodeForModule(ptr);
+
+	for (auto& func : ptr->functions())
+	{
+		// Delete IR to lower memory consumption
+		func.deleteBody();
+	}
+}
+
 void jit_compiler::add(const std::string& path)
 {
-	m_engine->addObjectFile(std::move(llvm::object::ObjectFile::createObjectFile(*ObjectCache::load(path)).get()));
+	auto cache = ObjectCache::load(path);
+
+	if (auto object_file = llvm::object::ObjectFile::createObjectFile(*cache))
+	{
+		m_engine->addObjectFile( std::move(*object_file) );
+	}
+	else
+	{
+		jit_log.error("ObjectCache: Adding failed: %s", path);
+	}
+}
+
+bool jit_compiler::check(const std::string& path)
+{
+	if (auto cache = ObjectCache::load(path))
+	{
+		if (auto object_file = llvm::object::ObjectFile::createObjectFile(*cache))
+		{
+			return true;
+		}
+
+		if (fs::remove_file(path))
+		{
+			jit_log.error("ObjectCache: Removed damaged file: %s", path);
+		}
+	}
+
+	return false;
 }
 
 void jit_compiler::fin()
@@ -505,35 +851,6 @@ void jit_compiler::fin()
 u64 jit_compiler::get(const std::string& name)
 {
 	return m_engine->getGlobalValueAddress(name);
-}
-
-std::unordered_map<std::string, u64> jit_compiler::add(std::unordered_map<std::string, std::string> data)
-{
-	// Lock memory manager
-	writer_lock lock(s_mutex);
-
-	std::unordered_map<std::string, u64> result;
-
-	std::size_t size = 0;
-
-	for (auto&& pair : data)
-	{
-		size += ::align(pair.second.size(), 16);
-	}
-
-	utils::memory_commit(s_next, size, utils::protection::wx);
-	std::memset(s_next, 0xc3, ::align(size, 4096));
-
-	for (auto&& pair : data)
-	{
-		std::memcpy(s_next, pair.second.data(), pair.second.size());
-		result.emplace(pair.first, (u64)s_next);
-		s_next = (void*)::align((u64)s_next + pair.second.size(), 16);
-	}
-
-	s_next = (void*)::align((u64)s_next, 4096);
-
-	return result;
 }
 
 #endif

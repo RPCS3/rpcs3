@@ -1,63 +1,100 @@
 #pragma once
 
-#include <stack>
+#include <thread>
+#include <queue>
 #include <deque>
-#include <set>
-#include <mutex>
-#include <atomic>
+#include <variant>
+#include <stack>
+#include <unordered_map>
+
 #include "GCM.h"
 #include "rsx_cache.h"
-#include "RSXTexture.h"
+#include "RSXFIFO.h"
+#include "RSXOffload.h"
 #include "RSXVertexProgram.h"
 #include "RSXFragmentProgram.h"
-#include "rsx_methods.h"
 #include "rsx_utils.h"
-#include "overlays.h"
-#include <Utilities/GSL.h>
+#include "Common/texture_cache_types.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/geometry.h"
-#include "rsx_trace.h"
-#include "restore_new.h"
-#include "Utilities/variant.hpp"
-#include "define_new_memleakdetect.h"
+#include "Capture/rsx_trace.h"
+#include "Capture/rsx_replay.h"
 
 #include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/IdManager.h"
+#include "Emu/system_config.h"
 
-extern u64 get_system_time();
-
-extern bool user_asked_for_frame_capture;
-extern rsx::frame_capture_data frame_debug;
+extern atomic_t<bool> g_user_asked_for_frame_capture;
+extern rsx::frame_trace_data frame_debug;
+extern rsx::frame_capture_data frame_capture;
 
 namespace rsx
 {
-	namespace limits
+	namespace overlays
 	{
-		enum
-		{
-			fragment_textures_count = 16,
-			vertex_textures_count = 4,
-			vertex_count = 16,
-			fragment_count = 32,
-			tiles_count = 15,
-			zculls_count = 8,
-			color_buffers_count = 4
-		};
+		class display_manager;
 	}
 
-	namespace constants
+	struct rsx_iomap_table
 	{
-		static std::array<const char*, 16> fragment_texture_names =
-		{
-			"tex0", "tex1", "tex2", "tex3", "tex4", "tex5", "tex6", "tex7",
-			"tex8", "tex9", "tex10", "tex11", "tex12", "tex13", "tex14", "tex15",
-		};
+		std::array<atomic_t<u32>, 4096> ea;
+		std::array<atomic_t<u32>, 4096> io;
+		std::array<shared_mutex, 4096> rs{};
 
-		static std::array<const char*, 4> vertex_texture_names =
+		rsx_iomap_table() noexcept
+			: ea(fill_array(-1))
+			, io(fill_array(-1))
 		{
-			"vtex0", "vtex1", "vtex2", "vtex3",
-		};
-	}
+		}
+
+		// Try to get the real address given a mapped address
+		// Returns -1 on failure
+		u32 get_addr(u32 offs) const noexcept
+		{
+			return this->ea[offs >> 20] | (offs & 0xFFFFF);
+		}
+
+		template<bool IsFullLock>
+		bool lock(u32 addr, u32 len) noexcept
+		{
+			if (len <= 1) return false;
+			const u32 end = addr + len - 1;
+
+			for (u32 block = (addr >> 20); block <= (end >> 20); ++block)
+			{
+				if constexpr (IsFullLock)
+				{
+					rs[block].lock();
+				}
+				else
+				{
+					rs[block].lock_shared();
+				}
+			}
+
+			return true;
+		}
+
+		template<bool IsFullLock>
+		void unlock(u32 addr, u32 len) noexcept
+		{
+			ensure(len >= 1);
+			const u32 end = addr + len - 1;
+
+			for (u32 block = (addr >> 20); block <= (end >> 20); ++block)
+			{
+				if constexpr (IsFullLock)
+				{
+					rs[block].unlock();
+				}
+				else
+				{
+					rs[block].unlock_shared();
+				}
+			}
+		}
+	};
 
 	enum framebuffer_creation_context : u8
 	{
@@ -67,9 +104,76 @@ namespace rsx
 		context_clear_all = context_clear_color | context_clear_depth
 	};
 
+	enum pipeline_state : u32
+	{
+		fragment_program_ucode_dirty = 0x1,   // Fragment program ucode changed
+		vertex_program_ucode_dirty = 0x2,     // Vertex program ucode changed
+		fragment_program_state_dirty = 0x4,   // Fragment program state changed
+		vertex_program_state_dirty = 0x8,     // Vertex program state changed
+		fragment_state_dirty = 0x10,          // Fragment state changed (alpha test, etc)
+		vertex_state_dirty = 0x20,            // Vertex state changed (scale_offset, clip planes, etc)
+		transform_constants_dirty = 0x40,     // Transform constants changed
+		fragment_constants_dirty = 0x80,      // Fragment constants changed
+		framebuffer_reads_dirty = 0x100,      // Framebuffer contents changed
+		fragment_texture_state_dirty = 0x200, // Fragment texture parameters changed
+		vertex_texture_state_dirty = 0x400,   // Fragment texture parameters changed
+		scissor_config_state_dirty = 0x800,   // Scissor region changed
+		zclip_config_state_dirty = 0x1000,    // Viewport Z clip changed
+
+		scissor_setup_invalid = 0x2000,       // Scissor configuration is broken
+		scissor_setup_clipped = 0x4000,       // Scissor region is cropped by viewport constraint
+
+		polygon_stipple_pattern_dirty = 0x8000,  // Rasterizer stippling pattern changed
+		line_stipple_pattern_dirty = 0x10000,    // Line stippling pattern changed
+
+		fragment_program_dirty = fragment_program_ucode_dirty | fragment_program_state_dirty,
+		vertex_program_dirty = vertex_program_ucode_dirty | vertex_program_state_dirty,
+		invalidate_pipeline_bits = fragment_program_dirty | vertex_program_dirty,
+		invalidate_zclip_bits = vertex_state_dirty | zclip_config_state_dirty,
+		memory_barrier_bits = framebuffer_reads_dirty,
+		all_dirty = ~0u
+	};
+
+	enum FIFO_state : u8
+	{
+		running = 0,
+		empty = 1,    // PUT == GET
+		spinning = 2, // Puller continuously jumps to self addr (synchronization technique)
+		nop = 3,      // Puller is processing a NOP command
+		lock_wait = 4 // Puller is processing a lock acquire
+	};
+
+	enum FIFO_hint : u8
+	{
+		hint_conditional_render_eval = 1,
+		hint_zcull_sync = 2
+	};
+
+	enum result_flags: u8
+	{
+		result_none = 0,
+		result_error = 1,
+		result_zcull_intr = 2
+	};
+
+	enum ROP_control : u32
+	{
+		alpha_test_enable       = (1u << 0),
+		framebuffer_srgb_enable = (1u << 1),
+		csaa_enable             = (1u << 4),
+		msaa_mask_enable        = (1u << 5),
+		msaa_config_mask        = (3u << 6),
+		polygon_stipple_enable  = (1u << 9),
+		alpha_func_mask         = (7u << 16)
+	};
+
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
-	u32 get_address(u32 offset, u32 location);
+	u32 get_address(u32 offset, u32 location, bool allow_failure = false,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION());
 
 	struct tiled_region
 	{
@@ -87,8 +191,9 @@ namespace rsx
 		rsx::vertex_base_type type;
 		u8 attribute_size;
 		u8 stride;
-		gsl::span<const gsl::byte> data;
+		gsl::span<const std::byte> data;
 		u8 index;
+		bool is_be;
 	};
 
 	struct vertex_array_register
@@ -106,39 +211,40 @@ namespace rsx
 
 	struct draw_array_command
 	{
-		/**
-		* First and count of index subranges.
-		*/
-		std::vector<std::pair<u32, u32>> indexes_range;
+		u32 __dummy;
 	};
 
 	struct draw_indexed_array_command
 	{
-		/**
-		* First and count of subranges to fetch in index buffer.
-		*/
-		std::vector<std::pair<u32, u32>> ranges_to_fetch_in_index_buffer;
-
-		gsl::span<const gsl::byte> raw_index_buffer;
+		gsl::span<const std::byte> raw_index_buffer;
 	};
 
 	struct draw_inlined_array
 	{
-		std::vector<u32> inline_vertex_array;
+		u32 __dummy;
+		u32 __dummy2;
+	};
+
+	struct interleaved_attribute_t
+	{
+		u8 index;
+		bool modulo;
+		u16 frequency;
 	};
 
 	struct interleaved_range_info
 	{
 		bool interleaved = false;
-		bool all_modulus = false;
 		bool single_vertex = false;
 		u32  base_offset = 0;
 		u32  real_offset_address = 0;
 		u8   memory_location = 0;
 		u8   attribute_stride = 0;
-		u16  min_divisor = 0;
 
-		std::vector<u8> locations;
+		rsx::simple_array<interleaved_attribute_t> locations;
+
+		// Check if we need to upload a full unoptimized range, i.e [0-max_index]
+		std::pair<u32, u32> calculate_required_range(u32 first, u32 count) const;
 	};
 
 	enum attribute_buffer_placement : u8
@@ -150,11 +256,95 @@ namespace rsx
 
 	struct vertex_input_layout
 	{
-		std::vector<interleaved_range_info> interleaved_blocks;  //Interleaved blocks to be uploaded as-is
-		std::vector<std::pair<u8, u32>> volatile_blocks;  //Volatile data blocks (immediate draw vertex data for example)
-		std::vector<u8> referenced_registers;  //Volatile register data
+		std::vector<interleaved_range_info> interleaved_blocks{};  // Interleaved blocks to be uploaded as-is
+		std::vector<std::pair<u8, u32>> volatile_blocks{};         // Volatile data blocks (immediate draw vertex data for example)
+		rsx::simple_array<u8> referenced_registers{};              // Volatile register data
 
-		std::array<attribute_buffer_placement, 16> attribute_placement;
+		std::array<attribute_buffer_placement, 16> attribute_placement = fill_array(attribute_buffer_placement::none);
+
+		vertex_input_layout() = default;
+
+		void clear()
+		{
+			interleaved_blocks.clear();
+			volatile_blocks.clear();
+			referenced_registers.clear();
+		}
+
+		bool validate() const
+		{
+			// Criteria: At least one array stream has to be defined to feed vertex positions
+			// This stream cannot be a const register as the vertices cannot create a zero-area primitive
+
+			if (!interleaved_blocks.empty() && interleaved_blocks.front().attribute_stride != 0)
+				return true;
+
+			if (!volatile_blocks.empty())
+				return true;
+
+			for (u8 index = 0; index < limits::vertex_count; ++index)
+			{
+				switch (attribute_placement[index])
+				{
+				case attribute_buffer_placement::transient:
+				{
+					// Ignore register reference
+					if (std::find(referenced_registers.begin(), referenced_registers.end(), index) != referenced_registers.end())
+						continue;
+
+					// The source is inline array or immediate draw push buffer
+					return true;
+				}
+				case attribute_buffer_placement::persistent:
+				{
+					return true;
+				}
+				case attribute_buffer_placement::none:
+				{
+					continue;
+				}
+				default:
+				{
+					fmt::throw_exception("Unreachable");
+				}
+				}
+			}
+
+			return false;
+		}
+
+		u32 calculate_interleaved_memory_requirements(u32 first_vertex, u32 vertex_count) const
+		{
+			u32 mem = 0;
+			for (auto &block : interleaved_blocks)
+			{
+				const auto range = block.calculate_required_range(first_vertex, vertex_count);
+				mem += range.second * block.attribute_stride;
+			}
+
+			return mem;
+		}
+	};
+
+	struct framebuffer_layout
+	{
+		u16 width;
+		u16 height;
+		std::array<u32, 4> color_addresses;
+		std::array<u32, 4> color_pitch;
+		std::array<u32, 4> actual_color_pitch;
+		std::array<bool, 4> color_write_enabled;
+		u32 zeta_address;
+		u32 zeta_pitch;
+		u32 actual_zeta_pitch;
+		bool zeta_write_enabled;
+		rsx::surface_target target;
+		rsx::surface_color_format color_format;
+		rsx::surface_depth_format2 depth_format;
+		rsx::surface_antialiasing aa_mode;
+		rsx::surface_raster_type raster_type;
+		u32 aa_factors[2];
+		bool ignore_change;
 	};
 
 	namespace reports
@@ -164,11 +354,12 @@ namespace rsx
 			u32 driver_handle;
 			u32 result;
 			u32 num_draws;
+			u32 data_type;
+			u64 sync_tag;
+			u64 timestamp;
 			bool pending;
 			bool active;
 			bool owned;
-
-			u64 sync_timestamp;
 		};
 
 		struct queued_report_write
@@ -177,139 +368,330 @@ namespace rsx
 			u32 counter_tag;
 			occlusion_query_info* query;
 			queued_report_write* forwarder;
-			vm::addr_t sink;
 
-			u32 due_tsc;
+			vm::addr_t sink;                      // Memory location of the report
+			std::vector<vm::addr_t> sink_alias;   // Aliased memory addresses
 		};
 
-		struct ZCULL_control
+		struct query_search_result
 		{
-			//Delay in 'cycles' before a report update operation is forced to retire
-			const u32 max_zcull_cycles_delay = 128;
-			const u32 min_zcull_cycles_delay = 16;
+			bool found;
+			u32  raw_zpass_result;
+			std::vector<occlusion_query_info*> queries;
+		};
 
-			//Number of occlusion query slots available. Real hardware actually has far fewer units before choking
-			const u32 occlusion_query_count = 128;
+		enum sync_control
+		{
+			sync_none = 0,
+			sync_defer_copy = 1, // If set, return a zcull intr code instead of forcefully reading zcull data
+			sync_no_notify = 2   // If set, backend hint notifications will not be made
+		};
 
-			bool active = false;
-			bool enabled = false;
+		class ZCULL_control
+		{
+		protected:
+			// Delay before a report update operation is forced to retire
+			const u32 max_zcull_delay_us = 300;
+			const u32 min_zcull_tick_us = 100;
 
-			std::array<occlusion_query_info, 128> m_occlusion_query_data = {};
+			// Number of occlusion query slots available. Real hardware actually has far fewer units before choking
+			const u32 occlusion_query_count = 1024;
+			const u32 max_safe_queue_depth = 892;
+
+			bool unit_enabled = false;           // The ZCULL unit is on
+			bool write_enabled = false;          // A surface in the ZCULL-monitored tile region has been loaded for rasterization
+			bool stats_enabled = false;          // Collecting of ZCULL statistics is enabled (not same as pixels passing Z test!)
+			bool zpass_count_enabled = false;    // Collecting of ZPASS statistics is enabled. If this is off, the counter does not increment
+			bool host_queries_active = false;    // The backend/host is gathering Z data for the ZCULL unit
+
+			std::array<occlusion_query_info, 1024> m_occlusion_query_data = {};
+			std::stack<occlusion_query_info*> m_free_occlusion_pool{};
 
 			occlusion_query_info* m_current_task = nullptr;
 			u32 m_statistics_tag_id = 0;
-			u32 m_tsc = 0;
-			u32 m_cycles_delay = max_zcull_cycles_delay;
 
-			std::vector<queued_report_write> m_pending_writes;
-			std::unordered_map<u32, u32> m_statistics_map;
+			// Scheduling clock. Granunlarity is min_zcull_tick value.
+			u64 m_tsc = 0;
+			u64 m_next_tsc = 0;
 
-			ZCULL_control() {}
-			~ZCULL_control() {}
+			// Incremental tag used for tracking sync events. Hardware clock resolution is too low for the job.
+			u64 m_sync_tag = 0;
+			u64 m_timer = 0;
 
-			void set_enabled(class ::rsx::thread* ptimer, bool enabled);
-			void set_active(class ::rsx::thread* ptimer, bool active);
+			std::vector<queued_report_write> m_pending_writes{};
+			std::unordered_map<u32, u32> m_statistics_map{};
 
-			void write(vm::addr_t sink, u32 timestamp, u32 type, u32 value);
+			// Enables/disables the ZCULL unit
+			void set_active(class ::rsx::thread* ptimer, bool state, bool flush_queue);
 
-			//Read current zcull statistics into the address provided
-			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
+			// Checks current state of the unit and applies changes
+			void check_state(class ::rsx::thread* ptimer, bool flush_queue);
 
-			//Sets up a new query slot and sets it to the current task
+			// Sets up a new query slot and sets it to the current task
 			void allocate_new_query(class ::rsx::thread* ptimer);
 
-			//clears current stat block and increments stat_tag_id
-			void clear(class ::rsx::thread* ptimer);
+			// Free a query slot in use
+			void free_query(occlusion_query_info* query);
 
-			//forcefully flushes all
+			// Write report to memory
+			void write(vm::addr_t sink, u64 timestamp, u32 type, u32 value);
+			void write(queued_report_write* writer, u64 timestamp, u32 value);
+
+			// Retire operation
+			void retire(class ::rsx::thread* ptimer, queued_report_write* writer, u32 result);
+
+		public:
+
+			ZCULL_control();
+			virtual ~ZCULL_control();
+
+			ZCULL_control(const ZCULL_control&) = delete;
+			ZCULL_control& operator=(const ZCULL_control&) = delete;
+
+			void set_enabled(class ::rsx::thread* ptimer, bool state, bool flush_queue = false);
+			void set_status(class ::rsx::thread* ptimer, bool surface_active, bool zpass_active, bool zcull_stats_active, bool flush_queue = false);
+
+			// Read current zcull statistics into the address provided
+			void read_report(class ::rsx::thread* ptimer, vm::addr_t sink, u32 type);
+
+			// Clears current stat block and increments stat_tag_id
+			void clear(class ::rsx::thread* ptimer, u32 type);
+
+			// Forcefully flushes all
 			void sync(class ::rsx::thread* ptimer);
 
-			//conditionally sync any pending writes if range overlaps
-			void read_barrier(class ::rsx::thread* ptimer, u32 memory_address, u32 memory_range);
+			// Conditionally sync any pending writes if range overlaps
+			flags32_t read_barrier(class ::rsx::thread* ptimer, u32 memory_address, u32 memory_range, flags32_t flags);
+			flags32_t read_barrier(class ::rsx::thread* ptimer, u32 memory_address, occlusion_query_info* query);
 
-			//call once every 'tick' to update
-			void update(class ::rsx::thread* ptimer);
+			// Call once every 'tick' to update, optional address provided to partially sync until address is processed
+			void update(class ::rsx::thread* ptimer, u32 sync_address = 0, bool hint = false);
 
-			//Draw call notification
+			// Draw call notification
 			void on_draw();
 
-			//Check for pending writes
-			bool has_pending() const { return (m_pending_writes.size() != 0); }
+			// Sync hint notification
+			void on_sync_hint(void* args);
 
-			//Backend methods (optional, will return everything as always visible by default)
+			// Check for pending writes
+			bool has_pending() const { return !m_pending_writes.empty(); }
+
+			// Search for query synchronized at address
+			query_search_result find_query(vm::addr_t sink_address, bool all);
+
+			// Copies queries in range rebased from source range to destination range
+			u32 copy_reports_to(u32 start, u32 range, u32 dest);
+
+			// Backend methods (optional, will return everything as always visible by default)
 			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
 			virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
 			virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/) { return true; }
 			virtual void get_occlusion_query_result(occlusion_query_info* query) { query->result = UINT32_MAX; }
 			virtual void discard_occlusion_query(occlusion_query_info* /*query*/) {}
 		};
+
+		// Helper class for conditional rendering
+		struct conditional_render_eval
+		{
+			bool enabled = false;
+			bool eval_failed = false;
+			bool hw_cond_active = false;
+			bool reserved = false;
+
+			std::vector<occlusion_query_info*> eval_sources;
+			u64 eval_sync_tag = 0;
+			u32 eval_address = 0;
+
+			// Resets common data
+			void reset();
+
+			// Returns true if rendering is disabled as per conditional render test
+			bool disable_rendering() const;
+
+			// Returns true if a conditional render is active but not yet evaluated
+			bool eval_pending() const;
+
+			// Enable conditional rendering
+			void enable_conditional_render(thread* pthr, u32 address);
+
+			// Disable conditional rendering
+			void disable_conditional_render(thread* pthr);
+
+			// Sets data sources for predicate evaluation
+			void set_eval_sources(std::vector<occlusion_query_info*>& sources);
+
+			// Sets evaluation result. Result is true if conditional evaluation failed
+			void set_eval_result(thread* pthr, bool failed);
+
+			// Evaluates the condition by accessing memory directly
+			void eval_result(thread* pthr);
+		};
 	}
+
+	struct frame_statistics_t
+	{
+		u32 draw_calls;
+		s64 setup_time;
+		s64 vertex_upload_time;
+		s64 textures_upload_time;
+		s64 draw_exec_time;
+		s64 flip_time;
+	};
+
+	struct display_flip_info_t
+	{
+		std::deque<u32> buffer_queue;
+		u32 buffer;
+		bool skip_frame;
+		bool emu_flip;
+		bool in_progress;
+		frame_statistics_t stats;
+
+		inline void push(u32 _buffer)
+		{
+			buffer_queue.push_back(_buffer);
+		}
+
+		inline bool pop(u32 _buffer)
+		{
+			if (buffer_queue.empty())
+			{
+				return false;
+			}
+
+			do
+			{
+				const auto index = buffer_queue.front();
+				buffer_queue.pop_front();
+
+				if (index == _buffer)
+				{
+					buffer = _buffer;
+					return true;
+				}
+			}
+			while (!buffer_queue.empty());
+
+			// Need to observe this happening in the wild
+			rsx_log.error("Display queue was discarded while not empty!");
+			return false;
+		}
+	};
+
+	struct backend_configuration
+	{
+		bool supports_multidraw;             // Draw call batching
+		bool supports_hw_a2c;                // Alpha to coverage
+		bool supports_hw_renormalization;    // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+		bool supports_hw_a2one;              // Alpha to one
+		bool supports_hw_conditional_render; // Conditional render
+	};
 
 	struct sampled_image_descriptor_base;
 
-	class thread : public named_thread
+	class thread : public cpu_thread
 	{
-		std::shared_ptr<thread_ctrl> m_vblank_thread;
+		u64 timestamp_ctrl = 0;
+		u64 timestamp_subvalue = 0;
 
+		display_flip_info_t m_queued_flip{};
+
+		void cpu_task() override;
 	protected:
-		atomic_t<bool> m_rsx_thread_exiting{false};
-		std::stack<u32> m_call_stack;
+		std::thread::id m_rsx_thread;
+		atomic_t<bool> m_rsx_thread_exiting{ true };
+
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
 		std::vector<u32> element_push_buffer;
 
 		s32 m_skip_frame_ctr = 0;
-		bool skip_frame = false;
+		bool skip_current_frame = false;
+		frame_statistics_t stats{};
 
-		bool supports_multidraw = false;
-		bool supports_native_ui = false;
+		backend_configuration backend_config{};
 
-		//occlusion query
+		// FIFO
+	public:
+		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
+		std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
+
+	protected:
+		FIFO::flattening_helper m_flattener;
+		u32 fifo_ret_addr = RSX_CALL_STACK_EMPTY;
+		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
+
+		// Occlusion query
 		bool zcull_surface_active = false;
 		std::unique_ptr<reports::ZCULL_control> zcull_ctrl;
 
-		//framebuffer setup
+		// Framebuffer setup
 		rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
 		rsx::gcm_framebuffer_info m_depth_surface_info;
+		framebuffer_layout m_framebuffer_layout{};
 		bool framebuffer_status_valid = false;
 
-		std::unique_ptr<rsx::overlays::user_interface> m_custom_ui;
-		std::unique_ptr<rsx::overlays::user_interface> m_invalidated_ui;
+		// Overlays
+		rsx::overlays::display_manager* m_overlay_manager = nullptr;
+
+		// Invalidated memory range
+		address_range m_invalidated_memory_range;
+
+		// Profiler
+		rsx::profiling_timer m_profiler;
+		frame_statistics_t m_frame_stats;
 
 	public:
 		RsxDmaControl* ctrl = nullptr;
-		atomic_t<u32> internal_get{ 0 };
-		atomic_t<u32> restore_point{ 0 };
-		atomic_t<bool> external_interrupt_lock{ false };
+		u32 dma_address{0};
+		rsx_iomap_table iomap_table;
+		u32 restore_point = 0;
+		u32 dbg_step_pc = 0;
+		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
+		atomic_t<bool> is_inited{ false };
+		bool is_fifo_idle() const;
+		void flush_fifo();
+		void recover_fifo();
+		static void fifo_wake_delay(u64 div = 1);
+		u32 get_fifo_cmd() const;
 
-		//performance approximation counters
+		std::string dump_regs() const override;
+		void cpu_wait(bs_t<cpu_flag> old) override;
+
+		// Performance approximation counters
 		struct
 		{
-			atomic_t<u64> idle_time{ 0 };  //Time spent idling in microseconds
-			u64 last_update_timestamp = 0; //Timestamp of last load update
-			u64 FIFO_idle_timestamp = 0; //Timestamp of when FIFO queue becomes idle
-			bool FIFO_is_idle = false; //True if FIFO is in idle state
+			atomic_t<u64> idle_time{ 0 };  // Time spent idling in microseconds
+			u64 last_update_timestamp = 0; // Timestamp of last load update
+			u64 FIFO_idle_timestamp = 0;   // Timestamp of when FIFO queue becomes idle
+			FIFO_state state = FIFO_state::running;
 			u32 approximate_load = 0;
 			u32 sampled_frames = 0;
 		}
 		performance_counters;
 
-		//native UI interrupts
-		atomic_t<bool> native_ui_flip_request{ false };
+		enum class flip_request : u32
+		{
+			emu_requested = 1,
+			native_ui = 2,
+
+			any = emu_requested | native_ui
+		};
+
+		atomic_bitmask_t<flip_request> async_flip_requested{};
+		u8 async_flip_buffer{ 0 };
 
 		GcmTileInfo tiles[limits::tiles_count];
 		GcmZcullInfo zculls[limits::zculls_count];
 
-		bool capture_current_frame = false;
 		void capture_frame(const std::string &name);
 
 	public:
-		std::shared_ptr<class ppu_thread> intr_thread;
+		std::shared_ptr<named_thread<class ppu_thread>> intr_thread;
 
 		// I hate this flag, but until hle is closer to lle, its needed
 		bool isHLE{ false };
 
-		u32 ioAddress, ioSize;
 		u32 flip_status;
 		int debug_level;
 
@@ -319,110 +701,146 @@ namespace rsx
 		RsxDisplayInfo display_buffers[8];
 		u32 display_buffers_count{0};
 		u32 current_display_buffer{0};
-		u32 ctxt_addr;
+		u32 device_addr;
 		u32 label_addr;
 
-		u32 local_mem_addr, main_mem_addr;
+		u32 main_mem_size{0};
+		u32 local_mem_size{0};
 
-		bool m_rtts_dirty;
-		bool m_transform_constants_dirty;
-		bool m_textures_dirty[16];
-		bool m_vertex_textures_dirty[4];
+		bool m_rtts_dirty = true;
+		std::array<bool, 16> m_textures_dirty;
+		std::array<bool, 4> m_vertex_textures_dirty;
 		bool m_framebuffer_state_contested = false;
+		rsx::framebuffer_creation_context m_current_framebuffer_context = rsx::framebuffer_creation_context::context_draw;
+
+		u32  m_graphics_state = 0;
+		u64  ROP_sync_timestamp = 0;
+
+		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
+		program_hash_util::vertex_program_utils::vertex_program_metadata current_vp_metadata = {};
 
 	protected:
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
 
+		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
+		bool get_scissor(areau& region, bool clip_viewport);
+
 		/**
 		 * Analyze vertex inputs and group all interleaved blocks
 		 */
-		vertex_input_layout analyse_inputs_interleaved() const;
+		void analyse_inputs_interleaved(vertex_input_layout&) const;
 
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
 
-		void get_current_vertex_program();
+		// Runs shader prefetch and resolves pipeline status flags
+		void analyse_current_rsx_pipeline();
+
+		// Prefetch and analyze the currently active fragment program ucode
+		void prefetch_fragment_program();
+
+		// Prefetch and analyze the currently active vertex program ucode
+		void prefetch_vertex_program();
+
+		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors);
 
 		/**
 		 * Gets current fragment program and associated fragment state
-		 * get_surface_info is a helper takes 2 parameters: rsx_texture_address and surface_is_depth
-		 * returns whether surface is a render target and surface pitch in native format
 		 */
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
-		void get_current_fragment_program_legacy(std::function<std::tuple<bool, u16>(u32, fragment_texture&, bool)> get_surface_info);
 
 	public:
-		double fps_limit = 59.94;
+		bool invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size);
+		void on_framebuffer_options_changed(u32 opt);
 
 	public:
-		u64 start_rsx_time = 0;
+		u64 target_rsx_flip_time = 0;
 		u64 int_flip_index = 0;
-		u64 last_flip_time;
+		u64 last_flip_time = 0;
 		vm::ptr<void(u32)> flip_handler = vm::null;
 		vm::ptr<void(u32)> user_handler = vm::null;
 		vm::ptr<void(u32)> vblank_handler = vm::null;
-		u64 vblank_count;
+		atomic_t<u64> vblank_count{0};
+		bool capture_current_frame = false;
 
 	public:
-		bool invalid_command_interrupt_raised = false;
-		bool sync_point_request = false;
+		atomic_t<bool> sync_point_request = false;
 		bool in_begin_end = false;
+
+		struct desync_fifo_cmd_info
+		{
+			u32 cmd;
+			u64 timestamp;
+		};
+
+		std::queue<desync_fifo_cmd_info> recovered_fifo_cmds_history;
 
 		atomic_t<s32> async_tasks_pending{ 0 };
 
-		bool conditional_render_test_failed = false;
-		bool conditional_render_enabled = false;
 		bool zcull_stats_enabled = false;
 		bool zcull_rendering_enabled = false;
 		bool zcull_pixel_cnt_enabled = false;
 
-	protected:
-		thread();
+		reports::conditional_render_eval cond_render_ctrl;
+
+		virtual u64 get_cycles() = 0;
 		virtual ~thread();
 
-		virtual void on_task() override;
-		virtual void on_exit() override;
+		static constexpr auto thread_name = "rsx::thread"sv;
+
+	protected:
+		thread();
+		virtual void on_task();
+		virtual void on_exit();
 
 		/**
 		 * Execute a backend local task queue
-		 * Idle argument checks that the FIFO queue is in an idle state
 		 */
-		virtual void do_local_task(bool /*idle*/) {}
+		virtual void do_local_task(FIFO_state state);
+
+		virtual void emit_geometry(u32) {}
+
+		void run_FIFO();
 
 	public:
-		virtual std::string get_name() const override;
+		thread(const thread&) = delete;
+		thread& operator=(const thread&) = delete;
 
-		virtual void on_init(const std::shared_ptr<void>&) override {} // disable start() (TODO)
-		virtual void on_stop() override {} // disable join()
-
+		virtual void clear_surface(u32 /*arg*/) {}
 		virtual void begin();
 		virtual void end();
+		virtual void execute_nop_draw();
 
-		virtual void on_init_rsx() = 0;
 		virtual void on_init_thread() = 0;
-		virtual bool do_method(u32 /*cmd*/, u32 /*value*/) { return false; }
-		virtual void flip(int buffer) = 0;
-		virtual u64 timestamp() const;
+		virtual void on_frame_end(u32 buffer, bool forced = false);
+		virtual void flip(const display_flip_info_t& info) = 0;
+		virtual u64 timestamp();
 		virtual bool on_access_violation(u32 /*address*/, bool /*is_writing*/) { return false; }
-		virtual void on_notify_memory_unmapped(u32 /*address_base*/, u32 /*size*/) {}
+		virtual void on_invalidate_memory_range(const address_range & /*range*/, rsx::invalidation_cause) {}
 		virtual void notify_tile_unbound(u32 /*tile*/) {}
 
-		//zcull
+		// control
+		virtual void renderctl(u32 /*request_code*/, void* /*args*/) {}
+
+		// zcull
 		void notify_zcull_info_changed();
 		void clear_zcull_stats(u32 type);
 		void check_zcull_status(bool framebuffer_swap);
 		void get_zcull_stats(u32 type, vm::addr_t sink);
+		u32  copy_zcull_stats(u32 memory_range_start, u32 memory_range, u32 destination);
 
-		//sync
+		void enable_conditional_rendering(vm::addr_t ref);
+		void disable_conditional_rendering();
+		virtual void begin_conditional_rendering(const std::vector<reports::occlusion_query_info*>& sources);
+		virtual void end_conditional_rendering();
+
+		// sync
 		void sync();
-		void read_barrier(u32 memory_address, u32 memory_range);
-		
-		gsl::span<const gsl::byte> get_raw_index_array(const std::vector<std::pair<u32, u32> >& draw_indexed_clause) const;
-		gsl::span<const gsl::byte> get_raw_vertex_buffer(const rsx::data_array_format_info&, u32 base_offset, const std::vector<std::pair<u32, u32>>& vertex_ranges) const;
+		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
+		virtual void sync_hint(FIFO_hint hint, void* args);
 
-		std::vector<std::variant<vertex_array_buffer, vertex_array_register, empty_vertex_array>>
-		get_vertex_buffers(const rsx::rsx_state& state, const std::vector<std::pair<u32, u32>>& vertex_ranges, const u64 consumed_attrib_mask) const;
+		gsl::span<const gsl::byte> get_raw_index_array(const draw_clause& draw_indexed_clause) const;
 
 		std::variant<draw_array_command, draw_indexed_array_command, draw_inlined_array>
 		get_draw_command(const rsx::rsx_state& state) const;
@@ -444,12 +862,12 @@ namespace rsx
 		 * result.first contains persistent memory requirements
 		 * result.second contains volatile memory requirements
 		 */
-		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 vertex_count);
+		std::pair<u32, u32> calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count);
 
 		/**
 		 * Generates vertex input descriptors as an array of 16x4 s32s
 		 */
-		void fill_vertex_layout_state(const vertex_input_layout& layout, u32 vertex_count, s32* buffer, u32 persistent_offset = 0, u32 volatile_offset = 0);
+		void fill_vertex_layout_state(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count, s32* buffer, u32 persistent_offset = 0, u32 volatile_offset = 0);
 
 		/**
 		 * Uploads vertex data described in the layout descriptor
@@ -460,24 +878,12 @@ namespace rsx
 	private:
 		shared_mutex m_mtx_task;
 
-		struct internal_task_entry
-		{
-			std::function<bool()> callback;
-			//std::promise<void> promise;
-
-			internal_task_entry(std::function<bool()> callback) : callback(callback)
-			{
-			}
-		};
-
-		std::deque<internal_task_entry> m_internal_tasks;
-		void do_internal_task();
+		void handle_emu_flip(u32 buffer);
+		void handle_invalidated_memory_range();
 
 	public:
 		//std::future<void> add_internal_task(std::function<bool()> callback);
 		//void invoke(std::function<bool()> callback);
-		void add_user_interface(std::shared_ptr<rsx::overlays::user_interface> iface);
-		void remove_user_interface();
 
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.
@@ -488,72 +894,148 @@ namespace rsx
 
 		/**
 		 * Fill buffer with user clip information
-		*/
-
+		 */
 		void fill_user_clip_data(void *buffer) const;
 
 		/**
 		* Fill buffer with vertex program constants.
 		* Buffer must be at least 512 float4 wide.
 		*/
-		void fill_vertex_program_constants_data(void *buffer);
+		void fill_vertex_program_constants_data(void* buffer);
 
 		/**
 		 * Fill buffer with fragment rasterization state.
 		 * Fills current fog values, alpha test parameters and texture scaling parameters
 		 */
-		void fill_fragment_state_buffer(void *buffer, const RSXFragmentProgram &fragment_program);
+		void fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& fragment_program);
 
 		/**
-		* Write inlined array data to buffer.
-		* The storage of inlined data looks different from memory stored arrays.
-		* There is no swapping required except for 4 u8 (according to Bleach Soul Resurection)
-		*/
-		void write_inline_array_to_buffer(void *dst_buffer);
+		 * Fill buffer with fragment texture parameter constants (texture matrix)
+		 */
+		void fill_fragment_texture_parameters(void* buffer, const RSXFragmentProgram& fragment_program);
+
+		/**
+		 * Notify that a section of memory has been mapped
+		 * If there is a notify_memory_unmapped request on this range yet to be handled,
+		 * handles it immediately.
+		 */
+		void on_notify_memory_mapped(u32 address_base, u32 size);
+
+		/**
+		 * Notify that a section of memory has been unmapped
+		 * Any data held in the defined range is discarded
+		 */
+		void on_notify_memory_unmapped(u32 address_base, u32 size);
+
+		/**
+		 * Notify to check internal state during semaphore wait
+		 */
+		virtual void on_semaphore_acquire_wait() {}
 
 		/**
 		 * Copy rtt values to buffer.
 		 * TODO: It's more efficient to combine multiple call of this function into one.
 		 */
-		virtual std::array<std::vector<gsl::byte>, 4> copy_render_targets_to_memory() {
-			return  std::array<std::vector<gsl::byte>, 4>();
-		};
+		virtual std::array<std::vector<std::byte>, 4> copy_render_targets_to_memory() {
+			return std::array<std::vector<std::byte>, 4>();
+		}
 
 		/**
 		* Copy depth and stencil content to buffers.
 		* TODO: It's more efficient to combine multiple call of this function into one.
 		*/
-		virtual std::array<std::vector<gsl::byte>, 2> copy_depth_stencil_buffer_to_memory() {
-			return std::array<std::vector<gsl::byte>, 2>();
-		};
+		virtual std::array<std::vector<std::byte>, 2> copy_depth_stencil_buffer_to_memory() {
+			return std::array<std::vector<std::byte>, 2>();
+		}
 
-		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); };
+		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); }
 
-		virtual bool scaled_image_from_memory(blit_src_info& /*src_info*/, blit_dst_info& /*dst_info*/, bool /*interpolate*/){ return false;  }
+		virtual bool scaled_image_from_memory(blit_src_info& /*src_info*/, blit_dst_info& /*dst_info*/, bool /*interpolate*/) { return false; }
 
 	public:
 		void reset();
-		void init(u32 ioAddress, u32 ioSize, u32 ctrlAddress, u32 localAddress);
+		void init(u32 ctrlAddress);
 
 		tiled_region get_tiled_address(u32 offset, u32 location);
 		GcmTileInfo *find_tile(u32 offset, u32 location);
 
-		u32 ReadIO32(u32 addr);
-		void WriteIO32(u32 addr, u32 value);
+		// Emu App/Game flip, only immediately flips when called from rsxthread
+		void request_emu_flip(u32 buffer);
 
 		void pause();
 		void unpause();
+		void wait_pause();
 
-		//Get RSX approximate load in %
+		// Get RSX approximate load in %
 		u32 get_load();
 
-		//HLE vsh stuff
-		//TODO: Move into a separate helper
-		virtual rsx::overlays::save_dialog* shell_open_save_dialog();
-		virtual rsx::overlays::message_dialog* shell_open_message_dialog();
-		virtual rsx::overlays::trophy_notification* shell_open_trophy_notification();
-		virtual rsx::overlays::user_interface* shell_get_current_dialog();
-		virtual bool shell_close_dialog();
-		virtual void shell_do_cleanup(){}
+		// Returns true if the current thread is the active RSX thread
+		bool is_current_thread() const { return std::this_thread::get_id() == m_rsx_thread; }
+	};
+
+	inline thread* get_current_renderer()
+	{
+		return g_fxo->try_get<rsx::thread>();
+	}
+
+	template<bool IsFullLock = false>
+	class reservation_lock
+	{
+		u32 addr = 0, length = 0;
+		bool locked = false;
+
+		inline void lock_range(u32 addr, u32 length)
+		{
+			this->addr = addr;
+			this->length = length;
+
+			auto renderer = get_current_renderer();
+			this->locked = renderer->iomap_table.lock<IsFullLock>(addr, length);
+		}
+
+	public:
+		reservation_lock(u32 addr, u32 length)
+		{
+			if (g_cfg.core.rsx_accurate_res_access &&
+				addr < constants::local_mem_base)
+			{
+				lock_range(addr, length);
+			}
+		}
+
+		// Multi-range lock. If ranges overlap, the combined range will be acquired.
+		// If ranges do not overlap, the first range that is in main memory will be acquired.
+		reservation_lock(u32 dst_addr, u32 dst_length, u32 src_addr, u32 src_length)
+		{
+			if (g_cfg.core.rsx_accurate_res_access)
+			{
+				const auto range1 = utils::address_range::start_length(dst_addr, dst_length);
+				const auto range2 = utils::address_range::start_length(src_addr, src_length);
+				utils::address_range target_range;
+
+				if (!range1.overlaps(range2)) [[likely]]
+				{
+					target_range = (dst_addr < constants::local_mem_base) ? range1 : range2;
+				}
+				else
+				{
+					// Very unlikely
+					target_range = range1.get_min_max(range2);
+				}
+
+				if (target_range.start < constants::local_mem_base)
+				{
+					lock_range(target_range.start, target_range.length());
+				}
+			}
+		}
+
+		~reservation_lock()
+		{
+			if (locked)
+			{
+				get_current_renderer()->iomap_table.unlock<IsFullLock>(addr, length);
+			}
+		}
 	};
 }

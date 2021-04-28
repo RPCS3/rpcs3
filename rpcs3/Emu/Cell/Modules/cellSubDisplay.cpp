@@ -3,7 +3,7 @@
 
 #include "cellSubDisplay.h"
 
-logs::channel cellSubDisplay("cellSubDisplay");
+LOG_CHANNEL(cellSubDisplay);
 
 template<>
 void fmt_class_string<CellSubDisplayError>::format(std::string& out, u64 arg)
@@ -17,6 +17,7 @@ void fmt_class_string<CellSubDisplayError>::format(std::string& out, u64 arg)
 		STR_CASE(CELL_SUBDISPLAY_ERROR_NOT_FOUND);
 		STR_CASE(CELL_SUBDISPLAY_ERROR_INVALID_VALUE);
 		STR_CASE(CELL_SUBDISPLAY_ERROR_NOT_INITIALIZED);
+		STR_CASE(CELL_SUBDISPLAY_ERROR_NOT_SUPPORTED);
 		STR_CASE(CELL_SUBDISPLAY_ERROR_SET_SAMPLE);
 		STR_CASE(CELL_SUBDISPLAY_ERROR_AUDIOOUT_IS_BUSY);
 		STR_CASE(CELL_SUBDISPLAY_ERROR_ZERO_REGISTERED);
@@ -29,7 +30,7 @@ void fmt_class_string<CellSubDisplayError>::format(std::string& out, u64 arg)
 error_code cellSubDisplayInit(vm::ptr<CellSubDisplayParam> pParam, vm::ptr<CellSubDisplayHandler> func, vm::ptr<void> userdata, u32 container)
 {
 	cellSubDisplay.todo("cellSubDisplayInit(pParam=*0x%x, func=*0x%x, userdata=*0x%x, container=0x%x)", pParam, func, userdata, container);
-	return CELL_OK;
+	return CELL_SUBDISPLAY_ERROR_ZERO_REGISTERED;
 }
 
 error_code cellSubDisplayEnd()
@@ -47,6 +48,7 @@ error_code cellSubDisplayGetRequiredMemory(vm::ptr<CellSubDisplayParam> pParam)
 		case CELL_SUBDISPLAY_VERSION_0001: return not_an_error(CELL_SUBDISPLAY_0001_MEMORY_CONTAINER_SIZE);
 		case CELL_SUBDISPLAY_VERSION_0002: return not_an_error(CELL_SUBDISPLAY_0002_MEMORY_CONTAINER_SIZE);
 		case CELL_SUBDISPLAY_VERSION_0003: return not_an_error(CELL_SUBDISPLAY_0003_MEMORY_CONTAINER_SIZE);
+		default: break;
 	}
 
 	return CELL_SUBDISPLAY_ERROR_INVALID_VALUE;

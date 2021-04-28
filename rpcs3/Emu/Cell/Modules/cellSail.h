@@ -2,10 +2,10 @@
 
 #include "cellVpost.h"
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // Error Codes
-enum
+enum CellSailError : u32
 {
 	CELL_SAIL_ERROR_INVALID_ARG        = 0x80610701,
 	CELL_SAIL_ERROR_INVALID_STATE      = 0x80610702,
@@ -933,9 +933,10 @@ struct CellSailSourceCheckResource
 	CellSailSourceCheckStream runningError;
 };
 
+template <template <class T, usz A = alignof(T)> class be_t = ::be_t>
 struct CellSailMp4DateTime
 {
-	be_t<u16> second;
+	be_t<u16, 2> second;
 	be_t<u16> minute;
 	be_t<u16> hour;
 	be_t<u16> day;
@@ -950,10 +951,11 @@ struct CellSailMp4Movie
 	be_t<u64> internalData[16];
 };
 
+template <template <class T, usz A = alignof(T)> class be_t = ::be_t>
 struct CellSailMp4MovieInfo
 {
-	CellSailMp4DateTime creationDateTime;
-	CellSailMp4DateTime modificationDateTime;
+	CellSailMp4DateTime<be_t> creationDateTime;
+	CellSailMp4DateTime<be_t> modificationDateTime;
 	be_t<u32> trackCount;
 	be_t<u32> movieTimeScale;
 	be_t<u32> movieDuration;

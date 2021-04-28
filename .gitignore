@@ -31,68 +31,62 @@
 *.wav
 
 /build
-/bin
 /lib
 /tmp
 /ipch
 /rpcs3/Debug
 /rpcs3/Release
 /llvm_build
+/3rdparty/llvm_build
 /Vulkan/Vulkan-build
 /Vulkan/glslang-build
+/Vulkan/spirv-tools-build
+
+!/bin
+/bin/*
 
 # Themes
 !/bin/GuiConfigs/
 /bin/GuiConfigs/*.ini
+/bin/GuiConfigs/*.ini.*
+/bin/GuiConfigs/*.dat
+/bin/GuiConfigs/*.dat.*
 
-/bin/rpcs3.ini
-/bin/rpcs3.ipdb
-/bin/rpcs3.iobj
-/bin/FragmentProgram.txt
-/bin/VertexProgram.txt
-/bin/*.hlsl
-/bin/BreakPoints.dat
-/bin/textures
-/bin/*.lib
-/bin/*.exp
-rpcs3/git-version.h
+# Some data from git
+!/bin/git/
 
 # Visual Studio Files
 .vs/*
 .vscode/*
+*.ipch
 *.vspx
 *.psess
 *.VC.*
 *.vcxproj.user
 enc_temp_folder/*
-
-# Copyrighted files
-/bin/data/
-/bin/dev_flash/data/font
-/bin/dev_flash/sys
-/bin/dev_flash/vsh
-
-# Ignore installed games except test homebrews
-!/bin/dev_hdd0/game/
-/bin/dev_hdd0/game/*
-!/bin/dev_hdd0/game/TEST12345/
-/bin/dev_hdd0/disc/*
+CMakeSettings.json
+*PVS-Studio*
+PVS/*
 
 # Ignore other system generated files
-bin/dev_hdd0/*.txt
 x64/*
 rpcs3/x64/*
-rpcs3-tests/x64/*
+rpcs3/git-version.h
 
 # cmake
 Makefile
 *CMakeFiles*
 CMakeCache.txt
 *cmake_install.cmake*
+CPackConfig.cmake
+CPackSourceConfig.cmake
+compile_commands.json
 
 # cotire
 rpcs3/cotire/*
 rpcs3/rpcs3_*_cotire.cmake
+rpcs3/Emu/rpcs3_emu_CXX_Release_cotire.cmake
+rpcs3/Emu/rpcs3_emu_CXX_cotire.cmake
 
 # kdevelop
 *.kdev4
@@ -100,6 +94,32 @@ rpcs3/rpcs3_*_cotire.cmake
 
 # Qt
 moc_*.cpp
-qrc_resources.cpp
+qrc_*.cpp
 rpcs3_automoc.cpp
 ui_*.h
+rpcs3/rpcs3_autogen/*
+
+# QtCreator
+CMakeLists.txt.user
+
+# CLion
+/.idea/*
+/cmake-build-*/
+
+# macOS
+.DS_Store
+
+# 7zlib
+/3rdparty/7z/**/*.lib
+
+# yaml-cpp
+yaml-cpp.pc
+
+# libusb
+/3rdparty/libusb_cmake/config.h
+/3rdparty/libusb_cmake/libusb-1.0.pc
+
+# ssl certificate
+cacert.pem
+
+_ReSharper.*/

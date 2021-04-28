@@ -1,10 +1,9 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "sysPrxForUser.h"
 
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
 {
@@ -16,24 +15,29 @@ void sys_spinlock_initialize(vm::ptr<atomic_be_t<u32>> lock)
 	}
 }
 
-void sys_spinlock_lock(ppu_thread& ppu, vm::ptr<atomic_be_t<u32>> lock)
+error_code sys_spinlock_lock(ppu_thread& ppu, vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.trace("sys_spinlock_lock(lock=*0x%x)", lock);
 
 	// Try to exchange with 0xabadcafe, repeat until exchanged with 0
 	while (*lock || lock->exchange(0xabadcafe))
 	{
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
 	}
+
+	return CELL_OK;
 }
 
-s32 sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)
+error_code sys_spinlock_trylock(vm::ptr<atomic_be_t<u32>> lock)
 {
 	sysPrxForUser.trace("sys_spinlock_trylock(lock=*0x%x)", lock);
 
 	if (*lock || lock->exchange(0xabadcafe))
 	{
-		return CELL_EBUSY;
+		return not_an_error(CELL_EBUSY);
 	}
 
 	return CELL_OK;

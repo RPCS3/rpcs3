@@ -1,46 +1,75 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "cellRemotePlay.h"
 
-logs::channel cellRemotePlay("cellRemotePlay");
+LOG_CHANNEL(cellRemotePlay);
 
-s32 cellRemotePlayGetStatus()
+template <>
+void fmt_class_string<CellRemotePlayError>::format(std::string& out, u64 arg)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	format_enum(out, arg, [](CellRemotePlayError value)
+	{
+		switch (value)
+		{
+		STR_CASE(CELL_REMOTEPLAY_ERROR_INTERNAL);
+		}
+
+		return unknown;
+	});
 }
 
-s32 cellRemotePlaySetComparativeVolume()
+error_code cellRemotePlayGetStatus()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayGetStatus()");
+	return CELL_OK;
 }
 
-s32 cellRemotePlayGetPeerInfo()
+error_code cellRemotePlaySetComparativeVolume(f32 comparativeAudioVolume)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlaySetComparativeVolume(comparativeAudioVolume=%f)", comparativeAudioVolume);
+	return CELL_OK;
 }
 
-s32 cellRemotePlayGetSharedMemory()
+error_code cellRemotePlayGetPeerInfo()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayGetPeerInfo()");
+	return CELL_OK;
 }
 
-s32 cellRemotePlayEncryptAllData()
+error_code cellRemotePlayGetSharedMemory()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayGetSharedMemory()");
+	return CELL_OK;
 }
 
-s32 cellRemotePlayStopPeerVideoOut()
+error_code cellRemotePlayEncryptAllData()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayEncryptAllData()");
+	return CELL_OK;
 }
 
-s32 cellRemotePlayGetComparativeVolume()
+error_code cellRemotePlayStopPeerVideoOut()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayStopPeerVideoOut()");
+	return CELL_OK;
 }
 
-s32 cellRemotePlayBreak()
+error_code cellRemotePlayGetComparativeVolume(vm::ptr<f32> pComparativeAudioVolume)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellRemotePlay.todo("cellRemotePlayGetComparativeVolume(pComparativeAudioVolume=*0x%x)", pComparativeAudioVolume);
+
+	if (pComparativeAudioVolume)
+	{
+		*pComparativeAudioVolume = 1.f;
+	}
+
+	return CELL_OK;
+}
+
+error_code cellRemotePlayBreak()
+{
+	cellRemotePlay.todo("cellRemotePlayBreak()");
+	return CELL_OK;
 }
 
 

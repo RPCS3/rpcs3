@@ -2,9 +2,11 @@
 
 #ifdef LLVM_AVAILABLE
 
-#include "../rpcs3/Emu/CPU/CPUTranslator.h"
-#include "../rpcs3/Emu/Cell/PPUOpcodes.h"
-#include "../rpcs3/Emu/Cell/PPUAnalyser.h"
+#include "Emu/CPU/CPUTranslator.h"
+#include "PPUOpcodes.h"
+#include "PPUAnalyser.h"
+
+#include "util/types.hpp"
 
 class PPUTranslator final : public cpu_translator
 {
@@ -15,7 +17,7 @@ class PPUTranslator final : public cpu_translator
 	std::map<u64, const ppu_reloc*> m_relocs;
 
 	// Attributes for function calls which are "pure" and may be optimized away if their results are unused
-	const llvm::AttributeSet m_pure_attr;
+	const llvm::AttributeList m_pure_attr;
 
 	// LLVM function
 	llvm::Function* m_function;
@@ -34,51 +36,49 @@ class PPUTranslator final : public cpu_translator
 
 	/* Variables */
 
-	// Segments
-	std::vector<llvm::GlobalVariable*> m_segs;
-
 	// Memory base
-	llvm::GlobalVariable* m_base;
-	llvm::Value* m_base_loaded;
+	llvm::Value* m_base;
 
 	// Thread context
 	llvm::Value* m_thread;
 
 	// Callable functions
-	llvm::GlobalVariable* m_call;
+	llvm::Value* m_exec;
 
-	// Main block
-	llvm::BasicBlock* m_body;
-	llvm::BasicBlock* m_entry;
+	// Segment 0 address
+	llvm::Value* m_seg0;
 
 	// Thread context struct
 	llvm::StructType* m_thread_type;
 
 	llvm::Value* m_mtocr_table{};
 
-	llvm::Value* m_globals[173];
+	llvm::Value* m_globals[175];
 	llvm::Value** const m_g_cr = m_globals + 99;
-	llvm::Value* m_locals[173];
+	llvm::Value* m_locals[175];
 	llvm::Value** const m_gpr = m_locals + 3;
 	llvm::Value** const m_fpr = m_locals + 35;
 	llvm::Value** const m_vr = m_locals + 67;
 	llvm::Value** const m_cr = m_locals + 99;
 	llvm::Value** const m_fc = m_locals + 131; // FPSCR bits (used partially)
 
+	llvm::Value* nan_vec4;
+
 #define DEF_VALUE(loc, glb, pos)\
 	llvm::Value*& loc = m_locals[pos];\
 	llvm::Value*& glb = m_globals[pos];
 
-	DEF_VALUE(m_lr, m_g_lr, 163); // LR, Link Register
-	DEF_VALUE(m_ctr, m_g_ctr, 164); // CTR, Counter Register
-	DEF_VALUE(m_vrsave, m_g_vrsave, 165);
-	DEF_VALUE(m_cia, m_g_cia, 166);
-	DEF_VALUE(m_so, m_g_so, 167); // XER.SO bit, summary overflow
-	DEF_VALUE(m_ov, m_g_ov, 168); // XER.OV bit, overflow flag
-	DEF_VALUE(m_ca, m_g_ca, 169); // XER.CA bit, carry flag
-	DEF_VALUE(m_cnt, m_g_cnt, 170); // XER.CNT
-	DEF_VALUE(m_sat, m_g_sat, 171); // VSCR.SAT bit, sticky saturation flag
-	DEF_VALUE(m_nj, m_g_nj, 172); // VSCR.NJ bit, non-Java mode
+	DEF_VALUE(m_lr, m_g_lr, 163) // LR, Link Register
+	DEF_VALUE(m_ctr, m_g_ctr, 164) // CTR, Counter Register
+	DEF_VALUE(m_vrsave, m_g_vrsave, 165)
+	DEF_VALUE(m_cia, m_g_cia, 166)
+	DEF_VALUE(m_so, m_g_so, 167) // XER.SO bit, summary overflow
+	DEF_VALUE(m_ov, m_g_ov, 168) // XER.OV bit, overflow flag
+	DEF_VALUE(m_ca, m_g_ca, 169) // XER.CA bit, carry flag
+	DEF_VALUE(m_cnt, m_g_cnt, 170) // XER.CNT
+	DEF_VALUE(m_sat, m_g_sat, 171) // VSCR.SAT bit, sticky saturation flag
+	DEF_VALUE(m_nj, m_g_nj, 172) // VSCR.NJ bit, non-Java mode
+	DEF_VALUE(m_jm_mask, m_g_jm_mask, 174) // Java-Mode helper mask
 
 #undef DEF_VALUE
 public:
@@ -91,10 +91,28 @@ public:
 		return result;
 	}
 
-	template <typename T>
-	void set_vr(u32 vr, value_t<T> v)
+	template <typename T, typename... Args>
+	std::tuple<std::conditional_t<false, Args, value_t<T>>...> get_vrs(const Args&... args)
 	{
-		return SetVr(vr, v.value);
+		return {get_vr<T>(args)...};
+	}
+
+	template <typename T>
+	void set_vr(u32 vr, T&& expr)
+	{
+		SetVr(vr, expr.eval(m_ir));
+	}
+
+	llvm::Value* VecHandleNan(llvm::Value* val);
+	llvm::Value* VecHandleDenormal(llvm::Value* val);
+	llvm::Value* VecHandleResult(llvm::Value* val);
+
+	template <typename T>
+	auto vec_handle_result(T&& expr)
+	{
+		value_t<typename T::type> result;
+		result.value = VecHandleResult(expr.eval(m_ir));
+		return result;
 	}
 
 	// Get current instruction address
@@ -190,20 +208,20 @@ public:
 	// Create sign extension (with double size if type is nullptr)
 	llvm::Value* SExt(llvm::Value* value, llvm::Type* = nullptr);
 
-	template<std::size_t N>
+	template<usz N>
 	std::array<llvm::Value*, N> SExt(std::array<llvm::Value*, N> values, llvm::Type* type = nullptr)
 	{
-		for (std::size_t i = 0; i < N; i++) values[i] = SExt(values[i], type);
+		for (usz i = 0; i < N; i++) values[i] = SExt(values[i], type);
 		return values;
 	}
 
 	// Create zero extension (with double size if type is nullptr)
 	llvm::Value* ZExt(llvm::Value*, llvm::Type* = nullptr);
 
-	template<std::size_t N>
+	template<usz N>
 	std::array<llvm::Value*, N> ZExt(std::array<llvm::Value*, N> values, llvm::Type* type = nullptr)
 	{
-		for (std::size_t i = 0; i < N; i++) values[i] = ZExt(values[i], type);
+		for (usz i = 0; i < N; i++) values[i] = ZExt(values[i], type);
 		return values;
 	}
 
@@ -297,23 +315,23 @@ public:
 
 	// Call a function with attribute list
 	template<typename... Args>
-	llvm::CallInst* Call(llvm::Type* ret, llvm::AttributeSet attr, llvm::StringRef name, Args... args)
+	llvm::CallInst* Call(llvm::Type* ret, llvm::AttributeList attr, llvm::StringRef name, Args... args)
 	{
 		// Call the function
-		return m_ir->CreateCall(m_module->getOrInsertFunction(name, llvm::FunctionType::get(ret, {args->getType()...}, false), attr), {args...});
+		return m_ir->CreateCall(m_module->getOrInsertFunction(name, attr, ret, args->getType()...), {args...});
 	}
 
 	// Call a function
 	template<typename... Args>
 	llvm::CallInst* Call(llvm::Type* ret, llvm::StringRef name, Args... args)
 	{
-		return Call(ret, llvm::AttributeSet{}, name, args...);
+		return Call(ret, llvm::AttributeList{}, name, args...);
 	}
 
 	// Handle compilation errors
 	void CompilationError(const std::string& error);
 
-	PPUTranslator(llvm::LLVMContext& context, llvm::Module* module, const ppu_module& info);
+	PPUTranslator(llvm::LLVMContext& context, llvm::Module* _module, const ppu_module& info, llvm::ExecutionEngine& engine);
 	~PPUTranslator();
 
 	// Get thread context struct type

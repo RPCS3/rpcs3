@@ -4,6 +4,14 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#endif
 extern "C"
 {
 #include "libavcodec/avcodec.h"
@@ -12,30 +20,259 @@ extern "C"
 #define AV_INPUT_BUFFER_PADDING_SIZE FF_INPUT_BUFFER_PADDING_SIZE
 #endif
 }
+#ifdef _MSC_VER
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic pop
+#endif
 
 #include "cellPamf.h"
 #include "cellAdec.h"
 
 #include <mutex>
-#include <thread>
 
 extern std::mutex g_mutex_avcodec_open2;
 
-logs::channel cellAdec("cellAdec");
+LOG_CHANNEL(cellAdec);
+
+template <>
+void fmt_class_string<CellAdecError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](CellAdecError value)
+	{
+		switch (value)
+		{
+		STR_CASE(CELL_ADEC_ERROR_FATAL);
+		STR_CASE(CELL_ADEC_ERROR_SEQ);
+		STR_CASE(CELL_ADEC_ERROR_ARG);
+		STR_CASE(CELL_ADEC_ERROR_BUSY);
+		STR_CASE(CELL_ADEC_ERROR_EMPTY);
+		STR_CASE(CELL_ADEC_ERROR_CELP_BUSY);
+		STR_CASE(CELL_ADEC_ERROR_CELP_EMPTY);
+		STR_CASE(CELL_ADEC_ERROR_CELP_ARG);
+		STR_CASE(CELL_ADEC_ERROR_CELP_SEQ);
+		STR_CASE(CELL_ADEC_ERROR_CELP_CORE_FATAL);
+		STR_CASE(CELL_ADEC_ERROR_CELP_CORE_ARG);
+		STR_CASE(CELL_ADEC_ERROR_CELP_CORE_SEQ);
+		STR_CASE(CELL_ADEC_ERROR_CELP8_BUSY);
+		STR_CASE(CELL_ADEC_ERROR_CELP8_EMPTY);
+		STR_CASE(CELL_ADEC_ERROR_CELP8_ARG);
+		STR_CASE(CELL_ADEC_ERROR_CELP8_SEQ);
+		STR_CASE(CELL_ADEC_ERROR_CELP8_CORE_FATAL);
+		STR_CASE(CELL_ADEC_ERROR_CELP8_CORE_ARG);
+		STR_CASE(CELL_ADEC_ERROR_CELP8_CORE_SEQ);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_FATAL);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SEQ);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_ARG);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_BUSY);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_EMPTY);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_BUFFER_OVERFLOW);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_END_OF_BITSTREAM);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_CH_CONFIG_INCONSISTENCY);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_NO_CH_DEFAULT_POS);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_CH_POS);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_UNANTICIPATED_COUPLING_CH);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_LAYER_ID);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_ADTS_SYNCWORD_ERROR);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_ADTS_ID);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_CH_CHANGED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SAMPLING_FREQ_CHANGED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_WRONG_SBR_CH);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_WRONG_SCALE_FACTOR);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_BOOKS);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_SECTION_DATA);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_PULSE_IS_NOT_LONG);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_GC_IS_NOT_SUPPORTED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_ELEMENT_ID);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_NO_CH_CONFIG);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_UNEXPECTED_OVERLAP_CRC);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_CRC_BUFFER_EXCEEDED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_CRC);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_BAD_WINDOW_CODE);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_ADIF_HEADER_ID);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_NOT_SUPPORTED_PROFILE);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_PROG_NUMBER_NOT_FOUND);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_SAMP_RATE_INDEX);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_UNANTICIPATED_CH_CONFIG);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_PULSE_OVERFLOWED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_CAN_NOT_UNPACK_INDEX);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_DEINTERLEAVE_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_CALC_BAND_OFFSET_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_SCALE_FACTOR_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_CC_GAIN_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_MIX_COUPLING_CH_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_GROUP_IS_INVALID);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_PREDICT_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_PREDICT_RESET_PATTERN);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVALID_TNS_FRAME_INFO);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_MASK_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_GROUP_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_LPFLAG_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_INVERSE_QUANTIZATION_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_CB_MAP_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_GET_PULSE_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_MONO_MIXDOWN_ELEMENT_IS_NOT_SUPPORTED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_STEREO_MIXDOWN_ELEMENT_IS_NOT_SUPPORTED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_CH_OVERFLOW);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_NOSYNCH);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_PROGRAM);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_TAG);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_CHN_CONFIG);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_SECTION);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_SCFACTORS);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_PULSE_DATA);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_MAIN_PROFILE_NOT_IMPLEMENTED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_GC_NOT_IMPLEMENTED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_ILLEGAL_PLUS_ELE_ID);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_CREATE_ERROR);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_NOT_INITIALIZED);
+		STR_CASE(CELL_ADEC_ERROR_M4AAC_SBR_INVALID_ENVELOPE);
+		STR_CASE(CELL_ADEC_ERROR_AC3_BUSY);
+		STR_CASE(CELL_ADEC_ERROR_AC3_EMPTY);
+		STR_CASE(CELL_ADEC_ERROR_AC3_PARAM);
+		STR_CASE(CELL_ADEC_ERROR_AC3_FRAME);
+		STR_CASE(CELL_ADEC_ERROR_AT3_OK); // CELL_ADEC_ERROR_AT3_OFFSET
+		STR_CASE(CELL_ADEC_ERROR_AT3_BUSY);
+		STR_CASE(CELL_ADEC_ERROR_AT3_EMPTY);
+		STR_CASE(CELL_ADEC_ERROR_AT3_ERROR);
+		STR_CASE(CELL_ADEC_ERROR_ATX_OK); // CELL_ADEC_ERROR_ATX_OFFSET, CELL_ADEC_ERROR_ATX_NONE
+		STR_CASE(CELL_ADEC_ERROR_ATX_BUSY);
+		STR_CASE(CELL_ADEC_ERROR_ATX_EMPTY);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ATSHDR);
+		STR_CASE(CELL_ADEC_ERROR_ATX_NON_FATAL);
+		STR_CASE(CELL_ADEC_ERROR_ATX_NOT_IMPLE);
+		STR_CASE(CELL_ADEC_ERROR_ATX_PACK_CE_OVERFLOW);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ILLEGAL_NPROCQUS);
+		STR_CASE(CELL_ADEC_ERROR_ATX_FATAL);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ENC_OVERFLOW);
+		STR_CASE(CELL_ADEC_ERROR_ATX_PACK_CE_UNDERFLOW);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDCT);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_GAINADJ);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDSF);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_SPECTRA);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDWL);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_GHWAVE);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_SHEADER);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_A);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_B);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_C);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_D);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDWL_E);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_A);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_B);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_C);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDSF_D);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_IDCT_A);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_GC_NGC);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLEV_A);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLOC_A);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLEV_B);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_GC_IDLOC_B);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_SN_NWVS);
+		STR_CASE(CELL_ADEC_ERROR_ATX_FATAL_HANDLE);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ASSERT_SAMPLING_FREQ);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ASSERT_CH_CONFIG_INDEX);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ASSERT_NBYTES);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ASSERT_BLOCK_NUM);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ASSERT_BLOCK_ID);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ASSERT_CHANNELS);
+		STR_CASE(CELL_ADEC_ERROR_ATX_UNINIT_BLOCK_SPECIFIED);
+		STR_CASE(CELL_ADEC_ERROR_ATX_POSCFG_PRESENT);
+		STR_CASE(CELL_ADEC_ERROR_ATX_BUFFER_OVERFLOW);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ILL_BLK_TYPE_ID);
+		STR_CASE(CELL_ADEC_ERROR_ATX_UNPACK_CHANNEL_BLK_FAILED);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ILL_BLK_ID_USED_1);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ILL_BLK_ID_USED_2);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ILLEGAL_ENC_SETTING);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ILLEGAL_DEC_SETTING);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ASSERT_NSAMPLES);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ILL_SYNCWORD);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ILL_SAMPLING_FREQ);
+		STR_CASE(CELL_ADEC_ERROR_ATX_ILL_CH_CONFIG_INDEX);
+		STR_CASE(CELL_ADEC_ERROR_ATX_RAW_DATA_FRAME_SIZE_OVER);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SYNTAX_ENHANCE_LENGTH_OVER);
+		STR_CASE(CELL_ADEC_ERROR_ATX_SPU_INTERNAL_FAIL);
+		STR_CASE(CELL_ADEC_ERROR_LPCM_FATAL);
+		STR_CASE(CELL_ADEC_ERROR_LPCM_SEQ);
+		STR_CASE(CELL_ADEC_ERROR_LPCM_ARG);
+		STR_CASE(CELL_ADEC_ERROR_LPCM_BUSY);
+		STR_CASE(CELL_ADEC_ERROR_LPCM_EMPTY);
+		STR_CASE(CELL_ADEC_ERROR_MP3_OK); // CELL_ADEC_ERROR_MP3_OFFSET
+		STR_CASE(CELL_ADEC_ERROR_MP3_BUSY);
+		STR_CASE(CELL_ADEC_ERROR_MP3_EMPTY);
+		STR_CASE(CELL_ADEC_ERROR_MP3_ERROR);
+		STR_CASE(CELL_ADEC_ERROR_MP3_LOST_SYNC);
+		STR_CASE(CELL_ADEC_ERROR_MP3_NOT_L3);
+		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_BITRATE);
+		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_SFREQ);
+		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_EMPHASIS);
+		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_BLKTYPE);
+		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_VERSION);
+		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_MODE);
+		STR_CASE(CELL_ADEC_ERROR_MP3_BAD_MODE_EXT);
+		STR_CASE(CELL_ADEC_ERROR_MP3_HUFFMAN_NUM);
+		STR_CASE(CELL_ADEC_ERROR_MP3_HUFFMAN_CASE_ID);
+		STR_CASE(CELL_ADEC_ERROR_MP3_SCALEFAC_COMPRESS);
+		STR_CASE(CELL_ADEC_ERROR_MP3_HGETBIT);
+		STR_CASE(CELL_ADEC_ERROR_MP3_FLOATING_EXCEPTION);
+		STR_CASE(CELL_ADEC_ERROR_MP3_ARRAY_OVERFLOW);
+		STR_CASE(CELL_ADEC_ERROR_MP3_STEREO_PROCESSING);
+		STR_CASE(CELL_ADEC_ERROR_MP3_JS_BOUND);
+		STR_CASE(CELL_ADEC_ERROR_MP3_PCMOUT);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_FATAL);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_SEQ);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_ARG);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_BUSY);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_EMPTY);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_SYNCF);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_LAYER);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_BITRATE);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_SAMPLEFREQ);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_VERSION);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_MODE_EXT);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_UNSUPPORT);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_OPENBS_EX);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_SYNCF_EX);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_CRCGET_EX);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_CRC_EX);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_CRCGET);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_CRC);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_BITALLOC);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_SCALE);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_SAMPLE);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_OPENBS);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_CRCGET);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_CRC);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_BITALLOC);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_SCALE);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_SAMPLE);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_HEADER);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_MC_STATUS);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_AG_CCRCGET);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_AG_CRC);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_AG_BITALLOC);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_AG_SCALE);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_AG_SAMPLE);
+		STR_CASE(CELL_ADEC_ERROR_M2BC_AG_STATUS);
+		}
+
+		return unknown;
+	});
+}
 
 class AudioDecoder : public ppu_thread
 {
 public:
 	squeue_t<AdecTask> job;
-	volatile bool is_closed;
-	volatile bool is_finished;
-	bool just_started;
-	bool just_finished;
+	volatile bool is_closed = false;
+	volatile bool is_finished = false;
+	bool just_started = false;
+	bool just_finished = false;
 
-	AVCodec* codec;
-	AVInputFormat* input_format;
-	AVCodecContext* ctx;
-	AVFormatContext* fmt;
+	AVCodec* codec = nullptr;
+	AVInputFormat* input_format = nullptr;
+	AVCodecContext* ctx = nullptr;
+	AVFormatContext* fmt = nullptr;
 	u8* io_buf;
 
 	struct AudioReader
@@ -59,7 +296,7 @@ public:
 	const u32 memSize;
 	const vm::ptr<CellAdecCbMsg> cbFunc;
 	const u32 cbArg;
-	u32 memBias;
+	u32 memBias = 0;
 
 	AdecTask task;
 	u64 last_pts, first_pts;
@@ -71,24 +308,15 @@ public:
 	bool use_ats_headers;
 
 	AudioDecoder(s32 type, u32 addr, u32 size, vm::ptr<CellAdecCbMsg> func, u32 arg)
-		: ppu_thread("HLE Audio Decoder")
+		: ppu_thread({}, "", 0)
 		, type(type)
 		, memAddr(addr)
 		, memSize(size)
-		, memBias(0)
 		, cbFunc(func)
 		, cbArg(arg)
-		, is_closed(false)
-		, is_finished(false)
-		, just_started(false)
-		, just_finished(false)
-		, codec(nullptr)
-		, input_format(nullptr)
-		, ctx(nullptr)
-		, fmt(nullptr)
 	{
-		av_register_all();
-		avcodec_register_all();
+		//av_register_all();
+		//avcodec_register_all();
 
 		switch (type)
 		{
@@ -109,28 +337,28 @@ public:
 		}
 		default:
 		{
-			fmt::throw_exception("Unknown type (0x%x)" HERE, type);
+			fmt::throw_exception("Unknown type (0x%x)", type);
 		}
 		}
 
 		if (!codec)
 		{
-			fmt::throw_exception("avcodec_find_decoder() failed" HERE);
+			fmt::throw_exception("avcodec_find_decoder() failed");
 		}
 		if (!input_format)
 		{
-			fmt::throw_exception("av_find_input_format() failed" HERE);
+			fmt::throw_exception("av_find_input_format() failed");
 		}
 		fmt = avformat_alloc_context();
 		if (!fmt)
 		{
-			fmt::throw_exception("avformat_alloc_context() failed" HERE);
+			fmt::throw_exception("avformat_alloc_context() failed");
 		}
-		io_buf = (u8*)av_malloc(4096);
-		fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, NULL, NULL);
+		io_buf = static_cast<u8*>(av_malloc(4096));
+		fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, nullptr, nullptr);
 		if (!fmt->pb)
 		{
-			fmt::throw_exception("avio_alloc_context() failed" HERE);
+			fmt::throw_exception("avio_alloc_context() failed");
 		}
 	}
 
@@ -159,7 +387,7 @@ public:
 		}
 	}
 
-	virtual void cpu_task() override
+	void non_task()
 	{
 		while (true)
 		{
@@ -215,7 +443,7 @@ public:
 				reader.addr = task.au.addr;
 				reader.size = task.au.size;
 				reader.has_ats = use_ats_headers;
-				//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
+				//cellAdec.notice("Audio AU: size = 0x%x, pts = 0x%llx", task.au.size, task.au.pts);
 
 				if (just_started)
 				{
@@ -232,12 +460,12 @@ public:
 
 						if (size)
 						{
-							data = (u8*)av_calloc(1, size + AV_INPUT_BUFFER_PADDING_SIZE);
+							data = static_cast<u8*>(av_calloc(1, size + AV_INPUT_BUFFER_PADDING_SIZE));
 							this->size = size + AV_INPUT_BUFFER_PADDING_SIZE;
 						}
 						else
 						{
-							data = NULL;
+							data = nullptr;
 							size = 0;
 						}
 					}
@@ -252,7 +480,7 @@ public:
 				if (just_started && just_finished)
 				{
 					avcodec_flush_buffers(ctx);
-					
+
 					reader.init = true; // wrong
 					just_finished = false;
 					just_started = false;
@@ -261,10 +489,10 @@ public:
 				{
 					AVDictionary* opts = nullptr;
 					av_dict_set(&opts, "probesize", "96", 0);
-					err = avformat_open_input(&fmt, NULL, input_format, &opts);
+					err = avformat_open_input(&fmt, nullptr, input_format, &opts);
 					if (err || opts)
 					{
-						fmt::throw_exception("avformat_open_input() failed (err=0x%x, opts=%d)" HERE, err, opts ? 1 : 0);
+						fmt::throw_exception("avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
 					}
 					//err = avformat_find_stream_info(fmt, NULL);
 					//if (err || !fmt->nb_streams)
@@ -273,20 +501,20 @@ public:
 					//}
 					if (!avformat_new_stream(fmt, codec))
 					{
-						fmt::throw_exception("avformat_new_stream() failed" HERE);
+						fmt::throw_exception("avformat_new_stream() failed");
 					}
-					ctx = fmt->streams[0]->codec; // TODO: check data
+					//ctx = fmt->streams[0]->codec; // TODO: check data
 
 					opts = nullptr;
 					av_dict_set(&opts, "refcounted_frames", "1", 0);
 					{
-						std::lock_guard<std::mutex> lock(g_mutex_avcodec_open2);
+						std::lock_guard lock(g_mutex_avcodec_open2);
 						// not multithread-safe (???)
 						err = avcodec_open2(ctx, codec, &opts);
 					}
 					if (err || opts)
 					{
-						fmt::throw_exception("avcodec_open2() failed (err=0x%x, opts=%d)" HERE, err, opts ? 1 : 0);
+						fmt::throw_exception("avcodec_open2() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
 					}
 					just_started = false;
 				}
@@ -330,12 +558,12 @@ public:
 
 					if (!frame.data)
 					{
-						fmt::throw_exception("av_frame_alloc() failed" HERE);
+						fmt::throw_exception("av_frame_alloc() failed");
 					}
 
 					int got_frame = 0;
 
-					int decode = avcodec_decode_audio4(ctx, frame.data, &got_frame, &au);
+					int decode = 0; //avcodec_decode_audio4(ctx, frame.data, &got_frame, &au);
 
 					if (decode <= 0)
 					{
@@ -354,17 +582,17 @@ public:
 						//	frame.pts = ts/* - first_pts*/;
 						//	last_pts = frame.pts;
 						//}
-						last_pts += ((u64)frame.data->nb_samples) * 90000 / frame.data->sample_rate;
+						last_pts += frame.data->nb_samples * 90000ull / frame.data->sample_rate;
 						frame.pts = last_pts;
 
-						s32 nbps = av_get_bytes_per_sample((AVSampleFormat)frame.data->format);
+						s32 nbps = av_get_bytes_per_sample(static_cast<AVSampleFormat>(frame.data->format));
 						switch (frame.data->format)
 						{
 						case AV_SAMPLE_FMT_FLTP: break;
 						case AV_SAMPLE_FMT_S16P: break;
 						default:
 						{
-							fmt::throw_exception("Unsupported frame format(%d)" HERE, frame.data->format);
+							fmt::throw_exception("Unsupported frame format(%d)", frame.data->format);
 						}
 						}
 						frame.auAddr = task.au.addr;
@@ -372,7 +600,7 @@ public:
 						frame.userdata = task.au.userdata;
 						frame.size = frame.data->nb_samples * frame.data->channels * nbps;
 
-						//LOG_NOTICE(HLE, "got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
+						//cellAdec.notice("got audio frame (pts=0x%llx, nb_samples=%d, ch=%d, sample_rate=%d, nbps=%d)",
 							//frame.pts, frame.data->nb_samples, frame.data->channels, frame.data->sample_rate, nbps);
 
 						if (frames.push(frame, &is_closed))
@@ -396,7 +624,7 @@ public:
 
 			default:
 			{
-				fmt::throw_exception("Unknown task(%d)" HERE, (u32)task.type);
+				fmt::throw_exception("Unknown task(%d)", +task.type);
 			}
 			}
 		}
@@ -407,7 +635,7 @@ public:
 
 int adecRead(void* opaque, u8* buf, int buf_size)
 {
-	AudioDecoder& adec = *(AudioDecoder*)opaque;
+	AudioDecoder& adec = *static_cast<AudioDecoder*>(opaque);
 
 	int res = 0;
 
@@ -417,7 +645,7 @@ next:
 		u8 code1 = vm::read8(adec.reader.addr + 2);
 		u8 code2 = vm::read8(adec.reader.addr + 3);
 		adec.ch_cfg = (code1 >> 2) & 0x7;
-		adec.frame_size = ((((u32)code1 & 0x3) << 8) | (u32)code2) * 8 + 8;
+		adec.frame_size = (((u32{code1} & 0x3) << 8) | code2) * 8 + 8;
 		adec.sample_rate = at3freq[code1 >> 5];
 
 		adec.reader.size -= 8;
@@ -428,7 +656,7 @@ next:
 	if (adecIsAtracX(adec.type) && !adec.reader.init)
 	{
 		OMAHeader oma(1 /* atrac3p id */, adec.sample_rate, adec.ch_cfg, adec.frame_size);
-		if (buf_size < sizeof(oma))
+		if (buf_size + 0u < sizeof(oma))
 		{
 			cellAdec.error("adecRead(): OMAHeader writing failed");
 			Emu.Pause();
@@ -443,7 +671,7 @@ next:
 		adec.reader.init = true;
 	}
 
-	if (adec.reader.size < (u32)buf_size /*&& !adec.just_started*/)
+	if (adec.reader.size < static_cast<u32>(buf_size) /*&& !adec.just_started*/)
 	{
 		AdecTask task;
 		if (!adec.job.peek(task, 0, &adec.is_closed))
@@ -458,9 +686,8 @@ next:
 		case adecClose:
 		{
 			buf_size = adec.reader.size;
+			break;
 		}
-		break;
-
 		case adecDecodeAu:
 		{
 			std::memcpy(buf, vm::base(adec.reader.addr), adec.reader.size);
@@ -476,13 +703,13 @@ next:
 			adec.reader.addr = adec.task.au.addr;
 			adec.reader.size = adec.task.au.size;
 			adec.reader.has_ats = adec.use_ats_headers;
-			//LOG_NOTICE(HLE, "Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
+			//cellAdec.notice("Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
+			break;
 		}
-		break;
-
+		case adecStartSeq: // TODO ?
 		default:
 		{
-			cellAdec.error("adecRawRead(): unknown task (%d)", (u32)task.type);
+			cellAdec.error("adecRawRead(): unknown task (%d)", +task.type);
 			Emu.Pause();
 			return -1;
 		}
@@ -490,8 +717,7 @@ next:
 
 		goto next;
 	}
-	// TODO:: Syphurith: I don't know whether we should keep this else-if now. Since the if condition is same with this one.
-	else if (adec.reader.size < (u32)buf_size)
+	else if (adec.reader.size < static_cast<u32>(buf_size) && 0)
 	{
 		buf_size = adec.reader.size;
 	}
@@ -500,14 +726,12 @@ next:
 	{
 		return res;
 	}
-	else
-	{
-		std::memcpy(buf, vm::base(adec.reader.addr), buf_size);
 
-		adec.reader.addr += buf_size;
-		adec.reader.size -= buf_size;
-		return res + buf_size;
-	}
+	std::memcpy(buf, vm::base(adec.reader.addr), buf_size);
+
+	adec.reader.addr += buf_size;
+	adec.reader.size -= buf_size;
+	return res + buf_size;
 }
 
 bool adecCheckType(s32 type)
@@ -531,14 +755,14 @@ bool adecCheckType(s32 type)
 		cellAdec.todo("Unimplemented audio codec type (%d)", type);
 		Emu.Pause();
 		break;
-	}	
+	}
 	default: return false;
 	}
 
 	return true;
 }
 
-s32 cellAdecQueryAttr(vm::ptr<CellAdecType> type, vm::ptr<CellAdecAttr> attr)
+error_code cellAdecQueryAttr(vm::ptr<CellAdecType> type, vm::ptr<CellAdecAttr> attr)
 {
 	cellAdec.warning("cellAdecQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
 
@@ -555,7 +779,7 @@ s32 cellAdecQueryAttr(vm::ptr<CellAdecType> type, vm::ptr<CellAdecAttr> attr)
 	return CELL_OK;
 }
 
-s32 cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
+error_code cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
 {
 	cellAdec.warning("cellAdecOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
@@ -564,16 +788,10 @@ s32 cellAdecOpen(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResource> res, vm::
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	auto&& adec = idm::make_ptr<ppu_thread, AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg);
-
-	*handle = adec->id;
-
-	adec->run();
-
-	return CELL_OK;
+	fmt::throw_exception("cellAdec disabled, use LLE.");
 }
 
-s32 cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
+error_code cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
 {
 	cellAdec.warning("cellAdecOpenEx(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
@@ -582,23 +800,17 @@ s32 cellAdecOpenEx(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, 
 		return CELL_ADEC_ERROR_ARG;
 	}
 
-	auto&& adec = idm::make_ptr<ppu_thread, AudioDecoder>(type->audioCodecType, res->startAddr, res->totalMemSize, cb->cbFunc, cb->cbArg);
-
-	*handle = adec->id;
-
-	adec->run();
-
-	return CELL_OK;
+	fmt::throw_exception("cellAdec disabled, use LLE.");
 }
 
-s32 cellAdecOpenExt(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
+error_code cellAdecOpenExt(vm::ptr<CellAdecType> type, vm::ptr<CellAdecResourceEx> res, vm::ptr<CellAdecCb> cb, vm::ptr<u32> handle)
 {
 	cellAdec.warning("cellAdecOpenExt(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
 	return cellAdecOpenEx(type, res, cb, handle);
 }
 
-s32 cellAdecClose(u32 handle)
+error_code cellAdecClose(u32 handle)
 {
 	cellAdec.warning("cellAdecClose(handle=0x%x)", handle);
 
@@ -617,11 +829,16 @@ s32 cellAdecClose(u32 handle)
 		thread_ctrl::wait_for(1000); // hack
 	}
 
-	idm::remove<ppu_thread>(handle);
+	if (!idm::remove_verify<ppu_thread>(handle, std::move(adec)))
+	{
+		// Removed by other thread beforehead
+		return CELL_ADEC_ERROR_ARG;
+	}
+
 	return CELL_OK;
 }
 
-s32 cellAdecStartSeq(u32 handle, u32 param)
+error_code cellAdecStartSeq(u32 handle, u32 param)
 {
 	cellAdec.warning("cellAdecStartSeq(handle=0x%x, param=*0x%x)", handle, param);
 
@@ -651,8 +868,10 @@ s32 cellAdecStartSeq(u32 handle, u32 param)
 		task.at3p.output = atx->bw_pcm;
 		task.at3p.downmix = atx->downmix_flag;
 		task.at3p.ats_header = atx->au_includes_ats_hdr_flg;
-		cellAdec.todo("*** CellAdecParamAtracX: sr=%d, ch_cfg=%d(%d), frame_size=0x%x, extra=0x%x, output=%d, downmix=%d, ats_header=%d",
-			task.at3p.sample_rate, task.at3p.channel_config, task.at3p.channels, task.at3p.frame_size, (u32&)task.at3p.extra_config, task.at3p.output, task.at3p.downmix, task.at3p.ats_header);
+		cellAdec.todo("*** CellAdecParamAtracX: sr=%d, ch_cfg=%d(%d), frame_size=0x%x, extra=%u:%u:%u:%u, output=%d, downmix=%d, ats_header=%d",
+			task.at3p.sample_rate, task.at3p.channel_config, task.at3p.channels, task.at3p.frame_size,
+			task.at3p.extra_config[0], task.at3p.extra_config[1], task.at3p.extra_config[2], task.at3p.extra_config[3],
+			task.at3p.output, task.at3p.downmix, task.at3p.ats_header);
 		break;
 	}
 	case CELL_ADEC_TYPE_MP3:
@@ -674,7 +893,7 @@ s32 cellAdecStartSeq(u32 handle, u32 param)
 	return CELL_OK;
 }
 
-s32 cellAdecEndSeq(u32 handle)
+error_code cellAdecEndSeq(u32 handle)
 {
 	cellAdec.warning("cellAdecEndSeq(handle=0x%x)", handle);
 
@@ -689,7 +908,7 @@ s32 cellAdecEndSeq(u32 handle)
 	return CELL_OK;
 }
 
-s32 cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
+error_code cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 {
 	cellAdec.trace("cellAdecDecodeAu(handle=0x%x, auInfo=*0x%x)", handle, auInfo);
 
@@ -704,7 +923,7 @@ s32 cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 	task.au.auInfo_addr = auInfo.addr();
 	task.au.addr = auInfo->startAddr;
 	task.au.size = auInfo->size;
-	task.au.pts = ((u64)auInfo->pts.upper << 32) | (u64)auInfo->pts.lower;
+	task.au.pts = (u64{auInfo->pts.upper} << 32) | u64{auInfo->pts.lower};
 	task.au.userdata = auInfo->userData;
 
 	//cellAdec.notice("cellAdecDecodeAu(): addr=0x%x, size=0x%x, pts=0x%llx", task.au.addr, task.au.size, task.au.pts);
@@ -712,7 +931,7 @@ s32 cellAdecDecodeAu(u32 handle, vm::ptr<CellAdecAuInfo> auInfo)
 	return CELL_OK;
 }
 
-s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
+error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 {
 	cellAdec.trace("cellAdecGetPcm(handle=0x%x, outBuffer=*0x%x)", handle, outBuffer);
 
@@ -741,7 +960,7 @@ s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		// reverse byte order:
 		if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 1)
 		{
-			float* in_f = (float*)frame->extended_data[0];
+			float* in_f = reinterpret_cast<float*>(frame->extended_data[0]);
 			for (u32 i = 0; i < af.size / 4; i++)
 			{
 				outBuffer[i] = in_f[i];
@@ -750,8 +969,8 @@ s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 2)
 		{
 			float* in_f[2];
-			in_f[0] = (float*)frame->extended_data[0];
-			in_f[1] = (float*)frame->extended_data[1];
+			in_f[0] = reinterpret_cast<float*>(frame->extended_data[0]);
+			in_f[1] = reinterpret_cast<float*>(frame->extended_data[1]);
 			for (u32 i = 0; i < af.size / 8; i++)
 			{
 				outBuffer[i * 2 + 0] = in_f[0][i];
@@ -761,12 +980,12 @@ s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 6)
 		{
 			float* in_f[6];
-			in_f[0] = (float*)frame->extended_data[0];
-			in_f[1] = (float*)frame->extended_data[1];
-			in_f[2] = (float*)frame->extended_data[2];
-			in_f[3] = (float*)frame->extended_data[3];
-			in_f[4] = (float*)frame->extended_data[4];
-			in_f[5] = (float*)frame->extended_data[5];
+			in_f[0] = reinterpret_cast<float*>(frame->extended_data[0]);
+			in_f[1] = reinterpret_cast<float*>(frame->extended_data[1]);
+			in_f[2] = reinterpret_cast<float*>(frame->extended_data[2]);
+			in_f[3] = reinterpret_cast<float*>(frame->extended_data[3]);
+			in_f[4] = reinterpret_cast<float*>(frame->extended_data[4]);
+			in_f[5] = reinterpret_cast<float*>(frame->extended_data[5]);
 			for (u32 i = 0; i < af.size / 24; i++)
 			{
 				outBuffer[i * 6 + 0] = in_f[0][i];
@@ -780,14 +999,14 @@ s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		else if (frame->format == AV_SAMPLE_FMT_FLTP && frame->channels == 8)
 		{
 			float* in_f[8];
-			in_f[0] = (float*)frame->extended_data[0];
-			in_f[1] = (float*)frame->extended_data[1];
-			in_f[2] = (float*)frame->extended_data[2];
-			in_f[3] = (float*)frame->extended_data[3];
-			in_f[4] = (float*)frame->extended_data[4];
-			in_f[5] = (float*)frame->extended_data[5];
-			in_f[6] = (float*)frame->extended_data[6];
-			in_f[7] = (float*)frame->extended_data[7];
+			in_f[0] = reinterpret_cast<float*>(frame->extended_data[0]);
+			in_f[1] = reinterpret_cast<float*>(frame->extended_data[1]);
+			in_f[2] = reinterpret_cast<float*>(frame->extended_data[2]);
+			in_f[3] = reinterpret_cast<float*>(frame->extended_data[3]);
+			in_f[4] = reinterpret_cast<float*>(frame->extended_data[4]);
+			in_f[5] = reinterpret_cast<float*>(frame->extended_data[5]);
+			in_f[6] = reinterpret_cast<float*>(frame->extended_data[6]);
+			in_f[7] = reinterpret_cast<float*>(frame->extended_data[7]);
 			for (u32 i = 0; i < af.size / 24; i++)
 			{
 				outBuffer[i * 8 + 0] = in_f[0][i];
@@ -802,33 +1021,33 @@ s32 cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		}
 		else if (frame->format == AV_SAMPLE_FMT_S16P && frame->channels == 1)
 		{
-			s16* in_i = (s16*)frame->extended_data[0];
+			s16* in_i = reinterpret_cast<s16*>(frame->extended_data[0]);
 			for (u32 i = 0; i < af.size / 2; i++)
 			{
-				outBuffer[i] = (float)in_i[i] / 0x8000;
+				outBuffer[i] = in_i[i] / 32768.f;
 			}
 		}
 		else if (frame->format == AV_SAMPLE_FMT_S16P && frame->channels == 2)
 		{
 			s16* in_i[2];
-			in_i[0] = (s16*)frame->extended_data[0];
-			in_i[1] = (s16*)frame->extended_data[1];
+			in_i[0] = reinterpret_cast<s16*>(frame->extended_data[0]);
+			in_i[1] = reinterpret_cast<s16*>(frame->extended_data[1]);
 			for (u32 i = 0; i < af.size / 4; i++)
 			{
-				outBuffer[i * 2 + 0] = (float)in_i[0][i] / 0x8000;
-				outBuffer[i * 2 + 1] = (float)in_i[1][i] / 0x8000;
+				outBuffer[i * 2 + 0] = in_i[0][i] / 32768.f;
+				outBuffer[i * 2 + 1] = in_i[1][i] / 32768.f;
 			}
 		}
 		else
 		{
-			fmt::throw_exception("Unsupported frame format (channels=%d, format=%d)" HERE, frame->channels, frame->format);
+			fmt::throw_exception("Unsupported frame format (channels=%d, format=%d)", frame->channels, frame->format);
 		}
 	}
 
 	return CELL_OK;
 }
 
-s32 cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
+error_code cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 {
 	cellAdec.trace("cellAdecGetPcmItem(handle=0x%x, pcmItem=**0x%x)", handle, pcmItem);
 
@@ -857,22 +1076,22 @@ s32 cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 	}
 
 	pcm->pcmHandle = 0; // ???
-	pcm->pcmAttr.bsiInfo_addr = pcm.addr() + SIZE_32(CellAdecPcmItem);
+	pcm->pcmAttr.bsiInfo_addr = pcm.addr() + u32{sizeof(CellAdecPcmItem)};
 	pcm->startAddr = 0x00000312; // invalid address (no output)
 	pcm->size = af.size;
 	pcm->status = CELL_OK;
-	pcm->auInfo.pts.lower = (u32)(af.pts);
-	pcm->auInfo.pts.upper = (u32)(af.pts >> 32);
+	pcm->auInfo.pts.lower = static_cast<u32>(af.pts);
+	pcm->auInfo.pts.upper = static_cast<u32>(af.pts >> 32);
 	pcm->auInfo.size = af.auSize;
 	pcm->auInfo.startAddr = af.auAddr;
 	pcm->auInfo.userData = af.userdata;
 
 	if (adecIsAtracX(adec->type))
 	{
-		auto atx = vm::ptr<CellAdecAtracXInfo>::make(pcm.addr() + SIZE_32(CellAdecPcmItem));
+		auto atx = vm::ptr<CellAdecAtracXInfo>::make(pcm.addr() + u32{sizeof(CellAdecPcmItem)});
 
 		atx->samplingFreq = frame->sample_rate;
-		atx->nbytes = frame->nb_samples * SIZE_32(float);
+		atx->nbytes = frame->nb_samples * u32{sizeof(float)};
 		if (frame->channels == 1)
 		{
 			atx->channelConfigIndex = 1;
@@ -897,7 +1116,7 @@ s32 cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 	}
 	else if (adec->type == CELL_ADEC_TYPE_MP3)
 	{
-		auto mp3 = vm::ptr<CellAdecMP3Info>::make(pcm.addr() + SIZE_32(CellAdecPcmItem));
+		auto mp3 = vm::ptr<CellAdecMP3Info>::make(pcm.addr() + u32{sizeof(CellAdecPcmItem)});
 
 		// TODO
 		memset(mp3.get_ptr(), 0, sizeof(CellAdecMP3Info));

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Emu/Memory/vm.h"
+#include "Emu/Memory/vm_ptr.h"
 #include "gcm_enums.h"
-#include "gcm_printing.h"
+#include "util/atomic.hpp"
 
 
 struct CellGcmControl
@@ -24,7 +24,7 @@ struct CellGcmConfig
 
 struct CellGcmContextData;
 
-typedef s32(CellGcmContextCallback)(vm::ptr<CellGcmContextData>, u32);
+using CellGcmContextCallback = s32 (vm::ptr<CellGcmContextData>, u32);
 
 struct CellGcmContextData
 {
@@ -64,7 +64,7 @@ struct CellGcmSurface
 	be_t<u16> y;
 };
 
-struct CellGcmReportData
+struct alignas(16) CellGcmReportData
 {
 	be_t<u64> timer;
 	be_t<u32> value;
@@ -73,12 +73,12 @@ struct CellGcmReportData
 
 struct CellGcmZcullInfo
 {
-	u32 region;
-	u32 size;
-	u32 start;
-	u32 offset;
-	u32 status0;
-	u32 status1;
+	be_t<u32> region;
+	be_t<u32> size;
+	be_t<u32> start;
+	be_t<u32> offset;
+	be_t<u32> status0;
+	be_t<u32> status1;
 };
 
 struct CellGcmDisplayInfo
@@ -110,12 +110,7 @@ struct GcmZcullInfo
 	u32 sFunc;
 	u32 sRef;
 	u32 sMask;
-	bool binded;
-
-	GcmZcullInfo()
-	{
-		memset(this, 0, sizeof(*this));
-	}
+	bool bound = false;
 
 	CellGcmZcullInfo pack() const
 	{
@@ -141,12 +136,7 @@ struct GcmTileInfo
 	u32 comp;
 	u32 base;
 	u32 bank;
-	bool binded;
-
-	GcmTileInfo()
-	{
-		memset(this, 0, sizeof(*this));
-	}
+	bool bound = false;
 
 	CellGcmTileInfo pack() const
 	{
@@ -161,26 +151,19 @@ struct GcmTileInfo
 	}
 };
 
-namespace rsx
+struct any32
 {
-	template<typename AT>
-	static inline u32 make_command(vm::_ptr_base<be_t<u32>, AT>& dst, u32 start_register, std::initializer_list<any32> values)
+	u32 m_data;
+
+	template <typename T, typename T2 = std::common_type_t<T>>
+	any32(const T& value)
+		: m_data(std::bit_cast<u32, T2>(value))
 	{
-		*dst++ = start_register << 2 | static_cast<u32>(values.size()) << 18;
-
-		for (const any32& cmd : values)
-		{
-			*dst++ = cmd.as<u32>();
-		}
-
-		return SIZE_32(u32) * (static_cast<u32>(values.size()) + 1);
 	}
 
-	template<typename AT>
-	static inline u32 make_jump(vm::_ptr_base<be_t<u32>, AT>& dst, u32 offset)
+	template <typename T>
+	T as() const
 	{
-		*dst++ = RSX_METHOD_OLD_JUMP_CMD | offset;
-
-		return SIZE_32(u32);
+		return std::bit_cast<T>(m_data);
 	}
-}
+};

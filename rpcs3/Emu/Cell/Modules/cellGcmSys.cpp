@@ -1,16 +1,59 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "Emu/Cell/PPUOpcodes.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/RSX/GSRender.h"
+#include "Emu/Memory/vm.h"
+#include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/RSX/RSXThread.h"
+
 #include "cellGcmSys.h"
+#include "sysPrxForUser.h"
 
-#include <thread>
+#include "util/asm.hpp"
 
-logs::channel cellGcmSys("cellGcmSys");
+LOG_CHANNEL(cellGcmSys);
+
+template<>
+void fmt_class_string<CellGcmError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+		STR_CASE(CELL_GCM_ERROR_FAILURE);
+		STR_CASE(CELL_GCM_ERROR_NO_IO_PAGE_TABLE);
+		STR_CASE(CELL_GCM_ERROR_INVALID_ENUM);
+		STR_CASE(CELL_GCM_ERROR_INVALID_VALUE);
+		STR_CASE(CELL_GCM_ERROR_INVALID_ALIGNMENT);
+		STR_CASE(CELL_GCM_ERROR_ADDRESS_OVERWRAP);
+		}
+
+		return unknown;
+	});
+}
+
+namespace rsx
+{
+	u32 make_command(vm::bptr<u32>& dst, u32 start_register, std::initializer_list<any32> values)
+	{
+		*dst++ = start_register << 2 | static_cast<u32>(values.size()) << 18;
+
+		for (const any32& cmd : values)
+		{
+			*dst++ = cmd.as<u32>();
+		}
+
+		return u32{sizeof(u32)} * (static_cast<u32>(values.size()) + 1);
+	}
+
+	u32 make_jump(vm::bptr<u32>& dst, u32 offset)
+	{
+		*dst++ = RSX_METHOD_OLD_JUMP_CMD | offset;
+
+		return sizeof(u32);
+	}
+}
 
 extern s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 count);
 
@@ -26,26 +69,12 @@ const u32 tiled_pitches[] = {
 	0x00010000
 };
 
-struct CellGcmSysConfig {
-	u32 zculls_addr;
-	vm::ptr<CellGcmDisplayInfo> gcm_buffers{ vm::null };
-	u32 tiles_addr;
-	u32 ctxt_addr;
-	CellGcmConfig current_config;
-	CellGcmContextData current_context;
-	gcmInfo gcm_info;
-};
-
-u64 system_mode = 0;
-u32 local_size = 0;
-u32 local_addr = 0;
-
 // Auxiliary functions
 
 /*
  * Get usable local memory size for a specific game SDK version
  * Example: For 0x00446000 (FW 4.46) we get a localSize of 0x0F900000 (249MB)
- */ 
+ */
 u32 gcmGetLocalMemorySize(u32 sdk_version)
 {
 	if (sdk_version >= 0x00220000)
@@ -67,15 +96,30 @@ u32 gcmGetLocalMemorySize(u32 sdk_version)
 	return 0x0E000000; // 224MB
 }
 
-CellGcmOffsetTable offsetTable;
+error_code gcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size, bool is_strict);
+
+u32 gcmIoOffsetToAddress(u32 ioOffset)
+{
+	const u32 upper12Bits = g_fxo->get<gcm_config>().offsetTable.eaAddress[ioOffset >> 20];
+
+	if (upper12Bits > 0xBFF)
+	{
+		return 0;
+	}
+
+	return (upper12Bits << 20) | (ioOffset & 0xFFFFF);
+}
 
 void InitOffsetTable()
 {
-	offsetTable.ioAddress.set(vm::alloc(3072 * sizeof(u16), vm::main));
-	offsetTable.eaAddress.set(vm::alloc(512 * sizeof(u16), vm::main));
+	auto& cfg = g_fxo->get<gcm_config>();
 
-	memset(offsetTable.ioAddress.get_ptr(), 0xFF, 3072 * sizeof(u16));
-	memset(offsetTable.eaAddress.get_ptr(), 0xFF, 512 * sizeof(u16));
+	const u32 addr = vm::alloc((3072 + 512) * sizeof(u16), vm::main);
+
+	cfg.offsetTable.ioAddress.set(addr);
+	cfg.offsetTable.eaAddress.set(addr + (3072 * sizeof(u16)));
+
+	std::memset(vm::base(addr), 0xFF, (3072 + 512) * sizeof(u16));
 }
 
 //----------------------------------------------------------------------------
@@ -85,47 +129,43 @@ void InitOffsetTable()
 u32 cellGcmGetLabelAddress(u8 index)
 {
 	cellGcmSys.trace("cellGcmGetLabelAddress(index=%d)", index);
-	const auto m_config = fxm::get<CellGcmSysConfig>();
-
-	if (!m_config)
-		return 0;
-
-	return m_config->gcm_info.label_addr + 0x10 * index;
+	return g_fxo->get<gcm_config>().gcm_info.label_addr + 0x10 * index;
 }
 
 vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(u32 index, u32 location)
 {
 	cellGcmSys.warning("cellGcmGetReportDataAddressLocation(index=%d, location=%d)", index, location);
 
-	if (location == CELL_GCM_LOCATION_LOCAL) {
-		if (index >= 2048) {
-			cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
-			return vm::null;
-		}
-		return vm::ptr<CellGcmReportData>::make(0x40301400 + index * 0x10);
-	}
-
-	if (location == CELL_GCM_LOCATION_MAIN) {
-		if (index >= 1024 * 1024) {
+	if (location == CELL_GCM_LOCATION_MAIN)
+	{
+		if (index >= 1024 * 1024)
+		{
 			cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong main index (%d)", index);
-			return vm::null;
 		}
-		return vm::ptr<CellGcmReportData>::make(RSXIOMem.RealAddr(index * 0x10));
+
+		return vm::cast(gcmIoOffsetToAddress(0x0e000000 + index * 0x10));
 	}
 
-	cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong location (%d)", location);
-	return vm::null;
+	// Anything else is Local
+
+	if (index >= 2048)
+	{
+		cellGcmSys.error("cellGcmGetReportDataAddressLocation: Wrong local index (%d)", index);
+	}
+
+	return vm::cast(g_fxo->get<gcm_config>().gcm_info.label_addr + ::offset32(&RsxReports::report) + index * 0x10);
 }
 
 u64 cellGcmGetTimeStamp(u32 index)
 {
 	cellGcmSys.trace("cellGcmGetTimeStamp(index=%d)", index);
 
-	if (index >= 2048) {
+	if (index >= 2048)
+	{
 		cellGcmSys.error("cellGcmGetTimeStamp: Wrong local index (%d)", index);
-		return 0;
 	}
-	return vm::read64(0x40301400 + index * 0x10);
+
+	return vm::read64(g_fxo->get<gcm_config>().gcm_info.label_addr + ::offset32(&RsxReports::report) + index * 0x10);
 }
 
 u32 cellGcmGetCurrentField()
@@ -139,12 +179,12 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
 	cellGcmSys.warning("cellGcmGetNotifyDataAddress(index=%d)", index);
 
 	// If entry not in use, return NULL
-	u16 entry = offsetTable.eaAddress[241];
+	u16 entry = g_fxo->get<gcm_config>().offsetTable.eaAddress[241];
 	if (entry == 0xFFFF) {
 		return 0;
 	}
 
-	return (entry << 20) + (index * 0x20);
+	return (entry << 20) + (index * 0x40);
 }
 
 /*
@@ -152,16 +192,16 @@ u32 cellGcmGetNotifyDataAddress(u32 index)
  */
 vm::ptr<CellGcmReportData> _cellGcmFunc12()
 {
-	return vm::ptr<CellGcmReportData>::make(0x40301400); // TODO
+	return vm::ptr<CellGcmReportData>::make(g_fxo->get<gcm_config>().gcm_info.label_addr + ::offset32(&RsxReports::report)); // TODO
 }
 
 u32 cellGcmGetReport(u32 type, u32 index)
 {
 	cellGcmSys.warning("cellGcmGetReport(type=%d, index=%d)", type, index);
 
-	if (index >= 2048) {
+	if (index >= 2048)
+	{
 		cellGcmSys.error("cellGcmGetReport: Wrong local index (%d)", index);
-		return -1;
 	}
 
 	if (type < 1 || type > 5) {
@@ -176,11 +216,12 @@ u32 cellGcmGetReportDataAddress(u32 index)
 {
 	cellGcmSys.warning("cellGcmGetReportDataAddress(index=%d)", index);
 
-	if (index >= 2048) {
+	if (index >= 2048)
+	{
 		cellGcmSys.error("cellGcmGetReportDataAddress: Wrong local index (%d)", index);
-		return 0;
 	}
-	return 0x40301400 + index * 0x10;
+
+	return g_fxo->get<gcm_config>().gcm_info.label_addr + ::offset32(&RsxReports::report) + index * 0x10;
 }
 
 u32 cellGcmGetReportDataLocation(u32 index, u32 location)
@@ -195,24 +236,8 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 {
 	cellGcmSys.warning("cellGcmGetTimeStampLocation(index=%d, location=%d)", index, location);
 
-	if (location == CELL_GCM_LOCATION_LOCAL) {
-		if (index >= 2048) {
-			cellGcmSys.error("cellGcmGetTimeStampLocation: Wrong local index (%d)", index);
-			return 0;
-		}
-		return vm::read64(0x40301400 + index * 0x10);
-	}
-
-	if (location == CELL_GCM_LOCATION_MAIN) {
-		if (index >= 1024 * 1024) {
-			cellGcmSys.error("cellGcmGetTimeStampLocation: Wrong main index (%d)", index);
-			return 0;
-		}
-		return vm::read64(RSXIOMem.RealAddr(index * 0x10));
-	}
-
-	cellGcmSys.error("cellGcmGetTimeStampLocation: Wrong location (%d)", location);
-	return 0;
+	// NOTE: No error checkings
+	return cellGcmGetReportDataAddressLocation(index, location)->timer;
 }
 
 //----------------------------------------------------------------------------
@@ -222,40 +247,28 @@ u64 cellGcmGetTimeStampLocation(u32 index, u32 location)
 u32 cellGcmGetControlRegister()
 {
 	cellGcmSys.trace("cellGcmGetControlRegister()");
-	const auto m_config = fxm::get<CellGcmSysConfig>();
-
-	if (!m_config)
-		return 0;
-	return m_config->gcm_info.control_addr;
+	return g_fxo->get<gcm_config>().gcm_info.control_addr;
 }
 
 u32 cellGcmGetDefaultCommandWordSize()
 {
 	cellGcmSys.trace("cellGcmGetDefaultCommandWordSize()");
-	const auto m_config = fxm::get<CellGcmSysConfig>();
-
-	if (!m_config)
-		return 0;
-	return m_config->gcm_info.command_size;
+	return g_fxo->get<gcm_config>().gcm_info.command_size;
 }
 
 u32 cellGcmGetDefaultSegmentWordSize()
 {
 	cellGcmSys.trace("cellGcmGetDefaultSegmentWordSize()");
-	const auto m_config = fxm::get<CellGcmSysConfig>();
-
-	if (!m_config)
-		return 0;
-	return m_config->gcm_info.segment_size;
+	return g_fxo->get<gcm_config>().gcm_info.segment_size;
 }
 
-s32 cellGcmInitDefaultFifoMode(s32 mode)
+error_code cellGcmInitDefaultFifoMode(s32 mode)
 {
 	cellGcmSys.warning("cellGcmInitDefaultFifoMode(mode=%d)", mode);
 	return CELL_OK;
 }
 
-s32 cellGcmSetDefaultFifoSize(u32 bufferSize, u32 segmentSize)
+error_code cellGcmSetDefaultFifoSize(u32 bufferSize, u32 segmentSize)
 {
 	cellGcmSys.warning("cellGcmSetDefaultFifoSize(bufferSize=0x%x, segmentSize=0x%x)", bufferSize, segmentSize);
 	return CELL_OK;
@@ -265,33 +278,31 @@ s32 cellGcmSetDefaultFifoSize(u32 bufferSize, u32 segmentSize)
 // Hardware Resource Management
 //----------------------------------------------------------------------------
 
-s32 cellGcmBindTile(u8 index)
+error_code cellGcmBindTile(u8 index)
 {
 	cellGcmSys.warning("cellGcmBindTile(index=%d)", index);
 
 	if (index >= rsx::limits::tiles_count)
 	{
-		cellGcmSys.error("cellGcmBindTile: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	fxm::get<GSRender>()->tiles[index].binded = true;
+	rsx::get_current_renderer()->tiles[index].bound = true;
 
 	return CELL_OK;
 }
 
-s32 cellGcmBindZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask)
+error_code cellGcmBindZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart, u32 zFormat, u32 aaFormat, u32 zCullDir, u32 zCullFormat, u32 sFunc, u32 sRef, u32 sMask)
 {
 	cellGcmSys.warning("cellGcmBindZcull(index=%d, offset=0x%x, width=%d, height=%d, cullStart=0x%x, zFormat=0x%x, aaFormat=0x%x, zCullDir=0x%x, zCullFormat=0x%x, sFunc=0x%x, sRef=0x%x, sMask=0x%x)",
 		index, offset, width, height, cullStart, zFormat, aaFormat, zCullDir, zCullFormat, sFunc, sRef, sMask);
 
 	if (index >= rsx::limits::zculls_count)
 	{
-		cellGcmSys.error("cellGcmBindZcull: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	fxm::get<GSRender>()->zculls[index].binded = true;
+	rsx::get_current_renderer()->zculls[index].bound = true;
 
 	return CELL_OK;
 }
@@ -299,26 +310,29 @@ s32 cellGcmBindZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart,
 void cellGcmGetConfiguration(vm::ptr<CellGcmConfig> config)
 {
 	cellGcmSys.trace("cellGcmGetConfiguration(config=*0x%x)", config);
-	const auto m_config = fxm::get<CellGcmSysConfig>();
-
-	if (m_config)
-		*config = m_config->current_config;
+	*config = g_fxo->get<gcm_config>().current_config;
 }
 
 u32 cellGcmGetFlipStatus()
 {
-	u32 status = fxm::get<GSRender>()->flip_status;
+	u32 status = rsx::get_current_renderer()->flip_status;
 
 	cellGcmSys.trace("cellGcmGetFlipStatus() -> %d", status);
 
 	return status;
 }
 
+error_code cellGcmGetFlipStatus2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
 u32 cellGcmGetTiledPitchSize(u32 size)
 {
 	cellGcmSys.trace("cellGcmGetTiledPitchSize(size=%d)", size);
 
-	for (size_t i = 0; i < sizeof(tiled_pitches) / sizeof(tiled_pitches[0]) - 1; i++) {
+	for (usz i = 0; i < std::size(tiled_pitches) - 1; i++) {
 		if (tiled_pitches[i] < size && size <= tiled_pitches[i + 1]) {
 			return tiled_pitches[i + 1];
 		}
@@ -341,93 +355,95 @@ void _cellGcmFunc15(vm::ptr<CellGcmContextData> context)
 u32 g_defaultCommandBufferBegin, g_defaultCommandBufferFragmentCount;
 
 // Called by cellGcmInit
-s32 _cellGcmInitBody(vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSize, u32 ioAddress)
+error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSize, u32 ioAddress)
 {
 	cellGcmSys.warning("_cellGcmInitBody(context=**0x%x, cmdSize=0x%x, ioSize=0x%x, ioAddress=0x%x)", context, cmdSize, ioSize, ioAddress);
 
-	auto m_config = fxm::make<CellGcmSysConfig>();
-	if (!m_config)
-		return CELL_GCM_ERROR_FAILURE;
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+	std::lock_guard lock(gcm_cfg.gcmio_mutex);
 
-	m_config->current_config.ioAddress = 0;
-	m_config->current_config.localAddress = 0;
-	local_size = 0;
-	local_addr = 0;
+	gcm_cfg.current_config.ioAddress = 0;
+	gcm_cfg.current_config.localAddress = 0;
+	gcm_cfg.local_size = 0;
+	gcm_cfg.local_addr = 0;
 
-	if (!local_size && !local_addr)
+	//if (!gcm_cfg.local_size && !gcm_cfg.local_addr)
 	{
-		local_size = 0xf900000; // TODO: Get sdk_version in _cellGcmFunc15 and pass it to gcmGetLocalMemorySize
-		local_addr = 0xC0000000;
-		vm::falloc(0xC0000000, local_size, vm::video);
+		gcm_cfg.local_size = 0xf900000; // TODO: Get sdk_version in _cellGcmFunc15 and pass it to gcmGetLocalMemorySize
+		gcm_cfg.local_addr = rsx::constants::local_mem_base;
+		vm::falloc(gcm_cfg.local_addr, gcm_cfg.local_size, vm::video);
 	}
 
-	cellGcmSys.warning("*** local memory(addr=0x%x, size=0x%x)", local_addr, local_size);
+	cellGcmSys.warning("*** local memory(addr=0x%x, size=0x%x)", gcm_cfg.local_addr, gcm_cfg.local_size);
 
 	InitOffsetTable();
-	if (system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB)
+
+	const auto render = rsx::get_current_renderer();
+	if (gcm_cfg.system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB)
 	{
 		cellGcmSys.warning("cellGcmInit(): 512MB io address space used");
-		RSXIOMem.SetRange(0, 0x20000000 /*512MB*/);
+		render->main_mem_size = 0x20000000;
 	}
 	else
 	{
 		cellGcmSys.warning("cellGcmInit(): 256MB io address space used");
-		RSXIOMem.SetRange(0, 0x10000000 /*256MB*/);
+		render->main_mem_size = 0x10000000;
 	}
 
-	if (gcmMapEaIoAddress(ioAddress, 0, ioSize, false) != CELL_OK)
+	if (gcmMapEaIoAddress(ppu, ioAddress, 0, ioSize, false) != CELL_OK)
 	{
-		cellGcmSys.error("cellGcmInit: CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	m_config->current_config.ioSize = ioSize;
-	m_config->current_config.ioAddress = ioAddress;
-	m_config->current_config.localSize = local_size;
-	m_config->current_config.localAddress = local_addr;
-	m_config->current_config.memoryFrequency = 650000000;
-	m_config->current_config.coreFrequency = 500000000;
+	gcm_cfg.current_config.ioSize = ioSize;
+	gcm_cfg.current_config.ioAddress = ioAddress;
+	gcm_cfg.current_config.localSize =  gcm_cfg.local_size;
+	gcm_cfg.current_config.localAddress =  gcm_cfg.local_addr;
+	gcm_cfg.current_config.memoryFrequency = 650000000;
+	gcm_cfg.current_config.coreFrequency = 500000000;
 
 	// Create contexts
-
-	u32 addr = vm::falloc(0x40000000, 0x400000);
-	if (addr == 0 || addr != 0x40000000)
-		fmt::throw_exception("Failed to alloc 0x40000000.");
+	const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
+	const u32 rsx_ctxaddr = area ? area->alloc(0x400000) : 0;
+	ensure(rsx_ctxaddr);
 
 	g_defaultCommandBufferBegin = ioAddress;
 	g_defaultCommandBufferFragmentCount = cmdSize / (32 * 1024);
 
-	m_config->gcm_info.context_addr = 0x40000000;
-	m_config->gcm_info.control_addr = 0x40100000;
-	m_config->gcm_info.label_addr = 0x40300000;
+	gcm_cfg.gcm_info.context_addr = rsx_ctxaddr;
+	gcm_cfg.gcm_info.control_addr = rsx_ctxaddr + 0x100000;
+	gcm_cfg.gcm_info.label_addr = rsx_ctxaddr + 0x300000;
 
-	m_config->current_context.begin.set(g_defaultCommandBufferBegin + 4096); // 4 kb reserved at the beginning
-	m_config->current_context.end.set(g_defaultCommandBufferBegin + 32 * 1024 - 4); // 4b at the end for jump
-	m_config->current_context.current = m_config->current_context.begin;
-	m_config->current_context.callback.set(ppu_function_manager::addr + 8 * FIND_FUNC(cellGcmCallback));
+	gcm_cfg.current_context.begin.set(g_defaultCommandBufferBegin + 4096); // 4 kb reserved at the beginning
+	gcm_cfg.current_context.end.set(g_defaultCommandBufferBegin + 32 * 1024 - 4); // 4b at the end for jump
+	gcm_cfg.current_context.current = gcm_cfg.current_context.begin;
+	gcm_cfg.current_context.callback.set(ppu_function_manager::func_addr(FIND_FUNC(cellGcmCallback)));
 
-	m_config->ctxt_addr = context.addr();
-	m_config->gcm_buffers.set(vm::alloc(sizeof(CellGcmDisplayInfo) * 8, vm::main));
-	m_config->zculls_addr = vm::alloc(sizeof(CellGcmZcullInfo) * 8, vm::main);
-	m_config->tiles_addr = vm::alloc(sizeof(CellGcmTileInfo) * 15, vm::main);
+	gcm_cfg.ctxt_addr = context.addr();
+	gcm_cfg.gcm_buffers.set(vm::alloc(sizeof(CellGcmDisplayInfo) * 8, vm::main));
+	gcm_cfg.zculls_addr = vm::alloc(sizeof(CellGcmZcullInfo) * 8, vm::main);
+	gcm_cfg.tiles_addr = vm::alloc(sizeof(CellGcmTileInfo) * 15, vm::main);
 
-	vm::_ref<CellGcmContextData>(m_config->gcm_info.context_addr) = m_config->current_context;
-	context->set(m_config->gcm_info.context_addr);
+	vm::_ref<CellGcmContextData>(gcm_cfg.gcm_info.context_addr) = gcm_cfg.current_context;
+	context->set(gcm_cfg.gcm_info.context_addr);
 
 	// 0x40 is to offset CellGcmControl from RsxDmaControl
-	m_config->gcm_info.control_addr += 0x40;
-	auto& ctrl = vm::_ref<CellGcmControl>(m_config->gcm_info.control_addr);
+	gcm_cfg.gcm_info.control_addr += 0x40;
+	auto& ctrl = vm::_ref<CellGcmControl>(gcm_cfg.gcm_info.control_addr);
 	ctrl.put = 0;
 	ctrl.get = 0;
-	ctrl.ref = -1;
+	ctrl.ref = 0; // Set later to -1 at RSX initialization
 
-	const auto render = fxm::get<GSRender>();
-	render->intr_thread = idm::make_ptr<ppu_thread>("_gcm_intr_thread", 1, 0x4000);
-	render->intr_thread->run();
-	render->main_mem_addr = 0;
+	vm::var<u64> _tid;
+	vm::var<char[]> _name = vm::make_str("_gcm_intr_thread");
+	ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, 0x10000, 0, 1, 0x4000, SYS_PPU_THREAD_CREATE_INTERRUPT, +_name);
+	render->intr_thread = idm::get<named_thread<ppu_thread>>(static_cast<u32>(*_tid));
+	render->intr_thread->state -= cpu_flag::stop;
 	render->isHLE = true;
-	render->label_addr = m_config->gcm_info.label_addr;
-	render->init(ioAddress, ioSize, m_config->gcm_info.control_addr - 0x40, local_addr);
+	render->label_addr = gcm_cfg.gcm_info.label_addr;
+	render->device_addr = gcm_cfg.gcm_info.context_addr;
+	render->local_mem_size = gcm_cfg.local_size;
+	render->init(gcm_cfg.gcm_info.control_addr - 0x40);
 
 	return CELL_OK;
 }
@@ -436,7 +452,13 @@ void cellGcmResetFlipStatus()
 {
 	cellGcmSys.trace("cellGcmResetFlipStatus()");
 
-	fxm::get<GSRender>()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_WAITING;
+	rsx::get_current_renderer()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_WAITING;
+}
+
+error_code cellGcmResetFlipStatus2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
 void cellGcmSetDebugOutputLevel(s32 level)
@@ -448,7 +470,7 @@ void cellGcmSetDebugOutputLevel(s32 level)
 	case CELL_GCM_DEBUG_LEVEL0:
 	case CELL_GCM_DEBUG_LEVEL1:
 	case CELL_GCM_DEBUG_LEVEL2:
-		fxm::get<GSRender>()->debug_level = level;
+		rsx::get_current_renderer()->debug_level = level;
 		break;
 
 	default:
@@ -456,21 +478,18 @@ void cellGcmSetDebugOutputLevel(s32 level)
 	}
 }
 
-s32 cellGcmSetDisplayBuffer(u8 id, u32 offset, u32 pitch, u32 width, u32 height)
+error_code cellGcmSetDisplayBuffer(u8 id, u32 offset, u32 pitch, u32 width, u32 height)
 {
 	cellGcmSys.trace("cellGcmSetDisplayBuffer(id=0x%x, offset=0x%x, pitch=%d, width=%d, height=%d)", id, offset, width ? pitch / width : pitch, width, height);
 
-	auto m_config = fxm::get<CellGcmSysConfig>();
-	if (!m_config)
-		return CELL_GCM_ERROR_FAILURE;
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
 
 	if (id > 7)
 	{
-		cellGcmSys.error("cellGcmSetDisplayBuffer: CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	auto buffers = render->display_buffers;
 
@@ -479,10 +498,10 @@ s32 cellGcmSetDisplayBuffer(u8 id, u32 offset, u32 pitch, u32 width, u32 height)
 	buffers[id].width = width;
 	buffers[id].height = height;
 
-	m_config->gcm_buffers[id].offset = offset;
-	m_config->gcm_buffers[id].pitch = pitch;
-	m_config->gcm_buffers[id].width = width;
-	m_config->gcm_buffers[id].height = height;
+	gcm_cfg.gcm_buffers[id].offset = offset;
+	gcm_cfg.gcm_buffers[id].pitch = pitch;
+	gcm_cfg.gcm_buffers[id].width = width;
+	gcm_cfg.gcm_buffers[id].height = height;
 
 	if (id + 1u > render->display_buffers_count)
 	{
@@ -496,62 +515,84 @@ void cellGcmSetFlipHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetFlipHandler(handler=*0x%x)", handler);
 
-	fxm::get<GSRender>()->flip_handler = handler;
+	rsx::get_current_renderer()->flip_handler = handler;
+}
+
+error_code cellGcmSetFlipHandler2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
 void cellGcmSetFlipMode(u32 mode)
 {
 	cellGcmSys.warning("cellGcmSetFlipMode(mode=%d)", mode);
 
-	fxm::get<GSRender>()->requested_vsync.store(mode == CELL_GCM_DISPLAY_VSYNC);
+	rsx::get_current_renderer()->requested_vsync.store(mode == CELL_GCM_DISPLAY_VSYNC);
+}
+
+error_code cellGcmSetFlipMode2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
 void cellGcmSetFlipStatus()
 {
 	cellGcmSys.warning("cellGcmSetFlipStatus()");
 
-	fxm::get<GSRender>()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
+	rsx::get_current_renderer()->flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 }
 
-s32 cellGcmSetPrepareFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 id)
+error_code cellGcmSetFlipStatus2()
 {
-	cellGcmSys.trace("cellGcmSetPrepareFlip(ctxt=*0x%x, id=0x%x)", ctxt, id);
-	auto m_config = fxm::get<CellGcmSysConfig>();
-	if (!m_config)
-		return CELL_GCM_ERROR_FAILURE;
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
+}
+
+template <bool old_api = false, typename ret_type = std::conditional_t<old_api, s32, error_code>>
+ret_type gcmSetPrepareFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 id)
+{
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
 
 	if (id > 7)
 	{
-		cellGcmSys.error("cellGcmSetPrepareFlip: CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	if (ctxt->current + 2 >= ctxt->end)
+	if (!old_api && ctxt->current + 2 >= ctxt->end)
 	{
 		if (s32 res = ctxt->callback(ppu, ctxt, 8 /* ??? */))
 		{
 			cellGcmSys.error("cellGcmSetPrepareFlip: callback failed (0x%08x)", res);
-			return res;
+			return static_cast<ret_type>(not_an_error(res));
 		}
 	}
 
 	const u32 cmd_size = rsx::make_command(ctxt->current, GCM_FLIP_COMMAND, { id });
 
-	if (ctxt.addr() == m_config->gcm_info.context_addr)
+	if (!old_api && ctxt.addr() == gcm_cfg.gcm_info.context_addr)
 	{
-		vm::_ref<CellGcmControl>(m_config->gcm_info.control_addr).put += cmd_size;
+		vm::_ref<CellGcmControl>(gcm_cfg.gcm_info.control_addr).put += cmd_size;
 	}
 
-	return id;
+	return static_cast<ret_type>(not_an_error(id));
 }
 
-s32 cellGcmSetFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 id)
+error_code cellGcmSetPrepareFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 id)
+{
+	cellGcmSys.trace("cellGcmSetPrepareFlip(ctxt=*0x%x, id=0x%x)", ctxt, id);
+
+	return gcmSetPrepareFlip(ppu, ctxt, id);
+}
+
+error_code cellGcmSetFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctxt, u32 id)
 {
 	cellGcmSys.trace("cellGcmSetFlip(ctxt=*0x%x, id=0x%x)", ctxt, id);
 
-	if (s32 res = cellGcmSetPrepareFlip(ppu, ctxt, id))
+	if (auto res = gcmSetPrepareFlip(ppu, ctxt, id); res < 0)
 	{
-		if (res < 0) return CELL_GCM_ERROR_FAILURE;
+		return CELL_GCM_ERROR_FAILURE;
 	}
 
 	return CELL_OK;
@@ -561,12 +602,9 @@ void cellGcmSetSecondVFrequency(u32 freq)
 {
 	cellGcmSys.warning("cellGcmSetSecondVFrequency(level=%d)", freq);
 
-	const auto render = fxm::get<GSRender>();
-
 	switch (freq)
 	{
 	case CELL_GCM_DISPLAY_FREQUENCY_59_94HZ:
-		render->fps_limit = 59.94;
 		break;
 	case CELL_GCM_DISPLAY_FREQUENCY_SCANOUT:
 		cellGcmSys.todo("Unimplemented display frequency: Scanout");
@@ -580,30 +618,25 @@ void cellGcmSetSecondVFrequency(u32 freq)
 	}
 }
 
-s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 comp, u16 base, u8 bank)
+error_code cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 comp, u16 base, u8 bank)
 {
 	cellGcmSys.warning("cellGcmSetTileInfo(index=%d, location=%d, offset=%d, size=%d, pitch=%d, comp=%d, base=%d, bank=%d)",
 		index, location, offset, size, pitch, comp, base, bank);
 
-	auto m_config = fxm::get<CellGcmSysConfig>();
-	if (!m_config)
-		return CELL_GCM_ERROR_FAILURE;
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
 
 	if (index >= rsx::limits::tiles_count || base >= 2048 || bank >= 4)
 	{
-		cellGcmSys.error("cellGcmSetTileInfo: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
 	if (offset & 0xffff || size & 0xffff || pitch & 0xff)
 	{
-		cellGcmSys.error("cellGcmSetTileInfo: CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 	}
 
 	if (location >= 2 || (comp != 0 && (comp < 7 || comp > 12)))
 	{
-		cellGcmSys.error("cellGcmSetTileInfo: CELL_GCM_ERROR_INVALID_ENUM");
 		return CELL_GCM_ERROR_INVALID_ENUM;
 	}
 
@@ -612,7 +645,7 @@ s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 		cellGcmSys.error("cellGcmSetTileInfo: bad compression mode! (%d)", comp);
 	}
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	auto& tile = render->tiles[index];
 	tile.location = location;
@@ -623,7 +656,7 @@ s32 cellGcmSetTileInfo(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u
 	tile.base = base;
 	tile.bank = bank;
 
-	vm::_ptr<CellGcmTileInfo>(m_config->tiles_addr)[index] = tile.pack();
+	vm::_ptr<CellGcmTileInfo>(gcm_cfg.tiles_addr)[index] = tile.pack();
 	return CELL_OK;
 }
 
@@ -631,7 +664,7 @@ void cellGcmSetUserHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetUserHandler(handler=*0x%x)", handler);
 
-	fxm::get<GSRender>()->user_handler = handler;
+	rsx::get_current_renderer()->user_handler = handler;
 }
 
 void cellGcmSetUserCommand(vm::ptr<CellGcmContextData> ctxt, u32 cause)
@@ -643,7 +676,7 @@ void cellGcmSetVBlankHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.warning("cellGcmSetVBlankHandler(handler=*0x%x)", handler);
 
-	fxm::get<GSRender>()->vblank_handler = handler;
+	rsx::get_current_renderer()->vblank_handler = handler;
 }
 
 void cellGcmSetWaitFlip(vm::ptr<CellGcmContextData> ctxt)
@@ -653,7 +686,7 @@ void cellGcmSetWaitFlip(vm::ptr<CellGcmContextData> ctxt)
 	// TODO: emit RSX command for "wait flip" operation
 }
 
-s32 cellGcmSetWaitFlipUnsafe()
+error_code cellGcmSetWaitFlipUnsafe()
 {
 	cellGcmSys.todo("cellGcmSetWaitFlipUnsafe()");
 
@@ -665,9 +698,7 @@ void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart,
 	cellGcmSys.todo("cellGcmSetZcull(index=%d, offset=0x%x, width=%d, height=%d, cullStart=0x%x, zFormat=0x%x, aaFormat=0x%x, zCullDir=0x%x, zCullFormat=0x%x, sFunc=0x%x, sRef=0x%x, sMask=0x%x)",
 		index, offset, width, height, cullStart, zFormat, aaFormat, zCullDir, zCullFormat, sFunc, sRef, sMask);
 
-	auto m_config = fxm::get<CellGcmSysConfig>();
-	if (!m_config)
-		return;
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
 
 	if (index >= rsx::limits::zculls_count)
 	{
@@ -675,7 +706,7 @@ void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart,
 		return;
 	}
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	auto& zcull = render->zculls[index];
 	zcull.offset = offset;
@@ -689,36 +720,35 @@ void cellGcmSetZcull(u8 index, u32 offset, u32 width, u32 height, u32 cullStart,
 	zcull.sFunc = sFunc;
 	zcull.sRef = sRef;
 	zcull.sMask = sMask;
+	zcull.bound = (zCullFormat > 0);
 
-	vm::_ptr<CellGcmZcullInfo>(m_config->zculls_addr)[index] = zcull.pack();
+	vm::_ptr<CellGcmZcullInfo>(gcm_cfg.zculls_addr)[index] = zcull.pack();
 }
 
-s32 cellGcmUnbindTile(u8 index)
+error_code cellGcmUnbindTile(u8 index)
 {
 	cellGcmSys.warning("cellGcmUnbindTile(index=%d)", index);
 
 	if (index >= rsx::limits::tiles_count)
 	{
-		cellGcmSys.error("cellGcmUnbindTile: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	fxm::get<GSRender>()->tiles[index].binded = false;
+	rsx::get_current_renderer()->tiles[index].bound = false;
 
 	return CELL_OK;
 }
 
-s32 cellGcmUnbindZcull(u8 index)
+error_code cellGcmUnbindZcull(u8 index)
 {
 	cellGcmSys.warning("cellGcmUnbindZcull(index=%d)", index);
 
 	if (index >= 8)
 	{
-		cellGcmSys.error("cellGcmUnbindZcull: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	fxm::get<GSRender>()->zculls[index].binded = false;
+	rsx::get_current_renderer()->zculls[index].bound = false;
 
 	return CELL_OK;
 }
@@ -726,37 +756,28 @@ s32 cellGcmUnbindZcull(u8 index)
 u32 cellGcmGetTileInfo()
 {
 	cellGcmSys.warning("cellGcmGetTileInfo()");
-	auto m_config = fxm::get<CellGcmSysConfig>();
-	if (!m_config)
-		return 0;
-	return m_config->tiles_addr;
+	return g_fxo->get<gcm_config>().tiles_addr;
 }
 
 u32 cellGcmGetZcullInfo()
 {
 	cellGcmSys.warning("cellGcmGetZcullInfo()");
-	auto m_config = fxm::get<CellGcmSysConfig>();
-	if (!m_config)
-		return 0;
-	return m_config->zculls_addr;
+	return g_fxo->get<gcm_config>().zculls_addr;
 }
 
 u32 cellGcmGetDisplayInfo()
 {
 	cellGcmSys.warning("cellGcmGetDisplayInfo()");
-	auto m_config = fxm::get<CellGcmSysConfig>();
-	if (!m_config)
-		return 0;
-	return m_config->gcm_buffers.addr();
+	return g_fxo->get<gcm_config>().gcm_buffers.addr();
 }
 
-s32 cellGcmGetCurrentDisplayBufferId(vm::ptr<u8> id)
+error_code cellGcmGetCurrentDisplayBufferId(vm::ptr<u8> id)
 {
 	cellGcmSys.warning("cellGcmGetCurrentDisplayBufferId(id=*0x%x)", id);
 
-	if ((*id = fxm::get<GSRender>()->current_display_buffer) > UINT8_MAX)
+	if ((*id = rsx::get_current_renderer()->current_display_buffer) > UINT8_MAX)
 	{
-		fmt::throw_exception("Unexpected" HERE);
+		fmt::throw_exception("Unexpected");
 	}
 
 	return CELL_OK;
@@ -767,12 +788,13 @@ void cellGcmSetInvalidateTile(u8 index)
 	cellGcmSys.todo("cellGcmSetInvalidateTile(index=%d)", index);
 }
 
-s32 cellGcmTerminate()
+error_code cellGcmTerminate()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	// The firmware just return CELL_OK as well
+	return CELL_OK;
 }
 
-s32 cellGcmDumpGraphicsError()
+error_code cellGcmDumpGraphicsError()
 {
 	cellGcmSys.todo("cellGcmDumpGraphicsError()");
 	return CELL_OK;
@@ -781,14 +803,20 @@ s32 cellGcmDumpGraphicsError()
 s32 cellGcmGetDisplayBufferByFlipIndex(u32 qid)
 {
 	cellGcmSys.todo("cellGcmGetDisplayBufferByFlipIndex(qid=%d)", qid);
-	return -1;
+	return -1; // Invalid id, todo
 }
 
 u64 cellGcmGetLastFlipTime()
 {
 	cellGcmSys.trace("cellGcmGetLastFlipTime()");
 
-	return fxm::get<GSRender>()->last_flip_time;
+	return rsx::get_current_renderer()->last_flip_time;
+}
+
+error_code cellGcmGetLastFlipTime2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
 u64 cellGcmGetLastSecondVTime()
@@ -801,35 +829,47 @@ u64 cellGcmGetVBlankCount()
 {
 	cellGcmSys.trace("cellGcmGetVBlankCount()");
 
-	return fxm::get<GSRender>()->vblank_count;
+	return rsx::get_current_renderer()->vblank_count;
 }
 
-s32 cellGcmSysGetLastVBlankTime()
+error_code cellGcmGetVBlankCount2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
-s32 cellGcmInitSystemMode(u64 mode)
+error_code cellGcmSysGetLastVBlankTime()
+{
+	cellGcmSys.todo("cellGcmSysGetLastVBlankTime()");
+	return CELL_OK;
+}
+
+error_code cellGcmInitSystemMode(u64 mode)
 {
 	cellGcmSys.trace("cellGcmInitSystemMode(mode=0x%x)", mode);
 
-	system_mode = mode;
+	g_fxo->get<gcm_config>().system_mode = mode;
 
 	return CELL_OK;
 }
 
-s32 cellGcmSetFlipImmediate(u8 id)
+error_code cellGcmSetFlipImmediate(u8 id)
 {
 	cellGcmSys.todo("cellGcmSetFlipImmediate(id=0x%x)", id);
 
 	if (id > 7)
 	{
-		cellGcmSys.error("cellGcmSetFlipImmediate: CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
 	cellGcmSetFlipMode(id);
 
+	return CELL_OK;
+}
+
+error_code cellGcmSetFlipImmediate2()
+{
+	UNIMPLEMENTED_FUNC(cellGcmSys);
 	return CELL_OK;
 }
 
@@ -843,7 +883,7 @@ void cellGcmSetQueueHandler(vm::ptr<void(u32)> handler)
 	cellGcmSys.todo("cellGcmSetQueueHandler(handler=*0x%x)", handler);
 }
 
-s32 cellGcmSetSecondVHandler(vm::ptr<void(u32)> handler)
+error_code cellGcmSetSecondVHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.todo("cellGcmSetSecondVHandler(handler=0x%x)", handler);
 	return CELL_OK;
@@ -854,7 +894,7 @@ void cellGcmSetVBlankFrequency(u32 freq)
 	cellGcmSys.todo("cellGcmSetVBlankFrequency(freq=%d)", freq);
 }
 
-s32 cellGcmSortRemapEaIoAddress()
+error_code cellGcmSortRemapEaIoAddress()
 {
 	cellGcmSys.todo("cellGcmSortRemapEaIoAddress()");
 	return CELL_OK;
@@ -863,30 +903,26 @@ s32 cellGcmSortRemapEaIoAddress()
 //----------------------------------------------------------------------------
 // Memory Mapping
 //----------------------------------------------------------------------------
-s32 cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset)
+error_code cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset)
 {
 	cellGcmSys.trace("cellGcmAddressToOffset(address=0x%x, offset=*0x%x)", address, offset);
 
-	// Address not on main memory or local memory
-	if (address >= 0xD0000000)
-	{
-		return CELL_GCM_ERROR_FAILURE;
-	}
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
 
 	u32 result;
 
-	// Address in local memory
-	if ((address >> 28) == 0xC)
+	// Test if address is within local memory
+	if (const u32 offs = address - gcm_cfg.local_addr; offs < gcm_cfg.local_size)
 	{
-		result = address - 0xC0000000;
+		result = offs;
 	}
-	// Address in main memory else check 
+	// Address in main memory else check
 	else
 	{
-		const u32 upper12Bits = offsetTable.ioAddress[address >> 20];
+		const u32 upper12Bits = gcm_cfg.offsetTable.ioAddress[address >> 20];
 
 		// If the address is mapped in IO
-		if (upper12Bits != 0xFFFF)
+		if (upper12Bits << 20 < rsx::get_current_renderer()->main_mem_size)
 		{
 			result = (upper12Bits << 20) | (address & 0xFFFFF);
 		}
@@ -904,209 +940,233 @@ u32 cellGcmGetMaxIoMapSize()
 {
 	cellGcmSys.trace("cellGcmGetMaxIoMapSize()");
 
-	return RSXIOMem.GetSize() - RSXIOMem.GetReservedAmount();
+	return rsx::get_current_renderer()->main_mem_size - g_fxo->get<gcm_config>().reserved_size;
 }
 
 void cellGcmGetOffsetTable(vm::ptr<CellGcmOffsetTable> table)
 {
 	cellGcmSys.trace("cellGcmGetOffsetTable(table=*0x%x)", table);
 
-	table->ioAddress = offsetTable.ioAddress;
-	table->eaAddress = offsetTable.eaAddress;
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+
+	table->ioAddress = gcm_cfg.offsetTable.ioAddress;
+	table->eaAddress = gcm_cfg.offsetTable.eaAddress;
 }
 
-s32 cellGcmIoOffsetToAddress(u32 ioOffset, vm::ptr<u32> address)
+error_code cellGcmIoOffsetToAddress(u32 ioOffset, vm::ptr<u32> address)
 {
 	cellGcmSys.trace("cellGcmIoOffsetToAddress(ioOffset=0x%x, address=*0x%x)", ioOffset, address);
 
-	u32 realAddr;
+	const u32 addr = gcmIoOffsetToAddress(ioOffset);
 
-	if (!RSXIOMem.getRealAddr(ioOffset, realAddr))
+	if (!addr)
+	{
 		return CELL_GCM_ERROR_FAILURE;
+	}
 
-	*address = realAddr;
+	*address = addr;
 
 	return CELL_OK;
 }
 
-s32 gcmMapEaIoAddress(u32 ea, u32 io, u32 size, bool is_strict)
+error_code gcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size, bool is_strict)
 {
-	if ((ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
-
-	const auto render = fxm::get<GSRender>();
-
-	// Check if the mapping was successfull
-	if (RSXIOMem.Map(ea, size, io))
+	if (!size || (ea & 0xFFFFF) || (io & 0xFFFFF) || (size & 0xFFFFF))
 	{
-		// Fill the offset table
-		for (u32 i = 0; i<(size >> 20); i++)
-		{
-			offsetTable.ioAddress[(ea >> 20) + i] = (io >> 20) + i;
-			offsetTable.eaAddress[(io >> 20) + i] = (ea >> 20) + i;
-		}
-	}
-	else
-	{
-		cellGcmSys.error("gcmMapEaIoAddress: CELL_GCM_ERROR_FAILURE");
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
+	if (auto error = sys_rsx_context_iomap(ppu, 0x55555555, io, ea, size, 0xe000000000000800ull | (u64{is_strict} << 60)))
+	{
+		return error;
+	}
+
+	// Assume lock is acquired
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+	ea >>= 20, io >>= 20, size >>= 20;
+
+	// Fill the offset table
+	for (u32 i = 0; i < size; i++)
+	{
+		gcm_cfg.offsetTable.ioAddress[ea + i] = io + i;
+		gcm_cfg.offsetTable.eaAddress[io + i] = ea + i;
+	}
+
+	gcm_cfg.IoMapTable[ea] = size;
 	return CELL_OK;
 }
 
-s32 cellGcmMapEaIoAddress(u32 ea, u32 io, u32 size)
+error_code cellGcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size)
 {
 	cellGcmSys.warning("cellGcmMapEaIoAddress(ea=0x%x, io=0x%x, size=0x%x)", ea, io, size);
 
-	return gcmMapEaIoAddress(ea, io, size, false);
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+	std::lock_guard lock(gcm_cfg.gcmio_mutex);
+
+	return gcmMapEaIoAddress(ppu, ea, io, size, false);
 }
 
-s32 cellGcmMapEaIoAddressWithFlags(u32 ea, u32 io, u32 size, u32 flags)
+error_code cellGcmMapEaIoAddressWithFlags(ppu_thread& ppu, u32 ea, u32 io, u32 size, u32 flags)
 {
 	cellGcmSys.warning("cellGcmMapEaIoAddressWithFlags(ea=0x%x, io=0x%x, size=0x%x, flags=0x%x)", ea, io, size, flags);
 
-	verify(HERE), flags == 2 /*CELL_GCM_IOMAP_FLAG_STRICT_ORDERING*/;
+	ensure(flags == 2 /*CELL_GCM_IOMAP_FLAG_STRICT_ORDERING*/);
 
-	return gcmMapEaIoAddress(ea, io, size, true);
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+	std::lock_guard lock(gcm_cfg.gcmio_mutex);
+
+	return gcmMapEaIoAddress(ppu, ea, io, size, true);
 }
 
-s32 cellGcmMapLocalMemory(vm::ptr<u32> address, vm::ptr<u32> size)
+error_code cellGcmMapLocalMemory(vm::ptr<u32> address, vm::ptr<u32> size)
 {
 	cellGcmSys.warning("cellGcmMapLocalMemory(address=*0x%x, size=*0x%x)", address, size);
 
-	if (!local_addr && !local_size && vm::falloc(local_addr = 0xC0000000, local_size = 0xf900000 /* TODO */, vm::video))
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+	std::lock_guard lock(gcm_cfg.gcmio_mutex);
+
+	if (!gcm_cfg.local_addr && !gcm_cfg.local_size && vm::falloc(gcm_cfg.local_addr = rsx::constants::local_mem_base, gcm_cfg.local_size = 0xf900000 /* TODO */, vm::video))
 	{
-		*address = local_addr;
-		*size = local_size;
-	}
-	else
-	{
-		cellGcmSys.error("RSX local memory already mapped");
-		return CELL_GCM_ERROR_FAILURE;
+		*address = gcm_cfg.local_addr;
+		*size = gcm_cfg.local_size;
+		return CELL_OK;
 	}
 
-	return CELL_OK;
+	return CELL_GCM_ERROR_FAILURE;
 }
 
-s32 cellGcmMapMainMemory(u32 ea, u32 size, vm::ptr<u32> offset)
+error_code cellGcmMapMainMemory(ppu_thread& ppu, u32 ea, u32 size, vm::ptr<u32> offset)
 {
 	cellGcmSys.warning("cellGcmMapMainMemory(ea=0x%x, size=0x%x, offset=*0x%x)", ea, size, offset);
 
-	if (size == 0) return CELL_OK;
-	if ((ea & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
+	if (!size || (ea & 0xFFFFF) || (size & 0xFFFFF)) return CELL_GCM_ERROR_FAILURE;
 
-	u32 io = RSXIOMem.Map(ea, size);
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+	std::lock_guard lock(gcm_cfg.gcmio_mutex);
 
-	const auto render = fxm::get<GSRender>();
-
-	//check if the mapping was successfull
-	if (RSXIOMem.RealAddr(io) == ea)
+	// Use the offset table to find the next free io address
+	for (u32 io = 0, end = (rsx::get_current_renderer()->main_mem_size - gcm_cfg.reserved_size) >> 20, unmap_count = 1; io < end; unmap_count++)
 	{
-		//fill the offset table
-		for (u32 i = 0; i<(size >> 20); i++)
+		if (gcm_cfg.offsetTable.eaAddress[io + unmap_count - 1] > 0xBFF)
 		{
-			offsetTable.ioAddress[(ea >> 20) + i] = (u16)((io >> 20) + i);
-			offsetTable.eaAddress[(io >> 20) + i] = (u16)((ea >> 20) + i);
+			if (unmap_count >= (size >> 20))
+			{
+				io <<= 20;
+
+				if (auto error = gcmMapEaIoAddress(ppu, ea, io, size, false))
+				{
+					return error;
+				}
+
+				*offset = io;
+				return CELL_OK;
+			}
 		}
-
-		*offset = io;
-	}
-	else
-	{
-		cellGcmSys.error("cellGcmMapMainMemory: CELL_GCM_ERROR_NO_IO_PAGE_TABLE");
-		return CELL_GCM_ERROR_NO_IO_PAGE_TABLE;
+		else
+		{
+			io += unmap_count;
+			unmap_count = 0;
+		}
 	}
 
-	render->main_mem_addr = render->ioAddress;
-
-	return CELL_OK;
+	return CELL_GCM_ERROR_NO_IO_PAGE_TABLE;
 }
 
-s32 cellGcmReserveIoMapSize(u32 size)
+error_code cellGcmReserveIoMapSize(u32 size)
 {
 	cellGcmSys.trace("cellGcmReserveIoMapSize(size=0x%x)", size);
 
 	if (size & 0xFFFFF)
 	{
-		cellGcmSys.error("cellGcmReserveIoMapSize: CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 	}
 
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+	std::lock_guard lock(gcm_cfg.gcmio_mutex);
+
 	if (size > cellGcmGetMaxIoMapSize())
 	{
-		cellGcmSys.error("cellGcmReserveIoMapSize: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	RSXIOMem.Reserve(size);
+	gcm_cfg.reserved_size += size;
 	return CELL_OK;
 }
 
-s32 cellGcmUnmapEaIoAddress(u32 ea)
+error_code GcmUnmapIoAddress(ppu_thread& ppu, gcm_config& gcm_cfg, u32 io)
 {
-	cellGcmSys.trace("cellGcmUnmapEaIoAddress(ea=0x%x)", ea);
-
-	u32 size;
-	if (RSXIOMem.UnmapRealAddress(ea, size))
+	if (u32 ea = gcm_cfg.offsetTable.eaAddress[io >>= 20], size = gcm_cfg.IoMapTable[ea]; size)
 	{
-		const u32 io = offsetTable.ioAddress[ea >>= 20];
-
-		for (u32 i = 0; i < size >> 20; i++)
+		if (auto error = sys_rsx_context_iounmap(ppu, 0x55555555, io << 20, size << 20))
 		{
-			offsetTable.ioAddress[ea + i] = 0xFFFF;
-			offsetTable.eaAddress[io + i] = 0xFFFF;
+			return error;
 		}
+
+		for (u32 i = 0; i < size; i++)
+		{
+			gcm_cfg.offsetTable.ioAddress[ea + i] = 0xFFFF;
+			gcm_cfg.offsetTable.eaAddress[io + i] = 0xFFFF;
+		}
+
+		gcm_cfg.IoMapTable[ea] = 0;
+		return CELL_OK;
 	}
-	else
+
+	return CELL_GCM_ERROR_FAILURE;
+}
+
+error_code cellGcmUnmapEaIoAddress(ppu_thread& ppu, u32 ea)
+{
+	cellGcmSys.warning("cellGcmUnmapEaIoAddress(ea=0x%x)", ea);
+
+	// Ignores lower bits
+	ea >>= 20;
+
+	if (ea > 0xBFF)
 	{
-		cellGcmSys.error("cellGcmUnmapEaIoAddress(ea=0x%x): UnmapRealAddress() failed", ea);
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	return CELL_OK;
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+	std::lock_guard lock(gcm_cfg.gcmio_mutex);
+
+	if (const u32 io = gcm_cfg.offsetTable.ioAddress[ea] << 20;
+		io < rsx::get_current_renderer()->main_mem_size)
+	{
+		return GcmUnmapIoAddress(ppu, gcm_cfg, io);
+	}
+
+	return CELL_GCM_ERROR_FAILURE;
 }
 
-s32 cellGcmUnmapIoAddress(u32 io)
+error_code cellGcmUnmapIoAddress(ppu_thread& ppu, u32 io)
 {
-	cellGcmSys.trace("cellGcmUnmapIoAddress(io=0x%x)", io);
+	cellGcmSys.warning("cellGcmUnmapIoAddress(io=0x%x)", io);
 
-	u32 size;
-	if (RSXIOMem.UnmapAddress(io, size))
-	{
-		const u32 ea = offsetTable.eaAddress[io >>= 20];
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+	std::lock_guard lock(gcm_cfg.gcmio_mutex);
 
-		for (u32 i = 0; i < size >> 20; i++)
-		{
-			offsetTable.ioAddress[ea + i] = 0xFFFF;
-			offsetTable.eaAddress[io + i] = 0xFFFF;
-		}
-	}
-	else
-	{
-		cellGcmSys.error("cellGcmUnmapIoAddress(io=0x%x): UnmapAddress() failed", io);
-		return CELL_GCM_ERROR_FAILURE;
-	}
-
-	return CELL_OK;
+	return GcmUnmapIoAddress(ppu, gcm_cfg, io);
 }
 
-s32 cellGcmUnreserveIoMapSize(u32 size)
+error_code cellGcmUnreserveIoMapSize(u32 size)
 {
 	cellGcmSys.trace("cellGcmUnreserveIoMapSize(size=0x%x)", size);
 
 	if (size & 0xFFFFF)
 	{
-		cellGcmSys.error("cellGcmUnreserveIoMapSize: CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 	}
 
-	if (size > RSXIOMem.GetReservedAmount())
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+	std::lock_guard lock(gcm_cfg.gcmio_mutex);
+
+	if (size > gcm_cfg.reserved_size)
 	{
-		cellGcmSys.error("cellGcmUnreserveIoMapSize: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
-	RSXIOMem.Unreserve(size);
+	gcm_cfg.reserved_size -= size;
 	return CELL_OK;
 }
 
@@ -1114,37 +1174,37 @@ s32 cellGcmUnreserveIoMapSize(u32 size)
 // Cursor Functions
 //----------------------------------------------------------------------------
 
-s32 cellGcmInitCursor()
+error_code cellGcmInitCursor()
 {
 	cellGcmSys.todo("cellGcmInitCursor()");
 	return CELL_OK;
 }
 
-s32 cellGcmSetCursorPosition(s32 x, s32 y)
+error_code cellGcmSetCursorPosition(s32 x, s32 y)
 {
 	cellGcmSys.todo("cellGcmSetCursorPosition(x=%d, y=%d)", x, y);
 	return CELL_OK;
 }
 
-s32 cellGcmSetCursorDisable()
+error_code cellGcmSetCursorDisable()
 {
 	cellGcmSys.todo("cellGcmSetCursorDisable()");
 	return CELL_OK;
 }
 
-s32 cellGcmUpdateCursor()
+error_code cellGcmUpdateCursor()
 {
 	cellGcmSys.todo("cellGcmUpdateCursor()");
 	return CELL_OK;
 }
 
-s32 cellGcmSetCursorEnable()
+error_code cellGcmSetCursorEnable()
 {
 	cellGcmSys.todo("cellGcmSetCursorEnable()");
 	return CELL_OK;
 }
 
-s32 cellGcmSetCursorImageOffset(u32 offset)
+error_code cellGcmSetCursorImageOffset(u32 offset)
 {
 	cellGcmSys.todo("cellGcmSetCursorImageOffset(offset=0x%x)", offset);
 	return CELL_OK;
@@ -1157,27 +1217,28 @@ s32 cellGcmSetCursorImageOffset(u32 offset)
 void cellGcmSetDefaultCommandBuffer()
 {
 	cellGcmSys.warning("cellGcmSetDefaultCommandBuffer()");
-	auto m_config = fxm::get<CellGcmSysConfig>();
-	if (m_config)
-		vm::write32(m_config->ctxt_addr, m_config->gcm_info.context_addr);
+
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+
+	vm::write32(gcm_cfg.ctxt_addr, gcm_cfg.gcm_info.context_addr);
 }
 
-s32 cellGcmSetDefaultCommandBufferAndSegmentWordSize(u32 bufferSize, u32 segmentSize)
+error_code cellGcmSetDefaultCommandBufferAndSegmentWordSize(u32 bufferSize, u32 segmentSize)
 {
 	cellGcmSys.warning("cellGcmSetDefaultCommandBufferAndSegmentWordSize(bufferSize=0x%x, segmentSize=0x%x)", bufferSize, segmentSize);
-	auto m_config = fxm::get<CellGcmSysConfig>();
-	if (!m_config)
-		return CELL_GCM_ERROR_FAILURE;
-	const auto& put = vm::_ref<CellGcmControl>(m_config->gcm_info.control_addr).put;
-	const auto& get = vm::_ref<CellGcmControl>(m_config->gcm_info.control_addr).get;
+
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+
+	const auto& put = vm::_ref<CellGcmControl>(gcm_cfg.gcm_info.control_addr).put;
+	const auto& get = vm::_ref<CellGcmControl>(gcm_cfg.gcm_info.control_addr).get;
 
 	if (put != 0x1000 || get != 0x1000 || bufferSize < segmentSize * 2 || segmentSize >= 0x80000000)
 	{
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	m_config->gcm_info.command_size = bufferSize;
-	m_config->gcm_info.segment_size = segmentSize;
+	gcm_cfg.gcm_info.command_size = bufferSize;
+	gcm_cfg.gcm_info.segment_size = segmentSize;
 
 	return CELL_OK;
 }
@@ -1186,49 +1247,59 @@ s32 cellGcmSetDefaultCommandBufferAndSegmentWordSize(u32 bufferSize, u32 segment
 // Other
 //------------------------------------------------------------------------
 
-s32 _cellGcmSetFlipCommand(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctx, u32 id)
+void _cellGcmSetFlipCommand(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctx, u32 id)
 {
 	cellGcmSys.trace("cellGcmSetFlipCommand(ctx=*0x%x, id=0x%x)", ctx, id);
 
-	return cellGcmSetPrepareFlip(ppu, ctx, id);
+	if (auto error = gcmSetPrepareFlip<true>(ppu, ctx, id); error < 0)
+	{
+		// TODO: On actual fw this function doesn't have error checks at all
+		cellGcmSys.error("cellGcmSetFlipCommand(): gcmSetPrepareFlip failed with %s", CellGcmError{error + 0u});
+	}
 }
 
-s32 _cellGcmSetFlipCommandWithWaitLabel(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctx, u32 id, u32 label_index, u32 label_value)
+error_code _cellGcmSetFlipCommand2()
 {
-	cellGcmSys.trace("cellGcmSetFlipCommandWithWaitLabel(ctx=*0x%x, id=0x%x, label_index=0x%x, label_value=0x%x)", ctx, id, label_index, label_value);
-	auto m_config = fxm::get<CellGcmSysConfig>();
-	if (!m_config)
-		return CELL_GCM_ERROR_FAILURE;
-	s32 res = cellGcmSetPrepareFlip(ppu, ctx, id);
-	vm::write32(m_config->gcm_info.label_addr + 0x10 * label_index, label_value);
-	return res < 0 ? CELL_GCM_ERROR_FAILURE : CELL_OK;
+	UNIMPLEMENTED_FUNC(cellGcmSys);
+	return CELL_OK;
 }
 
-s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 comp, u16 base, u8 bank)
+void _cellGcmSetFlipCommandWithWaitLabel(ppu_thread& ppu, vm::ptr<CellGcmContextData> ctx, u32 id, u32 label_index, u32 label_value)
+{
+	cellGcmSys.todo("cellGcmSetFlipCommandWithWaitLabel(ctx=*0x%x, id=0x%x, label_index=0x%x, label_value=0x%x)", ctx, id, label_index, label_value);
+
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+
+	if (auto error = gcmSetPrepareFlip<true>(ppu, ctx, id); error < 0)
+	{
+		// TODO: On actual fw this function doesn't have error checks at all
+		cellGcmSys.error("cellGcmSetFlipCommandWithWaitLabel(): gcmSetPrepareFlip failed with %s", CellGcmError{error + 0u});
+	}
+
+	// TODO: Fix this (must enqueue WaitLabel command instead)
+	vm::write32(gcm_cfg.gcm_info.label_addr + 0x10 * label_index, label_value);
+}
+
+error_code cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 comp, u16 base, u8 bank)
 {
 	cellGcmSys.warning("cellGcmSetTile(index=%d, location=%d, offset=%d, size=%d, pitch=%d, comp=%d, base=%d, bank=%d)",
 		index, location, offset, size, pitch, comp, base, bank);
 
-	auto m_config = fxm::get<CellGcmSysConfig>();
-	if (!m_config)
-		return CELL_GCM_ERROR_FAILURE;
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
 
 	// Copied form cellGcmSetTileInfo
 	if (index >= rsx::limits::tiles_count || base >= 2048 || bank >= 4)
 	{
-		cellGcmSys.error("cellGcmSetTile: CELL_GCM_ERROR_INVALID_VALUE");
 		return CELL_GCM_ERROR_INVALID_VALUE;
 	}
 
 	if (offset & 0xffff || size & 0xffff || pitch & 0xff)
 	{
-		cellGcmSys.error("cellGcmSetTile: CELL_GCM_ERROR_INVALID_ALIGNMENT");
 		return CELL_GCM_ERROR_INVALID_ALIGNMENT;
 	}
 
 	if (location >= 2 || (comp != 0 && (comp < 7 || comp > 12)))
 	{
-		cellGcmSys.error("cellGcmSetTile: CELL_GCM_ERROR_INVALID_ENUM");
 		return CELL_GCM_ERROR_INVALID_ENUM;
 	}
 
@@ -1237,7 +1308,7 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 		cellGcmSys.error("cellGcmSetTile: bad compression mode! (%d)", comp);
 	}
 
-	const auto render = fxm::get<GSRender>();
+	const auto render = rsx::get_current_renderer();
 
 	auto& tile = render->tiles[index];
 	tile.location = location;
@@ -1247,49 +1318,55 @@ s32 cellGcmSetTile(u8 index, u8 location, u32 offset, u32 size, u32 pitch, u8 co
 	tile.comp = comp;
 	tile.base = base;
 	tile.bank = bank;
+	tile.bound = (pitch > 0);
 
-	vm::_ptr<CellGcmTileInfo>(m_config->tiles_addr)[index] = tile.pack();
+	vm::_ptr<CellGcmTileInfo>(gcm_cfg.tiles_addr)[index] = tile.pack();
 	return CELL_OK;
 }
 
-s32 _cellGcmFunc2()
+error_code _cellGcmFunc2()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("_cellGcmFunc2()");
+	return CELL_OK;
 }
 
-s32 _cellGcmFunc3()
+error_code _cellGcmFunc3()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("_cellGcmFunc3()");
+	return CELL_OK;
 }
 
-s32 _cellGcmFunc4()
+error_code _cellGcmFunc4()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("_cellGcmFunc4()");
+	return CELL_OK;
 }
 
-s32 _cellGcmFunc13()
+error_code _cellGcmFunc13()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("_cellGcmFunc13()");
+	return CELL_OK;
 }
 
-s32 _cellGcmFunc38()
+error_code _cellGcmFunc38()
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellGcmSys.todo("_cellGcmFunc38()");
+	return CELL_OK;
 }
 
-s32 cellGcmGpadGetStatus(vm::ptr<u32> status)
+error_code cellGcmGpadGetStatus(vm::ptr<u32> status)
 {
 	cellGcmSys.todo("cellGcmGpadGetStatus(status=*0x%x)", status);
 	return CELL_OK;
 }
 
-s32 cellGcmGpadNotifyCaptureSurface(vm::ptr<CellGcmSurface> surface)
+error_code cellGcmGpadNotifyCaptureSurface(vm::ptr<CellGcmSurface> surface)
 {
 	cellGcmSys.todo("cellGcmGpadNotifyCaptureSurface(surface=*0x%x)", surface);
 	return CELL_OK;
 }
 
-s32 cellGcmGpadCaptureSnapshot(u32 num)
+error_code cellGcmGpadCaptureSnapshot(u32 num)
 {
 	cellGcmSys.todo("cellGcmGpadCaptureSnapshot(num=%d)", num);
 	return CELL_OK;
@@ -1314,8 +1391,8 @@ static std::pair<u32, u32> getNextCommandBufferBeginEnd(u32 current)
 
 static u32 getOffsetFromAddress(u32 address)
 {
-	const u32 upper = offsetTable.ioAddress[address >> 20]; // 12 bits
-	verify(HERE), (upper != 0xFFFF);
+	const u32 upper = g_fxo->get<gcm_config>().offsetTable.ioAddress[address >> 20]; // 12 bits
+	ensure(upper != 0xFFFF);
 	return (upper << 20) | (address & 0xFFFFF);
 }
 
@@ -1340,11 +1417,10 @@ static bool isInCommandBufferExcept(u32 getPos, u32 bufferBegin, u32 bufferEnd)
 s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 count)
 {
 	cellGcmSys.trace("cellGcmCallback(context=*0x%x, count=0x%x)", context, count);
-	auto m_config = fxm::get<CellGcmSysConfig>();
-	if (!m_config)
-		return CELL_GCM_ERROR_FAILURE;
 
-	auto& ctrl = vm::_ref<CellGcmControl>(m_config->gcm_info.control_addr);
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+
+	auto& ctrl = vm::_ref<CellGcmControl>(gcm_cfg.gcm_info.control_addr);
 
 	// Flush command buffer (ie allow RSX to read up to context->current)
 	ctrl.put.exchange(getOffsetFromAddress(context->current.addr()));
@@ -1365,7 +1441,11 @@ s32 cellGcmCallback(ppu_thread& ppu, vm::ptr<CellGcmContextData> context, u32 co
 		if (isInCommandBufferExcept(getPos, newCommandBuffer.first, newCommandBuffer.second))
 			break;
 
-		ppu.test_state();
+		if (ppu.test_stopped())
+		{
+			return 0;
+		}
+
 		busy_wait();
 	}
 
@@ -1402,23 +1482,31 @@ DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
 	REG_FUNC(cellGcmSys, cellGcmGetConfiguration);
 	REG_FUNC(cellGcmSys, cellGcmGetDisplayBufferByFlipIndex);
 	REG_FUNC(cellGcmSys, cellGcmGetFlipStatus);
+	REG_FUNC(cellGcmSys, cellGcmGetFlipStatus2);
 	REG_FUNC(cellGcmSys, cellGcmGetLastFlipTime);
+	REG_FUNC(cellGcmSys, cellGcmGetLastFlipTime2);
 	REG_FUNC(cellGcmSys, cellGcmGetLastSecondVTime);
 	REG_FUNC(cellGcmSys, cellGcmGetTiledPitchSize);
 	REG_FUNC(cellGcmSys, cellGcmGetVBlankCount);
+	REG_FUNC(cellGcmSys, cellGcmGetVBlankCount2);
 	REG_FUNC(cellGcmSys, cellGcmSysGetLastVBlankTime);
 	REG_FUNC(cellGcmSys, _cellGcmFunc1);
 	REG_FUNC(cellGcmSys, _cellGcmFunc15);
 	REG_FUNC(cellGcmSys, _cellGcmInitBody);
 	REG_FUNC(cellGcmSys, cellGcmInitSystemMode);
 	REG_FUNC(cellGcmSys, cellGcmResetFlipStatus);
+	REG_FUNC(cellGcmSys, cellGcmResetFlipStatus2);
 	REG_FUNC(cellGcmSys, cellGcmSetDebugOutputLevel);
 	REG_FUNC(cellGcmSys, cellGcmSetDisplayBuffer);
 	REG_FUNC(cellGcmSys, cellGcmSetFlip); //
 	REG_FUNC(cellGcmSys, cellGcmSetFlipHandler);
+	REG_FUNC(cellGcmSys, cellGcmSetFlipHandler2);
 	REG_FUNC(cellGcmSys, cellGcmSetFlipImmediate);
+	REG_FUNC(cellGcmSys, cellGcmSetFlipImmediate2);
 	REG_FUNC(cellGcmSys, cellGcmSetFlipMode);
+	REG_FUNC(cellGcmSys, cellGcmSetFlipMode2);
 	REG_FUNC(cellGcmSys, cellGcmSetFlipStatus);
+	REG_FUNC(cellGcmSys, cellGcmSetFlipStatus2);
 	REG_FUNC(cellGcmSys, cellGcmSetGraphicsHandler);
 	REG_FUNC(cellGcmSys, cellGcmSetPrepareFlip);
 	REG_FUNC(cellGcmSys, cellGcmSetQueueHandler);
@@ -1470,6 +1558,7 @@ DECLARE(ppu_module_manager::cellGcmSys)("cellGcmSys", []()
 
 	// Other
 	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommand);
+	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommand2);
 	REG_FUNC(cellGcmSys, _cellGcmSetFlipCommandWithWaitLabel);
 	REG_FUNC(cellGcmSys, cellGcmSetTile);
 	REG_FUNC(cellGcmSys, _cellGcmFunc2);

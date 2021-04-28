@@ -5,7 +5,7 @@
 
 
 
-logs::channel cellSpudll("cellSpudll");
+LOG_CHANNEL(cellSpudll);
 
 template<>
 void fmt_class_string<CellSpudllError>::format(std::string& out, u64 arg)

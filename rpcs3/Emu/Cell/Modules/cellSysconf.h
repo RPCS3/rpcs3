@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 typedef void(CellSysconfCallback)(s32 result, vm::ptr<void> userdata);
 
@@ -30,7 +30,7 @@ enum CellSysconfBtDeviceState : s32
 	CELL_SYSCONF_BT_DEVICE_STATE_AVAILABLE   = 1,
 };
 
-enum
+enum CellSysConfError : u32
 {
 	CELL_SYSCONF_ERROR_PARAM = 0x8002bb01
 };

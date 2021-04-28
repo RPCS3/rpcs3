@@ -1,11 +1,12 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // Return Codes
-enum
+constexpr auto CELL_RUDP_SUCCESS = CELL_OK;
+
+enum CellRudpError : u32
 {
-	CELL_RUDP_SUCCESS                            = 0,
 	CELL_RUDP_ERROR_NOT_INITIALIZED              = 0x80770001,
 	CELL_RUDP_ERROR_ALREADY_INITIALIZED          = 0x80770002,
 	CELL_RUDP_ERROR_INVALID_CONTEXT_ID           = 0x80770003,

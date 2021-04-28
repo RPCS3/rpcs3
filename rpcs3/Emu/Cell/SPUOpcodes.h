@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../../Utilities/BitField.h"
+#include "Utilities/BitField.h"
 
 union spu_opcode_t
 {
@@ -13,6 +13,7 @@ union spu_opcode_t
 	bf_t<u32, 21, 7> rt4; // 4..10, for 4-op instructions
 	bf_t<u32, 18, 1> e; // 13, "enable interrupts" bit
 	bf_t<u32, 19, 1> d; // 12, "disable interrupts" bit
+	bf_t<u32, 18, 2> de; // 12..13 combined 'e' and 'd' bits
 	bf_t<u32, 20, 1> c; // 11, "C" bit for SYNC instruction
 	bf_t<s32, 23, 2> r0h; // 7..8, signed
 	bf_t<s32, 14, 2> roh; // 16..17, signed
@@ -35,27 +36,43 @@ inline u32 spu_ls_target(u32 pc, u32 imm = 0)
 	return (pc + (imm << 2)) & 0x3fff0;
 }
 
-static u32 spu_decode(u32 inst)
+inline u32 spu_decode(u32 inst)
 {
 	return inst >> 21;
 }
+
+std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op);
 
 // SPU decoder object. D provides functions. T is function pointer type returned.
 template <typename D, typename T = decltype(&D::UNK)>
 class spu_decoder
 {
 	// Fast lookup table
-	std::array<T, 2048> m_table;
+	std::array<T, 2048> m_table{};
 
 	struct instruction_info
 	{
 		u32 magn; // Count = 2 ^ magn
 		u32 value;
 		T pointer;
+
+		instruction_info(u32 m, u32 v, T p) noexcept
+			: magn(m)
+			, value(v)
+			, pointer(p)
+		{
+		}
+
+		instruction_info(u32 m, u32 v, const T* p) noexcept
+			: magn(m)
+			, value(v)
+			, pointer(*p)
+		{
+		}
 	};
 
 public:
-	spu_decoder()
+	spu_decoder() noexcept
 	{
 		const std::initializer_list<instruction_info> instructions
 		{
@@ -260,7 +277,10 @@ public:
 			{ 7, 0xf, &D::FMS },
 		};
 
-		m_table.fill(&D::UNK);
+		for (auto& x : m_table)
+		{
+			x = &D::UNK;
+		}
 
 		for (auto& entry : instructions)
 		{
@@ -271,18 +291,12 @@ public:
 		}
 	}
 
-	template <typename F>
-	spu_decoder(F&& init) : spu_decoder()
-	{
-		init(m_table);
-	}
-
-	const std::array<T, 2048>& get_table() const
+	const std::array<T, 2048>& get_table() const noexcept
 	{
 		return m_table;
 	}
 
-	T decode(u32 inst) const
+	T decode(u32 inst) const noexcept
 	{
 		return m_table[spu_decode(inst)];
 	}

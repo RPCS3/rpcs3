@@ -3,8 +3,9 @@
 // http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
 #include "utils.h"
+#include <string>
 
-void bn_print(char *name, u8 *a, u32 n)
+void bn_print(char* name, u8* a, u32 n)
 {
 	u32 i;
 
@@ -16,20 +17,22 @@ void bn_print(char *name, u8 *a, u32 n)
 	printf("\n");
 }
 
-static void bn_zero(u8 *d, u32 n)
+static void bn_zero(u8* d, u32 n)
 {
 	memset(d, 0, n);
 }
-void bn_copy(u8 *d, u8 *a, u32 n)
+
+void bn_copy(u8* d, u8* a, u32 n)
 {
 	memcpy(d, a, n);
 }
 
-int bn_compare(u8 *a, u8 *b, u32 n)
+int bn_compare(u8* a, u8* b, u32 n)
 {
 	u32 i;
 
-	for (i = 0; i < n; i++) {
+	for (i = 0; i < n; i++)
+	{
 		if (a[i] < b[i])
 			return -1;
 		if (a[i] > b[i])
@@ -39,45 +42,47 @@ int bn_compare(u8 *a, u8 *b, u32 n)
 	return 0;
 }
 
-static u8 bn_add_1(u8 *d, u8 *a, u8 *b, u32 n)
+static u8 bn_add_1(u8* d, u8* a, u8* b, u32 n)
 {
 	u32 i;
 	u32 dig;
 	u8 c;
 
 	c = 0;
-	for (i = n - 1; i < n; i--) {
-		dig = a[i] + b[i] + c;
-		c = dig >> 8;
+	for (i = n - 1; i < n; i--)
+	{
+		dig  = a[i] + b[i] + c;
+		c    = dig >> 8;
 		d[i] = dig;
 	}
 
 	return c;
 }
 
-static u8 bn_sub_1(u8 *d, u8 *a, u8 *b, u32 n)
+static u8 bn_sub_1(u8* d, u8* a, u8* b, u32 n)
 {
 	u32 i;
 	u32 dig;
 	u8 c;
 
 	c = 1;
-	for (i = n - 1; i < n; i--) {
-		dig = a[i] + 255 - b[i] + c;
-		c = dig >> 8;
+	for (i = n - 1; i < n; i--)
+	{
+		dig  = a[i] + 255 - b[i] + c;
+		c    = dig >> 8;
 		d[i] = dig;
 	}
 
 	return 1 - c;
 }
 
-void bn_reduce(u8 *d, u8 *N, u32 n)
+void bn_reduce(u8* d, u8* N, u32 n)
 {
 	if (bn_compare(d, N, n) >= 0)
 		bn_sub_1(d, d, N, n);
 }
 
-void bn_add(u8 *d, u8 *a, u8 *b, u8 *N, u32 n)
+void bn_add(u8* d, u8* a, u8* b, u8* N, u32 n)
 {
 	if (bn_add_1(d, a, b, n))
 		bn_sub_1(d, d, N, n);
@@ -85,13 +90,13 @@ void bn_add(u8 *d, u8 *a, u8 *b, u8 *N, u32 n)
 	bn_reduce(d, N, n);
 }
 
-void bn_sub(u8 *d, u8 *a, u8 *b, u8 *N, u32 n)
+void bn_sub(u8* d, u8* a, u8* b, u8* N, u32 n)
 {
 	if (bn_sub_1(d, a, b, n))
 		bn_add_1(d, d, N, n);
 }
 
-static const u8 inv256[0x80] = {
+static constexpr u8 inv256[0x80] = {
 	0x01, 0xab, 0xcd, 0xb7, 0x39, 0xa3, 0xc5, 0xef,
 	0xf1, 0x1b, 0x3d, 0xa7, 0x29, 0x13, 0x35, 0xdf,
 	0xe1, 0x8b, 0xad, 0x97, 0x19, 0x83, 0xa5, 0xcf,
@@ -110,19 +115,20 @@ static const u8 inv256[0x80] = {
 	0x11, 0x3b, 0x5d, 0xc7, 0x49, 0x33, 0x55, 0xff,
 };
 
-static void bn_mon_muladd_dig(u8 *d, u8 *a, u8 b, u8 *N, u32 n)
+static void bn_mon_muladd_dig(u8* d, u8* a, u8 b, u8* N, u32 n)
 {
 	u32 dig;
 	u32 i;
 
-	u8 z = -(d[n-1] + a[n-1]*b) * inv256[N[n-1]/2];
+	const u8 z = -(d[n - 1] + a[n - 1] * b) * inv256[N[n - 1] / 2];
 
-	dig = d[n-1] + a[n-1]*b + N[n-1]*z;
+	dig = d[n - 1] + a[n - 1] * b + N[n - 1] * z;
 	dig >>= 8;
 
-	for (i = n - 2; i < n; i--) {
-		dig += d[i] + a[i]*b + N[i]*z;
-		d[i+1] = dig;
+	for (i = n - 2; i < n; i--)
+	{
+		dig += d[i] + a[i] * b + N[i] * z;
+		d[i + 1] = dig;
 		dig >>= 8;
 	}
 
@@ -135,7 +141,7 @@ static void bn_mon_muladd_dig(u8 *d, u8 *a, u8 b, u8 *N, u32 n)
 	bn_reduce(d, N, n);
 }
 
-void bn_mon_mul(u8 *d, u8 *a, u8 *b, u8 *N, u32 n)
+void bn_mon_mul(u8* d, u8* a, u8* b, u8* N, u32 n)
 {
 	u8 t[512];
 	u32 i;
@@ -148,35 +154,36 @@ void bn_mon_mul(u8 *d, u8 *a, u8 *b, u8 *N, u32 n)
 	bn_copy(d, t, n);
 }
 
-void bn_to_mon(u8 *d, u8 *N, u32 n)
+void bn_to_mon(u8* d, u8* N, u32 n)
 {
 	u32 i;
 
-	for (i = 0; i < 8*n; i++)
+	for (i = 0; i < 8 * n; i++)
 		bn_add(d, d, d, N, n);
 }
 
-void bn_from_mon(u8 *d, u8 *N, u32 n)
+void bn_from_mon(u8* d, u8* N, u32 n)
 {
 	u8 t[512];
 
 	bn_zero(t, n);
-	t[n-1] = 1;
+	t[n - 1] = 1;
 	bn_mon_mul(d, d, t, N, n);
 }
 
-static void bn_mon_exp(u8 *d, u8 *a, u8 *N, u32 n, u8 *e, u32 en)
+static void bn_mon_exp(u8* d, u8* a, u8* N, u32 n, u8* e, u32 en)
 {
 	u8 t[512];
 	u32 i;
 	u8 mask;
 
 	bn_zero(d, n);
-	d[n-1] = 1;
+	d[n - 1] = 1;
 	bn_to_mon(d, N, n);
 
 	for (i = 0; i < en; i++)
-		for (mask = 0x80; mask != 0; mask >>= 1) {
+		for (mask = 0x80; mask != 0; mask >>= 1)
+		{
 			bn_mon_mul(t, d, d, N, n);
 			if ((e[i] & mask) != 0)
 				bn_mon_mul(d, t, a, N, n);
@@ -185,50 +192,41 @@ static void bn_mon_exp(u8 *d, u8 *a, u8 *N, u32 n, u8 *e, u32 en)
 		}
 }
 
-void bn_mon_inv(u8 *d, u8 *a, u8 *N, u32 n)
+void bn_mon_inv(u8* d, u8* a, u8* N, u32 n)
 {
 	u8 t[512], s[512];
 
 	bn_zero(s, n);
-	s[n-1] = 2;
+	s[n - 1] = 2;
 	bn_sub_1(t, N, s, n);
 	bn_mon_exp(d, a, N, n, t, n);
 }
 
-void bn_copy(u8 *d, u8 *a, u32 n);
-int bn_compare(u8 *a, u8 *b, u32 n);
-void bn_reduce(u8 *d, u8 *N, u32 n);
-void bn_add(u8 *d, u8 *a, u8 *b, u8 *N, u32 n);
-void bn_sub(u8 *d, u8 *a, u8 *b, u8 *N, u32 n);
-void bn_to_mon(u8 *d, u8 *N, u32 n);
-void bn_from_mon(u8 *d, u8 *N, u32 n);
-void bn_mon_mul(u8 *d, u8 *a, u8 *b, u8 *N, u32 n);
-void bn_mon_inv(u8 *d, u8 *a, u8 *N, u32 n);
-
-struct point {
+struct point
+{
 	u8 x[20];
 	u8 y[20];
 };
 
-static u8 ec_p[20];
-static u8 ec_a[20];	// mon
-static u8 ec_b[20];	// mon
-static u8 ec_N[21];
-static struct point ec_G;	// mon
-static struct point ec_Q;	// mon
-static u8 ec_k[21];
+static thread_local u8 ec_p[20]{};
+static thread_local u8 ec_a[20]{}; // mon
+static thread_local u8 ec_b[20]{}; // mon
+static thread_local u8 ec_N[21]{};
+static thread_local point ec_G{}; // mon
+static thread_local point ec_Q{}; // mon
+static thread_local u8 ec_k[21]{};
 
-static void elt_copy(u8 *d, u8 *a)
+static void elt_copy(u8* d, u8* a)
 {
 	memcpy(d, a, 20);
 }
 
-static void elt_zero(u8 *d)
+static void elt_zero(u8* d)
 {
 	memset(d, 0, 20);
 }
 
-static int elt_is_zero(u8 *d)
+static int elt_is_zero(u8* d)
 {
 	u32 i;
 
@@ -239,47 +237,47 @@ static int elt_is_zero(u8 *d)
 	return 1;
 }
 
-static void elt_add(u8 *d, u8 *a, u8 *b)
+static void elt_add(u8* d, u8* a, u8* b)
 {
 	bn_add(d, a, b, ec_p, 20);
 }
 
-static void elt_sub(u8 *d, u8 *a, u8 *b)
+static void elt_sub(u8* d, u8* a, u8* b)
 {
 	bn_sub(d, a, b, ec_p, 20);
 }
 
-static void elt_mul(u8 *d, u8 *a, u8 *b)
+static void elt_mul(u8* d, u8* a, u8* b)
 {
 	bn_mon_mul(d, a, b, ec_p, 20);
 }
 
-static void elt_square(u8 *d, u8 *a)
+static void elt_square(u8* d, u8* a)
 {
 	elt_mul(d, a, a);
 }
 
-static void elt_inv(u8 *d, u8 *a)
+static void elt_inv(u8* d, u8* a)
 {
 	u8 s[20];
 	elt_copy(s, a);
 	bn_mon_inv(d, s, ec_p, 20);
 }
 
-static void point_to_mon(struct point *p)
+static void point_to_mon(point* p)
 {
 	bn_to_mon(p->x, ec_p, 20);
 	bn_to_mon(p->y, ec_p, 20);
 }
 
-static void point_from_mon(struct point *p)
+static void point_from_mon(point* p)
 {
 	bn_from_mon(p->x, ec_p, 20);
 	bn_from_mon(p->y, ec_p, 20);
 }
 
 #if 0
-static int point_is_on_curve(u8 *p)
+static int point_is_on_curve(u8* p)
 {
 	u8 s[20], t[20];
 	u8 *x, *y;
@@ -302,21 +300,21 @@ static int point_is_on_curve(u8 *p)
 }
 #endif
 
-static void point_zero(struct point *p)
+static void point_zero(point* p)
 {
 	elt_zero(p->x);
 	elt_zero(p->y);
 }
 
-static int point_is_zero(struct point *p)
+static int point_is_zero(point* p)
 {
 	return elt_is_zero(p->x) && elt_is_zero(p->y);
 }
 
-static void point_double(struct point *r, struct point *p)
+static void point_double(point* r, point* p)
 {
 	u8 s[20], t[20];
-	struct point pp;
+	point pp;
 	u8 *px, *py, *rx, *ry;
 
 	pp = *p;
@@ -326,33 +324,34 @@ static void point_double(struct point *r, struct point *p)
 	rx = r->x;
 	ry = r->y;
 
-	if (elt_is_zero(py)) {
+	if (elt_is_zero(py))
+	{
 		point_zero(r);
 		return;
 	}
 
-	elt_square(t, px);	// t = px*px
-	elt_add(s, t, t);	// s = 2*px*px
-	elt_add(s, s, t);	// s = 3*px*px
-	elt_add(s, s, ec_a);	// s = 3*px*px + a
-	elt_add(t, py, py);	// t = 2*py
-	elt_inv(t, t);		// t = 1/(2*py)
-	elt_mul(s, s, t);	// s = (3*px*px+a)/(2*py)
+	elt_square(t, px);   // t = px*px
+	elt_add(s, t, t);    // s = 2*px*px
+	elt_add(s, s, t);    // s = 3*px*px
+	elt_add(s, s, ec_a); // s = 3*px*px + a
+	elt_add(t, py, py);  // t = 2*py
+	elt_inv(t, t);       // t = 1/(2*py)
+	elt_mul(s, s, t);    // s = (3*px*px+a)/(2*py)
 
-	elt_square(rx, s);	// rx = s*s
-	elt_add(t, px, px);	// t = 2*px
-	elt_sub(rx, rx, t);	// rx = s*s - 2*px
+	elt_square(rx, s);  // rx = s*s
+	elt_add(t, px, px); // t = 2*px
+	elt_sub(rx, rx, t); // rx = s*s - 2*px
 
-	elt_sub(t, px, rx);	// t = -(rx-px)
-	elt_mul(ry, s, t);	// ry = -s*(rx-px)
-	elt_sub(ry, ry, py);	// ry = -s*(rx-px) - py
+	elt_sub(t, px, rx);  // t = -(rx-px)
+	elt_mul(ry, s, t);   // ry = -s*(rx-px)
+	elt_sub(ry, ry, py); // ry = -s*(rx-px) - py
 }
 
-static void point_add(struct point *r, struct point *p, struct point *q)
+static void point_add(point* r, point* p, point* q)
 {
 	u8 s[20], t[20], u[20];
 	u8 *px, *py, *qx, *qy, *rx, *ry;
-	struct point pp, qq;
+	point pp, qq;
 
 	pp = *p;
 	qq = *q;
@@ -364,13 +363,15 @@ static void point_add(struct point *r, struct point *p, struct point *q)
 	rx = r->x;
 	ry = r->y;
 
-	if (point_is_zero(&pp)) {
+	if (point_is_zero(&pp))
+	{
 		elt_copy(rx, qx);
 		elt_copy(ry, qy);
 		return;
 	}
 
-	if (point_is_zero(&qq)) {
+	if (point_is_zero(&qq))
+	{
 		elt_copy(rx, px);
 		elt_copy(ry, py);
 		return;
@@ -378,7 +379,8 @@ static void point_add(struct point *r, struct point *p, struct point *q)
 
 	elt_sub(u, qx, px);
 
-	if (elt_is_zero(u)) {
+	if (elt_is_zero(u))
+	{
 		elt_sub(u, qy, py);
 		if (elt_is_zero(u))
 			point_double(r, &pp);
@@ -388,20 +390,20 @@ static void point_add(struct point *r, struct point *p, struct point *q)
 		return;
 	}
 
-	elt_inv(t, u);		// t = 1/(qx-px)
-	elt_sub(u, qy, py);	// u = qy-py
-	elt_mul(s, t, u);	// s = (qy-py)/(qx-px)
+	elt_inv(t, u);      // t = 1/(qx-px)
+	elt_sub(u, qy, py); // u = qy-py
+	elt_mul(s, t, u);   // s = (qy-py)/(qx-px)
 
-	elt_square(rx, s);	// rx = s*s
-	elt_add(t, px, qx);	// t = px+qx
-	elt_sub(rx, rx, t);	// rx = s*s - (px+qx)
+	elt_square(rx, s);  // rx = s*s
+	elt_add(t, px, qx); // t = px+qx
+	elt_sub(rx, rx, t); // rx = s*s - (px+qx)
 
-	elt_sub(t, px, rx);	// t = -(rx-px)
-	elt_mul(ry, s, t);	// ry = -s*(rx-px)
-	elt_sub(ry, ry, py);	// ry = -s*(rx-px) - py
+	elt_sub(t, px, rx);  // t = -(rx-px)
+	elt_mul(ry, s, t);   // ry = -s*(rx-px)
+	elt_sub(ry, ry, py); // ry = -s*(rx-px) - py
 }
 
-static void point_mul(struct point *d, u8 *a, struct point *b)	// a is bignum
+static void point_mul(point* d, u8* a, point* b) // a is bignum
 {
 	u32 i;
 	u8 mask;
@@ -409,57 +411,15 @@ static void point_mul(struct point *d, u8 *a, struct point *b)	// a is bignum
 	point_zero(d);
 
 	for (i = 0; i < 21; i++)
-		for (mask = 0x80; mask != 0; mask >>= 1) {
+		for (mask = 0x80; mask != 0; mask >>= 1)
+		{
 			point_double(d, d);
 			if ((a[i] & mask) != 0)
 				point_add(d, d, b);
 		}
 }
 
-static void generate_ecdsa(u8 *R, u8 *S, u8 *k, u8 *hash)
-{
-	u8 e[21];
-	u8 kk[21];
-	u8 m[21];
-	u8 minv[21];
-	struct point mG;
-
-	e[0] = 0;
-	memcpy(e + 1, hash, 20);
-	bn_reduce(e, ec_N, 21);
-
-try_again:
-	prng(m, 21);
-	m[0] = 0;
-	if (bn_compare(m, ec_N, 21) >= 0)
-		goto try_again;
-
-	//	R = (mG).x
-
-	point_mul(&mG, m, &ec_G);
-	point_from_mon(&mG);
-	R[0] = 0;
-	elt_copy(R+1, mG.x);
-
-	//	S = m**-1*(e + Rk) (mod N)
-
-	bn_copy(kk, k, 21);
-	bn_reduce(kk, ec_N, 21);
-	bn_to_mon(m, ec_N, 21);
-	bn_to_mon(e, ec_N, 21);
-	bn_to_mon(R, ec_N, 21);
-	bn_to_mon(kk, ec_N, 21);
-
-	bn_mon_mul(S, R, kk, ec_N, 21);
-	bn_add(kk, S, e, ec_N, 21);
-	bn_mon_inv(minv, m, ec_N, 21);
-	bn_mon_mul(S, minv, kk, ec_N, 21);
-
-	bn_from_mon(R, ec_N, 21);
-	bn_from_mon(S, ec_N, 21);
-}
-
-static int check_ecdsa(struct point *Q, u8 *R, u8 *S, u8 *hash)
+static int check_ecdsa(struct point* Q, u8* R, u8* S, u8* hash)
 {
 	u8 Sinv[21];
 	u8 e[21];
@@ -501,13 +461,13 @@ static int check_ecdsa(struct point *Q, u8 *R, u8 *S, u8 *hash)
 }
 
 #if 0
-static void ec_priv_to_pub(u8 *k, u8 *Q)
+static void ec_priv_to_pub(u8* k, u8* Q)
 {
 	point_mul(Q, k, ec_G);
 }
 #endif
 
-int ecdsa_set_curve(u8* p, u8* a, u8* b, u8* N, u8* Gx, u8* Gy)
+int ecdsa_set_curve(const u8* p, const u8* a, const u8* b, const u8* N, const u8* Gx, const u8* Gy)
 {
 	memcpy(ec_p, p, 20);
 	memcpy(ec_a, a, 20);
@@ -515,33 +475,28 @@ int ecdsa_set_curve(u8* p, u8* a, u8* b, u8* N, u8* Gx, u8* Gy)
 	memcpy(ec_N, N, 21);
 	memcpy(ec_G.x, Gx, 20);
 	memcpy(ec_G.y, Gy, 20);
-	
+
 	bn_to_mon(ec_a, ec_p, 20);
 	bn_to_mon(ec_b, ec_p, 20);
 
 	point_to_mon(&ec_G);
 
 	return 0;
-} 
+}
 
-void ecdsa_set_pub(u8 *Q)
+void ecdsa_set_pub(const u8* Q)
 {
 	memcpy(ec_Q.x, Q, 20);
 	memcpy(ec_Q.y, Q+20, 20);
 	point_to_mon(&ec_Q);
 }
 
-void ecdsa_set_priv(u8 *k)
+void ecdsa_set_priv(const u8* k)
 {
 	memcpy(ec_k, k, sizeof ec_k);
 }
 
-int ecdsa_verify(u8 *hash, u8 *R, u8 *S)
+int ecdsa_verify(u8* hash, u8* R, u8* S)
 {
 	return check_ecdsa(&ec_Q, R, S, hash);
-}
-
-void ecdsa_sign(u8 *hash, u8 *R, u8 *S)
-{
-	generate_ecdsa(R, S, ec_k, hash);
 }

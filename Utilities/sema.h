@@ -1,7 +1,7 @@
 #pragma once
 
-#include "types.h"
-#include "Atomic.h"
+#include "util/types.hpp"
+#include "util/atomic.hpp"
 
 // Lightweight semaphore helper class
 class semaphore_base
@@ -12,8 +12,6 @@ class semaphore_base
 	void imp_wait();
 
 	void imp_post(s32 _old);
-
-	friend class semaphore_lock;
 
 protected:
 	explicit constexpr semaphore_base(s32 value)
@@ -27,20 +25,23 @@ protected:
 		const s32 value = m_value.load();
 
 		// Conditional decrement
-		if (UNLIKELY(value <= 0 || !m_value.compare_and_swap_test(value, value - 1)))
+		if (value <= 0 || !m_value.compare_and_swap_test(value, value - 1)) [[unlikely]]
 		{
 			imp_wait();
 		}
 	}
 
-	bool try_wait();
+	bool try_wait()
+	{
+		return m_value.try_dec(0);
+	}
 
 	void post(s32 _max)
 	{
 		// Unconditional increment
 		const s32 value = m_value.fetch_add(1);
 
-		if (UNLIKELY(value < 0 || value >= _max))
+		if (value < 0 || value >= _max) [[unlikely]]
 		{
 			imp_post(value);
 		}
@@ -73,36 +74,36 @@ class semaphore final : public semaphore_base
 public:
 	// Default constructor (recommended)
 	constexpr semaphore()
-		: base{Def}
+		: base(Def)
 	{
 	}
 
 	// Explicit value constructor (not recommended)
 	explicit constexpr semaphore(s32 value)
-		: base{value}
+		: base(value)
 	{
 	}
 
 	// Obtain a semaphore
-	void wait()
+	void lock()
 	{
 		return base::wait();
 	}
 
 	// Try to obtain a semaphore
-	explicit_bool_t try_wait()
+	bool try_lock()
 	{
 		return base::try_wait();
 	}
 
 	// Return a semaphore
-	void post()
+	void unlock()
 	{
 		return base::post(Max);
 	}
 
 	// Try to return a semaphore
-	explicit_bool_t try_post()
+	bool try_unlock()
 	{
 		return base::try_post(Max);
 	}
@@ -111,36 +112,5 @@ public:
 	static constexpr s32 size()
 	{
 		return Max;
-	}
-};
-
-class semaphore_lock
-{
-	semaphore_base& m_base;
-
-	void lock()
-	{
-		m_base.wait();
-	}
-
-	void unlock()
-	{
-		m_base.post(INT32_MAX);
-	}
-
-	friend class cond_variable;
-
-public:
-	explicit semaphore_lock(const semaphore_lock&) = delete;
-
-	semaphore_lock(semaphore_base& sema)
-		: m_base(sema)
-	{
-		lock();
-	}
-
-	~semaphore_lock()
-	{
-		unlock();
 	}
 };

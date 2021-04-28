@@ -1,0 +1,133 @@
+/*
+Classic Bright Theme for RPCS3
+by Megamouse @ https://github.com/Megamouse
+*/
+
+/* toolbar color stylesheet */
+QLineEdit#mw_searchbar {
+	margin-left:14px;
+	background-color:rgba(227,227,227,255);
+}
+QToolBar#mw_toolbar {
+	background-color:rgba(227,227,227,255);
+}
+QToolBar#mw_toolbar QSlider {
+	background-color:rgba(227,227,227,255);
+}
+QToolBar#mw_toolbar::separator {
+	background-color:rgba(207,207,207,255);
+	width:1px;
+	margin-top:2px;
+	margin-bottom: 2px;
+}
+QSlider#sizeSlider::groove:horizontal {
+	border: 0em solid transparent;
+	height: .3em;
+	background: #fff;
+}
+QSlider#sizeSlider::handle:horizontal {
+	width: 1em;
+	margin: -.8em 0;
+}
+
+/* toolbar icon color stylesheet */
+QLabel#toolbar_icon_color {
+	color: rgba(64,64,64,255);
+}
+/* thumbnail icon color stylesheet */
+QLabel#thumbnail_icon_color {
+	color: rgba(0,100,231,255);
+}
+/* gamelist icon color stylesheet */
+QLabel#gamelist_icon_background_color {
+	color: rgba(209,209,209,255);
+}
+
+/* game grid stylesheet */
+QTableWidget#game_grid {
+	font-weight:600;
+	font-size:8pt;
+	font-family:Lucida Grande;
+	color: rgba(51,51,51,255);
+}
+QTableWidget#game_grid::item:selected:active {
+	selection-background-color: #0078D7;
+}
+QTableWidget#game_grid::item:selected:!active {
+	selection-background-color: #008cff;
+}
+
+/* log stylesheet */
+QTextEdit#tty_frame {
+	background-color:#ffffff;
+}
+QLabel#tty_text {
+	color:#000000;
+}
+QTextEdit#log_frame {
+	background-color:#ffffff;
+}
+QLabel#log_level_always {
+	color:#107896;
+}
+QLabel#log_level_fatal {
+	color:#ff00ff;
+}
+QLabel#log_level_error {
+	color:#C02F1D;
+}
+QLabel#log_level_todo {
+	color:#ff6000;
+}
+QLabel#log_level_success {
+	color:#008000;
+}
+QLabel#log_level_warning {
+	color:#BA8745;
+}
+QLabel#log_level_notice {
+	color:#000000;
+}
+QLabel#log_level_trace {
+	color:#808080;
+}
+QLabel#log_stack {
+	color: #000000;
+}
+
+/* other objects' stylesheet */
+QWidget#header_section {
+	background-color:#ffffff;
+}
+QDialog#kernel_explorer {
+	background-color:rgba(240,240,240,255);
+}
+QDialog#memory_viewer {
+	background-color:rgba(240,240,240,255);
+}
+QLabel#memory_viewer_address_panel {
+	color:rgba(75,135,150,255);
+	background-color:rgba(240,240,240,255);
+}
+QLabel#memory_viewer_hex_panel {
+	color:#000000;
+	background-color:rgba(240,240,240,255);
+}
+QLabel#memory_viewer_ascii_panel {
+	color:#000000;
+	background-color:rgba(240,240,240,255);
+}
+QLabel#debugger_frame_breakpoint {
+	color:#000000;
+	background-color:#ffff00;
+}
+QLabel#debugger_frame_pc {
+	color:#000000;
+	background-color:#00ff00;
+}
+QLabel#rsx_debugger_display_buffer {
+	background-color:rgba(240,240,240,255);
+}
+QLabel#l_controller {
+	color:#434343;
+}

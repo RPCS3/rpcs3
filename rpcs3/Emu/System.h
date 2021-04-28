@@ -1,167 +1,72 @@
 #pragma once
 
-#include "VFS.h"
-#include "Utilities/Atomic.h"
-#include "Utilities/Config.h"
+#include "util/types.hpp"
+#include "util/atomic.hpp"
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
+#include <set>
 
-enum class system_state
+#include "Emu/Cell/timers.hpp"
+
+struct progress_dialog_workaround
+{
+	// WORKAROUND:
+	// We don't want to show the native dialog during gameplay.
+	// This can currently interfere with cell dialogs.
+	atomic_t<bool> skip_the_progress_dialog = false;
+};
+
+enum class localized_string_id;
+enum class video_renderer;
+
+enum class system_state : u32
 {
 	running,
-	paused,
 	stopped,
+	paused,
 	ready,
 };
 
-enum class ppu_decoder_type
+enum class game_boot_result : u32
 {
-	precise,
-	fast,
-	llvm,
+	no_errors,
+	generic_error,
+	nothing_to_boot,
+	wrong_disc_location,
+	invalid_file_or_folder,
+	install_failed,
+	decryption_error,
+	file_creation_error,
+	firmware_missing,
+	unsupported_disc_type
 };
-
-enum class spu_decoder_type
-{
-	precise,
-	fast,
-	asmjit,
-	llvm,
-};
-
-enum class lib_loading_type
-{
-	automatic,
-	manual,
-	both,
-	liblv2only
-};
-
-enum class keyboard_handler
-{
-	null,
-	basic,
-};
-
-enum class mouse_handler
-{
-	null,
-	basic,
-};
-
-enum class pad_handler
-{
-	null,
-	keyboard,
-	ds4,
-#ifdef _MSC_VER
-	xinput,
-#endif
-#ifdef _WIN32
-	mm,
-#endif
-#ifdef HAVE_LIBEVDEV
-	evdev,
-#endif
-};
-
-enum class video_renderer
-{
-	null,
-	opengl,
-	vulkan,
-#ifdef _MSC_VER
-	dx12,
-#endif
-};
-
-enum class audio_renderer
-{
-	null,
-#ifdef _WIN32
-	xaudio,
-#endif
-#ifdef HAVE_ALSA
-	alsa,
-#endif
-#ifdef HAVE_PULSE
-	pulse,
-#endif
-	openal,
-};
-
-enum class camera_handler
-{
-	null,
-	fake,
-};
-
-enum class fake_camera_type
-{
-	unknown,
-	eyetoy,
-	eyetoy2,
-	uvc1_1,
-};
-
-enum class move_handler
-{
-	null,
-	fake,
-};
-
-enum class video_resolution
-{
-	_1080,
-	_720,
-	_480,
-	_576,
-	_1600x1080,
-	_1440x1080,
-	_1280x1080,
-	_960x1080,
-};
-
-enum class video_aspect
-{
-	_auto,
-	_4_3,
-	_16_9,
-};
-
-enum class frame_limit_type
-{
-	none,
-	_59_94,
-	_50,
-	_60,
-	_30,
-	_auto,
-};
-
-enum CellNetCtlState : s32;
-enum CellSysutilLang : s32;
 
 struct EmuCallbacks
 {
 	std::function<void(std::function<void()>)> call_after;
-	std::function<void()> process_events;
-	std::function<void()> on_run;
+	std::function<void(bool)> on_run; // (start_playtime) continuing or going ingame, so start the clock
 	std::function<void()> on_pause;
 	std::function<void()> on_resume;
 	std::function<void()> on_stop;
 	std::function<void()> on_ready;
-	std::function<void()> exit;
-	std::function<std::shared_ptr<class KeyboardHandlerBase>()> get_kb_handler;
-	std::function<std::shared_ptr<class MouseHandlerBase>()> get_mouse_handler;
-	std::function<std::shared_ptr<class pad_thread>()> get_pad_handler;
+	std::function<bool()> on_missing_fw;
+	std::function<bool(bool, std::function<void()>)> try_to_quit; // (force_quit, on_exit) Try to close RPCS3
+	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit, 3 for set_value
+	std::function<void()> init_kb_handler;
+	std::function<void()> init_mouse_handler;
+	std::function<void(std::string_view title_id)> init_pad_handler;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
-	std::function<std::shared_ptr<class GSRender>()> get_gs_render;
-	std::function<std::shared_ptr<class AudioThread>()> get_audio;
+	std::function<void()> init_gs_render;
+	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
+	std::function<std::shared_ptr<class OskDialogBase>()> get_osk_dialog;
 	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
 	std::function<std::unique_ptr<class TrophyNotificationBase>()> get_trophy_notification_dialog;
+	std::function<std::string(localized_string_id, const char*)> get_localized_string;
+	std::function<std::u32string(localized_string_id, const char*)> get_localized_u32string;
+	std::string(*resolve_path)(std::string_view) = nullptr; // Resolve path using Qt
 };
 
 class Emulator final
@@ -170,17 +75,34 @@ class Emulator final
 
 	EmuCallbacks m_cb;
 
-	atomic_t<u64> m_pause_start_time; // set when paused
-	atomic_t<u64> m_pause_amend_time; // increased when resumed
+	atomic_t<u64> m_pause_start_time{0}; // set when paused
+	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
+	atomic_t<u64> m_stop_ctr{0}; // Increments when emulation is stopped
 
+	video_renderer m_default_renderer;
+	std::string m_default_graphics_adapter;
+
+	std::string m_config_override_path;
 	std::string m_path;
-	std::string m_cache_path;
+	std::string m_path_old;
 	std::string m_title_id;
 	std::string m_title;
+	std::string m_app_version;
 	std::string m_cat;
 	std::string m_dir;
+	std::string m_sfo_dir;
+	std::string m_game_dir{"PS3_GAME"};
+	std::string m_usr{"00000001"};
+	u32 m_usrid{1};
 
+	bool m_force_global_config = false;
+
+	// This flag should be adjusted before each Stop() or each BootGame() and similar because:
+	// 1. It forces an application to boot immediately by calling Run() in Load().
+	// 2. It signifies that we don't want to exit on Stop(), for example if we want to transition to another application.
 	bool m_force_boot = false;
+
+	bool m_has_gui = true;
 
 public:
 	Emulator() = default;
@@ -196,9 +118,22 @@ public:
 	}
 
 	// Call from the GUI thread
-	void CallAfter(std::function<void()>&& func) const
+	void CallAfter(std::function<void()>&& func, bool track_emu_state = true) const
 	{
-		return m_cb.call_after(std::move(func));
+		if (!track_emu_state)
+		{
+			return m_cb.call_after(std::move(func));
+		}
+
+		std::function<void()> final_func = [this, before = IsStopped(), count = +m_stop_ctr, func = std::move(func)]
+		{
+			if (count == m_stop_ctr && before == IsStopped())
+			{
+				func();
+			}
+		};
+
+		return m_cb.call_after(std::move(final_func));
 	}
 
 	/** Set emulator mode to running unconditionnaly.
@@ -209,13 +144,14 @@ public:
 		m_state = system_state::running;
 	}
 
-	void Init();
+	void Init(bool add_only = false);
 
 	std::vector<std::string> argv;
 	std::vector<std::string> envp;
 	std::vector<u8> data;
-	std::vector<u8> klic;
+	std::vector<u128> klic;
 	std::string disc;
+	std::string hdd1;
 
 	const std::string& GetBoot() const
 	{
@@ -232,14 +168,19 @@ public:
 		return m_title;
 	}
 
+	const std::string GetTitleAndTitleID() const
+	{
+		return m_title + (m_title_id.empty() ? "" : " [" + m_title_id + "]");
+	}
+
+	const std::string& GetAppVersion() const
+	{
+		return m_app_version;
+	}
+
 	const std::string& GetCat() const
 	{
 		return m_cat;
-	}
-
-	const std::string& GetCachePath() const
-	{
-		return m_cache_path;
 	}
 
 	const std::string& GetDir() const
@@ -247,201 +188,68 @@ public:
 		return m_dir;
 	}
 
-	u64 GetPauseTime()
+	const std::string& GetSfoDir() const
+	{
+		return m_sfo_dir;
+	}
+
+	// String for GUI dialogs.
+	const std::string& GetUsr() const
+	{
+		return m_usr;
+	}
+
+	// u32 for cell.
+	u32 GetUsrId() const
+	{
+		return m_usrid;
+	}
+
+	void SetUsr(const std::string& user);
+
+	std::string GetBackgroundPicturePath() const;
+
+	u64 GetPauseTime() const
 	{
 		return m_pause_amend_time;
 	}
 
-	bool BootGame(const std::string& path, bool direct = false, bool add_only = false);
-	bool InstallPkg(const std::string& path);
-
-	static std::string GetEmuDir();
-	static std::string GetHddDir();
-	static std::string GetLibDir();
+	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
+	bool BootRsxCapture(const std::string& path);
 
 	void SetForceBoot(bool force_boot);
 
-	void Load(bool add_only = false);
-	void Run();
+	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool force_global_config = false, bool is_disc_patch = false);
+	void Run(bool start_playtime);
 	bool Pause();
 	void Resume();
 	void Stop(bool restart = false);
 	void Restart() { Stop(true); }
+	bool Quit(bool force_quit);
+	static void CleanUp();
 
 	bool IsRunning() const { return m_state == system_state::running; }
-	bool IsPaused()  const { return m_state == system_state::paused; }
+	bool IsPaused()  const { return m_state >= system_state::paused; } // ready is also considered paused by this function
 	bool IsStopped() const { return m_state == system_state::stopped; }
 	bool IsReady()   const { return m_state == system_state::ready; }
 	auto GetStatus() const { return m_state.load(); }
+
+	bool HasGui() const { return m_has_gui; }
+	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
+
+	void SetDefaultRenderer(video_renderer renderer) { m_default_renderer = renderer; }
+	void SetDefaultGraphicsAdapter(std::string adapter) { m_default_graphics_adapter = std::move(adapter); }
+	void SetConfigOverride(std::string path) { m_config_override_path = std::move(path); }
+
+	std::string GetFormattedTitle(double fps) const;
+
+	void ConfigurePPUCache() const;
+
+	std::set<std::string> GetGameDirs() const;
 };
 
 extern Emulator Emu;
 
-struct cfg_root : cfg::node
-{
-	struct node_core : cfg::node
-	{
-		node_core(cfg::node* _this) : cfg::node(_this, "Core") {}
-
-		cfg::_enum<ppu_decoder_type> ppu_decoder{this, "PPU Decoder", ppu_decoder_type::llvm};
-		cfg::_int<1, 16> ppu_threads{this, "PPU Threads", 2}; // Amount of PPU threads running simultaneously (must be 2)
-		cfg::_bool ppu_debug{this, "PPU Debug"};
-		cfg::_bool llvm_logs{this, "Save LLVM logs"};
-		cfg::string llvm_cpu{this, "Use LLVM CPU"};
-		cfg::_int<0, INT32_MAX> llvm_threads{this, "Max LLVM Compile Threads", 0};
-
-#ifdef _WIN32
-		cfg::_bool thread_scheduler_enabled{ this, "Enable thread scheduler", true };
-#else
-		cfg::_bool thread_scheduler_enabled{ this, "Enable thread scheduler", false };
-#endif
-
-		cfg::_enum<spu_decoder_type> spu_decoder{this, "SPU Decoder", spu_decoder_type::asmjit};
-		cfg::_bool lower_spu_priority{this, "Lower SPU thread priority"};
-		cfg::_bool spu_debug{this, "SPU Debug"};
-		cfg::_int<0, 6> preferred_spu_threads{this, "Preferred SPU Threads", 0}; //Numnber of hardware threads dedicated to heavy simultaneous spu tasks
-		cfg::_int<0, 16> spu_delay_penalty{this, "SPU delay penalty", 3}; //Number of milliseconds to block a thread if a virtual 'core' isn't free
-		cfg::_bool spu_loop_detection{this, "SPU loop detection", true}; //Try to detect wait loops and trigger thread yield
-		cfg::_bool spu_shared_runtime{this, "SPU Shared Runtime", true}; // Share compiled SPU functions between all threads
-
-		cfg::_enum<lib_loading_type> lib_loading{this, "Lib Loader", lib_loading_type::liblv2only};
-		cfg::_bool hook_functions{this, "Hook static functions"};
-		cfg::set_entry load_libraries{this, "Load libraries"};
-
-	} core{this};
-
-	struct node_vfs : cfg::node
-	{
-		node_vfs(cfg::node* _this) : cfg::node(_this, "VFS") {}
-
-		cfg::string emulator_dir{this, "$(EmulatorDir)"}; // Default (empty): taken from fs::get_config_dir()
-		cfg::string dev_hdd0{this, "/dev_hdd0/", "$(EmulatorDir)dev_hdd0/"};
-		cfg::string dev_hdd1{this, "/dev_hdd1/", "$(EmulatorDir)dev_hdd1/"};
-		cfg::string dev_flash{this, "/dev_flash/", "$(EmulatorDir)dev_flash/"};
-		cfg::string dev_usb000{this, "/dev_usb000/", "$(EmulatorDir)dev_usb000/"};
-		cfg::string dev_bdvd{this, "/dev_bdvd/"}; // Not mounted
-		cfg::string app_home{this, "/app_home/"}; // Not mounted
-
-		cfg::_bool host_root{this, "Enable /host_root/"};
-
-	} vfs{this};
-
-	struct node_video : cfg::node
-	{
-		node_video(cfg::node* _this) : cfg::node(_this, "Video") {}
-
-		cfg::_enum<video_renderer> renderer{this, "Renderer", video_renderer::opengl};
-
-		cfg::_enum<video_resolution> resolution{this, "Resolution", video_resolution::_720};
-		cfg::_enum<video_aspect> aspect_ratio{this, "Aspect ratio", video_aspect::_16_9};
-		cfg::_enum<frame_limit_type> frame_limit{this, "Frame limit", frame_limit_type::none};
-
-		cfg::_bool write_color_buffers{this, "Write Color Buffers"};
-		cfg::_bool write_depth_buffer{this, "Write Depth Buffer"};
-		cfg::_bool read_color_buffers{this, "Read Color Buffers"};
-		cfg::_bool read_depth_buffer{this, "Read Depth Buffer"};
-		cfg::_bool log_programs{this, "Log shader programs"};
-		cfg::_bool vsync{this, "VSync"};
-		cfg::_bool debug_output{this, "Debug output"};
-		cfg::_bool overlay{this, "Debug overlay"};
-		cfg::_bool gl_legacy_buffers{this, "Use Legacy OpenGL Buffers"};
-		cfg::_bool use_gpu_texture_scaling{this, "Use GPU texture scaling", true};
-		cfg::_bool stretch_to_display_area{this, "Stretch To Display Area"};
-		cfg::_bool force_high_precision_z_buffer{this, "Force High Precision Z buffer"};
-		cfg::_bool strict_rendering_mode{this, "Strict Rendering Mode"};
-		cfg::_bool disable_zcull_queries{this, "Disable ZCull Occlusion Queries", false};
-		cfg::_bool disable_vertex_cache{this, "Disable Vertex Cache", false};
-		cfg::_bool frame_skip_enabled{this, "Enable Frame Skip", false};
-		cfg::_bool force_cpu_blit_processing{this, "Force CPU Blit", false}; // Debugging option
-		cfg::_bool disable_on_disk_shader_cache{this, "Disable On-Disk Shader Cache", false};
-		cfg::_bool full_rgb_range_output{this, "Use full RGB output range", true}; // Video out dynamic range
-		cfg::_int<1, 8> consequtive_frames_to_draw{this, "Consecutive Frames To Draw", 1};
-		cfg::_int<1, 8> consequtive_frames_to_skip{this, "Consecutive Frames To Skip", 1};
-		cfg::_int<50, 800> resolution_scale_percent{this, "Resolution Scale", 100};
-		cfg::_int<0, 16> anisotropic_level_override{this, "Anisotropic Filter Override", 0};
-		cfg::_int<1, 1024> min_scalable_dimension{this, "Minimum Scalable Dimension", 16};
-		cfg::_int<0, 30000000> driver_recovery_timeout{this, "Driver Recovery Timeout", 1000000};
-
-		struct node_d3d12 : cfg::node
-		{
-			node_d3d12(cfg::node* _this) : cfg::node(_this, "D3D12") {}
-
-			cfg::string adapter{this, "Adapter"};
-
-		} d3d12{this};
-
-		struct node_vk : cfg::node
-		{
-			node_vk(cfg::node* _this) : cfg::node(_this, "Vulkan") {}
-
-			cfg::string adapter{this, "Adapter"};
-			cfg::_bool force_fifo{this, "Force FIFO present mode"};
-			cfg::_bool force_primitive_restart{this, "Force primitive restart flag"};
-
-		} vk{this};
-
-	} video{this};
-
-	struct node_audio : cfg::node
-	{
-		node_audio(cfg::node* _this) : cfg::node(_this, "Audio") {}
-
-		cfg::_enum<audio_renderer> renderer{this, "Renderer", static_cast<audio_renderer>(1)};
-
-		cfg::_bool dump_to_file{this, "Dump to file"};
-		cfg::_bool convert_to_u16{this, "Convert to 16 bit"};
-		cfg::_bool downmix_to_2ch{this, "Downmix to Stereo", true};
-		cfg::_int<2, 128> frames{this, "Buffer Count", 32};
-		cfg::_int<1, 128> startt{this, "Start Threshold", 1};
-
-	} audio{this};
-
-	struct node_io : cfg::node
-	{
-		node_io(cfg::node* _this) : cfg::node(_this, "Input/Output") {}
-
-		cfg::_enum<keyboard_handler> keyboard{this, "Keyboard", keyboard_handler::null};
-		cfg::_enum<mouse_handler> mouse{this, "Mouse", mouse_handler::basic};
-		cfg::_enum<pad_handler> pad{this, "Pad", pad_handler::keyboard};
-		cfg::_enum<camera_handler> camera{this, "Camera", camera_handler::null};
-		cfg::_enum<fake_camera_type> camera_type{this, "Camera type", fake_camera_type::unknown};
-		cfg::_enum<move_handler> move{this, "Move", move_handler::null};
-
-	} io{this};
-
-	struct node_sys : cfg::node
-	{
-		node_sys(cfg::node* _this) : cfg::node(_this, "System") {}
-
-		cfg::_enum<CellSysutilLang> language{this, "Language"};
-
-	} sys{this};
-
-	struct node_net : cfg::node
-	{
-		node_net(cfg::node* _this) : cfg::node(_this, "Net") {}
-
-		cfg::_enum<CellNetCtlState> net_status{this, "Connection status"};
-		cfg::string ip_address{this, "IP address", "192.168.1.1"};
-
-	} net{this};
-
-	struct node_misc : cfg::node
-	{
-		node_misc(cfg::node* _this) : cfg::node(_this, "Miscellaneous") {}
-
-		cfg::_bool autostart{this, "Automatically start games after boot", true};
-		cfg::_bool autoexit{this, "Exit RPCS3 when process finishes"};
-		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode" };
-		cfg::_bool show_fps_in_title{ this, "Show FPS counter in window title", true};
-		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true};
-		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true };
-		cfg::_bool use_native_interface{ this, "Use native user interface", true };
-		cfg::_int<1, 65535> gdb_server_port{this, "Port", 2345};
-
-	} misc{this};
-
-	cfg::log_entry log{this, "Log"};
-};
-
-extern cfg_root g_cfg;
+extern bool g_use_rtm;
+extern u64 g_rtm_tx_limit1;
+extern u64 g_rtm_tx_limit2;

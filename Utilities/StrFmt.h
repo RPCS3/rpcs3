@@ -1,18 +1,16 @@
-#pragma once
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
-#include "types.h"
+#include "util/types.hpp"
 
-#include <exception>
-#include <stdexcept>
 #include <string>
 
 namespace fmt
 {
-	template <typename... Args>
-	static std::string format(const char*, const Args&...);
+	template <typename CharT, usz N, typename... Args>
+	static std::string format(const CharT(&)[N], const Args&...);
 }
 
-template <typename T, typename>
+template <typename T, typename = void>
 struct fmt_unveil
 {
 	static_assert(sizeof(T) > 0, "fmt_unveil<> error: incomplete type");
@@ -21,7 +19,7 @@ struct fmt_unveil
 
 	static inline u64 get(const T& arg)
 	{
-		return reinterpret_cast<std::uintptr_t>(&arg);
+		return reinterpret_cast<uptr>(&arg);
 	}
 
 	// Temporary value container (can possibly be created by other fmt_unveil<> specializations)
@@ -32,7 +30,7 @@ struct fmt_unveil
 		// Allow implicit conversion
 		operator u64() const
 		{
-			return reinterpret_cast<std::uintptr_t>(&arg);
+			return reinterpret_cast<uptr>(&arg);
 		}
 	};
 
@@ -62,18 +60,7 @@ struct fmt_unveil<T, std::enable_if_t<std::is_floating_point<T>::value && sizeof
 	// Convert FP to f64 and reinterpret as u64
 	static inline u64 get(const f64& arg)
 	{
-		return *reinterpret_cast<const u64*>(reinterpret_cast<const u8*>(&arg));
-	}
-};
-
-template <>
-struct fmt_unveil<f16, void>
-{
-	using type = f16;
-
-	static inline u64 get(const f16& arg)
-	{
-		return fmt_unveil<f64>::get(arg.operator float());
+		return std::bit_cast<u64>(arg);
 	}
 };
 
@@ -95,29 +82,29 @@ struct fmt_unveil<T*, void>
 
 	static inline u64 get(type arg)
 	{
-		return reinterpret_cast<std::uintptr_t>(arg);
+		return reinterpret_cast<uptr>(arg);
 	}
 };
 
-template <typename T, std::size_t N>
+template <typename T, usz N>
 struct fmt_unveil<T[N], void>
 {
 	using type = std::add_const_t<T>*;
 
 	static inline u64 get(type arg)
 	{
-		return reinterpret_cast<std::uintptr_t>(arg);
+		return reinterpret_cast<uptr>(arg);
 	}
 };
 
-template <>
-struct fmt_unveil<b8, void>
+template <typename T, bool Se, usz Align>
+struct fmt_unveil<se_t<T, Se, Align>, void>
 {
-	using type = bool;
+	using type = typename fmt_unveil<T>::type;
 
-	static inline u64 get(const b8& value)
+	static inline auto get(const se_t<T, Se, Align>& arg)
 	{
-		return fmt_unveil<bool>::get(value);
+		return fmt_unveil<T>::get(arg);
 	}
 };
 
@@ -132,26 +119,17 @@ struct fmt_class_string
 	using type = T;
 
 	// Helper function (converts arg to object reference)
-	static SAFE_BUFFERS FORCE_INLINE const T& get_object(u64 arg)
+	static FORCE_INLINE SAFE_BUFFERS(const T&) get_object(u64 arg)
 	{
-		return *reinterpret_cast<const T*>(static_cast<std::uintptr_t>(arg));
+		return *reinterpret_cast<const T*>(static_cast<uptr>(arg));
 	}
 
 	// Enum -> string function type
 	using convert_t = const char*(*)(T value);
 
-	// Enum -> string function registered
-	static convert_t convert_enum;
-
 	// Helper function (safely converts arg to enum value)
-	static SAFE_BUFFERS FORCE_INLINE void format_enum(std::string& out, u64 arg, convert_t convert)
+	static FORCE_INLINE SAFE_BUFFERS(void) format_enum(std::string& out, u64 arg, convert_t convert)
 	{
-		// Save convert function
-		if (convert_enum == nullptr)
-		{
-			convert_enum = convert;
-		}
-
 		const auto value = static_cast<std::underlying_type_t<T>>(arg);
 
 		// Check narrowing
@@ -169,7 +147,7 @@ struct fmt_class_string
 	}
 
 	// Helper function (bitset formatting)
-	static SAFE_BUFFERS FORCE_INLINE void format_bitset(std::string& out, u64 arg, const char* prefix, const char* delim, const char* suffix, void (*fmt)(std::string&, u64))
+	static FORCE_INLINE SAFE_BUFFERS(void) format_bitset(std::string& out, u64 arg, const char* prefix, const char* delim, const char* suffix, void (*fmt)(std::string&, u64))
 	{
 		// Start from raw value
 		fmt_class_string<u64>::format(out, arg);
@@ -202,9 +180,6 @@ struct fmt_class_string
 	// Helper constant (may be used in format_enum as lambda return value)
 	static constexpr const char* unknown = nullptr;
 };
-
-template <typename T, typename V>
-const char*(*fmt_class_string<T, V>::convert_enum)(T) = nullptr;
 
 template <>
 struct fmt_class_string<const void*, void>
@@ -248,13 +223,16 @@ struct fmt_type_info
 template <typename... Args>
 using fmt_args_t = const u64(&&)[sizeof...(Args) + 1];
 
+template <typename Arg>
+using fmt_unveil_t = typename fmt_unveil<Arg>::type;
+
 namespace fmt
 {
 	// Base-57 format helper
 	struct base57
 	{
 		const uchar* data;
-		std::size_t size;
+		usz size;
 
 		template <typename T>
 		base57(const T& arg)
@@ -263,7 +241,7 @@ namespace fmt
 		{
 		}
 
-		base57(const uchar* data, std::size_t size)
+		base57(const uchar* data, usz size)
 			: data(data)
 			, size(size)
 		{
@@ -271,41 +249,59 @@ namespace fmt
 	};
 
 	template <typename... Args>
-	SAFE_BUFFERS FORCE_INLINE const fmt_type_info* get_type_info()
+	FORCE_INLINE SAFE_BUFFERS(const fmt_type_info*) get_type_info()
 	{
 		// Constantly initialized null-terminated list of type-specific information
-		static constexpr fmt_type_info result[sizeof...(Args) + 1]{fmt_type_info::make<Args>()...};
+		static constexpr fmt_type_info result[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
 
 		return result;
 	}
+
+	template <typename... Args>
+	constexpr const fmt_type_info type_info_v[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
 
 	// Internal formatting function
 	void raw_append(std::string& out, const char*, const fmt_type_info*, const u64*) noexcept;
 
 	// Formatting function
-	template <typename... Args>
-	SAFE_BUFFERS FORCE_INLINE void append(std::string& out, const char* fmt, const Args&... args)
+	template <typename CharT, usz N, typename... Args>
+	FORCE_INLINE SAFE_BUFFERS(void) append(std::string& out, const CharT(&fmt)[N], const Args&... args)
 	{
-		raw_append(out, fmt, fmt::get_type_info<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
+		static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
+		raw_append(out, reinterpret_cast<const char*>(fmt), type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
 	}
 
 	// Formatting function
-	template <typename... Args>
-	SAFE_BUFFERS FORCE_INLINE std::string format(const char* fmt, const Args&... args)
+	template <typename CharT, usz N, typename... Args>
+	FORCE_INLINE SAFE_BUFFERS(std::string) format(const CharT(&fmt)[N], const Args&... args)
 	{
 		std::string result;
-		append<Args...>(result, fmt, args...);
+		append(result, fmt, args...);
 		return result;
 	}
 
 	// Internal exception message formatting template, must be explicitly specialized or instantiated in cpp to minimize code bloat
-	template <typename T>
-	[[noreturn]] void raw_throw_exception(const char*, const fmt_type_info*, const u64*);
+	[[noreturn]] void raw_throw_exception(const src_loc&, const char*, const fmt_type_info*, const u64*);
 
 	// Throw exception with formatting
-	template <typename T = std::runtime_error, typename... Args>
-	[[noreturn]] SAFE_BUFFERS FORCE_INLINE void throw_exception(const char* fmt, const Args&... args)
+	template <typename CharT, usz N, typename... Args>
+	struct throw_exception
 	{
-		raw_throw_exception<T>(fmt, fmt::get_type_info<fmt_unveil_t<Args>...>(), fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
-	}
+		[[noreturn]] FORCE_INLINE SAFE_BUFFERS() throw_exception(const CharT(&fmt)[N], const Args&... args,
+			u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION())
+		{
+			static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};
+			raw_throw_exception({line, col, file, func}, reinterpret_cast<const char*>(fmt), type_list, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...});
+		}
+
+#ifndef _MSC_VER
+		[[noreturn]] ~throw_exception();
+#endif
+	};
+
+	template <typename CharT, usz N, typename... Args>
+	throw_exception(const CharT(&)[N], const Args&...) -> throw_exception<CharT, N, Args...>;
 }

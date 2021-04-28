@@ -1,16 +1,55 @@
 #include "stdafx.h"
 #include "sys_mmapper.h"
+
 #include "Emu/Cell/PPUThread.h"
-#include "sys_ppu_thread.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Memory/vm_var.h"
+#include "sys_memory.h"
+#include "sys_sync.h"
+#include "sys_process.h"
 
+#include "util/vm.hpp"
 
+LOG_CHANNEL(sys_mmapper);
 
-logs::channel sys_mmapper("sys_mmapper");
-
-error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr)
+lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, lv2_memory_container* ct)
+	: size(size)
+	, align(align)
+	, flags(flags)
+	, ct(ct)
+	, shm(std::make_shared<utils::shm>(size, 1 /* shareable flag */))
 {
-	sys_mmapper.error("sys_mmapper_allocate_address(size=0x%llx, flags=0x%llx, alignment=0x%llx, alloc_addr=*0x%x)", size, flags, alignment, alloc_addr);
+#ifndef _WIN32
+	// Optimization that's useless on Windows :puke:
+	utils::memory_lock(shm->map_self(), size);
+#endif
+}
+
+template<> DECLARE(ipc_manager<lv2_memory, u64>::g_ipc) {};
+
+template <bool exclusive = false>
+error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 flags, lv2_memory_container* ct)
+{
+	if (auto error = lv2_obj::create<lv2_memory>(pshared ? SYS_SYNC_PROCESS_SHARED : SYS_SYNC_NOT_PROCESS_SHARED, ipc_key, exclusive ? SYS_SYNC_NEWLY_CREATED : SYS_SYNC_NOT_CARE, [&]()
+	{
+		return std::make_shared<lv2_memory>(
+			static_cast<u32>(size),
+			align,
+			flags,
+			ct);
+	}, false))
+	{
+		return error;
+	}
+
+	return CELL_OK;
+}
+
+error_code sys_mmapper_allocate_address(ppu_thread& ppu, u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_mmapper.warning("sys_mmapper_allocate_address(size=0x%x, flags=0x%x, alignment=0x%x, alloc_addr=*0x%x)", size, flags, alignment, alloc_addr);
 
 	if (size % 0x10000000)
 	{
@@ -36,13 +75,10 @@ error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::
 	case 0x40000000:
 	case 0x80000000:
 	{
-		for (u64 addr = ::align<u64>(0x50000000, alignment); addr < 0xC0000000; addr += alignment)
+		if (const auto area = vm::find_map(static_cast<u32>(size), static_cast<u32>(alignment), flags & SYS_MEMORY_PAGE_SIZE_MASK))
 		{
-			if (const auto area = vm::map(static_cast<u32>(addr), static_cast<u32>(size), flags))
-			{
-				*alloc_addr = static_cast<u32>(addr);
-				return CELL_OK;
-			}
+			*alloc_addr = area->addr;
+			return CELL_OK;
 		}
 
 		return CELL_ENOMEM;
@@ -52,9 +88,11 @@ error_code sys_mmapper_allocate_address(u64 size, u64 flags, u64 alignment, vm::
 	return CELL_EALIGN;
 }
 
-error_code sys_mmapper_allocate_fixed_address()
+error_code sys_mmapper_allocate_fixed_address(ppu_thread& ppu)
 {
-	sys_mmapper.error("sys_mmapper_allocate_fixed_address()");
+	ppu.state += cpu_flag::wait;
+
+	sys_mmapper.warning("sys_mmapper_allocate_fixed_address()");
 
 	if (!vm::map(0xB0000000, 0x10000000, SYS_MEMORY_PAGE_SIZE_1M))
 	{
@@ -64,14 +102,22 @@ error_code sys_mmapper_allocate_fixed_address()
 	return CELL_OK;
 }
 
-error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::ptr<u32> mem_id)
+error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u64 size, u64 flags, vm::ptr<u32> mem_id)
 {
-	sys_mmapper.warning("sys_mmapper_allocate_shared_memory(0x%llx, size=0x%x, flags=0x%llx, mem_id=*0x%x)", unk, size, flags, mem_id);
+	ppu.state += cpu_flag::wait;
+
+	sys_mmapper.warning("sys_mmapper_allocate_shared_memory(ipc_key=0x%x, size=0x%x, flags=0x%x, mem_id=*0x%x)", ipc_key, size, flags, mem_id);
+
+	if (size == 0)
+	{
+		return CELL_EALIGN;
+	}
 
 	// Check page granularity
-	switch (flags & SYS_MEMORY_PAGE_SIZE_MASK)
+	switch (flags & SYS_MEMORY_GRANULARITY_MASK)
 	{
-	case SYS_MEMORY_PAGE_SIZE_1M:
+	case 0:
+	case SYS_MEMORY_GRANULARITY_1M:
 	{
 		if (size % 0x100000)
 		{
@@ -80,8 +126,7 @@ error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::
 
 		break;
 	}
-
-	case SYS_MEMORY_PAGE_SIZE_64K:
+	case SYS_MEMORY_GRANULARITY_64K:
 	{
 		if (size % 0x10000)
 		{
@@ -90,7 +135,6 @@ error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::
 
 		break;
 	}
-
 	default:
 	{
 		return CELL_EINVAL;
@@ -98,27 +142,39 @@ error_code sys_mmapper_allocate_shared_memory(u64 unk, u32 size, u64 flags, vm::
 	}
 
 	// Get "default" memory container
-	const auto dct = fxm::get_always<lv2_memory_container>();
+	auto& dct = g_fxo->get<lv2_memory_container>();
 
-	if (!dct->take(size))
+	if (!dct.take(size))
 	{
 		return CELL_ENOMEM;
 	}
 
-	// Generate a new mem ID
-	*mem_id = idm::make<lv2_obj, lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, flags, dct);
+	if (auto error = create_lv2_shm(ipc_key != SYS_MMAPPER_NO_SHM_KEY, ipc_key, size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, &dct))
+	{
+		dct.used -= size;
+		return error;
+	}
 
+	*mem_id = idm::last_id();
 	return CELL_OK;
 }
 
-error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, u32 cid, u64 flags, vm::ptr<u32> mem_id)
+error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u64 ipc_key, u64 size, u32 cid, u64 flags, vm::ptr<u32> mem_id)
 {
-	sys_mmapper.error("sys_mmapper_allocate_shared_memory_from_container(0x%llx, size=0x%x, cid=0x%x, flags=0x%llx, mem_id=*0x%x)", unk, size, cid, flags, mem_id);
+	ppu.state += cpu_flag::wait;
+
+	sys_mmapper.warning("sys_mmapper_allocate_shared_memory_from_container(ipc_key=0x%x, size=0x%x, cid=0x%x, flags=0x%x, mem_id=*0x%x)", ipc_key, size, cid, flags, mem_id);
+
+	if (size == 0)
+	{
+		return CELL_EALIGN;
+	}
 
 	// Check page granularity.
-	switch (flags & SYS_MEMORY_PAGE_SIZE_MASK)
+	switch (flags & SYS_MEMORY_GRANULARITY_MASK)
 	{
-	case SYS_MEMORY_PAGE_SIZE_1M:
+	case 0:
+	case SYS_MEMORY_GRANULARITY_1M:
 	{
 		if (size % 0x100000)
 		{
@@ -127,8 +183,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 
 		break;
 	}
-
-	case SYS_MEMORY_PAGE_SIZE_64K:
+	case SYS_MEMORY_GRANULARITY_64K:
 	{
 		if (size % 0x10000)
 		{
@@ -137,7 +192,6 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 
 		break;
 	}
-
 	default:
 	{
 		return CELL_EINVAL;
@@ -165,31 +219,260 @@ error_code sys_mmapper_allocate_shared_memory_from_container(u64 unk, u32 size, 
 		return ct.ret;
 	}
 
-	// Generate a new mem ID
-	*mem_id = idm::make<lv2_obj, lv2_memory>(size, flags & SYS_MEMORY_PAGE_SIZE_1M ? 0x100000 : 0x10000, flags, ct.ptr);
+	if (auto error = create_lv2_shm(ipc_key != SYS_MMAPPER_NO_SHM_KEY, ipc_key, size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, ct.ptr.get()))
+	{
+		ct->used -= size;
+		return error;
+	}
+
+	*mem_id = idm::last_id();
+	return CELL_OK;
+}
+
+error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, u64 size, u32 flags, vm::ptr<mmapper_unk_entry_struct0> entries, s32 entry_count, vm::ptr<u32> mem_id)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_mmapper.todo("sys_mmapper_allocate_shared_memory_ext(ipc_key=0x%x, size=0x%x, flags=0x%x, entries=*0x%x, entry_count=0x%x, mem_id=*0x%x)", ipc_key, size, flags, entries, entry_count, mem_id);
+
+	if (size == 0)
+	{
+		return CELL_EALIGN;
+	}
+
+	switch (flags & SYS_MEMORY_GRANULARITY_MASK)
+	{
+	case SYS_MEMORY_GRANULARITY_1M:
+	case 0:
+	{
+		if (size % 0x100000)
+		{
+			return CELL_EALIGN;
+		}
+
+		break;
+	}
+	case SYS_MEMORY_GRANULARITY_64K:
+	{
+		if (size % 0x10000)
+		{
+			return CELL_EALIGN;
+		}
+
+		break;
+	}
+	default:
+	{
+		return CELL_EINVAL;
+	}
+	}
+
+	if (flags & ~SYS_MEMORY_PAGE_SIZE_MASK)
+	{
+		return CELL_EINVAL;
+	}
+
+	if (entry_count <= 0 || entry_count > 0x10)
+	{
+		return CELL_EINVAL;
+	}
+
+	if constexpr (bool to_perm_check = false; true)
+	{
+		for (s32 i = 0; i < entry_count; i++)
+		{
+			const u64 type = entries[i].type;
+
+			// The whole structure contents are unknown
+			sys_mmapper.todo("sys_mmapper_allocate_shared_memory_ext(): entry type = 0x%x", type);
+
+			switch (type)
+			{
+			case 0:
+			case 1:
+			case 3:
+			{
+				break;
+			}
+			case 5:
+			{
+				to_perm_check = true;
+				break;
+			}
+			default:
+			{
+				return CELL_EPERM;
+			}
+			}
+		}
+
+		if (to_perm_check)
+		{
+			if (flags != SYS_MEMORY_PAGE_SIZE_64K || !g_ps3_process_info.debug_or_root())
+			{
+				return CELL_EPERM;
+			}
+		}
+	}
+
+	// Get "default" memory container
+	auto& dct = g_fxo->get<lv2_memory_container>();
+
+	if (!dct.take(size))
+	{
+		return CELL_ENOMEM;
+	}
+
+	if (auto error = create_lv2_shm<true>(true, ipc_key, size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, &dct))
+	{
+		dct.used -= size;
+		return error;
+	}
+
+	*mem_id = idm::last_id();
+	return CELL_OK;
+}
+
+error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu, u64 ipc_key, u64 size, u64 flags, u32 cid, vm::ptr<mmapper_unk_entry_struct0> entries, s32 entry_count, vm::ptr<u32> mem_id)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_mmapper.todo("sys_mmapper_allocate_shared_memory_from_container_ext(ipc_key=0x%x, size=0x%x, flags=0x%x, cid=0x%x, entries=*0x%x, entry_count=0x%x, mem_id=*0x%x)", ipc_key, size, flags, cid, entries,
+		entry_count, mem_id);
+
+	switch (flags & SYS_MEMORY_PAGE_SIZE_MASK)
+	{
+	case SYS_MEMORY_PAGE_SIZE_1M:
+	case 0:
+	{
+		if (size % 0x100000)
+		{
+			return CELL_EALIGN;
+		}
+
+		break;
+	}
+	case SYS_MEMORY_PAGE_SIZE_64K:
+	{
+		if (size % 0x10000)
+		{
+			return CELL_EALIGN;
+		}
+
+		break;
+	}
+	default:
+	{
+		return CELL_EINVAL;
+	}
+	}
+
+	if (flags & ~SYS_MEMORY_PAGE_SIZE_MASK)
+	{
+		return CELL_EINVAL;
+	}
+
+	if (entry_count <= 0 || entry_count > 0x10)
+	{
+		return CELL_EINVAL;
+	}
+
+	if constexpr (bool to_perm_check = false; true)
+	{
+		for (s32 i = 0; i < entry_count; i++)
+		{
+			const u64 type = entries[i].type;
+
+			sys_mmapper.todo("sys_mmapper_allocate_shared_memory_from_container_ext(): entry type = 0x%x", type);
+
+			switch (type)
+			{
+			case 0:
+			case 1:
+			case 3:
+			{
+				break;
+			}
+			case 5:
+			{
+				to_perm_check = true;
+				break;
+			}
+			default:
+			{
+				return CELL_EPERM;
+			}
+			}
+		}
+
+		if (to_perm_check)
+		{
+			if (flags != SYS_MEMORY_PAGE_SIZE_64K || !g_ps3_process_info.debug_or_root())
+			{
+				return CELL_EPERM;
+			}
+		}
+	}
+
+	const auto ct = idm::get<lv2_memory_container>(cid, [&](lv2_memory_container& ct) -> CellError
+	{
+		// Try to get "physical memory"
+		if (!ct.take(size))
+		{
+			return CELL_ENOMEM;
+		}
+
+		return {};
+	});
+
+	if (!ct)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (ct.ret)
+	{
+		return ct.ret;
+	}
+
+	if (auto error = create_lv2_shm<true>(true, ipc_key, size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, ct.ptr.get()))
+	{
+		ct->used -= size;
+		return error;
+	}
+
+	*mem_id = idm::last_id();
+	return CELL_OK;
+}
+
+error_code sys_mmapper_change_address_access_right(ppu_thread& ppu, u32 addr, u64 flags)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_mmapper.todo("sys_mmapper_change_address_access_right(addr=0x%x, flags=0x%x)", addr, flags);
 
 	return CELL_OK;
 }
 
-error_code sys_mmapper_change_address_access_right(u32 addr, u64 flags)
+error_code sys_mmapper_free_address(ppu_thread& ppu, u32 addr)
 {
-	sys_mmapper.todo("sys_mmapper_change_address_access_right(addr=0x%x, flags=0x%llx)", addr, flags);
+	ppu.state += cpu_flag::wait;
 
-	return CELL_OK;
-}
+	sys_mmapper.warning("sys_mmapper_free_address(addr=0x%x)", addr);
 
-error_code sys_mmapper_free_address(u32 addr)
-{
-	sys_mmapper.error("sys_mmapper_free_address(addr=0x%x)", addr);
+	if (addr < 0x20000000 || addr >= 0xC0000000)
+	{
+		return {CELL_EINVAL, addr};
+	}
 
 	// If page fault notify exists and an address in this area is faulted, we can't free the memory.
-	auto pf_events = fxm::get_always<page_fault_event_entries>();
-	semaphore_lock pf_lock(pf_events->pf_mutex);
+	auto& pf_events = g_fxo->get<page_fault_event_entries>();
+	std::lock_guard pf_lock(pf_events.pf_mutex);
 
-	for (const auto& ev : pf_events->events)
+	for (const auto& ev : pf_events.events)
 	{
 		auto mem = vm::get(vm::any, addr);
-		if (mem && addr <= ev.fault_addr && ev.fault_addr <= addr + mem->size - 1)
+		if (mem && addr <= ev.second && ev.second <= addr + mem->size - 1)
 		{
 			return CELL_EBUSY;
 		}
@@ -200,40 +483,44 @@ error_code sys_mmapper_free_address(u32 addr)
 
 	if (!area)
 	{
-		return CELL_EINVAL;
+		return {CELL_EINVAL, addr};
 	}
 
-	if (!area.unique())
+	if (area.use_count() != 1)
 	{
 		return CELL_EBUSY;
 	}
 
 	// If a memory block is freed, remove it from page notification table.
-	auto pf_entries = fxm::get_always<page_fault_notification_entries>();
-	auto ind_to_remove = pf_entries->entries.begin();
-	for (; ind_to_remove != pf_entries->entries.end(); ++ind_to_remove)
+	auto& pf_entries = g_fxo->get<page_fault_notification_entries>();
+	std::lock_guard lock(pf_entries.mutex);
+
+	auto ind_to_remove = pf_entries.entries.begin();
+	for (; ind_to_remove != pf_entries.entries.end(); ++ind_to_remove)
 	{
 		if (addr == ind_to_remove->start_addr)
 		{
 			break;
 		}
 	}
-	if (ind_to_remove != pf_entries->entries.end())
+	if (ind_to_remove != pf_entries.entries.end())
 	{
-		pf_entries->entries.erase(ind_to_remove);
+		pf_entries.entries.erase(ind_to_remove);
 	}
 
 	return CELL_OK;
 }
 
-error_code sys_mmapper_free_shared_memory(u32 mem_id)
+error_code sys_mmapper_free_shared_memory(ppu_thread& ppu, u32 mem_id)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_mmapper.warning("sys_mmapper_free_shared_memory(mem_id=0x%x)", mem_id);
 
 	// Conditionally remove memory ID
 	const auto mem = idm::withdraw<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
-		if (!mem.addr.compare_and_swap_test(0, -1))
+		if (mem.counter)
 		{
 			return CELL_EBUSY;
 		}
@@ -257,120 +544,165 @@ error_code sys_mmapper_free_shared_memory(u32 mem_id)
 	return CELL_OK;
 }
 
-error_code sys_mmapper_map_shared_memory(u32 addr, u32 mem_id, u64 flags)
+error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, u64 flags)
 {
-	sys_mmapper.warning("sys_mmapper_map_shared_memory(addr=0x%x, mem_id=0x%x, flags=0x%llx)", addr, mem_id, flags);
+	ppu.state += cpu_flag::wait;
+
+	sys_mmapper.warning("sys_mmapper_map_shared_memory(addr=0x%x, mem_id=0x%x, flags=0x%x)", addr, mem_id, flags);
 
 	const auto area = vm::get(vm::any, addr);
 
-	if (!area || addr < 0x50000000 || addr >= 0xC0000000)
+	if (!area || addr < 0x20000000 || addr >= 0xC0000000)
 	{
 		return CELL_EINVAL;
 	}
 
-	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id);
-
-	if (!mem)
+	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
-		return CELL_ESRCH;
-	}
+		const u32 page_alignment = area->flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000;
 
-	if (addr % mem->align)
-	{
-		return CELL_EALIGN;
-	}
-
-	if (const u32 old_addr = mem->addr.compare_and_swap(0, -1))
-	{
-		sys_mmapper.warning("sys_mmapper_map_shared_memory(): Already mapped (mem_id=0x%x, addr=0x%x)", mem_id, old_addr);
-		return CELL_OK;
-	}
-
-	if (!area->falloc(addr, mem->size, mem->data.data()))
-	{
-		mem->addr = 0;
-		return CELL_EBUSY;
-	}
-
-	mem->addr = addr;
-	return CELL_OK;
-}
-
-error_code sys_mmapper_search_and_map(u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr)
-{
-	sys_mmapper.warning("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%llx, alloc_addr=*0x%x)", start_addr, mem_id, flags, alloc_addr);
-
-	const auto area = vm::get(vm::any, start_addr);
-
-	if (!area || start_addr < 0x50000000 || start_addr >= 0xC0000000)
-	{
-		return CELL_EINVAL;
-	}
-
-	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id);
-
-	if (!mem)
-	{
-		return CELL_ESRCH;
-	}
-
-	if (const u32 old_addr = mem->addr.compare_and_swap(0, -1))
-	{
-		sys_mmapper.warning("sys_mmapper_search_and_map(): Already mapped (mem_id=0x%x, addr=0x%x)", mem_id, old_addr);
-		return CELL_OK;
-	}
-
-	const u32 addr = area->alloc(mem->size, mem->align, mem->data.data());
-
-	if (!addr)
-	{
-		mem->addr = 0;
-		return CELL_ENOMEM;
-	}
-
-	*alloc_addr = mem->addr = addr;
-	return CELL_OK;
-}
-
-error_code sys_mmapper_unmap_shared_memory(u32 addr, vm::ptr<u32> mem_id)
-{
-	sys_mmapper.warning("sys_mmapper_unmap_shared_memory(addr=0x%x, mem_id=*0x%x)", addr, mem_id);
-
-	const auto area = vm::get(vm::any, addr);
-
-	if (!area || addr < 0x50000000 || addr >= 0xC0000000)
-	{
-		return CELL_EINVAL;
-	}
-
-	const auto mem = idm::select<lv2_obj, lv2_memory>([&](u32 id, lv2_memory& mem)
-	{
-		if (mem.addr == addr)
+		if (mem.align < page_alignment)
 		{
-			*mem_id = id;
-			return true;
+			return CELL_EINVAL;
 		}
 
-		return false;
+		if (addr % page_alignment)
+		{
+			return CELL_EALIGN;
+		}
+
+		mem.counter++;
+		return {};
 	});
 
 	if (!mem)
 	{
-		return CELL_EINVAL;
+		return CELL_ESRCH;
 	}
 
-	verify(HERE), area->dealloc(addr, mem->data.data()), mem->addr.exchange(0) == addr;
+	if (mem.ret)
+	{
+		return mem.ret;
+	}
+
+	if (!area->falloc(addr, mem->size, &mem->shm, mem->align == 0x10000 ? SYS_MEMORY_PAGE_SIZE_64K : SYS_MEMORY_PAGE_SIZE_1M))
+	{
+		mem->counter--;
+		return CELL_EBUSY;
+	}
+
+	vm::lock_sudo(addr, mem->size);
 	return CELL_OK;
 }
 
-error_code sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 event_queue_id)
+error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_id, u64 flags, vm::ptr<u32> alloc_addr)
 {
+	ppu.state += cpu_flag::wait;
+
+	sys_mmapper.warning("sys_mmapper_search_and_map(start_addr=0x%x, mem_id=0x%x, flags=0x%x, alloc_addr=*0x%x)", start_addr, mem_id, flags, alloc_addr);
+
+	const auto area = vm::get(vm::any, start_addr);
+
+	if (!area || start_addr != area->addr || start_addr < 0x20000000 || start_addr >= 0xC0000000)
+	{
+		return {CELL_EINVAL, start_addr};
+	}
+
+	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
+	{
+		const u32 page_alignment = area->flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000;
+
+		if (mem.align < page_alignment)
+		{
+			return CELL_EALIGN;
+		}
+
+		mem.counter++;
+		return {};
+	});
+
+	if (!mem)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (mem.ret)
+	{
+		return mem.ret;
+	}
+
+	const u32 addr = area->alloc(mem->size, &mem->shm, mem->align, mem->align == 0x10000 ? SYS_MEMORY_PAGE_SIZE_64K : SYS_MEMORY_PAGE_SIZE_1M);
+
+	if (!addr)
+	{
+		mem->counter--;
+		return CELL_ENOMEM;
+	}
+
+	vm::lock_sudo(addr, mem->size);
+	*alloc_addr = addr;
+	return CELL_OK;
+}
+
+error_code sys_mmapper_unmap_shared_memory(ppu_thread& ppu, u32 addr, vm::ptr<u32> mem_id)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_mmapper.warning("sys_mmapper_unmap_shared_memory(addr=0x%x, mem_id=*0x%x)", addr, mem_id);
+
+	const auto area = vm::get(vm::any, addr);
+
+	if (!area || addr < 0x20000000 || addr >= 0xC0000000)
+	{
+		return {CELL_EINVAL, addr};
+	}
+
+	const auto shm = area->peek(addr);
+
+	if (!shm.second)
+	{
+		return {CELL_EINVAL, addr};
+	}
+
+	const auto mem = idm::select<lv2_obj, lv2_memory>([&](u32 id, lv2_memory& mem) -> u32
+	{
+		if (mem.shm.get() == shm.second.get())
+		{
+			return id;
+		}
+
+		return 0;
+	});
+
+	if (!mem)
+	{
+		return {CELL_EINVAL, addr};
+	}
+
+	if (!area->dealloc(addr, &shm.second))
+	{
+		return {CELL_EINVAL, addr};
+	}
+
+	// Write out the ID
+	*mem_id = mem.ret;
+
+	// Acknowledge
+	mem->counter--;
+
+	return CELL_OK;
+}
+
+error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start_addr, u32 event_queue_id)
+{
+	ppu.state += cpu_flag::wait;
+
 	sys_mmapper.warning("sys_mmapper_enable_page_fault_notification(start_addr=0x%x, event_queue_id=0x%x)", start_addr, event_queue_id);
 
 	auto mem = vm::get(vm::any, start_addr);
-	if (!mem)
+	if (!mem || start_addr != mem->addr || start_addr < 0x20000000 || start_addr >= 0xC0000000)
 	{
-		return CELL_EINVAL;
+		return {CELL_EINVAL, start_addr};
 	}
 
 	// TODO: Check memory region's flags to make sure the memory can be used for page faults.
@@ -382,28 +714,63 @@ error_code sys_mmapper_enable_page_fault_notification(u32 start_addr, u32 event_
 		return CELL_ESRCH;
 	}
 
-	auto pf_entries = fxm::get_always<page_fault_notification_entries>();
+	vm::var<u32> port_id(0);
+	error_code res = sys_event_port_create(ppu, port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
+	sys_event_port_connect_local(ppu, *port_id, event_queue_id);
 
-	// We're not allowed to have the same queue registered more than once for page faults.
-	for (const auto& entry : pf_entries->entries)
+	if (res + 0u == CELL_EAGAIN)
 	{
-		if (entry.event_queue_id == event_queue_id)
-		{
-			return CELL_ESRCH;
-		}
-	}
-
-	vm::ptr<u32> port_id = vm::make_var<u32>(0);
-	error_code res = sys_event_port_create(port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
-	sys_event_port_connect_local(port_id->value(), event_queue_id);
-
-	if (res == CELL_EAGAIN)
-	{ // Not enough system resources.
+		// Not enough system resources.
 		return CELL_EAGAIN;
 	}
 
+	auto& pf_entries = g_fxo->get<page_fault_notification_entries>();
+	std::unique_lock lock(pf_entries.mutex);
+
+	// Return error code if page fault notifications are already enabled
+	for (const auto& entry : pf_entries.entries)
+	{
+		if (entry.start_addr == start_addr)
+		{
+			lock.unlock();
+			sys_event_port_disconnect(ppu, *port_id);
+			sys_event_port_destroy(ppu, *port_id);
+			return CELL_EBUSY;
+		}
+	}
+
 	page_fault_notification_entry entry{ start_addr, event_queue_id, port_id->value() };
-	pf_entries->entries.emplace_back(entry);
+	pf_entries.entries.emplace_back(entry);
+
+	return CELL_OK;
+}
+
+error_code mmapper_thread_recover_page_fault(cpu_thread* cpu)
+{
+	// We can only wake a thread if it is being suspended for a page fault.
+	auto& pf_events = g_fxo->get<page_fault_event_entries>();
+	{
+		std::lock_guard pf_lock(pf_events.pf_mutex);
+		const auto pf_event_ind = pf_events.events.find(cpu);
+
+		if (pf_event_ind == pf_events.events.end())
+		{
+			// if not found...
+			return CELL_EINVAL;
+		}
+
+		pf_events.events.erase(pf_event_ind);
+	}
+
+	if (cpu->id_type() == 1u)
+	{
+		lv2_obj::awake(cpu);
+	}
+	else
+	{
+		cpu->state += cpu_flag::signal;
+		cpu->state.notify_one(cpu_flag::signal);
+	}
 
 	return CELL_OK;
 }

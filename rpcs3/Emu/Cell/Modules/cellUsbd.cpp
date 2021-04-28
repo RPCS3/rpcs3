@@ -1,169 +1,211 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "cellUsbd.h"
 
-logs::channel cellUsbd("cellUsbd");
+LOG_CHANNEL(cellUsbd);
 
-s32 cellUsbdInit()
+template<>
+void fmt_class_string<CellUsbdError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_USBD_ERROR_NOT_INITIALIZED);
+			STR_CASE(CELL_USBD_ERROR_ALREADY_INITIALIZED);
+			STR_CASE(CELL_USBD_ERROR_NO_MEMORY);
+			STR_CASE(CELL_USBD_ERROR_INVALID_PARAM);
+			STR_CASE(CELL_USBD_ERROR_INVALID_TRANSFER_TYPE);
+			STR_CASE(CELL_USBD_ERROR_LDD_ALREADY_REGISTERED);
+			STR_CASE(CELL_USBD_ERROR_LDD_NOT_ALLOCATED);
+			STR_CASE(CELL_USBD_ERROR_LDD_NOT_RELEASED);
+			STR_CASE(CELL_USBD_ERROR_LDD_NOT_FOUND);
+			STR_CASE(CELL_USBD_ERROR_DEVICE_NOT_FOUND);
+			STR_CASE(CELL_USBD_ERROR_PIPE_NOT_ALLOCATED);
+			STR_CASE(CELL_USBD_ERROR_PIPE_NOT_RELEASED);
+			STR_CASE(CELL_USBD_ERROR_PIPE_NOT_FOUND);
+			STR_CASE(CELL_USBD_ERROR_IOREQ_NOT_ALLOCATED);
+			STR_CASE(CELL_USBD_ERROR_IOREQ_NOT_RELEASED);
+			STR_CASE(CELL_USBD_ERROR_IOREQ_NOT_FOUND);
+			STR_CASE(CELL_USBD_ERROR_CANNOT_GET_DESCRIPTOR);
+			STR_CASE(CELL_USBD_ERROR_FATAL);
+		}
+
+		return unknown;
+	});
+}
+
+error_code cellUsbdInit()
 {
 	cellUsbd.warning("cellUsbdInit()");
 
 	return CELL_OK;
 }
 
-s32 cellUsbdEnd()
+error_code cellUsbdEnd()
 {
 	cellUsbd.warning("cellUsbdEnd()");
 
 	return CELL_OK;
 }
 
-s32 cellUsbdSetThreadPriority()
+error_code cellUsbdSetThreadPriority()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdSetThreadPriority2()
+error_code cellUsbdSetThreadPriority2()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdGetThreadPriority()
+error_code cellUsbdGetThreadPriority()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdRegisterLdd()
+error_code cellUsbdRegisterLdd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdRegisterCompositeLdd()
+error_code cellUsbdRegisterCompositeLdd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdRegisterExtraLdd()
+error_code cellUsbdRegisterExtraLdd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdRegisterExtraLdd2()
+error_code cellUsbdRegisterExtraLdd2()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdUnregisterLdd()
+error_code cellUsbdUnregisterLdd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdUnregisterCompositeLdd()
+error_code cellUsbdUnregisterCompositeLdd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdUnregisterExtraLdd()
+error_code cellUsbdUnregisterExtraLdd()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdOpenPipe()
+error_code cellUsbdOpenPipe()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdClosePipe()
+error_code cellUsbdClosePipe()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdControlTransfer()
+error_code cellUsbdControlTransfer()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdBulkTransfer()
+error_code cellUsbdBulkTransfer()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdInterruptTransfer()
+error_code cellUsbdInterruptTransfer()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdIsochronousTransfer()
+error_code cellUsbdIsochronousTransfer()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdHSIsochronousTransfer()
+error_code cellUsbdHSIsochronousTransfer()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdScanStaticDescriptor()
+error_code cellUsbdScanStaticDescriptor()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdGetDeviceSpeed()
+error_code cellUsbdGetDeviceSpeed()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdGetDeviceLocation()
+error_code cellUsbdGetDeviceLocation()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdSetPrivateData()
+error_code cellUsbdSetPrivateData()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdGetPrivateData()
+error_code cellUsbdGetPrivateData()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdAllocateMemory()
+error_code cellUsbdAllocateMemory()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdFreeMemory()
+error_code cellUsbdAllocateMemoryFromContainer()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
 }
 
-s32 cellUsbdResetDevice()
+error_code cellUsbdAllocateSharedMemory()
+{
+	UNIMPLEMENTED_FUNC(cellUsbd);
+	return CELL_OK;
+}
+
+error_code cellUsbdFreeMemory()
+{
+	UNIMPLEMENTED_FUNC(cellUsbd);
+	return CELL_OK;
+}
+
+error_code cellUsbdResetDevice()
 {
 	UNIMPLEMENTED_FUNC(cellUsbd);
 	return CELL_OK;
@@ -204,6 +246,8 @@ DECLARE(ppu_module_manager::cellUsbd)("cellUsbd", []()
 	REG_FUNC(cellUsbd, cellUsbdGetPrivateData);
 
 	REG_FUNC(cellUsbd, cellUsbdAllocateMemory);
+	REG_FUNC(cellUsbd, cellUsbdAllocateMemoryFromContainer);
+	REG_FUNC(cellUsbd, cellUsbdAllocateSharedMemory);
 	REG_FUNC(cellUsbd, cellUsbdFreeMemory);
 
 	REG_FUNC(cellUsbd, cellUsbdResetDevice);

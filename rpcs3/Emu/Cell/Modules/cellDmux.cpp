@@ -7,9 +7,27 @@
 #include "cellPamf.h"
 #include "cellDmux.h"
 
-#include <thread>
+#include "util/asm.hpp"
 
-logs::channel cellDmux("cellDmux");
+LOG_CHANNEL(cellDmux);
+
+template <>
+void fmt_class_string<CellDmuxError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](CellDmuxError value)
+	{
+		switch (value)
+		{
+			STR_CASE(CELL_DMUX_ERROR_ARG);
+			STR_CASE(CELL_DMUX_ERROR_SEQ);
+			STR_CASE(CELL_DMUX_ERROR_BUSY);
+			STR_CASE(CELL_DMUX_ERROR_EMPTY);
+			STR_CASE(CELL_DMUX_ERROR_FATAL);
+		}
+
+		return unknown;
+	});
+}
 
 /* Demuxer Thread Classes */
 
@@ -39,7 +57,7 @@ struct DemuxerStream
 	{
 		if (sizeof(T) > size) return false;
 
-		out = vm::_ref<T>(addr);
+		std::memcpy(&out, vm::base(addr), sizeof(T));
 		addr += sizeof(T);
 		size -= sizeof(T);
 
@@ -51,7 +69,7 @@ struct DemuxerStream
 	{
 		if (sizeof(T) + shift > size) return false;
 
-		out = vm::_ref<T>(addr + shift);
+		std::memcpy(&out, vm::base(addr + shift), sizeof(T));
 		return true;
 	}
 
@@ -68,12 +86,12 @@ struct DemuxerStream
 
 	u64 get_ts(u8 c)
 	{
-		u8 v[4]; get((u32&)v); 
+		u8 v[4]; get(v);
 		return
-			(((u64)c & 0x0e) << 29) | 
-			(((u64)v[0]) << 21) |
-			(((u64)v[1] & 0x7e) << 15) |
-			(((u64)v[2]) << 7) | ((u64)v[3] >> 1);
+			((u64{c} & 0x0e) << 29) |
+			((u64{v[0]}) << 21) |
+			((u64{v[1]} & 0x7e) << 15) |
+			((u64{v[2]}) << 7) | (u64{v[3]} >> 1);
 	}
 };
 
@@ -135,9 +153,9 @@ class ElementaryStream
 	std::mutex m_mutex;
 
 	squeue_t<u32> entries; // AU starting addresses
-	u32 put_count; // number of AU written
-	u32 got_count; // number of AU obtained by GetAu(Ex)
-	u32 released; // number of AU released
+	u32 put_count = 0; // number of AU written
+	u32 got_count = 0; // number of AU obtained by GetAu(Ex)
+	u32 released = 0; // number of AU released
 
 	u32 put; // AU that is being written now
 
@@ -163,9 +181,9 @@ public:
 	const u32 spec; //addr
 
 	std::vector<u8> raw_data; // demultiplexed data stream (managed by demuxer thread)
-	size_t raw_pos; // should be <= raw_data.size()
-	u64 last_dts;
-	u64 last_pts;
+	usz raw_pos = 0; // should be <= raw_data.size()
+	u64 last_dts = CODEC_TS_INVALID;
+	u64 last_pts = CODEC_TS_INVALID;
 
 	void push(DemuxerStream& stream, u32 size); // called by demuxer thread (not multithread-safe)
 
@@ -188,17 +206,13 @@ public:
 	const u32 memSize;
 	const vm::ptr<CellDmuxCbMsg> cbFunc;
 	const u32 cbArg;
-	volatile bool is_finished;
-	volatile bool is_closed;
-	atomic_t<bool> is_running;
-	atomic_t<bool> is_working;
+	volatile bool is_finished = false;
+	volatile bool is_closed = false;
+	atomic_t<bool> is_running = false;
+	atomic_t<bool> is_working = false;
 
 	Demuxer(u32 addr, u32 size, vm::ptr<CellDmuxCbMsg> func, u32 arg)
-		: ppu_thread("HLE Demuxer")
-		, is_finished(false)
-		, is_closed(false)
-		, is_running(false)
-		, is_working(false)
+		: ppu_thread({}, "", 0)
 		, memAddr(addr)
 		, memSize(size)
 		, cbFunc(func)
@@ -206,17 +220,17 @@ public:
 	{
 	}
 
-	virtual void cpu_task() override
+	void non_task()
 	{
 		DemuxerTask task;
 		DemuxerStream stream = {};
-		ElementaryStream* esALL[96]; memset(esALL, 0, sizeof(esALL));
+		ElementaryStream* esALL[96]{};
 		ElementaryStream** esAVC = &esALL[0]; // AVC (max 16 minus M2V count)
-		ElementaryStream** esM2V = &esALL[16]; // M2V (max 16 minus AVC count)
-		ElementaryStream** esDATA = &esALL[32]; // user data (max 16)
+		//ElementaryStream** esM2V = &esALL[16]; // M2V (max 16 minus AVC count)
+		//ElementaryStream** esDATA = &esALL[32]; // user data (max 16)
 		ElementaryStream** esATX = &esALL[48]; // ATRAC3+ (max 16)
-		ElementaryStream** esAC3 = &esALL[64]; // AC3 (max 16)
-		ElementaryStream** esPCM = &esALL[80]; // LPCM (max 16)
+		//ElementaryStream** esAC3 = &esALL[64]; // AC3 (max 16)
+		//ElementaryStream** esPCM = &esALL[80]; // LPCM (max 16)
 
 		u32 cb_add = 0;
 
@@ -226,14 +240,14 @@ public:
 			{
 				break;
 			}
-			
+
 			if (!job.try_peek(task) && is_running && stream.addr)
 			{
 				// default task (demuxing) (if there is no other work)
 				be_t<u32> code;
 				be_t<u16> len;
 
-				if (!stream.peek(code)) 
+				if (!stream.peek(code))
 				{
 					// demuxing finished
 					is_running = false;
@@ -248,17 +262,17 @@ public:
 					is_working = false;
 
 					stream = {};
-					
+
 					continue;
 				}
-				
+
 				switch (code)
 				{
 				case PACK_START_CODE:
 				{
 					if (!stream.check(14))
 					{
-						fmt::throw_exception("End of stream (PACK_START_CODE)" HERE);
+						fmt::throw_exception("End of stream (PACK_START_CODE)");
 					}
 					stream.skip(14);
 					break;
@@ -268,7 +282,7 @@ public:
 				{
 					if (!stream.check(18))
 					{
-						fmt::throw_exception("End of stream (SYSTEM_HEADER_START_CODE)" HERE);
+						fmt::throw_exception("End of stream (SYSTEM_HEADER_START_CODE)");
 					}
 					stream.skip(18);
 					break;
@@ -278,14 +292,14 @@ public:
 				{
 					if (!stream.check(6))
 					{
-						fmt::throw_exception("End of stream (PADDING_STREAM)" HERE);
+						fmt::throw_exception("End of stream (PADDING_STREAM)");
 					}
 					stream.skip(4);
 					stream.get(len);
 
 					if (!stream.check(len))
 					{
-						fmt::throw_exception("End of stream (PADDING_STREAM, len=%d)" HERE, len);
+						fmt::throw_exception("End of stream (PADDING_STREAM, len=%d)", len);
 					}
 					stream.skip(len);
 					break;
@@ -295,7 +309,7 @@ public:
 				{
 					if (!stream.check(6))
 					{
-						fmt::throw_exception("End of stream (PRIVATE_STREAM_2)" HERE);
+						fmt::throw_exception("End of stream (PRIVATE_STREAM_2)");
 					}
 					stream.skip(4);
 					stream.get(len);
@@ -304,7 +318,7 @@ public:
 
 					if (!stream.check(len))
 					{
-						fmt::throw_exception("End of stream (PRIVATE_STREAM_2, len=%d)" HERE, len);
+						fmt::throw_exception("End of stream (PRIVATE_STREAM_2, len=%d)", len);
 					}
 					stream.skip(len);
 					break;
@@ -317,32 +331,32 @@ public:
 
 					if (!stream.check(6))
 					{
-						fmt::throw_exception("End of stream (PRIVATE_STREAM_1)" HERE);
+						fmt::throw_exception("End of stream (PRIVATE_STREAM_1)");
 					}
 					stream.skip(4);
 					stream.get(len);
 
 					if (!stream.check(len))
 					{
-						fmt::throw_exception("End of stream (PRIVATE_STREAM_1, len=%d)" HERE, len);
+						fmt::throw_exception("End of stream (PRIVATE_STREAM_1, len=%d)", len);
 					}
 
 					const PesHeader pes(stream);
 					if (!pes.is_ok)
 					{
-						fmt::throw_exception("PesHeader error (PRIVATE_STREAM_1, len=%d)" HERE, len);
+						fmt::throw_exception("PesHeader error (PRIVATE_STREAM_1, len=%d)", len);
 					}
 
 					if (len < pes.size + 4)
 					{
-						fmt::throw_exception("End of block (PRIVATE_STREAM_1, PesHeader + fid_minor, len=%d)" HERE, len);
+						fmt::throw_exception("End of block (PRIVATE_STREAM_1, PesHeader + fid_minor, len=%d)", len);
 					}
 					len -= pes.size + 4;
-					
+
 					u8 fid_minor;
 					if (!stream.get(fid_minor))
 					{
-						fmt::throw_exception("End of stream (PRIVATE_STREAM1, fid_minor)" HERE);
+						fmt::throw_exception("End of stream (PRIVATE_STREAM1, fid_minor)");
 					}
 
 					const u32 ch = fid_minor % 16;
@@ -358,7 +372,7 @@ public:
 
 						if (len < 3 || !stream.check(3))
 						{
-							fmt::throw_exception("End of block (ATX, unknown header, len=%d)" HERE, len);
+							fmt::throw_exception("End of block (ATX, unknown header, len=%d)", len);
 						}
 						len -= 3;
 						stream.skip(3);
@@ -380,15 +394,15 @@ public:
 
 							if (data[0] != 0x0f || data[1] != 0xd0)
 							{
-								fmt::throw_exception("ATX: 0x0fd0 header not found (ats=0x%llx)" HERE, *(be_t<u64>*)data);
+								fmt::throw_exception("ATX: 0x0fd0 header not found (ats=0x%llx)", *reinterpret_cast<be_t<u64>*>(data));
 							}
 
-							u32 frame_size = ((((u32)data[2] & 0x3) << 8) | (u32)data[3]) * 8 + 8;
+							u32 frame_size = (((u32{data[2]} & 0x3) << 8) | u32{data[3]}) * 8 + 8;
 
 							if (size < frame_size + 8) break; // skip non-complete AU
 
 							if (es.isfull(frame_size + 8)) break; // skip if cannot push AU
-							
+
 							es.push_au(frame_size + 8, es.last_dts, es.last_pts, stream.userdata, false /* TODO: set correct value */, 0);
 
 							//cellDmux.notice("ATX AU pushed (ats=0x%llx, frame_size=%d)", *(be_t<u64>*)data, frame_size);
@@ -418,25 +432,25 @@ public:
 
 					if (!stream.check(6))
 					{
-						fmt::throw_exception("End of stream (video, code=0x%x)" HERE, code);
+						fmt::throw_exception("End of stream (video, code=0x%x)", code);
 					}
 					stream.skip(4);
 					stream.get(len);
 
 					if (!stream.check(len))
 					{
-						fmt::throw_exception("End of stream (video, code=0x%x, len=%d)" HERE, code, len);
+						fmt::throw_exception("End of stream (video, code=0x%x, len=%d)", code, len);
 					}
 
 					const PesHeader pes(stream);
 					if (!pes.is_ok)
 					{
-						fmt::throw_exception("PesHeader error (video, code=0x%x, len=%d)" HERE, code, len);
+						fmt::throw_exception("PesHeader error (video, code=0x%x, len=%d)", code, len);
 					}
 
 					if (len < pes.size + 3)
 					{
-						fmt::throw_exception("End of block (video, code=0x%x, PesHeader)" HERE, code);
+						fmt::throw_exception("End of block (video, code=0x%x, PesHeader)", code);
 					}
 					len -= pes.size + 3;
 
@@ -445,7 +459,7 @@ public:
 					{
 						ElementaryStream& es = *esAVC[ch];
 
-						const u32 old_size = (u32)es.raw_data.size();
+						const u32 old_size = ::size32(es.raw_data);
 						if (es.isfull(old_size))
 						{
 							stream = backup;
@@ -465,7 +479,7 @@ public:
 							es.cbFunc(*this, id, es.id, esMsg, es.cbArg);
 							lv2_obj::sleep(*this);
 						}
-						
+
 						if (pes.has_ts)
 						{
 							// preserve dts/pts for next AU
@@ -490,7 +504,7 @@ public:
 				{
 					if ((code & PACKET_START_CODE_MASK) == PACKET_START_CODE_PREFIX)
 					{
-						fmt::throw_exception("Unknown code found (0x%x)" HERE, code);
+						fmt::throw_exception("Unknown code found (0x%x)", code);
 					}
 
 					// search
@@ -514,7 +528,7 @@ public:
 				if (task.stream.discontinuity)
 				{
 					cellDmux.warning("dmuxSetStream (beginning)");
-					for (u32 i = 0; i < sizeof(esALL) / sizeof(esALL[0]); i++)
+					for (u32 i = 0; i < std::size(esALL); i++)
 					{
 						if (esALL[i])
 						{
@@ -524,7 +538,7 @@ public:
 				}
 
 				stream = task.stream;
-				//LOG_NOTICE(HLE, "*** stream updated(addr=0x%x, size=0x%x, discont=%d, userdata=0x%llx)",
+				//cellDmux.notice("*** stream updated(addr=0x%x, size=0x%x, discont=%d, userdata=0x%llx)",
 					//stream.addr, stream.size, stream.discontinuity, stream.userdata);
 				break;
 			}
@@ -581,7 +595,7 @@ public:
 				//}
 				//else
 				{
-					fmt::throw_exception("dmuxEnableEs: unknown filter (0x%x, 0x%x, 0x%x, 0x%x)" HERE, es.fidMajor, es.fidMinor, es.sup1, es.sup2);
+					fmt::throw_exception("dmuxEnableEs: unknown filter (0x%x, 0x%x, 0x%x, 0x%x)", es.fidMajor, es.fidMinor, es.sup1, es.sup2);
 				}
 				es.dmux = this;
 				break;
@@ -592,10 +606,10 @@ public:
 				ElementaryStream& es = *task.es.es_ptr;
 				if (es.dmux != this)
 				{
-					fmt::throw_exception("dmuxDisableEs: invalid elementary stream" HERE);
+					fmt::throw_exception("dmuxDisableEs: invalid elementary stream");
 				}
 
-				for (u32 i = 0; i < sizeof(esALL) / sizeof(esALL[0]); i++)
+				for (u32 i = 0; i < std::size(esALL); i++)
 				{
 					if (esALL[i] == &es)
 					{
@@ -611,7 +625,7 @@ public:
 			{
 				ElementaryStream& es = *task.es.es_ptr;
 
-				const u32 old_size = (u32)es.raw_data.size();
+				const u32 old_size = ::size32(es.raw_data);
 				if (old_size && (es.fidMajor & -0x10) == 0xe0)
 				{
 					// TODO (it's only for AVC, some ATX data may be lost)
@@ -631,10 +645,10 @@ public:
 					es.cbFunc(*this, id, es.id, esMsg, es.cbArg);
 					lv2_obj::sleep(*this);
 				}
-				
-				if (es.raw_data.size())
+
+				if (!es.raw_data.empty())
 				{
-					cellDmux.error("dmuxFlushEs: 0x%x bytes lost (es_id=%d)", (u32)es.raw_data.size(), es.id);
+					cellDmux.error("dmuxFlushEs: 0x%x bytes lost (es_id=%d)", ::size32(es.raw_data), es.id);
 				}
 
 				// callback
@@ -651,7 +665,7 @@ public:
 				task.es.es_ptr->reset();
 				break;
 			}
-			
+
 			case dmuxClose:
 			{
 				break;
@@ -659,8 +673,8 @@ public:
 
 			default:
 			{
-				fmt::throw_exception("Demuxer thread error: unknown task (0x%x)" HERE, (u32)task.type);
-			}	
+				fmt::throw_exception("Demuxer thread error: unknown task (0x%x)", +task.type);
+			}
 			}
 		}
 
@@ -679,17 +693,17 @@ PesHeader::PesHeader(DemuxerStream& stream)
 	u16 header;
 	if (!stream.get(header))
 	{
-		fmt::throw_exception("End of stream (header)" HERE);
+		fmt::throw_exception("End of stream (header)");
 	}
 	if (!stream.get(size))
 	{
-		fmt::throw_exception("End of stream (size)" HERE);
+		fmt::throw_exception("End of stream (size)");
 	}
 	if (!stream.check(size))
 	{
-		fmt::throw_exception("End of stream (size=%d)" HERE, size);
+		fmt::throw_exception("End of stream (size=%d)", size);
 	}
-	
+
 	u8 pos = 0;
 	while (pos++ < size)
 	{
@@ -739,8 +753,9 @@ PesHeader::PesHeader(DemuxerStream& stream)
 }
 
 ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
-	: dmux(dmux)
-	, memAddr(align(addr, 128))
+	: put(utils::align(addr, 128))
+	, dmux(dmux)
+	, memAddr(utils::align(addr, 128))
 	, memSize(size - (addr - memAddr))
 	, fidMajor(fidMajor)
 	, fidMinor(fidMinor)
@@ -749,13 +764,6 @@ ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMaj
 	, cbFunc(cbFunc)
 	, cbArg(cbArg)
 	, spec(spec)
-	, put(align(addr, 128))
-	, put_count(0)
-	, got_count(0)
-	, released(0)
-	, raw_pos(0)
-	, last_dts(CODEC_TS_INVALID)
-	, last_pts(CODEC_TS_INVALID)
 {
 }
 
@@ -771,7 +779,7 @@ bool ElementaryStream::is_full(u32 space)
 		u32 first = 0;
 		if (!entries.peek(first, 0, &dmux->is_closed) || !first)
 		{
-			fmt::throw_exception("entries.peek() failed" HERE);
+			fmt::throw_exception("entries.peek() failed");
 		}
 		else if (first >= put)
 		{
@@ -794,7 +802,7 @@ bool ElementaryStream::is_full(u32 space)
 
 bool ElementaryStream::isfull(u32 space)
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
+	std::lock_guard lock(m_mutex);
 	return is_full(space);
 }
 
@@ -802,8 +810,8 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 {
 	u32 addr;
 	{
-		std::lock_guard<std::mutex> lock(m_mutex);
-		verify(HERE), !is_full(size);
+		std::lock_guard lock(m_mutex);
+		ensure(!is_full(size));
 
 		if (put + size + 128 > memAddr + memSize)
 		{
@@ -816,35 +824,35 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 		auto info = vm::ptr<CellDmuxAuInfoEx>::make(put);
 		info->auAddr = put + 128;
 		info->auSize = size;
-		info->dts.lower = (u32)(dts);
-		info->dts.upper = (u32)(dts >> 32);
-		info->pts.lower = (u32)(pts);
-		info->pts.upper = (u32)(pts >> 32);
+		info->dts.lower = static_cast<u32>(dts);
+		info->dts.upper = static_cast<u32>(dts >> 32);
+		info->pts.lower = static_cast<u32>(pts);
+		info->pts.upper = static_cast<u32>(pts >> 32);
 		info->isRap = rap;
 		info->reserved = 0;
 		info->userData = userdata;
 
-		auto spec = vm::ptr<u32>::make(put + SIZE_32(CellDmuxAuInfoEx));
+		auto spec = vm::ptr<u32>::make(put + u32{sizeof(CellDmuxAuInfoEx)});
 		*spec = specific;
 
 		auto inf = vm::ptr<CellDmuxAuInfo>::make(put + 64);
 		inf->auAddr = put + 128;
 		inf->auSize = size;
-		inf->dtsLower = (u32)(dts);
-		inf->dtsUpper = (u32)(dts >> 32);
-		inf->ptsLower = (u32)(pts);
-		inf->ptsUpper = (u32)(pts >> 32);
+		inf->dtsLower = static_cast<u32>(dts);
+		inf->dtsUpper = static_cast<u32>(dts >> 32);
+		inf->ptsLower = static_cast<u32>(pts);
+		inf->ptsUpper = static_cast<u32>(pts >> 32);
 		inf->auMaxSize = 0; // ?????
 		inf->userData = userdata;
 
 		addr = put;
 
-		put = align(put + 128 + size, 128);
+		put = utils::align(put + 128 + size, 128);
 
 		put_count++;
 	}
 
-	verify(HERE), entries.push(addr, &dmux->is_closed);
+	ensure(entries.push(addr, &dmux->is_closed));
 }
 
 void ElementaryStream::push(DemuxerStream& stream, u32 size)
@@ -860,7 +868,7 @@ void ElementaryStream::push(DemuxerStream& stream, u32 size)
 
 bool ElementaryStream::release()
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
+	std::lock_guard lock(m_mutex);
 	if (released >= put_count)
 	{
 		cellDmux.error("es::release() error: buffer is empty");
@@ -888,7 +896,7 @@ bool ElementaryStream::release()
 
 bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool update_index)
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
+	std::lock_guard lock(m_mutex);
 	if (got_count < released)
 	{
 		cellDmux.error("es::peek() error: got_count(%d) < released(%d) (put_count=%d)", got_count, released, put_count);
@@ -920,7 +928,7 @@ bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool updat
 
 void ElementaryStream::reset()
 {
-	std::lock_guard<std::mutex> lock(m_mutex);
+	std::lock_guard lock(m_mutex);
 	put = memAddr;
 	entries.clear();
 	put_count = 0;
@@ -930,14 +938,14 @@ void ElementaryStream::reset()
 	raw_pos = 0;
 }
 
-void dmuxQueryAttr(u32 info_addr /* may be 0 */, vm::ptr<CellDmuxAttr> attr)
+void dmuxQueryAttr(u32 /* info_addr, may be 0 */, vm::ptr<CellDmuxAttr> attr)
 {
 	attr->demuxerVerLower = 0x280000; // TODO: check values
 	attr->demuxerVerUpper = 0x260000;
 	attr->memSize = 0x10000; // 0x3e8e6 from ps3
 }
 
-void dmuxQueryEsAttr(u32 info /* may be 0 */, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> attr)
+void dmuxQueryEsAttr(u32 /* info, may be 0 */, vm::cptr<CellCodecEsFilterId> esFilterId, u32 /*esSpecificInfo*/, vm::ptr<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
 	{
@@ -951,7 +959,7 @@ void dmuxQueryEsAttr(u32 info /* may be 0 */, vm::cptr<CellCodecEsFilterId> esFi
 	cellDmux.warning("*** filter(0x%x, 0x%x, 0x%x, 0x%x)", esFilterId->filterIdMajor, esFilterId->filterIdMinor, esFilterId->supplementalInfo1, esFilterId->supplementalInfo2);
 }
 
-s32 cellDmuxQueryAttr(vm::cptr<CellDmuxType> type, vm::ptr<CellDmuxAttr> attr)
+error_code cellDmuxQueryAttr(vm::cptr<CellDmuxType> type, vm::ptr<CellDmuxAttr> attr)
 {
 	cellDmux.warning("cellDmuxQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
 
@@ -964,7 +972,7 @@ s32 cellDmuxQueryAttr(vm::cptr<CellDmuxType> type, vm::ptr<CellDmuxAttr> attr)
 	return CELL_OK;
 }
 
-s32 cellDmuxQueryAttr2(vm::cptr<CellDmuxType2> type2, vm::ptr<CellDmuxAttr> attr)
+error_code cellDmuxQueryAttr2(vm::cptr<CellDmuxType2> type2, vm::ptr<CellDmuxAttr> attr)
 {
 	cellDmux.warning("cellDmuxQueryAttr2(demuxerType2=*0x%x, demuxerAttr=*0x%x)", type2, attr);
 
@@ -977,7 +985,7 @@ s32 cellDmuxQueryAttr2(vm::cptr<CellDmuxType2> type2, vm::ptr<CellDmuxAttr> attr
 	return CELL_OK;
 }
 
-s32 cellDmuxOpen(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResource> res, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
+error_code cellDmuxOpen(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResource> res, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	cellDmux.warning("cellDmuxOpen(type=*0x%x, res=*0x%x, cb=*0x%x, handle=*0x%x)", type, res, cb, handle);
 
@@ -987,16 +995,10 @@ s32 cellDmuxOpen(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResource> res, vm
 	}
 
 	// TODO: check demuxerResource and demuxerCb arguments
-	auto&& dmux = idm::make_ptr<ppu_thread, Demuxer>(res->memAddr, res->memSize, cb->cbMsgFunc, cb->cbArg);
-
-	*handle = dmux->id;
-
-	dmux->run();
-
-	return CELL_OK;
+	fmt::throw_exception("cellDmux disabled, use LLE.");
 }
 
-s32 cellDmuxOpenEx(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> resEx, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
+error_code cellDmuxOpenEx(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> resEx, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	cellDmux.warning("cellDmuxOpenEx(type=*0x%x, resEx=*0x%x, cb=*0x%x, handle=*0x%x)", type, resEx, cb, handle);
 
@@ -1006,23 +1008,17 @@ s32 cellDmuxOpenEx(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> res
 	}
 
 	// TODO: check demuxerResourceEx and demuxerCb arguments
-	auto&& dmux = idm::make_ptr<ppu_thread, Demuxer>(resEx->memAddr, resEx->memSize, cb->cbMsgFunc, cb->cbArg);
-
-	*handle = dmux->id;
-
-	dmux->run();
-
-	return CELL_OK;
+	fmt::throw_exception("cellDmux disabled, use LLE.");
 }
 
-s32 cellDmuxOpenExt(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> resEx, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
+error_code cellDmuxOpenExt(vm::cptr<CellDmuxType> type, vm::cptr<CellDmuxResourceEx> resEx, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	cellDmux.warning("cellDmuxOpenExt(type=*0x%x, resEx=*0x%x, cb=*0x%x, handle=*0x%x)", type, resEx, cb, handle);
 
 	return cellDmuxOpenEx(type, resEx, cb, handle);
 }
 
-s32 cellDmuxOpen2(vm::cptr<CellDmuxType2> type2, vm::cptr<CellDmuxResource2> res2, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
+error_code cellDmuxOpen2(vm::cptr<CellDmuxType2> type2, vm::cptr<CellDmuxResource2> res2, vm::cptr<CellDmuxCb> cb, vm::ptr<u32> handle)
 {
 	cellDmux.warning("cellDmuxOpen2(type2=*0x%x, res2=*0x%x, cb=*0x%x, handle=*0x%x)", type2, res2, cb, handle);
 
@@ -1032,16 +1028,10 @@ s32 cellDmuxOpen2(vm::cptr<CellDmuxType2> type2, vm::cptr<CellDmuxResource2> res
 	}
 
 	// TODO: check demuxerType2, demuxerResource2 and demuxerCb arguments
-	auto&& dmux = idm::make_ptr<ppu_thread, Demuxer>(res2->memAddr, res2->memSize, cb->cbMsgFunc, cb->cbArg);
-
-	*handle = dmux->id;
-
-	dmux->run();
-
-	return CELL_OK;
+	fmt::throw_exception("cellDmux disabled, use LLE.");
 }
 
-s32 cellDmuxClose(u32 handle)
+error_code cellDmuxClose(u32 handle)
 {
 	cellDmux.warning("cellDmuxClose(handle=0x%x)", handle);
 
@@ -1070,7 +1060,7 @@ s32 cellDmuxClose(u32 handle)
 	return CELL_OK;
 }
 
-s32 cellDmuxSetStream(u32 handle, u32 streamAddress, u32 streamSize, b8 discontinuity, u64 userData)
+error_code cellDmuxSetStream(u32 handle, u32 streamAddress, u32 streamSize, b8 discontinuity, u64 userData)
 {
 	cellDmux.trace("cellDmuxSetStream(handle=0x%x, streamAddress=0x%x, streamSize=%d, discontinuity=%d, userData=0x%llx)", handle, streamAddress, streamSize, discontinuity, userData);
 
@@ -1098,7 +1088,7 @@ s32 cellDmuxSetStream(u32 handle, u32 streamAddress, u32 streamSize, b8 disconti
 	return CELL_OK;
 }
 
-s32 cellDmuxResetStream(u32 handle)
+error_code cellDmuxResetStream(u32 handle)
 {
 	cellDmux.warning("cellDmuxResetStream(handle=0x%x)", handle);
 
@@ -1113,7 +1103,7 @@ s32 cellDmuxResetStream(u32 handle)
 	return CELL_OK;
 }
 
-s32 cellDmuxResetStreamAndWaitDone(u32 handle)
+error_code cellDmuxResetStreamAndWaitDone(u32 handle)
 {
 	cellDmux.warning("cellDmuxResetStreamAndWaitDone(handle=0x%x)", handle);
 
@@ -1146,7 +1136,7 @@ s32 cellDmuxResetStreamAndWaitDone(u32 handle)
 	return CELL_OK;
 }
 
-s32 cellDmuxQueryEsAttr(vm::cptr<CellDmuxType> type, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> esAttr)
+error_code cellDmuxQueryEsAttr(vm::cptr<CellDmuxType> type, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> esAttr)
 {
 	cellDmux.warning("cellDmuxQueryEsAttr(demuxerType=*0x%x, esFilterId=*0x%x, esSpecificInfo=*0x%x, esAttr=*0x%x)", type, esFilterId, esSpecificInfo, esAttr);
 
@@ -1160,7 +1150,7 @@ s32 cellDmuxQueryEsAttr(vm::cptr<CellDmuxType> type, vm::cptr<CellCodecEsFilterI
 	return CELL_OK;
 }
 
-s32 cellDmuxQueryEsAttr2(vm::cptr<CellDmuxType2> type2, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> esAttr)
+error_code cellDmuxQueryEsAttr2(vm::cptr<CellDmuxType2> type2, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> esAttr)
 {
 	cellDmux.warning("cellDmuxQueryEsAttr2(type2=*0x%x, esFilterId=*0x%x, esSpecificInfo=*0x%x, esAttr=*0x%x)", type2, esFilterId, esSpecificInfo, esAttr);
 
@@ -1174,7 +1164,7 @@ s32 cellDmuxQueryEsAttr2(vm::cptr<CellDmuxType2> type2, vm::cptr<CellCodecEsFilt
 	return CELL_OK;
 }
 
-s32 cellDmuxEnableEs(u32 handle, vm::cptr<CellCodecEsFilterId> esFilterId, vm::cptr<CellDmuxEsResource> esResourceInfo, vm::cptr<CellDmuxEsCb> esCb, u32 esSpecificInfo, vm::ptr<u32> esHandle)
+error_code cellDmuxEnableEs(u32 handle, vm::cptr<CellCodecEsFilterId> esFilterId, vm::cptr<CellDmuxEsResource> esResourceInfo, vm::cptr<CellDmuxEsCb> esCb, u32 esSpecificInfo, vm::ptr<u32> esHandle)
 {
 	cellDmux.warning("cellDmuxEnableEs(handle=0x%x, esFilterId=*0x%x, esResourceInfo=*0x%x, esCb=*0x%x, esSpecificInfo=*0x%x, esHandle=*0x%x)", handle, esFilterId, esResourceInfo, esCb, esSpecificInfo, esHandle);
 
@@ -1204,7 +1194,7 @@ s32 cellDmuxEnableEs(u32 handle, vm::cptr<CellCodecEsFilterId> esFilterId, vm::c
 	return CELL_OK;
 }
 
-s32 cellDmuxDisableEs(u32 esHandle)
+error_code cellDmuxDisableEs(u32 esHandle)
 {
 	cellDmux.warning("cellDmuxDisableEs(esHandle=0x%x)", esHandle);
 
@@ -1223,7 +1213,7 @@ s32 cellDmuxDisableEs(u32 esHandle)
 	return CELL_OK;
 }
 
-s32 cellDmuxResetEs(u32 esHandle)
+error_code cellDmuxResetEs(u32 esHandle)
 {
 	cellDmux.trace("cellDmuxResetEs(esHandle=0x%x)", esHandle);
 
@@ -1242,7 +1232,7 @@ s32 cellDmuxResetEs(u32 esHandle)
 	return CELL_OK;
 }
 
-s32 cellDmuxGetAu(u32 esHandle, vm::ptr<u32> auInfo, vm::ptr<u32> auSpecificInfo)
+error_code cellDmuxGetAu(u32 esHandle, vm::ptr<u32> auInfo, vm::ptr<u32> auSpecificInfo)
 {
 	cellDmux.trace("cellDmuxGetAu(esHandle=0x%x, auInfo=**0x%x, auSpecificInfo=**0x%x)", esHandle, auInfo, auSpecificInfo);
 
@@ -1265,7 +1255,7 @@ s32 cellDmuxGetAu(u32 esHandle, vm::ptr<u32> auInfo, vm::ptr<u32> auSpecificInfo
 	return CELL_OK;
 }
 
-s32 cellDmuxPeekAu(u32 esHandle, vm::ptr<u32> auInfo, vm::ptr<u32> auSpecificInfo)
+error_code cellDmuxPeekAu(u32 esHandle, vm::ptr<u32> auInfo, vm::ptr<u32> auSpecificInfo)
 {
 	cellDmux.trace("cellDmuxPeekAu(esHandle=0x%x, auInfo=**0x%x, auSpecificInfo=**0x%x)", esHandle, auInfo, auSpecificInfo);
 
@@ -1288,7 +1278,7 @@ s32 cellDmuxPeekAu(u32 esHandle, vm::ptr<u32> auInfo, vm::ptr<u32> auSpecificInf
 	return CELL_OK;
 }
 
-s32 cellDmuxGetAuEx(u32 esHandle, vm::ptr<u32> auInfoEx, vm::ptr<u32> auSpecificInfo)
+error_code cellDmuxGetAuEx(u32 esHandle, vm::ptr<u32> auInfoEx, vm::ptr<u32> auSpecificInfo)
 {
 	cellDmux.trace("cellDmuxGetAuEx(esHandle=0x%x, auInfoEx=**0x%x, auSpecificInfo=**0x%x)", esHandle, auInfoEx, auSpecificInfo);
 
@@ -1311,7 +1301,7 @@ s32 cellDmuxGetAuEx(u32 esHandle, vm::ptr<u32> auInfoEx, vm::ptr<u32> auSpecific
 	return CELL_OK;
 }
 
-s32 cellDmuxPeekAuEx(u32 esHandle, vm::ptr<u32> auInfoEx, vm::ptr<u32> auSpecificInfo)
+error_code cellDmuxPeekAuEx(u32 esHandle, vm::ptr<u32> auInfoEx, vm::ptr<u32> auSpecificInfo)
 {
 	cellDmux.trace("cellDmuxPeekAuEx(esHandle=0x%x, auInfoEx=**0x%x, auSpecificInfo=**0x%x)", esHandle, auInfoEx, auSpecificInfo);
 
@@ -1334,7 +1324,7 @@ s32 cellDmuxPeekAuEx(u32 esHandle, vm::ptr<u32> auInfoEx, vm::ptr<u32> auSpecifi
 	return CELL_OK;
 }
 
-s32 cellDmuxReleaseAu(u32 esHandle)
+error_code cellDmuxReleaseAu(u32 esHandle)
 {
 	cellDmux.trace("cellDmuxReleaseAu(esHandle=0x%x)", esHandle);
 
@@ -1352,7 +1342,7 @@ s32 cellDmuxReleaseAu(u32 esHandle)
 	return CELL_OK;
 }
 
-s32 cellDmuxFlushEs(u32 esHandle)
+error_code cellDmuxFlushEs(u32 esHandle)
 {
 	cellDmux.warning("cellDmuxFlushEs(esHandle=0x%x)", esHandle);
 

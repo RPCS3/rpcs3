@@ -5,10 +5,10 @@
 
 
 
-logs::channel cellPhotoImportUtil("cellPhotoImportUtil");
+LOG_CHANNEL(cellPhotoImportUtil);
 
 // Return Codes
-enum
+enum CellPhotoImportError : u32
 {
 	CELL_PHOTO_IMPORT_ERROR_BUSY         = 0x8002c701,
 	CELL_PHOTO_IMPORT_ERROR_INTERNAL     = 0x8002c702,
@@ -17,6 +17,25 @@ enum
 	CELL_PHOTO_IMPORT_ERROR_COPY         = 0x8002c705,
 	CELL_PHOTO_IMPORT_ERROR_INITIALIZE   = 0x8002c706,
 };
+
+template<>
+void fmt_class_string<CellPhotoImportError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_PHOTO_IMPORT_ERROR_BUSY);
+			STR_CASE(CELL_PHOTO_IMPORT_ERROR_INTERNAL);
+			STR_CASE(CELL_PHOTO_IMPORT_ERROR_PARAM);
+			STR_CASE(CELL_PHOTO_IMPORT_ERROR_ACCESS_ERROR);
+			STR_CASE(CELL_PHOTO_IMPORT_ERROR_COPY);
+			STR_CASE(CELL_PHOTO_IMPORT_ERROR_INITIALIZE);
+		}
+
+		return unknown;
+	});
+}
 
 enum
 {
@@ -46,15 +65,15 @@ enum CellPhotoImportTexRot
 };
 
 struct CellPhotoImportFileDataSub
-{ 
+{
 	be_t<s32> width;
 	be_t<s32> height;
 	be_t<CellPhotoImportFormatType> format;
 	be_t<CellPhotoImportTexRot> rotate;
-}; 
+};
 
 struct CellPhotoImportFileData
-{ 
+{
 	char dstFileName[CELL_FS_MAX_FS_FILE_NAME_LENGTH];
 	char photo_title[CELL_PHOTO_IMPORT_PHOTO_TITLE_MAX_LENGTH * 3];
 	char game_title[CELL_PHOTO_IMPORT_GAME_TITLE_MAX_SIZE];
@@ -65,7 +84,7 @@ struct CellPhotoImportFileData
 };
 
 struct CellPhotoImportSetParam
-{ 
+{
 	be_t<u32> fileSizeMax;
 	vm::bptr<void> reserved1;
 	vm::bptr<void> reserved2;
@@ -80,7 +99,8 @@ error_code cellPhotoImport(u32 version, vm::cptr<char> dstHddPath, vm::ptr<CellP
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellPhotoImportFileData> filedata;
-		filedata->data_sub = vm::var<CellPhotoImportFileDataSub>();
+		vm::var<CellPhotoImportFileDataSub> sub;
+		filedata->data_sub = sub;
 		funcFinish(ppu, CELL_OK, filedata, userdata);
 		return CELL_OK;
 	});
@@ -95,7 +115,8 @@ error_code cellPhotoImport2(u32 version, vm::cptr<char> dstHddPath, vm::ptr<Cell
 	sysutil_register_cb([=](ppu_thread& ppu) -> s32
 	{
 		vm::var<CellPhotoImportFileData> filedata;
-		filedata->data_sub = vm::var<CellPhotoImportFileDataSub>();
+		vm::var<CellPhotoImportFileDataSub> sub;
+		filedata->data_sub = sub;
 		funcFinish(ppu, CELL_OK, filedata, userdata);
 		return CELL_OK;
 	});

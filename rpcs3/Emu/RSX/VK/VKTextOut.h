@@ -1,8 +1,13 @@
 #pragma once
-#include "VKHelpers.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
+#include "VKRenderPass.h"
+#include "VKPipelineCompiler.h"
+
+#include "vkutils/framebuffer_object.hpp"
+
 #include "../Common/TextGlyphs.h"
+#include <unordered_map>
 
 namespace vk
 {
@@ -11,10 +16,10 @@ namespace vk
 	private:
 		std::unique_ptr<vk::buffer> m_vertex_buffer;
 		std::unique_ptr<vk::buffer> m_uniforms_buffer;
-		
+
 		std::unique_ptr<vk::glsl::program> m_program;
-		VKVertexProgram m_vertex_shader;
-		VKFragmentProgram m_fragment_shader;
+		vk::glsl::shader m_vertex_shader;
+		vk::glsl::shader m_fragment_shader;
 
 		vk::descriptor_pool m_descriptor_pool;
 		VkDescriptorSet m_descriptor_set = nullptr;
@@ -39,10 +44,10 @@ namespace vk
 			};
 
 			//Reserve descriptor pools
-			m_descriptor_pool.create(dev, descriptor_pools, 1);
+			m_descriptor_pool.create(dev, descriptor_pools, 1, 120, 2);
 
 			VkDescriptorSetLayoutBinding bindings[1] = {};
-			
+
 			//Scale and offset data plus output color
 			bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			bindings[0].descriptorCount = 1;
@@ -64,7 +69,7 @@ namespace vk
 			CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &m_pipeline_layout));
 		}
 
-		void init_program(vk::render_device &dev)
+		void init_program()
 		{
 			std::string vs =
 			{
@@ -102,35 +107,34 @@ namespace vk
 				"}\n"
 			};
 
-			m_vertex_shader.shader = vs;
-			m_vertex_shader.id = 100000;
-			m_vertex_shader.Compile();
+			m_vertex_shader.create(::glsl::program_domain::glsl_vertex_program, vs);
+			m_vertex_shader.compile();
 
-			m_fragment_shader.shader = fs;
-			m_fragment_shader.id = 100001;
-			m_fragment_shader.Compile();
+			m_fragment_shader.create(::glsl::program_domain::glsl_fragment_program, fs);
+			m_fragment_shader.compile();
 
 			VkPipelineShaderStageCreateInfo shader_stages[2] = {};
 			shader_stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			shader_stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-			shader_stages[0].module = m_vertex_shader.handle;
+			shader_stages[0].module = m_vertex_shader.get_handle();
 			shader_stages[0].pName = "main";
 
 			shader_stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			shader_stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-			shader_stages[1].module = m_fragment_shader.handle;
+			shader_stages[1].module = m_fragment_shader.get_handle();
 			shader_stages[1].pName = "main";
 
-			VkDynamicState dynamic_state_descriptors[VK_DYNAMIC_STATE_RANGE_SIZE] = {};
+			std::vector<VkDynamicState> dynamic_state_descriptors;
 			VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
 			dynamic_state_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-			dynamic_state_descriptors[dynamic_state_info.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
-			dynamic_state_descriptors[dynamic_state_info.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
-			dynamic_state_info.pDynamicStates = dynamic_state_descriptors;
+			dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_VIEWPORT);
+			dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_SCISSOR);
+			dynamic_state_info.pDynamicStates = dynamic_state_descriptors.data();
+			dynamic_state_info.dynamicStateCount = ::size32(dynamic_state_descriptors);
 
 			VkVertexInputAttributeDescription vdesc;
 			VkVertexInputBindingDescription vbind;
-			
+
 			vdesc.binding = 0;
 			vdesc.format = VK_FORMAT_R32G32_SFLOAT;
 			vdesc.location = 0;
@@ -176,7 +180,6 @@ namespace vk
 			VkPipelineDepthStencilStateCreateInfo ds = {};
 			ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 
-			VkPipeline pipeline;
 			VkGraphicsPipelineCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 			info.pVertexInputState = &vi;
@@ -194,15 +197,13 @@ namespace vk
 			info.basePipelineHandle = VK_NULL_HANDLE;
 			info.renderPass = m_render_pass;
 
-			CHECK_RESULT(vkCreateGraphicsPipelines(dev, nullptr, 1, &info, NULL, &pipeline));
-
-			const std::vector<vk::glsl::program_input> unused;
-			m_program = std::make_unique<vk::glsl::program>((VkDevice)dev, pipeline, unused, unused);
+			auto compiler = vk::get_pipe_compiler();
+			m_program = compiler->compile(info, m_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE);
 		}
 
-		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, float *offsets, size_t nb_offsets, std::array<float, 4> color)
+		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, const float *offsets, usz nb_offsets, std::array<float, 4> color)
 		{
-			verify(HERE), m_used_descriptors < 120;
+			ensure(m_used_descriptors < 120);
 
 			VkDescriptorSetAllocateInfo alloc_info = {};
 			alloc_info.descriptorPool = m_descriptor_pool;
@@ -215,10 +216,10 @@ namespace vk
 
 			float scale[] = { scale_x, scale_y };
 			float colors[] = { color[0], color[1], color[2], color[3] };
-			float *dst = (float*)m_uniforms_buffer->map(m_uniform_buffer_offset, 8192);
+			float* dst = static_cast<float*>(m_uniforms_buffer->map(m_uniform_buffer_offset, 8192));
 
 			//std140 spec demands that arrays be multiples of 16 bytes
-			for (size_t i = 0; i < nb_offsets; ++i)
+			for (usz i = 0; i < nb_offsets; ++i)
 			{
 				dst[i * 4] = offsets[i * 2];
 				dst[i * 4 + 1] = offsets[i * 2 + 1];
@@ -234,42 +235,47 @@ namespace vk
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
 			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
-			
+
 			VkDeviceSize zero = 0;
 			vkCmdBindVertexBuffers(cmd, 0, 1, &m_vertex_buffer->value, &zero);
 		}
 
 	public:
 
-		text_writer() {}
+		text_writer() = default;
 		~text_writer()
 		{
 			if (initialized)
 			{
+				m_vertex_shader.destroy();
+				m_fragment_shader.destroy();
+
 				vkDestroyDescriptorSetLayout(device, m_descriptor_layout, nullptr);
 				vkDestroyPipelineLayout(device, m_pipeline_layout, nullptr);
 				m_descriptor_pool.destroy();
 			}
 		}
 
-		void init(vk::render_device &dev, vk::memory_type_mapping &memory_types, VkRenderPass &render_pass)
+		void init(vk::render_device &dev, VkRenderPass render_pass)
 		{
+			ensure(render_pass != VK_NULL_HANDLE);
+
 			//At worst case, 1 char = 16*16*8 bytes (average about 24*8), so ~256K for 128 chars. Allocating 512k for verts
 			//uniform params are 8k in size, allocating for 120 lines (max lines at 4k, one column per row. Can be expanded
-			m_vertex_buffer.reset( new vk::buffer(dev, 524288, memory_types.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0));
-			m_uniforms_buffer.reset(new vk::buffer(dev, 983040, memory_types.host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0));
+			m_vertex_buffer = std::make_unique<vk::buffer>(dev, 524288, dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0);
+			m_uniforms_buffer = std::make_unique<vk::buffer>(dev, 983040, dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0);
 
 			m_render_pass = render_pass;
 			m_uniform_buffer_size = 983040;
-			
+
 			init_descriptor_set(dev);
-			init_program(dev);
+			init_program();
 
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
-			const size_t buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
-			
-			u8 *dst = (u8*)m_vertex_buffer->map(0, buffer_size);
+			const usz buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
+
+			u8* dst = static_cast<u8*>(m_vertex_buffer->map(0, buffer_size));
 			memcpy(dst, points.data(), buffer_size);
 			m_vertex_buffer->unmap();
 
@@ -299,7 +305,7 @@ namespace vk
 
 			while (*s)
 			{
-				u8 offset = (u8)*s;
+				u8 offset = static_cast<u8>(*s);
 				bool to_draw = false;	//Can be false for space or unsupported characters
 
 				auto o = m_offsets.find(offset);
@@ -331,8 +337,8 @@ namespace vk
 			}
 
 			VkViewport vp{};
-			vp.width = (f32)target_w;
-			vp.height = (f32)target_h;
+			vp.width = static_cast<f32>(target_w);
+			vp.height = static_cast<f32>(target_h);
 			vp.minDepth = 0.f;
 			vp.maxDepth = 1.f;
 			vkCmdSetViewport(cmd, 0, 1, &vp);
@@ -343,23 +349,13 @@ namespace vk
 			//TODO: Add drop shadow if deemed necessary for visibility
 			load_program(cmd, scale_x, scale_y, shader_offsets.data(), counts.size(), color);
 
-			VkRenderPassBeginInfo rp_begin = {};
-			rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			rp_begin.renderPass = m_render_pass;
-			rp_begin.framebuffer = target.value;
-			rp_begin.renderArea.offset.x = 0;
-			rp_begin.renderArea.offset.y = 0;
-			rp_begin.renderArea.extent.width = target.width();
-			rp_begin.renderArea.extent.height = target.height();
+			const coordu viewport = { positionu{0u, 0u}, sizeu{target.width(), target.height() } };
+			vk::begin_renderpass(cmd, m_render_pass, target.value, viewport);
 
-			vkCmdBeginRenderPass(cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
-
-			for (int i = 0; i < counts.size(); ++i)
+			for (uint i = 0; i < counts.size(); ++i)
 			{
 				vkCmdDraw(cmd, counts[i], 1, offsets[i], i);
 			}
-
-			vkCmdEndRenderPass(cmd);
 		}
 
 		void reset_descriptors()
@@ -367,7 +363,7 @@ namespace vk
 			if (m_used_descriptors == 0)
 				return;
 
-			vkResetDescriptorPool(device, m_descriptor_pool, 0);
+			m_descriptor_pool.reset(0);
 			m_used_descriptors = 0;
 		}
 	};

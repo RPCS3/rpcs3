@@ -1,9 +1,9 @@
 #pragma once
 
-
+#include "Emu/Memory/vm_ptr.h"
 
 // Error codes
-enum
+enum CellFontError : u32
 {
 	CELL_FONT_ERROR_FATAL                      = 0x80540001,
 	CELL_FONT_ERROR_INVALID_PARAMETER          = 0x80540002,

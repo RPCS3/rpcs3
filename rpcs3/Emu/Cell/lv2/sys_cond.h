@@ -1,6 +1,7 @@
 #pragma once
 
 #include "sys_sync.h"
+#include "sys_mutex.h"
 
 struct lv2_mutex;
 
@@ -12,8 +13,8 @@ struct sys_cond_attribute_t
 
 	union
 	{
-		char name[8];
-		u64 name_u64;
+		nse_t<u64, 1> name_u64;
+		char name[sizeof(u64)];
 	};
 };
 
@@ -22,27 +23,37 @@ struct lv2_cond final : lv2_obj
 	static const u32 id_base = 0x86000000;
 
 	const u32 shared;
-	const s32 flags;
 	const u64 key;
 	const u64 name;
+	const u32 mtx_id;
 
 	std::shared_ptr<lv2_mutex> mutex; // Associated Mutex
 	atomic_t<u32> waiters{0};
 	std::deque<cpu_thread*> sq;
 
-	lv2_cond(u32 shared, s32 flags, u64 key, u64 name, std::shared_ptr<lv2_mutex> mutex)
+	lv2_cond(u32 shared, u64 key, u64 name, u32 mtx_id, std::shared_ptr<lv2_mutex> mutex)
 		: shared(shared)
 		, key(key)
-		, flags(flags)
 		, name(name)
+		, mtx_id(mtx_id)
 		, mutex(std::move(mutex))
 	{
-		this->mutex->cond_count++;
 	}
 
-	~lv2_cond()
+	CellError on_id_create() const
 	{
-		this->mutex->cond_count--;
+		if (!mutex->obj_count.fetch_op([](lv2_mutex::count_info& info)
+		{
+			if (info.mutex_count)
+				return info.cond_count++, true;
+			return false;
+		}).second)
+		{
+			// Mutex has been destroyed, cannot create conditional variable
+			return CELL_ESRCH;
+		}
+
+		return {};
 	}
 };
 
@@ -50,8 +61,8 @@ class ppu_thread;
 
 // Syscalls
 
-error_code sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr);
-error_code sys_cond_destroy(u32 cond_id);
+error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr);
+error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id);
 error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout);
 error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id);
 error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id);

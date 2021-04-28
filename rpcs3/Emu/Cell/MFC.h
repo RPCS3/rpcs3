@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/types.hpp"
+
 enum MFC : u8
 {
 	MFC_PUT_CMD      = 0x20, MFC_PUTB_CMD     = 0x21, MFC_PUTF_CMD     = 0x22,
@@ -25,10 +27,16 @@ enum MFC : u8
 	MFC_LIST_MASK    = 0x04,
 	MFC_START_MASK   = 0x08,
 	MFC_RESULT_MASK  = 0x10, // ???
+
+	MFC_SDCRT_CMD   = 0x80,
+	MFC_SDCRTST_CMD = 0x81,
+	MFC_SDCRZ_CMD   = 0x89,
+	MFC_SDCRS_CMD   = 0x8D,
+	MFC_SDCRF_CMD   = 0x8F,
 };
 
 // Atomic Status Update
-enum : u32
+enum mfc_atomic_status : u32
 {
 	MFC_PUTLLC_SUCCESS = 0,
 	MFC_PUTLLC_FAILURE = 1, // reservation was lost
@@ -37,7 +45,7 @@ enum : u32
 };
 
 // MFC Write Tag Status Update Request Channel (ch23) operations
-enum : u32
+enum mfc_tag_update : u32
 {
 	MFC_TAG_UPDATE_IMMEDIATE = 0,
 	MFC_TAG_UPDATE_ANY       = 1,
@@ -86,4 +94,11 @@ struct alignas(16) spu_mfc_cmd
 	u32 lsa;
 	u32 eal;
 	u32 eah;
+};
+
+struct mfc_cmd_dump
+{
+	spu_mfc_cmd cmd;
+
+	alignas(16) u8 data[128];
 };

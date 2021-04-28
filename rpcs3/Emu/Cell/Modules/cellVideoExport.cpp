@@ -5,7 +5,7 @@
 
 
 
-logs::channel cellVideoExport("cellVideoExport");
+LOG_CHANNEL(cellVideoExport);
 
 struct CellVideoExportSetParam
 {

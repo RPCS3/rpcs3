@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Utilities/types.h"
+#include "util/types.hpp"
 #include "../../Utilities/File.h"
 
 #include <vector>
@@ -30,18 +30,37 @@ struct PUPHashEntry
 	u8 padding[4];
 };
 
+// PUP loading error
+enum class pup_error : u32
+{
+	ok,
+
+	stream,
+	header_read,
+	header_magic,
+	header_file_count,
+	expected_size,
+	file_entries,
+	hash_mismatch,
+};
+
 class pup_object
 {
-	const fs::file& m_file;
-	bool isValid = true;
-	
-	std::vector<PUPFileEntry> m_file_tbl;
-	std::vector<PUPHashEntry> m_hash_tbl;
+	fs::file m_file{};
+
+	pup_error m_error{};
+	std::string m_formatted_error{};
+
+	std::vector<PUPFileEntry> m_file_tbl{};
+	std::vector<PUPHashEntry> m_hash_tbl{};
+
+	pup_error validate_hashes();
 
 public:
-	pup_object(const fs::file& file);
+	pup_object(fs::file&& file);
 
-	explicit operator bool() const { return isValid; };
+	explicit operator pup_error() const { return m_error; }
+	const std::string& get_formatted_error() const { return m_formatted_error; }
 
-	fs::file get_file(u64 entry_id);
+	fs::file get_file(u64 entry_id) const;
 };

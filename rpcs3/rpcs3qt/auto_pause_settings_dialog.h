@@ -1,23 +1,12 @@
 #pragma once
 
-#include "stdafx.h"
-#include "Emu/System.h"
-#include "Emu/Memory/Memory.h"
-#include "table_item_delegate.h"
+#include "util/types.hpp"
 
 #include <QDialog>
-#include <QVBoxLayout>
-#include <QFormLayout>
-#include <QPushButton>
-#include <QAbstractButton>
 #include <QLabel>
-#include <QString>
 #include <QTableWidget>
-#include <QHeaderView>
-#include <QMouseEvent>
-#include <QMenu>
 #include <QLineEdit>
-#include <QFontDatabase>
+#include <vector>
 
 class auto_pause_settings_dialog : public QDialog
 {
@@ -31,13 +20,13 @@ class auto_pause_settings_dialog : public QDialog
 	};
 
 	std::vector<u32> m_entries;
+	QTableWidget *m_pause_list;
 
 public:
 	explicit auto_pause_settings_dialog(QWidget* parent);
-	QTableWidget *pauseList;
-	void UpdateList(void);
-	void LoadEntries(void);
-	void SaveEntries(void);
+	void UpdateList();
+	void LoadEntries();
+	void SaveEntries();
 
 public Q_SLOTS:
 	void OnRemove();
@@ -63,5 +52,5 @@ public:
 private Q_SLOTS:
 	void OnOk();
 	void OnCancel();
-	void OnUpdateValue();
+	void OnUpdateValue() const;
 };

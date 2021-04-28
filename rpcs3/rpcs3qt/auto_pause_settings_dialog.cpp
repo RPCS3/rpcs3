@@ -1,5 +1,17 @@
-
 #include "auto_pause_settings_dialog.h"
+#include "table_item_delegate.h"
+#include "Emu/System.h"
+
+#include <QFontDatabase>
+#include <QMenu>
+#include <QMouseEvent>
+#include <QVBoxLayout>
+#include <QPushButton>
+
+#include "util/logs.hpp"
+#include "Utilities/File.h"
+
+LOG_CHANNEL(autopause_log, "AutoPause");
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -7,14 +19,14 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 {
 	QLabel *description = new QLabel(tr("To use auto pause: enter the ID(s) of a function or a system call.\nRestart of the game is required to apply. You can enable/disable this in the settings."), this);
 
-	pauseList = new QTableWidget(this);
-	pauseList->setColumnCount(2);
-	pauseList->setHorizontalHeaderLabels(QStringList() << tr("Call ID") << tr("Type"));
-	//pauseList->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-	pauseList->setSelectionBehavior(QAbstractItemView::SelectRows);
-	pauseList->setContextMenuPolicy(Qt::CustomContextMenu);
-	pauseList->setItemDelegate(new table_item_delegate(this));
-	pauseList->setShowGrid(false);
+	m_pause_list = new QTableWidget(this);
+	m_pause_list->setColumnCount(2);
+	m_pause_list->setHorizontalHeaderLabels(QStringList() << tr("Call ID") << tr("Type"));
+	//m_pause_list->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+	m_pause_list->setSelectionBehavior(QAbstractItemView::SelectRows);
+	m_pause_list->setContextMenuPolicy(Qt::CustomContextMenu);
+	m_pause_list->setItemDelegate(new table_item_delegate(this));
+	m_pause_list->setShowGrid(false);
 
 	QPushButton *clearButton = new QPushButton(tr("Clear"), this);
 	QPushButton *reloadButton = new QPushButton(tr("Reload"), this);
@@ -31,7 +43,7 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 
 	QVBoxLayout *mainLayout = new QVBoxLayout(this);
 	mainLayout->addWidget(description);
-	mainLayout->addWidget(pauseList);
+	mainLayout->addWidget(m_pause_list);
 	mainLayout->addLayout(buttonsLayout);
 	setLayout(mainLayout);
 
@@ -39,14 +51,14 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 	setWindowTitle(tr("Auto Pause Manager"));
 	setObjectName("auto_pause_manager");
 
-	//Events
-	connect(pauseList, &QTableWidget::customContextMenuRequested, this, &auto_pause_settings_dialog::ShowContextMenu);
-	connect(clearButton, &QAbstractButton::clicked, [=](){ m_entries.clear(); UpdateList(); });
-	connect(reloadButton, &QAbstractButton::clicked, [=](){ LoadEntries(); UpdateList(); });
-	connect(saveButton, &QAbstractButton::clicked, [=]
+	// Events
+	connect(m_pause_list, &QTableWidget::customContextMenuRequested, this, &auto_pause_settings_dialog::ShowContextMenu);
+	connect(clearButton, &QAbstractButton::clicked, [this](){ m_entries.clear(); UpdateList(); });
+	connect(reloadButton, &QAbstractButton::clicked, [this](){ LoadEntries(); UpdateList(); });
+	connect(saveButton, &QAbstractButton::clicked, [this]()
 	{
 		SaveEntries();
-		LOG_SUCCESS(HLE, "Auto Pause: File pause.bin was updated.");
+		autopause_log.success("File pause.bin was updated.");
 	});
 	connect(cancelButton, &QAbstractButton::clicked, this, &QWidget::close);
 
@@ -58,20 +70,20 @@ auto_pause_settings_dialog::auto_pause_settings_dialog(QWidget *parent) : QDialo
 	setFixedSize(sizeHint());
 }
 
-//Copied some from AutoPause.
-void auto_pause_settings_dialog::LoadEntries(void)
+// Copied some from AutoPause.
+void auto_pause_settings_dialog::LoadEntries()
 {
 	m_entries.clear();
 	m_entries.reserve(16);
 
-	fs::file list(fs::get_config_dir() + "pause.bin");
+	const fs::file list(fs::get_config_dir() + "pause.bin");
 
 	if (list)
 	{
-		//System calls ID and Function calls ID are all u32 iirc.
+		// System calls ID and Function calls ID are all u32 iirc.
 		u32 num;
-		size_t fmax = list.size();
-		size_t fcur = 0;
+		const usz fmax = list.size();
+		usz fcur = 0;
 		list.seek(0);
 		while (fcur <= fmax - sizeof(u32))
 		{
@@ -84,16 +96,16 @@ void auto_pause_settings_dialog::LoadEntries(void)
 	}
 }
 
-//Copied some from AutoPause.
-//Tip: This one doesn't check for the file is being read or not.
-//This would always use a 0xFFFFFFFF as end of the pause.bin
-void auto_pause_settings_dialog::SaveEntries(void)
+// Copied some from AutoPause.
+// Tip: This one doesn't check for the file is being read or not.
+// This would always use a 0xFFFFFFFF as end of the pause.bin
+void auto_pause_settings_dialog::SaveEntries()
 {
 	fs::file list(fs::get_config_dir() + "pause.bin", fs::rewrite);
 	//System calls ID and Function calls ID are all u32 iirc.
 	u32 num = 0;
 	list.seek(0);
-	for (size_t i = 0; i < m_entries.size(); ++i)
+	for (usz i = 0; i < m_entries.size(); ++i)
 	{
 		if (num == 0xFFFFFFFF) continue;
 		num = m_entries[i];
@@ -103,11 +115,11 @@ void auto_pause_settings_dialog::SaveEntries(void)
 	list.write(&num, sizeof(u32));
 }
 
-void auto_pause_settings_dialog::UpdateList(void)
+void auto_pause_settings_dialog::UpdateList()
 {
 	const int entries_size = static_cast<int>(m_entries.size());
-	pauseList->clearContents();
-	pauseList->setRowCount(entries_size);
+	m_pause_list->clearContents();
+	m_pause_list->setRowCount(entries_size);
 	for (int i = 0; i < entries_size; ++i)
 	{
 		QTableWidgetItem* callItem = new QTableWidgetItem;
@@ -115,7 +127,7 @@ void auto_pause_settings_dialog::UpdateList(void)
 		callItem->setFlags(callItem->flags() & ~Qt::ItemIsEditable);
 		typeItem->setFlags(typeItem->flags() & ~Qt::ItemIsEditable);
 		if (m_entries[i] != 0xFFFFFFFF)
-		{	
+		{
 			callItem->setData(Qt::DisplayRole, qstr(fmt::format("%08x", m_entries[i])));
 		}
 		else
@@ -132,16 +144,15 @@ void auto_pause_settings_dialog::UpdateList(void)
 			typeItem->setData(Qt::DisplayRole, tr("Function Call"));
 		}
 
-		pauseList->setItem(i, 0, callItem);
-		pauseList->setItem(i, 1, typeItem);
+		m_pause_list->setItem(i, 0, callItem);
+		m_pause_list->setItem(i, 1, typeItem);
 	}
 }
 
 void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 {
-	int row = pauseList->indexAt(pos).row();
+	const int row = m_pause_list->indexAt(pos).row();
 
-	QPoint globalPos = pauseList->mapToGlobal(pos);
 	QMenu myMenu;
 
 	// Make Actions
@@ -156,7 +167,7 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 		config->setEnabled(false);
 	}
 
-	auto OnEntryConfig = [=](int row, bool newEntry)
+	auto OnEntryConfig = [this](int row, bool newEntry)
 	{
 		AutoPauseConfigDialog *config = new AutoPauseConfigDialog(this, this, newEntry, &m_entries[row]);
 		config->setModal(true);
@@ -164,22 +175,23 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 		UpdateList();
 	};
 
-	connect(add, &QAction::triggered, [=]() {
+	connect(add, &QAction::triggered, this, [=, this]()
+	{
 		m_entries.emplace_back(0xFFFFFFFF);
 		UpdateList();
-		int idx = static_cast<int>(m_entries.size()) - 1;
-		pauseList->selectRow(idx);
+		const int idx = static_cast<int>(m_entries.size()) - 1;
+		m_pause_list->selectRow(idx);
 		OnEntryConfig(idx, true);
 	});
 	connect(remove, &QAction::triggered, this, &auto_pause_settings_dialog::OnRemove);
-	connect(config, &QAction::triggered, [=]() {OnEntryConfig(row, false); });
+	connect(config, &QAction::triggered, this, [=, this]() {OnEntryConfig(row, false); });
 
-	myMenu.exec(globalPos);
+	myMenu.exec(m_pause_list->viewport()->mapToGlobal(pos));
 }
 
 void auto_pause_settings_dialog::OnRemove()
 {
-	QModelIndexList selection = pauseList->selectionModel()->selectedRows();
+	QModelIndexList selection = m_pause_list->selectionModel()->selectedRows();
 	std::sort(selection.begin(), selection.end());
 	for (int i = selection.count() - 1; i >= 0; i--)
 	{
@@ -196,7 +208,7 @@ void auto_pause_settings_dialog::keyPressEvent(QKeyEvent *event)
 	}
 }
 
-AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_settings_dialog* apsd, bool newEntry, u32 *entry) 
+AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_settings_dialog* apsd, bool newEntry, u32 *entry)
 	: QDialog(parent), m_presult(entry), m_newEntry(newEntry), m_apsd(apsd)
 {
 	m_entry = *m_presult;
@@ -212,7 +224,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 
 	m_current_converted = new QLabel(tr("Currently it gets an id of \"Unset\"."), this);
 	m_current_converted->setWordWrap(true);
-	
+
 	m_id = new QLineEdit(this);
 	m_id->setText(qstr(fmt::format("%08x", m_entry)));
 	m_id->setPlaceholderText("ffffffff");
@@ -220,7 +232,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 	m_id->setMaxLength(8);
 	m_id->setFixedWidth(65);
 	setWindowTitle("Auto Pause Setting: " + m_id->text());
-	
+
 	connect(button_cancel, &QAbstractButton::clicked, this, &AutoPauseConfigDialog::OnCancel);
 	connect(button_ok, &QAbstractButton::clicked, this, &AutoPauseConfigDialog::OnOk);
 	connect(m_id, &QLineEdit::textChanged, this, &AutoPauseConfigDialog::OnUpdateValue);
@@ -230,7 +242,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 	configHBox->addWidget(button_ok);
 	configHBox->addWidget(button_cancel);
 	configHBox->setAlignment(Qt::AlignCenter);
-	
+
 	QVBoxLayout* mainLayout = new QVBoxLayout(this);
 	mainLayout->addWidget(description);
 	mainLayout->addLayout(configHBox);
@@ -245,7 +257,7 @@ AutoPauseConfigDialog::AutoPauseConfigDialog(QWidget* parent, auto_pause_setting
 void AutoPauseConfigDialog::OnOk()
 {
 	bool ok;
-	ullong value = m_id->text().toULongLong(&ok, 16);
+	const ullong value = m_id->text().toULongLong(&ok, 16);
 
 	m_entry = value;
 	*m_presult = m_entry;
@@ -262,11 +274,11 @@ void AutoPauseConfigDialog::OnCancel()
 	close();
 }
 
-void AutoPauseConfigDialog::OnUpdateValue()
+void AutoPauseConfigDialog::OnUpdateValue() const
 {
 	bool ok;
-	ullong value = m_id->text().toULongLong(&ok, 16);
+	const ullong value = m_id->text().toULongLong(&ok, 16);
 	const bool is_ok = ok && value <= UINT32_MAX;
-	
-	m_current_converted->setText(qstr(fmt::format("Current value: %08x (%s)", u32(value), is_ok ? "OK" : "conversion failed")));
+
+	m_current_converted->setText(tr("Current value: %1 (%2)").arg(value, 8, 16).arg(is_ok ? tr("OK") : tr("Conversion failed")));
 }

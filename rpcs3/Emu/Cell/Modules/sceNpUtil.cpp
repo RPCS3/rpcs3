@@ -1,32 +1,65 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/IdManager.h"
 
 #include "sceNp.h"
 #include "sceNpUtil.h"
 
-logs::channel sceNpUtil("sceNpUtil");
+LOG_CHANNEL(sceNpUtil);
 
-s32 sceNpUtilBandwidthTestInitStart(u32 prio, size_t stack)
+error_code sceNpUtilBandwidthTestInitStart(u32 prio, u64 stack)
 {
-	UNIMPLEMENTED_FUNC(sceNpUtil);
+	sceNpUtil.todo("sceNpUtilBandwidthTestInitStart(prio=%d, stack=%d)", prio, stack);
+
+	auto& util_manager = g_fxo->get<sce_np_util_manager>();
+
+	if (util_manager.is_initialized)
+	{
+		return SCE_NP_ERROR_ALREADY_INITIALIZED;
+	}
+
+	util_manager.is_initialized = true;
+
 	return CELL_OK;
 }
 
-s32 sceNpUtilBandwidthTestGetStatus()
+error_code sceNpUtilBandwidthTestGetStatus()
 {
-	UNIMPLEMENTED_FUNC(sceNpUtil);
+	sceNpUtil.todo("sceNpUtilBandwidthTestGetStatus()");
+
+	if (!g_fxo->get<sce_np_util_manager>().is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
+	return not_an_error(SCE_NP_UTIL_BANDWIDTH_TEST_STATUS_FINISHED);
+}
+
+error_code sceNpUtilBandwidthTestShutdown(vm::ptr<SceNpUtilBandwidthTestResult> result)
+{
+	sceNpUtil.todo("sceNpUtilBandwidthTestShutdown(result=*0x%x)", result);
+
+	auto& util_manager = g_fxo->get<sce_np_util_manager>();
+
+	if (!util_manager.is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
+	util_manager.is_initialized = false;
+
 	return CELL_OK;
 }
 
-s32 sceNpUtilBandwidthTestShutdown()
+error_code sceNpUtilBandwidthTestAbort()
 {
-	UNIMPLEMENTED_FUNC(sceNpUtil);
-	return CELL_OK;
-}
+	sceNpUtil.todo("sceNpUtilBandwidthTestAbort()");
 
-s32 sceNpUtilBandwidthTestAbort()
-{
-	UNIMPLEMENTED_FUNC(sceNpUtil);
+	if (!g_fxo->get<sce_np_util_manager>().is_initialized)
+	{
+		return SCE_NP_ERROR_NOT_INITIALIZED;
+	}
+
 	return CELL_OK;
 }
 

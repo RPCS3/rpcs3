@@ -1,5 +1,6 @@
-﻿#pragma once
-#include "Utilities/types.h"
+#pragma once
+
+#include "util/types.hpp"
 
 namespace rsx
 {
@@ -18,11 +19,9 @@ namespace rsx
 
 	enum class index_array_type : u8
 	{
-		u32,
-		u16,
+		u32 = 0, // CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32
+		u16 = 1, // CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16
 	};
-
-	index_array_type to_index_array_type(u8 in);
 
 	enum class primitive_type : u8
 	{
@@ -55,11 +54,59 @@ namespace rsx
 
 	enum class surface_depth_format : u8
 	{
-		z16, // unsigned 16 bits depth
-		z24s8, // unsigned 24 bits depth + 8 bits stencil
+		z16,   // typeless 16 bits depth
+		z24s8, // typeless 24 bits depth + 8 bits stencil
+	};
+
+	enum class surface_depth_format2 : u8
+	{
+		z16_uint,    // unsigned 16 bits depth
+		z24s8_uint,  // unsigned 24 bits depth + 8 bits stencil
+		z16_float,   // floating point 16 bits depth
+		z24s8_float, // floating point 24 bits depth + 8 bits stencil
 	};
 
 	surface_depth_format to_surface_depth_format(u8 in);
+
+	constexpr
+	bool operator == (surface_depth_format2 rhs, surface_depth_format lhs)
+	{
+		switch (lhs)
+		{
+		case surface_depth_format::z16:
+			return (rhs == surface_depth_format2::z16_uint || rhs == surface_depth_format2::z16_float);
+		case surface_depth_format::z24s8:
+			return (rhs == surface_depth_format2::z24s8_uint || rhs == surface_depth_format2::z24s8_float);
+		[[unlikely]] default:
+			return false;
+		}
+	}
+
+	// GCC requires every operator declared explicitly
+	constexpr
+	bool operator == (surface_depth_format rhs, surface_depth_format2 lhs)
+	{
+		return lhs == rhs;
+	}
+
+	constexpr
+	bool operator != (surface_depth_format2 rhs, surface_depth_format lhs)
+	{
+		return !(rhs == lhs);
+	}
+
+	constexpr
+	bool operator != (surface_depth_format rhs, surface_depth_format2 lhs)
+	{
+		return !(lhs == rhs);
+	}
+
+	enum class surface_raster_type : u8
+	{
+		undefined = 0,
+		linear = 1,
+		swizzle = 2,
+	};
 
 	enum class surface_antialiasing : u8
 	{
@@ -132,6 +179,17 @@ namespace rsx
 	};
 
 	fog_mode to_fog_mode(u32 in);
+
+	/**
+	* Use an extra cubemap format
+	*/
+	enum class texture_dimension_extended : u8
+	{
+		texture_dimension_1d = 0,
+		texture_dimension_2d = 1,
+		texture_dimension_cubemap = 2,
+		texture_dimension_3d = 3,
+	};
 
 	enum class texture_dimension : u8
 	{
@@ -271,14 +329,12 @@ namespace rsx
 
 	front_face to_front_face(u16 in);
 
-	enum class cull_face : u8
+	enum class cull_face : u32
 	{
-		front,
-		back,
-		front_and_back,
+		front = 0x0404, // CELL_GCM_FRONT
+		back = 0x0405, // CELL_GCM_BACK
+		front_and_back = 0x0408, // CELL_GCM_FRONT_AND_BACK
 	};
-
-	cull_face to_cull_face(u16 in);
 
 	enum class user_clip_plane_op : u8
 	{
@@ -412,12 +468,6 @@ enum
 
 enum
 {
-	CELL_GCM_LOCATION_LOCAL = 0,
-	CELL_GCM_LOCATION_MAIN = 1,
-};
-
-enum
-{
 	CELL_GCM_FREQUENCY_MODULO = 1,
 	CELL_GCM_FREQUENCY_DIVIDE = 0,
 };
@@ -433,8 +483,29 @@ enum
 	CELL_GCM_SYSTEM_MODE_IOMAP_512MB = 1,
 };
 
-// GCM Texture
 enum
+{
+	// Index Array Type
+	CELL_GCM_DRAW_INDEX_ARRAY_TYPE_32 = 0,
+	CELL_GCM_DRAW_INDEX_ARRAY_TYPE_16 = 1,
+};
+
+enum
+{
+	CELL_GCM_PRIMITIVE_POINTS = 1,
+	CELL_GCM_PRIMITIVE_LINES = 2,
+	CELL_GCM_PRIMITIVE_LINE_LOOP = 3,
+	CELL_GCM_PRIMITIVE_LINE_STRIP = 4,
+	CELL_GCM_PRIMITIVE_TRIANGLES = 5,
+	CELL_GCM_PRIMITIVE_TRIANGLE_STRIP= 6,
+	CELL_GCM_PRIMITIVE_TRIANGLE_FAN = 7,
+	CELL_GCM_PRIMITIVE_QUADS = 8,
+	CELL_GCM_PRIMITIVE_QUAD_STRIP = 9,
+	CELL_GCM_PRIMITIVE_POLYGON = 10,
+};
+
+// GCM Texture
+enum CellGcmTexture : u32
 {
 	// Color Flag
 	CELL_GCM_TEXTURE_B8 = 0x81,
@@ -446,6 +517,8 @@ enum
 	CELL_GCM_TEXTURE_COMPRESSED_DXT23 = 0x87,
 	CELL_GCM_TEXTURE_COMPRESSED_DXT45 = 0x88,
 	CELL_GCM_TEXTURE_G8B8 = 0x8B,
+	CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8 = 0x8D,
+	CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8 = 0x8E,
 	CELL_GCM_TEXTURE_R6G5B5 = 0x8F,
 	CELL_GCM_TEXTURE_DEPTH24_D8 = 0x90,
 	CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT = 0x91,
@@ -462,8 +535,6 @@ enum
 	CELL_GCM_TEXTURE_D1R5G5B5 = 0x9D,
 	CELL_GCM_TEXTURE_D8R8G8B8 = 0x9E,
 	CELL_GCM_TEXTURE_Y16_X16_FLOAT = 0x9F,
-	CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8 = 0xAD,
-	CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8 = 0xAE,
 
 	// Swizzle Flag
 	CELL_GCM_TEXTURE_SZ = 0x00,
@@ -480,6 +551,37 @@ enum
 	// Surface type
 	CELL_GCM_SURFACE_PITCH = 1,
 	CELL_GCM_SURFACE_SWIZZLE = 2,
+};
+
+// GCM blend equation
+enum
+{
+	CELL_GCM_FUNC_ADD = 0x8006,
+	CELL_GCM_MIN = 0x8007,
+	CELL_GCM_MAX = 0x8008,
+	CELL_GCM_FUNC_SUBTRACT = 0x800A,
+	CELL_GCM_FUNC_REVERSE_SUBTRACT = 0x800B,
+	CELL_GCM_FUNC_REVERSE_SUBTRACT_SIGNED = 0x0000F005,
+	CELL_GCM_FUNC_ADD_SIGNED = 0x0000F006,
+	CELL_GCM_FUNC_REVERSE_ADD_SIGNED = 0x0000F007,
+};
+
+// GCM blend factor
+enum
+{
+	CELL_GCM_SRC_COLOR = 0x0300,
+	CELL_GCM_ONE_MINUS_SRC_COLOR = 0x0301,
+	CELL_GCM_SRC_ALPHA = 0x0302,
+	CELL_GCM_ONE_MINUS_SRC_ALPHA = 0x0303,
+	CELL_GCM_DST_ALPHA = 0x0304,
+	CELL_GCM_ONE_MINUS_DST_ALPHA = 0x0305,
+	CELL_GCM_DST_COLOR = 0x0306,
+	CELL_GCM_ONE_MINUS_DST_COLOR = 0x0307,
+	CELL_GCM_SRC_ALPHA_SATURATE = 0x0308,
+	CELL_GCM_CONSTANT_COLOR = 0x8001,
+	CELL_GCM_ONE_MINUS_CONSTANT_COLOR = 0x8002,
+	CELL_GCM_CONSTANT_ALPHA = 0x8003,
+	CELL_GCM_ONE_MINUS_CONSTANT_ALPHA = 0x8004,
 };
 
 enum
@@ -553,7 +655,7 @@ enum
 	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_U = 1 << 28,
 	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_V = 1 << 29,
 	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_P = 1 << 30,
-	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_Q = 1 << 31,
+	CELL_GCM_TEXTURE_CYLINDRICAL_WRAP_ENABLE_TEX7_Q = 1u << 31,
 
 	CELL_GCM_COLOR_MASK_B = 1 << 0,
 	CELL_GCM_COLOR_MASK_G = 1 << 8,
@@ -707,22 +809,40 @@ enum
 };
 
 // GPU Class Handles
-enum
+enum CellGcmLocation : u32
 {
+	CELL_GCM_LOCATION_LOCAL = 0,
+	CELL_GCM_LOCATION_MAIN = 1,
+
 	CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER = 0xFEED0000, // Local memory
 	CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER = 0xFEED0001, // Main memory
 	CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL = 0x66626660,
 	CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN = 0xBAD68000,
 	CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_0 = 0x6660420F,
+	CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_1 = 0x6660420E,
+	CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_2 = 0x6660420D,
+	CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_3 = 0x6660420C,
+	CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_4 = 0x6660420B,
+	CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_5 = 0x6660420A,
+	CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_6 = 0x66604209,
+	CELL_GCM_CONTEXT_DMA_NOTIFY_MAIN_7 = 0x66604208,
 
-	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0 = 0x66604200,
+	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY0 = 0x66604207,
+	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY1 = 0x66604206,
+	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY2 = 0x66604205,
+	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY3 = 0x66604204,
+	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY4 = 0x66604203,
+	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY5 = 0x66604202,
+	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY6 = 0x66604201,
+	CELL_GCM_CONTEXT_DMA_TO_MEMORY_GET_NOTIFY7 = 0x66604200,
+
 	CELL_GCM_CONTEXT_DMA_SEMAPHORE_RW = 0x66606660,
 	CELL_GCM_CONTEXT_DMA_SEMAPHORE_R = 0x66616661,
 	CELL_GCM_CONTEXT_DMA_DEVICE_RW = 0x56616660,
 	CELL_GCM_CONTEXT_DMA_DEVICE_R = 0x56616661
 };
 
-enum
+enum CellGcmMethod : u16
 {
 	// NV40_CHANNEL_DMA (NV406E)
 	NV406E_SET_REFERENCE = 0x00000050 >> 2,
@@ -1025,7 +1145,7 @@ enum
 };
 
 
-enum Method
+enum Method : u32
 {
 	/*
 	CELL_GCM_METHOD_FLAG_NON_INCREMENT = 0x40000000,
@@ -1039,25 +1159,29 @@ enum Method
 
 	RSX_METHOD_INCREMENT_CMD_MASK = 0xe0030003,
 	RSX_METHOD_INCREMENT_CMD = 0,
-	RSX_METHOD_INCREMENT_COUNT_MASK = 0x0ffc0000,
-	RSX_METHOD_INCREMENT_COUNT_SHIFT = 18,
-	RSX_METHOD_INCREMENT_METHOD_MASK = 0x00001ffc,
-
 	RSX_METHOD_NON_INCREMENT_CMD_MASK = 0xe0030003,
 	RSX_METHOD_NON_INCREMENT_CMD = 0x40000000,
-	RSX_METHOD_NON_INCREMENT_COUNT_MASK = 0x0ffc0000,
-	RSX_METHOD_NON_INCREMENT_COUNT_SHIFT = 18,
-	RSX_METHOD_NON_INCREMENT_METHOD_MASK = 0x00001ffc,
+	RSX_METHOD_COUNT_MASK = 0x1ffc0000,
+	RSX_METHOD_COUNT_SHIFT = 18,
+	RSX_METHOD_METHOD_MASK = 0x0000fffc,
 
-	RSX_METHOD_NEW_JUMP_CMD_MASK = 0x00000003,
+	RSX_METHOD_NEW_JUMP_CMD_MASK = 0xe0000003,
 	RSX_METHOD_NEW_JUMP_CMD = 0x00000001,
 	RSX_METHOD_NEW_JUMP_OFFSET_MASK = 0xfffffffc,
 
 	RSX_METHOD_CALL_CMD_MASK = 0x00000003,
 	RSX_METHOD_CALL_CMD = 0x00000002,
-	RSX_METHOD_CALL_OFFSET_MASK = 0xfffffffc,
+	RSX_METHOD_CALL_OFFSET_MASK = 0x1ffffffc,
 
+	RSX_METHOD_NON_METHOD_CMD_MASK = 0xa0030003,
 	RSX_METHOD_RETURN_CMD = 0x00020000,
+	RSX_METHOD_RETURN_MASK = 0xffff0003,
+
+	RSX_METHOD_NOP_CMD = 0x00000000,
+	RSX_METHOD_NOP_MASK = 0xbfff0003,
+
+	// Stack is empty (invalid value)
+	RSX_CALL_STACK_EMPTY = 0x00000003,
 };
 
 //Fog

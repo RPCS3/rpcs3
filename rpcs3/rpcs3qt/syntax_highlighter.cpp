@@ -1,183 +1,183 @@
 #include "syntax_highlighter.h"
+#include "qt_utils.h"
 
-syntax_highlighter::syntax_highlighter(QTextDocument *parent) : QSyntaxHighlighter(parent)
+Highlighter::Highlighter(QTextDocument *parent) : QSyntaxHighlighter(parent)
 {
 }
 
-void syntax_highlighter::AddSimpleRule(SimpleRule rule)
+void Highlighter::addRule(const QString &pattern, const QBrush &brush)
 {
-	rule.expressions.erase(std::remove_if(rule.expressions.begin(), rule.expressions.end(), [&](const auto &e){
-		return IsInvalidExpression(e) || e.captureCount() > 1;
-	}), rule.expressions.end());
+	HighlightingRule rule;
+	rule.pattern = QRegularExpression(pattern);
+	rule.format.setForeground(brush);
+	highlightingRules.append(rule);
+}
 
-	if (rule.expressions.isEmpty())
+void Highlighter::highlightBlock(const QString &text)
+{
+	for (const HighlightingRule &rule : highlightingRules)
 	{
+		QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
+		while (matchIterator.hasNext())
+		{
+			QRegularExpressionMatch match = matchIterator.next();
+			setFormat(match.capturedStart(), match.capturedLength(), rule.format);
+		}
+	}
+	setCurrentBlockState(0);
+
+	if (commentStartExpression.pattern().isEmpty() || commentEndExpression.pattern().isEmpty())
 		return;
-	}
-	m_rules.append(rule);
-}
 
-void syntax_highlighter::AddSimpleRule(const QStringList& expressions, const QColor& color)
-{
-	QTextCharFormat format;
-	format.setForeground(color);
-	QVector<QRegularExpression> regexs;
-	for (const auto& expr : expressions)
+	int startIndex = 0;
+	if (previousBlockState() != 1)
+		startIndex = text.indexOf(commentStartExpression);
+
+	while (startIndex >= 0)
 	{
-		regexs.append(QRegularExpression(expr));
-	}
-	AddSimpleRule(SimpleRule(regexs, format));
-}
+		const QRegularExpressionMatch match = commentEndExpression.match(text, startIndex);
+		const int endIndex = match.capturedStart();
+		int commentLength;
 
-void syntax_highlighter::AddWordRule(const QStringList& words, const QColor& color)
-{
-	QTextCharFormat format;
-	format.setForeground(color);
-	QVector<QRegularExpression> regexs;
-	for (const auto& word : words)
-	{
-		regexs.append(QRegularExpression("\\b" + word + "\\b"));
-	}
-	AddSimpleRule(SimpleRule(regexs, format));
-}
-
-void syntax_highlighter::AddMultiRule(const MultiRule& rule)
-{
-	if (IsInvalidExpression(rule.expression) || rule.formats.length() <= rule.expression.captureCount())
-	{
-		return;
-	}
-
-	m_multi_rules.append(rule);
-}
-void syntax_highlighter::AddMultiRule(const QString& expression, const QVector<QColor>& colors)
-{
-	QVector<QTextCharFormat> formats;
-	for (const auto& color : colors)
-	{
-		QTextCharFormat format;
-		format.setForeground(color);
-		formats.append(format);
-	}
-	AddMultiRule(MultiRule(QRegularExpression(expression), formats));
-}
-
-void syntax_highlighter::AddCommentRule(const CommentRule& rule)
-{
-	if (IsInvalidExpression(rule.start_expression) || (rule.multi_line && IsInvalidExpression(rule.end_expression)))
-	{
-		return;
-	}
-	m_comment_rules.append(rule);
-}
-
-void syntax_highlighter::AddCommentRule(const QString& start, const QColor& color, bool multi_line, const QString& end)
-{
-	QTextCharFormat format;
-	format.setForeground(color);
-	AddCommentRule(CommentRule(QRegularExpression(start), QRegularExpression(end), format, multi_line));
-}
-
-void syntax_highlighter::highlightBlock(const QString &text)
-{
-	m_current_block = text;
-
-	for (const auto& rule : m_multi_rules)
-	{
-		// Search for all the matching strings
-		QRegularExpressionMatchIterator iter = rule.expression.globalMatch(m_current_block);
-
-		// Iterate through the matching strings
-		while (iter.hasNext())
+		if (endIndex == -1)
 		{
-			// Apply formats to their respective found groups
-			QRegularExpressionMatch match = iter.next();
-
-			for (int i = 0; i <= match.lastCapturedIndex(); i++)
-			{
-				setFormat(match.capturedStart(i), match.capturedLength(i), rule.formats[i]);
-			}
+			setCurrentBlockState(1);
+			commentLength = text.length() - startIndex;
 		}
-	}
-
-	for (const auto& rule : m_rules)
-	{
-		for (const auto& expression : rule.expressions)
+		else
 		{
-			// Search for all the matching strings
-			QRegularExpressionMatchIterator iter = expression.globalMatch(m_current_block);
-			bool contains_group = expression.captureCount() > 0;
-
-			// Iterate through the matching strings
-			while (iter.hasNext())
-			{
-				// Apply format to the matching string
-				QRegularExpressionMatch match = iter.next();
-				if (contains_group)
-				{
-					setFormat(match.capturedStart(1), match.capturedLength(1), rule.format);
-				}
-				else
-				{
-					setFormat(match.capturedStart(), match.capturedLength(), rule.format);
-				}
-			}
+			commentLength = endIndex - startIndex + match.capturedLength();
 		}
-	}
-
-	for (const auto& rule : m_comment_rules)
-	{
-		int comment_start  = 0; // Current comment's start position in the text block
-		int comment_end    = 0; // Current comment's end position in the text block
-		int comment_length = 0; // Current comment length
-
-		// We assume we end outside a comment until we know better
-		setCurrentBlockState(block_state::ended_outside_comment);
-
-		// Search for the first comment in this block if we start outside or don't want to search for multiline comments
-		if (!rule.multi_line || previousBlockState() != block_state::ended_inside_comment)
-		{
-			comment_start = m_current_block.indexOf(rule.start_expression);
-		}
-
-		// Set format for the rest of this block/line
-		if (!rule.multi_line)
-		{
-			comment_length = m_current_block.length() - comment_start;
-			setFormat(comment_start, comment_length, rule.format);
-			break;
-		}
-
-		// Format all comments in this block (if they exist)
-		while (comment_start >= 0)
-		{
-			// Search for end of comment in the remaining text
-			QRegularExpressionMatch match = rule.end_expression.match(m_current_block, comment_start);
-			comment_end = match.capturedStart();
-			match.captured(1);
-
-			if (comment_end == -1)
-			{
-				// We end inside a comment and want to format the entire remaining text
-				setCurrentBlockState(block_state::ended_inside_comment);
-				comment_length = m_current_block.length() - comment_start;
-			}
-			else
-			{
-				// We found the end of the comment so we need to go another round
-				comment_length = comment_end - comment_start + match.capturedLength();
-			}
-
-			// Set format for this text segment
-			setFormat(comment_start, comment_length, rule.format);
-
-			// Search for the next comment
-			comment_start = m_current_block.indexOf(rule.start_expression, comment_start + comment_length);
-		}
+		setFormat(startIndex, commentLength, multiLineCommentFormat);
+		startIndex = text.indexOf(commentStartExpression, startIndex + commentLength);
 	}
 }
 
-bool syntax_highlighter::IsInvalidExpression(const QRegularExpression& expression)
+LogHighlighter::LogHighlighter(QTextDocument* parent) : Highlighter(parent)
 {
-	return !expression.isValid() || expression.pattern().isEmpty();
+	//addRule("^[^·].*$", gui::utils::get_label_color("log_level_always")); // unused for now
+	addRule("^·F.*$", gui::utils::get_label_color("log_level_fatal"));
+	addRule("^·E.*$", gui::utils::get_label_color("log_level_error"));
+	addRule("^·U.*$", gui::utils::get_label_color("log_level_todo"));
+	addRule("^·S.*$", gui::utils::get_label_color("log_level_success"));
+	addRule("^·W.*$", gui::utils::get_label_color("log_level_warning"));
+	addRule("^·!.*$", gui::utils::get_label_color("log_level_notice"));
+	addRule("^·T.*$", gui::utils::get_label_color("log_level_trace"));
+}
+
+AsmHighlighter::AsmHighlighter(QTextDocument *parent) : Highlighter(parent)
+{
+	addRule("^[A-Z0-9]+",             Qt::darkBlue);    // Instructions
+	addRule("-?R\\d[^,;\\s]*",        Qt::darkRed);     // -R0.*
+	addRule("-?H\\d[^,;\\s]*",        Qt::red);         // -H1.*
+	addRule("-?v\\[\\d\\]*[^,;\\s]*", Qt::darkCyan);    // -v[xyz].*
+	addRule("-?o\\[\\d\\]*[^,;\\s]*", Qt::darkMagenta); // -o[xyz].*
+	addRule("-?c\\[\\d\\]*[^,;\\s]*", Qt::darkYellow);  // -c[xyz].*
+	addRule("#[^\\n]*",               Qt::darkGreen);   // Single line comment
+}
+
+GlslHighlighter::GlslHighlighter(QTextDocument *parent) : Highlighter(parent)
+{
+	const QStringList keywordPatterns = QStringList()
+		// Selection-Iteration-Jump Statements:
+		<< "if"     << "else"  << "switch"   << "case"    << "default"
+		<< "for"    << "while" << "do"       << "foreach" //?
+		<< "return" << "break" << "continue" << "discard"
+		// Misc:
+		<< "void"    << "char"     << "short"     << "long"      << "template"
+		<< "class"   << "struct"   << "union"     << "enum"
+		<< "static"  << "virtual"  << "inline"    << "explicit"
+		<< "public"  << "private"  << "protected" << "namespace"
+		<< "typedef" << "typename" << "signed"    << "unsigned"
+		<< "friend"  << "operator" << "signals"   << "slots"
+		// Qualifiers:
+		<< "in"     << "packed" << "precision" << "const"     << "smooth"        << "sample"
+		<< "out"    << "shared" << "highp"     << "invariant" << "noperspective" << "centroid"
+		<< "inout"  << "std140" << "mediump"   << "uniform"   << "flat"          << "patch"
+		<< "buffer" << "std430" << "lowp"
+		<< "image"
+		// Removed Qualifiers?
+		<< "attribute" << "varying"
+		// Memory Qualifiers
+		<< "coherent" << "volatile" << "restrict" << "readonly" << "writeonly"
+		// Layout Qualifiers:
+		//<< "subroutine" << "layout"     << "xfb_buffer" << "textureGrad"  << "texture" << "dFdx" << "dFdy"
+		//<< "location"   << "component"  << "binding"    << "offset"
+		//<< "xfb_offset" << "xfb_stride" << "vertices"   << "max_vertices"
+		// Scalars and Vectors:
+		<< "bool"  << "int"   << "uint"  << "float" << "double"
+		<< "bvec2" << "ivec2" << "uvec2" << "vec2"  << "dvec2"
+		<< "bvec3" << "ivec3" << "uvec3" << "vec3"  << "dvec3"
+		<< "bvec4" << "ivec4" << "uvec4" << "vec4"  << "dvec4"
+		// Matrices:
+		<< "mat2" << "mat2x3" << "mat2x4"
+		<< "mat3" << "mat3x2" << "mat3x4"
+		<< "mat4" << "mat4x2" << "mat4x3"
+		// Sampler Types:
+		<< "sampler1D"        << "isampler1D"        << "usampler1D"
+		<< "sampler2D"        << "isampler2D"        << "usampler2D"
+		<< "sampler3D"        << "isampler3D"        << "usampler3D"
+		<< "samplerCube"      << "isamplerCube"      << "usamplerCube"
+		<< "sampler2DRect"    << "isampler2DRect"    << "usampler2DRect"
+		<< "sampler1DArray"   << "isampler1DArray"   << "usampler1DArray"
+		<< "sampler2DArray"   << "isampler2DArray"   << "usampler2DArray"
+		<< "samplerCubeArray" << "isamplerCubeArray" << "usamplerCubeArray"
+		<< "samplerBuffer"    << "isamplerBuffer"    << "usamplerBuffer"
+		<< "sampler2DMS"      << "isampler2DMS"      << "usampler2DMS"
+		<< "sampler2DMSArray" << "isampler2DMSArray" << "usampler2DMSArray"
+		// Shadow Samplers:
+		<< "sampler1DShadow"
+		<< "sampler2DShadow"
+		<< "samplerCubeShadow"
+		<< "sampler2DRectShadow"
+		<< "sampler1DArrayShadow"
+		<< "sampler2DArrayShadow"
+		<< "samplerCubeArrayShadow"
+		// Image Types:
+		<< "image1D"        << "iimage1D"        << "uimage1D"
+		<< "image2D"        << "iimage2D"        << "uimage2D"
+		<< "image3D"        << "iimage3D"        << "uimage3D"
+		<< "imageCube"      << "iimageCube"      << "uimageCube"
+		<< "image2DRect"    << "iimage2DRect"    << "uimage2DRect"
+		<< "image1DArray"   << "iimage1DArray"   << "uimage1DArray"
+		<< "image2DArray"   << "iimage2DArray"   << "uimage2DArray"
+		<< "imageCubeArray" << "iimageCubeArray" << "uimageCubeArray"
+		<< "imageBuffer"    << "iimageBuffer"    << "uimageBuffer"
+		<< "image2DMS"      << "iimage2DMS"      << "uimage2DMS"
+		<< "image2DMSArray" << "iimage2DMSArray" << "uimage2DMSArray"
+		// Image Formats:
+		// Floating-point:  // Signed integer:
+		<< "rgba32f"        << "rgba32i"
+		<< "rgba16f"        << "rgba16i"
+		<< "rg32f"          << "rgba8i"
+		<< "rg16f"          << "rg32i"
+		<< "r11f_g11f_b10f" << "rg16i"
+		<< "r32f"           << "rg8i"
+		<< "r16f"           << "r32i"
+		<< "rgba16"         << "r16i"
+		<< "rgb10_a2"       << "r8i"
+		<< "rgba8"          << "r8ui"
+		<< "rg16"           // Unsigned integer:
+		<< "rg8"            << "rgba32ui"
+		<< "r16"            << "rgba16ui"
+		<< "r8"             << "rgb10_a2ui"
+		<< "rgba16_snorm"   << "rgba8ui"
+		<< "rgba8_snorm"    << "rg32ui"
+		<< "rg16_snorm"     << "rg16ui"
+		<< "rg8_snorm"      << "rg8ui"
+		<< "r16_snorm"      << "r32ui"
+		<< "r8_snorm"       << "r16ui";
+
+	for (const QString &pattern : keywordPatterns)
+		addRule("\\b" + pattern + "\\b",   Qt::darkBlue);    // normal words like: soka, nani, or gomen
+
+	addRule("\\bGL_(?:[A-Z]|_)+\\b",       Qt::darkMagenta); // constants like: GL_OMAE_WA_MOU_SHINDEIRU
+	addRule("\\bgl_(?:[A-Z]|[a-z]|_)+\\b", Qt::darkCyan);    // reserved types like: gl_exploooooosion
+	addRule("\\B#[^\\s]+\\b",              Qt::darkGray);    // preprocessor instructions like: #waifu megumin
+	addRule("//[^\\n]*",                   Qt::darkGreen);   // Single line comment
+
+	// Multi line comment
+	multiLineCommentFormat.setForeground(Qt::darkGreen);
+	commentStartExpression = QRegularExpression("/\\*");
+	commentEndExpression = QRegularExpression("\\*/");
 }

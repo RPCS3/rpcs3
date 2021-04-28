@@ -1,185 +1,38 @@
 #pragma once
 
-#include "stdafx.h"
-#include "Emu/GameInfo.h"
-
-#include "custom_dock_widget.h"
 #include "game_list.h"
-#include "game_list_grid.h"
-#include "emu_settings.h"
-#include "game_compatibility.h"
+#include "custom_dock_widget.h"
+#include "gui_save.h"
 
 #include <QMainWindow>
 #include <QToolBar>
-#include <QLineEdit>
 #include <QStackedWidget>
 #include <QSet>
+#include <QTableWidgetItem>
 
 #include <memory>
 
-enum Category
-{
-	Disc_Game,
-	Non_Disc_Game,
-	Home,
-	Media,
-	Data,
-	Unknown_Cat,
-	Others,
-};
-
-namespace category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories 
-{
-	// PS3 bootable
-	const QString app_Music = QObject::tr("App Music");
-	const QString app_Photo = QObject::tr("App Photo");
-	const QString app_TV    = QObject::tr("App TV");
-	const QString app_Video = QObject::tr("App Video");
-	const QString bc_Video  = QObject::tr("Broadcast Video");
-	const QString disc_Game = QObject::tr("Disc Game");
-	const QString hdd_Game  = QObject::tr("HDD Game");
-	const QString home      = QObject::tr("Home");
-	const QString network   = QObject::tr("Network");
-	const QString store_FE  = QObject::tr("Store");
-	const QString web_TV    = QObject::tr("Web TV");
-
-	// PS2 bootable
-	const QString ps2_game = QObject::tr("PS2 Classics");
-	const QString ps2_inst = QObject::tr("PS2 Game");
-
-	// PS1 bootable
-	const QString ps1_game = QObject::tr("PS1 Classics");
-
-	// PSP bootable
-	const QString psp_game = QObject::tr("PSP Game");
-	const QString psp_mini = QObject::tr("PSP Minis");
-	const QString psp_rema = QObject::tr("PSP Remasters");
-
-	// Data
-	const QString ps3_Data = QObject::tr("PS3 Game Data");
-	const QString ps2_Data = QObject::tr("PS2 Emulator Data");
-
-	// Save
-	const QString ps3_Save = QObject::tr("PS3 Save Data");
-	const QString psp_Save = QObject::tr("PSP Minis Save Data");
-
-	// others
-	const QString trophy  = QObject::tr("Trophy");
-	const QString unknown = QObject::tr("Unknown");
-	const QString other   = QObject::tr("Other");
-
-	const q_from_char cat_boot =
-	{
-		{ "AM",app_Music }, // media
-		{ "AP",app_Photo }, // media
-		{ "AT",app_TV },    // media
-		{ "AV",app_Video }, // media
-		{ "BV",bc_Video },  // media
-		{ "DG",disc_Game }, // disc_Game
-		{ "HG",hdd_Game },  // non_disc_games
-		{ "HM",home },      // home
-		{ "CB",network },   // other
-		{ "SF",store_FE },  // other
-		{ "WT",web_TV },    // media
-		{ "2P",ps2_game },  // non_disc_games
-		{ "2G",ps2_inst },  // non_disc_games
-		{ "1P",ps1_game },  // non_disc_games
-		{ "PP",psp_game },  // non_disc_games
-		{ "MN",psp_mini },  // non_disc_games
-		{ "PE",psp_rema }   // non_disc_games
-	};
-	const q_from_char cat_data =
-	{
-		{ "GD",ps3_Data }, // data
-		{ "2D",ps2_Data }, // data
-		{ "SD",ps3_Save }, // data
-		{ "MS",psp_Save }  // data
-	};
-
-	const QStringList non_disc_games = { hdd_Game, ps2_game, ps2_inst, ps1_game, psp_game, psp_mini, psp_rema };
-	const QStringList media = { app_Photo, app_Video, bc_Video, app_Music, app_TV, web_TV };
-	const QStringList data = { ps3_Data, ps2_Data, ps3_Save, psp_Save };
-	const QStringList others = { network, store_FE, trophy, other };
-
-	inline bool CategoryInMap(const std::string& cat, const q_from_char& map)
-	{
-		auto map_contains_category = [s = qstr(cat)](const auto& p)
-		{
-			return p.second == s;
-		};
-
-		return std::find_if(map.begin(), map.end(), map_contains_category) != map.end();
-	}
-}
-
-namespace parental
-{
-	// These values are partly generalized. They can vary between country and category
-	// Normally only values 1,2,3,5,7 and 9 are used
-	const std::map<u32, QString> level
-	{
-		{ 1,  QObject::tr("0+") },
-		{ 2,  QObject::tr("3+") },
-		{ 3,  QObject::tr("7+") },
-		{ 4,  QObject::tr("10+") },
-		{ 5,  QObject::tr("12+") },
-		{ 6,  QObject::tr("15+") },
-		{ 7,  QObject::tr("16+") },
-		{ 8,  QObject::tr("17+") },
-		{ 9,  QObject::tr("18+") },
-		{ 10, QObject::tr("Level 10") },
-		{ 11, QObject::tr("Level 11") }
-	};
-}
-
-namespace resolution
-{
-	// there might be different values for other categories
-	const std::map<u32, QString> mode
-	{
-		{ 1 << 0, QObject::tr("480p") },
-		{ 1 << 1, QObject::tr("576p") },
-		{ 1 << 2, QObject::tr("720p") },
-		{ 1 << 3, QObject::tr("1080p") },
-		{ 1 << 4, QObject::tr("480p 16:9") },
-		{ 1 << 5, QObject::tr("576p 16:9") },
-	};
-}
-
-namespace sound
-{
-	const std::map<u32, QString> format
-	{
-		{ 1 << 0, QObject::tr("LPCM 2.0") },
-		//{ 1 << 1, QObject::tr("LPCM ???") },
-		{ 1 << 2, QObject::tr("LPCM 5.1") },
-		{ 1 << 4, QObject::tr("LPCM 7.1") },
-		{ 1 << 8, QObject::tr("Dolby Digital 5.1") },
-		{ 1 << 9, QObject::tr("DTS 5.1") },
-	};
-}
-
-/* Having the icons associated with the game info simplifies logic internally */
-struct GUI_GameInfo
-{
-	GameInfo info;
-	compat_status compat;
-	QImage icon;
-	QPixmap pxmap;
-	bool bootable;
-	bool hasCustomConfig;
-};
+class game_list_grid;
+class gui_settings;
+class emu_settings;
+class persistent_settings;
 
 class game_list_frame : public custom_dock_widget
 {
 	Q_OBJECT
 
 public:
-	explicit game_list_frame(std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget *parent = nullptr);
+	explicit game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent = nullptr);
 	~game_list_frame();
 
+	/** Fix columns with width smaller than the minimal section size */
+	void FixNarrowColumns() const;
+
+	/** Resizes the columns to their contents and adds a small spacing */
+	void ResizeColumnsToContents(int spacing = 20) const;
+
 	/** Refresh the gamelist with/without loading game data from files. Public so that main frame can refresh after vfs or install */
-	void Refresh(const bool fromDrive = false, const bool scrollAfter = true);
+	void Refresh(const bool from_drive = false, const bool scroll_after = true);
 
 	/** Adds/removes categories that should be shown on gamelist. Public so that main frame menu actions can apply them */
 	void ToggleCategoryFilter(const QStringList& categories, bool show);
@@ -191,71 +44,103 @@ public:
 	void SaveSettings();
 
 	/** Resize Gamelist Icons to size given by slider position */
-	void ResizeIcons(const int& sliderPos);
+	void ResizeIcons(const int& slider_pos);
 
 	/** Repaint Gamelist Icons with new background color */
-	void RepaintIcons(const bool& fromSettings = false);
+	void RepaintIcons(const bool& from_settings = false);
 
 	void SetShowHidden(bool show);
 
+	game_compatibility* GetGameCompatibility() const { return m_game_compat; }
+
+	QList<game_info> GetGameInfo() const;
+
+	// Returns the visible version string in the game list
+	static std::string GetGameVersion(const game_info& game);
+
 public Q_SLOTS:
-	void SetListMode(const bool& isList);
+	void BatchCreatePPUCaches();
+	void BatchRemovePPUCaches();
+	void BatchRemoveSPUCaches();
+	void BatchRemoveCustomConfigurations();
+	void BatchRemoveCustomPadConfigurations();
+	void BatchRemoveShaderCaches();
+	void SetListMode(const bool& is_list);
 	void SetSearchText(const QString& text);
+	void SetShowCompatibilityInGrid(bool show);
+	void SetShowCustomIcons(bool show);
+	void SetPlayHoverGifs(bool play);
 
 private Q_SLOTS:
-	bool RemoveCustomConfiguration(const std::string& base_dir, bool is_interactive = false);
-	bool DeleteShadersCache(const std::string& base_dir, bool is_interactive = false);
-	bool DeleteLLVMCache(const std::string& base_dir, bool is_interactive = false);
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint &pos);
-	void ShowSpecifiedContextMenu(const QPoint &pos, int index); // Different name because the notation for overloaded connects is messy
-	void doubleClickedSlot(const QModelIndex& index);
+	void doubleClickedSlot(QTableWidgetItem *item);
+	void itemSelectionChangedSlot();
 Q_SIGNALS:
 	void GameListFrameClosed();
-	void RequestBoot(const std::string& path);
+	void NotifyGameSelection(const game_info& game);
+	void RequestBoot(const game_info& game, bool force_global_config = false);
 	void RequestIconSizeChange(const int& val);
+	void NotifyEmuSettingsChange();
 protected:
 	/** Override inherited method from Qt to allow signalling when close happened.*/
 	void closeEvent(QCloseEvent* event) override;
 	void resizeEvent(QResizeEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
 private:
-	QPixmap PaintedPixmap(const QImage& img, bool paintConfigIcon = false);
+	QPixmap PaintedPixmap(const QPixmap& icon, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor()) const;
+	QColor getGridCompatibilityColor(const QString& string) const;
+	void ShowCustomConfigIcon(const game_info& game);
+	void PopulateGameList();
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
-	bool IsEntryVisible(const GUI_GameInfo& game);
-	void SortGameList();
+	bool IsEntryVisible(const game_info& game);
+	void SortGameList() const;
+	bool SearchMatchesApp(const QString& name, const QString& serial) const;
 
-	int PopulateGameList();
-	bool SearchMatchesApp(const std::string& name, const std::string& serial);
+	bool RemoveCustomConfiguration(const std::string& title_id, const game_info& game = nullptr, bool is_interactive = false);
+	bool RemoveCustomPadConfiguration(const std::string& title_id, const game_info& game = nullptr, bool is_interactive = false);
+	bool RemoveShadersCache(const std::string& base_dir, bool is_interactive = false);
+	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
+	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
+	static bool CreatePPUCache(const game_info& game);
 
-	std::string CurrentSelectionIconPath();
-	std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
+	QString GetLastPlayedBySerial(const QString& serial) const;
+	static std::string GetCacheDirBySerial(const std::string& serial);
+	static std::string GetDataDirBySerial(const std::string& serial);
+	std::string CurrentSelectionPath();
+	static std::string GetStringFromU32(const u32& key, const std::map<u32, QString>& map, bool combined = false);
+
+	game_info GetGameInfoByMode(const QTableWidgetItem* item) const;
+	static game_info GetGameInfoFromItem(const QTableWidgetItem* item);
 
 	// Which widget we are displaying depends on if we are in grid or list mode.
-	QMainWindow* m_Game_Dock;
-	QStackedWidget* m_Central_Widget;
+	QMainWindow* m_game_dock = nullptr;
+	QStackedWidget* m_central_widget = nullptr;
 
 	// Game Grid
-	game_list_grid* m_xgrid;
+	game_list_grid* m_game_grid = nullptr;
 
 	// Game List
-	game_list* m_gameList;
-	std::unique_ptr<game_compatibility> m_game_compat;
+	game_list* m_game_list = nullptr;
+	game_compatibility* m_game_compat = nullptr;
 	QList<QAction*> m_columnActs;
-	Qt::SortOrder m_colSortOrder;
-	int m_sortColumn;
+	Qt::SortOrder m_col_sort_order;
+	int m_sort_column;
+	QMap<QString, QString> m_notes;
+	QMap<QString, QString> m_titles;
 
 	// Categories
-	QStringList m_categoryFilters;
+	QStringList m_category_filters;
 
 	// List Mode
-	bool m_isListLayout = true;
-	bool m_oldLayoutIsList = true;
+	bool m_is_list_layout = true;
+	bool m_old_layout_is_list = true;
 
 	// Data
-	std::shared_ptr<gui_settings> xgui_settings;
-	std::shared_ptr<emu_settings> xemu_settings;
-	std::vector<GUI_GameInfo> m_game_data;
+	std::shared_ptr<gui_settings> m_gui_settings;
+	std::shared_ptr<emu_settings> m_emu_settings;
+	std::shared_ptr<persistent_settings> m_persistent_settings;
+	QList<game_info> m_game_data;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};
 
@@ -266,8 +151,11 @@ private:
 	int m_icon_size_index = 0;
 
 	// Icons
-	QColor m_Icon_Color;
-	QSize m_Icon_Size = gui::gl_icon_size_min; // ensure a valid size
-	qreal m_Margin_Factor;
-	qreal m_Text_Factor;
+	QColor m_icon_color;
+	QSize m_icon_size;
+	qreal m_margin_factor;
+	qreal m_text_factor;
+	bool m_draw_compat_status_to_grid = false;
+	bool m_show_custom_icons = true;
+	bool m_play_hover_movies = true;
 };

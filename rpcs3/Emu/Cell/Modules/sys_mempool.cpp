@@ -2,8 +2,6 @@
 
 #include "Utilities/StrUtil.h"
 
-#include "Emu/System.h"
-#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_mutex.h"
@@ -11,8 +9,7 @@
 
 #include "sysPrxForUser.h"
 
-
-extern logs::channel sysPrxForUser;
+LOG_CHANNEL(sysPrxForUser);
 
 using sys_mempool_t = u32;
 
@@ -32,7 +29,7 @@ struct memory_pool_t
 	std::vector<vm::ptr<void>> free_blocks;
 };
 
-s32 sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<void> chunk, const u64 chunk_size, const u64 block_size, const u64 ralignment)
+error_code sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<void> chunk, const u64 chunk_size, const u64 block_size, const u64 ralignment)
 {
 	sysPrxForUser.warning("sys_mempool_create(mempool=*0x%x, chunk=*0x%x, chunk_size=%d, block_size=%d, ralignment=%d)", mempool, chunk, chunk_size, block_size, ralignment);
 
@@ -54,7 +51,7 @@ s32 sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<
 	}
 
 	// Test chunk address aligment
-	if (chunk % 8)
+	if (!chunk.aligned(8))
 	{
 		return CELL_EINVAL;
 	}
@@ -72,9 +69,9 @@ s32 sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<
 	// TODO: check blocks alignment wrt ralignment
 	u64 num_blocks = chunk_size / block_size;
 	memory_pool->free_blocks.resize(num_blocks);
-	for (int i = 0; i < num_blocks; ++i)
+	for (u32 i = 0; i < num_blocks; ++i)
 	{
-		memory_pool->free_blocks[i] = vm::ptr<void>::make(chunk.addr() + i * block_size);
+		memory_pool->free_blocks[i] = vm::ptr<void>::make(chunk.addr() + i * static_cast<u32>(block_size));
 	}
 
 	// Create synchronization variables
@@ -88,7 +85,7 @@ s32 sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<
 	attr->flags = 0; //  Also no idea what this is.
 	strcpy_trunc(attr->name, "mp_m" + std::to_string(*mempool));
 
-	error_code ret = sys_mutex_create(mutexid, attr);
+	error_code ret = sys_mutex_create(ppu, mutexid, attr);
 	if (ret != 0)
 	{ // TODO: Better exception handling.
 		fmt::throw_exception("mempool %x failed to create mutex", mempool);
@@ -102,7 +99,7 @@ s32 sys_mempool_create(ppu_thread& ppu, vm::ptr<sys_mempool_t> mempool, vm::ptr<
 	condAttr->ipc_key = 0; // Also no idea what this is
 	strcpy_trunc(condAttr->name, "mp_c" + std::to_string(*mempool));
 
-	ret = sys_cond_create(condid, *mutexid, condAttr);
+	ret = sys_cond_create(ppu, condid, *mutexid, condAttr);
 	if (ret != CELL_OK)
 	{  // TODO: Better exception handling.
 		fmt::throw_exception("mempool %x failed to create condition variable", mempool);
@@ -123,10 +120,10 @@ void sys_mempool_destroy(ppu_thread& ppu, sys_mempool_t mempool)
 		u32 mutexid = memory_pool->mutexid;
 
 		sys_mutex_lock(ppu, memory_pool->mutexid, 0);
-		idm::remove<memory_pool_t>(mempool);
+		idm::remove_verify<memory_pool_t>(mempool, std::move(memory_pool));
 		sys_mutex_unlock(ppu, mutexid);
-		sys_mutex_destroy(mutexid);
-		sys_cond_destroy(condid);
+		sys_mutex_destroy(ppu, mutexid);
+		sys_cond_destroy(ppu, condid);
 	}
 	else
 	{
@@ -134,7 +131,7 @@ void sys_mempool_destroy(ppu_thread& ppu, sys_mempool_t mempool)
 	}
 }
 
-s32 sys_mempool_free_block(ppu_thread& ppu, sys_mempool_t mempool, vm::ptr<void> block)
+error_code sys_mempool_free_block(ppu_thread& ppu, sys_mempool_t mempool, vm::ptr<void> block)
 {
 	sysPrxForUser.warning("sys_mempool_free_block(mempool=%d, block=*0x%x)", mempool, block);
 
@@ -184,7 +181,7 @@ vm::ptr<void> sys_mempool_allocate_block(ppu_thread& ppu, sys_mempool_t mempool)
 	}
 	sys_mutex_lock(ppu, memory_pool->mutexid, 0);
 
-	while (memory_pool->free_blocks.size() == 0) // while is to guard against spurious wakeups
+	while (memory_pool->free_blocks.empty()) // while is to guard against spurious wakeups
 	{
 		sys_cond_wait(ppu, memory_pool->condid, 0);
 		memory_pool = idm::get<memory_pool_t>(mempool);
@@ -206,7 +203,7 @@ vm::ptr<void> sys_mempool_try_allocate_block(ppu_thread& ppu, sys_mempool_t memp
 
 	auto memory_pool = idm::get<memory_pool_t>(mempool);
 
-	if (!memory_pool || memory_pool->free_blocks.size() == 0)
+	if (!memory_pool || memory_pool->free_blocks.empty())
 	{
 		return vm::null;
 	}

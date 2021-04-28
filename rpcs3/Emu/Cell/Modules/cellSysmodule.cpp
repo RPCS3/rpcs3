@@ -1,18 +1,36 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-logs::channel cellSysmodule("cellSysmodule");
+LOG_CHANNEL(cellSysmodule);
 
-enum
+constexpr auto CELL_SYSMODULE_LOADED = CELL_OK;
+
+enum CellSysmoduleError : u32
 {
-	CELL_SYSMODULE_LOADED                     = CELL_OK,
 	CELL_SYSMODULE_ERROR_DUPLICATED           = 0x80012001,
 	CELL_SYSMODULE_ERROR_UNKNOWN              = 0x80012002,
 	CELL_SYSMODULE_ERROR_UNLOADED             = 0x80012003,
 	CELL_SYSMODULE_ERROR_INVALID_MEMCONTAINER = 0x80012004,
 	CELL_SYSMODULE_ERROR_FATAL                = 0x800120ff,
 };
+
+template<>
+void fmt_class_string<CellSysmoduleError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_SYSMODULE_ERROR_DUPLICATED);
+			STR_CASE(CELL_SYSMODULE_ERROR_UNKNOWN);
+			STR_CASE(CELL_SYSMODULE_ERROR_UNLOADED);
+			STR_CASE(CELL_SYSMODULE_ERROR_INVALID_MEMCONTAINER);
+			STR_CASE(CELL_SYSMODULE_ERROR_FATAL);
+		}
+
+		return unknown;
+	});
+}
 
 static const char* get_module_name(u16 id)
 {
@@ -260,33 +278,32 @@ static const char* get_module_id(u16 id)
 	return tls_id_name;
 }
 
-s32 cellSysmoduleInitialize()
+error_code cellSysmoduleInitialize()
 {
 	cellSysmodule.warning("cellSysmoduleInitialize()");
 	return CELL_OK;
 }
 
-s32 cellSysmoduleFinalize()
+error_code cellSysmoduleFinalize()
 {
 	cellSysmodule.warning("cellSysmoduleFinalize()");
 	return CELL_OK;
 }
 
-s32 cellSysmoduleSetMemcontainer(u32 ct_id)
+error_code cellSysmoduleSetMemcontainer(u32 ct_id)
 {
 	cellSysmodule.todo("cellSysmoduleSetMemcontainer(ct_id=0x%x)", ct_id);
 	return CELL_OK;
 }
 
-s32 cellSysmoduleLoadModule(u16 id)
+error_code cellSysmoduleLoadModule(u16 id)
 {
-	cellSysmodule.warning("cellSysmoduleLoadModule(id=%s)", get_module_id(id));
+	cellSysmodule.warning("cellSysmoduleLoadModule(id=0x%04X=%s)", id, get_module_id(id));
 
 	const auto name = get_module_name(id);
 
 	if (!name)
 	{
-		cellSysmodule.error("cellSysmoduleLoadModule() failed: unknown module 0x%04X", id);
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
@@ -299,15 +316,14 @@ s32 cellSysmoduleLoadModule(u16 id)
 	return CELL_OK;
 }
 
-s32 cellSysmoduleUnloadModule(u16 id)
+error_code cellSysmoduleUnloadModule(u16 id)
 {
-	cellSysmodule.warning("cellSysmoduleUnloadModule(id=%s)", get_module_id(id));
+	cellSysmodule.warning("cellSysmoduleUnloadModule(id=0x%04X=%s)", id, get_module_id(id));
 
 	const auto name = get_module_name(id);
 
 	if (!name)
 	{
-		cellSysmodule.error("cellSysmoduleUnloadModule() failed: unknown module 0x%04X", id);
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
@@ -321,19 +337,18 @@ s32 cellSysmoduleUnloadModule(u16 id)
 
 	//	m->Unload();
 	//}
-	
+
 	return CELL_OK;
 }
 
-s32 cellSysmoduleIsLoaded(u16 id)
+error_code cellSysmoduleIsLoaded(u16 id)
 {
-	cellSysmodule.warning("cellSysmoduleIsLoaded(id=%s)", get_module_id(id));
+	cellSysmodule.warning("cellSysmoduleIsLoaded(id=0x%04X=%s)", id, get_module_id(id));
 
 	const auto name = get_module_name(id);
 
 	if (!name)
 	{
-		cellSysmodule.error("cellSysmoduleIsLoaded() failed: unknown module 0x%04X", id);
 		return CELL_SYSMODULE_ERROR_UNKNOWN;
 	}
 
@@ -349,31 +364,43 @@ s32 cellSysmoduleIsLoaded(u16 id)
 	return CELL_SYSMODULE_LOADED;
 }
 
-s32 cellSysmoduleGetImagesize()
+error_code cellSysmoduleGetImagesize()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
 }
 
-s32 cellSysmoduleFetchImage()
+error_code cellSysmoduleFetchImage()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
 }
 
-s32 cellSysmodule_B498BF77()
+error_code cellSysmoduleUnloadModuleInternal()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
 }
 
-s32 cellSysmodule_D9B8C0EE()
+error_code cellSysmoduleLoadModuleInternal()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
 }
 
-s32 cellSysmodule_1A267F98()
+error_code cellSysmoduleUnloadModuleEx()
+{
+	UNIMPLEMENTED_FUNC(cellSysmodule);
+	return CELL_OK;
+}
+
+error_code cellSysmoduleLoadModuleEx()
+{
+	UNIMPLEMENTED_FUNC(cellSysmodule);
+	return CELL_OK;
+}
+
+error_code cellSysmoduleIsLoadedEx()
 {
 	UNIMPLEMENTED_FUNC(cellSysmodule);
 	return CELL_OK;
@@ -389,7 +416,9 @@ DECLARE(ppu_module_manager::cellSysmodule)("cellSysmodule", []()
 	REG_FUNC(cellSysmodule, cellSysmoduleIsLoaded);
 	REG_FUNC(cellSysmodule, cellSysmoduleGetImagesize);
 	REG_FUNC(cellSysmodule, cellSysmoduleFetchImage);
-	REG_FNID(cellSysmodule, 0xB498BF77, cellSysmodule_B498BF77);
-	REG_FNID(cellSysmodule, 0xD9B8C0EE, cellSysmodule_D9B8C0EE);
-	REG_FNID(cellSysmodule, 0x1A267F98, cellSysmodule_1A267F98);
+	REG_FUNC(cellSysmodule, cellSysmoduleUnloadModuleInternal);
+	REG_FUNC(cellSysmodule, cellSysmoduleLoadModuleInternal);
+	REG_FUNC(cellSysmodule, cellSysmoduleUnloadModuleEx);
+	REG_FUNC(cellSysmodule, cellSysmoduleLoadModuleEx);
+	REG_FUNC(cellSysmodule, cellSysmoduleIsLoadedEx);
 });

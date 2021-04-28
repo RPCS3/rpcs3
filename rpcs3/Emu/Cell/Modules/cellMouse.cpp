@@ -1,122 +1,219 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Io/MouseHandler.h"
+
 #include "cellMouse.h"
 
-extern logs::channel sys_io;
+extern void libio_sys_config_init();
+extern void libio_sys_config_end();
 
-s32 cellMouseInit(u32 max_connect)
+LOG_CHANNEL(sys_io);
+
+template<>
+void fmt_class_string<CellMouseError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_MOUSE_ERROR_FATAL);
+			STR_CASE(CELL_MOUSE_ERROR_INVALID_PARAMETER);
+			STR_CASE(CELL_MOUSE_ERROR_ALREADY_INITIALIZED);
+			STR_CASE(CELL_MOUSE_ERROR_UNINITIALIZED);
+			STR_CASE(CELL_MOUSE_ERROR_RESOURCE_ALLOCATION_FAILED);
+			STR_CASE(CELL_MOUSE_ERROR_DATA_READ_FAILED);
+			STR_CASE(CELL_MOUSE_ERROR_NO_DEVICE);
+			STR_CASE(CELL_MOUSE_ERROR_SYS_SETTING_FAILED);
+		}
+
+		return unknown;
+	});
+}
+
+error_code cellMouseInit(u32 max_connect)
 {
 	sys_io.warning("cellMouseInit(max_connect=%d)", max_connect);
 
-	const auto handler = fxm::import<MouseHandlerBase>(Emu.GetCallbacks().get_mouse_handler);
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	if (!handler)
-	{
+	const auto init = handler.init.init();
+
+	if (!init)
 		return CELL_MOUSE_ERROR_ALREADY_INITIALIZED;
+
+	if (max_connect == 0 || max_connect > CELL_MAX_MICE)
+	{
+		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	handler->Init(std::min(max_connect, 7u));
+	libio_sys_config_init();
+	handler.Init(std::min(max_connect, 7u));
+
 	return CELL_OK;
 }
 
-s32 cellMouseClearBuf(u32 port_no)
+error_code cellMouseClearBuf(u32 port_no)
 {
 	sys_io.trace("cellMouseClearBuf(port_no=%d)", port_no);
 
-	const auto handler = fxm::get<MouseHandlerBase>();
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	if (!handler)
-	{
+	const auto init = handler.init.access();
+
+	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
 
-	if (port_no >= handler->GetMice().size())
+	if (port_no >= CELL_MAX_MICE)
 	{
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	//?
+	const MouseInfo& current_info = handler.GetInfo();
 
-	return CELL_OK;
-}
-
-s32 cellMouseEnd()
-{
-	sys_io.notice("cellMouseEnd()");
-
-	if (!fxm::remove<MouseHandlerBase>())
-	{
-		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
-
-	return CELL_OK;
-}
-
-s32 cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
-{
-	sys_io.trace("cellMouseGetInfo(info=*0x%x)", info);
-
-	const auto handler = fxm::get<MouseHandlerBase>();
-
-	if (!handler)
-	{
-		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
-
-	const MouseInfo& current_info = handler->GetInfo();
-	info->max_connect = current_info.max_connect;
-	info->now_connect = current_info.now_connect;
-	info->info = current_info.info;
-	for (u32 i=0; i<CELL_MAX_MICE; i++)	info->vendor_id[i] = current_info.vendor_id[i];
-	for (u32 i=0; i<CELL_MAX_MICE; i++)	info->product_id[i] = current_info.product_id[i];
-	for (u32 i=0; i<CELL_MAX_MICE; i++)	info->status[i] = current_info.status[i];
-
-	return CELL_OK;
-}
-
-s32 cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> info)
-{
-	sys_io.trace("cellMouseInfoTabletMode(port_no=%d, info=*0x%x)", port_no, info);
-
-	const auto handler = fxm::get<MouseHandlerBase>();
-
-	if (!handler)
-	{
-		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
-
-	if (port_no >= handler->GetMice().size())
-	{
-		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
-	}
-
-	info->is_supported = 0; // Unimplemented: (0=Tablet mode is not supported)
-	info->mode = 1; // Unimplemented: (1=Mouse mode)
-
-	return CELL_OK;
-}
-
-s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
-{
-	sys_io.trace("cellMouseGetData(port_no=%d, data=*0x%x)", port_no, data);
-
-	const auto handler = fxm::get<MouseHandlerBase>();
-
-	if (!handler)
-	{
-		return CELL_MOUSE_ERROR_UNINITIALIZED;
-	}
-
-	if (port_no >= handler->GetMice().size())
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
 		return CELL_MOUSE_ERROR_NO_DEVICE;
 	}
 
-	MouseData& current_data = handler->GetData(port_no);
+	handler.GetDataList(port_no).clear();
+	handler.GetTabletDataList(port_no).clear();
+
+	MouseRawData& raw_data = handler.GetRawData(port_no);
+	raw_data.len = 0;
+
+	for (int i = 0; i < CELL_MOUSE_MAX_CODES; i++)
+	{
+		raw_data.data[i] = 0;
+	}
+
+	return CELL_OK;
+}
+
+error_code cellMouseEnd()
+{
+	sys_io.notice("cellMouseEnd()");
+
+	auto& handler = g_fxo->get<MouseHandlerBase>();
+
+	const auto init = handler.init.reset();
+
+	if (!init)
+		return CELL_MOUSE_ERROR_UNINITIALIZED;
+
+	// TODO
+	libio_sys_config_end();
+	return CELL_OK;
+}
+
+error_code cellMouseGetInfo(vm::ptr<CellMouseInfo> info)
+{
+	sys_io.trace("cellMouseGetInfo(info=*0x%x)", info);
+
+	auto& handler = g_fxo->get<MouseHandlerBase>();
+
+	const auto init = handler.init.access();
+
+	if (!init)
+		return CELL_MOUSE_ERROR_UNINITIALIZED;
+
+	if (!info)
+	{
+		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
+	}
+
+	std::memset(info.get_ptr(), 0, info.size());
+
+	const MouseInfo& current_info = handler.GetInfo();
+	info->max_connect = current_info.max_connect;
+	info->now_connect = current_info.now_connect;
+	info->info = current_info.info;
+
+	for (u32 i = 0; i < CELL_MAX_MICE; i++)
+	{
+		info->vendor_id[i]  = current_info.vendor_id[i];
+		info->product_id[i] = current_info.product_id[i];
+		info->status[i]     = current_info.status[i];
+	}
+
+	return CELL_OK;
+}
+
+error_code cellMouseInfoTabletMode(u32 port_no, vm::ptr<CellMouseInfoTablet> info)
+{
+	sys_io.trace("cellMouseInfoTabletMode(port_no=%d, info=*0x%x)", port_no, info);
+
+	auto& handler = g_fxo->get<MouseHandlerBase>();
+
+	const auto init = handler.init.access();
+
+	if (!init)
+		return CELL_MOUSE_ERROR_UNINITIALIZED;
+
+	// only check for port_no here. Tests show that valid ports lead to ERROR_FATAL with disconnected devices regardless of info
+	if (port_no >= CELL_MAX_MICE)
+	{
+		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
+	}
+
+	const MouseInfo& current_info = handler.GetInfo();
+
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
+	{
+		return CELL_MOUSE_ERROR_FATAL;
+	}
+
+	if (!info)
+	{
+		return CELL_EFAULT; // we don't get CELL_MOUSE_ERROR_INVALID_PARAMETER here :thonkang:
+	}
+
+	info->is_supported = current_info.tablet_is_supported[port_no];
+	info->mode = current_info.mode[port_no];
+
+	// TODO: decr returns CELL_ENOTSUP ... How should we handle this?
+
+	return CELL_OK;
+}
+
+error_code cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
+{
+	sys_io.trace("cellMouseGetData(port_no=%d, data=*0x%x)", port_no, data);
+
+	auto& handler = g_fxo->get<MouseHandlerBase>();
+
+	const auto init = handler.init.access();
+
+	if (!init)
+		return CELL_MOUSE_ERROR_UNINITIALIZED;
+
+	if (port_no >= CELL_MAX_MICE || !data)
+	{
+		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
+	}
+
+	std::lock_guard lock(handler.mutex);
+
+	const MouseInfo& current_info = handler.GetInfo();
+
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
+	{
+		return CELL_MOUSE_ERROR_NO_DEVICE;
+	}
+
+	std::memset(data.get_ptr(), 0, data.size());
+
+	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_MOUSE_MODE) has any impact
+
+	MouseDataList& data_list = handler.GetDataList(port_no);
+
+	if (data_list.empty())
+	{
+		return CELL_OK;
+	}
+
+	const MouseData current_data = data_list.front();
 	data->update = current_data.update;
 	data->buttons = current_data.buttons;
 	data->x_axis = current_data.x_axis;
@@ -124,54 +221,172 @@ s32 cellMouseGetData(u32 port_no, vm::ptr<CellMouseData> data)
 	data->wheel = current_data.wheel;
 	data->tilt = current_data.tilt;
 
-	current_data.update = CELL_MOUSE_DATA_NON;
-	current_data.x_axis = 0;
-	current_data.y_axis = 0;
-	current_data.wheel = 0;
+	data_list.pop_front();
 
 	return CELL_OK;
 }
 
-s32 cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
+error_code cellMouseGetDataList(u32 port_no, vm::ptr<CellMouseDataList> data)
 {
-	sys_io.todo("cellMouseGetDataList(port_no=%d, data=0x%x", port_no, data);
-	if (g_cfg.io.mouse == mouse_handler::null)
-		return CELL_MOUSE_ERROR_NO_DEVICE;
-	else
-	{
-		data->list_num = 0;
-		return CELL_OK;
-	}
-}
+	sys_io.warning("cellMouseGetDataList(port_no=%d, data=0x%x)", port_no, data);
 
-s32 cellMouseSetTabletMode(u32 port_no, u32 mode)
-{
-	UNIMPLEMENTED_FUNC(sys_io);
+	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	return CELL_OK;
-}
+	const auto init = handler.init.access();
 
-s32 cellMouseGetTabletDataList(u32 port_no, u32 data_addr)
-{
-	UNIMPLEMENTED_FUNC(sys_io);
-
-	return CELL_OK;
-}
-
-s32 cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
-{
-	sys_io.todo("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
-
-	const auto handler = fxm::get<MouseHandlerBase>();
-
-	if (!handler)
-	{
+	if (!init)
 		return CELL_MOUSE_ERROR_UNINITIALIZED;
+
+	if (port_no >= CELL_MAX_MICE || !data)
+	{
+		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
-	if (port_no >= handler->GetMice().size())
+	std::lock_guard lock(handler.mutex);
+
+	const MouseInfo& current_info = handler.GetInfo();
+
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
 	{
 		return CELL_MOUSE_ERROR_NO_DEVICE;
+	}
+
+	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_MOUSE_MODE) has any impact
+
+	auto& list = handler.GetDataList(port_no);
+	data->list_num = std::min<u32>(CELL_MOUSE_MAX_DATA_LIST_NUM, static_cast<u32>(list.size()));
+
+	int i = 0;
+	for (auto it = list.begin(); it != list.end() && i < CELL_MOUSE_MAX_DATA_LIST_NUM; ++it, ++i)
+	{
+		data->list[i].update = it->update;
+		data->list[i].buttons = it->buttons;
+		data->list[i].x_axis = it->x_axis;
+		data->list[i].y_axis = it->y_axis;
+		data->list[i].wheel = it->wheel;
+		data->list[i].tilt = it->tilt;
+	}
+
+	list.clear();
+
+	return CELL_OK;
+}
+
+error_code cellMouseSetTabletMode(u32 port_no, u32 mode)
+{
+	sys_io.warning("cellMouseSetTabletMode(port_no=%d, mode=%d)", port_no, mode);
+
+	auto& handler = g_fxo->get<MouseHandlerBase>();
+
+	const auto init = handler.init.access();
+
+	if (!init)
+		return CELL_MOUSE_ERROR_UNINITIALIZED;
+
+	// only check for port_no here. Tests show that valid ports lead to ERROR_FATAL with disconnected devices regardless of info
+	if (port_no >= CELL_MAX_MICE)
+	{
+		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
+	}
+
+	MouseInfo& current_info = handler.GetInfo();
+
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
+	{
+		return CELL_MOUSE_ERROR_FATAL;
+	}
+
+	if (mode != CELL_MOUSE_INFO_TABLET_MOUSE_MODE && mode != CELL_MOUSE_INFO_TABLET_TABLET_MODE)
+	{
+		return CELL_EINVAL; // lol... why not CELL_MOUSE_ERROR_INVALID_PARAMETER. Sony is drunk
+	}
+
+	current_info.mode[port_no] = mode;
+
+	// TODO: decr returns CELL_ENOTSUP ... How should we handle this?
+
+	return CELL_OK;
+}
+
+error_code cellMouseGetTabletDataList(u32 port_no, vm::ptr<CellMouseTabletDataList> data)
+{
+	sys_io.warning("cellMouseGetTabletDataList(port_no=%d, data=0x%x)", port_no, data);
+
+	auto& handler = g_fxo->get<MouseHandlerBase>();
+
+	const auto init = handler.init.access();
+
+	if (!init)
+		return CELL_MOUSE_ERROR_UNINITIALIZED;
+
+	if (port_no >= CELL_MAX_MICE || !data)
+	{
+		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
+	}
+
+	const MouseInfo& current_info = handler.GetInfo();
+
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
+	{
+		return CELL_MOUSE_ERROR_NO_DEVICE;
+	}
+
+	// TODO: decr tests show that CELL_MOUSE_ERROR_DATA_READ_FAILED is returned when a mouse is connected
+	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_TABLET_MODE) has any impact
+
+	auto& list = handler.GetTabletDataList(port_no);
+	data->list_num = std::min<u32>(CELL_MOUSE_MAX_DATA_LIST_NUM, static_cast<u32>(list.size()));
+
+	int i = 0;
+	for (auto it = list.begin(); it != list.end() && i < CELL_MOUSE_MAX_DATA_LIST_NUM; ++it, ++i)
+	{
+		data->list[i].len = it->len;
+		it->len = 0;
+
+		for (int k = 0; k < CELL_MOUSE_MAX_CODES; k++)
+		{
+			data->list[i].data[k] = it->data[k];
+			it->data[k] = 0;
+		}
+	}
+
+	return CELL_OK;
+}
+
+error_code cellMouseGetRawData(u32 port_no, vm::ptr<CellMouseRawData> data)
+{
+	sys_io.warning("cellMouseGetRawData(port_no=%d, data=*0x%x)", port_no, data);
+
+	auto& handler = g_fxo->get<MouseHandlerBase>();
+
+	const auto init = handler.init.access();
+
+	if (!init)
+		return CELL_MOUSE_ERROR_UNINITIALIZED;
+
+	if (port_no >= CELL_MAX_MICE || !data)
+	{
+		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
+	}
+
+	const MouseInfo& current_info = handler.GetInfo();
+
+	if (port_no >= handler.GetMice().size() || current_info.status[port_no] != CELL_MOUSE_STATUS_CONNECTED)
+	{
+		return CELL_MOUSE_ERROR_NO_DEVICE;
+	}
+
+	// TODO: decr tests show that CELL_MOUSE_ERROR_DATA_READ_FAILED is returned when a mouse is connected
+	// TODO: check if (current_info.mode[port_no] != CELL_MOUSE_INFO_TABLET_MOUSE_MODE) has any impact
+
+	MouseRawData& current_data = handler.GetRawData(port_no);
+	data->len = current_data.len;
+	current_data.len = 0;
+
+	for (int i = 0; i < CELL_MOUSE_MAX_CODES; i++)
+	{
+		data->data[i] = current_data.data[i];
+		current_data.data[i] = 0;
 	}
 
 	return CELL_OK;

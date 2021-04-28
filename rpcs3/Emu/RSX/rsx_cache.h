@@ -1,255 +1,27 @@
 #pragma once
-#include "Utilities/VirtualMemory.h"
-#include "Utilities/hash.h"
-#include "Emu/Memory/vm.h"
-#include "gcm_enums.h"
+#include "Utilities/File.h"
+#include "Utilities/lockless.h"
+#include "Utilities/Thread.h"
 #include "Common/ProgramStateCache.h"
-#include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/System.h"
+#include "Emu/cache_utils.hpp"
+#include "Common/texture_cache_checker.h"
+#include "Overlays/Shaders/shader_loading_dialog.h"
+
+#include "rsx_utils.h"
+#include <chrono>
+#include <unordered_map>
+
+#include "util/sysinfo.hpp"
+#include "util/fnv_hash.hpp"
 
 namespace rsx
 {
-	struct blit_src_info
-	{
-		blit_engine::transfer_source_format format;
-		blit_engine::transfer_origin origin;
-		u16 offset_x;
-		u16 offset_y;
-		u16 width;
-		u16 height;
-		u16 slice_h;
-		u16 pitch;
-		void *pixels;
-
-		bool compressed_x;
-		bool compressed_y;
-		u32 rsx_address;
-	};
-
-	struct blit_dst_info
-	{
-		blit_engine::transfer_destination_format format;
-		u16 offset_x;
-		u16 offset_y;
-		u16 width;
-		u16 height;
-		u16 pitch;
-		u16 clip_x;
-		u16 clip_y;
-		u16 clip_width;
-		u16 clip_height;
-		u16 max_tile_h;
-		f32 scale_x;
-		f32 scale_y;
-
-		bool swizzled;
-		void *pixels;
-
-		bool compressed_x;
-		bool compressed_y;
-		u32  rsx_address;
-	};
-
-	enum protection_policy
-	{
-		protect_policy_one_page,	//Only guard one page, preferrably one where this section 'wholly' fits
-		protect_policy_conservative, //Guards as much memory as possible that is guaranteed to only be covered by the defined range without sharing
-		protect_policy_full_range	//Guard the full memory range. Shared pages may be invalidated by access outside the object we're guarding
-	};
-
-	class buffered_section
-	{
-	private:
-		u32 locked_address_base = 0;
-		u32 locked_address_range = 0;
-
-	protected:
-		u32 cpu_address_base = 0;
-		u32 cpu_address_range = 0;
-
-		utils::protection protection = utils::protection::rw;
-		protection_policy guard_policy;
-
-		bool locked = false;
-		bool dirty = false;
-
-		inline bool region_overlaps(u32 base1, u32 limit1, u32 base2, u32 limit2) const
-		{
-			return (base1 < limit2 && base2 < limit1);
-		}
-
-	public:
-
-		buffered_section() {}
-		~buffered_section() {}
-
-		void reset(u32 base, u32 length, protection_policy protect_policy= protect_policy_full_range)
-		{
-			verify(HERE), locked == false;
-
-			cpu_address_base = base;
-			cpu_address_range = length;
-
-			locked_address_base = (base & ~4095);
-
-			if ((protect_policy != protect_policy_full_range) && (length >= 4096))
-			{
-				const u32 limit = base + length;
-				const u32 block_end = (limit & ~4095);
-				const u32 block_start = (locked_address_base < base) ? (locked_address_base + 4096) : locked_address_base;
-
-				locked_address_range = 4096;
-
-				if (block_start < block_end)
-				{
-					//Page boundaries cover at least one unique page
-					locked_address_base = block_start;
-
-					if (protect_policy == protect_policy_conservative)
-					{
-						//Protect full unique range
-						locked_address_range = (block_end - block_start);
-					}
-				}
-			}
-			else
-				locked_address_range = align(base + length, 4096) - locked_address_base;
-
-			verify(HERE), locked_address_range > 0;
-			protection = utils::protection::rw;
-			guard_policy = protect_policy;
-			locked = false;
-		}
-
-		void protect(utils::protection prot)
-		{
-			if (prot == protection) return;
-
-			verify(HERE), locked_address_range > 0;
-			utils::memory_protect(vm::base(locked_address_base), locked_address_range, prot);
-			protection = prot;
-			locked = prot != utils::protection::rw;
-		}
-
-		void unprotect()
-		{
-			protect(utils::protection::rw);
-			locked = false;
-		}
-
-		void discard()
-		{
-			protection = utils::protection::rw;
-			dirty = true;
-			locked = false;
-		}
-
-		/**
-		* Check if range overlaps with this section.
-		* ignore_protection_range - if true, the test should not check against the aligned protection range, instead
-		* tests against actual range of contents in memory
-		*/
-		bool overlaps(std::pair<u32, u32> range) const
-		{
-			return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
-		}
-
-		bool overlaps(u32 address, bool ignore_protection_range) const
-		{
-			if (!ignore_protection_range)
-				return (locked_address_base <= address && (address - locked_address_base) < locked_address_range);
-			else
-				return (cpu_address_base <= address && (address - cpu_address_base) < cpu_address_range);
-		}
-
-		bool overlaps(std::pair<u32, u32> range, bool ignore_protection_range) const
-		{
-			if (!ignore_protection_range)
-				return region_overlaps(locked_address_base, locked_address_base + locked_address_range, range.first, range.first + range.second);
-			else
-				return region_overlaps(cpu_address_base, cpu_address_base + cpu_address_range, range.first, range.first + range.second);
-		}
-
-		/**
-		 * Check if the page containing the address tramples this section. Also compares a former trampled page range to compare
-		 * If true, returns the range <min, max> with updated invalid range 
-		 */
-		std::tuple<bool, std::pair<u32, u32>> overlaps_page(std::pair<u32, u32> old_range, u32 address, bool full_range_check) const
-		{
-			const u32 page_base = address & ~4095;
-			const u32 page_limit = address + 4096;
-
-			const u32 compare_min = std::min(old_range.first, page_base);
-			const u32 compare_max = std::max(old_range.second, page_limit);
-
-			u32 memory_base, memory_range;
-			if (full_range_check && guard_policy != protection_policy::protect_policy_full_range)
-			{
-				//Make sure protection range is full range
-				memory_base = (cpu_address_base & ~4095);
-				memory_range = align(cpu_address_base + cpu_address_range, 4096u) - memory_base;
-			}
-			else
-			{
-				memory_base = locked_address_base;
-				memory_range = locked_address_range;
-			}
-
-			if (!region_overlaps(memory_base, memory_base + memory_range, compare_min, compare_max))
-				return std::make_tuple(false, old_range);
-
-			const u32 _min = std::min(memory_base, compare_min);
-			const u32 _max = std::max(memory_base + memory_range, compare_max);
-			return std::make_tuple(true, std::make_pair(_min, _max));
-		}
-
-		bool is_locked() const
-		{
-			return locked;
-		}
-
-		bool is_dirty() const
-		{
-			return dirty;
-		}
-
-		void set_dirty(bool state)
-		{
-			dirty = state;
-		}
-
-		u32 get_section_base() const
-		{
-			return cpu_address_base;
-		}
-
-		u32 get_section_size() const
-		{
-			return cpu_address_range;
-		}
-
-		bool matches(u32 cpu_address, u32 size) const
-		{
-			return (cpu_address_base == cpu_address && cpu_address_range == size);
-		}
-
-		std::pair<u32, u32> get_min_max(std::pair<u32, u32> current_min_max) const
-		{
-			u32 min = std::min(current_min_max.first, locked_address_base);
-			u32 max = std::max(current_min_max.second, locked_address_base + locked_address_range);
-
-			return std::make_pair(min, max);
-		}
-
-		utils::protection get_protection() const
-		{
-			return protection;
-		}
-	};
-
 	template <typename pipeline_storage_type, typename backend_storage>
 	class shaders_cache
 	{
+		using unpacked_type = lf_fifo<std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram>, 1000>; // TODO: Determine best size
+
 		struct pipeline_data
 		{
 			u64 vertex_program_hash;
@@ -257,17 +29,24 @@ namespace rsx
 			u64 pipeline_storage_hash;
 
 			u32 vp_ctrl;
+			u32 vp_texture_dimensions;
+			u64 vp_instruction_mask[8];
+
+			u32 vp_base_address;
+			u32 vp_entry;
+			u16 vp_jump_table[32];
 
 			u32 fp_ctrl;
 			u32 fp_texture_dimensions;
+			u32 fp_texcoord_control;
 			u16 fp_unnormalized_coords;
 			u16 fp_height;
 			u16 fp_pixel_layout;
 			u16 fp_lighting_flags;
 			u16 fp_shadow_textures;
 			u16 fp_redirected_textures;
-			u16 fp_alphakill_mask;
-			u64 fp_zfunc_mask;
+			u16 unused_0;             // Retained for binary compatibility
+			u64 unused_1;             // Retained for binary compatibility
 
 			pipeline_storage_type pipeline_properties;
 		};
@@ -275,203 +54,275 @@ namespace rsx
 		std::string version_prefix;
 		std::string root_path;
 		std::string pipeline_class_name;
-		std::unordered_map<u64, std::vector<u8>> fragment_program_data;
+		lf_fifo<std::unique_ptr<u8[]>, 100> fragment_program_data;
 
 		backend_storage& m_storage;
 
-	public:
-
-		struct progress_dialog_helper
+		static std::string get_message(u32 index, u32 processed, u32 entry_count)
 		{
-			std::shared_ptr<MsgDialogBase> dlg;
-			atomic_t<bool> initialized{ false };
+			return fmt::format("%s pipeline object %u of %u", index == 0 ? "Loading" : "Compiling", processed, entry_count);
+		}
 
-			virtual void create()
+		void load_shaders(uint nb_workers, unpacked_type& unpacked, std::string& directory_path, std::vector<fs::dir_entry>& entries, u32 entry_count,
+		    shader_loading_dialog* dlg)
+		{
+			atomic_t<u32> processed(0);
+
+			std::function<void(u32)> shader_load_worker = [&](u32 stop_at)
 			{
-				dlg = Emu.GetCallbacks().get_msg_dialog();
-				dlg->type.se_normal = true;
-				dlg->type.bg_invisible = true;
-				dlg->type.progress_bar_count = 1;
-				dlg->on_close = [](s32 status)
+				u32 pos;
+				// Processed is incremented before work starts in order to avoid two workers working on the same shader
+				while (((pos = processed++) < stop_at) && !Emu.IsStopped())
 				{
-					Emu.CallAfter([]()
+					fs::dir_entry tmp = entries[pos];
+
+					const auto filename = directory_path + "/" + tmp.name;
+					fs::file f(filename);
+
+					if (!f)
 					{
-						Emu.Stop();
-					});
-				};
+						// Unexpected error, but avoid crash
+						continue;
+					}
 
-				Emu.CallAfter([&]()
-				{
-					dlg->Create("Preloading cached shaders from disk.\nPlease wait...");
-					initialized.store(true);
-				});
+					if (f.size() != sizeof(pipeline_data))
+					{
+						rsx_log.error("Removing cached pipeline object %s since it's not binary compatible with the current shader cache", tmp.name.c_str());
+						fs::remove_file(filename);
+						continue;
+					}
 
-				while (!initialized.load() && !Emu.IsStopped())
-				{
-					_mm_pause();
+					pipeline_data pdata{};
+					f.read(&pdata, f.size());
+
+					auto entry = unpack(pdata);
+
+					if (std::get<1>(entry).data.empty() || !std::get<2>(entry).ucode_length)
+					{
+						continue;
+					}
+
+					m_storage.preload_programs(std::get<1>(entry), std::get<2>(entry));
+
+					unpacked[unpacked.push_begin()] = std::move(entry);
 				}
-			}
+				// Do not account for an extra shader that was never processed
+				processed--;
+			};
 
-			virtual void update_msg(u32 processed, u32 entry_count)
-			{
-				Emu.CallAfter([=]()
-				{
-					dlg->ProgressBarSetMsg(0, fmt::format("Loading pipeline object %u of %u", processed, entry_count));
-				});
-			}
-
-			virtual void inc_value(u32 value)
-			{
-				Emu.CallAfter([=]()
-				{
-					dlg->ProgressBarInc(0, value);
-				});
-			}
-
-			virtual void close()
-			{}
-		};
-
-		shaders_cache(backend_storage& storage, std::string pipeline_class, std::string version_prefix_str = "v1")
-			: version_prefix(version_prefix_str)
-			, pipeline_class_name(pipeline_class)
-			, m_storage(storage)
-		{
-			root_path = Emu.GetCachePath() + "/shaders_cache";
+			await_workers(nb_workers, 0, shader_load_worker, processed, entry_count, dlg);
 		}
 
 		template <typename... Args>
-		void load(progress_dialog_helper* dlg, Args&& ...args)
+		void compile_shaders(uint nb_workers, unpacked_type& unpacked, u32 entry_count, shader_loading_dialog* dlg, Args&&... args)
+		{
+			atomic_t<u32> processed(0);
+
+			std::function<void(u32)> shader_comp_worker = [&](u32 stop_at)
+			{
+				u32 pos;
+				// Processed is incremented before work starts in order to avoid two workers working on the same shader
+				while (((pos = processed++) < stop_at) && !Emu.IsStopped())
+				{
+					auto& entry = unpacked[pos];
+					m_storage.add_pipeline_entry(std::get<1>(entry), std::get<2>(entry), std::get<0>(entry), std::forward<Args>(args)...);
+				}
+				// Do not account for an extra shader that was never processed
+				processed--;
+			};
+
+			await_workers(nb_workers, 1, shader_comp_worker, processed, entry_count, dlg);
+		}
+
+		void await_workers(uint nb_workers, u8 step, std::function<void(u32)>& worker, atomic_t<u32>& processed, u32 entry_count, shader_loading_dialog* dlg)
+		{
+			if (nb_workers == 1)
+			{
+				steady_clock::time_point last_update;
+
+				// Call the worker function directly, stopping it prematurely to be able update the screen
+				u32 stop_at = 0;
+				do
+				{
+					stop_at = std::min(stop_at + 10, entry_count);
+
+					worker(stop_at);
+
+					// Only update the screen at about 60fps since updating it everytime slows down the process
+					steady_clock::time_point now = steady_clock::now();
+					if ((std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update) > 16ms) || (stop_at == entry_count))
+					{
+						dlg->update_msg(step, get_message(step, stop_at, entry_count));
+						dlg->set_value(step, stop_at);
+						last_update = now;
+					}
+				} while (stop_at < entry_count && !Emu.IsStopped());
+			}
+			else
+			{
+				named_thread_group workers("RSX Worker ", nb_workers, [&]()
+				{
+					worker(entry_count);
+				});
+
+				u32 current_progress = 0;
+				u32 last_update_progress = 0;
+				while ((current_progress < entry_count) && !Emu.IsStopped())
+				{
+					thread_ctrl::wait_for(16'000); // Around 60fps should be good enough
+
+					if (Emu.IsStopped()) break;
+
+					current_progress = std::min(processed.load(), entry_count);
+
+					if (last_update_progress != current_progress)
+					{
+						last_update_progress = current_progress;
+						dlg->update_msg(step, get_message(step, current_progress, entry_count));
+						dlg->set_value(step, current_progress);
+					}
+				}
+			}
+
+			if (!Emu.IsStopped())
+			{
+				ensure(processed == entry_count);
+			}
+		}
+
+	public:
+
+		shaders_cache(backend_storage& storage, std::string pipeline_class, std::string version_prefix_str = "v1")
+			: version_prefix(std::move(version_prefix_str))
+			, pipeline_class_name(std::move(pipeline_class))
+			, m_storage(storage)
+		{
+			if (!g_cfg.video.disable_on_disk_shader_cache)
+			{
+				root_path = rpcs3::cache::get_ppu_cache() + "shaders_cache";
+			}
+		}
+
+		template <typename... Args>
+		void load(shader_loading_dialog* dlg, Args&& ...args)
 		{
 			if (g_cfg.video.disable_on_disk_shader_cache)
 			{
 				return;
 			}
 
-			std::string directory_path = root_path + "/pipelines/" + pipeline_class_name;
+			std::string directory_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix;
 
-			if (!fs::is_dir(directory_path))
+			fs::dir root = fs::dir(directory_path);
+
+			if (!root)
 			{
 				fs::create_path(directory_path);
 				fs::create_path(root_path + "/raw");
-
 				return;
 			}
 
-			fs::dir root = fs::dir(directory_path);
-			fs::dir_entry tmp;
+			std::vector<fs::dir_entry> entries;
 
-			u32 entry_count = 0;
-			for (auto It = root.begin(); It != root.end(); ++It, entry_count++);
+			for (auto&& tmp : root)
+			{
+				if (tmp.is_directory)
+					continue;
 
-			if (entry_count <= 2)
+				entries.push_back(tmp);
+			}
+
+			u32 entry_count = ::size32(entries);
+
+			if (!entry_count)
 				return;
-
-			entry_count -= 2;
-			f32 delta = 100.f / entry_count;
-			f32 tally = 0.f;
 
 			root.rewind();
 
 			// Progress dialog
-			std::unique_ptr<progress_dialog_helper> fallback_dlg;
+			std::unique_ptr<shader_loading_dialog> fallback_dlg;
 			if (!dlg)
 			{
-				fallback_dlg = std::make_unique<progress_dialog_helper>();
+				fallback_dlg = std::make_unique<shader_loading_dialog>();
 				dlg = fallback_dlg.get();
 			}
 
-			dlg->create();
+			dlg->create("Preloading cached shaders from disk.\nPlease wait...", "Shader Compilation");
+			dlg->set_limit(0, entry_count);
+			dlg->set_limit(1, entry_count);
+			dlg->update_msg(0, get_message(0, 0, entry_count));
+			dlg->update_msg(1, get_message(1, 0, entry_count));
 
-			const auto prefix_length = version_prefix.length();
-			u32 processed = 0;
-			while (root.read(tmp) && !Emu.IsStopped())
-			{
-				if (tmp.name == "." || tmp.name == "..")
-					continue;
+			// Preload everything needed to compile the shaders
+			unpacked_type unpacked;
+			uint nb_workers = g_cfg.video.renderer == video_renderer::vulkan ? utils::get_thread_count() : 1;
 
-				if (tmp.name.compare(0, prefix_length, version_prefix) != 0)
-					continue;
+			load_shaders(nb_workers, unpacked, directory_path, entries, entry_count, dlg);
 
-				std::vector<u8> bytes;
-				fs::file f(directory_path + "/" + tmp.name);
+			// Account for any invalid entries
+			entry_count = unpacked.size();
 
-				processed++;
-				dlg->update_msg(processed, entry_count);
+			compile_shaders(nb_workers, unpacked, entry_count, dlg, std::forward<Args>(args)...);
 
-				if (f.size() != sizeof(pipeline_data))
-				{
-					LOG_ERROR(RSX, "Cached pipeline object %s is not binary compatible with the current shader cache", tmp.name.c_str());
-					continue;
-				}
-
-				f.read<u8>(bytes, f.size());
-				auto unpacked = unpack(*(pipeline_data*)bytes.data());
-				m_storage.add_pipeline_entry(std::get<1>(unpacked), std::get<2>(unpacked), std::get<0>(unpacked), std::forward<Args>(args)...);
-
-				tally += delta;
-				if (tally > 1.f)
-				{
-					u32 value = (u32)tally;
-					dlg->inc_value(value);
-
-					tally -= (f32)value;
-				}
-			}
-
+			dlg->refresh();
 			dlg->close();
 		}
 
-		void store(pipeline_storage_type &pipeline, RSXVertexProgram &vp, RSXFragmentProgram &fp)
+		void store(const pipeline_storage_type &pipeline, const RSXVertexProgram &vp, const RSXFragmentProgram &fp)
 		{
 			if (g_cfg.video.disable_on_disk_shader_cache)
 			{
 				return;
 			}
 
+			if (vp.jump_table.size() > 32)
+			{
+				rsx_log.error("shaders_cache: vertex program has more than 32 jump addresses. Entry not saved to cache");
+				return;
+			}
+
 			pipeline_data data = pack(pipeline, vp, fp);
+
 			std::string fp_name = root_path + "/raw/" + fmt::format("%llX.fp", data.fragment_program_hash);
 			std::string vp_name = root_path + "/raw/" + fmt::format("%llX.vp", data.vertex_program_hash);
 
-			if (!fs::is_file(fp_name))
+			// Writeback to cache either if file does not exist or it is invalid (unexpected size)
+			// Note: fs::write_file is not atomic, if the process is terminated in the middle an empty file is created
+			if (fs::stat_t s{}; !fs::stat(fp_name, s) || s.size != fp.ucode_length)
 			{
-				const auto size = program_hash_util::fragment_program_utils::get_fragment_program_ucode_size(fp.addr);
-				fs::file(fp_name, fs::rewrite).write(fp.addr, size);
+				fs::write_file(fp_name, fs::rewrite, fp.get_data(), fp.ucode_length);
 			}
 
-			if (!fs::is_file(vp_name))
+			if (fs::stat_t s{}; !fs::stat(vp_name, s) || s.size != vp.data.size() * sizeof(u32))
 			{
-				fs::file(vp_name, fs::rewrite).write<u32>(vp.data);
+				fs::write_file(vp_name, fs::rewrite, vp.data);
 			}
 
 			u64 state_hash = 0;
 			state_hash ^= rpcs3::hash_base<u32>(data.vp_ctrl);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_ctrl);
+			state_hash ^= rpcs3::hash_base<u32>(data.vp_texture_dimensions);
 			state_hash ^= rpcs3::hash_base<u32>(data.fp_texture_dimensions);
+			state_hash ^= rpcs3::hash_base<u32>(data.fp_texcoord_control);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_unnormalized_coords);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_height);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_pixel_layout);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_lighting_flags);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_shadow_textures);
 			state_hash ^= rpcs3::hash_base<u16>(data.fp_redirected_textures);
-			state_hash ^= rpcs3::hash_base<u16>(data.fp_alphakill_mask);
-			state_hash ^= rpcs3::hash_base<u64>(data.fp_zfunc_mask);
 
-			std::string pipeline_file_name = fmt::format("%llX+%llX+%llX+%llX.bin", data.vertex_program_hash, data.fragment_program_hash, data.pipeline_storage_hash, state_hash);
-			std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "-" + pipeline_file_name;
-			fs::file(pipeline_path, fs::rewrite).write(&data, sizeof(pipeline_data));
+			const std::string pipeline_file_name = fmt::format("%llX+%llX+%llX+%llX.bin", data.vertex_program_hash, data.fragment_program_hash, data.pipeline_storage_hash, state_hash);
+			const std::string pipeline_path = root_path + "/pipelines/" + pipeline_class_name + "/" + version_prefix + "/" + pipeline_file_name;
+			fs::write_file(pipeline_path, fs::rewrite, &data, sizeof(data));
 		}
 
-		RSXVertexProgram load_vp_raw(u64 program_hash)
+		RSXVertexProgram load_vp_raw(u64 program_hash) const
 		{
-			std::vector<u32> data;
-			std::string filename = fmt::format("%llX.vp", program_hash);
-
-			fs::file f(root_path + "/raw/" + filename);
-			f.read<u32>(data, f.size() / sizeof(u32));
-
 			RSXVertexProgram vp = {};
-			vp.data = data;
+
+			fs::file f(fmt::format("%s/raw/%llX.vp", root_path, program_hash));
+			if (f) f.read(vp.data, f.size() / sizeof(u32));
+
 			vp.skip_vertex_input_check = true;
 
 			return vp;
@@ -479,48 +330,64 @@ namespace rsx
 
 		RSXFragmentProgram load_fp_raw(u64 program_hash)
 		{
-			std::vector<u8> data;
-			std::string filename = fmt::format("%llX.fp", program_hash);
-
-			fs::file f(root_path + "/raw/" + filename);
-			f.read<u8>(data, f.size());
+			fs::file f(fmt::format("%s/raw/%llX.fp", root_path, program_hash));
 
 			RSXFragmentProgram fp = {};
-			fragment_program_data[program_hash] = data;
-			fp.addr = fragment_program_data[program_hash].data();
 
+			const u32 size = fp.ucode_length = f ? ::size32(f) : 0;
+
+			if (!size)
+			{
+				return fp;
+			}
+
+			auto buf = std::make_unique<u8[]>(size);
+			fp.data = buf.get();
+			f.read(buf.get(), size);
+			fragment_program_data[fragment_program_data.push_begin()] = std::move(buf);
 			return fp;
 		}
 
 		std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram> unpack(pipeline_data &data)
 		{
-			RSXVertexProgram vp = load_vp_raw(data.vertex_program_hash);
-			RSXFragmentProgram fp = load_fp_raw(data.fragment_program_hash);
-			pipeline_storage_type pipeline = data.pipeline_properties;
+			std::tuple<pipeline_storage_type, RSXVertexProgram, RSXFragmentProgram> result;
+			auto& [pipeline, vp, fp] = result;
+
+			vp = load_vp_raw(data.vertex_program_hash);
+			fp = load_fp_raw(data.fragment_program_hash);
+			pipeline = data.pipeline_properties;
 
 			vp.output_mask = data.vp_ctrl;
+			vp.texture_dimensions = data.vp_texture_dimensions;
+			vp.base_address = data.vp_base_address;
+			vp.entry = data.vp_entry;
+
+			pack_bitset<512>(vp.instruction_mask, data.vp_instruction_mask);
+
+			for (u8 index = 0; index < 32; ++index)
+			{
+				const auto address = data.vp_jump_table[index];
+				if (address == UINT16_MAX)
+				{
+					// End of list marker
+					break;
+				}
+
+				vp.jump_table.emplace(address);
+			}
 
 			fp.ctrl = data.fp_ctrl;
 			fp.texture_dimensions = data.fp_texture_dimensions;
+			fp.texcoord_control_mask = data.fp_texcoord_control;
 			fp.unnormalized_coords = data.fp_unnormalized_coords;
-			fp.front_back_color_enabled = (data.fp_lighting_flags & 0x1) != 0;
-			fp.back_color_diffuse_output = ((data.fp_lighting_flags >> 1) & 0x1) != 0;
-			fp.back_color_specular_output = ((data.fp_lighting_flags >> 2) & 0x1) != 0;
-			fp.front_color_diffuse_output = ((data.fp_lighting_flags >> 3) & 0x1) != 0;
-			fp.front_color_specular_output = ((data.fp_lighting_flags >> 4) & 0x1) != 0;
+			fp.two_sided_lighting = !!(data.fp_lighting_flags & 0x1);
 			fp.shadow_textures = data.fp_shadow_textures;
 			fp.redirected_textures = data.fp_redirected_textures;
 
-			for (u8 index = 0; index < 16; ++index)
-			{
-				fp.textures_alpha_kill[index] = (data.fp_alphakill_mask & (1 << index))? 1: 0;
-				fp.textures_zfunc[index] = (data.fp_zfunc_mask >> (index << 2)) & 0xF;
-			}
-
-			return std::make_tuple(pipeline, vp, fp);
+			return result;
 		}
 
-		pipeline_data pack(pipeline_storage_type &pipeline, RSXVertexProgram &vp, RSXFragmentProgram &fp)
+		pipeline_data pack(const pipeline_storage_type &pipeline, const RSXVertexProgram &vp, const RSXFragmentProgram &fp)
 		{
 			pipeline_data data_block = {};
 			data_block.pipeline_properties = pipeline;
@@ -529,20 +396,37 @@ namespace rsx
 			data_block.pipeline_storage_hash = m_storage.get_hash(pipeline);
 
 			data_block.vp_ctrl = vp.output_mask;
+			data_block.vp_texture_dimensions = vp.texture_dimensions;
+			data_block.vp_base_address = vp.base_address;
+			data_block.vp_entry = vp.entry;
+
+			unpack_bitset<512>(vp.instruction_mask, data_block.vp_instruction_mask);
+
+			u8 index = 0;
+			while (index < 32)
+			{
+				if (!index && !vp.jump_table.empty())
+				{
+					for (auto &address : vp.jump_table)
+					{
+						data_block.vp_jump_table[index++] = static_cast<u16>(address);
+					}
+				}
+				else
+				{
+					// End of list marker
+					data_block.vp_jump_table[index] = UINT16_MAX;
+					break;
+				}
+			}
 
 			data_block.fp_ctrl = fp.ctrl;
 			data_block.fp_texture_dimensions = fp.texture_dimensions;
+			data_block.fp_texcoord_control = fp.texcoord_control_mask;
 			data_block.fp_unnormalized_coords = fp.unnormalized_coords;
-			data_block.fp_lighting_flags = (u16)fp.front_back_color_enabled | (u16)fp.back_color_diffuse_output << 1 |
-				(u16)fp.back_color_specular_output << 2 | (u16)fp.front_color_diffuse_output << 3 | (u16)fp.front_color_specular_output << 4;
+			data_block.fp_lighting_flags = u16(fp.two_sided_lighting);
 			data_block.fp_shadow_textures = fp.shadow_textures;
 			data_block.fp_redirected_textures = fp.redirected_textures;
-
-			for (u8 index = 0; index < 16; ++index)
-			{
-				data_block.fp_alphakill_mask |= (u32)(fp.textures_alpha_kill[index] & 0x1) << index;
-				data_block.fp_zfunc_mask |= (u32)(fp.textures_zfunc[index] & 0xF) << (index << 2);
-			}
 
 			return data_block;
 		}
@@ -555,8 +439,9 @@ namespace rsx
 		class default_vertex_cache
 		{
 		public:
-			virtual storage_type* find_vertex_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/) { return nullptr; }
-			virtual void store_range(uintptr_t /*local_addr*/, upload_format, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
+			virtual ~default_vertex_cache() = default;
+			virtual storage_type* find_vertex_range(uptr /*local_addr*/, upload_format, u32 /*data_length*/) { return nullptr; }
+			virtual void store_range(uptr /*local_addr*/, upload_format, u32 /*data_length*/, u32 /*offset_in_heap*/) {}
 			virtual void purge() {}
 		};
 
@@ -566,7 +451,7 @@ namespace rsx
 		template <typename upload_format>
 		struct uploaded_range
 		{
-			uintptr_t local_address;
+			uptr local_address;
 			upload_format buffer_format;
 			u32 offset_in_heap;
 			u32 data_length;
@@ -578,14 +463,17 @@ namespace rsx
 			using storage_type = uploaded_range<upload_format>;
 
 		private:
-			std::unordered_map<uintptr_t, std::vector<storage_type>> vertex_ranges;
+			std::unordered_map<uptr, std::vector<storage_type>> vertex_ranges;
 
 		public:
 
-			storage_type* find_vertex_range(uintptr_t local_addr, upload_format fmt, u32 data_length) override
+			storage_type* find_vertex_range(uptr local_addr, upload_format fmt, u32 data_length) override
 			{
+				//const auto data_end = local_addr + data_length;
+
 				for (auto &v : vertex_ranges[local_addr])
 				{
+					// NOTE: This has to match exactly. Using sized shortcuts such as >= comparison causes artifacting in some applications (UC1)
 					if (v.buffer_format == fmt && v.data_length == data_length)
 						return &v;
 				}
@@ -593,7 +481,7 @@ namespace rsx
 				return nullptr;
 			}
 
-			void store_range(uintptr_t local_addr, upload_format fmt, u32 data_length, u32 offset_in_heap) override
+			void store_range(uptr local_addr, upload_format fmt, u32 data_length, u32 offset_in_heap) override
 			{
 				storage_type v = {};
 				v.buffer_format = fmt;

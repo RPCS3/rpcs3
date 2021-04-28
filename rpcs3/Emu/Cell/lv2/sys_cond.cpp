@@ -1,24 +1,20 @@
 #include "stdafx.h"
-#include "Emu/Memory/Memory.h"
-#include "Emu/System.h"
+#include "sys_cond.h"
+
 #include "Emu/IdManager.h"
 #include "Emu/IPC.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
-#include "sys_mutex.h"
-#include "sys_cond.h"
 
-
-
-logs::channel sys_cond("sys_cond");
+LOG_CHANNEL(sys_cond);
 
 template<> DECLARE(ipc_manager<lv2_cond, u64>::g_ipc) {};
 
-extern u64 get_system_time();
-
-error_code sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
+error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_cond.warning("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
 
 	auto mutex = idm::get<lv2_obj, lv2_mutex>(mutex_id);
@@ -28,13 +24,15 @@ error_code sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_
 		return CELL_ESRCH;
 	}
 
-	if (auto error = lv2_obj::create<lv2_cond>(attr->pshared, attr->ipc_key, attr->flags, [&]
+	const auto _attr = *attr;
+
+	if (const auto error = lv2_obj::create<lv2_cond>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
 	{
 		return std::make_shared<lv2_cond>(
-			attr->pshared,
-			attr->flags,
-			attr->ipc_key,
-			attr->name_u64,
+			_attr.pshared,
+			_attr.ipc_key,
+			_attr.name_u64,
+			mutex_id,
 			std::move(mutex));
 	}))
 	{
@@ -45,17 +43,22 @@ error_code sys_cond_create(vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_
 	return CELL_OK;
 }
 
-error_code sys_cond_destroy(u32 cond_id)
+error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_cond.warning("sys_cond_destroy(cond_id=0x%x)", cond_id);
 
 	const auto cond = idm::withdraw<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> CellError
 	{
+		std::lock_guard lock(cond.mutex->mutex);
+
 		if (cond.waiters)
 		{
 			return CELL_EBUSY;
 		}
 
+		cond.mutex->obj_count.atomic_op([](lv2_mutex::count_info& info){ info.cond_count--; });
 		return {};
 	});
 
@@ -74,36 +77,32 @@ error_code sys_cond_destroy(u32 cond_id)
 
 error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_cond.trace("sys_cond_signal(cond_id=0x%x)", cond_id);
 
-	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [](lv2_cond& cond) -> cpu_thread*
+	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [](lv2_cond& cond)
 	{
 		if (cond.waiters)
 		{
-			semaphore_lock lock(cond.mutex->mutex);
+			std::lock_guard lock(cond.mutex->mutex);
 
 			if (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.mutex->protocol))
 			{
+				// TODO: Is EBUSY returned after reqeueing, on sys_cond_destroy?
 				cond.waiters--;
 
 				if (cond.mutex->try_own(*cpu, cpu->id))
 				{
-					return cpu;
+					cond.awake(cpu);
 				}
 			}
 		}
-
-		return nullptr;
 	});
 
 	if (!cond)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (cond.ret)
-	{
-		cond->awake(*cond.ret);
 	}
 
 	return CELL_OK;
@@ -111,38 +110,37 @@ error_code sys_cond_signal(ppu_thread& ppu, u32 cond_id)
 
 error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_cond.trace("sys_cond_signal_all(cond_id=0x%x)", cond_id);
 
 	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [](lv2_cond& cond)
 	{
-		cpu_thread* result = nullptr;
-
 		if (cond.waiters)
 		{
-			semaphore_lock lock(cond.mutex->mutex);
+			std::lock_guard lock(cond.mutex->mutex);
 
-			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.mutex->protocol))
+			cpu_thread* result = nullptr;
+			cond.waiters -= ::size32(cond.sq);
+
+			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, SYS_SYNC_PRIORITY))
 			{
-				cond.waiters--;
-
 				if (cond.mutex->try_own(*cpu, cpu->id))
 				{
-					result = cpu;
+					ensure(!std::exchange(result, cpu));
 				}
 			}
-		}
 
-		return result;
+			if (result)
+			{
+				lv2_obj::awake(result);
+			}
+		}
 	});
 
 	if (!cond)
 	{
 		return CELL_ESRCH;
-	}
-
-	if (cond.ret)
-	{
-		cond->awake(*cond.ret);
 	}
 
 	return CELL_OK;
@@ -150,43 +148,49 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 
 error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_cond.trace("sys_cond_signal_to(cond_id=0x%x, thread_id=0x%x)", cond_id, thread_id);
 
-	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> cpu_thread*
+	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> int
 	{
+		if (const auto cpu = idm::check_unlocked<named_thread<ppu_thread>>(thread_id);
+			!cpu || cpu->joiner == ppu_join_status::exited)
+		{
+			return -1;
+		}
+
 		if (cond.waiters)
 		{
-			semaphore_lock lock(cond.mutex->mutex);
+			std::lock_guard lock(cond.mutex->mutex);
 
 			for (auto cpu : cond.sq)
 			{
 				if (cpu->id == thread_id)
 				{
-					verify(HERE), cond.unqueue(cond.sq, cpu), cond.waiters--;
+					ensure(cond.unqueue(cond.sq, cpu));
+
+					cond.waiters--;
 
 					if (cond.mutex->try_own(*cpu, cpu->id))
 					{
-						return cpu;
+						cond.awake(cpu);
 					}
 
-					return (cpu_thread*)(1);
+					return 1;
 				}
 			}
 		}
 
-		return nullptr;
+		return 0;
 	});
 
-	if (!cond)
+	if (!cond || cond.ret == -1)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (cond.ret && cond.ret != (cpu_thread*)(1))
-	{
-		cond->awake(*cond.ret);
-	}
-	else if (!cond.ret)
+	if (!cond.ret)
 	{
 		return not_an_error(CELL_EPERM);
 	}
@@ -196,15 +200,39 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_cond.trace("sys_cond_wait(cond_id=0x%x, timeout=%lld)", cond_id, timeout);
 
-	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond)
+	// Further function result
+	ppu.gpr[3] = CELL_OK;
+
+	const auto cond = idm::get<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> s64
 	{
-		// Add a "promise" to add a waiter
+		if (cond.mutex->owner >> 1 != ppu.id)
+		{
+			return -1;
+		}
+
+		std::lock_guard lock(cond.mutex->mutex);
+
+		// Register waiter
+		cond.sq.emplace_back(&ppu);
 		cond.waiters++;
 
+		// Unlock the mutex
+		const auto count = cond.mutex->lock_count.exchange(0);
+
+		if (const auto cpu = cond.mutex->reown<ppu_thread>())
+		{
+			cond.mutex->append(cpu);
+		}
+
+		// Sleep current thread and schedule mutex waiter
+		cond.sleep(ppu, timeout);
+
 		// Save the recursive value
-		return cond.mutex->lock_count.load();
+		return count;
 	});
 
 	if (!cond)
@@ -212,46 +240,39 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		return CELL_ESRCH;
 	}
 
-	// Verify ownership
-	if (cond->mutex->owner >> 1 != ppu.id)
+	if (cond.ret < 0)
 	{
-		// Awww
-		cond->waiters--;
 		return CELL_EPERM;
 	}
-	else
+
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		semaphore_lock lock(cond->mutex->mutex);
-
-		// Register waiter
-		cond->sq.emplace_back(&ppu);
-		cond->sleep(ppu, timeout);
-
-		// Unlock the mutex
-		cond->mutex->lock_count = 0;
-
-		if (auto cpu = cond->mutex->reown<ppu_thread>())
+		if (is_stopped(state))
 		{
-			cond->mutex->awake(*cpu);
+			return {};
 		}
 
-		// Further function result
-		ppu.gpr[3] = CELL_OK;
-	}
+		if (state & cpu_flag::signal)
+		{
+			break;
+		}
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
-	{
 		if (timeout)
 		{
-			const u64 passed = get_system_time() - ppu.start_time;
-
-			if (passed >= timeout)
+			if (lv2_obj::wait_timeout(timeout, &ppu))
 			{
-				semaphore_lock lock(cond->mutex->mutex);
+				// Wait for rescheduling
+				if (ppu.check_state())
+				{
+					return {};
+				}
+
+				std::lock_guard lock(cond->mutex->mutex);
 
 				// Try to cancel the waiting
 				if (cond->unqueue(cond->sq, &ppu))
 				{
+					// TODO: Is EBUSY returned after reqeueing, on sys_cond_destroy?
 					cond->waiters--;
 
 					ppu.gpr[3] = CELL_ETIMEDOUT;
@@ -262,24 +283,27 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 						break;
 					}
 				}
+				else if (cond->mutex->owner >> 1 == ppu.id)
+				{
+					break;
+				}
 
+				cond->mutex->sleep(ppu);
 				timeout = 0;
 				continue;
 			}
-
-			thread_ctrl::wait_for(timeout - passed);
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 
 	// Verify ownership
-	verify(HERE), cond->mutex->owner >> 1 == ppu.id;
+	ensure(cond->mutex->owner >> 1 == ppu.id);
 
 	// Restore the recursive value
-	cond->mutex->lock_count = cond.ret;
+	cond->mutex->lock_count.release(static_cast<u32>(cond.ret));
 
 	return not_an_error(ppu.gpr[3]);
 }

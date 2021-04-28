@@ -1,5 +1,85 @@
 #pragma once
 
+#include "util/types.hpp"
+#include "Utilities/StrFmt.h"
+
+// Error code type (return type), implements error reporting.
+class error_code
+{
+	s32 value;
+
+public:
+	error_code() = default;
+
+	// Implementation must be provided independently
+	static s32 error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2);
+
+	// Helper type
+	enum class not_an_error : s32
+	{
+		__not_an_error // SFINAE marker
+	};
+
+	// __not_an_error tester
+	template<typename ET, typename = void>
+	struct is_error : std::integral_constant<bool, std::is_enum<ET>::value || std::is_integral<ET>::value>
+	{
+	};
+
+	template<typename ET>
+	struct is_error<ET, std::enable_if_t<sizeof(ET::__not_an_error) != 0>> : std::false_type
+	{
+	};
+
+	// Common constructor
+	template<typename ET>
+	error_code(const ET& value)
+		: value(static_cast<s32>(value))
+	{
+		if constexpr(is_error<ET>::value)
+		{
+			this->value = error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), nullptr, 0);
+		}
+	}
+
+	// Error constructor (2 args)
+	template<typename ET, typename T2>
+	error_code(const ET& value, const T2& value2)
+		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), fmt::get_type_info<fmt_unveil_t<T2>>(), fmt_unveil<T2>::get(value2)))
+	{
+	}
+
+	operator s32() const
+	{
+		return value;
+	}
+};
+
+// Helper function for error_code
+template <typename T>
+constexpr FORCE_INLINE error_code::not_an_error not_an_error(const T& value)
+{
+	return static_cast<error_code::not_an_error>(static_cast<s32>(value));
+}
+
+template <typename T, typename>
+struct ppu_gpr_cast_impl;
+
+template <>
+struct ppu_gpr_cast_impl<error_code, void>
+{
+	static inline u64 to(const error_code& code)
+	{
+		return code;
+	}
+
+	static inline error_code from(const u64 reg)
+	{
+		return not_an_error(reg);
+	}
+};
+
+
 enum CellNotAnError : s32
 {
 	CELL_OK     = 0,
@@ -36,9 +116,9 @@ enum CellError : u32
 	CELL_ENOTMSELF     = 0x80010018, // The file is not a MSELF
 	CELL_ESYSVER       = 0x80010019, // System version error
 	CELL_EAUTHFATAL    = 0x8001001A, // Fatal system error
-	CELL_EDOM          = 0x8001001B, // Math domain violation 
-	CELL_ERANGE        = 0x8001001C, // Math range violation 
-	CELL_EILSEQ        = 0x8001001D, // Illegal multi-byte sequence in input 
+	CELL_EDOM          = 0x8001001B, // Math domain violation
+	CELL_ERANGE        = 0x8001001C, // Math range violation
+	CELL_EILSEQ        = 0x8001001D, // Illegal multi-byte sequence in input
 	CELL_EFPOS         = 0x8001001E, // File position error
 	CELL_EINTR         = 0x8001001F, // Syscall was interrupted
 	CELL_EFBIG         = 0x80010020, // File too large
@@ -69,7 +149,7 @@ enum CellError : u32
 	CELL_EOVERFLOW     = 0x80010039, // Overflow occured
 	CELL_ENOTMOUNTED   = 0x8001003A, // Filesystem not mounted
 	CELL_ENOTSDATA     = 0x8001003B, // Not SData
-	CELL_ESDKVER       = 0x8001003C, // Incorrect version in sys_load_param 
+	CELL_ESDKVER       = 0x8001003C, // Incorrect version in sys_load_param
 	CELL_ENOLICDISC    = 0x8001003D, // Pointer is null. Similar than 0x8001003E but with some PARAM.SFO parameter (TITLE_ID?) embedded.
 	CELL_ENOLICENT     = 0x8001003E, // Pointer is null
 };

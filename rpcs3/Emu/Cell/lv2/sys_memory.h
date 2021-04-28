@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Emu/Memory/Memory.h"
+#include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
-#include "Emu/IdManager.h"
+
+class cpu_thread;
 
 enum : u32
 {
@@ -24,9 +25,24 @@ enum : u64
 
 enum : u64
 {
-	SYS_MEMORY_PAGE_SIZE_1M   = 0x400ull,
+	SYS_MEMORY_PAGE_SIZE_4K   = 0x100ull,
 	SYS_MEMORY_PAGE_SIZE_64K  = 0x200ull,
+	SYS_MEMORY_PAGE_SIZE_1M   = 0x400ull,
 	SYS_MEMORY_PAGE_SIZE_MASK = 0xf00ull,
+};
+
+enum : u64
+{
+	SYS_MEMORY_GRANULARITY_64K  = 0x0000000000000200,
+	SYS_MEMORY_GRANULARITY_1M   = 0x0000000000000400,
+	SYS_MEMORY_GRANULARITY_MASK = 0x0000000000000f00,
+};
+
+enum : u64
+{
+	SYS_MEMORY_PROT_READ_WRITE = 0x0000000000040000,
+	SYS_MEMORY_PROT_READ_ONLY  = 0x0000000000080000,
+	SYS_MEMORY_PROT_MASK       = 0x00000000000f0000,
 };
 
 struct sys_memory_info_t
@@ -46,17 +62,12 @@ struct sys_page_attr_t
 
 struct lv2_memory_container
 {
-	static const u32 id_base = 0x1; // Wrong?
+	static const u32 id_base = 0x3F000000;
 	static const u32 id_step = 0x1;
 	static const u32 id_count = 16;
 
-	// This is purposely set lower to fake the size of the OS
-	// Todo: This could change with requested sdk
-	const u32 size = 0xEC00000; // Amount of "physical" memory in this container
-
+	const u32 size; // Amount of "physical" memory in this container
 	atomic_t<u32> used{}; // Amount of "physical" memory currently used
-
-	lv2_memory_container() = default;
 
 	lv2_memory_container(u32 size)
 		: size(size)
@@ -64,31 +75,42 @@ struct lv2_memory_container
 	}
 
 	// Try to get specified amount of "physical" memory
-	u32 take(u32 amount)
+	// Values greater than UINT32_MAX will fail
+	u32 take(u64 amount)
 	{
-		const u32 old_value = used.fetch_op([&](u32& value)
+		auto [_, result] = used.fetch_op([&](u32& value) -> u32
 		{
 			if (size - value >= amount)
 			{
-				value += amount;
+				value += static_cast<u32>(amount);
+				return static_cast<u32>(amount);
 			}
+
+			return 0;
 		});
 
-		if (size - old_value >= amount)
-		{
-			return amount;
-		}
-
-		return 0;
+		return result;
 	}
 };
 
+struct sys_memory_user_memory_stat_t
+{
+	be_t<u32> a; // 0x0
+	be_t<u32> b; // 0x4
+	be_t<u32> c; // 0x8
+	be_t<u32> d; // 0xc
+	be_t<u32> e; // 0x10
+	be_t<u32> f; // 0x14
+	be_t<u32> g; // 0x18
+};
+
 // SysCalls
-error_code sys_memory_allocate(u32 size, u64 flags, vm::ptr<u32> alloc_addr);
-error_code sys_memory_allocate_from_container(u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr);
-error_code sys_memory_free(u32 start_addr);
-error_code sys_memory_get_page_attribute(u32 addr, vm::ptr<sys_page_attr_t> attr);
-error_code sys_memory_get_user_memory_size(vm::ptr<sys_memory_info_t> mem_info);
-error_code sys_memory_container_create(vm::ptr<u32> cid, u32 size);
-error_code sys_memory_container_destroy(u32 cid);
-error_code sys_memory_container_get_size(vm::ptr<sys_memory_info_t> mem_info, u32 cid);
+error_code sys_memory_allocate(cpu_thread& cpu, u32 size, u64 flags, vm::ptr<u32> alloc_addr);
+error_code sys_memory_allocate_from_container(cpu_thread& cpu, u32 size, u32 cid, u64 flags, vm::ptr<u32> alloc_addr);
+error_code sys_memory_free(cpu_thread& cpu, u32 start_addr);
+error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_page_attr_t> attr);
+error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_info_t> mem_info);
+error_code sys_memory_get_user_memory_stat(cpu_thread& cpu, vm::ptr<sys_memory_user_memory_stat_t> mem_stat);
+error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 size);
+error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid);
+error_code sys_memory_container_get_size(cpu_thread& cpu, vm::ptr<sys_memory_info_t> mem_info, u32 cid);

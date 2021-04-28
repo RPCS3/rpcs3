@@ -1,388 +1,384 @@
 #include "stdafx.h"
-#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "Emu/Cell/lv2/sys_lwmutex.h"
-#include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_spu.h"
-#include "cellSpurs.h"
 #include "cellSpursJq.h"
 
-logs::channel cellSpursJq("cellSpursJq");
+LOG_CHANNEL(cellSpursJq);
 
-s32 cellSpursJobQueueAttributeInitialize()
+error_code cellSpursJobQueueAttributeInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueAttributeSetMaxGrab()
+error_code cellSpursJobQueueAttributeSetMaxGrab()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueAttributeSetSubmitWithEntryLock()
+error_code cellSpursJobQueueAttributeSetSubmitWithEntryLock()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueAttributeSetDoBusyWaiting()
+error_code cellSpursJobQueueAttributeSetDoBusyWaiting()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueAttributeSetIsHaltOnError()
+error_code cellSpursJobQueueAttributeSetIsHaltOnError()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueAttributeSetIsJobTypeMemoryCheck()
+error_code cellSpursJobQueueAttributeSetIsJobTypeMemoryCheck()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueAttributeSetMaxSizeJobDescriptor()
+error_code cellSpursJobQueueAttributeSetMaxSizeJobDescriptor()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueAttributeSetGrabParameters()
+error_code cellSpursJobQueueAttributeSetGrabParameters()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueSetWaitingMode()
+error_code cellSpursJobQueueSetWaitingMode()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursShutdownJobQueue()
+error_code cellSpursShutdownJobQueue()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursCreateJobQueueWithJobDescriptorPool()
+error_code _cellSpursCreateJobQueueWithJobDescriptorPool()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursCreateJobQueue()
+error_code _cellSpursCreateJobQueue()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJoinJobQueue()
+error_code cellSpursJoinJobQueue()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePushJobListBody()
+error_code _cellSpursJobQueuePushJobListBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePushJobBody2()
+error_code _cellSpursJobQueuePushJobBody2()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePushJob2Body()
+error_code _cellSpursJobQueuePushJob2Body()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePushAndReleaseJobBody()
+error_code _cellSpursJobQueuePushAndReleaseJobBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePushJobBody()
+error_code _cellSpursJobQueuePushJobBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePushBody()
+error_code _cellSpursJobQueuePushBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueueAllocateJobDescriptorBody()
+error_code _cellSpursJobQueueAllocateJobDescriptorBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePushSync()
+error_code _cellSpursJobQueuePushSync()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePushFlush()
+error_code _cellSpursJobQueuePushFlush()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueGetSpurs()
+error_code cellSpursJobQueueGetSpurs()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueGetHandleCount()
+error_code cellSpursJobQueueGetHandleCount()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueGetError()
+error_code cellSpursJobQueueGetError()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueGetMaxSizeJobDescriptor()
+error_code cellSpursJobQueueGetMaxSizeJobDescriptor()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursGetJobQueueId()
+error_code cellSpursGetJobQueueId()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueGetSuspendedJobSize()
+error_code cellSpursJobQueueGetSuspendedJobSize()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueClose()
+error_code cellSpursJobQueueClose()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueOpen()
+error_code cellSpursJobQueueOpen()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueSemaphoreTryAcquire()
+error_code cellSpursJobQueueSemaphoreTryAcquire()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueSemaphoreAcquire()
+error_code cellSpursJobQueueSemaphoreAcquire()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueSemaphoreInitialize()
+error_code cellSpursJobQueueSemaphoreInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueSendSignal()
+error_code cellSpursJobQueueSendSignal()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePortGetJobQueue()
+error_code cellSpursJobQueuePortGetJobQueue()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePortPushSync()
+error_code _cellSpursJobQueuePortPushSync()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePortPushFlush()
+error_code _cellSpursJobQueuePortPushFlush()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePortPushJobListBody()
+error_code _cellSpursJobQueuePortPushJobListBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePortPushJobBody()
+error_code _cellSpursJobQueuePortPushJobBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePortPushJobBody2()
+error_code _cellSpursJobQueuePortPushJobBody2()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePortPushBody()
+error_code _cellSpursJobQueuePortPushBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePortTrySync()
+error_code cellSpursJobQueuePortTrySync()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePortSync()
+error_code cellSpursJobQueuePortSync()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePortInitialize()
+error_code cellSpursJobQueuePortInitialize()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePortInitializeWithDescriptorBuffer()
+error_code cellSpursJobQueuePortInitializeWithDescriptorBuffer()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePortFinalize()
+error_code cellSpursJobQueuePortFinalize()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePortCopyPushJobBody()
+error_code _cellSpursJobQueuePortCopyPushJobBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePortCopyPushJobBody2()
+error_code _cellSpursJobQueuePortCopyPushJobBody2()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePortCopyPushBody()
+error_code _cellSpursJobQueuePortCopyPushBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePort2GetJobQueue()
+error_code cellSpursJobQueuePort2GetJobQueue()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePort2PushSync()
+error_code cellSpursJobQueuePort2PushSync()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePort2PushFlush()
+error_code cellSpursJobQueuePort2PushFlush()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePort2PushJobListBody()
+error_code _cellSpursJobQueuePort2PushJobListBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePort2Sync()
+error_code cellSpursJobQueuePort2Sync()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePort2Create()
+error_code cellSpursJobQueuePort2Create()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePort2Destroy()
+error_code cellSpursJobQueuePort2Destroy()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueuePort2AllocateJobDescriptor()
+error_code cellSpursJobQueuePort2AllocateJobDescriptor()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePort2PushAndReleaseJobBody()
+error_code _cellSpursJobQueuePort2PushAndReleaseJobBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePort2CopyPushJobBody()
+error_code _cellSpursJobQueuePort2CopyPushJobBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 _cellSpursJobQueuePort2PushJobBody()
+error_code _cellSpursJobQueuePort2PushJobBody()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueSetExceptionEventHandler()
+error_code cellSpursJobQueueSetExceptionEventHandler()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueSetExceptionEventHandler2()
+error_code cellSpursJobQueueSetExceptionEventHandler2()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;
 }
 
-s32 cellSpursJobQueueUnsetExceptionEventHandler()
+error_code cellSpursJobQueueUnsetExceptionEventHandler()
 {
 	UNIMPLEMENTED_FUNC(cellSpursJq);
 	return CELL_OK;

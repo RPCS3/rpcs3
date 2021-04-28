@@ -8,24 +8,16 @@
         <file>Icons/controller.png</file>
         <file>Icons/insignia.png</file>
         <file>Icons/configure.png</file>
-        <file>Icons/context.png</file>
         <file>Icons/controllers.png</file>
-        <file>Icons/controls.png</file>
-        <file>Icons/disc.png</file>
         <file>Icons/fullscreen.png</file>
         <file>Icons/grid.png</file>
         <file>Icons/list.png</file>
         <file>Icons/refresh.png</file>
-        <file>Icons/screenshot.png</file>
-        <file>Icons/separator.png</file>
-        <file>Icons/sort.png</file>
-        <file>Icons/fullscreen_invert.png</file>
-        <file>Json/tooltips.json</file>
-        <file>Icons/pause_blue.png</file>
-        <file>Icons/play_blue.png</file>
-        <file>Icons/restart_blue.png</file>
-        <file>Icons/stop_blue.png</file>
-        <file>Icons/cog_black.png</file>
-        <file>Icons/cog_gray.png</file>
+        <file>Icons/exit_fullscreen.png</file>
+        <file>Icons/open.png</file>
+        <file>Icons/custom_config.png</file>
+        <file>Icons/custom_config_2.png</file>
+        <file>Icons/controllers_2.png</file>
+        <file>Icons/combo_config_bordered.png</file>
     </qresource>
 </RCC>

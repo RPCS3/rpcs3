@@ -3,126 +3,169 @@
 
 #include "cellDaisy.h"
 
-logs::channel cellDaisy("cellDaisy");
+LOG_CHANNEL(cellDaisy);
+
+template <>
+void fmt_class_string<CellDaisyError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](CellDaisyError value)
+	{
+		switch (value)
+		{
+			STR_CASE(CELL_DAISY_ERROR_NO_BEGIN);
+			STR_CASE(CELL_DAISY_ERROR_INVALID_PORT_ATTACH);
+			STR_CASE(CELL_DAISY_ERROR_NOT_IMPLEMENTED);
+			STR_CASE(CELL_DAISY_ERROR_AGAIN);
+			STR_CASE(CELL_DAISY_ERROR_INVAL);
+			STR_CASE(CELL_DAISY_ERROR_PERM);
+			STR_CASE(CELL_DAISY_ERROR_BUSY);
+			STR_CASE(CELL_DAISY_ERROR_STAT);
+		}
+
+		return unknown;
+	});
+}
+
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 using LFQueue2 = struct CellDaisyLFQueue2;
 using Lock = struct CellDaisyLock;
 using ScatterGatherInterlock = struct CellDaisyScatterGatherInterlock;
 using AtomicInterlock = volatile struct CellDaisyAtomicInterlock;
 
-s32 cellDaisyLFQueue2GetPopPointer(vm::ptr<LFQueue2> queue, vm::ptr<s32> pPointer, u32 isBlocking)
+error_code cellDaisyLFQueue2GetPopPointer(vm::ptr<LFQueue2> queue, vm::ptr<s32> pPointer, u32 isBlocking)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLFQueue2GetPopPointer()");
+	return CELL_OK;
 }
 
-s32 cellDaisyLFQueue2CompletePopPointer(vm::ptr<LFQueue2> queue, s32 pointer, vm::ptr<s32(vm::ptr<void>, u32)> fpSendSignal, u32 isQueueFull)
+error_code cellDaisyLFQueue2CompletePopPointer(vm::ptr<LFQueue2> queue, s32 pointer, vm::ptr<s32(vm::ptr<void>, u32)> fpSendSignal, u32 isQueueFull)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLFQueue2CompletePopPointer()");
+	return CELL_OK;
 }
 
 void cellDaisyLFQueue2PushOpen(vm::ptr<LFQueue2> queue)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLFQueue2PushOpen()");
 }
 
-s32 cellDaisyLFQueue2PushClose(vm::ptr<LFQueue2> queue, vm::ptr<s32(vm::ptr<void>, u32)> fpSendSignal)
+error_code cellDaisyLFQueue2PushClose(vm::ptr<LFQueue2> queue, vm::ptr<s32(vm::ptr<void>, u32)> fpSendSignal)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLFQueue2PushClose()");
+	return CELL_OK;
 }
 
 void cellDaisyLFQueue2PopOpen(vm::ptr<LFQueue2> queue)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLFQueue2PopOpen()");
 }
 
-s32 cellDaisyLFQueue2PopClose(vm::ptr<LFQueue2> queue, vm::ptr<s32(vm::ptr<void>, u32)> fpSendSignal)
+error_code cellDaisyLFQueue2PopClose(vm::ptr<LFQueue2> queue, vm::ptr<s32(vm::ptr<void>, u32)> fpSendSignal)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLFQueue2PopClose()");
+	return CELL_OK;
 }
 
-s32 cellDaisyLFQueue2HasUnfinishedConsumer(vm::ptr<LFQueue2> queue, u32 isCancelled)
+error_code cellDaisyLFQueue2HasUnfinishedConsumer(vm::ptr<LFQueue2> queue, u32 isCancelled)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLFQueue2HasUnfinishedConsumer()");
+	return CELL_OK;
 }
 
-s32 cellDaisy_snprintf(vm::ptr<char> buffer, u32 count, vm::cptr<char> fmt, ppu_va_args_t fmt_args)
+error_code cellDaisy_snprintf(vm::ptr<char> buffer, u32 count, vm::cptr<char> fmt, ppu_va_args_t fmt_args)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisy_snprintf()");
+	return CELL_OK;
 }
 
-s32 cellDaisyLock_initialize(vm::ptr<Lock> _this, u32 depth)
+error_code cellDaisyLock_initialize(vm::ptr<Lock> _this, u32 depth)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLock_initialize()");
+	return CELL_OK;
 }
 
-s32 cellDaisyLock_getNextHeadPointer(vm::ptr<Lock> _this)
+error_code cellDaisyLock_getNextHeadPointer(vm::ptr<Lock> _this)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLock_getNextHeadPointer()");
+	return CELL_OK;
 }
 
-s32 cellDaisyLock_getNextTailPointer(vm::ptr<Lock> _this)
+error_code cellDaisyLock_getNextTailPointer(vm::ptr<Lock> _this)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLock_getNextTailPointer()");
+	return CELL_OK;
 }
 
-s32 cellDaisyLock_completeConsume(vm::ptr<Lock> _this, u32 pointer)
+error_code cellDaisyLock_completeConsume(vm::ptr<Lock> _this, u32 pointer)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLock_completeConsume()");
+	return CELL_OK;
 }
 
-s32 cellDaisyLock_completeProduce(vm::ptr<Lock> _this, u32 pointer)
+error_code cellDaisyLock_completeProduce(vm::ptr<Lock> _this, u32 pointer)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLock_completeProduce()");
+	return CELL_OK;
 }
 
-s32 cellDaisyLock_pushOpen(vm::ptr<Lock> _this)
+error_code cellDaisyLock_pushOpen(vm::ptr<Lock> _this)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLock_pushOpen()");
+	return CELL_OK;
 }
 
-s32 cellDaisyLock_pushClose(vm::ptr<Lock> _this)
+error_code cellDaisyLock_pushClose(vm::ptr<Lock> _this)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLock_pushClose()");
+	return CELL_OK;
 }
 
-s32 cellDaisyLock_popOpen(vm::ptr<Lock> _this)
+error_code cellDaisyLock_popOpen(vm::ptr<Lock> _this)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLock_popOpen()");
+	return CELL_OK;
 }
 
-s32 cellDaisyLock_popClose(vm::ptr<Lock> _this)
+error_code cellDaisyLock_popClose(vm::ptr<Lock> _this)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyLock_popClose()");
+	return CELL_OK;
 }
 
 void cellDaisyScatterGatherInterlock_1(vm::ptr<ScatterGatherInterlock> _this, vm::ptr<AtomicInterlock> ea, u32 size, vm::ptr<void> eaSignal, vm::ptr<s32(vm::ptr<void>, u32)> fpSendSignal)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyScatterGatherInterlock_1()");
 }
 
 void cellDaisyScatterGatherInterlock_2(vm::ptr<ScatterGatherInterlock> _this, u32 size, vm::ptr<u32> ids, u32 numSpus, u8 spup)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyScatterGatherInterlock_2()");
 }
 
 void cellDaisyScatterGatherInterlock_9tor(vm::ptr<ScatterGatherInterlock> _this)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyScatterGatherInterlock_9tor()");
 }
 
-s32 cellDaisyScatterGatherInterlock_probe(vm::ptr<ScatterGatherInterlock> _this, u32 isBlocking)
+error_code cellDaisyScatterGatherInterlock_probe(vm::ptr<ScatterGatherInterlock> _this, u32 isBlocking)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyScatterGatherInterlock_probe()");
+	return CELL_OK;
 }
 
-s32 cellDaisyScatterGatherInterlock_release(vm::ptr<ScatterGatherInterlock> _this)
+error_code cellDaisyScatterGatherInterlock_release(vm::ptr<ScatterGatherInterlock> _this)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyScatterGatherInterlock_release()");
+	return CELL_OK;
 }
 
 void cellDaisyScatterGatherInterlock_proceedSequenceNumber(vm::ptr<ScatterGatherInterlock> _this)
 {
-	fmt::throw_exception("Unimplemented" HERE);
+	cellDaisy.todo("cellDaisyScatterGatherInterlock_proceedSequenceNumber()");
 }
 
 
@@ -138,7 +181,7 @@ DECLARE(ppu_module_manager::cellDaisy)("cellDaisy", []()
 	REG_FNID(cellDaisy, "_QN4cell5Daisy29LFQueue2HasUnfinishedConsumerEPNS0_8LFQueue2Ej", cellDaisyLFQueue2HasUnfinishedConsumer);
 	REG_FNID(cellDaisy, "_ZN4cell5Daisy16LFQueue2PushOpenEPNS0_8LFQueue2E", cellDaisyLFQueue2PushOpen);
 	REG_FNID(cellDaisy, "_QN4cell5Daisy16LFQueue2PushOpenEPNS0_8LFQueue2E", cellDaisyLFQueue2PushOpen);
-	REG_FNID(cellDaisy, "_ZN4cell5Daisy16LFQueue2PopCloseEPNS0_8LFQueue2EPFiPvjE", cellDaisyLFQueue2PopClose);	
+	REG_FNID(cellDaisy, "_ZN4cell5Daisy16LFQueue2PopCloseEPNS0_8LFQueue2EPFiPvjE", cellDaisyLFQueue2PopClose);
 	REG_FNID(cellDaisy, "_QN4cell5Daisy16LFQueue2PopCloseEPNS0_8LFQueue2EPFiPvjE", cellDaisyLFQueue2PopClose);
 	REG_FNID(cellDaisy, "_ZN4cell5Daisy15LFQueue2PopOpenEPNS0_8LFQueue2E", cellDaisyLFQueue2PopOpen);
 	REG_FNID(cellDaisy, "_QN4cell5Daisy15LFQueue2PopOpenEPNS0_8LFQueue2E", cellDaisyLFQueue2PopOpen);

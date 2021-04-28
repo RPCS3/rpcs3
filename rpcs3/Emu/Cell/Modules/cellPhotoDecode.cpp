@@ -4,10 +4,10 @@
 
 
 
-logs::channel cellPhotoDecode("cellPhotoDecode");
+LOG_CHANNEL(cellPhotoDecode);
 
 // Return Codes
-enum
+enum CellPhotoDecodeError : u32
 {
 	CELL_PHOTO_DECODE_ERROR_BUSY         = 0x8002c901,
 	CELL_PHOTO_DECODE_ERROR_INTERNAL     = 0x8002c902,
@@ -16,6 +16,25 @@ enum
 	CELL_PHOTO_DECODE_ERROR_INITIALIZE   = 0x8002c905,
 	CELL_PHOTO_DECODE_ERROR_DECODE       = 0x8002c906,
 };
+
+template<>
+void fmt_class_string<CellPhotoDecodeError>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto error)
+	{
+		switch (error)
+		{
+			STR_CASE(CELL_PHOTO_DECODE_ERROR_BUSY);
+			STR_CASE(CELL_PHOTO_DECODE_ERROR_INTERNAL);
+			STR_CASE(CELL_PHOTO_DECODE_ERROR_PARAM);
+			STR_CASE(CELL_PHOTO_DECODE_ERROR_ACCESS_ERROR);
+			STR_CASE(CELL_PHOTO_DECODE_ERROR_INITIALIZE);
+			STR_CASE(CELL_PHOTO_DECODE_ERROR_DECODE);
+		}
+
+		return unknown;
+	});
+}
 
 struct CellPhotoDecodeSetParam
 {
