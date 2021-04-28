@@ -9,8 +9,6 @@
 
 LOG_CHANNEL(sys_semaphore);
 
-template<> DECLARE(ipc_manager<lv2_sema, u64>::g_ipc) {};
-
 error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
 {
 	ppu.state += cpu_flag::wait;
@@ -68,6 +66,7 @@ error_code sys_semaphore_destroy(ppu_thread& ppu, u32 sem_id)
 			return CELL_EBUSY;
 		}
 
+		lv2_obj::on_id_destroy(sema, sema.shared, sema.key);
 		return {};
 	});
 

@@ -77,12 +77,16 @@ private:
 	};
 
 	// Function executed under IDM mutex, error will make the object creation fail and the error will be returned
-	static CellError on_id_create()
+	CellError on_id_create()
 	{
+		exists++;
 		return {};
 	}
 
 public:
+
+	// Existence validation (workaround for shared-ptr ref-counting)
+	atomic_t<u32> exists = 0;
 
 	static std::string name64(u64 name_u64)
 	{
@@ -198,95 +202,95 @@ public:
 			{
 			case SYS_SYNC_NEWLY_CREATED:
 			case SYS_SYNC_NOT_CARE:
-			{
-				std::shared_ptr<T> result = make();
-
-				CellError error{};
-
-				if (!ipc_manager<T, u64>::add(ipc_key, [&]()
-				{
-					if (!idm::import<lv2_obj, T>([&]()
-					{
-						if (result && (error = result->on_id_create()))
-							result.reset();
-						return result;
-					}))
-					{
-						result.reset();
-					}
-
-					return result;
-				}, &result))
-				{
-					if (error)
-					{
-						return error;
-					}
-
-					if (flags == SYS_SYNC_NEWLY_CREATED)
-					{
-						return CELL_EEXIST;
-					}
-
-					error = CELL_EAGAIN;
-
-					if (!idm::import<lv2_obj, T>([&]() { if (result && (error = result->on_id_create())) result.reset(); return std::move(result); }))
-					{
-						return error;
-					}
-
-					return CELL_OK;
-				}
-				else if (!result)
-				{
-					return error ? CELL_EAGAIN : error;
-				}
-				else
-				{
-					return CELL_OK;
-				}
-			}
 			case SYS_SYNC_NOT_CREATE:
 			{
-				auto result = ipc_manager<T, u64>::get(ipc_key);
-
-				if (!result)
-				{
-					return CELL_ESRCH;
-				}
-
-				CellError error = CELL_EAGAIN;
-
-				if (!idm::import<lv2_obj, T>([&]() { if (result && (error = result->on_id_create())) result.reset(); return std::move(result); }))
-				{
-					return error;
-				}
-
-				return CELL_OK;
+				break;
 			}
-			default:
-			{
-				return CELL_EINVAL;
+			default: return CELL_EINVAL;
 			}
-			}
+
+			break;
 		}
 		case SYS_SYNC_NOT_PROCESS_SHARED:
 		{
-			std::shared_ptr<T> result = make();
+			break;
+		}
+		default: return CELL_EINVAL;
+		}
 
-			CellError error = CELL_EAGAIN;
+		std::shared_ptr<T> result = make();
 
-			if (!idm::import<lv2_obj, T>([&]() { if (result && (error = result->on_id_create())) result.reset(); return std::move(result); }))
+		// EAGAIN for IDM IDs shortage
+		CellError error = CELL_EAGAIN;
+
+		if (!idm::import<lv2_obj, T>([&]() -> std::shared_ptr<T>
+		{
+			auto finalize_construct = [&]() -> std::shared_ptr<T>
 			{
-				return error;
+				if ((error = result->on_id_create()))
+				{
+					result.reset();
+				}
+
+				return std::move(result);
+			};
+
+			if (flags != SYS_SYNC_PROCESS_SHARED)
+			{
+				// Creation of unique (non-shared) object handle
+				return finalize_construct();
 			}
 
-			return CELL_OK;
-		}
-		default:
+			auto& ipc_container = g_fxo->get<ipc_manager<T, u64>>();
+
+			if (flags == SYS_SYNC_NOT_CREATE)
+			{
+				result = ipc_container.get(ipc_key);
+
+				if (!result)
+				{
+					error = CELL_ESRCH;
+					return result;
+				}
+
+				// Run on_id_create() on existing object
+				return finalize_construct();
+			}
+
+			bool added = false;
+			std::tie(added, result) = ipc_container.add(ipc_key, finalize_construct, flags != SYS_SYNC_NEWLY_CREATED);
+
+			if (!added)
+			{
+				if (flags == SYS_SYNC_NEWLY_CREATED)
+				{
+					// Object already exists but flags does not allow it
+					error = CELL_EEXIST;
+
+					// We specified we do not want to peek pointer's value, result must be empty
+					AUDIT(!result);
+					return result;
+				}
+
+				// Run on_id_create() on existing object
+				return finalize_construct();
+			}
+
+			return std::move(result);
+		}))
 		{
-			return CELL_EINVAL;
+			return error;
 		}
+
+		return CELL_OK;
+	}
+
+	template <typename T>
+	static void on_id_destroy(T& obj, u32 pshared, u64 ipc_key)
+	{
+		if (obj.exists-- == 1u && pshared == SYS_SYNC_PROCESS_SHARED)
+		{
+			g_fxo->get<ipc_manager<T, u64>>().remove(ipc_key);
 		}
 	}
 

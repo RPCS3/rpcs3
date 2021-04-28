@@ -32,16 +32,10 @@ struct lv2_mutex final : lv2_obj
 	const u64 key;
 	const u64 name;
 
-	struct alignas(8) count_info
-	{
-		u32 mutex_count; // Mutex copies count (0 means doesn't exist anymore)
-		u32 cond_count; // Condition Variables
-	};
-
+	u32 cond_count = 0; // Condition Variables
 	shared_mutex mutex;
 	atomic_t<u32> owner{0};
 	atomic_t<u32> lock_count{0}; // Recursive Locks
-	atomic_t<count_info> obj_count{};
 	std::deque<cpu_thread*> sq;
 
 	lv2_mutex(u32 protocol, u32 recursive, u32 shared, u32 adaptive, u64 key, u64 name)
@@ -52,12 +46,6 @@ struct lv2_mutex final : lv2_obj
 		, key(key)
 		, name(name)
 	{
-	}
-
-	CellError on_id_create()
-	{
-		obj_count.atomic_op([](count_info& info){ info.mutex_count++; });
-		return {};
 	}
 
 	CellError try_lock(u32 id)

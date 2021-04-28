@@ -11,8 +11,6 @@
 
 LOG_CHANNEL(sys_event);
 
-template<> DECLARE(ipc_manager<lv2_event_queue, u64>::g_ipc) {};
-
 std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 {
 	if (ipc_key == SYS_EVENT_QUEUE_LOCAL)
@@ -21,14 +19,7 @@ std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 		return {};
 	}
 
-	auto queue = ipc_manager<lv2_event_queue, u64>::get(ipc_key);
-
-	if (queue && !queue->exists)
-	{
-		queue.reset();
-	}
-
-	return queue;
+	return g_fxo->get<ipc_manager<lv2_event_queue, u64>>().get(ipc_key);
 }
 
 bool lv2_event_queue::check(const std::weak_ptr<lv2_event_queue>& wkptr)
@@ -93,11 +84,11 @@ CellError lv2_event_queue::send(lv2_event event)
 	return {};
 }
 
-error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size)
+error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 ipc_key, s32 size)
 {
 	cpu.state += cpu_flag::wait;
 
-	sys_event.warning("sys_event_queue_create(equeue_id=*0x%x, attr=*0x%x, event_queue_key=0x%llx, size=%d)", equeue_id, attr, event_queue_key, size);
+	sys_event.warning("sys_event_queue_create(equeue_id=*0x%x, attr=*0x%x, ipc_key=0x%llx, size=%d)", equeue_id, attr, ipc_key, size);
 
 	if (size <= 0 || size > 127)
 	{
@@ -120,42 +111,19 @@ error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::p
 		return CELL_EINVAL;
 	}
 
-	auto queue = std::make_shared<lv2_event_queue>(protocol, type, attr->name_u64, event_queue_key, size);
+	const u32 pshared = ipc_key == SYS_EVENT_QUEUE_LOCAL ? SYS_SYNC_NOT_PROCESS_SHARED : SYS_SYNC_NOT_PROCESS_SHARED;
+	constexpr u32 flags = SYS_SYNC_NEWLY_CREATED; // NOTE: This is inaccurate for multi-process
+	const u64 name = attr->name_u64;
 
-	CellError error = CELL_EAGAIN;
-
-	if (event_queue_key == SYS_EVENT_QUEUE_LOCAL)
+	if (const auto error = lv2_obj::create<lv2_event_queue>(pshared, ipc_key, flags, [&]()
 	{
-		// Not an IPC queue
-		if (const u32 _id = idm::import<lv2_obj, lv2_event_queue>([&]() { if ((error = queue->on_id_create())) queue.reset(); return std::move(queue); } ))
-		{
-			*equeue_id = _id;
-			return CELL_OK;
-		}
-
-		return error;
-	}
-
-	// Create IPC queue
-	if (!ipc_manager<lv2_event_queue, u64>::add(event_queue_key, [&]() -> std::shared_ptr<lv2_event_queue>
-	{
-		if (const u32 _id = idm::import<lv2_obj, lv2_event_queue>([&]() { if ((error = queue->on_id_create())) return decltype(queue){}; return queue; } ))
-		{
-			*equeue_id = _id;
-			return std::move(queue);
-		}
-
-		return nullptr;
+		return std::make_shared<lv2_event_queue>(protocol, type, name, ipc_key, size);
 	}))
 	{
-		return CELL_EEXIST;
-	}
-
-	if (queue)
-	{
 		return error;
 	}
 
+	*equeue_id = idm::last_id();
 	return CELL_OK;
 }
 
@@ -179,7 +147,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			return CELL_EBUSY;
 		}
 
-		queue.exists--;
+		lv2_obj::on_id_destroy(queue, queue.key == SYS_EVENT_QUEUE_LOCAL ? SYS_SYNC_NOT_PROCESS_SHARED : SYS_SYNC_PROCESS_SHARED, queue.key);
 		return {};
 	});
 

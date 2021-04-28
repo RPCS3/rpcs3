@@ -40,20 +40,17 @@ struct lv2_cond final : lv2_obj
 	{
 	}
 
-	CellError on_id_create() const
+	CellError on_id_create()
 	{
-		if (!mutex->obj_count.fetch_op([](lv2_mutex::count_info& info)
+		if (mutex->exists)
 		{
-			if (info.mutex_count)
-				return info.cond_count++, true;
-			return false;
-		}).second)
-		{
-			// Mutex has been destroyed, cannot create conditional variable
-			return CELL_ESRCH;
+			mutex->cond_count++;
+			exists++;
+			return {};
 		}
 
-		return {};
+		// Mutex has been destroyed, cannot create conditional variable
+		return CELL_ESRCH;
 	}
 };
 

@@ -321,7 +321,7 @@ void kernel_explorer::Update()
 		{
 			auto& mutex = static_cast<lv2_mutex&>(obj);
 			add_leaf(node, qstr(fmt::format(u8"Mutex 0x%08x: “%s”, %s,%s Owner: %#x, Locks: %u, Key: %#llx, Conds: %u, Wq: %zu", id, lv2_obj::name64(mutex.name), mutex.protocol,
-				mutex.recursive == SYS_SYNC_RECURSIVE ? " Recursive," : "", mutex.owner >> 1, +mutex.lock_count, mutex.key, mutex.obj_count.load().cond_count, mutex.sq.size())));
+				mutex.recursive == SYS_SYNC_RECURSIVE ? " Recursive," : "", mutex.owner >> 1, +mutex.lock_count, mutex.key, mutex.cond_count, mutex.sq.size())));
 			break;
 		}
 		case SYS_COND_OBJECT:

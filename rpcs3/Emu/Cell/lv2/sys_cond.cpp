@@ -9,8 +9,6 @@
 
 LOG_CHANNEL(sys_cond);
 
-template<> DECLARE(ipc_manager<lv2_cond, u64>::g_ipc) {};
-
 error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
 {
 	ppu.state += cpu_flag::wait;
@@ -58,7 +56,8 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 			return CELL_EBUSY;
 		}
 
-		cond.mutex->obj_count.atomic_op([](lv2_mutex::count_info& info){ info.cond_count--; });
+		cond.mutex->cond_count--;
+		lv2_obj::on_id_destroy(cond, cond.shared, cond.key);
 		return {};
 	});
 
