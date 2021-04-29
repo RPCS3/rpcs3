@@ -68,8 +68,7 @@ namespace rsx
 
 	surface_depth_format to_surface_depth_format(u8 in);
 
-	constexpr
-	bool operator == (surface_depth_format2 rhs, surface_depth_format lhs)
+	constexpr bool operator ==(surface_depth_format2 rhs, surface_depth_format lhs)
 	{
 		switch (lhs)
 		{
@@ -80,25 +79,6 @@ namespace rsx
 		[[unlikely]] default:
 			return false;
 		}
-	}
-
-	// GCC requires every operator declared explicitly
-	constexpr
-	bool operator == (surface_depth_format rhs, surface_depth_format2 lhs)
-	{
-		return lhs == rhs;
-	}
-
-	constexpr
-	bool operator != (surface_depth_format2 rhs, surface_depth_format lhs)
-	{
-		return !(rhs == lhs);
-	}
-
-	constexpr
-	bool operator != (surface_depth_format rhs, surface_depth_format2 lhs)
-	{
-		return !(lhs == rhs);
 	}
 
 	enum class surface_raster_type : u8

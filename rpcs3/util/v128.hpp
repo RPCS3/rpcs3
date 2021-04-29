@@ -207,8 +207,6 @@ union alignas(16) v128
 
 	bool operator==(const v128& right) const;
 
-	bool operator!=(const v128& right) const;
-
 	// result = (~left) & (right)
 	static inline v128 andnot(const v128& left, const v128& right);
 

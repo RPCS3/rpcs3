@@ -140,11 +140,6 @@ namespace stx
 			{
 				return ptr == r.ptr;
 			}
-
-			bool operator!=(const const_iterator& r) const
-			{
-				return ptr != r.ptr;
-			}
 		};
 
 		const_iterator begin() const

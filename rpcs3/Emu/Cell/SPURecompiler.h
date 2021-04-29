@@ -51,11 +51,6 @@ struct spu_program
 
 	bool operator==(const spu_program& rhs) const noexcept;
 
-	bool operator!=(const spu_program& rhs) const noexcept
-	{
-		return !(*this == rhs);
-	}
-
 	bool operator<(const spu_program& rhs) const noexcept;
 };
 

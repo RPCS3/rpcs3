@@ -239,14 +239,9 @@ namespace utils
 		}
 
 		// Comparison Operators
-		bool operator ==(const address_range &other) const
+		bool operator ==(const address_range& other) const
 		{
 			return (start == other.start && end == other.end);
-		}
-
-		bool operator !=(const address_range &other) const
-		{
-			return (start != other.start || end != other.end);
 		}
 
 		/**

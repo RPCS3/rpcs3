@@ -285,15 +285,6 @@ public:
 			return value() == rhs;
 		}
 
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-		template <typename T2, typename = decltype(+std::declval<const T2&>())>
-		constexpr bool operator!=(const T2& rhs) const noexcept
-		{
-			return !operator==<T2>(rhs);
-		}
-#endif
-
 private:
 		template <typename T2>
 		static constexpr bool check_args_for_bitwise_op()
