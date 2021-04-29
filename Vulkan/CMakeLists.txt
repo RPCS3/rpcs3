@@ -1,3 +1,4 @@
+set(ENABLE_PCH OFF CACHE BOOL "Enables Precompiled header" FORCE)
 set(BUILD_EXTERNAL OFF CACHE BOOL "Build external dependencies in /External" FORCE)
 set(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip installation" FORCE)
 set(ENABLE_SPVREMAPPER OFF CACHE BOOL "Enables building of SPVRemapper" FORCE)
