@@ -123,7 +123,7 @@ if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
 elseif(MSVC)
 	# Windows time.h defines timespec but doesn't add any flag for it, which makes libusb attempt to define it again
 	add_definitions(-DHAVE_STRUCT_TIMESPEC=1)
-	add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
+	add_subdirectory(libusb EXCLUDE_FROM_ALL)
 else()
 	if(USE_SYS_LIBUSB)
 		# we have the system libusb and have selected to use it
@@ -132,7 +132,7 @@ else()
 	else()
 		# we don't have the system libusb, so we compile from submodule
 		unset(LIBUSB_LIBRARIES CACHE)
-		add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
+		add_subdirectory(libusb EXCLUDE_FROM_ALL)
 	endif()
 endif()
 

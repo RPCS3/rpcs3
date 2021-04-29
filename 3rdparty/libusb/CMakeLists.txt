@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.8.4)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
-
-set(LIBUSB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libusb/)
-
 project(libusb)
+
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules")
+set(LIBUSB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
 
 option(WITH_DEBUG_LOG "enable debug logging" OFF)
 # if debug logging is enabled, by default enable logging
