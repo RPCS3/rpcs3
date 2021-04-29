@@ -58,6 +58,7 @@ namespace vk
 		conditional_render_support       = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
 		external_memory_host_support     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		unrestricted_depth_range_support = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
+		debug_utils_support              = instance_extensions.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		surface_capabilities_2_support   = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 	}
 
@@ -437,6 +438,11 @@ namespace vk
 			_vkCmdEndConditionalRenderingEXT = reinterpret_cast<PFN_vkCmdEndConditionalRenderingEXT>(vkGetDeviceProcAddr(dev, "vkCmdEndConditionalRenderingEXT"));
 		}
 
+		if (pgpu->debug_utils_support)
+		{
+			_vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(dev, "vkSetDebugUtilsObjectNameEXT"));
+		}
+
 		memory_map = vk::get_memory_mapping(pdev);
 		m_formats_support = vk::get_optimal_tiling_supported_formats(pdev);
 		m_pipeline_binding_table = vk::get_pipeline_binding_table(pdev);
@@ -595,6 +601,11 @@ namespace vk
 	bool render_device::get_surface_capabilities_2_support() const
 	{
 		return pgpu->surface_capabilities_2_support;
+	}
+
+	bool render_device::get_debug_utils_support() const
+	{
+		return g_cfg.video.renderdoc_compatiblity && pgpu->debug_utils_support;
 	}
 
 	mem_allocator_base* render_device::get_allocator() const

@@ -2,6 +2,7 @@
 #include "sys_sync.h"
 #include "sys_fs.h"
 
+#include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Crypto/unedat.h"
 #include "Emu/System.h"
@@ -1709,9 +1710,53 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		break;
 	}
 
-	case 0x00000025: // cellFsSdataOpenWithVersion
+	case 0xe0000025: // cellFsSdataOpenWithVersion
 	{
-		break;
+		const auto arg = vm::static_ptr_cast<lv2_file_e0000025>(_arg);
+
+		if (arg->size != 0x30u)
+		{
+			sys_fs.error("sys_fs_fcntl(0xe0000025): invalid size (0x%x)", arg->size);
+			break;
+		}
+
+		if (arg->_x4 != 0x10u || arg->_x8 != 0x28u)
+		{
+			sys_fs.error("sys_fs_fcntl(0xe0000025): invalid args (0x%x, 0x%x)", arg->_x4, arg->_x8);
+			break;
+		}
+
+		std::string_view vpath{ arg->name.get_ptr(), arg->name_size };
+		vpath = vpath.substr(0, vpath.find_first_of('\0'));
+
+		sys_fs.notice("sys_fs_fcntl(0xe0000025): %s", vpath);
+
+		be_t<u64> sdata_identifier = 0x18000000010;
+
+		lv2_file::open_result_t result = lv2_file::open(vpath, 0, 0, &sdata_identifier, 8);
+
+		if (result.error)
+		{
+			return result.error;
+		}
+
+		if (const u32 id = idm::import<lv2_fs_object, lv2_file>([&]() -> std::shared_ptr<lv2_file>
+		{
+			if (!g_fxo->get<loaded_npdrm_keys>().npdrm_fds.try_inc(16))
+			{
+				return nullptr;
+			}
+
+			return std::make_shared<lv2_file>(result.ppath, std::move(result.file), 0,  0, std::move(result.real_path), lv2_file_type::sdata);
+		}))
+		{
+			arg->out_code = CELL_OK;
+			arg->fd = id;
+			return CELL_OK;
+		}
+
+		// Out of file descriptors
+		return CELL_EMFILE;
 	}
 	}
 

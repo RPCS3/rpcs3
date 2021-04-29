@@ -10,6 +10,8 @@
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/VFS.h"
+#include "Emu/system_progress.hpp"
+#include "Emu/system_utils.hpp"
 #include "PPUThread.h"
 #include "PPUInterpreter.h"
 #include "PPUAnalyser.h"
@@ -66,8 +68,6 @@
 const bool s_use_ssse3 = utils::has_ssse3();
 
 extern atomic_t<u64> g_watchdog_hold_ctr;
-
-#include "Emu/system_progress.hpp"
 
 // Should be of the same type
 using spu_rdata_t = decltype(ppu_thread::rdata);
@@ -2999,7 +2999,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 	// Create worker threads for compilation (TODO: how many threads)
 	{
-		u32 thread_count = Emulator::GetMaxThreads();
+		u32 thread_count = rpcs3::utils::get_max_threads();
 
 		if (workload.size() < thread_count)
 		{

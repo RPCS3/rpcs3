@@ -1452,17 +1452,17 @@ void pad_settings_dialog::HandleDeviceClassChange(int index) const
 		}
 		case input::product_type::harmonix_rockband_drum_kit:
 		{
-			ui->chooseProduct->addItem(tr("Rockband", "Harmonix Rockband Drum Kit"), static_cast<int>(product.type));
+			ui->chooseProduct->addItem(tr("Rock Band", "Harmonix Rock Band Drum Kit"), static_cast<int>(product.type));
 			break;
 		}
 		case input::product_type::harmonix_rockband_drum_kit_2:
 		{
-			ui->chooseProduct->addItem(tr("Rockband Pro", "Harmonix Rockband Pro-Drum Kit"), static_cast<int>(product.type));
+			ui->chooseProduct->addItem(tr("Rock Band Pro", "Harmonix Rock Band Pro-Drum Kit"), static_cast<int>(product.type));
 			break;
 		}
 		case input::product_type::harmonix_rockband_guitar:
 		{
-			ui->chooseProduct->addItem(tr("Rockband", "Harmonix Rockband Guitar"), static_cast<int>(product.type));
+			ui->chooseProduct->addItem(tr("Rock Band", "Harmonix Rock Band Guitar"), static_cast<int>(product.type));
 			break;
 		}
 		case input::product_type::red_octane_gh_drum_kit:

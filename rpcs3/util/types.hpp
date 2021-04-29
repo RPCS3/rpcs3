@@ -204,6 +204,7 @@ extern "C"
 	uchar _subborrow_u64(uchar, u64, u64, u64*);
 	u64 __shiftleft128(u64, u64, uchar);
 	u64 __shiftright128(u64, u64, uchar);
+	u64 _umul128(u64, u64, u64*);
 }
 
 // Unsigned 128-bit integer implementation (TODO)
@@ -248,6 +249,13 @@ struct alignas(16) u128
 	{
 		u128 value = l;
 		value -= r;
+		return value;
+	}
+
+	constexpr friend u128 operator*(const u128& l, const u128& r)
+	{
+		u128 value = l;
+		value *= r;
 		return value;
 	}
 
@@ -365,6 +373,24 @@ struct alignas(16) u128
 		return *this;
 	}
 
+	constexpr u128& operator*=(const u128& r)
+	{
+		const u64 _hi = r.hi * lo + r.lo * hi;
+
+		if (std::is_constant_evaluated())
+		{
+			hi = (lo >> 32) * (r.lo >> 32) + (((lo >> 32) * (r.lo & 0xffffffff)) >> 32) + (((r.lo >> 32) * (lo & 0xffffffff)) >> 32);
+			lo = lo * r.lo;
+		}
+		else
+		{
+			lo = _umul128(lo, r.lo, &hi);
+		}
+
+		hi += _hi;
+		return *this;
+	}
+
 	constexpr u128& operator<<=(const u128& r)
 	{
 		if (std::is_constant_evaluated())
@@ -454,39 +480,25 @@ struct get_int_impl<16>
 };
 
 // Return magic value for any unsigned type
-constexpr inline struct umax_helper
+constexpr struct umax_impl_t
 {
-	constexpr umax_helper() noexcept = default;
-
 	template <typename T> requires (std::is_unsigned_v<std::common_type_t<T>>) || (std::is_same_v<std::common_type_t<T>, u128>)
-	friend constexpr bool operator==(const umax_helper&, const T& rhs)
+	constexpr bool operator==(const T& rhs) const
 	{
 		return rhs == static_cast<std::common_type_t<T>>(-1);
 	}
 
-#if __cpp_impl_three_way_comparison >= 201711 && !__INTELLISENSE__
-#else
 	template <typename T> requires (std::is_unsigned_v<std::common_type_t<T>>) || (std::is_same_v<std::common_type_t<T>, u128>)
-	friend constexpr bool operator==(const T& lhs, const umax_helper&)
+	constexpr bool operator<(const T& rhs) const
 	{
-		return lhs == static_cast<std::common_type_t<T>>(-1);
-	}
-#endif
-
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-	template <typename T> requires (std::is_unsigned_v<std::common_type_t<T>>) || (std::is_same_v<std::common_type_t<T>, u128>)
-	friend constexpr bool operator!=(const umax_helper&, const T& rhs)
-	{
-		return rhs != static_cast<std::common_type_t<T>>(-1);
+		return rhs < static_cast<std::common_type_t<T>>(-1);
 	}
 
 	template <typename T> requires (std::is_unsigned_v<std::common_type_t<T>>) || (std::is_same_v<std::common_type_t<T>, u128>)
-	friend constexpr bool operator!=(const T& lhs, const umax_helper&)
+	constexpr operator T() const
 	{
-		return lhs != static_cast<std::common_type_t<T>>(-1);
+		return static_cast<std::common_type_t<T>>(-1);
 	}
-#endif
 } umax;
 
 enum class f16 : u16{};

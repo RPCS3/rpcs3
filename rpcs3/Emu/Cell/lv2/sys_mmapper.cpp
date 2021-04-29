@@ -114,10 +114,10 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u64 
 	}
 
 	// Check page granularity
-	switch (flags & SYS_MEMORY_PAGE_SIZE_MASK)
+	switch (flags & SYS_MEMORY_GRANULARITY_MASK)
 	{
 	case 0:
-	case SYS_MEMORY_PAGE_SIZE_1M:
+	case SYS_MEMORY_GRANULARITY_1M:
 	{
 		if (size % 0x100000)
 		{
@@ -126,7 +126,7 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u64 
 
 		break;
 	}
-	case SYS_MEMORY_PAGE_SIZE_64K:
+	case SYS_MEMORY_GRANULARITY_64K:
 	{
 		if (size % 0x10000)
 		{
@@ -171,10 +171,10 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 	}
 
 	// Check page granularity.
-	switch (flags & SYS_MEMORY_PAGE_SIZE_MASK)
+	switch (flags & SYS_MEMORY_GRANULARITY_MASK)
 	{
 	case 0:
-	case SYS_MEMORY_PAGE_SIZE_1M:
+	case SYS_MEMORY_GRANULARITY_1M:
 	{
 		if (size % 0x100000)
 		{
@@ -183,7 +183,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 
 		break;
 	}
-	case SYS_MEMORY_PAGE_SIZE_64K:
+	case SYS_MEMORY_GRANULARITY_64K:
 	{
 		if (size % 0x10000)
 		{
@@ -240,9 +240,9 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 		return CELL_EALIGN;
 	}
 
-	switch (flags & SYS_MEMORY_PAGE_SIZE_MASK)
+	switch (flags & SYS_MEMORY_GRANULARITY_MASK)
 	{
-	case SYS_MEMORY_PAGE_SIZE_1M:
+	case SYS_MEMORY_GRANULARITY_1M:
 	case 0:
 	{
 		if (size % 0x100000)
@@ -252,7 +252,7 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 
 		break;
 	}
-	case SYS_MEMORY_PAGE_SIZE_64K:
+	case SYS_MEMORY_GRANULARITY_64K:
 	{
 		if (size % 0x10000)
 		{

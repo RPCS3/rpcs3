@@ -530,7 +530,7 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 
 		auto ptr = dst + offset;
 
-		u32 resval = -1;
+		u32 resval = umax;
 
 		switch (p.type)
 		{

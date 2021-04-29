@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "PadHandler.h"
-#include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Input/pad_thread.h"
 #include "Input/product_info.h"
 
@@ -292,16 +292,16 @@ std::string PadHandlerBase::get_config_dir(pad_handler type, const std::string& 
 {
 	if (!title_id.empty())
 	{
-		return Emulator::GetCustomInputConfigDir(title_id) + fmt::format("%s", type) + "/";
+		return rpcs3::utils::get_custom_input_config_dir(title_id) + fmt::format("%s", type) + "/";
 	}
 	return fs::get_config_dir() + "/InputConfigs/" + fmt::format("%s", type) + "/";
 }
 
 std::string PadHandlerBase::get_config_filename(int i, const std::string& title_id)
 {
-	if (!title_id.empty() && fs::is_file(Emulator::GetCustomInputConfigPath(title_id)))
+	if (!title_id.empty() && fs::is_file(rpcs3::utils::get_custom_input_config_path(title_id)))
 	{
-		const std::string path = Emulator::GetCustomInputConfigDir(title_id) + g_cfg_input.player[i]->handler.to_string() + "/" + g_cfg_input.player[i]->profile.to_string() + ".yml";
+		const std::string path = rpcs3::utils::get_custom_input_config_dir(title_id) + g_cfg_input.player[i]->handler.to_string() + "/" + g_cfg_input.player[i]->profile.to_string() + ".yml";
 		if (fs::is_file(path))
 		{
 			return path;

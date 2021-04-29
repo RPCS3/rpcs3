@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/localized_string.h"
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/ErrorCodes.h"
@@ -978,7 +979,7 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 		}
 
 		// Actually remove game data
-		if (!vfs::host::remove_all(dir, Emu.GetHddDir(), &g_mp_sys_dev_hdd0, true))
+		if (!vfs::host::remove_all(dir, rpcs3::utils::get_hdd0_dir(), &g_mp_sys_dev_hdd0, true))
 		{
 			return {CELL_GAME_ERROR_ACCESS_ERROR, dir};
 		}

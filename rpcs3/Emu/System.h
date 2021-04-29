@@ -205,8 +205,6 @@ public:
 		return m_usrid;
 	}
 
-	static u32 CheckUsr(const std::string& user);
-
 	void SetUsr(const std::string& user);
 
 	std::string GetBackgroundPicturePath() const;
@@ -216,27 +214,8 @@ public:
 		return m_pause_amend_time;
 	}
 
-	static std::string PPUCache();
-
 	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
 	bool BootRsxCapture(const std::string& path);
-	static bool InstallPkg(const std::string& path);
-
-#ifdef _WIN32
-	static std::string GetExeDir();
-#endif
-
-	static std::string GetEmuDir();
-	static std::string GetHddDir();
-	static std::string GetHdd1Dir();
-	static std::string GetCacheDir();
-	static std::string GetSfoDirFromGamePath(const std::string& game_path, const std::string& title_id = "");
-	static std::string GetRapFilePath(const std::string& rap);
-
-	static std::string GetCustomConfigDir();
-	static std::string GetCustomConfigPath(const std::string& title_id, bool get_deprecated_path = false);
-	static std::string GetCustomInputConfigDir(const std::string& title_id);
-	static std::string GetCustomInputConfigPath(const std::string& title_id);
 
 	void SetForceBoot(bool force_boot);
 
@@ -264,15 +243,9 @@ public:
 
 	std::string GetFormattedTitle(double fps) const;
 
-	static u32 GetMaxThreads();
-
-	static void ConfigureLogs();
 	void ConfigurePPUCache() const;
 
 	std::set<std::string> GetGameDirs() const;
-
-private:
-	static void LimitCacheSize();
 };
 
 extern Emulator Emu;

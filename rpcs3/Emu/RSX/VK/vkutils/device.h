@@ -52,6 +52,7 @@ namespace vk
 		bool external_memory_host_support = false;
 		bool unrestricted_depth_range_support = false;
 		bool surface_capabilities_2_support = false;
+		bool debug_utils_support = false;
 
 		friend class render_device;
 	private:
@@ -101,6 +102,7 @@ namespace vk
 		// Exported device endpoints
 		PFN_vkCmdBeginConditionalRenderingEXT _vkCmdBeginConditionalRenderingEXT = nullptr;
 		PFN_vkCmdEndConditionalRenderingEXT _vkCmdEndConditionalRenderingEXT = nullptr;
+		PFN_vkSetDebugUtilsObjectNameEXT _vkSetDebugUtilsObjectNameEXT = nullptr;
 
 	public:
 		render_device() = default;
@@ -126,6 +128,7 @@ namespace vk
 		bool get_unrestricted_depth_range_support() const;
 		bool get_external_memory_host_support() const;
 		bool get_surface_capabilities_2_support() const;
+		bool get_debug_utils_support() const;
 
 		VkQueue get_present_queue() const;
 		VkQueue get_graphics_queue() const;

@@ -1065,6 +1065,8 @@ DECLARE(ppu_module_manager::cellSail)("cellSail", []()
 {
 	static ppu_static_module cellSailAvi("cellSailAvi");
 
+	[[maybe_unused]] vm::ptr<CellSailMp4MovieInfo<>> test;
+
 	REG_FUNC(cellSail, cellSailMemAllocatorInitialize);
 
 	REG_FUNC(cellSail, cellSailFutureInitialize);

@@ -1,9 +1,12 @@
 ﻿add_library(rpcs3_emu
+    cache_utils.cpp
     IdManager.cpp
     localized_string.cpp
     System.cpp
     system_config.cpp
     system_config_types.cpp
+    system_progress.cpp
+    system_utils.cpp
     VFS.cpp
     GDB.cpp
     title.cpp
@@ -422,6 +425,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_perf_metrics.cpp
     RSX/Overlays/overlay_progress_bar.cpp
     RSX/Overlays/overlay_save_dialog.cpp
+    RSX/Overlays/overlay_user_list_dialog.cpp
     RSX/Overlays/overlay_utils.cpp
     RSX/Overlays/overlays.cpp
     RSX/Overlays/overlay_shader_compile_notification.cpp
@@ -481,6 +485,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKProgramPipeline.cpp
         RSX/VK/VKQueryPool.cpp
         RSX/VK/VKRenderPass.cpp
+        RSX/VK/VKRenderTargets.cpp
         RSX/VK/VKResolveHelper.cpp
         RSX/VK/VKResourceManager.cpp
         RSX/VK/VKShaderInterpreter.cpp
@@ -500,6 +505,13 @@ target_link_libraries(rpcs3_emu
     PRIVATE
         3rdparty::span 3rdparty::xxhash
 )
+
+if(APPLE)
+    check_function_exists(clock_gettime HAVE_CLOCK_GETTIME)
+    if (${HAVE_CLOCK_GETTIME})
+	    target_compile_definitions(rpcs3_emu PUBLIC -DHAVE_CLOCK_GETTIME)
+    endif()
+endif()
 
 
 if(USE_PRECOMPILED_HEADERS)

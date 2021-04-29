@@ -59,6 +59,7 @@
     <ClCompile Include="Emu\Audio\Pulse\PulseBackend.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Emu\cache_utils.cpp" />
     <ClCompile Include="Emu\Cell\Modules\sys_crashdump.cpp" />
     <ClCompile Include="Emu\Io\Turntable.cpp" />
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
@@ -72,12 +73,15 @@
     <ClCompile Include="Emu\NP\rpcn_config.cpp" />
     <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_user_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp" />
     <ClCompile Include="Emu\RSX\RSXDisAsm.cpp" />
     <ClCompile Include="Emu\system_config_types.cpp" />
     <ClCompile Include="Emu\perf_meter.cpp" />
+    <ClCompile Include="Emu\system_progress.cpp" />
+    <ClCompile Include="Emu\system_utils.cpp" />
     <ClCompile Include="Emu\title.cpp" />
     <ClCompile Include="Emu\system_config.cpp" />
     <ClCompile Include="Emu\NP\fb_helpers.cpp" />
@@ -430,6 +434,7 @@
     <ClInclude Include="Emu\Audio\Pulse\PulseBackend.h">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="Emu\cache_utils.hpp" />
     <ClInclude Include="Emu\Cell\lv2\sys_crypto_engine.h" />
     <ClInclude Include="Emu\Cell\Modules\cellCrossController.h" />
     <ClInclude Include="Emu\Cell\Modules\cellRemotePlay.h" />
@@ -465,10 +470,13 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_save_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_shader_compile_notification.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_trophy_notification.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_user_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.h" />
     <ClInclude Include="Emu\RSX\RSXDisAsm.h" />
+    <ClInclude Include="Emu\system_progress.hpp" />
+    <ClInclude Include="Emu\system_utils.hpp" />
     <ClInclude Include="Emu\title.h" />
     <ClInclude Include="Emu\system_config.h" />
     <ClInclude Include="Emu\system_config_types.h" />

@@ -5,6 +5,7 @@
 #include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 #include "unpkg.h"
 #include "Loader/PSF.h"
@@ -590,7 +591,7 @@ package_error package_reader::check_target_app_version() const
 		return package_error::no_error;
 	}
 
-	const fs::file installed_sfo_file(Emu.GetHddDir() + "game/" + std::string(title_id) + "/PARAM.SFO");
+	const fs::file installed_sfo_file(rpcs3::utils::get_hdd0_dir() + "game/" + std::string(title_id) + "/PARAM.SFO");
 	if (!installed_sfo_file)
 	{
 		if (!target_app_ver.empty())
@@ -674,7 +675,7 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 	}
 
 	// Get full path and create the directory
-	std::string dir = Emulator::GetHddDir();
+	std::string dir = rpcs3::utils::get_hdd0_dir();
 
 	// Based on https://www.psdevwiki.com/ps3/PKG_files#ContentType
 	switch (m_metadata.content_type)

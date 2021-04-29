@@ -73,7 +73,7 @@ error_code sys_get_random_number(vm::ptr<void> addr, u64 size)
 {
 	sysPrxForUser.warning("sys_get_random_number(addr=*0x%x, size=%d)", addr, size);
 
-	if (size > 0x1000)
+	if (size > RANDOM_NUMBER_MAX_SIZE)
 	{
 		return CELL_EINVAL;
 	}

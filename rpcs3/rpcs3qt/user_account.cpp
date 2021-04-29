@@ -1,6 +1,6 @@
 #include "user_account.h"
 
-#include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
 #include "util/logs.hpp"
 
@@ -12,7 +12,7 @@ user_account::user_account(const std::string& user_id)
 	m_user_id = user_id;
 
 	// Setting userDir.
-	m_user_dir = Emulator::GetHddDir() + "home/" + m_user_id + "/";
+	m_user_dir = rpcs3::utils::get_hdd0_dir() + "home/" + m_user_id + "/";
 
 	// Setting userName.
 	if (fs::file file; file.open(m_user_dir + "localusername", fs::read))
@@ -46,7 +46,7 @@ std::map<u32, user_account> user_account::GetUserAccounts(const std::string& bas
 		}
 
 		// Is the folder name exactly 8 all-numerical characters long?
-		const u32 key = Emulator::CheckUsr(user_folder.name);
+		const u32 key = rpcs3::utils::check_user(user_folder.name);
 
 		if (key == 0)
 		{

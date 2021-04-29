@@ -1,5 +1,6 @@
 ﻿#include "stdafx.h"
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -506,7 +507,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, reinterpret_cast<u8*>(&k_licensee), &contentID))
 		{
-			const std::string rap_file = Emulator::GetRapFilePath(contentID);
+			const std::string rap_file = rpcs3::utils::get_rap_file_path(contentID);
 			npdrmkeys.devKlic = k_licensee;
 
 			if (fs::is_file(rap_file))
@@ -552,7 +553,7 @@ error_code sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 	}
 
 	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
-	const std::string rap_file = Emulator::GetRapFilePath(content_str);
+	const std::string rap_file = rpcs3::utils::get_rap_file_path(content_str);
 
 	sceNp.warning(u8"sceNpDrmVerifyUpgradeLicense(): content_id=“%s”", content_id);
 
@@ -576,7 +577,7 @@ error_code sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 	}
 
 	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
-	const std::string rap_file = Emulator::GetRapFilePath(content_str);
+	const std::string rap_file = rpcs3::utils::get_rap_file_path(content_str);
 
 	sceNp.warning(u8"sceNpDrmVerifyUpgradeLicense2(): content_id=“%s”", content_id);
 

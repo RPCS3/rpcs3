@@ -51,6 +51,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include "Utilities/StrUtil.h"
 #include "rpcs3_version.h"
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include <thread>
 #include <charconv>
 
@@ -743,7 +744,7 @@ int main(int argc, char** argv)
 	{
 		active_user = parser.value(arg_user_id).toStdString();
 
-		if (Emulator::CheckUsr(active_user) == 0)
+		if (rpcs3::utils::check_user(active_user) == 0)
 		{
 			report_fatal_error(fmt::format("Failed to set user ID '%s'.\nThe user ID must consist of 8 digits and cannot be 00000000.", active_user));
 		}

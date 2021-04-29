@@ -74,6 +74,7 @@
     <ClCompile Include="Emu\RSX\VK\VKProgramPipeline.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKQueryPool.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKRenderPass.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKRenderTargets.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKResolveHelper.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKResourceManager.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKShaderInterpreter.cpp" />

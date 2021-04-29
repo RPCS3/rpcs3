@@ -3,6 +3,9 @@
 
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/system_progress.hpp"
+#include "Emu/system_utils.hpp"
+#include "Emu/cache_utils.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/timers.hpp"
 #include "Crypto/sha1.h"
@@ -22,8 +25,6 @@
 #include "util/v128.hpp"
 #include "util/v128sse.hpp"
 #include "util/sysinfo.hpp"
-
-#include "Emu/system_progress.hpp"
 
 const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iname> s_spu_iname;
@@ -368,7 +369,7 @@ void spu_cache::initialize()
 		}
 	}
 
-	const std::string ppu_cache = Emu.PPUCache();
+	const std::string ppu_cache = rpcs3::cache::get_ppu_cache();
 
 	if (ppu_cache.empty())
 	{
@@ -425,7 +426,7 @@ void spu_cache::initialize()
 		g_progr_ptotal += ::size32(func_list);
 		progr.emplace("Building SPU cache...");
 
-		worker_count = Emulator::GetMaxThreads();
+		worker_count = rpcs3::utils::get_max_threads();
 	}
 
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
@@ -585,7 +586,7 @@ bool spu_program::operator<(const spu_program& rhs) const noexcept
 spu_runtime::spu_runtime()
 {
 	// Clear LLVM output
-	m_cache_path = Emu.PPUCache();
+	m_cache_path = rpcs3::cache::get_ppu_cache();
 
 	if (m_cache_path.empty())
 	{
@@ -6562,9 +6563,8 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 
 		// Data with swapped endian from a load instruction
-		if (auto [ok, v0] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
 			const auto sh = sc + (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
 
@@ -6705,9 +6705,8 @@ public:
 		}
 
 		// Data with swapped endian from a load instruction
-		if (auto [ok, v0] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto as = byteswap(a);
 			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
 			const auto sh = eval(sc + splat_scalar(b));
 
@@ -7416,17 +7415,15 @@ public:
 		const auto b = get_vr<u8[16]>(op.rb);
 
 		// Data with swapped endian from a load instruction
-		if (auto [ok, v0] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			if (auto [ok, v1] = match_expr(b, byteswap(match<u8[16]>())); ok)
+			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 			{
 				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
-				const auto as = byteswap(a);
-				const auto bs = byteswap(b);
 
 				if (m_use_avx512_icl && (op.ra != op.rb))
 				{
-					const auto m = gf2p8affineqb(c, build<u8[16]>(0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04), 0x7f);
+					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
 					const auto ab = vperm2b(as, bs, c);
 					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
@@ -7447,7 +7444,6 @@ public:
 				{
 					// See above
 					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
-					const auto as = byteswap(a);
 					const auto ax = pshufb(as, c);
 					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, b) | x);
 					return;
@@ -7455,7 +7451,7 @@ public:
 			}
 		}
 
-		if (auto [ok, v0] = match_expr(b, byteswap(match<u8[16]>())); ok)
+		if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 		{
 			if (auto [ok, data] = get_const_vector(a.value, m_pos, 7000); ok)
 			{
@@ -7464,7 +7460,6 @@ public:
 				{
 					// See above
 					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
-					const auto bs = byteswap(b);
 					const auto bx = pshufb(bs, c);
 					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, a, bx) | x);
 					return;
@@ -7474,7 +7469,7 @@ public:
 
 		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
 		{
-			const auto m = gf2p8affineqb(c, build<u8[16]>(0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x02, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04), 0x7f);
+			const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
 			const auto cr = eval(~c);
 			const auto ab = vperm2b(b, a, cr);
