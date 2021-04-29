@@ -54,8 +54,8 @@ private:
 		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SHIFT: return tr("Shift", "OSK Dialog");
 		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ENTER_TEXT: return tr("[Enter Text]", "OSK Dialog");
 		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ENTER_PASSWORD: return tr("[Enter Password]", "OSK Dialog");
-		case localized_string_id::RSX_OVERLAYS_LIST_SELECT: return tr("Select", "Save Dialog List");
-		case localized_string_id::RSX_OVERLAYS_LIST_CANCEL: return tr("Back", "Save Dialog List");
+		case localized_string_id::RSX_OVERLAYS_LIST_SELECT: return tr("Enter", "Enter Dialog List");
+		case localized_string_id::RSX_OVERLAYS_LIST_CANCEL: return tr("Back", "Cancel Dialog List");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_GAMEDATA: return tr("ERROR: Game data is corrupted. The application will continue.", "Game Error");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_HDDGAME: return tr("ERROR: HDD boot game is corrupted. The application will continue.", "Game Error");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_EXIT_GAMEDATA: return tr("ERROR: Game data is corrupted. The application will be terminated.", "Game Error");
@@ -140,12 +140,15 @@ private:
 		case localized_string_id::CELL_SAVEDATA_CB_FAILURE: return tr("Error - Failed to save or load", "Savedata Error");
 		case localized_string_id::CELL_SAVEDATA_CB_NO_DATA: return tr("Error - Save data cannot be found", "Savedata Error");
 		case localized_string_id::CELL_SAVEDATA_CB_NO_SPACE: return tr("Error - Insufficient free space\n\nSpace needed: %0 KB", "Savedata Error").arg(std::forward<Args>(args)...);
-		case localized_string_id::CELL_SAVEDATA_CREATE_CONFIRMATION: return tr("Create new Save Data?", "Savedata Dialog");
-		case localized_string_id::CELL_SAVEDATA_DELETE_CONFIRMATION: return tr("Do you really want to delete this entry?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
-		case localized_string_id::CELL_SAVEDATA_DELETE_SUCCESS: return tr("Successfully removed entry!\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
-		case localized_string_id::CELL_SAVEDATA_DELETE: return tr("Delete this entry?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
-		case localized_string_id::CELL_SAVEDATA_LOAD: return tr("Load this entry?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
-		case localized_string_id::CELL_SAVEDATA_OVERWRITE: return tr("Overwrite this entry?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_SAVEDATA_NO_DATA: return tr("There is no saved data.", "Savedata entry info");
+		case localized_string_id::CELL_SAVEDATA_NEW_SAVED_DATA_TITLE: return tr("New Saved Data", "Savedata Dialog");
+		case localized_string_id::CELL_SAVEDATA_NEW_SAVED_DATA_SUB_TITLE: return tr("Select to create a new entry", "Savedata Dialog");
+		case localized_string_id::CELL_SAVEDATA_SAVE_CONFIRMATION: return tr("Do you want to save this data?", "Savedata Dialog");
+		case localized_string_id::CELL_SAVEDATA_DELETE_CONFIRMATION: return tr("Do you really want to delete this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_SAVEDATA_DELETE_SUCCESS: return tr("Successfully removed data!\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_SAVEDATA_DELETE: return tr("Delete this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_SAVEDATA_LOAD: return tr("Load this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_SAVEDATA_OVERWRITE: return tr("Do you want to overwrite the saved data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 
 		case localized_string_id::INVALID: return tr("Invalid");
 		default: return tr("Unknown");

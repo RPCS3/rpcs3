@@ -102,14 +102,6 @@ struct size2_base
 		return width == rhs.width && height == rhs.height;
 	}
 
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-	constexpr bool operator !=(const size2_base& rhs) const
-	{
-		return width != rhs.width || height != rhs.height;
-	}
-#endif
-
 	template<typename NT>
 	explicit constexpr operator size2_base<NT>() const
 	{
@@ -210,19 +202,6 @@ struct position1_base
 	{
 		return x == rhs;
 	}
-
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-	bool operator !=(const position1_base& rhs) const
-	{
-		return !(*this == rhs);
-	}
-
-	bool operator !=(T rhs) const
-	{
-		return !(*this == rhs);
-	}
-#endif
 
 	template<typename NT>
 	explicit operator position1_base<NT>() const
@@ -383,19 +362,6 @@ struct position2_base
 		return x == rhs && y == rhs;
 	}
 
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-	constexpr bool operator !=(const position2_base& rhs) const
-	{
-		return !(*this == rhs);
-	}
-
-	constexpr bool operator !=(T rhs) const
-	{
-		return !(*this == rhs);
-	}
-#endif
-
 	template<typename NT>
 	explicit constexpr operator position2_base<NT>() const
 	{
@@ -478,19 +444,6 @@ struct position3_base
 		return x == rhs && y == rhs && z == rhs;
 	}
 
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-	bool operator !=(const position3_base& rhs) const
-	{
-		return !(*this == rhs);
-	}
-
-	bool operator !=(T rhs) const
-	{
-		return !(*this == rhs);
-	}
-#endif
-
 	template<typename NT>
 	explicit operator position3_base<NT>() const
 	{
@@ -571,19 +524,6 @@ struct position4_base
 		return x == rhs && y == rhs && z == rhs && w == rhs;
 	}
 
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-	constexpr bool operator !=(const position4_base& rhs) const
-	{
-		return !(*this == rhs);
-	}
-
-	constexpr bool operator !=(T rhs) const
-	{
-		return !(*this == rhs);
-	}
-#endif
-
 	template<typename NT>
 	explicit constexpr operator position4_base<NT>() const
 	{
@@ -638,14 +578,6 @@ struct coord_base
 	{
 		return position == rhs.position && size == rhs.size;
 	}
-
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-	constexpr bool operator != (const coord_base& rhs) const
-	{
-		return position != rhs.position || size != rhs.size;
-	}
-#endif
 
 	template<typename NT>
 	explicit constexpr operator coord_base<NT>() const
@@ -717,14 +649,6 @@ struct area_base
 	{
 		return x1 == rhs.x1 && x2 == rhs.x2 && y1 == rhs.y1 && y2 == rhs.y2;
 	}
-
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-	constexpr bool operator != (const area_base& rhs) const
-	{
-		return !(*this == rhs);
-	}
-#endif
 
 	constexpr area_base operator - (const size2_base<T>& size) const
 	{
@@ -864,17 +788,10 @@ struct color4_base
 	{
 	}
 
-	constexpr bool operator == (const color4_base& rhs) const
+	constexpr bool operator ==(const color4_base& rhs) const
 	{
 		return r == rhs.r && g == rhs.g && b == rhs.b && a == rhs.a;
 	}
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-	constexpr bool operator != (const color4_base& rhs) const
-	{
-		return !(*this == rhs);
-	}
-#endif
 
 	void operator *= (const color4_base<T>& rhs)
 	{
@@ -940,17 +857,10 @@ struct color3_base
 	{
 	}
 
-	constexpr bool operator == (const color3_base& rhs) const
+	constexpr bool operator ==(const color3_base& rhs) const
 	{
 		return r == rhs.r && g == rhs.g && b == rhs.b;
 	}
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-	constexpr bool operator != (const color3_base& rhs) const
-	{
-		return !(*this == rhs);
-	}
-#endif
 
 	template<typename NT>
 	explicit constexpr operator color3_base<NT>() const
@@ -984,18 +894,10 @@ struct color2_base
 	{
 	}
 
-	constexpr bool operator == (const color2_base& rhs) const
+	constexpr bool operator ==(const color2_base& rhs) const
 	{
 		return r == rhs.r && g == rhs.g;
 	}
-
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-	constexpr bool operator != (const color2_base& rhs) const
-	{
-		return !(*this == rhs);
-	}
-#endif
 
 	template<typename NT>
 	explicit constexpr operator color2_base<NT>() const
@@ -1018,18 +920,10 @@ struct color1_base
 	{
 	}
 
-	constexpr bool operator == (const color1_base& rhs) const
+	constexpr bool operator ==(const color1_base& rhs) const
 	{
 		return r == rhs.r;
 	}
-
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-	constexpr bool operator != (const color1_base& rhs) const
-	{
-		return !(*this == rhs);
-	}
-#endif
 
 	template<typename NT>
 	explicit constexpr operator color1_base<NT>() const

@@ -174,13 +174,13 @@ namespace rsx
 				m_dim_background->back_color.a = 0.5f;
 			}
 
-			std::vector<u8> icon;
 			std::vector<std::unique_ptr<overlay_element>> entries;
 
 			for (auto& entry : save_entries)
 			{
+				const std::string date_and_size = fmt::format("%s   %s", entry.date(), entry.data_size());
 				std::unique_ptr<overlay_element> e;
-				e = std::make_unique<save_dialog_entry>(entry.title, entry.subtitle, entry.details, image_resource_id::raw_image, entry.iconBuf);
+				e = std::make_unique<save_dialog_entry>(entry.subtitle, date_and_size, entry.details, image_resource_id::raw_image, entry.iconBuf);
 				entries.emplace_back(std::move(e));
 			}
 
@@ -209,8 +209,9 @@ namespace rsx
 
 			if (listSet && listSet->newData)
 			{
-				const char* title = "Create New";
+				std::string title = get_localized_string(localized_string_id::CELL_SAVEDATA_NEW_SAVED_DATA_TITLE);
 
+				std::vector<u8> icon;
 				int id = resource_config::standard_image_resource::new_entry;
 
 				if (const auto picon = +listSet->newData->icon)
@@ -231,7 +232,7 @@ namespace rsx
 					id = image_resource_id::raw_image;
 				}
 
-				std::unique_ptr<overlay_element> new_stub = std::make_unique<save_dialog_entry>(title, "Select to create a new entry", "", id, icon);
+				std::unique_ptr<overlay_element> new_stub = std::make_unique<save_dialog_entry>(title, get_localized_string(localized_string_id::CELL_SAVEDATA_NEW_SAVED_DATA_SUB_TITLE), "", id, icon);
 
 				m_list->add_entry(new_stub);
 			}
@@ -246,7 +247,7 @@ namespace rsx
 
 			if (m_list->m_items.empty())
 			{
-				m_no_saves_text = std::make_unique<label>("There is no saved data.");
+				m_no_saves_text = std::make_unique<label>(get_localized_string(localized_string_id::CELL_SAVEDATA_NO_DATA));
 				m_no_saves_text->set_font("Arial", 20);
 				m_no_saves_text->align_text(overlay_element::text_align::center);
 				m_no_saves_text->set_pos(m_list->x, m_list->y + m_list->h / 2);
