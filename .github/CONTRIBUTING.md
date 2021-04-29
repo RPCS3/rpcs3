@@ -1,6 +1,6 @@
 # Getting Started
 
-Before getting started using the emulator, read the [Quickstart Guide](https://rpcs3.net/quickstart) and the [FAQ](https://rpcs3.net/faq). After reading those, if you need support, visit our [Forums](https://forums.rpcs3.net). 
+Before getting started using the emulator, read the [Quickstart Guide](https://rpcs3.net/quickstart). After reading it, if you need support, check out [How to ask for Support](https://github.com/RPCS3/rpcs3/wiki/How-to-ask-for-Support).
 
 # Issue Reporting
 
@@ -8,13 +8,12 @@ Before getting started using the emulator, read the [Quickstart Guide](https://r
 
 **Before reporting an issue:**
 - Check if your system matches all the minimum requirements listed in the [Quickstart Guide](https://rpcs3.net/quickstart);
-- Check if the issue is meaningful for the team (e.g. The Last of Us doesn't work is obvious and therefore useless);
-- Search older issues/forum threads to see if your issue was already submitted.
-- Use understandable English. It doesn't need to be perfect, but clear enough to understand your message.
-- While reporting issues, don't forget to include details about your system (OS, CPU, GPU, etc.), as well as the RPCS3.log file.
+- Search older issues/forum threads to see if your issue was already submitted;
+- Use understandable English. It doesn't need to be perfect, but clear enough to understand your message;
+- While reporting issues, please follow the template for the type of issue you've selected (Regression Report, Bug Report or Feature Request), which is prefilled on the issue's textbox.
 
 Submitting your test results for Commercial Games must be done on our forums. Please read the [Game Compatibility](https://github.com/RPCS3/rpcs3/wiki/Game-Compatibility) wiki page before doing so.
 
 # Contributing
 
-Check the [Coding Style Guidelines](https://github.com/RPCS3/rpcs3/wiki/Coding-Style), [Roadmap](https://github.com/RPCS3/rpcs3/wiki/Roadmap) and [Developer Information](https://github.com/RPCS3/rpcs3/wiki/Developer-Information). If you have any questions, hit us up on our [Discord Server](https://discord.me/RPCS3) in the **#development** channel.
+Check the [Coding Style Guidelines](https://github.com/RPCS3/rpcs3/wiki/Coding-Style) and [Developer Information](https://github.com/RPCS3/rpcs3/wiki/Developer-Information). If you have any questions, hit us up on our [Discord Server](https://discord.me/RPCS3) in the **#development** channel.
