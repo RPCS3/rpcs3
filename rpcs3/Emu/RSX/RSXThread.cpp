@@ -2042,40 +2042,6 @@ namespace rsx
 		m_rsx_thread_exiting = false;
 	}
 
-	GcmTileInfo *thread::find_tile(u32 offset, u32 location)
-	{
-		for (GcmTileInfo &tile : tiles)
-		{
-			if (!tile.bound || (tile.location & 1) != (location & 1))
-			{
-				continue;
-			}
-
-			if (offset >= tile.offset && offset < tile.offset + tile.size)
-			{
-				return &tile;
-			}
-		}
-
-		return nullptr;
-	}
-
-	tiled_region thread::get_tiled_address(u32 offset, u32 location)
-	{
-		u32 address = get_address(offset, location);
-
-		GcmTileInfo *tile = find_tile(offset, location);
-		u32 base = 0;
-
-		if (tile)
-		{
-			base = offset - tile->offset;
-			address = get_address(tile->offset, location);
-		}
-
-		return{ address, base, tile, vm::_ptr<u8>(address) };
-	}
-
 	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count)
 	{
 		u32 persistent_memory_size = 0;
