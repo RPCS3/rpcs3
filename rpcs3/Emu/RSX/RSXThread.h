@@ -713,8 +713,8 @@ namespace rsx
 		bool m_framebuffer_state_contested = false;
 		rsx::framebuffer_creation_context m_current_framebuffer_context = rsx::framebuffer_creation_context::context_draw;
 
-		u32  m_graphics_state = 0;
-		u64  ROP_sync_timestamp = 0;
+		u32 m_graphics_state = 0;
+		u64 ROP_sync_timestamp = 0;
 
 		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
 		program_hash_util::vertex_program_utils::vertex_program_metadata current_vp_metadata = {};
@@ -882,9 +882,6 @@ namespace rsx
 		void handle_invalidated_memory_range();
 
 	public:
-		//std::future<void> add_internal_task(std::function<bool()> callback);
-		//void invoke(std::function<bool()> callback);
-
 		/**
 		 * Fill buffer with 4x4 scale offset matrix.
 		 * Vertex shader's position is to be multiplied by this matrix.
@@ -939,9 +936,6 @@ namespace rsx
 	public:
 		void reset();
 		void init(u32 ctrlAddress);
-
-		tiled_region get_tiled_address(u32 offset, u32 location);
-		GcmTileInfo *find_tile(u32 offset, u32 location);
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
 		void request_emu_flip(u32 buffer);
