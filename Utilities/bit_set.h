@@ -138,14 +138,9 @@ public:
 		return bs_t(0, lhs.m_data ^ rhs.m_data);
 	}
 
-	friend constexpr bool operator ==(bs_t lhs, bs_t rhs)
+	constexpr bool operator ==(bs_t rhs) const
 	{
-		return lhs.m_data == rhs.m_data;
-	}
-
-	friend constexpr bool operator !=(bs_t lhs, bs_t rhs)
-	{
-		return lhs.m_data != rhs.m_data;
+		return m_data == rhs.m_data;
 	}
 
 	constexpr bool test_and_set(T bit)

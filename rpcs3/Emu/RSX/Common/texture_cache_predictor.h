@@ -101,11 +101,6 @@ namespace rsx
 		{
 			return cpu_range == other.cpu_range && format == other.format && context == other.context;
 		}
-
-		bool operator!=(const texture_cache_predictor_key& other) const
-		{
-			return !operator==(other);
-		}
 	};
 
 	/**

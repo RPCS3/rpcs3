@@ -161,11 +161,6 @@ public:
 		return m_ptr == rhs.m_ptr;
 	}
 
-	bool operator !=(const lf_queue_iterator& rhs) const
-	{
-		return m_ptr != rhs.m_ptr;
-	}
-
 	T& operator *() const
 	{
 		return m_ptr->m_data;
