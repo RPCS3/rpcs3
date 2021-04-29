@@ -1,35 +1,84 @@
 EXPORTS
+    alAuxiliaryEffectSlotPlaySOFT
+    alAuxiliaryEffectSlotPlayvSOFT
+    alAuxiliaryEffectSlotStopSOFT
+    alAuxiliaryEffectSlotStopvSOFT
+    alAuxiliaryEffectSlotf
+    alAuxiliaryEffectSlotfv
+    alAuxiliaryEffectSloti
+    alAuxiliaryEffectSlotiv
     alBuffer3f
     alBuffer3i
+    alBufferCallbackSOFT
     alBufferData
+    alBufferSamplesSOFT
+    alBufferStorageSOFT
+    alBufferSubDataSOFT
+    alBufferSubSamplesSOFT
     alBufferf
     alBufferfv
     alBufferi
     alBufferiv
+    alDeferUpdatesSOFT
+    alDeleteAuxiliaryEffectSlots
     alDeleteBuffers
+    alDeleteEffects
+    alDeleteFilters
     alDeleteSources
     alDisable
     alDistanceModel
     alDopplerFactor
     alDopplerVelocity
+    alEffectf
+    alEffectfv
+    alEffecti
+    alEffectiv
     alEnable
+    alEventCallbackSOFT
+    alEventControlSOFT
+    alFilterf
+    alFilterfv
+    alFilteri
+    alFilteriv
+    alFlushMappedBufferSOFT
+    alGenAuxiliaryEffectSlots
     alGenBuffers
+    alGenEffects
+    alGenFilters
     alGenSources
+    alGetAuxiliaryEffectSlotf
+    alGetAuxiliaryEffectSlotfv
+    alGetAuxiliaryEffectSloti
+    alGetAuxiliaryEffectSlotiv
     alGetBoolean
     alGetBooleanv
+    alGetBuffer3PtrSOFT
     alGetBuffer3f
     alGetBuffer3i
+    alGetBufferPtrSOFT
+    alGetBufferPtrvSOFT
+    alGetBufferSamplesSOFT
     alGetBufferf
     alGetBufferfv
     alGetBufferi
     alGetBufferiv
     alGetDouble
     alGetDoublev
+    alGetEffectf
+    alGetEffectfv
+    alGetEffecti
+    alGetEffectiv
     alGetEnumValue
     alGetError
+    alGetFilterf
+    alGetFilterfv
+    alGetFilteri
+    alGetFilteriv
     alGetFloat
     alGetFloatv
     alGetInteger
+    alGetInteger64SOFT
+    alGetInteger64vSOFT
     alGetIntegerv
     alGetListener3f
     alGetListener3i
@@ -37,17 +86,30 @@ EXPORTS
     alGetListenerfv
     alGetListeneri
     alGetListeneriv
+    alGetPointerSOFT
+    alGetPointervSOFT
     alGetProcAddress
+    alGetSource3dSOFT
     alGetSource3f
     alGetSource3i
+    alGetSource3i64SOFT
+    alGetSourcedSOFT
+    alGetSourcedvSOFT
     alGetSourcef
     alGetSourcefv
     alGetSourcei
+    alGetSourcei64SOFT
+    alGetSourcei64vSOFT
     alGetSourceiv
     alGetString
+    alGetStringiSOFT
+    alIsAuxiliaryEffectSlot
     alIsBuffer
+    alIsBufferFormatSupportedSOFT
+    alIsEffect
     alIsEnabled
     alIsExtensionPresent
+    alIsFilter
     alIsSource
     alListener3f
     alListener3i
@@ -55,8 +117,12 @@ EXPORTS
     alListenerfv
     alListeneri
     alListeneriv
+    alMapBufferSOFT
+    alProcessUpdatesSOFT
+    alSource3dSOFT
     alSource3f
     alSource3i
+    alSource3i64SOFT
     alSourcePause
     alSourcePausev
     alSourcePlay
@@ -67,11 +133,16 @@ EXPORTS
     alSourceStop
     alSourceStopv
     alSourceUnqueueBuffers
+    alSourcedSOFT
+    alSourcedvSOFT
     alSourcef
     alSourcefv
     alSourcei
+    alSourcei64SOFT
+    alSourcei64vSOFT
     alSourceiv
     alSpeedOfSound
+    alUnmapBufferSOFT
     alcCaptureCloseDevice
     alcCaptureOpenDevice
     alcCaptureSamples
@@ -80,17 +151,26 @@ EXPORTS
     alcCloseDevice
     alcCreateContext
     alcDestroyContext
+    alcDevicePauseSOFT
+    alcDeviceResumeSOFT
     alcGetContextsDevice
     alcGetCurrentContext
     alcGetEnumValue
     alcGetError
+    alcGetInteger64vSOFT
     alcGetIntegerv
     alcGetProcAddress
     alcGetString
+    alcGetStringiSOFT
     alcGetThreadContext
     alcIsExtensionPresent
+    alcIsRenderFormatSupportedSOFT
+    alcLoopbackOpenDeviceSOFT
     alcMakeContextCurrent
     alcOpenDevice
     alcProcessContext
+    alcRenderSamplesSOFT
+    alcResetDeviceSOFT
     alcSetThreadContext
     alcSuspendContext
+    alsoft_get_version
