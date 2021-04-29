@@ -194,7 +194,4 @@ protected:
 	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
 	void notify_tile_unbound(u32 tile) override;
 	void on_semaphore_acquire_wait() override;
-
-	std::array<std::vector<std::byte>, 4> copy_render_targets_to_memory() override;
-	std::array<std::vector<std::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
 };

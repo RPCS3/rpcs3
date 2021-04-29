@@ -932,22 +932,6 @@ namespace rsx
 		 */
 		virtual void on_semaphore_acquire_wait() {}
 
-		/**
-		 * Copy rtt values to buffer.
-		 * TODO: It's more efficient to combine multiple call of this function into one.
-		 */
-		virtual std::array<std::vector<std::byte>, 4> copy_render_targets_to_memory() {
-			return std::array<std::vector<std::byte>, 4>();
-		}
-
-		/**
-		* Copy depth and stencil content to buffers.
-		* TODO: It's more efficient to combine multiple call of this function into one.
-		*/
-		virtual std::array<std::vector<std::byte>, 2> copy_depth_stencil_buffer_to_memory() {
-			return std::array<std::vector<std::byte>, 2>();
-		}
-
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); }
 
 		virtual bool scaled_image_from_memory(blit_src_info& /*src_info*/, blit_dst_info& /*dst_info*/, bool /*interpolate*/) { return false; }
