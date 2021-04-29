@@ -7,11 +7,11 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 
 ### Windows 7 or later
 
-* [CMake 3.14.1+](https://www.cmake.org/download/) (add to PATH)
-* [Python 3.3+](https://www.python.org/downloads/) (add to PATH)
+* [CMake 3.16.9+](https://www.cmake.org/download/) (add to PATH)
+* [Python 3.6+](https://www.python.org/downloads/) (add to PATH)
 * [Qt 5.15.2](https://www.qt.io/download-qt-installer)
 * [Visual Studio 2019](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community)
-* [Vulkan SDK 1.1.126+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
+* [Vulkan SDK 1.2.154+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html))
 
 **Either add the** `QTDIR` **environment variable, e.g.** `<QtInstallFolder>\5.15.2\msvc2019_64\` **, or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2019)**
 
@@ -22,7 +22,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 * Clang 12+ or GCC 10+
 * [CMake 3.16.9+](https://www.cmake.org/download/)
 * [Qt 5.15.2](https://www.qt.io/download-qt-installer)
-* [Vulkan SDK 1.1.126+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))
+* [Vulkan SDK 1.2.154+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))
 * [SDL2](https://www.libsdl.org/download-2.0.php) (for the FAudio backend)
 
 **If you have an NVIDIA GPU, you may need to install the libglvnd package.**
@@ -64,7 +64,7 @@ For Ubuntu systems, it is strongly recommended to use the PPA from [LunarG](http
 ```
 . /etc/os-release
 wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
-sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.148-$UBUNTU_CODENAME.list https://packages.lunarg.com/vulkan/1.2.148/lunarg-vulkan-1.2.148-$UBUNTU_CODENAME.list
+sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.154-$UBUNTU_CODENAME.list https://packages.lunarg.com/vulkan/1.2.154/lunarg-vulkan-1.2.154-$UBUNTU_CODENAME.list
 sudo apt update
 sudo apt install vulkan-sdk
 ```
