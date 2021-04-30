@@ -64,6 +64,7 @@
     <ClCompile Include="curl\lib\asyn-ares.c" />
     <ClCompile Include="curl\lib\asyn-thread.c" />
     <ClCompile Include="curl\lib\base64.c" />
+    <ClCompile Include="curl\lib\c-hyper.c" />
     <ClCompile Include="curl\lib\conncache.c" />
     <ClCompile Include="curl\lib\connect.c" />
     <ClCompile Include="curl\lib\content_encoding.c" />
@@ -91,6 +92,8 @@
     <ClCompile Include="curl\lib\dotdot.c" />
     <ClCompile Include="curl\lib\dynbuf.c" />
     <ClCompile Include="curl\lib\easy.c" />
+    <ClCompile Include="curl\lib\easygetopt.c" />
+    <ClCompile Include="curl\lib\easyoptions.c" />
     <ClCompile Include="curl\lib\escape.c" />
     <ClCompile Include="curl\lib\file.c" />
     <ClCompile Include="curl\lib\fileinfo.c" />
@@ -108,8 +111,10 @@
     <ClCompile Include="curl\lib\hostip4.c" />
     <ClCompile Include="curl\lib\hostip6.c" />
     <ClCompile Include="curl\lib\hostsyn.c" />
+    <ClCompile Include="curl\lib\hsts.c" />
     <ClCompile Include="curl\lib\http.c" />
     <ClCompile Include="curl\lib\http2.c" />
+    <ClCompile Include="curl\lib\http_aws_sigv4.c" />
     <ClCompile Include="curl\lib\http_chunks.c" />
     <ClCompile Include="curl\lib\http_digest.c" />
     <ClCompile Include="curl\lib\http_negotiate.c" />
@@ -144,7 +149,6 @@
     <ClCompile Include="curl\lib\rand.c" />
     <ClCompile Include="curl\lib\rename.c" />
     <ClCompile Include="curl\lib\rtsp.c" />
-    <ClCompile Include="curl\lib\security.c" />
     <ClCompile Include="curl\lib\select.c" />
     <ClCompile Include="curl\lib\sendf.c" />
     <ClCompile Include="curl\lib\setopt.c" />
@@ -171,8 +175,10 @@
     <ClCompile Include="curl\lib\transfer.c" />
     <ClCompile Include="curl\lib\url.c" />
     <ClCompile Include="curl\lib\urlapi.c" />
+    <ClCompile Include="curl\lib\vauth\gsasl.c" />
     <ClCompile Include="curl\lib\version.c" />
     <ClCompile Include="curl\lib\version_win32.c" />
+    <ClCompile Include="curl\lib\vtls\rustls.c" />
     <ClCompile Include="curl\lib\warnless.c" />
     <ClCompile Include="curl\lib\wildcard.c" />
     <ClCompile Include="curl\lib\x509asn1.c" />
@@ -223,6 +229,7 @@
     <ClInclude Include="curl\lib\amigaos.h" />
     <ClInclude Include="curl\lib\arpa_telnet.h" />
     <ClInclude Include="curl\lib\asyn.h" />
+    <ClInclude Include="curl\lib\c-hyper.h" />
     <ClInclude Include="curl\lib\config-amigaos.h" />
     <ClInclude Include="curl\lib\config-dos.h" />
     <ClInclude Include="curl\lib\config-mac.h" />
@@ -249,6 +256,7 @@
     <ClInclude Include="curl\lib\curl_get_line.h" />
     <ClInclude Include="curl\lib\curl_gssapi.h" />
     <ClInclude Include="curl\lib\curl_hmac.h" />
+    <ClInclude Include="curl\lib\curl_krb5.h" />
     <ClInclude Include="curl\lib\curl_ldap.h" />
     <ClInclude Include="curl\lib\curl_md4.h" />
     <ClInclude Include="curl\lib\curl_md5.h" />
@@ -273,6 +281,7 @@
     <ClInclude Include="curl\lib\dotdot.h" />
     <ClInclude Include="curl\lib\dynbuf.h" />
     <ClInclude Include="curl\lib\easyif.h" />
+    <ClInclude Include="curl\lib\easyoptions.h" />
     <ClInclude Include="curl\lib\escape.h" />
     <ClInclude Include="curl\lib\file.h" />
     <ClInclude Include="curl\lib\fileinfo.h" />
@@ -284,8 +293,10 @@
     <ClInclude Include="curl\lib\hash.h" />
     <ClInclude Include="curl\lib\hostcheck.h" />
     <ClInclude Include="curl\lib\hostip.h" />
+    <ClInclude Include="curl\lib\hsts.h" />
     <ClInclude Include="curl\lib\http.h" />
     <ClInclude Include="curl\lib\http2.h" />
+    <ClInclude Include="curl\lib\http_aws_sigv4.h" />
     <ClInclude Include="curl\lib\http_chunks.h" />
     <ClInclude Include="curl\lib\http_digest.h" />
     <ClInclude Include="curl\lib\http_negotiate.h" />
@@ -343,6 +354,7 @@
     <ClInclude Include="curl\lib\urlapi-int.h" />
     <ClInclude Include="curl\lib\urldata.h" />
     <ClInclude Include="curl\lib\version_win32.h" />
+    <ClInclude Include="curl\lib\vtls\rustls.h" />
     <ClInclude Include="curl\lib\warnless.h" />
     <ClInclude Include="curl\lib\wildcard.h" />
     <ClInclude Include="curl\lib\x509asn1.h" />
