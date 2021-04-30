@@ -489,11 +489,11 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id, [&](lv2_event_port& port) -> CellError
 	{
-		if (const auto queue = port.queue.lock(); lv2_event_queue::check(queue))
+		if (lv2_event_queue::check(port.queue))
 		{
 			const u64 source = port.name ? port.name : (s64{process_getpid()} << 32) | u64{eport_id};
 
-			return queue->send(source, data1, data2, data3);
+			return port.queue->send(source, data1, data2, data3);
 		}
 
 		return CELL_ENOTCONN;

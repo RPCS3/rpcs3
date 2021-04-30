@@ -360,7 +360,7 @@ void kernel_explorer::Update()
 		case SYS_EVENT_PORT_OBJECT:
 		{
 			auto& ep = static_cast<lv2_event_port&>(obj);
-			const auto queue = ep.queue.lock();
+			const auto& queue = ep.queue;
 			const auto type = ep.type == SYS_EVENT_PORT_LOCAL ? "LOCAL"sv : "IPC"sv;
 
 			if (lv2_event_queue::check(queue))

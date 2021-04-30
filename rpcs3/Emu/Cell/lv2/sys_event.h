@@ -122,7 +122,7 @@ struct lv2_event_port final : lv2_obj
 	const u64 name; // Event source (generated from id and process id if not set)
 	u32 queue_id = 0; // Event queue ID (if IPC is used this value is meaningless)
 
-	std::weak_ptr<lv2_event_queue> queue; // Event queue this port is connected to
+	std::shared_ptr<lv2_event_queue> queue; // Event queue this port is connected to
 
 	lv2_event_port(s32 type, u64 name)
 		: type(type)
