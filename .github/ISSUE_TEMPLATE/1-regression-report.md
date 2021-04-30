@@ -15,6 +15,10 @@ Please briefly describe what has stopped working correctly.
 ## Details
 Please describe the regression as accurately as possible.
 
+#### 0. Make sure you're running with settings as close to default as possible
+* **Do NOT enable any emulator game patches when reporting issues**
+* Only change settings that are required for the game to work
+
 #### 1. Please provide _exact_ build (or commit) information that introduced the regression you're reporting.
 * Please see [How to find the build that caused a regression](https://wiki.rpcs3.net/index.php?title=Help:Using_different_versions_of_RPCS3#How_to_find_the_build_that_caused_a_regression.3F) in our wiki.
 * You can find [History of RPCS3 builds](https://rpcs3.net/compatibility?b) here.
@@ -35,12 +39,12 @@ Please describe the regression as accurately as possible.
 	On Windows it will be near the executable.
 * Attach the log:
 	+ Drag and drop your log file into the issue.
-	+ Or upload it to the cloud, such as Dropbox, Mega etc. 
+	+ Or upload it to the cloud, such as Dropbox, Mega etc.
 
 #### 3. If you describe graphical regression, please provide an RSX capture and a RenderDoc capture that demonstrate it.
 * To create an RSX capture, use _Create_ _RSX_ _Capture_ under _Utilities_.
 Captures will be stored in RPCS3 folder → captures.
-	+ Compress your capture with 7z, Rar etc. 
+	+ Compress your capture with 7z, Rar etc.
 	And drag and drop it into the issue.
 	+ Or upload it to the cloud, such as Dropbox, Mega etc.
 * To create a RenderDoc capture, please refer to [RenderDoc's documentation](https://renderdoc.org/docs/how/how_capture_frame.html).
