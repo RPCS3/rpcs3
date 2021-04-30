@@ -3,6 +3,7 @@
 #include "util/vm.hpp"
 #include "util/asm.hpp"
 #ifdef _WIN32
+#include "Utilities/File.h"
 #include "util/dyn_lib.hpp"
 #include <Windows.h>
 #else
@@ -283,12 +284,11 @@ namespace utils
 	}
 
 	shm::shm(u32 size, u32 flags)
-		: m_size(utils::align(size, 0x10000))
-		, m_flags(flags)
+		: m_flags(flags)
+		, m_size(utils::align(size, 0x10000))
 	{
 #ifdef _WIN32
-		m_handle = ::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE, 0, m_size, nullptr);
-		ensure(m_handle != INVALID_HANDLE_VALUE);
+		m_handle = ensure(::CreateFileMappingW(INVALID_HANDLE_VALUE, nullptr, PAGE_EXECUTE_READWRITE, 0, m_size, nullptr));
 #elif __linux__
 		m_file = -1;
 
@@ -323,6 +323,24 @@ namespace utils
 
 		ensure(::shm_unlink(name.c_str()) >= 0);
 		ensure(::ftruncate(m_file, m_size) >= 0);
+#endif
+	}
+
+	shm::shm(u64 size, const std::string& storage)
+		: m_size(utils::align(size, 0x10000))
+	{
+#ifdef _WIN32
+		fs::file f = ensure(fs::file(storage, fs::read + fs::rewrite));
+		FILE_DISPOSITION_INFO disp{ .DeleteFileW = true };
+		ensure(SetFileInformationByHandle(f.get_handle(), FileDispositionInfo, &disp, sizeof(disp)));
+		ensure(DeviceIoControl(f.get_handle(), FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, nullptr, nullptr));
+		ensure(f.trunc(m_size));
+		m_handle = ensure(::CreateFileMappingW(f.get_handle(), nullptr, PAGE_READWRITE, 0, 0, nullptr));
+#else
+		m_file = ::open(storage.c_str(), O_RDWR | O_CREAT | O_TRUNC, S_IWUSR | S_IRUSR);
+		ensure(m_file >= 0);
+		ensure(::ftruncate(m_file, m_size) >= 0);
+		::unlink(storage.c_str());
 #endif
 	}
 

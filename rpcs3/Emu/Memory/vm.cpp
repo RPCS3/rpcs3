@@ -44,8 +44,11 @@ namespace vm
 	// Auxiliary virtual memory for executable areas
 	u8* const g_exec_addr = memory_reserve_4GiB(g_sudo_addr, 0x200000000);
 
+	// Hooks for memory R/W interception (default: zero offset to some function with only ret instructions)
+	u8* const g_hook_addr = memory_reserve_4GiB(g_exec_addr, 0x800000000);
+
 	// Stats for debugging
-	u8* const g_stat_addr = memory_reserve_4GiB(g_exec_addr);
+	u8* const g_stat_addr = memory_reserve_4GiB(g_hook_addr);
 
 	// For SPU
 	u8* const g_free_addr = g_stat_addr + 0x1'0000'0000;
@@ -1125,7 +1128,7 @@ namespace vm
 		if (flags & page_size_4k || flags & preallocated)
 		{
 			// Special path for whole-allocated areas allowing 4k granularity
-			m_common = std::make_shared<utils::shm>(size);
+			m_common = std::make_shared<utils::shm>(size, fs::get_cache_dir() + std::to_string(utils::get_unique_tsc()));
 			m_common->map_critical(vm::base(addr), utils::protection::no);
 			m_common->map_critical(vm::get_super_ptr(addr));
 			lock_sudo(addr, size);
@@ -1630,17 +1633,21 @@ namespace vm
 
 	inline namespace ps3_
 	{
+		static utils::shm s_hook{0x800000000, fs::get_cache_dir() + "hook.dat"};
+
 		void init()
 		{
 			vm_log.notice("Guest memory bases address ranges:\n"
 			"vm::g_base_addr = %p - %p\n"
 			"vm::g_sudo_addr = %p - %p\n"
 			"vm::g_exec_addr = %p - %p\n"
+			"vm::g_hook_addr = %p - %p\n"
 			"vm::g_stat_addr = %p - %p\n"
 			"vm::g_reservations = %p - %p\n",
 			g_base_addr, g_base_addr + UINT32_MAX,
 			g_sudo_addr, g_sudo_addr + UINT32_MAX,
 			g_exec_addr, g_exec_addr + 0x200000000 - 1,
+			g_hook_addr, g_hook_addr + 0x800000000 - 1,
 			g_stat_addr, g_stat_addr + UINT32_MAX,
 			g_reservations, g_reservations + sizeof(g_reservations) - 1);
 
@@ -1661,6 +1668,11 @@ namespace vm
 			std::memset(g_shmem, 0, sizeof(g_shmem));
 			std::memset(g_range_lock_set, 0, sizeof(g_range_lock_set));
 			g_range_lock_bits = 0;
+
+#ifdef _WIN32
+			utils::memory_release(g_hook_addr, 0x800000000);
+#endif
+			ensure(s_hook.map(g_hook_addr, utils::protection::rw, true));
 		}
 	}
 
@@ -1671,6 +1683,13 @@ namespace vm
 		utils::memory_decommit(g_base_addr, 0x200000000);
 		utils::memory_decommit(g_exec_addr, 0x200000000);
 		utils::memory_decommit(g_stat_addr, 0x100000000);
+
+#ifdef _WIN32
+		s_hook.unmap(g_hook_addr);
+		ensure(utils::memory_reserve(0x800000000, g_hook_addr));
+#else
+		utils::memory_decommit(g_hook_addr, 0x800000000);
+#endif
 
 		std::memset(g_range_lock_set, 0, sizeof(g_range_lock_set));
 		g_range_lock_bits = 0;

@@ -51,12 +51,15 @@ namespace utils
 #else
 		int m_file{};
 #endif
-		u32 m_size{};
 		u32 m_flags{};
+		u64 m_size{};
 		atomic_t<void*> m_ptr{nullptr};
 
 	public:
 		explicit shm(u32 size, u32 flags = 0);
+
+		// Construct with specified path as sparse file storage
+		shm(u64 size, const std::string& storage);
 
 		shm(const shm&) = delete;
 
@@ -91,7 +94,7 @@ namespace utils
 			return static_cast<u8*>(+m_ptr);
 		}
 
-		u32 size() const
+		u64 size() const
 		{
 			return m_size;
 		}
