@@ -337,7 +337,7 @@ namespace utils
 #endif
 	}
 
-	u8* shm::map(void* ptr, protection prot) const
+	u8* shm::map(void* ptr, protection prot, bool cow) const
 	{
 #ifdef _WIN32
 		DWORD access = FILE_MAP_WRITE;
@@ -351,6 +351,11 @@ namespace utils
 		case protection::rx:
 			access |= FILE_MAP_EXECUTE;
 			break;
+		}
+
+		if (cow)
+		{
+			access |= FILE_MAP_COPY;
 		}
 
 		if (auto ret = static_cast<u8*>(::MapViewOfFileEx(m_handle, access, 0, 0, m_size, ptr)))
@@ -374,7 +379,7 @@ namespace utils
 
 		if (ptr64)
 		{
-			const auto result = ::mmap(reinterpret_cast<void*>(ptr64), m_size, +prot, MAP_SHARED | MAP_FIXED, m_file, 0);
+			const auto result = ::mmap(reinterpret_cast<void*>(ptr64), m_size, +prot, (cow ? MAP_PRIVATE : MAP_SHARED) | MAP_FIXED, m_file, 0);
 
 			return reinterpret_cast<u8*>(result);
 		}
@@ -383,7 +388,7 @@ namespace utils
 			const u64 res64 = reinterpret_cast<u64>(::mmap(reinterpret_cast<void*>(ptr64), m_size + 0xf000, PROT_NONE, MAP_ANON | MAP_PRIVATE, -1, 0));
 
 			const u64 aligned = utils::align(res64, 0x10000);
-			const auto result = ::mmap(reinterpret_cast<void*>(aligned), m_size, +prot, MAP_SHARED | MAP_FIXED, m_file, 0);
+			const auto result = ::mmap(reinterpret_cast<void*>(aligned), m_size, +prot, (cow ? MAP_PRIVATE : MAP_SHARED) | MAP_FIXED, m_file, 0);
 
 			// Now cleanup remnants
 			if (aligned > res64)
@@ -401,15 +406,15 @@ namespace utils
 #endif
 	}
 
-	u8* shm::try_map(void* ptr, protection prot) const
+	u8* shm::try_map(void* ptr, protection prot, bool cow) const
 	{
 		// Non-null pointer shall be specified
 		const auto target = ensure(reinterpret_cast<u8*>(reinterpret_cast<u64>(ptr) & -0x10000));
 
 #ifdef _WIN32
-		return this->map(target, prot);
+		return this->map(target, prot, cow);
 #else
-		const auto result = reinterpret_cast<u8*>(::mmap(reinterpret_cast<void*>(target), m_size, +prot, MAP_SHARED, m_file, 0));
+		const auto result = reinterpret_cast<u8*>(::mmap(reinterpret_cast<void*>(target), m_size, +prot, (cow ? MAP_PRIVATE : MAP_SHARED), m_file, 0));
 
 		if (result == reinterpret_cast<void*>(UINT64_MAX))
 		{
@@ -420,7 +425,7 @@ namespace utils
 #endif
 	}
 
-	u8* shm::map_critical(void* ptr, protection prot)
+	u8* shm::map_critical(void* ptr, protection prot, bool cow)
 	{
 		const auto target = reinterpret_cast<u8*>(reinterpret_cast<u64>(ptr) & -0x10000);
 
@@ -445,7 +450,7 @@ namespace utils
 		}
 #endif
 
-		return this->map(target, prot);
+		return this->map(target, prot, cow);
 	}
 
 	u8* shm::map_self(protection prot)

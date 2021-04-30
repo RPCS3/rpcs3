@@ -65,13 +65,13 @@ namespace utils
 		~shm();
 
 		// Map shared memory
-		u8* map(void* ptr, protection prot = protection::rw) const;
+		u8* map(void* ptr, protection prot = protection::rw, bool cow = false) const;
 
 		// Attempt to map shared memory fix fixed pointer
-		u8* try_map(void* ptr, protection prot = protection::rw) const;
+		u8* try_map(void* ptr, protection prot = protection::rw, bool cow = false) const;
 
 		// Map shared memory over reserved memory region, which is unsafe (non-atomic) under Win32
-		u8* map_critical(void* ptr, protection prot = protection::rw);
+		u8* map_critical(void* ptr, protection prot = protection::rw, bool cow = false);
 
 		// Map shared memory into its own storage (not mapped by default)
 		u8* map_self(protection prot = protection::rw);
