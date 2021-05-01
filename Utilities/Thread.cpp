@@ -2316,9 +2316,9 @@ std::string thread_ctrl::get_name_cached()
 	return *name_cache;
 }
 
-thread_base::thread_base(native_entry entry, std::string_view name)
+thread_base::thread_base(native_entry entry, std::string name)
 	: entry_point(entry)
-	, m_tname(make_single<std::string>(name))
+	, m_tname(make_single_value(std::move(name)))
 {
 }
 

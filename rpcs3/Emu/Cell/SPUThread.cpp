@@ -4793,6 +4793,27 @@ spu_function_logger::spu_function_logger(spu_thread& spu, const char* func)
 	spu.start_time = get_system_time();
 }
 
+spu_thread::thread_name_t::operator std::string() const
+{
+	std::string full_name = fmt::format("%s[0x%07x]", [](spu_type type) -> std::string_view
+	{
+		switch (type)
+		{
+		case spu_type::threaded: return "SPU"sv;
+		case spu_type::raw: return "RawSPU"sv;
+		case spu_type::isolated: return "Iso"sv;
+		default: fmt::throw_exception("Unreachable");
+		}
+	}(_this->get_type()), _this->lv2_id);
+
+	if (const std::string name = *_this->spu_tname.load(); !name.empty())
+	{
+		fmt::append(full_name, " %s", name);
+	}
+
+	return full_name;
+}
+
 template <>
 void fmt_class_string<spu_channel>::format(std::string& out, u64 arg)
 {

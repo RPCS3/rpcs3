@@ -408,14 +408,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	ensure(idm::import<named_thread<spu_thread>>([&]()
 	{
-		std::string full_name = fmt::format("SPU[0x%07x] ", tid);
-
-		if (!thread_name.empty())
-		{
-			fmt::append(full_name, "%s ", thread_name);
-		}
-
-		const auto spu = std::make_shared<named_thread<spu_thread>>(full_name, group.get(), spu_num, thread_name, tid, false, option);
+		const auto spu = std::make_shared<named_thread<spu_thread>>(group.get(), spu_num, thread_name, tid, false, option);
 		group->threads[inited] = spu;
 		group->threads_map[spu_num] = static_cast<s8>(inited);
 		return spu;
@@ -1849,7 +1842,7 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 			index = 0;
 	}
 
-	const u32 tid = idm::make<named_thread<spu_thread>>(fmt::format("RawSPU[0x%x] ", index), nullptr, index, "", index);
+	const u32 tid = idm::make<named_thread<spu_thread>>(nullptr, index, "", index);
 
 	spu_thread::g_raw_spu_id[index] = (ensure(tid));
 
@@ -1897,7 +1890,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 
 	const u32 ls_addr = RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index;
 
-	const auto thread = idm::make_ptr<named_thread<spu_thread>>(fmt::format("IsoSPU[0x%x] ", index), nullptr, index, "", index, true);
+	const auto thread = idm::make_ptr<named_thread<spu_thread>>(nullptr, index, "", index, true);
 
 	thread->gpr[3] = v128::from64(0, arg1);
 	thread->gpr[4] = v128::from64(0, arg2);

@@ -85,9 +85,9 @@ struct result_storage<Ctx, Args...>
 };
 
 template <typename T>
-concept NamedThreadName = requires (T& t)
+concept NamedThreadName = requires (const T& t)
 {
-	std::string_view(t.thread_name);
+	std::string(t.thread_name);
 };
 
 // Base class for task queue (linked list)
@@ -166,7 +166,7 @@ private:
 	friend class named_thread;
 
 protected:
-	thread_base(native_entry, std::string_view name);
+	thread_base(native_entry, std::string name);
 
 	~thread_base();
 
@@ -483,16 +483,16 @@ public:
 	template <typename... Args> requires (std::is_constructible_v<Context, Args&&...>) && (NamedThreadName<Context>)
 	named_thread(Args&&... args)
 		: Context(std::forward<Args>(args)...)
-		, thread(trampoline, Context::thread_name)
+		, thread(trampoline, std::string(Context::thread_name))
 	{
 		thread::start();
 	}
 
 	// Normal forwarding constructor
-	template <typename... Args> requires (std::is_constructible_v<Context, Args&&...>) && (!NamedThreadName<Context>)
-	named_thread(std::string_view name, Args&&... args)
+	template <typename... Args> requires (std::is_constructible_v<Context, Args&&...>)
+	named_thread(std::string name, Args&&... args)
 		: Context(std::forward<Args>(args)...)
-		, thread(trampoline, name)
+		, thread(trampoline, std::move(name))
 	{
 		thread::start();
 	}
@@ -500,7 +500,7 @@ public:
 	// Lambda constructor, also the implicit deduction guide candidate
 	named_thread(std::string_view name, Context&& f)
 		: Context(std::forward<Context>(f))
-		, thread(trampoline, name)
+		, thread(trampoline, std::string(name))
 	{
 		thread::start();
 	}

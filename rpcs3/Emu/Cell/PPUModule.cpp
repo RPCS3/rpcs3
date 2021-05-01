@@ -821,7 +821,7 @@ void try_spawn_ppu_if_exclusive_program(const ppu_module& m)
 			.stack_size = SYS_PROCESS_PARAM_STACK_SIZE_MAX,
 		};
 
-		auto ppu = idm::make_ptr<named_thread<ppu_thread>>("PPU[0x1000000] Thread (test_thread)", p, "test_thread", 0);
+		auto ppu = idm::make_ptr<named_thread<ppu_thread>>(p, "test_thread", 0);
 
 		ppu->cia = m.funcs[0].addr;
 
@@ -1694,7 +1694,7 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 	p.stack_addr = vm::cast(vm::alloc(primary_stacksize, vm::stack, 4096));
 	p.stack_size = primary_stacksize;
 
-	auto ppu = idm::make_ptr<named_thread<ppu_thread>>("PPU[0x1000000] main_thread ", p, "main_thread", primary_prio, 1);
+	auto ppu = idm::make_ptr<named_thread<ppu_thread>>(p, "main_thread", primary_prio, 1);
 
 	// Write initial data (exitspawn)
 	if (!Emu.data.empty())

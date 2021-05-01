@@ -674,7 +674,9 @@ void debugger_frame::UpdateUnitList()
 		if (emu_state == system_state::stopped) return;
 
 		const QVariant var_cpu = QVariant::fromValue<std::pair<cpu_thread*, u32>>(std::make_pair(&cpu, id));
-		m_choice_units->addItem(qstr(id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()), var_cpu);
+
+		// Space at the end is to pad a gap on the right
+		m_choice_units->addItem(qstr((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), var_cpu);
 
 		if (!reselected && old_cpu == var_cpu)
 		{
