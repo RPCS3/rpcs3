@@ -1133,6 +1133,18 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	}
 }
 
+ppu_thread::thread_name_t::operator std::string() const
+{
+	std::string thread_name = fmt::format("PPU[0x%x]", _this->id);
+
+	if (const std::string name = *_this->ppu_tname.load(); !name.empty())
+	{
+		fmt::append(thread_name, " %s", name);
+	}
+
+	return thread_name;
+}
+
 void ppu_thread::cmd_push(cmd64 cmd)
 {
 	// Reserve queue space

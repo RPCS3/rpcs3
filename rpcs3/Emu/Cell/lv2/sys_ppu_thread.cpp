@@ -459,18 +459,6 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 	const u32 tid = idm::import<named_thread<ppu_thread>>([&]()
 	{
-		const u32 tid = idm::last_id();
-
-		std::string full_name = fmt::format("PPU[0x%x] ", tid);
-
-		if (threadname)
-		{
-			if (!ppu_name.empty())
-			{
-				fmt::append(full_name, "%s ", ppu_name);
-			}
-		}
-
 		ppu_thread_params p;
 		p.stack_addr = stack_base;
 		p.stack_size = stack_size;
@@ -479,7 +467,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 		p.arg0 = arg;
 		p.arg1 = unk;
 
-		return std::make_shared<named_thread<ppu_thread>>(full_name, p, ppu_name, prio, 1 - static_cast<int>(flags & 3));
+		return std::make_shared<named_thread<ppu_thread>>(p, ppu_name, prio, 1 - static_cast<int>(flags & 3));
 	});
 
 	if (!tid)

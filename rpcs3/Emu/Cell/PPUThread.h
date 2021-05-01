@@ -282,6 +282,14 @@ public:
 
 	u32 dbg_step_pc = 0;
 
+	// For named_thread ctor
+	const struct thread_name_t
+	{
+		const ppu_thread* _this;
+
+		operator std::string() const;
+	} thread_name{ this };
+
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();
 	void fast_call(u32 addr, u32 rtoc);

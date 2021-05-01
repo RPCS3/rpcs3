@@ -321,7 +321,7 @@ void spu_load_exec(const spu_exec_object& elf)
 {
 	spu_thread::g_raw_spu_ctr++;
 
-	auto spu = idm::make_ptr<named_thread<spu_thread>>("TEST_SPU", nullptr, 0, "", 0);
+	auto spu = idm::make_ptr<named_thread<spu_thread>>(nullptr, 0, "test_spu", 0);
 
 	for (const auto& prog : elf.progs)
 	{

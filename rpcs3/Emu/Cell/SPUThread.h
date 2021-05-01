@@ -850,6 +850,14 @@ public:
 
 		return -1;
 	}
+
+	// For named_thread ctor
+	const struct thread_name_t
+	{
+		const spu_thread* _this;
+
+		operator std::string() const;
+	} thread_name{ this };
 };
 
 class spu_function_logger
