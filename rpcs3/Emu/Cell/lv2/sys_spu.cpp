@@ -109,7 +109,7 @@ void sys_spu_image::free() const
 	}
 }
 
-void sys_spu_image::deploy(u8* loc, sys_spu_segment* segs, u32 nsegs)
+void sys_spu_image::deploy(u8* loc, std::span<const sys_spu_segment> segs)
 {
 	// Segment info dump
 	std::string dump;
@@ -119,20 +119,18 @@ void sys_spu_image::deploy(u8* loc, sys_spu_segment* segs, u32 nsegs)
 	sha1_starts(&sha);
 	u8 sha1_hash[20];
 
-	for (u32 i = 0; i < nsegs; i++)
+	for (const auto& seg : segs)
 	{
-		auto& seg = segs[i];
+		fmt::append(dump, "\n\t[%u] t=0x%x, ls=0x%x, size=0x%x, addr=0x%x", &seg - segs.data(), seg.type, seg.ls, seg.size, seg.addr);
 
-		fmt::append(dump, "\n\t[%d] t=0x%x, ls=0x%x, size=0x%x, addr=0x%x", i, seg.type, seg.ls, seg.size, seg.addr);
-
-		sha1_update(&sha, reinterpret_cast<uchar*>(&seg.type), sizeof(seg.type));
+		sha1_update(&sha, reinterpret_cast<const uchar*>(&seg.type), sizeof(seg.type));
 
 		// Hash big-endian values
 		if (seg.type == SYS_SPU_SEGMENT_TYPE_COPY)
 		{
 			std::memcpy(loc + seg.ls, vm::base(seg.addr), seg.size);
-			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.size), sizeof(seg.size));
-			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.ls), sizeof(seg.ls));
+			sha1_update(&sha, reinterpret_cast<const uchar*>(&seg.size), sizeof(seg.size));
+			sha1_update(&sha, reinterpret_cast<const uchar*>(&seg.ls), sizeof(seg.ls));
 			sha1_update(&sha, vm::_ptr<uchar>(seg.addr), seg.size);
 		}
 		else if (seg.type == SYS_SPU_SEGMENT_TYPE_FILL)
@@ -143,9 +141,9 @@ void sys_spu_image::deploy(u8* loc, sys_spu_segment* segs, u32 nsegs)
 			}
 
 			std::fill_n(reinterpret_cast<be_t<u32>*>(loc + seg.ls), seg.size / 4, seg.addr);
-			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.size), sizeof(seg.size));
-			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.ls), sizeof(seg.ls));
-			sha1_update(&sha, reinterpret_cast<uchar*>(&seg.addr), sizeof(seg.addr));
+			sha1_update(&sha, reinterpret_cast<const uchar*>(&seg.size), sizeof(seg.size));
+			sha1_update(&sha, reinterpret_cast<const uchar*>(&seg.ls), sizeof(seg.ls));
+			sha1_update(&sha, reinterpret_cast<const uchar*>(&seg.addr), sizeof(seg.addr));
 		}
 		else if (seg.type == SYS_SPU_SEGMENT_TYPE_INFO)
 		{
@@ -424,7 +422,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	*thread = tid;
 
 	group->args[inited] = {arg->arg1, arg->arg2, arg->arg3, arg->arg4};
-	group->imgs[inited].first = image;
+	group->imgs[inited].first = image.entry_point;
 	group->imgs[inited].second.assign(image.segs.get_ptr(), image.segs.get_ptr() + image.nsegs);
 
 	if (++group->init == group->max_num)
@@ -732,7 +730,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			auto& args = group->args[thread->lv2_id >> 24];
 			auto& img = group->imgs[thread->lv2_id >> 24];
 
-			sys_spu_image::deploy(thread->ls, img.second.data(), img.first.nsegs);
+			sys_spu_image::deploy(thread->ls, std::span(img.second.data(), img.second.size()));
 
 			thread->cpu_init();
 			thread->gpr[3] = v128::from64(0, args[0]);
@@ -740,7 +738,7 @@ error_code sys_spu_thread_group_start(ppu_thread& ppu, u32 id)
 			thread->gpr[5] = v128::from64(0, args[2]);
 			thread->gpr[6] = v128::from64(0, args[3]);
 
-			thread->status_npc = {SPU_STATUS_RUNNING, img.first.entry_point};
+			thread->status_npc = {SPU_STATUS_RUNNING, img.first};
 		}
 	}
 
@@ -1910,7 +1908,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 	img.load(obj);
 
 	auto image_info = idm::get<lv2_obj, lv2_spu_image>(img.entry_point);
-	img.deploy(thread->ls, image_info->segs.get_ptr(), image_info->nsegs);
+	img.deploy(thread->ls, std::span(image_info->segs.get_ptr(), image_info->nsegs));
 
 	thread->write_reg(ls_addr + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, image_info->e_entry);
 	ensure(idm::remove_verify<lv2_obj, lv2_spu_image>(img.entry_point, std::move(image_info)));

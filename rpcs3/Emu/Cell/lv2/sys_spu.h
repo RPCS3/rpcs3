@@ -8,6 +8,8 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Utilities/File.h"
 
+#include <span>
+
 struct lv2_memory_container;
 
 enum : s32
@@ -223,7 +225,7 @@ struct sys_spu_image
 
 	void load(const fs::file& stream);
 	void free() const;
-	static void deploy(u8* loc, sys_spu_segment* segs, u32 nsegs);
+	static void deploy(u8* loc, std::span<const sys_spu_segment> segs);
 };
 
 enum : u32
@@ -288,7 +290,7 @@ struct lv2_spu_group
 
 	std::array<std::shared_ptr<named_thread<spu_thread>>, 8> threads; // SPU Threads
 	std::array<s8, 256> threads_map; // SPU Threads map based number
-	std::array<std::pair<sys_spu_image, std::vector<sys_spu_segment>>, 8> imgs; // SPU Images
+	std::array<std::pair<u32, std::vector<sys_spu_segment>>, 8> imgs; // Entry points, SPU image segments
 	std::array<std::array<u64, 4>, 8> args; // SPU Thread Arguments
 
 	std::weak_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
