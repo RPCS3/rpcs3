@@ -29,12 +29,12 @@
     <RootNamespace>zlib</RootNamespace>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\3rdparty\zlib.props" />
-  <Import Project="..\common_default.props" />
+  <Import Project="$(SolutionDir)\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
-  <Import Project="..\common_default_macros.props" />
+  <Import Project="$(SolutionDir)\common_default_macros.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
   </PropertyGroup>

@@ -109,12 +109,12 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>My7zlib</RootNamespace>
   </PropertyGroup>
-  <Import Project="..\..\common_default.props" />
+  <Import Project="$(SolutionDir)\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
-  <Import Project="..\..\common_default_macros.props" />
+  <Import Project="$(SolutionDir)\common_default_macros.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>

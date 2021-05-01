@@ -76,9 +76,9 @@
     <ProjectGuid>{AC40FF01-426E-4838-A317-66354CEFAE88}</ProjectGuid>
     <RootNamespace>asmjit</RootNamespace>
   </PropertyGroup>
-  <Import Project="..\common_default.props" />
+  <Import Project="$(SolutionDir)\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <Import Project="..\common_default_macros.props" />
+  <Import Project="$(SolutionDir)\common_default_macros.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>

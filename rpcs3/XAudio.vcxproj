@@ -14,12 +14,12 @@
     <ProjectGuid>{78CB2F39-B809-4A06-8329-8C0A19119D3D}</ProjectGuid>
     <RootNamespace>XAudio</RootNamespace>
   </PropertyGroup>
-  <Import Project="..\common_default.props" />
+  <Import Project="$(SolutionDir)\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
-  <Import Project="..\common_default_macros.props" />
+  <Import Project="$(SolutionDir)\common_default_macros.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>

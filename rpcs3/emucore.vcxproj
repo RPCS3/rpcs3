@@ -14,12 +14,12 @@
     <ProjectGuid>{C4A10229-4712-4BD2-B63E-50D93C67A038}</ProjectGuid>
     <RootNamespace>emucore</RootNamespace>
   </PropertyGroup>
-  <Import Project="..\common_default.props" />
+  <Import Project="$(SolutionDir)\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
-  <Import Project="..\common_default_macros.props" />
+  <Import Project="$(SolutionDir)\common_default_macros.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
