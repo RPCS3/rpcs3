@@ -15,249 +15,249 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="7z\7z.h">
+    <ClInclude Include"src\7z.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\7zAlloc.h">
+    <ClInclude Include"src\7zAlloc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\7zBuf.h">
+    <ClInclude Include"src\7zBuf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\7zCrc.h">
+    <ClInclude Include"src\7zCrc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\7zFile.h">
+    <ClInclude Include"src\7zFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\7zTypes.h">
+    <ClInclude Include"src\7zTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\7zVersion.h">
+    <ClInclude Include"src\7zVersion.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Aes.h">
+    <ClInclude Include"src\Aes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Alloc.h">
+    <ClInclude Include"src\Alloc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Bcj2.h">
+    <ClInclude Include"src\Bcj2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Bra.h">
+    <ClInclude Include"src\Bra.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Compiler.h">
+    <ClInclude Include"src\Compiler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\CpuArch.h">
+    <ClInclude Include"src\CpuArch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Delta.h">
+    <ClInclude Include"src\Delta.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\DllSecur.h">
+    <ClInclude Include"src\DllSecur.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\LzFind.h">
+    <ClInclude Include"src\LzFind.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\LzFindMt.h">
+    <ClInclude Include"src\LzFindMt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\LzHash.h">
+    <ClInclude Include"src\LzHash.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Lzma2Dec.h">
+    <ClInclude Include"src\Lzma2Dec.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Lzma2DecMt.h">
+    <ClInclude Include"src\Lzma2DecMt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Lzma2Enc.h">
+    <ClInclude Include"src\Lzma2Enc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Lzma86.h">
+    <ClInclude Include"src\Lzma86.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\LzmaDec.h">
+    <ClInclude Include"src\LzmaDec.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\LzmaEnc.h">
+    <ClInclude Include"src\LzmaEnc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\LzmaLib.h">
+    <ClInclude Include"src\LzmaLib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\MtCoder.h">
+    <ClInclude Include"src\MtCoder.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\MtDec.h">
+    <ClInclude Include"src\MtDec.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Ppmd.h">
+    <ClInclude Include"src\Ppmd.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Ppmd7.h">
+    <ClInclude Include"src\Ppmd7.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Precomp.h">
+    <ClInclude Include"src\Precomp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\RotateDefs.h">
+    <ClInclude Include"src\RotateDefs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Sha256.h">
+    <ClInclude Include"src\Sha256.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Sort.h">
+    <ClInclude Include"src\Sort.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Threads.h">
+    <ClInclude Include"src\Threads.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\Xz.h">
+    <ClInclude Include"src\Xz.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\XzCrc64.h">
+    <ClInclude Include"src\XzCrc64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="7z\XzEnc.h">
+    <ClInclude Include"src\XzEnc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="7z\7zAlloc.c">
+    <ClCompile Include"src\7zAlloc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\7zArcIn.c">
+    <ClCompile Include"src\7zArcIn.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\7zBuf.c">
+    <ClCompile Include"src\7zBuf.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\7zBuf2.c">
+    <ClCompile Include"src\7zBuf2.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\7zCrc.c">
+    <ClCompile Include"src\7zCrc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\7zCrcOpt.c">
+    <ClCompile Include"src\7zCrcOpt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\7zDec.c">
+    <ClCompile Include"src\7zDec.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\7zFile.c">
+    <ClCompile Include"src\7zFile.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\7zStream.c">
+    <ClCompile Include"src\7zStream.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Aes.c">
+    <ClCompile Include"src\Aes.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\AesOpt.c">
+    <ClCompile Include"src\AesOpt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Alloc.c">
+    <ClCompile Include"src\Alloc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Bcj2.c">
+    <ClCompile Include"src\Bcj2.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Bcj2Enc.c">
+    <ClCompile Include"src\Bcj2Enc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Bra.c">
+    <ClCompile Include"src\Bra.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Bra86.c">
+    <ClCompile Include"src\Bra86.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\BraIA64.c">
+    <ClCompile Include"src\BraIA64.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\CpuArch.c">
+    <ClCompile Include"src\CpuArch.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Delta.c">
+    <ClCompile Include"src\Delta.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\DllSecur.c">
+    <ClCompile Include"src\DllSecur.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\LzFind.c">
+    <ClCompile Include"src\LzFind.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\LzFindMt.c">
+    <ClCompile Include"src\LzFindMt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Lzma2Dec.c">
+    <ClCompile Include"src\Lzma2Dec.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Lzma2DecMt.c">
+    <ClCompile Include"src\Lzma2DecMt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Lzma2Enc.c">
+    <ClCompile Include"src\Lzma2Enc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Lzma86Dec.c">
+    <ClCompile Include"src\Lzma86Dec.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Lzma86Enc.c">
+    <ClCompile Include"src\Lzma86Enc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\LzmaDec.c">
+    <ClCompile Include"src\LzmaDec.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\LzmaEnc.c">
+    <ClCompile Include"src\LzmaEnc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\LzmaLib.c">
+    <ClCompile Include"src\LzmaLib.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\MtCoder.c">
+    <ClCompile Include"src\MtCoder.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\MtDec.c">
+    <ClCompile Include"src\MtDec.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Ppmd7.c">
+    <ClCompile Include"src\Ppmd7.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Ppmd7Dec.c">
+    <ClCompile Include"src\Ppmd7Dec.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Ppmd7Enc.c">
+    <ClCompile Include"src\Ppmd7Enc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Sha256.c">
+    <ClCompile Include"src\Sha256.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Sort.c">
+    <ClCompile Include"src\Sort.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Threads.c">
+    <ClCompile Include"src\Threads.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\Xz.c">
+    <ClCompile Include"src\Xz.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\XzCrc64.c">
+    <ClCompile Include"src\XzCrc64.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\XzCrc64Opt.c">
+    <ClCompile Include"src\XzCrc64Opt.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\XzDec.c">
+    <ClCompile Include"src\XzDec.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\XzEnc.c">
+    <ClCompile Include"src\XzEnc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="7z\XzIn.c">
+    <ClCompile Include"src\XzIn.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
