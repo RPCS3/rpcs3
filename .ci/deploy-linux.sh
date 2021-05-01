@@ -13,6 +13,7 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     ls ./appdir/usr/lib/
     rm -r ./appdir/usr/share/doc
     cp "$(readlink -f /lib/x86_64-linux-gnu/libnsl.so.1)" ./appdir/usr/lib/libnsl.so.1
+    cp "$(readlink -f /usr/lib/x86_64-linux-gnu/libOpenGL.so.0)" ./appdir/usr/lib/libOpenGL.so.0
     export PATH=/rpcs3/build/squashfs-root/usr/bin/:${PATH}
 
     # Embed newer libstdc++ for distros that don't come with it (ubuntu 16.04)
