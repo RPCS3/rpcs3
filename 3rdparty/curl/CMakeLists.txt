@@ -1,0 +1,16 @@
+# CURL
+
+if(USE_SYSTEM_CURL)
+	message("-- RPCS3: using shared libcurl")
+	find_package(CURL REQUIRED)
+	add_library(libcurl INTERFACE)
+	target_link_libraries(libcurl INTERFACE CURL::libcurl)
+else()
+	message("-- RPCS3: building libcurl + wolfssl submodules")
+	option(BUILD_CURL_EXE "Set to ON to build curl executable." OFF)
+	option(CMAKE_USE_WOLFSSL "enable wolfSSL for SSL/TLS" ON)
+	option(HTTP_ONLY "disables all protocols except HTTP (This overrides all CURL_DISABLE_* options)" ON)
+	option(CURL_ZLIB "Set to ON to enable building curl with zlib support." OFF)
+	set(CURL_CA_PATH "none" CACHE STRING "Location of default CA path. Set 'none' to disable or 'auto' for auto-detection. Defaults to 'auto'.")
+	add_subdirectory(src EXCLUDE_FROM_ALL)
+endif()
