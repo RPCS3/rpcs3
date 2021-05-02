@@ -3,7 +3,7 @@
 	url = https://github.com/RPCS3/ffmpeg-core
 	ignore = dirty
 [submodule "asmjit"]
-	path = asmjit
+	path = 3rdparty/asmjit/asmjit
 	url = https://github.com/asmjit/asmjit
 	branch = oldstable
 	ignore = dirty
