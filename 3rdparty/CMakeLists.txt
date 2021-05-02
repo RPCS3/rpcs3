@@ -146,8 +146,10 @@ target_include_directories(3rdparty_cereal INTERFACE cereal/include)
 
 # OpenGL
 
-# Prefer GLVND for OpenGL rather than legacy
-set(OpenGL_GL_PREFERENCE GLVND)
+# Prefer GLVND for OpenGL rather than legacy, unless it's been defined elsewhere, in the case of AppImage builds
+if(NOT DEFINED OpenGL_GL_PREFERENCE)
+	set(OpenGL_GL_PREFERENCE GLVND)
+endif()
 find_package(OpenGL REQUIRED)
 
 add_library(3rdparty_opengl INTERFACE)
