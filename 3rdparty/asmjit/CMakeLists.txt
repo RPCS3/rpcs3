@@ -3,7 +3,7 @@ set(ASMJIT_STATIC TRUE)
 set(ASMJIT_BUILD_X86 TRUE)
 set(ASMJIT_BUILD_ARM FALSE)
 set(ASMJIT_BUILD_TEST FALSE)
-set(ASMJIT_DIR "${CMAKE_SOURCE_DIR}/asmjit" CACHE PATH "Location of 'asmjit'")
+set(ASMJIT_DIR "${CMAKE_SOURCE_DIR}/3rdparty/asmjit/asmjit" CACHE PATH "Location of 'asmjit'")
 
 include("${ASMJIT_DIR}/CMakeLists.txt")
 

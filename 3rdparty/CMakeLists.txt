@@ -289,6 +289,8 @@ if(USE_VULKAN)
 	endif()
 endif()
 
+# AsmJit
+add_subdirectory(asmjit EXCLUDE_FROM_ALL)
 
 # OpenAL
 if (MSVC)
