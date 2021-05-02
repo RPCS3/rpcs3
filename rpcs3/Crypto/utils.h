@@ -1,8 +1,8 @@
 #pragma once
 
 // Copyright (C) 2014       Hykem <hykem@hotmail.com>
-// Licensed under the terms of the GNU GPL, version 3
-// http://www.gnu.org/licenses/gpl-3.0.txt
+// Licensed under the terms of the GNU GPL, version 2.0 or later versions.
+// http://www.gnu.org/licenses/gpl-2.0.txt
 
 #include "util/types.hpp"
 
