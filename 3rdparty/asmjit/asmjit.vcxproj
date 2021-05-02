@@ -1,0 +1,113 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="asmjit\src\asmjit\base\arch.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\assembler.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\codebuilder.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\codecompiler.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\codeemitter.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\codeholder.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\constpool.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\cpuinfo.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\func.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\globals.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\inst.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\logging.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\osutils.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\operand.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\regalloc.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\runtime.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\string.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\vmem.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\base\zone.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86assembler.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86compiler.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86inst.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86instimpl.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86internal.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86logging.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86operand.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86operand_regs.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86regalloc.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="asmjit\src\asmjit\base\arch.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\assembler.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\codebuilder.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\codecompiler.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\codeemitter.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\codeholder.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\constpool.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\context_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\cpuinfo.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\func.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\logging.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\globals.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\inst.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\lock.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\operand.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\osutils.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\regalloc_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\runtime.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\string.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\vectypes.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\vmem.h" />
+    <ClInclude Include="asmjit\src\asmjit\base\zone.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86assembler.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86compiler.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86inst.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86instimpl_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86internal_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86logging_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86operand.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86regalloc_p.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{AC40FF01-426E-4838-A317-66354CEFAE88}</ProjectGuid>
+    <RootNamespace>asmjit</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\common_default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(SolutionDir)\common_default_macros.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\rpcs3_default.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="..\..\rpcs3_debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="..\..\rpcs3_release.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>ASMJIT_STATIC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release'">MaxSpeed</Optimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

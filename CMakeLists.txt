@@ -61,7 +61,6 @@ if(MSVC)
 endif()
 
 add_subdirectory(Vulkan EXCLUDE_FROM_ALL)
-add_subdirectory(asmjitsrc EXCLUDE_FROM_ALL)
 add_subdirectory(3rdparty)
 
 unset(CMAKE_CXX_FLAGS)
