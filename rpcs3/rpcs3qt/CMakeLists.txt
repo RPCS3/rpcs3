@@ -105,7 +105,7 @@ target_link_libraries(rpcs3_ui
     PRIVATE
         rpcs3_emu
         3rdparty::zlib 3rdparty::pugixml
-        3rdparty::discord-rpc
+        3rdparty::discordRPC
         3rdparty::hidapi
         3rdparty::libusb
         3rdparty::libpng
