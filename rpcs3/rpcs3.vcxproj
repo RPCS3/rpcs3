@@ -62,12 +62,12 @@
     <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IgnoreImportLibrary>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>..\3rdparty\7z\src;..\3rdparty\hidapi\hidapi;.\;..\;..\3rdparty\asmjit\asmjit\src;..\3rdparty\yaml-cpp\include;..\3rdparty\ffmpeg\include;..\3rdparty\cereal\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\XAudio2Redist\include;..\3rdparty\span\include;..\3rdparty\libpng;..\3rdparty\GL;..\3rdparty\stblib;..\3rdparty\OpenAL\include;..\3rdparty\pugixml\src;..\3rdparty\Optional;..\3rdparty\discord-rpc\include;..\3rdparty\zlib</IncludePath>
+    <IncludePath>..\3rdparty\7z\src;..\3rdparty\hidapi\hidapi;.\;..\;..\3rdparty\asmjit\asmjit\src;..\3rdparty\yaml-cpp\include;..\3rdparty\ffmpeg\include;..\3rdparty\cereal\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\XAudio2Redist\include;..\3rdparty\span\include;..\3rdparty\libpng;..\3rdparty\GL;..\3rdparty\stblib\include;..\3rdparty\OpenAL\include;..\3rdparty\pugixml\src;..\3rdparty\Optional;..\3rdparty\discord-rpc\include;..\3rdparty\zlib</IncludePath>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
-    <IncludePath>..\3rdparty\7z\src;..\3rdparty\hidapi\hidapi;.\;..\;..\3rdparty\asmjit\asmjit\src;..\3rdparty\yaml-cpp\include;..\3rdparty\ffmpeg\include;..\3rdparty\cereal\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\XAudio2Redist\include;..\3rdparty\span\include;..\3rdparty\libpng;..\3rdparty\GL;..\3rdparty\stblib;..\3rdparty\OpenAL\include;..\3rdparty\pugixml\src;..\3rdparty\Optional;..\3rdparty\discord-rpc\include;..\3rdparty\zlib</IncludePath>
+    <IncludePath>..\3rdparty\7z\src;..\3rdparty\hidapi\hidapi;.\;..\;..\3rdparty\asmjit\asmjit\src;..\3rdparty\yaml-cpp\include;..\3rdparty\ffmpeg\include;..\3rdparty\cereal\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\XAudio2Redist\include;..\3rdparty\span\include;..\3rdparty\libpng;..\3rdparty\GL;..\3rdparty\stblib\include;..\3rdparty\OpenAL\include;..\3rdparty\pugixml\src;..\3rdparty\Optional;..\3rdparty\discord-rpc\include;..\3rdparty\zlib</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
