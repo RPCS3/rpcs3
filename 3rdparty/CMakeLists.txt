@@ -179,7 +179,7 @@ add_library(3rdparty_stblib INTERFACE)
 target_include_directories(3rdparty_stblib INTERFACE stblib/include)
 
 
-# discord rpc
+# DiscordRPC
 add_subdirectory(discord-rpc)
 
 
@@ -394,7 +394,7 @@ add_library(3rdparty::cereal ALIAS 3rdparty_cereal)
 add_library(3rdparty::opengl ALIAS 3rdparty_opengl)
 add_library(3rdparty::span ALIAS 3rdparty_span)
 add_library(3rdparty::stblib ALIAS 3rdparty_stblib)
-add_library(3rdparty::discord-rpc ALIAS 3rdparty_discord-rpc)
+add_library(3rdparty::discordRPC ALIAS 3rdparty_discordRPC)
 add_library(3rdparty::alsa ALIAS ${ALSA_TARGET})
 add_library(3rdparty::pulse ALIAS ${PULSE_TARGET})
 add_library(3rdparty::faudio ALIAS ${FAUDIO_TARGET})
