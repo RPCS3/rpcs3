@@ -60,11 +60,11 @@ add_subdirectory(pugixml EXCLUDE_FROM_ALL)
 # libusb
 if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
 	pkg_check_modules(LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0>=1.0 )
-	CMAKE_DEPENDENT_OPTION( USE_SYS_LIBUSB "Use system libusb-1.0 as shared library" ON
+	CMAKE_DEPENDENT_OPTION( USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" ON
 			"LIBUSB_FOUND" OFF)
 else()
 	pkg_check_modules(LIBUSB IMPORTED_TARGET libusb-1.0>=1.0 )
-	CMAKE_DEPENDENT_OPTION( USE_SYS_LIBUSB "Use system libusb-1.0 as shared library" OFF
+	CMAKE_DEPENDENT_OPTION( USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" OFF
 			"LIBUSB_FOUND" OFF)
 endif()
 if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
@@ -76,7 +76,7 @@ elseif(MSVC)
 	add_definitions(-DHAVE_STRUCT_TIMESPEC=1)
 	add_subdirectory(libusb EXCLUDE_FROM_ALL)
 else()
-	if(USE_SYS_LIBUSB)
+	if(USE_SYSTEM_LIBUSB)
 		# we have the system libusb and have selected to use it
 		add_library(usb-1.0-shared INTERFACE)
 		target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
@@ -418,7 +418,7 @@ endif()
 add_subdirectory(curl EXCLUDE_FROM_ALL)
 
 # add nice ALIAS targets for ease of use
-if(USE_SYS_LIBUSB)
+if(USE_SYSTEM_LIBUSB)
 	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
 else()
 	add_library(3rdparty::libusb ALIAS usb-1.0-static)
