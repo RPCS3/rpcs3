@@ -422,7 +422,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
+    <ClInclude Include="..\3rdparty\stblib\include\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
     <ClInclude Include="..\Utilities\cheat_info.h" />
     <ClInclude Include="Emu\Audio\ALSA\ALSABackend.h">

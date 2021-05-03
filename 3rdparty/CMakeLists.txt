@@ -176,7 +176,7 @@ target_include_directories(3rdparty_span INTERFACE span/include)
 
 # stblib
 add_library(3rdparty_stblib INTERFACE)
-target_include_directories(3rdparty_stblib INTERFACE stblib)
+target_include_directories(3rdparty_stblib INTERFACE stblib/include)
 
 
 # discord rpc
