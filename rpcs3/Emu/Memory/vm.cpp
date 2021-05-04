@@ -1131,7 +1131,6 @@ namespace vm
 			m_common = std::make_shared<utils::shm>(size, fs::get_cache_dir() + std::to_string(utils::get_unique_tsc()));
 			m_common->map_critical(vm::base(addr), utils::protection::no);
 			m_common->map_critical(vm::get_super_ptr(addr));
-			lock_sudo(addr, size);
 		}
 	}
 
