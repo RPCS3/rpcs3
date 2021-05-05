@@ -1128,7 +1128,7 @@ namespace vm
 		if (flags & page_size_4k || flags & preallocated)
 		{
 			// Special path for whole-allocated areas allowing 4k granularity
-			m_common = std::make_shared<utils::shm>(size, fs::get_cache_dir() + std::to_string(utils::get_unique_tsc()));
+			m_common = std::make_shared<utils::shm>(size);
 			m_common->map_critical(vm::base(addr), utils::protection::no);
 			m_common->map_critical(vm::get_super_ptr(addr));
 		}
@@ -1632,7 +1632,7 @@ namespace vm
 
 	inline namespace ps3_
 	{
-		static utils::shm s_hook{0x800000000, fs::get_cache_dir() + "hook.dat"};
+		static utils::shm s_hook{0x800000000, fmt::format("%s/rpcs3_vm_hook_%s", fs::get_temp_dir(), fmt::base57(utils::get_unique_tsc()))};
 
 		void init()
 		{

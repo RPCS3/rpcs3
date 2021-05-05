@@ -636,6 +636,9 @@ namespace fs
 	// Get common cache directory
 	const std::string& get_cache_dir();
 
+	// Temporary directory
+	const std::string& get_temp_dir();
+
 	// Unique pending file creation destined to be renamed to the destination file
 	struct pending_file
 	{
