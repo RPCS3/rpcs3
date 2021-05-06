@@ -1567,7 +1567,7 @@
     <ClInclude Include="Emu\CPU\CPUTranslator.h">
       <Filter>Emu\CPU</Filter>
     </ClInclude>
-    <ClInclude Include="..\3rdparty\stblib\stb_image.h">
+    <ClInclude Include="..\3rdparty\stblib\include\stb_image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\Config.h">

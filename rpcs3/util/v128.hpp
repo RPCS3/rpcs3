@@ -56,7 +56,7 @@ union alignas(16) v128
 	reversed_array_t<f64> dr;
 
 	u128 _u;
-	//s128 _s;
+	s128 _s;
 
 #ifdef _MSC_VER
 	template <typename T>

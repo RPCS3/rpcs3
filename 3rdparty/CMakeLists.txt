@@ -60,11 +60,11 @@ add_subdirectory(pugixml EXCLUDE_FROM_ALL)
 # libusb
 if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
 	pkg_check_modules(LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0>=1.0 )
-	CMAKE_DEPENDENT_OPTION( USE_SYS_LIBUSB "Use system libusb-1.0 as shared library" ON
+	CMAKE_DEPENDENT_OPTION( USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" ON
 			"LIBUSB_FOUND" OFF)
 else()
 	pkg_check_modules(LIBUSB IMPORTED_TARGET libusb-1.0>=1.0 )
-	CMAKE_DEPENDENT_OPTION( USE_SYS_LIBUSB "Use system libusb-1.0 as shared library" OFF
+	CMAKE_DEPENDENT_OPTION( USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" OFF
 			"LIBUSB_FOUND" OFF)
 endif()
 if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
@@ -76,7 +76,7 @@ elseif(MSVC)
 	add_definitions(-DHAVE_STRUCT_TIMESPEC=1)
 	add_subdirectory(libusb EXCLUDE_FROM_ALL)
 else()
-	if(USE_SYS_LIBUSB)
+	if(USE_SYSTEM_LIBUSB)
 		# we have the system libusb and have selected to use it
 		add_library(usb-1.0-shared INTERFACE)
 		target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
@@ -178,43 +178,11 @@ target_include_directories(3rdparty_span INTERFACE span/include)
 
 # stblib
 add_library(3rdparty_stblib INTERFACE)
-target_include_directories(3rdparty_stblib INTERFACE stblib)
+target_include_directories(3rdparty_stblib INTERFACE stblib/include)
 
 
-# discord_rpc
-add_library(3rdparty_discord-rpc INTERFACE)
-
-# We don't want Discord Rich Presence on the BSDs and other OSes
-if (USE_DISCORD_RPC AND (WIN32 OR CMAKE_SYSTEM MATCHES "Linux" OR APPLE))
-	if (WIN32 AND NOT MSVC)
-		ExternalProject_Add(discord-rpc
-				GIT_REPOSITORY https://github.com/discordapp/discord-rpc
-				BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/discord-rpc
-				INSTALL_COMMAND ""
-			)
-
-	endif()
-
-	target_include_directories(3rdparty_discord-rpc INTERFACE discord-rpc/include)
-	target_compile_definitions(3rdparty_discord-rpc INTERFACE -DWITH_DISCORD_RPC)
-
-	set(DISCORD_RPC_LIB NOTFOUND)
-	if (WIN32)
-		if (NOT MSVC)
-			set(DISCORD_RPC_LIB ${CMAKE_CURRENT_BINARY_DIR}/discord-rpc/src/libdiscord-rpc.a)
-		else()
-			find_library(DISCORD_RPC_LIB discord-rpc PATHS discord-rpc/lib/ NO_DEFAULT_PATH)
-		endif()
-	elseif(CMAKE_SYSTEM MATCHES "Linux")
-		find_library(DISCORD_RPC_LIB discord-rpc-linux PATHS discord-rpc/lib/ NO_DEFAULT_PATH)
-	elseif(APPLE)
-		find_library(DISCORD_RPC_LIB discord-rpc-mac PATHS discord-rpc/lib/ NO_DEFAULT_PATH)
-	endif()
-	target_link_libraries(3rdparty_discord-rpc INTERFACE ${DISCORD_RPC_LIB})
-	if(APPLE)
-		target_link_libraries(3rdparty_discord-rpc INTERFACE "objc" "-framework Foundation" "-framework CoreServices")
-	endif()
-endif()
+# DiscordRPC
+add_subdirectory(discord-rpc)
 
 
 # ALSA
@@ -295,16 +263,7 @@ endif()
 add_subdirectory(asmjit EXCLUDE_FROM_ALL)
 
 # OpenAL
-if (MSVC)
-	find_path(OPENAL_INCLUDE_DIR al.h PATHS OpenAL/include)
-	find_library(OPENAL_LIBRARY OpenAL32 PATHS OpenAL/libs/Win64/)
-else()
-	find_package(OpenAL REQUIRED)
-endif()
-
-add_library(3rdparty_openal INTERFACE)
-target_include_directories(3rdparty_openal INTERFACE ${OPENAL_INCLUDE_DIR})
-target_link_libraries(3rdparty_openal INTERFACE ${OPENAL_LIBRARY})
+add_subdirectory(OpenAL EXCLUDE_FROM_ALL)
 
 # FAudio
 set(FAUDIO_TARGET 3rdparty_dummy_lib)
@@ -420,7 +379,7 @@ endif()
 add_subdirectory(curl EXCLUDE_FROM_ALL)
 
 # add nice ALIAS targets for ease of use
-if(USE_SYS_LIBUSB)
+if(USE_SYSTEM_LIBUSB)
 	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
 else()
 	add_library(3rdparty::libusb ALIAS usb-1.0-static)
@@ -437,7 +396,7 @@ add_library(3rdparty::cereal ALIAS 3rdparty_cereal)
 add_library(3rdparty::opengl ALIAS 3rdparty_opengl)
 add_library(3rdparty::span ALIAS 3rdparty_span)
 add_library(3rdparty::stblib ALIAS 3rdparty_stblib)
-add_library(3rdparty::discord-rpc ALIAS 3rdparty_discord-rpc)
+add_library(3rdparty::discordRPC ALIAS 3rdparty_discordRPC)
 add_library(3rdparty::alsa ALIAS ${ALSA_TARGET})
 add_library(3rdparty::pulse ALIAS ${PULSE_TARGET})
 add_library(3rdparty::faudio ALIAS ${FAUDIO_TARGET})

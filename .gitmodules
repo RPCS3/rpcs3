@@ -53,7 +53,7 @@
 	url = https://github.com/glennrp/libpng.git
 	ignore = dirty
 [submodule "3rdparty/libusb"]
-	path = 3rdparty/libusb/src
+	path = 3rdparty/libusb/libusb
 	url = https://github.com/libusb/libusb.git
 	ignore = dirty
 [submodule "3rdparty/FAudio"]
@@ -65,7 +65,7 @@
 	url = https://github.com/tcbrindle/span
 	ignore = dirty
 [submodule "3rdparty/curl"]
-	path = 3rdparty/curl/src
+	path = 3rdparty/curl/curl
 	url = https://github.com/curl/curl.git
 	ignore = dirty
 [submodule "3rdparty/wolfssl"]

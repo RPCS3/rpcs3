@@ -1729,6 +1729,32 @@ const std::string& fs::get_cache_dir()
 	return s_dir;
 }
 
+const std::string& fs::get_temp_dir()
+{
+	static const std::string s_dir = []
+	{
+		std::string dir;
+
+#ifdef _WIN32
+		wchar_t buf[MAX_PATH + 2]{};
+		if (GetTempPathW(MAX_PATH + 1, buf) - 1 > MAX_PATH)
+		{
+			MessageBoxA(nullptr, fmt::format("GetTempPath() failed: error %u.", GetLastError()).c_str(), "fs::get_temp_dir()", MB_ICONERROR);
+			return dir; // empty
+		}
+
+		to_utf8(dir, buf);
+#else
+		// TODO
+		dir = get_cache_dir();
+#endif
+
+		return dir;
+	}();
+
+	return s_dir;
+}
+
 bool fs::remove_all(const std::string& path, bool remove_root)
 {
 	if (const auto root_dir = dir(path))
