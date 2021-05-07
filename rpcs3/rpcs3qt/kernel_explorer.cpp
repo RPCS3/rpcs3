@@ -372,18 +372,15 @@ void kernel_explorer::Update()
 
 			if (const auto queue = ep.queue.get(); queue && queue->exists)
 			{
-				if (queue == idm::check_unlocked<lv2_obj, lv2_event_queue>(ep.queue_id))
+				if (queue == idm::check_unlocked<lv2_obj, lv2_event_queue>(queue->id))
 				{
-					// Type must be LOCAL here, but refer to the note below for why it is showed
-					add_leaf(node, qstr(fmt::format("Event Port 0x%08x: %s, Name: %#llx, Event Queue (ID): 0x%08x", id, type, ep.name, ep.queue_id)));
+					add_leaf(node, qstr(fmt::format("Event Port 0x%08x: %s, Name: %#llx, Event Queue (ID): 0x%08x", id, type, ep.name, queue->id)));
 					break;
 				}
 
+				// This code is unused until multi-process is implemented
 				if (queue == lv2_event_queue::find(queue->key).get())
 				{
-					// There are cases in which the attached queue by ID also has an IPC
-					// And the ID was destroyed but another was created for that same IPC
-					// So show event port type as well here because it not guaranteed to be IPC 
 					add_leaf(node, qstr(fmt::format("Event Port 0x%08x: %s, Name: %#llx, Event Queue (IPC): %s", id, type, ep.name, queue->key)));
 					break;
 				}

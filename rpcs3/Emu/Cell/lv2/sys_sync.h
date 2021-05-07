@@ -224,13 +224,13 @@ public:
 		default: return CELL_EINVAL;
 		}
 
-		std::shared_ptr<T> result = make();
-
 		// EAGAIN for IDM IDs shortage
 		CellError error = CELL_EAGAIN;
 
 		if (!idm::import<lv2_obj, T>([&]() -> std::shared_ptr<T>
 		{
+			std::shared_ptr<T> result = make();
+
 			auto finalize_construct = [&]() -> std::shared_ptr<T>
 			{
 				if ((error = result->on_id_create()))
