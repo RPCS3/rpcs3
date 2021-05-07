@@ -103,7 +103,7 @@ void user_manager_dialog::Init()
 	restoreGeometry(m_gui_settings->GetValue(gui::um_geometry).toByteArray());
 
 	// Use this in multiple connects to protect the current user from deletion/rename.
-	const auto enable_buttons = [=, this]()
+	const auto enable_buttons = [=]()
 	{
 		const u32 key = GetUserKey();
 		if (key == 0)
@@ -117,7 +117,7 @@ void user_manager_dialog::Init()
 		const bool enable = m_user_list[key].GetUserId() != m_active_user;
 
 		push_login_user->setEnabled(enable);
-		push_rename_user->setEnabled(enable);
+		push_rename_user->setEnabled(true);
 		push_remove_user->setEnabled(enable);
 	};
 
