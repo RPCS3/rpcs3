@@ -24,11 +24,12 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 
 	const auto _attr = *attr;
 
-	if (const auto error = lv2_obj::create<lv2_cond>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
+	const u64 ipc_key = lv2_obj::get_key(_attr);
+
+	if (const auto error = lv2_obj::create<lv2_cond>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
 		return std::make_shared<lv2_cond>(
-			_attr.pshared,
-			_attr.ipc_key,
+			ipc_key,
 			_attr.name_u64,
 			mutex_id,
 			std::move(mutex));
@@ -57,7 +58,7 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 		}
 
 		cond.mutex->cond_count--;
-		lv2_obj::on_id_destroy(cond, cond.shared, cond.key);
+		lv2_obj::on_id_destroy(cond, cond.key);
 		return {};
 	});
 

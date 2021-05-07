@@ -186,6 +186,12 @@ public:
 
 	static void cleanup();
 
+	template <typename T>
+	static inline u64 get_key(const T& attr)
+	{
+		return (attr.pshared != SYS_SYNC_PROCESS_SHARED ? +attr.ipc_key : 0);
+	}
+
 	template <typename T, typename F>
 	static error_code create(u32 pshared, u64 ipc_key, s32 flags, F&& make, bool key_not_zero = true)
 	{
@@ -235,7 +241,7 @@ public:
 				return std::move(result);
 			};
 
-			if (flags != SYS_SYNC_PROCESS_SHARED)
+			if (pshared != SYS_SYNC_PROCESS_SHARED)
 			{
 				// Creation of unique (non-shared) object handle
 				return finalize_construct();
@@ -286,9 +292,15 @@ public:
 	}
 
 	template <typename T>
-	static void on_id_destroy(T& obj, u32 pshared, u64 ipc_key)
+	static void on_id_destroy(T& obj, u64 ipc_key, u64 pshared = -1)
 	{
-		if (obj.exists-- == 1u && pshared == SYS_SYNC_PROCESS_SHARED)
+		if (pshared == umax)
+		{
+			// Default is to check key
+			pshared = ipc_key != 0;
+		}
+
+		if (obj.exists-- == 1u && pshared)
 		{
 			g_fxo->get<ipc_manager<T, u64>>().remove(ipc_key);
 		}

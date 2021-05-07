@@ -314,7 +314,15 @@ void kernel_explorer::Update()
 		case SYS_MEM_OBJECT:
 		{
 			auto& mem = static_cast<lv2_memory&>(obj);
-			add_leaf(node, qstr(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Granularity: %s, Mappings: %u", id, mem.size, mem.size * 1. / (1024 * 1024), mem.align == 0x10000u ? "64K" : "1MB", +mem.counter)));
+			const f64 size_mb = mem.size * 1. / (1024 * 1024);
+
+			if (mem.pshared)
+			{
+				add_leaf(node, qstr(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Granularity: %s, Mappings: %u Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, mem.key)));
+				break;
+			}
+
+			add_leaf(node, qstr(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Granularity: %s, Mappings: %u", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter)));
 			break;
 		}
 		case SYS_MUTEX_OBJECT:

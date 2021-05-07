@@ -40,12 +40,13 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 		return CELL_EINVAL;
 	}
 
-	if (const auto error = lv2_obj::create<lv2_event_flag>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
+	const u64 ipc_key = lv2_obj::get_key(_attr);
+
+	if (const auto error = lv2_obj::create<lv2_event_flag>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
 		return std::make_shared<lv2_event_flag>(
 			_attr.protocol,
-			_attr.pshared,
-			_attr.ipc_key,
+			ipc_key,
 			_attr.type,
 			_attr.name_u64,
 			init);
@@ -71,7 +72,7 @@ error_code sys_event_flag_destroy(ppu_thread& ppu, u32 id)
 			return CELL_EBUSY;
 		}
 
-		lv2_obj::on_id_destroy(flag, flag.shared, flag.key);
+		lv2_obj::on_id_destroy(flag, flag.key);
 		return {};
 	});
 

@@ -57,7 +57,6 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 		return std::make_shared<lv2_mutex>(
 			_attr.protocol,
 			_attr.recursive,
-			_attr.pshared,
 			_attr.adaptive,
 			_attr.ipc_key,
 			_attr.name_u64);
@@ -90,7 +89,7 @@ error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id)
 			return CELL_EPERM;
 		}
 
-		lv2_obj::on_id_destroy(mutex, mutex.shared, mutex.key);
+		lv2_obj::on_id_destroy(mutex, mutex.key);
 		return {};
 	});
 

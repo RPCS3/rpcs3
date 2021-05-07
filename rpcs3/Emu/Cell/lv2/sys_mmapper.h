@@ -22,13 +22,13 @@ struct lv2_memory : lv2_obj
 	const u32 align; // Alignment required
 	const u64 flags;
 	const u64 key; // IPC key
-	const u32 pshared;
+	const bool pshared; // Process shared flag
 	lv2_memory_container* const ct; // Associated memory container
 	const std::shared_ptr<utils::shm> shm;
 
 	atomic_t<u32> counter{0};
 
-	lv2_memory(u32 size, u32 align, u64 flags, u64 key, u32 pshared, lv2_memory_container* ct);
+	lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv2_memory_container* ct);
 };
 
 enum : u64

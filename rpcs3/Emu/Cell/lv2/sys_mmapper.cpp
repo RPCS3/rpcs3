@@ -12,7 +12,7 @@
 
 LOG_CHANNEL(sys_mmapper);
 
-lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, u64 key, u32 pshared, lv2_memory_container* ct)
+lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv2_memory_container* ct)
 	: size(size)
 	, align(align)
 	, flags(flags)
@@ -31,6 +31,12 @@ template <bool exclusive = false>
 error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 flags, lv2_memory_container* ct)
 {
 	const u32 _pshared = pshared ? SYS_SYNC_PROCESS_SHARED : SYS_SYNC_NOT_PROCESS_SHARED;
+
+	if (!pshared)
+	{
+		ipc_key = 0;
+	}
+
 	if (auto error = lv2_obj::create<lv2_memory>(_pshared, ipc_key, exclusive ? SYS_SYNC_NEWLY_CREATED : SYS_SYNC_NOT_CARE, [&]()
 	{
 		return std::make_shared<lv2_memory>(
@@ -38,7 +44,7 @@ error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 fl
 			align,
 			flags,
 			ipc_key,
-			_pshared,
+			pshared,
 			ct);
 	}, false))
 	{
@@ -528,7 +534,7 @@ error_code sys_mmapper_free_shared_memory(ppu_thread& ppu, u32 mem_id)
 			return CELL_EBUSY;
 		}
 
-		lv2_obj::on_id_destroy(mem, mem.pshared, mem.key);
+		lv2_obj::on_id_destroy(mem, mem.key, +mem.pshared);
 		return {};
 	});
 
