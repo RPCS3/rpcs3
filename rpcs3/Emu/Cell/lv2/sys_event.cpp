@@ -111,7 +111,7 @@ error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::p
 		return CELL_EINVAL;
 	}
 
-	const u32 pshared = ipc_key == SYS_EVENT_QUEUE_LOCAL ? SYS_SYNC_NOT_PROCESS_SHARED : SYS_SYNC_NOT_PROCESS_SHARED;
+	const u32 pshared = ipc_key == SYS_EVENT_QUEUE_LOCAL ? SYS_SYNC_NOT_PROCESS_SHARED : SYS_SYNC_PROCESS_SHARED;
 	constexpr u32 flags = SYS_SYNC_NEWLY_CREATED; // NOTE: This is inaccurate for multi-process
 	const u64 name = attr->name_u64;
 
