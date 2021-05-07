@@ -147,7 +147,7 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 			return CELL_EBUSY;
 		}
 
-		lv2_obj::on_id_destroy(queue, queue.key == SYS_EVENT_QUEUE_LOCAL ? SYS_SYNC_NOT_PROCESS_SHARED : SYS_SYNC_PROCESS_SHARED, queue.key);
+		lv2_obj::on_id_destroy(queue, queue.key);
 		return {};
 	});
 

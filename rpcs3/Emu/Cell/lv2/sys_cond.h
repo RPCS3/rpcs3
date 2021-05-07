@@ -22,7 +22,6 @@ struct lv2_cond final : lv2_obj
 {
 	static const u32 id_base = 0x86000000;
 
-	const u32 shared;
 	const u64 key;
 	const u64 name;
 	const u32 mtx_id;
@@ -31,9 +30,8 @@ struct lv2_cond final : lv2_obj
 	atomic_t<u32> waiters{0};
 	std::deque<cpu_thread*> sq;
 
-	lv2_cond(u32 shared, u64 key, u64 name, u32 mtx_id, std::shared_ptr<lv2_mutex> mutex)
-		: shared(shared)
-		, key(key)
+	lv2_cond(u64 key, u64 name, u32 mtx_id, std::shared_ptr<lv2_mutex> mutex)
+		: key(key)
 		, name(name)
 		, mtx_id(mtx_id)
 		, mutex(std::move(mutex))

@@ -30,9 +30,11 @@ error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<s
 		return CELL_EINVAL;
 	}
 
-	if (auto error = lv2_obj::create<lv2_rwlock>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
+	const u64 ipc_key = lv2_obj::get_key(_attr);
+
+	if (auto error = lv2_obj::create<lv2_rwlock>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
-		return std::make_shared<lv2_rwlock>(protocol, _attr.pshared, _attr.ipc_key, _attr.name_u64);
+		return std::make_shared<lv2_rwlock>(protocol, ipc_key, _attr.name_u64);
 	}))
 	{
 		return error;
@@ -55,7 +57,7 @@ error_code sys_rwlock_destroy(ppu_thread& ppu, u32 rw_lock_id)
 			return CELL_EBUSY;
 		}
 
-		lv2_obj::on_id_destroy(rw, rw.shared, rw.key);
+		lv2_obj::on_id_destroy(rw, rw.key);
 		return {};
 	});
 
