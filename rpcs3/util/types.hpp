@@ -238,6 +238,11 @@ struct alignas(16) u128
 		return lo;
 	}
 
+	constexpr explicit operator s64() const noexcept
+	{
+		return lo;
+	}
+
 	constexpr friend u128 operator+(const u128& l, const u128& r)
 	{
 		u128 value = l;
@@ -463,13 +468,43 @@ struct alignas(16) u128
 	}
 };
 
-// Signed 128-bit integer implementation (TODO)
-struct alignas(16) s128
+// Signed 128-bit integer implementation
+struct s128 : u128
 {
-	u64 lo;
-	s64 hi;
+	using u128::u128;
 
-	s128() = default;
+	constexpr s128 operator>>(u128 shift_value) const
+	{
+		s128 value = *this;
+		value >>= shift_value;
+		return value;
+	}
+
+	constexpr s128& operator>>=(const u128& r)
+	{
+		if (std::is_constant_evaluated())
+		{
+			if (r.hi == 0 && r.lo < 64)
+			{
+				lo = (lo >> r.lo) | (hi << (64 - r.lo));
+				hi = (static_cast<s64>(hi) >> r.lo);
+				return *this;
+			}
+			else if (r.hi == 0 && r.lo < 128)
+			{
+				s64 _lo = static_cast<s64>(hi) >> (r.lo - 64);
+				lo = _lo;
+				hi = _lo >> 63;
+				return *this;
+			}
+		}
+
+		const u64 v0 = static_cast<s64>(hi) >> (r.lo & 63);
+		const u64 v1 = __shiftright128(lo, hi, static_cast<uchar>(r.lo));
+		lo = (r.lo & 64) ? v0 : v1;
+		hi = (r.lo & 64) ? static_cast<s64>(hi) >> 63 : v0;
+		return *this;
+	}
 };
 #endif
 
@@ -477,6 +512,7 @@ template <>
 struct get_int_impl<16>
 {
 	using utype = u128;
+	using stype = s128;
 };
 
 // Return magic value for any unsigned type

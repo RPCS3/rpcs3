@@ -11,8 +11,6 @@
 
 LOG_CHANNEL(sys_event_flag);
 
-template<> DECLARE(ipc_manager<lv2_event_flag, u64>::g_ipc) {};
-
 error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init)
 {
 	ppu.state += cpu_flag::wait;
@@ -73,6 +71,7 @@ error_code sys_event_flag_destroy(ppu_thread& ppu, u32 id)
 			return CELL_EBUSY;
 		}
 
+		lv2_obj::on_id_destroy(flag, flag.shared, flag.key);
 		return {};
 	});
 

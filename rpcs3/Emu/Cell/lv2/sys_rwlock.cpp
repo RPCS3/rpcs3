@@ -9,8 +9,6 @@
 
 LOG_CHANNEL(sys_rwlock);
 
-template<> DECLARE(ipc_manager<lv2_rwlock, u64>::g_ipc) {};
-
 error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {
 	ppu.state += cpu_flag::wait;
@@ -57,6 +55,7 @@ error_code sys_rwlock_destroy(ppu_thread& ppu, u32 rw_lock_id)
 			return CELL_EBUSY;
 		}
 
+		lv2_obj::on_id_destroy(rw, rw.shared, rw.key);
 		return {};
 	});
 

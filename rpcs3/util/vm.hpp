@@ -51,12 +51,15 @@ namespace utils
 #else
 		int m_file{};
 #endif
-		u32 m_size{};
 		u32 m_flags{};
+		u64 m_size{};
 		atomic_t<void*> m_ptr{nullptr};
 
 	public:
 		explicit shm(u32 size, u32 flags = 0);
+
+		// Construct with specified path as sparse file storage
+		shm(u64 size, const std::string& storage);
 
 		shm(const shm&) = delete;
 
@@ -65,13 +68,13 @@ namespace utils
 		~shm();
 
 		// Map shared memory
-		u8* map(void* ptr, protection prot = protection::rw) const;
+		u8* map(void* ptr, protection prot = protection::rw, bool cow = false) const;
 
 		// Attempt to map shared memory fix fixed pointer
-		u8* try_map(void* ptr, protection prot = protection::rw) const;
+		u8* try_map(void* ptr, protection prot = protection::rw, bool cow = false) const;
 
 		// Map shared memory over reserved memory region, which is unsafe (non-atomic) under Win32
-		u8* map_critical(void* ptr, protection prot = protection::rw);
+		u8* map_critical(void* ptr, protection prot = protection::rw, bool cow = false);
 
 		// Map shared memory into its own storage (not mapped by default)
 		u8* map_self(protection prot = protection::rw);
@@ -91,7 +94,7 @@ namespace utils
 			return static_cast<u8*>(+m_ptr);
 		}
 
-		u32 size() const
+		u64 size() const
 		{
 			return m_size;
 		}
