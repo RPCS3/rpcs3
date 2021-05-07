@@ -1,14 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="Source Files">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="Header Files">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
-    </Filter>
     <Filter Include="Crypto">
       <UniqueIdentifier>{d614f6ff-cd3b-40c4-8a76-1ff82b68d3d4}</UniqueIdentifier>
     </Filter>
@@ -217,12 +209,6 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\rsx_methods.cpp">
       <Filter>Emu\GPU\RSX</Filter>
-    </ClCompile>
-    <ClCompile Include="stb_image.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\Common\ProgramStateCache.cpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
@@ -740,12 +726,6 @@
     <ClCompile Include="util\dyn_lib.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="..\Utilities\version.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="rpcs3_version.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\Utilities\JIT.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -793,9 +773,6 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_gamepad.cpp">
       <Filter>Emu\Cell\lv2</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Utilities\LUrlParser.cpp">
-      <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\sys_net_.cpp">
       <Filter>Emu\Cell\Modules</Filter>
@@ -1001,6 +978,18 @@
     <ClCompile Include="Emu\system_progress.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\version.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Utilities\LUrlParser.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3_version.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1095,9 +1084,6 @@
     </ClInclude>
     <ClInclude Include="Loader\TROPUSR.h">
       <Filter>Loader</Filter>
-    </ClInclude>
-    <ClInclude Include="stdafx.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="util\v128.hpp">
       <Filter>Utilities</Filter>
@@ -1567,9 +1553,6 @@
     <ClInclude Include="Emu\CPU\CPUTranslator.h">
       <Filter>Emu\CPU</Filter>
     </ClInclude>
-    <ClInclude Include="..\3rdparty\stblib\include\stb_image.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\Utilities\Config.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -1593,12 +1576,6 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\rsx_cache.h">
       <Filter>Emu\GPU\RSX</Filter>
-    </ClInclude>
-    <ClInclude Include="..\Utilities\version.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="rpcs3_version.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\JIT.h">
       <Filter>Utilities</Filter>
@@ -1927,9 +1904,6 @@
     <ClInclude Include="Emu\RSX\display.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
-    <ClInclude Include="..\Utilities\dyn_lib.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\RSXDisAsm.h">
       <Filter>Emu\GPU\RSX</Filter>
     </ClInclude>
@@ -1942,9 +1916,6 @@
     <ClInclude Include="Loader\mself.hpp">
       <Filter>Loader</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\Cell\timers.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_user_list_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
@@ -1955,6 +1926,18 @@
       <Filter>Emu</Filter>
     </ClInclude>
     <ClInclude Include="Emu\system_progress.hpp">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3_version.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\version.h">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\timers.hpp">
       <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
