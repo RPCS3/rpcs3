@@ -9,8 +9,6 @@
 
 LOG_CHANNEL(sys_mutex);
 
-template<> DECLARE(ipc_manager<lv2_mutex, u64>::g_ipc) {};
-
 error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 {
 	ppu.state += cpu_flag::wait;
@@ -87,21 +85,12 @@ error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id)
 			return CELL_EBUSY;
 		}
 
-		if (!mutex.obj_count.fetch_op([](lv2_mutex::count_info& info)
-		{
-			if (info.cond_count)
-			{
-				return false;
-			}
-
-			// Decrement mutex copies count
-			info.mutex_count--;
-			return true;
-		}).second)
+		if (mutex.cond_count)
 		{
 			return CELL_EPERM;
 		}
 
+		lv2_obj::on_id_destroy(mutex, mutex.shared, mutex.key);
 		return {};
 	});
 
