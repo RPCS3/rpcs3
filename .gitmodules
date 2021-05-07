@@ -49,7 +49,7 @@
 	url = https://github.com/RPCS3/yaml-cpp.git
 	ignore = dirty
 [submodule "3rdparty/libpng"]
-	path = 3rdparty/libpng
+	path = 3rdparty/libpng/libpng
 	url = https://github.com/glennrp/libpng.git
 	ignore = dirty
 [submodule "3rdparty/libusb"]
