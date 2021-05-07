@@ -27,6 +27,7 @@
 #include "Emu/Cell/lv2/sys_vm.h"
 #include "Emu/Cell/lv2/sys_net.h"
 #include "Emu/Cell/lv2/sys_fs.h"
+#include "Emu/Cell/lv2/sys_interrupt.h"
 #include "Emu/Cell/Modules/cellSpurs.h"
 
 #include "Emu/RSX/RSXThread.h"
@@ -348,14 +349,22 @@ void kernel_explorer::Update()
 		}
 		case SYS_INTR_TAG_OBJECT:
 		{
-			// auto& tag = static_cast<lv2_int_tag&>(obj);
-			add_leaf(node, qstr(fmt::format("Intr Tag 0x%08x", id)));
+			auto& tag = static_cast<lv2_int_tag&>(obj);
+			auto handler = tag.handler.lock();
+
+			if (handler && handler.get() == idm::check_unlocked<lv2_obj, lv2_int_serv>(handler->id))
+			{
+				add_leaf(node, qstr(fmt::format("Intr Tag 0x%08x, Handler: 0x%08x", id, handler->id)));
+				break;
+			}
+
+			add_leaf(node, qstr(fmt::format("Intr Tag 0x%08x, Handler: Unbound", id)));
 			break;
 		}
 		case SYS_INTR_SERVICE_HANDLE_OBJECT:
 		{
-			// auto& serv = static_cast<lv2_int_serv&>(obj);
-			add_leaf(node, qstr(fmt::format("Intr Svc 0x%08x", id)));
+			auto& serv = static_cast<lv2_int_serv&>(obj);
+			add_leaf(node, qstr(fmt::format("Intr Svc 0x%08x, PPU: 0x%07x, arg1: 0x%x, arg2: 0x%x", id, serv.thread->id, serv.arg1, serv.arg2)));
 			break;
 		}
 		case SYS_EVENT_QUEUE_OBJECT:
