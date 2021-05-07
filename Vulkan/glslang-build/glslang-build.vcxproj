@@ -14,9 +14,9 @@
     <ProjectGuid>{8F85B6CC-250F-4ACA-A617-E820A74E3E3C}</ProjectGuid>
     <Keyword>MakeFileProj</Keyword>
   </PropertyGroup>
-  <Import Project="..\..\common_default.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <Import Project="..\..\common_default_macros.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default_macros.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
