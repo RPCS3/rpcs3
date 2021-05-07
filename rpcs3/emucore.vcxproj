@@ -507,7 +507,6 @@
     <ClInclude Include="util\fifo_mutex.hpp" />
     <ClInclude Include="util\logs.hpp" />
     <ClInclude Include="util\cpu_stats.hpp" />
-    <ClInclude Include="..\Utilities\dyn_lib.hpp" />
     <ClInclude Include="..\Utilities\File.h" />
     <ClInclude Include="..\Utilities\Config.h" />
     <ClInclude Include="..\Utilities\rXml.h" />
