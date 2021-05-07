@@ -1948,24 +1948,12 @@ error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 				// SLEEP
 				lv2_obj::sleep(ppu);
 				handler->join();
-				to_remove.emplace_back(std::move(handler), 0);
+				to_remove.emplace_back(std::move(handler), +handler->id);
 			}
 
-			to_remove.emplace_back(std::move(tag), 0);
+			to_remove.emplace_back(std::move(tag), +tag->id);
 		}
 	}
-
-	// Scan all kernel objects to determine IDs
-	idm::select<lv2_obj>([&](u32 id, lv2_obj& obj)
-	{
-		for (auto& pair : to_remove)
-		{
-			if (pair.first.get() == std::addressof(obj))
-			{
-				pair.second = id;
-			}
-		}
-	});
 
 	// Remove IDs
 	for (auto&& pair : to_remove)
