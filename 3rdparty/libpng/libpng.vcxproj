@@ -114,27 +114,27 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include=".\libpng\png.c">
+    <ClCompile Include="libpng\png.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug Library|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release Library|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include=".\libpng\pngerror.c" />
-    <ClCompile Include=".\libpng\pngget.c" />
-    <ClCompile Include=".\libpng\pngmem.c" />
-    <ClCompile Include=".\libpng\pngpread.c" />
-    <ClCompile Include=".\libpng\pngread.c" />
-    <ClCompile Include=".\libpng\pngrio.c" />
-    <ClCompile Include=".\libpng\pngrtran.c" />
-    <ClCompile Include=".\libpng\pngrutil.c" />
-    <ClCompile Include=".\libpng\pngset.c" />
-    <ClCompile Include=".\libpng\pngtrans.c" />
-    <ClCompile Include=".\libpng\pngwio.c" />
-    <ClCompile Include=".\libpng\pngwrite.c" />
-    <ClCompile Include=".\libpng\pngwtran.c" />
-    <ClCompile Include=".\libpng\pngwutil.c" />
+    <ClCompile Include="libpng\pngerror.c" />
+    <ClCompile Include="libpng\pngget.c" />
+    <ClCompile Include="libpng\pngmem.c" />
+    <ClCompile Include="libpng\pngpread.c" />
+    <ClCompile Include="libpng\pngread.c" />
+    <ClCompile Include="libpng\pngrio.c" />
+    <ClCompile Include="libpng\pngrtran.c" />
+    <ClCompile Include="libpng\pngrutil.c" />
+    <ClCompile Include="libpng\pngset.c" />
+    <ClCompile Include="libpng\pngtrans.c" />
+    <ClCompile Include="libpng\pngwio.c" />
+    <ClCompile Include="libpng\pngwrite.c" />
+    <ClCompile Include="libpng\pngwtran.c" />
+    <ClCompile Include="libpng\pngwutil.c" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include=".\libpng\scripts\pngwin.rc">
+    <ResourceCompile Include="libpng\scripts\pngwin.rc">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug Library|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release Library|x64'">true</ExcludedFromBuild>
     </ResourceCompile>
