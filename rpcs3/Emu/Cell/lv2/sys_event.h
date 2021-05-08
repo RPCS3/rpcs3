@@ -80,18 +80,18 @@ struct lv2_event_queue final : public lv2_obj
 {
 	static const u32 id_base = 0x8d000000;
 
-	const lv2_protocol protocol;
 	const u32 id;
-	const s32 type;
+	const lv2_protocol protocol;
+	const u8 type;
+	const u8 size;
 	const u64 name;
 	const u64 key;
-	const s32 size;
 
 	shared_mutex mutex;
 	std::deque<lv2_event> events;
 	std::deque<cpu_thread*> sq;
 
-	lv2_event_queue(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size) noexcept;
+	lv2_event_queue(u32 protocol, s32 type, s32 size, u64 name, u64 ipc_key) noexcept;
 
 	CellError send(lv2_event);
 

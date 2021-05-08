@@ -14,7 +14,7 @@
 #include <thread>
 
 // attr_protocol (waiting scheduling policy)
-enum lv2_protocol : u32
+enum lv2_protocol : u8
 {
 	SYS_SYNC_FIFO                = 0x1, // First In, First Out Order
 	SYS_SYNC_PRIORITY            = 0x2, // Priority Order
