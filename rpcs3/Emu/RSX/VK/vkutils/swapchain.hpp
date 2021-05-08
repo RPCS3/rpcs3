@@ -760,8 +760,12 @@ namespace vk
 			present.swapchainCount = 1;
 			present.pSwapchains = &m_vk_swapchain;
 			present.pImageIndices = &image;
-			present.waitSemaphoreCount = 1;
-			present.pWaitSemaphores = &semaphore;
+
+			if (semaphore != VK_NULL_HANDLE)
+			{
+				present.waitSemaphoreCount = 1;
+				present.pWaitSemaphores = &semaphore;
+			}
 
 			return _vkQueuePresentKHR(dev.get_present_queue(), &present);
 		}
