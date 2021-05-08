@@ -12,7 +12,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 	gl::command_context cmd = { gl_state };
 	const auto format_bpp = rsx::get_format_block_size_in_bytes(info->format);
 	const auto overlap_info = m_rtts.get_merged_texture_memory_region(cmd,
-		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::read);
+		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::shader_read);
 
 	if (!overlap_info.empty())
 	{
@@ -46,7 +46,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 			if (viable)
 			{
 				surface->read_barrier(cmd);
-				image = section.surface->get_surface(rsx::surface_access::read);
+				image = section.surface->get_surface(rsx::surface_access::shader_read);
 
 				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
 					std::min(surface_width, static_cast<u16>(info->width)),

@@ -837,8 +837,11 @@ namespace rsx
 						continue;
 
 					auto surface = tex_info.second.get();
-					if (access == rsx::surface_access::transfer && surface->write_through())
+					if (access.is_transfer() && access.is_read() && surface->write_through())
+					{
+						// The surface has no data other than what can be loaded from CPU
 						continue;
+					}
 
 					if (!rsx::pitch_compatible(surface, required_pitch, required_height))
 						continue;
@@ -1128,7 +1131,7 @@ namespace rsx
 					if (surface->dirty())
 					{
 						// Force memory barrier to release some resources
-						surface->memory_barrier(cmd, rsx::surface_access::read);
+						surface->memory_barrier(cmd, rsx::surface_access::shader_read);
 					}
 					else if (!surface->test())
 					{
