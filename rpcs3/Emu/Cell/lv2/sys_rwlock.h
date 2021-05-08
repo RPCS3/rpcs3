@@ -32,8 +32,8 @@ struct lv2_rwlock final : lv2_obj
 	std::deque<cpu_thread*> rq;
 	std::deque<cpu_thread*> wq;
 
-	lv2_rwlock(u32 protocol, u64 key, u64 name)
-		: protocol{protocol}
+	lv2_rwlock(u32 protocol, u64 key, u64 name) noexcept
+		: protocol{static_cast<u8>(protocol)}
 		, key(key)
 		, name(name)
 	{

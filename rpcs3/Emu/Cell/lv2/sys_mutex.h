@@ -37,8 +37,8 @@ struct lv2_mutex final : lv2_obj
 	atomic_t<u32> lock_count{0}; // Recursive Locks
 	std::deque<cpu_thread*> sq;
 
-	lv2_mutex(u32 protocol, u32 recursive,u32 adaptive, u64 key, u64 name)
-		: protocol{protocol}
+	lv2_mutex(u32 protocol, u32 recursive,u32 adaptive, u64 key, u64 name) noexcept
+		: protocol{static_cast<u8>(protocol)}
 		, recursive(recursive)
 		, adaptive(adaptive)
 		, key(key)

@@ -32,8 +32,8 @@ struct lv2_sema final : lv2_obj
 	atomic_t<s32> val;
 	std::deque<cpu_thread*> sq;
 
-	lv2_sema(u32 protocol, u64 key, u64 name, s32 max, s32 value)
-		: protocol{protocol}
+	lv2_sema(u32 protocol, u64 key, u64 name, s32 max, s32 value) noexcept
+		: protocol{static_cast<u8>(protocol)}
 		, key(key)
 		, name(name)
 		, max(max)

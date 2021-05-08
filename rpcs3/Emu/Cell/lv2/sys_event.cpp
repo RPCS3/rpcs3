@@ -11,13 +11,13 @@
 
 LOG_CHANNEL(sys_event);
 
-lv2_event_queue::lv2_event_queue(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size) noexcept
-	: protocol{protocol}
-	, id(idm::last_id())
-	, type(type)
+lv2_event_queue::lv2_event_queue(u32 protocol, s32 type, s32 size, u64 name, u64 ipc_key) noexcept
+	: id(idm::last_id())
+	, protocol{static_cast<u8>(protocol)}
+	, type(static_cast<u8>(type))
+	, size(static_cast<u8>(size))
 	, name(name)
 	, key(ipc_key)
-	, size(size)
 {
 }
 
@@ -127,7 +127,7 @@ error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::p
 
 	if (const auto error = lv2_obj::create<lv2_event_queue>(pshared, ipc_key, flags, [&]()
 	{
-		return std::make_shared<lv2_event_queue>(protocol, type, name, ipc_key, size);
+		return std::make_shared<lv2_event_queue>(protocol, type, size, name, ipc_key);
 	}))
 	{
 		return error;
