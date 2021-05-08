@@ -281,7 +281,7 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 	// Check the surface store first
 	const auto format_bpp = rsx::get_format_block_size_in_bytes(info->format);
 	const auto overlap_info = m_rtts.get_merged_texture_memory_region(*m_current_command_buffer,
-		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::read);
+		info->address, info->width, info->height, info->pitch, format_bpp, rsx::surface_access::shader_read);
 
 	if (!overlap_info.empty())
 	{
@@ -315,7 +315,7 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 			if (viable)
 			{
 				surface->read_barrier(*m_current_command_buffer);
-				image_to_flip = section.surface->get_surface(rsx::surface_access::read);
+				image_to_flip = section.surface->get_surface(rsx::surface_access::shader_read);
 
 				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
 					std::min(surface_width, static_cast<u16>(info->width)),

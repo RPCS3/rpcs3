@@ -36,11 +36,59 @@ namespace rsx
 		bytes = 2
 	};
 
-	enum surface_access : u32
+	class surface_access // This is simply a modified enum class
 	{
-		read = 0,
-		write = 1,
-		transfer = 2
+	public:
+		// Publicly visible enumerators
+		enum
+		{
+			shader_read = 0,
+			shader_write = 1,
+			transfer_read = 2,
+			transfer_write = 4,
+		};
+
+	private:
+		// Meta
+		enum
+		{
+			all_writes = (shader_write | transfer_write),
+			all_reads = (shader_read | transfer_read),
+			all_transfer = (transfer_read | transfer_write)
+		};
+
+		u32 value_;
+
+	public:
+		// Ctor
+		surface_access(u32 value) : value_(value)
+		{}
+
+		// Quick helpers
+		inline bool is_read() const
+		{
+			return !(value_ & ~all_reads);
+		}
+
+		inline bool is_write() const
+		{
+			return !(value_ & ~all_writes);
+		}
+
+		inline bool is_transfer() const
+		{
+			return !(value_ & ~all_transfer);
+		}
+
+		bool operator == (const surface_access& other) const
+		{
+			return value_ == other.value_;
+		}
+
+		bool operator == (u32 other) const
+		{
+			return value_ == other;
+		}
 	};
 
 	// Defines how the underlying PS3-visible memory backed by a texture is accessed
