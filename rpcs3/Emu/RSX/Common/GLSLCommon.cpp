@@ -223,7 +223,7 @@ namespace glsl
 		"#define VTX_FMT_UINT8   6\n\n";
 
 		// For intel GPUs which cannot access vectors in indexed mode (driver bug? or glsl version too low?)
-		// Note: Tested on Mesa iris with HD 530 and compliant path works fine, may be a bug on Windows proprietary drivers
+		// Note: Tested on Mesa iris with HD 530 and compilant path works fine, may be a bug on Windows proprietary drivers
 		if (!glsl4_compliant)
 		{
 			OS <<
