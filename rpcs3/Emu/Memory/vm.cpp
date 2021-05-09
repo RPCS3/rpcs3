@@ -1632,7 +1632,7 @@ namespace vm
 
 	inline namespace ps3_
 	{
-		static utils::shm s_hook{0x800000000, fmt::format("%s/rpcs3_vm_hook_%s", fs::get_temp_dir(), fmt::base57(utils::get_unique_tsc()))};
+		static utils::shm s_hook{0x800000000, ""};
 
 		void init()
 		{
