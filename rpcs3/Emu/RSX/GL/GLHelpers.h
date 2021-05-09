@@ -2340,7 +2340,7 @@ public:
 						error_msg = buf.get();
 					}
 
-					rsx_log.fatal("Compilation failed: %s", error_msg);
+					rsx_log.fatal("Compilation failed: %s\nsource: %s", error_msg, source);
 				}
 
 				m_compiled_fence.create();
