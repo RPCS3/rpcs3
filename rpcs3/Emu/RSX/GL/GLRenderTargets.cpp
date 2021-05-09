@@ -456,7 +456,21 @@ void gl::render_target::initialize_memory(gl::command_context& cmd, bool /*read_
 
 void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_access access)
 {
-	const bool read_access = (access != rsx::surface_access::write);
+	const bool read_access = access.is_read();
+	const bool is_depth = is_depth_surface();
+	const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+
+	if (should_read_buffers)
+	{
+		// TODO: Decide what to do when memory loads are disabled but the underlying has memory changed
+		// NOTE: Assume test() is expensive when in a pinch
+		if (last_use_tag && state_flags == rsx::surface_state_flags::ready && !test())
+		{
+			// TODO: Figure out why merely returning and failing the test does not work when reading (TLoU)
+			// The result should have been the same either way
+			state_flags |= rsx::surface_state_flags::erase_bkgnd;
+		}
+	}
 
 	if (old_contents.empty())
 	{

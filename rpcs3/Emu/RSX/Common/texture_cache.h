@@ -1630,7 +1630,7 @@ namespace rsx
 				if (options.prefer_surface_cache)
 				{
 					const u16 block_h = (attr.depth * attr.slice_h);
-					overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, attr.address, attr.width, block_h, attr.pitch, attr.bpp, rsx::surface_access::read);
+					overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, attr.address, attr.width, block_h, attr.pitch, attr.bpp, rsx::surface_access::shader_read);
 
 					if (!overlapping_fbos.empty())
 					{
@@ -1695,7 +1695,7 @@ namespace rsx
 				{
 					// Now check for surface cache hits
 					const u16 block_h = (attr.depth * attr.slice_h);
-					overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, attr.address, attr.width, block_h, attr.pitch, attr.bpp, rsx::surface_access::read);
+					overlapping_fbos = m_rtts.get_merged_texture_memory_region(cmd, attr.address, attr.width, block_h, attr.pitch, attr.bpp, rsx::surface_access::shader_read);
 				}
 
 				if (!overlapping_fbos.empty() || !overlapping_locals.empty())
@@ -2171,9 +2171,9 @@ namespace rsx
 				src_address += (src.width - src_w) * src_bpp;
 			}
 
-			auto rtt_lookup = [&m_rtts, &cmd, &scale_x, &scale_y, this](u32 address, u32 width, u32 height, u32 pitch, u8 bpp, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
+			auto rtt_lookup = [&m_rtts, &cmd, &scale_x, &scale_y, this](u32 address, u32 width, u32 height, u32 pitch, u8 bpp, rsx::flags32_t access, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
 			{
-				const auto list = m_rtts.get_merged_texture_memory_region(cmd, address, width, height, pitch, bpp, rsx::surface_access::transfer);
+				const auto list = m_rtts.get_merged_texture_memory_region(cmd, address, width, height, pitch, bpp, access);
 				if (list.empty())
 				{
 					return {};
@@ -2256,11 +2256,18 @@ namespace rsx
 			// Check if src/dst are parts of render targets
 			typename surface_store_type::surface_overlap_info dst_subres;
 			bool use_null_region = false;
+
+			// TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
+			// NOTE: Grab the src first as requirements for reading are more strict than requirements for writing
+			auto src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, src_bpp, surface_access::transfer_read, false);
+			src_is_render_target = src_subres.surface != nullptr;
+
+
 			if (get_location(dst_address) == CELL_GCM_LOCATION_LOCAL)
 			{
 				// TODO: HACK
 				// After writing, it is required to lock the memory range from access!
-				dst_subres = rtt_lookup(dst_address, dst_w, dst_h, dst.pitch, dst_bpp, false);
+				dst_subres = rtt_lookup(dst_address, dst_w, dst_h, dst.pitch, dst_bpp, surface_access::transfer_write, false);
 				dst_is_render_target = dst_subres.surface != nullptr;
 			}
 			else
@@ -2271,10 +2278,6 @@ namespace rsx
 				// Invalidate surfaces in range. Sample tests should catch overlaps in theory.
 				m_rtts.invalidate_range(utils::address_range::start_length(dst_address, dst.pitch* dst_h));
 			}
-
-			// TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
-			auto src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, src_bpp, false);
-			src_is_render_target = src_subres.surface != nullptr;
 
 			if (src_is_render_target)
 			{
@@ -2543,7 +2546,7 @@ namespace rsx
 				// Destination dimensions are relaxed (true)
 				dst_area = dst_subres.src_area;
 
-				dest_texture = dst_subres.surface->get_surface(rsx::surface_access::transfer);
+				dest_texture = dst_subres.surface->get_surface(rsx::surface_access::transfer_write);
 				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
 				dst_is_depth_surface = typeless_info.dst_is_typeless ? false : dst_subres.is_depth;
 
@@ -2692,7 +2695,7 @@ namespace rsx
 			else
 			{
 				src_area = src_subres.src_area;
-				vram_texture = src_subres.surface->get_surface(rsx::surface_access::read);
+				vram_texture = src_subres.surface->get_surface(rsx::surface_access::transfer_read);
 				typeless_info.src_context = texture_upload_context::framebuffer_storage;
 			}
 
@@ -2879,7 +2882,7 @@ namespace rsx
 				std::tie(src_area.x2, src_area.y2) = rsx::apply_resolution_scale<true>(src_area.x2, src_area.y2, surface_width, surface_height);
 
 				// The resource is of surface type; possibly disabled AA emulation
-				src_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer, src_area);
+				src_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer_read, src_area);
 			}
 
 			if (dst_is_render_target)
@@ -2890,7 +2893,7 @@ namespace rsx
 				std::tie(dst_area.x2, dst_area.y2) = rsx::apply_resolution_scale<true>(dst_area.x2, dst_area.y2, surface_width, surface_height);
 
 				// The resource is of surface type; possibly disabled AA emulation
-				dst_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer, dst_area);
+				dst_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer_write, dst_area);
 			}
 
 			if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format) !=

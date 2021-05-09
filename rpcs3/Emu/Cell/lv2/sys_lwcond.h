@@ -34,10 +34,10 @@ struct lv2_lwcond final : lv2_obj
 	atomic_t<u32> waiters{0};
 	std::deque<cpu_thread*> sq;
 
-	lv2_lwcond(u64 name, u32 lwid, u32 protocol, vm::ptr<sys_lwcond_t> control)
+	lv2_lwcond(u64 name, u32 lwid, u32 protocol, vm::ptr<sys_lwcond_t> control) noexcept
 		: name(std::bit_cast<be_t<u64>>(name))
 		, lwid(lwid)
-		, protocol{protocol}
+		, protocol{static_cast<u8>(protocol)}
 		, control(control)
 	{
 	}

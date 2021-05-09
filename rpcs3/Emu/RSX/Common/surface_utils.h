@@ -623,7 +623,7 @@ namespace rsx
 			if (spp == 1 || sample_layout == rsx::surface_sample_layout::ps3)
 				return;
 
-			ensure(access_type != rsx::surface_access::write);
+			ensure(access_type.is_read() || access_type.is_transfer());
 			transform_samples_to_pixels(region);
 		}
 	};

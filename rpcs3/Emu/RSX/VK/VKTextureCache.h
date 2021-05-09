@@ -197,7 +197,7 @@ namespace vk
 			{
 				auto surface = vk::as_rtt(vram_texture);
 				surface->read_barrier(cmd);
-				locked_resource = surface->get_surface(rsx::surface_access::read);
+				locked_resource = surface->get_surface(rsx::surface_access::shader_read);
 				transfer_width *= surface->samples_x;
 				transfer_height *= surface->samples_y;
 			}

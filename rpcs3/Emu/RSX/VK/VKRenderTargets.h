@@ -53,8 +53,8 @@ namespace vk
 		// Synchronization
 		void texture_barrier(vk::command_buffer& cmd);
 		void memory_barrier(vk::command_buffer& cmd, rsx::surface_access access);
-		void read_barrier(vk::command_buffer& cmd) { memory_barrier(cmd, rsx::surface_access::read); }
-		void write_barrier(vk::command_buffer& cmd) { memory_barrier(cmd, rsx::surface_access::write); }
+		void read_barrier(vk::command_buffer& cmd) { memory_barrier(cmd, rsx::surface_access::shader_read); }
+		void write_barrier(vk::command_buffer& cmd) { memory_barrier(cmd, rsx::surface_access::shader_write); }
 	};
 
 	static inline vk::render_target* as_rtt(vk::image* t)

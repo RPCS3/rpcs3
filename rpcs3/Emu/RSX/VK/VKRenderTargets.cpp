@@ -304,7 +304,7 @@ namespace vk
 
 	vk::viewable_image* render_target::get_surface(rsx::surface_access access_type)
 	{
-		if (samples() == 1 || access_type == rsx::surface_access::write)
+		if (samples() == 1 || access_type == rsx::surface_access::shader_write)
 		{
 			return this;
 		}
@@ -369,7 +369,7 @@ namespace vk
 
 	void render_target::memory_barrier(vk::command_buffer& cmd, rsx::surface_access access)
 	{
-		const bool read_access = (access != rsx::surface_access::write);
+		const bool read_access = access.is_read();
 		const bool is_depth = is_depth_surface();
 		const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
 
@@ -533,8 +533,8 @@ namespace vk
 
 			hw_blitter.scale_image(
 				cmd,
-				src_texture->get_surface(rsx::surface_access::read),
-				this->get_surface(rsx::surface_access::transfer),
+				src_texture->get_surface(rsx::surface_access::transfer_read),
+				this->get_surface(rsx::surface_access::transfer_write),
 				src_area,
 				dst_area,
 				/*linear?*/false, typeless_info);

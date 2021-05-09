@@ -111,8 +111,8 @@ namespace gl
 		}
 
 		void memory_barrier(gl::command_context& cmd, rsx::surface_access access);
-		void read_barrier(gl::command_context& cmd) { memory_barrier(cmd, rsx::surface_access::read); }
-		void write_barrier(gl::command_context& cmd) { memory_barrier(cmd, rsx::surface_access::write); }
+		void read_barrier(gl::command_context& cmd) { memory_barrier(cmd, rsx::surface_access::shader_read); }
+		void write_barrier(gl::command_context& cmd) { memory_barrier(cmd, rsx::surface_access::shader_write); }
 	};
 
 	struct framebuffer_holder : public gl::fbo, public rsx::ref_counted
