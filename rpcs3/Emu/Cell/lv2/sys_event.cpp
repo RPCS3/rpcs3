@@ -11,6 +11,16 @@
 
 LOG_CHANNEL(sys_event);
 
+lv2_event_queue::lv2_event_queue(u32 protocol, s32 type, s32 size, u64 name, u64 ipc_key) noexcept
+	: id(idm::last_id())
+	, protocol{static_cast<u8>(protocol)}
+	, type(static_cast<u8>(type))
+	, size(static_cast<u8>(size))
+	, name(name)
+	, key(ipc_key)
+{
+}
+
 std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 {
 	if (ipc_key == SYS_EVENT_QUEUE_LOCAL)
@@ -112,12 +122,12 @@ error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::p
 	}
 
 	const u32 pshared = ipc_key == SYS_EVENT_QUEUE_LOCAL ? SYS_SYNC_NOT_PROCESS_SHARED : SYS_SYNC_PROCESS_SHARED;
-	constexpr u32 flags = SYS_SYNC_NEWLY_CREATED; // NOTE: This is inaccurate for multi-process
+	constexpr u32 flags = SYS_SYNC_NEWLY_CREATED;
 	const u64 name = attr->name_u64;
 
 	if (const auto error = lv2_obj::create<lv2_event_queue>(pshared, ipc_key, flags, [&]()
 	{
-		return std::make_shared<lv2_event_queue>(protocol, type, name, ipc_key, size);
+		return std::make_shared<lv2_event_queue>(protocol, type, size, name, ipc_key);
 	}))
 	{
 		return error;
@@ -409,7 +419,6 @@ error_code sys_event_port_connect_local(cpu_thread& cpu, u32 eport_id, u32 equeu
 	}
 
 	port->queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_id);
-	port->queue_id = equeue_id;
 
 	return CELL_OK;
 }

@@ -80,24 +80,18 @@ struct lv2_event_queue final : public lv2_obj
 {
 	static const u32 id_base = 0x8d000000;
 
+	const u32 id;
 	const lv2_protocol protocol;
-	const s32 type;
+	const u8 type;
+	const u8 size;
 	const u64 name;
 	const u64 key;
-	const s32 size;
 
 	shared_mutex mutex;
 	std::deque<lv2_event> events;
 	std::deque<cpu_thread*> sq;
 
-	lv2_event_queue(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
-		: protocol{protocol}
-		, type(type)
-		, name(name)
-		, key(ipc_key)
-		, size(size)
-	{
-	}
+	lv2_event_queue(u32 protocol, s32 type, s32 size, u64 name, u64 ipc_key) noexcept;
 
 	CellError send(lv2_event);
 
@@ -120,7 +114,6 @@ struct lv2_event_port final : lv2_obj
 
 	const s32 type; // Port type, either IPC or local
 	const u64 name; // Event source (generated from id and process id if not set)
-	u32 queue_id = 0; // Event queue ID (if IPC is used this value is meaningless)
 
 	std::shared_ptr<lv2_event_queue> queue; // Event queue this port is connected to
 

@@ -64,8 +64,8 @@ struct lv2_lwmutex final : lv2_obj
 	std::deque<cpu_thread*> sq;
 	atomic_t<s32> lwcond_waiters{0};
 
-	lv2_lwmutex(u32 protocol, vm::ptr<sys_lwmutex_t> control, u64 name)
-		: protocol{protocol}
+	lv2_lwmutex(u32 protocol, vm::ptr<sys_lwmutex_t> control, u64 name) noexcept
+		: protocol{static_cast<u8>(protocol)}
 		, control(control)
 		, name(std::bit_cast<be_t<u64>>(name))
 	{

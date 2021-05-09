@@ -9,6 +9,19 @@
 
 LOG_CHANNEL(sys_interrupt);
 
+lv2_int_tag::lv2_int_tag() noexcept
+	: id(idm::last_id())
+{
+}
+
+lv2_int_serv::lv2_int_serv(const std::shared_ptr<named_thread<ppu_thread>>& thread, u64 arg1, u64 arg2) noexcept
+	: id(idm::last_id())
+	, thread(thread)
+	, arg1(arg1)
+	, arg2(arg2)
+{
+}
+
 void lv2_int_serv::exec() const
 {
 	thread->cmd_list

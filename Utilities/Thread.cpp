@@ -2230,7 +2230,7 @@ thread_state thread_ctrl::state()
 	return static_cast<thread_state>(_this->m_sync & 3);
 }
 
-void thread_ctrl::_wait_for(u64 usec, bool alert /* true */)
+void thread_ctrl::_wait_for(u64 usec, [[maybe_unused]] bool alert /* true */)
 {
 	auto _this = g_tls_this_thread;
 
@@ -2983,14 +2983,15 @@ std::pair<void*, usz> thread_ctrl::get_thread_stack()
 #else
 	void* saddr = 0;
 	usz ssize = 0;
-	pthread_attr_t attr;
 #if defined(__linux__)
+	pthread_attr_t attr;
 	pthread_getattr_np(pthread_self(), &attr);
 	pthread_attr_getstack(&attr, &saddr, &ssize);
 #elif defined(__APPLE__)
 	saddr = pthread_get_stackaddr_np(pthread_self());
 	ssize = pthread_get_stacksize_np(pthread_self());
 #else
+	pthread_attr_t attr;
 	pthread_attr_get_np(pthread_self(), &attr);
 	pthread_attr_getstackaddr(&attr, &saddr);
 	pthread_attr_getstacksize(&attr, &ssize);
