@@ -2723,7 +2723,7 @@ namespace rsx
 					{
 						// Each 64 entries are grouped by a bit
 						const u64 io_event = SYS_RSX_EVENT_UNMAPPED_BASE << i;
-						g_fxo->get<lv2_rsx_config>().send_event(0, io_event, to_unmap);
+						send_event(0, io_event, to_unmap);
 					}
 				}
 			}
