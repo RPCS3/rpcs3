@@ -280,7 +280,7 @@ namespace vk
 				dev.destroy();
 		}
 
-		VkResult present(VkSemaphore /*semaphore*/, u32 index) override
+		VkResult present(VkSemaphore /*semaphore*/, u32 /*index*/) override
 		{
 			fmt::throw_exception("Native macOS swapchain is not implemented yet!");
 		}
