@@ -126,19 +126,6 @@ struct RsxDisplayInfo
 	}
 };
 
-struct lv2_rsx_config
-{
-	shared_mutex mutex;
-	u32 memory_size{};
-	u32 rsx_event_port{};
-	u32 context_base{};
-	u32 device_addr{};
-	u32 driver_info{};
-	u32 dma_address{};
-
-	void send_event(u64, u64, u64) const;
-};
-
 // SysCalls
 error_code sys_rsx_device_open(cpu_thread& cpu);
 error_code sys_rsx_device_close(cpu_thread& cpu);
