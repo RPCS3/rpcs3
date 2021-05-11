@@ -34,8 +34,8 @@ namespace vk
 		void clear_memory(vk::command_buffer& cmd, vk::image* surface);
 		// Load memory from cell and use to initialize the surface
 		void load_memory(vk::command_buffer& cmd);
-		// Generic - chooses whether to clear or load
-		void initialize_memory(vk::command_buffer& cmd, bool read_access);
+		// Generic - chooses whether to clear or load.
+		void initialize_memory(vk::command_buffer& cmd, rsx::surface_access access);
 
 	public:
 		u64 frame_tag = 0; // frame id when invalidated, 0 if not invalid
