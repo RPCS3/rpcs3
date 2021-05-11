@@ -49,7 +49,7 @@ namespace gl
 	{
 		void clear_memory(gl::command_context& cmd);
 		void load_memory(gl::command_context& cmd);
-		void initialize_memory(gl::command_context& cmd, bool read_access);
+		void initialize_memory(gl::command_context& cmd, rsx::surface_access access);
 
 	public:
 		render_target(GLuint width, GLuint height, GLenum sized_format, rsx::format_class format_class)
