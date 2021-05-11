@@ -530,6 +530,18 @@ namespace vk
 				resolve(cmd);
 			}
 
+			if (samples() > 1)
+			{
+				// Ensure a writable surface exists for this surface
+				get_resolve_target_safe(cmd);
+			}
+
+			if (src_texture->samples() > 1)
+			{
+				// Ensure a readable surface exists for the source
+				src_texture->get_resolve_target_safe(cmd);
+			}
+
 			hw_blitter.scale_image(
 				cmd,
 				src_texture->get_surface(rsx::surface_access::transfer_read),
