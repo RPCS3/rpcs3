@@ -10,7 +10,7 @@
 #include "GLExecutionState.h"
 #include "../GCM.h"
 #include "../Common/TextureUtils.h"
-#include "../Common/GLSLTypes.h"
+#include "../Program/GLSLTypes.h"
 
 #include "Emu/system_config.h"
 #include "Utilities/mutex.h"

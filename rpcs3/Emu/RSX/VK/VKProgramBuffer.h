@@ -1,9 +1,9 @@
 #pragma once
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
-#include "../Common/ProgramStateCache.h"
 #include "VKRenderPass.h"
 #include "VKPipelineCompiler.h"
+#include "../Program/ProgramStateCache.h"
 
 #include "util/fnv_hash.hpp"
 

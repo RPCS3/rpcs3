@@ -4,8 +4,8 @@
 #include "VKFragmentProgram.h"
 #include "VKGSRender.h"
 
-#include "../Common/GLSLCommon.h"
-#include "../Common/ShaderInterpreter.h"
+#include "../Program/GLSLCommon.h"
+#include "../Program/ShaderInterpreter.h"
 #include "../rsx_methods.h"
 
 namespace vk

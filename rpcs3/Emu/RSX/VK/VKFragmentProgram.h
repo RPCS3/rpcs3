@@ -1,7 +1,6 @@
 #pragma once
-#include "../Common/FragmentProgramDecompiler.h"
-#include "../Common/GLSLTypes.h"
-#include "Emu/RSX/RSXFragmentProgram.h"
+#include "../Program/FragmentProgramDecompiler.h"
+#include "../Program/GLSLTypes.h"
 #include "VulkanAPI.h"
 #include "VKProgramPipeline.h"
 #include "vkutils/pipeline_binding_table.h"

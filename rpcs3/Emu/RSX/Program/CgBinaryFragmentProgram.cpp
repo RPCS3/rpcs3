@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "CgBinaryProgram.h"
 
-#include "Emu/RSX/RSXFragmentProgram.h"
+#include "RSXFragmentProgram.h"
 
 #include <algorithm>
 

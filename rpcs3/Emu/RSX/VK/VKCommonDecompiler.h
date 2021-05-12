@@ -1,5 +1,5 @@
 #pragma once
-#include "../Common/GLSLTypes.h"
+#include "../Program/GLSLTypes.h"
 
 namespace vk
 {

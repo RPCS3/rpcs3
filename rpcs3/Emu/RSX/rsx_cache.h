@@ -2,7 +2,7 @@
 #include "Utilities/File.h"
 #include "Utilities/lockless.h"
 #include "Utilities/Thread.h"
-#include "Common/ProgramStateCache.h"
+#include "Program/ProgramStateCache.h"
 #include "Emu/System.h"
 #include "Emu/cache_utils.hpp"
 #include "Common/texture_cache_checker.h"
@@ -358,7 +358,7 @@ namespace rsx
 			pipeline = data.pipeline_properties;
 
 			vp.output_mask = data.vp_ctrl;
-			vp.texture_dimensions = data.vp_texture_dimensions;
+			vp.texture_state.texture_dimensions = data.vp_texture_dimensions;
 			vp.base_address = data.vp_base_address;
 			vp.entry = data.vp_entry;
 
@@ -377,12 +377,12 @@ namespace rsx
 			}
 
 			fp.ctrl = data.fp_ctrl;
-			fp.texture_dimensions = data.fp_texture_dimensions;
+			fp.texture_state.texture_dimensions = data.fp_texture_dimensions;
+			fp.texture_state.unnormalized_coords = data.fp_unnormalized_coords;
+			fp.texture_state.shadow_textures = data.fp_shadow_textures;
+			fp.texture_state.redirected_textures = data.fp_redirected_textures;
 			fp.texcoord_control_mask = data.fp_texcoord_control;
-			fp.unnormalized_coords = data.fp_unnormalized_coords;
 			fp.two_sided_lighting = !!(data.fp_lighting_flags & 0x1);
-			fp.shadow_textures = data.fp_shadow_textures;
-			fp.redirected_textures = data.fp_redirected_textures;
 
 			return result;
 		}
@@ -396,7 +396,7 @@ namespace rsx
 			data_block.pipeline_storage_hash = m_storage.get_hash(pipeline);
 
 			data_block.vp_ctrl = vp.output_mask;
-			data_block.vp_texture_dimensions = vp.texture_dimensions;
+			data_block.vp_texture_dimensions = vp.texture_state.texture_dimensions;
 			data_block.vp_base_address = vp.base_address;
 			data_block.vp_entry = vp.entry;
 
@@ -421,12 +421,12 @@ namespace rsx
 			}
 
 			data_block.fp_ctrl = fp.ctrl;
-			data_block.fp_texture_dimensions = fp.texture_dimensions;
+			data_block.fp_texture_dimensions = fp.texture_state.texture_dimensions;
 			data_block.fp_texcoord_control = fp.texcoord_control_mask;
-			data_block.fp_unnormalized_coords = fp.unnormalized_coords;
+			data_block.fp_unnormalized_coords = fp.texture_state.unnormalized_coords;
 			data_block.fp_lighting_flags = u16(fp.two_sided_lighting);
-			data_block.fp_shadow_textures = fp.shadow_textures;
-			data_block.fp_redirected_textures = fp.redirected_textures;
+			data_block.fp_shadow_textures = fp.texture_state.shadow_textures;
+			data_block.fp_redirected_textures = fp.texture_state.redirected_textures;
 
 			return data_block;
 		}

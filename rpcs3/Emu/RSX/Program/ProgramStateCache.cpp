@@ -252,7 +252,7 @@ usz vertex_program_storage_hash::operator()(const RSXVertexProgram &program) con
 {
 	usz hash = vertex_program_utils::get_vertex_program_ucode_hash(program);
 	hash ^= program.output_mask;
-	hash ^= program.texture_dimensions;
+	hash ^= program.texture_state.texture_dimensions;
 	return hash;
 }
 
@@ -260,7 +260,7 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 {
 	if (binary1.output_mask != binary2.output_mask)
 		return false;
-	if (binary1.texture_dimensions != binary2.texture_dimensions)
+	if (binary1.texture_state != binary2.texture_state)
 		return false;
 	if (binary1.data.size() != binary2.data.size())
 		return false;
@@ -451,20 +451,19 @@ usz fragment_program_storage_hash::operator()(const RSXFragmentProgram& program)
 {
 	usz hash = fragment_program_utils::get_fragment_program_ucode_hash(program);
 	hash ^= program.ctrl;
-	hash ^= program.texture_dimensions;
-	hash ^= program.unnormalized_coords;
 	hash ^= +program.two_sided_lighting;
-	hash ^= program.shadow_textures;
-	hash ^= program.redirected_textures;
+	hash ^= program.texture_state.texture_dimensions;
+	hash ^= program.texture_state.unnormalized_coords;
+	hash ^= program.texture_state.shadow_textures;
+	hash ^= program.texture_state.redirected_textures;
 
 	return hash;
 }
 
 bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2) const
 {
-	if (binary1.ctrl != binary2.ctrl || binary1.texture_dimensions != binary2.texture_dimensions || binary1.unnormalized_coords != binary2.unnormalized_coords ||
-		binary1.two_sided_lighting != binary2.two_sided_lighting ||
-		binary1.shadow_textures != binary2.shadow_textures || binary1.redirected_textures != binary2.redirected_textures)
+	if (binary1.ctrl != binary2.ctrl || binary1.texture_state != binary2.texture_state ||
+		binary1.two_sided_lighting != binary2.two_sided_lighting)
 		return false;
 
 	const void* instBuffer1 = binary1.get_data();

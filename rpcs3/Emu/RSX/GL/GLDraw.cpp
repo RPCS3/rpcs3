@@ -359,7 +359,7 @@ void GLGSRender::bind_texture_env()
 		{
 			view->bind();
 
-			if (current_fragment_program.redirected_textures & (1 << i))
+			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
 			{
 				_SelectTexture(GL_STENCIL_MIRRORS_START + i);
 
@@ -373,7 +373,7 @@ void GLGSRender::bind_texture_env()
 			auto target = gl::get_target(current_fragment_program.get_texture_dimension(i));
 			glBindTexture(target, m_null_textures[target]->id());
 
-			if (current_fragment_program.redirected_textures & (1 << i))
+			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
 			{
 				_SelectTexture(GL_STENCIL_MIRRORS_START + i);
 				glBindTexture(target, m_null_textures[target]->id());

@@ -4,7 +4,7 @@
 #include "VKCommonDecompiler.h"
 #include "VKHelpers.h"
 #include "vkutils/device.h"
-#include "../Common/GLSLCommon.h"
+#include "../Program/GLSLCommon.h"
 
 
 std::string VKVertexDecompilerThread::getFloatTypeName(usz elementCount)

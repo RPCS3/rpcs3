@@ -1,6 +1,5 @@
 #pragma once
-#include "../Common/VertexProgramDecompiler.h"
-#include "Emu/RSX/RSXVertexProgram.h"
+#include "../Program/VertexProgramDecompiler.h"
 #include "GLHelpers.h"
 
 #include <unordered_map>

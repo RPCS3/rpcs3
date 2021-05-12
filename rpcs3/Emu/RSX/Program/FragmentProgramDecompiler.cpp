@@ -971,7 +971,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 
 		if (type != rsx::texture_dimension_extended::texture_dimension_3d)
 		{
-			if (m_prog.shadow_textures & ref_mask)
+			if (m_prog.texture_state.shadow_textures & ref_mask)
 			{
 				properties.shadow_sampler_mask |= ref_mask;
 				select = 4;
@@ -980,7 +980,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 			else
 			{
 				properties.common_access_sampler_mask |= ref_mask;
-				if (m_prog.redirected_textures & ref_mask)
+				if (m_prog.texture_state.redirected_textures & ref_mask)
 				{
 					properties.redirected_sampler_mask |= ref_mask;
 					select = 5;
@@ -1064,8 +1064,8 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	{
 		AddTex();
 
-		if (m_prog.redirected_textures & (1 << dst.tex_num) ||
-			m_prog.shadow_textures & (1 << dst.tex_num))
+		if (m_prog.texture_state.redirected_textures & (1 << dst.tex_num) ||
+			m_prog.texture_state.shadow_textures & (1 << dst.tex_num))
 		{
 			// Doesn't make sense to sample with derivates for these types
 			rsx_log.error("[Unimplemented warning] TXD operation performed on shadow/redirected texture!");

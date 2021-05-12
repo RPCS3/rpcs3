@@ -4,7 +4,7 @@
 #include "Emu/system_config.h"
 #include "GLCommonDecompiler.h"
 #include "../GCM.h"
-#include "../Common/GLSLCommon.h"
+#include "../Program/GLSLCommon.h"
 
 std::string GLFragmentDecompilerThread::getFloatTypeName(usz elementCount)
 {

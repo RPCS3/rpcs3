@@ -9,7 +9,7 @@
 #include <QFontDatabase>
 #include <QMimeData>
 
-#include "Emu/RSX/CgBinaryProgram.h"
+#include "Emu/RSX/Program/CgBinaryProgram.h"
 
 LOG_CHANNEL(gui_log, "GUI");
 

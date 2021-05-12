@@ -1,7 +1,9 @@
 #pragma once
 
-#include "gcm_enums.h"
-#include "util/types.hpp"
+#include "program_util.h"
+
+#include <string>
+#include <vector>
 
 enum register_type
 {
@@ -298,20 +300,17 @@ struct RSXFragmentProgram
 	u32 ucode_length = 0;
 	u32 total_length = 0;
 	u32 ctrl = 0;
-	u16 unnormalized_coords = 0;
-	u16 redirected_textures = 0;
-	u16 shadow_textures = 0;
 	bool two_sided_lighting = false;
-	u32 texture_dimensions = 0;
 	u32 texcoord_control_mask = 0;
 
-	float texture_scale[16][4]{};
+	rsx::fragment_program_texture_state texture_state;
+	rsx::fragment_program_texture_config texture_params;
 
 	bool valid = false;
 
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const
 	{
-		return rsx::texture_dimension_extended{static_cast<u8>((texture_dimensions >> (id * 2)) & 0x3)};
+		return rsx::texture_dimension_extended{static_cast<u8>((texture_state.texture_dimensions >> (id * 2)) & 0x3)};
 	}
 
 	bool texcoord_is_2d(u8 index) const

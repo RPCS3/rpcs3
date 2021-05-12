@@ -5,7 +5,6 @@
 #include "Emu/Cell/timers.hpp"
 
 #include "Common/BufferUtils.h"
-#include "Common/GLSLCommon.h"
 #include "Common/texture_cache.h"
 #include "Common/surface_store.h"
 #include "Capture/rsx_capture.h"
@@ -16,6 +15,7 @@
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
 #include "Overlays/overlay_perf_metrics.h"
+#include "Program/GLSLCommon.h"
 #include "Utilities/date_time.h"
 #include "Utilities/span.h"
 #include "Utilities/StrUtil.h"
@@ -854,19 +854,6 @@ namespace rsx
 		stream_vector(dst + 4, 0u, fog_mode, std::bit_cast<u32>(wpos_scale), std::bit_cast<u32>(wpos_bias));
 	}
 
-	void thread::fill_fragment_texture_parameters(void* buffer, const RSXFragmentProgram& fragment_program)
-	{
-		// Copy only the relevant section
-		if (current_fp_metadata.referenced_textures_mask)
-		{
-			const auto start = std::countr_zero(current_fp_metadata.referenced_textures_mask);
-			const auto end = 16 - std::countl_zero(current_fp_metadata.referenced_textures_mask);
-			const auto mem_offset = (start * 16);
-			const auto mem_size = (end - start) * 16;
-			memcpy(static_cast<u8*>(buffer) + mem_offset, reinterpret_cast<const u8*>(fragment_program.texture_scale) + mem_offset, mem_size);
-		}
-	}
-
 	u64 thread::timestamp()
 	{
 		const u64 freq = sys_time_get_timebase_frequency();
@@ -1571,6 +1558,7 @@ namespace rsx
 		current_fragment_program.offset = program_offset + current_fp_metadata.program_start_offset;
 		current_fragment_program.ucode_length = current_fp_metadata.program_ucode_length;
 		current_fragment_program.total_length = current_fp_metadata.program_ucode_length + current_fp_metadata.program_start_offset;
+		current_fragment_program.texture_state.import(current_fp_texture_state, current_fp_metadata.referenced_textures_mask);
 		current_fragment_program.valid = true;
 
 		if (!(m_graphics_state & rsx::pipeline_state::fragment_program_state_dirty))
@@ -1609,6 +1597,8 @@ namespace rsx
 			transform_program_start,                    // Address of entry point
 			current_vertex_program                      // [out] Program object
 		);
+
+		current_vertex_program.texture_state.import(current_vp_texture_state, current_vp_metadata.referenced_textures_mask);
 
 		if (!(m_graphics_state & rsx::pipeline_state::vertex_program_state_dirty))
 		{
@@ -1653,9 +1643,12 @@ namespace rsx
 			const auto &tex = rsx::method_registers.vertex_textures[i];
 			if (tex.enabled() && (current_vp_metadata.referenced_textures_mask & (1 << i)))
 			{
-				current_vertex_program.texture_dimensions |= (static_cast<u32>(sampler_descriptors[i]->image_type) << (i << 1));
+				current_vp_texture_state.clear(i);
+				current_vp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
 			}
 		}
+
+		current_vertex_program.texture_state.import(current_vp_texture_state, current_vp_metadata.referenced_textures_mask);
 	}
 
 	void thread::analyse_inputs_interleaved(vertex_input_layout& result) const
@@ -1835,13 +1828,7 @@ namespace rsx
 
 		current_fragment_program.ctrl = rsx::method_registers.shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT);
 		current_fragment_program.texcoord_control_mask = rsx::method_registers.texcoord_control_mask();
-		current_fragment_program.texture_dimensions = 0;
-		current_fragment_program.unnormalized_coords = 0;
 		current_fragment_program.two_sided_lighting = rsx::method_registers.two_side_light_en();
-		current_fragment_program.redirected_textures = 0;
-		current_fragment_program.shadow_textures = 0;
-
-		memset(current_fragment_program.texture_scale, 0, sizeof(current_fragment_program.texture_scale));
 
 		if (method_registers.current_draw_clause.primitive == primitive_type::points &&
 			method_registers.point_sprite_enabled())
@@ -1857,14 +1844,15 @@ namespace rsx
 			auto &tex = rsx::method_registers.fragment_textures[i];
 			if (tex.enabled())
 			{
-				current_fragment_program.texture_scale[i][0] = sampler_descriptors[i]->scale_x;
-				current_fragment_program.texture_scale[i][1] = sampler_descriptors[i]->scale_y;
-				current_fragment_program.texture_scale[i][2] = std::bit_cast<f32>(tex.remap());
+				current_fragment_program.texture_params[i].scale_x = sampler_descriptors[i]->scale_x;
+				current_fragment_program.texture_params[i].scale_y = sampler_descriptors[i]->scale_y;
+				current_fragment_program.texture_params[i].remap = tex.remap();
 
 				m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
 
 				u32 texture_control = 0;
-				current_fragment_program.texture_dimensions |= (static_cast<u32>(sampler_descriptors[i]->image_type) << (i << 1));
+				current_fp_texture_state.clear(i);
+				current_fp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
 
 				if (tex.alpha_kill_enabled())
 				{
@@ -1877,7 +1865,7 @@ namespace rsx
 				const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
 				if (raw_format & CELL_GCM_TEXTURE_UN)
-					current_fragment_program.unnormalized_coords |= (1 << i);
+					current_fp_texture_state.unnormalized_coords |= (1 << i);
 
 				if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)
 				{
@@ -1897,7 +1885,7 @@ namespace rsx
 					case CELL_GCM_TEXTURE_D8R8G8B8:
 					{
 						// Emulate bitcast in shader
-						current_fragment_program.redirected_textures |= (1 << i);
+						current_fp_texture_state.redirected_textures |= (1 << i);
 						const auto float_en = (sampler_descriptors[i]->format_class == RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32)? 1 : 0;
 						texture_control |= (float_en << texture_control_bits::DEPTH_FLOAT);
 						break;
@@ -1918,7 +1906,7 @@ namespace rsx
 							compare_mode < rsx::comparison_function::always &&
 							compare_mode > rsx::comparison_function::never)
 						{
-							current_fragment_program.shadow_textures |= (1 << i);
+							current_fp_texture_state.shadow_textures |= (1 << i);
 						}
 						break;
 					}
@@ -1995,9 +1983,12 @@ namespace rsx
 #ifdef __APPLE__
 				texture_control |= (sampler_descriptors[i]->encoded_component_map() << 16);
 #endif
-				current_fragment_program.texture_scale[i][3] = std::bit_cast<f32>(texture_control);
+				current_fragment_program.texture_params[i].control = texture_control;
 			}
 		}
+
+		// Update texture configuration
+		current_fragment_program.texture_state.import(current_fp_texture_state, current_fp_metadata.referenced_textures_mask);
 
 		//Sanity checks
 		if (current_fragment_program.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)

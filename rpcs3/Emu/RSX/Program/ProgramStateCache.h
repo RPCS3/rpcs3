@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Emu/RSX/RSXFragmentProgram.h"
-#include "Emu/RSX/RSXVertexProgram.h"
+#include "RSXFragmentProgram.h"
+#include "RSXVertexProgram.h"
 
 #include "Utilities/mutex.h"
 #include "util/logs.hpp"
