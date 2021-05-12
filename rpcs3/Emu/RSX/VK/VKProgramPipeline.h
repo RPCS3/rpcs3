@@ -2,7 +2,7 @@
 
 #include "VulkanAPI.h"
 #include "VKCommonDecompiler.h"
-#include "../Common/GLSLTypes.h"
+#include "../Program/GLSLTypes.h"
 
 #include <string>
 #include <vector>

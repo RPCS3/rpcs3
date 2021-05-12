@@ -11,10 +11,10 @@
 #include "rsx_cache.h"
 #include "RSXFIFO.h"
 #include "RSXOffload.h"
-#include "RSXVertexProgram.h"
-#include "RSXFragmentProgram.h"
 #include "rsx_utils.h"
 #include "Common/texture_cache_types.h"
+#include "Program/RSXVertexProgram.h"
+#include "Program/RSXFragmentProgram.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/geometry.h"
@@ -739,6 +739,9 @@ namespace rsx
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
 
+		vertex_program_texture_state current_vp_texture_state = {};
+		fragment_program_texture_state current_fp_texture_state = {};
+
 		// Runs shader prefetch and resolves pipeline status flags
 		void analyse_current_rsx_pipeline();
 
@@ -910,11 +913,6 @@ namespace rsx
 		 * Fills current fog values, alpha test parameters and texture scaling parameters
 		 */
 		void fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& fragment_program);
-
-		/**
-		 * Fill buffer with fragment texture parameter constants (texture matrix)
-		 */
-		void fill_fragment_texture_parameters(void* buffer, const RSXFragmentProgram& fragment_program);
 
 		/**
 		 * Notify that a section of memory has been mapped

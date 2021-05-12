@@ -4,8 +4,8 @@
 #include "GLVertexProgram.h"
 #include "GLFragmentProgram.h"
 #include "../rsx_methods.h"
-#include "../Common/ShaderInterpreter.h"
-#include "../Common/GLSLCommon.h"
+#include "../Program/ShaderInterpreter.h"
+#include "../Program/GLSLCommon.h"
 
 namespace gl
 {

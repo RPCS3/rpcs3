@@ -1,6 +1,6 @@
 #pragma once
 #include "ShaderParam.h"
-#include "Emu/RSX/RSXFragmentProgram.h"
+#include "RSXFragmentProgram.h"
 #include <sstream>
 
 // Helper for GPR occupancy tracking

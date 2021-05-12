@@ -24,7 +24,7 @@ namespace program_common
 		static std::string get_vertex_interpreter()
 		{
 			const char* s =
-			#include "Interpreter/VertexInterpreter.glsl"
+			#include "../Common/Interpreter/VertexInterpreter.glsl"
 			;
 			return s;
 		}
@@ -32,7 +32,7 @@ namespace program_common
 		static std::string get_fragment_interpreter()
 		{
 			const char* s =
-			#include "Interpreter/FragmentInterpreter.glsl"
+			#include "../Common/Interpreter/FragmentInterpreter.glsl"
 			;
 			return s;
 		}

@@ -441,7 +441,7 @@ void VKGSRender::bind_texture_env()
 				::glsl::program_domain::glsl_fragment_program,
 				m_current_frame->descriptor_set);
 
-			if (current_fragment_program.redirected_textures & (1 << i))
+			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
 			{
 				// Stencil mirror required
 				auto root_image = static_cast<vk::viewable_image*>(view->image());
@@ -473,7 +473,7 @@ void VKGSRender::bind_texture_env()
 				::glsl::program_domain::glsl_fragment_program,
 				m_current_frame->descriptor_set);
 
-			if (current_fragment_program.redirected_textures & (1 << i))
+			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
 			{
 				m_program->bind_uniform({ vk::null_sampler(), vk::null_image_view(*m_current_command_buffer, view_type)->value, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 					i,

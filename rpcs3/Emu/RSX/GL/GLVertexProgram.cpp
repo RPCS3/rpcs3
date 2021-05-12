@@ -4,7 +4,7 @@
 #include "Emu/System.h"
 
 #include "GLCommonDecompiler.h"
-#include "../Common/GLSLCommon.h"
+#include "../Program/GLSLCommon.h"
 
 #include <algorithm>
 

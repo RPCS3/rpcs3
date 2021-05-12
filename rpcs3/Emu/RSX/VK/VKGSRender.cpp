@@ -17,7 +17,7 @@
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/Memory/vm_locking.h"
 
-#include "../Common/program_state_cache2.hpp"
+#include "../Program/program_state_cache2.hpp"
 
 #include "util/asm.hpp"
 
@@ -1655,7 +1655,7 @@ bool VKGSRender::load_program()
 
 		// Load current program from buffer
 		vertex_program.skip_vertex_input_check = true;
-		fragment_program.unnormalized_coords = 0;
+		fragment_program.texture_state.unnormalized_coords = 0;
 		m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
 			shadermode != shader_mode::recompiler, true, pipeline_layout);
 
@@ -1791,7 +1791,7 @@ void VKGSRender::load_program_env()
 		auto mem = m_fragment_texture_params_ring_info.alloc<256>(256);
 		auto buf = m_fragment_texture_params_ring_info.map(mem, 256);
 
-		fill_fragment_texture_parameters(buf, current_fragment_program);
+		current_fragment_program.texture_params.write_to(buf, current_fp_metadata.referenced_textures_mask);
 		m_fragment_texture_params_ring_info.unmap();
 		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 256 };
 	}
@@ -1841,7 +1841,7 @@ void VKGSRender::load_program_env()
 			// Control mask
 			const auto control_masks = reinterpret_cast<u32*>(fp_buf);
 			control_masks[0] = rsx::method_registers.shader_control();
-			control_masks[1] = current_fragment_program.texture_dimensions;
+			control_masks[1] = current_fragment_program.texture_state.texture_dimensions;
 
 			std::memcpy(fp_buf + 16, current_fragment_program.get_data(), current_fragment_program.ucode_length);
 			m_fragment_instructions_buffer.unmap();
