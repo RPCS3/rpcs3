@@ -438,7 +438,7 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	}
 }
 
-void gl::render_target::initialize_memory(gl::command_context& cmd, bool /*read_access*/)
+void gl::render_target::initialize_memory(gl::command_context& cmd, rsx::surface_access /*access*/)
 {
 	const bool memory_load = is_depth_surface() ?
 		!!g_cfg.video.read_depth_buffer :
@@ -478,7 +478,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 		if (dirty() && (read_access || state_flags & rsx::surface_state_flags::erase_bkgnd))
 		{
 			// Initialize memory contents if we did not find anything usable
-			initialize_memory(cmd, true);
+			initialize_memory(cmd, access);
 			on_write();
 		}
 
@@ -523,7 +523,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 			const auto area = section.dst_rect();
 			if (area.x1 > 0 || area.y1 > 0 || unsigned(area.x2) < width() || unsigned(area.y2) < height())
 			{
-				initialize_memory(cmd, false);
+				initialize_memory(cmd, access);
 			}
 			else
 			{

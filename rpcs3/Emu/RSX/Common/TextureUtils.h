@@ -46,14 +46,18 @@ namespace rsx
 			shader_write = 1,
 			transfer_read = 2,
 			transfer_write = 4,
+
+			// Arbitrary r/w flags, use with caution.
+			memory_write = 8,
+			memory_read = 16
 		};
 
 	private:
 		// Meta
 		enum
 		{
-			all_writes = (shader_write | transfer_write),
-			all_reads = (shader_read | transfer_read),
+			all_writes = (shader_write | transfer_write | memory_write),
+			all_reads = (shader_read | transfer_read | memory_read),
 			all_transfer = (transfer_read | transfer_write)
 		};
 
@@ -78,6 +82,11 @@ namespace rsx
 		inline bool is_transfer() const
 		{
 			return !(value_ & ~all_transfer);
+		}
+
+		inline bool is_transfer_or_read() const // Special; reads and transfers generate MSAA load operations
+		{
+			return !(value_ & ~(all_transfer | all_reads));
 		}
 
 		bool operator == (const surface_access& other) const

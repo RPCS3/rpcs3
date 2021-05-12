@@ -279,7 +279,7 @@ namespace vk
 		state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
 	}
 
-	void render_target::initialize_memory(vk::command_buffer& cmd, bool read_access)
+	void render_target::initialize_memory(vk::command_buffer& cmd, rsx::surface_access access)
 	{
 		const bool is_depth = is_depth_surface();
 		const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
@@ -288,7 +288,7 @@ namespace vk
 		{
 			clear_memory(cmd, this);
 
-			if (read_access && samples() > 1)
+			if (samples() > 1 && access.is_transfer_or_read())
 			{
 				// Only clear the resolve surface if reading from it, otherwise it's a waste
 				clear_memory(cmd, get_resolve_target_safe(cmd));
@@ -369,7 +369,6 @@ namespace vk
 
 	void render_target::memory_barrier(vk::command_buffer& cmd, rsx::surface_access access)
 	{
-		const bool read_access = access.is_read();
 		const bool is_depth = is_depth_surface();
 		const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
 
@@ -385,7 +384,7 @@ namespace vk
 			}
 		}
 
-		if (!read_access && write_barrier_sync_tag != 0)
+		if (access == rsx::surface_access::shader_write && write_barrier_sync_tag != 0)
 		{
 			if (current_layout == VK_IMAGE_LAYOUT_GENERAL)
 			{
@@ -433,7 +432,7 @@ namespace vk
 			if (state_flags & rsx::surface_state_flags::erase_bkgnd)
 			{
 				// NOTE: This step CAN introduce MSAA flags!
-				initialize_memory(cmd, read_access);
+				initialize_memory(cmd, access);
 
 				ensure(state_flags == rsx::surface_state_flags::ready);
 				on_write(rsx::get_shared_tag(), static_cast<rsx::surface_state_flags>(msaa_flags));
@@ -441,7 +440,7 @@ namespace vk
 
 			if (msaa_flags & rsx::surface_state_flags::require_resolve)
 			{
-				if (read_access)
+				if (access.is_transfer_or_read())
 				{
 					// Only do this step when read access is required
 					get_resolve_target_safe(cmd);
@@ -450,7 +449,7 @@ namespace vk
 			}
 			else if (msaa_flags & rsx::surface_state_flags::require_unresolve)
 			{
-				if (!read_access)
+				if (access == rsx::surface_access::shader_write)
 				{
 					// Only do this step when it is needed to start rendering
 					ensure(resolve_surface);
@@ -521,7 +520,7 @@ namespace vk
 			else if (state_flags & rsx::surface_state_flags::erase_bkgnd)
 			{
 				// Might introduce MSAA flags
-				initialize_memory(cmd, false);
+				initialize_memory(cmd, rsx::surface_access::memory_write);
 				ensure(state_flags == rsx::surface_state_flags::ready);
 			}
 
@@ -561,14 +560,14 @@ namespace vk
 			clear_rw_barrier();
 
 			state_flags |= rsx::surface_state_flags::erase_bkgnd;
-			initialize_memory(cmd, read_access);
+			initialize_memory(cmd, access);
 			ensure(state_flags == rsx::surface_state_flags::ready);
 		}
 
 		// NOTE: Optimize flag relates to stencil resolve/unresolve for NVIDIA.
 		on_write_copy(newest_tag, optimize_copy);
 
-		if (!read_access && samples() > 1)
+		if (access == rsx::surface_access::shader_write && samples() > 1)
 		{
 			// Write barrier, must initialize
 			unresolve(cmd);
