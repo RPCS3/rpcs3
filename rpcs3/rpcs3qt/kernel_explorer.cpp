@@ -319,7 +319,7 @@ void kernel_explorer::Update()
 
 			if (mem.pshared)
 			{
-				add_leaf(node, qstr(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Granularity: %s, Mappings: %u Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, mem.key)));
+				add_leaf(node, qstr(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Granularity: %s, Mappings: %u, Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, mem.key)));
 				break;
 			}
 
@@ -541,7 +541,58 @@ void kernel_explorer::Update()
 
 	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
 	{
-		add_leaf(find_node(m_tree, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type())));
+		QTreeWidgetItem* spu_thread_tree = add_solid_node(m_tree, find_node(m_tree, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type())));
+
+		if (spu.get_type() == spu_type::threaded)
+		{
+			reader_lock lock(spu.group->mutex);
+
+			bool has_connected_ports = false;
+			const auto first_spu = spu.group->threads[0].get();
+
+			// Always show information of the first thread in group
+			// Or if information differs from that thread 
+			if (&spu == first_spu || std::any_of(std::begin(spu.spup), std::end(spu.spup), [&](const auto& port)
+			{
+				// Flag to avoid reporting information if no SPU ports are connected
+				has_connected_ports |= lv2_obj::check(port);
+
+				// Check if ports do not match with the first thread
+				return port != first_spu->spup[&port - spu.spup];
+			}))
+			{
+				for (const auto& port : spu.spup)
+				{
+					if (lv2_obj::check(port))
+					{
+						add_leaf(spu_thread_tree, qstr(fmt::format("SPU Port %u: Queue ID: 0x%08x", &port - spu.spup, port->id)));
+					}
+				}
+			}
+			else if (has_connected_ports)
+			{
+				// Avoid duplication of information between threads which is common
+				add_leaf(spu_thread_tree, qstr(fmt::format("SPU Ports: As SPU 0x%07x", first_spu->lv2_id)));
+			}
+			
+			for (const auto& [key, queue] : spu.spuq)
+			{
+				if (lv2_obj::check(queue))
+				{
+					add_leaf(spu_thread_tree, qstr(fmt::format("SPU Queue: Queue ID: 0x%08x, Key: 0x%x", queue->id, key)));
+				}
+			}
+		}
+		else
+		{
+			for (const auto& ctrl : spu.int_ctrl)
+			{
+				if (lv2_obj::check(ctrl.tag))
+				{
+					add_leaf(spu_thread_tree, qstr(fmt::format("Interrupt Tag %u: ID: 0x%x, Mask: 0x%x, Status: 0x%x", &ctrl - spu.int_ctrl.data(), ctrl.tag->id, +ctrl.mask, +ctrl.stat)));
+				}
+			}
+		}
 	});
 
 	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
