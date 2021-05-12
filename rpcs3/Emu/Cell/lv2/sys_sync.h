@@ -282,7 +282,7 @@ public:
 				return finalize_construct();
 			}
 
-			return std::move(result);
+			return result;
 		}))
 		{
 			return error;
