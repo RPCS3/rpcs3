@@ -701,11 +701,16 @@ namespace rsx
 		RsxDisplayInfo display_buffers[8];
 		u32 display_buffers_count{0};
 		u32 current_display_buffer{0};
-		u32 device_addr;
-		u32 label_addr;
 
+		shared_mutex sys_rsx_mtx;
+		u32 device_addr{0};
+		u32 label_addr{0};
 		u32 main_mem_size{0};
 		u32 local_mem_size{0};
+		u32 rsx_event_port{0};
+		u32 driver_info{0};
+
+		void send_event(u64, u64, u64) const;
 
 		bool m_rtts_dirty = true;
 		std::array<bool, 16> m_textures_dirty;

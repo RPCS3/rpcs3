@@ -35,7 +35,7 @@ u64 rsxTimeStamp()
 	return get_timebased_time();
 }
 
-void lv2_rsx_config::send_event(u64 data1, u64 event_flags, u64 data3) const
+void rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3) const
 {
 	// Filter event bits, send them only if they are masked by gcm
 	// Except the upper 32-bits, they are reserved for unmapped io events and execute unconditionally
@@ -76,7 +76,7 @@ void lv2_rsx_config::send_event(u64 data1, u64 event_flags, u64 data3) const
 
 	if (error && error + 0u != CELL_ENOTCONN)
 	{
-		fmt::throw_exception("lv2_rsx_config::send_event() Failed to send event! (error=%x)", +error);
+		fmt::throw_exception("rsx::thread::send_event() Failed to send event! (error=%x)", +error);
 	}
 }
 
@@ -116,7 +116,7 @@ error_code sys_rsx_memory_allocate(cpu_thread& cpu, vm::ptr<u32> mem_handle, vm:
 
 	if (u32 addr = vm::falloc(rsx::constants::local_mem_base, size, vm::video))
 	{
-		g_fxo->get<lv2_rsx_config>().memory_size = size;
+		rsx::get_current_renderer()->local_mem_size = size;
 		*mem_addr = addr;
 		*mem_handle = 0x5a5a5a5b;
 		return CELL_OK;
@@ -140,7 +140,7 @@ error_code sys_rsx_memory_free(cpu_thread& cpu, u32 mem_handle)
 		return CELL_ENOMEM;
 	}
 
-	if (g_fxo->get<lv2_rsx_config>().context_base)
+	if (rsx::get_current_renderer()->dma_address)
 	{
 		fmt::throw_exception("Attempting to dealloc rsx memory when the context is still being used");
 	}
@@ -174,27 +174,27 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 		return CELL_EINVAL;
 	}
 
-	auto& rsx_cfg = g_fxo->get<lv2_rsx_config>();
+	const auto render = rsx::get_current_renderer();
 
-	std::lock_guard lock(rsx_cfg.mutex);
+	std::lock_guard lock(render->sys_rsx_mtx);
 
-	if (rsx_cfg.context_base)
+	if (render->dma_address)
 	{
 		// We currently do not support multiple contexts
 		fmt::throw_exception("sys_rsx_context_allocate was called twice");
 	}
 
 	const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
-	const u32 context_base = area ? area->alloc(0x300000) : 0;
+	const u32 dma_address = area ? area->alloc(0x300000) : 0;
 
-	if (!context_base)
+	if (!dma_address)
 	{
 		return CELL_ENOMEM;
 	}
 
-	*lpar_dma_control = context_base;
-	*lpar_driver_info = context_base + 0x100000;
-	*lpar_reports = context_base + 0x200000;
+	*lpar_dma_control = dma_address;
+	*lpar_driver_info = dma_address + 0x100000;
+	*lpar_reports = dma_address + 0x200000;
 
 	auto &reports = vm::_ref<RsxReports>(vm::cast(*lpar_reports));
 	std::memset(&reports, 0, sizeof(RsxReports));
@@ -223,7 +223,6 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 
 	driverInfo.version_driver = 0x211;
 	driverInfo.version_gpu = 0x5c;
-	driverInfo.memory_size = rsx_cfg.memory_size;
 	driverInfo.nvcore_frequency = 500000000; // 0x1DCD6500
 	driverInfo.memory_frequency = 650000000; // 0x26BE3680
 	driverInfo.reportsNotifyOffset = 0x1000;
@@ -232,7 +231,7 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	driverInfo.systemModeFlags = static_cast<u32>(system_mode);
 	driverInfo.hardware_channel = 1; // * i think* this 1 for games, 0 for vsh
 
-	rsx_cfg.driver_info = vm::cast(*lpar_driver_info);
+	render->driver_info = vm::cast(*lpar_driver_info);
 
 	auto &dmaControl = vm::_ref<RsxDmaControl>(vm::cast(*lpar_dma_control));
 	dmaControl.get = 0;
@@ -251,21 +250,15 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	attr->name_u64 = 0;
 
 	sys_event_port_create(cpu, vm::get_addr(&driverInfo.handler_queue), SYS_EVENT_PORT_LOCAL, 0);
-	rsx_cfg.rsx_event_port = driverInfo.handler_queue;
+	render->rsx_event_port = driverInfo.handler_queue;
 	sys_event_queue_create(cpu, vm::get_addr(&driverInfo.handler_queue), attr, 0, 0x20);
-	sys_event_port_connect_local(cpu, rsx_cfg.rsx_event_port, driverInfo.handler_queue);
+	sys_event_port_connect_local(cpu, render->rsx_event_port, driverInfo.handler_queue);
 
-	rsx_cfg.dma_address = vm::cast(*lpar_dma_control);
-
-	const auto render = rsx::get_current_renderer();
 	render->display_buffers_count = 0;
 	render->current_display_buffer = 0;
 	render->label_addr = vm::cast(*lpar_reports);
-	render->device_addr = rsx_cfg.device_addr;
-	render->local_mem_size = rsx_cfg.memory_size;
-	render->init(vm::cast(*lpar_dma_control));
+	render->init(dma_address);
 
-	rsx_cfg.context_base = context_base;
 	*context_id = 0x55555555;
 
 	return CELL_OK;
@@ -281,11 +274,11 @@ error_code sys_rsx_context_free(cpu_thread& cpu, u32 context_id)
 
 	sys_rsx.todo("sys_rsx_context_free(context_id=0x%x)", context_id);
 
-	auto& rsx_cfg = g_fxo->get<lv2_rsx_config>();
+	const auto render = rsx::get_current_renderer();
 
-	std::scoped_lock lock(rsx_cfg.mutex);
+	std::scoped_lock lock(render->sys_rsx_mtx);
 
-	if (context_id != 0x55555555 || !rsx_cfg.context_base)
+	if (context_id != 0x55555555 || !render->dma_address)
 	{
 		return CELL_EINVAL;
 	}
@@ -336,7 +329,7 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u32 io, u32 ea
 	io >>= 20, ea >>= 20, size >>= 20;
 
 	render->pause();
-	std::scoped_lock lock(g_fxo->get<lv2_rsx_config>().mutex);
+	std::scoped_lock lock(render->sys_rsx_mtx);
 
 	for (u32 i = 0; i < size; i++)
 	{
@@ -380,7 +373,7 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u32 io, u32 
 
 	vm::reader_lock rlock;
 
-	std::scoped_lock lock(g_fxo->get<lv2_rsx_config>().mutex);
+	std::scoped_lock lock(render->sys_rsx_mtx);
 
 	for (const u32 end = (io >>= 20) + (size >>= 20); io < end;)
 	{
@@ -420,15 +413,13 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	const auto render = rsx::get_current_renderer();
 
-	auto& rsx_cfg = g_fxo->get<lv2_rsx_config>();
-
-	if (!rsx_cfg.context_base || context_id != 0x55555555)
+	if (!render->dma_address || context_id != 0x55555555)
 	{
 		sys_rsx.error("sys_rsx_context_attribute(): invalid context failure (context_id=0x%x)", context_id);
 		return CELL_OK; // Actually returns CELL_OK, cellGCmSys seem to be relying on this as well
 	}
 
-	auto &driverInfo = vm::_ref<RsxDriverInfo>(rsx_cfg.driver_info);
+	auto &driverInfo = vm::_ref<RsxDriverInfo>(render->driver_info);
 	switch (package_id)
 	{
 	case 0x001: // FIFO
@@ -436,7 +427,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		render->pause();
 		const u64 get = static_cast<u32>(a3);
 		const u64 put = static_cast<u32>(a4);
-		vm::_ref<atomic_be_t<u64>>(rsx_cfg.dma_address + ::offset32(&RsxDmaControl::put)).release(put << 32 | get);
+		vm::_ref<atomic_be_t<u64>>(render->dma_address + ::offset32(&RsxDmaControl::put)).release(put << 32 | get);
 		render->sync_point_request.release(true);
 		render->unpause();
 		break;
@@ -503,7 +494,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		driverInfo.head[a3].lastQueuedBufferId = static_cast<u32>(a4);
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
 
-		rsx_cfg.send_event(0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0);
+		render->send_event(0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0);
 
 		render->on_frame_end(static_cast<u32>(a4));
 	}
@@ -517,7 +508,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			return SYS_RSX_CONTEXT_ATTRIBUTE_ERROR;
 		}
 
-		std::lock_guard lock(rsx_cfg.mutex);
+		std::lock_guard lock(render->sys_rsx_mtx);
 
 		// Note: no error checking is being done
 
@@ -621,7 +612,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			ensure(a5 & (1 << 30));
 		}
 
-		std::lock_guard lock(rsx_cfg.mutex);
+		std::lock_guard lock(render->sys_rsx_mtx);
 
 		// When tile is going to be unbound, we can use it as a hint that the address will no longer be used as a surface and can be removed/invalidated
 		// Todo: There may be more checks such as format/size/width can could be done
@@ -695,7 +686,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			ensure((a6 & 0xFFFFFFFF) == 0u + ((0x2000 << 0) | (0x20 << 16)));
 		}
 
-		std::lock_guard lock(rsx_cfg.mutex);
+		std::lock_guard lock(render->sys_rsx_mtx);
 
 		auto &zcull = render->zculls[a3];
 
@@ -739,7 +730,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		// seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
 		vm::_ref<u32>(render->label_addr + 0x10) = 0;
 
-		rsx_cfg.send_event(0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
+		render->send_event(0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
 		break;
 
 	case 0xFED: // hack: vblank command
@@ -765,7 +756,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		if (render->enable_second_vhandler)
 			event_flags |= SYS_RSX_EVENT_SECOND_VBLANK_BASE << a3; // second vhandler
 
-		rsx_cfg.send_event(0, event_flags, 0);
+		render->send_event(0, event_flags, 0);
 		break;
 	}
 
@@ -774,7 +765,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		// as i think we need custom lv1 interrupts to handle this accurately
 		// this also should probly be set by rsxthread
 		driverInfo.userCmdParam = static_cast<u32>(a4);
-		rsx_cfg.send_event(0, SYS_RSX_EVENT_USER_CMD, 0);
+		render->send_event(0, SYS_RSX_EVENT_USER_CMD, 0);
 		break;
 
 	default:
@@ -801,12 +792,11 @@ error_code sys_rsx_device_map(cpu_thread& cpu, vm::ptr<u64> dev_addr, vm::ptr<u6
 		fmt::throw_exception("sys_rsx_device_map: Invalid dev_id %d", dev_id);
 	}
 
-	auto& rsx_cfg = g_fxo->get<lv2_rsx_config>();
+	const auto render = rsx::get_current_renderer();
 
-	static shared_mutex device_map_mtx;
-	std::scoped_lock lock(device_map_mtx);
+	std::scoped_lock lock(render->sys_rsx_mtx);
 
-	if (!rsx_cfg.device_addr)
+	if (!render->device_addr)
 	{
 		const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
 		const u32 addr = area ? area->alloc(0x100000) : 0;
@@ -817,11 +807,11 @@ error_code sys_rsx_device_map(cpu_thread& cpu, vm::ptr<u64> dev_addr, vm::ptr<u6
 		}
 
 		*dev_addr = addr;
-		rsx_cfg.device_addr = addr;
+		render->device_addr = addr;
 		return CELL_OK;
 	}
 
-	*dev_addr = rsx_cfg.device_addr;
+	*dev_addr = render->device_addr;
 	return CELL_OK;
 }
 
