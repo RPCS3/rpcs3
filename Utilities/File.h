@@ -220,6 +220,7 @@ namespace fs
 		template <typename... Args>
 		bool open(Args&&... args)
 		{
+			m_file.reset();
 			*this = fs::file(std::forward<Args>(args)...);
 			return m_file.operator bool();
 		}
