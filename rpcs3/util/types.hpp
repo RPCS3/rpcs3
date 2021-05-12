@@ -670,6 +670,80 @@ constexpr unsigned __builtin_COLUMN()
 }
 #endif
 
+template <usz Size = usz(-1)>
+struct const_str_t
+{
+	static constexpr usz size = Size;
+
+	char8_t chars[Size + 1]{};
+
+	constexpr const_str_t(const char(&a)[Size + 1])
+	{
+		for (usz i = 0; i <= Size; i++)
+			chars[i] = a[i];
+	}
+
+	constexpr const_str_t(const char8_t(&a)[Size + 1])
+	{
+		for (usz i = 0; i <= Size; i++)
+			chars[i] = a[i];
+	}
+
+	operator const char*() const
+	{
+		return reinterpret_cast<const char*>(chars);
+	}
+
+	constexpr operator const char8_t*() const
+	{
+		return chars;
+	}
+};
+
+template <>
+struct const_str_t<usz(-1)>
+{
+	const usz size;
+
+	const union
+	{
+		const char8_t* chars;
+		const char* chars2;
+	};
+
+	template <usz N>
+	constexpr const_str_t(const char8_t(&a)[N])
+		: size(N - 1)
+		, chars(+a)
+	{
+	}
+
+	template <usz N>
+	constexpr const_str_t(const char(&a)[N])
+		: size(N - 1)
+		, chars2(+a)
+	{
+	}
+
+	operator const char*() const
+	{
+		return std::launder(chars2);
+	}
+
+	constexpr operator const char8_t*() const
+	{
+		return chars;
+	}
+};
+
+template <usz Size>
+const_str_t(const char(&a)[Size]) -> const_str_t<Size - 1>;
+
+template <usz Size>
+const_str_t(const char8_t(&a)[Size]) -> const_str_t<Size - 1>;
+
+using const_str = const_str_t<>;
+
 struct src_loc
 {
 	u32 line;

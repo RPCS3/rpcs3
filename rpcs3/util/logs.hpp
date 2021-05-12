@@ -84,19 +84,19 @@ namespace logs
 
 #define GEN_LOG_METHOD(_sev)\
 		const message msg_##_sev{this, level::_sev};\
-		template <typename CharT, usz N, typename... Args>\
-		void _sev(const CharT(&fmt)[N], const Args&... args)\
+		template <typename... Args>\
+		void _sev(const const_str& fmt, const Args&... args)\
 		{\
 			if (level::_sev <= enabled.observe()) [[unlikely]]\
 			{\
 				if constexpr (sizeof...(Args) > 0)\
 				{\
 					static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
-					msg_##_sev.broadcast(reinterpret_cast<const char*>(fmt), type_list, u64{fmt_unveil<Args>::get(args)}...);\
+					msg_##_sev.broadcast(fmt, type_list, u64{fmt_unveil<Args>::get(args)}...);\
 				}\
 				else\
 				{\
-					msg_##_sev.broadcast(reinterpret_cast<const char*>(fmt), nullptr);\
+					msg_##_sev.broadcast(fmt, nullptr);\
 				}\
 			}\
 		}\
