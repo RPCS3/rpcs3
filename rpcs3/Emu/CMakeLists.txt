@@ -394,8 +394,6 @@ target_sources(rpcs3_emu PRIVATE
 
 # RSX
 target_sources(rpcs3_emu PRIVATE
-    RSX/CgBinaryFragmentProgram.cpp
-    RSX/CgBinaryVertexProgram.cpp
     RSX/gcm_enums.cpp
     RSX/gcm_printing.cpp
     RSX/GSRender.cpp
@@ -407,13 +405,9 @@ target_sources(rpcs3_emu PRIVATE
     RSX/rsx_utils.cpp
     RSX/RSXDisAsm.cpp
     RSX/Common/BufferUtils.cpp
-    RSX/Common/FragmentProgramDecompiler.cpp
-    RSX/Common/GLSLCommon.cpp
-    RSX/Common/ProgramStateCache.cpp
     RSX/Common/surface_store.cpp
     RSX/Common/TextureUtils.cpp
     RSX/Common/texture_cache.cpp
-    RSX/Common/VertexProgramDecompiler.cpp
     RSX/Null/NullGSRender.cpp
     RSX/Overlays/overlay_animation.cpp
     RSX/Overlays/overlay_edit_text.cpp
@@ -432,6 +426,13 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_trophy_notification.cpp
     RSX/Overlays/Shaders/shader_loading_dialog.cpp
     RSX/Overlays/Shaders/shader_loading_dialog_native.cpp
+    RSX/Program/CgBinaryFragmentProgram.cpp
+    RSX/Program/CgBinaryVertexProgram.cpp
+    RSX/Program/FragmentProgramDecompiler.cpp
+    RSX/Program/GLSLCommon.cpp
+    RSX/Program/program_util.cpp
+    RSX/Program/ProgramStateCache.cpp
+    RSX/Program/VertexProgramDecompiler.cpp
     RSX/Capture/rsx_capture.cpp
     RSX/Capture/rsx_replay.cpp
     RSX/GL/GLCommonDecompiler.cpp
