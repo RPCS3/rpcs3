@@ -56,7 +56,8 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "icelake" ||
 		cpu == "icelake-client" ||
 		cpu == "icelake-server" ||
-		cpu == "tigerlake")
+		cpu == "tigerlake" ||
+		cpu == "rocketlake")
 	{
 		m_use_fma = true;
 		m_use_avx512 = true;
@@ -66,7 +67,8 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 	if (cpu == "icelake" ||
 		cpu == "icelake-client" ||
 		cpu == "icelake-server" ||
-		cpu == "tigerlake")
+		cpu == "tigerlake" ||
+		cpu == "rocketlake")
 	{
 		m_use_avx512_icl = true;
 	}
