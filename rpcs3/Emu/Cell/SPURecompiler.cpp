@@ -6255,19 +6255,19 @@ public:
 	}
 
 	template <typename TA, typename TB>
-	static auto mpyh(TA&& a, TB&& b)
+	auto mpyh(TA&& a, TB&& b)
 	{
-		return (std::forward<TA>(a) >> 16) * (std::forward<TB>(b) << 16);
+		return bitcast<u32[4]>(bitcast<u16[8]>((std::forward<TA>(a) >> 16)) * bitcast<u16[8]>(std::forward<TB>(b))) << 16;
 	}
 
 	template <typename TA, typename TB>
-	static auto mpyu(TA&& a, TB&& b)
+	auto mpyu(TA&& a, TB&& b)
 	{
 		return (std::forward<TA>(a) << 16 >> 16) * (std::forward<TB>(b) << 16 >> 16);
 	}
 
 	template <typename TA, typename TB>
-	static auto fm(TA&& a, TB&& b)
+	auto fm(TA&& a, TB&& b)
 	{
 		return (std::forward<TA>(a)) * (std::forward<TB>(b));
 	}
