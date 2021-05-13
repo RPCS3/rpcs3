@@ -347,7 +347,7 @@ namespace utils
 		}
 
 		ensure(f.trunc(m_size));
-		m_handle = ensure(::CreateFileMappingW(f.get_handle(), nullptr, PAGE_WRITECOPY, 0, 0, nullptr));
+		m_handle = ensure(::CreateFileMappingW(f.get_handle(), nullptr, PAGE_READWRITE, 0, 0, nullptr));
 #else
 		if (!storage.empty())
 		{
