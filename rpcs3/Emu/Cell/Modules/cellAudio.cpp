@@ -505,7 +505,7 @@ void cell_audio_thread::advance(u64 timestamp, bool reset)
 			continue;
 		}
 
-		if ((queues[queue_count] = key_inf.port.lock()))
+		if ((queues[queue_count] = key_inf.port))
 		{
 			u32 periods = 1;
 
@@ -1570,14 +1570,12 @@ error_code AudioSetNotifyEventQueue(u64 key, u32 iFlags)
 
 	for (auto i = g_audio.keys.cbegin(); i != g_audio.keys.cend();) // check for duplicates
 	{
-		auto port = i->port.lock();
-
-		if (port == q)
+		if (i->port == q)
 		{
 			return CELL_AUDIO_ERROR_TRANS_EVENT;
 		}
 
-		if (!lv2_event_queue::check(port))
+		if (!lv2_event_queue::check(i->port))
 		{
 			// Cleanup, avoid cases where there are multiple ports with the same key
 			i = g_audio.keys.erase(i);
@@ -1627,7 +1625,7 @@ error_code AudioRemoveNotifyEventQueue(u64 key, u32 iFlags)
 
 	for (auto i = g_audio.keys.cbegin(); i != g_audio.keys.cend(); i++)
 	{
-		if ([&](auto port){ return lv2_event_queue::check(port) && port->key == key; }(i->port.lock()))
+		if (lv2_event_queue::check(i->port) && i->port->key == key)
 		{
 			if (i->flags != iFlags)
 			{
