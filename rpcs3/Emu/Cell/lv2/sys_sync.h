@@ -88,6 +88,12 @@ public:
 	// Existence validation (workaround for shared-ptr ref-counting)
 	atomic_t<u32> exists = 0;
 
+	template <typename Ptr>
+	static bool check(Ptr&& ptr)
+	{
+		return ptr && ptr->exists;
+	}
+
 	static std::string name64(u64 name_u64)
 	{
 		const auto ptr = reinterpret_cast<const char*>(&name_u64);

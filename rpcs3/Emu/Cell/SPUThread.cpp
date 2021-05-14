@@ -1160,9 +1160,9 @@ void spu_int_ctrl_t::set(u64 ints)
 	{
 		std::shared_lock rlock(id_manager::g_mutex);
 
-		if (tag && tag->exists)
+		if (lv2_obj::check(tag))
 		{
-			if (auto handler = tag->handler; handler && handler->exists)
+			if (auto handler = tag->handler; lv2_obj::check(handler))
 			{
 				rlock.unlock();
 				handler->exec();
@@ -4379,7 +4379,7 @@ bool spu_thread::stop_and_signal(u32 code)
 			{
 				if (spuq == v.first)
 				{
-					if (lv2_event_queue::check(v.second))
+					if (lv2_obj::check(v.second))
 					{
 						queue = v.second.get();
 						break;
@@ -4499,7 +4499,7 @@ bool spu_thread::stop_and_signal(u32 code)
 		{
 			if (spuq == v.first)
 			{
-				if (lv2_event_queue::check(v.second))
+				if (lv2_obj::check(v.second))
 				{
 					queue = v.second.get();
 					break;

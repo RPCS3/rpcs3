@@ -352,7 +352,7 @@ void kernel_explorer::Update()
 			auto& tag = static_cast<lv2_int_tag&>(obj);
 			const auto handler = tag.handler.get();
 
-			if (handler && handler->exists)
+			if (lv2_obj::check(handler))
 			{
 				add_leaf(node, qstr(fmt::format("Intr Tag 0x%08x, Handler: 0x%08x", id, handler->id)));
 				break;
@@ -379,7 +379,7 @@ void kernel_explorer::Update()
 			auto& ep = static_cast<lv2_event_port&>(obj);
 			const auto type = ep.type == SYS_EVENT_PORT_LOCAL ? "LOCAL"sv : "IPC"sv;
 
-			if (const auto queue = ep.queue.get(); queue && queue->exists)
+			if (const auto queue = ep.queue.get(); lv2_obj::check(queue))
 			{
 				if (queue == idm::check_unlocked<lv2_obj, lv2_event_queue>(queue->id))
 				{

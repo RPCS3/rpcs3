@@ -1432,7 +1432,7 @@ error_code sys_spu_thread_group_connect_event(ppu_thread& ppu, u32 id, u32 eq, u
 
 	std::lock_guard lock(group->mutex);
 
-	if (lv2_event_queue::check(*ep))
+	if (lv2_obj::check(*ep))
 	{
 		return CELL_EBUSY;
 	}
@@ -1474,7 +1474,7 @@ error_code sys_spu_thread_group_disconnect_event(ppu_thread& ppu, u32 id, u32 et
 
 	std::lock_guard lock(group->mutex);
 
-	if (!lv2_event_queue::check(*ep))
+	if (!lv2_obj::check(*ep))
 	{
 		return CELL_EINVAL;
 	}
@@ -1507,7 +1507,7 @@ error_code sys_spu_thread_connect_event(ppu_thread& ppu, u32 id, u32 eq, u32 et,
 
 	auto& port = thread->spup[spup];
 
-	if (lv2_event_queue::check(port))
+	if (lv2_obj::check(port))
 	{
 		return CELL_EISCONN;
 	}
@@ -1540,7 +1540,7 @@ error_code sys_spu_thread_disconnect_event(ppu_thread& ppu, u32 id, u32 et, u8 s
 
 	auto& port = thread->spup[spup];
 
-	if (!lv2_event_queue::check(port))
+	if (!lv2_obj::check(port))
 	{
 		return CELL_ENOTCONN;
 	}
@@ -1683,7 +1683,7 @@ error_code sys_spu_thread_group_connect_event_all_threads(ppu_thread& ppu, u32 i
 		{
 			if (t)
 			{
-				if (lv2_event_queue::check(t->spup[port]))
+				if (lv2_obj::check(t->spup[port]))
 				{
 					found = false;
 					break;
@@ -1938,9 +1938,9 @@ error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 	// Clear interrupt handlers
 	for (auto& intr : thread->int_ctrl)
 	{
-		if (auto& tag = intr.tag; tag && tag->exists)
+		if (auto& tag = intr.tag; lv2_obj::check(tag))
 		{
-			if (auto& handler = tag->handler; handler && handler->exists)
+			if (auto& handler = tag->handler; lv2_obj::check(handler))
 			{
 				// SLEEP
 				lv2_obj::sleep(ppu);
@@ -2023,7 +2023,7 @@ error_code raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 /*hwthread*/, 
 
 		auto& int_ctrl = thread->int_ctrl[class_id];
 
-		if (int_ctrl.tag && int_ctrl.tag->exists)
+		if (lv2_obj::check(int_ctrl.tag))
 		{
 			error = CELL_EAGAIN;
 			return result;
