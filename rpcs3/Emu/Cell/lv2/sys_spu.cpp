@@ -1428,7 +1428,7 @@ error_code sys_spu_thread_group_connect_event(ppu_thread& ppu, u32 id, u32 eq, u
 		return CELL_EINVAL;
 	}
 
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(eq);
+	auto queue = idm::get<lv2_obj, lv2_event_queue>(eq);
 
 	std::lock_guard lock(group->mutex);
 
@@ -1443,7 +1443,7 @@ error_code sys_spu_thread_group_connect_event(ppu_thread& ppu, u32 id, u32 eq, u
 		return CELL_ESRCH;
 	}
 
-	*ep = queue;
+	*ep = std::move(queue);
 	return CELL_OK;
 }
 
