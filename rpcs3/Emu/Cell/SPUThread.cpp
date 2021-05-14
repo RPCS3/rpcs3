@@ -3969,7 +3969,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				std::lock_guard lock(group->mutex);
 
-				const auto queue = this->spup[spup].lock();
+				const auto queue = this->spup[spup].get();
 
 				const auto res = ch_in_mbox.get_count() ? CELL_EBUSY :
 					!queue ? CELL_ENOTCONN :
@@ -4001,7 +4001,7 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 
 				spu_log.trace("sys_spu_thread_throw_event(spup=%d, data0=0x%x, data1=0x%x)", spup, value & 0x00ffffff, data);
 
-				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup].lock());
+				const auto queue = (std::lock_guard{group->mutex}, this->spup[spup]);
 
 				// TODO: check passing spup value
 				if (auto res = queue ? queue->send(SYS_SPU_THREAD_EVENT_USER_KEY, lv2_id, (u64{spup} << 32) | (value & 0x00ffffff), data) : CELL_ENOTCONN)
@@ -4339,16 +4339,12 @@ bool spu_thread::stop_and_signal(u32 code)
 			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
 		}
 
-		std::shared_ptr<lv2_event_queue> queue;
-
 		state += cpu_flag::wait;
 
 		spu_function_logger logger(*this, "sys_spu_thread_receive_event");
 
 		while (true)
 		{
-			queue.reset();
-
 			// Check group status, wait if necessary
 			for (auto _state = +group->run_state;
 				_state >= SPU_THREAD_GROUP_STATUS_WAITING && _state <= SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED;
@@ -4364,8 +4360,6 @@ bool spu_thread::stop_and_signal(u32 code)
 				thread_ctrl::wait_on(state, old);;
 			}
 
-			reader_lock rlock(id_manager::g_mutex);
-
 			std::lock_guard lock(group->mutex);
 
 			if (is_stopped())
@@ -4379,20 +4373,21 @@ bool spu_thread::stop_and_signal(u32 code)
 				continue;
 			}
 
+			lv2_event_queue* queue = nullptr;
+
 			for (auto& v : this->spuq)
 			{
 				if (spuq == v.first)
 				{
-					queue = v.second.lock();
-
-					if (lv2_event_queue::check(queue))
+					if (lv2_event_queue::check(v.second))
 					{
+						queue = v.second.get();
 						break;
 					}
 				}
 			}
 
-			if (!lv2_event_queue::check(queue))
+			if (!queue)
 			{
 				return ch_in_mbox.set_values(1, CELL_EINVAL), true;
 			}
@@ -4447,7 +4442,7 @@ bool spu_thread::stop_and_signal(u32 code)
 				break;
 			}
 
-			thread_ctrl::wait_on(state, old);;
+			thread_ctrl::wait_on(state, old);
 		}
 
 		std::lock_guard lock(group->mutex);
@@ -4498,20 +4493,21 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		std::lock_guard lock(group->mutex);
 
-		std::shared_ptr<lv2_event_queue> queue;
+		lv2_event_queue* queue = nullptr;
 
 		for (auto& v : this->spuq)
 		{
 			if (spuq == v.first)
 			{
-				if (queue = v.second.lock(); lv2_event_queue::check(queue))
+				if (lv2_event_queue::check(v.second))
 				{
+					queue = v.second.get();
 					break;
 				}
 			}
 		}
 
-		if (!lv2_event_queue::check(queue))
+		if (!queue)
 		{
 			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
 		}
