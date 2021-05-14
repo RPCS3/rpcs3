@@ -73,8 +73,8 @@ struct cpu_prof
 
 	struct sample_info
 	{
-		// Weak pointer to the thread
-		std::weak_ptr<cpu_thread> wptr;
+		// Pointer to the thread
+		std::shared_ptr<cpu_thread> ptr;
 
 		// Block occurences: name -> sample_count
 		std::unordered_map<u64, u64, value_hash<u64>> freq;
@@ -83,7 +83,7 @@ struct cpu_prof
 		u64 samples = 0, idle = 0;
 
 		sample_info(const std::shared_ptr<cpu_thread>& ptr)
-			: wptr(ptr)
+			: ptr(ptr)
 		{
 		}
 
@@ -168,7 +168,7 @@ struct cpu_prof
 					continue;
 				}
 
-				if (ptr)
+				if (ptr && cpu_flag::exit - ptr->state)
 				{
 					auto [found, add] = threads.try_emplace(id, ptr);
 
@@ -177,7 +177,7 @@ struct cpu_prof
 						// Overwritten: print previous data
 						found->second.print(id);
 						found->second.reset();
-						found->second.wptr = ptr;
+						found->second.ptr = std::move(ptr);
 					}
 				}
 			}
@@ -192,15 +192,15 @@ struct cpu_prof
 			// Sample active threads
 			for (auto& [id, info] : threads)
 			{
-				if (auto ptr = info.wptr.lock())
+				if (cpu_flag::exit - info.ptr->state)
 				{
 					// Get short function hash
-					const u64 name = atomic_storage<u64>::load(ptr->block_hash);
+					const u64 name = atomic_storage<u64>::load(info.ptr->block_hash);
 
 					// Append occurrence
 					info.samples++;
 
-					if (!(ptr->state.load() & (cpu_flag::wait + cpu_flag::stop + cpu_flag::dbg_global_pause)))
+					if (!(info.ptr->state & (cpu_flag::wait + cpu_flag::stop + cpu_flag::dbg_global_pause)))
 					{
 						info.freq[name]++;
 
@@ -218,7 +218,7 @@ struct cpu_prof
 			// Cleanup and print results for deleted threads
 			for (auto it = threads.begin(), end = threads.end(); it != end;)
 			{
-				if (it->second.wptr.expired())
+				if (cpu_flag::exit - it->second.ptr->state)
 					it->second.print(it->first), it = threads.erase(it);
 				else
 					it++;
