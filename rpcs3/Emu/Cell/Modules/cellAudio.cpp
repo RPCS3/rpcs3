@@ -1575,7 +1575,7 @@ error_code AudioSetNotifyEventQueue(u64 key, u32 iFlags)
 			return CELL_AUDIO_ERROR_TRANS_EVENT;
 		}
 
-		if (!lv2_event_queue::check(i->port))
+		if (!lv2_obj::check(i->port))
 		{
 			// Cleanup, avoid cases where there are multiple ports with the same key
 			i = g_audio.keys.erase(i);
@@ -1625,7 +1625,7 @@ error_code AudioRemoveNotifyEventQueue(u64 key, u32 iFlags)
 
 	for (auto i = g_audio.keys.cbegin(); i != g_audio.keys.cend(); i++)
 	{
-		if (lv2_event_queue::check(i->port) && i->port->key == key)
+		if (lv2_obj::check(i->port) && i->port->key == key)
 		{
 			if (i->flags != iFlags)
 			{

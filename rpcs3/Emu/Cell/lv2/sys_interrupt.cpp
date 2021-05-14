@@ -63,7 +63,7 @@ error_code sys_interrupt_tag_destroy(ppu_thread& ppu, u32 intrtag)
 
 	const auto tag = idm::withdraw<lv2_obj, lv2_int_tag>(intrtag, [](lv2_int_tag& tag) -> CellError
 	{
-		if (tag.handler && tag.handler->exists)
+		if (lv2_obj::check(tag.handler))
 		{
 			return CELL_EBUSY;
 		}
@@ -123,7 +123,7 @@ error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32
 		}
 
 		// It's unclear if multiple handlers can be established on single interrupt tag
-		if (tag->handler && tag->handler->exists)
+		if (lv2_obj::check(tag->handler))
 		{
 			error = CELL_ESTAT;
 			return result;

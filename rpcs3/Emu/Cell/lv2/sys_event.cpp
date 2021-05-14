@@ -32,18 +32,6 @@ std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 	return g_fxo->get<ipc_manager<lv2_event_queue, u64>>().get(ipc_key);
 }
 
-bool lv2_event_queue::check(const std::weak_ptr<lv2_event_queue>& wkptr)
-{
-	const auto queue = wkptr.lock();
-
-	return queue && queue->exists;
-}
-
-bool lv2_event_queue::check(const std::shared_ptr<lv2_event_queue>& sptr)
-{
-	return sptr && sptr->exists;
-}
-
 CellError lv2_event_queue::send(lv2_event event)
 {
 	std::lock_guard lock(mutex);
@@ -372,7 +360,7 @@ error_code sys_event_port_destroy(ppu_thread& ppu, u32 eport_id)
 
 	const auto port = idm::withdraw<lv2_obj, lv2_event_port>(eport_id, [](lv2_event_port& port) -> CellError
 	{
-		if (lv2_event_queue::check(port.queue))
+		if (lv2_obj::check(port.queue))
 		{
 			return CELL_EISCONN;
 		}
@@ -413,7 +401,7 @@ error_code sys_event_port_connect_local(cpu_thread& cpu, u32 eport_id, u32 equeu
 		return CELL_EINVAL;
 	}
 
-	if (lv2_event_queue::check(port->queue))
+	if (lv2_obj::check(port->queue))
 	{
 		return CELL_EISCONN;
 	}
@@ -450,7 +438,7 @@ error_code sys_event_port_connect_ipc(ppu_thread& ppu, u32 eport_id, u64 ipc_key
 		return CELL_EINVAL;
 	}
 
-	if (lv2_event_queue::check(port->queue))
+	if (lv2_obj::check(port->queue))
 	{
 		return CELL_EISCONN;
 	}
@@ -475,7 +463,7 @@ error_code sys_event_port_disconnect(ppu_thread& ppu, u32 eport_id)
 		return CELL_ESRCH;
 	}
 
-	if (!lv2_event_queue::check(port->queue))
+	if (!lv2_obj::check(port->queue))
 	{
 		return CELL_ENOTCONN;
 	}
@@ -498,7 +486,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 
 	const auto port = idm::get<lv2_obj, lv2_event_port>(eport_id, [&](lv2_event_port& port) -> CellError
 	{
-		if (lv2_event_queue::check(port.queue))
+		if (lv2_obj::check(port.queue))
 		{
 			const u64 source = port.name ? port.name : (s64{process_getpid()} << 32) | u64{eport_id};
 
