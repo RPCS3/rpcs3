@@ -293,9 +293,9 @@ struct lv2_spu_group
 	std::array<std::pair<u32, std::vector<sys_spu_segment>>, 8> imgs; // Entry points, SPU image segments
 	std::array<std::array<u64, 4>, 8> args; // SPU Thread Arguments
 
-	std::weak_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
-	std::weak_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
-	std::weak_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
+	std::shared_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
+	std::shared_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
+	std::shared_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
 
 	lv2_spu_group(std::string name, u32 num, s32 prio, s32 type, lv2_memory_container* ct, bool uses_scheduler, u32 mem_size)
 		: name(std::move(name))
@@ -318,28 +318,19 @@ struct lv2_spu_group
 		threads_map.fill(-1);
 	}
 
-	void send_run_event(u64 data1, u64 data2, u64 data3) const
+	CellError send_run_event(u64 data1, u64 data2, u64 data3) const
 	{
-		if (const auto queue = ep_run.lock())
-		{
-			queue->send(SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY, data1, data2, data3);
-		}
+		return ep_run ? ep_run->send(SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY, data1, data2, data3) : CELL_ENOTCONN;
 	}
 
-	void send_exception_event(u64 data1, u64 data2, u64 data3) const
+	CellError send_exception_event(u64 data1, u64 data2, u64 data3) const
 	{
-		if (const auto queue = ep_exception.lock())
-		{
-			queue->send(SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY, data1, data2, data3);
-		}
+		return ep_exception ? ep_exception->send(SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY, data1, data2, data3) : CELL_ENOTCONN;
 	}
 
-	void send_sysmodule_event(u64 data1, u64 data2, u64 data3) const
+	CellError send_sysmodule_event(u64 data1, u64 data2, u64 data3) const
 	{
-		if (const auto queue = ep_sysmodule.lock())
-		{
-			queue->send(SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3);
-		}
+		return ep_sysmodule ? ep_sysmodule->send(SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3) : CELL_ENOTCONN;
 	}
 
 	static std::pair<named_thread<spu_thread>*, std::shared_ptr<lv2_spu_group>> get_thread(u32 id);
