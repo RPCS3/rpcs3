@@ -421,7 +421,7 @@ void spu_cache::initialize()
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm)
 	{
 		// Initialize progress dialog (wait for previous progress done)
-		g_progr_ptotal.wait<atomic_wait::op_ne>(0);
+		thread_ctrl::wait_on<atomic_wait::op_ne>(g_progr_ptotal, 0);
 
 		g_progr_ptotal += ::size32(func_list);
 		progr.emplace("Building SPU cache...");
