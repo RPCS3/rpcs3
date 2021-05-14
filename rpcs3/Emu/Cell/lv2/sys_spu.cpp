@@ -1490,7 +1490,7 @@ error_code sys_spu_thread_connect_event(ppu_thread& ppu, u32 id, u32 eq, u32 et,
 	sys_spu.warning("sys_spu_thread_connect_event(id=0x%x, eq=0x%x, et=%d, spup=%d)", id, eq, et, spup);
 
 	const auto [thread, group] = lv2_spu_group::get_thread(id);
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(eq);
+	auto queue = idm::get<lv2_obj, lv2_event_queue>(eq);
 
 	if (!queue || !thread) [[unlikely]]
 	{
@@ -1512,7 +1512,7 @@ error_code sys_spu_thread_connect_event(ppu_thread& ppu, u32 id, u32 eq, u32 et,
 		return CELL_EISCONN;
 	}
 
-	port = queue;
+	port = std::move(queue);
 
 	return CELL_OK;
 }
@@ -1557,7 +1557,7 @@ error_code sys_spu_thread_bind_queue(ppu_thread& ppu, u32 id, u32 spuq, u32 spuq
 	sys_spu.warning("sys_spu_thread_bind_queue(id=0x%x, spuq=0x%x, spuq_num=0x%x)", id, spuq, spuq_num);
 
 	const auto [thread, group] = lv2_spu_group::get_thread(id);
-	const auto queue = idm::get<lv2_obj, lv2_event_queue>(spuq);
+	auto queue = idm::get<lv2_obj, lv2_event_queue>(spuq);
 
 	if (!queue || !thread) [[unlikely]]
 	{
@@ -1576,8 +1576,7 @@ error_code sys_spu_thread_bind_queue(ppu_thread& ppu, u32 id, u32 spuq, u32 spuq
 	for (auto& v : thread->spuq)
 	{
 		// Check if the entry is assigned at all
-		if (const decltype(v.second) test{};
-			!v.second.owner_before(test) && !test.owner_before(v.second))
+		if (!v.second)
 		{
 			if (!q)
 			{
@@ -1587,8 +1586,7 @@ error_code sys_spu_thread_bind_queue(ppu_thread& ppu, u32 id, u32 spuq, u32 spuq
 			continue;
 		}
 
-		if (v.first == spuq_num ||
-			(!v.second.owner_before(queue) && !queue.owner_before(v.second)))
+		if (v.first == spuq_num || v.second == queue)
 		{
 			return CELL_EBUSY;
 		}
@@ -1600,7 +1598,7 @@ error_code sys_spu_thread_bind_queue(ppu_thread& ppu, u32 id, u32 spuq, u32 spuq
 	}
 
 	q->first = spuq_num;
-	q->second = queue;
+	q->second = std::move(queue);
 	return CELL_OK;
 }
 
@@ -1626,8 +1624,7 @@ error_code sys_spu_thread_unbind_queue(ppu_thread& ppu, u32 id, u32 spuq_num)
 			continue;
 		}
 
-		if (const decltype(v.second) test{};
-			!v.second.owner_before(test) && !test.owner_before(v.second))
+		if (!v.second)
 		{
 			continue;
 		}
