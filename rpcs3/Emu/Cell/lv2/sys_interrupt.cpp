@@ -12,6 +12,7 @@ LOG_CHANNEL(sys_interrupt);
 lv2_int_tag::lv2_int_tag() noexcept
 	: id(idm::last_id())
 {
+	exists.release(1);
 }
 
 lv2_int_serv::lv2_int_serv(const std::shared_ptr<named_thread<ppu_thread>>& thread, u64 arg1, u64 arg2) noexcept
@@ -20,6 +21,7 @@ lv2_int_serv::lv2_int_serv(const std::shared_ptr<named_thread<ppu_thread>>& thre
 	, arg1(arg1)
 	, arg2(arg2)
 {
+	exists.release(1);
 }
 
 void lv2_int_serv::exec() const
@@ -61,11 +63,12 @@ error_code sys_interrupt_tag_destroy(ppu_thread& ppu, u32 intrtag)
 
 	const auto tag = idm::withdraw<lv2_obj, lv2_int_tag>(intrtag, [](lv2_int_tag& tag) -> CellError
 	{
-		if (!tag.handler.expired())
+		if (tag.handler && tag.handler->exists)
 		{
 			return CELL_EBUSY;
 		}
 
+		tag.exists.release(0);
 		return {};
 	});
 
@@ -120,7 +123,7 @@ error_code _sys_interrupt_thread_establish(ppu_thread& ppu, vm::ptr<u32> ih, u32
 		}
 
 		// It's unclear if multiple handlers can be established on single interrupt tag
-		if (!tag->handler.expired())
+		if (tag->handler && tag->handler->exists)
 		{
 			error = CELL_ESTAT;
 			return result;
@@ -148,7 +151,10 @@ error_code _sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih, vm::ptr<u
 
 	sys_interrupt.warning("_sys_interrupt_thread_disestablish(ih=0x%x, r13=*0x%x)", ih, r13);
 
-	const auto handler = idm::withdraw<lv2_obj, lv2_int_serv>(ih);
+	const auto handler = idm::withdraw<lv2_obj, lv2_int_serv>(ih, [](lv2_obj& obj)
+	{
+		obj.exists.release(0);
+	});
 
 	if (!handler)
 	{
