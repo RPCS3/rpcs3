@@ -383,7 +383,7 @@ public:
 		u8 start_period; // Starting event_period
 		u32 flags; // iFlags
 		u64 source; // Event source
-		std::weak_ptr<lv2_event_queue> port; // Underlying event port
+		std::shared_ptr<lv2_event_queue> port; // Underlying event port
 	};
 
 	std::vector<key_info> keys;
