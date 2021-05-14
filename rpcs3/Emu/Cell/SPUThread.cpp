@@ -1160,9 +1160,9 @@ void spu_int_ctrl_t::set(u64 ints)
 	{
 		std::shared_lock rlock(id_manager::g_mutex);
 
-		if (const auto tag_ptr = tag.lock())
+		if (tag && tag->exists)
 		{
-			if (auto handler = tag_ptr->handler.lock())
+			if (auto handler = tag->handler; handler && handler->exists)
 			{
 				rlock.unlock();
 				handler->exec();

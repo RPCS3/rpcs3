@@ -1938,17 +1938,17 @@ error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 	// Clear interrupt handlers
 	for (auto& intr : thread->int_ctrl)
 	{
-		if (auto tag = intr.tag.lock())
+		if (auto& tag = intr.tag; tag && tag->exists)
 		{
-			if (auto handler = tag->handler.lock())
+			if (auto& handler = tag->handler; handler && handler->exists)
 			{
 				// SLEEP
 				lv2_obj::sleep(ppu);
 				handler->join();
-				to_remove.emplace_back(std::move(handler), +handler->id);
+				to_remove.emplace_back(handler, handler->id);
 			}
 
-			to_remove.emplace_back(std::move(tag), +tag->id);
+			to_remove.emplace_back(tag, tag->id);
 		}
 	}
 
@@ -2023,7 +2023,7 @@ error_code raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 /*hwthread*/, 
 
 		auto& int_ctrl = thread->int_ctrl[class_id];
 
-		if (!int_ctrl.tag.expired())
+		if (int_ctrl.tag && int_ctrl.tag->exists)
 		{
 			error = CELL_EAGAIN;
 			return result;

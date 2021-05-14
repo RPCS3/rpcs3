@@ -11,7 +11,7 @@ struct lv2_int_tag final : lv2_obj
 	static const u32 id_base = 0x0a000000;
 
 	const u32 id;
-	std::weak_ptr<struct lv2_int_serv> handler;
+	std::shared_ptr<struct lv2_int_serv> handler;
 
 	lv2_int_tag() noexcept;
 };

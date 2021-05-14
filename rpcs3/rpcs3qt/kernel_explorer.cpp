@@ -350,9 +350,9 @@ void kernel_explorer::Update()
 		case SYS_INTR_TAG_OBJECT:
 		{
 			auto& tag = static_cast<lv2_int_tag&>(obj);
-			auto handler = tag.handler.lock();
+			const auto handler = tag.handler.get();
 
-			if (handler && handler.get() == idm::check_unlocked<lv2_obj, lv2_int_serv>(handler->id))
+			if (handler && handler->exists)
 			{
 				add_leaf(node, qstr(fmt::format("Intr Tag 0x%08x, Handler: 0x%08x", id, handler->id)));
 				break;
