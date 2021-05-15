@@ -8742,6 +8742,29 @@ public:
 
 		const u32 target = spu_branch_target(m_pos, op.i16);
 
+		// Check sign bit instead (optimization)
+		if (match_vr<s32[4], s64[2]>(op.rt, [&](auto c, auto MP)
+		{
+			using VT = typename decltype(MP)::type;
+
+			if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+			{
+				if (target != m_pos + 4)
+				{
+					m_block->block_end = m_ir->GetInsertBlock();	
+					const auto a = get_vr<s8[16]>(op.rt);
+					const auto cond = eval(bitcast<s16>(trunc<bool[16]>(a)) >= 0);
+					m_ir->CreateCondBr(cond.value, add_block(target), add_block(m_pos + 4));
+					return true;
+				}
+			}
+		
+			return false;
+		}))
+		{
+			return;
+		}
+
 		if (target != m_pos + 4)
 		{
 			m_block->block_end = m_ir->GetInsertBlock();
@@ -8762,6 +8785,29 @@ public:
 		}
 
 		const u32 target = spu_branch_target(m_pos, op.i16);
+
+		// Check sign bit instead (optimization)
+		if (match_vr<s32[4], s64[2]>(op.rt, [&](auto c, auto MP)
+		{
+			using VT = typename decltype(MP)::type;
+
+			if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+			{
+				if (target != m_pos + 4)
+				{
+					m_block->block_end = m_ir->GetInsertBlock();	
+					const auto a = get_vr<s8[16]>(op.rt);
+					const auto cond = eval(bitcast<s16>(trunc<bool[16]>(a)) < 0);
+					m_ir->CreateCondBr(cond.value, add_block(target), add_block(m_pos + 4));
+					return true;
+				}
+			}
+		
+			return false;
+		}))
+		{
+			return;
+		}
 
 		if (target != m_pos + 4)
 		{
