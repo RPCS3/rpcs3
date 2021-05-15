@@ -3,11 +3,10 @@
 #include "util/types.hpp"
 #include "../gcm_enums.h"
 
-#include <concepts>
-
 namespace rsx
 {
 #pragma pack(push, 1)
+	// NOTE: This structure must be packed to match GPU layout.
 	struct fragment_program_texture_config
 	{
 		struct TIU_slot
@@ -19,8 +18,7 @@ namespace rsx
 		}
 		slots_[16]; // QT headers will collide with any variable named 'slots' because reasons
 
-		template <std::integral T>
-		TIU_slot& operator[](T index) { return slots_[index]; }
+		TIU_slot& operator[](u32 index) { return slots_[index]; }
 
 		void write_to(void* dst, u16 mask);
 		void load_from(const void* src, u16 mask);
