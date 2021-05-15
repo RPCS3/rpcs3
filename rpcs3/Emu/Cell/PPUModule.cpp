@@ -253,14 +253,16 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 	// Initialize double-purpose fake OPD array for HLE functions
 	const auto& hle_funcs = ppu_function_manager::get(g_cfg.core.ppu_decoder == ppu_decoder_type::llvm);
 
+	u32& hle_funcs_addr = g_fxo->get<ppu_function_manager>().addr;
+
 	// Allocate memory for the array (must be called after fixed allocations)
-	ppu_function_manager::addr = vm::alloc(::size32(hle_funcs) * 8, vm::main);
+	hle_funcs_addr = vm::alloc(::size32(hle_funcs) * 8, vm::main);
 
 	// Initialize as PPU executable code
-	ppu_register_range(ppu_function_manager::addr, ::size32(hle_funcs) * 8);
+	ppu_register_range(hle_funcs_addr, ::size32(hle_funcs) * 8);
 
 	// Fill the array (visible data: self address and function index)
-	for (u32 addr = ppu_function_manager::addr, index = 0; index < hle_funcs.size(); addr += 8, index++)
+	for (u32 addr = hle_funcs_addr, index = 0; index < hle_funcs.size(); addr += 8, index++)
 	{
 		// Function address = next CIA, RTOC = 0 (vm::null)
 		vm::write32(addr + 0, addr + 4);
@@ -272,7 +274,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 	}
 
 	// Set memory protection to read-only
-	vm::page_protect(ppu_function_manager::addr, utils::align(::size32(hle_funcs) * 8, 0x1000), 0, 0, vm::page_writable);
+	vm::page_protect(hle_funcs_addr, utils::align(::size32(hle_funcs) * 8, 0x1000), 0, 0, vm::page_writable);
 
 	// Initialize function names
 	const bool is_first = g_ppu_function_names.empty();
@@ -312,7 +314,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 				auto& flink = linkage.functions[function.first];
 
 				flink.static_func = &function.second;
-				flink.export_addr = ppu_function_manager::func_addr(function.second.index);
+				flink.export_addr = g_fxo->get<ppu_function_manager>().func_addr(function.second.index);
 				function.second.export_addr = &flink.export_addr;
 			}
 		}
@@ -512,7 +514,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 			// Function linkage info
 			auto& flink = mlink.functions[fnid];
 
-			if (flink.static_func && flink.export_addr == ppu_function_manager::func_addr(flink.static_func->index))
+			if (flink.static_func && flink.export_addr == g_fxo->get<ppu_function_manager>().func_addr(flink.static_func->index))
 			{
 				flink.export_addr = 0;
 			}
@@ -530,7 +532,7 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 				{
 					// Inject a branch to the HLE implementation
 					const u32 _entry = vm::read32(faddr);
-					const u32 target = ppu_function_manager::func_addr(_sf->index) + 4;
+					const u32 target = g_fxo->get<ppu_function_manager>().func_addr(_sf->index) + 4;
 
 					// Set exported function
 					flink.export_addr = target - 4;
@@ -654,7 +656,7 @@ static auto ppu_load_imports(std::vector<ppu_reloc>& relocs, ppu_linkage_info* l
 			mlink.imported = true;
 
 			// Link address (special HLE function by default)
-			const u32 link_addr = flink.export_addr ? flink.export_addr : ppu_function_manager::addr;
+			const u32 link_addr = flink.export_addr ? flink.export_addr : g_fxo->get<ppu_function_manager>().addr;
 
 			// Write import table
 			vm::write32(faddr, link_addr);
@@ -1177,7 +1179,7 @@ void ppu_unload_prx(const lv2_prx& prx)
 	//	auto pinfo = static_cast<ppu_linkage_info::module_data::info*>(exp.second);
 	//	if (pinfo->static_func)
 	//	{
-	//		pinfo->export_addr = ppu_function_manager::func_addr(pinfo->static_func->index);
+	//		pinfo->export_addr = g_fxo->get<ppu_function_manager>().func_addr(pinfo->static_func->index);
 	//	}
 	//	else if (pinfo->static_var)
 	//	{
@@ -1219,6 +1221,7 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 	}
 
 	g_fxo->need<ppu_linkage_info>();
+	g_fxo->need<ppu_function_manager>();
 
 	// Set for delayed initialization in ppu_initialize()
 	auto& _main = g_fxo->get<ppu_module>();

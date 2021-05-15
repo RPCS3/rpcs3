@@ -784,7 +784,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			}
 
 			// Ignore HLE stop address
-			return addr == ppu_function_manager::func_addr(1) + 4;
+			return addr == g_fxo->get<ppu_function_manager>().func_addr(1) + 4;
 		};
 
 		if (is_invalid(addr))
@@ -1219,7 +1219,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 
 	cia = addr;
 	gpr[2] = rtoc;
-	lr = ppu_function_manager::func_addr(1) + 4; // HLE stop address
+	lr = g_fxo->get<ppu_function_manager>().func_addr(1) + 4; // HLE stop address
 	current_function = nullptr;
 
 	g_tls_log_prefix = []
