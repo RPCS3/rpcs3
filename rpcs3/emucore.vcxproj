@@ -14,12 +14,12 @@
     <ProjectGuid>{C4A10229-4712-4BD2-B63E-50D93C67A038}</ProjectGuid>
     <RootNamespace>emucore</RootNamespace>
   </PropertyGroup>
-  <Import Project="$(SolutionDir)\common_default.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
-  <Import Project="$(SolutionDir)\common_default_macros.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default_macros.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
@@ -29,13 +29,13 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\rpcs3_default.props" />
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_default.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <Import Project="..\rpcs3_debug.props" />
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_debug.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <Import Project="..\rpcs3_release.props" />
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_release.props" />
   </ImportGroup>
   <ItemDefinitionGroup>
     <ClCompile>
