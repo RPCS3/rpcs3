@@ -16,9 +16,9 @@
     <RootNamespace>libpng</RootNamespace>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\3rdparty\zlib.props" />
-  <Import Project="$(SolutionDir)\common_default.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <Import Project="$(SolutionDir)\common_default_macros.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default_macros.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug Library|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>MultiByte</CharacterSet>
