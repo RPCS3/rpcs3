@@ -42,7 +42,8 @@ void lv2_timer_context::operator()()
 				if (period)
 				{
 					// Set next expiration time and check again
-					expire += period;
+					const u64 _next = next + period;
+					expire.release(_next > next ? _next : UINT64_MAX);
 					continue;
 				}
 
@@ -135,12 +136,6 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 
 	const u64 start_time = get_guest_system_time();
 
-	if (!period && start_time >= base_time)
-	{
-		// Invalid oneshot (TODO: what will happen if both args are 0?)
-		return not_an_error(CELL_ETIMEDOUT);
-	}
-
 	if (period && period < 100)
 	{
 		// Invalid periodic timer
@@ -161,8 +156,15 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 			return CELL_EBUSY;
 		}
 
+		if (!period && start_time >= base_time)
+		{
+			// Invalid oneshot
+			return CELL_ETIMEDOUT;
+		}
+
 		// sys_timer_start_periodic() will use current time (TODO: is it correct?)
-		timer.expire = base_time ? base_time : start_time + period;
+		const u64 expire = base_time ? base_time : start_time + period;
+		timer.expire = expire > start_time ? expire : UINT64_MAX;
 		timer.period = period;
 		timer.state  = SYS_TIMER_STATE_RUN;
 
@@ -178,6 +180,11 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 
 	if (timer.ret)
 	{
+		if (timer.ret == CELL_ETIMEDOUT)
+		{
+			return not_an_error(timer.ret);
+		}
+
 		return timer.ret;
 	}
 
