@@ -37,4 +37,4 @@ Don't forget to have your graphics driver up to date and to install the [Visual 
 
 ## License
 
-Most files are licensed under the terms of GNU GPLv2 License; see LICENSE file for details. Some files may be licensed differently; check appropriate file headers for details.
+Most files are licensed under the terms of GNU GPL-2.0-only License; see LICENSE file for details. Some files may be licensed differently; check appropriate file headers for details.
