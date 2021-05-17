@@ -26,7 +26,12 @@ target_include_directories(3rdparty_zlib INTERFACE ${ZLIB_INCLUDE_DIR})
 add_subdirectory(7z EXCLUDE_FROM_ALL)
 
 add_library(3rdparty_flatbuffers INTERFACE)
-target_include_directories(3rdparty_flatbuffers INTERFACE flatbuffers/include)
+if (USE_SYSTEM_FLATBUFFERS)
+	pkg_check_modules(FLATBUFFERS REQUIRED IMPORTED_TARGET flatbuffers>=2.0.0)
+	target_link_libraries(3rdparty_flatbuffers INTERFACE PkgConfig::FLATBUFFERS)
+else()
+	target_include_directories(3rdparty_flatbuffers INTERFACE flatbuffers/include)
+endif()
 
 # libPNG
 add_subdirectory(libpng EXCLUDE_FROM_ALL)
