@@ -331,10 +331,9 @@ include(llvm.cmake)
 # WOLFSSL
 if(USE_SYSTEM_WOLFSSL)
 	message("-- RPCS3: using shared wolfssl")
-	find_package(WolfSSL REQUIRED)
+	pkg_check_modules(WolfSSL REQUIRED IMPORTED_TARGET wolfssl>=4.7.0)
 	add_library(wolfssl INTERFACE)
-	target_link_libraries(wolfssl INTERFACE WolfSSL_LIBRARIES)
-	target_include_directories(wolfssl INTERFACE WolfSSL_INCLUDE_DIRS)
+	target_link_libraries(wolfssl INTERFACE PkgConfig::WolfSSL)
 else()
 	SET(BUILD_TESTS NO CACHE BOOL "Build test applications")
 	add_compile_definitions(HAVE_FFDHE_2048 TFM_TIMING_RESISTANT ECC_TIMING_RESISTANT
