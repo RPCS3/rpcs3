@@ -60,10 +60,6 @@
 	path = 3rdparty/FAudio
 	url = https://github.com/FNA-XNA/FAudio.git
 	ignore = dirty
-[submodule "3rdparty/span"]
-	path = 3rdparty/span
-	url = https://github.com/tcbrindle/span
-	ignore = dirty
 [submodule "3rdparty/curl"]
 	path = 3rdparty/curl/curl
 	url = https://github.com/curl/curl.git

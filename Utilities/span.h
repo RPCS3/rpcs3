@@ -1,2 +1,6 @@
-#define TCB_SPAN_NAMESPACE_NAME gsl
-#include <tcb/span.hpp>
+#include <span>
+
+namespace gsl {
+	using std::span;
+	using std::byte;
+}
