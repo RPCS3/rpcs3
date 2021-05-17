@@ -38,7 +38,13 @@ add_subdirectory(libpng EXCLUDE_FROM_ALL)
 
 
 # pugixml
-add_subdirectory(pugixml EXCLUDE_FROM_ALL)
+if (USE_SYSTEM_PUGIXML)
+	pkg_check_modules(PUGIXML REQUIRED IMPORTED_TARGET pugixml>=1.11)
+	add_library(pugixml INTERFACE)
+	target_link_libraries(pugixml INTERFACE PkgConfig::PUGIXML)
+else()
+	add_subdirectory(pugixml EXCLUDE_FROM_ALL)
+endif()
 
 
 # libusb
