@@ -7,6 +7,7 @@
 #include "Emu/Cell/Common.h"
 #include "Emu/Cell/PPUFunction.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/IdManager.h"
 
 #include <bit>
 #include <cmath>
@@ -5180,7 +5181,7 @@ bool ppu_interpreter::FCFID(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::UNK(ppu_thread& ppu, ppu_opcode_t op)
 {
 	// HLE function index
-	const u32 index = (ppu.cia - ppu_function_manager::addr) / 8;
+	const u32 index = (ppu.cia - g_fxo->get<ppu_function_manager>().addr) / 8;
 
 	const auto& hle_funcs = ppu_function_manager::get();
 

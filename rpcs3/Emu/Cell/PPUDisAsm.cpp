@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "PPUDisAsm.h"
 #include "PPUFunction.h"
+#include "Emu/IdManager.h"
 
 const ppu_decoder<PPUDisAsm> s_ppu_disasm;
 
@@ -2349,10 +2350,10 @@ extern std::vector<std::string> g_ppu_function_names;
 
 void PPUDisAsm::UNK(ppu_opcode_t)
 {
-	if (ppu_function_manager::addr)
+	if (u32 addr{}; g_fxo->is_init<ppu_function_manager>() && (addr = g_fxo->get<ppu_function_manager>().addr))
 	{
 		// HLE function index
-		const u32 index = (dump_pc - ppu_function_manager::addr) / 8;
+		const u32 index = (dump_pc - addr) / 8;
 
 		if (dump_pc % 8 == 4 && index < ppu_function_manager::get().size())
 		{

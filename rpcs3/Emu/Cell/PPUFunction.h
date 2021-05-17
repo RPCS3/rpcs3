@@ -262,6 +262,12 @@ class ppu_function_manager
 	static u32 add_function(ppu_function_t function);
 
 public:
+	ppu_function_manager() = default;
+
+	ppu_function_manager(const ppu_function_manager&) = delete;
+
+	ppu_function_manager& operator=(const ppu_function_manager&) = delete;
+
 	// Register function (shall only be called during global initialization)
 	template<typename T, T Func>
 	static inline u32 register_function(ppu_function_t func)
@@ -282,7 +288,7 @@ public:
 		return access(llvm);
 	}
 
-	static inline u32 func_addr(u32 index)
+	u32 func_addr(u32 index) const
 	{
 		if (index >= access().size() || !addr)
 		{
@@ -293,7 +299,7 @@ public:
 	}
 
 	// Allocation address
-	static u32 addr;
+	u32 addr = 0;
 };
 
 template<typename T, T Func>

@@ -1947,5 +1947,3 @@ u32 ppu_function_manager::add_function(ppu_function_t function)
 
 	return ::size32(list) - 1;
 }
-
-DECLARE(ppu_function_manager::addr);
