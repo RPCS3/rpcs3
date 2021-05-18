@@ -332,16 +332,35 @@ namespace utils
 #ifdef _WIN32
 		fs::file f;
 
+		auto set_sparse = [](HANDLE h) -> bool
+		{
+			// Get version
+			const DWORD version_major = *reinterpret_cast<const DWORD*>(__readgsqword(0x60) + 0x118);
+
+			// Disable sparse files on Windows 7 or lower
+			if (version_major <= 7)
+			{
+				return true;
+			}
+
+			if (DeviceIoControl(h, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, nullptr, nullptr))
+			{
+				return true;
+			}
+
+			return false;
+		};
+
 		if (!storage.empty())
 		{
 			ensure(f.open(storage, fs::read + fs::write + fs::create));
 		}
-		else if (!f.open(fs::get_temp_dir() + "rpcs3_vm", fs::read + fs::write + fs::create) || !DeviceIoControl(f.get_handle(), FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, nullptr, nullptr))
+		else if (!f.open(fs::get_temp_dir() + "rpcs3_vm", fs::read + fs::write + fs::create) || !set_sparse(f.get_handle()))
 		{
 			ensure(f.open(fs::get_cache_dir() + "rpcs3_vm", fs::read + fs::write + fs::create));
 		}
 
-		if (!DeviceIoControl(f.get_handle(), FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, nullptr, nullptr))
+		if (!set_sparse(f.get_handle()))
 		{
 			MessageBoxW(0, L"Failed to initialize sparse file.", L"RPCS3", MB_ICONERROR);
 		}
