@@ -163,6 +163,16 @@ public:
 		m_data ^= shift(bit);
 		return r;
 	}
+
+	constexpr bool all_of(bs_t arg)
+	{
+		return (m_data & arg.m_data) == arg.m_data;
+	}
+
+	constexpr bool none_of(bs_t arg)
+	{
+		return (m_data & arg.m_data) == 0;
+	}
 };
 
 // Unary '+' operator: promote plain enum value to bitset value
@@ -360,6 +370,16 @@ public:
 	bool bit_test_set(uint bit) = delete;
 	bool bit_test_reset(uint bit) = delete;
 	bool bit_test_invert(uint bit) = delete;
+
+	bool all_of(bs_t arg)
+	{
+		return base::load().all_of(arg);
+	}
+
+	bool none_of(bs_t arg)
+	{
+		return base::load().none_of(arg);
+	}
 };
 
 template <typename T>
