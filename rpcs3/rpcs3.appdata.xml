@@ -3,7 +3,7 @@
 <component type="desktop-application">
     <id>RPCS3</id>
     <metadata_license>FSFAP</metadata_license>
-    <project_license>GPL-2.0</project_license>
+    <project_license>GPL-2.0-only</project_license>
     <name>RPCS3</name>
     <summary>Open-source Sony PlayStation 3 Emulator</summary>
 
