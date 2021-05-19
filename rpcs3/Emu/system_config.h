@@ -190,6 +190,8 @@ struct cfg_root : cfg::node
 			cfg::uint<2, 6000> framerate_datapoint_count{ this, "Framerate datapoints", 50, true };
 			cfg::uint<2, 6000> frametime_datapoint_count{ this, "Frametime datapoints", 170, true };
 			cfg::_enum<detail_level> level{ this, "Detail level", detail_level::medium, true };
+			cfg::_enum<perf_graph_detail_level> framerate_graph_detail_level{ this, "Framerate graph detail level", perf_graph_detail_level::show_all, true };
+			cfg::_enum<perf_graph_detail_level> frametime_graph_detail_level{ this, "Frametime graph detail level", perf_graph_detail_level::show_all, true };
 			cfg::uint<1, 1000> update_interval{ this, "Metrics update interval (ms)", 350, true };
 			cfg::uint<4, 36> font_size{ this, "Font size (px)", 10, true };
 			cfg::_enum<screen_quadrant> position{ this, "Position", screen_quadrant::top_left, true };

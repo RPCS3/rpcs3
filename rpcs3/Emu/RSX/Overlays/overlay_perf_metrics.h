@@ -89,6 +89,7 @@ namespace rsx
 			void set_frametime_graph_enabled(bool enabled);
 			void set_framerate_datapoint_count(u32 datapoint_count);
 			void set_frametime_datapoint_count(u32 datapoint_count);
+			void set_graph_detail_levels(perf_graph_detail_level framerate_level, perf_graph_detail_level frametime_level);
 			void set_detail_level(detail_level level);
 			void set_position(screen_quadrant quadrant);
 			void set_update_interval(u32 update_interval);

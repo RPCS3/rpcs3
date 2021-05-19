@@ -208,3 +208,11 @@ enum class thread_scheduler_mode
 	old,
 	alt
 };
+
+enum class perf_graph_detail_level
+{
+	minimal,
+	show_min_max,
+	show_one_percent_avg,
+	show_all
+};
