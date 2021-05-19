@@ -686,7 +686,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 
 	bool cancelled = false;
 
-	for (size_t i = 0, count = packages.size(); i < count; i++)
+	for (usz i = 0, count = packages.size(); i < count; i++)
 	{
 		progress = 0.;
 
