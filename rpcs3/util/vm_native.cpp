@@ -345,6 +345,16 @@ namespace utils
 
 			if (DeviceIoControl(h, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, nullptr, nullptr))
 			{
+				FILE_STANDARD_INFO info;
+				ensure(GetFileInformationByHandleEx(h, FileStandardInfo, &info, sizeof(info)));
+
+				if (info.AllocationSize.QuadPart)
+				{
+					// Make sure the file is not "dirty"
+					FILE_END_OF_FILE_INFO _eof{};
+					ensure(SetFileInformationByHandle(h, FileEndOfFileInfo, &_eof, sizeof(_eof)));
+				}
+
 				return true;
 			}
 
