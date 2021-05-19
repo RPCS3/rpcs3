@@ -1640,14 +1640,14 @@ std::string Emulator::GetFormattedTitle(double fps) const
 	return rpcs3::get_formatted_title(title_data);
 }
 
-s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2)
+s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* sup, const u64* args)
 {
 	static thread_local std::unordered_map<std::string, usz> g_tls_error_stats;
 	static thread_local std::string g_tls_error_str;
 
-	if (!sup)
+	if (!sup && !args)
 	{
-		if (!sup2)
+		if (!fmt)
 		{
 			// Report and clean error state
 			for (auto&& pair : g_tls_error_stats)
@@ -1681,7 +1681,8 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 
 	// Format log message (use preallocated buffer)
 	g_tls_error_str.clear();
-	fmt::append(g_tls_error_str, "'%s' failed with 0x%08x%s%s%s%s", func, arg, sup ? " : " : "", std::make_pair(sup, arg), sup2 ? ", " : "", std::make_pair(sup2, arg2));
+	fmt::append(g_tls_error_str, "'%s' failed with 0x%08x", func, result);
+	fmt::raw_append(g_tls_error_str, fmt, sup, args);
 
 	// Update stats and check log threshold
 	const auto stat = ++g_tls_error_stats[g_tls_error_str];
@@ -1691,7 +1692,7 @@ s32 error_code::error_report(const fmt_type_info* sup, u64 arg, const fmt_type_i
 		channel->error("%s [%u]", g_tls_error_str, stat);
 	}
 
-	return static_cast<s32>(arg);
+	return result;
 }
 
 void Emulator::ConfigurePPUCache() const

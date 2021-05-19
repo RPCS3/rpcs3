@@ -91,8 +91,7 @@ namespace logs
 			{\
 				if constexpr (sizeof...(Args) > 0)\
 				{\
-					static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
-					msg_##_sev.broadcast(fmt, type_list, u64{fmt_unveil<Args>::get(args)}...);\
+					msg_##_sev.broadcast(fmt, fmt::type_info_v<Args...>, u64{fmt_unveil<Args>::get(args)}...);\
 				}\
 				else\
 				{\

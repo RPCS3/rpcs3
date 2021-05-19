@@ -574,7 +574,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	if (const auto ecode = savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat,
 		funcFile, container, unk_op_flags, userdata, userId, funcDone))
 	{
-		return {CELL_SAVEDATA_ERROR_PARAM, std::to_string(ecode)};
+		return {CELL_SAVEDATA_ERROR_PARAM, " (error %d)", ecode};
 	}
 
 	std::unique_lock lock(g_fxo->get<savedata_manager>().mutex, std::try_to_lock);

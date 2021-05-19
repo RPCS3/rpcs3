@@ -12,20 +12,26 @@ public:
 	error_code() = default;
 
 	// Implementation must be provided independently
-	static s32 error_report(const fmt_type_info* sup, u64 arg, const fmt_type_info* sup2, u64 arg2);
+	static s32 error_report(s32 result, const char* fmt, const fmt_type_info* sup, const u64* args);
 
 	// Common constructor
 	template<typename ET>
 	error_code(const ET& value)
-		: value(static_cast<s32>(value))
+		: value(error_report(static_cast<s32>(value), " : %s", fmt::type_info_v<ET>, fmt_args_t<ET>{fmt_unveil<ET>::get(value)}))
 	{
-		this->value = error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), nullptr, 0);
 	}
 
 	// Error constructor (2 args)
-	template<typename ET, typename T2>
-	error_code(const ET& value, const T2& value2)
-		: value(error_report(fmt::get_type_info<fmt_unveil_t<ET>>(), fmt_unveil<ET>::get(value), fmt::get_type_info<fmt_unveil_t<T2>>(), fmt_unveil<T2>::get(value2)))
+	template<typename ET, typename T>
+	error_code(const ET& value, const T& arg)
+		: value(error_report(static_cast<s32>(value), " : %s, %s", fmt::type_info_v<ET, T>, fmt_args_t<ET, T>{fmt_unveil<ET>::get(value), fmt_unveil<T>::get(arg)}))
+	{
+	}
+
+	// Formatting constructor (error, format string, variadic list)
+	template <typename ET, typename... Args> requires (sizeof...(Args) > 0)
+	error_code(const ET& value, const const_str& fmt, const Args&... args)
+		: value(error_report(static_cast<s32>(value), fmt, fmt::type_info_v<Args...>, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...}))
 	{
 	}
 
