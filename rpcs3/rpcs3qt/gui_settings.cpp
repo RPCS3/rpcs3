@@ -254,7 +254,7 @@ void gui_settings::SaveCurrentConfig(const QString& config_name)
 
 logs::level gui_settings::GetLogLevel() const
 {
-	return logs::level{GetValue(gui::l_level).toUInt()};
+	return logs::level(GetValue(gui::l_level).toUInt());
 }
 
 bool gui_settings::GetGamelistColVisibility(int col) const

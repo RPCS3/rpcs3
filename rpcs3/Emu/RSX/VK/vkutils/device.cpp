@@ -70,7 +70,7 @@ namespace vk
 		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
 		get_physical_device_features(allow_extensions);
 
-		rsx_log.always("Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
+		rsx_log.always()("Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
 
 		if (get_driver_vendor() == driver_vendor::RADV && get_name().find("LLVM 8.0.0") != umax)
 		{

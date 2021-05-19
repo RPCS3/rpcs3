@@ -65,6 +65,14 @@ void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
 
 namespace logs
 {
+	static_assert(std::is_empty_v<message> && sizeof(message) == 1);
+	static_assert(sizeof(channel) == alignof(channel));
+	static_assert(uchar(level::always) == 0);
+	static_assert(uchar(level::fatal) == 1);
+	static_assert(uchar(level::trace) == 7);
+	static_assert((offsetof(channel, fatal) & 7) == 1);
+	static_assert((offsetof(channel, trace) & 7) == 7);
+
 	// Memory-mapped buffer size
 	constexpr u64 s_log_size = 32 * 1024 * 1024;
 
@@ -618,7 +626,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	text.reserve(50000);
 
 	// Used character: U+00B7 (Middle Dot)
-	switch (msg.sev)
+	switch (msg)
 	{
 	case level::always:  text = reinterpret_cast<const char*>(u8"·A "); break;
 	case level::fatal:   text = reinterpret_cast<const char*>(u8"·F "); break;
@@ -637,7 +645,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	const u64 frac = (stamp % 1'000'000);
 	fmt::append(text, "%u:%02u:%02u.%06u ", hours, mins, secs, frac);
 
-	if (msg.ch == nullptr && stamp == 0)
+	if (stamp == 0)
 	{
 		// Workaround for first special messages to keep backward compatibility
 		text.clear();
@@ -650,12 +658,12 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 		text += "} ";
 	}
 
-	if (msg.ch && '\0' != *msg.ch->name)
+	if (msg->name && '\0' != *msg->name)
 	{
-		text += msg.ch->name;
-		text += msg.sev == level::todo ? " TODO: " : ": ";
+		text += msg->name;
+		text += msg == level::todo ? " TODO: " : ": ";
 	}
-	else if (msg.sev == level::todo)
+	else if (msg == level::todo)
 	{
 		text += "TODO: ";
 	}

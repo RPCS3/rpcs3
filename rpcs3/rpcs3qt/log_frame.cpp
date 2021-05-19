@@ -26,7 +26,7 @@ constexpr auto qstr = QString::fromStdString;
 
 struct gui_listener : logs::listener
 {
-	atomic_t<logs::level> enabled{logs::level{UINT_MAX}};
+	atomic_t<logs::level> enabled{logs::level{UCHAR_MAX}};
 
 	struct packet_t
 	{
@@ -55,10 +55,10 @@ struct gui_listener : logs::listener
 	{
 		Q_UNUSED(stamp)
 
-		if (msg.sev <= enabled)
+		if (msg <= enabled)
 		{
 			packet_t p,* _new = &p;
-			_new->sev = msg.sev;
+			_new->sev = msg;
 
 			if (show_prefix && !prefix.empty())
 			{
@@ -67,12 +67,12 @@ struct gui_listener : logs::listener
 				_new->msg += "} ";
 			}
 
-			if (msg.ch && '\0' != *msg.ch->name)
+			if (msg->name && '\0' != *msg->name)
 			{
-				_new->msg += msg.ch->name;
-				_new->msg += msg.sev == logs::level::todo ? " TODO: " : ": ";
+				_new->msg += msg->name;
+				_new->msg += msg == logs::level::todo ? " TODO: " : ": ";
 			}
-			else if (msg.sev == logs::level::todo)
+			else if (msg == logs::level::todo)
 			{
 				_new->msg += "TODO: ";
 			}

@@ -187,7 +187,7 @@ struct fatal_error_listener final : logs::listener
 
 	void log(u64 /*stamp*/, const logs::message& msg, const std::string& prefix, const std::string& text) override
 	{
-		if (msg.sev == logs::level::fatal)
+		if (msg == logs::level::fatal)
 		{
 			std::string _msg = "RPCS3: ";
 
@@ -197,9 +197,9 @@ struct fatal_error_listener final : logs::listener
 				_msg += ": ";
 			}
 
-			if (msg.ch && '\0' != *msg.ch->name)
+			if (msg->name && '\0' != *msg->name)
 			{
-				_msg += msg.ch->name;
+				_msg += msg->name;
 				_msg += ": ";
 			}
 
@@ -446,31 +446,19 @@ int main(int argc, char** argv)
 
 	{
 		// Write RPCS3 version
-		logs::stored_message ver;
-		ver.m.ch  = nullptr;
-		ver.m.sev = logs::level::always;
-		ver.stamp = 0;
+		logs::stored_message ver{sys_log.always()};
 		ver.text  = fmt::format("RPCS3 v%s | %s", rpcs3::get_version().to_string(), rpcs3::get_branch());
 
 		// Write System information
-		logs::stored_message sys;
-		sys.m.ch  = nullptr;
-		sys.m.sev = logs::level::always;
-		sys.stamp = 0;
+		logs::stored_message sys{sys_log.always()};
 		sys.text  = utils::get_system_info();
 
 		// Write OS version
-		logs::stored_message os;
-		os.m.ch  = nullptr;
-		os.m.sev = logs::level::always;
-		os.stamp = 0;
+		logs::stored_message os{sys_log.always()};
 		os.text  = utils::get_OS_version();
 
 		// Write Qt version
-		logs::stored_message qt;
-		qt.m.ch  = nullptr;
-		qt.m.sev = (strcmp(QT_VERSION_STR, qVersion()) != 0) ? logs::level::error : logs::level::notice;
-		qt.stamp = 0;
+		logs::stored_message qt{(strcmp(QT_VERSION_STR, qVersion()) != 0) ? sys_log.error : sys_log.notice};
 		qt.text  = fmt::format("Qt version: Compiled against Qt %s | Run-time uses Qt %s", QT_VERSION_STR, qVersion());
 
 		logs::set_init({std::move(ver), std::move(sys), std::move(os), std::move(qt)});

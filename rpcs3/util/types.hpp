@@ -73,6 +73,10 @@ namespace std
 }
 #endif
 
+#if defined(__INTELLISENSE__)
+#define consteval constexpr
+#endif
+
 using schar  = signed char;
 using uchar  = unsigned char;
 using ushort = unsigned short;
