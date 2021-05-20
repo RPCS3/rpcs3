@@ -658,7 +658,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 		text += "} ";
 	}
 
-	if (msg->name && '\0' != *msg->name)
+	if (stamp && msg->name && '\0' != *msg->name)
 	{
 		text += msg->name;
 		text += msg == level::todo ? " TODO: " : ": ";
