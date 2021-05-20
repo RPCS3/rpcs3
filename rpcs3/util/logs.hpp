@@ -41,7 +41,7 @@ namespace logs
 
 		operator level() const
 		{
-			return level(reinterpret_cast<uptr>(this) & 7);
+			return level(uchar(reinterpret_cast<uptr>(this) & 7));
 		}
 
 		const channel* operator->() const
@@ -125,7 +125,7 @@ namespace logs
 	template <typename... Args>
 	FORCE_INLINE SAFE_BUFFERS(void) message::operator()(const const_str& fmt, const Args&... args) const
 	{
-		if (*this < (*this)->enabled) [[unlikely]]
+		if (*this <= (*this)->enabled.observe()) [[unlikely]]
 		{
 			if constexpr (sizeof...(Args) > 0)
 			{
