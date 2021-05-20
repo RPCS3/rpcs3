@@ -413,8 +413,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	if (!render->dma_address || context_id != 0x55555555)
 	{
-		sys_rsx.error("sys_rsx_context_attribute(): invalid context failure (context_id=0x%x)", context_id);
-		return CELL_OK; // Actually returns CELL_OK, cellGCmSys seem to be relying on this as well
+		return CELL_EINVAL;
 	}
 
 	auto &driverInfo = vm::_ref<RsxDriverInfo>(render->driver_info);
