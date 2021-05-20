@@ -1449,19 +1449,17 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 			u64 data1 = addr;
 			u64 data2 = 0;
 
-			if (cpu->id_type() == 1)
+			if (cpu->try_get<ppu_thread>())
 			{
 				data2 = (SYS_MEMORY_PAGE_FAULT_TYPE_PPU_THREAD << 32) | cpu->id;
 			}
-			else if (cpu->id_type() == 2)
+			else if (auto spu = cpu->try_get<spu_thread>())
 			{
-				const auto& spu = static_cast<spu_thread&>(*cpu);
-
-				const u64 type = spu.get_type() == spu_type::threaded ?
+				const u64 type = spu->get_type() == spu_type::threaded ?
 					SYS_MEMORY_PAGE_FAULT_TYPE_SPU_THREAD :
 					SYS_MEMORY_PAGE_FAULT_TYPE_RAW_SPU;
 
-				data2 = (type << 32) | spu.lv2_id;
+				data2 = (type << 32) | spu->lv2_id;
 			}
 
 			u64 data3;

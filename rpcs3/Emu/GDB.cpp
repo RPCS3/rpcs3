@@ -565,8 +565,8 @@ bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
 		return send_cmd_ack("E02");
 	}
 	auto th = selected_thread.lock();
-	if (th->id_type() == 1) {
-		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
+	if (auto ppu = th->try_get<named_thread<ppu_thread>>())
+	{
 		u32 rid = hex_to_u32(cmd.data);
 		std::string result = get_reg(ppu, rid);
 		if (result.empty()) {

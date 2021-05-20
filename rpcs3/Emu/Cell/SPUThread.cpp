@@ -2041,10 +2041,10 @@ void spu_thread::do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8*
 					continue;
 				}
 
-				const auto cpu = static_cast<spu_thread*>(get_current_cpu_thread());
+				const auto cpu = get_current_cpu_thread<spu_thread>();
 
 				alignas(64) u8 temp[128];
-				u8* dst0 = cpu && cpu->id_type() != 1 && (eal & -128) == cpu->raddr ? temp : dst;
+				u8* dst0 = cpu && (eal & -128) == cpu->raddr ? temp : dst;
 
 				if (dst0 == +temp && time0 != cpu->rtime)
 				{

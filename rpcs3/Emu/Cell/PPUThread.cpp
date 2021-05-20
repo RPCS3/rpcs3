@@ -1273,7 +1273,7 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 
 u32 ppu_thread::stack_push(u32 size, u32 align_v)
 {
-	if (auto cpu = get_current_cpu_thread()) if (cpu->id_type() == 1)
+	if (auto cpu = get_current_cpu_thread<ppu_thread>())
 	{
 		ppu_thread& context = static_cast<ppu_thread&>(*cpu);
 
@@ -1299,7 +1299,7 @@ u32 ppu_thread::stack_push(u32 size, u32 align_v)
 
 void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
 {
-	if (auto cpu = get_current_cpu_thread()) if (cpu->id_type() == 1)
+	if (auto cpu = get_current_cpu_thread<ppu_thread>())
 	{
 		ppu_thread& context = static_cast<ppu_thread&>(*cpu);
 

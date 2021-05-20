@@ -1143,7 +1143,7 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 {
 	const u64 start_time = get_guest_system_time();
 
-	if (auto ppu = static_cast<ppu_thread*>(thread.id_type() == 1 ? &thread : nullptr))
+	if (auto ppu = thread.try_get<ppu_thread>())
 	{
 		ppu_log.trace("sleep() - waiting (%zu)", g_pending.size());
 

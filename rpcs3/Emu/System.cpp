@@ -1666,16 +1666,11 @@ s32 error_code::error_report(s32 result, const char* fmt, const fmt_type_info* s
 	logs::channel* channel = &sys_log;
 	const char* func = "Unknown function";
 
-	if (auto thread = get_current_cpu_thread())
+	if (auto ppu = get_current_cpu_thread<ppu_thread>())
 	{
-		if (thread->id_type() == 1)
+		if (ppu->current_function)
 		{
-			auto& ppu = static_cast<ppu_thread&>(*thread);
-
-			if (ppu.current_function)
-			{
-				func = ppu.current_function;
-			}
+			func = ppu->current_function;
 		}
 	}
 

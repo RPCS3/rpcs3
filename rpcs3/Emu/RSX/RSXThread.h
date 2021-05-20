@@ -658,6 +658,8 @@ namespace rsx
 		std::string dump_regs() const override;
 		void cpu_wait(bs_t<cpu_flag> old) override;
 
+		static constexpr u32 id_base = 0x5555'5555; // See get_current_cpu_thread()
+
 		// Performance approximation counters
 		struct
 		{

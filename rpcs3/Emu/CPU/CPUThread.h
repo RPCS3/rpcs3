@@ -5,6 +5,10 @@
 
 #include <vector>
 
+template <typename Derived, typename Base>
+concept derived_from = std::is_base_of_v<Base, Derived> &&
+	std::is_convertible_v<const volatile Derived*, const volatile Base*>;
+
 // Thread state flags
 enum class cpu_flag : u32
 {
@@ -105,6 +109,30 @@ public:
 	u32 id_type() const
 	{
 		return id >> 24;
+	}
+
+	template <derived_from<cpu_thread> T> 
+	T* try_get()
+	{
+		if constexpr (std::is_same_v<std::remove_const_t<T>, cpu_thread>)
+		{
+			return this;
+		}
+		else
+		{
+			if (id_type() == (T::id_base >> 24))
+			{
+				return static_cast<T*>(this);
+			}
+
+			return nullptr;
+		}
+	}
+
+	template <derived_from<cpu_thread> T> 
+	const T* try_get() const
+	{
+		return const_cast<cpu_thread*>(this)->try_get<const T>();
 	}
 
 	u32 get_pc() const;
@@ -244,15 +272,25 @@ public:
 	// Send signal to the profiler(s) to flush results
 	static void flush_profilers() noexcept;
 
+	template <derived_from<cpu_thread> T = cpu_thread> 
+	static inline T* get_current() noexcept
+	{
+		if (const auto cpu = g_tls_this_thread)
+		{
+			return cpu->try_get<T>();
+		}
+
+		return nullptr;
+	}
+
 private:
 	static thread_local cpu_thread* g_tls_this_thread;
-
-	friend cpu_thread* get_current_cpu_thread() noexcept;
 };
 
-inline cpu_thread* get_current_cpu_thread() noexcept
+template <derived_from<cpu_thread> T = cpu_thread> 
+inline T* get_current_cpu_thread() noexcept
 {
-	return cpu_thread::g_tls_this_thread;
+	return cpu_thread::get_current<T>();
 }
 
 class ppu_thread;
