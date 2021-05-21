@@ -430,6 +430,7 @@ namespace rsx
 		void perf_metrics_overlay::update()
 		{
 			const auto elapsed_update = m_update_timer.GetElapsedTimeInMilliSec();
+			const bool do_update = m_force_update || elapsed_update >= m_update_interval;
 
 			if (m_is_initialised)
 			{
@@ -437,7 +438,7 @@ namespace rsx
 				{
 					const float elapsed_frame = static_cast<float>(m_frametime_timer.GetElapsedTimeInMilliSec());
 					m_frametime_timer.Start();
-					m_frametime_graph.record_datapoint(elapsed_frame);
+					m_frametime_graph.record_datapoint(elapsed_frame, do_update);
 					m_frametime_graph.set_title(fmt::format("Frametime: %4.1f", elapsed_frame).c_str());
 				}
 
@@ -452,7 +453,7 @@ namespace rsx
 				++m_frames;
 			}
 
-			if (elapsed_update >= m_update_interval || m_force_update)
+			if (do_update)
 			{
 				// 1. Fetch/calculate metrics we'll need
 				if (!m_is_initialised || !m_force_update)
@@ -512,7 +513,7 @@ namespace rsx
 						m_fps = std::max(0.f, static_cast<f32>(m_frames / (elapsed_update / 1000)));
 						if (m_is_initialised && m_framerate_graph_enabled)
 						{
-							m_fps_graph.record_datapoint(m_fps);
+							m_fps_graph.record_datapoint(m_fps, true);
 							m_fps_graph.set_title(fmt::format("Framerate: %04.1f", m_fps).c_str());
 						}
 						break;
@@ -720,7 +721,7 @@ namespace rsx
 			return m_datapoint_count;
 		}
 
-		void graph::record_datapoint(f32 datapoint)
+		void graph::record_datapoint(f32 datapoint, bool update_metrics)
 		{
 			ensure(datapoint >= 0.0f);
 
@@ -728,6 +729,18 @@ namespace rsx
 
 			// Record datapoint
 			m_datapoints.push_back(datapoint);
+
+			// Cull vector when it gets large
+			if (m_datapoints.size() > m_datapoint_count * 16ull)
+			{
+				std::copy(m_datapoints.begin() + m_datapoints.size() - m_datapoint_count, m_datapoints.end(), m_datapoints.begin());
+				m_datapoints.resize(m_datapoint_count);
+			}
+
+			if (!update_metrics)
+			{
+				return;
+			}
 
 			m_max = 0.0f;
 			m_avg = 0.0f;
@@ -756,7 +769,7 @@ namespace rsx
 				// Sanitize min value
 				m_min = std::min(m_min, m_max);
 
-				if (m_show_1p_avg && valid_datapoints.size())
+				if (m_show_1p_avg && !valid_datapoints.empty())
 				{
 					// Sort datapoints (we are only interested in the lowest/highest 1%)
 					const usz i_1p = valid_datapoints.size() / 100;
@@ -775,13 +788,6 @@ namespace rsx
 			else
 			{
 				m_min = 0.0f;
-			}
-
-			// Cull vector when it gets large
-			if (m_datapoints.size() > m_datapoint_count * 16ull)
-			{
-				std::copy(m_datapoints.begin() + m_datapoints.size() - m_datapoint_count, m_datapoints.end(), m_datapoints.begin());
-				m_datapoints.resize(m_datapoint_count);
 			}
 		}
 

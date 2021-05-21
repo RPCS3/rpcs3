@@ -1154,7 +1154,7 @@ namespace rsx
 			void set_one_percent_sort_high(bool sort_1p_high);
 			u16 get_height() const;
 			u32 get_datapoint_count() const;
-			void record_datapoint(f32 datapoint);
+			void record_datapoint(f32 datapoint, bool update_metrics);
 			void update();
 			compiled_resource& get_compiled() override;
 		};
