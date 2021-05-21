@@ -136,3 +136,9 @@ char* extract_file_name(const char* file_path, char real_file_name[CRYPTO_MAX_PA
 	strcpy_trunc(r, v);
 	return real_file_name;
 }
+
+void mbedtls_zeroize(void *v, size_t n)
+{
+	static void *(*const volatile unop_memset)(void *, int, size_t) = &memset;
+	(void)unop_memset(v, 0, n);
+}

@@ -578,11 +578,11 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		return SCE_NP_TROPHY_ERROR_ILLEGAL_UPDATE;
 	}
 
-	TROPUSRLoader* tropusr = new TROPUSRLoader();
+	const auto& tropusr = ctxt->tropusr = std::make_unique<TROPUSRLoader>();
 	const std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
 	const std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
-	tropusr->Load(trophyUsrPath, trophyConfPath);
-	ctxt->tropusr.reset(tropusr);
+
+	ensure(tropusr->Load(trophyUsrPath, trophyConfPath).success);
 
 	// This emulates vsh sending the events and ensures that not 2 events are processed at once
 	const std::pair<u32, s32> statuses[] =
