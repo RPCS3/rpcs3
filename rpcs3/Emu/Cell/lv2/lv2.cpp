@@ -48,6 +48,8 @@
 #include "sys_uart.h"
 #include "sys_crypto_engine.h"
 
+#include <optional>
+
 extern std::string ppu_get_syscall_name(u64 code);
 
 template <>
@@ -1386,4 +1388,42 @@ void lv2_obj::schedule_all()
 			break;
 		}
 	}
+}
+
+ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm)
+{
+	std::optional<reader_lock> opt_lock;
+
+	if (lock_idm)
+	{
+		opt_lock.emplace(id_manager::g_mutex);
+	}
+
+	if (ppu->state & cpu_flag::stop)
+	{
+		return PPU_THREAD_STATUS_IDLE;
+	}
+
+	switch (ppu->joiner)
+	{
+	case ppu_join_status::zombie: return PPU_THREAD_STATUS_ZOMBIE;
+	case ppu_join_status::exited: return PPU_THREAD_STATUS_DELETED;
+	default: break;
+	}
+
+	reader_lock lock(g_mutex);
+
+	const auto it = std::find(g_ppu.begin(), g_ppu.end(), ppu);
+
+	if (it == g_ppu.end())
+	{
+		return PPU_THREAD_STATUS_SLEEP;
+	}
+
+	if (it - g_ppu.begin() >= g_cfg.core.ppu_threads)
+	{
+		return PPU_THREAD_STATUS_RUNNABLE;
+	}
+
+	return PPU_THREAD_STATUS_ONPROC;
 }

@@ -97,6 +97,27 @@ void fmt_class_string<ppu_join_status>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<ppu_thread_status>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](ppu_thread_status s)
+	{
+		switch (s)
+		{
+		case PPU_THREAD_STATUS_IDLE: return "IDLE";
+		case PPU_THREAD_STATUS_RUNNABLE: return "RUN";
+		case PPU_THREAD_STATUS_ONPROC: return "ONPROC";
+		case PPU_THREAD_STATUS_SLEEP: return "SLEEP";
+		case PPU_THREAD_STATUS_STOP: return "STOP";
+		case PPU_THREAD_STATUS_ZOMBIE: return "Zombie";
+		case PPU_THREAD_STATUS_DELETED: return "Deleted";
+		case PPU_THREAD_STATUS_UNKNOWN: break;
+		}
+
+		return unknown;
+	});
+}
+
 const ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise;
 const ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast;
 const ppu_decoder<ppu_itype> g_ppu_itype;

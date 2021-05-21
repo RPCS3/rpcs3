@@ -60,6 +60,8 @@ enum
 	SYS_SYNC_ATTR_ADAPTIVE_MASK  = 0xf000,
 };
 
+enum ppu_thread_status : u32;
+
 // Base class for some kernel objects (shared set of 8192 objects).
 struct lv2_obj
 {
@@ -184,6 +186,8 @@ public:
 		awake({});
 		g_to_awake.clear();
 	}
+
+	static ppu_thread_status ppu_state(ppu_thread* ppu, bool lock_idm = true);
 
 	static inline void append(cpu_thread* const thread)
 	{
