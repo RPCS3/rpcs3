@@ -375,7 +375,17 @@ namespace utils
 			MessageBoxW(0, L"Failed to initialize sparse file.", L"RPCS3", MB_ICONERROR);
 		}
 
-		ensure(f.trunc(m_size));
+		if (f.size() != m_size)
+		{
+			// Resize the file gradually (bug workaround)
+			for (usz i = 0; i < m_size / (1024 * 1024 * 256); i++)
+			{
+				ensure(f.trunc((i + 1) * (1024 * 1024 * 256)));
+			}
+
+			ensure(f.trunc(m_size));
+		}
+
 		m_handle = ensure(::CreateFileMappingW(f.get_handle(), nullptr, PAGE_READWRITE, 0, 0, nullptr));
 #else
 		if (!storage.empty())
