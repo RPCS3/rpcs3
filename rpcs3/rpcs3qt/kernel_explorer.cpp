@@ -121,6 +121,24 @@ static QTreeWidgetItem* find_node(QTreeWidget* tree, u32 id)
 	return nullptr;
 }
 
+// Find node with ID in selected node children (optimization)
+static QTreeWidgetItem* find_node(QTreeWidgetItem* root, u32 id)
+{
+	if (root)
+	{
+		for (int i = 0; i < root->childCount(); i++)
+		{
+			if (auto item = root->child(i); item->data(0, kernel_item_role::type_role).toInt() == kernel_item_type::node &&
+				item->data(0, kernel_item_role::id_role).toUInt() == id)
+			{
+				return item;
+			}
+		}
+	}
+
+	return nullptr;
+}
+
 static QTreeWidgetItem* add_volatile_node(QTreeWidget* tree, QTreeWidgetItem *parent, const QString& base_text, const QString& text = "", int column = 0)
 {
 	QTreeWidgetItem* node = find_first_node(tree, parent, base_text + ".*");
@@ -288,7 +306,7 @@ void kernel_explorer::Update()
 	root->setText(0, qstr(fmt::format("Process 0x%08x: Total Memory Usage: 0x%x/0x%x (%0.2f/%0.2f MB)", process_getpid(), total_memory_usage, dct->size, 1. * total_memory_usage / (1024 * 1024)
 		, 1. * dct->size / (1024 * 1024))));
 
-	add_solid_node(m_tree, find_node(m_tree, additional_nodes::process_info), qstr(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat())));
+	add_solid_node(m_tree, find_node(root, additional_nodes::process_info), qstr(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat())));
 
 	auto display_program_segments = [this](QTreeWidgetItem* tree, const ppu_module& m)
 	{
@@ -304,7 +322,7 @@ void kernel_explorer::Update()
 
 	idm::select<lv2_obj>([&](u32 id, lv2_obj& obj)
 	{
-		const auto node = find_node(m_tree, id >> 24);
+		const auto node = find_node(root, id >> 24);
 		if (!node)
 		{
 			return;
@@ -517,31 +535,31 @@ void kernel_explorer::Update()
 	idm::select<sys_vm_t>([&](u32 /*id*/, sys_vm_t& vmo)
 	{
 		const u32 psize = vmo.psize;
-		add_leaf(find_node(m_tree, additional_nodes::virtual_memory), qstr(fmt::format("Virtual Mem 0x%08x: Virtual Size: 0x%x (%0.2f MB), Physical Size: 0x%x (%0.2f MB)", vmo.addr
+		add_leaf(find_node(root, additional_nodes::virtual_memory), qstr(fmt::format("Virtual Mem 0x%08x: Virtual Size: 0x%x (%0.2f MB), Physical Size: 0x%x (%0.2f MB)", vmo.addr
 			, vmo.size, vmo.size * 1. / (1024 * 1024), psize, psize * 1. / (1024 * 1024))));
 	});
 
 	idm::select<lv2_socket>([&](u32 id, lv2_socket& sock)
 	{
-		add_leaf(find_node(m_tree, additional_nodes::sockets), qstr(fmt::format("Socket %u: Type: %s, Family: %s, Wq: %zu", id, sock.type, sock.family, sock.queue.size())));
+		add_leaf(find_node(root, additional_nodes::sockets), qstr(fmt::format("Socket %u: Type: %s, Family: %s, Wq: %zu", id, sock.type, sock.family, sock.queue.size())));
 	});
 
 	idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container& container)
 	{
 		const u32 used = container.used;
-		add_leaf(find_node(m_tree, additional_nodes::memory_containers), qstr(fmt::format("Memory Container 0x%08x: Used: 0x%x/0x%x (%0.2f/%0.2f MB)", id, used, container.size, used * 1. / (1024 * 1024), container.size * 1. / (1024 * 1024))));
+		add_leaf(find_node(root, additional_nodes::memory_containers), qstr(fmt::format("Memory Container 0x%08x: Used: 0x%x/0x%x (%0.2f/%0.2f MB)", id, used, container.size, used * 1. / (1024 * 1024), container.size * 1. / (1024 * 1024))));
 	});
 
 	idm::select<named_thread<ppu_thread>>([&](u32 id, ppu_thread& ppu)
 	{
 		const auto func = ppu.last_function;
-		add_leaf(find_node(m_tree, additional_nodes::ppu_threads), qstr(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, State: %s, %s func: “%s”", id, *ppu.ppu_tname.load(), +ppu.prio, ppu.joiner.load(), ppu.state.load()
+		add_leaf(find_node(root, additional_nodes::ppu_threads), qstr(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, State: %s, %s func: “%s”", id, *ppu.ppu_tname.load(), +ppu.prio, ppu.joiner.load(), ppu.state.load()
 			, ppu.current_function ? "In" : "Last", func ? func : "")));
 	});
 
 	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
 	{
-		QTreeWidgetItem* spu_thread_tree = add_solid_node(m_tree, find_node(m_tree, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type())));
+		QTreeWidgetItem* spu_thread_tree = add_solid_node(m_tree, find_node(root, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type())));
 
 		if (spu.get_type() == spu_type::threaded)
 		{
@@ -597,7 +615,7 @@ void kernel_explorer::Update()
 
 	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
 	{
-		QTreeWidgetItem* spu_tree = add_solid_node(m_tree, find_node(m_tree, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), +tg.prio, tg.type)));
+		QTreeWidgetItem* spu_tree = add_solid_node(m_tree, find_node(root, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), +tg.prio, tg.type)));
 
 		if (tg.name.ends_with("CellSpursKernelGroup"sv))
 		{
@@ -685,7 +703,7 @@ void kernel_explorer::Update()
 		}
 	});
 
-	QTreeWidgetItem* rsx_context_node = find_node(m_tree, additional_nodes::rsx_contexts);
+	QTreeWidgetItem* rsx_context_node = find_node(root, additional_nodes::rsx_contexts);
 
 	do
 	{
@@ -793,7 +811,7 @@ void kernel_explorer::Update()
 
 	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& fo)
 	{
-		add_leaf(find_node(m_tree, additional_nodes::file_descriptors), qstr(fmt::format("FD %u: %s", id, fo.to_string())));
+		add_leaf(find_node(root, additional_nodes::file_descriptors), qstr(fmt::format("FD %u: %s", id, fo.to_string())));
 	});
 
 	std::function<int(QTreeWidgetItem*)> final_touches;
