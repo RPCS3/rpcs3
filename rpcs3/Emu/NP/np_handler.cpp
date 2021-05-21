@@ -42,6 +42,8 @@
 
 #include "util/asm.hpp"
 
+#include <span>
+
 LOG_CHANNEL(sys_net);
 LOG_CHANNEL(sceNp2);
 LOG_CHANNEL(sceNp);
@@ -372,6 +374,52 @@ namespace np
 		}
 	}
 
+	np_handler::np_handler(utils::serial& ar)
+		: np_handler()
+	{
+		ar(is_netctl_init, is_NP_init);
+
+		if (!is_NP_init)
+		{
+			return;
+		}
+
+		ar(is_NP_Lookup_init, is_NP_Score_init, is_NP2_init, is_NP2_Match2_init, is_NP_Auth_init
+			, manager_cb, manager_cb_arg, std::as_bytes(std::span(&basic_handler, 1)), is_connected, is_psn_active
+			, hostname, ether_address, local_ip_addr, public_ip_addr, dns_ip);
+
+		// Call init func if needed (np_memory is unaffected when an empty pool is provided)
+		init_NP(0, vm::null);
+
+		np_memory.save(ar);
+
+		// TODO: IDM-tied objects are not yet saved
+	}
+
+	void np_handler::save(utils::serial& ar)
+	{
+		// TODO: See ctor
+		ar(is_netctl_init, is_NP_init);
+
+		if (!is_NP_init)
+		{
+			return;
+		}
+
+		USING_SERIALIZATION_VERSION(sceNp);
+
+		ar(is_NP_Lookup_init, is_NP_Score_init, is_NP2_init, is_NP2_Match2_init, is_NP_Auth_init
+			, manager_cb, manager_cb_arg, std::as_bytes(std::span(&basic_handler, 1)), is_connected, is_psn_active
+			, hostname, ether_address, local_ip_addr, public_ip_addr, dns_ip);
+
+		np_memory.save(ar);
+	}
+
+	void memory_allocator::save(utils::serial& ar)
+	{
+		ar(m_pool, m_size, m_allocs, m_avail);
+	}
+
 	void np_handler::discover_ip_address()
 	{
 		hostname.clear();
@@ -553,8 +601,11 @@ namespace np
 
 	void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 	{
-		// Init memory pool
-		np_memory.setup(poolptr, poolsize);
+		if (poolsize)
+		{
+			// Init memory pool (zero arg is reserved for savestate's use)
+			np_memory.setup(poolptr, poolsize);
+		}
 
 		memset(&npid, 0, sizeof(npid));
 		memset(&online_name, 0, sizeof(online_name));

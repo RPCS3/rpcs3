@@ -2,6 +2,7 @@
 #include "sys_interrupt.h"
 
 #include "Emu/IdManager.h"
+#include "Emu/System.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -11,18 +12,59 @@
 LOG_CHANNEL(sys_interrupt);
 
 lv2_int_tag::lv2_int_tag() noexcept
-	: id(idm::last_id())
+	: lv2_obj{1}
+	, id(idm::last_id())
 {
-	exists.release(1);
+}
+
+lv2_int_tag::lv2_int_tag(utils::serial& ar) noexcept
+	: lv2_obj{1}
+	, id(idm::last_id())
+	, handler([&]()
+	{
+		const u32 id = ar;
+
+		auto ptr = idm::get_unlocked<lv2_obj, lv2_int_serv>(id);
+
+		if (!ptr && id)
+		{
+			Emu.DeferDeserialization([id, &handler = this->handler]()
+			{
+				handler = ensure(idm::get_unlocked<lv2_obj, lv2_int_serv>(id));
+			});
+		}
+
+		return ptr;
+	}())
+{
+}
+
+void lv2_int_tag::save(utils::serial& ar)
+{
+	ar(lv2_obj::check(handler) ? handler->id : 0);
 }
 
 lv2_int_serv::lv2_int_serv(const std::shared_ptr<named_thread<ppu_thread>>& thread, u64 arg1, u64 arg2) noexcept
-	: id(idm::last_id())
+	: lv2_obj{1}
+	, id(idm::last_id())
 	, thread(thread)
 	, arg1(arg1)
 	, arg2(arg2)
 {
-	exists.release(1);
+}
+
+lv2_int_serv::lv2_int_serv(utils::serial& ar) noexcept
+	: lv2_obj{1}
+	, id(idm::last_id())
+	, thread(idm::get_unlocked<named_thread<ppu_thread>>(ar))
+	, arg1(ar)
+	, arg2(ar)
+{
+}
+
+void lv2_int_serv::save(utils::serial& ar)
+{
+	ar(thread && idm::check_unlocked<named_thread<ppu_thread>>(thread->id) ? thread->id : 0, arg1, arg2);
 }
 
 void ppu_interrupt_thread_entry(ppu_thread&, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*);
@@ -197,6 +239,8 @@ void sys_interrupt_thread_eoi(ppu_thread& ppu)
 	ppu.state += cpu_flag::ret;
 
 	lv2_obj::sleep(ppu);
+
+	ppu.interrupt_thread_executing = false;
 }
 
 void ppu_interrupt_thread_entry(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*)

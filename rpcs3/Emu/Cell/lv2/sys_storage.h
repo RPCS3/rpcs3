@@ -26,6 +26,7 @@ struct lv2_storage
 	static const u32 id_base = 0x45000000;
 	static const u32 id_step = 1;
 	static const u32 id_count = 2048;
+	SAVESTATE_INIT_POS(45);
 
 	const u64 device_id;
 	const fs::file file;

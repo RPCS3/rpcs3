@@ -115,6 +115,7 @@ namespace ppu_func_detail
 
 		static FORCE_INLINE void put_result(ppu_thread& ppu, const T& result)
 		{
+			if (ppu.state & cpu_flag::again) return;
 			ppu.gpr[3] = ppu_gpr_cast(result);
 		}
 	};
@@ -126,6 +127,7 @@ namespace ppu_func_detail
 
 		static FORCE_INLINE void put_result(ppu_thread& ppu, const T& result)
 		{
+			if (ppu.state & cpu_flag::again) return;
 			ppu.fpr[1] = static_cast<T>(result);
 		}
 	};
@@ -137,6 +139,7 @@ namespace ppu_func_detail
 
 		static FORCE_INLINE void put_result(ppu_thread& ppu, const T& result)
 		{
+			if (ppu.state & cpu_flag::again) return;
 			ppu.vr[2] = result;
 		}
 	};
@@ -299,6 +302,9 @@ public:
 
 	// Allocation address
 	u32 addr = 0;
+
+	void save(utils::serial& ar);
+	ppu_function_manager(utils::serial& ar);
 };
 
 template<typename T, T Func>

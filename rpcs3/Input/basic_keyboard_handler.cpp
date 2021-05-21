@@ -33,10 +33,6 @@ void basic_keyboard_handler::Init(const u32 max_connect)
 	m_info.status[0]   = CELL_KB_STATUS_CONNECTED; // (TODO: Support for more keyboards)
 }
 
-basic_keyboard_handler::basic_keyboard_handler() : QObject()
-{
-}
-
 /* Sets the target window for the event handler, and also installs an event filter on the target. */
 void basic_keyboard_handler::SetTargetWindow(QWindow* target)
 {

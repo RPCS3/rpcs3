@@ -150,7 +150,7 @@ fs::file tar_object::get_file(const std::string& path)
 	}
 }
 
-bool tar_object::extract(std::string vfs_mp)
+bool tar_object::extract(std::string prefix_path, bool is_vfs)
 {
 	if (!m_file) return false;
 
@@ -163,21 +163,26 @@ bool tar_object::extract(std::string vfs_mp)
 
 		std::string result = name;
 
-		if (!vfs_mp.empty())
+		if (!prefix_path.empty())
 		{
-			result = fmt::format("/%s/%s", vfs_mp, result);
+			result = prefix_path + '/' + result;
 		}
 		else
 		{
+			// Must be VFS here
+			is_vfs = true;
 			result.insert(result.begin(), '/');
 		}
 
-		result = vfs::get(result);
-
-		if (result.empty())
+		if (is_vfs)
 		{
-			tar_log.error("Path of entry is not mounted: '%s' (vfs_mp='%s')", name, vfs_mp);
-			return false;
+			result = vfs::get(result);
+
+			if (result.empty())
+			{
+				tar_log.error("Path of entry is not mounted: '%s' (prefix_path='%s')", name, prefix_path);
+				return false;
+			}
 		}
 
 		u64 mtime = octal_text_to_u64({header.mtime, std::size(header.mtime)});
@@ -197,8 +202,8 @@ bool tar_object::extract(std::string vfs_mp)
 		case '\0':
 		case '0':
 		{
-			// Create the directories which should have been mount points if vfs_mp is not empty
-			if (!vfs_mp.empty() && !fs::create_path(fs::get_parent_dir(result)))
+			// Create the directories which should have been mount points if prefix_path is not empty
+			if (!prefix_path.empty() && !fs::create_path(fs::get_parent_dir(result)))
 			{
 				tar_log.error("TAR Loader: failed to create directory for file %s (%s)", name, fs::g_tls_error);
 				return false;
@@ -400,7 +405,7 @@ bool extract_tar(const std::string& file_path, const std::string& dir_path, fs::
 
 	tar_object tar(vec.empty() ? file : vec[2]);
 
-	const bool ok = tar.extract("/tar_extract");
+	const bool ok = tar.extract("/tar_extract", true);
 
 	if (ok)
 	{

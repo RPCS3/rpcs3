@@ -342,6 +342,52 @@ void audio_port::tag(s32 offset)
 	prev_touched_tag_nr = -1;
 }
 
+cell_audio_thread::cell_audio_thread(utils::serial& ar)
+	: cell_audio_thread()
+{
+	ar(init);
+
+	if (!init)
+	{
+		return;
+	}
+
+	ar(key_count, event_period);
+
+	keys.resize(ar);
+
+	for (key_info& k : keys)
+	{
+		ar(k.start_period, k.flags, k.source);
+		k.port = lv2_event_queue::load_ptr(ar, k.port);
+	}
+
+	ar(ports);
+}
+
+void cell_audio_thread::save(utils::serial& ar)
+{
+	ar(init);
+
+	if (!init)
+	{
+		return;
+	}
+
+	USING_SERIALIZATION_VERSION(cellAudio);
+
+	ar(key_count, event_period);
+	ar(keys.size());
+
+	for (const key_info& k : keys)
+	{
+		ar(k.start_period, k.flags, k.source);
+		lv2_event_queue::save_ptr(ar, k.port.get());
+	}
+
+	ar(ports);
+}
+
 std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 {
 	AUDIT(cfg.buffering_enabled);
@@ -614,6 +660,11 @@ void cell_audio_thread::operator()()
 	}
 
 	thread_ctrl::scoped_priority high_prio(+1);
+
+	while (Emu.IsPaused())
+	{
+		thread_ctrl::wait_for(5000);
+	}
 
 	u32 untouched_expected = 0;
 

@@ -77,6 +77,11 @@ public:
 	virtual void Init(const u32 max_connect) = 0;
 
 	virtual ~KeyboardHandlerBase() = default;
+	KeyboardHandlerBase(utils::serial* ar);
+	KeyboardHandlerBase(utils::serial& ar) : KeyboardHandlerBase(&ar) {}
+	void save(utils::serial& ar);
+
+	SAVESTATE_INIT_POS(19);
 
 	void Key(u32 code, bool pressed);
 	void SetIntercepted(bool intercepted);

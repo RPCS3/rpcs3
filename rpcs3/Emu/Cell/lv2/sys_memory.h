@@ -70,7 +70,13 @@ struct lv2_memory_container
 	const lv2_mem_container_id id; // ID of the container in if placed at IDM, otherwise SYS_MEMORY_CONTAINER_ID_INVALID
 	atomic_t<u32> used{}; // Amount of "physical" memory currently used
 
+	SAVESTATE_INIT_POS(1);
+
 	lv2_memory_container(u32 size, bool from_idm = false) noexcept;
+	lv2_memory_container(utils::serial& ar, bool from_idm = false) noexcept;
+	static std::shared_ptr<void> load(utils::serial& ar);
+	void save(utils::serial& ar);
+	static lv2_memory_container* search(u32 id);
 
 	// Try to get specified amount of "physical" memory
 	// Values greater than UINT32_MAX will fail

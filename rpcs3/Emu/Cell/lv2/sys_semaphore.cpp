@@ -9,6 +9,27 @@
 
 LOG_CHANNEL(sys_semaphore);
 
+lv2_sema::lv2_sema(utils::serial& ar)
+	: protocol(ar)
+	, key(ar)
+	, name(ar)
+	, max(ar)
+{
+	ar(val);
+}
+
+std::shared_ptr<void> lv2_sema::load(utils::serial& ar)
+{
+	auto sema = std::make_shared<lv2_sema>(ar);
+	return lv2_obj::load(sema->key, sema);
+}
+
+void lv2_sema::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(lv2_sync);
+	ar(protocol, key, name, max, std::max<s32>(+val, 0));
+}
+
 error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
 {
 	ppu.state += cpu_flag::wait;
@@ -46,10 +67,7 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 		return error;
 	}
 
-	if (ppu.test_stopped())
-	{
-		return {};
-	}
+	static_cast<void>(ppu.test_stopped());
 
 	*sem_id = idm::last_id();
 	return CELL_OK;
@@ -129,14 +147,22 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (is_stopped(state))
-		{
-			return {};
-		}
-
 		if (state & cpu_flag::signal)
 		{
 			break;
+		}
+
+		if (is_stopped(state))
+		{
+			std::lock_guard lock(sem->mutex);
+
+			if (std::find(sem->sq.begin(), sem->sq.end(), &ppu) == sem->sq.end())
+			{
+				break;
+			}
+
+			ppu.state += cpu_flag::again;
+			return {};
 		}
 
 		if (timeout)
@@ -146,7 +172,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return {};
+					continue;
 				}
 
 				std::lock_guard lock(sem->mutex);
@@ -240,6 +266,15 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 	{
 		std::lock_guard lock(sem->mutex);
 
+		for (auto cpu : sem->sq)
+		{
+			if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::again)
+			{
+				ppu.state += cpu_flag::again;
+				return {};
+			}
+		}
+
 		const auto [val, ok] = sem->val.fetch_op([&](s32& val)
 		{
 			if (count + 0u <= sem->max + 0u - val)
@@ -294,10 +329,7 @@ error_code sys_semaphore_get_value(ppu_thread& ppu, u32 sem_id, vm::ptr<s32> cou
 		return CELL_EFAULT;
 	}
 
-	if (ppu.test_stopped())
-	{
-		return {};
-	}
+	static_cast<void>(ppu.test_stopped());
 
 	*count = sema.ret;
 	return CELL_OK;

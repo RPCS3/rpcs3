@@ -19,6 +19,7 @@ enum class cpu_flag : u32
 	pause, // Thread suspended by suspend_all technique
 	suspend, // Thread suspended
 	ret, // Callback return requested
+	again, // Thread must complete the syscall after deserialization
 	signal, // Thread received a signal (HLE)
 	memory, // Thread must unlock memory mutex
 	pending, // Thread has postponed work
@@ -34,7 +35,7 @@ enum class cpu_flag : u32
 // Test stopped state
 constexpr bool is_stopped(bs_t<cpu_flag> state)
 {
-	return !!(state & (cpu_flag::stop + cpu_flag::exit));
+	return !!(state & (cpu_flag::stop + cpu_flag::exit + cpu_flag::again));
 }
 
 // Test paused state

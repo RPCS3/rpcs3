@@ -169,6 +169,7 @@ public:
 	static const u32 id_base = 0x41000000;
 	static const u32 id_step = 0x100;
 	static const u32 id_count = 2048;
+	SAVESTATE_INIT_POS(37);
 
 private:
 	u32 idm_id;
@@ -219,6 +220,7 @@ public:
 	static const u32 id_base = 0x43000000;
 	static const u32 id_step = 0x100;
 	static const u32 id_count = 2048;
+	SAVESTATE_INIT_POS(38);
 
 private:
 	// IDM data
@@ -283,6 +285,7 @@ public:
 	static const u32 id_base = 0x42000000;
 	static const u32 id_step = 0x100;
 	static const u32 id_count = 2048;
+	SAVESTATE_INIT_POS(39);
 
 private:
 	// IDM data

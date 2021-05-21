@@ -47,6 +47,11 @@ struct sns_fb_handle_t
 	static const u32 id_step  = 1;
 	static const u32 id_count = SCE_NP_SNS_FB_HANDLE_SLOT_MAX + 1;
 	static const u32 invalid  = SCE_NP_SNS_FB_INVALID_HANDLE;
+
+	SAVESTATE_INIT_POS(20);
+	sns_fb_handle_t() = default;
+	sns_fb_handle_t(utils::serial&){}
+	void save(utils::serial&){}
 };
 
 // Initialization parameters for functionalities coordinated with Facebook
