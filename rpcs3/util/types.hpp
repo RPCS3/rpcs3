@@ -53,26 +53,6 @@ using namespace std::literals;
 #define AUDIT(...) (static_cast<void>(0))
 #endif
 
-#if __cpp_lib_bit_cast < 201806L
-namespace std
-{
-	template <class To, class From, typename = std::enable_if_t<sizeof(To) == sizeof(From)>>
-	constexpr To bit_cast(const From& from) noexcept
-	{
-		static_assert(sizeof(To) == sizeof(From), "std::bit_cast<>: incompatible type size");
-
-		if constexpr ((std::is_same_v<std::remove_const_t<To>, std::remove_const_t<From>> && std::is_constructible_v<To, From>) || (std::is_integral_v<From> && std::is_integral_v<To>))
-		{
-			return static_cast<To>(from);
-		}
-
-		To result{};
-		__builtin_memcpy(&result, &from, sizeof(From));
-		return result;
-	}
-}
-#endif
-
 #if defined(__INTELLISENSE__)
 #define consteval constexpr
 #endif
