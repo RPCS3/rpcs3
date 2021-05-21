@@ -593,16 +593,16 @@ namespace rsx
 					// Only force once
 					m_force_update = false;
 				}
-			}
 
-			if (m_framerate_graph_enabled)
-			{
-				m_fps_graph.update();
-			}
+				if (m_framerate_graph_enabled)
+				{
+					m_fps_graph.update();
+				}
 
-			if (m_frametime_graph_enabled)
-			{
-				m_frametime_graph.update();
+				if (m_frametime_graph_enabled)
+				{
+					m_frametime_graph.update();
+				}
 			}
 		}
 
@@ -811,7 +811,11 @@ namespace rsx
 
 		compiled_resource& graph::get_compiled()
 		{
-			refresh();
+			if (is_compiled)
+			{
+				return compiled_resources;
+			}
+
 			overlay_element::get_compiled();
 
 			const f32 normalize_factor = f32(h) / (m_max != 0.0f ? m_max : 1.0f);
