@@ -34,6 +34,18 @@ enum class ppu_join_status : u32
 	max = 4, // Values above it indicate PPU id of joining thread
 };
 
+enum ppu_thread_status : u32
+{
+	PPU_THREAD_STATUS_IDLE,
+	PPU_THREAD_STATUS_RUNNABLE,
+	PPU_THREAD_STATUS_ONPROC,
+	PPU_THREAD_STATUS_SLEEP,
+	PPU_THREAD_STATUS_STOP,
+	PPU_THREAD_STATUS_ZOMBIE,
+	PPU_THREAD_STATUS_DELETED,
+	PPU_THREAD_STATUS_UNKNOWN,
+};
+
 // Formatting helper
 enum class ppu_syscall_code : u64
 {

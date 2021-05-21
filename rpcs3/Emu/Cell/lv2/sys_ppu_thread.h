@@ -41,18 +41,6 @@ struct sys_ppu_thread_icontext_t
 	be_t<u64> pc;
 };
 
-enum : u32
-{
-	PPU_THREAD_STATUS_IDLE,
-	PPU_THREAD_STATUS_RUNNABLE,
-	PPU_THREAD_STATUS_ONPROC,
-	PPU_THREAD_STATUS_SLEEP,
-	PPU_THREAD_STATUS_STOP,
-	PPU_THREAD_STATUS_ZOMBIE,
-	PPU_THREAD_STATUS_DELETED,
-	PPU_THREAD_STATUS_UNKNOWN,
-};
-
 // Syscalls
 
 void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode);
