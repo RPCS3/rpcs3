@@ -328,6 +328,8 @@ namespace rsx
 
 	struct framebuffer_layout
 	{
+		using enable_bitcopy = std::true_type;
+
 		u16 width;
 		u16 height;
 		std::array<u32, 4> color_addresses;
@@ -696,6 +698,7 @@ namespace rsx
 
 		// I hate this flag, but until hle is closer to lle, its needed
 		bool isHLE{ false };
+		bool serialized = false;
 
 		u32 flip_status;
 		int debug_level;
@@ -714,6 +717,7 @@ namespace rsx
 		u32 local_mem_size{0};
 		u32 rsx_event_port{0};
 		u32 driver_info{0};
+		bool gcm_intr_thread_offline = false; // Hack for savestates
 
 		void send_event(u64, u64, u64) const;
 
@@ -802,8 +806,15 @@ namespace rsx
 
 		static constexpr auto thread_name = "rsx::thread"sv;
 
+	private:
+		void serialize_common(utils::serial& ar);
+
 	protected:
-		thread();
+		thread(utils::serial* ar);
+
+		thread() : thread(static_cast<utils::serial*>(nullptr)) {}
+		thread(utils::serial& ar) : thread(std::addressof(ar)) {}
+
 		virtual void on_task();
 		virtual void on_exit();
 
@@ -819,6 +830,7 @@ namespace rsx
 	public:
 		thread(const thread&) = delete;
 		thread& operator=(const thread&) = delete;
+		void save(utils::serial& ar);
 
 		virtual void clear_surface(u32 /*arg*/) {}
 		virtual void begin();
@@ -946,7 +958,7 @@ namespace rsx
 		void init(u32 ctrlAddress);
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
-		void request_emu_flip(u32 buffer);
+		bool request_emu_flip(u32 buffer);
 
 		void pause();
 		void unpause();

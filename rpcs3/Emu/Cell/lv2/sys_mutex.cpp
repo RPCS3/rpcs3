@@ -9,6 +9,27 @@
 
 LOG_CHANNEL(sys_mutex);
 
+lv2_mutex::lv2_mutex(utils::serial& ar)
+	: protocol(ar)
+	, recursive(ar)
+	, adaptive(ar)
+	, key(ar)
+	, name(ar)
+{
+	ar(lock_count, owner);
+}
+
+std::shared_ptr<void> lv2_mutex::load(utils::serial& ar)
+{
+	auto mtx = std::make_shared<lv2_mutex>(ar);
+	return lv2_obj::load(mtx->key, mtx);
+}
+
+void lv2_mutex::save(utils::serial& ar)
+{
+	ar(protocol, recursive, adaptive, key, name, lock_count, owner & -2);
+}
+
 error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 {
 	ppu.state += cpu_flag::wait;
@@ -154,9 +175,22 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (is_stopped(state) || state & cpu_flag::signal)
+		if (state & cpu_flag::signal)
 		{
 			break;
+		}
+
+		if (is_stopped(state))
+		{
+			std::lock_guard lock(mutex->mutex);
+
+			if (std::find(mutex->sq.begin(), mutex->sq.end(), &ppu) == mutex->sq.end())
+			{
+				break;
+			}
+
+			ppu.state += cpu_flag::incomplete_syscall;
+			return {};
 		}
 
 		if (timeout)
@@ -166,7 +200,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return {};
+					continue;
 				}
 
 				std::lock_guard lock(mutex->mutex);

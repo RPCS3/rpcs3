@@ -10,6 +10,8 @@
 
 #include "Emu/Cell/timers.hpp"
 
+void init_fxo_for_exec(utils::serial*, bool);
+
 struct progress_dialog_workaround
 {
 	// WORKAROUND:
@@ -27,6 +29,7 @@ enum class system_state : u32
 	stopped,
 	paused,
 	ready,
+	starting,
 };
 
 enum class game_boot_result : u32
@@ -40,8 +43,15 @@ enum class game_boot_result : u32
 	decryption_error,
 	file_creation_error,
 	firmware_missing,
-	unsupported_disc_type
+	unsupported_disc_type,
+	savestate_corrupted,
+	savestate_version_unsupported,
 };
+
+constexpr bool is_error(game_boot_result res)
+{
+	return res != game_boot_result::no_errors;
+}
 
 struct EmuCallbacks
 {
@@ -58,7 +68,7 @@ struct EmuCallbacks
 	std::function<void()> init_mouse_handler;
 	std::function<void(std::string_view title_id)> init_pad_handler;
 	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
-	std::function<void()> init_gs_render;
+	std::function<void(utils::serial*)> init_gs_render;
 	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
 	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
 	std::function<std::shared_ptr<class OskDialogBase>()> get_osk_dialog;
@@ -104,6 +114,18 @@ class Emulator final
 
 	bool m_has_gui = true;
 
+	bool m_state_inspection_savestate = false;
+
+	std::vector<std::function<void()>> deferred_deserialization;
+
+	void ExecDeserializationRemnants()
+	{
+		for (auto&& func : ::as_rvalue(std::move(deferred_deserialization)))
+		{
+			func();
+		}
+	}
+
 public:
 	Emulator() = default;
 
@@ -136,6 +158,11 @@ public:
 		return m_cb.call_after(std::move(final_func));
 	}
 
+	void DeferDeserialization(std::function<void()>&& func)
+	{
+		deferred_deserialization.emplace_back(std::move(func));
+	}
+
 	/** Set emulator mode to running unconditionnaly.
 	 * Required to execute various part (PPUInterpreter, memory manager...) outside of rpcs3.
 	 */
@@ -146,6 +173,7 @@ public:
 
 	void Init(bool add_only = false);
 
+	std::unique_ptr<utils::serial> ar;
 	std::vector<std::string> argv;
 	std::vector<std::string> envp;
 	std::vector<u8> data;
@@ -214,24 +242,34 @@ public:
 		return m_pause_amend_time;
 	}
 
-	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
+	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false, const std::string& savestate = "");
 	bool BootRsxCapture(const std::string& path);
+
+	game_boot_result BootGameInState(const std::string& savestate, const std::string& title_id = "", bool direct = false, bool force_global_config = false)
+	{
+		return BootGame("", title_id, direct, false, force_global_config, savestate);
+	}
 
 	void SetForceBoot(bool force_boot);
 
 	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool force_global_config = false, bool is_disc_patch = false);
 	void Run(bool start_playtime);
+	void RunPPU();
+	void FixGuestTime();
+	void FinalizeRunRequest();
+
 	bool Pause();
 	void Resume();
-	void Stop(bool restart = false);
-	void Restart() { Stop(true); }
+	void Stop(bool savestate = false, bool restart = false);
+	void Restart(bool savestate = false) { Stop(savestate, true); }
 	bool Quit(bool force_quit);
 	static void CleanUp();
 
 	bool IsRunning() const { return m_state == system_state::running; }
-	bool IsPaused()  const { return m_state >= system_state::paused; } // ready is also considered paused by this function
+	bool IsPaused()  const { return m_state >= system_state::paused; } // ready/starting are also considered paused by this function
 	bool IsStopped() const { return m_state == system_state::stopped; }
 	bool IsReady()   const { return m_state == system_state::ready; }
+	bool IsStarting() const { return m_state == system_state::starting; }
 	auto GetStatus() const { return m_state.load(); }
 
 	bool HasGui() const { return m_has_gui; }
@@ -246,6 +284,8 @@ public:
 	void ConfigurePPUCache() const;
 
 	std::set<std::string> GetGameDirs() const;
+
+	friend void init_fxo_for_exec(utils::serial*, bool);
 };
 
 extern Emulator Emu;

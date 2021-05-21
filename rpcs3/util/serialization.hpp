@@ -3,21 +3,6 @@
 #include "util/types.hpp"
 #include <vector>
 
-namespace stx
-{
-	template <typename T>
-	struct exact_t
-	{
-		T obj;
-
-		exact_t(T&& _obj) : obj(std::forward<T>(_obj)) {}
-
-		// TODO: More conversions
-		template <typename U> requires (std::is_same_v<U&, T>)
-		operator U&() const { return obj; };
-	};
-}
-
 namespace utils
 {
 	template <typename T>

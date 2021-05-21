@@ -100,6 +100,46 @@ np_handler::np_handler()
 	}
 }
 
+np_handler::np_handler(utils::serial& ar)
+	: np_handler()
+{
+	ar(is_netctl_init, is_NP_init);
+
+	if (!is_NP_init)
+	{
+		return;
+	}
+
+	ar(is_NP_Lookup_init, is_NP_Score_init, is_NP2_init, is_NP2_Match2_init, is_NP_Auth_init
+		, manager_cb, manager_cb_arg, basic_handler, basic_handler_arg, is_connected, is_psn_active
+		, hostname, ether_address, local_ip_addr, public_ip_addr, dns_ip, mpool, mpool_size);
+
+	// Call init func if needed
+	init_NP(mpool_size, mpool);
+
+	// Deserialize after init function
+	ar(mpool_avail, mpool_allocs);
+
+	// TODO: IDM-tied objects are not yet saved
+}
+
+void np_handler::save(utils::serial& ar)
+{
+	// TODO: See ctor
+	ar(is_netctl_init, is_NP_init);
+
+	if (!is_NP_init)
+	{
+		return;
+	}
+
+	USING_SERIALIZATION_VERSION(sceNp);
+
+	ar(is_NP_Lookup_init, is_NP_Score_init, is_NP2_init, is_NP2_Match2_init, is_NP_Auth_init
+		, manager_cb, manager_cb_arg, basic_handler, basic_handler_arg, is_connected, is_psn_active
+		, hostname, ether_address, local_ip_addr, public_ip_addr, dns_ip, mpool, mpool_size, mpool_avail, mpool_allocs);
+}
+
 bool np_handler::discover_ip_address()
 {
 	hostname.clear();

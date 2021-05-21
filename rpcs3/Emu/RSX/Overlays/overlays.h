@@ -20,7 +20,7 @@ namespace rsx
 		struct overlay
 		{
 			u32 uid = umax;
-			u32 type_index = umax;
+			u64 type_index = umax;
 
 			u16 virtual_width = 1280;
 			u16 virtual_height = 720;

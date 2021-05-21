@@ -50,6 +50,23 @@ void fmt_class_string<CellPadFilterError>::format(std::string& out, u64 arg)
 	});
 }
 
+pad_info::pad_info(utils::serial& ar)
+	: max_connect(ar)
+	, port_setting(ar)
+{
+}
+
+void pad_info::save(utils::serial& ar)
+{
+	ar(max_connect, port_setting);
+}
+
+template <>
+void fxo_serialize<pad_info>(utils::serial* ar)
+{
+	fxo_serialize_body<pad_info>(ar);
+}
+
 error_code cellPadInit(u32 max_connect)
 {
 	sys_io.warning("cellPadInit(max_connect=%d)", max_connect);

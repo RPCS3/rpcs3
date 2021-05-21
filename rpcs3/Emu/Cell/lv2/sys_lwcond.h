@@ -41,6 +41,9 @@ struct lv2_lwcond final : lv2_obj
 		, control(control)
 	{
 	}
+
+	lv2_lwcond(utils::serial& ar);
+	void save(utils::serial& ar);
 };
 
 // Aux

@@ -5387,11 +5387,7 @@ public:
 			spu_runtime::g_escape(_spu);
 		}
 
-		if (_spu->test_stopped())
-		{
-			_spu->pc += 4;
-			spu_runtime::g_escape(_spu);
-		}
+		static_cast<void>(_spu->test_stopped());
 	}
 
 	void STOP(spu_opcode_t op) //
@@ -5434,12 +5430,7 @@ public:
 			spu_runtime::g_escape(_spu);
 		}
 
-		if (_spu->test_stopped())
-		{
-			_spu->pc += 4;
-			spu_runtime::g_escape(_spu);
-		}
-
+		static_cast<void>(_spu->test_stopped());
 		return static_cast<u32>(result & 0xffffffff);
 	}
 
@@ -5457,12 +5448,7 @@ public:
 		{
 			_spu->state += cpu_flag::wait;
 			std::this_thread::yield();
-
-			if (_spu->test_stopped())
-			{
-				_spu->pc += 4;
-				spu_runtime::g_escape(_spu);
-			}
+			static_cast<void>(_spu->test_stopped());
 		}
 
 		return res;
@@ -5498,6 +5484,8 @@ public:
 		val0 = m_ir->CreateTrunc(val0, get_type<u32>());
 		m_ir->CreateCondBr(cond, done, wait);
 		m_ir->SetInsertPoint(wait);
+		update_pc();
+		m_block->store.fill(nullptr);
 		const auto val1 = call("spu_read_channel", &exec_rdch, m_thread, m_ir->getInt32(op.ra));
 		m_ir->CreateBr(done);
 		m_ir->SetInsertPoint(done);
@@ -5528,6 +5516,7 @@ public:
 		case SPU_RdInMbox:
 		{
 			update_pc();
+			m_block->store.fill(nullptr);
 			res.value = call("spu_read_in_mbox", &exec_read_in_mbox, m_thread);
 			break;
 		}
@@ -5574,6 +5563,7 @@ public:
 		case SPU_RdEventStat:
 		{
 			update_pc();
+			m_block->store.fill(nullptr);
 			res.value = call("spu_read_events", &exec_read_events, m_thread);
 			break;
 		}
@@ -5587,6 +5577,7 @@ public:
 		default:
 		{
 			update_pc();
+			m_block->store.fill(nullptr);
 			res.value = call("spu_read_channel", &exec_rdch, m_thread, m_ir->getInt32(op.ra));
 			break;
 		}
@@ -5797,6 +5788,7 @@ public:
 			m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_upd)), m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE)), _mfc, next);
 			m_ir->SetInsertPoint(_mfc);
 			update_pc();
+			m_block->store.fill(nullptr);
 			call("spu_write_channel", &exec_wrch, m_thread, m_ir->getInt32(op.ra), val.value);
 			m_ir->CreateBr(next);
 			m_ir->SetInsertPoint(next);
@@ -5949,6 +5941,7 @@ public:
 					m_ir->SetInsertPoint(next);
 					m_ir->CreateStore(ci, spu_ptr<u8>(&spu_thread::ch_mfc_cmd, &spu_mfc_cmd::cmd));
 					update_pc();
+					m_block->store.fill(nullptr);
 					call("spu_exec_mfc_cmd", &exec_mfc_cmd, m_thread);
 					return;
 				}
@@ -6193,6 +6186,7 @@ public:
 			m_ir->CreateCondBr(m_ir->CreateICmpNE(_old, _new), _mfc, next);
 			m_ir->SetInsertPoint(_mfc);
 			update_pc();
+			m_block->store.fill(nullptr);
 			call("spu_list_unstall", &exec_list_unstall, m_thread, eval(val & 0x1f).value);
 			m_ir->CreateBr(next);
 			m_ir->SetInsertPoint(next);
@@ -6215,6 +6209,7 @@ public:
 		}
 
 		update_pc();
+		m_block->store.fill(nullptr);
 		call("spu_write_channel", &exec_wrch, m_thread, m_ir->getInt32(op.ra), val.value);
 	}
 
@@ -6235,6 +6230,7 @@ public:
 		{
 			m_block->block_end = m_ir->GetInsertBlock();
 			update_pc(m_pos + 4);
+			m_block->store.fill(nullptr);
 			tail_chunk(m_dispatch);
 		}
 	}
@@ -8354,7 +8350,9 @@ public:
 		if (m_interp_magn)
 			m_ir->CreateStore(&*(m_function->arg_begin() + 2), spu_ptr<u32>(&spu_thread::pc))->setVolatile(true);
 		else
-			update_pc();
+		{
+			update_pc(), m_block->store.fill(nullptr);
+		}
 		const auto ptr = _ptr<u32>(m_memptr, 0xffdead00);
 		m_ir->CreateStore(m_ir->getInt32("HALT"_u32), ptr)->setVolatile(true);
 		m_ir->CreateBr(next);

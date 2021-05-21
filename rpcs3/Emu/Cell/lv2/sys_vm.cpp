@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_vm.h"
 
 #include "Emu/IdManager.h"
@@ -17,6 +17,12 @@ sys_vm_t::sys_vm_t(u32 _addr, u32 vsize, lv2_memory_container* ct, u32 psize)
 	g_ids[addr >> 28].release(idm::last_id());
 }
 
+void sys_vm_t::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(lv2_vm);
+	ar(ct->id, addr, size, psize);
+}
+
 sys_vm_t::~sys_vm_t()
 {
 	// Free ID
@@ -29,6 +35,23 @@ struct sys_vm_global_t
 {
 	atomic_t<u32> total_vsize = 0;
 };
+
+sys_vm_t::sys_vm_t(utils::serial& ar)
+	: ct(lv2_memory_container::search(ar))
+	, addr(ar)
+	, size(ar)
+	, psize(ar)
+{
+	g_ids[addr >> 28].release(idm::last_id());
+	g_fxo->need<sys_vm_global_t>();
+	g_fxo->get<sys_vm_global_t>().total_vsize += size;
+}
+
+template <>
+void fxo_serialize<id_manager::id_map<sys_vm_t>>(utils::serial* ar)
+{
+	fxo_serialize_body<id_manager::id_map<sys_vm_t>>(ar);
+}
 
 error_code sys_vm_memory_map(ppu_thread& ppu, u32 vsize, u32 psize, u32 cid, u64 flag, u64 policy, vm::ptr<u32> addr)
 {

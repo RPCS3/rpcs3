@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "PPUFunction.h"
 #include "Utilities/JIT.h"
+#include "util/serialization.hpp"
 
 #include "PPUModule.h"
 
@@ -1887,6 +1888,17 @@ extern std::string ppu_get_variable_name(const std::string& _module, u32 vnid)
 	}
 
 	return fmt::format("0x%08X", vnid);
+}
+
+
+ppu_function_manager::ppu_function_manager(utils::serial& ar)
+	: addr(ar)
+{
+}
+
+void ppu_function_manager::save(utils::serial& ar)
+{
+	ar(addr);
 }
 
 std::vector<ppu_function_t>& ppu_function_manager::access(bool ghc)

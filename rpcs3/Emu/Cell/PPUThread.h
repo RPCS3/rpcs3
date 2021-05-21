@@ -20,6 +20,7 @@ enum class ppu_cmd : u32
 	hle_call, // Execute function by index (arg)
 	ptr_call, // Execute function by pointer
 	opd_call, // Execute function by provided rtoc and address (unlike lle_call, does not read memory)
+	cia_call, // Execute from current CIA, mo GPR modification applied
 	initialize, // ppu_initialize()
 	sleep,
 	reset_stack, // resets stack address
@@ -140,9 +141,12 @@ public:
 	virtual ~ppu_thread() override;
 
 	ppu_thread(const ppu_thread_params&, std::string_view name, u32 prio, int detached = 0);
-
+	ppu_thread(utils::serial& ar);
 	ppu_thread(const ppu_thread&) = delete;
 	ppu_thread& operator=(const ppu_thread&) = delete;
+	bool savable() const { return joiner != ppu_join_status::exited; }
+	void serialize_common(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	using cpu_thread::operator=;
 
@@ -179,8 +183,8 @@ public:
 		{
 			for (u8& b : bits)
 			{
-				b = value & 0x1;
-				value >>= 1;
+				b = !!(value & (1u << 31));
+				value <<= 1;
 			}
 		}
 	};
@@ -214,6 +218,8 @@ public:
 	// Fixed-Point Exception Register (abstract representation)
 	struct
 	{
+		using enable_bitcopy = std::true_type;
+
 		bool so{}; // Summary Overflow
 		bool ov{}; // Overflow
 		bool ca{}; // Carry
@@ -304,9 +310,15 @@ public:
 		operator std::string() const;
 	} thread_name{ this };
 
+	// For savestates
+	bool stop_flag_removal_protection = false; // If set, Emulator::Run won't remove stop flag 
+	bool loaded_from_savestate = false; // Indicates the thread had just started straight from savestate load
+	u64 optional_syscall_state{};
+	bool interrupt_thread_executing = false; // Hack (TODO)
+
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();
-	void fast_call(u32 addr, u32 rtoc);
+	void fast_call(u32 addr, u64 rtoc);
 
 	static std::pair<vm::addr_t, u32> stack_push(u32 size, u32 align_v);
 	static void stack_pop_verbose(u32 addr, u32 size) noexcept;

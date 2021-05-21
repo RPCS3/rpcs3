@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "VFS.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/vm.h"
@@ -35,6 +35,7 @@
 #include <fstream>
 #include <memory>
 #include <regex>
+#include <optional>
 
 #include "Utilities/JIT.h"
 
@@ -53,23 +54,83 @@ bool g_use_rtm = false;
 u64 g_rtm_tx_limit1 = 0;
 u64 g_rtm_tx_limit2 = 0;
 
+struct serial_ver_t
+{
+	bool used = false;
+	u32 current_version = 0;
+	std::set<u32> compatible_versions;
+};
+
+static std::array<serial_ver_t, 18> s_serial_versions;
+
+#define SERIALIZATION_VER(name, identifier, ver) \
+\
+	const bool s_##name##_serialization_fill = []() { ::s_serial_versions[identifier].compatible_versions = ver; return true; }();\
+\
+	extern void using_##name##_serialization()\
+	{\
+		::s_serial_versions[identifier].used = true;\
+	}\
+\
+	extern u32 get_##name##_serialization_version()\
+	{\
+		return ::s_serial_versions[identifier].current_version;\
+	}
+
+SERIALIZATION_VER(global_version, 0, {5}) // For stuff not listed here
+SERIALIZATION_VER(ppu, 1, {1})
+SERIALIZATION_VER(spu, 2, {2})
+SERIALIZATION_VER(lv2_sync, 3, {1})
+SERIALIZATION_VER(lv2_vm, 4, {1})
+SERIALIZATION_VER(lv2_net, 5, {1})
+SERIALIZATION_VER(lv2_fs, 6, {2})
+SERIALIZATION_VER(lv2_prx_overlay, 7, {1})
+SERIALIZATION_VER(lv2_memory, 8, {1})
+SERIALIZATION_VER(lv2_config, 9, {1})
+
+namespace rsx
+{
+	SERIALIZATION_VER(rsx, 10, {3})
+}
+
+#ifdef _MSC_VER
+// Compiler bug, lambda function body does seem to inherit used namespace atleast for function decleration 
+SERIALIZATION_VER(rsx, 10, {3})
+#endif
+
+SERIALIZATION_VER(sceNp, 11, {1})
+SERIALIZATION_VER(cellVdec, 12, {1})
+SERIALIZATION_VER(cellAudio, 13, {1})
+SERIALIZATION_VER(cellCamera, 14, {1})
+SERIALIZATION_VER(cellGem, 15, {1})
+SERIALIZATION_VER(sceNpTrophy, 16, {1})
+SERIALIZATION_VER(cellMusic, 17, {1})
+
+#undef SERIALIZATION_VER
+
 std::string g_cfg_defaults;
 
 atomic_t<u64> g_watchdog_hold_ctr{0};
 
-extern bool ppu_load_exec(const ppu_exec_object&);
+extern bool ppu_load_exec(const ppu_exec_object&, utils::serial* = nullptr);
 extern void spu_load_exec(const spu_exec_object&);
-extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_prx*>* loaded_prx);
+extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module*>* loaded_prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
 extern void ppu_unload_prx(const lv2_prx&);
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64 = 0);
-extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path, s64 = 0);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64 = 0, utils::serial* = nullptr);
+extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path, s64 = 0, utils::serial* = nullptr);
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
 std::array<std::deque<std::string>, 16> g_tty_input;
 std::mutex g_tty_mutex;
+thread_local std::string_view g_tls_serialize_name;
+
+u64 g_timebased_offs = 0;
+u64 g_systemtime_offs = 0;
+
+extern thread_local std::string(*g_tls_log_prefix)();
 
 // Report error and call std::abort(), defined in main.cpp
 [[noreturn]] void report_fatal_error(std::string_view);
@@ -96,9 +157,74 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 		case game_boot_result::file_creation_error: return "Could not create important files";
 		case game_boot_result::firmware_missing: return "Firmware is missing";
 		case game_boot_result::unsupported_disc_type: return "This disc type is not supported yet";
+		case game_boot_result::savestate_corrupted: return "Savestate data is corrupted or it's not an RPCS3 savestate";
+		case game_boot_result::savestate_version_unsupported: return "Savestate versioning data differes from your RPCS3 build";
 		}
 		return unknown;
 	});
+}
+
+namespace rsx
+{
+	struct avconf;
+}
+
+class np_handler;
+struct loaded_npdrm_keys;
+struct lv2_socket;
+struct lv2_memory_container;
+struct lv2_spu_group;
+struct sys_vm_t;
+struct pad_info;
+struct sce_np_trophy_manager;
+struct sysutil_cb_manager;
+struct gem_config;
+struct music_state;
+class cell_audio_thread;
+class usb_handler_thread;
+class camera_context;
+
+// This function ensures constant initialization order between different compilers and builds 
+void init_fxo_for_exec(utils::serial* ar, bool full = false)
+{
+	g_fxo->init<ppu_module>();
+
+	void init_ppu_functions(utils::serial* ar, bool full);
+
+	if (full)
+	{
+		init_ppu_functions(ar, true);
+	}
+
+	Emu.ConfigurePPUCache();
+
+	fxo_serialize<struct lv2_memory_container>(ar); // Must be first!
+
+	fxo_serialize<struct loaded_npdrm_keys>(ar);
+	fxo_serialize_body<id_manager::id_map<named_thread<ppu_thread>>>(ar);
+	fxo_serialize_body<id_manager::id_map<lv2_obj>>(ar); // Dependancy on PPUs
+	fxo_serialize_body<id_manager::id_map<named_thread<spu_thread>>>(ar);
+
+	fxo_serialize<named_thread<class np_handler>>(ar);
+	fxo_serialize<id_manager::id_map<struct lv2_socket>>(ar); // Dependancy on RPCN
+	fxo_serialize<id_manager::id_map<struct lv2_spu_group>>(ar); // Dependancy on SPUs
+	fxo_serialize<named_thread<class cell_audio_thread>>(ar);
+	fxo_serialize<id_manager::id_map<struct sys_vm_t>>(ar);
+	fxo_serialize<struct pad_info>(ar);
+	fxo_serialize<rsx::avconf>(ar);
+	fxo_serialize<struct sce_np_trophy_manager>(ar);
+	fxo_serialize<struct sysutil_cb_manager>(ar);
+	fxo_serialize<named_thread<usb_handler_thread>>(ar);
+	fxo_serialize<gem_config>(ar);
+	fxo_serialize<named_thread<camera_context>>(ar);
+	fxo_serialize<music_state>(ar);
+
+	g_fxo->init(false, ar);
+	Emu.GetCallbacks().init_gs_render(ar);
+	Emu.GetCallbacks().init_pad_handler(Emu.GetTitleID());
+	Emu.GetCallbacks().init_kb_handler();
+	Emu.GetCallbacks().init_mouse_handler();
+	if (ar) Emu.ExecDeserializationRemnants();
 }
 
 void Emulator::Init(bool add_only)
@@ -229,6 +355,7 @@ void Emulator::Init(bool add_only)
 
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
 	make_path_verbose(fs::get_cache_dir() + "spu_progs/");
+	make_path_verbose(fs::get_cache_dir() + "/savestates/");
 	make_path_verbose(fs::get_config_dir() + "captures/");
 
 	if (add_only)
@@ -418,7 +545,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	m_state = system_state::ready;
 	GetCallbacks().on_ready();
 
-	GetCallbacks().init_gs_render();
+	GetCallbacks().init_gs_render(nullptr);
 	GetCallbacks().init_pad_handler("");
 
 	GetCallbacks().on_run(false);
@@ -431,19 +558,38 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	return true;
 }
 
-game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
+game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config, const std::string& savestate)
 {
-	if (!fs::exists(path))
+	if (!fs::exists(path) && !fs::is_file(savestate))
 	{
 		return game_boot_result::invalid_file_or_folder;
 	}
 
 	m_path_old = m_path;
 
-	if (direct || fs::is_file(path))
+	if (fs::file save{savestate})
+	{
+		ar = std::make_unique<utils::serial>();
+		ar->set_reading_state(save.to_vector<u8>());
+	}
+
+	if (direct || fs::is_file(path) || ar)
 	{
 		m_path = path;
-		return Load(title_id, add_only, force_global_config);
+
+		auto error = Load(title_id, add_only, force_global_config);
+
+		if (is_error(error))
+		{
+			ar.reset();
+		}
+
+		if (g_cfg.savestate.suspend_emu)
+		{
+			fs::remove_file(savestate);
+		}
+
+		return error;
 	}
 
 	game_boot_result result = game_boot_result::nothing_to_boot;
@@ -463,7 +609,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 		if (fs::is_file(elf))
 		{
 			m_path = elf;
-			result = Load(title_id, add_only, force_global_config);
+			result = Load(title_id, add_only, force_global_config, false);
 			break;
 		}
 	}
@@ -484,7 +630,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 				if (fs::is_file(elf))
 				{
 					m_path = elf;
-					if (const auto err = Load(title_id, add_only, force_global_config); err != game_boot_result::no_errors)
+					if (const auto err = Load(title_id, add_only, force_global_config, false); err != game_boot_result::no_errors)
 					{
 						result = err;
 					}
@@ -503,7 +649,6 @@ void Emulator::SetForceBoot(bool force_boot)
 game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool force_global_config, bool is_disc_patch)
 {
 	m_force_global_config = force_global_config;
-	const std::string resolved_path = GetCallbacks().resolve_path(m_path);
 
 	if (!IsStopped())
 	{
@@ -537,6 +682,145 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		{
 			games.reset();
 		}
+
+		m_state_inspection_savestate = g_cfg.savestate.state_inspection_mode.get();
+	
+		if (ar)
+		{
+			struct file_header
+			{
+				using enable_bitcopy = std::true_type;
+	
+				nse_t<u64, 1> magic;
+				bool LE_format;
+				bool state_inspection_support;
+				nse_t<u64, 1> offset;
+			};
+	
+			if (ar->data.size() <= sizeof(file_header))
+			{
+				return game_boot_result::savestate_corrupted;
+			}
+	
+			const file_header header = ar->operator file_header();
+	
+			if (header.magic != "RPCS3SAV"_u64)
+			{
+				return game_boot_result::savestate_corrupted;
+			}
+	
+			if (header.LE_format != (std::endian::native == std::endian::little))
+			{
+				return game_boot_result::savestate_corrupted;
+			}
+	
+			g_cfg.savestate.state_inspection_mode.set(header.state_inspection_support);
+	
+			// Emulate seek operation (please avoid using in other places)
+			ar->pos = header.offset;
+			const std::vector<std::pair<u16, u16>> versions_data = *ar;
+			ar->pos = sizeof(file_header); // Restore position
+	
+			if (versions_data.empty())
+			{
+				return game_boot_result::savestate_corrupted;
+			}
+	
+			bool ok = true;
+	
+			for (auto [identifier, version] : versions_data)
+			{
+				if (identifier >= s_serial_versions.size())
+				{
+					sys_log.error("Savestate version identider is unknown! (category=%u, version=%u)", identifier, version);
+					ok = false; // Log all mismatches
+				}
+				else if (!s_serial_versions[identifier].compatible_versions.count(version))
+				{
+					sys_log.error("Savestate version is not supported. (category=%u, version=%u)", identifier, version);
+					ok = false;
+				}
+				else
+				{
+					s_serial_versions[identifier].current_version = version;
+				}
+			}
+	
+			if (!ok)
+			{
+				return game_boot_result::savestate_version_unsupported;
+			}
+	
+			argv.clear();
+	
+			std::string bdvd_by_title_id;
+			(*ar)(argv.emplace_back(), bdvd_by_title_id);
+	
+			klic.clear();
+	
+			if (u128 key = ar->operator u128())
+			{
+				klic.emplace_back(key);
+			}
+	
+			if (!bdvd_by_title_id.empty())
+			{
+				m_title_id = bdvd_by_title_id;
+	
+				// Load /dev_bdvd/ from game list if available
+				if (auto node = games[m_title_id])
+				{
+					disc = node.Scalar();
+				}
+				else
+				{
+					sys_log.fatal("Disc directory not found. Savestate cannot be loaded. ('%s')", m_title_id);
+					return game_boot_result::invalid_file_or_folder;
+				}
+			}
+	
+			hdd1 = ar->operator std::string();
+	
+			if (!hdd1.empty())
+			{
+				hdd1 = rpcs3::utils::get_hdd1_dir() + "caches/" + hdd1 + "/";
+			}
+	
+			if (argv[0].starts_with("/dev_hdd0"sv))
+			{
+				m_path = rpcs3::utils::get_hdd0_dir();
+				m_path += std::string_view(argv[0]).substr(9);
+			}
+			else if (argv[0].starts_with("/dev_flash"sv))
+			{
+				m_path = g_cfg.vfs.get_dev_flash();
+				m_path += std::string_view(argv[0]).substr(10);
+			}
+			else if (argv[0].starts_with("/dev_bdvd"sv))
+			{
+				m_path = disc;
+				m_path += std::string_view(argv[0]).substr(9);
+			}
+			else if (argv[0].starts_with("/host_root"sv))
+			{
+				sys_log.error("Host root has been used in savestates!");
+				m_path = argv[0].substr(9);
+			}
+			else if (argv[0].starts_with("/dev_hdd1"sv))
+			{
+				sys_log.error("HDD1 has been used to store executable in savestates!");
+				m_path = rpcs3::utils::get_hdd1_dir();
+				m_path += std::string_view(argv[0]).substr(9);
+			}
+			else
+			{
+				sys_log.error("Unknown source for savestates: %s", argv[0]);
+			}
+	
+			argv.clear();
+		}
+
+		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
 
 		sys_log.notice("Path: %s", m_path);
 
@@ -686,12 +970,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		vfs::mount("/dev_usb", g_cfg.vfs.get(g_cfg.vfs.dev_usb000, emu_dir));
 		vfs::mount("/dev_usb000", g_cfg.vfs.get(g_cfg.vfs.dev_usb000, emu_dir));
 		vfs::mount("/app_home", g_cfg.vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg.vfs.get(g_cfg.vfs.app_home, emu_dir));
-
-		if (!hdd1.empty())
-		{
-			vfs::mount("/dev_hdd1", hdd1);
-			sys_log.notice("Hdd1: %s", vfs::get("/dev_hdd1"));
-		}
 
 		// Special boot mode (directory scan)
 		if (!add_only && fs::is_dir(m_path))
@@ -1069,7 +1347,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Check game updates
 		const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN";
 
-		if (disc.empty() && !bdvd_dir.empty() && GetCallbacks().resolve_path(m_path) != GetCallbacks().resolve_path(hdd0_boot) && fs::is_file(hdd0_boot))
+		if (!ar && disc.empty() && !bdvd_dir.empty() && GetCallbacks().resolve_path(m_path) != GetCallbacks().resolve_path(hdd0_boot) && fs::is_file(hdd0_boot))
 		{
 			// Booting game update
 			sys_log.success("Updates found at /dev_hdd0/game/%s/", m_title_id);
@@ -1113,11 +1391,38 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			elf_path = vfs::get(argv[0]);
 		}
 
+		if (ar)
+		{
+			g_tls_log_prefix = []()
+			{
+				return fmt::format("Emu State Load Thread: '%s'", g_tls_serialize_name);
+			};
+		}
+
 		fs::file elf_file(elf_path);
 
 		if (!elf_file)
 		{
 			sys_log.error("Failed to open executable: %s", elf_path);
+
+			if (ar)
+			{
+				sys_log.warning("State Inspection Savestate Mode!");
+
+				vm::init();
+				vm::load(*ar);
+
+				if (!hdd1.empty())
+				{
+					vfs::mount("/dev_hdd1", hdd1);
+					sys_log.notice("Hdd1: %s", hdd1);
+				}
+
+				init_fxo_for_exec(ar.get(), true);
+
+				return game_boot_result::no_errors;
+			}
+
 			return game_boot_result::invalid_file_or_folder;
 		}
 
@@ -1169,6 +1474,17 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		ppu_exec_object ppu_exec;
 		ppu_prx_object ppu_prx;
 		spu_exec_object spu_exec;
+
+		if (ar)
+		{
+			vm::load(*ar);
+		}
+
+		if (!hdd1.empty())
+		{
+			vfs::mount("/dev_hdd1", hdd1);
+			sys_log.notice("Hdd1: %s", vfs::get("/dev_hdd1"));
+		}
 
 		if (ppu_exec.open(elf_file) == elf_error::ok)
 		{
@@ -1242,18 +1558,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 
 			g_fxo->init<ppu_module>();
-			g_fxo->init<id_manager::id_map<lv2_obj>>();
-			g_fxo->init<id_manager::id_map<named_thread<ppu_thread>>>();
 
-			if (ppu_load_exec(ppu_exec))
+			if (ppu_load_exec(ppu_exec, ar.get()))
 			{
-				ConfigurePPUCache();
-
-				g_fxo->init(false);
-				GetCallbacks().init_gs_render();
-				GetCallbacks().init_pad_handler(m_title_id);
-				GetCallbacks().init_kb_handler();
-				GetCallbacks().init_mouse_handler();
 			}
 			// Overlay (OVL) executable (only load it)
 			else if (vm::map(0x3000'0000, 0x1000'0000, 0x200); !ppu_load_overlay(ppu_exec, m_path).first)
@@ -1352,13 +1659,25 @@ void Emulator::Run(bool start_playtime)
 
 	m_pause_start_time = 0;
 	m_pause_amend_time = 0;
+
 	rpcs3::utils::configure_logs();
 
-	m_state = system_state::running;
+	m_state = system_state::starting;
+
+	if (g_cfg.misc.prevent_display_sleep)
+	{
+		disable_display_sleep();
+	}
+}
+
+void Emulator::RunPPU()
+{
+	ensure(IsStarting());
 
 	// Run main thread
-	idm::check<named_thread<ppu_thread>>(ppu_thread::id_base, [](named_thread<ppu_thread>& cpu)
+	idm::select<named_thread<ppu_thread>>([](u32, named_thread<ppu_thread>& cpu)
 	{
+		if (cpu.stop_flag_removal_protection) return;
 		ensure(cpu.state.test_and_reset(cpu_flag::stop));
 		cpu.state.notify_one(cpu_flag::stop);
 	});
@@ -1368,11 +1687,45 @@ void Emulator::Run(bool start_playtime)
 		thr->state -= cpu_flag::stop;
 		thr->state.notify_one(cpu_flag::stop);
 	}
+}
 
-	if (g_cfg.misc.prevent_display_sleep)
+void Emulator::FixGuestTime()
+{
+	if (ar)
 	{
-		disable_display_sleep();
+		u64 systemtime_dst = 0, timebased_dst = 0;
+		systemtime_dst = ar->operator u64();
+		timebased_dst = ar->operator u64();
+
+		g_systemtime_offs = systemtime_dst - get_guest_system_time();
+		g_timebased_offs = timebased_dst - get_timebased_time();
+
+		g_cfg.savestate.state_inspection_mode.set(m_state_inspection_savestate);
+		ar.reset();
+
+		CallAfter([this]
+		{
+			g_tls_log_prefix = []()
+			{
+				return std::string();
+			};
+		});
 	}
+}
+void Emulator::FinalizeRunRequest()
+{
+	auto on_select = [] (u32, spu_thread& cpu)
+	{
+		if (cpu.stop_flag_removal_protection) return;
+		ensure(cpu.state.test_and_reset(cpu_flag::stop));
+		cpu.state.notify_one(cpu_flag::stop);
+	};
+
+	idm::select<named_thread<spu_thread>>(on_select);
+
+	lv2_obj::awake_all();
+
+	m_state.compare_and_swap_test(system_state::starting, system_state::running);
 }
 
 bool Emulator::Pause()
@@ -1494,8 +1847,13 @@ void Emulator::Resume()
 	}
 }
 
-void Emulator::Stop(bool restart)
+void Emulator::Stop(bool savestate, bool restart)
 {
+	g_tls_log_prefix = []()
+	{
+		return std::string();
+	};
+
 	if (m_state.exchange(system_state::stopped) == system_state::stopped)
 	{
 		if (restart)
@@ -1511,6 +1869,13 @@ void Emulator::Stop(bool restart)
 	}
 
 	sys_log.notice("Stopping emulator...");
+
+	ar.reset();
+
+	if (savestate)
+	{
+		ar = std::make_unique<utils::serial>();
+	}
 
 	named_thread stop_watchdog("Stop Watchdog", [&]()
 	{
@@ -1564,13 +1929,78 @@ void Emulator::Stop(bool restart)
 		}
 	}
 
-	cpu_thread::cleanup();
+	// Save them first for maximum timing accuracy
+	const u64 times[2]{get_guest_system_time(), get_timebased_time()};
 
-	g_fxo->reset();
+	stop_watchdog = thread_state::aborting;
 
 	sys_log.notice("All threads have been stopped.");
 
+	if (savestate)
+	{
+		// Savestate thread
+		named_thread emu_state_cap_thread("Emu State Capture Thread", [&]()
+		{
+			g_tls_log_prefix = []()
+			{
+				return fmt::format("Emu State Capture Thread: '%s'", g_tls_serialize_name);
+			};
+
+			auto& ar = *this->ar;
+
+			for (serial_ver_t& ver : s_serial_versions)
+			{
+				ver.used = false;
+			}
+
+			using_global_version_serialization();
+			using_ppu_serialization();
+
+			auto save_hdd1 = [&ar]()
+			{
+				std::string _path = vfs::get("/dev_hdd1");
+				std::string_view path = _path;
+
+				path = path.substr(0, path.find_last_not_of(fs::delim) + 1);
+
+				ar(std::string(path.substr(path.find_last_of(fs::delim) + 1)));
+			};
+
+			ar("RPCS3SAV"_u64);
+			ar(std::endian::native == std::endian::little);
+			ar(g_cfg.savestate.state_inspection_mode.get());
+			ar(usz{0}); // Offset of versioning data, to be overwritten at the end of saving
+			ar(argv[0]);
+			ar(!m_title_id.empty() && !vfs::get("/dev_bdvd").empty() ? m_title_id : std::string());
+			ar(klic.empty() ? std::array<u8, 16>{} : std::bit_cast<std::array<u8, 16>>(klic[0]));
+			save_hdd1();
+			vm::save(ar);
+			g_fxo->save(ar);
+			ar(times[0], times[1]);
+		});
+
+		// Join it
+		emu_state_cap_thread();
+
+		restart = !g_cfg.savestate.suspend_emu;
+
+		if (emu_state_cap_thread == thread_state::errored)
+		{
+			sys_log.error("Saving savestate failed due to fatal error!");
+			ar.reset();
+			savestate = false;
+			restart = false;
+		}
+	}
+
+	cpu_thread::cleanup();
+
+	g_timebased_offs = 0;
+	g_systemtime_offs = 0;
+
 	lv2_obj::cleanup();
+
+	g_fxo->reset();
 
 	sys_log.notice("Objects cleared...");
 
@@ -1603,20 +2033,56 @@ void Emulator::Stop(bool restart)
 
 	sys_log.notice("Atomic wait hashtable stats: [in_use=%u, used=%u, max_collision_weight=%u, total_collisions=%u]", aw_refs, aw_used, aw_colm, aw_colc);
 
-	stop_watchdog = thread_state::aborting;
-
 	m_stop_ctr++;
 	m_stop_ctr.notify_all();
 
 	if (restart)
 	{
+		if (savestate)
+		{
+			const std::string path = fs::get_cache_dir() + "/savestates/" + (m_title_id.empty() ? m_path.substr(m_path.find_last_of(fs::delim) + 1) : m_title_id) + ".SAVESTAT";
+
+			fs::pending_file file(path);
+
+			// Identifer -> version
+			std::vector<std::pair<u16, u16>> used_serial;
+			used_serial.reserve(s_serial_versions.size());
+
+			for (const serial_ver_t& ver : s_serial_versions)
+			{
+				if (ver.used)
+				{
+					used_serial.emplace_back(&ver - s_serial_versions.data(), *ver.compatible_versions.rbegin());
+				}
+			}
+
+			auto& ar = *this->ar;
+			const usz pos = ar.data.size();
+			std::memcpy(&ar.data[10], &pos, 8);// Set offset
+			ar(used_serial);
+
+			if (!file.file || (file.file.write(ar.data), !file.commit()))
+			{
+				sys_log.error("Failed to write savestate to file! (path='%s', %s)", path, fs::g_tls_error);
+			}
+			else
+			{
+				sys_log.success("Saved savestate! path='%s'", path);
+			}
+
+			ar.pos = 0;
+		}
+
 		// Reload with prior configs.
 		if (const auto error = Load(m_title_id, false, m_force_global_config); error != game_boot_result::no_errors)
 			sys_log.error("Restart failed: %s", error);
+		else
+			ar.reset();
 		return;
 	}
 
 	// Boot arg cleanup (preserved in the case restarting)
+	ar.reset();
 	argv.clear();
 	envp.clear();
 	data.clear();

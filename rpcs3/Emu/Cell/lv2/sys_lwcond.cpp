@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_lwcond.h"
 
 #include "Emu/IdManager.h"
@@ -8,6 +8,20 @@
 #include "sys_lwmutex.h"
 
 LOG_CHANNEL(sys_lwcond);
+
+lv2_lwcond::lv2_lwcond(utils::serial& ar)
+	: name(ar.operator be_t<u64>())
+	, lwid(ar)
+	, protocol(ar)
+	, control(ar.operator decltype(control)())
+{
+}
+
+void lv2_lwcond::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(lv2_sync);
+	ar(name, lwid, protocol, control);
+}
 
 error_code _sys_lwcond_create(ppu_thread& ppu, vm::ptr<u32> lwcond_id, u32 lwmutex_id, vm::ptr<sys_lwcond_t> control, u64 name)
 {
@@ -115,12 +129,27 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 		{
 			std::lock_guard lock(cond.mutex);
 
+			if (cpu)
+			{
+				if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::incomplete_syscall)
+				{
+					ppu.state += cpu_flag::incomplete_syscall;
+					ppu.state += cpu_flag::exit;
+					return 0;
+				}
+			}
+
 			auto result = cpu ? cond.unqueue(cond.sq, cpu) :
 				cond.schedule<ppu_thread>(cond.sq, cond.protocol);
 
 			if (result)
 			{
-				cond.waiters--;
+				if (static_cast<ppu_thread*>(result)->state & cpu_flag::incomplete_syscall)
+				{
+					ppu.state += cpu_flag::incomplete_syscall;
+					ppu.state += cpu_flag::exit;
+					return 0;
+				}
 
 				if (mode == 2)
 				{
@@ -137,6 +166,13 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 						// Respect ordering of the sleep queue
 						mutex->sq.emplace_back(result);
 						result = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol);
+
+						if (static_cast<ppu_thread*>(result)->state & cpu_flag::incomplete_syscall)
+						{
+							ppu.state += cpu_flag::incomplete_syscall;
+							ppu.state += cpu_flag::exit;
+							return 0;
+						}
 					}
 					else if (mode == 1)
 					{
@@ -144,6 +180,8 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 						result = nullptr;
 					}
 				}
+
+				cond.waiters--;
 
 				if (result)
 				{
@@ -217,6 +255,16 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 			std::lock_guard lock(cond.mutex);
 
 			u32 result = 0;
+
+			for (auto cpu : cond.sq)
+			{
+				if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::incomplete_syscall)
+				{
+					ppu.state += cpu_flag::incomplete_syscall;
+					ppu.state += cpu_flag::exit;
+					return 0;
+				}
+			}
 
 			while (const auto cpu = cond.schedule<ppu_thread>(cond.sq, cond.protocol))
 			{
@@ -305,16 +353,33 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 		std::lock_guard lock(cond.mutex);
 
-		// Add a waiter
-		cond.waiters++;
-		cond.sq.emplace_back(&ppu);
+		if (ppu.loaded_from_savestate && ppu.optional_syscall_state)
+		{
+			// Special: loading state from the point of waiting on lwmutex sleep queue
+			std::lock_guard lock2(mutex->mutex);
+			mutex->sq.emplace_back(&ppu);
+		}
+		else
+		{
+			// Add a waiter
+			cond.waiters++;
+			cond.sq.emplace_back(&ppu);
+		}
 
+		if (!ppu.loaded_from_savestate)
 		{
 			std::lock_guard lock2(mutex->mutex);
 
 			// Process lwmutex sleep queue
 			if (const auto cpu = mutex->schedule<ppu_thread>(mutex->sq, mutex->protocol))
 			{
+				if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::incomplete_syscall)
+				{
+					ppu.state += cpu_flag::incomplete_syscall;
+					ppu.state += cpu_flag::exit;
+					return;
+				}
+
 				cond.append(cpu);
 			}
 			else
@@ -332,15 +397,33 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		return CELL_ESRCH;
 	}
 
+	if (ppu.state & cpu_flag::incomplete_syscall)
+	{
+		return CELL_OK;
+	}
+
 	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (is_stopped(state))
-		{
-			return {};
-		}
-
 		if (state & cpu_flag::signal)
 		{
+			break;
+		}
+
+		if (is_stopped(state))
+		{
+			reader_lock lock(cond->mutex);
+			reader_lock lock2(mutex->mutex);
+
+			const bool cond_sleep = std::find(cond->sq.begin(), cond->sq.end(), &ppu) != cond->sq.end();
+			const bool mutex_sleep = std::find(mutex->sq.begin(), mutex->sq.end(), &ppu) != mutex->sq.end();
+
+			if (!cond_sleep && !mutex_sleep)
+			{
+				break;
+			}
+
+			ppu.optional_syscall_state = +mutex_sleep;
+			ppu.state += cpu_flag::incomplete_syscall;
 			break;
 		}
 
@@ -351,7 +434,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return {};
+					continue;
 				}
 
 				std::lock_guard lock(cond->mutex);

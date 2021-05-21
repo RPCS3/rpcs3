@@ -8,6 +8,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUCallback.h"
+#include "Emu/Cell/PPUOpcodes.h"
 #include "Emu/Memory/vm_locking.h"
 #include "sys_event.h"
 #include "sys_process.h"
@@ -180,9 +181,12 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	if (thread->joiner != ppu_join_status::exited)
 	{
 		// Thread aborted, log it later
+		ppu.state += cpu_flag::incomplete_syscall;
 		ppu.state += cpu_flag::exit;
 		return {};
 	}
+
+	static_cast<void>(ppu.test_stopped());
 
 	// Get the exit status from the register
 	const u64 vret = thread->gpr[3];

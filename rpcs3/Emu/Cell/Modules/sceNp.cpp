@@ -396,6 +396,12 @@ void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fxo_serialize<named_thread<np_handler>>(utils::serial* ar)
+{
+	fxo_serialize_body<named_thread<np_handler>>(ar);
+}
+
 error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 {
 	sceNp.warning("sceNpInit(poolsize=0x%x, poolptr=*0x%x)", poolsize, poolptr);

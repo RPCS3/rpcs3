@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #ifdef _WIN32
 #include <QWinTHumbnailToolbar>
@@ -106,9 +106,10 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	void OnPlayOrPause();
-	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
+	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false, const std::string& savestate = "");
 	void BootElf();
 	void BootGame();
+	void BootSavestate();
 	void BootRsxCapture(std::string path = "");
 	void DecryptSPRXLibraries();
 	static void show_boot_error(game_boot_result status);

@@ -1078,6 +1078,21 @@ constexpr bool is_same_ptr(const volatile Y* ptr)
 template <typename X, typename Y>
 concept PtrSame = (is_same_ptr<X, Y>());
 
+namespace stx
+{
+	template <typename T>
+	struct exact_t
+	{
+		T obj;
+
+		exact_t(T&& _obj) : obj(std::forward<T>(_obj)) {}
+
+		// TODO: More conversions
+		template <typename U> requires (std::is_same_v<U&, T>)
+		operator U&() const { return obj; };
+	};
+}
+
 namespace utils
 {
 	struct serial;
@@ -1085,3 +1100,18 @@ namespace utils
 
 template <typename T>
 extern bool serialize(utils::serial& ar, T& obj);
+
+template <typename T>
+extern void fxo_serialize(utils::serial* ar);
+
+#define USING_SERIALIZATION_VERSION(name) []()\
+{\
+	extern void using_##name##_serialization();\
+	using_##name##_serialization();\
+}()
+
+#define GET_SERIALIZATION_VERSION(name) []()\
+{\
+	extern u32 get_##name##_serialization_version();\
+	return get_##name##_serialization_version();\
+}()

@@ -292,6 +292,15 @@ struct cfg_root : cfg::node
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
 	} net{this};
 
+	struct node_savestate : cfg::node
+	{
+		node_savestate(cfg::node* _this) : cfg::node(_this, "Savestate") {}
+
+		cfg::_bool start_paused{ this, "Start Paused" }; // Pause on first first
+		cfg::_bool suspend_emu{ this, "Suspend Emulation Savestate Mode" }; // Close emulation when saving, delete save after loading
+		cfg::_bool state_inspection_mode{ this, "Inspection Mode Savestates" }; // Save memory stored in executable files, thus allowing to view state without any files (for debugging)
+	} savestate{this};
+
 	struct node_misc : cfg::node
 	{
 		node_misc(cfg::node* _this) : cfg::node(_this, "Miscellaneous") {}

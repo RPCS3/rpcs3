@@ -128,6 +128,8 @@ namespace rsx
 
 		gcm_framebuffer_info() = default;
 
+		using enable_bitcopy = std::true_type;
+
 		void calculate_memory_range(u32 aa_factor_u, u32 aa_factor_v)
 		{
 			// Account for the last line of the block not reaching the end
@@ -160,6 +162,12 @@ namespace rsx
 		u32 resolution_x = 1280;   // X RES
 		u32 resolution_y = 720;    // Y RES
 		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
+
+		using enable_bitcopy = std::true_type;
+
+		avconf() = default;
+		avconf(utils::serial& ar);
+		void save(utils::serial& ar);
 
 		u32 get_compatible_gcm_format() const
 		{

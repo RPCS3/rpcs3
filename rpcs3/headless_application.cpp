@@ -1,4 +1,4 @@
-#include "headless_application.h"
+﻿#include "headless_application.h"
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
@@ -63,13 +63,13 @@ void headless_application::InitializeCallbacks()
 		RequestCallAfter(std::move(func));
 	};
 
-	callbacks.init_gs_render = []()
+	callbacks.init_gs_render = [](utils::serial* ar)
 	{
 		switch (const video_renderer type = g_cfg.video.renderer)
 		{
 		case video_renderer::null:
 		{
-			g_fxo->init<rsx::thread, named_thread<NullGSRender>>();
+			g_fxo->init<rsx::thread, named_thread<NullGSRender>>(ar);
 			break;
 		}
 		case video_renderer::opengl:

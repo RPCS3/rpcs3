@@ -30,6 +30,10 @@ struct lv2_memory : lv2_obj
 
 	lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv2_memory_container* ct);
 
+	lv2_memory(utils::serial& ar);
+	static std::shared_ptr<void> load(utils::serial& ar);
+	void save(utils::serial& ar);
+
 	CellError on_id_create();
 };
 
@@ -54,6 +58,8 @@ enum : u64
 
 struct page_fault_notification_entry
 {
+	using enable_bitcopy = std::true_type;
+
 	u32 start_addr; // Starting address of region to monitor.
 	u32 event_queue_id; // Queue to be notified.
 	u32 port_id; // Port used to notify the queue.
@@ -64,6 +70,10 @@ struct page_fault_notification_entries
 {
 	std::vector<page_fault_notification_entry> entries;
 	shared_mutex mutex;
+
+	page_fault_notification_entries() = default;
+	page_fault_notification_entries(utils::serial& ar);
+	void save(utils::serial& ar);
 };
 
 struct page_fault_event_entries

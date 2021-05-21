@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <map>
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/auto_typemap.hpp"
@@ -11,6 +12,7 @@
 namespace utils
 {
 	class shm;
+	class address_range;
 }
 
 namespace vm
@@ -148,6 +150,16 @@ namespace vm
 
 		// Internal
 		u32 imp_used(const vm::writer_lock&) const;
+
+		// Serialization helper for shared memory
+		void get_shared_memory(std::vector<std::pair<utils::shm*, u32>>& shared);
+
+		// Returns sample address for shared memory, 0 on failure
+		u32 get_shm_addr(const std::shared_ptr<utils::shm>& shared);
+
+		// Serialization
+		void save(utils::serial& ar, std::map<utils::shm*, usz>& shared);
+		block_t(utils::serial& ar, std::vector<std::shared_ptr<utils::shm>>& shared);
 	};
 
 	// Create new memory block with specified parameters and return it
@@ -320,6 +332,12 @@ namespace vm
 	}
 
 	void close();
+
+	void load(utils::serial& ar);
+	void save(utils::serial& ar);
+
+	// Returns sample address for shared memory, 0 on failure (wraps block_t::get_shm_addr)
+	u32 get_shm_addr(const std::shared_ptr<utils::shm>& shared);
 
 	template <typename T, typename AT>
 	class _ptr_base;

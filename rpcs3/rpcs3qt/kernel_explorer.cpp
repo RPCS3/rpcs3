@@ -1,4 +1,4 @@
-#include <map>
+﻿#include <map>
 
 #include <QVBoxLayout>
 #include <QPushButton>
@@ -746,7 +746,7 @@ void kernel_explorer::update()
 		decltype(rsx->display_buffers) dbs;
 		decltype(rsx->zculls) zcs;
 		{
-			std::lock_guard lock(rsx->sys_rsx_mtx);
+			//std::lock_guard lock(rsx->sys_rsx_mtx);
 			std::memcpy(&table, &rsx->iomap_table, sizeof(table));
 			std::memcpy(&dbs, rsx->display_buffers, sizeof(dbs));
 			std::memcpy(&zcs, &rsx->zculls, sizeof(zcs));
@@ -874,7 +874,7 @@ void kernel_explorer::update()
 					node->setText(0, node->text(0) + qstr(fmt::format(" (%zu)", count)));
 
 					// Expand if necessary
-					node->setExpanded(node->data(0, kernel_item_role::expanded_role).toBool());
+					node->setExpanded(true || node->data(0, kernel_item_role::expanded_role).toBool());
 				}
 
 				// Hide node if it has no children

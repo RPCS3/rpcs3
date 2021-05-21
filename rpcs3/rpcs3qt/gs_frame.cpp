@@ -1,4 +1,4 @@
-#include "gs_frame.h"
+﻿#include "gs_frame.h"
 #include "gui_settings.h"
 
 #include "Utilities/Config.h"
@@ -190,6 +190,13 @@ void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys && Emu.IsRunning())
 		{
 			Emu.Pause();
+			return;
+		}
+		break;
+	case Qt::Key_S:
+		if (keyEvent->modifiers() == Qt::ControlModifier && !m_disable_kb_hotkeys)
+		{
+			Emu.Stop(true, true);
 			return;
 		}
 		break;

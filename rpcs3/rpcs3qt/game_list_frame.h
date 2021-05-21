@@ -83,7 +83,7 @@ private Q_SLOTS:
 Q_SIGNALS:
 	void GameListFrameClosed();
 	void NotifyGameSelection(const game_info& game);
-	void RequestBoot(const game_info& game, bool force_global_config = false);
+	void RequestBoot(const game_info& game, bool force_global_config = false, const std::string& state = "");
 	void RequestIconSizeChange(const int& val);
 	void NotifyEmuSettingsChange();
 protected:
