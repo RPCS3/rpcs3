@@ -13,8 +13,8 @@ public:
 
 private Q_SLOTS:
 	void handle_media_status(QMediaPlayer::MediaStatus status);
-	void handle_music_state(QMediaPlayer::State state);
-	void handle_music_error(QMediaPlayer::Error error);
+	void handle_music_state(QMediaPlayer::PlaybackState state);
+	void handle_music_error(QMediaPlayer::Error error, const QString& errorString);
 
 private:
 	std::shared_ptr<QMediaPlayer> m_media_player;

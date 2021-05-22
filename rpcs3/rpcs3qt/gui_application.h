@@ -7,6 +7,7 @@
 #include <QElapsedTimer>
 #include <QTimer>
 #include <QTranslator>
+#include <QSoundEffect>
 
 #include "main_application.h"
 
@@ -86,6 +87,8 @@ private:
 
 	QTimer m_timer;
 	QElapsedTimer m_timer_playtime;
+
+	QSoundEffect m_sound_effect{};
 
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<gui_settings> m_gui_settings;

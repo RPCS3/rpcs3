@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 #include <QWinThumbnailToolBar>
 #include <QWinThumbnailToolButton>
 #endif
@@ -60,7 +60,7 @@ class main_window : public QMainWindow
 	QIcon m_icon_fullscreen_on;
 	QIcon m_icon_fullscreen_off;
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	QIcon m_icon_thumb_play;
 	QIcon m_icon_thumb_pause;
 	QIcon m_icon_thumb_stop;

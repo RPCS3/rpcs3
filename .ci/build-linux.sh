@@ -1,10 +1,5 @@
 #!/bin/sh -ex
 
-# Setup Qt variables
-export QT_BASE_DIR=/opt/qt"${QTVERMIN}"
-export PATH="$QT_BASE_DIR"/bin:"$PATH"
-export LD_LIBRARY_PATH="$QT_BASE_DIR"/lib/x86_64-linux-gnu:"$QT_BASE_DIR"/lib
-
 if [ -z "$CIRRUS_CI" ]; then
    cd rpcs3 || exit 1
 fi

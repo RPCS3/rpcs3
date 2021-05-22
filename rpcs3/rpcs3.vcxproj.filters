@@ -807,7 +807,7 @@
     <ClCompile Include="rpcs3qt\qt_camera_handler.cpp">
       <Filter>Io\camera</Filter>
     </ClCompile>
-    <ClCompile Include="rpcs3qt\qt_camera_video_surface.cpp">
+    <ClCompile Include="rpcs3qt\qt_camera_video_sink.cpp">
       <Filter>Io\camera</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\qt_camera_error_handler.cpp">
@@ -1166,7 +1166,7 @@
     <ClInclude Include="QTGeneratedFiles\ui_patch_creator_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
-    <ClInclude Include="rpcs3qt\qt_camera_video_surface.h">
+    <ClInclude Include="rpcs3qt\qt_camera_video_sink.h">
       <Filter>Io\camera</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\qt_camera_handler.h">

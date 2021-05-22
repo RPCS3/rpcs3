@@ -29,7 +29,6 @@
 #include <QDir>
 #include <QMenu>
 #include <QDesktopServices>
-#include <QUrl>
 #include <QScrollBar>
 #include <QWheelEvent>
 #include <QGuiApplication>

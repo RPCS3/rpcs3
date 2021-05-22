@@ -3,61 +3,56 @@
 #include "ui_camera_settings_dialog.h"
 #include "Emu/Io/camera_config.h"
 
-#include <QCameraInfo>
+#include <QCameraDevice>
+#include <QMediaDevices>
 #include <QMessageBox>
 #include <QPushButton>
 
 LOG_CHANNEL(camera_log, "Camera");
 
 template <>
-void fmt_class_string<QVideoFrame::PixelFormat>::format(std::string& out, u64 arg)
+void fmt_class_string<QVideoFrameFormat::PixelFormat>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](QVideoFrame::PixelFormat value)
+	format_enum(out, arg, [](QVideoFrameFormat::PixelFormat value)
 	{
 		switch (value)
 		{
-		case QVideoFrame::Format_Invalid: return "Invalid";
-		case QVideoFrame::Format_ARGB32: return "ARGB32";
-		case QVideoFrame::Format_ARGB32_Premultiplied: return "ARGB32_Premultiplied";
-		case QVideoFrame::Format_RGB32: return "RGB32";
-		case QVideoFrame::Format_RGB24: return "RGB24";
-		case QVideoFrame::Format_RGB565: return "RGB565";
-		case QVideoFrame::Format_RGB555: return "RGB555";
-		case QVideoFrame::Format_ARGB8565_Premultiplied: return "ARGB8565_Premultiplied";
-		case QVideoFrame::Format_BGRA32: return "BGRA32";
-		case QVideoFrame::Format_BGRA32_Premultiplied: return "BGRA32_Premultiplied";
-		case QVideoFrame::Format_BGR32: return "BGR32";
-		case QVideoFrame::Format_BGR24: return "BGR24";
-		case QVideoFrame::Format_BGR565: return "BGR565";
-		case QVideoFrame::Format_BGR555: return "BGR555";
-		case QVideoFrame::Format_BGRA5658_Premultiplied: return "BGRA5658_Premultiplied";
-		case QVideoFrame::Format_AYUV444: return "AYUV444";
-		case QVideoFrame::Format_AYUV444_Premultiplied: return "AYUV444_Premultiplied";
-		case QVideoFrame::Format_YUV444: return "YUV444";
-		case QVideoFrame::Format_YUV420P: return "YUV420P";
-		case QVideoFrame::Format_YV12: return "YV12";
-		case QVideoFrame::Format_UYVY: return "UYVY";
-		case QVideoFrame::Format_YUYV: return "YUYV";
-		case QVideoFrame::Format_NV12: return "NV12";
-		case QVideoFrame::Format_NV21: return "NV21";
-		case QVideoFrame::Format_IMC1: return "IMC1";
-		case QVideoFrame::Format_IMC2: return "IMC2";
-		case QVideoFrame::Format_IMC3: return "IMC3";
-		case QVideoFrame::Format_IMC4: return "IMC4";
-		case QVideoFrame::Format_Y8: return "Y8";
-		case QVideoFrame::Format_Y16: return "Y16";
-		case QVideoFrame::Format_Jpeg: return "Jpeg";
-		case QVideoFrame::Format_CameraRaw: return "CameraRaw";
-		case QVideoFrame::Format_AdobeDng: return "AdobeDng";
-		case QVideoFrame::Format_ABGR32: return "ABGR32";
-		case QVideoFrame::Format_YUV422P: return "YUV422P";
-		case QVideoFrame::Format_User: return "User";
+		case QVideoFrameFormat::Format_ARGB8888: return "ARGB8888";
+		case QVideoFrameFormat::Format_ARGB8888_Premultiplied: return "ARGB8888_Premultiplied";
+		case QVideoFrameFormat::Format_XRGB8888: return "XRGB8888";
+		case QVideoFrameFormat::Format_BGRA8888: return "BGRA8888";
+		case QVideoFrameFormat::Format_BGRA8888_Premultiplied: return "BGRA8888_Premultiplied";
+		case QVideoFrameFormat::Format_BGRX8888: return "BGRX8888";
+		case QVideoFrameFormat::Format_ABGR8888: return "ABGR8888";
+		case QVideoFrameFormat::Format_XBGR8888: return "XBGR8888";
+		case QVideoFrameFormat::Format_RGBA8888: return "RGBA8888";
+		case QVideoFrameFormat::Format_RGBX8888: return "RGBX8888";
+		case QVideoFrameFormat::Format_AYUV: return "AYUV";
+		case QVideoFrameFormat::Format_AYUV_Premultiplied: return "AYUV_Premultiplied";
+		case QVideoFrameFormat::Format_YUV420P: return "YUV420P";
+		case QVideoFrameFormat::Format_YUV422P: return "YUV422P";
+		case QVideoFrameFormat::Format_YV12: return "YV12";
+		case QVideoFrameFormat::Format_UYVY: return "UYVY";
+		case QVideoFrameFormat::Format_YUYV: return "YUYV";
+		case QVideoFrameFormat::Format_NV12: return "NV12";
+		case QVideoFrameFormat::Format_NV21: return "NV21";
+		case QVideoFrameFormat::Format_IMC1: return "IMC1";
+		case QVideoFrameFormat::Format_IMC2: return "IMC2";
+		case QVideoFrameFormat::Format_IMC3: return "IMC3";
+		case QVideoFrameFormat::Format_IMC4: return "IMC4";
+		case QVideoFrameFormat::Format_Y8: return "Y8";
+		case QVideoFrameFormat::Format_Y16: return "Y16";
+		case QVideoFrameFormat::Format_P010: return "P010";
+		case QVideoFrameFormat::Format_P016: return "P016";
+		case QVideoFrameFormat::Format_SamplerExternalOES: return "SamplerExternalOES";
+		case QVideoFrameFormat::Format_Jpeg: return "Jpeg";
+		case QVideoFrameFormat::Format_SamplerRect: return "SamplerRect";
 		default: return unknown;
 		}
 	});
 }
 
-Q_DECLARE_METATYPE(QCameraInfo);
+Q_DECLARE_METATYPE(QCameraDevice);
 
 camera_settings_dialog::camera_settings_dialog(QWidget* parent)
 	: QDialog(parent)
@@ -67,7 +62,7 @@ camera_settings_dialog::camera_settings_dialog(QWidget* parent)
 
 	load_config();
 
-	for (const QCameraInfo& camera_info : QCameraInfo::availableCameras())
+	for (const QCameraDevice& camera_info : QMediaDevices::videoInputs())
 	{
 		if (camera_info.isNull()) continue;
 		ui->combo_camera->addItem(camera_info.description(), QVariant::fromValue(camera_info));
@@ -108,13 +103,13 @@ camera_settings_dialog::~camera_settings_dialog()
 
 void camera_settings_dialog::handle_camera_change(int index)
 {
-	if (index < 0 || !ui->combo_camera->itemData(index).canConvert<QCameraInfo>())
+	if (index < 0 || !ui->combo_camera->itemData(index).canConvert<QCameraDevice>())
 	{
 		ui->combo_settings->clear();
 		return;
 	}
 
-	const QCameraInfo camera_info = ui->combo_camera->itemData(index).value<QCameraInfo>();
+	const QCameraDevice camera_info = ui->combo_camera->itemData(index).value<QCameraDevice>();
 
 	if (camera_info.isNull())
 	{
@@ -123,7 +118,9 @@ void camera_settings_dialog::handle_camera_change(int index)
 	}
 
 	m_camera.reset(new QCamera(camera_info));
-	m_camera->setViewfinder(ui->viewfinder);
+	m_media_capture_session.reset(new QMediaCaptureSession(nullptr));
+	m_media_capture_session->setCamera(m_camera.get());
+	m_media_capture_session->setVideoSink(ui->videoWidget->videoSink());
 
 	if (!m_camera->isAvailable())
 	{
@@ -132,42 +129,34 @@ void camera_settings_dialog::handle_camera_change(int index)
 		return;
 	}
 
-	m_camera->load();
-
 	ui->combo_settings->blockSignals(true);
 	ui->combo_settings->clear();
 
-	QList<QCameraViewfinderSettings> settings = m_camera->supportedViewfinderSettings();
-	std::sort(settings.begin(), settings.end(), [](const QCameraViewfinderSettings& l, const QCameraViewfinderSettings& r) -> bool
+	QList<QCameraFormat> settings = camera_info.videoFormats();
+	std::sort(settings.begin(), settings.end(), [](const QCameraFormat& l, const QCameraFormat& r) -> bool
 	{
 		if (l.resolution().width() > r.resolution().width()) return true;
 		if (l.resolution().width() < r.resolution().width()) return false;
 		if (l.resolution().height() > r.resolution().height()) return true;
 		if (l.resolution().height() < r.resolution().height()) return false;
-		if (l.minimumFrameRate() > r.minimumFrameRate()) return true;
-		if (l.minimumFrameRate() < r.minimumFrameRate()) return false;
-		if (l.maximumFrameRate() > r.maximumFrameRate()) return true;
-		if (l.maximumFrameRate() < r.maximumFrameRate()) return false;
+		if (l.minFrameRate() > r.minFrameRate()) return true;
+		if (l.minFrameRate() < r.minFrameRate()) return false;
+		if (l.maxFrameRate() > r.maxFrameRate()) return true;
+		if (l.maxFrameRate() < r.maxFrameRate()) return false;
 		if (l.pixelFormat() > r.pixelFormat()) return true;
 		if (l.pixelFormat() < r.pixelFormat()) return false;
-		if (l.pixelAspectRatio().width() > r.pixelAspectRatio().width()) return true;
-		if (l.pixelAspectRatio().width() < r.pixelAspectRatio().width()) return false;
-		if (l.pixelAspectRatio().height() > r.pixelAspectRatio().height()) return true;
-		if (l.pixelAspectRatio().height() < r.pixelAspectRatio().height()) return false;
 		return false;
 	});
 
-	for (const QCameraViewfinderSettings& setting : settings)
+	for (const QCameraFormat& setting : settings)
 	{
 		if (setting.isNull()) continue;
-		const QString description = tr("%0x%1, %2-%3 FPS, Format=%4, PixelAspectRatio=%5x%6")
+		const QString description = tr("%0x%1, %2-%3 FPS, Format=%4")
 			.arg(setting.resolution().width())
 			.arg(setting.resolution().height())
-			.arg(setting.minimumFrameRate())
-			.arg(setting.maximumFrameRate())
-			.arg(QString::fromStdString(fmt::format("%s", setting.pixelFormat())))
-			.arg(setting.pixelAspectRatio().width())
-			.arg(setting.pixelAspectRatio().height());
+			.arg(setting.minFrameRate())
+			.arg(setting.maxFrameRate())
+			.arg(QString::fromStdString(fmt::format("%s", setting.pixelFormat())));
 		ui->combo_settings->addItem(description, QVariant::fromValue(setting));
 	}
 	ui->combo_settings->blockSignals(false);
@@ -181,37 +170,27 @@ void camera_settings_dialog::handle_camera_change(int index)
 		// Load selected settings from config file
 		int index = 0;
 		bool success = false;
-		const std::string key = camera_info.deviceName().toStdString();
+		const std::string key = camera_info.id().toStdString();
 		cfg_camera::camera_setting cfg_setting = g_cfg_camera.get_camera_setting(key, success);
 
 		if (success)
 		{
 			camera_log.notice("Found config entry for camera \"%s\"", key);
 
-			// Convert to Qt data
-			QCameraViewfinderSettings setting;
-			setting.setResolution(cfg_setting.width, cfg_setting.height);
-			setting.setMinimumFrameRate(cfg_setting.min_fps);
-			setting.setMaximumFrameRate(cfg_setting.max_fps);
-			setting.setPixelFormat(static_cast<QVideoFrame::PixelFormat>(cfg_setting.format));
-			setting.setPixelAspectRatio(cfg_setting.pixel_aspect_width, cfg_setting.pixel_aspect_height);
-
 			// Select matching drowdown entry
 			const double epsilon = 0.001;
 
 			for (int i = 0; i < ui->combo_settings->count(); i++)
 			{
-				const QCameraViewfinderSettings tmp = ui->combo_settings->itemData(i).value<QCameraViewfinderSettings>();
+				const QCameraFormat tmp = ui->combo_settings->itemData(i).value<QCameraFormat>();
 
-				if (tmp.resolution().width() == setting.resolution().width() &&
-					tmp.resolution().height() == setting.resolution().height() &&
-					tmp.minimumFrameRate() >= (setting.minimumFrameRate() - epsilon) &&
-					tmp.minimumFrameRate() <= (setting.minimumFrameRate() + epsilon) &&
-					tmp.maximumFrameRate() >= (setting.maximumFrameRate() - epsilon) &&
-					tmp.maximumFrameRate() <= (setting.maximumFrameRate() + epsilon) &&
-					tmp.pixelFormat() == setting.pixelFormat() &&
-					tmp.pixelAspectRatio().width() == setting.pixelAspectRatio().width() &&
-					tmp.pixelAspectRatio().height() == setting.pixelAspectRatio().height())
+				if (tmp.resolution().width() == cfg_setting.width &&
+					tmp.resolution().height() == cfg_setting.height &&
+					tmp.minFrameRate() >= (cfg_setting.min_fps - epsilon) &&
+					tmp.minFrameRate() <= (cfg_setting.min_fps + epsilon) &&
+					tmp.maxFrameRate() >= (cfg_setting.max_fps - epsilon) &&
+					tmp.maxFrameRate() <= (cfg_setting.max_fps + epsilon) &&
+					tmp.pixelFormat() == static_cast<QVideoFrameFormat::PixelFormat>(cfg_setting.format))
 				{
 					index = i;
 					break;
@@ -223,14 +202,12 @@ void camera_settings_dialog::handle_camera_change(int index)
 		ui->combo_settings->setEnabled(true);
 
 		// Update config to match user interface outcome
-		const QCameraViewfinderSettings setting = ui->combo_settings->currentData().value<QCameraViewfinderSettings>();
+		const QCameraFormat setting = ui->combo_settings->currentData().value<QCameraFormat>();
 		cfg_setting.width = setting.resolution().width();
 		cfg_setting.height = setting.resolution().height();
-		cfg_setting.min_fps = setting.minimumFrameRate();
-		cfg_setting.max_fps = setting.maximumFrameRate();
+		cfg_setting.min_fps = setting.minFrameRate();
+		cfg_setting.max_fps = setting.maxFrameRate();
 		cfg_setting.format = static_cast<int>(setting.pixelFormat());
-		cfg_setting.pixel_aspect_width = setting.pixelAspectRatio().width();
-		cfg_setting.pixel_aspect_height = setting.pixelAspectRatio().height();
 		g_cfg_camera.set_camera_setting(key, cfg_setting);
 	}
 }
@@ -248,23 +225,21 @@ void camera_settings_dialog::handle_settings_change(int index)
 		return;
 	}
 
-	if (index >= 0 && ui->combo_settings->itemData(index).canConvert<QCameraViewfinderSettings>() && ui->combo_camera->currentData().canConvert<QCameraInfo>())
+	if (index >= 0 && ui->combo_settings->itemData(index).canConvert<QCameraFormat>() && ui->combo_camera->currentData().canConvert<QCameraDevice>())
 	{
-		const QCameraViewfinderSettings setting = ui->combo_settings->itemData(index).value<QCameraViewfinderSettings>();
+		const QCameraFormat setting = ui->combo_settings->itemData(index).value<QCameraFormat>();
 		if (!setting.isNull())
 		{
-			m_camera->setViewfinderSettings(setting);
+			m_camera->setCameraFormat(setting);
 		}
 
 		cfg_camera::camera_setting cfg_setting;
 		cfg_setting.width = setting.resolution().width();
 		cfg_setting.height = setting.resolution().height();
-		cfg_setting.min_fps = setting.minimumFrameRate();
-		cfg_setting.max_fps = setting.maximumFrameRate();
+		cfg_setting.min_fps = setting.minFrameRate();
+		cfg_setting.max_fps = setting.maxFrameRate();
 		cfg_setting.format = static_cast<int>(setting.pixelFormat());
-		cfg_setting.pixel_aspect_width = setting.pixelAspectRatio().width();
-		cfg_setting.pixel_aspect_height = setting.pixelAspectRatio().height();
-		g_cfg_camera.set_camera_setting(ui->combo_camera->currentData().value<QCameraInfo>().deviceName().toStdString(), cfg_setting);
+		g_cfg_camera.set_camera_setting(ui->combo_camera->currentData().value<QCameraDevice>().id().toStdString(), cfg_setting);
 	}
 
 	m_camera->start();

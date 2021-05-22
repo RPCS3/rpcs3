@@ -1,6 +1,6 @@
 #include "progress_indicator.h"
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 #include <QCoreApplication>
 #include <QWinTaskbarProgress>
 #elif HAVE_QTDBUS
@@ -10,7 +10,7 @@
 
 progress_indicator::progress_indicator(int minimum, int maximum)
 {
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_tb_button = std::make_unique<QWinTaskbarButton>();
 	m_tb_button->progress()->setRange(minimum, maximum);
 	m_tb_button->progress()->setVisible(false);
@@ -25,7 +25,7 @@ progress_indicator::progress_indicator(int minimum, int maximum)
 
 progress_indicator::~progress_indicator()
 {
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	// QWinTaskbarProgress::hide() will crash if the application is already about to close, even if the object is not null.
 	if (!QCoreApplication::closingDown())
 	{
@@ -38,7 +38,7 @@ progress_indicator::~progress_indicator()
 
 void progress_indicator::show(QWindow* window)
 {
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_tb_button->setWindow(window);
 	m_tb_button->progress()->show();
 #else
@@ -48,7 +48,7 @@ void progress_indicator::show(QWindow* window)
 
 int progress_indicator::value() const
 {
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	return m_tb_button->progress()->value();
 #else
 	return m_value;
@@ -57,7 +57,7 @@ int progress_indicator::value() const
 
 void progress_indicator::set_value(int value)
 {
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_tb_button->progress()->setValue(std::clamp(value, m_tb_button->progress()->minimum(), m_tb_button->progress()->maximum()));
 #else
 	m_value = std::clamp(value, m_minimum, m_maximum);
@@ -69,7 +69,7 @@ void progress_indicator::set_value(int value)
 
 void progress_indicator::set_range(int minimum, int maximum)
 {
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_tb_button->progress()->setRange(minimum, maximum);
 #else
 	m_minimum = minimum;
@@ -79,7 +79,7 @@ void progress_indicator::set_range(int minimum, int maximum)
 
 void progress_indicator::reset()
 {
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_tb_button->progress()->reset();
 #else
 	m_value = m_minimum;
@@ -91,7 +91,7 @@ void progress_indicator::reset()
 
 void progress_indicator::signal_failure()
 {
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_tb_button->progress()->stop();
 #elif HAVE_QTDBUS
 	update_progress(0, false, true);

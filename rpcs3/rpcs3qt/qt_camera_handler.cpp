@@ -5,17 +5,16 @@
 #include "Emu/Io/camera_config.h"
 #include "Emu/Cell/lv2/sys_event.h"
 
-#include <QMediaService>
-#include <QCameraInfo>
+#include <QMediaDevices>
 
 LOG_CHANNEL(camera_log, "Camera");
 
 qt_camera_handler::qt_camera_handler() : camera_handler_base()
 {
 	// List available cameras
-	for (const QCameraInfo& cameraInfo : QCameraInfo::availableCameras())
+	for (const QCameraDevice& camera_device : QMediaDevices::videoInputs())
 	{
-		camera_log.success("Found camera: name=%s, description=%s", cameraInfo.deviceName(), cameraInfo.description());
+		camera_log.success("Found camera: id=%s, description=%s", camera_device.id().toStdString(), camera_device.description());
 	}
 
 	if (!g_cfg_camera.load())
@@ -29,60 +28,53 @@ qt_camera_handler::~qt_camera_handler()
 	Emu.BlockingCallFromMainThread([&]()
 	{
 		close_camera();
-		m_surface.reset();
-		m_camera.reset();
-		m_error_handler.reset();
+		reset();
 	});
 }
 
-void qt_camera_handler::set_camera(const QCameraInfo& camera_info)
+void qt_camera_handler::reset()
+{
+	m_camera.reset();
+	m_error_handler.reset();
+	m_video_sink.reset();
+	m_media_capture_session.reset();
+}
+
+void qt_camera_handler::set_camera(const QCameraDevice& camera_info)
 {
 	if (camera_info.isNull())
 	{
-		m_surface.reset();
-		m_camera.reset();
-		m_error_handler.reset();
+		reset();
 		return;
 	}
 
 	// Determine if the camera is front facing, in which case we will need to flip the image horizontally.
-	const bool front_facing = camera_info.position() == QCamera::Position::FrontFace;
+	const bool front_facing = camera_info.position() == QCameraDevice::Position::FrontFace;
 
-	camera_log.success("Using camera: name=\"%s\", description=\"%s\", front_facing=%d", camera_info.deviceName(), camera_info.description(), front_facing);
+	camera_log.success("Using camera: id=\"%s\", description=\"%s\", front_facing=%d", camera_info.id().toStdString(), camera_info.description(), front_facing);
 
 	// Create camera and video surface
-	m_surface.reset(new qt_camera_video_surface(front_facing, nullptr));
+	m_media_capture_session.reset(new QMediaCaptureSession(nullptr));
+	m_video_sink.reset(new qt_camera_video_sink(front_facing, nullptr));
 	m_camera.reset(new QCamera(camera_info));
 	m_error_handler.reset(new qt_camera_error_handler(m_camera,
-		[this](QCamera::Status status)
+		[this](bool is_active)
 		{
-			switch (status)
+			if (is_active)
 			{
-			case QCamera::UnavailableStatus:
-				m_state = camera_handler_state::not_available;
-				break;
-			case QCamera::UnloadedStatus:
-			case QCamera::UnloadingStatus:
-				m_state = camera_handler_state::closed;
-				break;
-			case QCamera::StandbyStatus:
-			case QCamera::StoppingStatus:
-			case QCamera::LoadedStatus:
-			case QCamera::LoadingStatus:
-				m_state = camera_handler_state::open;
-				break;
-			case QCamera::StartingStatus:
-			case QCamera::ActiveStatus:
 				m_state = camera_handler_state::running;
-				break;
-			default:
-				camera_log.error("Ignoring unknown status %d", static_cast<int>(status));
-				break;
+			}
+			else
+			{
+				m_state = camera_handler_state::closed;
 			}
 		}));
 
-	// Set view finder and update the settings
-	m_camera->setViewfinder(m_surface.get());
+	// Setup video sink
+	m_media_capture_session->setCamera(m_camera.get());
+	m_media_capture_session->setVideoSink(m_video_sink.get());
+
+	// Update the settings
 	update_camera_settings();
 }
 
@@ -94,25 +86,25 @@ void qt_camera_handler::open_camera()
 		m_camera_id != camera_id)
 	{
 		camera_log.notice("Switching camera from %s to %s", m_camera_id, camera_id);
-		camera_log.notice("Unloading old camera...");
-		if (m_camera) m_camera->unload();
+		camera_log.notice("Stopping old camera...");
+		if (m_camera) m_camera->stop();
 		m_camera_id = camera_id;
 	}
 
-	QCameraInfo selected_camera;
+	QCameraDevice selected_camera{};
 
 	if (m_camera_id == g_cfg.io.camera_id.def)
 	{
-		selected_camera = QCameraInfo::defaultCamera();
+		selected_camera = QMediaDevices::defaultVideoInput();
 	}
 	else if (!m_camera_id.empty())
 	{
 		const QString camera_id = QString::fromStdString(m_camera_id);
-		for (const QCameraInfo& camera_info : QCameraInfo::availableCameras())
+		for (const QCameraDevice& camera_device : QMediaDevices::videoInputs())
 		{
-			if (camera_id == camera_info.deviceName())
+			if (camera_id == camera_device.id())
 			{
-				selected_camera = camera_info;
+				selected_camera = camera_device;
 				break;
 			}
 		}
@@ -124,35 +116,26 @@ void qt_camera_handler::open_camera()
 	{
 		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
 		else camera_log.error("No camera found");
-		m_state = camera_handler_state::not_available;
+		m_state = camera_handler_state::closed;
 		return;
 	}
 
-	if (m_camera->state() != QCamera::State::UnloadedState)
+	if (m_camera->isActive())
 	{
-		camera_log.notice("Camera already loaded");
+		camera_log.notice("Camera already active");
 		return;
 	}
-
-	// Load/open camera
-	m_camera->load();
 
 	// List all supported formats for debugging
-	for (const QCamera::FrameRateRange& frame_rate : m_camera->supportedViewfinderFrameRateRanges())
+	for (const QCameraFormat& format : m_camera->cameraDevice().videoFormats())
 	{
-		camera_log.notice("Supported frame rate range: %f-%f", frame_rate.minimumFrameRate, frame_rate.maximumFrameRate);
-	}
-	for (const QVideoFrame::PixelFormat& pixel_format : m_camera->supportedViewfinderPixelFormats())
-	{
-		camera_log.notice("Supported pixel format: %d", static_cast<int>(pixel_format));
-	}
-	for (const QSize& resolution : m_camera->supportedViewfinderResolutions())
-	{
-		camera_log.notice("Supported resolution: %dx%d", resolution.width(), resolution.height());
+		camera_log.notice("Supported format: pixelformat=%s, resolution=%dx%d framerate=%f-%f", format.pixelFormat(), format.resolution().width(), format.resolution().height(), format.minFrameRate(), format.maxFrameRate());
 	}
 
 	// Update camera and view finder settings
 	update_camera_settings();
+
+	m_state = camera_handler_state::open;
 }
 
 void qt_camera_handler::close_camera()
@@ -163,18 +146,12 @@ void qt_camera_handler::close_camera()
 	{
 		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
 		else camera_log.error("No camera found");
-		m_state = camera_handler_state::not_available;
-		return;
-	}
-
-	if (m_camera->state() == QCamera::State::UnloadedState)
-	{
-		camera_log.notice("Camera already unloaded");
+		m_state = camera_handler_state::closed;
 		return;
 	}
 
 	// Unload/close camera
-	m_camera->unload();
+	m_camera->stop();
 }
 
 void qt_camera_handler::start_camera()
@@ -185,20 +162,14 @@ void qt_camera_handler::start_camera()
 	{
 		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
 		else camera_log.error("No camera found");
-		m_state = camera_handler_state::not_available;
+		m_state = camera_handler_state::closed;
 		return;
 	}
 
-	if (m_camera->state() == QCamera::State::ActiveState)
+	if (m_camera->isActive())
 	{
 		camera_log.notice("Camera already started");
 		return;
-	}
-
-	if (m_camera->state() == QCamera::State::UnloadedState)
-	{
-		camera_log.notice("Camera not open");
-		open_camera();
 	}
 
 	// Start camera. We will start receiving frames now.
@@ -213,11 +184,11 @@ void qt_camera_handler::stop_camera()
 	{
 		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
 		else camera_log.error("No camera found");
-		m_state = camera_handler_state::not_available;
+		m_state = camera_handler_state::closed;
 		return;
 	}
 
-	if (m_camera->state() == QCamera::State::LoadedState)
+	if (!m_camera->isActive())
 	{
 		camera_log.notice("Camera already stopped");
 		return;
@@ -232,9 +203,9 @@ void qt_camera_handler::set_format(s32 format, u32 bytesize)
 	m_format = format;
 	m_bytesize = bytesize;
 
-	if (m_surface)
+	if (m_video_sink)
 	{
-		m_surface->set_format(m_format, m_bytesize);
+		m_video_sink->set_format(m_format, m_bytesize);
 	}
 }
 
@@ -248,9 +219,9 @@ void qt_camera_handler::set_resolution(u32 width, u32 height)
 	m_width = width;
 	m_height = height;
 
-	if (m_surface)
+	if (m_video_sink)
 	{
-		m_surface->set_resolution(m_width, m_height);
+		m_video_sink->set_resolution(m_width, m_height);
 	}
 }
 
@@ -258,15 +229,15 @@ void qt_camera_handler::set_mirrored(bool mirrored)
 {
 	m_mirrored = mirrored;
 
-	if (m_surface)
+	if (m_video_sink)
 	{
-		m_surface->set_mirrored(m_mirrored);
+		m_video_sink->set_mirrored(m_mirrored);
 	}
 }
 
 u64 qt_camera_handler::frame_number() const
 {
-	return m_surface ? m_surface->frame_number() : 0;
+	return m_video_sink ? m_video_sink->frame_number() : 0;
 }
 
 camera_handler_base::camera_handler_state qt_camera_handler::get_image(u8* buf, u64 size, u32& width, u32& height, u64& frame_number, u64& bytes_read)
@@ -280,22 +251,22 @@ camera_handler_base::camera_handler_state qt_camera_handler::get_image(u8* buf, 
 		m_camera_id != camera_id)
 	{
 		camera_log.notice("Switching cameras");
-		m_state = camera_handler_state::not_available;
-		return camera_handler_state::not_available;
+		m_state = camera_handler_state::closed;
+		return camera_handler_state::closed;
 	}
 
 	if (m_camera_id.empty())
 	{
 		camera_log.notice("Camera disabled");
-		m_state = camera_handler_state::not_available;
-		return camera_handler_state::not_available;
+		m_state = camera_handler_state::closed;
+		return camera_handler_state::closed;
 	}
 
-	if (!m_camera || !m_surface)
+	if (!m_camera || !m_video_sink)
 	{
 		camera_log.fatal("Error: camera invalid");
-		m_state = camera_handler_state::not_available;
-		return camera_handler_state::not_available;
+		m_state = camera_handler_state::closed;
+		return camera_handler_state::closed;
 	}
 
 	// Backup current state. State may change through events.
@@ -304,7 +275,7 @@ camera_handler_base::camera_handler_state qt_camera_handler::get_image(u8* buf, 
 	if (current_state == camera_handler_state::running)
 	{
 		// Copy latest image into out buffer.
-		m_surface->get_image(buf, size, width, height, frame_number, bytes_read);
+		m_video_sink->get_image(buf, size, width, height, frame_number, bytes_read);
 	}
 	else
 	{
@@ -317,7 +288,7 @@ camera_handler_base::camera_handler_state qt_camera_handler::get_image(u8* buf, 
 void qt_camera_handler::update_camera_settings()
 {
 	// Update camera if possible. We can only do this if it is already loaded.
-	if (m_camera && m_camera->state() != QCamera::State::UnloadedState)
+	if (m_camera && m_camera->isAvailable())
 	{
 		// Load selected settings from config file
 		bool success = false;
@@ -327,32 +298,23 @@ void qt_camera_handler::update_camera_settings()
 		{
 			camera_log.notice("Found config entry for camera \"%s\"", m_camera_id);
 
-			QCameraViewfinderSettings setting;
-			setting.setResolution(cfg_setting.width, cfg_setting.height);
-			setting.setMinimumFrameRate(cfg_setting.min_fps);
-			setting.setMaximumFrameRate(cfg_setting.max_fps);
-			setting.setPixelFormat(static_cast<QVideoFrame::PixelFormat>(cfg_setting.format));
-			setting.setPixelAspectRatio(cfg_setting.pixel_aspect_width, cfg_setting.pixel_aspect_height);
-
 			// List all available settings and choose the proper value if possible.
 			const double epsilon = 0.001;
 			success = false;
-			for (const QCameraViewfinderSettings& supported_setting : m_camera->supportedViewfinderSettings(setting))
+			for (const QCameraFormat& supported_setting : m_camera->cameraDevice().videoFormats())
 			{
-				if (supported_setting.resolution().width() == setting.resolution().width() &&
-					supported_setting.resolution().height() == setting.resolution().height() &&
-					supported_setting.minimumFrameRate() >= (setting.minimumFrameRate() - epsilon) &&
-					supported_setting.minimumFrameRate() <= (setting.minimumFrameRate() + epsilon) &&
-					supported_setting.maximumFrameRate() >= (setting.maximumFrameRate() - epsilon) &&
-					supported_setting.maximumFrameRate() <= (setting.maximumFrameRate() + epsilon) &&
-					supported_setting.pixelFormat() == setting.pixelFormat() &&
-					supported_setting.pixelAspectRatio().width() == setting.pixelAspectRatio().width() &&
-					supported_setting.pixelAspectRatio().height() == setting.pixelAspectRatio().height())
+				if (supported_setting.resolution().width() == cfg_setting.width &&
+					supported_setting.resolution().height() == cfg_setting.height &&
+					supported_setting.minFrameRate() >= (cfg_setting.min_fps - epsilon) &&
+					supported_setting.minFrameRate() <= (cfg_setting.min_fps + epsilon) &&
+					supported_setting.maxFrameRate() >= (cfg_setting.max_fps - epsilon) &&
+					supported_setting.maxFrameRate() <= (cfg_setting.max_fps + epsilon) &&
+					supported_setting.pixelFormat() == static_cast<QVideoFrameFormat::PixelFormat>(cfg_setting.format))
 				{
 					// Apply settings.
 					camera_log.notice("Setting view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%s",
-						supported_setting.maximumFrameRate(), supported_setting.resolution().width(), supported_setting.resolution().height(), supported_setting.pixelFormat());
-					m_camera->setViewfinderSettings(supported_setting);
+						supported_setting.maxFrameRate(), supported_setting.resolution().width(), supported_setting.resolution().height(), supported_setting.pixelFormat());
+					m_camera->setCameraFormat(supported_setting);
 					success = true;
 					break;
 				}
@@ -372,10 +334,10 @@ void qt_camera_handler::update_camera_settings()
 	}
 
 	// Update video surface if possible
-	if (m_surface)
+	if (m_video_sink)
 	{
-		m_surface->set_resolution(m_width, m_height);
-		m_surface->set_format(m_format, m_bytesize);
-		m_surface->set_mirrored(m_mirrored);
+		m_video_sink->set_resolution(m_width, m_height);
+		m_video_sink->set_format(m_format, m_bytesize);
+		m_video_sink->set_mirrored(m_mirrored);
 	}
 }

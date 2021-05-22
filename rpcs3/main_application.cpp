@@ -315,7 +315,7 @@ EmuCallbacks main_application::CreateCallbacks()
 					image = image.convertToFormat(QImage::Format::Format_RGBA8888);
 				}
 
-				std::memcpy(dst, image.constBits(), std::min(4 * target_width * target_height, image.height() * image.bytesPerLine()));
+				std::memcpy(dst, image.constBits(), std::min(target_width * target_height * 4LL, image.height() * image.bytesPerLine()));
 				success = true;
 				sys_log.notice("get_scaled_image scaled image: path='%s', width=%d, height=%d", path, width, height);
 			}
