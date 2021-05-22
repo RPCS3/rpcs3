@@ -12,6 +12,12 @@
 
 LOG_CHANNEL(sys_memory);
 
+lv2_memory_container::lv2_memory_container(u32 size, bool from_idm) noexcept
+	: size(size)
+	, id{from_idm ? idm::last_id() : SYS_MEMORY_CONTAINER_ID_INVALID}
+{
+}
+
 //
 static shared_mutex s_memstats_mtx;
 
@@ -265,7 +271,7 @@ error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u32 si
 	}
 
 	// Create the memory container
-	if (const u32 id = idm::make<lv2_memory_container>(size))
+	if (const u32 id = idm::make<lv2_memory_container>(size, true))
 	{
 		*cid = id;
 		return CELL_OK;
