@@ -29,7 +29,7 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     # See https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/config/abi/pre/gnu.ver
     # for which definitions correlate to which CXXABI version.
     # Currently we target a minimum of GLIBCXX_3.4.26 and CXXABI_1.3.11
-    printf "#include <bits/stdc++.h>\nint main(){std::make_exception_ptr(0);std::pmr::get_default_resource();}" | $CXX -x c++ -std=c++2a -o ./appdir/usr/optional/checker -
+    printf "#include <exception>\n#include <memory_resource>\nint main(){std::make_exception_ptr(0);std::pmr::get_default_resource();}" | $CXX -x c++ -std=c++2a -o ./appdir/usr/optional/checker -
 
     # Package it up and send it off
     ./squashfs-root/usr/bin/appimagetool "$APPDIR"
