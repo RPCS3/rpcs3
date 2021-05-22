@@ -9,17 +9,11 @@
 #include <array>
 #include <tuple>
 #include <compare>
+#include <bit>
 
 using std::chrono::steady_clock;
 
 using namespace std::literals;
-
-#ifdef _MSC_VER
-#if !defined(__cpp_lib_bitops) && _MSC_VER < 1928
-#define __cpp_lib_bitops
-#endif
-#endif
-#include <bit>
 
 #ifndef __has_builtin
 	#define __has_builtin(x) 0
@@ -57,19 +51,10 @@ using namespace std::literals;
 #if __cpp_lib_bit_cast < 201806L
 namespace std
 {
-	template <class To, class From, typename = std::enable_if_t<sizeof(To) == sizeof(From)>>
-	constexpr To bit_cast(const From& from) noexcept
+	template <typename To, typename From>
+	[[nodiscard]] constexpr To bit_cast(const From& from) noexcept
 	{
-		static_assert(sizeof(To) == sizeof(From), "std::bit_cast<>: incompatible type size");
-
-		if constexpr ((std::is_same_v<std::remove_const_t<To>, std::remove_const_t<From>> && std::is_constructible_v<To, From>) || (std::is_integral_v<From> && std::is_integral_v<To>))
-		{
-			return static_cast<To>(from);
-		}
-
-		To result{};
-		__builtin_memcpy(&result, &from, sizeof(From));
-		return result;
+		return __builtin_bit_cast(To, from);
 	}
 }
 #endif
