@@ -126,7 +126,7 @@ public:
 		const QString perf_overlay_frametime_datapoints    = tr("Sets the amount of datapoints used in the frametime graph.");
 		const QString perf_overlay_position                = tr("Sets the on-screen position (quadrant) of the performance overlay.");
 		const QString perf_overlay_detail_level            = tr("Controls the amount of information displayed on the performance overlay.");
-		const QString perf_overlay_update_interval         = tr("Sets the time interval in which the performance overlay is being updated (measured in milliseconds).");
+		const QString perf_overlay_update_interval         = tr("Sets the time interval in which the performance overlay is being updated (measured in milliseconds).\nSetting this to 16 milliseconds will refresh the performance overlay at roughly 60Hz.\nThe performance overlay refresh rate does not affect the frame graph statistics and can only be as fast as the current game allows.");
 		const QString perf_overlay_font_size               = tr("Sets the font size of the performance overlay (measured in pixels).");
 		const QString perf_overlay_opacity                 = tr("Sets the opacity of the performance overlay (measured in %).");
 		const QString perf_overlay_margin_x                = tr("Sets the horizontal distance to the screen border relative to the screen quadrant (measured in pixels).");
