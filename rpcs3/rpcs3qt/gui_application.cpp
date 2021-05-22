@@ -34,7 +34,6 @@
 #include <QLibraryInfo>
 #include <QDirIterator>
 #include <QFileInfo>
-#include <QSound>
 #include <QMessageBox>
 #include <QTextDocument>
 
@@ -173,7 +172,7 @@ void gui_application::SwitchTranslator(QTranslator& translator, const QString& f
 	// remove the old translator
 	removeTranslator(&translator);
 
-	const QString lang_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath) + QStringLiteral("/");
+	const QString lang_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath) + QStringLiteral("/");
 	const QString file_path = lang_path + filename;
 
 	if (QFileInfo(file_path).isFile())
@@ -236,7 +235,7 @@ QStringList gui_application::GetAvailableLanguageCodes()
 {
 	QStringList language_codes;
 
-	const QString language_path = QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+	const QString language_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath);
 
 	if (QFileInfo(language_path).isDir())
 	{
@@ -546,13 +545,17 @@ void gui_application::InitializeCallbacks()
 		return localized_emu::get_u32string(id, args);
 	};
 
-	callbacks.play_sound = [](const std::string& path)
+	callbacks.play_sound = [this](const std::string& path)
 	{
-		Emu.CallFromMainThread([path]()
+		Emu.CallFromMainThread([this, path]()
 		{
 			if (fs::is_file(path))
 			{
-				QSound::play(qstr(path));
+				m_sound_effect.stop();
+				m_sound_effect.setSource(QUrl::fromLocalFile(qstr(path)));
+				m_sound_effect.setVolume(g_cfg.audio.volume * 0.01f);
+				m_sound_effect.setLoopCount(1);
+				m_sound_effect.play();
 			}
 		});
 	};

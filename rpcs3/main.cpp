@@ -1,4 +1,4 @@
-// Qt5.10+ frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
+// Qt6 frontend implementation for rpcs3. Known to work on Windows, Linux, Mac
 // by Sacha Refshauge, Megamouse and flash-fire
 
 #include <iostream>
@@ -348,9 +348,6 @@ QCoreApplication* create_application(int& argc, char* argv[])
 		// Set QT_ENABLE_HIGHDPI_SCALING from environment. Defaults to cli argument, which defaults to 1.
 		use_high_dpi = "1" == qEnvironmentVariable("QT_ENABLE_HIGHDPI_SCALING", high_dpi_setting);
 	}
-
-	// AA_EnableHighDpiScaling has to be set before creating a QApplication
-	QApplication::setAttribute(use_high_dpi ? Qt::AA_EnableHighDpiScaling : Qt::AA_DisableHighDpiScaling);
 
 	if (use_high_dpi)
 	{
@@ -974,8 +971,6 @@ int main(int argc, char** argv)
 
 	if (gui_application* gui_app = qobject_cast<gui_application*>(app.data()))
 	{
-		gui_app->setAttribute(Qt::AA_UseHighDpiPixmaps);
-		gui_app->setAttribute(Qt::AA_DisableWindowContextHelpButton);
 		gui_app->setAttribute(Qt::AA_DontCheckOpenGLContextThreadAffinity);
 
 		gui_app->SetShowGui(!s_no_gui);
@@ -1057,7 +1052,7 @@ int main(int argc, char** argv)
 	bool got_timer_resolution = NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0;
 
 	// Set 0.5 msec timer resolution for best performance
-	// - As QT5 timers (QTimer) sets the timer resolution to 1 msec, override it here.
+	// - As QT timers (QTimer) sets the timer resolution to 1 msec, override it here.
 	if (parser.value(arg_timer).toStdString() == "1")
 	{
 		ULONG new_res;

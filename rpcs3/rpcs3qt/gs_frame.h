@@ -73,7 +73,7 @@ public:
 	void take_screenshot(std::vector<u8> data, const u32 sshot_width, const u32 sshot_height, bool is_bgra) override;
 
 protected:
-	virtual void paintEvent(QPaintEvent *event);
+	void paintEvent(QPaintEvent *event) override;
 	void showEvent(QShowEvent *event) override;
 
 	void keyPressEvent(QKeyEvent *keyEvent) override;

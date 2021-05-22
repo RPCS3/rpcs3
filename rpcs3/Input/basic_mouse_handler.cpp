@@ -128,6 +128,7 @@ void basic_mouse_handler::MouseMove(QMouseEvent* event)
 	{
 		// get the screen dimensions
 		const QSize screen = m_target->size();
+		const QPoint e_pos = event->pos();
 
 		if (m_target && m_target->isActive() && get_mouse_lock_state())
 		{
@@ -144,7 +145,7 @@ void basic_mouse_handler::MouseMove(QMouseEvent* event)
 			static QPoint p_real(p_center);
 
 			// get the delta of the mouse position to the screen center
-			const QPoint p_delta = event->pos() - p_center;
+			const QPoint p_delta = e_pos - p_center;
 
 			// update the current position without leaving the screen borders
 			p_real.setX(std::clamp(p_real.x() + p_delta.x(), 0, screen.width()));
@@ -155,7 +156,7 @@ void basic_mouse_handler::MouseMove(QMouseEvent* event)
 		}
 		else
 		{
-			MouseHandlerBase::Move(event->x(), event->y(), screen.width(), screen.height());
+			MouseHandlerBase::Move(e_pos.x(), e_pos.y(), screen.width(), screen.height());
 		}
 	}
 }

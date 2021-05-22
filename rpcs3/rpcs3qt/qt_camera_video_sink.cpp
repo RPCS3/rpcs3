@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "qt_camera_video_surface.h"
+#include "qt_camera_video_sink.h"
 
 #include "Emu/Cell/Modules/cellCamera.h"
 #include "Emu/system_config.h"
@@ -8,12 +8,13 @@
 
 LOG_CHANNEL(camera_log, "Camera");
 
-qt_camera_video_surface::qt_camera_video_surface(bool front_facing, QObject *parent)
-	: QAbstractVideoSurface(parent), m_front_facing(front_facing)
+qt_camera_video_sink::qt_camera_video_sink(bool front_facing, QObject *parent)
+	: QVideoSink(parent), m_front_facing(front_facing)
 {
+	connect(this, &QVideoSink::videoFrameChanged, this, &qt_camera_video_sink::present);
 }
 
-qt_camera_video_surface::~qt_camera_video_surface()
+qt_camera_video_sink::~qt_camera_video_sink()
 {
 	std::lock_guard lock(m_mutex);
 
@@ -28,51 +29,7 @@ qt_camera_video_surface::~qt_camera_video_surface()
 	}
 }
 
-QList<QVideoFrame::PixelFormat> qt_camera_video_surface::supportedPixelFormats(QAbstractVideoBuffer::HandleType type) const
-{
-	Q_UNUSED(type)
-
-	// Support all cameras
-	QList<QVideoFrame::PixelFormat> result;
-	result
-		<< QVideoFrame::Format_ARGB32
-		<< QVideoFrame::Format_ARGB32_Premultiplied
-		<< QVideoFrame::Format_RGB32
-		<< QVideoFrame::Format_RGB24
-		<< QVideoFrame::Format_RGB565
-		<< QVideoFrame::Format_RGB555
-		<< QVideoFrame::Format_ARGB8565_Premultiplied
-		<< QVideoFrame::Format_BGRA32
-		<< QVideoFrame::Format_BGRA32_Premultiplied
-		<< QVideoFrame::Format_BGR32
-		<< QVideoFrame::Format_BGR24
-		<< QVideoFrame::Format_BGR565
-		<< QVideoFrame::Format_BGR555
-		<< QVideoFrame::Format_BGRA5658_Premultiplied
-		<< QVideoFrame::Format_AYUV444
-		<< QVideoFrame::Format_AYUV444_Premultiplied
-		<< QVideoFrame::Format_YUV444
-		<< QVideoFrame::Format_YUV420P
-		<< QVideoFrame::Format_YV12
-		<< QVideoFrame::Format_UYVY
-		<< QVideoFrame::Format_YUYV
-		<< QVideoFrame::Format_NV12
-		<< QVideoFrame::Format_NV21
-		<< QVideoFrame::Format_IMC1
-		<< QVideoFrame::Format_IMC2
-		<< QVideoFrame::Format_IMC3
-		<< QVideoFrame::Format_IMC4
-		<< QVideoFrame::Format_Y8
-		<< QVideoFrame::Format_Y16
-		<< QVideoFrame::Format_Jpeg
-		<< QVideoFrame::Format_CameraRaw
-		<< QVideoFrame::Format_AdobeDng
-		<< QVideoFrame::Format_ABGR32
-		<< QVideoFrame::Format_YUV422P;
-	return result;
-}
-
-bool qt_camera_video_surface::present(const QVideoFrame& frame)
+bool qt_camera_video_sink::present(const QVideoFrame& frame)
 {
 	if (!frame.isValid())
 	{
@@ -82,18 +39,18 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 
 	// Get video image. Map frame for faster read operations.
 	QVideoFrame tmp(frame);
-	if (!tmp.map(QAbstractVideoBuffer::ReadOnly))
+	if (!tmp.map(QVideoFrame::ReadOnly))
 	{
 		camera_log.error("Failed to map video frame");
 		return false;
 	}
 
 	// Get image. This usually also converts the image to ARGB32.
-	QImage image = frame.image();
+	QImage image = frame.toImage();
 
 	if (image.isNull())
 	{
-		camera_log.warning("Image is invalid: pixel_format=%s, format=%d", tmp.pixelFormat(), static_cast<int>(QVideoFrame::imageFormatFromPixelFormat(tmp.pixelFormat())));
+		camera_log.warning("Image is invalid: pixel_format=%s, format=%d", tmp.pixelFormat(), static_cast<int>(QVideoFrameFormat::imageFormatFromPixelFormat(tmp.pixelFormat())));
 	}
 	else
 	{
@@ -293,7 +250,7 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 	return true;
 }
 
-void qt_camera_video_surface::set_format(s32 format, u32 bytesize)
+void qt_camera_video_sink::set_format(s32 format, u32 bytesize)
 {
 	camera_log.notice("Setting format: format=%d, bytesize=%d", format, bytesize);
 
@@ -301,7 +258,7 @@ void qt_camera_video_surface::set_format(s32 format, u32 bytesize)
 	m_bytesize = bytesize;
 }
 
-void qt_camera_video_surface::set_resolution(u32 width, u32 height)
+void qt_camera_video_sink::set_resolution(u32 width, u32 height)
 {
 	camera_log.notice("Setting resolution: width=%d, height=%d", width, height);
 
@@ -309,19 +266,19 @@ void qt_camera_video_surface::set_resolution(u32 width, u32 height)
 	m_height = height;
 }
 
-void qt_camera_video_surface::set_mirrored(bool mirrored)
+void qt_camera_video_sink::set_mirrored(bool mirrored)
 {
 	camera_log.notice("Setting mirrored: mirrored=%d", mirrored);
 
 	m_mirrored = mirrored;
 }
 
-u64 qt_camera_video_surface::frame_number() const
+u64 qt_camera_video_sink::frame_number() const
 {
 	return m_frame_number.load();
 }
 
-void qt_camera_video_surface::get_image(u8* buf, u64 size, u32& width, u32& height, u64& frame_number, u64& bytes_read)
+void qt_camera_video_sink::get_image(u8* buf, u64 size, u32& width, u32& height, u64& frame_number, u64& bytes_read)
 {
 	// Lock read buffer
 	std::lock_guard lock(m_mutex);
@@ -348,7 +305,7 @@ void qt_camera_video_surface::get_image(u8* buf, u64 size, u32& width, u32& heig
 	}
 }
 
-u32 qt_camera_video_surface::read_index() const
+u32 qt_camera_video_sink::read_index() const
 {
 	// The read buffer index cannot be the same as the write index
 	return (m_write_index + 1u) % ::narrow<u32>(m_image_buffer.size());

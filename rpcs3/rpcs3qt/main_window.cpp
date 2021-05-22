@@ -155,7 +155,7 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	ui->toolbar_start->setEnabled(enable_play_last);
 
 	// create tool buttons for the taskbar thumbnail
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_bar = new QWinThumbnailToolBar(this);
 	m_thumb_bar->setWindow(windowHandle());
 
@@ -1700,7 +1700,7 @@ void main_window::RepaintThumbnailIcons()
 		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, new_color);
 	};
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	if (!m_thumb_bar) return;
 
 	m_icon_thumb_play = icon(":/Icons/play.png");
@@ -1787,14 +1787,6 @@ void main_window::RepaintToolBarIcons()
 
 	// resize toolbar elements
 
-	// for highdpi resize toolbar icons and height dynamically
-	// choose factors to mimic Gui-Design in main_window.ui
-	// TODO: delete this in case Qt::AA_EnableHighDpiScaling is enabled in main.cpp
-#ifdef _WIN32
-	const int tool_icon_height = menuBar()->sizeHint().height() * 1.5;
-	ui->toolBar->setIconSize(QSize(tool_icon_height, tool_icon_height));
-#endif
-
 	const int tool_bar_height = ui->toolBar->sizeHint().height();
 
 	for (const auto& act : ui->toolBar->actions())
@@ -1820,7 +1812,7 @@ void main_window::OnEmuRun(bool /*start_playtime*/) const
 
 	m_debugger_frame->EnableButtons(true);
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_stop->setToolTip(stop_tooltip);
 	m_thumb_restart->setToolTip(restart_tooltip);
 	m_thumb_playPause->setToolTip(pause_tooltip);
@@ -1843,7 +1835,7 @@ void main_window::OnEmuResume() const
 	const QString pause_tooltip = tr("Pause %0").arg(title);
 	const QString stop_tooltip = tr("Stop %0").arg(title);
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_stop->setToolTip(stop_tooltip);
 	m_thumb_restart->setToolTip(restart_tooltip);
 	m_thumb_playPause->setToolTip(pause_tooltip);
@@ -1862,7 +1854,7 @@ void main_window::OnEmuPause() const
 	const QString title = GetCurrentTitle();
 	const QString resume_tooltip = tr("Resume %0").arg(title);
 
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_playPause->setToolTip(resume_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
@@ -1886,7 +1878,7 @@ void main_window::OnEmuStop()
 
 	ui->sysPauseAct->setText(tr("&Play"));
 	ui->sysPauseAct->setIcon(m_icon_play);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_playPause->setToolTip(play_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
@@ -1908,7 +1900,7 @@ void main_window::OnEmuStop()
 		ui->toolbar_start->setText(tr("Restart"));
 		ui->toolbar_start->setToolTip(restart_tooltip);
 		ui->sysRebootAct->setEnabled(true);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 		m_thumb_restart->setToolTip(restart_tooltip);
 		m_thumb_restart->setEnabled(true);
 #endif
@@ -1947,7 +1939,7 @@ void main_window::OnEmuReady() const
 	const QString play_tooltip = tr("Play %0").arg(title);
 
 	m_debugger_frame->EnableButtons(true);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_playPause->setToolTip(play_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
@@ -1971,7 +1963,7 @@ void main_window::OnEmuReady() const
 void main_window::EnableMenus(bool enabled) const
 {
 	// Thumbnail Buttons
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 	m_thumb_playPause->setEnabled(enabled);
 	m_thumb_stop->setEnabled(enabled);
 	m_thumb_restart->setEnabled(enabled);
@@ -3139,14 +3131,14 @@ void main_window::CreateDockWindows()
 
 			ui->toolbar_start->setEnabled(enable_play_buttons);
 			ui->sysPauseAct->setEnabled(enable_play_buttons);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 			m_thumb_playPause->setEnabled(enable_play_buttons);
 #endif
 
 			if (!tooltip.isEmpty())
 			{
 				ui->toolbar_start->setToolTip(tooltip);
-#ifdef _WIN32
+#ifdef HAS_QT_WIN_STUFF
 				m_thumb_playPause->setToolTip(tooltip);
 #endif
 			}

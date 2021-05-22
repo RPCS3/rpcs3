@@ -1,12 +1,12 @@
 #pragma once
 
 #include "Emu/Io/camera_handler_base.h"
-#include "qt_camera_video_surface.h"
+#include "qt_camera_video_sink.h"
 #include "qt_camera_error_handler.h"
 
 #include <QCamera>
-#include <QCameraImageCapture>
-#include <QAbstractVideoSurface>
+#include <QMediaCaptureSession>
+#include <QVideoSink>
 
 class qt_camera_handler final : public camera_handler_base
 {
@@ -14,7 +14,7 @@ public:
 	qt_camera_handler();
 	virtual ~qt_camera_handler();
 
-	void set_camera(const QCameraInfo& camera_info);
+	void set_camera(const QCameraDevice& camera_info);
 
 	void open_camera() override;
 	void close_camera() override;
@@ -28,10 +28,12 @@ public:
 	camera_handler_state get_image(u8* buf, u64 size, u32& width, u32& height, u64& frame_number, u64& bytes_read) override;
 
 private:
+	void reset();
 	void update_camera_settings();
 
 	std::string m_camera_id;
 	std::shared_ptr<QCamera> m_camera;
-	std::unique_ptr<qt_camera_video_surface> m_surface;
+	std::unique_ptr<QMediaCaptureSession> m_media_capture_session;
+	std::unique_ptr<qt_camera_video_sink> m_video_sink;
 	std::unique_ptr<qt_camera_error_handler> m_error_handler;
 };
