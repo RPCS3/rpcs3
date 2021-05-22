@@ -21,29 +21,18 @@ LOG_CHANNEL(sys_ppu_thread);
 // Simple structure to cleanup previous thread, because can't remove its own thread
 struct ppu_thread_cleaner
 {
-	atomic_t<u32> old_id = 0;
+	std::shared_ptr<void> old;
 
-	void clean(u32 new_id)
+	std::shared_ptr<void> clean(std::shared_ptr<void> ptr)
 	{
-		if (old_id || new_id) [[likely]]
-		{
-			if (u32 id = old_id.exchange(new_id)) [[likely]]
-			{
-				auto ppu = idm::get<named_thread<ppu_thread>>(id);
-
-				if (ppu)
-				{
-					// Join thread
-					(*ppu)();
-				}
-
-				if (!ppu || !idm::remove_verify<named_thread<ppu_thread>>(id, std::move(ppu))) [[unlikely]]
-				{
-					sys_ppu_thread.fatal("Failed to remove detached thread 0x%x", id);
-				}
-			}
-		}
+		return std::exchange(old, std::move(ptr));
 	}
+
+	ppu_thread_cleaner() = default;
+
+	ppu_thread_cleaner(const ppu_thread_cleaner&) = delete;
+
+	ppu_thread_cleaner& operator=(const ppu_thread_cleaner&) = delete;
 };
 
 bool ppu_thread_exit(ppu_thread& ppu)
@@ -72,6 +61,9 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 
 	ppu_join_status old_status;
 	{
+		// Avoid cases where cleaning causes the destructor to be called inside IDM lock scope (for performance)
+		std::shared_ptr<void> old_ppu;
+
 		std::lock_guard lock(id_manager::g_mutex);
 
 		// Get joiner ID
@@ -93,14 +85,18 @@ void _sys_ppu_thread_exit(ppu_thread& ppu, u64 errorcode)
 			lv2_obj::append(idm::check_unlocked<named_thread<ppu_thread>>(static_cast<u32>(old_status)));
 		}
 
+		if (old_status != ppu_join_status::joinable)
+		{
+			// Remove self ID from IDM, move owning ptr
+			old_ppu = g_fxo->get<ppu_thread_cleaner>().clean(std::move(idm::find_unlocked<named_thread<ppu_thread>>(ppu.id)->second));
+		}
+
 		// Unqueue
 		lv2_obj::sleep(ppu);
 
 		// Remove suspend state (TODO)
 		ppu.state -= cpu_flag::suspend;
 	}
-
-	g_fxo->get<ppu_thread_cleaner>().clean(old_status == ppu_join_status::detached ? ppu.id : 0);
 
 	while (ppu.joiner == ppu_join_status::zombie && !ppu.is_stopped())
 	{
@@ -126,9 +122,6 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	ppu.state += cpu_flag::wait;
 
 	sys_ppu_thread.trace("sys_ppu_thread_join(thread_id=0x%x, vptr=*0x%x)", thread_id, vptr);
-
-	// Clean some detached thread (hack)
-	g_fxo->get<ppu_thread_cleaner>().clean(0);
 
 	auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread) -> CellError
 	{
@@ -184,16 +177,21 @@ error_code sys_ppu_thread_join(ppu_thread& ppu, u32 thread_id, vm::ptr<u64> vptr
 	// Wait for cleanup
 	(*thread.ptr)();
 
-	if (ppu.test_stopped())
+	if (thread->joiner != ppu_join_status::exited)
 	{
+		// Thread aborted, log it later
+		ppu.state += cpu_flag::exit;
 		return {};
 	}
 
 	// Get the exit status from the register
 	const u64 vret = thread->gpr[3];
 
-	// Cleanup
-	ensure(idm::remove_verify<named_thread<ppu_thread>>(thread_id, std::move(thread.ptr)));
+	if (thread.ret == CELL_EAGAIN)
+	{
+		// Cleanup
+		ensure(idm::remove_verify<named_thread<ppu_thread>>(thread_id, std::move(thread.ptr)));
+	}
 
 	if (!vptr)
 	{
@@ -210,12 +208,11 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 
 	sys_ppu_thread.trace("sys_ppu_thread_detach(thread_id=0x%x)", thread_id);
 
-	// Clean some detached thread (hack)
-	g_fxo->get<ppu_thread_cleaner>().clean(0);
+	CellError result = CELL_ESRCH;
 
-	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread) -> CellError
+	idm::withdraw<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
-		CellError result = thread.joiner.atomic_op([](ppu_join_status& value) -> CellError
+		result = thread.joiner.atomic_op([](ppu_join_status& value) -> CellError
 		{
 			if (value == ppu_join_status::zombie)
 			{
@@ -247,23 +244,13 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 			thread.joiner.notify_one();
 		}
 
+		// Remove ID on EAGAIN
+		return result != CELL_EAGAIN;
+	}).ptr;
+
+	if (result)
+	{
 		return result;
-	});
-
-	if (!thread)
-	{
-		return CELL_ESRCH;
-	}
-
-	if (thread.ret && thread.ret != CELL_EAGAIN)
-	{
-		return thread.ret;
-	}
-
-	if (thread.ret == CELL_EAGAIN)
-	{
-		g_fxo->get<ppu_thread_cleaner>().clean(thread_id);
-		g_fxo->get<ppu_thread_cleaner>().clean(0);
 	}
 
 	return CELL_OK;
@@ -293,25 +280,15 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 		return CELL_EINVAL;
 	}
 
-	// Clean some detached thread (hack)
-	g_fxo->get<ppu_thread_cleaner>().clean(0);
-
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
-		if (thread.joiner == ppu_join_status::exited)
-		{
-			return false;
-		}
-
 		if (thread.prio != prio)
 		{
 			lv2_obj::set_priority(thread, prio);
 		}
-
-		return true;
 	});
 
-	if (!thread || !thread.ret)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
@@ -325,23 +302,14 @@ error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s
 
 	sys_ppu_thread.trace("sys_ppu_thread_get_priority(thread_id=0x%x, priop=*0x%x)", thread_id, priop);
 
-	// Clean some detached thread (hack)
-	g_fxo->get<ppu_thread_cleaner>().clean(0);
-
 	u32 prio;
 
 	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
 	{
-		if (thread.joiner == ppu_join_status::exited)
-		{
-			return false;
-		}
-
 		prio = thread.prio;
-		return true;
 	});
 
-	if (!thread || !thread.ret)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
@@ -371,12 +339,9 @@ error_code sys_ppu_thread_stop(ppu_thread& ppu, u32 thread_id)
 		return CELL_ENOSYS;
 	}
 
-	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
-	{
-		return thread.joiner != ppu_join_status::exited;
-	});
+	const auto thread = idm::check<named_thread<ppu_thread>>(thread_id);
 
-	if (!thread || !thread.ret)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
@@ -425,9 +390,6 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 	const ppu_func_opd_t entry = param->entry.opd();
 	const u32 tls = param->tls;
-
-	// Clean some detached thread (hack)
-	g_fxo->get<ppu_thread_cleaner>().clean(0);
 
 	// Compute actual stack size and allocate
 	const u32 stack_size = utils::align<u32>(std::max<u32>(_stacksz, 4096), 4096);
@@ -490,11 +452,6 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread) -> CellError
 	{
-		if (thread.joiner == ppu_join_status::exited)
-		{
-			return CELL_ESRCH;
-		}
-
 		if (!thread.state.test_and_reset(cpu_flag::stop))
 		{
 			// Already started
@@ -560,12 +517,9 @@ error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> 
 
 	sys_ppu_thread.warning("sys_ppu_thread_rename(thread_id=0x%x, name=*0x%x)", thread_id, name);
 
-	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
-	{
-		return thread.joiner != ppu_join_status::exited;
-	});
+	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id);
 
-	if (!thread || !thread.ret)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
@@ -593,17 +547,14 @@ error_code sys_ppu_thread_recover_page_fault(ppu_thread& ppu, u32 thread_id)
 
 	sys_ppu_thread.warning("sys_ppu_thread_recover_page_fault(thread_id=0x%x)", thread_id);
 
-	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
-	{
-		return thread.joiner != ppu_join_status::exited;
-	});
+	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id);
 
-	if (!thread || !thread.ret)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
 
-	return mmapper_thread_recover_page_fault(thread.ptr.get());
+	return mmapper_thread_recover_page_fault(thread.get());
 }
 
 error_code sys_ppu_thread_get_page_fault_context(ppu_thread& ppu, u32 thread_id, vm::ptr<sys_ppu_thread_icontext_t> ctxt)
@@ -612,12 +563,9 @@ error_code sys_ppu_thread_get_page_fault_context(ppu_thread& ppu, u32 thread_id,
 
 	sys_ppu_thread.todo("sys_ppu_thread_get_page_fault_context(thread_id=0x%x, ctxt=*0x%x)", thread_id, ctxt);
 
-	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&](ppu_thread& thread)
-	{
-		return thread.joiner != ppu_join_status::exited;
-	});
+	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id);
 
-	if (!thread || !thread.ret)
+	if (!thread)
 	{
 		return CELL_ESRCH;
 	}
@@ -626,7 +574,7 @@ error_code sys_ppu_thread_get_page_fault_context(ppu_thread& ppu, u32 thread_id,
 	auto& pf_events = g_fxo->get<page_fault_event_entries>();
 	reader_lock lock(pf_events.pf_mutex);
 
-	const auto evt = pf_events.events.find(thread.ptr.get());
+	const auto evt = pf_events.events.find(thread.get());
 	if (evt == pf_events.events.end())
 	{
 		return CELL_EINVAL;
