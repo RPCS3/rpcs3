@@ -703,62 +703,25 @@ struct offset32_detail<T3 T4::*>
 	}
 };
 
-// Helper function, used by ""_u16, ""_u32, ""_u64
-constexpr u32 to_u8(char c)
-{
-	return static_cast<u8>(c);
-}
-
-// Convert 1-2-byte string to u16 value like reinterpret_cast does
+// Convert 0-2-byte string to u16 value like reinterpret_cast does
 constexpr u16 operator""_u16(const char* s, usz /*length*/)
 {
-	if constexpr (std::endian::little == std::endian::native)
-	{
-		return static_cast<u16>(to_u8(s[1]) << 8 | to_u8(s[0]));
-	}
-	else
-	{
-		return static_cast<u16>(to_u8(s[0]) << 8 | to_u8(s[1]));
-	}
+	char buf[2]{s[0], s[1]};
+	return std::bit_cast<u16>(buf);
 }
 
 // Convert 3-4-byte string to u32 value like reinterpret_cast does
 constexpr u32 operator""_u32(const char* s, usz /*length*/)
 {
-	if constexpr (std::endian::little == std::endian::native)
-	{
-		return to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
-	}
-	else
-	{
-		return to_u8(s[0]) << 24 | to_u8(s[1]) << 16 | to_u8(s[2]) << 8 | to_u8(s[3]);
-	}
+	char buf[4]{s[0], s[1], s[2], s[3]};
+	return std::bit_cast<u32>(buf);
 }
 
-// Convert 5-6-byte string to u64 value like reinterpret_cast does
-constexpr u64 operator""_u48(const char* s, usz /*length*/)
+// Convert 5-8-byte string to u64 value like reinterpret_cast does
+constexpr u64 operator""_u64(const char* s, usz len)
 {
-	if constexpr (std::endian::little == std::endian::native)
-	{
-		return static_cast<u64>(to_u8(s[5]) << 8 | to_u8(s[4])) << 32 | to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
-	}
-	else
-	{
-		return static_cast<u64>(to_u8(s[0]) << 8 | to_u8(s[1])) << 32 | to_u8(s[2]) << 24 | to_u8(s[3]) << 16 | to_u8(s[4]) << 8 | to_u8(s[5]);
-	}
-}
-
-// Convert 7-8-byte string to u64 value like reinterpret_cast does
-constexpr u64 operator""_u64(const char* s, usz /*length*/)
-{
-	if constexpr (std::endian::little == std::endian::native)
-	{
-		return static_cast<u64>(to_u8(s[7]) << 24 | to_u8(s[6]) << 16 | to_u8(s[5]) << 8 | to_u8(s[4])) << 32 | to_u8(s[3]) << 24 | to_u8(s[2]) << 16 | to_u8(s[1]) << 8 | to_u8(s[0]);
-	}
-	else
-	{
-		return static_cast<u64>(to_u8(s[0]) << 24 | to_u8(s[1]) << 16 | to_u8(s[2]) << 8 | to_u8(s[3])) << 32 | to_u8(s[4]) << 24 | to_u8(s[5]) << 16 | to_u8(s[6]) << 8 | to_u8(s[7]);
-	}
+	char buf[8]{s[0], s[1], s[2], s[3], s[4], (len < 6 ? '\0' : s[5]), (len < 7 ? '\0' : s[6]), (len < 8 ? '\0' : s[7])};
+	return std::bit_cast<u64>(buf);
 }
 
 #if !defined(__INTELLISENSE__) && !__has_builtin(__builtin_COLUMN) && !defined(_MSC_VER)
