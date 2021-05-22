@@ -700,7 +700,7 @@ namespace rsx
 			m_datapoints.push_back(datapoint);
 
 			// Calculate new min/max
-			m_min = std::numeric_limits<float>::max();
+			m_min = max_v<f32>;
 			m_max = 0.0f;
 
 			// Make sure min/max reflects the data being displayed, not the entire datapoints vector

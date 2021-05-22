@@ -94,7 +94,7 @@ namespace vm
 
 	void reservation_update(u32 addr)
 	{
-		u64 old = UINT64_MAX;
+		u64 old = -1;
 		const auto cpu = get_current_cpu_thread();
 
 		while (true)
@@ -705,7 +705,7 @@ namespace vm
 				}
 
 				// Unsharing only happens on deallocation currently, so make sure all further refs are shared
-				shm->info = UINT32_MAX;
+				shm->info = 0xffff'ffff;
 			}
 
 			// Obtain existing pointer
@@ -1643,11 +1643,11 @@ namespace vm
 			"vm::g_hook_addr = %p - %p\n"
 			"vm::g_stat_addr = %p - %p\n"
 			"vm::g_reservations = %p - %p\n",
-			g_base_addr, g_base_addr + UINT32_MAX,
-			g_sudo_addr, g_sudo_addr + UINT32_MAX,
+			g_base_addr, g_base_addr + 0xffff'ffff,
+			g_sudo_addr, g_sudo_addr + 0xffff'ffff,
 			g_exec_addr, g_exec_addr + 0x200000000 - 1,
 			g_hook_addr, g_hook_addr + 0x800000000 - 1,
-			g_stat_addr, g_stat_addr + UINT32_MAX,
+			g_stat_addr, g_stat_addr + 0xffff'ffff,
 			g_reservations, g_reservations + sizeof(g_reservations) - 1);
 
 			std::memset(&g_pages, 0, sizeof(g_pages));

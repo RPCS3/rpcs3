@@ -478,7 +478,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			// Next instruction according to code flow
 			// Known branch targets are selected over next PC for conditional branches
 			// Indirect branches (unknown targets, such as function return) do not proceed to any instruction
-			std::array<u32, 2> res{UINT32_MAX, UINT32_MAX};
+			std::array<u32, 2> res{umax, umax};
 
 			switch (cpu->id_type())
 			{
@@ -499,7 +499,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			default: break;
 			}
 
-			if (const size_t pos = std::basic_string_view<u32>(res.data(), 2).find_last_not_of(UINT32_MAX); pos != umax)
+			if (const size_t pos = std::basic_string_view<u32>(res.data(), 2).find_last_not_of(umax); pos != umax)
 				m_debugger_list->ShowAddress(res[pos] - std::max(row, 0) * 4, true, true);
 
 			return;
@@ -562,7 +562,7 @@ cpu_thread* debugger_frame::get_cpu()
 
 std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu)
 {
-	const u32 id = cpu ? cpu->id : UINT32_MAX;
+	const u32 id = cpu ? cpu->id : umax;
 	const u32 type = id >> 24;
 
 	std::shared_ptr<cpu_thread> shared = type == 1 ? static_cast<std::shared_ptr<cpu_thread>>(idm::get<named_thread<ppu_thread>>(id)) :

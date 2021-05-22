@@ -43,7 +43,7 @@ void lv2_timer_context::operator()()
 				{
 					// Set next expiration time and check again
 					const u64 _next = next + period;
-					expire.release(_next > next ? _next : UINT64_MAX);
+					expire.release(_next > next ? _next : umax);
 					continue;
 				}
 
@@ -164,7 +164,7 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 
 		// sys_timer_start_periodic() will use current time (TODO: is it correct?)
 		const u64 expire = base_time ? base_time : start_time + period;
-		timer.expire = expire > start_time ? expire : UINT64_MAX;
+		timer.expire = expire > start_time ? expire : umax;
 		timer.period = period;
 		timer.state  = SYS_TIMER_STATE_RUN;
 

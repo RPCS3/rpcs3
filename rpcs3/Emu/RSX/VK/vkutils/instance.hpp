@@ -321,9 +321,9 @@ namespace vk
 				vkGetPhysicalDeviceSurfaceSupportKHR(dev, index, m_surface, &supports_present[index]);
 			}
 
-			u32 graphics_queue_idx = UINT32_MAX;
-			u32 present_queue_idx = UINT32_MAX;
-			u32 transfer_queue_idx = UINT32_MAX;
+			u32 graphics_queue_idx = -1;
+			u32 present_queue_idx = -1;
+			u32 transfer_queue_idx = -1;
 
 			auto test_queue_family = [&](u32 index, u32 desired_flags)
 			{
@@ -339,7 +339,7 @@ namespace vk
 			for (u32 i = 0; i < device_queues; ++i)
 			{
 				// 1. Test for a present queue possibly one that also supports present
-				if (present_queue_idx == UINT32_MAX && supports_present[i])
+				if (present_queue_idx == umax && supports_present[i])
 				{
 					present_queue_idx = i;
 					if (test_queue_family(i, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
@@ -348,7 +348,7 @@ namespace vk
 					}
 				}
 				// 2. Check for graphics support
-				else if (graphics_queue_idx == UINT32_MAX && test_queue_family(i, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
+				else if (graphics_queue_idx == umax && test_queue_family(i, VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT))
 				{
 					graphics_queue_idx = i;
 					if (supports_present[i])
@@ -357,13 +357,13 @@ namespace vk
 					}
 				}
 				// 3. Check if transfer + compute is available
-				else if (transfer_queue_idx == UINT32_MAX && test_queue_family(i, VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT))
+				else if (transfer_queue_idx == umax && test_queue_family(i, VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT))
 				{
 					transfer_queue_idx = i;
 				}
 			}
 
-			if (graphics_queue_idx == UINT32_MAX)
+			if (graphics_queue_idx == umax)
 			{
 				rsx_log.fatal("Failed to find a suitable graphics queue");
 				return nullptr;
@@ -380,7 +380,7 @@ namespace vk
 				//Native(sw) swapchain
 				rsx_log.error("It is not possible for the currently selected GPU to present to the window (Likely caused by NVIDIA driver running the current display)");
 				rsx_log.warning("Falling back to software present support (native windowing API)");
-				auto swapchain = new swapchain_NATIVE(dev, UINT32_MAX, graphics_queue_idx, transfer_queue_idx);
+				auto swapchain = new swapchain_NATIVE(dev, -1, graphics_queue_idx, transfer_queue_idx);
 				swapchain->create(window_handle);
 				return swapchain;
 			}

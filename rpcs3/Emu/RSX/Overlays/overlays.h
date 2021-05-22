@@ -19,8 +19,8 @@ namespace rsx
 		// Non-interactable UI element
 		struct overlay
 		{
-			u32 uid = UINT32_MAX;
-			u32 type_index = UINT32_MAX;
+			u32 uid = umax;
+			u32 type_index = umax;
 
 			u16 virtual_width = 1280;
 			u16 virtual_height = 720;

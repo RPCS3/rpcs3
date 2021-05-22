@@ -574,7 +574,7 @@ void kernel_explorer::Update()
 			const auto first_spu = spu.group->threads[0].get();
 
 			// Always show information of the first thread in group
-			// Or if information differs from that thread 
+			// Or if information differs from that thread
 			if (&spu == first_spu || std::any_of(std::begin(spu.spup), std::end(spu.spup), [&](const auto& port)
 			{
 				// Flag to avoid reporting information if no SPU ports are connected
@@ -597,7 +597,7 @@ void kernel_explorer::Update()
 				// Avoid duplication of information between threads which is common
 				add_leaf(spu_thread_tree, qstr(fmt::format("SPU Ports: As SPU 0x%07x", first_spu->lv2_id)));
 			}
-			
+
 			for (const auto& [key, queue] : spu.spuq)
 			{
 				if (lv2_obj::check(queue))
@@ -635,7 +635,7 @@ void kernel_explorer::Update()
 
 					if (!pspurs)
 					{
-						if (arg < UINT32_MAX && arg % 0x80 == 0 && vm::check_addr(arg, vm::page_readable, pspurs.size()))
+						if (arg < u32{umax} && arg % 0x80 == 0 && vm::check_addr(arg, vm::page_readable, pspurs.size()))
 						{
 							pspurs.set(static_cast<u32>(arg));
 						}

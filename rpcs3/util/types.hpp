@@ -505,140 +505,169 @@ struct get_int_impl<16>
 	using stype = s128;
 };
 
+enum class f16 : u16{};
+
+using f32 = float;
+using f64 = double;
+
+template <typename T>
+concept UnsignedInt = std::is_unsigned_v<std::common_type_t<T>> || std::is_same_v<std::common_type_t<T>, u128>;
+
+template <typename T>
+concept SignedInt = (std::is_signed_v<std::common_type_t<T>> && std::is_integral_v<std::common_type_t<T>>) || std::is_same_v<std::common_type_t<T>, s128>;
+
+template <typename T>
+concept FPInt = std::is_floating_point_v<std::common_type_t<T>> || std::is_same_v<std::common_type_t<T>, f16>;
+
+template <typename T>
+constexpr T min_v;
+
+template <UnsignedInt T>
+constexpr std::common_type_t<T> min_v<T> = 0;
+
+template <SignedInt T>
+constexpr std::common_type_t<T> min_v<T> = static_cast<std::common_type_t<T>>(-1) << (sizeof(std::common_type_t<T>) * 8 - 1);
+
+template <>
+constexpr inline f16 min_v<f16>{0xfbffu};
+
+template <>
+constexpr inline f32 min_v<f32> = std::bit_cast<f32, u32>(0xff'7fffffu);
+
+template <>
+constexpr inline f64 min_v<f64> = std::bit_cast<f64, u64>(0xffe'7ffff'ffffffffu);
+
+template <FPInt T>
+constexpr std::common_type_t<T> min_v<T> = min_v<std::common_type_t<T>>;
+
+template <typename T>
+constexpr T max_v;
+
+template <UnsignedInt T>
+constexpr std::common_type_t<T> max_v<T> = -1;
+
+template <SignedInt T>
+constexpr std::common_type_t<T> max_v<T> = static_cast<std::common_type_t<T>>(~min_v<T>);
+
+template <>
+constexpr inline f16 max_v<f16>{0x7bffu};
+
+template <>
+constexpr inline f32 max_v<f32> = std::bit_cast<f32, u32>(0x7f'7fffffu);
+
+template <>
+constexpr inline f64 max_v<f64> = std::bit_cast<f64, u64>(0x7fe'fffff'ffffffffu);
+
+template <FPInt T>
+constexpr std::common_type_t<T> max_v<T> = max_v<std::common_type_t<T>>;
+
 // Return magic value for any unsigned type
 constexpr struct umax_impl_t
 {
-	template <typename T>
-	static constexpr T value = static_cast<T>(-1);
-
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_unsigned_v<CT>) || (std::is_same_v<CT, u128>)
+	template <UnsignedInt T>
 	constexpr bool operator==(const T& rhs) const
 	{
-		return rhs == value<CT>;
+		return rhs == max_v<T>;
 	}
 
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_unsigned_v<CT>) || (std::is_same_v<CT, u128>)
+	template <UnsignedInt T>
 	constexpr std::strong_ordering operator<=>(const T& rhs) const
 	{
-		return rhs == value<CT> ? std::strong_ordering::equal : std::strong_ordering::greater;
+		return rhs == max_v<T> ? std::strong_ordering::equal : std::strong_ordering::greater;
 	}
 
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_unsigned_v<CT>) || (std::is_same_v<CT, u128>)
+	template <UnsignedInt T>
 	constexpr operator T() const
 	{
-		return value<CT>;
+		return max_v<T>;
 	}
 } umax;
 
 constexpr struct smin_impl_t
 {
-	template <typename T>
-	static constexpr T value = static_cast<T>(-1) << (sizeof(T) * 8 - 1);
-
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_signed_v<CT>) || (std::is_same_v<CT, s128>)
+	template <SignedInt T>
 	constexpr bool operator==(const T& rhs) const
 	{
-		return rhs == value<CT>;
+		return rhs == min_v<T>;
 	}
 
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_signed_v<CT>) || (std::is_same_v<CT, s128>)
+	template <SignedInt T>
 	constexpr std::strong_ordering operator<=>(const T& rhs) const
 	{
-		return rhs == value<CT> ? std::strong_ordering::equal : std::strong_ordering::less;
+		return rhs == min_v<T> ? std::strong_ordering::equal : std::strong_ordering::less;
 	}
 
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_signed_v<CT>) || (std::is_same_v<CT, s128>)
+	template <SignedInt T>
 	constexpr operator T() const
 	{
-		return value<CT>;
+		return min_v<T>;
 	}
 } smin;
 
 constexpr struct smax_impl_t
 {
-	template <typename T>
-	static constexpr T value = static_cast<T>(~smin_impl_t::value<T>);
-
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_integral_v<CT>) || (std::is_same_v<CT, s128>) || (std::is_same_v<CT, u128>)
+	template <SignedInt T>
 	constexpr bool operator==(const T& rhs) const
 	{
-		return rhs == value<CT>;
+		return rhs == max_v<T>;
 	}
 
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_integral_v<CT>) || (std::is_same_v<CT, s128>) || (std::is_same_v<CT, u128>)
+	template <SignedInt T>
 	constexpr std::strong_ordering operator<=>(const T& rhs) const
 	{
-		if constexpr (std::is_signed_v<CT> || std::is_same_v<CT, s128>)
-		{
-			return rhs == value<CT> ? std::strong_ordering::equal : std::strong_ordering::greater;
-		}
-		else
-		{
-			return value<CT> <=> rhs;
-		}
+		return rhs == max_v<T> ? std::strong_ordering::equal : std::strong_ordering::greater;
 	}
 
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_integral_v<CT>) || (std::is_same_v<CT, s128>) || (std::is_same_v<CT, u128>)
+	template <SignedInt T>
 	constexpr operator T() const
 	{
-		return value<CT>;
+		return max_v<T>;
 	}
 } smax;
 
 // Compare signed or unsigned type with its max value
 constexpr struct amax_impl_t
 {
-	template <typename T>
-	static constexpr T value = (std::is_unsigned_v<T> || std::is_same_v<T, u128>) ? umax_impl_t::value<T> : smax_impl_t::value<T>;
-
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_integral_v<CT>) || (std::is_same_v<CT, s128>) || (std::is_same_v<CT, u128>)
+	template <typename T> requires SignedInt<T> || UnsignedInt<T>
 	constexpr bool operator ==(const T& rhs) const
 	{
-		return rhs == value<CT>;
+		return rhs == max_v<T>;
 	}
 
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_integral_v<CT>) || (std::is_same_v<CT, s128>) || (std::is_same_v<CT, u128>)
+	template <typename T> requires SignedInt<T> || UnsignedInt<T>
 	constexpr std::strong_ordering operator <=>(const T& rhs) const
 	{
-		return value<CT> <=> rhs;
+		return max_v<T> <=> rhs;
 	}
 
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_integral_v<CT>) || (std::is_same_v<CT, s128>) || (std::is_same_v<CT, u128>)
+	template <typename T> requires SignedInt<T> || UnsignedInt<T>
 	constexpr operator T() const
 	{
-		return value<CT>;
+		return max_v<T>;
 	}
 } amax;
 
 // Compare signed or unsigned type with its minimal value (like zero or INT_MIN)
 constexpr struct amin_impl_t
 {
-	template <typename T>
-	static constexpr T value = (std::is_signed_v<T> || std::is_same_v<T, s128>) ? smin_impl_t::value<T> : 0;
-
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_integral_v<CT>) || (std::is_same_v<CT, s128>) || (std::is_same_v<CT, u128>)
+	template <typename T> requires SignedInt<T> || UnsignedInt<T>
 	constexpr bool operator ==(const T& rhs) const
 	{
-		return rhs == value<CT>;
+		return rhs == min_v<T>;
 	}
 
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_integral_v<T>) || (std::is_same_v<T, s128>) || (std::is_same_v<T, u128>)
+	template <typename T> requires SignedInt<T> || UnsignedInt<T>
 	constexpr std::strong_ordering operator <=>(const T& rhs) const
 	{
-		return value<CT> <=> rhs;
+		return min_v<T> <=> rhs;
 	}
 
-	template <typename T, typename CT = std::common_type_t<T>> requires (std::is_integral_v<T>) || (std::is_same_v<T, s128>) || (std::is_same_v<T, u128>)
+	template <typename T> requires SignedInt<T> || UnsignedInt<T>
 	constexpr operator T() const
 	{
-		return value<CT>;
+		return min_v<T>;
 	}
 } amin;
-
-enum class f16 : u16{};
-
-using f32 = float;
-using f64 = double;
 
 template <typename T, typename T2>
 inline u32 offset32(T T2::*const mptr)

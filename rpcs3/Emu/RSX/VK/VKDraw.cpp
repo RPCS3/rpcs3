@@ -983,14 +983,14 @@ void VKGSRender::end()
 	if (m_current_command_buffer->flags & vk::command_buffer::cb_load_occluson_task)
 	{
 		u32 occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
-		if (occlusion_id == UINT32_MAX)
+		if (occlusion_id == umax)
 		{
 			// Force flush
 			rsx_log.error("[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
 			ZCULL_control::sync(this);
 
 			occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
-			if (occlusion_id == UINT32_MAX)
+			if (occlusion_id == umax)
 			{
 				//rsx_log.error("Occlusion pool overflow");
 				if (m_current_task) m_current_task->result = 1;

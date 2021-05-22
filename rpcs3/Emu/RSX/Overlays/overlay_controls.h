@@ -20,7 +20,6 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <libgen.h>
-#include <limits.h>
 #endif
 
 #ifdef __APPLE__
@@ -508,7 +507,7 @@ namespace rsx
 				auto renderer = get_font();
 
 				f32 text_extents_w = 0.f;
-				u16 clip_width = clip_text ? w : UINT16_MAX;
+				u16 clip_width = clip_text ? w : umax;
 				std::vector<vertex> result = renderer->render_text(string, clip_width, wrap_text);
 
 				if (!result.empty())
@@ -1005,7 +1004,7 @@ namespace rsx
 				set_text(text);
 			}
 
-			bool auto_resize(bool grow_only = false, u16 limit_w = UINT16_MAX, u16 limit_h = UINT16_MAX)
+			bool auto_resize(bool grow_only = false, u16 limit_w = -1, u16 limit_h = -1)
 			{
 				u16 new_width, new_height;
 				u16 old_width = w, old_height = h;

@@ -187,7 +187,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 		//TODO: make vertex cache keep local data beyond frame boundaries and hook notify command
 		bool in_cache = false;
 		bool to_store = false;
-		u32  storage_address = UINT32_MAX;
+		u32  storage_address = -1;
 
 		if (m_vertex_layout.interleaved_blocks.size() == 1 &&
 			rsx::method_registers.current_draw_clause.command != rsx::draw_command::inlined_array)

@@ -33,7 +33,6 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include <spawn.h>
 #include <sys/wait.h>
 #include <stdlib.h>
-#include <limits.h>
 #endif
 
 #ifdef __linux__

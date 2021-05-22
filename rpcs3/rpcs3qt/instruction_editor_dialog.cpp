@@ -84,7 +84,7 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, C
 
 		bool ok;
 		const ulong opcode = m_instr->text().toULong(&ok, 16);
-		if (!ok || opcode > UINT32_MAX)
+		if (!ok || opcode > u32{umax})
 		{
 			QMessageBox::critical(this, tr("Error"), tr("Failed to parse PPU instruction."));
 			return;

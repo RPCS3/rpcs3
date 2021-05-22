@@ -775,10 +775,7 @@ error_code cellGcmGetCurrentDisplayBufferId(vm::ptr<u8> id)
 {
 	cellGcmSys.warning("cellGcmGetCurrentDisplayBufferId(id=*0x%x)", id);
 
-	if ((*id = rsx::get_current_renderer()->current_display_buffer) > UINT8_MAX)
-	{
-		fmt::throw_exception("Unexpected");
-	}
+	*id = ::narrow<u8>(rsx::get_current_renderer()->current_display_buffer);
 
 	return CELL_OK;
 }

@@ -109,7 +109,7 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 		if (m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))
 		{
 			OS << "layout(location=" << std::to_string(output_index++) << ") " << "out vec4 " << table[i].first << ";\n";
-			vk_prog->output_color_masks[i] = UINT32_MAX;
+			vk_prog->output_color_masks[i] = -1;
 		}
 	}
 }

@@ -73,14 +73,14 @@ namespace rsx
 				idx(0)
 			{
 				if (_block->empty())
-					idx = UINT32_MAX;
+					idx = u32{umax};
 			}
 
 		private:
 			// Members
 			block_list *block;
 			list_iterator list_it = {};
-			size_type idx = UINT32_MAX;
+			size_type idx = u32{umax};
 			size_type array_idx = 0;
 
 			inline void next()
@@ -88,7 +88,7 @@ namespace rsx
 				++idx;
 				if (idx >= block->size())
 				{
-					idx = UINT32_MAX;
+					idx = u32{umax};
 					return;
 				}
 
@@ -134,7 +134,7 @@ namespace rsx
 		// Constructor, Destructor
 		ranged_storage_block_list() :
 			m_data_it(m_data.end()),
-			m_array_idx(UINT32_MAX),
+			m_array_idx(-1),
 			m_capacity(0)
 		{}
 

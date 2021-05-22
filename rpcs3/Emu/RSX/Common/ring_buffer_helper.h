@@ -133,7 +133,7 @@ public:
 	// Updates the current_allocated_size metrics
 	void notify()
 	{
-		if (m_get_pos == UINT64_MAX)
+		if (m_get_pos == umax)
 			m_current_allocated_size = 0;
 		else if (m_get_pos < m_put_pos)
 			m_current_allocated_size = (m_put_pos - m_get_pos - 1);

@@ -181,7 +181,7 @@ namespace rsx
 
 				overlay_element caret;
 				auto renderer        = get_font();
-				const auto caret_loc = renderer->get_char_offset(text.c_str(), caret_position, clip_text ? w : UINT16_MAX, wrap_text);
+				const auto caret_loc = renderer->get_char_offset(text.c_str(), caret_position, clip_text ? w : -1, wrap_text);
 
 				caret.set_pos(static_cast<u16>(caret_loc.first) + padding_left + x, static_cast<u16>(caret_loc.second) + padding_top + y);
 				caret.set_size(1, static_cast<u16>(renderer->get_size_px() + 2));

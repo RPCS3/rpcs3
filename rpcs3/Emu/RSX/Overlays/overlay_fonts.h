@@ -74,9 +74,9 @@ namespace rsx
 
 			void render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, u32 char_limit, u16 max_width, bool wrap);
 
-			std::vector<vertex> render_text(const char32_t* text, u16 max_width = UINT16_MAX, bool wrap = false);
+			std::vector<vertex> render_text(const char32_t* text, u16 max_width = -1, bool wrap = false);
 
-			std::pair<f32, f32> get_char_offset(const char32_t* text, u16 max_length, u16 max_width = UINT16_MAX, bool wrap = false);
+			std::pair<f32, f32> get_char_offset(const char32_t* text, u16 max_length, u16 max_width = -1, bool wrap = false);
 
 			bool matches(const char* name, int size) const { return font_name == name && static_cast<int>(size_pt) == size; }
 			std::string_view get_name() const { return font_name; }

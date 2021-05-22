@@ -4608,8 +4608,7 @@ s32 cellSpursCreateJobChain(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, vm::ptr<C
 
 	const u64 prio = std::bit_cast<u64>(*priorities);
 
-	if (auto err = _spurs::check_job_chain_attribute(UINT32_MAX, jobChainEntry, sizeJobDescriptor, maxGrabbedJob, prio, maxContention
-        	, autoReadyCount, tag1, tag2, 0, 0, 0))
+	if (auto err = _spurs::check_job_chain_attribute(-1, jobChainEntry, sizeJobDescriptor, maxGrabbedJob, prio, maxContention, autoReadyCount, tag1, tag2, 0, 0, 0))
 	{
 		return err;
 	}

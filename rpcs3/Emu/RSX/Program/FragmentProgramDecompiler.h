@@ -11,7 +11,7 @@ struct temp_register
 	bool aliased_h1 = false;
 	bool last_write_half[4] = { false, false, false, false };
 
-	u32 real_index = UINT32_MAX;
+	u32 real_index = -1;
 
 	u32 h0_writes = 0u;   // Number of writes to the first 64-bits of the register
 	u32 h1_writes = 0u;   // Number of writes to the last 64-bits of the register
@@ -54,7 +54,7 @@ struct temp_register
 			h1_writes++;
 		}
 
-		if (real_index == UINT32_MAX)
+		if (real_index == umax)
 		{
 			if (half_register)
 				real_index = index >> 1;

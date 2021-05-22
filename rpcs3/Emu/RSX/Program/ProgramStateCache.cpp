@@ -37,7 +37,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 	//u32 first_instruction_address = entry;
 
 	std::stack<u32> call_stack;
-	std::pair<u32, u32> instruction_range = { UINT32_MAX, 0 };
+	std::pair<u32, u32> instruction_range{umax, 0};
 	std::bitset<512> instructions_to_patch;
 	bool has_branch_instruction = false;
 
@@ -330,7 +330,7 @@ usz fragment_program_utils::get_fragment_program_ucode_size(const void* ptr)
 fragment_program_utils::fragment_program_metadata fragment_program_utils::analyse_fragment_program(const void* ptr)
 {
 	fragment_program_utils::fragment_program_metadata result{};
-	result.program_start_offset = UINT32_MAX;
+	result.program_start_offset = -1;
 	const auto instBuffer = ptr;
 	s32 index = 0;
 

@@ -439,7 +439,7 @@ std::string VertexProgramDecompiler::Decompile()
 		last_label_addr = *m_prog.jump_table.rbegin();
 	}
 
-	auto find_jump_lvl = [this](u32 address)
+	auto find_jump_lvl = [this](u32 address) -> u32
 	{
 		u32 jump = 1;
 
@@ -451,7 +451,7 @@ std::string VertexProgramDecompiler::Decompile()
 			++jump;
 		}
 
-		return UINT32_MAX;
+		return -1;
 	};
 
 	auto do_function_call = [this, &i](const std::string& condition)
@@ -509,7 +509,7 @@ std::string VertexProgramDecompiler::Decompile()
 		if (m_prog.entry != m_prog.base_address)
 		{
 			jump_position = find_jump_lvl(m_prog.entry - m_prog.base_address);
-			ensure(jump_position != UINT32_MAX);
+			ensure(jump_position != umax);
 		}
 
 		AddCode(fmt::format("int jump_position = %u;", jump_position));
@@ -547,7 +547,7 @@ std::string VertexProgramDecompiler::Decompile()
 		{
 			//TODO: Subroutines can also have arbitrary jumps!
 			u32 jump_position = find_jump_lvl(i);
-			if (is_has_BRA || jump_position != UINT32_MAX)
+			if (is_has_BRA || jump_position != umax)
 			{
 				m_cur_instr->close_scopes++;
 				AddCode("}");

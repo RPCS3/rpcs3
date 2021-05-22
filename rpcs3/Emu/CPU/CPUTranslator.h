@@ -1375,7 +1375,7 @@ inline llvm_xor<T1, llvm_const_int<typename is_llvm_expr<T1>::type>> operator ^(
 template <typename T1>
 inline llvm_xor<T1, llvm_const_int<typename is_llvm_expr<T1>::type, true>> operator ~(T1&& a1)
 {
-	return {a1, {UINT64_MAX}};
+	return {a1, {u64{umax}}};
 }
 
 template <typename A1, typename A2, llvm::CmpInst::Predicate UPred, typename T = llvm_common_t<A1, A2>>

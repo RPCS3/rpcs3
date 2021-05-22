@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string>
-#include <limits>
 #include "Utilities/StrFmt.h"
 
 enum class cpu_disasm_mode
@@ -93,7 +92,7 @@ protected:
 	{
 		const auto v = static_cast<std::make_signed_t<T>>(value);
 
-		if (v == std::numeric_limits<std::make_signed_t<T>>::min())
+		if (v == smin)
 		{
 			// for INTx_MIN
 			return fmt::format("-0x%x", v);

@@ -551,7 +551,7 @@ namespace vk
 
 		for (const auto &res : configuration.texture_raw_data)
 		{
-			upload_simple_texture(dev, cmd, upload_heap, storage_key++, res->w, res->h, 1, false, false, res->data, UINT32_MAX);
+			upload_simple_texture(dev, cmd, upload_heap, storage_key++, res->w, res->h, 1, false, false, res->data, -1);
 		}
 
 		configuration.free_resources();
@@ -615,7 +615,7 @@ namespace vk
 		font->get_glyph_data(bytes);
 
 		return upload_simple_texture(cmd.get_command_pool().get_owner(), cmd, upload_heap, key, image_size.width, image_size.height, image_size.depth,
-				true, false, bytes.data(), UINT32_MAX);
+				true, false, bytes.data(), -1);
 	}
 
 	vk::image_view* ui_overlay_renderer::find_temp_image(rsx::overlays::image_info* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid)

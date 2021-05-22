@@ -48,8 +48,8 @@ namespace rsx {
 			{
 				switch (prot)
 				{
-				case utils::protection::no: if (no++ == UINT8_MAX) fmt::throw_exception("add(protection::no) overflow with NO==%d", UINT8_MAX); return;
-				case utils::protection::ro: if (ro++ == UINT8_MAX) fmt::throw_exception("add(protection::ro) overflow with RO==%d", UINT8_MAX); return;
+				case utils::protection::no: if (no++ == umax) fmt::throw_exception("add(protection::no) overflow"); return;
+				case utils::protection::ro: if (ro++ == umax) fmt::throw_exception("add(protection::ro) overflow"); return;
 				default: fmt::throw_exception("Unreachable");
 				}
 			}

@@ -902,12 +902,12 @@ u32 cpu_thread::get_pc() const
 	case 0x55:
 	{
 		const auto ctrl = static_cast<const rsx::thread*>(this)->ctrl;
-		return ctrl ? ctrl->get : UINT32_MAX;
+		return ctrl ? ctrl->get.load() : umax;
 	}
 	default: break;
 	}
 
-	return pc ? atomic_storage<u32>::load(*pc) : UINT32_MAX;
+	return pc ? atomic_storage<u32>::load(*pc) : u32{umax};
 }
 
 u32* cpu_thread::get_pc2()

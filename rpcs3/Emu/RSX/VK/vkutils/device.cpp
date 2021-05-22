@@ -426,7 +426,7 @@ namespace vk
 		vkGetDeviceQueue(dev, graphics_queue_idx, 0, &m_graphics_queue);
 		vkGetDeviceQueue(dev, transfer_queue_idx, transfer_queue_sub_index, &m_transfer_queue);
 
-		if (present_queue_idx != UINT32_MAX)
+		if (present_queue_idx != umax)
 		{
 			vkGetDeviceQueue(dev, present_queue_idx, 0, &m_present_queue);
 		}

@@ -361,7 +361,7 @@ void audio_port::tag(s32 offset)
 		last_tag_value[tag_nr] = -0.0f;
 	}
 
-	prev_touched_tag_nr = UINT32_MAX;
+	prev_touched_tag_nr = -1;
 }
 
 std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
@@ -395,13 +395,13 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 			{
 				last_val = val;
 
-				retouched |= (tag_nr <= port.prev_touched_tag_nr) && port.prev_touched_tag_nr != UINT32_MAX;
+				retouched |= (tag_nr <= port.prev_touched_tag_nr) && port.prev_touched_tag_nr != umax;
 				last_touched_tag_nr = tag_nr;
 			}
 		}
 
 		// Decide whether the buffer is untouched, in progress, incomplete, or complete
-		if (last_touched_tag_nr == UINT32_MAX)
+		if (last_touched_tag_nr == umax)
 		{
 			// no tag has been touched yet
 			untouched++;

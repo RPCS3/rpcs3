@@ -73,7 +73,7 @@ namespace rsx
 			compiled_resource m_cached_resource;
 
 			u32 flags = 0;
-			u32 char_limit = UINT32_MAX;
+			u32 char_limit = umax;
 
 			std::vector<osk_panel> m_panels;
 			usz m_panel_index = 0;

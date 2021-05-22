@@ -171,7 +171,7 @@ namespace vm
 	{
 		const std::make_unsigned_t<std::ptrdiff_t> diff = static_cast<const u8*>(real_ptr) - g_base_addr;
 
-		if (diff <= u64{UINT32_MAX} * 2 + 1)
+		if (diff <= u64{u32{umax}} * 2 + 1)
 		{
 			return {vm::addr_t{static_cast<u32>(diff)}, true};
 		}

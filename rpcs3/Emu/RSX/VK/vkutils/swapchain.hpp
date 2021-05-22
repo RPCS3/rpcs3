@@ -621,7 +621,7 @@ namespace vk
 				return false;
 			}
 
-			if (surface_descriptors.currentExtent.width != UINT32_MAX)
+			if (surface_descriptors.currentExtent.width != umax)
 			{
 				if (surface_descriptors.currentExtent.width == 0 || surface_descriptors.currentExtent.height == 0)
 				{

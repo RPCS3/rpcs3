@@ -178,11 +178,11 @@ namespace
 			{
 				if (index_type == rsx::index_array_type::u16)
 				{
-					index_count = rsx::remove_restart_index(static_cast<u16*>(buf), reinterpret_cast<u16*>(tmp.data()), index_count, u16{UINT16_MAX});
+					index_count = rsx::remove_restart_index(static_cast<u16*>(buf), reinterpret_cast<u16*>(tmp.data()), index_count, u16{umax});
 				}
 				else
 				{
-					index_count = rsx::remove_restart_index(static_cast<u32*>(buf), reinterpret_cast<u32*>(tmp.data()), index_count, u32{UINT32_MAX});
+					index_count = rsx::remove_restart_index(static_cast<u32*>(buf), reinterpret_cast<u32*>(tmp.data()), index_count, u32{umax});
 				}
 			}
 
@@ -238,8 +238,8 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 
 	//Do actual vertex upload
 	auto required = calculate_memory_requirements(m_vertex_layout, vertex_base, vertex_count);
-	u32 persistent_range_base = UINT32_MAX, volatile_range_base = UINT32_MAX;
-	usz persistent_offset = UINT64_MAX, volatile_offset = UINT64_MAX;
+	u32 persistent_range_base = -1, volatile_range_base = -1;
+	usz persistent_offset = -1, volatile_offset = -1;
 
 	if (required.first > 0)
 	{
@@ -248,7 +248,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		//TODO: make vertex cache keep local data beyond frame boundaries and hook notify command
 		bool in_cache = false;
 		bool to_store = false;
-		u32  storage_address = UINT32_MAX;
+		u32  storage_address = -1;
 
 		if (m_vertex_layout.interleaved_blocks.size() == 1 &&
 			rsx::method_registers.current_draw_clause.command != rsx::draw_command::inlined_array)
@@ -302,7 +302,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 	}
 	else
 	{
-		if (required.first > 0 && persistent_offset != UINT64_MAX)
+		if (required.first > 0 && persistent_offset != umax)
 		{
 			void *persistent_mapping = m_attrib_ring_info.map(persistent_offset, required.first);
 			write_vertex_data_to_memory(m_vertex_layout, vertex_base, vertex_count, persistent_mapping, nullptr);
@@ -335,7 +335,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		vk::clear_status_interrupt(vk::heap_changed);
 	}
 
-	if (persistent_range_base != UINT32_MAX)
+	if (persistent_range_base != umax)
 	{
 		if (!m_persistent_attribute_storage || !m_persistent_attribute_storage->in_range(persistent_range_base, required.first, persistent_range_base))
 		{
@@ -351,7 +351,7 @@ vk::vertex_upload_info VKGSRender::upload_vertex_data()
 		}
 	}
 
-	if (volatile_range_base != UINT32_MAX)
+	if (volatile_range_base != umax)
 	{
 		if (!m_volatile_attribute_storage || !m_volatile_attribute_storage->in_range(volatile_range_base, required.second, volatile_range_base))
 		{

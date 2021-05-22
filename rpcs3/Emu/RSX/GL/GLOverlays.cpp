@@ -375,7 +375,7 @@ namespace gl
 
 		for (const auto &res : configuration.texture_raw_data)
 		{
-			load_simple_image(res.get(), false, UINT32_MAX);
+			load_simple_image(res.get(), false, -1);
 		}
 
 		configuration.free_resources();

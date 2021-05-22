@@ -670,7 +670,7 @@ namespace rsx
 			invalidate_range = fault_range; // Sections fully inside this range will be invalidated, others will be deemed false positives
 
 			// Loop through cache and find pages that overlap the invalidate_range
-			u32 last_dirty_block = UINT32_MAX;
+			u32 last_dirty_block = -1;
 			bool repeat_loop = false;
 
 			auto It = m_storage.range_begin(invalidate_range, locked_range, true); // will iterate through locked sections only
@@ -685,7 +685,7 @@ namespace rsx
 				auto &tex = *It;
 
 				AUDIT(tex.is_locked()); // we should be iterating locked sections only, but just to make sure...
-				AUDIT(tex.cache_tag != cache_tag || last_dirty_block != UINT32_MAX); // cache tag should not match during the first loop
+				AUDIT(tex.cache_tag != cache_tag || last_dirty_block != umax); // cache tag should not match during the first loop
 
 				if (tex.cache_tag != cache_tag) //flushable sections can be 'clean' but unlocked. TODO: Handle this better
 				{
@@ -997,7 +997,7 @@ namespace rsx
 
 				if (!tex.is_dirty() && (context_mask & static_cast<u32>(tex.get_context())))
 				{
-					if (required_pitch && !rsx::pitch_compatible<false>(&tex, required_pitch, UINT16_MAX))
+					if (required_pitch && !rsx::pitch_compatible<false>(&tex, required_pitch, -1))
 					{
 						continue;
 					}
@@ -1784,7 +1784,7 @@ namespace rsx
 						if (result_is_valid)
 						{
 							// Check for possible duplicates
-							usz max_safe_sections = UINT32_MAX;
+							usz max_safe_sections = u32{umax};
 							switch (result.external_subresource_desc.op)
 							{
 							case deferred_request_command::atlas_gather:

@@ -414,7 +414,7 @@ namespace rsx
 			std::vector<vertex> result;
 			f32 unused_x, unused_y;
 
-			render_text_ex(result, unused_x, unused_y, text, UINT32_MAX, max_width, wrap);
+			render_text_ex(result, unused_x, unused_y, text, -1, max_width, wrap);
 			return result;
 		}
 

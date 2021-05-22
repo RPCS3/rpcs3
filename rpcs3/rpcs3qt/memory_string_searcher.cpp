@@ -254,7 +254,7 @@ void memory_string_searcher::OnSearch()
 
 			u64 addr_max = addr;
 
-			const u64 end_mem = std::min<u64>(utils::align<u64>(addr + 1, block_size) + 0x1000, UINT32_MAX);
+			const u64 end_mem = std::min<u64>(utils::align<u64>(addr + 1, block_size) + 0x1000, u32{umax});
 
 			// Determine allocation size quickly
 			while (addr_max < end_mem && vm::check_addr(static_cast<u32>(addr_max), vm::page_1m_size))
@@ -294,7 +294,7 @@ void memory_string_searcher::OnSearch()
 					// Allow overlapping strings
 					first_char++;
 				}
-			} 
+			}
 			else
 			{
 				while (first_char = section.find_first_of(wstr[0], first_char), first_char != umax)

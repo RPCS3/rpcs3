@@ -486,7 +486,7 @@ namespace rsx
 			virtual void begin_occlusion_query(occlusion_query_info* /*query*/) {}
 			virtual void end_occlusion_query(occlusion_query_info* /*query*/) {}
 			virtual bool check_occlusion_query_status(occlusion_query_info* /*query*/) { return true; }
-			virtual void get_occlusion_query_result(occlusion_query_info* query) { query->result = UINT32_MAX; }
+			virtual void get_occlusion_query_result(occlusion_query_info* query) { query->result = -1; }
 			virtual void discard_occlusion_query(occlusion_query_info* /*query*/) {}
 		};
 

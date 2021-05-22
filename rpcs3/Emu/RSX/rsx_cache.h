@@ -367,7 +367,7 @@ namespace rsx
 			for (u8 index = 0; index < 32; ++index)
 			{
 				const auto address = data.vp_jump_table[index];
-				if (address == UINT16_MAX)
+				if (address == u16{umax})
 				{
 					// End of list marker
 					break;
@@ -415,7 +415,7 @@ namespace rsx
 				else
 				{
 					// End of list marker
-					data_block.vp_jump_table[index] = UINT16_MAX;
+					data_block.vp_jump_table[index] = u16{umax};
 					break;
 				}
 			}

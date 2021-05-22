@@ -27,7 +27,7 @@ void VKGSRender::reinitialize_swapchain()
 
 	for (auto &ctx : frame_context_storage)
 	{
-		if (ctx.present_image == UINT32_MAX)
+		if (ctx.present_image == umax)
 			continue;
 
 		// Release present image by presenting it
@@ -77,7 +77,7 @@ void VKGSRender::reinitialize_swapchain()
 
 void VKGSRender::present(vk::frame_context_t *ctx)
 {
-	ensure(ctx->present_image != UINT32_MAX);
+	ensure(ctx->present_image != umax);
 
 	// Partial CS flush
 	ctx->swap_command_buffer->flush();
@@ -100,7 +100,7 @@ void VKGSRender::present(vk::frame_context_t *ctx)
 	}
 
 	// Presentation image released; reset value
-	ctx->present_image = UINT32_MAX;
+	ctx->present_image = -1;
 }
 
 void VKGSRender::advance_queued_frames()
@@ -498,7 +498,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	// Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
-	ensure(m_current_frame->present_image == UINT32_MAX);
+	ensure(m_current_frame->present_image == umax);
 	ensure(m_current_frame->swap_command_buffer == nullptr);
 
 	u64 timeout = m_swapchain->get_swap_image_count() <= VK_MAX_ASYNC_FRAMES? 0ull: 100000000ull;
@@ -541,7 +541,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	// Confirm that the driver did not silently fail
-	ensure(m_current_frame->present_image != UINT32_MAX);
+	ensure(m_current_frame->present_image != umax);
 
 	// Calculate output dimensions. Done after swapchain acquisition in case it was recreated.
 	coordi aspect_ratio;

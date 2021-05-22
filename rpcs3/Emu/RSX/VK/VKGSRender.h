@@ -203,7 +203,7 @@ namespace vk
 
 		std::vector<std::unique_ptr<vk::buffer_view>> buffer_views_to_clean;
 
-		u32 present_image = UINT32_MAX;
+		u32 present_image = -1;
 		command_buffer_chunk* swap_command_buffer = nullptr;
 
 		//Heap pointers
