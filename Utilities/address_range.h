@@ -41,7 +41,7 @@ namespace utils
 	class address_range
 	{
 	public:
-		u32 start = UINT32_MAX; // First address in range
+		u32 start = umax; // First address in range
 		u32 end = 0; // Last address
 
 	private:
@@ -174,7 +174,7 @@ namespace utils
 		address_range get_min_max(const address_range &other) const
 		{
 			return {
-				std::min(valid() ? start : UINT32_MAX, other.valid() ? other.start : UINT32_MAX),
+				std::min(valid() ? start : umax, other.valid() ? other.start : umax),
 				std::max(valid() ? end : 0, other.valid() ? other.end : 0)
 			};
 		}
@@ -234,7 +234,7 @@ namespace utils
 
 		void invalidate()
 		{
-			start = UINT32_MAX;
+			start = umax;
 			end = 0;
 		}
 

@@ -71,7 +71,7 @@ struct lv2_lwmutex final : lv2_obj
 	{
 	}
 
-	// Try to add a waiter 
+	// Try to add a waiter
 	bool add_waiter(cpu_thread* cpu)
 	{
 		if (const auto old = lwcond_waiters.fetch_op([](s32& val)
@@ -86,7 +86,7 @@ struct lv2_lwmutex final : lv2_obj
 			// Turn off the "destroying" bit as we are adding an lwmutex waiter
 			val &= 0x7fff'ffff;
 			return true;
-		}).first; old != INT32_MIN)
+		}).first; old != smin)
 		{
 			sq.emplace_back(cpu);
 
@@ -99,7 +99,7 @@ struct lv2_lwmutex final : lv2_obj
 			return true;
 		}
 
-		// Failed - lwmutex was set to be destroyed and all lwcond waiters quit 
+		// Failed - lwmutex was set to be destroyed and all lwcond waiters quit
 		return false;
 	}
 };

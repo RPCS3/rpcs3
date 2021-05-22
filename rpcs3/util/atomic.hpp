@@ -180,7 +180,7 @@ namespace atomic_wait
 	} any_value;
 
 	template <typename X, typename T = decltype(std::declval<X>().observe())>
-	constexpr u128 default_mask = sizeof(T) <= 8 ? u128{UINT64_MAX >> ((64 - sizeof(T) * 8) & 63)} : u128(-1);
+	constexpr u128 default_mask = sizeof(T) <= 8 ? u128{u64{umax} >> ((64 - sizeof(T) * 8) & 63)} : u128(-1);
 
 	template <typename X, typename T = decltype(std::declval<X>().observe())>
 	constexpr u128 get_value(X&, T value = T{}, ...)

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "util/types.hpp"
-#include <climits>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -46,7 +45,7 @@ usz cfmt_append(Dst& out, const Char* fmt, Src&& src)
 
 	const auto read_decimal = [&](uint result) -> uint
 	{
-		while (fmt[0] >= '0' && fmt[0] <= '9' && result <= (UINT_MAX / 10))
+		while (fmt[0] >= '0' && fmt[0] <= '9' && result <= (uint{umax} / 10))
 		{
 			result = result * 10 + (fmt[0] - '0');
 			fmt++, ctx.size++;

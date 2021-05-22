@@ -74,7 +74,7 @@ struct lv2_obj
 private:
 	enum thread_cmd : s32
 	{
-		yield_cmd = INT32_MIN,
+		yield_cmd = smin,
 		enqueue_cmd,
 	};
 
@@ -166,7 +166,7 @@ private:
 	static bool awake_unlocked(cpu_thread*, s32 prio = enqueue_cmd);
 
 public:
-	static constexpr u64 max_timeout = UINT64_MAX / 1000;
+	static constexpr u64 max_timeout = u64{umax} / 1000;
 
 	static void sleep(cpu_thread& cpu, const u64 timeout = 0);
 
@@ -319,12 +319,12 @@ public:
 	template <bool IsUsleep = false, bool Scale = true>
 	static bool wait_timeout(u64 usec, cpu_thread* const cpu = {})
 	{
-		static_assert(UINT64_MAX / max_timeout >= 100, "max timeout is not valid for scaling");
+		static_assert(u64{umax} / max_timeout >= 100, "max timeout is not valid for scaling");
 
 		if constexpr (Scale)
 		{
 			// Scale time
-			usec = std::min<u64>(usec, UINT64_MAX / 100) * 100 / g_cfg.core.clocks_scale;
+			usec = std::min<u64>(usec, u64{umax} / 100) * 100 / g_cfg.core.clocks_scale;
 		}
 
 		// Clamp

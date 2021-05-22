@@ -594,7 +594,7 @@ extern bool ppu_patch(u32 addr, u32 value)
 
 std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 {
-	std::array<u32, 2> res{pc + 4, UINT32_MAX};
+	std::array<u32, 2> res{pc + 4, umax};
 
 	switch (const auto type = g_ppu_itype.decode(op.opcode))
 	{
@@ -608,7 +608,7 @@ std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 	case ppu_itype::BCLR:
 	case ppu_itype::UNK:
 	{
-		res[0] = UINT32_MAX;
+		res[0] = umax;
 		break;
 	}
 	default: break;
@@ -633,7 +633,7 @@ std::string ppu_thread::dump_regs() const
 		constexpr u32 max_str_len = 32;
 		constexpr u32 hex_count = 8;
 
-		if (reg <= UINT32_MAX && vm::check_addr<max_str_len>(static_cast<u32>(reg)))
+		if (reg <= u32{umax} && vm::check_addr<max_str_len>(static_cast<u32>(reg)))
 		{
 			bool is_function = false;
 			u32 toc = 0;
@@ -759,7 +759,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 	// Determine stack range
 	const u64 r1 = gpr[1];
 
-	if (r1 > UINT32_MAX || r1 % 0x10)
+	if (r1 > u32{umax} || r1 % 0x10)
 	{
 		return {};
 	}
@@ -799,7 +799,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 		auto is_invalid = [](u64 addr)
 		{
-			if (addr > UINT32_MAX || addr % 4 || !vm::check_addr(static_cast<u32>(addr), vm::page_executable))
+			if (addr > u32{umax} || addr % 4 || !vm::check_addr(static_cast<u32>(addr), vm::page_executable))
 			{
 				return true;
 			}
@@ -1356,7 +1356,7 @@ extern void sse_cellbe_stvrx_v0(u64 addr, __m128i a);
 
 void ppu_trap(ppu_thread& ppu, u64 addr)
 {
-	ensure((addr & (~u64{UINT32_MAX} | 0x3)) == 0);
+	ensure((addr & (~u64{0xffff'ffff} | 0x3)) == 0);
 	ppu.cia = static_cast<u32>(addr);
 
 	u32 add = static_cast<u32>(g_cfg.core.stub_ppu_traps) * 4;
@@ -1931,7 +1931,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			{
 				switch (u64 count = ppu_stcx_accurate_tx(addr & -8, rtime, ppu.rdata, std::bit_cast<u64>(new_data)))
 				{
-				case UINT64_MAX:
+				case umax:
 				{
 					auto& all_data = *vm::get_super_ptr<spu_rdata_t>(addr & -128);
 					auto& sdata = *vm::get_super_ptr<atomic_be_t<u64>>(addr & -8);

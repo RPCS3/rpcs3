@@ -368,7 +368,7 @@ namespace spu
 
 std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 {
-	std::array<u32, 2> res{spu_branch_target(pc + 4), UINT32_MAX};
+	std::array<u32, 2> res{spu_branch_target(pc + 4), umax};
 
 	switch (const auto type = s_spu_itype.decode(op.opcode))
 	{
@@ -396,7 +396,7 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 
 	case spu_itype::UNK:
 	{
-		res[0] = UINT32_MAX;
+		res[0] = umax;
 		break;
 	}
 	default: break;
@@ -2728,7 +2728,7 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		{
 			switch (u64 count = spu_putllc_tx(addr, rtime, rdata, to_write))
 			{
-			case UINT64_MAX:
+			case umax:
 			{
 				auto& data = *vm::get_super_ptr<spu_rdata_t>(addr);
 

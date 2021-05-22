@@ -91,5 +91,5 @@ public:
 		}
 	}
 
-	static constexpr u64 max_timeout = UINT64_MAX / 1000;
+	static constexpr u64 max_timeout = u64{umax} / 1000;
 };

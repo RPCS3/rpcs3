@@ -11,6 +11,7 @@
 
 #include <bit>
 #include <cmath>
+#include <climits>
 
 #include "util/asm.hpp"
 #include "util/v128.hpp"

@@ -89,7 +89,7 @@ protected:
 		const s32 rem    = calibData.sens_numer % calibData.sens_denom;
 		const s32 output = (quot * biased) + ((rem * biased) / calibData.sens_denom);
 
-		return static_cast<s16>(std::clamp<s32>(output, INT16_MIN, INT16_MAX));
+		return static_cast<s16>(std::clamp<s32>(output, s16{smin}, s16{smax}));
 	}
 
 	static s16 read_s16(const void* buf)

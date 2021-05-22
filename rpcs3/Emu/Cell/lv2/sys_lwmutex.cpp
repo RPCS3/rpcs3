@@ -52,7 +52,7 @@ error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id)
 		if (std::scoped_lock lock(mutex->mutex); mutex->sq.empty())
 		{
 			// Set "destroyed" bit
-			if (mutex->lwcond_waiters.fetch_or(INT32_MIN) & 0x7fff'ffff)
+			if (mutex->lwcond_waiters.fetch_or(smin) & 0x7fff'ffff)
 			{
 				// Deschedule if waiters were found
 				lv2_obj::sleep(ppu);
@@ -64,7 +64,7 @@ error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id)
 		}
 
 		// Wait for all lwcond waiters to quit
-		if (const s32 old = mutex->lwcond_waiters; old != INT32_MIN)
+		if (const s32 old = mutex->lwcond_waiters; old != smin)
 		{
 			if (old >= 0)
 			{
@@ -125,7 +125,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 		if (old)
 		{
-			if (old == INT32_MIN)
+			if (old == smin)
 			{
 				ppu.gpr[3] = CELL_EBUSY;
 			}
@@ -274,7 +274,7 @@ error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id)
 			return;
 		}
 
-		mutex.signaled |= INT32_MIN;
+		mutex.signaled |= smin;
 	});
 
 	if (!mutex)

@@ -22,20 +22,20 @@ void semaphore_base::imp_wait()
 		const s32 value = m_value.atomic_op([](s32& value)
 		{
 			// Use sign bit to acknowledge waiter presence
-			if (value && value > INT32_MIN)
+			if (value && value > smin)
 			{
 				value--;
 
 				if (value < 0)
 				{
 					// Remove sign bit
-					value -= INT32_MIN;
+					value -= s32{smin};
 				}
 			}
 			else
 			{
 				// Set sign bit
-				value = INT32_MIN;
+				value = smin;
 			}
 
 			return value;

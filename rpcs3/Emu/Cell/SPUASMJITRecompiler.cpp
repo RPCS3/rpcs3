@@ -3499,7 +3499,7 @@ void spu_recompiler::CLGTH(spu_opcode_t op)
 	// compare if-greater-than
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 	const XmmLink& vi = XmmAlloc();
-	c->movdqa(vi, XmmConst(_mm_set1_epi16(INT16_MIN)));
+	c->movdqa(vi, XmmConst(_mm_set1_epi16(smin)));
 	c->pxor(va, vi);
 	c->pxor(vi, SPU_OFF_128(gpr, op.rb));
 	c->pcmpgtw(va, vi);
@@ -3595,7 +3595,7 @@ void spu_recompiler::CLGTB(spu_opcode_t op)
 	// compare if-greater-than
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 	const XmmLink& vi = XmmAlloc();
-	c->movdqa(vi, XmmConst(_mm_set1_epi8(INT8_MIN)));
+	c->movdqa(vi, XmmConst(_mm_set1_epi8(smin)));
 	c->pxor(va, vi);
 	c->pxor(vi, SPU_OFF_128(gpr, op.rb));
 	c->pcmpgtb(va, vi);
@@ -3721,7 +3721,7 @@ void spu_recompiler::CGX(spu_opcode_t op) //nf
 		c->paddd(res, vb);
 	}
 
-	c->movdqa(sign, XmmConst(_mm_set1_epi32(INT32_MIN)));
+	c->movdqa(sign, XmmConst(_mm_set1_epi32(smin)));
 	c->pxor(va, sign);
 	c->pxor(res, sign);
 	c->pcmpgtd(va, res);
@@ -3754,7 +3754,7 @@ void spu_recompiler::BGX(spu_opcode_t op) //nf
 	}
 
 	c->pand(vt, temp);
-	c->movdqa(sign, XmmConst(_mm_set1_epi32(INT32_MIN)));
+	c->movdqa(sign, XmmConst(_mm_set1_epi32(smin)));
 	c->pxor(va, sign);
 	c->pxor(vb, sign);
 	c->pcmpgtd(vb, va);
@@ -4484,7 +4484,7 @@ void spu_recompiler::CLGTI(spu_opcode_t op)
 void spu_recompiler::CLGTHI(spu_opcode_t op)
 {
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->pxor(va, XmmConst(_mm_set1_epi16(INT16_MIN)));
+	c->pxor(va, XmmConst(_mm_set1_epi16(smin)));
 	c->pcmpgtw(va, XmmConst(_mm_set1_epi16(op.si10 - 0x8000)));
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
@@ -4492,7 +4492,7 @@ void spu_recompiler::CLGTHI(spu_opcode_t op)
 void spu_recompiler::CLGTBI(spu_opcode_t op)
 {
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->psubb(va, XmmConst(_mm_set1_epi8(INT8_MIN)));
+	c->psubb(va, XmmConst(_mm_set1_epi8(smin)));
 	c->pcmpgtb(va, XmmConst(_mm_set1_epi8(op.si10 - 0x80)));
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }

@@ -71,7 +71,7 @@ static NEVER_INLINE bool ptr_cmp(const void* data, u32 _size, u128 old128, u128 
 	{
 		u64 new_value = 0;
 		u64 old_value = static_cast<u64>(old128);
-		u64 mask = static_cast<u64>(mask128) & (UINT64_MAX >> ((64 - size * 8) & 63));
+		u64 mask = static_cast<u64>(mask128) & (u64{umax} >> ((64 - size * 8) & 63));
 
 		// Don't load memory on empty mask
 		switch (mask ? size : 0)
@@ -482,10 +482,10 @@ static atomic_t<u128> s_cond_sem2[8]{{1}};
 static atomic_t<u128> s_cond_sem3[64]{{1}};
 
 // Allocation bits (level 4) - guarantee 1 free bit
-static atomic_t<u64> s_cond_bits[(UINT16_MAX + 1) / 64]{1};
+static atomic_t<u64> s_cond_bits[65536 / 64]{1};
 
 // Max allowed thread number is chosen to fit in 16 bits
-static cond_handle s_cond_list[UINT16_MAX + 1]{};
+static cond_handle s_cond_list[65536]{};
 
 namespace
 {
@@ -590,7 +590,7 @@ static u32 cond_alloc(uptr iptr, u128 mask, u32 tls_slot = -1)
 
 static void cond_free(u32 cond_id, u32 tls_slot = -1)
 {
-	if (cond_id - 1 >= u32{UINT16_MAX}) [[unlikely]]
+	if (cond_id - 1 >= u16{umax}) [[unlikely]]
 	{
 		fmt::throw_exception("bad id %u", cond_id);
 	}
@@ -664,7 +664,7 @@ static void cond_free(u32 cond_id, u32 tls_slot = -1)
 
 static cond_handle* cond_id_lock(u32 cond_id, u128 mask, uptr iptr = 0)
 {
-	if (cond_id - 1 < u32{UINT16_MAX})
+	if (cond_id - 1 < u16{umax})
 	{
 		const auto cond = s_cond_list + cond_id;
 
@@ -842,7 +842,7 @@ atomic_t<u16>* root_info::slot_alloc(uptr ptr) noexcept
 		slot = _this->bits.atomic_op([&](slot_allocator& bits) -> atomic_t<u16>*
 		{
 			// Increment reference counter on every hashtable slot we attempt to allocate on
-			if (bits.ref == UINT16_MAX)
+			if (bits.ref == u16{umax})
 			{
 				fmt::throw_exception("Thread limit (65535) reached for a single hashtable slot.");
 				return nullptr;
@@ -1354,7 +1354,7 @@ SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 size, u1
 	{
 		u32 res = alert_sema<true>(cond_id, size, mask);
 
-		if (res && ~res <= UINT16_MAX)
+		if (res && ~res <= u16{umax})
 		{
 			// Add to the end of the "stack"
 			*(std::end(cond_ids) - ++count) = ~res;
@@ -1381,7 +1381,7 @@ SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 size, u1
 		{
 			const u32 cond_id = *(std::end(cond_ids) - i - 1);
 
-			if (cond_id <= UINT16_MAX)
+			if (cond_id <= u16{umax})
 			{
 				if (s_cond_list[cond_id].try_alert_native())
 				{
@@ -1398,7 +1398,7 @@ SAFE_BUFFERS(void) atomic_wait_engine::notify_all(const void* data, u32 size, u1
 	{
 		const u32 cond_id = *(std::end(cond_ids) - i - 1);
 
-		if (cond_id <= UINT16_MAX)
+		if (cond_id <= u16{umax})
 		{
 			s_cond_list[cond_id].alert_native();
 			if (s_tls_notify_cb)

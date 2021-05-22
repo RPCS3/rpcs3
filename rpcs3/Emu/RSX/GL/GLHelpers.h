@@ -1699,14 +1699,14 @@ namespace gl
 				region.width == m_width && region.height == m_height && region.depth == m_depth)
 			{
 				if (caps.ARB_dsa_supported)
-					glGetTextureImage(m_id, level, static_cast<GLenum>(format), static_cast<GLenum>(type), INT32_MAX, dst);
+					glGetTextureImage(m_id, level, static_cast<GLenum>(format), static_cast<GLenum>(type), s32{smax}, dst);
 				else
 					glGetTextureImageEXT(m_id, static_cast<GLenum>(m_target), level, static_cast<GLenum>(format), static_cast<GLenum>(type), dst);
 			}
 			else if (caps.ARB_dsa_supported)
 			{
 				glGetTextureSubImage(m_id, level, region.x, region.y, region.z, region.width, region.height, region.depth,
-					static_cast<GLenum>(format), static_cast<GLenum>(type), INT32_MAX, dst);
+					static_cast<GLenum>(format), static_cast<GLenum>(type), s32{smax}, dst);
 			}
 			else
 			{

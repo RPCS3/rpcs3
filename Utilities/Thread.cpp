@@ -1644,7 +1644,7 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp) noexcept
 		{
 			addr = addr0;
 		}
-		else if (const usz exec64 = (ptr - vm::g_exec_addr) / 2; exec64 <= UINT32_MAX)
+		else if (const usz exec64 = (ptr - vm::g_exec_addr) / 2; exec64 <= u32{umax})
 		{
 			addr = static_cast<u32>(exec64);
 		}
@@ -2808,7 +2808,7 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 		}
 	}
 
-	return UINT64_MAX;
+	return -1;
 }
 
 void thread_ctrl::set_native_priority(int priority)

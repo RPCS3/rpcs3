@@ -260,8 +260,8 @@ struct vdec_context final
 
 					packet.data = vm::_ptr<u8>(au_addr);
 					packet.size = au_size;
-					packet.pts = au_pts != umax ? au_pts : INT64_MIN;
-					packet.dts = au_dts != umax ? au_dts : INT64_MIN;
+					packet.pts = au_pts != umax ? au_pts : s64{smin};
+					packet.dts = au_dts != umax ? au_dts : s64{smin};
 
 					if (next_pts == 0 && au_pts != umax)
 					{
@@ -281,8 +281,8 @@ struct vdec_context final
 				}
 				else
 				{
-					packet.pts = INT64_MIN;
-					packet.dts = INT64_MIN;
+					packet.pts = smin;
+					packet.dts = smin;
 					cellVdec.trace("End sequence...");
 				}
 
@@ -336,12 +336,12 @@ struct vdec_context final
 							fmt::throw_exception("Repeated frames not supported (0x%x)", frame->repeat_pict);
 						}
 
-						if (frame->pts != INT64_MIN)
+						if (frame->pts != smin)
 						{
 							next_pts = frame->pts;
 						}
 
-						if (frame->pkt_dts != INT64_MIN)
+						if (frame->pkt_dts != smin)
 						{
 							next_dts = frame->pkt_dts;
 						}

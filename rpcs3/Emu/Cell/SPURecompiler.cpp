@@ -716,7 +716,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			// Compute the distance
 			const s64 rel = taddr - reinterpret_cast<u64>(raw) - (op != 0xe9 ? 6 : 5);
 
-			ensure(rel >= INT32_MIN && rel <= INT32_MAX);
+			ensure(rel >= s32{smin} && rel <= s32{smax});
 
 			if (op != 0xe9)
 			{
@@ -757,7 +757,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 			u32 size2 = w.size - size1;
 			std::advance(it2, w.size / 2);
 
-			while (ensure(w.level < UINT16_MAX))
+			while (ensure(w.level < umax))
 			{
 				it = it2;
 				size1 = w.size - size2;
@@ -1150,11 +1150,11 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 		u64 result;
 	};
 
-	if (rel >= INT32_MIN && rel <= INT32_MAX)
+	if (rel >= s32{smin} && rel <= s32{smax})
 	{
 		const s64 rel8 = (rel + 5) - 2;
 
-		if (rel8 >= INT8_MIN && rel8 <= INT8_MAX)
+		if (rel8 >= s8{smin} && rel8 <= s8{smax})
 		{
 			bytes[0] = 0xeb; // jmp rel8
 			bytes[1] = static_cast<s8>(rel8);
@@ -5810,7 +5810,7 @@ public:
 				const auto completed = m_ir->CreateAnd(tag_mask, m_ir->CreateNot(mfc_fence));
 				const auto upd_ptr   = spu_ptr<u32>(&spu_thread::ch_tag_upd);
 				const auto stat_ptr  = spu_ptr<u64>(&spu_thread::ch_tag_stat);
-				const auto stat_val  = m_ir->CreateOr(m_ir->CreateZExt(completed, get_type<u64>()), INT64_MIN);
+				const auto stat_val  = m_ir->CreateOr(m_ir->CreateZExt(completed, get_type<u64>()), s64{smin});
 
 				const auto next = llvm::BasicBlock::Create(m_context, "", m_function);
 				const auto next0 = llvm::BasicBlock::Create(m_context, "", m_function);
@@ -6012,7 +6012,7 @@ public:
 					switch (csize)
 					{
 					case 0:
-					case UINT64_MAX:
+					case umax:
 					{
 						break;
 					}
@@ -8034,11 +8034,11 @@ public:
 				{
 					if (data[i] >= std::exp2(31.f))
 					{
-						result._s32[i] = INT32_MAX;
+						result._s32[i] = smax;
 					}
 					else if (data[i] < std::exp2(-31.f))
 					{
-						result._s32[i] = INT32_MIN;
+						result._s32[i] = smin;
 					}
 					else
 					{
@@ -8108,7 +8108,7 @@ public:
 				{
 					if (data[i] >= std::exp2(32.f))
 					{
-						result._u32[i] = UINT32_MAX;
+						result._u32[i] = umax;
 					}
 					else if (data[i] < 0.)
 					{
@@ -8751,14 +8751,14 @@ public:
 			{
 				if (target != m_pos + 4)
 				{
-					m_block->block_end = m_ir->GetInsertBlock();	
+					m_block->block_end = m_ir->GetInsertBlock();
 					const auto a = get_vr<s8[16]>(op.rt);
 					const auto cond = eval(bitcast<s16>(trunc<bool[16]>(a)) >= 0);
 					m_ir->CreateCondBr(cond.value, add_block(target), add_block(m_pos + 4));
 					return true;
 				}
 			}
-		
+
 			return false;
 		}))
 		{
@@ -8795,14 +8795,14 @@ public:
 			{
 				if (target != m_pos + 4)
 				{
-					m_block->block_end = m_ir->GetInsertBlock();	
+					m_block->block_end = m_ir->GetInsertBlock();
 					const auto a = get_vr<s8[16]>(op.rt);
 					const auto cond = eval(bitcast<s16>(trunc<bool[16]>(a)) < 0);
 					m_ir->CreateCondBr(cond.value, add_block(target), add_block(m_pos + 4));
 					return true;
 				}
 			}
-		
+
 			return false;
 		}))
 		{

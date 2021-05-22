@@ -252,7 +252,7 @@ namespace cfg
 		static_assert(Min < Max, "Invalid cfg::_int range");
 
 		// Prefer 32 bit type if possible
-		using int_type = std::conditional_t<Min >= INT32_MIN && Max <= INT32_MAX, s32, s64>;
+		using int_type = std::conditional_t<Min >= s32{smin} && Max <= s32{smax}, s32, s64>;
 
 		atomic_t<int_type> m_value;
 
@@ -314,10 +314,10 @@ namespace cfg
 	};
 
 	// Alias for 32 bit int
-	using int32 = _int<INT32_MIN, INT32_MAX>;
+	using int32 = _int<s32{smin}, s32{smax}>;
 
 	// Alias for 64 bit int
-	using int64 = _int<INT64_MIN, INT64_MAX>;
+	using int64 = _int<s64{smin}, s64{smax}>;
 
 	// Unsigned 32/64-bit integer entry with custom Min/Max range.
 	template <u64 Min, u64 Max>
@@ -326,7 +326,7 @@ namespace cfg
 		static_assert(Min < Max, "Invalid cfg::uint range");
 
 		// Prefer 32 bit type if possible
-		using int_type = std::conditional_t<Max <= UINT32_MAX, u32, u64>;
+		using int_type = std::conditional_t<Max <= u32{umax}, u32, u64>;
 
 		atomic_t<int_type> m_value;
 
@@ -388,10 +388,10 @@ namespace cfg
 	};
 
 	// Alias for 32 bit uint
-	using uint32 = uint<0, UINT32_MAX>;
+	using uint32 = uint<0, u32{umax}>;
 
 	// Alias for 64 bit int
-	using uint64 = uint<0, UINT64_MAX>;
+	using uint64 = uint<0, u64{umax}>;
 
 	// Simple string entry with mutex
 	class string : public _base

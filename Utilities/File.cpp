@@ -97,7 +97,7 @@ static FILETIME from_time(s64 _time)
 		result.dwLowDateTime = 0;
 		result.dwHighDateTime = 0;
 	}
-	else if (_time > INT64_MAX / 10000000ll - 11644473600ll)
+	else if (_time > s64{smax} / 10000000ll - 11644473600ll)
 	{
 		result.dwLowDateTime = 0xffffffff;
 		result.dwHighDateTime = 0x7fffffff;

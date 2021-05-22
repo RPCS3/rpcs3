@@ -136,7 +136,7 @@ public:
 	void append_title_patches(const std::string& title_id);
 
 	// Apply patch (returns the number of entries applied)
-	std::basic_string<u32> apply(const std::string& name, u8* dst, u32 filesz = UINT32_MAX, u32 min_addr = 0);
+	std::basic_string<u32> apply(const std::string& name, u8* dst, u32 filesz = -1, u32 min_addr = 0);
 
 private:
 	// Database

@@ -913,7 +913,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 			case CELL_SAVEDATA_FOCUSPOS_LATEST:
 			{
-				s64 max = INT64_MIN;
+				s64 max = smin;
 
 				for (u32 i = 0; i < save_entries.size(); i++)
 				{
@@ -928,7 +928,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 			case CELL_SAVEDATA_FOCUSPOS_OLDEST:
 			{
-				s64 min = INT64_MAX;
+				s64 min = smax;
 
 				for (u32 i = 0; i < save_entries.size(); i++)
 				{

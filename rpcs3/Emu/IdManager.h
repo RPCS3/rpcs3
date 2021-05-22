@@ -53,7 +53,7 @@ namespace id_manager
 
 		static constexpr std::pair<u32, u32> invl_range = invl_range_extract_impl<T>::invl_range;
 
-		static_assert(count && step && u64{step} * (count - 1) + base < u64{UINT32_MAX} + (base != 0 ? 1 : 0), "ID traits: invalid object range");
+		static_assert(count && step && u64{step} * (count - 1) + base < u32{umax} + u64{base != 0 ? 1 : 0}, "ID traits: invalid object range");
 
 		// TODO: Add more conditions
 		static_assert(!invl_range.second || (u64{invl_range.second} + invl_range.first <= 32 /*....*/ ));

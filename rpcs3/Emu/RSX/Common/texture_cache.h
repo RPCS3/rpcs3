@@ -226,7 +226,7 @@ namespace rsx
 
 				const int target_area = (external_subresource_desc.width * external_subresource_desc.height * threshold) / 100;
 				int covered_area = 0;
-				areai bbox{ INT_MAX, INT_MAX, 0, 0 };
+				areai bbox{smax, smax, 0, 0};
 
 				for (const auto& section : external_subresource_desc.sections_to_copy)
 				{

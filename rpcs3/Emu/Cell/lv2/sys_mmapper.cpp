@@ -65,7 +65,7 @@ error_code sys_mmapper_allocate_address(ppu_thread& ppu, u64 size, u64 flags, u6
 		return CELL_EALIGN;
 	}
 
-	if (size > UINT32_MAX)
+	if (size > u32{umax})
 	{
 		return CELL_ENOMEM;
 	}

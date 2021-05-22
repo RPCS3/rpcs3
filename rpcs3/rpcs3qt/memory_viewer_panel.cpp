@@ -585,7 +585,7 @@ void memory_viewer_panel::SetPC(const uint pc)
 void memory_viewer_panel::ShowImage(QWidget* parent, u32 addr, color_format format, u32 width, u32 height, bool flipv) const
 {
 	// If exceeds 32-bits it is invalid as well, UINT32_MAX always fails checks
-	const u32 memsize = static_cast<u32>(std::min<u64>(4ull * width * height, UINT32_MAX));
+	const u32 memsize = static_cast<u32>(std::min<u64>(4ull * width * height, u32{umax}));
 	if (memsize == 0)
 	{
 		return;

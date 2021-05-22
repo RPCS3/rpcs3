@@ -1213,7 +1213,7 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 
 			const addr_range r = addr_range::start_length(static_cast<u32>(prog.p_vaddr), static_cast<u32>(prog.p_memsz));
 
-			if ((prog.p_vaddr | prog.p_memsz) > UINT32_MAX || !r.valid() || !r.inside(addr_range::start_length(0x00000000, 0x30000000)))
+			if ((prog.p_vaddr | prog.p_memsz) > u32{umax} || !r.valid() || !r.inside(addr_range::start_length(0x00000000, 0x30000000)))
 			{
 				return false;
 			}
@@ -1433,7 +1433,7 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 		{
 			ppu_loader.notice("TLS info segment found: tls-image=*0x%x, image-size=0x%x, tls-size=0x%x", prog.p_vaddr, prog.p_filesz, prog.p_memsz);
 
-			if ((prog.p_vaddr | prog.p_filesz | prog.p_memsz) > UINT32_MAX)
+			if ((prog.p_vaddr | prog.p_filesz | prog.p_memsz) > u32{umax})
 			{
 				ppu_loader.fatal("ppu_load_exec(): TLS segment is invalid!");
 				return false;

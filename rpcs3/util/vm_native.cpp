@@ -124,7 +124,7 @@ namespace utils
 
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0);
 
-		if (ptr == reinterpret_cast<void*>(UINT64_MAX))
+		if (ptr == reinterpret_cast<void*>(uptr{umax}))
 		{
 			return nullptr;
 		}
@@ -195,7 +195,7 @@ namespace utils
 		ensure(::VirtualFree(pointer, size, MEM_DECOMMIT));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(UINT64_MAX));
+		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
 
 		if constexpr (c_madv_no_dump != 0)
 		{
@@ -215,7 +215,7 @@ namespace utils
 		memory_commit(pointer, size, prot);
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(UINT64_MAX));
+		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
 
 		if constexpr (c_madv_hugepage != 0)
 		{
@@ -513,7 +513,7 @@ namespace utils
 #else
 		const auto result = reinterpret_cast<u8*>(::mmap(reinterpret_cast<void*>(target), m_size, +prot, (cow ? MAP_PRIVATE : MAP_SHARED), m_file, 0));
 
-		if (result == reinterpret_cast<void*>(UINT64_MAX))
+		if (result == reinterpret_cast<void*>(uptr{umax}))
 		{
 			[[unlikely]] return nullptr;
 		}

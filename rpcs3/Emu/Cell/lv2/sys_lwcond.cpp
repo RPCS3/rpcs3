@@ -89,7 +89,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 	{
 		ppu_thread* cpu = nullptr;
 
-		if (ppu_thread_id != UINT32_MAX)
+		if (ppu_thread_id != u32{umax})
 		{
 			cpu = idm::check_unlocked<named_thread<ppu_thread>>(static_cast<u32>(ppu_thread_id));
 
@@ -164,7 +164,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 
 	if (!cond.ret)
 	{
-		if (ppu_thread_id == UINT32_MAX)
+		if (ppu_thread_id == u32{umax})
 		{
 			if (mode == 3)
 			{
@@ -289,7 +289,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		// Try to increment lwmutex's lwcond's waiters count
 		if (!mutex->lwcond_waiters.fetch_op([](s32& val)
 		{
-			if (val == INT32_MIN)
+			if (val == smin)
 			{
 				return false;
 			}
@@ -381,7 +381,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		}
 	}
 
-	if (--mutex->lwcond_waiters == INT32_MIN)
+	if (--mutex->lwcond_waiters == smin)
 	{
 		// Notify the thread destroying lwmutex on last waiter
 		mutex->lwcond_waiters.notify_all();

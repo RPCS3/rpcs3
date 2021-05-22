@@ -591,7 +591,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 				return CELL_EINVAL;
 			}
 
-			u32 limit = UINT32_MAX;
+			u32 limit = -1;
 
 			switch (location)
 			{

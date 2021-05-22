@@ -19,7 +19,7 @@ namespace stx
 	class type_info final : public Info
 	{
 		// Current type id (starts from 0)
-		u32 type = UINT32_MAX;
+		u32 type = umax;
 
 		u32 size = 1;
 		u32 align = 1;

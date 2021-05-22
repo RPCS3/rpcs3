@@ -2880,7 +2880,7 @@ void ppu_acontext::MFOCRF(ppu_opcode_t op)
 
 void ppu_acontext::LWARX(ppu_opcode_t op)
 {
-	gpr[op.rd] = spec_gpr::range(0, UINT32_MAX);
+	gpr[op.rd] = spec_gpr::range(0, u32{umax});
 }
 
 void ppu_acontext::LDX(ppu_opcode_t op)

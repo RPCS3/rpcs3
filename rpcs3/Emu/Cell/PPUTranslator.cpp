@@ -3239,8 +3239,8 @@ void PPUTranslator::DIVW(ppu_opcode_t op)
 {
 	const auto a = GetGpr(op.ra, 32);
 	const auto b = GetGpr(op.rb, 32);
-	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt32(INT32_MIN)), IsOnes(b)));
-	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(INT32_MIN), b));
+	const auto o = m_ir->CreateOr(IsZero(b), m_ir->CreateAnd(m_ir->CreateICmpEQ(a, m_ir->getInt32(s32{smin})), IsOnes(b)));
+	const auto result = m_ir->CreateSDiv(a, m_ir->CreateSelect(o, m_ir->getInt32(s32{smin}), b));
 	SetGpr(op.rd, m_ir->CreateSelect(o, m_ir->getInt32(0), result));
 	if (op.rc) SetCrFieldSignedCmp(0, GetGpr(op.rd), m_ir->getInt64(0));
 	if (op.oe) SetOverflow(o);
