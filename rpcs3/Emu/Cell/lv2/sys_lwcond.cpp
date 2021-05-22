@@ -93,7 +93,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 		{
 			cpu = idm::check_unlocked<named_thread<ppu_thread>>(static_cast<u32>(ppu_thread_id));
 
-			if (!cpu || cpu->joiner == ppu_join_status::exited)
+			if (!cpu)
 			{
 				return -1;
 			}

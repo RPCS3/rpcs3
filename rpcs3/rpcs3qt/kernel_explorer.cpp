@@ -555,11 +555,8 @@ void kernel_explorer::Update()
 		const auto func = ppu.last_function;
 		const ppu_thread_status status = lv2_obj::ppu_state(&ppu, false);
 
-		if (status != PPU_THREAD_STATUS_DELETED)
-		{
-			add_leaf(find_node(root, additional_nodes::ppu_threads), qstr(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, Status: %s, State: %s, %s func: “%s”", id, *ppu.ppu_tname.load(), +ppu.prio, ppu.joiner.load(), status, ppu.state.load()
-				, ppu.current_function ? "In" : "Last", func ? func : "")));
-		}
+		add_leaf(find_node(root, additional_nodes::ppu_threads), qstr(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, Status: %s, State: %s, %s func: “%s”", id, *ppu.ppu_tname.load(), +ppu.prio, ppu.joiner.load(), status, ppu.state.load()
+			, ppu.current_function ? "In" : "Last", func ? func : "")));
 	});
 
 	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
