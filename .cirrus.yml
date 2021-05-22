@@ -60,7 +60,7 @@ windows_task:
 
 linux_task:
   container:
-    image: rpcs3/rpcs3-ci-bionic:1.0
+    image: rpcs3/rpcs3-ci-bionic:1.1
     cpu: 4
     memory: 16G
   env:
