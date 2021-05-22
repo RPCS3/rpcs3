@@ -5,7 +5,7 @@
 
 class cpu_thread;
 
-enum : u32
+enum lv2_mem_container_id : u32
 {
 	SYS_MEMORY_CONTAINER_ID_INVALID = 0xFFFFFFFF,
 };
@@ -67,12 +67,10 @@ struct lv2_memory_container
 	static const u32 id_count = 16;
 
 	const u32 size; // Amount of "physical" memory in this container
+	const lv2_mem_container_id id; // ID of the container in if placed at IDM, otherwise SYS_MEMORY_CONTAINER_ID_INVALID
 	atomic_t<u32> used{}; // Amount of "physical" memory currently used
 
-	lv2_memory_container(u32 size)
-		: size(size)
-	{
-	}
+	lv2_memory_container(u32 size, bool from_idm = false) noexcept;
 
 	// Try to get specified amount of "physical" memory
 	// Values greater than UINT32_MAX will fail

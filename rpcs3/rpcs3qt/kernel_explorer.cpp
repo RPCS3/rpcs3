@@ -337,11 +337,11 @@ void kernel_explorer::Update()
 
 			if (mem.pshared)
 			{
-				add_leaf(node, qstr(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Granularity: %s, Mappings: %u, Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, mem.key)));
+				add_leaf(node, qstr(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mappings: %u, Mem Container: %s, Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, mem.ct->id, mem.key)));
 				break;
 			}
 
-			add_leaf(node, qstr(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Granularity: %s, Mappings: %u", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter)));
+			add_leaf(node, qstr(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mem Container: %s, Mappings: %u", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", mem.ct->id, +mem.counter)));
 			break;
 		}
 		case SYS_MUTEX_OBJECT:
@@ -535,8 +535,8 @@ void kernel_explorer::Update()
 	idm::select<sys_vm_t>([&](u32 /*id*/, sys_vm_t& vmo)
 	{
 		const u32 psize = vmo.psize;
-		add_leaf(find_node(root, additional_nodes::virtual_memory), qstr(fmt::format("Virtual Mem 0x%08x: Virtual Size: 0x%x (%0.2f MB), Physical Size: 0x%x (%0.2f MB)", vmo.addr
-			, vmo.size, vmo.size * 1. / (1024 * 1024), psize, psize * 1. / (1024 * 1024))));
+		add_leaf(find_node(root, additional_nodes::virtual_memory), qstr(fmt::format("Virtual Mem 0x%08x: Virtual Size: 0x%x (%0.2f MB), Physical Size: 0x%x (%0.2f MB), Mem Container: %s", vmo.addr
+			, vmo.size, vmo.size * 1. / (1024 * 1024), psize, psize * 1. / (1024 * 1024))), vmo.ct->id);
 	});
 
 	idm::select<lv2_socket>([&](u32 id, lv2_socket& sock)

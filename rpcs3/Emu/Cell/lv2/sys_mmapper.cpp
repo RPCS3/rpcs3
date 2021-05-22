@@ -12,6 +12,21 @@
 
 LOG_CHANNEL(sys_mmapper);
 
+template <>
+void fmt_class_string<lv2_mem_container_id>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case SYS_MEMORY_CONTAINER_ID_INVALID: return "Global";
+		}
+
+		// Resort to hex formatting for other values
+		return unknown;
+	});
+}
+
 lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv2_memory_container* ct)
 	: size(size)
 	, align(align)
