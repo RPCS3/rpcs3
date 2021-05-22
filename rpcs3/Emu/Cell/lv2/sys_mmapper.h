@@ -29,6 +29,8 @@ struct lv2_memory : lv2_obj
 	atomic_t<u32> counter{0};
 
 	lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv2_memory_container* ct);
+
+	CellError on_id_create();
 };
 
 enum : u64
