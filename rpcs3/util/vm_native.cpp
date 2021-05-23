@@ -332,26 +332,49 @@ namespace utils
 #ifdef _WIN32
 		fs::file f;
 
-		auto set_sparse = [](HANDLE h) -> bool
-		{
-			// Get version
-			const DWORD version_major = *reinterpret_cast<const DWORD*>(__readgsqword(0x60) + 0x118);
+		// Get system version
+		[[maybe_unused]] static const DWORD version_major = *reinterpret_cast<const DWORD*>(__readgsqword(0x60) + 0x118);
 
-			// Disable sparse files on Windows 7 or lower
-			if (version_major <= 7)
+		auto set_sparse = [](HANDLE h, usz m_size) -> bool
+		{
+			FILE_SET_SPARSE_BUFFER arg{.SetSparse = true};
+			FILE_BASIC_INFO info0{};
+			ensure(GetFileInformationByHandleEx(h, FileBasicInfo, &info0, sizeof(info0)));
+
+			if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && version_major <= 7)
 			{
-				return true;
+				MessageBoxW(0, L"RPCS3 needs to be restarted to create sparse file rpcs3_vm.", L"RPCS3", MB_ICONEXCLAMATION);
 			}
 
-			if (DeviceIoControl(h, FSCTL_SET_SPARSE, nullptr, 0, nullptr, 0, nullptr, nullptr))
+			if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) || DeviceIoControl(h, FSCTL_SET_SPARSE, &arg, sizeof(arg), nullptr, 0, nullptr, nullptr))
 			{
-				FILE_STANDARD_INFO info;
-				ensure(GetFileInformationByHandleEx(h, FileStandardInfo, &info, sizeof(info)));
-
-				if (info.AllocationSize.QuadPart)
+				if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && version_major <= 7)
 				{
-					// Make sure the file is not "dirty"
-					FILE_END_OF_FILE_INFO _eof{};
+					std::abort();
+				}
+
+				FILE_STANDARD_INFO info;
+				FILE_END_OF_FILE_INFO _eof{};
+				ensure(GetFileInformationByHandleEx(h, FileStandardInfo, &info, sizeof(info)));
+				ensure(GetFileSizeEx(h, &_eof.EndOfFile));
+
+				if (info.AllocationSize.QuadPart && _eof.EndOfFile.QuadPart == m_size)
+				{
+					// Truncate file since it may be dirty (fool-proof)
+					DWORD ret = 0;
+					FILE_ALLOCATED_RANGE_BUFFER dummy{};
+					dummy.Length.QuadPart = m_size;
+
+					if (!DeviceIoControl(h, FSCTL_QUERY_ALLOCATED_RANGES, &dummy, sizeof(dummy), nullptr, 0, &ret, 0) || ret)
+					{
+						_eof.EndOfFile.QuadPart = 0;
+					}
+				}
+
+				if (_eof.EndOfFile.QuadPart != m_size)
+				{
+					// Reset file size to 0 if it doesn't match
+					_eof.EndOfFile.QuadPart = 0;
 					ensure(SetFileInformationByHandle(h, FileEndOfFileInfo, &_eof, sizeof(_eof)));
 				}
 
@@ -365,12 +388,12 @@ namespace utils
 		{
 			ensure(f.open(storage, fs::read + fs::write + fs::create));
 		}
-		else if (!f.open(fs::get_temp_dir() + "rpcs3_vm", fs::read + fs::write + fs::create) || !set_sparse(f.get_handle()))
+		else if (!f.open(fs::get_cache_dir() + "rpcs3_vm", fs::read + fs::write + fs::create) || !set_sparse(f.get_handle(), m_size))
 		{
-			ensure(f.open(fs::get_cache_dir() + "rpcs3_vm", fs::read + fs::write + fs::create));
+			ensure(f.open(fs::get_temp_dir() + "rpcs3_vm", fs::read + fs::write + fs::create));
 		}
 
-		if (!set_sparse(f.get_handle()))
+		if (!set_sparse(f.get_handle(), m_size))
 		{
 			MessageBoxW(0, L"Failed to initialize sparse file.", L"RPCS3", MB_ICONERROR);
 		}
