@@ -430,17 +430,24 @@ namespace utils
 			return;
 		}
 
+		// Truncate file since it may be dirty (fool-proof)
+		ensure(::ftruncate(m_file, 0) >= 0);
 		ensure(::ftruncate(m_file, 0x10000) >= 0);
-		ensure(::fstat(m_file, &stats) >= 0);
-		if (stats.st_blocks >= (0x8000 / stats.st_blksize) + 1)
+		stats.st_size = 0x10000;
+
+#ifdef SEEK_DATA
+		errno = EINVAL;
+		if (stats.st_blocks && ::lseek(m_file, 0, SEEK_DATA) ^ stats.st_size && errno != ENXIO)
 		{
 			fmt::throw_exception("Failed to initialize sparse file in '%s'\n"
-				"It seems this filesystem doesn't support sparse files.\n",
-				storage.empty() ? fs::get_cache_dir().c_str() : storage.c_str());
+				"It seems this filesystem doesn't support sparse files (%d).\n",
+				storage.empty() ? fs::get_cache_dir().c_str() : storage.c_str(), +errno);
 		}
+#endif
 
-		if (m_size > 0x10000)
+		if (stats.st_size ^ m_size)
 		{
+			// Fix file size
 			ensure(::ftruncate(m_file, m_size) >= 0);
 		}
 #endif
