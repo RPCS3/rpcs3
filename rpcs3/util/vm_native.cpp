@@ -409,7 +409,7 @@ namespace utils
 
 		ensure(::ftruncate(m_file, 0x10000) >= 0);
 		ensure(::fstat(m_file, &stats) >= 0);
-		if (stats.st_blocks >= (0x8000 / stats.st_blksize) + 1)
+		if (stats.st_size < stats.st_blocks * 512)
 		{
 			fmt::throw_exception("Failed to initialize sparse file in '%s'\n"
 				"It seems this filesystem doesn't support sparse files.\n",
