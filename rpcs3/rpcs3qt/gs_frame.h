@@ -90,6 +90,7 @@ protected:
 	void flip(draw_context_t context, bool skip_frame = false) override;
 	int client_width() override;
 	int client_height() override;
+	double client_device_pixel_ratio() const override;
 
 	bool event(QEvent* ev) override;
 
