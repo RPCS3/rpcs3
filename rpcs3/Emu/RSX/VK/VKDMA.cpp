@@ -256,35 +256,36 @@ namespace vk
 	void create_dma_block(std::unique_ptr<dma_block>& block, u32 base_address, usz expected_length)
 	{
 		const auto vendor = g_render_device->gpu().get_driver_vendor();
-		[[maybe_unused]] const auto chip = vk::get_chip_family();
+		bool allow_host_buffers = false;
 
 #if defined(_WIN32)
-		bool allow_host_buffers;
-		if (vendor == driver_vendor::NVIDIA)
+		if (g_cfg.video.vk.asynchronous_texture_streaming)
 		{
-			if (g_cfg.video.vk.asynchronous_texture_streaming)
+			if (vendor == driver_vendor::NVIDIA)
 			{
-				allow_host_buffers = (chip != chip_class::NV_mobile_kepler) ?
+				allow_host_buffers = (vk::get_chip_family() != chip_class::NV_mobile_kepler) ?
 					test_host_pointer(base_address, expected_length) :
 					false;
 			}
 			else
 			{
-				allow_host_buffers = false;
+				allow_host_buffers = true;
+			}
+#elif defined(__linux__)
+			// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
+			allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV);
+#else
+			// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
+			// Intel chipsets woulf fail in most cases and DRM_IOCTL_i915_GEM_USERPTR unimplemented
+			allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV && vendor != driver_vendor::INTEL);
+#endif
+			if (!allow_host_buffers)
+			{
+				rsx_log.trace("Requested DMA passthrough for block 0x%x->0x%x but this was not possible.",
+					base_address, base_address + expected_length - 1);
 			}
 		}
-		else
-		{
-			allow_host_buffers = true;
-		}
-#elif defined(__linux__)
-		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
-		const bool allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV);
-#else
-		// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
-		// Intel chipsets woulf fail in most cases and DRM_IOCTL_i915_GEM_USERPTR unimplemented
-		const bool allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV && vendor != driver_vendor::INTEL);
-#endif
+
 		if (allow_host_buffers && g_render_device->get_external_memory_host_support())
 		{
 			block.reset(new dma_block_EXT());
