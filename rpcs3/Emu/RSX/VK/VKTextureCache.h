@@ -934,7 +934,7 @@ namespace vk
 			}
 
 			rsx::flags32_t upload_command_flags = initialize_image_layout |
-				(g_cfg.video.vk.asynchronous_texture_streaming? upload_contents_async : upload_contents_inline);
+				(rsx::get_current_renderer()->get_backend_config().supports_asynchronous_compute ? upload_contents_async : upload_contents_inline);
 
 			vk::upload_image(cmd, image, subresource_layout, gcm_format, input_swizzled, mipmaps, image->aspect(),
 				*m_texture_upload_heap, upload_heap_align_default, upload_command_flags);

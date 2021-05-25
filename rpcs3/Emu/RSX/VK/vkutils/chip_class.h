@@ -33,6 +33,8 @@ namespace vk
 		INTEL
 	};
 
+	driver_vendor get_driver_vendor();
+
 	struct chip_family_table
 	{
 		chip_class default_ = chip_class::unknown;

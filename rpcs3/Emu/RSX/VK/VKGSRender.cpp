@@ -392,25 +392,6 @@ VKGSRender::VKGSRender() : GSRender()
 	m_device = const_cast<vk::render_device*>(&m_swapchain->get_device());
 	vk::set_current_renderer(m_swapchain->get_device());
 
-	// Device-specific overrides
-	if (g_cfg.video.vk.asynchronous_texture_streaming)
-	{
-		if (m_device->get_graphics_queue() == m_device->get_transfer_queue())
-		{
-			rsx_log.error("Cannot run graphics and async transfer in the same queue. Async uploads are disabled. This is a limitation of your GPU");
-			g_cfg.video.vk.asynchronous_texture_streaming.set(false);
-		}
-
-		if (auto chip_family = vk::get_chip_family();
-			chip_family == vk::chip_class::NV_kepler ||
-			chip_family == vk::chip_class::NV_mobile_kepler || // TODO: Deprecate this classification, it just complicates things
-			chip_family == vk::chip_class::NV_maxwell)
-		{
-			rsx_log.error("Older NVIDIA cards do not meet requirements for asynchronous compute due to some driver fakery.");
-			g_cfg.video.vk.asynchronous_texture_streaming.set(false);
-		}
-	}
-
 	m_swapchain_dims.width = m_frame->client_width();
 	m_swapchain_dims.height = m_frame->client_height();
 
@@ -522,8 +503,6 @@ VKGSRender::VKGSRender() : GSRender()
 
 	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.91");
 
-	g_fxo->init<vk::async_scheduler_thread>();
-
 	open_command_buffer();
 
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
@@ -567,6 +546,56 @@ VKGSRender::VKGSRender() : GSRender()
 
 	// Relaxed query synchronization
 	backend_config.supports_hw_conditional_render = !!g_cfg.video.relaxed_zcull_sync;
+
+	// Async compute and related operations
+	if (g_cfg.video.vk.asynchronous_texture_streaming)
+	{
+		// Optimistic, enable async compute and passthrough DMA
+		backend_config.supports_passthrough_dma = m_device->get_external_memory_host_support();
+		backend_config.supports_asynchronous_compute = true;
+
+		if (m_device->get_graphics_queue() == m_device->get_transfer_queue())
+		{
+			rsx_log.error("Cannot run graphics and async transfer in the same queue. Async uploads are disabled. This is a limitation of your GPU");
+			backend_config.supports_asynchronous_compute = false;
+		}
+
+		switch (vk::get_driver_vendor())
+		{
+		case vk::driver_vendor::NVIDIA:
+			if (auto chip_family = vk::get_chip_family();
+				chip_family == vk::chip_class::NV_kepler ||
+				chip_family == vk::chip_class::NV_mobile_kepler || // TODO: Deprecate this classification, it just complicates things
+				chip_family == vk::chip_class::NV_maxwell)
+			{
+				rsx_log.error("Older NVIDIA cards do not meet requirements for asynchronous compute due to some driver fakery.");
+				backend_config.supports_asynchronous_compute = false;
+			}
+			break;
+#if !defined(_WIN32)
+			// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
+		case vk::driver_vendor::RADV:
+		case vk::driver_vendor::AMD:
+#if !defined(__linux__)
+			// Intel chipsets would fail on BSD in most cases and DRM_IOCTL_i915_GEM_USERPTR unimplemented
+		case vk::driver_vendor::INTEL:
+			if (backend_config.supports_passthrough_dma)
+			{
+				rsx_log.error("AMDGPU kernel driver on linux and INTEL driver on some platforms cannot support passthrough DMA buffers.");
+				backend_config.supports_passthrough_dma = false;
+			}
+#endif
+			break;
+#endif
+		default: break;
+		}
+
+		if (backend_config.supports_asynchronous_compute)
+		{
+			// Run only if async compute can be used.
+			g_fxo->init<vk::async_scheduler_thread>();
+		}
+	}
 }
 
 VKGSRender::~VKGSRender()
@@ -578,7 +607,10 @@ VKGSRender::~VKGSRender()
 	}
 
 	// Globals. TODO: Refactor lifetime management
-	g_fxo->get<vk::async_scheduler_thread>().kill();
+	if (backend_config.supports_asynchronous_compute)
+	{
+		g_fxo->get<vk::async_scheduler_thread>().kill();
+	}
 
 	//Wait for device to finish up with resources
 	vkDeviceWaitIdle(*m_device);
