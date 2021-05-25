@@ -126,9 +126,9 @@ extern void ppu_initialize();
 extern void ppu_finalize(const ppu_module& info);
 extern bool ppu_initialize(const ppu_module& info, bool = false);
 static void ppu_initialize2(class jit_compiler& jit, const ppu_module& module_part, const std::string& cache_path, const std::string& obj_name);
-extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path);
+extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path, s64 file_offset);
 extern void ppu_unload_prx(const lv2_prx&);
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64 file_offset);
 extern void ppu_execute_syscall(ppu_thread& ppu, u64 code);
 static bool ppu_break(ppu_thread& ppu, ppu_opcode_t op);
 
@@ -2456,7 +2456,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 				continue;
 			}
 
-			auto [path, offset] = std::as_const(file_queue)[func_i];
+			const auto& [path, offset] = std::as_const(file_queue)[func_i];
 
 			ppu_log.notice("Trying to load: %s", path);
 
@@ -2473,9 +2473,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 			{
 				// Adjust offset for MSELF
 				src.reset(std::make_unique<file_view>(std::move(src), off));
-
-				// Adjust path for MSELF too
-				fmt::append(path, "_x%x", off);
 			}
 
 			// Some files may fail to decrypt due to the lack of klic
@@ -2493,7 +2490,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 			{
 				std::unique_lock lock(sprx_mtx);
 
-				if (auto prx = ppu_load_prx(obj, path))
+				if (auto prx = ppu_load_prx(obj, path, offset))
 				{
 					lock.unlock();
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
@@ -2517,7 +2514,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 					// Only one thread compiles OVL atm, other can compile PRX cuncurrently
 					std::unique_lock lock(ovl_mtx);
 
-					auto [ovlm, error] = ppu_load_overlay(obj, path);
+					auto [ovlm, error] = ppu_load_overlay(obj, path, offset);
 
 					if (error)
 					{

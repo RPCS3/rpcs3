@@ -82,6 +82,7 @@ struct ppu_module
 	uchar sha1[20]{};
 	std::string name{};
 	std::string path{};
+	s64 offset = 0; // Offset of file
 	std::string cache{};
 	std::vector<ppu_reloc> relocs{};
 	std::vector<ppu_segment> segs{};
