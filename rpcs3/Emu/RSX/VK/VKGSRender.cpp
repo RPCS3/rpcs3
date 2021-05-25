@@ -579,12 +579,12 @@ VKGSRender::VKGSRender() : GSRender()
 #if !defined(__linux__)
 			// Intel chipsets would fail on BSD in most cases and DRM_IOCTL_i915_GEM_USERPTR unimplemented
 		case vk::driver_vendor::INTEL:
+#endif
 			if (backend_config.supports_passthrough_dma)
 			{
 				rsx_log.error("AMDGPU kernel driver on linux and INTEL driver on some platforms cannot support passthrough DMA buffers.");
 				backend_config.supports_passthrough_dma = false;
 			}
-#endif
 			break;
 #endif
 		default: break;
