@@ -51,7 +51,7 @@ namespace
 	// FIXME: GSL as_span break build if template parameter is non const with current revision.
 	// Replace with true as_span when fixed.
 	template <typename T>
-	std::span<T> as_span(std::span<std::byte> unformated_span)
+	std::span<T> as_span_workaround(std::span<std::byte> unformated_span)
 	{
 		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
 	}
@@ -665,7 +665,7 @@ void write_vertex_array_data_to_buffer(std::span<std::byte> raw_dst_span, std::s
 	}
 	case rsx::vertex_base_type::cmp:
 	{
-		std::span<u16> dst_span = as_span<u16>(raw_dst_span);
+		std::span<u16> dst_span = as_span_workaround<u16>(raw_dst_span);
 		for (u32 i = 0; i < count; ++i)
 		{
 			u32 src_value;
@@ -1295,12 +1295,12 @@ std::tuple<u32, u32, u32> write_index_array_data_to_buffer(std::span<std::byte> 
 	{
 	case rsx::index_array_type::u16:
 	{
-		return write_index_array_data_to_buffer_impl<u16>(as_span<u16>(dst_ptr),
+		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u16>(dst_ptr),
 			as_const_span<const be_t<u16>>(src_ptr), draw_mode, restart_index_enabled, restart_index, expands);
 	}
 	case rsx::index_array_type::u32:
 	{
-		return write_index_array_data_to_buffer_impl<u32>(as_span<u32>(dst_ptr),
+		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst_ptr),
 			as_const_span<const be_t<u32>>(src_ptr), draw_mode, restart_index_enabled, restart_index, expands);
 	}
 	default:

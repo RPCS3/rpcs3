@@ -6,7 +6,7 @@
 #include "util/asm.hpp"
 
 template <typename Traits>
-void program_state_cache<Traits>::fill_fragment_constants_buffer(gsl::span<f32> dst_buffer, const RSXFragmentProgram &fragment_program, bool sanitize) const
+void program_state_cache<Traits>::fill_fragment_constants_buffer(std::span<f32> dst_buffer, const RSXFragmentProgram &fragment_program, bool sanitize) const
 {
 	const auto I = m_fragment_shader_cache.find(fragment_program);
 	if (I == m_fragment_shader_cache.end())

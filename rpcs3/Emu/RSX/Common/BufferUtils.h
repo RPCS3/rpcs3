@@ -2,6 +2,8 @@
 
 #include "../gcm_enums.h"
 
+#include <span>
+
 /**
  * Write count vertex attributes from src_ptr.
  * src_ptr array layout is deduced from the type, vector element count and src_stride arguments.

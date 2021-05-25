@@ -654,7 +654,7 @@ namespace gl
 			image_memory_requirements mem_info;
 			pixel_buffer_layout mem_layout;
 
-			gsl::span<gsl::byte> dst_buffer = staging_buffer;
+			std::span<gsl::byte> dst_buffer = staging_buffer;
 			void* out_pointer = staging_buffer.data();
 			u8 block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
 			u64 image_linear_size;

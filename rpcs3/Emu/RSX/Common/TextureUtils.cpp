@@ -11,7 +11,7 @@ namespace
 	// FIXME: GSL as_span break build if template parameter is non const with current revision.
 	// Replace with true as_span when fixed.
 	template <typename T>
-	std::span<T> as_span(std::span<std::byte> unformated_span)
+	std::span<T> as_span_workaround(std::span<std::byte> unformated_span)
 	{
 		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
 	}
