@@ -104,6 +104,11 @@ freebsd_task:
         image_family: freebsd-12-2
         cpu: 8
         memory: 8G
+    - name: FreeBSD 13
+      freebsd_instance:
+        image_family: freebsd-13-0
+        cpu: 8
+        memory: 8G
   env:
     CCACHE_MAXSIZE: 300M # 3x clean build, rounded
     CCACHE_DIR: /tmp/ccache_dir
