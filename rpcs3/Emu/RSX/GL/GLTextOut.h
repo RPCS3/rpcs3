@@ -25,6 +25,8 @@ namespace gl
 		bool initialized = false;
 		bool enabled = false;
 
+		double m_scale = 1.0;
+
 		void init_program()
 		{
 			std::string vs =
@@ -138,11 +140,11 @@ namespace gl
 			char *s = const_cast<char *>(text.c_str());
 
 			//Y is in raster coordinates: convert to bottom-left origin
-			y = (target_h - y - 16);
+			y = ((target_h / m_scale) - y - 16);
 
 			//Compress [0, w] and [0, h] into range [-1, 1]
-			float scale_x = 2.f / target_w;
-			float scale_y = 2.f / target_h;
+			float scale_x = m_scale * 2.f / target_w;
+			float scale_y = m_scale * 2.f / target_h;
 
 			float base_offset = 0.f;
 			shader_offsets.reserve(text.length() * 2);
@@ -206,6 +208,12 @@ namespace gl
 
 				initialized = false;
 			}
+		}
+
+		void set_scale(double scale)
+		{
+			// Restrict scale to 2. The dots are gonna be too sparse otherwise.
+			m_scale = std::min(scale, 2.0);
 		}
 	};
 }

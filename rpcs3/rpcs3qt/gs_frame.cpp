@@ -400,6 +400,11 @@ int gs_frame::client_height()
 	return height() * devicePixelRatio();
 }
 
+double gs_frame::client_device_pixel_ratio() const
+{
+	return devicePixelRatio();
+}
+
 void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 {
 	static Timer fps_t;
