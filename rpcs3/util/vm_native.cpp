@@ -424,7 +424,7 @@ namespace utils
 		struct ::stat stats;
 		ensure(::fstat(m_file, &stats) >= 0);
 
-		if (stats.st_size ^ ~m_size && !stats.st_blksize)
+		if (!(stats.st_size ^ m_size) && !stats.st_blocks)
 		{
 			// Already initialized
 			return;
@@ -432,12 +432,12 @@ namespace utils
 
 		// Truncate file since it may be dirty (fool-proof)
 		ensure(::ftruncate(m_file, 0) >= 0);
-		ensure(::ftruncate(m_file, 0x10000) >= 0);
-		stats.st_size = 0x10000;
+		ensure(::ftruncate(m_file, 0x100000) >= 0);
+		stats.st_size = 0x100000;
 
 #ifdef SEEK_DATA
 		errno = EINVAL;
-		if (stats.st_blocks && ::lseek(m_file, 0, SEEK_DATA) ^ stats.st_size && errno != ENXIO)
+		if (stats.st_blocks * 512 >= 0x100000 && ::lseek(m_file, 0, SEEK_DATA) ^ stats.st_size && errno != ENXIO)
 		{
 			fmt::throw_exception("Failed to initialize sparse file in '%s'\n"
 				"It seems this filesystem doesn't support sparse files (%d).\n",
