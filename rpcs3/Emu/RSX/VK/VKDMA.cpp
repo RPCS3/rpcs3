@@ -256,7 +256,7 @@ namespace vk
 	void create_dma_block(std::unique_ptr<dma_block>& block, u32 base_address, usz expected_length)
 	{
 		const auto vendor = g_render_device->gpu().get_driver_vendor();
-		[[maybe_unused]] const auto chip  = g_render_device->gpu().get_chip_class();
+		[[maybe_unused]] const auto chip = vk::get_chip_family();
 
 #if defined(_WIN32)
 		bool allow_host_buffers;
