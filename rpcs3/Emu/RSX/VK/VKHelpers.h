@@ -50,7 +50,6 @@ namespace vk
 	bool fence_reset_disabled();
 	bool emulate_conditional_rendering();
 	VkFlags get_heap_compatible_buffer_types();
-	driver_vendor get_driver_vendor();
 
 	// Sync helpers around vkQueueSubmit
 	void acquire_global_submit_lock();

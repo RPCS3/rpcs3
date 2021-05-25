@@ -4,6 +4,7 @@
 #include "vkutils/device.h"
 
 #include "Emu/Memory/vm.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Utilities/mutex.h"
 
 #include "util/asm.hpp"
@@ -255,30 +256,16 @@ namespace vk
 
 	void create_dma_block(std::unique_ptr<dma_block>& block, u32 base_address, usz expected_length)
 	{
-		const auto vendor = g_render_device->gpu().get_driver_vendor();
 		bool allow_host_buffers = false;
-
-#if defined(_WIN32)
-		if (g_cfg.video.vk.asynchronous_texture_streaming)
+		if (rsx::get_current_renderer()->get_backend_config().supports_passthrough_dma)
 		{
-			if (vendor == driver_vendor::NVIDIA)
-			{
-				allow_host_buffers = (vk::get_chip_family() != chip_class::NV_mobile_kepler) ?
+			allow_host_buffers =
+#if defined(_WIN32)
+				(vk::get_driver_vendor() == driver_vendor::NVIDIA) ?
 					test_host_pointer(base_address, expected_length) :
-					false;
-			}
-			else
-			{
-				allow_host_buffers = true;
-			}
-#elif defined(__linux__)
-			// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
-			allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV);
-#else
-			// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
-			// Intel chipsets woulf fail in most cases and DRM_IOCTL_i915_GEM_USERPTR unimplemented
-			allow_host_buffers = (vendor != driver_vendor::AMD && vendor != driver_vendor::RADV && vendor != driver_vendor::INTEL);
 #endif
+				true;
+
 			if (!allow_host_buffers)
 			{
 				rsx_log.trace("Requested DMA passthrough for block 0x%x->0x%x but this was not possible.",
@@ -286,7 +273,7 @@ namespace vk
 			}
 		}
 
-		if (allow_host_buffers && g_render_device->get_external_memory_host_support())
+		if (allow_host_buffers)
 		{
 			block.reset(new dma_block_EXT());
 		}
