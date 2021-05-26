@@ -2,6 +2,7 @@
 #include "util/logs.hpp"
 #include "util/vm.hpp"
 #include "util/asm.hpp"
+#include "util/expr.hpp"
 #ifdef _WIN32
 #include "Utilities/File.h"
 #include "util/dyn_lib.hpp"
@@ -159,11 +160,11 @@ namespace utils
 
 		if constexpr (c_madv_no_dump != 0)
 		{
-			ensure(::madvise(ptr, orig_size, c_madv_no_dump) != -1);
+			ensure<"~">(::madvise(ptr, orig_size, c_madv_no_dump));
 		}
 		else
 		{
-			ensure(::madvise(ptr, orig_size, c_madv_free) != -1);
+			ensure<"~">(::madvise(ptr, orig_size, c_madv_free));
 		}
 
 		return ptr;
@@ -176,15 +177,15 @@ namespace utils
 		ensure(::VirtualAlloc(pointer, size, MEM_COMMIT, +prot));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1);
+		ensure<"~">(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot));
 
 		if constexpr (c_madv_dump != 0)
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_dump) != -1);
+			ensure<"~">(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_dump));
 		}
 		else
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
+			ensure<"~">(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED));
 		}
 #endif
 	}
@@ -195,15 +196,15 @@ namespace utils
 		ensure(::VirtualFree(pointer, size, MEM_DECOMMIT));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
+		ensure<"~">(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0));
 
 		if constexpr (c_madv_no_dump != 0)
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_no_dump) != -1);
+			ensure<"~">(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_no_dump));
 		}
 		else
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_free) != -1);
+			ensure<"~">(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_free));
 		}
 #endif
 	}
@@ -215,7 +216,7 @@ namespace utils
 		memory_commit(pointer, size, prot);
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
+		ensure<"~">(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0));
 
 		if constexpr (c_madv_hugepage != 0)
 		{
@@ -227,11 +228,11 @@ namespace utils
 
 		if constexpr (c_madv_dump != 0)
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_dump) != -1);
+			ensure<"~">(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), c_madv_dump));
 		}
 		else
 		{
-			ensure(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED) != -1);
+			ensure<"~">(::madvise(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), MADV_WILLNEED));
 		}
 #endif
 	}
@@ -241,7 +242,7 @@ namespace utils
 #ifdef _WIN32
 		ensure(::VirtualFree(pointer, 0, MEM_RELEASE));
 #else
-		ensure(::munmap(pointer, size) != -1);
+		ensure<"~">(::munmap(pointer, size));
 #endif
 	}
 
@@ -270,7 +271,7 @@ namespace utils
 		}
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
-		ensure(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot) != -1);
+		ensure<"~">(::mprotect(reinterpret_cast<void*>(ptr64 & -4096), size + (ptr64 & 4095), +prot));
 #endif
 	}
 
@@ -306,8 +307,8 @@ namespace utils
 			m_file = ::memfd_create_("", 0);
 		}
 
-		ensure(m_file >= 0);
-		ensure(::ftruncate(m_file, m_size) >= 0);
+		ensure<"~">(m_file);
+		ensure<"~">(::ftruncate(m_file, m_size));
 #else
 		const std::string name = "/rpcs3-mem-" + std::to_string(reinterpret_cast<u64>(this));
 
@@ -321,8 +322,8 @@ namespace utils
 			ensure(errno == EEXIST);
 		}
 
-		ensure(::shm_unlink(name.c_str()) >= 0);
-		ensure(::ftruncate(m_file, m_size) >= 0);
+		ensure<"~">(::shm_unlink(name.c_str()));
+		ensure<"~">(::ftruncate(m_file, m_size));
 #endif
 	}
 
@@ -420,9 +421,9 @@ namespace utils
 			m_file = ::open((fs::get_cache_dir() + "rpcs3_vm").c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
 		}
 
-		ensure(m_file >= 0);
+		ensure<"~">(m_file);
 		struct ::stat stats;
-		ensure(::fstat(m_file, &stats) >= 0);
+		ensure<"~">(::fstat(m_file, &stats));
 
 		if (!(stats.st_size ^ m_size) && !stats.st_blocks)
 		{
@@ -431,8 +432,8 @@ namespace utils
 		}
 
 		// Truncate file since it may be dirty (fool-proof)
-		ensure(::ftruncate(m_file, 0) >= 0);
-		ensure(::ftruncate(m_file, 0x100000) >= 0);
+		ensure<"~">(::ftruncate(m_file, 0));
+		ensure<"~">(::ftruncate(m_file, 0x100000));
 		stats.st_size = 0x100000;
 
 #ifdef SEEK_DATA
@@ -448,7 +449,7 @@ namespace utils
 		if (stats.st_size ^ m_size)
 		{
 			// Fix file size
-			ensure(::ftruncate(m_file, m_size) >= 0);
+			ensure<"~">(::ftruncate(m_file, m_size));
 		}
 #endif
 	}
@@ -520,12 +521,12 @@ namespace utils
 			// Now cleanup remnants
 			if (aligned > res64)
 			{
-				ensure(::munmap(reinterpret_cast<void*>(res64), aligned - res64) == 0);
+				ensure<"~">(::munmap(reinterpret_cast<void*>(res64), aligned - res64));
 			}
 
 			if (aligned < res64 + 0xf000)
 			{
-				ensure(::munmap(reinterpret_cast<void*>(aligned + m_size), (res64 + 0xf000) - (aligned)) == 0);
+				ensure<"~">(::munmap(reinterpret_cast<void*>(aligned + m_size), (res64 + 0xf000) - (aligned)));
 			}
 
 			return reinterpret_cast<u8*>(result);
@@ -644,7 +645,7 @@ namespace utils
 		}
 #else
 		// This method is faster but leaves mapped remnants of the shm (until overwritten)
-		ensure(::mprotect(target, m_size, PROT_NONE) != -1);
+		ensure<"~">(::mprotect(target, m_size, PROT_NONE));
 #endif
 	}
 
