@@ -1,6 +1,7 @@
 #pragma once
 
 #include "overlays.h"
+#include "overlay_list_view.hpp"
 #include "Emu/Cell/Modules/cellSaveData.h"
 
 namespace rsx

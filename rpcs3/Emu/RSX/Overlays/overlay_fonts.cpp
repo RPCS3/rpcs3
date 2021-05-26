@@ -2,6 +2,16 @@
 #include "overlay_controls.h"
 #include "Emu/system_config.h"
 
+#ifndef _WIN32
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+
+#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#include <sys/sysctl.h>
+#endif
+#endif
+
 namespace rsx
 {
 	namespace overlays

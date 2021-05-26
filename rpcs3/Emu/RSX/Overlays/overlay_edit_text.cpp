@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "overlay_controls.h"
+#include "overlay_edit_text.hpp"
 
 namespace rsx
 {
