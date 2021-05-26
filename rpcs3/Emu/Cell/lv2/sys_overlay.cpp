@@ -108,7 +108,7 @@ error_code sys_overlay_load_module_by_fd(vm::ptr<u32> ovlmid, u32 fd, u64 offset
 		return CELL_EBADF;
 	}
 
-	return overlay_load_module(ovlmid, file->name.data(), flags, entry, lv2_file::make_view(file, offset), offset);
+	return overlay_load_module(ovlmid, offset ? fmt::format("%s_x%x", file->name.data(), offset) : file->name.data(), flags, entry, lv2_file::make_view(file, offset), offset);
 }
 
 error_code sys_overlay_unload_module(u32 ovlmid)
