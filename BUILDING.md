@@ -19,7 +19,7 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 
 These are the essentials tools to build RPCS3 on Linux. Some of them can be installed through your favorite package manager.
 
-* Clang 12+ or GCC 10+
+* Clang 12+ or GCC 11+
 * [CMake 3.16.9+](https://www.cmake.org/download/)
 * [Qt 5.15.2](https://www.qt.io/download-qt-installer)
 * [Vulkan SDK 1.2.154+](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html))
@@ -47,16 +47,16 @@ sudo apt-get install qt515base qt515svg
 . /opt/qt515/bin/qt515-env.sh >/dev/null 2>&1
 ```
 
-##### GCC 10.x installation
+##### GCC 11.x installation
 
-If the `gcc-10` package is not available on your system, use the following commands
+If the `gcc-11` package is not available on your system, use the following commands
 ```
 sudo add-apt-repository ppa:ubuntu-toolchain-r/test
 sudo apt-get update
-sudo apt-get install gcc-10 g++-10
+sudo apt-get install gcc-11 g++-11
 ```
 
-You can either use `update-alternatives` to setup `gcc-10`/`g++-10` as your default compilers or prefix any `cmake` command by `CXX=g++-10 CC=gcc-10 ` to use it.
+You can either use `update-alternatives` to setup `gcc-11`/`g++-11` as your default compilers or prefix any `cmake` command by `CXX=g++-11 CC=gcc-11 ` to use it.
 
 ##### Vulkan SDK
 
@@ -126,7 +126,7 @@ Afterwards:
 While still in the project root:
 
 1) `cd .. && mkdir rpcs3_build && cd rpcs3_build`
-2) `cmake ../rpcs3/ && make` or `CXX=g++-10 CC=gcc-10 cmake ../rpcs3/ && make` to force these compilers
+2) `cmake ../rpcs3/ && make` or `CXX=g++-11 CC=gcc-11 cmake ../rpcs3/ && make` to force these compilers
 3) Run RPCS3 with `./bin/rpcs3`
 
 When using GDB, configure it to ignore SIGSEGV signal (`handle SIGSEGV nostop noprint`).
