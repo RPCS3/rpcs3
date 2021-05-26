@@ -25,6 +25,7 @@ public:
 	virtual void flip(draw_context_t ctx, bool skip_frame = false) = 0;
 	virtual int client_width() = 0;
 	virtual int client_height() = 0;
+	virtual double client_device_pixel_ratio() const = 0;
 
 	virtual display_handle_t handle() const = 0;
 
