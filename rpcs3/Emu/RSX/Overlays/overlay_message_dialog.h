@@ -1,6 +1,7 @@
 #pragma once
 
 #include "overlays.h"
+#include "overlay_progress_bar.hpp"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
 namespace rsx

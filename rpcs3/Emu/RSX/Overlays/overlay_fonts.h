@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include "overlay_utils.h"
 
+#include <memory>
 #include <vector>
 
 // STB_IMAGE_IMPLEMENTATION and STB_TRUETYPE_IMPLEMENTATION defined externally

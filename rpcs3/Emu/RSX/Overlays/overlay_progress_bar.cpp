@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "overlay_controls.h"
+#include "overlay_progress_bar.hpp"
 
 namespace rsx
 {

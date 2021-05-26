@@ -993,6 +993,9 @@
     <ClCompile Include="Emu\RSX\Program\program_util.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_controls.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1949,6 +1952,15 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Program\ProgramStateCache.h">
       <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_list_view.hpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_edit_text.hpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_progress_bar.hpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

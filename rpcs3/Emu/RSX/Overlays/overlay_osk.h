@@ -1,6 +1,7 @@
 #pragma once
 
 #include "overlays.h"
+#include "overlay_edit_text.hpp"
 #include "overlay_osk_panel.h"
 #include "Emu/Cell/Modules/cellOskDialog.h"
 
