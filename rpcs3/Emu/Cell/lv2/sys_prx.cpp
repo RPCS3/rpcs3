@@ -15,7 +15,7 @@
 #include "sys_process.h"
 #include "sys_memory.h"
 
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64);
 extern void ppu_unload_prx(const lv2_prx& prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
@@ -169,7 +169,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libwmadec.sprx", 0 },
 };
 
-static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> /*pOpt*/, fs::file src = {})
+static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> /*pOpt*/, fs::file src = {}, s64 file_offset = 0)
 {
 	if (flags != 0)
 	{
@@ -192,7 +192,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	const auto existing = idm::select<lv2_obj, lv2_prx>([&](u32, lv2_prx& prx)
 	{
-		return prx.path == path;
+		return prx.path == path && prx.offset == file_offset;
 	});
 
 	if (existing)
@@ -274,7 +274,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		return CELL_PRX_ERROR_ILLEGAL_LIBRARY;
 	}
 
-	const auto prx = ppu_load_prx(obj, path);
+	const auto prx = ppu_load_prx(obj, path, file_offset);
 
 	obj.clear();
 
@@ -318,7 +318,7 @@ error_code _sys_prx_load_module_by_fd(ppu_thread& ppu, s32 fd, u64 offset, u64 f
 		return CELL_EBADF;
 	}
 
-	return prx_load_module(fmt::format("%s_x%x", file->name.data(), offset), flags, pOpt, lv2_file::make_view(file, offset));
+	return prx_load_module(offset ? fmt::format("%s_x%x", file->name.data(), offset) : file->name.data(), flags, pOpt, lv2_file::make_view(file, offset), offset);
 }
 
 error_code _sys_prx_load_module_on_memcontainer_by_fd(ppu_thread& ppu, s32 fd, u64 offset, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
