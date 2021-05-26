@@ -53,7 +53,7 @@ bool hid_pad_handler<Device>::Init()
 	if (res != 0)
 		fmt::throw_exception("%s hidapi-init error.threadproc", m_type);
 
-	for (size_t i = 1; i <= MAX_GAMEPADS; i++) // Controllers 1-n in GUI
+	for (usz i = 1; i <= MAX_GAMEPADS; i++) // Controllers 1-n in GUI
 	{
 		m_controllers.emplace(m_name_string + std::to_string(i), std::make_shared<Device>());
 	}
@@ -167,7 +167,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 	}
 	else
 	{
-		const size_t count = std::count_if(m_controllers.cbegin(), m_controllers.cend(), [](const auto& c) { return c.second && c.second->hidDevice; });
+		const usz count = std::count_if(m_controllers.cbegin(), m_controllers.cend(), [](const auto& c) { return c.second && c.second->hidDevice; });
 		if (count > 0)
 		{
 			hid_log.success("%s Controllers found: %d", m_type, count);

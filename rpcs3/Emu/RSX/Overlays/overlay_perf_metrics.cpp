@@ -244,6 +244,9 @@ namespace rsx
 
 		void perf_metrics_overlay::init()
 		{
+			m_fps_graph.set_one_percent_sort_high(false);
+			m_frametime_graph.set_one_percent_sort_high(true);
+
 			reset_transforms();
 			force_next_update();
 
@@ -271,7 +274,7 @@ namespace rsx
 
 			if (enabled)
 			{
-				m_fps_graph.set_title("   Framerate");
+				m_fps_graph.set_title("Framerate: 00.0");
 				m_fps_graph.set_font_size(static_cast<u16>(m_font_size * 0.8));
 				m_fps_graph.set_color(convert_color_code(m_color_body, m_opacity));
 				m_fps_graph.set_guide_interval(10);
@@ -289,7 +292,7 @@ namespace rsx
 
 			if (enabled)
 			{
-				m_frametime_graph.set_title("   Frametime");
+				m_frametime_graph.set_title("Frametime: 0.0");
 				m_frametime_graph.set_font_size(static_cast<u16>(m_font_size * 0.8));
 				m_frametime_graph.set_color(convert_color_code(m_color_body, m_opacity));
 				m_frametime_graph.set_guide_interval(8);
@@ -313,6 +316,18 @@ namespace rsx
 				return;
 
 			m_frametime_graph.set_count(datapoint_count);
+			m_force_repaint = true;
+		}
+
+		void perf_metrics_overlay::set_graph_detail_levels(perf_graph_detail_level framerate_level, perf_graph_detail_level frametime_level)
+		{
+			m_fps_graph.set_labels_visible(
+				framerate_level == perf_graph_detail_level::show_all || framerate_level == perf_graph_detail_level::show_min_max,
+				framerate_level == perf_graph_detail_level::show_all || framerate_level == perf_graph_detail_level::show_one_percent_avg);
+			m_frametime_graph.set_labels_visible(
+				frametime_level == perf_graph_detail_level::show_all || frametime_level == perf_graph_detail_level::show_min_max,
+				frametime_level == perf_graph_detail_level::show_all || frametime_level == perf_graph_detail_level::show_one_percent_avg);
+
 			m_force_repaint = true;
 		}
 
@@ -415,14 +430,16 @@ namespace rsx
 		void perf_metrics_overlay::update()
 		{
 			const auto elapsed_update = m_update_timer.GetElapsedTimeInMilliSec();
+			const bool do_update = m_force_update || elapsed_update >= m_update_interval;
 
 			if (m_is_initialised)
 			{
 				if (m_frametime_graph_enabled && !m_force_update)
 				{
-					const auto elapsed_frame = m_frametime_timer.GetElapsedTimeInMilliSec();
+					const float elapsed_frame = static_cast<float>(m_frametime_timer.GetElapsedTimeInMilliSec());
 					m_frametime_timer.Start();
-					m_frametime_graph.record_datapoint(static_cast<float>(elapsed_frame));
+					m_frametime_graph.record_datapoint(elapsed_frame, do_update);
+					m_frametime_graph.set_title(fmt::format("Frametime: %4.1f", elapsed_frame).c_str());
 				}
 
 				if (m_force_repaint)
@@ -436,7 +453,7 @@ namespace rsx
 				++m_frames;
 			}
 
-			if (elapsed_update >= m_update_interval || m_force_update)
+			if (do_update)
 			{
 				// 1. Fetch/calculate metrics we'll need
 				if (!m_is_initialised || !m_force_update)
@@ -495,7 +512,10 @@ namespace rsx
 					{
 						m_fps = std::max(0.f, static_cast<f32>(m_frames / (elapsed_update / 1000)));
 						if (m_is_initialised && m_framerate_graph_enabled)
-							m_fps_graph.record_datapoint(m_fps);
+						{
+							m_fps_graph.record_datapoint(m_fps, true);
+							m_fps_graph.set_title(fmt::format("Framerate: %04.1f", m_fps).c_str());
+						}
 						break;
 					}
 					}
@@ -574,16 +594,16 @@ namespace rsx
 					// Only force once
 					m_force_update = false;
 				}
-			}
 
-			if (m_framerate_graph_enabled)
-			{
-				m_fps_graph.update();
-			}
+				if (m_framerate_graph_enabled)
+				{
+					m_fps_graph.update();
+				}
 
-			if (m_frametime_graph_enabled)
-			{
-				m_frametime_graph.update();
+				if (m_frametime_graph_enabled)
+				{
+					m_frametime_graph.update();
+				}
 			}
 		}
 
@@ -680,6 +700,17 @@ namespace rsx
 			m_guide_interval = guide_interval;
 		}
 
+		void graph::set_labels_visible(bool show_min_max, bool show_1p_avg)
+		{
+			m_show_min_max = show_min_max;
+			m_show_1p_avg = show_1p_avg;
+		}
+
+		void graph::set_one_percent_sort_high(bool sort_1p_high)
+		{
+			m_1p_sort_high = sort_1p_high;
+		}
+
 		u16 graph::get_height() const
 		{
 			return h + m_label.h + m_label.padding_top + m_label.padding_bottom;
@@ -690,7 +721,7 @@ namespace rsx
 			return m_datapoint_count;
 		}
 
-		void graph::record_datapoint(f32 datapoint)
+		void graph::record_datapoint(f32 datapoint, bool update_metrics)
 		{
 			ensure(datapoint >= 0.0f);
 
@@ -699,35 +730,82 @@ namespace rsx
 			// Record datapoint
 			m_datapoints.push_back(datapoint);
 
-			// Calculate new min/max
-			m_min = max_v<f32>;
-			m_max = 0.0f;
-
-			// Make sure min/max reflects the data being displayed, not the entire datapoints vector
-			for (usz i = m_datapoints.size() - m_datapoint_count; i < m_datapoints.size(); i++)
-			{
-				const f32& dp = m_datapoints[i];
-
-				if (dp < 0) continue; // Skip initial negative values. They don't count.
-
-				m_min = std::min(m_min, dp);
-				m_max = std::max(m_max, dp);
-			}
-
-			// Sanitize min value
-			m_min = std::min(m_min, m_max);
-
 			// Cull vector when it gets large
 			if (m_datapoints.size() > m_datapoint_count * 16ull)
 			{
 				std::copy(m_datapoints.begin() + m_datapoints.size() - m_datapoint_count, m_datapoints.end(), m_datapoints.begin());
 				m_datapoints.resize(m_datapoint_count);
 			}
+
+			if (!update_metrics)
+			{
+				return;
+			}
+
+			m_max = 0.0f;
+			m_avg = 0.0f;
+			m_1p = 0.0f;
+
+			if (m_show_min_max || m_show_1p_avg)
+			{
+				m_min = max_v<f32>;
+
+				std::vector<f32> valid_datapoints;
+
+				// Make sure min/max reflects the data being displayed, not the entire datapoints vector
+				for (usz i = m_datapoints.size() - m_datapoint_count; i < m_datapoints.size(); i++)
+				{
+					const f32& dp = m_datapoints[i];
+
+					if (dp < 0) continue; // Skip initial negative values. They don't count.
+
+					m_min = std::min(m_min, dp);
+					m_max = std::max(m_max, dp);
+					m_avg += dp;
+
+					valid_datapoints.push_back(dp);
+				}
+
+				// Sanitize min value
+				m_min = std::min(m_min, m_max);
+
+				if (m_show_1p_avg && !valid_datapoints.empty())
+				{
+					// Sort datapoints (we are only interested in the lowest/highest 1%)
+					const usz i_1p = valid_datapoints.size() / 100;
+					const usz n_1p = i_1p + 1;
+
+					if (m_1p_sort_high)
+						std::nth_element(valid_datapoints.begin(), valid_datapoints.begin() + i_1p, valid_datapoints.end(), std::greater<f32>());
+					else
+						std::nth_element(valid_datapoints.begin(), valid_datapoints.begin() + i_1p, valid_datapoints.end());
+
+					// Calculate statistics
+					m_avg /= valid_datapoints.size();
+					m_1p = std::accumulate(valid_datapoints.begin(), valid_datapoints.begin() + n_1p, 0.0f) / static_cast<float>(n_1p);
+				}
+			}
+			else
+			{
+				m_min = 0.0f;
+			}
 		}
 
 		void graph::update()
 		{
-			m_label.set_text(fmt::format("%s\nmn:%4.1f mx:%4.1f", m_title.c_str(), m_min, m_max));
+			std::string fps_info = m_title;
+
+			if (m_show_1p_avg)
+			{
+				fmt::append(fps_info, "\n1%%:%4.1f av:%4.1f", m_1p, m_avg);
+			}
+
+			if (m_show_min_max)
+			{
+				fmt::append(fps_info, "\nmn:%4.1f mx:%4.1f", m_min, m_max);
+			}
+
+			m_label.set_text(fps_info);
 			m_label.set_padding(4, 4, 0, 4);
 
 			m_label.auto_resize();
@@ -739,7 +817,11 @@ namespace rsx
 
 		compiled_resource& graph::get_compiled()
 		{
-			refresh();
+			if (is_compiled)
+			{
+				return compiled_resources;
+			}
+
 			overlay_element::get_compiled();
 
 			const f32 normalize_factor = f32(h) / (m_max != 0.0f ? m_max : 1.0f);
@@ -827,6 +909,7 @@ namespace rsx
 					perf_overlay->set_frametime_datapoint_count(perf_settings.frametime_datapoint_count);
 					perf_overlay->set_framerate_graph_enabled(perf_settings.framerate_graph_enabled.get());
 					perf_overlay->set_frametime_graph_enabled(perf_settings.frametime_graph_enabled.get());
+					perf_overlay->set_graph_detail_levels(perf_settings.framerate_graph_detail_level.get(), perf_settings.frametime_graph_detail_level.get());
 					perf_overlay->init();
 				}
 				else if (perf_overlay)

@@ -1131,8 +1131,14 @@ namespace rsx
 			color4f m_color;
 			f32 m_min{};
 			f32 m_max{};
+			f32 m_avg{};
+			f32 m_1p{};
 			f32 m_guide_interval{};
 			label m_label{};
+
+			bool m_show_min_max{false};
+			bool m_show_1p_avg{false};
+			bool m_1p_sort_high{false};
 
 		public:
 			graph();
@@ -1144,9 +1150,11 @@ namespace rsx
 			void set_count(u32 datapoint_count);
 			void set_color(color4f color);
 			void set_guide_interval(f32 guide_interval);
+			void set_labels_visible(bool show_min_max, bool show_1p_avg);
+			void set_one_percent_sort_high(bool sort_1p_high);
 			u16 get_height() const;
 			u32 get_datapoint_count() const;
-			void record_datapoint(f32 datapoint);
+			void record_datapoint(f32 datapoint, bool update_metrics);
 			void update();
 			compiled_resource& get_compiled() override;
 		};

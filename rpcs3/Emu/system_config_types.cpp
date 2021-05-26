@@ -144,6 +144,23 @@ void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<perf_graph_detail_level>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](perf_graph_detail_level value)
+	{
+		switch (value)
+		{
+		case perf_graph_detail_level::minimal: return "Minimal";
+		case perf_graph_detail_level::show_min_max: return "Show min and max";
+		case perf_graph_detail_level::show_one_percent_avg: return "Show 1% and average";
+		case perf_graph_detail_level::show_all: return "All";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
 void fmt_class_string<screen_quadrant>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](screen_quadrant value)
