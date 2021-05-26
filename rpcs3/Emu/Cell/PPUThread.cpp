@@ -2456,7 +2456,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 				continue;
 			}
 
-			const auto& [path, offset] = std::as_const(file_queue)[func_i];
+			auto [path, offset] = std::as_const(file_queue)[func_i];
 
 			ppu_log.notice("Trying to load: %s", path);
 
@@ -2473,6 +2473,9 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 			{
 				// Adjust offset for MSELF
 				src.reset(std::make_unique<file_view>(std::move(src), off));
+
+				// Adjust path for MSELF too
+				fmt::append(path, "_x%x", off);
 			}
 
 			// Some files may fail to decrypt due to the lack of klic
