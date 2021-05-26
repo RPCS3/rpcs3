@@ -12,14 +12,14 @@
 #include "sys_overlay.h"
 #include "sys_fs.h"
 
-extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path);
+extern std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, const std::string& path, s64 file_offset);
 
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
 
 LOG_CHANNEL(sys_overlay);
 
-static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vpath, u64 /*flags*/, vm::ptr<u32> entry, fs::file src = {})
+static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vpath, u64 /*flags*/, vm::ptr<u32> entry, fs::file src = {}, s64 file_offset = 0)
 {
 	if (!src)
 	{
@@ -42,7 +42,7 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 		return {CELL_ENOEXEC, obj.operator elf_error()};
 	}
 
-	const auto [ovlm, error] = ppu_load_overlay(obj, vfs::get(vpath));
+	const auto [ovlm, error] = ppu_load_overlay(obj, vfs::get(vpath), file_offset);
 
 	obj.clear();
 
@@ -108,7 +108,7 @@ error_code sys_overlay_load_module_by_fd(vm::ptr<u32> ovlmid, u32 fd, u64 offset
 		return CELL_EBADF;
 	}
 
-	return overlay_load_module(ovlmid, fmt::format("%s_x%x", file->name.data(), offset), flags, entry, lv2_file::make_view(file, offset));
+	return overlay_load_module(ovlmid, offset ? fmt::format("%s_x%x", file->name.data(), offset) : file->name.data(), flags, entry, lv2_file::make_view(file, offset), offset);
 }
 
 error_code sys_overlay_unload_module(u32 ovlmid)
