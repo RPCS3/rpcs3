@@ -832,7 +832,7 @@ void try_spawn_ppu_if_exclusive_program(const ppu_module& m)
 	}
 }
 
-std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::string& path)
+std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::string& path, s64 file_offset)
 {
 	if (elf != elf_error::ok)
 	{
@@ -1111,6 +1111,7 @@ std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, const std::stri
 	prx->epilogue.set(prx->specials[0x330f7005]);
 	prx->name = path.substr(path.find_last_of('/') + 1);
 	prx->path = path;
+	prx->offset = file_offset;
 
 	sha1_finish(&sha, prx->sha1);
 
@@ -1588,7 +1589,7 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 			{
 				ppu_loader.warning("Loading library: %s", name);
 
-				auto prx = ppu_load_prx(obj, lle_dir + name);
+				auto prx = ppu_load_prx(obj, lle_dir + name, 0);
 
 				if (prx->funcs.empty())
 				{
@@ -1807,7 +1808,7 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 	return true;
 }
 
-std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object& elf, const std::string& path)
+std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object& elf, const std::string& path, s64 file_offset)
 {
 	if (elf != elf_error::ok)
 	{
@@ -1843,6 +1844,7 @@ std::pair<std::shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_ex
 	// Set path (TODO)
 	ovlm->name = path.substr(path.find_last_of('/') + 1);
 	ovlm->path = path;
+	ovlm->offset = file_offset;
 
 	u32 end = 0;
 
