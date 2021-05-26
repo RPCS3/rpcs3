@@ -899,7 +899,7 @@ namespace vk
 #ifndef _WIN32
 		// RADV workaround. Buffer-to-buffer transfers are extremely slow and invoke memmove in vkCmdCopyBuffer.
 		if (const auto vendor = vk::get_driver_vendor();
-			vendor == driver_vendor::RADV)
+			vendor == driver_vendor::RADV || vendor == driver_vendor::INTEL)
 		{
 			caps.supports_zero_copy = false;
 		}
