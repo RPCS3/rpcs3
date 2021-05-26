@@ -318,7 +318,7 @@ error_code _sys_prx_load_module_by_fd(ppu_thread& ppu, s32 fd, u64 offset, u64 f
 		return CELL_EBADF;
 	}
 
-	return prx_load_module(file->name.data(), flags, pOpt, lv2_file::make_view(file, offset), offset);
+	return prx_load_module(offset ? fmt::format("%s_x%x", file->name.data(), offset) : file->name.data(), flags, pOpt, lv2_file::make_view(file, offset), offset);
 }
 
 error_code _sys_prx_load_module_on_memcontainer_by_fd(ppu_thread& ppu, s32 fd, u64 offset, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt)
