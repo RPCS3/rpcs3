@@ -20,6 +20,7 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <libgen.h>
+#include <limits.h>
 #endif
 
 #ifdef __APPLE__
