@@ -485,26 +485,6 @@ void cpu_thread::operator()()
 		}
 	});
 
-	g_tls_log_control = [](const char*, u64 progress)
-	{
-		static thread_local bool wait_set = false;
-
-		cpu_thread* _cpu = get_current_cpu_thread();
-
-		if (progress == 0 && cpu_flag::wait - _cpu->state)
-		{
-			_cpu->state += cpu_flag::wait + cpu_flag::temp;
-			wait_set = true;
-			return;
-		}
-
-		if (progress == umax && std::exchange(wait_set, false))
-		{
-			ensure(!_cpu->check_state());
-			return;
-		}
-	};
-
 	static thread_local struct thread_cleanup_t
 	{
 		cpu_thread* _this = nullptr;
