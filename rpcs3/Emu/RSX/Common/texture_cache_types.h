@@ -21,11 +21,11 @@ namespace rsx
 		chain_direction_backward, // Only lower-base-address pages chain (unless they overlap the fault)
 	};
 
-	enum texture_create_flags
+	enum class component_order
 	{
-		default_component_order = 0,
-		native_component_order = 1,
-		swapped_native_component_order = 2,
+		default_ = 0,
+		native = 1,
+		swapped_native = 2,
 	};
 
 	enum memory_read_flags

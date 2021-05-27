@@ -4,6 +4,7 @@
 #include "VKDMA.h"
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
+#include "VKRenderPass.h"
 #include "vkutils/image_helpers.h"
 
 #include "../Common/texture_cache.h"
@@ -396,6 +397,11 @@ namespace vk
 		friend baseclass;
 
 	public:
+		enum texture_create_flags : u32
+		{
+			initialize_image_contents = 1,
+		};
+
 		void on_section_destroyed(cached_texture_section& tex) override
 		{
 			if (tex.is_managed())
@@ -425,7 +431,7 @@ namespace vk
 			m_temporary_memory_size = 0;
 		}
 
-		VkComponentMapping apply_component_mapping_flags(u32 gcm_format, rsx::texture_create_flags flags, const rsx::texture_channel_remap_t& remap_vector) const
+		VkComponentMapping apply_component_mapping_flags(u32 gcm_format, rsx::component_order flags, const rsx::texture_channel_remap_t& remap_vector) const
 		{
 			switch (gcm_format)
 			{
@@ -442,17 +448,17 @@ namespace vk
 			VkComponentMapping mapping = {};
 			switch (flags)
 			{
-			case rsx::texture_create_flags::default_component_order:
+			case rsx::component_order::default_:
 			{
 				mapping = vk::apply_swizzle_remap(vk::get_component_mapping(gcm_format), remap_vector);
 				break;
 			}
-			case rsx::texture_create_flags::native_component_order:
+			case rsx::component_order::native:
 			{
 				mapping = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 				break;
 			}
-			case rsx::texture_create_flags::swapped_native_component_order:
+			case rsx::component_order::swapped_native:
 			{
 				mapping = { VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B };
 				break;
@@ -766,7 +772,7 @@ namespace vk
 		}
 
 		cached_texture_section* create_new_texture(vk::command_buffer& cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
-			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::texture_create_flags flags) override
+			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::component_order swizzle_flags, rsx::flags32_t flags) override
 		{
 			const auto section_depth = depth;
 
@@ -824,7 +830,7 @@ namespace vk
 					// Reuse
 					region.set_rsx_pitch(pitch);
 
-					if (context != rsx::texture_upload_context::shader_read)
+					if (flags & texture_create_flags::initialize_image_contents)
 					{
 						// Wipe memory
 						image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -863,12 +869,12 @@ namespace vk
 				region.create(width, height, section_depth, mipmaps, image, pitch, true, gcm_format);
 			}
 
-			region.set_view_flags(flags);
+			region.set_view_flags(swizzle_flags);
 			region.set_context(context);
 			region.set_swizzled(swizzled);
 			region.set_dirty(false);
 
-			image->native_component_map = apply_component_mapping_flags(gcm_format, flags, rsx::default_remap_vector);
+			image->native_component_map = apply_component_mapping_flags(gcm_format, swizzle_flags, rsx::default_remap_vector);
 
 			// Its not necessary to lock blit dst textures as they are just reused as necessary
 			switch (context)
@@ -918,8 +924,15 @@ namespace vk
 		cached_texture_section* upload_image_from_cpu(vk::command_buffer& cmd, const utils::address_range& rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
 			rsx::texture_upload_context context, const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) override
 		{
+			if (context != rsx::texture_upload_context::shader_read)
+			{
+				if (vk::is_renderpass_open(cmd))
+				{
+					vk::end_renderpass(cmd);
+				}
+			}
 			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type, swizzled,
-					rsx::texture_create_flags::default_component_order);
+					rsx::component_order::default_, 0);
 
 			auto image = section->get_raw_texture();
 			image->set_debug_name(fmt::format("Raw Texture @0x%x", rsx_range.start));
@@ -979,7 +992,7 @@ namespace vk
 			return section;
 		}
 
-		void enforce_surface_creation_type(cached_texture_section& section, u32 gcm_format, rsx::texture_create_flags expected_flags) override
+		void set_component_order(cached_texture_section& section, u32 gcm_format, rsx::component_order expected_flags) override
 		{
 			if (expected_flags == section.get_view_flags())
 				return;
