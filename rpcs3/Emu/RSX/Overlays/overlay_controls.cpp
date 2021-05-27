@@ -9,6 +9,7 @@
 #ifndef _WIN32
 #include <unistd.h>
 #include <libgen.h>
+#include <limits.h>
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
