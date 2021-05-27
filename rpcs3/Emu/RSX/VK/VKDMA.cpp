@@ -76,11 +76,22 @@ namespace vk
 	{
 		if (allocated_memory)
 		{
+			// Do some accounting before the allocation info is no more
 			s_allocated_dma_pool_size -= allocated_memory->size();
 
+			// If you have both a memory allocation AND a parent block at the same time, you're in trouble
+			ensure(head() == this);
+
+			if (memory_mapping)
+			{
+				// vma allocator does not allow us to destroy mapped memory on windows
+				unmap();
+				ensure(!memory_mapping);
+			}
+
+			// Move allocation to gc
 			auto gc = vk::get_resource_manager();
 			gc->dispose(allocated_memory);
-			memory_mapping = nullptr;
 		}
 	}
 
@@ -174,15 +185,15 @@ namespace vk
 			return;
 		}
 
-		inheritance_info.parent = parent;
-		inheritance_info.block_offset = (base_address - parent->base_address);
-
 		if (allocated_memory)
 		{
 			// Acquired blocks are always to be assumed dirty. It is not possible to synchronize host access and inline
 			// buffer copies without causing weird issues. Overlapped incomplete data ends up overwriting host-uploaded data.
 			free();
 		}
+
+		inheritance_info.parent = parent;
+		inheritance_info.block_offset = (base_address - parent->base_address);
 	}
 
 	void dma_block::extend(const render_device& dev, usz new_size)
