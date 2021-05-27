@@ -22,6 +22,7 @@ namespace vk
 		inheritance_info;
 
 		u32 base_address = 0;
+		u8* memory_mapping = nullptr;
 		std::unique_ptr<buffer> allocated_memory;
 
 		virtual void allocate(const render_device& dev, usz size);

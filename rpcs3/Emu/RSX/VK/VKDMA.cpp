@@ -34,10 +34,16 @@ namespace vk
 			return inheritance_info.parent->map_range(range);
 		}
 
+		if (memory_mapping == nullptr)
+		{
+			memory_mapping = static_cast<u8*>(allocated_memory->map(0, VK_WHOLE_SIZE));
+			ensure(memory_mapping);
+		}
+
 		ensure(range.start >= base_address);
 		u32 start = range.start;
 		start -= base_address;
-		return allocated_memory->map(start, range.length());
+		return memory_mapping + start;
 	}
 
 	void dma_block::unmap()
@@ -49,6 +55,7 @@ namespace vk
 		else
 		{
 			allocated_memory->unmap();
+			memory_mapping = nullptr;
 		}
 	}
 
@@ -73,6 +80,7 @@ namespace vk
 
 			auto gc = vk::get_resource_manager();
 			gc->dispose(allocated_memory);
+			memory_mapping = nullptr;
 		}
 	}
 
@@ -107,8 +115,7 @@ namespace vk
 		auto dst = vm::get_super_ptr(range.start);
 		std::memcpy(dst, src, range.length());
 
-		// TODO: Clear page bits
-		unmap();
+		// NOTE: Do not unmap. This can be extremely slow on some platforms.
 	}
 
 	void dma_block::load(const utils::address_range& range)
@@ -124,8 +131,7 @@ namespace vk
 		auto dst = map_range(range);
 		std::memcpy(dst, src, range.length());
 
-		// TODO: Clear page bits to sychronized
-		unmap();
+		// NOTE: Do not unmap. This can be extremely slow on some platforms.
 	}
 
 	std::pair<u32, buffer*> dma_block::get(const utils::address_range& range)
