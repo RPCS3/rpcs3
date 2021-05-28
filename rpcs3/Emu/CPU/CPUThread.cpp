@@ -693,8 +693,8 @@ bool cpu_thread::check_state() noexcept
 			// Atomically clean wait flag and escape
 			if (!(flags & (cpu_flag::exit + cpu_flag::ret + cpu_flag::stop)))
 			{
-				// Check pause flags which hold thread inside check_state (ignore suspend on cpu_flag::temp)
-				if (flags & (cpu_flag::pause + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::memory + (cpu_can_stop ? cpu_flag::suspend : cpu_flag::pause)))
+				// Check pause flags which hold thread inside check_state (ignore suspend/debug flags on cpu_flag::temp)
+				if (flags & (cpu_flag::pause + cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend)))
 				{
 					if (!(flags & cpu_flag::wait))
 					{
