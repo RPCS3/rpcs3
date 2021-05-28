@@ -137,6 +137,8 @@ error_code cellPadClearBuf(u32 port_no)
 	return CELL_OK;
 }
 
+void pad_get_data(u32 port_no, CellPadData* data);
+
 error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 {
 	sys_io.trace("cellPadGetData(port_no=%d, data=*0x%x)", port_no, data);
@@ -163,12 +165,21 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
 
+	pad_get_data(port_no, data.get_ptr());
+	return CELL_OK;
+}
+
+void pad_get_data(u32 port_no, CellPadData* data)
+{
+	auto& config = g_fxo->get<pad_info>();
+	const auto handler = pad::get_current_handler();
+	const auto& pad = handler->GetPads()[port_no];
 	const PadInfo& rinfo = handler->GetInfo();
 
 	if (rinfo.system_info & CELL_PAD_INFO_INTERCEPTED)
 	{
 		data->len = CELL_PAD_LEN_NO_CHANGE;
-		return CELL_OK;
+		return;
 	}
 
 	const auto setting = config.port_setting[port_no];
@@ -182,12 +193,12 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 	}
 	else if (pad->ldd)
 	{
-		memcpy(data.get_ptr(), pad->ldd_data, sizeof(CellPadData));
+		std::memcpy(data, pad->ldd_data, sizeof(CellPadData));
 		if (setting & CELL_PAD_SETTING_SENSOR_ON)
 			data->len = CELL_PAD_LEN_CHANGE_SENSOR_ON;
 		else
 			data->len = (setting & CELL_PAD_SETTING_PRESS_ON) ? CELL_PAD_LEN_CHANGE_PRESS_ON : CELL_PAD_LEN_CHANGE_DEFAULT;
-		return CELL_OK;
+		return;
 	}
 	else
 	{
@@ -409,8 +420,6 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 			data->button[CELL_PAD_BTN_OFFSET_SENSOR_G] = pad->m_sensor_g;
 		}
 	}
-
-	return CELL_OK;
 }
 
 error_code cellPadPeriphGetInfo(vm::ptr<CellPadPeriphInfo> info)
@@ -478,16 +487,18 @@ error_code cellPadPeriphGetData(u32 port_no, vm::ptr<CellPadPeriphData> data)
 	if (port_no >= config.max_connect)
 		return CELL_PAD_ERROR_NO_DEVICE;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return CELL_PAD_ERROR_NO_DEVICE;
+
+	pad_get_data(port_no, &data->cellpad_data);
 
 	data->pclass_type = pad->m_class_type;
 	data->pclass_profile = pad->m_class_profile;
 
 	// TODO: support for 'unique' controllers, which goes in offsets 24+ in padData (CELL_PAD_PCLASS_BTN_OFFSET)
-	return cellPadGetData(port_no, data.ptr(&CellPadPeriphData::cellpad_data));
+	return CELL_OK;
 }
 
 error_code cellPadGetRawData(u32 port_no, vm::ptr<CellPadData> data)
@@ -525,41 +536,24 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 {
 	sys_io.trace("cellPadGetDataExtra(port_no=%d, device_type=*0x%x, data=*0x%x)", port_no, device_type, data);
 
-	std::lock_guard lock(pad::g_pad_mutex);
-
-	auto& config = g_fxo->get<pad_info>();
-
-	if (!config.max_connect)
-		return CELL_PAD_ERROR_UNINITIALIZED;
-
-	const auto handler = pad::get_current_handler();
-
-	if (port_no >= CELL_MAX_PADS || !data)
-		return CELL_PAD_ERROR_INVALID_PARAMETER;
-
-	const auto& pads = handler->GetPads();
-
-	if (port_no >= config.max_connect)
-		return CELL_PAD_ERROR_NO_DEVICE;
-
-	const auto pad = pads[port_no];
-
-	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
-		return CELL_PAD_ERROR_NO_DEVICE;
-
 	// TODO: This is used just to get data from a BD/CEC remote,
 	// but if the port isnt a remote, device type is set to 0 and just regular cellPadGetData is returned
+
+	if (auto err = cellPadGetData(port_no, data))
+	{
+		return err;
+	}
 
 	if (device_type) // no error is returned on NULL
 	{
 		*device_type = 0;
 	}
 
-	// set BD data before just incase
+	// Set BD data
 	data->button[24] = 0x0;
 	data->button[25] = 0x0;
 
-	return cellPadGetData(port_no, data);
+	return CELL_OK;
 }
 
 error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
