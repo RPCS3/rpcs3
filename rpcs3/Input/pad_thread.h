@@ -4,6 +4,7 @@
 #include "util/atomic.hpp"
 #include "Emu/Io/pad_types.h"
 #include "Emu/Io/pad_config_types.h"
+#include "Utilities/mutex.h"
 
 #include <map>
 #include <thread>
@@ -52,7 +53,7 @@ protected:
 namespace pad
 {
 	extern atomic_t<pad_thread*> g_current;
-	extern std::recursive_mutex g_pad_mutex;
+	extern shared_mutex g_pad_mutex;
 	extern std::string g_title_id;
 	extern atomic_t<bool> g_enabled;
 	extern atomic_t<bool> g_reset;

@@ -485,26 +485,6 @@ void cpu_thread::operator()()
 		}
 	});
 
-	g_tls_log_control = [](const char*, u64 progress)
-	{
-		static thread_local bool wait_set = false;
-
-		cpu_thread* _cpu = get_current_cpu_thread();
-
-		if (progress == 0 && cpu_flag::wait - _cpu->state)
-		{
-			_cpu->state += cpu_flag::wait + cpu_flag::temp;
-			wait_set = true;
-			return;
-		}
-
-		if (progress == umax && std::exchange(wait_set, false))
-		{
-			ensure(!_cpu->check_state());
-			return;
-		}
-	};
-
 	static thread_local struct thread_cleanup_t
 	{
 		cpu_thread* _this = nullptr;
@@ -713,8 +693,8 @@ bool cpu_thread::check_state() noexcept
 			// Atomically clean wait flag and escape
 			if (!(flags & (cpu_flag::exit + cpu_flag::ret + cpu_flag::stop)))
 			{
-				// Check pause flags which hold thread inside check_state (ignore suspend on cpu_flag::temp)
-				if (flags & (cpu_flag::pause + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::memory + (cpu_can_stop ? cpu_flag::suspend : cpu_flag::pause)))
+				// Check pause flags which hold thread inside check_state (ignore suspend/debug flags on cpu_flag::temp)
+				if (flags & (cpu_flag::pause + cpu_flag::memory) || (cpu_can_stop && flags & (cpu_flag::dbg_global_pause + cpu_flag::dbg_pause + cpu_flag::suspend)))
 				{
 					if (!(flags & cpu_flag::wait))
 					{

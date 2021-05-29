@@ -34,10 +34,16 @@ namespace vk
 			return inheritance_info.parent->map_range(range);
 		}
 
+		if (memory_mapping == nullptr)
+		{
+			memory_mapping = static_cast<u8*>(allocated_memory->map(0, VK_WHOLE_SIZE));
+			ensure(memory_mapping);
+		}
+
 		ensure(range.start >= base_address);
 		u32 start = range.start;
 		start -= base_address;
-		return allocated_memory->map(start, range.length());
+		return memory_mapping + start;
 	}
 
 	void dma_block::unmap()
@@ -49,6 +55,7 @@ namespace vk
 		else
 		{
 			allocated_memory->unmap();
+			memory_mapping = nullptr;
 		}
 	}
 
@@ -69,8 +76,20 @@ namespace vk
 	{
 		if (allocated_memory)
 		{
+			// Do some accounting before the allocation info is no more
 			s_allocated_dma_pool_size -= allocated_memory->size();
 
+			// If you have both a memory allocation AND a parent block at the same time, you're in trouble
+			ensure(head() == this);
+
+			if (memory_mapping)
+			{
+				// vma allocator does not allow us to destroy mapped memory on windows
+				unmap();
+				ensure(!memory_mapping);
+			}
+
+			// Move allocation to gc
 			auto gc = vk::get_resource_manager();
 			gc->dispose(allocated_memory);
 		}
@@ -107,8 +126,7 @@ namespace vk
 		auto dst = vm::get_super_ptr(range.start);
 		std::memcpy(dst, src, range.length());
 
-		// TODO: Clear page bits
-		unmap();
+		// NOTE: Do not unmap. This can be extremely slow on some platforms.
 	}
 
 	void dma_block::load(const utils::address_range& range)
@@ -124,8 +142,7 @@ namespace vk
 		auto dst = map_range(range);
 		std::memcpy(dst, src, range.length());
 
-		// TODO: Clear page bits to sychronized
-		unmap();
+		// NOTE: Do not unmap. This can be extremely slow on some platforms.
 	}
 
 	std::pair<u32, buffer*> dma_block::get(const utils::address_range& range)
@@ -168,15 +185,15 @@ namespace vk
 			return;
 		}
 
-		inheritance_info.parent = parent;
-		inheritance_info.block_offset = (base_address - parent->base_address);
-
 		if (allocated_memory)
 		{
 			// Acquired blocks are always to be assumed dirty. It is not possible to synchronize host access and inline
 			// buffer copies without causing weird issues. Overlapped incomplete data ends up overwriting host-uploaded data.
 			free();
 		}
+
+		inheritance_info.parent = parent;
+		inheritance_info.block_offset = (base_address - parent->base_address);
 	}
 
 	void dma_block::extend(const render_device& dev, usz new_size)

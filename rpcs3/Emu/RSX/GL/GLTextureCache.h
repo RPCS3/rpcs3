@@ -470,7 +470,7 @@ namespace gl
 		gl::texture_view* create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_type, u32 gcm_format,
 				u16 x, u16 y, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap, bool copy);
 
-		std::array<GLenum, 4> get_component_mapping(u32 gcm_format, rsx::texture_create_flags flags) const
+		std::array<GLenum, 4> get_component_mapping(u32 gcm_format, rsx::component_order flags) const
 		{
 			switch (gcm_format)
 			{
@@ -486,15 +486,15 @@ namespace gl
 
 			switch (flags)
 			{
-			case rsx::texture_create_flags::default_component_order:
+			case rsx::component_order::default_:
 			{
 				return gl::get_swizzle_remap(gcm_format);
 			}
-			case rsx::texture_create_flags::native_component_order:
+			case rsx::component_order::native:
 			{
 				return{ GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
 			}
-			case rsx::texture_create_flags::swapped_native_component_order:
+			case rsx::component_order::swapped_native:
 			{
 				return{ GL_BLUE, GL_ALPHA, GL_RED, GL_GREEN };
 			}
@@ -624,7 +624,7 @@ namespace gl
 		}
 
 		cached_texture_section* create_new_texture(gl::command_context &cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
-			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::texture_create_flags flags) override
+			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::component_order swizzle_flags, rsx::flags32_t /*flags*/) override
 		{
 			const rsx::image_section_attributes_t search_desc = { .gcm_format = gcm_format, .width = width, .height = height, .depth = depth, .mipmaps = mipmaps };
 			const bool allow_dirty = (context != rsx::texture_upload_context::framebuffer_storage);
@@ -676,12 +676,12 @@ namespace gl
 				cached.create(width, height, depth, mipmaps, image, pitch, true);
 			}
 
-			cached.set_view_flags(flags);
+			cached.set_view_flags(swizzle_flags);
 			cached.set_context(context);
 			cached.set_swizzled(swizzled);
 			cached.set_dirty(false);
 
-			const auto swizzle = get_component_mapping(gcm_format, flags);
+			const auto swizzle = get_component_mapping(gcm_format, swizzle_flags);
 			image->set_native_component_layout(swizzle);
 
 			if (context != rsx::texture_upload_context::blit_engine_dst)
@@ -748,7 +748,7 @@ namespace gl
 			rsx::texture_upload_context context, const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool input_swizzled) override
 		{
 			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type, input_swizzled,
-				rsx::texture_create_flags::default_component_order);
+				rsx::component_order::default_, 0);
 
 			gl::upload_texture(section->get_raw_texture(), gcm_format, input_swizzled, subresource_layout);
 
@@ -756,7 +756,7 @@ namespace gl
 			return section;
 		}
 
-		void enforce_surface_creation_type(cached_texture_section& section, u32 gcm_format, rsx::texture_create_flags flags) override
+		void set_component_order(cached_texture_section& section, u32 gcm_format, rsx::component_order flags) override
 		{
 			if (flags == section.get_view_flags())
 				return;

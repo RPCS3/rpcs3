@@ -157,7 +157,8 @@ protected:
 	void GetPingInfoResponse_to_SceNpMatching2SignalingGetPingInfoResponse(const GetPingInfoResponse* resp, SceNpMatching2SignalingGetPingInfoResponse* sce_resp);
 	void RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(const RoomMessageInfo* mi, SceNpMatching2RoomMessageInfo* sce_mi);
 
-	struct callback_info {
+	struct callback_info
+	{
 		SceNpMatching2ContextId ctx_id;
 		vm::ptr<SceNpMatching2RequestCallback> cb;
 		vm::ptr<void> cb_arg;

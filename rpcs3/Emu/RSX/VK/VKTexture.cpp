@@ -880,7 +880,7 @@ namespace vk
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags)
 	{
 		const bool requires_depth_processing = (dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || (format == CELL_GCM_TEXTURE_DEPTH16_FLOAT);
-		rsx::texture_uploader_capabilities caps{ .supports_zero_copy = true, .alignment = heap_align };
+		rsx::texture_uploader_capabilities caps{ .alignment = heap_align };
 		rsx::texture_memory_info opt{};
 		bool check_caps = true;
 
@@ -895,15 +895,6 @@ namespace vk
 		std::vector<VkBufferCopy> buffer_copies;
 		std::vector<std::pair<VkBuffer, u32>> upload_commands;
 		copy_regions.reserve(subresource_layout.size());
-
-#ifndef _WIN32
-		// RADV workaround. Buffer-to-buffer transfers are extremely slow and invoke memmove in vkCmdCopyBuffer.
-		if (const auto vendor = vk::get_driver_vendor();
-			vendor == driver_vendor::RADV)
-		{
-			caps.supports_zero_copy = false;
-		}
-#endif
 
 		for (const rsx::subresource_layout &layout : subresource_layout)
 		{
@@ -922,7 +913,7 @@ namespace vk
 			{
 				caps.supports_byteswap = (image_linear_size >= 1024);
 				caps.supports_hw_deswizzle = caps.supports_byteswap;
-				caps.supports_zero_copy = caps.supports_zero_copy && caps.supports_byteswap;
+				caps.supports_zero_copy = caps.supports_byteswap;
 				caps.supports_vtc_decoding = false;
 				check_caps = false;
 			}
