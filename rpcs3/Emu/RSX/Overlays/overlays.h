@@ -72,6 +72,8 @@ namespace rsx
 			Timer input_timer;
 			std::set<u8> auto_repeat_buttons = { pad_button::dpad_up, pad_button::dpad_down, pad_button::dpad_left, pad_button::dpad_right };
 			atomic_t<bool> exit = false;
+			atomic_t<bool> m_interactive = false;
+			atomic_t<bool> m_stop_pad_interception = false;
 			atomic_t<u64> thread_bits = 0;
 
 			static thread_local u64 g_thread_bit;
