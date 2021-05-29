@@ -6,63 +6,8 @@
 
 namespace stx
 {
-	namespace detail
-	{
-		template <typename T>
-		union fake_t
-		{
-			char dummy;
-			T data;
-
-			fake_t() noexcept {}
-			~fake_t() {}
-		};
-
-		template <typename T>
-#ifdef _MSC_VER
-		static const
-#else
-		static thread_local const
-#endif
-		fake_t<std::remove_cv_t<T>> sample{};
-	}
-
-	// Classify compile-time information available for pointers
-	enum class same_ptr
-	{
-		no,
-		yes,
-		maybe
-	};
-
-	template <typename X, typename Y>
-	constexpr bool is_same_ptr_test(const volatile Y* ptr = std::addressof(detail::sample<Y>.data))
-	{
-		return static_cast<const volatile X*>(ptr) == static_cast<const volatile void*>(ptr);
-	}
-
-	// Checks whether the cast between two types is the same pointer
-	template <typename T, typename U>
-	constexpr same_ptr is_same_ptr() noexcept
-	{
-		if constexpr (std::is_void_v<T> || std::is_void_v<U> || std::is_same_v<std::remove_cv_t<T>, std::remove_cv_t<U>>)
-		{
-			return same_ptr::yes;
-		}
-		else if constexpr (PtrCastable<T, U> && !std::is_abstract_v<U>)
-		{
-			return is_same_ptr_test<T, U>() ? same_ptr::yes : same_ptr::no;
-		}
-		else if constexpr (PtrCastable<T, U> && !std::is_abstract_v<T>)
-		{
-			return is_same_ptr_test<T, U>() ? same_ptr::yes : same_ptr::no;
-		}
-
-		return same_ptr::maybe;
-	}
-
-	template <typename T, typename U>
-	constexpr same_ptr is_same_ptr_cast_v = std::is_convertible_v<U*, T*> ? is_same_ptr<T, U>() : same_ptr::no;
+	template <typename To, typename From>
+	constexpr bool same_ptr_implicit_v = std::is_convertible_v<const volatile From*, const volatile To*> ? is_same_ptr<From, To>() : false;
 
 	template <typename T>
 	class single_ptr;
@@ -175,12 +120,9 @@ namespace stx
 			r.m_ptr = nullptr;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		single_ptr(single_ptr<U>&& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			m_ptr = r.m_ptr;
 			r.m_ptr = nullptr;
 		}
@@ -200,12 +142,9 @@ namespace stx
 			return *this;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		single_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			single_ptr(std::move(r)).swap(*this);
 			return *this;
 		}
@@ -269,12 +208,9 @@ namespace stx
 		}
 
 		// "Moving" "static cast"
-		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr<U, T>() != same_ptr::no>>
+		template <typename U> requires PtrSame<T, U>
 		explicit operator single_ptr<U>() && noexcept
 		{
-			if constexpr (is_same_ptr<U, T>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<U, T>(m_ptr));
-
 			single_ptr<U> r;
 			r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
 			return r;
@@ -436,12 +372,9 @@ namespace stx
 			ensure((d()->refs++ - 1) >> 58 == 0);
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		shared_ptr(const shared_ptr<U>& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			m_ptr = r.m_ptr;
 			if (m_ptr)
 				d()->refs++;
@@ -453,22 +386,16 @@ namespace stx
 			r.m_ptr = nullptr;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		shared_ptr(shared_ptr<U>&& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			m_ptr = r.m_ptr;
 			r.m_ptr = nullptr;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		shared_ptr(single_ptr<U>&& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			m_ptr = r.m_ptr;
 			r.m_ptr = nullptr;
 		}
@@ -486,12 +413,9 @@ namespace stx
 
 		[[deprecated("Use null_ptr")]] shared_ptr& operator=(std::nullptr_t) = delete;
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		shared_ptr& operator=(const shared_ptr<U>& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			shared_ptr(r).swap(*this);
 			return *this;
 		}
@@ -502,22 +426,16 @@ namespace stx
 			return *this;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		shared_ptr& operator=(shared_ptr<U>&& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			shared_ptr(std::move(r)).swap(*this);
 			return *this;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		shared_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			shared_ptr(std::move(r)).swap(*this);
 			return *this;
 		}
@@ -535,12 +453,9 @@ namespace stx
 		}
 
 		// Converts to unique (single) ptr if reference is 1, otherwise returns null. Nullifies self.
-		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr<U, T>() != same_ptr::no>>
+		template <typename U> requires PtrSame<T, U>
 		explicit operator single_ptr<U>() && noexcept
 		{
-			if constexpr (is_same_ptr<U, T>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<U, T>(m_ptr));
-
 			const auto o = d();
 
 			if (m_ptr && !--o->refs)
@@ -618,12 +533,9 @@ namespace stx
 		}
 
 		// Basic "static cast" support
-		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr<U, T>() != same_ptr::no>>
+		template <typename U> requires PtrSame<T, U>
 		explicit operator shared_ptr<U>() const& noexcept
 		{
-			if constexpr (is_same_ptr<U, T>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<U, T>(m_ptr));
-
 			if (m_ptr)
 			{
 				d()->refs++;
@@ -635,12 +547,9 @@ namespace stx
 		}
 
 		// "Moving" "static cast"
-		template <typename U, typename = decltype(static_cast<U*>(std::declval<T*>())), typename = std::enable_if_t<is_same_ptr<U, T>() != same_ptr::no>>
+		template <typename U> requires PtrSame<T, U>
 		explicit operator shared_ptr<U>() && noexcept
 		{
-			if constexpr (is_same_ptr<U, T>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<U, T>(m_ptr));
-
 			shared_ptr<U> r;
 			r.m_ptr = static_cast<decltype(r.m_ptr)>(std::exchange(m_ptr, nullptr));
 			return r;
@@ -702,24 +611,18 @@ namespace stx
 			d()->refs.raw() += c_ref_mask;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		atomic_ptr(const shared_ptr<U>& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			// Obtain a ref + as many refs as an atomic_ptr can additionally reference
 			m_val = reinterpret_cast<uptr>(r.m_ptr) << c_ref_size;
 			if (m_val)
 				d()->refs += c_ref_mask + 1;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		atomic_ptr(shared_ptr<U>&& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			m_val = reinterpret_cast<uptr>(r.m_ptr) << c_ref_size;
 			r.m_ptr = nullptr;
 
@@ -727,12 +630,9 @@ namespace stx
 				d()->refs += c_ref_mask;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		atomic_ptr(single_ptr<U>&& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			m_val = reinterpret_cast<uptr>(r.m_ptr) << c_ref_size;
 			r.m_ptr = nullptr;
 
@@ -762,32 +662,23 @@ namespace stx
 			return *this;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		atomic_ptr& operator=(const shared_ptr<U>& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			store(r);
 			return *this;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		atomic_ptr& operator=(shared_ptr<U>&& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			store(std::move(r));
 			return *this;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		atomic_ptr& operator=(single_ptr<U>&& r) noexcept
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(r.m_ptr));
-
 			store(std::move(r));
 			return *this;
 		}
@@ -1048,24 +939,18 @@ namespace stx
 		}
 
 		// Unoptimized
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		shared_type compare_and_swap(const shared_ptr<U>& cmp, shared_type exch)
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(cmp.m_ptr));
-
 			shared_type old = cmp;
 			static_cast<void>(compare_exchange(old, std::move(exch)));
 			return old;
 		}
 
 		// More lightweight than compare_exchange
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		bool compare_and_swap_test(const shared_ptr<U>& cmp, shared_type exch)
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(cmp.m_ptr));
-
 			const uptr _old = reinterpret_cast<uptr>(cmp.m_ptr);
 			const uptr _new = reinterpret_cast<uptr>(exch.m_ptr);
 
@@ -1102,24 +987,18 @@ namespace stx
 		}
 
 		// Unoptimized
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		shared_type compare_and_swap(const single_ptr<U>& cmp, shared_type exch)
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(cmp.m_ptr));
-
 			shared_type old = cmp;
 			static_cast<void>(compare_exchange(old, std::move(exch)));
 			return old;
 		}
 
 		// Supplementary
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		bool compare_and_swap_test(const single_ptr<U>& cmp, shared_type exch)
 		{
-			if constexpr (is_same_ptr<T, U>() == same_ptr::maybe)
-				ensure(is_same_ptr_test<T, U>(cmp.m_ptr));
-
 			return compare_and_swap_test(reinterpret_cast<const shared_ptr<U>&>(cmp), std::move(exch));
 		}
 
@@ -1169,13 +1048,13 @@ namespace stx
 			return m_val != 0;
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		bool is_equal(const shared_ptr<U>& r) const noexcept
 		{
 			return observe() == r.get();
 		}
 
-		template <typename U, typename = std::enable_if_t<is_same_ptr_cast_v<T, U> != same_ptr::no>>
+		template <typename U> requires same_ptr_implicit_v<T, U>
 		bool is_equal(const single_ptr<U>& r) const noexcept
 		{
 			return observe() == r.get();

@@ -9,6 +9,7 @@
 #include <array>
 #include <tuple>
 #include <compare>
+#include <memory>
 #include <bit>
 
 using std::chrono::steady_clock;
@@ -1017,3 +1018,55 @@ concept PtrCastable = requires(const volatile X* x, const volatile Y* y)
 	static_cast<const volatile Y*>(x);
 	static_cast<const volatile X*>(y);
 };
+
+template <typename X, typename Y> requires PtrCastable<X, Y>
+constexpr bool is_same_ptr()
+{
+	if constexpr (std::is_void_v<X> || std::is_void_v<Y> || std::is_same_v<std::remove_cv_t<X>, std::remove_cv_t<Y>>)
+	{
+		return true;
+	}
+	else if constexpr (sizeof(X) == sizeof(Y))
+	{
+		return true;
+	}
+	else
+	{
+		if (std::is_constant_evaluated())
+		{
+			bool result = false;
+
+			if constexpr (sizeof(X) < sizeof(Y))
+			{
+				std::allocator<Y> a{};
+				Y* ptr = a.allocate(1);
+				result = static_cast<X*>(ptr) == static_cast<void*>(ptr);
+				a.deallocate(ptr, 1);
+			}
+			else
+			{
+				std::allocator<X> a{};
+				X* ptr = a.allocate(1);
+				result = static_cast<Y*>(ptr) == static_cast<void*>(ptr);
+				a.deallocate(ptr, 1);
+			}
+
+			return result;
+		}
+		else
+		{
+			std::aligned_union_t<0, X, Y> s;
+			Y* ptr = reinterpret_cast<Y*>(&s);
+			return static_cast<X*>(ptr) == static_cast<void*>(ptr);
+		}
+	}
+}
+
+template <typename X, typename Y> requires PtrCastable<X, Y>
+constexpr bool is_same_ptr(const volatile Y* ptr)
+{
+	return static_cast<const volatile X*>(ptr) == static_cast<const volatile void*>(ptr);
+}
+
+template <typename X, typename Y>
+concept PtrSame = (is_same_ptr<X, Y>());
