@@ -5796,6 +5796,7 @@ public:
 			const auto _mfc = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->CreateCondBr(m_ir->CreateICmpNE(m_ir->CreateLoad(spu_ptr<u32>(&spu_thread::ch_tag_upd)), m_ir->getInt32(MFC_TAG_UPDATE_IMMEDIATE)), _mfc, next);
 			m_ir->SetInsertPoint(_mfc);
+			update_pc();
 			call("spu_write_channel", &exec_wrch, m_thread, m_ir->getInt32(op.ra), val.value);
 			m_ir->CreateBr(next);
 			m_ir->SetInsertPoint(next);
@@ -6191,6 +6192,7 @@ public:
 			const auto _mfc = llvm::BasicBlock::Create(m_context, "", m_function);
 			m_ir->CreateCondBr(m_ir->CreateICmpNE(_old, _new), _mfc, next);
 			m_ir->SetInsertPoint(_mfc);
+			update_pc();
 			call("spu_list_unstall", &exec_list_unstall, m_thread, eval(val & 0x1f).value);
 			m_ir->CreateBr(next);
 			m_ir->SetInsertPoint(next);
