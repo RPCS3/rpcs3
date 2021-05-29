@@ -3,7 +3,7 @@
 
 namespace vk
 {
-	sampler::sampler(VkDevice dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
+	sampler::sampler(const vk::render_device& dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
 		VkBool32 unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
 		VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, VkBorderColor border_color,
 		VkBool32 depth_compare, VkCompareOp depth_compare_mode)
@@ -13,7 +13,7 @@ namespace vk
 		info.addressModeU = clamp_u;
 		info.addressModeV = clamp_v;
 		info.addressModeW = clamp_w;
-		info.anisotropyEnable = VK_TRUE;
+		info.anisotropyEnable = dev.get_anisotropic_filtering_support();
 		info.compareEnable = depth_compare;
 		info.unnormalizedCoordinates = unnormalized_coordinates;
 		info.mipLodBias = mipLodBias;

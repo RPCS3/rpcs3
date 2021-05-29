@@ -73,9 +73,10 @@ namespace vk
 
 		u32 get_queue_count() const;
 
-		VkQueueFamilyProperties get_queue_properties(u32 queue);
-		VkPhysicalDeviceMemoryProperties get_memory_properties() const;
-		VkPhysicalDeviceLimits get_limits() const;
+		// Device properties. These structs can be large so use with care.
+		const VkQueueFamilyProperties& get_queue_properties(u32 queue);
+		const VkPhysicalDeviceMemoryProperties& get_memory_properties() const;
+		const VkPhysicalDeviceLimits& get_limits() const;
 
 		operator VkPhysicalDevice() const;
 		operator VkInstance() const;
@@ -126,6 +127,8 @@ namespace vk
 		bool get_shader_stencil_export_support() const;
 		bool get_depth_bounds_support() const;
 		bool get_alpha_to_one_support() const;
+		bool get_anisotropic_filtering_support() const;
+		bool get_wide_lines_support() const;
 		bool get_conditional_render_support() const;
 		bool get_unrestricted_depth_range_support() const;
 		bool get_external_memory_host_support() const;

@@ -192,7 +192,7 @@ namespace vk
 		return count;
 	}
 
-	VkQueueFamilyProperties physical_device::get_queue_properties(u32 queue)
+	const VkQueueFamilyProperties& physical_device::get_queue_properties(u32 queue)
 	{
 		if (queue_props.empty())
 		{
@@ -208,12 +208,12 @@ namespace vk
 		return queue_props[queue];
 	}
 
-	VkPhysicalDeviceMemoryProperties physical_device::get_memory_properties() const
+	const VkPhysicalDeviceMemoryProperties& physical_device::get_memory_properties() const
 	{
 		return memory_properties;
 	}
 
-	VkPhysicalDeviceLimits physical_device::get_limits() const
+	const VkPhysicalDeviceLimits& physical_device::get_limits() const
 	{
 		return props.limits;
 	}
@@ -320,14 +320,6 @@ namespace vk
 		if (g_cfg.video.antialiasing_level != msaa_level::none)
 		{
 			// MSAA features
-			if (!pgpu->features.shaderStorageImageMultisample || !pgpu->features.shaderStorageImageWriteWithoutFormat)
-			{
-				// TODO: Slow fallback to emulate this
-				// Just warn and let the driver decide whether to crash or not
-				rsx_log.fatal("Your GPU driver does not support some required MSAA features. Expect problems.");
-				message_on_error += "Your GPU driver does not support some required MSAA features.\nTry updating your GPU driver or disable Anti-Aliasing in the settings.";
-			}
-
 			enabled_features.sampleRateShading = VK_TRUE;
 			enabled_features.alphaToOne = VK_TRUE;
 			enabled_features.shaderStorageImageMultisample = VK_TRUE;
@@ -344,41 +336,56 @@ namespace vk
 		enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
 
 		// If we're on lavapipe / llvmpipe, disable unimplemented features:
-		// - samplerAnisotropy
 		// - shaderStorageBufferArrayDynamicIndexing
-		// - wideLines
 		// as of mesa 21.1.0-dev (aea36ee05e9, 2020-02-10)
 		// Several games work even if we disable these, testing purpose only
 		if (pgpu->get_name().find("llvmpipe") != umax)
 		{
-			if (!pgpu->features.samplerAnisotropy)
-			{
-				rsx_log.error("Running lavapipe without support for samplerAnisotropy");
-				enabled_features.samplerAnisotropy = VK_FALSE;
-			}
 			if (!pgpu->features.shaderStorageBufferArrayDynamicIndexing)
 			{
 				rsx_log.error("Running lavapipe without support for shaderStorageBufferArrayDynamicIndexing");
 				enabled_features.shaderStorageBufferArrayDynamicIndexing = VK_FALSE;
 			}
-			if (!pgpu->features.wideLines)
-			{
-				rsx_log.error("Running lavapipe without support for wideLines");
-				enabled_features.wideLines = VK_FALSE;
-			}
 		}
 
 		// Optionally disable unsupported stuff
+		if (!pgpu->features.shaderStorageImageMultisample || !pgpu->features.shaderStorageImageWriteWithoutFormat)
+		{
+			// Disable MSAA if any of these two features are unsupported
+			if (g_cfg.video.antialiasing_level != msaa_level::none)
+			{
+				rsx_log.error("Your GPU driver does not support some required MSAA features. MSAA will be disabled.");
+				g_cfg.video.antialiasing_level.set(msaa_level::none);
+			}
+
+			enabled_features.sampleRateShading = VK_FALSE;
+			enabled_features.alphaToOne = VK_FALSE;
+			enabled_features.shaderStorageImageMultisample = VK_FALSE;
+			enabled_features.shaderStorageImageWriteWithoutFormat = VK_FALSE;
+		}
+
+		if (!pgpu->features.samplerAnisotropy)
+		{
+			rsx_log.error("Your GPU does not support anisotropic filtering. Graphics may not render correctly.");
+			enabled_features.samplerAnisotropy = VK_FALSE;
+		}
+
 		if (!pgpu->features.shaderFloat64)
 		{
-			rsx_log.error("Your GPU does not support double precision floats in shaders. Graphics may not work correctly.");
+			rsx_log.error("Your GPU does not support double precision floats in shaders. Graphics may not render correctly.");
 			enabled_features.shaderFloat64 = VK_FALSE;
 		}
 
 		if (!pgpu->features.depthBounds)
 		{
-			rsx_log.error("Your GPU does not support depth bounds testing. Graphics may not work correctly.");
+			rsx_log.error("Your GPU does not support depth bounds testing. Graphics may not render correctly.");
 			enabled_features.depthBounds = VK_FALSE;
+		}
+
+		if (!pgpu->features.wideLines)
+		{
+			rsx_log.error("Your GPU does not support wide lines. Graphics may not render correctly.");
+			enabled_features.wideLines = VK_FALSE;
 		}
 
 		if (!pgpu->features.sampleRateShading && enabled_features.sampleRateShading)
@@ -583,6 +590,16 @@ namespace vk
 	bool render_device::get_alpha_to_one_support() const
 	{
 		return pgpu->features.alphaToOne != VK_FALSE;
+	}
+
+	bool render_device::get_anisotropic_filtering_support() const
+	{
+		return pgpu->features.samplerAnisotropy != VK_FALSE;
+	}
+
+	bool render_device::get_wide_lines_support() const
+	{
+		return pgpu->features.wideLines != VK_FALSE;
 	}
 
 	bool render_device::get_conditional_render_support() const
