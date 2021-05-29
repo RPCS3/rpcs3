@@ -25,12 +25,6 @@ namespace stx
 		static thread_local const
 #endif
 		fake_t<std::remove_cv_t<T>> sample{};
-
-		template <typename From, typename To, typename = void>
-		struct can_static_cast : std::false_type {};
-
-		template <typename From, typename To>
-		struct can_static_cast<From, To, std::void_t<decltype(static_cast<To>(std::declval<From>()))>> : std::true_type {};
 	}
 
 	// Classify compile-time information available for pointers
@@ -55,13 +49,13 @@ namespace stx
 		{
 			return same_ptr::yes;
 		}
-		else if constexpr (detail::can_static_cast<U*, T*>::value && !std::is_abstract_v<U>)
+		else if constexpr (PtrCastable<T, U> && !std::is_abstract_v<U>)
 		{
 			return is_same_ptr_test<T, U>() ? same_ptr::yes : same_ptr::no;
 		}
-		else if constexpr (detail::can_static_cast<T*, U*>::value && !std::is_abstract_v<T>)
+		else if constexpr (PtrCastable<T, U> && !std::is_abstract_v<T>)
 		{
-			return is_same_ptr_test<U, T>() ? same_ptr::yes : same_ptr::no;
+			return is_same_ptr_test<T, U>() ? same_ptr::yes : same_ptr::no;
 		}
 
 		return same_ptr::maybe;

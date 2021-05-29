@@ -1010,3 +1010,10 @@ constexpr auto fill_array(const T&... args)
 {
 	return fill_array_t<T...>{{args...}};
 }
+
+template <typename X, typename Y>
+concept PtrCastable = requires(const volatile X* x, const volatile Y* y)
+{
+	static_cast<const volatile Y*>(x);
+	static_cast<const volatile X*>(y);
+};
