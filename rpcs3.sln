@@ -29,7 +29,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libpng", "3rdparty\libpng\l
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zlib", "3rdparty\zlib.vcxproj", "{60F89955-91C6-3A36-8000-13C592FEC2DF}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "glslang-build", "Vulkan\glslang-build\glslang-build.vcxproj", "{8F85B6CC-250F-4ACA-A617-E820A74E3E3C}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "glslang", "3rdparty\glslang\glslang.vcxproj", "{8F85B6CC-250F-4ACA-A617-E820A74E3E3C}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VKGSRender", "rpcs3\VKGSRender.vcxproj", "{3EE5F075-B546-42C4-B6A8-E3CCEF38B78D}"
 	ProjectSection(ProjectDependencies) = postProject

@@ -113,7 +113,7 @@ Open `rpcs3.sln`. The recommended build configuration is `Release`. (On older re
 You may want to download the precompiled [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z) and extract them to the root rpcs3 folder (which contains `rpcs3.sln`), as well as download and extract the [additional libs](https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z) to `lib\%CONFIGURATION%-x64\` to speed up compilation time (unoptimised/debug libs are currently not available precompiled).
 
 If you're not using the precompiled libs, build the following projects in *__BUILD_BEFORE* folder by right-clicking on a project > *Build*.:
-* glslang-build
+* glslang
 * **Either** llvm_build **or** llvm_build_clang_cl
 * spirv-tools-build
 

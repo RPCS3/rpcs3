@@ -81,6 +81,11 @@ endif()
 # hidapi
 add_subdirectory(hidapi)
 
+
+# glslang
+add_subdirectory(glslang)
+
+
 # yaml-cpp
 # We don't want to install yaml-cpp but its cmake file doesn't have option
 # to disable it...

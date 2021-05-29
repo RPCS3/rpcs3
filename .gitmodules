@@ -12,7 +12,7 @@
 	url = https://github.com/RPCS3/llvm-mirror
 	ignore = dirty
 [submodule "Vulkan/glslang"]
-	path = Vulkan/glslang
+	path = 3rdparty/glslang/glslang
 	url = https://github.com/KhronosGroup/glslang.git
 	ignore = dirty
 [submodule "Vulkan/spirv-tools"]
