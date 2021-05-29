@@ -117,7 +117,7 @@ namespace gl
 		if (!src || static_cast<GLenum>(src->get_internal_format()) != sized_internal_fmt)
 		{
 			// Apply base component map onto the new texture if a data cast has been done
-			swizzle = get_component_mapping(gcm_format, rsx::texture_create_flags::default_component_order);
+			swizzle = get_component_mapping(gcm_format, rsx::component_order::default_);
 		}
 		else
 		{

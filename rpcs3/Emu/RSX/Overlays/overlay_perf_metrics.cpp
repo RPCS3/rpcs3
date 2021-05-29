@@ -841,7 +841,7 @@ namespace rsx
 
 				for (auto y_off = m_guide_interval; y_off < m_max; y_off += m_guide_interval)
 				{
-					const f32 guide_y = y + y_off * normalize_factor;
+					const f32 guide_y = y + h - y_off * normalize_factor;
 					verts_guides.emplace_back(x, guide_y);
 					verts_guides.emplace_back(static_cast<float>(x + w), guide_y);
 				}

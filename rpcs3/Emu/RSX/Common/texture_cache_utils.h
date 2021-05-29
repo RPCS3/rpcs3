@@ -1104,7 +1104,7 @@ namespace rsx
 		bool speculatively_flushed = false;
 
 		rsx::memory_read_flags readback_behaviour = rsx::memory_read_flags::flush_once;
-		rsx::texture_create_flags view_flags = rsx::texture_create_flags::default_component_order;
+		rsx::component_order view_flags = rsx::component_order::default_;
 		rsx::texture_upload_context context = rsx::texture_upload_context::shader_read;
 		rsx::texture_dimension_extended image_type = rsx::texture_dimension_extended::texture_dimension_2d;
 
@@ -1179,7 +1179,7 @@ namespace rsx
 			m_predictor_entry = nullptr;
 
 			readback_behaviour = rsx::memory_read_flags::flush_once;
-			view_flags = rsx::texture_create_flags::default_component_order;
+			view_flags = rsx::component_order::default_;
 			context = rsx::texture_upload_context::shader_read;
 			image_type = rsx::texture_dimension_extended::texture_dimension_2d;
 
@@ -1654,7 +1654,7 @@ namespace rsx
 			return *m_predictor_entry;
 		}
 
-		void set_view_flags(rsx::texture_create_flags flags)
+		void set_view_flags(rsx::component_order flags)
 		{
 			view_flags = flags;
 		}
@@ -1716,7 +1716,7 @@ namespace rsx
 			return rsx_pitch;
 		}
 
-		rsx::texture_create_flags get_view_flags() const
+		rsx::component_order get_view_flags() const
 		{
 			return view_flags;
 		}

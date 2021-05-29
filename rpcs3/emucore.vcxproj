@@ -754,7 +754,7 @@
     <ClInclude Include="util\yaml.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\3rdparty\libpng.vcxproj">
+    <ProjectReference Include="..\3rdparty\libpng\libpng.vcxproj">
       <Project>{d6973076-9317-4ef2-a0b8-b7a18ac0713e}</Project>
     </ProjectReference>
     <ProjectReference Include="..\3rdparty\asmjit\asmjit.vcxproj">

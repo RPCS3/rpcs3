@@ -196,7 +196,7 @@ void memory_string_searcher::OnSearch()
 
 	vm::reader_lock rlock;
 
-	 const named_thread_group workers("String Searcher "sv, max_threads, [&]()
+	const named_thread_group workers("String Searcher "sv, max_threads, [&]()
 	{
 		u32 local_found = 0;
 

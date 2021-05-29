@@ -353,11 +353,11 @@ namespace rsx
 		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_storage_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
 		virtual void release_temporary_subresource(image_view_type rsc) = 0;
 		virtual section_storage_type* create_new_texture(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format,
-			rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, texture_create_flags flags) = 0;
+			rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, component_order swizzle_flags, rsx::flags32_t flags) = 0;
 		virtual section_storage_type* upload_image_from_cpu(commandbuffer_type&, const address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch, u32 gcm_format, texture_upload_context context,
 			const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool swizzled) = 0;
 		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range &rsx_range, bool memory_load) = 0;
-		virtual void enforce_surface_creation_type(section_storage_type& section, u32 gcm_format, texture_create_flags expected) = 0;
+		virtual void set_component_order(section_storage_type& section, u32 gcm_format, component_order expected) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex, bool strong_ordering = true) = 0;
 		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
 		virtual image_view_type generate_3d_from_2d_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, u16 depth, const std::vector<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
@@ -2705,11 +2705,11 @@ namespace rsx
 			if (cached_dest && !use_null_region)
 			{
 				// Prep surface
-				auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order :
-					dst_is_argb8 ? rsx::texture_create_flags::default_component_order :
-					rsx::texture_create_flags::swapped_native_component_order;
+				auto channel_order = src_is_render_target ? rsx::component_order::native :
+					dst_is_argb8 ? rsx::component_order::default_ :
+					rsx::component_order::swapped_native;
 
-				enforce_surface_creation_type(*cached_dest, preferred_dst_format, channel_order);
+				set_component_order(*cached_dest, preferred_dst_format, channel_order);
 			}
 
 			// Validate clipping region
@@ -2771,9 +2771,9 @@ namespace rsx
 				else
 				{
 					// render target data is already in correct swizzle layout
-					auto channel_order = src_is_render_target ? rsx::texture_create_flags::native_component_order :
-						dst_is_argb8 ? rsx::texture_create_flags::default_component_order :
-						rsx::texture_create_flags::swapped_native_component_order;
+					auto channel_order = src_is_render_target ? rsx::component_order::native :
+						dst_is_argb8 ? rsx::component_order::default_ :
+						rsx::component_order::swapped_native;
 
 					// Translate dst_area into the 'full' dst block based on dst.rsx_address as (0, 0)
 					dst_area.x1 += dst_offset.x;
@@ -2785,7 +2785,7 @@ namespace rsx
 					{
 						cached_dest = create_new_texture(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
 							preferred_dst_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
-							false, channel_order);
+							false, channel_order, 0);
 					}
 					else
 					{
@@ -2808,7 +2808,7 @@ namespace rsx
 							preferred_dst_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
 							rsx::texture_dimension_extended::texture_dimension_2d, false);
 
-						enforce_surface_creation_type(*cached_dest, preferred_dst_format, channel_order);
+						set_component_order(*cached_dest, preferred_dst_format, channel_order);
 					}
 
 					dest_texture = cached_dest->get_raw_texture();

@@ -33,7 +33,7 @@ namespace vk
 		u32 m_uniform_buffer_offset = 0;
 		u32 m_uniform_buffer_size = 0;
 
-		double m_scale = 1.0;
+		f32 m_scale = 1.0f;
 
 		bool initialized = false;
 		std::unordered_map<u8, std::pair<u32, u32>> m_offsets;
@@ -295,7 +295,7 @@ namespace vk
 			char *s = const_cast<char *>(text.c_str());
 
 			//Y is in raster coordinates: convert to bottom-left origin
-			y = ((target_h / m_scale) - y - 16);
+			y = (static_cast<int>(target_h / m_scale) - y - 16);
 
 			//Compress [0, w] and [0, h] into range [-1, 1]
 			//Flip Y scaling
@@ -372,7 +372,7 @@ namespace vk
 		void set_scale(double scale)
 		{
 			// Restrict scale to 2. The dots are gonna be too sparse otherwise.
-			m_scale = std::min(scale, 2.0);
+			m_scale = std::min(static_cast<f32>(scale), 2.0f);
 		}
 	};
 }
