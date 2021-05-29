@@ -127,6 +127,8 @@ struct vdec_context final
 
 	lf_queue<std::variant<vdec_start_seq_t, vdec_close_t, vdec_cmd, CellVdecFrameRate>> in_cmd;
 
+	AVRational log_time_base{}; // Used to reduce log spam
+
 	vdec_context(s32 type, u32 /*profile*/, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
 		: type(type)
 		, mem_addr(addr)
@@ -236,6 +238,8 @@ struct vdec_context final
 			else if (std::get_if<vdec_start_seq_t>(pcmd))
 			{
 				avcodec_flush_buffers(ctx);
+
+				log_time_base = {};
 
 				frc_set = 0; // TODO: ???
 				next_pts = 0;
@@ -376,6 +380,12 @@ struct vdec_context final
 						}
 						else if (ctx->time_base.num == 0)
 						{
+							if (log_time_base.den != ctx->time_base.den || log_time_base.num != ctx->time_base.num)
+							{
+								cellVdec.error("time_base.num is 0 (%d/%d, tpf=%d framerate=%d/%d)", ctx->time_base.num, ctx->time_base.den, ctx->ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
+								log_time_base = ctx->time_base;
+							}
+
 							// Hack
 							const u64 amend = u64{90000} / 30;
 							frame.frc = CELL_VDEC_FRC_30;
@@ -405,8 +415,14 @@ struct vdec_context final
 								frame.frc = CELL_VDEC_FRC_60;
 							else
 							{
+								if (log_time_base.den != ctx->time_base.den || log_time_base.num != ctx->time_base.num)
+								{
+									// 1/1000 usually means that the time stamps are written in 1ms units and that the frame rate may vary.
+									cellVdec.error("Unsupported time_base (%d/%d, tpf=%d framerate=%d/%d)", ctx->time_base.num, ctx->time_base.den, ctx->ticks_per_frame, ctx->framerate.num, ctx->framerate.den);
+									log_time_base = ctx->time_base;
+								}
+
 								// Hack
-								cellVdec.error("Unsupported time_base.num (%d/%d, tpf=%d)", ctx->time_base.den, ctx->time_base.num, ctx->ticks_per_frame);
 								amend = u64{90000} / 30;
 								frame.frc = CELL_VDEC_FRC_30;
 							}
