@@ -43,6 +43,8 @@ namespace rsx
 
 		s32 user_interface::run_input_loop()
 		{
+			m_interactive = true;
+
 			const u64 ms_interval = 200;
 			std::array<steady_clock::time_point, CELL_PAD_MAX_PORT_NUM> timestamp;
 			timestamp.fill(steady_clock::now());
@@ -86,6 +88,9 @@ namespace rsx
 				int pad_index = -1;
 				for (const auto &pad : handler->GetPads())
 				{
+					if (exit)
+						break;
+
 					if (++pad_index >= CELL_PAD_MAX_PORT_NUM)
 					{
 						rsx_log.fatal("The native overlay cannot handle more than 7 pads! Current number of pads: %d", pad_index + 1);
@@ -193,20 +198,29 @@ namespace rsx
 						}
 
 						if (exit)
-							return 0;
+							break;
 					}
 				}
 
 				refresh();
 			}
 
-			// Unreachable
+			// Disable pad interception since this user interface has to be interactive.
+			// Non-interactive user intefaces handle this in close in order to prevent a g_pad_mutex deadlock.
+			if (m_stop_pad_interception)
+			{
+				input::SetIntercepted(false);
+			}
+
+			m_interactive = false;
+
 			return 0;
 		}
 
 		void user_interface::close(bool use_callback, bool stop_pad_interception)
 		{
 			// Force unload
+			m_stop_pad_interception.release(stop_pad_interception);
 			exit.release(true);
 
 			while (u64 b = thread_bits)
@@ -220,7 +234,9 @@ namespace rsx
 				thread_bits.wait(b);
 			}
 
-			if (stop_pad_interception)
+			// Only disable pad interception if this user interface is not interactive.
+			// Interactive user interfaces handle this in run_input_loop in order to prevent a g_pad_mutex deadlock.
+			if (!m_interactive && m_stop_pad_interception)
 			{
 				input::SetIntercepted(false);
 			}
