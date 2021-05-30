@@ -918,7 +918,7 @@ namespace vk
 				check_caps = false;
 			}
 
-			gsl::span<std::byte> mapped{ static_cast<std::byte*>(mapped_buffer), image_linear_size };
+			std::span<std::byte> mapped{ static_cast<std::byte*>(mapped_buffer), image_linear_size };
 			opt = upload_texture_subresource(mapped, layout, format, is_swizzled, caps);
 			upload_heap.unmap();
 

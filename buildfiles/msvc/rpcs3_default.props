@@ -3,7 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>.\;..\;..\3rdparty\asmjit\asmjit\src;..\3rdparty\yaml-cpp\include;..\3rdparty\ffmpeg\include;..\3rdparty\cereal\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\span\include;..\3rdparty\libpng\libpng;..\3rdparty\GL;..\3rdparty\stblib\include;..\3rdparty\OpenAL\include;..\3rdparty\pugixml\src;..\3rdparty\hidapi\hidapi;..\3rdparty\Optional;..\3rdparty\xxhash</IncludePath>
+    <IncludePath>.\;..\;..\3rdparty\asmjit\asmjit\src;..\3rdparty\yaml-cpp\include;..\3rdparty\ffmpeg\include;..\3rdparty\cereal\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);..\3rdparty\libpng\libpng;..\3rdparty\GL;..\3rdparty\stblib\include;..\3rdparty\OpenAL\include;..\3rdparty\pugixml\src;..\3rdparty\hidapi\hidapi;..\3rdparty\Optional;..\3rdparty\xxhash</IncludePath>
     <OutDir>$(SolutionDir)lib\$(Configuration)-$(Platform)\</OutDir>
     <LibraryPath>$(SolutionDir)lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <IntDir>$(SolutionDir)tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>

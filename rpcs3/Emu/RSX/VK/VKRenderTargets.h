@@ -11,6 +11,8 @@
 #include "vkutils/image.h"
 #include "vkutils/scratch.h"
 
+#include <span>
+
 namespace vk
 {
 	void resolve_image(vk::command_buffer& cmd, vk::viewable_image* dst, vk::viewable_image* src);
