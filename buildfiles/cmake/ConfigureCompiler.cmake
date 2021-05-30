@@ -27,10 +27,6 @@ else()
 	add_compile_options(-fstack-protector)
 	add_compile_options(-msse -msse2 -mcx16)
 
-	if ((${CMAKE_CXX_COMPILER_ID} MATCHES "GNU") AND (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.1))
-		add_compile_options(-fconcepts)
-	endif()
-
 	add_compile_options(-Werror=old-style-cast)
 	add_compile_options(-Werror=sign-compare)
 	add_compile_options(-Werror=reorder)
