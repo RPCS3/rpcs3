@@ -5,6 +5,11 @@
 
 #include "util/to_endian.hpp"
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+#endif
+
 namespace vm
 {
 	template <typename T, typename AT>
@@ -23,8 +28,6 @@ namespace vm
 	public:
 		using type = T;
 		using addr_type = std::remove_cv_t<AT>;
-
-		_ref_base() = default;
 
 		_ref_base(const _ref_base&) = default;
 
@@ -177,6 +180,10 @@ namespace vm
 		template<typename T, typename AT = u32> using bref = brefb<T, AT>;
 	}
 }
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 
 // Change AT endianness to BE/LE
 template<typename T, typename AT, bool Se>
