@@ -137,66 +137,66 @@ namespace vm
 			return alignof(T);
 		}
 
-		_ptr_base<T, u32> operator +() const
+		constexpr _ptr_base<T, u32> operator +() const
 		{
 			return vm::cast(m_addr);
 		}
 
-		_ptr_base<T, u32> operator +(u32 count) const
+		constexpr _ptr_base<T, u32> operator +(u32 count) const
 		{
 			return vm::cast(vm::cast(m_addr) + count * size());
 		}
 
-		_ptr_base<T, u32> operator -(u32 count) const
+		constexpr _ptr_base<T, u32> operator -(u32 count) const
 		{
 			return vm::cast(vm::cast(m_addr) - count * size());
 		}
 
-		friend _ptr_base<T, u32> operator +(u32 count, const _ptr_base& ptr)
+		constexpr friend _ptr_base<T, u32> operator +(u32 count, const _ptr_base& ptr)
 		{
 			return vm::cast(vm::cast(ptr.m_addr) + count * size());
 		}
 
 		// Pointer difference operator
 		template<typename T2, typename AT2>
-		std::enable_if_t<std::is_object<T2>::value && std::is_same<std::decay_t<T>, std::decay_t<T2>>::value, s32> operator -(const _ptr_base<T2, AT2>& right) const
+		constexpr std::enable_if_t<std::is_object<T2>::value && std::is_same<std::decay_t<T>, std::decay_t<T2>>::value, s32> operator -(const _ptr_base<T2, AT2>& right) const
 		{
 			return static_cast<s32>(vm::cast(m_addr) - vm::cast(right.m_addr)) / size();
 		}
 
-		_ptr_base operator ++(int)
+		constexpr _ptr_base operator ++(int)
 		{
 			_ptr_base result = *this;
 			m_addr = vm::cast(m_addr) + size();
 			return result;
 		}
 
-		_ptr_base& operator ++()
+		constexpr _ptr_base& operator ++()
 		{
 			m_addr = vm::cast(m_addr) + size();
 			return *this;
 		}
 
-		_ptr_base operator --(int)
+		constexpr _ptr_base operator --(int)
 		{
 			_ptr_base result = *this;
 			m_addr = vm::cast(m_addr) - size();
 			return result;
 		}
 
-		_ptr_base& operator --()
+		constexpr _ptr_base& operator --()
 		{
 			m_addr = vm::cast(m_addr) - size();
 			return *this;
 		}
 
-		_ptr_base& operator +=(s32 count)
+		constexpr _ptr_base& operator +=(s32 count)
 		{
 			m_addr = vm::cast(m_addr) + count * size();
 			return *this;
 		}
 
-		_ptr_base& operator -=(s32 count)
+		constexpr _ptr_base& operator -=(s32 count)
 		{
 			m_addr = vm::cast(m_addr) - count * size();
 			return *this;
