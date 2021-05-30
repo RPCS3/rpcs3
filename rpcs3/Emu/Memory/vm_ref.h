@@ -24,7 +24,7 @@ namespace vm
 		using type = T;
 		using addr_type = std::remove_cv_t<AT>;
 
-		_ref_base() = default;
+		constexpr _ref_base() = default;
 
 		_ref_base(const _ref_base&) = default;
 
