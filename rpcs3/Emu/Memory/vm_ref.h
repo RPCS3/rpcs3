@@ -44,7 +44,7 @@ namespace vm
 		}
 
 		// convert to vm pointer
-		vm::_ptr_base<T, u32> ptr() const
+		constexpr vm::_ptr_base<T, u32> ptr() const
 		{
 			return vm::cast(m_addr);
 		}
