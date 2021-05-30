@@ -200,7 +200,7 @@ namespace vm
 	template<>
 	struct cast_impl<u32>
 	{
-		static vm::addr_t cast(u32 addr,
+		static constexpr vm::addr_t cast(u32 addr,
 			u32,
 			u32,
 			const char*,
@@ -226,7 +226,7 @@ namespace vm
 	template<typename T, bool Se>
 	struct cast_impl<se_t<T, Se>>
 	{
-		static vm::addr_t cast(const se_t<T, Se>& addr,
+		static constexpr vm::addr_t cast(const se_t<T, Se>& addr,
 			u32 line,
 			u32 col,
 			const char* file,
@@ -237,7 +237,7 @@ namespace vm
 	};
 
 	template<typename T>
-	vm::addr_t cast(const T& addr,
+	constexpr vm::addr_t cast(const T& addr,
 		u32 line = __builtin_LINE(),
 		u32 col = __builtin_COLUMN(),
 		const char* file = __builtin_FILE(),

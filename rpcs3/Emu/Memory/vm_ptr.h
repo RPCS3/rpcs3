@@ -31,22 +31,22 @@ namespace vm
 
 		_ptr_base() = default;
 
-		_ptr_base(vm::addr_t addr)
+		constexpr _ptr_base(vm::addr_t addr) noexcept
 			: m_addr(addr)
 		{
 		}
 
-		addr_type addr() const
+		constexpr addr_type addr() const
 		{
 			return m_addr;
 		}
 
-		void set(addr_type addr)
+		constexpr void set(addr_type addr)
 		{
 			this->m_addr = addr;
 		}
 
-		static _ptr_base make(addr_type addr)
+		static constexpr _ptr_base make(addr_type addr)
 		{
 			_ptr_base result;
 			result.m_addr = addr;
@@ -55,46 +55,46 @@ namespace vm
 
 		// Enable only the conversions which are originally possible between pointer types
 		template<typename T2, typename AT2, typename = std::enable_if_t<std::is_convertible<T*, T2*>::value>>
-		operator _ptr_base<T2, AT2>() const
+		constexpr operator _ptr_base<T2, AT2>() const noexcept
 		{
 			return vm::cast(m_addr);
 		}
 
-		explicit operator bool() const
+		constexpr explicit operator bool() const noexcept
 		{
 			return m_addr != 0u;
 		}
 
 		// Get vm pointer to a struct member
 		template <typename MT, typename T2, typename = if_comparable_t<T, T2>>
-		_ptr_base<MT, u32> ptr(MT T2::*const mptr) const
+		constexpr _ptr_base<MT, u32> ptr(MT T2::*const mptr) const
 		{
 			return vm::cast(vm::cast(m_addr) + offset32(mptr));
 		}
 
 		// Get vm pointer to a struct member with array subscription
 		template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>>
-		_ptr_base<ET, u32> ptr(MT T2::*const mptr, u32 index) const
+		constexpr _ptr_base<ET, u32> ptr(MT T2::*const mptr, u32 index) const
 		{
 			return vm::cast(vm::cast(m_addr) + offset32(mptr) + u32{sizeof(ET)} * index);
 		}
 
 		// Get vm reference to a struct member
 		template <typename MT, typename T2, typename = if_comparable_t<T, T2>>
-		_ref_base<MT, u32> ref(MT T2::*const mptr) const
+		constexpr _ref_base<MT, u32> ref(MT T2::*const mptr) const
 		{
 			return vm::cast(vm::cast(m_addr) + offset32(mptr));
 		}
 
 		// Get vm reference to a struct member with array subscription
 		template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>>
-		_ref_base<ET, u32> ref(MT T2::*const mptr, u32 index) const
+		constexpr _ref_base<ET, u32> ref(MT T2::*const mptr, u32 index) const
 		{
 			return vm::cast(vm::cast(m_addr) + offset32(mptr) + u32{sizeof(ET)} * index);
 		}
 
 		// Get vm reference
-		_ref_base<T, u32> ref() const
+		constexpr _ref_base<T, u32> ref() const
 		{
 			return vm::cast(m_addr);
 		}
@@ -120,7 +120,7 @@ namespace vm
 		}
 
 		// Test address for arbitrary alignment: (addr & (align - 1)) == 0
-		bool aligned(u32 align = alignof(T)) const
+		constexpr bool aligned(u32 align = alignof(T)) const
 		{
 			return (m_addr & (align - 1)) == 0u;
 		}

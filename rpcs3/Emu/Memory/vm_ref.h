@@ -28,12 +28,12 @@ namespace vm
 
 		_ref_base(const _ref_base&) = default;
 
-		_ref_base(vm::addr_t addr)
+		constexpr _ref_base(vm::addr_t addr) noexcept
 			: m_addr(addr)
 		{
 		}
 
-		addr_type addr() const
+		constexpr addr_type addr() const
 		{
 			return m_addr;
 		}

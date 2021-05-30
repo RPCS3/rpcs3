@@ -1693,6 +1693,8 @@ namespace vm
 		std::memset(g_range_lock_set, 0, sizeof(g_range_lock_set));
 		g_range_lock_bits = 0;
 	}
+
+	static_assert(std::is_trivially_copyable_v<vm::bptr<atomic_t<u32>>>);
 }
 
 void fmt_class_string<vm::_ptr_base<const void, u32>>::format(std::string& out, u64 arg)
