@@ -93,9 +93,19 @@ namespace vk
 		dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_STENCIL_REFERENCE);
 		dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
 
-		if (g_render_device->get_depth_bounds_support())
+		auto pdss = &create_info.state.ds;
+		VkPipelineDepthStencilStateCreateInfo ds2;
+		if (g_render_device->get_depth_bounds_support()) [[likely]]
 		{
 			dynamic_state_descriptors.push_back(VK_DYNAMIC_STATE_DEPTH_BOUNDS);
+		}
+		else if (pdss->depthBoundsTestEnable)
+		{
+			rsx_log.warning("Depth bounds test is enabled in the pipeline object but not supported by the current driver.");
+
+			ds2 = *pdss;
+			pdss = &ds2;
+			ds2.depthBoundsTestEnable = VK_FALSE;
 		}
 
 		VkPipelineDynamicStateCreateInfo dynamic_state_info = {};
@@ -110,12 +120,27 @@ namespace vk
 		vp.viewportCount = 1;
 		vp.scissorCount = 1;
 
-		VkPipelineMultisampleStateCreateInfo ms = create_info.state.ms;
-		ensure(ms.rasterizationSamples == VkSampleCountFlagBits((create_info.renderpass_key >> 16) & 0xF)); // "Multisample state mismatch!"
-		if (ms.rasterizationSamples != VK_SAMPLE_COUNT_1_BIT)
+		auto pmss = &create_info.state.ms;
+		VkPipelineMultisampleStateCreateInfo ms2;
+		ensure(pmss->rasterizationSamples == VkSampleCountFlagBits((create_info.renderpass_key >> 16) & 0xF)); // "Multisample state mismatch!"
+
+		if (pmss->rasterizationSamples != VK_SAMPLE_COUNT_1_BIT || pmss->sampleShadingEnable) [[unlikely]]
 		{
-			// Update the sample mask pointer
-			ms.pSampleMask = &create_info.state.temp_storage.msaa_sample_mask;
+			ms2 = *pmss;
+			pmss = &ms2;
+
+			if (ms2.rasterizationSamples != VK_SAMPLE_COUNT_1_BIT)
+			{
+				// Update the sample mask pointer
+				ms2.pSampleMask = &create_info.state.temp_storage.msaa_sample_mask;
+			}
+
+			if (g_cfg.video.antialiasing_level == msaa_level::none && ms2.sampleShadingEnable)
+			{
+				// Do not compile with MSAA enabled if multisampling is disabled
+				rsx_log.warning("MSAA is disabled globally but a shader with multi-sampling enabled was submitted for compilation.");
+				ms2.sampleShadingEnable = VK_FALSE;
+			}
 		}
 
 		// Rebase pointers from pipeline structure in case it is moved/copied
@@ -128,9 +153,9 @@ namespace vk
 		info.pInputAssemblyState = &create_info.state.ia;
 		info.pRasterizationState = &create_info.state.rs;
 		info.pColorBlendState = &cs;
-		info.pMultisampleState = &ms;
+		info.pMultisampleState = pmss;
 		info.pViewportState = &vp;
-		info.pDepthStencilState = &create_info.state.ds;
+		info.pDepthStencilState = pdss;
 		info.stageCount = 2;
 		info.pStages = shader_stages;
 		info.pDynamicState = &dynamic_state_info;
