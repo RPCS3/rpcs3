@@ -46,20 +46,12 @@ const bool s_use_ssse3 = utils::has_ssse3();
 const bool s_use_sse4_1 = utils::has_sse41();
 const bool s_use_avx2 = utils::has_avx2();
 
-namespace
+namespace utils
 {
-	// FIXME: GSL as_span break build if template parameter is non const with current revision.
-	// Replace with true as_span when fixed.
-	template <typename T>
-	std::span<T> as_span_workaround(std::span<std::byte> unformated_span)
+	template <typename T, typename U>
+	[[nodiscard]] auto bless(const std::span<U>& span)
 	{
-		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
-	}
-
-	template <typename T>
-	std::span<T> as_const_span(std::span<const std::byte> unformated_span)
-	{
-		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
+		return std::span<T>(bless<T>(span.data()), sizeof(U) * span.size() / sizeof(T));
 	}
 }
 
@@ -665,7 +657,7 @@ void write_vertex_array_data_to_buffer(std::span<std::byte> raw_dst_span, std::s
 	}
 	case rsx::vertex_base_type::cmp:
 	{
-		std::span<u16> dst_span = as_span_workaround<u16>(raw_dst_span);
+		std::span<u16> dst_span = utils::bless<u16>(raw_dst_span);
 		for (u32 i = 0; i < count; ++i)
 		{
 			u32 src_value;
@@ -1295,13 +1287,13 @@ std::tuple<u32, u32, u32> write_index_array_data_to_buffer(std::span<std::byte> 
 	{
 	case rsx::index_array_type::u16:
 	{
-		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u16>(dst_ptr),
-			as_const_span<const be_t<u16>>(src_ptr), draw_mode, restart_index_enabled, restart_index, expands);
+		return write_index_array_data_to_buffer_impl<u16>(utils::bless<u16>(dst_ptr), utils::bless<const be_t<u16>>(src_ptr),
+			draw_mode, restart_index_enabled, restart_index, expands);
 	}
 	case rsx::index_array_type::u32:
 	{
-		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst_ptr),
-			as_const_span<const be_t<u32>>(src_ptr), draw_mode, restart_index_enabled, restart_index, expands);
+		return write_index_array_data_to_buffer_impl<u32>(utils::bless<u32>(dst_ptr), utils::bless<const be_t<u32>>(src_ptr),
+			draw_mode, restart_index_enabled, restart_index, expands);
 	}
 	default:
 		fmt::throw_exception("Unreachable");

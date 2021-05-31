@@ -6,37 +6,24 @@
 
 #include "util/asm.hpp"
 
+namespace utils
+{
+	template <typename T, typename U>
+	[[nodiscard]] auto bless(const std::span<U>& span)
+	{
+		return std::span<T>(bless<T>(span.data()), sizeof(U) * span.size() / sizeof(T));
+	}
+}
+
 namespace
 {
-	// FIXME: GSL as_span break build if template parameter is non const with current revision.
-	// Replace with true as_span when fixed.
-	template <typename T>
-	std::span<T> as_span_workaround(std::span<std::byte> unformated_span)
-	{
-		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
-	}
 
-	template <typename T>
-	std::span<T> as_const_span(std::span<const std::byte> unformated_span)
-	{
-		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
-	}
-
-	// TODO: Make this function part of GSL
-	// Note: Doesn't handle overlapping range detection.
-	template<typename T1, typename T2>
-	constexpr void copy(std::span<T1> dst, std::span<T2> src)
-	{
-		static_assert(std::is_convertible<T1, T2>::value, "Cannot convert source and destination span type.");
-		std::copy(src.begin(), src.end(), dst.begin());
-	}
-
-	u16 convert_rgb655_to_rgb565(const u16 bits)
-	{
-		// g6 = g5
-		// r5 = (((bits & 0xFC00) >> 1) & 0xFC00) << 1 is equivalent to truncating the least significant bit
-		return (bits & 0xF81F) | (bits & 0x3E0) << 1;
-	}
+u16 convert_rgb655_to_rgb565(const u16 bits)
+{
+	// g6 = g5
+	// r5 = (((bits & 0xFC00) >> 1) & 0xFC00) << 1 is equivalent to truncating the least significant bit
+	return (bits & 0xF81F) | (bits & 0x3E0) << 1;
+}
 
 struct copy_unmodified_block
 {
@@ -49,7 +36,7 @@ struct copy_unmodified_block
 		{
 			// Fast copy
 			const auto data_length = src_pitch_in_block * words_per_block * row_count * depth;
-			copy(dst, src.subspan(0, data_length));
+			std::copy_n(src.begin(), data_length, dst.begin());
 			return;
 		}
 
@@ -69,7 +56,7 @@ struct copy_unmodified_block
 			for (int row = 0; row < row_count; ++row)
 			{
 				// NNOTE: src_offset is already shifted along the border at initialization
-				copy(dst.subspan(dst_offset, width_in_words), src.subspan(src_offset, width_in_words));
+				std::copy_n(src.begin() + src_offset, width_in_words, dst.begin() + dst_offset);
 
 				src_offset += src_pitch_in_words;
 				dst_offset += dst_pitch_in_words;
@@ -164,7 +151,7 @@ struct copy_unmodified_block_vtc
 			for (u32 i = 0; i < row_element_count; i += 1)
 			{
 				// Copy one span (8 bytes for DXT1 or 16 bytes for DXT5)
-				copy(dst.subspan(dst_offset + i, 1), src.subspan(src_offset + i * 4, 1));
+				dst[dst_offset + i] = src[src_offset + i];
 			}
 
 			dst_offset += row_element_count;
@@ -189,7 +176,7 @@ struct copy_unmodified_block_vtc
 			for (u32 i = 0; i < row_element_count; i += 1)
 			{
 				// Copy one span (8 bytes for DXT1 or 16 bytes for DXT5)
-				copy(dst.subspan(dst_offset + i, 1), src.subspan(src_offset + i * vtc_tile_count, 1));
+				dst[dst_offset + i] = src[src_offset + i * vtc_tile_count];
 			}
 
 			dst_offset += row_element_count;
@@ -627,22 +614,22 @@ namespace rsx
 
 		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 		{
-			copy_decoded_rb_rg_block::copy_mipmap_level<true>(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(src_layout.width_in_texel, caps.alignment), src_layout.pitch_in_block);
+			copy_decoded_rb_rg_block::copy_mipmap_level<true>(utils::bless<u32>(dst_buffer), utils::bless<const u32>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(src_layout.width_in_texel, caps.alignment), src_layout.pitch_in_block);
 			break;
 		}
 
 		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
 		{
-			copy_decoded_rb_rg_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(src_layout.width_in_texel, caps.alignment), src_layout.pitch_in_block);
+			copy_decoded_rb_rg_block::copy_mipmap_level(utils::bless<u32>(dst_buffer), utils::bless<const u32>(src_layout.data), w, h, depth, get_row_pitch_in_block<u32>(src_layout.width_in_texel, caps.alignment), src_layout.pitch_in_block);
 			break;
 		}
 
 		case CELL_GCM_TEXTURE_R6G5B5:
 		{
 			if (is_swizzled)
-				copy_rgb655_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u16>(w, caps.alignment));
+				copy_rgb655_block_swizzled::copy_mipmap_level(utils::bless<u16>(dst_buffer), utils::bless<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u16>(w, caps.alignment));
 			else
-				copy_rgb655_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u16>(w, caps.alignment), src_layout.pitch_in_block);
+				copy_rgb655_block::copy_mipmap_level(utils::bless<u16>(dst_buffer), utils::bless<const be_t<u16>>(src_layout.data), w, h, depth, src_layout.border, get_row_pitch_in_block<u16>(w, caps.alignment), src_layout.pitch_in_block);
 			break;
 		}
 
@@ -707,7 +694,7 @@ namespace rsx
 				// PS3 uses the Nvidia VTC memory layout for compressed 3D textures.
 				// This is only supported using Nvidia OpenGL.
 				// Remove the VTC tiling to support ATI and Vulkan.
-				copy_unmodified_block_vtc::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), as_const_span<const u64>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
+				copy_unmodified_block_vtc::copy_mipmap_level(utils::bless<u64>(dst_buffer), utils::bless<const u64>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
 			}
 			else if (caps.supports_zero_copy)
 			{
@@ -716,7 +703,7 @@ namespace rsx
 			}
 			else
 			{
-				copy_unmodified_block::copy_mipmap_level(as_span_workaround<u64>(dst_buffer), as_const_span<const u64>(src_layout.data), 1, w, h, depth, 0, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
+				copy_unmodified_block::copy_mipmap_level(utils::bless<u64>(dst_buffer), utils::bless<const u64>(src_layout.data), 1, w, h, depth, 0, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
 			}
 			break;
 		}
@@ -729,7 +716,7 @@ namespace rsx
 				// PS3 uses the Nvidia VTC memory layout for compressed 3D textures.
 				// This is only supported using Nvidia OpenGL.
 				// Remove the VTC tiling to support ATI and Vulkan.
-				copy_unmodified_block_vtc::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), as_const_span<const u128>(src_layout.data), w, h, depth, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
+				copy_unmodified_block_vtc::copy_mipmap_level(utils::bless<u128>(dst_buffer), utils::bless<const u128>(src_layout.data), w, h, depth, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
 			}
 			else if (caps.supports_zero_copy)
 			{
@@ -738,7 +725,7 @@ namespace rsx
 			}
 			else
 			{
-				copy_unmodified_block::copy_mipmap_level(as_span_workaround<u128>(dst_buffer), as_const_span<const u128>(src_layout.data), 1, w, h, depth, 0, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
+				copy_unmodified_block::copy_mipmap_level(utils::bless<u128>(dst_buffer), utils::bless<const u128>(src_layout.data), 1, w, h, depth, 0, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
 			}
 			break;
 		}
@@ -753,7 +740,7 @@ namespace rsx
 			{
 				if (is_swizzled)
 				{
-					copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), as_const_span<const u8>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+					copy_unmodified_block_swizzled::copy_mipmap_level(utils::bless<u8>(dst_buffer), utils::bless<const u8>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
 				}
 				else if (caps.supports_zero_copy)
 				{
@@ -762,7 +749,7 @@ namespace rsx
 				}
 				else
 				{
-					copy_unmodified_block::copy_mipmap_level(as_span_workaround<u8>(dst_buffer), as_const_span<const u8>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+					copy_unmodified_block::copy_mipmap_level(utils::bless<u8>(dst_buffer), utils::bless<const u8>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 				}
 			}
 			else
@@ -796,11 +783,11 @@ namespace rsx
 					}
 					else if (word_size == 2)
 					{
-						copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const u16>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+						copy_unmodified_block::copy_mipmap_level(utils::bless<u16>(dst_buffer), utils::bless<const u16>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 					}
 					else if (word_size == 4)
 					{
-						copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const u32>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+						copy_unmodified_block::copy_mipmap_level(utils::bless<u32>(dst_buffer), utils::bless<const u32>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 					}
 				}
 				else
@@ -808,16 +795,16 @@ namespace rsx
 					if (word_size == 2)
 					{
 						if (is_swizzled)
-							copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+							copy_unmodified_block_swizzled::copy_mipmap_level(utils::bless<u16>(dst_buffer), utils::bless<const be_t<u16>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
 						else
-							copy_unmodified_block::copy_mipmap_level(as_span_workaround<u16>(dst_buffer), as_const_span<const be_t<u16>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+							copy_unmodified_block::copy_mipmap_level(utils::bless<u16>(dst_buffer), utils::bless<const be_t<u16>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 					}
 					else if (word_size == 4)
 					{
 						if (is_swizzled)
-							copy_unmodified_block_swizzled::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+							copy_unmodified_block_swizzled::copy_mipmap_level(utils::bless<u32>(dst_buffer), utils::bless<const be_t<u32>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
 						else
-							copy_unmodified_block::copy_mipmap_level(as_span_workaround<u32>(dst_buffer), as_const_span<const be_t<u32>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+							copy_unmodified_block::copy_mipmap_level(utils::bless<u32>(dst_buffer), utils::bless<const be_t<u32>>(src_layout.data), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 					}
 				}
 			}
