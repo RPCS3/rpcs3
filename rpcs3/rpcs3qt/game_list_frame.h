@@ -90,6 +90,9 @@ protected:
 private:
 	QPixmap PaintedPixmap(const QPixmap& icon, bool paint_config_icon = false, bool paint_pad_config_icon = false, const QColor& color = QColor()) const;
 	QColor getGridCompatibilityColor(const QString& string) const;
+
+	/** Sets the custom config icon. Only call this for list title items. */
+	void SetCustomConfigIcon(QTableWidgetItem* title_item, const game_info& game);
 	void ShowCustomConfigIcon(const game_info& game);
 	void PopulateGameList();
 	void PopulateGameGrid(int maxCols, const QSize& image_size, const QColor& image_color);
