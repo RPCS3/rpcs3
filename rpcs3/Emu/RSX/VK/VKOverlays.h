@@ -49,6 +49,7 @@ namespace vk
 
 		VkFilter m_sampler_filter = VK_FILTER_LINEAR;
 		u32 m_num_usable_samplers = 1;
+		u32 m_num_input_attachments = 0;
 
 		std::unordered_map<u64, std::unique_ptr<vk::glsl::program>> m_program_cache;
 		std::unique_ptr<vk::sampler> m_sampler;
@@ -175,12 +176,13 @@ namespace vk
 		color4f clear_color = { 0.f, 0.f, 0.f, 0.f };
 		color4f colormask = { 1.f, 1.f, 1.f, 1.f };
 		VkRect2D region = {};
+		VkDescriptorImageInfo input_attachment_info = {};
 
 		attachment_clear_pass();
 
 		std::vector<VkPushConstantRange> get_push_constants() override;
 
-		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/) override;
+		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program) override;
 
 		void set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h) override;
 

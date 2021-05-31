@@ -10,10 +10,26 @@ namespace vk
 {
 	std::unordered_map<u64, std::vector<std::unique_ptr<vk::framebuffer_holder>>> g_framebuffers_cache;
 
-	vk::framebuffer_holder* get_framebuffer(VkDevice dev, u16 width, u16 height, VkRenderPass renderpass, const std::vector<vk::image*>& image_list)
+	union framebuffer_storage_key
 	{
-		u64 key = u64(width) | (u64(height) << 16);
-		auto &queue = g_framebuffers_cache[key];
+		u64 encoded;
+
+		struct
+		{
+			u64 width  : 16;   // Width of FBO
+			u64 height : 16;   // Height of FBO
+			u64 ia_ref : 1;    // Input attachment references?
+		};
+
+		framebuffer_storage_key(u16 width_, u16 height_, VkBool32 has_input_attachments)
+			: width(width_), height(height_), ia_ref(has_input_attachments)
+		{}
+	};
+
+	vk::framebuffer_holder* get_framebuffer(VkDevice dev, u16 width, u16 height, VkBool32 has_input_attachments, VkRenderPass renderpass, const std::vector<vk::image*>& image_list)
+	{
+		framebuffer_storage_key key(width, height, has_input_attachments);
+		auto &queue = g_framebuffers_cache[key.encoded];
 
 		for (auto &fbo : queue)
 		{
@@ -39,10 +55,10 @@ namespace vk
 		return ret;
 	}
 
-	vk::framebuffer_holder* get_framebuffer(VkDevice dev, u16 width, u16 height, VkRenderPass renderpass, VkFormat format, VkImage attachment)
+	vk::framebuffer_holder* get_framebuffer(VkDevice dev, u16 width, u16 height, VkBool32 has_input_attachments, VkRenderPass renderpass, VkFormat format, VkImage attachment)
 	{
-		u64 key = u64(width) | (u64(height) << 16);
-		auto &queue = g_framebuffers_cache[key];
+		framebuffer_storage_key key(width, height, has_input_attachments);
+		auto &queue = g_framebuffers_cache[key.encoded];
 
 		for (const auto &e : queue)
 		{

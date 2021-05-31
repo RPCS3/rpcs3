@@ -7,7 +7,7 @@ namespace vk
 {
 	class image;
 
-	u64 get_renderpass_key(const std::vector<vk::image*>& images);
+	u64 get_renderpass_key(const std::vector<vk::image*>& images, const std::vector<u8>& input_attachment_ids = {});
 	u64 get_renderpass_key(const std::vector<vk::image*>& images, u64 previous_key);
 	u64 get_renderpass_key(VkFormat surface_format);
 	VkRenderPass get_renderpass(VkDevice dev, u64 renderpass_key);

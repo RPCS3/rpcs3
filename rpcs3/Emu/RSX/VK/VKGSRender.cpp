@@ -1289,7 +1289,8 @@ void VKGSRender::clear_surface(u32 mask)
 							if (!renderpass)
 							{
 								std::vector<vk::image*> surfaces = { rtt };
-								const auto key = vk::get_renderpass_key(surfaces);
+								std::vector<u8> input_attachments = { 0 };
+								const auto key = vk::get_renderpass_key(surfaces, input_attachments);
 								renderpass = vk::get_renderpass(*m_device, key);
 							}
 
@@ -2277,7 +2278,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_draw_fbo->release();
 	}
 
-	m_draw_fbo = vk::get_framebuffer(*m_device, fbo_width, fbo_height, m_cached_renderpass, m_fbo_images);
+	m_draw_fbo = vk::get_framebuffer(*m_device, fbo_width, fbo_height, VK_FALSE, m_cached_renderpass, m_fbo_images);
 	m_draw_fbo->add_ref();
 
 	set_viewport();
