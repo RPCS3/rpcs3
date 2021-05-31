@@ -38,9 +38,8 @@
 /rpcs3/Release
 /llvm_build
 /3rdparty/llvm_build
-/Vulkan/Vulkan-build
 /3rdparty/glslang
-/Vulkan/spirv-tools-build
+/3rdparty/SPIRV
 
 !/bin
 /bin/*
