@@ -62,7 +62,6 @@ namespace vk
 		std::string fs_src;
 
 		graphics_pipeline_state renderpass_config;
-		bool multi_primitive = false;
 
 		bool initialized = false;
 		bool compiled = false;
@@ -176,7 +175,6 @@ namespace vk
 		color4f clear_color = { 0.f, 0.f, 0.f, 0.f };
 		color4f colormask = { 1.f, 1.f, 1.f, 1.f };
 		VkRect2D region = {};
-		VkDescriptorImageInfo input_attachment_info = {};
 
 		attachment_clear_pass();
 
@@ -186,9 +184,7 @@ namespace vk
 
 		void set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h) override;
 
-		bool update_config(u32 clearmask, color4f color);
-
-		void run(vk::command_buffer& cmd, vk::render_target* target, VkRect2D rect, VkRenderPass render_pass);
+		void run(vk::command_buffer& cmd, vk::framebuffer* target, VkRect2D rect, u32 clearmask, color4f color, VkRenderPass render_pass);
 	};
 
 	struct stencil_clear_pass : public overlay_pass
