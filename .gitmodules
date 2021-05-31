@@ -16,11 +16,11 @@
 	url = https://github.com/KhronosGroup/glslang.git
 	ignore = dirty
 [submodule "Vulkan/spirv-tools"]
-	path = Vulkan/spirv-tools
+	path = 3rdparty/SPIRV/SPIRV-Tools
 	url = https://github.com/KhronosGroup/SPIRV-Tools.git
 	ignore = dirty
 [submodule "Vulkan/spirv-headers"]
-	path = Vulkan/spirv-headers
+	path = 3rdparty/SPIRV/SPIRV-Headers
 	url = https://github.com/KhronosGroup/SPIRV-Headers.git
 	ignore = dirty
 [submodule "3rdparty/cereal"]
