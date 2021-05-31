@@ -32,21 +32,9 @@ namespace vk
 
 	u64 overlay_pass::get_pipeline_key(VkRenderPass pass)
 	{
-		if (!multi_primitive)
-		{
-			// Default fast path
-			return reinterpret_cast<u64>(pass);
-		}
-		else
-		{
-			struct
-			{
-				u64 pass_value;
-				u64 config;
-			}
-			key{ reinterpret_cast<uptr>(pass), static_cast<u64>(renderpass_config.ia.topology) };
-			return rpcs3::hash_struct(key);
-		}
+		u64 key = rpcs3::hash_struct(renderpass_config);
+		key ^= reinterpret_cast<uptr>(pass);
+		return key;
 	}
 
 	void overlay_pass::check_heap()
@@ -500,9 +488,6 @@ namespace vk
 			"	}\n"
 			"}\n";
 
-		// Allow mixed primitive rendering
-		multi_primitive = true;
-
 		// 2 input textures
 		m_num_usable_samplers = 2;
 
@@ -807,13 +792,11 @@ namespace vk
 			"#extension GL_ARB_separate_shader_objects : enable\n"
 			"layout(push_constant) uniform static_data{ vec4 regs[2]; };\n"
 			"layout(location=0) out vec4 color;\n"
-			"layout(location=1) out vec4 mask;\n"
 			"\n"
 			"void main()\n"
 			"{\n"
 			"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
 			"	color = regs[0];\n"
-			"	mask = regs[1];\n"
 			"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
 			"}\n";
 
@@ -822,20 +805,15 @@ namespace vk
 			"#extension GL_ARB_separate_shader_objects : enable\n"
 			"layout(input_attachment_index=0, binding=1) uniform subpassInput sp0;\n"
 			"layout(location=0) in vec4 color;\n"
-			"layout(location=1) in vec4 mask;\n"
 			"layout(location=0) out vec4 out_color;\n"
 			"\n"
 			"void main()\n"
 			"{\n"
-			"	vec4 original_color = subpassLoad(sp0);\n"
-			"	out_color = mix(original_color, color, bvec4(mask));\n"
+			"	out_color = color;\n"
 			"}\n";
 
 		// Disable samplers
 		m_num_usable_samplers = 0;
-
-		// Enable subpass attachment 0
-		m_num_input_attachments = 1;
 
 		renderpass_config.set_depth_mask(false);
 		renderpass_config.set_color_mask(0, true, true, true, true);
@@ -852,7 +830,7 @@ namespace vk
 		return { constant };
 	}
 
-	void attachment_clear_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program)
+	void attachment_clear_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/)
 	{
 		f32 data[8];
 		data[0] = clear_color.r;
@@ -865,9 +843,6 @@ namespace vk
 		data[7] = colormask.a;
 
 		vkCmdPushConstants(cmd, m_pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, 32, data);
-
-		// Bind subpass attachment 0
-		program->bind_uniform(input_attachment_info, "sp0", VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, m_descriptor_set);
 	}
 
 	void attachment_clear_pass::set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h)
@@ -884,8 +859,10 @@ namespace vk
 		vkCmdSetScissor(cmd, 0, 1, &region);
 	}
 
-	bool attachment_clear_pass::update_config(u32 clearmask, color4f color)
+	void attachment_clear_pass::run(vk::command_buffer& cmd, vk::framebuffer* target, VkRect2D rect, u32 clearmask, color4f color, VkRenderPass render_pass)
 	{
+		region = rect;
+
 		color4f mask = { 0.f, 0.f, 0.f, 0.f };
 		if (clearmask & 0x10) mask.r = 1.f;
 		if (clearmask & 0x20) mask.g = 1.f;
@@ -896,22 +873,15 @@ namespace vk
 		{
 			colormask = mask;
 			clear_color = color;
-			return true;
+
+			// Update color mask to match request
+			renderpass_config.set_color_mask(0, colormask.r, colormask.g, colormask.b, colormask.a);
 		}
 
-		return false;
-	}
-
-	void attachment_clear_pass::run(vk::command_buffer& cmd, vk::render_target* target, VkRect2D rect, VkRenderPass render_pass)
-	{
-		region = rect;
-		input_attachment_info = { VK_NULL_HANDLE, target->get_view(0xAAE4, rsx::default_remap_vector)->value, target->current_layout };
-
-		target->read_barrier(cmd);
-
-		// Coverage sampling disabled, but actually report correct number of samples
+		// Update renderpass configuration with the real number of samples
 		renderpass_config.set_multisample_state(target->samples(), 0xFFFF, false, false, false);
 
+		// Render fullscreen quad
 		overlay_pass::run(cmd, { 0, 0, target->width(), target->height() }, target, std::vector<vk::image_view*>{}, render_pass);
 	}
 
