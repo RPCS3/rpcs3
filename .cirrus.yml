@@ -99,12 +99,7 @@ linux_task:
 
 freebsd_task:
   matrix:
-    - name: FreeBSD 12.2
-      freebsd_instance:
-        image_family: freebsd-12-2
-        cpu: 8
-        memory: 8G
-    - name: FreeBSD 13
+    - name: Cirrus FreeBSD
       freebsd_instance:
         image_family: freebsd-13-0
         cpu: 8

@@ -1,6 +1,6 @@
 #!/bin/sh -e
 
-# Export variables for later stages of the Azure pipeline
+# Export variables for later stages of the Cirrus pipeline
 # Values done in this manner will appear as environment variables
 # in later stages.
 
