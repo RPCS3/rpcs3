@@ -657,7 +657,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 				const bool hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial)) || fs::is_file(rpcs3::utils::get_custom_config_path(game.serial, true));
 				const bool hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
-				const bool has_hover_gif =  fs::is_file(game_icon_path + game.serial + "/hover.gif");
+				const bool has_hover_gif = fs::is_file(game_icon_path + game.serial + "/hover.gif");
 
 				const QColor color = getGridCompatibilityColor(compat.color);
 				const QPixmap pxmap = PaintedPixmap(icon, hasCustomConfig, hasCustomPadConfig, color);
@@ -1904,6 +1904,33 @@ QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_ic
 	return canvas.scaled(m_icon_size * device_pixel_ratio, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation);
 }
 
+void game_list_frame::SetCustomConfigIcon(QTableWidgetItem* title_item, const game_info& game)
+{
+	if (!title_item || !game)
+		return;
+
+	static QIcon icon_combo_config_bordered(":/Icons/combo_config_bordered.png");
+	static QIcon icon_custom_config(":/Icons/custom_config.png");
+	static QIcon icon_controllers(":/Icons/controllers.png");
+
+	if (game->hasCustomConfig && game->hasCustomPadConfig)
+	{
+		title_item->setIcon(icon_combo_config_bordered);
+	}
+	else if (game->hasCustomConfig)
+	{
+		title_item->setIcon(icon_custom_config);
+	}
+	else if (game->hasCustomPadConfig)
+	{
+		title_item->setIcon(icon_controllers);
+	}
+	else if (!title_item->icon().isNull())
+	{
+		title_item->setIcon({});
+	}
+}
+
 void game_list_frame::ShowCustomConfigIcon(const game_info& game)
 {
 	if (!game)
@@ -1911,8 +1938,8 @@ void game_list_frame::ShowCustomConfigIcon(const game_info& game)
 		return;
 	}
 
-	const std::string serial      = game->info.serial;
-	const bool has_custom_config    = game->hasCustomConfig;
+	const std::string serial         = game->info.serial;
+	const bool has_custom_config     = game->hasCustomConfig;
 	const bool has_custom_pad_config = game->hasCustomPadConfig;
 
 	for (const auto& other_game : m_game_data)
@@ -1921,6 +1948,16 @@ void game_list_frame::ShowCustomConfigIcon(const game_info& game)
 		{
 			other_game->hasCustomConfig    = has_custom_config;
 			other_game->hasCustomPadConfig = has_custom_pad_config;
+		}
+	}
+
+	const QString q_serial = qstr(game->info.serial);
+
+	for (int row = 0; row < m_game_list->rowCount(); ++row)
+	{
+		if (const auto item = m_game_list->item(row, gui::column_serial); item && item->text() == q_serial)
+		{
+			SetCustomConfigIcon(m_game_list->item(row, gui::column_name), game);
 		}
 	}
 
@@ -2101,10 +2138,6 @@ void game_list_frame::PopulateGameList()
 
 	const QString game_icon_path = m_play_hover_movies ? qstr(fs::get_config_dir() + "/Icons/game_icons/") : "";
 
-	static QIcon icon_combo_config_bordered(":/Icons/combo_config_bordered.png");
-	static QIcon icon_custom_config(":/Icons/custom_config.png");
-	static QIcon icon_controllers(":/Icons/controllers.png");
-
 	int row = 0;
 	int index = -1;
 	for (const auto& game : m_game_data)
@@ -2149,18 +2182,7 @@ void game_list_frame::PopulateGameList()
 
 		// Title
 		custom_table_widget_item* title_item = new custom_table_widget_item(title);
-		if (game->hasCustomConfig && game->hasCustomPadConfig)
-		{
-			title_item->setIcon(icon_combo_config_bordered);
-		}
-		else if (game->hasCustomConfig)
-		{
-			title_item->setIcon(icon_custom_config);
-		}
-		else if (game->hasCustomPadConfig)
-		{
-			title_item->setIcon(icon_controllers);
-		}
+		SetCustomConfigIcon(title_item, game);
 
 		// Serial
 		custom_table_widget_item* serial_item = new custom_table_widget_item(game->info.serial);

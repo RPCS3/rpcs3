@@ -82,8 +82,9 @@ endif()
 add_subdirectory(hidapi)
 
 
-# glslang
-add_subdirectory(glslang)
+# Vulkan
+add_subdirectory(glslang EXCLUDE_FROM_ALL)
+add_subdirectory(SPIRV EXCLUDE_FROM_ALL)
 
 
 # yaml-cpp

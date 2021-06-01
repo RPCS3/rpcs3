@@ -11,16 +11,16 @@
 	path = llvm
 	url = https://github.com/RPCS3/llvm-mirror
 	ignore = dirty
-[submodule "Vulkan/glslang"]
+[submodule "3rdparty/glslang"]
 	path = 3rdparty/glslang/glslang
 	url = https://github.com/KhronosGroup/glslang.git
 	ignore = dirty
-[submodule "Vulkan/spirv-tools"]
-	path = Vulkan/spirv-tools
+[submodule "3rdparty/SPIRV-Tools"]
+	path = 3rdparty/SPIRV/SPIRV-Tools
 	url = https://github.com/KhronosGroup/SPIRV-Tools.git
 	ignore = dirty
-[submodule "Vulkan/spirv-headers"]
-	path = Vulkan/spirv-headers
+[submodule "3rdparty/SPIRV-Headers"]
+	path = 3rdparty/SPIRV/SPIRV-Headers
 	url = https://github.com/KhronosGroup/SPIRV-Headers.git
 	ignore = dirty
 [submodule "3rdparty/cereal"]

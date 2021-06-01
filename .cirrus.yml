@@ -40,8 +40,8 @@ windows_task:
 #   - choco install -y python # Needed for SPIRV, use either this or make a new Docker image
 #  spirv_script:
 #   - export PATH=${PATH}:"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin"
-#   - cd "${CIRRUS_WORKING_DIR}/Vulkan/spirv-tools-build"
-#   - msbuild.exe spirv-tools-build.vcxproj //p:Configuration=Release //m
+#   - cd "${CIRRUS_WORKING_DIR}/3rdparty/SPIRV"
+#   - msbuild.exe spirv.vcxproj //p:Configuration=Release //m
   rpcs3_script:
     - export PATH=${PATH}:"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\MSBuild\Current\Bin"
     - msbuild.exe rpcs3.sln //p:Configuration=Release //m
