@@ -1,5 +1,6 @@
 find_package(PkgConfig)
 include(ExternalProject)
+include(CMakeDependentOption)
 
 # Dummy target to use when lib isn't available
 add_library(3rdparty_dummy_lib INTERFACE)
