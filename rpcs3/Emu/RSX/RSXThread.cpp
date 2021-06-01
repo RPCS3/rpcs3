@@ -19,7 +19,7 @@
 #include "Utilities/date_time.h"
 #include "Utilities/StrUtil.h"
 
-#include "util/cereal.hpp"
+#include "util/serialization.hpp"
 #include "util/asm.hpp"
 
 #include <span>
@@ -38,6 +38,37 @@ rsx::frame_capture_data frame_capture;
 
 extern CellGcmOffsetTable offsetTable;
 extern thread_local std::string(*g_tls_log_prefix)();
+
+template <>
+bool serialize<rsx::rsx_state>(utils::serial& ar, rsx::rsx_state& o)
+{
+	return ar(o.transform_program, /*o.transform_constants,*/ o.registers);
+}
+
+template <>
+bool serialize<rsx::frame_capture_data>(utils::serial& ar, rsx::frame_capture_data& o)
+{
+	ar(o.magic, o.version, o.LE_format);
+
+	if (o.magic != rsx::c_fc_magic || o.version != rsx::c_fc_version || o.LE_format != (std::endian::little == std::endian::native))
+	{
+		return false;
+	}
+
+	return ar(o.tile_map, o.memory_map, o.memory_data_map, o.display_buffers_map, o.replay_commands, o.reg_state);
+}
+
+template <>
+bool serialize<rsx::frame_capture_data::memory_block_data>(utils::serial& ar, rsx::frame_capture_data::memory_block_data& o)
+{
+	return ar(o.data);
+}
+
+template <>
+bool serialize<rsx::frame_capture_data::replay_command>(utils::serial& ar, rsx::frame_capture_data::replay_command& o)
+{
+	return ar(o.rsx_command, o.memory_state, o.tile_state, o.display_buffer_state);
+}
 
 namespace rsx
 {
@@ -2861,11 +2892,14 @@ namespace rsx
 			const std::string file_path = fs::get_config_dir() + "captures/" + Emu.GetTitleID() + "_" + date_time::current_time_narrow() + "_capture.rrc";
 
 			// todo: may want to compress this data?
-			const std::string file_data = cereal_serialize(frame_capture);
+			utils::serial save_manager;
+			save_manager.reserve(0x800'0000); // 128MB
+
+			save_manager(frame_capture);
 
 			fs::pending_file temp(file_path);
 
-			if (temp.file && (temp.file.write(file_data), temp.commit(false)))
+			if (temp.file && (temp.file.write(save_manager.data), temp.commit(false)))
 			{
 				rsx_log.success("Capture successful: %s", file_path);
 			}

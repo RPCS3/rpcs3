@@ -843,9 +843,6 @@
     <ClCompile Include="util\yaml.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
-    <ClCompile Include="util\cereal.cpp">
-      <Filter>Utilities</Filter>
-    </ClCompile>
     <ClCompile Include="util\cpu_stats.cpp">
       <Filter>Utilities</Filter>
     </ClCompile>
@@ -1961,6 +1958,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_progress_bar.hpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="util\serialization.hpp">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

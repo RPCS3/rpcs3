@@ -1070,3 +1070,11 @@ constexpr bool is_same_ptr(const volatile Y* ptr)
 
 template <typename X, typename Y>
 concept PtrSame = (is_same_ptr<X, Y>());
+
+namespace utils
+{
+	struct serial;
+}
+
+template <typename T>
+extern bool serialize(utils::serial& ar, T& obj);

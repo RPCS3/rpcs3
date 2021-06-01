@@ -8,35 +8,27 @@
 
 namespace rsx
 {
-	constexpr u32 FRAME_CAPTURE_MAGIC = 0x52524300; // ascii 'RRC/0'
-	constexpr u32 FRAME_CAPTURE_VERSION = 0x4;
+	enum : u32
+	{
+		c_fc_magic = "RRC"_u32,
+		c_fc_version = 0x5,
+	};
+
 	struct frame_capture_data
 	{
 		struct memory_block_data
 		{
 			std::vector<u8> data{};
-
-			template<typename Archive>
-			void serialize(Archive& ar)
-			{
-				ar(data);
-			}
 		};
 
 		// simple block to hold ps3 address and data
 		struct memory_block
 		{
+			static constexpr bool enable_bitcopy = true;
+
 			u32 offset; // Offset in rsx address space
 			u32 location; // rsx memory location of the block
 			u64 data_state;
-
-			template<typename Archive>
-			void serialize(Archive & ar)
-			{
-				ar(offset);
-				ar(location);
-				ar(data_state);
-			}
 		};
 
 		struct replay_command
@@ -45,101 +37,61 @@ namespace rsx
 			std::unordered_set<u64> memory_state{}; // index into memory_map for the various memory blocks that need applying before this command can run
 			u64 tile_state{0};                      // tile state for this command
 			u64 display_buffer_state{0};
-
-			template<typename Archive>
-			void serialize(Archive & ar)
-			{
-				ar(rsx_command);
-				ar(memory_state);
-				ar(tile_state);
-				ar(display_buffer_state);
-			}
 		};
 
 		struct tile_info
 		{
+			static constexpr bool enable_bitcopy = true;
+
 			u32 tile;
 			u32 limit;
 			u32 pitch;
 			u32 format;
-
-			template<typename Archive>
-			void serialize(Archive & ar)
-			{
-				ar(tile);
-				ar(limit);
-				ar(pitch);
-				ar(format);
-			}
 		};
 
 		struct zcull_info
 		{
+			static constexpr bool enable_bitcopy = true;
+
 			u32 region;
 			u32 size;
 			u32 start;
 			u32 offset;
 			u32 status0;
 			u32 status1;
-
-			template<typename Archive>
-			void serialize(Archive & ar)
-			{
-				ar(region);
-				ar(size);
-				ar(start);
-				ar(offset);
-				ar(status0);
-				ar(status1);
-			}
 		};
 
 		// bleh, may need to break these out, might be unnecessary to do both always
 		struct tile_state
 		{
+			static constexpr bool enable_bitcopy = true;
+
 			tile_info tiles[15]{};
 			zcull_info zculls[8]{};
-
-			template<typename Archive>
-			void serialize(Archive & ar)
-			{
-				ar(tiles);
-				ar(zculls);
-			}
 		};
 
 		struct buffer_state
 		{
+			static constexpr bool enable_bitcopy = true;
+
 			u32 width{0};
 			u32 height{0};
 			u32 pitch{0};
 			u32 offset{0};
-
-			template<typename Archive>
-			void serialize(Archive & ar)
-			{
-				ar(width);
-				ar(height);
-				ar(pitch);
-				ar(offset);
-			}
 		};
 
 		struct display_buffers_state
 		{
+			static constexpr bool enable_bitcopy = true;
+
 			std::array<buffer_state, 8> buffers{};
 			u32 count{0};
-
-			template<typename Archive>
-			void serialize(Archive & ar)
-			{
-				ar(buffers);
-				ar(count);
-			}
 		};
 
-		u32 magic;
-		u32 version;
+		u32 magic = c_fc_magic;
+		u32 version = c_fc_version;
+		u32 LE_format = std::endian::little == std::endian::native;
+
 		// hashmap of holding various states for tile
 		std::unordered_map<u64, tile_state> tile_map;
 		// hashmap of various memory 'changes' that can be applied to ps3 memory
@@ -153,23 +105,10 @@ namespace rsx
 		// Initial registers state at the beginning of the capture
 		rsx::rsx_state reg_state;
 
-		template<typename Archive>
-		void serialize(Archive & ar)
-		{
-			ar(magic);
-			ar(version);
-			ar(tile_map);
-			ar(memory_map);
-			ar(memory_data_map);
-			ar(display_buffers_map);
-			ar(replay_commands);
-			ar(reg_state);
-		}
-
 		void reset()
 		{
-			magic = FRAME_CAPTURE_MAGIC;
-			version = FRAME_CAPTURE_VERSION;
+			magic = c_fc_magic;
+			version = c_fc_version;
 			tile_map.clear();
 			memory_map.clear();
 			replay_commands.clear();

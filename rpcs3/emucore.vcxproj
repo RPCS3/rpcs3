@@ -100,10 +100,6 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
-    <ClCompile Include="util\cereal.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <RuntimeTypeInfo>true</RuntimeTypeInfo>
-    </ClCompile>
     <ClCompile Include="..\Utilities\bin_patch.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -490,6 +486,7 @@
     <ClInclude Include="Emu\system_config_types.h" />
     <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="util\atomic.hpp" />
+    <ClInclude Include="util\serialization.hpp" />
     <ClInclude Include="util\v128.hpp" />
     <ClInclude Include="util\v128sse.hpp" />
     <ClInclude Include="util\to_endian.hpp" />

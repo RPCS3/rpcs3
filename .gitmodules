@@ -23,10 +23,6 @@
 	path = 3rdparty/SPIRV/SPIRV-Headers
 	url = ../../KhronosGroup/SPIRV-Headers.git
 	ignore = dirty
-[submodule "3rdparty/cereal"]
-	path = 3rdparty/cereal
-	url = ../../RPCS3/cereal.git
-	ignore = dirty
 [submodule "3rdparty/zlib"]
 	path = 3rdparty/zlib/zlib
 	url = ../../madler/zlib

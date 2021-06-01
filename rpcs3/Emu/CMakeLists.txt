@@ -38,7 +38,6 @@ target_sources(rpcs3_emu PRIVATE
     ../util/atomic.cpp
     ../util/logs.cpp
     ../util/yaml.cpp
-    ../util/cereal.cpp
     ../util/vm_native.cpp
     ../util/dyn_lib.cpp
     ../util/sysinfo.cpp
@@ -74,12 +73,6 @@ if(MSVC)
     set_source_files_properties("../util/yaml.cpp" PROPERTIES COMPILE_FLAGS /EHsc)
 else()
     set_source_files_properties("../util/yaml.cpp" PROPERTIES COMPILE_FLAGS -fexceptions)
-endif()
-
-if(MSVC)
-    set_source_files_properties("../util/cereal.cpp" PROPERTIES COMPILE_FLAGS /GR)
-else()
-    set_source_files_properties("../util/cereal.cpp" PROPERTIES COMPILE_FLAGS -frtti)
 endif()
 
 # Crypto
@@ -499,7 +492,7 @@ endif()
 
 target_link_libraries(rpcs3_emu
     PUBLIC
-        3rdparty::ffmpeg 3rdparty::cereal
+        3rdparty::ffmpeg
         3rdparty::opengl 3rdparty::stblib
         3rdparty::vulkan 3rdparty::glew
         3rdparty::libusb 3rdparty::wolfssl

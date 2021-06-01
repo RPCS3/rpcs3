@@ -30,7 +30,7 @@
 #include "../Crypto/unself.h"
 #include "util/yaml.hpp"
 #include "util/logs.hpp"
-#include "util/cereal.hpp"
+#include "util/serialization.hpp"
 
 #include <fstream>
 #include <memory>
@@ -380,18 +380,31 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	}
 
 	std::unique_ptr<rsx::frame_capture_data> frame = std::make_unique<rsx::frame_capture_data>();
-	cereal_deserialize(*frame, in_file.to_string());
+	utils::serial load_manager;
+	load_manager.set_reading_state(in_file.to_vector<u8>());
+
+	load_manager(*frame);
 	in_file.close();
 
-	if (frame->magic != rsx::FRAME_CAPTURE_MAGIC)
+	if (frame->magic != rsx::c_fc_magic)
 	{
 		sys_log.error("Invalid rsx capture file!");
 		return false;
 	}
 
-	if (frame->version != rsx::FRAME_CAPTURE_VERSION)
+	if (frame->version != rsx::c_fc_version)
 	{
-		sys_log.error("Rsx capture file version not supported! Expected %d, found %d", rsx::FRAME_CAPTURE_VERSION, frame->version);
+		sys_log.error("Rsx capture file version not supported! Expected %d, found %d", +rsx::c_fc_version, frame->version);
+		return false;
+	}
+
+	if (frame->LE_format != (std::endian::little == std::endian::native))
+	{
+		static constexpr std::string_view machines[2]{"Big-Endian", "Little-Endian"};
+
+		sys_log.error("Rsx capture byte endianness not supported! Expected %s format, found %s format"
+			, machines[frame->LE_format ^ 1], machines[frame->LE_format]);
+
 		return false;
 	}
 

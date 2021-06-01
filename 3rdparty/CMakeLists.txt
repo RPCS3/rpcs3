@@ -103,12 +103,6 @@ else()
 	target_include_directories(xxhash INTERFACE xxHash)
 endif()
 
-
-# cereal
-add_library(3rdparty_cereal INTERFACE)
-target_include_directories(3rdparty_cereal INTERFACE cereal/include)
-
-
 # OpenGL
 
 # Prefer GLVND for OpenGL rather than legacy, unless it's been defined elsewhere, in the case of AppImage builds
@@ -351,7 +345,6 @@ add_library(3rdparty::yaml-cpp ALIAS yaml-cpp)
 add_library(3rdparty::xxhash ALIAS xxhash)
 add_library(3rdparty::hidapi ALIAS 3rdparty_hidapi)
 add_library(3rdparty::libpng ALIAS ${LIBPNG_TARGET})
-add_library(3rdparty::cereal ALIAS 3rdparty_cereal)
 add_library(3rdparty::opengl ALIAS 3rdparty_opengl)
 add_library(3rdparty::stblib ALIAS 3rdparty_stblib)
 add_library(3rdparty::discordRPC ALIAS 3rdparty_discordRPC)

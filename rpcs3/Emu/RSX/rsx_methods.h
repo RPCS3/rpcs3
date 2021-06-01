@@ -554,15 +554,6 @@ namespace rsx
 
 		void init();
 
-		template<typename Archive>
-		void serialize(Archive & ar)
-		{
-			ar(transform_program,
-//				transform_constants,
-				registers
-				);
-		}
-
 		u16 viewport_width() const
 		{
 			return decode<NV4097_SET_VIEWPORT_HORIZONTAL>().width();
