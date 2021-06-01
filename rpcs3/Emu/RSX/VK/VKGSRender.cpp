@@ -501,7 +501,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
 
-	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.91");
+	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.92");
 
 	open_command_buffer();
 
@@ -1283,8 +1283,11 @@ void VKGSRender::clear_surface(u32 mask)
 						{
 							if (require_mem_load) rtt->write_barrier(*m_current_command_buffer);
 
-							// Add a barrier to ensure previous writes are visible; also transitions into GENERAL layout
-							rtt->push_barrier(*m_current_command_buffer, VK_IMAGE_LAYOUT_GENERAL);
+							// Add a barrier to ensure previous writes are visible; also transitions into optimal loop layout
+							const auto optimal_layout = m_device->get_framebuffer_loops_support()?
+								VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_VALVE :
+								VK_IMAGE_LAYOUT_GENERAL;
+							rtt->push_barrier(*m_current_command_buffer, optimal_layout);
 
 							if (!renderpass)
 							{

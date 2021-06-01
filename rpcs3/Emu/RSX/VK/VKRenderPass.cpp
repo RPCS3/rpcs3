@@ -19,6 +19,40 @@ namespace vk
 	shared_mutex g_renderpass_cache_mutex;
 	std::unordered_map<u64, VkRenderPass> g_renderpass_cache;
 
+	static u64 encode_layout(VkImageLayout layout)
+	{
+		switch (layout)
+		{
+			case VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_VALVE:
+				return 1;
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+				return 2;
+			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+				return 3;
+			case VK_IMAGE_LAYOUT_GENERAL:
+				return 4;
+			default:
+				fmt::throw_exception("Unsupported layout 0x%llx here", static_cast<usz>(layout));
+		}
+	}
+
+	static VkImageLayout decode_layout(u64 encoded)
+	{
+		switch (encoded)
+		{
+			case 1:
+				return VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_VALVE;
+			case 2:
+				return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			case 3:
+				return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			case 4:
+				return VK_IMAGE_LAYOUT_GENERAL;
+			default:
+				fmt::throw_exception("Unsupported layout encoding 0x%llx here", encoded);
+		}
+	}
+
 	u64 get_renderpass_key(const std::vector<vk::image*>& images)
 	{
 		// Key structure
@@ -44,17 +78,8 @@ namespace vk
 				break;
 			}
 
-			switch (const auto layout = surface->current_layout)
-			{
-			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-			case VK_IMAGE_LAYOUT_GENERAL:
-				key |= (u64(layout) << layout_offset);
-				layout_offset += 3;
-				break;
-			default:
-				fmt::throw_exception("Unsupported image layout 0x%x", static_cast<u32>(layout));
-			}
+			key |= (encode_layout(surface->current_layout) << layout_offset);
+			layout_offset += 3;
 		}
 
 		key |= u64(images[0]->samples()) << 16;
@@ -71,17 +96,8 @@ namespace vk
 
 		for (const auto &surface : images)
 		{
-			switch (const auto layout = surface->current_layout)
-			{
-			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-			case VK_IMAGE_LAYOUT_GENERAL:
-				key |= (u64(layout) << layout_offset);
-				layout_offset += 3;
-				break;
-			default:
-				fmt::throw_exception("Unsupported image layout 0x%x", static_cast<u32>(layout));
-			}
+			key |= (encode_layout(surface->current_layout) << layout_offset);
+			layout_offset += 3;
 		}
 
 		return key;
@@ -98,11 +114,11 @@ namespace vk
 		case VK_FORMAT_D24_UNORM_S8_UINT:
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 			key |= (u64(surface_format) << 8);
-			key |= (u64(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) << 22);
+			key |= (encode_layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) << 22);
 			break;
 		default:
 			key |= u64(surface_format);
-			key |= (u64(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) << 22);
+			key |= (encode_layout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) << 22);
 			break;
 		}
 
@@ -139,12 +155,10 @@ namespace vk
 		u64 layout_offset = 22;
 		for (int n = 0; n < 5; ++n)
 		{
-			const VkImageLayout layout = VkImageLayout((renderpass_key >> layout_offset) & 0x7);
-			layout_offset += 3;
-
-			if (layout)
+			if (const auto encoded_layout = ((renderpass_key >> layout_offset) & 0x7))
 			{
-				rtv_layouts.push_back(layout);
+				rtv_layouts.push_back(decode_layout(encoded_layout));
+				layout_offset += 3;
 			}
 			else
 			{
