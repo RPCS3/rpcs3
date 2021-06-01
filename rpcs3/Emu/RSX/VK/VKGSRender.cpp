@@ -1273,32 +1273,8 @@ void VKGSRender::clear_surface(u32 mask)
 						color_clear_values.color.float32[3]
 					};
 
-					VkRenderPass renderpass = VK_NULL_HANDLE;
 					auto attachment_clear_pass = vk::get_overlay_pass<vk::attachment_clear_pass>();
-					attachment_clear_pass->update_config(colormask, clear_color);
-
-					for (const auto &index : m_draw_buffers)
-					{
-						if (auto rtt = m_rtts.m_bound_render_targets[index].second)
-						{
-							if (require_mem_load) rtt->write_barrier(*m_current_command_buffer);
-
-							// Add a barrier to ensure previous writes are visible; also transitions into GENERAL layout
-							rtt->push_barrier(*m_current_command_buffer, VK_IMAGE_LAYOUT_GENERAL);
-
-							if (!renderpass)
-							{
-								std::vector<vk::image*> surfaces = { rtt };
-								const auto key = vk::get_renderpass_key(surfaces);
-								renderpass = vk::get_renderpass(*m_device, key);
-							}
-
-							attachment_clear_pass->run(*m_current_command_buffer, rtt, region.rect, renderpass);
-							rtt->pop_layout(*m_current_command_buffer);
-						}
-						else
-							fmt::throw_exception("Unreachable");
-					}
+					attachment_clear_pass->run(*m_current_command_buffer, m_draw_fbo, region.rect, colormask, clear_color, get_render_pass());
 				}
 
 				for (u8 index = m_rtts.m_bound_render_targets_config.first, count = 0;
@@ -2277,7 +2253,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_draw_fbo->release();
 	}
 
-	m_draw_fbo = vk::get_framebuffer(*m_device, fbo_width, fbo_height, m_cached_renderpass, m_fbo_images);
+	m_draw_fbo = vk::get_framebuffer(*m_device, fbo_width, fbo_height, VK_FALSE, m_cached_renderpass, m_fbo_images);
 	m_draw_fbo->add_ref();
 
 	set_viewport();
