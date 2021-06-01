@@ -1,74 +1,74 @@
 [submodule "rpcs3-ffmpeg"]
 	path = 3rdparty/ffmpeg
-	url = https://github.com/RPCS3/ffmpeg-core
+	url = ../../RPCS3/ffmpeg-core.git
 	ignore = dirty
 [submodule "asmjit"]
 	path = 3rdparty/asmjit/asmjit
-	url = https://github.com/asmjit/asmjit
+	url = ../../asmjit/asmjit.git
 	branch = oldstable
 	ignore = dirty
 [submodule "llvm"]
 	path = llvm
-	url = https://github.com/RPCS3/llvm-mirror
+	url = ../../RPCS3/llvm-mirror.git
 	ignore = dirty
 [submodule "3rdparty/glslang"]
 	path = 3rdparty/glslang/glslang
-	url = https://github.com/KhronosGroup/glslang.git
+	url = ../../KhronosGroup/glslang.git
 	ignore = dirty
 [submodule "3rdparty/SPIRV-Tools"]
 	path = 3rdparty/SPIRV/SPIRV-Tools
-	url = https://github.com/KhronosGroup/SPIRV-Tools.git
+	url = ../../KhronosGroup/SPIRV-Tools.git
 	ignore = dirty
 [submodule "3rdparty/SPIRV-Headers"]
 	path = 3rdparty/SPIRV/SPIRV-Headers
-	url = https://github.com/KhronosGroup/SPIRV-Headers.git
+	url = ../../KhronosGroup/SPIRV-Headers.git
 	ignore = dirty
 [submodule "3rdparty/cereal"]
 	path = 3rdparty/cereal
-	url = https://github.com/RPCS3/cereal.git
+	url = ../../RPCS3/cereal.git
 	ignore = dirty
 [submodule "3rdparty/zlib"]
 	path = 3rdparty/zlib
-	url = https://github.com/madler/zlib
+	url = ../../madler/zlib
 	ignore = dirty
 [submodule "3rdparty/hidapi"]
 	path = 3rdparty/hidapi/hidapi
-	url = https://github.com/RPCS3/hidapi
+	url = ../../RPCS3/hidapi.git
 	branch = master
 	ignore = dirty
 [submodule "3rdparty/pugixml"]
 	path = 3rdparty/pugixml
-	url = https://github.com/zeux/pugixml
+	url = ../../zeux/pugixml.git
 	ignore = dirty
 [submodule "3rdparty/xxHash"]
 	path = 3rdparty/xxHash
-	url = https://github.com/Cyan4973/xxHash
+	url = ../../Cyan4973/xxHash.git
 	ignore = dirty
 [submodule "3rdparty/yaml-cpp"]
 	path = 3rdparty/yaml-cpp
-	url = https://github.com/RPCS3/yaml-cpp.git
+	url = ../../RPCS3/yaml-cpp.git
 	ignore = dirty
 [submodule "3rdparty/libpng"]
 	path = 3rdparty/libpng/libpng
-	url = https://github.com/glennrp/libpng.git
+	url = ../../glennrp/libpng.git
 	ignore = dirty
 [submodule "3rdparty/libusb"]
 	path = 3rdparty/libusb/libusb
-	url = https://github.com/libusb/libusb.git
+	url = ../../libusb/libusb.git
 	ignore = dirty
 [submodule "3rdparty/FAudio"]
 	path = 3rdparty/FAudio
-	url = https://github.com/FNA-XNA/FAudio.git
+	url = ../../FNA-XNA/FAudio.git
 	ignore = dirty
 [submodule "3rdparty/curl"]
 	path = 3rdparty/curl/curl
-	url = https://github.com/curl/curl.git
+	url = ../../curl/curl.git
 	ignore = dirty
 [submodule "3rdparty/wolfssl"]
 	path = 3rdparty/wolfssl
-	url = https://github.com/wolfSSL/wolfssl.git
+	url = ../../wolfSSL/wolfssl.git
 	ignore = dirty
 [submodule "3rdparty/flatbuffers"]
 	path = 3rdparty/flatbuffers
-	url = https://github.com/google/flatbuffers.git
+	url = ../../google/flatbuffers.git
 	ignore = dirty
