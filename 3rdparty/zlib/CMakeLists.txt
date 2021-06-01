@@ -1,10 +1,8 @@
-# ZLib
 if (USE_SYSTEM_ZLIB)
-	find_package(ZLIB QUIET)
-endif()
-
-if (NOT ZLIB_FOUND)
-	message(STATUS "Using builtin ZLIB")
+    message(STATUS "-- RPCS3: Using syztem ZLIB")
+    find_package(ZLIB QUIET)
+else()
+	message(STATUS "-- RPCS3: Using builtin ZLIB")
 	set(SKIP_INSTALL_ALL ON)
 	add_subdirectory(zlib EXCLUDE_FROM_ALL)
 	set(ZLIB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/zlib" "${CMAKE_CURRENT_BINARY_DIR}/zlib")
