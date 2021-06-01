@@ -28,7 +28,7 @@
 	url = ../../RPCS3/cereal.git
 	ignore = dirty
 [submodule "3rdparty/zlib"]
-	path = 3rdparty/zlib
+	path = 3rdparty/zlib/zlib
 	url = ../../madler/zlib
 	ignore = dirty
 [submodule "3rdparty/hidapi"]
