@@ -37,9 +37,6 @@
 /rpcs3/Debug
 /rpcs3/Release
 /llvm_build
-/3rdparty/llvm_build
-/3rdparty/glslang
-/3rdparty/SPIRV
 
 !/bin
 /bin/*
