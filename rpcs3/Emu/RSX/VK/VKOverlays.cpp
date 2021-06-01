@@ -32,21 +32,9 @@ namespace vk
 
 	u64 overlay_pass::get_pipeline_key(VkRenderPass pass)
 	{
-		if (!multi_primitive)
-		{
-			// Default fast path
-			return reinterpret_cast<u64>(pass);
-		}
-		else
-		{
-			struct
-			{
-				u64 pass_value;
-				u64 config;
-			}
-			key{ reinterpret_cast<uptr>(pass), static_cast<u64>(renderpass_config.ia.topology) };
-			return rpcs3::hash_struct(key);
-		}
+		u64 key = rpcs3::hash_struct(renderpass_config);
+		key ^= reinterpret_cast<uptr>(pass);
+		return key;
 	}
 
 	void overlay_pass::check_heap()
@@ -60,16 +48,26 @@ namespace vk
 
 	void overlay_pass::init_descriptors()
 	{
-		VkDescriptorPoolSize descriptor_pool_sizes[2] =
+		std::vector<VkDescriptorPoolSize> descriptor_pool_sizes =
 		{
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_OVERLAY_MAX_DRAW_CALLS * m_num_usable_samplers },
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_OVERLAY_MAX_DRAW_CALLS },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_OVERLAY_MAX_DRAW_CALLS }
 		};
 
-		// Reserve descriptor pools
-		m_descriptor_pool.create(*m_device, descriptor_pool_sizes, 2, VK_OVERLAY_MAX_DRAW_CALLS, 2);
+		if (m_num_usable_samplers)
+		{
+			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_OVERLAY_MAX_DRAW_CALLS * m_num_usable_samplers });
+		}
 
-		std::vector<VkDescriptorSetLayoutBinding> bindings(1 + m_num_usable_samplers);
+		if (m_num_input_attachments)
+		{
+			descriptor_pool_sizes.push_back({ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, VK_OVERLAY_MAX_DRAW_CALLS * m_num_input_attachments });
+		}
+
+		// Reserve descriptor pools
+		m_descriptor_pool.create(*m_device, descriptor_pool_sizes.data(), ::size32(descriptor_pool_sizes), VK_OVERLAY_MAX_DRAW_CALLS, 2);
+
+		const auto num_bindings = 1 + m_num_usable_samplers + m_num_input_attachments;
+		std::vector<VkDescriptorSetLayoutBinding> bindings(num_bindings);
 
 		bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		bindings[0].descriptorCount = 1;
@@ -77,19 +75,31 @@ namespace vk
 		bindings[0].binding = 0;
 		bindings[0].pImmutableSamplers = nullptr;
 
-		for (u32 n = 1; n <= m_num_usable_samplers; ++n)
+		u32 descriptor_index = 1;
+		for (u32 n = 0; n < m_num_usable_samplers; ++n, ++descriptor_index)
 		{
-			bindings[n].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			bindings[n].descriptorCount = 1;
-			bindings[n].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-			bindings[n].binding = n;
-			bindings[n].pImmutableSamplers = nullptr;
+			bindings[descriptor_index].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			bindings[descriptor_index].descriptorCount = 1;
+			bindings[descriptor_index].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[descriptor_index].binding = descriptor_index;
+			bindings[descriptor_index].pImmutableSamplers = nullptr;
 		}
+
+		for (u32 n = 0; n < m_num_input_attachments; ++n, ++descriptor_index)
+		{
+			bindings[descriptor_index].descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+			bindings[descriptor_index].descriptorCount = 1;
+			bindings[descriptor_index].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+			bindings[descriptor_index].binding = descriptor_index;
+			bindings[descriptor_index].pImmutableSamplers = nullptr;
+		}
+
+		ensure(descriptor_index == num_bindings);
 
 		VkDescriptorSetLayoutCreateInfo infos = {};
 		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		infos.pBindings = bindings.data();
-		infos.bindingCount = 1 + m_num_usable_samplers;
+		infos.bindingCount = ::size32(bindings);
 
 		CHECK_RESULT(vkCreateDescriptorSetLayout(*m_device, &infos, nullptr, &m_descriptor_layout));
 
@@ -119,9 +129,15 @@ namespace vk
 		std::vector<vk::glsl::program_input> fs_inputs;
 		fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_uniform_buffer,{},{}, 0, "static_data" });
 
-		for (u32 n = 1; n <= m_num_usable_samplers; ++n)
+		u32 binding = 1;
+		for (u32 n = 0; n < m_num_usable_samplers; ++n, ++binding)
 		{
-			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, n, "fs" + std::to_string(n-1) });
+			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, binding, "fs" + std::to_string(n) });
+		}
+
+		for (u32 n = 0; n < m_num_input_attachments; ++n, ++binding)
+		{
+			fs_inputs.push_back({ ::glsl::program_domain::glsl_fragment_program, vk::glsl::program_input_type::input_type_texture,{},{}, binding, "sp" + std::to_string(n) });
 		}
 
 		return fs_inputs;
@@ -222,7 +238,7 @@ namespace vk
 		CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &m_descriptor_set));
 		m_used_descriptors++;
 
-		if (!m_sampler)
+		if (!m_sampler && !src.empty())
 		{
 			m_sampler = std::make_unique<vk::sampler>(*m_device,
 				VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -290,7 +306,7 @@ namespace vk
 	vk::framebuffer* overlay_pass::get_framebuffer(vk::image* target, VkRenderPass render_pass)
 	{
 		VkDevice dev = (*vk::get_current_renderer());
-		return vk::get_framebuffer(dev, target->width(), target->height(), render_pass, { target });
+		return vk::get_framebuffer(dev, target->width(), target->height(), m_num_input_attachments > 0, render_pass, { target });
 	}
 
 	void overlay_pass::emit_geometry(vk::command_buffer& cmd)
@@ -471,9 +487,6 @@ namespace vk
 			"		ocol = sample_image(fs0, tc0, parameters2.x).bgra * diff_color;\n"
 			"	}\n"
 			"}\n";
-
-		// Allow mixed primitive rendering
-		multi_primitive = true;
 
 		// 2 input textures
 		m_num_usable_samplers = 2;
@@ -778,34 +791,29 @@ namespace vk
 			"#version 450\n"
 			"#extension GL_ARB_separate_shader_objects : enable\n"
 			"layout(push_constant) uniform static_data{ vec4 regs[2]; };\n"
-			"layout(location=0) out vec2 tc0;\n"
-			"layout(location=1) out vec4 color;\n"
-			"layout(location=2) out vec4 mask;\n"
+			"layout(location=0) out vec4 color;\n"
 			"\n"
 			"void main()\n"
 			"{\n"
 			"	vec2 positions[] = {vec2(-1., -1.), vec2(1., -1.), vec2(-1., 1.), vec2(1., 1.)};\n"
-			"	vec2 coords[] = {vec2(0., 0.), vec2(1., 0.), vec2(0., 1.), vec2(1., 1.)};\n"
-			"	tc0 = coords[gl_VertexIndex % 4];\n"
 			"	color = regs[0];\n"
-			"	mask = regs[1];\n"
 			"	gl_Position = vec4(positions[gl_VertexIndex % 4], 0., 1.);\n"
 			"}\n";
 
 		fs_src =
 			"#version 420\n"
 			"#extension GL_ARB_separate_shader_objects : enable\n"
-			"layout(set=0, binding=1) uniform sampler2D fs0;\n"
-			"layout(location=0) in vec2 tc0;\n"
-			"layout(location=1) in vec4 color;\n"
-			"layout(location=2) in vec4 mask;\n"
+			"layout(input_attachment_index=0, binding=1) uniform subpassInput sp0;\n"
+			"layout(location=0) in vec4 color;\n"
 			"layout(location=0) out vec4 out_color;\n"
 			"\n"
 			"void main()\n"
 			"{\n"
-			"	vec4 original_color = texture(fs0, tc0);\n"
-			"	out_color = mix(original_color, color, bvec4(mask));\n"
+			"	out_color = color;\n"
 			"}\n";
+
+		// Disable samplers
+		m_num_usable_samplers = 0;
 
 		renderpass_config.set_depth_mask(false);
 		renderpass_config.set_color_mask(0, true, true, true, true);
@@ -851,8 +859,10 @@ namespace vk
 		vkCmdSetScissor(cmd, 0, 1, &region);
 	}
 
-	bool attachment_clear_pass::update_config(u32 clearmask, color4f color)
+	void attachment_clear_pass::run(vk::command_buffer& cmd, vk::framebuffer* target, VkRect2D rect, u32 clearmask, color4f color, VkRenderPass render_pass)
 	{
+		region = rect;
+
 		color4f mask = { 0.f, 0.f, 0.f, 0.f };
 		if (clearmask & 0x10) mask.r = 1.f;
 		if (clearmask & 0x20) mask.g = 1.f;
@@ -863,22 +873,16 @@ namespace vk
 		{
 			colormask = mask;
 			clear_color = color;
-			return true;
+
+			// Update color mask to match request
+			renderpass_config.set_color_mask(0, colormask.r, colormask.g, colormask.b, colormask.a);
 		}
 
-		return false;
-	}
-
-	void attachment_clear_pass::run(vk::command_buffer& cmd, vk::render_target* target, VkRect2D rect, VkRenderPass render_pass)
-	{
-		region = rect;
-		target->read_barrier(cmd);
-
-		// Coverage sampling disabled, but actually report correct number of samples
+		// Update renderpass configuration with the real number of samples
 		renderpass_config.set_multisample_state(target->samples(), 0xFFFF, false, false, false);
 
-		overlay_pass::run(cmd, { 0, 0, target->width(), target->height() }, target,
-			target->get_view(0xAAE4, rsx::default_remap_vector), render_pass);
+		// Render fullscreen quad
+		overlay_pass::run(cmd, { 0, 0, target->width(), target->height() }, target, std::vector<vk::image_view*>{}, render_pass);
 	}
 
 	stencil_clear_pass::stencil_clear_pass()

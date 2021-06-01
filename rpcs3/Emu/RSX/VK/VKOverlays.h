@@ -49,6 +49,7 @@ namespace vk
 
 		VkFilter m_sampler_filter = VK_FILTER_LINEAR;
 		u32 m_num_usable_samplers = 1;
+		u32 m_num_input_attachments = 0;
 
 		std::unordered_map<u64, std::unique_ptr<vk::glsl::program>> m_program_cache;
 		std::unique_ptr<vk::sampler> m_sampler;
@@ -61,7 +62,6 @@ namespace vk
 		std::string fs_src;
 
 		graphics_pipeline_state renderpass_config;
-		bool multi_primitive = false;
 
 		bool initialized = false;
 		bool compiled = false;
@@ -180,13 +180,11 @@ namespace vk
 
 		std::vector<VkPushConstantRange> get_push_constants() override;
 
-		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* /*program*/) override;
+		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program) override;
 
 		void set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h) override;
 
-		bool update_config(u32 clearmask, color4f color);
-
-		void run(vk::command_buffer& cmd, vk::render_target* target, VkRect2D rect, VkRenderPass render_pass);
+		void run(vk::command_buffer& cmd, vk::framebuffer* target, VkRect2D rect, u32 clearmask, color4f color, VkRenderPass render_pass);
 	};
 
 	struct stencil_clear_pass : public overlay_pass

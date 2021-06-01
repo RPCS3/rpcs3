@@ -57,6 +57,12 @@ namespace vk
 			return m_height;
 		}
 
+		u8 samples()
+		{
+			ensure(!attachments.empty());
+			return attachments[0]->image()->samples();
+		}
+
 		bool matches(std::vector<vk::image*> fbo_images, u32 width, u32 height)
 		{
 			if (m_width != width || m_height != height)

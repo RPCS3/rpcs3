@@ -19,77 +19,187 @@ namespace vk
 	shared_mutex g_renderpass_cache_mutex;
 	std::unordered_map<u64, VkRenderPass> g_renderpass_cache;
 
-	u64 get_renderpass_key(const std::vector<vk::image*>& images)
+	// Key structure
+	// 0-7 color_format
+	// 8-15 depth_format
+	// 16-21 sample_counts
+	// 22-36 current layouts
+	// 37-41 input attachments
+	union renderpass_key_blob
 	{
-		// Key structure
-		// 0-8 color_format
-		// 8-16 depth_format
-		// 16-21 sample_counts
-		// 21-37 current layouts
-		u64 key = 0;
-		u64 layout_offset = 22;
-		for (const auto &surface : images)
+	private:
+		// Internal utils
+		static u64 encode_layout(VkImageLayout layout)
 		{
-			const auto format_code = u64(surface->format()) & 0xFF;
-			switch (format_code)
+			switch (layout)
+			{
+			case VK_IMAGE_LAYOUT_GENERAL:
+			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+				return static_cast<u64>(layout);
+			default:
+				fmt::throw_exception("Unsupported layout 0x%llx here", static_cast<usz>(layout));
+			}
+		}
+
+		static VkImageLayout decode_layout(u64 encoded)
+		{
+			switch (encoded)
+			{
+			case 1:
+			case 2:
+			case 3:
+				return static_cast<VkImageLayout>(encoded);
+			default:
+				fmt::throw_exception("Unsupported layout encoding 0x%llx here", encoded);
+			}
+		}
+
+	public:
+		u64 encoded;
+
+		struct
+		{
+			u64 color_format  : 8;
+			u64 depth_format  : 8;
+			u64 sample_count  : 6;
+			u64 layout_blob   : 15;
+			u64 input_attachments_mask : 5;
+		};
+
+		renderpass_key_blob(u64 encoded_) : encoded(encoded_)
+		{}
+
+		// Encoders
+		inline void set_layout(u32 index, VkImageLayout layout)
+		{
+			switch (layout)
+			{
+			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+			case VK_IMAGE_LAYOUT_GENERAL:
+				layout_blob |= encode_layout(layout) << (index * 3);
+				break;
+			default:
+				fmt::throw_exception("Unsupported image layout 0x%x", static_cast<u32>(layout));
+			}
+		}
+
+		inline void set_input_attachment(u32 index)
+		{
+			input_attachments_mask |= (1ull << index);
+		}
+
+		inline void set_format(VkFormat format)
+		{
+			switch (format)
 			{
 			case VK_FORMAT_D16_UNORM:
 			case VK_FORMAT_D32_SFLOAT:
 			case VK_FORMAT_D24_UNORM_S8_UINT:
 			case VK_FORMAT_D32_SFLOAT_S8_UINT:
-				key |= (format_code << 8);
+				depth_format = static_cast<u64>(format);
 				break;
 			default:
-				key |= format_code;
+				color_format = static_cast<u64>(format);
 				break;
-			}
-
-			switch (const auto layout = surface->current_layout)
-			{
-			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-			case VK_IMAGE_LAYOUT_GENERAL:
-				key |= (u64(layout) << layout_offset);
-				layout_offset += 3;
-				break;
-			default:
-				fmt::throw_exception("Unsupported image layout 0x%x", static_cast<u32>(layout));
 			}
 		}
 
-		key |= u64(images[0]->samples()) << 16;
-		return key;
+		// Decoders
+		inline VkSampleCountFlagBits get_sample_count() const
+		{
+			return static_cast<VkSampleCountFlagBits>(sample_count);
+		}
+
+		inline VkFormat get_color_format() const
+		{
+			return static_cast<VkFormat>(color_format);
+		}
+
+		inline VkFormat get_depth_format() const
+		{
+			return static_cast<VkFormat>(depth_format);
+		}
+
+		std::vector<VkAttachmentReference> get_input_attachments() const
+		{
+			if (input_attachments_mask == 0) [[likely]]
+			{
+				return {};
+			}
+
+			std::vector<VkAttachmentReference> result;
+			for (u32 i = 0; i < 5; ++i)
+			{
+				if (input_attachments_mask & (1ull << i))
+				{
+					const auto layout = decode_layout((layout_blob >> (i * 3)) & 0x7);
+					result.push_back({i, layout});
+				}
+			}
+
+			return result;
+		}
+
+		std::vector<VkImageLayout> get_image_layouts() const
+		{
+			std::vector<VkImageLayout> result;
+
+			for (u32 i = 0, layout_offset = 0; i < 5; ++i, layout_offset += 3)
+			{
+				if (const auto layout = VkImageLayout((layout_blob >> layout_offset) & 0x7))
+				{
+					result.push_back(layout);
+				}
+				else
+				{
+					break;
+				}
+			}
+
+			return result;
+		}
+	};
+
+	u64 get_renderpass_key(const std::vector<vk::image*>& images, const std::vector<u8>& input_attachment_ids)
+	{
+		renderpass_key_blob key(0);
+
+		for (u32 i = 0; i < ::size32(images); ++i)
+		{
+			const auto& surface = images[i];
+			key.set_format(surface->format());
+			key.set_layout(i, surface->current_layout);
+		}
+
+		for (const auto& ref_id : input_attachment_ids)
+		{
+			key.set_input_attachment(ref_id);
+		}
+
+		key.sample_count = images[0]->samples();
+		return key.encoded;
 	}
 
 	u64 get_renderpass_key(const std::vector<vk::image*>& images, u64 previous_key)
 	{
 		// Partial update; assumes compatible renderpass keys
-		const u64 layout_mask = (0x7FFFull << 22);
+		renderpass_key_blob key(previous_key);
+		key.layout_blob = 0;
 
-		u64 key = previous_key & ~layout_mask;
-		u64 layout_offset = 22;
-
-		for (const auto &surface : images)
+		for (u32 i = 0; i < ::size32(images); ++i)
 		{
-			switch (const auto layout = surface->current_layout)
-			{
-			case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-			case VK_IMAGE_LAYOUT_GENERAL:
-				key |= (u64(layout) << layout_offset);
-				layout_offset += 3;
-				break;
-			default:
-				fmt::throw_exception("Unsupported image layout 0x%x", static_cast<u32>(layout));
-			}
+			key.set_layout(i, images[i]->current_layout);
 		}
 
-		return key;
+		return key.encoded;
 	}
 
 	u64 get_renderpass_key(VkFormat surface_format)
 	{
-		u64 key = (1ull << 16);
+		renderpass_key_blob key(0);
+		key.sample_count = 1;
 
 		switch (surface_format)
 		{
@@ -97,16 +207,16 @@ namespace vk
 		case VK_FORMAT_D32_SFLOAT:
 		case VK_FORMAT_D24_UNORM_S8_UINT:
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
-			key |= (u64(surface_format) << 8);
-			key |= (u64(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) << 22);
+			key.depth_format = static_cast<u64>(surface_format);
+			key.layout_blob = static_cast<u64>(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			break;
 		default:
-			key |= u64(surface_format);
-			key |= (u64(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) << 22);
+			key.color_format = static_cast<u64>(surface_format);
+			key.layout_blob = static_cast<u64>(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			break;
 		}
 
-		return key;
+		return key.encoded;
 	}
 
 	VkRenderPass get_renderpass(VkDevice dev, u64 renderpass_key)
@@ -132,37 +242,23 @@ namespace vk
 		}
 
 		// Decode
-		VkSampleCountFlagBits samples = VkSampleCountFlagBits((renderpass_key >> 16) & 0xF);
+		renderpass_key_blob key(renderpass_key);
+		VkSampleCountFlagBits samples = static_cast<VkSampleCountFlagBits>(key.sample_count);
 		std::vector<VkImageLayout> rtv_layouts;
 		VkImageLayout dsv_layout;
 
-		u64 layout_offset = 22;
-		for (int n = 0; n < 5; ++n)
-		{
-			const VkImageLayout layout = VkImageLayout((renderpass_key >> layout_offset) & 0x7);
-			layout_offset += 3;
+		VkFormat color_format = static_cast<VkFormat>(key.color_format);
+		VkFormat depth_format = static_cast<VkFormat>(key.depth_format);
 
-			if (layout)
-			{
-				rtv_layouts.push_back(layout);
-			}
-			else
-			{
-				break;
-			}
-		}
+		std::vector<VkAttachmentDescription> attachments = {};
+		std::vector<VkAttachmentReference> attachment_references;
 
-		VkFormat color_format = VkFormat(renderpass_key & 0xFF);
-		VkFormat depth_format = VkFormat((renderpass_key >> 8) & 0xFF);
-
+		rtv_layouts = key.get_image_layouts();
 		if (depth_format)
 		{
 			dsv_layout = rtv_layouts.back();
 			rtv_layouts.pop_back();
 		}
-
-		std::vector<VkAttachmentDescription> attachments = {};
-		std::vector<VkAttachmentReference> attachment_references;
 
 		u32 attachment_count = 0;
 		for (const auto &layout : rtv_layouts)
@@ -203,9 +299,16 @@ namespace vk
 		subpass.pColorAttachments = attachment_count? attachment_references.data() : nullptr;
 		subpass.pDepthStencilAttachment = depth_format? &attachment_references.back() : nullptr;
 
+		const auto input_attachments = key.get_input_attachments();
+		if (!input_attachments.empty())
+		{
+			subpass.inputAttachmentCount = ::size32(input_attachments);
+			subpass.pInputAttachments = input_attachments.data();
+		}
+
 		VkRenderPassCreateInfo rp_info = {};
 		rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		rp_info.attachmentCount = static_cast<u32>(attachments.size());
+		rp_info.attachmentCount = ::size32(attachments);
 		rp_info.pAttachments = attachments.data();
 		rp_info.subpassCount = 1;
 		rp_info.pSubpasses = &subpass;
