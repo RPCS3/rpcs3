@@ -36,7 +36,7 @@ struct copy_unmodified_block
 		{
 			// Fast copy
 			const auto data_length = src_pitch_in_block * words_per_block * row_count * depth;
-			std::copy_n(src.begin(), data_length, dst.begin());
+			std::copy_n(src.begin(), std::min<usz>({data_length, src.size(), dst.size()}), dst.begin());
 			return;
 		}
 
@@ -55,7 +55,7 @@ struct copy_unmodified_block
 
 			for (int row = 0; row < row_count; ++row)
 			{
-				// NNOTE: src_offset is already shifted along the border at initialization
+				// NOTE: src_offset is already shifted along the border at initialization
 				std::copy_n(src.begin() + src_offset, width_in_words, dst.begin() + dst_offset);
 
 				src_offset += src_pitch_in_words;
@@ -151,7 +151,7 @@ struct copy_unmodified_block_vtc
 			for (u32 i = 0; i < row_element_count; i += 1)
 			{
 				// Copy one span (8 bytes for DXT1 or 16 bytes for DXT5)
-				dst[dst_offset + i] = src[src_offset + i];
+				dst[dst_offset + i] = src[src_offset + i * 4];
 			}
 
 			dst_offset += row_element_count;
