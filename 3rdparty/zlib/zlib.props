@@ -32,7 +32,7 @@
 	 versions do not match.  The zlib version used in this build is recorded
 	 below:
      -->
-    <ZLibSrcDir>$(SolutionDir)3rdparty\zlib\</ZLibSrcDir>
+    <ZLibSrcDir>$(SolutionDir)3rdparty\zlib\zlib\</ZLibSrcDir>
 
     <!-- The following line allows compilation for an ARM target with Visual
          Studio 2012.  Notice that this is not supported by the Visual Studio

@@ -15,7 +15,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>libpng</RootNamespace>
   </PropertyGroup>
-  <Import Project="$(SolutionDir)\3rdparty\zlib.props" />
+  <Import Project="$(SolutionDir)\3rdparty\zlib\zlib.props" />
   <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <Import Project="$(SolutionDir)\buildfiles\msvc\common_default_macros.props" />
