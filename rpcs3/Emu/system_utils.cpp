@@ -136,11 +136,13 @@ namespace rpcs3::utils
 	{
 		const std::string home_dir = get_hdd0_dir() + "/home";
 
+		std::string rap_path;
+
 		for (auto&& entry : fs::dir(home_dir))
 		{
 			if (entry.is_directory && check_user(entry.name))
 			{
-				std::string rap_path = fmt::format("%s/%s/exdata/%s.rap", home_dir, entry.name, rap);
+				rap_path = fmt::format("%s/%s/exdata/%s.rap", home_dir, entry.name, rap);
 				if (fs::is_file(rap_path))
 				{
 					return rap_path;
@@ -148,7 +150,8 @@ namespace rpcs3::utils
 			}
 		}
 
-		return {};
+		// Return a sample path tested for logging purposes
+		return rap_path;
 	}
 
 	std::string get_sfo_dir_from_game_path(const std::string& game_path, const std::string& title_id)
