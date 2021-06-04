@@ -150,6 +150,7 @@ namespace rpcs3::utils
 			}
 		}
 
+		// Return a sample path tested for logging purposes
 		return rap_path;
 	}
 
