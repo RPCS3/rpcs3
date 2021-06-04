@@ -102,7 +102,16 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 	ppu.gpr[6] = 0;
 
 	// Always set result
-	if (result) *result = 0;
+	struct store_result
+	{
+		vm::ptr<u64> ptr;
+		u64 val = 0;
+
+		~store_result() noexcpet
+		{
+			if (ptr) *ptr = val;
+		}
+	} store{result};
 
 	if (!lv2_event_flag::check_mode(mode))
 	{
@@ -156,7 +165,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 	}
 	else
 	{
-		if (result) *result = ppu.gpr[6];
+		store.val = ppu.gpr[6];
 		return CELL_OK;
 	}
 
@@ -201,12 +210,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 		}
 	}
 
-	if (ppu.test_stopped())
-	{
-		return 0;
-	}
-
-	if (result) *result = ppu.gpr[6];
+	store.val = ppu.gpr[6];
 	return not_an_error(ppu.gpr[3]);
 }
 
