@@ -285,6 +285,8 @@ public:
 		bool has_clamp = false;
 		bool has_w_access = false;
 		bool has_exp_tex_op = false;
+		bool has_pkg = false;
+		bool has_upg = false;
 	}
 	properties;
 
