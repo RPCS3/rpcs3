@@ -830,6 +830,26 @@ std::string FragmentProgramDecompiler::BuildCode()
 	"#define _builtin_rsq(x) (1. / _builtin_sqrt(x))\n"
 	"#define _builtin_div(x, y) (x / y)\n\n";
 
+	if (properties.has_pkg)
+	{
+		OS <<
+		"vec4 _builtin_pkg(const in vec4 value)\n"
+		"{\n"
+		"	vec4 convert = linear_to_srgb(value);\n"
+		"	return uintBitsToFloat(packUnorm4x8(convert)).xxxx;\n"
+		"}\n\n";
+	}
+
+	if (properties.has_upg)
+	{
+		OS <<
+		"vec4 _builtin_upg(const in float value)\n"
+		"{\n"
+		"	vec4 raw = unpackUnorm4x8(floatBitsToUint(value));\n"
+		"	return srgb_to_linear(raw);\n"
+		"}\n\n";
+	}
+
 	if (properties.has_divsq)
 	{
 		// Define RSX-compliant DIVSQ
@@ -954,6 +974,9 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	case RSX_FP_OPCODE_PK16: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm2x16($0.xy)))"); return true;
 	case RSX_FP_OPCODE_PKG:
 		// Should be similar to PKB but with gamma correction, see description of PK4UBG in khronos page
+		properties.has_pkg = true;
+		SetDst("_builtin_pkg($0)");
+		return true;
 	case RSX_FP_OPCODE_PKB: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm4x8($0)))"); return true;
 	case RSX_FP_OPCODE_SIN: SetDst("sin($0.xxxx)"); return true;
 	}
@@ -1120,7 +1143,10 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 	case RSX_FP_OPCODE_UP4: SetDst("unpackSnorm4x8(floatBitsToUint($0.x))"); return true;
 	case RSX_FP_OPCODE_UP16: SetDst("unpackUnorm2x16(floatBitsToUint($0.x)).xyxy"); return true;
 	case RSX_FP_OPCODE_UPG:
-	// Same as UPB with gamma correction
+		// Same as UPB with gamma correction
+		properties.has_upg = true;
+		SetDst("_builtin_upg($0.x)");
+		return true;
 	case RSX_FP_OPCODE_UPB: SetDst("(unpackUnorm4x8(floatBitsToUint($0.x)))"); return true;
 	}
 	return false;
