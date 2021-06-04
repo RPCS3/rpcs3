@@ -107,7 +107,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 		vm::ptr<u64> ptr;
 		u64 val = 0;
 
-		~store_result() noexcpet
+		~store_result() noexcept
 		{
 			if (ptr) *ptr = val;
 		}
