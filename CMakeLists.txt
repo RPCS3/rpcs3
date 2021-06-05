@@ -12,8 +12,17 @@ elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
     endif()
 endif()
 
-# include build options
-include(options.cmake)
+option(USE_NATIVE_INSTRUCTIONS "USE_NATIVE_INSTRUCTIONS makes rpcs3 compile with -march=native, which is useful for local builds, but not good for packages." ON)
+option(WITH_LLVM "Enable usage of LLVM library" ON)
+option(BUILD_LLVM_SUBMODULE "Build LLVM from git submodule" ON)
+option(USE_ALSA "ALSA audio backend" ON)
+option(USE_PULSE "PulseAudio audio backend" ON)
+option(USE_FAUDIO "FAudio audio backend" ON)
+option(USE_LIBEVDEV "libevdev-based joystick support" ON)
+option(USE_DISCORD_RPC "Discord rich presence integration" ON)
+option(USE_SYSTEM_ZLIB "Prefer system ZLIB instead of the builtin one" ON)
+option(USE_VULKAN "Vulkan render backend" ON)
+option(USE_PRECOMPILED_HEADERS "Use precompiled headers" OFF)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/buildfiles/cmake")
 
