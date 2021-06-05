@@ -306,7 +306,7 @@ namespace rsx
 			}
 			break;
 		default:
-			::narrow(tile->comp);
+			ensure(false);
 		}
 	}
 
@@ -355,7 +355,7 @@ namespace rsx
 			}
 			break;
 		default:
-			::narrow(tile->comp);
+			ensure(false);
 		}
 	}
 

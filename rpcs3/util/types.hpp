@@ -864,87 +864,15 @@ constexpr decltype(auto) ensure(T&& arg,
 	fmt::raw_verify_error({line, col, file, func});
 }
 
-// narrow() function details
-template <typename From, typename To = void, typename = void>
-struct narrow_impl
-{
-	// Temporarily (diagnostic)
-	static_assert(std::is_void<To>::value, "narrow_impl<> specialization not found");
-
-	// Returns true if value cannot be represented in type To
-	static constexpr bool test(const From&)
-	{
-		// Unspecialized cases (including cast to void) always considered narrowing
-		return true;
-	}
-};
-
-// Unsigned to unsigned narrowing
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_unsigned<From>::value && std::is_unsigned<To>::value>>
-{
-	static constexpr bool test(const From& value)
-	{
-		return sizeof(To) < sizeof(From) && static_cast<To>(value) != value;
-	}
-};
-
-// Signed to signed narrowing
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std::is_signed<To>::value>>
-{
-	static constexpr bool test(const From& value)
-	{
-		return sizeof(To) < sizeof(From) && static_cast<To>(value) != value;
-	}
-};
-
-// Unsigned to signed narrowing
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_unsigned<From>::value && std::is_signed<To>::value>>
-{
-	static constexpr bool test(const From& value)
-	{
-		return sizeof(To) <= sizeof(From) && value > (static_cast<std::make_unsigned_t<To>>(-1) >> 1);
-	}
-};
-
-// Signed to unsigned narrowing (I)
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std::is_unsigned<To>::value && sizeof(To) >= sizeof(From)>>
-{
-	static constexpr bool test(const From& value)
-	{
-		return value < static_cast<From>(0);
-	}
-};
-
-// Signed to unsigned narrowing (II)
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<std::is_signed<From>::value && std::is_unsigned<To>::value && sizeof(To) < sizeof(From)>>
-{
-	static constexpr bool test(const From& value)
-	{
-		return static_cast<std::make_unsigned_t<From>>(value) > static_cast<To>(-1);
-	}
-};
-
-// Simple type enabled (TODO: allow for To as well)
-template <typename From, typename To>
-struct narrow_impl<From, To, std::enable_if_t<!std::is_same_v<std::common_type_t<From>, From>>>
-	: narrow_impl<std::common_type_t<From>, To>
-{
-};
-
-template <typename To = void, typename From, typename = decltype(static_cast<To>(std::declval<From>()))>
+template <typename To, typename From> requires (std::is_convertible_v<std::common_type_t<From>, To>)
 [[nodiscard]] constexpr To narrow(const From& value,
 	u32 line = __builtin_LINE(),
 	u32 col = __builtin_COLUMN(),
 	const char* file = __builtin_FILE(),
-	const char* func = __builtin_FUNCTION())
+	const char* func = __builtin_FUNCTION()) noexcept
 {
 	// Narrow check
-	if (narrow_impl<From, To>::test(value)) [[unlikely]]
+	if (std::cmp_not_equal<std::common_type_t<From>, To>(value, static_cast<To>(value))) [[unlikely]]
 	{
 		// Pack value as formatting argument
 		fmt::raw_narrow_error({line, col, file, func});
