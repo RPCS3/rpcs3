@@ -359,6 +359,8 @@ void GLGSRender::on_exit()
 		gl::g_typeless_transfer_buffer.remove();
 	}
 
+	gl::debug::g_vis_texture.reset(); // TODO
+
 	gl::destroy_pipe_compiler();
 
 	m_prog_buffer.clear();

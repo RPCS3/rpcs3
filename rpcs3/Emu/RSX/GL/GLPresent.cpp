@@ -4,6 +4,22 @@
 
 LOG_CHANNEL(screenshot_log, "SCREENSHOT");
 
+namespace gl
+{
+	namespace debug
+	{
+		std::unique_ptr<texture> g_vis_texture;
+
+		void set_vis_texture(texture* visual)
+		{
+			const auto target = static_cast<GLenum>(visual->get_target());
+			const auto ifmt = static_cast<GLenum>(visual->get_internal_format());
+			g_vis_texture.reset(new texture(target, visual->width(), visual->height(), 1, 1, ifmt, visual->format_class()));
+			glCopyImageSubData(visual->id(), target, 0, 0, 0, 0, g_vis_texture->id(), target, 0, 0, 0, 0, visual->width(), visual->height(), 1);
+		}
+	}
+}
+
 gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, const rsx::avconf& avconfig)
 {
 	gl::texture* image = nullptr;
@@ -332,6 +348,30 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 		m_text_printer.print_text(4, 144, width, height, fmt::format("Texture memory: %12dM", texture_memory_size));
 		m_text_printer.print_text(4, 162, width, height, fmt::format("Flush requests: %12d  = %2d (%3d%%) hard faults, %2d unavoidable, %2d misprediction(s), %2d speculation(s)", num_flushes, num_misses, cache_miss_ratio, num_unavoidable, num_mispredict, num_speculate));
 		m_text_printer.print_text(4, 180, width, height, fmt::format("Texture uploads: %15u (%u from CPU - %02u%%)", num_texture_upload, num_texture_upload_miss, texture_upload_miss_ratio));
+	}
+
+	if (gl::debug::g_vis_texture)
+	{
+		// Optionally renders a single debug texture to framebuffer.
+		// Only programmatic access provided at the moment.
+		// TODO: Migrate to use overlay system. (kd-11)
+		gl::fbo m_vis_buffer;
+		m_vis_buffer.create();
+		m_vis_buffer.bind();
+		m_vis_buffer.color = gl::debug::g_vis_texture->id();
+		m_vis_buffer.read_buffer(m_vis_buffer.color);
+		m_vis_buffer.draw_buffer(m_vis_buffer.color);
+
+		const u32 vis_width = 320;
+		const u32 vis_height = 240;
+		areai display_view = areai(aspect_ratio).flipped_vertical();
+		display_view.x1 = display_view.x2 - vis_width;
+		display_view.y1 = vis_height;
+
+		// Blit
+		const auto src_region = areau{ 0u, 0u, gl::debug::g_vis_texture->width(), gl::debug::g_vis_texture->height() };
+		m_vis_buffer.blit(gl::screen, static_cast<areai>(src_region), display_view, gl::buffers::color, gl::filter::linear);
+		m_vis_buffer.remove();
 	}
 
 	m_frame->flip(m_context);
