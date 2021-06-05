@@ -140,9 +140,6 @@ public:
 
 	void notify();
 
-private:
-	void abort();
-
 public:
 	// Thread stats for external observation
 	static atomic_t<u64> g_threads_created, g_threads_deleted, g_suspend_counter;
@@ -268,6 +265,9 @@ public:
 
 	// Stop all threads with cpu_flag::exit
 	static void stop_all() noexcept;
+
+	// Cleanup thread counting information
+	static void cleanup() noexcept;
 
 	// Send signal to the profiler(s) to flush results
 	static void flush_profilers() noexcept;

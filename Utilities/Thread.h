@@ -612,19 +612,23 @@ public:
 		return static_cast<thread_state>(thread::m_sync.load() & 3);
 	}
 
-	// Try to abort by assigning thread_state::aborting (UB if assigning different state)
+	// Try to abort by assigning thread_state::aborting/finished
+	// Join thread by thread_state::finished
 	named_thread& operator=(thread_state s)
 	{
-		if (s == thread_state::aborting && thread::m_sync.fetch_op([](u64& v){ return !(v & 3) && (v |= 1); }).second)
+		if (s >= thread_state::aborting && thread::m_sync.fetch_op([](u64& v){ return !(v & 3) && (v |= 1); }).second)
 		{
-			if (s == thread_state::aborting)
-			{
-				thread::m_sync.notify_one(1);
-			}
+			thread::m_sync.notify_one(1);
 
 			if constexpr (std::is_base_of_v<need_wakeup, Context>)
 			{
 				this->wake_up();
+			}
+
+			if (s == thread_state::finished)
+			{
+				// This participates in emulation stopping, use destruction-alike semantics
+				thread::join(true);
 			}
 		}
 
@@ -634,9 +638,8 @@ public:
 	// Context type doesn't need virtual destructor
 	~named_thread()
 	{
-		// Assign aborting state forcefully
-		operator=(thread_state::aborting);
-		thread::join(true);
+		// Assign aborting state forcefully and join thread
+		operator=(thread_state::finished);
 
 		if constexpr (!result::empty)
 		{

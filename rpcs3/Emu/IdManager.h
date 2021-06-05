@@ -12,6 +12,8 @@ extern stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
 
 constexpr auto* g_fxo = &g_fixed_typemap;
 
+enum class thread_state : u32;
+
 // Helper namespace
 namespace id_manager
 {
@@ -141,13 +143,36 @@ namespace id_manager
 	template <typename T>
 	struct id_map
 	{
-		std::vector<std::pair<id_key, std::shared_ptr<void>>> vec{};
+		std::vector<std::pair<id_key, std::shared_ptr<void>>> vec{}, private_copy{};
 		shared_mutex mutex{}; // TODO: Use this instead of global mutex
 
 		id_map()
 		{
 			// Preallocate memory
 			vec.reserve(T::id_count);
+		}
+
+		template <bool dummy = false> requires (std::is_assignable_v<T&, thread_state>)
+		id_map& operator=(thread_state state)
+		{
+			if (private_copy.empty())
+			{
+				reader_lock lock(g_mutex);
+
+				// Save all entries
+				private_copy = vec;
+			}
+
+			// Signal or join threads
+			for (const auto& [key, ptr] : private_copy)
+			{
+				if (ptr)
+				{
+					*static_cast<T*>(ptr.get()) = state;
+				}
+			}
+
+			return *this;
 		}
 	};
 }
