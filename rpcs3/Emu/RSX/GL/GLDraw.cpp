@@ -285,14 +285,16 @@ void GLGSRender::load_texture_env()
 			fs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
 
 		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-		if (m_samplers_dirty || m_textures_dirty[i] || m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state))
+		const auto& tex = rsx::method_registers.fragment_textures[i];
+
+		if (m_samplers_dirty || m_textures_dirty[i] || m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
 		{
-			if (rsx::method_registers.fragment_textures[i].enabled())
+			if (tex.enabled())
 			{
-				*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.fragment_textures[i], m_rtts);
+				*sampler_state = m_gl_texture_cache.upload_texture(cmd, tex, m_rtts);
 
 				if (m_textures_dirty[i])
-					m_fs_sampler_states[i].apply(rsx::method_registers.fragment_textures[i], fs_sampler_state[i].get());
+					m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
 			}
 			else
 			{
@@ -312,14 +314,16 @@ void GLGSRender::load_texture_env()
 			vs_sampler_state[i] = std::make_unique<gl::texture_cache::sampled_image_descriptor>();
 
 		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
-		if (m_samplers_dirty || m_vertex_textures_dirty[i] || m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state))
+		const auto& tex = rsx::method_registers.vertex_textures[i];
+
+		if (m_samplers_dirty || m_vertex_textures_dirty[i] || m_gl_texture_cache.test_if_descriptor_expired(cmd, m_rtts, sampler_state, tex))
 		{
 			if (rsx::method_registers.vertex_textures[i].enabled())
 			{
 				*sampler_state = m_gl_texture_cache.upload_texture(cmd, rsx::method_registers.vertex_textures[i], m_rtts);
 
 				if (m_vertex_textures_dirty[i])
-					m_vs_sampler_states[i].apply(rsx::method_registers.vertex_textures[i], vs_sampler_state[i].get());
+					m_vs_sampler_states[i].apply(tex, vs_sampler_state[i].get());
 			}
 			else
 				*sampler_state = {};
