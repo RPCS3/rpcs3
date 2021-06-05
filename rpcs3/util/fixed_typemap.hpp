@@ -8,6 +8,8 @@
 #include <utility>
 #include <type_traits>
 
+enum class thread_state : u32;
+
 namespace stx
 {
 	// Simplified typemap with exactly one object of each used type, non-moveable. Initialized on init(). Destroyed on clear().
@@ -53,10 +55,11 @@ namespace stx
 #endif
 		}
 
-		// Save default constructor and destructor
+		// Save default constructor and destructor and optional joining operation
 		struct typeinfo
 		{
 			bool(*create)(uchar* ptr, manual_typemap&) noexcept = nullptr;
+			void(*stop)(void* ptr, thread_state) noexcept = nullptr;
 			void(*destroy)(void* ptr) noexcept = nullptr;
 			std::string_view name{};
 
@@ -87,6 +90,13 @@ namespace stx
 			}
 
 			template <typename T>
+			static void call_stop(void* ptr, thread_state state) noexcept
+			{
+				// Abort and/or join (expected thread_state::aborting or thread_state::finished)
+				*std::launder(static_cast<T*>(ptr)) = state;
+			}
+
+			template <typename T>
 			static typeinfo make_typeinfo()
 			{
 				static_assert(!std::is_copy_assignable_v<T> && !std::is_copy_constructible_v<T>, "Please make sure the object cannot be accidentally copied.");
@@ -94,6 +104,12 @@ namespace stx
 				typeinfo r;
 				r.create = &call_ctor<T>;
 				r.destroy = &call_dtor<T>;
+
+				if constexpr (std::is_assignable_v<T&, thread_state>)
+				{
+					r.stop = &call_stop<T>;
+				}
+
 #ifdef _MSC_VER
 				constexpr std::string_view name = parse_type(__FUNCSIG__);
 #else
@@ -323,6 +339,22 @@ namespace stx
 			if (is_init<T>())
 			{
 				[[likely]] return &get<T>();
+			}
+
+			[[unlikely]] return nullptr;
+		}
+
+		static const auto& view_typelist() noexcept
+		{
+			return stx::typelist<typeinfo>();
+		}
+
+		// Get type-erased raw pointer to storage of type
+		uchar* try_get(const type_info<typeinfo>& type) const noexcept
+		{
+			if (m_init[type.index()])
+			{
+				[[likely]] return (Size ? +m_data : m_list) + type.pos();
 			}
 
 			[[unlikely]] return nullptr;
