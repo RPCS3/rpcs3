@@ -119,5 +119,10 @@ namespace gl
 		void apply_defaults(GLenum default_filter = GL_NEAREST);
 	};
 
+	namespace debug
+	{
+		extern std::unique_ptr<texture> g_vis_texture;
+	}
+
 	extern buffer g_typeless_transfer_buffer;
 }
