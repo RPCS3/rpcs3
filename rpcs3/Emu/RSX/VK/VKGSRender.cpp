@@ -565,7 +565,6 @@ VKGSRender::VKGSRender() : GSRender()
 		case vk::driver_vendor::NVIDIA:
 			if (auto chip_family = vk::get_chip_family();
 				chip_family == vk::chip_class::NV_kepler ||
-				chip_family == vk::chip_class::NV_mobile_kepler || // TODO: Deprecate this classification, it just complicates things
 				chip_family == vk::chip_class::NV_maxwell)
 			{
 				rsx_log.error("Older NVIDIA cards do not meet requirements for asynchronous compute due to some driver fakery.");
