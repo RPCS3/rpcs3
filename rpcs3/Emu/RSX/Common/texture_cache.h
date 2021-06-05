@@ -1830,8 +1830,8 @@ namespace rsx
 			return {};
 		}
 
-		template <typename surface_store_type>
-		bool test_if_descriptor_expired(commandbuffer_type& cmd, surface_store_type& surface_cache, sampled_image_descriptor* descriptor)
+		template <typename surface_store_type, typename RsxTextureType>
+		bool test_if_descriptor_expired(commandbuffer_type& cmd, surface_store_type& surface_cache, sampled_image_descriptor* descriptor, const RsxTextureType& tex)
 		{
 			auto result = descriptor->is_expired(surface_cache);
 			if (result.second && descriptor->is_cyclic_reference)
@@ -1849,9 +1849,41 @@ namespace rsx
 				}
 				else if (descriptor->image_handle)
 				{
-					descriptor->external_subresource_desc.external_handle = descriptor->image_handle->image();
-					descriptor->external_subresource_desc.op = deferred_request_command::copy_image_dynamic;
+					// Rebuild duplicate surface
+					auto src = descriptor->image_handle->image();
+					rsx::image_section_attributes_t attr;
+					attr.address = descriptor->ref_address;
+					attr.gcm_format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+					attr.width = src->width();
+					attr.height = src->height();
+					attr.depth = 1;
+					attr.mipmaps = 1;
+					attr.pitch = 0;  // Unused
+					attr.slice_h = src->height();
+					attr.bpp = get_format_block_size_in_bytes(attr.gcm_format);
+					attr.swizzled = false;
+
+					// Sanity checks
+					const bool gcm_format_is_depth = helpers::is_gcm_depth_format(attr.gcm_format);
+					const bool bound_surface_is_depth = surface_cache.m_bound_depth_stencil.first == attr.address;
+					if (!gcm_format_is_depth && bound_surface_is_depth)
+					{
+						// While the copy routines can perform a typeless cast, prefer to not cross the aspect barrier if possible
+						// This avoids messing with other solutions such as texture redirection as well
+						attr.gcm_format = helpers::get_compatible_depth_format(attr.gcm_format);
+					}
+
+					descriptor->external_subresource_desc =
+					{
+						src,
+						rsx::deferred_request_command::copy_image_dynamic,
+						attr,
+						{},
+						rsx::default_remap_vector
+					};
+
 					descriptor->external_subresource_desc.do_not_cache = true;
+					descriptor->image_handle = nullptr;
 				}
 				else
 				{
@@ -1864,7 +1896,7 @@ namespace rsx
 		}
 
 		template <typename RsxTextureType, typename surface_store_type, typename ...Args>
-		sampled_image_descriptor upload_texture(commandbuffer_type& cmd, RsxTextureType& tex, surface_store_type& m_rtts, Args&&... extras)
+		sampled_image_descriptor upload_texture(commandbuffer_type& cmd, const RsxTextureType& tex, surface_store_type& m_rtts, Args&&... extras)
 		{
 			m_texture_upload_calls_this_frame++;
 
