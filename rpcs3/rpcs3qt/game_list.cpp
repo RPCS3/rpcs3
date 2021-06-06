@@ -37,7 +37,7 @@ void game_list::mouseMoveEvent(QMouseEvent *event)
 	m_last_hover_item = new_item;
 }
 
-void game_list::leaveEvent(QEvent *event)
+void game_list::leaveEvent(QEvent */*event*/)
 {
 	if (m_last_hover_item)
 	{

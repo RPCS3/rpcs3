@@ -10,6 +10,11 @@
 
 namespace gl
 {
+	namespace debug
+	{
+		extern void set_vis_texture(texture*);
+	}
+
 	buffer g_typeless_transfer_buffer;
 
 	GLenum get_target(rsx::texture_dimension_extended type)

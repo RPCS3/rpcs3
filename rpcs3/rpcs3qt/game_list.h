@@ -7,6 +7,8 @@
 #include "game_compatibility.h"
 #include "Emu/GameInfo.h"
 
+class movie_item;
+
 /* Having the icons associated with the game info simplifies logic internally */
 struct gui_game_info
 {
@@ -18,12 +20,11 @@ struct gui_game_info
 	bool hasCustomConfig;
 	bool hasCustomPadConfig;
 	bool has_hover_gif;
+	movie_item* item;
 };
 
 typedef std::shared_ptr<gui_game_info> game_info;
 Q_DECLARE_METATYPE(game_info)
-
-class movie_item;
 
 /*
 	class used in order to get deselection and hover change

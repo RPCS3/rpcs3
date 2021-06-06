@@ -28,6 +28,8 @@ namespace glsl
 		bool require_texture_ops;
 		bool require_shadow_ops;
 		bool require_texture_expand;
+		bool require_srgb_to_linear;
+		bool require_linear_to_srgb;
 		bool emulate_coverage_tests;
 		bool emulate_shadow_compare;
 		bool emulate_zclip_transform;

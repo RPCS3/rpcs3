@@ -16,7 +16,6 @@ namespace vk
 		AMD_navi2x,
 		NV_generic,
 		NV_kepler,
-		NV_mobile_kepler,
 		NV_maxwell,
 		NV_pascal,
 		NV_volta,
