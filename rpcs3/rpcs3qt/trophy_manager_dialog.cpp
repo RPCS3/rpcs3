@@ -372,28 +372,19 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 
 	if (trophy_count == 0)
 	{
-		gui_log.error("Warning game %s in trophy folder %s usr file reports zero trophies.  Cannot load in trophy manager.", game_trophy_data->game_name, game_trophy_data->path);
+		gui_log.error("Warning game %s in trophy folder %s usr file reports zero trophies. Cannot load in trophy manager.", game_trophy_data->game_name, game_trophy_data->path);
 		return false;
 	}
 
 	for (u32 trophy_id = 0; trophy_id < trophy_count; ++trophy_id)
 	{
-		// Figure out how many zeros are needed for padding.  (either 0, 1, or 2)
-		QString padding = "";
-		if (trophy_id < 10)
-		{
-			padding = "00";
-		}
-		else if (trophy_id < 100)
-		{
-			padding = "0";
-		}
+		// A trophy icon has 3 digits from 000 to 999, for example TROP001.PNG
+		const QString path = qstr(fmt::format("%sTROP%03d.PNG", game_trophy_data->path, trophy_id));
 
 		QPixmap trophy_icon;
-		const QString path = qstr(game_trophy_data->path) + "TROP" + padding + QString::number(trophy_id) + ".PNG";
 		if (!trophy_icon.load(path))
 		{
-			gui_log.error("Failed to load trophy icon for trophy %d %s", trophy_id, game_trophy_data->path);
+			gui_log.error("Failed to load trophy icon for trophy %d %s", trophy_id, sstr(path));
 		}
 		game_trophy_data->trophy_images.emplace_back(std::move(trophy_icon));
 	}
