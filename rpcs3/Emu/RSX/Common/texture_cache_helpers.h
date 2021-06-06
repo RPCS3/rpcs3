@@ -529,12 +529,19 @@ namespace rsx
 			if (const bool gcm_format_is_depth = is_gcm_depth_format(attr2.gcm_format);
 				gcm_format_is_depth != is_depth)
 			{
-				if (force_convert)
+				if (force_convert || gcm_format_is_depth)
 				{
+					// If force_convert is set, we already know there is no simple workaround. Bitcast will be forced to resolve the issue.
+					// If the existing texture is a color texture but depth readout is requested, force bitcast
+					// Note that if only reading the depth value was needed from a depth surface, it would have been sampled as color due to Z comparison.
 					is_depth = gcm_format_is_depth;
+					force_convert = true;
 				}
 				else
 				{
+					// Existing texture is a depth texture, but RSX wants a color texture.
+					// Change the RSX request to a compatible depth texture to give same results in shader.
+					ensure(is_depth);
 					attr2.gcm_format = get_compatible_depth_format(attr2.gcm_format);
 				}
 

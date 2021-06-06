@@ -1047,7 +1047,7 @@ namespace vk
 			case CELL_GCM_TEXTURE_X16:
 			case CELL_GCM_TEXTURE_DEPTH16:
 			case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-				return (vk_format == VK_FORMAT_D16_UNORM);
+				return (vk_format == VK_FORMAT_D16_UNORM || vk_format == VK_FORMAT_D32_SFLOAT);
 			}
 		}
 
