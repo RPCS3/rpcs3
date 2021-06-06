@@ -968,7 +968,7 @@ namespace rsx
 
 			for (auto it = sections.crbegin(); it != sections.crend(); ++it)
 			{
-				if (it->base_address < range.start)
+				if (!it->surface->get_memory_range().inside(range))
 				{
 					continue;
 				}
