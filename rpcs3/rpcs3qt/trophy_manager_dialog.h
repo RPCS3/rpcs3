@@ -11,6 +11,8 @@
 #include <QSplitter>
 
 #include <memory>
+#include <map>
+#include <mutex>
 
 class game_list;
 class gui_settings;
@@ -20,9 +22,11 @@ struct GameTrophiesData
 {
 	std::unique_ptr<TROPUSRLoader> trop_usr;
 	rXmlDocument trop_config; // I'd like to use unique but the protocol inside of the function passes around shared pointers..
-	std::vector<QPixmap> trophy_images;
+	std::map<int, QPixmap> trophy_images; // Cache trophy images to avoid loading from disk as much as possible.
+	QStringList trophy_image_paths;
 	std::string game_name;
 	std::string path;
+	std::mutex mtx;
 };
 
 enum TrophyColumns
