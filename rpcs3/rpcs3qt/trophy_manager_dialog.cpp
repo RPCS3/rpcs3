@@ -379,14 +379,7 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 	for (u32 trophy_id = 0; trophy_id < trophy_count; ++trophy_id)
 	{
 		// A trophy icon has 3 digits from 000 to 999, for example TROP001.PNG
-		const QString path = qstr(fmt::format("%sTROP%03d.PNG", game_trophy_data->path, trophy_id));
-
-		QPixmap trophy_icon;
-		if (!trophy_icon.load(path))
-		{
-			gui_log.error("Failed to load trophy icon for trophy %d %s", trophy_id, sstr(path));
-		}
-		game_trophy_data->trophy_images.emplace_back(std::move(trophy_icon));
+		game_trophy_data->trophy_image_paths << qstr(fmt::format("%sTROP%03d.PNG", game_trophy_data->path, trophy_id));
 	}
 
 	// Get game name
@@ -542,7 +535,7 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 	for (int i = 0; i < m_trophy_table->rowCount(); ++i)
 		indices.append(i);
 
-	const std::function<QPixmap(const int&)> get_scaled = [this, db_pos, dpr, new_height](const int& i)
+	const std::function<QPixmap(const int&)> get_scaled = [this, data = m_trophies_db.at(db_pos).get(), dpr, new_height](const int& i)
 	{
 		QTableWidgetItem* item = m_trophy_table->item(i, TrophyColumns::Id);
 		QTableWidgetItem* icon_item = m_trophy_table->item(i, TrophyColumns::Icon);
@@ -550,8 +543,24 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 		{
 			return QPixmap();
 		}
+
 		const int trophy_id = item->text().toInt();
-		const QPixmap icon = m_trophies_db[db_pos]->trophy_images[trophy_id];
+		QPixmap icon;
+		{
+			std::scoped_lock lock(data->mtx);
+			if (data->trophy_images.contains(trophy_id))
+			{
+				icon = data->trophy_images[trophy_id];
+			}
+			else if (const QString& path = data->trophy_image_paths[trophy_id]; !icon.load(path))
+			{
+				gui_log.error("Failed to load trophy icon for trophy %d (icon='%s')", trophy_id, sstr(path));
+			}
+			else
+			{
+				data->trophy_images[trophy_id] = icon;
+			}
+		}
 
 		QPixmap new_icon = QPixmap(icon.size() * dpr);
 		new_icon.setDevicePixelRatio(dpr);
