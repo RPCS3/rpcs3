@@ -357,6 +357,7 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	{
 		const auto driver_caps = gl::get_driver_caps();
 		decompiler.device_props.has_native_half_support = driver_caps.NV_gpu_shader5_supported || driver_caps.AMD_gpu_shader_half_float_supported;
+		decompiler.device_props.has_low_precision_rounding = driver_caps.vendor_NVIDIA;
 	}
 
 	decompiler.Task();
