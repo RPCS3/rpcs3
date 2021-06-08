@@ -111,7 +111,7 @@ namespace utils
 						break;
 				}
 
-				if constexpr (std::is_trivially_copyable_v<typename std::remove_reference_t<T>::value_type>)
+				if constexpr (Bitcopy<typename std::remove_reference_t<T>::value_type>)
 				{
 					raw_serialize(obj.data(), sizeof(obj[0]) * obj.size());
 				}
@@ -152,7 +152,7 @@ namespace utils
 
 			obj.resize(size);
 
-			if constexpr (std::is_trivially_copyable_v<typename T::value_type>)
+			if constexpr (Bitcopy<typename T::value_type>)
 			{
 				if (!raw_serialize(obj.data(), sizeof(obj[0]) * size))
 				{
@@ -179,7 +179,7 @@ namespace utils
 		template <typename T> requires FastRandomAccess<T> && (!ListAlike<T>) && (!Bitcopy<T>)
 		bool serialize(T& obj)
 		{
-			if constexpr (std::is_trivially_copyable_v<std::remove_reference_t<decltype(std::declval<T>()[0])>>)
+			if constexpr (Bitcopy<std::remove_reference_t<decltype(std::declval<T>()[0])>>)
 			{
 				return raw_serialize(std::data(obj), sizeof(obj[0]) * std::size(obj));
 			}
