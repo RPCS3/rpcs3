@@ -1510,6 +1510,8 @@ void Emulator::Stop(bool restart)
 		return;
 	}
 
+	sys_log.notice("Stopping emulator...");
+
 	named_thread stop_watchdog("Stop Watchdog", [&]()
 	{
 		for (uint i = 0; thread_ctrl::state() != thread_state::aborting;)
@@ -1532,10 +1534,6 @@ void Emulator::Stop(bool restart)
 		}
 	});
 
-	sys_log.notice("Stopping emulator...");
-
-	GetCallbacks().on_stop();
-
 	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
 		// TODO: notify?
@@ -1557,6 +1555,8 @@ void Emulator::Stop(bool restart)
 			}
 		}
 	}
+
+	GetCallbacks().on_stop();
 
 	// Join threads
 	for (const auto& type : fxo_t::view_typelist())
