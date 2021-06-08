@@ -624,12 +624,12 @@ public:
 			{
 				this->wake_up();
 			}
+		}
 
-			if (s == thread_state::finished)
-			{
-				// This participates in emulation stopping, use destruction-alike semantics
-				thread::join(true);
-			}
+		if (s == thread_state::finished)
+		{
+			// This participates in emulation stopping, use destruction-alike semantics
+			thread::join(true);
 		}
 
 		return *this;
