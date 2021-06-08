@@ -155,8 +155,8 @@ namespace stx
 				clear();
 			}
 
-			m_order = new void*[stx::typelist<typeinfo>().count()];
-			m_info = new const typeinfo*[stx::typelist<typeinfo>().count()];
+			m_order = new void*[stx::typelist<typeinfo>().count() + 1];
+			m_info = new const typeinfo*[stx::typelist<typeinfo>().count() + 1];
 			m_init = new bool[stx::typelist<typeinfo>().count()]{};
 
 			if constexpr (Size == 0)
@@ -176,6 +176,9 @@ namespace stx
 				ensure(Align >= stx::typelist<typeinfo>().align());
 				m_data[0] = 0;
 			}
+
+			*m_order++ = nullptr;
+			*m_info++ = nullptr;
 		}
 
 		void init(bool reset = true)
@@ -231,6 +234,8 @@ namespace stx
 			}
 
 			// Pointers should be restored to their positions
+			m_info--;
+			m_order--;
 			delete[] m_init;
 			delete[] m_info;
 			delete[] m_order;
@@ -344,20 +349,51 @@ namespace stx
 			[[unlikely]] return nullptr;
 		}
 
-		static const auto& view_typelist() noexcept
+		class iterator
 		{
-			return stx::typelist<typeinfo>();
-		}
+			const typeinfo** m_info;
+			void** m_ptr;
 
-		// Get type-erased raw pointer to storage of type
-		uchar* try_get(const type_info<typeinfo>& type) const noexcept
-		{
-			if (m_init[type.index()])
+		public:
+			iterator(const typeinfo** _info, void** _ptr)
+				: m_info(_info)
+				, m_ptr(_ptr)
 			{
-				[[likely]] return (Size ? +m_data : m_list) + type.pos();
 			}
 
-			[[unlikely]] return nullptr;
+			std::pair<const typeinfo&, void*> operator*() const
+			{
+				return {*m_info[-1], m_ptr[-1]};
+			}
+
+			iterator& operator++()
+			{
+				m_info--;
+				m_ptr--;
+
+				if (!m_info[-1])
+				{
+					m_info = nullptr;
+					m_ptr = nullptr;
+				}
+
+				return *this;
+			}
+
+			bool operator!=(const iterator& rhs) const
+			{
+				return m_info != rhs.m_info || m_ptr != rhs.m_ptr;
+			}
+		};
+
+		iterator begin() noexcept
+		{
+			return iterator{m_info, m_order};
+		}
+
+		iterator end() noexcept
+		{
+			return iterator{nullptr, nullptr};
 		}
 	};
 }

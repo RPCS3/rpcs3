@@ -1542,31 +1542,23 @@ void Emulator::Stop(bool restart)
 
 	cpu_thread::stop_all();
 
-	using fxo_t = std::remove_pointer_t<decltype(g_fxo)>;
-
 	// Signal threads
-	for (const auto& type : fxo_t::view_typelist())
+	for (const auto& [type, data] : *g_fxo)
 	{
 		if (type.stop)
 		{
-			if (auto data = g_fxo->try_get(type))
-			{
-				type.stop(data, thread_state::aborting);
-			}
+			type.stop(data, thread_state::aborting);
 		}
 	}
 
 	GetCallbacks().on_stop();
 
 	// Join threads
-	for (const auto& type : fxo_t::view_typelist())
+	for (const auto& [type, data] : *g_fxo)
 	{
 		if (type.stop)
 		{
-			if (auto data = g_fxo->try_get(type))
-			{
-				type.stop(data, thread_state::finished);
-			}
+			type.stop(data, thread_state::finished);
 		}
 	}
 

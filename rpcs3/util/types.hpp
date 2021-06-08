@@ -761,7 +761,7 @@ constexpr unsigned __builtin_COLUMN()
 }
 #endif
 
-template <usz Size = usz(-1)>
+template <usz Size = umax>
 struct const_str_t
 {
 	static constexpr usz size = Size;
@@ -792,7 +792,7 @@ struct const_str_t
 };
 
 template <>
-struct const_str_t<usz(-1)>
+struct const_str_t<umax>
 {
 	const usz size;
 
