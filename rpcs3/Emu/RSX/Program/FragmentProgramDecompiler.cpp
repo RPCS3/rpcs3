@@ -828,7 +828,21 @@ std::string FragmentProgramDecompiler::BuildCode()
 	"#define _builtin_sqrt(x) sqrt(abs(x))\n"
 	"#define _builtin_rcp(x) (1. / x)\n"
 	"#define _builtin_rsq(x) (1. / _builtin_sqrt(x))\n"
-	"#define _builtin_div(x, y) (x / y)\n\n";
+	"#define _builtin_div(x, y) (x / y)\n";
+
+	if (device_props.has_low_precision_rounding)
+	{
+		// NVIDIA has terrible rounding errors interpolating constant values across vertices with different w
+		// PS3 games blindly rely on interpolating a constant to not change the values
+		// Calling floor/equality will fail randomly causing a moire pattern
+		OS <<
+		"#define _builtin_floor(x) floor(x + 0.000001)\n\n";
+	}
+	else
+	{
+		OS <<
+		"#define _builtin_floor floor\n\n";
+	}
 
 	if (properties.has_pkg)
 	{
@@ -954,7 +968,7 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 	case RSX_FP_OPCODE_DST: SetDst("$Ty(1.0, $0.y * $1.y, $0.z, $1.w)", OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_REFL: SetDst(getFunction(FUNCTION::FUNCTION_REFL), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_EX2: SetDst("exp2($0.xxxx)"); return true;
-	case RSX_FP_OPCODE_FLR: SetDst("floor($0)"); return true;
+	case RSX_FP_OPCODE_FLR: SetDst("_builtin_floor($0)"); return true;
 	case RSX_FP_OPCODE_FRC: SetDst(getFunction(FUNCTION::FUNCTION_FRACT)); return true;
 	case RSX_FP_OPCODE_LIT:
 		SetDst("_builtin_lit($0)");
