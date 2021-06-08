@@ -952,6 +952,7 @@ namespace rsx
 	public:
 		using iterator = Ty*;
 		using const_iterator = const Ty*;
+		using value_type = Ty;
 
 	private:
 		u32 _capacity = 0;
