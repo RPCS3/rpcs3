@@ -2014,6 +2014,12 @@ void game_list_frame::ResizeIcons(const int& slider_pos)
 
 void game_list_frame::RepaintIcons(const bool& from_settings)
 {
+	if (m_repaint_watcher.isRunning())
+	{
+		m_repaint_watcher.cancel();
+		m_repaint_watcher.waitForFinished();
+	}
+
 	if (from_settings)
 	{
 		if (m_gui_settings->GetValue(gui::m_enableUIColors).toBool())
@@ -2049,12 +2055,6 @@ void game_list_frame::RepaintIcons(const bool& from_settings)
 
 		// Shorten the last section to remove horizontal scrollbar if possible
 		m_game_list->resizeColumnToContents(gui::column_count - 1);
-	}
-
-	if (m_repaint_watcher.isRunning())
-	{
-		m_repaint_watcher.cancel();
-		m_repaint_watcher.waitForFinished();
 	}
 
 	const std::function func = [this](const game_info& game) -> movie_item*
