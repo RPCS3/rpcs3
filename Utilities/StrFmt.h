@@ -293,4 +293,66 @@ namespace fmt
 
 	template <typename CharT, usz N, typename... Args>
 	throw_exception(const CharT(&)[N], const Args&...) -> throw_exception<CharT, N, Args...>;
+
+	// Helper template: pack format variables
+	template <typename Arg = void, typename... Args>
+	struct tie
+	{
+		// Universal reference
+		std::add_rvalue_reference_t<Arg> arg;
+
+		tie<Args...> next;
+
+		// Store only references, unveil op is postponed
+		tie(Arg&& arg, Args&&... args) noexcept
+			: arg(std::forward<Arg>(arg))
+			, next(std::forward<Args>(args)...)
+		{
+		}
+
+		using type = std::remove_cvref_t<Arg>;
+
+		// Storage for fmt_unveil (deferred initialization)
+		decltype(fmt_unveil<type>::get(std::declval<Arg>())) value;
+
+		void init(u64 to[])
+		{
+			value = fmt_unveil<type>::get(arg);
+			to[0] = value;
+			next.init(to + 1);
+		}
+	};
+
+	template <>
+	struct tie<void>
+	{
+		void init(u64 to[]) const
+		{
+			// Isn't really null terminated, this value has no meaning
+			to[0] = 0;
+		}
+	};
+
+	template <typename... Args>
+	tie(Args&&... args) -> tie<Args...>;
+
+	// Ensure with formatting
+	template <typename T, typename CharT, usz N, typename... Args>
+	decltype(auto) ensure(T&& arg, const CharT(&fmt)[N], tie<Args...> args,
+		u32 line = __builtin_LINE(),
+		u32 col = __builtin_COLUMN(),
+		const char* file = __builtin_FILE(),
+		const char* func = __builtin_FUNCTION()) noexcept
+	{
+		if (std::forward<T>(arg)) [[likely]]
+		{
+			return std::forward<T>(arg);
+		}
+
+		// Prepare u64 array
+		u64 data[sizeof...(Args) + 1];
+		args.init(data);
+
+		raw_throw_exception({line, col, file, func}, reinterpret_cast<const char*>(fmt), type_info_v<std::remove_cvref_t<Args>...>, +data);
+	}
 }
