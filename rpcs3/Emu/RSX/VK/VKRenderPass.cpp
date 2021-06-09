@@ -322,6 +322,12 @@ namespace vk
 
 	void clear_renderpass_cache(VkDevice dev)
 	{
+		// Wipe current status
+		g_cached_renderpass_key = 0;
+		g_cached_renderpass = VK_NULL_HANDLE;
+		g_current_renderpass.clear();
+
+		// Destroy cache
 		for (const auto &renderpass : g_renderpass_cache)
 		{
 			vkDestroyRenderPass(dev, renderpass.second, nullptr);
