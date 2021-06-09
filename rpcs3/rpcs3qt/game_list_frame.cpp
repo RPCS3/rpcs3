@@ -2195,7 +2195,10 @@ void game_list_frame::PopulateGameList()
 		index++;
 
 		if (!IsEntryVisible(game))
+		{
+			game->item = nullptr;
 			continue;
+		}
 
 		const QString serial = qstr(game->info.serial);
 		const QString title = m_titles.value(serial, qstr(game->info.name));
