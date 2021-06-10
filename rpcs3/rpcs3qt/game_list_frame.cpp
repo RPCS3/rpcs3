@@ -133,6 +133,12 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnRefreshFinished);
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::canceled, this, [this]()
 	{
+		if (m_repaint_watcher.isRunning())
+		{
+			m_repaint_watcher.cancel();
+			m_repaint_watcher.waitForFinished();
+		}
+
 		m_path_list.clear();
 		m_game_data.clear();
 		m_serials.clear();
@@ -430,7 +436,10 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 	if (m_refresh_watcher.isRunning())
 	{
-		m_refresh_watcher.cancel();
+		if (from_drive)
+		{
+			m_refresh_watcher.cancel();
+		}
 		m_refresh_watcher.waitForFinished();
 	}
 
@@ -672,6 +681,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 			m_games.push(std::make_shared<gui_game_info>(gui_game_info{game, qt_cat, compat, {}, {}, hasCustomConfig, hasCustomPadConfig, has_hover_gif, nullptr}));
 		}));
+
 		return;
 	}
 
@@ -701,6 +711,12 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 
 void game_list_frame::OnRefreshFinished()
 {
+	if (m_repaint_watcher.isRunning())
+	{
+		m_repaint_watcher.cancel();
+		m_repaint_watcher.waitForFinished();
+	}
+
 	for (auto&& g : m_games.pop_all())
 	{
 		m_game_data.push_back(g);
