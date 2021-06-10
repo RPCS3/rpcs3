@@ -146,7 +146,8 @@ bool main_window::Init(bool with_cli_boot)
 
 	if (enable_play_last)
 	{
-		ui->sysPauseAct->setText(tr("&Play last played game\tCtrl+R"));
+		ui->sysPauseAct->setText(tr("&Play last played game"));
+		ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 		ui->sysPauseAct->setIcon(m_icon_play);
 		ui->toolbar_start->setToolTip(start_tooltip);
 	}
@@ -1480,7 +1481,8 @@ void main_window::OnEmuRun(bool /*start_playtime*/) const
 	m_thumb_playPause->setToolTip(pause_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 #endif
-	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
+	ui->sysPauseAct->setText(tr("&Pause"));
+	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
 	ui->toolbar_start->setText(tr("Pause"));
@@ -1503,7 +1505,8 @@ void main_window::OnEmuResume() const
 	m_thumb_playPause->setToolTip(pause_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_pause);
 #endif
-	ui->sysPauseAct->setText(tr("&Pause\tCtrl+P"));
+	ui->sysPauseAct->setText(tr("&Pause"));
+	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+P"));
 	ui->sysPauseAct->setIcon(m_icon_pause);
 	ui->toolbar_start->setIcon(m_icon_pause);
 	ui->toolbar_start->setText(tr("Pause"));
@@ -1520,7 +1523,8 @@ void main_window::OnEmuPause() const
 	m_thumb_playPause->setToolTip(resume_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
-	ui->sysPauseAct->setText(tr("&Resume\tCtrl+R"));
+	ui->sysPauseAct->setText(tr("&Resume"));
+	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
@@ -1540,7 +1544,8 @@ void main_window::OnEmuStop()
 
 	m_debugger_frame->UpdateUI();
 
-	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play\tCtrl+R") : tr("&Resume\tCtrl+R"));
+	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play") : tr("&Resume"));
+	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 #ifdef _WIN32
 	m_thumb_playPause->setToolTip(play_tooltip);
@@ -1599,7 +1604,8 @@ void main_window::OnEmuReady() const
 	m_thumb_playPause->setToolTip(play_tooltip);
 	m_thumb_playPause->setIcon(m_icon_thumb_play);
 #endif
-	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play\tCtrl+R") : tr("&Resume\tCtrl+R"));
+	ui->sysPauseAct->setText(Emu.IsReady() ? tr("&Play") : tr("&Resume"));
+	ui->sysPauseAct->setShortcut(QKeySequence("Ctrl+R"));
 	ui->sysPauseAct->setIcon(m_icon_play);
 	ui->toolbar_start->setIcon(m_icon_play);
 	ui->toolbar_start->setText(tr("Play"));
@@ -1797,7 +1803,7 @@ void main_window::AddRecentAction(const q_string_pair& entry)
 	// refill menu with actions
 	for (int i = 0; i < m_recent_game_acts.count(); i++)
 	{
-		m_recent_game_acts[i]->setShortcut(tr("Ctrl+%1").arg(i+1));
+		m_recent_game_acts[i]->setShortcut(tr("Ctrl+%1").arg(i + 1));
 		m_recent_game_acts[i]->setToolTip(m_rg_entries.at(i).second);
 		ui->bootRecentMenu->addAction(m_recent_game_acts[i]);
 	}
@@ -2651,23 +2657,6 @@ void main_window::keyPressEvent(QKeyEvent *keyEvent)
 	if (((keyEvent->modifiers() & Qt::AltModifier) && keyEvent->key() == Qt::Key_Return) || (isFullScreen() && keyEvent->key() == Qt::Key_Escape))
 	{
 		ui->toolbar_fullscreen->trigger();
-	}
-
-	if (keyEvent->modifiers() & Qt::ControlModifier)
-	{
-		switch (keyEvent->key())
-		{
-		case Qt::Key_R:
-		{
-			switch (Emu.GetStatus())
-			{
-			case system_state::paused: Emu.Resume(); return;
-			case system_state::ready: Emu.Run(true); return;
-			default: return;
-			}
-		}
-		case Qt::Key_P: if (Emu.IsRunning()) Emu.Pause(); return;
-		}
 	}
 }
 
