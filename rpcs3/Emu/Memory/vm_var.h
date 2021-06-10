@@ -46,6 +46,8 @@ namespace vm
 
 		_var_base& operator=(const _var_base&) = delete;
 
+		static constexpr bool enable_bitcopy = false;
+
 		_var_base()
 		    : pointer(A::alloc(sizeof(T), alignof(T)))
 		{
@@ -78,6 +80,8 @@ namespace vm
 		_var_base(const _var_base&) = delete;
 
 		_var_base& operator=(const _var_base&) = delete;
+
+		static constexpr bool enable_bitcopy = false;
 
 		_var_base(u32 count)
 		    : pointer(A::alloc(u32{sizeof(T)} * count, alignof(T)))

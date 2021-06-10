@@ -92,6 +92,8 @@ union alignas(16) v128
 	__m128d vd;
 #endif
 
+	static constexpr bool enable_bitcopy = true;
+
 	static v128 from64(u64 _0, u64 _1 = 0)
 	{
 		v128 ret;
