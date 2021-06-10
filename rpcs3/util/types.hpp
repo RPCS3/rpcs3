@@ -521,6 +521,9 @@ template <typename T>
 concept FPInt = std::is_floating_point_v<std::common_type_t<T>> || std::is_same_v<std::common_type_t<T>, f16>;
 
 template <typename T>
+concept Integral = std::is_integral_v<std::common_type_t<T>> || std::is_same_v<std::common_type_t<T>, u128> || std::is_same_v<std::common_type_t<T>, s128>;
+
+template <typename T>
 constexpr T min_v;
 
 template <UnsignedInt T>

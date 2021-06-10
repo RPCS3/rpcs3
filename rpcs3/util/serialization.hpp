@@ -33,7 +33,7 @@ namespace utils
 	};
 
 	template <typename T>
-	concept Bitcopy = (std::is_arithmetic_v<T>) || (std::is_enum_v<T>) || requires (T& obj)
+	concept Bitcopy = (std::is_arithmetic_v<T>) || (std::is_enum_v<T>) || Integral<T> || requires (T& obj)
 	{
 		std::enable_if_t<static_cast<bool>(std::remove_cv_t<T>::enable_bitcopy)>();
 	};
@@ -82,6 +82,49 @@ namespace utils
 			return true;
 		}
 
+		template <typename T> requires Integral<T>
+		bool serialize_vle(T&& value)
+		{
+			for (auto i = value;;)
+			{
+				const auto i_old = std::exchange(i, i >> 7);
+				const u8 to_write = static_cast<u8>((static_cast<u8>(i_old) % 0x80) | (i ? 0x80 : 0));
+				raw_serialize(&to_write, 1);
+
+				if (!i)
+				{
+					break;
+				}
+			}
+
+			return true;
+		}
+
+		template <typename T> requires Integral<T>
+		bool deserialize_vle(T& value)
+		{
+			value = {};
+
+			for (u32 i = 0;; i += 7)
+			{
+				u8 byte_data = 0;
+
+				if (!raw_serialize(&byte_data, 1))
+				{
+					return false;
+				}
+
+				value |= static_cast<T>(byte_data % 0x80) << i;
+
+				if (!(byte_data & 0x80))
+				{
+					break;
+				}
+			}
+
+			return true;
+		}
+
 		// (De)serialization function
 		template <typename T>
 		bool serialize(T& obj)
@@ -103,13 +146,7 @@ namespace utils
 		{
 			if (is_writing())
 			{
-				for (usz i = obj.size();;)
-				{
-					const usz i_old = std::exchange(i, i >> 7);
-					operator()<u8>(static_cast<u8>(i_old % 0x80) | (u8{!!i} << 7));
-					if (!i)
-						break;
-				}
+				serialize_vle(obj.size());
 
 				if constexpr (Bitcopy<typename std::remove_reference_t<T>::value_type>)
 				{
@@ -132,22 +169,9 @@ namespace utils
 			obj.clear();
 
 			usz size = 0;
-
-			for (u32 i = 0;; i += 7)
+			if (!deserialize_vle(size))
 			{
-				u8 byte_data = 0;
-
-				if (!raw_serialize(&byte_data, 1))
-				{
-					return false;
-				}
-
-				size |= static_cast<usz>(byte_data % 0x80) << i;
-
-				if (!(byte_data >> 7))
-				{
-					break;
-				}
+				return false;
 			}
 
 			obj.resize(size);
@@ -175,7 +199,7 @@ namespace utils
 			return true;
 		}
 
-		// C-array, std::array, std::span
+		// C-array, std::array, std::span (span must be supplied with size and address, this function does not modify it)
 		template <typename T> requires FastRandomAccess<T> && (!ListAlike<T>) && (!Bitcopy<T>)
 		bool serialize(T& obj)
 		{
@@ -203,13 +227,7 @@ namespace utils
 		{
 			if (is_writing())
 			{
-				for (usz i = obj.size();;)
-				{
-					const usz i_old = std::exchange(i, i >> 7);
-					operator()<u8>(static_cast<u8>(i_old % 0x80) | (u8{!!i} << 7));
-					if (!i)
-						break;
-				}
+				serialize_vle(obj.size());
 
 				for (auto&& value : obj)
 				{
@@ -225,22 +243,9 @@ namespace utils
 			obj.clear();
 
 			usz size = 0;
-
-			for (u32 i = 0;; i += 7)
+			if (!deserialize_vle(size))
 			{
-				u8 byte_data = 0;
-
-				if (!raw_serialize(&byte_data, 1))
-				{
-					return false;
-				}
-
-				size |= static_cast<usz>(byte_data % 0x80) << i;
-
-				if (!(byte_data >> 7))
-				{
-					break;
-				}
+				return false;
 			}
 
 			if constexpr (Reservable<T>)
@@ -290,7 +295,7 @@ namespace utils
 		bool operator()(Args&&... args)
 		{
 			return ((AUDIT(!std::is_const_v<std::remove_reference_t<Args>> || is_writing())
-				, serialize(const_cast<Args&>(static_cast<const Args&>(args)))), ...);
+				, serialize(const_cast<std::remove_cvref_t<Args>&>(static_cast<const Args&>(args)))), ...);
 		}
 
 		// Convert serialization manager to deserializion manager (can't go the other way)
@@ -305,7 +310,7 @@ namespace utils
 			pos = 0;
 		}
 
-		template <typename T> requires (std::is_constructible_v<std::remove_const_t<T>> || Bitcopy<std::remove_const_t<T>> ||
+		template <typename T> requires (std::is_copy_constructible_v<std::remove_const_t<T>>) && (std::is_constructible_v<std::remove_const_t<T>> || Bitcopy<std::remove_const_t<T>> ||
 			std::is_constructible_v<std::remove_const_t<T>, stx::exact_t<serial&>> || TupleAlike<std::remove_const_t<T>>)
 		operator T()
 		{
