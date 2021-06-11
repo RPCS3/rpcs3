@@ -313,17 +313,10 @@ void fmt_class_string<src_loc>::format(std::string& out, u64 arg)
 
 namespace fmt
 {
-	[[noreturn]] void raw_verify_error(const src_loc& loc)
+	[[noreturn]] void raw_verify_error(const src_loc& loc, const char8_t* msg)
 	{
-		std::string out{"Verification failed"};
-		fmt::append(out, "%s", loc);
-		thread_ctrl::emergency_exit(out);
-	}
-
-	[[noreturn]] void raw_narrow_error(const src_loc& loc)
-	{
-		std::string out{"Narrowing error"};
-		fmt::append(out, "%s", loc);
+		std::string out;
+		fmt::append(out, "%s%s", msg ? msg : u8"Verification failed", loc);
 		thread_ctrl::emergency_exit(out);
 	}
 

@@ -521,6 +521,9 @@ template <typename T>
 concept FPInt = std::is_floating_point_v<std::common_type_t<T>> || std::is_same_v<std::common_type_t<T>, f16>;
 
 template <typename T>
+concept Integral = std::is_integral_v<std::common_type_t<T>> || std::is_same_v<std::common_type_t<T>, u128> || std::is_same_v<std::common_type_t<T>, s128>;
+
+template <typename T>
 constexpr T min_v;
 
 template <UnsignedInt T>
@@ -802,6 +805,12 @@ struct const_str_t<umax>
 		const char* chars2;
 	};
 
+	const_str_t()
+		: size(0)
+		, chars(nullptr)
+	{
+	}
+
 	template <usz N>
 	constexpr const_str_t(const char8_t(&a)[N])
 		: size(N - 1)
@@ -845,12 +854,11 @@ struct src_loc
 
 namespace fmt
 {
-	[[noreturn]] void raw_verify_error(const src_loc& loc);
-	[[noreturn]] void raw_narrow_error(const src_loc& loc);
+	[[noreturn]] void raw_verify_error(const src_loc& loc, const char8_t* msg);
 }
 
 template <typename T>
-constexpr decltype(auto) ensure(T&& arg,
+constexpr decltype(auto) ensure(T&& arg, const_str msg = const_str(),
 	u32 line = __builtin_LINE(),
 	u32 col = __builtin_COLUMN(),
 	const char* file = __builtin_FILE(),
@@ -861,7 +869,7 @@ constexpr decltype(auto) ensure(T&& arg,
 		return std::forward<T>(arg);
 	}
 
-	fmt::raw_verify_error({line, col, file, func});
+	fmt::raw_verify_error({line, col, file, func}, msg);
 }
 
 // narrow() function details
@@ -946,8 +954,7 @@ template <typename To = void, typename From, typename = decltype(static_cast<To>
 	// Narrow check
 	if (narrow_impl<From, To>::test(value)) [[unlikely]]
 	{
-		// Pack value as formatting argument
-		fmt::raw_narrow_error({line, col, file, func});
+		fmt::raw_verify_error({line, col, file, func}, u8"Narrowing error");
 	}
 
 	return static_cast<To>(value);
