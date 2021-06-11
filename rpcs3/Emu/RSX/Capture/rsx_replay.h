@@ -24,7 +24,7 @@ namespace rsx
 		// simple block to hold ps3 address and data
 		struct memory_block
 		{
-			static constexpr bool enable_bitcopy = true;
+			using enable_bitcopy = std::true_type;
 
 			u32 offset; // Offset in rsx address space
 			u32 location; // rsx memory location of the block
@@ -41,7 +41,7 @@ namespace rsx
 
 		struct tile_info
 		{
-			static constexpr bool enable_bitcopy = true;
+			using enable_bitcopy = std::true_type;
 
 			u32 tile;
 			u32 limit;
@@ -51,7 +51,7 @@ namespace rsx
 
 		struct zcull_info
 		{
-			static constexpr bool enable_bitcopy = true;
+			using enable_bitcopy = std::true_type;
 
 			u32 region;
 			u32 size;
@@ -64,7 +64,7 @@ namespace rsx
 		// bleh, may need to break these out, might be unnecessary to do both always
 		struct tile_state
 		{
-			static constexpr bool enable_bitcopy = true;
+			using enable_bitcopy = std::true_type;
 
 			tile_info tiles[15]{};
 			zcull_info zculls[8]{};
@@ -72,7 +72,7 @@ namespace rsx
 
 		struct buffer_state
 		{
-			static constexpr bool enable_bitcopy = true;
+			using enable_bitcopy = std::true_type;
 
 			u32 width{0};
 			u32 height{0};
@@ -82,7 +82,7 @@ namespace rsx
 
 		struct display_buffers_state
 		{
-			static constexpr bool enable_bitcopy = true;
+			using enable_bitcopy = std::true_type;
 
 			std::array<buffer_state, 8> buffers{};
 			u32 count{0};

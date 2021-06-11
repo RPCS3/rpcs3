@@ -29,7 +29,7 @@ namespace vm
 		using type = T;
 		using addr_type = std::remove_cv_t<AT>;
 
-		static constexpr bool enable_bitcopy = true;
+		using enable_bitcopy = std::true_type;
 
 		_ptr_base() = default;
 
@@ -228,7 +228,7 @@ namespace vm
 
 	public:
 		using addr_type = std::remove_cv_t<AT>;
-		static constexpr bool enable_bitcopy = true;
+		using enable_bitcopy = std::true_type;
 
 		_ptr_base() = default;
 

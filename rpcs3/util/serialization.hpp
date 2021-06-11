@@ -33,9 +33,9 @@ namespace utils
 	};
 
 	template <typename T>
-	concept Bitcopy = (std::is_arithmetic_v<T>) || (std::is_enum_v<T>) || Integral<T> || requires (T& obj)
+	concept Bitcopy = (std::is_arithmetic_v<T>) || (std::is_enum_v<T>) || Integral<T> || requires ()
 	{
-		std::enable_if_t<static_cast<bool>(std::remove_cv_t<T>::enable_bitcopy)>();
+		std::enable_if_t<std::conjunction_v<typename T::enable_bitcopy>>();
 	};
 
 	template <typename T>
