@@ -341,6 +341,13 @@ namespace utils
 			FILE_BASIC_INFO info0{};
 			ensure(GetFileInformationByHandleEx(h, FileBasicInfo, &info0, sizeof(info0)));
 
+			if ((info0.FileAttributes & FILE_ATTRIBUTE_ARCHIVE) || (~info0.FileAttributes & FILE_ATTRIBUTE_TEMPORARY))
+			{
+				info0.FileAttributes &= ~FILE_ATTRIBUTE_ARCHIVE;
+				info0.FileAttributes |= FILE_ATTRIBUTE_TEMPORARY;
+				ensure(SetFileInformationByHandle(h, FileBasicInfo, &info0, sizeof(info0)));
+			}
+
 			if ((info0.FileAttributes & FILE_ATTRIBUTE_SPARSE_FILE) == 0 && version_major <= 7)
 			{
 				MessageBoxW(0, L"RPCS3 needs to be restarted to create sparse file rpcs3_vm.", L"RPCS3", MB_ICONEXCLAMATION);
@@ -384,20 +391,30 @@ namespace utils
 			return false;
 		};
 
+		const std::string storage2 = fs::get_temp_dir() + "rpcs3_vm_sparse.tmp";
+		const std::string storage3 = fs::get_cache_dir() + "rpcs3_vm_sparse.tmp";
+
 		if (!storage.empty())
 		{
+			// Explicitly specified storage
 			ensure(f.open(storage, fs::read + fs::write + fs::create));
 		}
-		else if (!f.open(fs::get_cache_dir() + "rpcs3_vm", fs::read + fs::write + fs::create) || !set_sparse(f.get_handle(), m_size))
+		else if (!f.open(storage2, fs::read + fs::write + fs::create) || !set_sparse(f.get_handle(), m_size))
 		{
-			ensure(f.open(fs::get_temp_dir() + "rpcs3_vm", fs::read + fs::write + fs::create));
+			// Fallback storage
+			ensure(f.open(storage3, fs::read + fs::write + fs::create));
+		}
+		else
+		{
+			goto check;
 		}
 
 		if (!set_sparse(f.get_handle(), m_size))
 		{
-			MessageBoxW(0, L"Failed to initialize sparse file.", L"RPCS3", MB_ICONERROR);
+			MessageBoxW(0, L"Failed to initialize sparse file.\nCan't find a filesystem with sparse file support (NTFS).", L"RPCS3", MB_ICONERROR);
 		}
 
+	check:
 		if (f.size() != m_size)
 		{
 			// Resize the file gradually (bug workaround)
