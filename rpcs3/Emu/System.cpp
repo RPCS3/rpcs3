@@ -1352,9 +1352,9 @@ void Emulator::Run(bool start_playtime)
 
 	m_pause_start_time = 0;
 	m_pause_amend_time = 0;
-	m_state = system_state::running;
-
 	rpcs3::utils::configure_logs();
+
+	m_state = system_state::running;
 
 	// Run main thread
 	idm::check<named_thread<ppu_thread>>(ppu_thread::id_base, [](named_thread<ppu_thread>& cpu)
