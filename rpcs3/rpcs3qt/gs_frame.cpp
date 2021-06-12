@@ -149,6 +149,12 @@ void gs_frame::showEvent(QShowEvent *event)
 
 void gs_frame::keyPressEvent(QKeyEvent *keyEvent)
 {
+	if (keyEvent->isAutoRepeat())
+	{
+		keyEvent->ignore();
+		return;
+	}
+
 	// NOTE: needs to be updated with keyboard_pad_handler::processKeyEvent
 
 	switch (keyEvent->key())

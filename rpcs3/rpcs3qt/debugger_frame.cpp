@@ -286,6 +286,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 	{
 	case Qt::Key_F1:
 	{
+		if (event->isAutoRepeat())
+			return;
+
 		QDialog* dlg = new QDialog(this);
 		dlg->setAttribute(Qt::WA_DeleteOnClose);
 		dlg->setWindowTitle(tr("Debugger Guide & Shortcuts"));
@@ -335,6 +338,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 	if (modifiers & Qt::ControlModifier)
 	{
+		if (event->isAutoRepeat())
+			return;
+
 		switch (event->key())
 		{
 		case Qt::Key_G:
@@ -356,6 +362,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		{
 		case Qt::Key_D:
 		{
+			if (event->isAutoRepeat())
+				return;
+
 			if (cpu->id_type() == 2 && g_cfg.core.mfc_debug && !cpu->is_stopped())
 			{
 				input_dialog dlg(4, "", tr("Max MFC cmds logged"),
@@ -426,6 +435,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		}
 		case Qt::Key_E:
 		{
+			if (event->isAutoRepeat())
+				return;
+
 			if (cpu->id_type() == 1 || cpu->id_type() == 2)
 			{
 				if (!m_inst_editor)
@@ -439,16 +451,20 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		}
 		case Qt::Key_F:
 		{
-			if (cpu->id_type() != 2)
-			{
+			if (event->isAutoRepeat())
 				return;
-			}
+
+			if (cpu->id_type() != 2)
+				return;
 
 			static_cast<spu_thread*>(cpu)->debugger_float_mode ^= 1; // Switch mode
 			return;
 		}
 		case Qt::Key_R:
 		{
+			if (event->isAutoRepeat())
+				return;
+
 			if (cpu->id_type() == 1 || cpu->id_type() == 2)
 			{
 				if (!m_reg_editor)
@@ -462,6 +478,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		}
 		case Qt::Key_S:
 		{
+			if (event->isAutoRepeat())
+				return;
+
 			if (modifiers & Qt::AltModifier)
 			{
 				if (cpu->id_type() != 2)
@@ -506,6 +525,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 		}
 		case Qt::Key_M:
 		{
+			if (event->isAutoRepeat())
+				return;
+
 			// Memory viewer
 			idm::make<memory_viewer_handle>(this, pc, make_check_cpu(cpu));
 			return;

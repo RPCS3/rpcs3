@@ -725,6 +725,11 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent *keyEvent)
 		return;
 	}
 
+	if (keyEvent->isAutoRepeat())
+	{
+		return;
+	}
+
 	if (m_button_id <= button_ids::id_pad_begin || m_button_id >= button_ids::id_pad_end)
 	{
 		cfg_log.error("Pad Settings: Handler Type: %d, Unknown button ID: %d", static_cast<int>(m_handler->m_type), m_button_id);
