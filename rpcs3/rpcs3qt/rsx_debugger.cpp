@@ -274,7 +274,7 @@ void rsx_debugger::closeEvent(QCloseEvent* event)
 
 void rsx_debugger::keyPressEvent(QKeyEvent* event)
 {
-	if (isActiveWindow())
+	if (isActiveWindow() && !event->isAutoRepeat())
 	{
 		switch (event->key())
 		{

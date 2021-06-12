@@ -2654,6 +2654,11 @@ void main_window::CreateFirmwareCache()
 
 void main_window::keyPressEvent(QKeyEvent *keyEvent)
 {
+	if (keyEvent->isAutoRepeat())
+	{
+		return;
+	}
+
 	if (((keyEvent->modifiers() & Qt::AltModifier) && keyEvent->key() == Qt::Key_Return) || (isFullScreen() && keyEvent->key() == Qt::Key_Escape))
 	{
 		ui->toolbar_fullscreen->trigger();

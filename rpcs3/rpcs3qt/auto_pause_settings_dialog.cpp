@@ -202,6 +202,11 @@ void auto_pause_settings_dialog::OnRemove()
 
 void auto_pause_settings_dialog::keyPressEvent(QKeyEvent *event)
 {
+	if (event->isAutoRepeat())
+	{
+		return;
+	}
+
 	if (event->key() == Qt::Key_Delete)
 	{
 		OnRemove();
