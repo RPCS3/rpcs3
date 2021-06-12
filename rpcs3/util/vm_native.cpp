@@ -428,13 +428,30 @@ namespace utils
 
 		m_handle = ensure(::CreateFileMappingW(f.get_handle(), nullptr, PAGE_READWRITE, 0, 0, nullptr));
 #else
+
+		// TODO: check overcommit configuration of other supported platforms to bypass rpcs3_vm creation
+#ifdef __linux__
+		if (const char c = fs::file("/proc/sys/vm/overcommit_memory").read<char>(); c == '0' || c == '1')
+		{
+			// Simply use memfd for overcommit memory
+			m_file = ::memfd_create_("", 0);
+			ensure(m_file >= 0);
+			ensure(::ftruncate(m_file, m_size) >= 0);
+			return;
+		}
+		else
+		{
+			fprintf(stderr, "Reading /proc/sys/vm/overcommit_memory: %c", c);
+		}
+#endif
+
 		if (!storage.empty())
 		{
 			m_file = ::open(storage.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
 		}
 		else
 		{
-			m_file = ::open((fs::get_cache_dir() + "rpcs3_vm").c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+			m_file = ::open((fs::get_cache_dir() + "rpcs3_vm_sparse.tmp").c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
 		}
 
 		ensure(m_file >= 0);
