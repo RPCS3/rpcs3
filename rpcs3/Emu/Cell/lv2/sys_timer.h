@@ -21,11 +21,9 @@ struct sys_timer_information_t
 	be_t<u32> pad;
 };
 
-struct lv2_timer_context : lv2_obj
+struct lv2_timer : lv2_obj
 {
 	static const u32 id_base = 0x11000000;
-
-	void operator()();
 
 	shared_mutex mutex;
 	atomic_t<u32> state{SYS_TIMER_STATE_STOP};
@@ -37,6 +35,13 @@ struct lv2_timer_context : lv2_obj
 
 	atomic_t<u64> expire{0}; // Next expiration time
 	atomic_t<u64> period{0}; // Period (oneshot if 0)
+
+	u64 check();
+
+	lv2_timer() noexcept
+		: lv2_obj{1}
+	{
+	}
 
 	void get_information(sys_timer_information_t& info)
 	{
@@ -56,8 +61,6 @@ struct lv2_timer_context : lv2_obj
 		}
 	}
 };
-
-using lv2_timer = named_thread<lv2_timer_context>;
 
 class ppu_thread;
 

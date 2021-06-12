@@ -13,7 +13,18 @@
 
 LOG_CHANNEL(sys_timer);
 
-void lv2_timer_context::operator()()
+struct lv2_timer_thread
+{
+	shared_mutex mutex;
+	std::deque<std::shared_ptr<lv2_timer>> timers;
+	atomic_t<u32> notify_var = 0;
+
+	void operator()();
+
+	static constexpr auto thread_name = "Timer Thread"sv;
+};
+
+u64 lv2_timer::check()
 {
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
@@ -49,15 +60,52 @@ void lv2_timer_context::operator()()
 
 				// Stop after oneshot
 				state.release(SYS_TIMER_STATE_STOP);
-				continue;
+				break;
 			}
 
-			// TODO: use single global dedicated thread for busy waiting, no timer threads
-			lv2_obj::wait_timeout(next - _now);
-			continue;
+			return (next - _now);
 		}
 
-		thread_ctrl::wait_on(state, _state);
+		break;
+	}
+
+	return umax;
+}
+
+void lv2_timer_thread::operator()()
+{
+	u64 sleep_time = umax;
+
+	while (thread_ctrl::state() != thread_state::aborting)
+	{
+		if (sleep_time != umax)
+		{
+			// Scale time
+			sleep_time = std::min(sleep_time, u64{umax} / 100) * 100 / g_cfg.core.clocks_scale;
+			thread_ctrl::wait_on(notify_var, 0, sleep_time);
+		}
+		else
+		{
+			thread_ctrl::wait_on(notify_var, 0);
+		}
+
+		notify_var = 0;
+		sleep_time = umax;
+
+		reader_lock lock(mutex);
+
+		for (const auto& timer : timers)
+		{
+			if (lv2_obj::check(timer))
+			{
+				const u64 adviced_sleep_time = timer->check();
+
+				if (sleep_time > adviced_sleep_time)
+				{
+					sleep_time = adviced_sleep_time;
+				}
+			}
+		}
 	}
 }
 
@@ -67,9 +115,15 @@ error_code sys_timer_create(ppu_thread& ppu, vm::ptr<u32> timer_id)
 
 	sys_timer.warning("sys_timer_create(timer_id=*0x%x)", timer_id);
 
-	if (const u32 id = idm::make<lv2_obj, lv2_timer>("Timer Thread"))
+	if (auto ptr = idm::make_ptr<lv2_obj, lv2_timer>())
 	{
-		*timer_id = id;
+		auto& thread = g_fxo->get<named_thread<lv2_timer_thread>>();
+		{
+			std::lock_guard lock(thread.mutex);
+			thread.timers.emplace_back(std::move(ptr));
+		}
+
+		*timer_id = idm::last_id();
 		return CELL_OK;
 	}
 
@@ -82,14 +136,14 @@ error_code sys_timer_destroy(ppu_thread& ppu, u32 timer_id)
 
 	sys_timer.warning("sys_timer_destroy(timer_id=0x%x)", timer_id);
 
-	const auto timer = idm::withdraw<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer) -> CellError
+	auto timer = idm::withdraw<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer) -> CellError
 	{
 		if (reader_lock lock(timer.mutex); lv2_obj::check(timer.port))
 		{
 			return CELL_EISCONN;
 		}
 
-		timer = thread_state::aborting;
+		timer.exists--;
 		return {};
 	});
 
@@ -103,6 +157,9 @@ error_code sys_timer_destroy(ppu_thread& ppu, u32 timer_id)
 		return timer.ret;
 	}
 
+	auto& thread = g_fxo->get<named_thread<lv2_timer_thread>>();
+	std::lock_guard lock(thread.mutex);
+	lv2_obj::unqueue(thread.timers, std::move(timer.ptr));
 	return CELL_OK;
 }
 
@@ -144,7 +201,7 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 
 	const auto timer = idm::check<lv2_obj, lv2_timer>(timer_id, [&](lv2_timer& timer) -> CellError
 	{
-		std::unique_lock lock(timer.mutex);
+		std::lock_guard lock(timer.mutex);
 
 		if (!lv2_obj::check(timer.port))
 		{
@@ -167,9 +224,6 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 		timer.expire = expire > start_time ? expire : umax;
 		timer.period = period;
 		timer.state  = SYS_TIMER_STATE_RUN;
-
-		lock.unlock();
-		timer.state.notify_one();
 		return {};
 	});
 
@@ -187,6 +241,10 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 
 		return timer.ret;
 	}
+
+	auto& thread = g_fxo->get<named_thread<lv2_timer_thread>>();
+	thread.notify_var = 1;
+	thread.notify_var.notify_one();
 
 	return CELL_OK;
 }

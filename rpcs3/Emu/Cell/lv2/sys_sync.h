@@ -110,18 +110,18 @@ public:
 
 	// Find and remove the object from the container (deque or vector)
 	template <typename T, typename E>
-	static T* unqueue(std::deque<T*>& queue, E* object)
+	static typename T::value_type unqueue(T& queue, E object)
 	{
 		for (auto found = queue.cbegin(), end = queue.cend(); found != end; found++)
 		{
 			if (*found == object)
 			{
 				queue.erase(found);
-				return static_cast<T*>(object);
+				return static_cast<typename T::value_type>(object);
 			}
 		}
 
-		return nullptr;
+		return {};
 	}
 
 	template <typename E, typename T>
