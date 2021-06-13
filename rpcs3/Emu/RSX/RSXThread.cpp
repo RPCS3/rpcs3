@@ -2279,27 +2279,14 @@ namespace rsx
 				}
 			} //end attribute placement check
 
-			// If data is passed via registers, it is already received in little endian
-			const bool is_be_type = (layout.attribute_placement[index] != attribute_buffer_placement::transient);
-			bool to_swap_bytes = is_be_type;
-
-			switch (type)
+			// Special compressed 4 components into one 4-byte value. Decoded as one value.
+			if (type == rsx::vertex_base_type::cmp)
 			{
-			case rsx::vertex_base_type::cmp:
-				// Compressed 4 components into one 4-byte value
 				size = 1;
-				break;
-			case rsx::vertex_base_type::ub:
-			case rsx::vertex_base_type::ub256:
-				// These are single byte formats, but inverted order (BGRA vs ARGB) when passed via registers
-				to_swap_bytes = (layout.attribute_placement[index] == attribute_buffer_placement::transient);
-				break;
-			default:
-				break;
 			}
 
-			if (to_swap_bytes) attrib1 |= swap_storage_mask;
-
+			// All data is passed in in PS3-native order (BE) so swap flag should be set
+			attrib1 |= swap_storage_mask;
 			attrib0 |= (static_cast<s32>(type) << 24);
 			attrib0 |= (size << 27);
 			attrib1 |= offset_in_block[index];
