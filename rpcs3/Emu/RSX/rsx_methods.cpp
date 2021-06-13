@@ -263,16 +263,8 @@ namespace rsx
 			const auto vtype = vertex_data_type_from_element_type<type>::type;
 			ensure(vtype != rsx::vertex_base_type::cmp);
 
-			switch (vtype)
-			{
-			case rsx::vertex_base_type::ub:
-			case rsx::vertex_base_type::ub256:
-				// Get BE data
-				arg = std::bit_cast<u32, be_t<u32>>(arg);
-				break;
-			default:
-				break;
-			}
+			// Get BE data
+			arg = std::bit_cast<u32, be_t<u32>>(arg);
 
 			if (rsx->in_begin_end)
 			{
@@ -398,6 +390,7 @@ namespace rsx
 
 		void draw_inline_array(thread* /*rsx*/, u32 /*reg*/, u32 arg)
 		{
+			arg = std::bit_cast<u32, be_t<u32>>(arg);
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::inlined_array;
 			rsx::method_registers.current_draw_clause.inline_vertex_array.push_back(arg);
 		}
