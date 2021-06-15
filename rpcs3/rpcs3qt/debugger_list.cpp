@@ -182,6 +182,10 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 	case Qt::Key_Down:     scroll(-1); return;
 	case Qt::Key_I:
 	{
+		if (event->isAutoRepeat())
+		{
+			return;
+		}
 		if (m_cpu && m_cpu->id_type() == 0x55)
 		{
 			create_rsx_command_detail(m_pc, currentRow());

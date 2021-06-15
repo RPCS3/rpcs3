@@ -255,23 +255,27 @@ namespace rsx
 		template<u32 id, u32 index, int count, int register_count, typename type>
 		void set_vertex_data_impl(thread* rsx, u32 arg)
 		{
-			static const usz increment_per_array_index = (register_count * sizeof(type)) / sizeof(u32);
+			static constexpr usz increment_per_array_index = (register_count * sizeof(type)) / sizeof(u32);
 
-			static const usz attribute_index = index / increment_per_array_index;
-			static const usz vertex_subreg = index % increment_per_array_index;
+			static constexpr usz attribute_index = index / increment_per_array_index;
+			static constexpr usz vertex_subreg = index % increment_per_array_index;
 
-			const auto vtype = vertex_data_type_from_element_type<type>::type;
-			ensure(vtype != rsx::vertex_base_type::cmp);
+			constexpr auto vtype = vertex_data_type_from_element_type<type>::type;
+			static_assert(vtype != rsx::vertex_base_type::cmp);
+			static_assert(vtype != rsx::vertex_base_type::ub256);
 
-			switch (vtype)
+			// Convert LE data to BE layout
+			if constexpr (sizeof(type) == 4)
 			{
-			case rsx::vertex_base_type::ub:
-			case rsx::vertex_base_type::ub256:
-				// Get BE data
 				arg = std::bit_cast<u32, be_t<u32>>(arg);
-				break;
-			default:
-				break;
+			}
+			else if constexpr (sizeof(type) == 2)
+			{
+				// 2 16-bit values packed in 1 32-bit word
+				const auto be_data = std::bit_cast<u32, be_t<u32>>(arg);
+
+				// After u32 swap, the components are in the wrong position
+				arg = (be_data << 16) | (be_data >> 16);
 			}
 
 			if (rsx->in_begin_end)
@@ -398,6 +402,7 @@ namespace rsx
 
 		void draw_inline_array(thread* /*rsx*/, u32 /*reg*/, u32 arg)
 		{
+			arg = std::bit_cast<u32, be_t<u32>>(arg);
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::inlined_array;
 			rsx::method_registers.current_draw_clause.inline_vertex_array.push_back(arg);
 		}
