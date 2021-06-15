@@ -17,7 +17,6 @@ struct lv2_timer_thread
 {
 	shared_mutex mutex;
 	std::deque<std::shared_ptr<lv2_timer>> timers;
-	atomic_t<u32> notify_var = 0;
 
 	void operator()();
 
@@ -82,14 +81,10 @@ void lv2_timer_thread::operator()()
 		{
 			// Scale time
 			sleep_time = std::min(sleep_time, u64{umax} / 100) * 100 / g_cfg.core.clocks_scale;
-			thread_ctrl::wait_on(notify_var, 0, sleep_time);
-		}
-		else
-		{
-			thread_ctrl::wait_on(notify_var, 0);
 		}
 
-		notify_var = 0;
+		thread_ctrl::wait_for(sleep_time);
+
 		sleep_time = umax;
 
 		reader_lock lock(mutex);
@@ -242,9 +237,7 @@ error_code _sys_timer_start(ppu_thread& ppu, u32 timer_id, u64 base_time, u64 pe
 		return timer.ret;
 	}
 
-	auto& thread = g_fxo->get<named_thread<lv2_timer_thread>>();
-	thread.notify_var = 1;
-	thread.notify_var.notify_one();
+	g_fxo->get<named_thread<lv2_timer_thread>>()([]{});
 
 	return CELL_OK;
 }
