@@ -160,8 +160,6 @@ extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
 
 struct lv2_fs_object
 {
-	using id_type = lv2_fs_object;
-
 	static const u32 id_base = 3;
 	static const u32 id_step = 1;
 	static const u32 id_count = 255 - id_base;
