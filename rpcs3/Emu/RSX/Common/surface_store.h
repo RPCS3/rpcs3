@@ -327,8 +327,6 @@ namespace rsx
 				for (const auto& e : list2) surface_info.push_back(e);
 			}
 
-			// TODO: Modify deferred_clip_region::direct_copy() to take a few more things into account!
-			const auto pitch = new_surface->get_rsx_pitch();
 			for (const auto &e: surface_info)
 			{
 				auto this_address = e.first;
