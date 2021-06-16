@@ -73,7 +73,7 @@ namespace vk
 		void insert_sync_event();
 
 	public:
-		AsyncTaskScheduler() = default;
+		AsyncTaskScheduler(const std::string_view& name) : thread_name(name) {} // This ctor stops default initialization by fxo
 		~AsyncTaskScheduler();
 
 		command_buffer* get_current();
@@ -86,7 +86,7 @@ namespace vk
 		// Thread entry-point
 		void operator()();
 
-		static constexpr auto thread_name = "Vulkan Async Scheduler"sv;
+		const std::string_view thread_name;
 	};
 
 	using async_scheduler_thread = named_thread<AsyncTaskScheduler>;
