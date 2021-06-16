@@ -12,6 +12,14 @@ namespace vk
 {
 	void AsyncTaskScheduler::operator()()
 	{
+		if (g_cfg.video.renderer != video_renderer::vulkan || !g_cfg.video.vk.asynchronous_texture_streaming)
+		{
+			// Invalid renderer combination, do not proceed. This should never happen.
+			// NOTE: If managed by fxo, this object may be created automatically on boot.
+			rsx_log.notice("Vulkan async streaming is disabled. This thread will now exit.");
+			return;
+		}
+
 		init_config_options();
 		if (!m_use_host_scheduler)
 		{

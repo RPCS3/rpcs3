@@ -592,7 +592,7 @@ VKGSRender::VKGSRender() : GSRender()
 		if (backend_config.supports_asynchronous_compute)
 		{
 			// Run only if async compute can be used.
-			g_fxo->init<vk::async_scheduler_thread>();
+			g_fxo->init<vk::async_scheduler_thread>("Vulkan Async Scheduler"sv);
 		}
 	}
 }
