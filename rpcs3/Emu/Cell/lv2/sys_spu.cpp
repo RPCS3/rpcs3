@@ -679,7 +679,7 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 			thread->cleanup();
 
 			// Remove ID from IDM (destruction will occur in group destructor)
-			idm::remove<named_thread<spu_thread>>(thread->id);
+			idm::withdraw<named_thread<spu_thread>>(thread->id);
 		}
 	}
 

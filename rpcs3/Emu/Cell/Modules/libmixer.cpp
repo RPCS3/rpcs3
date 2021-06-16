@@ -470,7 +470,7 @@ struct surmixer_thread : ppu_thread
 			g_surmx.mixcount++;
 		}
 
-		idm::remove<ppu_thread>(id);
+		idm::withdraw<ppu_thread>(id);
 	}
 };
 

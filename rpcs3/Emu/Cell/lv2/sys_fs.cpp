@@ -895,7 +895,7 @@ error_code sys_fs_closedir(ppu_thread& ppu, u32 fd)
 
 	sys_fs.warning("sys_fs_closedir(fd=%d)", fd);
 
-	if (!idm::remove<lv2_fs_object, lv2_dir>(fd))
+	if (!idm::withdraw<lv2_fs_object, lv2_dir>(fd))
 	{
 		return CELL_EBADF;
 	}

@@ -15,7 +15,7 @@ s32 create_score_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cpt
 }
 bool destroy_score_context(s32 ctx_id)
 {
-	return idm::remove<score_ctx>(static_cast<u32>(ctx_id));
+	return !!idm::withdraw<score_ctx>(static_cast<u32>(ctx_id));
 }
 
 score_transaction_ctx::score_transaction_ctx(s32 score_context_id)
@@ -28,7 +28,7 @@ s32 create_score_transaction_context(s32 score_context_id)
 }
 bool destroy_score_transaction_context(s32 ctx_id)
 {
-	return idm::remove<score_transaction_ctx>(static_cast<u32>(ctx_id));
+	return !!idm::withdraw<score_transaction_ctx>(static_cast<u32>(ctx_id));
 }
 
 match2_ctx::match2_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
@@ -43,11 +43,11 @@ u16 create_match2_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cp
 }
 bool destroy_match2_context(u16 ctx_id)
 {
-	return idm::remove<match2_ctx>(static_cast<u32>(ctx_id));
+	return !!idm::withdraw<match2_ctx>(static_cast<u32>(ctx_id));
 }
 bool check_match2_context(u16 ctx_id)
 {
-	return (idm::check<match2_ctx>(ctx_id) != nullptr);
+	return idm::check<match2_ctx>(ctx_id);
 }
 std::shared_ptr<match2_ctx> get_match2_context(u16 ctx_id)
 {
@@ -65,7 +65,7 @@ s32 create_lookup_title_context(vm::cptr<SceNpCommunicationId> communicationId)
 }
 bool destroy_lookup_title_context(s32 ctx_id)
 {
-	return idm::remove<lookup_title_ctx>(static_cast<u32>(ctx_id));
+	return !!idm::withdraw<lookup_title_ctx>(static_cast<u32>(ctx_id));
 }
 
 lookup_transaction_ctx::lookup_transaction_ctx(s32 lt_ctx)
@@ -78,7 +78,7 @@ s32 create_lookup_transaction_context(s32 lt_ctx)
 }
 bool destroy_lookup_transaction_context(s32 ctx_id)
 {
-	return idm::remove<lookup_transaction_ctx>(static_cast<u32>(ctx_id));
+	return !!idm::withdraw<lookup_transaction_ctx>(static_cast<u32>(ctx_id));
 }
 
 commerce2_ctx::commerce2_ctx(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg)
@@ -94,7 +94,7 @@ s32 create_commerce2_context(u32 version, vm::cptr<SceNpId> npid, vm::ptr<SceNpC
 }
 bool destroy_commerce2_context(s32 ctx_id)
 {
-	return idm::remove<commerce2_ctx>(static_cast<u32>(ctx_id));
+	return !!idm::withdraw<commerce2_ctx>(static_cast<u32>(ctx_id));
 }
 std::shared_ptr<commerce2_ctx> get_commerce2_context(u16 ctx_id)
 {
@@ -113,5 +113,5 @@ s32 create_signaling_context(vm::ptr<SceNpId> npid, vm::ptr<SceNpSignalingHandle
 }
 bool destroy_signaling_context(s32 ctx_id)
 {
-	return idm::remove<signaling_ctx>(static_cast<u32>(ctx_id));
+	return !!idm::withdraw<signaling_ctx>(static_cast<u32>(ctx_id));
 }

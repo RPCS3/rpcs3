@@ -117,7 +117,7 @@ error_code sceNpSnsFbDestroyHandle(u32 handle)
 		return SCE_NP_SNS_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (!idm::remove<sns_fb_handle_t>(handle))
+	if (!idm::withdraw<sns_fb_handle_t>(handle))
 	{
 		return SCE_NP_SNS_FB_ERROR_UNKNOWN_HANDLE;
 	}

@@ -1592,7 +1592,7 @@ error_code cellSearchEnd(CellSearchId searchId)
 		return CELL_SEARCH_ERROR_INVALID_SEARCHID;
 	}
 
-	idm::remove<search_object_t>(searchId);
+	idm::withdraw<search_object_t>(searchId);
 
 	return CELL_OK;
 }

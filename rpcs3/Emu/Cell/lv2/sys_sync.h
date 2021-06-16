@@ -65,8 +65,6 @@ enum ppu_thread_status : u32;
 // Base class for some kernel objects (shared set of 8192 objects).
 struct lv2_obj
 {
-	using id_type = lv2_obj;
-
 	static const u32 id_step = 0x100;
 	static const u32 id_count = 8192;
 	static constexpr std::pair<u32, u32> id_invl_range = {0, 8};

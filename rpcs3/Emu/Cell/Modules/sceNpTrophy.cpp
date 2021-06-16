@@ -298,7 +298,7 @@ error_code sceNpTrophyDestroyHandle(u32 handle)
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (!idm::remove<trophy_handle_t>(handle))
+	if (!idm::withdraw<trophy_handle_t>(handle))
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}
@@ -332,7 +332,7 @@ error_code sceNpTrophyAbortHandle(u32 handle)
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	const auto hndl = idm::check<trophy_handle_t>(handle);
+	const auto hndl = idm::get<trophy_handle_t>(handle);
 
 	if (!hndl)
 	{
@@ -449,7 +449,7 @@ error_code sceNpTrophyDestroyContext(u32 context)
 		return SCE_NP_TROPHY_ERROR_INVALID_ARGUMENT;
 	}
 
-	if (!idm::remove<trophy_context_t>(context))
+	if (!idm::withdraw<trophy_context_t>(context))
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
@@ -567,7 +567,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_CONTEXT;
 	}
 
-	if (handle_ptr.get() != idm::check<trophy_handle_t>(handle))
+	if (auto ret = idm::check<trophy_handle_t>(handle, [&](trophy_handle_t& h) { return &h == handle_ptr.get(); }); !ret || !ret.ret)
 	{
 		return SCE_NP_TROPHY_ERROR_UNKNOWN_HANDLE;
 	}

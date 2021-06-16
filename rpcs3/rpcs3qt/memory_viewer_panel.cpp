@@ -289,7 +289,7 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, u32 addr, std::functio
 	// Expected to be created by IDM, emulation stop will close it
 	connect(this, &memory_viewer_panel::finished, [id = idm::last_id()](int)
 	{
-		idm::remove<memory_viewer_handle>(id);
+		idm::withdraw<memory_viewer_handle>(id);
 	});
 }
 

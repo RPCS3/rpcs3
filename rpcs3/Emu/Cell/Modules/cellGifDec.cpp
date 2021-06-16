@@ -316,7 +316,7 @@ error_code cellGifDecClose(PMainHandle mainHandle, PSubHandle subHandle)
 {
 	cellGifDec.warning("cellGifDecClose(mainHandle=*0x%x, subHandle=*0x%x)", mainHandle, subHandle);
 
-	idm::remove<lv2_fs_object, lv2_file>(subHandle->fd);
+	idm::withdraw<lv2_fs_object, lv2_file>(subHandle->fd);
 
 	vm::dealloc(subHandle.addr());
 
