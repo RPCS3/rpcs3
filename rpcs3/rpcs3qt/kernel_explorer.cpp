@@ -578,7 +578,7 @@ void kernel_explorer::update()
 		add_leaf(find_node(root, additional_nodes::memory_containers), qstr(fmt::format("Memory Container 0x%08x: Used: 0x%x/0x%x (%0.2f/%0.2f MB)", id, used, container.size, used * 1. / (1024 * 1024), container.size * 1. / (1024 * 1024))));
 	});
 
-	std::unique_lock lock_lv2(lv2_obj::g_mutex);
+	std::optional<std::scoped_lock<shared_mutex, shared_mutex>> lock_idm_lv2(std::in_place, id_manager::g_mutex, lv2_obj::g_mutex);
 
 	idm::select<named_thread<ppu_thread>>([&](u32 id, ppu_thread& ppu)
 	{
@@ -587,9 +587,9 @@ void kernel_explorer::update()
 
 		add_leaf(find_node(root, additional_nodes::ppu_threads), qstr(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, Status: %s, State: %s, %s func: “%s”", id, *ppu.ppu_tname.load(), +ppu.prio, ppu.joiner.load(), status, ppu.state.load()
 			, ppu.current_function ? "In" : "Last", func ? func : "")));
-	});
+	}, idm::unlocked);
 
-	lock_lv2.unlock();
+	lock_idm_lv2.reset();
 
 	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
 	{
