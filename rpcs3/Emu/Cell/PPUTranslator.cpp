@@ -1332,38 +1332,42 @@ void PPUTranslator::VPKPX(ppu_opcode_t op)
 
 void PPUTranslator::VPKSHSS(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	const auto src = Shuffle(ab[0], ab[1], { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 });
-	const auto saturated = SaturateSigned(src, -0x80, 0x7f);
-	SetVr(op.vd, saturated.first);
-	SetSat(IsNotZero(saturated.second));
+	// Caution: potentially out-of-lane algorithm
+	const auto [a, b] = get_vrs<s16[8]>(op.va, op.vb);
+	const auto ab = shuffle2(b, a, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+	const auto r = trunc<u8[16]>(min(max(ab, splat<s16[16]>(-0x80)), splat<s16[16]>(0x7f)));
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(((a + 0x80) | (b + 0x80)) >> 8).value));
 }
 
 void PPUTranslator::VPKSHUS(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi16, op.va, op.vb);
-	const auto src = Shuffle(ab[0], ab[1], { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 });
-	const auto saturated = SaturateSigned(src, 0, 0xff);
-	SetVr(op.vd, saturated.first);
-	SetSat(IsNotZero(saturated.second));
+	// Caution: potentially out-of-lane algorithm
+	const auto [a, b] = get_vrs<s16[8]>(op.va, op.vb);
+	const auto ab = shuffle2(b, a, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+	const auto r = trunc<u8[16]>(min(max(ab, splat<s16[16]>(0)), splat<s16[16]>(0xff)));
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval((a | b) >> 8).value));
 }
 
 void PPUTranslator::VPKSWSS(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	const auto src = Shuffle(ab[0], ab[1], { 0, 1, 2, 3, 4, 5, 6, 7 });
-	const auto saturated = SaturateSigned(src, -0x8000, 0x7fff);
-	SetVr(op.vd, saturated.first);
-	SetSat(IsNotZero(saturated.second));
+	// Caution: potentially out-of-lane algorithm
+	const auto [a, b] = get_vrs<s32[4]>(op.va, op.vb);
+	const auto ab = shuffle2(b, a, 0, 1, 2, 3, 4, 5, 6, 7);
+	const auto r = trunc<u16[8]>(min(max(ab, splat<s32[8]>(-0x8000)), splat<s32[8]>(0x7fff)));
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval(((a + 0x8000) | (b + 0x8000)) >> 16).value));
 }
 
 void PPUTranslator::VPKSWUS(ppu_opcode_t op)
 {
-	const auto ab = GetVrs(VrType::vi32, op.va, op.vb);
-	const auto src = Shuffle(ab[0], ab[1], { 0, 1, 2, 3, 4, 5, 6, 7 });
-	const auto saturated = SaturateSigned(src, 0, 0xffff);
-	SetVr(op.vd, saturated.first);
-	SetSat(IsNotZero(saturated.second));
+	// Caution: potentially out-of-lane algorithm
+	const auto [a, b] = get_vrs<s32[4]>(op.va, op.vb);
+	const auto ab = shuffle2(b, a, 0, 1, 2, 3, 4, 5, 6, 7);
+	const auto r = trunc<u16[8]>(min(max(ab, splat<s32[8]>(0)), splat<s32[8]>(0xffff)));
+	set_vr(op.vd, r);
+	SetSat(IsNotZero(eval((a | b) >> 16).value));
 }
 
 void PPUTranslator::VPKUHUM(ppu_opcode_t op)
