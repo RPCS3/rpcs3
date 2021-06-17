@@ -993,6 +993,9 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_controls.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="util\media_utils.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1960,6 +1963,9 @@
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
     <ClInclude Include="util\serialization.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="util\media_utils.h">
       <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
