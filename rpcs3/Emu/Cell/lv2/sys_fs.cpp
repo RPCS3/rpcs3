@@ -307,14 +307,6 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 	default: break;
 	}
 
-	if (mp->flags & lv2_mp_flag::read_only)
-	{
-		if (flags & CELL_FS_O_ACCMODE || flags & (CELL_FS_O_CREAT | CELL_FS_O_TRUNC))
-		{
-			return {CELL_EPERM};
-		}
-	}
-
 	if (flags & CELL_FS_O_CREAT)
 	{
 		open_mode += fs::create;
