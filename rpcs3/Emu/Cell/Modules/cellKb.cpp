@@ -37,13 +37,16 @@ error_code cellKbInit(u32 max_connect)
 
 	auto& handler = g_fxo->get<KeyboardHandlerBase>();
 
-	const auto init = handler.init.init();
+	auto init = handler.init.init();
 
 	if (!init)
 		return CELL_KB_ERROR_ALREADY_INITIALIZED;
 
 	if (max_connect == 0 || max_connect > CELL_KB_MAX_KEYBOARDS)
+	{
+		init.cancel();
 		return CELL_KB_ERROR_INVALID_PARAMETER;
+	}
 
 	libio_sys_config_init();
 	handler.Init(std::min(max_connect, 7u));

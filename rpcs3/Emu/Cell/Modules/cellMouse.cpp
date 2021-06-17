@@ -38,13 +38,14 @@ error_code cellMouseInit(u32 max_connect)
 
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
-	const auto init = handler.init.init();
+	auto init = handler.init.init();
 
 	if (!init)
 		return CELL_MOUSE_ERROR_ALREADY_INITIALIZED;
 
 	if (max_connect == 0 || max_connect > CELL_MAX_MICE)
 	{
+		init.cancel();
 		return CELL_MOUSE_ERROR_INVALID_PARAMETER;
 	}
 
