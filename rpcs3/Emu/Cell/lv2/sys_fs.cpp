@@ -309,7 +309,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 
 	if (mp->flags & lv2_mp_flag::read_only)
 	{
-		if (flags & CELL_FS_O_ACCMODE || flags & (CELL_FS_O_CREAT | CELL_FS_O_TRUNC))
+		if ((flags & CELL_FS_O_ACCMODE) != CELL_FS_O_RDONLY && fs::is_file(local_path))
 		{
 			return {CELL_EPERM};
 		}
@@ -400,9 +400,9 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		if (mp->flags & lv2_mp_flag::read_only)
 		{
 			// Failed to create file on read-only FS (file doesn't exist)
-			if (flags & CELL_FS_O_CREAT)
+			if (flags & CELL_FS_O_ACCMODE && flags & CELL_FS_O_CREAT)
 			{
-				return {CELL_EROFS};
+				return {CELL_EPERM};
 			}
 		}
 
@@ -418,21 +418,6 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		}
 
 		return {CELL_EIO};
-	}
-
-	if (mp->flags & lv2_mp_flag::read_only)
-	{
-		// Failed to create file on read-only FS (file exists)
-		if (flags & CELL_FS_O_CREAT && flags & CELL_FS_O_EXCL)
-		{
-			return {CELL_EEXIST};
-		}
-
-		// Failed to truncate file on read-only FS
-		if (flags & CELL_FS_O_TRUNC)
-		{
-			return {CELL_EROFS};
-		}
 	}
 
 	if (flags & CELL_FS_O_MSELF && !verify_mself(file))
