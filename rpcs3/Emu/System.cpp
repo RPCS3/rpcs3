@@ -1354,10 +1354,20 @@ void Emulator::Run(bool start_playtime)
 	m_pause_amend_time = 0;
 	rpcs3::utils::configure_logs();
 
-	m_state = system_state::running;
+	m_state = system_state::starting;
+
+	if (g_cfg.misc.prevent_display_sleep)
+	{
+		disable_display_sleep();
+	}
+}
+
+void Emulator::RunPPU()
+{
+	ensure(IsStarting());
 
 	// Run main thread
-	idm::check<named_thread<ppu_thread>>(ppu_thread::id_base, [](named_thread<ppu_thread>& cpu)
+	idm::select<named_thread<ppu_thread>>([](u32, named_thread<ppu_thread>& cpu)
 	{
 		ensure(cpu.state.test_and_reset(cpu_flag::stop));
 		cpu.state.notify_one(cpu_flag::stop);
@@ -1368,11 +1378,11 @@ void Emulator::Run(bool start_playtime)
 		thr->state -= cpu_flag::stop;
 		thr->state.notify_one(cpu_flag::stop);
 	}
+}
 
-	if (g_cfg.misc.prevent_display_sleep)
-	{
-		disable_display_sleep();
-	}
+void Emulator::FinalizeRunRequest()
+{
+	m_state.compare_and_swap_test(system_state::starting, system_state::running);
 }
 
 bool Emulator::Pause()
