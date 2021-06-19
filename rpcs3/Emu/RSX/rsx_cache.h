@@ -199,14 +199,17 @@ namespace rsx
 		{
 			if (!g_cfg.video.disable_on_disk_shader_cache)
 			{
-				root_path = rpcs3::cache::get_ppu_cache() + "shaders_cache";
+				if (std::string cache_path = rpcs3::cache::get_ppu_cache(); !cache_path.empty())
+				{
+					root_path = std::move(cache_path) + "shaders_cache/";
+				}
 			}
 		}
 
 		template <typename... Args>
 		void load(shader_loading_dialog* dlg, Args&& ...args)
 		{
-			if (g_cfg.video.disable_on_disk_shader_cache)
+			if (root_path.empty())
 			{
 				return;
 			}
@@ -270,7 +273,7 @@ namespace rsx
 
 		void store(const pipeline_storage_type &pipeline, const RSXVertexProgram &vp, const RSXFragmentProgram &fp)
 		{
-			if (g_cfg.video.disable_on_disk_shader_cache)
+			if (root_path.empty())
 			{
 				return;
 			}
