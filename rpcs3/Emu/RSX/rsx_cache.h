@@ -197,11 +197,12 @@ namespace rsx
 			, pipeline_class_name(std::move(pipeline_class))
 			, m_storage(storage)
 		{
-			std::string cache_path = rpcs3::cache::get_ppu_cache();
-
-			if (!cache_path.empty() && !g_cfg.video.disable_on_disk_shader_cache)
+			if (!g_cfg.video.disable_on_disk_shader_cache)
 			{
-				root_path = std::move(cache_path) + "shaders_cache/";
+				if (std::string cache_path = rpcs3::cache::get_ppu_cache(); !cache_path.empty())
+				{
+					root_path = std::move(cache_path) + "shaders_cache/";
+				}
 			}
 		}
 
