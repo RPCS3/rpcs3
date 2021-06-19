@@ -16,7 +16,7 @@ namespace rpcs3::cache
 	
 		if (!g_fxo->is_init<ppu_module>() || _main.cache.empty())
 		{
-			ppu_log.warning("PPU Cache location not initialized.");
+			ppu_log.error("PPU Cache location not initialized.");
 			return {};
 		}
 	
