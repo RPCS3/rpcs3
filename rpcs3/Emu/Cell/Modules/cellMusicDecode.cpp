@@ -3,6 +3,7 @@
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_spu.h"
+#include "Emu/RSX/Overlays/overlay_media_list_dialog.h"
 #include "Emu/VFS.h"
 #include "cellMusic.h"
 #include "cellSearch.h"
@@ -138,7 +139,10 @@ struct music_decode
 			readPos = 0;
 
 			// Decode data. The format of the decoded data is 48kHz, float 32bit, 2ch LPCM data interleaved in order from left to right.
-			decoder.set_path(vfs::get(current_selection_context.path));
+			const std::string path = vfs::get(current_selection_context.content_path);
+			cellMusicDecode.notice("set_decode_command(START): Setting vfs path: '%s' (unresolved='%s')", path, current_selection_context.content_path);
+
+			decoder.set_path(path);
 			decoder.set_swap_endianness(true);
 			decoder.decode();
 			break;
@@ -166,6 +170,46 @@ struct music_decode2 : music_decode
 {
 	s32 speed = CELL_MUSIC_DECODE2_SPEED_MAX;
 };
+
+template <typename Music_Decode>
+error_code cell_music_decode_select_contents()
+{
+	auto& dec = g_fxo->get<Music_Decode>();
+
+	if (!dec.func)
+		return CELL_MUSIC_DECODE_ERROR_GENERIC;
+
+	const std::string dir_path = "/dev_hdd0/music";
+	const std::string vfs_dir_path = vfs::get("/dev_hdd0/music");
+	const std::string title = get_localized_string(localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_EMPTY);
+
+	error_code error = rsx::overlays::show_media_list_dialog(rsx::overlays::media_list_dialog::media_type::audio, vfs_dir_path, title,
+		[&dec, dir_path, vfs_dir_path](s32 status, utils::media_info info)
+		{
+			sysutil_register_cb([&dec, dir_path, vfs_dir_path, info, status](ppu_thread& ppu) -> s32
+			{
+				std::lock_guard lock(dec.mutex);
+				const u32 result = status >= 0 ? u32{CELL_OK} : u32{CELL_MUSIC_DECODE_CANCELED};
+				if (result == CELL_OK)
+				{
+					music_selection_context context;
+					context.content_path = dir_path + info.path.substr(vfs_dir_path.length()); // We need the non-vfs path here
+					context.content_type = fs::is_dir(info.path) ? CELL_SEARCH_CONTENTTYPE_MUSICLIST : CELL_SEARCH_CONTENTTYPE_MUSIC;
+					// TODO: context.repeat_mode = CELL_SEARCH_REPEATMODE_NONE;
+					// TODO: context.context_option = CELL_SEARCH_CONTEXTOPTION_NONE;
+					dec.current_selection_context = context;
+					cellMusicDecode.success("Media list dialog: selected entry '%s'", context.content_path);
+				}
+				else
+				{
+					cellMusicDecode.warning("Media list dialog was canceled");
+				}
+				dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(result), dec.userData);
+				return CELL_OK;
+			});
+		});
+	return error;
+}
 
 template <typename Music_Decode>
 error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64 reqSize, vm::ptr<u64> readSize, vm::ptr<s32> position)
@@ -285,19 +329,7 @@ error_code cellMusicDecodeSelectContents()
 {
 	cellMusicDecode.todo("cellMusicDecodeSelectContents()");
 
-	auto& dec = g_fxo->get<music_decode>();
-	std::lock_guard lock(dec.mutex);
-
-	if (!dec.func)
-		return CELL_MUSIC_DECODE_ERROR_GENERIC;
-
-	sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
-	{
-		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(CELL_OK), dec.userData);
-		return CELL_OK;
-	});
-
-	return CELL_OK;
+	return cell_music_decode_select_contents<music_decode>();
 }
 
 error_code cellMusicDecodeSetDecodeCommand(s32 command)
@@ -464,19 +496,7 @@ error_code cellMusicDecodeSelectContents2()
 {
 	cellMusicDecode.todo("cellMusicDecodeSelectContents2()");
 
-	auto& dec = g_fxo->get<music_decode2>();
-	std::lock_guard lock(dec.mutex);
-
-	if (!dec.func)
-		return CELL_MUSIC_DECODE_ERROR_GENERIC;
-
-	sysutil_register_cb([=, &dec](ppu_thread& ppu) -> s32
-	{
-		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SELECT_CONTENTS_RESULT, vm::addr_t(CELL_OK), dec.userData);
-		return CELL_OK;
-	});
-
-	return CELL_OK;
+	return cell_music_decode_select_contents<music_decode2>();
 }
 
 error_code cellMusicDecodeSetDecodeCommand2(s32 command)
