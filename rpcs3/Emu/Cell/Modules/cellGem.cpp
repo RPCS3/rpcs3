@@ -1153,7 +1153,7 @@ error_code cellGemReset(u32 gem_num)
 	gem.reset_controller(gem_num);
 
 	// TODO: is this correct?
-	gem.timer.Start();
+	gem.start_timestamp = get_guest_system_time();
 
 	return CELL_OK;
 }
