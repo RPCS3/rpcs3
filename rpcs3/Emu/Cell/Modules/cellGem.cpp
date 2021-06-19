@@ -106,7 +106,7 @@ struct gem_config
 
 	shared_mutex mtx;
 
-	Timer timer;
+	u64 start_timestamp = 0;
 
 	// helper functions
 	bool is_controller_ready(u32 gem_num) const
@@ -738,7 +738,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 	{
 		ds3_input_to_ext(gem_num, inertial_state->ext);
 
-		inertial_state->timestamp = gem.timer.GetElapsedTimeInMicroSec();
+		inertial_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
 		inertial_state->counter = gem.inertial_counter++;
 		inertial_state->accelerometer[0] = 10;
 	}
@@ -876,7 +876,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		ds3_input_to_ext(gem_num, gem_state->ext);
 
 		gem_state->tracking_flags = CELL_GEM_TRACKING_FLAG_POSITION_TRACKED | CELL_GEM_TRACKING_FLAG_VISIBLE;
-		gem_state->timestamp = gem.timer.GetElapsedTimeInMicroSec();
+		gem_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
 		gem_state->quat[3] = 1.f;
 
 		return CELL_OK;
@@ -1006,7 +1006,7 @@ error_code cellGemInit(ppu_thread& ppu, vm::cptr<CellGemAttribute> attribute)
 	}
 
 	// TODO: is this correct?
-	gem.timer.Start();
+	gem.start_timestamp = get_guest_system_time();
 
 	return CELL_OK;
 }
