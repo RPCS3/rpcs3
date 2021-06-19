@@ -58,7 +58,7 @@ std::vector<std::string> cfg::make_int_range(s64 min, s64 max)
 	return {std::to_string(min), std::to_string(max)};
 }
 
-bool cfg::try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
+bool try_to_int64(s64* out, const std::string& value, s64 min, s64 max)
 {
 	s64 result;
 	const char* start = &value.front();
@@ -104,7 +104,7 @@ std::vector<std::string> cfg::make_uint_range(u64 min, u64 max)
 	return {std::to_string(min), std::to_string(max)};
 }
 
-bool cfg::try_to_uint64(u64* out, const std::string& value, u64 min, u64 max)
+bool try_to_uint64(u64* out, const std::string& value, u64 min, u64 max)
 {
 	u64 result;
 	const char* start = &value.front();
