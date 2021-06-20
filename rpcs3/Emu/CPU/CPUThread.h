@@ -38,7 +38,7 @@ constexpr bool is_stopped(bs_t<cpu_flag> state)
 // Test paused state
 constexpr bool is_paused(bs_t<cpu_flag> state)
 {
-	return !!(state & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause));
+	return !!(state & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause)) && !is_stopped(state);
 }
 
 class cpu_thread
