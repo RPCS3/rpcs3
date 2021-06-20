@@ -1984,15 +1984,31 @@ bool fs::pending_file::commit(bool overwrite)
 	}
 
 	// The temporary file's contents must be on disk before rename
+#ifndef _WIN32
 	file.sync();
+#endif
 	file.close();
 
+#ifdef _WIN32
+	const auto ws1 = to_wchar(m_path);
+	const auto ws2 = to_wchar(m_dest);
+
+	if (MoveFileExW(ws1.get(), ws2.get(), overwrite ? MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH : MOVEFILE_WRITE_THROUGH))
+	{
+		// Disable the destructor
+		m_path.clear();
+		return true;
+	}
+
+	g_tls_error = to_error(GetLastError());
+#else
 	if (fs::rename(m_path, m_dest, overwrite))
 	{
 		// Disable the destructor
 		m_path.clear();
 		return true;
 	}
+#endif
 
 	return false;
 }
