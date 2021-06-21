@@ -34,17 +34,20 @@ namespace rsx
 
 		trophy_notification::trophy_notification()
 		{
-			frame.set_pos(0, 0);
-			frame.set_size(300, 80);
-			frame.back_color.a = 0.85f;
+			frame.set_pos(68.24, 55.34);
+			frame.set_size(425, 72);
+			frame.back_color.r = 0.247059f;
+			frame.back_color.g = 0.250980f;
+			frame.back_color.b = 0.247059f;
+			frame.back_color.a = 0.88f;
 
-			image.set_pos(8, 8);
-			image.set_size(64, 64);
+			image.set_pos(78, 64);
+			image.set_size(53.333, 53.333);
 			image.back_color.a = 0.f;
 
-			text_view.set_pos(85, 0);
-			text_view.set_padding(0, 0, 24, 0);
-			text_view.set_font("Arial", 9);
+			text_view.set_pos(139.14, 69.30);
+			text_view.set_padding(0, 0, 0, 0);
+			text_view.set_font("Arial", 14);
 			text_view.align_text(overlay_element::text_align::center);
 			text_view.back_color.a = 0.f;
 
@@ -71,11 +74,11 @@ namespace rsx
 				return;
 			}
 
-			if (((t - creation_time) / 1000) > 7500)
+			if (((t - creation_time) / 1000) > 5000)
 			{
 				if (!sliding_animation.active)
 				{
-					sliding_animation.end = { -f32(frame.w), 0, 0 };
+					sliding_animation.end = { -f32(frame.w*1.25), 0, 0 };
 					sliding_animation.on_finish = [this]
 					{
 						s_trophy_semaphore.release();
@@ -133,8 +136,8 @@ namespace rsx
 			text_view.auto_resize();
 
 			// Resize background to cover the text
-			u16 margin_sz = text_view.x - image.w - image.x;
-			frame.w       = text_view.x + text_view.w + margin_sz;
+			u16 margin_sz = 9;
+			frame.w       = 72 + text_view.w + margin_sz;
 
 			visible = true;
 			return CELL_OK;
