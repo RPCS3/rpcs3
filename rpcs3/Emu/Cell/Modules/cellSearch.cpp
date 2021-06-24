@@ -131,8 +131,8 @@ void populate_music_info(CellSearchMusicInfo& info, const utils::media_info& mi,
 	info.releasedYear = static_cast<s32>(mi.get_metadata<s64>("date", -1));
 	info.duration = mi.duration_us / 1000; // we need microseconds
 	info.samplingRate = mi.sample_rate;
-	info.bitrate = mi.bitrate_bps;
-	info.quantizationBitrate = mi.bitrate_bps; // TODO: Assumption, verify value
+	info.bitrate = mi.audio_bitrate_bps;
+	info.quantizationBitrate = mi.audio_bitrate_bps; // TODO: Assumption, verify value
 	info.playCount = 0; // we do not track this for now
 	info.lastPlayedDate = -1; // we do not track this for now
 	info.importedDate = -1; // we do not track this for now
@@ -140,7 +140,7 @@ void populate_music_info(CellSearchMusicInfo& info, const utils::media_info& mi,
 	info.status = CELL_SEARCH_CONTENTSTATUS_AVAILABLE;
 
 	// Convert AVCodecID to CellSearchCodec
-	switch (mi.av_codec_id)
+	switch (mi.audio_av_codec_id)
 	{
 	case 86017: // AV_CODEC_ID_MP3
 		info.codec = CELL_SEARCH_CODEC_MP3;
@@ -177,6 +177,104 @@ void populate_music_info(CellSearchMusicInfo& info, const utils::media_info& mi,
 	//	break;
 	default:
 		info.codec = CELL_SEARCH_CODEC_UNKNOWN;
+		info.status = CELL_SEARCH_CONTENTSTATUS_NOT_SUPPORTED;
+		break;
+	}
+}
+
+void populate_video_info(CellSearchVideoInfo& info, const utils::media_info& mi, const fs::dir_entry& item)
+{
+	parse_metadata(info.albumTitle, mi, "album", "Unknown Album", CELL_SEARCH_TITLE_LEN_MAX);
+	parse_metadata(info.title, mi, "title", item.name.substr(0, item.name.find_last_of('.')), CELL_SEARCH_TITLE_LEN_MAX);
+
+	info.size = item.size;
+	info.duration = mi.duration_us / 1000; // we need microseconds
+	info.audioBitrate = mi.audio_bitrate_bps;
+	info.videoBitrate = mi.video_bitrate_bps;
+	info.playCount = 0; // we do not track this for now
+	info.importedDate = -1; // we do not track this for now
+	info.takenDate = -1; // we do not track this for now
+	info.drmEncrypted = 0; // TODO: Needs to be 1 if it's encrypted
+	info.status = CELL_SEARCH_CONTENTSTATUS_AVAILABLE;
+
+	// Convert Video AVCodecID to CellSearchCodec
+	switch (mi.video_av_codec_id)
+	{
+	case 1: // AV_CODEC_ID_MPEG1VIDEO
+		info.videoCodec = CELL_SEARCH_CODEC_MPEG1;
+		break;
+	case 2: // AV_CODEC_ID_MPEG2VIDEO
+		info.videoCodec = CELL_SEARCH_CODEC_MPEG2;
+		break;
+	case 12: // AV_CODEC_ID_MPEG4
+		info.videoCodec = CELL_SEARCH_CODEC_MPEG4;
+		break;
+	case 27: // AV_CODEC_ID_H264
+		info.videoCodec = CELL_SEARCH_CODEC_AVC;
+		break;
+	default:
+		info.videoCodec = CELL_SEARCH_CODEC_UNKNOWN;
+		info.status = CELL_SEARCH_CONTENTSTATUS_NOT_SUPPORTED;
+		break;
+	}
+
+	// Convert Audio AVCodecID to CellSearchCodec
+	switch (mi.audio_av_codec_id)
+	{
+	// Let's ignore this due to CELL_SEARCH_CODEC_MPEG1_LAYER3
+	//case 86017: // AV_CODEC_ID_MP3
+	//	info.audioCodec = CELL_SEARCH_CODEC_MP3;
+	//	break;
+	case 86018: // AV_CODEC_ID_AAC
+		info.audioCodec = CELL_SEARCH_CODEC_AAC;
+		break;
+	case 86019: // AV_CODEC_ID_AC3
+		info.audioCodec = CELL_SEARCH_CODEC_AC3;
+		break;
+	case 86023: // AV_CODEC_ID_WMAV1
+	case 86024: // AV_CODEC_ID_WMAV2
+		info.audioCodec = CELL_SEARCH_CODEC_WMA;
+		break;
+	case 86047: // AV_CODEC_ID_ATRAC3
+		info.audioCodec = CELL_SEARCH_CODEC_AT3;
+		break;
+	case 86055: // AV_CODEC_ID_ATRAC3P
+		info.audioCodec = CELL_SEARCH_CODEC_AT3P;
+		break;
+	case 88078: // AV_CODEC_ID_ATRAC3AL
+	//case 88079: // AV_CODEC_ID_ATRAC3PAL TODO: supported ?
+		info.audioCodec = CELL_SEARCH_CODEC_ATALL;
+		break;
+	// TODO: Find out if any of this works
+	//case 88069: // AV_CODEC_ID_DSD_LSBF
+	//case 88070: // AV_CODEC_ID_DSD_MSBF
+	//case 88071: // AV_CODEC_ID_DSD_LSBF_PLANAR
+	//case 88072: // AV_CODEC_ID_DSD_MSBF_PLANAR
+	//	info.audioCodec = CELL_SEARCH_CODEC_DSD;
+	//	break;
+	//case ???:
+	//	info.audioCodec = CELL_SEARCH_CODEC_WAV;
+	//	break;
+	case 86058: // AV_CODEC_ID_MP1
+		info.audioCodec = CELL_SEARCH_CODEC_MPEG1_LAYER1;
+		break;
+	case 86016: // AV_CODEC_ID_MP2
+		info.audioCodec = CELL_SEARCH_CODEC_MPEG1_LAYER2;
+		break;
+	case 86017: // AV_CODEC_ID_MP3
+		info.audioCodec = CELL_SEARCH_CODEC_MPEG1_LAYER3;
+		break;
+	//case ???:
+	//	info.audioCodec = CELL_SEARCH_CODEC_MPEG2_LAYER1;
+	//	break;
+	//case ???:
+	//	info.audioCodec = CELL_SEARCH_CODEC_MPEG2_LAYER2;
+	//	break;
+	//case ???:
+	//	info.audioCodec = CELL_SEARCH_CODEC_MPEG2_LAYER3;
+	//	break;
+	default:
+		info.audioCodec = CELL_SEARCH_CODEC_UNKNOWN;
 		info.status = CELL_SEARCH_CONTENTSTATUS_NOT_SUPPORTED;
 		break;
 	}
@@ -681,21 +779,15 @@ error_code cellSearchStartContentSearchInList(vm::cptr<CellSearchContentId> list
 					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL)
 					{
 						curr_find->type = CELL_SEARCH_CONTENTTYPE_VIDEO;
-						CellSearchVideoInfo& info = curr_find->data.video;
-						// TODO - Some kinda file video analysis and assign the values as such
-						info.duration = 0;
-						info.size = item.size;
-						info.importedDate = 0;
-						info.takenDate = 0;
-						info.videoBitrate = 0;
-						info.audioBitrate = 0;
-						info.playCount = 0;
-						info.drmEncrypted = 0;
-						info.videoCodec = 0; // CellSearchCodec
-						info.audioCodec = 0; // CellSearchCodec
-						info.status = 0;     // CellSearchContentStatus
-						strcpy_trunc(info.title, item.name.substr(0, ext_offset)); // it'll do for the moment...
-						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
+
+						const std::string path = vfs::get(vpath) + "/" + item.name;
+						const auto [success, mi] = utils::get_media_info(path, 0); // AVMEDIA_TYPE_VIDEO
+						if (!success)
+						{
+							continue;
+						}
+
+						populate_video_info(curr_find->data.video, mi, item);
 					}
 
 					content_map.map.emplace(hash, curr_find);
@@ -862,34 +954,28 @@ error_code cellSearchStartContentSearch(CellSearchContentSearchType type, CellSe
 						CellSearchPhotoInfo& info = curr_find->data.photo;
 						// TODO - Some kinda file photo analysis and assign the values as such
 						info.size = item.size;
-						info.importedDate = 0;
-						info.takenDate = 0;
+						info.importedDate = -1;
+						info.takenDate = -1;
 						info.width = 0;
 						info.height = 0;
-						info.orientation = 0;  // CellSearchOrientation
-						info.codec = 0;        // CellSearchCodec
-						info.status = 0;       // CellSearchContentStatus
+						info.orientation = CELL_SEARCH_ORIENTATION_UNKNOWN;
+						info.codec = CELL_SEARCH_CODEC_UNKNOWN;
+						info.status = CELL_SEARCH_CONTENTSTATUS_AVAILABLE;
 						strcpy_trunc(info.title, item.name.substr(0, ext_offset));
 						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
 					}
 					else if (type == CELL_SEARCH_CONTENTSEARCHTYPE_VIDEO_ALL)
 					{
 						curr_find->type = CELL_SEARCH_CONTENTTYPE_VIDEO;
-						CellSearchVideoInfo& info = curr_find->data.video;
-						// TODO - Some kinda file video analysis and assign the values as such
-						info.duration = 0;
-						info.size = item.size;
-						info.importedDate = 0;
-						info.takenDate = 0;
-						info.videoBitrate = 0;
-						info.audioBitrate = 0;
-						info.playCount = 0;
-						info.drmEncrypted = 0;
-						info.videoCodec = 0; // CellSearchCodec
-						info.audioCodec = 0; // CellSearchCodec
-						info.status = 0;     // CellSearchContentStatus
-						strcpy_trunc(info.title, item.name.substr(0, ext_offset)); // it'll do for the moment...
-						strcpy_trunc(info.albumTitle, "ALBUM TITLE");
+
+						const std::string path = vfs::get(vpath) + "/" + item.name;
+						const auto [success, mi] = utils::get_media_info(path, 0); // AVMEDIA_TYPE_VIDEO
+						if (!success)
+						{
+							continue;
+						}
+
+						populate_video_info(curr_find->data.video, mi, item);
 					}
 
 					content_map.map.emplace(hash, curr_find);
