@@ -94,7 +94,7 @@ public:
 
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
-	void SaveSettings() const;
+	void SaveSettings();
 private:
 	YAML::Node m_default_settings; // The default settings as a YAML node.
 	YAML::Node m_current_settings; // The current settings as a YAML node.
