@@ -49,6 +49,13 @@ namespace utils
 		return def;
 	}
 
+	std::string error_to_string(int error)
+	{
+		char av_error[AV_ERROR_MAX_STRING_SIZE];
+		av_make_error_string(av_error, AV_ERROR_MAX_STRING_SIZE, error);
+		return av_error;
+	}
+
 	std::pair<bool, media_info> get_media_info(const std::string& path, s32 av_media_type)
 	{
 		media_info info;
@@ -59,7 +66,7 @@ namespace utils
 		AVDictionary* av_dict_opts = nullptr;
 		if (int err = av_dict_set(&av_dict_opts, "probesize", "96", 0); err < 0)
 		{
-			media_log.error("av_dict_set: returned with error=%d", err);
+			media_log.error("av_dict_set: returned with error=%d='%s'", err, error_to_string(err));
 			return { false, std::move(info) };
 		}
 
@@ -71,7 +78,7 @@ namespace utils
 			// Failed to open file
 			av_dict_free(&av_dict_opts);
 			avformat_free_context(av_format_ctx);
-			media_log.notice("avformat_open_input: could not open file. error=%d file='%s'", err, path);
+			media_log.notice("avformat_open_input: could not open file. error=%d='%s' file='%s'", err, error_to_string(err), path);
 			return { false, std::move(info) };
 		}
 		av_dict_free(&av_dict_opts);
@@ -82,7 +89,7 @@ namespace utils
 			// Failed to load stream information
 			avformat_close_input(&av_format_ctx);
 			avformat_free_context(av_format_ctx);
-			media_log.notice("avformat_find_stream_info: could not load stream information. error=%d file='%s'", err, path);
+			media_log.notice("avformat_find_stream_info: could not load stream information. error=%d='%s' file='%s'", err, error_to_string(err), path);
 			return { false, std::move(info) };
 		}
 
