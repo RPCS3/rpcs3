@@ -80,40 +80,64 @@ namespace utils
 		if (int err = avformat_find_stream_info(av_format_ctx, nullptr); err < 0)
 		{
 			// Failed to load stream information
+			avformat_close_input(&av_format_ctx);
 			avformat_free_context(av_format_ctx);
 			media_log.notice("avformat_find_stream_info: could not load stream information. error=%d file='%s'", err, path);
 			return { false, std::move(info) };
 		}
 
-		// Derive first stream id and type from avformat context
-		// we are only interested in the first stream for now
-		int stream_index = -1;
-		for (uint i = 0; i < 1 && i < av_format_ctx->nb_streams; i++)
+		// Derive first stream id and type from avformat context.
+		// We are only interested in the first matching stream for now.
+		int audio_stream_index = -1;
+		int video_stream_index = -1;
+		for (uint i = 0; i < av_format_ctx->nb_streams; i++)
 		{
-			if (av_format_ctx->streams[i]->codecpar->codec_type == av_media_type)
+			switch (av_format_ctx->streams[i]->codecpar->codec_type)
 			{
-				stream_index = i;
+			case AVMEDIA_TYPE_AUDIO:
+				if (audio_stream_index < 0)
+					audio_stream_index = i;
+				break;
+			case AVMEDIA_TYPE_VIDEO:
+				if (video_stream_index < 0)
+					video_stream_index = i;
+				break;
+			default:
 				break;
 			}
 		}
 
-		if (stream_index == -1)
+		// Abort if there is no natching stream or if the stream isn't the first one
+		if (av_media_type == AVMEDIA_TYPE_AUDIO && audio_stream_index != 0 ||
+			av_media_type == AVMEDIA_TYPE_VIDEO && video_stream_index != 0)
 		{
 			// Failed to find a stream
+			avformat_close_input(&av_format_ctx);
 			avformat_free_context(av_format_ctx);
-			media_log.notice("Could not find the desired stream of type %d in file='%s'", av_media_type, path);
+			media_log.notice("Failed to match stream of type %d in file='%s'", av_media_type, path);
 			return { false, std::move(info) };
 		}
 
-		AVStream* stream = av_format_ctx->streams[stream_index];
-		AVCodecParameters* codec = stream->codecpar;
-		AVDictionaryEntry* tag = nullptr;
+		// Get video info if available
+		if (video_stream_index >= 0)
+		{
+			const AVStream* stream = av_format_ctx->streams[video_stream_index];
+			info.video_av_codec_id = stream->codecpar->codec_id;
+			info.video_bitrate_bps = stream->codecpar->bit_rate;
+		}
 
-		info.av_codec_id = codec->codec_id;
-		info.bitrate_bps = codec->bit_rate;
-		info.sample_rate = codec->sample_rate;
+		// Get audio info if available
+		if (audio_stream_index >= 0)
+		{
+			const AVStream* stream = av_format_ctx->streams[audio_stream_index];
+			info.audio_av_codec_id = stream->codecpar->codec_id;
+			info.audio_bitrate_bps = stream->codecpar->bit_rate;
+			info.sample_rate = stream->codecpar->sample_rate;
+		}
+
 		info.duration_us = av_format_ctx->duration;
 
+		AVDictionaryEntry* tag = nullptr;
 		while (tag = av_dict_get(av_format_ctx->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))
 		{
 			info.metadata[tag->key] = tag->value;
