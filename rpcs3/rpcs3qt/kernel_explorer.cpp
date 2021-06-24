@@ -813,7 +813,22 @@ void kernel_explorer::Update()
 
 	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& fo)
 	{
-		add_leaf(find_node(root, additional_nodes::file_descriptors), qstr(fmt::format("FD %u: %s", id, fo.to_string())));
+		const std::string str = fmt::format("FD %u: %s", id, [&]() -> std::string
+		{
+			if (idm::check_unlocked<lv2_fs_object, lv2_file>(id))
+			{
+				return fmt::format("%s", static_cast<lv2_file&>(fo));
+			}
+
+			if (idm::check_unlocked<lv2_fs_object, lv2_dir>(id))
+			{
+				return fmt::format("%s", static_cast<lv2_dir&>(fo));
+			}
+
+			return "Unknown object!";
+		}());
+
+		add_leaf(find_node(root, additional_nodes::file_descriptors), qstr(str));
 	});
 
 	std::function<int(QTreeWidgetItem*)> final_touches;
