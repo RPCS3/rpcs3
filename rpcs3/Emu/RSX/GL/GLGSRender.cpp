@@ -511,11 +511,11 @@ void GLGSRender::clear_surface(u32 arg)
 	GLbitfield mask = 0;
 
 	gl::command_context cmd{ gl_state };
-	const bool require_mem_load =
-		rsx::method_registers.scissor_origin_x() > 0 ||
-		rsx::method_registers.scissor_origin_y() > 0 ||
-		rsx::method_registers.scissor_width() < rsx::method_registers.surface_clip_width() ||
-		rsx::method_registers.scissor_height() < rsx::method_registers.surface_clip_height();
+	const bool full_frame =
+		rsx::method_registers.scissor_origin_x() == 0 &&
+		rsx::method_registers.scissor_origin_y() == 0 &&
+		rsx::method_registers.scissor_width() >= rsx::method_registers.surface_clip_width() &&
+		rsx::method_registers.scissor_height() >= rsx::method_registers.surface_clip_height();
 
 	bool update_color = false, update_z = false;
 	rsx::surface_depth_format2 surface_depth_format = rsx::method_registers.surface_depth_fmt();
@@ -543,32 +543,38 @@ void GLGSRender::clear_surface(u32 arg)
 				mask |= GLenum(gl::buffers::stencil);
 			}
 
-			if ((arg & 0x3) != 0x3 && !require_mem_load && ds->dirty())
+			if ((arg & 0x3) != 0x3 || !full_frame)
 			{
 				ensure(mask);
 
-				// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
-				if (arg == 1)
+				if (ds->state_flags & rsx::surface_state_flags::erase_bkgnd &&  // Needs initialization
+					ds->old_contents.empty() && !g_cfg.video.read_depth_buffer) // No way to load data from memory, so no initialization given
 				{
-					// Depth was cleared, initialize stencil
-					gl_state.stencil_mask(0xFF);
-					gl_state.clear_stencil(0xFF);
-					mask |= GLenum(gl::buffers::stencil);
+					// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
+					if (arg == 1)
+					{
+						// Depth was cleared, initialize stencil
+						gl_state.stencil_mask(0xFF);
+						gl_state.clear_stencil(0xFF);
+						mask |= GLenum(gl::buffers::stencil);
+					}
+					else
+					{
+						// Stencil was cleared, initialize depth
+						gl_state.depth_mask(GL_TRUE);
+						gl_state.clear_depth(1.f);
+						mask |= GLenum(gl::buffers::depth);
+					}
 				}
 				else
 				{
-					// Stencil was cleared, initialize depth
-					gl_state.depth_mask(GL_TRUE);
-					gl_state.clear_depth(1.f);
-					mask |= GLenum(gl::buffers::depth);
+					ds->write_barrier(cmd);
 				}
 			}
 		}
 
 		if (mask)
 		{
-			if (require_mem_load) ds->write_barrier(cmd);
-
 			// Memory has been initialized
 			update_z = true;
 		}
@@ -620,7 +626,11 @@ void GLGSRender::clear_surface(u32 arg)
 				 count < m_rtts.m_bound_render_targets_config.second;
 				 ++count, ++index)
 			{
-				if (require_mem_load) m_rtts.m_bound_render_targets[index].second->write_barrier(cmd);
+				if (!full_frame)
+				{
+					m_rtts.m_bound_render_targets[index].second->write_barrier(cmd);
+				}
+
 				gl_state.color_maski(count, colormask);
 			}
 
