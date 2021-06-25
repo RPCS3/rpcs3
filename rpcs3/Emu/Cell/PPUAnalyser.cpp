@@ -24,6 +24,7 @@ void fmt_class_string<ppu_attr>::format(std::string& out, u64 arg)
 		case ppu_attr::known_size: return "known_size";
 		case ppu_attr::no_return: return "no_return";
 		case ppu_attr::no_size: return "no_size";
+		case ppu_attr::has_mfvscr: return "has_mfvscr";
 		case ppu_attr::__bitset_enum_max: break;
 		}
 

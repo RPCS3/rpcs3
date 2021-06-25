@@ -141,6 +141,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 	// Instruction address is (m_addr + base)
 	const u64 base = m_reloc ? m_reloc->addr : 0;
 	m_addr = info.addr - base;
+	m_attr = info.attr;
 
 	// Don't emit check in small blocks without terminator
 	bool need_check = info.size >= 16;
@@ -4816,7 +4817,10 @@ void PPUTranslator::SetOverflow(Value* bit)
 
 void PPUTranslator::SetSat(Value* bit)
 {
-	RegStore(m_ir->CreateOr(RegLoad(m_sat), bit), m_sat);
+	if (m_attr & ppu_attr::has_mfvscr)
+	{
+		RegStore(m_ir->CreateOr(RegLoad(m_sat), bit), m_sat);
+	}
 }
 
 Value* PPUTranslator::CheckTrapCondition(u32 to, Value* left, Value* right)

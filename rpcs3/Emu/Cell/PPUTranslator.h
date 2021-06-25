@@ -28,6 +28,9 @@ class PPUTranslator final : public cpu_translator
 	// Current position-independent address
 	u64 m_addr = 0;
 
+	// Function attributes
+	bs_t<ppu_attr> m_attr{};
+
 	// Relocation info
 	const ppu_segment* m_reloc = nullptr;
 
