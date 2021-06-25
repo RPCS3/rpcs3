@@ -104,7 +104,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// Various connects
 
-	const auto apply_configs = [this, use_discord_old = m_use_discord, discord_state_old = m_discord_state](bool do_exit)
+	const auto apply_configs = [this, use_discord_old = m_use_discord, discord_state_old = m_discord_state, game](bool do_exit)
 	{
 		std::set<std::string> selected;
 		for (int i = 0; i < ui->lleList->count(); ++i)
@@ -160,6 +160,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			discord::update_presence(sstr(m_discord_state), "Idle", false);
 		}
 #endif
+
+		if (!game)
+		{
+			ApplyGuiOptions(false);
+		}
 	};
 
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, [apply_configs, this](QAbstractButton* button)
@@ -1609,41 +1614,22 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->pb_sd_icon_color->setEnabled(enable_ui_colors);
 		ui->pb_tr_icon_color->setEnabled(enable_ui_colors);
 
-		auto apply_gui_options = [this](bool reset = false)
+		connect(ui->buttonBox, &QDialogButtonBox::accepted, this, [this]()
 		{
-			if (reset)
-			{
-				m_current_stylesheet = gui::DefaultStylesheet;
-				ui->combo_configs->setCurrentIndex(0);
-				ui->combo_stylesheets->setCurrentIndex(0);
-			}
-			// Only attempt to load a config if changes occurred.
-			if (m_current_gui_config != ui->combo_configs->currentText())
-			{
-				OnApplyGuiConfig();
-			}
-			if (m_current_stylesheet != m_gui_settings->GetValue(gui::m_currentStylesheet).toString())
-			{
-				OnApplyStylesheet();
-			}
-		};
-
-		connect(ui->buttonBox, &QDialogButtonBox::accepted, [apply_gui_options, this]()
-		{
-			apply_gui_options();
+			ApplyGuiOptions(false);
 		});
 
-		connect(ui->pb_reset_default, &QAbstractButton::clicked, [apply_gui_options, this]
+		connect(ui->pb_reset_default, &QAbstractButton::clicked, this, [this]
 		{
 			if (QMessageBox::question(this, tr("Reset GUI to default?", "Reset"), tr("This will include your stylesheet as well. Do you wish to proceed?", "Reset"),
 				QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
 			{
-				apply_gui_options(true);
+				ApplyGuiOptions(true);
 				m_gui_settings->Reset(true);
 				Q_EMIT GuiSettingsSyncRequest(true);
 				AddGuiConfigs();
 				AddStylesheets();
-				apply_gui_options();
+				ApplyGuiOptions(false);
 			}
 		});
 
@@ -1975,9 +1961,27 @@ void settings_dialog::OnApplyGuiConfig()
 
 void settings_dialog::OnApplyStylesheet()
 {
+	// NOTE: We're deliberately not using currentText() here. The actual stylesheet is stored in user data.
 	m_current_stylesheet = ui->combo_stylesheets->currentData().toString();
-	m_gui_settings->SetValue(gui::m_currentStylesheet, m_current_stylesheet);
-	Q_EMIT GuiStylesheetRequest();
+
+	if (m_current_stylesheet != m_gui_settings->GetValue(gui::m_currentStylesheet).toString())
+	{
+		m_gui_settings->SetValue(gui::m_currentStylesheet, m_current_stylesheet);
+		Q_EMIT GuiStylesheetRequest();
+	}
+}
+
+void settings_dialog::ApplyGuiOptions(bool reset)
+{
+	if (reset)
+	{
+		m_current_stylesheet = gui::DefaultStylesheet;
+		ui->combo_configs->setCurrentIndex(0);
+		ui->combo_stylesheets->setCurrentIndex(0);
+	}
+
+	OnApplyGuiConfig();
+	OnApplyStylesheet();
 }
 
 int settings_dialog::exec()
