@@ -1534,13 +1534,7 @@ void Emulator::Stop(bool restart)
 		}
 	});
 
-	if (auto rsx = g_fxo->try_get<rsx::thread>())
-	{
-		// TODO: notify?
-		rsx->state += cpu_flag::exit;
-	}
-
-	cpu_thread::stop_all();
+	id_manager::g_mutex.lock_unlock();
 
 	// Signal threads
 	for (const auto& [type, data] : *g_fxo)

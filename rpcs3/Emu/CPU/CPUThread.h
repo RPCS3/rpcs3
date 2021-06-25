@@ -139,6 +139,7 @@ public:
 	u32* get_pc2(); // Last PC before stepping for the debugger (may be null)
 
 	void notify();
+	cpu_thread& operator=(thread_state);
 
 public:
 	// Thread stats for external observation
@@ -262,9 +263,6 @@ public:
 			return work.push(_this);
 		}
 	}
-
-	// Stop all threads with cpu_flag::exit
-	static void stop_all() noexcept;
 
 	// Cleanup thread counting information
 	static void cleanup() noexcept;

@@ -812,6 +812,8 @@ bool cpu_thread::check_state() noexcept
 
 void cpu_thread::notify()
 {
+	state.notify_one();
+
 	// Downcast to correct type
 	if (id_type() == 1)
 	{
@@ -825,6 +827,13 @@ void cpu_thread::notify()
 	{
 		fmt::throw_exception("Invalid cpu_thread type");
 	}
+}
+
+cpu_thread& cpu_thread::operator=(thread_state)
+{
+	state += cpu_flag::exit;
+	state.notify_one(cpu_flag::exit);
+	return *this;
 }
 
 std::string cpu_thread::get_name() const
@@ -1097,29 +1106,6 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 
 	g_suspend_counter.notify_all();
 	return true;
-}
-
-void cpu_thread::stop_all() noexcept
-{
-	if (g_tls_this_thread)
-	{
-		// Report unsupported but unnecessary case
-		sys_log.fatal("cpu_thread::stop_all() has been called from a CPU thread.");
-		return;
-	}
-	else
-	{
-		auto on_stop = [](u32, cpu_thread& cpu)
-		{
-			cpu.state += cpu_flag::exit;
-			cpu.state.notify_one(cpu_flag::exit);
-		};
-
-		idm::select<named_thread<ppu_thread>>(on_stop);
-		idm::select<named_thread<spu_thread>>(on_stop);
-	}
-
-	sys_log.notice("All CPU threads have been signaled.");
 }
 
 void cpu_thread::cleanup() noexcept

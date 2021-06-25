@@ -377,6 +377,12 @@ void signaling_handler::wake_up()
 	wakey.notify_one();
 }
 
+signaling_handler& signaling_handler::operator=(thread_state)
+{
+	wakey.notify_one();
+	return *this;
+}
+
 void signaling_handler::update_si_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port)
 {
 	ensure(si);
