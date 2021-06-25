@@ -21,6 +21,12 @@ inline void strcpy_trunc(D& dst, const T& src)
 	std::memset(std::data(dst) + count, 0, std::size(dst) - count);
 }
 
+// Convert string to signed integer
+bool try_to_int64(s64* out, const std::string& value, s64 min, s64 max);
+
+// Convert string to unsigned integer
+bool try_to_uint64(u64* out, const std::string& value, u64 min, u64 max);
+
 namespace fmt
 {
 	std::string replace_all(std::string_view src, std::string_view from, std::string_view to, usz count = -1);
