@@ -96,6 +96,7 @@
     <ClCompile Include="util\atomic.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="util\media_utils.cpp" />
     <ClCompile Include="util\yaml.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -486,6 +487,7 @@
     <ClInclude Include="Emu\system_config_types.h" />
     <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="util\atomic.hpp" />
+    <ClInclude Include="util\media_utils.h" />
     <ClInclude Include="util\serialization.hpp" />
     <ClInclude Include="util\v128.hpp" />
     <ClInclude Include="util\v128sse.hpp" />
