@@ -536,7 +536,7 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 	std::string path;
 	const std::string local_path = vfs::get(vpath, nullptr, &path);
 
-	const auto mp = lv2_fs_object::get_mp(path);
+	const auto mp = lv2_fs_object::get_mp(vpath);
 
 	if (mp == &g_mp_sys_dev_root)
 	{
