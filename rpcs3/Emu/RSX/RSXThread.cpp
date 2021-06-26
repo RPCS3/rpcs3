@@ -629,12 +629,13 @@ namespace rsx
 			// TODO: exit condition
 			while (!is_stopped())
 			{
+				const u64 current = get_system_time();
 				const u64 period_time = 1000000 / g_cfg.video.vblank_rate;
-				const u64 wait_sleep = period_time - u64{period_time >= host_min_quantum} * host_min_quantum;
+				const u64 wait_for = period_time - std::min<u64>(current - start_time, period_time);
+				const u64 wait_sleep = wait_for - u64{wait_for >= host_min_quantum} * host_min_quantum;
 
-				if (get_system_time() - start_time >= period_time)
+				if (!wait_for)
 				{
-					do
 					{
 						start_time += period_time;
 						vblank_count++;
@@ -658,10 +659,14 @@ namespace rsx
 							sys_rsx_context_attribute(0x55555555, 0xFED, 1, 0, 0, 0);
 						}
 					}
-					while (get_system_time() - start_time >= period_time);
-
+				}
+				else if (wait_sleep)
+				{
 					thread_ctrl::wait_for(wait_sleep);
-					continue;
+				}
+				else if (wait_for >= host_min_quantum / 3 * 2)
+				{
+					std::this_thread::yield();
 				}
 
 				if (Emu.IsPaused())
@@ -677,8 +682,6 @@ namespace rsx
 					// Restore difference
 					start_time = get_system_time() - start_time;
 				}
-
-				thread_ctrl::wait_for(100);
 			}
 		});
 
