@@ -1292,26 +1292,31 @@ void ppu_thread::fast_call(u32 addr, u32 rtoc)
 	at_ret();
 }
 
-u32 ppu_thread::stack_push(u32 size, u32 align_v)
+std::pair<vm::addr_t, u32> ppu_thread::stack_push(u32 size, u32 align_v)
 {
 	if (auto cpu = get_current_cpu_thread<ppu_thread>())
 	{
 		ppu_thread& context = static_cast<ppu_thread&>(*cpu);
 
 		const u32 old_pos = vm::cast(context.gpr[1]);
-		context.gpr[1] -= utils::align(size + 4, 8); // room minimal possible size
+		context.gpr[1] -= size; // room minimal possible size
 		context.gpr[1] &= ~(u64{align_v} - 1); // fix stack alignment
 
-		if (old_pos >= context.stack_addr && old_pos < context.stack_addr + context.stack_size && context.gpr[1] < context.stack_addr)
+		auto is_stack = [&](u64 addr)
+		{
+			return addr >= context.stack_addr && addr < context.stack_addr + context.stack_size;
+		};
+
+		// TODO: This check does not care about custom stack memory
+		if (is_stack(old_pos) != is_stack(context.gpr[1]))
 		{
 			fmt::throw_exception("Stack overflow (size=0x%x, align=0x%x, SP=0x%llx, stack=*0x%x)", size, align_v, old_pos, context.stack_addr);
 		}
 		else
 		{
 			const u32 addr = static_cast<u32>(context.gpr[1]);
-			vm::_ref<nse_t<u32>>(addr + size) = old_pos;
 			std::memset(vm::base(addr), 0, size);
-			return addr;
+			return {vm::cast(addr), old_pos - addr};
 		}
 	}
 
@@ -1330,7 +1335,7 @@ void ppu_thread::stack_pop_verbose(u32 addr, u32 size) noexcept
 			return;
 		}
 
-		context.gpr[1] = vm::_ref<nse_t<u32>>(static_cast<u32>(context.gpr[1]) + size);
+		context.gpr[1] += size;
 		return;
 	}
 
