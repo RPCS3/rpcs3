@@ -34,17 +34,21 @@ namespace rsx
 
 		trophy_notification::trophy_notification()
 		{
-			frame.set_pos(0, 0);
-			frame.set_size(300, 80);
-			frame.back_color.a = 0.85f;
+			frame.set_pos(68, 55);
+			frame.set_size(300, 72);
+			frame.back_color.r = 0.247059f;
+			frame.back_color.g = 0.250980f;
+			frame.back_color.b = 0.247059f;
+			frame.back_color.a = 0.88f;
+			
 
-			image.set_pos(8, 8);
-			image.set_size(64, 64);
+			image.set_pos(78, 64);
+			image.set_size(53, 53);
 			image.back_color.a = 0.f;
 
-			text_view.set_pos(85, 0);
-			text_view.set_padding(0, 0, 24, 0);
-			text_view.set_font("Arial", 9);
+			text_view.set_pos(139, 69);
+			text_view.set_padding(0, 0, 0, 0);
+			text_view.set_font("Arial", 14);
 			text_view.align_text(overlay_element::text_align::center);
 			text_view.back_color.a = 0.f;
 
@@ -71,7 +75,7 @@ namespace rsx
 				return;
 			}
 
-			if (((t - creation_time) / 1000) > 7500)
+			if (((t - creation_time) / 1000) > 5000)
 			{
 				if (!sliding_animation.active)
 				{
@@ -133,8 +137,8 @@ namespace rsx
 			text_view.auto_resize();
 
 			// Resize background to cover the text
-			u16 margin_sz = text_view.x - image.w - image.x;
-			frame.w       = text_view.x + text_view.w + margin_sz;
+			u16 margin_sz = 9;
+			frame.w       = margin_sz * 3 + image.w + text_view.w;
 
 			visible = true;
 			return CELL_OK;

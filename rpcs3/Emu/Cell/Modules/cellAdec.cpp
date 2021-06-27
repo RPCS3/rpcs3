@@ -315,9 +315,6 @@ public:
 		, cbFunc(func)
 		, cbArg(arg)
 	{
-		//av_register_all();
-		//avcodec_register_all();
-
 		switch (type)
 		{
 		case CELL_ADEC_TYPE_ATRACX:

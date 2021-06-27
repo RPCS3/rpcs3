@@ -41,9 +41,10 @@ private:
 	void SnapSlider(QSlider* slider, int interval);
 	QSlider* m_current_slider = nullptr;
 
-	// Emulator tab
+	// Gui tab
 	void AddGuiConfigs();
 	void AddStylesheets();
+	void ApplyGuiOptions(bool reset);
 	QString m_current_stylesheet;
 	QString m_current_gui_config;
 	// Gpu tab

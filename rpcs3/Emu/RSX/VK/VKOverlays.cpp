@@ -803,7 +803,6 @@ namespace vk
 		fs_src =
 			"#version 420\n"
 			"#extension GL_ARB_separate_shader_objects : enable\n"
-			"layout(input_attachment_index=0, binding=1) uniform subpassInput sp0;\n"
 			"layout(location=0) in vec4 color;\n"
 			"layout(location=0) out vec4 out_color;\n"
 			"\n"

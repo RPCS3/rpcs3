@@ -36,6 +36,7 @@ target_include_directories(rpcs3_emu
 # Utilities
 target_sources(rpcs3_emu PRIVATE
     ../util/atomic.cpp
+    ../util/media_utils.cpp
     ../util/logs.cpp
     ../util/yaml.cpp
     ../util/vm_native.cpp
