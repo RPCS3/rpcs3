@@ -93,6 +93,13 @@ union D0
 		u32 vec_result           : 1;
 		u32                      : 1;
 	};
+
+	struct
+	{
+		u32         : 23;
+		u32 iaddrh2 : 1;
+		u32         : 8;
+	};
 };
 
 union D1
@@ -239,7 +246,7 @@ struct RSXVertexProgram
 
 	u32 base_address;
 	u32 entry;
-	std::bitset<512> instruction_mask;
+	std::bitset<rsx::max_vertex_program_instructions> instruction_mask;
 	std::set<u32> jump_table;
 
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const

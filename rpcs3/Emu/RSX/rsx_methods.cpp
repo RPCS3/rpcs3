@@ -467,13 +467,10 @@ namespace rsx
 				u32 rcount = count;
 
 				if (const u32 max = load_pos * 4 + rcount + (index % 4);
-					max > 512 * 4)
+					max > max_vertex_program_instructions * 4)
 				{
-					// PS3 seems to allow exceeding the program buffer by upto 32 instructions before crashing
-					// Discard the "excess" instructions to not overflow our transform program buffer
-					// TODO: Check if the instructions in the overflow area are executed by PS3
-					rsx_log.warning("Program buffer overflow!");
-					rcount -= max - (512 * 4);
+					rsx_log.warning("Program buffer overflow! Attempted to write %u VP instructions.", max / 4);
+					rcount -= max - (max_vertex_program_instructions * 4);
 				}
 
 				stream_data_to_memory_swapped_u32<true>(&rsx::method_registers.transform_program[load_pos * 4 + index % 4]

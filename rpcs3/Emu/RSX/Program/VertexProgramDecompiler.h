@@ -53,8 +53,7 @@ struct VertexProgramDecompiler
 		}
 	};
 
-	static const usz m_max_instr_count = 512;
-	Instruction m_instructions[m_max_instr_count];
+	Instruction m_instructions[rsx::max_vertex_program_instructions];
 	Instruction* m_cur_instr;
 	usz m_instr_count;
 
