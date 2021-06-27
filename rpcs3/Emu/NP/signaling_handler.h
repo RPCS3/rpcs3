@@ -45,11 +45,12 @@ enum SignalingCommand : u32
 	signal_finished_ack,
 };
 
-class signaling_handler : public need_wakeup
+class signaling_handler
 {
 public:
 	void operator()();
 	void wake_up();
+	signaling_handler& operator=(thread_state);
 
 	void set_self_sig_info(SceNpId& npid);
 	void set_self_sig2_info(u64 room_id, u16 member_id);
