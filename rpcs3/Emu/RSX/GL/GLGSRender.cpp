@@ -15,7 +15,7 @@ u64 GLGSRender::get_cycles()
 
 GLGSRender::GLGSRender() : GSRender()
 {
-	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.91");
+	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.92");
 
 	if (g_cfg.video.disable_vertex_cache || g_cfg.video.multithreaded_rsx)
 		m_vertex_cache = std::make_unique<gl::null_vertex_cache>();

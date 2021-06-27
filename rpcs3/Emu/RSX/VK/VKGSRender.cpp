@@ -501,7 +501,7 @@ VKGSRender::VKGSRender() : GSRender()
 	else
 		m_vertex_cache = std::make_unique<vk::weak_vertex_cache>();
 
-	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.91");
+	m_shaders_cache = std::make_unique<vk::shader_cache>(*m_prog_buffer, "vulkan", "v1.92");
 
 	open_command_buffer();
 

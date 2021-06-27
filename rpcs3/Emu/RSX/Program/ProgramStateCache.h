@@ -22,7 +22,7 @@ namespace program_hash_util
 	{
 		struct vertex_program_metadata
 		{
-			std::bitset<512> instruction_mask;
+			std::bitset<rsx::max_vertex_program_instructions> instruction_mask;
 			u32 ucode_length;
 			u32 referenced_textures_mask;
 		};

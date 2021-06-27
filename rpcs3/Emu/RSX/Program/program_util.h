@@ -5,6 +5,11 @@
 
 namespace rsx
 {
+	enum program_limits
+	{
+		max_vertex_program_instructions = 544
+	};
+
 #pragma pack(push, 1)
 	// NOTE: This structure must be packed to match GPU layout.
 	struct fragment_program_texture_config

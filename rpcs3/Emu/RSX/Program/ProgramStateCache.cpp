@@ -36,10 +36,10 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 	//u32 last_instruction_address = 0;
 	//u32 first_instruction_address = entry;
 
-	std::stack<u32> call_stack;
-	std::pair<u32, u32> instruction_range{umax, 0};
-	std::bitset<512> instructions_to_patch;
+	std::bitset<rsx::max_vertex_program_instructions> instructions_to_patch;
+	std::pair<u32, u32> instruction_range{ umax, 0 };
 	bool has_branch_instruction = false;
+	std::stack<u32> call_stack;
 
 	D3  d3;
 	D2  d2;
@@ -54,7 +54,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 		while (true)
 		{
-			ensure(current_instruction < 512);
+			ensure(current_instruction < rsx::max_vertex_program_instructions);
 
 			if (result.instruction_mask[current_instruction])
 			{
@@ -120,8 +120,9 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 				instructions_to_patch[current_instruction] = true;
 				has_branch_instruction = true;
 
+				d0.HEX = instruction._u32[0];
 				d2.HEX = instruction._u32[2];
-				const u32 jump_address = ((d2.iaddrh << 3) | d3.iaddrl);
+				const u32 jump_address = (d0.iaddrh2 << 9) | (d2.iaddrh << 3) | d3.iaddrl;
 
 				if (function_call)
 				{
@@ -162,7 +163,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			}
 
 			if ((d3.end && (fast_exit || current_instruction >= instruction_range.second)) ||
-				(current_instruction + 1) == 512)
+				(current_instruction + 1) == rsx::max_vertex_program_instructions)
 			{
 				break;
 			}
@@ -183,7 +184,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 	{
 		fs::file dump(fs::get_cache_dir() + "shaderlog/vp_analyser.bin", fs::rewrite);
 		dump.write(&entry, 4);
-		dump.write(data, 512 * 16);
+		dump.write(data, rsx::max_vertex_program_instructions * 16);
 		dump.close();
 	}
 
@@ -215,14 +216,17 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 				if (instructions_to_patch[i])
 				{
+					d0.HEX = dst[0];
 					d2.HEX = dst[2];
 					d3.HEX = dst[3];
 
-					u32 address = ((d2.iaddrh << 3) | d3.iaddrl);
+					u32 address = (d0.iaddrh2 << 9) | (d2.iaddrh << 3) | d3.iaddrl;
 					address -= instruction_range.first;
 
-					d2.iaddrh = (address >> 3);
+					d0.iaddrh2 = (address >> 9) & 0x1;
+					d2.iaddrh = (address >> 3) & 0x3F;
 					d3.iaddrl = (address & 0x7);
+					dst[0] = d0.HEX;
 					dst[2] = d2.HEX;
 					dst[3] = d3.HEX;
 
