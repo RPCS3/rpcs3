@@ -262,11 +262,9 @@ bool emu_settings::ValidateSettings(bool cleanup)
 	return is_clean;
 }
 
-void emu_settings::SaveSettings() const
+void emu_settings::SaveSettings()
 {
 	YAML::Emitter out;
-	emit_data(out, m_current_settings);
-
 	std::string config_name;
 
 	if (m_title_id.empty())
@@ -275,8 +273,12 @@ void emu_settings::SaveSettings() const
 	}
 	else
 	{
+		// VFS paths are being controlled mainly by the main config (needs manual modification for customization of custom configs)
+		m_current_settings.remove("VFS");
 		config_name = rpcs3::utils::get_custom_config_path(m_title_id);
 	}
+
+	emit_data(out, m_current_settings);
 
 	// Save config atomically
 	fs::pending_file temp(config_name);
