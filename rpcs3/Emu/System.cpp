@@ -1534,8 +1534,6 @@ void Emulator::Stop(bool restart)
 		}
 	});
 
-	id_manager::g_mutex.lock_unlock();
-
 	// Signal threads
 	for (const auto& [type, data] : *g_fxo)
 	{
@@ -1544,6 +1542,11 @@ void Emulator::Stop(bool restart)
 			type.stop(data, thread_state::aborting);
 		}
 	}
+
+	sys_log.notice("All emulation threads have been signaled.");
+
+	// Wait fot newly created cpu_thread to see that emulation has been stopped
+	id_manager::g_mutex.lock_unlock();
 
 	GetCallbacks().on_stop();
 
