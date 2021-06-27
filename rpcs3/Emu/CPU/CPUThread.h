@@ -6,7 +6,7 @@
 #include <vector>
 
 template <typename Derived, typename Base>
-concept derived_from = std::is_base_of_v<Base, Derived> &&
+concept DerivedFrom = std::is_base_of_v<Base, Derived> &&
 	std::is_convertible_v<const volatile Derived*, const volatile Base*>;
 
 // Thread state flags
@@ -111,7 +111,7 @@ public:
 		return id >> 24;
 	}
 
-	template <derived_from<cpu_thread> T> 
+	template <DerivedFrom<cpu_thread> T>
 	T* try_get()
 	{
 		if constexpr (std::is_same_v<std::remove_const_t<T>, cpu_thread>)
@@ -129,7 +129,7 @@ public:
 		}
 	}
 
-	template <derived_from<cpu_thread> T> 
+	template <DerivedFrom<cpu_thread> T>
 	const T* try_get() const
 	{
 		return const_cast<cpu_thread*>(this)->try_get<const T>();
@@ -270,7 +270,7 @@ public:
 	// Send signal to the profiler(s) to flush results
 	static void flush_profilers() noexcept;
 
-	template <derived_from<cpu_thread> T = cpu_thread> 
+	template <DerivedFrom<cpu_thread> T = cpu_thread>
 	static inline T* get_current() noexcept
 	{
 		if (const auto cpu = g_tls_this_thread)
@@ -285,7 +285,7 @@ private:
 	static thread_local cpu_thread* g_tls_this_thread;
 };
 
-template <derived_from<cpu_thread> T = cpu_thread> 
+template <DerivedFrom<cpu_thread> T = cpu_thread>
 inline T* get_current_cpu_thread() noexcept
 {
 	return cpu_thread::get_current<T>();

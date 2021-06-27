@@ -1535,6 +1535,11 @@ void Emulator::Stop(bool restart)
 	});
 
 	// Signal threads
+	if (auto rsx = g_fxo->try_get<rsx::thread>())
+	{
+		*static_cast<cpu_thread*>(rsx) = thread_state::aborting;
+	}
+
 	for (const auto& [type, data] : *g_fxo)
 	{
 		if (type.stop)

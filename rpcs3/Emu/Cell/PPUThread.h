@@ -144,6 +144,8 @@ public:
 	ppu_thread(const ppu_thread&) = delete;
 	ppu_thread& operator=(const ppu_thread&) = delete;
 
+	using cpu_thread::operator=;
+
 	u64 gpr[32] = {}; // General-Purpose Registers
 	f64 fpr[32] = {}; // Floating Point Registers
 	v128 vr[32] = {}; // Vector Registers

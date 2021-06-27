@@ -644,6 +644,8 @@ public:
 	spu_thread(const spu_thread&) = delete;
 	spu_thread& operator=(const spu_thread&) = delete;
 
+	using cpu_thread::operator=;
+
 	u32 pc = 0;
 	u32 dbg_step_pc = 0;
 
