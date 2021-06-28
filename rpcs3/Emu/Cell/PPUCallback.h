@@ -170,10 +170,12 @@ namespace ppu_cb_detail
 	{
 		FORCE_INLINE static void call(ppu_thread& CPU, u32 pc, u32 rtoc, T... args)
 		{
+			const u64 old_r1 = CPU.gpr[1];
+			CPU.gpr[1] &= -16; // Ensure 16-byte alignment
 			const bool stack = _bind_func_args<0, 0, 0, T...>(CPU, args...);
 			CPU.gpr[1] -= stack ? FIXED_STACK_FRAME_SIZE : 0x70; // create reserved area
 			CPU.fast_call(pc, rtoc);
-			CPU.gpr[1] += stack ? FIXED_STACK_FRAME_SIZE : 0x70;
+			CPU.gpr[1] = old_r1;
 		}
 	};
 }
