@@ -173,14 +173,6 @@ public:
 	// Load vr
 	llvm::Value* GetVr(u32 vr, VrType);
 
-	// Load VRs
-	template<typename... Vrs>
-	std::array<llvm::Value*, sizeof...(Vrs)> GetVrs(VrType type, Vrs... regs)
-	{
-		static_assert(sizeof...(Vrs), "Empty VR list");
-		return{ GetVr(regs, type)... };
-	}
-
 	// Set vr to the specified value
 	void SetVr(u32 vr, llvm::Value*);
 
@@ -195,12 +187,6 @@ public:
 
 	// Broadcast specified value
 	llvm::Value* Broadcast(llvm::Value* value, u32 count);
-
-	// Saturate scalar or vector given the comparison operand and the extreme value to compare with (second result is the comparison result)
-	std::pair<llvm::Value*, llvm::Value*> Saturate(llvm::Value* value, llvm::CmpInst::Predicate inst, llvm::Value* extreme);
-
-	// Saturate signed value (second result is the disjunction of comparison results)
-	std::pair<llvm::Value*, llvm::Value*> SaturateSigned(llvm::Value* value, u64 min, u64 max);
 
 	// Create shuffle instruction with constant args
 	llvm::Value* Shuffle(llvm::Value* left, llvm::Value* right, std::initializer_list<u32> indices);
