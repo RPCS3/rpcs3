@@ -189,7 +189,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	if (!new_data)
 	{
 		const auto cat = psf::get_string(sfo, "CATEGORY", "");
-		if (cat != "HG")
+		if (cat != "HG"sv && cat != "AM"sv && cat != "AP"sv && cat != "AT"sv && cat != "AV"sv && cat != "BV"sv && cat != "WT"sv)
 		{
 			return { CELL_GAMEDATA_ERROR_BROKEN, fmt::format("CATEGORY='%s'", cat) };
 		}
@@ -592,7 +592,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 	{
 		switch (type)
 		{
-		case CELL_GAME_GAMETYPE_HDD: return cat != "HG"sv;
+		case CELL_GAME_GAMETYPE_HDD: return cat != "HG"sv && cat != "AM"sv && cat != "AP"sv && cat != "AT"sv && cat != "AV"sv && cat != "BV"sv && cat != "WT"sv;
 		case CELL_GAME_GAMETYPE_GAMEDATA: return cat != "GD"sv;
 		case CELL_GAME_GAMETYPE_DISC: return cat != "DG"sv;
 		default: fmt::throw_exception("Unreachable");
