@@ -880,7 +880,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 
 		// Booting patch data
-		if (m_cat == "GD" && bdvd_dir.empty() && disc.empty())
+		if ((is_disc_patch || m_cat == "GD") && bdvd_dir.empty() && disc.empty())
 		{
 			// Load /dev_bdvd/ from game list if available
 			if (auto node = games[m_title_id])
