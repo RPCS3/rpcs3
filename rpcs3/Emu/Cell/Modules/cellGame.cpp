@@ -191,7 +191,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		const auto cat = psf::get_string(sfo, "CATEGORY", "");
 		if (cat != "HG")
 		{
-			return CELL_GAMEDATA_ERROR_BROKEN;
+			return { CELL_GAMEDATA_ERROR_BROKEN, fmt::format("CATEGORY='%s'", cat) };
 		}
 	}
 
@@ -588,13 +588,13 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	auto [sfo, psf_error] = psf::load(vfs::get(dir + "/PARAM.SFO"));
 
-	if (psf::get_string(sfo, "CATEGORY") != [&]()
+	if (const std::string_view cat = psf::get_string(sfo, "CATEGORY"); [&]()
 	{
 		switch (type)
 		{
-		case CELL_GAME_GAMETYPE_HDD: return "HG"sv;
-		case CELL_GAME_GAMETYPE_GAMEDATA: return "GD"sv;
-		case CELL_GAME_GAMETYPE_DISC: return "DG"sv;
+		case CELL_GAME_GAMETYPE_HDD: return cat != "HG"sv;
+		case CELL_GAME_GAMETYPE_GAMEDATA: return cat != "GD"sv;
+		case CELL_GAME_GAMETYPE_DISC: return cat != "DG"sv;
 		default: fmt::throw_exception("Unreachable");
 		}
 	}())
@@ -602,7 +602,7 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 		if (psf_error != psf::error::stream)
 		{
 			init.cancel();
-			return {CELL_GAME_ERROR_BROKEN, psf_error};
+			return {CELL_GAME_ERROR_BROKEN, fmt::format("psf::error='%s', type='%d' CATEGORY='%s'", psf_error, type, cat)};
 		}
 	}
 
