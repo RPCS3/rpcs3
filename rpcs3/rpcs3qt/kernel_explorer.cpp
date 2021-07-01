@@ -170,10 +170,10 @@ static QTreeWidgetItem* add_solid_node(QTreeWidget* tree, QTreeWidgetItem *paren
 kernel_explorer::kernel_explorer(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(tr("Kernel Explorer"));
+	setWindowTitle(tr("Kernel Explorer | %1").arg(qstr(Emu.GetTitleAndTitleID())));
 	setObjectName("kernel_explorer");
 	setAttribute(Qt::WA_DeleteOnClose);
-	setMinimumSize(QSize(700, 450));
+	setMinimumSize(QSize(800, 600));
 
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
 	QHBoxLayout* hbox_buttons = new QHBoxLayout();
@@ -182,7 +182,7 @@ kernel_explorer::kernel_explorer(QWidget* parent)
 	hbox_buttons->addStretch();
 
 	m_tree = new QTreeWidget(this);
-	m_tree->setBaseSize(QSize(600, 300));
+	m_tree->setBaseSize(QSize(700, 450));
 	m_tree->setWindowTitle(tr("Kernel"));
 	m_tree->header()->close();
 
