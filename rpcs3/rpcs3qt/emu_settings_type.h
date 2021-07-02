@@ -40,6 +40,7 @@ enum class emu_settings_type
 	ClocksScale,
 	PerformanceReport,
 	FullWidthAVX512,
+	PPULLVMJavaModeHandling,
 
 	// Graphics
 	Renderer,
@@ -195,6 +196,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::PerformanceReport,        { "Core", "Enable Performance Report"}},
 	{ emu_settings_type::FullWidthAVX512,          { "Core", "Full Width AVX-512"}},
 	{ emu_settings_type::NumPPUThreads,            { "Core", "PPU Threads"}},
+	{ emu_settings_type::PPULLVMJavaModeHandling,  { "Core", "PPU LLVM Java Mode Handling"}},
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   { "Video", "Renderer"}},

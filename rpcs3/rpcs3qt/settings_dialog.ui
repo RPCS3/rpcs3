@@ -3639,6 +3639,13 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="ppuLlvmJavaModeHandling">
+              <property name="text">
+               <string>PPU LLVM Java Mode Handling</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <spacer name="verticalSpacerDebugCore">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
