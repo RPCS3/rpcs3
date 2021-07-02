@@ -167,6 +167,7 @@ usb_handler_thread::usb_handler_thread()
 		};
 		// clang-format on
 
+		// Portals
 		if (check_device(0x1430, 0x0150, 0x0150, "Skylanders Portal"))
 		{
 			found_skylander = true;
@@ -175,7 +176,12 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x0E6F, 0x0241, 0x0241, "Lego Dimensions Portal");
 		check_device(0x0E6F, 0x0129, 0x0129, "Disney Infinity Portal");
 
-		check_device(0x1415, 0x0000, 0x0000, "Singstar Microphone");
+		// Cameras
+		//check_device(0x1415, 0x0020, 0x2000, "Sony Playstation Eye"); // TODO: verifiy
+
+		// Music devices
+		check_device(0x1415, 0x0000, 0x0000, "SingStar Microphone");
+		//check_device(0x1415, 0x0020, 0x0020, "SingStar Microphone Wireless"); // TODO: verifiy
 		check_device(0x12BA, 0x0100, 0x0100, "Guitar Hero Guitar");
 		check_device(0x12BA, 0x0120, 0x0120, "Guitar Hero Drums");
 		if (check_device(0x12BA, 0x074B, 0x074B, "Guitar Hero Live Guitar"))
@@ -216,6 +222,9 @@ usb_handler_thread::usb_handler_thread()
 
 		// uDraw GameTablet
 		check_device(0x20D6, 0xCB17, 0xCB17, "uDraw GameTablet");
+
+		// DVB-T
+		check_device(0x1415, 0x0003, 0x0003, " PlayTV SCEH-0036");
 	}
 
 	libusb_free_device_list(list, 1);
