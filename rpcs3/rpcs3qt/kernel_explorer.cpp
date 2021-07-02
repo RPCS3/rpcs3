@@ -37,6 +37,8 @@
 
 constexpr auto qstr = QString::fromStdString;
 
+LOG_CHANNEL(sys_log, "SYS");
+
 enum kernel_item_role
 {
 	name_role       = Qt::UserRole + 0,
@@ -178,7 +180,10 @@ kernel_explorer::kernel_explorer(QWidget* parent)
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
 	QHBoxLayout* hbox_buttons = new QHBoxLayout();
 	QPushButton* button_refresh = new QPushButton(tr("Refresh"), this);
+	QPushButton* button_log = new QPushButton(tr("Log All"), this);
 	hbox_buttons->addWidget(button_refresh);
+	hbox_buttons->addSpacing(8);
+	hbox_buttons->addWidget(button_log);
 	hbox_buttons->addStretch();
 
 	m_tree = new QTreeWidget(this);
@@ -194,12 +199,17 @@ kernel_explorer::kernel_explorer(QWidget* parent)
 	setLayout(vbox_panel);
 
 	// Events
-	connect(button_refresh, &QAbstractButton::clicked, this, &kernel_explorer::Update);
+	connect(button_refresh, &QAbstractButton::clicked, this, &kernel_explorer::update);
+	connect(button_log, &QAbstractButton::clicked, this, [this]()
+	{
+		log();
+		m_log_buf.clear();
+	});
 
-	Update();
+	update();
 }
 
-void kernel_explorer::Update()
+void kernel_explorer::update()
 {
 	const auto dct = g_fxo->try_get<lv2_memory_container>();
 
@@ -888,4 +898,39 @@ void kernel_explorer::Update()
 	};
 	final_touches(root);
 	root->setExpanded(true);
+}
+
+void kernel_explorer::log(u32 level, QTreeWidgetItem* item)
+{
+	if (!item)
+	{
+		item = m_tree->topLevelItem(0);
+
+		if (!item)
+		{
+			return;
+		}
+
+		m_log_buf = qstr(fmt::format("Kernel Explorer: %s\n", Emu.GetTitleAndTitleID()));
+		log(level + 1, item);
+
+		sys_log.success("%s", m_log_buf.toStdString());
+		return;
+	}
+
+	for (u32 j = 0; j < level; j++)
+	{
+		m_log_buf += QChar::Nbsp;
+	}
+
+	m_log_buf.append(item->text(0));
+	m_log_buf += '\n';
+
+	for (int i = 0; i < item->childCount(); i++)
+	{
+		if (auto node = item->child(i); node && !node->isHidden())
+		{
+			log(level + 1, node);
+		}
+	}
 }
