@@ -1797,6 +1797,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->perfReport, emu_settings_type::PerformanceReport);
 	SubscribeTooltip(ui->perfReport, tooltips.settings.enable_performance_report);
 
+	m_emu_settings->EnhanceCheckBox(ui->ppuLlvmJavaModeHandling, emu_settings_type::PPULLVMJavaModeHandling);
+	SubscribeTooltip(ui->ppuLlvmJavaModeHandling, tooltips.settings.ppu_llvm_java_mode_handling);
+
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->combo_accurate_ppu_128, emu_settings_type::AccuratePPU128Loop, true);
