@@ -56,7 +56,7 @@ enum kernel_item_type : int
 	leaf
 };
 
-static QTreeWidgetItem* add_child(QTreeWidgetItem *parent, const QString& text, int column, kernel_item_type type)
+static QTreeWidgetItem* add_child(QTreeWidgetItem* parent, const QString& text, int column, kernel_item_type type)
 {
 	if (parent)
 	{
@@ -77,12 +77,12 @@ static QTreeWidgetItem* add_child(QTreeWidgetItem *parent, const QString& text, 
 	return item;
 }
 
-static QTreeWidgetItem* add_leaf(QTreeWidgetItem *parent, const QString& text, int column = 0)
+static QTreeWidgetItem* add_leaf(QTreeWidgetItem* parent, const QString& text, int column = 0)
 {
 	return add_child(parent, text, column, kernel_item_type::leaf);
 }
 
-static QTreeWidgetItem* add_node(u32 id, QTreeWidgetItem *parent, const QString& text, int column = 0)
+static QTreeWidgetItem* add_node(u32 id, QTreeWidgetItem* parent, const QString& text, int column = 0)
 {
 	QTreeWidgetItem* node = add_child(parent, text, column, kernel_item_type::node);
 	if (node)
@@ -92,13 +92,17 @@ static QTreeWidgetItem* add_node(u32 id, QTreeWidgetItem *parent, const QString&
 	return node;
 }
 
-static QTreeWidgetItem* find_first_node(QTreeWidget* tree, QTreeWidgetItem *parent, const QString& regexp)
+static QTreeWidgetItem* find_first_node(QTreeWidgetItem* parent, const QString& regexp)
 {
-	if (tree && parent)
+	if (parent)
 	{
-		for (auto item : tree->findItems(regexp, Qt::MatchFlag::MatchRegularExpression | Qt::MatchFlag::MatchRecursive))
+		const QRegularExpression re(regexp);
+
+		for (int i = 0; i < parent->childCount(); i++)
 		{
-			if (item->parent() == parent && item->data(0, kernel_item_role::type_role).toInt() != kernel_item_type::leaf)
+			if (QTreeWidgetItem* item = parent->child(i); item &&
+				item->data(0, kernel_item_role::type_role).toInt() != kernel_item_type::leaf &&
+				re.match(item->data(0, kernel_item_role::name_role).toString()).hasMatch())
 			{
 				return item;
 			}
@@ -107,30 +111,15 @@ static QTreeWidgetItem* find_first_node(QTreeWidget* tree, QTreeWidgetItem *pare
 	return nullptr;
 }
 
-static QTreeWidgetItem* find_node(QTreeWidget* tree, u32 id)
-{
-	if (tree)
-	{
-		for (auto item : tree->findItems(".*", Qt::MatchFlag::MatchRegularExpression | Qt::MatchFlag::MatchRecursive))
-		{
-			if (item->data(0, kernel_item_role::type_role).toInt() == kernel_item_type::node &&
-				item->data(0, kernel_item_role::id_role).toUInt() == id)
-			{
-				return item;
-			}
-		}
-	}
-	return nullptr;
-}
-
-// Find node with ID in selected node children (optimization)
+// Find node with ID in selected node children
 static QTreeWidgetItem* find_node(QTreeWidgetItem* root, u32 id)
 {
 	if (root)
 	{
 		for (int i = 0; i < root->childCount(); i++)
 		{
-			if (auto item = root->child(i); item->data(0, kernel_item_role::type_role).toInt() == kernel_item_type::node &&
+			if (QTreeWidgetItem* item = root->child(i); item &&
+				item->data(0, kernel_item_role::type_role).toInt() == kernel_item_type::node &&
 				item->data(0, kernel_item_role::id_role).toUInt() == id)
 			{
 				return item;
@@ -138,12 +127,13 @@ static QTreeWidgetItem* find_node(QTreeWidgetItem* root, u32 id)
 		}
 	}
 
+	sys_log.fatal("find_node(root=%s, id=%d) failed", root ? root->text(0).toStdString() : "?", id);
 	return nullptr;
 }
 
-static QTreeWidgetItem* add_volatile_node(QTreeWidget* tree, QTreeWidgetItem *parent, const QString& base_text, const QString& text = "", int column = 0)
+static QTreeWidgetItem* add_volatile_node(QTreeWidgetItem* parent, const QString& base_text, const QString& text = "", int column = 0)
 {
-	QTreeWidgetItem* node = find_first_node(tree, parent, base_text + ".*");
+	QTreeWidgetItem* node = find_first_node(parent, base_text + ".*");
 	if (!node)
 	{
 		node = add_child(parent, base_text, column, kernel_item_type::volatile_node);
@@ -152,12 +142,16 @@ static QTreeWidgetItem* add_volatile_node(QTreeWidget* tree, QTreeWidgetItem *pa
 	{
 		node->setText(0, text.isEmpty() ? base_text : text);
 	}
+	else
+	{
+		sys_log.fatal("add_volatile_node(parent=%s, regexp=%s) failed", parent ? parent->text(0).toStdString() : "?", base_text.toStdString() + ".*");
+	}
 	return node;
 }
 
-static QTreeWidgetItem* add_solid_node(QTreeWidget* tree, QTreeWidgetItem *parent, const QString& base_text, const QString& text = "", int column = 0)
+static QTreeWidgetItem* add_solid_node(QTreeWidgetItem* parent, const QString& base_text, const QString& text = "", int column = 0)
 {
-	QTreeWidgetItem* node = find_first_node(tree, parent, base_text + ".*");
+	QTreeWidgetItem* node = find_first_node(parent, base_text + ".*");
 	if (!node)
 	{
 		node = add_child(parent, base_text, column, kernel_item_type::solid_node);
@@ -165,6 +159,10 @@ static QTreeWidgetItem* add_solid_node(QTreeWidget* tree, QTreeWidgetItem *paren
 	if (node)
 	{
 		node->setText(0, text.isEmpty() ? base_text : text);
+	}
+	else
+	{
+		sys_log.fatal("add_solid_node(parent=%s, regexp=%s) failed", parent ? parent->text(0).toStdString() : "?", base_text.toStdString() + ".*");
 	}
 	return node;
 }
@@ -218,8 +216,6 @@ void kernel_explorer::update()
 		m_tree->clear();
 		return;
 	}
-
-	//static const usz additional_size = 6;
 
 	const std::unordered_map<u32, QString> tree_item_names =
 	{
@@ -316,7 +312,7 @@ void kernel_explorer::update()
 	root->setText(0, qstr(fmt::format("Process 0x%08x: Total Memory Usage: 0x%x/0x%x (%0.2f/%0.2f MB)", process_getpid(), total_memory_usage, dct->size, 1. * total_memory_usage / (1024 * 1024)
 		, 1. * dct->size / (1024 * 1024))));
 
-	add_solid_node(m_tree, find_node(root, additional_nodes::process_info), qstr(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat())));
+	add_solid_node(find_node(root, additional_nodes::process_info), qstr(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat())));
 
 	auto display_program_segments = [this](QTreeWidgetItem* tree, const ppu_module& m)
 	{
@@ -448,7 +444,7 @@ void kernel_explorer::update()
 			}
 
 			const QString text = qstr(fmt::format("PRX 0x%08x: '%s'", id, prx.name));
-			QTreeWidgetItem* prx_tree = add_solid_node(m_tree, node, text, text);
+			QTreeWidgetItem* prx_tree = add_solid_node(node, text, text);
 			display_program_segments(prx_tree, prx);
 			break;
 		}
@@ -461,7 +457,7 @@ void kernel_explorer::update()
 		{
 			auto& ovl = static_cast<lv2_overlay&>(obj);
 			const QString text = qstr(fmt::format("OVL 0x%08x: '%s'", id, ovl.name));
-			QTreeWidgetItem* ovl_tree = add_solid_node(m_tree, node, text, text);
+			QTreeWidgetItem* ovl_tree = add_solid_node(node, text, text);
 			display_program_segments(ovl_tree, ovl);
 			break;
 		}
@@ -571,7 +567,7 @@ void kernel_explorer::update()
 
 	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
 	{
-		QTreeWidgetItem* spu_thread_tree = add_solid_node(m_tree, find_node(root, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type())));
+		QTreeWidgetItem* spu_thread_tree = add_solid_node(find_node(root, additional_nodes::spu_threads), qstr(fmt::format(u8"SPU 0x%07x: “%s”, State: %s, Type: %s", spu.lv2_id, *spu.spu_tname.load(), spu.state.load(), spu.get_type())));
 
 		if (spu.get_type() == spu_type::threaded)
 		{
@@ -627,7 +623,7 @@ void kernel_explorer::update()
 
 	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
 	{
-		QTreeWidgetItem* spu_tree = add_solid_node(m_tree, find_node(root, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), +tg.prio, tg.type)));
+		QTreeWidgetItem* spu_tree = add_solid_node(find_node(root, additional_nodes::spu_thread_groups), qstr(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), +tg.prio, tg.type)));
 
 		if (tg.name.ends_with("CellSpursKernelGroup"sv))
 		{
@@ -665,7 +661,7 @@ void kernel_explorer::update()
 			{
 				const QString branch_name = tr("SPURS %1").arg(pspurs.addr());
 				const u32 wklEnabled = spurs.wklEnabled;
-				QTreeWidgetItem* spurs_tree = add_solid_node(m_tree, spu_tree, branch_name, qstr(fmt::format("SPURS, Instance: *0x%x, LWMutex: 0x%x, LWCond: 0x%x, wklEnabled: 0x%x"
+				QTreeWidgetItem* spurs_tree = add_solid_node(spu_tree, branch_name, qstr(fmt::format("SPURS, Instance: *0x%x, LWMutex: 0x%x, LWCond: 0x%x, wklEnabled: 0x%x"
 					, pspurs, spurs.mutex.sleep_queue, spurs.cond.lwcond_queue, wklEnabled)));
 
 				const u32 signal_mask = u32{spurs.wklSignal1} << 16 | spurs.wklSignal2;
@@ -690,7 +686,7 @@ void kernel_explorer::update()
 					const u8 status = spurs.wklStatus(wid);
 					const auto has_signal = (signal_mask & (0x80000000u >> wid)) ? "Signalled"sv : "No Signal"sv;
 
-					QTreeWidgetItem* wkl_tree = add_solid_node(m_tree, spurs_tree, branch_name + qstr(fmt::format(" Work.%u", wid)), qstr(fmt::format("Work.%u, class: %s, %s, %s, Status: %#x, Event: %#x, %s, ReadyCnt: %u", wid, +name.nameClass, +name.nameInstance, state, status, evt, has_signal, ready_count)));
+					QTreeWidgetItem* wkl_tree = add_solid_node(spurs_tree, branch_name + qstr(fmt::format(" Work.%u", wid)), qstr(fmt::format("Work.%u, class: %s, %s, %s, Status: %#x, Event: %#x, %s, ReadyCnt: %u", wid, +name.nameClass, +name.nameInstance, state, status, evt, has_signal, ready_count)));
 
 					auto contention = [&](u8 v)
 					{
@@ -735,12 +731,12 @@ void kernel_explorer::update()
 		}
 
 		const QString branch_name = "RSX Context 0x55555555";
-		QTreeWidgetItem* rsx_tree = add_solid_node(m_tree, rsx_context_node, branch_name,
+		QTreeWidgetItem* rsx_tree = add_solid_node(rsx_context_node, branch_name,
 			branch_name + qstr(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", rsx->local_mem_size >> 20, base, rsx->device_addr, +vm::_ref<RsxDriverInfo>(rsx->driver_info).handlers)));
 
-		QTreeWidgetItem* io_tree = add_volatile_node(m_tree, rsx_tree, tr("IO-EA Table"));
-		QTreeWidgetItem* zc_tree = add_volatile_node(m_tree, rsx_tree, tr("Zcull Bindings"));
-		QTreeWidgetItem* db_tree = add_volatile_node(m_tree, rsx_tree, tr("Display Buffers"));
+		QTreeWidgetItem* io_tree = add_volatile_node(rsx_tree, tr("IO-EA Table"));
+		QTreeWidgetItem* zc_tree = add_volatile_node(rsx_tree, tr("Zcull Bindings"));
+		QTreeWidgetItem* db_tree = add_volatile_node(rsx_tree, tr("Display Buffers"));
 
 		decltype(rsx->iomap_table) table;
 		decltype(rsx->display_buffers) dbs;
