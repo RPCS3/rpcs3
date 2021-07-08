@@ -222,11 +222,16 @@ add_subdirectory(OpenAL EXCLUDE_FROM_ALL)
 # FAudio
 set(FAUDIO_TARGET 3rdparty_dummy_lib)
 if(USE_FAUDIO)
-	# FAudio depends on SDL2
-	find_package(SDL2)
-	if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.0.9)
-		message("-- RPCS3: FAudio requires SDL 2.0.9 or newer.")
+	if (USE_SYSTEM_FAUDIO)
+		find_package(FAudio)
+		set(FAUDIO_TARGET FAudio)
 	else()
+		# FAudio depends on SDL2
+		find_package(SDL2)
+		if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.0.9)
+			message(FATAL_ERROR "-- RPCS3: FAudio requires SDL 2.0.9 or newer.")
+		endif()
+
 		set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared library")
 		add_subdirectory(FAudio EXCLUDE_FROM_ALL)
 		target_compile_definitions(FAudio INTERFACE -DHAVE_FAUDIO)
