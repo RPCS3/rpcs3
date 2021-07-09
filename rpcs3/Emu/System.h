@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <Emu/IPC_socket.h>
 
 #include "Emu/Cell/timers.hpp"
 
@@ -88,12 +89,14 @@ class Emulator final
 	std::string m_title_id;
 	std::string m_title;
 	std::string m_app_version;
+	std::string m_hash;
 	std::string m_cat;
 	std::string m_dir;
 	std::string m_sfo_dir;
 	std::string m_game_dir{"PS3_GAME"};
 	std::string m_usr{"00000001"};
 	u32 m_usrid{1};
+	named_thread<SocketIPC> m_ipc_server;
 
 	bool m_force_global_config = false;
 
@@ -177,6 +180,13 @@ public:
 	{
 		return m_app_version;
 	}
+
+	const std::string& GetExecutableHash() const
+	{
+		return m_hash;
+	}
+
+	void SetExecutableHash(std::string& hash) { m_hash = hash; }
 
 	const std::string& GetCat() const
 	{

@@ -11,6 +11,7 @@
     GDB.cpp
     title.cpp
     perf_meter.cpp
+    IPC_socket.cpp
 )
 
 # prevent WolfSSL from warning about not having harden options
