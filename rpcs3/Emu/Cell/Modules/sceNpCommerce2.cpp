@@ -107,7 +107,10 @@ s32 sceNpCommerce2DestroyCtx(u32 ctx_id)
 {
 	sceNpCommerce2.warning("sceNpCommerce2DestroyCtx(ctx_id=%d)", ctx_id);
 
-	destroy_commerce2_context(ctx_id);
+	if (!destroy_commerce2_context(ctx_id))
+	{
+		return SCE_NP_COMMERCE2_ERROR_CTX_NOT_FOUND; // TODO: verify
+	}
 
 	return CELL_OK;
 }
@@ -117,6 +120,11 @@ s32 sceNpCommerce2EmptyStoreCheckStart(u32 ctx_id, s32 store_check_type, vm::cpt
 	sceNpCommerce2.warning("sceNpCommerce2EmptyStoreCheckStart(ctx_id=%d, store_check_type=%d, target_id=*0x%x(%s))", ctx_id, store_check_type, target_id, target_id);
 
 	const auto ctx = get_commerce2_context(ctx_id);
+
+	if (!ctx)
+	{
+		return SCE_NP_COMMERCE2_ERROR_CTX_NOT_FOUND; // TODO: verify
+	}
 
 	if (ctx->context_callback)
 	{
@@ -148,6 +156,11 @@ s32 sceNpCommerce2CreateSessionStart(u32 ctx_id)
 	sceNpCommerce2.warning("sceNpCommerce2CreateSessionStart(ctx_id=%d)", ctx_id);
 
 	const auto ctx = get_commerce2_context(ctx_id);
+
+	if (!ctx)
+	{
+		return SCE_NP_COMMERCE2_ERROR_CTX_NOT_FOUND; // TODO: verify
+	}
 
 	if (ctx->context_callback)
 	{

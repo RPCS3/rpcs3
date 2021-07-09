@@ -8,6 +8,7 @@
 #include "rsx_vertex_data.h"
 #include "rsx_utils.h"
 #include "Emu/Cell/timers.hpp"
+#include "Program/program_util.h"
 
 namespace rsx
 {
@@ -23,13 +24,15 @@ namespace rsx
 	{
 		primitive_restart_barrier,
 		vertex_base_modifier_barrier,
-		index_base_modifier_barrier
+		index_base_modifier_barrier,
+		vertex_array_offset_modifier_barrier
 	};
 
 	enum command_execution_flags : u32
 	{
 		vertex_base_changed = (1 << 0),
-		index_base_changed = (1 << 1)
+		index_base_changed = (1 << 1),
+		vertex_arrays_changed = (1 << 2),
 	};
 
 	struct barrier_t
@@ -38,6 +41,7 @@ namespace rsx
 		u64 timestamp;
 
 		u32 address;
+		u32 index;
 		u32 arg;
 		u32 flags;
 		command_barrier_type type;
@@ -111,47 +115,7 @@ namespace rsx
 
 		simple_array<u32> inline_vertex_array{};
 
-		void insert_command_barrier(command_barrier_type type, u32 arg)
-		{
-			ensure(!draw_command_ranges.empty());
-
-			auto _do_barrier_insert = [this](barrier_t&& val)
-			{
-				if (draw_command_barriers.empty() || draw_command_barriers.back() < val)
-				{
-					draw_command_barriers.push_back(val);
-					return;
-				}
-
-				for (auto it = draw_command_barriers.begin(); it != draw_command_barriers.end(); it++)
-				{
-					if (*it < val)
-					{
-						continue;
-					}
-
-					draw_command_barriers.insert(it, val);
-					break;
-				}
-			};
-
-			if (type == primitive_restart_barrier)
-			{
-				// Rasterization flow barrier
-				const auto& last = draw_command_ranges[current_range_index];
-				const auto address = last.first + last.count;
-
-				_do_barrier_insert({ current_range_index, 0, address, arg, 0, type });
-			}
-			else
-			{
-				// Execution dependency barrier
-				append_draw_command({});
-
-				_do_barrier_insert({ current_range_index, get_system_time(), ~0u, arg, 0, type });
-				last_execution_barrier_index = current_range_index;
-			}
-		}
+		void insert_command_barrier(command_barrier_type type, u32 arg, u32 register_index = 0);
 
 		/**
 		 * Optimize commands for rendering
@@ -492,7 +456,7 @@ namespace rsx
 		std::array<vertex_texture, 4> vertex_textures;
 
 
-		std::array<u32, 512 * 4> transform_program{};
+		std::array<u32, max_vertex_program_instructions * 4> transform_program{};
 		std::array<u32[4], 512> transform_constants{};
 
 		draw_clause current_draw_clause{};

@@ -296,7 +296,7 @@ static void network_clear_queue(ppu_thread& ppu)
 }
 
 // Object in charge of retransmiting packets for STREAM_P2P sockets
-class tcp_timeout_monitor : public need_wakeup
+class tcp_timeout_monitor
 {
 public:
 	void add_message(s32 sock_id, const sockaddr_in *dst, std::vector<u8> data, u64 seq)
@@ -423,9 +423,10 @@ public:
 		}
 	}
 
-	void wake_up()
+	tcp_timeout_monitor& operator=(thread_state)
 	{
 		wakey.notify_one();
+		return *this;
 	}
 
 	public:

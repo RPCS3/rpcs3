@@ -23,6 +23,55 @@ lv2_fs_mount_point g_mp_sys_dev_flash{"", 512, 8192, lv2_mp_flag::read_only + lv
 lv2_fs_mount_point g_mp_sys_dev_flash2{ "", 512, 8192, lv2_mp_flag::no_uid_gid }; // TODO confirm
 lv2_fs_mount_point g_mp_sys_dev_flash3{ "", 512, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid }; // TODO confirm
 
+template<>
+void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
+{
+	const auto& file = get_object(arg);
+
+	std::string_view type_s;
+	switch (file.type)
+	{
+	case lv2_file_type::regular: type_s = "Regular file"; break;
+	case lv2_file_type::sdata: type_s = "SDATA"; break;
+	case lv2_file_type::edata: type_s = "EDATA"; break;
+	}
+
+	auto get_size = [](u64 size) -> std::string
+	{
+		if (size == umax)
+		{
+			return "N/A";
+		}
+
+		std::string size_str = fmt::format("0x%05x ", size);
+		switch (std::bit_width(size) / 10 * 10)
+		{
+		case 64: size_str = "0"s; break;
+		case 0: fmt::append(size_str, "(%u)", size); break;
+		case 10: fmt::append(size_str, "(%gKB)", size / 1024.); break;
+		case 20: fmt::append(size_str, "(%gMB)", size / (1024. * 1024)); break;
+
+		default:
+		case 30: fmt::append(size_str, "(%gGB)", size / (1024. * 1024 * 1024)); break;
+		}
+	
+		return size_str;
+	};
+
+	const usz pos = file.file ? file.file.pos() : umax;
+	const usz size = file.file ? file.file.size() : umax;
+
+	fmt::append(out, u8"%s, “%s”, Mode: 0x%x, Flags: 0x%x, Pos: %s, Size: %s", type_s, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size));
+}
+
+template<>
+void fmt_class_string<lv2_dir>::format(std::string& out, u64 arg)
+{
+	const auto& dir = get_object(arg);
+
+	fmt::append(out, u8"Directory, “%s”, Entries: %u/%u", dir.name.data(), std::min<u64>(dir.pos, dir.entries.size()), dir.entries.size());
+}
+
 bool verify_mself(const fs::file& mself_file)
 {
 	FsMselfHeader mself_header;
@@ -309,7 +358,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 
 	if (mp->flags & lv2_mp_flag::read_only)
 	{
-		if (flags & CELL_FS_O_ACCMODE || flags & (CELL_FS_O_CREAT | CELL_FS_O_TRUNC))
+		if ((flags & CELL_FS_O_ACCMODE) != CELL_FS_O_RDONLY && fs::is_file(local_path))
 		{
 			return {CELL_EPERM};
 		}
@@ -400,9 +449,9 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		if (mp->flags & lv2_mp_flag::read_only)
 		{
 			// Failed to create file on read-only FS (file doesn't exist)
-			if (flags & CELL_FS_O_CREAT)
+			if (flags & CELL_FS_O_ACCMODE && flags & CELL_FS_O_CREAT)
 			{
-				return {CELL_EROFS};
+				return {CELL_EPERM};
 			}
 		}
 
@@ -418,21 +467,6 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		}
 
 		return {CELL_EIO};
-	}
-
-	if (mp->flags & lv2_mp_flag::read_only)
-	{
-		// Failed to create file on read-only FS (file exists)
-		if (flags & CELL_FS_O_CREAT && flags & CELL_FS_O_EXCL)
-		{
-			return {CELL_EEXIST};
-		}
-
-		// Failed to truncate file on read-only FS
-		if (flags & CELL_FS_O_TRUNC)
-		{
-			return {CELL_EROFS};
-		}
 	}
 
 	if (flags & CELL_FS_O_MSELF && !verify_mself(file))
@@ -502,7 +536,7 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 	std::string path;
 	const std::string local_path = vfs::get(vpath, nullptr, &path);
 
-	const auto mp = lv2_fs_object::get_mp(path);
+	const auto mp = lv2_fs_object::get_mp(vpath);
 
 	if (mp == &g_mp_sys_dev_root)
 	{

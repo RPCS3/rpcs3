@@ -748,7 +748,7 @@ void game_list_frame::OnRefreshFinished()
 					return false;
 				};
 
-				if (entry->info.serial == other->info.serial && other->info.category == "GD" && other->info.app_ver != cat_unknown_localized)
+				if (entry->info.serial == other->info.serial && other->info.category != "DG" && other->info.app_ver != cat_unknown_localized)
 				{
 					// Update the app version if it's higher than the disc's version (old games may not have an app version)
 					if (entry->info.app_ver == cat_unknown_localized || version_is_bigger(other->info.app_ver, entry->info.app_ver, entry->info.serial, true))
@@ -1928,11 +1928,11 @@ QPixmap game_list_frame::PaintedPixmap(const QPixmap& icon, bool paint_config_ic
 		}
 		else if (paint_config_icon)
 		{
-			icon_path = ":/Icons/custom_config_2.png";
+			icon_path = ":/Icons/custom_config.png";
 		}
 		else if (paint_pad_config_icon)
 		{
-			icon_path = ":/Icons/controllers_2.png";
+			icon_path = ":/Icons/controllers.png";
 		}
 
 		QPixmap custom_config_icon(icon_path);

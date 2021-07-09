@@ -13,9 +13,9 @@ namespace vm
 	template <typename T, typename AT>
 	class _ref_base;
 
-	// SFINAE helper type for vm::_ptr_base comparison operators (enables comparison between equal types and between any type and void*)
-	template<typename T1, typename T2, typename RT = void>
-	using if_comparable_t = std::enable_if_t<std::is_void<T1>::value || std::is_void<T2>::value || std::is_same<std::remove_cv_t<T1>, std::remove_cv_t<T2>>::value, RT>;
+	// Enables comparison between comparable types of pointers
+	template<typename T1, typename T2>
+	concept PtrComparable = requires (T1* t1, T2* t2) { t1 == t2; };
 
 	template <typename T, typename AT>
 	class _ptr_base
@@ -56,7 +56,7 @@ namespace vm
 		}
 
 		// Enable only the conversions which are originally possible between pointer types
-		template<typename T2, typename AT2, typename = std::enable_if_t<std::is_convertible<T*, T2*>::value>>
+		template <typename T2, typename AT2> requires (std::is_convertible_v<T*, T2*>)
 		operator _ptr_base<T2, AT2>() const
 		{
 			return vm::cast(m_addr);
@@ -68,28 +68,28 @@ namespace vm
 		}
 
 		// Get vm pointer to a struct member
-		template <typename MT, typename T2, typename = if_comparable_t<T, T2>>
+		template <typename MT, typename T2> requires PtrComparable<T, T2>
 		_ptr_base<MT, u32> ptr(MT T2::*const mptr) const
 		{
 			return vm::cast(vm::cast(m_addr) + offset32(mptr));
 		}
 
 		// Get vm pointer to a struct member with array subscription
-		template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>>
+		template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>> requires PtrComparable<T, T2>
 		_ptr_base<ET, u32> ptr(MT T2::*const mptr, u32 index) const
 		{
 			return vm::cast(vm::cast(m_addr) + offset32(mptr) + u32{sizeof(ET)} * index);
 		}
 
 		// Get vm reference to a struct member
-		template <typename MT, typename T2, typename = if_comparable_t<T, T2>>
+		template <typename MT, typename T2> requires PtrComparable<T, T2>
 		_ref_base<MT, u32> ref(MT T2::*const mptr) const
 		{
 			return vm::cast(vm::cast(m_addr) + offset32(mptr));
 		}
 
 		// Get vm reference to a struct member with array subscription
-		template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>, typename = if_comparable_t<T, T2>>
+		template <typename MT, typename T2, typename ET = std::remove_extent_t<MT>> requires PtrComparable<T, T2>
 		_ref_base<ET, u32> ref(MT T2::*const mptr, u32 index) const
 		{
 			return vm::cast(vm::cast(m_addr) + offset32(mptr) + u32{sizeof(ET)} * index);
@@ -160,8 +160,8 @@ namespace vm
 		}
 
 		// Pointer difference operator
-		template<typename T2, typename AT2>
-		std::enable_if_t<std::is_object<T2>::value && std::is_same<std::decay_t<T>, std::decay_t<T2>>::value, s32> operator -(const _ptr_base<T2, AT2>& right) const
+		template <typename T2, typename AT2> requires (std::is_object_v<T2> && std::is_same_v<std::decay_t<T>, std::decay_t<T2>>)
+		s32 operator -(const _ptr_base<T2, AT2>& right) const
 		{
 			return static_cast<s32>(vm::cast(m_addr) - vm::cast(right.m_addr)) / size();
 		}
@@ -204,12 +204,14 @@ namespace vm
 			return *this;
 		}
 
-		bool try_read(std::conditional_t<std::is_void_v<T>, char&, std::add_lvalue_reference_t<std::remove_const_t<T>>> out) const
+		template <bool = false> requires (!std::is_void_v<T> && !std::is_const_v<T>)
+		bool try_read(std::conditional_t<std::is_void_v<T>, char, T>& out) const
 		{
 			return vm::try_access(vm::cast(m_addr), &out, sizeof(T), false);
 		}
 
-		bool try_write(std::conditional_t<std::is_void_v<T>, const char&, std::add_lvalue_reference_t<const T>> _in) const
+		template <bool = false> requires (!std::is_void_v<T>)
+		bool try_write(const std::conditional_t<std::is_void_v<T>, char, T>& _in) const
 		{
 			return vm::try_access(vm::cast(m_addr), const_cast<T*>(&_in), sizeof(T), true);
 		}
@@ -373,32 +375,32 @@ namespace vm
 	constexpr null_t null{};
 }
 
-template<typename T1, typename AT1, typename T2, typename AT2>
-inline vm::if_comparable_t<T1, T2, bool> operator ==(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
+template<typename T1, typename AT1, typename T2, typename AT2> requires vm::PtrComparable<T1, T2>
+inline bool operator ==(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
 {
 	return left.addr() == right.addr();
 }
 
-template<typename T1, typename AT1, typename T2, typename AT2>
-inline vm::if_comparable_t<T1, T2, bool> operator <(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
+template<typename T1, typename AT1, typename T2, typename AT2> requires vm::PtrComparable<T1, T2>
+inline bool operator <(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
 {
 	return left.addr() < right.addr();
 }
 
-template<typename T1, typename AT1, typename T2, typename AT2>
-inline vm::if_comparable_t<T1, T2, bool> operator <=(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
+template<typename T1, typename AT1, typename T2, typename AT2> requires vm::PtrComparable<T1, T2>
+inline bool operator <=(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
 {
 	return left.addr() <= right.addr();
 }
 
-template<typename T1, typename AT1, typename T2, typename AT2>
-inline vm::if_comparable_t<T1, T2, bool> operator >(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
+template<typename T1, typename AT1, typename T2, typename AT2> requires vm::PtrComparable<T1, T2>
+inline bool operator >(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
 {
 	return left.addr() > right.addr();
 }
 
-template<typename T1, typename AT1, typename T2, typename AT2>
-inline vm::if_comparable_t<T1, T2, bool> operator >=(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
+template<typename T1, typename AT1, typename T2, typename AT2> requires vm::PtrComparable<T1, T2>
+inline bool operator >=(const vm::_ptr_base<T1, AT1>& left, const vm::_ptr_base<T2, AT2>& right)
 {
 	return left.addr() >= right.addr();
 }

@@ -649,6 +649,8 @@ namespace fs
 		bool commit(bool overwrite = true);
 
 		pending_file(const std::string& path);
+		pending_file(const pending_file&) = delete;
+		pending_file& operator=(const pending_file&) = delete;
 		~pending_file();
 
 	private:

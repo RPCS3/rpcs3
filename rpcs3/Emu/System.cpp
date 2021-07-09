@@ -880,7 +880,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 
 		// Booting patch data
-		if (m_cat == "GD" && bdvd_dir.empty() && disc.empty())
+		if ((is_disc_patch || m_cat == "GD") && bdvd_dir.empty() && disc.empty())
 		{
 			// Load /dev_bdvd/ from game list if available
 			if (auto node = games[m_title_id])
@@ -1544,15 +1544,12 @@ void Emulator::Stop(bool restart)
 		}
 	});
 
+	// Signal threads
 	if (auto rsx = g_fxo->try_get<rsx::thread>())
 	{
-		// TODO: notify?
-		rsx->state += cpu_flag::exit;
+		*static_cast<cpu_thread*>(rsx) = thread_state::aborting;
 	}
 
-	cpu_thread::stop_all();
-
-	// Signal threads
 	for (const auto& [type, data] : *g_fxo)
 	{
 		if (type.stop)
@@ -1560,6 +1557,11 @@ void Emulator::Stop(bool restart)
 			type.stop(data, thread_state::aborting);
 		}
 	}
+
+	sys_log.notice("All emulation threads have been signaled.");
+
+	// Wait fot newly created cpu_thread to see that emulation has been stopped
+	id_manager::g_mutex.lock_unlock();
 
 	GetCallbacks().on_stop();
 

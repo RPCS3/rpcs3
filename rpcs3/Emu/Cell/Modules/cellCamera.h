@@ -417,7 +417,7 @@ public:
 
 	shared_mutex mutex;
 	shared_mutex mutex_notify_data_map;
-	Timer timer;
+	u64 start_timestamp = 0;
 
 	atomic_t<u8> read_mode{CELL_CAMERA_READ_FUNCCALL};
 	atomic_t<bool> is_streaming{false};

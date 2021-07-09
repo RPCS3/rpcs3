@@ -6,7 +6,7 @@
 #include <vector>
 
 template <typename Derived, typename Base>
-concept derived_from = std::is_base_of_v<Base, Derived> &&
+concept DerivedFrom = std::is_base_of_v<Base, Derived> &&
 	std::is_convertible_v<const volatile Derived*, const volatile Base*>;
 
 // Thread state flags
@@ -38,7 +38,7 @@ constexpr bool is_stopped(bs_t<cpu_flag> state)
 // Test paused state
 constexpr bool is_paused(bs_t<cpu_flag> state)
 {
-	return !!(state & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause));
+	return !!(state & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause)) && !is_stopped(state);
 }
 
 class cpu_thread
@@ -111,7 +111,7 @@ public:
 		return id >> 24;
 	}
 
-	template <derived_from<cpu_thread> T> 
+	template <DerivedFrom<cpu_thread> T>
 	T* try_get()
 	{
 		if constexpr (std::is_same_v<std::remove_const_t<T>, cpu_thread>)
@@ -129,7 +129,7 @@ public:
 		}
 	}
 
-	template <derived_from<cpu_thread> T> 
+	template <DerivedFrom<cpu_thread> T>
 	const T* try_get() const
 	{
 		return const_cast<cpu_thread*>(this)->try_get<const T>();
@@ -139,6 +139,7 @@ public:
 	u32* get_pc2(); // Last PC before stepping for the debugger (may be null)
 
 	void notify();
+	cpu_thread& operator=(thread_state);
 
 public:
 	// Thread stats for external observation
@@ -263,16 +264,13 @@ public:
 		}
 	}
 
-	// Stop all threads with cpu_flag::exit
-	static void stop_all() noexcept;
-
 	// Cleanup thread counting information
 	static void cleanup() noexcept;
 
 	// Send signal to the profiler(s) to flush results
 	static void flush_profilers() noexcept;
 
-	template <derived_from<cpu_thread> T = cpu_thread> 
+	template <DerivedFrom<cpu_thread> T = cpu_thread>
 	static inline T* get_current() noexcept
 	{
 		if (const auto cpu = g_tls_this_thread)
@@ -287,7 +285,7 @@ private:
 	static thread_local cpu_thread* g_tls_this_thread;
 };
 
-template <derived_from<cpu_thread> T = cpu_thread> 
+template <DerivedFrom<cpu_thread> T = cpu_thread>
 inline T* get_current_cpu_thread() noexcept
 {
 	return cpu_thread::get_current<T>();

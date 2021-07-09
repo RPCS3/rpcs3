@@ -30,7 +30,7 @@ namespace rsx
 
 			u32 vp_ctrl;
 			u32 vp_texture_dimensions;
-			u64 vp_instruction_mask[8];
+			u64 vp_instruction_mask[9];
 
 			u32 vp_base_address;
 			u32 vp_entry;
@@ -199,14 +199,17 @@ namespace rsx
 		{
 			if (!g_cfg.video.disable_on_disk_shader_cache)
 			{
-				root_path = rpcs3::cache::get_ppu_cache() + "shaders_cache";
+				if (std::string cache_path = rpcs3::cache::get_ppu_cache(); !cache_path.empty())
+				{
+					root_path = std::move(cache_path) + "shaders_cache/";
+				}
 			}
 		}
 
 		template <typename... Args>
 		void load(shader_loading_dialog* dlg, Args&& ...args)
 		{
-			if (g_cfg.video.disable_on_disk_shader_cache)
+			if (root_path.empty())
 			{
 				return;
 			}
@@ -270,7 +273,7 @@ namespace rsx
 
 		void store(const pipeline_storage_type &pipeline, const RSXVertexProgram &vp, const RSXFragmentProgram &fp)
 		{
-			if (g_cfg.video.disable_on_disk_shader_cache)
+			if (root_path.empty())
 			{
 				return;
 			}
@@ -362,7 +365,7 @@ namespace rsx
 			vp.base_address = data.vp_base_address;
 			vp.entry = data.vp_entry;
 
-			pack_bitset<512>(vp.instruction_mask, data.vp_instruction_mask);
+			pack_bitset<max_vertex_program_instructions>(vp.instruction_mask, data.vp_instruction_mask);
 
 			for (u8 index = 0; index < 32; ++index)
 			{
@@ -400,7 +403,7 @@ namespace rsx
 			data_block.vp_base_address = vp.base_address;
 			data_block.vp_entry = vp.entry;
 
-			unpack_bitset<512>(vp.instruction_mask, data_block.vp_instruction_mask);
+			unpack_bitset<max_vertex_program_instructions>(vp.instruction_mask, data_block.vp_instruction_mask);
 
 			u8 index = 0;
 			while (index < 32)

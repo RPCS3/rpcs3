@@ -5,7 +5,7 @@
 #endif
 
 #include "Emu/Audio/AudioBackend.h"
-#include "3rdparty/FAudio/include/FAudio.h"
+#include "FAudio.h"
 
 class FAudioBackend : public AudioBackend
 {

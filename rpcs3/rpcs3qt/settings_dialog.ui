@@ -3639,6 +3639,13 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="ppuLlvmJavaModeHandling">
+              <property name="text">
+               <string>PPU LLVM Java Mode Handling</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <spacer name="verticalSpacerDebugCore">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
@@ -3680,6 +3687,18 @@
               <layout class="QVBoxLayout" name="gb_accurate_ppu_128_layout">
                <item>
                 <widget class="QComboBox" name="combo_accurate_ppu_128"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_num_ppu_threads">
+              <property name="title">
+               <string>PPU Thread Count</string>
+              </property>
+              <layout class="QVBoxLayout" name="vbl_num_ppu_threads">
+               <item>
+                <widget class="QComboBox" name="combo_num_ppu_threads"/>
                </item>
               </layout>
              </widget>

@@ -37,6 +37,8 @@
 
 constexpr auto qstr = QString::fromStdString;
 
+LOG_CHANNEL(sys_log, "SYS");
+
 enum kernel_item_role
 {
 	name_role       = Qt::UserRole + 0,
@@ -170,19 +172,22 @@ static QTreeWidgetItem* add_solid_node(QTreeWidget* tree, QTreeWidgetItem *paren
 kernel_explorer::kernel_explorer(QWidget* parent)
 	: QDialog(parent)
 {
-	setWindowTitle(tr("Kernel Explorer"));
+	setWindowTitle(tr("Kernel Explorer | %1").arg(qstr(Emu.GetTitleAndTitleID())));
 	setObjectName("kernel_explorer");
 	setAttribute(Qt::WA_DeleteOnClose);
-	setMinimumSize(QSize(700, 450));
+	setMinimumSize(QSize(800, 600));
 
 	QVBoxLayout* vbox_panel = new QVBoxLayout();
 	QHBoxLayout* hbox_buttons = new QHBoxLayout();
 	QPushButton* button_refresh = new QPushButton(tr("Refresh"), this);
+	QPushButton* button_log = new QPushButton(tr("Log All"), this);
 	hbox_buttons->addWidget(button_refresh);
+	hbox_buttons->addSpacing(8);
+	hbox_buttons->addWidget(button_log);
 	hbox_buttons->addStretch();
 
 	m_tree = new QTreeWidget(this);
-	m_tree->setBaseSize(QSize(600, 300));
+	m_tree->setBaseSize(QSize(700, 450));
 	m_tree->setWindowTitle(tr("Kernel"));
 	m_tree->header()->close();
 
@@ -194,12 +199,17 @@ kernel_explorer::kernel_explorer(QWidget* parent)
 	setLayout(vbox_panel);
 
 	// Events
-	connect(button_refresh, &QAbstractButton::clicked, this, &kernel_explorer::Update);
+	connect(button_refresh, &QAbstractButton::clicked, this, &kernel_explorer::update);
+	connect(button_log, &QAbstractButton::clicked, this, [this]()
+	{
+		log();
+		m_log_buf.clear();
+	});
 
-	Update();
+	update();
 }
 
-void kernel_explorer::Update()
+void kernel_explorer::update()
 {
 	const auto dct = g_fxo->try_get<lv2_memory_container>();
 
@@ -813,7 +823,22 @@ void kernel_explorer::Update()
 
 	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& fo)
 	{
-		add_leaf(find_node(root, additional_nodes::file_descriptors), qstr(fmt::format("FD %u: %s", id, fo.to_string())));
+		const std::string str = fmt::format("FD %u: %s", id, [&]() -> std::string
+		{
+			if (idm::check_unlocked<lv2_fs_object, lv2_file>(id))
+			{
+				return fmt::format("%s", static_cast<lv2_file&>(fo));
+			}
+
+			if (idm::check_unlocked<lv2_fs_object, lv2_dir>(id))
+			{
+				return fmt::format("%s", static_cast<lv2_dir&>(fo));
+			}
+
+			return "Unknown object!";
+		}());
+
+		add_leaf(find_node(root, additional_nodes::file_descriptors), qstr(str));
 	});
 
 	std::function<int(QTreeWidgetItem*)> final_touches;
@@ -873,4 +898,39 @@ void kernel_explorer::Update()
 	};
 	final_touches(root);
 	root->setExpanded(true);
+}
+
+void kernel_explorer::log(u32 level, QTreeWidgetItem* item)
+{
+	if (!item)
+	{
+		item = m_tree->topLevelItem(0);
+
+		if (!item)
+		{
+			return;
+		}
+
+		m_log_buf = qstr(fmt::format("Kernel Explorer: %s\n", Emu.GetTitleAndTitleID()));
+		log(level + 1, item);
+
+		sys_log.success("%s", m_log_buf.toStdString());
+		return;
+	}
+
+	for (u32 j = 0; j < level; j++)
+	{
+		m_log_buf += QChar::Nbsp;
+	}
+
+	m_log_buf.append(item->text(0));
+	m_log_buf += '\n';
+
+	for (int i = 0; i < item->childCount(); i++)
+	{
+		if (auto node = item->child(i); node && !node->isHidden())
+		{
+			log(level + 1, node);
+		}
+	}
 }

@@ -855,18 +855,17 @@ namespace rsx
 	template <int N>
 	void unpack_bitset(const std::bitset<N>& block, u64* values)
 	{
-		constexpr int count = N / 64;
-		for (int n = 0; n < count; ++n)
+		for (int bit = 0, n = -1, shift = 0; bit < N; ++bit, ++shift)
 		{
-			int i = (n << 6);
-			values[n] = 0;
-
-			for (int bit = 0; bit < 64; ++bit, ++i)
+			if ((bit % 64) == 0)
 			{
-				if (block[i])
-				{
-					values[n] |= (1ull << bit);
-				}
+				values[++n] = 0;
+				shift = 0;
+			}
+
+			if (block[bit])
+			{
+				values[n] |= (1ull << shift);
 			}
 		}
 	}
@@ -874,18 +873,11 @@ namespace rsx
 	template <int N>
 	void pack_bitset(std::bitset<N>& block, u64* values)
 	{
-		constexpr int count = N / 64;
-		for (int n = (count - 1); n >= 0; --n)
+		for (int n = 0, shift = 0; shift < N; ++n, shift += 64)
 		{
-			if ((n + 1) < count)
-			{
-				block <<= 64;
-			}
-
-			if (values[n])
-			{
-				block |= values[n];
-			}
+			std::bitset<N> tmp = values[n];
+			tmp <<= shift;
+			block |= tmp;
 		}
 	}
 

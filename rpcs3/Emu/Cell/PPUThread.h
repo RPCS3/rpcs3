@@ -144,6 +144,8 @@ public:
 	ppu_thread(const ppu_thread&) = delete;
 	ppu_thread& operator=(const ppu_thread&) = delete;
 
+	using cpu_thread::operator=;
+
 	u64 gpr[32] = {}; // General-Purpose Registers
 	f64 fpr[32] = {}; // Floating Point Registers
 	v128 vr[32] = {}; // Vector Registers
@@ -306,7 +308,7 @@ public:
 	void exec_task();
 	void fast_call(u32 addr, u32 rtoc);
 
-	static u32 stack_push(u32 size, u32 align_v);
+	static std::pair<vm::addr_t, u32> stack_push(u32 size, u32 align_v);
 	static void stack_pop_verbose(u32 addr, u32 size) noexcept;
 };
 

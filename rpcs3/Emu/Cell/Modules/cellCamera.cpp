@@ -976,7 +976,7 @@ error_code cellCameraStart(s32 dev_num)
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
 
-	g_camera.timer.Start();
+	g_camera.start_timestamp = get_guest_system_time();
 	g_camera.is_streaming = true;
 
 	return CELL_OK;
@@ -1066,7 +1066,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 
 	if (read) // NULL returns CELL_OK
 	{
-		read->timestamp = g_camera.timer.GetElapsedTimeInMicroSec();
+		read->timestamp = (get_guest_system_time() - g_camera.start_timestamp);
 		read->frame = g_camera.frame_num;
 		read->bytesread = g_camera.is_streaming ? get_video_buffer_size(g_camera.info) : 0;
 
@@ -1122,9 +1122,6 @@ error_code cellCameraStop(s32 dev_num)
 	}
 
 	g_camera.is_streaming = false;
-
-	std::lock_guard lock(g_camera.mutex);
-	g_camera.timer.Stop();
 
 	return CELL_OK;
 }
@@ -1300,7 +1297,7 @@ void camera_context::operator()()
 						const u64 camera_id = 0;
 
 						data2 = image_data_size << 32 | buffer_number << 16 | camera_id;
-						data3 = timer.GetElapsedTimeInMicroSec();	// timestamp
+						data3 = get_guest_system_time() - start_timestamp;	// timestamp
 					}
 					else // CELL_CAMERA_READ_FUNCCALL, also default
 					{
