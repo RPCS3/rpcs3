@@ -1390,13 +1390,13 @@ void lv2_obj::schedule_all()
 	}
 }
 
-ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm)
+ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_lv2)
 {
-	std::optional<reader_lock> opt_lock;
+	std::optional<reader_lock> opt_lock[2];
 
 	if (lock_idm)
 	{
-		opt_lock.emplace(id_manager::g_mutex);
+		opt_lock[0].emplace(id_manager::g_mutex);
 	}
 
 	if (ppu->state & cpu_flag::stop)
@@ -1411,7 +1411,10 @@ ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm)
 	default: break;
 	}
 
-	reader_lock lock(g_mutex);
+	if (lock_lv2)
+	{
+		opt_lock[1].emplace(lv2_obj::g_mutex);
+	}
 
 	const auto it = std::find(g_ppu.begin(), g_ppu.end(), ppu);
 
