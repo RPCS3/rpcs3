@@ -298,6 +298,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			"\nKeys Ctrl+B: Open breakpoints settings."
 			"\nKeys Alt+S: Capture SPU images of selected SPU."
 			"\nKey D: SPU MFC commands logger, MFC debug setting must be enabled."
+			"\nKey D: Also PPU calling history logger, interpreter and non-zero call history size must be used."
 			"\nKey E: Instruction Editor: click on the instruction you want to modify, then press E."
 			"\nKey F: Dedicated floating point mode switch for SPU threads."
 			"\nKey R: Registers Editor for selected thread."
@@ -365,10 +366,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			if (event->isAutoRepeat())
 				return;
 
-			if (cpu->id_type() == 2 && g_cfg.core.mfc_debug && !cpu->is_stopped())
+			auto get_max_allowed = [&](QString title, QString description, u32 limit) -> u32
 			{
-				input_dialog dlg(4, "", tr("Max MFC cmds logged"),
-					tr("Decimal only, max allowed is 1820."), "0", this);
+				input_dialog dlg(4, "", title, description, "0", this);
 
 				QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 				mono.setPointSize(8);
@@ -383,7 +383,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				{
 					bool ok = false;
 					const u32 dummy = changed.toUInt(&ok, 10);
-					ok = ok && dummy && dummy <= spu_thread::max_mfc_dump_idx;
+					ok = ok && dummy && dummy <= limit;
 					dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, ok);
 
 					if (ok)
@@ -397,15 +397,22 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					max = 0;
 				}
 
+				return max;
+			};
+
+			if (cpu->id_type() == 2 && g_cfg.core.mfc_debug)
+			{
+				const u32 max = get_max_allowed(tr("Max MFC cmds logged"), tr("Decimal only, max allowed is 2048."), spu_thread::max_mfc_dump_idx);
+
 				const auto spu = static_cast<spu_thread*>(cpu);
 
-				const auto ptr = reinterpret_cast<const mfc_cmd_dump*>(vm::g_stat_addr + spu->vm_offset());
+				auto& history = spu->mfc_history;
 
 				std::string ret;
 
 				for (u64 count = 0, idx = spu->mfc_dump_idx - 1; idx != umax && count < max; count++, idx--)
 				{
-					auto dump = ptr[idx % spu_thread::max_mfc_dump_idx];
+					auto dump = history[idx % spu_thread::max_mfc_dump_idx];
 
 					const u32 pc = std::exchange(dump.cmd.eah, 0);
 					fmt::append(ret, "\n(%d) PC 0x%05x: [%s]", count, pc, dump.cmd);
@@ -429,8 +436,46 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					ret = "No MFC commands have been logged";
 				}
 
-				spu_log.warning("SPU MFC dump of '%s': %s", spu->get_name(), ret);
+				spu_log.success("SPU MFC dump of '%s': %s", spu->get_name(), ret);
 			}
+			else if (cpu->id_type() == 1 && g_cfg.core.ppu_call_history)
+			{
+				const u32 max = get_max_allowed(tr("Max PPU calls logged"), tr("Decimal only, max allowed is 4096."), ppu_thread::call_history_max_size);
+
+				typename ppu_thread::call_history_t copy;
+				auto list_ptr = &static_cast<ppu_thread*>(cpu)->call_history;
+
+				if (max == ppu_thread::call_history_max_size)
+				{
+					cpu_thread::suspend_all(nullptr, {}, [&]
+					{
+						// Empty list when possible
+						copy = std::move(*list_ptr);
+						list_ptr->data.resize(ppu_thread::call_history_max_size);
+						list_ptr = &copy;
+					});
+				}
+
+				std::string ret;
+
+				for (u64 count = 0, idx = list_ptr->index - 1; idx != umax && count < max; count++, idx--)
+				{
+					fmt::append(ret, "\n(%u) 0x%08x", count, list_ptr->data[idx % ppu_thread::call_history_max_size]);
+				}
+	
+				if (ret.empty())
+				{
+					ret = "No PPU calls have been logged";
+				}
+
+				ppu_log.success("PPU calling history dump of '%s': %s", cpu->get_name(), ret);
+
+				if (list_ptr == &copy && !copy.data.empty())
+				{
+					ppu_log.success("Previous call history has been emptied!");
+				}
+			}
+
 			return;
 		}
 		case Qt::Key_E:

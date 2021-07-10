@@ -47,6 +47,14 @@ bool ppu_thread_exit(ppu_thread& ppu)
 		dct.used -= ppu.stack_size;
 	}
 
+	std::string str = fmt::format("%s", ppu.call_history);
+	ppu.call_history.index = 0;
+
+	if (!str.empty())
+	{
+		ppu_log.notice("Calling history: %s", str);
+	}
+
 	return false;
 }
 
