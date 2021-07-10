@@ -273,7 +273,8 @@ void save_manager_dialog::UpdateList()
 		return icon;
 	};
 
-	const QList<QPixmap> icons = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_icon);
+	// NOTE: Due to a Qt bug in Qt 5.15.2, QtConcurrent::blockingMapped has a high risk of deadlocking. So let's just use QtConcurrent::mapped.
+	const QList<QPixmap> icons = QtConcurrent::mapped(indices, get_icon).results();
 
 	for (int i = 0; i < icons.count(); ++i)
 	{
@@ -370,7 +371,8 @@ void save_manager_dialog::UpdateIcons()
 		return GetResizedIcon(i);
 	};
 
-	QList<QPixmap> scaled = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_scaled);
+	// NOTE: Due to a Qt bug in Qt 5.15.2, QtConcurrent::blockingMapped has a high risk of deadlocking. So let's just use QtConcurrent::mapped.
+	const QList<QPixmap> scaled = QtConcurrent::mapped(indices, get_scaled).results();
 
 	for (int i = 0; i < m_list->rowCount() && i < scaled.count(); ++i)
 	{
