@@ -205,6 +205,16 @@ struct fmt_class_string<char*, void> : fmt_class_string<const char*>
 	// Classify char* as const char*
 };
 
+template <>
+struct fmt_class_string<const char8_t*, void> : fmt_class_string<const char*>
+{
+};
+
+template <>
+struct fmt_class_string<char8_t*, void> : fmt_class_string<const char8_t*>
+{
+};
+
 struct fmt_type_info
 {
 	decltype(&fmt_class_string<int>::format) fmt_string;

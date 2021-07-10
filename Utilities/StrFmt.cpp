@@ -153,6 +153,27 @@ void fmt_class_string<std::vector<char>>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<std::u8string>::format(std::string& out, u64 arg)
+{
+	const std::u8string& obj = get_object(arg);
+	out.append(obj.cbegin(), obj.cend());
+}
+
+template <>
+void fmt_class_string<std::u8string_view>::format(std::string& out, u64 arg)
+{
+	const std::u8string_view& obj = get_object(arg);
+	out.append(obj.cbegin(), obj.cend());
+}
+
+template <>
+void fmt_class_string<std::vector<char8_t>>::format(std::string& out, u64 arg)
+{
+	const std::vector<char8_t>& obj = get_object(arg);
+	out.append(obj.cbegin(), obj.cend());
+}
+
+template <>
 void fmt_class_string<char>::format(std::string& out, u64 arg)
 {
 	fmt::append(out, "%#hhx", static_cast<char>(arg));
