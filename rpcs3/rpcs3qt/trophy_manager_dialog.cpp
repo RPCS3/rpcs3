@@ -513,7 +513,8 @@ void trophy_manager_dialog::ResizeGameIcons()
 		return GetResizedGameIcon(i);
 	};
 
-	QList<QPixmap> scaled = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_scaled);
+	// NOTE: Due to a Qt bug in Qt 5.15.2, QtConcurrent::blockingMapped has a high risk of deadlocking. So let's just use QtConcurrent::mapped.
+	const QList<QPixmap> scaled = QtConcurrent::mapped(indices, get_scaled).results();
 
 	for (int i = 0; i < m_game_table->rowCount() && i < scaled.count(); ++i)
 	{
@@ -578,17 +579,14 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 	};
 
 
-	// NOTE: Due to a Qt bug, QtConcurrent::blockingMapped has a high risk of deadlocking
-	//       during the QPixmap operations in get_scaled. So let's just use QtConcurrent::mapped.
-	QFutureWatcher<QPixmap> watcher;
-	watcher.setFuture(QtConcurrent::mapped(trophy_ids, get_scaled));
-	watcher.waitForFinished();
+	// NOTE: Due to a Qt bug in Qt 5.15.2, QtConcurrent::blockingMapped has a high risk of deadlocking. So let's just use QtConcurrent::mapped.
+	const QList<QPixmap> scaled = QtConcurrent::mapped(trophy_ids, get_scaled).results();
 
-	for (int i = 0; i < m_trophy_table->rowCount() && i < watcher.future().resultCount(); ++i)
+	for (int i = 0; i < m_trophy_table->rowCount() && i < scaled.count(); ++i)
 	{
 		QTableWidgetItem* icon_item = m_trophy_table->item(i, TrophyColumns::Icon);
 		if (icon_item)
-			icon_item->setData(Qt::DecorationRole, watcher.future().resultAt(i));
+			icon_item->setData(Qt::DecorationRole, scaled.at(i));
 	}
 
 	ReadjustTrophyTable();
@@ -747,7 +745,8 @@ void trophy_manager_dialog::PopulateGameTable()
 		return icon;
 	};
 
-	QList<QPixmap> icons = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_icon);
+	// NOTE: Due to a Qt bug in Qt 5.15.2, QtConcurrent::blockingMapped has a high risk of deadlocking. So let's just use QtConcurrent::mapped.
+	const QList<QPixmap> icons = QtConcurrent::mapped(indices, get_icon).results();
 
 	for (int i = 0; i < indices.count(); ++i)
 	{
