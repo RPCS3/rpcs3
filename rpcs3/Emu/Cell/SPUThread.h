@@ -770,8 +770,9 @@ public:
 	u64 last_fail = 0;
 	u64 last_succ = 0;
 
+	std::vector<mfc_cmd_dump> mfc_history;
 	u64 mfc_dump_idx = 0;
-	static constexpr u32 max_mfc_dump_idx = SPU_LS_SIZE / sizeof(mfc_cmd_dump);
+	static constexpr u32 max_mfc_dump_idx = 2048;
 
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
