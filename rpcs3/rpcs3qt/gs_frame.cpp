@@ -512,6 +512,10 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 			screenshot_log.notice("Taking screenshot (%dx%d)", sshot_width, sshot_height);
 
 			std::string screen_path = fs::get_config_dir() + "screenshots/";
+			if (const std::string id = Emu.GetTitleID(); !id.empty())
+			{
+				screen_path += id + "/";
+			};
 
 			if (!fs::create_dir(screen_path) && fs::g_tls_error != fs::error::exist)
 			{
