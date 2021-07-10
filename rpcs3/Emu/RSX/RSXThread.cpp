@@ -585,6 +585,8 @@ namespace rsx
 
 		performance_counters.state = FIFO_state::empty;
 
+		Emu.CallAfter([]{ Emu.RunPPU(); });
+
 		// Wait for startup (TODO)
 		while (m_rsx_thread_exiting)
 		{

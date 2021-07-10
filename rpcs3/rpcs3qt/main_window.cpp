@@ -324,6 +324,7 @@ void main_window::OnPlayOrPause()
 
 		return;
 	}
+	case system_state::starting: break;
 	default: fmt::throw_exception("Unreachable");
 	}
 }
@@ -1385,7 +1386,7 @@ void main_window::RepaintThumbnailIcons()
 	m_icon_thumb_stop = icon(":/Icons/stop.png");
 	m_icon_thumb_restart = icon(":/Icons/restart.png");
 
-	m_thumb_playPause->setIcon(Emu.IsRunning() ? m_icon_thumb_pause : m_icon_thumb_play);
+	m_thumb_playPause->setIcon(Emu.IsRunning() || Emu.IsStarting() ? m_icon_thumb_pause : m_icon_thumb_play);
 	m_thumb_stop->setIcon(m_icon_thumb_stop);
 	m_thumb_restart->setIcon(m_icon_thumb_restart);
 #endif

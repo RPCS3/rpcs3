@@ -964,12 +964,6 @@ void ppu_thread::cpu_task()
 		{
 			cmd_pop();
 
-			while (!g_fxo->get<rsx::thread>().is_inited && !is_stopped())
-			{
-				// Wait for RSX to be initialized
-				thread_ctrl::wait_on(g_fxo->get<rsx::thread>().is_inited, false);
-			}
-
 			ppu_initialize(), spu_cache::initialize();
 
 			// Wait until the progress dialog is closed.
@@ -977,6 +971,7 @@ void ppu_thread::cpu_task()
 			thread_ctrl::wait_on<atomic_wait::op_ne>(g_progr_ptotal, 0);
 			g_fxo->get<progress_dialog_workaround>().skip_the_progress_dialog = true;
 
+			Emu.FinalizeRunRequest();
 			break;
 		}
 		case ppu_cmd::sleep:

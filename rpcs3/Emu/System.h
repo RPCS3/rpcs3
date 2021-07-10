@@ -27,6 +27,7 @@ enum class system_state : u32
 	stopped,
 	paused,
 	ready,
+	starting,
 };
 
 enum class game_boot_result : u32
@@ -221,6 +222,9 @@ public:
 
 	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool force_global_config = false, bool is_disc_patch = false);
 	void Run(bool start_playtime);
+	void RunPPU();
+	void FinalizeRunRequest();
+
 	bool Pause();
 	void Resume();
 	void Stop(bool restart = false);
@@ -229,9 +233,10 @@ public:
 	static void CleanUp();
 
 	bool IsRunning() const { return m_state == system_state::running; }
-	bool IsPaused()  const { return m_state >= system_state::paused; } // ready is also considered paused by this function
+	bool IsPaused()  const { return m_state >= system_state::paused; } // ready/starting are also considered paused by this function
 	bool IsStopped() const { return m_state == system_state::stopped; }
 	bool IsReady()   const { return m_state == system_state::ready; }
+	bool IsStarting() const { return m_state == system_state::starting; }
 	auto GetStatus() const { return m_state.load(); }
 
 	bool HasGui() const { return m_has_gui; }
