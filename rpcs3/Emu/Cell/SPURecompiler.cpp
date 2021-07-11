@@ -25,6 +25,7 @@
 #include "util/v128.hpp"
 #include "util/v128sse.hpp"
 #include "util/sysinfo.hpp"
+#include "util/expr.hpp"
 
 const spu_decoder<spu_itype> s_spu_itype;
 const spu_decoder<spu_iname> s_spu_iname;
@@ -665,12 +666,7 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		}
 	}
 
-	std::sort(m_flat_list.begin(), m_flat_list.end(), [&](const auto& a, const auto& b)
-	{
-		std::basic_string_view<u32> lhs = a.first;
-		std::basic_string_view<u32> rhs = b.first;
-		return lhs < rhs;
-	});
+	std::sort(m_flat_list.begin(), m_flat_list.end(), "s0s0<"_x);
 
 	struct work
 	{
