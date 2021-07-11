@@ -2802,6 +2802,44 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 	bool compiled_new = false;
 
+	bool has_mfvscr = false;
+
+	for (auto& func : info.funcs)
+	{
+		if (func.size == 0)
+		{
+			continue;
+		}
+
+		for (const auto& [addr, size] : func.blocks)
+		{
+			if (size == 0)
+			{
+				continue;
+			}
+
+			for (u32 i = addr; i < addr + size; i += 4)
+			{
+				if (g_ppu_itype.decode(vm::read32(i)) == ppu_itype::MFVSCR)
+				{
+					ppu_log.warning("MFVSCR found");
+					has_mfvscr = true;
+					break;
+				}
+			}
+
+			if (has_mfvscr)
+			{
+				break;
+			}
+		}
+
+		if (has_mfvscr)
+		{
+			break;
+		}
+	}
+
 	while (!jit_mod.init && fpos < info.funcs.size())
 	{
 		// Initialize compiler instance
@@ -2842,6 +2880,12 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 
 			// Fixup some information
 			entry.name = fmt::format("__0x%x", entry.addr - reloc);
+
+			if (has_mfvscr)
+			{
+				// TODO
+				entry.attr += ppu_attr::has_mfvscr;
+			}
 
 			if (entry.blocks.empty())
 			{
@@ -2960,6 +3004,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				accurate_cache_line_stores,
 				reservations_128_byte,
 				greedy_mode,
+				has_mfvscr,
 
 				__bitset_enum_max
 			};
@@ -2981,9 +3026,11 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 				settings += ppu_settings::reservations_128_byte;
 			if (g_cfg.core.ppu_llvm_greedy_mode)
 				settings += ppu_settings::greedy_mode;
+			if (has_mfvscr)
+				settings += ppu_settings::has_mfvscr;
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v4-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
+			fmt::append(obj_name, "v5-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
 		}
 
 		if (Emu.IsStopped())

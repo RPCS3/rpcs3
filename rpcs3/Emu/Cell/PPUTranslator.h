@@ -28,6 +28,9 @@ class PPUTranslator final : public cpu_translator
 	// Current position-independent address
 	u64 m_addr = 0;
 
+	// Function attributes
+	bs_t<ppu_attr> m_attr{};
+
 	// Relocation info
 	const ppu_segment* m_reloc = nullptr;
 
@@ -198,9 +201,6 @@ public:
 
 	// Saturate signed value (second result is the disjunction of comparison results)
 	std::pair<llvm::Value*, llvm::Value*> SaturateSigned(llvm::Value* value, u64 min, u64 max);
-
-	// Multiply FP value or vector by the pow(2, scale)
-	llvm::Value* Scale(llvm::Value* value, s32 scale);
 
 	// Create shuffle instruction with constant args
 	llvm::Value* Shuffle(llvm::Value* left, llvm::Value* right, std::initializer_list<u32> indices);

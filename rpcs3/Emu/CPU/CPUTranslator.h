@@ -41,6 +41,18 @@ enum class i4 : char
 {
 };
 
+template <typename T>
+concept LLVMType = (std::is_pointer_v<T>) && (std::is_base_of_v<llvm::Type, std::remove_pointer_t<T>>);
+
+template <typename T>
+concept LLVMValue = (std::is_pointer_v<T>) && (std::is_base_of_v<llvm::Value, std::remove_pointer_t<T>>);
+
+template <typename T>
+concept DSLValue = requires (T& v)
+{
+	{ v.eval(std::declval<llvm::IRBuilder<>*>()) } -> LLVMValue;
+};
+
 template <typename T = void>
 struct llvm_value_t
 {
@@ -1752,6 +1764,55 @@ struct llvm_bitcast
 };
 
 template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_fpcast
+{
+	using type = U;
+
+	static constexpr auto opc =
+		llvm_value_t<T>::is_sint ? llvm::Instruction::SIToFP :
+		llvm_value_t<U>::is_sint ? llvm::Instruction::FPToSI :
+		llvm_value_t<T>::is_int ? llvm::Instruction::UIToFP :
+		llvm_value_t<U>::is_int ? llvm::Instruction::FPToUI :
+		llvm_value_t<T>::esize > llvm_value_t<U>::esize ? llvm::Instruction::FPTrunc :
+		llvm_value_t<T>::esize < llvm_value_t<U>::esize ? llvm::Instruction::FPExt : llvm::Instruction::BitCast;
+
+	llvm_expr_t<A1> a1;
+	static_assert(llvm_value_t<T>::is_float || llvm_value_t<U>::is_float, "llvm_fpcast<>: invalid type(s)");
+	static_assert(opc != llvm::Instruction::BitCast, "llvm_fpcast<>: possible cast to the same type");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_fpcast<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		(llvm_value_t<T>::is_float || llvm_value_t<U>::is_float) && opc != llvm::Instruction::BitCast &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return ir->CreateCast(opc, a1.eval(ir), llvm_value_t<U>::get_type(ir->getContext()));
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CastInst>(value); i && i->getOpcode() == opc)
+		{
+			v1 = i->getOperand(0);
+
+			if (llvm_value_t<U>::get_type(v1->getContext()) == i->getDestTy())
+			{
+				if (auto r1 = a1.match(v1); v1)
+				{
+					return r1;
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
 struct llvm_trunc
 {
 	using type = U;
@@ -2504,7 +2565,7 @@ public:
 	}
 
 	// Call external function: provide name and function pointer
-	template <typename RT, typename... FArgs, typename... Args>
+	template <typename RT, typename... FArgs, LLVMValue... Args>
 	llvm::CallInst* call(std::string_view lame, RT(*_func)(FArgs...), Args... args)
 	{
 		static_assert(sizeof...(FArgs) == sizeof...(Args), "spu_llvm_recompiler::call(): unexpected arg number");
@@ -2520,6 +2581,22 @@ public:
 		inst->setCallingConv(llvm::CallingConv::Win64);
 #endif
 		return inst;
+	}
+
+	template <typename RT, typename... FArgs, DSLValue... Args> requires (sizeof...(Args) != 0)
+	auto call(std::string_view name, RT(*_func)(FArgs...), Args&&... args)
+	{
+		llvm_value_t<RT> r;
+		r.value = call(name, _func, std::forward<Args>(args).eval(m_ir)...);
+		return r;
+	}
+
+	template <typename RT, DSLValue... Args>
+	auto call(llvm::Function* func, Args&&... args)
+	{
+		llvm_value_t<RT> r;
+		r.value = m_ir->CreateCall(func, {std::forward<Args>(args).eval(m_ir)...});
+		return r;
 	}
 
 	// Bitcast with immediate constant folding
@@ -2570,10 +2647,16 @@ public:
 		return llvm_noncast<U, T>{std::forward<T>(expr)};
 	}
 
-	template <typename U, typename T, typename = std::enable_if_t<llvm_bitcast<U, T>::is_ok>>
+	template <typename U, DSLValue T, typename = std::enable_if_t<llvm_bitcast<U, T>::is_ok>>
 	auto bitcast(T&& expr)
 	{
 		return llvm_bitcast<U, T>{std::forward<T>(expr), m_module};
+	}
+
+	template <typename U, typename T, typename = std::enable_if_t<llvm_fpcast<U, T>::is_ok>>
+	static auto fpcast(T&& expr)
+	{
+		return llvm_fpcast<U, T>{std::forward<T>(expr)};
 	}
 
 	template <typename U, typename T, typename = std::enable_if_t<llvm_trunc<U, T>::is_ok>>
@@ -2763,14 +2846,23 @@ public:
 	}
 
 	// Opportunistic hardware FMA, can be used if results are identical for all possible input values
-	template <typename T>
-	auto fmuladd(T a, T b, T c)
+	template <typename T, typename U, typename V> requires (std::is_same_v<typename T::type, typename U::type>) && (std::is_same_v<typename T::type, typename V::type>)
+	auto fmuladd(T a, U b, V c)
 	{
 		value_t<typename T::type> result;
 		const auto av = a.eval(m_ir);
 		const auto bv = b.eval(m_ir);
 		const auto cv = c.eval(m_ir);
-		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::fmuladd), {av, bv, cv});
+
+		if (m_use_fma)
+		{
+			result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::fma), {av, bv, cv});
+		}
+		else
+		{
+			result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::fmuladd), {av, bv, cv});
+		}
+
 		return result;
 	}
 
@@ -3005,10 +3097,22 @@ struct fmt_unveil<llvm::TypeSize, void>
 #endif
 
 template <>
-inline llvm::Type* cpu_translator::get_type<__m128i>()
+struct llvm_value_t<__m128> : llvm_value_t<f32[4]>
 {
-	return llvm::VectorType::get(llvm::Type::getInt8Ty(m_context), 16, false);
-}
+
+};
+
+template <>
+struct llvm_value_t<__m128d> : llvm_value_t<f64[2]>
+{
+
+};
+
+template <>
+struct llvm_value_t<__m128i> : llvm_value_t<u8[16]>
+{
+
+};
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
