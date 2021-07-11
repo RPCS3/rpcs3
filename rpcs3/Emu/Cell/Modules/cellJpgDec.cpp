@@ -110,8 +110,8 @@ error_code cellJpgDecClose(u32 mainHandle, u32 subHandle)
 		return CELL_JPGDEC_ERROR_FATAL;
 	}
 
-	idm::remove<lv2_fs_object, lv2_file>(subHandle_data->fd);
-	idm::remove<CellJpgDecSubHandle>(subHandle);
+	idm::withdraw<lv2_fs_object, lv2_file>(subHandle_data->fd);
+	idm::withdraw<CellJpgDecSubHandle>(subHandle);
 
 	return CELL_OK;
 }

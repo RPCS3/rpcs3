@@ -617,7 +617,7 @@ public:
 					}
 				}
 				es.dmux = nullptr;
-				idm::remove<ElementaryStream>(task.es.es);
+				idm::withdraw<ElementaryStream>(task.es.es);
 				break;
 			}
 
@@ -1056,7 +1056,7 @@ error_code cellDmuxClose(u32 handle)
 		std::this_thread::sleep_for(1ms); // hack
 	}
 
-	idm::remove<ppu_thread>(handle);
+	idm::withdraw<ppu_thread>(handle);
 	return CELL_OK;
 }
 

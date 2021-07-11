@@ -2503,7 +2503,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 					lock.unlock();
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 					ppu_initialize(*prx);
-					idm::remove<lv2_obj, lv2_prx>(idm::last_id());
+					idm::withdraw<lv2_obj, lv2_prx>(idm::last_id());
 					lock.lock();
 					ppu_unload_prx(*prx);
 					lock.unlock();
@@ -2541,7 +2541,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 					}
 
 					lock.unlock();
-					idm::remove<lv2_obj, lv2_overlay>(idm::last_id());
+					idm::withdraw<lv2_obj, lv2_overlay>(idm::last_id());
 					ppu_finalize(*ovlm);
 					break;
 				}

@@ -31,7 +31,7 @@ error_code _sys_heap_delete_heap(u32 heap)
 {
 	sysPrxForUser.warning("_sys_heap_delete_heap(heap=0x%x)", heap);
 
-	idm::remove<HeapInfo>(heap);
+	idm::withdraw<HeapInfo>(heap);
 
 	return CELL_OK;
 }

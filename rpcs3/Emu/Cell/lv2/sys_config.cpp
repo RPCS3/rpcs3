@@ -167,7 +167,7 @@ void lv2_config_service_listener::notify_all()
 		{
 			services.push_back(service.get_shared_ptr());
 		}
-	}, 0);
+	});
 
 	// Sort services by timestamp
 	sort(services.begin(), services.end(), [](const std::shared_ptr<lv2_config_service>& s1, const std::shared_ptr<lv2_config_service>& s2)
@@ -193,7 +193,7 @@ void lv2_config_service::unregister()
 
 	// Allow this object to be destroyed by withdrawing it from the IDM
 	// Note that it won't be destroyed while there are service events that hold a reference to it
-	idm::remove<lv2_config_service>(idm_id);
+	idm::withdraw<lv2_config_service>(idm_id);
 }
 
 void lv2_config_service::notify() const
@@ -288,7 +288,7 @@ error_code sys_config_close(u32 config_hdl)
 {
 	sys_config.trace("sys_config_close(config_hdl=0x%x)", config_hdl);
 
-	if (!idm::remove<lv2_config_handle>(config_hdl))
+	if (!idm::withdraw<lv2_config_handle>(config_hdl))
 	{
 		return CELL_ESRCH;
 	}
@@ -368,7 +368,7 @@ error_code sys_config_remove_service_listener(u32 config_hdl, u32 listener_hdl)
 	sys_config.trace("sys_config_remove_service_listener(config_hdl=0x%x, listener_hdl=0x%x)", config_hdl, listener_hdl);
 
 	// Remove listener from IDM
-	if (!idm::remove<lv2_config_service_listener>(listener_hdl))
+	if (!idm::withdraw<lv2_config_service_listener>(listener_hdl))
 	{
 		return CELL_ESRCH;
 	}

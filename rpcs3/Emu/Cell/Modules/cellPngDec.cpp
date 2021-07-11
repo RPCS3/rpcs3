@@ -534,7 +534,7 @@ error_code pngDecClose(ppu_thread& ppu, PHandle handle, PStream stream)
 	// Remove the file descriptor, if a file descriptor was used for decoding
 	if (stream->buffer->file)
 	{
-		idm::remove<lv2_fs_object, lv2_file>(stream->buffer->fd);
+		idm::withdraw<lv2_fs_object, lv2_file>(stream->buffer->fd);
 	}
 
 	// Deallocate the PNG buffer structure used to decode from memory, if we decoded from memory

@@ -212,7 +212,7 @@ error_code cellVpostClose(u32 handle)
 		return CELL_VPOST_ERROR_C_ARG_HDL_INVALID;
 	}
 
-	idm::remove<VpostInstance>(handle);
+	idm::withdraw<VpostInstance>(handle);
 	return CELL_OK;
 }
 
