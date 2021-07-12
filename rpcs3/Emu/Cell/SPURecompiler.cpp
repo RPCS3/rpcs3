@@ -1214,6 +1214,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 	// Result: addr + raw instruction data
 	spu_program result;
 	result.data.reserve(10000);
+	result.inst_attrs.reserve(10000);
 	result.entry_point = entry_point;
 	result.lower_bound = entry_point;
 
@@ -1526,6 +1527,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 						if (result.data.size() < new_size)
 						{
 							result.data.resize(new_size);
+							result.inst_attrs.resize(new_size);
 						}
 
 						for (u32 i = 0; i < jt_abs.size(); i++)
@@ -1545,6 +1547,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 						if (result.data.size() < new_size)
 						{
 							result.data.resize(new_size);
+							result.inst_attrs.resize(new_size);
 						}
 
 						for (u32 i = 0; i < jt_rel.size(); i++)
@@ -1938,6 +1941,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 			if (result.data.size() < new_size)
 			{
 				result.data.resize(new_size);
+				result.inst_attrs.resize(new_size);
 			}
 
 			result.data.emplace_back(std::bit_cast<u32, be_t<u32>>(data));
@@ -2038,6 +2042,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 		}
 
 		result.data.resize((limit - lsa) / 4);
+		result.inst_attrs.resize((limit - lsa) / 4);
 
 		// Check holes in safe mode (TODO)
 		u32 valid_size = 0;
@@ -2058,6 +2063,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 				if (g_cfg.core.spu_block_size != spu_block_size_type::giga)
 				{
 					result.data.resize(valid_size);
+					result.inst_attrs.resize(valid_size);
 					break;
 				}
 			}
@@ -2069,6 +2075,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point)
 
 		// Even if NOP or LNOP, should be removed at the end
 		result.data.resize(valid_size);
+		result.inst_attrs.resize(valid_size);
 
 		// Repeat if blocks were removed
 		if (result.data.size() == initial_size)
@@ -4722,6 +4729,16 @@ public:
 						m_next_op = 0;
 					else
 						m_next_op = func.data[(m_pos - start) / 4 + 1];
+
+					switch (func.inst_attrs[(m_pos - start) / 4])
+					{
+					case spu_program::inst_attr::omit:
+					{
+						// TODO
+						continue;
+					}
+					default: break;
+					}
 
 					// Execute recompiler function (TODO)
 					(this->*decode(op))({op});
