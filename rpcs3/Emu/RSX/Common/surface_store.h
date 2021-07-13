@@ -1075,14 +1075,24 @@ namespace rsx
 			{
 				return false;
 			}
-			else
+			else if (m_active_memory_used > (max_safe_memory * 3) / 2)
 			{
 				rsx_log.warning("Surface cache is using too much memory! (%dM)", m_active_memory_used / 0x100000);
-				return true;
 			}
+			else
+			{
+				rsx_log.trace("Surface cache is using too much memory! (%dM)", m_active_memory_used / 0x100000);
+			}
+
+			return true;
 		}
 
-		bool handle_memory_pressure(command_list_type cmd, problem_severity /*severity*/)
+		virtual bool can_collapse_surface(const surface_storage_type&)
+		{
+			return true;
+		}
+
+		virtual bool handle_memory_pressure(command_list_type cmd, problem_severity severity)
 		{
 			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data)
 			{
@@ -1092,18 +1102,22 @@ namespace rsx
 					if (surface->dirty())
 					{
 						// Force memory barrier to release some resources
-						surface->memory_barrier(cmd, rsx::surface_access::shader_read);
+						if (can_collapse_surface(It->second))
+						{
+							// NOTE: Do not call memory_barrier under fatal conditions as it can create allocations!
+							// It would be safer to leave the resources hanging around and spill them instead
+							surface->memory_barrier(cmd, rsx::surface_access::memory_read);
+						}
 					}
 					else if (!surface->test())
 					{
 						// Remove this
 						invalidate(It->second);
 						It = data.erase(It);
+						continue;
 					}
-					else
-					{
-						++It;
-					}
+
+					++It;
 				}
 			};
 
