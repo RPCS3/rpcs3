@@ -481,7 +481,7 @@ VKGSRender::VKGSRender() : GSRender()
 	}
 
 	const auto& memory_map = m_device->get_memory_mapping();
-	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, memory_map.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0);
+	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, memory_map.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
 	vk::initialize_compiler_context();
@@ -2461,7 +2461,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		m_cond_render_buffer = std::make_unique<vk::buffer>(
 			*m_device, 4,
 			memory_props.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-			usage_flags, 0);
+			usage_flags, 0, VMM_ALLOCATION_POOL_UNDEFINED);
 	}
 
 	VkPipelineStageFlags dst_stage;

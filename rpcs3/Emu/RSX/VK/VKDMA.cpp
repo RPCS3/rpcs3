@@ -67,7 +67,8 @@ namespace vk
 
 		allocated_memory = std::make_unique<vk::buffer>(dev, size,
 			dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0);
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0,
+			VMM_ALLOCATION_POOL_UNDEFINED);
 
 		s_allocated_dma_pool_size += allocated_memory->size();
 	}

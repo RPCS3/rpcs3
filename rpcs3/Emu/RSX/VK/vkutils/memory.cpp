@@ -22,7 +22,10 @@ namespace vk
 		allocatorInfo.physicalDevice = pdev;
 		allocatorInfo.device = dev;
 
-		vmaCreateAllocator(&allocatorInfo, &m_allocator);
+		CHECK_RESULT(vmaCreateAllocator(&allocatorInfo, &m_allocator));
+
+		// Allow fastest possible allocation on start
+		set_fastest_allocation_flags();
 	}
 
 	void mem_allocator_vma::destroy()
@@ -30,7 +33,7 @@ namespace vk
 		vmaDestroyAllocator(m_allocator);
 	}
 
-	mem_allocator_vk::mem_handle_t mem_allocator_vma::alloc(u64 block_sz, u64 alignment, u32 memory_type_index)
+	mem_allocator_vk::mem_handle_t mem_allocator_vma::alloc(u64 block_sz, u64 alignment, u32 memory_type_index, vmm_allocation_pool pool)
 	{
 		VmaAllocation vma_alloc;
 		VkMemoryRequirements mem_req = {};
@@ -40,7 +43,7 @@ namespace vk
 		mem_req.size = ::align2(block_sz, alignment);
 		mem_req.alignment = alignment;
 		create_info.memoryTypeBits = 1u << memory_type_index;
-		create_info.flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_TIME_BIT;
+		create_info.flags = m_allocation_flags;
 
 		if (VkResult result = vmaAllocateMemory(m_allocator, &mem_req, &create_info, &vma_alloc, nullptr);
 			result != VK_SUCCESS)
@@ -62,7 +65,7 @@ namespace vk
 			}
 		}
 
-		vmm_notify_memory_allocated(vma_alloc, memory_type_index, block_sz);
+		vmm_notify_memory_allocated(vma_alloc, memory_type_index, block_sz, pool);
 		return vma_alloc;
 	}
 
@@ -123,7 +126,17 @@ namespace vk
 		return max_usage;
 	}
 
-	mem_allocator_vk::mem_handle_t mem_allocator_vk::alloc(u64 block_sz, u64 /*alignment*/, u32 memory_type_index)
+	void mem_allocator_vma::set_safest_allocation_flags()
+	{
+		m_allocation_flags = VMA_ALLOCATION_CREATE_STRATEGY_BEST_FIT_BIT;
+	}
+
+	void mem_allocator_vma::set_fastest_allocation_flags()
+	{
+		m_allocation_flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_TIME_BIT;
+	}
+
+	mem_allocator_vk::mem_handle_t mem_allocator_vk::alloc(u64 block_sz, u64 /*alignment*/, u32 memory_type_index, vmm_allocation_pool pool)
 	{
 		VkDeviceMemory memory;
 		VkMemoryAllocateInfo info = {};
@@ -149,7 +162,7 @@ namespace vk
 			}
 		}
 
-		vmm_notify_memory_allocated(memory, memory_type_index, block_sz);
+		vmm_notify_memory_allocated(memory, memory_type_index, block_sz, pool);
 		return memory;
 	}
 
@@ -191,11 +204,11 @@ namespace vk
 		return g_render_device->get_allocator();
 	}
 
-	memory_block::memory_block(VkDevice dev, u64 block_sz, u64 alignment, u32 memory_type_index)
-		: m_device(dev)
+	memory_block::memory_block(VkDevice dev, u64 block_sz, u64 alignment, u32 memory_type_index, vmm_allocation_pool pool)
+		: m_device(dev), m_size(block_sz)
 	{
 		m_mem_allocator = get_current_mem_allocator();
-		m_mem_handle    = m_mem_allocator->alloc(block_sz, alignment, memory_type_index);
+		m_mem_handle    = m_mem_allocator->alloc(block_sz, alignment, memory_type_index, pool);
 	}
 
 	memory_block::~memory_block()
@@ -257,6 +270,11 @@ namespace vk
 	u64 memory_block::get_vk_device_memory_offset()
 	{
 		return m_mem_allocator->get_vk_device_memory_offset(m_mem_handle);
+	}
+
+	u64 memory_block::size() const
+	{
+		return m_size;
 	}
 
 	void* memory_block::map(u64 offset, u64 size)

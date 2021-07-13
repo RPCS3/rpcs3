@@ -26,6 +26,7 @@ namespace vk
 				VK_IMAGE_TILING_OPTIMAL,
 				usage,
 				0,
+				VMM_ALLOCATION_POOL_SURFACE_CACHE,
 				format_class()));
 
 			resolve_surface->native_component_map = native_component_map;

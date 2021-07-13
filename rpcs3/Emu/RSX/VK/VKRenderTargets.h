@@ -9,6 +9,7 @@
 #include "vkutils/data_heap.h"
 #include "vkutils/device.h"
 #include "vkutils/image.h"
+#include "vkutils/memory.h"
 #include "vkutils/scratch.h"
 
 #include <span>
@@ -120,7 +121,7 @@ namespace rsx
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage_flags,
-				0, RSX_FORMAT_CLASS_COLOR);
+				0, vk::VMM_ALLOCATION_POOL_SURFACE_CACHE, RSX_FORMAT_CLASS_COLOR);
 
 			rtt->set_debug_name(fmt::format("RTV @0x%x", address));
 			rtt->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -181,7 +182,7 @@ namespace rsx
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage_flags,
-				0, rsx::classify_format(format));
+				0, vk::VMM_ALLOCATION_POOL_SURFACE_CACHE, rsx::classify_format(format));
 
 			ds->set_debug_name(fmt::format("DSV @0x%x", address));
 			ds->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
@@ -223,6 +224,7 @@ namespace rsx
 					VK_IMAGE_TILING_OPTIMAL,
 					ref->info.usage,
 					ref->info.flags,
+					vk::VMM_ALLOCATION_POOL_SURFACE_CACHE,
 					ref->format_class());
 
 				sink->add_ref();

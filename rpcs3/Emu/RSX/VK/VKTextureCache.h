@@ -576,7 +576,7 @@ namespace vk
 					dst_format,
 					w, h, d, mips, layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags,
-					rsx::classify_format(gcm_format));
+					VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
 			}
 
 			//This method is almost exclusively used to work on framebuffer resources
@@ -871,7 +871,7 @@ namespace vk
 					vk_format,
 					width, height, depth, mipmaps, layer, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_TILING_OPTIMAL, usage_flags, is_cubemap ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
-					rsx::classify_format(gcm_format));
+					VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
 
 				// New section, we must prepare it
 				region.reset(rsx_range);
@@ -1220,7 +1220,8 @@ namespace vk
 				VK_IMAGE_TYPE_2D,
 				format,
 				width, height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_PREINITIALIZED,
-				VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, 0);
+				VK_IMAGE_TILING_LINEAR, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+				0, VMM_ALLOCATION_POOL_TEXTURE_CACHE);
 
 			VkImageSubresource subresource{};
 			subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
