@@ -511,7 +511,7 @@ private:
 		VkSemaphore signal_semaphore = VK_NULL_HANDLE,
 		VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 
-	void flush_command_queue(bool hard_sync = false);
+	void flush_command_queue(bool hard_sync = false, bool do_not_switch = false);
 	void queue_swap_request();
 	void frame_context_cleanup(vk::frame_context_t *ctx, bool free_resources = false);
 	void advance_queued_frames();

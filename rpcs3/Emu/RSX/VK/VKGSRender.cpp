@@ -826,21 +826,65 @@ void VKGSRender::on_semaphore_acquire_wait()
 bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 {
 	ensure(!vk::is_uninterruptible() && rsx::get_current_renderer()->is_current_thread());
-	bool released = m_texture_cache.handle_memory_pressure(severity);
 
-	if (severity <= rsx::problem_severity::moderate)
+	bool texture_cache_relieved = false;
+	if (severity >= rsx::problem_severity::fatal && m_texture_cache.is_overallocated())
 	{
-		released |= m_rtts.handle_memory_pressure(*m_current_command_buffer, severity);
-		return released;
+		// Evict some unused textures. Do not evict any active references
+		std::set<u32> exclusion_list;
+		for (auto i = 0; i < rsx::limits::fragment_textures_count; ++i)
+		{
+			const auto& tex = rsx::method_registers.fragment_textures[i];
+			const auto addr = rsx::get_address(tex.offset(), tex.location());
+			exclusion_list.insert(addr);
+		}
+		for (auto i = 0; i < rsx::limits::vertex_textures_count; ++i)
+		{
+			const auto& tex = rsx::method_registers.vertex_textures[i];
+			const auto addr = rsx::get_address(tex.offset(), tex.location());
+			exclusion_list.insert(addr);
+		}
+
+		// Hold the secondary lock guard to prevent threads from trying to touch access violation handler stuff
+		std::lock_guard lock(m_secondary_cb_guard);
+
+		rsx_log.warning("Texture cache is overallocated. Will evict unnecessary textures.");
+		texture_cache_relieved = m_texture_cache.evict_unused(exclusion_list);
 	}
 
-	if (released && severity >= rsx::problem_severity::fatal)
+	texture_cache_relieved |= m_texture_cache.handle_memory_pressure(severity);
+	if (severity == rsx::problem_severity::low)
+	{
+		// Low severity only handles invalidating unused textures
+		return texture_cache_relieved;
+	}
+
+	bool surface_cache_relieved = false;
+	if (severity >= rsx::problem_severity::moderate)
+	{
+		// Check if we need to spill
+		if (severity >= rsx::problem_severity::fatal && m_rtts.is_overallocated())
+		{
+			// Queue a VRAM spill operation.
+			m_rtts.spill_unused_memory();
+		}
+
+		// Moderate severity and higher also starts removing stale render target objects
+		if (m_rtts.handle_memory_pressure(*m_current_command_buffer, severity))
+		{
+			surface_cache_relieved = true;
+			m_rtts.free_invalidated(*m_current_command_buffer, severity);
+		}
+	}
+
+	const bool any_cache_relieved = (texture_cache_relieved || surface_cache_relieved);
+	if (any_cache_relieved && severity >= rsx::problem_severity::fatal)
 	{
 		// Imminent crash, full GPU sync is the least of our problems
-		flush_command_queue(true);
+		flush_command_queue(true, true);
 	}
 
-	return released;
+	return any_cache_relieved;
 }
 
 void VKGSRender::notify_tile_unbound(u32 tile)
@@ -1334,7 +1378,7 @@ void VKGSRender::clear_surface(u32 mask)
 	}
 }
 
-void VKGSRender::flush_command_queue(bool hard_sync)
+void VKGSRender::flush_command_queue(bool hard_sync, bool do_not_switch)
 {
 	close_and_submit_command_buffer(m_current_command_buffer->submit_fence);
 
@@ -1365,17 +1409,25 @@ void VKGSRender::flush_command_queue(bool hard_sync)
 		m_current_command_buffer->pending = true;
 	}
 
-	// Grab next cb in line and make it usable
-	// NOTE: Even in the case of a hard sync, this is required to free any waiters on the CB (ZCULL)
-	m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
-	m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
-
-	if (!m_current_command_buffer->poke())
+	if (!do_not_switch)
 	{
-		rsx_log.error("CB chain has run out of free entries!");
-	}
+		// Grab next cb in line and make it usable
+		// NOTE: Even in the case of a hard sync, this is required to free any waiters on the CB (ZCULL)
+		m_current_cb_index = (m_current_cb_index + 1) % VK_MAX_ASYNC_CB_COUNT;
+		m_current_command_buffer = &m_primary_cb_list[m_current_cb_index];
 
-	m_current_command_buffer->reset();
+		if (!m_current_command_buffer->poke())
+		{
+			rsx_log.error("CB chain has run out of free entries!");
+		}
+
+		m_current_command_buffer->reset();
+	}
+	else
+	{
+		// Special hard-sync where we must preserve the CB. This can happen when an emergency event handler is invoked and needs to flush to hw.
+		ensure(hard_sync);
+	}
 
 	// Just in case a queued frame holds a ref to this cb, drain the present queue
 	check_present_status();
