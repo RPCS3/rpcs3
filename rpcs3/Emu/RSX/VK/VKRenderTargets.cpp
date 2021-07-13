@@ -1,7 +1,128 @@
 #include "VKRenderTargets.h"
+#include "VKResourceManager.h"
 
 namespace vk
 {
+	void surface_cache::destroy()
+	{
+		invalidate_all();
+		invalidated_resources.clear();
+	}
+
+	u64 surface_cache::get_surface_cache_memory_quota(u64 total_device_memory)
+	{
+		total_device_memory /= 0x100000;
+		u64 quota = 0;
+
+		if (total_device_memory >= 2048)
+		{
+			quota = std::min(6144ull, (total_device_memory * 40) / 100);
+		}
+		else if (total_device_memory >= 1024)
+		{
+			quota = 768;
+		}
+		else if (total_device_memory >= 768)
+		{
+			quota = 256;
+		}
+		else
+		{
+			// Remove upto 128MB but at least aim for half of available VRAM
+			quota = std::min(128ull, total_device_memory / 2);
+		}
+
+		return quota * 0x100000;
+	}
+
+	bool surface_cache::can_collapse_surface(const std::unique_ptr<vk::render_target>& surface)
+	{
+		if (surface->samples() == 1)
+		{
+			return true;
+		}
+
+		// MSAA surface, check if we have the memory for this...
+		return vk::vmm_determine_memory_load_severity() < rsx::problem_severity::fatal;
+	}
+
+	bool surface_cache::handle_memory_pressure(vk::command_buffer& cmd, rsx::problem_severity severity)
+	{
+		bool any_released = rsx::surface_store<surface_cache_traits>::handle_memory_pressure(cmd, severity);
+
+		if (severity >= rsx::problem_severity::fatal)
+		{
+			// TODO
+		}
+
+		return any_released;
+	}
+
+	void surface_cache::free_invalidated(vk::command_buffer& cmd, rsx::problem_severity memory_pressure)
+	{
+		// Do not allow more than 300M of RSX memory to be used by RTTs.
+		// The actual boundary is 256M but we need to give some overallocation for performance reasons.
+		if (check_memory_usage(300 * 0x100000))
+		{
+			if (!cmd.is_recording())
+			{
+				cmd.begin();
+			}
+
+			const auto severity = std::max(memory_pressure, rsx::problem_severity::moderate);
+			handle_memory_pressure(cmd, severity);
+		}
+
+		const u64 last_finished_frame = vk::get_last_completed_frame_id();
+		invalidated_resources.remove_if([&](std::unique_ptr<vk::render_target>& rtt)
+		{
+			ensure(rtt->frame_tag != 0);
+
+			if (rtt->has_refs())
+			{
+				// Actively in use, likely for a reading pass.
+				// Call handle_memory_pressure before calling this method.
+				return false;
+			}
+
+			if (memory_pressure >= rsx::problem_severity::severe)
+			{
+				if (rtt->resolve_surface)
+				{
+					// We do not need to keep resolve targets around if things are bad.
+					vk::get_resource_manager()->dispose(rtt->resolve_surface);
+				}
+			}
+
+			if (rtt->frame_tag >= last_finished_frame)
+			{
+				// RTT itself still in use by the frame.
+				return false;
+			}
+
+			switch (memory_pressure)
+			{
+			case rsx::problem_severity::low:
+				return (rtt->unused_check_count() >= 2);
+			case rsx::problem_severity::moderate:
+				return (rtt->unused_check_count() >= 1);
+			case rsx::problem_severity::severe:
+			case rsx::problem_severity::fatal:
+				// We're almost dead anyway. Remove forcefully.
+				return true;
+			default:
+				fmt::throw_exception("Unreachable");
+			}
+		});
+	}
+
+	bool surface_cache::is_overallocated()
+	{
+		const auto surface_cache_vram_load = vmm_get_application_pool_usage(VMM_ALLOCATION_POOL_SURFACE_CACHE);
+		const auto surface_cache_allocation_quota = get_surface_cache_memory_quota(get_current_renderer()->get_memory_mapping().device_local_total_bytes);
+		return (surface_cache_vram_load > surface_cache_allocation_quota);
+	}
+
 	// Get the linear resolve target bound to this surface. Initialize if none exists
 	vk::viewable_image* render_target::get_resolve_target_safe(vk::command_buffer& cmd)
 	{

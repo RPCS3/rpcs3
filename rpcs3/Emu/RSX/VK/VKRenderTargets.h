@@ -6,10 +6,10 @@
 #include "VKFormats.h"
 #include "VKHelpers.h"
 #include "vkutils/barriers.h"
+#include "vkutils/buffer_object.h"
 #include "vkutils/data_heap.h"
 #include "vkutils/device.h"
 #include "vkutils/image.h"
-#include "vkutils/memory.h"
 #include "vkutils/scratch.h"
 
 #include <span>
@@ -42,6 +42,7 @@ namespace vk
 
 	public:
 		u64 frame_tag = 0; // frame id when invalidated, 0 if not invalid
+
 		using viewable_image::viewable_image;
 
 		vk::viewable_image* get_surface(rsx::surface_access access_type) override;
@@ -78,7 +79,7 @@ namespace vk
 			rsx::surface_color_format format,
 			usz width, usz height, usz pitch,
 			rsx::surface_antialiasing antialias,
-			vk::render_device &device, vk::command_buffer& cmd)
+			vk::render_device& device, vk::command_buffer& cmd)
 		{
 			const auto fmt = vk::get_compatible_surface_format(format);
 			VkFormat requested_format = fmt.first;
@@ -118,7 +119,7 @@ namespace vk
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage_flags,
-				0, vk::VMM_ALLOCATION_POOL_SURFACE_CACHE, RSX_FORMAT_CLASS_COLOR);
+				0, VMM_ALLOCATION_POOL_SURFACE_CACHE, RSX_FORMAT_CLASS_COLOR);
 
 			rtt->set_debug_name(fmt::format("RTV @0x%x", address));
 			rtt->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -144,7 +145,7 @@ namespace vk
 			rsx::surface_depth_format2 format,
 			usz width, usz height, usz pitch,
 			rsx::surface_antialiasing antialias,
-			vk::render_device &device, vk::command_buffer& cmd)
+			vk::render_device& device, vk::command_buffer& cmd)
 		{
 			const VkFormat requested_format = vk::get_compatible_depth_surface_format(device.get_formats_support(), format);
 			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -179,7 +180,7 @@ namespace vk
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage_flags,
-				0, vk::VMM_ALLOCATION_POOL_SURFACE_CACHE, rsx::classify_format(format));
+				0, VMM_ALLOCATION_POOL_SURFACE_CACHE, rsx::classify_format(format));
 
 			ds->set_debug_name(fmt::format("DSV @0x%x", address));
 			ds->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
@@ -187,7 +188,7 @@ namespace vk
 			ds->set_format(format);
 			ds->set_aa_mode(antialias);
 			ds->sample_layout = sample_layout;
-			ds->memory_usage_flags= rsx::surface_usage_flags::attachment;
+			ds->memory_usage_flags = rsx::surface_usage_flags::attachment;
 			ds->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			ds->native_component_map = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
 			ds->native_pitch = static_cast<u16>(width) * get_format_block_size_in_bytes(format) * ds->samples_x;
@@ -221,7 +222,7 @@ namespace vk
 					VK_IMAGE_TILING_OPTIMAL,
 					ref->info.usage,
 					ref->info.flags,
-					vk::VMM_ALLOCATION_POOL_SURFACE_CACHE,
+					VMM_ALLOCATION_POOL_SURFACE_CACHE,
 					ref->format_class());
 
 				sink->add_ref();
@@ -274,7 +275,7 @@ namespace vk
 					surface->get_surface_height() >= height);
 		}
 
-		static void prepare_surface_for_drawing(vk::command_buffer& cmd, vk::render_target *surface)
+		static void prepare_surface_for_drawing(vk::command_buffer& cmd, vk::render_target* surface)
 		{
 			if (surface->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
 			{
@@ -292,12 +293,12 @@ namespace vk
 		static void prepare_surface_for_sampling(vk::command_buffer& /*cmd*/, vk::render_target* /*surface*/)
 		{}
 
-		static bool surface_is_pitch_compatible(const std::unique_ptr<vk::render_target> &surface, usz pitch)
+		static bool surface_is_pitch_compatible(const std::unique_ptr<vk::render_target>& surface, usz pitch)
 		{
 			return surface->rsx_pitch == pitch;
 		}
 
-		static void invalidate_surface_contents(vk::command_buffer& /*cmd*/, vk::render_target *surface, u32 address, usz pitch)
+		static void invalidate_surface_contents(vk::command_buffer& /*cmd*/, vk::render_target* surface, u32 address, usz pitch)
 		{
 			surface->rsx_pitch = static_cast<u16>(pitch);
 			surface->queue_tag(address);
@@ -307,7 +308,7 @@ namespace vk
 			surface->raster_type = rsx::surface_raster_type::linear;
 		}
 
-		static void notify_surface_invalidated(const std::unique_ptr<vk::render_target> &surface)
+		static void notify_surface_invalidated(const std::unique_ptr<vk::render_target>& surface)
 		{
 			surface->frame_tag = vk::get_current_frame_id();
 			if (!surface->frame_tag) surface->frame_tag = 1;
@@ -324,14 +325,14 @@ namespace vk
 		static void notify_surface_persist(const std::unique_ptr<vk::render_target>& /*surface*/)
 		{}
 
-		static void notify_surface_reused(const std::unique_ptr<vk::render_target> &surface)
+		static void notify_surface_reused(const std::unique_ptr<vk::render_target>& surface)
 		{
 			surface->state_flags |= rsx::surface_state_flags::erase_bkgnd;
 			surface->add_ref();
 		}
 
 		static bool int_surface_matches_properties(
-			const std::unique_ptr<vk::render_target> &surface,
+			const std::unique_ptr<vk::render_target>& surface,
 			VkFormat format,
 			usz width, usz height,
 			rsx::surface_antialiasing antialias,
@@ -349,7 +350,7 @@ namespace vk
 		}
 
 		static bool surface_matches_properties(
-			const std::unique_ptr<vk::render_target> &surface,
+			const std::unique_ptr<vk::render_target>& surface,
 			rsx::surface_color_format format,
 			usz width, usz height,
 			rsx::surface_antialiasing antialias,
@@ -360,7 +361,7 @@ namespace vk
 		}
 
 		static bool surface_matches_properties(
-			const std::unique_ptr<vk::render_target> &surface,
+			const std::unique_ptr<vk::render_target>& surface,
 			rsx::surface_depth_format2 format,
 			usz width, usz height,
 			rsx::surface_antialiasing antialias,
@@ -371,43 +372,22 @@ namespace vk
 			return int_surface_matches_properties(surface, vk_format, width, height, antialias, check_refs);
 		}
 
-		static vk::render_target *get(const std::unique_ptr<vk::render_target> &tex)
+		static vk::render_target* get(const std::unique_ptr<vk::render_target>& tex)
 		{
 			return tex.get();
 		}
 	};
 
-	struct surface_cache : public rsx::surface_store<vk::surface_cache_traits>
+	class surface_cache : public rsx::surface_store<vk::surface_cache_traits>
 	{
-		void destroy()
-		{
-			invalidate_all();
-			invalidated_resources.clear();
-		}
+	private:
+		u64 get_surface_cache_memory_quota(u64 total_device_memory);
 
-		void free_invalidated(vk::command_buffer& cmd)
-		{
-			// Do not allow more than 256M of RSX memory to be used by RTTs
-			if (check_memory_usage(256 * 0x100000))
-			{
-				if (!cmd.is_recording())
-				{
-					cmd.begin();
-				}
-
-				handle_memory_pressure(cmd, rsx::problem_severity::moderate);
-			}
-
-			const u64 last_finished_frame = vk::get_last_completed_frame_id();
-			invalidated_resources.remove_if([&](std::unique_ptr<vk::render_target> &rtt)
-			{
-				ensure(rtt->frame_tag != 0);
-
-				if (rtt->unused_check_count() >= 2 && rtt->frame_tag < last_finished_frame)
-					return true;
-
-				return false;
-			});
-		}
+	public:
+		void destroy();
+		bool is_overallocated();
+		bool can_collapse_surface(const std::unique_ptr<vk::render_target>& surface) override;
+		bool handle_memory_pressure(vk::command_buffer& cmd, rsx::problem_severity severity) override;
+		void free_invalidated(vk::command_buffer& cmd, rsx::problem_severity memory_pressure);
 	};
 }
