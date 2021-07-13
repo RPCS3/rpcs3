@@ -84,7 +84,8 @@ namespace vk
 				dev.get_memory_mapping().host_visible_coherent,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 				VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-				0
+				0,
+				VMM_ALLOCATION_POOL_SYSTEM
 			);
 
 			m_value = reinterpret_cast<u32*>(m_buffer->map(0, 4));

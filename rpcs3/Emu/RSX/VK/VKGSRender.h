@@ -365,6 +365,8 @@ private:
 		deadlock = 2
 	};
 
+	using enum vk::vmm_allocation_pool;
+
 private:
 	VKFragmentProgram m_fragment_prog;
 	VKVertexProgram m_vertex_prog;

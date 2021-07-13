@@ -54,7 +54,7 @@ namespace vk
 		return size / (1024.f * 1024.f * 1024.f);
 	}
 
-	void vmm_notify_memory_allocated(void* handle, u32 memory_type, u64 memory_size)
+	void vmm_notify_memory_allocated(void* handle, u32 memory_type, u64 memory_size, vmm_allocation_pool pool)
 	{
 		auto key = reinterpret_cast<uptr>(handle);
 		const vmm_allocation_t info = { memory_size, memory_type };
