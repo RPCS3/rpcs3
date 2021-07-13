@@ -115,6 +115,8 @@ struct RsxReports
 
 struct RsxDisplayInfo
 {
+	using enable_bitcopy = std::true_type;
+
 	be_t<u32> offset;
 	be_t<u32> pitch;
 	be_t<u32> width;

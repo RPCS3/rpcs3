@@ -131,6 +131,9 @@ LOG_CHANNEL(sys_time);
 
 static constexpr u64 g_timebase_freq = /*79800000*/ 80000000ull; // 80 Mhz
 
+extern u64 g_timebased_offs;
+extern u64 g_systemtime_offs;
+
 // Auxiliary functions
 u64 get_timebased_time()
 {
@@ -141,13 +144,14 @@ u64 get_timebased_time()
 	const u64 time = count.QuadPart;
 	const u64 freq = s_time_aux_info.perf_freq;
 
-	return (time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u;
+	const u64 result = (time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u;
 #else
 	struct timespec ts;
 	ensure(::clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
 
-	return (static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000ull) * g_cfg.core.clocks_scale / 100u;
+	const u64 result = (static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000ull) * g_cfg.core.clocks_scale / 100u;
 #endif
+	return result + g_timebased_offs;
 }
 
 // Returns some relative time in microseconds, don't change this fact
@@ -177,7 +181,7 @@ u64 get_system_time()
 // As get_system_time but obeys Clocks scaling setting
 u64 get_guest_system_time()
 {
-	return get_system_time() * g_cfg.core.clocks_scale / 100;
+	return get_system_time() * g_cfg.core.clocks_scale / 100 + g_systemtime_offs;
 }
 
 // Functions

@@ -60,6 +60,9 @@ struct lv2_timer : lv2_obj
 			info.period      = 0;
 		}
 	}
+
+	lv2_timer(utils::serial& ar);
+	void save(utils::serial& ar);
 };
 
 class ppu_thread;

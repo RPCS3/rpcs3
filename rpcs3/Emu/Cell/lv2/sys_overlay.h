@@ -8,6 +8,11 @@ struct lv2_overlay final : lv2_obj, ppu_module
 	static const u32 id_base = 0x25000000;
 
 	u32 entry;
+
+	lv2_overlay() = default;
+	lv2_overlay(utils::serial& ar){}
+	static std::shared_ptr<void> load(utils::serial& ar);
+	void save(utils::serial& ar);
 };
 
 error_code sys_overlay_load_module(vm::ptr<u32> ovlmid, vm::cptr<char> path, u64 flags, vm::ptr<u32> entry);

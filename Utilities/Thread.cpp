@@ -1576,7 +1576,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 				ppu_log.fatal("Function aborted: %s", last_func);
 			}
 
-			lv2_obj::sleep(*cpu);
+			//lv2_obj::sleep(*cpu);
 		}
 	}
 

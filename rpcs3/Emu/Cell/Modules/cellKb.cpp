@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/IdManager.h"
+#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Io/KeyboardHandler.h"
@@ -29,6 +30,28 @@ void fmt_class_string<CellKbError>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+
+KeyboardHandlerBase::KeyboardHandlerBase(utils::serial& ar)
+{
+	ar(m_info.max_connect);
+
+	if (m_info.max_connect)
+	{
+		Emu.DeferDeserialization([this]()
+		{
+			Init(m_info.max_connect);
+			auto _ = init.init();
+		});
+	}
+}
+
+void KeyboardHandlerBase::save(utils::serial& ar)
+{
+	const auto inited = init.access();
+
+	ar(inited ? m_info.max_connect : 0);
 }
 
 error_code cellKbInit(u32 max_connect)

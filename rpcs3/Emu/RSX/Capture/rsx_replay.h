@@ -11,7 +11,7 @@ namespace rsx
 	enum : u32
 	{
 		c_fc_magic = "RRC"_u32,
-		c_fc_version = 0x5,
+		c_fc_version = 0x6,
 	};
 
 	struct frame_capture_data

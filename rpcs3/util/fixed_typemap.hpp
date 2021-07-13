@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 // Backported from auto_typemap.hpp as a more simple alternative
 
@@ -58,14 +58,30 @@ namespace stx
 		// Save default constructor and destructor and optional joining operation
 		struct typeinfo
 		{
-			bool(*create)(uchar* ptr, manual_typemap&) noexcept = nullptr;
+			bool(*create)(uchar* ptr, manual_typemap&, utils::serial*) noexcept = nullptr;
 			void(*stop)(void* ptr, thread_state) noexcept = nullptr;
+			void(*save)(void* ptr, utils::serial&) noexcept = nullptr;
 			void(*destroy)(void* ptr) noexcept = nullptr;
-			std::string_view name{};
+			std::string_view name;
 
 			template <typename T>
-			static bool call_ctor(uchar* ptr, manual_typemap& _this) noexcept
+			static bool call_ctor(uchar* ptr, manual_typemap& _this, utils::serial* ar) noexcept
 			{
+				if (ar)
+				{
+					if constexpr (std::is_constructible_v<T, manual_typemap&, exact_t<utils::serial&>>)
+					{
+						new (ptr) T(_this, exact_t<utils::serial&>(*ar));
+						return true;
+					}
+
+					if constexpr (std::is_constructible_v<T, exact_t<utils::serial&>>)
+					{
+						new (ptr) T(exact_t<utils::serial&>(*ar));
+						return true;
+					}
+				}
+
 				// Allow passing reference to "this"
 				if constexpr (std::is_constructible_v<T, manual_typemap&>)
 				{
@@ -97,6 +113,12 @@ namespace stx
 			}
 
 			template <typename T>
+			static void call_save(void* ptr, utils::serial& ar) noexcept
+			{
+				std::launder(static_cast<T*>(ptr))->save(stx::exact_t<utils::serial&>(ar));
+			}
+
+			template <typename T>
 			static typeinfo make_typeinfo()
 			{
 				static_assert(!std::is_copy_assignable_v<T> && !std::is_copy_constructible_v<T>, "Please make sure the object cannot be accidentally copied.");
@@ -110,6 +132,10 @@ namespace stx
 					r.stop = &call_stop<T>;
 				}
 
+				if constexpr (std::is_constructible_v<T, exact_t<utils::serial&>> || std::is_constructible_v<T, manual_typemap&, exact_t<utils::serial&>>)
+				{
+					r.save = &call_save<T>;
+				}
 #ifdef _MSC_VER
 				constexpr std::string_view name = parse_type(__FUNCSIG__);
 #else
@@ -181,7 +207,7 @@ namespace stx
 			*m_info++ = nullptr;
 		}
 
-		void init(bool reset = true)
+		void init(bool reset = true, utils::serial* ar = nullptr)
 		{
 			if (reset)
 			{
@@ -199,7 +225,7 @@ namespace stx
 					continue;
 				}
 
-				if (type.create(data, *this))
+				if (type.create(data, *this, ar))
 				{
 					*m_order++ = data;
 					*m_info++ = &type;
@@ -259,6 +285,32 @@ namespace stx
 			if constexpr (Size == 0)
 			{
 				m_list = nullptr;
+			}
+		}
+
+		void save(utils::serial& ar)
+		{
+			if (!m_init)
+			{
+				return;
+			}
+
+			// Get actual number of created objects
+			u32 _max = 0;
+
+			for (const auto& type : stx::typelist<typeinfo>())
+			{
+				if (m_init[type.index()])
+				{
+					// Skip object if not created
+					_max++;
+				}
+			}
+
+			// Save data in forward order
+			for (u32 i = _max; i; i--)
+			{
+				if (auto save = (*std::prev(m_info, i))->save) save(*std::prev(m_order, i), ar);
 			}
 		}
 
@@ -335,6 +387,12 @@ namespace stx
 			{
 				return *std::launder(reinterpret_cast<T*>(m_list + stx::typeoffset<typeinfo, std::decay_t<T>>()));
 			}
+		}
+
+		template <typename T, typename As = T>
+		static std::string_view get_name() noexcept
+		{
+			return stx::typedata<typeinfo, std::decay_t<T>, std::decay_t<As>>().name;
 		}
 
 		// Obtain object pointer if initialized

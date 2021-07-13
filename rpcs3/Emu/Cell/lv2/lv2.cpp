@@ -1112,6 +1112,7 @@ DECLARE(lv2_obj::g_mutex);
 DECLARE(lv2_obj::g_ppu);
 DECLARE(lv2_obj::g_pending);
 DECLARE(lv2_obj::g_waiting);
+DECLARE(lv2_obj::g_to_sleep);
 
 thread_local DECLARE(lv2_obj::g_to_awake);
 
@@ -1169,6 +1170,30 @@ void lv2_obj::sleep_unlocked(cpu_thread& thread, u64 timeout)
 		// Find and remove the thread
 		if (!unqueue(g_ppu, ppu))
 		{
+			if (unqueue(g_to_sleep, ppu))
+			{
+				ppu->start_time = start_time;
+
+				std::string out = fmt::format("Threads (%d):", g_to_sleep.size());
+				for (auto thread : g_to_sleep)
+				{
+					fmt::append(out, " 0x%x,", thread->id);
+				}
+
+				ppu_log.warning("%s", out);
+
+				if (g_to_sleep.empty())
+				{
+					Emu.CallAfter([]
+					{
+						if (Emu.IsStarting())
+						{
+							Emu.FinalizeRunRequest();
+						}
+					});
+				}
+			}
+
 			// Already sleeping
 			ppu_log.trace("sleep(): called on already sleeping thread.");
 			return;
@@ -1351,11 +1376,12 @@ void lv2_obj::cleanup()
 	g_ppu.clear();
 	g_pending.clear();
 	g_waiting.clear();
+	g_to_sleep.clear();
 }
 
 void lv2_obj::schedule_all()
 {
-	if (g_pending.empty())
+	if (g_pending.empty() && g_to_sleep.empty())
 	{
 		// Wake up threads
 		for (usz i = 0, x = std::min<usz>(g_cfg.core.ppu_threads, g_ppu.size()); i < x; i++)
@@ -1399,7 +1425,7 @@ ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_l
 		opt_lock[0].emplace(id_manager::g_mutex);
 	}
 
-	if (ppu->state & cpu_flag::stop)
+	if ((!Emu.IsReady()) ? ppu->state.all_of(cpu_flag::stop) : ppu->stop_flag_removal_protection)
 	{
 		return PPU_THREAD_STATUS_IDLE;
 	}
@@ -1420,6 +1446,11 @@ ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_l
 
 	if (it == g_ppu.end())
 	{
+		if (!ppu->interrupt_thread_executing)
+		{
+			return PPU_THREAD_STATUS_STOP;
+		}
+
 		return PPU_THREAD_STATUS_SLEEP;
 	}
 
@@ -1429,4 +1460,15 @@ ppu_thread_status lv2_obj::ppu_state(ppu_thread* ppu, bool lock_idm, bool lock_l
 	}
 
 	return PPU_THREAD_STATUS_ONPROC;
+}
+
+void lv2_obj::set_future_sleep(ppu_thread* ppu)
+{
+	g_to_sleep.emplace_back(ppu);
+}
+
+bool lv2_obj::is_scheduler_ready()
+{
+	reader_lock lock(g_mutex);
+	return g_to_sleep.empty();
 }

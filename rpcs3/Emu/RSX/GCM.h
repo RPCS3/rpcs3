@@ -99,6 +99,8 @@ struct CellGcmTileInfo
 
 struct GcmZcullInfo
 {
+	using enable_bitcopy = std::true_type;
+
 	u32 offset;
 	u32 width;
 	u32 height;
@@ -129,6 +131,8 @@ struct GcmZcullInfo
 
 struct GcmTileInfo
 {
+	using enable_bitcopy = std::true_type;
+
 	u32 location;
 	u32 offset;
 	u32 size;

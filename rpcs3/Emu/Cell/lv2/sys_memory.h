@@ -72,6 +72,11 @@ struct lv2_memory_container
 
 	lv2_memory_container(u32 size, bool from_idm = false) noexcept;
 
+	lv2_memory_container(utils::serial& ar, bool from_idm = false) noexcept;
+	static std::shared_ptr<void> load(utils::serial& ar);
+	void save(utils::serial& ar);
+	static lv2_memory_container* search(u32 id);
+
 	// Try to get specified amount of "physical" memory
 	// Values greater than UINT32_MAX will fail
 	u32 take(u64 amount)

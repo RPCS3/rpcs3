@@ -15,7 +15,7 @@
 #include "sys_memory.h"
 #include <span>
 
-extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64);
+extern std::shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, const std::string&, s64, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx& prx);
 extern bool ppu_initialize(const ppu_module&, bool = false);
 extern void ppu_finalize(const ppu_module&);
@@ -237,7 +237,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		prx->name = std::move(name);
 		prx->path = std::move(path);
 
-		sys_prx.warning(u8"Ignored module: “%s” (id=0x%x)", vpath, idm::last_id());
+		sys_prx.warning(u8"Ignored module: â€œ%sâ€ (id=0x%x)", vpath, idm::last_id());
 
 		return not_an_error(idm::last_id());
 	};
@@ -255,7 +255,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		{
 			if (fs_error + 0u == CELL_ENOENT && is_firmware_sprx)
 			{
-				sys_prx.error(u8"firmware SPRX not found: “%s” (forcing HLE implementation)", vpath, idm::last_id());
+				sys_prx.error(u8"firmware SPRX not found: â€œ%sâ€ (forcing HLE implementation)", vpath, idm::last_id());
 				return hle_load();
 			}
 
@@ -285,9 +285,79 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	ppu_initialize(*prx);
 
-	sys_prx.success(u8"Loaded module: “%s” (id=0x%x)", vpath, idm::last_id());
+	sys_prx.success(u8"Loaded module: â€œ%sâ€ (id=0x%x)", vpath, idm::last_id());
 
 	return not_an_error(idm::last_id());
+}
+
+fs::file make_file_view(fs::file&& _file, u64 offset);
+
+std::shared_ptr<void> lv2_prx::load(utils::serial& ar)
+{
+	const std::string path = vfs::get(ar.operator std::string());
+	const s64 offset = ar;
+	const u32 state = ar;
+
+	usz seg_count = 0;
+	ar.deserialize_vle(seg_count);
+
+	std::shared_ptr<lv2_prx> prx;
+
+	auto hle_load = [&]()
+	{
+		prx = std::make_shared<lv2_prx>();
+		prx->path = path;
+		prx->name = path.substr(path.find_last_of(fs::delim) + 1);
+	};
+
+	if (seg_count)
+	{
+		fs::file file{path.substr(0, path.size() - (offset ? fmt::format("_x%x", offset).size() : 0))};
+
+		if (file)
+		{
+			u128 klic = g_fxo->get<loaded_npdrm_keys>().devKlic.load();
+			file = make_file_view(std::move(file), offset);
+			prx = ppu_load_prx(ppu_prx_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, path, 0, &ar);
+			ensure(prx);
+		}
+		else
+		{
+			ensure(g_cfg.savestate.state_inspection_mode.get());
+
+			hle_load();
+
+			// Partially recover information
+			for (usz i = 0; i < seg_count; i++)
+			{
+				auto& seg = prx->segs.emplace_back();
+				seg.addr = ar;
+				seg.size = 1; // TODO
+			}
+		}
+	}
+	else
+	{
+		hle_load();
+	}
+
+	prx->state = state;
+	return std::move(prx);
+}
+
+void lv2_prx::save(utils::serial& ar)
+{
+	USING_SERIALIZATION_VERSION(lv2_prx_overlay);
+
+	ar(vfs::retrieve(path), offset, state);
+
+	// Save segments count
+	ar.serialize_vle(segs.size());
+
+	for (const ppu_segment& seg : segs)
+	{
+		if (seg.type == 0x1u && seg.size) ar(seg.addr);
+	}
 }
 
 error_code sys_prx_get_ppu_guid(ppu_thread& ppu)

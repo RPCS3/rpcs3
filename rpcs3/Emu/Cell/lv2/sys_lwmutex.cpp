@@ -8,11 +8,24 @@
 
 LOG_CHANNEL(sys_lwmutex);
 
+lv2_lwmutex::lv2_lwmutex(utils::serial& ar)
+	: protocol(ar)
+	, control(ar.operator decltype(control)())
+	, name(ar.operator be_t<u64>())
+	, signaled(ar)
+{
+}
+
+void lv2_lwmutex::save(utils::serial& ar)
+{
+	ar(protocol, control, name, signaled);
+}
+
 error_code _sys_lwmutex_create(ppu_thread& ppu, vm::ptr<u32> lwmutex_id, u32 protocol, vm::ptr<sys_lwmutex_t> control, s32 has_name, u64 name)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_lwmutex.warning(u8"_sys_lwmutex_create(lwmutex_id=*0x%x, protocol=0x%x, control=*0x%x, has_name=0x%x, name=0x%llx (“%s”))", lwmutex_id, protocol, control, has_name, name, lv2_obj::name64(std::bit_cast<be_t<u64>>(name)));
+	sys_lwmutex.warning(u8"_sys_lwmutex_create(lwmutex_id=*0x%x, protocol=0x%x, control=*0x%x, has_name=0x%x, name=0x%llx (Ã¢â‚¬Å“%sÃ¢â‚¬Â))", lwmutex_id, protocol, control, has_name, name, lv2_obj::name64(std::bit_cast<be_t<u64>>(name)));
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_RETRY && protocol != SYS_SYNC_PRIORITY)
 	{
@@ -77,6 +90,7 @@ error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id)
 
 			if (ppu.is_stopped())
 			{
+				ppu.state += cpu_flag::incomplete_syscall;
 				return {};
 			}
 		}
@@ -155,14 +169,22 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 
 	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (is_stopped(state))
-		{
-			return {};
-		}
-
 		if (state & cpu_flag::signal)
 		{
 			break;
+		}
+
+		if (is_stopped(state))
+		{
+			std::lock_guard lock(mutex->mutex);
+
+			if (std::find(mutex->sq.begin(), mutex->sq.end(), &ppu) == mutex->sq.end())
+			{
+				break;
+			}
+
+			ppu.state += cpu_flag::incomplete_syscall;
+			return {};
 		}
 
 		if (timeout)
@@ -172,7 +194,7 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return {};
+					continue;
 				}
 
 				std::lock_guard lock(mutex->mutex);
@@ -242,6 +264,13 @@ error_code _sys_lwmutex_unlock(ppu_thread& ppu, u32 lwmutex_id)
 
 		if (const auto cpu = mutex.schedule<ppu_thread>(mutex.sq, mutex.protocol))
 		{
+			if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::incomplete_syscall)
+			{
+				ppu.state += cpu_flag::incomplete_syscall;
+				ppu.state += cpu_flag::exit;
+				return;
+			}
+
 			mutex.awake(cpu);
 			return;
 		}
@@ -269,6 +298,13 @@ error_code _sys_lwmutex_unlock2(ppu_thread& ppu, u32 lwmutex_id)
 
 		if (const auto cpu = mutex.schedule<ppu_thread>(mutex.sq, mutex.protocol))
 		{
+			if (static_cast<ppu_thread*>(cpu)->state & cpu_flag::incomplete_syscall)
+			{
+				ppu.state += cpu_flag::incomplete_syscall;
+				ppu.state += cpu_flag::exit;
+				return;
+			}
+
 			static_cast<ppu_thread*>(cpu)->gpr[3] = CELL_EBUSY;
 			mutex.awake(cpu);
 			return;

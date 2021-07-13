@@ -188,6 +188,7 @@
     </widget>
     <addaction name="bootElfAct"/>
     <addaction name="bootGameAct"/>
+    <addaction name="bootSavestateAct"/>
     <addaction name="bootRecentMenu"/>
     <addaction name="separator"/>
     <addaction name="addGamesAct"/>
@@ -400,6 +401,11 @@
   <action name="bootGameAct">
    <property name="text">
     <string>Boot Game</string>
+   </property>
+  </action>
+  <action name="bootSavestateAct">
+   <property name="text">
+    <string>Boot Savestate</string>
    </property>
   </action>
   <action name="bootInstallPkgAct">

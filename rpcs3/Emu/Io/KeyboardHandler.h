@@ -93,6 +93,10 @@ public:
 
 	virtual ~KeyboardHandlerBase() = default;
 
+	KeyboardHandlerBase() = default;
+	KeyboardHandlerBase(utils::serial& ar);
+	void save(utils::serial& ar);
+
 	void Key(u32 code, bool pressed);
 	void SetIntercepted(bool intercepted);
 
@@ -109,6 +113,6 @@ public:
 protected:
 	void ReleaseAllKeys();
 
-	KbInfo m_info;
+	KbInfo m_info{};
 	std::vector<Keyboard> m_keyboards;
 };

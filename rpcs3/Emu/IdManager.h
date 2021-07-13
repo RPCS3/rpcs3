@@ -5,12 +5,37 @@
 
 #include <memory>
 #include <vector>
+#include <map>
+#include <typeinfo>
 
+#include "util/serialization.hpp"
 #include "util/fixed_typemap.hpp"
 
 extern stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
 
 constexpr auto* g_fxo = &g_fixed_typemap;
+
+extern thread_local std::string_view g_tls_serialize_name;
+
+template <typename T, typename U = T>
+inline U* fxo_serialize_body(utils::serial* ar)
+{
+	if (ar)
+	{
+		g_tls_serialize_name = g_fxo->get_name<T, U>();
+		return g_fxo->init<T, U>(stx::exact_t<utils::serial&>(*ar));
+	}
+
+	if constexpr (std::is_constructible_v<U>)
+	{
+		return g_fxo->init<T, U>();
+	}
+	else
+	{
+		// Must be constructed already
+		return ensure(static_cast<U*>(g_fxo->try_get<T>()));
+	}
+}
 
 enum class thread_state : u32;
 
@@ -20,11 +45,14 @@ namespace id_manager
 	// Common global mutex
 	extern shared_mutex g_mutex;
 
+	// Last allocated ID for constructors
+	extern thread_local u32 g_id;
+
 	// ID traits
 	template <typename T, typename = void>
 	struct id_traits
 	{
-		static_assert(sizeof(T) == 0, "ID object must specify: id_base, id_step, id_count");
+		//static_assert(sizeof(T) == 0, "ID object must specify: id_base, id_step, id_count");
 
 		static constexpr u32 base    = 1;     // First ID (N = 0)
 		static constexpr u32 step    = 1;     // Any ID: N * id_step + id_base
@@ -74,51 +102,121 @@ namespace id_manager
 		// If T2 contains id_type type, T must be equal to it
 	};
 
-	class typeinfo
+	static constexpr u32 get_index(u32 id, u32 base, u32 step, u32 count, std::pair<u32, u32> invl_range)
 	{
-		// Global variable for each registered type
-		template <typename T>
-		struct registered
-		{
-			static const u32 index;
-		};
+		u32 mask_out = ((1u << invl_range.second) - 1) << invl_range.first;
 
-		// Increment type counter
-		static u32 add_type(u32 i)
-		{
-			static atomic_t<u32> g_next{0};
+		// Note: if id is lower than base, diff / step will be higher than count
+		u32 diff = (id & ~mask_out) - base;
 
-			return g_next.fetch_add(i);
+		if (diff % step)
+		{
+			// id is invalid, return invalid index
+			return count;
 		}
 
-	public:
-		// Get type index
-		template <typename T>
-		static inline u32 get_index()
-		{
-			return registered<T>::index;
-		}
+		// Get actual index
+		return diff / step;
+	}
 
-		// Get type count
-		static inline u32 get_count()
-		{
-			return add_type(0);
-		}
+	inline u64 get_hash_from_index(u64 index)
+	{
+		return index;
+	}
+
+	// ID traits
+	template <typename T, typename = void>
+	struct id_traits_load_func
+	{
+		static constexpr std::shared_ptr<void>(*load)(utils::serial&) = [](utils::serial& ar) -> std::shared_ptr<void> { return std::make_shared<T>(stx::exact_t<utils::serial&>(ar)); };
 	};
 
 	template <typename T>
-	const u32 typeinfo::registered<T>::index = typeinfo::add_type(1);
+	struct id_traits_load_func<T, std::void_t<decltype(&T::load)>>
+	{
+		static constexpr std::shared_ptr<void>(*load)(utils::serial&) = &T::load;
+	};
+
+	template <typename T, typename = void>
+	struct id_traits_savable_func
+	{
+		static constexpr bool(*savable)(void*) = [](void*) -> bool { return true; };
+	};
+
+	template <typename T>
+	struct id_traits_savable_func<T, std::void_t<decltype(&T::savable)>>
+	{
+		static constexpr bool(*savable)(void* ptr) = [](void* ptr) -> bool { return static_cast<const T*>(ptr)->savable(); };
+	};
+
+	struct dummy_construct
+	{
+		dummy_construct() {}
+		dummy_construct(utils::serial&){}
+		void save(utils::serial&) {}
+	};
+
+	struct typeinfo
+	{
+	public:
+		std::shared_ptr<void>(*load)(utils::serial&);
+		void(*save)(utils::serial&, void*);
+		bool(*savable)(void* ptr);
+
+		u32 base;
+		u32 step;
+		u32 count;
+		std::pair<u32, u32> invl_range;
+
+		// Get type index
+		template <typename T>
+		static inline u64 get_index()
+		{
+			return reinterpret_cast<u64>(&stx::typedata<id_manager::typeinfo, T>());
+		}
+
+		template <typename T>
+		static typeinfo make_typeinfo()
+		{
+			typeinfo info{};
+
+			using C = std::conditional_t<std::is_constructible_v<T, stx::exact_t<utils::serial&>>, T, dummy_construct>;
+
+			if constexpr (std::is_same_v<C, T>)
+			{
+				info =
+				{
+					+id_traits_load_func<C>::load,
+					+[](utils::serial& ar, void* obj) { static_cast<C*>(obj)->save(ar); },
+					+id_traits_savable_func<C>::savable,
+					id_traits<T>::base, id_traits<T>::step, id_traits<T>::count, id_traits<T>::invl_range,
+				};
+			}
+			else
+			{
+				info =
+				{
+					nullptr,
+					nullptr,
+					nullptr,
+					id_traits<T>::base, id_traits<T>::step, id_traits<T>::count, id_traits<T>::invl_range,
+				};
+			}
+
+			return info;
+		}
+	};
 
 	// ID value with additional type stored
 	class id_key
 	{
 		u32 m_value;           // ID value
-		u32 m_type;            // True object type
+		u64 m_type;            // True object type
 
 	public:
 		id_key() = default;
 
-		id_key(u32 value, u32 type)
+		id_key(u32 value, u64 type)
 			: m_value(value)
 			, m_type(type)
 		{
@@ -129,7 +227,7 @@ namespace id_manager
 			return m_value;
 		}
 
-		u32 type() const
+		u64 type() const
 		{
 			return m_type;
 		}
@@ -150,6 +248,59 @@ namespace id_manager
 		{
 			// Preallocate memory
 			vec.reserve(T::id_count);
+		}
+
+		id_map(utils::serial& ar)
+		{
+			vec.resize(T::id_count);
+
+			while (true)
+			{
+				// ID, type hash
+				std::pair<u32, u64> p{};
+
+				ar(p.first);
+
+				if (p.first == id_traits<T>::invalid)
+				{
+					// Terminator encountered
+					break;
+				}
+
+				ar(p.second);
+
+				// Construct each object from information collected
+
+				// Access type information
+				const auto& info = *reinterpret_cast<const typeinfo*>(p.second);
+
+				g_id = p.first; // Simulate construction semantics
+
+				auto& obj = vec[get_index(p.first, info.base, info.step, info.count, info.invl_range)]; 
+				if (obj.second) continue; // Initialized through dependencies by previous object constructor
+
+				obj.first = id_key(p.first, p.second);
+				obj.second = info.load(ar);
+			}
+		}
+
+		void save(utils::serial& ar)
+		{
+			for (const auto& p : vec)
+			{
+				if (!p.second) continue;
+
+				// Save each object with needed information
+				auto& info = *reinterpret_cast<const typeinfo*>(get_hash_from_index(p.first.type()));
+				if (info.save && info.savable(p.second.get()))
+				{
+					ar(p.first.value(), get_hash_from_index(p.first.type()));
+					info.save(ar, p.second.get());
+				}
+			}
+
+			// Terminator
+			ar(id_traits<T>::invalid);
 		}
 
 		template <bool dummy = false> requires (std::is_assignable_v<T&, thread_state>)
@@ -180,11 +331,8 @@ namespace id_manager
 // Object manager for emulated process. Multiple objects of specified arbitrary type are given unique IDs.
 class idm
 {
-	// Last allocated ID for constructors
-	static thread_local u32 g_id;
-
 	template <typename T>
-	static inline u32 get_type()
+	static inline u64 get_type()
 	{
 		return id_manager::typeinfo::get_index<T>();
 	}
@@ -194,19 +342,7 @@ class idm
 	{
 		using traits = id_manager::id_traits<T>;
 
-		constexpr u32 mask_out = ((1u << traits::invl_range.second) - 1) << traits::invl_range.first;
-
-		// Note: if id is lower than base, diff / step will be higher than count
-		u32 diff = (id & ~mask_out) - traits::base;
-
-		if (diff % traits::step)
-		{
-			// id is invalid, return invalid index
-			return traits::count;
-		}
-
-		// Get actual index
-		return diff / traits::step;
+		return id_manager::get_index(id, traits::base, traits::step, traits::count, traits::invl_range);
 	}
 
 	// Helper
@@ -290,7 +426,7 @@ class idm
 	using map_data = std::pair<id_manager::id_key, std::shared_ptr<void>>;
 
 	// Prepare new ID (returns nullptr if out of resources)
-	static map_data* allocate_id(std::vector<map_data>& vec, u32 type_id, u32 base, u32 step, u32 count, std::pair<u32, u32> invl_range);
+	static map_data* allocate_id(std::vector<map_data>& vec, u64 type_id, u32 dst_id, u32 base, u32 step, u32 count, std::pair<u32, u32> invl_range);
 
 	// Find ID (additionally check type if types are not equal)
 	template <typename T, typename Type>
@@ -328,9 +464,9 @@ class idm
 		return nullptr;
 	}
 
-	// Allocate new ID and assign the object from the provider()
+	// Allocate new ID (or use fixed ID) and assign the object from the provider()
 	template <typename T, typename Type, typename F>
-	static map_data* create_id(F&& provider)
+	static map_data* create_id(F&& provider, u32 id = id_manager::id_traits<Type>::invalid)
 	{
 		static_assert(id_manager::id_verify<T, Type>::value, "Invalid ID type combination");
 
@@ -342,7 +478,7 @@ class idm
 
 		auto& map = g_fxo->get<id_manager::id_map<T>>();
 
-		if (auto* place = allocate_id(map.vec, get_type<Type>(), traits::base, traits::step, traits::count, traits::invl_range))
+		if (auto* place = allocate_id(map.vec, get_type<Type>(), id, traits::base, traits::step, traits::count, traits::invl_range))
 		{
 			// Get object, store it
 			place->second = provider();
@@ -369,7 +505,7 @@ public:
 	// Get last ID (updated in create_id/allocate_id)
 	static inline u32 last_id()
 	{
-		return g_id;
+		return id_manager::g_id;
 	}
 
 	// Add a new ID of specified type with specified constructor arguments (returns object or nullptr)
@@ -398,9 +534,9 @@ public:
 
 	// Add a new ID for an existing object provided (returns new id)
 	template <typename T, typename Made = T>
-	static inline u32 import_existing(const std::shared_ptr<T>& ptr)
+	static inline u32 import_existing(const std::shared_ptr<T>& ptr, u32 id = id_manager::id_traits<Made>::invalid)
 	{
-		if (auto pair = create_id<T, Made>([&] { return ptr; }))
+		if (auto pair = create_id<T, Made>([&] { return ptr; }, id))
 		{
 			return pair->first;
 		}

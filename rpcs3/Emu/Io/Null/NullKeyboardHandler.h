@@ -4,6 +4,8 @@
 
 class NullKeyboardHandler final : public KeyboardHandlerBase
 {
+	using KeyboardHandlerBase::KeyboardHandlerBase;
+
 public:
 	void Init(const u32 max_connect) override
 	{

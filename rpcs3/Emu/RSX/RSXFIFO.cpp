@@ -626,6 +626,9 @@ namespace rsx
 		}
 		while (fifo_ctrl->read_unsafe(command));
 
-		fifo_ctrl->sync_get();
+		if (state.none_of(cpu_flag::incomplete_syscall))
+		{
+			fifo_ctrl->sync_get();
+		}
 	}
 }

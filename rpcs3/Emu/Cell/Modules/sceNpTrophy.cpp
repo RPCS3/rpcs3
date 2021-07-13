@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
@@ -36,6 +36,43 @@ struct trophy_context_t
 	std::string trp_name;
 	fs::file trp_stream;
 	std::unique_ptr<TROPUSRLoader> tropusr;
+
+	trophy_context_t() = default;
+
+	trophy_context_t(utils::serial& ar)
+		: trp_name(ar.operator std::string())
+	{
+		std::string trophy_path = vfs::get(Emu.GetDir() + "TROPDIR/" + trp_name + "/TROPHY.TRP");
+		trp_stream.open(trophy_path);
+
+		if (!trp_stream)
+		{
+			// Fallback
+			trophy_path = vfs::get("/dev_bdvd/PS3_GAME/TROPDIR/" + trp_name + "/TROPHY.TRP");
+			trp_stream.open(trophy_path);
+		}
+
+		if (!ar.operator bool())
+		{
+			return;
+		}
+
+		if (!trp_stream && g_cfg.savestate.state_inspection_mode)
+		{
+			return;
+		}
+
+		const std::string trophyPath = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + trp_name;
+		tropusr = std::make_unique<TROPUSRLoader>();
+		const std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
+		const std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
+		ensure(tropusr->Load(trophyUsrPath, trophyConfPath).success);
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(trp_name, tropusr.operator bool());
+	}
 };
 
 struct trophy_handle_t
@@ -45,6 +82,18 @@ struct trophy_handle_t
 	static const u32 id_count = 4;
 
 	bool is_aborted = false;
+
+	trophy_handle_t() = default;
+
+	trophy_handle_t(utils::serial& ar)
+		: is_aborted(ar)
+	{
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(is_aborted);
+	}
 };
 
 struct sce_np_trophy_manager
@@ -96,7 +145,33 @@ struct sce_np_trophy_manager
 
 		return res;
 	}
+
+	sce_np_trophy_manager() = default;
+
+	sce_np_trophy_manager(utils::serial& ar)
+		: is_initialized(ar)
+	{
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(is_initialized);
+
+		if (is_initialized)
+		{
+			USING_SERIALIZATION_VERSION(sceNpTrophy);
+		}
+	}
 };
+
+
+template <>
+void fxo_serialize<sce_np_trophy_manager>(utils::serial* ar)
+{
+	fxo_serialize_body<sce_np_trophy_manager>(ar);
+	fxo_serialize_body<id_manager::id_map<trophy_context_t>>(ar);
+	fxo_serialize_body<id_manager::id_map<trophy_handle_t>>(ar);
+}
 
 template<>
 void fmt_class_string<SceNpTrophyError>::format(std::string& out, u64 arg)

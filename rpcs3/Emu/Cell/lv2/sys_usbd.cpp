@@ -1,4 +1,4 @@
-#include "stdafx.h"
+﻿#include "stdafx.h"
 #include "sys_usbd.h"
 #include "sys_ppu_thread.h"
 #include "sys_sync.h"
@@ -59,6 +59,16 @@ class usb_handler_thread
 public:
 	usb_handler_thread();
 	~usb_handler_thread();
+
+	usb_handler_thread(utils::serial& ar) : usb_handler_thread()
+	{
+		is_init = !!ar.operator u8();
+	}
+
+	void save(utils::serial& ar)
+	{
+		ar(u8{is_init.load()});
+	}
 
 	// Thread loop
 	void operator()();
@@ -122,6 +132,12 @@ private:
 
 	libusb_context* ctx = nullptr;
 };
+
+template <>
+void fxo_serialize<named_thread<usb_handler_thread>>(utils::serial* ar)
+{
+	fxo_serialize_body<named_thread<usb_handler_thread>>(ar);
+}
 
 void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 {
@@ -743,14 +759,22 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 
 	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (is_stopped(state))
-		{
-			return {};
-		}
-
 		if (state & cpu_flag::signal)
 		{
 			break;
+		}
+
+		if (is_stopped(state))
+		{
+			std::lock_guard lock(usbh.mutex);
+
+			if (std::find(usbh.sq.begin(), usbh.sq.end(), &ppu) == usbh.sq.end())
+			{
+				break;
+			}
+
+			ppu.state += cpu_flag::incomplete_syscall;
+			return {};
 		}
 
 		thread_ctrl::wait_on(ppu.state, state);

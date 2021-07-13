@@ -71,7 +71,10 @@ struct lv2_lwmutex final : lv2_obj
 	{
 	}
 
-	// Try to add a waiter
+	lv2_lwmutex(utils::serial& ar);
+	void save(utils::serial& ar);
+
+	// Try to add a waiter 
 	bool add_waiter(cpu_thread* cpu)
 	{
 		if (const auto old = lwcond_waiters.fetch_op([](s32& val)

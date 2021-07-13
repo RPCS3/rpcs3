@@ -83,7 +83,17 @@ fs::file tar_object::get_file(const std::string& path)
 
 			u64 size = -1;
 
-			if (header.name[0] && std::memcmp(header.magic, "ustar", 5) == 0)
+			std::string_view prefix_name{header.prefix, std::size(header.prefix)};
+			std::string_view name{header.name, std::size(header.name)};
+
+			prefix_name = prefix_name.substr(0, prefix_name.find_first_of('\0'));
+			name = name.substr(0, name.find_first_of('\0'));
+
+			std::string filename;
+			filename += prefix_name;
+			filename += name;
+
+			if (!filename.empty() && std::memcmp(header.magic, "ustar", 5) == 0)
 			{
 				const std::string_view size_sv{header.size, std::size(header.size)};
 
@@ -97,7 +107,7 @@ fs::file tar_object::get_file(const std::string& path)
 					std::memcpy(header.size, &size, 8);
 
 					// Save header andd offset
-					m_map.insert_or_assign(header.name, std::make_pair(largest_offset + 512, header));
+					m_map.insert_or_assign(filename, std::make_pair(largest_offset + 512, header));
 				}
 				else
 				{
@@ -114,10 +124,10 @@ fs::file tar_object::get_file(const std::string& path)
 			if (size == umax)
 			{
 				size = 0;
-				header.name[0] = '\0'; // Ensure path will not be equal
+				filename.clear(); // Ensure path will not be equal
 			}
 
-			if (!path.empty() && path == header.name)
+			if (!path.empty() && path == filename)
 			{
 				// Path is equal, read file and advance offset to start of next block
 				std::vector<u8> buf(size);
@@ -128,7 +138,7 @@ fs::file tar_object::get_file(const std::string& path)
 					return fs::make_stream(std::move(buf));
 				}
 
-				tar_log.error("tar_object::get_file() failed to read file entry %s (size=0x%x)", header.name, size);
+				tar_log.error("tar_object::get_file() failed to read file entry %s (size=0x%x)", filename, size);
 				size = 0;
 			}
 
@@ -140,7 +150,7 @@ fs::file tar_object::get_file(const std::string& path)
 	}
 }
 
-bool tar_object::extract(std::string vfs_mp)
+bool tar_object::extract(std::string prefix_path, bool is_vfs)
 {
 	if (!m_file) return false;
 
@@ -153,21 +163,38 @@ bool tar_object::extract(std::string vfs_mp)
 
 		std::string result = name;
 
-		if (!vfs_mp.empty())
+		if (!prefix_path.empty())
 		{
-			result = fmt::format("/%s/%s", vfs_mp, result);
+			result = prefix_path + '/' + result;
 		}
 		else
 		{
+			// Must be VFS here
+			is_vfs = true;
 			result.insert(result.begin(), '/');
 		}
 
-		result = vfs::get(result);
-
-		if (result.empty())
+		if (is_vfs)
 		{
-			tar_log.error("Path of entry is not mounted: '%s' (vfs_mp='%s')", name, vfs_mp);
-			return false;
+			result = vfs::get(result);
+
+			if (result.empty())
+			{
+				tar_log.error("Path of entry is not mounted: '%s' (prefix_path='%s')", name, prefix_path);
+				return false;
+			}
+		}
+
+		u64 mtime = octal_text_to_u64({header.mtime, std::size(header.mtime)});
+
+		// Let's use it for optional atime 
+		u64 atime = octal_text_to_u64({header.padding, 12});
+
+		// This is a fake timestamp, it can be invalid
+		if (atime == umax)
+		{
+			// Set to mtime if not provided
+			atime = mtime;
 		}
 
 		switch (header.filetype)
@@ -175,8 +202,8 @@ bool tar_object::extract(std::string vfs_mp)
 		case '\0':
 		case '0':
 		{
-			// Create the directories which should have been mount points if vfs_mp is not empty
-			if (!vfs_mp.empty() && !fs::create_path(fs::get_parent_dir(result)))
+			// Create the directories which should have been mount points if prefix_path is not empty
+			if (!prefix_path.empty() && !fs::create_path(fs::get_parent_dir(result)))
 			{
 				tar_log.error("TAR Loader: failed to create directory for file %s (%s)", name, fs::g_tls_error);
 				return false;
@@ -189,6 +216,14 @@ bool tar_object::extract(std::string vfs_mp)
 			if (file)
 			{
 				file.write(static_cast<fs::container_stream<std::vector<u8>>*>(data.get())->obj);
+				file.close();
+
+				if (mtime != umax && !fs::utime(result, atime, mtime))
+				{
+					tar_log.error("TAR Loader: fs::utime failed on %s (%s)", result, fs::g_tls_error);
+					return false;
+				}
+
 				tar_log.notice("TAR Loader: written file %s", name);
 				break;
 			}
@@ -206,6 +241,12 @@ bool tar_object::extract(std::string vfs_mp)
 				return false;
 			}
 
+			if (mtime != umax && !fs::utime(result, atime, mtime))
+			{
+				tar_log.error("TAR Loader: fs::utime failed on %s (%s)", result, fs::g_tls_error);
+				return false;
+			}
+
 			break;
 		}
 
@@ -217,11 +258,95 @@ bool tar_object::extract(std::string vfs_mp)
 	return true;
 }
 
-bool extract_tar(const std::string& file_path, const std::string& dir_path)
+std::vector<u8> tar_object::save_directory(const std::string& src_dir, std::string full_path, std::vector<u8>&& init)
+{
+	const std::string& target_path = full_path.empty() ? src_dir : full_path;
+
+	fs::stat_t stat{};
+	if (!fs::stat(target_path, stat))
+	{
+		return std::move(init);
+	}
+
+	u32 count = 0;
+
+	if (stat.is_directory)
+	{
+		u32 count = 0;
+
+		for (auto& entry : fs::dir(target_path))
+		{
+			if (entry.name.find_first_not_of('.') == umax) continue;
+
+			init = save_directory(src_dir, target_path + '/' + entry.name, std::move(init));
+			count++;
+		}
+
+		if (count)
+		{
+			return std::move(init);
+		}
+	}
+
+	auto write_octal = [](char* ptr, u64 i)
+	{
+		if (!i)
+		{
+			*ptr = '0';
+			return;
+		}
+
+		ptr += utils::aligned_div(std::bit_width(i), 3) - 1;
+
+		for (; i; ptr--, i /= 8)
+		{
+			*ptr = static_cast<char>('0' + (i % 8));
+		}
+	};
+
+	TARHeader header{};
+	std::memcpy(header.magic, "ustar ", 6);
+
+	const std::string_view saved_path{target_path.data() + src_dir.size(), target_path.size() - src_dir.size()};
+
+	// Prefer saving to name field as much as we can
+	// If it doesn't fit, save 100 characters at name and 155 characters preceding to it at max
+	// Character position 255 and above will be appended to header data
+	const u64 prefix_size = std::clamp<usz>(saved_path.size(), 100, 255) - 100; 
+	std::memcpy(header.prefix, saved_path.data(), prefix_size);
+	const u64 name_size = std::min<usz>(saved_path.size(), 255) - prefix_size;
+	std::memcpy(header.name, saved_path.data() + prefix_size, name_size);
+
+	const u64 old_size = init.size();
+	init.resize(init.size() + sizeof(header) + std::max<usz>(saved_path.size(), 255) - 255);
+
+	const std::string_view rest_of_path = saved_path.substr(prefix_size + name_size);
+	std::memcpy(init.data() + old_size + sizeof(header), rest_of_path.data(), rest_of_path.size());
+
+	write_octal(header.size, stat.is_directory ? 0 : stat.size);
+	write_octal(header.mtime, stat.mtime);
+	write_octal(header.padding, stat.atime);
+	header.filetype = stat.is_directory ? '5' : '0';
+
+	if (!stat.is_directory)
+	{
+		init.resize(init.size() + utils::align(stat.size, 512));
+		fs::file fd(target_path);
+		fd.read(&init.back() + 1 - stat.size, stat.size);
+	}
+
+	std::memcpy(init.data() + old_size, &header, sizeof(header));
+	return std::move(init);
+}
+
+bool extract_tar(const std::string& file_path, const std::string& dir_path, fs::file file)
 {
 	tar_log.notice("Extracting '%s' to directory '%s'...", file_path, dir_path);
 
-	fs::file file(file_path);
+	if (!file)
+	{
+		file.open(file_path);
+	}
 
 	if (!file)
 	{
@@ -263,7 +388,7 @@ bool extract_tar(const std::string& file_path, const std::string& dir_path)
 
 	tar_object tar(vec.empty() ? file : vec[2]);
 
-	const bool ok = tar.extract("/tar_extract");
+	const bool ok = tar.extract("/tar_extract", true);
 
 	if (ok)
 	{

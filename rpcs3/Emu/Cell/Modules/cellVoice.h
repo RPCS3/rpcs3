@@ -210,4 +210,8 @@ struct voice_manager
 	void reset();
 	shared_mutex mtx;
 	atomic_t<bool> is_init{ false };
+
+	//voice_manager() = default;
+	//voice_manager(utils::serial& ar);
+	//void save(utils::serial& ar);
 };

@@ -19,6 +19,7 @@ enum class cpu_flag : u32
 	pause, // Thread suspended by suspend_all technique
 	suspend, // Thread suspended
 	ret, // Callback return requested
+	incomplete_syscall, // Thread must complete the syscall after deserialization
 	signal, // Thread received a signal (HLE)
 	memory, // Thread must unlock memory mutex
 

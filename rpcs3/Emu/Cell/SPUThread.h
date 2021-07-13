@@ -640,11 +640,15 @@ public:
 	static const u32 id_count = (0xFFFC0000 - SPU_FAKE_BASE_ADDR) / SPU_LS_SIZE;
 
 	spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated = false, u32 option = 0);
-
 	spu_thread(const spu_thread&) = delete;
 	spu_thread& operator=(const spu_thread&) = delete;
 
 	using cpu_thread::operator=;
+
+	spu_thread(utils::serial& ar, lv2_spu_group* group = nullptr);
+	void serialize_common(utils::serial& ar);
+	void save(utils::serial& ar);
+	bool savable() const { return get_type() != spu_type::threaded; } // Threaded SPUs are saved as part of the SPU group
 
 	u32 pc = 0;
 	u32 dbg_step_pc = 0;
@@ -744,9 +748,9 @@ public:
 	atomic_t<u32> last_exit_status; // Value to be written in exit_status after checking group termination
 	lv2_spu_group* const group; // SPU Thread Group (access by the spu threads in the group only! From other threads obtain a shared pointer to group using group ID)
 	const u32 index; // SPU index
+	const spu_type thread_type;
 	std::shared_ptr<utils::shm> shm; // SPU memory
 	const std::add_pointer_t<u8> ls; // SPU LS pointer
-	const spu_type thread_type;
 	const u32 option; // sys_spu_thread_initialize option
 	const u32 lv2_id; // The actual id that is used by syscalls
 
@@ -779,6 +783,8 @@ public:
 	u64 start_time{}; // Starting time of STOP or RDCH bloking function
 
 	atomic_t<u8> debugger_float_mode = 0;
+
+	bool stop_flag_removal_protection = false;
 
 	void push_snr(u32 number, u32 value);
 	static void do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls);

@@ -28,9 +28,6 @@ void basic_mouse_handler::Init(const u32 max_connect)
 	m_info.product_id[0] = 0x1234;
 }
 
-basic_mouse_handler::basic_mouse_handler() : QObject()
-{}
-
 /* Sets the target window for the event handler, and also installs an event filter on the target. */
 void basic_mouse_handler::SetTargetWindow(QWindow* target)
 {

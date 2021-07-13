@@ -41,6 +41,9 @@ struct sys_vm_t
 	sys_vm_t(u32 addr, u32 vsize, lv2_memory_container* ct, u32 psize);
 	~sys_vm_t();
 
+	sys_vm_t(utils::serial& ar);
+	void save(utils::serial& ar);
+
 	static std::array<atomic_t<u32>, id_count> g_ids;
 
 	static u32 find_id(u32 addr)

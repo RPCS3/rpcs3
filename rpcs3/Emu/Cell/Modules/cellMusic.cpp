@@ -67,7 +67,42 @@ struct music_state
 
 	vm::ptr<void(u32 event, vm::ptr<void> param, vm::ptr<void> userData)> func{};
 	vm::ptr<void> userData{};
+
+	music_state() = default;
+
+	void serialize_common(utils::serial& ar)
+	{
+		ar(func);
+
+		if (!func)
+		{
+			return;
+		}
+
+		if (ar.is_writing())
+		{
+			USING_SERIALIZATION_VERSION(cellMusic);
+		}
+
+		ar(userData);
+	}
+
+	music_state(utils::serial& ar)
+	{
+		serialize_common(ar);
+	}
+
+	void save(utils::serial& ar)
+	{
+		serialize_common(ar);
+	}
 };
+
+template <>
+void fxo_serialize<music_state>(utils::serial* ar)
+{
+	fxo_serialize_body<music_state>(ar);
+}
 
 error_code cellMusicGetSelectionContext(vm::ptr<CellMusicSelectionContext> context)
 {

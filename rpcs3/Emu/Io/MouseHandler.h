@@ -132,7 +132,7 @@ struct Mouse
 class MouseHandlerBase
 {
 protected:
-	MouseInfo m_info;
+	MouseInfo m_info{};
 	std::vector<Mouse> m_mice;
 	steady_clock::time_point last_update;
 
@@ -154,6 +154,11 @@ public:
 
 	virtual void Init(const u32 max_connect) = 0;
 	virtual ~MouseHandlerBase() = default;
+
+	MouseHandlerBase() = default;
+	MouseHandlerBase(const MouseHandlerBase&) = delete;
+	MouseHandlerBase(utils::serial& ar);
+	void save(utils::serial& ar);
 
 	void Button(u8 button, bool pressed)
 	{

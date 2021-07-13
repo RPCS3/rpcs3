@@ -40,6 +40,8 @@ struct sysutil_cb_manager
 {
 	struct alignas(8) registered_cb
 	{
+		using enable_bitcopy = std::true_type;
+
 		vm::ptr<CellSysutilCallback> first;
 		vm::ptr<void> second;
 	};
@@ -47,7 +49,27 @@ struct sysutil_cb_manager
 	atomic_t<registered_cb> callbacks[4]{};
 
 	lf_queue<std::function<s32(ppu_thread&)>> registered;
+
+	sysutil_cb_manager() = default;
+
+	sysutil_cb_manager(utils::serial& ar)
+	{
+		ar(callbacks);
+	}
+
+	void save(utils::serial& ar)
+	{
+		ensure(!registered);
+		ar(callbacks);
+	}
 };
+
+
+template <>
+void fxo_serialize<sysutil_cb_manager>(utils::serial* ar)
+{
+	fxo_serialize_body<sysutil_cb_manager>(ar);
+}
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 {

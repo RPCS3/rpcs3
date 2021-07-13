@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include "util/types.hpp"
 
 enum CellPadError : u32
 {
@@ -195,4 +196,8 @@ struct pad_info
 {
 	atomic_t<u32> max_connect = 0;
 	std::array<u32, CELL_PAD_MAX_PORT_NUM> port_setting{ 0 };
+
+	pad_info() = default;
+	pad_info(utils::serial& ar);
+	void save(utils::serial& ar);
 };
