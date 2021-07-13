@@ -504,5 +504,7 @@ namespace vk
 		u32 get_unreleased_textures_count() const override;
 
 		u32 get_temporary_memory_in_use() const;
+
+		bool is_overallocated() const;
 	};
 }
