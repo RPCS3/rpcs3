@@ -23,6 +23,7 @@
 #include "Emu/RSX/Capture/rsx_replay.h"
 
 #include "Loader/PSF.h"
+#include "Loader/TAR.h"
 #include "Loader/ELF.h"
 
 #include "Utilities/StrUtil.h"
@@ -77,7 +78,7 @@ static std::array<serial_ver_t, 18> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0, {5}) // For stuff not listed here
+SERIALIZATION_VER(global_version, 0, {6}) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1, {1})
 SERIALIZATION_VER(spu, 2, {2})
 SERIALIZATION_VER(lv2_sync, 3, {1})
@@ -781,11 +782,35 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 	
 			hdd1 = ar->operator std::string();
 	
+			auto load_tar = [&](const std::string& path)
+			{
+				const usz size = *ar;
+
+				if (size)
+				{
+					ensure(tar_object(fs::file(&ar->data[ar->pos], size)).extract(path));
+					ar->pos += size;
+				}
+			};
+
 			if (!hdd1.empty())
 			{
 				hdd1 = rpcs3::utils::get_hdd1_dir() + "caches/" + hdd1 + "/";
+				load_tar(hdd1);
 			}
 	
+			for (const std::string hdd0_game = rpcs3::utils::get_hdd0_dir() + "game/";;)
+			{
+				const std::string game_data = ar->operator std::string();
+
+				if (game_data.empty())
+				{
+					break;
+				}
+
+				load_tar(hdd0_game + game_data);
+			}
+
 			if (argv[0].starts_with("/dev_hdd0"sv))
 			{
 				m_path = rpcs3::utils::get_hdd0_dir();
@@ -1956,14 +1981,60 @@ void Emulator::Stop(bool savestate, bool restart)
 			using_global_version_serialization();
 			using_ppu_serialization();
 
-			auto save_hdd1 = [&ar]()
+			// Avoid duplicating TAR object memory because it can be very large
+			auto save_tar = [&](const std::string& path)
 			{
-				std::string _path = vfs::get("/dev_hdd1");
+				ar(usz{}); // Reserve memory to be patched later with correct size
+				const usz old_size = ar.data.size();
+				ar.data = tar_object::save_directory(path, {}, std::move(ar.data));
+				const usz tar_size = ar.data.size() - old_size;
+				std::memcpy(ar.data.data() - sizeof(usz) - tar_size, &tar_size, sizeof(usz));
+			};
+
+			auto save_hdd1 = [&]()
+			{
+				const std::string _path = vfs::get("/dev_hdd1");
 				std::string_view path = _path;
 
 				path = path.substr(0, path.find_last_not_of(fs::delim) + 1);
 
 				ar(std::string(path.substr(path.find_last_of(fs::delim) + 1)));
+
+				if (!_path.empty())
+				{
+					if (!g_cfg.savestate.suspend_emu)
+					{
+						save_tar(_path);
+						sys_log.success("Saved the contents of directory '%s'", _path);
+					}
+					else
+					{
+						ar(usz{});
+					}
+				}
+			};
+
+			auto save_hdd0 = [&]()
+			{
+				if (!g_cfg.savestate.suspend_emu)
+				{
+					const std::string path = vfs::get("/dev_hdd0/game/");
+
+					for (auto& entry : fs::dir(path))
+					{
+						if (entry.is_directory && entry.name != "." && entry.name != "..")
+						{
+							if (auto res = psf::load(path + entry.name + "/PARAM.SFO"); res && /*!m_title_id.empty() &&*/ psf::get_string(res, "TITLE_ID") == m_title_id && psf::get_string(res, "CATEGORY") == "GD")
+							{
+								ar(entry.name);
+								save_tar(path + entry.name);
+								sys_log.success("Saved the contents of directory '%s'", path + entry.name);
+							}
+						}
+					}
+				}
+
+				ar(std::string{});
 			};
 
 			ar("RPCS3SAV"_u64);
@@ -1974,6 +2045,7 @@ void Emulator::Stop(bool savestate, bool restart)
 			ar(!m_title_id.empty() && !vfs::get("/dev_bdvd").empty() ? m_title_id : std::string());
 			ar(klic.empty() ? std::array<u8, 16>{} : std::bit_cast<std::array<u8, 16>>(klic[0]));
 			save_hdd1();
+			save_hdd0();
 			vm::save(ar);
 			g_fxo->save(ar);
 			ar(times[0], times[1]);

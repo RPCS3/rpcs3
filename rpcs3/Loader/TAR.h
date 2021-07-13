@@ -38,9 +38,9 @@ public:
 
 	fs::file get_file(const std::string& path);
 
-	// Extract all files in archive to destination as VFS
+	// Extract all files in archive to destination (as VFS if is_vfs is true)
 	// Allow to optionally specify explicit mount point (which may be directory meant for extraction)
-	bool extract(std::string vfs_mp = {});
+	bool extract(std::string prefix_path = {}, bool is_vfs = false);
 
 	static std::vector<u8> save_directory(const std::string& src_dir, std::string append_path = {}, std::vector<u8>&& init = std::vector<u8>{});
 };

@@ -297,7 +297,7 @@ struct cfg_root : cfg::node
 		node_savestate(cfg::node* _this) : cfg::node(_this, "Savestate") {}
 
 		cfg::_bool start_paused{ this, "Start Paused" }; // Pause on first first
-		cfg::_bool suspend_emu{ this, "Suspend Emulation Savestate Mode" }; // Close emulation when saving, delete save after loading
+		cfg::_bool suspend_emu{ this, "Suspend Emulation SaveState Mode", true }; // Close emulation when saving, delete save after loading
 		cfg::_bool state_inspection_mode{ this, "Inspection Mode Savestates" }; // Save memory stored in executable files, thus allowing to view state without any files (for debugging)
 	} savestate{this};
 

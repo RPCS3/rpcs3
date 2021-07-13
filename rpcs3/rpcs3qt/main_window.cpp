@@ -1075,7 +1075,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 			return;	
 		}
 
-		if (!update_files.extract("/pup_extract"))
+		if (!update_files.extract("/pup_extract", true))
 		{
 			gui_log.error("Error while installing firmware: TAR contents are invalid.");
 			critical(tr("Firmware installation failed: Firmware contents could not be extracted."));
