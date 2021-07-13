@@ -556,36 +556,29 @@ namespace rsx
 
 		void purge_unreleased_sections()
 		{
-			// We will be iterating through m_in_use
-			// do not allow the callbacks to touch m_in_use to avoid invalidating the iterator
 			m_purging = true;
+			std::vector<section_storage_type*> textures_to_remove;
 
-			//Reclaims all graphics memory consumed by dirty textures
-			for (auto it = m_in_use.begin(); it != m_in_use.end();)
+			// Reclaims all graphics memory consumed by dirty textures
+			// Do not destroy anything while iterating or you will end up with stale iterators
+			for (auto& block : m_in_use)
 			{
-				auto *block = *it;
-
 				if (block->get_unreleased_count() > 0)
 				{
-					for (auto &tex : *block)
+					for (auto& tex : *block)
 					{
 						if (!tex.is_unreleased())
 							continue;
 
 						ensure(!tex.is_locked());
-
-						tex.destroy();
+						textures_to_remove.push_back(&tex);
 					}
 				}
+			}
 
-				if (block->get_exists_count() == 0)
-				{
-					it = m_in_use.erase(it);
-				}
-				else
-				{
-					it++;
-				}
+			for (auto& tex : textures_to_remove)
+			{
+				tex->destroy();
 			}
 
 			m_purging = false;
@@ -595,11 +588,11 @@ namespace rsx
 		bool purge_unlocked_sections()
 		{
 			// Reclaims all graphics memory consumed by unlocked textures
-			bool any_released = false;
-			for (auto it = m_in_use.begin(); it != m_in_use.end();)
-			{
-				auto* block = *it;
+			// Do not destroy anything while iterating or you will end up with stale iterators
+			std::vector<section_storage_type*> textures_to_remove;
 
+			for (auto& block : m_in_use)
+			{
 				if (block->get_exists_count() > block->get_locked_count())
 				{
 					for (auto& tex : *block)
@@ -612,22 +605,17 @@ namespace rsx
 						}
 
 						ensure(!tex.is_locked() && tex.exists());
-						tex.destroy();
-						any_released = true;
+						textures_to_remove.push_back(&tex);
 					}
-				}
-
-				if (block->get_exists_count() == 0)
-				{
-					it = m_in_use.erase(it);
-				}
-				else
-				{
-					it++;
 				}
 			}
 
-			return any_released;
+			for (auto& tex : textures_to_remove)
+			{
+				tex->destroy();
+			}
+
+			return !textures_to_remove.empty();
 		}
 
 		void trim_sections()
