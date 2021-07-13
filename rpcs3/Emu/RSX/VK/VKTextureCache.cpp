@@ -1214,4 +1214,35 @@ namespace vk
 	{
 		return m_temporary_memory_size;
 	}
+
+	bool texture_cache::is_overallocated() const
+	{
+		const auto total_device_memory = m_device->get_memory_mapping().device_local_total_bytes / 0x100000;
+		u64 quota = 0;
+
+		if (total_device_memory >= 1024)
+		{
+			quota = std::min(3072ull, (total_device_memory * 40) / 100);
+		}
+		else if (total_device_memory >= 768)
+		{
+			quota = 256;
+		}
+		else
+		{
+			quota = std::min(128ull, total_device_memory / 2);
+		}
+
+		quota *= 0x100000;
+
+		if (const u64 texture_cache_pool_usage = vmm_get_application_pool_usage(VMM_ALLOCATION_POOL_TEXTURE_CACHE);
+			texture_cache_pool_usage > quota)
+		{
+			rsx_log.warning("Texture cache is using %lluM of memory which exceeds the allocation quota of %lluM",
+				texture_cache_pool_usage, quota);
+			return true;
+		}
+
+		return false;
+	}
 }
