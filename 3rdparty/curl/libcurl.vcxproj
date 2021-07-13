@@ -64,6 +64,7 @@
     <ClCompile Include="curl\lib\asyn-ares.c" />
     <ClCompile Include="curl\lib\asyn-thread.c" />
     <ClCompile Include="curl\lib\base64.c" />
+    <ClCompile Include="curl\lib\bufref.c" />
     <ClCompile Include="curl\lib\c-hyper.c" />
     <ClCompile Include="curl\lib\conncache.c" />
     <ClCompile Include="curl\lib\connect.c" />
@@ -229,6 +230,7 @@
     <ClInclude Include="curl\lib\amigaos.h" />
     <ClInclude Include="curl\lib\arpa_telnet.h" />
     <ClInclude Include="curl\lib\asyn.h" />
+    <ClInclude Include="curl\lib\bufref.h" />
     <ClInclude Include="curl\lib\c-hyper.h" />
     <ClInclude Include="curl\lib\config-amigaos.h" />
     <ClInclude Include="curl\lib\config-dos.h" />
