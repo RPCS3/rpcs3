@@ -30,6 +30,9 @@
     <ClCompile Include="curl\lib\base64.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="curl\lib\bufref.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="curl\lib\conncache.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -519,6 +522,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\asyn.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\bufref.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\config-amigaos.h">
