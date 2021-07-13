@@ -1453,6 +1453,55 @@ namespace rsx
 			m_storage.trim_sections();
 		}
 
+		bool evict_unused(const std::set<u32>& exclusion_list)
+		{
+			// Manage synchronization externally. It is very likely for RSX to call this after failing to create a new texture while already owning the mutex
+			ensure(rsx::get_current_renderer()->is_current_thread());
+			rsx_log.warning("[PERFORMANCE WARNING] Texture cache is running eviction routine. This will affect performance.");
+
+			thrashed_set evicted_set;
+			const u32 type_to_evict = rsx::texture_upload_context::shader_read | rsx::texture_upload_context::blit_engine_src;
+			for (auto It = m_storage.begin(); It != m_storage.end(); ++It)
+			{
+				auto& block = *It;
+				if (block.empty())
+				{
+					continue;
+				}
+
+				for (auto& region : block)
+				{
+					if (region.is_dirty() || !(region.get_context() & type_to_evict))
+					{
+						continue;
+					}
+
+					ensure(region.is_locked());
+
+					const u32 this_address = region.get_section_base();
+					if (exclusion_list.contains(this_address))
+					{
+						continue;
+					}
+
+					evicted_set.violation_handled = true;
+					region.set_dirty(true);
+
+					if (region.is_locked(true))
+					{
+						evicted_set.sections_to_unprotect.push_back(&region);
+					}
+					else
+					{
+						region.discard(true);
+					}
+				}
+			}
+
+			unprotect_set(evicted_set);
+			return evicted_set.violation_handled;
+		}
+
 		image_view_type create_temporary_subresource(commandbuffer_type &cmd, deferred_subresource& desc)
 		{
 			if (!desc.do_not_cache) [[likely]]
