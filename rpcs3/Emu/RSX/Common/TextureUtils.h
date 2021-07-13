@@ -49,7 +49,10 @@ namespace rsx
 
 			// Arbitrary r/w flags, use with caution.
 			memory_write = 8,
-			memory_read = 16
+			memory_read = 16,
+
+			// Not r/w but signifies a GPU reference to this object.
+			gpu_reference = 32
 		};
 
 	private:

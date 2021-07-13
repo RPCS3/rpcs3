@@ -24,6 +24,9 @@ namespace vk
 		u64 cyclic_reference_sync_tag = 0;
 		u64 write_barrier_sync_tag = 0;
 
+		// Memory spilling support
+		std::unique_ptr<vk::buffer> m_spilled_mem;
+
 		// MSAA support:
 		// Get the linear resolve target bound to this surface. Initialize if none exists
 		vk::viewable_image* get_resolve_target_safe(vk::command_buffer& cmd);
@@ -40,8 +43,17 @@ namespace vk
 		// Generic - chooses whether to clear or load.
 		void initialize_memory(vk::command_buffer& cmd, rsx::surface_access access);
 
+		// Spill helpers
+		// Re-initialize using spilled memory
+		void unspill(vk::command_buffer& cmd);
+		// Build spill transfer descriptors
+		std::vector<VkBufferImageCopy> build_spill_transfer_descriptors(vk::image* target);
+
 	public:
-		u64 frame_tag = 0; // frame id when invalidated, 0 if not invalid
+		u64 frame_tag = 0;              // frame id when invalidated, 0 if not invalid
+		u64 last_rw_access_tag = 0;     // timestamp when this object was last used
+		u64 spill_request_tag = 0;      // timestamp when spilling was requested
+		bool is_bound = false;          // set when the surface is bound for rendering
 
 		using viewable_image::viewable_image;
 
@@ -53,6 +65,9 @@ namespace vk
 
 		image_view* get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap,
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT) override;
+
+		// Memory management
+		void spill(vk::command_buffer& cmd, std::vector<std::unique_ptr<vk::viewable_image>>& resolve_cache);
 
 		// Synchronization
 		void texture_barrier(vk::command_buffer& cmd);
@@ -270,13 +285,16 @@ namespace vk
 		static bool is_compatible_surface(const vk::render_target* surface, const vk::render_target* ref, u16 width, u16 height, u8 sample_count)
 		{
 			return (surface->format() == ref->format() &&
-					surface->get_spp() == sample_count &&
-					surface->get_surface_width() >= width &&
-					surface->get_surface_height() >= height);
+				surface->get_spp() == sample_count &&
+				surface->get_surface_width() >= width &&
+				surface->get_surface_height() >= height);
 		}
 
 		static void prepare_surface_for_drawing(vk::command_buffer& cmd, vk::render_target* surface)
 		{
+			// Special case barrier
+			surface->memory_barrier(cmd, rsx::surface_access::gpu_reference);
+
 			if (surface->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
 			{
 				surface->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -288,10 +306,13 @@ namespace vk
 
 			surface->reset_surface_counters();
 			surface->memory_usage_flags |= rsx::surface_usage_flags::attachment;
+			surface->is_bound = true;
 		}
 
-		static void prepare_surface_for_sampling(vk::command_buffer& /*cmd*/, vk::render_target* /*surface*/)
-		{}
+		static void prepare_surface_for_sampling(vk::command_buffer& /*cmd*/, vk::render_target* surface)
+		{
+			surface->is_bound = false;
+		}
 
 		static bool surface_is_pitch_compatible(const std::unique_ptr<vk::render_target>& surface, usz pitch)
 		{
@@ -385,9 +406,11 @@ namespace vk
 
 	public:
 		void destroy();
+		bool spill_unused_memory();
 		bool is_overallocated();
 		bool can_collapse_surface(const std::unique_ptr<vk::render_target>& surface) override;
 		bool handle_memory_pressure(vk::command_buffer& cmd, rsx::problem_severity severity) override;
 		void free_invalidated(vk::command_buffer& cmd, rsx::problem_severity memory_pressure);
 	};
 }
+//h
