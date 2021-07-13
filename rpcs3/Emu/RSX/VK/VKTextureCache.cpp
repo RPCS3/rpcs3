@@ -340,11 +340,11 @@ namespace vk
 							dst_y = src_h;
 						}
 
-							vk::copy_scaled_image(cmd, tmp, _dst,
-								areai{ 0, 0, src_w, static_cast<s32>(src_h) },
-								coordi{ { dst_x, dst_y }, { section.dst_w, section.dst_h } },
-								1, tmp->info.format == _dst->info.format,
-								VK_FILTER_NEAREST);
+						vk::copy_scaled_image(cmd, tmp, _dst,
+							areai{ 0, 0, src_w, static_cast<s32>(src_h) },
+							coordi{ { dst_x, dst_y }, { section.dst_w, section.dst_h } },
+							1, tmp->info.format == _dst->info.format,
+							VK_FILTER_NEAREST);
 					}
 					else
 					{

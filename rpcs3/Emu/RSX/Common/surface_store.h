@@ -1092,7 +1092,7 @@ namespace rsx
 			return true;
 		}
 
-		virtual bool handle_memory_pressure(command_list_type cmd, problem_severity severity)
+		virtual bool handle_memory_pressure(command_list_type cmd, problem_severity /*severity*/)
 		{
 			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data)
 			{
