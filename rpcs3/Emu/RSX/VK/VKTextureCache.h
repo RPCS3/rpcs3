@@ -1260,7 +1260,7 @@ namespace vk
 			return result;
 		}
 
-		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, rsx::vk_render_targets& m_rtts, vk::command_buffer& cmd)
+		bool blit(rsx::blit_src_info& src, rsx::blit_dst_info& dst, bool interpolate, vk::surface_cache& m_rtts, vk::command_buffer& cmd)
 		{
 			blitter helper;
 			auto reply = upload_scaled_image(src, dst, interpolate, cmd, m_rtts, helper);

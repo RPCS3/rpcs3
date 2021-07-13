@@ -374,7 +374,7 @@ private:
 	vk::pipeline_props m_pipeline_properties;
 
 	vk::texture_cache m_texture_cache;
-	rsx::vk_render_targets m_rtts;
+	vk::surface_cache m_rtts;
 
 	std::unique_ptr<vk::buffer> null_buffer;
 	std::unique_ptr<vk::buffer_view> null_buffer_view;

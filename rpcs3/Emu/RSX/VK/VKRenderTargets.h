@@ -64,11 +64,8 @@ namespace vk
 	{
 		return ensure(dynamic_cast<vk::render_target*>(t));
 	}
-}
 
-namespace rsx
-{
-	struct vk_render_target_traits
+	struct surface_cache_traits
 	{
 		using surface_storage_type = std::unique_ptr<vk::render_target>;
 		using surface_type = vk::render_target*;
@@ -78,7 +75,7 @@ namespace rsx
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
 			u32 address,
-			surface_color_format format,
+			rsx::surface_color_format format,
 			usz width, usz height, usz pitch,
 			rsx::surface_antialiasing antialias,
 			vk::render_device &device, vk::command_buffer& cmd)
@@ -87,16 +84,16 @@ namespace rsx
 			VkFormat requested_format = fmt.first;
 
 			u8 samples;
-			surface_sample_layout sample_layout;
+			rsx::surface_sample_layout sample_layout;
 			if (g_cfg.video.antialiasing_level == msaa_level::_auto)
 			{
 				samples = get_format_sample_count(antialias);
-				sample_layout = surface_sample_layout::ps3;
+				sample_layout = rsx::surface_sample_layout::ps3;
 			}
 			else
 			{
 				samples = 1;
-				sample_layout = surface_sample_layout::null;
+				sample_layout = rsx::surface_sample_layout::null;
 			}
 
 			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -144,7 +141,7 @@ namespace rsx
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
 			u32 address,
-			surface_depth_format2 format,
+			rsx::surface_depth_format2 format,
 			usz width, usz height, usz pitch,
 			rsx::surface_antialiasing antialias,
 			vk::render_device &device, vk::command_buffer& cmd)
@@ -153,16 +150,16 @@ namespace rsx
 			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 			u8 samples;
-			surface_sample_layout sample_layout;
+			rsx::surface_sample_layout sample_layout;
 			if (g_cfg.video.antialiasing_level == msaa_level::_auto)
 			{
 				samples = get_format_sample_count(antialias);
-				sample_layout = surface_sample_layout::ps3;
+				sample_layout = rsx::surface_sample_layout::ps3;
 			}
 			else
 			{
 				samples = 1;
-				sample_layout = surface_sample_layout::null;
+				sample_layout = rsx::surface_sample_layout::null;
 			}
 
 			if (samples == 1) [[likely]]
@@ -353,7 +350,7 @@ namespace rsx
 
 		static bool surface_matches_properties(
 			const std::unique_ptr<vk::render_target> &surface,
-			surface_color_format format,
+			rsx::surface_color_format format,
 			usz width, usz height,
 			rsx::surface_antialiasing antialias,
 			bool check_refs = false)
@@ -364,7 +361,7 @@ namespace rsx
 
 		static bool surface_matches_properties(
 			const std::unique_ptr<vk::render_target> &surface,
-			surface_depth_format2 format,
+			rsx::surface_depth_format2 format,
 			usz width, usz height,
 			rsx::surface_antialiasing antialias,
 			bool check_refs = false)
@@ -380,7 +377,7 @@ namespace rsx
 		}
 	};
 
-	struct vk_render_targets : public rsx::surface_store<vk_render_target_traits>
+	struct surface_cache : public rsx::surface_store<vk::surface_cache_traits>
 	{
 		void destroy()
 		{
