@@ -31,6 +31,9 @@ namespace vk
 		u32 host_visible_coherent;
 		u32 device_local;
 
+		u64 device_local_total_bytes;
+		u64 host_visible_total_bytes;
+
 		PFN_vkGetMemoryHostPointerPropertiesEXT _vkGetMemoryHostPointerPropertiesEXT;
 	};
 
