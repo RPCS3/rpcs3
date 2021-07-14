@@ -107,8 +107,8 @@ namespace vk
 
 		if (!(memory_req.memoryTypeBits & (1 << memory_type_index)))
 		{
-			//Suggested memory type is incompatible with this memory type.
-			//Go through the bitset and test for requested props.
+			// Suggested memory type is incompatible with this memory type.
+			// Go through the bitset and test for requested props.
 			if (!dev.get_compatible_memory_type(memory_req.memoryTypeBits, access_flags, &memory_type_index))
 				fmt::throw_exception("No compatible memory type was found!");
 		}

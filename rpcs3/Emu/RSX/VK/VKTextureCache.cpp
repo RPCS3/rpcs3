@@ -383,7 +383,7 @@ namespace vk
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 		case CELL_GCM_TEXTURE_DEPTH16:
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-			//Dont bother letting this propagate
+			// Dont bother letting this propagate
 			return{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_R };
 		default:
 			break;
@@ -509,8 +509,8 @@ namespace vk
 				VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
 		}
 
-		//This method is almost exclusively used to work on framebuffer resources
-		//Keep the original swizzle layout unless there is data format conversion
+		// This method is almost exclusively used to work on framebuffer resources
+		// Keep the original swizzle layout unless there is data format conversion
 		VkComponentMapping view_swizzle;
 		if (!source || dst_format != source->info.format)
 		{
@@ -831,7 +831,7 @@ namespace vk
 			break;
 		case rsx::texture_upload_context::dma:
 		case rsx::texture_upload_context::framebuffer_storage:
-			// Should not initialized with this method
+			// Should not be initialized with this method
 		default:
 			fmt::throw_exception("Unexpected upload context 0x%x", u32(context));
 		}
@@ -1197,7 +1197,7 @@ namespace vk
 		auto src = vm::_ptr<const char>(address);
 		auto dst = static_cast<char*>(mem);
 
-		//TODO: SSE optimization
+		// TODO: SSE optimization
 		for (u32 row = 0; row < height; ++row)
 		{
 			auto casted_src = reinterpret_cast<const be_t<u32>*>(src);
