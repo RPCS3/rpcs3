@@ -483,6 +483,7 @@ namespace vk
 			break;
 		default:
 			element_size = get_format_texel_width(fmt);
+			break;
 		}
 
 		vk::image* src = nullptr;
