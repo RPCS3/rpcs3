@@ -450,13 +450,13 @@ namespace vk
 
 	std::unique_ptr<vk::viewable_image> texture_cache::find_temporary_image(VkFormat format, u16 w, u16 h, u16 d, u8 mipmaps)
 	{
-		//const auto current_frame = vk::get_current_frame_id();
 		for (auto& e : m_temporary_storage)
 		{
 			if (e.can_reuse && e.matches(format, w, h, d, mipmaps, 0))
 			{
 				m_temporary_memory_size -= e.block_size;
 				e.block_size = 0;
+				e.can_reuse = false;
 				return std::move(e.combined_image);
 			}
 		}
@@ -466,13 +466,13 @@ namespace vk
 
 	std::unique_ptr<vk::viewable_image> texture_cache::find_temporary_cubemap(VkFormat format, u16 size)
 	{
-		//const auto current_frame = vk::get_current_frame_id();
 		for (auto& e : m_temporary_storage)
 		{
 			if (e.can_reuse && e.matches(format, size, size, 1, 1, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT))
 			{
 				m_temporary_memory_size -= e.block_size;
 				e.block_size = 0;
+				e.can_reuse = false;
 				return std::move(e.combined_image);
 			}
 		}
@@ -1090,6 +1090,42 @@ namespace vk
 
 		//Unreachable; silence compiler warning anyway
 		return false;
+	}
+
+	bool texture_cache::handle_memory_pressure(rsx::problem_severity severity)
+	{
+		bool any_released = baseclass::handle_memory_pressure(severity);
+
+		if (severity <= rsx::problem_severity::low || !m_temporary_memory_size)
+		{
+			// Nothing left to do
+			return any_released;
+		}
+
+		constexpr u64 _1M = 0x100000;
+		if (severity <= rsx::problem_severity::moderate && m_temporary_memory_size < (64 * _1M))
+		{
+			// Some memory is consumed by the temporary resources, but no need to panic just yet
+			return any_released;
+		}
+
+		// Nuke temporary resources. They will still be visible to the GPU.
+		auto gc = vk::get_resource_manager();
+		u64 actual_released_memory = 0;
+
+		for (auto& entry : m_temporary_storage)
+		{
+			actual_released_memory += entry.combined_image->memory->size();
+			gc->dispose(entry.combined_image);
+			m_temporary_memory_size -= entry.block_size;
+		}
+
+		ensure(m_temporary_memory_size == 0);
+		m_temporary_storage.clear();
+		m_temporary_subresource_cache.clear();
+
+		rsx_log.warning("Texture cache released %lluM of temporary resources.", (actual_released_memory / _1M));
+		return any_released || (actual_released_memory > 0);
 	}
 
 	void texture_cache::on_frame_end()
