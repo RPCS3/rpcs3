@@ -106,7 +106,7 @@ namespace rsx
 	// Defines how the underlying PS3-visible memory backed by a texture is accessed
 	namespace format_class_
 	{
-		// TODO: Remove when enum import is supported by GCC
+		// TODO: Remove when enum import is supported by clang
 		enum format_class : u8
 		{
 			RSX_FORMAT_CLASS_UNDEFINED = 0,
