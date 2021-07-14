@@ -1429,7 +1429,7 @@ namespace rsx
 			m_storage.purge_unreleased_sections();
 		}
 
-		bool handle_memory_pressure(problem_severity severity)
+		virtual bool handle_memory_pressure(problem_severity severity)
 		{
 			if (m_storage.m_unreleased_texture_objects)
 			{
