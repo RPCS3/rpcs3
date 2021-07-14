@@ -8,15 +8,20 @@
 
 namespace vk
 {
-	enum vmm_allocation_pool
+	namespace vmm_allocation_pool_ // Workaround for clang < 13 not supporting enum imports
 	{
-		VMM_ALLOCATION_POOL_UNDEFINED = 0,
-		VMM_ALLOCATION_POOL_SYSTEM,
-		VMM_ALLOCATION_POOL_SURFACE_CACHE,
-		VMM_ALLOCATION_POOL_TEXTURE_CACHE,
-		VMM_ALLOCATION_POOL_SWAPCHAIN,
-		VMM_ALLOCATION_POOL_SCRATCH,
-	};
+		enum vmm_allocation_pool
+		{
+			VMM_ALLOCATION_POOL_UNDEFINED = 0,
+			VMM_ALLOCATION_POOL_SYSTEM,
+			VMM_ALLOCATION_POOL_SURFACE_CACHE,
+			VMM_ALLOCATION_POOL_TEXTURE_CACHE,
+			VMM_ALLOCATION_POOL_SWAPCHAIN,
+			VMM_ALLOCATION_POOL_SCRATCH,
+		};
+	}
+
+	using namespace vk::vmm_allocation_pool_;
 
 	class mem_allocator_base
 	{

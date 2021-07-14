@@ -335,6 +335,8 @@ namespace vk
 	};
 }
 
+using namespace vk::vmm_allocation_pool_; // clang workaround.
+
 class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
 private:
@@ -364,8 +366,6 @@ private:
 		flushing = 1,
 		deadlock = 2
 	};
-
-	using enum vk::vmm_allocation_pool;
 
 private:
 	VKFragmentProgram m_fragment_prog;
