@@ -1258,7 +1258,7 @@ namespace vk
 
 		if (total_device_memory >= 1024)
 		{
-			quota = std::min(3072ull, (total_device_memory * 40) / 100);
+			quota = std::min<u64>(3072, (total_device_memory * 40) / 100);
 		}
 		else if (total_device_memory >= 768)
 		{
@@ -1266,7 +1266,7 @@ namespace vk
 		}
 		else
 		{
-			quota = std::min(128ull, total_device_memory / 2);
+			quota = std::min<u64>(128, total_device_memory / 2);
 		}
 
 		quota *= 0x100000;

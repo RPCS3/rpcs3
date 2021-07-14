@@ -16,7 +16,7 @@ namespace vk
 
 		if (total_device_memory >= 2048)
 		{
-			quota = std::min(6144ull, (total_device_memory * 40) / 100);
+			quota = std::min<u64>(6144, (total_device_memory * 40) / 100);
 		}
 		else if (total_device_memory >= 1024)
 		{
@@ -29,7 +29,7 @@ namespace vk
 		else
 		{
 			// Remove upto 128MB but at least aim for half of available VRAM
-			quota = std::min(128ull, total_device_memory / 2);
+			quota = std::min<u64>(128, total_device_memory / 2);
 		}
 
 		return quota * 0x100000;
