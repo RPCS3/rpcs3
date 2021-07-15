@@ -12,7 +12,8 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <LanguageStandard Condition = "'$(VisualStudioVersion.Substring(0,2))'&lt;'17'">stdcpplatest</LanguageStandard>
+      <LanguageStandard Condition = "'$(VisualStudioVersion.Substring(0,2))'&gt;='17'">stdcpp20</LanguageStandard>
       <PreprocessorDefinitions>_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING=1;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>false</ExceptionHandling>
       <AdditionalOptions>-d2FH4- %(AdditionalOptions)</AdditionalOptions>
