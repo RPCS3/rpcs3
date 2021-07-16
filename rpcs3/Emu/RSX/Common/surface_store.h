@@ -501,6 +501,7 @@ namespace rsx
 				ensure(store);
 				new_surface_storage = Traits::create_new_surface(address, format, width, height, pitch, antialias, std::forward<Args>(extra_params)...);
 				new_surface = Traits::get(new_surface_storage);
+				Traits::prepare_surface_for_drawing(command_list, new_surface);
 				allocate_rsx_memory(new_surface);
 			}
 
