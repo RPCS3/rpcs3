@@ -1087,12 +1087,12 @@ namespace rsx
 			return true;
 		}
 
-		virtual bool can_collapse_surface(const surface_storage_type&)
+		virtual bool can_collapse_surface(const surface_storage_type&, problem_severity)
 		{
 			return true;
 		}
 
-		virtual bool handle_memory_pressure(command_list_type cmd, problem_severity /*severity*/)
+		virtual bool handle_memory_pressure(command_list_type cmd, problem_severity severity)
 		{
 			auto process_list_function = [&](std::unordered_map<u32, surface_storage_type>& data)
 			{
@@ -1102,7 +1102,7 @@ namespace rsx
 					if (surface->dirty())
 					{
 						// Force memory barrier to release some resources
-						if (can_collapse_surface(It->second))
+						if (can_collapse_surface(It->second, severity))
 						{
 							// NOTE: Do not call memory_barrier under fatal conditions as it can create allocations!
 							// It would be safer to leave the resources hanging around and spill them instead
@@ -1121,6 +1121,7 @@ namespace rsx
 				}
 			};
 
+			ensure(severity >= rsx::problem_severity::moderate);
 			const auto old_usage = m_active_memory_used;
 
 			// Try and find old surfaces to remove
