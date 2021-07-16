@@ -125,6 +125,12 @@ namespace vk
 			// 1. Spill an strip any 'invalidated resources'. At this point it doesn't matter and we donate to the resolve cache which is a plus.
 			for (auto& surface : invalidated_resources)
 			{
+				if (!surface->value)
+				{
+					ensure(!surface->resolve_surface);
+					continue;
+				}
+
 				// Only spill anything with references. Other surfaces already marked for removal should be inevitably deleted when it is time to free_invalidated
 				if (surface->has_refs() && (surface->resolve_surface || surface->samples() == 1))
 				{
@@ -251,7 +257,8 @@ namespace vk
 		{
 			for (auto& surface : list)
 			{
-				if (surface.second->value && !surface.second->is_bound)
+				// NOTE: Check if memory is available instead of value in case we ran out of memory during unspill
+				if (surface.second->memory && !surface.second->is_bound)
 				{
 					sorted_list.push_back(surface.second.get());
 				}
