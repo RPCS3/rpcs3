@@ -51,5 +51,4 @@ protected:
 
 	std::unique_ptr<QSettings> m_settings;
 	QDir m_settings_dir;
-	QString m_current_name;
 };

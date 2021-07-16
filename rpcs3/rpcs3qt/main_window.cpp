@@ -106,7 +106,7 @@ bool main_window::Init(bool with_cli_boot)
 	setWindowTitle(QString::fromStdString("RPCS3 " + rpcs3::get_version().to_string()));
 
 	Q_EMIT RequestGlobalStylesheetChange();
-	ConfigureGuiFromSettings(true);
+	ConfigureGuiFromSettings();
 
 	if (const std::string_view branch_name = rpcs3::get_full_branch(); branch_name != "RPCS3/rpcs3/master" && branch_name != "local_build")
 	{
@@ -2022,8 +2022,6 @@ void main_window::CreateConnects()
 	const auto open_settings = [this](int tabIndex)
 	{
 		settings_dialog dlg(m_gui_settings, m_emu_settings, tabIndex, this);
-		connect(&dlg, &settings_dialog::GuiSettingsSaveRequest, this, &main_window::SaveWindowState);
-		connect(&dlg, &settings_dialog::GuiSettingsSyncRequest, this, &main_window::ConfigureGuiFromSettings);
 		connect(&dlg, &settings_dialog::GuiStylesheetRequest, this, &main_window::RequestGlobalStylesheetChange);
 		connect(&dlg, &settings_dialog::GuiRepaintRequest, this, &main_window::RepaintGui);
 		connect(&dlg, &settings_dialog::EmuSettingsApplied, this, &main_window::NotifyEmuSettingsChange);
@@ -2478,7 +2476,7 @@ void main_window::CreateDockWindows()
 	connect(m_game_list_frame, &game_list_frame::NotifyEmuSettingsChange, this, &main_window::NotifyEmuSettingsChange);
 }
 
-void main_window::ConfigureGuiFromSettings(bool configure_all)
+void main_window::ConfigureGuiFromSettings()
 {
 	// Restore GUI state if needed. We need to if they exist.
 	if (!restoreGeometry(m_gui_settings->GetValue(gui::mw_geometry).toByteArray()))
@@ -2566,14 +2564,11 @@ void main_window::ConfigureGuiFromSettings(bool configure_all)
 	ui->sizeSlider->setSliderPosition(icon_size_index);
 	SetIconSizeActions(icon_size_index);
 
-	if (configure_all)
-	{
-		// Handle log settings
-		m_log_frame->LoadSettings();
+	// Handle log settings
+	m_log_frame->LoadSettings();
 
-		// Gamelist
-		m_game_list_frame->LoadSettings();
-	}
+	// Gamelist
+	m_game_list_frame->LoadSettings();
 }
 
 void main_window::SetIconSizeActions(int idx) const

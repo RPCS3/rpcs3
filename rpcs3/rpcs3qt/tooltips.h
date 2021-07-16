@@ -171,7 +171,6 @@ public:
 
 		const QString log_limit          = tr("Sets the maximum amount of blocks that the log can display.\nThis usually equals the number of lines.\nSet 0 in order to remove the limit.");
 		const QString tty_limit          = tr("Sets the maximum amount of blocks that the tty can display.\nThis usually equals the number of lines.\nSet 0 in order to remove the limit.");
-		const QString configs            = tr("Only useful to developers.\nIf unsure, don't use this option.");
 		const QString stylesheets        = tr("Changes the overall look of RPCS3.\nChoose a stylesheet and click Apply to change between styles.");
 		const QString show_welcome       = tr("Shows the initial welcome screen upon starting RPCS3.");
 		const QString show_exit_game     = tr("Shows a confirmation dialog when the game window is being closed.");
