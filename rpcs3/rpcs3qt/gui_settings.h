@@ -191,7 +191,6 @@ namespace gui
 	const gui_save rsx_geometry = gui_save(rsx, "geometry", QByteArray());
 	const gui_save rsx_states   = gui_save(rsx, "states",   QVariantMap());
 
-	const gui_save m_currentConfig     = gui_save(meta, "currentConfig",     Settings);
 	const gui_save m_currentStylesheet = gui_save(meta, "currentStylesheet", DefaultStylesheet);
 	const gui_save m_showDebugTab      = gui_save(meta, "showDebugTab",      false);
 	const gui_save m_enableUIColors    = gui_save(meta, "enableUIColors",    false);
@@ -247,9 +246,6 @@ class gui_settings : public settings
 public:
 	explicit gui_settings(QObject* parent = nullptr);
 
-	/** Changes the settings file to the destination preset*/
-	bool ChangeToConfig(const QString& config_name);
-
 	bool GetCategoryVisibility(int cat) const;
 
 	void ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent);
@@ -259,13 +255,10 @@ public:
 	logs::level GetLogLevel() const;
 	bool GetGamelistColVisibility(int col) const;
 	QColor GetCustomColor(int col) const;
-	QStringList GetConfigEntries() const;
 	QStringList GetStylesheetEntries() const;
 	QStringList GetGameListCategoryFilters() const;
 
 public Q_SLOTS:
-	void Reset(bool remove_meta = false) const;
-
 	/** Sets the visibility of the chosen category. */
 	void SetCategoryVisibility(int cat, const bool& val) const;
 
@@ -273,13 +266,9 @@ public Q_SLOTS:
 
 	void SetCustomColor(int col, const QColor& val) const;
 
-	void SaveCurrentConfig(const QString& config_name);
-
 	static QSize SizeFromSlider(int pos);
 	static gui_save GetGuiSaveForColumn(int col);
 
 private:
-	void SaveConfigNameToDefault(const QString& config_name) const;
-	void BackupSettingsToTarget(const QString& config_name) const;
 	void ShowBox(QMessageBox::Icon icon, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, bool always_on_top);
 };

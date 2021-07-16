@@ -163,7 +163,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		if (!game)
 		{
-			ApplyGuiOptions(false);
+			ApplyStylesheet(false);
 		}
 	};
 
@@ -1494,34 +1494,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	if (!game)
 	{
-		// Comboboxes
-		SubscribeTooltip(ui->combo_configs, tooltips.settings.configs);
-
 		SubscribeTooltip(ui->gb_stylesheets, tooltips.settings.stylesheets);
-
-		// Checkboxes:
 		SubscribeTooltip(ui->cb_custom_colors, tooltips.settings.custom_colors);
-
-		// Checkboxes: gui options
 		SubscribeTooltip(ui->cb_show_welcome, tooltips.settings.show_welcome);
-
 		SubscribeTooltip(ui->cb_show_exit_game, tooltips.settings.show_exit_game);
-
 		SubscribeTooltip(ui->cb_show_boot_game, tooltips.settings.show_boot_game);
-
 		SubscribeTooltip(ui->cb_show_pkg_install, tooltips.settings.show_pkg_install);
-
 		SubscribeTooltip(ui->cb_show_pup_install, tooltips.settings.show_pup_install);
-
 		SubscribeTooltip(ui->cb_show_obsolete_cfg_dialog, tooltips.settings.show_obsolete_cfg);
-
 		SubscribeTooltip(ui->gb_updates, tooltips.settings.check_update_start);
 
-		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);
-
-		SubscribeTooltip(ui->discordState, tooltips.settings.discord_state);
-
 		// Discord:
+		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);
+		SubscribeTooltip(ui->discordState, tooltips.settings.discord_state);
 		ui->useRichPresence->setChecked(m_use_discord);
 		ui->label_discordState->setEnabled(m_use_discord);
 		ui->discordState->setEnabled(m_use_discord);
@@ -1614,33 +1599,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->pb_sd_icon_color->setEnabled(enable_ui_colors);
 		ui->pb_tr_icon_color->setEnabled(enable_ui_colors);
 
-		connect(ui->buttonBox, &QDialogButtonBox::accepted, this, [this]()
-		{
-			ApplyGuiOptions(false);
-		});
-
-		connect(ui->pb_reset_default, &QAbstractButton::clicked, this, [this]
-		{
-			if (QMessageBox::question(this, tr("Reset GUI to default?", "Reset"), tr("This will include your stylesheet as well. Do you wish to proceed?", "Reset"),
-				QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
-			{
-				ApplyGuiOptions(true);
-				m_gui_settings->Reset(true);
-				Q_EMIT GuiSettingsSyncRequest(true);
-				AddGuiConfigs();
-				AddStylesheets();
-				ApplyGuiOptions(false);
-			}
-		});
-
-		connect(ui->pb_backup_config, &QAbstractButton::clicked, this, &settings_dialog::OnBackupCurrentGuiConfig);
-		connect(ui->pb_apply_config, &QAbstractButton::clicked, this, &settings_dialog::OnApplyGuiConfig);
-		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
-
-		connect(ui->pb_open_folder, &QAbstractButton::clicked, [this]()
-		{
-			QDesktopServices::openUrl(m_gui_settings->GetSettingsDir());
-		});
+		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, [this]() { ApplyStylesheet(false); });
 
 		connect(ui->cb_show_welcome, &QCheckBox::clicked, [this](bool val)
 		{
@@ -1710,7 +1669,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			color_dialog(gui::tr_icon_color, tr("Choose trophy manager icon color", "Settings: color dialog"), ui->pb_tr_icon_color);
 		});
 
-		AddGuiConfigs();
 		AddStylesheets();
 	}
 
@@ -1855,24 +1813,6 @@ void settings_dialog::SnapSlider(QSlider *slider, int interval)
 	});
 }
 
-void settings_dialog::AddGuiConfigs()
-{
-	ui->combo_configs->clear();
-	ui->combo_configs->addItems(m_gui_settings->GetConfigEntries());
-
-	m_current_gui_config = m_gui_settings->GetValue(gui::m_currentConfig).toString();
-
-	const int index = ui->combo_configs->findText(m_current_gui_config);
-	if (index >= 0)
-	{
-		ui->combo_configs->setCurrentIndex(index);
-	}
-	else
-	{
-		cfg_log.warning("Trying to set an invalid config index %d", index);
-	}
-}
-
 void settings_dialog::AddStylesheets()
 {
 	ui->combo_stylesheets->clear();
@@ -1901,69 +1841,14 @@ void settings_dialog::AddStylesheets()
 	}
 }
 
-void settings_dialog::OnBackupCurrentGuiConfig()
+void settings_dialog::ApplyStylesheet(bool reset)
 {
-	QInputDialog* dialog = new QInputDialog(this);
-	dialog->setWindowTitle(tr("Choose a unique name", "Backup GUI config"));
-	dialog->setLabelText(tr("Configuration Name: ", "Backup GUI config"));
-	dialog->resize(500, 100);
-
-	while (dialog->exec() != QDialog::Rejected)
+	if (reset)
 	{
-		dialog->resize(500, 100);
-
-		const QString gui_config_name = dialog->textValue();
-
-		if (gui_config_name.isEmpty())
-		{
-			QMessageBox::warning(this, tr("Error", "Backup GUI config warning 1"), tr("Name cannot be empty", "Backup GUI config warning 1"));
-			continue;
-		}
-		if (gui_config_name.contains("."))
-		{
-			QMessageBox::warning(this, tr("Error", "Backup GUI config warning 2"), tr("Must choose a name with no '.'", "Backup GUI config warning 2"));
-			continue;
-		}
-		if (ui->combo_configs->findText(gui_config_name) != -1)
-		{
-			QMessageBox::warning(this, tr("Error", "Backup GUI config warning 3"), tr("Please choose a non-existing name", "Backup GUI config warning 3"));
-			continue;
-		}
-		Q_EMIT GuiSettingsSaveRequest();
-		m_gui_settings->SaveCurrentConfig(gui_config_name);
-		ui->combo_configs->addItem(gui_config_name);
-		ui->combo_configs->setCurrentText(gui_config_name);
-		m_current_gui_config = gui_config_name;
-		break;
-	}
-}
-
-void settings_dialog::OnApplyGuiConfig()
-{
-	const QString new_config = ui->combo_configs->currentText();
-
-	if (new_config == m_current_gui_config)
-	{
-		return;
+		m_current_stylesheet = gui::DefaultStylesheet;
+		ui->combo_stylesheets->setCurrentIndex(0);
 	}
 
-	// Backup current window states
-	Q_EMIT GuiSettingsSaveRequest();
-
-	if (!m_gui_settings->ChangeToConfig(new_config))
-	{
-		const int new_config_idx = ui->combo_configs->currentIndex();
-		ui->combo_configs->setCurrentText(m_current_gui_config);
-		ui->combo_configs->removeItem(new_config_idx);
-		return;
-	}
-
-	m_current_gui_config = new_config;
-	Q_EMIT GuiSettingsSyncRequest(true);
-}
-
-void settings_dialog::OnApplyStylesheet()
-{
 	// NOTE: We're deliberately not using currentText() here. The actual stylesheet is stored in user data.
 	m_current_stylesheet = ui->combo_stylesheets->currentData().toString();
 
@@ -1972,19 +1857,6 @@ void settings_dialog::OnApplyStylesheet()
 		m_gui_settings->SetValue(gui::m_currentStylesheet, m_current_stylesheet);
 		Q_EMIT GuiStylesheetRequest();
 	}
-}
-
-void settings_dialog::ApplyGuiOptions(bool reset)
-{
-	if (reset)
-	{
-		m_current_stylesheet = gui::DefaultStylesheet;
-		ui->combo_configs->setCurrentIndex(0);
-		ui->combo_stylesheets->setCurrentIndex(0);
-	}
-
-	OnApplyGuiConfig();
-	OnApplyStylesheet();
 }
 
 int settings_dialog::exec()
