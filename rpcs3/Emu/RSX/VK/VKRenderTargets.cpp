@@ -540,7 +540,7 @@ namespace vk
 			break;
 		}
 
-		vk::image* src = nullptr;
+		vk::viewable_image* src = nullptr;
 		if (samples() == 1) [[likely]]
 		{
 			src = this;
@@ -588,7 +588,24 @@ namespace vk
 		if (msaa_flags & rsx::surface_state_flags::require_resolve)
 		{
 			ensure(samples() > 1);
+			const bool borrowed = [&]()
+			{
+				if (src != resolve_surface.get())
+				{
+					ensure(!resolve_surface);
+					resolve_surface.reset(src);
+					return true;
+				}
+
+				return false;
+			}();
+
 			resolve(cmd);
+
+			if (borrowed)
+			{
+				resolve_surface.release();
+			}
 		}
 
 		const auto pdev = vk::get_current_renderer();
