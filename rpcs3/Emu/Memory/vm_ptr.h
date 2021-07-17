@@ -204,13 +204,13 @@ namespace vm
 			return *this;
 		}
 
-		template <bool = false> requires (!std::is_void_v<T> && !std::is_const_v<T>)
-		bool try_read(std::conditional_t<std::is_void_v<T>, char, T>& out) const
+		template <bool = false> requires (!std::is_void_v<T>)
+		bool try_read(std::conditional_t<std::is_void_v<T>, char, std::remove_const_t<T>>& out) const
 		{
 			return vm::try_access(vm::cast(m_addr), &out, sizeof(T), false);
 		}
 
-		template <bool = false> requires (!std::is_void_v<T>)
+		template <bool = false> requires (!std::is_void_v<T> && !std::is_const_v<T>)
 		bool try_write(const std::conditional_t<std::is_void_v<T>, char, T>& _in) const
 		{
 			return vm::try_access(vm::cast(m_addr), const_cast<T*>(&_in), sizeof(T), true);
