@@ -225,7 +225,7 @@ namespace fmt
 {
 	// Both uchar and std::byte are allowed
 	template <typename T>
-	concept ByteArray = requires (T& t) { static_cast<const std::conditional_t<std::is_same_v<decltype(std::as_const(t[0])), const std::byte&>, std::byte, uchar>&>(std::data(t)[0]); };
+	concept ByteArray = requires (T& t) { const_cast<std::conditional_t<std::is_same_v<decltype(std::as_const(t[0])), const std::byte&>, std::byte, uchar>&>(std::data(t)[0]); };
 }
 
 template <fmt::ByteArray T>
