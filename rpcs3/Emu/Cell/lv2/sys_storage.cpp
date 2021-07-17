@@ -325,32 +325,38 @@ error_code sys_storage_report_devices(u32 storages, u32 start, u32 devices, vm::
 {
 	sys_storage.todo("sys_storage_report_devices(storages=0x%x, start=0x%x, devices=0x%x, device_ids=0x%x)", storages, start, devices, device_ids);
 
-	std::array<u64, 0x11> all_devs;
-
-	all_devs[0] = 0x10300000000000A;
-	for (int i = 0; i < 7; ++i)
+	static constexpr std::array<u64, 0x11> all_devs = []
 	{
-		all_devs[i + 1] = 0x100000000000001 | (static_cast<u64>(i) << 32);
+		std::array<u64, 0x11> all_devs{};
+		all_devs[0] = 0x10300000000000A;
+
+		for (int i = 0; i < 7; ++i)
+		{
+			all_devs[i + 1] = 0x100000000000001 | (static_cast<u64>(i) << 32);
+		}
+
+		for (int i = 0; i < 3; ++i)
+		{
+			all_devs[i + 8] = 0x101000000000007 | (static_cast<u64>(i) << 32);
+		}
+
+		all_devs[11] = 0x101000000000006;
+
+		for (int i = 0; i < 4; ++i)
+		{
+			all_devs[i + 12] = 0x100000000000004 | (static_cast<u64>(i) << 32);
+		}
+
+		all_devs[16] = 0x100000000000003;
+		return all_devs;
+	}();
+
+	if (!devices || start >= all_devs.size() || devices > all_devs.size() - start)
+	{
+		return CELL_EINVAL;
 	}
 
-	for (int i = 0; i < 3; ++i)
-	{
-		all_devs[i + 8] = 0x101000000000007 | (static_cast<u64>(i) << 32);
-	}
-
-	all_devs[11] = 0x101000000000006;
-
-	for (int i = 0; i < 4; ++i)
-	{
-		all_devs[i + 12] = 0x100000000000004 | (static_cast<u64>(i) << 32);
-	}
-
-	all_devs[16] = 0x100000000000003;
-
-	for (u32 i = 0; i < devices; ++i)
-	{
-		device_ids[i] = all_devs[start++];
-	}
+	std::copy_n(all_devs.begin() + start, devices, device_ids.get_ptr());
 
 	return CELL_OK;
 }
