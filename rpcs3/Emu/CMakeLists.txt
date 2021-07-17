@@ -333,6 +333,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/sys_rsxaudio_.cpp
     Cell/Modules/sys_spinlock.cpp
     Cell/Modules/sys_spu_.cpp
+    Cell/Modules/libfs_utility_init.cpp
 )
 
 if(NOT MSVC)
