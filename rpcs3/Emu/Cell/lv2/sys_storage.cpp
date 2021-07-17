@@ -4,15 +4,20 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "util/shared_ptr.hpp"
 
 #include "sys_storage.h"
 
 LOG_CHANNEL(sys_storage);
 
-struct storage_manager
+namespace
 {
-	atomic_ptr<std::shared_ptr<lv2_event_queue>> asyncequeue;
-};
+	struct storage_manager
+	{
+		// This is probably wrong and should be assigned per fd or something
+		atomic_ptr<std::shared_ptr<lv2_event_queue>> asyncequeue;
+	};
+}
 
 error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 {
@@ -26,16 +31,13 @@ error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 	u64 storage_id = device & 0xFFFFF00FFFFFFFF;
 	fs::file file;
 
-	auto storage = std::make_shared<lv2_storage>(device, std::move(file), mode, flags);
-
-	if (const u32 id = idm::import_existing<lv2_storage>(std::move(storage)))
+	if (const u32 id = idm::make<lv2_storage>(device, std::move(file), mode, flags))
 	{
 		*fd = id;
 		return CELL_OK;
 	}
 
-	// idk error
-	return CELL_EFAULT;
+	return CELL_EAGAIN;
 }
 
 error_code sys_storage_close(u32 fd)
@@ -97,13 +99,14 @@ error_code sys_storage_async_configure(u32 fd, u32 io_buf, u32 equeue_id, u32 un
 	sys_storage.todo("sys_storage_async_configure(fd=0x%x, io_buf=0x%x, equeue_id=0x%x, unk=*0x%x)", fd, io_buf, equeue_id, unk);
 
 	auto& manager = g_fxo->get<storage_manager>();
+
 	if (auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id))
 	{
-		manager.asyncequeue = queue;
+		manager.asyncequeue.store(queue);
 	}
 	else
 	{
-		return ESRCH;
+		return CELL_ESRCH;
 	}
 
 	return CELL_OK;
@@ -114,7 +117,8 @@ error_code sys_storage_async_send_device_command(u32 dev_handle, u64 cmd, vm::pt
 	sys_storage.todo("sys_storage_async_send_device_command(dev_handle=0x%x, cmd=0x%llx, in=*0x%x, inlen=0x%x, out=*0x%x, outlen=0x%x, unk=0x%x)", dev_handle, cmd, in, inlen, out, outlen, unk);
 
 	auto& manager = g_fxo->get<storage_manager>();
-	if (auto q = idm::get<lv2_obj, lv2_event_queue>(manager.asyncequeue))
+
+	if (auto q = *manager.asyncequeue.load())
 	{
 		q->send(0, unk, unk, unk);
 	}
