@@ -118,6 +118,17 @@ void fmt_class_string<ppu_thread_status>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<typename ppu_thread::call_history_t>::format(std::string& out, u64 arg)
+{
+	const auto& history = get_object(arg);
+
+	for (u64 count = 0, idx = history.index - 1; idx != umax && count < ppu_thread::call_history_max_size; count++, idx--)
+	{
+		fmt::append(out, "\n(%u) 0x%08x", count, history.data[idx % ppu_thread::call_history_max_size]);
+	}
+}
+
 const ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise;
 const ppu_decoder<ppu_interpreter_fast> g_ppu_interpreter_fast;
 const ppu_decoder<ppu_itype> g_ppu_itype;
@@ -885,6 +896,22 @@ std::string ppu_thread::dump_misc() const
 	return ret;
 }
 
+std::string ppu_thread::dump_all() const
+{
+	std::string ret = cpu_thread::dump_all();
+
+	if (!call_history.data.empty())
+	{
+		ret +=
+			"\nCalling History:"
+			"\n================";
+
+		fmt::append(ret, "%s", call_history);
+	}
+
+	return ret;
+}
+
 extern thread_local std::string(*g_tls_log_prefix)();
 
 void ppu_thread::cpu_task()
@@ -1151,6 +1178,11 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	if (!g_use_rtm)
 	{
 		state += cpu_flag::memory;
+	}
+
+	if (g_cfg.core.ppu_call_history)
+	{
+		call_history.data.resize(call_history_max_size);
 	}
 }
 

@@ -243,6 +243,14 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 
 		std::lock_guard lock(queue.mutex);
 
+		// "/dev_flash/vsh/module/msmw2.sprx" seems to rely on some cryptic shared memory behaviour that we don't emulate correctly
+		// This is a hack to avoid waiting for 1m40s every time we boot vsh
+		if (queue.key == 0x8005911000000012 && g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+		{
+			sys_event.todo("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx) Bypassing timeout for msmw2.sprx", equeue_id, dummy_event, timeout);
+			timeout = 1;
+		}
+
 		if (queue.events.empty())
 		{
 			queue.sq.emplace_back(&ppu);
