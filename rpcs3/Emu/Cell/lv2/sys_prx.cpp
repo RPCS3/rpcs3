@@ -25,6 +25,7 @@ LOG_CHANNEL(sys_prx);
 // <string: firmware sprx, int: should hle if 1>
 extern const std::map<std::string_view, int> g_prx_list
 {
+	{ "/dev_flash/sys/internal/libfs_utility_init.sprx", 1 },
 	{ "libaacenc.sprx", 0 },
 	{ "libaacenc_spurs.sprx", 0 },
 	{ "libac3dec.sprx", 0 },
@@ -225,7 +226,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	}
 	else if (vpath0.starts_with("/"))
 	{
-		// Special case (currently unused): HLE for files outside of "/dev_flash/sys/external/"
+		// Special case : HLE for files outside of "/dev_flash/sys/external/"
 		// Have to specify full path for them
 		ignore = g_prx_list.count(vpath0) && g_prx_list.at(vpath0);
 	}
