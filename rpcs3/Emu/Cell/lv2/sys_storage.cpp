@@ -4,15 +4,20 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "util/shared_ptr.hpp"
 
 #include "sys_storage.h"
 
 LOG_CHANNEL(sys_storage);
 
-struct storage_manager
+namespace
 {
-	atomic_ptr<std::shared_ptr<lv2_event_queue>> asyncequeue;
-};
+	struct storage_manager
+	{
+		// This is probably wrong and should be assigned per fd or something
+		atomic_ptr<std::shared_ptr<lv2_event_queue>> asyncequeue;
+	};
+}
 
 error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 {
@@ -31,16 +36,13 @@ error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 	u64 storage_id = device & 0xFFFFF00FFFFFFFF;
 	fs::file file;
 
-	auto storage = std::make_shared<lv2_storage>(device, std::move(file), mode, flags);
-
-	if (const u32 id = idm::import_existing<lv2_storage>(std::move(storage)))
+	if (const u32 id = idm::make<lv2_storage>(device, std::move(file), mode, flags))
 	{
 		*fd = id;
 		return CELL_OK;
 	}
 
-	// idk error
-	return CELL_EFAULT;
+	return CELL_EAGAIN;
 }
 
 error_code sys_storage_close(u32 fd)
@@ -112,13 +114,14 @@ error_code sys_storage_async_configure(u32 fd, u32 io_buf, u32 equeue_id, u32 un
 	sys_storage.todo("sys_storage_async_configure(fd=0x%x, io_buf=0x%x, equeue_id=0x%x, unk=*0x%x)", fd, io_buf, equeue_id, unk);
 
 	auto& manager = g_fxo->get<storage_manager>();
+
 	if (auto queue = idm::get<lv2_obj, lv2_event_queue>(equeue_id))
 	{
-		manager.asyncequeue = queue;
+		manager.asyncequeue.store(queue);
 	}
 	else
 	{
-		return ESRCH;
+		return CELL_ESRCH;
 	}
 
 	return CELL_OK;
@@ -129,7 +132,8 @@ error_code sys_storage_async_send_device_command(u32 dev_handle, u64 cmd, vm::pt
 	sys_storage.todo("sys_storage_async_send_device_command(dev_handle=0x%x, cmd=0x%llx, in=*0x%x, inlen=0x%x, out=*0x%x, outlen=0x%x, unk=0x%x)", dev_handle, cmd, in, inlen, out, outlen, unk);
 
 	auto& manager = g_fxo->get<storage_manager>();
-	if (auto q = idm::get<lv2_obj, lv2_event_queue>(manager.asyncequeue))
+
+	if (auto q = *manager.asyncequeue.load())
 	{
 		q->send(0, unk, unk, unk);
 	}
@@ -346,32 +350,38 @@ error_code sys_storage_report_devices(u32 storages, u32 start, u32 devices, vm::
 		return CELL_EFAULT;
 	}
 
-	std::array<u64, 0x11> all_devs;
-
-	all_devs[0] = 0x10300000000000A;
-	for (int i = 0; i < 7; ++i)
+	static constexpr std::array<u64, 0x11> all_devs = []
 	{
-		all_devs[i + 1] = 0x100000000000001 | (static_cast<u64>(i) << 32);
+		std::array<u64, 0x11> all_devs{};
+		all_devs[0] = 0x10300000000000A;
+
+		for (int i = 0; i < 7; ++i)
+		{
+			all_devs[i + 1] = 0x100000000000001 | (static_cast<u64>(i) << 32);
+		}
+
+		for (int i = 0; i < 3; ++i)
+		{
+			all_devs[i + 8] = 0x101000000000007 | (static_cast<u64>(i) << 32);
+		}
+
+		all_devs[11] = 0x101000000000006;
+
+		for (int i = 0; i < 4; ++i)
+		{
+			all_devs[i + 12] = 0x100000000000004 | (static_cast<u64>(i) << 32);
+		}
+
+		all_devs[16] = 0x100000000000003;
+		return all_devs;
+	}();
+
+	if (!devices || start >= all_devs.size() || devices > all_devs.size() - start)
+	{
+		return CELL_EINVAL;
 	}
 
-	for (int i = 0; i < 3; ++i)
-	{
-		all_devs[i + 8] = 0x101000000000007 | (static_cast<u64>(i) << 32);
-	}
-
-	all_devs[11] = 0x101000000000006;
-
-	for (int i = 0; i < 4; ++i)
-	{
-		all_devs[i + 12] = 0x100000000000004 | (static_cast<u64>(i) << 32);
-	}
-
-	all_devs[16] = 0x100000000000003;
-
-	for (u32 i = 0; i < devices; ++i)
-	{
-		device_ids[i] = all_devs[start++];
-	}
+	std::copy_n(all_devs.begin() + start, devices, device_ids.get_ptr());
 
 	return CELL_OK;
 }
