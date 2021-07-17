@@ -1330,6 +1330,18 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 	switch (op)
 	{
+	case 0x80000004: // Unknown
+	{
+		if (_size > 4)
+		{
+			return CELL_EINVAL;
+		}
+
+		const auto arg = vm::static_ptr_cast<u32>(_arg);
+		*arg = 0;
+		break;
+	}
+
 	case 0x80000006: // cellFsAllocateFileAreaByFdWithInitialData
 	{
 		break;
@@ -2326,12 +2338,59 @@ error_code sys_fs_get_mount_info_size(ppu_thread&, vm::ptr<u64> len)
 {
 	sys_fs.todo("sys_fs_get_mount_info_size(len=*0x%x)", len);
 
+	if (!len)
+	{
+		return CELL_EFAULT;
+	}
+
+	*len = 0x8;
+
 	return CELL_OK;
 }
 
 error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u32 len, vm::ptr<u64> out_len)
 {
 	sys_fs.todo("sys_fs_get_mount_info(info=*0x%x, len=0x%x, out_len=*0x%x)", info, len, out_len);
+
+	if (!out_len)
+	{
+		return CELL_EFAULT;
+	}
+
+	// TODO there is a case where 'something' happens if !info or len == 0
+	if (!info || len == 0)
+	{
+		sys_fs.todo("sys_fs_get_mount_info special case TODO");
+	}
+
+	const u32 max_len = std::min<u32>(len, 8);
+	*out_len = max_len;
+
+	struct mount_info
+	{
+		std::string_view path, filesystem, dev_name;
+		be_t<u32> unk1 = 0, unk2 = 0, unk3 = 0, unk4 = 0, unk5 = 0;
+	};
+
+	static constexpr std::array<mount_info, 8> data
+	{
+		mount_info{.path = "/", .filesystem = "CELL_FS_ADMINFS", .dev_name = "CELL_FS_ADMINFS:", .unk5 = 0x10000000},
+		mount_info{.path = "/app_home", .filesystem = "CELL_FS_DUMMY", .dev_name = "CELL_FS_DUMMY:"},
+		mount_info{.path = "/host_root", .filesystem = "CELL_FS_DUMMY", .dev_name = "CELL_FS_DUMMY:"},
+		mount_info{.path = "/dev_flash", .filesystem = "CELL_FS_FAT", .dev_name = "CELL_FS_IOS:BUILTIN_FLSH1:", .unk5 = 0x10000000},
+		mount_info{.path = "/dev_flash2", .filesystem = "CELL_FS_FAT", .dev_name = "CELL_FS_IOS:BUILTIN_FLSH2:"},
+		mount_info{.path = "/dev_flash3", .filesystem = "CELL_FS_FAT", .dev_name = "CELL_FS_IOS:BUILTIN_FLSH3:"},
+		mount_info{.path = "/dev_hdd0", .filesystem = "CELL_FS_UFS", .dev_name = "CELL_FS_UTILITY:HDD0:"},
+		mount_info{.path = "/dev_bdvd", .filesystem = "CELL_FS_ISO9660", .dev_name = "CELL_FS_IOS:PATA0_BDVD_DRIVE"},
+	};
+
+	for (u32 i = 0; i < max_len; info++, i++)
+	{
+		strcpy_trunc(info->mount_path, data[i].path);
+		strcpy_trunc(info->filesystem, data[i].filesystem);
+		strcpy_trunc(info->dev_name, data[i].dev_name);
+		std::memcpy(&info->unk1, &data[i].unk1, sizeof(be_t<u32>) * 5);
+	}
 
 	return CELL_OK;
 }
