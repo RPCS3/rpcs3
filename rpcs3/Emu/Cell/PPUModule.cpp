@@ -228,6 +228,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 		&ppu_module_manager::cellVpost,
 		&ppu_module_manager::libad_async,
 		&ppu_module_manager::libad_core,
+		&ppu_module_manager::libfs_utility_init,
 		&ppu_module_manager::libmedi,
 		&ppu_module_manager::libmixer,
 		&ppu_module_manager::libsnd3,
