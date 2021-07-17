@@ -199,7 +199,7 @@ public:
 	template <typename T>
 	static inline u64 get_key(const T& attr)
 	{
-		return (attr.pshared != SYS_SYNC_PROCESS_SHARED ? +attr.ipc_key : 0);
+		return (attr.pshared == SYS_SYNC_PROCESS_SHARED ? +attr.ipc_key : 0);
 	}
 
 	template <typename T, typename F>
