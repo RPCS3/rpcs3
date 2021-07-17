@@ -2357,7 +2357,7 @@ error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u32
 		return CELL_EFAULT;
 	}
 
-	// TODO there is a case where 'something' happens if info or len == 0
+	// TODO there is a case where 'something' happens if !info or len == 0
 	if (!info || len == 0)
 	{
 		sys_fs.todo("sys_fs_get_mount_info special case TODO");
