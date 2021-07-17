@@ -35,15 +35,48 @@ namespace vk
 		return quota * 0x100000;
 	}
 
-	bool surface_cache::can_collapse_surface(const std::unique_ptr<vk::render_target>& surface)
+	bool surface_cache::can_collapse_surface(const std::unique_ptr<vk::render_target>& surface, rsx::problem_severity severity)
 	{
 		if (surface->samples() == 1)
 		{
+			// No internal allocations needed for non-MSAA images
 			return true;
 		}
 
-		// MSAA surface, check if we have the memory for this...
-		return vk::vmm_determine_memory_load_severity() < rsx::problem_severity::fatal;
+		if (severity < rsx::problem_severity::fatal &&
+			vk::vmm_determine_memory_load_severity() < rsx::problem_severity::fatal)
+		{
+			// We may be able to allocate what we need.
+			return true;
+		}
+
+		// Check if we need to do any allocations. Do not collapse in such a situation otherwise
+		if (!surface->resolve_surface)
+		{
+			return false;
+		}
+		else
+		{
+			// Resolve target does exist. Scan through the entire collapse chain
+			for (auto& region : surface->old_contents)
+			{
+				if (region.source->samples() == 1)
+				{
+					// Not MSAA
+					continue;
+				}
+
+				if (vk::as_rtt(region.source)->resolve_surface)
+				{
+					// Has a resolve target.
+					continue;
+				}
+
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	bool surface_cache::handle_memory_pressure(vk::command_buffer& cmd, rsx::problem_severity severity)
@@ -52,15 +85,14 @@ namespace vk
 
 		if (severity >= rsx::problem_severity::fatal)
 		{
+			std::vector<std::unique_ptr<vk::viewable_image>> resolve_target_cache;
+			std::vector<vk::render_target*> deferred_spills;
+			auto gc = vk::get_resource_manager();
+
 			// Drop MSAA resolve/unresolve caches. Only trigger when a hard sync is guaranteed to follow else it will cause even more problems!
+			// 2-pass to ensure resources are available where they are most needed
 			auto relieve_memory_pressure = [&](const auto& list)
 			{
-				// 2-pass to ensure resources are available where they are most needed
-				std::vector<std::unique_ptr<vk::viewable_image>> resolve_target_cache;
-				std::vector<vk::render_target*> deferred_spills;
-				auto gc = vk::get_resource_manager();
-
-				// 1. Scan the list and spill resources that can be spilled immediately if requested. Also gather resources from those that don't need it.
 				for (auto& surface : list)
 				{
 					auto& rtt = surface.second;
@@ -81,30 +113,58 @@ namespace vk
 					if (rtt->resolve_surface || rtt->samples() == 1)
 					{
 						// Can spill immediately. Do it.
-						rtt->spill(cmd, resolve_target_cache);
+						ensure(rtt->spill(cmd, resolve_target_cache));
 						any_released |= true;
 						continue;
 					}
 
 					deferred_spills.push_back(rtt.get());
 				}
-
-				// 2. We should have enough discarded reusable memory for the second pass.
-				for (auto& surface : deferred_spills)
-				{
-					surface->spill(cmd, resolve_target_cache);
-					any_released |= true;
-				}
-
-				// 3. Discard the now-useless resolve cache memory
-				for (auto& data : resolve_target_cache)
-				{
-					gc->dispose(data);
-				}
 			};
 
+			// 1. Spill an strip any 'invalidated resources'. At this point it doesn't matter and we donate to the resolve cache which is a plus.
+			for (auto& surface : invalidated_resources)
+			{
+				if (!surface->value)
+				{
+					ensure(!surface->resolve_surface);
+					continue;
+				}
+
+				// Only spill anything with references. Other surfaces already marked for removal should be inevitably deleted when it is time to free_invalidated
+				if (surface->has_refs() && (surface->resolve_surface || surface->samples() == 1))
+				{
+					ensure(surface->spill(cmd, resolve_target_cache));
+					any_released |= true;
+				}
+				else if (surface->resolve_surface)
+				{
+					ensure(!surface->has_refs());
+					resolve_target_cache.emplace_back(std::move(surface->resolve_surface));
+					surface->msaa_flags |= rsx::surface_state_flags::require_resolve;
+					any_released |= true;
+				}
+				else if (surface->has_refs())
+				{
+					deferred_spills.push_back(surface.get());
+				}
+			}
+
+			// 2. Scan the list and spill resources that can be spilled immediately if requested. Also gather resources from those that don't need it.
 			relieve_memory_pressure(m_render_targets_storage);
 			relieve_memory_pressure(m_depth_stencil_storage);
+
+			// 3. Write to system heap everything marked to spill
+			for (auto& surface : deferred_spills)
+			{
+				any_released |= surface->spill(cmd, resolve_target_cache);
+			}
+
+			// 4. Cleanup; removes all the resources used up here that are no longer needed for the moment
+			for (auto& data : resolve_target_cache)
+			{
+				gc->dispose(data);
+			}
 		}
 
 		return any_released;
@@ -197,7 +257,8 @@ namespace vk
 		{
 			for (auto& surface : list)
 			{
-				if (surface.second->value && !surface.second->is_bound)
+				// NOTE: Check if memory is available instead of value in case we ran out of memory during unspill
+				if (surface.second->memory && !surface.second->is_bound)
 				{
 					sorted_list.push_back(surface.second.get());
 				}
@@ -467,7 +528,7 @@ namespace vk
 		return result;
 	}
 
-	void render_target::spill(vk::command_buffer& cmd, std::vector<std::unique_ptr<vk::viewable_image>>& resolve_cache)
+	bool render_target::spill(vk::command_buffer& cmd, std::vector<std::unique_ptr<vk::viewable_image>>& resolve_cache)
 	{
 		ensure(value);
 
@@ -486,7 +547,7 @@ namespace vk
 			break;
 		}
 
-		vk::image* src = nullptr;
+		vk::viewable_image* src = nullptr;
 		if (samples() == 1) [[likely]]
 		{
 			src = this;
@@ -523,7 +584,7 @@ namespace vk
 					// TODO: Spill to DMA buf
 					// For now, just skip this one if we don't have the capacity for it
 					rsx_log.warning("Could not spill memory due to resolve failure. Will ignore spilling for the moment.");
-					return;
+					return false;
 				}
 			}
 
@@ -534,7 +595,24 @@ namespace vk
 		if (msaa_flags & rsx::surface_state_flags::require_resolve)
 		{
 			ensure(samples() > 1);
+			const bool borrowed = [&]()
+			{
+				if (src != resolve_surface.get())
+				{
+					ensure(!resolve_surface);
+					resolve_surface.reset(src);
+					return true;
+				}
+
+				return false;
+			}();
+
 			resolve(cmd);
+
+			if (borrowed)
+			{
+				resolve_surface.release();
+			}
 		}
 
 		const auto pdev = vk::get_current_renderer();
@@ -559,6 +637,7 @@ namespace vk
 
 		ensure(!memory && !value && views.empty() && !resolve_surface);
 		spill_request_tag = 0ull;
+		return true;
 	}
 
 	void render_target::unspill(vk::command_buffer& cmd)
