@@ -2374,22 +2374,22 @@ error_code sys_fs_get_mount_info(ppu_thread&, vm::ptr<CellFsMountInfo> info, u32
 
 	static constexpr std::array<mount_info, 8> data
 	{
-		{.path = "/", .filesystem = "CELL_FS_ADMINFS", .dev_name = "CELL_FS_ADMINFS:", .unk5 = 0x10000000},
-		{.path = "/app_home", .filesystem = "CELL_FS_DUMMY", .dev_name = "CELL_FS_DUMMY:"},
-		{.path = "/host_root", .filesystem = "CELL_FS_DUMMY", .dev_name = "CELL_FS_DUMMY:"},
-		{.path = "/dev_flash", .filesystem = "CELL_FS_FAT", .dev_name = "CELL_FS_IOS:BUILTIN_FLSH1:", .unk5 = 0x10000000},
-		{.path = "/dev_flash2", .filesystem = "CELL_FS_FAT", .dev_name = "CELL_FS_IOS:BUILTIN_FLSH2:"},
-		{.path = "/dev_flash3", .filesystem = "CELL_FS_FAT", .dev_name = "CELL_FS_IOS:BUILTIN_FLSH3:"},
-		{.path = "/dev_hdd0", .filesystem = "CELL_FS_UFS", .dev_name = "CELL_FS_UTILITY:HDD0:"},
-		{.path = "/dev_bdvd", .filesystem = "CELL_FS_ISO9660", .dev_name = "CELL_FS_IOS:PATA0_BDVD_DRIVE"},
+		mount_info{.path = "/", .filesystem = "CELL_FS_ADMINFS", .dev_name = "CELL_FS_ADMINFS:", .unk5 = 0x10000000},
+		mount_info{.path = "/app_home", .filesystem = "CELL_FS_DUMMY", .dev_name = "CELL_FS_DUMMY:"},
+		mount_info{.path = "/host_root", .filesystem = "CELL_FS_DUMMY", .dev_name = "CELL_FS_DUMMY:"},
+		mount_info{.path = "/dev_flash", .filesystem = "CELL_FS_FAT", .dev_name = "CELL_FS_IOS:BUILTIN_FLSH1:", .unk5 = 0x10000000},
+		mount_info{.path = "/dev_flash2", .filesystem = "CELL_FS_FAT", .dev_name = "CELL_FS_IOS:BUILTIN_FLSH2:"},
+		mount_info{.path = "/dev_flash3", .filesystem = "CELL_FS_FAT", .dev_name = "CELL_FS_IOS:BUILTIN_FLSH3:"},
+		mount_info{.path = "/dev_hdd0", .filesystem = "CELL_FS_UFS", .dev_name = "CELL_FS_UTILITY:HDD0:"},
+		mount_info{.path = "/dev_bdvd", .filesystem = "CELL_FS_ISO9660", .dev_name = "CELL_FS_IOS:PATA0_BDVD_DRIVE"},
 	};
 
-	for (u32 i = 0; i < max_len; i++)
+	for (u32 i = 0; i < max_len; info++, i++)
 	{
 		strcpy_trunc(info->mount_path, data[i].path);
 		strcpy_trunc(info->filesystem, data[i].filesystem);
 		strcpy_trunc(info->dev_name, data[i].dev_name);
-		std::memcpy(&info->unk1, &data->unk1, sizeof(be_t<u32>) * 5);
+		std::memcpy(&info->unk1, &data[i].unk1, sizeof(be_t<u32>) * 5);
 	}
 
 	return CELL_OK;
