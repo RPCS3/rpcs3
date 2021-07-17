@@ -23,6 +23,11 @@ error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 		return CELL_ENOENT;
 	}
 
+	if (!fd)
+	{
+		return CELL_EFAULT;
+	}
+
 	u64 storage_id = device & 0xFFFFF00FFFFFFFF;
 	fs::file file;
 
@@ -50,6 +55,11 @@ error_code sys_storage_close(u32 fd)
 error_code sys_storage_read(u32 fd, u32 mode, u32 start_sector, u32 num_sectors, vm::ptr<void> bounce_buf, vm::ptr<u32> sectors_read, u64 flags)
 {
 	sys_storage.todo("sys_storage_read(fd=0x%x, mode=0x%x, start_sector=0x%x, num_sectors=0x%x, bounce_buf=*0x%x, sectors_read=*0x%x, flags=0x%x)", fd, mode, start_sector, num_sectors, bounce_buf, sectors_read, flags);
+
+	if (!bounce_buf || !sectors_read)
+	{
+		return CELL_EFAULT;
+	}
 
 	memset(bounce_buf.get_ptr(), 0, num_sectors * 0x200);
 
@@ -79,6 +89,11 @@ error_code sys_storage_read(u32 fd, u32 mode, u32 start_sector, u32 num_sectors,
 error_code sys_storage_write(u32 fd, u32 mode, u32 start_sector, u32 num_sectors, vm::ptr<void> data, vm::ptr<u32> sectors_wrote, u64 flags)
 {
 	sys_storage.todo("sys_storage_write(fd=0x%x, mode=0x%x, start_sector=0x%x, num_sectors=0x%x, data=*=0x%x, sectors_wrote=*0x%x, flags=0x%llx)", fd, mode, start_sector, num_sectors, data, sectors_wrote, flags);
+
+	if (!sectors_wrote)
+	{
+		return CELL_EFAULT;
+	}
 
 	*sectors_wrote = num_sectors;
 
@@ -146,6 +161,11 @@ error_code sys_storage_async_cancel()
 error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> buffer)
 {
 	sys_storage.todo("sys_storage_get_device_info(device=0x%x, buffer=*0x%x)", device, buffer);
+
+	if (!buffer)
+	{
+		return CELL_EFAULT;
+	}
 
 	memset(buffer.get_ptr(), 0, sizeof(StorageDeviceInfo));
 
@@ -311,8 +331,8 @@ error_code sys_storage_get_device_config(vm::ptr<u32> storages, vm::ptr<u32> dev
 {
 	sys_storage.todo("sys_storage_get_device_config(storages=*0x%x, devices=*0x%x)", storages, devices);
 
-	*storages = 6;
-	*devices = 17;
+	if (storages) *storages = 6; else return CELL_EFAULT;
+	if (devices)  *devices = 17; else return CELL_EFAULT;
 
 	return CELL_OK;
 }
@@ -320,6 +340,11 @@ error_code sys_storage_get_device_config(vm::ptr<u32> storages, vm::ptr<u32> dev
 error_code sys_storage_report_devices(u32 storages, u32 start, u32 devices, vm::ptr<u64> device_ids)
 {
 	sys_storage.todo("sys_storage_report_devices(storages=0x%x, start=0x%x, devices=0x%x, device_ids=0x%x)", storages, start, devices, device_ids);
+
+	if (!device_ids)
+	{
+		return CELL_EFAULT;
+	}
 
 	std::array<u64, 0x11> all_devs;
 
