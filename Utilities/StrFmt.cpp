@@ -173,6 +173,37 @@ void fmt_class_string<std::vector<char8_t>>::format(std::string& out, u64 arg)
 	out.append(obj.cbegin(), obj.cend());
 }
 
+void format_byte_array(std::string& out, const uchar* data, usz size)
+{
+	if (!size)
+	{
+		out += "{ EMPTY }";
+		return;
+	}
+
+	out += "{ ";
+
+	for (usz i = 0;; i++)
+	{
+		if (i == size - 1)
+		{
+			fmt::append(out, "%02X", data[i]);
+			break;
+		}
+
+		if (i % 4)
+		{
+			// Place a comma each 4 bytes for ease of byte placement finding
+			fmt::append(out, "%02X ", data[i]);
+			continue;
+		}
+
+		fmt::append(out, "%02X, ", data[i]);
+	}
+
+	out += " }";
+}
+
 template <>
 void fmt_class_string<char>::format(std::string& out, u64 arg)
 {
