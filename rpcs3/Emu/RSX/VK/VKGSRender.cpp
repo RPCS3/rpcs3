@@ -863,7 +863,10 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 	if (severity >= rsx::problem_severity::moderate)
 	{
 		// Check if we need to spill
-		if (severity >= rsx::problem_severity::fatal && m_rtts.is_overallocated())
+		const auto mem_info = m_device->get_memory_mapping();
+		if (severity >= rsx::problem_severity::fatal &&                // Only spill for fatal errors
+			mem_info.device_local != mem_info.host_visible_coherent && // Do not spill if it is an IGP, there is nowhere to spill to
+			m_rtts.is_overallocated())                                 // Surface cache must be over-allocated by the design quota
 		{
 			// Queue a VRAM spill operation.
 			m_rtts.spill_unused_memory();

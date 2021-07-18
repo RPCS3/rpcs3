@@ -160,21 +160,7 @@ void fmt_class_string<SceNpCommunicationSignature>::format(std::string& out, u64
 {
 	const auto& sign = get_object(arg);
 
-	// Format as a C byte array for ease of use
-	fmt::append(out, "{ ");
-
-	for (usz i = 0;; i++)
-	{
-		if (i == std::size(sign.data) - 1)
-		{
-			fmt::append(out, "0x%02X", sign.data[i]);
-			break;
-		}
-
-		fmt::append(out, "0x%02X, ", sign.data[i]);
-	}
-
-	fmt::append(out, " }");
+	fmt::append(out, "%s", sign.data);
 }
 
 // Helpers

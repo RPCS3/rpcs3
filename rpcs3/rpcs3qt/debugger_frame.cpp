@@ -298,6 +298,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			"\nKeys Ctrl+B: Open breakpoints settings."
 			"\nKeys Alt+S: Capture SPU images of selected SPU."
 			"\nKey D: SPU MFC commands logger, MFC debug setting must be enabled."
+			"\nKey D: Also PPU calling history logger, interpreter and non-zero call history size must be used."
 			"\nKey E: Instruction Editor: click on the instruction you want to modify, then press E."
 			"\nKey F: Dedicated floating point mode switch for SPU threads."
 			"\nKey R: Registers Editor for selected thread."
@@ -365,10 +366,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			if (event->isAutoRepeat())
 				return;
 
-			if (cpu->id_type() == 2 && g_cfg.core.mfc_debug && !cpu->is_stopped())
+			auto get_max_allowed = [&](QString title, QString description, u32 limit) -> u32
 			{
-				input_dialog dlg(4, "", tr("Max MFC cmds logged"),
-					tr("Decimal only, max allowed is 1820."), "0", this);
+				input_dialog dlg(4, "", title, description.arg(limit), QString::number(limit), this);
 
 				QFont mono = QFontDatabase::systemFont(QFontDatabase::FixedFont);
 				mono.setPointSize(8);
@@ -383,7 +383,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 				{
 					bool ok = false;
 					const u32 dummy = changed.toUInt(&ok, 10);
-					ok = ok && dummy && dummy <= spu_thread::max_mfc_dump_idx;
+					ok = ok && dummy && dummy <= limit;
 					dlg.set_button_enabled(QDialogButtonBox::StandardButton::Ok, ok);
 
 					if (ok)
@@ -397,30 +397,71 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					max = 0;
 				}
 
-				const auto spu = static_cast<spu_thread*>(cpu);
+				return max;
+			};
 
-				const auto ptr = reinterpret_cast<const mfc_cmd_dump*>(vm::g_stat_addr + spu->vm_offset());
+			auto copy_overlapping_list = [&] <typename T> (u64& index, u64 max, const std::vector<T>& in, std::vector<T>& out, bool& emptied)
+			{
+				const u64 current_pos = index % in.size();
+				const u64 last_elements = std::min<u64>(current_pos, max);
+				const u64 overlapped_old_elements = std::min<u64>(index, max) - last_elements;
+
+				out.resize(overlapped_old_elements + last_elements);
+
+				// Save list contents (only the relavant parts)
+				std::copy(in.end() - overlapped_old_elements, in.end(), out.begin());
+				std::copy_n(in.begin() + current_pos - last_elements, last_elements, out.begin() + overlapped_old_elements);
+
+				// Check if max elements to log is larger/equal to current list size
+				if ((emptied = index && max >= index))
+				{
+					// Empty list when possible (further calls' history logging will not log any call before this)
+					index = 0;
+				}
+			};
+
+
+			if (cpu->id_type() == 2 && g_cfg.core.mfc_debug)
+			{
+				const u32 max = get_max_allowed(tr("Max MFC cmds logged"), tr("Decimal only, max allowed is %0."), spu_thread::max_mfc_dump_idx);
+
+				// Preallocate in order to save execution time when inside suspend_all.
+				std::vector<mfc_cmd_dump> copy(max);
+
+				bool emptied = false;
+
+				cpu_thread::suspend_all(nullptr, {}, [&]
+				{
+					const auto spu = static_cast<spu_thread*>(cpu);
+					copy_overlapping_list(spu->mfc_dump_idx, max, spu->mfc_history, copy, emptied);
+				});
 
 				std::string ret;
 
-				for (u64 count = 0, idx = spu->mfc_dump_idx - 1; idx != umax && count < max; count++, idx--)
+				u32 i = 0;
+				for (auto it = copy.rbegin(); it != copy.rend(); it++, i++)
 				{
-					auto dump = ptr[idx % spu_thread::max_mfc_dump_idx];
+					auto& dump = *it;
 
 					const u32 pc = std::exchange(dump.cmd.eah, 0);
-					fmt::append(ret, "\n(%d) PC 0x%05x: [%s]", count, pc, dump.cmd);
+					fmt::append(ret, "\n(%d) PC 0x%05x: [%s]", i, pc, dump.cmd);
 
 					if (dump.cmd.cmd == MFC_PUTLLC_CMD)
 					{
 						fmt::append(ret, " %s", dump.cmd.tag == MFC_PUTLLC_SUCCESS ? "(passed)" : "(failed)");
 					}
 
-					const auto data = reinterpret_cast<const be_t<u32>*>(dump.data);
+					auto load = [&](usz index)
+					{
+						be_t<u32> data{};
+						std::memcpy(&data, dump.data + index * sizeof(data), sizeof(data));
+						return data;
+					};
 
 					for (usz i = 0; i < utils::aligned_div(std::min<u32>(dump.cmd.size, 128), 4); i += 4)
 					{
-						fmt::append(ret, "\n[0x%02x] %08x %08x %08x %08x", i * sizeof(data[0])
-							, data[i + 0], data[i + 1], data[i + 2], data[i + 3]);
+						fmt::append(ret, "\n[0x%02x] %08x %08x %08x %08x", i * sizeof(be_t<u32>)
+							, load(i + 0), load(i + 1), load(i + 2), load(i + 3));
 					}
 				}
 
@@ -429,8 +470,52 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 					ret = "No MFC commands have been logged";
 				}
 
-				spu_log.warning("SPU MFC dump of '%s': %s", spu->get_name(), ret);
+				if (emptied)
+				{
+					ret += "\nPrevious MFC history has been emptied!";
+				}
+
+				spu_log.success("SPU MFC dump of '%s': %s", cpu->get_name(), ret);
 			}
+			else if (cpu->id_type() == 1 && g_cfg.core.ppu_call_history)
+			{
+				const u32 max = get_max_allowed(tr("Max PPU calls logged"), tr("Decimal only, max allowed is %0."), ppu_thread::call_history_max_size);
+
+				// Preallocate in order to save execution time when inside suspend_all.
+				std::vector<u32> copy(max);
+
+				bool emptied = false;
+
+				cpu_thread::suspend_all(nullptr, {}, [&]
+				{
+					auto& list = static_cast<ppu_thread*>(cpu)->call_history;
+					copy_overlapping_list(list.index, max, list.data, copy, emptied);
+				});
+
+				std::string ret;
+
+				PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
+				u32 i = 0;
+
+				for (auto it = copy.rbegin(); it != copy.rend(); it++, i++)
+				{
+					dis_asm.disasm(*it);
+					fmt::append(ret, "\n(%u) 0x%08x: %s", i, *it, dis_asm.last_opcode);
+				}
+	
+				if (ret.empty())
+				{
+					ret = "No PPU calls have been logged";
+				}
+
+				if (emptied)
+				{
+					ret += "\nPrevious call history has been emptied!";
+				}
+
+				ppu_log.success("PPU calling history dump of '%s': %s", cpu->get_name(), ret);
+			}
+
 			return;
 		}
 		case Qt::Key_E:

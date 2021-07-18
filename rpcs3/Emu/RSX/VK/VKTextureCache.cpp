@@ -1115,6 +1115,11 @@ namespace vk
 
 		for (auto& entry : m_temporary_storage)
 		{
+			if (!entry.combined_image)
+			{
+				continue;
+			}
+
 			actual_released_memory += entry.combined_image->memory->size();
 			gc->dispose(entry.combined_image);
 			m_temporary_memory_size -= entry.block_size;

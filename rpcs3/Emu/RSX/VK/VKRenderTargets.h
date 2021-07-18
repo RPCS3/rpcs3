@@ -67,7 +67,7 @@ namespace vk
 			VkImageAspectFlags mask = VK_IMAGE_ASPECT_COLOR_BIT | VK_IMAGE_ASPECT_DEPTH_BIT) override;
 
 		// Memory management
-		void spill(vk::command_buffer& cmd, std::vector<std::unique_ptr<vk::viewable_image>>& resolve_cache);
+		bool spill(vk::command_buffer& cmd, std::vector<std::unique_ptr<vk::viewable_image>>& resolve_cache);
 
 		// Synchronization
 		void texture_barrier(vk::command_buffer& cmd);
@@ -408,7 +408,7 @@ namespace vk
 		void destroy();
 		bool spill_unused_memory();
 		bool is_overallocated();
-		bool can_collapse_surface(const std::unique_ptr<vk::render_target>& surface) override;
+		bool can_collapse_surface(const std::unique_ptr<vk::render_target>& surface, rsx::problem_severity severity) override;
 		bool handle_memory_pressure(vk::command_buffer& cmd, rsx::problem_severity severity) override;
 		void free_invalidated(vk::command_buffer& cmd, rsx::problem_severity memory_pressure);
 	};
