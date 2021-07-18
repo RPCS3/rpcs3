@@ -625,6 +625,8 @@ void main_window::InstallPackages(QStringList file_paths)
 	}
 
 	// Install rap files if available
+	int installed_rap_count = 0;
+
 	for (const auto& rap : file_paths.filter(QRegExp(".*\\.rap", Qt::CaseInsensitive)))
 	{
 		const QFileInfo file_info(rap);
@@ -633,11 +635,18 @@ void main_window::InstallPackages(QStringList file_paths)
 		if (InstallRapFile(rap, rapname))
 		{
 			gui_log.success("Successfully copied rap file: %s", rapname);
+			installed_rap_count++;
 		}
 		else
 		{
 			gui_log.error("Could not copy rap file: %s", rapname);
 		}
+	}
+
+	if (installed_rap_count > 0)
+	{
+		// Refresh game list since we probably unlocked some games now.
+		m_game_list_frame->Refresh(true);
 	}
 
 	// Find remaining package files
