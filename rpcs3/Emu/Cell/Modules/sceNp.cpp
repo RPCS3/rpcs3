@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
@@ -543,52 +543,34 @@ error_code sceNpDrmIsAvailable2(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm
 	return npDrmIsAvailable(k_licensee_addr, drm_path);
 }
 
-error_code sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
+error_code npDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 {
-	sceNp.warning("sceNpDrmVerifyUpgradeLicense(content_id=*0x%x)", content_id);
-
 	if (!content_id)
 	{
 		return SCE_NP_DRM_ERROR_INVALID_PARAM;
 	}
 
 	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
-	const std::string rap_file = rpcs3::utils::get_rap_file_path(content_str);
+	sceNp.warning("npDrmVerifyUpgradeLicense(): content_id='%s'", content_id);
 
-	sceNp.warning(u8"sceNpDrmVerifyUpgradeLicense(): content_id=“%s”", content_id);
-
-	if (fs::stat_t s{}; !fs::stat(rap_file, s) || s.is_directory || s.size < 0x10)
-	{
-		// Game hasn't been purchased therefore no RAP file present
+	if (!rpcs3::utils::verify_c00_unlock_edat(Emu.GetTitleID(), content_str))
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
-	}
 
-	// Game has been purchased and there's a RAP file present
 	return CELL_OK;
+}
+
+error_code sceNpDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
+{
+	sceNp.warning("sceNpDrmVerifyUpgradeLicense(content_id=*0x%x)", content_id);
+
+	return npDrmVerifyUpgradeLicense(content_id);
 }
 
 error_code sceNpDrmVerifyUpgradeLicense2(vm::cptr<char> content_id)
 {
 	sceNp.warning("sceNpDrmVerifyUpgradeLicense2(content_id=*0x%x)", content_id);
 
-	if (!content_id)
-	{
-		return SCE_NP_DRM_ERROR_INVALID_PARAM;
-	}
-
-	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
-	const std::string rap_file = rpcs3::utils::get_rap_file_path(content_str);
-
-	sceNp.warning(u8"sceNpDrmVerifyUpgradeLicense2(): content_id=“%s”", content_id);
-
-	if (fs::stat_t s{}; !fs::stat(rap_file, s) || s.is_directory || s.size < 0x10)
-	{
-		// Game hasn't been purchased therefore no RAP file present
-		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
-	}
-
-	// Game has been purchased and there's a RAP file present
-	return CELL_OK;
+	return npDrmVerifyUpgradeLicense(content_id);
 }
 
 error_code sceNpDrmExecuteGamePurchase()
