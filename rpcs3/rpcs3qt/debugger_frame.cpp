@@ -494,10 +494,13 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 				std::string ret;
 
+				PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
 				u32 i = 0;
+
 				for (auto it = copy.rbegin(); it != copy.rend(); it++, i++)
 				{
-					fmt::append(ret, "\n(%u) 0x%08x", i, *it);
+					dis_asm.disasm(*it);
+					fmt::append(ret, "\n(%u) 0x%08x: %s", i, *it, dis_asm.last_opcode);
 				}
 	
 				if (ret.empty())
