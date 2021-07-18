@@ -545,6 +545,8 @@ error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> 
 	// thread_ctrl name is not changed (TODO)
 	sys_ppu_thread.warning(u8"sys_ppu_thread_rename(): Thread renamed to “%s”", *_name);
 	thread->ppu_tname.store(std::move(_name));
+	thread_ctrl::set_name(*thread, thread->thread_name); // TODO: Currently sets debugger thread name only for local thread
+
 	return CELL_OK;
 }
 

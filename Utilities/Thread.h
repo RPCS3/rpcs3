@@ -224,16 +224,22 @@ public:
 	}
 
 	// Set current thread name (not recommended)
-	static void set_name(std::string_view name)
+	static void set_name(std::string name)
 	{
 		g_tls_this_thread->m_tname.store(make_single<std::string>(name));
+		g_tls_this_thread->set_name(std::move(name));
 	}
 
 	// Set thread name (not recommended)
 	template <typename T>
-	static void set_name(named_thread<T>& thread, std::string_view name)
+	static void set_name(named_thread<T>& thread, std::string name)
 	{
 		static_cast<thread_base&>(thread).m_tname.store(make_single<std::string>(name));
+
+		if (g_tls_this_thread == std::addressof(static_cast<thread_base&>(thread)))
+		{
+			g_tls_this_thread->set_name(std::move(name));
+		}
 	}
 
 	template <typename T>
