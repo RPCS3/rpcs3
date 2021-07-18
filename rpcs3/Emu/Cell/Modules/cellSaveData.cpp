@@ -1229,6 +1229,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				{
 					cellSaveData.warning("savedata_op(): funcDone returned result=%d.", res);
 
+					if (res == CELL_SAVEDATA_CBRESULT_OK_LAST || res == CELL_SAVEDATA_CBRESULT_OK_LAST_NOCONFIRM)
+					{
+						return CELL_OK;
+					}
+
 					return display_callback_result_error_message(ppu, *result, errDialog);
 				}
 
