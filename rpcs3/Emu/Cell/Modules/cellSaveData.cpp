@@ -1951,9 +1951,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (auto file = pair.second.release())
 			{
 				auto&& fvec = static_cast<fs::container_stream<std::vector<uchar>>&>(*file);
+#ifdef _WIN32
 				fs::pending_file f(new_path + vfs::escape(pair.first));
 				f.file.write(fvec.obj);
 				ensure(f.commit());
+#else
+				ensure(fs::write_file(new_path + vfs::escape(pair.first), fs::rewrite, fvec.obj));
+#endif
 			}
 		}
 
@@ -1965,6 +1969,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 
 		// Remove old backup
 		fs::remove_all(old_path);
+		fs::sync();
 
 		// Backup old savedata
 		if (!vfs::host::rename(dir_path, old_path, &g_mp_sys_dev_hdd0, false))
