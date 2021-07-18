@@ -4,6 +4,7 @@
 #include "Emu/IdManager.h"
 
 const ppu_decoder<PPUDisAsm> s_ppu_disasm;
+extern const std::unordered_map<u32, std::string_view>& get_exported_function_names_as_addr_indexed_map();
 
 u32 PPUDisAsm::disasm(u32 pc)
 {
@@ -12,6 +13,15 @@ u32 PPUDisAsm::disasm(u32 pc)
 	std::memcpy(&op, m_offset + pc, 4);
 	m_op = op;
 	(this->*(s_ppu_disasm.decode(m_op)))({ m_op });
+
+	const auto& map = get_exported_function_names_as_addr_indexed_map();
+
+	if (auto it = map.find(pc); it != map.end())
+	{
+		last_opcode += " #";
+		last_opcode += it->second;
+	}
+
 	return 4;
 }
 
