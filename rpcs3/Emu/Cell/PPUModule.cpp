@@ -307,7 +307,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 
 			if (is_first)
 			{
-				g_ppu_function_names[function.second.index] = fmt::format("%s.%s", _module->name, function.second.name);
+				g_ppu_function_names[function.second.index] = fmt::format("%s:%s", function.second.name, _module->name);
 			}
 
 			if ((function.second.flags & MFF_HIDDEN) == 0)
@@ -366,6 +366,59 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 			}
 		}
 	}
+}
+
+// For the debugger (g_ppu_function_names shouldn't change, string_view should suffice)
+extern const std::unordered_map<u32, std::string_view>& get_exported_function_names_as_addr_indexed_map()
+{
+	static std::unordered_map<u32, std::string_view> res;
+	static u64 update_time = 0;
+
+	const auto link = g_fxo->try_get<ppu_linkage_info>();
+	const auto hle_funcs = g_fxo->try_get<ppu_function_manager>();
+
+	if (!link || !hle_funcs)
+	{
+		res.clear();
+		return res;
+	}
+
+	const u64 current_time = get_system_time();
+
+	// Update list every >=0.1 seconds
+	if (current_time - update_time < 100'000)
+	{
+		return res;
+	}
+
+	update_time = current_time;
+
+	res.clear();
+	res.reserve(ppu_module_manager::get().size());
+
+	for (auto& pair : ppu_module_manager::get())
+	{
+		const auto _module = pair.second;
+		auto& linkage = link->modules[_module->name];
+
+		for (auto& function : _module->functions)
+		{
+			auto& flink = linkage.functions[function.first];
+			u32 addr = flink.export_addr;
+
+			if (vm::check_addr<4>(addr, vm::page_readable) && addr != hle_funcs->func_addr(function.second.index))
+			{
+				addr = vm::read32(addr);
+
+				if (!(addr % 4) && vm::check_addr<4>(addr, vm::page_executable))
+				{
+					res.try_emplace(addr, g_ppu_function_names[function.second.index]);
+				}
+			}
+		}
+	}
+
+	return res;
 }
 
 // Resolve relocations for variable/function linkage.
