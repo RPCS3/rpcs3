@@ -1951,9 +1951,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (auto file = pair.second.release())
 			{
 				auto&& fvec = static_cast<fs::container_stream<std::vector<uchar>>&>(*file);
+#ifdef _WIN32
 				fs::pending_file f(new_path + vfs::escape(pair.first));
 				f.file.write(fvec.obj);
 				ensure(f.commit());
+#else
+				ensure(fs::write_file(new_path + vfs::escape(pair.first), fs::rewrite, fvec.obj));
+#endif
 			}
 		}
 
