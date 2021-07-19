@@ -1788,17 +1788,16 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 		mem_size = 0xC800000;
 	}
 
+	if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+	{
+		// Because vsh.self comes before any generic application, more memory is available to it
+		mem_size = 0xF000000;
+	}
+
 	if (g_cfg.core.debug_console_mode)
 	{
 		// TODO: Check for all sdk versions
 		mem_size += 0xC000000;
-	}
-
-	if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
-	{
-		// Because vsh.self comes before any generic application, more memory is available to it
-		// This is an estimation though (TODO)
-		mem_size += 0x800000;
 	}
 
 	g_fxo->init<lv2_memory_container>(mem_size)->used += primary_stacksize;
