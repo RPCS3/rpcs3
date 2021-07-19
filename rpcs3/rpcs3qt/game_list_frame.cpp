@@ -1632,6 +1632,7 @@ void game_list_frame::BatchCreatePPUCaches()
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
+	QApplication::processEvents();
 
 	u32 created = 0;
 
@@ -1644,7 +1645,6 @@ void game_list_frame::BatchCreatePPUCaches()
 	{
 		if (pdlg->wasCanceled())
 		{
-			game_list_log.notice("PPU Cache Batch Creation was canceled");
 			break;
 		}
 		QApplication::processEvents();
@@ -1653,10 +1653,26 @@ void game_list_frame::BatchCreatePPUCaches()
 		{
 			while (!Emu.IsStopped())
 			{
+				if (pdlg->wasCanceled())
+				{
+					break;
+				}
 				QApplication::processEvents();
 			}
 			pdlg->SetValue(++created);
 		}
+	}
+
+	if (pdlg->wasCanceled())
+	{
+		game_list_log.notice("PPU Cache Batch Creation was canceled");
+
+		if (!Emu.IsStopped())
+		{
+			QApplication::processEvents();
+			Emu.Stop();
+		}
+		return;
 	}
 
 	pdlg->setLabelText(tr("Created PPU Caches for %n title(s)", "", created));
