@@ -141,16 +141,33 @@ FORCE_INLINE auto ppu_feed_data(ppu_thread& ppu, u64 addr)
 }
 
 // Push called address to custom call history for debugging
-inline u32 ppu_record_call(ppu_thread& ppu, u32 new_cia, ppu_opcode_t op)
+inline u32 ppu_record_call(ppu_thread& ppu, u32 new_cia, ppu_opcode_t op, bool indirect = false)
 {
-	if (!op.lk)
-	{
-		return new_cia;
-	}
-
 	if (auto& history = ppu.call_history; !history.data.empty())
 	{
+		if (!op.lk)
+		{
+			if (indirect)
+			{
+				// Register LLE exported function trampolines
+				// Trampolines do not change the stack pointer, and ones to exported functions change RTOC
+				if (ppu.gpr[1] == history.last_r1 && ppu.gpr[2] != history.last_r2)
+				{
+					// Cancel condition
+					history.last_r1 = umax;
+					history.last_r2 = ppu.gpr[2];
+
+					// Register trampolie with TOC
+					history.data[history.index++ % ppu.call_history_max_size] = new_cia;
+				}
+			}
+
+			return new_cia;
+		}
+
 		history.data[history.index++ % ppu.call_history_max_size] = new_cia;
+		history.last_r1 = ppu.gpr[1];
+		history.last_r2 = ppu.gpr[2];
 	}
 
 	return new_cia;
@@ -3161,7 +3178,7 @@ bool ppu_interpreter::BCLR(ppu_thread& ppu, ppu_opcode_t op)
 
 	if (ctr_ok && cond_ok)
 	{
-		ppu.cia = ppu_record_call(ppu, target, op);
+		ppu.cia = ppu_record_call(ppu, target, op, true);
 		return false;
 	}
 	else
@@ -3230,7 +3247,7 @@ bool ppu_interpreter::BCCTR(ppu_thread& ppu, ppu_opcode_t op)
 
 	if (op.bo & 0x10 || ppu.cr[op.bi] == ((op.bo & 0x8) != 0))
 	{
-		ppu.cia = ppu_record_call(ppu, static_cast<u32>(ppu.ctr) & ~3, op);
+		ppu.cia = ppu_record_call(ppu, static_cast<u32>(ppu.ctr) & ~3, op, true);
 		return false;
 	}
 

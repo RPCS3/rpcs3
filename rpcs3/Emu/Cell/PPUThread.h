@@ -301,6 +301,8 @@ public:
 	{
 		std::vector<u32> data;
 		u64 index = 0;
+		u64 last_r1 = umax;
+		u64 last_r2 = umax;
 	} call_history;
 
 	static constexpr u32 call_history_max_size = 4096;

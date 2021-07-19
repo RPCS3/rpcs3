@@ -123,9 +123,13 @@ void fmt_class_string<typename ppu_thread::call_history_t>::format(std::string& 
 {
 	const auto& history = get_object(arg);
 
+	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
+
 	for (u64 count = 0, idx = history.index - 1; idx != umax && count < ppu_thread::call_history_max_size; count++, idx--)
 	{
-		fmt::append(out, "\n(%u) 0x%08x", count, history.data[idx % ppu_thread::call_history_max_size]);
+		const u32 pc = history.data[idx % ppu_thread::call_history_max_size];
+		dis_asm.disasm(pc);
+		fmt::append(out, "\n(%u) 0x%08x: %s", count, pc, dis_asm.last_opcode);
 	}
 }
 
