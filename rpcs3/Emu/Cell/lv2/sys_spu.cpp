@@ -209,6 +209,9 @@ error_code sys_spu_initialize(ppu_thread& ppu, u32 max_usable_spu, u32 max_raw_s
 		return CELL_EINVAL;
 	}
 
+	ppu.max_usable_spu = max_usable_spu;
+	ppu.max_raw_spu = max_raw_spu;
+
 	return CELL_OK;
 }
 
@@ -505,7 +508,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	bool use_scheduler = true;
 	bool use_memct = !!(type & SYS_SPU_THREAD_GROUP_TYPE_MEMORY_FROM_CONTAINER);
 	bool needs_root = false;
-	u32 max_threads = 6; // TODO: max num value should be affected by sys_spu_initialize() settings
+	u32 max_threads = ppu.max_usable_spu;
 	u32 min_threads = 1;
 	u32 mem_size = 0;
 	lv2_memory_container* ct{};
@@ -1821,9 +1824,7 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 
 	sys_spu.warning("sys_raw_spu_create(id=*0x%x, attr=*0x%x)", id, attr);
 
-	// TODO: check number set by sys_spu_initialize()
-
-	if (!spu_thread::g_raw_spu_ctr.try_inc(5))
+	if (!spu_thread::g_raw_spu_ctr.try_inc(ppu.max_raw_spu))
 	{
 		return CELL_EAGAIN;
 	}
@@ -1867,9 +1868,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 		return CELL_EAUTHFAIL;
 	}
 
-	// TODO: check number set by sys_spu_initialize()
-
-	if (!spu_thread::g_raw_spu_ctr.try_inc(5))
+	if (!spu_thread::g_raw_spu_ctr.try_inc(ppu.max_raw_spu))
 	{
 		return CELL_EAGAIN;
 	}

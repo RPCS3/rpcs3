@@ -297,6 +297,9 @@ public:
 
 	u32 dbg_step_pc = 0;
 
+	u32 max_usable_spu = 6;
+	u32 max_raw_spu = 5;
+
 	struct call_history_t
 	{
 		std::vector<u32> data;
