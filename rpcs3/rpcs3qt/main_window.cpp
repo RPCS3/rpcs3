@@ -468,6 +468,12 @@ void main_window::BootGame()
 	Boot(sstr(dir_path));
 }
 
+void main_window::BootVSH()
+{
+	gui_log.notice("Booting from BootVSH...");
+	Boot(g_cfg.vfs.get_dev_flash() + "/vsh/module/vsh.self");
+}
+
 void main_window::BootRsxCapture(std::string path)
 {
 	if (path.empty())
@@ -1914,6 +1920,7 @@ void main_window::CreateConnects()
 {
 	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
+	connect(ui->bootVSHAct, &QAction::triggered, this, &main_window::BootVSH);
 	connect(ui->actionopen_rsx_capture, &QAction::triggered, this, [this](){ BootRsxCapture(); });
 	connect(ui->actionCreate_RSX_Capture, &QAction::triggered, this, []()
 	{
