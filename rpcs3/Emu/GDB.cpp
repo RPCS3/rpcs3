@@ -851,7 +851,8 @@ void gdb_thread::operator()()
 			return;
 		}
 		//stop immediately
-		if (Emu.IsRunning()) {
+		if (Emu.IsRunning())
+		{
 			Emu.Pause();
 		}
 

@@ -655,8 +655,7 @@ next:
 		OMAHeader oma(1 /* atrac3p id */, adec.sample_rate, adec.ch_cfg, adec.frame_size);
 		if (buf_size + 0u < sizeof(oma))
 		{
-			cellAdec.error("adecRead(): OMAHeader writing failed");
-			Emu.Pause();
+			cellAdec.fatal("adecRead(): OMAHeader writing failed");
 			return 0;
 		}
 
@@ -706,8 +705,7 @@ next:
 		case adecStartSeq: // TODO ?
 		default:
 		{
-			cellAdec.error("adecRawRead(): unknown task (%d)", +task.type);
-			Emu.Pause();
+			cellAdec.fatal("adecRawRead(): unknown task (%d)", +task.type);
 			return -1;
 		}
 		}
@@ -749,8 +747,7 @@ bool adecCheckType(s32 type)
 	case CELL_ADEC_TYPE_M4AAC:
 	case CELL_ADEC_TYPE_CELP8:
 	{
-		cellAdec.todo("Unimplemented audio codec type (%d)", type);
-		Emu.Pause();
+		cellAdec.fatal("Unimplemented audio codec type (%d)", type);
 		break;
 	}
 	default: return false;
@@ -880,8 +877,7 @@ error_code cellAdecStartSeq(u32 handle, u32 param)
 	}
 	default:
 	{
-		cellAdec.todo("cellAdecStartSeq(): Unimplemented audio codec type(%d)", adec->type);
-		Emu.Pause();
+		cellAdec.fatal("cellAdecStartSeq(): Unimplemented audio codec type(%d)", adec->type);
 		return CELL_OK;
 	}
 	}
@@ -1107,8 +1103,7 @@ error_code cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 		}
 		else
 		{
-			cellAdec.error("cellAdecGetPcmItem(): unsupported channel count (%d)", frame->channels);
-			Emu.Pause();
+			cellAdec.fatal("cellAdecGetPcmItem(): unsupported channel count (%d)", frame->channels);
 		}
 	}
 	else if (adec->type == CELL_ADEC_TYPE_MP3)

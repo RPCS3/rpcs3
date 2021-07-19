@@ -664,8 +664,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		break;
 
 	default:
-		rsx_log.error("Bad src type %d", u32{ src.reg_type });
-		Emu.Pause();
+		rsx_log.fatal("Bad src type %d", u32{ src.reg_type });
 		break;
 	}
 
