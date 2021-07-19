@@ -125,8 +125,7 @@ error_code pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFi
 
 	default:
 	{
-		cellPamf.error("pamfStreamTypeToEsFilterId(): unknown type (%d, ch=%d)", type, ch);
-		Emu.Pause();
+		cellPamf.fatal("pamfStreamTypeToEsFilterId(): unknown type (%d, ch=%d)", type, ch);
 		return CELL_PAMF_ERROR_INVALID_ARG;
 	}
 	}
@@ -151,8 +150,7 @@ u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u32 stream)
 	default: break;
 	}
 
-	cellPamf.todo("pamfGetStreamType(): unsupported stream type found(0x%x)", header.type);
-	Emu.Pause();
+	cellPamf.fatal("pamfGetStreamType(): unsupported stream type found(0x%x)", header.type);
 	return 0xff;
 }
 
@@ -200,8 +198,7 @@ u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u32 stream)
 	default: break;
 	}
 
-	cellPamf.todo("pamfGetStreamChannel(): unsupported stream type found(0x%x)", header.type);
-	Emu.Pause();
+	cellPamf.fatal("pamfGetStreamChannel(): unsupported stream type found(0x%x)", header.type);
 	return 0xff;
 }
 
@@ -346,8 +343,7 @@ u8 cellPamfReaderGetNumberOfSpecificStreams(vm::ptr<CellPamfReader> pSelf, u8 st
 	}
 	}
 
-	cellPamf.todo("cellPamfReaderGetNumberOfSpecificStreams(): unsupported stream type (0x%x)", streamType);
-	Emu.Pause();
+	cellPamf.fatal("cellPamfReaderGetNumberOfSpecificStreams(): unsupported stream type (0x%x)", streamType);
 	return 0;
 }
 
@@ -368,10 +364,9 @@ error_code cellPamfReaderSetStreamWithTypeAndChannel(vm::ptr<CellPamfReader> pSe
 {
 	cellPamf.warning("cellPamfReaderSetStreamWithTypeAndChannel(pSelf=*0x%x, streamType=%d, ch=%d)", pSelf, streamType, ch);
 
-	// it probably doesn't support "any audio" or "any video" argument
+	// TODO: it probably doesn't support "any audio" or "any video" argument
 	if (streamType > 5 || ch >= 16)
 	{
-		Emu.Pause();
 		return CELL_PAMF_ERROR_INVALID_ARG;
 	}
 

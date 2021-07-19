@@ -871,22 +871,19 @@ bool ElementaryStream::release()
 	std::lock_guard lock(m_mutex);
 	if (released >= put_count)
 	{
-		cellDmux.error("es::release() error: buffer is empty");
-		Emu.Pause();
+		cellDmux.fatal("es::release() error: buffer is empty");
 		return false;
 	}
 	if (released >= got_count)
 	{
-		cellDmux.error("es::release() error: buffer has not been seen yet");
-		Emu.Pause();
+		cellDmux.fatal("es::release() error: buffer has not been seen yet");
 		return false;
 	}
 
 	u32 addr = 0;
 	if (!entries.pop(addr, &dmux->is_closed) || !addr)
 	{
-		cellDmux.error("es::release() error: entries.Pop() failed");
-		Emu.Pause();
+		cellDmux.fatal("es::release() error: entries.Pop() failed");
 		return false;
 	}
 
@@ -899,8 +896,7 @@ bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool updat
 	std::lock_guard lock(m_mutex);
 	if (got_count < released)
 	{
-		cellDmux.error("es::peek() error: got_count(%d) < released(%d) (put_count=%d)", got_count, released, put_count);
-		Emu.Pause();
+		cellDmux.fatal("es::peek() error: got_count(%d) < released(%d) (put_count=%d)", got_count, released, put_count);
 		return false;
 	}
 	if (got_count >= put_count)
@@ -911,8 +907,7 @@ bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool updat
 	u32 addr = 0;
 	if (!entries.peek(addr, got_count - released, &dmux->is_closed) || !addr)
 	{
-		cellDmux.error("es::peek() error: entries.Peek() failed");
-		Emu.Pause();
+		cellDmux.fatal("es::peek() error: entries.Peek() failed");
 		return false;
 	}
 

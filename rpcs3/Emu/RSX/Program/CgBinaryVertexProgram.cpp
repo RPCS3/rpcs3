@@ -100,8 +100,7 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n)
 		break;
 
 	default:
-		rsx_log.error("Bad src%u reg type: %d", n, u32{ src[n].reg_type });
-		Emu.Pause();
+		rsx_log.fatal("Bad src%u reg type: %d", n, u32{ src[n].reg_type });
 		break;
 	}
 
