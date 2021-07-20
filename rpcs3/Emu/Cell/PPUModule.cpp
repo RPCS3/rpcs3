@@ -1763,7 +1763,12 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 
 	// Initialize memory stats (according to sdk version)
 	u32 mem_size;
-	if (sdk_version > 0x0021FFFF)
+	if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+	{
+		// Because vsh.self comes before any generic application, more memory is available to it
+		mem_size = 0xF000000;
+	}
+	else if (sdk_version > 0x0021FFFF)
 	{
 		mem_size = 0xD500000;
 	}
@@ -1792,13 +1797,6 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 	{
 		// TODO: Check for all sdk versions
 		mem_size += 0xC000000;
-	}
-
-	if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
-	{
-		// Because vsh.self comes before any generic application, more memory is available to it
-		// This is an estimation though (TODO)
-		mem_size += 0x800000;
 	}
 
 	g_fxo->init<lv2_memory_container>(mem_size)->used += primary_stacksize;

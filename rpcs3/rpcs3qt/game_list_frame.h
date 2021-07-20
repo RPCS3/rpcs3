@@ -109,6 +109,7 @@ private:
 	bool RemoveShadersCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemovePPUCache(const std::string& base_dir, bool is_interactive = false);
 	bool RemoveSPUCache(const std::string& base_dir, bool is_interactive = false);
+	static bool CreatePPUCache(const std::string& path, const std::string& serial = {});
 	static bool CreatePPUCache(const game_info& game);
 
 	QString GetLastPlayedBySerial(const QString& serial) const;
