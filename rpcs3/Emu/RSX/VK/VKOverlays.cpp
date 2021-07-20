@@ -514,7 +514,7 @@ namespace vk
 		auto tex = std::make_unique<vk::image>(dev, dev.get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			VK_IMAGE_TYPE_2D, format, std::max(w, 1u), std::max(h, 1u), 1, 1, layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-			0);
+			0, VMM_ALLOCATION_POOL_UNDEFINED);
 
 		if (pixel_src && data_size)
 			std::memcpy(addr, pixel_src, data_size);

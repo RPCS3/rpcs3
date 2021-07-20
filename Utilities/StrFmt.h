@@ -86,7 +86,13 @@ struct fmt_unveil<T*, void>
 	}
 };
 
-template <typename T, usz N>
+namespace fmt
+{
+	template <typename T>
+	concept CharT = (std::is_same_v<const T, const char> || std::is_same_v<const T, const char8_t>);
+}
+
+template <fmt::CharT T, usz N>
 struct fmt_unveil<T[N], void>
 {
 	using type = std::add_const_t<T>*;
@@ -203,6 +209,40 @@ template <>
 struct fmt_class_string<char*, void> : fmt_class_string<const char*>
 {
 	// Classify char* as const char*
+};
+
+template <>
+struct fmt_class_string<const char8_t*, void> : fmt_class_string<const char*>
+{
+};
+
+template <>
+struct fmt_class_string<char8_t*, void> : fmt_class_string<const char8_t*>
+{
+};
+
+namespace fmt
+{
+	// Both uchar and std::byte are allowed
+	template <typename T>
+	concept ByteArray = requires (T& t) { const_cast<std::conditional_t<std::is_same_v<decltype(std::as_const(t[0])), const std::byte&>, std::byte, uchar>&>(std::data(t)[0]); };
+}
+
+template <fmt::ByteArray T>
+struct fmt_class_string<T, void>
+{
+	static FORCE_INLINE SAFE_BUFFERS(const T&) get_object(u64 arg)
+	{
+		return *reinterpret_cast<const T*>(static_cast<uptr>(arg));
+	}
+
+	static void format(std::string& out, u64 arg)
+	{
+		const auto& obj = get_object(arg);
+	
+		void format_byte_array(std::string&, const uchar*, usz);
+		format_byte_array(out, reinterpret_cast<const uchar*>(std::data(obj)), std::size(obj));
+	}
 };
 
 struct fmt_type_info

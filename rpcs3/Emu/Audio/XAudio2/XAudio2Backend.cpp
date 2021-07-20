@@ -67,8 +67,7 @@ void XAudio2Backend::Play()
 	const HRESULT hr = m_source_voice->Start();
 	if (FAILED(hr))
 	{
-		XAudio.error("Start() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		Emu.Pause();
+		XAudio.fatal("Start() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 	}
 }
 
@@ -85,8 +84,7 @@ void XAudio2Backend::Pause()
 	const HRESULT hr = m_source_voice->Stop();
 	if (FAILED(hr))
 	{
-		XAudio.error("Stop() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		Emu.Pause();
+		XAudio.fatal("Stop() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 	}
 }
 
@@ -104,8 +102,7 @@ void XAudio2Backend::Open(u32 /* num_buffers */)
 	const HRESULT hr = m_xaudio2_instance->CreateSourceVoice(&m_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO);
 	if (FAILED(hr))
 	{
-		XAudio.error("CreateSourceVoice() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		Emu.Pause();
+		XAudio.fatal("CreateSourceVoice() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		return;
 	}
 
@@ -151,8 +148,7 @@ bool XAudio2Backend::AddData(const void* src, u32 num_samples)
 	const HRESULT hr = m_source_voice->SubmitSourceBuffer(&buffer);
 	if (FAILED(hr))
 	{
-		XAudio.error("AddData() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		Emu.Pause();
+		XAudio.fatal("AddData() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		return false;
 	}
 
@@ -166,8 +162,7 @@ void XAudio2Backend::Flush()
 	const HRESULT hr = m_source_voice->FlushSourceBuffers();
 	if (FAILED(hr))
 	{
-		XAudio.error("FlushSourceBuffers() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		Emu.Pause();
+		XAudio.fatal("FlushSourceBuffers() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 	}
 }
 
@@ -189,8 +184,7 @@ f32 XAudio2Backend::SetFrequencyRatio(f32 new_ratio)
 	const HRESULT hr = m_source_voice->SetFrequencyRatio(new_ratio);
 	if (FAILED(hr))
 	{
-		XAudio.error("SetFrequencyRatio() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		Emu.Pause();
+		XAudio.fatal("SetFrequencyRatio() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		return 1.0f;
 	}
 

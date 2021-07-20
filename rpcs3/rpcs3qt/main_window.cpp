@@ -468,6 +468,12 @@ void main_window::BootGame()
 	Boot(sstr(dir_path));
 }
 
+void main_window::BootVSH()
+{
+	gui_log.notice("Booting from BootVSH...");
+	Boot(g_cfg.vfs.get_dev_flash() + "/vsh/module/vsh.self");
+}
+
 void main_window::BootRsxCapture(std::string path)
 {
 	if (path.empty())
@@ -480,7 +486,7 @@ void main_window::BootRsxCapture(std::string path)
 			is_stopped = true;
 		}
 
-		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), qstr(fs::get_config_dir() + "captures/"), tr("RRC files (*.rrc);;All files (*.*)"));
+		const QString file_path = QFileDialog::getOpenFileName(this, tr("Select RSX Capture"), qstr(fs::get_config_dir() + "captures/"), tr("RRC files (*.rrc *.RRC);;All files (*.*)"));
 
 		if (file_path.isEmpty())
 		{
@@ -546,7 +552,7 @@ void main_window::InstallPackages(QStringList file_paths)
 		// If this function was called without a path, ask the user for files to install.
 		const QString path_last_pkg = m_gui_settings->GetValue(gui::fd_install_pkg).toString();
 		const QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select packages and/or rap files to install"),
-			path_last_pkg, tr("All relevant (*.pkg *.rap);;Package files (*.pkg);;Rap files (*.rap);;All files (*.*)"));
+			path_last_pkg, tr("All relevant (*.pkg *.PKG *.rap *.RAP);;Package files (*.pkg *.PKG);;Rap files (*.rap *.RAP);;All files (*.*)"));
 
 		if (paths.isEmpty())
 		{
@@ -810,7 +816,7 @@ void main_window::HandlePackageInstallation(QStringList file_paths)
 void main_window::ExtractMSELF()
 {
 	const QString path_last_mself = m_gui_settings->GetValue(gui::fd_ext_mself).toString();
-	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select MSELF To extract"), path_last_mself, tr("All mself files (*.mself);;All files (*.*)"));
+	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select MSELF To extract"), path_last_mself, tr("All mself files (*.mself *.MSELF);;All files (*.*)"));
 
 	if (file_path.isEmpty())
 	{
@@ -831,7 +837,7 @@ void main_window::InstallPup(QString file_path)
 	if (file_path.isEmpty())
 	{
 		const QString path_last_pup = m_gui_settings->GetValue(gui::fd_install_pup).toString();
-		file_path = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_pup, tr("PS3 update file (PS3UPDAT.PUP);;All pup files (*.pup);;All files (*.*)"));
+		file_path = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_pup, tr("PS3 update file (PS3UPDAT.PUP);;All pup files (*.pup *.PUP);;All files (*.*)"));
 	}
 	else
 	{
@@ -856,7 +862,7 @@ void main_window::InstallPup(QString file_path)
 void main_window::ExtractPup()
 {
 	const QString path_last_pup = m_gui_settings->GetValue(gui::fd_install_pup).toString();
-	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To extract"), path_last_pup, tr("PS3 update file (PS3UPDAT.PUP);;All pup files (*.pup);;All files (*.*)"));
+	const QString file_path = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To extract"), path_last_pup, tr("PS3 update file (PS3UPDAT.PUP);;All pup files (*.pup *.PUP);;All files (*.*)"));
 
 	if (file_path.isEmpty())
 	{
@@ -882,7 +888,7 @@ void main_window::ExtractTar()
 	Emu.Stop();
 
 	const QString path_last_tar = m_gui_settings->GetValue(gui::fd_ext_tar).toString();
-	QStringList files = QFileDialog::getOpenFileNames(this, tr("Select TAR To extract"), path_last_tar, tr("All tar files (*.tar *.tar.aa.*);;All files (*.*)"));
+	QStringList files = QFileDialog::getOpenFileNames(this, tr("Select TAR To extract"), path_last_tar, tr("All tar files (*.tar *.TAR *.tar.aa.* *.TAR.AA.*);;All files (*.*)"));
 
 	if (files.isEmpty())
 	{
@@ -1211,7 +1217,7 @@ void main_window::DecryptSPRXLibraries()
 		path_last_sprx = qstr(g_cfg.vfs.get_dev_flash() + "sys/external");
 	}
 
-	const QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select binary files"), path_last_sprx, tr("All Binaries (*.BIN *.self *.sprx);;BIN files (*.BIN);;SELF files (*.self);;SPRX files (*.sprx);;All files (*.*)"));
+	const QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select binary files"), path_last_sprx, tr("All Binaries (*.bin *.BIN *.self *.SELF *.sprx *.SPRX);;BIN files (*.bin *.BIN);;SELF files (*.self *.SELF);;SPRX files (*.sprx *.SPRX);;All files (*.*)"));
 
 	if (modules.isEmpty())
 	{
@@ -1914,6 +1920,7 @@ void main_window::CreateConnects()
 {
 	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
+	connect(ui->bootVSHAct, &QAction::triggered, this, &main_window::BootVSH);
 	connect(ui->actionopen_rsx_capture, &QAction::triggered, this, [this](){ BootRsxCapture(); });
 	connect(ui->actionCreate_RSX_Capture, &QAction::triggered, this, []()
 	{

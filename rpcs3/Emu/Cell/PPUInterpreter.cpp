@@ -140,6 +140,39 @@ FORCE_INLINE auto ppu_feed_data(ppu_thread& ppu, u64 addr)
 	return value;
 }
 
+// Push called address to custom call history for debugging
+inline u32 ppu_record_call(ppu_thread& ppu, u32 new_cia, ppu_opcode_t op, bool indirect = false)
+{
+	if (auto& history = ppu.call_history; !history.data.empty())
+	{
+		if (!op.lk)
+		{
+			if (indirect)
+			{
+				// Register LLE exported function trampolines
+				// Trampolines do not change the stack pointer, and ones to exported functions change RTOC
+				if (ppu.gpr[1] == history.last_r1 && ppu.gpr[2] != history.last_r2)
+				{
+					// Cancel condition
+					history.last_r1 = umax;
+					history.last_r2 = ppu.gpr[2];
+
+					// Register trampolie with TOC
+					history.data[history.index++ % ppu.call_history_max_size] = new_cia;
+				}
+			}
+
+			return new_cia;
+		}
+
+		history.data[history.index++ % ppu.call_history_max_size] = new_cia;
+		history.last_r1 = ppu.gpr[1];
+		history.last_r2 = ppu.gpr[2];
+	}
+
+	return new_cia;
+}
+
 // Compare 16 packed unsigned bytes (greater than)
 inline __m128i sse_cmpgt_epu8(__m128i A, __m128i B)
 {
@@ -3085,6 +3118,10 @@ bool ppu_interpreter::BC(ppu_thread& ppu, ppu_opcode_t op)
 
 	if (ctr_ok && cond_ok)
 	{
+		// Provide additional information by using the origin of the call
+		// Because this is a fixed target branch there's no abiguity about it
+		ppu_record_call(ppu, ppu.cia, op);
+
 		ppu.cia = (op.aa ? 0 : ppu.cia) + op.bt14;
 		return false;
 	}
@@ -3107,6 +3144,10 @@ bool ppu_interpreter::SC(ppu_thread& ppu, ppu_opcode_t op)
 
 bool ppu_interpreter::B(ppu_thread& ppu, ppu_opcode_t op)
 {
+	// Provide additional information by using the origin of the call
+	// Because this is a fixed target branch there's no abiguity about it
+	ppu_record_call(ppu, ppu.cia, op);
+
 	const u32 link = ppu.cia + 4;
 	ppu.cia = (op.aa ? 0 : ppu.cia) + op.bt24;
 	if (op.lk) ppu.lr = link;
@@ -3137,7 +3178,7 @@ bool ppu_interpreter::BCLR(ppu_thread& ppu, ppu_opcode_t op)
 
 	if (ctr_ok && cond_ok)
 	{
-		ppu.cia = target;
+		ppu.cia = ppu_record_call(ppu, target, op, true);
 		return false;
 	}
 	else
@@ -3206,7 +3247,7 @@ bool ppu_interpreter::BCCTR(ppu_thread& ppu, ppu_opcode_t op)
 
 	if (op.bo & 0x10 || ppu.cr[op.bi] == ((op.bo & 0x8) != 0))
 	{
-		ppu.cia = static_cast<u32>(ppu.ctr) & ~3;
+		ppu.cia = ppu_record_call(ppu, static_cast<u32>(ppu.ctr) & ~3, op, true);
 		return false;
 	}
 

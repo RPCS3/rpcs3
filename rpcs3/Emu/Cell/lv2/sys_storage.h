@@ -3,6 +3,44 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 
+enum Devices : u64
+{
+	ATA_HDD = 0x101000000000007,
+	BDVD_DRIVE = 0x101000000000006,
+	PATA0_HDD_DRIVE = 0x101000000000008,
+	PATA0_BDVD_DRIVE = BDVD_DRIVE,
+	PATA1_HDD_DRIVE = ATA_HDD,
+	BUILTIN_FLASH = 0x100000000000001,
+	NAND_FLASH = BUILTIN_FLASH,
+	NAND_UNK = 0x100000000000003,
+	NOR_FLASH = 0x100000000000004,
+	MEMORY_STICK = 0x103000000000010,
+	SD_CARD = 0x103000100000010,
+	COMPACT_FLASH = 0x103000200000010,
+	USB_MASS_STORAGE_1_BASE = 0x10300000000000A,
+	USB_MASS_STORAGE_2_BASE = 0x10300000000001F,
+};
+
+struct lv2_storage
+{
+	static const u32 id_base = 0x45000000;
+	static const u32 id_step = 1;
+	static const u32 id_count = 2048;
+
+	const u64 device_id;
+	const fs::file file;
+	const u64 mode;
+	const u64 flags;
+
+	lv2_storage(u64 device_id, fs::file&& file, u64 mode, u64 flags)
+		: device_id(device_id)
+		, file(std::move(file))
+		, mode(mode)
+		, flags(flags)
+	{
+	}
+};
+
 struct StorageDeviceInfo
 {
 	u8 name[0x20];          // 0x0
@@ -13,6 +51,9 @@ struct StorageDeviceInfo
 	be_t<u32> one;          // 0x34
 	u8 flags[8];            // 0x38
 };
+
+#define USB_MASS_STORAGE_1(n) (USB_MASS_STORAGE_1_BASE + n)       /* For 0-5 */
+#define USB_MASS_STORAGE_2(n) (USB_MASS_STORAGE_2_BASE + (n - 6)) /* For 6-127 */
 
 // SysCalls
 

@@ -134,6 +134,7 @@ public:
 	virtual std::string dump_callstack() const override;
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 	virtual std::string dump_misc() const override;
+	virtual std::string dump_all() const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_sleep() override;
 	virtual void cpu_on_stop() override;
@@ -295,6 +296,16 @@ public:
 	u64 last_succ = 0;
 
 	u32 dbg_step_pc = 0;
+
+	struct call_history_t
+	{
+		std::vector<u32> data;
+		u64 index = 0;
+		u64 last_r1 = umax;
+		u64 last_r2 = umax;
+	} call_history;
+
+	static constexpr u32 call_history_max_size = 4096;
 
 	// For named_thread ctor
 	const struct thread_name_t

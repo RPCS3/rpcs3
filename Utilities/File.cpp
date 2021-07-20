@@ -1154,24 +1154,50 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 		u64 read(void* buffer, u64 count) override
 		{
-			// TODO (call ReadFile multiple times if count is too big)
-			const int size = narrow<int>(count);
+			u64 nread_sum = 0;
 
-			DWORD nread;
-			ensure(ReadFile(m_handle, buffer, size, &nread, nullptr)); // "file::read"
+			for (char* data = static_cast<char*>(buffer); count;)
+			{
+				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
 
-			return nread;
+				DWORD nread = 0;
+				ensure(ReadFile(m_handle, data, size, &nread, nullptr)); // "file::read"
+				nread_sum += nread;
+
+				if (nread < size)
+				{
+					break;
+				}
+
+				count -= size;
+				data += size;
+			}
+
+			return nread_sum;
 		}
 
 		u64 write(const void* buffer, u64 count) override
 		{
-			// TODO (call WriteFile multiple times if count is too big)
-			const int size = narrow<int>(count);
+			u64 nwritten_sum = 0;
 
-			DWORD nwritten;
-			ensure(WriteFile(m_handle, buffer, size, &nwritten, nullptr)); // "file::write"
+			for (const char* data = static_cast<const char*>(buffer); count;)
+			{
+				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096)); 
 
-			return nwritten;
+				DWORD nwritten = 0;
+				ensure(WriteFile(m_handle, data, size, &nwritten, nullptr)); // "file::write"
+				nwritten_sum += nwritten;
+
+				if (nwritten < size)
+				{
+					break;
+				}
+
+				count -= size;
+				data += size;
+			}
+
+			return nwritten_sum;
 		}
 
 		u64 seek(s64 offset, seek_mode whence) override

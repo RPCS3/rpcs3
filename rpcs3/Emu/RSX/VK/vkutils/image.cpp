@@ -53,9 +53,9 @@ namespace vk
 		VkImageTiling tiling,
 		VkImageUsageFlags usage,
 		VkImageCreateFlags image_flags,
+		vmm_allocation_pool allocation_pool,
 		rsx::format_class format_class)
-		: current_layout(initial_layout)
-		, m_device(dev)
+		: m_device(dev)
 	{
 		info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		info.imageType = image_type;
@@ -70,23 +70,7 @@ namespace vk
 		info.initialLayout = initial_layout;
 		info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		validate(dev, info);
-		CHECK_RESULT(vkCreateImage(m_device, &info, nullptr, &value));
-
-		VkMemoryRequirements memory_req;
-		vkGetImageMemoryRequirements(m_device, value, &memory_req);
-
-		if (!(memory_req.memoryTypeBits & (1 << memory_type_index)))
-		{
-			//Suggested memory type is incompatible with this memory type.
-			//Go through the bitset and test for requested props.
-			if (!dev.get_compatible_memory_type(memory_req.memoryTypeBits, access_flags, &memory_type_index))
-				fmt::throw_exception("No compatible memory type was found!");
-		}
-
-		memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, memory_type_index);
-		CHECK_RESULT(vkBindImageMemory(m_device, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset()));
-
+		create_impl(dev, access_flags, memory_type_index, allocation_pool);
 		m_storage_aspect = get_aspect_flags(format);
 
 		if (format_class == RSX_FORMAT_CLASS_UNDEFINED)
@@ -109,6 +93,30 @@ namespace vk
 	image::~image()
 	{
 		vkDestroyImage(m_device, value, nullptr);
+	}
+
+	void image::create_impl(const vk::render_device& dev, u32 access_flags, u32 memory_type_index, vmm_allocation_pool allocation_pool)
+	{
+		ensure(!value && !memory);
+		validate(dev, info);
+
+		CHECK_RESULT(vkCreateImage(m_device, &info, nullptr, &value));
+
+		VkMemoryRequirements memory_req;
+		vkGetImageMemoryRequirements(m_device, value, &memory_req);
+
+		if (!(memory_req.memoryTypeBits & (1 << memory_type_index)))
+		{
+			// Suggested memory type is incompatible with this memory type.
+			// Go through the bitset and test for requested props.
+			if (!dev.get_compatible_memory_type(memory_req.memoryTypeBits, access_flags, &memory_type_index))
+				fmt::throw_exception("No compatible memory type was found!");
+		}
+
+		memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, memory_type_index, allocation_pool);
+		CHECK_RESULT(vkBindImageMemory(m_device, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset()));
+
+		current_layout = info.initialLayout;
 	}
 
 	u32 image::width() const
@@ -328,6 +336,20 @@ namespace vk
 		// Restore requested mapping
 		info.components = mapping;
 #endif
+	}
+
+	viewable_image* viewable_image::clone()
+	{
+		// Destructive cloning. The clone grabs the GPU objects owned by this instance.
+		// This instance can be rebuilt in-place by calling create_impl() which will create a duplicate now owned by this.
+		auto result = new viewable_image();
+		result->m_device = this->m_device;
+		result->info = this->info;
+		result->value = this->value;
+		result->memory = std::move(this->memory);
+		result->views = std::move(this->views);
+		this->value = VK_NULL_HANDLE;
+		return result;
 	}
 
 	image_view* viewable_image::get_view(u32 remap_encoding, const std::pair<std::array<u8, 4>, std::array<u8, 4>>& remap, VkImageAspectFlags mask)

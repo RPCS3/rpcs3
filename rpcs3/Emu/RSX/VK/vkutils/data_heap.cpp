@@ -26,13 +26,13 @@ namespace vk
 		{
 			rsx_log.warning("Buffer usage %u is not heap-compatible using this driver, explicit staging buffer in use", usage);
 
-			shadow = std::make_unique<buffer>(*g_render_device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0);
+			shadow = std::make_unique<buffer>(*g_render_device, size, memory_index, memory_flags, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0, VMM_ALLOCATION_POOL_SYSTEM);
 			usage |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 			memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 			memory_index = memory_map.device_local;
 		}
 
-		heap = std::make_unique<buffer>(*g_render_device, size, memory_index, memory_flags, usage, 0);
+		heap = std::make_unique<buffer>(*g_render_device, size, memory_index, memory_flags, usage, 0, VMM_ALLOCATION_POOL_SYSTEM);
 
 		initial_size = size;
 		notify_on_grow = bool(notify);
@@ -87,7 +87,7 @@ namespace vk
 
 		// Discard old heap and create a new one. Old heap will be garbage collected when no longer needed
 		get_resource_manager()->dispose(heap);
-		heap = std::make_unique<buffer>(*g_render_device, aligned_new_size, memory_index, memory_flags, usage, 0);
+		heap = std::make_unique<buffer>(*g_render_device, aligned_new_size, memory_index, memory_flags, usage, 0, VMM_ALLOCATION_POOL_SYSTEM);
 
 		if (notify_on_grow)
 		{

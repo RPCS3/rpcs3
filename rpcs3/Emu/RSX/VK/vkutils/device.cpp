@@ -647,10 +647,9 @@ namespace vk
 		memory_type_mapping result;
 		result.device_local = VK_MAX_MEMORY_TYPES;
 		result.host_visible_coherent = VK_MAX_MEMORY_TYPES;
-
+		result.device_local_total_bytes = 0;
+		result.host_visible_total_bytes = 0;
 		bool host_visible_cached = false;
-		VkDeviceSize host_visible_vram_size = 0;
-		VkDeviceSize device_local_vram_size = 0;
 
 		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
 		{
@@ -659,10 +658,10 @@ namespace vk
 			bool is_device_local = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			if (is_device_local)
 			{
-				if (device_local_vram_size < heap.size)
+				if (result.device_local_total_bytes < heap.size)
 				{
 					result.device_local = i;
-					device_local_vram_size = heap.size;
+					result.device_local_total_bytes = heap.size;
 				}
 			}
 
@@ -672,10 +671,10 @@ namespace vk
 
 			if (is_host_coherent && is_host_visible)
 			{
-				if ((is_cached && !host_visible_cached) || (host_visible_vram_size < heap.size))
+				if ((is_cached && !host_visible_cached) || (result.host_visible_total_bytes < heap.size))
 				{
 					result.host_visible_coherent = i;
-					host_visible_vram_size = heap.size;
+					result.host_visible_total_bytes = heap.size;
 					host_visible_cached = is_cached;
 				}
 			}
