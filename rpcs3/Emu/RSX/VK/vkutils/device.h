@@ -28,8 +28,8 @@ namespace vk
 
 	struct memory_type_mapping
 	{
-		u32 host_visible_coherent;
-		u32 device_local;
+		memory_type_info host_visible_coherent;
+		memory_type_info device_local;
 
 		u64 device_local_total_bytes;
 		u64 host_visible_total_bytes;
