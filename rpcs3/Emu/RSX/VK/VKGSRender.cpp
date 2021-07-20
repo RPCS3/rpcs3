@@ -570,6 +570,12 @@ VKGSRender::VKGSRender() : GSRender()
 				rsx_log.error("Older NVIDIA cards do not meet requirements for asynchronous compute due to some driver fakery.");
 				backend_config.supports_asynchronous_compute = false;
 			}
+			else // Workaround. Remove once the async decoder is re-written
+			{
+				// NVIDIA 471 and newer are completely borked. Queue priority is not observed and any queue waiting on another just causes deadlock.
+				rsx_log.error("NVIDIA GPUs are incompatible with the current implementation of asynchronous texture decoding.");
+				backend_config.supports_asynchronous_compute = false;
+			}
 			break;
 #if !defined(_WIN32)
 			// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
