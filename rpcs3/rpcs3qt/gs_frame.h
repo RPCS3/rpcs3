@@ -40,6 +40,7 @@ private:
 
 	u64 m_frames = 0;
 	std::string m_window_title;
+	QWindow::Visibility m_last_visibility = Visibility::Windowed;
 	atomic_t<bool> m_show_mouse = true;
 	bool m_disable_mouse = false;
 	bool m_disable_kb_hotkeys = false;

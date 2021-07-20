@@ -262,10 +262,18 @@ void gs_frame::toggle_fullscreen()
 	{
 		if (visibility() == FullScreen)
 		{
-			setVisibility(Windowed);
+			// Change to the last recorded visibility. Sanitize it just in case.
+			if (m_last_visibility != Visibility::Maximized && m_last_visibility != Visibility::Windowed)
+			{
+				m_last_visibility = Visibility::Windowed;
+			}
+			setVisibility(m_last_visibility);
 		}
 		else
 		{
+			// Backup visibility for exiting fullscreen mode later. Don't do this in the visibilityChanged slot,
+			// since entering fullscreen from maximized will first change the visibility to windowed.
+			m_last_visibility = visibility();
 			setVisibility(FullScreen);
 		}
 	});
