@@ -109,9 +109,21 @@ namespace vk
 		g_last_completed_event = 0;
 	}
 
-	u64 vmm_get_application_memory_usage(u32 memory_type)
+	u64 vmm_get_application_memory_usage(const memory_type_info& memory_type)
 	{
-		return g_vmm_stats.memory_usage[memory_type];
+		u64 result = 0;
+		for (const auto& memory_type_index : memory_type)
+		{
+			auto it = g_vmm_stats.memory_usage.find(memory_type_index);
+			if (it == g_vmm_stats.memory_usage.end())
+			{
+				continue;
+			}
+
+			result += it->second.observe();
+		}
+
+		return result;
 	}
 
 	u64 vmm_get_application_pool_usage(vmm_allocation_pool pool)

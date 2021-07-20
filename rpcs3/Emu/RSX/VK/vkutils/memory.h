@@ -23,6 +23,24 @@ namespace vk
 
 	using namespace vk::vmm_allocation_pool_;
 
+	class memory_type_info
+	{
+		std::array<u32, 4> pools;
+		u32 num_entries = 0;
+
+	public:
+		memory_type_info() = default;
+		memory_type_info(u32 index);
+		void push(u32 index);
+
+		using iterator = u32*;
+		using const_iterator = const u32*;
+		const_iterator begin() const;
+		const_iterator end() const;
+
+		operator bool() const;
+	};
+
 	class mem_allocator_base
 	{
 	public:
@@ -33,7 +51,7 @@ namespace vk
 
 		virtual void destroy() = 0;
 
-		virtual mem_handle_t alloc(u64 block_sz, u64 alignment, u32 memory_type_index, vmm_allocation_pool pool) = 0;
+		virtual mem_handle_t alloc(u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool) = 0;
 		virtual void free(mem_handle_t mem_handle) = 0;
 		virtual void* map(mem_handle_t mem_handle, u64 offset, u64 size) = 0;
 		virtual void unmap(mem_handle_t mem_handle) = 0;
@@ -61,7 +79,7 @@ namespace vk
 
 		void destroy() override;
 
-		mem_handle_t alloc(u64 block_sz, u64 alignment, u32 memory_type_index, vmm_allocation_pool pool) override;
+		mem_handle_t alloc(u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool) override;
 
 		void free(mem_handle_t mem_handle) override;
 		void* map(mem_handle_t mem_handle, u64 offset, u64 /*size*/) override;
@@ -90,7 +108,7 @@ namespace vk
 
 		void destroy() override {}
 
-		mem_handle_t alloc(u64 block_sz, u64 /*alignment*/, u32 memory_type_index, vmm_allocation_pool pool) override;
+		mem_handle_t alloc(u64 block_sz, u64 /*alignment*/, const memory_type_info& memory_type, vmm_allocation_pool pool) override;
 
 		void free(mem_handle_t mem_handle) override;
 		void* map(mem_handle_t mem_handle, u64 offset, u64 size) override;
@@ -151,7 +169,7 @@ namespace vk
 	void vmm_notify_memory_freed(void* handle);
 	void vmm_reset();
 	void vmm_check_memory_usage();
-	u64  vmm_get_application_memory_usage(u32 memory_type);
+	u64  vmm_get_application_memory_usage(const memory_type_info& memory_type);
 	u64  vmm_get_application_pool_usage(vmm_allocation_pool pool);
 	bool vmm_handle_memory_pressure(rsx::problem_severity severity);
 	rsx::problem_severity vmm_determine_memory_load_severity();
