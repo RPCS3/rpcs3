@@ -156,7 +156,7 @@ namespace vk
 		if (!scratch_buffer)
 		{
 			// Choose optimal size
-			const u64 alloc_size = std::max<u64>(64 * 0x100000, utils::align(min_required_size, 0x100000));
+			const u64 alloc_size = utils::align(min_required_size, 0x100000);
 
 			scratch_buffer = std::make_unique<vk::buffer>(*g_render_device, alloc_size,
 				g_render_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
