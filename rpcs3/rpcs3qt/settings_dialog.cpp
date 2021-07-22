@@ -1595,13 +1595,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->cb_show_pup_install->setChecked(m_gui_settings->GetValue(gui::ib_pup_success).toBool());
 		ui->cb_show_obsolete_cfg_dialog->setChecked(m_gui_settings->GetValue(gui::ib_obsolete_cfg).toBool());
 
-		const QString updates_yes        = tr("Yes", "Updates");
-		const QString updates_background = tr("Background", "Updates");
-		const QString updates_no         = tr("No", "Updates");
-
-		ui->combo_updates->addItem(updates_yes, "true");
-		ui->combo_updates->addItem(updates_background, "background");
-		ui->combo_updates->addItem(updates_no, "false");
+		ui->combo_updates->addItem(tr("Yes", "Updates"), gui::update_on);
+		ui->combo_updates->addItem(tr("Background", "Updates"), gui::update_bkg);
+		ui->combo_updates->addItem(tr("Automatic", "Updates"), gui::update_auto);
+		ui->combo_updates->addItem(tr("No", "Updates"), gui::update_off);
 		ui->combo_updates->setCurrentIndex(ui->combo_updates->findData(m_gui_settings->GetValue(gui::m_check_upd_start).toString()));
 		connect(ui->combo_updates, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
 		{
