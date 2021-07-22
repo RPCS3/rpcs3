@@ -196,7 +196,7 @@ bool main_window::Init(bool with_cli_boot)
 	QAction *download_action = new QAction(tr("Download Update"), download_menu);
 	connect(download_action, &QAction::triggered, this, [this]
 	{
-		m_updater.update();
+		m_updater.update(false);
 	});
 
 	download_menu->addAction(download_action);
@@ -229,10 +229,11 @@ bool main_window::Init(bool with_cli_boot)
 	});
 
 #if defined(_WIN32) || defined(__linux__)
-	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != "false")
+	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
 	{
-		const bool in_background = with_cli_boot || update_value != "true";
-		m_updater.check_for_updates(true, in_background, this);
+		const bool in_background = with_cli_boot || update_value == gui::update_bkg;
+		const bool auto_accept   = !in_background && update_value == gui::update_auto;
+		m_updater.check_for_updates(true, in_background, auto_accept, this);
 	}
 #endif
 
