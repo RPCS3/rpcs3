@@ -23,10 +23,10 @@ namespace vk
 
 	using namespace vk::vmm_allocation_pool_;
 
+	class render_device;
 	class memory_type_info
 	{
-		std::array<u32, 4> pools;
-		u32 num_entries = 0;
+		std::vector<u32> type_ids;
 
 	public:
 		memory_type_info() = default;
@@ -37,8 +37,11 @@ namespace vk
 		using const_iterator = const u32*;
 		const_iterator begin() const;
 		const_iterator end() const;
+		u32 first() const;
 
 		operator bool() const;
+
+		memory_type_info get(const render_device& dev, u32 access_flags, u32 type_mask) const;
 	};
 
 	class mem_allocator_base
@@ -121,7 +124,7 @@ namespace vk
 
 	struct memory_block
 	{
-		memory_block(VkDevice dev, u64 block_sz, u64 alignment, u32 memory_type_index, vmm_allocation_pool pool);
+		memory_block(VkDevice dev, u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool);
 		virtual ~memory_block();
 
 		virtual VkDeviceMemory get_vk_device_memory();
@@ -147,7 +150,7 @@ namespace vk
 
 	struct memory_block_host : public memory_block
 	{
-		memory_block_host(VkDevice dev, void* host_pointer, u64 size, u32 memory_type_index);
+		memory_block_host(VkDevice dev, void* host_pointer, u64 size, const memory_type_info& memory_type);
 		~memory_block_host();
 
 		VkDeviceMemory get_vk_device_memory() override;

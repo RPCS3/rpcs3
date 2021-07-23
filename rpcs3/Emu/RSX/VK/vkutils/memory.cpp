@@ -14,29 +14,56 @@ namespace
 namespace vk
 {
 	memory_type_info::memory_type_info(u32 index)
-		: num_entries(0)
 	{
 		push(index);
 	}
 	void memory_type_info::push(u32 index)
 	{
-		ensure(num_entries < pools.size());
-		pools[num_entries++] = index;
+		type_ids.push_back(index);
 	}
 
 	memory_type_info::const_iterator memory_type_info::begin() const
 	{
-		return pools.data();
+		return type_ids.data();
 	}
 
 	memory_type_info::const_iterator memory_type_info::end() const
 	{
-		return pools.data() + num_entries;
+		return type_ids.data() + type_ids.size();
+	}
+
+	u32 memory_type_info::first() const
+	{
+		ensure(!type_ids.empty());
+		return type_ids.front();
 	}
 
 	memory_type_info::operator bool() const
 	{
-		return (num_entries > 0);
+		return !type_ids.empty();
+	}
+
+	memory_type_info memory_type_info::get(const render_device& dev, u32 access_flags, u32 type_mask) const
+	{
+		memory_type_info result{};
+		for (const auto& type : type_ids)
+		{
+			if (type_mask & (1 << type))
+			{
+				result.push(type);
+			}
+		}
+
+		if (!result)
+		{
+			u32 type;
+			if (dev.get_compatible_memory_type(type_mask, access_flags, &type))
+			{
+				result = type;
+			}
+		}
+
+		return result;
 	}
 
 	mem_allocator_vma::mem_allocator_vma(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev)
@@ -268,11 +295,11 @@ namespace vk
 		return g_render_device->get_allocator();
 	}
 
-	memory_block::memory_block(VkDevice dev, u64 block_sz, u64 alignment, u32 memory_type_index, vmm_allocation_pool pool)
+	memory_block::memory_block(VkDevice dev, u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool)
 		: m_device(dev), m_size(block_sz)
 	{
 		m_mem_allocator = get_current_mem_allocator();
-		m_mem_handle    = m_mem_allocator->alloc(block_sz, alignment, memory_type_index, pool);
+		m_mem_handle    = m_mem_allocator->alloc(block_sz, alignment, memory_type, pool);
 	}
 
 	memory_block::~memory_block()
@@ -283,14 +310,14 @@ namespace vk
 		}
 	}
 
-	memory_block_host::memory_block_host(VkDevice dev, void* host_pointer, u64 size, u32 memory_type_index) :
+	memory_block_host::memory_block_host(VkDevice dev, void* host_pointer, u64 size, const memory_type_info& memory_type) :
 		m_device(dev), m_mem_handle(VK_NULL_HANDLE), m_host_pointer(host_pointer)
 	{
 		VkMemoryAllocateInfo alloc_info{};
 		VkImportMemoryHostPointerInfoEXT import_info{};
 
 		alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		alloc_info.memoryTypeIndex = memory_type_index;
+		alloc_info.memoryTypeIndex = memory_type.first();
 		alloc_info.allocationSize = size;
 		alloc_info.pNext = &import_info;
 
