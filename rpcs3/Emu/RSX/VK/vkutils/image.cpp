@@ -42,7 +42,7 @@ namespace vk
 	}
 
 	image::image(const vk::render_device& dev,
-		u32 memory_type_index,
+		const memory_type_info& memory_type,
 		u32 access_flags,
 		VkImageType image_type,
 		VkFormat format,
@@ -70,7 +70,7 @@ namespace vk
 		info.initialLayout = initial_layout;
 		info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		create_impl(dev, access_flags, memory_type_index, allocation_pool);
+		create_impl(dev, access_flags, memory_type, allocation_pool);
 		m_storage_aspect = get_aspect_flags(format);
 
 		if (format_class == RSX_FORMAT_CLASS_UNDEFINED)
@@ -95,7 +95,7 @@ namespace vk
 		vkDestroyImage(m_device, value, nullptr);
 	}
 
-	void image::create_impl(const vk::render_device& dev, u32 access_flags, u32 memory_type_index, vmm_allocation_pool allocation_pool)
+	void image::create_impl(const vk::render_device& dev, u32 access_flags, const memory_type_info& memory_type, vmm_allocation_pool allocation_pool)
 	{
 		ensure(!value && !memory);
 		validate(dev, info);
@@ -105,15 +105,13 @@ namespace vk
 		VkMemoryRequirements memory_req;
 		vkGetImageMemoryRequirements(m_device, value, &memory_req);
 
-		if (!(memory_req.memoryTypeBits & (1 << memory_type_index)))
+		const auto allocation_type_info = memory_type.get(dev, access_flags, memory_req.memoryTypeBits);
+		if (!allocation_type_info)
 		{
-			// Suggested memory type is incompatible with this memory type.
-			// Go through the bitset and test for requested props.
-			if (!dev.get_compatible_memory_type(memory_req.memoryTypeBits, access_flags, &memory_type_index))
-				fmt::throw_exception("No compatible memory type was found!");
+			fmt::throw_exception("No compatible memory type was found!");
 		}
 
-		memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, memory_type_index, allocation_pool);
+		memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, allocation_type_info, allocation_pool);
 		CHECK_RESULT(vkBindImageMemory(m_device, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset()));
 
 		current_layout = info.initialLayout;

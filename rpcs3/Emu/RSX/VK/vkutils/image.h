@@ -37,7 +37,7 @@ namespace vk
 
 	protected:
 		image() = default;
-		void create_impl(const vk::render_device& dev, u32 access_flags, u32 memory_type_index, vmm_allocation_pool allocation_pool);
+		void create_impl(const vk::render_device& dev, u32 access_flags, const memory_type_info& memory_type, vmm_allocation_pool allocation_pool);
 
 	public:
 		VkImage value = VK_NULL_HANDLE;
@@ -48,7 +48,7 @@ namespace vk
 		std::shared_ptr<vk::memory_block> memory;
 
 		image(const vk::render_device& dev,
-			u32 memory_type_index,
+			const memory_type_info& memory_type,
 			u32 access_flags,
 			VkImageType image_type,
 			VkFormat format,
