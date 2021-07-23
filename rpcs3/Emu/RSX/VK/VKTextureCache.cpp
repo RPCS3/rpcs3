@@ -1094,8 +1094,9 @@ namespace vk
 
 	bool texture_cache::handle_memory_pressure(rsx::problem_severity severity)
 	{
-		bool any_released = baseclass::handle_memory_pressure(severity);
+		auto any_released = baseclass::handle_memory_pressure(severity);
 
+		// TODO: This can cause invalidation of in-flight resources
 		if (severity <= rsx::problem_severity::low || !m_temporary_memory_size)
 		{
 			// Nothing left to do
@@ -1106,6 +1107,13 @@ namespace vk
 		if (severity <= rsx::problem_severity::moderate && m_temporary_memory_size < (64 * _1M))
 		{
 			// Some memory is consumed by the temporary resources, but no need to panic just yet
+			return any_released;
+		}
+
+		std::unique_lock lock(m_cache_mutex, std::defer_lock);
+		if (!lock.try_lock())
+		{
+			rsx_log.warning("Unable to remove temporary resources because we're already in the texture cache!");
 			return any_released;
 		}
 

@@ -1455,8 +1455,16 @@ namespace rsx
 
 		bool evict_unused(const std::set<u32>& exclusion_list)
 		{
-			// Manage synchronization externally. It is very likely for RSX to call this after failing to create a new texture while already owning the mutex
+			// Some sanity checks. Do not evict if the cache is currently in use.
 			ensure(rsx::get_current_renderer()->is_current_thread());
+			std::unique_lock lock(m_cache_mutex, std::defer_lock);
+
+			if (!lock.try_lock())
+			{
+				rsx_log.warning("Unable to evict the texture cache because we're faulting from within in the texture cache!");
+				return false;
+			}
+
 			rsx_log.warning("[PERFORMANCE WARNING] Texture cache is running eviction routine. This will affect performance.");
 
 			thrashed_set evicted_set;
@@ -1523,7 +1531,9 @@ namespace rsx
 				}
 			}
 
+			std::lock_guard lock(m_cache_mutex);
 			image_view_type result = 0;
+
 			switch (desc.op)
 			{
 			case deferred_request_command::cubemap_gather:
