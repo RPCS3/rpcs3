@@ -1120,6 +1120,9 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 	// Used by tar_object::extract() as destination directory
 	vfs::mount("/dev_flash", g_cfg.vfs.get_dev_flash());
 
+	// Empty directory for clean installation
+	fs::remove_all(g_cfg.vfs.get_dev_flash(), false);
+
 	// Synchronization variable
 	atomic_t<uint> progress(0);
 	{
