@@ -27,21 +27,25 @@ namespace vk
 	class memory_type_info
 	{
 		std::vector<u32> type_ids;
+		std::vector<u64> type_sizes;
 
 	public:
 		memory_type_info() = default;
-		memory_type_info(u32 index);
-		void push(u32 index);
+		memory_type_info(u32 index, u64 size);
+		void push(u32 index, u64 size);
 
 		using iterator = u32*;
 		using const_iterator = const u32*;
 		const_iterator begin() const;
 		const_iterator end() const;
 		u32 first() const;
+		size_t count() const;
 
 		operator bool() const;
 
 		memory_type_info get(const render_device& dev, u32 access_flags, u32 type_mask) const;
+
+		void rebalance();
 	};
 
 	class mem_allocator_base

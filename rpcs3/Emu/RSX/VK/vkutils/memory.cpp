@@ -13,13 +13,14 @@ namespace
 
 namespace vk
 {
-	memory_type_info::memory_type_info(u32 index)
+	memory_type_info::memory_type_info(u32 index, u64 size)
 	{
-		push(index);
+		push(index, size);
 	}
-	void memory_type_info::push(u32 index)
+	void memory_type_info::push(u32 index, u64 size)
 	{
 		type_ids.push_back(index);
+		type_sizes.push_back(size);
 	}
 
 	memory_type_info::const_iterator memory_type_info::begin() const
@@ -38,6 +39,11 @@ namespace vk
 		return type_ids.front();
 	}
 
+	size_t memory_type_info::count() const
+	{
+		return type_ids.size();
+	}
+
 	memory_type_info::operator bool() const
 	{
 		return !type_ids.empty();
@@ -46,11 +52,11 @@ namespace vk
 	memory_type_info memory_type_info::get(const render_device& dev, u32 access_flags, u32 type_mask) const
 	{
 		memory_type_info result{};
-		for (const auto& type : type_ids)
+		for (size_t i = 0; i < type_ids.size(); ++i)
 		{
-			if (type_mask & (1 << type))
+			if (type_mask & (1 << type_ids[i]))
 			{
-				result.push(type);
+				result.push(type_ids[i], type_sizes[i]);
 			}
 		}
 
@@ -59,11 +65,69 @@ namespace vk
 			u32 type;
 			if (dev.get_compatible_memory_type(type_mask, access_flags, &type))
 			{
-				result = type;
+				result = { type, 0ull };
 			}
 		}
 
 		return result;
+	}
+
+	void memory_type_info::rebalance()
+	{
+		// Re-order indices with the least used one first.
+		// This will avoid constant pressure on the memory budget in low memory systems.
+
+		if (type_ids.size() <= 1)
+		{
+			// Nothing to do
+			return;
+		}
+
+		std::vector<std::pair<u32, u64>> free_memory_map;
+		const auto num_types = type_ids.size();
+		u64 last_free = UINT64_MAX;
+		bool to_reorder = false;
+
+		for (u32 i = 0; i < num_types; ++i)
+		{
+			const auto heap_size = type_sizes[i];
+			const auto type_id = type_ids[i];
+			ensure(heap_size > 0);
+
+			const u64 used_mem = vmm_get_application_memory_usage({ type_ids[i], 0ull });
+			const u64 free_mem = (used_mem >= heap_size) ? 0ull : (heap_size - used_mem);
+
+			to_reorder |= (free_mem > last_free);
+			last_free = free_mem;
+
+			free_memory_map.push_back({ i, free_mem });
+		}
+
+		if (!to_reorder) [[likely]]
+		{
+			return;
+		}
+
+		ensure(free_memory_map.size() == num_types);
+		std::sort(free_memory_map.begin(), free_memory_map.end(), [](const auto& a, const auto& b)
+		{
+			return a.second > b.second;
+		});
+
+		std::vector<u32> new_type_ids(num_types);
+		std::vector<u64> new_type_sizes(num_types);
+
+		for (u32 i = 0; i < num_types; ++i)
+		{
+			const u32 ref = free_memory_map[i].first;
+			new_type_ids[i] = type_ids[ref];
+			new_type_sizes[i] = type_sizes[ref];
+		}
+
+		type_ids = new_type_ids;
+		type_sizes = new_type_sizes;
+
+		rsx_log.warning("Rebalanced memory types successfully");
 	}
 
 	mem_allocator_vma::mem_allocator_vma(VkDevice dev, VkPhysicalDevice pdev) : mem_allocator_base(dev, pdev)

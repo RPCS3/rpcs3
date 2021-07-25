@@ -637,6 +637,12 @@ namespace vk
 		return dev;
 	}
 
+	void render_device::rebalance_memory_type_usage()
+	{
+		// Rebalance device local memory types
+		memory_map.device_local.rebalance();
+	}
+
 	// Shared Util
 	memory_type_mapping get_memory_mapping(const vk::physical_device& dev)
 	{
@@ -657,7 +663,7 @@ namespace vk
 			if (is_device_local)
 			{
 				// Allow multiple device_local heaps
-				result.device_local.push(i);
+				result.device_local.push(i, heap.size);
 				result.device_local_total_bytes += heap.size;
 			}
 
@@ -670,7 +676,7 @@ namespace vk
 				if ((is_cached && !host_visible_cached) || (result.host_visible_total_bytes < heap.size))
 				{
 					// Allow only a single host_visible heap. It makes no sense to have multiple of these otherwise
-					result.host_visible_coherent = i;
+					result.host_visible_coherent = { i, heap.size };
 					result.host_visible_total_bytes = heap.size;
 					host_visible_cached = is_cached;
 				}
