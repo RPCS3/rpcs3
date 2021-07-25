@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
@@ -721,7 +721,13 @@ error_code sceNpBasicSetPresence(vm::cptr<void> data, u64 size)
 
 error_code sceNpBasicSetPresenceDetails(vm::cptr<SceNpBasicPresenceDetails> pres, u32 options)
 {
-	sceNp.todo("sceNpBasicSetPresenceDetails(pres=*0x%x, options=0x%x)", pres, options);
+	if (pres)
+		sceNp.todo("sceNpBasicSetPresenceDetails(pres=*0x%x, options=0x%x) state=0x%X title=%s status=%s comment=%s data=%s",
+		    pres, options, pres->state, reinterpret_cast<const char*>(pres->title),
+		    reinterpret_cast<const char*>(pres->status), reinterpret_cast<const char*>(pres->comment),
+		    reinterpret_cast<const char*>(pres->data));
+	else
+		sceNp.todo("sceNpBasicSetPresenceDetails(pres=*0x%x, options=0x%x)", pres, options);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -745,7 +751,13 @@ error_code sceNpBasicSetPresenceDetails(vm::cptr<SceNpBasicPresenceDetails> pres
 
 error_code sceNpBasicSetPresenceDetails2(vm::cptr<SceNpBasicPresenceDetails2> pres, u32 options)
 {
-	sceNp.todo("sceNpBasicSetPresenceDetails2(pres=*0x%x, options=0x%x)", pres, options);
+	if (pres)
+		sceNp.todo("sceNpBasicSetPresenceDetails2(pres=*0x%x, options=0x%x) state=0x%X title=%s status=%s comment=%s data=%s",
+		    pres, options, pres->state, reinterpret_cast<const char*>(pres->title),
+		    reinterpret_cast<const char*>(pres->status), reinterpret_cast<const char*>(pres->comment),
+		    reinterpret_cast<const char*>(pres->data));
+	else
+		sceNp.todo("sceNpBasicSetPresenceDetails2(pres=*0x%x, options=0x%x)", pres, options);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
