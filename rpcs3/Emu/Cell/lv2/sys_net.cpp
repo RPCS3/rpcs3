@@ -2098,6 +2098,18 @@ error_code sys_net_bnet_getsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 				native_opt = SO_LINGER;
 				break;
 			}
+			case SYS_NET_SO_USECRYPTO:
+			{
+				out_val._int = (sock.p2p.sendto_flags | sock.p2p.recvfrom_flags) & SYS_NET_MSG_USECRYPTO;
+				out_len = sizeof(s32);
+				return {};
+			}
+			case SYS_NET_SO_USESIGNATURE:
+			{
+				out_val._int = (sock.p2p.sendto_flags | sock.p2p.recvfrom_flags) & SYS_NET_MSG_USESIGNATURE;
+				out_len = sizeof(s32);
+				return {};
+			}
 			default:
 			{
 				sys_net.error("sys_net_bnet_getsockopt(s=%d, SOL_SOCKET): unknown option (0x%x)", s, optname);
@@ -2240,7 +2252,9 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 		return -SYS_NET_EINVAL;
 	}
 
-	if (flags & ~(SYS_NET_MSG_PEEK | SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL))
+	// SYS_NET_MSG_PEEK, SYS_NET_MSG_DONTWAIT and SYS_NET_MSG_WAITALL are implemented
+	// SYS_NET_MSG_USECRYPTO and SYS_NET_MSG_USESIGNATURE are invisible to the user
+	if (flags & ~(SYS_NET_MSG_PEEK | SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL | SYS_NET_MSG_USECRYPTO | SYS_NET_MSG_USESIGNATURE))
 	{
 		fmt::throw_exception("sys_net_bnet_recvfrom(s=%d): unknown flags (0x%x)", flags);
 	}
@@ -2268,6 +2282,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 	{
 		type = sock.type;
 		std::lock_guard lock(sock.mutex);
+		sock.p2p.recvfrom_flags = flags;
 
 		//if (!(sock.events & lv2_socket::poll::read))
 		{
@@ -2565,9 +2580,11 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 	sys_net.warning("sys_net_bnet_sendto(s=%d, buf=*0x%x, len=%u, flags=0x%x, addr=*0x%x, addrlen=%u)", s, buf, len, flags, addr, addrlen);
 
-	if (flags & ~(SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL))
+	// SYS_NET_MSG_DONTWAIT and SYS_NET_MSG_WAITALL are implemented
+	// SYS_NET_MSG_USECRYPTO and SYS_NET_MSG_USESIGNATURE are invisible to the user
+	if (flags & ~(SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL | SYS_NET_MSG_USECRYPTO | SYS_NET_MSG_USESIGNATURE))
 	{
-		fmt::throw_exception("sys_net_bnet_sendto(s=%d): unknown flags (0x%x)", flags);
+		fmt::throw_exception("sys_net_bnet_sendto(s=%d): unknown flags (0x%x)", s, flags);
 	}
 
 	if (addr && addrlen < 8)
@@ -2623,6 +2640,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 	const auto sock = idm::check<lv2_socket>(s, [&](lv2_socket& sock)
 	{
 		std::lock_guard lock(sock.mutex);
+		sock.p2p.sendto_flags = flags;
 		type = sock.type;
 
 		if (type == SYS_NET_SOCK_DGRAM_P2P)
@@ -2951,14 +2969,14 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 			}
 			case SYS_NET_SO_USECRYPTO:
 			{
-				//TODO
-				sys_net.error("sys_net_bnet_setsockopt(s=%d, SOL_SOCKET): Stubbed option (0x%x) (SYS_NET_SO_USECRYPTO)", s, optname);
+				// Invisible to user
+				sys_net.trace("sys_net_bnet_setsockopt(s=%d, SOL_SOCKET): Stubbed option (0x%x) (SYS_NET_SO_USECRYPTO)", s, optname);
 				return {};
 			}
 			case SYS_NET_SO_USESIGNATURE:
 			{
-				//TODO
-				sys_net.error("sys_net_bnet_setsockopt(s=%d, SOL_SOCKET): Stubbed option (0x%x) (SYS_NET_SO_USESIGNATURE)", s, optname);
+				// Invisible to user
+				sys_net.trace("sys_net_bnet_setsockopt(s=%d, SOL_SOCKET): Stubbed option (0x%x) (SYS_NET_SO_USESIGNATURE)", s, optname);
 				return {};
 			}
 			default:

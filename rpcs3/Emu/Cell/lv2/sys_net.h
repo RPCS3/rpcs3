@@ -362,9 +362,15 @@ struct lv2_socket final
 	struct p2p_i
 	{
 		// Port(actual bound port) and Virtual Port(indicated by u16 at the start of the packet)
-		u16 port = 0, vport = 0;
+		u16 port{};
+		u16 vport{};
+
 		// Queue containing received packets from network_thread for SYS_NET_SOCK_DGRAM_P2P sockets
 		std::queue<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>> data{};
+
+		// Flags most recently set by send/recv calls
+		s32 sendto_flags{};
+		s32 recvfrom_flags{};
 	} p2p;
 
 	struct p2ps_i
