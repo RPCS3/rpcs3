@@ -17,4 +17,5 @@ namespace extra_nps
 	void print_search_room(const SceNpMatching2SearchRoomRequest* req);
 	void print_set_roomdata_ext_req(const SceNpMatching2SetRoomDataExternalRequest* req);
 	void print_set_roomdata_int_req(const SceNpMatching2SetRoomDataInternalRequest* req);
+	void print_set_roommemberdata_int_req(const SceNpMatching2SetRoomMemberDataInternalRequest* req);
 } // namespace extra_nps

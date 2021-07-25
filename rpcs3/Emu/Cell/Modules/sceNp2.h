@@ -1388,9 +1388,9 @@ struct SceNpMatching2RoomDataInternalUpdateInfo
 	vm::bptr<SceNpMatching2FlagAttr> prevFlagAttr;
 	vm::bptr<SceNpMatching2RoomPasswordSlotMask> newRoomPasswordSlotMask;
 	vm::bptr<SceNpMatching2RoomPasswordSlotMask> prevRoomPasswordSlotMask;
-	vm::pptr<SceNpMatching2RoomGroup> newRoomGroup;
+	vm::bpptr<SceNpMatching2RoomGroup> newRoomGroup;
 	be_t<u32> newRoomGroupNum;
-	vm::pptr<SceNpMatching2RoomBinAttrInternal> newRoomBinAttrInternal;
+	vm::bpptr<SceNpMatching2RoomBinAttrInternal> newRoomBinAttrInternal;
 	be_t<u32> newRoomBinAttrInternalNum;
 };
 
@@ -1401,7 +1401,7 @@ struct SceNpMatching2RoomMemberDataInternalUpdateInfo
 	vm::bptr<SceNpMatching2FlagAttr> newFlagAttr;
 	vm::bptr<SceNpMatching2FlagAttr> prevFlagAttr;
 	vm::bptr<SceNpMatching2TeamId> newTeamId;
-	vm::pptr<SceNpMatching2RoomMemberBinAttrInternal> newRoomMemberBinAttrInternal;
+	vm::bpptr<SceNpMatching2RoomMemberBinAttrInternal> newRoomMemberBinAttrInternal;
 	be_t<u32> newRoomMemberBinAttrInternalNum;
 };
 

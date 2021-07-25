@@ -663,7 +663,7 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 error_code sceNpMatching2SendRoomMessage(
     SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SendRoomMessageRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	sceNp2.todo("sceNpMatching2SendRoomMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+	sceNp2.warning("sceNpMatching2SendRoomMessage(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
@@ -958,7 +958,7 @@ error_code sceNpMatching2SendRoomChatMessage(
 error_code sceNpMatching2SetRoomDataInternal(
     SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SetRoomDataInternalRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	sceNp2.todo("sceNpMatching2SetRoomDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+	sceNp2.warning("sceNpMatching2SetRoomDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
@@ -974,7 +974,7 @@ error_code sceNpMatching2SetRoomDataInternal(
 error_code sceNpMatching2GetRoomDataInternal(
     SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetRoomDataInternalRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	sceNp2.todo("sceNpMatching2GetRoomDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+	sceNp2.warning("sceNpMatching2GetRoomDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
@@ -1164,13 +1164,15 @@ error_code sceNpMatching2GetRoomMemberDataInternal(
 error_code sceNpMatching2SetRoomMemberDataInternal(
     SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2SetRoomMemberDataInternalRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	sceNp2.todo("sceNpMatching2SetRoomMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+	sceNp2.warning("sceNpMatching2SetRoomMemberDataInternal(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
 	{
 		return res;
 	}
+
+	*assignedReqId = nph.set_roommemberdata_internal(ctxId, optParam, reqParam.get_ptr());
 
 	return CELL_OK;
 }
@@ -1280,7 +1282,7 @@ error_code sceNpMatching2GetRoomPasswordLocal(SceNpMatching2ContextId ctxId, Sce
 error_code sceNpMatching2GetRoomDataExternalList(
     SceNpMatching2ContextId ctxId, vm::cptr<SceNpMatching2GetRoomDataExternalListRequest> reqParam, vm::cptr<SceNpMatching2RequestOptParam> optParam, vm::ptr<SceNpMatching2RequestId> assignedReqId)
 {
-	sceNp2.todo("sceNpMatching2GetRoomDataExternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
+	sceNp2.warning("sceNpMatching2GetRoomDataExternalList(ctxId=%d, reqParam=*0x%x, optParam=*0x%x, assignedReqId=*0x%x)", ctxId, reqParam, optParam, assignedReqId);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 	if (auto res = generic_match2_error_check(nph, ctxId, reqParam, assignedReqId); res != CELL_OK)
