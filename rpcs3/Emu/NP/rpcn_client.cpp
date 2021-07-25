@@ -34,7 +34,7 @@
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 
-#define RPCN_PROTOCOL_VERSION 10
+#define RPCN_PROTOCOL_VERSION 11
 #define RPCN_HEADER_SIZE 9
 #define COMMUNICATION_ID_SIZE 9
 
@@ -464,7 +464,7 @@ bool rpcn_client::manage_connection()
 	}
 
 	const u8 packet_type  = header[0];
-	const u16 command     = *utils::bless<le_t<u16>>(&header[1]);
+	const CommandType command = *utils::bless<le_t<CommandType>>(&header[1]);
 	const u16 packet_size = *utils::bless<le_t<u16>>(&header[3]);
 	const u32 packet_id   = *utils::bless<le_t<u32>>(&header[5]);
 
@@ -489,7 +489,7 @@ bool rpcn_client::manage_connection()
 			return error_and_disconnect("Reply packet without result");
 
 		// Those commands are handled synchronously and won't be forwarded to NP Handler
-		if (command == CommandType::Login || command == CommandType::GetServerList || command == CommandType::Create)
+		if (is_command_type_synchronous(command))
 		{
 			std::lock_guard lock(mutex_replies_sync);
 			replies_sync.insert(std::make_pair(packet_id, std::make_pair(command, std::move(data))));
@@ -965,7 +965,7 @@ bool rpcn_client::set_roomdata_internal(u32 req_id, const SceNpCommunicationId& 
 {
 	std::vector<u8> data{};
 
-	//	extra_nps::print_set_roomdata_req(req);
+	extra_nps::print_set_roomdata_int_req(req);
 
 	flatbuffers::FlatBufferBuilder builder(1024);
 	flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrinternal_vec;
@@ -1011,6 +1011,42 @@ bool rpcn_client::set_roomdata_internal(u32 req_id, const SceNpCommunicationId& 
 	memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
 
 	if (!forge_send(CommandType::SetRoomDataInternal, req_id, data))
+		return false;
+
+	return true;
+}
+
+bool rpcn_client::set_roommemberdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomMemberDataInternalRequest* req)
+{
+	std::vector<u8> data{};
+
+	extra_nps::print_set_roommemberdata_int_req(req);
+
+	flatbuffers::FlatBufferBuilder builder(1024);
+	flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<BinAttr>>> final_binattrinternal_vec;
+	if (req->roomMemberBinAttrInternalNum)
+	{
+		std::vector<flatbuffers::Offset<BinAttr>> davec;
+		for (u32 i = 0; i < req->roomMemberBinAttrInternalNum; i++)
+		{
+			auto bin = CreateBinAttr(builder, req->roomMemberBinAttrInternal[i].id, builder.CreateVector(req->roomMemberBinAttrInternal[i].ptr.get_ptr(), req->roomMemberBinAttrInternal[i].size));
+			davec.push_back(bin);
+		}
+		final_binattrinternal_vec = builder.CreateVector(davec);
+	}
+
+	auto req_finished = CreateSetRoomMemberDataInternalRequest(builder, req->roomId, req->memberId, req->teamId, req->flagFilter, req->flagAttr, final_binattrinternal_vec);
+
+	builder.Finish(req_finished);
+	u8* buf     = builder.GetBufferPointer();
+	usz bufsize = builder.GetSize();
+	data.resize(COMMUNICATION_ID_SIZE + bufsize + sizeof(u32));
+
+	memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
+	reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = static_cast<u32>(bufsize);
+	memcpy(data.data() + COMMUNICATION_ID_SIZE + sizeof(u32), buf, bufsize);
+
+	if (!forge_send(CommandType::SetRoomMemberDataInternal, req_id, data))
 		return false;
 
 	return true;
@@ -1167,4 +1203,17 @@ void rpcn_client::abort()
 {
 	ensure(in_config);
 	abort_config = true;
+}
+
+bool is_command_type_synchronous(CommandType command_type)
+{
+	switch (command_type)
+	{
+	case CommandType::Login:
+	case CommandType::Create:
+	case CommandType::GetServerList:
+		return true;
+	default:
+		return false;
+	}
 }

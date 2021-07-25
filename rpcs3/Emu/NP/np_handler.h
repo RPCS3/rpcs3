@@ -2,6 +2,7 @@
 
 #include <queue>
 #include <map>
+#include <set>
 #include <unordered_map>
 
 #include "Emu/Memory/vm_ptr.h"
@@ -52,6 +53,8 @@ public:
 		UserJoinedRoom,
 		UserLeftRoom,
 		RoomDestroyed,
+		UpdatedRoomDataInternal,
+		UpdatedRoomMemberDataInternal,
 		SignalP2PConnect,
 		_SignalP2PDisconnect,
 		RoomMessageReceived,
@@ -101,6 +104,7 @@ public:
 	u32 set_roomdata_external(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataExternalRequest* req);
 	u32 get_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2GetRoomDataInternalRequest* req);
 	u32 set_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomDataInternalRequest* req);
+	u32 set_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomMemberDataInternalRequest* req);
 	u32 get_ping_info(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SignalingGetPingInfoRequest* req);
 	u32 send_room_message(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SendRoomMessageRequest* req);
 
@@ -119,6 +123,10 @@ public:
 
 	static constexpr std::string_view thread_name = "NP Handler Thread";
 
+public:
+	std::mutex room_members_mtx;
+	std::map<SceNpMatching2RoomId, std::set<SceNpMatching2RoomMemberId>> room_members; // Protected by room_members_mtx
+
 protected:
 	// Various generic helpers
 	bool discover_ip_address();
@@ -129,6 +137,8 @@ protected:
 	void notif_user_joined_room(std::vector<u8>& data);
 	void notif_user_left_room(std::vector<u8>& data);
 	void notif_room_destroyed(std::vector<u8>& data);
+	void notif_updated_room_data_internal(std::vector<u8>& data);
+	void notif_updated_room_member_data_internal(std::vector<u8>& data);
 	void notif_p2p_connect(std::vector<u8>& data);
 	void notif_room_message_received(std::vector<u8>& data);
 
@@ -141,18 +151,25 @@ protected:
 	bool reply_set_roomdata_external(u32 req_id, std::vector<u8>& reply_data);
 	bool reply_get_roomdata_internal(u32 req_id, std::vector<u8>& reply_data);
 	bool reply_set_roomdata_internal(u32 req_id, std::vector<u8>& reply_data);
+	bool reply_set_roommemberdata_internal(u32 req_id, std::vector<u8>& reply_data);
 	bool reply_get_ping_info(u32 req_id, std::vector<u8>& reply_data);
 	bool reply_send_room_message(u32 req_id, std::vector<u8>& reply_data);
 	bool reply_req_sign_infos(u32 req_id, std::vector<u8>& reply_data);
 	bool reply_req_ticket(u32 req_id, std::vector<u8>& reply_data);
 
 	// Helper functions(fb=>np2)
-	void BinAttr_to_SceNpMatching2BinAttr(const flatbuffers::Vector<flatbuffers::Offset<BinAttr>>* fb_attr, vm::ptr<SceNpMatching2BinAttr> binattr_info);
-	void RoomGroup_to_SceNpMatching2RoomGroup(const flatbuffers::Vector<flatbuffers::Offset<RoomGroup>>* fb_group, vm::ptr<SceNpMatching2RoomGroup> group_info);
+	void BinAttr_to_SceNpMatching2BinAttr(const BinAttr* bin_attr, SceNpMatching2BinAttr* binattr_info);
+	void MemberBinAttrInternal_to_SceNpMatching2RoomBinAttrInternal(const MemberBinAttrInternal* fb_attr, vm::ptr<SceNpMatching2RoomMemberBinAttrInternal> binattr_info);
+	void RoomBinAttrInternal_to_SceNpMatching2RoomBinAttrInternal(const BinAttrInternal* fb_attr, vm::ptr<SceNpMatching2RoomBinAttrInternal> binattr_info);
+	void BinAttrs_to_SceNpMatching2BinAttr(const flatbuffers::Vector<flatbuffers::Offset<BinAttr>>* fb_attr, vm::ptr<SceNpMatching2BinAttr> binattr_info);
+	void RoomGroups_to_SceNpMatching2RoomGroup(const flatbuffers::Vector<flatbuffers::Offset<RoomGroup>>* fb_group, vm::ptr<SceNpMatching2RoomGroup> group_info);
 	void UserInfo2_to_SceNpUserInfo2(const UserInfo2* user, SceNpUserInfo2* user_info);
 	void SearchRoomReponse_to_SceNpMatching2SearchRoomResponse(const SearchRoomResponse* resp, SceNpMatching2SearchRoomResponse* search_resp);
 	u16 RoomDataInternal_to_SceNpMatching2RoomDataInternal(const RoomDataInternal* resp, SceNpMatching2RoomDataInternal* room_resp, const SceNpId& npid);
-	void RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(const RoomMemberUpdateInfo* resp, SceNpMatching2RoomMemberUpdateInfo* room_info);
+	void RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(const RoomMemberDataInternal* member_data, const SceNpMatching2RoomDataInternal* room_info, SceNpMatching2RoomMemberDataInternal* sce_member_data);
+	void RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(const RoomMemberUpdateInfo* update_info, SceNpMatching2RoomMemberUpdateInfo* sce_update_info);
+	void RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo(const RoomDataInternalUpdateInfo* update_info, SceNpMatching2RoomDataInternalUpdateInfo* sce_update_info, const SceNpId& npid);
+	void RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(const RoomMemberDataInternalUpdateInfo* update_info, SceNpMatching2RoomMemberDataInternalUpdateInfo* sce_update_info);
 	void RoomUpdateInfo_to_SceNpMatching2RoomUpdateInfo(const RoomUpdateInfo* update_info, SceNpMatching2RoomUpdateInfo* sce_update_info);
 	void GetPingInfoResponse_to_SceNpMatching2SignalingGetPingInfoResponse(const GetPingInfoResponse* resp, SceNpMatching2SignalingGetPingInfoResponse* sce_resp);
 	void RoomMessageInfo_to_SceNpMatching2RoomMessageInfo(const RoomMessageInfo* mi, SceNpMatching2RoomMessageInfo* sce_mi);

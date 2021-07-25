@@ -184,6 +184,15 @@ table SetRoomDataInternalRequest {
     ownerPrivilegeRank:[uint16];
 }
 
+table SetRoomMemberDataInternalRequest {
+    roomId:uint64;
+    memberId:uint16;
+    teamId:uint8;
+    flagFilter:uint32;
+    flagAttr:uint32;
+    roomMemberBinAttrInternal:[BinAttr];
+}
+
 table GetRoomDataInternalRequest {
     roomId:uint64;
     attrId:[uint16];
@@ -199,6 +208,24 @@ table RoomUpdateInfo {
     eventCause:uint8;
     errorCode:int32;
     optData:PresenceOptionData;
+}
+
+table RoomDataInternalUpdateInfo {
+    newRoomDataInternal:RoomDataInternal;
+    newFlagAttr:uint32;
+    prevFlagAttr:uint32;
+    newRoomPasswordSlotMask:uint64;
+    prevRoomPasswordSlotMask:uint64;
+    newRoomGroup:[RoomGroup];
+    newRoomBinAttrInternal:[BinAttrInternal];
+}
+
+table RoomMemberDataInternalUpdateInfo {
+    newRoomMemberDataInternal:RoomMemberDataInternal;
+    newFlagAttr:uint32;
+    prevFlagAttr:uint32;
+    newTeamId:uint8;
+    newRoomMemberBinAttrInternal:[MemberBinAttrInternal];
 }
 
 table GetPingInfoResponse {

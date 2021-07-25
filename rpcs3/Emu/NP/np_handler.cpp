@@ -583,9 +583,20 @@ u32 np_handler::set_roomdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<S
 {
 	u32 req_id = generate_callback_info(ctx_id, optParam);
 
-	extra_nps::print_set_roomdata_int_req(req);
-
 	if (!rpcn.set_roomdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
+	{
+		rpcn_log.error("Disconnecting from RPCN!");
+		is_psn_active = false;
+	}
+
+	return req_id;
+}
+
+u32 np_handler::set_roommemberdata_internal(SceNpMatching2ContextId ctx_id, vm::cptr<SceNpMatching2RequestOptParam> optParam, const SceNpMatching2SetRoomMemberDataInternalRequest* req)
+{
+	u32 req_id = generate_callback_info(ctx_id, optParam);
+
+	if (!rpcn.set_roommemberdata_internal(req_id, get_match2_context(ctx_id)->communicationId, req))
 	{
 		rpcn_log.error("Disconnecting from RPCN!");
 		is_psn_active = false;
@@ -693,6 +704,7 @@ void np_handler::operator()()
 			case CommandType::SetRoomDataExternal: reply_set_roomdata_external(req_id, data); break;
 			case CommandType::GetRoomDataInternal: reply_get_roomdata_internal(req_id, data); break;
 			case CommandType::SetRoomDataInternal: reply_set_roomdata_internal(req_id, data); break;
+			case CommandType::SetRoomMemberDataInternal: reply_set_roommemberdata_internal(req_id, data); break;
 			case CommandType::PingRoomOwner: reply_get_ping_info(req_id, data); break;
 			case CommandType::SendRoomMessage: reply_send_room_message(req_id, data); break;
 			case CommandType::RequestSignalingInfos: reply_req_sign_infos(req_id, data); break;
@@ -709,6 +721,8 @@ void np_handler::operator()()
 			case NotificationType::UserJoinedRoom: notif_user_joined_room(notif.second); break;
 			case NotificationType::UserLeftRoom: notif_user_left_room(notif.second); break;
 			case NotificationType::RoomDestroyed: notif_room_destroyed(notif.second); break;
+			case NotificationType::UpdatedRoomDataInternal: notif_updated_room_data_internal(notif.second); break;
+			case NotificationType::UpdatedRoomMemberDataInternal: notif_updated_room_member_data_internal(notif.second); break;
 			case NotificationType::SignalP2PConnect: notif_p2p_connect(notif.second); break;
 			case NotificationType::RoomMessageReceived: notif_room_message_received(notif.second); break;
 			default: rpcn_log.error("Unknown notification(%d) received!", notif.first); break;
@@ -800,6 +814,13 @@ bool np_handler::reply_create_join_room(u32 req_id, std::vector<u8>& reply_data)
 
 	extra_nps::print_create_room_resp(room_resp);
 
+	std::lock_guard lock(room_members_mtx);
+	room_members[room_info->roomId] = {};
+	for (auto member : *resp->memberList())
+	{
+		room_members[room_info->roomId].insert(member->memberId());
+	}
+
 	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
 	{
 		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_CreateJoinRoom, event_key, 0, sizeof(SceNpMatching2CreateJoinRoomResponse), cb_info.cb_arg);
@@ -834,7 +855,19 @@ bool np_handler::reply_join_room(u32 req_id, std::vector<u8>& reply_data)
 
 	u16 member_id = RoomDataInternal_to_SceNpMatching2RoomDataInternal(resp, room_info.get_ptr(), npid);
 
+	std::lock_guard lock(room_members_mtx);
+	room_members[room_info->roomId].insert(member_id);
+
 	extra_nps::print_room_data_internal(room_resp->roomDataInternal.get_ptr());
+
+	auto cur_member = (room_resp->roomDataInternal.get_ptr())->memberList.members;
+	while (cur_member)
+	{
+		const auto cur_member_id = cur_member.get_ptr()->memberId;
+		room_members[room_info->roomId].insert(cur_member_id);
+
+		cur_member = cur_member->next;
+	}
 
 	// Establish Matching2 self signaling info
 	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
@@ -860,7 +893,7 @@ bool np_handler::reply_leave_room(u32 req_id, std::vector<u8>& reply_data)
 	pending_requests.erase(req_id);
 
 	vec_stream reply(reply_data, 1);
-	u64 room_id = reply.get<u64>();
+	SceNpMatching2RoomId room_id = reply.get<u64>();
 	if (reply.is_error())
 		return error_and_disconnect("Malformed reply to LeaveRoom command");
 
@@ -980,6 +1013,25 @@ bool np_handler::reply_set_roomdata_internal(u32 req_id, std::vector<u8>& /*repl
 	return true;
 }
 
+bool np_handler::reply_set_roommemberdata_internal(u32 req_id, std::vector<u8>& /*reply_data*/)
+{
+	if (!pending_requests.contains(req_id))
+		return error_and_disconnect("Unexpected reply ID to SetRoomMemberDataInternal");
+
+	const auto cb_info = std::move(pending_requests.at(req_id));
+	pending_requests.erase(req_id);
+
+	u32 event_key = get_event_key(); // Unsure if necessary if there is no data
+
+	sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+	{
+		cb_info.cb(cb_ppu, cb_info.ctx_id, req_id, SCE_NP_MATCHING2_REQUEST_EVENT_SetRoomMemberDataInternal, event_key, 0, 0, cb_info.cb_arg);
+		return 0;
+	});
+
+	return true;
+}
+
 bool np_handler::reply_get_ping_info(u32 req_id, std::vector<u8>& reply_data)
 {
 	if (!pending_requests.contains(req_id))
@@ -1074,7 +1126,7 @@ bool np_handler::reply_req_ticket(u32 /*req_id*/, std::vector<u8>& reply_data)
 void np_handler::notif_user_joined_room(std::vector<u8>& data)
 {
 	vec_stream noti(data);
-	u64 room_id          = noti.get<u64>();
+	SceNpMatching2RoomId room_id = noti.get<u64>();
 	auto update_info_raw = noti.get_rawdata();
 
 	if (noti.is_error())
@@ -1092,6 +1144,9 @@ void np_handler::notif_user_joined_room(std::vector<u8>& data)
 	rpcn_log.notice("Received notification that user %s(%d) joined the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
 	extra_nps::print_room_member_data_internal(notif_data->roomMemberDataInternal.get_ptr());
 
+	std::lock_guard lock(room_members_mtx);
+	room_members[room_id].insert(notif_data->roomMemberDataInternal->memberId);
+
 	sysutil_register_cb([room_event_cb = this->room_event_cb, room_id, event_key, room_event_cb_ctx = this->room_event_cb_ctx, room_event_cb_arg = this->room_event_cb_arg](ppu_thread& cb_ppu) -> s32
 	{
 		room_event_cb(cb_ppu, room_event_cb_ctx, room_id, SCE_NP_MATCHING2_ROOM_EVENT_MemberJoined, event_key, 0, sizeof(SceNpMatching2RoomMemberUpdateInfo), room_event_cb_arg);
@@ -1102,7 +1157,7 @@ void np_handler::notif_user_joined_room(std::vector<u8>& data)
 void np_handler::notif_user_left_room(std::vector<u8>& data)
 {
 	vec_stream noti(data);
-	u64 room_id          = noti.get<u64>();
+	SceNpMatching2RoomId room_id = noti.get<u64>();
 	auto update_info_raw = noti.get_rawdata();
 
 	if (noti.is_error())
@@ -1120,6 +1175,9 @@ void np_handler::notif_user_left_room(std::vector<u8>& data)
 	rpcn_log.notice("Received notification that user %s(%d) left the room(%d)", notif_data->roomMemberDataInternal->userInfo.npId.handle.data, notif_data->roomMemberDataInternal->memberId, room_id);
 	extra_nps::print_room_member_data_internal(notif_data->roomMemberDataInternal.get_ptr());
 
+	std::lock_guard lock(room_members_mtx);
+	room_members[room_id].erase(notif_data->roomMemberDataInternal->memberId);
+
 	sysutil_register_cb([room_event_cb = this->room_event_cb, room_event_cb_ctx = this->room_event_cb_ctx, room_id, event_key, room_event_cb_arg = this->room_event_cb_arg](ppu_thread& cb_ppu) -> s32
 	{
 		room_event_cb(cb_ppu, room_event_cb_ctx, room_id, SCE_NP_MATCHING2_ROOM_EVENT_MemberLeft, event_key, 0, sizeof(SceNpMatching2RoomMemberUpdateInfo), room_event_cb_arg);
@@ -1130,7 +1188,7 @@ void np_handler::notif_user_left_room(std::vector<u8>& data)
 void np_handler::notif_room_destroyed(std::vector<u8>& data)
 {
 	vec_stream noti(data);
-	u64 room_id          = noti.get<u64>();
+	SceNpMatching2RoomId room_id = noti.get<u64>();
 	auto update_info_raw = noti.get_rawdata();
 
 	if (noti.is_error())
@@ -1157,6 +1215,67 @@ void np_handler::notif_room_destroyed(std::vector<u8>& data)
 	});
 }
 
+void np_handler::notif_updated_room_data_internal(std::vector<u8>& data)
+{
+	vec_stream noti(data);
+	SceNpMatching2RoomId room_id = noti.get<u64>();
+	auto update_info_raw         = noti.get_rawdata();
+
+	if (noti.is_error())
+	{
+		rpcn_log.error("Received faulty UpdatedRoomDataInternal notification");
+		return;
+	}
+
+	u32 event_key = get_event_key();
+
+	auto update_info = flatbuffers::GetRoot<RoomDataInternalUpdateInfo>(update_info_raw.data());
+	SceNpMatching2RoomDataInternalUpdateInfo* notif_data = reinterpret_cast<SceNpMatching2RoomDataInternalUpdateInfo*>(allocate_req_result(event_key, sizeof(SceNpMatching2RoomDataInternalUpdateInfo)));
+
+	RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo(update_info, notif_data, npid);
+
+	extra_nps::print_room_data_internal(notif_data->newRoomDataInternal.get_ptr());
+
+	rpcn_log.notice("Received notification that room(%d)'s data was updated", room_id);
+
+	auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+	sigh.disconnect_sig2_users(room_id);
+
+	sysutil_register_cb([room_event_cb = this->room_event_cb, room_event_cb_ctx = this->room_event_cb_ctx, room_id, event_key, room_event_cb_arg = this->room_event_cb_arg](ppu_thread& cb_ppu) -> s32
+	{
+		room_event_cb(cb_ppu, room_event_cb_ctx, room_id, SCE_NP_MATCHING2_ROOM_EVENT_UpdatedRoomDataInternal, event_key, 0, sizeof(SceNpMatching2RoomDataInternalUpdateInfo), room_event_cb_arg);
+		return 0;
+	});
+}
+
+void np_handler::notif_updated_room_member_data_internal(std::vector<u8>& data)
+{
+	vec_stream noti(data);
+	SceNpMatching2RoomId room_id = noti.get<u64>();
+	auto update_info_raw         = noti.get_rawdata();
+
+	if (noti.is_error())
+	{
+		rpcn_log.error("Received faulty UpdatedRoomMemberDataInternal notification");
+		return;
+	}
+
+	u32 event_key = get_event_key();
+
+	auto update_info = flatbuffers::GetRoot<RoomMemberDataInternalUpdateInfo>(update_info_raw.data());
+	SceNpMatching2RoomMemberDataInternalUpdateInfo* notif_data = reinterpret_cast<SceNpMatching2RoomMemberDataInternalUpdateInfo*>(allocate_req_result(event_key, sizeof(SceNpMatching2RoomMemberDataInternalUpdateInfo)));
+	RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(update_info, notif_data);
+
+	rpcn_log.notice("Received notification that user's %s(%d) room (%d) data was updated", notif_data->newRoomMemberDataInternal->userInfo.npId.handle.data, notif_data->newRoomMemberDataInternal->memberId, room_id);
+	extra_nps::print_room_member_data_internal(notif_data->newRoomMemberDataInternal.get_ptr());
+
+	sysutil_register_cb([room_event_cb = this->room_event_cb, room_event_cb_ctx = this->room_event_cb_ctx, room_id, event_key, room_event_cb_arg = this->room_event_cb_arg](ppu_thread& cb_ppu) -> s32
+	{
+		room_event_cb(cb_ppu, room_event_cb_ctx, room_id, SCE_NP_MATCHING2_ROOM_EVENT_UpdatedRoomMemberDataInternal, event_key, 0, sizeof(SceNpMatching2RoomMemberDataInternalUpdateInfo), room_event_cb_arg);
+		return 0;
+	});
+}
+
 void np_handler::notif_p2p_connect(std::vector<u8>& data)
 {
 	if (data.size() != 16)
@@ -1165,7 +1284,7 @@ void np_handler::notif_p2p_connect(std::vector<u8>& data)
 		return;
 	}
 
-	const u64 room_id    = reinterpret_cast<le_t<u64>&>(data[0]);
+	const SceNpMatching2RoomId room_id = reinterpret_cast<le_t<u64>&>(data[0]);
 	const u16 member_id  = reinterpret_cast<le_t<u16>&>(data[8]);
 	const u16 port_p2p   = reinterpret_cast<be_t<u16>&>(data[10]);
 	const u32 addr_p2p   = reinterpret_cast<le_t<u32>&>(data[12]);
@@ -1181,7 +1300,7 @@ void np_handler::notif_p2p_connect(std::vector<u8>& data)
 void np_handler::notif_room_message_received(std::vector<u8>& data)
 {
 	vec_stream noti(data);
-	u64 room_id           = noti.get<u64>();
+	SceNpMatching2RoomId room_id = noti.get<u64>();
 	u16 member_id         = noti.get<u16>();
 	auto message_info_raw = noti.get_rawdata();
 

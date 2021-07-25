@@ -769,10 +769,7 @@ error_code sceNpMatching2GetRoomSlotInfoLocal(SceNpMatching2ContextId ctxId, con
 	const std::set<SceNpMatching2RoomMemberId> member_list = nph.room_members[roomId];
 	const u32 num_members = static_cast<u32>(member_list.size());
 
-	if (num_members == 0)
-		roomSlotInfo->joinedSlotMask = 0;
-	else
-		roomSlotInfo->joinedSlotMask = (1ull << num_members) - 1ull; // Set bitsmask bit 1 for all members
+	roomSlotInfo->joinedSlotMask = (1ull << num_members) - 1ull; // Set bitsmask bit 1 for all members
 
 	roomSlotInfo->openPublicSlotNum = roomSlotInfo->publicSlotNum - num_members;
 
@@ -809,7 +806,7 @@ error_code sceNpMatching2AbortContextStart(SceNpMatching2ContextId ctxId)
 
 error_code sceNpMatching2GetRoomMemberIdListLocal(SceNpMatching2ContextId ctxId, SceNpMatching2RoomId roomId, s32 sortMethod, vm::ptr<SceNpMatching2RoomMemberId> memberId, u32 memberIdNum)
 {
-	sceNp2.success("sceNpMatching2GetRoomMemberIdListLocal(ctxId=%d, roomId=%d, sortMethod=%d, memberId=*0x%x, memberIdNum=%d)", ctxId, roomId, sortMethod, memberId, memberIdNum);
+	sceNp2.notice("sceNpMatching2GetRoomMemberIdListLocal(ctxId=%d, roomId=%d, sortMethod=%d, memberId=*0x%x, memberIdNum=%d)", ctxId, roomId, sortMethod, memberId, memberIdNum);
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 

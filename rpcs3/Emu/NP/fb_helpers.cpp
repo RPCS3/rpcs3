@@ -3,22 +3,41 @@
 
 LOG_CHANNEL(rpcn_log, "rpcn");
 
-void np_handler::BinAttr_to_SceNpMatching2BinAttr(const flatbuffers::Vector<flatbuffers::Offset<BinAttr>>* fb_attr, vm::ptr<SceNpMatching2BinAttr> binattr_info)
+void np_handler::BinAttr_to_SceNpMatching2BinAttr(const BinAttr* bin_attr, SceNpMatching2BinAttr* binattr_info)
+{
+	binattr_info->id   = bin_attr->id();
+	binattr_info->size = bin_attr->data()->size();
+	binattr_info->ptr  = allocate(binattr_info->size);
+	for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < bin_attr->data()->size(); tmp_index++)
+	{
+		binattr_info->ptr[tmp_index] = bin_attr->data()->Get(tmp_index);
+	}
+}
+void np_handler::BinAttrs_to_SceNpMatching2BinAttr(const flatbuffers::Vector<flatbuffers::Offset<BinAttr>>* fb_attr, vm::ptr<SceNpMatching2BinAttr> binattr_info)
 {
 	for (flatbuffers::uoffset_t i = 0; i < fb_attr->size(); i++)
 	{
-		auto bin_attr        = fb_attr->Get(i);
-		binattr_info[i].id   = bin_attr->id();
-		binattr_info[i].size = bin_attr->data()->size();
-		binattr_info[i].ptr  = allocate(binattr_info[i].size);
-		for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < bin_attr->data()->size(); tmp_index++)
-		{
-			binattr_info[i].ptr[tmp_index] = bin_attr->data()->Get(tmp_index);
-		}
+		auto fb_attr_this      = fb_attr->Get(i);
+		auto binattr_info_this = binattr_info + i;
+
+		BinAttr_to_SceNpMatching2BinAttr(fb_attr_this, binattr_info_this.get_ptr());
 	}
 }
 
-void np_handler::RoomGroup_to_SceNpMatching2RoomGroup(const flatbuffers::Vector<flatbuffers::Offset<RoomGroup>>* fb_group, vm::ptr<SceNpMatching2RoomGroup> group_info)
+void np_handler::MemberBinAttrInternal_to_SceNpMatching2RoomBinAttrInternal(const MemberBinAttrInternal* fb_attr, vm::ptr<SceNpMatching2RoomMemberBinAttrInternal> binattr_info)
+{
+	binattr_info->updateDate.tick = fb_attr->updateDate();
+	BinAttr_to_SceNpMatching2BinAttr(fb_attr->data(), &binattr_info->data);
+}
+
+void np_handler::RoomBinAttrInternal_to_SceNpMatching2RoomBinAttrInternal(const BinAttrInternal* fb_attr, vm::ptr<SceNpMatching2RoomBinAttrInternal> binattr_info)
+{
+	binattr_info->updateDate.tick = fb_attr->updateDate();
+	binattr_info->updateMemberId = fb_attr->updateMemberId();
+	BinAttr_to_SceNpMatching2BinAttr(fb_attr->data(), &binattr_info->data);
+}
+
+void np_handler::RoomGroups_to_SceNpMatching2RoomGroup(const flatbuffers::Vector<flatbuffers::Offset<RoomGroup>>* fb_group, vm::ptr<SceNpMatching2RoomGroup> group_info)
 {
 	for (flatbuffers::uoffset_t i = 0; i < fb_group->size(); i++)
 	{
@@ -103,7 +122,7 @@ void np_handler::SearchRoomReponse_to_SceNpMatching2SearchRoomResponse(const Sea
 			{
 				room_info->roomGroupNum = room->roomGroup()->size();
 				vm::ptr<SceNpMatching2RoomGroup> group_info(allocate(sizeof(SceNpMatching2RoomGroup) * room_info->roomGroupNum));
-				RoomGroup_to_SceNpMatching2RoomGroup(room->roomGroup(), group_info);
+				RoomGroups_to_SceNpMatching2RoomGroup(room->roomGroup(), group_info);
 				room_info->roomGroup = group_info;
 			}
 
@@ -126,7 +145,7 @@ void np_handler::SearchRoomReponse_to_SceNpMatching2SearchRoomResponse(const Sea
 			{
 				room_info->roomSearchableBinAttrExternalNum = room->roomSearchableBinAttrExternal()->size();
 				vm::ptr<SceNpMatching2BinAttr> binattr_info(allocate(sizeof(SceNpMatching2BinAttr) * room_info->roomSearchableBinAttrExternalNum));
-				BinAttr_to_SceNpMatching2BinAttr(room->roomSearchableBinAttrExternal(), binattr_info);
+				BinAttrs_to_SceNpMatching2BinAttr(room->roomSearchableBinAttrExternal(), binattr_info);
 				room_info->roomSearchableBinAttrExternal = binattr_info;
 			}
 
@@ -134,7 +153,7 @@ void np_handler::SearchRoomReponse_to_SceNpMatching2SearchRoomResponse(const Sea
 			{
 				room_info->roomBinAttrExternalNum = room->roomBinAttrExternal()->size();
 				vm::ptr<SceNpMatching2BinAttr> binattr_info(allocate(sizeof(SceNpMatching2BinAttr) * room_info->roomBinAttrExternalNum));
-				BinAttr_to_SceNpMatching2BinAttr(room->roomBinAttrExternal(), binattr_info);
+				BinAttrs_to_SceNpMatching2BinAttr(room->roomBinAttrExternal(), binattr_info);
 				room_info->roomBinAttrExternal = binattr_info;
 			}
 		}
@@ -160,7 +179,7 @@ u16 np_handler::RoomDataInternal_to_SceNpMatching2RoomDataInternal(const RoomDat
 	{
 		room_info->roomGroupNum = resp->roomGroup()->size();
 		vm::ptr<SceNpMatching2RoomGroup> group_info(allocate(sizeof(SceNpMatching2RoomGroup) * room_info->roomGroupNum));
-		RoomGroup_to_SceNpMatching2RoomGroup(resp->roomGroup(), group_info);
+		RoomGroups_to_SceNpMatching2RoomGroup(resp->roomGroup(), group_info);
 		room_info->roomGroup = group_info;
 	}
 
@@ -182,48 +201,7 @@ u16 np_handler::RoomDataInternal_to_SceNpMatching2RoomDataInternal(const RoomDat
 
 		prev_member = member_info;
 
-		UserInfo2_to_SceNpUserInfo2(member->userInfo(), &member_info->userInfo);
-		member_info->joinDate.tick = member->joinDate();
-		member_info->memberId      = member->memberId();
-		member_info->teamId        = member->teamId();
-
-		// Look for id
-		if (member->roomGroup() != 0)
-		{
-			bool found = false;
-			for (u32 g_index = 0; g_index < room_info->roomGroupNum; g_index++)
-			{
-				if (room_info->roomGroup[g_index].groupId == member->roomGroup())
-				{
-					member_info->roomGroup = vm::cast(room_info->roomGroup.addr() + (u32{sizeof(SceNpMatching2RoomGroup)} * g_index));
-					found                  = true;
-				}
-			}
-			ensure(found);
-		}
-
-		member_info->natType  = member->natType();
-		member_info->flagAttr = member->flagAttr();
-
-		if (member->roomMemberBinAttrInternal() && member->roomMemberBinAttrInternal()->size() != 0)
-		{
-			member_info->roomMemberBinAttrInternalNum = member->roomMemberBinAttrInternal()->size();
-			vm::ptr<SceNpMatching2RoomMemberBinAttrInternal> binattr_info(allocate(sizeof(SceNpMatching2RoomMemberBinAttrInternal) * member_info->roomMemberBinAttrInternalNum));
-			for (u32 b_index = 0; b_index < member_info->roomMemberBinAttrInternalNum; b_index++)
-			{
-				const auto battr                      = member->roomMemberBinAttrInternal()->Get(b_index);
-				binattr_info[b_index].updateDate.tick = battr->updateDate();
-
-				binattr_info[b_index].data.id   = battr->data()->id();
-				binattr_info[b_index].data.size = battr->data()->data()->size();
-				binattr_info[b_index].data.ptr  = allocate(binattr_info[b_index].data.size);
-				for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < binattr_info[b_index].data.size; tmp_index++)
-				{
-					binattr_info[b_index].data.ptr[tmp_index] = battr->data()->data()->Get(tmp_index);
-				}
-			}
-			member_info->roomMemberBinAttrInternal = binattr_info;
-		}
+		RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(member, room_info, member_info.get_ptr());
 	}
 
 	vm::ptr<SceNpMatching2RoomMemberDataInternal> ptr = room_info->memberList.members;
@@ -277,6 +255,53 @@ u16 np_handler::RoomDataInternal_to_SceNpMatching2RoomDataInternal(const RoomDat
 	return member_id;
 }
 
+void np_handler::RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(const RoomMemberDataInternal* member_data, const SceNpMatching2RoomDataInternal* room_info, SceNpMatching2RoomMemberDataInternal* sce_member_data)
+{
+	UserInfo2_to_SceNpUserInfo2(member_data->userInfo(), &sce_member_data->userInfo);
+	sce_member_data->joinDate.tick = member_data->joinDate();
+	sce_member_data->memberId      = member_data->memberId();
+	sce_member_data->teamId        = member_data->teamId();
+
+	// Look for id
+	if (member_data->roomGroup() != 0 && room_info)
+	{
+		bool found = false;
+		for (u32 g_index = 0; g_index < room_info->roomGroupNum; g_index++)
+		{
+			if (room_info->roomGroup[g_index].groupId == member_data->roomGroup())
+			{
+				sce_member_data->roomGroup = vm::cast(room_info->roomGroup.addr() + (u32{sizeof(SceNpMatching2RoomGroup)} * g_index));
+				found = true;
+				break;
+			}
+		}
+		ensure(found);
+	}
+
+	sce_member_data->natType  = member_data->natType();
+	sce_member_data->flagAttr = member_data->flagAttr();
+
+	if (member_data->roomMemberBinAttrInternal() && member_data->roomMemberBinAttrInternal()->size() != 0)
+	{
+		sce_member_data->roomMemberBinAttrInternalNum = member_data->roomMemberBinAttrInternal()->size();
+		vm::ptr<SceNpMatching2RoomMemberBinAttrInternal> binattr_info(allocate(sizeof(SceNpMatching2RoomMemberBinAttrInternal) * sce_member_data->roomMemberBinAttrInternalNum));
+		for (u32 b_index = 0; b_index < sce_member_data->roomMemberBinAttrInternalNum; b_index++)
+		{
+			const auto battr                      = member_data->roomMemberBinAttrInternal()->Get(b_index);
+			binattr_info[b_index].updateDate.tick = battr->updateDate();
+
+			binattr_info[b_index].data.id   = battr->data()->id();
+			binattr_info[b_index].data.size = battr->data()->data()->size();
+			binattr_info[b_index].data.ptr  = allocate(binattr_info[b_index].data.size);
+			for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < binattr_info[b_index].data.size; tmp_index++)
+			{
+				binattr_info[b_index].data.ptr[tmp_index] = battr->data()->data()->Get(tmp_index);
+			}
+		}
+		sce_member_data->roomMemberBinAttrInternal = binattr_info;
+	}
+}
+
 void np_handler::RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(const RoomMemberUpdateInfo* update_info, SceNpMatching2RoomMemberUpdateInfo* sce_update_info)
 {
 	sce_update_info->eventCause = 0;
@@ -292,39 +317,12 @@ void np_handler::RoomMemberUpdateInfo_to_SceNpMatching2RoomMemberUpdateInfo(cons
 	if (update_info->roomMemberDataInternal())
 	{
 		auto member = update_info->roomMemberDataInternal();
+
 		vm::ptr<SceNpMatching2RoomMemberDataInternal> member_info(allocate(sizeof(SceNpMatching2RoomMemberDataInternal)));
 		sce_update_info->roomMemberDataInternal = member_info;
 
-		UserInfo2_to_SceNpUserInfo2(member->userInfo(), &member_info->userInfo);
-		member_info->joinDate.tick = member->joinDate();
-		member_info->memberId      = member->memberId();
-		member_info->teamId        = member->teamId();
-
-		// Look for id
-		// TODO
-
-		member_info->natType  = member->natType();
-		member_info->flagAttr = member->flagAttr();
-
-		if (member->roomMemberBinAttrInternal() && member->roomMemberBinAttrInternal()->size() != 0)
-		{
-			member_info->roomMemberBinAttrInternalNum = member->roomMemberBinAttrInternal()->size();
-			vm::ptr<SceNpMatching2RoomMemberBinAttrInternal> binattr_info(allocate(sizeof(SceNpMatching2RoomMemberBinAttrInternal) * member_info->roomMemberBinAttrInternalNum));
-			for (u32 b_index = 0; b_index < member_info->roomMemberBinAttrInternalNum; b_index++)
-			{
-				const auto battr                      = member->roomMemberBinAttrInternal()->Get(b_index);
-				binattr_info[b_index].updateDate.tick = battr->updateDate();
-
-				binattr_info[b_index].data.id   = battr->data()->id();
-				binattr_info[b_index].data.size = battr->data()->data()->size();
-				binattr_info[b_index].data.ptr  = allocate(binattr_info[b_index].data.size);
-				for (flatbuffers::uoffset_t tmp_index = 0; tmp_index < binattr_info[b_index].data.size; tmp_index++)
-				{
-					binattr_info[b_index].data.ptr[tmp_index] = battr->data()->data()->Get(tmp_index);
-				}
-			}
-			member_info->roomMemberBinAttrInternal = binattr_info;
-		}
+		// TODO: Pass room_info
+		RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(member, nullptr, member_info.get_ptr());
 	}
 }
 
@@ -339,6 +337,100 @@ void np_handler::RoomUpdateInfo_to_SceNpMatching2RoomUpdateInfo(const RoomUpdate
 		{
 			sce_update_info->optData.data[i] = update_info->optData()->data()->Get(i);
 		}
+	}
+}
+
+void np_handler::RoomDataInternalUpdateInfo_to_SceNpMatching2RoomDataInternalUpdateInfo(const RoomDataInternalUpdateInfo* update_info, SceNpMatching2RoomDataInternalUpdateInfo* sce_update_info, const SceNpId& npid)
+{
+	vm::ptr<SceNpMatching2RoomDataInternal> room_data(allocate(sizeof(SceNpMatching2RoomDataInternal)));
+	sce_update_info->newRoomDataInternal = room_data;
+	RoomDataInternal_to_SceNpMatching2RoomDataInternal(update_info->newRoomDataInternal(), sce_update_info->newRoomDataInternal.get_ptr(), npid);
+
+	if (update_info->newFlagAttr() == update_info->prevFlagAttr())
+	{
+		sce_update_info->newFlagAttr.set(0);
+		sce_update_info->prevFlagAttr.set(0);
+	}
+	else
+	{
+		sce_update_info->newFlagAttr = sce_update_info->newRoomDataInternal.ptr(&SceNpMatching2RoomDataInternal::flagAttr);
+
+		vm::ptr<SceNpMatching2FlagAttr> prev_flag_attr(allocate(sizeof(SceNpMatching2FlagAttr)));
+		*prev_flag_attr               = update_info->prevFlagAttr();
+		sce_update_info->prevFlagAttr = prev_flag_attr;
+	}
+
+	if (update_info->newRoomPasswordSlotMask() == update_info->prevRoomPasswordSlotMask())
+	{
+		sce_update_info->newRoomPasswordSlotMask.set(0);
+		sce_update_info->prevRoomPasswordSlotMask.set(0);
+	}
+	else
+	{
+		sce_update_info->newRoomPasswordSlotMask = sce_update_info->newRoomDataInternal.ptr(&SceNpMatching2RoomDataInternal::passwordSlotMask);
+
+		vm::ptr<SceNpMatching2RoomPasswordSlotMask> prev_room_password_slot_mask(allocate(sizeof(SceNpMatching2RoomPasswordSlotMask)));
+		*prev_room_password_slot_mask             = update_info->prevRoomPasswordSlotMask();
+		sce_update_info->prevRoomPasswordSlotMask = prev_room_password_slot_mask;
+	}
+
+	if (update_info->newRoomGroup() && update_info->newRoomGroup()->size() != 0)
+	{
+		rpcn_log.todo("RoomDataInternalUpdateInfo::newRoomGroup");
+		// TODO
+		//sce_update_info->newRoomGroupNum = update_info->newRoomGroup()->size();
+		//vm::ptr<SceNpMatching2RoomGroup> group_info(allocate(sizeof(SceNpMatching2RoomGroup) * sce_update_info->newRoomGroupNum));
+		//RoomGroups_to_SceNpMatching2RoomGroup(update_info->newRoomGroup(), group_info);
+		//sce_update_info->newRoomGroup = group_info;
+	}
+
+	if (update_info->newRoomBinAttrInternal() && update_info->newRoomBinAttrInternal()->size() != 0)
+	{
+		sce_update_info->newRoomBinAttrInternalNum = update_info->newRoomBinAttrInternal()->size();
+		vm::bpptr<SceNpMatching2RoomBinAttrInternal> binattr_info_array(allocate(4 * sce_update_info->newRoomBinAttrInternalNum));
+		for (uint i = 0; i < sce_update_info->newRoomBinAttrInternalNum; ++i)
+		{
+			vm::ptr<SceNpMatching2RoomBinAttrInternal> binattr_info = allocate(sizeof(SceNpMatching2RoomBinAttrInternal) * sce_update_info->newRoomBinAttrInternalNum);
+			binattr_info_array[i]                               = binattr_info;
+			RoomBinAttrInternal_to_SceNpMatching2RoomBinAttrInternal(update_info->newRoomBinAttrInternal()->Get(i), binattr_info);
+		}
+		sce_update_info->newRoomBinAttrInternal = binattr_info_array;
+	}
+}
+
+void np_handler::RoomMemberDataInternalUpdateInfo_to_SceNpMatching2RoomMemberDataInternalUpdateInfo(const RoomMemberDataInternalUpdateInfo* update_info, SceNpMatching2RoomMemberDataInternalUpdateInfo* sce_update_info)
+{
+	vm::ptr<SceNpMatching2RoomMemberDataInternal> room_member_data(allocate(sizeof(SceNpMatching2RoomMemberDataInternal)));
+	sce_update_info->newRoomMemberDataInternal = room_member_data;
+	RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal(update_info->newRoomMemberDataInternal(), nullptr, sce_update_info->newRoomMemberDataInternal.get_ptr());
+
+	if (update_info->newFlagAttr() == update_info->prevFlagAttr())
+	{
+		sce_update_info->newFlagAttr.set(0);
+		sce_update_info->prevFlagAttr.set(0);
+	}
+	else
+	{
+		sce_update_info->newFlagAttr = sce_update_info->newRoomMemberDataInternal.ptr(&SceNpMatching2RoomMemberDataInternal::flagAttr);
+
+		vm::ptr<SceNpMatching2FlagAttr> prev_flag_attr(allocate(sizeof(SceNpMatching2FlagAttr)));
+		*prev_flag_attr               = update_info->prevFlagAttr();
+		sce_update_info->prevFlagAttr = prev_flag_attr;
+	}
+
+	sce_update_info->newTeamId = sce_update_info->newRoomMemberDataInternal.ptr(&SceNpMatching2RoomMemberDataInternal::teamId);
+
+	if (update_info->newRoomMemberBinAttrInternal() && update_info->newRoomMemberBinAttrInternal()->size() != 0)
+	{
+		sce_update_info->newRoomMemberBinAttrInternalNum = update_info->newRoomMemberBinAttrInternal()->size();
+		vm::bpptr<SceNpMatching2RoomMemberBinAttrInternal> binattr_info_array(allocate(4 * sce_update_info->newRoomMemberBinAttrInternalNum));
+		for (uint i = 0; i < sce_update_info->newRoomMemberBinAttrInternalNum; ++i)
+		{
+			vm::ptr<SceNpMatching2RoomMemberBinAttrInternal> binattr_info = allocate(sizeof(SceNpMatching2RoomMemberBinAttrInternal) * sce_update_info->newRoomMemberBinAttrInternalNum);
+			binattr_info_array[i] = binattr_info;
+			MemberBinAttrInternal_to_SceNpMatching2RoomBinAttrInternal(update_info->newRoomMemberBinAttrInternal()->Get(i), binattr_info);
+		}
+		sce_update_info->newRoomMemberBinAttrInternal = binattr_info_array;
 	}
 }
 
