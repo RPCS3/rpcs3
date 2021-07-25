@@ -109,6 +109,7 @@ void VKGSRender::advance_queued_frames()
 	check_present_status();
 
 	// Run video memory balancer
+	m_device->rebalance_memory_type_usage();
 	vk::vmm_check_memory_usage();
 
 	// m_rtts storage is double buffered and should be safe to tag on frame boundary

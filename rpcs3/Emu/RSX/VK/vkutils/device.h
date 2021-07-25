@@ -120,6 +120,7 @@ namespace vk
 		const VkFormatProperties get_format_properties(VkFormat format);
 
 		bool get_compatible_memory_type(u32 typeBits, u32 desired_mask, u32* type_index) const;
+		void rebalance_memory_type_usage();
 
 		const physical_device& gpu() const;
 		const memory_type_mapping& get_memory_mapping() const;
