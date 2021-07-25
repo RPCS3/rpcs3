@@ -654,7 +654,7 @@ u32 np_handler::get_match2_event(SceNpMatching2EventKey event_key, u8* dest, u32
 {
 	std::lock_guard lock(mutex_req_results);
 
-	if (!match2_req_results.count(event_key))
+	if (!match2_req_results.contains(event_key))
 		return 0;
 
 	u32 size_copied = std::min(size, static_cast<u32>(match2_req_results.at(event_key).size()));
@@ -719,7 +719,7 @@ void np_handler::operator()()
 
 bool np_handler::reply_get_world_list(u32 req_id, std::vector<u8>& reply_data)
 {
-	if (pending_requests.count(req_id) == 0)
+	if (!pending_requests.contains(req_id))
 		return error_and_disconnect("Unexpected reply ID to GetWorldList");
 
 	const auto cb_info = std::move(pending_requests.at(req_id));
@@ -770,7 +770,7 @@ bool np_handler::reply_get_world_list(u32 req_id, std::vector<u8>& reply_data)
 
 bool np_handler::reply_create_join_room(u32 req_id, std::vector<u8>& reply_data)
 {
-	if (pending_requests.count(req_id) == 0)
+	if (!pending_requests.contains(req_id))
 		return error_and_disconnect("Unexpected reply ID to CreateRoom");
 
 	const auto cb_info = std::move(pending_requests.at(req_id));
@@ -811,7 +811,7 @@ bool np_handler::reply_create_join_room(u32 req_id, std::vector<u8>& reply_data)
 
 bool np_handler::reply_join_room(u32 req_id, std::vector<u8>& reply_data)
 {
-	if (pending_requests.count(req_id) == 0)
+	if (!pending_requests.contains(req_id))
 		return error_and_disconnect("Unexpected reply ID to JoinRoom");
 
 	const auto cb_info = std::move(pending_requests.at(req_id));
@@ -853,7 +853,7 @@ bool np_handler::reply_join_room(u32 req_id, std::vector<u8>& reply_data)
 
 bool np_handler::reply_leave_room(u32 req_id, std::vector<u8>& reply_data)
 {
-	if (pending_requests.count(req_id) == 0)
+	if (!pending_requests.contains(req_id))
 		return error_and_disconnect("Unexpected reply ID to LeaveRoom");
 
 	const auto cb_info = std::move(pending_requests.at(req_id));
@@ -881,7 +881,7 @@ bool np_handler::reply_leave_room(u32 req_id, std::vector<u8>& reply_data)
 
 bool np_handler::reply_search_room(u32 req_id, std::vector<u8>& reply_data)
 {
-	if (pending_requests.count(req_id) == 0)
+	if (!pending_requests.contains(req_id))
 		return error_and_disconnect("Unexpected reply ID to SearchRoom");
 
 	const auto cb_info = std::move(pending_requests.at(req_id));
@@ -910,7 +910,7 @@ bool np_handler::reply_search_room(u32 req_id, std::vector<u8>& reply_data)
 
 bool np_handler::reply_set_roomdata_external(u32 req_id, std::vector<u8>& /*reply_data*/)
 {
-	if (pending_requests.count(req_id) == 0)
+	if (!pending_requests.contains(req_id))
 		return error_and_disconnect("Unexpected reply ID to SetRoomDataExternal");
 
 	const auto cb_info = std::move(pending_requests.at(req_id));
@@ -929,7 +929,7 @@ bool np_handler::reply_set_roomdata_external(u32 req_id, std::vector<u8>& /*repl
 
 bool np_handler::reply_get_roomdata_internal(u32 req_id, std::vector<u8>& reply_data)
 {
-	if (pending_requests.count(req_id) == 0)
+	if (!pending_requests.contains(req_id))
 		return error_and_disconnect("Unexpected reply ID to GetRoomDataInternal");
 
 	const auto cb_info = std::move(pending_requests.at(req_id));
@@ -963,7 +963,7 @@ bool np_handler::reply_get_roomdata_internal(u32 req_id, std::vector<u8>& reply_
 
 bool np_handler::reply_set_roomdata_internal(u32 req_id, std::vector<u8>& /*reply_data*/)
 {
-	if (pending_requests.count(req_id) == 0)
+	if (!pending_requests.contains(req_id))
 		return error_and_disconnect("Unexpected reply ID to SetRoomDataInternal");
 
 	const auto cb_info = std::move(pending_requests.at(req_id));
@@ -982,7 +982,7 @@ bool np_handler::reply_set_roomdata_internal(u32 req_id, std::vector<u8>& /*repl
 
 bool np_handler::reply_get_ping_info(u32 req_id, std::vector<u8>& reply_data)
 {
-	if (pending_requests.count(req_id) == 0)
+	if (!pending_requests.contains(req_id))
 		return error_and_disconnect("Unexpected reply ID to PingRoomOwner");
 
 	const auto cb_info = std::move(pending_requests.at(req_id));
@@ -1012,7 +1012,7 @@ bool np_handler::reply_get_ping_info(u32 req_id, std::vector<u8>& reply_data)
 
 bool np_handler::reply_send_room_message(u32 req_id, std::vector<u8>& /*reply_data*/)
 {
-	if (pending_requests.count(req_id) == 0)
+	if (!pending_requests.contains(req_id))
 		return error_and_disconnect("Unexpected reply ID to PingRoomOwner");
 
 	const auto cb_info = std::move(pending_requests.at(req_id));
@@ -1029,7 +1029,7 @@ bool np_handler::reply_send_room_message(u32 req_id, std::vector<u8>& /*reply_da
 
 bool np_handler::reply_req_sign_infos(u32 req_id, std::vector<u8>& reply_data)
 {
-	if (!pending_sign_infos_requests.count(req_id))
+	if (!pending_sign_infos_requests.contains(req_id))
 		return error_and_disconnect("Unexpected reply ID to req RequestSignalingInfos");
 
 	u32 conn_id = pending_sign_infos_requests.at(req_id);
@@ -1221,7 +1221,7 @@ void np_handler::remove_dns_spy(u32 sock)
 
 bool np_handler::is_dns(u32 sock) const
 {
-	return dns_spylist.count(sock) != 0;
+	return dns_spylist.contains(sock);
 }
 
 bool np_handler::is_dns_queue(u32 sock) const
@@ -1308,7 +1308,7 @@ s32 np_handler::analyze_dns_packet(s32 s, const u8* buf, u32 len)
 
 	sys_net.warning("DNS query for %s", host);
 
-	if (switch_map.count(host))
+	if (switch_map.contains(host))
 	{
 		// design fake packet
 		std::vector<u8> fake(len);
