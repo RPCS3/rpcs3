@@ -124,6 +124,7 @@ namespace rpcn
 		SetRoomDataExternal,
 		GetRoomDataInternal,
 		SetRoomDataInternal,
+		SetRoomMemberDataInternal,
 		PingRoomOwner,
 		SendRoomMessage,
 		RequestSignalingInfos,
@@ -136,6 +137,8 @@ namespace rpcn
 		UserJoinedRoom,
 		UserLeftRoom,
 		RoomDestroyed,
+		UpdatedRoomDataInternal,
+		UpdatedRoomMemberDataInternal,
 		SignalP2PConnect,
 		_SignalP2PDisconnect,
 		FriendQuery,  // Other user sent a friend request
@@ -328,6 +331,7 @@ namespace rpcn
 		bool set_roomdata_external(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataExternalRequest* req);
 		bool get_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomDataInternalRequest* req);
 		bool set_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataInternalRequest* req);
+		bool set_roommemberdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomMemberDataInternalRequest* req);
 		bool ping_room_owner(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id);
 		bool send_room_message(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendRoomMessageRequest* req);
 		bool req_sign_infos(u32 req_id, const std::string& npid);
