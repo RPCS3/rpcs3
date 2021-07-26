@@ -42,6 +42,7 @@ namespace vk
 		size_t count() const;
 
 		operator bool() const;
+		bool operator == (const memory_type_info& other) const;
 
 		memory_type_info get(const render_device& dev, u32 access_flags, u32 type_mask) const;
 
