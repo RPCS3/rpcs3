@@ -838,18 +838,18 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 	{
 		// Evict some unused textures. Do not evict any active references
 		std::set<u32> exclusion_list;
-		for (auto i = 0; i < rsx::limits::fragment_textures_count; ++i)
+		auto scan_array = [&](const auto& texture_array)
 		{
-			const auto& tex = rsx::method_registers.fragment_textures[i];
-			const auto addr = rsx::get_address(tex.offset(), tex.location());
-			exclusion_list.insert(addr);
-		}
-		for (auto i = 0; i < rsx::limits::vertex_textures_count; ++i)
-		{
-			const auto& tex = rsx::method_registers.vertex_textures[i];
-			const auto addr = rsx::get_address(tex.offset(), tex.location());
-			exclusion_list.insert(addr);
-		}
+			for (auto i = 0ull; i < texture_array.size(); ++i)
+			{
+				const auto& tex = texture_array[i];
+				const auto addr = rsx::get_address(tex.offset(), tex.location());
+				exclusion_list.insert(addr);
+			}
+		};
+
+		scan_array(rsx::method_registers.fragment_textures);
+		scan_array(rsx::method_registers.vertex_textures);
 
 		// Hold the secondary lock guard to prevent threads from trying to touch access violation handler stuff
 		std::lock_guard lock(m_secondary_cb_guard);
@@ -883,6 +883,30 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 		{
 			surface_cache_relieved = true;
 			m_rtts.free_invalidated(*m_current_command_buffer, severity);
+		}
+
+		if (severity >= rsx::problem_severity::fatal && surface_cache_relieved && !m_samplers_dirty)
+		{
+			// If surface cache was modified destructively, then we must reload samplers touching the surface cache.
+			bool invalidate_samplers = false;
+			auto scan_array = [&](const auto& texture_array, const auto& sampler_states)
+			{
+				for (auto i = 0ull; i < texture_array.size() && !invalidate_samplers; ++i)
+				{
+					if (texture_array[i].enabled() && sampler_states[i])
+					{
+						invalidate_samplers = (sampler_states[i]->upload_context == rsx::texture_upload_context::framebuffer_storage);
+					}
+				}
+			};
+
+			scan_array(rsx::method_registers.fragment_textures, fs_sampler_state);
+			scan_array(rsx::method_registers.vertex_textures, vs_sampler_state);
+
+			if (invalidate_samplers)
+			{
+				m_samplers_dirty.store(true);
+			}
 		}
 	}
 
