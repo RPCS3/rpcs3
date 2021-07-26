@@ -150,7 +150,7 @@ namespace vk
 		vmaDestroyAllocator(m_allocator);
 	}
 
-	mem_allocator_vk::mem_handle_t mem_allocator_vma::alloc(u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool)
+	mem_allocator_vk::mem_handle_t mem_allocator_vma::alloc(u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool, bool throw_on_fail)
 	{
 		VmaAllocation vma_alloc;
 		VkMemoryRequirements mem_req = {};
@@ -187,8 +187,9 @@ namespace vk
 			}
 		}
 
+		const auto severity = (throw_on_fail) ? rsx::problem_severity::fatal : rsx::problem_severity::severe;
 		if (error_code == VK_ERROR_OUT_OF_DEVICE_MEMORY &&
-			vmm_handle_memory_pressure(rsx::problem_severity::fatal))
+			vmm_handle_memory_pressure(severity))
 		{
 			// Out of memory. Try again.
 			const auto [status, type] = do_vma_alloc();
@@ -198,6 +199,11 @@ namespace vk
 				vmm_notify_memory_allocated(vma_alloc, type, block_sz, pool);
 				return vma_alloc;
 			}
+		}
+
+		if (!throw_on_fail)
+		{
+			return VK_NULL_HANDLE;
 		}
 
 		die_with_error(error_code);
@@ -228,8 +234,12 @@ namespace vk
 
 	VkDeviceMemory mem_allocator_vma::get_vk_device_memory(mem_handle_t mem_handle)
 	{
-		VmaAllocationInfo alloc_info;
+		if (!mem_handle)
+		{
+			return VK_NULL_HANDLE;
+		}
 
+		VmaAllocationInfo alloc_info;
 		vmaGetAllocationInfo(m_allocator, static_cast<VmaAllocation>(mem_handle), &alloc_info);
 		return alloc_info.deviceMemory;
 	}
@@ -271,7 +281,7 @@ namespace vk
 		m_allocation_flags = VMA_ALLOCATION_CREATE_STRATEGY_MIN_TIME_BIT;
 	}
 
-	mem_allocator_vk::mem_handle_t mem_allocator_vk::alloc(u64 block_sz, u64 /*alignment*/, const memory_type_info& memory_type, vmm_allocation_pool pool)
+	mem_allocator_vk::mem_handle_t mem_allocator_vk::alloc(u64 block_sz, u64 /*alignment*/, const memory_type_info& memory_type, vmm_allocation_pool pool, bool throw_on_fail)
 	{
 		VkResult error_code;
 		VkDeviceMemory memory;
@@ -304,8 +314,9 @@ namespace vk
 			}
 		}
 
+		const auto severity = (throw_on_fail) ? rsx::problem_severity::fatal : rsx::problem_severity::severe;
 		if (error_code == VK_ERROR_OUT_OF_DEVICE_MEMORY &&
-			vmm_handle_memory_pressure(rsx::problem_severity::fatal))
+			vmm_handle_memory_pressure(severity))
 		{
 			// Out of memory. Try again.
 			const auto [status, type] = do_vk_alloc();
@@ -315,6 +326,11 @@ namespace vk
 				vmm_notify_memory_allocated(memory, type, block_sz, pool);
 				return memory;
 			}
+		}
+
+		if (!throw_on_fail)
+		{
+			return VK_NULL_HANDLE;
 		}
 
 		die_with_error(error_code);
@@ -359,16 +375,16 @@ namespace vk
 		return g_render_device->get_allocator();
 	}
 
-	memory_block::memory_block(VkDevice dev, u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool)
+	memory_block::memory_block(VkDevice dev, u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool, bool nullable)
 		: m_device(dev), m_size(block_sz)
 	{
 		m_mem_allocator = get_current_mem_allocator();
-		m_mem_handle    = m_mem_allocator->alloc(block_sz, alignment, memory_type, pool);
+		m_mem_handle    = m_mem_allocator->alloc(block_sz, alignment, memory_type, pool, !nullable);
 	}
 
 	memory_block::~memory_block()
 	{
-		if (m_mem_allocator)
+		if (m_mem_allocator && m_mem_handle)
 		{
 			m_mem_allocator->free(m_mem_handle);
 		}

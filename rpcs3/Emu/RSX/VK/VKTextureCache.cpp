@@ -505,8 +505,14 @@ namespace vk
 				image_type,
 				dst_format,
 				w, h, d, mips, layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags | VK_IMAGE_CREATE_ALLOW_NULL,
 				VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
+
+			if (!image->value)
+			{
+				// OOM, bail
+				return nullptr;
+			}
 		}
 
 		// This method is almost exclusively used to work on framebuffer resources
@@ -572,6 +578,12 @@ namespace vk
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_CUBE, gcm_format, 0, 0, size, size, 1, 1, remap_vector, false);
 
+		if (!result)
+		{
+			// Failed to create temporary object, bail
+			return nullptr;
+		}
+
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
 		VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 6 };
@@ -600,6 +612,12 @@ namespace vk
 		auto _template = get_template_from_collection_impl(sections_to_copy);
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_3D,
 			VK_IMAGE_VIEW_TYPE_3D, gcm_format, 0, 0, width, height, depth, 1, remap_vector, false);
+
+		if (!result)
+		{
+			// Failed to create temporary object, bail
+			return nullptr;
+		}
 
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
@@ -630,6 +648,12 @@ namespace vk
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, 1, 1, remap_vector, false);
 
+		if (!result)
+		{
+			// Failed to create temporary object, bail
+			return nullptr;
+		}
+
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
 		VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 1 };
@@ -659,6 +683,12 @@ namespace vk
 		auto _template = get_template_from_collection_impl(sections_to_copy);
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, 1, mipmaps, remap_vector, false);
+
+		if (!result)
+		{
+			// Failed to create temporary object, bail
+			return nullptr;
+		}
 
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);

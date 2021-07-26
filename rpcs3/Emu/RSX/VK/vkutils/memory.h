@@ -58,7 +58,7 @@ namespace vk
 
 		virtual void destroy() = 0;
 
-		virtual mem_handle_t alloc(u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool) = 0;
+		virtual mem_handle_t alloc(u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool, bool throw_on_fail) = 0;
 		virtual void free(mem_handle_t mem_handle) = 0;
 		virtual void* map(mem_handle_t mem_handle, u64 offset, u64 size) = 0;
 		virtual void unmap(mem_handle_t mem_handle) = 0;
@@ -86,7 +86,7 @@ namespace vk
 
 		void destroy() override;
 
-		mem_handle_t alloc(u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool) override;
+		mem_handle_t alloc(u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool, bool throw_on_fail) override;
 
 		void free(mem_handle_t mem_handle) override;
 		void* map(mem_handle_t mem_handle, u64 offset, u64 /*size*/) override;
@@ -115,7 +115,7 @@ namespace vk
 
 		void destroy() override {}
 
-		mem_handle_t alloc(u64 block_sz, u64 /*alignment*/, const memory_type_info& memory_type, vmm_allocation_pool pool) override;
+		mem_handle_t alloc(u64 block_sz, u64 /*alignment*/, const memory_type_info& memory_type, vmm_allocation_pool pool, bool throw_on_fail) override;
 
 		void free(mem_handle_t mem_handle) override;
 		void* map(mem_handle_t mem_handle, u64 offset, u64 size) override;
@@ -128,7 +128,7 @@ namespace vk
 
 	struct memory_block
 	{
-		memory_block(VkDevice dev, u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool);
+		memory_block(VkDevice dev, u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool, bool nullable = false);
 		virtual ~memory_block();
 
 		virtual VkDeviceMemory get_vk_device_memory();
