@@ -49,6 +49,32 @@ namespace vk
 		return !type_ids.empty();
 	}
 
+	bool memory_type_info::operator == (const memory_type_info& other) const
+	{
+		if (type_ids.size() != other.type_ids.size())
+		{
+			return false;
+		}
+
+		switch (type_ids.size())
+		{
+		case 1:
+			return type_ids[0] == other.type_ids[0];
+		case 2:
+			return ((type_ids[0] == other.type_ids[0] && type_ids[1] == other.type_ids[1]) ||
+					(type_ids[0] == other.type_ids[1] && type_ids[1] == other.type_ids[0]));
+		default:
+			for (const auto& id : other.type_ids)
+			{
+				if (std::find(type_ids.begin(), type_ids.end(), id) == type_ids.end())
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+	}
+
 	memory_type_info memory_type_info::get(const render_device& dev, u32 access_flags, u32 type_mask) const
 	{
 		memory_type_info result{};
