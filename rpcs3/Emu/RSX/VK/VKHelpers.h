@@ -38,7 +38,8 @@ namespace vk
 	{
 		uninterruptible = 1,
 		heap_dirty = 2,
-		heap_changed = 3
+		heap_changed = 3,
+		out_of_memory = 4
 	};
 
 	const vk::render_device *get_current_renderer();
