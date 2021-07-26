@@ -100,6 +100,9 @@ namespace vk
 		ensure(!value && !memory);
 		validate(dev, info);
 
+		const bool nullable = !!(info.flags & VK_IMAGE_CREATE_ALLOW_NULL);
+		info.flags &= ~VK_IMAGE_CREATE_ALLOW_NULL;
+
 		CHECK_RESULT(vkCreateImage(m_device, &info, nullptr, &value));
 
 		VkMemoryRequirements memory_req;
@@ -111,10 +114,19 @@ namespace vk
 			fmt::throw_exception("No compatible memory type was found!");
 		}
 
-		memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, allocation_type_info, allocation_pool);
-		CHECK_RESULT(vkBindImageMemory(m_device, value, memory->get_vk_device_memory(), memory->get_vk_device_memory_offset()));
-
-		current_layout = info.initialLayout;
+		memory = std::make_shared<vk::memory_block>(m_device, memory_req.size, memory_req.alignment, allocation_type_info, allocation_pool, nullable);
+		if (auto device_mem = memory->get_vk_device_memory();
+			device_mem != VK_NULL_HANDLE) [[likely]]
+		{
+			CHECK_RESULT(vkBindImageMemory(m_device, value, device_mem, memory->get_vk_device_memory_offset()));
+			current_layout = info.initialLayout;
+		}
+		else
+		{
+			ensure(nullable);
+			vkDestroyImage(m_device, value, nullptr);
+			value = VK_NULL_HANDLE;
+		}
 	}
 
 	u32 image::width() const
