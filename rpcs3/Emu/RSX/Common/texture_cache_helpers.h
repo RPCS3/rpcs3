@@ -656,6 +656,7 @@ namespace rsx
 			// If this method was called, there is no easy solution, likely means atlas gather is needed
 			const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale(attr2.width, attr2.height);
 			const auto format_class = classify_format(attr2.gcm_format);
+			const auto upload_context = (fbos.empty()) ? texture_upload_context::shader_read : texture_upload_context::framebuffer_storage;
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap)
 			{
@@ -665,7 +666,7 @@ namespace rsx
 
 				sampled_image_descriptor desc = { nullptr, deferred_request_command::cubemap_gather,
 						attr2, {},
-						texture_upload_context::framebuffer_storage, format_class, scale,
+						upload_context, format_class, scale,
 						rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 
 				gather_texture_slices(desc.external_subresource_desc.sections_to_copy, fbos, local, attr, 6, is_depth);
@@ -678,7 +679,7 @@ namespace rsx
 
 				sampled_image_descriptor desc = { nullptr, deferred_request_command::_3d_gather,
 					attr2, {},
-					texture_upload_context::framebuffer_storage, format_class, scale,
+					upload_context, format_class, scale,
 					rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 
 				gather_texture_slices(desc.external_subresource_desc.sections_to_copy, fbos, local, attr, attr.depth, is_depth);
@@ -697,7 +698,7 @@ namespace rsx
 			}
 
 			sampled_image_descriptor result = { nullptr, deferred_request_command::atlas_gather,
-					attr2, {}, texture_upload_context::framebuffer_storage, format_class,
+					attr2, {}, upload_context, format_class,
 					scale, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
 
 			gather_texture_slices(result.external_subresource_desc.sections_to_copy, fbos, local, attr, 1, is_depth);
