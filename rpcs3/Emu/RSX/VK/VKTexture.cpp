@@ -968,7 +968,9 @@ namespace vk
 			{
 				if (!scratch_buf)
 				{
-					scratch_buf = vk::get_scratch_buffer(image_linear_size * 2);
+					// Calculate enough scratch memory. We need 2x the size of layer 0 to fit all the mip levels and an extra 128 bytes per level as alignment overhead.
+					const auto scratch_buf_size = 128u * ::size32(subresource_layout) + image_linear_size + image_linear_size;
+					scratch_buf = vk::get_scratch_buffer(scratch_buf_size);
 					buffer_copies.reserve(subresource_layout.size());
 				}
 
