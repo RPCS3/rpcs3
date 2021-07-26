@@ -544,7 +544,7 @@ namespace vk
 					const auto dst_w = dst_rect.width();
 					const auto dst_h = dst_rect.height();
 
-					auto scratch_buf = vk::get_scratch_buffer();
+					auto scratch_buf = vk::get_scratch_buffer(std::max(src_w, dst_w) * std::max(src_h, dst_h) * 4);
 
 					//1. Copy unscaled to typeless surface
 					VkBufferImageCopy info{};
