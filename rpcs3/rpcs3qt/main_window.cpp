@@ -237,6 +237,9 @@ bool main_window::Init(bool with_cli_boot)
 	}
 #endif
 
+	// Disable vsh if not present.
+	ui->bootVSHAct->setEnabled(fs::is_file(g_cfg.vfs.get_dev_flash() + "vsh/module/vsh.self"));
+
 	return true;
 }
 
@@ -1198,6 +1201,8 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 
 	if (progress == update_filenames.size())
 	{
+		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg.vfs.get_dev_flash() + "/vsh/module/vsh.self"));
+
 		gui_log.success("Successfully installed PS3 firmware version %s.", version_string);
 		m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), gui::ib_pup_success, this);
 
@@ -2059,7 +2064,8 @@ void main_window::CreateConnects()
 	{
 		vfs_dialog dlg(m_gui_settings, m_emu_settings, this);
 		dlg.exec();
-		m_game_list_frame->Refresh(true); // dev-hdd0 may have changed. Refresh just in case.
+		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg.vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
+		m_game_list_frame->Refresh(true); // dev_hdd0 may have changed. Refresh just in case.
 	});
 
 	connect(ui->confSavedataManagerAct, &QAction::triggered, this, [this]
