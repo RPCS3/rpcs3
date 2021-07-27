@@ -1628,7 +1628,9 @@ void game_list_frame::BatchCreatePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Creation"), tr("Creating all PPU caches"), tr("Cancel"), 0, total, true, this);
+	const QString main_label = tr("Creating all PPU caches");
+
+	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Creation"), main_label, tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1636,9 +1638,28 @@ void game_list_frame::BatchCreatePPUCaches()
 
 	u32 created = 0;
 
-	if (vsh_exists && CreatePPUCache(vsh_path))
+	const auto wait_until_compiled = [pdlg]() -> bool
 	{
-		pdlg->SetValue(++created);
+		while (!Emu.IsStopped())
+		{
+			if (pdlg->wasCanceled())
+			{
+				return false;
+			}
+			QApplication::processEvents();
+		}
+		return true;
+	};
+
+	if (vsh_exists)
+	{
+		pdlg->setLabelText(tr("%0\nProgress: %1/%2. Compiling caches for VSH...", "Second line after main label").arg(main_label).arg(created).arg(total));
+		QApplication::processEvents();
+
+		if (CreatePPUCache(vsh_path) && wait_until_compiled())
+		{
+			pdlg->SetValue(++created);
+		}
 	}
 
 	for (const auto& game : m_game_data)
@@ -1647,18 +1668,12 @@ void game_list_frame::BatchCreatePPUCaches()
 		{
 			break;
 		}
+
+		pdlg->setLabelText(tr("%0\nProgress: %1/%2. Compiling caches for %3...", "Second line after main label").arg(main_label).arg(created).arg(total).arg(qstr(game->info.serial)));
 		QApplication::processEvents();
 
-		if (CreatePPUCache(game))
+		if (CreatePPUCache(game) && wait_until_compiled())
 		{
-			while (!Emu.IsStopped())
-			{
-				if (pdlg->wasCanceled())
-				{
-					break;
-				}
-				QApplication::processEvents();
-			}
 			pdlg->SetValue(++created);
 		}
 	}
