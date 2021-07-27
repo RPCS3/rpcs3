@@ -45,7 +45,7 @@ protected:
 		}
 	}
 
-    // Grow the buffer to hold at least size bytes
+	// Grow the buffer to hold at least size bytes
 	virtual bool grow(usz /*size*/)
 	{
 		// Stub
@@ -87,7 +87,7 @@ public:
 		const usz alloc_size = utils::align(size, Alignment);
 		const usz aligned_put_pos = utils::align(m_put_pos, Alignment);
 
-		if (!can_alloc<Alignment>(size) && !grow(aligned_put_pos + alloc_size))
+		if (!can_alloc<Alignment>(size) && !grow(alloc_size))
 		{
 			fmt::throw_exception("[%s] Working buffer not big enough, buffer_length=%d allocated=%d requested=%d guard=%d largest_pool=%d",
 					m_name, m_size, m_current_allocated_size, size, m_min_guard_size, m_largest_allocated_pool);
