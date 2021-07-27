@@ -969,7 +969,14 @@ namespace vk
 				if (!scratch_buf)
 				{
 					// Calculate enough scratch memory. We need 2x the size of layer 0 to fit all the mip levels and an extra 128 bytes per level as alignment overhead.
-					const auto scratch_buf_size = 128u * ::size32(subresource_layout) + image_linear_size + image_linear_size;
+					auto scratch_buf_size = 128u * ::size32(subresource_layout) + image_linear_size + image_linear_size;
+					if (opt.require_deswizzle)
+					{
+						// Double the memory if hw deswizzle is going to be used.
+						// For GPU deswizzle, the memory is not transformed in-place, rather the decoded texture is placed at the end of the uploaded data.
+						scratch_buf_size += scratch_buf_size;
+					}
+
 					scratch_buf = vk::get_scratch_buffer(scratch_buf_size);
 					buffer_copies.reserve(subresource_layout.size());
 				}
