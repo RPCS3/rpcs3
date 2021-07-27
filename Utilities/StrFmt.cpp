@@ -191,14 +191,14 @@ void format_byte_array(std::string& out, const uchar* data, usz size)
 			break;
 		}
 
-		if (i % 4)
+		if ((i % 4) == 3)
 		{
 			// Place a comma each 4 bytes for ease of byte placement finding
-			fmt::append(out, "%02X ", data[i]);
+			fmt::append(out, "%02X, ", data[i]);
 			continue;
 		}
 
-		fmt::append(out, "%02X, ", data[i]);
+		fmt::append(out, "%02X ", data[i]);
 	}
 
 	out += " }";
