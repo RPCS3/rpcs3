@@ -12,6 +12,9 @@ atomic_t<u32> g_progr_fdone{0};
 atomic_t<u32> g_progr_ptotal{0};
 atomic_t<u32> g_progr_pdone{0};
 
+// For Batch PPU Compilation
+atomic_t<bool> g_system_progress_canceled{false};
+
 namespace rsx::overlays
 {
 	class progress_dialog : public message_dialog
@@ -43,6 +46,8 @@ void progress_dialog_server::operator()()
 		{
 			break;
 		}
+
+		g_system_progress_canceled = false;
 
 		// Initialize message dialog
 		bool skip_this_one = false; // Workaround: do not open a progress dialog if there is already a cell message dialog open.
@@ -82,6 +87,8 @@ void progress_dialog_server::operator()()
 					// Abort everything
 					Emu.Stop();
 				});
+
+				g_system_progress_canceled = true;
 			};
 
 			Emu.CallAfter([dlg, text0]()

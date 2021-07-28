@@ -44,6 +44,8 @@
 LOG_CHANNEL(game_list_log, "GameList");
 LOG_CHANNEL(sys_log, "SYS");
 
+extern atomic_t<bool> g_system_progress_canceled;
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
@@ -1664,7 +1666,7 @@ void game_list_frame::BatchCreatePPUCaches()
 
 	for (const auto& game : m_game_data)
 	{
-		if (pdlg->wasCanceled())
+		if (pdlg->wasCanceled() || g_system_progress_canceled)
 		{
 			break;
 		}
@@ -1678,7 +1680,7 @@ void game_list_frame::BatchCreatePPUCaches()
 		}
 	}
 
-	if (pdlg->wasCanceled())
+	if (pdlg->wasCanceled() || g_system_progress_canceled)
 	{
 		game_list_log.notice("PPU Cache Batch Creation was canceled");
 
@@ -1686,6 +1688,11 @@ void game_list_frame::BatchCreatePPUCaches()
 		{
 			QApplication::processEvents();
 			Emu.Stop();
+		}
+
+		if (!pdlg->wasCanceled())
+		{
+			pdlg->close();
 		}
 		return;
 	}
