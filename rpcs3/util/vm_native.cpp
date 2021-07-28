@@ -31,7 +31,13 @@ static int memfd_create_(const char *name, uint flags)
 	return syscall(__NR_memfd_create, name, flags);
 }
 #elif defined(__FreeBSD__)
+# if __FreeBSD__ < 13
+// XXX Drop after FreeBSD 12.* reaches EOL on 2024-06-30
+#define MFD_CLOEXEC O_CLOEXEC
+#define memfd_create_(name, flags) shm_open(SHM_ANON, O_RDWR | flags, 0600)
+# else
 #define memfd_create_ memfd_create
+# endif
 #endif
 
 namespace utils
