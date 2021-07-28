@@ -1566,7 +1566,7 @@ void main_window::OnEmuStop()
 
 	EnableMenus(false);
 
-	if (Emu.GetBoot().empty())
+	if (title.isEmpty())
 	{
 		ui->toolbar_start->setIcon(m_icon_play);
 		ui->toolbar_start->setText(tr("Play"));
