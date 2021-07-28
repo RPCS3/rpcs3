@@ -117,6 +117,7 @@ struct savedata_manager
 {
 	semaphore<> mutex;
 	atomic_t<bool> enable_overlay{false};
+	atomic_t<s32> last_cbresult_error_dialog{0}; // CBRESULT errors are negative
 };
 
 static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, const std::string& prefix)
@@ -312,9 +313,12 @@ static error_code display_callback_result_error_message(ppu_thread& ppu, const C
 		return {CELL_SAVEDATA_ERROR_PARAM, "22"};
 	}
 
-	// TODO: errDialog == CELL_SAVEDATA_ERRDIALOG_NOREPEAT
-	if (errDialog != CELL_SAVEDATA_ERRDIALOG_ALWAYS)
+	if (errDialog == CELL_SAVEDATA_ERRDIALOG_NONE ||
+		(errDialog == CELL_SAVEDATA_ERRDIALOG_NOREPEAT && result.result == g_fxo->get<savedata_manager>().last_cbresult_error_dialog.exchange(result.result)))
+	{
+		// TODO: Find out if the "last error" is always tracked or only when NOREPEAT is set
 		return CELL_SAVEDATA_ERROR_CBRESULT;
+	}
 
 	// Yield before a blocking dialog is being spawned
 	lv2_obj::sleep(ppu);
