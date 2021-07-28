@@ -801,6 +801,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 				if (IsStopped())
 				{
+					m_path = m_path_old; // Reset m_path to fix boot from gui
+					GetCallbacks().on_stop(); // Call on_stop to refresh gui
 					return;
 				}
 
@@ -812,6 +814,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					Emu.SetForceBoot(true);
 					Emu.Stop();
 				});
+
+				m_path = m_path_old; // Reset m_path to fix boot from gui
+				GetCallbacks().on_stop(); // Call on_stop to refresh gui
 			});
 
 			return game_boot_result::no_errors;
