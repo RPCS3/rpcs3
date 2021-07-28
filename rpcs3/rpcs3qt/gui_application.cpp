@@ -419,11 +419,6 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.resolve_path = [](std::string_view sv)
-	{
-		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
-	};
-
 	Emu.SetCallbacks(std::move(callbacks));
 }
 
