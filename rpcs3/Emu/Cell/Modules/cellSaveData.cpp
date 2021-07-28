@@ -575,6 +575,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	u32 errDialog, PSetList setList, PSetBuf setBuf, PFuncList funcList, PFuncFixed funcFixed, PFuncStat funcStat,
 	PFuncFile funcFile, u32 container, u32 unk_op_flags /*TODO*/, vm::ptr<void> userdata, u32 userId, PFuncDone funcDone)
 {
+	if (const auto [ok, list] = setList.try_read(); ok)
+		cellSaveData.notice("savedata_op(): setList = { .sortType=%d, .sortOrder=%d, .dirNamePrefix='%s' }", list.sortType, list.sortOrder, list.dirNamePrefix);
+
+	if (const auto [ok, buf] = setBuf.try_read(); ok)
+		cellSaveData.notice("savedata_op(): setBuf  = { .dirListMax=%d, .fileListMax=%d, .bufSize=%d }", buf.dirListMax, buf.fileListMax, buf.bufSize);
+
 	if (const auto ecode = savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat,
 		funcFile, container, unk_op_flags, userdata, userId, funcDone))
 	{
