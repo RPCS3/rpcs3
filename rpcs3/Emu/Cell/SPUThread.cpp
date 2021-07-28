@@ -4265,6 +4265,40 @@ bool spu_thread::set_ch_value(u32 ch, u32 value)
 	fmt::throw_exception("Unknown/illegal channel in WRCH (ch=%d [%s], value=0x%x)", ch, ch < 128 ? spu_ch_name[ch] : "???", value);
 }
 
+extern void resume_spu_thread_group_from_waiting(spu_thread& spu)
+{
+	const auto group = spu.group;
+
+	std::lock_guard lock(group->mutex);
+
+	if (group->run_state == SPU_THREAD_GROUP_STATUS_WAITING)
+	{
+		group->run_state = SPU_THREAD_GROUP_STATUS_RUNNING;
+	}
+	else if (group->run_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
+	{
+		group->run_state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
+	}
+
+	for (auto& thread : group->threads)
+	{
+		if (thread)
+		{
+			if (thread.get() == &spu)
+			{
+				constexpr auto flags = cpu_flag::suspend + cpu_flag::signal;
+				ensure(((thread->state ^= flags) & flags) == cpu_flag::signal);
+			}
+			else
+			{
+				thread->state -= cpu_flag::suspend;
+			}
+
+			thread->state.notify_one(cpu_flag::suspend + cpu_flag::signal);
+		}
+	}
+}
+
 bool spu_thread::stop_and_signal(u32 code)
 {
 	spu_log.trace("stop_and_signal(code=0x%x)", code);
@@ -4292,6 +4326,23 @@ bool spu_thread::stop_and_signal(u32 code)
 		check_state();
 		return true;
 	}
+
+	auto get_queue = [this](u32 spuq) -> const std::shared_ptr<lv2_event_queue>&
+	{
+		for (auto& v : this->spuq)
+		{
+			if (spuq == v.first)
+			{
+				if (lv2_obj::check(v.second))
+				{
+					return v.second;
+				}
+			}
+		}
+
+		static const std::shared_ptr<lv2_event_queue> empty;
+		return empty;
+	};
 
 	switch (code)
 	{
@@ -4338,6 +4389,8 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		spu_function_logger logger(*this, "sys_spu_thread_receive_event");
 
+		std::shared_ptr<lv2_event_queue> queue;
+	
 		while (true)
 		{
 			// Check group status, wait if necessary
@@ -4355,7 +4408,15 @@ bool spu_thread::stop_and_signal(u32 code)
 				thread_ctrl::wait_on(state, old);;
 			}
 
-			std::lock_guard lock(group->mutex);
+			reader_lock{group->mutex}, queue = get_queue(spuq);
+
+			if (!queue)
+			{
+				return ch_in_mbox.set_values(1, CELL_EINVAL), true;
+			}
+
+			// Lock queue's mutex first, then group's mutex
+			std::scoped_lock lock(queue->mutex, group->mutex);
 
 			if (is_stopped())
 			{
@@ -4368,26 +4429,11 @@ bool spu_thread::stop_and_signal(u32 code)
 				continue;
 			}
 
-			lv2_event_queue* queue = nullptr;
-
-			for (auto& v : this->spuq)
+			if (queue != get_queue(spuq))
 			{
-				if (spuq == v.first)
-				{
-					if (lv2_obj::check(v.second))
-					{
-						queue = v.second.get();
-						break;
-					}
-				}
+				// Try again
+				continue;
 			}
-
-			if (!queue)
-			{
-				return ch_in_mbox.set_values(1, CELL_EINVAL), true;
-			}
-
-			std::lock_guard qlock(queue->mutex);
 
 			if (!queue->exists)
 			{
@@ -4440,30 +4486,6 @@ bool spu_thread::stop_and_signal(u32 code)
 			thread_ctrl::wait_on(state, old);
 		}
 
-		std::lock_guard lock(group->mutex);
-
-		if (group->run_state == SPU_THREAD_GROUP_STATUS_WAITING)
-		{
-			group->run_state = SPU_THREAD_GROUP_STATUS_RUNNING;
-		}
-		else if (group->run_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
-		{
-			group->run_state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
-		}
-
-		for (auto& thread : group->threads)
-		{
-			if (thread)
-			{
-				thread->state -= cpu_flag::suspend;
-
-				if (thread.get() != this)
-				{
-					thread->state.notify_one(cpu_flag::suspend);
-				}
-			}
-		}
-
 		return true;
 	}
 
@@ -4486,28 +4508,35 @@ bool spu_thread::stop_and_signal(u32 code)
 
 		spu_log.trace("sys_spu_thread_tryreceive_event(spuq=0x%x)", spuq);
 
-		std::lock_guard lock(group->mutex);
+		std::shared_ptr<lv2_event_queue> queue;
 
-		lv2_event_queue* queue = nullptr;
+		reader_lock{group->mutex}, queue = get_queue(spuq);
 
-		for (auto& v : this->spuq)
+		std::unique_lock<shared_mutex> qlock, group_lock;
+
+		while (true)
 		{
-			if (spuq == v.first)
+			if (!queue)
 			{
-				if (lv2_obj::check(v.second))
-				{
-					queue = v.second.get();
-					break;
-				}
+				return ch_in_mbox.set_values(1, CELL_EINVAL), true;
+			}
+
+			// Lock queue's mutex first, then group's mutex
+			qlock = std::unique_lock{queue->mutex};
+			group_lock = std::unique_lock{group->mutex};
+
+			if (const auto& queue0 = get_queue(spuq); queue != queue0)
+			{
+				// Keep atleast one reference of the pointer so mutex unlock can work
+				const auto old_ref = std::exchange(queue, queue0);
+				group_lock.unlock();
+				qlock.unlock();
+			}
+			else
+			{
+				break;
 			}
 		}
-
-		if (!queue)
-		{
-			return ch_in_mbox.set_values(1, CELL_EINVAL), true;
-		}
-
-		std::lock_guard qlock(queue->mutex);
 
 		if (!queue->exists)
 		{
