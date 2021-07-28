@@ -594,7 +594,7 @@ error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sy
 		return {prx.ret, "%s (id=%s)", prx->name, id};
 	}
 
-	sys_prx.success("_sys_prx_unload_module(id=0x%x, flags=0x%x, pOpt=*0x%x): name='%s'", id, flags, pOpt);
+	sys_prx.success("_sys_prx_unload_module(id=0x%x, flags=0x%x, pOpt=*0x%x): name='%s'", id, flags, pOpt, prx->name);
 
 	ppu_unload_prx(*prx);
 
