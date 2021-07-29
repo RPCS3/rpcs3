@@ -235,7 +235,7 @@ static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 }
 
 /**
- * \brief Maps external Move controller data to DS3 input
+ * \brief Maps external Move controller data to DS3 input. (This can be input from any physical pad, not just the DS3)
  *        Implementation detail: CellGemExtPortData's digital/analog fields map the same way as
  *        libPad, so no translation is needed.
  * \param port_no DS3 port number to use
@@ -322,12 +322,12 @@ static bool mouse_pos_to_gem_image_state(const u32 mouse_no, vm::ptr<CellGemImag
 
 	const auto renderer = static_cast<GSRender*>(rsx::get_current_renderer());
 	const auto width = renderer->get_frame()->client_width();
-	const auto hight = renderer->get_frame()->client_height();
+	const auto height = renderer->get_frame()->client_height();
 	const f32 scaling_width = width / 640.f;
-	const f32 scaling_hight = hight / 480.f;
+	const f32 scaling_height = height / 480.f;
 
 	const f32 x = static_cast<f32>(mouse.x_pos) / scaling_width;
-	const f32 y = static_cast<f32>(mouse.y_pos) / scaling_hight;
+	const f32 y = static_cast<f32>(mouse.y_pos) / scaling_height;
 
 	gem_image_state->u = 133.f + (x / 1.50f);
 	gem_image_state->v = 160.f + (y / 1.67f);
@@ -352,12 +352,12 @@ static bool mouse_pos_to_gem_state(const u32 mouse_no, vm::ptr<CellGemState>& ge
 
 	const auto renderer = static_cast<GSRender*>(rsx::get_current_renderer());
 	const auto width = renderer->get_frame()->client_width();
-	const auto hight = renderer->get_frame()->client_height();
+	const auto height = renderer->get_frame()->client_height();
 
 	const f32 scaling_width = width / 640.f;
-	const f32 scaling_hight = hight / 480.f;
+	const f32 scaling_height = height / 480.f;
 	const f32 x = static_cast<f32>(mouse.x_pos) / scaling_width;
-	const f32 y = static_cast<f32>(mouse.y_pos) / scaling_hight;
+	const f32 y = static_cast<f32>(mouse.y_pos) / scaling_height;
 
 	gem_state->pos[0] = x;
 	gem_state->pos[1] = -y;
@@ -682,18 +682,6 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 
 	auto& shared_data = g_fxo->get<gem_camera_shared>();
 
-	if (g_cfg.io.move == move_handler::fake)
-	{
-		gem_image_state->u = 0;
-		gem_image_state->v = 0;
-		gem_image_state->projectionx = 1;
-		gem_image_state->projectiony = 1;
-	}
-	else if (g_cfg.io.move == move_handler::mouse)
-	{
-		mouse_pos_to_gem_image_state(gem_num, gem_image_state);
-	}
-
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
 		gem_image_state->frame_timestamp = shared_data.frame_timestamp.load();
@@ -702,6 +690,18 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		gem_image_state->distance = 2 * 1000; // 2 meters away from camera
 		gem_image_state->visible = true;
 		gem_image_state->r_valid = true;
+
+		if (g_cfg.io.move == move_handler::fake)
+		{
+			gem_image_state->u = 0;
+			gem_image_state->v = 0;
+			gem_image_state->projectionx = 1;
+			gem_image_state->projectiony = 1;
+		}
+		else if (g_cfg.io.move == move_handler::mouse)
+		{
+			mouse_pos_to_gem_image_state(gem_num, gem_image_state);
+		}
 	}
 
 	return CELL_OK;
@@ -725,15 +725,6 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (g_cfg.io.move == move_handler::fake)
-	{
-		ds3_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
-	}
-	else if (g_cfg.io.move == move_handler::mouse)
-	{
-		mouse_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
-	}
-
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
 		ds3_input_to_ext(gem_num, inertial_state->ext);
@@ -741,6 +732,15 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 		inertial_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
 		inertial_state->counter = gem.inertial_counter++;
 		inertial_state->accelerometer[0] = 10;
+
+		if (g_cfg.io.move == move_handler::fake)
+		{
+			ds3_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+		}
+		else if (g_cfg.io.move == move_handler::mouse)
+		{
+			mouse_input_to_pad(gem_num, inertial_state->pad.digitalbuttons, inertial_state->pad.analog_T);
+		}
 	}
 
 	return CELL_OK;
@@ -861,16 +861,6 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (g_cfg.io.move == move_handler::fake)
-	{
-		ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
-	}
-	else if (g_cfg.io.move == move_handler::mouse)
-	{
-		mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
-		mouse_pos_to_gem_state(gem_num, gem_state);
-	}
-
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
 		ds3_input_to_ext(gem_num, gem_state->ext);
@@ -878,6 +868,16 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		gem_state->tracking_flags = CELL_GEM_TRACKING_FLAG_POSITION_TRACKED | CELL_GEM_TRACKING_FLAG_VISIBLE;
 		gem_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
 		gem_state->quat[3] = 1.f;
+
+		if (g_cfg.io.move == move_handler::fake)
+		{
+			ds3_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+		}
+		else if (g_cfg.io.move == move_handler::mouse)
+		{
+			mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
+			mouse_pos_to_gem_state(gem_num, gem_state);
+		}
 
 		return CELL_OK;
 	}
@@ -1032,7 +1032,7 @@ error_code cellGemInvalidateCalibration(s32 gem_num)
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
 		gem.controllers[gem_num].calibrated_magnetometer = false;
-		// TODO: gem.status_flags
+		// TODO: gem.status_flags (probably not changed)
 	}
 
 	return CELL_OK;
