@@ -728,29 +728,47 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this]
 			{
+				std::string path;
 				std::vector<std::string> dir_queue;
 				dir_queue.emplace_back(m_path + '/');
 
-				// Find game update to use EBOOT.BIN from it, also add its directory to scan
-				if (m_cat == "DG")
+				if (m_title_id.empty())
 				{
-					const std::string hdd0_path = vfs::get("/dev_hdd0/game/") + m_title_id;
+					// Check if we are trying to scan vsh/module
+					const std::string vsh_path = g_cfg.vfs.get_dev_flash() + "vsh/module";
 
-					if (fs::is_file(hdd0_path + "/USRDIR/EBOOT.BIN"))
+					if (IsPathInsideDir(m_path, vsh_path))
 					{
-						m_path = hdd0_path;
-						dir_queue.emplace_back(m_path + '/');
+						// Memorize path to vsh.self
+						path = vsh_path + "/vsh.self";
 					}
 				}
-
-				// Try to add all related directories
-				const std::set<std::string> dirs = GetGameDirs();
-				dir_queue.insert(std::end(dir_queue), std::begin(dirs), std::end(dirs));
-
-				if (std::string path = m_path + "/USRDIR/EBOOT.BIN"; fs::is_file(path))
+				else
 				{
-					// Compile EBOOT.BIN first
-					ppu_log.notice("Trying to load EBOOT.BIN: %s", path);
+					// Find game update to use EBOOT.BIN from it, also add its directory to scan
+					if (m_cat == "DG")
+					{
+						const std::string hdd0_path = vfs::get("/dev_hdd0/game/") + m_title_id;
+
+						if (fs::is_file(hdd0_path + "/USRDIR/EBOOT.BIN"))
+						{
+							m_path = hdd0_path;
+							dir_queue.emplace_back(m_path + '/');
+						}
+					}
+
+					// Memorize path to EBOOT.BIN
+					path = m_path + "/USRDIR/EBOOT.BIN";
+
+					// Try to add all related directories
+					const std::set<std::string> dirs = GetGameDirs();
+					dir_queue.insert(std::end(dir_queue), std::begin(dirs), std::end(dirs));
+				}
+
+				if (fs::is_file(path))
+				{
+					// Compile binary first
+					ppu_log.notice("Trying to load binary: %s", path);
 
 					fs::file src{path};
 
@@ -772,7 +790,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					}
 					else
 					{
-						sys_log.error("Failed to load EBOOT.BIN '%s' (%s)", path, obj.get_error());
+						sys_log.error("Failed to load binary '%s' (%s)", path, obj.get_error());
 					}
 				}
 				else
@@ -783,6 +801,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 				if (IsStopped())
 				{
+					m_path = m_path_old; // Reset m_path to fix boot from gui
+					GetCallbacks().on_stop(); // Call on_stop to refresh gui
 					return;
 				}
 
@@ -794,28 +814,25 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					Emu.SetForceBoot(true);
 					Emu.Stop();
 				});
+
+				m_path = m_path_old; // Reset m_path to fix boot from gui
+				GetCallbacks().on_stop(); // Call on_stop to refresh gui
 			});
 
 			return game_boot_result::no_errors;
 		}
 
-		// Check if path is inside the specified directory
-		auto is_path_inside_path = [this](std::string_view path, std::string_view dir)
-		{
-			return (GetCallbacks().resolve_path(path) + '/').starts_with(GetCallbacks().resolve_path(dir) + '/');
-		};
-
 		// Detect boot location
 		constexpr usz game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
-		const bool from_hdd0_game   = is_path_inside_path(m_path, hdd0_game);
-		const bool from_dev_flash   = is_path_inside_path(m_path, g_cfg.vfs.get_dev_flash());
+		const bool from_hdd0_game   = IsPathInsideDir(m_path, hdd0_game);
+		const bool from_dev_flash   = IsPathInsideDir(m_path, g_cfg.vfs.get_dev_flash());
 
 #ifdef _WIN32
 		// m_path might be passed from command line with differences in uppercase/lowercase on windows.
-		if ((!from_hdd0_game && is_path_inside_path(fmt::to_lower(m_path), fmt::to_lower(hdd0_game))) ||
-			(!from_dev_flash && is_path_inside_path(fmt::to_lower(m_path), fmt::to_lower(g_cfg.vfs.get_dev_flash()))))
+		if ((!from_hdd0_game && IsPathInsideDir(fmt::to_lower(m_path), fmt::to_lower(hdd0_game))) ||
+			(!from_dev_flash && IsPathInsideDir(fmt::to_lower(m_path), fmt::to_lower(g_cfg.vfs.get_dev_flash()))))
 		{
 			// Let's just abort to prevent errors down the line.
 			sys_log.error("The boot path seems to contain incorrectly cased characters. Please adjust the path and try again.");
@@ -1795,5 +1812,10 @@ std::set<std::string> Emulator::GetGameDirs() const
 
 	return dirs;
 }
+
+bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) const
+{
+	return (GetCallbacks().resolve_path(path) + '/').starts_with(GetCallbacks().resolve_path(dir) + '/');
+};
 
 Emulator Emu;
