@@ -156,6 +156,12 @@ enum
 	CELL_GEM_BAYER_RESTORED_RASTERIZED = 9
 };
 
+// External device IDs (types)
+enum
+{
+	SHARP_SHOOTER_DEVICE_ID = 0x8081
+};
+
 struct CellGemAttribute
 {
 	be_t<u32> version;
