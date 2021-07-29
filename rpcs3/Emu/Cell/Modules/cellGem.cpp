@@ -939,7 +939,7 @@ error_code cellGemGetTrackerHue(u32 gem_num, vm::ptr<u32> hue)
 
 	if (!gem.controllers[gem_num].enabled_tracking || gem.controllers[gem_num].hue > 359)
 	{
-		return CELL_GEM_ERROR_NOT_A_HUE;
+		return { CELL_GEM_ERROR_NOT_A_HUE, gem.controllers[gem_num].hue };
 	}
 
 	*hue = gem.controllers[gem_num].hue;
@@ -1220,20 +1220,57 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 
 	for (u32 i = 0; i < CELL_GEM_MAX_NUM; i++)
 	{
-		if (req_hues[i] == u32{CELL_GEM_DONT_CARE_HUE})
+		if (req_hues[i] == CELL_GEM_DONT_CARE_HUE)
 		{
+			gem.controllers[i].enabled_tracking = true;
+			gem.controllers[i].enabled_LED = true;
 
+			switch (i)
+			{
+			default:
+			case 0:
+				gem.controllers[i].hue = 240; // blue
+				break;
+			case 1:
+				gem.controllers[i].hue = 0;   // red
+				break;
+			case 2:
+				gem.controllers[i].hue = 120; // green
+				break;
+			case 3:
+				gem.controllers[i].hue = 300; // purple
+				break;
+			}
+
+			if (res_hues)
+			{
+				res_hues[i] = gem.controllers[i].hue;
+			}
 		}
-		else if (req_hues[i] == u32{CELL_GEM_DONT_TRACK_HUE})
+		else if (req_hues[i] == CELL_GEM_DONT_TRACK_HUE)
 		{
 			gem.controllers[i].enabled_tracking = false;
 			gem.controllers[i].enabled_LED = false;
+
+			if (res_hues)
+			{
+				res_hues[i] = CELL_GEM_DONT_TRACK_HUE;
+			}
 		}
 		else
 		{
 			if (req_hues[i] > 359)
 			{
 				cellGem.warning("cellGemTrackHues: req_hues[%d]=%d -> this can lead to unexpected behavior", i, req_hues[i]);
+			}
+
+			gem.controllers[i].enabled_tracking = true;
+			gem.controllers[i].enabled_LED = true;
+			gem.controllers[i].hue = req_hues[i];
+
+			if (res_hues)
+			{
+				res_hues[i] = gem.controllers[i].hue;
 			}
 		}
 	}
