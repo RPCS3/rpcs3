@@ -299,20 +299,32 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 	}
 
 	const auto& mouse_data = handler.GetMice().at(0);
+	const auto is_pressed = [&mouse_data](MouseButtonCodes button) -> bool { return !!(mouse_data.buttons & button); };
 
 	digital_buttons = 0;
 
-	if ((mouse_data.buttons & CELL_MOUSE_BUTTON_1) && (mouse_data.buttons & CELL_MOUSE_BUTTON_2))
-		digital_buttons |= CELL_GEM_CTRL_CIRCLE;
-	if (mouse_data.buttons & CELL_MOUSE_BUTTON_3)
-		digital_buttons |= CELL_GEM_CTRL_CROSS;
-	if (mouse_data.buttons & CELL_MOUSE_BUTTON_2)
-		digital_buttons |= CELL_GEM_CTRL_MOVE;
-	if ((mouse_data.buttons & CELL_MOUSE_BUTTON_1) && (mouse_data.buttons & CELL_MOUSE_BUTTON_3))
-		digital_buttons |= CELL_GEM_CTRL_START;
-	if (mouse_data.buttons & CELL_MOUSE_BUTTON_1)
+	if (is_pressed(CELL_MOUSE_BUTTON_1))
 		digital_buttons |= CELL_GEM_CTRL_T;
-	if ((mouse_data.buttons & CELL_MOUSE_BUTTON_2) && (mouse_data.buttons & CELL_MOUSE_BUTTON_3))
+
+	if (is_pressed(CELL_MOUSE_BUTTON_2))
+		digital_buttons |= CELL_GEM_CTRL_MOVE;
+
+	if (is_pressed(CELL_MOUSE_BUTTON_3))
+		digital_buttons |= CELL_GEM_CTRL_CROSS;
+
+	if (is_pressed(CELL_MOUSE_BUTTON_4))
+		digital_buttons |= CELL_GEM_CTRL_SELECT;
+
+	if (is_pressed(CELL_MOUSE_BUTTON_5))
+		digital_buttons |= CELL_GEM_CTRL_START;
+
+	if (is_pressed(CELL_MOUSE_BUTTON_6) || (is_pressed(CELL_MOUSE_BUTTON_1) && is_pressed(CELL_MOUSE_BUTTON_2)))
+		digital_buttons |= CELL_GEM_CTRL_CIRCLE;
+
+	if (is_pressed(CELL_MOUSE_BUTTON_7) || (is_pressed(CELL_MOUSE_BUTTON_1) && is_pressed(CELL_MOUSE_BUTTON_3)))
+		digital_buttons |= CELL_GEM_CTRL_SQUARE;
+
+	if (is_pressed(CELL_MOUSE_BUTTON_8) || (is_pressed(CELL_MOUSE_BUTTON_2) && is_pressed(CELL_MOUSE_BUTTON_3)))
 		digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
 
 	analog_t = (mouse_data.buttons & CELL_MOUSE_BUTTON_1) ? 0xFFFF : 0;

@@ -85,6 +85,12 @@ void basic_mouse_handler::MouseButtonDown(QMouseEvent* event)
 	if (event->button() == Qt::LeftButton)        MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, true);
 	else if (event->button() == Qt::RightButton)  MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, true);
 	else if (event->button() == Qt::MiddleButton) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, true);
+	// TODO: verify these
+	else if (event->button() == Qt::ExtraButton1) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_4, true);
+	else if (event->button() == Qt::ExtraButton2) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_5, true);
+	else if (event->button() == Qt::ExtraButton3) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_6, true);
+	else if (event->button() == Qt::ExtraButton4) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_7, true);
+	else if (event->button() == Qt::ExtraButton5) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_8, true);
 }
 
 void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
@@ -92,6 +98,12 @@ void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
 	if (event->button() == Qt::LeftButton)        MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, false);
 	else if (event->button() == Qt::RightButton)  MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, false);
 	else if (event->button() == Qt::MiddleButton) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, false);
+	// TODO: verify these
+	else if (event->button() == Qt::ExtraButton1) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_4, false);
+	else if (event->button() == Qt::ExtraButton2) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_5, false);
+	else if (event->button() == Qt::ExtraButton3) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_6, false);
+	else if (event->button() == Qt::ExtraButton4) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_7, false);
+	else if (event->button() == Qt::ExtraButton5) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_8, false);
 }
 
 void basic_mouse_handler::MouseScroll(QWheelEvent* event)
