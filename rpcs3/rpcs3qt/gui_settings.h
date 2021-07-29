@@ -207,6 +207,7 @@ namespace gui
 	const gui_save gs_disableMouse      = gui_save(gs_frame, "disableMouse",          false);
 	const gui_save gs_disableKbHotkeys  = gui_save(gs_frame, "disableKbHotkeys",      false);
 	const gui_save gs_showMouseFs       = gui_save(gs_frame, "showMouseInFullscreen", false);
+	const gui_save gs_lockMouseFs       = gui_save(gs_frame, "lockMouseInFullscreen", true);
 	const gui_save gs_resize            = gui_save(gs_frame, "resize",                false);
 	const gui_save gs_width             = gui_save(gs_frame, "width",                 1280);
 	const gui_save gs_height            = gui_save(gs_frame, "height",                720);
