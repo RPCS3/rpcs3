@@ -88,6 +88,7 @@ struct gem_config
 		bool enabled_filtering = false;                    // Whether filtering is enabled
 		bool enabled_tracking = false;                     // Whether tracking is enabled
 		bool enabled_LED = false;                          // Whether the LED is enabled
+		bool hue_set = false;                              // Whether the hue was set
 		u8 rumble = 0;                                     // Rumble intensity
 		gem_color sphere_rgb = {};                         // RGB color of the sphere LED
 		u32 hue = 0;                                       // Tracking hue of the motion controller
@@ -101,6 +102,7 @@ struct gem_config
 
 	std::array<gem_controller, CELL_GEM_MAX_NUM> controllers;
 	u32 connected_controllers = 0;
+	bool video_conversion_started{};
 	bool update_started{};
 	u32 camera_frame{};
 	u32 memory_ptr{};
@@ -454,6 +456,13 @@ error_code cellGemConvertVideoFinish()
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
+	if (!std::exchange(gem.video_conversion_started, false))
+	{
+		return CELL_GEM_ERROR_CONVERT_NOT_STARTED;
+	}
+
+	// TODO: wait until image is converted
+
 	return CELL_OK;
 }
 
@@ -467,6 +476,18 @@ error_code cellGemConvertVideoStart(vm::cptr<void> video_frame)
 	{
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
+
+	if (!video_frame)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (std::exchange(gem.video_conversion_started, true))
+	{
+		return CELL_GEM_ERROR_CONVERT_NOT_FINISHED;
+	}
+
+	// TODO: start image conversion of video_frame async to gem.vc_attribute.video_data_out
 
 	return CELL_OK;
 }
@@ -592,9 +613,22 @@ error_code cellGemForceRGB(u32 gem_num, float r, float g, float b)
 	return CELL_OK;
 }
 
-error_code cellGemGetAccelerometerPositionInDevice()
+error_code cellGemGetAccelerometerPositionInDevice(u32 gem_num, vm::ptr<f32> pos)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemGetAccelerometerPositionInDevice(gem_num=%d, pos=*0x%x)", gem_num, pos);
+
+	auto& gem = g_fxo->get<gem_config>();
+
+	if (!gem.state)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!check_gem_num(gem_num) || !pos)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
 	return CELL_OK;
 }
 
@@ -607,6 +641,11 @@ error_code cellGemGetAllTrackableHues(vm::ptr<u8> hues)
 	if (!gem.state)
 	{
 		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!hues)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
 	for (u32 i = 0; i < 360; i++)
@@ -879,12 +918,37 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
+	if (!gem.controllers[gem_num].calibrated_magnetometer)
+	{
+		return CELL_GEM_SPHERE_NOT_CALIBRATED;
+	}
+
+	if (!gem.controllers[gem_num].hue_set)
+	{
+		return CELL_GEM_HUE_NOT_SET;
+	}
+
+	// TODO: Get the gem state at the specified time
+	//if (flag == CELL_GEM_STATE_FLAG_CURRENT_TIME)
+	//{
+	//	// now + time_parameter (time_parameter in microseconds). Positive values actually allow predictions for the future state.
+	//}
+	//else if (flag == CELL_GEM_STATE_FLAG_LATEST_IMAGE_TIME)
+	//{
+	//	// When the sphere was registered during the last camera frame (time_parameter may also have an impact)
+	//}
+	//else // CELL_GEM_STATE_FLAG_TIMESTAMP
+	//{
+	//	// As specified by time_parameter.
+	//}
+
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
 		ds3_input_to_ext(gem_num, gem.controllers[gem_num], gem_state->ext);
 
 		gem_state->tracking_flags = CELL_GEM_TRACKING_FLAG_POSITION_TRACKED | CELL_GEM_TRACKING_FLAG_VISIBLE;
 		gem_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
+		gem_state->camera_pitch_angle = 0.f;
 		gem_state->quat[3] = 1.f;
 
 		if (g_cfg.io.move == move_handler::fake)
@@ -1201,9 +1265,26 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 	return CELL_OK;
 }
 
-error_code cellGemSetYaw()
+error_code cellGemSetYaw(u32 gem_num, vm::ptr<f32> z_direction)
 {
-	UNIMPLEMENTED_FUNC(cellGem);
+	cellGem.todo("cellGemSetYaw(gem_num=%d, z_direction=*0x%x)", gem_num, z_direction);
+
+	auto& gem = g_fxo->get<gem_config>();
+
+	std::scoped_lock lock(gem.mtx);
+
+	if (!gem.state)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (!z_direction)
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	// TODO
+
 	return CELL_OK;
 }
 
@@ -1280,6 +1361,8 @@ error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 				res_hues[i] = gem.controllers[i].hue;
 			}
 		}
+
+		gem.controllers[i].hue_set = true;
 	}
 
 	return CELL_OK;
