@@ -81,6 +81,7 @@ struct gem_config
 	{
 		u32 status = CELL_GEM_STATUS_DISCONNECTED;         // Connection status (CELL_GEM_STATUS_DISCONNECTED or CELL_GEM_STATUS_READY)
 		u32 ext_status = CELL_GEM_NO_EXTERNAL_PORT_DEVICE; // External port connection status
+		u32 ext_id = 0;                                    // External device ID (type). For example SHARP_SHOOTER_DEVICE_ID
 		u32 port = 0;                                      // Assigned port
 		bool enabled_magnetometer = false;                 // Whether the magnetometer is enabled (probably used for additional rotational precision)
 		bool calibrated_magnetometer = false;              // Whether the magnetometer is calibrated
@@ -242,7 +243,7 @@ static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
  * \param ext External data to modify
  * \return true on success, false if port_no controller is invalid
  */
-static bool ds3_input_to_ext(const u32 port_no, CellGemExtPortData& ext)
+static bool ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller& controller, CellGemExtPortData& ext)
 {
 	std::scoped_lock lock(pad::g_pad_mutex);
 
@@ -261,6 +262,16 @@ static bool ds3_input_to_ext(const u32 port_no, CellGemExtPortData& ext)
 	ext.analog_right_y = pad->m_analog_right_y;
 	ext.digital1 = pad->m_digital_1;
 	ext.digital2 = pad->m_digital_2;
+
+	if (controller.ext_id == SHARP_SHOOTER_DEVICE_ID)
+	{
+		// TODO set custom[0] bits as follows:
+		// 1xxxxxxx: RL reload button is pressed.
+		// x1xxxxxx: T button trigger is pressed.
+		// xxxxx001: Firing mode selector is in position 1.
+		// xxxxx010: Firing mode selector is in position 2.
+		// xxxxx100: Firing mode selector is in position 3.
+	}
 
 	return true;
 }
@@ -727,7 +738,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
-		ds3_input_to_ext(gem_num, inertial_state->ext);
+		ds3_input_to_ext(gem_num, gem.controllers[gem_num], inertial_state->ext);
 
 		inertial_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
 		inertial_state->counter = gem.inertial_counter++;
@@ -863,7 +874,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
-		ds3_input_to_ext(gem_num, gem_state->ext);
+		ds3_input_to_ext(gem_num, gem.controllers[gem_num], gem_state->ext);
 
 		gem_state->tracking_flags = CELL_GEM_TRACKING_FLAG_POSITION_TRACKED | CELL_GEM_TRACKING_FLAG_VISIBLE;
 		gem_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
@@ -1130,6 +1141,8 @@ error_code cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, v
 	{
 		return CELL_GEM_NO_EXTERNAL_PORT_DEVICE;
 	}
+
+	*ext_id = gem.controllers[gem_num].ext_id;
 
 	return CELL_OK;
 }
