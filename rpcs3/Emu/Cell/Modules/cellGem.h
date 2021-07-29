@@ -91,7 +91,7 @@ enum
 };
 
 // Special values for cellGemTrackHues.
-enum
+enum : u32
 {
 	CELL_GEM_DONT_TRACK_HUE  = 2 << 24,
 	CELL_GEM_DONT_CARE_HUE   = 4 << 24,
