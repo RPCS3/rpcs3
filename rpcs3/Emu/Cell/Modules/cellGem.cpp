@@ -757,7 +757,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		gem_image_state->timestamp = gem_image_state->frame_timestamp + 10;
 		gem_image_state->r = 10;
 		gem_image_state->distance = 2 * 1000; // 2 meters away from camera
-		gem_image_state->visible = true;
+		gem_image_state->visible = gem.is_controller_ready(gem_num);
 		gem_image_state->r_valid = true;
 
 		if (g_cfg.io.move == move_handler::fake)
@@ -930,14 +930,9 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (!gem.controllers[gem_num].calibrated_magnetometer)
+	if (!gem.is_controller_ready(gem_num))
 	{
-		return CELL_GEM_SPHERE_NOT_CALIBRATED;
-	}
-
-	if (!gem.controllers[gem_num].hue_set)
-	{
-		return CELL_GEM_HUE_NOT_SET;
+		return CELL_GEM_NOT_CONNECTED;
 	}
 
 	// TODO: Get the gem state at the specified time
@@ -958,7 +953,12 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 	{
 		ds3_input_to_ext(gem_num, gem.controllers[gem_num], gem_state->ext);
 
-		gem_state->tracking_flags = CELL_GEM_TRACKING_FLAG_POSITION_TRACKED | CELL_GEM_TRACKING_FLAG_VISIBLE;
+		u32 tracking_flags = CELL_GEM_TRACKING_FLAG_VISIBLE;
+
+		if (gem.controllers[gem_num].enabled_tracking)
+			tracking_flags |= CELL_GEM_TRACKING_FLAG_POSITION_TRACKED;
+
+		gem_state->tracking_flags = tracking_flags;
 		gem_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
 		gem_state->camera_pitch_angle = 0.f;
 		gem_state->quat[3] = 1.f;
@@ -972,11 +972,21 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 			mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
 			mouse_pos_to_gem_state(gem_num, gem_state);
 		}
-
-		return CELL_OK;
 	}
 
-	return CELL_GEM_NOT_CONNECTED;
+	// TODO: verify position of this check. gem_state seems to be polled regardless (otherwise you would never be able to calibrate anyway)
+	if (!gem.controllers[gem_num].calibrated_magnetometer)
+	{
+		return CELL_GEM_SPHERE_NOT_CALIBRATED;
+	}
+
+	// TODO: verify position of this check
+	if (!gem.controllers[gem_num].hue_set)
+	{
+		return CELL_GEM_HUE_NOT_SET;
+	}
+
+	return CELL_OK;
 }
 
 error_code cellGemGetStatusFlags(u32 gem_num, vm::ptr<u64> flags)
