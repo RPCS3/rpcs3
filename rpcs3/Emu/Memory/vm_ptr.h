@@ -209,7 +209,7 @@ namespace vm
 		template <bool = false> requires (!std::is_void_v<T>)
 		std::pair<bool, std::conditional_t<std::is_void_v<T>, char, std::remove_const_t<T>>> try_read() const
 		{
-			alignas(16) char buf[sizeof(T)]{};
+			alignas(sizeof(T) >= 16 ? 16 : 8) char buf[sizeof(T)]{};
 			const bool ok = vm::try_access(vm::cast(m_addr), buf, sizeof(T), false);
 			return { ok, std::bit_cast<decltype(try_read().second)>(buf) };
 		}
