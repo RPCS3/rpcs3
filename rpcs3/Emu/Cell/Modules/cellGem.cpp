@@ -95,7 +95,7 @@ struct gem_config
 
 	CellGemAttribute attribute = {};
 	CellGemVideoConvertAttribute vc_attribute = {};
-	u64 status_flags = CELL_GEM_NOT_CALIBRATED;
+	u64 status_flags = 0;
 	bool enable_pitch_correction = false;
 	u32 inertial_counter = 0;
 
@@ -414,7 +414,7 @@ error_code cellGemCalibrate(u32 gem_num)
 		gem.controllers[gem_num].calibrated_magnetometer = true;
 		gem.controllers[gem_num].enabled_tracking = true;
 		gem.controllers[gem_num].hue = 1;
-		gem.status_flags = CELL_GEM_FLAG_CALIBRATION_OCCURRED | CELL_GEM_FLAG_CALIBRATION_SUCCEEDED;
+		gem.status_flags = CELL_GEM_FLAG_CALIBRATION_SUCCEEDED;
 	}
 
 	return CELL_OK;
