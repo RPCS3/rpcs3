@@ -580,7 +580,14 @@ error_code cellGemForceRGB(u32 gem_num, float r, float g, float b)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
+	// TODO: Adjust brightness
+	//if (const f32 sum = r + g + b; sum > 2.f)
+	//{
+	//	color = color * (2.f / sum)
+	//}
+
 	gem.controllers[gem_num].sphere_rgb = gem_config::gem_color(r, g, b);
+	gem.controllers[gem_num].enabled_tracking = false;
 
 	return CELL_OK;
 }
