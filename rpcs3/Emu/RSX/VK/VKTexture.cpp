@@ -33,6 +33,22 @@ namespace vk
 		}
 	}
 
+	u64 calculate_working_buffer_size(u64 base_size, VkImageAspectFlags aspect)
+	{
+		if (aspect & VK_IMAGE_ASPECT_STENCIL_BIT)
+		{
+			return (base_size * 9) / 4;
+		}
+		else if (aspect & VK_IMAGE_ASPECT_DEPTH_BIT)
+		{
+			return base_size * 2;
+		}
+		else
+		{
+			return base_size;
+		}
+	}
+
 	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes)
 	{
 		// Always validate
@@ -328,15 +344,7 @@ namespace vk
 
 		const auto src_texel_size = vk::get_format_texel_width(src->info.format);
 		const auto src_length = src_texel_size * src_copy.imageExtent.width * src_copy.imageExtent.height;
-		u32 min_scratch_size = src_length;
-
-		// Check for DS manipulation which will affect scratch memory requirements
-		if (const VkFlags combined_aspect =  src->aspect() | dst->aspect();
-			(combined_aspect & VK_IMAGE_ASPECT_STENCIL_BIT) != 0)
-		{
-			// At least one depth-stencil merge/extract required; requirements change to 2(w*h*bpp) + (w*h)
-			min_scratch_size = (src_length * 2) + (src_length / src_texel_size);
-		}
+		const auto min_scratch_size = calculate_working_buffer_size(src_length, src->aspect() | dst->aspect());
 
 		// Initialize scratch memory
 		auto scratch_buf = vk::get_scratch_buffer(min_scratch_size);
@@ -975,6 +983,12 @@ namespace vk
 						// Double the memory if hw deswizzle is going to be used.
 						// For GPU deswizzle, the memory is not transformed in-place, rather the decoded texture is placed at the end of the uploaded data.
 						scratch_buf_size += scratch_buf_size;
+					}
+
+					if (requires_depth_processing)
+					{
+						// D-S aspect requires a load section that can fit a separated block => D(4) + S(1)
+						scratch_buf_size += dst_image->width() * dst_image->height() * 5;
 					}
 
 					scratch_buf = vk::get_scratch_buffer(scratch_buf_size);
