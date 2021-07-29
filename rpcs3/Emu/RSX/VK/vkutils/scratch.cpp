@@ -151,7 +151,7 @@ namespace vk
 		return ptr.get();
 	}
 
-	vk::buffer* get_scratch_buffer(u32 min_required_size)
+	vk::buffer* get_scratch_buffer(u64 min_required_size)
 	{
 		auto& scratch_buffer = g_scratch_buffers_pool[0 /*TODO: Replace with Queue Family ID*/].get_buf();
 
