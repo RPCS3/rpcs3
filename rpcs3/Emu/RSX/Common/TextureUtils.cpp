@@ -689,7 +689,10 @@ namespace rsx
 
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		{
-			if (depth > 1 && !caps.supports_vtc_decoding)
+			if (depth > 1 &&
+				utils::is_power_of_2(src_layout.width_in_texel) &&
+				utils::is_power_of_2(src_layout.height_in_texel) &&
+				!caps.supports_vtc_decoding)
 			{
 				// PS3 uses the Nvidia VTC memory layout for compressed 3D textures.
 				// This is only supported using Nvidia OpenGL.
@@ -711,7 +714,10 @@ namespace rsx
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 		{
-			if (depth > 1 && !caps.supports_vtc_decoding)
+			if (depth > 1 &&
+				utils::is_power_of_2(src_layout.width_in_texel) &&
+				utils::is_power_of_2(src_layout.height_in_texel) &&
+				!caps.supports_vtc_decoding)
 			{
 				// PS3 uses the Nvidia VTC memory layout for compressed 3D textures.
 				// This is only supported using Nvidia OpenGL.
