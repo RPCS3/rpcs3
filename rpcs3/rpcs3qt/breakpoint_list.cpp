@@ -5,8 +5,11 @@
 #include "Emu/Cell/PPUThread.h"
 
 #include <QMenu>
+#include <QMessageBox>
 
 constexpr auto qstr = QString::fromStdString;
+
+extern bool is_using_interpreter(u32 id_type);
 
 breakpoint_list::breakpoint_list(QWidget* parent, breakpoint_handler* handler) : QListWidget(parent), m_breakpoint_handler(handler)
 {
@@ -62,9 +65,12 @@ void breakpoint_list::RemoveBreakpoint(u32 addr)
 	Q_EMIT RequestShowAddress(addr);
 }
 
-void breakpoint_list::AddBreakpoint(u32 pc)
+bool breakpoint_list::AddBreakpoint(u32 pc)
 {
-	m_breakpoint_handler->AddBreakpoint(pc);
+	if (!m_breakpoint_handler->AddBreakpoint(pc))
+	{
+		return false;
+	}
 
 	m_disasm->disasm(pc);
 
@@ -78,6 +84,8 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 	addItem(breakpoint_item);
 
 	Q_EMIT RequestShowAddress(pc);
+
+	return true;
 }
 
 /**
@@ -85,9 +93,27 @@ void breakpoint_list::AddBreakpoint(u32 pc)
 */
 void breakpoint_list::HandleBreakpointRequest(u32 loc)
 {
-	if (!m_cpu || m_cpu->id_type() != 1 || !vm::check_addr(loc, vm::page_allocated | vm::page_executable))
+	if (!m_cpu || m_cpu->state & cpu_flag::exit)
+	{
+		return;
+	}
+
+	if (m_cpu->id_type() != 1)
 	{
 		// TODO: SPU breakpoints
+		QMessageBox::warning(this, tr("Unimplemented Breakpoints For Thread Type!"), tr("Cannot set breakpoints on non-PPU thread currently, sorry."));
+		return;
+	}
+
+	if (!vm::check_addr(loc, vm::page_executable))
+	{
+		QMessageBox::warning(this, tr("Invalid Memory For Breakpoints!"), tr("Cannot set breakpoints on non-executable memory!"));
+		return;
+	}
+
+	if (!is_using_interpreter(m_cpu->id_type()))
+	{
+		QMessageBox::warning(this, tr("Interpreters-Only Feature!"), tr("Cannot set breakpoints on non-interpreter decoders."));
 		return;
 	}
 
@@ -97,7 +123,11 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc)
 	}
 	else
 	{
-		AddBreakpoint(loc);
+		if (!AddBreakpoint(loc))
+		{
+			QMessageBox::warning(this, tr("Unknown error while setting breakpoint!"), tr("Failed to set breakpoints."));
+			return;
+		}
 	}
 }
 
