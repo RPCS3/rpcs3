@@ -46,6 +46,7 @@ private:
 	bool m_disable_kb_hotkeys = false;
 	bool m_mouse_hide_and_lock = false;
 	bool m_show_mouse_in_fullscreen = false;
+	bool m_lock_mouse_in_fullscreen = true;
 	bool m_hide_mouse_after_idletime = false;
 	u32 m_hide_mouse_idletime = 2000; // ms
 	bool m_flip_showed_frame = false;

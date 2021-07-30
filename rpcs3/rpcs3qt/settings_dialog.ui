@@ -2437,6 +2437,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="gs_lockMouseInFullscreen">
+                <property name="text">
+                 <string>Lock mouse cursor in Fullscreen</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QWidget" name="gs_hideMouseOnIdle_widget" native="true">
                 <layout class="QHBoxLayout" name="gs_hideMouseOnIdle_layout" stretch="0,0">
                  <property name="leftMargin">

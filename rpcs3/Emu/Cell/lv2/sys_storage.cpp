@@ -33,7 +33,7 @@ error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 		return CELL_EFAULT;
 	}
 
-	u64 storage_id = device & 0xFFFFF00FFFFFFFF;
+	[[maybe_unused]] u64 storage_id = device & 0xFFFFF00FFFFFFFF;
 	fs::file file;
 
 	if (const u32 id = idm::make<lv2_storage>(device, std::move(file), mode, flags))

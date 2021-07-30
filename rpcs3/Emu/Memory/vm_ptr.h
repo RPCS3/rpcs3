@@ -206,16 +206,24 @@ namespace vm
 			return *this;
 		}
 
+		template <bool = false> requires (std::is_copy_constructible_v<T>)
+		std::pair<bool, std::conditional_t<std::is_void_v<T>, char, std::remove_const_t<T>>> try_read() const
+		{
+			alignas(sizeof(T) >= 16 ? 16 : 8) char buf[sizeof(T)]{};
+			const bool ok = vm::try_access(vm::cast(m_addr), buf, sizeof(T), false);
+			return { ok, std::bit_cast<decltype(try_read().second)>(buf) };
+		}
+
 		template <bool = false> requires (!std::is_void_v<T>)
 		bool try_read(std::conditional_t<std::is_void_v<T>, char, std::remove_const_t<T>>& out) const
 		{
-			return vm::try_access(vm::cast(m_addr), &out, sizeof(T), false);
+			return vm::try_access(vm::cast(m_addr), std::addressof(out), sizeof(T), false);
 		}
 
 		template <bool = false> requires (!std::is_void_v<T> && !std::is_const_v<T>)
 		bool try_write(const std::conditional_t<std::is_void_v<T>, char, T>& _in) const
 		{
-			return vm::try_access(vm::cast(m_addr), const_cast<T*>(&_in), sizeof(T), true);
+			return vm::try_access(vm::cast(m_addr), const_cast<T*>(std::addressof(_in)), sizeof(T), true);
 		}
 
 		// Don't use

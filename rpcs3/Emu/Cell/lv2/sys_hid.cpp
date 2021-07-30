@@ -87,7 +87,7 @@ error_code sys_hid_manager_ioctl(u32 hid_handle, u32 pkg_id, vm::ptr<void> buf, 
 	// pkg_id == 6 == setpressmode?
 	else if (pkg_id == 0x68)
 	{
-		auto info = vm::static_ptr_cast<sys_hid_ioctl_68>(buf);
+		[[maybe_unused]] auto info = vm::static_ptr_cast<sys_hid_ioctl_68>(buf);
 		//info->unk2 = 0;
 	}
 

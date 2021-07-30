@@ -59,6 +59,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	m_disable_mouse = m_gui_settings->GetValue(gui::gs_disableMouse).toBool();
 	m_disable_kb_hotkeys = m_gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
 	m_show_mouse_in_fullscreen = m_gui_settings->GetValue(gui::gs_showMouseFs).toBool();
+	m_lock_mouse_in_fullscreen  = m_gui_settings->GetValue(gui::gs_lockMouseFs).toBool();
 	m_hide_mouse_after_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool();
 	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
 
@@ -703,7 +704,7 @@ void gs_frame::handle_cursor(QWindow::Visibility visibility, bool from_event, bo
 	if (from_event)
 	{
 		// In fullscreen we default to hiding and locking. In windowed mode we do not want the lock by default.
-		m_mouse_hide_and_lock = visibility == QWindow::Visibility::FullScreen;
+		m_mouse_hide_and_lock = (visibility == QWindow::Visibility::FullScreen) && m_lock_mouse_in_fullscreen;
 	}
 
 	// Update the mouse hide timer
