@@ -182,7 +182,7 @@ bool tar_object::extract(std::string vfs_mp)
 
 		u64 mtime = octal_text_to_u64({header.mtime, std::size(header.mtime)});
 
-		// Let's use it for optional atime 
+		// Let's use it for optional atime
 		u64 atime = octal_text_to_u64({header.padding, 12});
 
 		// This is a fake timestamp, it can be invalid
@@ -263,8 +263,6 @@ std::vector<u8> tar_object::save_directory(const std::string& src_dir, std::vect
 		return std::move(init);
 	}
 
-	u32 count = 0;
-
 	if (stat.is_directory)
 	{
 		bool has_items = false;
@@ -311,7 +309,7 @@ std::vector<u8> tar_object::save_directory(const std::string& src_dir, std::vect
 		if (func)
 		{
 			// Use custom function for file saving if provided
-			// Allows for example to compress PNG files as JPEG in the TAR itself 
+			// Allows for example to compress PNG files as JPEG in the TAR itself
 			if (!func(fd, saved_path, std::move(init)))
 			{
 				// Revert (this entry should not be included if func returns false)
@@ -338,7 +336,7 @@ std::vector<u8> tar_object::save_directory(const std::string& src_dir, std::vect
 
 	// Prefer saving to name field as much as we can
 	// If it doesn't fit, save 100 characters at name and 155 characters preceding to it at max
-	const u64 prefix_size = std::clamp<usz>(saved_path.size(), 100, 255) - 100; 
+	const u64 prefix_size = std::clamp<usz>(saved_path.size(), 100, 255) - 100;
 	std::memcpy(header.prefix, saved_path.data(), prefix_size);
 	const u64 name_size = std::min<usz>(saved_path.size(), 255) - prefix_size;
 	std::memcpy(header.name, saved_path.data() + prefix_size, name_size);
