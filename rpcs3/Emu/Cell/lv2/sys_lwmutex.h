@@ -71,10 +71,10 @@ struct lv2_lwmutex final : lv2_obj
 	{
 	}
 
-	// Try to add a waiter
-	bool add_waiter(cpu_thread* cpu)
+	// Add a waiter
+	void add_waiter(cpu_thread* cpu)
 	{
-		if (const auto old = lwcond_waiters.fetch_op([](s32& val)
+		const bool notify = lwcond_waiters.fetch_op([](s32& val)
 		{
 			if (val + 0u <= 1u << 31)
 			{
@@ -83,24 +83,18 @@ struct lv2_lwmutex final : lv2_obj
 			}
 
 			// lwmutex was set to be destroyed, but there are lwcond waiters
-			// Turn off the "destroying" bit as we are adding an lwmutex waiter
+			// Turn off the "lwcond_waiters notification" bit as we are adding an lwmutex waiter
 			val &= 0x7fff'ffff;
 			return true;
-		}).first; old != smin)
+		}).second;
+
+		sq.emplace_back(cpu);
+
+		if (notify)
 		{
-			sq.emplace_back(cpu);
-
-			if (old < 0)
-			{
-				// Notify lwmutex destroyer (may cause EBUSY to be returned for it)
-				lwcond_waiters.notify_all();
-			}
-
-			return true;
+			// Notify lwmutex destroyer (may cause EBUSY to be returned for it)
+			lwcond_waiters.notify_all();
 		}
-
-		// Failed - lwmutex was set to be destroyed and all lwcond waiters quit
-		return false;
 	}
 };
 
