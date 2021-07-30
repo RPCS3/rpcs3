@@ -3,9 +3,10 @@
 #include "cellCamera.h"
 
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/Io/MouseHandler.h"
-#include "Emu/RSX/GSRender.h"
-#include "Utilities/Timer.h"
+#include "Emu/system_config.h"
+#include "Emu/IdManager.h"
 #include "Input/pad_thread.h"
 
 LOG_CHANNEL(cellGem);
@@ -92,6 +93,10 @@ struct gem_config
 		u8 rumble = 0;                                     // Rumble intensity
 		gem_color sphere_rgb = {};                         // RGB color of the sphere LED
 		u32 hue = 0;                                       // Tracking hue of the motion controller
+		u32 distance{1500};                                // Distance from the camera in mm
+		u32 radius{10};                                    // Radius of the sphere in camera pixels
+
+		static constexpr s32 diameter_mm = 45;             // Physical diameter of the sphere in millimeter
 	};
 
 	CellGemAttribute attribute = {};
@@ -164,9 +169,7 @@ static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
 	std::scoped_lock lock(pad::g_pad_mutex);
 
 	const auto handler = pad::get_current_handler();
-
-	auto& pads = handler->GetPads();
-	auto pad = pads[port_no];
+	auto& pad = handler->GetPads()[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return false;
@@ -250,9 +253,7 @@ static bool ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller
 	std::scoped_lock lock(pad::g_pad_mutex);
 
 	const auto handler = pad::get_current_handler();
-
-	auto& pads = handler->GetPads();
-	auto pad = pads[port_no];
+	auto& pad = handler->GetPads()[port_no];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return false;
@@ -313,16 +314,16 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 		digital_buttons |= CELL_GEM_CTRL_CROSS;
 
 	if (is_pressed(CELL_MOUSE_BUTTON_4))
-		digital_buttons |= CELL_GEM_CTRL_SELECT;
-
-	if (is_pressed(CELL_MOUSE_BUTTON_5))
-		digital_buttons |= CELL_GEM_CTRL_START;
-
-	if (is_pressed(CELL_MOUSE_BUTTON_6) || (is_pressed(CELL_MOUSE_BUTTON_1) && is_pressed(CELL_MOUSE_BUTTON_2)))
 		digital_buttons |= CELL_GEM_CTRL_CIRCLE;
 
-	if (is_pressed(CELL_MOUSE_BUTTON_7) || (is_pressed(CELL_MOUSE_BUTTON_1) && is_pressed(CELL_MOUSE_BUTTON_3)))
+	if (is_pressed(CELL_MOUSE_BUTTON_5))
 		digital_buttons |= CELL_GEM_CTRL_SQUARE;
+
+	if (is_pressed(CELL_MOUSE_BUTTON_6) || (is_pressed(CELL_MOUSE_BUTTON_1) && is_pressed(CELL_MOUSE_BUTTON_2)))
+		digital_buttons |= CELL_GEM_CTRL_SELECT;
+
+	if (is_pressed(CELL_MOUSE_BUTTON_7) || (is_pressed(CELL_MOUSE_BUTTON_1) && is_pressed(CELL_MOUSE_BUTTON_3)))
+		digital_buttons |= CELL_GEM_CTRL_START;
 
 	if (is_pressed(CELL_MOUSE_BUTTON_8) || (is_pressed(CELL_MOUSE_BUTTON_2) && is_pressed(CELL_MOUSE_BUTTON_3)))
 		digital_buttons |= CELL_GEM_CTRL_TRIANGLE;
@@ -332,7 +333,7 @@ static bool mouse_input_to_pad(const u32 mouse_no, be_t<u16>& digital_buttons, b
 	return true;
 }
 
-static bool mouse_pos_to_gem_image_state(const u32 mouse_no, vm::ptr<CellGemImageState>& gem_image_state)
+static bool mouse_pos_to_gem_image_state(const u32 mouse_no, const gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state)
 {
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -344,25 +345,40 @@ static bool mouse_pos_to_gem_image_state(const u32 mouse_no, vm::ptr<CellGemImag
 	}
 
 	const auto& mouse = handler.GetMice().at(0);
+	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
-	const auto renderer = static_cast<GSRender*>(rsx::get_current_renderer());
-	const auto width = renderer->get_frame()->client_width();
-	const auto height = renderer->get_frame()->client_height();
-	const f32 scaling_width = width / 640.f;
-	const f32 scaling_height = height / 480.f;
+	s32 mouse_width = mouse.x_max;
+	if (mouse_width <= 0) mouse_width = shared_data.width;
+	s32 mouse_height = mouse.y_max;
+	if (mouse_height <= 0) mouse_height = shared_data.height;
+	const f32 scaling_width = mouse_width / static_cast<f32>(shared_data.width);
+	const f32 scaling_height = mouse_height / static_cast<f32>(shared_data.height);
+	const f32 mmPerPixel = controller.diameter_mm / static_cast<f32>(controller.radius * 2);
 
-	const f32 x = static_cast<f32>(mouse.x_pos) / scaling_width;
-	const f32 y = static_cast<f32>(mouse.y_pos) / scaling_height;
+	// Image coordinates in pixels
+	const f32 image_x = static_cast<f32>(mouse.x_pos) / scaling_width;
+	const f32 image_y = static_cast<f32>(mouse.y_pos) / scaling_height;
 
-	gem_image_state->u = 133.f + (x / 1.50f);
-	gem_image_state->v = 160.f + (y / 1.67f);
-	gem_image_state->projectionx = x - 320.f;
-	gem_image_state->projectiony = 240.f - y;
+	// Centered image coordinates in pixels
+	const f32 centered_x = image_x - (shared_data.width / 2.f);
+	const f32 centered_y = (shared_data.height / 2.f) - image_y; // Image coordinates increase downwards, so we have to invert this
+
+	// Camera coordinates in mm (centered, so it's the same as world coordinates)
+	const f32 camera_x = centered_x * mmPerPixel;
+	const f32 camera_y = centered_y * mmPerPixel;
+
+	// Image coordinates in pixels
+	gem_image_state->u = image_x;
+	gem_image_state->v = image_y;
+
+	// Projected camera coordinates in mm
+	gem_image_state->projectionx = camera_x / controller.distance;
+	gem_image_state->projectiony = camera_y / controller.distance;
 
 	return true;
 }
 
-static bool mouse_pos_to_gem_state(const u32 mouse_no, vm::ptr<CellGemState>& gem_state)
+static bool mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state)
 {
 	auto& handler = g_fxo->get<MouseHandlerBase>();
 
@@ -374,28 +390,42 @@ static bool mouse_pos_to_gem_state(const u32 mouse_no, vm::ptr<CellGemState>& ge
 	}
 
 	const auto& mouse = handler.GetMice().at(0);
+	const auto& shared_data = g_fxo->get<gem_camera_shared>();
+	
+	s32 mouse_width = mouse.x_max;
+	if (mouse_width <= 0) mouse_width = shared_data.width;
+	s32 mouse_height = mouse.y_max;
+	if (mouse_height <= 0) mouse_height = shared_data.height;
+	const f32 scaling_width = mouse_width / static_cast<f32>(shared_data.width);
+	const f32 scaling_height = mouse_height / static_cast<f32>(shared_data.height);
+	const f32 mmPerPixel = controller.diameter_mm / static_cast<f32>(controller.radius * 2);
 
-	const auto renderer = static_cast<GSRender*>(rsx::get_current_renderer());
-	const auto width = renderer->get_frame()->client_width();
-	const auto height = renderer->get_frame()->client_height();
+	// Image coordinates in pixels
+	const f32 image_x = static_cast<f32>(mouse.x_pos) / scaling_width;
+	const f32 image_y = static_cast<f32>(mouse.y_pos) / scaling_height;
 
-	const f32 scaling_width = width / 640.f;
-	const f32 scaling_height = height / 480.f;
-	const f32 x = static_cast<f32>(mouse.x_pos) / scaling_width;
-	const f32 y = static_cast<f32>(mouse.y_pos) / scaling_height;
+	// Centered image coordinates in pixels
+	const f32 centered_x = image_x - (shared_data.width / 2.f);
+	const f32 centered_y = (shared_data.height / 2.f) - image_y; // Image coordinates increase downwards, so we have to invert this
 
-	gem_state->pos[0] = x;
-	gem_state->pos[1] = -y;
-	gem_state->pos[2] = 1500.f;
+	// Camera coordinates in mm (centered, so it's the same as world coordinates)
+	const f32 camera_x = centered_x * mmPerPixel;
+	const f32 camera_y = centered_y * mmPerPixel;
+
+	// World coordinates in mm
+	gem_state->pos[0] = camera_x;
+	gem_state->pos[1] = camera_y;
+	gem_state->pos[2] = static_cast<f32>(controller.distance);
 	gem_state->pos[3] = 0.f;
 
-	gem_state->quat[0] = 320.f - x;
+	gem_state->quat[0] = 320.f - image_x;
 	gem_state->quat[1] = (mouse.y_pos / scaling_width) - 180.f;
 	gem_state->quat[2] = 1200.f;
 
-	gem_state->handle_pos[0] = x;
-	gem_state->handle_pos[1] = y;
-	gem_state->handle_pos[2] = 1500.f;
+	// TODO: calculate handle position based on our world coordinate and the angles
+	gem_state->handle_pos[0] = camera_x;
+	gem_state->handle_pos[1] = camera_y;
+	gem_state->handle_pos[2] = static_cast<f32>(controller.distance + 10);
 	gem_state->handle_pos[3] = 0.f;
 
 	return true;
@@ -749,14 +779,13 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	auto& shared_data = g_fxo->get<gem_camera_shared>();
-
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
+		auto& shared_data = g_fxo->get<gem_camera_shared>();
 		gem_image_state->frame_timestamp = shared_data.frame_timestamp.load();
 		gem_image_state->timestamp = gem_image_state->frame_timestamp + 10;
-		gem_image_state->r = 10;
-		gem_image_state->distance = 2 * 1000; // 2 meters away from camera
+		gem_image_state->r = gem.controllers[gem_num].radius; // Radius in camera pixels
+		gem_image_state->distance = gem.controllers[gem_num].distance; // 1.5 meters away from camera
 		gem_image_state->visible = gem.is_controller_ready(gem_num);
 		gem_image_state->r_valid = true;
 
@@ -769,7 +798,7 @@ error_code cellGemGetImageState(u32 gem_num, vm::ptr<CellGemImageState> gem_imag
 		}
 		else if (g_cfg.io.move == move_handler::mouse)
 		{
-			mouse_pos_to_gem_image_state(gem_num, gem_image_state);
+			mouse_pos_to_gem_image_state(gem_num, gem.controllers[gem_num], gem_image_state);
 		}
 	}
 
@@ -800,7 +829,7 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 
 		inertial_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
 		inertial_state->counter = gem.inertial_counter++;
-		inertial_state->accelerometer[0] = 10;
+		inertial_state->accelerometer[0] = 10; // Current gravity in m/s²
 
 		if (g_cfg.io.move == move_handler::fake)
 		{
@@ -958,6 +987,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		if (gem.controllers[gem_num].enabled_tracking)
 			tracking_flags |= CELL_GEM_TRACKING_FLAG_POSITION_TRACKED;
 
+		*gem_state = {};
 		gem_state->tracking_flags = tracking_flags;
 		gem_state->timestamp = (get_guest_system_time() - gem.start_timestamp);
 		gem_state->camera_pitch_angle = 0.f;
@@ -970,7 +1000,7 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		else if (g_cfg.io.move == move_handler::mouse)
 		{
 			mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
-			mouse_pos_to_gem_state(gem_num, gem_state);
+			mouse_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_state);
 		}
 	}
 
