@@ -205,7 +205,7 @@ struct cpu_prof
 						info.freq[name]++;
 
 						// Append verification time to fixed common name 0000000...chunk-0x3fffc
-						if ((name & 0xffff) == 0)
+						if (name >> 16 && (name & 0xffff) == 0)
 							info.freq[0xffff]++;
 					}
 					else
