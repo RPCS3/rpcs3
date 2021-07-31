@@ -369,12 +369,22 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 	fmt::throw_exception("Unexpected syscall result (lwcond=*0x%x, result=0x%x)", lwcond, +res);
 }
 
-void sysPrxForUser_sys_lwcond_init()
+void sysPrxForUser_sys_lwcond_init(ppu_static_module* _this)
 {
-	REG_FUNC(sysPrxForUser, sys_lwcond_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwcond_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwcond_signal).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwcond_signal_all).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwcond_signal_to).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwcond_wait).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	REG_FUNC(sysPrxForUser, sys_lwcond_create);
+	REG_FUNC(sysPrxForUser, sys_lwcond_destroy);
+	REG_FUNC(sysPrxForUser, sys_lwcond_signal);
+	REG_FUNC(sysPrxForUser, sys_lwcond_signal_all);
+	REG_FUNC(sysPrxForUser, sys_lwcond_signal_to);
+	REG_FUNC(sysPrxForUser, sys_lwcond_wait);
+
+	_this->add_init_func([](ppu_static_module*)
+	{
+		ACCESS_FUNC(sys_lwcond_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		ACCESS_FUNC(sys_lwcond_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		ACCESS_FUNC(sys_lwcond_signal).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		ACCESS_FUNC(sys_lwcond_signal_all).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		ACCESS_FUNC(sys_lwcond_signal_to).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		ACCESS_FUNC(sys_lwcond_wait).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	});
 }

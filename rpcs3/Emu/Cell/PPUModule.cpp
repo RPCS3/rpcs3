@@ -60,6 +60,19 @@ ppu_static_module::ppu_static_module(const char* name)
 	ppu_module_manager::register_module(this);
 }
 
+void ppu_static_module::add_init_func(void(*func)(ppu_static_module*))
+{
+	m_on_init.emplace_back(func);
+}
+
+void ppu_static_module::initialize()
+{
+	for (auto func : m_on_init)
+	{
+		func(this);
+	}
+}
+
 void ppu_module_manager::register_module(ppu_static_module* _module)
 {
 	ppu_module_manager::s_module_map.emplace(_module->name, _module);
@@ -94,6 +107,14 @@ const ppu_static_module* ppu_module_manager::get_module(const std::string& name)
 	const auto& map = ppu_module_manager::s_module_map;
 	const auto found = map.find(name);
 	return found != map.end() ? found->second : nullptr;
+}
+
+void ppu_module_manager::initialize_modules()
+{
+	for (auto& _module : s_module_map)
+	{
+		_module.second->initialize();
+	}
 }
 
 // Global linkage information
@@ -135,6 +156,8 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 	{
 		return;
 	}
+
+	ppu_module_manager::initialize_modules();
 
 	const std::initializer_list<const ppu_static_module*> registered
 	{

@@ -168,8 +168,8 @@ error_code sysPs2Disc_BB7CD1AE()
 	return CELL_OK;
 }
 
-extern void sysPrxForUser_sys_lwmutex_init();
-extern void sysPrxForUser_sys_lwcond_init();
+extern void sysPrxForUser_sys_lwmutex_init(ppu_static_module*);
+extern void sysPrxForUser_sys_lwcond_init(ppu_static_module*);
 extern void sysPrxForUser_sys_ppu_thread_init();
 extern void sysPrxForUser_sys_prx_init();
 extern void sysPrxForUser_sys_heap_init();
@@ -181,7 +181,7 @@ extern void sysPrxForUser_sys_game_init();
 extern void sysPrxForUser_sys_libc_init();
 extern void sysPrxForUser_sys_rsxaudio_init();
 
-DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
+DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", [](ppu_static_module* _this)
 {
 	static ppu_static_module cellGamePs1Emu("cellGamePs1Emu", []()
 	{
@@ -217,8 +217,8 @@ DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 		REG_FNID(sysPs2Disc, 0xBB7CD1AE, sysPs2Disc_BB7CD1AE);
 	});
 
-	sysPrxForUser_sys_lwmutex_init();
-	sysPrxForUser_sys_lwcond_init();
+	sysPrxForUser_sys_lwmutex_init(_this);
+	sysPrxForUser_sys_lwcond_init(_this);
 	sysPrxForUser_sys_ppu_thread_init();
 	sysPrxForUser_sys_prx_init();
 	sysPrxForUser_sys_heap_init();
