@@ -3,31 +3,19 @@
 // http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 
 #include "utils.h"
-#include <string>
-
-void bn_print(char* name, u8* a, u32 n)
-{
-	u32 i;
-
-	printf("%s = ", name);
-
-	for (i = 0; i < n; i++)
-		printf("%02x", a[i]);
-
-	printf("\n");
-}
+#include <cstring>
 
 static void bn_zero(u8* d, u32 n)
 {
 	memset(d, 0, n);
 }
 
-void bn_copy(u8* d, u8* a, u32 n)
+static void bn_copy(u8* d, u8* a, u32 n)
 {
 	memcpy(d, a, n);
 }
 
-int bn_compare(u8* a, u8* b, u32 n)
+static int bn_compare(u8* a, u8* b, u32 n)
 {
 	u32 i;
 
@@ -76,13 +64,13 @@ static u8 bn_sub_1(u8* d, u8* a, u8* b, u32 n)
 	return 1 - c;
 }
 
-void bn_reduce(u8* d, u8* N, u32 n)
+static void bn_reduce(u8* d, u8* N, u32 n)
 {
 	if (bn_compare(d, N, n) >= 0)
 		bn_sub_1(d, d, N, n);
 }
 
-void bn_add(u8* d, u8* a, u8* b, u8* N, u32 n)
+static void bn_add(u8* d, u8* a, u8* b, u8* N, u32 n)
 {
 	if (bn_add_1(d, a, b, n))
 		bn_sub_1(d, d, N, n);
@@ -90,7 +78,7 @@ void bn_add(u8* d, u8* a, u8* b, u8* N, u32 n)
 	bn_reduce(d, N, n);
 }
 
-void bn_sub(u8* d, u8* a, u8* b, u8* N, u32 n)
+static void bn_sub(u8* d, u8* a, u8* b, u8* N, u32 n)
 {
 	if (bn_sub_1(d, a, b, n))
 		bn_add_1(d, d, N, n);
@@ -141,7 +129,7 @@ static void bn_mon_muladd_dig(u8* d, u8* a, u8 b, u8* N, u32 n)
 	bn_reduce(d, N, n);
 }
 
-void bn_mon_mul(u8* d, u8* a, u8* b, u8* N, u32 n)
+static void bn_mon_mul(u8* d, u8* a, u8* b, u8* N, u32 n)
 {
 	u8 t[512];
 	u32 i;
@@ -154,7 +142,7 @@ void bn_mon_mul(u8* d, u8* a, u8* b, u8* N, u32 n)
 	bn_copy(d, t, n);
 }
 
-void bn_to_mon(u8* d, u8* N, u32 n)
+static void bn_to_mon(u8* d, u8* N, u32 n)
 {
 	u32 i;
 
@@ -162,7 +150,7 @@ void bn_to_mon(u8* d, u8* N, u32 n)
 		bn_add(d, d, d, N, n);
 }
 
-void bn_from_mon(u8* d, u8* N, u32 n)
+static void bn_from_mon(u8* d, u8* N, u32 n)
 {
 	u8 t[512];
 
@@ -192,7 +180,7 @@ static void bn_mon_exp(u8* d, u8* a, u8* N, u32 n, u8* e, u32 en)
 		}
 }
 
-void bn_mon_inv(u8* d, u8* a, u8* N, u32 n)
+static void bn_mon_inv(u8* d, u8* a, u8* N, u32 n)
 {
 	u8 t[512], s[512];
 
@@ -275,30 +263,6 @@ static void point_from_mon(point* p)
 	bn_from_mon(p->x, ec_p, 20);
 	bn_from_mon(p->y, ec_p, 20);
 }
-
-#if 0
-static int point_is_on_curve(u8* p)
-{
-	u8 s[20], t[20];
-	u8 *x, *y;
-
-	x = p;
-	y = p + 20;
-
-	elt_square(t, x);
-	elt_mul(s, t, x);
-
-	elt_mul(t, x, ec_a);
-	elt_add(s, s, t);
-
-	elt_add(s, s, ec_b);
-
-	elt_square(t, y);
-	elt_sub(s, s, t);
-
-	return elt_is_zero(s);
-}
-#endif
 
 static void point_zero(point* p)
 {
@@ -459,13 +423,6 @@ static int check_ecdsa(struct point* Q, u8* R, u8* S, u8* hash)
 
 	return (bn_compare(rr, R, 21) == 0);
 }
-
-#if 0
-static void ec_priv_to_pub(u8* k, u8* Q)
-{
-	point_mul(Q, k, ec_G);
-}
-#endif
 
 int ecdsa_set_curve(const u8* p, const u8* a, const u8* b, const u8* N, const u8* Gx, const u8* Gy)
 {
