@@ -1897,12 +1897,12 @@ void VKGSRender::load_program_env()
 	{
 		check_heap_status(VK_HEAP_CHECK_TEXTURE_ENV_STORAGE);
 
-		auto mem = m_fragment_texture_params_ring_info.alloc<256>(256);
-		auto buf = m_fragment_texture_params_ring_info.map(mem, 256);
+		auto mem = m_fragment_texture_params_ring_info.alloc<256>(512);
+		auto buf = m_fragment_texture_params_ring_info.map(mem, 512);
 
 		current_fragment_program.texture_params.write_to(buf, current_fp_metadata.referenced_textures_mask);
 		m_fragment_texture_params_ring_info.unmap();
-		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 256 };
+		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 512 };
 	}
 
 	if (update_raster_env)

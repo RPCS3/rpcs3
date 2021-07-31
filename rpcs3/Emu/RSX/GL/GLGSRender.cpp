@@ -812,10 +812,10 @@ void GLGSRender::load_program_env()
 	if (update_fragment_texture_env)
 	{
 		// Fragment texture parameters
-		auto mapping = m_texture_parameters_buffer->alloc_from_heap(256, m_uniform_buffer_offset_align);
+		auto mapping = m_texture_parameters_buffer->alloc_from_heap(512, m_uniform_buffer_offset_align);
 		current_fragment_program.texture_params.write_to(mapping.first, current_fp_metadata.referenced_textures_mask);
 
-		m_texture_parameters_buffer->bind_range(GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, mapping.second, 256);
+		m_texture_parameters_buffer->bind_range(GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, mapping.second, 512);
 	}
 
 	if (update_raster_env)
