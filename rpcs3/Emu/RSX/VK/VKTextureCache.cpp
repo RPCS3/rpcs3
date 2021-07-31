@@ -43,8 +43,9 @@ namespace vk
 			const auto section_length = valid_range.length();
 			const auto transfer_pitch = real_pitch;
 			const auto task_length = transfer_pitch * src_area.height();
+			const auto working_buffer_length = calculate_working_buffer_size(task_length, src->aspect());
 
-			auto working_buffer = vk::get_scratch_buffer(task_length);
+			auto working_buffer = vk::get_scratch_buffer(working_buffer_length);
 			auto final_mapping = vk::map_dma(valid_range.start, section_length);
 
 			VkBufferImageCopy region = {};

@@ -218,7 +218,7 @@ struct cpu_prof
 			// Cleanup and print results for deleted threads
 			for (auto it = threads.begin(), end = threads.end(); it != end;)
 			{
-				if (cpu_flag::exit - it->second.ptr->state)
+				if (cpu_flag::exit & it->second.ptr->state)
 					it->second.print(it->first), it = threads.erase(it);
 				else
 					it++;

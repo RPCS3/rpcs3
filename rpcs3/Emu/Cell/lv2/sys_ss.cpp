@@ -190,8 +190,6 @@ error_code sys_ss_get_cache_of_product_mode(vm::ptr<u8> ptr)
 {
 	sys_ss.todo("sys_ss_get_cache_of_product_mode(ptr=*0x%x)", ptr);
 
-	s32 pid = 1;
-
 	if (!ptr)
 	{
 		return CELL_EINVAL;

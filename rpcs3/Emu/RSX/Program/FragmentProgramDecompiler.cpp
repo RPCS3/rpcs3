@@ -217,7 +217,7 @@ std::string FragmentProgramDecompiler::AddConst()
 		return name;
 	}
 
-	auto data = reinterpret_cast<be_t<u32>*>(static_cast<char*>(m_prog.get_data()) + m_size + 4 * sizeof(u32));
+	auto data = reinterpret_cast<be_t<u32>*>(reinterpret_cast<uptr>(m_prog.get_data()) + m_size + 4 * sizeof(u32));
 	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);
 	u32 y = GetData(data[1]);
