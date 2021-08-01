@@ -567,7 +567,7 @@ void spu_cache::initialize()
 					u8 output[20];
 
 					sha1_starts(&ctx);
-					sha1_update(&ctx, bytes.data(), bytes.size() * sizeof(u32));
+					sha1_update(&ctx, bytes.data(), bytes.size());
 					sha1_finish(&ctx, output);
 					fmt::append(dump, "\n\t[%s] ", fmt::base57(output));
 				}
