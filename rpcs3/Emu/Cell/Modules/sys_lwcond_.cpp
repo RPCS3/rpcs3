@@ -380,11 +380,11 @@ void sysPrxForUser_sys_lwcond_init(ppu_static_module* _this)
 
 	_this->add_init_func([](ppu_static_module*)
 	{
-		ACCESS_FUNC(sys_lwcond_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		ACCESS_FUNC(sys_lwcond_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		ACCESS_FUNC(sys_lwcond_signal).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		ACCESS_FUNC(sys_lwcond_signal_all).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		ACCESS_FUNC(sys_lwcond_signal_to).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-		ACCESS_FUNC(sys_lwcond_wait).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwcond_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwcond_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwcond_signal).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwcond_signal_all).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwcond_signal_to).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwcond_wait).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
 	});
 }
