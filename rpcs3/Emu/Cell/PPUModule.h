@@ -301,6 +301,6 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 
 #define REG_VAR(_module, var) REG_VNID(_module, #var, var)
 
-#define ACCESS_FUNC(func) ppu_module_manager::find_static_function<&func>()
+#define REINIT_FUNC(func) (ppu_module_manager::find_static_function<&func>().flags = 0, ppu_module_manager::find_static_function<&func>())
 
 #define UNIMPLEMENTED_FUNC(_module) _module.todo("%s()", __func__)
