@@ -3029,10 +3029,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			if (!jit && !check_only)
 			{
 				ppu_log.success("LLVM: Module exists: %s", obj_name);
-			}
 
-			if (!check_only)
-			{
 				// Update progress dialog
 				g_progr_pdone++;
 			}
