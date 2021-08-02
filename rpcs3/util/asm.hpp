@@ -385,13 +385,6 @@ namespace utils
 		return static_cast<T>(value / align + (value > 0 ? T{(value % align) > (align / 2)} : 0 - T{(value % align) < (align / 2)}));
 	}
 
-	// Returns true if input is an unsigned integer with a power of 2
-	template <typename T> requires(std::is_integral_v<T> && std::is_unsigned_v<T>)
-	constexpr T is_power_of_2(T value)
-	{
-		return !(value & (value - 1));
-	}
-
 	// Hack. Pointer cast util to workaround UB. Use with extreme care.
 	template <typename T, typename U>
 	[[nodiscard]] T* bless(U* ptr)
