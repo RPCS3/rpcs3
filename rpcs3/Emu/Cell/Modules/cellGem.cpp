@@ -1223,13 +1223,20 @@ error_code cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_
 
 	const auto vc = *vc_attribute;
 
-	if (!vc_attribute || vc.version == 0 || vc.output_format == 0 ||
-		(vc.conversion_flags & CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME && !vc.buffer_memory))
+	if (!vc_attribute || vc.version != CELL_GEM_VERSION)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (vc.video_data_out & 0x1f || vc.buffer_memory & 0xff)
+	if (vc.output_format != CELL_GEM_NO_VIDEO_OUTPUT)
+	{
+		if (!vc.video_data_out || ((vc.conversion_flags & CELL_GEM_COMBINE_PREVIOUS_INPUT_FRAME) && !vc.buffer_memory))
+		{
+			return CELL_GEM_ERROR_INVALID_PARAMETER;
+		}
+	}
+
+	if (!vc.video_data_out.aligned(16) || !vc.buffer_memory.aligned(128))
 	{
 		return CELL_GEM_ERROR_INVALID_ALIGNMENT;
 	}

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Memory/vm_ptr.h"
+
 static const float CELL_GEM_SPHERE_RADIUS_MM = 22.5f;
 
 // Error codes
@@ -265,7 +267,7 @@ struct CellGemVideoConvertAttribute
 	be_t<f32> red_gain;
 	be_t<f32> green_gain;
 	be_t<f32> blue_gain;
-	be_t<u32> buffer_memory;
-	be_t<u32> video_data_out;
+	vm::ptr<void> buffer_memory;
+	vm::ptr<void> video_data_out;
 	u8 alpha;
 };
