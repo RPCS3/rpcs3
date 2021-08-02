@@ -13,6 +13,12 @@ namespace utils
 	{
 		return std::span<T>(bless<T>(span.data()), sizeof(U) * span.size() / sizeof(T));
 	}
+
+	template <typename T>
+	bool is_power_of_2(T value)
+	{
+		return std::has_single_bit(value);
+	}
 }
 
 namespace
