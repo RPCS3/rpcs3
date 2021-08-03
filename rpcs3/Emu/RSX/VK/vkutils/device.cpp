@@ -469,6 +469,11 @@ namespace vk
 
 	void render_device::destroy()
 	{
+		if (g_render_device == this)
+		{
+			g_render_device = nullptr;
+		}
+
 		if (dev && pgpu)
 		{
 			if (m_allocator)
