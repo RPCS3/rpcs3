@@ -13,6 +13,12 @@ namespace utils
 	{
 		return std::span<T>(bless<T>(span.data()), sizeof(U) * span.size() / sizeof(T));
 	}
+
+	template <typename T>
+	bool is_power_of_2(T value)
+	{
+		return std::has_single_bit(value);
+	}
 }
 
 namespace
@@ -127,9 +133,10 @@ struct copy_unmodified_block_swizzled
 struct copy_unmodified_block_vtc
 {
 	template<typename T, typename U>
-	static void copy_mipmap_level(std::span<T> dst, std::span<const U> src, u16 width_in_block, u16 row_count, u16 depth, u32 /*dst_pitch_in_block*/, u32 /*src_pitch_in_block*/)
+	static void copy_mipmap_level(std::span<T> dst, std::span<const U> src, u16 width_in_block, u16 row_count, u16 depth, u32 dst_pitch_in_block, u32 /*src_pitch_in_block*/)
 	{
 		static_assert(sizeof(T) == sizeof(U), "Type size doesn't match.");
+		u32 plane_size = dst_pitch_in_block * row_count;
 		u32 row_element_count = width_in_block * row_count;
 		u32 dst_offset = 0;
 		u32 src_offset = 0;
@@ -154,7 +161,7 @@ struct copy_unmodified_block_vtc
 				dst[dst_offset + i] = src[src_offset + i * 4];
 			}
 
-			dst_offset += row_element_count;
+			dst_offset += plane_size;
 
 			// Last plane in the group of 4?
 			if ((d & 0x3) == 0x3)
@@ -179,8 +186,64 @@ struct copy_unmodified_block_vtc
 				dst[dst_offset + i] = src[src_offset + i * vtc_tile_count];
 			}
 
-			dst_offset += row_element_count;
+			dst_offset += plane_size;
 			src_offset += 1;
+		}
+	}
+};
+
+struct copy_linear_block_to_vtc
+{
+	template<typename T, typename U>
+	static void copy_mipmap_level(std::span<T> dst, std::span<const U> src, u16 width_in_block, u16 row_count, u16 depth, u32 /*dst_pitch_in_block*/, u32 src_pitch_in_block)
+	{
+		static_assert(sizeof(T) == sizeof(U), "Type size doesn't match.");
+		u32 plane_size = src_pitch_in_block * row_count;
+		u32 row_element_count = width_in_block * row_count;
+		u32 dst_offset = 0;
+		u32 src_offset = 0;
+		const u16 depth_4 = (depth >> 2) * 4;	// multiple of 4
+
+		// Convert incoming linear texture to VTC compressed texture
+		// https://www.khronos.org/registry/OpenGL/extensions/NV/NV_texture_compression_vtc.txt
+
+		//  Tile as 4x4x4
+		for (int d = 0; d < depth_4; d++)
+		{
+			// Copy one slice of the 3d texture
+			for (u32 i = 0; i < row_element_count; i += 1)
+			{
+				// Copy one span (8 bytes for DXT1 or 16 bytes for DXT5)
+				dst[dst_offset + i * 4] = src[src_offset + i];
+			}
+
+			src_offset += plane_size;
+
+			// Last plane in the group of 4?
+			if ((d & 0x3) == 0x3)
+			{
+				// Move forward to next group of 4 planes
+				dst_offset += row_element_count * 4 - 3;
+			}
+			else
+			{
+				dst_offset ++;
+			}
+		}
+
+		// End Case - tile as 4x4x3 or 4x4x2 or 4x4x1
+		const int vtc_tile_count = depth - depth_4;
+		for (int d = 0; d < vtc_tile_count; d++)
+		{
+			// Copy one slice of the 3d texture
+			for (u32 i = 0; i < row_element_count; i += 1)
+			{
+				// Copy one span (8 bytes for DXT1 or 16 bytes for DXT5)
+				dst[dst_offset + i * vtc_tile_count] = src[src_offset + i];
+			}
+
+			src_offset += row_element_count;
+			dst_offset ++;
 		}
 	}
 };
@@ -689,12 +752,21 @@ namespace rsx
 
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
 		{
-			if (depth > 1 && !caps.supports_vtc_decoding)
+			const bool is_3d = depth > 1;
+			const bool is_po2 = utils::is_power_of_2(src_layout.width_in_texel) && utils::is_power_of_2(src_layout.height_in_texel);
+
+			if (is_3d && is_po2 && !caps.supports_vtc_decoding)
 			{
 				// PS3 uses the Nvidia VTC memory layout for compressed 3D textures.
 				// This is only supported using Nvidia OpenGL.
 				// Remove the VTC tiling to support ATI and Vulkan.
 				copy_unmodified_block_vtc::copy_mipmap_level(utils::bless<u64>(dst_buffer), utils::bless<const u64>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
+			}
+			else if (is_3d && !is_po2 && caps.supports_vtc_decoding)
+			{
+				// In this case, hardware expects us to feed it a VTC input, but on PS3 we only have a linear one.
+				// We need to compress the 2D-planar DXT input into a VTC output
+				copy_linear_block_to_vtc::copy_mipmap_level(utils::bless<u64>(dst_buffer), utils::bless<const u64>(src_layout.data), w, h, depth, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
 			}
 			else if (caps.supports_zero_copy)
 			{
@@ -711,12 +783,21 @@ namespace rsx
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
 		{
-			if (depth > 1 && !caps.supports_vtc_decoding)
+			const bool is_3d = depth > 1;
+			const bool is_po2 = utils::is_power_of_2(src_layout.width_in_texel) && utils::is_power_of_2(src_layout.height_in_texel);
+
+			if (is_3d && is_po2 && !caps.supports_vtc_decoding)
 			{
 				// PS3 uses the Nvidia VTC memory layout for compressed 3D textures.
 				// This is only supported using Nvidia OpenGL.
 				// Remove the VTC tiling to support ATI and Vulkan.
 				copy_unmodified_block_vtc::copy_mipmap_level(utils::bless<u128>(dst_buffer), utils::bless<const u128>(src_layout.data), w, h, depth, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
+			}
+			else if (is_3d && !is_po2 && caps.supports_vtc_decoding)
+			{
+				// In this case, hardware expects us to feed it a VTC input, but on PS3 we only have a linear one.
+				// We need to compress the 2D-planar DXT input into a VTC output
+				copy_linear_block_to_vtc::copy_mipmap_level(utils::bless<u128>(dst_buffer), utils::bless<const u128>(src_layout.data), w, h, depth, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
 			}
 			else if (caps.supports_zero_copy)
 			{

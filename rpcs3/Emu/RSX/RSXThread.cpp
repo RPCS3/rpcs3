@@ -1878,8 +1878,10 @@ namespace rsx
 			auto &tex = rsx::method_registers.fragment_textures[i];
 			if (tex.enabled())
 			{
-				current_fragment_program.texture_params[i].scale_x = sampler_descriptors[i]->scale_x;
-				current_fragment_program.texture_params[i].scale_y = sampler_descriptors[i]->scale_y;
+				current_fragment_program.texture_params[i].scale[0] = sampler_descriptors[i]->scale_x;
+				current_fragment_program.texture_params[i].scale[1] = sampler_descriptors[i]->scale_y;
+				current_fragment_program.texture_params[i].scale[2] = sampler_descriptors[i]->scale_z;
+				current_fragment_program.texture_params[i].subpixel_bias = 0.f;
 				current_fragment_program.texture_params[i].remap = tex.remap();
 
 				m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
@@ -1899,7 +1901,16 @@ namespace rsx
 				const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
 				if (raw_format & CELL_GCM_TEXTURE_UN)
+				{
 					current_fp_texture_state.unnormalized_coords |= (1 << i);
+
+					if (tex.min_filter() == rsx::texture_minify_filter::nearest ||
+						tex.mag_filter() == rsx::texture_magnify_filter::nearest)
+					{
+						// Subpixel offset so that (X + bias) * scale will round correctly
+						current_fragment_program.texture_params[i].subpixel_bias = 0.5f;
+					}
+				}
 
 				if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)
 				{
