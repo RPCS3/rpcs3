@@ -503,7 +503,7 @@ namespace rsx
 		sampled_image_descriptor process_framebuffer_resource_fast(commandbuffer_type& cmd,
 			render_target_type texptr,
 			const image_section_attributes_t& attr,
-			const size2f& scale,
+			const size3f& scale,
 			texture_dimension_extended extended_dimension,
 			u32 encoded_remap, const texture_channel_remap_t& decoded_remap,
 			bool surface_is_rop_target,
@@ -594,7 +594,7 @@ namespace rsx
 		sampled_image_descriptor merge_cache_resources(
 			const surface_store_list_type& fbos, const std::vector<section_storage_type*>& local,
 			const image_section_attributes_t& attr,
-			const size2f& scale,
+			const size3f& scale,
 			texture_dimension_extended extended_dimension,
 			u32 /*encoded_remap*/, const texture_channel_remap_t& decoded_remap,
 			int select_hint = -1)

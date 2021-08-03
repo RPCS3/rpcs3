@@ -1993,24 +1993,35 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 	error_code::error_report(0, 0, 0, 0);
 
 #ifdef _WIN32
+	static thread_local ULONG64 tls_cycles{};
+	static thread_local u64 tls_time{};
 	ULONG64 cycles{};
 	QueryThreadCycleTime(GetCurrentThread(), &cycles);
+	cycles -= tls_cycles;
+	tls_cycles += cycles;
 	FILETIME ctime, etime, ktime, utime;
 	GetThreadTimes(GetCurrentThread(), &ctime, &etime, &ktime, &utime);
-	const u64 time = ((ktime.dwLowDateTime | (u64)ktime.dwHighDateTime << 32) + (utime.dwLowDateTime | (u64)utime.dwHighDateTime << 32)) * 100ull;
+	const u64 time = ((ktime.dwLowDateTime | (u64)ktime.dwHighDateTime << 32) + (utime.dwLowDateTime | (u64)utime.dwHighDateTime << 32)) * 100ull - tls_time;
+	tls_time += time;
 	const u64 fsoft = 0;
 	const u64 fhard = 0;
 	const u64 ctxvol = 0;
 	const u64 ctxinv = 0;
 #elif defined(RUSAGE_THREAD)
+	static thread_local u64 tls_time{}, tls_fsoft{}, tls_fhard{}, tls_ctxvol{}, tls_ctxinv{};
 	const u64 cycles = 0; // Not supported
 	struct ::rusage stats{};
 	::getrusage(RUSAGE_THREAD, &stats);
-	const u64 time = (stats.ru_utime.tv_sec + stats.ru_stime.tv_sec) * 1000000000ull + (stats.ru_utime.tv_usec + stats.ru_stime.tv_usec) * 1000ull;
-	const u64 fsoft = stats.ru_minflt;
-	const u64 fhard = stats.ru_majflt;
-	const u64 ctxvol = stats.ru_nvcsw;
-	const u64 ctxinv = stats.ru_nivcsw;
+	const u64 time = (stats.ru_utime.tv_sec + stats.ru_stime.tv_sec) * 1000000000ull + (stats.ru_utime.tv_usec + stats.ru_stime.tv_usec) * 1000ull - tls_time;
+	tls_time += time;
+	const u64 fsoft = stats.ru_minflt - tls_fsoft;
+	tls_fsoft += fsoft;
+	const u64 fhard = stats.ru_majflt - tls_fhard;
+	tls_fhard += fhard;
+	const u64 ctxvol = stats.ru_nvcsw - tls_ctxvol;
+	tls_ctxvol += ctxvol;
+	const u64 ctxinv = stats.ru_nivcsw - tls_ctxinv;
+	tls_ctxinv += ctxinv;
 #else
 	const u64 cycles = 0;
 	const u64 time = 0;

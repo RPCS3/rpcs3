@@ -16,7 +16,7 @@ public:
 	breakpoint_list(QWidget* parent, breakpoint_handler* handler);
 	void UpdateCPUData(cpu_thread* cpu, CPUDisAsm* disasm);
 	void ClearBreakpoints();
-	void AddBreakpoint(u32 pc);
+	bool AddBreakpoint(u32 pc);
 	void RemoveBreakpoint(u32 addr);
 
 	QColor m_text_color_bp;
