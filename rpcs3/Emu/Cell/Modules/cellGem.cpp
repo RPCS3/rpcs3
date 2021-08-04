@@ -1356,7 +1356,7 @@ error_code cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, v
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (gem.controllers[gem_num].status & CELL_GEM_STATUS_DISCONNECTED)
+	if (!gem.is_controller_ready(gem_num))
 	{
 		return CELL_GEM_NOT_CONNECTED;
 	}
