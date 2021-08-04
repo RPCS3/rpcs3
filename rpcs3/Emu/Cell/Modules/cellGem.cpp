@@ -98,6 +98,10 @@ struct gem_config
 		u32 distance{1500};                                // Distance from the camera in mm
 		u32 radius{10};                                    // Radius of the sphere in camera pixels
 
+		bool is_calibrating{false};                        // Whether or not we are currently calibrating
+		u64 calibration_start_us{0};                       // The start timestamp of the calibration in microseconds
+
+		static constexpr u64 calibration_time_us = 500000; // The calibration supposedly takes 0.5 seconds (500000 microseconds)
 		static constexpr s32 diameter_mm = 45;             // Physical diameter of the sphere in millimeter
 	};
 
@@ -122,6 +126,27 @@ struct gem_config
 	bool is_controller_ready(u32 gem_num) const
 	{
 		return controllers[gem_num].status == CELL_GEM_STATUS_READY;
+	}
+
+	bool is_controller_calibrating(u32 gem_num)
+	{
+		gem_controller& gem = controllers[gem_num];
+
+		if (gem.is_calibrating)
+		{
+			if ((get_guest_system_time() - gem.calibration_start_us) >= gem_controller::calibration_time_us)
+			{
+				gem.is_calibrating = false;
+				gem.calibration_start_us = 0;
+				gem.calibrated_magnetometer = true;
+				gem.enabled_tracking = true;
+				gem.hue = 1;
+
+				status_flags = CELL_GEM_FLAG_CALIBRATION_SUCCEEDED;
+			}
+		}
+
+		return gem.is_calibrating;
 	}
 
 	void reset_controller(u32 gem_num)
@@ -456,12 +481,15 @@ error_code cellGemCalibrate(u32 gem_num)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
+	if (gem.is_controller_calibrating(gem_num))
+	{
+		return CELL_EBUSY;
+	}
+
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
-		gem.controllers[gem_num].calibrated_magnetometer = true;
-		gem.controllers[gem_num].enabled_tracking = true;
-		gem.controllers[gem_num].hue = 1;
-		gem.status_flags = CELL_GEM_FLAG_CALIBRATION_SUCCEEDED;
+		gem.controllers[gem_num].is_calibrating = true;
+		gem.controllers[gem_num].calibration_start_us = get_guest_system_time();
 	}
 
 	return CELL_OK;
@@ -1052,13 +1080,16 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 		return CELL_GEM_COMPUTING_AVAILABLE_COLORS;
 	}
 
-	// TODO: verify position of this check. gem_state seems to be polled regardless (otherwise you would never be able to calibrate anyway)
+	if (gem.is_controller_calibrating(gem_num))
+	{
+		return CELL_GEM_SPHERE_CALIBRATING;
+	}
+
 	if (!gem.controllers[gem_num].calibrated_magnetometer)
 	{
 		return CELL_GEM_SPHERE_NOT_CALIBRATED;
 	}
 
-	// TODO: verify position of this check
 	if (!gem.controllers[gem_num].hue_set)
 	{
 		return CELL_GEM_HUE_NOT_SET;
@@ -1255,6 +1286,11 @@ error_code cellGemInvalidateCalibration(s32 gem_num)
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
 		gem.controllers[gem_num].calibrated_magnetometer = false;
+
+		// TODO: does this really stop an ongoing calibration ?
+		gem.controllers[gem_num].is_calibrating = false;
+		gem.controllers[gem_num].calibration_start_us = 0;
+
 		// TODO: gem.status_flags (probably not changed)
 	}
 
