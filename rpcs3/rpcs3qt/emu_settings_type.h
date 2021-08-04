@@ -71,6 +71,8 @@ enum class emu_settings_type
 	AnisotropicFilterOverride,
 	ResolutionScale,
 	MinimumScalableDimension,
+	FsrUpscalingEnable,
+	FsrSharpeningStrength,
 	ForceCPUBlitEmulation,
 	DisableOnDiskShaderCache,
 	DisableVulkanMemAllocator,
@@ -240,6 +242,8 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	// Vulkan
 	{ emu_settings_type::VulkanAsyncTextureUploads,        { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},
 	{ emu_settings_type::VulkanAsyncSchedulerDriver,       { "Video", "Vulkan", "Asynchronous Queue Scheduler"}},
+	{ emu_settings_type::FsrUpscalingEnable,               { "Video", "Vulkan", "Enable FidelityFX Super Resolution Upscaling"}},
+	{ emu_settings_type::FsrSharpeningStrength,            { "Video", "Vulkan", "FidelityFX CAS Sharpening Intensity"}},
 
 	// Performance Overlay
 	{ emu_settings_type::PerfOverlayEnabled,               { "Video", "Performance Overlay", "Enabled" } },

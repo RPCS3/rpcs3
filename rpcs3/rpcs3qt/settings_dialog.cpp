@@ -469,6 +469,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->asyncTextureStreaming, emu_settings_type::VulkanAsyncTextureUploads);
 	SubscribeTooltip(ui->asyncTextureStreaming, tooltips.settings.async_texture_streaming);
 
+	m_emu_settings->EnhanceCheckBox(ui->fsrUpscalingEnable, emu_settings_type::FsrUpscalingEnable);
+	SubscribeTooltip(ui->fsrUpscalingEnable, tooltips.settings.fsr_upscaling);
+
 	// Radio buttons
 
 	SubscribeTooltip(ui->rb_legacy_recompiler, tooltips.settings.legacy_shader_recompiler);
@@ -539,6 +542,29 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->minimumScalableDimensionReset, &QAbstractButton::clicked, [minimum_scalable_dimension_def, this]()
 	{
 		ui->minimumScalableDimension->setValue(minimum_scalable_dimension_def);
+	});
+
+	const int fsr_sharpening_strength_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::FsrSharpeningStrength));
+	auto fmt_fsr_sharpening_strength = [fsr_sharpening_strength_def](int value)
+	{
+		if (value == fsr_sharpening_strength_def)
+		{
+			return tr("%1% (Default)").arg(value);
+		}
+		return tr("%1%").arg(value);
+	};
+	m_emu_settings->EnhanceSlider(ui->fsrSharpeningStrength, emu_settings_type::FsrSharpeningStrength);
+	SubscribeTooltip(ui->fsrSharpeningStrength, tooltips.settings.fsr_rcas_strength);
+	SubscribeTooltip(ui->fsrSharpeningStrengthVal, tooltips.settings.fsr_rcas_strength);
+	SubscribeTooltip(ui->fsrSharpeningStrengthReset, tooltips.settings.fsr_rcas_strength);
+	ui->fsrSharpeningStrengthVal->setText(fmt_fsr_sharpening_strength(ui->fsrSharpeningStrength->value()));
+	connect(ui->fsrSharpeningStrength, &QSlider::valueChanged, [fmt_fsr_sharpening_strength, this](int value)
+	{
+		ui->fsrSharpeningStrengthVal->setText(fmt_fsr_sharpening_strength(value));
+	});
+	connect(ui->fsrSharpeningStrengthReset, &QAbstractButton::clicked, [fsr_sharpening_strength_def, this]()
+	{
+		ui->fsrSharpeningStrength->setValue(fsr_sharpening_strength_def);
 	});
 
 	// Remove renderers from the renderer Combobox if not supported
@@ -666,8 +692,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	auto apply_renderer_specific_options = [=, this](const QString& text)
 	{
 		// Vulkan-only
-		ui->asyncTextureStreaming->setEnabled(text == r_creator->Vulkan.name);
-		ui->vulkansched->setEnabled(text == r_creator->Vulkan.name);
+		const bool is_vulkan = (text == r_creator->Vulkan.name);
+		ui->asyncTextureStreaming->setEnabled(is_vulkan);
+		ui->vulkansched->setEnabled(is_vulkan);
+		ui->fsrUpscalingEnable->setEnabled(is_vulkan);
+		ui->fsrSharpeningStrength->setEnabled(is_vulkan);
+		ui->fsrSharpeningStrengthReset->setEnabled(is_vulkan);
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.

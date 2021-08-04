@@ -4,6 +4,8 @@
 #include "Emu/RSX/Overlays/overlays.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 
+#include "upscalers/bilinear_pass.hpp"
+#include "upscalers/fsr_pass.h"
 #include "util/asm.hpp"
 
 void VKGSRender::reinitialize_swapchain()
@@ -33,6 +35,9 @@ void VKGSRender::reinitialize_swapchain()
 		// Release present image by presenting it
 		frame_context_cleanup(&ctx, true);
 	}
+
+	// Discard the current upscaling pipeline if any
+	m_upscaler.reset();
 
 	// Drain all the queues
 	vkDeviceWaitIdle(*m_device);
@@ -275,9 +280,9 @@ void VKGSRender::frame_context_cleanup(vk::frame_context_t *ctx, bool free_resou
 	vk::advance_completed_frame_counter();
 }
 
-vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const rsx::avconf& avconfig)
+vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* info, const rsx::avconf& avconfig)
 {
-	vk::image* image_to_flip = nullptr;
+	vk::viewable_image* image_to_flip = nullptr;
 
 	// Check the surface store first
 	const auto format_bpp = rsx::get_format_block_size_in_bytes(info->format);
@@ -329,7 +334,8 @@ vk::image* VKGSRender::get_present_source(vk::present_surface_info* info, const 
 	{
 		// Hack - this should be the first location to check for output
 		// The render might have been done offscreen or in software and a blit used to display
-		image_to_flip = surface->get_raw_texture();
+		image_to_flip = dynamic_cast<vk::viewable_image*>(surface->get_raw_texture());
+		ensure(image_to_flip);
 	}
 
 	if (!image_to_flip)
@@ -461,7 +467,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	// Scan memory for required data. This is done early to optimize waiting for the driver image acquire below.
-	vk::image *image_to_flip = nullptr, *image_to_flip2 = nullptr;
+	vk::viewable_image *image_to_flip = nullptr, *image_to_flip2 = nullptr;
 	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
 	{
 		vk::present_surface_info present_info;
@@ -590,23 +596,63 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
 
+	if (!m_upscaler)
+	{
+		if (g_cfg.video.vk.fsr_upscaling)
+		{
+			m_upscaler = std::make_unique<vk::fsr_upscale_pass>();
+		}
+		else
+		{
+			m_upscaler = std::make_unique<vk::bilinear_upscale_pass>();
+		}
+	}
+
 	if (image_to_flip)
 	{
 		const bool use_full_rgb_range_output = g_cfg.video.full_rgb_range_output.get();
 
 		if (!use_full_rgb_range_output || !rsx::fcmp(avconfig.gamma, 1.f) || avconfig._3d) [[unlikely]]
 		{
-			calibration_src.push_back(dynamic_cast<vk::viewable_image*>(image_to_flip));
-			ensure(calibration_src.front());
+			if (image_to_flip) calibration_src.push_back(image_to_flip);
+			if (image_to_flip2) calibration_src.push_back(image_to_flip2);
 
-			if (image_to_flip2)
+			if (g_cfg.video.vk.fsr_upscaling && !avconfig._3d) // 3D will be implemented later
 			{
-				calibration_src.push_back(dynamic_cast<vk::viewable_image*>(image_to_flip2));
-				ensure(calibration_src.back());
-			}
-		}
+				// Run upscaling pass before the rest of the output effects pipeline
+				// This can be done with all upscalers but we already get bilinear upscaling for free if we just out the filters directly
+				VkImageBlit request = {};
+				request.srcSubresource = { image_to_flip->aspect(), 0, 0, 1 };
+				request.dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+				request.srcOffsets[0] = { 0, 0, 0 };
+				request.srcOffsets[1] = { s32(buffer_width), s32(buffer_height), 1 };
+				request.dstOffsets[0] = { 0, 0, 0 };
+				request.dstOffsets[1] = { aspect_ratio.width, aspect_ratio.height, 1 };
 
-		if (calibration_src.empty()) [[likely]]
+				for (unsigned i = 0; i < calibration_src.size(); ++i)
+				{
+					const rsx::flags32_t mode = (i == 0) ? UPSCALE_LEFT_VIEW : UPSCALE_RIGHT_VIEW;
+					calibration_src[i] = m_upscaler->scale_output(*m_current_command_buffer, image_to_flip, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED, request, mode);
+				}
+			}
+
+			vk::change_image_layout(*m_current_command_buffer, target_image, target_layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, subresource_range);
+			target_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+			const auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
+			single_target_pass = vk::get_renderpass(*m_device, key);
+			ensure(single_target_pass != VK_NULL_HANDLE);
+
+			direct_fbo = vk::get_framebuffer(*m_device, m_swapchain_dims.width, m_swapchain_dims.height, VK_FALSE, single_target_pass, m_swapchain->get_surface_format(), target_image);
+			direct_fbo->add_ref();
+
+			vk::get_overlay_pass<vk::video_out_calibration_pass>()->run(
+				*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src,
+				avconfig.gamma, !use_full_rgb_range_output, avconfig._3d, single_target_pass);
+
+			direct_fbo->release();
+		}
+		else
 		{
 			// Do raw transfer here as there is no image object associated with textures owned by the driver (TODO)
 			const areai dst_rect = aspect_ratio;
@@ -619,35 +665,13 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			rgn.dstOffsets[0] = { dst_rect.x1, dst_rect.y1, 0 };
 			rgn.dstOffsets[1] = { dst_rect.x2, dst_rect.y2, 1 };
 
-			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 			if (target_layout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 			{
 				vk::change_image_layout(*m_current_command_buffer, target_image, target_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
 				target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 			}
 
-			vkCmdBlitImage(*m_current_command_buffer, image_to_flip->value, image_to_flip->current_layout, target_image, target_layout, 1, &rgn, VK_FILTER_LINEAR);
-			image_to_flip->pop_layout(*m_current_command_buffer);
-		}
-		else
-		{
-			vk::change_image_layout(*m_current_command_buffer, target_image, target_layout, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, subresource_range);
-			target_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-			const auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
-			single_target_pass = vk::get_renderpass(*m_device, key);
-			ensure(single_target_pass != VK_NULL_HANDLE);
-
-			direct_fbo = vk::get_framebuffer(*m_device, m_swapchain_dims.width, m_swapchain_dims.height, VK_FALSE, single_target_pass, m_swapchain->get_surface_format(), target_image);
-			direct_fbo->add_ref();
-			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-			vk::get_overlay_pass<vk::video_out_calibration_pass>()->run(
-				*m_current_command_buffer, areau(aspect_ratio), direct_fbo, calibration_src,
-				avconfig.gamma, !use_full_rgb_range_output, avconfig._3d, single_target_pass);
-
-			image_to_flip->pop_layout(*m_current_command_buffer);
-			direct_fbo->release();
+			m_upscaler->scale_output(*m_current_command_buffer, image_to_flip, target_image, target_layout, rgn, UPSCALE_AND_COMMIT | UPSCALE_DEFAULT_VIEW);
 		}
 
 		if (m_frame->screenshot_toggle)

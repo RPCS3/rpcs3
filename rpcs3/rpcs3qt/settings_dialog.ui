@@ -39,7 +39,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -345,7 +345,7 @@
       </attribute>
       <layout class="QVBoxLayout" name="gpuTab_layout" stretch="0,1,0">
        <item>
-        <layout class="QHBoxLayout" name="gpuTabLayout" stretch="1,1,1">
+        <layout class="QHBoxLayout" name="gpuTabLayout" stretch="1,0,1">
          <item>
           <layout class="QVBoxLayout" name="gpuTabLayoutLeft">
            <item>
@@ -633,6 +633,100 @@
               </widget>
              </item>
             </layout>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_Upscaling">
+             <property name="title">
+              <string>Upscaling</string>
+             </property>
+             <layout class="QVBoxLayout" name="gb_Upscaling_layout">
+              <item>
+               <widget class="QCheckBox" name="fsrUpscalingEnable">
+                <property name="text">
+                 <string>Enable FSR Upscaling</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="Line" name="line">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="fsrSharpeningStrengthLabel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>RCAS Sharpening Strength</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+                </property>
+                <property name="margin">
+                 <number>1</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="fsrSharpeningLayoutTop">
+                <item>
+                 <widget class="QLabel" name="minSharpeningVal">
+                  <property name="text">
+                   <string>0</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSlider" name="fsrSharpeningStrength">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="maxSharpeningVal">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="text">
+                   <string>100</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="fsrSharpeningLayoutBottom" stretch="1,0">
+                <item>
+                 <widget class="QLabel" name="fsrSharpeningStrengthVal">
+                  <property name="text">
+                   <string>0</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="fsrSharpeningStrengthReset">
+                  <property name="text">
+                   <string>Reset</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
            </item>
            <item>
             <spacer name="gpu_tab_layout_middle_spacer">
