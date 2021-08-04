@@ -716,8 +716,12 @@ error_code cellGemGetCameraState(vm::ptr<CellGemCameraState> camera_state)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	camera_state->exposure_time = 1.0f / 60.0f; // TODO: use correct framerate
+	// TODO: use correct camera settings
+	camera_state->exposure = 0;
+	camera_state->exposure_time = 1.0f / 60.0f;
 	camera_state->gain = 1.0;
+	camera_state->pitch_angle = 0.0;
+	camera_state->pitch_angle_estimate = 0.0;
 
 	return CELL_OK;
 }
