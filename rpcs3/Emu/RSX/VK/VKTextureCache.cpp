@@ -1199,7 +1199,7 @@ namespace vk
 		baseclass::on_frame_end();
 	}
 
-	vk::image* texture_cache::upload_image_simple(vk::command_buffer& cmd, VkFormat format, u32 address, u32 width, u32 height, u32 pitch)
+	vk::viewable_image* texture_cache::upload_image_simple(vk::command_buffer& cmd, VkFormat format, u32 address, u32 width, u32 height, u32 pitch)
 	{
 		bool linear_format_supported = false;
 

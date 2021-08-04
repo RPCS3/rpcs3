@@ -167,6 +167,9 @@ public:
 
 		const QString async_texture_streaming         = tr("Stream textures to GPU in parallel with 3D rendering.\nCan improve performance on more powerful GPUs that have spare headroom.\nOnly works with Vulkan renderer.");
 
+		const QString fsr_upscaling     = tr("Enable FidelityFX Super Resolution upscaling filter to improve the look of upscaled images.\nIf the game is rendering at an internal resolution lower than your window resolution, FidelityFX will handle the upscale.\nCan cause visual artefacts.\nDoes not work with stereo 3D output for now");
+		const QString fsr_rcas_strength = tr("Control the sharpening strength applied by FidelityFX Super Resolution. Higher values will give sharper output but may introduce artefacts.");
+
 		// gui
 
 		const QString log_limit          = tr("Sets the maximum amount of blocks that the log can display.\nThis usually equals the number of lines.\nSet 0 in order to remove the limit.");

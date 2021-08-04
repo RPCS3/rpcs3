@@ -623,10 +623,10 @@ VKGSRender::~VKGSRender()
 	// Clear flush requests
 	m_flush_requests.clear_pending_flag();
 
-	//Texture cache
+	// Texture cache
 	m_texture_cache.destroy();
 
-	//Shaders
+	// Shaders
 	vk::destroy_pipe_compiler();      // Ensure no pending shaders being compiled
 	vk::finalize_compiler_context();  // Shut down the glslang compiler
 	m_prog_buffer->clear();           // Delete shader objects
@@ -636,10 +636,13 @@ VKGSRender::~VKGSRender()
 	m_volatile_attribute_storage.reset();
 	m_vertex_layout_storage.reset();
 
-	//Global resources
+	// Upscaler (references some global resources)
+	m_upscaler.reset();
+
+	// Global resources
 	vk::destroy_global_resources();
 
-	//Heaps
+	// Heaps
 	m_attrib_ring_info.destroy();
 	m_fragment_env_ring_info.destroy();
 	m_vertex_env_ring_info.destroy();
@@ -653,13 +656,13 @@ VKGSRender::~VKGSRender()
 	m_fragment_instructions_buffer.destroy();
 	m_raster_env_ring_info.destroy();
 
-	//Fallback bindables
+	// Fallback bindables
 	null_buffer.reset();
 	null_buffer_view.reset();
 
 	if (m_current_frame == &m_aux_frame_context)
 	{
-		//Return resources back to the owner
+		// Return resources back to the owner
 		m_current_frame = &frame_context_storage[m_current_queue_index];
 		m_current_frame->swap_storage(m_aux_frame_context);
 		m_current_frame->grab_resources(m_aux_frame_context);
@@ -667,7 +670,7 @@ VKGSRender::~VKGSRender()
 
 	m_aux_frame_context.buffer_views_to_clean.clear();
 
-	//NOTE: aux_context uses descriptor pools borrowed from the main queues and any allocations will be automatically freed when pool is destroyed
+	// NOTE: aux_context uses descriptor pools borrowed from the main queues and any allocations will be automatically freed when pool is destroyed
 	for (auto &ctx : frame_context_storage)
 	{
 		vkDestroySemaphore((*m_device), ctx.present_wait_semaphore, nullptr);
@@ -677,24 +680,24 @@ VKGSRender::~VKGSRender()
 		ctx.buffer_views_to_clean.clear();
 	}
 
-	//Textures
+	// Textures
 	m_rtts.destroy();
 	m_texture_cache.destroy();
 
 	m_stencil_mirror_sampler.reset();
 
-	//Overlay text handler
+	// Overlay text handler
 	m_text_writer.reset();
 
 	//Pipeline descriptors
 	vkDestroyPipelineLayout(*m_device, pipeline_layout, nullptr);
 	vkDestroyDescriptorSetLayout(*m_device, descriptor_layouts, nullptr);
 
-	//Queries
+	// Queries
 	m_occlusion_query_manager.reset();
 	m_cond_render_buffer.reset();
 
-	//Command buffer
+	// Command buffer
 	for (auto &cb : m_primary_cb_list)
 		cb.destroy();
 
@@ -703,7 +706,7 @@ VKGSRender::~VKGSRender()
 	m_secondary_command_buffer.destroy();
 	m_secondary_command_buffer_pool.destroy();
 
-	//Device handles/contexts
+	// Device handles/contexts
 	m_swapchain->destroy();
 	m_instance.destroy();
 
