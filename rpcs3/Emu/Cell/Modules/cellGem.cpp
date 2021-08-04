@@ -142,7 +142,7 @@ struct gem_config
 				gem.enabled_tracking = true;
 				gem.hue = 1;
 
-				status_flags = CELL_GEM_FLAG_CALIBRATION_SUCCEEDED;
+				status_flags = CELL_GEM_FLAG_CALIBRATION_SUCCEEDED | CELL_GEM_FLAG_CALIBRATION_OCCURRED;
 			}
 		}
 
