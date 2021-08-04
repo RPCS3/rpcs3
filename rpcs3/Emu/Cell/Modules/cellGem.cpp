@@ -142,6 +142,7 @@ struct gem_config
 		// Assign status and port number
 		if (gem_num < connected_controllers)
 		{
+			controllers[gem_num] = {};
 			controllers[gem_num].status = CELL_GEM_STATUS_READY;
 			controllers[gem_num].port = 7u - gem_num;
 		}
