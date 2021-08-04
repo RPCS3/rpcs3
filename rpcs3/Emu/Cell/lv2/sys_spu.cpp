@@ -238,7 +238,7 @@ struct spu_limits_t
 
 		raw_spu_count += spu_thread::g_raw_spu_ctr;
 
-		if (spu_limit + raw_limit > 6 || raw_spu_count > raw_limit || physical_spus_count + controllable_spu_count > spu_limit)
+		if (spu_limit + raw_limit > 6 || raw_spu_count > raw_limit || physical_spus_count >= spu_limit || physical_spus_count + controllable_spu_count > spu_limit)
 		{
 			return false;
 		}
@@ -713,6 +713,10 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 	ppu.state += cpu_flag::wait;
 
 	sys_spu.warning("sys_spu_thread_group_destroy(id=0x%x)", id);
+
+	auto& limits = g_fxo->get<spu_limits_t>();
+
+	std::lock_guard lock(limits.mutex);
 
 	const auto group = idm::withdraw<lv2_spu_group>(id, [](lv2_spu_group& group) -> CellError
 	{
@@ -2051,6 +2055,10 @@ error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 	}
 
 	(*thread)();
+
+	auto& limits = g_fxo->get<spu_limits_t>();
+
+	std::lock_guard lock(limits.mutex);
 
 	if (auto ret = idm::withdraw<named_thread<spu_thread>>(idm_id, [&](spu_thread& spu) -> CellError
 	{
