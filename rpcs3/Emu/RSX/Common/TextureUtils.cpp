@@ -14,10 +14,10 @@ namespace utils
 		return std::span<T>(bless<T>(span.data()), sizeof(U) * span.size() / sizeof(T));
 	}
 
-	template <typename T>
+	template <typename T> requires(std::is_integral_v<T> && std::is_unsigned_v<T>)
 	bool is_power_of_2(T value)
 	{
-		return std::has_single_bit(value);
+		return !(value & (value - 1));
 	}
 }
 
