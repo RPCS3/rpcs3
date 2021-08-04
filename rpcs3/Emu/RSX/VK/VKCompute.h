@@ -34,6 +34,9 @@ namespace vk
 		u32 optimal_kernel_size = 1;
 		u32 max_invocations_x = 65535;
 
+		compute_task() = default;
+		virtual ~compute_task() { destroy(); }
+
 		virtual std::vector<std::pair<VkDescriptorType, u8>> get_descriptor_layout();
 
 		void init_descriptors();
