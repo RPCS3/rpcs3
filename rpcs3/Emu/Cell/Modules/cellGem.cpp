@@ -9,6 +9,8 @@
 #include "Emu/IdManager.h"
 #include "Input/pad_thread.h"
 
+#include <cmath> // for fmod
+
 LOG_CHANNEL(cellGem);
 
 template <>
@@ -1072,7 +1074,7 @@ error_code cellGemGetTrackerHue(u32 gem_num, vm::ptr<u32> hue)
 
 error_code cellGemHSVtoRGB(f32 h, f32 s, f32 v, vm::ptr<f32> r, vm::ptr<f32> g, vm::ptr<f32> b)
 {
-	cellGem.todo("cellGemHSVtoRGB(h=%f, s=%f, v=%f, r=*0x%x, g=*0x%x, b=*0x%x)", h, s, v, r, g, b);
+	cellGem.warning("cellGemHSVtoRGB(h=%f, s=%f, v=%f, r=*0x%x, g=*0x%x, b=*0x%x)", h, s, v, r, g, b);
 
 	if (s < 0.0f || s > 1.0f || v < 0.0f || v > 1.0f || !r || !g || !b)
 	{
@@ -1081,7 +1083,48 @@ error_code cellGemHSVtoRGB(f32 h, f32 s, f32 v, vm::ptr<f32> r, vm::ptr<f32> g, 
 
 	h = std::clamp(h, 0.0f, 360.0f);
 
-	// TODO: convert
+	const f32 c = v * s;
+	const f32 x = c * (1.0f - abs(fmod(h / 60.0f, 2.0f) - 1.0f));
+	const f32 m = v - c;
+
+	f32 r_tmp{0.0};
+	f32 g_tmp{0.0};
+	f32 b_tmp{0.0};
+
+	if (h < 60.0f)
+	{
+		r_tmp = c;
+		g_tmp = x;
+	}
+	else if (h < 120.0f)
+	{
+		r_tmp = x;
+		g_tmp = c;
+	}
+	else if (h < 180.0f)
+	{
+		g_tmp = c;
+		b_tmp = x;
+	}
+	else if (h < 240.0f)
+	{
+		g_tmp = x;
+		b_tmp = c;
+	}
+	else if (h < 300.0f)
+	{
+		r_tmp = x;
+		b_tmp = c;
+	}
+	else
+	{
+		r_tmp = c;
+		b_tmp = x;
+	}
+
+	*r = (r_tmp + m) * 255.0f;
+	*g = (g_tmp + m) * 255.0f;
+	*b = (b_tmp + m) * 255.0f;
 
 	return CELL_OK;
 }
