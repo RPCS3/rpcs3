@@ -526,6 +526,11 @@ error_code cellGemConvertVideoStart(vm::cptr<void> video_frame)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
+	if (!video_frame.aligned(128))
+	{
+		return CELL_GEM_ERROR_INVALID_ALIGNMENT;
+	}
+
 	if (std::exchange(gem.video_conversion_started, true))
 	{
 		return CELL_GEM_ERROR_CONVERT_NOT_FINISHED;
@@ -567,10 +572,21 @@ error_code cellGemEnableMagnetometer(u32 gem_num, u32 enable)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
+	if (!check_gem_num(gem_num))
+	{
+		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
 	if (!gem.is_controller_ready(gem_num))
 	{
 		return CELL_GEM_NOT_CONNECTED;
 	}
+
+	// NOTE: RE doesn't show this check but it is mentioned in the docs, so I'll leave it here for now.
+	//if (!gem.controllers[gem_num].calibrated_magnetometer)
+	//{
+	//	return CELL_GEM_NOT_CALIBRATED;
+	//}
 
 	gem.controllers[gem_num].enabled_magnetometer = !!enable;
 
@@ -673,6 +689,8 @@ error_code cellGemGetAccelerometerPositionInDevice(u32 gem_num, vm::ptr<f32> pos
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
+	// TODO
+
 	return CELL_OK;
 }
 
@@ -747,6 +765,12 @@ error_code cellGemGetEnvironmentLightingColor(vm::ptr<f32> r, vm::ptr<f32> g, vm
 	*g = 128;
 	*b = 128;
 
+	// NOTE: RE doesn't show this check but it is mentioned in the docs, so I'll leave it here for now.
+	//if (!gem.controllers[gem_num].calibrated_magnetometer)
+	//{
+	//	return CELL_GEM_ERROR_LIGHTING_NOT_CALIBRATED; // This error doesn't really seem to be a real thing.
+	//}
+
 	return CELL_OK;
 }
 
@@ -765,6 +789,8 @@ error_code cellGemGetHuePixels(vm::cptr<void> camera_frame, u32 hue, vm::ptr<u8>
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
+
+	// TODO
 
 	return CELL_OK;
 }
@@ -827,6 +853,11 @@ error_code cellGemGetInertialState(u32 gem_num, u32 state_flag, u64 timestamp, v
 	if (!check_gem_num(gem_num) || state_flag > CELL_GEM_INERTIAL_STATE_FLAG_NEXT || !inertial_state || !gem.is_controller_ready(gem_num))
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (false) // TODO
+	{
+		return CELL_GEM_TIME_OUT_OF_RANGE;
 	}
 
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
@@ -984,6 +1015,11 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 	//	// As specified by time_parameter.
 	//}
 
+	if (false) // TODO: check if there is data for the specified time_parameter and flag
+	{
+		return CELL_GEM_TIME_OUT_OF_RANGE;
+	}
+
 	if (g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::mouse)
 	{
 		ds3_input_to_ext(gem_num, gem.controllers[gem_num], gem_state->ext);
@@ -1008,6 +1044,11 @@ error_code cellGemGetState(u32 gem_num, u32 flag, u64 time_parameter, vm::ptr<Ce
 			mouse_input_to_pad(gem_num, gem_state->pad.digitalbuttons, gem_state->pad.analog_T);
 			mouse_pos_to_gem_state(gem_num, gem.controllers[gem_num], gem_state);
 		}
+	}
+
+	if (false) // TODO: check if we are computing colors
+	{
+		return CELL_GEM_COMPUTING_AVAILABLE_COLORS;
 	}
 
 	// TODO: verify position of this check. gem_state seems to be polled regardless (otherwise you would never be able to calibrate anyway)
@@ -1242,6 +1283,11 @@ error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 	if (!gem.state)
 	{
 		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
+
+	if (false) // TODO: Check if the camera is currently being prepared.
+	{
+		return CELL_EBUSY;
 	}
 
 	max_exposure = std::clamp(max_exposure, static_cast<s32>(CELL_GEM_MIN_CAMERA_EXPOSURE), static_cast<s32>(CELL_GEM_MAX_CAMERA_EXPOSURE));
@@ -1519,6 +1565,11 @@ error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 		return CELL_GEM_ERROR_UPDATE_NOT_FINISHED;
 	}
 
+	if (!camera_frame.aligned(128))
+	{
+		return CELL_GEM_ERROR_INVALID_ALIGNMENT;
+	}
+
 	gem.camera_frame = camera_frame.addr();
 	if (!camera_frame)
 	{
@@ -1542,6 +1593,16 @@ error_code cellGemWriteExternalPort(u32 gem_num, vm::ptr<u8[CELL_GEM_EXTERNAL_PO
 	if (!check_gem_num(gem_num))
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
+	}
+
+	if (!gem.is_controller_ready(gem_num))
+	{
+		return CELL_GEM_NOT_CONNECTED;
+	}
+
+	if (false) // TODO: check if this is still writing to the external port
+	{
+		return CELL_GEM_ERROR_WRITE_NOT_FINISHED;
 	}
 
 	return CELL_OK;
