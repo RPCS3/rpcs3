@@ -102,7 +102,6 @@ struct gem_config
 		u64 calibration_start_us{0};                       // The start timestamp of the calibration in microseconds
 
 		static constexpr u64 calibration_time_us = 500000; // The calibration supposedly takes 0.5 seconds (500000 microseconds)
-		static constexpr s32 diameter_mm = 45;             // Physical diameter of the sphere in millimeter
 	};
 
 	CellGemAttribute attribute = {};
@@ -381,7 +380,7 @@ static bool mouse_pos_to_gem_image_state(const u32 mouse_no, const gem_config::g
 	if (mouse_height <= 0) mouse_height = shared_data.height;
 	const f32 scaling_width = mouse_width / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = mouse_height / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = controller.diameter_mm / static_cast<f32>(controller.radius * 2);
+	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / static_cast<f32>(controller.radius);
 
 	// Image coordinates in pixels
 	const f32 image_x = static_cast<f32>(mouse.x_pos) / scaling_width;
@@ -426,7 +425,7 @@ static bool mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_con
 	if (mouse_height <= 0) mouse_height = shared_data.height;
 	const f32 scaling_width = mouse_width / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = mouse_height / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = controller.diameter_mm / static_cast<f32>(controller.radius * 2);
+	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / static_cast<f32>(controller.radius);
 
 	// Image coordinates in pixels
 	const f32 image_x = static_cast<f32>(mouse.x_pos) / scaling_width;
