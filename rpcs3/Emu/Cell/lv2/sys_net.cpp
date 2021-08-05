@@ -1217,6 +1217,12 @@ lv2_socket::~lv2_socket()
 	}
 }
 
+extern void need_network()
+{
+	g_fxo->need<network_context>();
+	g_fxo->need<named_thread<tcp_timeout_monitor>>();
+}
+
 error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen)
 {
 	ppu.state += cpu_flag::wait;

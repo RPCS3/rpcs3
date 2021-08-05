@@ -16,6 +16,7 @@ LOG_CHANNEL(sign_log, "Signaling");
 
 std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> get_sign_msgs();
 s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& addr);
+void need_network();
 
 template <>
 void fmt_class_string<SignalingCommand>::format(std::string& out, u64 arg)
@@ -35,6 +36,11 @@ void fmt_class_string<SignalingCommand>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+signaling_handler::signaling_handler()
+{
+	need_network();
 }
 
 /////////////////////////////

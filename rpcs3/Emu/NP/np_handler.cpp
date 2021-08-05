@@ -42,6 +42,8 @@ LOG_CHANNEL(nph_log, "NPHandler");
 
 np_handler::np_handler()
 {
+	g_fxo->need<named_thread<signaling_handler>>();
+
 	g_cfg_rpcn.load();
 
 	is_connected  = (g_cfg.net.net_active == np_internet_status::enabled);
