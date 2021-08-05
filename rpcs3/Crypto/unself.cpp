@@ -312,51 +312,26 @@ void ControlInfo::Show() const
 	{
 		if (size == 0x30)
 		{
-			std::string digest_str;
-			for (int i = 0; i < 20; i++)
-				digest_str += fmt::format("%02x", file_digest_30.digest[i]);
-
-			self_log.notice("Digest: %s", digest_str.c_str());
+			self_log.notice("Digest: %s", file_digest_30.digest);
 			self_log.notice("Unknown: 0x%llx", file_digest_30.unknown);
 		}
 		else if (size == 0x40)
 		{
-			std::string digest_str1;
-			std::string digest_str2;
-			for (int i = 0; i < 20; i++)
-			{
-				digest_str1 += fmt::format("%02x", file_digest_40.digest1[i]);
-				digest_str2 += fmt::format("%02x", file_digest_40.digest2[i]);
-			}
-
-			self_log.notice("Digest1: %s", digest_str1.c_str());
-			self_log.notice("Digest2: %s", digest_str2.c_str());
+			self_log.notice("Digest1: %s", file_digest_40.digest1);
+			self_log.notice("Digest2: %s", file_digest_40.digest2);
 			self_log.notice("Unknown: 0x%llx", file_digest_40.unknown);
 		}
 	}
 	else if (type == 3)
 	{
-		std::string contentid_str;
-		std::string digest_str;
-		std::string invdigest_str;
-		std::string xordigest_str;
-		for (int i = 0; i < 48; i++)
-			contentid_str += fmt::format("%02x", npdrm.content_id[i]);
-		for (int i = 0; i < 16; i++)
-		{
-			digest_str += fmt::format("%02x", npdrm.digest[i]);
-			invdigest_str += fmt::format("%02x", npdrm.invdigest[i]);
-			xordigest_str += fmt::format("%02x", npdrm.xordigest[i]);
-		}
-
 		self_log.notice("Magic: 0x%08x", npdrm.magic);
 		self_log.notice("Unknown1: 0x%08x", npdrm.unknown1);
 		self_log.notice("License: 0x%08x", npdrm.license);
 		self_log.notice("Type: 0x%08x", npdrm.type);
-		self_log.notice("ContentID: %s", contentid_str.c_str());
-		self_log.notice("Digest: %s", digest_str.c_str());
-		self_log.notice("Inverse digest: %s", invdigest_str.c_str());
-		self_log.notice("XOR digest: %s", xordigest_str.c_str());
+		self_log.notice("ContentID: %s", npdrm.content_id);
+		self_log.notice("Digest: %s", npdrm.digest);
+		self_log.notice("Inverse digest: %s", npdrm.invdigest);
+		self_log.notice("XOR digest: %s", npdrm.xordigest);
 		self_log.notice("Unknown2: 0x%llx", npdrm.unknown2);
 		self_log.notice("Unknown3: 0x%llx", npdrm.unknown3);
 	}

@@ -31,8 +31,6 @@ extern std::string ppu_get_function_name(const std::string& _module, u32 fnid);
 extern std::string ppu_get_variable_name(const std::string& _module, u32 vnid);
 extern void ppu_register_range(u32 addr, u32 size);
 extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr);
-extern bool ppu_initialize(const ppu_module& info, bool = false);
-extern void ppu_initialize();
 
 extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 
@@ -60,6 +58,19 @@ ppu_static_module::ppu_static_module(const char* name)
 	: name(name)
 {
 	ppu_module_manager::register_module(this);
+}
+
+void ppu_static_module::add_init_func(void(*func)(ppu_static_module*))
+{
+	m_on_init.emplace_back(func);
+}
+
+void ppu_static_module::initialize()
+{
+	for (auto func : m_on_init)
+	{
+		func(this);
+	}
 }
 
 void ppu_module_manager::register_module(ppu_static_module* _module)
@@ -96,6 +107,14 @@ const ppu_static_module* ppu_module_manager::get_module(const std::string& name)
 	const auto& map = ppu_module_manager::s_module_map;
 	const auto found = map.find(name);
 	return found != map.end() ? found->second : nullptr;
+}
+
+void ppu_module_manager::initialize_modules()
+{
+	for (auto& _module : s_module_map)
+	{
+		_module.second->initialize();
+	}
 }
 
 // Global linkage information
@@ -137,6 +156,8 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 	{
 		return;
 	}
+
+	ppu_module_manager::initialize_modules();
 
 	const std::initializer_list<const ppu_static_module*> registered
 	{
@@ -228,6 +249,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 		&ppu_module_manager::cellVpost,
 		&ppu_module_manager::libad_async,
 		&ppu_module_manager::libad_core,
+		&ppu_module_manager::libfs_utility_init,
 		&ppu_module_manager::libmedi,
 		&ppu_module_manager::libmixer,
 		&ppu_module_manager::libsnd3,
@@ -306,7 +328,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 
 			if (is_first)
 			{
-				g_ppu_function_names[function.second.index] = fmt::format("%s.%s", _module->name, function.second.name);
+				g_ppu_function_names[function.second.index] = fmt::format("%s:%s", function.second.name, _module->name);
 			}
 
 			if ((function.second.flags & MFF_HIDDEN) == 0)
@@ -365,6 +387,59 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 			}
 		}
 	}
+}
+
+// For the debugger (g_ppu_function_names shouldn't change, string_view should suffice)
+extern const std::unordered_map<u32, std::string_view>& get_exported_function_names_as_addr_indexed_map()
+{
+	static std::unordered_map<u32, std::string_view> res;
+	static u64 update_time = 0;
+
+	const auto link = g_fxo->try_get<ppu_linkage_info>();
+	const auto hle_funcs = g_fxo->try_get<ppu_function_manager>();
+
+	if (!link || !hle_funcs)
+	{
+		res.clear();
+		return res;
+	}
+
+	const u64 current_time = get_system_time();
+
+	// Update list every >=0.1 seconds
+	if (current_time - update_time < 100'000)
+	{
+		return res;
+	}
+
+	update_time = current_time;
+
+	res.clear();
+	res.reserve(ppu_module_manager::get().size());
+
+	for (auto& pair : ppu_module_manager::get())
+	{
+		const auto _module = pair.second;
+		auto& linkage = link->modules[_module->name];
+
+		for (auto& function : _module->functions)
+		{
+			auto& flink = linkage.functions[function.first];
+			u32 addr = flink.export_addr;
+
+			if (vm::check_addr<4>(addr, vm::page_readable) && addr != hle_funcs->func_addr(function.second.index))
+			{
+				addr = vm::read32(addr);
+
+				if (!(addr % 4) && vm::check_addr<4>(addr, vm::page_executable))
+				{
+					res.try_emplace(addr, g_ppu_function_names[function.second.index]);
+				}
+			}
+		}
+	}
+
+	return res;
 }
 
 // Resolve relocations for variable/function linkage.
@@ -1709,7 +1784,12 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 
 	// Initialize memory stats (according to sdk version)
 	u32 mem_size;
-	if (sdk_version > 0x0021FFFF)
+	if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
+	{
+		// Because vsh.self comes before any generic application, more memory is available to it
+		mem_size = 0xF000000;
+	}
+	else if (sdk_version > 0x0021FFFF)
 	{
 		mem_size = 0xD500000;
 	}
@@ -1738,13 +1818,6 @@ bool ppu_load_exec(const ppu_exec_object& elf)
 	{
 		// TODO: Check for all sdk versions
 		mem_size += 0xC000000;
-	}
-
-	if (g_ps3_process_info.get_cellos_appname() == "vsh.self"sv)
-	{
-		// Because vsh.self comes before any generic application, more memory is available to it
-		// This is an estimation though (TODO)
-		mem_size += 0x800000;
 	}
 
 	g_fxo->init<lv2_memory_container>(mem_size)->used += primary_stacksize;

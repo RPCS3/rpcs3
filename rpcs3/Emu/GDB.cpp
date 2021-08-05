@@ -30,8 +30,7 @@
 #include <regex>
 #include <charconv>
 
-extern void ppu_set_breakpoint(u32 addr);
-extern void ppu_remove_breakpoint(u32 addr);
+extern bool ppu_breakpoint(u32 addr, bool is_adding);
 
 LOG_CHANNEL(GDB);
 
@@ -776,7 +775,7 @@ bool gdb_thread::cmd_set_breakpoint(gdb_cmd& cmd)
 			GDB.warning("Can't parse breakpoint request, data: '%s'.", cmd.data);
 			return send_cmd_ack("E02");
 		}
-		ppu_set_breakpoint(addr);
+		ppu_breakpoint(addr, true);
 		return send_cmd_ack("OK");
 	}
 	//other breakpoint types are not supported
@@ -794,7 +793,7 @@ bool gdb_thread::cmd_remove_breakpoint(gdb_cmd& cmd)
 			GDB.warning("Can't parse breakpoint remove request, data: '%s'.", cmd.data);
 			return send_cmd_ack("E01");
 		}
-		ppu_remove_breakpoint(addr);
+		ppu_breakpoint(addr, false);
 		return send_cmd_ack("OK");
 	}
 	//other breakpoint types are not supported
@@ -851,7 +850,8 @@ void gdb_thread::operator()()
 			return;
 		}
 		//stop immediately
-		if (Emu.IsRunning()) {
+		if (Emu.IsRunning())
+		{
 			Emu.Pause();
 		}
 

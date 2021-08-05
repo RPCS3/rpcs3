@@ -570,6 +570,12 @@ VKGSRender::VKGSRender() : GSRender()
 				rsx_log.error("Older NVIDIA cards do not meet requirements for asynchronous compute due to some driver fakery.");
 				backend_config.supports_asynchronous_compute = false;
 			}
+			else // Workaround. Remove once the async decoder is re-written
+			{
+				// NVIDIA 471 and newer are completely borked. Queue priority is not observed and any queue waiting on another just causes deadlock.
+				rsx_log.error("NVIDIA GPUs are incompatible with the current implementation of asynchronous texture decoding.");
+				backend_config.supports_asynchronous_compute = false;
+			}
 			break;
 #if !defined(_WIN32)
 			// Anything running on AMDGPU kernel driver will not work due to the check for fd-backed memory allocations
@@ -832,18 +838,18 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 	{
 		// Evict some unused textures. Do not evict any active references
 		std::set<u32> exclusion_list;
-		for (auto i = 0; i < rsx::limits::fragment_textures_count; ++i)
+		auto scan_array = [&](const auto& texture_array)
 		{
-			const auto& tex = rsx::method_registers.fragment_textures[i];
-			const auto addr = rsx::get_address(tex.offset(), tex.location());
-			exclusion_list.insert(addr);
-		}
-		for (auto i = 0; i < rsx::limits::vertex_textures_count; ++i)
-		{
-			const auto& tex = rsx::method_registers.vertex_textures[i];
-			const auto addr = rsx::get_address(tex.offset(), tex.location());
-			exclusion_list.insert(addr);
-		}
+			for (auto i = 0ull; i < texture_array.size(); ++i)
+			{
+				const auto& tex = texture_array[i];
+				const auto addr = rsx::get_address(tex.offset(), tex.location());
+				exclusion_list.insert(addr);
+			}
+		};
+
+		scan_array(rsx::method_registers.fragment_textures);
+		scan_array(rsx::method_registers.vertex_textures);
 
 		// Hold the secondary lock guard to prevent threads from trying to touch access violation handler stuff
 		std::lock_guard lock(m_secondary_cb_guard);
@@ -863,7 +869,10 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 	if (severity >= rsx::problem_severity::moderate)
 	{
 		// Check if we need to spill
-		if (severity >= rsx::problem_severity::fatal && m_rtts.is_overallocated())
+		const auto mem_info = m_device->get_memory_mapping();
+		if (severity >= rsx::problem_severity::fatal &&                // Only spill for fatal errors
+			mem_info.device_local != mem_info.host_visible_coherent && // Do not spill if it is an IGP, there is nowhere to spill to
+			m_rtts.is_overallocated())                                 // Surface cache must be over-allocated by the design quota
 		{
 			// Queue a VRAM spill operation.
 			m_rtts.spill_unused_memory();
@@ -874,6 +883,30 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 		{
 			surface_cache_relieved = true;
 			m_rtts.free_invalidated(*m_current_command_buffer, severity);
+		}
+
+		if (severity >= rsx::problem_severity::fatal && surface_cache_relieved && !m_samplers_dirty)
+		{
+			// If surface cache was modified destructively, then we must reload samplers touching the surface cache.
+			bool invalidate_samplers = false;
+			auto scan_array = [&](const auto& texture_array, const auto& sampler_states)
+			{
+				for (auto i = 0ull; i < texture_array.size() && !invalidate_samplers; ++i)
+				{
+					if (texture_array[i].enabled() && sampler_states[i])
+					{
+						invalidate_samplers = (sampler_states[i]->upload_context == rsx::texture_upload_context::framebuffer_storage);
+					}
+				}
+			};
+
+			scan_array(rsx::method_registers.fragment_textures, fs_sampler_state);
+			scan_array(rsx::method_registers.vertex_textures, vs_sampler_state);
+
+			if (invalidate_samplers)
+			{
+				m_samplers_dirty.store(true);
+			}
 		}
 	}
 
@@ -1864,12 +1897,12 @@ void VKGSRender::load_program_env()
 	{
 		check_heap_status(VK_HEAP_CHECK_TEXTURE_ENV_STORAGE);
 
-		auto mem = m_fragment_texture_params_ring_info.alloc<256>(256);
-		auto buf = m_fragment_texture_params_ring_info.map(mem, 256);
+		auto mem = m_fragment_texture_params_ring_info.alloc<256>(512);
+		auto buf = m_fragment_texture_params_ring_info.map(mem, 512);
 
 		current_fragment_program.texture_params.write_to(buf, current_fp_metadata.referenced_textures_mask);
 		m_fragment_texture_params_ring_info.unmap();
-		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 256 };
+		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 512 };
 	}
 
 	if (update_raster_env)
@@ -1946,7 +1979,7 @@ void VKGSRender::load_program_env()
 
 	if (vk::emulate_conditional_rendering())
 	{
-		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer()->value;
+		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer(4)->value;
 		m_program->bind_buffer({ predicate, 0, 4 }, binding_table.conditional_render_predicate_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
 	}
 
@@ -2549,7 +2582,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		}
 	}
 
-	auto scratch = vk::get_scratch_buffer();
+	auto scratch = vk::get_scratch_buffer(OCCLUSION_MAX_POOL_SIZE * 4);
 	u32 dst_offset = 0;
 	usz first = 0;
 	usz last;

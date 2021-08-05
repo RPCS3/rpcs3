@@ -115,8 +115,8 @@ namespace utils
 		}
 
 		// Abort if there is no natching stream or if the stream isn't the first one
-		if (av_media_type == AVMEDIA_TYPE_AUDIO && audio_stream_index != 0 ||
-			av_media_type == AVMEDIA_TYPE_VIDEO && video_stream_index != 0)
+		if ((av_media_type == AVMEDIA_TYPE_AUDIO && audio_stream_index != 0) ||
+			(av_media_type == AVMEDIA_TYPE_VIDEO && video_stream_index != 0))
 		{
 			// Failed to find a stream
 			avformat_close_input(&av_format_ctx);

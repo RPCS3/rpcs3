@@ -47,6 +47,13 @@ bool ppu_thread_exit(ppu_thread& ppu)
 		dct.used -= ppu.stack_size;
 	}
 
+	if (ppu.call_history.index)
+	{
+		std::string str = fmt::format("%s", ppu.call_history);
+		ppu.call_history.index = 0;
+		ppu_log.notice("Calling history: %s", str);
+	}
+
 	return false;
 }
 
@@ -538,6 +545,8 @@ error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> 
 	// thread_ctrl name is not changed (TODO)
 	sys_ppu_thread.warning(u8"sys_ppu_thread_rename(): Thread renamed to “%s”", *_name);
 	thread->ppu_tname.store(std::move(_name));
+	thread_ctrl::set_name(*thread, thread->thread_name); // TODO: Currently sets debugger thread name only for local thread
+
 	return CELL_OK;
 }
 

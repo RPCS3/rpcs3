@@ -637,6 +637,12 @@ namespace vk
 		return dev;
 	}
 
+	void render_device::rebalance_memory_type_usage()
+	{
+		// Rebalance device local memory types
+		memory_map.device_local.rebalance();
+	}
+
 	// Shared Util
 	memory_type_mapping get_memory_mapping(const vk::physical_device& dev)
 	{
@@ -645,8 +651,6 @@ namespace vk
 		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
 
 		memory_type_mapping result;
-		result.device_local = VK_MAX_MEMORY_TYPES;
-		result.host_visible_coherent = VK_MAX_MEMORY_TYPES;
 		result.device_local_total_bytes = 0;
 		result.host_visible_total_bytes = 0;
 		bool host_visible_cached = false;
@@ -658,11 +662,9 @@ namespace vk
 			bool is_device_local = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			if (is_device_local)
 			{
-				if (result.device_local_total_bytes < heap.size)
-				{
-					result.device_local = i;
-					result.device_local_total_bytes = heap.size;
-				}
+				// Allow multiple device_local heaps
+				result.device_local.push(i, heap.size);
+				result.device_local_total_bytes += heap.size;
 			}
 
 			bool is_host_visible = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
@@ -673,16 +675,17 @@ namespace vk
 			{
 				if ((is_cached && !host_visible_cached) || (result.host_visible_total_bytes < heap.size))
 				{
-					result.host_visible_coherent = i;
+					// Allow only a single host_visible heap. It makes no sense to have multiple of these otherwise
+					result.host_visible_coherent = { i, heap.size };
 					result.host_visible_total_bytes = heap.size;
 					host_visible_cached = is_cached;
 				}
 			}
 		}
 
-		if (result.device_local == VK_MAX_MEMORY_TYPES)
+		if (!result.device_local)
 			fmt::throw_exception("GPU doesn't support device local memory");
-		if (result.host_visible_coherent == VK_MAX_MEMORY_TYPES)
+		if (!result.host_visible_coherent)
 			fmt::throw_exception("GPU doesn't support host coherent device local memory");
 		return result;
 	}

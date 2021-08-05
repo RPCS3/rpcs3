@@ -1899,6 +1899,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="ppuLlvmJavaModeHandling">
+                <property name="text">
+                 <string>PPU LLVM Java Mode Handling</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QCheckBox" name="ppuPrecompilation">
                 <property name="text">
                  <string>PPU LLVM Precompilation</string>
@@ -2426,6 +2433,13 @@
                <widget class="QCheckBox" name="gs_showMouseInFullscreen">
                 <property name="text">
                  <string>Show mouse cursor in Fullscreen</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="gs_lockMouseInFullscreen">
+                <property name="text">
+                 <string>Lock mouse cursor in Fullscreen</string>
                 </property>
                </widget>
               </item>
@@ -3588,13 +3602,6 @@
              <widget class="QCheckBox" name="perfReport">
               <property name="text">
                <string>Enable Performance Report</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="ppuLlvmJavaModeHandling">
-              <property name="text">
-               <string>PPU LLVM Java Mode Handling</string>
               </property>
              </widget>
             </item>

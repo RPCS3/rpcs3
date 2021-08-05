@@ -217,7 +217,7 @@ std::string FragmentProgramDecompiler::AddConst()
 		return name;
 	}
 
-	auto data = reinterpret_cast<be_t<u32>*>(static_cast<char*>(m_prog.get_data()) + m_size + 4 * sizeof(u32));
+	auto data = reinterpret_cast<be_t<u32>*>(reinterpret_cast<uptr>(m_prog.get_data()) + m_size + 4 * sizeof(u32));
 	m_offset = 2 * 4 * sizeof(u32);
 	u32 x = GetData(data[0]);
 	u32 y = GetData(data[1]);
@@ -664,8 +664,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		break;
 
 	default:
-		rsx_log.error("Bad src type %d", u32{ src.reg_type });
-		Emu.Pause();
+		rsx_log.fatal("Bad src type %d", u32{ src.reg_type });
 		break;
 	}
 

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Utilities/JIT.h"
 #include "Utilities/StrUtil.h"
 #include "Crypto/sha1.h"
@@ -116,6 +116,21 @@ void fmt_class_string<ppu_thread_status>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+template <>
+void fmt_class_string<typename ppu_thread::call_history_t>::format(std::string& out, u64 arg)
+{
+	const auto& history = get_object(arg);
+
+	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
+
+	for (u64 count = 0, idx = history.index - 1; idx != umax && count < ppu_thread::call_history_max_size; count++, idx--)
+	{
+		const u32 pc = history.data[idx % ppu_thread::call_history_max_size];
+		dis_asm.disasm(pc);
+		fmt::append(out, "\n(%u) 0x%08x: %s", count, pc, dis_asm.last_opcode);
+	}
 }
 
 const ppu_decoder<ppu_interpreter_precise> g_ppu_interpreter_precise;
@@ -498,57 +513,45 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t)
 }
 
 // Set or remove breakpoint
-extern void ppu_breakpoint(u32 addr, bool is_adding)
+extern bool ppu_breakpoint(u32 addr, bool is_adding)
 {
-	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
+	if (!vm::check_addr(addr, vm::page_executable) || g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
-		return;
+		return false;
 	}
 
 	const u64 _break = reinterpret_cast<uptr>(&ppu_break);
+
+	// Remove breakpoint parameters
+	u64 to_set = 0;
+	u64 expected = _break;
+
+	if (u32 hle_addr{}; g_fxo->is_init<ppu_function_manager>() && (hle_addr = g_fxo->get<ppu_function_manager>().addr))
+	{
+		// HLE function index
+		const u32 index = (addr - hle_addr) / 8;
+
+		if (addr % 8 == 4 && index < ppu_function_manager::get().size())
+		{
+			// HLE function placement
+			to_set = reinterpret_cast<uptr>(ppu_function_manager::get()[index]);
+		}
+	}
+
+	if (!to_set)
+	{
+		// If not an HLE function use regular instruction function
+		to_set = ppu_cache(addr);
+	}
 
 	if (is_adding)
 	{
-		// Set breakpoint
-		ppu_ref(addr) = _break;
-	}
-	else
-	{
-		// Remove breakpoint
-		ppu_ref(addr) = ppu_cache(addr);
-	}
-}
-
-//sets breakpoint, does nothing if there is a breakpoint there already
-extern void ppu_set_breakpoint(u32 addr)
-{
-	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
-	{
-		return;
+		// Swap if adding
+		std::swap(to_set, expected);
 	}
 
-	const u64 _break = reinterpret_cast<uptr>(&ppu_break);
-
-	if (ppu_ref(addr) != _break)
-	{
-		ppu_ref(addr) = _break;
-	}
-}
-
-//removes breakpoint, does nothing if there is no breakpoint at location
-extern void ppu_remove_breakpoint(u32 addr)
-{
-	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
-	{
-		return;
-	}
-
-	const auto _break = reinterpret_cast<uptr>(&ppu_break);
-
-	if (ppu_ref(addr) == _break)
-	{
-		ppu_ref(addr) = ppu_cache(addr);
-	}
+	auto& ref = reinterpret_cast<atomic_t<u64>&>(ppu_ref(addr));
+	return ref.compare_and_swap_test(expected, to_set);
 }
 
 extern bool ppu_patch(u32 addr, u32 value)
@@ -885,6 +888,22 @@ std::string ppu_thread::dump_misc() const
 	return ret;
 }
 
+std::string ppu_thread::dump_all() const
+{
+	std::string ret = cpu_thread::dump_all();
+
+	if (!call_history.data.empty())
+	{
+		ret +=
+			"\nCalling History:"
+			"\n================";
+
+		fmt::append(ret, "%s", call_history);
+	}
+
+	return ret;
+}
+
 extern thread_local std::string(*g_tls_log_prefix)();
 
 void ppu_thread::cpu_task()
@@ -1151,6 +1170,11 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	if (!g_use_rtm)
 	{
 		state += cpu_flag::memory;
+	}
+
+	if (g_cfg.core.ppu_call_history)
+	{
+		call_history.data.resize(call_history_max_size);
 	}
 }
 
@@ -3005,6 +3029,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			if (!jit && !check_only)
 			{
 				ppu_log.success("LLVM: Module exists: %s", obj_name);
+
+				// Update progress dialog
+				g_progr_pdone++;
 			}
 
 			continue;

@@ -109,9 +109,21 @@ namespace vk
 		g_last_completed_event = 0;
 	}
 
-	u64 vmm_get_application_memory_usage(u32 memory_type)
+	u64 vmm_get_application_memory_usage(const memory_type_info& memory_type)
 	{
-		return g_vmm_stats.memory_usage[memory_type];
+		u64 result = 0;
+		for (const auto& memory_type_index : memory_type)
+		{
+			auto it = g_vmm_stats.memory_usage.find(memory_type_index);
+			if (it == g_vmm_stats.memory_usage.end())
+			{
+				continue;
+			}
+
+			result += it->second.observe();
+		}
+
+		return result;
 	}
 
 	u64 vmm_get_application_pool_usage(vmm_allocation_pool pool)
@@ -152,14 +164,18 @@ namespace vk
 			const auto mem_info = get_current_renderer()->get_memory_mapping();
 			const auto local_memory_usage = vmm_get_application_memory_usage(mem_info.device_local);
 
-			constexpr u64 _1GB = (1024 * 0x100000);
-			if (local_memory_usage < (mem_info.device_local_total_bytes / 2) ||    // Less than 50% VRAM usage OR
-				(mem_info.device_local_total_bytes - local_memory_usage) > _1GB)   // More than 1GiB of unallocated memory
+			constexpr u64 _1M = 0x100000;
+			const auto res_scale = rsx::get_resolution_scale();
+			const auto mem_threshold_1 = static_cast<u64>(256 * res_scale * res_scale) * _1M;
+			const auto mem_threshold_2 = static_cast<u64>(64 * res_scale * res_scale) * _1M;
+
+			if (local_memory_usage < (mem_info.device_local_total_bytes / 2) ||                   // Less than 50% VRAM usage OR
+				(mem_info.device_local_total_bytes - local_memory_usage) > mem_threshold_1)       // Enough to hold all required resources left
 			{
 				// Lower severity to avoid slowing performance too much
 				load_severity = rsx::problem_severity::low;
 			}
-			else if ((mem_info.device_local_total_bytes - local_memory_usage) > 512 * 0x100000)
+			else if ((mem_info.device_local_total_bytes - local_memory_usage) > mem_threshold_2)  // Enough to hold basic resources like textures, buffers, etc
 			{
 				// At least 512MB left, do not overreact
 				load_severity = rsx::problem_severity::moderate;

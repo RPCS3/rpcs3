@@ -222,20 +222,30 @@ add_subdirectory(OpenAL EXCLUDE_FROM_ALL)
 # FAudio
 set(FAUDIO_TARGET 3rdparty_dummy_lib)
 if(USE_FAUDIO)
-	if (USE_SYSTEM_FAUDIO)
-		find_package(FAudio)
-		set(FAUDIO_TARGET FAudio)
+	# FAudio depends on SDL2
+	find_package(SDL2)
+	if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.0.12)
+		message(WARNING
+			"-- RPCS3: FAudio requires SDL 2.0.9 or newer. Please note, this warning"
+			"can also be displayed with SDL2 versions between 2.0.9-2.0.12, as the"
+			"CMake config files are not correctly installed. Since a valid SDL2"
+			">=2.0.9 version cannot be found, building with FAudio will be skipped.")
+		set(USE_FAUDIO False)
 	else()
-		# FAudio depends on SDL2
-		find_package(SDL2)
-		if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.0.9)
-			message(FATAL_ERROR "-- RPCS3: FAudio requires SDL 2.0.9 or newer.")
+		if (USE_SYSTEM_FAUDIO)
+			message(STATUS "RPCS3: Using system FAudio")
+			find_package(FAudio REQUIRED CONFIGS FAudio-config.cmake)
+			add_library(3rdparty_FAudio INTERFACE)
+			target_link_libraries(3rdparty_FAudio INTERFACE FAudio)
+			target_compile_definitions(3rdparty_FAudio INTERFACE -DHAVE_FAUDIO)
+			set(FAUDIO_TARGET 3rdparty_FAudio)
+		else()
+			message(STATUS "RPCS3: Using builtin FAudio")
+			set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared library")
+			add_subdirectory(FAudio EXCLUDE_FROM_ALL)
+			target_compile_definitions(FAudio INTERFACE -DHAVE_FAUDIO)
+			set(FAUDIO_TARGET FAudio)
 		endif()
-
-		set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared library")
-		add_subdirectory(FAudio EXCLUDE_FROM_ALL)
-		target_compile_definitions(FAudio INTERFACE -DHAVE_FAUDIO)
-		set(FAUDIO_TARGET FAudio)
 	endif()
 endif()
 

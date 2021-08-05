@@ -59,6 +59,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	m_disable_mouse = m_gui_settings->GetValue(gui::gs_disableMouse).toBool();
 	m_disable_kb_hotkeys = m_gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
 	m_show_mouse_in_fullscreen = m_gui_settings->GetValue(gui::gs_showMouseFs).toBool();
+	m_lock_mouse_in_fullscreen  = m_gui_settings->GetValue(gui::gs_lockMouseFs).toBool();
 	m_hide_mouse_after_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool();
 	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
 
@@ -135,13 +136,42 @@ void gs_frame::paintEvent(QPaintEvent *event)
 
 void gs_frame::showEvent(QShowEvent *event)
 {
-	// We have to calculate new window positions, since the frame is only known once the window was created
-	const QRect available_geometry = screen()->availableGeometry();
-	QPoint pos = m_initial_geometry.topLeft();
-	pos.setX(std::min(std::max(pos.x() - ((frameGeometry().width() - width()) / 2), available_geometry.left()),
-	                  available_geometry.left() + available_geometry.width() - frameGeometry().width()));
-	pos.setY(std::min(std::max(pos.y() - ((frameGeometry().height() - height()) / 2), available_geometry.top()),
-	                  available_geometry.top() + available_geometry.height() - frameGeometry().height()));
+	// We have to calculate new window positions, since the frame is only known once the window was created.
+	// We will try to find the originally requested dimensions if possible by moving the frame.
+
+	// NOTES: The parameter m_initial_geometry is not necessarily equal to our actual geometry() at this point.
+	//        That's why we use m_initial_geometry instead of the frameGeometry() in some places.
+	//        All of these values, including the screen geometry, can also be negative numbers.
+
+	const QRect available_geometry = screen()->availableGeometry(); // The available screen geometry
+	const QRect inner_geometry = geometry();      // The current inner geometry
+	const QRect outer_geometry = frameGeometry(); // The current outer geometry
+
+	// Calculate the left and top frame borders (this will include window handles)
+	const int left_border = inner_geometry.left() - outer_geometry.left();
+	const int top_border = inner_geometry.top() - outer_geometry.top();
+
+	// Calculate the initially expected frame origin
+	const QPoint expected_pos(m_initial_geometry.left() - left_border,
+	                          m_initial_geometry.top() - top_border);
+
+	// Make sure that the expected position is inside the screen (check left and top borders)
+	QPoint pos(std::max(expected_pos.x(), available_geometry.left()),
+	           std::max(expected_pos.y(), available_geometry.top()));
+
+	// Find the maximum position that still ensures that the frame is completely visible inside the screen (check right and bottom borders)
+	QPoint max_pos(available_geometry.left() + available_geometry.width() - frameGeometry().width(),
+	               available_geometry.top() + available_geometry.height() - frameGeometry().height());
+
+	// Make sure that the "maximum" position is inside the screen (check left and top borders)
+	max_pos.setX(std::max(max_pos.x(), available_geometry.left()));
+	max_pos.setY(std::max(max_pos.y(), available_geometry.top()));
+
+	// Adjust the expected position accordingly
+	pos.setX(std::min(pos.x(), max_pos.x()));
+	pos.setY(std::min(pos.y(), max_pos.y()));
+
+	// Set the new position
 	setFramePosition(pos);
 
 	QWindow::showEvent(event);
@@ -233,10 +263,18 @@ void gs_frame::toggle_fullscreen()
 	{
 		if (visibility() == FullScreen)
 		{
-			setVisibility(Windowed);
+			// Change to the last recorded visibility. Sanitize it just in case.
+			if (m_last_visibility != Visibility::Maximized && m_last_visibility != Visibility::Windowed)
+			{
+				m_last_visibility = Visibility::Windowed;
+			}
+			setVisibility(m_last_visibility);
 		}
 		else
 		{
+			// Backup visibility for exiting fullscreen mode later. Don't do this in the visibilityChanged slot,
+			// since entering fullscreen from maximized will first change the visibility to windowed.
+			m_last_visibility = visibility();
 			setVisibility(FullScreen);
 		}
 	});
@@ -666,7 +704,7 @@ void gs_frame::handle_cursor(QWindow::Visibility visibility, bool from_event, bo
 	if (from_event)
 	{
 		// In fullscreen we default to hiding and locking. In windowed mode we do not want the lock by default.
-		m_mouse_hide_and_lock = visibility == QWindow::Visibility::FullScreen;
+		m_mouse_hide_and_lock = (visibility == QWindow::Visibility::FullScreen) && m_lock_mouse_in_fullscreen;
 	}
 
 	// Update the mouse hide timer

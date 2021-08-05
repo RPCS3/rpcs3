@@ -111,6 +111,11 @@ namespace gui
 	const QString patches      = "Patches";
 	const QString localization = "Localization";
 	const QString pad_settings = "PadSettings";
+	
+	const QString update_on   = "true";
+	const QString update_off  = "false";
+	const QString update_auto = "auto";
+	const QString update_bkg  = "background";
 
 	const QColor gl_icon_color = QColor(240, 240, 240, 255);
 
@@ -196,11 +201,12 @@ namespace gui
 	const gui_save m_enableUIColors    = gui_save(meta, "enableUIColors",    false);
 	const gui_save m_richPresence      = gui_save(meta, "useRichPresence",   true);
 	const gui_save m_discordState      = gui_save(meta, "discordState",      "");
-	const gui_save m_check_upd_start   = gui_save(meta, "checkUpdateStart",  true);
+	const gui_save m_check_upd_start   = gui_save(meta, "checkUpdateStart",  update_on);
 
 	const gui_save gs_disableMouse      = gui_save(gs_frame, "disableMouse",          false);
 	const gui_save gs_disableKbHotkeys  = gui_save(gs_frame, "disableKbHotkeys",      false);
 	const gui_save gs_showMouseFs       = gui_save(gs_frame, "showMouseInFullscreen", false);
+	const gui_save gs_lockMouseFs       = gui_save(gs_frame, "lockMouseInFullscreen", true);
 	const gui_save gs_resize            = gui_save(gs_frame, "resize",                false);
 	const gui_save gs_width             = gui_save(gs_frame, "width",                 1280);
 	const gui_save gs_height            = gui_save(gs_frame, "height",                720);

@@ -72,6 +72,8 @@ struct ppu_static_variable
 // HLE module information
 class ppu_static_module final
 {
+	std::vector<void(*)(ppu_static_module*)> m_on_init;
+
 public:
 	const std::string name;
 
@@ -92,6 +94,10 @@ public:
 	{
 		init(this);
 	}
+
+	void add_init_func(void(*func)(ppu_static_module*));
+
+	void initialize();
 };
 
 class ppu_module_manager final
@@ -113,6 +119,8 @@ class ppu_module_manager final
 
 public:
 	static const ppu_static_module* get_module(const std::string& name);
+
+	static void initialize_modules();
 
 	template <auto* Func>
 	static auto& register_static_function(const char* _module, const char* name, ppu_function_t func, u32 fnid)
@@ -248,6 +256,7 @@ public:
 	static const ppu_static_module cellVpost;
 	static const ppu_static_module libad_async;
 	static const ppu_static_module libad_core;
+	static const ppu_static_module libfs_utility_init;
 	static const ppu_static_module libmedi;
 	static const ppu_static_module libmixer;
 	static const ppu_static_module libsnd3;
@@ -291,5 +300,7 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 #define REG_VNID(_module, nid, var) ppu_module_manager::register_static_variable<&var>(#_module, ppu_select_name(#var, nid), ppu_generate_id(nid))
 
 #define REG_VAR(_module, var) REG_VNID(_module, #var, var)
+
+#define REINIT_FUNC(func) (ppu_module_manager::find_static_function<&func>().flags = 0, ppu_module_manager::find_static_function<&func>())
 
 #define UNIMPLEMENTED_FUNC(_module) _module.todo("%s()", __func__)

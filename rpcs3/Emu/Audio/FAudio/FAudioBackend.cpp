@@ -54,8 +54,7 @@ void FAudioBackend::Play()
 	const u32 res = FAudioSourceVoice_Start(m_source_voice, 0, FAUDIO_COMMIT_NOW);
 	if (res)
 	{
-		FAudio_.error("FAudioSourceVoice_Start() failed(0x%08x)", res);
-		Emu.Pause();
+		FAudio_.fatal("FAudioSourceVoice_Start() failed(0x%08x)", res);
 	}
 }
 
@@ -66,8 +65,7 @@ void FAudioBackend::Pause()
 	const u32 res = FAudioSourceVoice_Stop(m_source_voice, 0, FAUDIO_COMMIT_NOW);
 	if (res)
 	{
-		FAudio_.error("FAudioSourceVoice_Stop() failed(0x%08x)", res);
-		Emu.Pause();
+		FAudio_.fatal("FAudioSourceVoice_Stop() failed(0x%08x)", res);
 	}
 }
 
@@ -78,8 +76,7 @@ void FAudioBackend::Flush()
 	const u32 res = FAudioSourceVoice_FlushSourceBuffers(m_source_voice);
 	if (res)
 	{
-		FAudio_.error("FAudioSourceVoice_FlushSourceBuffers() failed(0x%08x)", res);
-		Emu.Pause();
+		FAudio_.fatal("FAudioSourceVoice_FlushSourceBuffers() failed(0x%08x)", res);
 	}
 }
 
@@ -113,8 +110,7 @@ void FAudioBackend::Open(u32 /* num_buffers */)
 	const u32 res = FAudio_CreateSourceVoice(m_instance, &m_source_voice, &waveformatex, 0, FAUDIO_DEFAULT_FREQ_RATIO, nullptr, nullptr, nullptr);
 	if (res)
 	{
-		FAudio_.error("FAudio_CreateSourceVoice() failed(0x%08x)", res);
-		Emu.Pause();
+		FAudio_.fatal("FAudio_CreateSourceVoice() failed(0x%08x)", res);
 	}
 
 	AUDIT(m_source_voice != nullptr);
@@ -148,8 +144,7 @@ bool FAudioBackend::AddData(const void* src, u32 num_samples)
 	const u32 res = FAudioSourceVoice_SubmitSourceBuffer(m_source_voice, &buffer, nullptr);
 	if (res)
 	{
-		FAudio_.error("FAudioSourceVoice_SubmitSourceBuffer() failed(0x%08x)", res);
-		Emu.Pause();
+		FAudio_.fatal("FAudioSourceVoice_SubmitSourceBuffer() failed(0x%08x)", res);
 		return false;
 	}
 
@@ -172,8 +167,7 @@ f32 FAudioBackend::SetFrequencyRatio(f32 new_ratio)
 	const u32 res = FAudioSourceVoice_SetFrequencyRatio(m_source_voice, new_ratio, FAUDIO_COMMIT_NOW);
 	if (res)
 	{
-		FAudio_.error("FAudioSourceVoice_SetFrequencyRatio() failed(0x%08x)", res);
-		Emu.Pause();
+		FAudio_.fatal("FAudioSourceVoice_SetFrequencyRatio() failed(0x%08x)", res);
 		return 1.0f;
 	}
 

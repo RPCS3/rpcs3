@@ -448,6 +448,10 @@ error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 	g_camera.is_open = true;
 	g_camera.info = *info;
 
+	auto& shared_data = g_fxo->get<gem_camera_shared>();
+	shared_data.width = info->width > 0 ? +info->width : 640;
+	shared_data.height = info->height > 0 ? +info->height : 480;
+
 	return CELL_OK;
 }
 

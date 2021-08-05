@@ -847,44 +847,49 @@ namespace glsl
 			"#define TEX_NAME(index) tex##index\n"
 			"#define TEX_NAME_STENCIL(index) tex##index##_stencil\n\n"
 
-			"#define TEX1D(index, coord1) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].scale.x), TEX_FLAGS(index))\n"
-			"#define TEX1D_BIAS(index, coord1, bias) process_texel(texture(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, bias), TEX_FLAGS(index))\n"
-			"#define TEX1D_LOD(index, coord1, lod) process_texel(textureLod(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, lod), TEX_FLAGS(index))\n"
-			"#define TEX1D_GRAD(index, coord1, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord1 * texture_parameters[index].scale.x, dpdx, dpdy), TEX_FLAGS(index))\n"
-			"#define TEX1D_PROJ(index, coord2) process_texel(textureProj(TEX_NAME(index), coord2 * vec2(texture_parameters[index].scale.x, 1.)), TEX_FLAGS(index))\n"
+			"#define COORD_SCALE1(index, coord1) ((coord1 + texture_parameters[index].scale_bias.w) * texture_parameters[index].scale_bias.x)\n"
+			"#define COORD_SCALE2(index, coord2) ((coord2 + texture_parameters[index].scale_bias.w) * texture_parameters[index].scale_bias.xy)\n"
+			"#define COORD_SCALE3(index, coord3) ((coord3 + texture_parameters[index].scale_bias.w) * texture_parameters[index].scale_bias.xyz)\n\n"
 
-			"#define TEX2D(index, coord2) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].scale), TEX_FLAGS(index))\n"
-			"#define TEX2D_BIAS(index, coord2, bias) process_texel(texture(TEX_NAME(index), coord2 * texture_parameters[index].scale, bias), TEX_FLAGS(index))\n"
-			"#define TEX2D_LOD(index, coord2, lod) process_texel(textureLod(TEX_NAME(index), coord2 * texture_parameters[index].scale, lod), TEX_FLAGS(index))\n"
-			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord2 * texture_parameters[index].scale, dpdx, dpdy), TEX_FLAGS(index))\n"
-			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.)), TEX_FLAGS(index))\n"
+			"#define TEX1D(index, coord1) process_texel(texture(TEX_NAME(index), COORD_SCALE1(index, coord1)), TEX_FLAGS(index))\n"
+			"#define TEX1D_BIAS(index, coord1, bias) process_texel(texture(TEX_NAME(index), COORD_SCALE1(index, coord1), bias), TEX_FLAGS(index))\n"
+			"#define TEX1D_LOD(index, coord1, lod) process_texel(textureLod(TEX_NAME(index), COORD_SCALE1(index, coord1), lod), TEX_FLAGS(index))\n"
+			"#define TEX1D_GRAD(index, coord1, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), COORD_SCALE1(index, coord1), dpdx, dpdy), TEX_FLAGS(index))\n"
+			"#define TEX1D_PROJ(index, coord2) process_texel(textureProj(TEX_NAME(index), vec2(COORD_SCALE1(index, coord2.x), coord2.y)), TEX_FLAGS(index))\n"
 
-			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), coord2 * texture_parameters[index].scale, texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n";
+			"#define TEX2D(index, coord2) process_texel(texture(TEX_NAME(index), COORD_SCALE2(index, coord2)), TEX_FLAGS(index))\n"
+			"#define TEX2D_BIAS(index, coord2, bias) process_texel(texture(TEX_NAME(index), COORD_SCALE2(index, coord2), bias), TEX_FLAGS(index))\n"
+			"#define TEX2D_LOD(index, coord2, lod) process_texel(textureLod(TEX_NAME(index), COORD_SCALE2(index, coord2), lod), TEX_FLAGS(index))\n"
+			"#define TEX2D_GRAD(index, coord2, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), COORD_SCALE2(index, coord2), dpdx, dpdy), TEX_FLAGS(index))\n"
+			"#define TEX2D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), vec4(COORD_SCALE2(index, coord4.xy), coord4.z, coord4.w)), TEX_FLAGS(index))\n"
+
+			"#define TEX2D_DEPTH_RGBA8(index, coord2) process_texel(texture2DReconstruct(TEX_NAME(index), TEX_NAME_STENCIL(index), COORD_SCALE2(index, coord2), texture_parameters[index].remap, TEX_FLAGS(index)), TEX_FLAGS(index))\n";
 
 			if (props.emulate_shadow_compare)
 			{
 				OS <<
-				"#define SHADOW_COORD(coord3, scale, flags) vec3(coord3.xy * scale, _test_bit(flags, DEPTH_FLOAT)? coord3.z : min(float(coord3.z), 1.0))\n"
-				"#define SHADOW_COORD4(coord4, scale, flags) vec4(SHADOW_COORD(coord4.xyz, scale, flags), coord4.w)\n"
-				"#define SHADOW_COORD_PROJ(coord4, scale, flags) vec4(coord4.xy * scale, _test_bit(flags, DEPTH_FLOAT)? coord4.z : min(coord4.z, coord4.w), coord4.w)\n"
-				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), SHADOW_COORD(coord3, texture_parameters[index].scale, TEX_FLAGS(index)))\n"
-				"#define TEX2D_SHADOWCUBE(index, coord4) texture(TEX_NAME(index), SHADOW_COORD4(coord4, texture_parameters[index].scale, TEX_FLAGS(index)))\n"
-				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), SHADOW_COORD_PROJ(coord4, texture_parameters[index].scale, TEX_FLAGS(index)))\n";
+				"#define SHADOW_COORD(index, coord3) vec3(COORD_SCALE2(index, coord3.xy), _test_bit(TEX_FLAGS(index), DEPTH_FLOAT)? coord3.z : min(float(coord3.z), 1.0))\n"
+				"#define SHADOW_COORD4(index, coord4) vec4(SHADOW_COORD(index, coord4.xyz), coord4.w)\n"
+				"#define SHADOW_COORD_PROJ(index, coord4) vec4(COORD_SCALE2(index, coord4.xy), _test_bit(TEX_FLAGS(index), DEPTH_FLOAT)? coord4.z : min(coord4.z, coord4.w), coord4.w)\n\n"
+
+				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), SHADOW_COORD(index, coord3))\n"
+				"#define TEX2D_SHADOWCUBE(index, coord4) texture(TEX_NAME(index), SHADOW_COORD4(index, coord4))\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), SHADOW_COORD_PROJ(index, coord4))\n";
 			}
 			else
 			{
 				OS <<
-				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), coord3 * vec3(texture_parameters[index].scale, 1.))\n"
-				"#define TEX2D_SHADOWCUBE(index, coord4) texture(TEX_NAME(index), coord4 * vec3(texture_parameters[index].scale, 1., 1.))\n"
-				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), coord4 * vec4(texture_parameters[index].scale, 1., 1.))\n";
+				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), vec3(COORD_SCALE2(index, coord3.xy), coord3.z))\n"
+				"#define TEX2D_SHADOWCUBE(index, coord4) texture(TEX_NAME(index), vec4(COORD_SCALE3(index, coord4.xyz), coord4.w))\n"
+				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), vec4(COORD_SCALE3(index, coord4.xyz), coord4.w))\n";
 			}
 
 			OS <<
-			"#define TEX3D(index, coord3) process_texel(texture(TEX_NAME(index), coord3), TEX_FLAGS(index))\n"
-			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), coord3, bias), TEX_FLAGS(index))\n"
-			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), coord3, lod), TEX_FLAGS(index))\n"
-			"#define TEX3D_GRAD(index, coord3, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), coord3, dpdx, dpdy), TEX_FLAGS(index))\n"
-			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), coord4), TEX_FLAGS(index))\n\n";
+			"#define TEX3D(index, coord3) process_texel(texture(TEX_NAME(index), COORD_SCALE3(index, coord3)), TEX_FLAGS(index))\n"
+			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), COORD_SCALE3(index, coord3), bias), TEX_FLAGS(index))\n"
+			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), COORD_SCALE3(index, coord3), lod), TEX_FLAGS(index))\n"
+			"#define TEX3D_GRAD(index, coord3, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), COORD_SCALE3(index, coord3), dpdx, dpdy), TEX_FLAGS(index))\n"
+			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), vec4(COORD_SCALE3(index, coord4.xyz), coord4.w)), TEX_FLAGS(index))\n\n";
 		}
 
 		if (props.require_wpos)
@@ -998,7 +1003,7 @@ namespace glsl
 		OS <<
 		"struct sampler_info\n"
 		"{\n"
-		"	vec2 scale;\n"
+		"	vec4 scale_bias;\n"
 		"	uint remap;\n"
 		"	uint flags;\n"
 		"};\n"

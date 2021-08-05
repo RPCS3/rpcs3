@@ -36,7 +36,7 @@
 
 LOG_CHANNEL(update_log, "UPDATER");
 
-void update_manager::check_for_updates(bool automatic, bool check_only, QWidget* parent)
+void update_manager::check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent)
 {
 	m_update_message.clear();
 
@@ -59,9 +59,9 @@ void update_manager::check_for_updates(bool automatic, bool check_only, QWidget*
 		}
 	});
 
-	connect(m_downloader, &downloader::signal_download_finished, this, [this, automatic, check_only](const QByteArray& data)
+	connect(m_downloader, &downloader::signal_download_finished, this, [this, automatic, check_only, auto_accept](const QByteArray& data)
 	{
-		const bool result_json = handle_json(automatic, check_only, data);
+		const bool result_json = handle_json(automatic, check_only, auto_accept, data);
 
 		if (!result_json)
 		{
@@ -81,7 +81,7 @@ void update_manager::check_for_updates(bool automatic, bool check_only, QWidget*
 	m_downloader->start(url, true, !automatic, tr("Checking For Updates"), true);
 }
 
-bool update_manager::handle_json(bool automatic, bool check_only, const QByteArray& data)
+bool update_manager::handle_json(bool automatic, bool check_only, bool auto_accept, const QByteArray& data)
 {
 	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
 	const int return_code       = json_data["return_code"].toInt(-255);
@@ -218,16 +218,16 @@ bool update_manager::handle_json(bool automatic, bool check_only, const QByteArr
 		return true;
 	}
 
-	update();
+	update(auto_accept);
 	return true;
 }
 
-void update_manager::update()
+void update_manager::update(bool auto_accept)
 {
 	ensure(m_downloader);
 
-	if (m_update_message.isEmpty() ||
-		QMessageBox::question(m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
+	if (!auto_accept && (m_update_message.isEmpty() ||
+		QMessageBox::question(m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No))
 	{
 		m_downloader->close_progress_dialog();
 		return;
@@ -247,9 +247,9 @@ void update_manager::update()
 		QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
 	});
 
-	connect(m_downloader, &downloader::signal_download_finished, this, [this](const QByteArray& data)
+	connect(m_downloader, &downloader::signal_download_finished, this, [this, auto_accept](const QByteArray& data)
 	{
-		const bool result_json = handle_rpcs3(data);
+		const bool result_json = handle_rpcs3(data, auto_accept);
 
 		if (!result_json)
 		{
@@ -265,7 +265,7 @@ void update_manager::update()
 	m_downloader->start(m_request_url, true, true, tr("Downloading Update"), true, m_expected_size);
 }
 
-bool update_manager::handle_rpcs3(const QByteArray& data)
+bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 {
 	m_downloader->update_progress_dialog(tr("Updating RPCS3"));
 
@@ -545,7 +545,10 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 
 	m_downloader->close_progress_dialog();
 
-	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!\nRPCS3 will now restart."));
+	if (!auto_accept)
+	{
+		QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!\nRPCS3 will now restart."));
+	}
 
 	Emu.SetForceBoot(true);
 	Emu.Stop();

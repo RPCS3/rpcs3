@@ -115,6 +115,8 @@ struct Mouse
 {
 	s32 x_pos;
 	s32 y_pos;
+	s32 x_max;
+	s32 y_max;
 	u8 buttons; // actual mouse button positions
 
 	MouseTabletDataList m_tablet_datalist;
@@ -124,6 +126,8 @@ struct Mouse
 	Mouse()
 		: x_pos(0)
 		, y_pos(0)
+		, x_max(0)
+		, y_max(0)
 		, buttons(0)
 	{
 	}
@@ -213,7 +217,7 @@ public:
 		}
 	}
 
-	void Move(const s32 x_pos_new, const s32 y_pos_new, const bool is_qt_fullscreen = false, s32 x_delta = 0, s32 y_delta = 0)
+	void Move(s32 x_pos_new, s32 y_pos_new, s32 x_max, s32 y_max, const bool is_qt_fullscreen = false, s32 x_delta = 0, s32 y_delta = 0)
 	{
 		std::lock_guard lock(mutex);
 
@@ -244,6 +248,8 @@ public:
 			new_data.x_axis = static_cast<s8>(std::clamp(x_delta, -127, 128));
 			new_data.y_axis = static_cast<s8>(std::clamp(y_delta, -127, 128));
 
+			m_mice[p].x_max = x_max;
+			m_mice[p].y_max = y_max;
 			m_mice[p].x_pos = x_pos_new;
 			m_mice[p].y_pos = y_pos_new;
 

@@ -21,6 +21,7 @@
 #include <mutex>
 #include <thread>
 #include <optional>
+#include <unordered_set>
 
 #include "util/v128.hpp"
 #include "util/v128sse.hpp"
@@ -539,6 +540,108 @@ void spu_cache::initialize()
 	if ((g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm) && !func_list.empty())
 	{
 		spu_log.success("SPU Runtime: Built %u functions.", func_list.size());
+
+		if (g_cfg.core.spu_debug)
+		{
+			std::string dump;
+			dump.reserve(10'000'000);
+
+			std::map<std::basic_string_view<u8>, spu_program*> sorted;
+
+			for (auto&& f : func_list)
+			{
+				// Interpret as a byte string
+				std::basic_string_view<u8> data = {reinterpret_cast<u8*>(f.data.data()), f.data.size() * sizeof(u32)};
+
+				sorted[data] = &f;
+			}
+
+			std::unordered_set<u32> depth_n;
+
+			u32 n_max = 0;
+
+			for (auto&& [bytes, f] : sorted)
+			{
+				{
+					sha1_context ctx;
+					u8 output[20];
+
+					sha1_starts(&ctx);
+					sha1_update(&ctx, bytes.data(), bytes.size());
+					sha1_finish(&ctx, output);
+					fmt::append(dump, "\n\t[%s] ", fmt::base57(output));
+				}
+
+				u32 depth_m = 0;
+
+				for (auto&& [data, f2] : sorted)
+				{
+					u32 depth = 0;
+
+					if (f2 == f)
+					{
+						continue;
+					}
+
+					for (u32 i = 0; i < bytes.size(); i++)
+					{
+						if (i < data.size() && data[i] == bytes[i])
+						{
+							depth++;
+						}
+						else
+						{
+							break;
+						}
+					}
+
+					depth_n.emplace(depth);
+					depth_m = std::max(depth, depth_m);
+				}
+
+				fmt::append(dump, "c=%06d,d=%06d ", depth_n.size(), depth_m);
+
+				bool sk = false;
+
+				for (u32 i = 0; i < bytes.size(); i++)
+				{
+					if (depth_m == i)
+					{
+						dump += '|';
+						sk = true;
+					}
+
+					fmt::append(dump, "%02x", bytes[i]);
+
+					if (i % 4 == 3)
+					{
+						if (sk)
+						{
+							sk = false;
+						}
+						else
+						{
+							dump += ' ';
+						}
+
+						dump += ' ';
+					}
+				}
+
+				fmt::append(dump, "\n\t%49s", "");
+
+				for (u32 i = 0; i < f->data.size(); i++)
+				{
+					fmt::append(dump, "%-10s", s_spu_iname.decode(std::bit_cast<be_t<u32>>(f->data[i])));
+				}
+
+				n_max = std::max(n_max, ::size32(depth_n));
+
+				depth_n.clear();
+			}
+
+			spu_log.notice("SPU Cache Dump (max_c=%d): %s", n_max, dump);
+		}
 	}
 
 	// Initialize global cache instance
@@ -8632,7 +8735,7 @@ public:
 		{
 			return;
 		}
-		
+
 		const auto cond = eval(extract(get_vr(op.rt), 3) != 0);
 		const auto addr = eval(extract(get_vr(op.ra), 3) & 0x3fffc);
 		const auto target = add_block_indirect(op, addr);

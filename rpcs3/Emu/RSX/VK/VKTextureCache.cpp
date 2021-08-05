@@ -43,8 +43,9 @@ namespace vk
 			const auto section_length = valid_range.length();
 			const auto transfer_pitch = real_pitch;
 			const auto task_length = transfer_pitch * src_area.height();
+			const auto working_buffer_length = calculate_working_buffer_size(task_length, src->aspect());
 
-			auto working_buffer = vk::get_scratch_buffer(task_length);
+			auto working_buffer = vk::get_scratch_buffer(working_buffer_length);
 			auto final_mapping = vk::map_dma(valid_range.start, section_length);
 
 			VkBufferImageCopy region = {};
@@ -505,8 +506,14 @@ namespace vk
 				image_type,
 				dst_format,
 				w, h, d, mips, layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags | VK_IMAGE_CREATE_ALLOW_NULL,
 				VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
+
+			if (!image->value)
+			{
+				// OOM, bail
+				return nullptr;
+			}
 		}
 
 		// This method is almost exclusively used to work on framebuffer resources
@@ -572,6 +579,12 @@ namespace vk
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_CUBE, gcm_format, 0, 0, size, size, 1, 1, remap_vector, false);
 
+		if (!result)
+		{
+			// Failed to create temporary object, bail
+			return nullptr;
+		}
+
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
 		VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 6 };
@@ -600,6 +613,12 @@ namespace vk
 		auto _template = get_template_from_collection_impl(sections_to_copy);
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_3D,
 			VK_IMAGE_VIEW_TYPE_3D, gcm_format, 0, 0, width, height, depth, 1, remap_vector, false);
+
+		if (!result)
+		{
+			// Failed to create temporary object, bail
+			return nullptr;
+		}
 
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
@@ -630,6 +649,12 @@ namespace vk
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, 1, 1, remap_vector, false);
 
+		if (!result)
+		{
+			// Failed to create temporary object, bail
+			return nullptr;
+		}
+
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
 		VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 1 };
@@ -659,6 +684,12 @@ namespace vk
 		auto _template = get_template_from_collection_impl(sections_to_copy);
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, 1, mipmaps, remap_vector, false);
+
+		if (!result)
+		{
+			// Failed to create temporary object, bail
+			return nullptr;
+		}
 
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
@@ -1094,8 +1125,9 @@ namespace vk
 
 	bool texture_cache::handle_memory_pressure(rsx::problem_severity severity)
 	{
-		bool any_released = baseclass::handle_memory_pressure(severity);
+		auto any_released = baseclass::handle_memory_pressure(severity);
 
+		// TODO: This can cause invalidation of in-flight resources
 		if (severity <= rsx::problem_severity::low || !m_temporary_memory_size)
 		{
 			// Nothing left to do
@@ -1109,12 +1141,24 @@ namespace vk
 			return any_released;
 		}
 
+		std::unique_lock lock(m_cache_mutex, std::defer_lock);
+		if (!lock.try_lock())
+		{
+			rsx_log.warning("Unable to remove temporary resources because we're already in the texture cache!");
+			return any_released;
+		}
+
 		// Nuke temporary resources. They will still be visible to the GPU.
 		auto gc = vk::get_resource_manager();
 		u64 actual_released_memory = 0;
 
 		for (auto& entry : m_temporary_storage)
 		{
+			if (!entry.combined_image)
+			{
+				continue;
+			}
+
 			actual_released_memory += entry.combined_image->memory->size();
 			gc->dispose(entry.combined_image);
 			m_temporary_memory_size -= entry.block_size;
