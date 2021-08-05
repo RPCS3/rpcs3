@@ -637,9 +637,8 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 
 	if (type & SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM)
 	{
-		// Constant size, unknown what it means but it's definitely not for each spu thread alone
+		// Constant size, unknown what it means
 		mem_size = SPU_LS_SIZE;
-		use_scheduler = false;
 	}
 	else if (type & SYS_SPU_THREAD_GROUP_TYPE_NON_CONTEXT)
 	{
