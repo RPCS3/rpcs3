@@ -554,10 +554,11 @@ error_code cellGemConvertVideoStart(vm::cptr<void> video_frame)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	if (!video_frame.aligned(128))
-	{
-		return CELL_GEM_ERROR_INVALID_ALIGNMENT;
-	}
+	// TODO: The alignment checks seem to break Time Crisis Razing Storm [BLUS30528]
+	//if (!video_frame.aligned(128))
+	//{
+	//	return CELL_GEM_ERROR_INVALID_ALIGNMENT;
+	//}
 
 	if (std::exchange(gem.video_conversion_started, true))
 	{
@@ -1365,10 +1366,11 @@ error_code cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_
 		}
 	}
 
-	if (!vc.video_data_out.aligned(16) || !vc.buffer_memory.aligned(128))
-	{
-		return CELL_GEM_ERROR_INVALID_ALIGNMENT;
-	}
+	// TODO: The alignment checks seem to break Time Crisis Razing Storm [BLUS30528]
+	//if (!vc.video_data_out.aligned(16) || !vc.buffer_memory.aligned(128))
+	//{
+	//	return CELL_GEM_ERROR_INVALID_ALIGNMENT;
+	//}
 
 	gem.vc_attribute = vc;
 
@@ -1601,10 +1603,11 @@ error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 		return CELL_GEM_ERROR_UPDATE_NOT_FINISHED;
 	}
 
-	if (!camera_frame.aligned(128))
-	{
-		return CELL_GEM_ERROR_INVALID_ALIGNMENT;
-	}
+	// TODO: The alignment checks seem to break Time Crisis Razing Storm [BLUS30528]
+	//if (!camera_frame.aligned(128))
+	//{
+	//	return CELL_GEM_ERROR_INVALID_ALIGNMENT;
+	//}
 
 	gem.camera_frame = camera_frame.addr();
 	if (!camera_frame)
