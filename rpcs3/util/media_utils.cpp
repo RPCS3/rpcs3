@@ -145,7 +145,7 @@ namespace utils
 		info.duration_us = av_format_ctx->duration;
 
 		AVDictionaryEntry* tag = nullptr;
-		while (tag = av_dict_get(av_format_ctx->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))
+		while ((tag = av_dict_get(av_format_ctx->metadata, "", tag, AV_DICT_IGNORE_SUFFIX)))
 		{
 			info.metadata[tag->key] = tag->value;
 		}

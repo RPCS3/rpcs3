@@ -550,8 +550,7 @@ extern bool ppu_breakpoint(u32 addr, bool is_adding)
 		std::swap(to_set, expected);
 	}
 
-	auto& ref = reinterpret_cast<atomic_t<u64>&>(ppu_ref(addr));
-	return ref.compare_and_swap_test(expected, to_set);
+	return atomic_storage<u64>::compare_exchange(ppu_ref(addr), expected, to_set);
 }
 
 extern bool ppu_patch(u32 addr, u32 value)
