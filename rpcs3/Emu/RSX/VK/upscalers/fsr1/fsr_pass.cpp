@@ -5,8 +5,8 @@
 #include "../fsr_pass.h"
 
 #define A_CPU 1
-#include "3rdParty/GPUOpen/include/ffx_a.h"
-#include "3rdParty/GPUOpen/include/ffx_fsr1.h"
+#include "3rdparty/GPUOpen/include/ffx_a.h"
+#include "3rdparty/GPUOpen/include/ffx_fsr1.h"
 #undef A_CPU
 
 namespace vk
