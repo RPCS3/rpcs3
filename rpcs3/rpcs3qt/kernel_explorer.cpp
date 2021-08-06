@@ -238,7 +238,7 @@ void kernel_explorer::update()
 		{ SYS_LWMUTEX_OBJECT             , tr("Light Weight Mutexes")},
 		{ SYS_TIMER_OBJECT               , tr("Timers")},
 		{ SYS_SEMAPHORE_OBJECT           , tr("Semaphores")},
-		{ SYS_FS_FD_OBJECT               , tr("File Descriptors ?")},
+		{ SYS_FS_FD_OBJECT               , tr("File Descriptors")},
 		{ SYS_LWCOND_OBJECT              , tr("Light Weight Condition Variables")},
 		{ SYS_EVENT_FLAG_OBJECT          , tr("Event Flags")},
 
