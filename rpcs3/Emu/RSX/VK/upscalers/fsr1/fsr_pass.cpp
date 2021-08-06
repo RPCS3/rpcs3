@@ -4,10 +4,28 @@
 
 #include "../fsr_pass.h"
 
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wignored-qualifiers"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#elif defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wignored-qualifiers"
+#pragma clang diagnostic ignored "-Wold-style-cast"
+#pragma clang diagnostic ignored "-Wunused-function"
+#endif
+
 #define A_CPU 1
 #include "3rdparty/GPUOpen/include/ffx_a.h"
 #include "3rdparty/GPUOpen/include/ffx_fsr1.h"
 #undef A_CPU
+
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#elif defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 namespace vk
 {
