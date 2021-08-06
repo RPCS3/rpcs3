@@ -4278,6 +4278,9 @@ extern void resume_spu_thread_group_from_waiting(spu_thread& spu)
 	else if (group->run_state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
 	{
 		group->run_state = SPU_THREAD_GROUP_STATUS_SUSPENDED;
+		spu.state += cpu_flag::signal;
+		spu.state.notify_one(cpu_flag::signal);
+		return;
 	}
 
 	for (auto& thread : group->threads)

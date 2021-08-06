@@ -958,6 +958,8 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 		else if (state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
 		{
 			state = SPU_THREAD_GROUP_STATUS_WAITING;
+			error = CellError{};
+			return true;
 		}
 		else
 		{
@@ -971,7 +973,12 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 
 	if (error != CELL_CANCEL + 0u)
 	{
-		return error;
+		if (error)
+		{
+			return error;
+		}
+
+		return CELL_OK;
 	}
 
 	for (auto& thread : group->threads)
