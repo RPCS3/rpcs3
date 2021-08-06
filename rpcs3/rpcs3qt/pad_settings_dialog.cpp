@@ -298,6 +298,8 @@ void pad_settings_dialog::InitButtons()
 	insert_button(button_ids::id_pad_rstick_right, ui->b_rstick_right);
 	insert_button(button_ids::id_pad_rstick_up, ui->b_rstick_up);
 
+	insert_button(button_ids::id_pressure_intensity, ui->b_pressure_intensity);
+
 	m_pad_buttons->addButton(ui->b_refresh, button_ids::id_refresh);
 	m_pad_buttons->addButton(ui->b_addProfile, button_ids::id_add_profile);
 
@@ -578,6 +580,8 @@ void pad_settings_dialog::ReloadButtons()
 	updateButton(button_ids::id_pad_rstick_right, ui->b_rstick_right, &m_handler_cfg.rs_right);
 	updateButton(button_ids::id_pad_rstick_up, ui->b_rstick_up, &m_handler_cfg.rs_up);
 
+	updateButton(button_ids::id_pressure_intensity, ui->b_pressure_intensity, &m_handler_cfg.pressure_intensity_button);
+
 	m_min_force = m_handler->vibration_min;
 	m_max_force = m_handler->vibration_max;
 
@@ -586,6 +590,9 @@ void pad_settings_dialog::ReloadButtons()
 
 	// Enable Deadzone Settings
 	m_enable_deadzones = m_handler->has_deadzones();
+
+	// Enable Pressure Sensitivity Settings
+	m_enable_pressure_intensity_button = m_handler->has_pressure_intensity_button();
 
 	UpdateLabels(true);
 }
@@ -969,53 +976,60 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 		ui->slider_stick_right->setRange(0, m_handler->thumb_max);
 		ui->slider_stick_right->setValue(m_handler_cfg.rstickdeadzone);
 
+		std::vector<std::string> range;
+
 		// Update Mouse Deadzones
-		std::vector<std::string> mouse_dz_range_x = m_handler_cfg.mouse_deadzone_x.to_list();
-		ui->mouse_dz_x->setRange(std::stoi(mouse_dz_range_x.front()), std::stoi(mouse_dz_range_x.back()));
+		range = m_handler_cfg.mouse_deadzone_x.to_list();
+		ui->mouse_dz_x->setRange(std::stoi(range.front()), std::stoi(range.back()));
 		ui->mouse_dz_x->setValue(m_handler_cfg.mouse_deadzone_x);
 
-		std::vector<std::string> mouse_dz_range_y = m_handler_cfg.mouse_deadzone_y.to_list();
-		ui->mouse_dz_y->setRange(std::stoi(mouse_dz_range_y.front()), std::stoi(mouse_dz_range_y.back()));
+		range = m_handler_cfg.mouse_deadzone_y.to_list();
+		ui->mouse_dz_y->setRange(std::stoi(range.front()), std::stoi(range.back()));
 		ui->mouse_dz_y->setValue(m_handler_cfg.mouse_deadzone_y);
 
 		// Update Mouse Acceleration
-		std::vector<std::string> mouse_accel_range_x = m_handler_cfg.mouse_acceleration_x.to_list();
-		ui->mouse_accel_x->setRange(std::stod(mouse_accel_range_x.front()) / 100.0, std::stod(mouse_accel_range_x.back()) / 100.0);
+		range = m_handler_cfg.mouse_acceleration_x.to_list();
+		ui->mouse_accel_x->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
 		ui->mouse_accel_x->setValue(m_handler_cfg.mouse_acceleration_x / 100.0);
 
-		std::vector<std::string> mouse_accel_range_y = m_handler_cfg.mouse_acceleration_y.to_list();
-		ui->mouse_accel_y->setRange(std::stod(mouse_accel_range_y.front()) / 100.0, std::stod(mouse_accel_range_y.back()) / 100.0);
+		range = m_handler_cfg.mouse_acceleration_y.to_list();
+		ui->mouse_accel_y->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
 		ui->mouse_accel_y->setValue(m_handler_cfg.mouse_acceleration_y / 100.0);
 
 		// Update Stick Lerp Factors
-		std::vector<std::string> left_stick_lerp_range = m_handler_cfg.l_stick_lerp_factor.to_list();
-		ui->left_stick_lerp->setRange(std::stod(left_stick_lerp_range.front()) / 100.0, std::stod(left_stick_lerp_range.back()) / 100.0);
+		range = m_handler_cfg.l_stick_lerp_factor.to_list();
+		ui->left_stick_lerp->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
 		ui->left_stick_lerp->setValue(m_handler_cfg.l_stick_lerp_factor / 100.0);
 
-		std::vector<std::string> right_stick_lerp_range = m_handler_cfg.r_stick_lerp_factor.to_list();
-		ui->right_stick_lerp->setRange(std::stod(right_stick_lerp_range.front()) / 100.0, std::stod(right_stick_lerp_range.back()) / 100.0);
+		range = m_handler_cfg.r_stick_lerp_factor.to_list();
+		ui->right_stick_lerp->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
 		ui->right_stick_lerp->setValue(m_handler_cfg.r_stick_lerp_factor / 100.0);
 
 		// Update Stick Multipliers
-		std::vector<std::string> stick_multi_range_left = m_handler_cfg.lstickmultiplier.to_list();
-		ui->stick_multi_left->setRange(std::stod(stick_multi_range_left.front()) / 100.0, std::stod(stick_multi_range_left.back()) / 100.0);
+		range = m_handler_cfg.lstickmultiplier.to_list();
+		ui->stick_multi_left->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
 		ui->stick_multi_left->setValue(m_handler_cfg.lstickmultiplier / 100.0);
 
-		std::vector<std::string> stick_multi_range_right = m_handler_cfg.rstickmultiplier.to_list();
-		ui->stick_multi_right->setRange(std::stod(stick_multi_range_right.front()) / 100.0, std::stod(stick_multi_range_right.back()) / 100.0);
+		range = m_handler_cfg.rstickmultiplier.to_list();
+		ui->stick_multi_right->setRange(std::stod(range.front()) / 100.0, std::stod(range.back()) / 100.0);
 		ui->stick_multi_right->setValue(m_handler_cfg.rstickmultiplier / 100.0);
 
 		// Update Squircle Factors
-		std::vector<std::string> squircle_range_left = m_handler_cfg.lpadsquircling.to_list();
-		ui->squircle_left->setRange(std::stoi(squircle_range_left.front()), std::stoi(squircle_range_left.back()));
+		range = m_handler_cfg.lpadsquircling.to_list();
+		ui->squircle_left->setRange(std::stoi(range.front()), std::stoi(range.back()));
 		ui->squircle_left->setValue(m_handler_cfg.lpadsquircling);
 
-		std::vector<std::string> squircle_range_right = m_handler_cfg.rpadsquircling.to_list();
-		ui->squircle_right->setRange(std::stoi(squircle_range_right.front()), std::stoi(squircle_range_right.back()));
+		range = m_handler_cfg.rpadsquircling.to_list();
+		ui->squircle_right->setRange(std::stoi(range.front()), std::stoi(range.back()));
 		ui->squircle_right->setValue(m_handler_cfg.rpadsquircling);
 
 		RepaintPreviewLabel(ui->preview_stick_left, ui->slider_stick_left->value(), ui->slider_stick_left->size().width(), m_lx, m_ly, m_handler_cfg.lpadsquircling, m_handler_cfg.lstickmultiplier / 100.0);
 		RepaintPreviewLabel(ui->preview_stick_right, ui->slider_stick_right->value(), ui->slider_stick_right->size().width(), m_rx, m_ry, m_handler_cfg.rpadsquircling, m_handler_cfg.rstickmultiplier / 100.0);
+
+		// Update pressure sensitivity factors
+		range = m_handler_cfg.pressure_intensity.to_list();
+		ui->sb_pressure_intensity->setRange(std::stoi(range.front()), std::stoi(range.back()));
+		ui->sb_pressure_intensity->setValue(m_handler_cfg.pressure_intensity);
 
 		// Apply stored/default LED settings to the device
 		m_enable_led = m_handler->has_led();
@@ -1043,6 +1057,7 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 {
 	m_enable_buttons = is_enabled;
 
+	ui->gb_pressure_intensity->setEnabled(is_enabled && m_enable_pressure_intensity_button);
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_sticks->setEnabled(is_enabled && m_enable_deadzones);
 	ui->gb_triggers->setEnabled(is_enabled && m_enable_deadzones);
@@ -1244,6 +1259,7 @@ void pad_settings_dialog::ChangeInputType()
 	// change our contextual widgets
 	ui->left_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
 	ui->right_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
+	ui->gb_pressure_intensity->setVisible(m_handler->has_pressure_intensity_button());
 
 	// Refill the device combobox with currently available devices
 	switch (m_handler->m_type)
@@ -1552,6 +1568,11 @@ void pad_settings_dialog::SaveProfile()
 		m_handler_cfg.rstickdeadzone.set(ui->slider_stick_right->value());
 	}
 
+	if (m_handler->has_pressure_intensity_button())
+	{
+		m_handler_cfg.pressure_intensity.set(ui->sb_pressure_intensity->value());
+	}
+
 	if (m_handler->m_type == pad_handler::keyboard)
 	{
 		m_handler_cfg.mouse_acceleration_x.set(ui->mouse_accel_x->value() * 100);
@@ -1665,6 +1686,7 @@ void pad_settings_dialog::SubscribeTooltips()
 	// Localized tooltips
 	const Tooltips tooltips;
 
+	SubscribeTooltip(ui->gb_pressure_intensity, tooltips.gamepad_settings.pressure_intensity);
 	SubscribeTooltip(ui->gb_squircle, tooltips.gamepad_settings.squircle_factor);
 	SubscribeTooltip(ui->gb_stick_multi, tooltips.gamepad_settings.stick_multiplier);
 	SubscribeTooltip(ui->gb_vibration, tooltips.gamepad_settings.vibration);

@@ -253,6 +253,22 @@ void pad_thread::ThreadFunc()
 			}
 		}
 
+		// I guess this is the best place to add pressure sensitivity without too much code duplication.
+		for (const auto& pad : m_pads)
+		{
+			if ((pad->m_port_status & CELL_PAD_STATUS_CONNECTED) &&
+				pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed)
+			{
+				for (auto& button : pad->m_buttons)
+				{
+					if (button.m_pressed)
+					{
+						button.m_value = pad->m_pressure_intensity;
+					}
+				}
+			}
+		}
+
 		std::this_thread::sleep_for(1ms);
 	}
 }
@@ -275,7 +291,8 @@ void pad_thread::InitLddPad(u32 handle)
 		0, // CELL_PAD_PCLASS_TYPE_STANDARD
 		product.pclass_profile,
 		product.vendor_id,
-		product.product_id
+		product.product_id,
+		50
 	);
 
 	num_ldd_pad++;

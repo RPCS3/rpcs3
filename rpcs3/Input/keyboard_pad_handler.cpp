@@ -65,6 +65,8 @@ void keyboard_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l2.def       = GetKeyName(Qt::Key_R);
 	cfg->l3.def       = GetKeyName(Qt::Key_F);
 
+	cfg->pressure_intensity_button.def = "";
+
 	// apply defaults
 	cfg->from_default();
 }
@@ -743,8 +745,12 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 		p_profile->device_class_type,
 		pclass_profile,
 		p_profile->vendor_id,
-		p_profile->product_id
+		p_profile->product_id,
+		p_profile->pressure_intensity
 	);
+
+	pad->m_buttons.emplace_back(special_button_offset, find_key(p_profile->pressure_intensity_button), special_button_value::pressure_intensity);
+	pad->m_pressure_intensity_button_index = pad->m_buttons.size() - 1;
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->left),     CELL_PAD_CTRL_LEFT);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->down),     CELL_PAD_CTRL_DOWN);

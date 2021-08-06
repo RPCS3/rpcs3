@@ -69,6 +69,9 @@ struct pad_config final : cfg::node
 	cfg::string l2{ this, "L2", "" };
 	cfg::string l3{ this, "L3", "" };
 
+	cfg::string pressure_intensity_button{ this, "Pressure Intensity Button", "" };
+	cfg::uint<0, 100> pressure_intensity{ this, "Pressure Intensity Percent", 50 };
+
 	cfg::uint<0, 200> lstickmultiplier{ this, "Left Stick Multiplier", 100 };
 	cfg::uint<0, 200> rstickmultiplier{ this, "Right Stick Multiplier", 100 };
 	cfg::uint<0, 1000000> lstickdeadzone{ this, "Left Stick Deadzone", 0 };

@@ -273,6 +273,8 @@ void dualsense_pad_handler::init_config(pad_config* cfg, const std::string& name
 	cfg->l2.def       = button_list.at(DualSenseKeyCodes::L2);
 	cfg->l3.def       = button_list.at(DualSenseKeyCodes::L3);
 
+	cfg->pressure_intensity_button.def = "";
+
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255
 	cfg->rstickdeadzone.def    = 40; // between 0 and 255

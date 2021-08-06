@@ -66,6 +66,8 @@ class pad_settings_dialog : public QDialog
 		id_pad_rstick_right,
 		id_pad_rstick_up,
 
+		id_pressure_intensity, // Special button for pressure intensity
+
 		id_pad_end, // end
 
 		id_led,
@@ -117,6 +119,7 @@ private:
 	bool m_enable_deadzones{ false };
 	bool m_enable_led{ false };
 	bool m_enable_battery{ false };
+	bool m_enable_pressure_intensity_button{ true };
 
 	// Button Mapping
 	QButtonGroup* m_pad_buttons = nullptr;
