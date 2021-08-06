@@ -217,7 +217,7 @@ void kernel_explorer::update()
 		return;
 	}
 
-	const std::unordered_map<u32, QString> tree_item_names =
+	const std::initializer_list<std::pair<u32, QString>> tree_item_names =
 	{
 		{ process_info                   , tr("Process Info")},
 
