@@ -881,7 +881,7 @@ namespace glsl
 				OS <<
 				"#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), vec3(COORD_SCALE2(index, coord3.xy), coord3.z))\n"
 				"#define TEX2D_SHADOWCUBE(index, coord4) texture(TEX_NAME(index), vec4(COORD_SCALE3(index, coord4.xyz), coord4.w))\n"
-				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), vec4(COORD_SCALE3(index, coord4.xyz), coord4.w))\n";
+				"#define TEX2D_SHADOWPROJ(index, coord4) textureProj(TEX_NAME(index), vec4(COORD_SCALE2(index, coord4.xy), coord4.zw))\n";
 			}
 
 			OS <<
