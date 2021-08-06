@@ -85,6 +85,7 @@ ds3_pad_handler::ds3_pad_handler()
 	b_has_battery = true;
 	b_has_led = true;
 	b_has_rgb = false;
+	b_has_pressure_intensity_button = false; // The DS3 obviously already has this feature natively.
 
 	m_name_string = "DS3 Pad #";
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;
@@ -227,6 +228,8 @@ void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l1.def = button_list.at(DS3KeyCodes::L1);
 	cfg->l2.def = button_list.at(DS3KeyCodes::L2);
 	cfg->l3.def = button_list.at(DS3KeyCodes::L3);
+
+	cfg->pressure_intensity_button.def = "";
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255

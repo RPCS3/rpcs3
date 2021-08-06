@@ -60,6 +60,8 @@ void mm_joystick_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l2.def       = button_list.at(JOY_BUTTON5);
 	cfg->l3.def       = button_list.at(JOY_BUTTON11);
 
+	cfg->pressure_intensity_button.def = "";
+
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 0; // between 0 and 255
 	cfg->rstickdeadzone.def    = 0; // between 0 and 255

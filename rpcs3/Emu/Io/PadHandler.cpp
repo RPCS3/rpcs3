@@ -30,7 +30,9 @@ int PadHandlerBase::FindKeyCode(const std::unordered_map<u32, std::string>& map,
 
 	if (fallback)
 	{
-		input_log.error("int FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
+		if (!nam.empty())
+			input_log.error("int FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
+
 		if (def_code < 0)
 			def_code = 0;
 	}
@@ -55,7 +57,9 @@ long PadHandlerBase::FindKeyCode(const std::unordered_map<u64, std::string>& map
 
 	if (fallback)
 	{
-		input_log.error("long FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
+		if (!nam.empty())
+			input_log.error("long FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
+
 		if (def_code < 0)
 			def_code = 0;
 	}
@@ -74,7 +78,8 @@ int PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u32, std::strin
 
 	if (fallback)
 	{
-		input_log.error("long FindKeyCodeByString for [name = %s] returned with 0", name);
+		if (!name.empty())
+			input_log.error("long FindKeyCodeByString for [name = %s] returned with 0", name);
 		return 0;
 	}
 
@@ -92,7 +97,8 @@ long PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u64, std::stri
 
 	if (fallback)
 	{
-		input_log.error("long FindKeyCodeByString for [name = %s] returned with 0", name);
+		if (!name.empty())
+			input_log.error("long FindKeyCodeByString for [name = %s] returned with 0", name);
 		return 0;
 	}
 
@@ -288,6 +294,11 @@ bool PadHandlerBase::has_battery() const
 	return b_has_battery;
 }
 
+bool PadHandlerBase::has_pressure_intensity_button() const
+{
+	return b_has_pressure_intensity_button;
+}
+
 std::string PadHandlerBase::get_config_dir(pad_handler type, const std::string& title_id)
 {
 	if (!title_id.empty())
@@ -479,8 +490,12 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string
 		profile->device_class_type,
 		pclass_profile,
 		profile->vendor_id,
-		profile->product_id
+		profile->product_id,
+		profile->pressure_intensity
 	);
+
+	pad->m_buttons.emplace_back(special_button_offset, mapping[button::pressure_intensity_button], special_button_value::pressure_intensity);
+	pad->m_pressure_intensity_button_index = pad->m_buttons.size() - 1;
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::up], CELL_PAD_CTRL_UP);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::down], CELL_PAD_CTRL_DOWN);
@@ -548,6 +563,8 @@ std::array<u32, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped
 	mapping[button::rs_down]  = FindKeyCode(button_list, profile->rs_down);
 	mapping[button::rs_up]    = FindKeyCode(button_list, profile->rs_up);
 	mapping[button::ps]       = FindKeyCode(button_list, profile->ps);
+
+	mapping[button::pressure_intensity_button] = FindKeyCode(button_list, profile->pressure_intensity_button);
 
 	return mapping;
 }

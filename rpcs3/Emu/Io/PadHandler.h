@@ -54,6 +54,8 @@ protected:
 		rs_down,
 		rs_up,
 
+		pressure_intensity_button,
+
 		button_count
 	};
 
@@ -80,6 +82,7 @@ protected:
 	bool b_has_deadzones = false;
 	bool b_has_rumble = false;
 	bool b_has_config = false;
+	bool b_has_pressure_intensity_button = true;
 	std::array<pad_config, MAX_GAMEPADS> m_pad_configs;
 	std::vector<std::pair<std::shared_ptr<PadDevice>, std::shared_ptr<Pad>>> bindings;
 	std::unordered_map<u32, std::string> button_list;
@@ -148,6 +151,7 @@ public:
 	bool has_led() const;
 	bool has_rgb() const;
 	bool has_battery() const;
+	bool has_pressure_intensity_button() const;
 
 	void set_player(u32 player_id) { m_player_id = player_id; }
 

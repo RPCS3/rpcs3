@@ -81,6 +81,8 @@ void evdev_joystick_handler::init_config(pad_config* cfg, const std::string& nam
 	cfg->l2.def       = axis_list.at(ABS_Z);
 	cfg->l3.def       = button_list.at(BTN_THUMBL);
 
+	cfg->pressure_intensity_button.def = "";
+
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 30; // between 0 and 255
 	cfg->rstickdeadzone.def    = 30; // between 0 and 255
@@ -951,8 +953,12 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 		p_profile->device_class_type,
 		pclass_profile,
 		p_profile->vendor_id,
-		p_profile->product_id
+		p_profile->product_id,
+		p_profile->pressure_intensity
 	);
+
+	pad->m_buttons.emplace_back(special_button_offset, evdevbutton(p_profile->pressure_intensity_button).code, special_button_value::pressure_intensity);
+	pad->m_pressure_intensity_button_index = pad->m_buttons.size() - 1;
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(p_profile->triangle).code, CELL_PAD_CTRL_TRIANGLE);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(p_profile->circle).code,   CELL_PAD_CTRL_CIRCLE);
