@@ -39,7 +39,7 @@
       </sizepolicy>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -345,7 +345,7 @@
       </attribute>
       <layout class="QVBoxLayout" name="gpuTab_layout" stretch="0,1,0">
        <item>
-        <layout class="QHBoxLayout" name="gpuTabLayout" stretch="1,0,1">
+        <layout class="QHBoxLayout" name="gpuTabLayout" stretch="1,1,1">
          <item>
           <layout class="QVBoxLayout" name="gpuTabLayoutLeft">
            <item>
