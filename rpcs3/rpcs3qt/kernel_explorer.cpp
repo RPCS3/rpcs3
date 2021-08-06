@@ -491,12 +491,12 @@ void kernel_explorer::update()
 			}
 			else
 			{
-				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x, Wq: %zu (Couldn't extract control data)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lwm.signaled, lwm.sq.size())));
+				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x, Wq: %zu (Unmapped control data at *0x%x)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lwm.signaled, lwm.sq.size(), lwm.control)));
 				break;
 			}
 
-			add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Wq: %zu", id, lv2_obj::name64(lwm.name), lwm.protocol,
-					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, +lwm.signaled, lwm.sq.size())));
+			add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Control: *0x%x, Wq: %zu", id, lv2_obj::name64(lwm.name), lwm.protocol,
+					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, +lwm.signaled, lwm.control, lwm.sq.size())));
 			break;
 		}
 		case SYS_TIMER_OBJECT:
@@ -521,7 +521,7 @@ void kernel_explorer::update()
 		case SYS_LWCOND_OBJECT:
 		{
 			auto& lwc = static_cast<lv2_lwcond&>(obj);
-			add_leaf(node, qstr(fmt::format(u8"LWCond 0x%08x: “%s”, %s, OG LWMutex: 0x%08x, Wq: %zu", id, lv2_obj::name64(lwc.name), lwc.protocol, lwc.lwid, +lwc.waiters)));
+			add_leaf(node, qstr(fmt::format(u8"LWCond 0x%08x: “%s”, %s, OG LWMutex: 0x%08x, Control: *0x%x, Wq: %zu", id, lv2_obj::name64(lwc.name), lwc.protocol, lwc.lwid, lwc.control, +lwc.waiters)));
 			break;
 		}
 		case SYS_EVENT_FLAG_OBJECT:
