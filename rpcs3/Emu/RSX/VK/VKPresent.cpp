@@ -335,7 +335,6 @@ vk::viewable_image* VKGSRender::get_present_source(vk::present_surface_info* inf
 		// Hack - this should be the first location to check for output
 		// The render might have been done offscreen or in software and a blit used to display
 		image_to_flip = dynamic_cast<vk::viewable_image*>(surface->get_raw_texture());
-		ensure(image_to_flip);
 	}
 
 	if (!image_to_flip)
