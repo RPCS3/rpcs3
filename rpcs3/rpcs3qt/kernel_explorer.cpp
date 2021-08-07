@@ -467,7 +467,7 @@ void kernel_explorer::update()
 			std::string owner_str = "unknown"; // Either invalid state or the lwmutex control data was moved from
 			sys_lwmutex_t lwm_data{};
 
-			if (lwm.control.try_read(lwm_data) || lwm_data.sleep_queue != id)
+			if (lwm.control.try_read(lwm_data) && lwm_data.sleep_queue == id)
 			{
 				switch (const u32 owner = lwm_data.vars.owner)
 				{
