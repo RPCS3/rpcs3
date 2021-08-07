@@ -22,16 +22,17 @@ namespace vk
 			if (memcmp(&state.ia, &other.state.ia, sizeof(VkPipelineInputAssemblyStateCreateInfo)))
 				return false;
 
-			if (memcmp(&state.att_state[0], &other.state.att_state[0], sizeof(VkPipelineColorBlendAttachmentState)))
-				return false;
-
 			if (memcmp(&state.rs, &other.state.rs, sizeof(VkPipelineRasterizationStateCreateInfo)))
 				return false;
 
 			// Cannot memcmp cs due to pAttachments being a pointer to memory
-			if (state.cs.logicOp != other.state.cs.logicOp ||
+			if (state.cs.attachmentCount != other.state.cs.attachmentCount ||
+				state.cs.logicOp != other.state.cs.logicOp ||
 				state.cs.logicOpEnable != other.state.cs.logicOpEnable ||
 				memcmp(state.cs.blendConstants, other.state.cs.blendConstants, 4 * sizeof(f32)))
+				return false;
+
+			if (memcmp(state.att_state, &other.state.att_state, state.cs.attachmentCount * sizeof(VkPipelineColorBlendAttachmentState)))
 				return false;
 
 			if (memcmp(&state.ds, &other.state.ds, sizeof(VkPipelineDepthStencilStateCreateInfo)))
@@ -180,7 +181,10 @@ namespace rpcs3
 		memcpy(&tmp, &pipelineProperties.state.cs, sizeof(VkPipelineColorBlendStateCreateInfo));
 		tmp.pAttachments = nullptr;
 
-		seed ^= hash_struct(pipelineProperties.state.att_state[0]);
+		for (usz i = 0; i < pipelineProperties.state.cs.attachmentCount; ++i)
+		{
+			seed ^= hash_struct(pipelineProperties.state.att_state[i]);
+		}
 		return hash_base(seed);
 	}
 }
