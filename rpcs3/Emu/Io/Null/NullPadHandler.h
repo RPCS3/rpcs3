@@ -5,7 +5,10 @@
 class NullPadHandler final : public PadHandlerBase
 {
 public:
-	NullPadHandler() : PadHandlerBase(pad_handler::null) {}
+	NullPadHandler() : PadHandlerBase(pad_handler::null)
+	{
+		b_has_pressure_intensity_button = false;
+	}
 	
 	bool Init() override
 	{
@@ -45,6 +48,8 @@ public:
 		cfg->l1.def       = "";
 		cfg->l2.def       = "";
 		cfg->l3.def       = "";
+
+		cfg->pressure_intensity_button.def = "";
 
 		// Apply defaults
 		cfg->from_default();

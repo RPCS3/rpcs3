@@ -35,7 +35,7 @@ void usb_device_turntable::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 					// Do nothing here - not sure what it should do.
 					break;
 				default:
-			        turntable_log.error("Unhandled Query Type: 0x%02X", buf[0]);
+					turntable_log.error("Unhandled Query Type: 0x%02X", buf[0]);
 					break;
 			}
 			break;
@@ -248,19 +248,19 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 		{
 			case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
 				buf[6] = ~(stick.m_value) + 0x01; // Right Turntable
-			    // Some pad handlers like MMJoystick are centered at 0x81 instead of 0x80
+				// Some pad handlers like MMJoystick are centered at 0x81 instead of 0x80
 				// which leaves the turntable stuck at 0x7F instead of 0x80, causing auto-scrolling menus
 				// so force 0x7F to 0x80.
-			    if (buf[6] == 0x7F)
-				    buf[6] = 0x80;
+				if (buf[6] == 0x7F)
+					buf[6] = 0x80;
 				break;
 			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-			    buf[21] = (stick.m_value & 0x3F) << 2; // Crossfader, lower 6 bits
-			    buf[22] = (stick.m_value & 0xC0) >> 6; // Crossfader, upper 2 bits
+				buf[21] = (stick.m_value & 0x3F) << 2; // Crossfader, lower 6 bits
+				buf[22] = (stick.m_value & 0xC0) >> 6; // Crossfader, upper 2 bits
 				break;
 			case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
-			    buf[19] = (stick.m_value & 0x3F) << 2; // Effects Dial, lower 6 bits
-			    buf[20] = (stick.m_value & 0xC0) >> 6; // Effects Dial, upper 2 bits
+				buf[19] = (stick.m_value & 0x3F) << 2; // Effects Dial, lower 6 bits
+				buf[20] = (stick.m_value & 0xC0) >> 6; // Effects Dial, upper 2 bits
 				break;
 			default:
 				break;

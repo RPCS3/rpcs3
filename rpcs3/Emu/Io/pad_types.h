@@ -163,6 +163,14 @@ enum
 	CELL_MAX_PADS = 127,
 };
 
+
+constexpr u32 special_button_offset = 666; // Must not conflict with other CELL offsets like ButtonDataOffset
+
+enum special_button_value
+{
+	pressure_intensity
+};
+
 struct Button
 {
 	u32 m_offset;
@@ -241,22 +249,25 @@ struct VibrateMotor
 
 struct Pad
 {
-	bool m_buffer_cleared;
-	u32 m_port_status;
-	u32 m_device_capability;
-	u32 m_device_type;
-	u32 m_class_type;
-	u32 m_class_profile;
+	bool m_buffer_cleared{true};
+	u32 m_port_status{0};
+	u32 m_device_capability{0};
+	u32 m_device_type{0};
+	u32 m_class_type{0};
+	u32 m_class_profile{0};
 
-	u16 m_vendor_id;
-	u16 m_product_id;
+	u16 m_vendor_id{0};
+	u16 m_product_id{0};
+
+	s32 m_pressure_intensity_button_index{-1}; // Special button index. -1 if not set.
+	u8 m_pressure_intensity{127}; // 0-255
 
 	// Cable State:   0 - 1  plugged in ?
-	u8 m_cable_state;
+	u8 m_cable_state{0};
 
 	// DS4: 0 - 9 while unplugged, 0 - 10 while plugged in, 11 charge complete
 	// XInput: 0 = Empty, 1 = Low, 2 = Medium, 3 = Full
-	u8 m_battery_level;
+	u8 m_battery_level{0};
 
 	std::vector<Button> m_buttons;
 	std::vector<AnalogStick> m_sticks;
@@ -264,39 +275,46 @@ struct Pad
 	std::vector<VibrateMotor> m_vibrateMotors;
 
 	// These hold bits for their respective buttons
-	u16 m_digital_1;
-	u16 m_digital_2;
+	u16 m_digital_1{0};
+	u16 m_digital_2{0};
 
 	// All sensors go from 0-255
-	u16 m_analog_left_x;
-	u16 m_analog_left_y;
-	u16 m_analog_right_x;
-	u16 m_analog_right_y;
+	u16 m_analog_left_x{128};
+	u16 m_analog_left_y{128};
+	u16 m_analog_right_x{128};
+	u16 m_analog_right_y{128};
 
-	u16 m_press_right;
-	u16 m_press_left;
-	u16 m_press_up;
-	u16 m_press_down;
-	u16 m_press_triangle;
-	u16 m_press_circle;
-	u16 m_press_cross;
-	u16 m_press_square;
-	u16 m_press_L1;
-	u16 m_press_L2;
-	u16 m_press_R1;
-	u16 m_press_R2;
+	u16 m_press_right{0};
+	u16 m_press_left{0};
+	u16 m_press_up{0};
+	u16 m_press_down{0};
+	u16 m_press_triangle{0};
+	u16 m_press_circle{0};
+	u16 m_press_cross{0};
+	u16 m_press_square{0};
+	u16 m_press_L1{0};
+	u16 m_press_L2{0};
+	u16 m_press_R1{0};
+	u16 m_press_R2{0};
 
 	// Except for these...0-1023
 	// ~399 on sensor y is a level non moving controller
-	u16 m_sensor_x;
-	u16 m_sensor_y;
-	u16 m_sensor_z;
-	u16 m_sensor_g;
+	u16 m_sensor_x{512};
+	u16 m_sensor_y{399};
+	u16 m_sensor_z{512};
+	u16 m_sensor_g{512};
 
-	bool ldd = false;
+	bool ldd{false};
 	u8 ldd_data[132] = {};
 
-	void Init(u32 port_status, u32 device_capability, u32 device_type, u32 class_type, u32 class_profile, u16 vendor_id, u16 product_id)
+	explicit Pad(u32 port_status, u32 device_capability, u32 device_type)
+		: m_port_status(port_status)
+		, m_device_capability(device_capability)
+		, m_device_type(device_type)
+	{
+	}
+
+	void Init(u32 port_status, u32 device_capability, u32 device_type, u32 class_type, u32 class_profile, u16 vendor_id, u16 product_id, u8 pressure_intensity_percent)
 	{
 		m_port_status = port_status;
 		m_device_capability = device_capability;
@@ -305,45 +323,6 @@ struct Pad
 		m_class_profile = class_profile;
 		m_vendor_id = vendor_id;
 		m_product_id = product_id;
-	}
-
-	Pad(u32 port_status, u32 device_capability, u32 device_type)
-		: m_buffer_cleared(true)
-		, m_port_status(port_status)
-		, m_device_capability(device_capability)
-		, m_device_type(device_type)
-		, m_class_type(0)
-		, m_class_profile(0)
-		, m_vendor_id(0)
-		, m_product_id(0)
-		, m_cable_state(0)
-		, m_battery_level(0)
-
-		, m_digital_1(0)
-		, m_digital_2(0)
-
-		, m_analog_left_x(128)
-		, m_analog_left_y(128)
-		, m_analog_right_x(128)
-		, m_analog_right_y(128)
-
-		, m_press_right(0)
-		, m_press_left(0)
-		, m_press_up(0)
-		, m_press_down(0)
-		, m_press_triangle(0)
-		, m_press_circle(0)
-		, m_press_cross(0)
-		, m_press_square(0)
-		, m_press_L1(0)
-		, m_press_L2(0)
-		, m_press_R1(0)
-		, m_press_R2(0)
-
-		, m_sensor_x(512)
-		, m_sensor_y(399)
-		, m_sensor_z(512)
-		, m_sensor_g(512)
-	{
+		m_pressure_intensity = (255 * pressure_intensity_percent) / 100;
 	}
 };
