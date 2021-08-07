@@ -467,7 +467,7 @@ void kernel_explorer::update()
 			std::string owner_str = "unknown"; // Either invalid state or the lwmutex control data was moved from
 			sys_lwmutex_t lwm_data{};
 
-			if (lwm.control.try_read(lwm_data))
+			if (lwm.control.try_read(lwm_data) || lwm_data.sleep_queue != id)
 			{
 				switch (const u32 owner = lwm_data.vars.owner)
 				{
@@ -491,7 +491,7 @@ void kernel_explorer::update()
 			}
 			else
 			{
-				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x, Wq: %zu (Unmapped control data at *0x%x)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lwm.signaled, lwm.sq.size(), lwm.control)));
+				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x, Wq: %zu (unmapped/invalid control data at *0x%x)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lwm.signaled, lwm.sq.size(), lwm.control)));
 				break;
 			}
 
