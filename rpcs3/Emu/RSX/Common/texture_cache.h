@@ -2010,11 +2010,18 @@ namespace rsx
 
 			if (is_unnormalized)
 			{
-				if (extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d)
+				switch (extended_dimension)
 				{
-					scale.width /= attributes.width;
-					scale.height /= attributes.height;
+				case rsx::texture_dimension_extended::texture_dimension_3d:
+				case rsx::texture_dimension_extended::texture_dimension_cubemap:
 					scale.depth /= attributes.depth;
+					[[ fallthrough ]];
+				case rsx::texture_dimension_extended::texture_dimension_2d:
+					scale.height /= attributes.height;
+					[[ fallthrough ]];
+				default:
+					scale.width /= attributes.width;
+					break;
 				}
 			}
 
