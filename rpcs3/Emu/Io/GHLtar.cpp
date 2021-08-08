@@ -96,9 +96,9 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 	// buf[7] through buf[18] are always 0x00
 	// buf[21]/[23]/[25] are also always 0x00
 
+	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
-	const auto& pads   = handler->GetPads();
-	const auto pad     = pads[6];
+	const auto& pad    = handler->GetPads()[6];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return;

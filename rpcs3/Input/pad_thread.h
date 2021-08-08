@@ -23,7 +23,7 @@ public:
 	~pad_thread();
 
 	PadInfo& GetInfo() { return m_info; }
-	auto& GetPads() { return m_pads; }
+	auto& GetPads() { return m_pads_interface; }
 	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor);
 	void Init();
 	void SetIntercepted(bool intercepted);
@@ -44,6 +44,7 @@ protected:
 
 	PadInfo m_info{ 0, 0, false };
 	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads;
+	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads_interface;
 
 	std::shared_ptr<std::thread> thread;
 

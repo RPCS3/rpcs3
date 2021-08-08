@@ -193,7 +193,7 @@ static bool check_gem_num(const u32 gem_num)
  */
 static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t<u16>& analog_t)
 {
-	std::scoped_lock lock(pad::g_pad_mutex);
+	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto handler = pad::get_current_handler();
 	auto& pad = handler->GetPads()[port_no];
@@ -277,7 +277,7 @@ static bool ds3_input_to_pad(const u32 port_no, be_t<u16>& digital_buttons, be_t
  */
 static bool ds3_input_to_ext(const u32 port_no, const gem_config::gem_controller& controller, CellGemExtPortData& ext)
 {
-	std::scoped_lock lock(pad::g_pad_mutex);
+	std::lock_guard lock(pad::g_pad_mutex);
 
 	const auto handler = pad::get_current_handler();
 	auto& pad = handler->GetPads()[port_no];
