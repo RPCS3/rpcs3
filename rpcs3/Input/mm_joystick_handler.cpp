@@ -60,7 +60,7 @@ void mm_joystick_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l2.def       = button_list.at(JOY_BUTTON5);
 	cfg->l3.def       = button_list.at(JOY_BUTTON11);
 
-	cfg->pressure_intensity_button.def = "";
+	cfg->pressure_intensity_button.def = button_list.at(NO_BUTTON);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 0; // between 0 and 255
@@ -119,6 +119,16 @@ std::vector<std::string> mm_joystick_handler::ListDevices()
 	return devices;
 }
 
+u64 mm_joystick_handler::find_key(const std::string& name) const
+{
+	long key = FindKeyCodeByString(axis_list, name, false);
+	if (key < 0)
+		key = FindKeyCodeByString(pov_list, name, false);
+	if (key < 0)
+		key = FindKeyCodeByString(button_list, name);
+	return static_cast<u64>(key);
+}
+
 std::array<u32, PadHandlerBase::button::button_count> mm_joystick_handler::get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const pad_config* profile)
 {
 	std::array<u32, button::button_count> mapping{ 0 };
@@ -126,16 +136,6 @@ std::array<u32, PadHandlerBase::button::button_count> mm_joystick_handler::get_m
 	MMJOYDevice* joy_device = static_cast<MMJOYDevice*>(device.get());
 	if (!joy_device)
 		return mapping;
-
-	auto find_key = [this](const cfg::string& name)
-	{
-		long key = FindKeyCode(button_list, name, false);
-		if (key < 0)
-			key = FindKeyCode(pov_list, name, false);
-		if (key < 0)
-			key = FindKeyCode(axis_list, name);
-		return static_cast<u64>(key);
-	};
 
 	joy_device->trigger_left  = find_key(profile->l2);
 	joy_device->trigger_right = find_key(profile->r2);
@@ -173,6 +173,8 @@ std::array<u32, PadHandlerBase::button::button_count> mm_joystick_handler::get_m
 	mapping[button::rs_right] = static_cast<u32>(joy_device->axis_right[1]);
 	mapping[button::rs_down]  = static_cast<u32>(joy_device->axis_right[2]);
 	mapping[button::rs_up]    = static_cast<u32>(joy_device->axis_right[3]);
+
+	mapping[button::pressure_intensity_button] = static_cast<u32>(find_key(profile->pressure_intensity_button));
 
 	return mapping;
 }
@@ -272,11 +274,15 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 
 		for (const auto& button : button_list)
 		{
-			u64 keycode = button.first;
-			u16 value = data[keycode];
+			const u64 keycode = button.first;
+
+			if (keycode == NO_BUTTON)
+				continue;
 
 			if (!get_blacklist && std::find(blacklist.begin(), blacklist.end(), keycode) != blacklist.end())
 				continue;
+
+			const u16 value = data[keycode];
 
 			if (value > 0)
 			{
@@ -296,16 +302,6 @@ void mm_joystick_handler::get_next_button_press(const std::string& padId, const 
 				input_log.success("MMJOY Calibration: Blacklist is clear. No input spam detected");
 			return;
 		}
-
-		auto find_key = [this](const std::string& name)
-		{
-			long key = FindKeyCodeByString(axis_list, name, false);
-			if (key < 0)
-				key = FindKeyCodeByString(pov_list, name, false);
-			if (key < 0)
-				key = FindKeyCodeByString(button_list, name);
-			return static_cast<u64>(key);
-		};
 
 		pad_preview_values preview_values = { 0, 0, 0, 0, 0, 0 };
 		if (buttons.size() == 10)
@@ -339,6 +335,9 @@ std::unordered_map<u64, u16> mm_joystick_handler::GetButtonValues(const JOYINFOE
 
 	for (const auto& entry : button_list)
 	{
+		if (entry.first == NO_BUTTON)
+			continue;
+
 		button_values.emplace(entry.first, js_info.dwButtons & entry.first ? 255 : 0);
 	}
 

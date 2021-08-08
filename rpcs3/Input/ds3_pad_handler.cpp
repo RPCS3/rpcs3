@@ -49,6 +49,7 @@ ds3_pad_handler::ds3_pad_handler()
 {
 	button_list =
 	{
+		{ DS3KeyCodes::None,     "" },
 		{ DS3KeyCodes::Triangle, "Triangle" },
 		{ DS3KeyCodes::Circle,   "Circle" },
 		{ DS3KeyCodes::Cross,    "Cross" },
@@ -229,7 +230,7 @@ void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l2.def = button_list.at(DS3KeyCodes::L2);
 	cfg->l3.def = button_list.at(DS3KeyCodes::L3);
 
-	cfg->pressure_intensity_button.def = "";
+	cfg->pressure_intensity_button.def = button_list.at(DS3KeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255

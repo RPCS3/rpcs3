@@ -16,7 +16,9 @@ class ds3_pad_handler final : public hid_pad_handler<ds3_device>
 {
 	enum DS3KeyCodes
 	{
-		Triangle = 0,
+		None = 0,
+
+		Triangle,
 		Circle,
 		Cross,
 		Square,
@@ -42,9 +44,7 @@ class ds3_pad_handler final : public hid_pad_handler<ds3_device>
 		RSXNeg,
 		RSXPos,
 		RSYNeg,
-		RSYPos,
-
-		KeyCodeCount
+		RSYPos
 	};
 
 	enum HidRequest

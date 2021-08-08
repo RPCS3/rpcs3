@@ -57,6 +57,8 @@ class xinput_pad_handler final : public PadHandlerBase
 	// These are all the possible buttons on a standard xbox 360 or xbox one controller
 	enum XInputKeyCodes
 	{
+		None = 0,
+
 		A,
 		B,
 		X,
@@ -83,9 +85,7 @@ class xinput_pad_handler final : public PadHandlerBase
 		RSXNeg,
 		RSXPos,
 		RSYNeg,
-		RSYPos,
-
-		KeyCodeCount
+		RSYPos
 	};
 
 	using PadButtonValues = std::unordered_map<u64, u16>;
