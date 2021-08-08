@@ -19,6 +19,7 @@ xinput_pad_handler::xinput_pad_handler() : PadHandlerBase(pad_handler::xinput)
 	// Unique names for the config files and our pad settings dialog
 	button_list =
 	{
+		{ XInputKeyCodes::None,   ""  },
 		{ XInputKeyCodes::A,      "A" },
 		{ XInputKeyCodes::B,      "B" },
 		{ XInputKeyCodes::X,      "X" },
@@ -115,6 +116,8 @@ void xinput_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l1.def       = button_list.at(XInputKeyCodes::LB);
 	cfg->l2.def       = button_list.at(XInputKeyCodes::LT);
 	cfg->l3.def       = button_list.at(XInputKeyCodes::LS);
+
+	cfg->pressure_intensity_button.def = button_list.at(XInputKeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE;  // between 0 and 32767

@@ -65,7 +65,7 @@ void keyboard_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l2.def       = GetKeyName(Qt::Key_R);
 	cfg->l3.def       = GetKeyName(Qt::Key_F);
 
-	cfg->pressure_intensity_button.def = "";
+	cfg->pressure_intensity_button.def = GetKeyName(Qt::NoButton);
 
 	// apply defaults
 	cfg->from_default();

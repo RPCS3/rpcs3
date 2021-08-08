@@ -474,7 +474,7 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string
 
 	u32 pclass_profile = 0x0;
 
-	for (const auto product : input::get_products_by_class(profile->device_class_type))
+	for (const auto& product : input::get_products_by_class(profile->device_class_type))
 	{
 		if (product.vendor_id == profile->vendor_id && product.product_id == profile->product_id)
 		{

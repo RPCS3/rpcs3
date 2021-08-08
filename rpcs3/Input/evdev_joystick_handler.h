@@ -80,9 +80,12 @@ struct positive_axis : cfg::node
 
 class evdev_joystick_handler final : public PadHandlerBase
 {
+	static constexpr u32 NO_BUTTON = u32{umax}; // Some event code that doesn't exist in evdev (code type is U16)
+
 	// Unique button names for the config files and our pad settings dialog
 	const std::unordered_map<u32, std::string> button_list =
 	{
+		{ NO_BUTTON           , ""            },
 		// Xbox One S Controller returns some buttons as key when connected through bluetooth
 		{ KEY_BACK            , "Back Key"    },
 		{ KEY_HOMEPAGE        , "Homepage Key"},
@@ -372,7 +375,7 @@ private:
 	bool update_device(const std::shared_ptr<PadDevice>& device);
 	void update_devs();
 	int add_device(const std::string& device, const std::shared_ptr<Pad>& pad, bool in_settings = false);
-	int GetButtonInfo(const input_event& evt, const std::shared_ptr<EvdevDevice>& device, int& button_code);
+	u32 GetButtonInfo(const input_event& evt, const std::shared_ptr<EvdevDevice>& device, int& button_code);
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(const std::shared_ptr<EvdevDevice>& device);
 	void SetRumble(EvdevDevice* device, u16 large, u16 small);
 
