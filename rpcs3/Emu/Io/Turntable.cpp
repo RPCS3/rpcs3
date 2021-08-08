@@ -117,8 +117,7 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 	// All other bufs are always 0x00
 
 	const auto handler = pad::get_current_handler();
-	const auto& pads   = handler->GetPads();
-	const auto pad     = pads[6];
+	const auto& pad    = handler->GetPads()[6];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return;

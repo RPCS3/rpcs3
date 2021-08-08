@@ -889,7 +889,7 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 	if (port_no >= CELL_PAD_MAX_PORT_NUM)
 		return CELL_OK;
 
-	const auto pad = pads[port_no];
+	const auto& pad = pads[port_no];
 
 	// TODO: find out if this is checked here or later or at all
 	if (!(pad->m_device_capability & CELL_PAD_CAPABILITY_SENSOR_MODE))
@@ -992,6 +992,8 @@ error_code cellPadLddUnregisterController(s32 handle)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	const auto& pads = handler->GetPads();
+
+	// TODO: check if handle >= pads.size()
 
 	if (!pads[handle]->ldd)
 		return CELL_PAD_ERROR_NO_DEVICE;
