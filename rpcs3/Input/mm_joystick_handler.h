@@ -16,9 +16,12 @@
 
 class mm_joystick_handler final : public PadHandlerBase
 {
+	static constexpr u64 NO_BUTTON = 0;
+
 	// Unique names for the config files and our pad settings dialog
 	const std::unordered_map<u64, std::string> button_list =
 	{
+		{ NO_BUTTON   , ""          },
 		{ JOY_BUTTON1 , "Button 1"  },
 		{ JOY_BUTTON2 , "Button 2"  },
 		{ JOY_BUTTON3 , "Button 3"  },
@@ -127,6 +130,8 @@ private:
 	std::vector<u64> blacklist;
 	std::shared_ptr<MMJOYDevice> m_dev;
 	std::unordered_map<int, MMJOYDevice> m_devices;
+
+	u64 find_key(const std::string& name) const;
 
 	std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const pad_config* profile) override;
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;

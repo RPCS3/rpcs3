@@ -76,6 +76,7 @@ ds4_pad_handler::ds4_pad_handler()
 	// Unique names for the config files and our pad settings dialog
 	button_list =
 	{
+		{ DS4KeyCodes::None,     "" },
 		{ DS4KeyCodes::Triangle, "Triangle" },
 		{ DS4KeyCodes::Circle,   "Circle" },
 		{ DS4KeyCodes::Cross,    "Cross" },
@@ -162,7 +163,7 @@ void ds4_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l2.def       = button_list.at(DS4KeyCodes::L2);
 	cfg->l3.def       = button_list.at(DS4KeyCodes::L3);
 
-	cfg->pressure_intensity_button.def = "";
+	cfg->pressure_intensity_button.def = button_list.at(DS4KeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255

@@ -32,7 +32,9 @@ class dualsense_pad_handler final : public hid_pad_handler<DualSenseDevice>
 {
 	enum DualSenseKeyCodes
 	{
-		Triangle = 0,
+		None = 0,
+
+		Triangle,
 		Circle,
 		Cross,
 		Square,
@@ -60,9 +62,7 @@ class dualsense_pad_handler final : public hid_pad_handler<DualSenseDevice>
 		RSXNeg,
 		RSXPos,
 		RSYNeg,
-		RSYPos,
-
-		KeyCodeCount
+		RSYPos
 	};
 
 public:
