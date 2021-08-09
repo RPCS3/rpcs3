@@ -161,7 +161,7 @@ private:
 	void CancelExit();
 
 	// Set vibrate data while keeping the current color
-	void SetPadData(u32 large_motor, u32 small_motor);
+	void SetPadData(u32 large_motor, u32 small_motor, bool led_battery_indicator = false);
 
 	/** Update all the Button Labels with current button mapping */
 	void UpdateLabels(bool is_reset = false);
