@@ -613,17 +613,17 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 
 	switch (code)
 	{
-		case 1:
+		case SCE_NP_SIGNALING_CONN_INFO_RTT:
 		{
 			connInfo->rtt = 20000; // HACK
 			break;
 		}
-		case 2:
+	    case SCE_NP_SIGNALING_CONN_INFO_BANDWIDTH:
 		{
 			connInfo->bandwidth = 10'000'000; // 10 MBPS HACK
 			break;
 		}
-		case 4:
+	    case SCE_NP_SIGNALING_CONN_INFO_PEER_ADDRESS:
 		{
 			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 			const auto si = sigh.get_sig2_infos(roomId, memberId);
@@ -631,7 +631,7 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 			connInfo->address.addr.np_s_addr = si.addr;
 			break;
 		}
-	    case 5:
+	    case SCE_NP_SIGNALING_CONN_INFO_MAPPED_ADDRESS:
 		{
 			// TODO: wrong?
 			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
@@ -640,7 +640,7 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 			connInfo->address.addr.np_s_addr = si.addr;
 			break;
 		}
-		case 6:
+	    case SCE_NP_SIGNALING_CONN_INFO_PACKET_LOSS:
 		{
 			connInfo->packet_loss = 1; // HACK
 			break;
