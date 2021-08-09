@@ -1907,8 +1907,9 @@ namespace rsx
 					if (tex.min_filter() == rsx::texture_minify_filter::nearest ||
 						tex.mag_filter() == rsx::texture_magnify_filter::nearest)
 					{
-						// Subpixel offset so that (X + bias) * scale will round correctly
-						current_fragment_program.texture_params[i].subpixel_bias = 0.5f;
+						// Subpixel offset so that (X + bias) * scale will round correctly.
+						// This is done to work around fdiv precision issues in some GPUs (NVIDIA)
+						current_fragment_program.texture_params[i].subpixel_bias = 0.01f;
 					}
 				}
 
