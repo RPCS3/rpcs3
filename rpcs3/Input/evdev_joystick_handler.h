@@ -355,8 +355,6 @@ class evdev_joystick_handler final : public PadHandlerBase
 		clock_t last_vibration = 0;
 	};
 
-	const int BUTTON_COUNT = 17;
-
 public:
 	evdev_joystick_handler();
 	~evdev_joystick_handler();

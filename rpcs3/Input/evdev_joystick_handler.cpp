@@ -802,7 +802,7 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 
 			if (!m_is_button_or_trigger && evt.type == EV_ABS)
 			{
-				const int index         = BUTTON_COUNT + (idx * 2) + 1;
+				const int index         = pad->m_buttons.size() + (idx * 2) + 1;
 				const int min_direction = FindAxisDirection(axis_orientations, index);
 				m_dev->cur_dir          = min_direction;
 
@@ -828,7 +828,7 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 
 			if (!m_is_button_or_trigger && evt.type == EV_ABS)
 			{
-				const int index         = BUTTON_COUNT + (idx * 2);
+				const int index         = pad->m_buttons.size() + (idx * 2);
 				const int max_direction = FindAxisDirection(axis_orientations, index);
 				m_dev->cur_dir          = max_direction;
 
@@ -910,7 +910,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 		return false;
 
 	std::unordered_map<int, bool> axis_orientations;
-	int i = 0; // increment to know the axis location (17-24). Be careful if you ever add more evdevbutton() calls in here (BUTTON_COUNT = 17)
+	int i = 0; // increment to know the axis location
 
 	auto evdevbutton = [&](const cfg::string& name)
 	{
