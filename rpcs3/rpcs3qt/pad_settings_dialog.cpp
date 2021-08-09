@@ -104,9 +104,8 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	connect(ui->chooseDevice, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 	{
 		if (index < 0)
-		{
 			return;
-		}
+
 		const pad_device_info info = ui->chooseDevice->itemData(index).value<pad_device_info>();
 		m_device_name = info.name;
 		if (!g_cfg_input.player[ui->tabWidget->currentIndex()]->device.from_string(m_device_name))
@@ -379,11 +378,11 @@ void pad_settings_dialog::InitButtons()
 	{
 		// Allow LED battery indication while the dialog is open
 		ensure(m_handler);
-		m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, m_handler_cfg.led_battery_indicator.get(), m_handler_cfg.led_battery_indicator_brightness);
+		SetPadData(0, 0, m_handler_cfg.led_battery_indicator.get());
 		pad_led_settings_dialog dialog(this, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, m_handler->has_rgb(), m_handler->has_battery(), m_handler_cfg.led_low_battery_blink.get(), m_handler_cfg.led_battery_indicator.get(), m_handler_cfg.led_battery_indicator_brightness);
 		connect(&dialog, &pad_led_settings_dialog::pass_led_settings, this, &pad_settings_dialog::apply_led_settings);
 		dialog.exec();
-		m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, false, m_handler_cfg.led_battery_indicator_brightness);
+		SetPadData(0, 0);
 	});
 
 	// Enable Button Remapping
@@ -495,24 +494,25 @@ void pad_settings_dialog::InitButtons()
 	});
 }
 
-void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor)
+void pad_settings_dialog::SetPadData(u32 large_motor, u32 small_motor, bool led_battery_indicator)
 {
 	ensure(m_handler);
-	const QColor led_color(m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB);
-	m_handler->SetPadData(m_device_name, large_motor, small_motor, led_color.red(), led_color.green(), led_color.blue(), static_cast<bool>(m_handler_cfg.led_battery_indicator), m_handler_cfg.led_battery_indicator_brightness);
+	const int player_id = ui->tabWidget->currentIndex();
+	m_handler->SetPadData(m_device_name, player_id, large_motor, small_motor, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, led_battery_indicator, m_handler_cfg.led_battery_indicator_brightness);
 }
 
 // Slot to handle the data from a signal in the led settings dialog
 void pad_settings_dialog::apply_led_settings(int colorR, int colorG, int colorB, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness)
 {
 	ensure(m_handler);
+	const int player_id = ui->tabWidget->currentIndex();
 	m_handler_cfg.colorR.set(colorR);
 	m_handler_cfg.colorG.set(colorG);
 	m_handler_cfg.colorB.set(colorB);
 	m_handler_cfg.led_battery_indicator.set(led_battery_indicator);
 	m_handler_cfg.led_battery_indicator_brightness.set(led_battery_indicator_brightness);
 	m_handler_cfg.led_low_battery_blink.set(led_low_battery_blink);
-	m_handler->SetPadData(m_device_name, 0, 0, colorR, colorG, colorB, led_battery_indicator, led_battery_indicator_brightness);
+	SetPadData(0, 0, led_battery_indicator);
 }
 
 void pad_settings_dialog::SwitchPadInfo(const std::string& pad_name, bool is_connected)
@@ -1033,7 +1033,7 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 
 		// Apply stored/default LED settings to the device
 		m_enable_led = m_handler->has_led();
-		m_handler->SetPadData(m_device_name, 0, 0, m_handler_cfg.colorR, m_handler_cfg.colorG, m_handler_cfg.colorB, false, m_handler_cfg.led_battery_indicator_brightness);
+		SetPadData(0, 0);
 
 		// Enable battery and LED group box
 		m_enable_battery = m_handler->has_battery();
@@ -1206,7 +1206,6 @@ void pad_settings_dialog::ChangeInputType()
 	// Get this player's current handler and it's currently available devices
 	m_handler = GetHandler(g_cfg_input.player[player]->handler);
 	ensure(m_handler);
-	m_handler->set_player(player);
 	const auto device_list = m_handler->ListDevices();
 
 	// Localized tooltips

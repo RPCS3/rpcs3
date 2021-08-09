@@ -509,7 +509,7 @@ void evdev_joystick_handler::SetRumble(EvdevDevice* device, u16 large, u16 small
 	device->force_small = small;
 }
 
-void evdev_joystick_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 /* r*/, s32 /* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
+void evdev_joystick_handler::SetPadData(const std::string& padId, u8 /*player_id*/, u32 largeMotor, u32 smallMotor, s32 /* r*/, s32 /* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
 	// Get our evdev device
 	auto dev = get_evdev_device(padId);
@@ -893,7 +893,7 @@ int evdev_joystick_handler::FindAxisDirection(const std::unordered_map<int, bool
 	return -1;
 }
 
-bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
+bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id)
 {
 	if (!pad)
 		return false;
@@ -904,7 +904,8 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 
 	const int index = static_cast<int>(bindings.size());
 	m_pad_configs[index].load();
-	m_dev->config         = &m_pad_configs[index];
+	m_dev->config = &m_pad_configs[index];
+	m_dev->player_id = player_id;
 	pad_config* p_profile = m_dev->config;
 	if (p_profile == nullptr)
 		return false;

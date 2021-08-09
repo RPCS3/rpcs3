@@ -955,7 +955,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 			// Use OR with 0x1, 0x2, 0x4, 0x8 and 0x10 to enable the LEDs (from leftmost to rightmost).
 			common.valid_flag_1 |= VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE;
 
-			switch (m_player_id)
+			switch (device->player_id)
 			{
 			case 0: common.player_leds = 0b00100; break;
 			case 1: common.player_leds = 0b01010; break;
@@ -965,7 +965,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 			case 5: common.player_leds = 0b10111; break;
 			case 6: common.player_leds = 0b11101; break;
 			default:
-				fmt::throw_exception("Dualsense is using forbidden player id %d", m_player_id);
+				fmt::throw_exception("Dualsense is using forbidden player id %d", device->player_id);
 			}
 		}
 	}
@@ -1086,7 +1086,7 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 	}
 }
 
-void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
+void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<DualSenseDevice> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
@@ -1095,6 +1095,7 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor,
 	// Set the device's motor speeds to our requested values 0-255
 	device->large_motor = largeMotor;
 	device->small_motor = smallMotor;
+	device->player_id = player_id;
 
 	int index = 0;
 	for (uint i = 0; i < MAX_GAMEPADS; i++)

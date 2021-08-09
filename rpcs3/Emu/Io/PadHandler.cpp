@@ -451,7 +451,7 @@ void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& devi
 	}
 }
 
-bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
+bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id)
 {
 	std::shared_ptr<PadDevice> pad_device = get_device(device);
 	if (!pad_device)
@@ -463,6 +463,7 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string
 	const int index = static_cast<int>(bindings.size());
 	m_pad_configs[index].load();
 	pad_device->config = &m_pad_configs[index];
+	pad_device->player_id = player_id;
 	pad_config* profile = pad_device->config;
 	if (profile == nullptr)
 	{

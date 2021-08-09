@@ -16,6 +16,7 @@ class PadDevice
 {
 public:
 	pad_config* config{ nullptr };
+	u8 player_id{0};
 };
 
 using pad_preview_values = std::array<int, 6>;
@@ -71,7 +72,6 @@ protected:
 	std::array<bool, MAX_GAMEPADS> last_connection_status{{ false, false, false, false, false, false, false }};
 
 	std::string m_name_string;
-	u32 m_player_id = 0;
 	usz m_max_devices = 0;
 	int m_trigger_threshold = 0;
 	int m_thumb_threshold = 0;
@@ -153,8 +153,6 @@ public:
 	bool has_battery() const;
 	bool has_pressure_intensity_button() const;
 
-	void set_player(u32 player_id) { m_player_id = player_id; }
-
 	static std::string get_config_dir(pad_handler type, const std::string& title_id = "");
 	static std::string get_config_filename(int i, const std::string& title_id = "");
 
@@ -165,14 +163,14 @@ public:
 	PadHandlerBase(pad_handler type = pad_handler::null);
 	virtual ~PadHandlerBase() = default;
 	// Sets window to config the controller(optional)
-	virtual void SetPadData(const std::string& /*padId*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
+	virtual void SetPadData(const std::string& /*padId*/, u8 /*player_id*/, u32 /*largeMotor*/, u32 /*smallMotor*/, s32 /*r*/, s32 /*g*/, s32 /*b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/) {}
 	virtual u32 get_battery_level(const std::string& /*padId*/) { return 0; }
 	// Return list of devices for that handler
 	virtual std::vector<std::string> ListDevices() = 0;
 	// Callback called during pad_thread::ThreadFunc
 	virtual void ThreadProc();
 	// Binds a Pad to a device
-	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device);
+	virtual bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id);
 	virtual void init_config(pad_config* /*cfg*/, const std::string& /*name*/) = 0;
 	virtual void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist, const std::vector<std::string>& buttons = {});
 

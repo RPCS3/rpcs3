@@ -119,7 +119,7 @@ u32 ds3_pad_handler::get_battery_level(const std::string& padId)
 	return std::clamp<u32>(device->battery_level, 0, 100);
 }
 
-void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
+void ds3_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
 	std::shared_ptr<ds3_device> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
@@ -128,6 +128,7 @@ void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 	// Set the device's motor speeds to our requested values 0-255
 	device->large_motor = largeMotor;
 	device->small_motor = smallMotor;
+	device->player_id = player_id;
 
 	int index = 0;
 	for (uint i = 0; i < MAX_GAMEPADS; i++)
@@ -172,7 +173,7 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 	}
 	else
 	{
-		switch (m_player_id)
+		switch (ds3dev->player_id)
 		{
 		case 0: output_report.led_enabled = 0b00000010; break;
 		case 1: output_report.led_enabled = 0b00000100; break;
@@ -182,7 +183,7 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 		case 5: output_report.led_enabled = 0b00010100; break;
 		case 6: output_report.led_enabled = 0b00011000; break;
 		default:
-			fmt::throw_exception("DS3 is using forbidden player id %d", m_player_id);
+			fmt::throw_exception("DS3 is using forbidden player id %d", ds3dev->player_id);
 		}
 	}
 

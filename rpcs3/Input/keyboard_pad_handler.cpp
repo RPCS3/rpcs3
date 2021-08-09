@@ -690,7 +690,7 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 	}
 }
 
-bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
+bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 /*player_id*/)
 {
 	if (device != pad::keyboard_device_name)
 		return false;
