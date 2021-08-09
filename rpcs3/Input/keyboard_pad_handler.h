@@ -110,6 +110,7 @@ private:
 	void release_all_keys();
 
 	std::vector<std::shared_ptr<Pad>> m_bindings;
+	std::vector<Pad> m_pads_internal; // Accumulates input until the next poll
 
 	// Button Movements
 	steady_clock::time_point m_button_time;

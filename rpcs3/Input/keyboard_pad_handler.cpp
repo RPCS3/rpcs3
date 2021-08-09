@@ -80,9 +80,9 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 	value = Clamp0To255(value);
 
-	for (const auto& pad : m_bindings)
+	for (auto& pad : m_pads_internal)
 	{
-		for (Button& button : pad->m_buttons)
+		for (Button& button : pad.m_buttons)
 		{
 			if (button.m_keyCode != code)
 				continue;
@@ -108,10 +108,10 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			}
 		}
 
-		for (usz i = 0; i < pad->m_sticks.size(); i++)
+		for (usz i = 0; i < pad.m_sticks.size(); i++)
 		{
-			const bool is_max = pad->m_sticks[i].m_keyCodeMax == code;
-			const bool is_min = pad->m_sticks[i].m_keyCodeMin == code;
+			const bool is_max = pad.m_sticks[i].m_keyCodeMax == code;
+			const bool is_min = pad.m_sticks[i].m_keyCodeMin == code;
 
 			const u16 normalized_value = std::max<u16>(1, static_cast<u16>(std::floor(value / 2.0)));
 
@@ -130,7 +130,7 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 				// to get the fastest response time possible we don't wanna use any lerp with factor 1
 				if (stick_lerp_factor >= 1.0f)
 				{
-					pad->m_sticks[i].m_value = m_stick_val[i];
+					pad.m_sticks[i].m_value = m_stick_val[i];
 				}
 			}
 		}
@@ -139,21 +139,21 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 void keyboard_pad_handler::release_all_keys()
 {
-	for (const auto& pad : m_bindings)
+	for (auto& pad : m_pads_internal)
 	{
-		for (Button& button : pad->m_buttons)
+		for (Button& button : pad.m_buttons)
 		{
 			button.m_pressed = false;
 			button.m_value = 0;
 			button.m_actual_value = 0;
 		}
 
-		for (usz i = 0; i < pad->m_sticks.size(); i++)
+		for (usz i = 0; i < pad.m_sticks.size(); i++)
 		{
 			m_stick_min[i] = 0;
 			m_stick_max[i] = 128;
 			m_stick_val[i] = 128;
-			pad->m_sticks[i].m_value = 128;
+			pad.m_sticks[i].m_value = 128;
 		}
 	}
 }
@@ -623,7 +623,7 @@ u32 keyboard_pad_handler::GetKeyCode(const std::string& keyName)
 u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 {
 	if (keyName.isEmpty())
-		return 0;
+		return Qt::NoButton;
 	if (const int native_scan_code = native_scan_code_from_string(sstr(keyName)); native_scan_code >= 0)
 		return Qt::Key_unknown + native_scan_code; // Special cases that can't be expressed with Qt::Key
 	if (keyName == "Alt")
@@ -785,6 +785,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
 	m_bindings.push_back(pad);
+	m_pads_internal.push_back(*pad);
 
 	return true;
 }
@@ -855,10 +856,14 @@ void keyboard_pad_handler::ThreadProc()
 
 	for (uint i = 0; i < m_bindings.size(); i++)
 	{
+		auto& pad = m_bindings[i];
+		pad->m_buttons = m_pads_internal[i].m_buttons;
+		pad->m_sticks = m_pads_internal[i].m_sticks;
+
 		if (last_connection_status[i] == false)
 		{
-			m_bindings[i]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
-			m_bindings[i]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
+			pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 			last_connection_status[i] = true;
 			connected_devices++;
 		}
@@ -866,25 +871,25 @@ void keyboard_pad_handler::ThreadProc()
 		{
 			if (update_sticks)
 			{
-				for (int j = 0; j < static_cast<int>(m_bindings[i]->m_sticks.size()); j++)
+				for (int j = 0; j < static_cast<int>(pad->m_sticks.size()); j++)
 				{
 					const f32 stick_lerp_factor = (j < 2) ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
 
 					// we already applied the following values on keypress if we used factor 1
 					if (stick_lerp_factor < 1.0f)
 					{
-						const f32 v0 = static_cast<f32>(m_bindings[i]->m_sticks[j].m_value);
+						const f32 v0 = static_cast<f32>(pad->m_sticks[j].m_value);
 						const f32 v1 = static_cast<f32>(m_stick_val[j]);
 						const f32 res = get_lerped(v0, v1, stick_lerp_factor);
 
-						m_bindings[i]->m_sticks[j].m_value = static_cast<u16>(res);
+						pad->m_sticks[j].m_value = static_cast<u16>(res);
 					}
 				}
 			}
 
 			if (update_buttons)
 			{
-				for (auto& button : m_bindings[i]->m_buttons)
+				for (auto& button : pad->m_buttons)
 				{
 					if (button.m_analog)
 					{
