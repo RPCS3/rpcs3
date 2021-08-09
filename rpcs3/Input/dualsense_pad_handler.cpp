@@ -95,6 +95,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 	// Unique names for the config files and our pad settings dialog
 	button_list =
 	{
+		{ DualSenseKeyCodes::None,     "" },
 		{ DualSenseKeyCodes::Triangle, "Triangle" },
 		{ DualSenseKeyCodes::Circle,   "Circle" },
 		{ DualSenseKeyCodes::Cross,    "Cross" },
@@ -273,7 +274,7 @@ void dualsense_pad_handler::init_config(pad_config* cfg, const std::string& name
 	cfg->l2.def       = button_list.at(DualSenseKeyCodes::L2);
 	cfg->l3.def       = button_list.at(DualSenseKeyCodes::L3);
 
-	cfg->pressure_intensity_button.def = "";
+	cfg->pressure_intensity_button.def = button_list.at(DualSenseKeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255

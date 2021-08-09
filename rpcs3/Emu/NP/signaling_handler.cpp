@@ -495,8 +495,8 @@ std::shared_ptr<signaling_info> signaling_handler::get_signaling_ptr(const signa
 		if (!npid_to_conn_id.count(npid))
 			return nullptr;
 
-		auto conn_id = npid_to_conn_id.at(npid);
-		if (!sig1_peers.count(conn_id))
+		const u32 conn_id = npid_to_conn_id.at(npid);
+		if (!sig1_peers.contains(conn_id))
 		{
 			sign_log.error("Discrepancy in signaling 1 data");
 			return nullptr;
@@ -508,7 +508,7 @@ std::shared_ptr<signaling_info> signaling_handler::get_signaling_ptr(const signa
 	// V2
 	auto room_id   = sp->V2.room_id;
 	auto member_id = sp->V2.member_id;
-	if (!sig2_peers.count(room_id) || !sig2_peers.at(room_id).count(member_id))
+	if (!sig2_peers.contains(room_id) || !sig2_peers.at(room_id).contains(member_id))
 		return nullptr;
 
 	return sig2_peers.at(room_id).at(member_id);
@@ -525,7 +525,8 @@ void signaling_handler::start_sig_nl(u32 conn_id, u32 addr, u16 port)
 	auto& sent_packet   = sig1_packet;
 	sent_packet.command = signal_connect;
 
-	auto si = sig1_peers.at(conn_id);
+	ensure(sig1_peers.contains(conn_id));
+	std::shared_ptr<signaling_info> si = sig1_peers.at(conn_id);
 
 	si->addr = addr;
 	si->port = port;
@@ -541,7 +542,11 @@ void signaling_handler::start_sig2(u64 room_id, u16 member_id)
 	auto& sent_packet   = sig2_packet;
 	sent_packet.command = signal_connect;
 
-	auto si = sig2_peers.at(room_id).at(member_id);
+	ensure(sig2_peers.contains(room_id));
+	const auto& sp = sig2_peers.at(room_id);
+
+	ensure(sp.contains(member_id));
+	std::shared_ptr<signaling_info> si = sp.at(member_id);
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
 	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_CONNECT_DELAY);
@@ -551,7 +556,7 @@ void signaling_handler::disconnect_sig2_users(u64 room_id)
 {
 	std::lock_guard lock(data_mutex);
 
-	if (!sig2_peers.count(room_id))
+	if (!sig2_peers.contains(room_id))
 		return;
 
 	auto& sent_packet = sig2_packet;
@@ -574,7 +579,7 @@ u32 signaling_handler::create_sig_infos(const SceNpId* npid)
 	ensure(npid->handle.data[16] == 0);
 	std::string npid_str(reinterpret_cast<const char*>(npid->handle.data));
 
-	if (npid_to_conn_id.count(npid_str))
+	if (npid_to_conn_id.contains(npid_str))
 	{
 		return npid_to_conn_id.at(npid_str);
 	}

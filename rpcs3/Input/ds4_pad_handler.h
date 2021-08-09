@@ -18,7 +18,9 @@ class ds4_pad_handler final : public hid_pad_handler<DS4Device>
 	// The touchpad is restricted to its button for now (or forever?)
 	enum DS4KeyCodes
 	{
-		Triangle = 0,
+		None = 0,
+
+		Triangle,
 		Circle,
 		Cross,
 		Square,
@@ -47,9 +49,7 @@ class ds4_pad_handler final : public hid_pad_handler<DS4Device>
 		RSXNeg,
 		RSXPos,
 		RSYNeg,
-		RSYPos,
-
-		KeyCodeCount
+		RSYPos
 	};
 
 public:
