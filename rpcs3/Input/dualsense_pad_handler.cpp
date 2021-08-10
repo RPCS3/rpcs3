@@ -240,12 +240,9 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	dualsense_log.notice("Added device: bluetooth=%d, data_mode=%s, serial='%s', hw_version: 0x%x, fw_version: 0x%x, path='%s'", device->bt_controller, device->data_mode, serial, hw_version, fw_version, device->path);
 }
 
-void dualsense_pad_handler::init_config(pad_config* cfg, const std::string& name)
+void dualsense_pad_handler::init_config(cfg_pad* cfg)
 {
 	if (!cfg) return;
-
-	// Set this profile's save location
-	cfg->cfg_name = name;
 
 	// Set default button mapping
 	cfg->ls_left.def  = button_list.at(DualSenseKeyCodes::LSXNeg);
@@ -1008,7 +1005,7 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 	if (!dualsense_dev || !dualsense_dev->hidDevice || !dualsense_dev->config || !pad)
 		return;
 
-	pad_config* config = dualsense_dev->config;
+	cfg_pad* config = dualsense_dev->config;
 
 	// Attempt to send rumble no matter what
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;
@@ -1104,7 +1101,7 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u
 		{
 			if (g_cfg_input.player[i]->device.to_string() == padId)
 			{
-				m_pad_configs[index].load();
+				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
 				device->config = &m_pad_configs[index];
 				break;
 			}

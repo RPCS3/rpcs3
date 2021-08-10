@@ -129,12 +129,9 @@ ds4_pad_handler::ds4_pad_handler()
 	m_thumb_threshold = thumb_max / 2;
 }
 
-void ds4_pad_handler::init_config(pad_config* cfg, const std::string& name)
+void ds4_pad_handler::init_config(cfg_pad* cfg)
 {
 	if (!cfg) return;
-
-	// Set this profile's save location
-	cfg->cfg_name = name;
 
 	// Set default button mapping
 	cfg->ls_left.def  = button_list.at(DS4KeyCodes::LSXNeg);
@@ -215,7 +212,7 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 lar
 		{
 			if (g_cfg_input.player[i]->device.to_string() == padId)
 			{
-				m_pad_configs[index].load();
+				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
 				device->config = &m_pad_configs[index];
 				break;
 			}
@@ -855,7 +852,7 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 	if (!ds4_dev || !ds4_dev->hidDevice || !ds4_dev->config || !pad)
 		return;
 
-	pad_config* config = ds4_dev->config;
+	cfg_pad* config = ds4_dev->config;
 
 	// Attempt to send rumble no matter what
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;

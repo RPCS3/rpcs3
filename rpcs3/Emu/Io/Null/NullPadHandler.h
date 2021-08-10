@@ -15,12 +15,9 @@ public:
 		return true;
 	}
 
-	void init_config(pad_config* cfg, const std::string& /*name*/) override
+	void init_config(cfg_pad* cfg) override
 	{
 		if (!cfg) return;
-
-		// This profile does not need a save location
-		cfg->cfg_name = "";
 
 		// Reset default button mapping
 		cfg->ls_left.def  = "";

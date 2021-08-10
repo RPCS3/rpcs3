@@ -81,7 +81,7 @@ class pad_settings_dialog : public QDialog
 
 	struct pad_button
 	{
-		cfg::string* cfg_name = nullptr;
+		cfg::string* cfg_text = nullptr;
 		std::string key;
 		QString text;
 	};
@@ -98,11 +98,14 @@ public Q_SLOTS:
 private Q_SLOTS:
 	void OnPadButtonClicked(int id);
 	void OnTabChanged(int index);
-	void RefreshInputTypes();
-	void ChangeInputType();
+	void RefreshHandlers();
+	void ChangeHandler();
+	void ChangeProfile(const QString& profile);
+	void ChangeDevice(int index);
 	void HandleDeviceClassChange(int index) const;
-	/** Save the Pad Configuration to the current Pad Handler Config File */
-	void SaveProfile();
+	void AddProfile();
+	/** Update the current player config with the GUI values. */
+	void ApplyCurrentPlayerConfig(int new_player_id);
 
 private:
 	Ui::pad_settings_dialog *ui;
@@ -141,10 +144,10 @@ private:
 
 	// Pad Handlers
 	std::shared_ptr<PadHandlerBase> m_handler;
-	pad_config m_handler_cfg;
 	std::string m_device_name;
 	std::string m_profile;
 	QTimer m_timer_pad_refresh;
+	int m_last_player_id = 0;
 
 	// Remap Timer
 	const int MAX_SECONDS = 5;
@@ -176,7 +179,7 @@ private:
 	void InitButtons();
 	void ReloadButtons();
 
-	void ChangeProfile();
+	void InitPadConfig(cfg_pad& cfg, pad_handler type);
 
 	/** Repaints a stick deadzone preview label */
 	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier) const;
@@ -186,7 +189,13 @@ private:
 	QString GetLocalizedPadHandler(const QString& original, pad_handler handler);
 
 	/** Checks if the port at the given index is already reserved by the application as custom controller (ldd pad) */
-	bool GetIsLddPad(int index) const;
+	bool GetIsLddPad(u32 index) const;
+
+	/** Returns the current player index */
+	u32 GetPlayerIndex() const;
+
+	/** Returns the current player config */
+	cfg_pad& GetPlayerConfig() const;
 
 	/** Resizes the dialog. We need to do this because the main scroll area can't determine the size on its own. */
 	void ResizeDialog();

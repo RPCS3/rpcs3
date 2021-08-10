@@ -47,12 +47,9 @@ evdev_joystick_handler::~evdev_joystick_handler()
 	Close();
 }
 
-void evdev_joystick_handler::init_config(pad_config* cfg, const std::string& name)
+void evdev_joystick_handler::init_config(cfg_pad* cfg)
 {
 	if (!cfg) return;
-
-	// Set this profile's save location
-	cfg->cfg_name = name;
 
 	// Set default button mapping
 	cfg->ls_left.def  = rev_axis_list.at(ABS_X);
@@ -902,12 +899,11 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 
 	m_dev = std::make_shared<EvdevDevice>();
 
-	const int index = static_cast<int>(bindings.size());
-	m_pad_configs[index].load();
-	m_dev->config = &m_pad_configs[index];
+	m_pad_configs[player_id].from_string(g_cfg_input.player[player_id]->config.to_string());
+	m_dev->config = &m_pad_configs[player_id];
 	m_dev->player_id = player_id;
-	pad_config* p_profile = m_dev->config;
-	if (p_profile == nullptr)
+	cfg_pad* cfg = m_dev->config;
+	if (cfg == nullptr)
 		return false;
 
 	std::unordered_map<int, bool> axis_orientations;
@@ -946,9 +942,9 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 
 	u32 pclass_profile = 0x0;
 
-	for (const auto product : input::get_products_by_class(p_profile->device_class_type))
+	for (const auto product : input::get_products_by_class(cfg->device_class_type))
 	{
-		if (product.vendor_id == p_profile->vendor_id && product.product_id == p_profile->product_id)
+		if (product.vendor_id == cfg->vendor_id && product.product_id == cfg->product_id)
 		{
 			pclass_profile = product.pclass_profile;
 		}
@@ -959,48 +955,48 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 		CELL_PAD_STATUS_DISCONNECTED,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD,
-		p_profile->device_class_type,
+		cfg->device_class_type,
 		pclass_profile,
-		p_profile->vendor_id,
-		p_profile->product_id,
-		p_profile->pressure_intensity
+		cfg->vendor_id,
+		cfg->product_id,
+		cfg->pressure_intensity
 	);
 
-	pad->m_buttons.emplace_back(special_button_offset, evdevbutton(p_profile->pressure_intensity_button).code, special_button_value::pressure_intensity);
+	pad->m_buttons.emplace_back(special_button_offset, evdevbutton(cfg->pressure_intensity_button).code, special_button_value::pressure_intensity);
 	pad->m_pressure_intensity_button_index = pad->m_buttons.size() - 1;
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(p_profile->triangle).code, CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(p_profile->circle).code,   CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(p_profile->cross).code,    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(p_profile->square).code,   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->triangle).code, CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->circle).code,   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->cross).code,    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->square).code,   CELL_PAD_CTRL_SQUARE);
 
-	m_dev->trigger_left = evdevbutton(p_profile->l2);
+	m_dev->trigger_left = evdevbutton(cfg->l2);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_left.code,              CELL_PAD_CTRL_L2);
 
-	m_dev->trigger_right = evdevbutton(p_profile->r2);
+	m_dev->trigger_right = evdevbutton(cfg->r2);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, m_dev->trigger_right.code,             CELL_PAD_CTRL_R2);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(p_profile->l1).code,       CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(p_profile->r1).code,       CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->start).code,    CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->select).code,   CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->l3).code,       CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->r3).code,       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(p_profile->ps).code,       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->up).code,       CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->down).code,     CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->left).code,     CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(p_profile->right).code,    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->l1).code,       CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->r1).code,       CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->start).code,    CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->select).code,   CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->l3).code,       CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->r3).code,       CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->ps).code,       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->up).code,       CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->down).code,     CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->left).code,     CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, evdevbutton(cfg->right).code,    CELL_PAD_CTRL_RIGHT);
 	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0,                                     0x0); // Reserved (and currently not in use by rpcs3 at all)
 
-	m_dev->axis_left[0]  = evdevbutton(p_profile->ls_right);
-	m_dev->axis_left[1]  = evdevbutton(p_profile->ls_left);
-	m_dev->axis_left[2]  = evdevbutton(p_profile->ls_up);
-	m_dev->axis_left[3]  = evdevbutton(p_profile->ls_down);
-	m_dev->axis_right[0] = evdevbutton(p_profile->rs_right);
-	m_dev->axis_right[1] = evdevbutton(p_profile->rs_left);
-	m_dev->axis_right[2] = evdevbutton(p_profile->rs_up);
-	m_dev->axis_right[3] = evdevbutton(p_profile->rs_down);
+	m_dev->axis_left[0]  = evdevbutton(cfg->ls_right);
+	m_dev->axis_left[1]  = evdevbutton(cfg->ls_left);
+	m_dev->axis_left[2]  = evdevbutton(cfg->ls_up);
+	m_dev->axis_left[3]  = evdevbutton(cfg->ls_down);
+	m_dev->axis_right[0] = evdevbutton(cfg->rs_right);
+	m_dev->axis_right[1] = evdevbutton(cfg->rs_left);
+	m_dev->axis_right[2] = evdevbutton(cfg->rs_up);
+	m_dev->axis_right[3] = evdevbutton(cfg->rs_down);
 
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  m_dev->axis_left[1].code,  m_dev->axis_left[0].code);
 	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  m_dev->axis_left[3].code,  m_dev->axis_left[2].code);
