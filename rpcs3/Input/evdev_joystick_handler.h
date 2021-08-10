@@ -359,7 +359,7 @@ public:
 	evdev_joystick_handler();
 	~evdev_joystick_handler();
 
-	void init_config(pad_config* cfg, const std::string& name) override;
+	void init_config(cfg_pad* cfg) override;
 	bool Init() override;
 	std::vector<std::string> ListDevices() override;
 	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id) override;

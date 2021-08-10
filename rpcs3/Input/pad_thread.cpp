@@ -89,7 +89,8 @@ void pad_thread::Init()
 
 	handlers.clear();
 
-	g_cfg_input.load(pad::g_title_id);
+	g_cfg_profile.load();
+	g_cfg_input.load(pad::g_title_id, g_cfg_profile.active_profiles.get_value(pad::g_title_id));
 
 	std::shared_ptr<keyboard_pad_handler> keyptr;
 
@@ -162,6 +163,8 @@ void pad_thread::Init()
 
 		m_pads_interface[i] = std::make_shared<Pad>(CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
 		*m_pads_interface[i] = *m_pads[i];
+
+		input_log.notice("Pad %d: %s", i, g_cfg_input.player[i]->device.to_string());
 	}
 }
 
@@ -286,6 +289,8 @@ void pad_thread::InitLddPad(u32 handle)
 	{
 		return;
 	}
+
+	input_log.notice("Pad %d: LDD", handle);
 
 	static const auto product = input::get_product_info(input::product_type::playstation_3_controller);
 
