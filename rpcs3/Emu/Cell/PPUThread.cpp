@@ -515,7 +515,7 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t)
 // Set or remove breakpoint
 extern bool ppu_breakpoint(u32 addr, bool is_adding)
 {
-	if (!vm::check_addr(addr, vm::page_executable) || g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
+	if (addr % 4 || !vm::check_addr(addr, vm::page_executable) || g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
 		return false;
 	}
@@ -544,13 +544,23 @@ extern bool ppu_breakpoint(u32 addr, bool is_adding)
 		to_set = ppu_cache(addr);
 	}
 
+	u64& _ref = ppu_ref(addr);
+
 	if (is_adding)
 	{
 		// Swap if adding
 		std::swap(to_set, expected);
+
+		const u64 _fall = reinterpret_cast<uptr>(&ppu_fallback);
+
+		if (_ref == _fall)
+		{
+			ppu_log.error("Unregistered instruction replaced with a breakpoint at 0x%08x", addr);
+			expected = _fall;
+		}
 	}
 
-	return atomic_storage<u64>::compare_exchange(ppu_ref(addr), expected, to_set);
+	return atomic_storage<u64>::compare_exchange(_ref, expected, to_set);
 }
 
 extern bool ppu_patch(u32 addr, u32 value)
