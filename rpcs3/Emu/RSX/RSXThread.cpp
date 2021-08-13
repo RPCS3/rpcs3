@@ -2545,7 +2545,7 @@ namespace rsx
 		fifo_ctrl->sync_get();
 	}
 
-	void thread::recover_fifo()
+	void thread::recover_fifo(u32 line, u32 col, const char* file, const char* func)
 	{
 		const u64 current_time = get_system_time();
 
@@ -2554,10 +2554,11 @@ namespace rsx
 			const auto cmd_info = recovered_fifo_cmds_history.front();
 
 			// Check timestamp of last tracked cmd
-			if (current_time - cmd_info.timestamp < 2'000'000u)
+			// Shorten the range of forbidden difference if driver wake-up delay is used
+			if (current_time - cmd_info.timestamp < 2'000'000u - std::min<u32>(g_cfg.video.driver_wakeup_delay * 700, 1'400'000))
 			{
 				// Probably hopeless
-				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings.");
+				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings. Called from %s", src_loc{line, col, file, func});
 			}
 
 			// Erase the last command from history, keep the size of the queue the same
