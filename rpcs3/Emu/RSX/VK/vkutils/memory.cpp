@@ -120,7 +120,7 @@ namespace vk
 			const auto type_id = type_ids[i];
 			ensure(heap_size > 0);
 
-			const u64 used_mem = vmm_get_application_memory_usage({ type_ids[i], 0ull });
+			const u64 used_mem = vmm_get_application_memory_usage({ type_id, 0ull });
 			const u64 free_mem = (used_mem >= heap_size) ? 0ull : (heap_size - used_mem);
 
 			to_reorder |= (free_mem > last_free);
