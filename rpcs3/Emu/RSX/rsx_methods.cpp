@@ -1171,25 +1171,23 @@ namespace rsx
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
 			const u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			const u32 src_address = get_address(src_offset, src_dma);
-			const u32 dst_address = get_address(dst_offset, dst_dma);
-
-			if (src_address == dst_address &&
-				in_w == clip_w && in_h == clip_h &&
-				in_pitch == out_pitch &&
-				rsx::fcmp(scale_x, 1.f) && rsx::fcmp(scale_y, 1.f))
-			{
-				// NULL operation
-				rsx_log.warning("NV3089_IMAGE_IN: Operation writes memory onto itself with no modification (move-to-self). Will ignore.");
-				return;
-			}
-
 			const u32 src_line_length = (in_w * in_bpp);
+
+			u32 src_address = 0;
+			const u32 dst_address = get_address(dst_offset, dst_dma, 1); // TODO: Add size
 
 			if (is_block_transfer && (clip_h == 1 || (in_pitch == out_pitch && src_line_length == in_pitch)))
 			{
 				const u32 nb_lines = std::min(clip_h, in_h);
 				const u32 data_length = nb_lines * src_line_length;
+
+				src_address = get_address(src_offset, src_dma, data_length);
+
+				if (!src_address || !dst_address)
+				{
+					rsx->recover_fifo();
+					return;
+				}
 
 				rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
 
@@ -1207,8 +1205,26 @@ namespace rsx
 			{
 				const u32 data_length = in_pitch * (in_h - 1) + src_line_length;
 
+				src_address = get_address(src_offset, src_dma, data_length);
+
+				if (!src_address || !dst_address)
+				{
+					rsx->recover_fifo();
+					return;
+				}
+
 				rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
 				rsx->read_barrier(src_address, data_length, true);
+			}
+
+			if (src_address == dst_address &&
+				in_w == clip_w && in_h == clip_h &&
+				in_pitch == out_pitch &&
+				rsx::fcmp(scale_x, 1.f) && rsx::fcmp(scale_y, 1.f))
+			{
+				// NULL operation
+				rsx_log.warning("NV3089_IMAGE_IN: Operation writes memory onto itself with no modification (move-to-self). Will ignore.");
+				return;
 			}
 
 			u8* pixels_src = vm::_ptr<u8>(src_address + in_offset);
