@@ -857,6 +857,14 @@ public:
 
 		operator std::string() const;
 	} thread_name{ this };
+
+	// For lv2_obj::schedule<spu_thread>
+	const struct priority_t
+	{
+		const spu_thread* _this;
+
+		operator s32() const;
+	} prio{ this };
 };
 
 class spu_function_logger

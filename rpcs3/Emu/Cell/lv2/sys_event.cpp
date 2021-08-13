@@ -67,10 +67,7 @@ CellError lv2_event_queue::send(lv2_event event)
 	else
 	{
 		// Store event in In_MBox
-		auto& spu = static_cast<spu_thread&>(*sq.front());
-
-		// TODO: use protocol?
-		sq.pop_front();
+		auto& spu = static_cast<spu_thread&>(*schedule<spu_thread>(sq, protocol));
 
 		const u32 data1 = static_cast<u32>(std::get<1>(event));
 		const u32 data2 = static_cast<u32>(std::get<2>(event));
