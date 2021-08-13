@@ -1088,8 +1088,8 @@ blit_engine::transfer_operation blit_engine::to_transfer_operation(u8 in)
 	case CELL_GCM_TRANSFER_OPERATION_SRCCOPY: return blit_engine::transfer_operation::srccopy;
 	case CELL_GCM_TRANSFER_OPERATION_SRCCOPY_PREMULT: return blit_engine::transfer_operation::srccopy_premult;
 	case CELL_GCM_TRANSFER_OPERATION_BLEND_PREMULT: return blit_engine::transfer_operation::blend_premult;
+	default: return blit_engine::transfer_operation::invalid;
 	}
-	fmt::throw_exception("Unknown transfer operation 0x%x", in);
 }
 
 enum
@@ -1126,8 +1126,8 @@ blit_engine::transfer_source_format blit_engine::to_transfer_source_format(u8 in
 	case CELL_GCM_TRANSFER_SCALE_FORMAT_ECR8EYB8ECB8EYA8: return blit_engine::transfer_source_format::ecr8eyb8ecb8eya8;
 	case CELL_GCM_TRANSFER_SCALE_FORMAT_A8B8G8R8: return blit_engine::transfer_source_format::a8b8g8r8;
 	case CELL_GCM_TRANSFER_SCALE_FORMAT_X8B8G8R8: return blit_engine::transfer_source_format::x8b8g8r8;
+	default: return blit_engine::transfer_source_format::invalid;
 	}
-	fmt::throw_exception("Unknown transfer source format 0x%x", in);
 }
 
 enum
@@ -1145,8 +1145,8 @@ blit_engine::transfer_destination_format blit_engine::to_transfer_destination_fo
 	case CELL_GCM_TRANSFER_SURFACE_FORMAT_R5G6B5: return blit_engine::transfer_destination_format::r5g6b5;
 	case CELL_GCM_TRANSFER_SURFACE_FORMAT_A8R8G8B8: return blit_engine::transfer_destination_format::a8r8g8b8;
 	case CELL_GCM_TRANSFER_SURFACE_FORMAT_Y32: return blit_engine::transfer_destination_format::y32;
+	default: return blit_engine::transfer_destination_format::invalid;
 	}
-	fmt::throw_exception("Unknown transfer destination format 0x%x", in);
 }
 
 enum
