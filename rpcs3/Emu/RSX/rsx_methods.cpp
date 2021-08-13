@@ -1090,7 +1090,16 @@ namespace rsx
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
 			{
-				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown operation (%d)", static_cast<u8>(operation));
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown operation (0x%x)", method_registers.registers[NV3089_SET_OPERATION]);
+				rsx->recover_fifo();
+				return;
+			}
+
+			if (src_color_format == rsx::blit_engine::transfer_source_format::invalid)
+			{
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown src color format (0x%x)", method_registers.registers[NV3089_SET_COLOR_FORMAT]);
+				rsx->recover_fifo();
+				return;
 			}
 
 			const u32 src_offset = method_registers.blit_engine_input_offset();
@@ -1113,6 +1122,14 @@ namespace rsx
 				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
 				out_alignment = method_registers.blit_engine_output_alignment_nv3062();
 				is_block_transfer = fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f);
+
+				if (dst_color_format == rsx::blit_engine::transfer_destination_format::invalid)
+				{
+					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV3062 dst color format (0x%x)", method_registers.registers[NV3062_SET_COLOR_FORMAT]);
+					rsx->recover_fifo();
+					return;
+				}
+
 				break;
 			}
 			case blit_engine::context_surface::swizzle2d:
@@ -1120,6 +1137,14 @@ namespace rsx
 				dst_dma = method_registers.blit_engine_nv309E_location();
 				dst_offset = method_registers.blit_engine_nv309E_offset();
 				dst_color_format = method_registers.blit_engine_output_format_nv309E();
+
+				if (dst_color_format == rsx::blit_engine::transfer_destination_format::invalid)
+				{
+					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV309E dst color format (0x%x)", method_registers.registers[NV309E_SET_FORMAT]);
+					rsx->recover_fifo();
+					return;
+				}
+
 				break;
 			}
 			default:
