@@ -884,7 +884,7 @@ namespace vk
 	}
 
 	void upload_image(const vk::command_buffer& cmd, vk::image* dst_image,
-		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 /*mipmap_count*/,
+		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 layer_count,
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags)
 	{
 		const bool requires_depth_processing = (dst_image->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || (format == CELL_GCM_TEXTURE_DEPTH16_FLOAT);
@@ -977,7 +977,8 @@ namespace vk
 				if (!scratch_buf)
 				{
 					// Calculate enough scratch memory. We need 2x the size of layer 0 to fit all the mip levels and an extra 128 bytes per level as alignment overhead.
-					auto scratch_buf_size = 128u * ::size32(subresource_layout) + image_linear_size + image_linear_size;
+					const u64 layer_size = (image_linear_size + image_linear_size);
+					u64 scratch_buf_size = 128u * ::size32(subresource_layout) + (layer_size * layer_count);
 					if (opt.require_deswizzle)
 					{
 						// Double the memory if hw deswizzle is going to be used.
@@ -988,6 +989,7 @@ namespace vk
 					if (requires_depth_processing)
 					{
 						// D-S aspect requires a load section that can fit a separated block => D(4) + S(1)
+						// Due to reverse processing of inputs, only enough space to fit one layer is needed here.
 						scratch_buf_size += dst_image->width() * dst_image->height() * 5;
 					}
 
