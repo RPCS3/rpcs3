@@ -4835,6 +4835,16 @@ spu_thread::thread_name_t::operator std::string() const
 	return full_name;
 }
 
+spu_thread::priority_t::operator s32() const
+{
+	if (_this->get_type() != spu_type::threaded || !_this->group->has_scheduler_context)
+	{
+		return s32{smax};
+	}
+
+	return _this->group->prio;
+}
+
 template <>
 void fmt_class_string<spu_channel>::format(std::string& out, u64 arg)
 {
