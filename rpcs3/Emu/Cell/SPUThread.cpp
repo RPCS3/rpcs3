@@ -4476,8 +4476,6 @@ bool spu_thread::stop_and_signal(u32 code)
 		{
 			if (is_stopped(old))
 			{
-				// The thread group cannot be stopped while waiting for an event
-				ensure(!(old & cpu_flag::stop));
 				return false;
 			}
 
