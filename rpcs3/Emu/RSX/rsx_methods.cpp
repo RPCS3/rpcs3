@@ -925,8 +925,8 @@ namespace rsx
 				const u32 x = method_registers.nv308a_x() + index;
 				const u32 y = method_registers.nv308a_y();
 
-				// TODO
-				//auto res = vm::passive_lock(address, address + write_len);
+				// Skip "handled methods"
+				rsx->fifo_ctrl->skip_methods(count - 1);
 
 				switch (method_registers.blit_engine_nv3062_color_format())
 				{
@@ -935,12 +935,21 @@ namespace rsx
 				{
 					// Bit cast - optimize to mem copy
 
-					const auto dst_address = get_address(dst_offset + (x * 4) + (out_pitch * y), dst_dma);
+					const u32 data_length = count * 4;
+
+					const auto dst_address = get_address(dst_offset + (x * 4) + (out_pitch * y), dst_dma, data_length);
+
+					if (!dst_address)
+					{
+						rsx->recover_fifo();
+						return;
+					}
+
 					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN);
+
 					const auto dst = vm::_ptr<u8>(dst_address);
 					const auto src = vm::_ptr<const u8>(src_address);
 
-					const u32 data_length = count * 4;
 					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
 
 					if (rsx->fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) [[unlikely]]
@@ -969,12 +978,19 @@ namespace rsx
 				}
 				case blit_engine::transfer_destination_format::r5g6b5:
 				{
-					const auto dst_address = get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma);
+					const auto data_length = count * 2;
+
+					const auto dst_address = get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, data_length);
 					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN);
 					const auto dst = vm::_ptr<u16>(dst_address);
 					const auto src = vm::_ptr<const u32>(src_address);
 
-					const auto data_length = count * 2;
+					if (!dst_address)
+					{
+						rsx->recover_fifo();
+						return;
+					}
+
 					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
 
 					auto convert = [](u32 input) -> u16
@@ -1011,11 +1027,6 @@ namespace rsx
 					fmt::throw_exception("Unreachable");
 				}
 				}
-
-				//res->release(0);
-
-				// Skip "handled methods"
-				rsx->fifo_ctrl->skip_methods(count - 1);
 			}
 		};
 	}
