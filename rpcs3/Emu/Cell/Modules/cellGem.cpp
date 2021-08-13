@@ -1161,7 +1161,7 @@ error_code cellGemHSVtoRGB(f32 h, f32 s, f32 v, vm::ptr<f32> r, vm::ptr<f32> g, 
 	h = std::clamp(h, 0.0f, 360.0f);
 
 	const f32 c = v * s;
-	const f32 x = c * (1.0f - abs(fmod(h / 60.0f, 2.0f) - 1.0f));
+	const f32 x = c * (1.0f - fabs(fmod(h / 60.0f, 2.0f) - 1.0f));
 	const f32 m = v - c;
 
 	f32 r_tmp{0.0};
