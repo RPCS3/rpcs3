@@ -1,4 +1,4 @@
-﻿#include "rsx_debugger.h"
+#include "rsx_debugger.h"
 #include "gui_settings.h"
 #include "qt_utils.h"
 #include "table_item_delegate.h"
