@@ -228,7 +228,7 @@ void GLGSRender::update_draw_state()
 		gl_state.logic_op(gl::logic_op(rsx::method_registers.logic_operation()));
 	}
 
-	gl_state.line_width(rsx::method_registers.line_width());
+	gl_state.line_width(rsx::method_registers.line_width() * rsx::get_resolution_scale());
 	gl_state.enable(rsx::method_registers.line_smooth_enabled(), GL_LINE_SMOOTH);
 
 	gl_state.enable(rsx::method_registers.poly_offset_point_enabled(), GL_POLYGON_OFFSET_POINT);
