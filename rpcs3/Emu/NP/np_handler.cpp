@@ -277,10 +277,10 @@ const SceNpAvatarUrl& np_handler::get_avatar_url() const
 
 std::string np_handler::ip_to_string(u32 ip_addr)
 {
-	in_addr addr;
-	addr.s_addr = ip_addr;
+	char ip_str[16];
 
-	return inet_ntoa(addr);
+	inet_ntop(AF_INET, &ip_addr, ip_str, sizeof(ip_str));
+	return std::string(ip_str);
 }
 
 std::string np_handler::ether_to_string(std::array<u8, 6>& ether)

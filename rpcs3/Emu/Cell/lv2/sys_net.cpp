@@ -556,7 +556,9 @@ struct nt_p2p_port
 
 	static void send_u2s_packet(lv2_socket &sock, s32 sock_id, std::vector<u8> data, const ::sockaddr_in* dst, u32 seq = 0, bool require_ack = true)
 	{
-		sys_net.trace("Sending U2S packet on socket %d(id:%d): data(%d, seq %d, require_ack %d) to %s:%d", sock.socket, sock_id, data.size(), seq, require_ack, inet_ntoa(dst->sin_addr), std::bit_cast<u16, be_t<u16>>(dst->sin_port));
+		char ip_str[16];
+		inet_ntop(AF_INET, &dst->sin_addr, ip_str, sizeof(ip_str));
+		sys_net.trace("Sending U2S packet on socket %d(id:%d): data(%d, seq %d, require_ack %d) to %s:%d", sock.socket, sock_id, data.size(), seq, require_ack, ip_str, std::bit_cast<u16, be_t<u16>>(dst->sin_port));
 		if (sendto(sock.socket, reinterpret_cast<char *>(data.data()), data.size(), 0, reinterpret_cast<const sockaddr*>(dst), sizeof(sockaddr_in)) == -1)
 		{
 			sys_net.error("Attempting to send a u2s packet failed(%s), closing socket!", get_last_error(false));
@@ -1496,7 +1498,9 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 				p2p_vport = psa_in_p2p->sin_port;
 			}
 
-			sys_net.notice("[P2P] %s, Socket bind to %s:%d:%d", sock.type, inet_ntoa(name.sin_addr), p2p_port, p2p_vport);
+			char ip_str[16];
+			inet_ntop(AF_INET, &name.sin_addr, ip_str, sizeof(ip_str));
+			sys_net.notice("[P2P] %s, Socket bind to %s:%d:%d", sock.type, ip_str, p2p_port, p2p_vport);
 
 			if (p2p_port != 3658)
 			{
@@ -2604,7 +2608,9 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		name.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
 		name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
 
-		sys_net.trace("Sending to %s:%d", inet_ntoa(name.sin_addr), psa_in->sin_port);
+		char ip_str[16];
+		inet_ntop(AF_INET, &name.sin_addr, ip_str, sizeof(ip_str));
+		sys_net.trace("Sending to %s:%d", ip_str, psa_in->sin_port);
 	}
 
 	::socklen_t namelen = sizeof(name);
@@ -2633,7 +2639,9 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 			const u16 p2p_port  = reinterpret_cast<const sys_net_sockaddr_in*>(addr.get_ptr())->sin_port;
 			const u16 p2p_vport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
 
-			sys_net.trace("[P2P] Sending a packet to %s:%d:%d", inet_ntoa(name.sin_addr), p2p_port, p2p_vport);
+			char ip_str[16];
+			inet_ntop(AF_INET, &name.sin_addr, ip_str, sizeof(ip_str));
+			sys_net.trace("[P2P] Sending a packet to %s:%d:%d", ip_str, p2p_port, p2p_vport);
 
 			p2p_data.resize(len + sizeof(u16));
 			reinterpret_cast<le_t<u16>&>(p2p_data[0]) = p2p_vport;
