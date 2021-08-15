@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "Emu/Io/pad_types.h"
+#include "Emu/Io/pad_config.h"
 #include "Emu/Io/pad_config_types.h"
 #include "Utilities/mutex.h"
 
@@ -30,6 +31,9 @@ public:
 
 	s32 AddLddPad();
 	void UnregisterLddPad(u32 handle);
+
+	static std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
+	static void InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler);
 
 protected:
 	void InitLddPad(u32 handle);

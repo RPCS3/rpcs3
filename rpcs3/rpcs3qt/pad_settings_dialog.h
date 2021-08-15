@@ -179,12 +179,8 @@ private:
 	void InitButtons();
 	void ReloadButtons();
 
-	void InitPadConfig(cfg_pad& cfg, pad_handler type);
-
 	/** Repaints a stick deadzone preview label */
 	void RepaintPreviewLabel(QLabel* l, int deadzone, int desired_width, int x, int y, int squircle, double multiplier) const;
-
-	std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type) const;
 
 	QString GetLocalizedPadHandler(const QString& original, pad_handler handler);
 
