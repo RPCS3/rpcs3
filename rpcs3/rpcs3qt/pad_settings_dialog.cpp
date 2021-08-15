@@ -1120,35 +1120,6 @@ void pad_settings_dialog::OnTabChanged(int index)
 	RefreshHandlers();
 }
 
-std::shared_ptr<PadHandlerBase> pad_settings_dialog::GetHandler(pad_handler type) const
-{
-	switch (type)
-	{
-	case pad_handler::null:
-		return std::make_unique<NullPadHandler>();
-	case pad_handler::keyboard:
-		return std::make_unique<keyboard_pad_handler>();
-	case pad_handler::ds3:
-		return std::make_unique<ds3_pad_handler>();
-	case pad_handler::ds4:
-		return std::make_unique<ds4_pad_handler>();
-	case pad_handler::dualsense:
-		return std::make_unique<dualsense_pad_handler>();
-#ifdef _WIN32
-	case pad_handler::xinput:
-		return std::make_unique<xinput_pad_handler>();
-	case pad_handler::mm:
-		return std::make_unique<mm_joystick_handler>();
-#endif
-#ifdef HAVE_LIBEVDEV
-	case pad_handler::evdev:
-		return std::make_unique<evdev_joystick_handler>();
-#endif
-	}
-
-	return nullptr;
-}
-
 void pad_settings_dialog::ChangeHandler()
 {
 	bool force_enable = false; // enable configs even with disconnected devices
@@ -1180,11 +1151,12 @@ void pad_settings_dialog::ChangeHandler()
 		}
 
 		// Initialize the new pad config's defaults
-		InitPadConfig(cfg, cfg_handler);
+		m_handler = pad_thread::GetHandler(g_cfg_input.player[player]->handler);
+		pad_thread::InitPadConfig(cfg, cfg_handler, m_handler);
 	}
 	else
 	{
-		m_handler = GetHandler(g_cfg_input.player[player]->handler);
+		m_handler = pad_thread::GetHandler(g_cfg_input.player[player]->handler);
 	}
 
 	ensure(m_handler);
@@ -1357,43 +1329,6 @@ void pad_settings_dialog::ChangeHandler()
 	}
 }
 
-void pad_settings_dialog::InitPadConfig(cfg_pad& cfg, pad_handler type)
-{
-	m_handler = GetHandler(type);
-
-	switch (type)
-	{
-	case pad_handler::null:
-		static_cast<NullPadHandler*>(m_handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::keyboard:
-		static_cast<keyboard_pad_handler*>(m_handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::ds3:
-		static_cast<ds3_pad_handler*>(m_handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::ds4:
-		static_cast<ds4_pad_handler*>(m_handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::dualsense:
-		static_cast<dualsense_pad_handler*>(m_handler.get())->init_config(&cfg);
-		break;
-#ifdef _WIN32
-	case pad_handler::xinput:
-		static_cast<xinput_pad_handler*>(m_handler.get())->init_config(&cfg);
-		break;
-	case pad_handler::mm:
-		static_cast<mm_joystick_handler*>(m_handler.get())->init_config(&cfg);
-		break;
-#endif
-#ifdef HAVE_LIBEVDEV
-	case pad_handler::evdev:
-		static_cast<evdev_joystick_handler*>(m_handler.get())->init_config(&cfg);
-		break;
-#endif
-	}
-}
-
 void pad_settings_dialog::ChangeProfile(const QString& profile)
 {
 	if (profile.isEmpty())
@@ -1401,23 +1336,23 @@ void pad_settings_dialog::ChangeProfile(const QString& profile)
 
 	m_profile = sstr(profile);
 
-	std::unique_ptr<cfg_input> tmp = std::make_unique<cfg_input>();
-
-	if (!tmp->load(m_title_id, m_profile, true))
-	{
-		cfg_log.notice("Loaded empty temporary pad config");
-	}
-
-	// Adjust to the different pad handlers
-	for (usz i = 0; i < tmp->player.size(); i++)
-	{
-		auto& cfg = g_cfg_input.player[i]->config;
-		InitPadConfig(cfg, tmp->player[i]->handler);
-	}
-
+	// Load in order to get the pad handlers
 	if (!g_cfg_input.load(m_title_id, m_profile, true))
 	{
 		cfg_log.notice("Loaded empty pad config");
+	}
+
+	// Adjust to the different pad handlers
+	for (usz i = 0; i < g_cfg_input.player.size(); i++)
+	{
+		std::shared_ptr<PadHandlerBase> handler;
+		pad_thread::InitPadConfig(g_cfg_input.player[i]->config, g_cfg_input.player[i]->handler, handler);
+	}
+
+	// Reload with proper defaults
+	if (!g_cfg_input.load(m_title_id, m_profile, true))
+	{
+		cfg_log.notice("Reloaded empty pad config");
 	}
 
 	const u32 player_id = GetPlayerIndex();
