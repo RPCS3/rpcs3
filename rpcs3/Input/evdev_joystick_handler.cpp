@@ -963,7 +963,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std
 	);
 
 	pad->m_buttons.emplace_back(special_button_offset, evdevbutton(cfg->pressure_intensity_button).code, special_button_value::pressure_intensity);
-	pad->m_pressure_intensity_button_index = pad->m_buttons.size() - 1;
+	pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->triangle).code, CELL_PAD_CTRL_TRIANGLE);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, evdevbutton(cfg->circle).code,   CELL_PAD_CTRL_CIRCLE);
