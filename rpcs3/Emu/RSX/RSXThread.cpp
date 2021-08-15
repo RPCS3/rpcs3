@@ -2649,6 +2649,11 @@ namespace rsx
 	{
 		std::string result;
 
+		if (ctrl)
+		{
+			fmt::append(result, "FIFO: GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", +ctrl->get, +ctrl->put, +ctrl->ref);
+		}
+
 		for (u32 i = 0; i < 1 << 14; i++)
 		{
 			if (rsx::methods[i] == &invalid_method)

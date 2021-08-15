@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "system_utils.hpp"
 #include "system_config.h"
+#include "Emu/Io/pad_config.h"
 #include "util/sysinfo.hpp"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
@@ -225,19 +226,23 @@ namespace rpcs3::utils
 		return path;
 	}
 
-	std::string get_custom_input_config_dir(const std::string& title_id)
+	std::string get_input_config_root()
 	{
-		// Notice: the extra folder for each title id may be removed at a later stage
-		// Warning: make sure to change any function that removes this directory as well
 #ifdef _WIN32
-		return fs::get_config_dir() + "config/custom_input_configs/" + title_id + "/";
+		return fs::get_config_dir() + "config/input_configs/";
 #else
-		return fs::get_config_dir() + "custom_input_configs/" + title_id + "/";
+		return fs::get_config_dir() + "input_configs/";
 #endif
+	}
+
+	std::string get_input_config_dir(const std::string& title_id)
+	{
+		return get_input_config_root() + (title_id.empty() ? "global" : title_id) + "/";
 	}
 
 	std::string get_custom_input_config_path(const std::string& title_id)
 	{
-		return get_custom_input_config_dir(title_id) + "/config_input_" + title_id + ".yml";
+		if (title_id.empty()) return "";
+		return get_input_config_dir(title_id) + g_cfg_profile.default_profile + ".yml";
 	}
 }
