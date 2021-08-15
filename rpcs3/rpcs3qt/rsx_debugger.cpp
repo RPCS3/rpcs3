@@ -47,33 +47,7 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	QLabel l("000000000"); // hacky way to get the lineedit to resize properly
 	l.setFont(mono);
 
-	// Controls: Address
-	m_addr_line = new QLineEdit();
-	m_addr_line->setFont(mono);
-	m_addr_line->setPlaceholderText("00000000");
-	m_addr_line->setMaxLength(18);
-	m_addr_line->setFixedWidth(l.sizeHint().width());
-	m_addr_line->setValidator(new QRegExpValidator(QRegExp("^(0[xX])?0*[a-fA-F0-9]{0,8}$")));
-	setFocusProxy(m_addr_line);
-
 	QHBoxLayout* hbox_controls_addr = new QHBoxLayout();
-	hbox_controls_addr->addWidget(m_addr_line);
-
-	QGroupBox* gb_controls_addr = new QGroupBox(tr("Address:"));
-	gb_controls_addr->setLayout(hbox_controls_addr);
-
-	// Controls: Go to
-	QPushButton* b_goto_get = new QPushButton(tr("Get"));
-	QPushButton* b_goto_put = new QPushButton(tr("Put"));
-	b_goto_get->setAutoDefault(false);
-	b_goto_put->setAutoDefault(false);
-
-	QHBoxLayout* hbox_controls_goto = new QHBoxLayout();
-	hbox_controls_goto->addWidget(b_goto_get);
-	hbox_controls_goto->addWidget(b_goto_put);
-
-	QGroupBox* gb_controls_goto = new QGroupBox(tr("Go to:"));
-	gb_controls_goto->setLayout(hbox_controls_goto);
 
 	// Controls: Breaks
 	QPushButton* b_break_frame = new QPushButton(tr("Frame"));
@@ -105,17 +79,15 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	b_break_inst->setEnabled(false);
 
 	QHBoxLayout* hbox_controls = new QHBoxLayout();
-	hbox_controls->addWidget(gb_controls_addr);
-	hbox_controls->addWidget(gb_controls_goto);
 	hbox_controls->addWidget(gb_controls_breaks);
 	hbox_controls->addStretch(1);
 
 	m_tw_rsx = new QTabWidget();
 
 	// adds a tab containing a list to the tabwidget
-	const auto add_rsx_tab = [this, &mono](QTableWidget* table, const QString& tabname, int columns)
+	const auto add_rsx_tab = [this, &mono](const QString& tabname, int columns)
 	{
-		table = new QTableWidget();
+		QTableWidget* table = new QTableWidget();
 		table->setItemDelegate(new table_item_delegate);
 		table->setFont(mono);
 		table->setGridStyle(Qt::NoPen);
@@ -132,23 +104,8 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 		return table;
 	};
 
-	if (const auto render = rsx::get_current_renderer(); render && render->ctrl &&
-		render->iomap_table.get_addr(render->ctrl->get) + 1)
-	{
-		m_addr = render->ctrl->get;
-	}
-
-	m_list_commands            = add_rsx_tab(m_list_commands, tr("RSX Commands"), 4);
-	m_list_captured_frame      = add_rsx_tab(m_list_captured_frame, tr("Captured Frame"), 1);
-	m_list_captured_draw_calls = add_rsx_tab(m_list_captured_draw_calls, tr("Captured Draw Calls"), 1);
-
-	// Tabs: List Columns
-	m_list_commands->viewport()->installEventFilter(this);
-	m_list_commands->setHorizontalHeaderLabels(QStringList() << tr("Column") << tr("Value") << tr("Command") << tr("Count"));
-	m_list_commands->setColumnWidth(0, 70);
-	m_list_commands->setColumnWidth(1, 70);
-	m_list_commands->setColumnWidth(2, 520);
-	m_list_commands->setColumnWidth(3, 60);
+	m_list_captured_frame      = add_rsx_tab(tr("Captured Frame"), 1);
+	m_list_captured_draw_calls = add_rsx_tab(tr("Captured Draw Calls"), 1);
 
 	m_list_captured_frame->setHorizontalHeaderLabels(QStringList() << tr("Column"));
 	m_list_captured_frame->setColumnWidth(0, 720);
@@ -217,33 +174,6 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	main_layout->addWidget(state_rsx, 1);
 	setLayout(main_layout);
 
-	// Events
-	connect(b_goto_get, &QAbstractButton::clicked, [this]()
-	{
-		if (const auto render = rsx::get_current_renderer(); render && render->ctrl &&
-			render->iomap_table.get_addr(render->ctrl->get) + 1)
-		{
-			m_addr = render->ctrl->get;
-			UpdateInformation();
-		}
-	});
-	connect(b_goto_put, &QAbstractButton::clicked, [this]()
-	{
-		if (const auto render = rsx::get_current_renderer(); render && render->ctrl &&
-			render->iomap_table.get_addr(render->ctrl->put) + 1)
-		{
-			m_addr = render->ctrl->put;
-			UpdateInformation();
-		}
-	});
-	connect(m_addr_line, &QLineEdit::returnPressed, [this]()
-	{
-		bool ok = false;
-		const u32 addr = static_cast<u32>(m_addr_line->text().toULong(&ok, 16));
-
-		if (ok) m_addr = addr;
-		UpdateInformation();
-	});
 	connect(m_list_captured_draw_calls, &QTableWidget::itemClicked, this, &rsx_debugger::OnClickDrawCalls);
 
 	// Restore header states
@@ -288,37 +218,7 @@ void rsx_debugger::keyPressEvent(QKeyEvent* event)
 
 bool rsx_debugger::eventFilter(QObject* object, QEvent* event)
 {
-	if (object == m_list_commands->viewport())
-	{
-		switch (event->type())
-		{
-		case QEvent::MouseButtonDblClick:
-		{
-			PerformJump(m_list_commands->item(m_list_commands->currentRow(), 0)->data(Qt::UserRole).toUInt());
-			break;
-		}
-		case QEvent::Resize:
-		{
-			gui::utils::update_table_item_count(m_list_commands);
-			UpdateInformation();
-			break;
-		}
-		case QEvent::Wheel:
-		{
-			QWheelEvent* wheelEvent = static_cast<QWheelEvent*>(event);
-			const QPoint numSteps = wheelEvent->angleDelta() / 8 / 15; // http://doc.qt.io/qt-5/qwheelevent.html#pixelDelta
-			const int steps = numSteps.y();
-			const int item_count = m_list_commands->rowCount();
-			const int step_size = wheelEvent->modifiers() & Qt::ControlModifier ? item_count : 1;
-			m_addr -= step_size * 4 * steps;
-			UpdateInformation();
-			break;
-		}
-		default:
-			break;
-		}
-	}
-	else if (Buffer* buffer = qobject_cast<Buffer*>(object))
+	if (Buffer* buffer = qobject_cast<Buffer*>(object))
 	{
 		switch (event->type())
 		{
@@ -611,41 +511,12 @@ void rsx_debugger::OnClickDrawCalls()
 
 void rsx_debugger::UpdateInformation() const
 {
-	m_addr_line->setText(QString("%1").arg(m_addr, 8, 16, QChar('0'))); // get 8 digits in input line
 	GetMemory();
 	GetBuffers();
 }
 
 void rsx_debugger::GetMemory() const
 {
-	const int item_count = m_list_commands->rowCount();
-
-	// Write information
-	for (int i = 0, addr = m_addr; i < item_count; i++, addr += 4)
-	{
-		QTableWidgetItem* address_item = new QTableWidgetItem(qstr(fmt::format("%07x", addr)));
-		address_item->setData(Qt::UserRole, addr);
-		m_list_commands->setItem(i, 0, address_item);
-
-		if (const u32 ea = rsx::get_current_renderer()->iomap_table.get_addr(addr);
-			ea + 1)
-		{
-			const u32 cmd = *vm::get_super_ptr<u32>(ea);
-			const u32 count = cmd & RSX_METHOD_NON_METHOD_CMD_MASK ? 0 : (cmd >> 18) & 0x7ff;
-
-			m_list_commands->setItem(i, 1, new QTableWidgetItem(qstr(fmt::format("%08x", cmd))));
-			m_list_commands->setItem(i, 2, new QTableWidgetItem(DisAsmCommand(cmd, count, addr)));
-			m_list_commands->setItem(i, 3, new QTableWidgetItem(QString::number(count)));
-			addr += 4 * count;
-		}
-		else
-		{
-			m_list_commands->setItem(i, 1, new QTableWidgetItem("????????"));
-			m_list_commands->setItem(i, 2, new QTableWidgetItem(""));
-			m_list_commands->setItem(i, 3, new QTableWidgetItem(""));
-		}
-	}
-
 	std::string dump;
 	u32 cmd_i = 0;
 
@@ -743,104 +614,4 @@ void rsx_debugger::GetBuffers() const
 	//std::memcpy(buffer, vm::base(TexBuffer_addr), width * height * 3);
 
 	//m_buffer_tex->showImage(QImage(buffer, m_text_width, m_text_height, QImage::Format_RGB32));
-}
-
-QString rsx_debugger::DisAsmCommand(u32 cmd, u32 count, u32 ioAddr) const
-{
-	std::string disasm;
-
-#define DISASM(string, ...) { disasm.empty() ? fmt::append(disasm, ("" string), ##__VA_ARGS__) : fmt::append(disasm, (" " string), ##__VA_ARGS__); }
-
-	if (cmd & RSX_METHOD_NON_METHOD_CMD_MASK)
-	{
-		if ((cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
-		{
-			const u32 jump_addr = cmd & RSX_METHOD_OLD_JUMP_OFFSET_MASK;
-			DISASM("JUMP to 0x%07x", jump_addr)
-		}
-		else if ((cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
-		{
-			const u32 jump_addr = cmd & RSX_METHOD_NEW_JUMP_OFFSET_MASK;
-			DISASM("JUMP to 0x%07x", jump_addr)
-		}
-		else if ((cmd & RSX_METHOD_CALL_CMD_MASK) == RSX_METHOD_CALL_CMD)
-		{
-			const u32 jump_addr = cmd & RSX_METHOD_CALL_OFFSET_MASK;
-			DISASM("CALL to 0x%07x", jump_addr)
-		}
-		else if ((cmd & RSX_METHOD_RETURN_MASK) == RSX_METHOD_RETURN_CMD)
-		{
-			DISASM("RETURN")
-		}
-		else
-		{
-			DISASM("Not a command")
-		}
-	}
-	else if ((cmd & RSX_METHOD_NOP_MASK) == RSX_METHOD_NOP_CMD)
-	{
-		DISASM("NOP")
-	}
-	else
-	{
-		const auto args = vm::get_super_ptr<u32>(rsx::get_current_renderer()->iomap_table.get_addr(ioAddr + 4));
-
-		[[maybe_unused]] u32 index = 0;
-
-		switch((cmd & 0x3ffff) >> 2)
-		{
-		case 0x3fead:
-		{
-			DISASM("Flip and change current buffer: %d", args[0])
-			break;
-		}
-		default:
-		{
-			const u32 id = (cmd & 0x3ffff) >> 2;
-			const std::string str = rsx::get_pretty_printing_function(id)(id, args[0]);
-			DISASM("%s", str.c_str())
-			break;
-		}
-		}
-
-		if ((cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD && count > 1)
-		{
-			DISASM("Non Increment cmd")
-		}
-
-		DISASM("(")
-
-		for (uint i=0; i<count; ++i)
-		{
-			if (i != 0) disasm += ", ";
-			disasm += fmt::format("0x%x", args[i]);
-		}
-
-		disasm += ")";
-	}
-#undef DISASM
-
-	return qstr(disasm);
-}
-
-void rsx_debugger::SetPC(const uint pc)
-{
-	m_addr = pc;
-}
-
-void rsx_debugger::PerformJump(u32 address)
-{
-	if (!vm::check_addr(address))
-		return;
-
-	const u32 cmd = *vm::get_super_ptr<u32>(address);
-	const u32 count = cmd & RSX_METHOD_NON_METHOD_CMD_MASK ? 0 : (cmd >> 18) & 0x7ff;
-
-	if (count == 0)
-		return;
-
-	m_addr = address + count;
-	UpdateInformation();
-
-	m_list_commands->setCurrentCell(0, 0); // needs to be changed when m_addr doesn't get set to row 0 anymore
 }
