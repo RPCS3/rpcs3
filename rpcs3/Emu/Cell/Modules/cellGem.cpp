@@ -95,8 +95,8 @@ struct gem_config
 		u8 rumble = 0;                                     // Rumble intensity
 		gem_color sphere_rgb = {};                         // RGB color of the sphere LED
 		u32 hue = 0;                                       // Tracking hue of the motion controller
-		u32 distance{1500};                                // Distance from the camera in mm
-		u32 radius{10};                                    // Radius of the sphere in camera pixels
+		f32 distance{1500.0f};                             // Distance from the camera in mm
+		f32 radius{10.0f};                                 // Radius of the sphere in camera pixels
 
 		bool is_calibrating{false};                        // Whether or not we are currently calibrating
 		u64 calibration_start_us{0};                       // The start timestamp of the calibration in microseconds
@@ -380,7 +380,7 @@ static bool mouse_pos_to_gem_image_state(const u32 mouse_no, const gem_config::g
 	if (mouse_height <= 0) mouse_height = shared_data.height;
 	const f32 scaling_width = mouse_width / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = mouse_height / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / static_cast<f32>(controller.radius);
+	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
 
 	// Image coordinates in pixels
 	const f32 image_x = static_cast<f32>(mouse.x_pos) / scaling_width;
@@ -425,7 +425,7 @@ static bool mouse_pos_to_gem_state(const u32 mouse_no, const gem_config::gem_con
 	if (mouse_height <= 0) mouse_height = shared_data.height;
 	const f32 scaling_width = mouse_width / static_cast<f32>(shared_data.width);
 	const f32 scaling_height = mouse_height / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / static_cast<f32>(controller.radius);
+	const f32 mmPerPixel = CELL_GEM_SPHERE_RADIUS_MM / controller.radius;
 
 	// Image coordinates in pixels
 	const f32 image_x = static_cast<f32>(mouse.x_pos) / scaling_width;
