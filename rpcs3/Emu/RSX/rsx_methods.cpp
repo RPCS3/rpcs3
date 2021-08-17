@@ -1206,9 +1206,8 @@ namespace rsx
 				const u32 nb_lines = std::min(clip_h, in_h);
 				const u32 data_length = nb_lines * src_line_length;
 
-				src_address = get_address(src_offset, src_dma, data_length);
-
-				if (!src_address || !dst_address)
+				if (src_address = get_address(src_offset, src_dma, data_length);
+					!src_address || !dst_address)
 				{
 					rsx->recover_fifo();
 					return;
@@ -1228,11 +1227,11 @@ namespace rsx
 			}
 			else
 			{
-				const u32 data_length = in_pitch * (in_h - 1) + src_line_length;
+				const u16 read_h = std::min(static_cast<u16>(clip_h / scale_y), in_h);
+				const u32 data_length = in_pitch * (read_h - 1) + src_line_length;
 
-				src_address = get_address(src_offset, src_dma, data_length);
-
-				if (!src_address || !dst_address)
+				if (src_address = get_address(src_offset, src_dma, data_length);
+					!src_address || !dst_address)
 				{
 					rsx->recover_fifo();
 					return;
