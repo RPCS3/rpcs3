@@ -118,7 +118,7 @@ public:
 
 	std::vector<std::string> ListDevices() override;
 	void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
-	void init_config(pad_config* cfg, const std::string& name) override;
+	void init_config(cfg_pad* cfg) override;
 
 private:
 	std::unordered_map<u64, u16> GetButtonValues(const JOYINFOEX& js_info, const JOYCAPS& js_caps);
@@ -133,7 +133,7 @@ private:
 
 	u64 find_key(const std::string& name) const;
 
-	std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const pad_config* profile) override;
+	std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg) override;
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 	bool get_is_left_trigger(u64 keyCode) override;
 	bool get_is_right_trigger(u64 keyCode) override;

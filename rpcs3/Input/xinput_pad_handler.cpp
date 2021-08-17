@@ -83,12 +83,9 @@ xinput_pad_handler::~xinput_pad_handler()
 	}
 }
 
-void xinput_pad_handler::init_config(pad_config* cfg, const std::string& name)
+void xinput_pad_handler::init_config(cfg_pad* cfg)
 {
 	if (!cfg) return;
-
-	// Set this profile's save location
-	cfg->cfg_name = name;
 
 	// Set default button mapping
 	cfg->ls_left.def  = button_list.at(XInputKeyCodes::LSXNeg);

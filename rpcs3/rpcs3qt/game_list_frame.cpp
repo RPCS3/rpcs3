@@ -1453,7 +1453,10 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, con
 
 bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, const game_info& game, bool is_interactive)
 {
-	const std::string config_dir = rpcs3::utils::get_custom_input_config_dir(title_id);
+	if (title_id.empty())
+		return true;
+
+	const std::string config_dir = rpcs3::utils::get_input_config_dir(title_id);
 
 	if (!fs::is_dir(config_dir))
 		return true;

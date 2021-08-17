@@ -89,7 +89,26 @@ void pad_thread::Init()
 
 	handlers.clear();
 
-	g_cfg_input.load(pad::g_title_id);
+	g_cfg_profile.load();
+
+	// Load in order to get the pad handlers
+	if (!g_cfg_input.load(pad::g_title_id, g_cfg_profile.active_profiles.get_value(pad::g_title_id)))
+	{
+		input_log.notice("Loaded empty pad config");
+	}
+
+	// Adjust to the different pad handlers
+	for (usz i = 0; i < g_cfg_input.player.size(); i++)
+	{
+		std::shared_ptr<PadHandlerBase> handler;
+		pad_thread::InitPadConfig(g_cfg_input.player[i]->config, g_cfg_input.player[i]->handler, handler);
+	}
+
+	// Reload with proper defaults
+	if (!g_cfg_input.load(pad::g_title_id, g_cfg_profile.active_profiles.get_value(pad::g_title_id)))
+	{
+		input_log.notice("Reloaded empty pad config");
+	}
 
 	std::shared_ptr<keyboard_pad_handler> keyptr;
 
@@ -162,6 +181,8 @@ void pad_thread::Init()
 
 		m_pads_interface[i] = std::make_shared<Pad>(CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
 		*m_pads_interface[i] = *m_pads[i];
+
+		input_log.notice("Pad %d: %s", i, g_cfg_input.player[i]->device.to_string());
 	}
 }
 
@@ -287,6 +308,8 @@ void pad_thread::InitLddPad(u32 handle)
 		return;
 	}
 
+	input_log.notice("Pad %d: LDD", handle);
+
 	static const auto product = input::get_product_info(input::product_type::playstation_3_controller);
 
 	m_pads[handle]->ldd = true;
@@ -330,4 +353,73 @@ void pad_thread::UnregisterLddPad(u32 handle)
 	m_pads_interface[handle]->ldd = false;
 
 	num_ldd_pad--;
+}
+
+std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
+{
+	switch (type)
+	{
+	case pad_handler::null:
+		return std::make_unique<NullPadHandler>();
+	case pad_handler::keyboard:
+		return std::make_unique<keyboard_pad_handler>();
+	case pad_handler::ds3:
+		return std::make_unique<ds3_pad_handler>();
+	case pad_handler::ds4:
+		return std::make_unique<ds4_pad_handler>();
+	case pad_handler::dualsense:
+		return std::make_unique<dualsense_pad_handler>();
+#ifdef _WIN32
+	case pad_handler::xinput:
+		return std::make_unique<xinput_pad_handler>();
+	case pad_handler::mm:
+		return std::make_unique<mm_joystick_handler>();
+#endif
+#ifdef HAVE_LIBEVDEV
+	case pad_handler::evdev:
+		return std::make_unique<evdev_joystick_handler>();
+#endif
+	}
+
+	return nullptr;
+}
+
+void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler)
+{
+	if (!handler)
+	{
+		handler = GetHandler(type);
+	}
+
+	switch (handler->m_type)
+	{
+	case pad_handler::null:
+		static_cast<NullPadHandler*>(handler.get())->init_config(&cfg);
+		break;
+	case pad_handler::keyboard:
+		static_cast<keyboard_pad_handler*>(handler.get())->init_config(&cfg);
+		break;
+	case pad_handler::ds3:
+		static_cast<ds3_pad_handler*>(handler.get())->init_config(&cfg);
+		break;
+	case pad_handler::ds4:
+		static_cast<ds4_pad_handler*>(handler.get())->init_config(&cfg);
+		break;
+	case pad_handler::dualsense:
+		static_cast<dualsense_pad_handler*>(handler.get())->init_config(&cfg);
+		break;
+#ifdef _WIN32
+	case pad_handler::xinput:
+		static_cast<xinput_pad_handler*>(handler.get())->init_config(&cfg);
+		break;
+	case pad_handler::mm:
+		static_cast<mm_joystick_handler*>(handler.get())->init_config(&cfg);
+		break;
+#endif
+#ifdef HAVE_LIBEVDEV
+	case pad_handler::evdev:
+		static_cast<evdev_joystick_handler*>(handler.get())->init_config(&cfg);
+		break;
+#endif
+	}
 }

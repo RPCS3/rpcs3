@@ -137,7 +137,7 @@ void ds3_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 lar
 		{
 			if (g_cfg_input.player[i]->device.to_string() == padId)
 			{
-				m_pad_configs[index].load();
+				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
 				device->config = &m_pad_configs[index];
 				break;
 			}
@@ -197,12 +197,9 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 	return hid_write(ds3dev->hidDevice, &output_report.report_id, sizeof(output_report));
 }
 
-void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
+void ds3_pad_handler::init_config(cfg_pad* cfg)
 {
 	if (!cfg) return;
-
-	// Set this profile's save location
-	cfg->cfg_name = name;
 
 	// Set default button mapping
 	cfg->ls_left.def = button_list.at(DS3KeyCodes::LSXNeg);
@@ -560,7 +557,7 @@ void ds3_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 	if (!dev || !dev->hidDevice || !dev->config || !pad)
 		return;
 
-	pad_config* config = dev->config;
+	cfg_pad* config = dev->config;
 
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;
 	const int idx_s = config->switch_vibration_motors ? 0 : 1;

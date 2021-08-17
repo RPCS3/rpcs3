@@ -4,44 +4,17 @@
 
 #include "Utilities/Config.h"
 
+#include <array>
+
 namespace pad
 {
 	constexpr static std::string_view keyboard_device_name = "Keyboard";
 }
 
-struct cfg_player final : cfg::node
+struct cfg_pad final : cfg::node
 {
-	pad_handler def_handler = pad_handler::null;
-	cfg_player(node* owner, const std::string& name, pad_handler type) : cfg::node(owner, name), def_handler(type) {}
-
-	cfg::_enum<pad_handler> handler{ this, "Handler", def_handler };
-	cfg::string device{ this, "Device", handler.to_string() };
-	cfg::string profile{ this, "Profile", "Default Profile" };
-};
-
-struct cfg_input final : cfg::node
-{
-	cfg_input();
-
-	std::string cfg_name;
-
-	cfg_player player1{ this, "Player 1 Input", pad_handler::null };
-	cfg_player player2{ this, "Player 2 Input", pad_handler::null };
-	cfg_player player3{ this, "Player 3 Input", pad_handler::null };
-	cfg_player player4{ this, "Player 4 Input", pad_handler::null };
-	cfg_player player5{ this, "Player 5 Input", pad_handler::null };
-	cfg_player player6{ this, "Player 6 Input", pad_handler::null };
-	cfg_player player7{ this, "Player 7 Input", pad_handler::null };
-
-	cfg_player* player[7]{ &player1, &player2, &player3, &player4, &player5, &player6, &player7 }; // Thanks gcc!
-
-	bool load(const std::string& title_id = "");
-	void save(const std::string& title_id = "");
-};
-
-struct pad_config final : cfg::node
-{
-	std::string cfg_name{};
+	cfg_pad() {};
+	cfg_pad(node* owner, const std::string& name) : cfg::node(owner, name) {}
 
 	cfg::string ls_left{ this, "Left Stick Left", "" };
 	cfg::string ls_down{ this, "Left Stick Down", "" };
@@ -106,10 +79,46 @@ struct pad_config final : cfg::node
 	cfg::uint<0, 5> device_class_type{ this, "Device Class Type", 0 };
 	cfg::uint<0, 65535> vendor_id{ this, "Vendor ID", 0 };
 	cfg::uint<0, 65535> product_id{ this, "Product ID", 0 };
+};
 
-	bool exist() const;
+struct cfg_player final : cfg::node
+{
+	pad_handler def_handler = pad_handler::null;
+	cfg_player(node* owner, const std::string& name, pad_handler type) : cfg::node(owner, name), def_handler(type) {}
+
+	cfg::_enum<pad_handler> handler{ this, "Handler", def_handler };
+	cfg::string device{ this, "Device", handler.to_string() };
+	cfg_pad config{ this, "Config" };
+};
+
+struct cfg_input final : cfg::node
+{
+	cfg_player player1{ this, "Player 1 Input", pad_handler::null };
+	cfg_player player2{ this, "Player 2 Input", pad_handler::null };
+	cfg_player player3{ this, "Player 3 Input", pad_handler::null };
+	cfg_player player4{ this, "Player 4 Input", pad_handler::null };
+	cfg_player player5{ this, "Player 5 Input", pad_handler::null };
+	cfg_player player6{ this, "Player 6 Input", pad_handler::null };
+	cfg_player player7{ this, "Player 7 Input", pad_handler::null };
+
+	std::array<cfg_player*, 7> player{ &player1, &player2, &player3, &player4, &player5, &player6, &player7 }; // Thanks gcc!
+
+	bool load(const std::string& title_id = "", const std::string& profile = "", bool strict = false);
+	void save(const std::string& title_id, const std::string& profile = "") const;
+};
+
+struct cfg_profile final : cfg::node
+{
+	cfg_profile();
 	bool load();
 	void save() const;
+
+	const std::string path;
+	const std::string global_key = "global";
+	const std::string default_profile = "Default";
+
+	cfg::map_entry active_profiles{ this, "Active Profiles" };
 };
 
 extern cfg_input g_cfg_input;
+extern cfg_profile g_cfg_profile;

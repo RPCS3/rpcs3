@@ -39,11 +39,6 @@ class rsx_debugger : public QDialog
 {
 	Q_OBJECT
 
-	u32 m_addr = 0;
-
-	QLineEdit* m_addr_line;
-
-	QTableWidget* m_list_commands;
 	QTableWidget* m_list_captured_frame;
 	QTableWidget* m_list_captured_draw_calls;
 	QListWidget* m_list_index_buffer;
@@ -71,10 +66,6 @@ public:
 	void UpdateInformation() const;
 	void GetMemory() const;
 	void GetBuffers() const;
-
-	QString DisAsmCommand(u32 cmd, u32 count, u32 ioAddr) const;
-
-	void SetPC(const uint pc);
 
 public Q_SLOTS:
 	virtual void OnClickDrawCalls();
