@@ -26,12 +26,9 @@ mm_joystick_handler::mm_joystick_handler() : PadHandlerBase(pad_handler::mm)
 	m_thumb_threshold = thumb_max / 2;
 }
 
-void mm_joystick_handler::init_config(pad_config* cfg, const std::string& name)
+void mm_joystick_handler::init_config(cfg_pad* cfg)
 {
 	if (!cfg) return;
-
-	// Set this profile's save location
-	cfg->cfg_name = name;
 
 	// Set default button mapping
 	cfg->ls_left.def  = axis_list.at(mmjoy_axis::joy_x_neg);
@@ -129,42 +126,42 @@ u64 mm_joystick_handler::find_key(const std::string& name) const
 	return static_cast<u64>(key);
 }
 
-std::array<u32, PadHandlerBase::button::button_count> mm_joystick_handler::get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const pad_config* profile)
+std::array<u32, PadHandlerBase::button::button_count> mm_joystick_handler::get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg)
 {
-	std::array<u32, button::button_count> mapping{ 0 };
+	std::array<u32, button::button_count> mapping{};
 
 	MMJOYDevice* joy_device = static_cast<MMJOYDevice*>(device.get());
-	if (!joy_device)
+	if (!joy_device || !cfg)
 		return mapping;
 
-	joy_device->trigger_left  = find_key(profile->l2);
-	joy_device->trigger_right = find_key(profile->r2);
-	joy_device->axis_left[0]  = find_key(profile->ls_left);
-	joy_device->axis_left[1]  = find_key(profile->ls_right);
-	joy_device->axis_left[2]  = find_key(profile->ls_down);
-	joy_device->axis_left[3]  = find_key(profile->ls_up);
-	joy_device->axis_right[0] = find_key(profile->rs_left);
-	joy_device->axis_right[1] = find_key(profile->rs_right);
-	joy_device->axis_right[2] = find_key(profile->rs_down);
-	joy_device->axis_right[3] = find_key(profile->rs_up);
+	joy_device->trigger_left  = find_key(cfg->l2);
+	joy_device->trigger_right = find_key(cfg->r2);
+	joy_device->axis_left[0]  = find_key(cfg->ls_left);
+	joy_device->axis_left[1]  = find_key(cfg->ls_right);
+	joy_device->axis_left[2]  = find_key(cfg->ls_down);
+	joy_device->axis_left[3]  = find_key(cfg->ls_up);
+	joy_device->axis_right[0] = find_key(cfg->rs_left);
+	joy_device->axis_right[1] = find_key(cfg->rs_right);
+	joy_device->axis_right[2] = find_key(cfg->rs_down);
+	joy_device->axis_right[3] = find_key(cfg->rs_up);
 
-	mapping[button::up]       = static_cast<u32>(find_key(profile->up));
-	mapping[button::down]     = static_cast<u32>(find_key(profile->down));
-	mapping[button::left]     = static_cast<u32>(find_key(profile->left));
-	mapping[button::right]    = static_cast<u32>(find_key(profile->right));
-	mapping[button::cross]    = static_cast<u32>(find_key(profile->cross));
-	mapping[button::square]   = static_cast<u32>(find_key(profile->square));
-	mapping[button::circle]   = static_cast<u32>(find_key(profile->circle));
-	mapping[button::triangle] = static_cast<u32>(find_key(profile->triangle));
-	mapping[button::l1]       = static_cast<u32>(find_key(profile->l1));
+	mapping[button::up]       = static_cast<u32>(find_key(cfg->up));
+	mapping[button::down]     = static_cast<u32>(find_key(cfg->down));
+	mapping[button::left]     = static_cast<u32>(find_key(cfg->left));
+	mapping[button::right]    = static_cast<u32>(find_key(cfg->right));
+	mapping[button::cross]    = static_cast<u32>(find_key(cfg->cross));
+	mapping[button::square]   = static_cast<u32>(find_key(cfg->square));
+	mapping[button::circle]   = static_cast<u32>(find_key(cfg->circle));
+	mapping[button::triangle] = static_cast<u32>(find_key(cfg->triangle));
+	mapping[button::l1]       = static_cast<u32>(find_key(cfg->l1));
 	mapping[button::l2]       = static_cast<u32>(joy_device->trigger_left);
-	mapping[button::l3]       = static_cast<u32>(find_key(profile->l3));
-	mapping[button::r1]       = static_cast<u32>(find_key(profile->r1));
+	mapping[button::l3]       = static_cast<u32>(find_key(cfg->l3));
+	mapping[button::r1]       = static_cast<u32>(find_key(cfg->r1));
 	mapping[button::r2]       = static_cast<u32>(joy_device->trigger_right);
-	mapping[button::r3]       = static_cast<u32>(find_key(profile->r3));
-	mapping[button::start]    = static_cast<u32>(find_key(profile->start));
-	mapping[button::select]   = static_cast<u32>(find_key(profile->select));
-	mapping[button::ps]       = static_cast<u32>(find_key(profile->ps));
+	mapping[button::r3]       = static_cast<u32>(find_key(cfg->r3));
+	mapping[button::start]    = static_cast<u32>(find_key(cfg->start));
+	mapping[button::select]   = static_cast<u32>(find_key(cfg->select));
+	mapping[button::ps]       = static_cast<u32>(find_key(cfg->ps));
 	mapping[button::ls_left]  = static_cast<u32>(joy_device->axis_left[0]);
 	mapping[button::ls_right] = static_cast<u32>(joy_device->axis_left[1]);
 	mapping[button::ls_down]  = static_cast<u32>(joy_device->axis_left[2]);
@@ -174,7 +171,7 @@ std::array<u32, PadHandlerBase::button::button_count> mm_joystick_handler::get_m
 	mapping[button::rs_down]  = static_cast<u32>(joy_device->axis_right[2]);
 	mapping[button::rs_up]    = static_cast<u32>(joy_device->axis_right[3]);
 
-	mapping[button::pressure_intensity_button] = static_cast<u32>(find_key(profile->pressure_intensity_button));
+	mapping[button::pressure_intensity_button] = static_cast<u32>(find_key(cfg->pressure_intensity_button));
 
 	return mapping;
 }

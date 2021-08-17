@@ -226,7 +226,6 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 			out << YAML::Value;
 			encode(out, *node);
 		}
-
 		out << YAML::EndMap;
 		return;
 	}
@@ -237,8 +236,18 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 		{
 			out << str;
 		}
-
 		out << YAML::EndSeq;
+		return;
+	}
+	case type::map:
+	{
+		out << YAML::BeginMap;
+		for (const auto& np : static_cast<const map_entry&>(rhs).get_map())
+		{
+			out << YAML::Key << np.first;
+			out << YAML::Value << fmt::format("%s", np.second);
+		}
+		out << YAML::EndMap;
 		return;
 	}
 	case type::log:
@@ -250,7 +259,6 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 			out << YAML::Key << np.first;
 			out << YAML::Value << fmt::format("%s", np.second);
 		}
-
 		out << YAML::EndMap;
 		return;
 	}
@@ -303,6 +311,25 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 			rhs.from_list(std::move(values));
 		}
 
+		break;
+	}
+	case type::map:
+	{
+		if (!data.IsMap())
+		{
+			return;
+		}
+
+		std::map<std::string, std::string> values;
+
+		for (const auto& pair : data)
+		{
+			if (!pair.first.IsScalar() || !pair.second.IsScalar()) continue;
+
+			values.emplace(pair.first.Scalar(), pair.second.Scalar());
+		}
+
+		static_cast<map_entry&>(rhs).set_map(std::move(values));
 		break;
 	}
 	case type::log:
@@ -385,6 +412,26 @@ void cfg::string::from_default()
 void cfg::set_entry::from_default()
 {
 	m_set = {};
+}
+
+std::string cfg::map_entry::get_value(const std::string& key)
+{
+	return m_map.contains(key) ? m_map.at(key) : "";
+}
+
+void cfg::map_entry::set_value(const std::string& key, const std::string& value)
+{
+	m_map[key] = value;
+}
+
+void cfg::map_entry::set_map(std::map<std::string, std::string>&& map)
+{
+	m_map = std::move(map);
+}
+
+void cfg::map_entry::from_default()
+{
+	set_map({});
 }
 
 void cfg::log_entry::set_map(std::map<std::string, logs::level>&& map)
