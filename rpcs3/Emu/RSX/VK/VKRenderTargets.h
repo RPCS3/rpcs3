@@ -89,6 +89,35 @@ namespace vk
 		using download_buffer_object = void*;
 		using barrier_descriptor_t = rsx::deferred_clipped_region<vk::render_target*>;
 
+		static VkFlags get_attachment_compression_usage_flags()
+		{
+			if (g_cfg.video.strict_rendering_mode)
+			{
+				return 0;
+			}
+
+			switch (vk::get_driver_vendor())
+			{
+			case driver_vendor::NVIDIA:
+			case driver_vendor::INTEL:
+			case driver_vendor::AMD: // TODO
+				return 0;
+
+			// Workaround to force transition to GENERAL to decompress.
+			// Fixes corruption in FBO loops for ANV and RADV.
+			case driver_vendor::ANV:
+				return VK_IMAGE_USAGE_STORAGE_BIT;
+			case driver_vendor::RADV:
+				// Only needed for GFX10+
+				return (vk::get_chip_family() >= chip_class::AMD_navi1x) ?
+					VK_IMAGE_USAGE_STORAGE_BIT : 0;
+
+			default:
+				rsx_log.error("Unknown driver vendor!");
+				return 0;
+			}
+		}
+
 		static std::unique_ptr<vk::render_target> create_new_surface(
 			u32 address,
 			rsx::surface_color_format format,
@@ -115,7 +144,7 @@ namespace vk
 			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			if (samples == 1) [[likely]]
 			{
-				usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+				usage_flags |= get_attachment_compression_usage_flags() | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			}
 			else
 			{
@@ -180,7 +209,7 @@ namespace vk
 
 			if (samples == 1) [[likely]]
 			{
-				usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+				usage_flags |= get_attachment_compression_usage_flags() | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 			}
 
 			std::unique_ptr<vk::render_target> ds;

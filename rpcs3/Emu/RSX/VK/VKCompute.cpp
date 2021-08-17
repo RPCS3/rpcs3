@@ -75,6 +75,7 @@ namespace vk
 			{
 			case vk::driver_vendor::unknown:
 			case vk::driver_vendor::INTEL:
+			case vk::driver_vendor::ANV:
 				// Intel hw has 8 threads, but LDS allocation behavior makes optimal group size between 64 and 256
 				// Based on intel's own OpenCL recommended settings
 				unroll_loops = true;
