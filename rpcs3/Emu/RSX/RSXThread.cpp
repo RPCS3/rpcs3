@@ -74,7 +74,7 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
-	u32 get_address(u32 offset, u32 location, bool allow_failure, u32 line, u32 col, const char* file, const char* func)
+	u32 get_address(u32 offset, u32 location, u32 size_to_check, u32 line, u32 col, const char* file, const char* func)
 	{
 		const auto render = get_current_renderer();
 		std::string_view msg;
@@ -84,7 +84,7 @@ namespace rsx
 		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
 		case CELL_GCM_LOCATION_LOCAL:
 		{
-			if (offset < render->local_mem_size)
+			if (offset < render->local_mem_size && render->local_mem_size - offset >= size_to_check)
 			{
 				return rsx::constants::local_mem_base + offset;
 			}
@@ -98,7 +98,10 @@ namespace rsx
 		{
 			if (const u32 ea = render->iomap_table.get_addr(offset); ea + 1)
 			{
-				return ea;
+				if (!size_to_check || vm::check_addr(ea, 0, size_to_check))
+				{
+					return ea;
+				}
 			}
 
 			msg = "RSXIO memory not mapped!"sv;
@@ -120,7 +123,10 @@ namespace rsx
 		{
 			if (const u32 ea = offset < 0x1000000 ? render->iomap_table.get_addr(0x0e000000 + offset) : -1; ea + 1)
 			{
-				return ea;
+				if (!size_to_check || vm::check_addr(ea, 0, size_to_check))
+				{
+					return ea;
+				}
 			}
 
 			msg = "RSXIO REPORT memory not mapped!"sv;
@@ -181,8 +187,11 @@ namespace rsx
 		}
 		}
 
-		if (allow_failure)
+		if (size_to_check)
 		{
+			// Allow failure if specified size
+			// This is to allow accurate recovery for failures
+			rsx_log.warning("rsx::get_address(offset=0x%x, location=0x%x, size=0x%x): %s%s", offset, location, size_to_check, msg, src_loc{line, col, file, func});
 			return 0;
 		}
 
@@ -2536,7 +2545,7 @@ namespace rsx
 		fifo_ctrl->sync_get();
 	}
 
-	void thread::recover_fifo()
+	void thread::recover_fifo(u32 line, u32 col, const char* file, const char* func)
 	{
 		const u64 current_time = get_system_time();
 
@@ -2545,10 +2554,11 @@ namespace rsx
 			const auto cmd_info = recovered_fifo_cmds_history.front();
 
 			// Check timestamp of last tracked cmd
-			if (current_time - cmd_info.timestamp < 2'000'000u)
+			// Shorten the range of forbidden difference if driver wake-up delay is used
+			if (current_time - cmd_info.timestamp < 2'000'000u - std::min<u32>(g_cfg.video.driver_wakeup_delay * 700, 1'400'000))
 			{
 				// Probably hopeless
-				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings.");
+				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings. Called from %s", src_loc{line, col, file, func});
 			}
 
 			// Erase the last command from history, keep the size of the queue the same

@@ -70,7 +70,8 @@ void VKGSRender::update_draw_state()
 {
 	m_profiler.start();
 
-	const float actual_line_width = m_device->get_wide_lines_support()? rsx::method_registers.line_width() : 1.f;
+	const float actual_line_width =
+	    m_device->get_wide_lines_support() ? rsx::method_registers.line_width() * rsx::get_resolution_scale() : 1.f;
 	vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
 
 	if (rsx::method_registers.poly_offset_fill_enabled())

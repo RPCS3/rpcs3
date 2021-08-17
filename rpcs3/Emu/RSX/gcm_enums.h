@@ -368,6 +368,7 @@ namespace rsx
 			srccopy,
 			srccopy_premult,
 			blend_premult,
+			invalid,
 		};
 
 		transfer_operation to_transfer_operation(u8 in);
@@ -387,6 +388,7 @@ namespace rsx
 			ecr8eyb8ecb8eya8,
 			a8b8g8r8,
 			x8b8g8r8,
+			invalid,
 		};
 
 		transfer_source_format to_transfer_source_format(u8 in);
@@ -396,6 +398,7 @@ namespace rsx
 			r5g6b5,
 			a8r8g8b8,
 			y32,
+			invalid
 		};
 
 		transfer_destination_format to_transfer_destination_format(u8 in);
