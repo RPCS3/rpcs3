@@ -1106,64 +1106,37 @@ namespace rsx
 			return decode<NV4097_SET_SURFACE_CLIP_VERTICAL>().height();
 		}
 
-		u32 surface_a_offset() const
+		u32 surface_offset(u32 index) const
 		{
-			return decode<NV4097_SET_SURFACE_COLOR_AOFFSET>().surface_a_offset();
+			switch (index)
+			{
+			case 0: return decode<NV4097_SET_SURFACE_COLOR_AOFFSET>().surface_a_offset();
+			case 1: return decode<NV4097_SET_SURFACE_COLOR_BOFFSET>().surface_b_offset();
+			case 2: return decode<NV4097_SET_SURFACE_COLOR_COFFSET>().surface_c_offset();
+			default: return decode<NV4097_SET_SURFACE_COLOR_DOFFSET>().surface_d_offset();
+			}
 		}
 
-		u32 surface_b_offset() const
+		u32 surface_pitch(u32 index) const
 		{
-			return decode<NV4097_SET_SURFACE_COLOR_BOFFSET>().surface_b_offset();
+			switch (index)
+			{
+			case 0: return decode<NV4097_SET_SURFACE_PITCH_A>().surface_a_pitch();
+			case 1: return decode<NV4097_SET_SURFACE_PITCH_B>().surface_b_pitch();
+			case 2: return decode<NV4097_SET_SURFACE_PITCH_C>().surface_c_pitch();
+			default: return decode<NV4097_SET_SURFACE_PITCH_D>().surface_d_pitch();
+			}
 		}
 
-		u32 surface_c_offset() const
+		u32 surface_dma(u32 index) const
 		{
-			return decode<NV4097_SET_SURFACE_COLOR_COFFSET>().surface_c_offset();
-		}
-
-		u32 surface_d_offset() const
-		{
-			return decode<NV4097_SET_SURFACE_COLOR_DOFFSET>().surface_d_offset();
-		}
-
-		u32 surface_a_pitch() const
-		{
-			return decode<NV4097_SET_SURFACE_PITCH_A>().surface_a_pitch();
-		}
-
-		u32 surface_b_pitch() const
-		{
-			return decode<NV4097_SET_SURFACE_PITCH_B>().surface_b_pitch();
-		}
-
-		u32 surface_c_pitch() const
-		{
-			return decode<NV4097_SET_SURFACE_PITCH_C>().surface_c_pitch();
-		}
-
-		u32 surface_d_pitch() const
-		{
-			return decode<NV4097_SET_SURFACE_PITCH_D>().surface_d_pitch();
-		}
-
-		u32 surface_a_dma() const
-		{
-			return decode<NV4097_SET_CONTEXT_DMA_COLOR_A>().dma_surface_a();
-		}
-
-		u32 surface_b_dma() const
-		{
-			return decode<NV4097_SET_CONTEXT_DMA_COLOR_B>().dma_surface_b();
-		}
-
-		u32 surface_c_dma() const
-		{
-			return decode<NV4097_SET_CONTEXT_DMA_COLOR_C>().dma_surface_c();
-		}
-
-		u32 surface_d_dma() const
-		{
-			return decode<NV4097_SET_CONTEXT_DMA_COLOR_D>().dma_surface_d();
+			switch (index)
+			{
+			case 0: return decode<NV4097_SET_CONTEXT_DMA_COLOR_A>().dma_surface_a();
+			case 1: return decode<NV4097_SET_CONTEXT_DMA_COLOR_B>().dma_surface_b();
+			case 2: return decode<NV4097_SET_CONTEXT_DMA_COLOR_C>().dma_surface_c();
+			default: return decode<NV4097_SET_CONTEXT_DMA_COLOR_D>().dma_surface_d();
+			}
 		}
 
 		u32 surface_z_offset() const
