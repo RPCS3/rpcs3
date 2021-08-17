@@ -29,7 +29,8 @@ namespace vk
 		AMD,
 		NVIDIA,
 		RADV,
-		INTEL
+		INTEL,
+		ANV
 	};
 
 	driver_vendor get_driver_vendor();

@@ -583,7 +583,7 @@ VKGSRender::VKGSRender() : GSRender()
 		case vk::driver_vendor::AMD:
 #if !defined(__linux__)
 			// Intel chipsets would fail on BSD in most cases and DRM_IOCTL_i915_GEM_USERPTR unimplemented
-		case vk::driver_vendor::INTEL:
+		case vk::driver_vendor::ANV:
 #endif
 			if (backend_config.supports_passthrough_dma)
 			{
