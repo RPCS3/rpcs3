@@ -7,6 +7,7 @@
 
 #ifdef _WIN32
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #else
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -202,11 +203,18 @@ void signaling_handler::process_incoming_messages()
 				char npid_buf[17]{};
 				memcpy(npid_buf, sp->V1.npid.handle.data, 16);
 				std::string npid(npid_buf);
-				sign_log.trace("sig1 %s from %s:%d(%s)", sp->command, inet_ntoa(addr), op_port, npid);
+
+				char ip_str[16];
+				inet_ntop(AF_INET, &addr, ip_str, sizeof(ip_str));
+
+				sign_log.trace("sig1 %s from %s:%d(%s)", sp->command, ip_str, op_port, npid);
 			}
 			else
 			{
-				sign_log.trace("sig2 %s from %s:%d(%d:%d)", sp->command, inet_ntoa(addr), op_port, sp->V2.room_id, sp->V2.member_id);
+				char inet_addr[16];
+				const char* inet_addr_string = inet_ntop(AF_INET, &addr, inet_addr, sizeof(inet_addr));
+
+				sign_log.trace("sig2 %s from %s:%d(%d:%d)", sp->command, inet_addr_string, op_port, sp->V2.room_id, sp->V2.member_id);
 			}
 		}
 
@@ -399,7 +407,12 @@ void signaling_handler::update_si_addr(std::shared_ptr<signaling_info>& si, u32 
 		addr_old.s_addr = si->addr;
 		addr_new.s_addr = new_addr;
 
-		sign_log.trace("Updated Address from %s:%d to %s:%d", inet_ntoa(addr_old), si->port, inet_ntoa(addr_new), new_port);
+		char ip_str_old[16];
+		char ip_str_new[16];
+		inet_ntop(AF_INET, &addr_old, ip_str_old, sizeof(ip_str_old));
+		inet_ntop(AF_INET, &addr_new, ip_str_new, sizeof(ip_str_new));
+
+		sign_log.trace("Updated Address from %s:%d to %s:%d", ip_str_old, si->port, ip_str_new, new_port);
 		si->addr = new_addr;
 		si->port = new_port;
 	}
@@ -467,11 +480,14 @@ void signaling_handler::send_signaling_packet(signaling_packet& sp, u32 addr, u1
 	dest.sin_addr.s_addr = addr;
 	dest.sin_port        = std::bit_cast<u16, be_t<u16>>(port);
 
-	sign_log.trace("Sending %s packet to %s:%d", sp.command, inet_ntoa(dest.sin_addr), port);
+	char ip_str[16];
+	inet_ntop(AF_INET, &dest.sin_addr, ip_str, sizeof(ip_str));
+
+	sign_log.trace("Sending %s packet to %s:%d", sp.command, ip_str, port);
 
 	if (send_packet_from_p2p_port(packet, dest) == -1)
 	{
-		sign_log.error("Failed to send signaling packet to %s:%d", inet_ntoa(dest.sin_addr), port);
+		sign_log.error("Failed to send signaling packet to %s:%d", ip_str, port);
 	}
 }
 
