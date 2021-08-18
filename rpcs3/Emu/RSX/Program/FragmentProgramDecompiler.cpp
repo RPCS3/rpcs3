@@ -547,10 +547,20 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		// 1. Reading from registers 1 and 2 (COL0 and COL1) is clamped to (0, 1)
 		// 2. Reading from registers 4-12 (inclusive) is not clamped, but..
 		// 3. If the texcoord control mask is enabled, the last 2 values are always 0 and hpos.w!
-		const std::string reg_var = (dst.src_attr_reg_num < std::size(reg_table))? reg_table[dst.src_attr_reg_num] : "unk";
+		// 4. [A0 + N] addressing can be applied to dynamically sample texture coordinates.
+		// - This is explained in NV_fragment_program2 specification page, Fragment Attributes section.
+		// - There is no instruction that writes to the address register directly, it is supposed to be the loop counter!
+		const u32 register_id = src2.use_index_reg ? (src2.addr_reg + 4) : dst.src_attr_reg_num;
+		const std::string reg_var = (register_id < std::size(reg_table))? reg_table[register_id] : "unk";
 		bool insert = true;
 
-		switch (dst.src_attr_reg_num)
+		if (src2.use_index_reg && m_loop_count)
+		{
+			// TODO: Actually implement dynamic register indexing (kd-11)
+			rsx_log.error("Dynamic register indexing is unimplemented. Report this to developers!");
+		}
+
+		switch (register_id)
 		{
 		case 0x00:
 		{
@@ -563,30 +573,14 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		case 0x02:
 		{
 			// COL0, COL1
-			if (!src2.use_index_reg)
-			{
-				ret += "_saturate(" + reg_var + ")";
-				precision_modifier = RSX_FP_PRECISION_REAL;
-			}
-			else
-			{
-				// Raw access
-				ret += reg_var;
-			}
+			ret += "_saturate(" + reg_var + ")";
+			precision_modifier = RSX_FP_PRECISION_REAL;
 			break;
 		}
 		case 0x03:
 		{
 			// FOGC
-			if (!src2.use_index_reg)
-			{
-				ret += reg_var;
-			}
-			else
-			{
-				// Raw access
-				ret += "fog_c";
-			}
+			ret += reg_var;
 			break;
 		}
 		case 0x4:
@@ -602,7 +596,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		{
 			// TEX0 - TEX9
 			// Texcoord 2d mask seems to reset the last 2 arguments to 0 and w if set
-			const u8 texcoord = u8(dst.src_attr_reg_num) - 4;
+			const u8 texcoord = u8(register_id) - 4;
 			if (m_prog.texcoord_is_point_coord(texcoord))
 			{
 				// Point sprite coord generation. Stacks with the 2D override mask.
@@ -633,7 +627,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			// UNK
 			if (reg_var == "unk")
 			{
-				rsx_log.error("Bad src reg num: %d", u32{ dst.src_attr_reg_num });
+				rsx_log.error("Bad src reg num: %d", u32{ register_id });
 			}
 
 			ret += reg_var;
@@ -647,7 +641,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_var);
 		}
 
-		properties.in_register_mask |= (1 << dst.src_attr_reg_num);
+		properties.in_register_mask |= (1 << register_id);
 	}
 	break;
 
