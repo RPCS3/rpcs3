@@ -205,7 +205,7 @@ void Emulator::Init(bool add_only)
 		make_path_verbose(dev_hdd0 + "game/");
 		make_path_verbose(dev_hdd0 + "game/TEST12345/");
 		make_path_verbose(dev_hdd0 + "game/TEST12345/USRDIR/");
-		make_path_verbose(dev_hdd0 + reinterpret_cast<const char*>(u8"＄locks/"));
+		make_path_verbose(dev_hdd0 + reinterpret_cast<const char*>(u8"game/＄locks/"));
 		make_path_verbose(dev_hdd0 + "home/");
 		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/");
 		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/exdata/");
