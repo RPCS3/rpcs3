@@ -1010,17 +1010,17 @@ namespace rsx
 	{
 		u32 offset_color[] =
 		{
-			rsx::method_registers.surface_a_offset(),
-			rsx::method_registers.surface_b_offset(),
-			rsx::method_registers.surface_c_offset(),
-			rsx::method_registers.surface_d_offset(),
+			rsx::method_registers.surface_offset(0),
+			rsx::method_registers.surface_offset(1),
+			rsx::method_registers.surface_offset(2),
+			rsx::method_registers.surface_offset(3),
 		};
 		u32 context_dma_color[] =
 		{
-			rsx::method_registers.surface_a_dma(),
-			rsx::method_registers.surface_b_dma(),
-			rsx::method_registers.surface_c_dma(),
-			rsx::method_registers.surface_d_dma(),
+			rsx::method_registers.surface_dma(0),
+			rsx::method_registers.surface_dma(1),
+			rsx::method_registers.surface_dma(2),
+			rsx::method_registers.surface_dma(3),
 		};
 		return
 		{
@@ -1064,10 +1064,10 @@ namespace rsx
 		layout.zeta_pitch = rsx::method_registers.surface_z_pitch();
 		layout.color_pitch =
 		{
-			rsx::method_registers.surface_a_pitch(),
-			rsx::method_registers.surface_b_pitch(),
-			rsx::method_registers.surface_c_pitch(),
-			rsx::method_registers.surface_d_pitch(),
+			rsx::method_registers.surface_pitch(0),
+			rsx::method_registers.surface_pitch(1),
+			rsx::method_registers.surface_pitch(2),
+			rsx::method_registers.surface_pitch(3),
 		};
 
 		layout.color_format = rsx::method_registers.surface_color();
