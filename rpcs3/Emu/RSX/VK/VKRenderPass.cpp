@@ -245,7 +245,7 @@ namespace vk
 		renderpass_key_blob key(renderpass_key);
 		VkSampleCountFlagBits samples = static_cast<VkSampleCountFlagBits>(key.sample_count);
 		std::vector<VkImageLayout> rtv_layouts;
-		VkImageLayout dsv_layout;
+		VkImageLayout dsv_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		VkFormat color_format = static_cast<VkFormat>(key.color_format);
 		VkFormat depth_format = static_cast<VkFormat>(key.depth_format);

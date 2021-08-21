@@ -524,7 +524,7 @@ namespace vk
 		return m_transfer_queue_family;
 	}
 
-	const VkFormatProperties render_device::get_format_properties(VkFormat format)
+	const VkFormatProperties render_device::get_format_properties(VkFormat format) const
 	{
 		auto found = pgpu->format_properties.find(format);
 		if (found != pgpu->format_properties.end())
