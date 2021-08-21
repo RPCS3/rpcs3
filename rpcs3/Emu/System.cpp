@@ -205,7 +205,7 @@ void Emulator::Init(bool add_only)
 		make_path_verbose(dev_hdd0 + "game/");
 		make_path_verbose(dev_hdd0 + "game/TEST12345/");
 		make_path_verbose(dev_hdd0 + "game/TEST12345/USRDIR/");
-		make_path_verbose(dev_hdd0 + "game/.locks/");
+		make_path_verbose(dev_hdd0 + reinterpret_cast<const char*>(u8"game/＄locks/"));
 		make_path_verbose(dev_hdd0 + "home/");
 		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/");
 		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/exdata/");
@@ -1015,21 +1015,40 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			return game_boot_result::no_errors;
 		}
 
+		// Set title to actual disc title if necessary
+		const std::string disc_sfo_dir = vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO");
+
+		const auto disc_psf_obj = psf::load_object(fs::file{ disc_sfo_dir });
+
 		// Install PKGDIR, INSDIR, PS3_EXTRA
 		if (!bdvd_dir.empty())
 		{
-			const std::string ins_dir = vfs::get("/dev_bdvd/PS3_GAME/INSDIR/");
-			const std::string pkg_dir = vfs::get("/dev_bdvd/PS3_GAME/PKGDIR/");
-			const std::string extra_dir = vfs::get("/dev_bdvd/PS3_GAME/PS3_EXTRA/");
+			std::string ins_dir = vfs::get("/dev_bdvd/PS3_GAME/INSDIR/");
+			std::string pkg_dir = vfs::get("/dev_bdvd/PS3_GAME/PKGDIR/");
+			std::string extra_dir = vfs::get("/dev_bdvd/PS3_GAME/PS3_EXTRA/");
 			fs::file lock_file;
 
-			if (fs::is_dir(ins_dir) || fs::is_dir(pkg_dir) || fs::is_dir(extra_dir))
+			for (const auto path_ptr : {&ins_dir, &pkg_dir, &extra_dir})
 			{
-				// Create lock file to prevent double installation
-				lock_file.open(hdd0_game + ".locks/" + m_title_id, fs::read + fs::create + fs::excl);
+				if (!fs::is_dir(*path_ptr))
+				{
+					path_ptr->clear();
+				}
 			}
 
-			if (lock_file && fs::is_dir(ins_dir))
+			const std::string lock_file_path = fmt::format("%s%s%s_v%s", hdd0_game, u8"＄locks/", m_title_id, psf::get_string(disc_psf_obj, "APP_VER"));
+
+			if (!ins_dir.empty() || !pkg_dir.empty() || !extra_dir.empty())
+			{
+				// For backwards compatibility
+				if (!lock_file.open(hdd0_game + ".locks/" + m_title_id))
+				{
+					// Check if already installed
+					lock_file.open(lock_file_path);
+				}
+			}
+
+			if (!lock_file && !ins_dir.empty())
 			{
 				sys_log.notice("Found INSDIR: %s", ins_dir);
 
@@ -1044,7 +1063,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 			}
 
-			if (lock_file && fs::is_dir(pkg_dir))
+			if (!lock_file && !pkg_dir.empty())
 			{
 				sys_log.notice("Found PKGDIR: %s", pkg_dir);
 
@@ -1063,7 +1082,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 			}
 
-			if (lock_file && fs::is_dir(extra_dir))
+			if (!lock_file && !extra_dir.empty())
 			{
 				sys_log.notice("Found PS3_EXTRA: %s", extra_dir);
 
@@ -1081,6 +1100,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					}
 				}
 			}
+
+			if (!lock_file)
+			{
+				// Create lock file to prevent double installation
+				// Do it after installation to prevent false positives when RPCS3 closed in the middle of the operation
+				lock_file.open(lock_file_path, fs::read + fs::create + fs::excl);
+			}
 		}
 
 		// Check game updates
@@ -1093,13 +1119,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			return m_path = hdd0_boot, Load(m_title_id, false, force_global_config, true);
 		}
 
-		// Set title to actual disc title if necessary
-		const std::string disc_sfo_dir = vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO");
-
-		if (!disc_sfo_dir.empty() && fs::is_file(disc_sfo_dir))
+		if (!disc_psf_obj.empty())
 		{
-			const auto psf_obj = psf::load_object(fs::file{ disc_sfo_dir });
-			const auto bdvd_title = psf::get_string(psf_obj, "TITLE");
+			const auto bdvd_title = psf::get_string(disc_psf_obj, "TITLE");
 
 			if (!bdvd_title.empty() && bdvd_title != m_title)
 			{
