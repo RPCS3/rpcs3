@@ -176,7 +176,6 @@ usb_handler_thread::usb_handler_thread()
 		check_device(0x0E6F, 0x0241, 0x0241, "Lego Dimensions Portal");
 		check_device(0x0E6F, 0x0129, 0x0129, "Disney Infinity Portal");
 		check_device(0x0E6F, 0x200A, 0x200A, "Kamen Rider Summonride Portal");
-		
 		// Cameras
 		//check_device(0x1415, 0x0020, 0x2000, "Sony Playstation Eye"); // TODO: verifiy
 
