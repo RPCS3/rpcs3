@@ -7960,17 +7960,134 @@ public:
 	void FCEQ(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
+		{
 			set_vr(op.rt, sext<s32[4]>(fcmp_ord(get_vr<f64[4]>(op.ra) == get_vr<f64[4]>(op.rb))));
+			return;
+		}
+
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+		const value_t<f32[4]> ab[2]{a, b};
+
+		std::bitset<2> safe_float_compare(0);
+		std::bitset<2> safe_int_compare(0);
+
+		for (u32 i = 0; i < 2; i++)
+		{
+			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, 6000); ok)
+			{
+				safe_float_compare.set(i);
+				safe_int_compare.set(i);
+
+				for (u32 j = 0; j < 4; j++)
+				{
+					const u32 value = data._u32[j];
+					const u8 exponent = static_cast<u8>(value >> 23);
+
+					// unsafe if nan
+					if (exponent == 255)
+					{
+						safe_float_compare.reset(i);
+					}
+
+					// unsafe if denormal or 0
+					if (!exponent)
+					{
+						safe_int_compare.reset(i);
+					}
+				}
+			}
+		}
+
+		if (safe_float_compare.any())
+		{
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a == b)));
+			return;
+		}
+
+		if (safe_int_compare.any())
+		{
+			set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
+			return;
+		}
+
+		if (g_cfg.core.spu_approx_xfloat)
+		{
+			const auto ai = eval(bitcast<s32[4]>(a));
+			const auto bi = eval(bitcast<s32[4]>(b));
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a == b)) | sext<s32[4]>(ai == bi));
+		}
 		else
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(get_vr<f32[4]>(op.ra) == get_vr<f32[4]>(op.rb))));
+		{
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a == b)));
+		}
 	}
 
 	void FCMEQ(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
+		{
 			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fabs(get_vr<f64[4]>(op.ra)) == fabs(get_vr<f64[4]>(op.rb)))));
+			return;
+		}
+
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+		const value_t<f32[4]> ab[2]{a, b};
+
+		std::bitset<2> safe_float_compare(0);
+		std::bitset<2> safe_int_compare(0);
+
+		for (u32 i = 0; i < 2; i++)
+		{
+			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, 6000); ok)
+			{
+				safe_float_compare.set(i);
+				safe_int_compare.set(i);
+
+				for (u32 j = 0; j < 4; j++)
+				{
+					const u32 value = data._u32[j];
+					const u8 exponent = static_cast<u8>(value >> 23);
+
+					// unsafe if nan
+					if (exponent == 255)
+					{
+						safe_float_compare.reset(i);
+					}
+
+					// unsafe if denormal or 0
+					if (!exponent)
+					{
+						safe_int_compare.reset(i);
+					}
+				}
+			}
+		}
+
+		const auto fa = eval(fabs(a));
+		const auto fb = eval(fabs(b));
+
+		if (safe_float_compare.any())
+		{
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fa == fb)));
+			return;
+		}
+
+		if (safe_int_compare.any())
+		{
+			set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
+			return;
+		}
+
+		if (g_cfg.core.spu_approx_xfloat)
+		{
+			const auto ai = eval(bitcast<s32[4]>(fa));
+			const auto bi = eval(bitcast<s32[4]>(fb));
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fa == fb)) | sext<s32[4]>(ai == bi));
+		}
 		else
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fabs(get_vr<f32[4]>(op.ra)) == fabs(get_vr<f32[4]>(op.rb)))));
+		{
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fa == fb)));
+		}
 	}
 
 	value_t<f32[4]> fma32x4(value_t<f32[4]> a, value_t<f32[4]> b, value_t<f32[4]> c)
