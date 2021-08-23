@@ -345,16 +345,23 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 	if (!indirect)
 	{
-		if ((!m_reloc && target < 0x10000) || target >= 0x100000000u - 0x10000)
-		{
-			Trap();
-			return;
-		}
+		const u64 base = m_reloc ? m_reloc->addr : 0;
+		const u32 caddr = m_info.segs[0].addr;
+		const u32 cend = caddr + m_info.segs[0].size - 1;
+		const u64 _target = target + base;
 
-		callee = m_module->getOrInsertFunction(fmt::format("__0x%x", target), type);
-		cast<Function>(callee.getCallee())->setCallingConv(CallingConv::GHC);
+		if (_target >= caddr && _target <= cend)
+		{
+			callee = m_module->getOrInsertFunction(fmt::format("__0x%x", target), type);
+			cast<Function>(callee.getCallee())->setCallingConv(CallingConv::GHC);
+		}
+		else
+		{
+			indirect = m_reloc ? m_ir->CreateAdd(m_ir->getInt64(target), seg0) : m_ir->getInt64(target);
+		}
 	}
-	else
+
+	if (indirect)
 	{
 		m_ir->CreateStore(Trunc(indirect, GetType<u32>()), m_ir->CreateStructGEP(nullptr, m_thread, static_cast<uint>(&m_cia - m_locals)), true);
 
