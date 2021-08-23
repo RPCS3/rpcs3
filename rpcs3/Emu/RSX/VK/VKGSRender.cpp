@@ -583,7 +583,7 @@ VKGSRender::VKGSRender() : GSRender()
 		case vk::driver_vendor::AMD:
 #if !defined(__linux__)
 			// Intel chipsets would fail on BSD in most cases and DRM_IOCTL_i915_GEM_USERPTR unimplemented
-		case vk::driver_vendor::INTEL:
+		case vk::driver_vendor::ANV:
 #endif
 			if (backend_config.supports_passthrough_dma)
 			{
@@ -623,10 +623,10 @@ VKGSRender::~VKGSRender()
 	// Clear flush requests
 	m_flush_requests.clear_pending_flag();
 
-	//Texture cache
+	// Texture cache
 	m_texture_cache.destroy();
 
-	//Shaders
+	// Shaders
 	vk::destroy_pipe_compiler();      // Ensure no pending shaders being compiled
 	vk::finalize_compiler_context();  // Shut down the glslang compiler
 	m_prog_buffer->clear();           // Delete shader objects
@@ -636,10 +636,13 @@ VKGSRender::~VKGSRender()
 	m_volatile_attribute_storage.reset();
 	m_vertex_layout_storage.reset();
 
-	//Global resources
+	// Upscaler (references some global resources)
+	m_upscaler.reset();
+
+	// Global resources
 	vk::destroy_global_resources();
 
-	//Heaps
+	// Heaps
 	m_attrib_ring_info.destroy();
 	m_fragment_env_ring_info.destroy();
 	m_vertex_env_ring_info.destroy();
@@ -653,13 +656,13 @@ VKGSRender::~VKGSRender()
 	m_fragment_instructions_buffer.destroy();
 	m_raster_env_ring_info.destroy();
 
-	//Fallback bindables
+	// Fallback bindables
 	null_buffer.reset();
 	null_buffer_view.reset();
 
 	if (m_current_frame == &m_aux_frame_context)
 	{
-		//Return resources back to the owner
+		// Return resources back to the owner
 		m_current_frame = &frame_context_storage[m_current_queue_index];
 		m_current_frame->swap_storage(m_aux_frame_context);
 		m_current_frame->grab_resources(m_aux_frame_context);
@@ -667,7 +670,7 @@ VKGSRender::~VKGSRender()
 
 	m_aux_frame_context.buffer_views_to_clean.clear();
 
-	//NOTE: aux_context uses descriptor pools borrowed from the main queues and any allocations will be automatically freed when pool is destroyed
+	// NOTE: aux_context uses descriptor pools borrowed from the main queues and any allocations will be automatically freed when pool is destroyed
 	for (auto &ctx : frame_context_storage)
 	{
 		vkDestroySemaphore((*m_device), ctx.present_wait_semaphore, nullptr);
@@ -677,24 +680,24 @@ VKGSRender::~VKGSRender()
 		ctx.buffer_views_to_clean.clear();
 	}
 
-	//Textures
+	// Textures
 	m_rtts.destroy();
 	m_texture_cache.destroy();
 
 	m_stencil_mirror_sampler.reset();
 
-	//Overlay text handler
+	// Overlay text handler
 	m_text_writer.reset();
 
 	//Pipeline descriptors
 	vkDestroyPipelineLayout(*m_device, pipeline_layout, nullptr);
 	vkDestroyDescriptorSetLayout(*m_device, descriptor_layouts, nullptr);
 
-	//Queries
+	// Queries
 	m_occlusion_query_manager.reset();
 	m_cond_render_buffer.reset();
 
-	//Command buffer
+	// Command buffer
 	for (auto &cb : m_primary_cb_list)
 		cb.destroy();
 
@@ -703,7 +706,7 @@ VKGSRender::~VKGSRender()
 	m_secondary_command_buffer.destroy();
 	m_secondary_command_buffer_pool.destroy();
 
-	//Device handles/contexts
+	// Device handles/contexts
 	m_swapchain->destroy();
 	m_instance.destroy();
 
@@ -838,18 +841,18 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 	{
 		// Evict some unused textures. Do not evict any active references
 		std::set<u32> exclusion_list;
-		for (auto i = 0; i < rsx::limits::fragment_textures_count; ++i)
+		auto scan_array = [&](const auto& texture_array)
 		{
-			const auto& tex = rsx::method_registers.fragment_textures[i];
-			const auto addr = rsx::get_address(tex.offset(), tex.location());
-			exclusion_list.insert(addr);
-		}
-		for (auto i = 0; i < rsx::limits::vertex_textures_count; ++i)
-		{
-			const auto& tex = rsx::method_registers.vertex_textures[i];
-			const auto addr = rsx::get_address(tex.offset(), tex.location());
-			exclusion_list.insert(addr);
-		}
+			for (auto i = 0ull; i < texture_array.size(); ++i)
+			{
+				const auto& tex = texture_array[i];
+				const auto addr = rsx::get_address(tex.offset(), tex.location());
+				exclusion_list.insert(addr);
+			}
+		};
+
+		scan_array(rsx::method_registers.fragment_textures);
+		scan_array(rsx::method_registers.vertex_textures);
 
 		// Hold the secondary lock guard to prevent threads from trying to touch access violation handler stuff
 		std::lock_guard lock(m_secondary_cb_guard);
@@ -883,6 +886,30 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 		{
 			surface_cache_relieved = true;
 			m_rtts.free_invalidated(*m_current_command_buffer, severity);
+		}
+
+		if (severity >= rsx::problem_severity::fatal && surface_cache_relieved && !m_samplers_dirty)
+		{
+			// If surface cache was modified destructively, then we must reload samplers touching the surface cache.
+			bool invalidate_samplers = false;
+			auto scan_array = [&](const auto& texture_array, const auto& sampler_states)
+			{
+				for (auto i = 0ull; i < texture_array.size() && !invalidate_samplers; ++i)
+				{
+					if (texture_array[i].enabled() && sampler_states[i])
+					{
+						invalidate_samplers = (sampler_states[i]->upload_context == rsx::texture_upload_context::framebuffer_storage);
+					}
+				}
+			};
+
+			scan_array(rsx::method_registers.fragment_textures, fs_sampler_state);
+			scan_array(rsx::method_registers.vertex_textures, vs_sampler_state);
+
+			if (invalidate_samplers)
+			{
+				m_samplers_dirty.store(true);
+			}
 		}
 	}
 
@@ -1814,7 +1841,7 @@ void VKGSRender::load_program_env()
 		fill_scale_offset_data(buf, false);
 		fill_user_clip_data(buf + 64);
 		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-		*(reinterpret_cast<f32*>(buf + 132)) = rsx::method_registers.point_size();
+		*(reinterpret_cast<f32*>(buf + 132)) = rsx::method_registers.point_size() * rsx::get_resolution_scale();
 		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.clip_min();
 		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_max();
 
@@ -1873,12 +1900,12 @@ void VKGSRender::load_program_env()
 	{
 		check_heap_status(VK_HEAP_CHECK_TEXTURE_ENV_STORAGE);
 
-		auto mem = m_fragment_texture_params_ring_info.alloc<256>(256);
-		auto buf = m_fragment_texture_params_ring_info.map(mem, 256);
+		auto mem = m_fragment_texture_params_ring_info.alloc<256>(512);
+		auto buf = m_fragment_texture_params_ring_info.map(mem, 512);
 
 		current_fragment_program.texture_params.write_to(buf, current_fp_metadata.referenced_textures_mask);
 		m_fragment_texture_params_ring_info.unmap();
-		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 256 };
+		m_fragment_texture_params_buffer_info = { m_fragment_texture_params_ring_info.heap->value, mem, 512 };
 	}
 
 	if (update_raster_env)
@@ -1955,7 +1982,7 @@ void VKGSRender::load_program_env()
 
 	if (vk::emulate_conditional_rendering())
 	{
-		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer()->value;
+		auto predicate = m_cond_render_buffer ? m_cond_render_buffer->value : vk::get_scratch_buffer(4)->value;
 		m_program->bind_buffer({ predicate, 0, 4 }, binding_table.conditional_render_predicate_slot, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_current_frame->descriptor_set);
 	}
 
@@ -2558,7 +2585,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		}
 	}
 
-	auto scratch = vk::get_scratch_buffer();
+	auto scratch = vk::get_scratch_buffer(OCCLUSION_MAX_POOL_SIZE * 4);
 	u32 dst_offset = 0;
 	usz first = 0;
 	usz last;

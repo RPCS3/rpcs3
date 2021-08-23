@@ -2,6 +2,8 @@
 #include "Emu/RSX/GSRender.h"
 #include "Emu/Cell/timers.hpp"
 
+#include "upscalers/upscaling.h"
+
 #include "vkutils/descriptors.hpp"
 #include "vkutils/data_heap.h"
 #include "vkutils/instance.hpp"
@@ -336,6 +338,7 @@ namespace vk
 }
 
 using namespace vk::vmm_allocation_pool_; // clang workaround.
+using namespace vk::upscaling_flags_;     // ditto
 
 class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
@@ -380,6 +383,7 @@ private:
 	std::unique_ptr<vk::buffer_view> null_buffer_view;
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
+	std::unique_ptr<vk::upscaler> m_upscaler;
 
 	std::unique_ptr<vk::buffer> m_cond_render_buffer;
 	u64 m_cond_render_sync_tag = 0;
@@ -518,7 +522,7 @@ private:
 	void present(vk::frame_context_t *ctx);
 	void reinitialize_swapchain();
 
-	vk::image* get_present_source(vk::present_surface_info* info, const rsx::avconf& avconfig);
+	vk::viewable_image* get_present_source(vk::present_surface_info* info, const rsx::avconf& avconfig);
 
 	void begin_render_pass();
 	void close_render_pass();

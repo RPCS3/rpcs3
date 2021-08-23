@@ -127,7 +127,7 @@ void hid_pad_handler<Device>::enumerate_devices()
 		if (controller.second && !controller.second->path.empty() && !device_paths.contains(controller.second->path))
 		{
 			hid_close(controller.second->hidDevice);
-			pad_config* config = controller.second->config;
+			cfg_pad* config = controller.second->config;
 			controller.second.reset(new Device());
 			controller.second->config = config;
 		}

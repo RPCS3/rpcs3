@@ -570,8 +570,6 @@ error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sy
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_prx.todo("_sys_prx_unload_module(id=0x%x, flags=0x%x, pOpt=*0x%x)", id, flags, pOpt);
-
 	// Get the PRX, free the used memory and delete the object and its ID
 	const auto prx = idm::withdraw<lv2_obj, lv2_prx>(id, [](lv2_prx& prx) -> CellPrxError
 	{
@@ -588,13 +586,15 @@ error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sy
 
 	if (!prx)
 	{
-		return CELL_PRX_ERROR_UNKNOWN_MODULE;
+		return {CELL_PRX_ERROR_UNKNOWN_MODULE, id};
 	}
 
 	if (prx.ret)
 	{
-		return prx.ret;
+		return {prx.ret, "%s (id=%s)", prx->name, id};
 	}
+
+	sys_prx.success("_sys_prx_unload_module(id=0x%x, flags=0x%x, pOpt=*0x%x): name='%s'", id, flags, pOpt, prx->name);
 
 	ppu_unload_prx(*prx);
 

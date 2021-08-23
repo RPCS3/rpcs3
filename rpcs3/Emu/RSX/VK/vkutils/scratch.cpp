@@ -97,7 +97,14 @@ namespace vk
 		auto& tex = g_null_image_views[type];
 		tex = std::make_unique<viewable_image>(*g_render_device, g_render_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 			image_type, VK_FORMAT_B8G8R8A8_UNORM, size, size, 1, 1, num_layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, flags, VMM_ALLOCATION_POOL_SCRATCH);
+			VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, flags | VK_IMAGE_CREATE_ALLOW_NULL, VMM_ALLOCATION_POOL_SCRATCH);
+
+		if (!tex->value)
+		{
+			// If we cannot create a 1x1 placeholder, things are truly hopeless.
+			// The null view is 'nullable' because it is meant for use in emergency situations and we do not wish to invalidate any handles.
+			fmt::throw_exception("Renderer is out of memory. We could not even squeeze in a 1x1 texture, things are bad.");
+		}
 
 		// Initialize memory to transparent black
 		tex->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -122,7 +129,8 @@ namespace vk
 
 			return new vk::image(*g_render_device, g_render_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D, format, new_width, new_height, 1, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0, VMM_ALLOCATION_POOL_SCRATCH);
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, 0, VMM_ALLOCATION_POOL_SCRATCH,
+				format_class);
 		};
 
 		const u32 key = (format_class << 24u) | format;
@@ -143,7 +151,7 @@ namespace vk
 		return ptr.get();
 	}
 
-	vk::buffer* get_scratch_buffer(u32 min_required_size)
+	vk::buffer* get_scratch_buffer(u64 min_required_size)
 	{
 		auto& scratch_buffer = g_scratch_buffers_pool[0 /*TODO: Replace with Queue Family ID*/].get_buf();
 
@@ -156,7 +164,7 @@ namespace vk
 		if (!scratch_buffer)
 		{
 			// Choose optimal size
-			const u64 alloc_size = std::max<u64>(64 * 0x100000, utils::align(min_required_size, 0x100000));
+			const u64 alloc_size = utils::align(min_required_size, 0x100000);
 
 			scratch_buffer = std::make_unique<vk::buffer>(*g_render_device, alloc_size,
 				g_render_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,

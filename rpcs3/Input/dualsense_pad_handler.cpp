@@ -95,6 +95,7 @@ dualsense_pad_handler::dualsense_pad_handler()
 	// Unique names for the config files and our pad settings dialog
 	button_list =
 	{
+		{ DualSenseKeyCodes::None,     "" },
 		{ DualSenseKeyCodes::Triangle, "Triangle" },
 		{ DualSenseKeyCodes::Circle,   "Circle" },
 		{ DualSenseKeyCodes::Cross,    "Cross" },
@@ -239,12 +240,9 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 	dualsense_log.notice("Added device: bluetooth=%d, data_mode=%s, serial='%s', hw_version: 0x%x, fw_version: 0x%x, path='%s'", device->bt_controller, device->data_mode, serial, hw_version, fw_version, device->path);
 }
 
-void dualsense_pad_handler::init_config(pad_config* cfg, const std::string& name)
+void dualsense_pad_handler::init_config(cfg_pad* cfg)
 {
 	if (!cfg) return;
-
-	// Set this profile's save location
-	cfg->cfg_name = name;
 
 	// Set default button mapping
 	cfg->ls_left.def  = button_list.at(DualSenseKeyCodes::LSXNeg);
@@ -272,6 +270,8 @@ void dualsense_pad_handler::init_config(pad_config* cfg, const std::string& name
 	cfg->l1.def       = button_list.at(DualSenseKeyCodes::L1);
 	cfg->l2.def       = button_list.at(DualSenseKeyCodes::L2);
 	cfg->l3.def       = button_list.at(DualSenseKeyCodes::L3);
+
+	cfg->pressure_intensity_button.def = button_list.at(DualSenseKeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255
@@ -952,7 +952,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 			// Use OR with 0x1, 0x2, 0x4, 0x8 and 0x10 to enable the LEDs (from leftmost to rightmost).
 			common.valid_flag_1 |= VALID_FLAG_1_PLAYER_INDICATOR_CONTROL_ENABLE;
 
-			switch (m_player_id)
+			switch (device->player_id)
 			{
 			case 0: common.player_leds = 0b00100; break;
 			case 1: common.player_leds = 0b01010; break;
@@ -962,7 +962,7 @@ int dualsense_pad_handler::send_output_report(DualSenseDevice* device)
 			case 5: common.player_leds = 0b10111; break;
 			case 6: common.player_leds = 0b11101; break;
 			default:
-				fmt::throw_exception("Dualsense is using forbidden player id %d", m_player_id);
+				fmt::throw_exception("Dualsense is using forbidden player id %d", device->player_id);
 			}
 		}
 	}
@@ -1005,7 +1005,7 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 	if (!dualsense_dev || !dualsense_dev->hidDevice || !dualsense_dev->config || !pad)
 		return;
 
-	pad_config* config = dualsense_dev->config;
+	cfg_pad* config = dualsense_dev->config;
 
 	// Attempt to send rumble no matter what
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;
@@ -1083,7 +1083,7 @@ void dualsense_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& dev
 	}
 }
 
-void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
+void dualsense_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<DualSenseDevice> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
@@ -1092,6 +1092,7 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor,
 	// Set the device's motor speeds to our requested values 0-255
 	device->large_motor = largeMotor;
 	device->small_motor = smallMotor;
+	device->player_id = player_id;
 
 	int index = 0;
 	for (uint i = 0; i < MAX_GAMEPADS; i++)
@@ -1100,7 +1101,7 @@ void dualsense_pad_handler::SetPadData(const std::string& padId, u32 largeMotor,
 		{
 			if (g_cfg_input.player[i]->device.to_string() == padId)
 			{
-				m_pad_configs[index].load();
+				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
 				device->config = &m_pad_configs[index];
 				break;
 			}

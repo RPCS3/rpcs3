@@ -49,6 +49,7 @@ ds3_pad_handler::ds3_pad_handler()
 {
 	button_list =
 	{
+		{ DS3KeyCodes::None,     "" },
 		{ DS3KeyCodes::Triangle, "Triangle" },
 		{ DS3KeyCodes::Circle,   "Circle" },
 		{ DS3KeyCodes::Cross,    "Cross" },
@@ -85,6 +86,7 @@ ds3_pad_handler::ds3_pad_handler()
 	b_has_battery = true;
 	b_has_led = true;
 	b_has_rgb = false;
+	b_has_pressure_intensity_button = false; // The DS3 obviously already has this feature natively.
 
 	m_name_string = "DS3 Pad #";
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;
@@ -117,7 +119,7 @@ u32 ds3_pad_handler::get_battery_level(const std::string& padId)
 	return std::clamp<u32>(device->battery_level, 0, 100);
 }
 
-void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
+void ds3_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
 	std::shared_ptr<ds3_device> device = get_hid_device(padId);
 	if (device == nullptr || device->hidDevice == nullptr)
@@ -126,6 +128,7 @@ void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 	// Set the device's motor speeds to our requested values 0-255
 	device->large_motor = largeMotor;
 	device->small_motor = smallMotor;
+	device->player_id = player_id;
 
 	int index = 0;
 	for (uint i = 0; i < MAX_GAMEPADS; i++)
@@ -134,7 +137,7 @@ void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 		{
 			if (g_cfg_input.player[i]->device.to_string() == padId)
 			{
-				m_pad_configs[index].load();
+				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
 				device->config = &m_pad_configs[index];
 				break;
 			}
@@ -170,7 +173,7 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 	}
 	else
 	{
-		switch (m_player_id)
+		switch (ds3dev->player_id)
 		{
 		case 0: output_report.led_enabled = 0b00000010; break;
 		case 1: output_report.led_enabled = 0b00000100; break;
@@ -180,7 +183,7 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 		case 5: output_report.led_enabled = 0b00010100; break;
 		case 6: output_report.led_enabled = 0b00011000; break;
 		default:
-			fmt::throw_exception("DS3 is using forbidden player id %d", m_player_id);
+			fmt::throw_exception("DS3 is using forbidden player id %d", ds3dev->player_id);
 		}
 	}
 
@@ -194,12 +197,9 @@ int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 	return hid_write(ds3dev->hidDevice, &output_report.report_id, sizeof(output_report));
 }
 
-void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
+void ds3_pad_handler::init_config(cfg_pad* cfg)
 {
 	if (!cfg) return;
-
-	// Set this profile's save location
-	cfg->cfg_name = name;
 
 	// Set default button mapping
 	cfg->ls_left.def = button_list.at(DS3KeyCodes::LSXNeg);
@@ -227,6 +227,8 @@ void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l1.def = button_list.at(DS3KeyCodes::L1);
 	cfg->l2.def = button_list.at(DS3KeyCodes::L2);
 	cfg->l3.def = button_list.at(DS3KeyCodes::L3);
+
+	cfg->pressure_intensity_button.def = button_list.at(DS3KeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255
@@ -555,7 +557,7 @@ void ds3_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 	if (!dev || !dev->hidDevice || !dev->config || !pad)
 		return;
 
-	pad_config* config = dev->config;
+	cfg_pad* config = dev->config;
 
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;
 	const int idx_s = config->switch_vibration_motors ? 0 : 1;

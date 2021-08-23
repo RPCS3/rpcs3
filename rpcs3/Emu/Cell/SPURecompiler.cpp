@@ -21,6 +21,7 @@
 #include <mutex>
 #include <thread>
 #include <optional>
+#include <unordered_set>
 
 #include "util/v128.hpp"
 #include "util/v128sse.hpp"
@@ -539,6 +540,108 @@ void spu_cache::initialize()
 	if ((g_cfg.core.spu_decoder == spu_decoder_type::asmjit || g_cfg.core.spu_decoder == spu_decoder_type::llvm) && !func_list.empty())
 	{
 		spu_log.success("SPU Runtime: Built %u functions.", func_list.size());
+
+		if (g_cfg.core.spu_debug)
+		{
+			std::string dump;
+			dump.reserve(10'000'000);
+
+			std::map<std::basic_string_view<u8>, spu_program*> sorted;
+
+			for (auto&& f : func_list)
+			{
+				// Interpret as a byte string
+				std::basic_string_view<u8> data = {reinterpret_cast<u8*>(f.data.data()), f.data.size() * sizeof(u32)};
+
+				sorted[data] = &f;
+			}
+
+			std::unordered_set<u32> depth_n;
+
+			u32 n_max = 0;
+
+			for (auto&& [bytes, f] : sorted)
+			{
+				{
+					sha1_context ctx;
+					u8 output[20];
+
+					sha1_starts(&ctx);
+					sha1_update(&ctx, bytes.data(), bytes.size());
+					sha1_finish(&ctx, output);
+					fmt::append(dump, "\n\t[%s] ", fmt::base57(output));
+				}
+
+				u32 depth_m = 0;
+
+				for (auto&& [data, f2] : sorted)
+				{
+					u32 depth = 0;
+
+					if (f2 == f)
+					{
+						continue;
+					}
+
+					for (u32 i = 0; i < bytes.size(); i++)
+					{
+						if (i < data.size() && data[i] == bytes[i])
+						{
+							depth++;
+						}
+						else
+						{
+							break;
+						}
+					}
+
+					depth_n.emplace(depth);
+					depth_m = std::max(depth, depth_m);
+				}
+
+				fmt::append(dump, "c=%06d,d=%06d ", depth_n.size(), depth_m);
+
+				bool sk = false;
+
+				for (u32 i = 0; i < bytes.size(); i++)
+				{
+					if (depth_m == i)
+					{
+						dump += '|';
+						sk = true;
+					}
+
+					fmt::append(dump, "%02x", bytes[i]);
+
+					if (i % 4 == 3)
+					{
+						if (sk)
+						{
+							sk = false;
+						}
+						else
+						{
+							dump += ' ';
+						}
+
+						dump += ' ';
+					}
+				}
+
+				fmt::append(dump, "\n\t%49s", "");
+
+				for (u32 i = 0; i < f->data.size(); i++)
+				{
+					fmt::append(dump, "%-10s", s_spu_iname.decode(std::bit_cast<be_t<u32>>(f->data[i])));
+				}
+
+				n_max = std::max(n_max, ::size32(depth_n));
+
+				depth_n.clear();
+			}
+
+			spu_log.notice("SPU Cache Dump (max_c=%d): %s", n_max, dump);
+		}
 	}
 
 	// Initialize global cache instance
@@ -7857,17 +7960,134 @@ public:
 	void FCEQ(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
+		{
 			set_vr(op.rt, sext<s32[4]>(fcmp_ord(get_vr<f64[4]>(op.ra) == get_vr<f64[4]>(op.rb))));
+			return;
+		}
+
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+		const value_t<f32[4]> ab[2]{a, b};
+
+		std::bitset<2> safe_float_compare(0);
+		std::bitset<2> safe_int_compare(0);
+
+		for (u32 i = 0; i < 2; i++)
+		{
+			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, 6000); ok)
+			{
+				safe_float_compare.set(i);
+				safe_int_compare.set(i);
+
+				for (u32 j = 0; j < 4; j++)
+				{
+					const u32 value = data._u32[j];
+					const u8 exponent = static_cast<u8>(value >> 23);
+
+					// unsafe if nan
+					if (exponent == 255)
+					{
+						safe_float_compare.reset(i);
+					}
+
+					// unsafe if denormal or 0
+					if (!exponent)
+					{
+						safe_int_compare.reset(i);
+					}
+				}
+			}
+		}
+
+		if (safe_float_compare.any())
+		{
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a == b)));
+			return;
+		}
+
+		if (safe_int_compare.any())
+		{
+			set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
+			return;
+		}
+
+		if (g_cfg.core.spu_approx_xfloat)
+		{
+			const auto ai = eval(bitcast<s32[4]>(a));
+			const auto bi = eval(bitcast<s32[4]>(b));
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a == b)) | sext<s32[4]>(ai == bi));
+		}
 		else
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(get_vr<f32[4]>(op.ra) == get_vr<f32[4]>(op.rb))));
+		{
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a == b)));
+		}
 	}
 
 	void FCMEQ(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
+		{
 			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fabs(get_vr<f64[4]>(op.ra)) == fabs(get_vr<f64[4]>(op.rb)))));
+			return;
+		}
+
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+		const value_t<f32[4]> ab[2]{a, b};
+
+		std::bitset<2> safe_float_compare(0);
+		std::bitset<2> safe_int_compare(0);
+
+		for (u32 i = 0; i < 2; i++)
+		{
+			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, 6000); ok)
+			{
+				safe_float_compare.set(i);
+				safe_int_compare.set(i);
+
+				for (u32 j = 0; j < 4; j++)
+				{
+					const u32 value = data._u32[j];
+					const u8 exponent = static_cast<u8>(value >> 23);
+
+					// unsafe if nan
+					if (exponent == 255)
+					{
+						safe_float_compare.reset(i);
+					}
+
+					// unsafe if denormal or 0
+					if (!exponent)
+					{
+						safe_int_compare.reset(i);
+					}
+				}
+			}
+		}
+
+		const auto fa = eval(fabs(a));
+		const auto fb = eval(fabs(b));
+
+		if (safe_float_compare.any())
+		{
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fa == fb)));
+			return;
+		}
+
+		if (safe_int_compare.any())
+		{
+			set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
+			return;
+		}
+
+		if (g_cfg.core.spu_approx_xfloat)
+		{
+			const auto ai = eval(bitcast<s32[4]>(fa));
+			const auto bi = eval(bitcast<s32[4]>(fb));
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fa == fb)) | sext<s32[4]>(ai == bi));
+		}
 		else
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fabs(get_vr<f32[4]>(op.ra)) == fabs(get_vr<f32[4]>(op.rb)))));
+		{
+			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fa == fb)));
+		}
 	}
 
 	value_t<f32[4]> fma32x4(value_t<f32[4]> a, value_t<f32[4]> b, value_t<f32[4]> c)
@@ -8632,7 +8852,7 @@ public:
 		{
 			return;
 		}
-		
+
 		const auto cond = eval(extract(get_vr(op.rt), 3) != 0);
 		const auto addr = eval(extract(get_vr(op.ra), 3) & 0x3fffc);
 		const auto target = add_block_indirect(op, addr);

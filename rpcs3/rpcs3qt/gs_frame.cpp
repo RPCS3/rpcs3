@@ -59,6 +59,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	m_disable_mouse = m_gui_settings->GetValue(gui::gs_disableMouse).toBool();
 	m_disable_kb_hotkeys = m_gui_settings->GetValue(gui::gs_disableKbHotkeys).toBool();
 	m_show_mouse_in_fullscreen = m_gui_settings->GetValue(gui::gs_showMouseFs).toBool();
+	m_lock_mouse_in_fullscreen  = m_gui_settings->GetValue(gui::gs_lockMouseFs).toBool();
 	m_hide_mouse_after_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdle).toBool();
 	m_hide_mouse_idletime = m_gui_settings->GetValue(gui::gs_hideMouseIdleTime).toUInt();
 
@@ -75,12 +76,28 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 		setSurfaceType(QSurface::VulkanSurface);
 #endif
 
+	// NOTE: You cannot safely create a wayland window that has hidden initial status and perform any changes on the window while it is still hidden.
+	// Doing this will create a surface with deferred commands that require a buffer. When binding to your session, this may assert in your compositor due to protocol restrictions.
+	Visibility startup_visibility = Hidden;
+#ifndef _WIN32
+	if (const char* session_type = ::getenv("XDG_SESSION_TYPE"))
+	{
+		if (!strcasecmp(session_type, "wayland"))
+		{
+			// Start windowed. This is a featureless rectangle on-screen with no window decorations.
+			// It does not even resemble a window until the WM attaches later on.
+			// Fullscreen could technically work with some fiddling, but easily breaks depending on geometry input.
+			startup_visibility = Windowed;
+		}
+	}
+#endif
+
 	setMinimumWidth(160);
 	setMinimumHeight(90);
 	setScreen(screen);
 	setGeometry(geometry);
 	setTitle(qstr(m_window_title));
-	setVisibility(Hidden);
+	setVisibility(startup_visibility);
 	create();
 
 	// Change cursor when in fullscreen.
@@ -703,7 +720,7 @@ void gs_frame::handle_cursor(QWindow::Visibility visibility, bool from_event, bo
 	if (from_event)
 	{
 		// In fullscreen we default to hiding and locking. In windowed mode we do not want the lock by default.
-		m_mouse_hide_and_lock = visibility == QWindow::Visibility::FullScreen;
+		m_mouse_hide_and_lock = (visibility == QWindow::Visibility::FullScreen) && m_lock_mouse_in_fullscreen;
 	}
 
 	// Update the mouse hide timer

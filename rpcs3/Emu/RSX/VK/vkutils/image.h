@@ -23,7 +23,8 @@ namespace vk
 	enum : u32// special remap_encoding enums
 	{
 		VK_REMAP_IDENTITY = 0xCAFEBABE,             // Special view encoding to return an identity image view
-		VK_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF     // Special encoding for multisampled images; returns a multisampled image view
+		VK_REMAP_VIEW_MULTISAMPLED = 0xDEADBEEF,    // Special encoding for multisampled images; returns a multisampled image view
+		VK_IMAGE_CREATE_ALLOW_NULL = 0x80000000,    // Special flag that allows null images to be created if there is no memory
 	};
 
 	class image
@@ -37,7 +38,7 @@ namespace vk
 
 	protected:
 		image() = default;
-		void create_impl(const vk::render_device& dev, u32 access_flags, u32 memory_type_index, vmm_allocation_pool allocation_pool);
+		void create_impl(const vk::render_device& dev, u32 access_flags, const memory_type_info& memory_type, vmm_allocation_pool allocation_pool);
 
 	public:
 		VkImage value = VK_NULL_HANDLE;
@@ -48,7 +49,7 @@ namespace vk
 		std::shared_ptr<vk::memory_block> memory;
 
 		image(const vk::render_device& dev,
-			u32 memory_type_index,
+			const memory_type_info& memory_type,
 			u32 access_flags,
 			VkImageType image_type,
 			VkFormat format,

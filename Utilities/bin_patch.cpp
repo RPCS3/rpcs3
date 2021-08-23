@@ -654,10 +654,10 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 	const auto& app_version = Emu.GetAppVersion();
 
 	// Different containers in order to seperate the patches
-	std::vector<patch_engine::patch_info> patches_for_this_serial_and_this_version;
-	std::vector<patch_engine::patch_info> patches_for_this_serial_and_all_versions;
-	std::vector<patch_engine::patch_info> patches_for_all_serials_and_this_version;
-	std::vector<patch_engine::patch_info> patches_for_all_serials_and_all_versions;
+	std::vector<const patch_info*> patches_for_this_serial_and_this_version;
+	std::vector<const patch_info*> patches_for_this_serial_and_all_versions;
+	std::vector<const patch_info*> patches_for_all_serials_and_this_version;
+	std::vector<const patch_info*> patches_for_all_serials_and_all_versions;
 
 	// Sort patches into different vectors based on their serial and version
 	for (const auto& [description, patch] : container.patch_info_map)
@@ -705,20 +705,20 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 				{
 					if (is_all_versions)
 					{
-						patches_for_all_serials_and_all_versions.push_back(patch);
+						patches_for_all_serials_and_all_versions.emplace_back(&patch);
 					}
 					else
 					{
-						patches_for_all_serials_and_this_version.push_back(patch);
+						patches_for_all_serials_and_this_version.emplace_back(&patch);
 					}
 				}
 				else if (is_all_versions)
 				{
-					patches_for_this_serial_and_all_versions.push_back(patch);
+					patches_for_this_serial_and_all_versions.emplace_back(&patch);
 				}
 				else
 				{
-					patches_for_this_serial_and_this_version.push_back(patch);
+					patches_for_this_serial_and_this_version.emplace_back(&patch);
 				}
 
 				break;
@@ -726,31 +726,50 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 		}
 	}
 
-	// Sort specific patches in front of global patches
-	std::vector<patch_engine::patch_info> sorted_patches;
-	sorted_patches.insert(sorted_patches.end(), patches_for_this_serial_and_this_version.begin(), patches_for_this_serial_and_this_version.end());
-	sorted_patches.insert(sorted_patches.end(), patches_for_this_serial_and_all_versions.begin(), patches_for_this_serial_and_all_versions.end());
-	sorted_patches.insert(sorted_patches.end(), patches_for_all_serials_and_this_version.begin(), patches_for_all_serials_and_this_version.end());
-	sorted_patches.insert(sorted_patches.end(), patches_for_all_serials_and_all_versions.begin(), patches_for_all_serials_and_all_versions.end());
-
 	// Apply modifications sequentially
-	for (const auto& patch : sorted_patches)
+	auto apply_func = [&](const patch_info& patch)
 	{
-		if (!patch.patch_group.empty())
-		{
-			if (m_applied_groups.contains(patch.patch_group))
-			{
-				continue;
-			}
-
-			m_applied_groups.insert(patch.patch_group);
-		}
-
 		auto applied = apply_modification(patch, dst, filesz, min_addr);
 
 		applied_total += applied;
 
 		patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %u)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied.size());
+	};
+
+	// Sort specific patches after global patches
+	// So they will determine the end results
+	const auto patch_super_list =
+	{
+		&patches_for_all_serials_and_all_versions,
+		&patches_for_all_serials_and_this_version,
+		&patches_for_this_serial_and_all_versions,
+		&patches_for_this_serial_and_this_version
+	};
+
+	// Filter by patch group (reverse so specific patches will be prioritized over globals)
+	for (auto it = std::rbegin(patch_super_list); it != std::rend(patch_super_list); it++)
+	{
+		for (auto& patch : *it.operator*())
+		{
+			if (!patch->patch_group.empty())
+			{
+				if (!m_applied_groups.insert(patch->patch_group).second)
+				{
+					patch = nullptr;
+				}
+			}
+		}
+	}
+
+	for (auto patch_list : patch_super_list)
+	{
+		for (const patch_info* patch : *patch_list)
+		{
+			if (patch)
+			{
+				apply_func(*patch);
+			}
+		}
 	}
 
 	return applied_total;

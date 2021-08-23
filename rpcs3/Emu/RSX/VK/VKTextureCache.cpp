@@ -43,8 +43,9 @@ namespace vk
 			const auto section_length = valid_range.length();
 			const auto transfer_pitch = real_pitch;
 			const auto task_length = transfer_pitch * src_area.height();
+			const auto working_buffer_length = calculate_working_buffer_size(task_length, src->aspect());
 
-			auto working_buffer = vk::get_scratch_buffer(task_length);
+			auto working_buffer = vk::get_scratch_buffer(working_buffer_length);
 			auto final_mapping = vk::map_dma(valid_range.start, section_length);
 
 			VkBufferImageCopy region = {};
@@ -505,8 +506,14 @@ namespace vk
 				image_type,
 				dst_format,
 				w, h, d, mips, layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags,
+				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags | VK_IMAGE_CREATE_ALLOW_NULL,
 				VMM_ALLOCATION_POOL_TEXTURE_CACHE, rsx::classify_format(gcm_format));
+
+			if (!image->value)
+			{
+				// OOM, bail
+				return nullptr;
+			}
 		}
 
 		// This method is almost exclusively used to work on framebuffer resources
@@ -572,6 +579,12 @@ namespace vk
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_CUBE, gcm_format, 0, 0, size, size, 1, 1, remap_vector, false);
 
+		if (!result)
+		{
+			// Failed to create temporary object, bail
+			return nullptr;
+		}
+
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
 		VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 6 };
@@ -600,6 +613,12 @@ namespace vk
 		auto _template = get_template_from_collection_impl(sections_to_copy);
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_3D,
 			VK_IMAGE_VIEW_TYPE_3D, gcm_format, 0, 0, width, height, depth, 1, remap_vector, false);
+
+		if (!result)
+		{
+			// Failed to create temporary object, bail
+			return nullptr;
+		}
 
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
@@ -630,6 +649,12 @@ namespace vk
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, 1, 1, remap_vector, false);
 
+		if (!result)
+		{
+			// Failed to create temporary object, bail
+			return nullptr;
+		}
+
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
 		VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 1 };
@@ -659,6 +684,12 @@ namespace vk
 		auto _template = get_template_from_collection_impl(sections_to_copy);
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_2D, gcm_format, 0, 0, width, height, 1, mipmaps, remap_vector, false);
+
+		if (!result)
+		{
+			// Failed to create temporary object, bail
+			return nullptr;
+		}
 
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
@@ -890,7 +921,8 @@ namespace vk
 		rsx::flags32_t upload_command_flags = initialize_image_layout |
 			(rsx::get_current_renderer()->get_backend_config().supports_asynchronous_compute ? upload_contents_async : upload_contents_inline);
 
-		vk::upload_image(cmd, image, subresource_layout, gcm_format, input_swizzled, mipmaps, image->aspect(),
+		const u16 layer_count = (type == rsx::texture_dimension_extended::texture_dimension_cubemap) ? 6 : 1;
+		vk::upload_image(cmd, image, subresource_layout, gcm_format, input_swizzled, layer_count, image->aspect(),
 			*m_texture_upload_heap, upload_heap_align_default, upload_command_flags);
 
 		vk::leave_uninterruptible();
@@ -1094,8 +1126,9 @@ namespace vk
 
 	bool texture_cache::handle_memory_pressure(rsx::problem_severity severity)
 	{
-		bool any_released = baseclass::handle_memory_pressure(severity);
+		auto any_released = baseclass::handle_memory_pressure(severity);
 
+		// TODO: This can cause invalidation of in-flight resources
 		if (severity <= rsx::problem_severity::low || !m_temporary_memory_size)
 		{
 			// Nothing left to do
@@ -1106,6 +1139,13 @@ namespace vk
 		if (severity <= rsx::problem_severity::moderate && m_temporary_memory_size < (64 * _1M))
 		{
 			// Some memory is consumed by the temporary resources, but no need to panic just yet
+			return any_released;
+		}
+
+		std::unique_lock lock(m_cache_mutex, std::defer_lock);
+		if (!lock.try_lock())
+		{
+			rsx_log.warning("Unable to remove temporary resources because we're already in the texture cache!");
 			return any_released;
 		}
 
@@ -1160,7 +1200,7 @@ namespace vk
 		baseclass::on_frame_end();
 	}
 
-	vk::image* texture_cache::upload_image_simple(vk::command_buffer& cmd, VkFormat format, u32 address, u32 width, u32 height, u32 pitch)
+	vk::viewable_image* texture_cache::upload_image_simple(vk::command_buffer& cmd, VkFormat format, u32 address, u32 width, u32 height, u32 pitch)
 	{
 		bool linear_format_supported = false;
 

@@ -520,13 +520,11 @@ namespace vk
 				switch (gpu.get_driver_vendor())
 				{
 				case driver_vendor::AMD:
-					break;
 				case driver_vendor::INTEL:
-	#ifdef _WIN32
-					break;
-	#endif
-				case driver_vendor::NVIDIA:
 				case driver_vendor::RADV:
+					break;
+				case driver_vendor::ANV:
+				case driver_vendor::NVIDIA:
 					m_wm_reports_flag = true;
 					break;
 				default:

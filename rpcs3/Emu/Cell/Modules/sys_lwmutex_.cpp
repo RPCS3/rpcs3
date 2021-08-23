@@ -379,11 +379,20 @@ error_code sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	return CELL_OK;
 }
 
-void sysPrxForUser_sys_lwmutex_init()
+void sysPrxForUser_sys_lwmutex_init(ppu_static_module* _this)
 {
-	REG_FUNC(sysPrxForUser, sys_lwmutex_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_lock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_create);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_destroy);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_lock);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock);
+
+	_this->add_init_func([](ppu_static_module*)
+	{
+		REINIT_FUNC(sys_lwmutex_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwmutex_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwmutex_lock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwmutex_trylock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwmutex_unlock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	});
 }

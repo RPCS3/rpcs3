@@ -85,6 +85,12 @@ void basic_mouse_handler::MouseButtonDown(QMouseEvent* event)
 	if (event->button() == Qt::LeftButton)        MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, true);
 	else if (event->button() == Qt::RightButton)  MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, true);
 	else if (event->button() == Qt::MiddleButton) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, true);
+	// TODO: verify these
+	else if (event->button() == Qt::ExtraButton1) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_4, true);
+	else if (event->button() == Qt::ExtraButton2) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_5, true);
+	else if (event->button() == Qt::ExtraButton3) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_6, true);
+	else if (event->button() == Qt::ExtraButton4) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_7, true);
+	else if (event->button() == Qt::ExtraButton5) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_8, true);
 }
 
 void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
@@ -92,6 +98,12 @@ void basic_mouse_handler::MouseButtonUp(QMouseEvent* event)
 	if (event->button() == Qt::LeftButton)        MouseHandlerBase::Button(CELL_MOUSE_BUTTON_1, false);
 	else if (event->button() == Qt::RightButton)  MouseHandlerBase::Button(CELL_MOUSE_BUTTON_2, false);
 	else if (event->button() == Qt::MiddleButton) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_3, false);
+	// TODO: verify these
+	else if (event->button() == Qt::ExtraButton1) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_4, false);
+	else if (event->button() == Qt::ExtraButton2) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_5, false);
+	else if (event->button() == Qt::ExtraButton3) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_6, false);
+	else if (event->button() == Qt::ExtraButton4) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_7, false);
+	else if (event->button() == Qt::ExtraButton5) MouseHandlerBase::Button(CELL_MOUSE_BUTTON_8, false);
 }
 
 void basic_mouse_handler::MouseScroll(QWheelEvent* event)
@@ -110,11 +122,11 @@ void basic_mouse_handler::MouseMove(QMouseEvent* event)
 {
 	if (is_time_for_update())
 	{
+		// get the screen dimensions
+		const QSize screen = m_target->size();
+
 		if (m_target && m_target->isActive() && get_mouse_lock_state())
 		{
-			// get the screen dimensions
-			const QSize screen = m_target->size();
-
 			// get the center of the screen in global coordinates
 			QPoint p_center = m_target->geometry().topLeft() + QPoint(screen.width() / 2, screen.height() / 2);
 
@@ -135,11 +147,11 @@ void basic_mouse_handler::MouseMove(QMouseEvent* event)
 			p_real.setY(std::clamp(p_real.y() + p_delta.y(), 0, screen.height()));
 
 			// pass the 'real' position and the current delta to the screen center
-			MouseHandlerBase::Move(p_real.x(), p_real.y(), true, p_delta.x(), p_delta.y());
+			MouseHandlerBase::Move(p_real.x(), p_real.y(), screen.width(), screen.height(), true, p_delta.x(), p_delta.y());
 		}
 		else
 		{
-			MouseHandlerBase::Move(event->x(), event->y());
+			MouseHandlerBase::Move(event->x(), event->y(), screen.width(), screen.height());
 		}
 	}
 }

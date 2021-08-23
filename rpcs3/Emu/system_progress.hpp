@@ -8,6 +8,7 @@ extern atomic_t<u32> g_progr_ftotal;
 extern atomic_t<u32> g_progr_fdone;
 extern atomic_t<u32> g_progr_ptotal;
 extern atomic_t<u32> g_progr_pdone;
+extern atomic_t<bool> g_system_progress_canceled;
 
 // Initialize progress dialog (can be recursive)
 class scoped_progress_dialog final

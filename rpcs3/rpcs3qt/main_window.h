@@ -115,7 +115,7 @@ private Q_SLOTS:
 	static void show_boot_error(game_boot_result status);
 
 	void SaveWindowState() const;
-	void ConfigureGuiFromSettings(bool configure_all = false);
+	void ConfigureGuiFromSettings();
 	void SetIconSizeActions(int idx) const;
 	void ResizeIcons(int index);
 

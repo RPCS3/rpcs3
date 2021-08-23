@@ -16,9 +16,12 @@
 
 class mm_joystick_handler final : public PadHandlerBase
 {
+	static constexpr u64 NO_BUTTON = u64{umax};
+
 	// Unique names for the config files and our pad settings dialog
 	const std::unordered_map<u64, std::string> button_list =
 	{
+		{ NO_BUTTON   , ""          },
 		{ JOY_BUTTON1 , "Button 1"  },
 		{ JOY_BUTTON2 , "Button 2"  },
 		{ JOY_BUTTON3 , "Button 3"  },
@@ -115,7 +118,7 @@ public:
 
 	std::vector<std::string> ListDevices() override;
 	void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
-	void init_config(pad_config* cfg, const std::string& name) override;
+	void init_config(cfg_pad* cfg) override;
 
 private:
 	std::unordered_map<u64, u16> GetButtonValues(const JOYINFOEX& js_info, const JOYCAPS& js_caps);
@@ -128,7 +131,9 @@ private:
 	std::shared_ptr<MMJOYDevice> m_dev;
 	std::unordered_map<int, MMJOYDevice> m_devices;
 
-	std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const pad_config* profile) override;
+	u64 find_key(const std::string& name) const;
+
+	std::array<u32, PadHandlerBase::button::button_count> get_mapped_key_codes(const std::shared_ptr<PadDevice>& device, const cfg_pad* cfg) override;
 	std::shared_ptr<PadDevice> get_device(const std::string& device) override;
 	bool get_is_left_trigger(u64 keyCode) override;
 	bool get_is_right_trigger(u64 keyCode) override;

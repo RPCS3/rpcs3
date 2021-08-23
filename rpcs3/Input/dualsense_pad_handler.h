@@ -32,7 +32,9 @@ class dualsense_pad_handler final : public hid_pad_handler<DualSenseDevice>
 {
 	enum DualSenseKeyCodes
 	{
-		Triangle = 0,
+		None = 0,
+
+		Triangle,
 		Circle,
 		Cross,
 		Square,
@@ -60,18 +62,16 @@ class dualsense_pad_handler final : public hid_pad_handler<DualSenseDevice>
 		RSXNeg,
 		RSXPos,
 		RSYNeg,
-		RSYPos,
-
-		KeyCodeCount
+		RSYPos
 	};
 
 public:
 	dualsense_pad_handler();
 	~dualsense_pad_handler();
 
-	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
+	void SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
 	u32 get_battery_level(const std::string& padId) override;
-	void init_config(pad_config* cfg, const std::string& name) override;
+	void init_config(cfg_pad* cfg) override;
 
 private:
 	bool get_calibration_data(DualSenseDevice* dualsense_device) const;

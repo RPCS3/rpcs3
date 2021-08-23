@@ -556,7 +556,9 @@ struct nt_p2p_port
 
 	static void send_u2s_packet(lv2_socket &sock, s32 sock_id, std::vector<u8> data, const ::sockaddr_in* dst, u32 seq = 0, bool require_ack = true)
 	{
-		sys_net.trace("Sending U2S packet on socket %d(id:%d): data(%d, seq %d, require_ack %d) to %s:%d", sock.socket, sock_id, data.size(), seq, require_ack, inet_ntoa(dst->sin_addr), std::bit_cast<u16, be_t<u16>>(dst->sin_port));
+		char ip_str[16];
+		inet_ntop(AF_INET, &dst->sin_addr, ip_str, sizeof(ip_str));
+		sys_net.trace("Sending U2S packet on socket %d(id:%d): data(%d, seq %d, require_ack %d) to %s:%d", sock.socket, sock_id, data.size(), seq, require_ack, ip_str, std::bit_cast<u16, be_t<u16>>(dst->sin_port));
 		if (sendto(sock.socket, reinterpret_cast<char *>(data.data()), data.size(), 0, reinterpret_cast<const sockaddr*>(dst), sizeof(sockaddr_in)) == -1)
 		{
 			sys_net.error("Attempting to send a u2s packet failed(%s), closing socket!", get_last_error(false));
@@ -598,7 +600,7 @@ struct nt_p2p_port
 			auto send_ack = [&]()
 			{
 				auto final_ack = sock.p2ps.data_beg_seq;
-				while (sock.p2ps.received_data.count(final_ack))
+				while (sock.p2ps.received_data.contains(final_ack))
 				{
 					final_ack += sock.p2ps.received_data.at(final_ack).size();
 				}
@@ -840,7 +842,7 @@ struct nt_p2p_port
 
 		{
 			std::lock_guard lock(bound_p2p_vports_mutex);
-			if (bound_p2p_vports.count(dst_vport))
+			if (bound_p2p_vports.contains(dst_vport))
 			{
 				sys_net_sockaddr_in_p2p p2p_addr{};
 
@@ -938,7 +940,7 @@ struct nt_p2p_port
 
 		{
 			std::lock_guard lock(bound_p2p_vports_mutex);
-			if (bound_p2p_streams.count(key_connected))
+			if (bound_p2p_streams.contains(key_connected))
 			{
 				const auto sock_id = bound_p2p_streams.at(key_connected);
 				sys_net.trace("Received packet for connected STREAM-P2P socket(s=%d)", sock_id);
@@ -946,7 +948,7 @@ struct nt_p2p_port
 				return true;
 			}
 
-			if(bound_p2p_streams.count(key_listening))
+			if (bound_p2p_streams.contains(key_listening))
 			{
 				const auto sock_id = bound_p2p_streams.at(key_listening);
 				sys_net.trace("Received packet for listening STREAM-P2P socket(s=%d)", sock_id);
@@ -1147,9 +1149,15 @@ s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& ad
 	auto& nc = g_fxo->get<network_context>();
 	{
 		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
-		auto& def_port = nc.list_p2p_ports.at(3658);
-
-		res = ::sendto(def_port.p2p_socket, reinterpret_cast<const char*>(data.data()), data.size(), 0, reinterpret_cast<const sockaddr*>(&addr), sizeof(sockaddr_in));
+		if (nc.list_p2p_ports.contains(3658))
+		{
+			auto& def_port = nc.list_p2p_ports.at(3658);
+			res = ::sendto(def_port.p2p_socket, reinterpret_cast<const char*>(data.data()), data.size(), 0, reinterpret_cast<const sockaddr*>(&addr), sizeof(sockaddr_in));
+		}
+		else
+		{
+			sys_net.error("send_packet_from_p2p_port: port %d not present", 3658);
+		}
 	}
 
 	return res;
@@ -1161,11 +1169,18 @@ std::vector<std::vector<u8>> get_rpcn_msgs()
 	auto& nc = g_fxo->get<network_context>();
 	{
 		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
-		auto& def_port = nc.list_p2p_ports.at(3658);
+		if (nc.list_p2p_ports.contains(3658))
 		{
-			std::lock_guard lock(def_port.s_rpcn_mutex);
-			msgs = std::move(def_port.rpcn_msgs);
-			def_port.rpcn_msgs.clear();
+			auto& def_port = nc.list_p2p_ports.at(3658);
+			{
+				std::lock_guard lock(def_port.s_rpcn_mutex);
+				msgs = std::move(def_port.rpcn_msgs);
+				def_port.rpcn_msgs.clear();
+			}
+		}
+		else
+		{
+			sys_net.error("get_rpcn_msgs: port %d not present", 3658);
 		}
 	}
 
@@ -1178,11 +1193,18 @@ std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> get_sign_msgs()
 	auto& nc = g_fxo->get<network_context>();
 	{
 		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
-		auto& def_port = nc.list_p2p_ports.at(3658);
+		if (nc.list_p2p_ports.contains(3658))
 		{
-			std::lock_guard lock(def_port.s_sign_mutex);
-			msgs = std::move(def_port.sign_msgs);
-			def_port.sign_msgs.clear();
+			auto& def_port = nc.list_p2p_ports.at(3658);
+			{
+				std::lock_guard lock(def_port.s_sign_mutex);
+				msgs = std::move(def_port.sign_msgs);
+				def_port.sign_msgs.clear();
+			}
+		}
+		else
+		{
+			sys_net.error("get_sign_msgs: port %d not present", 3658);
 		}
 	}
 
@@ -1215,6 +1237,12 @@ lv2_socket::~lv2_socket()
 		::close(socket);
 #endif
 	}
+}
+
+extern void need_network()
+{
+	g_fxo->need<network_context>();
+	g_fxo->need<named_thread<tcp_timeout_monitor>>();
 }
 
 error_code sys_net_bnet_accept(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr> addr, vm::ptr<u32> paddrlen)
@@ -1470,7 +1498,9 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 				p2p_vport = psa_in_p2p->sin_port;
 			}
 
-			sys_net.notice("[P2P] %s, Socket bind to %s:%d:%d", sock.type, inet_ntoa(name.sin_addr), p2p_port, p2p_vport);
+			char ip_str[16];
+			inet_ntop(AF_INET, &name.sin_addr, ip_str, sizeof(ip_str));
+			sys_net.notice("[P2P] %s, Socket bind to %s:%d:%d", sock.type, ip_str, p2p_port, p2p_vport);
 
 			if (p2p_port != 3658)
 			{
@@ -1483,7 +1513,7 @@ error_code sys_net_bnet_bind(ppu_thread& ppu, s32 s, vm::cptr<sys_net_sockaddr> 
 			auto& nc = g_fxo->get<network_context>();
 			{
 				std::lock_guard list_lock(nc.list_p2p_ports_mutex);
-				if (nc.list_p2p_ports.count(p2p_port) == 0)
+				if (!nc.list_p2p_ports.contains(p2p_port))
 				{
 					nc.list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(p2p_port), std::forward_as_tuple(p2p_port));
 				}
@@ -1600,7 +1630,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 				auto& nc = g_fxo->get<network_context>();
 				{
 					std::lock_guard list_lock(nc.list_p2p_ports_mutex);
-					if (!nc.list_p2p_ports.count(sock.p2p.port))
+					if (!nc.list_p2p_ports.contains(sock.p2p.port))
 						nc.list_p2p_ports.emplace(std::piecewise_construct, std::forward_as_tuple(sock.p2p.port), std::forward_as_tuple(sock.p2p.port));
 
 					auto& pport = nc.list_p2p_ports.at(sock.p2p.port);
@@ -2578,7 +2608,9 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		name.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
 		name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
 
-		sys_net.trace("Sending to %s:%d", inet_ntoa(name.sin_addr), psa_in->sin_port);
+		char ip_str[16];
+		inet_ntop(AF_INET, &name.sin_addr, ip_str, sizeof(ip_str));
+		sys_net.trace("Sending to %s:%d", ip_str, psa_in->sin_port);
 	}
 
 	::socklen_t namelen = sizeof(name);
@@ -2607,7 +2639,9 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 			const u16 p2p_port  = reinterpret_cast<const sys_net_sockaddr_in*>(addr.get_ptr())->sin_port;
 			const u16 p2p_vport = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(addr.get_ptr())->sin_vport;
 
-			sys_net.trace("[P2P] Sending a packet to %s:%d:%d", inet_ntoa(name.sin_addr), p2p_port, p2p_vport);
+			char ip_str[16];
+			inet_ntop(AF_INET, &name.sin_addr, ip_str, sizeof(ip_str));
+			sys_net.trace("[P2P] Sending a packet to %s:%d:%d", ip_str, p2p_port, p2p_vport);
 
 			p2p_data.resize(len + sizeof(u16));
 			reinterpret_cast<le_t<u16>&>(p2p_data[0]) = p2p_vport;
@@ -3139,6 +3173,7 @@ error_code sys_net_bnet_close(ppu_thread& ppu, s32 s)
 		auto& nc = g_fxo->get<network_context>();
 		{
 			std::lock_guard lock(nc.list_p2p_ports_mutex);
+			ensure(nc.list_p2p_ports.contains(sock->p2p.port));
 			auto& p2p_port = nc.list_p2p_ports.at(sock->p2p.port);
 			{
 				std::lock_guard lock(p2p_port.bound_p2p_vports_mutex);

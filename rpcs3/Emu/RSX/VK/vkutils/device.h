@@ -28,8 +28,8 @@ namespace vk
 
 	struct memory_type_mapping
 	{
-		u32 host_visible_coherent;
-		u32 device_local;
+		memory_type_info host_visible_coherent;
+		memory_type_info device_local;
 
 		u64 device_local_total_bytes;
 		u64 host_visible_total_bytes;
@@ -46,7 +46,7 @@ namespace vk
 		VkPhysicalDeviceMemoryProperties memory_properties;
 		std::vector<VkQueueFamilyProperties> queue_props;
 
-		std::unordered_map<VkFormat, VkFormatProperties> format_properties;
+		mutable std::unordered_map<VkFormat, VkFormatProperties> format_properties;
 		gpu_shader_types_support shader_types_support{};
 		VkPhysicalDeviceDriverPropertiesKHR driver_properties{};
 
@@ -117,9 +117,10 @@ namespace vk
 		void create(vk::physical_device& pdev, u32 graphics_queue_idx, u32 present_queue_idx, u32 transfer_queue_idx);
 		void destroy();
 
-		const VkFormatProperties get_format_properties(VkFormat format);
+		const VkFormatProperties get_format_properties(VkFormat format) const;
 
 		bool get_compatible_memory_type(u32 typeBits, u32 desired_mask, u32* type_index) const;
+		void rebalance_memory_type_usage();
 
 		const physical_device& gpu() const;
 		const memory_type_mapping& get_memory_mapping() const;

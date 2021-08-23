@@ -89,7 +89,26 @@ void pad_thread::Init()
 
 	handlers.clear();
 
-	g_cfg_input.load(pad::g_title_id);
+	g_cfg_profile.load();
+
+	// Load in order to get the pad handlers
+	if (!g_cfg_input.load(pad::g_title_id, g_cfg_profile.active_profiles.get_value(pad::g_title_id)))
+	{
+		input_log.notice("Loaded empty pad config");
+	}
+
+	// Adjust to the different pad handlers
+	for (usz i = 0; i < g_cfg_input.player.size(); i++)
+	{
+		std::shared_ptr<PadHandlerBase> handler;
+		pad_thread::InitPadConfig(g_cfg_input.player[i]->config, g_cfg_input.player[i]->handler, handler);
+	}
+
+	// Reload with proper defaults
+	if (!g_cfg_input.load(pad::g_title_id, g_cfg_profile.active_profiles.get_value(pad::g_title_id)))
+	{
+		input_log.notice("Reloaded empty pad config");
+	}
 
 	std::shared_ptr<keyboard_pad_handler> keyptr;
 
@@ -145,7 +164,6 @@ void pad_thread::Init()
 			}
 			handlers.emplace(handler_type, cur_pad_handler);
 		}
-		cur_pad_handler->set_player(i);
 		cur_pad_handler->Init();
 
 		m_pads[i] = std::make_shared<Pad>(CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
@@ -154,24 +172,29 @@ void pad_thread::Init()
 		{
 			InitLddPad(pad_settings[i].ldd_handle);
 		}
-		else if (cur_pad_handler->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string()) == false)
+		else if (!cur_pad_handler->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string(), i))
 		{
 			// Failed to bind the device to cur_pad_handler so binds to NullPadHandler
 			input_log.error("Failed to bind device %s to handler %s", g_cfg_input.player[i]->device.to_string(), handler_type);
-			nullpad->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string());
+			nullpad->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string(), i);
 		}
+
+		m_pads_interface[i] = std::make_shared<Pad>(CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
+		*m_pads_interface[i] = *m_pads[i];
+
+		input_log.notice("Pad %d: %s", i, g_cfg_input.player[i]->device.to_string());
 	}
 }
 
 void pad_thread::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor)
 {
-	if (pad > m_pads.size())
+	if (pad > m_pads_interface.size())
 		return;
 
-	if (m_pads[pad]->m_vibrateMotors.size() >= 2)
+	if (m_pads_interface[pad]->m_vibrateMotors.size() >= 2)
 	{
-		m_pads[pad]->m_vibrateMotors[0].m_value = largeMotor;
-		m_pads[pad]->m_vibrateMotors[1].m_value = smallMotor ? 255 : 0;
+		m_pads_interface[pad]->m_vibrateMotors[0].m_value = largeMotor;
+		m_pads_interface[pad]->m_vibrateMotors[1].m_value = smallMotor ? 255 : 0;
 	}
 }
 
@@ -206,48 +229,69 @@ void pad_thread::ThreadFunc()
 
 		u32 connected_devices = 0;
 
+		// Copy public pad data - which might have been changed - to internal pads
+		{
+			std::lock_guard lock(pad::g_pad_mutex);
+
+			for (usz i = 0; i < m_pads.size(); i++)
+			{
+				*m_pads[i] = *m_pads_interface[i];
+			}
+		}
+
 		for (auto& cur_pad_handler : handlers)
 		{
 			cur_pad_handler.second->ThreadProc();
 			connected_devices += cur_pad_handler.second->connected_devices;
 		}
 
-		m_info.now_connect = connected_devices + num_ldd_pad;
-
-		// The following section is only reached when a dialog was closed and the pads are still intercepted.
-		// As long as any of the listed buttons is pressed, cellPadGetData will ignore all input (needed for Hotline Miami).
-		// ignore_input was added because if we keep the pads intercepted, then some games will enter the menu due to unexpected system interception (tested with Ninja Gaiden Sigma).
-		if (!(m_info.system_info & CELL_PAD_INFO_INTERCEPTED) && m_info.ignore_input)
+		// Copy new internal pad data back to public pads
 		{
+			std::lock_guard lock(pad::g_pad_mutex);
+
+			m_info.now_connect = connected_devices + num_ldd_pad;
+
+			// The input_ignored section is only reached when a dialog was closed and the pads are still intercepted.
+			// As long as any of the listed buttons is pressed, cellPadGetData will ignore all input (needed for Hotline Miami).
+			// ignore_input was added because if we keep the pads intercepted, then some games will enter the menu due to unexpected system interception (tested with Ninja Gaiden Sigma).
+			const bool input_ignored = m_info.ignore_input && !(m_info.system_info & CELL_PAD_INFO_INTERCEPTED);
 			bool any_button_pressed = false;
 
-			for (const auto& pad : m_pads)
+			for (usz i = 0; i < m_pads.size(); i++)
 			{
+				const auto& pad = m_pads[i];
+
+				// I guess this is the best place to add pressure sensitivity without too much code duplication.
 				if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
 				{
-					for (const auto& button : pad->m_buttons)
+					const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
+
+					for (auto& button : pad->m_buttons)
 					{
-						if (button.m_pressed && (
-							button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
-							button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
-							button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
-							button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
-							button.m_outKeyCode == CELL_PAD_CTRL_START ||
-							button.m_outKeyCode == CELL_PAD_CTRL_SELECT))
+						if (button.m_pressed)
 						{
-							any_button_pressed = true;
-							break;
+							if (button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
+								button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
+								button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
+								button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
+								button.m_outKeyCode == CELL_PAD_CTRL_START ||
+								button.m_outKeyCode == CELL_PAD_CTRL_SELECT)
+							{
+								any_button_pressed = true;
+							}
+
+							if (adjust_pressure)
+							{
+								button.m_value = pad->m_pressure_intensity;
+							}
 						}
 					}
-
-					if (any_button_pressed)
-					{
-						break;
-					}
 				}
+
+				*m_pads_interface[i] = *pad;
 			}
 
-			if (!any_button_pressed)
+			if (input_ignored && !any_button_pressed)
 			{
 				m_info.ignore_input = false;
 			}
@@ -264,6 +308,8 @@ void pad_thread::InitLddPad(u32 handle)
 		return;
 	}
 
+	input_log.notice("Pad %d: LDD", handle);
+
 	static const auto product = input::get_product_info(input::product_type::playstation_3_controller);
 
 	m_pads[handle]->ldd = true;
@@ -275,8 +321,11 @@ void pad_thread::InitLddPad(u32 handle)
 		0, // CELL_PAD_PCLASS_TYPE_STANDARD
 		product.pclass_profile,
 		product.vendor_id,
-		product.product_id
+		product.product_id,
+		50
 	);
+
+	*m_pads_interface[handle] = *m_pads[handle];
 
 	num_ldd_pad++;
 }
@@ -298,6 +347,79 @@ s32 pad_thread::AddLddPad()
 
 void pad_thread::UnregisterLddPad(u32 handle)
 {
+	ensure(handle < m_pads.size());
+
 	m_pads[handle]->ldd = false;
+	m_pads_interface[handle]->ldd = false;
+
 	num_ldd_pad--;
+}
+
+std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
+{
+	switch (type)
+	{
+	case pad_handler::null:
+		return std::make_unique<NullPadHandler>();
+	case pad_handler::keyboard:
+		return std::make_unique<keyboard_pad_handler>();
+	case pad_handler::ds3:
+		return std::make_unique<ds3_pad_handler>();
+	case pad_handler::ds4:
+		return std::make_unique<ds4_pad_handler>();
+	case pad_handler::dualsense:
+		return std::make_unique<dualsense_pad_handler>();
+#ifdef _WIN32
+	case pad_handler::xinput:
+		return std::make_unique<xinput_pad_handler>();
+	case pad_handler::mm:
+		return std::make_unique<mm_joystick_handler>();
+#endif
+#ifdef HAVE_LIBEVDEV
+	case pad_handler::evdev:
+		return std::make_unique<evdev_joystick_handler>();
+#endif
+	}
+
+	return nullptr;
+}
+
+void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler)
+{
+	if (!handler)
+	{
+		handler = GetHandler(type);
+	}
+
+	switch (handler->m_type)
+	{
+	case pad_handler::null:
+		static_cast<NullPadHandler*>(handler.get())->init_config(&cfg);
+		break;
+	case pad_handler::keyboard:
+		static_cast<keyboard_pad_handler*>(handler.get())->init_config(&cfg);
+		break;
+	case pad_handler::ds3:
+		static_cast<ds3_pad_handler*>(handler.get())->init_config(&cfg);
+		break;
+	case pad_handler::ds4:
+		static_cast<ds4_pad_handler*>(handler.get())->init_config(&cfg);
+		break;
+	case pad_handler::dualsense:
+		static_cast<dualsense_pad_handler*>(handler.get())->init_config(&cfg);
+		break;
+#ifdef _WIN32
+	case pad_handler::xinput:
+		static_cast<xinput_pad_handler*>(handler.get())->init_config(&cfg);
+		break;
+	case pad_handler::mm:
+		static_cast<mm_joystick_handler*>(handler.get())->init_config(&cfg);
+		break;
+#endif
+#ifdef HAVE_LIBEVDEV
+	case pad_handler::evdev:
+		static_cast<evdev_joystick_handler*>(handler.get())->init_config(&cfg);
+		break;
+#endif
+	}
 }

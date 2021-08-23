@@ -205,7 +205,7 @@ void Emulator::Init(bool add_only)
 		make_path_verbose(dev_hdd0 + "game/");
 		make_path_verbose(dev_hdd0 + "game/TEST12345/");
 		make_path_verbose(dev_hdd0 + "game/TEST12345/USRDIR/");
-		make_path_verbose(dev_hdd0 + "game/.locks/");
+		make_path_verbose(dev_hdd0 + reinterpret_cast<const char*>(u8"game/＄locks/"));
 		make_path_verbose(dev_hdd0 + "home/");
 		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/");
 		make_path_verbose(dev_hdd0 + "home/" + m_usr + "/exdata/");
@@ -642,6 +642,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			}
 		}
 
+		initalize_timebased_time();
+
 		// Set RTM usage
 		g_use_rtm = utils::has_rtm() && ((utils::has_mpx() && g_cfg.core.enable_TSX == tsx_usage::enabled) || g_cfg.core.enable_TSX == tsx_usage::forced);
 
@@ -728,29 +730,47 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this]
 			{
+				std::string path;
 				std::vector<std::string> dir_queue;
 				dir_queue.emplace_back(m_path + '/');
 
-				// Find game update to use EBOOT.BIN from it, also add its directory to scan
-				if (m_cat == "DG")
+				if (m_title_id.empty())
 				{
-					const std::string hdd0_path = vfs::get("/dev_hdd0/game/") + m_title_id;
+					// Check if we are trying to scan vsh/module
+					const std::string vsh_path = g_cfg.vfs.get_dev_flash() + "vsh/module";
 
-					if (fs::is_file(hdd0_path + "/USRDIR/EBOOT.BIN"))
+					if (IsPathInsideDir(m_path, vsh_path))
 					{
-						m_path = hdd0_path;
-						dir_queue.emplace_back(m_path + '/');
+						// Memorize path to vsh.self
+						path = vsh_path + "/vsh.self";
 					}
 				}
-
-				// Try to add all related directories
-				const std::set<std::string> dirs = GetGameDirs();
-				dir_queue.insert(std::end(dir_queue), std::begin(dirs), std::end(dirs));
-
-				if (std::string path = m_path + "/USRDIR/EBOOT.BIN"; fs::is_file(path))
+				else
 				{
-					// Compile EBOOT.BIN first
-					ppu_log.notice("Trying to load EBOOT.BIN: %s", path);
+					// Find game update to use EBOOT.BIN from it, also add its directory to scan
+					if (m_cat == "DG")
+					{
+						const std::string hdd0_path = vfs::get("/dev_hdd0/game/") + m_title_id;
+
+						if (fs::is_file(hdd0_path + "/USRDIR/EBOOT.BIN"))
+						{
+							m_path = hdd0_path;
+							dir_queue.emplace_back(m_path + '/');
+						}
+					}
+
+					// Memorize path to EBOOT.BIN
+					path = m_path + "/USRDIR/EBOOT.BIN";
+
+					// Try to add all related directories
+					const std::set<std::string> dirs = GetGameDirs();
+					dir_queue.insert(std::end(dir_queue), std::begin(dirs), std::end(dirs));
+				}
+
+				if (fs::is_file(path))
+				{
+					// Compile binary first
+					ppu_log.notice("Trying to load binary: %s", path);
 
 					fs::file src{path};
 
@@ -772,7 +792,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					}
 					else
 					{
-						sys_log.error("Failed to load EBOOT.BIN '%s' (%s)", path, obj.get_error());
+						sys_log.error("Failed to load binary '%s' (%s)", path, obj.get_error());
 					}
 				}
 				else
@@ -783,6 +803,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 				if (IsStopped())
 				{
+					m_path = m_path_old; // Reset m_path to fix boot from gui
+					GetCallbacks().on_stop(); // Call on_stop to refresh gui
 					return;
 				}
 
@@ -794,28 +816,25 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					Emu.SetForceBoot(true);
 					Emu.Stop();
 				});
+
+				m_path = m_path_old; // Reset m_path to fix boot from gui
+				GetCallbacks().on_stop(); // Call on_stop to refresh gui
 			});
 
 			return game_boot_result::no_errors;
 		}
 
-		// Check if path is inside the specified directory
-		auto is_path_inside_path = [this](std::string_view path, std::string_view dir)
-		{
-			return (GetCallbacks().resolve_path(path) + '/').starts_with(GetCallbacks().resolve_path(dir) + '/');
-		};
-
 		// Detect boot location
 		constexpr usz game_dir_size = 8; // size of PS3_GAME and PS3_GMXX
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
-		const bool from_hdd0_game   = is_path_inside_path(m_path, hdd0_game);
-		const bool from_dev_flash   = is_path_inside_path(m_path, g_cfg.vfs.get_dev_flash());
+		const bool from_hdd0_game   = IsPathInsideDir(m_path, hdd0_game);
+		const bool from_dev_flash   = IsPathInsideDir(m_path, g_cfg.vfs.get_dev_flash());
 
 #ifdef _WIN32
 		// m_path might be passed from command line with differences in uppercase/lowercase on windows.
-		if ((!from_hdd0_game && is_path_inside_path(fmt::to_lower(m_path), fmt::to_lower(hdd0_game))) ||
-			(!from_dev_flash && is_path_inside_path(fmt::to_lower(m_path), fmt::to_lower(g_cfg.vfs.get_dev_flash()))))
+		if ((!from_hdd0_game && IsPathInsideDir(fmt::to_lower(m_path), fmt::to_lower(hdd0_game))) ||
+			(!from_dev_flash && IsPathInsideDir(fmt::to_lower(m_path), fmt::to_lower(g_cfg.vfs.get_dev_flash()))))
 		{
 			// Let's just abort to prevent errors down the line.
 			sys_log.error("The boot path seems to contain incorrectly cased characters. Please adjust the path and try again.");
@@ -998,21 +1017,40 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			return game_boot_result::no_errors;
 		}
 
+		// Set title to actual disc title if necessary
+		const std::string disc_sfo_dir = vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO");
+
+		const auto disc_psf_obj = psf::load_object(fs::file{ disc_sfo_dir });
+
 		// Install PKGDIR, INSDIR, PS3_EXTRA
 		if (!bdvd_dir.empty())
 		{
-			const std::string ins_dir = vfs::get("/dev_bdvd/PS3_GAME/INSDIR/");
-			const std::string pkg_dir = vfs::get("/dev_bdvd/PS3_GAME/PKGDIR/");
-			const std::string extra_dir = vfs::get("/dev_bdvd/PS3_GAME/PS3_EXTRA/");
+			std::string ins_dir = vfs::get("/dev_bdvd/PS3_GAME/INSDIR/");
+			std::string pkg_dir = vfs::get("/dev_bdvd/PS3_GAME/PKGDIR/");
+			std::string extra_dir = vfs::get("/dev_bdvd/PS3_GAME/PS3_EXTRA/");
 			fs::file lock_file;
 
-			if (fs::is_dir(ins_dir) || fs::is_dir(pkg_dir) || fs::is_dir(extra_dir))
+			for (const auto path_ptr : {&ins_dir, &pkg_dir, &extra_dir})
 			{
-				// Create lock file to prevent double installation
-				lock_file.open(hdd0_game + ".locks/" + m_title_id, fs::read + fs::create + fs::excl);
+				if (!fs::is_dir(*path_ptr))
+				{
+					path_ptr->clear();
+				}
 			}
 
-			if (lock_file && fs::is_dir(ins_dir))
+			const std::string lock_file_path = fmt::format("%s%s%s_v%s", hdd0_game, u8"＄locks/", m_title_id, psf::get_string(disc_psf_obj, "APP_VER"));
+
+			if (!ins_dir.empty() || !pkg_dir.empty() || !extra_dir.empty())
+			{
+				// For backwards compatibility
+				if (!lock_file.open(hdd0_game + ".locks/" + m_title_id))
+				{
+					// Check if already installed
+					lock_file.open(lock_file_path);
+				}
+			}
+
+			if (!lock_file && !ins_dir.empty())
 			{
 				sys_log.notice("Found INSDIR: %s", ins_dir);
 
@@ -1027,7 +1065,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 			}
 
-			if (lock_file && fs::is_dir(pkg_dir))
+			if (!lock_file && !pkg_dir.empty())
 			{
 				sys_log.notice("Found PKGDIR: %s", pkg_dir);
 
@@ -1046,7 +1084,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				}
 			}
 
-			if (lock_file && fs::is_dir(extra_dir))
+			if (!lock_file && !extra_dir.empty())
 			{
 				sys_log.notice("Found PS3_EXTRA: %s", extra_dir);
 
@@ -1064,6 +1102,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 					}
 				}
 			}
+
+			if (!lock_file)
+			{
+				// Create lock file to prevent double installation
+				// Do it after installation to prevent false positives when RPCS3 closed in the middle of the operation
+				lock_file.open(lock_file_path, fs::read + fs::create + fs::excl);
+			}
 		}
 
 		// Check game updates
@@ -1076,13 +1121,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			return m_path = hdd0_boot, Load(m_title_id, false, force_global_config, true);
 		}
 
-		// Set title to actual disc title if necessary
-		const std::string disc_sfo_dir = vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO");
-
-		if (!disc_sfo_dir.empty() && fs::is_file(disc_sfo_dir))
+		if (!disc_psf_obj.empty())
 		{
-			const auto psf_obj = psf::load_object(fs::file{ disc_sfo_dir });
-			const auto bdvd_title = psf::get_string(psf_obj, "TITLE");
+			const auto bdvd_title = psf::get_string(disc_psf_obj, "TITLE");
 
 			if (!bdvd_title.empty() && bdvd_title != m_title)
 			{
@@ -1795,5 +1836,10 @@ std::set<std::string> Emulator::GetGameDirs() const
 
 	return dirs;
 }
+
+bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) const
+{
+	return (GetCallbacks().resolve_path(path) + '/').starts_with(GetCallbacks().resolve_path(dir) + '/');
+};
 
 Emulator Emu;

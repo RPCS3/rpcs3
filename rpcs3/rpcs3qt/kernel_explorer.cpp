@@ -217,7 +217,7 @@ void kernel_explorer::update()
 		return;
 	}
 
-	const std::unordered_map<u32, QString> tree_item_names =
+	const std::initializer_list<std::pair<u32, QString>> tree_item_names =
 	{
 		{ process_info                   , tr("Process Info")},
 
@@ -238,7 +238,7 @@ void kernel_explorer::update()
 		{ SYS_LWMUTEX_OBJECT             , tr("Light Weight Mutexes")},
 		{ SYS_TIMER_OBJECT               , tr("Timers")},
 		{ SYS_SEMAPHORE_OBJECT           , tr("Semaphores")},
-		{ SYS_FS_FD_OBJECT               , tr("File Descriptors ?")},
+		{ SYS_FS_FD_OBJECT               , tr("File Descriptors")},
 		{ SYS_LWCOND_OBJECT              , tr("Light Weight Condition Variables")},
 		{ SYS_EVENT_FLAG_OBJECT          , tr("Event Flags")},
 
@@ -467,7 +467,7 @@ void kernel_explorer::update()
 			std::string owner_str = "unknown"; // Either invalid state or the lwmutex control data was moved from
 			sys_lwmutex_t lwm_data{};
 
-			if (lwm.control.try_read(lwm_data))
+			if (lwm.control.try_read(lwm_data) && lwm_data.sleep_queue == id)
 			{
 				switch (const u32 owner = lwm_data.vars.owner)
 				{
@@ -491,12 +491,12 @@ void kernel_explorer::update()
 			}
 			else
 			{
-				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x, Wq: %zu (Couldn't extract control data)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lwm.signaled, lwm.sq.size())));
+				add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s, Signal: %#x, Wq: %zu (unmapped/invalid control data at *0x%x)", id, lv2_obj::name64(lwm.name), lwm.protocol, +lwm.signaled, lwm.sq.size(), lwm.control)));
 				break;
 			}
 
-			add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Wq: %zu", id, lv2_obj::name64(lwm.name), lwm.protocol,
-					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, +lwm.signaled, lwm.sq.size())));
+			add_leaf(node, qstr(fmt::format(u8"LWMutex 0x%08x: “%s”, %s,%s Owner: %s, Locks: %u, Signal: %#x, Control: *0x%x, Wq: %zu", id, lv2_obj::name64(lwm.name), lwm.protocol,
+					(lwm_data.attribute & SYS_SYNC_RECURSIVE) ? " Recursive," : "", owner_str, lwm_data.recursive_count, +lwm.signaled, lwm.control, lwm.sq.size())));
 			break;
 		}
 		case SYS_TIMER_OBJECT:
@@ -521,7 +521,7 @@ void kernel_explorer::update()
 		case SYS_LWCOND_OBJECT:
 		{
 			auto& lwc = static_cast<lv2_lwcond&>(obj);
-			add_leaf(node, qstr(fmt::format(u8"LWCond 0x%08x: “%s”, %s, OG LWMutex: 0x%08x, Wq: %zu", id, lv2_obj::name64(lwc.name), lwc.protocol, lwc.lwid, +lwc.waiters)));
+			add_leaf(node, qstr(fmt::format(u8"LWCond 0x%08x: “%s”, %s, OG LWMutex: 0x%08x, Control: *0x%x, Wq: %zu", id, lv2_obj::name64(lwc.name), lwc.protocol, lwc.lwid, lwc.control, +lwc.waiters)));
 			break;
 		}
 		case SYS_EVENT_FLAG_OBJECT:
@@ -542,7 +542,7 @@ void kernel_explorer::update()
 	{
 		const u32 psize = vmo.psize;
 		add_leaf(find_node(root, additional_nodes::virtual_memory), qstr(fmt::format("Virtual Mem 0x%08x: Virtual Size: 0x%x (%0.2f MB), Physical Size: 0x%x (%0.2f MB), Mem Container: %s", vmo.addr
-			, vmo.size, vmo.size * 1. / (1024 * 1024), psize, psize * 1. / (1024 * 1024))), vmo.ct->id);
+			, vmo.size, vmo.size * 1. / (1024 * 1024), psize, psize * 1. / (1024 * 1024), vmo.ct->id)));
 	});
 
 	idm::select<lv2_socket>([&](u32 id, lv2_socket& sock)

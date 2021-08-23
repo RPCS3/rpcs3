@@ -72,10 +72,6 @@ namespace vk
 
 		vk::get_upload_heap()->destroy();
 
-		for (const auto& p : g_compute_tasks)
-		{
-			p.second->destroy();
-		}
 		g_compute_tasks.clear();
 
 		for (const auto& p : g_overlay_passes)
@@ -125,6 +121,9 @@ namespace vk
 			g_drv_sanitize_fp_values = true;
 			break;
 		case driver_vendor::INTEL:
+		case driver_vendor::ANV:
+			// INTEL vulkan drivers are mostly OK, workarounds are applied when creating the device
+			break;
 		default:
 			rsx_log.warning("Unsupported device: %s", gpu_name);
 		}

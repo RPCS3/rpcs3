@@ -169,7 +169,7 @@ namespace rsx
 
 	u32 get_vertex_type_size_on_host(vertex_base_type type, u32 size);
 
-	u32 get_address(u32 offset, u32 location, bool allow_failure = false,
+	u32 get_address(u32 offset, u32 location, u32 size_to_check = 0,
 		u32 line = __builtin_LINE(),
 		u32 col = __builtin_COLUMN(),
 		const char* file = __builtin_FILE(),
@@ -653,7 +653,12 @@ namespace rsx
 		atomic_t<bool> is_inited{ false };
 		bool is_fifo_idle() const;
 		void flush_fifo();
-		void recover_fifo();
+
+		void recover_fifo(u32 line = __builtin_LINE(),
+			u32 col = __builtin_COLUMN(),
+			const char* file = __builtin_FILE(),
+			const char* func = __builtin_FUNCTION());
+
 		static void fifo_wake_delay(u64 div = 1);
 		u32 get_fifo_cmd() const;
 

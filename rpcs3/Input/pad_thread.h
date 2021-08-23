@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "Emu/Io/pad_types.h"
+#include "Emu/Io/pad_config.h"
 #include "Emu/Io/pad_config_types.h"
 #include "Utilities/mutex.h"
 
@@ -23,13 +24,16 @@ public:
 	~pad_thread();
 
 	PadInfo& GetInfo() { return m_info; }
-	auto& GetPads() { return m_pads; }
+	auto& GetPads() { return m_pads_interface; }
 	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor);
 	void Init();
 	void SetIntercepted(bool intercepted);
 
 	s32 AddLddPad();
 	void UnregisterLddPad(u32 handle);
+
+	static std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
+	static void InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler);
 
 protected:
 	void InitLddPad(u32 handle);
@@ -44,6 +48,7 @@ protected:
 
 	PadInfo m_info{ 0, 0, false };
 	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads;
+	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads_interface;
 
 	std::shared_ptr<std::thread> thread;
 

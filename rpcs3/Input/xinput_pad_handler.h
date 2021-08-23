@@ -57,6 +57,8 @@ class xinput_pad_handler final : public PadHandlerBase
 	// These are all the possible buttons on a standard xbox 360 or xbox one controller
 	enum XInputKeyCodes
 	{
+		None = 0,
+
 		A,
 		B,
 		X,
@@ -83,9 +85,7 @@ class xinput_pad_handler final : public PadHandlerBase
 		RSXNeg,
 		RSXPos,
 		RSYNeg,
-		RSYPos,
-
-		KeyCodeCount
+		RSYPos
 	};
 
 	using PadButtonValues = std::unordered_map<u64, u16>;
@@ -110,9 +110,9 @@ public:
 	bool Init() override;
 
 	std::vector<std::string> ListDevices() override;
-	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
+	void SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
 	u32 get_battery_level(const std::string& padId) override;
-	void init_config(pad_config* cfg, const std::string& name) override;
+	void init_config(cfg_pad* cfg) override;
 
 private:
 	typedef DWORD (WINAPI * PFN_XINPUTGETEXTENDED)(DWORD, SCP_EXTN *);

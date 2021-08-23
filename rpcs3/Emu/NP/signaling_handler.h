@@ -48,6 +48,7 @@ enum SignalingCommand : u32
 class signaling_handler
 {
 public:
+	signaling_handler();
 	void operator()();
 	void wake_up();
 	signaling_handler& operator=(thread_state);

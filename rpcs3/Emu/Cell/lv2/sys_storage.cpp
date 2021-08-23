@@ -3,7 +3,8 @@
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
-#include "Emu/Cell/lv2/sys_event.h"
+#include "sys_event.h"
+#include "sys_fs.h"
 #include "util/shared_ptr.hpp"
 
 #include "sys_storage.h"
@@ -33,7 +34,7 @@ error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 		return CELL_EFAULT;
 	}
 
-	u64 storage_id = device & 0xFFFFF00FFFFFFFF;
+	[[maybe_unused]] u64 storage_id = device & 0xFFFFF00FFFFFFFF;
 	fs::file file;
 
 	if (const u32 id = idm::make<lv2_storage>(device, std::move(file), mode, flags))
@@ -63,24 +64,20 @@ error_code sys_storage_read(u32 fd, u32 mode, u32 start_sector, u32 num_sectors,
 		return CELL_EFAULT;
 	}
 
-	memset(bounce_buf.get_ptr(), 0, num_sectors * 0x200);
+	std::memset(bounce_buf.get_ptr(), 0, num_sectors * 0x200ull);
+	const auto handle = idm::get<lv2_storage>(fd);
 
-	auto handle = idm::get<lv2_storage>(fd);
 	if (!handle)
 	{
-		return CELL_ESRCH; // idk
+		return CELL_ESRCH;
 	}
 
-	if (handle->device_id == 0x100000200000004 && handle->file)
+	if (handle->file)
 	{
-		handle->file.seek(start_sector * 0x200);
-		u64 size = num_sectors * 0x200;
-		const u64 result = handle->file.read(bounce_buf.get_ptr(), size);
-
-		if (result != size) // mjau
-		{
-			fmt::throw_exception("didnt read expected");
-		}
+		handle->file.seek(start_sector * 0x200ull);
+		const u64 size = num_sectors * 0x200ull;
+		const u64 result = lv2_file::op_read(handle->file, bounce_buf, size);
+		num_sectors = result / 0x200;
 	}
 
 	*sectors_read = num_sectors;
@@ -95,6 +92,13 @@ error_code sys_storage_write(u32 fd, u32 mode, u32 start_sector, u32 num_sectors
 	if (!sectors_wrote)
 	{
 		return CELL_EFAULT;
+	}
+
+	const auto handle = idm::get<lv2_storage>(fd);
+
+	if (!handle)
+	{
+		return CELL_ESRCH;
 	}
 
 	*sectors_wrote = num_sectors;

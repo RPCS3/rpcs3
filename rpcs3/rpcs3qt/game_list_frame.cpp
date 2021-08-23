@@ -44,6 +44,8 @@
 LOG_CHANNEL(game_list_log, "GameList");
 LOG_CHANNEL(sys_log, "SYS");
 
+extern atomic_t<bool> g_system_progress_canceled;
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
@@ -1451,7 +1453,10 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, con
 
 bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, const game_info& game, bool is_interactive)
 {
-	const std::string config_dir = rpcs3::utils::get_custom_input_config_dir(title_id);
+	if (title_id.empty())
+		return true;
+
+	const std::string config_dir = rpcs3::utils::get_input_config_dir(title_id);
 
 	if (!fs::is_dir(config_dir))
 		return true;
@@ -1613,8 +1618,8 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 
 void game_list_frame::BatchCreatePPUCaches()
 {
-	const std::string vsh_path = g_cfg.vfs.get_dev_flash() + "/vsh/module/vsh.self";
-	const bool vsh_exists = fs::is_file(vsh_path);
+	const std::string vsh_path = g_cfg.vfs.get_dev_flash() + "vsh/module/";
+	const bool vsh_exists = fs::is_file(vsh_path + "vsh.self");
 	const u32 total = m_game_data.size() + (vsh_exists ? 1 : 0);
 
 	if (total == 0)
@@ -1628,7 +1633,9 @@ void game_list_frame::BatchCreatePPUCaches()
 		return;
 	}
 
-	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Creation"), tr("Creating all PPU caches"), tr("Cancel"), 0, total, true, this);
+	const QString main_label = tr("Creating all PPU caches");
+
+	progress_dialog* pdlg = new progress_dialog(tr("PPU Cache Batch Creation"), main_label, tr("Cancel"), 0, total, true, this);
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
 	pdlg->show();
@@ -1636,34 +1643,47 @@ void game_list_frame::BatchCreatePPUCaches()
 
 	u32 created = 0;
 
-	if (vsh_exists && CreatePPUCache(vsh_path))
+	const auto wait_until_compiled = [pdlg]() -> bool
 	{
-		pdlg->SetValue(++created);
-	}
-
-	for (const auto& game : m_game_data)
-	{
-		if (pdlg->wasCanceled())
+		while (!Emu.IsStopped())
 		{
-			break;
+			if (pdlg->wasCanceled())
+			{
+				return false;
+			}
+			QApplication::processEvents();
 		}
+		return true;
+	};
+
+	if (vsh_exists)
+	{
+		pdlg->setLabelText(tr("%0\nProgress: %1/%2. Compiling caches for VSH...", "Second line after main label").arg(main_label).arg(created).arg(total));
 		QApplication::processEvents();
 
-		if (CreatePPUCache(game))
+		if (CreatePPUCache(vsh_path) && wait_until_compiled())
 		{
-			while (!Emu.IsStopped())
-			{
-				if (pdlg->wasCanceled())
-				{
-					break;
-				}
-				QApplication::processEvents();
-			}
 			pdlg->SetValue(++created);
 		}
 	}
 
-	if (pdlg->wasCanceled())
+	for (const auto& game : m_game_data)
+	{
+		if (pdlg->wasCanceled() || g_system_progress_canceled)
+		{
+			break;
+		}
+
+		pdlg->setLabelText(tr("%0\nProgress: %1/%2. Compiling caches for %3...", "Second line after main label").arg(main_label).arg(created).arg(total).arg(qstr(game->info.serial)));
+		QApplication::processEvents();
+
+		if (CreatePPUCache(game) && wait_until_compiled())
+		{
+			pdlg->SetValue(++created);
+		}
+	}
+
+	if (pdlg->wasCanceled() || g_system_progress_canceled)
 	{
 		game_list_log.notice("PPU Cache Batch Creation was canceled");
 
@@ -1671,6 +1691,11 @@ void game_list_frame::BatchCreatePPUCaches()
 		{
 			QApplication::processEvents();
 			Emu.Stop();
+		}
+
+		if (!pdlg->wasCanceled())
+		{
+			pdlg->close();
 		}
 		return;
 	}

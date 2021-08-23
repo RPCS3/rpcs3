@@ -39,6 +39,16 @@ constexpr auto s_pause_flags = cpu_flag::dbg_pause + cpu_flag::dbg_global_pause;
 
 extern atomic_t<bool> g_debugger_pause_all_threads_on_bp;
 
+extern bool is_using_interpreter(u32 id_type)
+{
+	switch (id_type)
+	{
+	case 1: return g_cfg.core.ppu_decoder != ppu_decoder_type::llvm;
+	case 2: return g_cfg.core.spu_decoder == spu_decoder_type::fast || g_cfg.core.spu_decoder == spu_decoder_type::precise;
+	default: return true; 
+	}
+}
+
 debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidget *parent)
 	: custom_dock_widget(tr("Debugger"), parent)
 	, m_gui_settings(std::move(gui_settings))
@@ -733,17 +743,21 @@ void debugger_frame::UpdateUI()
 			m_last_pc = cia;
 			DoUpdate();
 
-			if (cpu->state & s_pause_flags)
+			const bool paused = !!(cpu->state & s_pause_flags);
+
+			if (paused)
 			{
 				m_btn_run->setText(RunString);
-				m_btn_step->setEnabled(true);
-				m_btn_step_over->setEnabled(true);
 			}
 			else
 			{
 				m_btn_run->setText(PauseString);
-				m_btn_step->setEnabled(false);
-				m_btn_step_over->setEnabled(false);
+			}
+
+			if (is_using_interpreter(cpu->id_type()))
+			{
+				m_btn_step->setEnabled(paused);
+				m_btn_step_over->setEnabled(paused);
 			}
 		}
 	}
@@ -812,6 +826,11 @@ void debugger_frame::UpdateUnitList()
 	{
 		if (m_reg_editor) m_reg_editor->close();
 		if (m_inst_editor) m_inst_editor->close();
+	}
+
+	if (emu_state == system_state::stopped)
+	{
+		ClearBreakpoints();
 	}
 
 	OnSelectUnit();
@@ -1094,11 +1113,15 @@ void debugger_frame::EnableUpdateTimer(bool enable) const
 
 void debugger_frame::EnableButtons(bool enable)
 {
-	if (!get_cpu()) enable = false;
+	const auto cpu = get_cpu();
 
+	if (!cpu) enable = false;
+
+	const bool step = enable && is_using_interpreter(cpu->id_type());
+ 
 	m_go_to_addr->setEnabled(enable);
 	m_go_to_pc->setEnabled(enable);
-	m_btn_step->setEnabled(enable);
-	m_btn_step_over->setEnabled(enable);
+	m_btn_step->setEnabled(step);
+	m_btn_step_over->setEnabled(step);
 	m_btn_run->setEnabled(enable);
 }

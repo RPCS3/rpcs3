@@ -205,7 +205,7 @@ struct cpu_prof
 						info.freq[name]++;
 
 						// Append verification time to fixed common name 0000000...chunk-0x3fffc
-						if ((name & 0xffff) == 0)
+						if (name >> 16 && (name & 0xffff) == 0)
 							info.freq[0xffff]++;
 					}
 					else
@@ -218,7 +218,7 @@ struct cpu_prof
 			// Cleanup and print results for deleted threads
 			for (auto it = threads.begin(), end = threads.end(); it != end;)
 			{
-				if (cpu_flag::exit - it->second.ptr->state)
+				if (cpu_flag::exit & it->second.ptr->state)
 					it->second.print(it->first), it = threads.erase(it);
 				else
 					it++;

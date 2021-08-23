@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Utilities/JIT.h"
 #include "Utilities/StrUtil.h"
 #include "Crypto/sha1.h"
@@ -513,57 +513,54 @@ static bool ppu_break(ppu_thread& ppu, ppu_opcode_t)
 }
 
 // Set or remove breakpoint
-extern void ppu_breakpoint(u32 addr, bool is_adding)
+extern bool ppu_breakpoint(u32 addr, bool is_adding)
 {
-	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
+	if (addr % 4 || !vm::check_addr(addr, vm::page_executable) || g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
-		return;
+		return false;
 	}
 
 	const u64 _break = reinterpret_cast<uptr>(&ppu_break);
+
+	// Remove breakpoint parameters
+	u64 to_set = 0;
+	u64 expected = _break;
+
+	if (u32 hle_addr{}; g_fxo->is_init<ppu_function_manager>() && (hle_addr = g_fxo->get<ppu_function_manager>().addr))
+	{
+		// HLE function index
+		const u32 index = (addr - hle_addr) / 8;
+
+		if (addr % 8 == 4 && index < ppu_function_manager::get().size())
+		{
+			// HLE function placement
+			to_set = reinterpret_cast<uptr>(ppu_function_manager::get()[index]);
+		}
+	}
+
+	if (!to_set)
+	{
+		// If not an HLE function use regular instruction function
+		to_set = ppu_cache(addr);
+	}
+
+	u64& _ref = ppu_ref(addr);
 
 	if (is_adding)
 	{
-		// Set breakpoint
-		ppu_ref(addr) = _break;
-	}
-	else
-	{
-		// Remove breakpoint
-		ppu_ref(addr) = ppu_cache(addr);
-	}
-}
+		// Swap if adding
+		std::swap(to_set, expected);
 
-//sets breakpoint, does nothing if there is a breakpoint there already
-extern void ppu_set_breakpoint(u32 addr)
-{
-	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
-	{
-		return;
+		const u64 _fall = reinterpret_cast<uptr>(&ppu_fallback);
+
+		if (_ref == _fall)
+		{
+			ppu_log.error("Unregistered instruction replaced with a breakpoint at 0x%08x", addr);
+			expected = _fall;
+		}
 	}
 
-	const u64 _break = reinterpret_cast<uptr>(&ppu_break);
-
-	if (ppu_ref(addr) != _break)
-	{
-		ppu_ref(addr) = _break;
-	}
-}
-
-//removes breakpoint, does nothing if there is no breakpoint at location
-extern void ppu_remove_breakpoint(u32 addr)
-{
-	if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
-	{
-		return;
-	}
-
-	const auto _break = reinterpret_cast<uptr>(&ppu_break);
-
-	if (ppu_ref(addr) == _break)
-	{
-		ppu_ref(addr) = ppu_cache(addr);
-	}
+	return atomic_storage<u64>::compare_exchange(_ref, expected, to_set);
 }
 
 extern bool ppu_patch(u32 addr, u32 value)
@@ -3041,6 +3038,9 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			if (!jit && !check_only)
 			{
 				ppu_log.success("LLVM: Module exists: %s", obj_name);
+
+				// Update progress dialog
+				g_progr_pdone++;
 			}
 
 			continue;

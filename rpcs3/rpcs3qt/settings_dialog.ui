@@ -635,6 +635,100 @@
             </layout>
            </item>
            <item>
+            <widget class="QGroupBox" name="gb_Upscaling">
+             <property name="title">
+              <string>Upscaling</string>
+             </property>
+             <layout class="QVBoxLayout" name="gb_Upscaling_layout">
+              <item>
+               <widget class="QCheckBox" name="fsrUpscalingEnable">
+                <property name="text">
+                 <string>Enable FSR Upscaling</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="Line" name="line">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="fsrSharpeningStrengthLabel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>RCAS Sharpening Strength</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+                </property>
+                <property name="margin">
+                 <number>1</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="fsrSharpeningLayoutTop">
+                <item>
+                 <widget class="QLabel" name="minSharpeningVal">
+                  <property name="text">
+                   <string>0</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSlider" name="fsrSharpeningStrength">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="maxSharpeningVal">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="text">
+                   <string>100</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="fsrSharpeningLayoutBottom" stretch="1,0">
+                <item>
+                 <widget class="QLabel" name="fsrSharpeningStrengthVal">
+                  <property name="text">
+                   <string>0</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="fsrSharpeningStrengthReset">
+                  <property name="text">
+                   <string>Reset</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
             <spacer name="gpu_tab_layout_middle_spacer">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -1899,6 +1993,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="ppuLlvmJavaModeHandling">
+                <property name="text">
+                 <string>PPU LLVM Java Mode Handling</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <widget class="QCheckBox" name="ppuPrecompilation">
                 <property name="text">
                  <string>PPU LLVM Precompilation</string>
@@ -2426,6 +2527,13 @@
                <widget class="QCheckBox" name="gs_showMouseInFullscreen">
                 <property name="text">
                  <string>Show mouse cursor in Fullscreen</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="gs_lockMouseInFullscreen">
+                <property name="text">
+                 <string>Lock mouse cursor in Fullscreen</string>
                 </property>
                </widget>
               </item>
@@ -3114,92 +3222,29 @@
                 </property>
                </widget>
               </item>
-              <item>
-               <spacer name="guiTabSpacerLeft">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeType">
-                 <enum>QSizePolicy::MinimumExpanding</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
              </layout>
             </widget>
+           </item>
+           <item>
+            <spacer name="guiTabSpacerLeft">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::MinimumExpanding</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </item>
          <item>
           <layout class="QVBoxLayout" name="guiTabLayoutMiddle">
-           <item>
-            <widget class="QGroupBox" name="gb_settings">
-             <property name="title">
-              <string>UI Settings</string>
-             </property>
-             <layout class="QVBoxLayout" name="gb_settings_layout">
-              <item>
-               <widget class="QPushButton" name="pb_reset_default">
-                <property name="text">
-                 <string>Restore default settings</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_backup_config">
-                <property name="text">
-                 <string>Save current settings</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_open_folder">
-                <property name="text">
-                 <string>Open configuration folder</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="label">
-                <property name="text">
-                 <string>Load Settings:</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QComboBox" name="combo_configs"/>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_apply_config">
-                <property name="text">
-                 <string>Apply</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <spacer name="guiTabSpacerMiddle">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeType">
-                 <enum>QSizePolicy::MinimumExpanding</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-             </layout>
-            </widget>
-           </item>
            <item>
             <widget class="QGroupBox" name="gb_log">
              <property name="title">
@@ -3281,6 +3326,22 @@
               </item>
              </layout>
             </widget>
+           </item>
+           <item>
+            <spacer name="guiTabSpacerMiddle">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::MinimumExpanding</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </item>
@@ -3635,13 +3696,6 @@
              <widget class="QCheckBox" name="perfReport">
               <property name="text">
                <string>Enable Performance Report</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="ppuLlvmJavaModeHandling">
-              <property name="text">
-               <string>PPU LLVM Java Mode Handling</string>
               </property>
              </widget>
             </item>

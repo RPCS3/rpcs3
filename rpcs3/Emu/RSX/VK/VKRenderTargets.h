@@ -89,6 +89,38 @@ namespace vk
 		using download_buffer_object = void*;
 		using barrier_descriptor_t = rsx::deferred_clipped_region<vk::render_target*>;
 
+		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(u8 samples)
+		{
+			if (g_cfg.video.strict_rendering_mode || samples > 1)
+			{
+				return {};
+			}
+
+			// Workarounds to force transition to GENERAL to decompress.
+			// Fixes corruption in FBO loops for ANV and RADV.
+			switch (vk::get_driver_vendor())
+			{
+			case driver_vendor::ANV:
+				return { VK_IMAGE_USAGE_STORAGE_BIT, 0 };
+			case driver_vendor::AMD:
+			case driver_vendor::RADV:
+				if (vk::get_chip_family() >= chip_class::AMD_navi1x)
+				{
+					// Only needed for GFX10+
+					return { 0, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT };
+				}
+				break;
+			default:
+				rsx_log.error("Unknown driver vendor!");
+				[[ fallthrough ]];
+			case driver_vendor::NVIDIA:
+			case driver_vendor::INTEL:
+				break;
+			}
+
+			return {};
+		}
+
 		static std::unique_ptr<vk::render_target> create_new_surface(
 			u32 address,
 			rsx::surface_color_format format,
@@ -112,7 +144,9 @@ namespace vk
 				sample_layout = rsx::surface_sample_layout::null;
 			}
 
-			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			auto [usage_flags, create_flags] = get_attachment_create_flags(samples);
+			usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
 			if (samples == 1) [[likely]]
 			{
 				usage_flags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -134,7 +168,9 @@ namespace vk
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage_flags,
-				0, VMM_ALLOCATION_POOL_SURFACE_CACHE, RSX_FORMAT_CLASS_COLOR);
+				create_flags,
+				VMM_ALLOCATION_POOL_SURFACE_CACHE,
+				RSX_FORMAT_CLASS_COLOR);
 
 			rtt->set_debug_name(fmt::format("RTV @0x%x", address));
 			rtt->change_layout(cmd, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -163,7 +199,6 @@ namespace vk
 			vk::render_device& device, vk::command_buffer& cmd)
 		{
 			const VkFormat requested_format = vk::get_compatible_depth_surface_format(device.get_formats_support(), format);
-			VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 			u8 samples;
 			rsx::surface_sample_layout sample_layout;
@@ -177,6 +212,9 @@ namespace vk
 				samples = 1;
 				sample_layout = rsx::surface_sample_layout::null;
 			}
+
+			auto [usage_flags, create_flags] = get_attachment_create_flags(samples);
+			usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 			if (samples == 1) [[likely]]
 			{
@@ -195,7 +233,9 @@ namespace vk
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_TILING_OPTIMAL,
 				usage_flags,
-				0, VMM_ALLOCATION_POOL_SURFACE_CACHE, rsx::classify_format(format));
+				create_flags,
+				VMM_ALLOCATION_POOL_SURFACE_CACHE,
+				rsx::classify_format(format));
 
 			ds->set_debug_name(fmt::format("DSV @0x%x", address));
 			ds->change_layout(cmd, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
