@@ -26,6 +26,7 @@ enum class patch_type
 {
 	invalid,
 	load,
+	alloc, // Allocate memory at address (zeroized executable memory)
 	byte,
 	le16,
 	le32,
@@ -83,6 +84,15 @@ public:
 		std::unordered_map<std::string /*description*/, patch_info> patch_info_map{};
 		std::string hash{};
 		std::string version{};
+	};
+
+	enum mem_protection : u8
+	{
+		wx = 0, // Read + Write + Execute (default)
+		ro = 1, // Read
+		rx = 2, // Read + Execute
+		rw = 3, // Read + Write
+		mask = 3,
 	};
 
 	using patch_map = std::unordered_map<std::string /*hash*/, patch_container>;
