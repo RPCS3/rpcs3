@@ -999,6 +999,9 @@
     <ClCompile Include="Emu\Cell\Modules\libfs_utility_init.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Audio\audio_device_listener.cpp">
+      <Filter>Emu\Audio</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1973,6 +1976,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\libfs_utility_init.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\audio_device_listener.h">
+      <Filter>Emu\Audio</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

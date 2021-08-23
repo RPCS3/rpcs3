@@ -305,7 +305,6 @@ u64 audio_ringbuffer::update()
 			//cellAudio.error("play_delta=%llu delta_samples=%llu", play_delta, delta_samples);
 			if (delta_samples > 0)
 			{
-
 				if (enqueued_samples < delta_samples)
 				{
 					enqueued_samples = 0;
@@ -618,6 +617,7 @@ void cell_audio_thread::operator()()
 	{
 		if (m_update_configuration)
 		{
+			cellAudio.warning("Updating cell_audio_thread configuration");
 			update_config();
 			m_update_configuration = false;
 		}

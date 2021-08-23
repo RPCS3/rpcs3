@@ -7,7 +7,7 @@
 #include <string_view>
 
 #ifdef _WIN32
-std::string wchar_to_utf8(wchar_t *src);
+std::string wchar_to_utf8(const wchar_t *src);
 std::string wchar_path_to_ansi_path(const std::wstring& src);
 std::string utf8_path_to_ansi_path(const std::string& src);
 #endif
