@@ -287,6 +287,7 @@ public:
 		bool has_exp_tex_op = false;
 		bool has_pkg = false;
 		bool has_upg = false;
+		bool has_dynamic_register_load = false;
 	}
 	properties;
 
