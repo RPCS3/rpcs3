@@ -53,6 +53,7 @@
     <ClCompile Include="Emu\Audio\ALSA\ALSABackend.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Emu\Audio\audio_device_listener.cpp" />
     <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
@@ -428,6 +429,7 @@
     <ClInclude Include="Emu\Audio\ALSA\ALSABackend.h">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="Emu\Audio\audio_device_listener.h" />
     <ClInclude Include="Emu\Audio\FAudio\FAudioBackend.h">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>

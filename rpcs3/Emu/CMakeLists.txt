@@ -106,6 +106,7 @@ target_sources(rpcs3_emu PRIVATE
 
 # Audio
 target_sources(rpcs3_emu PRIVATE
+    Audio/audio_device_listener.cpp
     Audio/AudioDumper.cpp
     Audio/AudioBackend.cpp
     Audio/AL/OpenALBackend.cpp
