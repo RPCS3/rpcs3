@@ -550,14 +550,14 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		// 4. [A0 + N] addressing can be applied to dynamically sample texture coordinates.
 		// - This is explained in NV_fragment_program2 specification page, Fragment Attributes section.
 		// - There is no instruction that writes to the address register directly, it is supposed to be the loop counter!
-		const u32 register_id = src2.use_index_reg ? (src2.addr_reg + 4) : dst.src_attr_reg_num;
+		u32 register_id = src2.use_index_reg ? (src2.addr_reg + 4) : dst.src_attr_reg_num;
 		const std::string reg_var = (register_id < std::size(reg_table))? reg_table[register_id] : "unk";
 		bool insert = true;
 
 		if (src2.use_index_reg && m_loop_count)
 		{
-			// TODO: Actually implement dynamic register indexing (kd-11)
-			rsx_log.error("Dynamic register indexing is unimplemented. Report this to developers!");
+			// Dynamically load the input
+			register_id = 0xFF;
 		}
 
 		switch (register_id)
@@ -619,6 +619,23 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			{
 				ret += reg_var;
 			}
+			break;
+		}
+		case 0xFF:
+		{
+			for (int i = 0; i < 10; ++i)
+			{
+				m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_table[i + 4]);
+			}
+
+			if (m_loop_count > 1)
+			{
+				rsx_log.error("Nested loop with indexed load was detected. Report this to developers!");
+			}
+
+			ret = fmt::format("_indexed_load(i%u + %u)", m_loop_count - 1, src2.addr_reg);
+			properties.has_dynamic_register_load = true;
+			insert = false;
 			break;
 		}
 		default:
@@ -909,6 +926,28 @@ std::string FragmentProgramDecompiler::BuildCode()
 		OS << "	float y = uintBitsToFloat(packHalf2x16(_h.zw));\n";
 		OS << "	return " << float2 << "(x, y);\n";
 		OS << "}\n\n";
+	}
+
+	if (properties.has_dynamic_register_load)
+	{
+		OS <<
+		"vec4 _indexed_load(int index)\n"
+		"{\n"
+		"	switch (index)\n"
+		"	{\n"
+		"		case 0: return tc0;\n"
+		"		case 1: return tc1;\n"
+		"		case 2: return tc2;\n"
+		"		case 3: return tc3;\n"
+		"		case 4: return tc4;\n"
+		"		case 5: return tc5;\n"
+		"		case 6: return tc6;\n"
+		"		case 7: return tc7;\n"
+		"		case 8: return tc8;\n"
+		"		case 9: return tc9;\n"
+		"	}\n"
+		"	return vec4(0., 0., 0., 1.);\n"
+		"}\n\n";
 	}
 
 	insertMainStart(OS);
