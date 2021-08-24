@@ -26,7 +26,7 @@ option(USE_PRECOMPILED_HEADERS "Use precompiled headers" OFF)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/buildfiles/cmake")
 
-set(CMAKE_CXX_STANDARD 20)
+set_property(GLOBAL PROPERTY CMAKE_CXX_STANDARD 20)
 include(CheckCXXCompilerFlag)
 
 if(NOT CMAKE_BUILD_TYPE)
