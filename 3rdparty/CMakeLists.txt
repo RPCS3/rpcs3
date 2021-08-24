@@ -75,19 +75,7 @@ add_subdirectory(SPIRV EXCLUDE_FROM_ALL)
 
 
 # yaml-cpp
-# We don't want to install yaml-cpp but its cmake file doesn't have option
-# to disable it...
-# So we just install it to a different directory
-set(YAML_CPP_INSTALL OFF CACHE BOOL "Don't install YAML")
-set(CMAKE_INSTALL_PREFIX_OLD ${CMAKE_INSTALL_PREFIX})
-set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/yaml-cpp_install)
-
-set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Enable testing" FORCE)
-set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools" FORCE)
-set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Enable contrib stuff in library" FORCE)
-add_subdirectory(yaml-cpp EXCLUDE_FROM_ALL)
-
-set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX_OLD})
+add_subdirectory(yaml-cpp)
 
 
 # xxHash
@@ -325,22 +313,45 @@ if(USE_SYSTEM_WOLFSSL)
 	add_library(wolfssl INTERFACE)
 	target_link_libraries(wolfssl INTERFACE PkgConfig::WolfSSL)
 else()
-	SET(BUILD_TESTS NO CACHE BOOL "Build test applications")
-	add_compile_definitions(HAVE_FFDHE_2048 TFM_TIMING_RESISTANT ECC_TIMING_RESISTANT
-					WC_RSA_BLINDING HAVE_AESGCM WOLFSSL_SHA512 WOLFSSL_SHA384 NO_DSA HAVE_ECC TFM_ECC256 ECC_SHAMIR
-					NO_RC4 NO_HC128 NO_RABBIT WOLFSSL_SHA224 WOLFSSL_SHA3 WOLFSSL_SHAKE256 HAVE_POLY1305
-					HAVE_ONE_TIME_AUTH HAVE_CHACHA HAVE_HASHDRBG HAVE_TLS_EXTENSIONS HAVE_SNI HAVE_SUPPORTED_CURVES
-					HAVE_EXTENDED_MASTER NO_RC4 HAVE_ENCRYPT_THEN_MAC NO_PSK NO_MD4
-					WC_NO_ASYNC_THREADING OPENSSL_EXTRA WOLFSSL_DES_ECB WC_NO_HARDEN)
-	set(ENABLED_HARDEN OFF CACHE BOOL "Disable Harden")
+	# TODO(cjj19970505@live.cn)
+	# OPENSSL_EXTRA, WOLFSSL_DES_ECB and HAVE_SNI are unconfigurable from CMake cache.
+	# but they do have it in a TODO list (wolfssl/CMakeList, 1021)
+	add_compile_definitions(OPENSSL_EXTRA WOLFSSL_DES_ECB HAVE_SNI)
+
+	set(WOLFSSL_TLS13 "no" CACHE INTERNAL "")
+	set(WOLFSSL_SHA224 "yes" CACHE INTERNAL "")
+	set(WOLFSSL_SHA3 "yes" CACHE INTERNAL "")
+	set(WOLFSSL_SHAKE256 "yes" CACHE INTERNAL "")
+	set(WOLFSSL_BASE64_ENCODE "no" CACHE INTERNAL "")
+	set(WOLFSSL_DES3 "yes" CACHE INTERNAL "")
+	set(WOLFSSL_POLY1305 "yes" CACHE INTERNAL "")
+	set(WOLFSSL_CHACHA "yes" CACHE INTERNAL "")
+	set(WOLFSSL_FILESYSTEM "yes" CACHE INTERNAL "")
+	set(WOLFSSL_PWDBASED "yes" CACHE INTERNAL "")
+	set(WOLFSSL_FAST_MATH "no" CACHE INTERNAL "")
+	set(WOLFSSL_EXAMPLES "no" CACHE INTERNAL "")
+	set(WOLFSSL_CRYPT_TESTS "no" CACHE INTERNAL "")
+	set(WOLFSSL_ASYNC_THREADS "no" CACHE INTERNAL "")
+	set(WOLFSSL_CONFIG_H "no" CACHE INTERNAL "")
+
 	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
-	target_include_directories(wolfssl INTERFACE "wolfssl/")
-	# This is needed for CURL
-	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/wolfssl/options.h.in ${CMAKE_CURRENT_BINARY_DIR}/wolfssl/wolfssl/options.h)
-	set(WolfSSL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/libwolfssl.a")
-	set(WolfSSL_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/libwolfssl.a")
-	set(WolfSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/" "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/")
-	set(WolfSSL_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/" "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/")
+
+	# TODO(cjj19970505@live.cn)
+	# This only works in single-config generator
+	# For a multi-config generator, we need to provide different wolfssl binaries for different config
+	if (GENERATOR_IS_MULTI_CONFIG)
+		message( FATAL_ERROR "RPCS3 can only be configured using single-config generator." )
+	endif()
+
+	if(MSVC)
+		set(WolfSSL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/wolfssl.lib")
+	else()
+		set(WolfSSL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/libwolfssl.a")
+	endif()
+
+	# "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/wolfssl/" provides openssl headers
+	# So that curl can be built on an environment where openssl headers are not provided
+	set(WolfSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/" "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/wolfssl/" "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/")
 endif()
 
 # CURL
