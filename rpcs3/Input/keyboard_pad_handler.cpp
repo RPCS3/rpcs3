@@ -850,16 +850,14 @@ void keyboard_pad_handler::ThreadProc()
 		return (v0 <= v1) ? std::ceil(res) : std::floor(res);
 	};
 
-	for (uint i = 0; i < m_bindings.size(); i++)
+	for (uint i = 0; i < m_pads_internal.size(); i++)
 	{
-		auto& pad = m_bindings[i];
-		pad->m_buttons = m_pads_internal[i].m_buttons;
-		pad->m_sticks = m_pads_internal[i].m_sticks;
+		auto& pad = m_pads_internal[i];
 
 		if (last_connection_status[i] == false)
 		{
-			pad->m_port_status |= CELL_PAD_STATUS_CONNECTED;
-			pad->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+			pad.m_port_status |= CELL_PAD_STATUS_CONNECTED;
+			pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 			last_connection_status[i] = true;
 			connected_devices++;
 		}
@@ -867,25 +865,25 @@ void keyboard_pad_handler::ThreadProc()
 		{
 			if (update_sticks)
 			{
-				for (int j = 0; j < static_cast<int>(pad->m_sticks.size()); j++)
+				for (int j = 0; j < static_cast<int>(pad.m_sticks.size()); j++)
 				{
 					const f32 stick_lerp_factor = (j < 2) ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
 
 					// we already applied the following values on keypress if we used factor 1
 					if (stick_lerp_factor < 1.0f)
 					{
-						const f32 v0 = static_cast<f32>(pad->m_sticks[j].m_value);
+						const f32 v0 = static_cast<f32>(pad.m_sticks[j].m_value);
 						const f32 v1 = static_cast<f32>(m_stick_val[j]);
 						const f32 res = get_lerped(v0, v1, stick_lerp_factor);
 
-						pad->m_sticks[j].m_value = static_cast<u16>(res);
+						pad.m_sticks[j].m_value = static_cast<u16>(res);
 					}
 				}
 			}
 
 			if (update_buttons)
 			{
-				for (auto& button : pad->m_buttons)
+				for (auto& button : pad.m_buttons)
 				{
 					if (button.m_analog)
 					{
@@ -918,34 +916,40 @@ void keyboard_pad_handler::ThreadProc()
 		}
 	}
 
-	if (!m_mouse_wheel_used)
+	if (m_mouse_wheel_used)
 	{
-		return;
+		// Releases the wheel buttons 0,1 sec after they've been triggered
+		// Next activation is set to distant future to avoid activating this on every proc
+		const auto update_threshold = now - std::chrono::milliseconds(100);
+		const auto distant_future = now + std::chrono::hours(24);
+
+		if (update_threshold >= m_last_wheel_move_up)
+		{
+			Key(mouse::wheel_up, false);
+			m_last_wheel_move_up = distant_future;
+		}
+		if (update_threshold >= m_last_wheel_move_down)
+		{
+			Key(mouse::wheel_down, false);
+			m_last_wheel_move_down = distant_future;
+		}
+		if (update_threshold >= m_last_wheel_move_left)
+		{
+			Key(mouse::wheel_left, false);
+			m_last_wheel_move_left = distant_future;
+		}
+		if (update_threshold >= m_last_wheel_move_right)
+		{
+			Key(mouse::wheel_right, false);
+			m_last_wheel_move_right = distant_future;
+		}
 	}
 
-	// Releases the wheel buttons 0,1 sec after they've been triggered
-	// Next activation is set to distant future to avoid activating this on every proc
-	const auto update_threshold = now - std::chrono::milliseconds(100);
-	const auto distant_future = now + std::chrono::hours(24);
-
-	if (update_threshold >= m_last_wheel_move_up)
+	for (uint i = 0; i < m_bindings.size(); i++)
 	{
-		Key(mouse::wheel_up, false);
-		m_last_wheel_move_up = distant_future;
-	}
-	if (update_threshold >= m_last_wheel_move_down)
-	{
-		Key(mouse::wheel_down, false);
-		m_last_wheel_move_down = distant_future;
-	}
-	if (update_threshold >= m_last_wheel_move_left)
-	{
-		Key(mouse::wheel_left, false);
-		m_last_wheel_move_left = distant_future;
-	}
-	if (update_threshold >= m_last_wheel_move_right)
-	{
-		Key(mouse::wheel_right, false);
-		m_last_wheel_move_right = distant_future;
+		auto& pad = m_bindings[i];
+		pad->m_buttons = m_pads_internal[i].m_buttons;
+		pad->m_sticks = m_pads_internal[i].m_sticks;
+		pad->m_port_status = m_pads_internal[i].m_port_status;
 	}
 }

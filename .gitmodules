@@ -41,7 +41,7 @@
 	url = ../../Cyan4973/xxHash.git
 	ignore = dirty
 [submodule "3rdparty/yaml-cpp"]
-	path = 3rdparty/yaml-cpp
+	path = 3rdparty/yaml-cpp/yaml-cpp
 	url = ../../RPCS3/yaml-cpp.git
 	ignore = dirty
 [submodule "3rdparty/libpng"]
