@@ -784,12 +784,9 @@ namespace vm
 		flags_set   &= ~flags_both;
 		flags_clear &= ~flags_both;
 
-		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		if (!check_addr(addr, flags_test, size))
 		{
-			if ((g_pages[i] & flags_test) != (flags_test | page_allocated))
-			{
-				return false;
-			}
+			return false;
 		}
 
 		if (!flags_set && !flags_clear)
