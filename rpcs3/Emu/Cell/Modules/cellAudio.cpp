@@ -161,7 +161,7 @@ f32 audio_ringbuffer::set_frequency_ratio(f32 new_ratio)
 
 u64 audio_ringbuffer::get_timestamp()
 {
-	return get_system_time() - Emu.GetPauseTime();
+	return get_system_time();
 }
 
 void audio_ringbuffer::enqueue(const float* in_buffer)
@@ -296,7 +296,7 @@ u64 audio_ringbuffer::update()
 		}
 		else
 		{
-			const u64 play_delta = timestamp - (play_timestamp > update_timestamp ? play_timestamp : update_timestamp);
+			const u64 play_delta = (update_timestamp ? timestamp - std::max<u64>(play_timestamp, update_timestamp) : 0);
 
 			const u64 delta_samples_tmp = play_delta * static_cast<u64>(cfg.audio_sampling_rate * frequency_ratio) + last_remainder;
 			last_remainder = delta_samples_tmp % 1'000'000;
@@ -1237,7 +1237,7 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 	port->cur_pos        = 0;
 	port->global_counter = g_audio.m_counter;
 	port->active_counter = 0;
-	port->timestamp      = g_audio.m_last_period_end;
+	port->timestamp      = get_guest_system_time(g_audio.m_last_period_end);
 
 	if (attr & CELL_AUDIO_PORTATTR_INITLEVEL)
 	{
@@ -1419,7 +1419,7 @@ error_code cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 	const u64 delta_tag_stamp = delta_tag * g_audio.cfg.audio_block_period;
 
 	// Apparently no error is returned if stamp is null
-	*stamp = port.timestamp - delta_tag_stamp;
+	*stamp = get_guest_system_time(port.timestamp - delta_tag_stamp);
 
 	return CELL_OK;
 }
