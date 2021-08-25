@@ -13,6 +13,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/sysctl.h>
 #endif
 
 #ifdef __linux__
@@ -437,7 +438,6 @@ namespace utils
 		m_handle = ensure(::CreateFileMappingW(f.get_handle(), nullptr, PAGE_READWRITE, 0, 0, nullptr));
 #else
 
-		// TODO: check overcommit configuration of other supported platforms to bypass rpcs3_vm creation
 #ifdef __linux__
 		if (const char c = fs::file("/proc/sys/vm/overcommit_memory").read<char>(); c == '0' || c == '1')
 		{
@@ -450,6 +450,46 @@ namespace utils
 		else
 		{
 			fprintf(stderr, "Reading /proc/sys/vm/overcommit_memory: %c", c);
+		}
+#else
+		int vm_overcommit = 0;
+		auto vm_sz = sizeof(int);
+
+#if defined(__NetBSD__) || defined(__APPLE__)
+		// Always ON
+		vm_overcommit = 0;
+#elif defined(__FreeBSD__) && defined(VM_OVERCOMMIT)
+		int mib[2]{CTL_VM, VM_OVERCOMMIT};
+		if (::sysctl(mib, 2, &vm_overcommit, &vm_sz, NULL, 0) != 0)
+			vm_overcommit = -1;
+#elif defined(__FreeBSD__) || defined(__DragonFly__)
+		if (::sysctlbyname("vm.overcommit", &vm_overcommit, &vm_sz, NULL, 0) != 0)
+			vm_overcommit = -1;
+#else
+		vm_overcommit = -1;
+#endif
+
+		if ((vm_overcommit & 3) == 0)
+		{
+#ifdef SHM_ANON
+			ensure(::shm_open(SHM_ANON, O_RDWR, S_IWUSR | S_IRUSR) == 0);
+#else
+			const std::string name = "/rpcs3-mem2-" + std::to_string(reinterpret_cast<u64>(this));
+
+			while ((m_file = ::shm_open(name.c_str(), O_RDWR | O_CREAT | O_EXCL, S_IWUSR | S_IRUSR)) == -1)
+			{
+				if (errno == EMFILE)
+				{
+					fmt::throw_exception("Too many open files. Raise the limit and try again.");
+				}
+
+				ensure(errno == EEXIST);
+			}
+
+			ensure(::shm_unlink(name.c_str()) >= 0);
+#endif
+			ensure(::ftruncate(m_file, m_size) >= 0);
+			return;
 		}
 #endif
 
