@@ -7,6 +7,7 @@
 #include "util/asm.hpp"
 
 u64 timebase_offset;
+u64 system_time_offset;
 
 #ifdef _WIN32
 
@@ -152,13 +153,6 @@ u64 get_timebased_time()
 #endif
 }
 
-// Add an offset to get_timebased_time to avoid leaking PC's uptime into the game
-void initalize_timebased_time()
-{
-	timebase_offset = 0;
-	timebase_offset = get_timebased_time();
-}
-
 // Returns some relative time in microseconds, don't change this fact
 u64 get_system_time()
 {
@@ -171,12 +165,12 @@ u64 get_system_time()
 		const u64 time = count.QuadPart;
 		const u64 freq = s_time_aux_info.perf_freq;
 
-		const u64 result = time / freq * 1000000ull + (time % freq) * 1000000ull / freq;
+		const u64 result = (time / freq * 1000000ull + (time % freq) * 1000000ull / freq) - system_time_offset;
 #else
 		struct timespec ts;
 		ensure(::clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
 
-		const u64 result = static_cast<u64>(ts.tv_sec) * 1000000ull + static_cast<u64>(ts.tv_nsec) / 1000u;
+		const u64 result = (static_cast<u64>(ts.tv_sec) * 1000000ull + static_cast<u64>(ts.tv_nsec) / 1000u) - system_time_offset;
 #endif
 
 		if (result) return result;
@@ -187,6 +181,15 @@ u64 get_system_time()
 u64 get_guest_system_time()
 {
 	return get_system_time() * g_cfg.core.clocks_scale / 100;
+}
+
+// Add an offset to get_timebased_time/get_system_time to avoid leaking PC's uptime into the game
+void initalize_time_offsets()
+{
+	timebase_offset = 0;
+	timebase_offset = get_timebased_time();
+	system_time_offset = 0;
+	system_time_offset = get_system_time();
 }
 
 // Functions
