@@ -460,6 +460,7 @@ usz fragment_program_storage_hash::operator()(const RSXFragmentProgram& program)
 	hash ^= program.texture_state.unnormalized_coords;
 	hash ^= program.texture_state.shadow_textures;
 	hash ^= program.texture_state.redirected_textures;
+	hash ^= program.texcoord_control_mask;
 
 	return hash;
 }
@@ -467,6 +468,7 @@ usz fragment_program_storage_hash::operator()(const RSXFragmentProgram& program)
 bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, const RSXFragmentProgram& binary2) const
 {
 	if (binary1.ctrl != binary2.ctrl || binary1.texture_state != binary2.texture_state ||
+		binary1.texcoord_control_mask != binary2.texcoord_control_mask ||
 		binary1.two_sided_lighting != binary2.two_sided_lighting)
 		return false;
 
