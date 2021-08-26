@@ -658,7 +658,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 				rsx_log.error("Indexed load with control override mask detected. Report this to developers!");
 			}
 
-			auto load_cmd = fmt::format("_indexed_load(i%u + %u)", m_loop_count - 1, src2.addr_reg);
+			const auto load_cmd = fmt::format("_indexed_load(i%u + %u)", m_loop_count - 1, src2.addr_reg);
 			properties.has_dynamic_register_load = true;
 			insert = false;
 
