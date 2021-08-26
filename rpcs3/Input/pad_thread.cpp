@@ -179,22 +179,19 @@ void pad_thread::Init()
 			nullpad->bindPadToDevice(m_pads[i], g_cfg_input.player[i]->device.to_string(), i);
 		}
 
-		m_pads_interface[i] = std::make_shared<Pad>(CELL_PAD_STATUS_DISCONNECTED, pad_settings[i].device_capability, pad_settings[i].device_type);
-		*m_pads_interface[i] = *m_pads[i];
-
 		input_log.notice("Pad %d: %s", i, g_cfg_input.player[i]->device.to_string());
 	}
 }
 
 void pad_thread::SetRumble(const u32 pad, u8 largeMotor, bool smallMotor)
 {
-	if (pad > m_pads_interface.size())
+	if (pad > m_pads.size())
 		return;
 
-	if (m_pads_interface[pad]->m_vibrateMotors.size() >= 2)
+	if (m_pads[pad]->m_vibrateMotors.size() >= 2)
 	{
-		m_pads_interface[pad]->m_vibrateMotors[0].m_value = largeMotor;
-		m_pads_interface[pad]->m_vibrateMotors[1].m_value = smallMotor ? 255 : 0;
+		m_pads[pad]->m_vibrateMotors[0].m_value = largeMotor;
+		m_pads[pad]->m_vibrateMotors[1].m_value = smallMotor ? 255 : 0;
 	}
 }
 
@@ -229,25 +226,14 @@ void pad_thread::ThreadFunc()
 
 		u32 connected_devices = 0;
 
-		// Copy public pad data - which might have been changed - to internal pads
 		{
 			std::lock_guard lock(pad::g_pad_mutex);
 
-			for (usz i = 0; i < m_pads.size(); i++)
+			for (auto& cur_pad_handler : handlers)
 			{
-				*m_pads[i] = *m_pads_interface[i];
+				cur_pad_handler.second->ThreadProc();
+				connected_devices += cur_pad_handler.second->connected_devices;
 			}
-		}
-
-		for (auto& cur_pad_handler : handlers)
-		{
-			cur_pad_handler.second->ThreadProc();
-			connected_devices += cur_pad_handler.second->connected_devices;
-		}
-
-		// Copy new internal pad data back to public pads
-		{
-			std::lock_guard lock(pad::g_pad_mutex);
 
 			m_info.now_connect = connected_devices + num_ldd_pad;
 
@@ -287,8 +273,6 @@ void pad_thread::ThreadFunc()
 						}
 					}
 				}
-
-				*m_pads_interface[i] = *pad;
 			}
 
 			if (input_ignored && !any_button_pressed)
@@ -325,8 +309,6 @@ void pad_thread::InitLddPad(u32 handle)
 		50
 	);
 
-	*m_pads_interface[handle] = *m_pads[handle];
-
 	num_ldd_pad++;
 }
 
@@ -350,7 +332,6 @@ void pad_thread::UnregisterLddPad(u32 handle)
 	ensure(handle < m_pads.size());
 
 	m_pads[handle]->ldd = false;
-	m_pads_interface[handle]->ldd = false;
 
 	num_ldd_pad--;
 }
