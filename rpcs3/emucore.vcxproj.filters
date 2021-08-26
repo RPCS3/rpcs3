@@ -982,8 +982,12 @@
     <ClCompile Include="Emu\RSX\Program\VertexProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Program\CgBinaryFragmentProgram.cpp" />
-    <ClCompile Include="Emu\RSX\Program\CgBinaryVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\Program\CgBinaryFragmentProgram.cpp">
+      <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Program\CgBinaryVertexProgram.cpp">
+      <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Program\ProgramStateCache.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClCompile>
