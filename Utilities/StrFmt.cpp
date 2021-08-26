@@ -16,7 +16,7 @@
 #endif
 
 #ifdef _WIN32
-std::string wchar_to_utf8(wchar_t *src)
+std::string wchar_to_utf8(const wchar_t *src)
 {
 	std::string utf8_string;
 	const auto tmp_size = WideCharToMultiByte(CP_UTF8, 0, src, -1, nullptr, 0, nullptr, nullptr);

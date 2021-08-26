@@ -21,9 +21,14 @@ XAudio2Backend::XAudio2Backend()
 
 	// In order to prevent errors on CreateMasteringVoice, apparently we need CoInitializeEx according to:
 	// https://docs.microsoft.com/en-us/windows/win32/api/xaudio2fx/nf-xaudio2fx-xaudio2createvolumemeter
-	CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+	if (FAILED(hr) && hr != RPC_E_CHANGED_MODE)
+	{
+		XAudio.error("CoInitializeEx() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
+		return;
+	}
 
-	HRESULT hr = XAudio2Create(instance.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
+	hr = XAudio2Create(instance.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
 	if (FAILED(hr))
 	{
 		XAudio.error("XAudio2Create() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
@@ -90,7 +95,7 @@ void XAudio2Backend::Pause()
 
 void XAudio2Backend::Open(u32 /* num_buffers */)
 {
-	WAVEFORMATEX waveformatex;
+	WAVEFORMATEX waveformatex{};
 	waveformatex.wFormatTag = m_convert_to_u16 ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
 	waveformatex.nChannels = m_channels;
 	waveformatex.nSamplesPerSec = m_sampling_rate;
@@ -133,8 +138,7 @@ bool XAudio2Backend::AddData(const void* src, u32 num_samples)
 		return false;
 	}
 
-	XAUDIO2_BUFFER buffer;
-
+	XAUDIO2_BUFFER buffer{};
 	buffer.AudioBytes = num_samples * m_sample_size;
 	buffer.Flags = 0;
 	buffer.LoopBegin = XAUDIO2_NO_LOOP_REGION;
