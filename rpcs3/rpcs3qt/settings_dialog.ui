@@ -3396,6 +3396,13 @@
                </widget>
               </item>
               <item>
+               <widget class="QCheckBox" name="cb_show_same_buttons_dialog">
+                <property name="text">
+                 <string>Show Duplicate Buttons Dialog</string>
+                </property>
+               </widget>
+              </item>
+              <item>
                <spacer name="guiTabSpacerRight">
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>
