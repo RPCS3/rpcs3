@@ -34,6 +34,8 @@ downloader::~downloader()
 
 void downloader::start(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title, bool keep_progress_dialog_open, int expected_size)
 {
+	network_log.notice("Starting download from URL: %s", url);
+
 	if (m_thread)
 	{
 		if (m_thread->isRunning())
