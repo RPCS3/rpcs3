@@ -763,7 +763,7 @@ bool gs_frame::event(QEvent* ev)
 			Emu.CallAfter([this, &result, &called]()
 			{
 				m_gui_settings->ShowConfirmationBox(tr("Exit Game?"),
-					tr("Do you really want to exit the game?\n\nAny unsaved progress will be lost!\n"),
+					tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>"),
 					gui::ib_confirm_exit, &result, nullptr);
 
 				called = true;

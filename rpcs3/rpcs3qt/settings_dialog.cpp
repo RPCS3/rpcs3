@@ -1909,10 +1909,10 @@ int settings_dialog::exec()
 			m_gui_settings->ShowConfirmationBox(
 				tr("Remove obsolete settings?"),
 				tr(
-					"Your config file contains one or more obsolete entries.\n"
-					"Consider that a removal might render them invalid for other versions of RPCS3.\n"
-					"\n"
-					"Do you wish to let the program remove them for you now?\n"
+					"Your config file contains one or more obsolete entries.<br>"
+					"Consider that a removal might render them invalid for other versions of RPCS3.<br>"
+					"<br>"
+					"Do you wish to let the program remove them for you now?<br>"
 					"This change will only be final when you save the config."
 				), gui::ib_obsolete_cfg, &result, this);
 
