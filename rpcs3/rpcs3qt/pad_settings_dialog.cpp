@@ -1525,13 +1525,48 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 		return;
 	}
 
+	m_duplicate_buttons[m_last_player_id] = "";
+
+	auto& player = g_cfg_input.player[m_last_player_id];
+	m_last_player_id = new_player_id;
+
+	// Check for invalid selection
+	if (!ui->chooseDevice->isEnabled() || ui->chooseDevice->currentIndex() < 0)
+	{
+		const u32 played_id = GetPlayerIndex();
+		g_cfg_input.player[played_id]->handler.from_default();
+		g_cfg_input.player[played_id]->device.from_default();
+		g_cfg_input.player[played_id]->config.from_default();
+
+		return;
+	}
+
+	// Check for duplicate button choices
+	if (m_handler->m_type != pad_handler::null)
+	{
+		std::set<std::string> unique_keys;
+		for (const auto& entry : m_cfg_entries)
+		{
+			// Let's ignore special keys, unless we're using a keyboard
+			if (entry.first == button_ids::id_pressure_intensity && m_handler->m_type != pad_handler::keyboard)
+				continue;
+
+			if (const auto& [it, ok] = unique_keys.insert(entry.second.key); !ok)
+			{
+				m_duplicate_buttons[m_last_player_id] = entry.second.key;
+				break;
+			}
+		}
+	}
+
+	// Apply buttons
 	for (const auto& entry : m_cfg_entries)
 	{
 		entry.second.cfg_text->from_string(entry.second.key);
 	}
 
-	auto& cfg = g_cfg_input.player[m_last_player_id]->config;
-	m_last_player_id = new_player_id;
+	// Apply rest of config
+	auto& cfg = player->config;
 
 	cfg.lstickmultiplier.set(ui->stick_multi_left->value() * 100);
 	cfg.rstickmultiplier.set(ui->stick_multi_right->value() * 100);
@@ -1580,13 +1615,22 @@ void pad_settings_dialog::SaveExit()
 {
 	ApplyCurrentPlayerConfig(m_last_player_id);
 
-	// Check for invalid selection
-	if (!ui->chooseDevice->isEnabled() || ui->chooseDevice->currentIndex() < 0)
+	for (const auto& [player_id, key] : m_duplicate_buttons)
 	{
-		const u32 played_id = GetPlayerIndex();
-		g_cfg_input.player[played_id]->handler.from_default();
-		g_cfg_input.player[played_id]->device.from_default();
-		g_cfg_input.player[played_id]->config.from_default();
+		if (!key.empty())
+		{
+			int result = QMessageBox::Yes;
+			m_gui_settings->ShowConfirmationBox(
+				tr("Warning!"),
+				tr("The %0 button <b>%1</b> of <b>Player %2</b> was assigned at least twice.<br>Please consider adjusting the configuration.<br><br>Continue anyway?<br>")
+					.arg(qstr(g_cfg_input.player[player_id]->handler.to_string())).arg(qstr(key)).arg(player_id + 1),
+				gui::ib_same_buttons, &result, this);
+
+			if (result == QMessageBox::No)
+				return;
+
+			break;
+		}
 	}
 
 	if (m_title_id.empty())
