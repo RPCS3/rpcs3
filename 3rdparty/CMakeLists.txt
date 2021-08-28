@@ -2,6 +2,8 @@ find_package(PkgConfig)
 include(ExternalProject)
 include(CMakeDependentOption)
 
+set(CMAKE_CXX_STANDARD 20)
+
 # Dummy target to use when lib isn't available
 add_library(3rdparty_dummy_lib INTERFACE)
 
