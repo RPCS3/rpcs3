@@ -1578,7 +1578,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		});
 
 		// colorize preview icons
-		auto add_colored_icon = [this](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor())
+		const auto add_colored_icon = [this](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor())
 		{
 			QLabel* text = new QLabel(button->text());
 			text->setObjectName("color_button");
@@ -1602,13 +1602,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			button->layout()->addWidget(text);
 		};
 
-		auto add_colored_icons = [add_colored_icon, this]()
-		{
-			add_colored_icon(ui->pb_gl_icon_color, m_gui_settings->GetValue(gui::gl_iconColor).value<QColor>());
-			add_colored_icon(ui->pb_sd_icon_color, m_gui_settings->GetValue(gui::sd_icon_color).value<QColor>());
-			add_colored_icon(ui->pb_tr_icon_color, m_gui_settings->GetValue(gui::tr_icon_color).value<QColor>());
-		};
-		add_colored_icons();
+		add_colored_icon(ui->pb_gl_icon_color, m_gui_settings->GetValue(gui::gl_iconColor).value<QColor>());
+		add_colored_icon(ui->pb_sd_icon_color, m_gui_settings->GetValue(gui::sd_icon_color).value<QColor>());
+		add_colored_icon(ui->pb_tr_icon_color, m_gui_settings->GetValue(gui::tr_icon_color).value<QColor>());
 
 		ui->cb_show_welcome->setChecked(m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
 		ui->cb_show_exit_game->setChecked(m_gui_settings->GetValue(gui::ib_confirm_exit).toBool());
