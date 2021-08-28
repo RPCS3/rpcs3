@@ -584,16 +584,20 @@ int main(int argc, char** argv)
 			hhdr = curl_slist_append(hhdr, "Accept: application/vnd.github.v3+json");
 			hhdr = curl_slist_append(hhdr, "User-Agent: curl/7.37.0");
 
-			curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hhdr);
-			curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](const char* ptr, usz, usz size, void* json) -> usz
+			CURLcode err = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, hhdr);
+			if (err != CURLE_OK) fprintf(stderr, "curl_easy_setopt(CURLOPT_HTTPHEADER) error: %s", curl_easy_strerror(err));
+
+			err = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, +[](const char* ptr, usz, usz size, void* json) -> usz
 			{
 				static_cast<QByteArray*>(json)->append(ptr, size);
 				return size;
 			});
-			curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
+			if (err != CURLE_OK) fprintf(stderr, "curl_easy_setopt(CURLOPT_WRITEFUNCTION) error: %s", curl_easy_strerror(err));
+
+			err = curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
+			if (err != CURLE_OK) fprintf(stderr, "curl_easy_setopt(CURLOPT_WRITEDATA) error: %s", curl_easy_strerror(err));
 
 			u32 page = 1;
-
 			constexpr u32 per_page = 100;
 
 			while (page <= 55)
@@ -603,8 +607,19 @@ int main(int argc, char** argv)
 				if (!from.empty())
 					fmt::append(url, "&sha=%s", from);
 
-				curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-				curl_easy_perform(curl);
+				err = curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+				if (err != CURLE_OK)
+				{
+					fprintf(stderr, "curl_easy_setopt(CURLOPT_URL, %s) error: %s", url.c_str(), curl_easy_strerror(err));
+					break;
+				}
+
+				err = curl_easy_perform(curl);
+				if (err != CURLE_OK)
+				{
+					fprintf(stderr, "Curl error:\n%s", curl_easy_strerror(err));
+					break;
+				}
 
 				QJsonDocument info = QJsonDocument::fromJson(buf);
 

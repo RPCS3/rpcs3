@@ -8,7 +8,7 @@
 #include "Crypto/sha256.h"
 #include "util/logs.hpp"
 
-LOG_CHANNEL(network_log, "NETWORK");
+LOG_CHANNEL(network_log, "NET");
 
 usz curl_write_cb_compat(char* ptr, usz /*size*/, usz nmemb, void* userdata)
 {
@@ -48,10 +48,17 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 	m_curl_buf.clear();
 	m_curl_abort = false;
 
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, url.c_str());
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEFUNCTION, curl_write_cb_compat);
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEDATA, this);
-	curl_easy_setopt(m_curl->get_curl(), CURLOPT_FOLLOWLOCATION, follow_location ? 1 : 0);
+	CURLcode err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, url.c_str());
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_URL, %s) error: %s", url, curl_easy_strerror(err));
+
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEFUNCTION, curl_write_cb_compat);
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_WRITEFUNCTION, curl_write_cb_compat) error: %s", curl_easy_strerror(err));
+
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEDATA, this);
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_WRITEDATA) error: %s", curl_easy_strerror(err));
+
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_FOLLOWLOCATION, follow_location ? 1 : 0);
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_FOLLOWLOCATION, %d) error: %s", follow_location, curl_easy_strerror(err));
 
 	m_thread = QThread::create([this]
 	{
