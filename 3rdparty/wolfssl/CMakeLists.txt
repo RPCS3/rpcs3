@@ -1,4 +1,3 @@
-
 if(USE_SYSTEM_WOLFSSL)
 	message("-- RPCS3: using shared wolfssl")
 	pkg_check_modules(WolfSSL REQUIRED IMPORTED_TARGET wolfssl>=4.7.0)
@@ -36,15 +35,16 @@ else()
 	endif()
 
 	if(MSVC)
-		set(WolfSSL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/wolfssl.lib")
+		set(WolfSSL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/${CMAKE_BUILD_TYPE}/wolfssl.lib" CACHE INTERNAL "")
 	else()
-		set(WolfSSL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/libwolfssl.a")
+		set(WolfSSL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/libwolfssl.a" CACHE INTERNAL "")
 	endif()
 
 	# "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/wolfssl/" provides openssl headers
 	# So that curl can be built on an environment where openssl headers are not provided
 	set(WolfSSL_INCLUDE_DIR
-        "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/"
-        "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/wolfssl/"
-        "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/")
+		"${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/"
+		"${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/wolfssl/"
+		"${CMAKE_CURRENT_BINARY_DIR}/wolfssl/"
+		CACHE INTERNAL "")
 endif()
