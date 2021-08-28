@@ -43,7 +43,8 @@ namespace vm
 		page_readable           = (1 << 0),
 		page_writable           = (1 << 1),
 		page_executable         = (1 << 2),
-
+		page_prot_mask          = page_readable | page_writable | page_executable,
+	
 		page_fault_notification = (1 << 3),
 		page_no_reservations    = (1 << 4),
 		page_64k_size           = (1 << 5),

@@ -319,17 +319,17 @@ void ppu_recompiler_fallback(ppu_thread& ppu)
 
 	while (true)
 	{
+		if (uptr func = ppu_ref(ppu.cia); (func << 17 >> 17) != reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
+		{
+			// We found a recompiler function at cia, return
+			break;
+		}
+
 		// Run instructions in interpreter
 		if (const u32 op = vm::read32(ppu.cia); ctr++, table[ppu_decode(op)](ppu, {op})) [[likely]]
 		{
 			ppu.cia += 4;
 			continue;
-		}
-
-		if (uptr func = ppu_ref(ppu.cia); (func << 17 >> 17) != reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
-		{
-			// We found a recompiler function at cia, return
-			break;
 		}
 
 		if (ppu.test_stopped())
@@ -411,7 +411,7 @@ extern void ppu_register_range(u32 addr, u32 size)
 
 	// Register executable range at
 	utils::memory_commit(&ppu_ref(addr), u64{size} * 2, utils::protection::rw);
-	vm::page_protect(addr, size, 0, vm::page_executable);
+	ensure(vm::page_protect(addr, size, 0, vm::page_executable));
 
 	if (g_cfg.core.ppu_debug)
 	{
@@ -438,7 +438,9 @@ extern void ppu_register_range(u32 addr, u32 size)
 	}
 }
 
-extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
+static bool ppu_far_jump(ppu_thread& ppu);
+
+extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr = nullptr)
 {
 	// Initialize specific function
 	if (ptr)
@@ -464,16 +466,91 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_function_t ptr)
 
 	// Initialize interpreter cache
 	const u64 _break = reinterpret_cast<uptr>(ppu_break);
+	const u64 far_jump = reinterpret_cast<uptr>(ppu_far_jump);
 
 	while (size)
 	{
-		if (ppu_ref(addr) != _break)
+		if (ppu_ref(addr) != _break && ppu_ref(addr) != far_jump)
 		{
 			ppu_ref(addr) = ppu_cache(addr);
 		}
 
 		addr += 4;
 		size -= 4;
+	}
+}
+
+extern void ppu_register_function_at(u32 addr, u32 size, u64 ptr)
+{
+	return ppu_register_function_at(addr, size, reinterpret_cast<ppu_function_t>(ptr));
+}
+
+struct ppu_far_jumps_t
+{
+	std::unordered_map<u32, u32> vals;
+
+	mutable shared_mutex mutex;
+
+	u32 get_target(u32 pc) const
+	{
+		reader_lock lock(mutex);
+
+		if (auto it = vals.find(pc); it != vals.end())
+		{
+			return it->second;
+		}
+
+		return 0;
+	}
+};
+
+u32 ppu_get_far_jump(u32 pc)
+{
+	return g_fxo->get<const ppu_far_jumps_t>().get_target(pc);
+}
+	
+static bool ppu_far_jump(ppu_thread& ppu)
+{
+	ppu.cia = g_fxo->get<const ppu_far_jumps_t>().get_target(ppu.cia);
+	return false;
+}
+
+bool ppu_form_branch_to_code(u32 entry, u32 target)
+{
+	entry &= -4;
+	target &= -4;
+
+	if (entry == target || vm::check_addr(entry, vm::page_executable) || !vm::check_addr(target, vm::page_executable))
+	{
+		return false;
+	}
+
+	g_fxo->init<ppu_far_jumps_t>();
+
+	// Register branch target in host memory, not guest memory
+	auto& jumps = g_fxo->get<ppu_far_jumps_t>();
+
+	std::lock_guard lock(jumps.mutex);
+	jumps.vals.insert_or_assign(entry, target);
+
+	return true;
+}
+
+void ppu_remove_hle_instructions(u32 addr, u32 size)
+{
+	auto& jumps = g_fxo->get<ppu_far_jumps_t>();
+
+	std::lock_guard lock(jumps.mutex);
+
+	for (auto it = jumps.vals.begin(); it != jumps.vals.end();)
+	{
+		if (it->first >= addr && it->first <= addr + size - 1 && size)
+		{
+			it = jumps.vals.erase(it);
+			continue;
+		}
+
+		it++;
 	}
 }
 
@@ -607,6 +684,14 @@ extern bool ppu_patch(u32 addr, u32 value)
 std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 {
 	std::array<u32, 2> res{pc + 4, umax};
+
+	g_fxo->need<ppu_far_jumps_t>();
+
+	if (u32 target = g_fxo->get<const ppu_far_jumps_t>().get_target(pc))
+	{
+		res[0] = target;
+		return res;
+	}
 
 	switch (const auto type = g_ppu_itype.decode(op.opcode))
 	{
@@ -1409,10 +1494,10 @@ void ppu_trap(ppu_thread& ppu, u64 addr)
 	ppu.cia += add; // Skip instructions, hope for valid code (interprter may be invoked temporarily)
 }
 
-[[noreturn]] static void ppu_error(ppu_thread& ppu, u64 addr, u32 op)
+static void ppu_error(ppu_thread& ppu, u64 addr, u32 op)
 {
 	ppu.cia = ::narrow<u32>(addr);
-	fmt::throw_exception("Unknown/Illegal opcode 0x08x (0x%llx)", op, addr);
+	ppu_recompiler_fallback(ppu);
 }
 
 static void ppu_check(ppu_thread& ppu, u64 addr)
@@ -2707,7 +2792,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 		{
 			for (auto& block : func.blocks)
 			{
-				ppu_register_function_at(block.first, block.second, nullptr);
+				ppu_register_function_at(block.first, block.second);
 			}
 
 			if (g_cfg.core.ppu_debug && func.size && func.toc != umax)
@@ -3166,7 +3251,7 @@ bool ppu_initialize(const ppu_module& info, bool check_only)
 			const auto name = fmt::format("__0x%x", func.addr - reloc);
 			const u64 addr = ensure(jit->get(name));
 			jit_mod.funcs.emplace_back(reinterpret_cast<ppu_function_t>(addr));
-			ppu_ref(func.addr) = (addr & 0x7fff'ffff'ffffu) | (ppu_ref(func.addr) & ~0x7fff'ffff'ffffu);
+			ppu_register_function_at(func.addr, 4, jit_mod.funcs.back());
 
 			if (g_cfg.core.ppu_debug)
 				ppu_log.notice("Installing function %s at 0x%x: %p (reloc = 0x%x)", name, func.addr, ppu_ref(func.addr), reloc);
