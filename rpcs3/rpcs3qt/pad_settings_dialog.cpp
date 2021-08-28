@@ -1037,6 +1037,11 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 {
 	m_enable_buttons = is_enabled;
 
+	ui->chb_show_emulated_values->setEnabled(is_enabled);
+	ui->stick_multi_left->setEnabled(is_enabled);
+	ui->stick_multi_right->setEnabled(is_enabled);
+	ui->squircle_left->setEnabled(is_enabled);
+	ui->squircle_right->setEnabled(is_enabled);
 	ui->gb_pressure_intensity->setEnabled(is_enabled && m_enable_pressure_intensity_button);
 	ui->gb_vibration->setEnabled(is_enabled && m_enable_rumble);
 	ui->gb_sticks->setEnabled(is_enabled && m_enable_deadzones);
@@ -1047,6 +1052,8 @@ void pad_settings_dialog::SwitchButtons(bool is_enabled)
 	ui->gb_mouse_accel->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_mouse_dz->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
 	ui->gb_stick_lerp->setEnabled(is_enabled && m_handler->m_type == pad_handler::keyboard);
+	ui->chooseClass->setEnabled(is_enabled && ui->chooseClass->count() > 0);
+	ui->chooseProduct->setEnabled(is_enabled && ui->chooseProduct->count() > 0);
 	ui->buttonBox->button(QDialogButtonBox::Reset)->setEnabled(is_enabled && m_handler->m_type != pad_handler::keyboard);
 
 	for (int i = button_ids::id_pad_begin + 1; i < button_ids::id_pad_end; i++)
@@ -1317,8 +1324,6 @@ void pad_settings_dialog::ChangeHandler()
 
 	ui->buttonBox->button(QDialogButtonBox::RestoreDefaults)->setEnabled(!is_ldd_pad);
 	ui->chooseDevice->setEnabled(config_enabled && ui->chooseDevice->count() > 0);
-	ui->chooseClass->setEnabled(config_enabled && ui->chooseClass->count() > 0);
-	ui->chooseProduct->setEnabled(config_enabled && ui->chooseProduct->count() > 0);
 	ui->chooseHandler->setEnabled(!is_ldd_pad && ui->chooseHandler->count() > 0);
 
 	// Re-enable input timer
