@@ -244,11 +244,8 @@ void pad_thread::ThreadFunc()
 		{
 			const auto& pad = m_pads[i];
 
-			// I guess this is the best place to add pressure sensitivity without too much code duplication.
 			if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
 			{
-				const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
-
 				for (auto& button : pad->m_buttons)
 				{
 					if (button.m_pressed)
@@ -261,11 +258,6 @@ void pad_thread::ThreadFunc()
 							button.m_outKeyCode == CELL_PAD_CTRL_SELECT)
 						{
 							any_button_pressed = true;
-						}
-
-						if (adjust_pressure)
-						{
-							button.m_value = pad->m_pressure_intensity;
 						}
 					}
 				}

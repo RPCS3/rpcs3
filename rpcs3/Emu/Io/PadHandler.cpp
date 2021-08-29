@@ -552,12 +552,25 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 
 	auto button_values = get_button_values(device);
 
+	// Find out if special buttons are pressed (introduced by RPCS3).
+	// These buttons will have a delay of one cycle, but whatever.
+	const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
+
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (auto& btn : pad->m_buttons)
 	{
-		Button tmp = btn; // Using a buffer because the values can change during translation
+		// Using a temporary buffer because the values can change during translation
+		Button tmp = btn;
 		tmp.m_value = button_values[btn.m_keyCode];
+
 		TranslateButtonPress(device, tmp.m_keyCode, tmp.m_pressed, tmp.m_value);
+
+		// Modify pressure if necessary if the button was pressed
+		if (adjust_pressure && tmp.m_pressed)
+		{
+			tmp.m_value = pad->m_pressure_intensity;
+		}
+
 		btn = tmp;
 	}
 

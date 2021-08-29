@@ -753,6 +753,10 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 
 	auto axis_orientations = m_dev->axis_orientations;
 
+	// Find out if special buttons are pressed (introduced by RPCS3).
+	// These buttons will have a delay of one cycle, but whatever.
+	const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
+
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (int i = 0; i < static_cast<int>(pad->m_buttons.size()); i++)
 	{
@@ -782,9 +786,18 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 			}
 		}
 
-		Button tmp = button; // Using a buffer because the values can change during translation
+		// Using a temporary buffer because the values can change during translation
+		Button tmp = button;
 		tmp.m_value = static_cast<u16>(value);
+
 		TranslateButtonPress(m_dev, button_code, tmp.m_pressed, tmp.m_value);
+
+		// Modify pressure if necessary if the button was pressed
+		if (adjust_pressure && tmp.m_pressed)
+		{
+			tmp.m_value = pad->m_pressure_intensity;
+		}
+
 		button = tmp;
 	}
 
