@@ -782,8 +782,10 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 			}
 		}
 
-		button.m_value = static_cast<u16>(value);
-		TranslateButtonPress(m_dev, button_code, button.m_pressed, button.m_value);
+		Button tmp = button; // Using a buffer because the values can change during translation
+		tmp.m_value = static_cast<u16>(value);
+		TranslateButtonPress(m_dev, button_code, tmp.m_pressed, tmp.m_value);
+		button = tmp;
 	}
 
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)

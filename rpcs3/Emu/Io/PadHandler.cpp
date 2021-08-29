@@ -555,8 +555,10 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (auto& btn : pad->m_buttons)
 	{
-		btn.m_value = button_values[btn.m_keyCode];
-		TranslateButtonPress(device, btn.m_keyCode, btn.m_pressed, btn.m_value);
+		Button tmp = btn; // Using a buffer because the values can change during translation
+		tmp.m_value = button_values[btn.m_keyCode];
+		TranslateButtonPress(device, tmp.m_keyCode, tmp.m_pressed, tmp.m_value);
+		btn = tmp;
 	}
 
 	// used to get the absolute value of an axis
