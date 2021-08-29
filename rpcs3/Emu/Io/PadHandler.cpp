@@ -548,7 +548,7 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 	if (!device || !pad)
 		return;
 
-	auto profile = device->config;
+	auto cfg = device->config;
 
 	auto button_values = get_button_values(device);
 
@@ -584,8 +584,8 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 	u16 lx, ly, rx, ry;
 
 	// Normalize and apply pad squircling
-	convert_stick_values(lx, ly, stick_val[0], stick_val[1], profile->lstickdeadzone, profile->lpadsquircling);
-	convert_stick_values(rx, ry, stick_val[2], stick_val[3], profile->rstickdeadzone, profile->rpadsquircling);
+	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lpadsquircling);
+	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rpadsquircling);
 
 	if (m_type == pad_handler::ds4)
 	{
