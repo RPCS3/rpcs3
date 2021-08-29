@@ -544,8 +544,10 @@ int main(int argc, char** argv)
 	{
 #ifdef _WIN32
 		if (AttachConsole(ATTACH_PARENT_PROCESS) || AllocConsole())
+		{
 			[[maybe_unused]] const auto con_out = freopen("CONOUT$", "w", stdout);
 			[[maybe_unused]] const auto con_err = freopen("CONOUT$", "w", stderr);
+		}
 
 		std::string path;
 #else
@@ -751,7 +753,7 @@ int main(int argc, char** argv)
 
 		curl_slist_free_all(hhdr);
 
-		fprintf(stdout, "Finished fetching commits\n", path.c_str());
+		fprintf(stdout, "Finished fetching commits: %s\n", path.c_str());
 		return 0;
 	}
 
