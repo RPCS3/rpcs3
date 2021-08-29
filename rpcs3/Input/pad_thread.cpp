@@ -226,59 +226,55 @@ void pad_thread::ThreadFunc()
 
 		u32 connected_devices = 0;
 
+		for (auto& cur_pad_handler : handlers)
 		{
-			std::lock_guard lock(pad::g_pad_mutex);
+			cur_pad_handler.second->ThreadProc();
+			connected_devices += cur_pad_handler.second->connected_devices;
+		}
 
-			for (auto& cur_pad_handler : handlers)
+		m_info.now_connect = connected_devices + num_ldd_pad;
+
+		// The input_ignored section is only reached when a dialog was closed and the pads are still intercepted.
+		// As long as any of the listed buttons is pressed, cellPadGetData will ignore all input (needed for Hotline Miami).
+		// ignore_input was added because if we keep the pads intercepted, then some games will enter the menu due to unexpected system interception (tested with Ninja Gaiden Sigma).
+		const bool input_ignored = m_info.ignore_input && !(m_info.system_info & CELL_PAD_INFO_INTERCEPTED);
+		bool any_button_pressed = false;
+
+		for (usz i = 0; i < m_pads.size(); i++)
+		{
+			const auto& pad = m_pads[i];
+
+			// I guess this is the best place to add pressure sensitivity without too much code duplication.
+			if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
 			{
-				cur_pad_handler.second->ThreadProc();
-				connected_devices += cur_pad_handler.second->connected_devices;
-			}
+				const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
 
-			m_info.now_connect = connected_devices + num_ldd_pad;
-
-			// The input_ignored section is only reached when a dialog was closed and the pads are still intercepted.
-			// As long as any of the listed buttons is pressed, cellPadGetData will ignore all input (needed for Hotline Miami).
-			// ignore_input was added because if we keep the pads intercepted, then some games will enter the menu due to unexpected system interception (tested with Ninja Gaiden Sigma).
-			const bool input_ignored = m_info.ignore_input && !(m_info.system_info & CELL_PAD_INFO_INTERCEPTED);
-			bool any_button_pressed = false;
-
-			for (usz i = 0; i < m_pads.size(); i++)
-			{
-				const auto& pad = m_pads[i];
-
-				// I guess this is the best place to add pressure sensitivity without too much code duplication.
-				if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
+				for (auto& button : pad->m_buttons)
 				{
-					const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
-
-					for (auto& button : pad->m_buttons)
+					if (button.m_pressed)
 					{
-						if (button.m_pressed)
+						if (button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
+							button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
+							button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
+							button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
+							button.m_outKeyCode == CELL_PAD_CTRL_START ||
+							button.m_outKeyCode == CELL_PAD_CTRL_SELECT)
 						{
-							if (button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
-								button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
-								button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
-								button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
-								button.m_outKeyCode == CELL_PAD_CTRL_START ||
-								button.m_outKeyCode == CELL_PAD_CTRL_SELECT)
-							{
-								any_button_pressed = true;
-							}
+							any_button_pressed = true;
+						}
 
-							if (adjust_pressure)
-							{
-								button.m_value = pad->m_pressure_intensity;
-							}
+						if (adjust_pressure)
+						{
+							button.m_value = pad->m_pressure_intensity;
 						}
 					}
 				}
 			}
+		}
 
-			if (input_ignored && !any_button_pressed)
-			{
-				m_info.ignore_input = false;
-			}
+		if (input_ignored && !any_button_pressed)
+		{
+			m_info.ignore_input = false;
 		}
 
 		std::this_thread::sleep_for(1ms);
