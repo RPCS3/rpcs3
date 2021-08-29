@@ -655,7 +655,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	}
 
 	if (num < min_threads || num > max_threads ||
-		(needs_root && min_prio == 0x10) || (use_scheduler && !is_system_coop && && (prio > 255 || prio < min_prio)))
+		(needs_root && min_prio == 0x10) || (use_scheduler && !is_system_coop && (prio > 255 || prio < min_prio)))
 	{
 		return CELL_EINVAL;
 	}
