@@ -2451,6 +2451,9 @@ protected:
 	// Allow skylake-x tier AVX-512
 	bool m_use_avx512 = false;
 
+	// Allow VNNI
+	bool m_use_vnni = false;
+
 	// Allow Icelake tier AVX-512
 	bool m_use_avx512_icl = false;
 
