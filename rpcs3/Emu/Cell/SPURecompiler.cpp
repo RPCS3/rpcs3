@@ -7032,8 +7032,7 @@ public:
 
 	void SUMB(spu_opcode_t op)
 	{
-		// TODO: Some future CPUS will support VNNI but not avx512
-		if (m_use_avx512_icl)
+		if (m_use_vnni)
 		{
 			const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
 			const auto zeroes = splat<u32[4]>(0);
