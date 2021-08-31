@@ -13,6 +13,9 @@
 #include <errno.h>
 #include <unistd.h>
 #include <sys/types.h>
+#endif
+
+#if !defined(__linux__) && !defined(_WIN32)
 #include <sys/sysctl.h>
 #endif
 
