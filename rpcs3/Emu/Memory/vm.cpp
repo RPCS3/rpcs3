@@ -784,12 +784,9 @@ namespace vm
 		flags_set   &= ~flags_both;
 		flags_clear &= ~flags_both;
 
-		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
+		if (!check_addr(addr, flags_test, size))
 		{
-			if ((g_pages[i] & flags_test) != (flags_test | page_allocated))
-			{
-				return false;
-			}
+			return false;
 		}
 
 		if (!flags_set && !flags_clear)
@@ -1208,14 +1205,28 @@ namespace vm
 			shm = std::make_shared<utils::shm>(size);
 		}
 
+		const u32 max = (this->addr + this->size - size) & (0 - align);
+
+		u32 addr = utils::align(this->addr, align);
+
+		if (this->addr > std::min(max, addr))
+		{
+			return 0;
+		}
+
 		vm::writer_lock lock(0);
 
 		// Search for an appropriate place (unoptimized)
-		for (u32 addr = utils::align(this->addr, align); u64{addr} + size <= u64{this->addr} + this->size; addr += align)
+		for (;; addr += align)
 		{
 			if (try_alloc(addr, pflags, size, std::move(shm)))
 			{
 				return addr + (flags & stack_guarded ? 0x1000 : 0);
+			}
+
+			if (addr == max)
+			{
+				break;
 			}
 		}
 
@@ -1420,11 +1431,23 @@ namespace vm
 
 	static std::shared_ptr<block_t> _find_map(u32 size, u32 align, u64 flags)
 	{
-		for (u32 addr = utils::align<u32>(0x20000000, align); addr - 1 < 0xC0000000 - 1; addr += align)
+		const u32 max = (0xC0000000 - size) & (0 - align);
+
+		if (size > 0xC0000000 - 0x20000000 || max < 0x20000000)
+		{
+			return nullptr;
+		}
+
+		for (u32 addr = utils::align<u32>(0x20000000, align);; addr += align)
 		{
 			if (_test_map(addr, size))
 			{
 				return std::make_shared<block_t>(addr, size, flags);
+			}
+
+			if (addr == max)
+			{
+				break;
 			}
 		}
 

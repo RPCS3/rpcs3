@@ -22,7 +22,7 @@ R"(
 %FFX_A_IMPORT%
 
 layout(set=0,binding=0) uniform sampler2D InputTexture;
-layout(set=0,binding=1,rgba8) uniform image2D OutputTexture;
+layout(set=0,binding=1,rgba8) uniform writeonly image2D OutputTexture;
 
 #if A_HALF
 	#if SAMPLE_EASU

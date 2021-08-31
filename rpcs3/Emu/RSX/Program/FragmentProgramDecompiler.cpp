@@ -5,6 +5,23 @@
 
 #include <algorithm>
 
+namespace rsx
+{
+	namespace fragment_program
+	{
+		static const std::string reg_table[] =
+		{
+			"wpos",
+			"diff_color", "spec_color",
+			"fogc",
+			"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7", "tc8", "tc9",
+			"ssa"
+		};
+	}
+}
+
+using namespace rsx::fragment_program;
+
 FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size)
 	: m_size(size)
 	, m_prog(prog)
@@ -534,15 +551,6 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 
 	case RSX_FP_REGISTER_TYPE_INPUT:
 	{
-		static const std::string reg_table[] =
-		{
-			"wpos",
-			"diff_color", "spec_color",
-			"fogc",
-			"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7", "tc8", "tc9",
-			"ssa"
-		};
-
 		// NOTE: Hw testing showed the following:
 		// 1. Reading from registers 1 and 2 (COL0 and COL1) is clamped to (0, 1)
 		// 2. Reading from registers 4-12 (inclusive) is not clamped, but..
@@ -550,14 +558,14 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		// 4. [A0 + N] addressing can be applied to dynamically sample texture coordinates.
 		// - This is explained in NV_fragment_program2 specification page, Fragment Attributes section.
 		// - There is no instruction that writes to the address register directly, it is supposed to be the loop counter!
-		const u32 register_id = src2.use_index_reg ? (src2.addr_reg + 4) : dst.src_attr_reg_num;
+		u32 register_id = src2.use_index_reg ? (src2.addr_reg + 4) : dst.src_attr_reg_num;
 		const std::string reg_var = (register_id < std::size(reg_table))? reg_table[register_id] : "unk";
 		bool insert = true;
 
 		if (src2.use_index_reg && m_loop_count)
 		{
-			// TODO: Actually implement dynamic register indexing (kd-11)
-			rsx_log.error("Dynamic register indexing is unimplemented. Report this to developers!");
+			// Dynamically load the input
+			register_id = 0xFF;
 		}
 
 		switch (register_id)
@@ -610,14 +618,57 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 					ret += getFloatTypeName(4) + "(gl_PointCoord, 1., 0.)";
 				}
 			}
-			else if (m_prog.texcoord_is_2d(texcoord))
+			else if (src2.perspective_corr)
 			{
-				ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., in_w)";
-				properties.has_w_access = true;
+				// Perspective correct flag multiplies the result by 1/w
+				if (m_prog.texcoord_is_2d(texcoord))
+				{
+					ret += getFloatTypeName(4) + "(" + reg_var + ".xy * gl_FragCoord.w, 0., 1.)";
+				}
+				else
+				{
+					ret += "(" + reg_var + " * gl_FragCoord.w)";
+				}
 			}
 			else
 			{
-				ret += reg_var;
+				if (m_prog.texcoord_is_2d(texcoord))
+				{
+					ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., in_w)";
+					properties.has_w_access = true;
+				}
+				else
+				{
+					ret += reg_var;
+				}
+			}
+			break;
+		}
+		case 0xFF:
+		{
+			if (m_loop_count > 1)
+			{
+				// Afaik there is only one address/loop register on NV40
+				rsx_log.error("Nested loop with indexed load was detected. Report this to developers!");
+			}
+
+			if (m_prog.texcoord_control_mask)
+			{
+				// This would require more work if it exists. It cannot be determined at compile time and has to be part of _indexed_load() subroutine.
+				rsx_log.error("Indexed load with control override mask detected. Report this to developers!");
+			}
+
+			const auto load_cmd = fmt::format("_indexed_load(i%u + %u)", m_loop_count - 1, src2.addr_reg);
+			properties.has_dynamic_register_load = true;
+			insert = false;
+
+			if (src2.perspective_corr)
+			{
+				ret += "(" + load_cmd + " * gl_FragCoord.w)";
+			}
+			else
+			{
+				ret += load_cmd;
 			}
 			break;
 		}
@@ -737,6 +788,15 @@ std::string FragmentProgramDecompiler::BuildCode()
 			// NOTE: Discard operation overrides output
 			rsx_log.warning("Shader does not write to any output register and will be NOPed");
 			main = "/*" + main + "*/";
+		}
+	}
+
+	if (properties.has_dynamic_register_load)
+	{
+		// Since the registers will be loaded dynamically, declare all of them
+		for (int i = 0; i < 10; ++i)
+		{
+			m_parr.AddParam(PF_PARAM_IN, getFloatTypeName(4), reg_table[i + 4]);
 		}
 	}
 
@@ -909,6 +969,28 @@ std::string FragmentProgramDecompiler::BuildCode()
 		OS << "	float y = uintBitsToFloat(packHalf2x16(_h.zw));\n";
 		OS << "	return " << float2 << "(x, y);\n";
 		OS << "}\n\n";
+	}
+
+	if (properties.has_dynamic_register_load)
+	{
+		OS <<
+		"vec4 _indexed_load(int index)\n"
+		"{\n"
+		"	switch (index)\n"
+		"	{\n"
+		"		case 0: return tc0;\n"
+		"		case 1: return tc1;\n"
+		"		case 2: return tc2;\n"
+		"		case 3: return tc3;\n"
+		"		case 4: return tc4;\n"
+		"		case 5: return tc5;\n"
+		"		case 6: return tc6;\n"
+		"		case 7: return tc7;\n"
+		"		case 8: return tc8;\n"
+		"		case 9: return tc9;\n"
+		"	}\n"
+		"	return vec4(0., 0., 0., 1.);\n"
+		"}\n\n";
 	}
 
 	insertMainStart(OS);

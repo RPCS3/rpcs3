@@ -856,8 +856,8 @@ void keyboard_pad_handler::ThreadProc()
 
 		if (last_connection_status[i] == false)
 		{
-			pad.m_port_status |= CELL_PAD_STATUS_CONNECTED;
-			pad.m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
+			m_bindings[i]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
+			m_bindings[i]->m_port_status |= CELL_PAD_STATUS_ASSIGN_CHANGES;
 			last_connection_status[i] = true;
 			connected_devices++;
 		}
@@ -950,6 +950,5 @@ void keyboard_pad_handler::ThreadProc()
 		auto& pad = m_bindings[i];
 		pad->m_buttons = m_pads_internal[i].m_buttons;
 		pad->m_sticks = m_pads_internal[i].m_sticks;
-		pad->m_port_status = m_pads_internal[i].m_port_status;
 	}
 }

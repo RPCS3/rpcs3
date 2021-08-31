@@ -2,10 +2,12 @@
 #include "File.h"
 #include "Config.h"
 #include "version.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
 #include "util/types.hpp"
 #include "util/endian.hpp"
+#include "util/asm.hpp"
 
 LOG_CHANNEL(patch_log, "PAT");
 
@@ -35,6 +37,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		switch (value)
 		{
 		case patch_type::invalid: return "invalid";
+		case patch_type::alloc: return "alloc";
 		case patch_type::load: return "load";
 		case patch_type::byte: return "byte";
 		case patch_type::le16: return "le16";
@@ -512,9 +515,84 @@ void patch_engine::append_title_patches(const std::string& title_id)
 	load(m_map, get_patches_path() + title_id + "_patch.yml");
 }
 
+void ppu_register_range(u32 addr, u32 size);
+
 static std::basic_string<u32> apply_modification(const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 min_addr)
 {
 	std::basic_string<u32> applied;
+
+	for (const auto& p : patch.data_list)
+	{
+		if (p.type != patch_type::alloc) continue;
+
+		// Do not allow null address or if dst is not a VM ptr
+		if (const u32 alloc_at = vm::try_get_addr(dst + (p.offset & -4096)).first; alloc_at >> 16)
+		{
+			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value) + alloc_at % 4096, 4096);
+
+			// Allocate map if needed, if allocated flags will indicate that bit 62 is set (unique identifier)
+			auto alloc_map = vm::reserve_map(vm::any, alloc_at & -0x10000, utils::align(alloc_size, 0x10000), vm::page_size_64k | vm::preallocated | vm::bf0_0x2 | (1ull << 62));
+
+			u64 flags = 0;
+
+			switch (p.offset % patch_engine::mem_protection::mask)
+			{
+			case patch_engine::mem_protection::wx: flags |= vm::page_writable + vm::page_readable + vm::page_executable; break;
+			case patch_engine::mem_protection::ro: flags |= vm::page_readable; break;
+			case patch_engine::mem_protection::rx: flags |= vm::page_writable + vm::page_executable; break;
+			case patch_engine::mem_protection::rw: flags |= vm::page_writable + vm::page_readable; break;
+			default: ensure(false);
+			}
+
+			if (alloc_map)
+			{
+				if (alloc_map->falloc(alloc_at, alloc_size))
+				{
+					vm::page_protect(alloc_at, alloc_size, 0, flags, flags ^ (vm::page_writable + vm::page_readable + vm::page_executable));
+
+					if (flags & vm::page_executable)
+					{
+						ppu_register_range(alloc_at, alloc_size);
+					}
+
+					applied.push_back(::narrow<u32>(&p - patch.data_list.data())); // Remember index in case of failure to allocate any memory
+					continue;
+				}
+
+				// Revert if allocated map before failure
+				if (alloc_map->flags & (1ull << 62))
+				{
+					vm::unmap(vm::any, alloc_map->addr);
+				}
+			}
+		}
+
+		// Revert in case of failure
+		for (u32 index : applied)
+		{
+			const u32 addr = patch.data_list[index].offset & -4096;
+
+			// Try different alignments until works
+			if (!vm::dealloc(addr))
+			{
+				if (!vm::dealloc(addr & -0x10000))
+				{
+					vm::dealloc(addr & -0x100000);
+				}
+			}
+
+			if (auto alloc_map = vm::get(vm::any, addr); alloc_map->flags & (1ull << 62))
+			{
+				vm::unmap(vm::any, alloc_map->addr);
+			}
+		}
+
+		applied.clear();
+		return applied;
+	}
+
+	// Fixup values from before
+	std::fill(applied.begin(), applied.end(), u32{umax});
 
 	for (const auto& p : patch.data_list)
 	{
@@ -538,6 +616,11 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 		case patch_type::load:
 		{
 			// Invalid in this context
+			continue;
+		}
+		case patch_type::alloc:
+		{
+			// Applied before
 			continue;
 		}
 		case patch_type::byte:

@@ -3,6 +3,7 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Utilities/Thread.h"
 #include "Emu/Memory/vm.h"
+#include "Emu/Audio/audio_device_listener.h"
 #include "Emu/Audio/AudioBackend.h"
 #include "Emu/Audio/AudioDumper.h"
 #include "Emu/system_config_types.h"
@@ -353,6 +354,7 @@ class cell_audio_thread
 {
 private:
 	std::unique_ptr<audio_ringbuffer> ringbuffer;
+	audio_device_listener listener;
 
 	void reset_ports(s32 offset = 0);
 	void advance(u64 timestamp, bool reset = true);
