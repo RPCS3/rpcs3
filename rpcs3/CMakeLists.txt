@@ -159,7 +159,7 @@ elseif(WIN32)
     # If we build our libs with /MT(d), we might encounter some issues.
     # https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160#what-problems-exist-if-an-application-uses-more-than-one-crt-version
 
-    # Qt installed from Qt installer hs following hierarchy:
+    # Qt installed from Qt installer has following hierarchy:
     # bin/ for release and debug dlls and windeployqt tools
     # lib/cmake/Qt5/ for Qt5_Dir
     # Qt installed from vcpkg has following hierarchy:
@@ -169,7 +169,7 @@ elseif(WIN32)
     # tools/qt5/debug/bin/ for tools with debug build including windeployqt
     # share/cmake/Qt5/ for Qt5_Dir
 
-    # If Qt5 is installed from official Qt instaler
+    # If Qt5 is installed from official Qt installer
     list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../bin/")
 
     # If Qt5 is installed from vcpkg

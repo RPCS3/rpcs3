@@ -55,7 +55,7 @@ if(MSVC)
     # https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160#what-problems-exist-if-an-application-uses-more-than-one-crt-version
     # Add other DiscordRPC binaries(compiled with /MTd, /MD, /MDd) or compile it from source may address this issue.
     if(NOT(CMAKE_BUILD_TYPE MATCHES "Release" AND USE_MSVC_STATIC_CRT))
-        set(USE_DISCORD_RPC OFF CACHE BOOL "Discrd RPC is only availiable in Relase and static CRT build." FORCE)
+        set(USE_DISCORD_RPC OFF CACHE BOOL "Discord RPC is only available in Release and static CRT build." FORCE)
     endif()
     
     if(USE_MSVC_STATIC_CRT)
