@@ -2591,6 +2591,94 @@ struct llvm_avg
 	}
 };
 
+template <typename A1, typename T = llvm_common_t<A1>>
+struct llvm_fsqrt
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_float, "llvm_fsqrt<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_float;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		llvm::Value* v = a1.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v))
+		{
+			if (auto c = llvm::ConstantFoldInstruction(ir->CreateUnaryIntrinsic(llvm::Intrinsic::sqrt, v), llvm::DataLayout("")))
+			{
+				// Will fail in some cases (such as negative constant)
+				return c;
+			}
+		}
+
+		return ir->CreateUnaryIntrinsic(llvm::Intrinsic::sqrt, v);
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == llvm::Intrinsic::sqrt)
+		{
+			v1 = i->getOperand(0);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				return r1;
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename T = llvm_common_t<A1>>
+struct llvm_fabs
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_float, "llvm_fabs<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_float;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		llvm::Value* v = a1.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v))
+		{
+			return llvm::ConstantFoldInstruction(ir->CreateUnaryIntrinsic(llvm::Intrinsic::fabs, v), llvm::DataLayout(""));
+		}
+
+		return ir->CreateUnaryIntrinsic(llvm::Intrinsic::fabs, v);
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == llvm::Intrinsic::fabs)
+		{
+			v1 = i->getOperand(0);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				return r1;
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
 class cpu_translator
 {
 protected:
@@ -2890,27 +2978,23 @@ public:
 		return llvm_avg<T, U>{std::forward<T>(a), std::forward<U>(b)};
 	}
 
+	template <typename T, typename = std::enable_if_t<llvm_fsqrt<T>::is_ok>>
+	static auto fsqrt(T&& a)
+	{
+		return llvm_fsqrt<T>{std::forward<T>(a)};
+	}
+
+	template <typename T, typename = std::enable_if_t<llvm_fabs<T>::is_ok>>
+	static auto fabs(T&& a)
+	{
+		return llvm_fabs<T>{std::forward<T>(a)};
+	}
+
 	template <typename... Types>
 	llvm::Function* get_intrinsic(llvm::Intrinsic::ID id)
 	{
 		const auto _module = m_ir->GetInsertBlock()->getParent()->getParent();
 		return llvm::Intrinsic::getDeclaration(_module, id, {get_type<Types>()...});
-	}
-
-	template <typename T>
-	auto sqrt(T a)
-	{
-		value_t<typename T::type> result;
-		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::sqrt), {a.eval(m_ir)});
-		return result;
-	}
-
-	template <typename T>
-	auto fabs(T a)
-	{
-		value_t<typename T::type> result;
-		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::fabs), {a.eval(m_ir)});
-		return result;
 	}
 
 	// Opportunistic hardware FMA, can be used if results are identical for all possible input values

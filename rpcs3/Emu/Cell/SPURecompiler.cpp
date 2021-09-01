@@ -7837,9 +7837,9 @@ public:
 	{
 		// TODO
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, fsplat<f64[4]>(1.0) / sqrt(fabs(get_vr<f64[4]>(op.ra))));
+			set_vr(op.rt, fsplat<f64[4]>(1.0) / fsqrt(fabs(get_vr<f64[4]>(op.ra))));
 		else
-			set_vr(op.rt, fsplat<f32[4]>(1.0) / sqrt(fabs(get_vr<f32[4]>(op.ra))));
+			set_vr(op.rt, fsplat<f32[4]>(1.0) / fsqrt(fabs(get_vr<f32[4]>(op.ra))));
 	}
 
 	void FCGT(spu_opcode_t op)
