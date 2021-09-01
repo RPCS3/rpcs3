@@ -506,9 +506,10 @@ struct ppu_far_jumps_t
 
 u32 ppu_get_far_jump(u32 pc)
 {
+	g_fxo->init<ppu_far_jumps_t>();
 	return g_fxo->get<const ppu_far_jumps_t>().get_target(pc);
 }
-	
+
 static bool ppu_far_jump(ppu_thread& ppu)
 {
 	ppu.cia = g_fxo->get<const ppu_far_jumps_t>().get_target(ppu.cia);

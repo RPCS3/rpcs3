@@ -608,7 +608,6 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 				if (_sf && (_sf->flags & MFF_FORCED_HLE))
 				{
 					// Inject a branch to the HLE implementation
-					const u32 _entry = vm::read32(faddr);
 					const u32 target = g_fxo->get<ppu_function_manager>().func_addr(_sf->index) + 4;
 
 					// Set exported function

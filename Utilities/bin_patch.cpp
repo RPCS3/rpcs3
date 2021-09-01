@@ -701,7 +701,7 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 
 			// Write address of the allocated memory to the code entry
 			*vm::get_super_ptr<u32>(resval) = addr;
-	
+
 			// Write branch to return to code
 			ppu_form_branch_to_code(addr + static_cast<u32>(p.value.long_value) * 4, resval + 4);
 			relocate_instructions_at = addr;
@@ -968,18 +968,15 @@ void patch_engine::unload(const std::string& name)
 
 	for (const auto& [description, patch] : container.patch_info_map)
 	{
-		for (const auto& [title, serials] : patch.titles)
+		for (auto& entry : patch.data_list)
 		{
-			for (auto& entry : patch.data_list)
+			// Deallocate used memory
+			if (u32 addr = std::exchange(entry.alloc_addr, 0))
 			{
-				// Deallocate used memory
-				if (u32 addr = std::exchange(entry.alloc_addr, 0))
-				{
-					vm::dealloc(addr);
+				vm::dealloc(addr);
 
-					auto alloc_map = vm::get(vm::any, addr);
-					unmap_vm_area(alloc_map);
-				}
+				auto alloc_map = vm::get(vm::any, addr);
+				unmap_vm_area(alloc_map);
 			}
 		}
 	}
