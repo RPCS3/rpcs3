@@ -10,6 +10,8 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 include(ConfigureCompiler)
 include(CheckFunctionExists)
 
+set(CMAKE_CXX_STANDARD 20)
+
 set(ADDITIONAL_LIBS "")
 if(CMAKE_SYSTEM MATCHES "Linux")
     #on some Linux distros shm_unlink and similar functions are in librt only

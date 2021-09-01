@@ -9,10 +9,10 @@ namespace rsx
 	// TODO: Move this somewhere else once more compilers are supported other than glsl
 	enum texture_control_bits
 	{
-		GAMMA_R = 0,
+		GAMMA_A = 0,
+		GAMMA_R,
 		GAMMA_G,
 		GAMMA_B,
-		GAMMA_A,
 		ALPHAKILL,
 		RENORMALIZE,
 		EXPAND_A,

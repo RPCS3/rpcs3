@@ -548,15 +548,30 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 	if (!device || !pad)
 		return;
 
-	auto profile = device->config;
+	auto cfg = device->config;
 
 	auto button_values = get_button_values(device);
+
+	// Find out if special buttons are pressed (introduced by RPCS3).
+	// These buttons will have a delay of one cycle, but whatever.
+	const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (auto& btn : pad->m_buttons)
 	{
-		btn.m_value = button_values[btn.m_keyCode];
-		TranslateButtonPress(device, btn.m_keyCode, btn.m_pressed, btn.m_value);
+		// Using a temporary buffer because the values can change during translation
+		Button tmp = btn;
+		tmp.m_value = button_values[btn.m_keyCode];
+
+		TranslateButtonPress(device, tmp.m_keyCode, tmp.m_pressed, tmp.m_value);
+
+		// Modify pressure if necessary if the button was pressed
+		if (adjust_pressure && tmp.m_pressed)
+		{
+			tmp.m_value = pad->m_pressure_intensity;
+		}
+
+		btn = tmp;
 	}
 
 	// used to get the absolute value of an axis
@@ -584,8 +599,8 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 	u16 lx, ly, rx, ry;
 
 	// Normalize and apply pad squircling
-	convert_stick_values(lx, ly, stick_val[0], stick_val[1], profile->lstickdeadzone, profile->lpadsquircling);
-	convert_stick_values(rx, ry, stick_val[2], stick_val[3], profile->rstickdeadzone, profile->rpadsquircling);
+	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lpadsquircling);
+	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rpadsquircling);
 
 	if (m_type == pad_handler::ds4)
 	{

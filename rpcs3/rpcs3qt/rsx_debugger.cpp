@@ -47,8 +47,6 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	QLabel l("000000000"); // hacky way to get the lineedit to resize properly
 	l.setFont(mono);
 
-	QHBoxLayout* hbox_controls_addr = new QHBoxLayout();
-
 	// Controls: Breaks
 	QPushButton* b_break_frame = new QPushButton(tr("Frame"));
 	QPushButton* b_break_text  = new QPushButton(tr("Texture"));

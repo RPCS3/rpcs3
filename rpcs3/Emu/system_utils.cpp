@@ -37,7 +37,7 @@ namespace rpcs3::utils
 		{
 			if (!was_silenced)
 			{
-				sys_log.notice("Disabling logging...");
+				sys_log.success("Disabling logging! Do not create issues on GitHub or on the forums while logging is disabled.");
 			}
 
 			logs::silence();
@@ -49,7 +49,7 @@ namespace rpcs3::utils
 
 			if (was_silenced)
 			{
-				sys_log.notice("Logging enabled");
+				sys_log.success("Logging enabled");
 			}
 		}
 
