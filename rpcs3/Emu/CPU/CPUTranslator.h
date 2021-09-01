@@ -2425,6 +2425,93 @@ struct llvm_shuffle2
 	}
 };
 
+template <typename A1, typename T = llvm_common_t<A1>>
+struct llvm_ctlz
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_ctlz<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		llvm::Value* v = a1.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v))
+		{
+			return llvm::ConstantFoldInstruction(ir->CreateIntrinsic(llvm::Intrinsic::ctlz, {v->getType()}, {v, ir->getFalse()}), llvm::DataLayout(""));
+		}
+
+		return ir->CreateIntrinsic(llvm::Intrinsic::ctlz, {v->getType()}, {v, ir->getFalse()});
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == llvm::Intrinsic::ctlz)
+		{
+			v1 = i->getOperand(0);
+
+			if (i->getOperand(2) == llvm::ConstantInt::getFalse(value->getContext()))
+			{
+				if (auto r1 = a1.match(v1); v1)
+				{
+					return r1;
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename A1, typename T = llvm_common_t<A1>>
+struct llvm_ctpop
+{
+	using type = T;
+
+	llvm_expr_t<A1> a1;
+
+	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_ctpop<>: invalid type");
+
+	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		llvm::Value* v = a1.eval(ir);
+
+		if (llvm::isa<llvm::Constant>(v))
+		{
+			return llvm::ConstantFoldInstruction(ir->CreateUnaryIntrinsic(llvm::Intrinsic::ctpop, v), llvm::DataLayout(""));
+		}
+
+		return ir->CreateUnaryIntrinsic(llvm::Intrinsic::ctpop, v);
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CallInst>(value); i && i->getIntrinsicID() == llvm::Intrinsic::ctpop)
+		{
+			v1 = i->getOperand(0);
+
+			if (auto r1 = a1.match(v1); v1)
+			{
+				return r1;
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
 class cpu_translator
 {
 protected:
@@ -2705,6 +2792,18 @@ public:
 		return llvm_shuffle2<sizeof...(Args), T, U>{std::forward<T>(v1), std::forward<U>(v2), {static_cast<int>(indices)...}};
 	}
 
+	template <typename T, typename = std::enable_if_t<llvm_ctlz<T>::is_ok>>
+	static auto ctlz(T&& a)
+	{
+		return llvm_ctlz<T>{std::forward<T>(a)};
+	}
+
+	template <typename T, typename = std::enable_if_t<llvm_ctpop<T>::is_ok>>
+	static auto ctpop(T&& a)
+	{
+		return llvm_ctpop<T>{std::forward<T>(a)};
+	}
+
 	// Average: (a + b + 1) >> 1
 	template <typename T>
 	inline auto avg(T a, T b)
@@ -2731,22 +2830,6 @@ public:
 	{
 		const auto _module = m_ir->GetInsertBlock()->getParent()->getParent();
 		return llvm::Intrinsic::getDeclaration(_module, id, {get_type<Types>()...});
-	}
-
-	template <typename T>
-	auto ctlz(T a)
-	{
-		value_t<typename T::type> result;
-		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::ctlz), {a.eval(m_ir), m_ir->getFalse()});
-		return result;
-	}
-
-	template <typename T>
-	auto ctpop(T a)
-	{
-		value_t<typename T::type> result;
-		result.value = m_ir->CreateCall(get_intrinsic<typename T::type>(llvm::Intrinsic::ctpop), {a.eval(m_ir)});
-		return result;
 	}
 
 	template <typename T>
