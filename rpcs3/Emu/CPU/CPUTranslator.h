@@ -3228,10 +3228,10 @@ public:
 	}
 
 	template <typename R = v128>
-	std::pair<bool, R> get_const_vector(llvm::Value*, u32 a, u32 b);
+	std::pair<bool, R> get_const_vector(llvm::Value*, u32 pos, u32 = __builtin_LINE());
 
 	template <typename T = v128>
-	llvm::Constant* make_const_vector(T, llvm::Type*);
+	llvm::Constant* make_const_vector(T, llvm::Type*, u32 = __builtin_LINE());
 };
 
 // Format llvm::SizeType

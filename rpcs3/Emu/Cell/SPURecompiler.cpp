@@ -7390,7 +7390,7 @@ public:
 		const auto c = get_vr(op.rc);
 
 		// Check if the constant mask doesn't require bit granularity
-		if (auto [ok, mask] = get_const_vector(c.value, m_pos, 8000); ok)
+		if (auto [ok, mask] = get_const_vector(c.value, m_pos); ok)
 		{
 			bool sel_32 = true;
 			for (u32 i = 0; i < 4; i++)
@@ -7492,7 +7492,7 @@ public:
 
 		const auto c = get_vr<u8[16]>(op.rc);
 
-		if (auto [ok, mask] = get_const_vector(c.value, m_pos, 57216); ok)
+		if (auto [ok, mask] = get_const_vector(c.value, m_pos); ok)
 		{
 			// Optimization: SHUFB with constant mask
 			if (((mask._u64[0] | mask._u64[1]) & 0xe0e0e0e0e0e0e0e0) == 0)
@@ -7597,7 +7597,7 @@ public:
 				return;
 			}
 
-			if (auto [ok, data] = get_const_vector(b.value, m_pos, 7000); ok)
+			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
 			{
 				const bool all_bytes_equiv = data == v128::from8p(data._u8[0]);
 				if (all_bytes_equiv)
@@ -7613,7 +7613,7 @@ public:
 
 		if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 		{
-			if (auto [ok, data] = get_const_vector(a.value, m_pos, 7000); ok)
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
 				const bool all_bytes_equiv = data == v128::from8p(data._u8[0]);
 				if (all_bytes_equiv)
@@ -7858,7 +7858,7 @@ public:
 
 		for (u32 i = 0; i < 2; i++)
 		{
-			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, 5000); ok)
+			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos); ok)
 			{
 				safe_int_compare.set(i);
 				safe_nonzero_compare.set(i);
@@ -8028,7 +8028,7 @@ public:
 
 		for (u32 i = 0; i < 2; i++)
 		{
-			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, 6000); ok)
+			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos); ok)
 			{
 				safe_float_compare.set(i);
 				safe_int_compare.set(i);
@@ -8093,7 +8093,7 @@ public:
 
 		for (u32 i = 0; i < 2; i++)
 		{
-			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, 6000); ok)
+			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos); ok)
 			{
 				safe_float_compare.set(i);
 				safe_int_compare.set(i);
@@ -8151,7 +8151,7 @@ public:
 
 		// Optimization: Emit only a floating multiply if the addend is zero
 		// This is odd since SPU code could just use the FM instruction, but it seems common enough
-		if (auto [ok, data] = get_const_vector(c.value, m_pos, 4000); ok)
+		if (auto [ok, data] = get_const_vector(c.value, m_pos); ok)
 		{
 			if (is_spu_float_zero(data, -1))
 			{
@@ -8168,14 +8168,14 @@ public:
 
 		if ([&]()
 		{
-			if (auto [ok, data] = get_const_vector(a.value, m_pos, 4000); ok)
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
 				if (!is_spu_float_zero(data, +1))
 				{
 					return false;
 				}
 
-				if (auto [ok0, data0] = get_const_vector(b.value, m_pos, 4000); ok0)
+				if (auto [ok0, data0] = get_const_vector(b.value, m_pos); ok0)
 				{
 					if (is_spu_float_zero(data0, +1))
 					{
@@ -8184,14 +8184,14 @@ public:
 				}
 			}
 
-			if (auto [ok, data] = get_const_vector(a.value, m_pos, 4000); ok)
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
 				if (!is_spu_float_zero(data, -1))
 				{
 					return false;
 				}
 
-				if (auto [ok0, data0] = get_const_vector(b.value, m_pos, 4000); ok0)
+				if (auto [ok0, data0] = get_const_vector(b.value, m_pos); ok0)
 				{
 					if (is_spu_float_zero(data0, -1))
 					{
@@ -8435,7 +8435,7 @@ public:
 			value_t<s32[4]> a = get_vr<s32[4]>(op.ra);
 			value_t<f64[4]> r;
 
-			if (auto [ok, data] = get_const_vector(a.value, m_pos, 25971); ok)
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
 				r.value = build<f64[4]>(data._s32[0], data._s32[1], data._s32[2], data._s32[3]).eval(m_ir);
 			}
@@ -8475,7 +8475,7 @@ public:
 			value_t<s32[4]> a = get_vr<s32[4]>(op.ra);
 			value_t<f64[4]> r;
 
-			if (auto [ok, data] = get_const_vector(a.value, m_pos, 20971); ok)
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
 				r.value = build<f64[4]>(data._u32[0], data._u32[1], data._u32[2], data._u32[3]).eval(m_ir);
 			}
@@ -8528,7 +8528,7 @@ public:
 
 		for (auto pair : std::initializer_list<std::pair<value_t<u32[4]>, value_t<u32[4]>>>{{a, b}, {b, a}})
 		{
-			if (auto [ok, data] = get_const_vector(pair.first.value, m_pos, 10000); ok)
+			if (auto [ok, data] = get_const_vector(pair.first.value, m_pos); ok)
 			{
 				data._u32[3] %= SPU_LS_SIZE;
 
@@ -8552,7 +8552,7 @@ public:
 
 		for (auto pair : std::initializer_list<std::pair<value_t<u32[4]>, value_t<u32[4]>>>{{a, b}, {b, a}})
 		{
-			if (auto [ok, data] = get_const_vector(pair.first.value, m_pos, 10000); ok)
+			if (auto [ok, data] = get_const_vector(pair.first.value, m_pos); ok)
 			{
 				data._u32[3] %= SPU_LS_SIZE;
 
