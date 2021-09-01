@@ -7589,6 +7589,9 @@ public:
 			return;
 		}
 
+		// (TODO: implement via known-bits-lookup) Check whether shuffle mask doesn't contain fixed value selectors
+		const auto [perm_only, dummy1] = match_expr(c, match<u8[16]>() & 31);
+
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
 
@@ -7598,9 +7601,14 @@ public:
 			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 			{
 				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
-
 				if (m_use_avx512_icl && (op.ra != op.rb))
 				{
+					if (perm_only)
+					{
+						set_vr(op.rt4, vperm2b(as, bs, c));
+						return;
+					}
+
 					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
 					const auto ab = vperm2b(as, bs, c);
@@ -7611,19 +7619,26 @@ public:
 				const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
 				const auto ax = pshufb(as, c);
 				const auto bx = pshufb(bs, c);
-				set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, bx) | x);
+
+				if (perm_only)
+					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, bx));
+				else
+					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, bx) | x);
 				return;
 			}
 
 			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
 			{
-				const bool all_bytes_equiv = data == v128::from8p(data._u8[0]);
-				if (all_bytes_equiv)
+				if (data == v128::from8p(data._u8[0]))
 				{
 					// See above
 					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
 					const auto ax = pshufb(as, c);
-					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, b) | x);
+
+					if (perm_only)
+						set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, b));
+					else
+						set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, b) | x);
 					return;
 				}
 			}
@@ -7633,13 +7648,16 @@ public:
 		{
 			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
-				const bool all_bytes_equiv = data == v128::from8p(data._u8[0]);
-				if (all_bytes_equiv)
+				if (data == v128::from8p(data._u8[0]))
 				{
 					// See above
 					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
 					const auto bx = pshufb(bs, c);
-					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, a, bx) | x);
+
+					if (perm_only)
+						set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, a, bx));
+					else
+						set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, a, bx) | x);
 					return;
 				}
 			}
@@ -7647,6 +7665,12 @@ public:
 
 		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
 		{
+			if (perm_only)
+			{
+				set_vr(op.rt4, vperm2b(b, a, eval(~c)));
+				return;
+			}
+
 			const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
 			const auto cr = eval(~c);
@@ -7659,7 +7683,11 @@ public:
 		const auto cr = eval(c ^ 0xf);
 		const auto ax = pshufb(a, cr);
 		const auto bx = pshufb(b, cr);
-		set_vr(op.rt4, select(noncast<s8[16]>(cr << 3) >= 0, ax, bx) | x);
+
+		if (perm_only)
+			set_vr(op.rt4, select(noncast<s8[16]>(cr << 3) >= 0, ax, bx));
+		else
+			set_vr(op.rt4, select(noncast<s8[16]>(cr << 3) >= 0, ax, bx) | x);
 	}
 
 	void MPYA(spu_opcode_t op)
