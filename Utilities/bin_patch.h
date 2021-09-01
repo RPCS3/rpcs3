@@ -27,6 +27,8 @@ enum class patch_type
 	invalid,
 	load,
 	alloc, // Allocate memory at address (zeroized executable memory)
+	code_alloc,// Allocate memory somewhere, saves branch to memory at specfied address (filled with PPU NOP and branch for returning)
+	jump, // Install special 32-bit jump instruction (PPU only atm)
 	byte,
 	le16,
 	le32,
@@ -56,6 +58,7 @@ public:
 			u64 long_value;
 			f64 double_value;
 		} value{0};
+		mutable u32 alloc_addr = 0; // Used to save optional allocation address (if occured)
 	};
 
 	using patch_app_versions = std::unordered_map<std::string /*app_version*/, bool /*enabled*/>;
@@ -147,6 +150,9 @@ public:
 
 	// Apply patch (returns the number of entries applied)
 	std::basic_string<u32> apply(const std::string& name, u8* dst, u32 filesz = -1, u32 min_addr = 0);
+
+	// Deallocate memory used by patches
+	void unload(const std::string& name);
 
 private:
 	// Database

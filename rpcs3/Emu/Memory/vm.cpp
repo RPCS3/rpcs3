@@ -20,6 +20,8 @@
 
 LOG_CHANNEL(vm_log, "VM");
 
+void ppu_remove_hle_instructions(u32 addr, u32 size);
+
 namespace vm
 {
 	static u8* memory_reserve_4GiB(void* _addr, u64 size = 0x100000000)
@@ -914,6 +916,9 @@ namespace vm
 			rsxthr.on_notify_memory_unmapped(addr, size);
 		}
 
+		// Deregister PPU related data
+		ppu_remove_hle_instructions(addr, size);
+
 		// Actually unmap memory
 		if (!shm)
 		{
@@ -1160,8 +1165,8 @@ namespace vm
 	{
 		if (!src)
 		{
-			// Use the block's flags
-			flags = this->flags;
+			// Use the block's flags (excpet for protection)
+			flags = (this->flags & ~page_prot_mask) | (flags & page_prot_mask);
 		}
 
 		// Determine minimal alignment
@@ -1182,7 +1187,7 @@ namespace vm
 			return 0;
 		}
 
-		u8 pflags = flags & page_hidden ? 0 : page_readable | page_writable;
+		u8 pflags = flags & page_hidden ? 0 : (~flags & (page_readable | page_writable));
 
 		if ((flags & page_size_64k) == page_size_64k)
 		{
@@ -1237,8 +1242,8 @@ namespace vm
 	{
 		if (!src)
 		{
-			// Use the block's flags
-			flags = this->flags;
+			// Use the block's flags (excpet for protection)
+			flags = (this->flags & ~page_prot_mask) | (flags & page_prot_mask);
 		}
 
 		// Determine minimal alignment
@@ -1266,7 +1271,7 @@ namespace vm
 		// Force aligned address
 		addr -= addr % min_page_size;
 
-		u8 pflags = flags & page_hidden ? 0 : page_readable | page_writable;
+		u8 pflags = flags & page_hidden ? 0 : (~flags & (page_readable | page_writable));
 
 		if ((flags & page_size_64k) == page_size_64k)
 		{

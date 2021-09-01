@@ -126,6 +126,8 @@ Type* PPUTranslator::GetContextType()
 	return m_thread_type;
 }
 
+u32 ppu_get_far_jump(u32 pc);
+
 Function* PPUTranslator::Translate(const ppu_function& info)
 {
 	m_function = m_module->getFunction(info.name);
@@ -232,7 +234,15 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 				m_rel = nullptr;
 			}
 
+			if (u32 target = ppu_get_far_jump(m_addr + base))
+			{
+				FlushRegisters();
+				CallFunction(0, m_ir->getInt64(target));
+				continue;
+			}
+
 			const u32 op = vm::read32(vm::cast(m_addr + base));
+	
 			(this->*(s_ppu_decoder.decode(op)))({op});
 
 			if (m_rel)
@@ -352,6 +362,12 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 		if (_target >= caddr && _target <= cend)
 		{
+			if (target == m_addr + 4)
+			{
+				// Branch to nex (ignored)
+				return;
+			}
+
 			callee = m_module->getOrInsertFunction(fmt::format("__0x%x", target), type);
 			cast<Function>(callee.getCallee())->setCallingConv(CallingConv::GHC);
 		}
