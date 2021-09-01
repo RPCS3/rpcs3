@@ -1203,7 +1203,7 @@ void ppu_module::analyse(u32 lib_toc, u32 entry, const u32 sec_end, const std::b
 
 				if (ppu_get_far_jump(iaddr))
 				{
-					block.second = _ptr.addr() - block.first;
+					block.second = _ptr.addr() - block.first - 4;
 					break;
 				}
 
