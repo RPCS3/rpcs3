@@ -7751,11 +7751,7 @@ public:
 		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
 
 		if (g_cfg.core.llvm_accurate_dfma)
-		{
-			value_t<f64[2]> r;
-			r.value = m_ir->CreateCall(get_intrinsic<f64[2]>(llvm::Intrinsic::fma), {a.value, b.value, c.value});
-			set_vr(op.rt, r);
-		}
+			set_vr(op.rt, fmuladd(a, b, c, true));
 		else
 			set_vr(op.rt, a * b + c);
 	}
@@ -7765,11 +7761,7 @@ public:
 		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
 
 		if (g_cfg.core.llvm_accurate_dfma)
-		{
-			value_t<f64[2]> r;
-			r.value = m_ir->CreateCall(get_intrinsic<f64[2]>(llvm::Intrinsic::fma), {a.value, b.value, eval(-c).value});
-			set_vr(op.rt, r);
-		}
+			set_vr(op.rt, fmuladd(a, b, -c, true));
 		else
 			set_vr(op.rt, a * b - c);
 	}
@@ -7779,11 +7771,7 @@ public:
 		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
 
 		if (g_cfg.core.llvm_accurate_dfma)
-		{
-			value_t<f64[2]> r;
-			r.value = m_ir->CreateCall(get_intrinsic<f64[2]>(llvm::Intrinsic::fma), {eval(-a).value, b.value, c.value});
-			set_vr(op.rt, r);
-		}
+			set_vr(op.rt, fmuladd(-a, b, c, true));
 		else
 			set_vr(op.rt, c - (a * b));
 	}
@@ -7793,11 +7781,7 @@ public:
 		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
 
 		if (g_cfg.core.llvm_accurate_dfma)
-		{
-			value_t<f64[2]> r;
-			r.value = m_ir->CreateCall(get_intrinsic<f64[2]>(llvm::Intrinsic::fma), {a.value, b.value, c.value});
-			set_vr(op.rt, -r);
-		}
+			set_vr(op.rt, -fmuladd(a, b, c, true));
 		else
 			set_vr(op.rt, -(a * b + c));
 	}
