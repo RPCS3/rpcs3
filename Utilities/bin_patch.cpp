@@ -580,7 +580,7 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 		}
 
 		// Revert in case of failure
-		for (u32 index : applied)
+		std::for_each(applied.begin() + old_applied_size, applied.end(), [&](u32 index)
 		{
 			const u32 addr = std::exchange(patch.data_list[index].alloc_addr, 0);
 
@@ -588,7 +588,7 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 
 			auto alloc_map = vm::get(vm::any, addr);
 			unmap_vm_area(alloc_map);
-		}
+		});
 
 		applied.resize(old_applied_size);
 		return old_applied_size;
