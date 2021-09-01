@@ -1752,6 +1752,55 @@ struct llvm_bitcast
 };
 
 template <typename U, typename A1, typename T = llvm_common_t<A1>>
+struct llvm_fpcast
+{
+	using type = U;
+
+	static constexpr auto opc =
+		llvm_value_t<T>::is_sint ? llvm::Instruction::SIToFP :
+		llvm_value_t<U>::is_sint ? llvm::Instruction::FPToSI :
+		llvm_value_t<T>::is_int ? llvm::Instruction::UIToFP :
+		llvm_value_t<U>::is_int ? llvm::Instruction::FPToUI :
+		llvm_value_t<T>::esize > llvm_value_t<U>::esize ? llvm::Instruction::FPTrunc :
+		llvm_value_t<T>::esize < llvm_value_t<U>::esize ? llvm::Instruction::FPExt : llvm::Instruction::BitCast;
+
+	llvm_expr_t<A1> a1;
+	static_assert(llvm_value_t<T>::is_float || llvm_value_t<U>::is_float, "llvm_fpcast<>: invalid type(s)");
+	static_assert(opc != llvm::Instruction::BitCast, "llvm_fpcast<>: possible cast to the same type");
+	static_assert(llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector, "llvm_fpcast<>: vector element mismatch");
+
+	static constexpr bool is_ok =
+		(llvm_value_t<T>::is_float || llvm_value_t<U>::is_float) && opc != llvm::Instruction::BitCast &&
+		llvm_value_t<T>::is_vector == llvm_value_t<U>::is_vector;
+
+	llvm::Value* eval(llvm::IRBuilder<>* ir) const
+	{
+		return ir->CreateCast(opc, a1.eval(ir), llvm_value_t<U>::get_type(ir->getContext()));
+	}
+
+	llvm_match_tuple<A1> match(llvm::Value*& value) const
+	{
+		llvm::Value* v1 = {};
+
+		if (auto i = llvm::dyn_cast_or_null<llvm::CastInst>(value); i && i->getOpcode() == opc)
+		{
+			v1 = i->getOperand(0);
+
+			if (llvm_value_t<U>::get_type(v1->getContext()) == i->getDestTy())
+			{
+				if (auto r1 = a1.match(v1); v1)
+				{
+					return r1;
+				}
+			}
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
+template <typename U, typename A1, typename T = llvm_common_t<A1>>
 struct llvm_trunc
 {
 	using type = U;
@@ -2888,6 +2937,12 @@ public:
 	auto bitcast(T&& expr)
 	{
 		return llvm_bitcast<U, T>{std::forward<T>(expr), m_module};
+	}
+
+	template <typename U, typename T, typename = std::enable_if_t<llvm_fpcast<U, T>::is_ok>>
+	static auto fpcast(T&& expr)
+	{
+		return llvm_fpcast<U, T>{std::forward<T>(expr)};
 	}
 
 	template <typename U, typename T, typename = std::enable_if_t<llvm_trunc<U, T>::is_ok>>
