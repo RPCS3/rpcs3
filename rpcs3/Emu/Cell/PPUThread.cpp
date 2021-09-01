@@ -521,7 +521,7 @@ bool ppu_form_branch_to_code(u32 entry, u32 target)
 	entry &= -4;
 	target &= -4;
 
-	if (entry == target || vm::check_addr(entry, vm::page_executable) || !vm::check_addr(target, vm::page_executable))
+	if (entry == target || !vm::check_addr(entry, vm::page_executable) || !vm::check_addr(target, vm::page_executable))
 	{
 		return false;
 	}
@@ -533,6 +533,7 @@ bool ppu_form_branch_to_code(u32 entry, u32 target)
 
 	std::lock_guard lock(jumps.mutex);
 	jumps.vals.insert_or_assign(entry, target);
+	ppu_register_function_at(entry, 4, &ppu_far_jump);
 
 	return true;
 }
