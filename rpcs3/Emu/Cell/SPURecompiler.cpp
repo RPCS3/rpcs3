@@ -7869,7 +7869,7 @@ public:
 		if (g_cfg.core.spu_accurate_xfloat)
 			set_vr(op.rt, fsplat<f64[4]>(1.0) / fsqrt(fabs(get_vr<f64[4]>(op.ra))));
 		else
-			set_vr(op.rt, fsplat<f32[4]>(1.0) / fsqrt(fabs(get_vr<f32[4]>(op.ra))));
+			set_vr(op.rt, frsqe(fabs(get_vr<f32[4]>(op.ra))));
 	}
 
 	void FCGT(spu_opcode_t op)
@@ -8305,9 +8305,31 @@ public:
 	{
 		// TODO
 		if (g_cfg.core.spu_accurate_xfloat)
+		{
 			set_vr(op.rt, get_vr<f64[4]>(op.rb));
+			// const auto [a, b] = get_vrs<f64[4]>(op.ra, op.rb);
+
+			// const auto mask_se = splat<s64[4]>(0xfff0000000000000ull);
+			// const auto mask_bf = splat<s64[4]>(0x000fff8000000000ull);
+			// const auto mask_sf = splat<s64[4]>(0x0000007fe0000000ull);
+			// const auto mask_yf = splat<s64[4]>(0x0000ffffe0000000ull);
+
+			// const auto base = bitcast<f64[4]>((bitcast<s64[4]>(b) & mask_bf) | 0x3ff0000000000000ull);
+			// const auto step = fpcast<f64[4]>(bitcast<s64[4]>(b) & mask_sf) * fsplat<f64[4]>(std::exp2(-13.f));
+			// const auto yval = fpcast<f64[4]>(bitcast<s64[4]>(a) & mask_yf) * fsplat<f64[4]>(std::exp2(-19.f));
+			// set_vr(op.rt, bitcast<f64[4]>((bitcast<s64[4]>(b) & mask_se) | (bitcast<s64[4]>(base - step * yval) & ~mask_se)));
+		}
 		else
-			set_vr(op.rt, get_vr<f32[4]>(op.rb));
+		{
+			const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+
+			const auto mask_se = splat<u32[4]>(0xff800000u); // Sign and exponent mask
+
+			const auto base = (b & 0x007ffc00u) << 9; // Base fraction
+			const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
+			const auto bnew = bitcast<s32[4]>((base - ymul) >> 9) + (sext<s32[4]>(ymul <= base) & (1 << 23)); // Subtract and correct invisible fraction bit
+			set_vr(op.rt, (b & mask_se) | (bitcast<u32[4]>(fpcast<f32[4]>(bnew)) & ~mask_se)); // Inject old sign and exponent
+		}
 	}
 
 	void CFLTS(spu_opcode_t op)
