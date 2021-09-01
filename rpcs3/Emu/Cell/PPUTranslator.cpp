@@ -362,12 +362,6 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 
 		if (_target >= caddr && _target <= cend)
 		{
-			if (target == m_addr + 4)
-			{
-				// Branch to nex (ignored)
-				return;
-			}
-
 			callee = m_module->getOrInsertFunction(fmt::format("__0x%x", target), type);
 			cast<Function>(callee.getCallee())->setCallingConv(CallingConv::GHC);
 		}

@@ -539,6 +539,8 @@ bool ppu_form_branch_to_code(u32 entry, u32 target)
 
 void ppu_remove_hle_instructions(u32 addr, u32 size)
 {
+	g_fxo->init<ppu_far_jumps_t>();
+
 	auto& jumps = g_fxo->get<ppu_far_jumps_t>();
 
 	std::lock_guard lock(jumps.mutex);
