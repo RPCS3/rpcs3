@@ -7552,23 +7552,41 @@ public:
 						return;
 					}
 				}
-
-				// Generic constant shuffle without constant-generation bits
-				mask = mask ^ v128::from8p(0x1f);
-
-				if (op.ra == op.rb)
-				{
-					mask = mask & v128::from8p(0xf);
-				}
-
-				const auto a = get_vr<u8[16]>(op.ra);
-				const auto b = get_vr<u8[16]>(op.rb);
-				const auto c = make_const_vector(mask, get_type<u8[16]>());
-				set_reg_fixed(op.rt4, m_ir->CreateShuffleVector(b.value, op.ra == op.rb ? b.value : a.value, m_ir->CreateZExt(c, get_type<u32[16]>())));
-				return;
 			}
 
-			spu_log.todo("[0x%x] Const SHUFB mask: %s", m_pos, mask);
+			// Adjusted shuffle mask
+			v128 smask = ~mask & v128::from8p(op.ra == op.rb ? 0xf : 0x1f);
+
+			// Blend mask for encoded constants
+			v128 bmask{};
+
+			for (u32 i = 0; i < 16; i++)
+			{
+				if (mask._bytes[i] >= 0xe0)
+					bmask._bytes[i] = 0x80;
+				else if (mask._bytes[i] >= 0xc0)
+					bmask._bytes[i] = 0xff;
+			}
+
+			const auto a = get_vr<u8[16]>(op.ra);
+			const auto b = get_vr<u8[16]>(op.rb);
+			const auto c = make_const_vector(smask, get_type<u8[16]>());
+			const auto d = make_const_vector(bmask, get_type<u8[16]>());
+
+			llvm::Value* r = d;
+
+			if ((~mask._u64[0] | ~mask._u64[1]) & 0x8080808080808080) [[likely]]
+			{
+				r = m_ir->CreateShuffleVector(b.value, op.ra == op.rb ? b.value : a.value, m_ir->CreateZExt(c, get_type<u32[16]>()));
+
+				if ((mask._u64[0] | mask._u64[1]) & 0x8080808080808080)
+				{
+					r = m_ir->CreateSelect(m_ir->CreateICmpSLT(make_const_vector(mask, get_type<u8[16]>()), llvm::ConstantInt::get(get_type<u8[16]>(), 0)), d, r);
+				}
+			}
+
+			set_reg_fixed(op.rt4, r);
+			return;
 		}
 
 		const auto a = get_vr<u8[16]>(op.ra);
