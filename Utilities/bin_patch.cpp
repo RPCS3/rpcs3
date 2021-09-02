@@ -40,6 +40,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		case patch_type::alloc: return "alloc";
 		case patch_type::code_alloc: return "calloc";
 		case patch_type::jump: return "jump";
+		case patch_type::jump_link: return "jumpl";
 		case patch_type::load: return "load";
 		case patch_type::byte: return "byte";
 		case patch_type::le16: return "le16";
@@ -551,7 +552,7 @@ void patch_engine::append_title_patches(const std::string& title_id)
 }
 
 void ppu_register_range(u32 addr, u32 size);
-bool ppu_form_branch_to_code(u32 entry, u32 target);
+bool ppu_form_branch_to_code(u32 entry, u32 target, bool link = false);
 
 void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
 {
@@ -737,12 +738,13 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 			break;
 		}
 		case patch_type::jump:
+		case patch_type::jump_link:
 		{
 			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
 			const u32 dest = static_cast<u32>(p.value.long_value);
 
 			// Allow only if points to a PPU executable instruction
-			if (!ppu_form_branch_to_code(out_branch, dest))
+			if (!ppu_form_branch_to_code(out_branch, dest, p.type == patch_type::jump_link))
 			{
 				continue;
 			}
