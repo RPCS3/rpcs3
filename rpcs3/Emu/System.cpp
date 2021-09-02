@@ -398,7 +398,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 		return false;
 	}
 
-	if (frame->LE_format != (std::endian::little == std::endian::native))
+	if (frame->LE_format != u32{std::endian::little == std::endian::native})
 	{
 		static constexpr std::string_view machines[2]{"Big-Endian", "Little-Endian"};
 
@@ -669,8 +669,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		{
 			// Update supplementary settings
 			const f64 _1ns = utils::get_tsc_freq() / 1000'000'000.;
-			g_rtm_tx_limit1 = g_cfg.core.tx_limit1_ns * _1ns;
-			g_rtm_tx_limit2 = g_cfg.core.tx_limit2_ns * _1ns;
+			g_rtm_tx_limit1 = static_cast<u64>(g_cfg.core.tx_limit1_ns * _1ns);
+			g_rtm_tx_limit2 = static_cast<u64>(g_cfg.core.tx_limit2_ns * _1ns);
 		}
 
 		// Load patches from different locations

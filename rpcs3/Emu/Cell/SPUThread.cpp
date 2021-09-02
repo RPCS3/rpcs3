@@ -3205,7 +3205,7 @@ bool spu_thread::process_mfc_cmd()
 			{
 				state += cpu_flag::wait + cpu_flag::temp;
 				std::this_thread::yield();
-				!check_state();
+				static_cast<void>(check_state());
 			}
 		}())
 		{
