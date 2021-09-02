@@ -23,6 +23,7 @@
 #include "skylander_dialog.h"
 #include "cheat_manager.h"
 #include "patch_manager_dialog.h"
+#include "patch_creator_dialog.h"
 #include "pkg_install_dialog.h"
 #include "category.h"
 #include "gui_settings.h"
@@ -2110,6 +2111,12 @@ void main_window::CreateConnects()
 		patch_manager_dialog patch_manager(m_gui_settings, games, "", "", this);
 		patch_manager.exec();
  	});
+
+	connect(ui->patchCreatorAct, &QAction::triggered, this, [this]
+	{
+		patch_creator_dialog patch_creator(this);
+		patch_creator.exec();
+	});
 
 	connect(ui->actionManage_Users, &QAction::triggered, this, [this]
 	{

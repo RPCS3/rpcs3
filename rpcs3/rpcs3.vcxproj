@@ -291,6 +291,9 @@
     <ClCompile Include="QTGeneratedFiles\Debug\moc_pad_settings_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_patch_creator_dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_patch_manager_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -480,6 +483,9 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_pad_settings_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_patch_creator_dialog.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_patch_manager_dialog.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -572,6 +578,7 @@
     <ClCompile Include="rpcs3qt\microphone_creator.cpp" />
     <ClCompile Include="rpcs3qt\osk_dialog_frame.cpp" />
     <ClCompile Include="rpcs3qt\pad_led_settings_dialog.cpp" />
+    <ClCompile Include="rpcs3qt\patch_creator_dialog.cpp" />
     <ClCompile Include="rpcs3qt\patch_manager_dialog.cpp" />
     <ClCompile Include="rpcs3qt\pkg_install_dialog.cpp" />
     <ClCompile Include="rpcs3qt\persistent_settings.cpp" />
@@ -1046,6 +1053,16 @@
     </CustomBuild>
     <ClInclude Include="rpcs3qt\movie_item.h" />
     <ClInclude Include="rpcs3qt\numbered_widget_item.h" />
+    <CustomBuild Include="rpcs3qt\patch_creator_dialog.h">
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\debug" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\QTGeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_WINDOWS -DUNICODE -DWIN32 -DWIN64 -DWITH_DISCORD_RPC -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WINEXTRAS_LIB -DQT_CONCURRENT_LIB -D%(PreprocessorDefinitions) "-I.\..\3rdparty\flatbuffers\include" "-I.\..\3rdparty\wolfssl\wolfssl" "-I.\..\3rdparty\curl\curl\include" "-I.\..\3rdparty\libusb\libusb\libusb" "-I$(VULKAN_SDK)\Include" "-I.\..\3rdparty\XAudio2Redist\include" "-I$(QTDIR)\include" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtGui" "-I$(QTDIR)\include\QtANGLE" "-I$(QTDIR)\include\QtCore" "-I.\release" "-I$(QTDIR)\mkspecs\win32-msvc2015" "-I.\QTGeneratedFiles\$(ConfigurationName)" "-I.\QTGeneratedFiles" "-I$(QTDIR)\include\QtWinExtras" "-I$(QTDIR)\include\QtConcurrent"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
+    </CustomBuild>
     <ClInclude Include="rpcs3qt\richtext_item_delegate.h" />
     <ClInclude Include="rpcs3qt\stylesheets.h" />
     <CustomBuild Include="rpcs3qt\skylander_dialog.h">
@@ -1398,6 +1415,16 @@
   <ItemGroup>
     <None Include="QTGeneratedFiles\Debug\pkg_install_dialog.moc" />
     <None Include="QTGeneratedFiles\Release\pkg_install_dialog.moc" />
+    <CustomBuild Include="rpcs3qt\patch_creator_dialog.ui">
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Uic%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\QTGeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(QTDIR)\bin\uic.exe" -o ".\QTGeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\uic.exe;%(AdditionalInputs)</AdditionalInputs>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Uic%27ing %(Identity)...</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\QTGeneratedFiles\ui_%(Filename).h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"$(QTDIR)\bin\uic.exe" -o ".\QTGeneratedFiles\ui_%(Filename).h" "%(FullPath)"</Command>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

@@ -121,6 +121,9 @@ public:
 	// Read and add a patch node to the patch info
 	static bool read_patch_node(patch_info& info, YAML::Node node, const YAML::Node& root, std::stringstream* log_messages = nullptr);
 
+	// Get the patch type from a string
+	static patch_type get_patch_type(const std::string& text);
+
 	// Get the patch type of a patch node
 	static patch_type get_patch_type(YAML::Node node);
 

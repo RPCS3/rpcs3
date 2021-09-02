@@ -176,6 +176,14 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 			continue;
 		}
 
+		if (main_key.empty())
+		{
+			append_log_message(log_messages, "Error: Skipping empty key");
+			patch_log.error("Skipping empty key (file: %s)", path);
+			is_valid = false;
+			continue;
+		}
+
 		// Skip Anchors
 		if (main_key == patch_key::anchors)
 		{
@@ -184,8 +192,8 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 		// Find or create an entry matching the key/hash in our map
 		auto& container = patches_map[main_key];
-		container.hash      = main_key;
-		container.version   = version;
+		container.hash    = main_key;
+		container.version = version;
 
 		// Go through each patch
 		for (auto patches_entry : pair.second)
@@ -223,10 +231,18 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 				{
 					const std::string& title = game_node.first.Scalar();
 
+					if (title.empty())
+					{
+						append_log_message(log_messages, fmt::format("Error: Empty game title (key: %s, file: %s)", main_key, path));
+						patch_log.error("Empty game title (key: %s, file: %s)", main_key, path);
+						is_valid = false;
+						continue;
+					}
+
 					if (const auto yml_type = game_node.second.Type(); yml_type != YAML::NodeType::Map)
 					{
-						append_log_message(log_messages, fmt::format("Error: Skipping %s: expected Map, found %s (patch: %s, key: %s)", title, yml_type, description, main_key));
-						patch_log.error("Skipping %s: expected Map, found %s (patch: %s, key: %s, file: %s)", title, yml_type, description, main_key, path);
+						append_log_message(log_messages, fmt::format("Error: Skipping game %s: expected Map, found %s (patch: %s, key: %s)", title, yml_type, description, main_key));
+						patch_log.error("Skipping game %s: expected Map, found %s (patch: %s, key: %s, file: %s)", title, yml_type, description, main_key, path);
 						is_valid = false;
 						continue;
 					}
@@ -237,7 +253,14 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 					{
 						const std::string& serial = serial_node.first.Scalar();
 
-						if (serial == patch_key::all)
+						if (serial.empty())
+						{
+							append_log_message(log_messages, fmt::format("Error: Using empty serial (title: %s, patch: %s, key: %s)", title, description, main_key));
+							patch_log.error("Using empty serial (title: %s, patch: %s, key: %s, file: %s)", title, description, main_key, path);
+							is_valid = false;
+							continue;
+						}
+						else if (serial == patch_key::all)
 						{
 							if (!title_is_all_key)
 							{
@@ -363,16 +386,26 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 	return is_valid;
 }
 
-patch_type patch_engine::get_patch_type(YAML::Node node)
+patch_type patch_engine::get_patch_type(const std::string& text)
 {
 	u64 type_val = 0;
 
-	if (!node || !node.IsScalar() || !cfg::try_to_enum_value(&type_val, &fmt_class_string<patch_type>::format, node.Scalar()))
+	if (!cfg::try_to_enum_value(&type_val, &fmt_class_string<patch_type>::format, text))
 	{
 		return patch_type::invalid;
 	}
 
 	return static_cast<patch_type>(type_val);
+}
+
+patch_type patch_engine::get_patch_type(YAML::Node node)
+{
+	if (!node || !node.IsScalar())
+	{
+		return patch_type::invalid;
+	}
+
+	return get_patch_type(node.Scalar());
 }
 
 bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root, std::stringstream* log_messages)
