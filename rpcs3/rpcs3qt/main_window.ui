@@ -255,6 +255,7 @@
     <addaction name="toolsmemory_viewerAct"/>
     <addaction name="toolsRsxDebuggerAct"/>
     <addaction name="toolsStringSearchAct"/>
+    <addaction name="patchCreatorAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
     <addaction name="separator"/>
@@ -1167,6 +1168,11 @@
   <action name="bootVSHAct">
    <property name="text">
     <string>Boot VSH/XMB</string>
+   </property>
+  </action>
+  <action name="patchCreatorAct">
+   <property name="text">
+    <string>Patch Creator</string>
    </property>
   </action>
  </widget>

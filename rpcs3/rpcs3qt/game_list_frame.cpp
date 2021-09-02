@@ -2211,7 +2211,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 				return true;
 			}
 		}
-		else
+		else if (!key_event->isAutoRepeat())
 		{
 			if (key_event->key() == Qt::Key_Enter || key_event->key() == Qt::Key_Return)
 			{
