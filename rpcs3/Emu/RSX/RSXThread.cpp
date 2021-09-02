@@ -50,7 +50,7 @@ bool serialize<rsx::frame_capture_data>(utils::serial& ar, rsx::frame_capture_da
 {
 	ar(o.magic, o.version, o.LE_format);
 
-	if (o.magic != rsx::c_fc_magic || o.version != rsx::c_fc_version || o.LE_format != (std::endian::little == std::endian::native))
+	if (o.magic != rsx::c_fc_magic || o.version != rsx::c_fc_version || o.LE_format != u32{std::endian::little == std::endian::native})
 	{
 		return false;
 	}

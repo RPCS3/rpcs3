@@ -1672,7 +1672,7 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 				sock.p2ps.op_vport     = dst_vport;
 				sock.p2ps.cur_seq      = send_hdr.seq + 1;
 				sock.p2ps.data_beg_seq = 0;
-				sock.p2ps.data_available = 0;
+				sock.p2ps.data_available = 0u;
 				sock.p2ps.received_data.clear();
 				sock.p2ps.status       = lv2_socket::p2ps_i::stream_status::stream_handshaking;
 
@@ -2320,8 +2320,8 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 			{
 				const auto get_data = [&](unsigned char *dest_buf)
 				{
-					const u32 to_give = std::min(sock.p2ps.data_available, len);
-					sys_net.trace("STREAM-P2P socket had %d available, given %d", sock.p2ps.data_available, to_give);
+					const u32 to_give = std::min<u32>(sock.p2ps.data_available, len);
+					sys_net.trace("STREAM-P2P socket had %u available, given %u", sock.p2ps.data_available, to_give);
 
 					u32 left_to_give = to_give;
 					while (left_to_give)
@@ -2652,7 +2652,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		}
 		else if (type == SYS_NET_SOCK_STREAM_P2P)
 		{
-			constexpr s64 max_data_len = (65535 - (sizeof(u16) + sizeof(lv2_socket::p2ps_i::encapsulated_tcp)));
+			constexpr u32 max_data_len = (65535 - (sizeof(u16) + sizeof(lv2_socket::p2ps_i::encapsulated_tcp)));
 
 			// Prepare address
 			name.sin_family = AF_INET;
@@ -2664,10 +2664,10 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 			tcp_header.dst_port = sock.p2ps.op_vport;
 			// chop it up
 			std::vector<std::vector<u8>> stream_packets;
-			s64 cur_total_len = len;
+			u32 cur_total_len = len;
 			while(cur_total_len > 0)
 			{
-				s64 cur_data_len;
+				u32 cur_data_len;
 				if (cur_total_len >= max_data_len)
 					cur_data_len = max_data_len;
 				else
@@ -2676,7 +2676,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 				tcp_header.length = cur_data_len;
 				tcp_header.seq = sock.p2ps.cur_seq;
 
-				auto packet       = nt_p2p_port::generate_u2s_packet(tcp_header, &_buf[len - cur_total_len], cur_data_len);
+				auto packet = nt_p2p_port::generate_u2s_packet(tcp_header, &_buf[len - cur_total_len], cur_data_len);
 				nt_p2p_port::send_u2s_packet(sock, s, std::move(packet), &name, tcp_header.seq);
 
 				cur_total_len -= cur_data_len;
@@ -3273,7 +3273,7 @@ error_code sys_net_bnet_poll(ppu_thread& ppu, vm::ptr<sys_net_pollfd> fds, s32 n
 					{
 						if ((fds[i].events & SYS_NET_POLLIN) && sock->p2ps.data_available)
 						{
-							sys_net.trace("[P2PS] p2ps has %d bytes available", sock->p2ps.data_available);
+							sys_net.trace("[P2PS] p2ps has %u bytes available", sock->p2ps.data_available);
 							fds_buf[i].revents |= SYS_NET_POLLIN;
 						}
 

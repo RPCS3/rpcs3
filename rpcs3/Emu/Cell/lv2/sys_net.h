@@ -414,10 +414,10 @@ struct lv2_socket final
 		u32 op_addr = 0;
 
 		u64 data_beg_seq = 0; // Seq of first byte of received_data
-		u32 data_available = 0; // Amount of continuous data available(calculated on ACK send)
+		u64 data_available = 0; // Amount of continuous data available(calculated on ACK send)
 		std::map<u64, std::vector<u8>> received_data; // holds seq/data of data received
 
-		u32 cur_seq = 0; // SEQ of next packet to be sent
+		u64 cur_seq = 0; // SEQ of next packet to be sent
 	} p2ps;
 
 	// Value keepers
