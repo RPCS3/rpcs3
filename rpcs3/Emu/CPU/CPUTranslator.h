@@ -3197,45 +3197,6 @@ public:
 		return llvm::Intrinsic::getDeclaration(_module, id, {get_type<Types>()...});
 	}
 
-	// TODO: Support doubles
-	template <typename T, typename = std::enable_if_t<llvm_value_t<typename T::type>::esize == 32u && llvm_value_t<typename T::type>::is_float>>
-	auto fre(T a)
-	{
-		value_t<typename T::type> result;
-		const auto av = a.eval(m_ir);
-		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rcp.ps", av->getType(), av->getType()), {av});
-		return result;
-	}
-
-	template <typename T, typename = std::enable_if_t<llvm_value_t<typename T::type>::esize == 32u && llvm_value_t<typename T::type>::is_float>>
-	auto frsqe(T a)
-	{
-		value_t<typename T::type> result;
-		const auto av = a.eval(m_ir);
-		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.rsqrt.ps", av->getType(), av->getType()), {av});
-		return result;
-	}
-
-	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<typename T::type, typename U::type> && llvm_value_t<typename T::type>::esize == 32u && llvm_value_t<typename T::type>::is_float>>
-	auto fmax(T a, U b)
-	{
-		value_t<typename T::type> result;
-		const auto av = a.eval(m_ir);
-		const auto bv = b.eval(m_ir);
-		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.max.ps", av->getType(), av->getType(), av->getType()), {av, bv});
-		return result;
-	}
-
-	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<typename T::type, typename U::type> && llvm_value_t<typename T::type>::esize == 32u && llvm_value_t<typename T::type>::is_float>>
-	auto fmin(T a, U b)
-	{
-		value_t<typename T::type> result;
-		const auto av = a.eval(m_ir);
-		const auto bv = b.eval(m_ir);
-		result.value  = m_ir->CreateCall(m_module->getOrInsertFunction("llvm.x86.sse.min.ps", av->getType(), av->getType(), av->getType()), {av, bv});
-		return result;
-	}
-
 	template <typename T1, typename T2>
 	value_t<u8[16]> gf2p8affineqb(T1 a, T2 b, u8 c)
 	{
@@ -3427,6 +3388,30 @@ public:
 
 			return nullptr;
 		});
+	}
+
+	template <typename T, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T>, f32[4]>>>
+	static auto fre(T&& a)
+	{
+		return llvm_calli<f32[4], T>{"llvm.x86.sse.rcp.ps", {std::forward<T>(a)}};
+	}
+
+	template <typename T, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T>, f32[4]>>>
+	static auto frsqe(T&& a)
+	{
+		return llvm_calli<f32[4], T>{"llvm.x86.sse.rsqrt.ps", {std::forward<T>(a)}};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, f32[4]>>>
+	static auto fmax(T&& a, U&& b)
+	{
+		return llvm_calli<f32[4], T, U>{"llvm.x86.sse.max.ps", {std::forward<T>(a), std::forward<U>(b)}};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, f32[4]>>>
+	static auto fmin(T&& a, U&& b)
+	{
+		return llvm_calli<f32[4], T, U>{"llvm.x86.sse.min.ps", {std::forward<T>(a), std::forward<U>(b)}};
 	}
 };
 
