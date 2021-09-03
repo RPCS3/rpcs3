@@ -4908,6 +4908,11 @@ public:
 		pm.add(createAggressiveDCEPass());
 		//pm.add(createLintPass()); // Check
 
+		for (auto& f : *m_module)
+		{
+			replace_intrinsics(f);
+		}
+
 		for (const auto& func : m_functions)
 		{
 			const auto f = func.second.fn ? func.second.fn : func.second.chunk;
@@ -5375,6 +5380,12 @@ public:
 		pm.add(createDeadStoreEliminationPass());
 		pm.add(createAggressiveDCEPass());
 		//pm.add(createLintPass());
+
+		for (auto& f : *_module)
+		{
+			replace_intrinsics(f);
+			//pm.run(f);
+		}
 
 		std::string log;
 

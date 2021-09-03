@@ -262,6 +262,7 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 		}
 	}
 
+	replace_intrinsics(*m_function);
 	return m_function;
 }
 

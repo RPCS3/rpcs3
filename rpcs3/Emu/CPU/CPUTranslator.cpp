@@ -12,6 +12,43 @@ cpu_translator::cpu_translator(llvm::Module* _module, bool is_be)
 	, m_module(_module)
 	, m_is_be(is_be)
 {
+	register_intrinsic("x86_pshufb", [&](llvm::CallInst* ci) -> llvm::Value*
+	{
+		const auto data0 = ci->getOperand(0);
+		const auto index = ci->getOperand(1);
+		const auto zeros = llvm::ConstantAggregateZero::get(get_type<u8[16]>());
+
+		if (m_use_ssse3)
+		{
+			return m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_ssse3_pshuf_b_128), {data0, index});
+		}
+		else
+		{
+			// Emulate PSHUFB (TODO)
+			const auto mask = m_ir->CreateAnd(index, 0xf);
+			const auto loop = llvm::BasicBlock::Create(m_context, "", m_ir->GetInsertBlock()->getParent());
+			const auto prev = ci->getParent();
+			const auto next = prev->splitBasicBlock(ci->getNextNode());
+
+			llvm::cast<llvm::BranchInst>(m_ir->GetInsertBlock()->getTerminator())->setOperand(0, loop);
+
+			llvm::Value* result;
+			//m_ir->CreateBr(loop);
+			m_ir->SetInsertPoint(loop);
+			const auto i = m_ir->CreatePHI(get_type<u32>(), 2);
+			const auto v = m_ir->CreatePHI(get_type<u8[16]>(), 2);
+			i->addIncoming(m_ir->getInt32(0), prev);
+			i->addIncoming(m_ir->CreateAdd(i, m_ir->getInt32(1)), loop);
+			v->addIncoming(zeros, prev);
+			result = m_ir->CreateInsertElement(v, m_ir->CreateExtractElement(data0, m_ir->CreateExtractElement(mask, i)), i);
+			v->addIncoming(result, loop);
+			m_ir->CreateCondBr(m_ir->CreateICmpULT(i, m_ir->getInt32(16)), loop, next);
+			m_ir->SetInsertPoint(next->getFirstNonPHI());
+			result = m_ir->CreateSelect(m_ir->CreateICmpSLT(index, zeros), zeros, result);
+
+			return result;
+		}
+	});
 }
 
 void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngine& engine)
@@ -248,6 +285,31 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t, u
 	}
 
 	fmt::throw_exception("[line %u] No supported constant type", _line);
+}
+
+void cpu_translator::replace_intrinsics(llvm::Function& f)
+{
+	for (auto& bb : f)
+	{
+		for (auto bit = bb.begin(); bit != bb.end();)
+		{
+			if (auto ci = llvm::dyn_cast<llvm::CallInst>(&*bit))
+			{
+				if (auto cf = ci->getCalledFunction())
+				{
+					if (auto it = m_intrinsics.find(std::string_view(cf->getName().data(), cf->getName().size())); it != m_intrinsics.end())
+					{
+						m_ir->SetInsertPoint(ci);
+						ci->replaceAllUsesWith(it->second(ci));
+						bit = ci->eraseFromParent();
+						continue;
+					}
+				}
+			}
+
+			++bit;
+		}
+	}
 }
 
 #endif
