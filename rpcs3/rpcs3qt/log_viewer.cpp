@@ -182,7 +182,7 @@ bool log_viewer::eventFilter(QObject* object, QEvent* event)
 	if (event->type() == QEvent::KeyPress)
 	{
 		QKeyEvent* e = static_cast<QKeyEvent*>(event);
-		if (e && e->modifiers() == Qt::ControlModifier && e->key() == Qt::Key_F)
+		if (e && !e->isAutoRepeat() && e->modifiers() == Qt::ControlModifier && e->key() == Qt::Key_F)
 		{
 			if (m_find_dialog && m_find_dialog->isVisible())
 				m_find_dialog->close();

@@ -44,6 +44,7 @@ set(SRC_FILES
     osk_dialog_frame.cpp
     pad_led_settings_dialog.cpp
     pad_settings_dialog.cpp
+    patch_creator_dialog.cpp
     patch_manager_dialog.cpp
     persistent_settings.cpp
     pkg_install_dialog.cpp
@@ -80,6 +81,8 @@ set(UI_FILES
     main_window.ui
     pad_led_settings_dialog.ui
     pad_settings_dialog.ui
+    patch_creator_dialog.ui
+    patch_manager_dialog.ui
     settings_dialog.ui
     welcome_dialog.ui
 )
