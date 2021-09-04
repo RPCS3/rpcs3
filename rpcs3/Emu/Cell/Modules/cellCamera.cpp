@@ -705,20 +705,23 @@ error_code cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm
 		return CELL_CAMERA_ERROR_NOT_OPEN;
 	}
 
-	std::lock_guard lock(g_camera.mutex);
+	reader_lock lock(g_camera.mutex);
 
 	if (!g_camera.is_attached)
 	{
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
 
+	const auto attr = g_camera.attr[attrib].load();
+
 	if (arg1)
 	{
-		*arg1 = g_camera.attr[attrib].v1;
+		*arg1 = attr.v1;
 	}
+
 	if (arg2)
 	{
-		*arg2 = g_camera.attr[attrib].v2;
+		*arg2 = attr.v2;
 	}
 
 	return CELL_OK;
@@ -1294,7 +1297,7 @@ void camera_context::operator()()
 					u64 data2 = 0;
 					u64 data3 = 0;
 
-					if (read_mode.load() == CELL_CAMERA_READ_DIRECT)
+					if (read_mode() == CELL_CAMERA_READ_DIRECT)
 					{
 						const u64 image_data_size = static_cast<u64>(info.bytesize);
 						const u64 buffer_number = 0;
@@ -1332,7 +1335,6 @@ void camera_context::operator()()
 
 void camera_context::reset_state()
 {
-	read_mode = CELL_CAMERA_READ_FUNCCALL;
 	is_streaming = false;
 	is_attached = false;
 	is_open = false;
@@ -1379,11 +1381,10 @@ void camera_context::set_attr(s32 attrib, u32 arg1, u32 arg2)
 			cellCamera.warning("Unknown read mode set: %d", arg1);
 			arg1 = CELL_CAMERA_READ_FUNCCALL;
 		}
-		read_mode.exchange(arg1);
 	}
 
 	std::lock_guard lock(mutex);
-	attr[attrib] = {arg1, arg2};
+	attr[attrib].release(attr_t{arg1, arg2});
 }
 
 void camera_context::add_queue(u64 key, u64 source, u64 flag)

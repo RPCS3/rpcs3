@@ -419,7 +419,6 @@ public:
 	shared_mutex mutex_notify_data_map;
 	u64 start_timestamp = 0;
 
-	atomic_t<u8> read_mode{CELL_CAMERA_READ_FUNCCALL};
 	atomic_t<bool> is_streaming{false};
 	atomic_t<bool> is_attached{false};
 	atomic_t<bool> is_open{false};
@@ -429,11 +428,19 @@ public:
 	struct attr_t
 	{
 		u32 v1, v2;
+
+		using enable_bitcopy = std::true_type;
 	};
-	attr_t attr[500]{};
+
+	atomic_t<attr_t> attr[500]{};
 	atomic_t<u32> frame_num;
 
 	atomic_t<u32> init = 0;
+
+	u32 read_mode() const
+	{
+		return attr[CELL_CAMERA_READMODE].load().v1;
+	}
 
 	static constexpr auto thread_name = "Camera Thread"sv;
 };
