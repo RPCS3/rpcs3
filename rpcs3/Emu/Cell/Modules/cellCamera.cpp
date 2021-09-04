@@ -564,7 +564,7 @@ error_code cellCameraGetType(s32 dev_num, vm::ptr<s32> type)
 
 s32 cellCameraIsAvailable(s32 dev_num)
 {
-	cellCamera.warning("cellCameraIsAvailable(dev_num=%d)", dev_num);
+	cellCamera.trace("cellCameraIsAvailable(dev_num=%d)", dev_num);
 
 	if (g_cfg.io.camera == camera_handler::null)
 	{
@@ -727,7 +727,7 @@ error_code cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm
 error_code cellCameraSetAttribute(s32 dev_num, s32 attrib, u32 arg1, u32 arg2)
 {
 	const auto attr_name = get_camera_attr_name(attrib);
-	cellCamera.todo("cellCameraSetAttribute(dev_num=%d, attrib=%d=%s, arg1=%d, arg2=%d)", dev_num, attrib, attr_name, arg1, arg2);
+	(attrib == CELL_CAMERA_LED ? cellCamera.trace : cellCamera.todo)("cellCameraSetAttribute(dev_num=%d, attrib=%d=%s, arg1=%d, arg2=%d)", dev_num, attrib, attr_name, arg1, arg2);
 
 	auto& g_camera = g_fxo->get<camera_thread>();
 
