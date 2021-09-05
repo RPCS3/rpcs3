@@ -79,10 +79,10 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	}
 
 	// Load profiles
+	g_cfg_profile.load();
+
 	if (m_title_id.empty())
 	{
-		g_cfg_profile.load();
-
 		const QString profile_dir = qstr(rpcs3::utils::get_input_config_dir(m_title_id));
 		QStringList profiles = gui::utils::get_dir_entries(QDir(profile_dir), QStringList() << "*.yml");
 		QString active_profile = qstr(g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key));
@@ -108,8 +108,6 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	}
 	else
 	{
-		g_cfg_profile.from_default();
-
 		ui->chooseProfile->addItem(qstr(m_title_id));
 		ui->gb_profiles->setEnabled(false);
 	}
@@ -1633,17 +1631,12 @@ void pad_settings_dialog::SaveExit()
 		}
 	}
 
-	if (m_title_id.empty())
-	{
-		g_cfg_profile.active_profiles.set_value(g_cfg_profile.global_key, m_profile);
-		g_cfg_profile.save();
+	const std::string profile_key = m_title_id.empty() ? g_cfg_profile.global_key : m_title_id;
 
-		g_cfg_input.save(m_title_id, m_profile);
-	}
-	else
-	{
-		g_cfg_input.save(m_title_id);
-	}
+	g_cfg_profile.active_profiles.set_value(profile_key, m_profile);
+	g_cfg_profile.save();
+
+	g_cfg_input.save(m_title_id, m_profile);
 
 	QDialog::accept();
 }
