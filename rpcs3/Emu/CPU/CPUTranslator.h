@@ -2974,6 +2974,13 @@ public:
 		return {};
 	}
 
+	template <typename T, typename = llvm_common_t<T>>
+	static auto match_expr(llvm::Value* v, llvm::Module* _m, T&& expr)
+	{
+		auto r = expr.match(v, _m);
+		return std::tuple_cat(std::make_tuple(v != nullptr), r);
+	}
+
 	template <typename T, typename U, typename = llvm_common_t<T, U>>
 	auto match_expr(T&& arg, U&& expr) -> decltype(std::tuple_cat(std::make_tuple(false), expr.match(std::declval<llvm::Value*&>(), nullptr)))
 	{
@@ -2987,6 +2994,26 @@ public:
 	{
 		// Execute pred(.) for each type until one of them returns true
 		return (pred(llvm_placeholder_t<Types>{}) || ...);
+	}
+
+	template <typename T, typename F>
+	struct expr_t
+	{
+		using type = llvm_common_t<T>;
+
+		T a;
+		F match;
+
+		llvm::Value* eval(llvm::IRBuilder<>* ir) const
+		{
+			return a.eval(ir);
+		}
+	};
+
+	template <typename T, typename F>
+	static auto expr(T&& expr, F matcher)
+	{
+		return expr_t<T, F>{std::forward<T>(expr), std::move(matcher)};
 	}
 
 	template <typename T, typename = std::enable_if_t<is_llvm_cmp<std::decay_t<T>>::value>>
@@ -3188,6 +3215,39 @@ public:
 	auto fmuladd(T&& a, U&& b, V&& c)
 	{
 		return llvm_fmuladd<T, U, V>{std::forward<T>(a), std::forward<U>(b), std::forward<V>(c), m_use_fma};
+	}
+
+	// Absolute difference
+	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
+	static auto absd(T&& a, U&& b)
+	{
+		return expr(max(a, b) - min(a, b), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
+		{
+			static const auto M = match<CT>();
+
+			if (auto [ok, _max, _min] = match_expr(value, _m, M - M); ok)
+			{
+				if (auto [ok1, a, b] = match_expr(_max.value, _m, max(M, M)); ok1 && !a.eq(b))
+				{
+					if (auto [ok2, c, d] = match_expr(_min.value, _m, min(M, M)); ok2 && !c.eq(d))
+					{
+						if ((a.eq(c) && b.eq(d)) || (a.eq(d) && b.eq(c)))
+						{
+							if (auto r1 = llvm_expr_t<T>{}.match(a.value, _m); a.eq())
+							{
+								if (auto r2 = llvm_expr_t<U>{}.match(b.value, _m); b.eq())
+								{
+									return std::tuple_cat(r1, r2);
+								}
+							}
+						}
+					}
+				}
+			}
+
+			value = nullptr;
+			return {};
+		});
 	}
 
 	template <typename... Types>

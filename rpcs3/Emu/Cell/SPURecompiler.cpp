@@ -6417,7 +6417,7 @@ public:
 	void ABSDB(spu_opcode_t op)
 	{
 		const auto [a, b] = get_vrs<u8[16]>(op.ra, op.rb);
-		set_vr(op.rt, max(a, b) - min(a, b));
+		set_vr(op.rt, absd(a, b));
 	}
 
 	template <typename T>
