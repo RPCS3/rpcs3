@@ -1027,9 +1027,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings_type::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, tooltips.settings.disable_on_disk_shader_cache);
 
-	m_emu_settings->EnhanceCheckBox(ui->relaxedZCULL, emu_settings_type::RelaxedZCULL);
-	SubscribeTooltip(ui->relaxedZCULL, tooltips.settings.relaxed_zcull);
-
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);
@@ -1041,6 +1038,41 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
+
+	// Custom control that simplifies operation of two independent variables. Can probably be done better but this works.
+	ui->zcullPrecisionMode->addItems({tr("Precise (Default)"), tr("Approximate (Fast)"), tr("Relaxed (Fastest)")});
+	if (m_emu_settings->GetSetting(emu_settings_type::RelaxedZCULL) == "true")
+	{
+		ui->zcullPrecisionMode->setCurrentIndex(2);
+	}
+	else if (m_emu_settings->GetSetting(emu_settings_type::PreciseZCULL) == "true")
+	{
+		ui->zcullPrecisionMode->setCurrentIndex(0);
+	}
+	else
+	{
+		ui->zcullPrecisionMode->setCurrentIndex(1);
+	}
+	connect(ui->zcullPrecisionMode, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+	{
+		bool relaxed = false, precise = false;
+
+		switch (index)
+		{
+		case 0:
+			precise = true; break;
+		case 1:
+			break;
+		case 2:
+			relaxed = true; break;
+		default:
+			fmt::throw_exception("Unexpected selection");
+		}
+
+		m_emu_settings->SetSetting(emu_settings_type::RelaxedZCULL, relaxed ? "true" : "false");
+		m_emu_settings->SetSetting(emu_settings_type::PreciseZCULL, precise ? "true" : "false");
+	});
+	SubscribeTooltip(ui->gbZCULL, tooltips.settings.zcull_operation_mode);
 
 	// Sliders
 
