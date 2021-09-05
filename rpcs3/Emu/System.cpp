@@ -1602,6 +1602,18 @@ void Emulator::Stop(bool restart)
 
 	sys_log.notice("Stopping emulator...");
 
+	if (!restart)
+	{
+		// Show visual feedback to the user in case that stopping takes a while.
+		// This needs to be done before actually stopping, because otherwise the necessary threads will be terminated before we can show an image.
+		if (auto progress_dialog = g_fxo->try_get<named_thread<progress_dialog_server>>(); progress_dialog && +g_progr)
+		{
+			// We are currently showing a progress dialog. Notify it that we are going to stop emulation.
+			g_system_progress_stopping = true;
+			std::this_thread::sleep_for(20ms); // Enough for one frame to be rendered
+		}
+	}
+
 	named_thread stop_watchdog("Stop Watchdog", [&]()
 	{
 		for (uint i = 0; thread_ctrl::state() != thread_state::aborting;)
