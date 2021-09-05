@@ -3374,12 +3374,21 @@ namespace rsx
 		{
 			ensure(sink);
 
+			auto scale_result = [](u32 value)
+			{
+				const auto scale = rsx::get_resolution_scale_percent();
+				const auto result = static_cast<u64>(value * 10000) / (scale * scale);
+				return std::max<u32>(1u, result);
+			};
+
 			switch (type)
 			{
 			case CELL_GCM_ZPASS_PIXEL_CNT:
-				if (!g_cfg.video.precise_zpass_count)
+				if (value)
 				{
-					value = value ? u16{ umax } : 0;
+					value = (g_cfg.video.precise_zpass_count) ?
+						scale_result(value) :
+						u16{ umax };
 				}
 				break;
 			case CELL_GCM_ZCULL_STATS3:
