@@ -91,8 +91,14 @@ void pad_thread::Init()
 
 	g_cfg_profile.load();
 
+	std::string active_profile = g_cfg_profile.active_profiles.get_value(pad::g_title_id);
+	if (active_profile.empty())
+	{
+		active_profile = g_cfg_profile.active_profiles.get_value(g_cfg_profile.global_key);
+	}
+
 	// Load in order to get the pad handlers
-	if (!g_cfg_input.load(pad::g_title_id, g_cfg_profile.active_profiles.get_value(pad::g_title_id)))
+	if (!g_cfg_input.load(pad::g_title_id, active_profile))
 	{
 		input_log.notice("Loaded empty pad config");
 	}
@@ -105,7 +111,7 @@ void pad_thread::Init()
 	}
 
 	// Reload with proper defaults
-	if (!g_cfg_input.load(pad::g_title_id, g_cfg_profile.active_profiles.get_value(pad::g_title_id)))
+	if (!g_cfg_input.load(pad::g_title_id, active_profile))
 	{
 		input_log.notice("Reloaded empty pad config");
 	}
