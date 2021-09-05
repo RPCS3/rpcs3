@@ -359,21 +359,21 @@ struct CellCameraInfo
 
 struct CellCameraInfoEx
 {
-	be_t<s32> format;     // CellCameraFormat
-	be_t<s32> resolution; // CellCameraResolution
-	be_t<s32> framerate;
+	be_t<s32> format;     // CellCameraFormat (0x0)
+	be_t<s32> resolution; // CellCameraResolution (0x4)
+	be_t<s32> framerate; // 0x8
 
-	vm::bptr<u8> buffer;
-	be_t<s32> bytesize;
-	be_t<s32> width;    // only used if resolution == CELL_CAMERA_SPECIFIED_WIDTH_HEIGHT
-	be_t<s32> height;   // likewise
-	be_t<s32> dev_num;
-	be_t<s32> guid;
+	vm::bptr<u8> buffer; // 0xC
+	be_t<s32> bytesize; // 0x10
+	be_t<s32> width;    // only used if resolution == CELL_CAMERA_SPECIFIED_WIDTH_HEIGHT (0x14)
+	be_t<s32> height;   // likewise (0x18)
+	be_t<s32> dev_num; // 0x1C
+	be_t<s32> guid; // 0x20
 
-	be_t<s32> info_ver;
-	be_t<u32> container;
-	be_t<s32> read_mode;
-	vm::bptr<u8> pbuf[2];
+	be_t<s32> info_ver; // 0x24
+	be_t<u32> container; // 0x28
+	be_t<s32> read_mode; // 0x2C
+	vm::bptr<u8> pbuf[2]; // 0x30
 };
 
 struct CellCameraReadEx
@@ -383,6 +383,15 @@ struct CellCameraReadEx
 	be_t<u32> bytesread;
 	be_t<s64> timestamp;
 	vm::bptr<u8> pbuf;
+};
+
+enum class camera_state : u8
+{
+	uninit, // Uninitialized
+	detached, // Initialized, but not attached
+	closed, // Attached, but not opened
+	open, // Opened, but not started
+	streaming, // Started
 };
 
 class camera_context
@@ -419,9 +428,7 @@ public:
 	shared_mutex mutex_notify_data_map;
 	u64 start_timestamp = 0;
 
-	atomic_t<bool> is_streaming{false};
-	atomic_t<bool> is_attached{false};
-	atomic_t<bool> is_open{false};
+	atomic_t<camera_state> state{};
 
 	CellCameraInfoEx info{};
 
@@ -434,8 +441,6 @@ public:
 
 	atomic_t<attr_t> attr[500]{};
 	atomic_t<u32> frame_num;
-
-	atomic_t<u32> init = 0;
 
 	u32 read_mode() const
 	{
