@@ -811,6 +811,7 @@
     <ClInclude Include="QTGeneratedFiles\ui_main_window.h" />
     <ClInclude Include="QTGeneratedFiles\ui_pad_led_settings_dialog.h" />
     <ClInclude Include="QTGeneratedFiles\ui_pad_settings_dialog.h" />
+    <ClInclude Include="QTGeneratedFiles\ui_patch_creator_dialog.h" />
     <ClInclude Include="QTGeneratedFiles\ui_patch_manager_dialog.h" />
     <ClInclude Include="QTGeneratedFiles\ui_settings_dialog.h" />
     <ClInclude Include="QTGeneratedFiles\ui_welcome_dialog.h" />
