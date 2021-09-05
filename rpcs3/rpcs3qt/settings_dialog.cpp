@@ -1040,30 +1040,36 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
 
 	// Custom control that simplifies operation of two independent variables. Can probably be done better but this works.
-	ui->zcullPrecisionMode->addItems({tr("Precise (Default)"), tr("Approximate (Fast)"), tr("Relaxed (Fastest)")});
+	ui->zcullPrecisionMode->addItem(tr("Precise (Default)"), static_cast<int>(zcull_precision_level::precise));
+	ui->zcullPrecisionMode->addItem(tr("Approximate (Fast)"), static_cast<int>(zcull_precision_level::approximate));
+	ui->zcullPrecisionMode->addItem(tr("Relaxed (Fastest)"), static_cast<int>(zcull_precision_level::relaxed));
+
 	if (m_emu_settings->GetSetting(emu_settings_type::RelaxedZCULL) == "true")
 	{
-		ui->zcullPrecisionMode->setCurrentIndex(2);
+		ui->zcullPrecisionMode->setCurrentIndex(
+			ui->zcullPrecisionMode->findData(static_cast<int>(zcull_precision_level::relaxed)));
 	}
 	else if (m_emu_settings->GetSetting(emu_settings_type::PreciseZCULL) == "true")
 	{
-		ui->zcullPrecisionMode->setCurrentIndex(0);
+		ui->zcullPrecisionMode->setCurrentIndex(
+			ui->zcullPrecisionMode->findData(static_cast<int>(zcull_precision_level::precise)));
 	}
 	else
 	{
-		ui->zcullPrecisionMode->setCurrentIndex(1);
+		ui->zcullPrecisionMode->setCurrentIndex(
+			ui->zcullPrecisionMode->findData(static_cast<int>(zcull_precision_level::approximate)));
 	}
 	connect(ui->zcullPrecisionMode, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
 	{
 		bool relaxed = false, precise = false;
 
-		switch (index)
+		switch (static_cast<zcull_precision_level>(ui->zcullPrecisionMode->itemData(index).toInt()))
 		{
-		case 0:
+		case zcull_precision_level::precise:
 			precise = true; break;
-		case 1:
+		case zcull_precision_level::approximate:
 			break;
-		case 2:
+		case zcull_precision_level::relaxed:
 			relaxed = true; break;
 		default:
 			fmt::throw_exception("Unexpected selection");
