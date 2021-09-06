@@ -16,13 +16,17 @@ namespace vk
 			bool any_passed;
 			bool active;
 			bool ready;
+			u32 data;
 		};
 
 		std::vector<std::unique_ptr<query_pool>> m_consumed_pools;
 		std::unique_ptr<query_pool> m_current_query_pool;
 		std::deque<u32> m_available_slots;
 		u32 m_pool_lifetime_counter = 0;
+
 		VkQueryType query_type = VK_QUERY_TYPE_OCCLUSION;
+		VkQueryResultFlags result_flags = VK_QUERY_RESULT_PARTIAL_BIT;
+		VkQueryControlFlags control_flags = 0;
 
 		vk::render_device* owner = nullptr;
 		std::vector<query_slot_info> query_slot_status;
@@ -35,6 +39,8 @@ namespace vk
 	public:
 		query_pool_manager(vk::render_device& dev, VkQueryType type, u32 num_entries);
 		~query_pool_manager();
+
+		void set_control_flags(VkQueryControlFlags control_flags, VkQueryResultFlags result_flags);
 
 		void begin_query(vk::command_buffer& cmd, u32 index);
 		void end_query(vk::command_buffer& cmd, u32 index);
