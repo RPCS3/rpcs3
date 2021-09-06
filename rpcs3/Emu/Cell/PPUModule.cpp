@@ -37,21 +37,23 @@ extern void sys_initialize_tls(ppu_thread&, u64, u32, u32, u32);
 // HLE function name cache
 std::vector<std::string> g_ppu_function_names;
 
-extern u32 ppu_generate_id(const char* name)
+extern u32 ppu_generate_id(std::string_view name)
 {
 	// Symbol name suffix
-	const auto suffix = "\x67\x59\x65\x99\x04\x25\x04\x90\x56\x64\x27\x49\x94\x89\x74\x1A";
+	constexpr auto suffix = "\x67\x59\x65\x99\x04\x25\x04\x90\x56\x64\x27\x49\x94\x89\x74\x1A"sv;
 
 	sha1_context ctx;
 	u8 output[20];
 
 	// Compute SHA-1 hash
 	sha1_starts(&ctx);
-	sha1_update(&ctx, reinterpret_cast<const u8*>(name), std::strlen(name));
-	sha1_update(&ctx, reinterpret_cast<const u8*>(suffix), std::strlen(suffix));
+	sha1_update(&ctx, reinterpret_cast<const u8*>(name.data()), name.size());
+	sha1_update(&ctx, reinterpret_cast<const u8*>(suffix.data()), suffix.size());
 	sha1_finish(&ctx, output);
 
-	return reinterpret_cast<le_t<u32>&>(output[0]);
+	le_t<u32> result = 0;
+	std::memcpy(&result, output, sizeof(result));
+	return result;
 }
 
 ppu_static_module::ppu_static_module(const char* name)
@@ -331,14 +333,11 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 				g_ppu_function_names[function.second.index] = fmt::format("%s:%s", function.second.name, _module->name);
 			}
 
-			if ((function.second.flags & MFF_HIDDEN) == 0)
-			{
-				auto& flink = linkage.functions[function.first];
+			auto& flink = linkage.functions[function.first];
 
-				flink.static_func = &function.second;
-				flink.export_addr = g_fxo->get<ppu_function_manager>().func_addr(function.second.index);
-				function.second.export_addr = &flink.export_addr;
-			}
+			flink.static_func = &function.second;
+			flink.export_addr = g_fxo->get<ppu_function_manager>().func_addr(function.second.index);
+			function.second.export_addr = &flink.export_addr;
 		}
 
 		for (auto& variable : _module->variables)
@@ -528,7 +527,12 @@ struct ppu_prx_module_info
 	be_t<u32> unk5;
 };
 
-bool ppu_form_branch_to_code(u32 entry, u32 target, bool link = false);
+bool ppu_form_branch_to_code(u32 entry, u32 target);
+
+extern u32 ppu_get_exported_func_addr(u32 fnid, const std::string& module_name)
+{
+	return g_fxo->get<ppu_linkage_info>().modules[module_name].functions[fnid].export_addr;
+}
 
 // Load and register exports; return special exports found (nameless module)
 static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 exports_end)

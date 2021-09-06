@@ -9,6 +9,8 @@
 #include "util/endian.hpp"
 #include "util/asm.hpp"
 
+#include <charconv>
+
 LOG_CHANNEL(patch_log, "PAT");
 
 template <>
@@ -41,6 +43,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		case patch_type::code_alloc: return "calloc";
 		case patch_type::jump: return "jump";
 		case patch_type::jump_link: return "jumpl";
+		case patch_type::jump_func: return "jumpf";
 		case patch_type::load: return "load";
 		case patch_type::byte: return "byte";
 		case patch_type::le16: return "le16";
@@ -464,6 +467,7 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	switch (p_data.type)
 	{
 	case patch_type::utf8:
+	case patch_type::jump_func:
 	{
 		break;
 	}
@@ -546,7 +550,8 @@ void patch_engine::append_title_patches(const std::string& title_id)
 }
 
 void ppu_register_range(u32 addr, u32 size);
-bool ppu_form_branch_to_code(u32 entry, u32 target, bool link = false);
+bool ppu_form_branch_to_code(u32 entry, u32 target, bool link = false, bool with_toc = false, std::string module_name = {});
+u32 ppu_generate_id(std::string_view name);
 
 void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
 {
@@ -737,6 +742,55 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 
 			// Allow only if points to a PPU executable instruction
 			if (!ppu_form_branch_to_code(out_branch, dest, p.type == patch_type::jump_link))
+			{
+				continue;
+			}
+
+			resval = out_branch & -4;
+			break;
+		}
+		case patch_type::jump_func:
+		{
+			const std::string& str = p.original_value;
+
+			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
+			const usz sep_pos = str.find_first_of(':');
+
+			// Must contain only a single ':' or none
+			// If ':' is found: Left string is the module name, right string is the function name
+			// If ':' is not found: The entire string is a direct address of the function's descriptor in hexadecimal
+			if (str.size() <= 2 || !sep_pos || sep_pos == str.size() - 1 || sep_pos != str.find_last_of(":"))
+			{
+				continue;
+			}
+
+			const std::string_view func_name{std::string_view(str).substr(sep_pos + 1)};
+			u32 id = 0;
+
+			if (func_name.starts_with("0x"sv))
+			{
+				// Raw hexadeciaml-formatted FNID (real function name cannot contain a digit at the start, derived from C/CPP which were used in PS3 development)
+				const auto result = std::from_chars(func_name.data() + 2, func_name.data() + func_name.size() - 2, id, 16);
+
+				if (result.ec != std::errc() || str.data() + sep_pos != result.ptr)
+				{
+					continue;
+				}
+			}
+			else
+			{
+				if (sep_pos == umax)
+				{
+					continue;
+				}
+
+				// Generate FNID using function name
+				id = ppu_generate_id(func_name);
+			}
+
+			// Allow only if points to a PPU executable instruction
+			// FNID/OPD-address is placed at target
+			if (!ppu_form_branch_to_code(out_branch, id, true, true, std::string{str.data(), sep_pos != umax ? sep_pos : 0}))
 			{
 				continue;
 			}

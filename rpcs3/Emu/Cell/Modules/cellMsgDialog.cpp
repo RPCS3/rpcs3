@@ -618,5 +618,5 @@ void cellSysutil_MsgDialog_init()
 	REG_FUNC(cellSysutil, cellMsgDialogAbort);
 
 	// Helper Function
-	REG_FUNC(cellSysutil, exit_game).flag(MFF_HIDDEN);
+	REG_HIDDEN_FUNC(exit_game);
 }

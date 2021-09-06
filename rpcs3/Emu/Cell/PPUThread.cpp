@@ -485,19 +485,96 @@ extern void ppu_register_function_at(u32 addr, u32 size, u64 ptr)
 	return ppu_register_function_at(addr, size, reinterpret_cast<ppu_function_t>(ptr));
 }
 
+u32 ppu_get_exported_func_addr(u32 fnid, const std::string& module_name);
+
+bool ppu_return_from_far_jump(ppu_thread& ppu)
+{
+	auto& calls_info = ppu.hle_func_calls_with_toc_info;
+	ensure(!calls_info.empty());
+
+	// Branch to next instruction after far jump call entry with restored R2 and LR
+	const auto restore_info = &calls_info.back();
+	ppu.cia = restore_info->cia + 4;
+	ppu.lr = restore_info->saved_lr;
+	ppu.gpr[2] = restore_info->saved_r2;
+
+	calls_info.pop_back();
+	return false;
+}
+
+static const bool s_init_return_far_jump_func = []
+{
+	REG_HIDDEN_FUNC_PURE(ppu_return_from_far_jump);
+	return true;
+}();
+
 struct ppu_far_jumps_t
 {
-	std::unordered_map<u32, std::pair<u32, bool>> vals;
+	struct all_info_t
+	{
+		u32 target;
+		bool link;
+		bool with_toc;
+		std::string module_name;
+	};
+
+	std::unordered_map<u32, all_info_t> vals;
 
 	mutable shared_mutex mutex;
 
-	std::pair<u32, bool> get_target(u32 pc) const
+	// Get target address, 'ppu' is used in ppu_far_jump in order to modify registers
+	u32 get_target(const u32 pc, ppu_thread* ppu = nullptr)
 	{
 		reader_lock lock(mutex);
 
 		if (auto it = vals.find(pc); it != vals.end())
 		{
-			return it->second;
+			all_info_t& all_info = it->second;
+			u32 target = all_info.target;
+
+			bool link = all_info.link;
+			bool from_opd = all_info.with_toc;
+
+			if (!all_info.module_name.empty())
+			{
+				target = ppu_get_exported_func_addr(target, all_info.module_name);
+			}
+
+			if (from_opd && !vm::check_addr<sizeof(ppu_func_opd_t)>(target))
+			{
+				// Avoid reading unmapped memory under mutex
+				from_opd = false;
+			}
+
+			if (from_opd)
+			{
+				auto& opd = vm::_ref<ppu_func_opd_t>(target);
+				target = opd.addr;
+
+				// We modify LR to custom values here 
+				link = false;
+
+				if (ppu)
+				{
+					auto& calls_info = ppu->hle_func_calls_with_toc_info;
+
+					// Save LR and R2
+					// Set LR to the this ppu_return_from_far_jump branch for restoration of registers
+					// NOTE: In order to clean up this information all calls must return in order
+					auto& saved_info = calls_info.emplace_back();
+					saved_info.cia = pc;
+					saved_info.saved_lr = std::exchange(ppu->lr, FIND_FUNC(ppu_return_from_far_jump));
+					saved_info.saved_r2 = std::exchange(ppu->gpr[2], opd.rtoc);
+				}
+				
+			}
+
+			if (link && ppu)
+			{
+				ppu->lr = pc + 4;
+			}
+
+			return target;
 		}
 
 		return {};
@@ -507,37 +584,101 @@ struct ppu_far_jumps_t
 u32 ppu_get_far_jump(u32 pc)
 {
 	g_fxo->init<ppu_far_jumps_t>();
-	return g_fxo->get<const ppu_far_jumps_t>().get_target(pc).first;
+	return g_fxo->get<ppu_far_jumps_t>().get_target(pc);
 }
 
 static bool ppu_far_jump(ppu_thread& ppu)
 {
-	auto [cia, link] = g_fxo->get<const ppu_far_jumps_t>().get_target(ppu.cia);
-	if (link) ppu.lr = ppu.cia + 4;
+	const u32 cia = g_fxo->get<ppu_far_jumps_t>().get_target(ppu.cia, &ppu);
+
+	if (!vm::check_addr(cia, vm::page_executable))
+	{
+		fmt::throw_exception("PPU far jump failed! (returned cia = 0x%08x)", cia);
+	}
+
 	ppu.cia = cia;
 	return false;
 }
 
-bool ppu_form_branch_to_code(u32 entry, u32 target, bool link)
+bool ppu_form_branch_to_code(u32 entry, u32 target, bool link, bool with_toc, std::string module_name)
 {
+	// Force align entry and target
 	entry &= -4;
-	target &= -4;
 
-	if (entry == target || !vm::check_addr(entry, vm::page_executable) || !vm::check_addr(target, vm::page_executable))
+	// Exported functions are using target as FNID, must not be changed
+	if (module_name.empty())
+	{
+		target &= -4;
+
+		u32 cia_target = target;
+
+		if (with_toc)
+		{
+			ppu_func_opd_t opd{};
+			if (!vm::try_access(target, &opd, sizeof(opd), false))
+			{
+				// Cannot access function descriptor
+				return false;
+			}
+
+			// For now allow situations where OPD is changed later by patches or by the program itself
+			//cia_target = opd.addr;
+
+			// So force a valid target (executable, yet not equal to entry)
+			cia_target = entry ^ 8;
+		}
+
+		// Target CIA must be aligned, executable and not equal with
+		if (cia_target % 4 || entry == cia_target || !vm::check_addr(cia_target, vm::page_executable))
+		{
+			return false;
+		}
+	}
+
+	// Entry must be executable
+	if (!vm::check_addr(entry, vm::page_executable))
 	{
 		return false;
 	}
 
+	if (module_name.empty())
 	g_fxo->init<ppu_far_jumps_t>();
+
+	if (!module_name.empty())
+	{
+		// Always use function descriptor for exported functions
+		with_toc = true;
+	}
+
+	if (with_toc)
+	{
+		// Always link for calls with function descriptor
+		link = true;
+	}
 
 	// Register branch target in host memory, not guest memory
 	auto& jumps = g_fxo->get<ppu_far_jumps_t>();
 
 	std::lock_guard lock(jumps.mutex);
-	jumps.vals.insert_or_assign(entry, std::make_pair(target, link));
+	jumps.vals.insert_or_assign(entry, std::type_identity_t<typename ppu_far_jumps_t::all_info_t>{target, link, with_toc, std::move(module_name)});
 	ppu_register_function_at(entry, 4, &ppu_far_jump);
 
 	return true;
+}
+
+bool ppu_form_branch_to_code(u32 entry, u32 target, bool link, bool with_toc)
+{
+	return ppu_form_branch_to_code(entry, target, link, with_toc, std::string{});
+}
+
+bool ppu_form_branch_to_code(u32 entry, u32 target, bool link)
+{
+	return ppu_form_branch_to_code(entry, target, link, false);
+}
+
+bool ppu_form_branch_to_code(u32 entry, u32 target)
+{
+	return ppu_form_branch_to_code(entry, target, false);
 }
 
 void ppu_remove_hle_instructions(u32 addr, u32 size)
@@ -693,7 +834,7 @@ std::array<u32, 2> op_branch_targets(u32 pc, ppu_opcode_t op)
 
 	g_fxo->need<ppu_far_jumps_t>();
 
-	if (u32 target = g_fxo->get<const ppu_far_jumps_t>().get_target(pc).first)
+	if (u32 target = g_fxo->get<ppu_far_jumps_t>().get_target(pc))
 	{
 		res[0] = target;
 		return res;

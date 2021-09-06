@@ -307,6 +307,15 @@ public:
 
 	static constexpr u32 call_history_max_size = 4096;
 
+	struct hle_func_call_with_toc_info_t
+	{
+		u32 cia;
+		u64 saved_lr;
+		u64 saved_r2;
+	};
+
+	std::vector<hle_func_call_with_toc_info_t> hle_func_calls_with_toc_info;
+
 	// For named_thread ctor
 	const struct thread_name_t
 	{

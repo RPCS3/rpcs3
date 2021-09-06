@@ -30,6 +30,7 @@ enum class patch_type
 	code_alloc,// Allocate memory somewhere, saves branch to memory at specfied address (filled with PPU NOP and branch for returning)
 	jump, // Install special 32-bit jump instruction (PPU only atm)
 	jump_link, // jump + set link (PPU only atm)
+	jump_func, // jump to exported function (PPU only, forever)
 	byte,
 	le16,
 	le32,
