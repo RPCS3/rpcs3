@@ -306,6 +306,8 @@ std::vector<u8> tar_object::save_directory(const std::string& src_dir, std::vect
 	{
 		fs::file fd(target_path);
 
+		const u64 old_size2 = init.size();
+
 		if (func)
 		{
 			// Use custom function for file saving if provided
@@ -319,13 +321,12 @@ std::vector<u8> tar_object::save_directory(const std::string& src_dir, std::vect
 		}
 		else
 		{
-			const u64 old_size2 = init.size();
 			init.resize(init.size() + stat.size);
 			ensure(fd.read(init.data() + old_size2, stat.size) == stat.size);
 		}
 
 		// Align
-		init.resize(utils::align(init.size(), 512));
+		init.resize(old_size2 + utils::align(init.size() - old_size2, 512));
 
 		fd.close();
 		fs::utime(target_path, stat.atime, stat.mtime);
