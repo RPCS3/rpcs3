@@ -1250,5 +1250,5 @@ DECLARE(ppu_module_manager::cellVdec)("libvdec", []()
 	REG_FUNC(libvdec, cellVdecSetFrameRateExt); // 0xcffc42a5
 	REG_FUNC(libvdec, cellVdecSetPts); // 0x3ce2e4f8
 
-	REG_FUNC(libvdec, vdecEntry).flag(MFF_HIDDEN);
+	REG_HIDDEN_FUNC(vdecEntry);
 });

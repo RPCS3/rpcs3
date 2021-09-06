@@ -18,7 +18,7 @@ constexpr const char* ppu_select_name(const char* /*name*/, const char* orig_nam
 }
 
 // Generate FNID or VNID for given name
-extern u32 ppu_generate_id(const char* name);
+extern u32 ppu_generate_id(std::string_view name);
 
 // Overload for REG_FNID, REG_VNID macro
 constexpr u32 ppu_generate_id(u32 id)
@@ -31,7 +31,7 @@ enum ppu_static_module_flags : u32
 {
 	MFF_FORCED_HLE = (1 << 0), // Always call HLE function
 	MFF_PERFECT    = (1 << 1), // Indicates complete implementation and LLE interchangeability
-	MFF_HIDDEN     = (1 << 2), // Invisible function for internal use (TODO)
+	MFF_HIDDEN     = (1 << 2), // Invisible variable for internal use (TODO)
 };
 
 // HLE function information
@@ -293,13 +293,19 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 	return func(ppu, args...);
 }
 
-#define REG_FNID(_module, nid, func) ppu_module_manager::register_static_function<&func>(#_module, ppu_select_name(#func, nid), BIND_FUNC(func, ppu.cia = static_cast<u32>(ppu.lr) & ~3), ppu_generate_id(nid))
+#define BIND_FUNC_WITH_BLR(func) BIND_FUNC(func, ppu.cia = static_cast<u32>(ppu.lr) & ~3)
+
+#define REG_FNID(_module, nid, func) ppu_module_manager::register_static_function<&func>(#_module, ppu_select_name(#func, nid), BIND_FUNC_WITH_BLR(func), ppu_generate_id(nid))
 
 #define REG_FUNC(_module, func) REG_FNID(_module, #func, func)
 
 #define REG_VNID(_module, nid, var) ppu_module_manager::register_static_variable<&var>(#_module, ppu_select_name(#var, nid), ppu_generate_id(nid))
 
 #define REG_VAR(_module, var) REG_VNID(_module, #var, var)
+
+#define REG_HIDDEN_FUNC(func) ppu_function_manager::register_function<decltype(&func), &func>(BIND_FUNC_WITH_BLR(func))
+
+#define REG_HIDDEN_FUNC_PURE(func) ppu_function_manager::register_function<decltype(&func), &func>(func)
 
 #define REINIT_FUNC(func) (ppu_module_manager::find_static_function<&func>().flags = 0, ppu_module_manager::find_static_function<&func>())
 
