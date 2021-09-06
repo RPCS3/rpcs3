@@ -72,7 +72,7 @@ enum : s32
 	SYS_SPU_SEGMENT_TYPE_INFO = 4,
 };
 
-enum : u32
+enum spu_stop_syscall : u32
 {
 	SYS_SPU_THREAD_STOP_YIELD                = 0x0100,
 	SYS_SPU_THREAD_STOP_GROUP_EXIT           = 0x0101,

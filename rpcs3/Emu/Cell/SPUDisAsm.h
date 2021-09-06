@@ -4,6 +4,7 @@
 #include "SPUOpcodes.h"
 
 union v128;
+enum spu_stop_syscall : u32;
 
 static constexpr const char* spu_reg_name[128] =
 {
@@ -176,7 +177,7 @@ public:
 	//0 - 10
 	void STOP(spu_opcode_t op)
 	{
-		op.rb ? UNK(op) : DisAsm("stop", op.opcode & 0x3fff);
+		op.rb ? UNK(op) : DisAsm("stop", fmt::format("0x%x #%s", op.opcode & 0x3fff, spu_stop_syscall{op.opcode & 0x3fff}).c_str());
 	}
 	void LNOP(spu_opcode_t /*op*/)
 	{
