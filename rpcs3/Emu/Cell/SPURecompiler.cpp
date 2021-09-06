@@ -6420,128 +6420,108 @@ public:
 		set_vr(op.rt, absd(a, b));
 	}
 
-	template <typename T>
-	void make_spu_rol(spu_opcode_t op, value_t<T> by)
-	{
-		set_vr(op.rt, rol(get_vr<T>(op.ra), by));
-	}
-
-	template <typename R, typename T>
-	void make_spu_rotate_mask(spu_opcode_t op, value_t<T> by)
-	{
-		value_t<R> sh;
-		static_assert(sh.esize == by.esize);
-		sh.value = m_ir->CreateAnd(m_ir->CreateNeg(by.value), by.esize * 2 - 1);
-		if constexpr (!by.is_vector)
-			sh.value = m_ir->CreateVectorSplat(sh.is_vector, sh.value);
-
-		set_vr(op.rt, select(sh < by.esize, get_vr<R>(op.ra) >> sh, splat<R>(0)));
-	}
-
-	template <typename R, typename T>
-	void make_spu_rotate_sext(spu_opcode_t op, value_t<T> by)
-	{
-		value_t<R> sh;
-		static_assert(sh.esize == by.esize);
-		sh.value = m_ir->CreateAnd(m_ir->CreateNeg(by.value), by.esize * 2 - 1);
-		if constexpr (!by.is_vector)
-			sh.value = m_ir->CreateVectorSplat(sh.is_vector, sh.value);
-
-		value_t<R> max_sh = eval(splat<R>(by.esize - 1));
-		sh.value = m_ir->CreateSelect(m_ir->CreateICmpUGT(max_sh.value, sh.value), sh.value, max_sh.value);
-		set_vr(op.rt, get_vr<R>(op.ra) >> sh);
-	}
-
-	template <typename R, typename T>
-	void make_spu_shift_left(spu_opcode_t op, value_t<T> by)
-	{
-		value_t<R> sh;
-		static_assert(sh.esize == by.esize);
-		sh.value = m_ir->CreateAnd(by.value, by.esize * 2 - 1);
-		if constexpr (!by.is_vector)
-			sh.value = m_ir->CreateVectorSplat(sh.is_vector, sh.value);
-
-		set_vr(op.rt, select(sh < by.esize, get_vr<R>(op.ra) << sh, splat<R>(0)));
-	}
-
 	void ROT(spu_opcode_t op)
 	{
-		make_spu_rol(op, get_vr<u32[4]>(op.rb));
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+		set_vr(op.rt, rol(a, b));
 	}
 
 	void ROTM(spu_opcode_t op)
 	{
-		make_spu_rotate_mask<u32[4]>(op, get_vr(op.rb));
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+		set_vr(op.rt, inf_lshr(a, -b & 63));
 	}
 
 	void ROTMA(spu_opcode_t op)
 	{
-		make_spu_rotate_sext<s32[4]>(op, get_vr(op.rb));
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+		set_vr(op.rt, inf_ashr(a, -b & 63));
 	}
 
 	void SHL(spu_opcode_t op)
 	{
-		make_spu_shift_left<u32[4]>(op, get_vr(op.rb));
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+		set_vr(op.rt, inf_shl(a, b & 63));
 	}
 
 	void ROTH(spu_opcode_t op)
 	{
-		make_spu_rol(op, get_vr<u16[8]>(op.rb));
+		const auto [a, b] = get_vrs<u16[8]>(op.ra, op.rb);
+		set_vr(op.rt, rol(a, b));
 	}
 
 	void ROTHM(spu_opcode_t op)
 	{
-		make_spu_rotate_mask<u16[8]>(op, get_vr<u16[8]>(op.rb));
+		const auto [a, b] = get_vrs<u16[8]>(op.ra, op.rb);
+		set_vr(op.rt, inf_lshr(a, -b & 31));
 	}
 
 	void ROTMAH(spu_opcode_t op)
 	{
-		make_spu_rotate_sext<s16[8]>(op, get_vr<s16[8]>(op.rb));
+		const auto [a, b] = get_vrs<s16[8]>(op.ra, op.rb);
+		set_vr(op.rt, inf_ashr(a, -b & 31));
 	}
 
 	void SHLH(spu_opcode_t op)
 	{
-		make_spu_shift_left<u16[8]>(op, get_vr<u16[8]>(op.rb));
+		const auto [a, b] = get_vrs<u16[8]>(op.ra, op.rb);
+		set_vr(op.rt, inf_shl(a, b & 31));
 	}
 
 	void ROTI(spu_opcode_t op)
 	{
-		make_spu_rol(op, get_imm<u32[4]>(op.i7, false));
+		const auto a = get_vr<u32[4]>(op.ra);
+		const auto i = get_imm<u32[4]>(op.i7, false);
+		set_vr(op.rt, rol(a, i));
 	}
 
 	void ROTMI(spu_opcode_t op)
 	{
-		make_spu_rotate_mask<u32[4]>(op, get_imm<u32>(op.i7, false));
+		const auto a = get_vr<u32[4]>(op.ra);
+		const auto i = get_imm<u32[4]>(op.i7, false);
+		set_vr(op.rt, inf_lshr(a, -i & 63));
 	}
 
 	void ROTMAI(spu_opcode_t op)
 	{
-		make_spu_rotate_sext<s32[4]>(op, get_imm<u32>(op.i7, false));
+		const auto a = get_vr<s32[4]>(op.ra);
+		const auto i = get_imm<s32[4]>(op.i7, false);
+		set_vr(op.rt, inf_ashr(a, -i & 63));
 	}
 
 	void SHLI(spu_opcode_t op)
 	{
-		make_spu_shift_left<u32[4]>(op, get_imm<u32>(op.i7, false));
+		const auto a = get_vr<u32[4]>(op.ra);
+		const auto i = get_imm<u32[4]>(op.i7, false);
+		set_vr(op.rt, inf_shl(a, i & 63));
 	}
 
 	void ROTHI(spu_opcode_t op)
 	{
-		make_spu_rol(op, get_imm<u16[8]>(op.i7, false));
+		const auto a = get_vr<u16[8]>(op.ra);
+		const auto i = get_imm<u16[8]>(op.i7, false);
+		set_vr(op.rt, rol(a, i));
 	}
 
 	void ROTHMI(spu_opcode_t op)
 	{
-		make_spu_rotate_mask<u16[8]>(op, get_imm<u16>(op.i7, false));
+		const auto a = get_vr<u16[8]>(op.ra);
+		const auto i = get_imm<u16[8]>(op.i7, false);
+		set_vr(op.rt, inf_lshr(a, -i & 31));
 	}
 
 	void ROTMAHI(spu_opcode_t op)
 	{
-		make_spu_rotate_sext<s16[8]>(op, get_imm<u16>(op.i7, false));
+		const auto a = get_vr<s16[8]>(op.ra);
+		const auto i = get_imm<s16[8]>(op.i7, false);
+		set_vr(op.rt, inf_ashr(a, -i & 31));
 	}
 
 	void SHLHI(spu_opcode_t op)
 	{
-		make_spu_shift_left<u16[8]>(op, get_imm<u16>(op.i7, false));
+		const auto a = get_vr<u16[8]>(op.ra);
+		const auto i = get_imm<u16[8]>(op.i7, false);
+		set_vr(op.rt, inf_shl(a, i & 31));
 	}
 
 	void A(spu_opcode_t op)

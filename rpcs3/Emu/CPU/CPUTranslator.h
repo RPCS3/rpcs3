@@ -3250,6 +3250,84 @@ public:
 		});
 	}
 
+	// Infinite-precision shift left
+	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
+	static auto inf_shl(T&& a, U&& b)
+	{
+		static constexpr u32 esz = llvm_value_t<CT>::esize;
+
+		return expr(select(b < esz, a << b, splat<CT>(0)), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
+		{
+			static const auto M = match<CT>();
+
+			if (auto [ok, b, a, b2] = match_expr(value, _m, select(M < esz, M << M, splat<CT>(0))); ok && b.eq(b2))
+			{
+				if (auto r1 = llvm_expr_t<T>{}.match(a.value, _m); a.eq())
+				{
+					if (auto r2 = llvm_expr_t<U>{}.match(b.value, _m); b.eq())
+					{
+						return std::tuple_cat(r1, r2);
+					}
+				}
+			}
+
+			value = nullptr;
+			return {};
+		});
+	}
+
+	// Infinite-precision logical shift right (unsigned)
+	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
+	static auto inf_lshr(T&& a, U&& b)
+	{
+		static constexpr u32 esz = llvm_value_t<CT>::esize;
+
+		return expr(select(b < esz, a >> b, splat<CT>(0)), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
+		{
+			static const auto M = match<CT>();
+
+			if (auto [ok, b, a, b2] = match_expr(value, _m, select(M < esz, M >> M, splat<CT>(0))); ok && b.eq(b2))
+			{
+				if (auto r1 = llvm_expr_t<T>{}.match(a.value, _m); a.eq())
+				{
+					if (auto r2 = llvm_expr_t<U>{}.match(b.value, _m); b.eq())
+					{
+						return std::tuple_cat(r1, r2);
+					}
+				}
+			}
+
+			value = nullptr;
+			return {};
+		});
+	}
+
+	// Infinite-precision arithmetic shift right (signed)
+	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
+	static auto inf_ashr(T&& a, U&& b)
+	{
+		static constexpr u32 esz = llvm_value_t<CT>::esize;
+
+		return expr(a >> select(b > (esz - 1), splat<CT>(esz - 1), b), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
+		{
+			static const auto M = match<CT>();
+
+			if (auto [ok, a, b, b2] = match_expr(value, _m, M >> select(M > (esz - 1), splat<CT>(esz - 1), M)); ok && b.eq(b2))
+			{
+				if (auto r1 = llvm_expr_t<T>{}.match(a.value, _m); a.eq())
+				{
+					if (auto r2 = llvm_expr_t<U>{}.match(b.value, _m); b.eq())
+					{
+						return std::tuple_cat(r1, r2);
+					}
+				}
+			}
+
+			value = nullptr;
+			return {};
+		});
+	}
+
 	template <typename... Types>
 	llvm::Function* get_intrinsic(llvm::Intrinsic::ID id)
 	{
