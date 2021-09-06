@@ -426,6 +426,11 @@ VKGSRender::VKGSRender() : GSRender()
 	for (u32 n = 0; n < occlusion_query_count; ++n)
 		m_occlusion_query_data[n].driver_handle = n;
 
+	if (g_cfg.video.precise_zpass_count)
+	{
+		m_occlusion_query_manager->set_control_flags(VK_QUERY_CONTROL_PRECISE_BIT, 0);
+	}
+
 	//Generate frame contexts
 	const auto& binding_table = m_device->get_pipeline_binding_table();
 	const u32 num_fs_samplers = binding_table.vertex_textures_first_bind_slot - binding_table.textures_first_bind_slot;
@@ -2437,7 +2442,7 @@ bool VKGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info
 	if (data.is_current(m_current_command_buffer))
 		return false;
 
-	u32 oldest = data.indices.front();
+	const u32 oldest = data.indices.front();
 	return m_occlusion_query_manager->check_query_status(oldest);
 }
 
@@ -2468,10 +2473,10 @@ void VKGSRender::get_occlusion_query_result(rsx::reports::occlusion_query_info* 
 		// Gather data
 		for (const auto occlusion_id : data.indices)
 		{
-			// We only need one hit
-			if (m_occlusion_query_manager->get_query_result(occlusion_id))
+			query->result += m_occlusion_query_manager->get_query_result(occlusion_id);
+			if (query->result && !g_cfg.video.precise_zpass_count)
 			{
-				query->result = 1;
+				// We only need one hit unless precise zcull is requested
 				break;
 			}
 		}
