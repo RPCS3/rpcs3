@@ -17,10 +17,10 @@ struct gui_game_info
 	compat::status compat;
 	QPixmap icon;
 	QPixmap pxmap;
-	bool hasCustomConfig;
-	bool hasCustomPadConfig;
-	bool has_hover_gif;
-	movie_item* item;
+	bool hasCustomConfig = false;
+	bool hasCustomPadConfig = false;
+	bool has_hover_gif = false;
+	movie_item* item = nullptr;
 };
 
 typedef std::shared_ptr<gui_game_info> game_info;
