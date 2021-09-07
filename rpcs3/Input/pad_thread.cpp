@@ -14,6 +14,8 @@
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/PadHandler.h"
 #include "Emu/Io/pad_config.h"
+#include "Emu/System.h"
+#include "Utilities/Thread.h"
 
 LOG_CHANNEL(input_log, "Input");
 
@@ -24,7 +26,6 @@ namespace pad
 	std::string g_title_id;
 	atomic_t<bool> g_reset{false};
 	atomic_t<bool> g_enabled{true};
-	atomic_t<bool> g_active{false};
 }
 
 struct pad_setting
@@ -38,19 +39,12 @@ struct pad_setting
 pad_thread::pad_thread(void *_curthread, void *_curwindow, std::string_view title_id) : curthread(_curthread), curwindow(_curwindow)
 {
 	pad::g_title_id = title_id;
-	Init();
-
-	thread = std::make_shared<std::thread>(&pad_thread::ThreadFunc, this);
 	pad::g_current = this;
 }
 
 pad_thread::~pad_thread()
 {
 	pad::g_current = nullptr;
-	pad::g_active = false;
-	thread->join();
-
-	handlers.clear();
 }
 
 void pad_thread::Init()
@@ -214,14 +208,15 @@ void pad_thread::SetIntercepted(bool intercepted)
 	}
 }
 
-void pad_thread::ThreadFunc()
+void pad_thread::operator()()
 {
-	pad::g_active = true;
-	while (pad::g_active)
+	pad::g_reset = true;
+
+	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		if (!pad::g_enabled)
+		if (!pad::g_enabled || Emu.IsPaused())
 		{
-			std::this_thread::sleep_for(1ms);
+			thread_ctrl::wait_for(10000);
 			continue;
 		}
 
@@ -276,7 +271,7 @@ void pad_thread::ThreadFunc()
 			}
 		}
 
-		std::this_thread::sleep_for(1ms);
+		thread_ctrl::wait_for(1000);
 	}
 }
 
