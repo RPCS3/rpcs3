@@ -240,39 +240,40 @@ void pad_thread::ThreadFunc()
 
 		m_info.now_connect = connected_devices + num_ldd_pad;
 
-		// The input_ignored section is only reached when a dialog was closed and the pads are still intercepted.
+		// The ignore_input section is only reached when a dialog was closed and the pads are still intercepted.
 		// As long as any of the listed buttons is pressed, cellPadGetData will ignore all input (needed for Hotline Miami).
 		// ignore_input was added because if we keep the pads intercepted, then some games will enter the menu due to unexpected system interception (tested with Ninja Gaiden Sigma).
-		const bool input_ignored = m_info.ignore_input && !(m_info.system_info & CELL_PAD_INFO_INTERCEPTED);
-		bool any_button_pressed = false;
-
-		for (usz i = 0; i < m_pads.size(); i++)
+		if (m_info.ignore_input && !(m_info.system_info & CELL_PAD_INFO_INTERCEPTED))
 		{
-			const auto& pad = m_pads[i];
+			bool any_button_pressed = false;
 
-			if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
+			for (usz i = 0; i < m_pads.size() && !any_button_pressed; i++)
 			{
+				const auto& pad = m_pads[i];
+
+				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+					continue;
+
 				for (auto& button : pad->m_buttons)
 				{
-					if (button.m_pressed)
+					if (button.m_pressed && (
+						button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
+						button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
+						button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
+						button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
+						button.m_outKeyCode == CELL_PAD_CTRL_START ||
+						button.m_outKeyCode == CELL_PAD_CTRL_SELECT))
 					{
-						if (button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
-							button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
-							button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
-							button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
-							button.m_outKeyCode == CELL_PAD_CTRL_START ||
-							button.m_outKeyCode == CELL_PAD_CTRL_SELECT)
-						{
-							any_button_pressed = true;
-						}
+						any_button_pressed = true;
+						break;
 					}
 				}
 			}
-		}
 
-		if (input_ignored && !any_button_pressed)
-		{
-			m_info.ignore_input = false;
+			if (!any_button_pressed)
+			{
+				m_info.ignore_input = false;
+			}
 		}
 
 		std::this_thread::sleep_for(1ms);
