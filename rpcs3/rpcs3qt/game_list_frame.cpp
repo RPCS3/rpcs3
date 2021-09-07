@@ -2255,7 +2255,10 @@ void game_list_frame::PopulateGameList()
 
 	const std::string selected_item = CurrentSelectionPath();
 
+	// Release old data
+	m_game_grid->clear_list();
 	m_game_list->clear_list();
+
 	m_game_list->setRowCount(m_game_data.size());
 
 	// Default locale. Uses current Qt application language.
@@ -2401,6 +2404,8 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	const std::string selected_item = CurrentSelectionPath();
 
+	// Release old data
+	m_game_list->clear_list();
 	m_game_grid->deleteLater();
 
 	const bool show_text = m_icon_size_index > gui::gl_max_slider_pos * 2 / 5;
@@ -2516,7 +2521,7 @@ std::string game_list_frame::CurrentSelectionPath()
 			item = m_game_list->item(m_game_list->currentRow(), 0);
 		}
 	}
-	else
+	else if (m_game_grid)
 	{
 		if (!m_game_grid->selectedItems().isEmpty())
 		{
