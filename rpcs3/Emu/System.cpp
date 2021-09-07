@@ -1289,6 +1289,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				ppu_exec.set_error(elf_error::header_type);
 			}
+			else
+			{
+				// Preserve emulation state for OVL excutable
+				Pause(true);
+			}
 
 			if (ppu_exec != elf_error::ok)
 			{
@@ -1306,6 +1311,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			ppu_load_prx(ppu_prx, m_path);
+			Pause(true);
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{
@@ -1313,6 +1319,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			spu_load_exec(spu_exec);
+			Pause(true);
 		}
 		else
 		{
