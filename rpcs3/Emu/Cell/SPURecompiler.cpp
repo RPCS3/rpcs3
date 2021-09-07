@@ -7778,12 +7778,9 @@ public:
 
 	bool is_input_positive(value_t<f32[4]> a)
 	{
-		if (auto [ok, v0, v1] = match_expr(a, match<f32[4]>() * match<f32[4]>()); ok)
+		if (auto [ok, v0, v1] = match_expr(a, match<f32[4]>() * match<f32[4]>()); ok && v0.eq(v1))
 		{
-			if (v0.value == v1.value)
-			{
-				return true;
-			}
+			return true;
 		}
 
 		return false;
@@ -8496,6 +8493,18 @@ public:
 		return {"spu_fi", {std::forward<T>(a), std::forward<U>(b)}};
 	}
 
+	template <typename T>
+	static llvm_calli<f32[4], T> spu_re(T&& a)
+	{
+		return {"spu_re", {std::forward<T>(a)}};
+	}
+
+	template <typename T>
+	static llvm_calli<f32[4], T> spu_rsqrte(T&& a)
+	{
+		return {"spu_rsqrte", {std::forward<T>(a)}};
+	}
+
 	void FI(spu_opcode_t op)
 	{
 		// TODO
@@ -8527,7 +8536,39 @@ public:
 			return bitcast<f32[4]>((b & 0xff800000u) | (bitcast<u32[4]>(fpcast<f32[4]>(bnew)) & ~0xff800000u)); // Inject old sign and exponent
 		});
 
-		set_vr(op.rt, fi(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
+		register_intrinsic("spu_re", [&](llvm::CallInst* ci)
+		{
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			return fre(a);
+		});
+
+		register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
+		{
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			return frsqe(fabs(a));
+		});
+
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+
+		if (const auto [ok, mb] = match_expr(b, frest(match<f32[4]>())); ok && mb.eq(a))
+		{
+			erase_stores(b);
+			set_vr(op.rt, spu_re(a));
+			return;
+		}
+
+		if (const auto [ok, mb] = match_expr(b, frsqest(match<f32[4]>())); ok && mb.eq(a))
+		{
+			erase_stores(b);
+			set_vr(op.rt, spu_rsqrte(a));
+			return;
+		}
+
+		const auto r = eval(fi(a, b));
+		if (!m_interp_magn)
+			spu_log.todo("[%s:0x%05x] Unmatched spu_fi found", m_hash, m_pos);
+
+		set_vr(op.rt, r);
 	}
 
 	void CFLTS(spu_opcode_t op)

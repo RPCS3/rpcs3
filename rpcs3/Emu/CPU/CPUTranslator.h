@@ -427,6 +427,9 @@ using llvm_common_t = std::enable_if_t<(is_llvm_expr_of<T, Types>::ok && ...), t
 template <typename... Args>
 using llvm_match_tuple = decltype(std::tuple_cat(std::declval<llvm_expr_t<Args>&>().match(std::declval<llvm::Value*&>(), nullptr)...));
 
+// Helper function
+llvm::Value* peek_through_bitcasts(llvm::Value*);
+
 template <typename T, typename U = llvm_common_t<llvm_value_t<T>>>
 struct llvm_match_t
 {
@@ -442,7 +445,8 @@ struct llvm_match_t
 	template <typename... Args>
 	bool eq(const Args&... args) const
 	{
-		return value && ((value == args.value) && ...);
+		llvm::Value* lhs = nullptr;
+		return value && (lhs = peek_through_bitcasts(value)) && ((lhs == peek_through_bitcasts(args.value)) && ...);
 	}
 
 	llvm::Value* eval(llvm::IRBuilder<>*) const
@@ -3490,6 +3494,15 @@ public:
 
 	// Finalize processing custom intrinsics
 	void replace_intrinsics(llvm::Function&);
+
+	// Erase store instructions of provided
+	void erase_stores(llvm::ArrayRef<llvm::Value*> args);
+
+	template <typename... Args>
+	void erase_stores(Args... args)
+	{
+		erase_stores({args.value...});
+	}
 
 	template <typename T, typename U>
 	static auto pshufb(T&& a, U&& b)

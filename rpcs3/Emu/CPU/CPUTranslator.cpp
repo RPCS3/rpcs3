@@ -7,6 +7,18 @@
 
 llvm::LLVMContext g_llvm_ctx;
 
+llvm::Value* peek_through_bitcasts(llvm::Value* arg)
+{
+	llvm::CastInst* i;
+
+	while ((i = llvm::dyn_cast_or_null<llvm::CastInst>(arg)) && i->getOpcode() == llvm::Instruction::BitCast)
+	{
+		arg = i->getOperand(0);
+	}
+
+	return arg;
+}
+
 cpu_translator::cpu_translator(llvm::Module* _module, bool is_be)
     : m_context(g_llvm_ctx)
 	, m_module(_module)
@@ -308,6 +320,29 @@ void cpu_translator::replace_intrinsics(llvm::Function& f)
 			}
 
 			++bit;
+		}
+	}
+}
+
+void cpu_translator::erase_stores(llvm::ArrayRef<llvm::Value*> args)
+{
+	for (auto v : args)
+	{
+		for (auto it = v->use_begin(); it != v->use_end(); ++it)
+		{
+			llvm::Value* i = *it;
+			llvm::CastInst* bci = nullptr;
+
+			// Walk through bitcasts
+			while (i && (bci = llvm::dyn_cast<llvm::CastInst>(i)) && bci->getOpcode() == llvm::Instruction::BitCast)
+			{
+				i = *bci->use_begin();
+			}
+
+			if (auto si = llvm::dyn_cast_or_null<llvm::StoreInst>(i))
+			{
+				si->eraseFromParent();
+			}
 		}
 	}
 }
