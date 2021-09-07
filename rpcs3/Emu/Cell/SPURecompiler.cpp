@@ -9489,7 +9489,6 @@ struct spu_llvm_worker
 			else
 			{
 				spu_log.fatal("[0x%05x] Compilation failed.", func.entry_point);
-				Emu.Pause();
 				return;
 			}
 
