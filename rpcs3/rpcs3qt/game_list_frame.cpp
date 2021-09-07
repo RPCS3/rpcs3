@@ -621,19 +621,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
 			quint64 playtime    = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
 
-			// Read deprecated gui_setting values first for backwards compatibility (older than January 12th 2020).
-			// Restrict this to empty persistent settings to keep continuity.
-			if (last_played.isEmpty())
-			{
-				last_played = m_gui_settings->GetValue(gui::persistent::last_played, serial, "").toString();
-				m_gui_settings->RemoveValue(gui::persistent::last_played, serial);
-			}
-			if (playtime <= 0)
-			{
-				playtime = m_gui_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
-				m_gui_settings->RemoveValue(gui::persistent::playtime, serial);
-			}
-
 			// Set persistent_settings values if values exist
 			if (!last_played.isEmpty())
 			{
