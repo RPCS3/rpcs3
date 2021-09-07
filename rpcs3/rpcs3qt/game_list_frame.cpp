@@ -2289,7 +2289,7 @@ void game_list_frame::PopulateGameList()
 
 		icon_item->set_icon_func([this, icon_item, game](int)
 		{
-			ensure(icon_item);
+			ensure(icon_item && game);
 
 			if (QMovie* movie = icon_item->movie(); movie && icon_item->get_active())
 			{
@@ -2298,6 +2298,12 @@ void game_list_frame::PopulateGameList()
 			else
 			{
 				icon_item->setData(Qt::DecorationRole, game->pxmap);
+
+				if (!game->has_hover_gif)
+				{
+					game->pxmap = {};
+				}
+
 				if (movie)
 				{
 					movie->stop();
