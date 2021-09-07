@@ -117,7 +117,6 @@ void Emulator::Init(bool add_only)
 	}
 
 	g_fxo->reset();
-	g_fxo->need<named_thread<progress_dialog_server>>();
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
@@ -235,6 +234,7 @@ void Emulator::Init(bool add_only)
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
 	make_path_verbose(fs::get_cache_dir() + "spu_progs/");
 	make_path_verbose(fs::get_config_dir() + "captures/");
+	make_path_verbose(patch_engine::get_patches_path());
 
 	if (add_only)
 	{
@@ -312,9 +312,6 @@ void Emulator::Init(bool add_only)
 	// Limit cache size
 	if (g_cfg.vfs.limit_cache_size)
 		rpcs3::cache::limit_cache_size();
-
-	// Initialize patch engine
-	g_fxo->init<patch_engine>()->append_global_patches();
 }
 
 void Emulator::SetUsr(const std::string& user)
@@ -418,6 +415,9 @@ bool Emulator::BootRsxCapture(const std::string& path)
 
 	vm::init();
 	g_fxo->init(false);
+
+	// Initialize progress dialog
+	g_fxo->init<named_thread<progress_dialog_server>>();
 
 	// PS3 'executable'
 	m_state = system_state::ready;
@@ -649,22 +649,28 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Set RTM usage
 		g_use_rtm = utils::has_rtm() && ((utils::has_mpx() && g_cfg.core.enable_TSX == tsx_usage::enabled) || g_cfg.core.enable_TSX == tsx_usage::forced);
 
-		// Log some extra info in case of boot
 		if (!add_only)
 		{
+			// Log some extra info in case of boot
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 			if (g_cfg.video.renderer == video_renderer::vulkan)
 			{
 				sys_log.notice("Vulkan SDK Revision: %d", VK_HEADER_VERSION);
 			}
 #endif
-
 			sys_log.notice("Used configuration:\n%s\n", g_cfg.to_string());
 
 			if (g_use_rtm && !utils::has_mpx())
 			{
 				sys_log.warning("TSX forced by User");
 			}
+
+			// Initialize patch engine
+			g_fxo->need<patch_engine>();
+
+			// Load patches from different locations
+			g_fxo->get<patch_engine>().append_global_patches();
+			g_fxo->get<patch_engine>().append_title_patches(m_title_id);
 		}
 
 		if (g_use_rtm)
@@ -674,9 +680,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			g_rtm_tx_limit1 = static_cast<u64>(g_cfg.core.tx_limit1_ns * _1ns);
 			g_rtm_tx_limit2 = static_cast<u64>(g_cfg.core.tx_limit2_ns * _1ns);
 		}
-
-		// Load patches from different locations
-		g_fxo->get<patch_engine>().append_title_patches(m_title_id);
 
 		// Mount all devices
 		const std::string emu_dir = rpcs3::utils::get_emu_dir();
@@ -1037,6 +1040,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			m_path = m_path_old; // Reset m_path to fix boot from gui
 			return game_boot_result::no_errors;
 		}
+
+		// Initialize progress dialog
+		g_fxo->init<named_thread<progress_dialog_server>>();
 
 		// Set title to actual disc title if necessary
 		const std::string disc_sfo_dir = vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO");
