@@ -1434,6 +1434,10 @@ bool Emulator::Pause()
 
 	GetCallbacks().on_pause();
 
+	static atomic_t<u32> pause_mark = 0;
+
+	sys_log.success("Emulation is being paused... (mark=%u)", pause_mark++);
+
 	// Update pause start time
 	if (m_pause_start_time.exchange(start))
 	{
@@ -1528,6 +1532,8 @@ void Emulator::Resume()
 	}
 
 	GetCallbacks().on_resume();
+
+	sys_log.success("Emulation has been resumed!");
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{
