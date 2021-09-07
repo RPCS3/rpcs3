@@ -221,7 +221,7 @@ struct fatal_error_listener final : logs::listener
 			}
 #endif
 			// Pause emulation if fatal error encountered
-			Emu.Pause();
+			Emu.Pause(true);
 		}
 	}
 };
