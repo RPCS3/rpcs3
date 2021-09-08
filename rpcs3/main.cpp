@@ -522,7 +522,7 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_styles, "Lists the available styles."));
 	parser.addOption(QCommandLineOption(arg_style, "Loads a custom style.", "style", ""));
 	parser.addOption(QCommandLineOption(arg_stylesheet, "Loads a custom stylesheet.", "path", ""));
-	const QCommandLineOption config_option(arg_config, "Forces the emulator to use this configuration file.", "path", "");
+	const QCommandLineOption config_option(arg_config, "Forces the emulator to use this configuration file for CLI-booted game.", "path", "");
 	parser.addOption(config_option);
 	const QCommandLineOption installfw_option(arg_installfw, "Forces the emulator to install this firmware file.", "path", "");
 	parser.addOption(installfw_option);
@@ -837,18 +837,6 @@ int main(int argc, char** argv)
 	}
 #endif
 
-	if (parser.isSet(arg_config))
-	{
-		const std::string config_override_path = parser.value(config_option).toStdString();
-
-		if (!fs::is_file(config_override_path))
-		{
-			report_fatal_error(fmt::format("No config file found: %s", config_override_path));
-		}
-
-		Emu.SetConfigOverride(config_override_path);
-	}
-
 	// Force install firmware or pkg first if specified through command-line
 	if (parser.isSet(arg_installfw) || parser.isSet(arg_installpkg))
 	{
@@ -909,13 +897,25 @@ int main(int argc, char** argv)
 			}
 		}
 
+		std::string config_path = cfg_keys::title_id;
+
+		if (parser.isSet(arg_config))
+		{
+			config_path = parser.value(config_option).toStdString();
+
+			if (!fs::is_file(config_path))
+			{
+				report_fatal_error(fmt::format("No config file found: %s", config_path));
+			}
+		}
+
 		// Postpone startup to main event loop
-		Emu.CallAfter([path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv)]() mutable
+		Emu.CallAfter([path = sstr(QFileInfo(args.at(0)).absoluteFilePath()), rpcs3_argv = std::move(rpcs3_argv), config_path = std::move(config_path)]() mutable
 		{
 			Emu.argv = std::move(rpcs3_argv);
 			Emu.SetForceBoot(true);
 
-			if (const game_boot_result error = Emu.BootGame(path, ""); error != game_boot_result::no_errors)
+			if (const game_boot_result error = Emu.BootGame(path, "", false, false, config_path); error != game_boot_result::no_errors)
 			{
 				sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
 
