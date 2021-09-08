@@ -665,7 +665,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			m_mutex_cat.unlock();
 
 			const auto compat = m_game_compat->GetCompatibility(game.serial);
-			const bool hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial)) || fs::is_file(rpcs3::utils::get_custom_config_path(game.serial, true));
+			const bool hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial));
 			const bool hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
 			const bool has_hover_gif = fs::is_file(game_icon_path + game.serial + "/hover.gif");
 
@@ -1017,15 +1017,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QAction* open_config_dir = menu.addAction(tr("&Open Custom Config Folder"));
 		connect(open_config_dir, &QAction::triggered, [current_game]()
 		{
-			const std::string new_config_path = rpcs3::utils::get_custom_config_path(current_game.serial);
+			const std::string config_path = rpcs3::utils::get_custom_config_path(current_game.serial);
 
-			if (fs::is_file(new_config_path))
-				gui::utils::open_dir(new_config_path);
-
-			const std::string old_config_path = rpcs3::utils::get_custom_config_path(current_game.serial, true);
-
-			if (fs::is_file(old_config_path))
-				gui::utils::open_dir(old_config_path);
+			if (fs::is_file(config_path))
+				gui::utils::open_dir(config_path);
 		});
 	}
 	if (fs::is_dir(data_base_dir))
@@ -1398,10 +1393,9 @@ bool game_list_frame::CreatePPUCache(const game_info& game)
 
 bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, const game_info& game, bool is_interactive)
 {
-	const std::string config_path_new = rpcs3::utils::get_custom_config_path(title_id);
-	const std::string config_path_old = rpcs3::utils::get_custom_config_path(title_id, true);
+	const std::string path = rpcs3::utils::get_custom_config_path(title_id);
 
-	if (!fs::is_file(config_path_new) && !fs::is_file(config_path_old))
+	if (!fs::is_file(path))
 		return true;
 
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Removal"), tr("Remove custom game configuration?")) != QMessageBox::Yes)
@@ -1409,12 +1403,8 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, con
 
 	bool result = true;
 
-	for (const std::string& path : { config_path_new, config_path_old })
+	if (fs::is_file(path))
 	{
-		if (!fs::is_file(path))
-		{
-			continue;
-		}
 		if (fs::remove_file(path))
 		{
 			if (game)
