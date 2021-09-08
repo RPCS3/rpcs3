@@ -14,6 +14,8 @@
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/PadHandler.h"
 #include "Emu/Io/pad_config.h"
+#include "Emu/System.h"
+#include "Utilities/Thread.h"
 
 LOG_CHANNEL(input_log, "Input");
 
@@ -24,7 +26,6 @@ namespace pad
 	std::string g_title_id;
 	atomic_t<bool> g_reset{false};
 	atomic_t<bool> g_enabled{true};
-	atomic_t<bool> g_active{false};
 }
 
 struct pad_setting
@@ -38,19 +39,12 @@ struct pad_setting
 pad_thread::pad_thread(void *_curthread, void *_curwindow, std::string_view title_id) : curthread(_curthread), curwindow(_curwindow)
 {
 	pad::g_title_id = title_id;
-	Init();
-
-	thread = std::make_shared<std::thread>(&pad_thread::ThreadFunc, this);
 	pad::g_current = this;
 }
 
 pad_thread::~pad_thread()
 {
 	pad::g_current = nullptr;
-	pad::g_active = false;
-	thread->join();
-
-	handlers.clear();
 }
 
 void pad_thread::Init()
@@ -214,14 +208,15 @@ void pad_thread::SetIntercepted(bool intercepted)
 	}
 }
 
-void pad_thread::ThreadFunc()
+void pad_thread::operator()()
 {
-	pad::g_active = true;
-	while (pad::g_active)
+	pad::g_reset = true;
+
+	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		if (!pad::g_enabled)
+		if (!pad::g_enabled || Emu.IsPaused())
 		{
-			std::this_thread::sleep_for(1ms);
+			thread_ctrl::wait_for(10000);
 			continue;
 		}
 
@@ -240,42 +235,43 @@ void pad_thread::ThreadFunc()
 
 		m_info.now_connect = connected_devices + num_ldd_pad;
 
-		// The input_ignored section is only reached when a dialog was closed and the pads are still intercepted.
+		// The ignore_input section is only reached when a dialog was closed and the pads are still intercepted.
 		// As long as any of the listed buttons is pressed, cellPadGetData will ignore all input (needed for Hotline Miami).
 		// ignore_input was added because if we keep the pads intercepted, then some games will enter the menu due to unexpected system interception (tested with Ninja Gaiden Sigma).
-		const bool input_ignored = m_info.ignore_input && !(m_info.system_info & CELL_PAD_INFO_INTERCEPTED);
-		bool any_button_pressed = false;
-
-		for (usz i = 0; i < m_pads.size(); i++)
+		if (m_info.ignore_input && !(m_info.system_info & CELL_PAD_INFO_INTERCEPTED))
 		{
-			const auto& pad = m_pads[i];
+			bool any_button_pressed = false;
 
-			if (pad->m_port_status & CELL_PAD_STATUS_CONNECTED)
+			for (usz i = 0; i < m_pads.size() && !any_button_pressed; i++)
 			{
+				const auto& pad = m_pads[i];
+
+				if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
+					continue;
+
 				for (auto& button : pad->m_buttons)
 				{
-					if (button.m_pressed)
+					if (button.m_pressed && (
+						button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
+						button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
+						button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
+						button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
+						button.m_outKeyCode == CELL_PAD_CTRL_START ||
+						button.m_outKeyCode == CELL_PAD_CTRL_SELECT))
 					{
-						if (button.m_outKeyCode == CELL_PAD_CTRL_CROSS ||
-							button.m_outKeyCode == CELL_PAD_CTRL_CIRCLE ||
-							button.m_outKeyCode == CELL_PAD_CTRL_TRIANGLE ||
-							button.m_outKeyCode == CELL_PAD_CTRL_SQUARE ||
-							button.m_outKeyCode == CELL_PAD_CTRL_START ||
-							button.m_outKeyCode == CELL_PAD_CTRL_SELECT)
-						{
-							any_button_pressed = true;
-						}
+						any_button_pressed = true;
+						break;
 					}
 				}
 			}
+
+			if (!any_button_pressed)
+			{
+				m_info.ignore_input = false;
+			}
 		}
 
-		if (input_ignored && !any_button_pressed)
-		{
-			m_info.ignore_input = false;
-		}
-
-		std::this_thread::sleep_for(1ms);
+		thread_ctrl::wait_for(1000);
 	}
 }
 

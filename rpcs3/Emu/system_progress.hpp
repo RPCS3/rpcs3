@@ -37,5 +37,5 @@ struct progress_dialog_server
 	void operator()();
 	~progress_dialog_server();
 
-	static auto constexpr thread_name = "Progress Dialog Server"sv;
+	static constexpr auto thread_name = "Progress Dialog Server"sv;
 };
