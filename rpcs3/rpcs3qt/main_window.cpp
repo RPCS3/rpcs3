@@ -1938,6 +1938,11 @@ void main_window::CreateConnects()
 
 	connect(ui->addGamesAct, &QAction::triggered, this, [this]()
 	{
+		if (!m_gui_settings->GetBootConfirmation(this))
+		{
+			return;
+		}
+
 		QStringList paths;
 
 		// Only select one folder for now
@@ -2662,6 +2667,8 @@ void main_window::CreateFirmwareCache()
 	}
 
 	Emu.SetForceBoot(true);
+	Emu.Stop();
+	Emu.SetForceBoot(true);
 
 	if (const game_boot_result error = Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys", "", true);
 		error != game_boot_result::no_errors)
@@ -2888,6 +2895,10 @@ void main_window::dropEvent(QDropEvent* event)
 		{
 			return;
 		}
+
+		Emu.SetForceBoot(true);
+		Emu.Stop();
+
 		if (const auto error = Emu.BootGame(sstr(drop_paths.first()), "", true); error != game_boot_result::no_errors)
 		{
 			gui_log.error("Boot failed: reason: %s, path: %s", error, sstr(drop_paths.first()));
