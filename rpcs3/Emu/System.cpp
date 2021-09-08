@@ -601,36 +601,24 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		if (!add_only && !force_global_config && m_config_override_path.empty())
 		{
-			const std::string config_path_new = rpcs3::utils::get_custom_config_path(m_title_id);
-			const std::string config_path_old = rpcs3::utils::get_custom_config_path(m_title_id, true);
+			const std::string config_path = rpcs3::utils::get_custom_config_path(m_title_id);
 
 			// Load custom config-1
-			if (fs::file cfg_file{ config_path_old })
+			if (fs::file cfg_file{ config_path })
 			{
-				sys_log.notice("Applying custom config: %s", config_path_old);
+				sys_log.notice("Applying custom config: %s", config_path);
 
-				if (!g_cfg.from_string(cfg_file.to_string()))
+				if (g_cfg.from_string(cfg_file.to_string()))
 				{
-					sys_log.fatal("Failed to apply custom config: %s", config_path_old);
+					g_cfg.name = config_path;
+				}
+				else
+				{
+					sys_log.fatal("Failed to apply custom config: %s", config_path);
 				}
 			}
 
 			// Load custom config-2
-			if (fs::file cfg_file{ config_path_new })
-			{
-				sys_log.notice("Applying custom config: %s", config_path_new);
-
-				if (g_cfg.from_string(cfg_file.to_string()))
-				{
-					g_cfg.name = config_path_new;
-				}
-				else
-				{
-					sys_log.fatal("Failed to apply custom config: %s", config_path_new);
-				}
-			}
-
-			// Load custom config-3
 			if (fs::file cfg_file{ m_path + ".yml" })
 			{
 				sys_log.notice("Applying custom config: %s.yml", m_path);
