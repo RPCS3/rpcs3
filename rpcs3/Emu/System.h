@@ -26,6 +26,7 @@ enum class system_state : u32
 	running,
 	stopped,
 	paused,
+	frozen, // paused but cannot resume
 	ready,
 };
 
@@ -231,7 +232,7 @@ public:
 
 	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool is_disc_patch = false);
 	void Run(bool start_playtime);
-	bool Pause();
+	bool Pause(bool freeze_emulation = false);
 	void Resume();
 	void Stop(bool restart = false);
 	void Restart() { Stop(true); }
@@ -242,7 +243,7 @@ public:
 	bool IsPaused()  const { return m_state >= system_state::paused; } // ready is also considered paused by this function
 	bool IsStopped() const { return m_state == system_state::stopped; }
 	bool IsReady()   const { return m_state == system_state::ready; }
-	auto GetStatus() const { return m_state.load(); }
+	auto GetStatus() const { system_state state = m_state; return state == system_state::frozen ? system_state::paused : state; }
 
 	bool HasGui() const { return m_has_gui; }
 	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
