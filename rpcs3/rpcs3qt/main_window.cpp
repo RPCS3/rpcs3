@@ -2482,9 +2482,9 @@ void main_window::CreateDockWindows()
 		m_selected_game = game;
 	});
 
-	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, const std::string& config_path)
+	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game)
 	{
-		Boot(game->info.path, game->info.serial, false, false, config_path);
+		Boot(game->info.path, game->info.serial, false, false, game->selected_config);
 	});
 
 	connect(m_game_list_frame, &game_list_frame::NotifyEmuSettingsChange, this, &main_window::NotifyEmuSettingsChange);

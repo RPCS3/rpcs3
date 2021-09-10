@@ -669,7 +669,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			const bool hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
 			const bool has_hover_gif = fs::is_file(game_icon_path + game.serial + "/hover.gif");
 
-			m_games.push(std::make_shared<gui_game_info>(gui_game_info{game, qt_cat, compat, {}, {}, hasCustomConfig, hasCustomPadConfig, has_hover_gif, nullptr}));
+			m_games.push(std::make_shared<gui_game_info>(gui_game_info{game, qt_cat, compat, {}, {}, cfg_keys::title_id, hasCustomConfig, hasCustomPadConfig, has_hover_gif, nullptr}));
 		}));
 
 		return;
@@ -912,27 +912,25 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	const bool is_current_running_game = (Emu.IsRunning() || Emu.IsPaused()) && current_game.serial == Emu.GetTitleID();
 
-	QAction* boot = new QAction(gameinfo->hasCustomConfig
-		? (is_current_running_game
-			? tr("&Reboot with global configuration")
-			: tr("&Boot with global configuration"))
-		: (is_current_running_game
-			? tr("&Reboot")
-			: tr("&Boot")));
+	QMenu* cfg_menu = menu.addMenu(tr("&Game Configuration"));
+
+	QAction* boot = new QAction(tr("&Use global configuration"));
+	boot->setCheckable(true);
 
 	QFont font = boot->font();
 	font.setBold(true);
 
 	if (gameinfo->hasCustomConfig)
 	{
-		QAction* boot_custom = menu.addAction(is_current_running_game
-			? tr("&Reboot with custom configuration")
-			: tr("&Boot with custom configuration"));
+		QAction* boot_custom = cfg_menu->addAction(tr("&Use custom configuration"));
 		boot_custom->setFont(font);
+		boot_custom->setCheckable(true);
+		boot_custom->setChecked(gameinfo->selected_config == cfg_keys::title_id);
+
 		connect(boot_custom, &QAction::triggered, [this, gameinfo]
 		{
-			sys_log.notice("Booting from gamelist per context menu...");
-			Q_EMIT RequestBoot(gameinfo);
+			sys_log.notice("Selected custom config for game %s", gameinfo->info.serial);
+			gameinfo->selected_config = cfg_keys::title_id;
 		});
 	}
 	else
@@ -940,29 +938,30 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		boot->setFont(font);
 	}
 
-	menu.addAction(boot);
+	boot->setChecked(gameinfo->selected_config == cfg_keys::global);
+	cfg_menu->addAction(boot);
 
 	{
-		QAction* boot_default = menu.addAction(is_current_running_game
-			? tr("&Reboot with default configuration")
-			: tr("&Boot with default configuration"));
+		QAction* boot_default = cfg_menu->addAction(tr("&Use default configuration"));
+		boot_default->setCheckable(true);
+		boot_default->setChecked(gameinfo->selected_config == cfg_keys::_default);
 
 		connect(boot_default, &QAction::triggered, [this, gameinfo]
 		{
-			sys_log.notice("Booting from gamelist per context menu...");
-			Q_EMIT RequestBoot(gameinfo, cfg_keys::_default);
+			sys_log.notice("Selected default config for game %s", gameinfo->info.serial);
+			gameinfo->selected_config = cfg_keys::_default;
 		});
 
-		QAction* boot_manual = menu.addAction(is_current_running_game
-			? tr("&Reboot with manually selected configuration")
-			: tr("&Boot with manually selected configuration"));
+		QAction* boot_manual = cfg_menu->addAction(tr("&Use manually selected configuration"));
+		boot_manual->setCheckable(true);
+		boot_manual->setChecked(gameinfo->selected_config.find_first_of('/') != umax);
 
 		connect(boot_manual, &QAction::triggered, [this, gameinfo]
 		{
 			if (std::string file_path = sstr(QFileDialog::getOpenFileName(this, "Select Config File", "", tr("Config Files (*.yml);;All files (*.*)"))); !file_path.empty())
 			{
-				sys_log.notice("Booting from gamelist per context menu...");
-				Q_EMIT RequestBoot(gameinfo, file_path);
+				sys_log.notice("Manually selected config for game %s ('%s')", gameinfo->info.serial, file_path);
+				gameinfo->selected_config = std::move(file_path);
 			}
 			else
 			{
@@ -1220,8 +1219,8 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 
 	connect(boot, &QAction::triggered, this, [this, gameinfo]()
 	{
-		sys_log.notice("Booting from gamelist per context menu...");
-		Q_EMIT RequestBoot(gameinfo, cfg_keys::global);
+		sys_log.notice("Selected global config for game %s", gameinfo->info.serial);
+		gameinfo->selected_config = cfg_keys::global;
 	});
 	connect(configure, &QAction::triggered, this, [this, current_game, gameinfo]()
 	{

@@ -17,6 +17,7 @@ struct gui_game_info
 	compat::status compat;
 	QPixmap icon;
 	QPixmap pxmap;
+	std::string selected_config = "title_id";
 	bool hasCustomConfig = false;
 	bool hasCustomPadConfig = false;
 	bool has_hover_gif = false;
