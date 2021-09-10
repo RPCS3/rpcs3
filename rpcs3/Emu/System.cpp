@@ -881,8 +881,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 						// Booting disc game from wrong location
 						sys_log.error("Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
 
+						const std::string dst_dir = hdd0_disc + sfb_dir.substr(hdd0_game.size());
+
 						// Move and retry from correct location
-						if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../", false))
+						if (fs::create_path(fs::get_parent_dir(dst_dir)) && fs::rename(sfb_dir, dst_dir, false))
 						{
 							sys_log.success("Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
 							return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load(m_title_id, add_only);

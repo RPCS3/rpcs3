@@ -383,12 +383,12 @@ shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, shar
 	return get_device_manager().set_device(name, std::move(device));
 }
 
-std::string fs::get_parent_dir(const std::string& path)
+std::string fs::get_parent_dir(const std::string& path, u32 levels)
 {
 	std::string_view result = path;
 
 	// Number of path components to remove
-	usz to_remove = 1;
+	usz to_remove = levels;
 
 	while (to_remove--)
 	{
