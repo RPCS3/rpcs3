@@ -1083,11 +1083,11 @@ namespace vm
 			flags |= page_executable;
 		}
 
-		if ((flags & page_size_mask) == page_size_64k)
+		if ((bflags & page_size_mask) == page_size_64k)
 		{
 			flags |= page_64k_size;
 		}
-		else if (!(flags & (page_size_mask & ~page_size_1m)))
+		else if (!(bflags & (page_size_mask & ~page_size_1m)))
 		{
 			flags |= page_1m_size;
 		}
