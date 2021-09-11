@@ -50,7 +50,7 @@ bool serialize<rsx::frame_capture_data>(utils::serial& ar, rsx::frame_capture_da
 {
 	ar(o.magic, o.version, o.LE_format);
 
-	if (o.magic != rsx::c_fc_magic || o.version != rsx::c_fc_version || o.LE_format != (std::endian::little == std::endian::native))
+	if (o.magic != rsx::c_fc_magic || o.version != rsx::c_fc_version || o.LE_format != u32{std::endian::little == std::endian::native})
 	{
 		return false;
 	}
@@ -74,7 +74,7 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
-	u32 get_address(u32 offset, u32 location, bool allow_failure, u32 line, u32 col, const char* file, const char* func)
+	u32 get_address(u32 offset, u32 location, u32 size_to_check, u32 line, u32 col, const char* file, const char* func)
 	{
 		const auto render = get_current_renderer();
 		std::string_view msg;
@@ -84,7 +84,7 @@ namespace rsx
 		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
 		case CELL_GCM_LOCATION_LOCAL:
 		{
-			if (offset < render->local_mem_size)
+			if (offset < render->local_mem_size && render->local_mem_size - offset >= size_to_check)
 			{
 				return rsx::constants::local_mem_base + offset;
 			}
@@ -98,7 +98,10 @@ namespace rsx
 		{
 			if (const u32 ea = render->iomap_table.get_addr(offset); ea + 1)
 			{
-				return ea;
+				if (!size_to_check || vm::check_addr(ea, 0, size_to_check))
+				{
+					return ea;
+				}
 			}
 
 			msg = "RSXIO memory not mapped!"sv;
@@ -120,7 +123,10 @@ namespace rsx
 		{
 			if (const u32 ea = offset < 0x1000000 ? render->iomap_table.get_addr(0x0e000000 + offset) : -1; ea + 1)
 			{
-				return ea;
+				if (!size_to_check || vm::check_addr(ea, 0, size_to_check))
+				{
+					return ea;
+				}
 			}
 
 			msg = "RSXIO REPORT memory not mapped!"sv;
@@ -181,8 +187,11 @@ namespace rsx
 		}
 		}
 
-		if (allow_failure)
+		if (size_to_check)
 		{
+			// Allow failure if specified size
+			// This is to allow accurate recovery for failures
+			rsx_log.warning("rsx::get_address(offset=0x%x, location=0x%x, size=0x%x): %s%s", offset, location, size_to_check, msg, src_loc{line, col, file, func});
 			return 0;
 		}
 
@@ -1001,17 +1010,17 @@ namespace rsx
 	{
 		u32 offset_color[] =
 		{
-			rsx::method_registers.surface_a_offset(),
-			rsx::method_registers.surface_b_offset(),
-			rsx::method_registers.surface_c_offset(),
-			rsx::method_registers.surface_d_offset(),
+			rsx::method_registers.surface_offset(0),
+			rsx::method_registers.surface_offset(1),
+			rsx::method_registers.surface_offset(2),
+			rsx::method_registers.surface_offset(3),
 		};
 		u32 context_dma_color[] =
 		{
-			rsx::method_registers.surface_a_dma(),
-			rsx::method_registers.surface_b_dma(),
-			rsx::method_registers.surface_c_dma(),
-			rsx::method_registers.surface_d_dma(),
+			rsx::method_registers.surface_dma(0),
+			rsx::method_registers.surface_dma(1),
+			rsx::method_registers.surface_dma(2),
+			rsx::method_registers.surface_dma(3),
 		};
 		return
 		{
@@ -1055,10 +1064,10 @@ namespace rsx
 		layout.zeta_pitch = rsx::method_registers.surface_z_pitch();
 		layout.color_pitch =
 		{
-			rsx::method_registers.surface_a_pitch(),
-			rsx::method_registers.surface_b_pitch(),
-			rsx::method_registers.surface_c_pitch(),
-			rsx::method_registers.surface_d_pitch(),
+			rsx::method_registers.surface_pitch(0),
+			rsx::method_registers.surface_pitch(1),
+			rsx::method_registers.surface_pitch(2),
+			rsx::method_registers.surface_pitch(3),
 		};
 
 		layout.color_format = rsx::method_registers.surface_color();
@@ -1878,8 +1887,10 @@ namespace rsx
 			auto &tex = rsx::method_registers.fragment_textures[i];
 			if (tex.enabled())
 			{
-				current_fragment_program.texture_params[i].scale_x = sampler_descriptors[i]->scale_x;
-				current_fragment_program.texture_params[i].scale_y = sampler_descriptors[i]->scale_y;
+				current_fragment_program.texture_params[i].scale[0] = sampler_descriptors[i]->scale_x;
+				current_fragment_program.texture_params[i].scale[1] = sampler_descriptors[i]->scale_y;
+				current_fragment_program.texture_params[i].scale[2] = sampler_descriptors[i]->scale_z;
+				current_fragment_program.texture_params[i].subpixel_bias = 0.f;
 				current_fragment_program.texture_params[i].remap = tex.remap();
 
 				m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
@@ -1899,7 +1910,17 @@ namespace rsx
 				const u32 format = raw_format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 
 				if (raw_format & CELL_GCM_TEXTURE_UN)
+				{
 					current_fp_texture_state.unnormalized_coords |= (1 << i);
+
+					if (tex.min_filter() == rsx::texture_minify_filter::nearest ||
+						tex.mag_filter() == rsx::texture_magnify_filter::nearest)
+					{
+						// Subpixel offset so that (X + bias) * scale will round correctly.
+						// This is done to work around fdiv precision issues in some GPUs (NVIDIA)
+						current_fragment_program.texture_params[i].subpixel_bias = 0.01f;
+					}
+				}
 
 				if (sampler_descriptors[i]->format_class != RSX_FORMAT_CLASS_COLOR)
 				{
@@ -1966,11 +1987,16 @@ namespace rsx
 				}
 
 				// Special operations applied to 8-bit formats such as gamma correction and sign conversion
-				// NOTE: The unsigned_remap being set to anything other than 0 flags the texture as being signed
+				// NOTE: The unsigned_remap being set to anything other than 0 flags the texture as being signed (UE3)
 				// This is a separate method of setting the format to signed mode without doing so per-channel
-				// NOTE2: Modifier precedence is not respected here. This is another TODO (kd-11)
-				u32 argb8_convert = tex.gamma();
-				if (const u32 sign_convert = tex.unsigned_remap() ? 0xF : tex.argb_signed())
+				// Precedence = SIGNED override > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/REMAP relationship, UE3 for REMAP effect)
+
+				const u32 argb8_signed = tex.argb_signed();
+				const u32 gamma = tex.gamma() & ~argb8_signed;
+				const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~gamma & 0xF);
+				u32 argb8_convert = gamma;
+
+				if (const u32 sign_convert = (argb8_signed | unsigned_remap))
 				{
 					// Apply remap to avoid mapping 1 to -1. Only the sign conversion needs this check
 					// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
@@ -2524,7 +2550,7 @@ namespace rsx
 		fifo_ctrl->sync_get();
 	}
 
-	void thread::recover_fifo()
+	void thread::recover_fifo(u32 line, u32 col, const char* file, const char* func)
 	{
 		const u64 current_time = get_system_time();
 
@@ -2533,10 +2559,11 @@ namespace rsx
 			const auto cmd_info = recovered_fifo_cmds_history.front();
 
 			// Check timestamp of last tracked cmd
-			if (current_time - cmd_info.timestamp < 2'000'000u)
+			// Shorten the range of forbidden difference if driver wake-up delay is used
+			if (current_time - cmd_info.timestamp < 2'000'000u - std::min<u32>(g_cfg.video.driver_wakeup_delay * 700, 1'400'000))
 			{
 				// Probably hopeless
-				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings.");
+				fmt::throw_exception("Dead FIFO commands queue state has been detected!\nTry increasing \"Driver Wake-Up Delay\" setting in Advanced settings. Called from %s", src_loc{line, col, file, func});
 			}
 
 			// Erase the last command from history, keep the size of the queue the same
@@ -2636,6 +2663,11 @@ namespace rsx
 	std::string thread::dump_regs() const
 	{
 		std::string result;
+
+		if (ctrl)
+		{
+			fmt::append(result, "FIFO: GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", +ctrl->get, +ctrl->put, +ctrl->ref);
+		}
 
 		for (u32 i = 0; i < 1 << 14; i++)
 		{
@@ -3342,10 +3374,22 @@ namespace rsx
 		{
 			ensure(sink);
 
+			auto scale_result = [](u32 value)
+			{
+				const auto scale = rsx::get_resolution_scale_percent();
+				const auto result = static_cast<u64>(value * 10000) / (scale * scale);
+				return std::max<u32>(1u, result);
+			};
+
 			switch (type)
 			{
 			case CELL_GCM_ZPASS_PIXEL_CNT:
-				value = value ? u16{umax} : 0;
+				if (value)
+				{
+					value = (g_cfg.video.precise_zpass_count) ?
+						scale_result(value) :
+						u16{ umax };
+				}
 				break;
 			case CELL_GCM_ZCULL_STATS3:
 				value = value ? 0 : u16{umax};
@@ -3438,7 +3482,9 @@ namespace rsx
 						ensure(query->pending);
 
 						const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
-						if (implemented && !result && query->num_draws)
+						const bool have_result = result && !g_cfg.video.precise_zpass_count;
+
+						if (implemented && !have_result && query->num_draws)
 						{
 							get_occlusion_query_result(query);
 
@@ -3590,55 +3636,30 @@ namespace rsx
 					ensure(query->pending);
 
 					const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
-					if (force_read)
-					{
-						if (implemented && !result && query->num_draws)
-						{
-							get_occlusion_query_result(query);
+					const bool have_result = result && !g_cfg.video.precise_zpass_count;
 
-							if (query->result)
-							{
-								result += query->result;
-								if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
-								{
-									m_statistics_map[writer.counter_tag] += query->result;
-								}
-							}
-						}
-						else
+					if (!implemented || !query->num_draws || have_result)
+					{
+						discard_occlusion_query(query);
+					}
+					else if (force_read || check_occlusion_query_status(query))
+					{
+						get_occlusion_query_result(query);
+
+						if (query->result)
 						{
-							//No need to read this
-							discard_occlusion_query(query);
+							result += query->result;
+							if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
+							{
+								m_statistics_map[writer.counter_tag] += query->result;
+							}
 						}
 					}
 					else
 					{
-						if (implemented && !result && query->num_draws)
-						{
-							//Maybe we get lucky and results are ready
-							if (check_occlusion_query_status(query))
-							{
-								get_occlusion_query_result(query);
-								if (query->result)
-								{
-									result += query->result;
-									if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
-									{
-										m_statistics_map[writer.counter_tag] += query->result;
-									}
-								}
-							}
-							else
-							{
-								//Too early; abort
-								break;
-							}
-						}
-						else
-						{
-							//Not necessary to read the result anymore
-							discard_occlusion_query(query);
-						}
+						// Too early; abort
+						ensure(!force_read && implemented);
+						break;
 					}
 
 					free_query(query);

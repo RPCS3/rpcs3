@@ -32,6 +32,8 @@ std::shared_ptr<lv2_event_queue> lv2_event_queue::find(u64 ipc_key)
 	return g_fxo->get<ipc_manager<lv2_event_queue, u64>>().get(ipc_key);
 }
 
+extern void resume_spu_thread_group_from_waiting(spu_thread& spu);
+
 CellError lv2_event_queue::send(lv2_event event)
 {
 	std::lock_guard lock(mutex);
@@ -65,18 +67,13 @@ CellError lv2_event_queue::send(lv2_event event)
 	else
 	{
 		// Store event in In_MBox
-		auto& spu = static_cast<spu_thread&>(*sq.front());
-
-		// TODO: use protocol?
-		sq.pop_front();
+		auto& spu = static_cast<spu_thread&>(*schedule<spu_thread>(sq, protocol));
 
 		const u32 data1 = static_cast<u32>(std::get<1>(event));
 		const u32 data2 = static_cast<u32>(std::get<2>(event));
 		const u32 data3 = static_cast<u32>(std::get<3>(event));
 		spu.ch_in_mbox.set_values(4, CELL_OK, data1, data2, data3);
-
-		spu.state += cpu_flag::signal;
-		spu.state.notify_one(cpu_flag::signal);
+		resume_spu_thread_group_from_waiting(spu);
 	}
 
 	return {};
@@ -161,11 +158,15 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 
 	if (mode == SYS_EVENT_QUEUE_DESTROY_FORCE)
 	{
+		std::deque<cpu_thread*> sq;
+
 		std::lock_guard lock(queue->mutex);
 
+		sq = std::move(queue->sq);
+	
 		if (queue->type == SYS_PPU_QUEUE)
 		{
-			for (auto cpu : queue->sq)
+			for (auto cpu : sq)
 			{
 				static_cast<ppu_thread&>(*cpu).gpr[3] = CELL_ECANCELED;
 				queue->append(cpu);
@@ -178,11 +179,10 @@ error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode)
 		}
 		else
 		{
-			for (auto cpu : queue->sq)
+			for (auto cpu : sq)
 			{
 				static_cast<spu_thread&>(*cpu).ch_in_mbox.set_values(1, CELL_ECANCELED);
-				cpu->state += cpu_flag::signal;
-				cpu->state.notify_one(cpu_flag::signal);
+				resume_spu_thread_group_from_waiting(static_cast<spu_thread&>(*cpu));
 			}
 		}
 	}

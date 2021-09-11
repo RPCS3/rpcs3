@@ -36,6 +36,7 @@ namespace cfg
 		uint, // cfg::uint type
 		string, // cfg::string type
 		set, // cfg::set_entry type
+		map, // cfg::map_entry type
 		log,
 	};
 
@@ -471,6 +472,31 @@ namespace cfg
 
 			return true;
 		}
+	};
+
+	class map_entry final : public _base
+	{
+		std::map<std::string, std::string> m_map{};
+
+	public:
+		map_entry(node* owner, const std::string& name)
+			: _base(type::map, owner, name, true)
+		{
+		}
+
+		const std::map<std::string, std::string>& get_map() const
+		{
+			return m_map;
+		}
+
+		std::string get_value(const std::string& key);
+
+		void set_value(const std::string& key, const std::string& value);
+		void set_map(std::map<std::string, std::string>&& map);
+
+		void erase(const std::string& key);
+
+		void from_default() override;
 	};
 
 	class log_entry final : public _base

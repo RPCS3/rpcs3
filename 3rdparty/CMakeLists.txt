@@ -2,6 +2,8 @@ find_package(PkgConfig)
 include(ExternalProject)
 include(CMakeDependentOption)
 
+set(CMAKE_CXX_STANDARD 20)
+
 # Dummy target to use when lib isn't available
 add_library(3rdparty_dummy_lib INTERFACE)
 
@@ -75,19 +77,7 @@ add_subdirectory(SPIRV EXCLUDE_FROM_ALL)
 
 
 # yaml-cpp
-# We don't want to install yaml-cpp but its cmake file doesn't have option
-# to disable it...
-# So we just install it to a different directory
-set(YAML_CPP_INSTALL OFF CACHE BOOL "Don't install YAML")
-set(CMAKE_INSTALL_PREFIX_OLD ${CMAKE_INSTALL_PREFIX})
-set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/yaml-cpp_install)
-
-set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Enable testing" FORCE)
-set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools" FORCE)
-set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Enable contrib stuff in library" FORCE)
-add_subdirectory(yaml-cpp EXCLUDE_FROM_ALL)
-
-set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX_OLD})
+add_subdirectory(yaml-cpp)
 
 
 # xxHash
@@ -234,7 +224,7 @@ if(USE_FAUDIO)
 	else()
 		if (USE_SYSTEM_FAUDIO)
 			message(STATUS "RPCS3: Using system FAudio")
-			find_package(FAudio REQUIRED CONFIGS FAudio-config.cmake)
+			find_package(FAudio REQUIRED CONFIGS FAudioConfig.cmake FAudio-config.cmake)
 			add_library(3rdparty_FAudio INTERFACE)
 			target_link_libraries(3rdparty_FAudio INTERFACE FAudio)
 			target_compile_definitions(3rdparty_FAudio INTERFACE -DHAVE_FAUDIO)
@@ -319,29 +309,7 @@ endif()
 include(llvm.cmake)
 
 # WOLFSSL
-if(USE_SYSTEM_WOLFSSL)
-	message("-- RPCS3: using shared wolfssl")
-	pkg_check_modules(WolfSSL REQUIRED IMPORTED_TARGET wolfssl>=4.7.0)
-	add_library(wolfssl INTERFACE)
-	target_link_libraries(wolfssl INTERFACE PkgConfig::WolfSSL)
-else()
-	SET(BUILD_TESTS NO CACHE BOOL "Build test applications")
-	add_compile_definitions(HAVE_FFDHE_2048 TFM_TIMING_RESISTANT ECC_TIMING_RESISTANT
-					WC_RSA_BLINDING HAVE_AESGCM WOLFSSL_SHA512 WOLFSSL_SHA384 NO_DSA HAVE_ECC TFM_ECC256 ECC_SHAMIR
-					NO_RC4 NO_HC128 NO_RABBIT WOLFSSL_SHA224 WOLFSSL_SHA3 WOLFSSL_SHAKE256 HAVE_POLY1305
-					HAVE_ONE_TIME_AUTH HAVE_CHACHA HAVE_HASHDRBG HAVE_TLS_EXTENSIONS HAVE_SNI HAVE_SUPPORTED_CURVES
-					HAVE_EXTENDED_MASTER NO_RC4 HAVE_ENCRYPT_THEN_MAC NO_PSK NO_MD4
-					WC_NO_ASYNC_THREADING OPENSSL_EXTRA WOLFSSL_DES_ECB WC_NO_HARDEN)
-	set(ENABLED_HARDEN OFF CACHE BOOL "Disable Harden")
-	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
-	target_include_directories(wolfssl INTERFACE "wolfssl/")
-	# This is needed for CURL
-	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/wolfssl/options.h.in ${CMAKE_CURRENT_BINARY_DIR}/wolfssl/wolfssl/options.h)
-	set(WolfSSL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/libwolfssl.a")
-	set(WolfSSL_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/libwolfssl.a")
-	set(WolfSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/" "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/")
-	set(WolfSSL_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/" "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/")
-endif()
+add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 
 # CURL
 add_subdirectory(curl EXCLUDE_FROM_ALL)

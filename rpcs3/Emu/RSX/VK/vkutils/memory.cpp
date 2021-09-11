@@ -120,7 +120,7 @@ namespace vk
 			const auto type_id = type_ids[i];
 			ensure(heap_size > 0);
 
-			const u64 used_mem = vmm_get_application_memory_usage({ type_ids[i], 0ull });
+			const u64 used_mem = vmm_get_application_memory_usage({ type_id, 0ull });
 			const u64 free_mem = (used_mem >= heap_size) ? 0ull : (heap_size - used_mem);
 
 			to_reorder |= (free_mem > last_free);
@@ -181,7 +181,7 @@ namespace vk
 		VmaAllocation vma_alloc;
 		VkMemoryRequirements mem_req = {};
 		VmaAllocationCreateInfo create_info = {};
-		VkResult error_code;
+		VkResult error_code = VK_ERROR_UNKNOWN;
 
 		auto do_vma_alloc = [&]() -> std::tuple<VkResult, u32>
 		{
@@ -309,7 +309,7 @@ namespace vk
 
 	mem_allocator_vk::mem_handle_t mem_allocator_vk::alloc(u64 block_sz, u64 /*alignment*/, const memory_type_info& memory_type, vmm_allocation_pool pool, bool throw_on_fail)
 	{
-		VkResult error_code;
+		VkResult error_code = VK_ERROR_UNKNOWN;
 		VkDeviceMemory memory;
 
 		VkMemoryAllocateInfo info = {};

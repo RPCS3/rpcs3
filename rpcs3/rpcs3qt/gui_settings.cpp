@@ -15,57 +15,7 @@ inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 gui_settings::gui_settings(QObject* parent) : settings(parent)
 {
-	m_current_name = gui::Settings;
 	m_settings.reset(new QSettings(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent));
-
-	const QString settings_name = GetValue(gui::m_currentConfig).toString();
-
-	if (settings_name != m_current_name)
-	{
-		ChangeToConfig(settings_name);
-	}
-}
-
-bool gui_settings::ChangeToConfig(const QString& config_name)
-{
-	if (m_current_name == config_name)
-	{
-		return false;
-	}
-
-	// Backup current config
-	SaveCurrentConfig(m_current_name);
-
-	// Save new config name to the default config
-	SaveConfigNameToDefault(config_name);
-
-	// Sync file just in case
-	m_settings->sync();
-
-	// Load new config
-	m_settings.reset(new QSettings(m_settings_dir.absoluteFilePath(config_name + ".ini"), QSettings::IniFormat));
-
-	// Save own name to new config
-	SetValue(gui::m_currentConfig, config_name);
-	m_settings->sync();
-
-	m_current_name = config_name;
-
-	return true;
-}
-
-void gui_settings::Reset(bool remove_meta) const
-{
-	if (remove_meta)
-	{
-		m_settings->clear();
-	}
-	else
-	{
-		m_settings->remove(gui::logger);
-		m_settings->remove(gui::main_window);
-		m_settings->remove(gui::game_list);
-	}
 }
 
 QStringList gui_settings::GetGameListCategoryFilters() const
@@ -210,16 +160,16 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 	if (!Emu.IsStopped())
 	{
 		QString title = tr("Close Running Game?");
-		QString message = tr("Performing this action will close the current game.\nDo you really want to continue?\n\nAny unsaved progress will be lost!\n");
+		QString message = tr("Performing this action will close the current game.<br>Do you really want to continue?<br><br>Any unsaved progress will be lost!<br>");
 
 		if (gui_save_entry == gui::ib_confirm_boot)
 		{
-			message = tr("Booting another game will close the current game.\nDo you really want to boot another game?\n\nAny unsaved progress will be lost!\n");
+			message = tr("Booting another game will close the current game.<br>Do you really want to boot another game?<br><br>Any unsaved progress will be lost!<br>");
 		}
 		else if (gui_save_entry == gui::ib_confirm_exit)
 		{
 			title = tr("Exit RPCS3?");
-			message = tr("A game is currently running. Do you really want to close RPCS3?\n\nAny unsaved progress will be lost!\n");
+			message = tr("A game is currently running. Do you really want to close RPCS3?<br><br>Any unsaved progress will be lost!<br>");
 		}
 
 		int result = QMessageBox::Yes;
@@ -245,13 +195,6 @@ void gui_settings::SetCustomColor(int col, const QColor& val) const
 	SetValue(gui_save(gui::meta, "CustomColor" + QString::number(col), gui::gl_icon_color), val);
 }
 
-void gui_settings::SaveCurrentConfig(const QString& config_name)
-{
-	SaveConfigNameToDefault(config_name);
-	BackupSettingsToTarget(config_name);
-	ChangeToConfig(config_name);
-}
-
 logs::level gui_settings::GetLogLevel() const
 {
 	return logs::level(GetValue(gui::l_level).toUInt());
@@ -265,53 +208,6 @@ bool gui_settings::GetGamelistColVisibility(int col) const
 QColor gui_settings::GetCustomColor(int col) const
 {
 	return GetValue(gui_save(gui::meta, "CustomColor" + QString::number(col), gui::gl_icon_color)).value<QColor>();
-}
-
-QStringList gui_settings::GetConfigEntries() const
-{
-	const QStringList name_filter = QStringList("*.ini");
-	const QFileInfoList entries = m_settings_dir.entryInfoList(name_filter, QDir::Files);
-
-	QStringList res;
-
-	for (const QFileInfo &entry : entries)
-	{
-		res.append(entry.baseName());
-	}
-
-	return res;
-}
-
-// Save the name of the used config to the default settings file
-void gui_settings::SaveConfigNameToDefault(const QString& config_name) const
-{
-	if (m_current_name == gui::Settings)
-	{
-		SetValue(gui::m_currentConfig, config_name);
-		m_settings->sync();
-	}
-	else
-	{
-		QSettings tmp(m_settings_dir.absoluteFilePath(gui::Settings + ".ini"), QSettings::Format::IniFormat, parent());
-		tmp.beginGroup(gui::m_currentConfig.key);
-		tmp.setValue(gui::m_currentConfig.name, config_name);
-		tmp.endGroup();
-	}
-}
-
-void gui_settings::BackupSettingsToTarget(const QString& config_name) const
-{
-	QSettings target(ComputeSettingsDir() + config_name + ".ini", QSettings::Format::IniFormat);
-
-	for (const QString& key : m_settings->allKeys())
-	{
-		if (!key.startsWith(gui::meta))
-		{
-			target.setValue(key, m_settings->value(key));
-		}
-	}
-
-	target.sync();
 }
 
 QStringList gui_settings::GetStylesheetEntries() const

@@ -66,6 +66,9 @@
     <ClCompile Include="Emu\RSX\VK\VKCompute.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKAsyncScheduler.cpp" />
     <ClCompile Include="Emu\RSX\VK\VKRenderTargets.cpp" />
+    <ClCompile Include="Emu\RSX\VK\upscalers\fsr1\fsr_pass.cpp">
+      <Filter>upscalers\fsr1</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
@@ -152,10 +155,36 @@
       <Filter>vkutils</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\VK\VKAsyncScheduler.h" />
+    <ClInclude Include="Emu\RSX\VK\upscalers\bilinear_pass.hpp">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\upscalers\fsr_pass.h">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\upscalers\upscaling.h">
+      <Filter>upscalers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="vkutils">
       <UniqueIdentifier>{2c6cb5a5-ed99-44fe-a0b6-7ba1949c8b29}</UniqueIdentifier>
     </Filter>
+    <Filter Include="upscalers">
+      <UniqueIdentifier>{7294bfa7-a561-4032-8b96-256afbb7476d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr1">
+      <UniqueIdentifier>{8387b0fc-178f-4c9c-9cf2-03df99ce4df2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Emu\RSX\VK\upscalers\fsr1\fsr_ffx_a_flattened.inc">
+      <Filter>upscalers\fsr1</Filter>
+    </None>
+    <None Include="Emu\RSX\VK\upscalers\fsr1\fsr_ffx_fsr1_flattened.inc">
+      <Filter>upscalers\fsr1</Filter>
+    </None>
+    <None Include="Emu\RSX\VK\upscalers\fsr1\fsr_ubershader.glsl">
+      <Filter>upscalers\fsr1</Filter>
+    </None>
   </ItemGroup>
 </Project>

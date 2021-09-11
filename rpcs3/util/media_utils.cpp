@@ -130,7 +130,7 @@ namespace utils
 		{
 			const AVStream* stream = av_format_ctx->streams[video_stream_index];
 			info.video_av_codec_id = stream->codecpar->codec_id;
-			info.video_bitrate_bps = stream->codecpar->bit_rate;
+			info.video_bitrate_bps = static_cast<s32>(stream->codecpar->bit_rate);
 		}
 
 		// Get audio info if available
@@ -138,14 +138,14 @@ namespace utils
 		{
 			const AVStream* stream = av_format_ctx->streams[audio_stream_index];
 			info.audio_av_codec_id = stream->codecpar->codec_id;
-			info.audio_bitrate_bps = stream->codecpar->bit_rate;
+			info.audio_bitrate_bps = static_cast<s32>(stream->codecpar->bit_rate);
 			info.sample_rate = stream->codecpar->sample_rate;
 		}
 
 		info.duration_us = av_format_ctx->duration;
 
 		AVDictionaryEntry* tag = nullptr;
-		while (tag = av_dict_get(av_format_ctx->metadata, "", tag, AV_DICT_IGNORE_SUFFIX))
+		while ((tag = av_dict_get(av_format_ctx->metadata, "", tag, AV_DICT_IGNORE_SUFFIX)))
 		{
 			info.metadata[tag->key] = tag->value;
 		}

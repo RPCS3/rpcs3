@@ -136,9 +136,9 @@ void progress_dialog_server::operator()()
 
 				// Compute new progress in percents
 				// Assume not all programs were found if files were not compiled (as it may contain more)
-				const u64 total    = std::max<u64>(ptotal, 1) * std::max<u64>(ftotal, 1);
-				const u64 done     = pdone * std::max<u64>(fdone, 1);
-				const double value = std::fmin(done * 100. / total, 100.);
+				const u64 total = std::max<u64>(ptotal, 1) * std::max<u64>(ftotal, 1);
+				const u64 done  = pdone * std::max<u64>(fdone, 1);
+				const f32 value = static_cast<f32>(std::fmin(done * 100. / total, 100.f));
 
 				std::string progr = "Progress:";
 
@@ -160,7 +160,7 @@ void progress_dialog_server::operator()()
 					{
 						dlg->SetMsg(text_new);
 						dlg->ProgressBarSetMsg(0, progr);
-						dlg->ProgressBarSetValue(0, std::floor(value));
+						dlg->ProgressBarSetValue(0, static_cast<u32>(std::floor(value)));
 					});
 				}
 			}

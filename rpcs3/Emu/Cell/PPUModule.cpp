@@ -528,6 +528,8 @@ struct ppu_prx_module_info
 	be_t<u32> unk5;
 };
 
+bool ppu_form_branch_to_code(u32 entry, u32 target, bool link = false);
+
 // Load and register exports; return special exports found (nameless module)
 static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 exports_end)
 {
@@ -606,26 +608,12 @@ static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 expo
 				if (_sf && (_sf->flags & MFF_FORCED_HLE))
 				{
 					// Inject a branch to the HLE implementation
-					const u32 _entry = vm::read32(faddr);
 					const u32 target = g_fxo->get<ppu_function_manager>().func_addr(_sf->index) + 4;
 
 					// Set exported function
 					flink.export_addr = target - 4;
 
-					if ((target <= _entry && _entry - target <= 0x2000000) || (target > _entry && target - _entry < 0x2000000))
-					{
-						// Use relative branch
-						vm::write32(_entry, ppu_instructions::B(target - _entry));
-					}
-					else if (target < 0x2000000)
-					{
-						// Use absolute branch if possible
-						vm::write32(_entry, ppu_instructions::B(target, true));
-					}
-					else
-					{
-						ppu_loader.fatal("Failed to patch function at 0x%x (0x%x)", _entry, target);
-					}
+					ppu_form_branch_to_code(faddr, target);
 				}
 				else
 				{
@@ -1267,9 +1255,25 @@ void ppu_unload_prx(const lv2_prx& prx)
 	//	}
 	//}
 
+	// Format patch name
+	std::string hash = fmt::format("PRX-%s", fmt::base57(prx.sha1));
+
 	for (auto& seg : prx.segs)
 	{
+		if (!seg.size) continue;
+
 		vm::dealloc(seg.addr, vm::main);
+
+		const std::string hash_seg = fmt::format("%s-%u", hash, &seg - prx.segs.data());
+
+		// Deallocatte memory used for patches
+		g_fxo->get<patch_engine>().unload(hash_seg);
+
+		if (!Emu.GetTitleID().empty())
+		{
+			// Alternative patch
+			g_fxo->get<patch_engine>().unload(Emu.GetTitleID() + '-' + hash_seg);
+		}
 	}
 }
 

@@ -443,5 +443,7 @@ using camera_thread = named_thread<camera_context>;
 /// Shared data between cellGem and cellCamera
 struct gem_camera_shared
 {
-	atomic_t<s64> frame_timestamp;    // latest read timestamp from cellCamera (cellCameraRead(Ex))
+	atomic_t<s64> frame_timestamp{}; // latest read timestamp from cellCamera (cellCameraRead(Ex))
+	atomic_t<s32> width{640};
+	atomic_t<s32> height{480};
 };

@@ -5,19 +5,19 @@
 class NullPadHandler final : public PadHandlerBase
 {
 public:
-	NullPadHandler() : PadHandlerBase(pad_handler::null) {}
+	NullPadHandler() : PadHandlerBase(pad_handler::null)
+	{
+		b_has_pressure_intensity_button = false;
+	}
 	
 	bool Init() override
 	{
 		return true;
 	}
 
-	void init_config(pad_config* cfg, const std::string& /*name*/) override
+	void init_config(cfg_pad* cfg) override
 	{
 		if (!cfg) return;
-
-		// This profile does not need a save location
-		cfg->cfg_name = "";
 
 		// Reset default button mapping
 		cfg->ls_left.def  = "";
@@ -46,6 +46,8 @@ public:
 		cfg->l2.def       = "";
 		cfg->l3.def       = "";
 
+		cfg->pressure_intensity_button.def = "";
+
 		// Apply defaults
 		cfg->from_default();
 	}
@@ -57,7 +59,7 @@ public:
 		return nulllist;
 	}
 
-	bool bindPadToDevice(std::shared_ptr<Pad> /*pad*/, const std::string& /*device*/) override
+	bool bindPadToDevice(std::shared_ptr<Pad> /*pad*/, const std::string& /*device*/, u8 /*player_id*/) override
 	{
 		return true;
 	}

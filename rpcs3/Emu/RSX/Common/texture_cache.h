@@ -172,7 +172,7 @@ namespace rsx
 			sampled_image_descriptor() = default;
 
 			sampled_image_descriptor(image_view_type handle, texture_upload_context ctx, rsx::format_class ftype,
-				size2f scale, rsx::texture_dimension_extended type, bool cyclic_reference = false)
+				size3f scale, rsx::texture_dimension_extended type, bool cyclic_reference = false)
 			{
 				image_handle = handle;
 				upload_context = ctx;
@@ -180,12 +180,13 @@ namespace rsx
 				is_cyclic_reference = cyclic_reference;
 				scale_x = scale.width;
 				scale_y = scale.height;
+				scale_z = scale.depth;
 				image_type = type;
 			}
 
 			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason,
 				const image_section_attributes_t& attr, position2u src_offset,
-				texture_upload_context ctx, rsx::format_class ftype, size2f scale,
+				texture_upload_context ctx, rsx::format_class ftype, size3f scale,
 				rsx::texture_dimension_extended type, const texture_channel_remap_t& remap)
 			{
 				external_subresource_desc = { external_handle, reason, attr, src_offset, remap };
@@ -195,6 +196,7 @@ namespace rsx
 				format_class = ftype;
 				scale_x = scale.width;
 				scale_y = scale.height;
+				scale_z = scale.depth;
 				image_type = type;
 			}
 
@@ -1656,7 +1658,7 @@ namespace rsx
 		sampled_image_descriptor fast_texture_search(
 			commandbuffer_type& cmd,
 			const image_section_attributes_t& attr,
-			const size2f& scale,
+			const size3f& scale,
 			u32 encoded_remap,
 			const texture_channel_remap_t& remap,
 			const texture_cache_search_options& options,
@@ -2004,18 +2006,22 @@ namespace rsx
 
 			u32 tex_size = 0, required_surface_height = 1;
 			u8 subsurface_count = 1;
-			size2f scale{ 1.f, 1.f };
+			size3f scale{ 1.f, 1.f, 1.f };
 
 			if (is_unnormalized)
 			{
-				if (extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d)
+				switch (extended_dimension)
 				{
-					scale.width /= attributes.width;
+				case rsx::texture_dimension_extended::texture_dimension_3d:
+				case rsx::texture_dimension_extended::texture_dimension_cubemap:
+					scale.depth /= attributes.depth;
+					[[ fallthrough ]];
+				case rsx::texture_dimension_extended::texture_dimension_2d:
 					scale.height /= attributes.height;
-				}
-				else
-				{
-					rsx_log.error("Unimplemented unnormalized sampling for texture type %d", static_cast<u32>(extended_dimension));
+					[[ fallthrough ]];
+				default:
+					scale.width /= attributes.width;
+					break;
 				}
 			}
 
@@ -2025,7 +2031,7 @@ namespace rsx
 				if (attributes.pitch = tex.pitch(); !attributes.pitch)
 				{
 					attributes.pitch = packed_pitch;
-					scale = { 0.f, 0.f };
+					scale = { 0.f, 0.f, 0.f };
 				}
 				else if (packed_pitch > attributes.pitch && !options.is_compressed_format)
 				{
@@ -2043,12 +2049,13 @@ namespace rsx
 			case rsx::texture_dimension_extended::texture_dimension_1d:
 				attributes.depth = 1;
 				attributes.slice_h = 1;
-				scale.height = 0.f;
+				scale.height = scale.depth = 0.f;
 				subsurface_count = 1;
 				required_surface_height = 1;
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_2d:
 				attributes.depth = 1;
+				scale.depth = 0.f;
 				subsurface_count = options.is_compressed_format? 1 : tex.get_exact_mipmap_count();
 				attributes.slice_h = required_surface_height = attributes.height;
 				break;
@@ -2066,7 +2073,8 @@ namespace rsx
 				required_surface_height = tex_size / attributes.pitch;
 				attributes.slice_h = required_surface_height / attributes.depth;
 				break;
-			default: break; // TODO
+			default:
+				fmt::throw_exception("Unsupported texture dimension %d", static_cast<int>(extended_dimension));
 			}
 
 			if (options.is_compressed_format)

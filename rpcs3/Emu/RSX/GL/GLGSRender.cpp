@@ -93,6 +93,7 @@ void GLGSRender::on_init_thread()
 	gl::set_primary_context_thread();
 
 	zcull_ctrl.reset(static_cast<::rsx::reports::ZCULL_control*>(this));
+	m_occlusion_type = g_cfg.video.precise_zpass_count ? GL_SAMPLES_PASSED : GL_ANY_SAMPLES_PASSED;
 
 	gl::init();
 
@@ -770,7 +771,7 @@ void GLGSRender::load_program_env()
 		fill_scale_offset_data(buf, false);
 		fill_user_clip_data(buf + 64);
 		*(reinterpret_cast<u32*>(buf + 128)) = rsx::method_registers.transform_branch_bits();
-		*(reinterpret_cast<f32*>(buf + 132)) = rsx::method_registers.point_size();
+		*(reinterpret_cast<f32*>(buf + 132)) = rsx::method_registers.point_size() * rsx::get_resolution_scale();
 		*(reinterpret_cast<f32*>(buf + 136)) = rsx::method_registers.clip_min();
 		*(reinterpret_cast<f32*>(buf + 140)) = rsx::method_registers.clip_max();
 
@@ -812,10 +813,10 @@ void GLGSRender::load_program_env()
 	if (update_fragment_texture_env)
 	{
 		// Fragment texture parameters
-		auto mapping = m_texture_parameters_buffer->alloc_from_heap(256, m_uniform_buffer_offset_align);
+		auto mapping = m_texture_parameters_buffer->alloc_from_heap(512, m_uniform_buffer_offset_align);
 		current_fragment_program.texture_params.write_to(mapping.first, current_fp_metadata.referenced_textures_mask);
 
-		m_texture_parameters_buffer->bind_range(GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, mapping.second, 256);
+		m_texture_parameters_buffer->bind_range(GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, mapping.second, 512);
 	}
 
 	if (update_raster_env)
@@ -1061,13 +1062,13 @@ void GLGSRender::notify_tile_unbound(u32 tile)
 void GLGSRender::begin_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
 	query->result = 0;
-	glBeginQuery(GL_ANY_SAMPLES_PASSED, query->driver_handle);
+	glBeginQuery(m_occlusion_type, query->driver_handle);
 }
 
 void GLGSRender::end_occlusion_query(rsx::reports::occlusion_query_info* query)
 {
 	ensure(query->active);
-	glEndQuery(GL_ANY_SAMPLES_PASSED);
+	glEndQuery(m_occlusion_type);
 }
 
 bool GLGSRender::check_occlusion_query_status(rsx::reports::occlusion_query_info* query)
@@ -1097,6 +1098,6 @@ void GLGSRender::discard_occlusion_query(rsx::reports::occlusion_query_info* que
 	if (query->active)
 	{
 		//Discard is being called on an active query, close it
-		glEndQuery(GL_ANY_SAMPLES_PASSED);
+		glEndQuery(m_occlusion_type);
 	}
 }

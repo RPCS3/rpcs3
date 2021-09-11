@@ -163,7 +163,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		if (!game)
 		{
-			ApplyGuiOptions(false);
+			ApplyStylesheet(false);
 		}
 	};
 
@@ -267,7 +267,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		ui->enableTSX->setEnabled(false);
 		ui->enableTSX->setPlaceholderText(tr("Not supported", "Enable TSX"));
-		SubscribeTooltip(ui->enableTSX, tr("Unfortunately your CPU model does not support this instruction set.", "Enable TSX"));
+		SubscribeTooltip(ui->enableTSX, tr("Unfortunately, your CPU model does not support this instruction set.", "Enable TSX"));
 
 		m_emu_settings->SetSetting(emu_settings_type::EnableTSX, fmt::format("%s", tsx_usage::disabled));
 	}
@@ -469,6 +469,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->asyncTextureStreaming, emu_settings_type::VulkanAsyncTextureUploads);
 	SubscribeTooltip(ui->asyncTextureStreaming, tooltips.settings.async_texture_streaming);
 
+	m_emu_settings->EnhanceCheckBox(ui->fsrUpscalingEnable, emu_settings_type::FsrUpscalingEnable);
+	SubscribeTooltip(ui->fsrUpscalingEnable, tooltips.settings.fsr_upscaling);
+
 	// Radio buttons
 
 	SubscribeTooltip(ui->rb_legacy_recompiler, tooltips.settings.legacy_shader_recompiler);
@@ -539,6 +542,29 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->minimumScalableDimensionReset, &QAbstractButton::clicked, [minimum_scalable_dimension_def, this]()
 	{
 		ui->minimumScalableDimension->setValue(minimum_scalable_dimension_def);
+	});
+
+	const int fsr_sharpening_strength_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::FsrSharpeningStrength));
+	auto fmt_fsr_sharpening_strength = [fsr_sharpening_strength_def](int value)
+	{
+		if (value == fsr_sharpening_strength_def)
+		{
+			return tr("%1% (Default)").arg(value);
+		}
+		return tr("%1%").arg(value);
+	};
+	m_emu_settings->EnhanceSlider(ui->fsrSharpeningStrength, emu_settings_type::FsrSharpeningStrength);
+	SubscribeTooltip(ui->fsrSharpeningStrength, tooltips.settings.fsr_rcas_strength);
+	SubscribeTooltip(ui->fsrSharpeningStrengthVal, tooltips.settings.fsr_rcas_strength);
+	SubscribeTooltip(ui->fsrSharpeningStrengthReset, tooltips.settings.fsr_rcas_strength);
+	ui->fsrSharpeningStrengthVal->setText(fmt_fsr_sharpening_strength(ui->fsrSharpeningStrength->value()));
+	connect(ui->fsrSharpeningStrength, &QSlider::valueChanged, [fmt_fsr_sharpening_strength, this](int value)
+	{
+		ui->fsrSharpeningStrengthVal->setText(fmt_fsr_sharpening_strength(value));
+	});
+	connect(ui->fsrSharpeningStrengthReset, &QAbstractButton::clicked, [fsr_sharpening_strength_def, this]()
+	{
+		ui->fsrSharpeningStrength->setValue(fsr_sharpening_strength_def);
 	});
 
 	// Remove renderers from the renderer Combobox if not supported
@@ -666,8 +692,12 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	auto apply_renderer_specific_options = [=, this](const QString& text)
 	{
 		// Vulkan-only
-		ui->asyncTextureStreaming->setEnabled(text == r_creator->Vulkan.name);
-		ui->vulkansched->setEnabled(text == r_creator->Vulkan.name);
+		const bool is_vulkan = (text == r_creator->Vulkan.name);
+		ui->asyncTextureStreaming->setEnabled(is_vulkan);
+		ui->vulkansched->setEnabled(is_vulkan);
+		ui->fsrUpscalingEnable->setEnabled(is_vulkan);
+		ui->fsrSharpeningStrength->setEnabled(is_vulkan);
+		ui->fsrSharpeningStrengthReset->setEnabled(is_vulkan);
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
@@ -997,9 +1027,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings_type::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, tooltips.settings.disable_on_disk_shader_cache);
 
-	m_emu_settings->EnhanceCheckBox(ui->relaxedZCULL, emu_settings_type::RelaxedZCULL);
-	SubscribeTooltip(ui->relaxedZCULL, tooltips.settings.relaxed_zcull);
-
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);
@@ -1011,6 +1038,47 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
+
+	// Custom control that simplifies operation of two independent variables. Can probably be done better but this works.
+	ui->zcullPrecisionMode->addItem(tr("Precise (Default)"), static_cast<int>(zcull_precision_level::precise));
+	ui->zcullPrecisionMode->addItem(tr("Approximate (Fast)"), static_cast<int>(zcull_precision_level::approximate));
+	ui->zcullPrecisionMode->addItem(tr("Relaxed (Fastest)"), static_cast<int>(zcull_precision_level::relaxed));
+
+	if (m_emu_settings->GetSetting(emu_settings_type::RelaxedZCULL) == "true")
+	{
+		ui->zcullPrecisionMode->setCurrentIndex(
+			ui->zcullPrecisionMode->findData(static_cast<int>(zcull_precision_level::relaxed)));
+	}
+	else if (m_emu_settings->GetSetting(emu_settings_type::PreciseZCULL) == "true")
+	{
+		ui->zcullPrecisionMode->setCurrentIndex(
+			ui->zcullPrecisionMode->findData(static_cast<int>(zcull_precision_level::precise)));
+	}
+	else
+	{
+		ui->zcullPrecisionMode->setCurrentIndex(
+			ui->zcullPrecisionMode->findData(static_cast<int>(zcull_precision_level::approximate)));
+	}
+	connect(ui->zcullPrecisionMode, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+	{
+		bool relaxed = false, precise = false;
+
+		switch (static_cast<zcull_precision_level>(ui->zcullPrecisionMode->itemData(index).toInt()))
+		{
+		case zcull_precision_level::precise:
+			precise = true; break;
+		case zcull_precision_level::approximate:
+			break;
+		case zcull_precision_level::relaxed:
+			relaxed = true; break;
+		default:
+			fmt::throw_exception("Unexpected selection");
+		}
+
+		m_emu_settings->SetSetting(emu_settings_type::RelaxedZCULL, relaxed ? "true" : "false");
+		m_emu_settings->SetSetting(emu_settings_type::PreciseZCULL, precise ? "true" : "false");
+	});
+	SubscribeTooltip(ui->gbZCULL, tooltips.settings.zcull_operation_mode);
 
 	// Sliders
 
@@ -1501,34 +1569,20 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	if (!game)
 	{
-		// Comboboxes
-		SubscribeTooltip(ui->combo_configs, tooltips.settings.configs);
-
 		SubscribeTooltip(ui->gb_stylesheets, tooltips.settings.stylesheets);
-
-		// Checkboxes:
 		SubscribeTooltip(ui->cb_custom_colors, tooltips.settings.custom_colors);
-
-		// Checkboxes: gui options
 		SubscribeTooltip(ui->cb_show_welcome, tooltips.settings.show_welcome);
-
 		SubscribeTooltip(ui->cb_show_exit_game, tooltips.settings.show_exit_game);
-
 		SubscribeTooltip(ui->cb_show_boot_game, tooltips.settings.show_boot_game);
-
 		SubscribeTooltip(ui->cb_show_pkg_install, tooltips.settings.show_pkg_install);
-
 		SubscribeTooltip(ui->cb_show_pup_install, tooltips.settings.show_pup_install);
-
 		SubscribeTooltip(ui->cb_show_obsolete_cfg_dialog, tooltips.settings.show_obsolete_cfg);
-
+		SubscribeTooltip(ui->cb_show_same_buttons_dialog, tooltips.settings.show_same_buttons);
 		SubscribeTooltip(ui->gb_updates, tooltips.settings.check_update_start);
 
-		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);
-
-		SubscribeTooltip(ui->discordState, tooltips.settings.discord_state);
-
 		// Discord:
+		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);
+		SubscribeTooltip(ui->discordState, tooltips.settings.discord_state);
 		ui->useRichPresence->setChecked(m_use_discord);
 		ui->label_discordState->setEnabled(m_use_discord);
 		ui->discordState->setEnabled(m_use_discord);
@@ -1563,7 +1617,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		});
 
 		// colorize preview icons
-		auto add_colored_icon = [this](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor())
+		const auto add_colored_icon = [this](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor())
 		{
 			QLabel* text = new QLabel(button->text());
 			text->setObjectName("color_button");
@@ -1587,13 +1641,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			button->layout()->addWidget(text);
 		};
 
-		auto add_colored_icons = [add_colored_icon, this]()
-		{
-			add_colored_icon(ui->pb_gl_icon_color, m_gui_settings->GetValue(gui::gl_iconColor).value<QColor>());
-			add_colored_icon(ui->pb_sd_icon_color, m_gui_settings->GetValue(gui::sd_icon_color).value<QColor>());
-			add_colored_icon(ui->pb_tr_icon_color, m_gui_settings->GetValue(gui::tr_icon_color).value<QColor>());
-		};
-		add_colored_icons();
+		add_colored_icon(ui->pb_gl_icon_color, m_gui_settings->GetValue(gui::gl_iconColor).value<QColor>());
+		add_colored_icon(ui->pb_sd_icon_color, m_gui_settings->GetValue(gui::sd_icon_color).value<QColor>());
+		add_colored_icon(ui->pb_tr_icon_color, m_gui_settings->GetValue(gui::tr_icon_color).value<QColor>());
 
 		ui->cb_show_welcome->setChecked(m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
 		ui->cb_show_exit_game->setChecked(m_gui_settings->GetValue(gui::ib_confirm_exit).toBool());
@@ -1601,6 +1651,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->cb_show_pkg_install->setChecked(m_gui_settings->GetValue(gui::ib_pkg_success).toBool());
 		ui->cb_show_pup_install->setChecked(m_gui_settings->GetValue(gui::ib_pup_success).toBool());
 		ui->cb_show_obsolete_cfg_dialog->setChecked(m_gui_settings->GetValue(gui::ib_obsolete_cfg).toBool());
+		ui->cb_show_same_buttons_dialog->setChecked(m_gui_settings->GetValue(gui::ib_same_buttons).toBool());
 
 		ui->combo_updates->addItem(tr("Yes", "Updates"), gui::update_on);
 		ui->combo_updates->addItem(tr("Background", "Updates"), gui::update_bkg);
@@ -1618,33 +1669,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->pb_sd_icon_color->setEnabled(enable_ui_colors);
 		ui->pb_tr_icon_color->setEnabled(enable_ui_colors);
 
-		connect(ui->buttonBox, &QDialogButtonBox::accepted, this, [this]()
-		{
-			ApplyGuiOptions(false);
-		});
-
-		connect(ui->pb_reset_default, &QAbstractButton::clicked, this, [this]
-		{
-			if (QMessageBox::question(this, tr("Reset GUI to default?", "Reset"), tr("This will include your stylesheet as well. Do you wish to proceed?", "Reset"),
-				QMessageBox::Yes | QMessageBox::No, QMessageBox::No) == QMessageBox::Yes)
-			{
-				ApplyGuiOptions(true);
-				m_gui_settings->Reset(true);
-				Q_EMIT GuiSettingsSyncRequest(true);
-				AddGuiConfigs();
-				AddStylesheets();
-				ApplyGuiOptions(false);
-			}
-		});
-
-		connect(ui->pb_backup_config, &QAbstractButton::clicked, this, &settings_dialog::OnBackupCurrentGuiConfig);
-		connect(ui->pb_apply_config, &QAbstractButton::clicked, this, &settings_dialog::OnApplyGuiConfig);
-		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, &settings_dialog::OnApplyStylesheet);
-
-		connect(ui->pb_open_folder, &QAbstractButton::clicked, [this]()
-		{
-			QDesktopServices::openUrl(m_gui_settings->GetSettingsDir());
-		});
+		connect(ui->pb_apply_stylesheet, &QAbstractButton::clicked, this, [this]() { ApplyStylesheet(false); });
 
 		connect(ui->cb_show_welcome, &QCheckBox::clicked, [this](bool val)
 		{
@@ -1669,6 +1694,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		connect(ui->cb_show_obsolete_cfg_dialog, &QCheckBox::clicked, [this](bool val)
 		{
 			m_gui_settings->SetValue(gui::ib_obsolete_cfg, val);
+		});
+		connect(ui->cb_show_same_buttons_dialog, &QCheckBox::clicked, [this](bool val)
+		{
+			m_gui_settings->SetValue(gui::ib_same_buttons, val);
 		});
 
 		connect(ui->cb_custom_colors, &QCheckBox::clicked, [this](bool val)
@@ -1714,7 +1743,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			color_dialog(gui::tr_icon_color, tr("Choose trophy manager icon color", "Settings: color dialog"), ui->pb_tr_icon_color);
 		});
 
-		AddGuiConfigs();
 		AddStylesheets();
 	}
 
@@ -1859,24 +1887,6 @@ void settings_dialog::SnapSlider(QSlider *slider, int interval)
 	});
 }
 
-void settings_dialog::AddGuiConfigs()
-{
-	ui->combo_configs->clear();
-	ui->combo_configs->addItems(m_gui_settings->GetConfigEntries());
-
-	m_current_gui_config = m_gui_settings->GetValue(gui::m_currentConfig).toString();
-
-	const int index = ui->combo_configs->findText(m_current_gui_config);
-	if (index >= 0)
-	{
-		ui->combo_configs->setCurrentIndex(index);
-	}
-	else
-	{
-		cfg_log.warning("Trying to set an invalid config index %d", index);
-	}
-}
-
 void settings_dialog::AddStylesheets()
 {
 	ui->combo_stylesheets->clear();
@@ -1905,69 +1915,14 @@ void settings_dialog::AddStylesheets()
 	}
 }
 
-void settings_dialog::OnBackupCurrentGuiConfig()
+void settings_dialog::ApplyStylesheet(bool reset)
 {
-	QInputDialog* dialog = new QInputDialog(this);
-	dialog->setWindowTitle(tr("Choose a unique name", "Backup GUI config"));
-	dialog->setLabelText(tr("Configuration Name: ", "Backup GUI config"));
-	dialog->resize(500, 100);
-
-	while (dialog->exec() != QDialog::Rejected)
+	if (reset)
 	{
-		dialog->resize(500, 100);
-
-		const QString gui_config_name = dialog->textValue();
-
-		if (gui_config_name.isEmpty())
-		{
-			QMessageBox::warning(this, tr("Error", "Backup GUI config warning 1"), tr("Name cannot be empty", "Backup GUI config warning 1"));
-			continue;
-		}
-		if (gui_config_name.contains("."))
-		{
-			QMessageBox::warning(this, tr("Error", "Backup GUI config warning 2"), tr("Must choose a name with no '.'", "Backup GUI config warning 2"));
-			continue;
-		}
-		if (ui->combo_configs->findText(gui_config_name) != -1)
-		{
-			QMessageBox::warning(this, tr("Error", "Backup GUI config warning 3"), tr("Please choose a non-existing name", "Backup GUI config warning 3"));
-			continue;
-		}
-		Q_EMIT GuiSettingsSaveRequest();
-		m_gui_settings->SaveCurrentConfig(gui_config_name);
-		ui->combo_configs->addItem(gui_config_name);
-		ui->combo_configs->setCurrentText(gui_config_name);
-		m_current_gui_config = gui_config_name;
-		break;
-	}
-}
-
-void settings_dialog::OnApplyGuiConfig()
-{
-	const QString new_config = ui->combo_configs->currentText();
-
-	if (new_config == m_current_gui_config)
-	{
-		return;
+		m_current_stylesheet = gui::DefaultStylesheet;
+		ui->combo_stylesheets->setCurrentIndex(0);
 	}
 
-	// Backup current window states
-	Q_EMIT GuiSettingsSaveRequest();
-
-	if (!m_gui_settings->ChangeToConfig(new_config))
-	{
-		const int new_config_idx = ui->combo_configs->currentIndex();
-		ui->combo_configs->setCurrentText(m_current_gui_config);
-		ui->combo_configs->removeItem(new_config_idx);
-		return;
-	}
-
-	m_current_gui_config = new_config;
-	Q_EMIT GuiSettingsSyncRequest(true);
-}
-
-void settings_dialog::OnApplyStylesheet()
-{
 	// NOTE: We're deliberately not using currentText() here. The actual stylesheet is stored in user data.
 	m_current_stylesheet = ui->combo_stylesheets->currentData().toString();
 
@@ -1976,19 +1931,6 @@ void settings_dialog::OnApplyStylesheet()
 		m_gui_settings->SetValue(gui::m_currentStylesheet, m_current_stylesheet);
 		Q_EMIT GuiStylesheetRequest();
 	}
-}
-
-void settings_dialog::ApplyGuiOptions(bool reset)
-{
-	if (reset)
-	{
-		m_current_stylesheet = gui::DefaultStylesheet;
-		ui->combo_configs->setCurrentIndex(0);
-		ui->combo_stylesheets->setCurrentIndex(0);
-	}
-
-	OnApplyGuiConfig();
-	OnApplyStylesheet();
 }
 
 int settings_dialog::exec()
@@ -2011,10 +1953,10 @@ int settings_dialog::exec()
 			m_gui_settings->ShowConfirmationBox(
 				tr("Remove obsolete settings?"),
 				tr(
-					"Your config file contains one or more obsolete entries.\n"
-					"Consider that a removal might render them invalid for other versions of RPCS3.\n"
-					"\n"
-					"Do you wish to let the program remove them for you now?\n"
+					"Your config file contains one or more obsolete entries.<br>"
+					"Consider that a removal might render them invalid for other versions of RPCS3.<br>"
+					"<br>"
+					"Do you wish to let the program remove them for you now?<br>"
 					"This change will only be final when you save the config."
 				), gui::ib_obsolete_cfg, &result, this);
 

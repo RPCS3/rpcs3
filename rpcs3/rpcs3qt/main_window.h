@@ -106,7 +106,7 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	void OnPlayOrPause();
-	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
+	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, const std::string& config_path = "title_id"); // "title_id" is cfg_keys::title_id
 	void BootElf();
 	void BootGame();
 	void BootVSH();
@@ -115,7 +115,7 @@ private Q_SLOTS:
 	static void show_boot_error(game_boot_result status);
 
 	void SaveWindowState() const;
-	void ConfigureGuiFromSettings(bool configure_all = false);
+	void ConfigureGuiFromSettings();
 	void SetIconSizeActions(int idx) const;
 	void ResizeIcons(int index);
 

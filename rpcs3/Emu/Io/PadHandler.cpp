@@ -30,7 +30,9 @@ int PadHandlerBase::FindKeyCode(const std::unordered_map<u32, std::string>& map,
 
 	if (fallback)
 	{
-		input_log.error("int FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
+		if (!nam.empty())
+			input_log.error("int FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
+
 		if (def_code < 0)
 			def_code = 0;
 	}
@@ -55,7 +57,9 @@ long PadHandlerBase::FindKeyCode(const std::unordered_map<u64, std::string>& map
 
 	if (fallback)
 	{
-		input_log.error("long FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
+		if (!nam.empty())
+			input_log.error("long FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", nam, def_code, def);
+
 		if (def_code < 0)
 			def_code = 0;
 	}
@@ -74,7 +78,8 @@ int PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u32, std::strin
 
 	if (fallback)
 	{
-		input_log.error("long FindKeyCodeByString for [name = %s] returned with 0", name);
+		if (!name.empty())
+			input_log.error("long FindKeyCodeByString for [name = %s] returned with 0", name);
 		return 0;
 	}
 
@@ -92,7 +97,8 @@ long PadHandlerBase::FindKeyCodeByString(const std::unordered_map<u64, std::stri
 
 	if (fallback)
 	{
-		input_log.error("long FindKeyCodeByString for [name = %s] returned with 0", name);
+		if (!name.empty())
+			input_log.error("long FindKeyCodeByString for [name = %s] returned with 0", name);
 		return 0;
 	}
 
@@ -288,39 +294,16 @@ bool PadHandlerBase::has_battery() const
 	return b_has_battery;
 }
 
-std::string PadHandlerBase::get_config_dir(pad_handler type, const std::string& title_id)
+bool PadHandlerBase::has_pressure_intensity_button() const
 {
-	if (!title_id.empty())
-	{
-		return rpcs3::utils::get_custom_input_config_dir(title_id) + fmt::format("%s", type) + "/";
-	}
-	return fs::get_config_dir() + "/InputConfigs/" + fmt::format("%s", type) + "/";
-}
-
-std::string PadHandlerBase::get_config_filename(int i, const std::string& title_id)
-{
-	if (!title_id.empty() && fs::is_file(rpcs3::utils::get_custom_input_config_path(title_id)))
-	{
-		const std::string path = rpcs3::utils::get_custom_input_config_dir(title_id) + g_cfg_input.player[i]->handler.to_string() + "/" + g_cfg_input.player[i]->profile.to_string() + ".yml";
-		if (fs::is_file(path))
-		{
-			return path;
-		}
-	}
-	return fs::get_config_dir() + "/InputConfigs/" + g_cfg_input.player[i]->handler.to_string() + "/" + g_cfg_input.player[i]->profile.to_string() + ".yml";
+	return b_has_pressure_intensity_button;
 }
 
 void PadHandlerBase::init_configs()
 {
-	int index = 0;
-
 	for (u32 i = 0; i < MAX_GAMEPADS; i++)
 	{
-		if (g_cfg_input.player[i]->handler == m_type)
-		{
-			init_config(&m_pad_configs[index], get_config_filename(i, pad::g_title_id));
-			index++;
-		}
+		init_config(&m_pad_configs[i]);
 	}
 }
 
@@ -440,7 +423,7 @@ void PadHandlerBase::TranslateButtonPress(const std::shared_ptr<PadDevice>& devi
 	}
 }
 
-bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
+bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id)
 {
 	std::shared_ptr<PadDevice> pad_device = get_device(device);
 	if (!pad_device)
@@ -449,23 +432,23 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string
 		return false;
 	}
 
-	const int index = static_cast<int>(bindings.size());
-	m_pad_configs[index].load();
-	pad_device->config = &m_pad_configs[index];
-	pad_config* profile = pad_device->config;
-	if (profile == nullptr)
+	m_pad_configs[player_id].from_string(g_cfg_input.player[player_id]->config.to_string());
+	pad_device->config = &m_pad_configs[player_id];
+	pad_device->player_id = player_id;
+	cfg_pad* config = pad_device->config;
+	if (config == nullptr)
 	{
-		input_log.error("PadHandlerBase::bindPadToDevice: no profile found for device %d '%s'", index, device);
+		input_log.error("PadHandlerBase::bindPadToDevice: no profile found for device %d '%s'", bindings.size(), device);
 		return false;
 	}
 
-	std::array<u32, button::button_count> mapping = get_mapped_key_codes(pad_device, profile);
+	std::array<u32, button::button_count> mapping = get_mapped_key_codes(pad_device, config);
 
 	u32 pclass_profile = 0x0;
 
-	for (const auto product : input::get_products_by_class(profile->device_class_type))
+	for (const auto& product : input::get_products_by_class(config->device_class_type))
 	{
-		if (product.vendor_id == profile->vendor_id && product.product_id == profile->product_id)
+		if (product.vendor_id == config->vendor_id && product.product_id == config->product_id)
 		{
 			pclass_profile = product.pclass_profile;
 		}
@@ -476,11 +459,15 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string
 		CELL_PAD_STATUS_DISCONNECTED,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD,
-		profile->device_class_type,
+		config->device_class_type,
 		pclass_profile,
-		profile->vendor_id,
-		profile->product_id
+		config->vendor_id,
+		config->product_id,
+		config->pressure_intensity
 	);
+
+	pad->m_buttons.emplace_back(special_button_offset, mapping[button::pressure_intensity_button], special_button_value::pressure_intensity);
+	pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
 
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::up], CELL_PAD_CTRL_UP);
 	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, mapping[button::down], CELL_PAD_CTRL_DOWN);
@@ -519,35 +506,39 @@ bool PadHandlerBase::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string
 	return true;
 }
 
-std::array<u32, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped_key_codes(const std::shared_ptr<PadDevice>& /*device*/, const pad_config* profile)
+std::array<u32, PadHandlerBase::button::button_count> PadHandlerBase::get_mapped_key_codes(const std::shared_ptr<PadDevice>& /*device*/, const cfg_pad* cfg)
 {
-	std::array<u32, button::button_count> mapping;
+	std::array<u32, button::button_count> mapping{};
+	if (!cfg)
+		return mapping;
 
-	mapping[button::up]       = FindKeyCode(button_list, profile->up);
-	mapping[button::down]     = FindKeyCode(button_list, profile->down);
-	mapping[button::left]     = FindKeyCode(button_list, profile->left);
-	mapping[button::right]    = FindKeyCode(button_list, profile->right);
-	mapping[button::cross]    = FindKeyCode(button_list, profile->cross);
-	mapping[button::square]   = FindKeyCode(button_list, profile->square);
-	mapping[button::circle]   = FindKeyCode(button_list, profile->circle);
-	mapping[button::triangle] = FindKeyCode(button_list, profile->triangle);
-	mapping[button::start]    = FindKeyCode(button_list, profile->start);
-	mapping[button::select]   = FindKeyCode(button_list, profile->select);
-	mapping[button::l1]       = FindKeyCode(button_list, profile->l1);
-	mapping[button::l2]       = FindKeyCode(button_list, profile->l2);
-	mapping[button::l3]       = FindKeyCode(button_list, profile->l3);
-	mapping[button::r1]       = FindKeyCode(button_list, profile->r1);
-	mapping[button::r2]       = FindKeyCode(button_list, profile->r2);
-	mapping[button::r3]       = FindKeyCode(button_list, profile->r3);
-	mapping[button::ls_left]  = FindKeyCode(button_list, profile->ls_left);
-	mapping[button::ls_right] = FindKeyCode(button_list, profile->ls_right);
-	mapping[button::ls_down]  = FindKeyCode(button_list, profile->ls_down);
-	mapping[button::ls_up]    = FindKeyCode(button_list, profile->ls_up);
-	mapping[button::rs_left]  = FindKeyCode(button_list, profile->rs_left);
-	mapping[button::rs_right] = FindKeyCode(button_list, profile->rs_right);
-	mapping[button::rs_down]  = FindKeyCode(button_list, profile->rs_down);
-	mapping[button::rs_up]    = FindKeyCode(button_list, profile->rs_up);
-	mapping[button::ps]       = FindKeyCode(button_list, profile->ps);
+	mapping[button::up]       = FindKeyCode(button_list, cfg->up);
+	mapping[button::down]     = FindKeyCode(button_list, cfg->down);
+	mapping[button::left]     = FindKeyCode(button_list, cfg->left);
+	mapping[button::right]    = FindKeyCode(button_list, cfg->right);
+	mapping[button::cross]    = FindKeyCode(button_list, cfg->cross);
+	mapping[button::square]   = FindKeyCode(button_list, cfg->square);
+	mapping[button::circle]   = FindKeyCode(button_list, cfg->circle);
+	mapping[button::triangle] = FindKeyCode(button_list, cfg->triangle);
+	mapping[button::start]    = FindKeyCode(button_list, cfg->start);
+	mapping[button::select]   = FindKeyCode(button_list, cfg->select);
+	mapping[button::l1]       = FindKeyCode(button_list, cfg->l1);
+	mapping[button::l2]       = FindKeyCode(button_list, cfg->l2);
+	mapping[button::l3]       = FindKeyCode(button_list, cfg->l3);
+	mapping[button::r1]       = FindKeyCode(button_list, cfg->r1);
+	mapping[button::r2]       = FindKeyCode(button_list, cfg->r2);
+	mapping[button::r3]       = FindKeyCode(button_list, cfg->r3);
+	mapping[button::ls_left]  = FindKeyCode(button_list, cfg->ls_left);
+	mapping[button::ls_right] = FindKeyCode(button_list, cfg->ls_right);
+	mapping[button::ls_down]  = FindKeyCode(button_list, cfg->ls_down);
+	mapping[button::ls_up]    = FindKeyCode(button_list, cfg->ls_up);
+	mapping[button::rs_left]  = FindKeyCode(button_list, cfg->rs_left);
+	mapping[button::rs_right] = FindKeyCode(button_list, cfg->rs_right);
+	mapping[button::rs_down]  = FindKeyCode(button_list, cfg->rs_down);
+	mapping[button::rs_up]    = FindKeyCode(button_list, cfg->rs_up);
+	mapping[button::ps]       = FindKeyCode(button_list, cfg->ps);
+
+	mapping[button::pressure_intensity_button] = FindKeyCode(button_list, cfg->pressure_intensity_button);
 
 	return mapping;
 }
@@ -557,15 +548,30 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 	if (!device || !pad)
 		return;
 
-	auto profile = device->config;
+	auto cfg = device->config;
 
 	auto button_values = get_button_values(device);
+
+	// Find out if special buttons are pressed (introduced by RPCS3).
+	// These buttons will have a delay of one cycle, but whatever.
+	const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
 
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (auto& btn : pad->m_buttons)
 	{
-		btn.m_value = button_values[btn.m_keyCode];
-		TranslateButtonPress(device, btn.m_keyCode, btn.m_pressed, btn.m_value);
+		// Using a temporary buffer because the values can change during translation
+		Button tmp = btn;
+		tmp.m_value = button_values[btn.m_keyCode];
+
+		TranslateButtonPress(device, tmp.m_keyCode, tmp.m_pressed, tmp.m_value);
+
+		// Modify pressure if necessary if the button was pressed
+		if (adjust_pressure && tmp.m_pressed)
+		{
+			tmp.m_value = pad->m_pressure_intensity;
+		}
+
+		btn = tmp;
 	}
 
 	// used to get the absolute value of an axis
@@ -593,8 +599,8 @@ void PadHandlerBase::get_mapping(const std::shared_ptr<PadDevice>& device, const
 	u16 lx, ly, rx, ry;
 
 	// Normalize and apply pad squircling
-	convert_stick_values(lx, ly, stick_val[0], stick_val[1], profile->lstickdeadzone, profile->lpadsquircling);
-	convert_stick_values(rx, ry, stick_val[2], stick_val[3], profile->rstickdeadzone, profile->rpadsquircling);
+	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lpadsquircling);
+	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rpadsquircling);
 
 	if (m_type == pad_handler::ds4)
 	{

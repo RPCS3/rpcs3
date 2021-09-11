@@ -42,17 +42,17 @@ namespace rsx
 		// Publicly visible enumerators
 		enum
 		{
-			shader_read = 0,
-			shader_write = 1,
-			transfer_read = 2,
-			transfer_write = 4,
+			shader_read    = (1 << 0),
+			shader_write   = (1 << 1),
+			transfer_read  = (1 << 2),
+			transfer_write = (1 << 3),
 
 			// Arbitrary r/w flags, use with caution.
-			memory_write = 8,
-			memory_read = 16,
+			memory_write   = (1 << 4),
+			memory_read    = (1 << 5),
 
 			// Not r/w but signifies a GPU reference to this object.
-			gpu_reference = 32
+			gpu_reference  = (1 << 6),
 		};
 
 	private:
@@ -133,6 +133,7 @@ namespace rsx
 		u64 surface_cache_tag = 0;
 		f32 scale_x = 1.f;
 		f32 scale_y = 1.f;
+		f32 scale_z = 1.f;
 
 		virtual ~sampled_image_descriptor_base() = default;
 		virtual u32 encoded_component_map() const = 0;

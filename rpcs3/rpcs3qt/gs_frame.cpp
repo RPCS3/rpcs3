@@ -76,12 +76,28 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 		setSurfaceType(QSurface::VulkanSurface);
 #endif
 
+	// NOTE: You cannot safely create a wayland window that has hidden initial status and perform any changes on the window while it is still hidden.
+	// Doing this will create a surface with deferred commands that require a buffer. When binding to your session, this may assert in your compositor due to protocol restrictions.
+	Visibility startup_visibility = Hidden;
+#ifndef _WIN32
+	if (const char* session_type = ::getenv("XDG_SESSION_TYPE"))
+	{
+		if (!strcasecmp(session_type, "wayland"))
+		{
+			// Start windowed. This is a featureless rectangle on-screen with no window decorations.
+			// It does not even resemble a window until the WM attaches later on.
+			// Fullscreen could technically work with some fiddling, but easily breaks depending on geometry input.
+			startup_visibility = Windowed;
+		}
+	}
+#endif
+
 	setMinimumWidth(160);
 	setMinimumHeight(90);
 	setScreen(screen);
 	setGeometry(geometry);
 	setTitle(qstr(m_window_title));
-	setVisibility(Hidden);
+	setVisibility(startup_visibility);
 	create();
 
 	// Change cursor when in fullscreen.
@@ -747,7 +763,7 @@ bool gs_frame::event(QEvent* ev)
 			Emu.CallAfter([this, &result, &called]()
 			{
 				m_gui_settings->ShowConfirmationBox(tr("Exit Game?"),
-					tr("Do you really want to exit the game?\n\nAny unsaved progress will be lost!\n"),
+					tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>"),
 					gui::ib_confirm_exit, &result, nullptr);
 
 				called = true;

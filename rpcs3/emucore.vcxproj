@@ -40,7 +40,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\3rdparty\wolfssl\;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\zlib\zlib;..\llvm\include;..\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\zlib\zlib;..\llvm\include;..\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
     </ClCompile>
     <PreBuildEvent>
@@ -53,6 +53,7 @@
     <ClCompile Include="Emu\Audio\ALSA\ALSABackend.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Emu\Audio\audio_device_listener.cpp" />
     <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
@@ -428,6 +429,7 @@
     <ClInclude Include="Emu\Audio\ALSA\ALSABackend.h">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="Emu\Audio\audio_device_listener.h" />
     <ClInclude Include="Emu\Audio\FAudio\FAudioBackend.h">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
@@ -761,7 +763,7 @@
     <ProjectReference Include="..\3rdparty\asmjit\asmjit.vcxproj">
       <Project>{ac40ff01-426e-4838-a317-66354cefae88}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\3rdparty\yaml-cpp.vcxproj">
+    <ProjectReference Include="..\3rdparty\yaml-cpp\yaml-cpp.vcxproj">
       <Project>{fdc361c5-7734-493b-8cfb-037308b35122}</Project>
     </ProjectReference>
   </ItemGroup>

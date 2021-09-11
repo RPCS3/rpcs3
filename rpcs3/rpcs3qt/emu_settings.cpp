@@ -140,17 +140,12 @@ void emu_settings::LoadSettings(const std::string& title_id)
 		// Otherwise we'll always trigger the "obsolete settings dialog" when editing custom configs.
 		ValidateSettings(true);
 
-		const std::string config_path_new = rpcs3::utils::get_custom_config_path(m_title_id);
-		const std::string config_path_old = rpcs3::utils::get_custom_config_path(m_title_id, true);
+		const std::string config_path = rpcs3::utils::get_custom_config_path(m_title_id);
 		std::string custom_config_path;
 
-		if (fs::is_file(config_path_new))
+		if (fs::is_file(config_path))
 		{
-			custom_config_path = config_path_new;
-		}
-		else if (fs::is_file(config_path_old))
-		{
-			custom_config_path = config_path_old;
+			custom_config_path = config_path;
 		}
 
 		if (!custom_config_path.empty())

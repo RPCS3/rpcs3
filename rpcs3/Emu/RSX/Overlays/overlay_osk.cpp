@@ -280,7 +280,7 @@ namespace rsx
 			}
 			else
 			{
-				m_preview.caret_position = ::narrow<u16>(m_preview.value.length());
+				m_preview.caret_position = m_preview.value.length();
 				m_preview.fore_color.a = 1.f;
 			}
 
@@ -593,7 +593,7 @@ namespace rsx
 			// Append to output text
 			if (m_preview.value.empty())
 			{
-				m_preview.caret_position = ::narrow<u16>(str.length());
+				m_preview.caret_position = str.length();
 				m_preview.set_unicode_text(str);
 			}
 			else

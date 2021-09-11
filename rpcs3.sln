@@ -38,7 +38,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VKGSRender", "rpcs3\VKGSRen
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "__BUILD_BEFORE", "__BUILD_BEFORE", "{B0AC29FD-7B01-4B5E-9C8D-0A081E4C5668}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "yaml-cpp", "3rdparty\yaml-cpp.vcxproj", "{FDC361C5-7734-493B-8CFB-037308B35122}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "yaml-cpp", "3rdparty\yaml-cpp\yaml-cpp.vcxproj", "{FDC361C5-7734-493B-8CFB-037308B35122}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rpcs3", "rpcs3\rpcs3.vcxproj", "{70CD65B0-91D6-4FAE-9A7B-4AF55D0D1B12}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -66,7 +66,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libusb-1.0 (static)", "3rdp
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "7zlib", "3rdparty\7z\7zlib.vcxproj", "{5B146DEA-9ACE-4D32-A7FD-3F42464DD69C}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wolfssl", "3rdparty\wolfssl.vcxproj", "{73973223-5EE8-41CA-8E88-1D60E89A237B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "wolfssl", "3rdparty\wolfssl\wolfssl.vcxproj", "{73973223-5EE8-41CA-8E88-1D60E89A237B}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libcurl", "3rdparty\curl\libcurl.vcxproj", "{DA6F56B4-06A4-441D-AD70-AC5A7D51FADB}"
 	ProjectSection(ProjectDependencies) = postProject

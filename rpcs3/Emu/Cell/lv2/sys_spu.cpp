@@ -48,6 +48,25 @@ void fmt_class_string<spu_group_status>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<spu_stop_syscall>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](spu_stop_syscall value)
+	{
+		switch (value)
+		{
+		case SYS_SPU_THREAD_STOP_YIELD: return "sys_spu_thread_yield";
+		case SYS_SPU_THREAD_STOP_GROUP_EXIT: return "sys_spu_thread_group_exit";
+		case SYS_SPU_THREAD_STOP_THREAD_EXIT: return "sys_spu_thread_thread_exit";
+		case SYS_SPU_THREAD_STOP_RECEIVE_EVENT: return "sys_spu_thread_receive_event";
+		case SYS_SPU_THREAD_STOP_TRY_RECEIVE_EVENT: return "sys_spu_thread_tryreceive_event";
+		case SYS_SPU_THREAD_STOP_SWITCH_SYSTEM_MODULE: return "sys_spu_thread_switch_system_module";
+		}
+		
+		return unknown;
+	});
+}
+
 void sys_spu_image::load(const fs::file& stream)
 {
 	const spu_exec_object obj{stream, 0, elf_opt::no_sections + elf_opt::no_data};
@@ -198,17 +217,82 @@ std::pair<named_thread<spu_thread>*, std::shared_ptr<lv2_spu_group>> lv2_spu_gro
 	return res;
 }
 
+namespace
+{
+
+struct limits_data
+{
+	u32 physical = 0;
+	u32 raw_spu = 0;
+	u32 controllable = 0;
+	u32 spu_limit = umax;
+	u32 raw_limit = umax;
+};
+
+struct spu_limits_t
+{
+	u32 max_raw = 0;
+	u32 max_spu = 6;
+	shared_mutex mutex;
+
+	bool check(const limits_data& init) const
+	{
+		u32 physical_spus_count = init.physical;
+		u32 raw_spu_count = init.raw_spu;
+		u32 controllable_spu_count = init.controllable;
+		const u32 spu_limit = init.spu_limit != umax ? init.spu_limit : max_spu;
+		const u32 raw_limit = init.raw_limit != umax ? init.raw_limit : max_raw;
+
+		idm::select<lv2_spu_group>([&](u32, lv2_spu_group& group)
+		{
+			if (group.has_scheduler_context)
+			{
+				controllable_spu_count = std::max(controllable_spu_count, group.max_num);
+			}
+			else
+			{
+				physical_spus_count += group.max_num;
+			}
+		});
+
+		raw_spu_count += spu_thread::g_raw_spu_ctr;
+
+		if (spu_limit + raw_limit > 6 || raw_spu_count > raw_limit || physical_spus_count >= spu_limit || physical_spus_count + controllable_spu_count > spu_limit)
+		{
+			return false;
+		}
+
+		return true;
+	}
+};
+
+} // annonymous namespace
+
 error_code sys_spu_initialize(ppu_thread& ppu, u32 max_usable_spu, u32 max_raw_spu)
 {
 	ppu.state += cpu_flag::wait;
 
 	sys_spu.warning("sys_spu_initialize(max_usable_spu=%d, max_raw_spu=%d)", max_usable_spu, max_raw_spu);
 
+	auto& limits = g_fxo->get<spu_limits_t>();
+
 	if (max_raw_spu > 5)
 	{
 		return CELL_EINVAL;
 	}
 
+	// NOTE: This value can be changed by VSH in theory
+	max_usable_spu = 6;
+
+	std::lock_guard lock(limits.mutex);
+
+	if (!limits.check(limits_data{.spu_limit = max_usable_spu - max_raw_spu, .raw_limit = max_raw_spu}))
+	{
+		return CELL_EBUSY;
+	}
+
+	limits.max_raw = max_raw_spu;
+	limits.max_spu = max_usable_spu - max_raw_spu;
 	return CELL_OK;
 }
 
@@ -505,7 +589,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	bool use_scheduler = true;
 	bool use_memct = !!(type & SYS_SPU_THREAD_GROUP_TYPE_MEMORY_FROM_CONTAINER);
 	bool needs_root = false;
-	u32 max_threads = 6; // TODO: max num value should be affected by sys_spu_initialize() settings
+	u32 max_threads = 6;
 	u32 min_threads = 1;
 	u32 mem_size = 0;
 	lv2_memory_container* ct{};
@@ -570,11 +654,12 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	default: return CELL_EINVAL;
 	}
 
-	if (type & SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM)
+	const bool is_system_coop = type & SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM;
+
+	if (is_system_coop)
 	{
-		// Constant size, unknown what it means but it's definitely not for each spu thread alone
+		// Constant size, unknown what it means
 		mem_size = SPU_LS_SIZE;
-		use_scheduler = false;
 	}
 	else if (type & SYS_SPU_THREAD_GROUP_TYPE_NON_CONTEXT)
 	{
@@ -589,7 +674,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	}
 
 	if (num < min_threads || num > max_threads ||
-		(needs_root && min_prio == 0x10) || (use_scheduler && (prio > 255 || prio < min_prio)))
+		(needs_root && min_prio == 0x10) || (use_scheduler && !is_system_coop && (prio > 255 || prio < min_prio)))
 	{
 		return CELL_EINVAL;
 	}
@@ -620,6 +705,16 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 		}
 	}
 
+	auto& limits = g_fxo->get<spu_limits_t>();
+
+	std::lock_guard lock(limits.mutex);
+
+	if (!limits.check(use_scheduler ? limits_data{.controllable = num} : limits_data{.physical = num}))
+	{
+		ct->used -= mem_size;
+		return CELL_EBUSY;
+	}
+
 	const auto group = idm::make_ptr<lv2_spu_group>(std::string(attr->name.get_ptr(), std::max<u32>(attr->nsize, 1) - 1), num, prio, type, ct, use_scheduler, mem_size);
 
 	if (!group)
@@ -638,6 +733,10 @@ error_code sys_spu_thread_group_destroy(ppu_thread& ppu, u32 id)
 	ppu.state += cpu_flag::wait;
 
 	sys_spu.warning("sys_spu_thread_group_destroy(id=0x%x)", id);
+
+	auto& limits = g_fxo->get<spu_limits_t>();
+
+	std::lock_guard lock(limits.mutex);
 
 	const auto group = idm::withdraw<lv2_spu_group>(id, [](lv2_spu_group& group) -> CellError
 	{
@@ -880,6 +979,8 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 		else if (state == SPU_THREAD_GROUP_STATUS_WAITING_AND_SUSPENDED)
 		{
 			state = SPU_THREAD_GROUP_STATUS_WAITING;
+			error = CellError{};
+			return true;
 		}
 		else
 		{
@@ -893,7 +994,12 @@ error_code sys_spu_thread_group_resume(ppu_thread& ppu, u32 id)
 
 	if (error != CELL_CANCEL + 0u)
 	{
-		return error;
+		if (error)
+		{
+			return error;
+		}
+
+		return CELL_OK;
 	}
 
 	for (auto& thread : group->threads)
@@ -1821,7 +1927,14 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 
 	sys_spu.warning("sys_raw_spu_create(id=*0x%x, attr=*0x%x)", id, attr);
 
-	// TODO: check number set by sys_spu_initialize()
+	auto& limits = g_fxo->get<spu_limits_t>();
+
+	std::lock_guard lock(limits.mutex);
+
+	if (!limits.check(limits_data{.raw_spu = 1}))
+	{
+		return CELL_EAGAIN;
+	}
 
 	if (!spu_thread::g_raw_spu_ctr.try_inc(5))
 	{
@@ -1867,7 +1980,14 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 		return CELL_EAUTHFAIL;
 	}
 
-	// TODO: check number set by sys_spu_initialize()
+	auto& limits = g_fxo->get<spu_limits_t>();
+
+	std::lock_guard lock(limits.mutex);
+
+	if (!limits.check(limits_data{.raw_spu = 1}))
+	{
+		return CELL_EAGAIN;
+	}
 
 	if (!spu_thread::g_raw_spu_ctr.try_inc(5))
 	{
@@ -1962,6 +2082,10 @@ error_code raw_spu_destroy(ppu_thread& ppu, u32 id)
 	}
 
 	(*thread)();
+
+	auto& limits = g_fxo->get<spu_limits_t>();
+
+	std::lock_guard lock(limits.mutex);
 
 	if (auto ret = idm::withdraw<named_thread<spu_thread>>(idm_id, [&](spu_thread& spu) -> CellError
 	{

@@ -982,8 +982,12 @@
     <ClCompile Include="Emu\RSX\Program\VertexProgramDecompiler.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Program\CgBinaryFragmentProgram.cpp" />
-    <ClCompile Include="Emu\RSX\Program\CgBinaryVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\Program\CgBinaryFragmentProgram.cpp">
+      <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Program\CgBinaryVertexProgram.cpp">
+      <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Program\ProgramStateCache.cpp">
       <Filter>Emu\GPU\RSX\Program</Filter>
     </ClCompile>
@@ -998,6 +1002,9 @@
     </ClCompile>
     <ClCompile Include="Emu\Cell\Modules\libfs_utility_init.cpp">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Audio\audio_device_listener.cpp">
+      <Filter>Emu\Audio</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1973,6 +1980,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\libfs_utility_init.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Audio\audio_device_listener.h">
+      <Filter>Emu\Audio</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -747,6 +747,15 @@
     <ClCompile Include="rpcs3qt\game_list.cpp">
       <Filter>Gui\game list</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_patch_creator_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\patch_creator_dialog.cpp">
+      <Filter>Gui\patch manager</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_patch_creator_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -877,6 +886,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\movie_item.h">
       <Filter>Gui\custom items</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_patch_creator_dialog.h">
+      <Filter>Generated Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1092,6 +1104,12 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\log_viewer.h">
       <Filter>Gui\log</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\patch_creator_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\patch_creator_dialog.h">
+      <Filter>Gui\patch manager</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

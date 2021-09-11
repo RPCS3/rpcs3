@@ -348,6 +348,11 @@ static const __m128i lvrx_masks[0x10] =
 	_mm_set_epi8(-1, 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe),
 };
 
+static SSSE3_FUNC __m128i sse_cellbe_lvlx(ppu_thread& ppu, u64 addr)
+{
+	return _mm_shuffle_epi8(ppu_feed_data<__m128i>(ppu, addr & -16), lvlx_masks[addr & 0xf]);
+}
+
 extern SSSE3_FUNC __m128i sse_cellbe_lvlx(u64 addr)
 {
 	return _mm_shuffle_epi8(_mm_load_si128(vm::_ptr<const __m128i>(addr & ~0xf)), lvlx_masks[addr & 0xf]);
@@ -356,6 +361,11 @@ extern SSSE3_FUNC __m128i sse_cellbe_lvlx(u64 addr)
 extern SSSE3_FUNC void sse_cellbe_stvlx(u64 addr, __m128i a)
 {
 	_mm_maskmoveu_si128(_mm_shuffle_epi8(a, lvlx_masks[addr & 0xf]), lvrx_masks[addr & 0xf], vm::_ptr<char>(addr & ~0xf));
+}
+
+static SSSE3_FUNC __m128i sse_cellbe_lvrx(ppu_thread& ppu, u64 addr)
+{
+	return _mm_shuffle_epi8(ppu_feed_data<__m128i>(ppu, addr & -16), lvrx_masks[addr & 0xf]);
 }
 
 extern SSSE3_FUNC __m128i sse_cellbe_lvrx(u64 addr)
@@ -368,6 +378,11 @@ extern SSSE3_FUNC void sse_cellbe_stvrx(u64 addr, __m128i a)
 	_mm_maskmoveu_si128(_mm_shuffle_epi8(a, lvrx_masks[addr & 0xf]), lvlx_masks[addr & 0xf], vm::_ptr<char>(addr & ~0xf));
 }
 
+static __m128i sse_cellbe_lvlx_v0(ppu_thread& ppu, u64 addr)
+{
+	return sse_pshufb(ppu_feed_data<__m128i>(ppu, addr & -16), lvlx_masks[addr & 0xf]);
+}
+
 extern __m128i sse_cellbe_lvlx_v0(u64 addr)
 {
 	return sse_pshufb(_mm_load_si128(vm::_ptr<const __m128i>(addr & ~0xf)), lvlx_masks[addr & 0xf]);
@@ -376,6 +391,11 @@ extern __m128i sse_cellbe_lvlx_v0(u64 addr)
 extern void sse_cellbe_stvlx_v0(u64 addr, __m128i a)
 {
 	_mm_maskmoveu_si128(sse_pshufb(a, lvlx_masks[addr & 0xf]), lvrx_masks[addr & 0xf], vm::_ptr<char>(addr & ~0xf));
+}
+
+static __m128i sse_cellbe_lvrx_v0(ppu_thread& ppu, u64 addr)
+{
+	return sse_pshufb(ppu_feed_data<__m128i>(ppu, addr & -16), lvrx_masks[addr & 0xf]);
 }
 
 extern __m128i sse_cellbe_lvrx_v0(u64 addr)
@@ -4161,7 +4181,7 @@ bool ppu_interpreter::DIVW(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LVLX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd].vi = s_use_ssse3 ? sse_cellbe_lvlx(addr) : sse_cellbe_lvlx_v0(addr);
+	ppu.vr[op.vd].vi = s_use_ssse3 ? sse_cellbe_lvlx(ppu, addr) : sse_cellbe_lvlx_v0(ppu, addr);
 	return true;
 }
 
@@ -4225,7 +4245,7 @@ bool ppu_interpreter::SRD(ppu_thread& ppu, ppu_opcode_t op)
 bool ppu_interpreter::LVRX(ppu_thread& ppu, ppu_opcode_t op)
 {
 	const u64 addr = op.ra ? ppu.gpr[op.ra] + ppu.gpr[op.rb] : ppu.gpr[op.rb];
-	ppu.vr[op.vd].vi = s_use_ssse3 ? sse_cellbe_lvrx(addr) : sse_cellbe_lvrx_v0(addr);
+	ppu.vr[op.vd].vi = s_use_ssse3 ? sse_cellbe_lvrx(ppu, addr) : sse_cellbe_lvrx_v0(ppu, addr);
 	return true;
 }
 

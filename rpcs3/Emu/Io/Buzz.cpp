@@ -59,12 +59,13 @@ void usb_device_buzz::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint*/
 	buf[3] = 0x00;
 	buf[4] = 0xf0;
 
+	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_current_handler();
 	const auto& pads   = handler->GetPads();
 
 	for (int index = 0; index <= (last_controller - first_controller); index++)
 	{
-		const auto pad = pads[first_controller + index];
+		const auto& pad = pads[first_controller + index];
 
 		if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 			continue;

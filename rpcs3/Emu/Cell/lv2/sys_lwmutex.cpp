@@ -40,56 +40,76 @@ error_code _sys_lwmutex_destroy(ppu_thread& ppu, u32 lwmutex_id)
 
 	sys_lwmutex.warning("_sys_lwmutex_destroy(lwmutex_id=0x%x)", lwmutex_id);
 
-	auto mutex = idm::get<lv2_obj, lv2_lwmutex>(lwmutex_id);
-
-	if (!mutex)
-	{
-		return CELL_ESRCH;
-	}
+	std::shared_ptr<lv2_lwmutex> _mutex;
 
 	while (true)
 	{
-		if (std::scoped_lock lock(mutex->mutex); mutex->sq.empty())
+		s32 old_val = 0;
+
+		auto [ptr, ret] = idm::withdraw<lv2_obj, lv2_lwmutex>(lwmutex_id, [&](lv2_lwmutex& mutex) -> CellError
 		{
-			// Set "destroyed" bit
-			if (mutex->lwcond_waiters.fetch_or(smin) & 0x7fff'ffff)
+			// Ignore check on first iteration
+			if (_mutex && std::addressof(mutex) != _mutex.get())
+			{
+				// Other thread has destroyed the lwmutex earlier
+				return CELL_ESRCH;
+			}
+
+			std::lock_guard lock(mutex.mutex);
+
+			if (!mutex.sq.empty())
+			{
+				return CELL_EBUSY;
+			}
+
+			old_val = mutex.lwcond_waiters.or_fetch(smin);
+
+			if (old_val != smin)
 			{
 				// Deschedule if waiters were found
 				lv2_obj::sleep(ppu);
-			}
-		}
-		else
-		{
-			return CELL_EBUSY;
-		}
 
-		// Wait for all lwcond waiters to quit
-		if (const s32 old = mutex->lwcond_waiters; old != smin)
-		{
-			if (old >= 0)
-			{
-				// Sleep queue is no longer empty
-				// Was set to positive value to announce it
-				continue;
+				// Repeat loop: there are lwcond waiters
+				return CELL_EAGAIN;
 			}
 
-			thread_ctrl::wait_on(mutex->lwcond_waiters, old);
+			return {};
+		});
 
-			if (ppu.is_stopped())
+		if (!ptr)
+		{
+			return CELL_ESRCH;
+		}
+
+		if (ret)
+		{
+			if (ret != CELL_EAGAIN)
 			{
-				return {};
+				return ret;
 			}
 		}
 		else
 		{
 			break;
 		}
-	}
 
-	if (!idm::remove_verify<lv2_obj, lv2_lwmutex>(lwmutex_id, std::move(mutex)))
-	{
-		// Other thread has destroyed the lwmutex earlier
-		return CELL_ESRCH;
+		_mutex = std::move(ptr);
+
+		// Wait for all lwcond waiters to quit
+		while (old_val + 0u > 1u << 31)
+		{
+			thread_ctrl::wait_on(_mutex->lwcond_waiters, old_val);
+
+			if (ppu.is_stopped())
+			{
+				return {};
+			}
+
+			old_val = _mutex->lwcond_waiters;
+		}
+
+		// Wake up from sleep
+		ppu.check_state();
 	}
 
 	return CELL_OK;
@@ -133,17 +153,12 @@ error_code _sys_lwmutex_lock(ppu_thread& ppu, u32 lwmutex_id, u64 timeout)
 			return true;
 		}
 
-		if (!mutex.add_waiter(&ppu))
-		{
-			ppu.gpr[3] = CELL_ESRCH;
-			return true;
-		}
-
+		mutex.add_waiter(&ppu);
 		mutex.sleep(ppu, timeout);
 		return false;
 	});
 
-	if (!mutex || ppu.gpr[3] == CELL_ESRCH)
+	if (!mutex)
 	{
 		return CELL_ESRCH;
 	}

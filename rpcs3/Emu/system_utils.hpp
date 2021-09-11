@@ -26,7 +26,9 @@ namespace rpcs3::utils
 	std::string get_sfo_dir_from_game_path(const std::string& game_path, const std::string& title_id = "");
 
 	std::string get_custom_config_dir();
-	std::string get_custom_config_path(const std::string& title_id, bool get_deprecated_path = false);
-	std::string get_custom_input_config_dir(const std::string& title_id);
+	std::string get_custom_config_path(const std::string& title_id);
+
+	std::string get_input_config_root();
+	std::string get_input_config_dir(const std::string& title_id = "");
 	std::string get_custom_input_config_path(const std::string& title_id);
 }

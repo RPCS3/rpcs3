@@ -75,7 +75,7 @@ namespace vk
 	};
 
 	void upload_image(const vk::command_buffer& cmd, vk::image* dst_image,
-		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 mipmap_count,
+		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 layer_count,
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags);
 
 	//Other texture management helpers

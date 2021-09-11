@@ -31,12 +31,9 @@ keyboard_pad_handler::keyboard_pad_handler()
 	b_has_config = true;
 }
 
-void keyboard_pad_handler::init_config(pad_config* cfg, const std::string& name)
+void keyboard_pad_handler::init_config(cfg_pad* cfg)
 {
 	if (!cfg) return;
-
-	// Set this profile's save location
-	cfg->cfg_name = name;
 
 	// Set default button mapping
 	cfg->ls_left.def  = GetKeyName(Qt::Key_A);
@@ -65,6 +62,8 @@ void keyboard_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l2.def       = GetKeyName(Qt::Key_R);
 	cfg->l3.def       = GetKeyName(Qt::Key_F);
 
+	cfg->pressure_intensity_button.def = GetKeyName(Qt::NoButton);
+
 	// apply defaults
 	cfg->from_default();
 }
@@ -78,9 +77,9 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 	value = Clamp0To255(value);
 
-	for (const auto& pad : m_bindings)
+	for (auto& pad : m_pads_internal)
 	{
-		for (Button& button : pad->m_buttons)
+		for (Button& button : pad.m_buttons)
 		{
 			if (button.m_keyCode != code)
 				continue;
@@ -106,10 +105,10 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			}
 		}
 
-		for (usz i = 0; i < pad->m_sticks.size(); i++)
+		for (usz i = 0; i < pad.m_sticks.size(); i++)
 		{
-			const bool is_max = pad->m_sticks[i].m_keyCodeMax == code;
-			const bool is_min = pad->m_sticks[i].m_keyCodeMin == code;
+			const bool is_max = pad.m_sticks[i].m_keyCodeMax == code;
+			const bool is_min = pad.m_sticks[i].m_keyCodeMin == code;
 
 			const u16 normalized_value = std::max<u16>(1, static_cast<u16>(std::floor(value / 2.0)));
 
@@ -128,7 +127,7 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 				// to get the fastest response time possible we don't wanna use any lerp with factor 1
 				if (stick_lerp_factor >= 1.0f)
 				{
-					pad->m_sticks[i].m_value = m_stick_val[i];
+					pad.m_sticks[i].m_value = m_stick_val[i];
 				}
 			}
 		}
@@ -137,21 +136,21 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 void keyboard_pad_handler::release_all_keys()
 {
-	for (const auto& pad : m_bindings)
+	for (auto& pad : m_pads_internal)
 	{
-		for (Button& button : pad->m_buttons)
+		for (Button& button : pad.m_buttons)
 		{
 			button.m_pressed = false;
 			button.m_value = 0;
 			button.m_actual_value = 0;
 		}
 
-		for (usz i = 0; i < pad->m_sticks.size(); i++)
+		for (usz i = 0; i < pad.m_sticks.size(); i++)
 		{
 			m_stick_min[i] = 0;
 			m_stick_max[i] = 128;
 			m_stick_val[i] = 128;
-			pad->m_sticks[i].m_value = 128;
+			pad.m_sticks[i].m_value = 128;
 		}
 	}
 }
@@ -621,7 +620,7 @@ u32 keyboard_pad_handler::GetKeyCode(const std::string& keyName)
 u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 {
 	if (keyName.isEmpty())
-		return 0;
+		return Qt::NoButton;
 	if (const int native_scan_code = native_scan_code_from_string(sstr(keyName)); native_scan_code >= 0)
 		return Qt::Key_unknown + native_scan_code; // Special cases that can't be expressed with Qt::Key
 	if (keyName == "Alt")
@@ -688,27 +687,26 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 	}
 }
 
-bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device)
+bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id)
 {
 	if (device != pad::keyboard_device_name)
 		return false;
 
-	const int index = static_cast<int>(m_bindings.size());
-	m_pad_configs[index].load();
-	pad_config* p_profile = &m_pad_configs[index];
-	if (p_profile == nullptr)
+	m_pad_configs[player_id].from_string(g_cfg_input.player[player_id]->config.to_string());
+	cfg_pad* cfg = &m_pad_configs[player_id];
+	if (cfg == nullptr)
 		return false;
 
 	m_mouse_move_used = false;
 	m_mouse_wheel_used = false;
-	m_deadzone_x = p_profile->mouse_deadzone_x;
-	m_deadzone_y = p_profile->mouse_deadzone_y;
-	m_multi_x = p_profile->mouse_acceleration_x / 100.0;
-	m_multi_y = p_profile->mouse_acceleration_y / 100.0;
-	m_l_stick_lerp_factor = p_profile->l_stick_lerp_factor / 100.0f;
-	m_r_stick_lerp_factor = p_profile->r_stick_lerp_factor / 100.0f;
-	m_analog_lerp_factor  = p_profile->analog_lerp_factor / 100.0f;
-	m_trigger_lerp_factor = p_profile->trigger_lerp_factor / 100.0f;
+	m_deadzone_x = cfg->mouse_deadzone_x;
+	m_deadzone_y = cfg->mouse_deadzone_y;
+	m_multi_x = cfg->mouse_acceleration_x / 100.0;
+	m_multi_y = cfg->mouse_acceleration_y / 100.0;
+	m_l_stick_lerp_factor = cfg->l_stick_lerp_factor / 100.0f;
+	m_r_stick_lerp_factor = cfg->r_stick_lerp_factor / 100.0f;
+	m_analog_lerp_factor  = cfg->analog_lerp_factor / 100.0f;
+	m_trigger_lerp_factor = cfg->trigger_lerp_factor / 100.0f;
 
 	const auto find_key = [this](const cfg::string& name)
 	{
@@ -726,9 +724,9 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 
 	u32 pclass_profile = 0x0;
 
-	for (const auto product : input::get_products_by_class(p_profile->device_class_type))
+	for (const auto& product : input::get_products_by_class(cfg->device_class_type))
 	{
-		if (product.vendor_id == p_profile->vendor_id && product.product_id == p_profile->product_id)
+		if (product.vendor_id == cfg->vendor_id && product.product_id == cfg->product_id)
 		{
 			pclass_profile = product.pclass_profile;
 		}
@@ -740,35 +738,39 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 		CELL_PAD_STATUS_DISCONNECTED,
 		CELL_PAD_CAPABILITY_PS3_CONFORMITY | CELL_PAD_CAPABILITY_PRESS_MODE | CELL_PAD_CAPABILITY_HP_ANALOG_STICK | CELL_PAD_CAPABILITY_ACTUATOR | CELL_PAD_CAPABILITY_SENSOR_MODE,
 		CELL_PAD_DEV_TYPE_STANDARD,
-		p_profile->device_class_type,
+		cfg->device_class_type,
 		pclass_profile,
-		p_profile->vendor_id,
-		p_profile->product_id
+		cfg->vendor_id,
+		cfg->product_id,
+		cfg->pressure_intensity
 	);
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->left),     CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->down),     CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->right),    CELL_PAD_CTRL_RIGHT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->up),       CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->start),    CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->r3),       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->l3),       CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(p_profile->select),   CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
-	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0,                             0x0); // Reserved (and currently not in use by rpcs3 at all)
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->square),   CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->cross),    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->circle),   CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->triangle), CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->r1),       CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->l1),       CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->r2),       CELL_PAD_CTRL_R2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(p_profile->l2),       CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(special_button_offset, find_key(cfg->pressure_intensity_button), special_button_value::pressure_intensity);
+	pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
 
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_key(p_profile->ls_left), find_key(p_profile->ls_right));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_key(p_profile->ls_up),   find_key(p_profile->ls_down));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_key(p_profile->rs_left), find_key(p_profile->rs_right));
-	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_key(p_profile->rs_up),   find_key(p_profile->rs_down));
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->left),     CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->down),     CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->right),    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->up),       CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->start),    CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->r3),       CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->l3),       CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_key(cfg->select),   CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->ps),       0x100/*CELL_PAD_CTRL_PS*/);// TODO: PS button support
+	//pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, 0,                             0x0); // Reserved (and currently not in use by rpcs3 at all)
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->square),   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->cross),    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->circle),   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->triangle), CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->r1),       CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->l1),       CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->r2),       CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_key(cfg->l2),       CELL_PAD_CTRL_L2);
+
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_key(cfg->ls_left), find_key(cfg->ls_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_key(cfg->ls_up),   find_key(cfg->ls_down));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_key(cfg->rs_left), find_key(cfg->rs_right));
+	pad->m_sticks.emplace_back(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_key(cfg->rs_up),   find_key(cfg->rs_down));
 
 	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_X, 512);
 	pad->m_sensors.emplace_back(CELL_PAD_BTN_OFFSET_SENSOR_Y, 399);
@@ -779,6 +781,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad, const std::
 	pad->m_vibrateMotors.emplace_back(false, 0);
 
 	m_bindings.push_back(pad);
+	m_pads_internal.push_back(*pad);
 
 	return true;
 }
@@ -847,8 +850,10 @@ void keyboard_pad_handler::ThreadProc()
 		return (v0 <= v1) ? std::ceil(res) : std::floor(res);
 	};
 
-	for (uint i = 0; i < m_bindings.size(); i++)
+	for (uint i = 0; i < m_pads_internal.size(); i++)
 	{
+		auto& pad = m_pads_internal[i];
+
 		if (last_connection_status[i] == false)
 		{
 			m_bindings[i]->m_port_status |= CELL_PAD_STATUS_CONNECTED;
@@ -860,25 +865,25 @@ void keyboard_pad_handler::ThreadProc()
 		{
 			if (update_sticks)
 			{
-				for (int j = 0; j < static_cast<int>(m_bindings[i]->m_sticks.size()); j++)
+				for (int j = 0; j < static_cast<int>(pad.m_sticks.size()); j++)
 				{
 					const f32 stick_lerp_factor = (j < 2) ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
 
 					// we already applied the following values on keypress if we used factor 1
 					if (stick_lerp_factor < 1.0f)
 					{
-						const f32 v0 = static_cast<f32>(m_bindings[i]->m_sticks[j].m_value);
+						const f32 v0 = static_cast<f32>(pad.m_sticks[j].m_value);
 						const f32 v1 = static_cast<f32>(m_stick_val[j]);
 						const f32 res = get_lerped(v0, v1, stick_lerp_factor);
 
-						m_bindings[i]->m_sticks[j].m_value = static_cast<u16>(res);
+						pad.m_sticks[j].m_value = static_cast<u16>(res);
 					}
 				}
 			}
 
 			if (update_buttons)
 			{
-				for (auto& button : m_bindings[i]->m_buttons)
+				for (auto& button : pad.m_buttons)
 				{
 					if (button.m_analog)
 					{
@@ -911,34 +916,39 @@ void keyboard_pad_handler::ThreadProc()
 		}
 	}
 
-	if (!m_mouse_wheel_used)
+	if (m_mouse_wheel_used)
 	{
-		return;
+		// Releases the wheel buttons 0,1 sec after they've been triggered
+		// Next activation is set to distant future to avoid activating this on every proc
+		const auto update_threshold = now - std::chrono::milliseconds(100);
+		const auto distant_future = now + std::chrono::hours(24);
+
+		if (update_threshold >= m_last_wheel_move_up)
+		{
+			Key(mouse::wheel_up, false);
+			m_last_wheel_move_up = distant_future;
+		}
+		if (update_threshold >= m_last_wheel_move_down)
+		{
+			Key(mouse::wheel_down, false);
+			m_last_wheel_move_down = distant_future;
+		}
+		if (update_threshold >= m_last_wheel_move_left)
+		{
+			Key(mouse::wheel_left, false);
+			m_last_wheel_move_left = distant_future;
+		}
+		if (update_threshold >= m_last_wheel_move_right)
+		{
+			Key(mouse::wheel_right, false);
+			m_last_wheel_move_right = distant_future;
+		}
 	}
 
-	// Releases the wheel buttons 0,1 sec after they've been triggered
-	// Next activation is set to distant future to avoid activating this on every proc
-	const auto update_threshold = now - std::chrono::milliseconds(100);
-	const auto distant_future = now + std::chrono::hours(24);
-
-	if (update_threshold >= m_last_wheel_move_up)
+	for (uint i = 0; i < m_bindings.size(); i++)
 	{
-		Key(mouse::wheel_up, false);
-		m_last_wheel_move_up = distant_future;
-	}
-	if (update_threshold >= m_last_wheel_move_down)
-	{
-		Key(mouse::wheel_down, false);
-		m_last_wheel_move_down = distant_future;
-	}
-	if (update_threshold >= m_last_wheel_move_left)
-	{
-		Key(mouse::wheel_left, false);
-		m_last_wheel_move_left = distant_future;
-	}
-	if (update_threshold >= m_last_wheel_move_right)
-	{
-		Key(mouse::wheel_right, false);
-		m_last_wheel_move_right = distant_future;
+		auto& pad = m_bindings[i];
+		pad->m_buttons = m_pads_internal[i].m_buttons;
+		pad->m_sticks = m_pads_internal[i].m_sticks;
 	}
 }

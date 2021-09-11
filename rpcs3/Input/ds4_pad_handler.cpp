@@ -76,6 +76,7 @@ ds4_pad_handler::ds4_pad_handler()
 	// Unique names for the config files and our pad settings dialog
 	button_list =
 	{
+		{ DS4KeyCodes::None,     "" },
 		{ DS4KeyCodes::Triangle, "Triangle" },
 		{ DS4KeyCodes::Circle,   "Circle" },
 		{ DS4KeyCodes::Cross,    "Cross" },
@@ -128,12 +129,9 @@ ds4_pad_handler::ds4_pad_handler()
 	m_thumb_threshold = thumb_max / 2;
 }
 
-void ds4_pad_handler::init_config(pad_config* cfg, const std::string& name)
+void ds4_pad_handler::init_config(cfg_pad* cfg)
 {
 	if (!cfg) return;
-
-	// Set this profile's save location
-	cfg->cfg_name = name;
 
 	// Set default button mapping
 	cfg->ls_left.def  = button_list.at(DS4KeyCodes::LSXNeg);
@@ -161,6 +159,8 @@ void ds4_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l1.def       = button_list.at(DS4KeyCodes::L1);
 	cfg->l2.def       = button_list.at(DS4KeyCodes::L2);
 	cfg->l3.def       = button_list.at(DS4KeyCodes::L3);
+
+	cfg->pressure_intensity_button.def = button_list.at(DS4KeyCodes::None);
 
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255
@@ -194,7 +194,7 @@ u32 ds4_pad_handler::get_battery_level(const std::string& padId)
 	return std::min<u32>(device->battery_level * 10, 100);
 }
 
-void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
+void ds4_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness)
 {
 	std::shared_ptr<DS4Device> device = get_hid_device(padId);
 	if (!device || !device->hidDevice || !device->config)
@@ -203,6 +203,7 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 	// Set the device's motor speeds to our requested values 0-255
 	device->large_motor = largeMotor;
 	device->small_motor = smallMotor;
+	device->player_id = player_id;
 
 	int index = 0;
 	for (uint i = 0; i < MAX_GAMEPADS; i++)
@@ -211,7 +212,7 @@ void ds4_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 		{
 			if (g_cfg_input.player[i]->device.to_string() == padId)
 			{
-				m_pad_configs[index].load();
+				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
 				device->config = &m_pad_configs[index];
 				break;
 			}
@@ -851,7 +852,7 @@ void ds4_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, c
 	if (!ds4_dev || !ds4_dev->hidDevice || !ds4_dev->config || !pad)
 		return;
 
-	pad_config* config = ds4_dev->config;
+	cfg_pad* config = ds4_dev->config;
 
 	// Attempt to send rumble no matter what
 	const int idx_l = config->switch_vibration_motors ? 1 : 0;

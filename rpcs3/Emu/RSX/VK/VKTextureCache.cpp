@@ -921,7 +921,8 @@ namespace vk
 		rsx::flags32_t upload_command_flags = initialize_image_layout |
 			(rsx::get_current_renderer()->get_backend_config().supports_asynchronous_compute ? upload_contents_async : upload_contents_inline);
 
-		vk::upload_image(cmd, image, subresource_layout, gcm_format, input_swizzled, mipmaps, image->aspect(),
+		const u16 layer_count = (type == rsx::texture_dimension_extended::texture_dimension_cubemap) ? 6 : 1;
+		vk::upload_image(cmd, image, subresource_layout, gcm_format, input_swizzled, layer_count, image->aspect(),
 			*m_texture_upload_heap, upload_heap_align_default, upload_command_flags);
 
 		vk::leave_uninterruptible();
@@ -1199,7 +1200,7 @@ namespace vk
 		baseclass::on_frame_end();
 	}
 
-	vk::image* texture_cache::upload_image_simple(vk::command_buffer& cmd, VkFormat format, u32 address, u32 width, u32 height, u32 pitch)
+	vk::viewable_image* texture_cache::upload_image_simple(vk::command_buffer& cmd, VkFormat format, u32 address, u32 width, u32 height, u32 pitch)
 	{
 		bool linear_format_supported = false;
 

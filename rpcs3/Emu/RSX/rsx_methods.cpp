@@ -925,8 +925,8 @@ namespace rsx
 				const u32 x = method_registers.nv308a_x() + index;
 				const u32 y = method_registers.nv308a_y();
 
-				// TODO
-				//auto res = vm::passive_lock(address, address + write_len);
+				// Skip "handled methods"
+				rsx->fifo_ctrl->skip_methods(count - 1);
 
 				switch (method_registers.blit_engine_nv3062_color_format())
 				{
@@ -935,12 +935,21 @@ namespace rsx
 				{
 					// Bit cast - optimize to mem copy
 
-					const auto dst_address = get_address(dst_offset + (x * 4) + (out_pitch * y), dst_dma);
+					const u32 data_length = count * 4;
+
+					const auto dst_address = get_address(dst_offset + (x * 4) + (out_pitch * y), dst_dma, data_length);
+
+					if (!dst_address)
+					{
+						rsx->recover_fifo();
+						return;
+					}
+
 					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN);
+
 					const auto dst = vm::_ptr<u8>(dst_address);
 					const auto src = vm::_ptr<const u8>(src_address);
 
-					const u32 data_length = count * 4;
 					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
 
 					if (rsx->fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) [[unlikely]]
@@ -969,12 +978,19 @@ namespace rsx
 				}
 				case blit_engine::transfer_destination_format::r5g6b5:
 				{
-					const auto dst_address = get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma);
+					const auto data_length = count * 2;
+
+					const auto dst_address = get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, data_length);
 					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN);
 					const auto dst = vm::_ptr<u16>(dst_address);
 					const auto src = vm::_ptr<const u32>(src_address);
 
-					const auto data_length = count * 2;
+					if (!dst_address)
+					{
+						rsx->recover_fifo();
+						return;
+					}
+
 					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
 
 					auto convert = [](u32 input) -> u16
@@ -1011,11 +1027,6 @@ namespace rsx
 					fmt::throw_exception("Unreachable");
 				}
 				}
-
-				//res->release(0);
-
-				// Skip "handled methods"
-				rsx->fifo_ctrl->skip_methods(count - 1);
 			}
 		};
 	}
@@ -1079,7 +1090,16 @@ namespace rsx
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
 			{
-				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown operation (%d)", static_cast<u8>(operation));
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown operation (0x%x)", method_registers.registers[NV3089_SET_OPERATION]);
+				rsx->recover_fifo();
+				return;
+			}
+
+			if (src_color_format == rsx::blit_engine::transfer_source_format::invalid)
+			{
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown src color format (0x%x)", method_registers.registers[NV3089_SET_COLOR_FORMAT]);
+				rsx->recover_fifo();
+				return;
 			}
 
 			const u32 src_offset = method_registers.blit_engine_input_offset();
@@ -1102,6 +1122,14 @@ namespace rsx
 				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
 				out_alignment = method_registers.blit_engine_output_alignment_nv3062();
 				is_block_transfer = fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f);
+
+				if (dst_color_format == rsx::blit_engine::transfer_destination_format::invalid)
+				{
+					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV3062 dst color format (0x%x)", method_registers.registers[NV3062_SET_COLOR_FORMAT]);
+					rsx->recover_fifo();
+					return;
+				}
+
 				break;
 			}
 			case blit_engine::context_surface::swizzle2d:
@@ -1109,6 +1137,14 @@ namespace rsx
 				dst_dma = method_registers.blit_engine_nv309E_location();
 				dst_offset = method_registers.blit_engine_nv309E_offset();
 				dst_color_format = method_registers.blit_engine_output_format_nv309E();
+
+				if (dst_color_format == rsx::blit_engine::transfer_destination_format::invalid)
+				{
+					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV309E dst color format (0x%x)", method_registers.registers[NV309E_SET_FORMAT]);
+					rsx->recover_fifo();
+					return;
+				}
+
 				break;
 			}
 			default:
@@ -1160,25 +1196,22 @@ namespace rsx
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
 			const u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			const u32 src_address = get_address(src_offset, src_dma);
-			const u32 dst_address = get_address(dst_offset, dst_dma);
-
-			if (src_address == dst_address &&
-				in_w == clip_w && in_h == clip_h &&
-				in_pitch == out_pitch &&
-				rsx::fcmp(scale_x, 1.f) && rsx::fcmp(scale_y, 1.f))
-			{
-				// NULL operation
-				rsx_log.warning("NV3089_IMAGE_IN: Operation writes memory onto itself with no modification (move-to-self). Will ignore.");
-				return;
-			}
-
 			const u32 src_line_length = (in_w * in_bpp);
+
+			u32 src_address = 0;
+			const u32 dst_address = get_address(dst_offset, dst_dma, 1); // TODO: Add size
 
 			if (is_block_transfer && (clip_h == 1 || (in_pitch == out_pitch && src_line_length == in_pitch)))
 			{
 				const u32 nb_lines = std::min(clip_h, in_h);
 				const u32 data_length = nb_lines * src_line_length;
+
+				if (src_address = get_address(src_offset, src_dma, data_length);
+					!src_address || !dst_address)
+				{
+					rsx->recover_fifo();
+					return;
+				}
 
 				rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
 
@@ -1194,10 +1227,28 @@ namespace rsx
 			}
 			else
 			{
-				const u32 data_length = in_pitch * (in_h - 1) + src_line_length;
+				const u16 read_h = std::min(static_cast<u16>(clip_h / scale_y), in_h);
+				const u32 data_length = in_pitch * (read_h - 1) + src_line_length;
+
+				if (src_address = get_address(src_offset, src_dma, data_length);
+					!src_address || !dst_address)
+				{
+					rsx->recover_fifo();
+					return;
+				}
 
 				rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
 				rsx->read_barrier(src_address, data_length, true);
+			}
+
+			if (src_address == dst_address &&
+				in_w == clip_w && in_h == clip_h &&
+				in_pitch == out_pitch &&
+				rsx::fcmp(scale_x, 1.f) && rsx::fcmp(scale_y, 1.f))
+			{
+				// NULL operation
+				rsx_log.warning("NV3089_IMAGE_IN: Operation writes memory onto itself with no modification (move-to-self). Will ignore.");
+				return;
 			}
 
 			u8* pixels_src = vm::_ptr<u8>(src_address + in_offset);

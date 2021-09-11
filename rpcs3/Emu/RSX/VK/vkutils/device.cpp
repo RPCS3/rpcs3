@@ -128,7 +128,11 @@ namespace vk
 
 			if (gpu_name.find("Intel") != umax)
 			{
+#ifdef _WIN32
 				return driver_vendor::INTEL;
+#else
+				return driver_vendor::ANV;
+#endif
 			}
 
 			return driver_vendor::unknown;
@@ -145,10 +149,11 @@ namespace vk
 			case VK_DRIVER_ID_NVIDIA_PROPRIETARY_KHR:
 				return driver_vendor::NVIDIA;
 			case VK_DRIVER_ID_INTEL_PROPRIETARY_WINDOWS_KHR:
-			case VK_DRIVER_ID_INTEL_OPEN_SOURCE_MESA_KHR:
 				return driver_vendor::INTEL;
+			case VK_DRIVER_ID_INTEL_OPEN_SOURCE_MESA_KHR:
+				return driver_vendor::ANV;
 			default:
-				// Mobile
+				// Mobile?
 				return driver_vendor::unknown;
 			}
 		}
@@ -469,6 +474,11 @@ namespace vk
 
 	void render_device::destroy()
 	{
+		if (g_render_device == this)
+		{
+			g_render_device = nullptr;
+		}
+
 		if (dev && pgpu)
 		{
 			if (m_allocator)
@@ -514,7 +524,7 @@ namespace vk
 		return m_transfer_queue_family;
 	}
 
-	const VkFormatProperties render_device::get_format_properties(VkFormat format)
+	const VkFormatProperties render_device::get_format_properties(VkFormat format) const
 	{
 		auto found = pgpu->format_properties.find(format);
 		if (found != pgpu->format_properties.end())
