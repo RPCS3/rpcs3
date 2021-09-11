@@ -141,7 +141,7 @@ namespace rsx
 				value.insert(caret_position, str);
 			}
 
-			caret_position += ::narrow<u16>(str.length());
+			caret_position += str.length();
 			m_reset_caret_pulse = true;
 			set_unicode_text(value);
 			refresh();

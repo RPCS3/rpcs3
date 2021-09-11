@@ -494,6 +494,8 @@ namespace cfg
 		void set_value(const std::string& key, const std::string& value);
 		void set_map(std::map<std::string, std::string>&& map);
 
+		void erase(const std::string& key);
+
 		void from_default() override;
 	};
 

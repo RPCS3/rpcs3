@@ -621,19 +621,6 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
 			quint64 playtime    = m_persistent_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
 
-			// Read deprecated gui_setting values first for backwards compatibility (older than January 12th 2020).
-			// Restrict this to empty persistent settings to keep continuity.
-			if (last_played.isEmpty())
-			{
-				last_played = m_gui_settings->GetValue(gui::persistent::last_played, serial, "").toString();
-				m_gui_settings->RemoveValue(gui::persistent::last_played, serial);
-			}
-			if (playtime <= 0)
-			{
-				playtime = m_gui_settings->GetValue(gui::persistent::playtime, serial, 0).toULongLong();
-				m_gui_settings->RemoveValue(gui::persistent::playtime, serial);
-			}
-
 			// Set persistent_settings values if values exist
 			if (!last_played.isEmpty())
 			{
@@ -678,7 +665,7 @@ void game_list_frame::Refresh(const bool from_drive, const bool scroll_after)
 			m_mutex_cat.unlock();
 
 			const auto compat = m_game_compat->GetCompatibility(game.serial);
-			const bool hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial)) || fs::is_file(rpcs3::utils::get_custom_config_path(game.serial, true));
+			const bool hasCustomConfig = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial));
 			const bool hasCustomPadConfig = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
 			const bool has_hover_gif = fs::is_file(game_icon_path + game.serial + "/hover.gif");
 
@@ -954,6 +941,36 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	}
 
 	menu.addAction(boot);
+
+	{
+		QAction* boot_default = menu.addAction(is_current_running_game
+			? tr("&Reboot with default configuration")
+			: tr("&Boot with default configuration"));
+
+		connect(boot_default, &QAction::triggered, [this, gameinfo]
+		{
+			sys_log.notice("Booting from gamelist per context menu...");
+			Q_EMIT RequestBoot(gameinfo, cfg_keys::_default);
+		});
+
+		QAction* boot_manual = menu.addAction(is_current_running_game
+			? tr("&Reboot with manually selected configuration")
+			: tr("&Boot with manually selected configuration"));
+
+		connect(boot_manual, &QAction::triggered, [this, gameinfo]
+		{
+			if (std::string file_path = sstr(QFileDialog::getOpenFileName(this, "Select Config File", "", tr("Config Files (*.yml);;All files (*.*)"))); !file_path.empty())
+			{
+				sys_log.notice("Booting from gamelist per context menu...");
+				Q_EMIT RequestBoot(gameinfo, file_path);
+			}
+			else
+			{
+				sys_log.notice("Manual config selection aborted.");
+			}
+		});
+	}
+
 	menu.addSeparator();
 
 	QAction* configure = menu.addAction(gameinfo->hasCustomConfig
@@ -1030,15 +1047,10 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		QAction* open_config_dir = menu.addAction(tr("&Open Custom Config Folder"));
 		connect(open_config_dir, &QAction::triggered, [current_game]()
 		{
-			const std::string new_config_path = rpcs3::utils::get_custom_config_path(current_game.serial);
+			const std::string config_path = rpcs3::utils::get_custom_config_path(current_game.serial);
 
-			if (fs::is_file(new_config_path))
-				gui::utils::open_dir(new_config_path);
-
-			const std::string old_config_path = rpcs3::utils::get_custom_config_path(current_game.serial, true);
-
-			if (fs::is_file(old_config_path))
-				gui::utils::open_dir(old_config_path);
+			if (fs::is_file(config_path))
+				gui::utils::open_dir(config_path);
 		});
 	}
 	if (fs::is_dir(data_base_dir))
@@ -1209,7 +1221,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(boot, &QAction::triggered, this, [this, gameinfo]()
 	{
 		sys_log.notice("Booting from gamelist per context menu...");
-		Q_EMIT RequestBoot(gameinfo, gameinfo->hasCustomConfig);
+		Q_EMIT RequestBoot(gameinfo, cfg_keys::global);
 	});
 	connect(configure, &QAction::triggered, this, [this, current_game, gameinfo]()
 	{
@@ -1411,10 +1423,9 @@ bool game_list_frame::CreatePPUCache(const game_info& game)
 
 bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, const game_info& game, bool is_interactive)
 {
-	const std::string config_path_new = rpcs3::utils::get_custom_config_path(title_id);
-	const std::string config_path_old = rpcs3::utils::get_custom_config_path(title_id, true);
+	const std::string path = rpcs3::utils::get_custom_config_path(title_id);
 
-	if (!fs::is_file(config_path_new) && !fs::is_file(config_path_old))
+	if (!fs::is_file(path))
 		return true;
 
 	if (is_interactive && QMessageBox::question(this, tr("Confirm Removal"), tr("Remove custom game configuration?")) != QMessageBox::Yes)
@@ -1422,12 +1433,8 @@ bool game_list_frame::RemoveCustomConfiguration(const std::string& title_id, con
 
 	bool result = true;
 
-	for (const std::string& path : { config_path_new, config_path_old })
+	if (fs::is_file(path))
 	{
-		if (!fs::is_file(path))
-		{
-			continue;
-		}
 		if (fs::remove_file(path))
 		{
 			if (game)
@@ -1465,6 +1472,11 @@ bool game_list_frame::RemoveCustomPadConfiguration(const std::string& title_id, 
 		? tr("Remove custom pad configuration?\nYour configuration will revert to the global pad settings.")
 		: tr("Remove custom pad configuration?")) != QMessageBox::Yes)
 		return true;
+
+	g_cfg_profile.load();
+	g_cfg_profile.active_profiles.erase(title_id);
+	g_cfg_profile.save();
+	game_list_log.notice("Removed active pad profile entry for key '%s'", title_id);
 
 	if (QDir(qstr(config_dir)).removeRecursively())
 	{
@@ -2211,7 +2223,7 @@ bool game_list_frame::eventFilter(QObject *object, QEvent *event)
 				return true;
 			}
 		}
-		else
+		else if (!key_event->isAutoRepeat())
 		{
 			if (key_event->key() == Qt::Key_Enter || key_event->key() == Qt::Key_Return)
 			{
@@ -2250,7 +2262,10 @@ void game_list_frame::PopulateGameList()
 
 	const std::string selected_item = CurrentSelectionPath();
 
+	// Release old data
+	m_game_grid->clear_list();
 	m_game_list->clear_list();
+
 	m_game_list->setRowCount(m_game_data.size());
 
 	// Default locale. Uses current Qt application language.
@@ -2281,7 +2296,7 @@ void game_list_frame::PopulateGameList()
 
 		icon_item->set_icon_func([this, icon_item, game](int)
 		{
-			ensure(icon_item);
+			ensure(icon_item && game);
 
 			if (QMovie* movie = icon_item->movie(); movie && icon_item->get_active())
 			{
@@ -2290,6 +2305,12 @@ void game_list_frame::PopulateGameList()
 			else
 			{
 				icon_item->setData(Qt::DecorationRole, game->pxmap);
+
+				if (!game->has_hover_gif)
+				{
+					game->pxmap = {};
+				}
+
 				if (movie)
 				{
 					movie->stop();
@@ -2396,6 +2417,8 @@ void game_list_frame::PopulateGameGrid(int maxCols, const QSize& image_size, con
 
 	const std::string selected_item = CurrentSelectionPath();
 
+	// Release old data
+	m_game_list->clear_list();
 	m_game_grid->deleteLater();
 
 	const bool show_text = m_icon_size_index > gui::gl_max_slider_pos * 2 / 5;
@@ -2511,7 +2534,7 @@ std::string game_list_frame::CurrentSelectionPath()
 			item = m_game_list->item(m_game_list->currentRow(), 0);
 		}
 	}
-	else
+	else if (m_game_grid)
 	{
 		if (!m_game_grid->selectedItems().isEmpty())
 		{

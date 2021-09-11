@@ -6696,16 +6696,40 @@ public:
 
 	void ROTQMBYBI(spu_opcode_t op)
 	{
+		const auto a = get_vr<u8[16]>(op.ra);
+		const auto b = get_vr<u8[16]>(op.rb);
+
+		// Data with swapped endian from a load instruction
+		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		{
+			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+			const auto sh = sc - (-(splat_scalar(b) >> 3) & 0x1f);
+			set_vr(op.rt, pshufb(as, sh));
+			return;
+		}
+
 		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
-		const auto sh = sc + (-(splat_scalar(get_vr<u8[16]>(op.rb)) >> 3) & 0x1f);
-		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
+		const auto sh = sc + (-(splat_scalar(b) >> 3) & 0x1f);
+		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	void SHLQBYBI(spu_opcode_t op)
 	{
+		const auto a = get_vr<u8[16]>(op.ra);
+		const auto b = get_vr<u8[16]>(op.rb);
+
+		// Data with swapped endian from a load instruction
+		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		{
+			const auto sc = build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112);
+			const auto sh = sc + (splat_scalar(b) >> 3);
+			set_vr(op.rt, pshufb(as, sh));
+			return;
+		}
+
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
-		const auto sh = sc - (splat_scalar(get_vr<u8[16]>(op.rb)) >> 3);
-		set_vr(op.rt, pshufb(get_vr<u8[16]>(op.ra), sh));
+		const auto sh = sc - (splat_scalar(b) >> 3);
+		set_vr(op.rt, pshufb(a, sh));
 	}
 
 	template <typename RT, typename T>
@@ -6841,6 +6865,16 @@ public:
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
+
+		// Data with swapped endian from a load instruction
+		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		{
+			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+			const auto sh = sc - (-splat_scalar(b) & 0x1f);
+			set_vr(op.rt, pshufb(as, sh));
+			return;
+		}
+
 		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
 		const auto sh = sc + (-splat_scalar(b) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
@@ -6850,6 +6884,16 @@ public:
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
+
+		// Data with swapped endian from a load instruction
+		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		{
+			const auto sc = build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112);
+			const auto sh = sc + (splat_scalar(b) & 0x1f);
+			set_vr(op.rt, pshufb(as, sh));
+			return;
+		}
+
 		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
 		const auto sh = sc - (splat_scalar(b) & 0x1f);
 		set_vr(op.rt, pshufb(a, sh));
@@ -6988,6 +7032,17 @@ public:
 
 	void SUMB(spu_opcode_t op)
 	{
+		if (m_use_vnni)
+		{
+			const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+			const auto zeroes = splat<u32[4]>(0);
+			const auto ones = splat<u32[4]>(0x01010101);
+			const auto ax = bitcast<u16[8]>(vpdpbusd(zeroes, a, ones));
+			const auto bx = bitcast<u16[8]>(vpdpbusd(zeroes, b, ones));
+			set_vr(op.rt, shuffle2(ax, bx, 0, 8, 2, 10, 4, 12, 6, 14));
+			return;
+		}
+
 		const auto [a, b] = get_vrs<u16[8]>(op.ra, op.rb);
 		const auto ahs = eval((a >> 8) + (a & 0xff));
 		const auto bhs = eval((b >> 8) + (b & 0xff));
@@ -9434,7 +9489,6 @@ struct spu_llvm_worker
 			else
 			{
 				spu_log.fatal("[0x%05x] Compilation failed.", func.entry_point);
-				Emu.Pause();
 				return;
 			}
 

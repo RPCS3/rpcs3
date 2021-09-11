@@ -121,6 +121,7 @@ void Emulator::Init(bool add_only)
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
+	g_cfg.name = cfg_keys::_default;
 
 	// Not all renderers are known at compile time, so set a provided default if possible
 	if (m_default_renderer == video_renderer::vulkan && !m_default_graphics_adapter.empty())
@@ -131,31 +132,31 @@ void Emulator::Init(bool add_only)
 
 	g_cfg_defaults = g_cfg.to_string();
 
-	// Reload override configuration set via command line
-	if (!m_config_override_path.empty())
+	// Load config file
+	if (m_config_path.find_first_of('/') != umax)
 	{
-		if (const fs::file cfg_file{m_config_override_path, fs::read + fs::create})
+		if (const fs::file cfg_file{m_config_path, fs::read + fs::create})
 		{
 			if (!g_cfg.from_string(cfg_file.to_string()))
 			{
-				sys_log.fatal("Failed to apply config override: %s. Proceeding with regular configuration.", m_config_override_path);
-				m_config_override_path.clear();
+				sys_log.fatal("Failed to apply config: %s. Proceeding with regular configuration.", m_config_path);
+				m_config_path = cfg_keys::title_id;
 			}
 			else
 			{
-				sys_log.success("Applied config override: %s", m_config_override_path);
-				g_cfg.name = m_config_override_path;
+				sys_log.success("Applied config override: %s", m_config_path);
+				g_cfg.name = m_config_path;
 			}
 		}
 		else
 		{
-			sys_log.fatal("Failed to access config override: %s (%s). Proceeding with regular configuration.", m_config_override_path, fs::g_tls_error);
-			m_config_override_path.clear();
+			sys_log.fatal("Failed to access config: %s (%s). Proceeding with regular configuration.", m_config_path, fs::g_tls_error);
+			m_config_path = cfg_keys::title_id;
 		}
 	}
 
 	// Reload global configuration
-	if (m_config_override_path.empty())
+	if (m_config_path == cfg_keys::global || m_config_path == cfg_keys::title_id)
 	{
 		const auto cfg_path = fs::get_config_dir() + "/config.yml";
 
@@ -398,7 +399,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 		return false;
 	}
 
-	if (frame->LE_format != (std::endian::little == std::endian::native))
+	if (frame->LE_format != u32{std::endian::little == std::endian::native})
 	{
 		static constexpr std::string_view machines[2]{"Big-Endian", "Little-Endian"};
 
@@ -431,7 +432,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	return true;
 }
 
-game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
+game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, const std::string& config_path)
 {
 	if (!fs::exists(path))
 	{
@@ -440,10 +441,12 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 	m_path_old = m_path;
 
+	m_config_path = config_path;
+
 	if (direct || fs::is_file(path))
 	{
 		m_path = path;
-		return Load(title_id, add_only, force_global_config);
+		return Load(title_id, add_only);
 	}
 
 	game_boot_result result = game_boot_result::nothing_to_boot;
@@ -463,7 +466,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 		if (fs::is_file(elf))
 		{
 			m_path = elf;
-			result = Load(title_id, add_only, force_global_config);
+			result = Load(title_id, add_only);
 			break;
 		}
 	}
@@ -484,7 +487,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 				if (fs::is_file(elf))
 				{
 					m_path = elf;
-					if (const auto err = Load(title_id, add_only, force_global_config); err != game_boot_result::no_errors)
+					if (const auto err = Load(title_id, add_only); err != game_boot_result::no_errors)
 					{
 						result = err;
 					}
@@ -500,9 +503,8 @@ void Emulator::SetForceBoot(bool force_boot)
 	m_force_boot = force_boot;
 }
 
-game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool force_global_config, bool is_disc_patch)
+game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool is_disc_patch)
 {
-	m_force_global_config = force_global_config;
 	const std::string resolved_path = GetCallbacks().resolve_path(m_path);
 
 	if (!IsStopped())
@@ -599,43 +601,37 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		sys_log.notice("Category: %s", GetCat());
 		sys_log.notice("Version: APP_VER=%s VERSION=%s", version_app, version_disc);
 
-		if (!add_only && !force_global_config && m_config_override_path.empty())
+		if (!add_only && m_config_path == cfg_keys::title_id)
 		{
-			const std::string config_path_new = rpcs3::utils::get_custom_config_path(m_title_id);
-			const std::string config_path_old = rpcs3::utils::get_custom_config_path(m_title_id, true);
+			const std::string config_path = rpcs3::utils::get_custom_config_path(m_title_id);
 
 			// Load custom config-1
-			if (fs::file cfg_file{ config_path_old })
+			if (fs::file cfg_file{ config_path })
 			{
-				sys_log.notice("Applying custom config: %s", config_path_old);
+				sys_log.notice("Applying custom config: %s", config_path);
 
-				if (!g_cfg.from_string(cfg_file.to_string()))
+				if (g_cfg.from_string(cfg_file.to_string()))
 				{
-					sys_log.fatal("Failed to apply custom config: %s", config_path_old);
+					g_cfg.name = config_path;
+					m_config_path = config_path;
+				}
+				else
+				{
+					sys_log.fatal("Failed to apply custom config: %s", config_path);
 				}
 			}
 
 			// Load custom config-2
-			if (fs::file cfg_file{ config_path_new })
-			{
-				sys_log.notice("Applying custom config: %s", config_path_new);
-
-				if (g_cfg.from_string(cfg_file.to_string()))
-				{
-					g_cfg.name = config_path_new;
-				}
-				else
-				{
-					sys_log.fatal("Failed to apply custom config: %s", config_path_new);
-				}
-			}
-
-			// Load custom config-3
 			if (fs::file cfg_file{ m_path + ".yml" })
 			{
 				sys_log.notice("Applying custom config: %s.yml", m_path);
 
-				if (!g_cfg.from_string(cfg_file.to_string()))
+				if (g_cfg.from_string(cfg_file.to_string()))
+				{
+					g_cfg.name = m_path + ".yml";
+					m_config_path = g_cfg.name;
+				}
+				else
 				{
 					sys_log.fatal("Failed to apply custom config: %s.yml", m_path);
 				}
@@ -669,8 +665,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		{
 			// Update supplementary settings
 			const f64 _1ns = utils::get_tsc_freq() / 1000'000'000.;
-			g_rtm_tx_limit1 = g_cfg.core.tx_limit1_ns * _1ns;
-			g_rtm_tx_limit2 = g_cfg.core.tx_limit2_ns * _1ns;
+			g_rtm_tx_limit1 = static_cast<u64>(g_cfg.core.tx_limit1_ns * _1ns);
+			g_rtm_tx_limit2 = static_cast<u64>(g_cfg.core.tx_limit2_ns * _1ns);
 		}
 
 		// Load patches from different locations
@@ -866,7 +862,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 						if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../", false))
 						{
 							sys_log.success("Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
-							return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load(m_title_id, add_only, force_global_config);
+							return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load(m_title_id, add_only);
 						}
 
 						sys_log.error("Failed to move disc game %s to /dev_hdd0/disc/ (%s)", m_title_id, fs::g_tls_error);
@@ -1118,7 +1114,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		{
 			// Booting game update
 			sys_log.success("Updates found at /dev_hdd0/game/%s/", m_title_id);
-			return m_path = hdd0_boot, Load(m_title_id, false, force_global_config, true);
+			return m_path = hdd0_boot, Load(m_title_id, false, true);
 		}
 
 		if (!disc_psf_obj.empty())
@@ -1301,6 +1297,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			{
 				ppu_exec.set_error(elf_error::header_type);
 			}
+			else
+			{
+				// Preserve emulation state for OVL excutable
+				Pause(true);
+			}
 
 			if (ppu_exec != elf_error::ok)
 			{
@@ -1318,6 +1319,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			ppu_load_prx(ppu_prx, m_path);
+			Pause(true);
 		}
 		else if (spu_exec.open(elf_file) == elf_error::ok)
 		{
@@ -1325,6 +1327,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			GetCallbacks().on_ready();
 			g_fxo->init(false);
 			spu_load_exec(spu_exec);
+			Pause(true);
 		}
 		else
 		{
@@ -1416,16 +1419,26 @@ void Emulator::Run(bool start_playtime)
 	}
 }
 
-bool Emulator::Pause()
+bool Emulator::Pause(bool freeze_emulation)
 {
 	const u64 start = get_system_time();
 
+	const system_state pause_state = freeze_emulation ? system_state::frozen : system_state::paused;
+
 	// Try to pause
-	if (!m_state.compare_and_swap_test(system_state::running, system_state::paused))
+	if (!m_state.compare_and_swap_test(system_state::running, pause_state))
 	{
-		if (!m_state.compare_and_swap_test(system_state::ready, system_state::paused))
+		if (!freeze_emulation)
 		{
 			return false;
+		}
+
+		if (!m_state.compare_and_swap_test(system_state::ready, pause_state))
+		{
+			if (!m_state.compare_and_swap_test(system_state::paused, pause_state))
+			{
+				return false;
+			}
 		}
 	}
 
@@ -1433,6 +1446,17 @@ bool Emulator::Pause()
 	cpu_thread::flush_profilers();
 
 	GetCallbacks().on_pause();
+
+	static atomic_t<u32> pause_mark = 0;
+
+	if (freeze_emulation)
+	{
+		sys_log.warning("Emulation has been frozen! You can either use debugger tools to inspect current emulation state or terminate it.");
+	}
+	else
+	{
+		sys_log.success("Emulation is being paused... (mark=%u)", pause_mark++);
+	}
 
 	// Update pause start time
 	if (m_pause_start_time.exchange(start))
@@ -1529,6 +1553,8 @@ void Emulator::Resume()
 
 	GetCallbacks().on_resume();
 
+	sys_log.success("Emulation has been resumed!");
+
 	if (g_cfg.misc.prevent_display_sleep)
 	{
 		disable_display_sleep();
@@ -1542,7 +1568,7 @@ void Emulator::Stop(bool restart)
 		if (restart)
 		{
 			// Reload with prior configs.
-			if (const auto error = Load(m_title_id, false, m_force_global_config); error != game_boot_result::no_errors)
+			if (const auto error = Load(m_title_id); error != game_boot_result::no_errors)
 				sys_log.error("Restart failed: %s", error);
 			return;
 		}
@@ -1652,7 +1678,7 @@ void Emulator::Stop(bool restart)
 	if (restart)
 	{
 		// Reload with prior configs.
-		if (const auto error = Load(m_title_id, false, m_force_global_config); error != game_boot_result::no_errors)
+		if (const auto error = Load(m_title_id); error != game_boot_result::no_errors)
 			sys_log.error("Restart failed: %s", error);
 		return;
 	}
@@ -1664,6 +1690,7 @@ void Emulator::Stop(bool restart)
 	disc.clear();
 	klic.clear();
 	hdd1.clear();
+	m_config_path = cfg_keys::global;
 
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();

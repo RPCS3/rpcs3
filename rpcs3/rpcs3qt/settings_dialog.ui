@@ -457,6 +457,36 @@
             </widget>
            </item>
            <item>
+            <widget class="QWidget" name="widget_gpu_3" native="true">
+             <layout class="QHBoxLayout" name="widget_gpu_3_layout" stretch="1">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QGroupBox" name="gbZCULL">
+                <property name="title">
+                 <string>ZCULL Accuracy</string>
+                </property>
+                <layout class="QVBoxLayout" name="gbZCULL_layout">
+                 <item>
+                  <widget class="QComboBox" name="zcullPrecisionMode"/>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
             <spacer name="gpu_tab_layout_right_spacer">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -2181,13 +2211,6 @@
                <widget class="QCheckBox" name="DisableNativefp16">
                 <property name="text">
                  <string>Disable native float16 support</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="relaxedZCULL">
-                <property name="text">
-                 <string>Relaxed ZCULL Sync</string>
                 </property>
                </widget>
               </item>

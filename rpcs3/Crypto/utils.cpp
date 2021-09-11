@@ -5,6 +5,7 @@
 #include "utils.h"
 #include "aes.h"
 #include "sha1.h"
+#include "key_vault.h"
 #include <cstring>
 #include <stdio.h>
 #include <time.h>
@@ -141,4 +142,81 @@ void mbedtls_zeroize(void *v, size_t n)
 {
 	static void *(*const volatile unop_memset)(void *, int, size_t) = &memset;
 	(void)unop_memset(v, 0, n);
+}
+
+
+// SC passphrase crypto
+
+void sc_form_key(const u8* sc_key, const std::array<u8, PASSPHRASE_KEY_LEN>& laid_paid, u8* key)
+{
+	for (u32 i = 0; i < PASSPHRASE_KEY_LEN; i++)
+	{
+		key[i] = static_cast<u8>(sc_key[i] ^ laid_paid[i]);
+	}
+}
+
+std::array<u8, PASSPHRASE_KEY_LEN> sc_combine_laid_paid(s64 laid, s64 paid)
+{
+	const std::string paid_laid = fmt::format("%016llx%016llx", laid, paid);
+	std::array<u8, PASSPHRASE_KEY_LEN> out{};
+	hex_to_bytes(out.data(), paid_laid.c_str(), PASSPHRASE_KEY_LEN * 2);
+	return out;
+}
+
+std::array<u8, PASSPHRASE_KEY_LEN> vtrm_get_laid_paid_from_type(int type)
+{
+	// No idea what this type stands for
+	switch (type)
+	{
+	case 0: return sc_combine_laid_paid(0xFFFFFFFFFFFFFFFFL, 0xFFFFFFFFFFFFFFFFL);
+	case 1: return sc_combine_laid_paid(LAID_2, 0x1070000000000001L);
+	case 2: return sc_combine_laid_paid(LAID_2, 0x0000000000000000L);
+	case 3: return sc_combine_laid_paid(LAID_2, PAID_69);
+	default:
+		fmt::throw_exception("vtrm_get_laid_paid_from_type: Wrong type specified (type=%d)", type);
+	}
+}
+
+std::array<u8, PASSPHRASE_KEY_LEN> vtrm_portability_laid_paid()
+{
+	// 107000002A000001
+	return sc_combine_laid_paid(0x0000000000000000L, 0x0000000000000000L);
+}
+
+int sc_decrypt(const u8* sc_key, const std::array<u8, PASSPHRASE_KEY_LEN>& laid_paid, u8* iv, u8* input, u8* output)
+{
+	aes_context ctx;
+	u8 key[PASSPHRASE_KEY_LEN];
+	sc_form_key(sc_key, laid_paid, key);
+	aes_setkey_dec(&ctx, key, 128);
+	return aes_crypt_cbc(&ctx, AES_DECRYPT, PASSPHRASE_OUT_LEN, iv, input, output);
+}
+
+int vtrm_decrypt(int type, u8* iv, u8* input, u8* output)
+{
+	return sc_decrypt(SC_ISO_SERIES_KEY_2, vtrm_get_laid_paid_from_type(type), iv, input, output);
+}
+
+int vtrm_decrypt_master(s64 laid, s64 paid, u8* iv, u8* input, u8* output)
+{
+	return sc_decrypt(SC_ISO_SERIES_INTERNAL_KEY_3, sc_combine_laid_paid(laid, paid), iv, input, output);
+}
+
+const u8* vtrm_portability_type_mapper(int type)
+{
+	// No idea what this type stands for
+	switch (type)
+	{
+	//case 0: return key_for_type_1;
+	case 1: return SC_ISO_SERIES_KEY_2;
+	case 2: return SC_ISO_SERIES_KEY_1;
+	case 3: return SC_KEY_FOR_MASTER_2;
+	default:
+		fmt::throw_exception("vtrm_portability_type_mapper: Wrong type specified (type=%d)", type);
+	}
+}
+
+int vtrm_decrypt_with_portability(int type, u8* iv, u8* input, u8* output)
+{
+	return sc_decrypt(vtrm_portability_type_mapper(type), vtrm_portability_laid_paid(), iv, input, output);
 }

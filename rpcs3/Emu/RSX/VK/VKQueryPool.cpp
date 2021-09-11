@@ -20,12 +20,14 @@ namespace vk
 			{
 				query.any_passed = true;
 				query.ready = true;
+				query.data = result[0];
 				return true;
 			}
 			else if (result[1])
 			{
 				query.any_passed = false;
 				query.ready = true;
+				query.data = 0;
 				return true;
 			}
 
@@ -33,10 +35,11 @@ namespace vk
 		}
 		case VK_NOT_READY:
 		{
-			if (result[0])
+			if (result[0] && (flags & VK_QUERY_RESULT_PARTIAL_BIT))
 			{
 				query.any_passed = true;
 				query.ready = true;
+				query.data = result[0];
 				return true;
 			}
 
@@ -123,6 +126,12 @@ namespace vk
 		}
 	}
 
+	void query_pool_manager::set_control_flags(VkQueryControlFlags control_, VkQueryResultFlags result_)
+	{
+		control_flags = control_;
+		result_flags = result_;
+	}
+
 	void query_pool_manager::begin_query(vk::command_buffer& cmd, u32 index)
 	{
 		ensure(query_slot_status[index].active == false);
@@ -131,7 +140,7 @@ namespace vk
 		query_info.pool = m_current_query_pool.get();
 		query_info.active = true;
 
-		vkCmdBeginQuery(cmd, *query_info.pool, index, 0);//VK_QUERY_CONTROL_PRECISE_BIT);
+		vkCmdBeginQuery(cmd, *query_info.pool, index, control_flags);
 	}
 
 	void query_pool_manager::end_query(vk::command_buffer& cmd, u32 index)
@@ -141,20 +150,19 @@ namespace vk
 
 	bool query_pool_manager::check_query_status(u32 index)
 	{
-		return poke_query(query_slot_status[index], index, VK_QUERY_RESULT_PARTIAL_BIT);
+		return poke_query(query_slot_status[index], index, result_flags);
 	}
 
 	u32 query_pool_manager::get_query_result(u32 index)
 	{
 		// Check for cached result
 		auto& query_info = query_slot_status[index];
-
 		while (!query_info.ready)
 		{
-			poke_query(query_info, index, VK_QUERY_RESULT_PARTIAL_BIT);
+			poke_query(query_info, index, result_flags);
 		}
 
-		return query_info.any_passed ? 1 : 0;
+		return query_info.data;
 	}
 
 	void query_pool_manager::get_query_result_indirect(vk::command_buffer& cmd, u32 index, VkBuffer dst, VkDeviceSize dst_offset)

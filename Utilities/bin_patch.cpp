@@ -38,6 +38,9 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		{
 		case patch_type::invalid: return "invalid";
 		case patch_type::alloc: return "alloc";
+		case patch_type::code_alloc: return "calloc";
+		case patch_type::jump: return "jump";
+		case patch_type::jump_link: return "jumpl";
 		case patch_type::load: return "load";
 		case patch_type::byte: return "byte";
 		case patch_type::le16: return "le16";
@@ -174,6 +177,14 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 			continue;
 		}
 
+		if (main_key.empty())
+		{
+			append_log_message(log_messages, "Error: Skipping empty key");
+			patch_log.error("Skipping empty key (file: %s)", path);
+			is_valid = false;
+			continue;
+		}
+
 		// Skip Anchors
 		if (main_key == patch_key::anchors)
 		{
@@ -182,8 +193,8 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 		// Find or create an entry matching the key/hash in our map
 		auto& container = patches_map[main_key];
-		container.hash      = main_key;
-		container.version   = version;
+		container.hash    = main_key;
+		container.version = version;
 
 		// Go through each patch
 		for (auto patches_entry : pair.second)
@@ -221,10 +232,18 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 				{
 					const std::string& title = game_node.first.Scalar();
 
+					if (title.empty())
+					{
+						append_log_message(log_messages, fmt::format("Error: Empty game title (key: %s, file: %s)", main_key, path));
+						patch_log.error("Empty game title (key: %s, file: %s)", main_key, path);
+						is_valid = false;
+						continue;
+					}
+
 					if (const auto yml_type = game_node.second.Type(); yml_type != YAML::NodeType::Map)
 					{
-						append_log_message(log_messages, fmt::format("Error: Skipping %s: expected Map, found %s (patch: %s, key: %s)", title, yml_type, description, main_key));
-						patch_log.error("Skipping %s: expected Map, found %s (patch: %s, key: %s, file: %s)", title, yml_type, description, main_key, path);
+						append_log_message(log_messages, fmt::format("Error: Skipping game %s: expected Map, found %s (patch: %s, key: %s)", title, yml_type, description, main_key));
+						patch_log.error("Skipping game %s: expected Map, found %s (patch: %s, key: %s, file: %s)", title, yml_type, description, main_key, path);
 						is_valid = false;
 						continue;
 					}
@@ -235,7 +254,14 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 					{
 						const std::string& serial = serial_node.first.Scalar();
 
-						if (serial == patch_key::all)
+						if (serial.empty())
+						{
+							append_log_message(log_messages, fmt::format("Error: Using empty serial (title: %s, patch: %s, key: %s)", title, description, main_key));
+							patch_log.error("Using empty serial (title: %s, patch: %s, key: %s, file: %s)", title, description, main_key, path);
+							is_valid = false;
+							continue;
+						}
+						else if (serial == patch_key::all)
 						{
 							if (!title_is_all_key)
 							{
@@ -361,16 +387,26 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 	return is_valid;
 }
 
-patch_type patch_engine::get_patch_type(YAML::Node node)
+patch_type patch_engine::get_patch_type(const std::string& text)
 {
 	u64 type_val = 0;
 
-	if (!node || !node.IsScalar() || !cfg::try_to_enum_value(&type_val, &fmt_class_string<patch_type>::format, node.Scalar()))
+	if (!cfg::try_to_enum_value(&type_val, &fmt_class_string<patch_type>::format, text))
 	{
 		return patch_type::invalid;
 	}
 
 	return static_cast<patch_type>(type_val);
+}
+
+patch_type patch_engine::get_patch_type(YAML::Node node)
+{
+	if (!node || !node.IsScalar())
+	{
+		return patch_type::invalid;
+	}
+
+	return get_patch_type(node.Scalar());
 }
 
 bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root, std::stringstream* log_messages)
@@ -516,10 +552,22 @@ void patch_engine::append_title_patches(const std::string& title_id)
 }
 
 void ppu_register_range(u32 addr, u32 size);
+bool ppu_form_branch_to_code(u32 entry, u32 target, bool link = false);
 
-static std::basic_string<u32> apply_modification(const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 min_addr)
+void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
 {
-	std::basic_string<u32> applied;
+	if (ptr && ptr->flags & (1ull << 62))
+	{
+		const u32 addr = ptr->addr;
+		ptr.reset();
+		vm::unmap(addr, true);
+	}
+}
+
+// Returns old 'applied' size
+static usz apply_modification(std::basic_string<u32>& applied, const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 min_addr)
+{
+	const usz old_applied_size = applied.size();
 
 	for (const auto& p : patch.data_list)
 	{
@@ -531,26 +579,24 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value) + alloc_at % 4096, 4096);
 
 			// Allocate map if needed, if allocated flags will indicate that bit 62 is set (unique identifier)
-			auto alloc_map = vm::reserve_map(vm::any, alloc_at & -0x10000, utils::align(alloc_size, 0x10000), vm::page_size_64k | vm::preallocated | vm::bf0_0x2 | (1ull << 62));
+			auto alloc_map = vm::reserve_map(vm::any, alloc_at & -0x10000, utils::align(alloc_size, 0x10000), vm::page_size_64k | vm::preallocated | (1ull << 62));
 
-			u64 flags = 0;
+			u64 flags = vm::alloc_unwritable;
 
 			switch (p.offset % patch_engine::mem_protection::mask)
 			{
-			case patch_engine::mem_protection::wx: flags |= vm::page_writable + vm::page_readable + vm::page_executable; break;
-			case patch_engine::mem_protection::ro: flags |= vm::page_readable; break;
-			case patch_engine::mem_protection::rx: flags |= vm::page_writable + vm::page_executable; break;
-			case patch_engine::mem_protection::rw: flags |= vm::page_writable + vm::page_readable; break;
+			case patch_engine::mem_protection::wx: flags = vm::alloc_executable; break;
+			case patch_engine::mem_protection::ro: break;
+			case patch_engine::mem_protection::rx: flags |= vm::alloc_executable; break;
+			case patch_engine::mem_protection::rw: flags &= ~vm::alloc_unwritable; break;
 			default: ensure(false);
 			}
 
 			if (alloc_map)
 			{
-				if (alloc_map->falloc(alloc_at, alloc_size))
+				if ((p.alloc_addr = alloc_map->falloc(alloc_at, alloc_size, nullptr, flags)))
 				{
-					vm::page_protect(alloc_at, alloc_size, 0, flags, flags ^ (vm::page_writable + vm::page_readable + vm::page_executable));
-
-					if (flags & vm::page_executable)
+					if (flags & vm::alloc_executable)
 					{
 						ppu_register_range(alloc_at, alloc_size);
 					}
@@ -560,45 +606,41 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 				}
 
 				// Revert if allocated map before failure
-				if (alloc_map->flags & (1ull << 62))
-				{
-					vm::unmap(vm::any, alloc_map->addr);
-				}
+				unmap_vm_area(alloc_map);
 			}
 		}
 
 		// Revert in case of failure
-		for (u32 index : applied)
+		std::for_each(applied.begin() + old_applied_size, applied.end(), [&](u32 index)
 		{
-			const u32 addr = patch.data_list[index].offset & -4096;
+			const u32 addr = std::exchange(patch.data_list[index].alloc_addr, 0);
 
-			// Try different alignments until works
-			if (!vm::dealloc(addr))
-			{
-				if (!vm::dealloc(addr & -0x10000))
-				{
-					vm::dealloc(addr & -0x100000);
-				}
-			}
+			vm::dealloc(addr);
 
-			if (auto alloc_map = vm::get(vm::any, addr); alloc_map->flags & (1ull << 62))
-			{
-				vm::unmap(vm::any, alloc_map->addr);
-			}
-		}
+			auto alloc_map = vm::get(vm::any, addr);
+			unmap_vm_area(alloc_map);
+		});
 
-		applied.clear();
-		return applied;
+		applied.resize(old_applied_size);
+		return old_applied_size;
 	}
 
 	// Fixup values from before
-	std::fill(applied.begin(), applied.end(), u32{umax});
+	std::fill(applied.begin() + old_applied_size, applied.end(), u32{umax});
+
+	u32 relocate_instructions_at = 0;
 
 	for (const auto& p : patch.data_list)
 	{
 		u32 offset = p.offset;
 
-		if (offset < min_addr || offset - min_addr >= filesz)
+		if (relocate_instructions_at && vm::read32(relocate_instructions_at) != 0x6000'0000u)
+		{
+			// No longer points a NOP to be filled, meaning we ran out of instructions
+			relocate_instructions_at = 0;
+		}
+
+		if (!relocate_instructions_at && (offset < min_addr || offset - min_addr >= filesz))
 		{
 			// This patch is out of range for this segment
 			continue;
@@ -607,6 +649,13 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 		offset -= min_addr;
 
 		auto ptr = dst + offset;
+
+		if (relocate_instructions_at)
+		{
+			offset = relocate_instructions_at;
+			ptr = vm::get_super_ptr<u8>(relocate_instructions_at);
+			relocate_instructions_at += 4; // Advance to the next instruction on dynamic memory
+		}
 
 		u32 resval = umax;
 
@@ -622,6 +671,86 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 		{
 			// Applied before
 			continue;
+		}
+		case patch_type::code_alloc:
+		{
+			relocate_instructions_at = 0;
+
+			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
+
+			// Allow only if points to a PPU executable instruction
+			if (out_branch < 0x10000 || out_branch >= 0x4000'0000 || !vm::check_addr<4>(out_branch, vm::alloc_executable))
+			{
+				continue;
+			}
+
+			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value + 1) * 4, 0x10000);
+
+			// Always executable
+			u64 flags = vm::alloc_executable | vm::alloc_unwritable;
+
+			switch (p.offset % patch_engine::mem_protection::mask)
+			{
+			case patch_engine::mem_protection::rw:
+			case patch_engine::mem_protection::wx:
+			{
+				flags &= ~vm::alloc_unwritable;
+				break;
+			}
+			case patch_engine::mem_protection::ro:
+			case patch_engine::mem_protection::rx:
+			{
+				break;
+			}
+			default: ensure(false);
+			}
+
+			const auto alloc_map = ensure(vm::get(vm::any, out_branch));
+
+			// Range allowed for absolute branches to operate at
+			// It takes into account that we need to put a branch for return at the end of memory space
+			const u32 addr = p.alloc_addr = alloc_map->alloc(alloc_size, nullptr, 0x10000, flags);
+
+			if (!addr)
+			{
+				patch_log.error("Failed to allocate 0x%x bytes for code (entry=0x%x)", alloc_size, addr, out_branch);
+				continue;
+			}
+
+			patch_log.success("Allocated 0x%x for code at 0x%x (entry=0x%x)", alloc_size, addr, out_branch);
+
+			// NOP filled
+			std::fill_n(vm::get_super_ptr<u32>(addr), p.value.long_value, 0x60000000);
+
+			// Register code
+			ppu_register_range(addr, alloc_size);
+
+			// Write branch to code
+			ppu_form_branch_to_code(out_branch, addr);
+			resval = out_branch & -4;
+
+			// Write address of the allocated memory to the code entry
+			*vm::get_super_ptr<u32>(resval) = addr;
+
+			// Write branch to return to code
+			ppu_form_branch_to_code(addr + static_cast<u32>(p.value.long_value) * 4, resval + 4);
+			relocate_instructions_at = addr;
+			break;
+		}
+		case patch_type::jump:
+		case patch_type::jump_link:
+		{
+			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
+			const u32 dest = static_cast<u32>(p.value.long_value);
+
+			// Allow only if points to a PPU executable instruction
+			if (!ppu_form_branch_to_code(out_branch, dest, p.type == patch_type::jump_link))
+			{
+				continue;
+			}
+
+			resval = out_branch & -4;
+			break;
 		}
 		case patch_type::byte:
 		{
@@ -721,7 +850,7 @@ static std::basic_string<u32> apply_modification(const patch_engine::patch_info&
 		applied.push_back(resval);
 	}
 
-	return applied;
+	return old_applied_size;
 }
 
 std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32 filesz, u32 min_addr)
@@ -812,11 +941,12 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 	// Apply modifications sequentially
 	auto apply_func = [&](const patch_info& patch)
 	{
-		auto applied = apply_modification(patch, dst, filesz, min_addr);
+		const usz old_size = apply_modification(applied_total, patch, dst, filesz, min_addr);
 
-		applied_total += applied;
-
-		patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %u)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied.size());
+		if (applied_total.size() != old_size)
+		{
+			patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %u)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied_total.size() - old_size);
+		}
 	};
 
 	// Sort specific patches after global patches
@@ -856,6 +986,31 @@ std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32
 	}
 
 	return applied_total;
+}
+
+void patch_engine::unload(const std::string& name)
+{
+	if (m_map.find(name) == m_map.cend())
+	{
+		return;
+	}
+
+	const auto& container = m_map.at(name);
+
+	for (const auto& [description, patch] : container.patch_info_map)
+	{
+		for (auto& entry : patch.data_list)
+		{
+			// Deallocate used memory
+			if (u32 addr = std::exchange(entry.alloc_addr, 0))
+			{
+				vm::dealloc(addr);
+
+				auto alloc_map = vm::get(vm::any, addr);
+				unmap_vm_area(alloc_map);
+			}
+		}
+	}
 }
 
 void patch_engine::save_config(const patch_map& patches_map)

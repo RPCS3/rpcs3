@@ -48,6 +48,25 @@ void fmt_class_string<spu_group_status>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<spu_stop_syscall>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](spu_stop_syscall value)
+	{
+		switch (value)
+		{
+		case SYS_SPU_THREAD_STOP_YIELD: return "sys_spu_thread_yield";
+		case SYS_SPU_THREAD_STOP_GROUP_EXIT: return "sys_spu_thread_group_exit";
+		case SYS_SPU_THREAD_STOP_THREAD_EXIT: return "sys_spu_thread_thread_exit";
+		case SYS_SPU_THREAD_STOP_RECEIVE_EVENT: return "sys_spu_thread_receive_event";
+		case SYS_SPU_THREAD_STOP_TRY_RECEIVE_EVENT: return "sys_spu_thread_tryreceive_event";
+		case SYS_SPU_THREAD_STOP_SWITCH_SYSTEM_MODULE: return "sys_spu_thread_switch_system_module";
+		}
+		
+		return unknown;
+	});
+}
+
 void sys_spu_image::load(const fs::file& stream)
 {
 	const spu_exec_object obj{stream, 0, elf_opt::no_sections + elf_opt::no_data};
@@ -635,7 +654,9 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	default: return CELL_EINVAL;
 	}
 
-	if (type & SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM)
+	const bool is_system_coop = type & SYS_SPU_THREAD_GROUP_TYPE_COOPERATE_WITH_SYSTEM;
+
+	if (is_system_coop)
 	{
 		// Constant size, unknown what it means
 		mem_size = SPU_LS_SIZE;
@@ -653,7 +674,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	}
 
 	if (num < min_threads || num > max_threads ||
-		(needs_root && min_prio == 0x10) || (use_scheduler && (prio > 255 || prio < min_prio)))
+		(needs_root && min_prio == 0x10) || (use_scheduler && !is_system_coop && (prio > 255 || prio < min_prio)))
 	{
 		return CELL_EINVAL;
 	}

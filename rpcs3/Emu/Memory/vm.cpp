@@ -20,6 +20,8 @@
 
 LOG_CHANNEL(vm_log, "VM");
 
+void ppu_remove_hle_instructions(u32 addr, u32 size);
+
 namespace vm
 {
 	static u8* memory_reserve_4GiB(void* _addr, u64 size = 0x100000000)
@@ -914,6 +916,9 @@ namespace vm
 			rsxthr.on_notify_memory_unmapped(addr, size);
 		}
 
+		// Deregister PPU related data
+		ppu_remove_hle_instructions(addr, size);
+
 		// Actually unmap memory
 		if (!shm)
 		{
@@ -1045,7 +1050,7 @@ namespace vm
 	// Mapped regions: addr -> shm handle
 	constexpr auto block_map = &auto_typemap<block_t>::get<std::map<u32, std::pair<u32, std::shared_ptr<utils::shm>>>>;
 
-	bool block_t::try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&& shm) const
+	bool block_t::try_alloc(u32 addr, u64 bflags, u32 size, std::shared_ptr<utils::shm>&& shm) const
 	{
 		// Check if memory area is already mapped
 		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
@@ -1058,6 +1063,34 @@ namespace vm
 
 		const u32 page_addr = addr + (this->flags & stack_guarded ? 0x1000 : 0);
 		const u32 page_size = size - (this->flags & stack_guarded ? 0x2000 : 0);
+
+		// No flags are default to readable/writable
+		// Explicit (un...) flags are used to protect from such access
+		u8 flags = 0;
+
+		if (~bflags & alloc_hidden)
+		{
+			flags |= page_readable;
+
+			if (~bflags & alloc_unwritable)
+			{
+				flags |= page_writable;
+			}
+		}
+
+		if (bflags & alloc_executable)
+		{
+			flags |= page_executable;
+		}
+
+		if ((flags & page_size_mask) == page_size_64k)
+		{
+			flags |= page_64k_size;
+		}
+		else if (!(flags & (page_size_mask & ~page_size_1m)))
+		{
+			flags |= page_1m_size;
+		}
 
 		if (this->flags & stack_guarded)
 		{
@@ -1117,12 +1150,31 @@ namespace vm
 		return true;
 	}
 
+	static constexpr u64 process_block_flags(u64 flags)
+	{
+		if ((flags & page_size_mask) == 0)
+		{
+			flags |= page_size_1m;
+		}
+
+		if (flags & page_size_4k)
+		{
+			flags |= preallocated;
+		}
+		else
+		{
+			flags &= ~stack_guarded;
+		}
+
+		return flags;
+	}
+
 	block_t::block_t(u32 addr, u32 size, u64 flags)
 		: addr(addr)
 		, size(size)
-		, flags(flags)
+		, flags(process_block_flags(flags))
 	{
-		if (flags & page_size_4k || flags & preallocated)
+		if (this->flags & preallocated)
 		{
 			// Special path for whole-allocated areas allowing 4k granularity
 			m_common = std::make_shared<utils::shm>(size);
@@ -1160,8 +1212,8 @@ namespace vm
 	{
 		if (!src)
 		{
-			// Use the block's flags
-			flags = this->flags;
+			// Use the block's flags (excpet for protection)
+			flags = (this->flags & ~alloc_prot_mask) | (flags & alloc_prot_mask);
 		}
 
 		// Determine minimal alignment
@@ -1180,17 +1232,6 @@ namespace vm
 		if (!orig_size || !size || orig_size > size || size > this->size)
 		{
 			return 0;
-		}
-
-		u8 pflags = flags & page_hidden ? 0 : page_readable | page_writable;
-
-		if ((flags & page_size_64k) == page_size_64k)
-		{
-			pflags |= page_64k_size;
-		}
-		else if (!(flags & (page_size_mask & ~page_size_1m)))
-		{
-			pflags |= page_1m_size;
 		}
 
 		// Create or import shared memory object
@@ -1219,7 +1260,7 @@ namespace vm
 		// Search for an appropriate place (unoptimized)
 		for (;; addr += align)
 		{
-			if (try_alloc(addr, pflags, size, std::move(shm)))
+			if (try_alloc(addr, flags, size, std::move(shm)))
 			{
 				return addr + (flags & stack_guarded ? 0x1000 : 0);
 			}
@@ -1237,8 +1278,8 @@ namespace vm
 	{
 		if (!src)
 		{
-			// Use the block's flags
-			flags = this->flags;
+			// Use the block's flags (excpet for protection)
+			flags = (this->flags & ~alloc_prot_mask) | (flags & alloc_prot_mask);
 		}
 
 		// Determine minimal alignment
@@ -1266,17 +1307,6 @@ namespace vm
 		// Force aligned address
 		addr -= addr % min_page_size;
 
-		u8 pflags = flags & page_hidden ? 0 : page_readable | page_writable;
-
-		if ((flags & page_size_64k) == page_size_64k)
-		{
-			pflags |= page_64k_size;
-		}
-		else if (!(flags & (page_size_mask & ~page_size_1m)))
-		{
-			pflags |= page_1m_size;
-		}
-
 		// Create or import shared memory object
 		std::shared_ptr<utils::shm> shm;
 
@@ -1291,7 +1321,7 @@ namespace vm
 
 		vm::writer_lock lock(0);
 
-		if (!try_alloc(addr, pflags, size, std::move(shm)))
+		if (!try_alloc(addr, flags, size, std::move(shm)))
 		{
 			return 0;
 		}

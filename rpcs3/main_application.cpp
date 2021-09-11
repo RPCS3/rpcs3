@@ -4,6 +4,7 @@
 #include "util/logs.hpp"
 #include "util/sysinfo.hpp"
 
+#include "Utilities/Thread.h"
 #include "Input/pad_thread.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -99,7 +100,7 @@ EmuCallbacks main_application::CreateCallbacks()
 
 	callbacks.init_pad_handler = [this](std::string_view title_id)
 	{
-		g_fxo->init<pad_thread>(get_thread(), m_game_window, title_id);
+		g_fxo->init<named_thread<pad_thread>>(get_thread(), m_game_window, title_id);
 	};
 
 	callbacks.get_audio = []() -> std::shared_ptr<AudioBackend>

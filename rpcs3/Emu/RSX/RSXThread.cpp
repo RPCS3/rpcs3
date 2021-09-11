@@ -50,7 +50,7 @@ bool serialize<rsx::frame_capture_data>(utils::serial& ar, rsx::frame_capture_da
 {
 	ar(o.magic, o.version, o.LE_format);
 
-	if (o.magic != rsx::c_fc_magic || o.version != rsx::c_fc_version || o.LE_format != (std::endian::little == std::endian::native))
+	if (o.magic != rsx::c_fc_magic || o.version != rsx::c_fc_version || o.LE_format != u32{std::endian::little == std::endian::native})
 	{
 		return false;
 	}
@@ -1987,11 +1987,16 @@ namespace rsx
 				}
 
 				// Special operations applied to 8-bit formats such as gamma correction and sign conversion
-				// NOTE: The unsigned_remap being set to anything other than 0 flags the texture as being signed
+				// NOTE: The unsigned_remap being set to anything other than 0 flags the texture as being signed (UE3)
 				// This is a separate method of setting the format to signed mode without doing so per-channel
-				// NOTE2: Modifier precedence is not respected here. This is another TODO (kd-11)
-				u32 argb8_convert = tex.gamma();
-				if (const u32 sign_convert = tex.unsigned_remap() ? 0xF : tex.argb_signed())
+				// Precedence = SIGNED override > GAMMA > UNSIGNED_REMAP (See Resistance 3 for GAMMA/REMAP relationship, UE3 for REMAP effect)
+
+				const u32 argb8_signed = tex.argb_signed();
+				const u32 gamma = tex.gamma() & ~argb8_signed;
+				const u32 unsigned_remap = (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_NORMAL)? 0u : (~gamma & 0xF);
+				u32 argb8_convert = gamma;
+
+				if (const u32 sign_convert = (argb8_signed | unsigned_remap))
 				{
 					// Apply remap to avoid mapping 1 to -1. Only the sign conversion needs this check
 					// TODO: Use actual remap mask to account for 0 and 1 overrides in default mapping
@@ -3369,10 +3374,22 @@ namespace rsx
 		{
 			ensure(sink);
 
+			auto scale_result = [](u32 value)
+			{
+				const auto scale = rsx::get_resolution_scale_percent();
+				const auto result = static_cast<u64>(value * 10000) / (scale * scale);
+				return std::max<u32>(1u, result);
+			};
+
 			switch (type)
 			{
 			case CELL_GCM_ZPASS_PIXEL_CNT:
-				value = value ? u16{umax} : 0;
+				if (value)
+				{
+					value = (g_cfg.video.precise_zpass_count) ?
+						scale_result(value) :
+						u16{ umax };
+				}
 				break;
 			case CELL_GCM_ZCULL_STATS3:
 				value = value ? 0 : u16{umax};
@@ -3465,7 +3482,9 @@ namespace rsx
 						ensure(query->pending);
 
 						const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
-						if (implemented && !result && query->num_draws)
+						const bool have_result = result && !g_cfg.video.precise_zpass_count;
+
+						if (implemented && !have_result && query->num_draws)
 						{
 							get_occlusion_query_result(query);
 
@@ -3617,55 +3636,30 @@ namespace rsx
 					ensure(query->pending);
 
 					const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
-					if (force_read)
-					{
-						if (implemented && !result && query->num_draws)
-						{
-							get_occlusion_query_result(query);
+					const bool have_result = result && !g_cfg.video.precise_zpass_count;
 
-							if (query->result)
-							{
-								result += query->result;
-								if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
-								{
-									m_statistics_map[writer.counter_tag] += query->result;
-								}
-							}
-						}
-						else
+					if (!implemented || !query->num_draws || have_result)
+					{
+						discard_occlusion_query(query);
+					}
+					else if (force_read || check_occlusion_query_status(query))
+					{
+						get_occlusion_query_result(query);
+
+						if (query->result)
 						{
-							//No need to read this
-							discard_occlusion_query(query);
+							result += query->result;
+							if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
+							{
+								m_statistics_map[writer.counter_tag] += query->result;
+							}
 						}
 					}
 					else
 					{
-						if (implemented && !result && query->num_draws)
-						{
-							//Maybe we get lucky and results are ready
-							if (check_occlusion_query_status(query))
-							{
-								get_occlusion_query_result(query);
-								if (query->result)
-								{
-									result += query->result;
-									if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
-									{
-										m_statistics_map[writer.counter_tag] += query->result;
-									}
-								}
-							}
-							else
-							{
-								//Too early; abort
-								break;
-							}
-						}
-						else
-						{
-							//Not necessary to read the result anymore
-							discard_occlusion_query(query);
-						}
+						// Too early; abort
+						ensure(!force_read && implemented);
+						break;
 					}
 
 					free_query(query);

@@ -61,7 +61,7 @@
 	url = ../../curl/curl.git
 	ignore = dirty
 [submodule "3rdparty/wolfssl"]
-	path = 3rdparty/wolfssl
+	path = 3rdparty/wolfssl/wolfssl
 	url = ../../wolfSSL/wolfssl.git
 	ignore = dirty
 [submodule "3rdparty/flatbuffers"]

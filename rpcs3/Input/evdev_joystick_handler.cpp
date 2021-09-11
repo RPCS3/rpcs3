@@ -753,6 +753,10 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 
 	auto axis_orientations = m_dev->axis_orientations;
 
+	// Find out if special buttons are pressed (introduced by RPCS3).
+	// These buttons will have a delay of one cycle, but whatever.
+	const bool adjust_pressure = pad->m_pressure_intensity_button_index >= 0 && pad->m_buttons[pad->m_pressure_intensity_button_index].m_pressed;
+
 	// Translate any corresponding keycodes to our normal DS3 buttons and triggers
 	for (int i = 0; i < static_cast<int>(pad->m_buttons.size()); i++)
 	{
@@ -782,8 +786,19 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 			}
 		}
 
-		button.m_value = static_cast<u16>(value);
-		TranslateButtonPress(m_dev, button_code, button.m_pressed, button.m_value);
+		// Using a temporary buffer because the values can change during translation
+		Button tmp = button;
+		tmp.m_value = static_cast<u16>(value);
+
+		TranslateButtonPress(m_dev, button_code, tmp.m_pressed, tmp.m_value);
+
+		// Modify pressure if necessary if the button was pressed
+		if (adjust_pressure && tmp.m_pressed)
+		{
+			tmp.m_value = pad->m_pressure_intensity;
+		}
+
+		button = tmp;
 	}
 
 	// Translate any corresponding keycodes to our two sticks. (ignoring thresholds for now)
@@ -848,13 +863,13 @@ void evdev_joystick_handler::get_mapping(const std::shared_ptr<PadDevice>& devic
 		m_dev->stick_val[idx] = m_dev->val_max[idx] - m_dev->val_min[idx];
 	}
 
-	const auto profile = m_dev->config;
+	const auto cfg = m_dev->config;
 
 	u16 lx, ly, rx, ry;
 
 	// Normalize and apply pad squircling
-	convert_stick_values(lx, ly, m_dev->stick_val[0], m_dev->stick_val[1], profile->lstickdeadzone, profile->lpadsquircling);
-	convert_stick_values(rx, ry, m_dev->stick_val[2], m_dev->stick_val[3], profile->rstickdeadzone, profile->rpadsquircling);
+	convert_stick_values(lx, ly, m_dev->stick_val[0], m_dev->stick_val[1], cfg->lstickdeadzone, cfg->lpadsquircling);
+	convert_stick_values(rx, ry, m_dev->stick_val[2], m_dev->stick_val[3], cfg->rstickdeadzone, cfg->rpadsquircling);
 
 	pad->m_sticks[0].m_value = lx;
 	pad->m_sticks[1].m_value = 255 - ly;
@@ -870,13 +885,13 @@ void evdev_joystick_handler::apply_pad_data(const std::shared_ptr<PadDevice>& de
 	if (!evdev_device)
 		return;
 
-	auto profile = device->config;
+	auto cfg = device->config;
 
 	// Handle vibration
-	const int idx_l       = profile->switch_vibration_motors ? 1 : 0;
-	const int idx_s       = profile->switch_vibration_motors ? 0 : 1;
-	const u16 force_large = profile->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : vibration_min;
-	const u16 force_small = profile->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : vibration_min;
+	const int idx_l       = cfg->switch_vibration_motors ? 1 : 0;
+	const int idx_s       = cfg->switch_vibration_motors ? 0 : 1;
+	const u16 force_large = cfg->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value * 257 : vibration_min;
+	const u16 force_small = cfg->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value * 257 : vibration_min;
 	SetRumble(evdev_device, force_large, force_small);
 }
 
