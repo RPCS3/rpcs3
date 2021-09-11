@@ -95,16 +95,16 @@ error_code console_getc()
 	return CELL_OK;
 }
 
-void console_putc(char ch)
+void console_putc(ppu_thread& ppu, char ch)
 {
 	sysPrxForUser.trace("console_putc(ch=0x%x)", ch);
-	sys_tty_write(0, vm::var<char>(ch), 1, vm::var<u32>{});
+	sys_tty_write(ppu, 0, vm::var<char>(ch), 1, vm::var<u32>{});
 }
 
-error_code console_write(vm::ptr<char> data, u32 len)
+error_code console_write(ppu_thread& ppu, vm::ptr<char> data, u32 len)
 {
 	sysPrxForUser.trace("console_write(data=*0x%x, len=%d)", data, len);
-	sys_tty_write(0, data, len, vm::var<u32>{});
+	sys_tty_write(ppu, 0, data, len, vm::var<u32>{});
 	return CELL_OK;
 }
 
