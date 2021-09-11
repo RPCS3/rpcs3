@@ -473,7 +473,13 @@ error_code _sys_prx_start_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys
 	}
 
 	pOpt->entry.set(prx->start ? prx->start.addr() : ~0ull);
-	pOpt->entry2.set(prx->prologue ? prx->prologue.addr() : ~0ull);
+
+	// This check is probably for older fw
+	if (pOpt->size != 0x20u)
+	{
+		pOpt->entry2.set(prx->prologue ? prx->prologue.addr() : ~0ull);
+	}
+
 	return CELL_OK;
 }
 
@@ -495,6 +501,14 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		return CELL_EINVAL;
 	}
 
+	auto set_entry2 = [&](u64 addr)
+	{
+		if (pOpt->size != 0x20u)
+		{
+			pOpt->entry2.set(addr);
+		}
+	};
+
 	switch (pOpt->cmd & 0xf)
 	{
 	case 1:
@@ -511,7 +525,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		}
 
 		pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
-		pOpt->entry2.set(prx->epilogue ? prx->epilogue.addr() : ~0ull);
+		set_entry2(prx->epilogue ? prx->epilogue.addr() : ~0ull);
 		return CELL_OK;
 	}
 	case 2:
@@ -550,7 +564,7 @@ error_code _sys_prx_stop_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_
 		if (pOpt->cmd == 4u)
 		{
 			pOpt->entry.set(prx->stop ? prx->stop.addr() : ~0ull);
-			pOpt->entry2.set(prx->epilogue ? prx->epilogue.addr() : ~0ull);
+			set_entry2(prx->epilogue ? prx->epilogue.addr() : ~0ull);
 		}
 		else
 		{
