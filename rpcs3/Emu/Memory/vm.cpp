@@ -1170,7 +1170,8 @@ namespace vm
 	}
 
 	block_t::block_t(u32 addr, u32 size, u64 flags)
-		: addr(addr)
+		: m_id([](){ static atomic_t<u64> s_id = 1; return s_id++; }())
+		, addr(addr)
 		, size(size)
 		, flags(process_block_flags(flags))
 	{
@@ -1183,12 +1184,12 @@ namespace vm
 		}
 	}
 
-	block_t::~block_t()
+	bool block_t::unmap()
 	{
 		auto& m_map = (m.*block_map)();
-		{
-			vm::writer_lock lock(0);
 
+		if (m_id.exchange(0))
+		{
 			// Deallocate all memory
 			for (auto it = m_map.begin(), end = m_map.end(); it != end;)
 			{
@@ -1205,7 +1206,16 @@ namespace vm
 				m_common->unmap_critical(vm::get_super_ptr(addr));
 #endif
 			}
+
+			return true;
 		}
+
+		return false;
+	}
+
+	block_t::~block_t()
+	{
+		ensure(!is_valid());
 	}
 
 	u32 block_t::alloc(const u32 orig_size, const std::shared_ptr<utils::shm>* src, u32 align, u64 flags)
@@ -1256,6 +1266,12 @@ namespace vm
 		}
 
 		vm::writer_lock lock(0);
+
+		if (!is_valid())
+		{
+			// Expired block
+			return 0;
+		}
 
 		// Search for an appropriate place (unoptimized)
 		for (;; addr += align)
@@ -1320,6 +1336,12 @@ namespace vm
 		}
 
 		vm::writer_lock lock(0);
+
+		if (!is_valid())
+		{
+			// Expired block
+			return 0;
+		}
 
 		if (!try_alloc(addr, flags, size, std::move(shm)))
 		{
@@ -1569,8 +1591,15 @@ namespace vm
 		return block;
 	}
 
-	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty)
+	std::pair<std::shared_ptr<block_t>, bool> unmap(u32 addr, bool must_be_empty, const std::shared_ptr<block_t>* ptr)
 	{
+		if (ptr)
+		{
+			addr = (*ptr)->addr;
+		}
+
+		std::pair<std::shared_ptr<block_t>, bool> result{};
+
 		vm::writer_lock lock(0);
 
 		for (auto it = g_locations.begin() + memory_location_max; it != g_locations.end(); it++)
@@ -1587,18 +1616,26 @@ namespace vm
 					continue;
 				}
 
-				if (must_be_empty && (it->use_count() != 1 || (*it)->imp_used(lock)))
+				if (ptr && *it != *ptr)
 				{
-					return *it;
+					return {};
 				}
 
-				auto block = std::move(*it);
+				if (must_be_empty && (*it)->imp_used(lock))
+				{
+					result.first = *it;
+					return result;
+				}
+
+				result.first = std::move(*it);
 				g_locations.erase(it);
-				return block;
+				ensure(result.first->unmap());
+				result.second = true;
+				return result;
 			}
 		}
 
-		return nullptr;
+		return {};
 	}
 
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr)
@@ -1730,7 +1767,16 @@ namespace vm
 
 	void close()
 	{
-		g_locations.clear();
+		{
+			vm::writer_lock lock(0);
+
+			for (auto& block : g_locations)
+			{
+				if (block) block->unmap();
+			}
+
+			g_locations.clear();
+		}
 
 		utils::memory_decommit(g_base_addr, 0x200000000);
 		utils::memory_decommit(g_exec_addr, 0x200000000);

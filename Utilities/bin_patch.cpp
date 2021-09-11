@@ -558,9 +558,7 @@ void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
 {
 	if (ptr && ptr->flags & (1ull << 62))
 	{
-		const u32 addr = ptr->addr;
-		ptr.reset();
-		vm::unmap(addr, true);
+		vm::unmap(0, true, &ptr);
 	}
 }
 
@@ -679,7 +677,7 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
 
 			// Allow only if points to a PPU executable instruction
-			if (out_branch < 0x10000 || out_branch >= 0x4000'0000 || !vm::check_addr<4>(out_branch, vm::alloc_executable))
+			if (out_branch < 0x10000 || out_branch >= 0x4000'0000 || !vm::check_addr<4>(out_branch, vm::page_executable))
 			{
 				continue;
 			}
