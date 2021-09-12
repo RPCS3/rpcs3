@@ -90,7 +90,7 @@ class Emulator final
 	video_renderer m_default_renderer;
 	std::string m_default_graphics_adapter;
 
-	std::string m_config_path;
+	std::string m_config_path = cfg_keys::title_id;;
 	std::string m_path;
 	std::string m_path_old;
 	std::string m_title_id;
