@@ -7354,6 +7354,39 @@ public:
 
 				if constexpr (std::extent_v<VT> == 4) // u32[4]
 				{
+					// Match division (adjusted) (TODO)
+					if (auto a = match_vr<f32[4]>(op.ra))
+					{
+						static const auto MT = match<f32[4]>();
+
+						if (auto [div_ok, diva, divb] = match_expr(a, MT / MT); div_ok)
+						{
+							if (auto b = match_vr<s32[4]>(op.rb))
+							{
+								if (auto [add1_ok] = match_expr(b, bitcast<s32[4]>(a) + splat<s32[4]>(1)); add1_ok)
+								{
+									if (auto [fm_ok, a1, b1] = match_expr(x, bitcast<s32[4]>(fm(MT, MT)) > splat<s32[4]>(-1)); fm_ok)
+									{
+										if (auto [fnma_ok] = match_expr(a1, fnms(divb, bitcast<f32[4]>(b), diva)); fnma_ok)
+										{
+											if (fabs(b1).eval(m_ir) == fsplat<f32[4]>(1.0).eval(m_ir))
+											{
+												set_vr(op.rt4, diva / divb);
+												return true;
+											}
+
+											if (auto [sel_ok] = match_expr(b1, bitcast<f32[4]>((bitcast<u32[4]>(diva) & 0x80000000) | 0x3f800000)); sel_ok)
+											{
+												set_vr(op.rt4, diva / divb);
+												return true;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+
 					if (auto [a, b] = match_vrs<f64[4]>(op.ra, op.rb); a || b)
 					{
 						set_vr(op.rt4, select(x, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
@@ -8449,7 +8482,42 @@ public:
 			}
 		});
 
-		set_vr(op.rt4, fma(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
+		const auto [a, b, c] = get_vrs<f32[4]>(op.ra, op.rb, op.rc);
+
+		static const auto MT = match<f32[4]>();
+
+		// Match sqrt
+		if (auto [ok_fnma, a1, b1] = match_expr(a, fnms(MT, MT, fsplat<f32[4]>(1.00000011920928955078125))); ok_fnma)
+		{
+			if (auto [ok_fm2, a2] = match_expr(b, fm(MT, fsplat<f32[4]>(0.5))); ok_fm2 && a2.eq(b1))
+			{
+				if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(a1))
+				{
+					if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
+					{
+						erase_stores(a, b, c, a3);
+						set_vr(op.rt4, fsqrt(fabs(src)));
+						return;
+					}
+				}
+			}
+		}
+
+		// Match division (fast)
+		if (auto [ok_fnma, divb, diva] = match_expr(a, fnms(c, MT, MT)); ok_fnma)
+		{
+			if (auto [ok_fm] = match_expr(c, fm(diva, b)); ok_fm)
+			{
+				if (auto [ok_re] = match_expr(b, spu_re(divb)); ok_re)
+				{
+					erase_stores(b, c);
+					set_vr(op.rt4, diva / divb);
+					return;
+				}
+			}
+		}
+
+		set_vr(op.rt4, fma(a, b, c));
 	}
 
 	template <typename T, typename U, typename V>
