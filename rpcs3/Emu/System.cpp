@@ -133,7 +133,7 @@ void Emulator::Init(bool add_only)
 	g_cfg_defaults = g_cfg.to_string();
 
 	// Load config file
-	if (m_config_path.find_first_of('/') != umax)
+	if (m_config_path.find_first_of(fs::delim) != umax)
 	{
 		if (const fs::file cfg_file{m_config_path, fs::read + fs::create})
 		{
@@ -680,7 +680,24 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		// Mount all devices
 		const std::string emu_dir = rpcs3::utils::get_emu_dir();
-		std::string bdvd_dir = g_cfg.vfs.dev_bdvd;
+		std::string bdvd_dir;
+
+		if (!add_only)
+		{
+			bdvd_dir = g_cfg.vfs.dev_bdvd;
+
+			if (!bdvd_dir.empty() && bdvd_dir.back() != fs::delim[0] && bdvd_dir.back() != fs::delim[1])
+			{
+				bdvd_dir.push_back('/');
+			}
+
+			if (!bdvd_dir.empty() && !fs::is_file(bdvd_dir + "PS3_DISC.SFB"))
+			{
+				// Unuse if invalid
+				sys_log.error("Failed to use custom BDVD directory: '%s'", bdvd_dir);
+				bdvd_dir.clear();
+			}
+		}
 
 		// Mount default relative path to non-existent directory
 		vfs::mount("/dev_hdd0", g_cfg.vfs.get(g_cfg.vfs.dev_hdd0, emu_dir));
