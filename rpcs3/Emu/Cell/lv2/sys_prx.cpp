@@ -801,7 +801,17 @@ error_code _sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<
 		return CELL_EFAULT;
 	}
 
-	if (pOpt->size != pOpt.size() || !pOpt->info)
+	if (pOpt->size != pOpt.size())
+	{
+		return CELL_EINVAL;
+	}
+
+	if (!pOpt->info)
+	{
+		return CELL_EFAULT;
+	}
+
+	if (pOpt->info->size != pOpt->info.size())
 	{
 		return CELL_EINVAL;
 	}
