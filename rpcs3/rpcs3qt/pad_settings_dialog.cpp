@@ -915,7 +915,7 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 {
 	if (is_reset)
 	{
-		const auto& cfg = GetPlayerConfig();
+		const cfg_pad& cfg = GetPlayerConfig();
 
 		// Update device class
 		ui->chooseClass->setCurrentIndex(cfg.device_class_type);
@@ -1518,7 +1518,7 @@ void pad_settings_dialog::RefreshHandlers()
 
 void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 {
-	if (!m_handler || new_player_id < 0)
+	if (!m_handler || new_player_id < 0 || static_cast<u32>(new_player_id) >= g_cfg_input.player.size())
 	{
 		return;
 	}
@@ -1527,17 +1527,6 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 
 	auto& player = g_cfg_input.player[m_last_player_id];
 	m_last_player_id = new_player_id;
-
-	// Check for invalid selection
-	if (!ui->chooseDevice->isEnabled() || ui->chooseDevice->currentIndex() < 0)
-	{
-		const u32 played_id = GetPlayerIndex();
-		g_cfg_input.player[played_id]->handler.from_default();
-		g_cfg_input.player[played_id]->device.from_default();
-		g_cfg_input.player[played_id]->config.from_default();
-
-		return;
-	}
 
 	// Check for duplicate button choices
 	if (m_handler->m_type != pad_handler::null)
