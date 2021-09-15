@@ -14,4 +14,5 @@ target_link_libraries(asmjit PRIVATE ${ASMJIT_DEPS})
 # ASMJIT should have a option for disabling installing and this wouldnt
 # be required to avoid installing ASMJIT...
 
+set_property(TARGET asmjit PROPERTY FOLDER "3rdparty/")
 add_library(3rdparty::asmjit ALIAS asmjit)
