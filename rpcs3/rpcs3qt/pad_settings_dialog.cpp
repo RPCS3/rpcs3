@@ -1209,6 +1209,12 @@ void pad_settings_dialog::ChangeHandler()
 	m_min_force = m_handler->vibration_min;
 	m_max_force = m_handler->vibration_max;
 
+	// Reset parameters
+	m_lx = 0;
+	m_ly = 0;
+	m_rx = 0;
+	m_ry = 0;
+
 	// Enable Vibration Checkboxes
 	m_enable_rumble = m_handler->has_rumble();
 
