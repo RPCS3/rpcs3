@@ -458,7 +458,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		sceNp.notice("npDrmIsAvailable(): KLicense key %s", std::bit_cast<be_t<u128>>(k_licensee));
 	}
 
-	if (Emu.GetCat() == "PE")
+	if (Emu.GetFakeCat() == "PE")
 	{
 		std::memcpy(&k_licensee, NP_PSP_KEY_2, sizeof(k_licensee));
 		sceNp.success("npDrmIsAvailable(): PSP remaster KLicense key applied.");
