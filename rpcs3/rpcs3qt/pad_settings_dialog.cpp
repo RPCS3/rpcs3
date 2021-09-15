@@ -558,18 +558,6 @@ void pad_settings_dialog::ReloadButtons()
 
 	updateButton(button_ids::id_pressure_intensity, ui->b_pressure_intensity, &cfg.pressure_intensity_button);
 
-	m_min_force = m_handler->vibration_min;
-	m_max_force = m_handler->vibration_max;
-
-	// Enable Vibration Checkboxes
-	m_enable_rumble = m_handler->has_rumble();
-
-	// Enable Deadzone Settings
-	m_enable_deadzones = m_handler->has_deadzones();
-
-	// Enable Pressure Sensitivity Settings
-	m_enable_pressure_intensity_button = m_handler->has_pressure_intensity_button();
-
 	UpdateLabels(true);
 }
 
@@ -1216,6 +1204,19 @@ void pad_settings_dialog::ChangeHandler()
 #endif
 	}
 	ui->l_description->setText(m_description);
+
+	// Update parameters
+	m_min_force = m_handler->vibration_min;
+	m_max_force = m_handler->vibration_max;
+
+	// Enable Vibration Checkboxes
+	m_enable_rumble = m_handler->has_rumble();
+
+	// Enable Deadzone Settings
+	m_enable_deadzones = m_handler->has_deadzones();
+
+	// Enable Pressure Sensitivity Settings
+	m_enable_pressure_intensity_button = m_handler->has_pressure_intensity_button();
 
 	// Change our contextual widgets
 	ui->left_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
