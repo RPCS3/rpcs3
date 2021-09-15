@@ -43,8 +43,7 @@ namespace vm
 		page_readable           = (1 << 0),
 		page_writable           = (1 << 1),
 		page_executable         = (1 << 2),
-		page_prot_mask          = page_readable | page_writable | page_executable,
-	
+
 		page_fault_notification = (1 << 3),
 		page_no_reservations    = (1 << 4),
 		page_64k_size           = (1 << 5),
@@ -93,8 +92,6 @@ namespace vm
 
 	enum block_flags_3
 	{
-		page_hidden    = 0x1000,
-
 		page_size_4k   = 0x100, // SYS_MEMORY_PAGE_SIZE_4K
 		page_size_64k  = 0x200, // SYS_MEMORY_PAGE_SIZE_64K
 		page_size_1m   = 0x400, // SYS_MEMORY_PAGE_SIZE_1M
@@ -109,6 +106,15 @@ namespace vm
 		bf0_mask = bf0_0x1 | bf0_0x2,
 	};
 
+	enum alloc_flags
+	{
+		alloc_hidden = 0x1000,
+		alloc_unwritable = 0x2000,
+		alloc_executable = 0x4000,
+
+		alloc_prot_mask = alloc_hidden | alloc_unwritable | alloc_executable,
+	};
+
 	// Object that handles memory allocations inside specific constant bounds ("location")
 	class block_t final
 	{
@@ -117,7 +123,12 @@ namespace vm
 		// Common mapped region for special cases
 		std::shared_ptr<utils::shm> m_common;
 
-		bool try_alloc(u32 addr, u8 flags, u32 size, std::shared_ptr<utils::shm>&&) const;
+		atomic_t<u64> m_id = 0;
+
+		bool try_alloc(u32 addr, u64 bflags, u32 size, std::shared_ptr<utils::shm>&&) const;
+
+		// Unmap block
+		bool unmap();
 
 	public:
 		block_t(u32 addr, u32 size, u64 flags);
@@ -149,6 +160,15 @@ namespace vm
 
 		// Internal
 		u32 imp_used(const vm::writer_lock&) const;
+
+		// Returns 0 if invalid, none-zero unique id if valid
+		u64 is_valid() const
+		{
+			return m_id;
+		}
+
+		friend std::pair<std::shared_ptr<block_t>, bool> unmap(u32, bool, const std::shared_ptr<block_t>*);
+		friend void close();
 	};
 
 	// Create new memory block with specified parameters and return it
@@ -157,8 +177,8 @@ namespace vm
 	// Create new memory block with at arbitrary position with specified alignment
 	std::shared_ptr<block_t> find_map(u32 size, u32 align, u64 flags = 0);
 
-	// Delete existing memory block with specified start address, return it
-	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty = false);
+	// Delete existing memory block with specified start address, .first=its ptr, .second=success
+	std::pair<std::shared_ptr<block_t>, bool> unmap(u32 addr, bool must_be_empty = false, const std::shared_ptr<block_t>* ptr = nullptr);
 
 	// Get memory block associated with optionally specified memory location or optionally specified address
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0);

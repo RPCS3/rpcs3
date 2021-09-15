@@ -528,7 +528,7 @@ struct ppu_prx_module_info
 	be_t<u32> unk5;
 };
 
-bool ppu_form_branch_to_code(u32 entry, u32 target);
+bool ppu_form_branch_to_code(u32 entry, u32 target, bool link = false);
 
 // Load and register exports; return special exports found (nameless module)
 static auto ppu_load_exports(ppu_linkage_info* link, u32 exports_start, u32 exports_end)

@@ -1580,7 +1580,7 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 		}
 	}
 
-	Emu.Pause();
+	Emu.Pause(true);
 
 	if (!g_tls_access_violation_recovered)
 	{

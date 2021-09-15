@@ -234,10 +234,11 @@ Function* PPUTranslator::Translate(const ppu_function& info)
 				m_rel = nullptr;
 			}
 
-			if (u32 target = ppu_get_far_jump(m_addr + base))
+			if (ppu_get_far_jump(m_addr + base))
 			{
+				// Branch into an HLEd instruction using the jump table 
 				FlushRegisters();
-				CallFunction(0, m_ir->getInt64(target));
+				CallFunction(0, m_reloc ? m_ir->CreateAdd(m_ir->getInt64(m_addr), m_seg0) : m_ir->getInt64(m_addr));
 				continue;
 			}
 

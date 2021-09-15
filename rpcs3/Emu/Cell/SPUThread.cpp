@@ -1710,12 +1710,12 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	{
 		if (!group)
 		{
-			ensure(vm::get(vm::spu)->falloc(vm_offset(), SPU_LS_SIZE, &shm, 0x200));
+			ensure(vm::get(vm::spu)->falloc(vm_offset(), SPU_LS_SIZE, &shm, vm::page_size_64k));
 		}
 		else
 		{
-			// 0x1000 indicates falloc to allocate page with no access rights in base memory
-			ensure(vm::get(vm::spu)->falloc(vm_offset(), SPU_LS_SIZE, &shm, 0x1200));
+			// alloc_hidden indicates falloc to allocate page with no access rights in base memory
+			ensure(vm::get(vm::spu)->falloc(vm_offset(), SPU_LS_SIZE, &shm, vm::page_size_64k | vm::alloc_hidden));
 		}
 
 		// Try to guess free area

@@ -727,13 +727,11 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 	ppu.state += cpu_flag::wait;
 	lv2_obj::sleep(ppu);
 
-	sys_fs.trace("sys_fs_close(fd=%d)", fd);
-
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
 	{
-		return CELL_EBADF;
+		return {CELL_EBADF, fd};
 	}
 
 	{
@@ -741,7 +739,7 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 
 		if (!file->file)
 		{
-			return CELL_EBADF;
+			return {CELL_EBADF, fd};
 		}
 
 		if (!(file->mp->flags & (lv2_mp_flag::read_only + lv2_mp_flag::cache)) && file->flags & CELL_FS_O_ACCMODE)
@@ -772,12 +770,14 @@ error_code sys_fs_close(ppu_thread& ppu, u32 fd)
 
 	if (!ret || ret.ret == CELL_EBADF)
 	{
-		return CELL_EBADF;
+		return {CELL_EBADF, fd};
 	}
+
+	sys_fs.warning("sys_fs_close(fd=%u): path='%s'", fd, file->name.data());
 
 	if (file->lock == 1)
 	{
-		return CELL_EBUSY;
+		return {CELL_EBUSY, fd};
 	}
 
 	return CELL_OK;
