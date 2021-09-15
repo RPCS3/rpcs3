@@ -659,9 +659,6 @@ bool GLGSRender::load_program()
 		ensure(current_fragment_program.valid);
 
 		get_current_vertex_program(vs_sampler_state);
-
-		current_vertex_program.skip_vertex_input_check = true;	//not needed for us since decoding is done server side
-		current_fragment_program.texture_state.unnormalized_coords = 0; //unused
 	}
 	else if (m_program)
 	{

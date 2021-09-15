@@ -1771,9 +1771,7 @@ bool VKGSRender::load_program()
 	{
 		vk::enter_uninterruptible();
 
-		// Load current program from buffer
-		vertex_program.skip_vertex_input_check = true;
-		fragment_program.texture_state.unnormalized_coords = 0;
+		// Load current program from cache
 		m_program = m_prog_buffer->get_graphics_pipeline(vertex_program, fragment_program, properties,
 			shadermode != shader_mode::recompiler, true, pipeline_layout);
 

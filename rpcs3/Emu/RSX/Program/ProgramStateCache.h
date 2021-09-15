@@ -25,6 +25,8 @@ namespace program_hash_util
 			std::bitset<rsx::max_vertex_program_instructions> instruction_mask;
 			u32 ucode_length;
 			u32 referenced_textures_mask;
+			u16 referenced_inputs_mask;
+			u16 reserved;
 		};
 
 		static usz get_vertex_program_ucode_hash(const RSXVertexProgram &program);

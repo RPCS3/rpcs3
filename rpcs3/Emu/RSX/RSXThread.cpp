@@ -1637,9 +1637,6 @@ namespace rsx
 		m_graphics_state &= ~rsx::pipeline_state::vertex_program_ucode_dirty;
 
 		const u32 transform_program_start = rsx::method_registers.transform_program_start();
-		current_vertex_program.skip_vertex_input_check = true;
-
-		current_vertex_program.rsx_vertex_inputs.clear();
 		current_vertex_program.data.reserve(512 * 4);
 		current_vertex_program.jump_table.clear();
 
@@ -1706,7 +1703,7 @@ namespace rsx
 	void thread::analyse_inputs_interleaved(vertex_input_layout& result) const
 	{
 		const rsx_state& state = rsx::method_registers;
-		const u32 input_mask = state.vertex_attrib_input_mask();
+		const u32 input_mask = state.vertex_attrib_input_mask() & current_vp_metadata.referenced_inputs_mask;
 
 		result.clear();
 
@@ -1752,11 +1749,15 @@ namespace rsx
 		result.interleaved_blocks.reserve(16);
 		result.referenced_registers.reserve(16);
 
-		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		for (auto [ref_mask, index] = std::tuple{ input_mask, u8(0) }; ref_mask; ++index, ref_mask >>= 1)
 		{
-			// Check if vertex stream is enabled
-			if (!(input_mask & (1 << index)))
+			ensure(index < rsx::limits::vertex_count);
+
+			if (!(ref_mask & 1u))
+			{
+				// Nothing to do, uninitialized
 				continue;
+			}
 
 			//Check for interleaving
 			const auto &info = state.vertex_arrays_info[index];
@@ -1921,8 +1922,6 @@ namespace rsx
 
 				if (raw_format & CELL_GCM_TEXTURE_UN)
 				{
-					current_fp_texture_state.unnormalized_coords |= (1 << i);
-
 					if (tex.min_filter() == rsx::texture_minify_filter::nearest ||
 						tex.mag_filter() == rsx::texture_magnify_filter::nearest)
 					{
@@ -2204,8 +2203,14 @@ namespace rsx
 		const u32 modulo_mask = rsx::method_registers.frequency_divider_operation_mask();
 		const auto max_index = (first_vertex + vertex_count) - 1;
 
-		for (u8 index = 0; index < rsx::limits::vertex_count; ++index)
+		for (u16 ref_mask = current_vp_metadata.referenced_inputs_mask, index = 0; ref_mask; ++index, ref_mask >>= 1)
 		{
+			if (!(ref_mask & 1u))
+			{
+				// Unused input, ignore this
+				continue;
+			}
+
 			if (layout.attribute_placement[index] == attribute_buffer_placement::none)
 			{
 				static constexpr u64 zero = 0;

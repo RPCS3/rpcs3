@@ -85,6 +85,9 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			instruction_range.first = std::min(current_instruction, instruction_range.first);
 			instruction_range.second = std::max(current_instruction, instruction_range.second);
 
+			// Whether to check if the current instruction references an input stream
+			bool test_input_read = false;
+
 			// Basic vec op analysis, must be done before flow analysis
 			switch (d1.vec_opcode)
 			{
@@ -92,6 +95,11 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			{
 				d2.HEX = instruction._u32[2];
 				result.referenced_textures_mask |= (1 << d2.tex_num);
+				break;
+			}
+			default:
+			{
+				test_input_read = !!d1.input_src;
 				break;
 			}
 			}
@@ -160,6 +168,26 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 
 				break;
 			}
+			default:
+			{
+				test_input_read = !!d1.input_src;
+				break;
+			}
+			}
+
+			if (test_input_read)
+			{
+				// Type is encoded in the first 2 bits of each block
+				d2.HEX = instruction._u32[2];
+
+				const auto src0 = d2.src0l;
+				const auto src1 = d2.src1;
+				const auto src2 = d3.src2l;
+
+				if ((src0 | src1 | src2) & RSX_VP_REGISTER_TYPE_INPUT)
+				{
+					result.referenced_inputs_mask |= (1 << d1.input_src);
+				}
 			}
 
 			if ((d3.end && (fast_exit || current_instruction >= instruction_range.second)) ||
@@ -249,6 +277,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 		}
 	}
 
+	result.referenced_inputs_mask |= 1u; // VPOS is always enabled, else no rendering can happen
 	return result;
 }
 
@@ -269,8 +298,6 @@ bool vertex_program_compare::operator()(const RSXVertexProgram &binary1, const R
 	if (binary1.data.size() != binary2.data.size())
 		return false;
 	if (binary1.jump_table != binary2.jump_table)
-		return false;
-	if (!binary1.skip_vertex_input_check && !binary2.skip_vertex_input_check && binary1.rsx_vertex_inputs != binary2.rsx_vertex_inputs)
 		return false;
 
 	const void* instBuffer1 = binary1.data.data();
@@ -457,7 +484,6 @@ usz fragment_program_storage_hash::operator()(const RSXFragmentProgram& program)
 	hash ^= program.ctrl;
 	hash ^= +program.two_sided_lighting;
 	hash ^= program.texture_state.texture_dimensions;
-	hash ^= program.texture_state.unnormalized_coords;
 	hash ^= program.texture_state.shadow_textures;
 	hash ^= program.texture_state.redirected_textures;
 	hash ^= program.texcoord_control_mask;
