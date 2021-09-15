@@ -1176,6 +1176,7 @@ void pad_settings_dialog::ChangeHandler()
 	switch (m_handler->m_type)
 	{
 	case pad_handler::null:
+		GetPlayerConfig().from_default();
 		if (is_ldd_pad)
 			m_description = tooltips.gamepad_settings.ldd_pad;
 		else
