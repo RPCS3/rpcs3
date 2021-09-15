@@ -312,7 +312,7 @@ void kernel_explorer::update()
 	root->setText(0, qstr(fmt::format("Process 0x%08x: Total Memory Usage: 0x%x/0x%x (%0.2f/%0.2f MB)", process_getpid(), total_memory_usage, dct->size, 1. * total_memory_usage / (1024 * 1024)
 		, 1. * dct->size / (1024 * 1024))));
 
-	add_solid_node(find_node(root, additional_nodes::process_info), qstr(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat())));
+	add_solid_node(find_node(root, additional_nodes::process_info), qstr(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s (Fake: %s)", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat(), Emu.GetFakeCat())));
 
 	auto display_program_segments = [this](QTreeWidgetItem* tree, const ppu_module& m)
 	{

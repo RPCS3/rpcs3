@@ -189,6 +189,8 @@ public:
 		return m_cat;
 	}
 
+	const std::string& GetFakeCat() const;
+
 	const std::string& GetDir() const
 	{
 		return m_dir;

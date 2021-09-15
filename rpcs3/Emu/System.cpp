@@ -1906,4 +1906,20 @@ bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) cons
 	return (GetCallbacks().resolve_path(path) + '/').starts_with(GetCallbacks().resolve_path(dir) + '/');
 };
 
+const std::string& Emulator::GetFakeCat() const
+{
+	if (m_cat == "DG")
+	{
+		const std::string mount_point = vfs::get("/dev_bdvd");
+
+		if (mount_point.empty() || !IsPathInsideDir(m_path, mount_point))
+		{
+			static const std::string s_hg = "HG";
+			return s_hg;
+		}
+	}
+
+	return m_cat;
+};
+
 Emulator Emu;

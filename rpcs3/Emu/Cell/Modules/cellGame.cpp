@@ -472,7 +472,9 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 	std::string dir;
 	psf::registry sfo;
 
-	if (Emu.GetCat() == "DG")
+	const std::string& cat = Emu.GetFakeCat();
+
+	if (cat == "DG")
 	{
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = 0; // TODO
@@ -480,7 +482,7 @@ error_code cellGameBootCheck(vm::ptr<u32> type, vm::ptr<u32> attributes, vm::ptr
 
 		sfo = psf::load_object(fs::file(vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO")));
 	}
-	else if (Emu.GetCat() == "GD")
+	else if (cat == "GD")
 	{
 		*type = CELL_GAME_GAMETYPE_DISC;
 		*attributes = CELL_GAME_ATTRIBUTE_PATCH; // TODO
