@@ -857,8 +857,33 @@ error_code _sys_prx_get_module_id_by_address(ppu_thread& ppu, u32 addr)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_prx.todo("_sys_prx_get_module_id_by_address(addr=0x%x)", addr);
-	return CELL_OK;
+	sys_prx.warning("_sys_prx_get_module_id_by_address(addr=0x%x)", addr);
+
+	if (!vm::check_addr(addr))
+	{
+		// Fast check for an invalid argument
+		return {CELL_PRX_ERROR_UNKNOWN_MODULE, addr};
+	}
+
+	const auto [prx, id] = idm::select<lv2_obj, lv2_prx>([&](u32 id, lv2_prx& prx) -> u32
+	{
+		for (const ppu_segment& seg : prx.segs)
+		{
+			if (seg.size && addr >= seg.addr && addr < seg.addr + seg.size)
+			{
+				return id;
+			}
+		}
+
+		return 0;
+	});
+
+	if (!id)
+	{
+		return {CELL_PRX_ERROR_UNKNOWN_MODULE, addr};
+	}
+
+	return not_an_error(id);
 }
 
 error_code _sys_prx_start(ppu_thread& ppu)
