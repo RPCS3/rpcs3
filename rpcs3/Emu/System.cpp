@@ -137,6 +137,8 @@ void Emulator::Init(bool add_only)
 	{
 		if (const fs::file cfg_file{m_config_path, fs::read + fs::create})
 		{
+			sys_log.notice("Applying config override: %s", m_config_path);
+
 			if (!g_cfg.from_string(cfg_file.to_string()))
 			{
 				sys_log.fatal("Failed to apply config: %s. Proceeding with regular configuration.", m_config_path);
@@ -162,6 +164,8 @@ void Emulator::Init(bool add_only)
 
 		if (const fs::file cfg_file{cfg_path, fs::read + fs::create})
 		{
+			sys_log.notice("Applying global config: %s", cfg_path);
+
 			if (!g_cfg.from_string(cfg_file.to_string()))
 			{
 				sys_log.fatal("Failed to apply global config: %s", cfg_path);
@@ -516,6 +520,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 	{
 		m_title_id = title_id;
 	}
+
+	sys_log.notice("Selected config: %s", m_config_path);
 
 	{
 		Init(add_only);

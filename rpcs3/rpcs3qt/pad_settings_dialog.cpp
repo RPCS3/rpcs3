@@ -558,18 +558,6 @@ void pad_settings_dialog::ReloadButtons()
 
 	updateButton(button_ids::id_pressure_intensity, ui->b_pressure_intensity, &cfg.pressure_intensity_button);
 
-	m_min_force = m_handler->vibration_min;
-	m_max_force = m_handler->vibration_max;
-
-	// Enable Vibration Checkboxes
-	m_enable_rumble = m_handler->has_rumble();
-
-	// Enable Deadzone Settings
-	m_enable_deadzones = m_handler->has_deadzones();
-
-	// Enable Pressure Sensitivity Settings
-	m_enable_pressure_intensity_button = m_handler->has_pressure_intensity_button();
-
 	UpdateLabels(true);
 }
 
@@ -915,7 +903,7 @@ void pad_settings_dialog::UpdateLabels(bool is_reset)
 {
 	if (is_reset)
 	{
-		const auto& cfg = GetPlayerConfig();
+		const cfg_pad& cfg = GetPlayerConfig();
 
 		// Update device class
 		ui->chooseClass->setCurrentIndex(cfg.device_class_type);
@@ -1176,6 +1164,7 @@ void pad_settings_dialog::ChangeHandler()
 	switch (m_handler->m_type)
 	{
 	case pad_handler::null:
+		GetPlayerConfig().from_default();
 		if (is_ldd_pad)
 			m_description = tooltips.gamepad_settings.ldd_pad;
 		else
@@ -1215,6 +1204,25 @@ void pad_settings_dialog::ChangeHandler()
 #endif
 	}
 	ui->l_description->setText(m_description);
+
+	// Update parameters
+	m_min_force = m_handler->vibration_min;
+	m_max_force = m_handler->vibration_max;
+
+	// Reset parameters
+	m_lx = 0;
+	m_ly = 0;
+	m_rx = 0;
+	m_ry = 0;
+
+	// Enable Vibration Checkboxes
+	m_enable_rumble = m_handler->has_rumble();
+
+	// Enable Deadzone Settings
+	m_enable_deadzones = m_handler->has_deadzones();
+
+	// Enable Pressure Sensitivity Settings
+	m_enable_pressure_intensity_button = m_handler->has_pressure_intensity_button();
 
 	// Change our contextual widgets
 	ui->left_stack->setCurrentIndex((m_handler->m_type == pad_handler::keyboard) ? 1 : 0);
@@ -1518,7 +1526,7 @@ void pad_settings_dialog::RefreshHandlers()
 
 void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 {
-	if (!m_handler || new_player_id < 0)
+	if (!m_handler || new_player_id < 0 || static_cast<u32>(new_player_id) >= g_cfg_input.player.size())
 	{
 		return;
 	}
@@ -1527,17 +1535,6 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 
 	auto& player = g_cfg_input.player[m_last_player_id];
 	m_last_player_id = new_player_id;
-
-	// Check for invalid selection
-	if (!ui->chooseDevice->isEnabled() || ui->chooseDevice->currentIndex() < 0)
-	{
-		const u32 played_id = GetPlayerIndex();
-		g_cfg_input.player[played_id]->handler.from_default();
-		g_cfg_input.player[played_id]->device.from_default();
-		g_cfg_input.player[played_id]->config.from_default();
-
-		return;
-	}
 
 	// Check for duplicate button choices
 	if (m_handler->m_type != pad_handler::null)

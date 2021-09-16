@@ -332,6 +332,11 @@ namespace vk
 			enabled_features.shaderStorageImageWriteWithoutFormat = VK_TRUE;
 		}
 
+		if (g_cfg.video.precise_zpass_count)
+		{
+			enabled_features.occlusionQueryPrecise = VK_TRUE;
+		}
+
 		// enabled_features.shaderSampledImageArrayDynamicIndexing = TRUE;  // Unused currently but will be needed soon
 		enabled_features.shaderClipDistance = VK_TRUE;
 		// enabled_features.shaderCullDistance = VK_TRUE;  // Alt notation of clip distance
@@ -404,6 +409,12 @@ namespace vk
 			// AMD proprietary drivers do not expose alphaToOne support
 			rsx_log.error("Your GPU does not support alpha-to-one for multisampling. Graphics may be inaccurate when MSAA is enabled.");
 			enabled_features.alphaToOne = VK_FALSE;
+		}
+
+		if (!pgpu->features.occlusionQueryPrecise && enabled_features.occlusionQueryPrecise)
+		{
+			rsx_log.error("Your GPU does not support precise occlusion queries. Graphics may not render correctly.");
+			enabled_features.occlusionQueryPrecise = VK_FALSE;
 		}
 
 		VkDeviceCreateInfo device = {};
