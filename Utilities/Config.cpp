@@ -429,6 +429,14 @@ void cfg::map_entry::set_map(std::map<std::string, std::string>&& map)
 	m_map = std::move(map);
 }
 
+void cfg::map_entry::erase(const std::string& key)
+{
+	if (m_map.contains(key))
+	{
+		m_map.erase(key);
+	}
+}
+
 void cfg::map_entry::from_default()
 {
 	set_map({});

@@ -267,7 +267,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		ui->enableTSX->setEnabled(false);
 		ui->enableTSX->setPlaceholderText(tr("Not supported", "Enable TSX"));
-		SubscribeTooltip(ui->enableTSX, tr("Unfortunately your CPU model does not support this instruction set.", "Enable TSX"));
+		SubscribeTooltip(ui->enableTSX, tr("Unfortunately, your CPU model does not support this instruction set.", "Enable TSX"));
 
 		m_emu_settings->SetSetting(emu_settings_type::EnableTSX, fmt::format("%s", tsx_usage::disabled));
 	}
@@ -1027,9 +1027,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings_type::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, tooltips.settings.disable_on_disk_shader_cache);
 
-	m_emu_settings->EnhanceCheckBox(ui->relaxedZCULL, emu_settings_type::RelaxedZCULL);
-	SubscribeTooltip(ui->relaxedZCULL, tooltips.settings.relaxed_zcull);
-
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);
@@ -1041,6 +1038,47 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
+
+	// Custom control that simplifies operation of two independent variables. Can probably be done better but this works.
+	ui->zcullPrecisionMode->addItem(tr("Precise (Default)"), static_cast<int>(zcull_precision_level::precise));
+	ui->zcullPrecisionMode->addItem(tr("Approximate (Fast)"), static_cast<int>(zcull_precision_level::approximate));
+	ui->zcullPrecisionMode->addItem(tr("Relaxed (Fastest)"), static_cast<int>(zcull_precision_level::relaxed));
+
+	if (m_emu_settings->GetSetting(emu_settings_type::RelaxedZCULL) == "true")
+	{
+		ui->zcullPrecisionMode->setCurrentIndex(
+			ui->zcullPrecisionMode->findData(static_cast<int>(zcull_precision_level::relaxed)));
+	}
+	else if (m_emu_settings->GetSetting(emu_settings_type::PreciseZCULL) == "true")
+	{
+		ui->zcullPrecisionMode->setCurrentIndex(
+			ui->zcullPrecisionMode->findData(static_cast<int>(zcull_precision_level::precise)));
+	}
+	else
+	{
+		ui->zcullPrecisionMode->setCurrentIndex(
+			ui->zcullPrecisionMode->findData(static_cast<int>(zcull_precision_level::approximate)));
+	}
+	connect(ui->zcullPrecisionMode, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+	{
+		bool relaxed = false, precise = false;
+
+		switch (static_cast<zcull_precision_level>(ui->zcullPrecisionMode->itemData(index).toInt()))
+		{
+		case zcull_precision_level::precise:
+			precise = true; break;
+		case zcull_precision_level::approximate:
+			break;
+		case zcull_precision_level::relaxed:
+			relaxed = true; break;
+		default:
+			fmt::throw_exception("Unexpected selection");
+		}
+
+		m_emu_settings->SetSetting(emu_settings_type::RelaxedZCULL, relaxed ? "true" : "false");
+		m_emu_settings->SetSetting(emu_settings_type::PreciseZCULL, precise ? "true" : "false");
+	});
+	SubscribeTooltip(ui->gbZCULL, tooltips.settings.zcull_operation_mode);
 
 	// Sliders
 
@@ -1539,6 +1577,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->cb_show_pkg_install, tooltips.settings.show_pkg_install);
 		SubscribeTooltip(ui->cb_show_pup_install, tooltips.settings.show_pup_install);
 		SubscribeTooltip(ui->cb_show_obsolete_cfg_dialog, tooltips.settings.show_obsolete_cfg);
+		SubscribeTooltip(ui->cb_show_same_buttons_dialog, tooltips.settings.show_same_buttons);
 		SubscribeTooltip(ui->gb_updates, tooltips.settings.check_update_start);
 
 		// Discord:
@@ -1578,7 +1617,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		});
 
 		// colorize preview icons
-		auto add_colored_icon = [this](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor())
+		const auto add_colored_icon = [this](QPushButton *button, const QColor& color, const QIcon& icon = QIcon(), const QColor& iconColor = QColor())
 		{
 			QLabel* text = new QLabel(button->text());
 			text->setObjectName("color_button");
@@ -1602,13 +1641,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			button->layout()->addWidget(text);
 		};
 
-		auto add_colored_icons = [add_colored_icon, this]()
-		{
-			add_colored_icon(ui->pb_gl_icon_color, m_gui_settings->GetValue(gui::gl_iconColor).value<QColor>());
-			add_colored_icon(ui->pb_sd_icon_color, m_gui_settings->GetValue(gui::sd_icon_color).value<QColor>());
-			add_colored_icon(ui->pb_tr_icon_color, m_gui_settings->GetValue(gui::tr_icon_color).value<QColor>());
-		};
-		add_colored_icons();
+		add_colored_icon(ui->pb_gl_icon_color, m_gui_settings->GetValue(gui::gl_iconColor).value<QColor>());
+		add_colored_icon(ui->pb_sd_icon_color, m_gui_settings->GetValue(gui::sd_icon_color).value<QColor>());
+		add_colored_icon(ui->pb_tr_icon_color, m_gui_settings->GetValue(gui::tr_icon_color).value<QColor>());
 
 		ui->cb_show_welcome->setChecked(m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
 		ui->cb_show_exit_game->setChecked(m_gui_settings->GetValue(gui::ib_confirm_exit).toBool());
@@ -1616,6 +1651,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->cb_show_pkg_install->setChecked(m_gui_settings->GetValue(gui::ib_pkg_success).toBool());
 		ui->cb_show_pup_install->setChecked(m_gui_settings->GetValue(gui::ib_pup_success).toBool());
 		ui->cb_show_obsolete_cfg_dialog->setChecked(m_gui_settings->GetValue(gui::ib_obsolete_cfg).toBool());
+		ui->cb_show_same_buttons_dialog->setChecked(m_gui_settings->GetValue(gui::ib_same_buttons).toBool());
 
 		ui->combo_updates->addItem(tr("Yes", "Updates"), gui::update_on);
 		ui->combo_updates->addItem(tr("Background", "Updates"), gui::update_bkg);
@@ -1658,6 +1694,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		connect(ui->cb_show_obsolete_cfg_dialog, &QCheckBox::clicked, [this](bool val)
 		{
 			m_gui_settings->SetValue(gui::ib_obsolete_cfg, val);
+		});
+		connect(ui->cb_show_same_buttons_dialog, &QCheckBox::clicked, [this](bool val)
+		{
+			m_gui_settings->SetValue(gui::ib_same_buttons, val);
 		});
 
 		connect(ui->cb_custom_colors, &QCheckBox::clicked, [this](bool val)
@@ -1913,10 +1953,10 @@ int settings_dialog::exec()
 			m_gui_settings->ShowConfirmationBox(
 				tr("Remove obsolete settings?"),
 				tr(
-					"Your config file contains one or more obsolete entries.\n"
-					"Consider that a removal might render them invalid for other versions of RPCS3.\n"
-					"\n"
-					"Do you wish to let the program remove them for you now?\n"
+					"Your config file contains one or more obsolete entries.<br>"
+					"Consider that a removal might render them invalid for other versions of RPCS3.<br>"
+					"<br>"
+					"Do you wish to let the program remove them for you now?<br>"
 					"This change will only be final when you save the config."
 				), gui::ib_obsolete_cfg, &result, this);
 

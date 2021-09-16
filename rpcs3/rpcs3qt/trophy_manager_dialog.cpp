@@ -935,7 +935,7 @@ bool trophy_manager_dialog::eventFilter(QObject *object, QEvent *event)
 	{
 		QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
 
-		if (keyEvent->modifiers() & Qt::ControlModifier && (is_trophy_table || is_game_table))
+		if (keyEvent && keyEvent->modifiers() == Qt::ControlModifier && (is_trophy_table || is_game_table))
 		{
 			if (keyEvent->key() == Qt::Key_Plus)
 			{

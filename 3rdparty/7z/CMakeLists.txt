@@ -45,7 +45,14 @@ if(WIN32)
 		src/LzmaLib.c
 		src/7zCrc.c
 		src/MtDec.c)
+	target_include_directories(3rdparty_7z INTERFACE
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+		$<INSTALL_INTERFACE:/src>)
+
 	target_include_directories(3rdparty_7z INTERFACE 7z)
+
+	set_property(TARGET 3rdparty_7z PROPERTY FOLDER "3rdparty/")
+
 else()
 	add_library(3rdparty_7z INTERFACE)
 endif()

@@ -280,7 +280,7 @@ namespace rsx
 			}
 			else
 			{
-				m_preview.caret_position = ::narrow<u16>(m_preview.value.length());
+				m_preview.caret_position = m_preview.value.length();
 				m_preview.fore_color.a = 1.f;
 			}
 
@@ -593,7 +593,7 @@ namespace rsx
 			// Append to output text
 			if (m_preview.value.empty())
 			{
-				m_preview.caret_position = ::narrow<u16>(str.length());
+				m_preview.caret_position = str.length();
 				m_preview.set_unicode_text(str);
 			}
 			else
@@ -1034,9 +1034,17 @@ namespace rsx
 
 			update_panel();
 
-			g_fxo->get<named_thread<osk_dialog_thread>>()([this, tbit = alloc_thread_bit()]
+			auto& osk_thread = g_fxo->get<named_thread<osk_dialog_thread>>();
+
+			const auto notify = std::make_shared<atomic_t<bool>>(false);
+
+			osk_thread([&, notify]()
 			{
+				const u64 tbit = alloc_thread_bit();
 				g_thread_bit = tbit;
+
+				*notify = true;
+				notify->notify_one();
 
 				if (const auto error = run_input_loop())
 				{
@@ -1046,6 +1054,11 @@ namespace rsx
 				thread_bits &= ~tbit;
 				thread_bits.notify_all();
 			});
+
+			while (osk_thread < thread_state::errored && !*notify)
+			{
+				notify->wait(false, atomic_wait_timeout{1'000'000});
+			}
 		}
 	}
 }

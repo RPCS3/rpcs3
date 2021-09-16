@@ -26,6 +26,7 @@ enum class system_state : u32
 	running,
 	stopped,
 	paused,
+	frozen, // paused but cannot resume
 	ready,
 };
 
@@ -42,6 +43,13 @@ enum class game_boot_result : u32
 	firmware_missing,
 	unsupported_disc_type
 };
+
+namespace cfg_keys
+{
+	inline const std::string title_id = "title_id"; // No config override mode
+	inline const std::string global = "global"; // Force global config
+	inline const std::string _default = "default"; // Force virtual default constructed config.yml
+}
 
 struct EmuCallbacks
 {
@@ -82,7 +90,7 @@ class Emulator final
 	video_renderer m_default_renderer;
 	std::string m_default_graphics_adapter;
 
-	std::string m_config_override_path;
+	std::string m_config_path = cfg_keys::title_id;
 	std::string m_path;
 	std::string m_path_old;
 	std::string m_title_id;
@@ -94,8 +102,6 @@ class Emulator final
 	std::string m_game_dir{"PS3_GAME"};
 	std::string m_usr{"00000001"};
 	u32 m_usrid{1};
-
-	bool m_force_global_config = false;
 
 	// This flag should be adjusted before each Stop() or each BootGame() and similar because:
 	// 1. It forces an application to boot immediately by calling Run() in Load().
@@ -214,14 +220,19 @@ public:
 		return m_pause_amend_time;
 	}
 
-	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
+	const std::string& GetUsedConfig() const
+	{
+		return m_config_path;
+	}
+
+	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, const std::string& config_path = cfg_keys::title_id);
 	bool BootRsxCapture(const std::string& path);
 
 	void SetForceBoot(bool force_boot);
 
-	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool force_global_config = false, bool is_disc_patch = false);
+	game_boot_result Load(const std::string& title_id = "", bool add_only = false, bool is_disc_patch = false);
 	void Run(bool start_playtime);
-	bool Pause();
+	bool Pause(bool freeze_emulation = false);
 	void Resume();
 	void Stop(bool restart = false);
 	void Restart() { Stop(true); }
@@ -232,14 +243,13 @@ public:
 	bool IsPaused()  const { return m_state >= system_state::paused; } // ready is also considered paused by this function
 	bool IsStopped() const { return m_state == system_state::stopped; }
 	bool IsReady()   const { return m_state == system_state::ready; }
-	auto GetStatus() const { return m_state.load(); }
+	auto GetStatus() const { system_state state = m_state; return state == system_state::frozen ? system_state::paused : state; }
 
 	bool HasGui() const { return m_has_gui; }
 	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
 
 	void SetDefaultRenderer(video_renderer renderer) { m_default_renderer = renderer; }
 	void SetDefaultGraphicsAdapter(std::string adapter) { m_default_graphics_adapter = std::move(adapter); }
-	void SetConfigOverride(std::string path) { m_config_override_path = std::move(path); }
 
 	std::string GetFormattedTitle(double fps) const;
 

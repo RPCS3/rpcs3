@@ -8,7 +8,6 @@
 #include "Utilities/mutex.h"
 
 #include <map>
-#include <thread>
 #include <mutex>
 #include <string_view>
 #include <string>
@@ -23,10 +22,11 @@ public:
 	pad_thread& operator=(const pad_thread&) = delete;
 	~pad_thread();
 
+	void operator()();
+
 	PadInfo& GetInfo() { return m_info; }
 	auto& GetPads() { return m_pads; }
 	void SetRumble(const u32 pad, u8 largeMotor, bool smallMotor);
-	void Init();
 	void SetIntercepted(bool intercepted);
 
 	s32 AddLddPad();
@@ -35,9 +35,11 @@ public:
 	static std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
 	static void InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler);
 
+	static auto constexpr thread_name = "Pad Thread"sv;
+
 protected:
+	void Init();
 	void InitLddPad(u32 handle);
-	void ThreadFunc();
 
 	// List of all handlers
 	std::map<pad_handler, std::shared_ptr<PadHandlerBase>> handlers;
@@ -49,8 +51,6 @@ protected:
 	PadInfo m_info{ 0, 0, false };
 	std::array<std::shared_ptr<Pad>, CELL_PAD_MAX_PORT_NUM> m_pads;
 
-	std::shared_ptr<std::thread> thread;
-
 	u32 num_ldd_pad = 0;
 };
 
@@ -61,7 +61,6 @@ namespace pad
 	extern std::string g_title_id;
 	extern atomic_t<bool> g_enabled;
 	extern atomic_t<bool> g_reset;
-	extern atomic_t<bool> g_active;
 
 	static inline class pad_thread* get_current_handler(bool relaxed = false)
 	{
@@ -81,7 +80,7 @@ namespace pad
 	static inline void reset(std::string_view title_id)
 	{
 		g_title_id = title_id;
-		g_reset = g_active.load();
+		g_reset = true;
 	}
 
 	static inline void SetIntercepted(bool intercepted)

@@ -7,6 +7,7 @@
 #include "Utilities/File.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/system_progress.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
 #include "Emu/RSX/rsx_utils.h"
@@ -348,7 +349,12 @@ void gs_frame::close()
 {
 	Emu.CallAfter([this]()
 	{
-		QWindow::hide(); // Workaround
+		if (!(+g_progr))
+		{
+			// Hide the dialog before stopping if no progress bar is being shown.
+			// Otherwise users might think that the game softlocked if stopping takes too long.
+			QWindow::hide();
+		}
 
 		if (!Emu.IsStopped())
 		{
@@ -763,7 +769,7 @@ bool gs_frame::event(QEvent* ev)
 			Emu.CallAfter([this, &result, &called]()
 			{
 				m_gui_settings->ShowConfirmationBox(tr("Exit Game?"),
-					tr("Do you really want to exit the game?\n\nAny unsaved progress will be lost!\n"),
+					tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>"),
 					gui::ib_confirm_exit, &result, nullptr);
 
 				called = true;

@@ -107,7 +107,9 @@ namespace rsx
 
 	u8 fragment_texture::gamma() const
 	{
-		return ((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 20) & 0xf);
+		// Converts gamma mask from RGBA to ARGB for compatibility with other per-channel mask registers
+		const u32 rgba8_ctrl = ((registers[NV4097_SET_TEXTURE_ADDRESS + (m_index * 8)] >> 20) & 0xf);
+		return ((rgba8_ctrl << 1) & 0xF) | (rgba8_ctrl >> 3);
 	}
 
 	u8 fragment_texture::aniso_bias() const

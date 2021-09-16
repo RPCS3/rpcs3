@@ -216,3 +216,11 @@ enum class perf_graph_detail_level
 	show_one_percent_avg,
 	show_all
 };
+
+enum class zcull_precision_level
+{
+	precise,
+	approximate,
+	relaxed,
+	undefined
+};

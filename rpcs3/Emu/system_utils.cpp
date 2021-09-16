@@ -39,7 +39,7 @@ namespace rpcs3::utils
 		{
 			if (!was_silenced)
 			{
-				sys_log.notice("Disabling logging...");
+				sys_log.success("Disabling logging! Do not create issues on GitHub or on the forums while logging is disabled.");
 			}
 
 			logs::silence();
@@ -51,7 +51,7 @@ namespace rpcs3::utils
 
 			if (was_silenced)
 			{
-				sys_log.notice("Logging enabled");
+				sys_log.success("Logging enabled");
 			}
 		}
 
@@ -307,16 +307,9 @@ namespace rpcs3::utils
 #endif
 	}
 
-	std::string get_custom_config_path(const std::string& title_id, bool get_deprecated_path)
+	std::string get_custom_config_path(const std::string& title_id)
 	{
-		std::string path;
-
-		if (get_deprecated_path)
-			path = fs::get_config_dir() + "data/" + title_id + "/config.yml";
-		else
-			path = get_custom_config_dir() + "config_" + title_id + ".yml";
-
-		return path;
+		return get_custom_config_dir() + "config_" + title_id + ".yml";
 	}
 
 	std::string get_input_config_root()

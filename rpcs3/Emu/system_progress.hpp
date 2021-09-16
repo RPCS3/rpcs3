@@ -9,6 +9,7 @@ extern atomic_t<u32> g_progr_fdone;
 extern atomic_t<u32> g_progr_ptotal;
 extern atomic_t<u32> g_progr_pdone;
 extern atomic_t<bool> g_system_progress_canceled;
+extern atomic_t<bool> g_system_progress_stopping;
 
 // Initialize progress dialog (can be recursive)
 class scoped_progress_dialog final
@@ -37,5 +38,5 @@ struct progress_dialog_server
 	void operator()();
 	~progress_dialog_server();
 
-	static auto constexpr thread_name = "Progress Dialog Server"sv;
+	static constexpr auto thread_name = "Progress Dialog Server"sv;
 };
