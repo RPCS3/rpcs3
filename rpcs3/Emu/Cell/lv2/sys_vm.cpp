@@ -116,7 +116,7 @@ error_code sys_vm_unmap(ppu_thread& ppu, u32 addr)
 	const auto vmo = idm::withdraw<sys_vm_t>(sys_vm_t::find_id(addr), [&](sys_vm_t& vmo)
 	{
 		// Free block
-		ensure(vm::unmap(addr));
+		ensure(vm::unmap(addr).second);
 
 		// Return memory
 		vmo.ct->used -= vmo.psize;

@@ -40,6 +40,7 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		case patch_type::alloc: return "alloc";
 		case patch_type::code_alloc: return "calloc";
 		case patch_type::jump: return "jump";
+		case patch_type::jump_link: return "jumpl";
 		case patch_type::load: return "load";
 		case patch_type::byte: return "byte";
 		case patch_type::le16: return "le16";
@@ -551,16 +552,13 @@ void patch_engine::append_title_patches(const std::string& title_id)
 }
 
 void ppu_register_range(u32 addr, u32 size);
-void ppu_register_function_at(u32 addr, u32 size, u64 ptr);
-bool ppu_form_branch_to_code(u32 entry, u32 target);
+bool ppu_form_branch_to_code(u32 entry, u32 target, bool link = false);
 
 void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
 {
 	if (ptr && ptr->flags & (1ull << 62))
 	{
-		const u32 addr = ptr->addr;
-		ptr.reset();
-		vm::unmap(addr, true);
+		vm::unmap(0, true, &ptr);
 	}
 }
 
@@ -581,24 +579,22 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 			// Allocate map if needed, if allocated flags will indicate that bit 62 is set (unique identifier)
 			auto alloc_map = vm::reserve_map(vm::any, alloc_at & -0x10000, utils::align(alloc_size, 0x10000), vm::page_size_64k | vm::preallocated | (1ull << 62));
 
-			u64 flags = vm::page_readable;
+			u64 flags = vm::alloc_unwritable;
 
 			switch (p.offset % patch_engine::mem_protection::mask)
 			{
-			case patch_engine::mem_protection::wx: flags |= vm::page_writable + vm::page_executable; break;
+			case patch_engine::mem_protection::wx: flags = vm::alloc_executable; break;
 			case patch_engine::mem_protection::ro: break;
-			case patch_engine::mem_protection::rx: flags |= vm::page_executable; break;
-			case patch_engine::mem_protection::rw: flags |= vm::page_writable; break;
+			case patch_engine::mem_protection::rx: flags |= vm::alloc_executable; break;
+			case patch_engine::mem_protection::rw: flags &= ~vm::alloc_unwritable; break;
 			default: ensure(false);
 			}
 
 			if (alloc_map)
 			{
-				if ((p.alloc_addr = alloc_map->falloc(alloc_at, alloc_size)))
+				if ((p.alloc_addr = alloc_map->falloc(alloc_at, alloc_size, nullptr, flags)))
 				{
-					vm::page_protect(alloc_at, alloc_size, 0, flags, flags ^ (vm::page_writable + vm::page_readable + vm::page_executable));
-
-					if (flags & vm::page_executable)
+					if (flags & vm::alloc_executable)
 					{
 						ppu_register_range(alloc_at, alloc_size);
 					}
@@ -689,14 +685,14 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value + 1) * 4, 0x10000);
 
 			// Always executable
-			u64 flags = vm::page_executable | vm::page_readable;
+			u64 flags = vm::alloc_executable | vm::alloc_unwritable;
 
 			switch (p.offset % patch_engine::mem_protection::mask)
 			{
 			case patch_engine::mem_protection::rw:
 			case patch_engine::mem_protection::wx:
 			{
-				flags |= vm::page_writable;
+				flags &= ~vm::alloc_unwritable;
 				break;
 			}
 			case patch_engine::mem_protection::ro:
@@ -726,7 +722,6 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 
 			// Register code
 			ppu_register_range(addr, alloc_size);
-			ppu_register_function_at(addr, static_cast<u32>(p.value.long_value), 0);
 
 			// Write branch to code
 			ppu_form_branch_to_code(out_branch, addr);
@@ -741,12 +736,13 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 			break;
 		}
 		case patch_type::jump:
+		case patch_type::jump_link:
 		{
 			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
 			const u32 dest = static_cast<u32>(p.value.long_value);
 
 			// Allow only if points to a PPU executable instruction
-			if (!ppu_form_branch_to_code(out_branch, dest))
+			if (!ppu_form_branch_to_code(out_branch, dest, p.type == patch_type::jump_link))
 			{
 				continue;
 			}

@@ -48,6 +48,25 @@ void fmt_class_string<spu_group_status>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<spu_stop_syscall>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](spu_stop_syscall value)
+	{
+		switch (value)
+		{
+		case SYS_SPU_THREAD_STOP_YIELD: return "sys_spu_thread_yield";
+		case SYS_SPU_THREAD_STOP_GROUP_EXIT: return "sys_spu_thread_group_exit";
+		case SYS_SPU_THREAD_STOP_THREAD_EXIT: return "sys_spu_thread_thread_exit";
+		case SYS_SPU_THREAD_STOP_RECEIVE_EVENT: return "sys_spu_thread_receive_event";
+		case SYS_SPU_THREAD_STOP_TRY_RECEIVE_EVENT: return "sys_spu_thread_tryreceive_event";
+		case SYS_SPU_THREAD_STOP_SWITCH_SYSTEM_MODULE: return "sys_spu_thread_switch_system_module";
+		}
+		
+		return unknown;
+	});
+}
+
 void sys_spu_image::load(const fs::file& stream)
 {
 	const spu_exec_object obj{stream, 0, elf_opt::no_sections + elf_opt::no_data};

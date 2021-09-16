@@ -3374,10 +3374,22 @@ namespace rsx
 		{
 			ensure(sink);
 
+			auto scale_result = [](u32 value)
+			{
+				const auto scale = rsx::get_resolution_scale_percent();
+				const auto result = static_cast<u64>(value * 10000) / (scale * scale);
+				return std::max<u32>(1u, result);
+			};
+
 			switch (type)
 			{
 			case CELL_GCM_ZPASS_PIXEL_CNT:
-				value = value ? u16{umax} : 0;
+				if (value)
+				{
+					value = (g_cfg.video.precise_zpass_count) ?
+						scale_result(value) :
+						u16{ umax };
+				}
 				break;
 			case CELL_GCM_ZCULL_STATS3:
 				value = value ? 0 : u16{umax};
@@ -3470,7 +3482,9 @@ namespace rsx
 						ensure(query->pending);
 
 						const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
-						if (implemented && !result && query->num_draws)
+						const bool have_result = result && !g_cfg.video.precise_zpass_count;
+
+						if (implemented && !have_result && query->num_draws)
 						{
 							get_occlusion_query_result(query);
 
@@ -3622,55 +3636,30 @@ namespace rsx
 					ensure(query->pending);
 
 					const bool implemented = (writer.type == CELL_GCM_ZPASS_PIXEL_CNT || writer.type == CELL_GCM_ZCULL_STATS3);
-					if (force_read)
-					{
-						if (implemented && !result && query->num_draws)
-						{
-							get_occlusion_query_result(query);
+					const bool have_result = result && !g_cfg.video.precise_zpass_count;
 
-							if (query->result)
-							{
-								result += query->result;
-								if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
-								{
-									m_statistics_map[writer.counter_tag] += query->result;
-								}
-							}
-						}
-						else
+					if (!implemented || !query->num_draws || have_result)
+					{
+						discard_occlusion_query(query);
+					}
+					else if (force_read || check_occlusion_query_status(query))
+					{
+						get_occlusion_query_result(query);
+
+						if (query->result)
 						{
-							//No need to read this
-							discard_occlusion_query(query);
+							result += query->result;
+							if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
+							{
+								m_statistics_map[writer.counter_tag] += query->result;
+							}
 						}
 					}
 					else
 					{
-						if (implemented && !result && query->num_draws)
-						{
-							//Maybe we get lucky and results are ready
-							if (check_occlusion_query_status(query))
-							{
-								get_occlusion_query_result(query);
-								if (query->result)
-								{
-									result += query->result;
-									if (query->data_type & CELL_GCM_ZPASS_PIXEL_CNT)
-									{
-										m_statistics_map[writer.counter_tag] += query->result;
-									}
-								}
-							}
-							else
-							{
-								//Too early; abort
-								break;
-							}
-						}
-						else
-						{
-							//Not necessary to read the result anymore
-							discard_occlusion_query(query);
-						}
+						// Too early; abort
+						ensure(!force_read && implemented);
+						break;
 					}
 
 					free_query(query);

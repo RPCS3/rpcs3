@@ -312,7 +312,7 @@ void main_window::OnPlayOrPause()
 	{
 		if (m_selected_game)
 		{
-			Boot(m_selected_game->info.path, m_selected_game->info.serial, false, false, false);
+			Boot(m_selected_game->info.path, m_selected_game->info.serial);
 		}
 		else if (const auto path = Emu.GetBoot(); !path.empty())
 		{
@@ -377,7 +377,7 @@ void main_window::show_boot_error(game_boot_result status)
 	msg.exec();
 }
 
-void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool add_only, bool force_global_config)
+void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool add_only, const std::string& config_path)
 {
 	if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_boot))
 	{
@@ -389,7 +389,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	Emu.SetForceBoot(true);
 	Emu.Stop();
 
-	if (const auto error = Emu.BootGame(path, title_id, direct, add_only, force_global_config); error != game_boot_result::no_errors)
+	if (const auto error = Emu.BootGame(path, title_id, direct, add_only, config_path); error != game_boot_result::no_errors)
 	{
 		gui_log.error("Boot failed: reason: %s, path: %s", error, path);
 		show_boot_error(error);
@@ -1938,6 +1938,11 @@ void main_window::CreateConnects()
 
 	connect(ui->addGamesAct, &QAction::triggered, this, [this]()
 	{
+		if (!m_gui_settings->GetBootConfirmation(this))
+		{
+			return;
+		}
+
 		QStringList paths;
 
 		// Only select one folder for now
@@ -2477,9 +2482,9 @@ void main_window::CreateDockWindows()
 		m_selected_game = game;
 	});
 
-	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, bool force_global_config)
+	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, const std::string& config_path)
 	{
-		Boot(game->info.path, game->info.serial, false, false, force_global_config);
+		Boot(game->info.path, game->info.serial, false, false, config_path);
 	});
 
 	connect(m_game_list_frame, &game_list_frame::NotifyEmuSettingsChange, this, &main_window::NotifyEmuSettingsChange);
@@ -2661,6 +2666,8 @@ void main_window::CreateFirmwareCache()
 		return;
 	}
 
+	Emu.SetForceBoot(true);
+	Emu.Stop();
 	Emu.SetForceBoot(true);
 
 	if (const game_boot_result error = Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys", "", true);
@@ -2888,6 +2895,10 @@ void main_window::dropEvent(QDropEvent* event)
 		{
 			return;
 		}
+
+		Emu.SetForceBoot(true);
+		Emu.Stop();
+
 		if (const auto error = Emu.BootGame(sstr(drop_paths.first()), "", true); error != game_boot_result::no_errors)
 		{
 			gui_log.error("Boot failed: reason: %s, path: %s", error, sstr(drop_paths.first()));
