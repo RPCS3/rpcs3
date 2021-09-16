@@ -1903,7 +1903,9 @@ std::set<std::string> Emulator::GetGameDirs() const
 
 bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) const
 {
-	return (GetCallbacks().resolve_path(path) + '/').starts_with(GetCallbacks().resolve_path(dir) + '/');
+	const std::string dir_path = GetCallbacks().resolve_path(dir);
+
+	return !dir_path.empty() && (GetCallbacks().resolve_path(path) + '/').starts_with(dir_path + '/');
 };
 
 const std::string& Emulator::GetFakeCat() const
