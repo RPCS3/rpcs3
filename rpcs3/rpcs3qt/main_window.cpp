@@ -52,6 +52,7 @@
 
 #include "Loader/PUP.h"
 #include "Loader/TAR.h"
+#include "Loader/PSF.h"
 #include "Loader/mself.hpp"
 
 #include "Utilities/Thread.h"
@@ -2796,6 +2797,15 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 
 			drop_type = drop_type::drop_pup;
 		}
+		else if (info.fileName().toLower() == "param.sfo")
+		{
+			if (drop_type != drop_type::drop_psf && drop_type != drop_type::drop_error)
+			{
+				return drop_type::drop_error;
+			}
+
+			drop_type = drop_type::drop_psf;
+		}
 		else if (info.suffix().toLower() == "pkg")
 		{
 			if (drop_type != drop_type::drop_pkg && drop_type != drop_type::drop_error)
@@ -2883,6 +2893,23 @@ void main_window::dropEvent(QDropEvent* event)
 			// Refresh game list since we probably unlocked some games now.
 			m_game_list_frame->Refresh(true);
 		}
+		break;
+	}
+	case drop_type::drop_psf: // Display PARAM.SFO content
+	{
+		for (const auto& psf : drop_paths)
+		{
+			const std::string psf_path = sstr(psf);
+			std::string info = fmt::format("Dropped PARAM.SFO '%s':\n\n%s", psf_path, psf::load(psf_path).sfo);
+
+			gui_log.success("%s", info);
+			info.erase(info.begin(), info.begin() + info.find_first_of('\''));
+
+			QMessageBox mb(QMessageBox::Information, tr("PARAM.SFO Information"), qstr(info), QMessageBox::Ok, this);
+			mb.setTextInteractionFlags(Qt::TextSelectableByMouse);
+			mb.exec();
+		}
+
 		break;
 	}
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
