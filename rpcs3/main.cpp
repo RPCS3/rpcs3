@@ -241,6 +241,7 @@ constexpr auto arg_user_id    = "user-id";
 constexpr auto arg_installfw  = "installfw";
 constexpr auto arg_installpkg = "installpkg";
 constexpr auto arg_commit_db  = "get-commit-db";
+constexpr auto arg_timer      = "high-res-timer";
 
 int find_arg(std::string arg, int& argc, char* argv[])
 {
@@ -534,6 +535,7 @@ int main(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_commit_db, "Update commits.lst cache. Optional arguments: <path> <sha>"));
+	parser.addOption(QCommandLineOption(arg_timer, "Enable high resolution timer for better performance (windows)", "enabled", "1"));
 	parser.process(app->arguments());
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
@@ -828,12 +830,33 @@ int main(int argc, char** argv)
 	QTimer* dummy_timer = new QTimer(app.data());
 	dummy_timer->start(13);
 
+	ULONG min_res, max_res, orig_res;
+	bool got_timer_resolution = NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0;
+
 	// Set 0.5 msec timer resolution for best performance
 	// - As QT5 timers (QTimer) sets the timer resolution to 1 msec, override it here.
-	ULONG min_res, max_res, orig_res, new_res;
-	if (NtQueryTimerResolution(&min_res, &max_res, &orig_res) == 0)
+	if (parser.value(arg_timer).toStdString() == "1")
 	{
-		NtSetTimerResolution(max_res, TRUE, &new_res);
+		ULONG new_res;
+		if (got_timer_resolution && NtSetTimerResolution(max_res, TRUE, &new_res) == 0)
+		{
+			NtSetTimerResolution(max_res, TRUE, &new_res);
+			sys_log.notice("New timer resolution: %d us (old=%d us, min=%d us, max=%d us)", new_res / 10, orig_res / 10, min_res / 10, max_res / 10);
+			got_timer_resolution = false; // Invalidate for log message later
+		}
+		else
+		{
+			sys_log.error("Failed to set timer resolution!");
+		}
+	}
+	else
+	{
+		sys_log.warning("High resolution timer disabled!");
+	}
+
+	if (got_timer_resolution)
+	{
+		sys_log.notice("Timer resolution: %d us (min=%d us, max=%d us)", orig_res / 10, min_res / 10, max_res / 10);
 	}
 #endif
 
