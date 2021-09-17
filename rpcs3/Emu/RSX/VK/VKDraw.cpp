@@ -158,7 +158,6 @@ void VKGSRender::load_texture_env()
 		return false;
 	};
 
-	vk::clear_status_interrupt(vk::out_of_memory);
 	std::lock_guard lock(m_sampler_mutex);
 
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
@@ -368,8 +367,10 @@ void VKGSRender::load_texture_env()
 	}
 }
 
-void VKGSRender::bind_texture_env()
+bool VKGSRender::bind_texture_env()
 {
+	bool out_of_memory = false;
+
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
@@ -386,7 +387,7 @@ void VKGSRender::bind_texture_env()
 				//Requires update, copy subresource
 				if (!(view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc)))
 				{
-					vk::raise_status_interrupt(vk::out_of_memory);
+					out_of_memory = true;
 				}
 			}
 			else
@@ -516,7 +517,7 @@ void VKGSRender::bind_texture_env()
 		{
 			if (!(image_ptr = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc)))
 			{
-				vk::raise_status_interrupt(vk::out_of_memory);
+				out_of_memory = true;
 			}
 		}
 
@@ -587,14 +588,16 @@ void VKGSRender::bind_texture_env()
 			::glsl::program_domain::glsl_vertex_program,
 			m_current_frame->descriptor_set);
 	}
+
+	return out_of_memory;
 }
 
-void VKGSRender::bind_interpreter_texture_env()
+bool VKGSRender::bind_interpreter_texture_env()
 {
 	if (current_fp_metadata.referenced_textures_mask == 0)
 	{
 		// Nothing to do
-		return;
+		return false;
 	}
 
 	std::array<VkDescriptorImageInfo, 68> texture_env;
@@ -623,6 +626,8 @@ void VKGSRender::bind_interpreter_texture_env()
 	std::advance(end, 16);
 	std::fill(start, end, fallback);
 
+	bool out_of_memory = false;
+
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
@@ -639,7 +644,7 @@ void VKGSRender::bind_interpreter_texture_env()
 				//Requires update, copy subresource
 				if (!(view = m_texture_cache.create_temporary_subresource(*m_current_command_buffer, sampler_state->external_subresource_desc)))
 				{
-					vk::raise_status_interrupt(vk::out_of_memory);
+					out_of_memory = true;
 				}
 			}
 			else
@@ -706,6 +711,7 @@ void VKGSRender::bind_interpreter_texture_env()
 	}
 
 	m_shader_interpreter.update_fragment_textures(texture_env, m_current_frame->descriptor_set);
+	return out_of_memory;
 }
 
 void VKGSRender::emit_geometry(u32 sub_index)
@@ -985,20 +991,20 @@ void VKGSRender::end()
 		ev->gpu_wait(*m_current_command_buffer);
 	}
 
-	int binding_attempts = 0;
-	while (binding_attempts++ < 3)
+	for (int binding_attempts = 0; binding_attempts < 3; binding_attempts++)
 	{
+		bool out_of_memory;
 		if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
 		{
-			bind_texture_env();
+			out_of_memory = bind_texture_env();
 		}
 		else
 		{
-			bind_interpreter_texture_env();
+			out_of_memory = bind_interpreter_texture_env();
 		}
 
-		// TODO: Replace OOO tracking with ref-counting to simplify the logic
-		if (!vk::test_status_interrupt(vk::out_of_memory))
+		// TODO: Replace OOM tracking with ref-counting to simplify the logic
+		if (!out_of_memory)
 		{
 			break;
 		}
@@ -1013,11 +1019,6 @@ void VKGSRender::end()
 		{
 			// Reload texture env if referenced objects were invalidated during OOO handling.
 			load_texture_env();
-		}
-		else
-		{
-			// Nothing to reload, only texture cache references held. Simply attempt to bind again.
-			vk::clear_status_interrupt(vk::out_of_memory);
 		}
 	}
 
