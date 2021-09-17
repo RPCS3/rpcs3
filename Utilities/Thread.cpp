@@ -1231,19 +1231,15 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 		bool handled = rsx::g_access_violation_handler(addr, is_writing);
 
+		if (cpu && (cpu->state += cpu_flag::temp, cpu->test_stopped()))
+		{
+			//
+		}
+
 		if (handled)
 		{
 			g_tls_fault_rsx++;
-			if (cpu && cpu->test_stopped())
-			{
-				//
-			}
-
 			return true;
-		}
-
-		if (cpu && cpu->test_stopped())
-		{
 		}
 	}
 
@@ -1389,11 +1385,6 @@ bool handle_access_violation(u32 addr, bool is_writing, x64_context* context) no
 
 	if (vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable))
 	{
-		if (cpu && cpu->test_stopped())
-		{
-			//
-		}
-
 		return true;
 	}
 
