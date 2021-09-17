@@ -3172,7 +3172,7 @@ bool spu_thread::process_mfc_cmd()
 		mfc_last_timestamp = 0;
 
 		// Process MFC commands
-		if (!test_stopped())
+		if (test_stopped())
 		{
 			return false;
 		}
