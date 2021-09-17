@@ -1027,6 +1027,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->disableOnDiskShaderCache, emu_settings_type::DisableOnDiskShaderCache);
 	SubscribeTooltip(ui->disableOnDiskShaderCache, tooltips.settings.disable_on_disk_shader_cache);
 
+	ui->mfcDelayCommand->setChecked(m_emu_settings->GetSetting(emu_settings_type::MFCCommandsShuffling) == "1");
+	SubscribeTooltip(ui->mfcDelayCommand, tooltips.settings.mfc_delay_command);
+	connect(ui->mfcDelayCommand, &QCheckBox::stateChanged, [&](int val)
+	{
+		const std::string str = val != Qt::Unchecked ? "1" : "0";
+		m_emu_settings->SetSetting(emu_settings_type::MFCCommandsShuffling, str);
+	});
+
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);
