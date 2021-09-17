@@ -12,6 +12,8 @@
 #include "RSXFIFO.h"
 #include "RSXOffload.h"
 #include "rsx_utils.h"
+#include "Common/bitfield.hpp"
+#include "Common/profiling_timer.hpp"
 #include "Common/texture_cache_types.h"
 #include "Program/RSXVertexProgram.h"
 #include "Program/RSXFragmentProgram.h"

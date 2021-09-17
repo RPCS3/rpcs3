@@ -3,7 +3,6 @@
 #include "Common/BufferUtils.h"
 #include "RSXOffload.h"
 #include "RSXThread.h"
-#include "rsx_utils.h"
 
 #include <thread>
 #include "util/asm.hpp"

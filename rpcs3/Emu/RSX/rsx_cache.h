@@ -2,13 +2,13 @@
 #include "Utilities/File.h"
 #include "Utilities/lockless.h"
 #include "Utilities/Thread.h"
-#include "Program/ProgramStateCache.h"
+#include "Common/bitfield.hpp"
 #include "Emu/System.h"
 #include "Emu/cache_utils.hpp"
+#include "Program/ProgramStateCache.h"
 #include "Common/texture_cache_checker.h"
 #include "Overlays/Shaders/shader_loading_dialog.h"
 
-#include "rsx_utils.h"
 #include <chrono>
 #include <unordered_map>
 

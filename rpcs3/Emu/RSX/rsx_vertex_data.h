@@ -2,8 +2,8 @@
 
 #include "gcm_enums.h"
 
+#include "Common/simple_array.hpp"
 #include "util/types.hpp"
-#include "rsx_utils.h"
 
 namespace rsx
 {
