@@ -160,7 +160,7 @@ namespace vk
 		}
 
 		synchronized = true;
-		sync_timestamp = get_system_time();
+		sync_timestamp = rsx::get_shared_tag();
 	}
 
 	void texture_cache::on_section_destroyed(cached_texture_section& tex)

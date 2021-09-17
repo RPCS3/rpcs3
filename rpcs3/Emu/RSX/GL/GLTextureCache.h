@@ -235,7 +235,7 @@ namespace gl
 
 			m_fence.reset();
 			synchronized = true;
-			sync_timestamp = get_system_time();
+			sync_timestamp = rsx::get_shared_tag();
 		}
 
 		void copy_texture(gl::command_context& cmd, bool miss)
