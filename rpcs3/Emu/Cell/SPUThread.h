@@ -791,7 +791,7 @@ public:
 	bool do_list_transfer(spu_mfc_cmd& args);
 	void do_putlluc(const spu_mfc_cmd& args);
 	bool do_putllc(const spu_mfc_cmd& args);
-	void do_mfc(bool can_escape = true);
+	void do_mfc(bool can_escape = true, bool must_finish = true);
 	u32 get_mfc_completed() const;
 
 	bool process_mfc_cmd();
