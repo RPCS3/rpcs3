@@ -513,7 +513,7 @@ namespace rsx
 		method_registers.current_draw_clause.post_execute_cleanup();
 
 		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
-		ROP_sync_timestamp = get_system_time();
+		ROP_sync_timestamp = rsx::get_shared_tag();
 
 		for (auto & push_buf : vertex_push_buffers)
 		{
