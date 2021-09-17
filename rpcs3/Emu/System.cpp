@@ -1401,13 +1401,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				Run(true);
 			}
 		}
-		else
-		{
-			ensure(m_state == system_state::paused);
-			Resume(); // Remove paused flag from threads
-			m_state = system_state::ready;
-			GetCallbacks().on_ready();
-		}
 
 		return game_boot_result::no_errors;
 	}
