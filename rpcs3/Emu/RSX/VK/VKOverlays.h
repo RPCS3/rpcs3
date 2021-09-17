@@ -1,6 +1,8 @@
 #pragma once
 
+#include "../Common/simple_array.hpp"
 #include "../Overlays/overlay_controls.h"
+
 #include "VKProgramPipeline.h"
 #include "VKHelpers.h"
 

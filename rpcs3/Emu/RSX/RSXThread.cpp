@@ -9,7 +9,6 @@
 #include "Common/surface_store.h"
 #include "Capture/rsx_capture.h"
 #include "rsx_methods.h"
-#include "rsx_utils.h"
 #include "gcm_printing.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_time.h"

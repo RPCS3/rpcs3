@@ -1990,6 +1990,15 @@
     <ClInclude Include="Emu\vfs_config.h">
       <Filter>Emu</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\simple_array.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\profiling_timer.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\bitfield.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl">
