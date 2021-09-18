@@ -19,6 +19,13 @@ private:
 	// This message is empty if there is no download available
 	QString m_update_message;
 
+	struct changelog_data
+	{
+		QString version;
+		QString title;
+	};
+	std::vector<changelog_data> m_changelog;
+
 	std::string m_request_url;
 	std::string m_expected_hash;
 	u64 m_expected_size = 0;

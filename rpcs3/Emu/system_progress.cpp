@@ -15,6 +15,9 @@ atomic_t<u32> g_progr_pdone{0};
 // For Batch PPU Compilation
 atomic_t<bool> g_system_progress_canceled{false};
 
+// For showing feedback while stopping emulation
+atomic_t<bool> g_system_progress_stopping{false};
+
 namespace rsx::overlays
 {
 	class progress_dialog : public message_dialog
@@ -26,14 +29,17 @@ namespace rsx::overlays
 
 void progress_dialog_server::operator()()
 {
-	while (thread_ctrl::state() != thread_state::aborting)
+	std::shared_ptr<rsx::overlays::progress_dialog> native_dlg;
+	g_system_progress_stopping = false;
+
+	while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
 	{
 		// Wait for the start condition
 		auto text0 = +g_progr;
 
 		while (!text0)
 		{
-			if (thread_ctrl::state() == thread_state::aborting)
+			if (g_system_progress_stopping || thread_ctrl::state() == thread_state::aborting)
 			{
 				break;
 			}
@@ -42,7 +48,7 @@ void progress_dialog_server::operator()()
 			text0 = +g_progr;
 		}
 
-		if (thread_ctrl::state() == thread_state::aborting)
+		if (g_system_progress_stopping || thread_ctrl::state() == thread_state::aborting)
 		{
 			break;
 		}
@@ -52,7 +58,6 @@ void progress_dialog_server::operator()()
 		// Initialize message dialog
 		bool skip_this_one = false; // Workaround: do not open a progress dialog if there is already a cell message dialog open.
 		std::shared_ptr<MsgDialogBase> dlg;
-		std::shared_ptr<rsx::overlays::progress_dialog> native_dlg;
 
 		if (const auto renderer = rsx::get_current_renderer();
 		    renderer && renderer->is_inited)
@@ -104,7 +109,7 @@ void progress_dialog_server::operator()()
 		auto text1 = text0;
 
 		// Update progress
-		while (thread_ctrl::state() != thread_state::aborting)
+		while (!g_system_progress_stopping && thread_ctrl::state() != thread_state::aborting)
 		{
 			const auto text_new = g_progr.load();
 
@@ -168,7 +173,7 @@ void progress_dialog_server::operator()()
 			std::this_thread::sleep_for(10ms);
 		}
 
-		if (thread_ctrl::state() == thread_state::aborting)
+		if (g_system_progress_stopping || thread_ctrl::state() == thread_state::aborting)
 		{
 			break;
 		}
@@ -195,6 +200,12 @@ void progress_dialog_server::operator()()
 		g_progr_ftotal -= ftotal;
 		g_progr_ptotal -= ptotal;
 		g_progr_ptotal.notify_all();
+	}
+
+	if (native_dlg && g_system_progress_stopping)
+	{
+		native_dlg->set_text("Stopping. Please wait...");
+		native_dlg->refresh();
 	}
 }
 

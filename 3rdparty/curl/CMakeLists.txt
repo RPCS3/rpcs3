@@ -16,4 +16,7 @@ else()
 		set(CURL_STATIC_CRT ON CACHE BOOL "Use static crt to build curl" FORCE)
 	endif()
 	add_subdirectory(curl EXCLUDE_FROM_ALL)
+
+	set_property(TARGET libcurl PROPERTY FOLDER "3rdparty/")
+
 endif()

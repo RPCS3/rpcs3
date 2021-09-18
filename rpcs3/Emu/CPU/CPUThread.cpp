@@ -469,7 +469,7 @@ void cpu_thread::operator()()
 		cpu_thread* _cpu = get_current_cpu_thread();
 
 		// Wait flag isn't set asynchronously so this should be thread-safe
-		if (progress == 0 && cpu_flag::wait - _cpu->state)
+		if (progress == 0 && _cpu->state.none_of(cpu_flag::wait + cpu_flag::temp))
 		{
 			// Operation just started and syscall is imminent
 			_cpu->state += cpu_flag::wait + cpu_flag::temp;
@@ -737,6 +737,12 @@ bool cpu_thread::check_state() noexcept
 			{
 				// Restore thread in the suspend list
 				cpu_counter::add(this);
+			}
+
+			if ((state0 & (cpu_flag::pending + cpu_flag::temp)) == cpu_flag::pending)
+			{
+				// Execute pending work
+				cpu_work();
 			}
 
 			if (retval)

@@ -156,7 +156,7 @@ namespace fs
 	shared_ptr<device_base> set_virtual_device(const std::string& name, shared_ptr<device_base> device);
 
 	// Try to get parent directory (returns empty string on failure)
-	std::string get_parent_dir(const std::string& path);
+	std::string get_parent_dir(const std::string& path, u32 levels = 1);
 
 	// Get file information
 	bool stat(const std::string& path, stat_t& info);

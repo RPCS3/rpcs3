@@ -117,7 +117,6 @@ void Emulator::Init(bool add_only)
 	}
 
 	g_fxo->reset();
-	g_fxo->need<named_thread<progress_dialog_server>>();
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
@@ -133,10 +132,12 @@ void Emulator::Init(bool add_only)
 	g_cfg_defaults = g_cfg.to_string();
 
 	// Load config file
-	if (m_config_path.find_first_of('/') != umax)
+	if (m_config_path.find_first_of(fs::delim) != umax)
 	{
 		if (const fs::file cfg_file{m_config_path, fs::read + fs::create})
 		{
+			sys_log.notice("Applying config override: %s", m_config_path);
+
 			if (!g_cfg.from_string(cfg_file.to_string()))
 			{
 				sys_log.fatal("Failed to apply config: %s. Proceeding with regular configuration.", m_config_path);
@@ -162,6 +163,8 @@ void Emulator::Init(bool add_only)
 
 		if (const fs::file cfg_file{cfg_path, fs::read + fs::create})
 		{
+			sys_log.notice("Applying global config: %s", cfg_path);
+
 			if (!g_cfg.from_string(cfg_file.to_string()))
 			{
 				sys_log.fatal("Failed to apply global config: %s", cfg_path);
@@ -231,6 +234,7 @@ void Emulator::Init(bool add_only)
 	make_path_verbose(fs::get_cache_dir() + "shaderlog/");
 	make_path_verbose(fs::get_cache_dir() + "spu_progs/");
 	make_path_verbose(fs::get_config_dir() + "captures/");
+	make_path_verbose(patch_engine::get_patches_path());
 
 	if (add_only)
 	{
@@ -308,9 +312,6 @@ void Emulator::Init(bool add_only)
 	// Limit cache size
 	if (g_cfg.vfs.limit_cache_size)
 		rpcs3::cache::limit_cache_size();
-
-	// Initialize patch engine
-	g_fxo->init<patch_engine>()->append_global_patches();
 }
 
 void Emulator::SetUsr(const std::string& user)
@@ -415,6 +416,9 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	vm::init();
 	g_fxo->init(false);
 
+	// Initialize progress dialog
+	g_fxo->init<named_thread<progress_dialog_server>>();
+
 	// PS3 'executable'
 	m_state = system_state::ready;
 	GetCallbacks().on_ready();
@@ -516,6 +520,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 	{
 		m_title_id = title_id;
 	}
+
+	sys_log.notice("Selected config: %s", m_config_path);
 
 	{
 		Init(add_only);
@@ -643,22 +649,28 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		// Set RTM usage
 		g_use_rtm = utils::has_rtm() && ((utils::has_mpx() && g_cfg.core.enable_TSX == tsx_usage::enabled) || g_cfg.core.enable_TSX == tsx_usage::forced);
 
-		// Log some extra info in case of boot
 		if (!add_only)
 		{
+			// Log some extra info in case of boot
 #if defined(_WIN32) || defined(HAVE_VULKAN)
 			if (g_cfg.video.renderer == video_renderer::vulkan)
 			{
 				sys_log.notice("Vulkan SDK Revision: %d", VK_HEADER_VERSION);
 			}
 #endif
-
 			sys_log.notice("Used configuration:\n%s\n", g_cfg.to_string());
 
 			if (g_use_rtm && !utils::has_mpx())
 			{
 				sys_log.warning("TSX forced by User");
 			}
+
+			// Initialize patch engine
+			g_fxo->need<patch_engine>();
+
+			// Load patches from different locations
+			g_fxo->get<patch_engine>().append_global_patches();
+			g_fxo->get<patch_engine>().append_title_patches(m_title_id);
 		}
 
 		if (g_use_rtm)
@@ -669,12 +681,26 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			g_rtm_tx_limit2 = static_cast<u64>(g_cfg.core.tx_limit2_ns * _1ns);
 		}
 
-		// Load patches from different locations
-		g_fxo->get<patch_engine>().append_title_patches(m_title_id);
-
 		// Mount all devices
 		const std::string emu_dir = rpcs3::utils::get_emu_dir();
-		std::string bdvd_dir = g_cfg.vfs.dev_bdvd;
+		std::string bdvd_dir;
+
+		if (!add_only)
+		{
+			bdvd_dir = g_cfg.vfs.dev_bdvd;
+
+			if (!bdvd_dir.empty() && bdvd_dir.back() != fs::delim[0] && bdvd_dir.back() != fs::delim[1])
+			{
+				bdvd_dir.push_back('/');
+			}
+
+			if (!bdvd_dir.empty() && !fs::is_file(bdvd_dir + "PS3_DISC.SFB"))
+			{
+				// Unuse if invalid
+				sys_log.error("Failed to use custom BDVD directory: '%s'", bdvd_dir);
+				bdvd_dir.clear();
+			}
+		}
 
 		// Mount default relative path to non-existent directory
 		vfs::mount("/dev_hdd0", g_cfg.vfs.get(g_cfg.vfs.dev_hdd0, emu_dir));
@@ -858,8 +884,10 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 						// Booting disc game from wrong location
 						sys_log.error("Disc game %s found at invalid location /dev_hdd0/game/", m_title_id);
 
+						const std::string dst_dir = hdd0_disc + sfb_dir.substr(hdd0_game.size());
+
 						// Move and retry from correct location
-						if (fs::rename(elf_dir + "/../../", hdd0_disc + elf_dir.substr(hdd0_game.size()) + "/../../", false))
+						if (fs::create_path(fs::get_parent_dir(dst_dir)) && fs::rename(sfb_dir, dst_dir, false))
 						{
 							sys_log.success("Disc game %s moved to special location /dev_hdd0/disc/", m_title_id);
 							return m_path = hdd0_disc + m_path.substr(hdd0_game.size()), Load(m_title_id, add_only);
@@ -1012,6 +1040,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			m_path = m_path_old; // Reset m_path to fix boot from gui
 			return game_boot_result::no_errors;
 		}
+
+		// Initialize progress dialog
+		g_fxo->init<named_thread<progress_dialog_server>>();
 
 		// Set title to actual disc title if necessary
 		const std::string disc_sfo_dir = vfs::get("/dev_bdvd/PS3_GAME/PARAM.SFO");
@@ -1376,13 +1407,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				Run(true);
 			}
 		}
-		else
-		{
-			ensure(m_state == system_state::paused);
-			Resume(); // Remove paused flag from threads
-			m_state = system_state::ready;
-			GetCallbacks().on_ready();
-		}
 
 		return game_boot_result::no_errors;
 	}
@@ -1578,6 +1602,18 @@ void Emulator::Stop(bool restart)
 	}
 
 	sys_log.notice("Stopping emulator...");
+
+	if (!restart)
+	{
+		// Show visual feedback to the user in case that stopping takes a while.
+		// This needs to be done before actually stopping, because otherwise the necessary threads will be terminated before we can show an image.
+		if (auto progress_dialog = g_fxo->try_get<named_thread<progress_dialog_server>>(); progress_dialog && +g_progr)
+		{
+			// We are currently showing a progress dialog. Notify it that we are going to stop emulation.
+			g_system_progress_stopping = true;
+			std::this_thread::sleep_for(20ms); // Enough for one frame to be rendered
+		}
+	}
 
 	named_thread stop_watchdog("Stop Watchdog", [&]()
 	{
@@ -1866,7 +1902,25 @@ std::set<std::string> Emulator::GetGameDirs() const
 
 bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) const
 {
-	return (GetCallbacks().resolve_path(path) + '/').starts_with(GetCallbacks().resolve_path(dir) + '/');
+	const std::string dir_path = GetCallbacks().resolve_path(dir);
+
+	return !dir_path.empty() && (GetCallbacks().resolve_path(path) + '/').starts_with(dir_path + '/');
+};
+
+const std::string& Emulator::GetFakeCat() const
+{
+	if (m_cat == "DG")
+	{
+		const std::string mount_point = vfs::get("/dev_bdvd");
+
+		if (mount_point.empty() || !IsPathInsideDir(m_path, mount_point))
+		{
+			static const std::string s_hg = "HG";
+			return s_hg;
+		}
+	}
+
+	return m_cat;
 };
 
 Emulator Emu;

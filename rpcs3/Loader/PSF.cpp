@@ -5,7 +5,7 @@
 
 LOG_CHANNEL(psf_log, "PSF");
 
-template<>
+template <>
 void fmt_class_string<psf::format>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto fmt)
@@ -21,7 +21,7 @@ void fmt_class_string<psf::format>::format(std::string& out, u64 arg)
 	});
 }
 
-template<>
+template <>
 void fmt_class_string<psf::error>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](auto fmt)
@@ -36,6 +36,47 @@ void fmt_class_string<psf::error>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+template <>
+void fmt_class_string<psf::registry>::format(std::string& out, u64 arg)
+{
+	const psf::registry& psf = get_object(arg);
+
+	for (const auto& entry : psf)
+	{
+		if (entry.second.type() == psf::format::array)
+		{
+			// Format them last
+			continue;
+		}
+
+		fmt::append(out, "%s: ", entry.first);
+
+		const psf::entry& data = entry.second;
+
+		if (data.type() == psf::format::integer)
+		{
+			fmt::append(out, "0x%x", data.as_integer());
+		}
+		else
+		{
+			fmt::append(out, "\"%s\"", data.as_string());
+		}
+
+		out += '\n';
+	}
+
+	for (const auto& entry : psf)
+	{
+		if (entry.second.type() != psf::format::array)
+		{
+			// Formatted before
+			continue;
+		}
+
+		fmt::append(out, "%s: %s\n", entry.first, std::basic_string_view<u8>(reinterpret_cast<const u8*>(entry.second.as_string().data()), entry.second.size()));
+	}
 }
 
 namespace psf

@@ -239,6 +239,9 @@ if(USE_FAUDIO)
 	endif()
 endif()
 
+set_property(TARGET ${FAUDIO_TARGET} PROPERTY FOLDER "3rdparty/")
+
+
 # FFMPEG
 add_library(3rdparty_ffmpeg INTERFACE)
 
