@@ -778,6 +778,8 @@ public:
 	u64 mfc_dump_idx = 0;
 	static constexpr u32 max_mfc_dump_idx = 2048;
 
+	bool in_cpu_work = false;
+
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
 	const char* current_func{}; // Current STOP or RDCH blocking function
@@ -791,7 +793,7 @@ public:
 	bool do_list_transfer(spu_mfc_cmd& args);
 	void do_putlluc(const spu_mfc_cmd& args);
 	bool do_putllc(const spu_mfc_cmd& args);
-	void do_mfc(bool can_escape = true);
+	void do_mfc(bool can_escape = true, bool must_finish = true);
 	u32 get_mfc_completed() const;
 
 	bool process_mfc_cmd();

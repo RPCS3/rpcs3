@@ -1657,14 +1657,20 @@ void spu_thread::cpu_task()
 
 void spu_thread::cpu_work()
 {
+	if (std::exchange(in_cpu_work, true))
+	{
+		return;
+	}
+
 	const auto timeout = +g_cfg.core.mfc_transfers_timeout;
 
 	// If either MFC size exceeds limit or timeout has been reached execute pending MFC commands
 	if (mfc_size > g_cfg.core.mfc_transfers_shuffling || (timeout && get_system_time() - mfc_last_timestamp >= timeout))
 	{
-		do_mfc(false);
-		check_mfc_interrupts(pc + 4);
+		do_mfc(false, false);
 	}
+
+	in_cpu_work = false;
 }
 
 struct raw_spu_cleanup
@@ -2960,7 +2966,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	vm::reservation_notifier(addr).notify_all(-128);
 }
 
-void spu_thread::do_mfc(bool can_escape)
+void spu_thread::do_mfc(bool can_escape, bool must_finish)
 {
 	u32 removed = 0;
 	u32 barrier = 0;
@@ -3106,6 +3112,14 @@ void spu_thread::do_mfc(bool can_escape)
 		{
 			break;
 		}
+
+		if (!must_finish && g_cfg.core.mfc_shuffling_in_steps)
+		{
+			// Exit early, not all pending commands have to be executed at a single iteration
+			// Update last timestamp so the next MFC timeout check will use the current time
+			mfc_last_timestamp = get_system_time();
+			return;
+		}
 	}
 
 	if (state & cpu_flag::pending)
@@ -3171,10 +3185,17 @@ bool spu_thread::process_mfc_cmd()
 		// Reset MFC timestamp in the case of full queue
 		mfc_last_timestamp = 0;
 
-		// Process MFC commands
 		if (test_stopped())
 		{
 			return false;
+		}
+
+		// Process MFC commands
+		do_mfc();
+
+		if (mfc_size < 16)
+		{
+			break;
 		}
 
 		auto old = state.add_fetch(cpu_flag::wait);
