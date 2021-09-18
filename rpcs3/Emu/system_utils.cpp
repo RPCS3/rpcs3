@@ -157,7 +157,7 @@ namespace rpcs3::utils
 		return rap_path;
 	}
 
-	std::string get_c00_unlock_edat_path(const std::string_view& title_id, const std::string_view& content_id)
+	std::string get_c00_unlock_edat_path(const std::string_view& content_id)
 	{
 		const std::string home_dir = get_hdd0_dir() + "home";
 
@@ -167,7 +167,7 @@ namespace rpcs3::utils
 		{
 			if (entry.is_directory && check_user(entry.name))
 			{
-				edat_path = fmt::format("%s/%s/exdata/%s/%s.edat", home_dir, entry.name, title_id, content_id);
+				edat_path = fmt::format("%s/%s/exdata/%s.edat", home_dir, entry.name, content_id);
 				if (fs::is_file(edat_path))
 				{
 					return edat_path;
@@ -179,9 +179,9 @@ namespace rpcs3::utils
 		return edat_path;
 	}
 
-	bool verify_c00_unlock_edat(const std::string_view& title_id, const std::string_view& content_id)
+	bool verify_c00_unlock_edat(const std::string_view& content_id)
 	{
-		const std::string edat_path = rpcs3::utils::get_c00_unlock_edat_path(title_id, content_id);
+		const std::string edat_path = rpcs3::utils::get_c00_unlock_edat_path(content_id);
 
 		// Check if user has unlock EDAT installed
 		if (!fs::is_file(edat_path))
@@ -287,7 +287,7 @@ namespace rpcs3::utils
 			// This is a trial game. Check if the user has EDAT file to unlock it.
 			const auto c00_title_id = psf::get_string(psf, "TITLE_ID");
 
-			if (fs::is_file(game_path + "/C00/PARAM.SFO") && verify_c00_unlock_edat(c00_title_id, content_id))
+			if (fs::is_file(game_path + "/C00/PARAM.SFO") && verify_c00_unlock_edat(content_id))
 			{
 				// Load full game data.
 				sys_log.notice("Verified EDAT file %s.edat for trial game %s", content_id, c00_title_id);

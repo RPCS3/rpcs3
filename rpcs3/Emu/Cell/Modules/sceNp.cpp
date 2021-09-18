@@ -553,7 +553,7 @@ error_code npDrmVerifyUpgradeLicense(vm::cptr<char> content_id)
 	const std::string content_str(content_id.get_ptr(), std::find(content_id.get_ptr(), content_id.get_ptr() + 0x2f, '\0'));
 	sceNp.warning("npDrmVerifyUpgradeLicense(): content_id='%s'", content_id);
 
-	if (!rpcs3::utils::verify_c00_unlock_edat(Emu.GetTitleID(), content_str))
+	if (!rpcs3::utils::verify_c00_unlock_edat(content_str))
 		return SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND;
 
 	return CELL_OK;
