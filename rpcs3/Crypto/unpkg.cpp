@@ -706,7 +706,9 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 		break;
 	}
 
-	dir += m_install_dir + '/';
+	// TODO: Verify whether other content types require appending title ID
+	if (m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
+		dir += m_install_dir + '/';
 
 	// If false, an existing directory is being overwritten: cannot cancel the operation
 	const bool was_null = !fs::is_dir(dir);
