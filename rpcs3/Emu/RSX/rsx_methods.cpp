@@ -2751,7 +2751,7 @@ namespace rsx
 				current_range_index = draw_command_ranges.size() - 1;
 			}
 
-			_do_barrier_insert({ current_range_index, get_system_time(), ~0u, index, arg, 0, type });
+			_do_barrier_insert({ current_range_index, rsx::get_shared_tag(), ~0u, index, arg, 0, type });
 			last_execution_barrier_index = current_range_index;
 		}
 	}
