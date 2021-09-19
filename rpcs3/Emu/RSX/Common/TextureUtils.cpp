@@ -436,7 +436,7 @@ namespace
 
 		for (unsigned layer = 0; layer < layer_count; layer++)
 		{
-			u16 miplevel_width_in_texel = width_in_texel, miplevel_height_in_texel = height_in_texel;
+			u16 miplevel_width_in_texel = width_in_texel, miplevel_height_in_texel = height_in_texel, miplevel_depth = depth;
 			for (unsigned mip_level = 0; mip_level < mipmap_count; mip_level++)
 			{
 				result.push_back({});
@@ -446,7 +446,7 @@ namespace
 				current_subresource_layout.height_in_texel = miplevel_height_in_texel;
 				current_subresource_layout.level = mip_level;
 				current_subresource_layout.layer = layer;
-				current_subresource_layout.depth = depth;
+				current_subresource_layout.depth = miplevel_depth;
 				current_subresource_layout.border = border_size;
 
 				if constexpr (block_edge_in_texel == 1)
@@ -482,13 +482,14 @@ namespace
 					full_height_in_block = rsx::next_pow2(current_subresource_layout.height_in_block + border_size + border_size);
 				}
 
-				const u32 slice_sz = src_pitch_in_block * block_size_in_bytes * full_height_in_block * depth;
+				const u32 slice_sz = src_pitch_in_block * block_size_in_bytes * full_height_in_block * miplevel_depth;
 				current_subresource_layout.pitch_in_block = src_pitch_in_block;
 				current_subresource_layout.data = std::span<const std::byte>(texture_data_pointer + offset_in_src, slice_sz);
 
 				offset_in_src += slice_sz;
 				miplevel_width_in_texel = std::max(miplevel_width_in_texel / 2, 1);
 				miplevel_height_in_texel = std::max(miplevel_height_in_texel / 2, 1);
+				miplevel_depth = std::max(miplevel_depth / 2, 1);
 			}
 
 			offset_in_src = utils::align(offset_in_src, 128);
