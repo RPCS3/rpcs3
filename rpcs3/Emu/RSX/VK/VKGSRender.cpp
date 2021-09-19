@@ -1197,14 +1197,14 @@ void VKGSRender::clear_surface(u32 mask)
 	if (skip_current_frame || swapchain_unavailable) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
-	if (!rsx::method_registers.stencil_mask()) mask &= ~0x2u;
+	if (!rsx::method_registers.stencil_mask()) mask &= ~RSX_GCM_CLEAR_STENCIL_BIT;
 
 	// Ignore invalid clear flags
-	if (!(mask & 0xF3)) return;
+	if (!(mask & RSX_GCM_CLEAR_ANY_MASK)) return;
 
 	u8 ctx = rsx::framebuffer_creation_context::context_draw;
-	if (mask & 0xF0) ctx |= rsx::framebuffer_creation_context::context_clear_color;
-	if (mask & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
+	if (mask & RSX_GCM_CLEAR_COLOR_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
+	if (mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 	init_buffers(rsx::framebuffer_creation_context{ctx});
 
 	if (!framebuffer_status_valid) return;
@@ -1232,9 +1232,9 @@ void VKGSRender::clear_surface(u32 mask)
 	bool update_color = false, update_z = false;
 	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & 0x3)
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
-		if (mask & 0x1)
+		if (mask & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
 			u32 max_depth_value = get_max_depth_value(surface_depth_format);
 
@@ -1249,7 +1249,7 @@ void VKGSRender::clear_surface(u32 mask)
 
 		if (is_depth_stencil_format(surface_depth_format))
 		{
-			if (mask & 0x2)
+			if (mask & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
 				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
 				depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
@@ -1273,13 +1273,14 @@ void VKGSRender::clear_surface(u32 mask)
 				ds->old_contents.empty() && !g_cfg.video.read_depth_buffer) // No way to load data from memory, so no initialization given
 			{
 				// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
-				if (mask == 1)
+				const auto ds_mask = (mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK);
+				if (ds_mask == RSX_GCM_CLEAR_DEPTH_BIT && (ds->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT))
 				{
 					// Depth was cleared, initialize stencil
 					depth_stencil_clear_values.depthStencil.stencil = 0xFF;
 					depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
 				}
-				else
+				else if (ds_mask == RSX_GCM_CLEAR_STENCIL_BIT)
 				{
 					// Stencil was cleared, initialize depth
 					depth_stencil_clear_values.depthStencil.depth = 1.f;
@@ -1294,7 +1295,7 @@ void VKGSRender::clear_surface(u32 mask)
 		}
 	}
 
-	if (auto colormask = (mask & 0xF0))
+	if (auto colormask = (mask & RSX_GCM_CLEAR_COLOR_MASK))
 	{
 		if (!m_draw_buffers.empty())
 		{
@@ -1318,7 +1319,7 @@ void VKGSRender::clear_surface(u32 mask)
 			{
 				rsx::get_g8b8_clear_color(clear_r, clear_g, clear_b, clear_a);
 				colormask = rsx::get_g8b8_r8g8_colormask(colormask);
-				use_fast_clear = (colormask == (0x10 | 0x20));
+				use_fast_clear = (colormask == (RSX_GCM_CLEAR_RED_BIT | RSX_GCM_CLEAR_GREEN_BIT));
 				break;
 			}
 			case rsx::surface_color_format::a8b8g8r8:
@@ -1331,7 +1332,7 @@ void VKGSRender::clear_surface(u32 mask)
 			}
 			default:
 			{
-				use_fast_clear = (colormask == (0x10 | 0x20 | 0x40 | 0x80));
+				use_fast_clear = (colormask == RSX_GCM_CLEAR_COLOR_MASK);
 				break;
 			}
 			}

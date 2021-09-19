@@ -496,14 +496,14 @@ void GLGSRender::clear_surface(u32 arg)
 	if (skip_current_frame) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
-	if (!rsx::method_registers.stencil_mask()) arg &= ~0x2u;
+	if (!rsx::method_registers.stencil_mask()) arg &= ~RSX_GCM_CLEAR_STENCIL_BIT;
 
 	// Ignore invalid clear flags
-	if ((arg & 0xf3) == 0) return;
+	if ((arg & RSX_GCM_CLEAR_ANY_MASK) == 0) return;
 
 	u8 ctx = rsx::framebuffer_creation_context::context_draw;
-	if (arg & 0xF0) ctx |= rsx::framebuffer_creation_context::context_clear_color;
-	if (arg & 0x3) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
+	if (arg & RSX_GCM_CLEAR_COLOR_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_color;
+	if (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 
 	init_buffers(static_cast<rsx::framebuffer_creation_context>(ctx), true);
 
@@ -521,9 +521,9 @@ void GLGSRender::clear_surface(u32 arg)
 	bool update_color = false, update_z = false;
 	rsx::surface_depth_format2 surface_depth_format = rsx::method_registers.surface_depth_fmt();
 
-	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & 0x3)
+	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
-		if (arg & 0x1)
+		if (arg & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
 			u32 max_depth_value = get_max_depth_value(surface_depth_format);
 			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
@@ -535,7 +535,7 @@ void GLGSRender::clear_surface(u32 arg)
 
 		if (is_depth_stencil_format(surface_depth_format))
 		{
-			if (arg & 0x2)
+			if (arg & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
 				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
 
@@ -544,7 +544,8 @@ void GLGSRender::clear_surface(u32 arg)
 				mask |= GLenum(gl::buffers::stencil);
 			}
 
-			if ((arg & 0x3) != 0x3 || !full_frame)
+			if (const auto ds_mask = (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK);
+				ds_mask != RSX_GCM_CLEAR_DEPTH_STENCIL_MASK || !full_frame)
 			{
 				ensure(mask);
 
@@ -552,14 +553,14 @@ void GLGSRender::clear_surface(u32 arg)
 					ds->old_contents.empty() && !g_cfg.video.read_depth_buffer) // No way to load data from memory, so no initialization given
 				{
 					// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
-					if (arg == 1)
+					if (ds_mask == RSX_GCM_CLEAR_DEPTH_BIT)
 					{
 						// Depth was cleared, initialize stencil
 						gl_state.stencil_mask(0xFF);
 						gl_state.clear_stencil(0xFF);
 						mask |= GLenum(gl::buffers::stencil);
 					}
-					else
+					else if (ds_mask == RSX_GCM_CLEAR_STENCIL_BIT)
 					{
 						// Stencil was cleared, initialize depth
 						gl_state.depth_mask(GL_TRUE);
