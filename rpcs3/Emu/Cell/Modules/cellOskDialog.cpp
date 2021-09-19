@@ -160,9 +160,11 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			return;
 		}
 
-		const bool accepted = status == CELL_MSGDIALOG_BUTTON_OK;
+		const bool keep_seperate_window_open = g_fxo->get<osk_info>().use_separate_windows.load() && (g_fxo->get<osk_info>().osk_continuous_mode.load() != CELL_OSKDIALOG_CONTINUOUS_MODE_NONE);
 
-		if (accepted)
+		switch (status)
+		{
+		case CELL_OSKDIALOG_CLOSE_CONFIRM:
 		{
 			if (auto ccb = g_fxo->get<osk_info>().osk_confirm_callback.exchange({}))
 			{
@@ -208,22 +210,40 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			{
 				osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
 			}
+			break;
 		}
-		else
+		case CELL_OSKDIALOG_CLOSE_CANCEL:
 		{
 			osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_CANCELED;
+			break;
+		}
+		default:
+		{
+			osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_ABORT;
+			break;
+		}
 		}
 
 		// Send OSK status
 		if (g_fxo->get<osk_info>().use_separate_windows.load() && (g_fxo->get<osk_info>().osk_continuous_mode.load() != CELL_OSKDIALOG_CONTINUOUS_MODE_NONE))
 		{
-			if (accepted)
+			switch (status)
+			{
+			case CELL_OSKDIALOG_CLOSE_CONFIRM:
 			{
 				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED, 0);
+				break;
 			}
-			else
+			case CELL_OSKDIALOG_CLOSE_CANCEL:
 			{
 				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED, 0);
+				break;
+			}
+			default:
+			{
+				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
+				break;
+			}
 			}
 		}
 		else
@@ -403,7 +423,7 @@ error_code cellOskDialogAbort()
 	}
 
 	osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_ABORT;
-	osk->Close(false);
+	osk->Close(-1);
 
 	return CELL_OK;
 }
@@ -546,7 +566,7 @@ error_code cellOskDialogExtSendFinishMessage(u32 /*CellOskDialogFinishReason*/ f
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	osk->Close(finishReason == CELL_OSKDIALOG_CLOSE_CONFIRM);
+	osk->Close(finishReason);
 
 	return CELL_OK;
 }
