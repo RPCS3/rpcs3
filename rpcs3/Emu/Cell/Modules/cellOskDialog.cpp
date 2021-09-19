@@ -166,7 +166,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		{
 			if (auto ccb = g_fxo->get<osk_info>().osk_confirm_callback.exchange({}))
 			{
-				vm::ptr<u16> string_to_send = vm::cast(vm::alloc(CELL_OSKDIALOG_STRING_SIZE * 2, vm::main));
+				std::shared_ptr<u16[]> string_to_send = std::make_shared<u16[]>(CELL_OSKDIALOG_STRING_SIZE);
 				atomic_t<bool> done = false;
 				u32 return_value;
 				u32 i;
@@ -177,14 +177,16 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 					if (osk->osk_text[i] == 0) break;
 				}
 
-				sysutil_register_cb([&, length = i](ppu_thread& cb_ppu) -> s32
+				sysutil_register_cb([&, length = i, string_to_send = std::move(string_to_send)](ppu_thread& cb_ppu) -> s32
 				{
-					return_value = ccb(cb_ppu, string_to_send, static_cast<s32>(length));
+					vm::var<u16[], vm::page_allocator<>> string_var(CELL_OSKDIALOG_STRING_SIZE, string_to_send.get());
+
+					return_value = ccb(cb_ppu, string_var.begin(), static_cast<s32>(length));
 					cellOskDialog.warning("osk_confirm_callback return_value=%d", return_value);
 
 					for (u32 i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
 					{
-						osk->osk_text[i] = string_to_send[i];
+						osk->osk_text[i] = string_var.begin()[i];
 					}
 
 					done = true;
