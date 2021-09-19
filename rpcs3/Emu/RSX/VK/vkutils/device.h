@@ -30,9 +30,11 @@ namespace vk
 	{
 		memory_type_info host_visible_coherent;
 		memory_type_info device_local;
+		memory_type_info device_bar;
 
 		u64 device_local_total_bytes;
 		u64 host_visible_total_bytes;
+		u64 device_bar_total_bytes;
 
 		PFN_vkGetMemoryHostPointerPropertiesEXT _vkGetMemoryHostPointerPropertiesEXT;
 	};
