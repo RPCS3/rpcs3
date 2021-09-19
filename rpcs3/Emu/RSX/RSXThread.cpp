@@ -1894,6 +1894,8 @@ namespace rsx
 			if (!(textures_ref & 1)) continue;
 
 			auto &tex = rsx::method_registers.fragment_textures[i];
+			current_fp_texture_state.clear(i);
+
 			if (tex.enabled())
 			{
 				current_fragment_program.texture_params[i].scale[0] = sampler_descriptors[i]->scale_x;
@@ -1905,7 +1907,6 @@ namespace rsx
 				m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
 
 				u32 texture_control = 0;
-				current_fp_texture_state.clear(i);
 				current_fp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
 
 				if (tex.alpha_kill_enabled())
