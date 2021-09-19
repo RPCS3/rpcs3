@@ -248,7 +248,11 @@ class OskDialogBase
 {
 public:
 	virtual void Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel) = 0;
-	virtual void Close(bool accepted) = 0;
+
+	// Closes the dialog.
+	// Set status to CELL_OSKDIALOG_CLOSE_CONFIRM or CELL_OSKDIALOG_CLOSE_CANCEL for user input.
+	// Set status to -1 if closed by the game or system.
+	virtual void Close(s32 status) = 0;
 	virtual ~OskDialogBase();
 
 	std::function<void(s32 status)> on_osk_close;
