@@ -70,6 +70,31 @@ struct osk_info
 	atomic_t<vm::ptr<cellOskDialogConfirmWordFilterCallback>> osk_confirm_callback{};
 
 	stx::init_mutex init;
+
+	void reset()
+	{
+		dlg.reset();
+		use_separate_windows = false;
+		lock_ext_input = false;
+		device_mask = 0;
+		key_layout = CELL_OSKDIALOG_10KEY_PANEL;
+		initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM;
+		initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD;
+		clipboard_enabled = false;
+		half_byte_kana_enabled = false;
+		supported_languages = 0;
+		dimmer_enabled = true;
+		base_color_red = 1.0f;
+		base_color_blue = 1.0f;
+		base_color_green = 1.0f;
+		base_color_alpha = 1.0f;
+		pointer_enabled = false;
+		pointer_pos = {0.0f, 0.0f};
+		initial_scale = 1.0f;
+		layout_mode = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT | CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
+		osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
+		osk_confirm_callback.store({});
+	}
 };
 
 // TODO: don't use this function
@@ -370,8 +395,7 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 		// Unload should be called last, so remove the dialog here
 		if (const auto reset_lock = g_fxo->get<osk_info>().init.reset())
 		{
-			// TODO
-			g_fxo->get<osk_info>().dlg.reset();
+			g_fxo->get<osk_info>().reset();
 		}
 
 		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_UNLOADED, 0);
