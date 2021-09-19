@@ -679,40 +679,117 @@ namespace vk
 		memory_type_mapping result;
 		result.device_local_total_bytes = 0;
 		result.host_visible_total_bytes = 0;
-		bool host_visible_cached = false;
+		result.device_bar_total_bytes = 0;
+
+		// Sort the confusingly laid out heap-type map into something easier to scan.
+		// Not performance-critical, this method is called once at initialization.
+		struct memory_type
+		{
+			u32 type_index;
+			VkFlags flags;
+			VkDeviceSize size;
+		};
+
+		struct heap_type_map_entry
+		{
+			VkMemoryHeap heap;
+			std::vector<memory_type> types;
+		};
+
+		std::vector<heap_type_map_entry> memory_heap_map;
+		for (u32 i = 0; i < memory_properties.memoryHeapCount; ++i)
+		{
+			memory_heap_map.push_back(
+			{
+				.heap = memory_properties.memoryHeaps[i],
+				.types = {}
+			});
+		}
 
 		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
 		{
-			VkMemoryHeap& heap = memory_properties.memoryHeaps[memory_properties.memoryTypes[i].heapIndex];
+			auto& type_info = memory_properties.memoryTypes[i];
+			memory_heap_map[type_info.heapIndex].types.push_back({ i, type_info.propertyFlags, 0 });
+		}
 
-			bool is_device_local = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			if (is_device_local)
+		auto find_memory_type_with_property = [&memory_heap_map](VkFlags desired_flags, VkFlags excluded_flags)
+		{
+			std::vector<memory_type> results;
+
+			for (auto& heap : memory_heap_map)
 			{
-				// Allow multiple device_local heaps
-				result.device_local.push(i, heap.size);
-				result.device_local_total_bytes += heap.size;
+				for (auto &type : heap.types)
+				{
+					if (((type.flags & desired_flags) == desired_flags) && !(type.flags & excluded_flags))
+					{
+						// Match, only once allowed per heap!
+						results.push_back({ type.type_index, type.flags, heap.heap.size });
+						break;
+					}
+				}
 			}
 
-			bool is_host_visible = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			bool is_host_coherent = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-			bool is_cached = !!(memory_properties.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT);
+			return results;
+		};
 
-			if (is_host_coherent && is_host_visible)
+		auto device_local_types = find_memory_type_with_property(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, (VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD | VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD));
+		auto host_coherent_types = find_memory_type_with_property((VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT), 0);
+		auto bar_memory_types = find_memory_type_with_property((VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT), 0);
+
+		ensure(!device_local_types.empty());
+		ensure(!host_coherent_types.empty());
+
+		// BAR heap, currently parked for future use, I have some plans for it (kd-11)
+		for (auto& type : bar_memory_types)
+		{
+			result.device_bar.push(type.type_index, type.size);
+			result.device_bar_total_bytes += type.size;
+		}
+
+		// Generic VRAM access, requires some minor prioritization based on flags
+		// Most devices have a 'PURE' device local type, pin that as the first priority
+		// Internally, there will be some reshuffling based on memory load later, but this is rare
+		if (device_local_types.size() > 1)
+		{
+			std::sort(device_local_types.begin(), device_local_types.end(), [](const auto& a, const auto& b)
 			{
-				if ((is_cached && !host_visible_cached) || (result.host_visible_total_bytes < heap.size))
+				if (a.flags == b.flags)
 				{
-					// Allow only a single host_visible heap. It makes no sense to have multiple of these otherwise
-					result.host_visible_coherent = { i, heap.size };
-					result.host_visible_total_bytes = heap.size;
-					host_visible_cached = is_cached;
+					return a.size > b.size;
 				}
+
+				return (a.flags == VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) || (b.flags != VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT && a.size > b.size);
+			});
+		}
+
+		for (auto& type : device_local_types)
+		{
+			result.device_local.push(type.type_index, type.size);
+			result.device_local_total_bytes += type.size;
+		}
+
+		// Some prioritization is needed for host-visible memory. We only need to pick only one block unlike the others.
+		// Use host-cached memory if available, but this is not really required.
+		bool is_host_cached = false;
+		for (auto& type : host_coherent_types)
+		{
+			if (!is_host_cached && type.flags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
+			{
+				is_host_cached = true;
+				result.host_visible_coherent = { type.type_index, type.size };
+				result.host_visible_total_bytes = type.size;
+			}
+			else if (result.host_visible_total_bytes < type.size)
+			{
+				result.host_visible_coherent = { type.type_index, type.size };
+				result.host_visible_total_bytes = type.size;
 			}
 		}
 
-		if (!result.device_local)
-			fmt::throw_exception("GPU doesn't support device local memory");
-		if (!result.host_visible_coherent)
-			fmt::throw_exception("GPU doesn't support host coherent device local memory");
+		rsx_log.notice("Detected %llu MB of device local memory", result.device_local_total_bytes / (0x100000));
+		rsx_log.notice("Detected %llu MB of host coherent memory", result.host_visible_total_bytes / (0x100000));
+		rsx_log.notice("Detected %llu MB of BAR memory", result.device_bar_total_bytes / (0x100000));
+
 		return result;
 	}
 
