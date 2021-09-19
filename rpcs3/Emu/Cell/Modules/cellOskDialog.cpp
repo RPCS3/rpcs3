@@ -238,7 +238,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	{
 		const auto osk = wptr.lock();
 
-		if (g_fxo->get<osk_info>().use_separate_windows.load())
+		if (g_fxo->get<osk_info>().use_separate_windows.load() && (g_fxo->get<osk_info>().osk_continuous_mode.load() != CELL_OSKDIALOG_CONTINUOUS_MODE_NONE))
 		{
 			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED, 0);
 		}
