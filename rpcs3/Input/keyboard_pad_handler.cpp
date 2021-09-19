@@ -79,6 +79,24 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 	for (auto& pad : m_pads_internal)
 	{
+		// Find out if special buttons are pressed (introduced by RPCS3).
+		// Activate the buttons here if possible since keys don't auto-repeat. This ensures that they are already pressed in the following loop.
+		bool adjust_pressure = false;
+
+		if (pad.m_pressure_intensity_button_index >= 0)
+		{
+			Button& pressure_intensity_button = pad.m_buttons[pad.m_pressure_intensity_button_index];
+
+			if (pressure_intensity_button.m_keyCode == code)
+			{
+				pressure_intensity_button.m_pressed = pressed;
+				pressure_intensity_button.m_value = value;
+			}
+
+			adjust_pressure = pressure_intensity_button.m_pressed;
+		}
+
+		// Handle buttons
 		for (Button& button : pad.m_buttons)
 		{
 			if (button.m_keyCode != code)
@@ -100,11 +118,21 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 			if (update_button)
 			{
-				button.m_value = pressed ? value : 0;
+				if (pressed)
+				{
+					// Modify pressure if necessary if the button was pressed
+					button.m_value = adjust_pressure ? pad.m_pressure_intensity : value;
+				}
+				else
+				{
+					button.m_value = 0;
+				}
+
 				button.m_pressed = pressed;
 			}
 		}
 
+		// Handle sticks
 		for (usz i = 0; i < pad.m_sticks.size(); i++)
 		{
 			const bool is_max = pad.m_sticks[i].m_keyCodeMax == code;
