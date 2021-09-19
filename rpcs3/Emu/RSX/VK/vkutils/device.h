@@ -58,6 +58,7 @@ namespace vk
 		bool unrestricted_depth_range_support = false;
 		bool surface_capabilities_2_support = false;
 		bool debug_utils_support = false;
+		bool sampler_mirror_clamped_support = false;
 
 		friend class render_device;
 	private:
