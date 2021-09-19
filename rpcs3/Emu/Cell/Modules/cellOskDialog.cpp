@@ -43,6 +43,28 @@ struct osk_info
 
 	atomic_t<bool> use_separate_windows = false;
 
+	atomic_t<bool> lock_ext_input = false;
+	atomic_t<u32> device_mask = 0; // 0 means all devices can influence the OSK
+	atomic_t<u32> key_layout = CELL_OSKDIALOG_10KEY_PANEL;
+	atomic_t<CellOskDialogInitialKeyLayout> initial_key_layout = CELL_OSKDIALOG_INITIAL_PANEL_LAYOUT_SYSTEM;
+	atomic_t<CellOskDialogInputDevice> initial_input_device = CELL_OSKDIALOG_INPUT_DEVICE_PAD;
+
+	atomic_t<bool> clipboard_enabled = false; // For copy and paste
+	atomic_t<bool> half_byte_kana_enabled = false;
+	atomic_t<u32> supported_languages = 0; // Used to enable non-default languages in the OSK
+
+	atomic_t<bool> dimmer_enabled = true;
+	atomic_t<f32> base_color_red = 1.0f;
+	atomic_t<f32> base_color_blue = 1.0f;
+	atomic_t<f32> base_color_green = 1.0f;
+	atomic_t<f32> base_color_alpha = 1.0f;
+
+	atomic_t<bool> pointer_enabled = false;
+	CellOskDialogPoint pointer_pos{0.0f, 0.0f};
+	atomic_t<f32> initial_scale = 1.0f;
+
+	atomic_t<u32> layout_mode = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT | CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
+
 	atomic_t<CellOskDialogContinuousMode> osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
 
 	atomic_t<vm::ptr<cellOskDialogConfirmWordFilterCallback>> osk_confirm_callback{};
@@ -431,6 +453,13 @@ error_code cellOskDialogAbort()
 error_code cellOskDialogSetDeviceMask(u32 deviceMask)
 {
 	cellOskDialog.todo("cellOskDialogSetDeviceMask(deviceMask=0x%x)", deviceMask);
+
+	// TODO: error checks. It probably checks for use_separate_windows
+
+	g_fxo->get<osk_info>().device_mask = deviceMask;
+
+	// TODO: change osk device input
+
 	return CELL_OK;
 }
 
@@ -443,30 +472,50 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	if (auto& osk = g_fxo->get<osk_info>(); true)
-	{
-		osk.use_separate_windows = true;
-		osk.osk_continuous_mode  = static_cast<CellOskDialogContinuousMode>(+windowOption->continuousMode);
-	}
+	auto& osk = g_fxo->get<osk_info>();
+	osk.use_separate_windows = true;
+	osk.osk_continuous_mode  = static_cast<CellOskDialogContinuousMode>(+windowOption->continuousMode);
+	// TODO: rest
 
 	return CELL_OK;
 }
 
-error_code cellOskDialogSetInitialInputDevice(vm::ptr<CellOskDialogInputDevice> inputDevice)
+error_code cellOskDialogSetInitialInputDevice(u32 inputDevice)
 {
-	cellOskDialog.todo("cellOskDialogSetInitialInputDevice(inputDevice=*0x%x)", inputDevice);
+	cellOskDialog.todo("cellOskDialogSetInitialInputDevice(inputDevice=%d)", inputDevice);
+
+	// TODO: error checks
+
+	g_fxo->get<osk_info>().initial_input_device = static_cast<CellOskDialogInputDevice>(inputDevice);
+
+	// TODO: use value
+
 	return CELL_OK;
 }
 
-error_code cellOskDialogSetInitialKeyLayout(vm::ptr<CellOskDialogInitialKeyLayout> initialKeyLayout)
+error_code cellOskDialogSetInitialKeyLayout(u32 initialKeyLayout)
 {
-	cellOskDialog.todo("cellOskDialogSetInitialKeyLayout(initialKeyLayout=*0x%x)", initialKeyLayout);
+	cellOskDialog.todo("cellOskDialogSetInitialKeyLayout(initialKeyLayout=%d)", initialKeyLayout);
+
+	// TODO: error checks
+
+	g_fxo->get<osk_info>().initial_key_layout = static_cast<CellOskDialogInitialKeyLayout>(initialKeyLayout);
+
+	// TODO: use value
+
 	return CELL_OK;
 }
 
 error_code cellOskDialogDisableDimmer()
 {
 	cellOskDialog.todo("cellOskDialogDisableDimmer()");
+
+	// TODO: error checks
+
+	g_fxo->get<osk_info>().dimmer_enabled = false;
+
+	// TODO: use value
+
 	return CELL_OK;
 }
 
@@ -479,18 +528,47 @@ error_code cellOskDialogSetKeyLayoutOption(u32 option)
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
+	g_fxo->get<osk_info>().key_layout = option;
+
+	// TODO: use value
+
 	return CELL_OK;
 }
 
 error_code cellOskDialogAddSupportLanguage(u32 supportLanguage)
 {
 	cellOskDialog.todo("cellOskDialogAddSupportLanguage(supportLanguage=0x%x)", supportLanguage);
+
+	// TODO: error checks
+
+	g_fxo->get<osk_info>().supported_languages = supportLanguage;
+
+	// TODO: disable extra languages unless they were enabled here
+	// Extra languages are:
+	// CELL_OSKDIALOG_PANELMODE_POLISH
+	// CELL_OSKDIALOG_PANELMODE_KOREAN
+	// CELL_OSKDIALOG_PANELMODE_TURKEY
+	// CELL_OSKDIALOG_PANELMODE_TRADITIONAL_CHINESE
+	// CELL_OSKDIALOG_PANELMODE_SIMPLIFIED_CHINESE
+	// CELL_OSKDIALOG_PANELMODE_PORTUGUESE_BRAZIL
+	// CELL_OSKDIALOG_PANELMODE_DANISH
+	// CELL_OSKDIALOG_PANELMODE_SWEDISH
+	// CELL_OSKDIALOG_PANELMODE_NORWEGIAN
+	// CELL_OSKDIALOG_PANELMODE_FINNISH
+
 	return CELL_OK;
 }
 
 error_code cellOskDialogSetLayoutMode(s32 layoutMode)
 {
 	cellOskDialog.todo("cellOskDialogSetLayoutMode(layoutMode=%d)", layoutMode);
+
+	// TODO: error checks
+
+	g_fxo->get<osk_info>().layout_mode = layoutMode;
+
+	// TODO: use layout mode
+
 	return CELL_OK;
 }
 
@@ -498,12 +576,6 @@ error_code cellOskDialogGetInputText(vm::ptr<CellOskDialogCallbackReturnParam> O
 {
 	cellOskDialog.warning("cellOskDialogGetInputText(OutputInfo=*0x%x)", OutputInfo);
 	return getText(OutputInfo, false);
-}
-
-error_code cellOskDialogExtInputDeviceUnlock()
-{
-	cellOskDialog.todo("cellOskDialogExtInputDeviceUnlock()");
-	return CELL_OK;
 }
 
 error_code register_keyboard_event_hook_callback(u16 hookEventMode, vm::ptr<cellOskDialogHardwareKeyboardEventHookCallback> pCallback)
@@ -514,6 +586,8 @@ error_code register_keyboard_event_hook_callback(u16 hookEventMode, vm::ptr<cell
 	{
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
+
+	// TODO: register callback and and use it
 
 	return CELL_OK;
 }
@@ -551,6 +625,13 @@ error_code cellOskDialogExtAddJapaneseOptionDictionary(vm::cpptr<char> filePath)
 error_code cellOskDialogExtEnableClipboard()
 {
 	cellOskDialog.todo("cellOskDialogExtEnableClipboard()");
+
+	// TODO: error checks
+
+	g_fxo->get<osk_info>().clipboard_enabled = true;
+
+	// TODO: implement copy paste
+
 	return CELL_OK;
 }
 
@@ -580,18 +661,56 @@ error_code cellOskDialogExtAddOptionDictionary(vm::cptr<CellOskDialogImeDictiona
 error_code cellOskDialogExtSetInitialScale(f32 initialScale)
 {
 	cellOskDialog.todo("cellOskDialogExtSetInitialScale(initialScale=%f)", initialScale);
+
+	// TODO: error checks (CELL_OSKDIALOG_SCALE_MIN, CELL_OSKDIALOG_SCALE_MAX)
+
+	g_fxo->get<osk_info>().initial_scale = initialScale;
+
+	// TODO: implement overlay scaling
+
 	return CELL_OK;
 }
 
 error_code cellOskDialogExtInputDeviceLock()
 {
 	cellOskDialog.todo("cellOskDialogExtInputDeviceLock()");
+
+	// TODO: error checks
+
+	g_fxo->get<osk_info>().lock_ext_input = true;
+
+	// TODO: change osk device input
+
+	return CELL_OK;
+}
+
+error_code cellOskDialogExtInputDeviceUnlock()
+{
+	cellOskDialog.todo("cellOskDialogExtInputDeviceUnlock()");
+
+	// TODO: error checks
+
+	g_fxo->get<osk_info>().lock_ext_input = false;
+
+	// TODO: change osk device input
+
 	return CELL_OK;
 }
 
 error_code cellOskDialogExtSetBaseColor(f32 red, f32 blue, f32 green, f32 alpha)
 {
 	cellOskDialog.todo("cellOskDialogExtSetBaseColor(red=%f, blue=%f, green=%f, alpha=%f)", red, blue, green, alpha);
+
+	// TODO: error checks
+
+	auto& osk = g_fxo->get<osk_info>();
+	osk.base_color_red = red;
+	osk.base_color_blue = blue;
+	osk.base_color_green = green;
+	osk.base_color_alpha = alpha;
+
+	// TODO: use osk base color
+
 	return CELL_OK;
 }
 
@@ -604,10 +723,7 @@ error_code cellOskDialogExtRegisterConfirmWordFilterCallback(vm::ptr<cellOskDial
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
 
-	if (auto& osk = g_fxo->get<osk_info>(); true)
-	{
-		osk.osk_confirm_callback = pCallback;
-	}
+	g_fxo->get<osk_info>().osk_confirm_callback = pCallback;
 
 	return CELL_OK;
 }
@@ -618,27 +734,58 @@ error_code cellOskDialogExtUpdateInputText()
 	return CELL_OK;
 }
 
-error_code cellOskDialogExtDisableHalfByteKana()
-{
-	cellOskDialog.todo("cellOskDialogExtDisableHalfByteKana()");
-	return CELL_OK;
-}
-
 error_code cellOskDialogExtSetPointerEnable(b8 enable)
 {
 	cellOskDialog.todo("cellOskDialogExtSetPointerEnable(enable=%d)", enable);
+
+	// TODO: error checks
+
+	g_fxo->get<osk_info>().pointer_enabled = enable;
+
+	// TODO: use new value in osk
+
 	return CELL_OK;
 }
 
-error_code cellOskDialogExtUpdatePointerDisplayPos(/*const CellOskDialogPoint pos*/)
+error_code cellOskDialogExtUpdatePointerDisplayPos(vm::cptr<CellOskDialogPoint> pos)
 {
-	cellOskDialog.todo("cellOskDialogExtUpdatePointerDisplayPos(posX=%f, posY=%f)"/*, pos.x, pos.y*/);
+	cellOskDialog.todo("cellOskDialogExtUpdatePointerDisplayPos(pos=0x%x, posX=%f, posY=%f)", pos->x, pos->y);
+
+	// TODO: error checks
+
+	if (pos)
+	{
+		g_fxo->get<osk_info>().pointer_pos = *pos;
+	}
+
+	// TODO: use new value in osk
+
 	return CELL_OK;
 }
 
 error_code cellOskDialogExtEnableHalfByteKana()
 {
 	cellOskDialog.todo("cellOskDialogExtEnableHalfByteKana()");
+
+	// TODO: error checks
+
+	g_fxo->get<osk_info>().half_byte_kana_enabled = true;
+
+	// TODO: use new value in osk
+
+	return CELL_OK;
+}
+
+error_code cellOskDialogExtDisableHalfByteKana()
+{
+	cellOskDialog.todo("cellOskDialogExtDisableHalfByteKana()");
+
+	// TODO: error checks
+
+	g_fxo->get<osk_info>().half_byte_kana_enabled = false;
+
+	// TODO: use new value in osk
+
 	return CELL_OK;
 }
 
@@ -650,6 +797,8 @@ error_code cellOskDialogExtRegisterForceFinishCallback(vm::ptr<cellOskDialogForc
 	{
 		return CELL_OSKDIALOG_ERROR_PARAM;
 	}
+
+	// TODO: register and use force finish callback (PS button during continuous mode)
 
 	return CELL_OK;
 }
