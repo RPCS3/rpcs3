@@ -33,6 +33,23 @@ void fmt_class_string<CellOskDialogError>::format(std::string& out, u64 arg)
 	});
 }
 
+template<>
+void fmt_class_string<CellOskDialogContinuousMode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto mode)
+	{
+		switch (mode)
+		{
+			STR_CASE(CELL_OSKDIALOG_CONTINUOUS_MODE_NONE);
+			STR_CASE(CELL_OSKDIALOG_CONTINUOUS_MODE_REMAIN_OPEN);
+			STR_CASE(CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE);
+			STR_CASE(CELL_OSKDIALOG_CONTINUOUS_MODE_SHOW);
+		}
+
+		return unknown;
+	});
+}
+
 OskDialogBase::~OskDialogBase()
 {
 }
@@ -154,7 +171,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	auto osk = _get_osk_dialog(true);
 
 	// Can't open another dialog if this one is already open.
-	if (!osk || osk->state.load() == OskDialogState::Open)
+	if (!osk || osk->state.load() != OskDialogState::Unloaded)
 	{
 		return CELL_SYSUTIL_ERROR_BUSY;
 	}
@@ -200,21 +217,10 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 	osk->on_osk_close = [wptr = std::weak_ptr<OskDialogBase>(osk)](s32 status)
 	{
+		cellOskDialog.error("on_osk_close(status=%d)", status);
+
 		const auto osk = wptr.lock();
-
-		if (osk->state.atomic_op([&](OskDialogState& state)
-		{
-			if (state == OskDialogState::Abort)
-			{
-				return true;
-			}
-
-			state = OskDialogState::Close;
-			return false;
-		}))
-		{
-			cellOskDialog.notice("Called on_osk_close after abort");
-		}
+		osk->state = OskDialogState::Closed;
 
 		auto& info = g_fxo->get<osk_info>();
 
@@ -275,9 +281,14 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_CANCELED;
 			break;
 		}
-		default:
+		case FAKE_CELL_OSKDIALOG_CLOSE_ABORT:
 		{
 			osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_ABORT;
+			break;
+		}
+		default:
+		{
+			cellOskDialog.fatal("on_osk_close: Unknown status (%d)", status);
 			break;
 		}
 		}
@@ -299,15 +310,24 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED, 0);
 				break;
 			}
+			case FAKE_CELL_OSKDIALOG_CLOSE_ABORT:
+			{
+				// Handled in cellOskDialogAbort
+				break;
+			}
 			default:
 			{
-				info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_FINISHED;
-				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
+				cellOskDialog.fatal("on_osk_close: Unknown status (%d)", status);
 				break;
 			}
 			}
+
+			if (info.osk_continuous_mode.load() == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
+			{
+				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_DISPLAY_CHANGED, CELL_OSKDIALOG_DISPLAY_STATUS_HIDE);
+			}
 		}
-		else
+		else if (status != FAKE_CELL_OSKDIALOG_CLOSE_ABORT) // Handled in cellOskDialogAbort
 		{
 			info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_FINISHED;
 			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
@@ -316,6 +336,13 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		input::SetIntercepted(false);
 	};
 
+	if (auto& info = g_fxo->get<osk_info>(); info.osk_continuous_mode == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
+	{
+		info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_LOADED;
+		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_LOADED, 0);
+		return CELL_OK;
+	}
+
 	input::SetIntercepted(true);
 
 	Emu.CallAfter([=, &result]()
@@ -323,12 +350,14 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		osk->Create(get_localized_string(localized_string_id::CELL_OSK_DIALOG_TITLE), message, osk->osk_text, maxLength, prohibitFlgs, allowOskPanelFlg, firstViewPanel);
 		result = true;
 		result.notify_one();
+
+		if (g_fxo->get<osk_info>().osk_continuous_mode.load() == CELL_OSKDIALOG_CONTINUOUS_MODE_HIDE)
+		{
+			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_DISPLAY_CHANGED, CELL_OSKDIALOG_DISPLAY_STATUS_SHOW);
+		}
 	});
 
-	{
-		auto& info = g_fxo->get<osk_info>();
-		info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_LOADED;
-	}
+	g_fxo->get<osk_info>().last_dialog_state = CELL_SYSUTIL_OSKDIALOG_LOADED;
 	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_LOADED, 0);
 
 	while (!result && !Emu.IsStopped())
@@ -420,6 +449,7 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 			info.reset();
 		}
 
+		osk->state = OskDialogState::Unloaded;
 		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_UNLOADED, 0);
 	}
 	else if (keep_seperate_window_open)
@@ -483,16 +513,10 @@ error_code cellOskDialogAbort()
 
 	const s32 result = osk->state.atomic_op([](OskDialogState& state)
 	{
-		// Check for open dialog. In this case the dialog is only "Open" if it was not aborted before.
-		if (state == OskDialogState::Abort)
+		// Check for open dialog. In this case the dialog is "Open" if it was not unloaded before.
+		if (state == OskDialogState::Unloaded)
 		{
 			return static_cast<s32>(CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED);
-		}
-
-		// If the dialog has the Open state then it is in use. Only dialogs with the Close state can be aborted.
-		if (state == OskDialogState::Open)
-		{
-			return static_cast<s32>(CELL_SYSUTIL_ERROR_BUSY);
 		}
 
 		state = OskDialogState::Abort;
@@ -506,7 +530,10 @@ error_code cellOskDialogAbort()
 	}
 
 	osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_ABORT;
-	osk->Close(-1);
+	osk->Close(FAKE_CELL_OSKDIALOG_CLOSE_ABORT);
+
+	g_fxo->get<osk_info>().last_dialog_state = CELL_SYSUTIL_OSKDIALOG_FINISHED;
+	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
 
 	return CELL_OK;
 }
@@ -536,7 +563,9 @@ error_code cellOskDialogSetSeparateWindowOption(vm::ptr<CellOskDialogSeparateWin
 	auto& osk = g_fxo->get<osk_info>();
 	osk.use_separate_windows = true;
 	osk.osk_continuous_mode  = static_cast<CellOskDialogContinuousMode>(+windowOption->continuousMode);
-	// TODO: rest
+	// TODO: handle rest of windowOption
+
+	cellOskDialog.warning("cellOskDialogSetSeparateWindowOption: continuousMode=%s)", osk.osk_continuous_mode.load());
 
 	return CELL_OK;
 }
@@ -702,8 +731,8 @@ error_code cellOskDialogExtSendFinishMessage(u32 /*CellOskDialogFinishReason*/ f
 
 	const auto osk = _get_osk_dialog();
 
-	// Check for open dialog.
-	if (!osk || osk->state.load() != OskDialogState::Open)
+	// Check for "Open" dialog.
+	if (!osk || osk->state.load() == OskDialogState::Unloaded)
 	{
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}

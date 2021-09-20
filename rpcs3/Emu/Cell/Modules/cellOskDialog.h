@@ -83,6 +83,11 @@ enum CellOskDialogFinishReason
 	CELL_OSKDIALOG_CLOSE_CANCEL = 1,
 };
 
+enum CellOskDialogFinishReasonFake // Helper. Must be negative values.
+{
+	FAKE_CELL_OSKDIALOG_CLOSE_ABORT = -1,
+};
+
 enum CellOskDialogType
 {
 	CELL_OSKDIALOG_TYPE_SINGLELINE_OSK = 0,
@@ -239,9 +244,10 @@ using cellOskDialogForceFinishCallback = class b8();
 
 enum class OskDialogState
 {
+	Unloaded,
 	Open,
 	Abort,
-	Close,
+	Closed
 };
 
 class OskDialogBase
@@ -258,7 +264,7 @@ public:
 	std::function<void(s32 status)> on_osk_close;
 	std::function<void()> on_osk_input_entered;
 
-	atomic_t<OskDialogState> state{ OskDialogState::Close };
+	atomic_t<OskDialogState> state{ OskDialogState::Unloaded };
 
 	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
 	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE]{};
