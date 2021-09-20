@@ -151,9 +151,48 @@ elseif(UNIX)
             COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_SOURCE_DIR}/bin/git $<TARGET_FILE_DIR:rpcs3>/git)
 elseif(WIN32)
+    # TODO(cjj19970505@live.cn)
+    # this is a single-config generator workaround
+    # multi-config generator will fail.
+
+    # TODO(cjj19970505@live.cn)
+    # offical Qt binaries are built with -MD(d) only as stated in offical wiki
+    # https://wiki.qt.io/Technical_FAQ#Why_does_a_statically_built_Qt_use_the_dynamic_Visual_Studio_runtime_libraries_.3F_Do_I_need_to_deploy_those_with_my_application_.3F
+    # If we build our libs with /MT(d), we might encounter some issues.
+    # https://docs.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-160#what-problems-exist-if-an-application-uses-more-than-one-crt-version
+
+    # Qt installed from Qt installer has following hierarchy:
+    # bin/ for release and debug dlls and windeployqt tools
+    # lib/cmake/Qt5/ for Qt5_Dir
+    # Qt installed from vcpkg has following hierarchy:
+    # bin/ for release dlls
+    # debug/bin/ for debug dlls
+    # tools/qt5/bin/ for tools including windeployqt
+    # tools/qt5/debug/bin/ for tools with debug build including windeployqt
+    # share/cmake/Qt5/ for Qt5_Dir
+
+    # If Qt5 is installed from official Qt installer
+    list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../bin/")
+
+    # If Qt5 is installed from vcpkg
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../tools/qt5/debug/bin/")
+    else()
+        list(APPEND _QT5_TOOLS_PATHS "${Qt5_DIR}/../../../tools/qt5/bin/")
+    endif()
+    
+    find_program(_WINDEPLOYQT 
+        NAMES windeployqt
+        PATHS ${_QT5_TOOLS_PATHS}
+        REQUIRED)
+    message("Use windeployqt in ${_WINDEPLOYQT}")
+    
     add_custom_command(TARGET rpcs3 POST_BUILD
-            COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/bin" "$<TARGET_FILE_DIR:rpcs3>"
-            COMMAND "${Qt5_DIR}/../../../bin/windeployqt" --no-angle --no-compiler-runtime --no-opengl-sw --no-patchqt --no-svg --no-translations --no-quick --plugindir "$<TARGET_FILE_DIR:rpcs3>/qt/plugins" --release "$<TARGET_FILE:rpcs3>")
+        COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_SOURCE_DIR}/bin" "$<TARGET_FILE_DIR:rpcs3>"
+        # If Qt5 is installed from vcpkg, add binary path to PATH
+        # otherwise windeployqt tool won't be able to locate necessary dlls
+        COMMAND set PATH=${Qt5_DIR}/../../../$<$<CONFIG:Debug>:debug/>bin/$<SEMICOLON>%PATH% 
+        COMMAND "${_WINDEPLOYQT}" --no-angle --no-compiler-runtime --no-opengl-sw --no-patchqt --no-svg --no-translations --no-quick --plugindir "$<TARGET_FILE_DIR:rpcs3>/qt/plugins" $<$<CONFIG:Debug>:--debug> $<$<CONFIG:Release>:--release> "$<TARGET_FILE:rpcs3>")
 endif()
 
 # Unix installation

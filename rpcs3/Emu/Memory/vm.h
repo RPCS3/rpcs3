@@ -123,7 +123,12 @@ namespace vm
 		// Common mapped region for special cases
 		std::shared_ptr<utils::shm> m_common;
 
+		atomic_t<u64> m_id = 0;
+
 		bool try_alloc(u32 addr, u64 bflags, u32 size, std::shared_ptr<utils::shm>&&) const;
+
+		// Unmap block
+		bool unmap();
 
 	public:
 		block_t(u32 addr, u32 size, u64 flags);
@@ -155,6 +160,15 @@ namespace vm
 
 		// Internal
 		u32 imp_used(const vm::writer_lock&) const;
+
+		// Returns 0 if invalid, none-zero unique id if valid
+		u64 is_valid() const
+		{
+			return m_id;
+		}
+
+		friend std::pair<std::shared_ptr<block_t>, bool> unmap(u32, bool, const std::shared_ptr<block_t>*);
+		friend void close();
 	};
 
 	// Create new memory block with specified parameters and return it
@@ -163,8 +177,8 @@ namespace vm
 	// Create new memory block with at arbitrary position with specified alignment
 	std::shared_ptr<block_t> find_map(u32 size, u32 align, u64 flags = 0);
 
-	// Delete existing memory block with specified start address, return it
-	std::shared_ptr<block_t> unmap(u32 addr, bool must_be_empty = false);
+	// Delete existing memory block with specified start address, .first=its ptr, .second=success
+	std::pair<std::shared_ptr<block_t>, bool> unmap(u32 addr, bool must_be_empty = false, const std::shared_ptr<block_t>* ptr = nullptr);
 
 	// Get memory block associated with optionally specified memory location or optionally specified address
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0);

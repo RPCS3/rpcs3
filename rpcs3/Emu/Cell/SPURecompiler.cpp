@@ -4149,6 +4149,11 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		// Set register value
 		if (m_block)
 		{
+#ifndef _WIN32
+			if (g_cfg.core.spu_debug)
+				value->setName(fmt::format("result_0x%05x", m_pos));
+#endif
+
 			m_block->reg.at(index) = saved_value;
 		}
 
@@ -4908,6 +4913,11 @@ public:
 		pm.add(createAggressiveDCEPass());
 		//pm.add(createLintPass()); // Check
 
+		for (auto& f : *m_module)
+		{
+			replace_intrinsics(f);
+		}
+
 		for (const auto& func : m_functions)
 		{
 			const auto f = func.second.fn ? func.second.fn : func.second.chunk;
@@ -5375,6 +5385,12 @@ public:
 		pm.add(createDeadStoreEliminationPass());
 		pm.add(createAggressiveDCEPass());
 		//pm.add(createLintPass());
+
+		for (auto& f : *_module)
+		{
+			replace_intrinsics(f);
+			//pm.run(f);
+		}
 
 		std::string log;
 
@@ -6371,12 +6387,6 @@ public:
 		return (std::forward<TA>(a) << 16 >> 16) * (std::forward<TB>(b) << 16 >> 16);
 	}
 
-	template <typename TA, typename TB>
-	auto fm(TA&& a, TB&& b)
-	{
-		return (std::forward<TA>(a)) * (std::forward<TB>(b));
-	}
-
 	void SF(spu_opcode_t op)
 	{
 		set_vr(op.rt, get_vr(op.rb) - get_vr(op.ra));
@@ -6406,131 +6416,111 @@ public:
 	void ABSDB(spu_opcode_t op)
 	{
 		const auto [a, b] = get_vrs<u8[16]>(op.ra, op.rb);
-		set_vr(op.rt, max(a, b) - min(a, b));
-	}
-
-	template <typename T>
-	void make_spu_rol(spu_opcode_t op, value_t<T> by)
-	{
-		set_vr(op.rt, rol(get_vr<T>(op.ra), by));
-	}
-
-	template <typename R, typename T>
-	void make_spu_rotate_mask(spu_opcode_t op, value_t<T> by)
-	{
-		value_t<R> sh;
-		static_assert(sh.esize == by.esize);
-		sh.value = m_ir->CreateAnd(m_ir->CreateNeg(by.value), by.esize * 2 - 1);
-		if constexpr (!by.is_vector)
-			sh.value = m_ir->CreateVectorSplat(sh.is_vector, sh.value);
-
-		set_vr(op.rt, select(sh < by.esize, get_vr<R>(op.ra) >> sh, splat<R>(0)));
-	}
-
-	template <typename R, typename T>
-	void make_spu_rotate_sext(spu_opcode_t op, value_t<T> by)
-	{
-		value_t<R> sh;
-		static_assert(sh.esize == by.esize);
-		sh.value = m_ir->CreateAnd(m_ir->CreateNeg(by.value), by.esize * 2 - 1);
-		if constexpr (!by.is_vector)
-			sh.value = m_ir->CreateVectorSplat(sh.is_vector, sh.value);
-
-		value_t<R> max_sh = eval(splat<R>(by.esize - 1));
-		sh.value = m_ir->CreateSelect(m_ir->CreateICmpUGT(max_sh.value, sh.value), sh.value, max_sh.value);
-		set_vr(op.rt, get_vr<R>(op.ra) >> sh);
-	}
-
-	template <typename R, typename T>
-	void make_spu_shift_left(spu_opcode_t op, value_t<T> by)
-	{
-		value_t<R> sh;
-		static_assert(sh.esize == by.esize);
-		sh.value = m_ir->CreateAnd(by.value, by.esize * 2 - 1);
-		if constexpr (!by.is_vector)
-			sh.value = m_ir->CreateVectorSplat(sh.is_vector, sh.value);
-
-		set_vr(op.rt, select(sh < by.esize, get_vr<R>(op.ra) << sh, splat<R>(0)));
+		set_vr(op.rt, absd(a, b));
 	}
 
 	void ROT(spu_opcode_t op)
 	{
-		make_spu_rol(op, get_vr<u32[4]>(op.rb));
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+		set_vr(op.rt, rol(a, b));
 	}
 
 	void ROTM(spu_opcode_t op)
 	{
-		make_spu_rotate_mask<u32[4]>(op, get_vr(op.rb));
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+		set_vr(op.rt, inf_lshr(a, -b & 63));
 	}
 
 	void ROTMA(spu_opcode_t op)
 	{
-		make_spu_rotate_sext<s32[4]>(op, get_vr(op.rb));
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+		set_vr(op.rt, inf_ashr(a, -b & 63));
 	}
 
 	void SHL(spu_opcode_t op)
 	{
-		make_spu_shift_left<u32[4]>(op, get_vr(op.rb));
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+		set_vr(op.rt, inf_shl(a, b & 63));
 	}
 
 	void ROTH(spu_opcode_t op)
 	{
-		make_spu_rol(op, get_vr<u16[8]>(op.rb));
+		const auto [a, b] = get_vrs<u16[8]>(op.ra, op.rb);
+		set_vr(op.rt, rol(a, b));
 	}
 
 	void ROTHM(spu_opcode_t op)
 	{
-		make_spu_rotate_mask<u16[8]>(op, get_vr<u16[8]>(op.rb));
+		const auto [a, b] = get_vrs<u16[8]>(op.ra, op.rb);
+		set_vr(op.rt, inf_lshr(a, -b & 31));
 	}
 
 	void ROTMAH(spu_opcode_t op)
 	{
-		make_spu_rotate_sext<s16[8]>(op, get_vr<s16[8]>(op.rb));
+		const auto [a, b] = get_vrs<s16[8]>(op.ra, op.rb);
+		set_vr(op.rt, inf_ashr(a, -b & 31));
 	}
 
 	void SHLH(spu_opcode_t op)
 	{
-		make_spu_shift_left<u16[8]>(op, get_vr<u16[8]>(op.rb));
+		const auto [a, b] = get_vrs<u16[8]>(op.ra, op.rb);
+		set_vr(op.rt, inf_shl(a, b & 31));
 	}
 
 	void ROTI(spu_opcode_t op)
 	{
-		make_spu_rol(op, get_imm<u32[4]>(op.i7, false));
+		const auto a = get_vr<u32[4]>(op.ra);
+		const auto i = get_imm<u32[4]>(op.i7, false);
+		set_vr(op.rt, rol(a, i));
 	}
 
 	void ROTMI(spu_opcode_t op)
 	{
-		make_spu_rotate_mask<u32[4]>(op, get_imm<u32>(op.i7, false));
+		const auto a = get_vr<u32[4]>(op.ra);
+		const auto i = get_imm<u32[4]>(op.i7, false);
+		set_vr(op.rt, inf_lshr(a, -i & 63));
 	}
 
 	void ROTMAI(spu_opcode_t op)
 	{
-		make_spu_rotate_sext<s32[4]>(op, get_imm<u32>(op.i7, false));
+		const auto a = get_vr<s32[4]>(op.ra);
+		const auto i = get_imm<s32[4]>(op.i7, false);
+		set_vr(op.rt, inf_ashr(a, -i & 63));
 	}
 
 	void SHLI(spu_opcode_t op)
 	{
-		make_spu_shift_left<u32[4]>(op, get_imm<u32>(op.i7, false));
+		const auto a = get_vr<u32[4]>(op.ra);
+		const auto i = get_imm<u32[4]>(op.i7, false);
+		set_vr(op.rt, inf_shl(a, i & 63));
 	}
 
 	void ROTHI(spu_opcode_t op)
 	{
-		make_spu_rol(op, get_imm<u16[8]>(op.i7, false));
+		const auto a = get_vr<u16[8]>(op.ra);
+		const auto i = get_imm<u16[8]>(op.i7, false);
+		set_vr(op.rt, rol(a, i));
 	}
 
 	void ROTHMI(spu_opcode_t op)
 	{
-		make_spu_rotate_mask<u16[8]>(op, get_imm<u16>(op.i7, false));
+		const auto a = get_vr<u16[8]>(op.ra);
+		const auto i = get_imm<u16[8]>(op.i7, false);
+		set_vr(op.rt, inf_lshr(a, -i & 31));
 	}
 
 	void ROTMAHI(spu_opcode_t op)
 	{
-		make_spu_rotate_sext<s16[8]>(op, get_imm<u16>(op.i7, false));
+		const auto a = get_vr<s16[8]>(op.ra);
+		const auto i = get_imm<s16[8]>(op.i7, false);
+		set_vr(op.rt, inf_ashr(a, -i & 31));
 	}
 
 	void SHLHI(spu_opcode_t op)
 	{
-		make_spu_shift_left<u16[8]>(op, get_imm<u16>(op.i7, false));
+		const auto a = get_vr<u16[8]>(op.ra);
+		const auto i = get_imm<u16[8]>(op.i7, false);
+		set_vr(op.rt, inf_shl(a, i & 31));
 	}
 
 	void A(spu_opcode_t op)
@@ -7364,6 +7354,39 @@ public:
 
 				if constexpr (std::extent_v<VT> == 4) // u32[4]
 				{
+					// Match division (adjusted) (TODO)
+					if (auto a = match_vr<f32[4]>(op.ra))
+					{
+						static const auto MT = match<f32[4]>();
+
+						if (auto [div_ok, diva, divb] = match_expr(a, MT / MT); div_ok)
+						{
+							if (auto b = match_vr<s32[4]>(op.rb))
+							{
+								if (auto [add1_ok] = match_expr(b, bitcast<s32[4]>(a) + splat<s32[4]>(1)); add1_ok)
+								{
+									if (auto [fm_ok, a1, b1] = match_expr(x, bitcast<s32[4]>(fm(MT, MT)) > splat<s32[4]>(-1)); fm_ok)
+									{
+										if (auto [fnma_ok] = match_expr(a1, fnms(divb, bitcast<f32[4]>(b), diva)); fnma_ok)
+										{
+											if (fabs(b1).eval(m_ir) == fsplat<f32[4]>(1.0).eval(m_ir))
+											{
+												set_vr(op.rt4, diva / divb);
+												return true;
+											}
+
+											if (auto [sel_ok] = match_expr(b1, bitcast<f32[4]>((bitcast<u32[4]>(diva) & 0x80000000) | 0x3f800000)); sel_ok)
+											{
+												set_vr(op.rt4, diva / divb);
+												return true;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+
 					if (auto [a, b] = match_vrs<f64[4]>(op.ra, op.rb); a || b)
 					{
 						set_vr(op.rt4, select(x, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
@@ -7390,7 +7413,7 @@ public:
 		const auto c = get_vr(op.rc);
 
 		// Check if the constant mask doesn't require bit granularity
-		if (auto [ok, mask] = get_const_vector(c.value, m_pos, 8000); ok)
+		if (auto [ok, mask] = get_const_vector(c.value, m_pos); ok)
 		{
 			bool sel_32 = true;
 			for (u32 i = 0; i < 4; i++)
@@ -7492,7 +7515,7 @@ public:
 
 		const auto c = get_vr<u8[16]>(op.rc);
 
-		if (auto [ok, mask] = get_const_vector(c.value, m_pos, 57216); ok)
+		if (auto [ok, mask] = get_const_vector(c.value, m_pos); ok)
 		{
 			// Optimization: SHUFB with constant mask
 			if (((mask._u64[0] | mask._u64[1]) & 0xe0e0e0e0e0e0e0e0) == 0)
@@ -7552,24 +7575,45 @@ public:
 						return;
 					}
 				}
-
-				// Generic constant shuffle without constant-generation bits
-				mask = mask ^ v128::from8p(0x1f);
-
-				if (op.ra == op.rb)
-				{
-					mask = mask & v128::from8p(0xf);
-				}
-
-				const auto a = get_vr<u8[16]>(op.ra);
-				const auto b = get_vr<u8[16]>(op.rb);
-				const auto c = make_const_vector(mask, get_type<u8[16]>());
-				set_reg_fixed(op.rt4, m_ir->CreateShuffleVector(b.value, op.ra == op.rb ? b.value : a.value, m_ir->CreateZExt(c, get_type<u32[16]>())));
-				return;
 			}
 
-			spu_log.todo("[0x%x] Const SHUFB mask: %s", m_pos, mask);
+			// Adjusted shuffle mask
+			v128 smask = ~mask & v128::from8p(op.ra == op.rb ? 0xf : 0x1f);
+
+			// Blend mask for encoded constants
+			v128 bmask{};
+
+			for (u32 i = 0; i < 16; i++)
+			{
+				if (mask._bytes[i] >= 0xe0)
+					bmask._bytes[i] = 0x80;
+				else if (mask._bytes[i] >= 0xc0)
+					bmask._bytes[i] = 0xff;
+			}
+
+			const auto a = get_vr<u8[16]>(op.ra);
+			const auto b = get_vr<u8[16]>(op.rb);
+			const auto c = make_const_vector(smask, get_type<u8[16]>());
+			const auto d = make_const_vector(bmask, get_type<u8[16]>());
+
+			llvm::Value* r = d;
+
+			if ((~mask._u64[0] | ~mask._u64[1]) & 0x8080808080808080) [[likely]]
+			{
+				r = m_ir->CreateShuffleVector(b.value, op.ra == op.rb ? b.value : a.value, m_ir->CreateZExt(c, get_type<u32[16]>()));
+
+				if ((mask._u64[0] | mask._u64[1]) & 0x8080808080808080)
+				{
+					r = m_ir->CreateSelect(m_ir->CreateICmpSLT(make_const_vector(mask, get_type<u8[16]>()), llvm::ConstantInt::get(get_type<u8[16]>(), 0)), d, r);
+				}
+			}
+
+			set_reg_fixed(op.rt4, r);
+			return;
 		}
+
+		// (TODO: implement via known-bits-lookup) Check whether shuffle mask doesn't contain fixed value selectors
+		const auto [perm_only, dummy1] = match_expr(c, match<u8[16]>() & 31);
 
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
@@ -7580,9 +7624,14 @@ public:
 			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 			{
 				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
-
 				if (m_use_avx512_icl && (op.ra != op.rb))
 				{
+					if (perm_only)
+					{
+						set_vr(op.rt4, vperm2b(as, bs, c));
+						return;
+					}
+
 					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
 					const auto ab = vperm2b(as, bs, c);
@@ -7593,19 +7642,26 @@ public:
 				const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
 				const auto ax = pshufb(as, c);
 				const auto bx = pshufb(bs, c);
-				set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, bx) | x);
+
+				if (perm_only)
+					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, bx));
+				else
+					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, bx) | x);
 				return;
 			}
 
-			if (auto [ok, data] = get_const_vector(b.value, m_pos, 7000); ok)
+			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
 			{
-				const bool all_bytes_equiv = data == v128::from8p(data._u8[0]);
-				if (all_bytes_equiv)
+				if (data == v128::from8p(data._u8[0]))
 				{
 					// See above
 					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
 					const auto ax = pshufb(as, c);
-					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, b) | x);
+
+					if (perm_only)
+						set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, b));
+					else
+						set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, ax, b) | x);
 					return;
 				}
 			}
@@ -7613,15 +7669,18 @@ public:
 
 		if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
 		{
-			if (auto [ok, data] = get_const_vector(a.value, m_pos, 7000); ok)
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
-				const bool all_bytes_equiv = data == v128::from8p(data._u8[0]);
-				if (all_bytes_equiv)
+				if (data == v128::from8p(data._u8[0]))
 				{
 					// See above
 					const auto x = avg(noncast<u8[16]>(sext<s8[16]>((c & 0xc0) == 0xc0)), noncast<u8[16]>(sext<s8[16]>((c & 0xe0) == 0xc0)));
 					const auto bx = pshufb(bs, c);
-					set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, a, bx) | x);
+
+					if (perm_only)
+						set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, a, bx));
+					else
+						set_vr(op.rt4, select(noncast<s8[16]>(c << 3) >= 0, a, bx) | x);
 					return;
 				}
 			}
@@ -7629,6 +7688,12 @@ public:
 
 		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
 		{
+			if (perm_only)
+			{
+				set_vr(op.rt4, vperm2b(b, a, eval(~c)));
+				return;
+			}
+
 			const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
 			const auto cr = eval(~c);
@@ -7641,7 +7706,11 @@ public:
 		const auto cr = eval(c ^ 0xf);
 		const auto ax = pshufb(a, cr);
 		const auto bx = pshufb(b, cr);
-		set_vr(op.rt4, select(noncast<s8[16]>(cr << 3) >= 0, ax, bx) | x);
+
+		if (perm_only)
+			set_vr(op.rt4, select(noncast<s8[16]>(cr << 3) >= 0, ax, bx));
+		else
+			set_vr(op.rt4, select(noncast<s8[16]>(cr << 3) >= 0, ax, bx) | x);
 	}
 
 	void MPYA(spu_opcode_t op)
@@ -7705,11 +7774,7 @@ public:
 		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
 
 		if (g_cfg.core.llvm_accurate_dfma)
-		{
-			value_t<f64[2]> r;
-			r.value = m_ir->CreateCall(get_intrinsic<f64[2]>(llvm::Intrinsic::fma), {a.value, b.value, c.value});
-			set_vr(op.rt, r);
-		}
+			set_vr(op.rt, fmuladd(a, b, c, true));
 		else
 			set_vr(op.rt, a * b + c);
 	}
@@ -7719,11 +7784,7 @@ public:
 		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
 
 		if (g_cfg.core.llvm_accurate_dfma)
-		{
-			value_t<f64[2]> r;
-			r.value = m_ir->CreateCall(get_intrinsic<f64[2]>(llvm::Intrinsic::fma), {a.value, b.value, eval(-c).value});
-			set_vr(op.rt, r);
-		}
+			set_vr(op.rt, fmuladd(a, b, -c, true));
 		else
 			set_vr(op.rt, a * b - c);
 	}
@@ -7733,11 +7794,7 @@ public:
 		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
 
 		if (g_cfg.core.llvm_accurate_dfma)
-		{
-			value_t<f64[2]> r;
-			r.value = m_ir->CreateCall(get_intrinsic<f64[2]>(llvm::Intrinsic::fma), {eval(-a).value, b.value, c.value});
-			set_vr(op.rt, r);
-		}
+			set_vr(op.rt, fmuladd(-a, b, c, true));
 		else
 			set_vr(op.rt, c - (a * b));
 	}
@@ -7747,23 +7804,16 @@ public:
 		const auto [a, b, c] = get_vrs<f64[2]>(op.ra, op.rb, op.rt);
 
 		if (g_cfg.core.llvm_accurate_dfma)
-		{
-			value_t<f64[2]> r;
-			r.value = m_ir->CreateCall(get_intrinsic<f64[2]>(llvm::Intrinsic::fma), {a.value, b.value, c.value});
-			set_vr(op.rt, -r);
-		}
+			set_vr(op.rt, -fmuladd(a, b, c, true));
 		else
 			set_vr(op.rt, -(a * b + c));
 	}
 
 	bool is_input_positive(value_t<f32[4]> a)
 	{
-		if (auto [ok, v0, v1] = match_expr(a, fm(match<f32[4]>(), match<f32[4]>())); ok)
+		if (auto [ok, v0, v1] = match_expr(a, match<f32[4]>() * match<f32[4]>()); ok && v0.eq(v1))
 		{
-			if (v0.value == v1.value)
-			{
-				return true;
-			}
+			return true;
 		}
 
 		return false;
@@ -7817,6 +7867,12 @@ public:
 		return true;
 	}
 
+	template <typename T>
+	static llvm_calli<f32[4], T> frest(T&& a)
+	{
+		return {"spu_frest", {std::forward<T>(a)}};
+	}
+
 	void FREST(spu_opcode_t op)
 	{
 		// TODO
@@ -7826,20 +7882,46 @@ public:
 			const auto mask_ov = sext<s32[4]>(bitcast<s32[4]>(fabs(a)) > splat<s32[4]>(0x7e7fffff));
 			const auto mask_de = eval(noncast<u32[4]>(sext<s32[4]>(fcmp_ord(a == fsplat<f32[4]>(0.)))) >> 1);
 			set_vr(op.rt, (bitcast<s32[4]>(fre(a)) & ~mask_ov) | noncast<s32[4]>(mask_de));
+			return;
 		}
-		else
+
+		register_intrinsic("spu_frest", [&](llvm::CallInst* ci)
 		{
-			set_vr(op.rt, fre(get_vr<f32[4]>(op.ra)));
-		}
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			return fre(a);
+		});
+
+		set_vr(op.rt, frest(get_vr<f32[4]>(op.ra)));
+	}
+
+	template <typename T>
+	static llvm_calli<f32[4], T> frsqest(T&& a)
+	{
+		return {"spu_frsqest", {std::forward<T>(a)}};
 	}
 
 	void FRSQEST(spu_opcode_t op)
 	{
 		// TODO
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, fsplat<f64[4]>(1.0) / sqrt(fabs(get_vr<f64[4]>(op.ra))));
-		else
-			set_vr(op.rt, fsplat<f32[4]>(1.0) / sqrt(fabs(get_vr<f32[4]>(op.ra))));
+		{
+			set_vr(op.rt, fsplat<f64[4]>(1.0) / fsqrt(fabs(get_vr<f64[4]>(op.ra))));
+			return;
+		}
+
+		register_intrinsic("spu_frsqest", [&](llvm::CallInst* ci)
+		{
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			return frsqe(fabs(a));
+		});
+
+		set_vr(op.rt, frsqest(get_vr<f32[4]>(op.ra)));
+	}
+
+	template <typename T, typename U>
+	static llvm_calli<s32[4], T, U> fcgt(T&& a, U&& b)
+	{
+		return {"spu_fcgt", {std::forward<T>(a), std::forward<U>(b)}};
 	}
 
 	void FCGT(spu_opcode_t op)
@@ -7850,58 +7932,74 @@ public:
 			return;
 		}
 
-		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
-		const value_t<f32[4]> ab[2]{a, b};
-
-		std::bitset<2> safe_int_compare(0);
-		std::bitset<2> safe_nonzero_compare(0);
-
-		for (u32 i = 0; i < 2; i++)
+		register_intrinsic("spu_fcgt", [&](llvm::CallInst* ci)
 		{
-			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, 5000); ok)
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			const auto b = value<f32[4]>(ci->getOperand(1));
+
+			const value_t<f32[4]> ab[2]{a, b};
+
+			std::bitset<2> safe_int_compare(0);
+			std::bitset<2> safe_nonzero_compare(0);
+
+			for (u32 i = 0; i < 2; i++)
 			{
-				safe_int_compare.set(i);
-				safe_nonzero_compare.set(i);
-
-				for (u32 j = 0; j < 4; j++)
+				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					const u32 value = data._u32[j];
-					const u8 exponent = static_cast<u8>(value >> 23);
+					safe_int_compare.set(i);
+					safe_nonzero_compare.set(i);
 
-					if (value >= 0x7f7fffffu || !exponent)
+					for (u32 j = 0; j < 4; j++)
 					{
-						// Postive or negative zero, Denormal (treated as zero), Negative constant, or Normalized number with exponent +127
-		 				// Cannot used signed integer compare safely
-						// Note: Technically this optimization is accurate for any positive value, but due to the fact that
-						// we don't produce "extended range" values the same way as real hardware, it's not safe to apply
-						// this optimization for values outside of the range of x86 floating point hardware.
-						safe_int_compare.reset(i);
-						if (!exponent) safe_nonzero_compare.reset(i);
+						const u32 value = data._u32[j];
+						const u8 exponent = static_cast<u8>(value >> 23);
+
+						if (value >= 0x7f7fffffu || !exponent)
+						{
+							// Postive or negative zero, Denormal (treated as zero), Negative constant, or Normalized number with exponent +127
+							// Cannot used signed integer compare safely
+							// Note: Technically this optimization is accurate for any positive value, but due to the fact that
+							// we don't produce "extended range" values the same way as real hardware, it's not safe to apply
+							// this optimization for values outside of the range of x86 floating point hardware.
+							safe_int_compare.reset(i);
+							if (!exponent) safe_nonzero_compare.reset(i);
+						}
 					}
 				}
 			}
-		}
 
-		if (safe_int_compare.any())
-		{
-			set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
-			return;
-		}
+			if (safe_int_compare.any())
+			{
+				return eval(sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
+			}
 
-		if (g_cfg.core.spu_approx_xfloat)
-		{
-			const auto ai = eval(bitcast<s32[4]>(a));
-			const auto bi = eval(bitcast<s32[4]>(b));
+			if (g_cfg.core.spu_approx_xfloat)
+			{
+				const auto ai = eval(bitcast<s32[4]>(a));
+				const auto bi = eval(bitcast<s32[4]>(b));
 
-			if (!safe_nonzero_compare.any())
-				set_vr(op.rt, sext<s32[4]>(fcmp_uno(a != b) & select((ai & bi) >= 0, ai > bi, ai < bi)));
+				if (!safe_nonzero_compare.any())
+				{
+					return eval(sext<s32[4]>(fcmp_uno(a != b) & select((ai & bi) >= 0, ai > bi, ai < bi)));
+				}
+				else
+				{
+					return eval(sext<s32[4]>(select((ai & bi) >= 0, ai > bi, ai < bi)));
+				}
+			}
 			else
-				set_vr(op.rt, sext<s32[4]>(select((ai & bi) >= 0, ai > bi, ai < bi)));
-		}
-		else
-		{
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a > b)));
-		}
+			{
+				return eval(sext<s32[4]>(fcmp_ord(a > b)));
+			}
+		});
+
+		set_vr(op.rt, fcgt(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
+	}
+
+	template <typename T, typename U>
+	static llvm_calli<s32[4], T, U> fcmgt(T&& a, U&& b)
+	{
+		return {"spu_fcmgt", {std::forward<T>(a), std::forward<U>(b)}};
 	}
 
 	void FCMGT(spu_opcode_t op)
@@ -7912,83 +8010,158 @@ public:
 			return;
 		}
 
-		const auto a = eval(fabs(get_vr<f32[4]>(op.ra)));
-		const auto b = eval(fabs(get_vr<f32[4]>(op.rb)));
+		register_intrinsic("spu_fcmgt", [&](llvm::CallInst* ci)
+		{
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			const auto b = value<f32[4]>(ci->getOperand(1));
 
-		if (g_cfg.core.spu_approx_xfloat)
-		{
-			set_vr(op.rt, sext<s32[4]>(fcmp_uno(a > b) & (bitcast<s32[4]>(a) > bitcast<s32[4]>(b))));
-		}
-		else
-		{
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a > b)));
-		}
+			const auto ma = eval(fabs(a));
+			const auto mb = eval(fabs(b));
+
+			if (g_cfg.core.spu_approx_xfloat)
+			{
+				return eval(sext<s32[4]>(fcmp_uno(ma > mb) & (bitcast<s32[4]>(ma) > bitcast<s32[4]>(mb))));
+			}
+			else
+			{
+				return eval(sext<s32[4]>(fcmp_ord(ma > mb)));
+			}
+		});
+
+		set_vr(op.rt, fcmgt(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
+	}
+
+	template <typename T, typename U>
+	static llvm_calli<f32[4], T, U> fa(T&& a, U&& b)
+	{
+		return {"spu_fa", {std::forward<T>(a), std::forward<U>(b)}};
 	}
 
 	void FA(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
+		{
 			set_vr(op.rt, get_vr<f64[4]>(op.ra) + get_vr<f64[4]>(op.rb));
-		else
-			set_vr(op.rt, get_vr<f32[4]>(op.ra) + get_vr<f32[4]>(op.rb));
+			return;
+		}
+
+		register_intrinsic("spu_fa", [&](llvm::CallInst* ci)
+		{
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			const auto b = value<f32[4]>(ci->getOperand(1));
+
+			return a + b;
+		});
+
+		set_vr(op.rt, fa(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
+	}
+
+	template <typename T, typename U>
+	static llvm_calli<f32[4], T, U> fs(T&& a, U&& b)
+	{
+		return {"spu_fs", {std::forward<T>(a), std::forward<U>(b)}};
 	}
 
 	void FS(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) - get_vr<f64[4]>(op.rb));
-		else if (g_cfg.core.spu_approx_xfloat)
 		{
-			const auto b = eval(clamp_smax(get_vr<f32[4]>(op.rb))); // for #4478
-			set_vr(op.rt, get_vr<f32[4]>(op.ra) - b);
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) - get_vr<f64[4]>(op.rb));
+			return;
 		}
-		else
-			set_vr(op.rt, get_vr<f32[4]>(op.ra) - get_vr<f32[4]>(op.rb));
+
+		register_intrinsic("spu_fs", [&](llvm::CallInst* ci)
+		{
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			const auto b = value<f32[4]>(ci->getOperand(1));
+
+			if (g_cfg.core.spu_approx_xfloat)
+			{
+				const auto bc = clamp_smax(b); // for #4478
+				return eval(a - bc);
+			}
+			else
+			{
+				return eval(a - b);
+			}
+		});
+
+		set_vr(op.rt, fs(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
+	}
+
+	template <typename T, typename U>
+	static llvm_calli<f32[4], T, U> fm(T&& a, U&& b)
+	{
+		return {"spu_fm", {std::forward<T>(a), std::forward<U>(b)}};
 	}
 
 	void FM(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb));
-		else if (g_cfg.core.spu_approx_xfloat)
 		{
-			const auto a = get_vr<f32[4]>(op.ra);
-			const auto b = get_vr<f32[4]>(op.rb);
-
-			if (op.ra == op.rb && !m_interp_magn)
-			{
-				set_vr(op.rt, fm(a, b));
-				return;
-			}
-
-			const auto ma = eval(sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.))));
-			const auto mb = eval(sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.))));
-			const auto cx = eval(ma & mb);
-			const auto x = fm(a, b);
-			set_vr(op.rt, eval(bitcast<f32[4]>(bitcast<s32[4]>(x) & cx)));
+			set_vr(op.rt, get_vr<f64[4]>(op.ra) * get_vr<f64[4]>(op.rb));
+			return;
 		}
-		else
-			set_vr(op.rt, get_vr<f32[4]>(op.ra) * get_vr<f32[4]>(op.rb));
+
+		register_intrinsic("spu_fm", [&](llvm::CallInst* ci)
+		{
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			const auto b = value<f32[4]>(ci->getOperand(1));
+
+			if (g_cfg.core.spu_approx_xfloat)
+			{
+				if (op.ra == op.rb && !m_interp_magn)
+				{
+					return eval(a * b);
+				}
+
+				const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
+				const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
+				return eval(bitcast<f32[4]>(bitcast<s32[4]>(a * b) & ma & mb));
+			}
+			else
+			{
+				return eval(a * b);
+			}
+		});
+
+		set_vr(op.rt, fm(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
+	}
+
+	template <typename T>
+	static llvm_calli<f64[2], T> fesd(T&& a)
+	{
+		return {"spu_fesd", {std::forward<T>(a)}};
 	}
 
 	void FESD(spu_opcode_t op)
 	{
 		if (g_cfg.core.spu_accurate_xfloat)
 		{
-			const auto r = shuffle2(get_vr<f64[4]>(op.ra), fsplat<f64[4]>(0.), 1, 3);
+			const auto r = zshuffle(get_vr<f64[4]>(op.ra), 1, 3);
 			const auto d = bitcast<s64[2]>(r);
 			const auto a = eval(d & 0x7fffffffffffffff);
 			const auto s = eval(d & 0x8000000000000000);
 			const auto i = select(a == 0x47f0000000000000, eval(s | 0x7ff0000000000000), d);
 			const auto n = select(a > 0x47f0000000000000, splat<s64[2]>(0x7ff8000000000000), i);
 			set_vr(op.rt, bitcast<f64[2]>(n));
+			return;
 		}
-		else
+
+		register_intrinsic("spu_fesd", [&](llvm::CallInst* ci)
 		{
-			value_t<f64[2]> r;
-			r.value = m_ir->CreateFPExt(shuffle2(get_vr<f32[4]>(op.ra), fsplat<f32[4]>(0.), 1, 3).eval(m_ir), get_type<f64[2]>());
-			set_vr(op.rt, r);
-		}
+			const auto a = value<f32[4]>(ci->getOperand(0));
+
+			return fpcast<f64[2]>(zshuffle(a, 1, 3));
+		});
+
+		set_vr(op.rt, fesd(get_vr<f32[4]>(op.ra)));
+	}
+
+	template <typename T>
+	static llvm_calli<f32[4], T> frds(T&& a)
+	{
+		return {"spu_frds", {std::forward<T>(a)}};
 	}
 
 	void FRDS(spu_opcode_t op)
@@ -8002,14 +8175,24 @@ public:
 			const auto i = select(a > 0x47f0000000000000, eval(s | 0x47f0000000000000), d);
 			const auto n = select(a > 0x7ff0000000000000, splat<s64[2]>(0x47f8000000000000), i);
 			const auto z = select(a < 0x3810000000000000, s, n);
-			set_vr(op.rt, shuffle2(bitcast<f64[2]>(z), fsplat<f64[2]>(0.), 2, 0, 3, 1), false);
+			set_vr(op.rt, zshuffle(bitcast<f64[2]>(z), 2, 0, 3, 1), false);
+			return;
 		}
-		else
+
+		register_intrinsic("spu_frds", [&](llvm::CallInst* ci)
 		{
-			value_t<f32[2]> r;
-			r.value = m_ir->CreateFPTrunc(get_vr<f64[2]>(op.ra).value, get_type<f32[2]>());
-			set_vr(op.rt, shuffle2(r, fsplat<f32[2]>(0.), 2, 0, 3, 1));
-		}
+			const auto a = value<f64[2]>(ci->getOperand(0));
+
+			return zshuffle(fpcast<f32[2]>(a), 2, 0, 3, 1);
+		});
+
+		set_vr(op.rt, frds(get_vr<f64[2]>(op.ra)));
+	}
+
+	template <typename T, typename U>
+	static llvm_calli<s32[4], T, U> fceq(T&& a, U&& b)
+	{
+		return {"spu_fceq", {std::forward<T>(a), std::forward<U>(b)}};
 	}
 
 	void FCEQ(spu_opcode_t op)
@@ -8020,61 +8203,70 @@ public:
 			return;
 		}
 
-		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
-		const value_t<f32[4]> ab[2]{a, b};
-
-		std::bitset<2> safe_float_compare(0);
-		std::bitset<2> safe_int_compare(0);
-
-		for (u32 i = 0; i < 2; i++)
+		register_intrinsic("spu_fceq", [&](llvm::CallInst* ci)
 		{
-			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, 6000); ok)
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			const auto b = value<f32[4]>(ci->getOperand(1));
+
+			const value_t<f32[4]> ab[2]{a, b};
+
+			std::bitset<2> safe_float_compare(0);
+			std::bitset<2> safe_int_compare(0);
+
+			for (u32 i = 0; i < 2; i++)
 			{
-				safe_float_compare.set(i);
-				safe_int_compare.set(i);
-
-				for (u32 j = 0; j < 4; j++)
+				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					const u32 value = data._u32[j];
-					const u8 exponent = static_cast<u8>(value >> 23);
+					safe_float_compare.set(i);
+					safe_int_compare.set(i);
 
-					// unsafe if nan
-					if (exponent == 255)
+					for (u32 j = 0; j < 4; j++)
 					{
-						safe_float_compare.reset(i);
-					}
+						const u32 value = data._u32[j];
+						const u8 exponent = static_cast<u8>(value >> 23);
 
-					// unsafe if denormal or 0
-					if (!exponent)
-					{
-						safe_int_compare.reset(i);
+						// unsafe if nan
+						if (exponent == 255)
+						{
+							safe_float_compare.reset(i);
+						}
+
+						// unsafe if denormal or 0
+						if (!exponent)
+						{
+							safe_int_compare.reset(i);
+						}
 					}
 				}
 			}
-		}
 
-		if (safe_float_compare.any())
-		{
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a == b)));
-			return;
-		}
+			if (safe_float_compare.any())
+			{
+				return eval(sext<s32[4]>(fcmp_ord(a == b)));
+			}
 
-		if (safe_int_compare.any())
-		{
-			set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
-			return;
-		}
+			if (safe_int_compare.any())
+			{
+				return eval(sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
+			}
 
-		if (g_cfg.core.spu_approx_xfloat)
-		{
-			const auto ai = eval(bitcast<s32[4]>(a));
-			const auto bi = eval(bitcast<s32[4]>(b));
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a == b)) | sext<s32[4]>(ai == bi));
-		}
-		else
-		{
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(a == b)));
-		}
+			if (g_cfg.core.spu_approx_xfloat)
+			{
+				return eval(sext<s32[4]>(fcmp_ord(a == b)) | sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
+			}
+			else
+			{
+				return eval(sext<s32[4]>(fcmp_ord(a == b)));
+			}
+		});
+
+		set_vr(op.rt, fceq(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
+	}
+
+	template <typename T, typename U>
+	static llvm_calli<s32[4], T, U> fcmeq(T&& a, U&& b)
+	{
+		return {"spu_fcmeq", {std::forward<T>(a), std::forward<U>(b)}};
 	}
 
 	void FCMEQ(spu_opcode_t op)
@@ -8085,97 +8277,96 @@ public:
 			return;
 		}
 
-		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
-		const value_t<f32[4]> ab[2]{a, b};
-
-		std::bitset<2> safe_float_compare(0);
-		std::bitset<2> safe_int_compare(0);
-
-		for (u32 i = 0; i < 2; i++)
+		register_intrinsic("spu_fcmeq", [&](llvm::CallInst* ci)
 		{
-			if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, 6000); ok)
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			const auto b = value<f32[4]>(ci->getOperand(1));
+
+			const value_t<f32[4]> ab[2]{a, b};
+
+			std::bitset<2> safe_float_compare(0);
+			std::bitset<2> safe_int_compare(0);
+
+			for (u32 i = 0; i < 2; i++)
 			{
-				safe_float_compare.set(i);
-				safe_int_compare.set(i);
-
-				for (u32 j = 0; j < 4; j++)
+				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					const u32 value = data._u32[j];
-					const u8 exponent = static_cast<u8>(value >> 23);
+					safe_float_compare.set(i);
+					safe_int_compare.set(i);
 
-					// unsafe if nan
-					if (exponent == 255)
+					for (u32 j = 0; j < 4; j++)
 					{
-						safe_float_compare.reset(i);
-					}
+						const u32 value = data._u32[j];
+						const u8 exponent = static_cast<u8>(value >> 23);
 
-					// unsafe if denormal or 0
-					if (!exponent)
-					{
-						safe_int_compare.reset(i);
+						// unsafe if nan
+						if (exponent == 255)
+						{
+							safe_float_compare.reset(i);
+						}
+
+						// unsafe if denormal or 0
+						if (!exponent)
+						{
+							safe_int_compare.reset(i);
+						}
 					}
 				}
 			}
-		}
 
-		const auto fa = eval(fabs(a));
-		const auto fb = eval(fabs(b));
+			const auto fa = eval(fabs(a));
+			const auto fb = eval(fabs(b));
 
-		if (safe_float_compare.any())
-		{
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fa == fb)));
-			return;
-		}
+			if (safe_float_compare.any())
+			{
+				return eval(sext<s32[4]>(fcmp_ord(fa == fb)));
+			}
 
-		if (safe_int_compare.any())
-		{
-			set_vr(op.rt, sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
-			return;
-		}
+			if (safe_int_compare.any())
+			{
+				return eval(sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
+			}
 
-		if (g_cfg.core.spu_approx_xfloat)
-		{
-			const auto ai = eval(bitcast<s32[4]>(fa));
-			const auto bi = eval(bitcast<s32[4]>(fb));
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fa == fb)) | sext<s32[4]>(ai == bi));
-		}
-		else
-		{
-			set_vr(op.rt, sext<s32[4]>(fcmp_ord(fa == fb)));
-		}
+			if (g_cfg.core.spu_approx_xfloat)
+			{
+				return eval(sext<s32[4]>(fcmp_ord(fa == fb)) | sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
+			}
+			else
+			{
+				return eval(sext<s32[4]>(fcmp_ord(fa == fb)));
+			}
+		});
+
+		set_vr(op.rt, fcmeq(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
 	}
 
 	value_t<f32[4]> fma32x4(value_t<f32[4]> a, value_t<f32[4]> b, value_t<f32[4]> c)
 	{
-		value_t<f32[4]> r;
-
 		// Optimization: Emit only a floating multiply if the addend is zero
 		// This is odd since SPU code could just use the FM instruction, but it seems common enough
-		if (auto [ok, data] = get_const_vector(c.value, m_pos, 4000); ok)
+		if (auto [ok, data] = get_const_vector(c.value, m_pos); ok)
 		{
 			if (is_spu_float_zero(data, -1))
 			{
-				r = eval(a * b);
-				return r;
+				return eval(a * b);
 			}
 
 			if (!m_use_fma && is_spu_float_zero(data, +1))
 			{
-				r = eval(a * b + fsplat<f32[4]>(0.f));
-				return r;
+				return eval(a * b + fsplat<f32[4]>(0.f));
 			}
 		}
 
 		if ([&]()
 		{
-			if (auto [ok, data] = get_const_vector(a.value, m_pos, 4000); ok)
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
 				if (!is_spu_float_zero(data, +1))
 				{
 					return false;
 				}
 
-				if (auto [ok0, data0] = get_const_vector(b.value, m_pos, 4000); ok0)
+				if (auto [ok0, data0] = get_const_vector(b.value, m_pos); ok0)
 				{
 					if (is_spu_float_zero(data0, +1))
 					{
@@ -8184,14 +8375,14 @@ public:
 				}
 			}
 
-			if (auto [ok, data] = get_const_vector(a.value, m_pos, 4000); ok)
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
 				if (!is_spu_float_zero(data, -1))
 				{
 					return false;
 				}
 
-				if (auto [ok0, data0] = get_const_vector(b.value, m_pos, 4000); ok0)
+				if (auto [ok0, data0] = get_const_vector(b.value, m_pos); ok0)
 				{
 					if (is_spu_float_zero(data0, -1))
 					{
@@ -8209,75 +8400,243 @@ public:
 
 		if (m_use_fma)
 		{
-			r.value = m_ir->CreateCall(get_intrinsic<f32[4]>(llvm::Intrinsic::fma), {a.value, b.value, c.value});
-			return r;
+			return eval(fmuladd(a, b, c, true));
 		}
 
 		// Convert to doubles
-		const auto xa = m_ir->CreateFPExt(a.value, get_type<f64[4]>());
-		const auto xb = m_ir->CreateFPExt(b.value, get_type<f64[4]>());
-		const auto xc = m_ir->CreateFPExt(c.value, get_type<f64[4]>());
-		const auto xr = m_ir->CreateCall(get_intrinsic<f64[4]>(llvm::Intrinsic::fmuladd), {xa, xb, xc});
-		r.value = m_ir->CreateFPTrunc(xr, get_type<f32[4]>());
-		return r;
+		const auto xa = fpcast<f64[4]>(a);
+		const auto xb = fpcast<f64[4]>(b);
+		const auto xc = fpcast<f64[4]>(c);
+		const auto xr = fmuladd(xa, xb, xc, false);
+		return eval(fpcast<f32[4]>(xr));
+	}
+
+	template <typename T, typename U, typename V>
+	static llvm_calli<f32[4], T, U, V> fnms(T&& a, U&& b, V&& c)
+	{
+		return {"spu_fnms", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}};
 	}
 
 	void FNMS(spu_opcode_t op)
 	{
 		// See FMA.
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(eval(-get_vr<f64[4]>(op.ra)), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
-		else if (g_cfg.core.spu_approx_xfloat)
 		{
-			const auto a = eval(clamp_smax(get_vr<f32[4]>(op.ra)));
-			const auto b = eval(clamp_smax(get_vr<f32[4]>(op.rb)));
-			set_vr(op.rt4, fma32x4(eval(-(a)), (b), get_vr<f32[4]>(op.rc)));
+			const auto [a, b, c] = get_vrs<f64[4]>(op.ra, op.rb, op.rc);
+			set_vr(op.rt4, fmuladd(-a, b, c));
+			return;
 		}
-		else
-			set_vr(op.rt4, fma32x4(eval(-get_vr<f32[4]>(op.ra)), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
+
+		register_intrinsic("spu_fnms", [&](llvm::CallInst* ci)
+		{
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			const auto b = value<f32[4]>(ci->getOperand(1));
+			const auto c = value<f32[4]>(ci->getOperand(2));
+
+			if (g_cfg.core.spu_approx_xfloat)
+			{
+				return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), c);
+			}
+			else
+			{
+				return fma32x4(eval(-a), b, c);
+			}
+		});
+
+		set_vr(op.rt4, fnms(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
+	}
+
+	template <typename T, typename U, typename V>
+	static llvm_calli<f32[4], T, U, V> fma(T&& a, U&& b, V&& c)
+	{
+		return {"spu_fma", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}};
 	}
 
 	void FMA(spu_opcode_t op)
 	{
 		// Hardware FMA produces the same result as multiple + add on the limited double range (xfloat).
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.rc)));
-		else if (g_cfg.core.spu_approx_xfloat)
 		{
-			const auto a = get_vr<f32[4]>(op.ra);
-			const auto b = get_vr<f32[4]>(op.rb);
-			const auto ma = eval(sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.))));
-			const auto mb = eval(sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.))));
-			const auto ca = eval(bitcast<f32[4]>(bitcast<s32[4]>(a) & mb));
-			const auto cb = eval(bitcast<f32[4]>(bitcast<s32[4]>(b) & ma));
-			set_vr(op.rt4, fma32x4((ca), (cb), get_vr<f32[4]>(op.rc)));
+			const auto [a, b, c] = get_vrs<f64[4]>(op.ra, op.rb, op.rc);
+			set_vr(op.rt4, fmuladd(a, b, c));
+			return;
 		}
-		else
-			set_vr(op.rt4, fma32x4(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
+
+		register_intrinsic("spu_fma", [&](llvm::CallInst* ci)
+		{
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			const auto b = value<f32[4]>(ci->getOperand(1));
+			const auto c = value<f32[4]>(ci->getOperand(2));
+
+			if (g_cfg.core.spu_approx_xfloat)
+			{
+				const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
+				const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
+				const auto ca = bitcast<f32[4]>(bitcast<s32[4]>(a) & mb);
+				const auto cb = bitcast<f32[4]>(bitcast<s32[4]>(b) & ma);
+				return fma32x4(eval(ca), eval(cb), c);
+			}
+			else
+			{
+				return fma32x4(a, b, c);
+			}
+		});
+
+		const auto [a, b, c] = get_vrs<f32[4]>(op.ra, op.rb, op.rc);
+
+		static const auto MT = match<f32[4]>();
+
+		// Match sqrt
+		if (auto [ok_fnma, a1, b1] = match_expr(a, fnms(MT, MT, fsplat<f32[4]>(1.00000011920928955078125))); ok_fnma)
+		{
+			if (auto [ok_fm2, a2] = match_expr(b, fm(MT, fsplat<f32[4]>(0.5))); ok_fm2 && a2.eq(b1))
+			{
+				if (auto [ok_fm1, a3, b3] = match_expr(c, fm(MT, MT)); ok_fm1 && a3.eq(a1))
+				{
+					if (auto [ok_sqrte, src] = match_expr(a3, spu_rsqrte(MT)); ok_sqrte && src.eq(b3))
+					{
+						erase_stores(a, b, c, a3);
+						set_vr(op.rt4, fsqrt(fabs(src)));
+						return;
+					}
+				}
+			}
+		}
+
+		// Match division (fast)
+		if (auto [ok_fnma, divb, diva] = match_expr(a, fnms(c, MT, MT)); ok_fnma)
+		{
+			if (auto [ok_fm] = match_expr(c, fm(diva, b)); ok_fm)
+			{
+				if (auto [ok_re] = match_expr(b, spu_re(divb)); ok_re)
+				{
+					erase_stores(b, c);
+					set_vr(op.rt4, diva / divb);
+					return;
+				}
+			}
+		}
+
+		set_vr(op.rt4, fma(a, b, c));
+	}
+
+	template <typename T, typename U, typename V>
+	static llvm_calli<f32[4], T, U, V> fms(T&& a, U&& b, V&& c)
+	{
+		return {"spu_fms", {std::forward<T>(a), std::forward<U>(b), std::forward<V>(c)}};
 	}
 
 	void FMS(spu_opcode_t op)
 	{
 		// See FMA.
 		if (g_cfg.core.spu_accurate_xfloat)
-			set_vr(op.rt4, fmuladd(get_vr<f64[4]>(op.ra), get_vr<f64[4]>(op.rb), eval(-get_vr<f64[4]>(op.rc))));
-		else if (g_cfg.core.spu_approx_xfloat)
 		{
-			const auto a = eval(clamp_smax(get_vr<f32[4]>(op.ra)));
-			const auto b = eval(clamp_smax(get_vr<f32[4]>(op.rb)));
-			set_vr(op.rt4, fma32x4((a), (b), eval(-get_vr<f32[4]>(op.rc))));
+			const auto [a, b, c] = get_vrs<f64[4]>(op.ra, op.rb, op.rc);
+			set_vr(op.rt4, fmuladd(a, b, -c));
+			return;
 		}
-		else
-			set_vr(op.rt4, fma32x4(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), eval(-get_vr<f32[4]>(op.rc))));
+
+		register_intrinsic("spu_fms", [&](llvm::CallInst* ci)
+		{
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			const auto b = value<f32[4]>(ci->getOperand(1));
+			const auto c = value<f32[4]>(ci->getOperand(2));
+
+			if (g_cfg.core.spu_approx_xfloat)
+			{
+				return fma32x4(clamp_smax(a), clamp_smax(b), eval(-c));
+			}
+			else
+			{
+				return fma32x4(a, b, eval(-c));
+			}
+		});
+
+		set_vr(op.rt4, fms(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
+	}
+
+	template <typename T, typename U>
+	static llvm_calli<f32[4], T, U> fi(T&& a, U&& b)
+	{
+		return {"spu_fi", {std::forward<T>(a), std::forward<U>(b)}};
+	}
+
+	template <typename T>
+	static llvm_calli<f32[4], T> spu_re(T&& a)
+	{
+		return {"spu_re", {std::forward<T>(a)}};
+	}
+
+	template <typename T>
+	static llvm_calli<f32[4], T> spu_rsqrte(T&& a)
+	{
+		return {"spu_rsqrte", {std::forward<T>(a)}};
 	}
 
 	void FI(spu_opcode_t op)
 	{
 		// TODO
 		if (g_cfg.core.spu_accurate_xfloat)
+		{
 			set_vr(op.rt, get_vr<f64[4]>(op.rb));
-		else
-			set_vr(op.rt, get_vr<f32[4]>(op.rb));
+			// const auto [a, b] = get_vrs<f64[4]>(op.ra, op.rb);
+
+			// const auto mask_se = splat<s64[4]>(0xfff0000000000000ull);
+			// const auto mask_bf = splat<s64[4]>(0x000fff8000000000ull);
+			// const auto mask_sf = splat<s64[4]>(0x0000007fe0000000ull);
+			// const auto mask_yf = splat<s64[4]>(0x0000ffffe0000000ull);
+
+			// const auto base = bitcast<f64[4]>((bitcast<s64[4]>(b) & mask_bf) | 0x3ff0000000000000ull);
+			// const auto step = fpcast<f64[4]>(bitcast<s64[4]>(b) & mask_sf) * fsplat<f64[4]>(std::exp2(-13.f));
+			// const auto yval = fpcast<f64[4]>(bitcast<s64[4]>(a) & mask_yf) * fsplat<f64[4]>(std::exp2(-19.f));
+			// set_vr(op.rt, bitcast<f64[4]>((bitcast<s64[4]>(b) & mask_se) | (bitcast<s64[4]>(base - step * yval) & ~mask_se)));
+			return;
+		}
+
+		register_intrinsic("spu_fi", [&](llvm::CallInst* ci)
+		{
+			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
+			const auto b = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(1)));
+
+			const auto base = (b & 0x007ffc00u) << 9; // Base fraction
+			const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
+			const auto bnew = bitcast<s32[4]>((base - ymul) >> 9) + (sext<s32[4]>(ymul <= base) & (1 << 23)); // Subtract and correct invisible fraction bit
+			return bitcast<f32[4]>((b & 0xff800000u) | (bitcast<u32[4]>(fpcast<f32[4]>(bnew)) & ~0xff800000u)); // Inject old sign and exponent
+		});
+
+		register_intrinsic("spu_re", [&](llvm::CallInst* ci)
+		{
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			return fre(a);
+		});
+
+		register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
+		{
+			const auto a = value<f32[4]>(ci->getOperand(0));
+			return frsqe(fabs(a));
+		});
+
+		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
+
+		if (const auto [ok, mb] = match_expr(b, frest(match<f32[4]>())); ok && mb.eq(a))
+		{
+			erase_stores(b);
+			set_vr(op.rt, spu_re(a));
+			return;
+		}
+
+		if (const auto [ok, mb] = match_expr(b, frsqest(match<f32[4]>())); ok && mb.eq(a))
+		{
+			erase_stores(b);
+			set_vr(op.rt, spu_rsqrte(a));
+			return;
+		}
+
+		const auto r = eval(fi(a, b));
+		if (!m_interp_magn)
+			spu_log.todo("[%s:0x%05x] Unmatched spu_fi found", m_hash, m_pos);
+
+		set_vr(op.rt, r);
 	}
 
 	void CFLTS(spu_opcode_t op)
@@ -8435,7 +8794,7 @@ public:
 			value_t<s32[4]> a = get_vr<s32[4]>(op.ra);
 			value_t<f64[4]> r;
 
-			if (auto [ok, data] = get_const_vector(a.value, m_pos, 25971); ok)
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
 				r.value = build<f64[4]>(data._s32[0], data._s32[1], data._s32[2], data._s32[3]).eval(m_ir);
 			}
@@ -8475,7 +8834,7 @@ public:
 			value_t<s32[4]> a = get_vr<s32[4]>(op.ra);
 			value_t<f64[4]> r;
 
-			if (auto [ok, data] = get_const_vector(a.value, m_pos, 20971); ok)
+			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
 			{
 				r.value = build<f64[4]>(data._u32[0], data._u32[1], data._u32[2], data._u32[3]).eval(m_ir);
 			}
@@ -8528,7 +8887,7 @@ public:
 
 		for (auto pair : std::initializer_list<std::pair<value_t<u32[4]>, value_t<u32[4]>>>{{a, b}, {b, a}})
 		{
-			if (auto [ok, data] = get_const_vector(pair.first.value, m_pos, 10000); ok)
+			if (auto [ok, data] = get_const_vector(pair.first.value, m_pos); ok)
 			{
 				data._u32[3] %= SPU_LS_SIZE;
 
@@ -8552,7 +8911,7 @@ public:
 
 		for (auto pair : std::initializer_list<std::pair<value_t<u32[4]>, value_t<u32[4]>>>{{a, b}, {b, a}})
 		{
-			if (auto [ok, data] = get_const_vector(pair.first.value, m_pos, 10000); ok)
+			if (auto [ok, data] = get_const_vector(pair.first.value, m_pos); ok)
 			{
 				data._u32[3] %= SPU_LS_SIZE;
 

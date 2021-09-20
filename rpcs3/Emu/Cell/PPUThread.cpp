@@ -2688,7 +2688,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<lv2_
 
 	if (!had_ovl)
 	{
-		ensure(vm::unmap(0x3000'0000));
+		ensure(vm::unmap(0x3000'0000).second);
 	}
 
 	g_ps3_process_info.ppc_seg = ppc_seg;

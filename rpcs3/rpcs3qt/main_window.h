@@ -74,6 +74,7 @@ class main_window : public QMainWindow
 		drop_pkg,
 		drop_pup,
 		drop_rap,
+		drop_psf,
 		drop_dir,
 		drop_game,
 		drop_rrc

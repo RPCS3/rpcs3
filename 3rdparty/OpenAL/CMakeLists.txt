@@ -1,7 +1,7 @@
 # OpenAL
 if (MSVC)
-	find_path(OPENAL_INCLUDE_DIR al.h PATHS OpenAL/include)
-	find_library(OPENAL_LIBRARY OpenAL32 PATHS OpenAL/libs/Win64/)
+	find_path(OPENAL_INCLUDE_DIR al.h PATHS include/)
+	find_library(OPENAL_LIBRARY OpenAL32 PATHS libs/Win64/)
 else()
 	find_package(OpenAL REQUIRED)
 endif()

@@ -75,7 +75,7 @@ bool package_reader::read_header()
 	pkg_log.notice("Header: data_size = 0x%x = %d", m_header.data_size, m_header.data_size);
 	pkg_log.notice("Header: title_id = %s", m_header.title_id);
 	pkg_log.notice("Header: qa_digest = 0x%x 0x%x", m_header.qa_digest[0], m_header.qa_digest[1]);
-	//pkg_log.notice("Header: klicensee = 0x%x = %d", header.klicensee, header.klicensee);
+	pkg_log.notice("Header: klicensee = %s", m_header.klicensee.value());
 
 	// Get extended PKG information for PSP or PSVita
 	if (m_header.pkg_platform == PKG_PLATFORM_TYPE_PSP_PSVITA)
@@ -667,6 +667,8 @@ package_error package_reader::check_target_app_version() const
 	return package_error::app_version;
 }
 
+fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, const std::string& rap_file_name, u8 *custom_klic, bool verbose = false);
+
 bool package_reader::extract_data(atomic_t<double>& sync)
 {
 	if (!m_is_valid)
@@ -704,7 +706,9 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 		break;
 	}
 
-	dir += m_install_dir + '/';
+	// TODO: Verify whether other content types require appending title ID
+	if (m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
+		dir += m_install_dir + '/';
 
 	// If false, an existing directory is being overwritten: cannot cancel the operation
 	const bool was_null = !fs::is_dir(dir);
@@ -742,9 +746,10 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 		const std::string name{reinterpret_cast<char*>(m_buf.get()), entry.name_size};
 		const std::string path = dir + vfs::escape(name);
 
-		pkg_log.notice("Entry 0x%08x: %s", entry.type, name);
+		const bool log_error = entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS);
+		(log_error ? pkg_log.error : pkg_log.notice)("Entry 0x%08x: %s (pad=0x%x)", entry.type, name, entry.pad);
 
-		switch (entry.type & 0xff)
+		switch (const u8 entry_type = entry.type & 0xff)
 		{
 		case PKG_FILE_ENTRY_NPDRM:
 		case PKG_FILE_ENTRY_NPDRMEDAT:
@@ -770,7 +775,14 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 				break;
 			}
 
-			if (fs::file out{ path, fs::rewrite })
+			const bool is_buffered = entry_type == PKG_FILE_ENTRY_SDAT;
+
+			if (entry_type == PKG_FILE_ENTRY_NPDRMEDAT)
+			{
+				pkg_log.todo("NPDRM EDAT!");
+			}
+
+			if (fs::file out = is_buffered ? fs::make_stream<std::vector<u8>>() : fs::file{ path, fs::rewrite })
 			{
 				bool extract_success = true;
 				for (u64 pos = 0; pos < entry.file_size; pos += BUF_SIZE)
@@ -803,6 +815,17 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 
 						// Cannot cancel the installation
 						sync += 1.;
+					}
+				}
+
+				if (is_buffered)
+				{
+					out = DecryptEDAT(out, name, 1, "", reinterpret_cast<u8*>(&m_header.klicensee), true);
+					if (!out || !fs::write_file(path, fs::rewrite, static_cast<fs::container_stream<std::vector<u8>>*>(out.release().get())->obj))
+					{
+						num_failures++;
+						pkg_log.error("Failed to create file %s", path);
+						break;
 					}
 				}
 

@@ -7,6 +7,7 @@
 #include "Utilities/File.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/system_progress.hpp"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellScreenshot.h"
 #include "Emu/RSX/rsx_utils.h"
@@ -348,7 +349,12 @@ void gs_frame::close()
 {
 	Emu.CallAfter([this]()
 	{
-		QWindow::hide(); // Workaround
+		if (!(+g_progr))
+		{
+			// Hide the dialog before stopping if no progress bar is being shown.
+			// Otherwise users might think that the game softlocked if stopping takes too long.
+			QWindow::hide();
+		}
 
 		if (!Emu.IsStopped())
 		{

@@ -555,7 +555,7 @@ namespace rsx
 		on_exit();
 	}
 
-	void thread::cpu_wait(bs_t<cpu_flag>)
+	void thread::cpu_wait(bs_t<cpu_flag> old)
 	{
 		if (external_interrupt_lock)
 		{
@@ -563,7 +563,16 @@ namespace rsx
 		}
 
 		on_semaphore_acquire_wait();
-		std::this_thread::yield();
+
+		if ((state & (cpu_flag::dbg_global_pause + cpu_flag::exit)) == cpu_flag::dbg_global_pause)
+		{
+			// Wait 16ms during emulation pause. This reduces cpu load while still giving us the chance to render overlays.
+			thread_ctrl::wait_on(state, old, 16000);
+		}
+		else
+		{
+			std::this_thread::yield();
+		}
 	}
 
 	void thread::on_task()
@@ -3377,8 +3386,8 @@ namespace rsx
 			auto scale_result = [](u32 value)
 			{
 				const auto scale = rsx::get_resolution_scale_percent();
-				const auto result = static_cast<u64>(value * 10000) / (scale * scale);
-				return std::max<u32>(1u, result);
+				const auto result = (value * 10000ull) / (scale * scale);
+				return std::max(1u, static_cast<u32>(result));
 			};
 
 			switch (type)

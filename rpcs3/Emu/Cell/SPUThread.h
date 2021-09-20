@@ -631,6 +631,7 @@ public:
 	virtual std::string dump_misc() const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_return() override;
+	virtual void cpu_work() override;
 	virtual ~spu_thread() override;
 	void cleanup();
 	void cpu_init();
@@ -667,6 +668,9 @@ public:
 	u32 mfc_size = 0;
 	u32 mfc_barrier = -1;
 	u32 mfc_fence = -1;
+
+	// Timestamp of the first postponed command (transfers shuffling related)
+	u64 mfc_last_timestamp = 0;
 
 	// MFC proxy command data
 	spu_mfc_cmd mfc_prxy_cmd;
@@ -774,6 +778,8 @@ public:
 	u64 mfc_dump_idx = 0;
 	static constexpr u32 max_mfc_dump_idx = 2048;
 
+	bool in_cpu_work = false;
+
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
 	const char* current_func{}; // Current STOP or RDCH blocking function
@@ -787,7 +793,7 @@ public:
 	bool do_list_transfer(spu_mfc_cmd& args);
 	void do_putlluc(const spu_mfc_cmd& args);
 	bool do_putllc(const spu_mfc_cmd& args);
-	void do_mfc(bool wait = true);
+	void do_mfc(bool can_escape = true, bool must_finish = true);
 	u32 get_mfc_completed() const;
 
 	bool process_mfc_cmd();
