@@ -262,5 +262,4 @@ public:
 
 	atomic_t<CellOskDialogInputFieldResult> osk_input_result{ CellOskDialogInputFieldResult::CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK };
 	char16_t osk_text[CELL_OSKDIALOG_STRING_SIZE]{};
-	char16_t osk_text_old[CELL_OSKDIALOG_STRING_SIZE]{};
 };
