@@ -170,7 +170,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 			on_osk_close(CELL_OSKDIALOG_CLOSE_CANCEL);
 			break;
 		default:
-			on_osk_close(-1);
+			on_osk_close(result);
 			break;
 		}
 	});
@@ -198,7 +198,7 @@ void osk_dialog_frame::Close(s32 status)
 			m_dialog->done(QDialog::Rejected);
 			break;
 		default:
-			m_dialog->done(-1);
+			m_dialog->done(status);
 			break;
 		}
 	}
