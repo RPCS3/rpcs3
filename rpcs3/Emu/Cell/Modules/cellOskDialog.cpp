@@ -123,17 +123,15 @@ std::shared_ptr<OskDialogBase> _get_osk_dialog(bool create = false)
 
 		return osk.dlg;
 	}
-	else
+
+	const auto init = osk.init.access();
+
+	if (!init)
 	{
-		const auto init = osk.init.access();
-
-		if (!init)
-		{
-			return nullptr;
-		}
-
-		return osk.dlg;
+		return nullptr;
 	}
+
+	return osk.dlg;
 }
 
 error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dialogParam, vm::ptr<CellOskDialogInputFieldInfo> inputFieldInfo)
@@ -301,16 +299,6 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		input::SetIntercepted(false);
 	};
 
-	osk->on_osk_input_entered = [wptr = std::weak_ptr<OskDialogBase>(osk)]()
-	{
-		const auto osk = wptr.lock();
-
-		if (g_fxo->get<osk_info>().use_separate_windows.load() && (g_fxo->get<osk_info>().osk_continuous_mode.load() != CELL_OSKDIALOG_CONTINUOUS_MODE_NONE))
-		{
-			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED, 0);
-		}
-	};
-
 	input::SetIntercepted(true);
 
 	Emu.CallAfter([=, &result]()
@@ -332,7 +320,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 error_code cellOskDialogLoadAsyncExt()
 {
-	UNIMPLEMENTED_FUNC(cellOskDialog);
+	cellOskDialog.todo("cellOskDialogLoadAsyncExt()");
 	return CELL_OK;
 }
 
