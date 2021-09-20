@@ -41,6 +41,9 @@ struct osk_info
 {
 	std::shared_ptr<OskDialogBase> dlg;
 
+	std::array<char16_t, CELL_OSKDIALOG_STRING_SIZE> valid_text{};
+	shared_mutex text_mtx;
+
 	atomic_t<bool> use_separate_windows = false;
 
 	atomic_t<bool> lock_ext_input = false;
@@ -66,6 +69,7 @@ struct osk_info
 	atomic_t<u32> layout_mode = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT | CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
 
 	atomic_t<CellOskDialogContinuousMode> osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
+	atomic_t<u32> last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED; // Used for continuous seperate window dialog
 
 	atomic_t<vm::ptr<cellOskDialogConfirmWordFilterCallback>> osk_confirm_callback{};
 
@@ -73,7 +77,10 @@ struct osk_info
 
 	void reset()
 	{
+		std::lock_guard lock(text_mtx);
+
 		dlg.reset();
+		valid_text = {};
 		use_separate_windows = false;
 		lock_ext_input = false;
 		device_mask = 0;
@@ -93,6 +100,7 @@ struct osk_info
 		initial_scale = 1.0f;
 		layout_mode = CELL_OSKDIALOG_LAYOUTMODE_X_ALIGN_LEFT | CELL_OSKDIALOG_LAYOUTMODE_Y_ALIGN_TOP;
 		osk_continuous_mode = CELL_OSKDIALOG_CONTINUOUS_MODE_NONE;
+		last_dialog_state = CELL_SYSUTIL_OSKDIALOG_UNLOADED;
 		osk_confirm_callback.store({});
 	}
 };
@@ -160,14 +168,19 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 	// Get init text and prepare return value
 	osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK;
 	std::memset(osk->osk_text, 0, sizeof(osk->osk_text));
-	std::memset(osk->osk_text_old, 0, sizeof(osk->osk_text_old));
+
+	// Also clear the info text just to be sure (it should be zeroed at this point anyway)
+	{
+		auto& info = g_fxo->get<osk_info>();
+		std::lock_guard lock(info.text_mtx);
+		info.valid_text = {};
+	}
 
 	if (inputFieldInfo->init_text)
 	{
 		for (u32 i = 0; (i < maxLength) && (inputFieldInfo->init_text[i] != 0); i++)
 		{
 			osk->osk_text[i] = inputFieldInfo->init_text[i];
-			osk->osk_text_old[i] = inputFieldInfo->init_text[i];
 		}
 	}
 
@@ -200,18 +213,18 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			return false;
 		}))
 		{
-			input::SetIntercepted(false);
-			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
-			return;
+			cellOskDialog.notice("Called on_osk_close after abort");
 		}
 
-		const bool keep_seperate_window_open = g_fxo->get<osk_info>().use_separate_windows.load() && (g_fxo->get<osk_info>().osk_continuous_mode.load() != CELL_OSKDIALOG_CONTINUOUS_MODE_NONE);
+		auto& info = g_fxo->get<osk_info>();
+
+		const bool keep_seperate_window_open = info.use_separate_windows.load() && (info.osk_continuous_mode.load() != CELL_OSKDIALOG_CONTINUOUS_MODE_NONE);
 
 		switch (status)
 		{
 		case CELL_OSKDIALOG_CLOSE_CONFIRM:
 		{
-			if (auto ccb = g_fxo->get<osk_info>().osk_confirm_callback.exchange({}))
+			if (auto ccb = info.osk_confirm_callback.exchange({}))
 			{
 				std::vector<u16> string_to_send(CELL_OSKDIALOG_STRING_SIZE);
 				atomic_t<bool> done = false;
@@ -246,7 +259,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 				}
 			}
 
-			if (g_fxo->get<osk_info>().use_separate_windows.load() && osk->osk_text[0] == 0)
+			if (info.use_separate_windows.load() && osk->osk_text[0] == 0)
 			{
 				cellOskDialog.warning("cellOskDialogLoadAsync: input result is CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT");
 				osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT;
@@ -270,22 +283,25 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		}
 
 		// Send OSK status
-		if (g_fxo->get<osk_info>().use_separate_windows.load() && (g_fxo->get<osk_info>().osk_continuous_mode.load() != CELL_OSKDIALOG_CONTINUOUS_MODE_NONE))
+		if (keep_seperate_window_open)
 		{
 			switch (status)
 			{
 			case CELL_OSKDIALOG_CLOSE_CONFIRM:
 			{
+				info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED;
 				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED, 0);
 				break;
 			}
 			case CELL_OSKDIALOG_CLOSE_CANCEL:
 			{
+				info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED;
 				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED, 0);
 				break;
 			}
 			default:
 			{
+				info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_FINISHED;
 				sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
 				break;
 			}
@@ -293,6 +309,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		}
 		else
 		{
+			info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_FINISHED;
 			sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
 		}
 
@@ -308,6 +325,10 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 		result.notify_one();
 	});
 
+	{
+		auto& info = g_fxo->get<osk_info>();
+		info.last_dialog_state = CELL_SYSUTIL_OSKDIALOG_LOADED;
+	}
 	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_LOADED, 0);
 
 	while (!result && !Emu.IsStopped())
@@ -338,13 +359,28 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
+	auto& info = g_fxo->get<osk_info>();
+
+	const bool keep_seperate_window_open = info.use_separate_windows.load() && (info.osk_continuous_mode.load() != CELL_OSKDIALOG_CONTINUOUS_MODE_NONE);
+
+	info.text_mtx.lock();
+
+	// Update text buffer if called from cellOskDialogUnloadAsync or if the user accepted the dialog during continuous seperate window mode.
+	if (is_unload || (keep_seperate_window_open && info.last_dialog_state == CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED))
+	{
+		for (s32 i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
+		{
+			info.valid_text[i] = osk->osk_text[i];
+		}
+	}
+
 	if (is_unload)
 	{
 		OutputInfo->result = osk->osk_input_result.load();
 	}
 	else
 	{
-		if (memcmp(osk->osk_text_old, osk->osk_text, sizeof(osk->osk_text)) == 0)
+		if (info.valid_text[0] == 0)
 		{
 			OutputInfo->result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT;
 		}
@@ -354,39 +390,52 @@ error_code getText(vm::ptr<CellOskDialogCallbackReturnParam> OutputInfo, bool is
 		}
 	}
 
-	bool do_copy = OutputInfo->pResultString && (OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK || (is_unload && OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT));
+	const bool do_copy = OutputInfo->pResultString && (OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_OK || (is_unload && OutputInfo->result == CELL_OSKDIALOG_INPUT_FIELD_RESULT_NO_INPUT_TEXT));
 
-	for (s32 i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
+	for (s32 i = 0; do_copy && i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
 	{
-		osk->osk_text_old[i] = osk->osk_text[i];
-
-		if (do_copy)
+		if (i < OutputInfo->numCharsResultString)
 		{
-			if (i < OutputInfo->numCharsResultString)
+			OutputInfo->pResultString[i] = info.valid_text[i];
+
+			if (info.valid_text[i] == 0)
 			{
-				if (osk->osk_text[i] == 0)
-				{
-					do_copy = false;
-				}
-				OutputInfo->pResultString[i] = osk->osk_text[i];
-			}
-			else
-			{
-				OutputInfo->pResultString[i] = 0;
-				do_copy = false;
+				break;
 			}
 		}
+		else
+		{
+			OutputInfo->pResultString[i] = 0;
+			break;
+		}
 	}
+
+	info.text_mtx.unlock();
 
 	if (is_unload)
 	{
 		// Unload should be called last, so remove the dialog here
-		if (const auto reset_lock = g_fxo->get<osk_info>().init.reset())
+		if (const auto reset_lock = info.init.reset())
 		{
-			g_fxo->get<osk_info>().reset();
+			info.reset();
 		}
 
 		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_UNLOADED, 0);
+	}
+	else if (keep_seperate_window_open)
+	{
+		// Clear text buffer unless the dialog is still open during continuous seperate window mode.
+		switch (info.last_dialog_state)
+		{
+		case CELL_SYSUTIL_OSKDIALOG_FINISHED:
+		case CELL_SYSUTIL_OSKDIALOG_UNLOADED:
+		case CELL_SYSUTIL_OSKDIALOG_INPUT_CANCELED:
+		case CELL_SYSUTIL_OSKDIALOG_INPUT_ENTERED:
+			info.valid_text = {};
+			break;
+		default:
+			break;
+		}
 	}
 
 	return CELL_OK;
@@ -743,6 +792,27 @@ error_code cellOskDialogExtRegisterConfirmWordFilterCallback(vm::ptr<cellOskDial
 error_code cellOskDialogExtUpdateInputText()
 {
 	cellOskDialog.todo("cellOskDialogExtUpdateInputText()");
+
+	// Usually, user input is only available when the dialog was accepted.
+	// This function seems to be called in order to copy the current text to an internal buffer.
+	// Afterwards, cellOskDialogGetInputText can be called to fetch the current text regardless of
+	// user confirmation, even if the dialog is still in use.
+
+	// TODO: error checks
+
+	const auto osk = _get_osk_dialog();
+
+	if (osk)
+	{
+		auto& info = g_fxo->get<osk_info>();
+		std::lock_guard lock(info.text_mtx);
+
+		for (s32 i = 0; i < CELL_OSKDIALOG_STRING_SIZE - 1; i++)
+		{
+			info.valid_text[i] = osk->osk_text[i];
+		}
+	}
+
 	return CELL_OK;
 }
 
