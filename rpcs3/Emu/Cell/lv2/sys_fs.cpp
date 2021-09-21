@@ -1467,7 +1467,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 				return nullptr;
 			}
 
-			return std::make_shared<lv2_file>(file, std::move(stream), file.mode, file.flags, file.real_path, lv2_file_type::sdata);
+			return std::make_shared<lv2_file>(file, std::move(stream), file.mode, CELL_FS_O_RDONLY, file.real_path, lv2_file_type::sdata);
 		}))
 		{
 			arg->out_code = CELL_OK;
