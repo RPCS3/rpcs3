@@ -24,17 +24,25 @@ lv2_fs_mount_point g_mp_sys_dev_flash2{ "", 512, 8192, lv2_mp_flag::no_uid_gid }
 lv2_fs_mount_point g_mp_sys_dev_flash3{ "", 512, 8192, lv2_mp_flag::read_only + lv2_mp_flag::no_uid_gid }; // TODO confirm
 
 template<>
+void fmt_class_string<lv2_file_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](lv2_file_type type)
+	{
+		switch (type)
+		{
+		case lv2_file_type::regular: return "Regular file";
+		case lv2_file_type::sdata: return "SDATA";
+		case lv2_file_type::edata: return "EDATA";
+		}
+
+		return unknown;
+	});
+}
+
+template<>
 void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 {
 	const auto& file = get_object(arg);
-
-	std::string_view type_s;
-	switch (file.type)
-	{
-	case lv2_file_type::regular: type_s = "Regular file"; break;
-	case lv2_file_type::sdata: type_s = "SDATA"; break;
-	case lv2_file_type::edata: type_s = "EDATA"; break;
-	}
 
 	auto get_size = [](u64 size) -> std::string
 	{
@@ -61,7 +69,7 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 	const usz pos = file.file ? file.file.pos() : umax;
 	const usz size = file.file ? file.file.size() : umax;
 
-	fmt::append(out, u8"%s, “%s”, Mode: 0x%x, Flags: 0x%x, Pos: %s, Size: %s", type_s, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size));
+	fmt::append(out, u8"%s, “%s”, Mode: 0x%x, Flags: 0x%x, Pos: %s, Size: %s", file.type, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size));
 }
 
 template<>
@@ -711,6 +719,11 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 
 		*nwrite = 0;
 		return CELL_OK;
+	}
+
+	if (file->type != lv2_file_type::regular)
+	{
+		sys_fs.error("%s type: Writing %u bytes to FD=%d (path=%s)", file->type, nbytes, file->name.data());
 	}
 
 	if (file->mp->flags & lv2_mp_flag::read_only)
@@ -1420,6 +1433,11 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		if (op == 0x8000000b && file->mp->flags & lv2_mp_flag::read_only)
 		{
 			return CELL_EROFS;
+		}
+
+		if (op == 0x8000000b && file->type != lv2_file_type::regular && arg->size)
+		{
+			sys_fs.error("%s type: Writing %u bytes to FD=%d (path=%s)", file->type, arg->size, file->name.data());
 		}
 
 		std::lock_guard lock(file->mp->mutex);
