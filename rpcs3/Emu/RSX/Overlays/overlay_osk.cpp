@@ -19,19 +19,19 @@ namespace rsx
 			auto_repeat_buttons.insert(pad_button::square);
 		}
 
-		void osk_dialog::Close(bool ok)
+		void osk_dialog::Close(s32 status)
 		{
 			fade_animation.current = color4f(1.f);
 			fade_animation.end = color4f(0.f);
 			fade_animation.duration = 0.5f;
 
-			fade_animation.on_finish = [this, ok]
+			fade_animation.on_finish = [this, status]
 			{
 				if (on_osk_close)
 				{
-					Emu.CallAfter([this, ok]()
+					Emu.CallAfter([this, status]()
 					{
-						on_osk_close(ok ? CELL_MSGDIALOG_BUTTON_OK : CELL_MSGDIALOG_BUTTON_ESCAPE);
+						on_osk_close(status);
 					});
 				}
 
@@ -522,7 +522,7 @@ namespace rsx
 			}
 			case pad_button::start:
 			{
-				Close(true);
+				Close(CELL_OSKDIALOG_CLOSE_CONFIRM);
 				break;
 			}
 			case pad_button::triangle:
@@ -543,7 +543,7 @@ namespace rsx
 			}
 			case pad_button::circle:
 			{
-				Close(false);
+				Close(CELL_OSKDIALOG_CLOSE_CANCEL);
 				break;
 			}
 			case pad_button::L2:

@@ -159,14 +159,20 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	// Events
 	connect(button_box, &QDialogButtonBox::accepted, m_dialog, &QDialog::accept);
 
-	connect(m_dialog, &QDialog::accepted, [this]()
+	connect(m_dialog, &QDialog::finished, [this](int result)
 	{
-		on_osk_close(CELL_MSGDIALOG_BUTTON_OK);
-	});
-
-	connect(m_dialog, &QDialog::rejected, [this]()
-	{
-		on_osk_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
+		switch (result)
+		{
+		case QDialog::Accepted:
+			on_osk_close(CELL_OSKDIALOG_CLOSE_CONFIRM);
+			break;
+		case QDialog::Rejected:
+			on_osk_close(CELL_OSKDIALOG_CLOSE_CANCEL);
+			break;
+		default:
+			on_osk_close(result);
+			break;
+		}
 	});
 
 	// Fix size
@@ -179,10 +185,21 @@ void osk_dialog_frame::SetOskText(const QString& text)
 	std::memcpy(osk_text, utils::bless<char16_t>(text.constData()), (text.size() + 1u) * sizeof(char16_t));
 }
 
-void osk_dialog_frame::Close(bool accepted)
+void osk_dialog_frame::Close(s32 status)
 {
 	if (m_dialog)
 	{
-		m_dialog->done(accepted ? QDialog::Accepted : QDialog::Rejected);
+		switch (status)
+		{
+		case CELL_OSKDIALOG_CLOSE_CONFIRM:
+			m_dialog->done(QDialog::Accepted);
+			break;
+		case CELL_OSKDIALOG_CLOSE_CANCEL:
+			m_dialog->done(QDialog::Rejected);
+			break;
+		default:
+			m_dialog->done(status);
+			break;
+		}
 	}
 }
