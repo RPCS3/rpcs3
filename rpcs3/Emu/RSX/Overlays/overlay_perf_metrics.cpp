@@ -267,6 +267,9 @@ namespace rsx
 
 			update();
 
+			// The text might have changed during the initial update. Recalculate positions.
+			reset_transforms();
+
 			m_is_initialised = true;
 			visible = true;
 		}
