@@ -244,6 +244,11 @@ namespace fs
 #endif
 	}
 
+	file_id file_base::get_id()
+	{
+		return {};
+	}
+
 	u64 file_base::write_gather(const iovec_clone* buffers, u64 buf_count)
 	{
 		u64 total = 0;
@@ -270,6 +275,66 @@ namespace fs
 		}
 
 		return this->write(buf.get(), total);
+	}
+
+	file_id::operator bool() const
+	{
+		return !type.empty() && !data.empty();
+	}
+
+	// Test if identical
+	// For example: when LHS writes one byte to a file at X offset, RHS file be able to read that exact byte at X offset)
+	bool file_id::is_mirror_of(const file_id& rhs) const
+	{
+		// If either is an invalid ID we cannot compare safely, return false
+		return rhs && type == rhs.type && data == rhs.data;
+	}
+
+	// Test if both files point to the same file
+	// For example: if a file descriptor pointing to the complete file exists and is being truncated to 0 bytes from non-
+	// -zero size state: this has to affect both RHS and LHS files.
+	bool file_id::is_coherent_with(const file_id& rhs) const
+	{
+		struct id_view
+		{
+			std::string_view type_view;
+			std::basic_string_view<u8> data_view;
+		};
+
+		id_view _rhs{rhs.type, {rhs.data.data(), rhs.data.size()}};
+		id_view _lhs{type, {data.data(), data.size()}};
+
+		// Peek through fs::file wrappers
+		auto peek_wrapppers = [](id_view& id)
+		{
+			u64 offset_count = 0;
+			constexpr auto lv2_view = "lv2_file::file_view: "sv;
+
+			for (usz pos = 0; (pos = id.type_view.find(lv2_view, pos)) != umax; pos += lv2_view.size())
+			{
+				offset_count++;
+			}
+
+			// Remove offsets data
+			id.data_view.remove_suffix(sizeof(u64) * offset_count);
+
+			// Get last category identifier
+			if (usz sep = id.type_view.rfind(": "); sep != umax)
+			{
+				id.type_view.remove_prefix(sep + 2);
+			}
+		};
+
+		peek_wrapppers(_rhs);
+		peek_wrapppers(_lhs);
+
+		// If either is an invalid ID we cannot compare safely, return false
+		if (_rhs.type_view.empty() || _rhs.data_view.empty())
+		{
+			return false;
+		}
+
+		return _rhs.type_view == _lhs.type_view && _rhs.data_view == _lhs.data_view;
 	}
 
 	dir_base::~dir_base()
@@ -1289,6 +1354,28 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		{
 			return m_handle;
 		}
+
+		file_id get_id() override
+		{
+			file_id id{"windows_file"};
+			id.data.resize(sizeof(FILE_ID_INFO));
+
+			FILE_ID_INFO info;
+
+			if (!GetFileInformationByHandleEx(m_handle, FileIdInfo, &info, sizeof(info)))
+			{
+				// Try GetFileInformationByHandle as a fallback
+				BY_HANDLE_FILE_INFORMATION info2;
+				ensure(GetFileInformationByHandle(m_handle, &info2));
+
+				info = {};
+				info.VolumeSerialNumber = info2.dwVolumeSerialNumber;
+				std::memcpy(&info.FileId, &info2.nFileIndexHigh, 8);
+			}
+
+			std::memcpy(id.data.data(), &info, sizeof(info));
+			return id;
+		}
 	};
 
 	m_file = std::make_unique<windows_file>(handle);
@@ -1481,6 +1568,19 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return m_fd;
 		}
 
+		file_id get_id() override
+		{
+			struct ::stat file_info;
+			ensure(::fstat(m_fd, &file_info) == 0); // "file::get_id"
+
+			file_id id{"unix_file"};
+			id.data.resize(sizeof(file_info.st_dev) + sizeof(file_info.st_ino));
+
+			std::memcpy(id.data.data(), &file_info.st_dev, sizeof(file_info.st_dev));
+			std::memcpy(id.data.data() + sizeof(file_info.st_dev), &file_info.st_ino, sizeof(file_info.st_ino));
+			return id;
+		}
+
 		u64 write_gather(const iovec_clone* buffers, u64 buf_count) override
 		{
 			static_assert(sizeof(iovec) == sizeof(iovec_clone), "Weird iovec size");
@@ -1613,6 +1713,16 @@ fs::native_handle fs::file::get_handle() const
 #else
 	return -1;
 #endif
+}
+
+fs::file_id fs::file::get_id() const
+{
+	if (m_file)
+	{
+		return m_file->get_id();
+	}
+
+	return {};
 }
 
 bool fs::dir::open(const std::string& path)
@@ -2255,4 +2365,13 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+template<>
+void fmt_class_string<fs::file_id>::format(std::string& out, u64 arg)
+{
+	const fs::file_id& id = get_object(arg);
+
+	// TODO: Format data
+	fmt::append(out, "{type='%s'}", id.type);
 }

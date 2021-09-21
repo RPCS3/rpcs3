@@ -84,6 +84,16 @@ namespace fs
 		usz iov_len;
 	};
 
+	struct file_id
+	{
+		std::string type;
+		std::vector<u8> data;
+
+		explicit operator bool() const;
+		bool is_mirror_of(const file_id&) const;
+		bool is_coherent_with(const file_id&) const;
+	};
+
 	// File handle base
 	struct file_base
 	{
@@ -98,6 +108,7 @@ namespace fs
 		virtual u64 seek(s64 offset, seek_mode whence) = 0;
 		virtual u64 size() = 0;
 		virtual native_handle get_handle();
+		virtual file_id get_id();
 		virtual u64 write_gather(const iovec_clone* buffers, u64 buf_count);
 	};
 
@@ -504,6 +515,9 @@ namespace fs
 
 		// Get native handle if available
 		native_handle get_handle() const;
+
+		// Get file ID information (custom ID)
+		file_id get_id() const;
 
 		// Gathered write
 		u64 write_gather(const iovec_clone* buffers, u64 buf_count,

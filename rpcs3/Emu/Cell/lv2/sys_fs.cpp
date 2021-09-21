@@ -641,6 +641,18 @@ struct lv2_file::file_view : fs::file_base
 	{
 		return m_file->file.size();
 	}
+
+	fs::file_id get_id() override
+	{
+		fs::file_id id = m_file->file.get_id();
+
+		be_t<u64> off = m_off;
+		const auto ptr = reinterpret_cast<u8*>(&off);
+
+		id.data.insert(id.data.end(), ptr, ptr + sizeof(off));
+		id.type.insert(0, "lv2_file::file_view: "sv);
+		return id;
+	}
 };
 
 fs::file lv2_file::make_view(const std::shared_ptr<lv2_file>& _file, u64 offset)
