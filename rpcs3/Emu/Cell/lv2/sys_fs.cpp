@@ -637,10 +637,23 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
-	if (!file || file->flags & CELL_FS_O_WRONLY)
+	if (!file || (nbytes && file->flags & CELL_FS_O_WRONLY))
 	{
 		nread.try_write(0); // nread writing is allowed to fail, error code is unchanged
 		return CELL_EBADF;
+	}
+
+	if (!nbytes)
+	{
+		// Whole function is skipped, only EBADF and EBUSY are checked
+		if (file->lock == 1)
+		{
+			nread.try_write(0);
+			return CELL_EBUSY;
+		}
+
+		*nread = 0;
+		return CELL_OK;
 	}
 
 	std::lock_guard lock(file->mp->mutex);
@@ -681,10 +694,23 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 
 	const auto file = idm::get<lv2_fs_object, lv2_file>(fd);
 
-	if (!file || !(file->flags & CELL_FS_O_ACCMODE))
+	if (!file || (nbytes && !(file->flags & CELL_FS_O_ACCMODE)))
 	{
 		nwrite.try_write(0); // nwrite writing is allowed to fail, error code is unchanged
 		return CELL_EBADF;
+	}
+
+	if (!nbytes)
+	{
+		// Whole function is skipped, only EBADF and EBUSY are checked
+		if (file->lock == 1)
+		{
+			nwrite.try_write(0);
+			return CELL_EBUSY;
+		}
+
+		*nwrite = 0;
+		return CELL_OK;
 	}
 
 	if (file->mp->flags & lv2_mp_flag::read_only)
