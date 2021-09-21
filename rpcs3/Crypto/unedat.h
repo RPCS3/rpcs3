@@ -86,13 +86,9 @@ public:
 
 	fs::stat_t stat() override
 	{
-		fs::stat_t stats;
-		stats.is_directory = false;
-		stats.is_writable = false;
+		fs::stat_t stats = edata_file.stat();
+		stats.is_writable = false; // TODO
 		stats.size = file_size;
-		stats.atime = -1;
-		stats.ctime = -1;
-		stats.mtime = -1;
 		return stats;
 	}
 
