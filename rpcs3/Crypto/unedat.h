@@ -143,4 +143,11 @@ public:
 	}
 
 	u64 size() override { return file_size; }
+
+	fs::file_id get_id() override
+	{
+		fs::file_id id = edata_file.get_id();
+		id.type.insert(0, "EDATADecrypter: "sv);
+		return id;
+	}
 };
