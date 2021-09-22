@@ -430,7 +430,7 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 		Emu.SetForceBoot(true);
 
-		auto res = Emu.BootGame(path, "", true, false, old_config);
+		auto res = Emu.BootGame(path, "", true, false, cfg_mode::continuous, old_config);
 
 		if (res != game_boot_result::no_errors)
 		{

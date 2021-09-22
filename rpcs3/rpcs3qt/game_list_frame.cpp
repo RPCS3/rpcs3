@@ -950,7 +950,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 		connect(boot_default, &QAction::triggered, [this, gameinfo]
 		{
 			sys_log.notice("Booting from gamelist per context menu...");
-			Q_EMIT RequestBoot(gameinfo, cfg_keys::_default);
+			Q_EMIT RequestBoot(gameinfo, cfg_mode::default_config);
 		});
 
 		QAction* boot_manual = menu.addAction(is_current_running_game
@@ -962,7 +962,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 			if (std::string file_path = sstr(QFileDialog::getOpenFileName(this, "Select Config File", "", tr("Config Files (*.yml);;All files (*.*)"))); !file_path.empty())
 			{
 				sys_log.notice("Booting from gamelist per context menu...");
-				Q_EMIT RequestBoot(gameinfo, file_path);
+				Q_EMIT RequestBoot(gameinfo, cfg_mode::custom_selection, file_path);
 			}
 			else
 			{
@@ -1221,7 +1221,7 @@ void game_list_frame::ShowContextMenu(const QPoint &pos)
 	connect(boot, &QAction::triggered, this, [this, gameinfo]()
 	{
 		sys_log.notice("Booting from gamelist per context menu...");
-		Q_EMIT RequestBoot(gameinfo, cfg_keys::global);
+		Q_EMIT RequestBoot(gameinfo, cfg_mode::global);
 	});
 	connect(configure, &QAction::triggered, this, [this, current_game, gameinfo]()
 	{

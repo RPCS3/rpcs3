@@ -4,6 +4,7 @@
 #include "custom_dock_widget.h"
 #include "gui_save.h"
 #include "Utilities/lockless.h"
+#include "Emu/System.h"
 
 #include <QMainWindow>
 #include <QToolBar>
@@ -83,7 +84,7 @@ private Q_SLOTS:
 Q_SIGNALS:
 	void GameListFrameClosed();
 	void NotifyGameSelection(const game_info& game);
-	void RequestBoot(const game_info& game, const std::string& config_path = "title_id"); // "title_id" is cfg_keys::title_id
+	void RequestBoot(const game_info& game, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	void RequestIconSizeChange(const int& val);
 	void NotifyEmuSettingsChange();
 protected:
