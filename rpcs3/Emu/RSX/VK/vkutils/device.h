@@ -59,6 +59,7 @@ namespace vk
 		bool surface_capabilities_2_support = false;
 		bool debug_utils_support = false;
 		bool sampler_mirror_clamped_support = false;
+		bool descriptor_indexing_support = false;
 
 		friend class render_device;
 	private:
@@ -141,6 +142,7 @@ namespace vk
 		bool get_external_memory_host_support() const;
 		bool get_surface_capabilities_2_support() const;
 		bool get_debug_utils_support() const;
+		bool get_descriptor_indexing_support() const;
 
 		VkQueue get_present_queue() const;
 		VkQueue get_graphics_queue() const;

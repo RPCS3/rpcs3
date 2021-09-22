@@ -56,6 +56,7 @@ namespace vk
 
 		stencil_export_support           = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		conditional_render_support       = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
+		descriptor_indexing_support      = device_extensions.is_supported(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 		external_memory_host_support     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		sampler_mirror_clamped_support   = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
 		unrestricted_depth_range_support = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
@@ -321,6 +322,11 @@ namespace vk
 		if (pgpu->sampler_mirror_clamped_support)
 		{
 			requested_extensions.push_back(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
+		}
+
+		if (pgpu->descriptor_indexing_support)
+		{
+			requested_extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 		}
 
 		enabled_features.robustBufferAccess = VK_TRUE;
@@ -657,6 +663,11 @@ namespace vk
 	bool render_device::get_debug_utils_support() const
 	{
 		return g_cfg.video.renderdoc_compatiblity && pgpu->debug_utils_support;
+	}
+
+	bool render_device::get_descriptor_indexing_support() const
+	{
+		return pgpu->descriptor_indexing_support;
 	}
 
 	mem_allocator_base* render_device::get_allocator() const
