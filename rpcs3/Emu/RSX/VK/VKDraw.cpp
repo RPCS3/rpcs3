@@ -791,28 +791,27 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	else if (persistent_buffer != old_persistent_buffer || volatile_buffer != old_volatile_buffer)
 	{
 		// Need to update descriptors; make a copy for the next draw
-		VkDescriptorSet new_descriptor_set = allocate_descriptor_set();
-		std::vector<VkCopyDescriptorSet> copy_set(binding_table.total_descriptor_bindings);
+		VkDescriptorSet previous_set = m_current_frame->descriptor_set.value();
+		m_current_frame->descriptor_set = allocate_descriptor_set();
+		std::vector<VkCopyDescriptorSet> copy_cmds(binding_table.total_descriptor_bindings);
 
 		for (u32 n = 0; n < binding_table.total_descriptor_bindings; ++n)
 		{
-			copy_set[n] =
+			copy_cmds[n] =
 			{
 				VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,   // sType
 				nullptr,                                 // pNext
-				m_current_frame->descriptor_set,         // srcSet
+				previous_set,                            // srcSet
 				n,                                       // srcBinding
 				0u,                                      // srcArrayElement
-				new_descriptor_set,                      // dstSet
+				m_current_frame->descriptor_set.value(), // dstSet
 				n,                                       // dstBinding
 				0u,                                      // dstArrayElement
 				1u                                       // descriptorCount
 			};
 		}
 
-		vkUpdateDescriptorSets(*m_device, 0, 0, binding_table.total_descriptor_bindings, copy_set.data());
-		m_current_frame->descriptor_set = new_descriptor_set;
-
+		m_current_frame->descriptor_set.push(copy_cmds);
 		update_descriptors = true;
 	}
 
@@ -866,8 +865,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	}
 
 	// Bind the new set of descriptors for use with this draw call
-	vkCmdBindDescriptorSets(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline_layout, 0, 1, &m_current_frame->descriptor_set, 0, nullptr);
-
+	m_current_frame->descriptor_set.bind(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline_layout);
 	m_frame_stats.setup_time += m_profiler.duration();
 
 	if (!upload_info.index_info)
