@@ -738,9 +738,23 @@ namespace vk
 			return results;
 		};
 
-		auto device_local_types = find_memory_type_with_property(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, (VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD | VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD));
-		auto host_coherent_types = find_memory_type_with_property((VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT), 0);
-		auto bar_memory_types = find_memory_type_with_property((VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT), 0);
+		auto device_local_types = find_memory_type_with_property(
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			(VK_MEMORY_PROPERTY_DEVICE_COHERENT_BIT_AMD | VK_MEMORY_PROPERTY_DEVICE_UNCACHED_BIT_AMD));
+		auto host_coherent_types = find_memory_type_with_property(
+			(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT),
+			0);
+		auto bar_memory_types = find_memory_type_with_property(
+			(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+			0);
+
+		if (host_coherent_types.empty())
+		{
+			rsx_log.warning("[Performance Warning] Could not identify a cached upload heap. Will fall back to uncached transport.");
+			host_coherent_types = find_memory_type_with_property(
+				(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+				0);
+		}
 
 		ensure(!device_local_types.empty());
 		ensure(!host_coherent_types.empty());
@@ -774,22 +788,19 @@ namespace vk
 			result.device_local_total_bytes += type.size;
 		}
 
-		// Some prioritization is needed for host-visible memory. We only need to pick only one block unlike the others.
-		// Use host-cached memory if available, but this is not really required.
-		bool is_host_cached = false;
+		// Sort upload heap entries based on size.
+		if (host_coherent_types.size() > 1)
+		{
+			std::sort(host_coherent_types.begin(), host_coherent_types.end(), [](const auto& a, const auto& b)
+			{
+				return a.size > b.size;
+			});
+		}
+
 		for (auto& type : host_coherent_types)
 		{
-			if (!is_host_cached && type.flags & VK_MEMORY_PROPERTY_HOST_CACHED_BIT)
-			{
-				is_host_cached = true;
-				result.host_visible_coherent = { type.type_index, type.size };
-				result.host_visible_total_bytes = type.size;
-			}
-			else if (result.host_visible_total_bytes < type.size)
-			{
-				result.host_visible_coherent = { type.type_index, type.size };
-				result.host_visible_total_bytes = type.size;
-			}
+			result.host_visible_coherent.push(type.type_index, type.size);
+			result.host_visible_total_bytes += type.size;
 		}
 
 		rsx_log.notice("Detected %llu MB of device local memory", result.device_local_total_bytes / (0x100000));
