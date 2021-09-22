@@ -44,12 +44,15 @@ enum class game_boot_result : u32
 	unsupported_disc_type
 };
 
-namespace cfg_keys
+enum class cfg_mode
 {
-	inline const std::string title_id = "title_id"; // No config override mode
-	inline const std::string global = "global"; // Force global config
-	inline const std::string _default = "default"; // Force virtual default constructed config.yml
-}
+	custom,           // Prefer regular custom config. Fall back to global config.
+	custom_selection, // Use user-selected custom config. Fall back to global config.
+	global,           // Use global config.
+	config_override,  // Use config override. This does not use the global VFS settings! Fall back to global config.
+	continuous,       // Use same config as on last boot. Fall back to global config.
+	default_config    // Use the default values of the config entries.
+};
 
 struct EmuCallbacks
 {
@@ -90,7 +93,8 @@ class Emulator final
 	video_renderer m_default_renderer;
 	std::string m_default_graphics_adapter;
 
-	std::string m_config_path = cfg_keys::title_id;
+	cfg_mode m_config_mode = cfg_mode::custom;
+	std::string m_config_path;
 	std::string m_path;
 	std::string m_path_old;
 	std::string m_title_id;
@@ -227,7 +231,7 @@ public:
 		return m_config_path;
 	}
 
-	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, const std::string& config_path = cfg_keys::title_id);
+	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	bool BootRsxCapture(const std::string& path);
 
 	void SetForceBoot(bool force_boot);

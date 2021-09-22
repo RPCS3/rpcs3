@@ -920,7 +920,7 @@ int main(int argc, char** argv)
 			}
 		}
 
-		std::string config_path = cfg_keys::title_id;
+		std::string config_path;
 
 		if (parser.isSet(arg_config))
 		{
@@ -938,7 +938,9 @@ int main(int argc, char** argv)
 			Emu.argv = std::move(rpcs3_argv);
 			Emu.SetForceBoot(true);
 
-			if (const game_boot_result error = Emu.BootGame(path, "", false, false, config_path); error != game_boot_result::no_errors)
+			const cfg_mode config_mode = config_path.empty() ? cfg_mode::custom : cfg_mode::config_override;
+
+			if (const game_boot_result error = Emu.BootGame(path, "", false, false, config_mode, config_path); error != game_boot_result::no_errors)
 			{
 				sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
 

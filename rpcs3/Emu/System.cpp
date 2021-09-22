@@ -101,6 +101,24 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 	});
 }
 
+template<>
+void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](cfg_mode value)
+	{
+		switch (value)
+		{
+		case cfg_mode::custom: return "custom config";
+		case cfg_mode::custom_selection: return "custom config selection";
+		case cfg_mode::global: return "global config";
+		case cfg_mode::config_override: return "config override";
+		case cfg_mode::continuous: return "continuous config";
+		case cfg_mode::default_config: return "default config";
+		}
+		return unknown;
+	});
+}
+
 void Emulator::Init(bool add_only)
 {
 	jit_runtime::initialize();
@@ -120,7 +138,7 @@ void Emulator::Init(bool add_only)
 
 	// Reset defaults, cache them
 	g_cfg.from_default();
-	g_cfg.name = cfg_keys::_default;
+	g_cfg.name.clear();
 
 	// Not all renderers are known at compile time, so set a provided default if possible
 	if (m_default_renderer == video_renderer::vulkan && !m_default_graphics_adapter.empty())
@@ -132,7 +150,7 @@ void Emulator::Init(bool add_only)
 	g_cfg_defaults = g_cfg.to_string();
 
 	// Load config file
-	if (m_config_path.find_first_of(fs::delim) != umax)
+	if (m_config_mode == cfg_mode::config_override)
 	{
 		if (const fs::file cfg_file{m_config_path, fs::read + fs::create})
 		{
@@ -141,7 +159,8 @@ void Emulator::Init(bool add_only)
 			if (!g_cfg.from_string(cfg_file.to_string()))
 			{
 				sys_log.fatal("Failed to apply config: %s. Proceeding with regular configuration.", m_config_path);
-				m_config_path = cfg_keys::title_id;
+				m_config_path.clear();
+				m_config_mode = cfg_mode::custom;
 			}
 			else
 			{
@@ -152,12 +171,13 @@ void Emulator::Init(bool add_only)
 		else
 		{
 			sys_log.fatal("Failed to access config: %s (%s). Proceeding with regular configuration.", m_config_path, fs::g_tls_error);
-			m_config_path = cfg_keys::title_id;
+			m_config_path.clear();
+			m_config_mode = cfg_mode::custom;
 		}
 	}
 
 	// Reload global configuration
-	if (m_config_path == cfg_keys::global || m_config_path == cfg_keys::title_id)
+	if (m_config_mode != cfg_mode::config_override && m_config_mode != cfg_mode::default_config)
 	{
 		const auto cfg_path = fs::get_config_dir() + "/config.yml";
 
@@ -436,7 +456,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	return true;
 }
 
-game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, const std::string& config_path)
+game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, bool add_only, cfg_mode config_mode, const std::string& config_path)
 {
 	if (!fs::exists(path))
 	{
@@ -445,6 +465,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 	m_path_old = m_path;
 
+	m_config_mode = config_mode;
 	m_config_path = config_path;
 
 	if (direct || fs::is_file(path))
@@ -521,7 +542,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		m_title_id = title_id;
 	}
 
-	sys_log.notice("Selected config: %s", m_config_path);
+	sys_log.notice("Selected config: mode=%s, path=\"%s\"", m_config_mode, m_config_path);
 
 	{
 		Init(add_only);
@@ -607,39 +628,62 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		sys_log.notice("Category: %s", GetCat());
 		sys_log.notice("Version: APP_VER=%s VERSION=%s", version_app, version_disc);
 
-		if (!add_only && m_config_path == cfg_keys::title_id)
+		if (!add_only)
 		{
-			const std::string config_path = rpcs3::utils::get_custom_config_path(m_title_id);
-
-			// Load custom config-1
-			if (fs::file cfg_file{ config_path })
+			if (m_config_mode == cfg_mode::custom_selection || m_config_mode == cfg_mode::continuous)
 			{
-				sys_log.notice("Applying custom config: %s", config_path);
-
-				if (g_cfg.from_string(cfg_file.to_string()))
+				if (fs::file cfg_file{ m_config_path })
 				{
-					g_cfg.name = config_path;
-					m_config_path = config_path;
+					sys_log.notice("Applying %s: %s", m_config_mode, m_config_path);
+
+					if (g_cfg.from_string(cfg_file.to_string()))
+					{
+						g_cfg.name = m_config_path;
+					}
+					else
+					{
+						sys_log.fatal("Failed to apply %s: %s", m_config_mode, m_config_path);
+					}
 				}
 				else
 				{
-					sys_log.fatal("Failed to apply custom config: %s", config_path);
+					sys_log.fatal("Failed to access %s: %s", m_config_mode, m_config_path);
 				}
 			}
-
-			// Load custom config-2
-			if (fs::file cfg_file{ m_path + ".yml" })
+			else if (m_config_mode == cfg_mode::custom)
 			{
-				sys_log.notice("Applying custom config: %s.yml", m_path);
+				const std::string config_path = rpcs3::utils::get_custom_config_path(m_title_id);
 
-				if (g_cfg.from_string(cfg_file.to_string()))
+				// Load custom config-1
+				if (fs::file cfg_file{ config_path })
 				{
-					g_cfg.name = m_path + ".yml";
-					m_config_path = g_cfg.name;
+					sys_log.notice("Applying custom config: %s", config_path);
+
+					if (g_cfg.from_string(cfg_file.to_string()))
+					{
+						g_cfg.name = config_path;
+						m_config_path = config_path;
+					}
+					else
+					{
+						sys_log.fatal("Failed to apply custom config: %s", config_path);
+					}
 				}
-				else
+
+				// Load custom config-2
+				if (fs::file cfg_file{ m_path + ".yml" })
 				{
-					sys_log.fatal("Failed to apply custom config: %s.yml", m_path);
+					sys_log.notice("Applying custom config: %s.yml", m_path);
+
+					if (g_cfg.from_string(cfg_file.to_string()))
+					{
+						g_cfg.name = m_path + ".yml";
+						m_config_path = g_cfg.name;
+					}
+					else
+					{
+						sys_log.fatal("Failed to apply custom config: %s.yml", m_path);
+					}
 				}
 			}
 		}
@@ -1726,7 +1770,8 @@ void Emulator::Stop(bool restart)
 	disc.clear();
 	klic.clear();
 	hdd1.clear();
-	m_config_path = cfg_keys::global;
+	m_config_path.clear();
+	m_config_mode == cfg_mode::custom;
 
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();
