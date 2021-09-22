@@ -4,7 +4,7 @@
 
 #include "upscalers/upscaling.h"
 
-#include "vkutils/descriptors.hpp"
+#include "vkutils/descriptors.h"
 #include "vkutils/data_heap.h"
 #include "vkutils/instance.hpp"
 #include "vkutils/sync.h"

@@ -7,7 +7,7 @@
 #include "VKHelpers.h"
 
 #include "vkutils/data_heap.h"
-#include "vkutils/descriptors.hpp"
+#include "vkutils/descriptors.h"
 #include "vkutils/graphics_pipeline_state.hpp"
 
 #include "Emu/IdManager.h"
