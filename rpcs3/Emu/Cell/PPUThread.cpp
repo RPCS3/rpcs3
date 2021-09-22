@@ -1500,7 +1500,7 @@ void ppu_trap(ppu_thread& ppu, u64 addr)
 	ppu.cia += add; // Skip instructions, hope for valid code (interprter may be invoked temporarily)
 }
 
-static void ppu_error(ppu_thread& ppu, u64 addr, u32 op)
+static void ppu_error(ppu_thread& ppu, u64 addr, u32 /*op*/)
 {
 	ppu.cia = ::narrow<u32>(addr);
 	ppu_recompiler_fallback(ppu);
