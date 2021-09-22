@@ -20,7 +20,7 @@ namespace vk
 		std::unique_ptr<vk::buffer> m_param_buffer;
 
 		vk::descriptor_pool m_descriptor_pool;
-		VkDescriptorSet m_descriptor_set = nullptr;
+		descriptor_set m_descriptor_set;
 		VkDescriptorSetLayout m_descriptor_layout = nullptr;
 		VkPipelineLayout m_pipeline_layout = nullptr;
 		u32 m_used_descriptors = 0;

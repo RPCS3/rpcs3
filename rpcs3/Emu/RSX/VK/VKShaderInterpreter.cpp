@@ -508,7 +508,7 @@ namespace vk
 		return program.release();
 	}
 
-	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, VkDescriptorSet descriptor_set)
+	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, vk::descriptor_set &set)
 	{
 		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
 		for (u32 i = 0, binding = m_fragment_textures_start; i < 4; ++i, ++binding, texture_ptr += 16)
@@ -517,7 +517,7 @@ namespace vk
 			{
 				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
 				nullptr,                                   // pNext
-				descriptor_set,                            // dstSet
+				VK_NULL_HANDLE,                            // dstSet
 				binding,                                   // dstBinding
 				0,                                         // dstArrayElement
 				16,                                        // descriptorCount
@@ -527,7 +527,7 @@ namespace vk
 				nullptr                                    // pTexelBufferView
 			};
 
-			vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
+			set.push(descriptor_writer);
 		}
 	}
 

@@ -235,7 +235,7 @@ namespace vk
 		alloc_info.pSetLayouts = &m_descriptor_layout;
 		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 
-		CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &m_descriptor_set));
+		CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, m_descriptor_set.ptr()));
 		m_used_descriptors++;
 
 		if (!m_sampler && !src.empty())
@@ -256,7 +256,7 @@ namespace vk
 		}
 
 		vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, program->pipeline);
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
+		m_descriptor_set.bind(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout);
 
 		VkBuffer buffers = m_vao.heap->value;
 		VkDeviceSize offsets = m_vao_offset;
