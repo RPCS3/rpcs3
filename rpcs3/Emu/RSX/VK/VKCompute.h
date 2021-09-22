@@ -1,6 +1,6 @@
 #pragma once
 #include "VKPipelineCompiler.h"
-#include "vkutils/descriptors.hpp"
+#include "vkutils/descriptors.h"
 #include "vkutils/buffer_object.h"
 
 #include "Emu/IdManager.h"

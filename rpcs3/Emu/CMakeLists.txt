@@ -458,6 +458,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/vkutils/chip_class.cpp
         RSX/VK/vkutils/commands.cpp
         RSX/VK/vkutils/data_heap.cpp
+        RSX/VK/vkutils/descriptors.cpp
         RSX/VK/vkutils/image.cpp
         RSX/VK/vkutils/image_helpers.cpp
         RSX/VK/vkutils/scratch.cpp

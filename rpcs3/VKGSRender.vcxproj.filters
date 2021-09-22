@@ -44,6 +44,9 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\memory.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\descriptors.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\VK\vkutils\device.cpp">
       <Filter>vkutils</Filter>
     </ClCompile>
@@ -139,7 +142,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\swapchain.hpp">
       <Filter>vkutils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\VK\vkutils\descriptors.hpp">
+    <ClInclude Include="Emu\RSX\VK\vkutils\descriptors.h">
       <Filter>vkutils</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\VK\vkutils\data_heap.h">

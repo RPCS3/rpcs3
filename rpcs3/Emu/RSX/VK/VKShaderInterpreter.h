@@ -1,6 +1,6 @@
 #pragma once
 #include "VKProgramBuffer.h"
-#include "vkutils/descriptors.hpp"
+#include "vkutils/descriptors.h"
 #include <unordered_map>
 
 namespace vk

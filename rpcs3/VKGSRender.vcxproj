@@ -40,7 +40,7 @@
     <ClInclude Include="Emu\RSX\VK\vkutils\chip_class.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\commands.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\data_heap.h" />
-    <ClInclude Include="Emu\RSX\VK\vkutils\descriptors.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\descriptors.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\barriers.h" />
     <ClInclude Include="Emu\RSX\VK\vkutils\framebuffer_object.hpp" />
     <ClInclude Include="Emu\RSX\VK\vkutils\image.h" />
@@ -93,6 +93,7 @@
     <ClCompile Include="Emu\RSX\VK\vkutils\scratch.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\sync.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\memory.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\descriptors.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\device.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\sampler.cpp" />
     <ClCompile Include="Emu\RSX\VK\vkutils\shared.cpp" />
