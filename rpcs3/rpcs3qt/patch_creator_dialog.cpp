@@ -267,11 +267,6 @@ void patch_creator_dialog::move_instructions(int src_row, int rows_to_move, int 
 		return patch_type::invalid;
 	};
 
-	const auto set_row_type_widget = [this](int i, patch_type type) -> void
-	{
-		ui->instructionTable->setCellWidget(i, patch_column::type, create_patch_type_bombo_box(type));
-	};
-
 	for (int i = 0; i < rows_to_move; i++)
 	{
 		moving_types[i] = get_row_type(src_row + i);
