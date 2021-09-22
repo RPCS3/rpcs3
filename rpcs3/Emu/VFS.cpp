@@ -14,6 +14,8 @@
 
 #include <thread>
 
+LOG_CHANNEL(vfs_log, "VFS");
+
 struct vfs_directory
 {
 	// Real path (empty if root or not exists)
@@ -45,8 +47,11 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 	if (vpath.empty())
 	{
 		// Empty relative path, should set relative path base; unsupported
+		vfs_log.error("Cannot mount empty path to \"%s\"", path);
 		return false;
 	}
+
+	const std::string_view vpath_backup = vpath;
 
 	for (std::vector<vfs_directory*> list{&table.root};;)
 	{
@@ -56,6 +61,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 		if (pos == 0)
 		{
 			// Mounting relative path is not supported
+			vfs_log.error("Cannot mount relative path \"%s\" to \"%s\"", vpath_backup, path);
 			return false;
 		}
 
@@ -63,6 +69,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 		{
 			// Mounting completed
 			list.back()->path = path;
+			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, path);
 			return true;
 		}
 
