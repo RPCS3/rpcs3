@@ -1006,6 +1006,9 @@
     <ClCompile Include="Emu\Audio\audio_device_listener.cpp">
       <Filter>Emu\Audio</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\vfs_config.cpp">
+      <Filter>Emu</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -1983,6 +1986,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Audio\audio_device_listener.h">
       <Filter>Emu\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\vfs_config.h">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

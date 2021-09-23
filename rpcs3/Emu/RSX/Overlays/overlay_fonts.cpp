@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "overlay_controls.h"
-#include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -121,8 +121,8 @@ namespace rsx
 				result.lookup_font_dirs[0] += "/.fonts/";
 #endif
 			// Search dev_flash for the font too
-			result.lookup_font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/");
-			result.lookup_font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SONY-CC/");
+			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/");
+			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/SONY-CC/");
 
 			switch (class_)
 			{

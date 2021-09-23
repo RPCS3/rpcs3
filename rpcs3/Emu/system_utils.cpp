@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "system_utils.hpp"
 #include "system_config.h"
+#include "vfs_config.h"
 #include "Emu/Io/pad_config.h"
 #include "util/sysinfo.hpp"
 #include "Utilities/File.h"
@@ -116,18 +117,18 @@ namespace rpcs3::utils
 
 	std::string get_emu_dir()
 	{
-		const std::string& emu_dir_ = g_cfg.vfs.emulator_dir;
+		const std::string& emu_dir_ = g_cfg_vfs.emulator_dir;
 		return emu_dir_.empty() ? fs::get_config_dir() : emu_dir_;
 	}
 
 	std::string get_hdd0_dir()
 	{
-		return g_cfg.vfs.get(g_cfg.vfs.dev_hdd0, get_emu_dir());
+		return g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, get_emu_dir());
 	}
 
 	std::string get_hdd1_dir()
 	{
-		return g_cfg.vfs.get(g_cfg.vfs.dev_hdd1, get_emu_dir());
+		return g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, get_emu_dir());
 	}
 
 	std::string get_cache_dir()

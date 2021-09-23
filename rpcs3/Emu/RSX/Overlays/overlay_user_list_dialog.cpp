@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "overlay_user_list_dialog.h"
-#include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
@@ -170,7 +170,7 @@ namespace rsx
 					}
 
 					// Let's assume there are 26 avatar pngs (like in my installation)
-					const std::string avatar_path = g_cfg.vfs.get_dev_flash() + fmt::format("vsh/resource/explore/user/%03d.png", id % 26);
+					const std::string avatar_path = g_cfg_vfs.get_dev_flash() + fmt::format("vsh/resource/explore/user/%03d.png", id % 26);
 					const std::string username = file.to_string();
 					std::unique_ptr<overlay_element> entry = std::make_unique<user_list_entry>(username, user_id, avatar_path);
 					entries.emplace_back(std::move(entry));

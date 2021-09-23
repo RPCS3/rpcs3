@@ -268,8 +268,6 @@ void emu_settings::SaveSettings()
 	}
 	else
 	{
-		// VFS paths are being controlled mainly by the main config (needs manual modification for customization of custom configs)
-		m_current_settings.remove("VFS");
 		config_name = rpcs3::utils::get_custom_config_path(m_title_id);
 	}
 

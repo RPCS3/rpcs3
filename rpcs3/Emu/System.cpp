@@ -6,6 +6,7 @@
 #include "Emu/system_progress.hpp"
 #include "Emu/system_utils.hpp"
 #include "Emu/perf_meter.hpp"
+#include "Emu/vfs_config.h"
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
@@ -137,6 +138,7 @@ void Emulator::Init(bool add_only)
 	g_fxo->reset();
 
 	// Reset defaults, cache them
+	g_cfg_vfs.from_default();
 	g_cfg.from_default();
 	g_cfg.name.clear();
 
@@ -148,6 +150,9 @@ void Emulator::Init(bool add_only)
 	}
 
 	g_cfg_defaults = g_cfg.to_string();
+
+	// Load VFS config
+	g_cfg_vfs.load();
 
 	// Load config file
 	if (m_config_mode == cfg_mode::config_override)
@@ -201,11 +206,11 @@ void Emulator::Init(bool add_only)
 	// Create directories (can be disabled if necessary)
 	const std::string emu_dir = rpcs3::utils::get_emu_dir();
 	const std::string dev_hdd0 = rpcs3::utils::get_hdd0_dir();
-	const std::string dev_hdd1 = g_cfg.vfs.get(g_cfg.vfs.dev_hdd1, emu_dir);
-	const std::string dev_usb = g_cfg.vfs.get(g_cfg.vfs.dev_usb000, emu_dir);
-	const std::string dev_flsh = g_cfg.vfs.get_dev_flash();
-	const std::string dev_flsh2 = g_cfg.vfs.get_dev_flash2();
-	const std::string dev_flsh3 = g_cfg.vfs.get_dev_flash3();
+	const std::string dev_hdd1 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, emu_dir);
+	const std::string dev_usb = g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir);
+	const std::string dev_flsh = g_cfg_vfs.get_dev_flash();
+	const std::string dev_flsh2 = g_cfg_vfs.get_dev_flash2();
+	const std::string dev_flsh3 = g_cfg_vfs.get_dev_flash3();
 
 	auto make_path_verbose = [](const std::string& path)
 	{
@@ -731,7 +736,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		if (!add_only)
 		{
-			bdvd_dir = g_cfg.vfs.dev_bdvd;
+			bdvd_dir = g_cfg_vfs.dev_bdvd;
 
 			if (!bdvd_dir.empty() && bdvd_dir.back() != fs::delim[0] && bdvd_dir.back() != fs::delim[1])
 			{
@@ -747,13 +752,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		}
 
 		// Mount default relative path to non-existent directory
-		vfs::mount("/dev_hdd0", g_cfg.vfs.get(g_cfg.vfs.dev_hdd0, emu_dir));
-		vfs::mount("/dev_flash", g_cfg.vfs.get_dev_flash());
-		vfs::mount("/dev_flash2", g_cfg.vfs.get_dev_flash2());
-		vfs::mount("/dev_flash3", g_cfg.vfs.get_dev_flash3());
-		vfs::mount("/dev_usb", g_cfg.vfs.get(g_cfg.vfs.dev_usb000, emu_dir));
-		vfs::mount("/dev_usb000", g_cfg.vfs.get(g_cfg.vfs.dev_usb000, emu_dir));
-		vfs::mount("/app_home", g_cfg.vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg.vfs.get(g_cfg.vfs.app_home, emu_dir));
+		vfs::mount("/dev_hdd0", g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir));
+		vfs::mount("/dev_flash", g_cfg_vfs.get_dev_flash());
+		vfs::mount("/dev_flash2", g_cfg_vfs.get_dev_flash2());
+		vfs::mount("/dev_flash3", g_cfg_vfs.get_dev_flash3());
+		vfs::mount("/dev_usb", g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir));
+		vfs::mount("/dev_usb000", g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir));
+		vfs::mount("/app_home", g_cfg_vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg_vfs.get(g_cfg_vfs.app_home, emu_dir));
 
 		if (!hdd1.empty())
 		{
@@ -803,7 +808,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				if (m_title_id.empty())
 				{
 					// Check if we are trying to scan vsh/module
-					const std::string vsh_path = g_cfg.vfs.get_dev_flash() + "vsh/module";
+					const std::string vsh_path = g_cfg_vfs.get_dev_flash() + "vsh/module";
 
 					if (IsPathInsideDir(m_path, vsh_path))
 					{
@@ -895,12 +900,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		const std::string hdd0_game = vfs::get("/dev_hdd0/game/");
 		const std::string hdd0_disc = vfs::get("/dev_hdd0/disc/");
 		const bool from_hdd0_game   = IsPathInsideDir(m_path, hdd0_game);
-		const bool from_dev_flash   = IsPathInsideDir(m_path, g_cfg.vfs.get_dev_flash());
+		const bool from_dev_flash   = IsPathInsideDir(m_path, g_cfg_vfs.get_dev_flash());
 
 #ifdef _WIN32
 		// m_path might be passed from command line with differences in uppercase/lowercase on windows.
 		if ((!from_hdd0_game && IsPathInsideDir(fmt::to_lower(m_path), fmt::to_lower(hdd0_game))) ||
-			(!from_dev_flash && IsPathInsideDir(fmt::to_lower(m_path), fmt::to_lower(g_cfg.vfs.get_dev_flash()))))
+			(!from_dev_flash && IsPathInsideDir(fmt::to_lower(m_path), fmt::to_lower(g_cfg_vfs.get_dev_flash()))))
 		{
 			// Let's just abort to prevent errors down the line.
 			sys_log.error("The boot path seems to contain incorrectly cased characters. Please adjust the path and try again.");
@@ -1329,7 +1334,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				else if (from_dev_flash)
 				{
 					// Firmware executables
-					argv[0] = "/dev_flash" + resolved_path.substr(GetCallbacks().resolve_path(g_cfg.vfs.get_dev_flash()).size());
+					argv[0] = "/dev_flash" + resolved_path.substr(GetCallbacks().resolve_path(g_cfg_vfs.get_dev_flash()).size());
 					m_dir = fs::get_parent_dir(argv[0]) + '/';
 				}
 				else if (g_cfg.vfs.host_root)
@@ -1417,7 +1422,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			return game_boot_result::invalid_file_or_folder;
 		}
 
-		if (ppu_exec == elf_error::ok && !fs::is_file(g_cfg.vfs.get_dev_flash() + "sys/external/liblv2.sprx"))
+		if (ppu_exec == elf_error::ok && !fs::is_file(g_cfg_vfs.get_dev_flash() + "sys/external/liblv2.sprx"))
 		{
 			const auto libs = g_cfg.core.libraries_control.get_set();
 

@@ -28,7 +28,7 @@ void cfg_rpcn::save() const
 	fs::file cfg_file(cfg_rpcn::get_path(), fs::rewrite);
 	if (cfg_file)
 	{
-		cfg_file.write(to_string());	
+		cfg_file.write(to_string());
 	}
 	else
 	{

@@ -1,7 +1,7 @@
 #include "util/sysinfo.hpp"
 #include "Utilities/StrFmt.h"
 #include "Utilities/File.h"
-#include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 #include "Utilities/Thread.h"
 
 #ifdef _WIN32
@@ -241,7 +241,7 @@ std::string utils::get_system_info()
 
 std::string utils::get_firmware_version()
 {
-	const std::string file_path = g_cfg.vfs.get_dev_flash() + "vsh/etc/version.txt";
+	const std::string file_path = g_cfg_vfs.get_dev_flash() + "vsh/etc/version.txt";
 	if (fs::file version_file{file_path})
 	{
 		const std::string version_str = version_file.to_string();
