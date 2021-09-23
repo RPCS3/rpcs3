@@ -82,8 +82,7 @@ enum : u32
 
 	SPU_EVENT_IMPLEMENTED  = SPU_EVENT_LR | SPU_EVENT_TM | SPU_EVENT_SN | SPU_EVENT_S1 | SPU_EVENT_S2, // Mask of implemented events
 	SPU_EVENT_INTR_IMPLEMENTED = SPU_EVENT_SN,
-
-	SPU_EVENT_INTR_TEST = SPU_EVENT_INTR_IMPLEMENTED,
+	SPU_EVENT_INTR_BUSY_CHECK = SPU_EVENT_IMPLEMENTED & ~SPU_EVENT_INTR_IMPLEMENTED,
 };
 
 // SPU Class 0 Interrupts
@@ -779,6 +778,8 @@ public:
 	static constexpr u32 max_mfc_dump_idx = 2048;
 
 	bool in_cpu_work = false;
+	bool allow_interrupts_in_cpu_work = false;
+	u8 cpu_work_iteration_count = 0;
 
 	std::array<v128, 0x4000> stack_mirror; // Return address information
 
@@ -793,7 +794,7 @@ public:
 	bool do_list_transfer(spu_mfc_cmd& args);
 	void do_putlluc(const spu_mfc_cmd& args);
 	bool do_putllc(const spu_mfc_cmd& args);
-	void do_mfc(bool can_escape = true, bool must_finish = true);
+	bool do_mfc(bool can_escape = true, bool must_finish = true);
 	u32 get_mfc_completed() const;
 
 	bool process_mfc_cmd();
