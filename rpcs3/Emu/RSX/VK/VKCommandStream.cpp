@@ -1,9 +1,12 @@
 #include "stdafx.h"
 #include "VKCommandStream.h"
+#include "vkutils/descriptors.h"
 #include "vkutils/sync.h"
+
 #include "Emu/IdManager.h"
-#include "Emu/system_config.h"
 #include "Emu/RSX/RSXOffload.h"
+#include "Emu/RSX/RSXThread.h"
+#include "Emu/system_config.h"
 
 namespace vk
 {
@@ -22,6 +25,11 @@ namespace vk
 
 	void queue_submit(VkQueue queue, const VkSubmitInfo* info, fence* pfence, VkBool32 flush)
 	{
+		if (rsx::get_current_renderer()->is_current_thread())
+		{
+			vk::descriptors::flush();
+		}
+
 		if (!flush && g_cfg.video.multithreaded_rsx)
 		{
 			auto packet = new submit_packet(queue, pfence, info);

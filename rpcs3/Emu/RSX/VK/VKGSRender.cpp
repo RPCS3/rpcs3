@@ -301,13 +301,7 @@ namespace
 			push_constants[0].size = 20;
 		}
 
-		VkDescriptorSetLayoutCreateInfo infos = {};
-		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		infos.pBindings = bindings.data();
-		infos.bindingCount = static_cast<u32>(bindings.size());
-
-		VkDescriptorSetLayout set_layout;
-		CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &set_layout));
+		const auto set_layout = vk::descriptors::create_layout(bindings);
 
 		VkPipelineLayoutCreateInfo layout_info = {};
 		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
