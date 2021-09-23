@@ -131,12 +131,40 @@ void Emulator::Init(bool add_only)
 
 	g_cfg_defaults = g_cfg.to_string();
 
-	// Load config file
+	// Reload global configuration (or only the VFS settings for default config)
+	{
+		const auto cfg_path = fs::get_config_dir() + "/config.yml";
+
+		if (const fs::file cfg_file{cfg_path, fs::read + fs::create})
+		{
+			sys_log.notice("Applying global config: %s", cfg_path);
+
+			// Only modify VFS settings for default config mode
+			g_cfg.vfs.set_selected(m_config_path == cfg_keys::_default);
+
+			if (!g_cfg.from_string(cfg_file.to_string(), false, m_config_path == cfg_keys::_default))
+			{
+				sys_log.fatal("Failed to apply global config: %s", cfg_path);
+			}
+
+			g_cfg.vfs.set_selected(false);
+
+			g_cfg.name = cfg_path;
+		}
+		else
+		{
+			sys_log.fatal("Failed to access global config: %s (%s)", cfg_path, fs::g_tls_error);
+		}
+	}
+
+	// Load direct config file from path
 	if (m_config_path.find_first_of(fs::delim) != umax)
 	{
 		if (const fs::file cfg_file{m_config_path, fs::read + fs::create})
 		{
 			sys_log.notice("Applying config override: %s", m_config_path);
+
+			g_cfg.vfs.set_selected(true);
 
 			if (!g_cfg.from_string(cfg_file.to_string()))
 			{
@@ -148,33 +176,14 @@ void Emulator::Init(bool add_only)
 				sys_log.success("Applied config override: %s", m_config_path);
 				g_cfg.name = m_config_path;
 			}
+
+			// Allow VFS settings mutability
+			g_cfg.vfs.set_selected(false);
 		}
 		else
 		{
 			sys_log.fatal("Failed to access config: %s (%s). Proceeding with regular configuration.", m_config_path, fs::g_tls_error);
 			m_config_path = cfg_keys::title_id;
-		}
-	}
-
-	// Reload global configuration
-	if (m_config_path == cfg_keys::global || m_config_path == cfg_keys::title_id)
-	{
-		const auto cfg_path = fs::get_config_dir() + "/config.yml";
-
-		if (const fs::file cfg_file{cfg_path, fs::read + fs::create})
-		{
-			sys_log.notice("Applying global config: %s", cfg_path);
-
-			if (!g_cfg.from_string(cfg_file.to_string()))
-			{
-				sys_log.fatal("Failed to apply global config: %s", cfg_path);
-			}
-
-			g_cfg.name = cfg_path;
-		}
-		else
-		{
-			sys_log.fatal("Failed to access global config: %s (%s)", cfg_path, fs::g_tls_error);
 		}
 	}
 
@@ -623,22 +632,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				else
 				{
 					sys_log.fatal("Failed to apply custom config: %s", config_path);
-				}
-			}
-
-			// Load custom config-2
-			if (fs::file cfg_file{ m_path + ".yml" })
-			{
-				sys_log.notice("Applying custom config: %s.yml", m_path);
-
-				if (g_cfg.from_string(cfg_file.to_string()))
-				{
-					g_cfg.name = m_path + ".yml";
-					m_config_path = g_cfg.name;
-				}
-				else
-				{
-					sys_log.fatal("Failed to apply custom config: %s.yml", m_path);
 				}
 			}
 		}

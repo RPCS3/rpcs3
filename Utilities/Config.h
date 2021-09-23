@@ -47,6 +47,7 @@ namespace cfg
 
 	protected:
 		bool m_dynamic = true;
+		bool m_is_selected = false;
 		const std::string m_name{};
 
 		// Ownerless entry constructor
@@ -80,7 +81,7 @@ namespace cfg
 		}
 
 		// Try to convert from string (optional)
-		virtual bool from_string(const std::string&, bool /*dynamic*/ = false);
+		virtual bool from_string(const std::string&, bool /*dynamic*/ = false, bool /*modify_selected*/ = false);
 
 		// Get string list (optional)
 		virtual std::vector<std::string> to_list() const
@@ -90,6 +91,17 @@ namespace cfg
 
 		// Set multiple values. Implementation-specific, optional.
 		virtual bool from_list(std::vector<std::string>&&);
+
+		bool is_selected() const
+		{
+			return m_is_selected;
+		}
+
+		_base& set_selected(bool select = true)
+		{
+			m_is_selected = select;
+			return *this;
+		}
 	};
 
 	// Config tree node which contains another nodes
@@ -122,7 +134,7 @@ namespace cfg
 		std::string to_string() const override;
 
 		// Deserialize node
-		bool from_string(const std::string& value, bool dynamic = false) override;
+		bool from_string(const std::string& value, bool dynamic = false, bool modify_selected_entries = false) override;
 
 		// Set default values
 		void from_default() override;
@@ -159,7 +171,7 @@ namespace cfg
 			return m_value ? "true" : "false";
 		}
 
-		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
+		bool from_string(const std::string& value, bool /*dynamic*/ = false, bool /*modify_selected*/ = false) override
 		{
 			if (value == "false")
 				m_value = false;
@@ -220,7 +232,7 @@ namespace cfg
 			return result; // TODO: ???
 		}
 
-		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
+		bool from_string(const std::string& value, bool /*dynamic*/ = false, bool /*modify_selected*/ = false) override
 		{
 			u64 result;
 
@@ -285,7 +297,7 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
-		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
+		bool from_string(const std::string& value, bool /*dynamic*/ = false, bool /*modify_selected*/ = false) override
 		{
 			s64 result;
 			if (try_to_int64(&result, value, Min, Max))
@@ -359,7 +371,7 @@ namespace cfg
 			return std::to_string(m_value);
 		}
 
-		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
+		bool from_string(const std::string& value, bool /*dynamic*/ = false, bool /*modify_selected*/ = false) override
 		{
 			u64 result;
 			if (try_to_uint64(&result, value, Min, Max))
@@ -430,7 +442,7 @@ namespace cfg
 			return *m_value.load().get();
 		}
 
-		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
+		bool from_string(const std::string& value, bool /*dynamic*/ = false, bool /*modify_selected*/ = false) override
 		{
 			m_value = value;
 			return true;

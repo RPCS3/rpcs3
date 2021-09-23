@@ -50,7 +50,7 @@ namespace cfg
 
 	// Incrementally load config entries from YAML::Node.
 	// The config value is preserved if the corresponding YAML node doesn't exist.
-	static void decode(const YAML::Node& data, class _base& rhs, bool dynamic = false);
+	static void decode(const YAML::Node& data, class _base& rhs, bool dynamic = false, bool modify_selected = false);
 }
 
 std::vector<std::string> cfg::make_int_range(s64 min, s64 max)
@@ -270,10 +270,17 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 	}
 }
 
-void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
+void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic, bool modify_selected)
 {
 	if (dynamic && !rhs.get_is_dynamic())
 	{
+		return;
+	}
+
+	if (rhs.is_selected() != modify_selected)
+	{
+		// If selected and modify_selected is false: do not modify
+		// If not selected and modify_selected is true: do not modify
 		return;
 	}
 
@@ -295,7 +302,7 @@ void cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic)
 			{
 				if (node->get_name() == pair.first.Scalar())
 				{
-					decode(pair.second, *node, dynamic);
+					decode(pair.second, *node, dynamic, modify_selected);
 				}
 			}
 		}
@@ -377,13 +384,13 @@ std::string cfg::node::to_string() const
 	return {out.c_str(), out.size()};
 }
 
-bool cfg::node::from_string(const std::string& value, bool dynamic)
+bool cfg::node::from_string(const std::string& value, bool dynamic, bool modify_selected_entries)
 {
 	auto [result, error] = yaml_load(value);
 
 	if (error.empty())
 	{
-		cfg::decode(result, *this, dynamic);
+		cfg::decode(result, *this, dynamic, modify_selected_entries);
 		return true;
 	}
 
