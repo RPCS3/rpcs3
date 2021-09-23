@@ -1643,6 +1643,8 @@ void spu_thread::cpu_task()
 	{
 		ensure(spu_runtime::g_interpreter);
 
+		allow_interrupts_in_cpu_work = true;
+
 		while (true)
 		{
 			if (state) [[unlikely]]
@@ -1653,6 +1655,8 @@ void spu_thread::cpu_task()
 
 			spu_runtime::g_interpreter(*this, _ptr<u8>(0), nullptr);
 		}
+
+		allow_interrupts_in_cpu_work = false;
 	}
 }
 
@@ -1663,15 +1667,57 @@ void spu_thread::cpu_work()
 		return;
 	}
 
+	const u32 old_iter_count = cpu_work_iteration_count++;
+
 	const auto timeout = +g_cfg.core.mfc_transfers_timeout;
 
-	// If either MFC size exceeds limit or timeout has been reached execute pending MFC commands
-	if (mfc_size > g_cfg.core.mfc_transfers_shuffling || (timeout && get_system_time() - mfc_last_timestamp >= timeout))
+	bool work_left = false;
+
+	if (u32 shuffle_count = g_cfg.core.mfc_transfers_shuffling)
 	{
-		do_mfc(false, false);
+		// If either MFC size exceeds limit or timeout has been reached execute pending MFC commands
+		if (mfc_size > shuffle_count || (timeout && get_system_time() - mfc_last_timestamp >= timeout))
+		{
+			work_left = do_mfc(false, false);
+		}
+		else
+		{
+			work_left = mfc_size != 0; // TODO: Optimize
+		}
 	}
 
+	bool gen_interrupt = false;
+
+	// Check interrupts every 16 iterations
+	if (!(old_iter_count % 16) && allow_interrupts_in_cpu_work)
+	{
+		if (u32 mask = ch_events.load().mask & SPU_EVENT_INTR_BUSY_CHECK)
+		{
+			// LR check is expensive, do it once in a while
+			if (old_iter_count /*% 256*/)
+			{
+				mask &= ~SPU_EVENT_LR;
+			}
+
+			get_events(mask);
+		}
+
+		gen_interrupt = check_mfc_interrupts(pc);
+		work_left |= interrupts_enabled;
+	}
+	
 	in_cpu_work = false;
+
+	if (!work_left)
+	{
+		state -= cpu_flag::pending;
+	}
+
+	if (gen_interrupt)
+	{
+		// Interrupt! escape everything and restart execution
+		spu_runtime::g_escape(this);
+	}
 }
 
 struct raw_spu_cleanup
@@ -2967,7 +3013,7 @@ void spu_thread::do_putlluc(const spu_mfc_cmd& args)
 	vm::reservation_notifier(addr).notify_all(-128);
 }
 
-void spu_thread::do_mfc(bool can_escape, bool must_finish)
+bool spu_thread::do_mfc(bool can_escape, bool must_finish)
 {
 	u32 removed = 0;
 	u32 barrier = 0;
@@ -3119,15 +3165,11 @@ void spu_thread::do_mfc(bool can_escape, bool must_finish)
 			// Exit early, not all pending commands have to be executed at a single iteration
 			// Update last timestamp so the next MFC timeout check will use the current time
 			mfc_last_timestamp = get_system_time();
-			return;
+			return true;
 		}
 	}
 
-	if (state & cpu_flag::pending)
-	{
-		// No more pending work
-		state -= cpu_flag::pending;
-	}
+	return false;
 }
 
 bool spu_thread::check_mfc_interrupts(u32 next_pc)
@@ -3752,9 +3794,20 @@ void spu_thread::set_interrupt_status(bool enable)
 	if (enable)
 	{
 		// Detect enabling interrupts with events masked
-		if (auto mask = ch_events.load().mask; mask & ~SPU_EVENT_INTR_IMPLEMENTED)
+		if (auto mask = ch_events.load().mask; mask & SPU_EVENT_INTR_BUSY_CHECK)
 		{
-			fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x)", mask);
+			if (g_cfg.core.spu_decoder != spu_decoder_type::precise && g_cfg.core.spu_decoder != spu_decoder_type::fast)
+			{
+				fmt::throw_exception("SPU Interrupts not implemented (mask=0x%x): Use interpreterts", mask);
+			}
+
+			spu_log.trace("SPU Interrupts (mask=0x%x) are using CPU busy checking mode", mask);
+
+			// Process interrupts in cpu_work()
+			if (state.none_of(cpu_flag::pending))
+			{
+				state += cpu_flag::pending;
+			}
 		}
 	}
 

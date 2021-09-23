@@ -125,7 +125,13 @@ void spu_interpreter::set_interrupt_status(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter::STOP(spu_thread& spu, spu_opcode_t op)
 {
-	if (!spu.stop_and_signal(op.opcode & 0x3fff))
+	const bool allow = std::exchange(spu.allow_interrupts_in_cpu_work, false);
+
+	const bool advance_pc = spu.stop_and_signal(op.opcode & 0x3fff);
+
+	spu.allow_interrupts_in_cpu_work = allow;
+
+	if (!advance_pc)
 	{
 		return false;
 	}
@@ -166,7 +172,11 @@ bool spu_interpreter::MFSPR(spu_thread& spu, spu_opcode_t op)
 
 bool spu_interpreter::RDCH(spu_thread& spu, spu_opcode_t op)
 {
+	const bool allow = std::exchange(spu.allow_interrupts_in_cpu_work, false);
+
 	const s64 result = spu.get_ch_value(op.ra);
+
+	spu.allow_interrupts_in_cpu_work = allow;
 
 	if (result < 0)
 	{
@@ -428,7 +438,13 @@ bool spu_interpreter::MTSPR(spu_thread&, spu_opcode_t)
 
 bool spu_interpreter::WRCH(spu_thread& spu, spu_opcode_t op)
 {
-	if (!spu.set_ch_value(op.ra, spu.gpr[op.rt]._u32[3]))
+	const bool allow = std::exchange(spu.allow_interrupts_in_cpu_work, false);
+
+	const bool advance_pc = spu.set_ch_value(op.ra, spu.gpr[op.rt]._u32[3]);
+
+	spu.allow_interrupts_in_cpu_work = allow;
+
+	if (!advance_pc)
 	{
 		return false;
 	}
