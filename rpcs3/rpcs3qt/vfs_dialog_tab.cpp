@@ -6,10 +6,11 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 
+constexpr auto qstr = QString::fromStdString;
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
-vfs_dialog_tab::vfs_dialog_tab(vfs_settings_info settingsInfo, std::shared_ptr<gui_settings> guiSettings, std::shared_ptr<emu_settings> emuSettings, QWidget* parent)
-	: QWidget(parent), m_info(std::move(settingsInfo)), m_gui_settings(std::move(guiSettings)), m_emu_settings(std::move(emuSettings))
+vfs_dialog_tab::vfs_dialog_tab(vfs_settings_info settingsInfo, std::shared_ptr<gui_settings> guiSettings, QWidget* parent)
+	: QWidget(parent), m_info(std::move(settingsInfo)), m_gui_settings(std::move(guiSettings))
 {
 	m_dir_dist = new QListWidget(this);
 
@@ -77,7 +78,6 @@ void vfs_dialog_tab::SetSettings() const
 
 	const std::string new_dir = m_selected_config_label->text() == EmptyPath ? "" : sstr(m_selected_config_label->text());
 	m_info.cfg_node->from_string(new_dir);
-	m_emu_settings->SetSetting(m_info.settingLoc, new_dir);
 }
 
 void vfs_dialog_tab::Reset() const

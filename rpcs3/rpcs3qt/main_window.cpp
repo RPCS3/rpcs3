@@ -42,7 +42,7 @@
 #include "rpcs3_version.h"
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
-#include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 
 #include "Crypto/unpkg.h"
@@ -239,7 +239,7 @@ bool main_window::Init(bool with_cli_boot)
 #endif
 
 	// Disable vsh if not present.
-	ui->bootVSHAct->setEnabled(fs::is_file(g_cfg.vfs.get_dev_flash() + "vsh/module/vsh.self"));
+	ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self"));
 
 	return true;
 }
@@ -476,7 +476,7 @@ void main_window::BootGame()
 void main_window::BootVSH()
 {
 	gui_log.notice("Booting from BootVSH...");
-	Boot(g_cfg.vfs.get_dev_flash() + "/vsh/module/vsh.self");
+	Boot(g_cfg_vfs.get_dev_flash() + "/vsh/module/vsh.self");
 }
 
 void main_window::BootRsxCapture(std::string path)
@@ -1133,7 +1133,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 	pdlg.show();
 
 	// Used by tar_object::extract() as destination directory
-	vfs::mount("/dev_flash", g_cfg.vfs.get_dev_flash());
+	vfs::mount("/dev_flash", g_cfg_vfs.get_dev_flash());
 
 	// Synchronization variable
 	atomic_t<uint> progress(0);
@@ -1213,7 +1213,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 
 	if (progress == update_filenames.size())
 	{
-		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg.vfs.get_dev_flash() + "/vsh/module/vsh.self"));
+		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "/vsh/module/vsh.self"));
 
 		gui_log.success("Successfully installed PS3 firmware version %s.", version_string);
 		m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), gui::ib_pup_success, this);
@@ -1232,7 +1232,7 @@ void main_window::DecryptSPRXLibraries()
 	if (!fs::is_dir(sstr(path_last_sprx)))
 	{
 		// Default: redirect to userland firmware SPRX directory
-		path_last_sprx = qstr(g_cfg.vfs.get_dev_flash() + "sys/external");
+		path_last_sprx = qstr(g_cfg_vfs.get_dev_flash() + "sys/external");
 	}
 
 	const QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select binary files"), path_last_sprx, tr("All Binaries (*.bin *.BIN *.self *.SELF *.sprx *.SPRX);;BIN files (*.bin *.BIN);;SELF files (*.self *.SELF);;SPRX files (*.sprx *.SPRX);;All files (*.*)"));
@@ -2079,7 +2079,7 @@ void main_window::CreateConnects()
 	{
 		vfs_dialog dlg(m_gui_settings, m_emu_settings, this);
 		dlg.exec();
-		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg.vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
+		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "vsh/module/vsh.self")); // dev_flash may have changed. Disable vsh if not present.
 		m_game_list_frame->Refresh(true); // dev_hdd0 may have changed. Refresh just in case.
 	});
 
@@ -2679,7 +2679,7 @@ void main_window::CreateFirmwareCache()
 	Emu.Stop();
 	Emu.SetForceBoot(true);
 
-	if (const game_boot_result error = Emu.BootGame(g_cfg.vfs.get_dev_flash() + "sys", "", true);
+	if (const game_boot_result error = Emu.BootGame(g_cfg_vfs.get_dev_flash() + "sys", "", true);
 		error != game_boot_result::no_errors)
 	{
 		gui_log.error("Creating firmware cache failed: reason: %s", error);

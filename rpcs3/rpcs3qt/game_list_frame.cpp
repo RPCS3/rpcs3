@@ -16,7 +16,7 @@
 
 #include "Emu/Memory/vm.h"
 #include "Emu/System.h"
-#include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/PSF.h"
 #include "util/types.hpp"
@@ -1630,7 +1630,7 @@ bool game_list_frame::RemoveSPUCache(const std::string& base_dir, bool is_intera
 
 void game_list_frame::BatchCreatePPUCaches()
 {
-	const std::string vsh_path = g_cfg.vfs.get_dev_flash() + "vsh/module/";
+	const std::string vsh_path = g_cfg_vfs.get_dev_flash() + "vsh/module/";
 	const bool vsh_exists = fs::is_file(vsh_path + "vsh.self");
 	const u32 total = m_game_data.size() + (vsh_exists ? 1 : 0);
 

@@ -18,6 +18,7 @@
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/RSX/Overlays/overlay_perf_metrics.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/vfs_config.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
@@ -513,7 +514,7 @@ void gui_application::OnChangeStyleSheetRequest()
 			const QString config_dir = qstr(fs::get_config_dir());
 
 			// Add PS3 fonts
-			QDirIterator ps3_font_it(qstr(g_cfg.vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+			QDirIterator ps3_font_it(qstr(g_cfg_vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
 			while (ps3_font_it.hasNext())
 				QFontDatabase::addApplicationFont(ps3_font_it.next());
 

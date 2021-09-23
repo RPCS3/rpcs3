@@ -7,6 +7,7 @@
     system_config_types.cpp
     system_progress.cpp
     system_utils.cpp
+    vfs_config.cpp
     VFS.cpp
     GDB.cpp
     title.cpp
