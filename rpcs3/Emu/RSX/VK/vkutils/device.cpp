@@ -326,6 +326,7 @@ namespace vk
 
 		if (pgpu->descriptor_indexing_support)
 		{
+			requested_extensions.push_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
 			requested_extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 		}
 
@@ -458,6 +459,17 @@ namespace vk
 		else
 		{
 			rsx_log.notice("GPU/driver lacks support for float16 data types. All float16_t arithmetic will be emulated with float32_t.");
+		}
+
+		VkPhysicalDeviceDescriptorIndexingFeatures indexing_features{};
+		if (pgpu->descriptor_indexing_support)
+		{
+			indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+			indexing_features.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE;
+			indexing_features.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
+			indexing_features.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+			indexing_features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+			device.pNext = &indexing_features;
 		}
 
 		CHECK_RESULT_EX(vkCreateDevice(*pgpu, &device, nullptr, &dev), message_on_error);

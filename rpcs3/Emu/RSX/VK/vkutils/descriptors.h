@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../VulkanAPI.h"
+#include "Utilities/mutex.h"
+
 #include "commands.h"
 #include "device.h"
 
@@ -32,13 +34,11 @@ namespace vk
 	class descriptor_set
 	{
 		const size_t max_cache_size = 16384;
-
-		void flush();
-		void init();
+		void init(VkDescriptorSet new_set);
 
 	public:
 		descriptor_set(VkDescriptorSet set);
-		descriptor_set();
+		descriptor_set() = default;
 		~descriptor_set() = default;
 
 		descriptor_set(const descriptor_set&) = delete;
@@ -57,8 +57,12 @@ namespace vk
 		void bind(VkCommandBuffer cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout);
 		void bind(const command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout);
 
+		void flush();
+
 	private:
 		VkDescriptorSet m_handle = VK_NULL_HANDLE;
+		bool m_update_after_bind = false;
+		bool m_in_use = false;
 
 		rsx::simple_array<VkBufferView> m_buffer_view_pool;
 		rsx::simple_array<VkDescriptorBufferInfo> m_buffer_info_pool;
@@ -68,5 +72,11 @@ namespace vk
 		rsx::simple_array<VkCopyDescriptorSet> m_pending_copies;
 	};
 
-	void flush_descriptor_updates();
+	namespace descriptors
+	{
+		void init();
+		void flush();
+
+		VkDescriptorSetLayout create_layout(const std::vector<VkDescriptorSetLayoutBinding>& bindings);
+	}
 }

@@ -167,6 +167,8 @@ namespace vk
 				vkDestroyBuffer(*g_render_device, tmp, nullptr);
 			}
 		}
+
+		descriptors::init();
 	}
 
 	VkFlags get_heap_compatible_buffer_types()

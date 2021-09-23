@@ -1,13 +1,81 @@
+#include "Emu/IdManager.h"
 #include "descriptors.h"
 
 namespace vk
 {
+	namespace descriptors
+	{
+		class dispatch_manager
+		{
+		public:
+			void flush_all()
+			{
+				for (auto& set : m_notification_list)
+				{
+					set->flush();
+				}
+			}
+
+			void notify(descriptor_set* set)
+			{
+				m_notification_list.push_back(set);
+				rsx_log.error("Now monitoring %u descriptor sets", m_notification_list.size());
+			}
+
+			dispatch_manager() = default;
+
+		private:
+			rsx::simple_array<descriptor_set*> m_notification_list;
+
+			dispatch_manager(const dispatch_manager&) = delete;
+			dispatch_manager& operator = (const dispatch_manager&) = delete;
+		};
+
+		void init()
+		{
+			g_fxo->init<dispatch_manager>();
+		}
+
+		void flush()
+		{
+			g_fxo->get<dispatch_manager>().flush_all();
+		}
+
+		VkDescriptorSetLayout create_layout(const std::vector<VkDescriptorSetLayoutBinding>& bindings)
+		{
+			VkDescriptorSetLayoutCreateInfo infos = {};
+			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+			infos.pBindings = bindings.data();
+			infos.bindingCount = ::size32(bindings);
+
+			VkDescriptorSetLayoutBindingFlagsCreateInfo binding_infos = {};
+			std::vector<VkDescriptorBindingFlags> binding_flags;
+
+			if (g_render_device->get_descriptor_indexing_support())
+			{
+				binding_flags.resize(bindings.size(), VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT);
+
+				binding_infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+				binding_infos.pNext = nullptr;
+				binding_infos.bindingCount = ::size32(binding_flags);
+				binding_infos.pBindingFlags = binding_flags.data();
+
+				infos.pNext = &binding_infos;
+				infos.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT_EXT;
+			}
+
+			VkDescriptorSetLayout result;
+			CHECK_RESULT(vkCreateDescriptorSetLayout(*g_render_device, &infos, nullptr, &result));
+			return result;
+		}
+	}
+
 	void descriptor_pool::create(const vk::render_device& dev, VkDescriptorPoolSize* sizes, u32 size_descriptors_count, u32 max_sets, u8 subpool_count)
 	{
 		ensure(subpool_count);
 
 		VkDescriptorPoolCreateInfo infos = {};
-		infos.flags = 0;
+		infos.flags = dev.get_descriptor_indexing_support() ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
 		infos.maxSets = max_sets;
 		infos.poolSizeCount = size_descriptors_count;
 		infos.pPoolSizes = sizes;
@@ -57,44 +125,49 @@ namespace vk
 	descriptor_set::descriptor_set(VkDescriptorSet set)
 	{
 		flush();
-		init();
 		m_handle = set;
 	}
 
-	descriptor_set::descriptor_set()
+	void descriptor_set::init(VkDescriptorSet new_set)
 	{
-		init();
-	}
-
-	void descriptor_set::init()
-	{
-		if (m_image_info_pool.capacity() == 0)
+		if (!m_in_use) [[unlikely]]
 		{
 			m_image_info_pool.reserve(max_cache_size + 16);
 			m_buffer_view_pool.reserve(max_cache_size + 16);
 			m_buffer_info_pool.reserve(max_cache_size + 16);
+
+			m_in_use = true;
+			m_update_after_bind = g_render_device->get_descriptor_indexing_support();
+
+			if (m_update_after_bind)
+			{
+				g_fxo->get<descriptors::dispatch_manager>().notify(this);
+			}
 		}
+		else if (!m_update_after_bind)
+		{
+			flush();
+		}
+
+		m_handle = new_set;
 	}
 
 	void descriptor_set::swap(descriptor_set& other)
 	{
+		const auto other_handle = other.m_handle;
 		other.flush();
-		flush();
-
-		std::swap(m_handle, other.m_handle);
+		other.m_handle = m_handle;
+		init(other_handle);
 	}
 
 	descriptor_set& descriptor_set::operator = (VkDescriptorSet set)
 	{
-		flush();
-		m_handle = set;
+		init(set);
 		return *this;
 	}
 
 	VkDescriptorSet* descriptor_set::ptr()
 	{
-		// TODO: You shouldn't need this
-		// ensure(m_handle == VK_NULL_HANDLE);
 		return &m_handle;
 	}
 
@@ -105,6 +178,11 @@ namespace vk
 
 	void descriptor_set::push(const VkBufferView& buffer_view, VkDescriptorType type, u32 binding)
 	{
+		if (m_pending_writes.size() > max_cache_size)
+		{
+			flush();
+		}
+
 		m_buffer_view_pool.push_back(buffer_view);
 		m_pending_writes.push_back(
 		{
@@ -123,6 +201,11 @@ namespace vk
 
 	void descriptor_set::push(const VkDescriptorBufferInfo& buffer_info, VkDescriptorType type, u32 binding)
 	{
+		if (m_pending_writes.size() > max_cache_size)
+		{
+			flush();
+		}
+
 		m_buffer_info_pool.push_back(buffer_info);
 		m_pending_writes.push_back(
 		{
@@ -141,6 +224,11 @@ namespace vk
 
 	void descriptor_set::push(const VkDescriptorImageInfo& image_info, VkDescriptorType type, u32 binding)
 	{
+		if (m_pending_writes.size() >= max_cache_size)
+		{
+			flush();
+		}
+
 		m_image_info_pool.push_back(image_info);
 		m_pending_writes.push_back(
 		{
@@ -192,7 +280,11 @@ namespace vk
 
 	void descriptor_set::bind(VkCommandBuffer cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
 	{
-		flush();
+		if (!m_update_after_bind)
+		{
+			flush();
+		}
+
 		vkCmdBindDescriptorSets(cmd, bind_point, layout, 0, 1, &m_handle, 0, nullptr);
 	}
 

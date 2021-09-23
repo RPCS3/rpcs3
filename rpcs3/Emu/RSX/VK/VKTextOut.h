@@ -45,23 +45,21 @@ namespace vk
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 120 },
 			};
 
-			//Reserve descriptor pools
+			// Reserve descriptor pools
 			m_descriptor_pool.create(dev, descriptor_pools, 1, 120, 2);
 
-			VkDescriptorSetLayoutBinding bindings[1] = {};
-
-			//Scale and offset data plus output color
-			bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			bindings[0].descriptorCount = 1;
-			bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			bindings[0].binding = 0;
-
-			VkDescriptorSetLayoutCreateInfo infos = {};
-			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			infos.pBindings = bindings;
-			infos.bindingCount = 1;
-
-			CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &m_descriptor_layout));
+			// Scale and offset data plus output color
+			std::vector<VkDescriptorSetLayoutBinding> bindings = 
+			{
+				{
+					.binding = 0,
+					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+					.descriptorCount = 1,
+					.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+					.pImmutableSamplers = nullptr
+				}
+			};
+			m_descriptor_layout = vk::descriptors::create_layout(bindings);
 
 			VkPipelineLayoutCreateInfo layout_info = {};
 			layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
