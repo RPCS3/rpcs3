@@ -619,7 +619,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				if (g_cfg.from_string(cfg_file.to_string()))
 				{
 					g_cfg.name = config_path;
-					m_config_path = config_path;
 				}
 				else
 				{
