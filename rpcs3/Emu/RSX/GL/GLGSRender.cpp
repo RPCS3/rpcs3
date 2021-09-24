@@ -917,7 +917,7 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 
 bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 {
-	const bool can_flush = (std::this_thread::get_id() == m_rsx_thread);
+	const bool can_flush = is_current_thread();
 	const rsx::invalidation_cause cause =
 		is_writing ? (can_flush ? rsx::invalidation_cause::write : rsx::invalidation_cause::deferred_write)
 		           : (can_flush ? rsx::invalidation_cause::read  : rsx::invalidation_cause::deferred_read);

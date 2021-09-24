@@ -576,8 +576,6 @@ namespace rsx
 
 	void thread::on_task()
 	{
-		m_rsx_thread = std::this_thread::get_id();
-
 		g_tls_log_prefix = []
 		{
 			const auto rsx = get_current_renderer();
