@@ -4,7 +4,7 @@
 #include "commands.h"
 #include "device.h"
 
-#include <vector>
+#include "Emu/RSX/rsx_utils.h"
 
 namespace vk
 {
@@ -24,7 +24,7 @@ namespace vk
 	private:
 		const vk::render_device* m_owner = nullptr;
 
-		std::vector<VkDescriptorPool> m_device_pools;
+		rsx::simple_array<VkDescriptorPool> m_device_pools;
 		VkDescriptorPool m_current_pool_handle = VK_NULL_HANDLE;
 		u32 m_current_pool_index = 0;
 	};
@@ -32,10 +32,6 @@ namespace vk
 	class descriptor_set
 	{
 		const size_t max_cache_size = 16384;
-
-		VkBufferView* dup(const VkBufferView* in);
-		VkDescriptorBufferInfo* dup(const VkDescriptorBufferInfo* in);
-		VkDescriptorImageInfo* dup(const VkDescriptorImageInfo* in);
 
 		void flush();
 		void init();
@@ -52,8 +48,11 @@ namespace vk
 
 		VkDescriptorSet* ptr();
 		VkDescriptorSet value() const;
-		void push(const VkWriteDescriptorSet& write_cmd);
-		void push(std::vector<VkCopyDescriptorSet>& copy_cmd);
+		void push(const VkBufferView& buffer_view, VkDescriptorType type, u32 binding);
+		void push(const VkDescriptorBufferInfo& buffer_info, VkDescriptorType type, u32 binding);
+		void push(const VkDescriptorImageInfo& image_info, VkDescriptorType type, u32 binding);
+		void push(const VkDescriptorImageInfo* image_info, u32 count, VkDescriptorType type, u32 binding);
+		void push(rsx::simple_array<VkCopyDescriptorSet>& copy_cmd);
 
 		void bind(VkCommandBuffer cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout);
 		void bind(const command_buffer& cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout);
@@ -61,12 +60,12 @@ namespace vk
 	private:
 		VkDescriptorSet m_handle = VK_NULL_HANDLE;
 
-		std::vector<VkBufferView> m_buffer_view_pool;
-		std::vector<VkDescriptorBufferInfo> m_buffer_info_pool;
-		std::vector<VkDescriptorImageInfo> m_image_info_pool;
+		rsx::simple_array<VkBufferView> m_buffer_view_pool;
+		rsx::simple_array<VkDescriptorBufferInfo> m_buffer_info_pool;
+		rsx::simple_array<VkDescriptorImageInfo> m_image_info_pool;
 
-		std::vector<VkWriteDescriptorSet> m_pending_writes;
-		std::vector<VkCopyDescriptorSet> m_pending_copies;
+		rsx::simple_array<VkWriteDescriptorSet> m_pending_writes;
+		rsx::simple_array<VkCopyDescriptorSet> m_pending_copies;
 	};
 
 	void flush_descriptor_updates();
