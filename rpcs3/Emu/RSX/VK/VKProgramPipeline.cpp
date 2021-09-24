@@ -165,21 +165,7 @@ namespace vk
 			{
 				if (uniform.name == uniform_name)
 				{
-					const VkWriteDescriptorSet descriptor_writer =
-					{
-						VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
-						nullptr,                                   // pNext
-						VK_NULL_HANDLE,                            // dstSet
-						uniform.location,                          // dstBinding
-						0,                                         // dstArrayElement
-						1,                                         // descriptorCount
-						type,                                      // descriptorType
-						&image_descriptor,                         // pImageInfo
-						nullptr,                                   // pBufferInfo
-						nullptr                                    // pTexelBufferView
-					};
-
-					set.push(descriptor_writer);
+					set.push(image_descriptor, type, uniform.location);
 					attribute_location_mask |= (1ull << uniform.location);
 					return;
 				}
@@ -204,21 +190,7 @@ namespace vk
 
 			if (binding != ~0u)
 			{
-				const VkWriteDescriptorSet descriptor_writer =
-				{
-					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
-					nullptr,                                   // pNext
-					VK_NULL_HANDLE,                            // dstSet
-					binding,                                   // dstBinding
-					0,                                         // dstArrayElement
-					1,                                         // descriptorCount
-					VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, // descriptorType
-					&image_descriptor,                         // pImageInfo
-					nullptr,                                   // pBufferInfo
-					nullptr                                    // pTexelBufferView
-				};
-
-				set.push(descriptor_writer);
+				set.push(image_descriptor, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding);
 				attribute_location_mask |= (1ull << binding);
 				return;
 			}
@@ -233,21 +205,7 @@ namespace vk
 
 		void program::bind_uniform(const VkBufferView &buffer_view, u32 binding_point, vk::descriptor_set &set)
 		{
-			const VkWriteDescriptorSet descriptor_writer =
-			{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // sType
-				nullptr,                                // pNext
-				VK_NULL_HANDLE,                         // dstSet
-				binding_point,                          // dstBinding
-				0,                                      // dstArrayElement
-				1,                                      // descriptorCount
-				VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,// descriptorType
-				nullptr,                                // pImageInfo
-				nullptr,                                // pBufferInfo
-				&buffer_view                            // pTexelBufferView
-			};
-
-			set.push(descriptor_writer);
+			set.push(buffer_view, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, binding_point);
 			attribute_location_mask |= (1ull << binding_point);
 		}
 
@@ -267,21 +225,7 @@ namespace vk
 
 		void program::bind_buffer(const VkDescriptorBufferInfo &buffer_descriptor, u32 binding_point, VkDescriptorType type, vk::descriptor_set &set)
 		{
-			const VkWriteDescriptorSet descriptor_writer =
-			{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, // sType
-				nullptr,                                // pNext
-				VK_NULL_HANDLE,                         // dstSet
-				binding_point,                          // dstBinding
-				0,                                      // dstArrayElement
-				1,                                      // descriptorCount
-				type,                                   // descriptorType
-				nullptr,                                // pImageInfo
-				&buffer_descriptor,                     // pBufferInfo
-				nullptr                                 // pTexelBufferView
-			};
-
-			set.push(descriptor_writer);
+			set.push(buffer_descriptor, type, binding_point);
 			attribute_location_mask |= (1ull << binding_point);
 		}
 	}

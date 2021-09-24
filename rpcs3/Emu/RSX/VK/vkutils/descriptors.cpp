@@ -76,30 +76,6 @@ namespace vk
 		}
 	}
 
-	VkBufferView* descriptor_set::dup(const VkBufferView* in)
-	{
-		if (!in) return nullptr;
-
-		m_buffer_view_pool.push_back(*in);
-		return &m_buffer_view_pool.back();
-	}
-
-	VkDescriptorBufferInfo* descriptor_set::dup(const VkDescriptorBufferInfo* in)
-	{
-		if (!in) return nullptr;
-
-		m_buffer_info_pool.push_back(*in);
-		return &m_buffer_info_pool.back();
-	}
-
-	VkDescriptorImageInfo* descriptor_set::dup(const VkDescriptorImageInfo* in)
-	{
-		if (!in) return nullptr;
-
-		m_image_info_pool.push_back(*in);
-		return &m_image_info_pool.back();
-	}
-
 	void descriptor_set::swap(descriptor_set& other)
 	{
 		other.flush();
@@ -127,29 +103,79 @@ namespace vk
 		return m_handle;
 	}
 
-	void descriptor_set::push(const VkWriteDescriptorSet& write_cmd)
+	void descriptor_set::push(const VkBufferView& buffer_view, VkDescriptorType type, u32 binding)
 	{
-		if (m_pending_writes.size() >= max_cache_size)
-		{
-			flush();
-		}
-
+		m_buffer_view_pool.push_back(buffer_view);
 		m_pending_writes.push_back(
 		{
-			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.pNext = nullptr,
-			.dstSet = m_handle,
-			.dstBinding = write_cmd.dstBinding,
-			.dstArrayElement = write_cmd.dstArrayElement,
-			.descriptorCount = write_cmd.descriptorCount,
-			.descriptorType = write_cmd.descriptorType,
-			.pImageInfo = dup(write_cmd.pImageInfo),
-			.pBufferInfo = dup(write_cmd.pBufferInfo),
-			.pTexelBufferView = dup(write_cmd.pTexelBufferView)
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
+			nullptr,                                   // pNext
+			m_handle,                                  // dstSet
+			binding,                                   // dstBinding
+			0,                                         // dstArrayElement
+			1,                                         // descriptorCount
+			type,                                      // descriptorType
+			nullptr,                                   // pImageInfo
+			nullptr,                                   // pBufferInfo
+			&m_buffer_view_pool.back()                 // pTexelBufferView
 		});
 	}
 
-	void descriptor_set::push(std::vector<VkCopyDescriptorSet>& copy_cmd)
+	void descriptor_set::push(const VkDescriptorBufferInfo& buffer_info, VkDescriptorType type, u32 binding)
+	{
+		m_buffer_info_pool.push_back(buffer_info);
+		m_pending_writes.push_back(
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
+			nullptr,                                   // pNext
+			m_handle,                                  // dstSet
+			binding,                                   // dstBinding
+			0,                                         // dstArrayElement
+			1,                                         // descriptorCount
+			type,                                      // descriptorType
+			nullptr,                                   // pImageInfo
+			&m_buffer_info_pool.back(),                // pBufferInfo
+			nullptr                                    // pTexelBufferView
+		});
+	}
+
+	void descriptor_set::push(const VkDescriptorImageInfo& image_info, VkDescriptorType type, u32 binding)
+	{
+		m_image_info_pool.push_back(image_info);
+		m_pending_writes.push_back(
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
+			nullptr,                                   // pNext
+			m_handle,                                  // dstSet
+			binding,                                   // dstBinding
+			0,                                         // dstArrayElement
+			1,                                         // descriptorCount
+			type,                                      // descriptorType
+			&m_image_info_pool.back(),                 // pImageInfo
+			nullptr,                                   // pBufferInfo
+			nullptr                                    // pTexelBufferView
+		});
+	}
+
+	void descriptor_set::push(const VkDescriptorImageInfo* image_info, u32 count, VkDescriptorType type, u32 binding)
+	{
+		VkWriteDescriptorSet writer =
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
+			nullptr,                                   // pNext
+			m_handle,                                  // dstSet
+			binding,                                   // dstBinding
+			0,                                         // dstArrayElement
+			count,                                     // descriptorCount
+			type,                                      // descriptorType
+			image_info,                                // pImageInfo
+			nullptr,                                   // pBufferInfo
+			nullptr                                    // pTexelBufferView
+		};
+		vkUpdateDescriptorSets(*g_render_device, 1, &writer, 0, nullptr);
+	}
+
+	void descriptor_set::push(rsx::simple_array<VkCopyDescriptorSet>& copy_cmd)
 	{
 		if (m_pending_copies.empty()) [[likely]]
 		{

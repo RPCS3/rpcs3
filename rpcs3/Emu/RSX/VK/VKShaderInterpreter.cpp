@@ -513,21 +513,7 @@ namespace vk
 		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
 		for (u32 i = 0, binding = m_fragment_textures_start; i < 4; ++i, ++binding, texture_ptr += 16)
 		{
-			const VkWriteDescriptorSet descriptor_writer =
-			{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
-				nullptr,                                   // pNext
-				VK_NULL_HANDLE,                            // dstSet
-				binding,                                   // dstBinding
-				0,                                         // dstArrayElement
-				16,                                        // descriptorCount
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, // descriptorType
-				texture_ptr,                               // pImageInfo
-				nullptr,                                   // pBufferInfo
-				nullptr                                    // pTexelBufferView
-			};
-
-			set.push(descriptor_writer);
+			set.push(texture_ptr, 16, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding);
 		}
 	}
 
