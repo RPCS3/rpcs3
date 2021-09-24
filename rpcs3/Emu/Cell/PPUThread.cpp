@@ -1493,7 +1493,7 @@ void ppu_trap(ppu_thread& ppu, u64 addr)
 	// If stubbing is enabled, check current instruction and the following
 	if (!add || !vm::check_addr(ppu.cia, vm::page_executable) || !vm::check_addr(ppu.cia + add, vm::page_executable))
 	{
-		fmt::throw_exception("PPU Trap!");
+		fmt::throw_exception("PPU Trap! Sometimes tweaking the setting "Stub PPU Traps" can workaround this crash.\nBest values depend on game code, if unsure try 1.");
 	}
 
 	ppu_log.error("PPU Trap: Stubbing %d instructions %s.", std::abs(static_cast<s32>(add) / 4), add >> 31 ? "backwards" : "forwards");
