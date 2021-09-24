@@ -602,7 +602,6 @@ namespace rsx
 
 		void cpu_task() override;
 	protected:
-		std::thread::id m_rsx_thread;
 		atomic_t<bool> m_rsx_thread_exiting{ true };
 
 		std::array<push_buffer_vertex_info, 16> vertex_push_buffers;
@@ -963,7 +962,10 @@ namespace rsx
 		u32 get_load();
 
 		// Returns true if the current thread is the active RSX thread
-		bool is_current_thread() const { return std::this_thread::get_id() == m_rsx_thread; }
+		inline bool is_current_thread() const
+		{
+			return !!cpu_thread::get_current<rsx::thread>();
+		}
 	};
 
 	inline thread* get_current_renderer()
