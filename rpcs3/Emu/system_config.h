@@ -31,7 +31,6 @@ struct cfg_root : cfg::node
 		cfg::_enum<thread_scheduler_mode> thread_scheduler{this, "Thread Scheduler Mode", thread_scheduler_mode::os};
 		cfg::_bool set_daz_and_ftz{ this, "Set DAZ and FTZ", false };
 		cfg::_enum<spu_decoder_type> spu_decoder{ this, "SPU Decoder", spu_decoder_type::llvm };
-		cfg::_bool lower_spu_priority{ this, "Lower SPU thread priority" };
 		cfg::_bool spu_getllar_polling_detection{ this, "SPU GETLLAR polling detection", false, true };
 		cfg::_bool spu_debug{ this, "SPU Debug" };
 		cfg::_bool mfc_debug{ this, "MFC Debug" };

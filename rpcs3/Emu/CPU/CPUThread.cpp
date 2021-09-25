@@ -411,11 +411,6 @@ void cpu_thread::operator()()
 	}
 	if (id_type() == 2)
 	{
-		if (g_cfg.core.lower_spu_priority)
-		{
-			thread_ctrl::set_native_priority(-1);
-		}
-
 		// force input/output denormals to zero for SPU threads (FTZ/DAZ)
 		_mm_setcsr( _mm_getcsr() | 0x8040 );
 
