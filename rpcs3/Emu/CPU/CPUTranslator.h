@@ -2823,7 +2823,8 @@ struct llvm_calli
 		const auto _rty = llvm_value_t<RT>::get_type(ir->getContext());
 		const auto type = llvm::FunctionType::get(_rty, {v[I]->getType()...}, false);
 		const auto func = llvm::cast<llvm::Function>(ir->GetInsertBlock()->getParent()->getParent()->getOrInsertFunction(iname, type).getCallee());
-		return ir->CreateCall(func, v);
+		const auto call = ir->CreateCall(func, v);
+		return call;
 	}
 
 	template <typename F>
@@ -2946,21 +2947,45 @@ public:
 
 	// Call external function: provide name and function pointer
 	template <typename RT, typename... FArgs, typename... Args>
-	llvm::CallInst* call(std::string_view lame, RT(*_func)(FArgs...), Args... args)
+	llvm::CallInst* call(std::string_view name0, RT(*_func)(FArgs...), Args... args)
 	{
 		static_assert(sizeof...(FArgs) == sizeof...(Args), "spu_llvm_recompiler::call(): unexpected arg number");
-		const auto type = llvm::FunctionType::get(get_type<RT>(), {args->getType()...}, false);
-		const auto func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction({lame.data(), lame.size()}, type).getCallee());
-#ifdef _WIN32
-		func->setCallingConv(llvm::CallingConv::Win64);
-#endif
-		m_engine->updateGlobalMapping({lame.data(), lame.size()}, reinterpret_cast<uptr>(_func));
 
-		const auto inst = m_ir->CreateCall(func, {args...});
 #ifdef _WIN32
-		inst->setCallingConv(llvm::CallingConv::Win64);
+		const auto name = "_trw64_"s + std::string(name0);
+		const auto type = llvm::FunctionType::get(get_type<RT>(), {args->getType()...}, false);
+		const auto func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction({name.data(), name.size()}, type).getCallee());
+
+		if (func->getLinkage() != llvm::GlobalValue::InternalLinkage)
+		{
+			func->setLinkage(llvm::GlobalValue::InternalLinkage);
+
+			const auto trgt = llvm::cast<llvm::Function>(m_module->getOrInsertFunction({name0.data(), name0.size()}, type).getCallee());
+			trgt->setCallingConv(llvm::CallingConv::Win64);
+			m_engine->updateGlobalMapping({name0.data(), name0.size()}, reinterpret_cast<uptr>(_func));
+
+			llvm::IRBuilder<> irb(m_context);
+
+			irb.SetInsertPoint(llvm::BasicBlock::Create(m_context, "", func));
+			std::vector<llvm::Value*> args2;
+			for (auto& arg : func->args())
+				args2.push_back(&arg);
+			const auto inst = irb.CreateCall(trgt, args2);
+			inst->setCallingConv(llvm::CallingConv::Win64);
+			inst->setTailCall();
+
+			if constexpr (std::is_void_v<RT>)
+				irb.CreateRetVoid();
+			else
+				irb.CreateRet(inst);
+		}
+#else
+		const auto type = llvm::FunctionType::get(get_type<RT>(), {args->getType()...}, false);
+		const auto func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction({name0.data(), name0.size()}, type).getCallee());
+		m_engine->updateGlobalMapping({name0.data(), name0.size()}, reinterpret_cast<uptr>(_func));
 #endif
-		return inst;
+
+		return m_ir->CreateCall(func, {args...});
 	}
 
 	// Bitcast with immediate constant folding
@@ -3536,7 +3561,8 @@ public:
 	{
 		const auto type = llvm::FunctionType::get(get_type<RT>(), {args->getType()...}, false);
 		const auto func = llvm::cast<llvm::Function>(m_module->getOrInsertFunction({name.data(), name.size()}, type).getCallee());
-		return m_ir->CreateCall(func, {args...});
+		const auto call = m_ir->CreateCall(func, {args...});
+		return call;
 	}
 
 	// Initialize custom intrinsic
