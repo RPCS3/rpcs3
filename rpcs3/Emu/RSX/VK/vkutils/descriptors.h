@@ -33,7 +33,7 @@ namespace vk
 		VkDescriptorPool m_current_pool_handle = VK_NULL_HANDLE;
 		u32 m_current_pool_index = 0;
 
-		static const size_t max_cache_size = 64;
+		static constexpr size_t max_cache_size = 64;
 		VkDescriptorSetLayout m_cached_layout = VK_NULL_HANDLE;
 		rsx::simple_array<VkDescriptorSet> m_descriptor_set_cache;
 		rsx::simple_array<VkDescriptorSetLayout> m_allocation_request_cache;
@@ -41,7 +41,10 @@ namespace vk
 
 	class descriptor_set
 	{
-		static const size_t max_cache_size = 16384;
+		static constexpr size_t max_cache_size = 16384;
+		static constexpr size_t max_overflow_size = 64;
+		static constexpr size_t m_pool_size = max_cache_size + max_overflow_size;
+
 		void init(VkDescriptorSet new_set);
 
 	public:
@@ -69,7 +72,8 @@ namespace vk
 
 	private:
 		VkDescriptorSet m_handle = VK_NULL_HANDLE;
-		bool m_update_after_bind = false;
+		u64 m_update_after_bind_mask = 0;
+		u64 m_push_type_mask = 0;
 		bool m_in_use = false;
 
 		rsx::simple_array<VkBufferView> m_buffer_view_pool;

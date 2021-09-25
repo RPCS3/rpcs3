@@ -56,11 +56,24 @@ namespace vk
 			infos.bindingCount = ::size32(bindings);
 
 			VkDescriptorSetLayoutBindingFlagsCreateInfo binding_infos = {};
-			std::vector<VkDescriptorBindingFlags> binding_flags;
+			rsx::simple_array<VkDescriptorBindingFlags> binding_flags;
 
 			if (g_render_device->get_descriptor_indexing_support())
 			{
-				binding_flags.resize(bindings.size(), VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT);
+				const auto deferred_mask = g_render_device->get_descriptor_update_after_bind_support();
+				binding_flags.resize(::size32(bindings));
+
+				for (u32 i = 0; i < binding_flags.size(); ++i)
+				{
+					if ((1ull << bindings[i].descriptorType) & ~deferred_mask)
+					{
+						binding_flags[i] = 0u;
+					}
+					else
+					{
+						binding_flags[i] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+					}
+				}
 
 				binding_infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
 				binding_infos.pNext = nullptr;
@@ -197,19 +210,19 @@ namespace vk
 	{
 		if (!m_in_use) [[unlikely]]
 		{
-			m_image_info_pool.reserve(max_cache_size + 16);
-			m_buffer_view_pool.reserve(max_cache_size + 16);
-			m_buffer_info_pool.reserve(max_cache_size + 16);
+			m_image_info_pool.reserve(m_pool_size);
+			m_buffer_view_pool.reserve(m_pool_size);
+			m_buffer_info_pool.reserve(m_pool_size);
 
 			m_in_use = true;
-			m_update_after_bind = g_render_device->get_descriptor_indexing_support();
+			m_update_after_bind_mask = g_render_device->get_descriptor_update_after_bind_support();
 
-			if (m_update_after_bind)
+			if (m_update_after_bind_mask)
 			{
 				g_fxo->get<descriptors::dispatch_manager>().notify(this);
 			}
 		}
-		else if (!m_update_after_bind)
+		else if (m_push_type_mask & ~m_update_after_bind_mask)
 		{
 			flush();
 		}
@@ -233,6 +246,11 @@ namespace vk
 
 	VkDescriptorSet* descriptor_set::ptr()
 	{
+		if (!m_in_use) [[likely]]
+		{
+			init(m_handle);
+		}
+
 		return &m_handle;
 	}
 
@@ -243,11 +261,7 @@ namespace vk
 
 	void descriptor_set::push(const VkBufferView& buffer_view, VkDescriptorType type, u32 binding)
 	{
-		if (m_pending_writes.size() > max_cache_size)
-		{
-			flush();
-		}
-
+		m_push_type_mask |= (1ull << type);
 		m_buffer_view_pool.push_back(buffer_view);
 		m_pending_writes.push_back(
 		{
@@ -266,11 +280,7 @@ namespace vk
 
 	void descriptor_set::push(const VkDescriptorBufferInfo& buffer_info, VkDescriptorType type, u32 binding)
 	{
-		if (m_pending_writes.size() > max_cache_size)
-		{
-			flush();
-		}
-
+		m_push_type_mask |= (1ull << type);
 		m_buffer_info_pool.push_back(buffer_info);
 		m_pending_writes.push_back(
 		{
@@ -289,11 +299,7 @@ namespace vk
 
 	void descriptor_set::push(const VkDescriptorImageInfo& image_info, VkDescriptorType type, u32 binding)
 	{
-		if (m_pending_writes.size() >= max_cache_size)
-		{
-			flush();
-		}
-
+		m_push_type_mask |= (1ull << type);
 		m_image_info_pool.push_back(image_info);
 		m_pending_writes.push_back(
 		{
@@ -336,8 +342,8 @@ namespace vk
 		}
 		else
 		{
-			const size_t old_size = m_pending_copies.size();
-			const size_t new_size = copy_cmd.size() + old_size;
+			const auto old_size = m_pending_copies.size();
+			const auto new_size = copy_cmd.size() + old_size;
 			m_pending_copies.resize(new_size);
 			std::copy(copy_cmd.begin(), copy_cmd.end(), m_pending_copies.begin() + old_size);
 		}
@@ -345,7 +351,7 @@ namespace vk
 
 	void descriptor_set::bind(VkCommandBuffer cmd, VkPipelineBindPoint bind_point, VkPipelineLayout layout)
 	{
-		if (!m_update_after_bind)
+		if ((m_push_type_mask & ~m_update_after_bind_mask) || (m_pending_writes.size() >= max_cache_size))
 		{
 			flush();
 		}
@@ -360,7 +366,7 @@ namespace vk
 
 	void descriptor_set::flush()
 	{
-		if (m_pending_writes.empty() && m_pending_copies.empty())
+		if (!m_push_type_mask)
 		{
 			return;
 		}
@@ -369,6 +375,7 @@ namespace vk
 		const auto num_copies = ::size32(m_pending_copies);
 		vkUpdateDescriptorSets(*g_render_device, num_writes, m_pending_writes.data(), num_copies, m_pending_copies.data());
 
+		m_push_type_mask = 0;
 		m_pending_writes.clear();
 		m_pending_copies.clear();
 		m_image_info_pool.clear();

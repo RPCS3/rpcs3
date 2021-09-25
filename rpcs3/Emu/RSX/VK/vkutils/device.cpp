@@ -30,6 +30,7 @@ namespace vk
 			features2.pNext = nullptr;
 
 			VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
+			VkPhysicalDeviceDescriptorIndexingFeatures  descriptor_indexing_info{};
 
 			if (device_extensions.is_supported(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
 			{
@@ -44,6 +45,14 @@ namespace vk
 				features2.pNext         = &driver_properties;
 			}
 
+			if (device_extensions.is_supported(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME))
+			{
+				descriptor_indexing_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+				descriptor_indexing_info.pNext = features2.pNext;
+				features2.pNext                = &descriptor_indexing_info;
+				descriptor_indexing_support    = true;
+			}
+
 			auto _vkGetPhysicalDeviceFeatures2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceFeatures2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceFeatures2KHR"));
 			ensure(_vkGetPhysicalDeviceFeatures2KHR); // "vkGetInstanceProcAddress failed to find entry point!"
 			_vkGetPhysicalDeviceFeatures2KHR(dev, &features2);
@@ -52,11 +61,23 @@ namespace vk
 			shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
 			shader_types_support.allow_int8    = !!shader_support_info.shaderInt8;
 			features                           = features2.features;
+
+			if (descriptor_indexing_support)
+			{
+#define SET_DESCRIPTOR_BITFLAG(field, bit) if (descriptor_indexing_info.field) descriptor_update_after_bind_mask |= (1ull << bit)
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER);
+				SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER);
+#undef SET_DESCRIPTOR_BITFLAG
+			}
 		}
 
 		stencil_export_support           = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		conditional_render_support       = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
-		descriptor_indexing_support      = device_extensions.is_supported(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
 		external_memory_host_support     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
 		sampler_mirror_clamped_support   = device_extensions.is_supported(VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME);
 		unrestricted_depth_range_support = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
@@ -464,11 +485,17 @@ namespace vk
 		VkPhysicalDeviceDescriptorIndexingFeatures indexing_features{};
 		if (pgpu->descriptor_indexing_support)
 		{
+#define SET_DESCRIPTOR_BITFLAG(field, bit) if (pgpu->descriptor_update_after_bind_mask & (1ull << bit)) indexing_features.field = VK_TRUE
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER);
+			SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER);
+#undef SET_DESCRIPTOR_BITFLAG
+
 			indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
-			indexing_features.descriptorBindingUniformTexelBufferUpdateAfterBind = VK_TRUE;
-			indexing_features.descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE;
-			indexing_features.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
-			indexing_features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
 			device.pNext = &indexing_features;
 		}
 
@@ -680,6 +707,11 @@ namespace vk
 	bool render_device::get_descriptor_indexing_support() const
 	{
 		return pgpu->descriptor_indexing_support;
+	}
+
+	u64 render_device::get_descriptor_update_after_bind_support() const
+	{
+		return pgpu->descriptor_update_after_bind_mask;
 	}
 
 	mem_allocator_base* render_device::get_allocator() const
