@@ -158,13 +158,6 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="spuCache">
-                <property name="text">
-                 <string>SPU Cache</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QCheckBox" name="accurateXFloat">
                 <property name="text">
                  <string>Accurate xfloat</string>
