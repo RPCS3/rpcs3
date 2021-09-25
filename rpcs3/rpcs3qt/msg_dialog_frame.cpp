@@ -372,12 +372,10 @@ void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
 #ifdef HAVE_QTDBUS
 void msg_dialog_frame::UpdateProgress(int progress, bool disable)
 {
-	QDBusMessage message = QDBusMessage::createSignal
-	(
+	QDBusMessage message = QDBusMessage::createSignal(
 		QStringLiteral("/"),
 		QStringLiteral("com.canonical.Unity.LauncherEntry"),
-		QStringLiteral("Update")
-	);
+		QStringLiteral("Update"));
 	QVariantMap properties;
 	if (disable)
 		properties.insert(QStringLiteral("progress-visible"), false);

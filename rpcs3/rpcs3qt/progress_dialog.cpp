@@ -54,7 +54,16 @@ progress_dialog::~progress_dialog()
 		m_tb_progress->hide();
 	}
 #elif HAVE_QTDBUS
-	UpdateProgress(0);
+	QDBusMessage message = QDBusMessage::createSignal(
+		QStringLiteral("/"),
+		QStringLiteral("com.canonical.Unity.LauncherEntry"),
+		QStringLiteral("Update"));
+	QVariantMap properties;
+	properties.insert(QStringLiteral("urgent"), false);
+	properties.insert(QStringLiteral("progress-visible"), false);
+	properties.insert(QStringLiteral("progress"), 0);
+	message << QStringLiteral("application://rpcs3.desktop") << properties;
+	QDBusConnection::sessionBus().send(message);
 #endif
 }
 
@@ -84,8 +93,16 @@ void progress_dialog::SignalFailure() const
 {
 #ifdef _WIN32
 	m_tb_progress->stop();
+#elif HAVE_QTDBUS
+	QDBusMessage message = QDBusMessage::createSignal(
+		QStringLiteral("/"),
+		QStringLiteral("com.canonical.Unity.LauncherEntry"),
+		QStringLiteral("Update"));
+	QVariantMap properties;
+	properties.insert(QStringLiteral("urgent"), true);
+	message << QStringLiteral("application://rpcs3.desktop") << properties;
+	QDBusConnection::sessionBus().send(message);
 #endif
-	// TODO: Implement an equivalent for Linux, if possible
 
 	QApplication::beep();
 }
