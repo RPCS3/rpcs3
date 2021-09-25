@@ -41,7 +41,7 @@ progress_dialog::progress_dialog(const QString& windowTitle, const QString& labe
 	m_tb_progress->setRange(minimum, maximum);
 	m_tb_progress->show();
 #elif HAVE_QTDBUS
-	UpdateProgress(0);
+	UpdateProgress(0, true);
 #endif
 }
 
@@ -60,8 +60,8 @@ progress_dialog::~progress_dialog()
 		QStringLiteral("Update"));
 	QVariantMap properties;
 	properties.insert(QStringLiteral("urgent"), false);
-	properties.insert(QStringLiteral("progress-visible"), false);
 	properties.insert(QStringLiteral("progress"), 0);
+	properties.insert(QStringLiteral("progress-visible"), false);
 	message << QStringLiteral("application://rpcs3.desktop") << properties;
 	QDBusConnection::sessionBus().send(message);
 #endif
@@ -83,7 +83,7 @@ void progress_dialog::SetValue(int progress)
 #ifdef _WIN32
 	m_tb_progress->setValue(value);
 #elif HAVE_QTDBUS
-	UpdateProgress(value);
+	UpdateProgress(value, true);
 #endif
 
 	QProgressDialog::setValue(value);
@@ -108,19 +108,16 @@ void progress_dialog::SignalFailure() const
 }
 
 #ifdef HAVE_QTDBUS
-void progress_dialog::UpdateProgress(int progress, bool disable)
+void progress_dialog::UpdateProgress(int progress, bool progress_visible)
 {
 	QDBusMessage message = QDBusMessage::createSignal(
 		QStringLiteral("/"),
 		QStringLiteral("com.canonical.Unity.LauncherEntry"),
 		QStringLiteral("Update"));
 	QVariantMap properties;
-	if (disable)
-		properties.insert(QStringLiteral("progress-visible"), false);
-	else
-		properties.insert(QStringLiteral("progress-visible"), true);
-	//Progress takes a value from 0.0 to 0.1
+	// Progress takes a value from 0.0 to 0.1
 	properties.insert(QStringLiteral("progress"), 1. * progress / maximum());
+	properties.insert(QStringLiteral("progress-visible"), progress_visible);
 	message << QStringLiteral("application://rpcs3.desktop") << properties;
 	QDBusConnection::sessionBus().send(message);
 }
