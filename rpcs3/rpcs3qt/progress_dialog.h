@@ -21,6 +21,6 @@ private:
 	std::unique_ptr<QWinTaskbarButton> m_tb_button = nullptr;
 	QWinTaskbarProgress* m_tb_progress = nullptr;
 #elif HAVE_QTDBUS
-	void UpdateProgress(int progress, bool disable = false);
+	void UpdateProgress(int progress, bool progress_visible);
 #endif
 };

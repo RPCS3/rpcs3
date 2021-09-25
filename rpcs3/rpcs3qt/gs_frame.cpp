@@ -124,7 +124,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	m_tb_progress->setVisible(false);
 
 #elif HAVE_QTDBUS
-	UpdateProgress(0);
+	UpdateProgress(0, false);
 	m_progress_value = 0;
 #endif
 }
@@ -801,7 +801,7 @@ void gs_frame::progress_reset(bool reset_limit)
 		m_tb_progress->reset();
 	}
 #elif HAVE_QTDBUS
-	UpdateProgress(0);
+	UpdateProgress(0, false);
 #endif
 
 	if (reset_limit)
@@ -819,7 +819,7 @@ void gs_frame::progress_set_value(int value)
 	}
 #elif HAVE_QTDBUS
 	m_progress_value = std::clamp(value, 0, m_gauge_max);
-	UpdateProgress(m_progress_value);
+	UpdateProgress(m_progress_value, true);
 #endif
 }
 
@@ -853,7 +853,7 @@ void gs_frame::progress_set_limit(int limit)
 }
 
 #ifdef HAVE_QTDBUS
-void gs_frame::UpdateProgress(int progress, bool disable)
+void gs_frame::UpdateProgress(int progress, bool progress_visible)
 {
 	QDBusMessage message = QDBusMessage::createSignal
 	(
@@ -862,12 +862,9 @@ void gs_frame::UpdateProgress(int progress, bool disable)
 		QStringLiteral("Update")
 	);
 	QVariantMap properties;
-	if (disable)
-		properties.insert(QStringLiteral("progress-visible"), false);
-	else
-		properties.insert(QStringLiteral("progress-visible"), true);
-	//Progress takes a value from 0.0 to 0.1
+	// Progress takes a value from 0.0 to 0.1
 	properties.insert(QStringLiteral("progress"), 1. * progress / m_gauge_max);
+	properties.insert(QStringLiteral("progress-visible"), progress_visible);
 	message << QStringLiteral("application://rpcs3.desktop") << properties;
 	QDBusConnection::sessionBus().send(message);
 }
