@@ -144,13 +144,6 @@
              </property>
              <layout class="QVBoxLayout" name="checkboxes_layout">
               <item>
-               <widget class="QCheckBox" name="lowerSPUThrPrio">
-                <property name="text">
-                 <string>Lower SPU thread priority</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QCheckBox" name="spuLoopDetection">
                 <property name="text">
                  <string>Enable SPU loop detection</string>
