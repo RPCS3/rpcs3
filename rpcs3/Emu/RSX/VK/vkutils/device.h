@@ -61,6 +61,8 @@ namespace vk
 		bool sampler_mirror_clamped_support = false;
 		bool descriptor_indexing_support = false;
 
+		u64 descriptor_update_after_bind_mask = 0;
+
 		friend class render_device;
 	private:
 		void get_physical_device_features(bool allow_extensions);
@@ -143,6 +145,8 @@ namespace vk
 		bool get_surface_capabilities_2_support() const;
 		bool get_debug_utils_support() const;
 		bool get_descriptor_indexing_support() const;
+
+		u64 get_descriptor_update_after_bind_support() const;
 
 		VkQueue get_present_queue() const;
 		VkQueue get_graphics_queue() const;
