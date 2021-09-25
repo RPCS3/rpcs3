@@ -1079,18 +1079,7 @@ VkDescriptorSet VKGSRender::allocate_descriptor_set()
 	if (!m_shader_interpreter.is_interpreter(m_program)) [[likely]]
 	{
 		ensure(m_current_frame->used_descriptors < DESCRIPTOR_MAX_DRAW_CALLS);
-
-		VkDescriptorSetAllocateInfo alloc_info = {};
-		alloc_info.descriptorPool = m_current_frame->descriptor_pool;
-		alloc_info.descriptorSetCount = 1;
-		alloc_info.pSetLayouts = &descriptor_layouts;
-		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-
-		VkDescriptorSet new_descriptor_set;
-		CHECK_RESULT(vkAllocateDescriptorSets(*m_device, &alloc_info, &new_descriptor_set));
-		m_current_frame->used_descriptors++;
-
-		return new_descriptor_set;
+		return m_current_frame->descriptor_pool.allocate(descriptor_layouts, VK_TRUE, m_current_frame->used_descriptors++);
 	}
 	else
 	{

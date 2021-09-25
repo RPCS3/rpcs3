@@ -6,7 +6,7 @@
 #include "commands.h"
 #include "device.h"
 
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Common/simple_array.hpp"
 
 namespace vk
 {
@@ -23,17 +23,25 @@ namespace vk
 		bool valid() const;
 		operator VkDescriptorPool();
 
+		VkDescriptorSet allocate(VkDescriptorSetLayout layout, VkBool32 use_cache, u32 used_count);
+
 	private:
 		const vk::render_device* m_owner = nullptr;
+		VkDescriptorPoolCreateInfo info = {};
 
 		rsx::simple_array<VkDescriptorPool> m_device_pools;
 		VkDescriptorPool m_current_pool_handle = VK_NULL_HANDLE;
 		u32 m_current_pool_index = 0;
+
+		static const size_t max_cache_size = 64;
+		VkDescriptorSetLayout m_cached_layout = VK_NULL_HANDLE;
+		rsx::simple_array<VkDescriptorSet> m_descriptor_set_cache;
+		rsx::simple_array<VkDescriptorSetLayout> m_allocation_request_cache;
 	};
 
 	class descriptor_set
 	{
-		const size_t max_cache_size = 16384;
+		static const size_t max_cache_size = 16384;
 		void init(VkDescriptorSet new_set);
 
 	public:
