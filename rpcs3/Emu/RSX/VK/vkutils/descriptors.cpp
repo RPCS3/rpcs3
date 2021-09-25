@@ -18,6 +18,13 @@ namespace vk
 
 			void notify(descriptor_set* set)
 			{
+				// Rare event, upon creation of a new set tracker.
+				// Check for spurious 'new' events when the aux context is taking over
+				for (const auto& set_ : m_notification_list)
+				{
+					if (set_ == set) return;
+				}
+
 				m_notification_list.push_back(set);
 				rsx_log.error("Now monitoring %u descriptor sets", m_notification_list.size());
 			}
@@ -74,19 +81,18 @@ namespace vk
 	{
 		ensure(subpool_count);
 
-		VkDescriptorPoolCreateInfo infos = {};
-		infos.flags = dev.get_descriptor_indexing_support() ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
-		infos.maxSets = max_sets;
-		infos.poolSizeCount = size_descriptors_count;
-		infos.pPoolSizes = sizes;
-		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		info.flags = dev.get_descriptor_indexing_support() ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
+		info.maxSets = max_sets;
+		info.poolSizeCount = size_descriptors_count;
+		info.pPoolSizes = sizes;
+		info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 
 		m_owner = &dev;
 		m_device_pools.resize(subpool_count);
 
 		for (auto& pool : m_device_pools)
 		{
-			CHECK_RESULT(vkCreateDescriptorPool(dev, &infos, nullptr, &pool));
+			CHECK_RESULT(vkCreateDescriptorPool(dev, &info, nullptr, &pool));
 		}
 
 		m_current_pool_handle = m_device_pools[0];
@@ -117,9 +123,68 @@ namespace vk
 
 	void descriptor_pool::reset(VkDescriptorPoolResetFlags flags)
 	{
+		m_descriptor_set_cache.clear();
 		m_current_pool_index = (m_current_pool_index + 1) % u32(m_device_pools.size());
 		m_current_pool_handle = m_device_pools[m_current_pool_index];
 		CHECK_RESULT(vkResetDescriptorPool(*m_owner, m_current_pool_handle, flags));
+	}
+
+	VkDescriptorSet descriptor_pool::allocate(VkDescriptorSetLayout layout, VkBool32 use_cache, u32 used_count)
+	{
+		if (use_cache)
+		{
+			if (m_descriptor_set_cache.empty())
+			{
+				// For optimal cache utilization, each pool should only allocate one layout
+				if (m_cached_layout != layout)
+				{
+					m_cached_layout = layout;
+					m_allocation_request_cache.resize(max_cache_size);
+
+					for (auto& layout_ : m_allocation_request_cache)
+					{
+						layout_ = m_cached_layout;
+					}
+				}
+			}
+			else if (m_cached_layout != layout)
+			{
+				use_cache = VK_FALSE;
+			}
+			else
+			{
+				return m_descriptor_set_cache.pop_back();
+			}
+		}
+
+		VkDescriptorSet new_descriptor_set;
+		VkDescriptorSetAllocateInfo alloc_info = {};
+		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		alloc_info.descriptorPool = m_current_pool_handle;
+		alloc_info.descriptorSetCount = 1;
+		alloc_info.pSetLayouts = &layout;
+
+		if (use_cache)
+		{
+			const auto alloc_size = std::min<u32>(info.maxSets - used_count, max_cache_size);
+
+			ensure(alloc_size);
+			ensure(m_descriptor_set_cache.empty());
+
+			alloc_info.descriptorSetCount = alloc_size;
+			alloc_info.pSetLayouts = m_allocation_request_cache.data();
+
+			m_descriptor_set_cache.resize(alloc_size);
+			CHECK_RESULT(vkAllocateDescriptorSets(*m_owner, &alloc_info, m_descriptor_set_cache.data()));
+
+			new_descriptor_set = m_descriptor_set_cache.pop_back();
+		}
+		else
+		{
+			CHECK_RESULT(vkAllocateDescriptorSets(*m_owner, &alloc_info, &new_descriptor_set));
+		}
+
+		return new_descriptor_set;
 	}
 
 	descriptor_set::descriptor_set(VkDescriptorSet set)
