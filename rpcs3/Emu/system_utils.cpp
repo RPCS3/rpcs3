@@ -185,13 +185,14 @@ namespace rpcs3::utils
 		const std::string edat_path = rpcs3::utils::get_c00_unlock_edat_path(content_id);
 
 		// Check if user has unlock EDAT installed
-		if (!fs::is_file(edat_path))
+		fs::file enc_file(edat_path);
+
+		if (!enc_file)
 		{
 			sys_log.notice("verify_c00_unlock_edat(): '%s' not found", edat_path);
 			return false;
 		}
 
-		const fs::file enc_file(edat_path);
 		u128 k_licensee = get_default_self_klic();
 		std::string edat_content_id;
 
@@ -207,18 +208,8 @@ namespace rpcs3::utils
 			return false;
 		}
 
-		// Check if required RAP is present
-		std::string rap_path = rpcs3::utils::get_rap_file_path(content_id);
-
-		if (!fs::is_file(rap_path))
-		{
-			// Not necessarily an error
-			sys_log.warning("verify_c00_unlock_edat(): RAP file not found: '%s'", rap_path);
-			rap_path.clear();
-		}
-
 		// Decrypt EDAT and verify its contents
-		fs::file dec_file = DecryptEDAT(enc_file, edat_path, 8, rap_path, reinterpret_cast<u8*>(&k_licensee), false);
+		fs::file dec_file = DecryptEDAT(enc_file, edat_path, 8, reinterpret_cast<u8*>(&k_licensee), false);
 		if (!dec_file)
 		{
 			sys_log.error("verify_c00_unlock_edat(): Failed to decrypt '%s'", edat_path);
