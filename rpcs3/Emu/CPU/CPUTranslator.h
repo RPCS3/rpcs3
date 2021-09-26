@@ -3367,6 +3367,21 @@ public:
 	}
 
 	template <typename T1, typename T2>
+	value_t<u8[16]> vdbpsadbw(T1 a, T2 b, u8 c)
+	{
+		value_t<u8[16]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+
+		const auto immediate = (llvm_const_int<u32>{c});
+		const auto imm8 = immediate.eval(m_ir);
+
+		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_dbpsadbw_128), {data0, data1, imm8});
+		return result;
+	}
+
+	template <typename T1, typename T2>
 	value_t<u8[16]> vpermb(T1 a, T2 b)
 	{
 		value_t<u8[16]> result;
