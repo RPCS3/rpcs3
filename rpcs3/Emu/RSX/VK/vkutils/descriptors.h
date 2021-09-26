@@ -50,7 +50,7 @@ namespace vk
 	public:
 		descriptor_set(VkDescriptorSet set);
 		descriptor_set() = default;
-		~descriptor_set() = default;
+		~descriptor_set();
 
 		descriptor_set(const descriptor_set&) = delete;
 
