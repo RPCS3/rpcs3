@@ -1869,24 +1869,25 @@ void settings_dialog::EnhanceSlider(emu_settings_type settings_type, QSlider* sl
 
 void settings_dialog::SnapSlider(QSlider *slider, int interval)
 {
-	connect(slider, &QSlider::sliderPressed, [this, slider]()
+	if (!slider)
 	{
-		m_current_slider = slider;
-	});
+		return;
+	}
 
-	connect(slider, &QSlider::sliderReleased, [this]()
-	{
-		m_current_slider = nullptr;
-	});
-
+	// Snap the slider to the next best interval position if the slider is currently modified with the mouse.
 	connect(slider, &QSlider::valueChanged, [this, slider, interval](int value)
 	{
-		if (slider != m_current_slider)
+		if (!slider || slider != m_current_slider)
 		{
 			return;
 		}
 		slider->setValue(utils::rounded_div(value, interval) * interval);
 	});
+
+	// Register the slider for the event filter which updates m_current_slider if a QSlider was pressed or released with the mouse.
+	// We can't just use sliderPressed and sliderReleased signals to update m_current_slider because those only trigger if the handle was clicked.
+	slider->installEventFilter(this);
+	m_snap_sliders.insert(slider);
 }
 
 void settings_dialog::AddStylesheets()
@@ -1987,6 +1988,18 @@ void settings_dialog::SubscribeTooltip(QObject* object, const QString& tooltip)
 // Thanks Dolphin
 bool settings_dialog::eventFilter(QObject* object, QEvent* event)
 {
+	if (m_snap_sliders.contains(object))
+	{
+		if (event->type() == QEvent::MouseButtonPress)
+		{
+			m_current_slider = static_cast<QSlider*>(object);
+		}
+		else if (event->type() == QEvent::MouseButtonRelease)
+		{
+			m_current_slider = nullptr;
+		}
+	}
+
 	if (!m_descriptions.contains(object))
 	{
 		return QDialog::eventFilter(object, event);

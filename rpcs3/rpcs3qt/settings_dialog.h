@@ -34,6 +34,7 @@ private:
 	// Snapping of sliders when moved with mouse
 	void SnapSlider(QSlider* slider, int interval);
 	QSlider* m_current_slider = nullptr;
+	std::set<QObject*> m_snap_sliders;
 
 	// Gui tab
 	void AddStylesheets();
