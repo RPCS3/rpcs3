@@ -8,7 +8,7 @@ namespace vk
 		class dispatch_manager
 		{
 		public:
-			void flush_all()
+			inline void flush_all()
 			{
 				for (auto& set : m_notification_list)
 				{
@@ -16,7 +16,7 @@ namespace vk
 				}
 			}
 
-			void notify(descriptor_set* set)
+			void register_(descriptor_set* set)
 			{
 				// Rare event, upon creation of a new set tracker.
 				// Check for spurious 'new' events when the aux context is taking over
@@ -26,7 +26,22 @@ namespace vk
 				}
 
 				m_notification_list.push_back(set);
-				rsx_log.error("Now monitoring %u descriptor sets", m_notification_list.size());
+				rsx_log.warning("[descriptor_manager::register] Now monitoring %u descriptor sets", m_notification_list.size());
+			}
+
+			void deregister(descriptor_set* set)
+			{
+				for (auto it = m_notification_list.begin(); it != m_notification_list.end(); ++it)
+				{
+					if (*it == set)
+					{
+						*it = m_notification_list.back();
+						m_notification_list.pop_back();
+						break;
+					}
+				}
+
+				rsx_log.warning("[descriptor_manager::deregister] Now monitoring %u descriptor sets", m_notification_list.size());
 			}
 
 			dispatch_manager() = default;
@@ -206,6 +221,14 @@ namespace vk
 		m_handle = set;
 	}
 
+	descriptor_set::~descriptor_set()
+	{
+		if (m_update_after_bind_mask)
+		{
+			g_fxo->get<descriptors::dispatch_manager>().deregister(this);
+		}
+	}
+
 	void descriptor_set::init(VkDescriptorSet new_set)
 	{
 		if (!m_in_use) [[unlikely]]
@@ -219,7 +242,7 @@ namespace vk
 
 			if (m_update_after_bind_mask)
 			{
-				g_fxo->get<descriptors::dispatch_manager>().notify(this);
+				g_fxo->get<descriptors::dispatch_manager>().register_(this);
 			}
 		}
 		else if (m_push_type_mask & ~m_update_after_bind_mask)
