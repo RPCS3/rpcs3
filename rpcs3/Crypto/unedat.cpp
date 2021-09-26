@@ -6,6 +6,7 @@
 #include "ec.h"
 
 #include "Utilities/mutex.h"
+#include "Emu/system_utils.hpp"
 #include <cmath>
 
 #include "util/asm.hpp"
@@ -649,7 +650,7 @@ void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& E
 	EDAT.file_size = swap64(*reinterpret_cast<u64*>(&edat_header[8]));
 }
 
-bool extract_all_data(const fs::file* input, const fs::file* output, const char* input_file_name, unsigned char* devklic, unsigned char* rifkey, bool verbose)
+bool extract_all_data(const fs::file* input, const fs::file* output, const char* input_file_name, unsigned char* devklic, bool verbose)
 {
 	// Setup NPD and EDAT/SDAT structs.
 	NPD_HEADER NPD;
@@ -658,8 +659,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 	// Read in the NPD and EDAT/SDAT headers.
 	read_npd_edat_header(input, NPD, EDAT);
 
-	unsigned char npd_magic[4] = {0x4E, 0x50, 0x44, 0x00};  //NPD0
-	if (memcmp(&NPD.magic, npd_magic, 4))
+	if (NPD.magic != "NPD\0"_u32)
 	{
 		edat_log.error("%s has invalid NPD header or already decrypted.", input_file_name);
 		return true;
@@ -671,6 +671,7 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 		edat_log.notice("NPD version: %d", NPD.version);
 		edat_log.notice("NPD license: %d", NPD.license);
 		edat_log.notice("NPD type: %d", NPD.type);
+		edat_log.notice("NPD content_id: %s", NPD.content_id);
 	}
 
 	// Set decryption key.
@@ -715,27 +716,28 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 
 		// Select EDAT key.
 		if ((NPD.license & 0x3) == 0x3)           // Type 3: Use supplied devklic.
-			memcpy(&key, devklic, 0x10);
-		else if ((NPD.license & 0x2) == 0x2)      // Type 2: Use key from RAP file (RIF key).
 		{
-			memcpy(&key, rifkey, 0x10);
+			std::memcpy(&key, devklic, 0x10);
+		}
+		else // Type 2: Use key from RAP file (RIF key). (also used for type 1 at the moment)
+		{
+			const std::string rap_path = rpcs3::utils::get_rap_file_path(NPD.content_id);
+
+			if (fs::file rap{rap_path}; rap && rap.size() >= sizeof(key))
+			{
+				key = GetEdatRifKeyFromRapFile(rap);
+			}
 
 			// Make sure we don't have an empty RIF key.
 			if (!key)
 			{
-				edat_log.error("A valid RAP file is needed for this EDAT file! (local activation)");
+				edat_log.error("A valid RAP file is needed for this EDAT file! (license=%d)", NPD.license);
 				return true;
 			}
-		}
-		else if ((NPD.license & 0x1) == 0x1)      // Type 1: Use network activation.
-		{
-			memcpy(&key, rifkey, 0x10);
 
-			// Make sure we don't have an empty RIF key.
-			if (!key)
+			if (verbose)
 			{
-				edat_log.error("A valid RAP file is needed for this EDAT file! (network activation)");
-				return true;
+				edat_log.notice("RIFKEY: %s", std::bit_cast<be_t<u128>>(key));
 			}
 		}
 
@@ -745,8 +747,6 @@ bool extract_all_data(const fs::file* input, const fs::file* output, const char*
 
 			std::memcpy(&data, devklic, sizeof(data));
 			edat_log.notice("DEVKLIC: %s", data);
-			std::memcpy(&data, rifkey, sizeof(data));
-			edat_log.notice("RIF KEY: %s", data);
 		}
 	}
 
@@ -793,8 +793,7 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 	// Read in the NPD and EDAT/SDAT headers.
 	read_npd_edat_header(&input, NPD, EDAT);
 
-	unsigned char npd_magic[4] = { 0x4E, 0x50, 0x44, 0x00 };  //NPD0
-	if (memcmp(&NPD.magic, npd_magic, 4))
+	if (NPD.magic != "NPD\0"_u32)
 	{
 		edat_log.error("%s has invalid NPD header or already decrypted.", input_file_name);
 		return false;
@@ -824,13 +823,17 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 }
 
 // Decrypts full file
-fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, const std::string& rap_file_name, u8 *custom_klic, bool verbose)
+fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose)
 {
+	if (!input)
+	{
+		return {};
+	}
+
 	// Prepare the files.
 	input.seek(0);
 
-	// Set keys (RIF and DEVKLIC).
-	u128 rifKey{};
+	// Set DEVKLIC
 	u128 devklic{};
 
 	// Select the EDAT key mode.
@@ -875,17 +878,9 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 		return fs::file{};
 	}
 
-	// Read the RAP file, if provided.
-	if (!rap_file_name.empty())
-	{
-		const fs::file rap(rap_file_name);
-
-		rifKey = GetEdatRifKeyFromRapFile(rap);
-	}
-
 	// Delete the bad output file if any errors arise.
 	fs::file output = fs::make_stream<std::vector<u8>>();
-	if (extract_all_data(&input, &output, input_file_name.c_str(), reinterpret_cast<uchar*>(&devklic), reinterpret_cast<uchar*>(&rifKey), verbose))
+	if (extract_all_data(&input, &output, input_file_name.c_str(), reinterpret_cast<uchar*>(&devklic), verbose))
 	{
 		output.release();
 		return fs::file{};
@@ -901,8 +896,7 @@ bool EDATADecrypter::ReadHeader()
 	// Read in the NPD and EDAT/SDAT headers.
 	read_npd_edat_header(&edata_file, npdHeader, edatHeader);
 
-	unsigned char npd_magic[4] = { 0x4E, 0x50, 0x44, 0x00 };  //NPD0
-	if (memcmp(&npdHeader.magic, npd_magic, 4))
+	if (npdHeader.magic != "NPD\0"_u32)
 	{
 		return false;
 	}
