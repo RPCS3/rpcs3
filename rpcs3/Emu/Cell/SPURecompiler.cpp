@@ -7022,6 +7022,23 @@ public:
 
 	void SUMB(spu_opcode_t op)
 	{
+		if (m_use_avx512)
+		{
+			const auto [a, b] = get_vrs<u8[16]>(op.ra, op.rb);
+			const auto zeroes = splat<u8[16]>(0);
+
+			if (op.ra == op.rb && !m_interp_magn)
+			{
+				set_vr(op.rt, vdbpsadbw(a, zeroes, 0));
+				return;
+			}
+
+			const auto ax = vdbpsadbw(a, zeroes, 0);
+			const auto bx = vdbpsadbw(b, zeroes, 0);
+			set_vr(op.rt, shuffle2(ax, bx, 0, 8, 2, 10, 4, 12, 6, 14));
+			return;
+		}
+
 		if (m_use_vnni)
 		{
 			const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
