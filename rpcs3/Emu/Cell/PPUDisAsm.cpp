@@ -1,10 +1,15 @@
 #include "stdafx.h"
 #include "PPUDisAsm.h"
 #include "PPUFunction.h"
+#include "PPUAnalyser.h"
 #include "Emu/IdManager.h"
 
 const ppu_decoder<PPUDisAsm> s_ppu_disasm;
+const ppu_decoder<ppu_itype> s_ppu_itype;
+
 extern const std::unordered_map<u32, std::string_view>& get_exported_function_names_as_addr_indexed_map();
+
+enum class ppu_syscall_code : u64;
 
 u32 PPUDisAsm::disasm(u32 pc)
 {
@@ -13,6 +18,11 @@ u32 PPUDisAsm::disasm(u32 pc)
 	std::memcpy(&op, m_offset + pc, 4);
 	m_op = op;
 	(this->*(s_ppu_disasm.decode(m_op)))({ m_op });
+
+	if (m_mode != cpu_disasm_mode::interpreter && m_mode != cpu_disasm_mode::normal)
+	{
+		return 4;
+	}
 
 	const auto& map = get_exported_function_names_as_addr_indexed_map();
 
@@ -23,6 +33,137 @@ u32 PPUDisAsm::disasm(u32 pc)
 	}
 
 	return 4;
+}
+
+std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc) const
+{
+	if (m_mode != cpu_disasm_mode::interpreter && m_mode != cpu_disasm_mode::normal)
+	{
+		return {};
+	}
+
+	if (pc == umax)
+	{
+		pc = dump_pc;
+	}
+
+	if (!vm::check_addr(pc, vm::page_executable))
+	{
+		return {};
+	}
+
+	// Scan PPU executable memory backwards until unmapped or non-executable memory block is encountered
+
+	for (u32 i = pc - 4; vm::check_addr(i, vm::page_executable); i -= 4)
+	{
+		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(m_offset + i);
+		const ppu_opcode_t op{ opcode };
+
+		const auto type = s_ppu_itype.decode(opcode);
+
+		auto is_branch = [](enum ppu_itype::type itype)
+		{
+			return itype == ppu_itype::BC || itype == ppu_itype::B || itype == ppu_itype::BCLR || itype == ppu_itype::BCCTR; 
+		};
+
+		if (is_branch(type) || type == ppu_itype::UNK)
+		{
+			// TODO: Detect calls, ignore them if reg is a non-volatile register
+			return {};
+		}
+
+		// Get constant register value
+		#define GET_CONST_REG(var, reg) \
+		{\
+			/* Search for the constant value of the register*/\
+			const auto [is_const, value] = try_get_const_gpr_value(reg, i);\
+		\
+			if (!is_const)\
+			{\
+				/* Cannot compute constant value if register is not constant*/\
+				return {};\
+			}\
+		\
+			var = value;\
+		} void() /*<- Require a semicolon*/
+
+		switch (type)
+		{
+		case ppu_itype::ADDI:
+		{
+			if (op.rd != reg)
+			{
+				// Destination register is not relevant to us
+				break;
+			}
+
+			u64 reg_ra = 0;
+
+			if (op.ra)
+			{
+				GET_CONST_REG(reg_ra, op.ra);
+			}
+
+			return { true, reg_ra + op.simm16 };
+		}
+		case ppu_itype::ADDIS:
+		{
+			if (op.rd != reg)
+			{
+				break;
+			}
+
+			u64 reg_ra = 0;
+
+			if (op.ra)
+			{
+				GET_CONST_REG(reg_ra, op.ra);
+			}
+
+			return { true, reg_ra + op.simm16 * 65536 };
+		}
+		case ppu_itype::ORI:
+		{
+			if (op.ra != reg)
+			{
+				// Destination register is not relevant to us
+				break;
+			}
+
+			u64 reg_rs = 0;
+
+			GET_CONST_REG(reg_rs, op.rs);
+
+			return { true, reg_rs | op.uimm16 };
+		}
+		case ppu_itype::ORIS:
+		{
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			u64 reg_rs = 0;
+
+			GET_CONST_REG(reg_rs, op.rs);
+
+			return { true, reg_rs | (u64{op.uimm16} << 16)};
+		}
+		default:
+		{
+			// Ordinary test
+			// TODO: Proper detection of destination register(s) modification (if there are any)
+			if (op.ra == reg || op.rd == reg)
+			{
+				return {};
+			}
+
+			break;
+		}
+		}
+	}
+
+	return {};
 }
 
 constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
@@ -997,6 +1138,13 @@ void PPUDisAsm::SC(ppu_opcode_t op)
 	if (op.opcode != ppu_instructions::SC(0))
 	{
 		return UNK(op);
+	}
+
+	// Try to get constant syscall index
+	if (auto [is_const, index] = try_get_const_gpr_value(11); is_const && index < 1024u)
+	{
+		Write(fmt::format("sc #%s", ppu_syscall_code{index}));
+		return;
 	}
 
 	Write("sc");

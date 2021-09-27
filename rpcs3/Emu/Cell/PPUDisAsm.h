@@ -287,6 +287,7 @@ private:
 
 public:
 	u32 disasm(u32 pc) override;
+	std::pair<bool, u64> try_get_const_gpr_value(u32 reg, u32 pc = -1) const;
 
 	void MFVSCR(ppu_opcode_t op);
 	void MTVSCR(ppu_opcode_t op);
