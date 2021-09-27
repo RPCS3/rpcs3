@@ -641,7 +641,6 @@ bool ppu_form_branch_to_code(u32 entry, u32 target, bool link, bool with_toc, st
 		return false;
 	}
 
-	if (module_name.empty())
 	g_fxo->init<ppu_far_jumps_t>();
 
 	if (!module_name.empty())
