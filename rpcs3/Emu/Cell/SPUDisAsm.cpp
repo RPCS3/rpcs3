@@ -22,7 +22,7 @@ u32 SPUDisAsm::disasm(u32 pc)
 
 std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 {
-	if (m_mode != cpu_disasm_mode::interpreter)
+	if (m_mode != cpu_disasm_mode::interpreter && m_mode != cpu_disasm_mode::normal)
 	{
 		return {};
 	}
