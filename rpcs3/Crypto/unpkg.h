@@ -327,10 +327,7 @@ private:
 
 	std::string m_path{};
 	std::string m_install_dir{};
-	std::vector<fs::file> m_filelist{};
-	usz m_cur_file = 0;
-	u64 m_cur_offset = 0;
-	u64 m_cur_file_offset = 0;
+	fs::file m_file{};
 	std::unique_ptr<u128[]> m_buf{};
 	std::array<uchar, 16> m_dec_key{};
 
