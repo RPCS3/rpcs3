@@ -20,10 +20,12 @@ namespace vk
 		void destroy();
 		void reset(VkDescriptorPoolResetFlags flags);
 
-		bool valid() const;
-		operator VkDescriptorPool();
-
 		VkDescriptorSet allocate(VkDescriptorSetLayout layout, VkBool32 use_cache, u32 used_count);
+
+		operator VkDescriptorPool() { return m_current_pool_handle; }
+		FORCE_INLINE bool valid() const { return (!m_device_pools.empty()); }
+		FORCE_INLINE u32 max_sets() const { return info.maxSets; }
+		FORCE_INLINE bool can_allocate(u32 required_count, u32 used_count) const { return (used_count + required_count) <= info.maxSets; };
 
 	private:
 		const vk::render_device* m_owner = nullptr;

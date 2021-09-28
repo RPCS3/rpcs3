@@ -109,7 +109,7 @@ namespace vk
 	{
 		ensure(subpool_count);
 
-		info.flags = dev.get_descriptor_indexing_support() ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
+		info.flags = dev.get_descriptor_update_after_bind_support() ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
 		info.maxSets = max_sets;
 		info.poolSizeCount = size_descriptors_count;
 		info.pPoolSizes = sizes;
@@ -137,16 +137,6 @@ namespace vk
 		}
 
 		m_owner = nullptr;
-	}
-
-	bool descriptor_pool::valid() const
-	{
-		return (!m_device_pools.empty());
-	}
-
-	descriptor_pool::operator VkDescriptorPool()
-	{
-		return m_current_pool_handle;
 	}
 
 	void descriptor_pool::reset(VkDescriptorPoolResetFlags flags)
@@ -194,11 +184,10 @@ namespace vk
 
 		if (use_cache)
 		{
+			ensure(used_count < info.maxSets);
 			const auto alloc_size = std::min<u32>(info.maxSets - used_count, max_cache_size);
 
-			ensure(alloc_size);
 			ensure(m_descriptor_set_cache.empty());
-
 			alloc_info.descriptorSetCount = alloc_size;
 			alloc_info.pSetLayouts = m_allocation_request_cache.data();
 

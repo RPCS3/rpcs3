@@ -373,13 +373,15 @@ namespace vk
 
 	void shader_interpreter::create_descriptor_pools(const vk::render_device& dev)
 	{
-		std::vector<VkDescriptorPoolSize> sizes;
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * DESCRIPTOR_MAX_DRAW_CALLS });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * DESCRIPTOR_MAX_DRAW_CALLS });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 68 * DESCRIPTOR_MAX_DRAW_CALLS });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 * DESCRIPTOR_MAX_DRAW_CALLS });
+		const auto max_draw_calls = dev.get_descriptor_max_draw_calls();
 
-		m_descriptor_pool.create(dev, sizes.data(), ::size32(sizes), DESCRIPTOR_MAX_DRAW_CALLS, 2);
+		std::vector<VkDescriptorPoolSize> sizes;
+		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * max_draw_calls });
+		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * max_draw_calls });
+		sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 68 * max_draw_calls });
+		sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 * max_draw_calls });
+
+		m_descriptor_pool.create(dev, sizes.data(), ::size32(sizes), max_draw_calls, 2);
 	}
 
 	void shader_interpreter::init(const vk::render_device& dev)
@@ -513,7 +515,7 @@ namespace vk
 
 	VkDescriptorSet shader_interpreter::allocate_descriptor_set()
 	{
-		if (m_used_descriptors == DESCRIPTOR_MAX_DRAW_CALLS)
+		if (!m_descriptor_pool.can_allocate(1u, m_used_descriptors))
 		{
 			m_descriptor_pool.reset(0);
 			m_used_descriptors = 0;

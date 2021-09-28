@@ -16,7 +16,6 @@
 #include "Emu/RSX/Common/TextureUtils.h"
 #include "Emu/RSX/rsx_utils.h"
 
-#define DESCRIPTOR_MAX_DRAW_CALLS 16384
 #define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
 
 #define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
