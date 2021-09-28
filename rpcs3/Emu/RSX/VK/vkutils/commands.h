@@ -39,8 +39,8 @@ namespace vk
 	public:
 		enum access_type_hint
 		{
-			flush_only, //Only to be submitted/opened/closed via command flush
-			all         //Auxiliary, can be submitted/opened/closed at any time
+			flush_only, // Only to be submitted/opened/closed via command flush
+			all         // Auxiliary, can be submitted/opened/closed at any time
 		}
 		access_hint = flush_only;
 

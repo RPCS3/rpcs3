@@ -6,7 +6,7 @@
 namespace vk
 {
 	// This queue flushing method to be implemented by the backend as behavior depends on config
-	void queue_submit(VkQueue queue, const VkSubmitInfo* info, fence* pfence, VkBool32 flush = VK_FALSE);
+	void queue_submit(VkQueue queue, const VkSubmitInfo* info, fence* pfence, VkBool32 flush);
 
 	void command_pool::create(vk::render_device& dev, u32 queue_family_id)
 	{

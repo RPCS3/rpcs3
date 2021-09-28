@@ -23,12 +23,22 @@ namespace vk
 		g_submit_mutex.unlock();
 	}
 
+	FORCE_INLINE
+	static void queue_submit_impl(VkQueue queue, const VkSubmitInfo* info, fence* pfence)
+	{
+		acquire_global_submit_lock();
+		vkQueueSubmit(queue, 1, info, pfence->handle);
+		release_global_submit_lock();
+
+		// Signal fence
+		pfence->signal_flushed();
+	}
+
 	void queue_submit(VkQueue queue, const VkSubmitInfo* info, fence* pfence, VkBool32 flush)
 	{
-		if (rsx::get_current_renderer()->is_current_thread())
-		{
-			vk::descriptors::flush();
-		}
+		// Access to this method must be externally synchronized.
+		// Offloader is guaranteed to never call this for async flushes.
+		vk::descriptors::flush();
 
 		if (!flush && g_cfg.video.multithreaded_rsx)
 		{
@@ -37,12 +47,13 @@ namespace vk
 		}
 		else
 		{
-			acquire_global_submit_lock();
-			vkQueueSubmit(queue, 1, info, pfence->handle);
-			release_global_submit_lock();
-
-			// Signal fence
-			pfence->signal_flushed();
+			queue_submit_impl(queue, info, pfence);
 		}
+	}
+
+	void queue_submit(const vk::submit_packet* packet)
+	{
+		// Flush-only version used by asynchronous submit processing (MTRSX)
+		queue_submit_impl(packet->queue, &packet->submit_info, packet->pfence);
 	}
 }

@@ -32,19 +32,19 @@ namespace vk
 	class image;
 	class instance;
 	class render_device;
+	struct submit_packet;
 
-	//VkAllocationCallbacks default_callbacks();
 	enum runtime_state
 	{
 		uninterruptible = 1,
-		heap_dirty = 2,
-		heap_changed = 3
+		heap_dirty      = 2,
+		heap_changed    = 4,
 	};
 
 	const vk::render_device *get_current_renderer();
 	void set_current_renderer(const vk::render_device &device);
 
-	//Compatibility workarounds
+	// Compatibility workarounds
 	bool emulate_primitive_restart(rsx::primitive_type type);
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
@@ -54,7 +54,7 @@ namespace vk
 	// Sync helpers around vkQueueSubmit
 	void acquire_global_submit_lock();
 	void release_global_submit_lock();
-	void queue_submit(VkQueue queue, const VkSubmitInfo* info, fence* pfence, VkBool32 flush = VK_FALSE);
+	void queue_submit(const vk::submit_packet* packet);
 
 	template<class T>
 	T* get_compute_task();
@@ -64,12 +64,12 @@ namespace vk
 
 	enum image_upload_options
 	{
-		upload_contents_async = 1,
+		upload_contents_async   = 1,
 		initialize_image_layout = 2,
-		preserve_image_layout = 4,
+		preserve_image_layout   = 4,
 
 		// meta-flags
-		upload_contents_inline = 0,
+		upload_contents_inline    = 0,
 		upload_heap_align_default = 0
 	};
 
@@ -77,7 +77,7 @@ namespace vk
 		const std::vector<rsx::subresource_layout>& subresource_layout, int format, bool is_swizzled, u16 layer_count,
 		VkImageAspectFlags flags, vk::data_heap &upload_heap, u32 heap_align, rsx::flags32_t image_setup_flags);
 
-	//Other texture management helpers
+	// Other texture management helpers
 	void copy_image_to_buffer(VkCommandBuffer cmd, const vk::image* src, const vk::buffer* dst, const VkBufferImageCopy& region, bool swap_bytes = false);
 	void copy_buffer_to_image(VkCommandBuffer cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
 	u64  calculate_working_buffer_size(u64 base_size, VkImageAspectFlags aspect);
