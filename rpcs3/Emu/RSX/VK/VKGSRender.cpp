@@ -760,9 +760,9 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 		}
 
 		bool has_queue_ref = false;
-		if (!is_current_thread())
+		if (!is_current_thread()) [[likely]]
 		{
-			//Always submit primary cb to ensure state consistency (flush pending changes such as image transitions)
+			// Always submit primary cb to ensure state consistency (flush pending changes such as image transitions)
 			vm::temporary_unlock();
 
 			std::lock_guard lock(m_flush_queue_mutex);
@@ -777,13 +777,13 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 				rsx_log.error("Fault in uninterruptible code!");
 			}
 
-			//Flush primary cb queue to sync pending changes (e.g image transitions!)
+			// Flush primary cb queue to sync pending changes (e.g image transitions!)
 			flush_command_queue();
 		}
 
 		if (has_queue_ref)
 		{
-			//Wait for the RSX thread to process request if it hasn't already
+			// Wait for the RSX thread to process request if it hasn't already
 			m_flush_requests.producer_wait();
 		}
 
@@ -791,7 +791,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 		if (has_queue_ref)
 		{
-			//Release RSX thread
+			// Release RSX thread
 			m_flush_requests.remove_one();
 		}
 	}
@@ -2340,8 +2340,8 @@ void VKGSRender::renderctl(u32 request_code, void* args)
 	{
 	case vk::rctrl_queue_submit:
 	{
-		auto packet = reinterpret_cast<vk::submit_packet*>(args);
-		vk::queue_submit(packet->queue, &packet->submit_info, packet->pfence, VK_TRUE);
+		const auto packet = reinterpret_cast<vk::submit_packet*>(args);
+		vk::queue_submit(packet);
 		free(packet);
 		break;
 	}

@@ -87,7 +87,7 @@ namespace rsx
 
 		void clear()
 		{
-			m_data.store(0);
+			m_data.release(0);
 		}
 	};
 }
