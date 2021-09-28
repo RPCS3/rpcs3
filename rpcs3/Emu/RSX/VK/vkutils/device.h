@@ -9,6 +9,8 @@
 #include <vector>
 #include <unordered_map>
 
+#define DESCRIPTOR_MAX_DRAW_CALLS 16384
+
 namespace vk
 {
 	struct gpu_formats_support
@@ -62,10 +64,12 @@ namespace vk
 		bool descriptor_indexing_support = false;
 
 		u64 descriptor_update_after_bind_mask = 0;
+		u32 descriptor_max_draw_calls = DESCRIPTOR_MAX_DRAW_CALLS;
 
 		friend class render_device;
 	private:
 		void get_physical_device_features(bool allow_extensions);
+		void get_physical_device_properties(bool allow_extensions);
 
 	public:
 
@@ -147,6 +151,7 @@ namespace vk
 		bool get_descriptor_indexing_support() const;
 
 		u64 get_descriptor_update_after_bind_support() const;
+		u32 get_descriptor_max_draw_calls() const;
 
 		VkQueue get_present_queue() const;
 		VkQueue get_graphics_queue() const;

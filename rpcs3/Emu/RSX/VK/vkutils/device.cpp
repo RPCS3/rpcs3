@@ -85,13 +85,65 @@ namespace vk
 		surface_capabilities_2_support   = instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 	}
 
+	void physical_device::get_physical_device_properties(bool allow_extensions)
+	{
+		vkGetPhysicalDeviceMemoryProperties(dev, &memory_properties);
+
+		if (!allow_extensions)
+		{
+			vkGetPhysicalDeviceProperties(dev, &props);
+			return;
+		}
+
+		supported_extensions instance_extensions(supported_extensions::instance);
+		if (!instance_extensions.is_supported(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+		{
+			vkGetPhysicalDeviceProperties(dev, &props);
+		}
+		else
+		{
+			VkPhysicalDeviceProperties2KHR properties2;
+			properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
+			properties2.pNext = nullptr;
+
+			VkPhysicalDeviceDescriptorIndexingPropertiesEXT descriptor_indexing_props{};
+
+			if (descriptor_indexing_support)
+			{
+				descriptor_indexing_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES_EXT;
+				descriptor_indexing_props.pNext = properties2.pNext;
+				properties2.pNext = &descriptor_indexing_props;
+			}
+
+			auto _vkGetPhysicalDeviceProperties2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(vkGetInstanceProcAddr(parent, "vkGetPhysicalDeviceProperties2KHR"));
+			ensure(_vkGetPhysicalDeviceProperties2KHR);
+
+			_vkGetPhysicalDeviceProperties2KHR(dev, &properties2);
+			props = properties2.properties;
+
+			if (descriptor_indexing_support)
+			{
+				if (descriptor_indexing_props.maxUpdateAfterBindDescriptorsInAllPools < 800'000)
+				{
+					rsx_log.error("Physical device does not support enough descriptors for deferred updates to work effectively. Deferred updates are disabled.");
+					descriptor_update_after_bind_mask = 0;
+				}
+				else if (descriptor_indexing_props.maxUpdateAfterBindDescriptorsInAllPools < 2'000'000)
+				{
+					rsx_log.warning("Physical device reports a low amount of allowed deferred descriptor updates. Draw call threshold will be lowered accordingly.");
+					descriptor_max_draw_calls = 8192;
+				}
+			}
+		}
+	}
+
 	void physical_device::create(VkInstance context, VkPhysicalDevice pdev, bool allow_extensions)
 	{
 		dev    = pdev;
 		parent = context;
-		vkGetPhysicalDeviceProperties(pdev, &props);
-		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+
 		get_physical_device_features(allow_extensions);
+		get_physical_device_properties(allow_extensions);
 
 		rsx_log.always()("Found vulkan-compatible GPU: '%s' running on driver %s", get_name(), get_driver_version());
 
@@ -712,6 +764,11 @@ namespace vk
 	u64 render_device::get_descriptor_update_after_bind_support() const
 	{
 		return pgpu->descriptor_update_after_bind_mask;
+	}
+
+	u32 render_device::get_descriptor_max_draw_calls() const
+	{
+		return pgpu->descriptor_max_draw_calls;
 	}
 
 	mem_allocator_base* render_device::get_allocator() const
