@@ -106,7 +106,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 		{
 			m_progress_dialog->setWindowTitle(progress_dialog_title);
 			m_progress_dialog->setAutoClose(!m_keep_progress_dialog_open);
-			m_progress_dialog->setMaximum(maximum);
+			m_progress_dialog->SetRange(0, maximum);
 		}
 		else
 		{
@@ -209,8 +209,8 @@ void downloader::handle_buffer_update(int size, int max) const
 
 	if (m_progress_dialog)
 	{
-		m_progress_dialog->setMaximum(max > 0 ? max : m_progress_dialog->maximum());
-		m_progress_dialog->setValue(size);
+		m_progress_dialog->SetRange(0, max > 0 ? max : m_progress_dialog->maximum());
+		m_progress_dialog->SetValue(size);
 		QApplication::processEvents();
 	}
 }

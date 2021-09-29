@@ -10,7 +10,7 @@
 #include <QtDBus/QDBusConnection>
 #endif
 
-progress_dialog::progress_dialog(const QString &windowTitle, const QString &labelText, const QString &cancelButtonText, int minimum, int maximum, bool delete_on_close, QWidget *parent, Qt::WindowFlags flags)
+progress_dialog::progress_dialog(const QString& windowTitle, const QString& labelText, const QString& cancelButtonText, int minimum, int maximum, bool delete_on_close, QWidget* parent, Qt::WindowFlags flags)
 	: QProgressDialog(labelText, cancelButtonText, minimum, maximum, parent, flags)
 {
 	setWindowTitle(windowTitle);
@@ -24,11 +24,22 @@ progress_dialog::progress_dialog(const QString &windowTitle, const QString &labe
 	}
 
 #ifdef _WIN32
+	// Try to find a window handle first
+	QWindow* handle = windowHandle();
+
+	for (QWidget* ancestor = this; !handle && ancestor;)
+	{
+		if (ancestor = static_cast<QWidget*>(ancestor->parent()))
+		{
+			handle = ancestor->windowHandle();
+		}
+	}
+
 	m_tb_button = std::make_unique<QWinTaskbarButton>();
-	m_tb_button->setWindow(parent ? parent->windowHandle() : windowHandle());
+	m_tb_button->setWindow(handle);
 	m_tb_progress = m_tb_button->progress();
 	m_tb_progress->setRange(minimum, maximum);
-	m_tb_progress->setVisible(true);
+	m_tb_progress->show();
 #elif HAVE_QTDBUS
 	UpdateProgress(0);
 #endif
@@ -45,6 +56,15 @@ progress_dialog::~progress_dialog()
 #elif HAVE_QTDBUS
 	UpdateProgress(0);
 #endif
+}
+
+void progress_dialog::SetRange(int min, int max)
+{
+#ifdef _WIN32
+	m_tb_progress->setRange(min, max);
+#endif
+
+	QProgressDialog::setRange(min, max);
 }
 
 void progress_dialog::SetValue(int progress)
