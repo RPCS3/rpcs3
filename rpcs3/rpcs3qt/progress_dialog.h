@@ -10,8 +10,9 @@
 class progress_dialog : public QProgressDialog
 {
 public:
-	progress_dialog(const QString &windowTitle, const QString &labelText, const QString &cancelButtonText, int minimum, int maximum, bool delete_on_close, QWidget *parent = Q_NULLPTR, Qt::WindowFlags flags = Qt::WindowFlags());
+	progress_dialog(const QString& windowTitle, const QString& labelText, const QString& cancelButtonText, int minimum, int maximum, bool delete_on_close, QWidget* parent = Q_NULLPTR, Qt::WindowFlags flags = Qt::WindowFlags());
 	~progress_dialog();
+	void SetRange(int min, int max);
 	void SetValue(int progress);
 	void SignalFailure() const;
 
