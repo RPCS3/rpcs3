@@ -1,6 +1,6 @@
 #include "progress_dialog.h"
 
-#include <QCoreApplication>
+#include <QApplication>
 #include <QLabel>
 
 #ifdef _WIN32
@@ -86,6 +86,8 @@ void progress_dialog::SignalFailure() const
 	m_tb_progress->stop();
 #endif
 	// TODO: Implement an equivalent for Linux, if possible
+
+	QApplication::beep();
 }
 
 #ifdef HAVE_QTDBUS
