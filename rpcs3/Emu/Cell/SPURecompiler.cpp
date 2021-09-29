@@ -9232,6 +9232,20 @@ public:
 	{
 		if (m_block) m_block->block_end = m_ir->GetInsertBlock();
 
+		const auto rt = get_vr<u8[16]>(op.rt);
+
+		// Checking for zero doeesn't care about the order of the bytes,
+		// so load the data before it's byteswapped
+		if (auto [ok, as] = match_expr(rt, byteswap(match<u8[16]>())); ok)
+		{
+			m_block->block_end = m_ir->GetInsertBlock();
+			const auto cond = eval(extract(bitcast<u32[4]>(as), 0) == 0);
+			const auto addr = eval(extract(get_vr(op.ra), 3) & 0x3fffc);
+			const auto target = add_block_indirect(op, addr);
+			m_ir->CreateCondBr(cond.value, target, add_block_next());
+			return;
+		}
+
 		// Check sign bit instead (optimization)
 		if (match_vr<s32[4], s64[2]>(op.rt, [&](auto c, auto MP)
 		{
@@ -9262,6 +9276,21 @@ public:
 	void BINZ(spu_opcode_t op) //
 	{
 		if (m_block) m_block->block_end = m_ir->GetInsertBlock();
+
+		const auto rt = get_vr<u8[16]>(op.rt);
+
+		// Checking for zero doeesn't care about the order of the bytes,
+		// so load the data before it's byteswapped
+		if (auto [ok, as] = match_expr(rt, byteswap(match<u8[16]>())); ok)
+		{
+			m_block->block_end = m_ir->GetInsertBlock();
+			const auto cond = eval(extract(bitcast<u32[4]>(as), 0) != 0);
+			const auto addr = eval(extract(get_vr(op.ra), 3) & 0x3fffc);
+			const auto target = add_block_indirect(op, addr);
+			m_ir->CreateCondBr(cond.value, target, add_block_next());
+			return;
+		}
+
 
 		// Check sign bit instead (optimization)
 		if (match_vr<s32[4], s64[2]>(op.rt, [&](auto c, auto MP)
@@ -9483,6 +9512,21 @@ public:
 
 		const u32 target = spu_branch_target(m_pos, op.i16);
 
+		const auto rt = get_vr<u8[16]>(op.rt);
+
+		// Checking for zero doeesn't care about the order of the bytes,
+		// so load the data before it's byteswapped
+		if (auto [ok, as] = match_expr(rt, byteswap(match<u8[16]>())); ok)
+		{
+			if (target != m_pos + 4)
+			{
+				m_block->block_end = m_ir->GetInsertBlock();
+				const auto cond = eval(extract(bitcast<u32[4]>(as), 0) == 0);
+				m_ir->CreateCondBr(cond.value, add_block(target), add_block(m_pos + 4));
+				return;
+			}
+		}
+
 		// Check sign bit instead (optimization)
 		if (match_vr<s32[4], s64[2]>(op.rt, [&](auto c, auto MP)
 		{
@@ -9526,6 +9570,21 @@ public:
 		}
 
 		const u32 target = spu_branch_target(m_pos, op.i16);
+
+		const auto rt = get_vr<u8[16]>(op.rt);
+
+		// Checking for zero doeesn't care about the order of the bytes,
+		// so load the data before it's byteswapped
+		if (auto [ok, as] = match_expr(rt, byteswap(match<u8[16]>())); ok)
+		{
+			if (target != m_pos + 4)
+			{
+				m_block->block_end = m_ir->GetInsertBlock();
+				const auto cond = eval(extract(bitcast<u32[4]>(as), 0) != 0);
+				m_ir->CreateCondBr(cond.value, add_block(target), add_block(m_pos + 4));
+				return;
+			}
+		}
 
 		// Check sign bit instead (optimization)
 		if (match_vr<s32[4], s64[2]>(op.rt, [&](auto c, auto MP)
@@ -9583,7 +9642,6 @@ public:
 					m_block->block_end = m_ir->GetInsertBlock();
 					const auto a = get_vr<s8[16]>(op.rt);
 					const auto cond = eval((bitcast<s16>(trunc<bool[16]>(a)) & 0x3000) == 0);
-					//const auto cond = eval((m & 0x3000) == 0);
 					m_ir->CreateCondBr(cond.value, add_block(target), add_block(m_pos + 4));
 					return true;
 				}
