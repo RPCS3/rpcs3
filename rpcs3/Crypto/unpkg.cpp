@@ -142,7 +142,7 @@ bool package_reader::read_header()
 		filelist.emplace_back(std::move(m_file));
 
 		const std::string name_wo_number = m_path.substr(0, m_path.size() - 7);
-		u64 cursize = m_file.size();
+		u64 cursize = filelist[0].size();
 
 		while (cursize < m_header.pkg_size)
 		{
