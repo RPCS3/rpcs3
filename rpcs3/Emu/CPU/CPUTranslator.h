@@ -3367,21 +3367,6 @@ public:
 	}
 
 	template <typename T1, typename T2>
-	value_t<u8[16]> vdbpsadbw(T1 a, T2 b, u8 c)
-	{
-		value_t<u8[16]> result;
-
-		const auto data0 = a.eval(m_ir);
-		const auto data1 = b.eval(m_ir);
-
-		const auto immediate = (llvm_const_int<u32>{c});
-		const auto imm8 = immediate.eval(m_ir);
-
-		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_dbpsadbw_128), {data0, data1, imm8});
-		return result;
-	}
-
-	template <typename T1, typename T2>
 	value_t<u8[16]> vpermb(T1 a, T2 b)
 	{
 		value_t<u8[16]> result;
@@ -3578,6 +3563,12 @@ public:
 	static auto fmin(T&& a, U&& b)
 	{
 		return llvm_calli<f32[4], T, U>{"llvm.x86.sse.min.ps", {std::forward<T>(a), std::forward<U>(b)}};
+	}
+
+	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, u8[16]>>>
+	static auto vdbpsadbw(T&& a, U&& b, u8 c)
+	{
+		return llvm_calli<u8[16], T, U, llvm_const_int<u32>>{"llvm.x86.avx512.dbpsadbw.128", {std::forward<T>(a), std::forward<U>(b), llvm_const_int<u32>{c}}};
 	}
 };
 
