@@ -279,25 +279,24 @@ void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 	u8 buf[0xFF];
 	buf[0] = 0xF2;
 
-	bool got_report = hid_get_feature_report(hidDevice, buf, 0xFF) >= 0;
-	if (!got_report)
+	int res = hid_get_feature_report(hidDevice, buf, 0xFF);
+	if (res < 0)
 	{
-		buf[0]     = 0;
-		got_report = hid_get_feature_report(hidDevice, buf, 0xFF) >= 0;
+		ds3_log.warning("check_add_device: hid_get_feature_report 0xF2 failed! Trying again with 0x0. (result=%d, error=%s)", res, hid_error(hidDevice));
+		buf[0] = 0;
+		res    = hid_get_feature_report(hidDevice, buf, 0xFF);
 	}
-	if (!got_report)
+	if (res < 0)
 	{
-		ds3_log.error("check_add_device: hid_get_feature_report failed! Reason: %s", hid_error(hidDevice));
+		ds3_log.error("check_add_device: hid_get_feature_report 0x0 failed! result=%d, error=%s", res, hid_error(hidDevice));
 		hid_close(hidDevice);
 		return;
 	}
 	device->report_id = buf[0];
 #endif
 
-	{
-		for (wchar_t ch : wide_serial)
-			serial += static_cast<uchar>(ch);
-	}
+	for (wchar_t ch : wide_serial)
+		serial += static_cast<uchar>(ch);
 
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
 	{
