@@ -30,7 +30,7 @@ private:
 	QWinTaskbarProgress* m_tb_progress = nullptr;
 #elif HAVE_QTDBUS
 	int m_progress_value = 0;
-	void UpdateProgress(int progress, bool disable = false);
+	void UpdateProgress(int progress, bool progress_visible);
 #endif
 
 	QRect m_initial_geometry;
