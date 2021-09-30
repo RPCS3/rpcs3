@@ -3568,7 +3568,7 @@ public:
 	template <typename T, typename U, typename = std::enable_if_t<std::is_same_v<llvm_common_t<T, U>, u8[16]>>>
 	static auto vdbpsadbw(T&& a, U&& b, u8 c)
 	{
-		return llvm_calli<u8[16], T, U, llvm_const_int<u32>>{"llvm.x86.avx512.dbpsadbw.128", {std::forward<T>(a), std::forward<U>(b), llvm_const_int<u32>{c}}};
+		return llvm_calli<u16[8], T, U, llvm_const_int<u32>>{"llvm.x86.avx512.dbpsadbw.128", {std::forward<T>(a), std::forward<U>(b), llvm_const_int<u32>{c}}};
 	}
 };
 
