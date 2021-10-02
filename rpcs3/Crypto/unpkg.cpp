@@ -15,13 +15,11 @@ LOG_CHANNEL(pkg_log, "PKG");
 package_reader::package_reader(const std::string& path)
 	: m_path(path)
 {
-	if (!fs::is_file(path))
+	if (!m_file.open(path))
 	{
 		pkg_log.error("PKG file not found!");
 		return;
 	}
-
-	m_filelist.emplace_back(fs::file{path});
 
 	m_is_valid = read_header();
 
@@ -51,7 +49,7 @@ package_reader::~package_reader()
 
 bool package_reader::read_header()
 {
-	if (m_path.empty() || m_filelist.empty())
+	if (m_path.empty() || !m_file)
 	{
 		pkg_log.error("Reading PKG header: no file to read!");
 		return false;
@@ -131,7 +129,7 @@ bool package_reader::read_header()
 	}
 	}
 
-	if (m_header.pkg_size > m_filelist[0].size())
+	if (m_header.pkg_size > m_file.size())
 	{
 		// Check if multi-files pkg
 		if (!m_path.ends_with("_00.pkg"))
@@ -140,11 +138,15 @@ bool package_reader::read_header()
 			return false;
 		}
 
+		std::vector<fs::file> filelist;
+		filelist.emplace_back(std::move(m_file));
+
 		const std::string name_wo_number = m_path.substr(0, m_path.size() - 7);
-		u64 cursize = m_filelist[0].size();
+		u64 cursize = filelist[0].size();
+
 		while (cursize < m_header.pkg_size)
 		{
-			const std::string archive_filename = fmt::format("%s_%02d.pkg", name_wo_number, m_filelist.size());
+			const std::string archive_filename = fmt::format("%s_%02d.pkg", name_wo_number, filelist.size());
 
 			fs::file archive_file(archive_filename);
 			if (!archive_file)
@@ -153,9 +155,20 @@ bool package_reader::read_header()
 				return false;
 			}
 
-			cursize += archive_file.size();
-			m_filelist.emplace_back(std::move(archive_file));
+			const usz add_size = archive_file.size();
+
+			if (!add_size)
+			{
+				pkg_log.error("%s is empty, cannot read PKG", archive_filename);
+				return false;
+			}
+
+			cursize += add_size;
+			filelist.emplace_back(std::move(archive_file));
 		}
+
+		// Gather files
+		m_file = fs::make_gather(std::move(filelist));
 	}
 
 	if (m_header.data_size + m_header.data_offset > m_header.pkg_size)
@@ -510,10 +523,10 @@ bool package_reader::read_param_sfo()
 
 		decrypt(entry.name_offset, entry.name_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data());
 
-		const std::string name{reinterpret_cast<char*>(m_buf.get()), entry.name_size};
+		const std::string_view name{reinterpret_cast<char*>(m_buf.get()), entry.name_size};
 
 		// We're looking for the PARAM.SFO file, if there is any
-		if (name != "PARAM.SFO")
+		if (usz ndelim = name.find_first_not_of('/'); ndelim == umax || name.substr(ndelim) != "PARAM.SFO")
 		{
 			continue;
 		}
@@ -541,6 +554,12 @@ bool package_reader::read_param_sfo()
 			tmp.seek(0);
 
 			m_psf = psf::load_object(tmp);
+
+			if (m_psf.empty())
+			{
+				// Invalid
+				continue;
+			}
 
 			return true;
 		}
@@ -897,58 +916,12 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 
 void package_reader::archive_seek(const s64 new_offset, const fs::seek_mode damode)
 {
-	if (damode == fs::seek_set)
-		m_cur_offset = new_offset;
-	else if (damode == fs::seek_cur)
-		m_cur_offset += new_offset;
-
-	u64 _offset = 0;
-	for (usz i = 0; i < m_filelist.size(); i++)
-	{
-		if (m_cur_offset < (_offset + m_filelist[i].size()))
-		{
-			m_cur_file = i;
-			m_cur_file_offset = m_cur_offset - _offset;
-			m_filelist[i].seek(m_cur_file_offset);
-			break;
-		}
-		_offset += m_filelist[i].size();
-	}
+	if (m_file) m_file.seek(new_offset, damode);
 };
 
 u64 package_reader::archive_read(void* data_ptr, const u64 num_bytes)
 {
-	ensure(m_filelist.size() > m_cur_file && m_filelist[m_cur_file]);
-
-	const u64 num_bytes_left = m_filelist[m_cur_file].size() - m_cur_file_offset;
-
-	// check if it continues in another file
-	if (num_bytes > num_bytes_left)
-	{
-		m_filelist[m_cur_file].read(data_ptr, num_bytes_left);
-
-		if ((m_cur_file + 1) < m_filelist.size())
-		{
-			++m_cur_file;
-		}
-		else
-		{
-			m_cur_offset += num_bytes_left;
-			m_cur_file_offset = m_filelist[m_cur_file].size();
-			return num_bytes_left;
-		}
-		const u64 num_read = m_filelist[m_cur_file].read(static_cast<u8*>(data_ptr) + num_bytes_left, num_bytes - num_bytes_left);
-		m_cur_offset += (num_read + num_bytes_left);
-		m_cur_file_offset = num_read;
-		return (num_read + num_bytes_left);
-	}
-
-	const u64 num_read = m_filelist[m_cur_file].read(data_ptr, num_bytes);
-
-	m_cur_offset += num_read;
-	m_cur_file_offset += num_read;
-
-	return num_read;
+	return m_file ? m_file.read(data_ptr, num_bytes) : 0;
 };
 
 u64 package_reader::decrypt(u64 offset, u64 size, const uchar* key)
