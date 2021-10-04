@@ -420,8 +420,8 @@ void keyboard_pad_handler::mouseMoveEvent(QMouseEvent* event)
 		last_pos_y = event->y();
 	}
 
-	movement_x = m_multi_x * movement_x;
-	movement_y = m_multi_y * movement_y;
+	movement_x *= m_multi_x;
+	movement_y *= m_multi_y;
 
 	int deadzone_x = 0;
 	int deadzone_y = 0;
