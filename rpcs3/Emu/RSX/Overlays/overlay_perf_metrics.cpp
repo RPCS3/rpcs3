@@ -92,7 +92,7 @@ namespace rsx
 		void perf_metrics_overlay::reset_transform(label& elm) const
 		{
 			// left, top, right, bottom
-			const areau padding { m_padding, m_padding - 4, m_padding, m_padding };
+			const areau padding { m_padding, m_padding - std::min<u32>(4, m_padding), m_padding, m_padding };
 			const positionu margin { m_margin_x, m_margin_y };
 			positionu pos;
 
