@@ -1374,7 +1374,7 @@ void PPUTranslator::VPERM(ppu_opcode_t op)
 	if (m_use_avx512_icl && op.ra != op.rb)
 	{
 		const auto i = eval(~c);
-		set_vr(op.vd, vperm2b(b, a, i));
+		set_vr(op.vd, vperm2b256to128(b, a, i));
 		return;
 	}
 
