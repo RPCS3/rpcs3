@@ -3442,6 +3442,70 @@ public:
 		return result;
 	}
 
+	// Emulate the behavior of VPERM2B by using a 256 bit wide VPERMB
+	template <typename T1, typename T2, typename T3>
+	value_t<u8[16]> vperm2b256to128(T1 a, T2 b, T3 c)
+	{
+		value_t<u8[16]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+		const auto index = c.eval(m_ir);
+
+		// May be slower than non constant path?
+		if (auto c = llvm::dyn_cast<llvm::Constant>(index))
+		{
+			// Convert VPERM2B index back to LLVM vector shuffle mask
+			v128 mask{};
+
+			const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(c);
+
+			if (cv)
+			{
+				for (u32 i = 0; i < 16; i++)
+				{
+					const u64 b = cv->getElementAsInteger(i);
+					mask._u8[i] = b & 0x1f;
+				}
+			}
+
+			if (cv || llvm::isa<llvm::ConstantAggregateZero>(c))
+			{
+				result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask), 16));
+				result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
+				result.value = m_ir->CreateShuffleVector(data0, data1, result.value);
+				return result;
+			}
+		}
+
+		const auto zeroes = llvm::ConstantAggregateZero::get(get_type<u8[16]>());
+		const auto zeroes32 = llvm::ConstantAggregateZero::get(get_type<u8[32]>());
+
+		value_t<u8[32]> intermediate;
+		value_t<u8[32]> shuffle;
+		value_t<u8[32]> shuffleindex;
+
+		u8 mask32[32] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31};
+		u8 mask16[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+
+		// insert the second source operand into the same vector as the first source operand and expand to 256 bit width
+		shuffle.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask32), 32));
+		shuffle.value = m_ir->CreateZExt(shuffle.value, get_type<u32[32]>());
+		intermediate.value = m_ir->CreateShuffleVector(data0, data1, shuffle.value);
+
+		// expand the shuffle index to 256 bits with zeroes 
+		shuffleindex.value = m_ir->CreateShuffleVector(index, zeroes, shuffle.value);
+
+		// permute 
+		intermediate.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_permvar_qi_256), {intermediate.value, shuffleindex.value});
+
+		// convert the 256 bit vector back to 128 bits
+		result.value = llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(&mask16), 16));
+		result.value = m_ir->CreateZExt(result.value, get_type<u32[16]>());
+		result.value = m_ir->CreateShuffleVector(intermediate.value, zeroes32, result.value);
+		return result;
+	}
+
 	llvm::Value* load_const(llvm::GlobalVariable* g, llvm::Value* i)
 	{
 		return m_ir->CreateLoad(m_ir->CreateGEP(g, {m_ir->getInt64(0), m_ir->CreateZExtOrTrunc(i, get_type<u64>())}));
