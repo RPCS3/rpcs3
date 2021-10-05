@@ -1776,7 +1776,7 @@ void Emulator::Stop(bool restart)
 	klic.clear();
 	hdd1.clear();
 	m_config_path.clear();
-	m_config_mode == cfg_mode::custom;
+	m_config_mode = cfg_mode::custom;
 
 	// Always Enable display sleep, not only if it was prevented.
 	enable_display_sleep();
