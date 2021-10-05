@@ -91,5 +91,8 @@
     <ClCompile Include="yaml-cpp\src\exceptions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="yaml-cpp\src\depthguard.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
