@@ -49,6 +49,7 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::ret: return "ret";
 		case cpu_flag::signal: return "sig";
 		case cpu_flag::memory: return "mem";
+		case cpu_flag::pending: return "pend";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_pause: return "PAUSE";
 		case cpu_flag::dbg_step: return "STEP";
