@@ -74,7 +74,7 @@ struct KbButton
 
 struct Keyboard
 {
-	bool m_key_repeat = false; // for future use
+	bool m_key_repeat = false;
 	KbData m_data;
 	KbConfig m_config;
 	std::vector<KbButton> m_buttons;
