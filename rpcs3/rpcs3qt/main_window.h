@@ -74,7 +74,7 @@ class main_window : public QMainWindow
 		drop_error,
 		drop_pkg,
 		drop_pup,
-		drop_rap,
+		drop_rap_edat,
 		drop_psf,
 		drop_dir,
 		drop_game,
@@ -143,7 +143,7 @@ private:
 	void EnableMenus(bool enabled) const;
 	void ShowTitleBars(bool show) const;
 
-	static bool InstallRapFile(const QString& path, const std::string& filename);
+	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
 
 	void HandlePackageInstallation(QStringList file_paths);
 
