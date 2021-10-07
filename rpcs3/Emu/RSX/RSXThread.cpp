@@ -550,7 +550,11 @@ namespace rsx
 			thread_ctrl::wait_for(1000);
 		}
 
-		on_task();
+		if (!Emu.IsStopped())
+		{
+			on_task();
+		}
+
 		on_exit();
 	}
 
