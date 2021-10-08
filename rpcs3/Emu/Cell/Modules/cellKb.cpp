@@ -301,9 +301,22 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 	data->mkey = current_data.mkey;
 	data->len = std::min<s32>(CELL_KB_MAX_KEYCODES, current_data.len);
 
-	for (s32 i = 0; i < current_data.len; i++)
+	if (current_data.len > 0)
 	{
-		data->keycode[i] = current_data.keycode[i].first;
+		for (s32 i = 0; i < current_data.len; i++)
+		{
+			data->keycode[i] = current_data.keycode[i].first;
+		}
+
+		KbConfig& current_config = handler.GetConfig(port_no);
+
+		// For single character mode to work properly we need to "flush" the buffer after reading or else we'll constantly get the same key presses with each call.
+		// Actual key repeats are handled by adding a new key code to the buffer periodically. Key releases are handled in a similar fashion.
+		// Warning: Don't do this in packet mode, which is basically the mouse and keyboard gaming mode. Otherwise games like Unreal Tournament will be unplayable.
+		if (current_config.read_mode == CELL_KB_RMODE_INPUTCHAR)
+		{
+			current_data.len = 0;
+		}
 	}
 
 	return CELL_OK;
@@ -385,6 +398,10 @@ error_code cellKbSetReadMode(u32 port_no, u32 rmode)
 
 	KbConfig& current_config = handler.GetConfig(port_no);
 	current_config.read_mode = rmode;
+
+	// Key repeat must be disabled in packet mode. But let's just always enable it otherwise.
+	Keyboard& keyboard = handler.GetKeyboards()[port_no];
+	keyboard.m_key_repeat = rmode != CELL_KB_RMODE_PACKET;
 
 	// can also return CELL_KB_ERROR_SYS_SETTING_FAILED
 
