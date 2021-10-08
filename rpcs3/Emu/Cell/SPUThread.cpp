@@ -1216,6 +1216,8 @@ std::string spu_thread::dump_regs() const
 
 	const bool floats_only = debugger_float_mode.load();
 
+	SPUDisAsm dis_asm(cpu_disasm_mode::normal, ls);
+
 	for (u32 i = 0; i < 128; i++, ret += '\n')
 	{
 		fmt::append(ret, "%s: ", spu_reg_name[i]);
@@ -1269,7 +1271,6 @@ std::string spu_thread::dump_regs() const
 
 		if (i3 >= 0x80 && is_exec_code(i3))
 		{
-			SPUDisAsm dis_asm(cpu_disasm_mode::normal, ls);
 			dis_asm.disasm(i3);
 			fmt::append(ret, " -> %s", dis_asm.last_opcode);
 		}

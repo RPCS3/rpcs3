@@ -12,30 +12,58 @@ const spu_decoder<spu_iflag> s_spu_iflag;
 
 u32 SPUDisAsm::disasm(u32 pc)
 {
+	last_opcode.clear();
+
+	if (pc < m_start_pc || pc >= SPU_LS_SIZE)
+	{
+		return 0;
+	}
+
 	dump_pc = pc;
 	be_t<u32> op;
 	std::memcpy(&op, m_offset + pc, 4);
 	m_op = op;
 	(this->*(s_spu_disasm.decode(m_op)))({ m_op });
+
+	format_by_mode();
 	return 4;
 }
 
-std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
+std::pair<const void*, usz> SPUDisAsm::get_memory_span() const
 {
-	if (m_mode != cpu_disasm_mode::interpreter && m_mode != cpu_disasm_mode::normal)
+	return {m_offset + m_start_pc, SPU_LS_SIZE - m_start_pc};
+}
+
+std::unique_ptr<CPUDisAsm> SPUDisAsm::copy_type_erased() const
+{
+	return std::make_unique<SPUDisAsm>(*this);
+}
+
+std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc, u32 TTL) const
+{
+	if (!TTL)
 	{
+		// Recursion limit (Time To Live)
 		return {};
 	}
 
 	if (pc == umax)
 	{
-		pc = dump_pc;
+		// Default arg: choose pc of previous instruction 
+
+		if (dump_pc == 0)
+		{
+			// Do not underflow
+			return {};
+		}
+
+		pc = dump_pc - 4;
 	}
 
 	// Scan LS backwards from this instruction (until PC=0)
 	// Search for the first register modification or branch instruction
 
-	for (s32 i = pc - 4; i >= 0; i -= 4)
+	for (s32 i = static_cast<s32>(pc); i >= static_cast<s32>(m_start_pc); i -= 4)
 	{
 		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(m_offset + i);
 		const spu_opcode_t op0{ opcode };
@@ -57,6 +85,21 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 
 			continue;
 		}
+
+		// Get constant register value
+		#define GET_CONST_REG(var, reg) \
+		{\
+			/* Search for the constant value of the register*/\
+			const auto [is_const, value] = try_get_const_value(reg, i - 4, TTL - 1);\
+		\
+			if (!is_const)\
+			{\
+				/* Cannot compute constant value if register is not constant*/\
+				return {};\
+			}\
+		\
+			var = value;\
+		} void() /*<- Require a semicolon*/
 
 		//const auto flag = s_spu_iflag.decode(opcode);
 
@@ -127,25 +170,13 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 			}
 			case spu_itype::IOHL:
 			{
-				// Avoid multi-recursion for now
-				if (dump_pc != pc)
-				{
-					return {};
-				}
+				v128 reg_val{};
 
-				if (i >= 4)
-				{
-					// Search for ILHU+IOHL pattern (common pattern for 32-bit constants formation)
-					// But don't limit to it
-					const auto [is_const, value] = try_get_const_value(reg, i);
+				// Search for ILHU+IOHL pattern (common pattern for 32-bit constants formation)
+				// But don't limit to it
+				GET_CONST_REG(reg_val, op0.rt);
 
-					if (is_const)
-					{
-						return { true, value | v128::from32p(op0.i16) };
-					}
-				}
-
-				return {};
+				return { true, reg_val | v128::from32p(op0.i16) };
 			}
 			case spu_itype::STQA:
 			case spu_itype::STQD:
@@ -155,6 +186,27 @@ std::pair<bool, v128> SPUDisAsm::try_get_const_value(u32 reg, u32 pc) const
 			{
 				// Do not modify RT
 				break;
+			}
+			case spu_itype::SHLQBYI:
+			{
+				if (op0.si7)
+				{
+					// Unimplemented, doubt needed
+					return {};
+				}
+
+				// Move register value operation
+				v128 reg_val{};
+				GET_CONST_REG(reg_val, op0.ra);
+
+				return { true, reg_val };	
+			}
+			case spu_itype::ORI:
+			{
+				v128 reg_val{};
+				GET_CONST_REG(reg_val, op0.ra);
+
+				return { true, reg_val | v128::from32p(op0.si10) };	
 			}
 			default: return {};
 			}

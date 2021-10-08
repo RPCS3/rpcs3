@@ -1,6 +1,8 @@
 #include "memory_string_searcher.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/Memory/vm_reservation.h"
+#include "Emu/CPU/CPUDisAsm.h"
+#include "Emu/IdManager.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/StrUtil.h"
@@ -13,6 +15,7 @@
 #include <QCheckBox>
 
 #include <charconv>
+#include <unordered_map>
 
 #include "util/logs.hpp"
 #include "util/sysinfo.hpp"
@@ -26,14 +29,27 @@ enum : int
 	as_hex,
 	as_f64,
 	as_f32,
+	as_inst,
 };
 
-memory_string_searcher::memory_string_searcher(QWidget* parent)
+memory_string_searcher::memory_string_searcher(QWidget* parent, std::shared_ptr<CPUDisAsm> disasm, std::string_view title)
 	: QDialog(parent)
+	, m_disasm(std::move(disasm))
 {
-	setWindowTitle(tr("String Searcher"));
+	if (title.empty())
+	{
+		setWindowTitle(tr("String Searcher"));
+	}
+	else
+	{
+		setWindowTitle(tr("String Searcher Of %1").arg(title.data()));
+	}
+
 	setObjectName("memory_string_searcher");
 	setAttribute(Qt::WA_DeleteOnClose);
+
+	// Extract memory view from the disassembler
+	std::tie(m_ptr, m_size) = m_disasm->get_memory_span();
 
 	m_addr_line = new QLineEdit(this);
 	m_addr_line->setFixedWidth(QLabel("This is the very length of the lineedit due to hidpi reasons.").sizeHint().width());
@@ -52,10 +68,12 @@ memory_string_searcher::memory_string_searcher(QWidget* parent)
 	m_cbox_input_mode->addItem("HEX bytes/integer", QVariant::fromValue(+as_hex));
 	m_cbox_input_mode->addItem("Double", QVariant::fromValue(+as_f64));
 	m_cbox_input_mode->addItem("Float", QVariant::fromValue(+as_f32));
+	m_cbox_input_mode->addItem("Instruction", QVariant::fromValue(+as_inst));
 	m_cbox_input_mode->setToolTip(tr("String: search the memory for the specified string."
 		"\nHEX bytes/integer: search the memory for hexadecimal values. Spaces, commas, \"0x\", \"0X\", \"\\x\" ensure separation of bytes but they are not mandatory."
 		"\nDouble: reinterpret the string as 64-bit precision floating point value. Values are searched for exact representation, meaning -0 != 0."
-		"\nFloat: reinterpret the string as 32-bit precision floating point value. Values are searched for exact representation, meaning -0 != 0."));
+		"\nFloat: reinterpret the string as 32-bit precision floating point value. Values are searched for exact representation, meaning -0 != 0."
+		"\nInstruction: search an instruction contains the text of the string."));
 
 	QHBoxLayout* hbox_panel = new QHBoxLayout();
 	hbox_panel->addWidget(m_addr_line);
@@ -68,6 +86,15 @@ memory_string_searcher::memory_string_searcher(QWidget* parent)
 	connect(button_search, &QAbstractButton::clicked, this, &memory_string_searcher::OnSearch);
 
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
+
+	// Show by default
+	show();
+
+	// Expected to be created by IDM, emulation stop will close it
+	connect(this, &memory_string_searcher::finished, [id = idm::last_id()](int)
+	{
+		idm::remove<memory_searcher_handle>(id);
+	});
 }
 
 void memory_string_searcher::OnSearch()
@@ -97,6 +124,7 @@ void memory_string_searcher::OnSearch()
 
 	switch (mode)
 	{
+	case as_inst:
 	case as_string:
 	{
 		case_insensitive = m_chkbox_case_insensitive->isChecked();
@@ -134,8 +162,8 @@ void memory_string_searcher::OnSearch()
 
 		if (const usz pos = wstr.find_first_not_of(hex_chars); pos != umax)
 		{
-			gui_log.error("String '%s' cannot be interpreted as hexadecimal byte string due to unknown character '%s'.",
-				m_addr_line->text().toStdString(), std::string_view{&wstr[pos], 1});
+			gui_log.error("String '%s' cannot be interpreted as hexadecimal byte string due to unknown character '%c'.",
+				m_addr_line->text().toStdString(), wstr[pos]);
 			return;
 		}
 
@@ -189,8 +217,8 @@ void memory_string_searcher::OnSearch()
 	atomic_t<u32> found = 0;
 	atomic_t<u32> avail_addr = 0;
 
-	// There's no need for so many threads
-	const u32 max_threads = utils::aligned_div(utils::get_thread_count(), 2);
+	// There's no need for so many threads (except for instructions searching)
+	const u32 max_threads = utils::aligned_div(utils::get_thread_count(), mode != as_inst ? 2 : 1);
 
 	static constexpr u32 block_size = 0x2000000;
 
@@ -198,18 +226,91 @@ void memory_string_searcher::OnSearch()
 
 	const named_thread_group workers("String Searcher "sv, max_threads, [&]()
 	{
+		if (mode == as_inst)
+		{
+			auto disasm = m_disasm->copy_type_erased();
+			disasm->change_mode(cpu_disasm_mode::normal);
+
+			const usz limit = std::min(m_size, m_ptr == vm::g_sudo_addr ? 0x4000'0000 : m_size);
+
+			while (true)
+			{
+				u32 addr;
+
+				const bool ok = avail_addr.fetch_op([&](u32& val)
+				{
+					if (val < limit && val != umax)
+					{
+						while (m_ptr == vm::g_sudo_addr && !vm::check_addr(val, vm::page_executable))
+						{
+							// Skip unmapped memory
+							val = utils::align(val + 1, 0x10000);
+
+							if (!val)
+							{
+								return false;
+							}
+						}
+
+						addr = val;
+
+						// Iterate 16k instructions at a time
+						val += 0x10000;
+
+						if (!val)
+						{
+							// Overflow detection
+							val = -1;
+						}
+
+						return true;
+					}
+
+					return false;
+				}).second;
+
+				if (!ok)
+				{
+					return;
+				}
+
+				for (u32 i = 0; i < 0x10000; i += 4)
+				{
+					if (disasm->disasm(addr + i))
+					{
+						auto& last = disasm->last_opcode;
+
+						if (case_insensitive)
+						{
+							std::transform(last.begin(), last.end(), last.begin(), ::tolower);
+						}
+
+						if (last.find(wstr) != umax)
+						{
+							gui_log.success("Found instruction at 0x%08x: '%s'", addr + i, disasm->last_opcode);
+							found++;
+						}
+					}
+				}
+			}
+
+			return;
+		}
+
 		u32 local_found = 0;
 
 		u32 addr = 0;
 		bool ok = false;
 
+		const u64 addr_limit = (m_size >= block_size ? m_size - block_size : 0);
+
 		while (true)
 		{
 			if (!(addr % block_size))
 			{
-				std::tie(addr, ok) = avail_addr.fetch_op([](u32& val)
+				std::tie(addr, ok) = avail_addr.fetch_op([&](u32& val)
 				{
-					if (val <= 0 - block_size)
+					if (val <= addr_limit)
 					{
 						// Iterate in 32MB blocks
 						val += block_size;
@@ -228,8 +329,14 @@ void memory_string_searcher::OnSearch()
 				break;
 			}
 
-			if (![&addr = addr]()
+			if (![&]()
 			{
+				if (m_ptr != vm::g_sudo_addr)
+				{
+					// Always valid
+					return true;
+				}
+
 				// Skip unmapped memory
 				for (const u32 end = utils::align(addr + 1, block_size) - 0x1000; !vm::check_addr(addr, 0); addr += 0x1000)
 				{
@@ -252,9 +359,9 @@ void memory_string_searcher::OnSearch()
 				continue;
 			}
 
-			u64 addr_max = addr;
+			const u64 end_mem = std::min<u64>(utils::align<u64>(addr + 1, block_size), m_size);
 
-			const u64 end_mem = std::min<u64>(utils::align<u64>(addr + 1, block_size) + 0x1000, u32{umax});
+			u64 addr_max = m_ptr == vm::g_sudo_addr ? addr : end_mem;
 
 			// Determine allocation size quickly
 			while (addr_max < end_mem && vm::check_addr(static_cast<u32>(addr_max), vm::page_1m_size))
@@ -272,7 +379,12 @@ void memory_string_searcher::OnSearch()
 				addr_max += 0x1000;
 			}
 
-			std::string_view section{vm::get_super_ptr<const char>(addr), addr_max - addr};
+			auto get_ptr = [&](u32 address)
+			{
+				return static_cast<const char*>(m_ptr) + address;
+			};
+
+			std::string_view section{get_ptr(addr), addr_max - addr};
 
 			usz first_char = 0;
 
@@ -282,7 +394,7 @@ void memory_string_searcher::OnSearch()
 				{
 					const u32 start = addr + first_char;
 
-					std::string_view test_sv{vm::get_super_ptr<const char>(start), addr_max - start};
+					std::string_view test_sv{get_ptr(start), addr_max - start};
 
 					// Do not use allocating functions such as fmt::to_lower
 					if (test_sv.size() >= wstr.size() && std::all_of(wstr.begin(), wstr.end(), [&](const char& c) { return c == ::tolower(test_sv[&c - wstr.data()]); }))
@@ -301,7 +413,7 @@ void memory_string_searcher::OnSearch()
 				{
 					const u32 start = addr + first_char;
 
-					if (std::string_view{vm::get_super_ptr<const char>(start), addr_max - start}.starts_with(wstr))
+					if (std::string_view{get_ptr(start), addr_max - start}.starts_with(wstr))
 					{
 						gui_log.success("Found at 0x%08x", start);
 						local_found++;
@@ -311,10 +423,13 @@ void memory_string_searcher::OnSearch()
 				}
 			}
 
-			addr = static_cast<u32>(std::min<u64>(end_mem - 0x1000, addr_max));
-
 			// Check if at last page
-			if (addr_max >= 0u - 0x1000) break;
+			if (addr_max >= m_size - 0x1000)
+			{
+				break;
+			}
+
+			addr = addr_max;
 		}
 
 		found += local_found;

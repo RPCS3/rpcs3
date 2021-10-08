@@ -11,16 +11,36 @@ extern const std::unordered_map<u32, std::string_view>& get_exported_function_na
 
 enum class ppu_syscall_code : u64;
 
+extern std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm()
+{
+	return std::make_shared<PPUDisAsm>(cpu_disasm_mode::normal, vm::g_sudo_addr);
+}
+
 u32 PPUDisAsm::disasm(u32 pc)
 {
+	last_opcode.clear();
+
+	if (pc < m_start_pc)
+	{
+		return 0;
+	}
+
+	if (m_offset == vm::g_sudo_addr && !vm::check_addr(pc, vm::page_executable))
+	{
+		return 0;
+	}
+
 	dump_pc = pc;
 	be_t<u32> op{};
 	std::memcpy(&op, m_offset + pc, 4);
 	m_op = op;
+
 	(this->*(s_ppu_disasm.decode(m_op)))({ m_op });
 
-	if (m_mode != cpu_disasm_mode::interpreter && m_mode != cpu_disasm_mode::normal)
+	if (m_offset != vm::g_sudo_addr)
 	{
+		// Exported functions lookup is not allowed in this case
+		format_by_mode();
 		return 4;
 	}
 
@@ -32,29 +52,44 @@ u32 PPUDisAsm::disasm(u32 pc)
 		last_opcode += it->second;
 	}
 
+	format_by_mode();
 	return 4;
 }
 
-std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc) const
+std::pair<const void*, usz> PPUDisAsm::get_memory_span() const
 {
-	if (m_mode != cpu_disasm_mode::interpreter && m_mode != cpu_disasm_mode::normal)
+	return {m_offset + m_start_pc, (1ull << 32) - m_start_pc};
+}
+
+std::unique_ptr<CPUDisAsm> PPUDisAsm::copy_type_erased() const
+{
+	return std::make_unique<PPUDisAsm>(*this);
+}
+
+std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL) const
+{
+	if (!TTL)
 	{
+		// Recursion limit (Time To Live)
 		return {};
 	}
 
 	if (pc == umax)
 	{
-		pc = dump_pc;
-	}
+		// Default arg: choose pc of previous instruction 
 
-	if (!vm::check_addr(pc, vm::page_executable))
-	{
-		return {};
+		if (dump_pc == 0)
+		{
+			// Do not underflow
+			return {};
+		}
+
+		pc = dump_pc - 4;
 	}
 
 	// Scan PPU executable memory backwards until unmapped or non-executable memory block is encountered
 
-	for (u32 i = pc - 4; vm::check_addr(i, vm::page_executable); i -= 4)
+	for (u32 i = pc; i >= m_start_pc && (m_offset != vm::g_sudo_addr || vm::check_addr(i, vm::page_executable));)
 	{
 		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(m_offset + i);
 		const ppu_opcode_t op{ opcode };
@@ -76,7 +111,7 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc) const
 		#define GET_CONST_REG(var, reg) \
 		{\
 			/* Search for the constant value of the register*/\
-			const auto [is_const, value] = try_get_const_gpr_value(reg, i);\
+			const auto [is_const, value] = try_get_const_gpr_value(reg, i - 4, TTL - 1);\
 		\
 			if (!is_const)\
 			{\
@@ -161,6 +196,13 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc) const
 			break;
 		}
 		}
+
+		if (i == 0)
+		{
+			return {};
+		}
+
+		i -= 4;
 	}
 
 	return {};
@@ -1091,7 +1133,7 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 
 	if (m_mode == cpu_disasm_mode::compiler_elf)
 	{
-		Write(fmt::format("bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk));
+		fmt::append(last_opcode, "bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk);
 		return;
 	}
 
@@ -1099,7 +1141,7 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 
 	if (!inst)
 	{
-		Write(fmt::format("bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk));
+		fmt::append(last_opcode, "bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk);
 		return;
 	}
 
@@ -1143,11 +1185,11 @@ void PPUDisAsm::SC(ppu_opcode_t op)
 	// Try to get constant syscall index
 	if (auto [is_const, index] = try_get_const_gpr_value(11); is_const && index < 1024u)
 	{
-		Write(fmt::format("sc #%s", ppu_syscall_code{index}));
+		fmt::append(last_opcode, "%-*s #%s", PadOp(), ppu_syscall_code{index});
 		return;
 	}
 
-	Write("sc");
+	last_opcode += "sc";
 }
 
 void PPUDisAsm::B(ppu_opcode_t op)
@@ -1158,7 +1200,7 @@ void PPUDisAsm::B(ppu_opcode_t op)
 
 	if (m_mode == cpu_disasm_mode::compiler_elf)
 	{
-		Write(fmt::format("b 0x%x, %d, %d", li, aa, lk));
+		fmt::append(last_opcode, "b 0x%x, %d, %d", li, aa, lk);
 		return;
 	}
 
@@ -1196,7 +1238,7 @@ void PPUDisAsm::BCLR(ppu_opcode_t op)
 
 	if (bo == 0b10100)
 	{
-		Write(lk ? "blrl" : "blr");
+		last_opcode += (lk ? "blrl" : "blr");
 		return;
 	}
 
@@ -1204,7 +1246,7 @@ void PPUDisAsm::BCLR(ppu_opcode_t op)
 
 	if (!inst)
 	{
-		Write(fmt::format("bclr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk));
+		fmt::append(last_opcode, "bclr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk);
 		return;
 	}
 
@@ -1239,7 +1281,7 @@ void PPUDisAsm::CRANDC(ppu_opcode_t op)
 
 void PPUDisAsm::ISYNC(ppu_opcode_t)
 {
-	Write("isync");
+	last_opcode += "isync";
 }
 
 void PPUDisAsm::CRXOR(ppu_opcode_t op)
@@ -1299,7 +1341,7 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 
 	if (bo == 0b10100)
 	{
-		Write(lk ? "bctrl" : "bctr");
+		last_opcode += (lk ? "bctrl" : "bctr");
 		return;
 	}
 
@@ -1308,7 +1350,7 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 	if (!inst || inst[1] == 'd')
 	{
 		// Invalid or unknown bcctr form
-		Write(fmt::format("bcctr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk));
+		fmt::append(last_opcode, "bcctr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk);
 		return;
 	}
 
@@ -1347,14 +1389,14 @@ void PPUDisAsm::RLWNM(ppu_opcode_t op)
 
 void PPUDisAsm::ORI(ppu_opcode_t op)
 {
-	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) return Write("nop");
+	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) { last_opcode += "nop"; return; }
 	if (op.uimm16 == 0) return DisAsm_R2("mr", op.ra, op.rs);
 	DisAsm_R2_IMM("ori", op.ra, op.rs, op.uimm16);
 }
 
 void PPUDisAsm::ORIS(ppu_opcode_t op)
 {
-	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) return Write("nop");
+	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) { last_opcode += "nop"; return; }
 	DisAsm_R2_IMM("oris", op.ra, op.rs, op.uimm16);
 }
 
@@ -1898,10 +1940,10 @@ void PPUDisAsm::OR(ppu_opcode_t op)
 	{
 		switch (op.opcode)
 		{
-		case 0x7f9ce378: return Write("db8cyc");
-		case 0x7fbdeb78: return Write("db10cyc");
-		case 0x7fdef378: return Write("db12cyc");
-		case 0x7ffffb78: return Write("db16cyc");
+		case 0x7f9ce378: last_opcode += "db8cyc"; return;
+		case 0x7fbdeb78: last_opcode += "db10cyc"; return;
+		case 0x7fdef378: last_opcode += "db12cyc"; return;
+		case 0x7ffffb78: last_opcode += "db16cyc"; return;
 		default: DisAsm_R2_RC("mr", op.ra, op.rb, op.rc);
 		}
 	}
@@ -2011,7 +2053,7 @@ void PPUDisAsm::LFSUX(ppu_opcode_t op)
 
 void PPUDisAsm::SYNC(ppu_opcode_t op)
 {
-	Write(op.l10 ? "lwsync" : "sync");
+	last_opcode += (op.l10 ? "lwsync" : "sync");
 }
 
 void PPUDisAsm::LFDX(ppu_opcode_t op)
@@ -2101,7 +2143,7 @@ void PPUDisAsm::LVRXL(ppu_opcode_t op)
 
 void PPUDisAsm::DSS(ppu_opcode_t)
 {
-	Write("dss()");
+	last_opcode += "dss";
 }
 
 void PPUDisAsm::SRAWI(ppu_opcode_t op)
@@ -2116,7 +2158,7 @@ void PPUDisAsm::SRADI(ppu_opcode_t op)
 
 void PPUDisAsm::EIEIO(ppu_opcode_t)
 {
-	Write("eieio");
+	last_opcode += "eieio";
 }
 
 void PPUDisAsm::STVLXL(ppu_opcode_t op)
@@ -2361,7 +2403,7 @@ void PPUDisAsm::FNMADDS(ppu_opcode_t op)
 
 void PPUDisAsm::MTFSB1(ppu_opcode_t op)
 {
-	Write(fmt::format("mtfsb1%s %d", op.rc ? "." : "", op.crbd));
+	fmt::append(last_opcode, "%-*s%d", PadOp(), op.rc ? "mtfsb1." : "mtfsb1", op.crbd);
 }
 
 void PPUDisAsm::MCRFS(ppu_opcode_t op)
@@ -2371,12 +2413,12 @@ void PPUDisAsm::MCRFS(ppu_opcode_t op)
 
 void PPUDisAsm::MTFSB0(ppu_opcode_t op)
 {
-	Write(fmt::format("mtfsb0%s %d", op.rc ? "." : "", op.crbd));
+	fmt::append(last_opcode, "%-*s%d", PadOp(), op.rc ? "mtfsb0." : "mtfsb0", op.crbd);
 }
 
 void PPUDisAsm::MTFSFI(ppu_opcode_t op)
 {
-	Write(fmt::format("mtfsfi%s cr%d,%d,%d", op.rc ? "." : "", op.crfd, op.i, op.l15));
+	fmt::append(last_opcode, "%-*s cr%d,%d,%d", PadOp(), op.rc ? "mtfsfi." : "mtfsfi", op.crfd, op.i, op.l15);
 }
 
 void PPUDisAsm::MFFS(ppu_opcode_t op)
@@ -2386,7 +2428,7 @@ void PPUDisAsm::MFFS(ppu_opcode_t op)
 
 void PPUDisAsm::MTFSF(ppu_opcode_t op)
 {
-	Write(fmt::format("mtfsf%s %d,f%d,%d,%d", op.rc ? "." : "", op.rc, op.flm, op.frb, op.l6, op.l15));
+	fmt::append(last_opcode, "%-*s%d,f%d,%d,%d", PadOp(), op.rc ? "mtfsf." : "mtfsf", op.rc, op.flm, op.frb, op.l6, op.l15);
 }
 
 void PPUDisAsm::FCMPU(ppu_opcode_t op)
@@ -2515,10 +2557,10 @@ void PPUDisAsm::UNK(ppu_opcode_t)
 
 		if (dump_pc % 8 == 4 && index < ppu_function_manager::get().size())
 		{
-			Write(fmt::format("Function : %s (index %u)", index < g_ppu_function_names.size() ? g_ppu_function_names[index].c_str() : "?", index));
+			fmt::append(last_opcode, "Function : %s (index %u)", index < g_ppu_function_names.size() ? g_ppu_function_names[index].c_str() : "?", index);
 			return;
 		}
 	}
 
-	Write("?? ??");
+	last_opcode += "?? ??";
 }
