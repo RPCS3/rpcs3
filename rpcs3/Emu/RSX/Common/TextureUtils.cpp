@@ -492,7 +492,10 @@ namespace
 				miplevel_depth = std::max(miplevel_depth / 2, 1);
 			}
 
-			offset_in_src = utils::align(offset_in_src, 128);
+			if (!padded_row) // Only swizzled textures obey this restriction
+			{
+				offset_in_src = utils::align(offset_in_src, 128);
+			}
 		}
 
 		return result;
