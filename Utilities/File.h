@@ -45,7 +45,8 @@ namespace fs
 	constexpr auto lock    = +open_mode::lock; // Prevent opening the file more than once
 	constexpr auto unread  = +open_mode::unread; // Aggressively prevent reading the opened file (do not use)
 
-	constexpr auto rewrite = open_mode::write + open_mode::create + open_mode::trunc;
+	constexpr auto write_new = write + create + excl;
+	constexpr auto rewrite = write + create + trunc;
 
 	// File seek mode
 	enum class seek_mode : u32
