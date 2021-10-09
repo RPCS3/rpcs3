@@ -1064,13 +1064,6 @@ void patch_engine::save_config(const patch_map& patches_map)
 	const std::string path = get_patch_config_path();
 	patch_log.notice("Saving patch config file %s", path);
 
-	fs::file file(path, fs::rewrite);
-	if (!file)
-	{
-		patch_log.fatal("Failed to open patch config file %s (%s)", path, fs::g_tls_error);
-		return;
-	}
-
 	YAML::Emitter out;
 	out << YAML::BeginMap;
 
@@ -1134,7 +1127,12 @@ void patch_engine::save_config(const patch_map& patches_map)
 
 	out << YAML::EndMap;
 
-	file.write(out.c_str(), out.size());
+	fs::pending_file file(path);
+
+	if (!file.file || (file.file.write(out.c_str(), out.size()), !file.commit()))
+	{
+		patch_log.error("Failed to create patch config file %s (%s)", path, fs::g_tls_error);
+	}
 }
 
 static void append_patches(patch_engine::patch_map& existing_patches, const patch_engine::patch_map& new_patches, usz& count, usz& total, std::stringstream* log_messages)
