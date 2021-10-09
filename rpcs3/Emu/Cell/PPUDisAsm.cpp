@@ -68,7 +68,7 @@ std::unique_ptr<CPUDisAsm> PPUDisAsm::copy_type_erased() const
 	return std::make_unique<PPUDisAsm>(*this);
 }
 
-std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL) const
+std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 reg, u32 pc, u32 TTL) const
 {
 	if (!TTL)
 	{
@@ -88,6 +88,12 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL
 
 		pc = dump_pc - 4;
 	}
+
+#if __cpp_using_enum >= 201907
+	using enum const_op;
+#else
+	constexpr const_op none = const_op::none, form = const_op::form, xor_mask = const_op::xor_mask;
+#endif
 
 	// Scan PPU executable memory backwards until unmapped or non-executable memory block is encountered
 
@@ -110,19 +116,21 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL
 		}
 
 		// Get constant register value
-		#define GET_CONST_REG(var, reg) \
+		#define GET_CONST_OP_REG(var, reg, op) \
 		{\
 			/* Search for the constant value of the register*/\
-			const auto [is_const, value] = try_get_const_gpr_value(reg, i - 4, TTL - 1);\
+			const auto [const_op, value] = try_get_const_op_gpr_value(reg, i - 4, TTL - 1);\
 		\
-			if (!is_const)\
+			if (const_op != const_op::op)\
 			{\
-				/* Cannot compute constant value if register is not constant*/\
+				/* Cannot compute constant value if register/operation is not constant*/\
 				return {};\
 			}\
 		\
 			var = value;\
 		} void() /*<- Require a semicolon*/
+
+		#define GET_CONST_REG(var, reg) GET_CONST_OP_REG(var, reg, form)
 
 		switch (type)
 		{
@@ -141,7 +149,7 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL
 				GET_CONST_REG(reg_ra, op.ra);
 			}
 
-			return { true, reg_ra + op.simm16 };
+			return { form, reg_ra + op.simm16 };
 		}
 		case ppu_itype::ADDIS:
 		{
@@ -157,7 +165,7 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL
 				GET_CONST_REG(reg_ra, op.ra);
 			}
 
-			return { true, reg_ra + op.simm16 * 65536 };
+			return { form, reg_ra + op.simm16 * 65536 };
 		}
 		case ppu_itype::ORI:
 		{
@@ -177,7 +185,7 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL
 
 			GET_CONST_REG(reg_rs, op.rs);
 
-			return { true, reg_rs | op.uimm16 };
+			return { form, reg_rs | op.uimm16 };
 		}
 		case ppu_itype::ORIS:
 		{
@@ -196,7 +204,29 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL
 
 			GET_CONST_REG(reg_rs, op.rs);
 
-			return { true, reg_rs | (u64{op.uimm16} << 16)};
+			return { form, reg_rs | (u64{op.uimm16} << 16)};
+		}
+		case ppu_itype::XORIS:
+		{
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			const auto [const_op, reg_rs] = try_get_const_op_gpr_value(op.rs, i - 4, TTL - 1);
+
+			if (const_op == none)
+			{
+				return { xor_mask, (u64{op.uimm16} << 16) };
+			}
+
+			if (const_op != form)
+			{
+				// Unexpected
+				return {};
+			}
+
+			return { form, reg_rs ^ (u64{op.uimm16} << 16)};
 		}
 		case ppu_itype::RLDICR:
 		{
@@ -209,7 +239,7 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL
 
 			GET_CONST_REG(reg_rs, op.rs);
 
-			return { true, utils::rol64(reg_rs, op.sh64) & (~0ull << (op.mbe64 ^ 63)) };
+			return { form, utils::rol64(reg_rs, op.sh64) & (~0ull << (op.mbe64 ^ 63)) };
 		}
 		case ppu_itype::OR:
 		{
@@ -234,7 +264,39 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL
 				GET_CONST_REG(reg_rb, op.rb);
 			}
 
-			return { true, reg_rs | reg_rb };
+			return { form, reg_rs | reg_rb };
+		}
+		case ppu_itype::XOR:
+		{
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			if (op.rs == op.rb)
+			{
+				return { form, 0 };
+			}
+
+			const auto [const_op_rs, reg_rs] = try_get_const_op_gpr_value(op.rs, i - 4, TTL - 1);
+			const auto [const_op_rb, reg_rb] = try_get_const_op_gpr_value(op.rb, i - 4, TTL - 1);
+
+			if (const_op_rs == form && const_op_rb == form)
+			{
+				// Normally it is not the case
+				return { form, reg_rs ^ reg_rb };
+			}
+
+			if (const_op_rs == form && const_op_rb == none)
+			{
+				return { xor_mask, reg_rs };
+			}
+			else if (const_op_rb == form && const_op_rs == none)
+			{
+				return { xor_mask, reg_rb };
+			}
+
+			return {};
 		}
 		default:
 		{
@@ -258,6 +320,33 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL
 	}
 
 	return {};
+}
+
+enum CellError : u32;
+
+void comment_constant(std::string& last_opcode, u64 value)
+{
+	// Test if potentially a CELL error
+	if ((value >> 28) == 0xf'ffff'fff8u || (value >> 28) == 0x8u)
+	{
+		const usz old_size = last_opcode.size();
+
+		// Comment as CELL error
+		fmt::append(last_opcode, " #%s (0x%x)", CellError{static_cast<u32>(value)}, value);
+
+		// Test if failed to format (appended " #0x8".. in such case)
+		if (last_opcode[old_size + 2] != '0')
+		{
+			// Success
+			return;
+		}
+
+		// Revert and fallback
+		last_opcode.resize(old_size);
+	}
+
+	// Comment constant formation
+	fmt::append(last_opcode, " #0x%x", value);
 }
 
 constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
@@ -1139,11 +1228,40 @@ void PPUDisAsm::SUBFIC(ppu_opcode_t op)
 void PPUDisAsm::CMPLI(ppu_opcode_t op)
 {
 	DisAsm_CR1_R1_IMM(op.l10 ? "cmpldi" : "cmplwi", op.crfd, op.ra, op.uimm16);
+
+	// Try to obtain the true constant value we are comparing against, comment on success
+	// Upper 16/48 bits of it
+	if (auto [is_xor, value] = try_get_const_xor_gpr_value(op.ra); is_xor && !(value & 0xFFFF))
+	{
+		// Fixup value (merge the lower 16-bits of that value)
+		value |= op.uimm16;
+
+		if (!op.l10)
+		{
+			value = static_cast<u32>(value);
+		}
+
+		comment_constant(last_opcode, value);
+	}
 }
 
 void PPUDisAsm::CMPI(ppu_opcode_t op)
 {
 	DisAsm_CR1_R1_IMM(op.l10 ? "cmpdi" : "cmpwi", op.crfd, op.ra, op.simm16);
+
+	// See CMPLI
+	if (auto [is_xor, value] = try_get_const_xor_gpr_value(op.ra); is_xor && !(value & 0xFFFF))
+	{
+		// Signed fixup
+		value ^= s64{op.simm16};
+
+		if (!op.l10)
+		{
+			value = static_cast<u32>(value);
+		}
+
+		comment_constant(last_opcode, value);
+	}
 }
 
 void PPUDisAsm::ADDIC(ppu_opcode_t op)
@@ -1448,7 +1566,7 @@ void PPUDisAsm::ORI(ppu_opcode_t op)
 	if (auto [is_const, value] = try_get_const_gpr_value(op.rs); is_const)
 	{
 		// Comment constant formation
-		fmt::append(last_opcode, " #0x%x", value | op.uimm16);
+		comment_constant(last_opcode, value | op.uimm16);
 	}
 }
 

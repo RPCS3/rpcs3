@@ -305,7 +305,27 @@ public:
 	u32 disasm(u32 pc) override;
 	std::pair<const void*, usz> get_memory_span() const override;
 	std::unique_ptr<CPUDisAsm> copy_type_erased() const override;
-	std::pair<bool, u64> try_get_const_gpr_value(u32 reg, u32 pc = -1, u32 TTL = 10) const;
+
+	enum class const_op
+	{
+		none,
+		form, // Cosntant formation
+		xor_mask, // Constant XOR mask applied (used with CMPI/CMPLI instructions, covers their limit of 16-bit immediates)
+	};
+
+	std::pair<const_op, u64> try_get_const_op_gpr_value(u32 reg, u32 pc = -1, u32 TTL = 10) const;
+
+	std::pair<bool, u64> try_get_const_gpr_value(u32 reg, u32 pc = -1) const
+	{
+		auto [op, res] = try_get_const_op_gpr_value(reg, pc);
+		return {op == const_op::form, res};
+	}
+
+	std::pair<bool, u64> try_get_const_xor_gpr_value(u32 reg, u32 pc = -1) const
+	{
+		auto [op, res] = try_get_const_op_gpr_value(reg, pc);
+		return {op == const_op::xor_mask, res};
+	}
 
 	void MFVSCR(ppu_opcode_t op);
 	void MTVSCR(ppu_opcode_t op);

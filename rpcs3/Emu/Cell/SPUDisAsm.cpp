@@ -341,21 +341,34 @@ void SPUDisAsm::WRCH(spu_opcode_t op)
 	DisAsm("wrch", spu_ch_name[op.ra], spu_reg_name[op.rt]);
 }
 
+enum CellError : u32;
+
 void SPUDisAsm::IOHL(spu_opcode_t op)
 {
+	DisAsm("iohl", spu_reg_name[op.rt], op.i16);
+
 	const auto [is_const, value] = try_get_const_value(op.rt);
 
-	if (is_const)
+	u32 val0 = value._u32[0];
+
+	// Only print constant for a 4 equal 32-bit constants array
+	if (is_const && value == v128::from32p(val0))
 	{
-		// Only print constant for a 4 equal 32-bit constants array
-		if (value == v128::from32p(value._u32[0]))
+		// Fixup value
+		val0 |= op.i16;
+
+		// Test if potentially a CELL error
+		if ((val0 >> 28) == 0x8u)
 		{
-			DisAsm("iohl", spu_reg_name[op.rt], fmt::format("%s #%s", SignedHex(+op.i16), (value._u32[0] | op.i16)).c_str());
-			return;
+			// Comment as CELL error
+			fmt::append(last_opcode, " #%s (0x%x)", CellError{val0}, val0);
+		}
+		else
+		{
+			// Comment constant formation
+			fmt::append(last_opcode, " #0x%x", val0);
 		}
 	}
-
-	DisAsm("iohl", spu_reg_name[op.rt], op.i16);
 }
 
 void SPUDisAsm::SHUFB(spu_opcode_t op)
