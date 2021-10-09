@@ -399,7 +399,7 @@ void memory_string_searcher::OnSearch()
 					// Do not use allocating functions such as fmt::to_lower
 					if (test_sv.size() >= wstr.size() && std::all_of(wstr.begin(), wstr.end(), [&](const char& c) { return c == ::tolower(test_sv[&c - wstr.data()]); }))
 					{
-						gui_log.success("Found at 0x%08x", start);
+						gui_log.success("Found at 0x%08x: '%s'", start, test_sv);
 						local_found++;
 					}
 
