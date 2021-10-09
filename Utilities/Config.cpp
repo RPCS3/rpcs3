@@ -387,7 +387,7 @@ bool cfg::node::from_string(const std::string& value, bool dynamic)
 		return true;
 	}
 
-	cfg_log.fatal("Failed to load node: %s", error);
+	cfg_log.error("Failed to load node: %s", error);
 	return false;
 }
 
