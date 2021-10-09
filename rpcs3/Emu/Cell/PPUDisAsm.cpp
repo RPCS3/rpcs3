@@ -4,6 +4,8 @@
 #include "PPUAnalyser.h"
 #include "Emu/IdManager.h"
 
+#include "util/asm.hpp"
+
 const ppu_decoder<PPUDisAsm> s_ppu_disasm;
 const ppu_decoder<ppu_itype> s_ppu_itype;
 
@@ -159,6 +161,12 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL
 		}
 		case ppu_itype::ORI:
 		{
+			if (op.rs == op.ra && !op.uimm16)
+			{
+				// NO-OP
+				break;
+			}
+
 			if (op.ra != reg)
 			{
 				// Destination register is not relevant to us
@@ -173,6 +181,12 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL
 		}
 		case ppu_itype::ORIS:
 		{
+			if (op.rs == op.ra && !op.uimm16)
+			{
+				// NO-OP
+				break;
+			}
+
 			if (op.ra != reg)
 			{
 				break;
@@ -183,6 +197,44 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc, u32 TTL
 			GET_CONST_REG(reg_rs, op.rs);
 
 			return { true, reg_rs | (u64{op.uimm16} << 16)};
+		}
+		case ppu_itype::RLDICR:
+		{
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			u64 reg_rs = 0;
+
+			GET_CONST_REG(reg_rs, op.rs);
+
+			return { true, utils::rol64(reg_rs, op.sh64) & (~0ull << (op.mbe64 ^ 63)) };
+		}
+		case ppu_itype::OR:
+		{
+			if (op.rs == op.rb && op.rs == op.ra)
+			{
+				// NO-OP
+				break;
+			}
+
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			u64 reg_rs = 0, reg_rb = 0;
+
+			GET_CONST_REG(reg_rs, op.rs);
+
+			// Try to optimize if it's a register move operation
+			if (op.rs != op.rb)
+			{
+				GET_CONST_REG(reg_rb, op.rb);
+			}
+
+			return { true, reg_rs | reg_rb };
 		}
 		default:
 		{
@@ -1392,6 +1444,12 @@ void PPUDisAsm::ORI(ppu_opcode_t op)
 	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) { last_opcode += "nop"; return; }
 	if (op.uimm16 == 0) return DisAsm_R2("mr", op.ra, op.rs);
 	DisAsm_R2_IMM("ori", op.ra, op.rs, op.uimm16);
+
+	if (auto [is_const, value] = try_get_const_gpr_value(op.rs); is_const)
+	{
+		// Comment constant formation
+		fmt::append(last_opcode, " #0x%x", value | op.uimm16);
+	}
 }
 
 void PPUDisAsm::ORIS(ppu_opcode_t op)
