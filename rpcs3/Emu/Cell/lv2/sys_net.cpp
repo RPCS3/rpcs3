@@ -1439,7 +1439,7 @@ error_code sys_net_bnet_select(ppu_thread& ppu, s32 nfds, vm::ptr<sys_net_fd_set
 
 		if (!g_fxo->get<log_t>().logged.exchange(true))
 		{
-			sys_net.error("sys_net_bnet_select(): exceptfds not implemented");
+			//sys_net.error("sys_net_bnet_select(): exceptfds not implemented");
 		}
 	}
 
