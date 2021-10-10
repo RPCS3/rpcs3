@@ -68,11 +68,9 @@ void cfg_input::save(const std::string& title_id, const std::string& profile) co
 		input_log.fatal("Failed to create path: %s (%s)", cfg_name, fs::g_tls_error);
 	}
 
-	if (auto cfg_file = fs::file(cfg_name, fs::rewrite))
-	{
-		cfg_file.write(to_string());
-	}
-	else
+	fs::pending_file cfg_file(cfg_name);
+
+	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 	{
 		input_log.error("Failed to save pad config to '%s'", cfg_name);
 	}
