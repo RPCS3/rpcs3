@@ -961,6 +961,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->buzzBox, emu_settings_type::Buzz);
 	SubscribeTooltip(ui->gb_buzz_emulated, tooltips.settings.buzz);
 
+	m_emu_settings->EnhanceComboBox(ui->turntableBox, emu_settings_type::Turntable);
+	SubscribeTooltip(ui->gb_turntable_emulated, tooltips.settings.turntable);
+
 	//     _____           _                   _______    _
 	//    / ____|         | |                 |__   __|  | |
 	//   | (___  _   _ ___| |_ ___ _ __ ___      | | __ _| |__

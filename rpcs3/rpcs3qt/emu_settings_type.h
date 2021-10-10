@@ -127,6 +127,7 @@ enum class emu_settings_type
 	CameraType,
 	Move,
 	Buzz,
+	Turntable,
 
 	// Misc
 	ExitRPCS3OnFinish,
@@ -279,6 +280,7 @@ inline static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::CameraType,      { "Input/Output", "Camera type"}},
 	{ emu_settings_type::Move,            { "Input/Output", "Move" }},
 	{ emu_settings_type::Buzz,            { "Input/Output", "Buzz emulated controller" }},
+	{ emu_settings_type::Turntable,       { "Input/Output", "Turntable emulated controller" }},
 
 	// Misc
 	{ emu_settings_type::ExitRPCS3OnFinish,         { "Miscellaneous", "Exit RPCS3 when process finishes" }},

@@ -102,6 +102,13 @@ enum class buzz_handler
 	two_controllers,
 };
 
+enum class turntable_handler
+{
+	null,
+	one_controller,
+	two_controllers,
+};
+
 enum class microphone_handler
 {
 	null,

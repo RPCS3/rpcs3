@@ -4,8 +4,10 @@
 
 class usb_device_turntable : public usb_device_emulated
 {
+	int controller_index;
+
 public:
-	usb_device_turntable();
+	usb_device_turntable(int controller_index);
 	~usb_device_turntable();
 
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;

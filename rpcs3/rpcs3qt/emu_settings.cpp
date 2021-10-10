@@ -1030,6 +1030,14 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case buzz_handler::two_controllers: return tr("2 controllers (5-7 players)", "Buzz handler");
 		}
 		break;
+	case emu_settings_type::Turntable:
+		switch (static_cast<turntable_handler>(index))
+		{
+		case turntable_handler::null: return tr("Null", "Turntable handler");
+		case turntable_handler::one_controller: return tr("1 controller", "Turntable handler");
+		case turntable_handler::two_controllers: return tr("2 controllers", "Turntable handler");
+		}
+		break;
 	case emu_settings_type::InternetStatus:
 		switch (static_cast<np_internet_status>(index))
 		{
