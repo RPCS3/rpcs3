@@ -156,7 +156,7 @@ private:
 	static void set_name(std::string);
 
 	// Make entry point
-	static native_entry make_trampoline(u64(*)(thread_base*));
+	static native_entry make_trampoline(u64(*entry)(thread_base* _base));
 
 	friend class thread_ctrl;
 

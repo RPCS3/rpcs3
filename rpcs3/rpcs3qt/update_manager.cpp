@@ -174,8 +174,12 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 
 	const Localized localized;
 
+	m_new_version = latest["version"].toString().toStdString();
+
 	if (hash_found)
 	{
+		m_old_version = current["version"].toString().toStdString();
+
 		if (diff_msec < 0)
 		{
 			// This usually means that the current version was marked as broken and won't be shipped anymore, so we need to downgrade to avoid certain bugs.
@@ -197,6 +201,8 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 	}
 	else
 	{
+		m_old_version = fmt::format("%s-%s-%s", rpcs3::get_full_branch(), rpcs3::get_branch(), rpcs3::get_version().to_string());
+
 		m_update_message = tr("You're currently using a custom or PR build.\n\nLatest version: %0 (%1)\nThe latest version is %2 old.\n\nDo you want to update to the latest official RPCS3 version?")
 			.arg(latest["version"].toString())
 			.arg(lts_str)
@@ -630,6 +636,19 @@ bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 #endif
 
 	m_downloader->close_progress_dialog();
+
+	// Add new version to log file
+	if (fs::file update_file{fs::get_config_dir() + "update_history.log", fs::create + fs::write + fs::append})
+	{
+		const std::string update_time = QDateTime::currentDateTime().toString("yyyy/MM/dd hh:mm:ss").toStdString();
+		const std::string entry = fmt::format("%s: Updated from \"%s\" to \"%s\"", update_time, m_old_version, m_new_version);
+		update_file.write(fmt::format("%s\n", entry));
+		update_log.notice("Added entry '%s' to update_history.log", entry);
+	}
+	else
+	{
+		update_log.error("Failed to append version to update_history.log");
+	}
 
 	if (!auto_accept)
 	{

@@ -686,7 +686,7 @@ package_error package_reader::check_target_app_version() const
 	return package_error::app_version;
 }
 
-fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, const std::string& rap_file_name, u8 *custom_klic, bool verbose = false);
+fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose = false);
 
 bool package_reader::extract_data(atomic_t<double>& sync)
 {
@@ -839,7 +839,7 @@ bool package_reader::extract_data(atomic_t<double>& sync)
 
 				if (is_buffered)
 				{
-					out = DecryptEDAT(out, name, 1, "", reinterpret_cast<u8*>(&m_header.klicensee), true);
+					out = DecryptEDAT(out, name, 1, reinterpret_cast<u8*>(&m_header.klicensee), true);
 					if (!out || !fs::write_file(path, fs::rewrite, static_cast<fs::container_stream<std::vector<u8>>*>(out.release().get())->obj))
 					{
 						num_failures++;

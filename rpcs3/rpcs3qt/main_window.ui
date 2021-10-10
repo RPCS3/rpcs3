@@ -406,7 +406,7 @@
   </action>
   <action name="bootInstallPkgAct">
    <property name="text">
-    <string>Install Packages/Raps</string>
+    <string>Install Packages/Raps/Edats</string>
    </property>
    <property name="toolTip">
     <string>Install application from a .pkg file</string>

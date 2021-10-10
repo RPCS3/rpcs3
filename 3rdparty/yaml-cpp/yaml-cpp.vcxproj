@@ -52,6 +52,7 @@
     </ClCompile>
     <ClCompile Include="yaml-cpp\src\convert.cpp">
     </ClCompile>
+    <ClCompile Include="yaml-cpp\src\depthguard.cpp" />
     <ClCompile Include="yaml-cpp\src\directives.cpp">
     </ClCompile>
     <ClCompile Include="yaml-cpp\src\emit.cpp">

@@ -522,7 +522,7 @@ void main_window::BootRsxCapture(std::string path)
 	}
 }
 
-bool main_window::InstallRapFile(const QString& path, const std::string& filename)
+bool main_window::InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename)
 {
 	if (path.isEmpty() || filename.empty())
 	{
@@ -531,7 +531,7 @@ bool main_window::InstallRapFile(const QString& path, const std::string& filenam
 
 	// Copy file atomically with thread/process-safe error checking for file size
 
-	fs::pending_file to(rpcs3::utils::get_hdd0_dir() + "/home/" + Emu.GetUsr() + "/exdata/" + filename.substr(0, filename.find_last_of('.')) + ".rap");
+	fs::pending_file to(rpcs3::utils::get_hdd0_dir() + "/home/" + Emu.GetUsr() + "/exdata/" + filename.substr(0, filename.find_last_of('.')) + "." + extension);
 	const fs::file from(sstr(path));
 
 	if (!to.file || !from)
@@ -557,7 +557,7 @@ void main_window::InstallPackages(QStringList file_paths)
 		// If this function was called without a path, ask the user for files to install.
 		const QString path_last_pkg = m_gui_settings->GetValue(gui::fd_install_pkg).toString();
 		const QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select packages and/or rap files to install"),
-			path_last_pkg, tr("All relevant (*.pkg *.PKG *.rap *.RAP);;Package files (*.pkg *.PKG);;Rap files (*.rap *.RAP);;All files (*.*)"));
+			path_last_pkg, tr("All relevant (*.pkg *.PKG *.rap *.RAP *.edat *.EDAT);;Package files (*.pkg *.PKG);;Rap files (*.rap *.RAP);;Edat files (*.edat *.EDAT);;All files (*.*)"));
 
 		if (paths.isEmpty())
 		{
@@ -625,25 +625,32 @@ void main_window::InstallPackages(QStringList file_paths)
 	}
 
 	// Install rap files if available
-	int installed_rap_count = 0;
+	int installed_rap_and_edat_count = 0;
 
-	for (const auto& rap : file_paths.filter(QRegExp(".*\\.rap", Qt::CaseInsensitive)))
+	const auto install_filetype = [&installed_rap_and_edat_count, &file_paths](const std::string extension)
 	{
-		const QFileInfo file_info(rap);
-		const std::string rapname = sstr(file_info.fileName());
-
-		if (InstallRapFile(rap, rapname))
+		const QString pattern = QString(".*\\.%1").arg(QString::fromStdString(extension));
+		for (const auto& file : file_paths.filter(QRegExp(pattern, Qt::CaseInsensitive)))
 		{
-			gui_log.success("Successfully copied rap file: %s", rapname);
-			installed_rap_count++;
-		}
-		else
-		{
-			gui_log.error("Could not copy rap file: %s", rapname);
-		}
-	}
+			const QFileInfo file_info(file);
+			const std::string filename = sstr(file_info.fileName());
 
-	if (installed_rap_count > 0)
+			if (InstallFileInExData(extension, file, filename))
+			{
+				gui_log.success("Successfully copied %s file: %s", extension, filename);
+				installed_rap_and_edat_count++;
+			}
+			else
+			{
+				gui_log.error("Could not copy %s file: %s", extension, filename);
+			}
+		}
+	};
+
+	install_filetype("rap");
+	install_filetype("edat");
+
+	if (installed_rap_and_edat_count > 0)
 	{
 		// Refresh game list since we probably unlocked some games now.
 		m_game_list_frame->Refresh(true);
@@ -1235,7 +1242,8 @@ void main_window::DecryptSPRXLibraries()
 		path_last_sprx = qstr(g_cfg_vfs.get_dev_flash() + "sys/external");
 	}
 
-	const QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select binary files"), path_last_sprx, tr("All Binaries (*.bin *.BIN *.self *.SELF *.sprx *.SPRX);;BIN files (*.bin *.BIN);;SELF files (*.self *.SELF);;SPRX files (*.sprx *.SPRX);;All files (*.*)"));
+	const QStringList modules = QFileDialog::getOpenFileNames(this, tr("Select binary files"), path_last_sprx, tr("All Binaries (*.bin *.BIN *.self *.SELF *.sprx *.SPRX *.sdat *.SDAT *.edat *.EDAT);;"
+		"BIN files (*.bin *.BIN);;SELF files (*.self *.SELF);;SPRX files (*.sprx *.SPRX);;SDAT/EDAT files (*.sdat *.SDAT *.edat *.EDAT);;All files (*.*)"));
 
 	if (modules.isEmpty())
 	{
@@ -1267,12 +1275,20 @@ void main_window::DecryptSPRXLibraries()
 		bool tried = false;
 		bool invalid = false;
 		usz key_it = 0;
+		u32 file_magic{};
 
 		while (true)
 		{
 			for (; key_it < klics.size(); key_it++)
 			{
-				if (elf_file.open(old_path) && elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
+				if (!elf_file.open(old_path) || !elf_file.read(file_magic))
+				{
+					file_magic = 0;
+				}
+
+				switch (file_magic)
+				{
+				case "SCE\0"_u32:
 				{
 					// First KLIC is no KLIC
 					elf_file = decrypt_self(std::move(elf_file), key_it != 0 ? reinterpret_cast<u8*>(&klics[key_it]) : nullptr);
@@ -1282,11 +1298,32 @@ void main_window::DecryptSPRXLibraries()
 						// Try another key
 						continue;
 					}
+
+					break;
 				}
-				else
+				case "NPD\0"_u32:
 				{
-					elf_file = {};
+					// EDAT / SDAT
+					elf_file = DecryptEDAT(elf_file, old_path, key_it != 0 ? 8 : 1, reinterpret_cast<u8*>(&klics[key_it]), true);
+
+					if (!elf_file)
+					{
+						// Try another key
+						continue;
+					}
+
+					break;
+				}
+				default:
+				{
 					invalid = true;
+					break;
+				}
+				}
+
+				if (invalid)
+				{
+					elf_file.close();
 				}
 
 				break;
@@ -1294,13 +1331,14 @@ void main_window::DecryptSPRXLibraries()
 
 			if (elf_file)
 			{
-				const std::string bin_ext  = _module.toLower().endsWith(".sprx") ? ".prx" : ".elf";
-				const std::string new_path = old_path.substr(0, old_path.find_last_of('.')) + bin_ext;
+				const std::string exec_ext = _module.toLower().endsWith(".sprx") ? ".prx" : ".elf";
+				const std::string new_path = file_magic == "NPD\0"_u32 ? old_path + ".unedat" :
+					old_path.substr(0, old_path.find_last_of('.')) + exec_ext;
 
 				if (fs::file new_file{new_path, fs::rewrite})
 				{
 					new_file.write(elf_file.to_string());
-					gui_log.success("Decrypted %s", old_path);
+					gui_log.success("Decrypted %s -> %s", old_path, new_path);
 				}
 				else
 				{
@@ -2814,14 +2852,14 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 
 			drop_type = drop_type::drop_pkg;
 		}
-		else if (info.suffix().toLower() == "rap")
+		else if (info.suffix().toLower() == "rap" || info.suffix().toLower() == "edat")
 		{
-			if (info.size() < 0x10 || (drop_type != drop_type::drop_rap && drop_type != drop_type::drop_error))
+			if (info.size() < 0x10 || (drop_type != drop_type::drop_rap_edat && drop_type != drop_type::drop_error))
 			{
 				return drop_type::drop_error;
 			}
 
-			drop_type = drop_type::drop_rap;
+			drop_type = drop_type::drop_rap_edat;
 		}
 		else if (list.size() == 1)
 		{
@@ -2868,30 +2906,33 @@ void main_window::dropEvent(QDropEvent* event)
 		InstallPup(drop_paths.first());
 		break;
 	}
-	case drop_type::drop_rap: // import rap files to exdata dir
+	case drop_type::drop_rap_edat: // import rap files to exdata dir
 	{
-		int installed_rap_count = 0;
+		int installed_count = 0;
 
-		for (const auto& rap : drop_paths)
+		for (const auto& path : drop_paths)
 		{
-			const std::string rapname = sstr(QFileInfo(rap).fileName());
+			const QFileInfo file_info = path;
+			const std::string extension = file_info.suffix().toLower().toStdString();
+			const std::string filename = sstr(file_info.fileName());
 
-			if (InstallRapFile(rap, rapname))
+			if (InstallFileInExData(extension, path, filename))
 			{
-				gui_log.success("Successfully copied rap file by drop: %s", rapname);
-				installed_rap_count++;
+				gui_log.success("Successfully copied %s file by drop: %s", extension, filename);
+				installed_count++;
 			}
 			else
 			{
-				gui_log.error("Could not copy rap file by drop: %s", rapname);
+				gui_log.error("Could not copy %s file by drop: %s", extension, filename);
 			}
 		}
 
-		if (installed_rap_count > 0)
+		if (installed_count > 0)
 		{
 			// Refresh game list since we probably unlocked some games now.
 			m_game_list_frame->Refresh(true);
 		}
+		
 		break;
 	}
 	case drop_type::drop_psf: // Display PARAM.SFO content

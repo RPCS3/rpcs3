@@ -27,7 +27,7 @@ struct NPD_HEADER
 	s32 version;
 	s32 license;
 	s32 type;
-	u8 content_id[0x30];
+	char content_id[0x30];
 	u8 digest[0x10];
 	u8 title_hash[0x10];
 	u8 dev_hash[0x10];
@@ -43,7 +43,7 @@ struct EDAT_HEADER
 };
 
 // Decrypts full file, or null/empty file
-extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, const std::string& rap_file_name, u8 *custom_klic, bool verbose);
+extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose);
 
 extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, std::string* contentID);
 
