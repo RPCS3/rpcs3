@@ -2246,8 +2246,10 @@ error_code sceNpFriendlist(vm::ptr<SceNpFriendlistResultHandler> resultHandler, 
 
 	if (!nph.is_NP_init)
 	{
-		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
+		return SCE_NP_FRIENDLIST_ERROR_NOT_INITIALIZED;
 	}
+
+	// TODO: SCE_NP_FRIENDLIST_ERROR_BUSY
 
 	if (!resultHandler)
 	{
@@ -2265,8 +2267,10 @@ error_code sceNpFriendlistCustom(SceNpFriendlistCustomOptions options, vm::ptr<S
 
 	if (!nph.is_NP_init)
 	{
-		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
+		return SCE_NP_FRIENDLIST_ERROR_NOT_INITIALIZED;
 	}
+
+	// TODO: SCE_NP_FRIENDLIST_ERROR_BUSY
 
 	if (!resultHandler)
 	{
@@ -2284,8 +2288,10 @@ error_code sceNpFriendlistAbortGui()
 
 	if (!nph.is_NP_init)
 	{
-		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
+		return SCE_NP_FRIENDLIST_ERROR_NOT_INITIALIZED;
 	}
+
+	// TODO: abort friendlist GUI interaction
 
 	return CELL_OK;
 }
