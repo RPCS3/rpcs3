@@ -732,10 +732,11 @@ error_code sceNpBasicSetPresence(vm::cptr<u8> data, u64 size)
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
-	if (!data || !data[0])
-	{
-		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
-	}
+	// TODO: Correct but causes issues atm(breaks bomberman ultra)
+	// if (!data || !data[0])
+	// {
+	// 	return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	// }
 
 	if (size > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
 	{
@@ -979,7 +980,7 @@ error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> 
 
 	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED, might be in between argument checks
 
-	if (strlen(subject.get_ptr()) > SCE_NP_BASIC_BODY_CHARACTER_MAX || strlen(body.get_ptr()) > SCE_NP_BASIC_BODY_CHARACTER_MAX)
+	if (strlen(subject.get_ptr()) > SCE_NP_BASIC_SUBJECT_CHARACTER_MAX || strlen(body.get_ptr()) > SCE_NP_BASIC_BODY_CHARACTER_MAX)
 	{
 		return SCE_NP_BASIC_ERROR_EXCEEDS_MAX;
 	}
