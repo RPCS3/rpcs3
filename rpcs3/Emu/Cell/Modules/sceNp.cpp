@@ -716,7 +716,7 @@ error_code sceNpBasicUnregisterHandler()
 	return CELL_OK;
 }
 
-error_code sceNpBasicSetPresence(vm::cptr<void> data, u64 size)
+error_code sceNpBasicSetPresence(vm::cptr<u8> data, u64 size)
 {
 	sceNp.todo("sceNpBasicSetPresence(data=*0x%x, size=%d)", data, size);
 
@@ -725,6 +725,16 @@ error_code sceNpBasicSetPresence(vm::cptr<void> data, u64 size)
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
+	if (!data || !data[0])
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
 	if (size > SCE_NP_BASIC_MAX_PRESENCE_SIZE)
@@ -744,6 +754,11 @@ error_code sceNpBasicSetPresenceDetails(vm::cptr<SceNpBasicPresenceDetails> pres
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!pres || options > SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS)
@@ -770,6 +785,11 @@ error_code sceNpBasicSetPresenceDetails2(vm::cptr<SceNpBasicPresenceDetails2> pr
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	if (!pres || options > SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
@@ -792,6 +812,11 @@ error_code sceNpBasicSendMessage(vm::cptr<SceNpId> to, vm::cptr<void> data, u64 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!to || to->handle.data[0] == '\0' || !data || !size)
@@ -839,6 +864,8 @@ error_code sceNpBasicSendMessageGui(vm::cptr<SceNpBasicMessageDetails> msg, sys_
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
+
+	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED, might be in between argument checks
 
 	if (msg->size > SCE_NP_BASIC_MAX_MESSAGE_SIZE)
 	{
@@ -940,10 +967,17 @@ error_code sceNpBasicSendMessageAttachment(vm::cptr<SceNpId> to, vm::cptr<char> 
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	if (!to || to->handle.data[0] == '\0' || !data || !size)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
+
+	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED, might be in between argument checks
 
 	if (strlen(subject.get_ptr()) > SCE_NP_BASIC_BODY_CHARACTER_MAX || strlen(body.get_ptr()) > SCE_NP_BASIC_BODY_CHARACTER_MAX)
 	{
@@ -967,6 +1001,11 @@ error_code sceNpBasicRecvMessageAttachment(sys_memory_container_t containerId)
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	return CELL_OK;
@@ -1031,12 +1070,12 @@ error_code sceNpBasicRecvMessageCustom(u16 mainType, u32 recvOptions, sys_memory
 		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
+	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED
+
 	if ((recvOptions & ~SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_ALL_OPTIONS))
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
-
-	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED
 
 	atomic_t<bool> wake_up = false;
 	bool result            = false;
@@ -1100,6 +1139,11 @@ error_code sceNpBasicMarkMessageAsUsed(SceNpBasicMessageId msgId)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	//if (!msgId > ?)
 	//{
 	//	return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
@@ -1119,6 +1163,13 @@ error_code sceNpBasicAbortGui()
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
+	// TODO: abort GUI interaction
+
 	return CELL_OK;
 }
 
@@ -1133,10 +1184,17 @@ error_code sceNpBasicAddFriend(vm::cptr<SceNpId> contact, vm::cptr<char> body, s
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	if (!contact || contact->handle.data[0] == '\0')
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
+
+	// TODO: SCE_NP_BASIC_ERROR_NOT_SUPPORTED, might be in between argument checks
 
 	if (strlen(body.get_ptr()) > SCE_NP_BASIC_BODY_CHARACTER_MAX)
 	{
@@ -1208,6 +1266,11 @@ error_code sceNpBasicGetFriendPresenceByIndex(u32 index, vm::ptr<SceNpUserInfo> 
 {
 	sceNp.todo("sceNpBasicGetFriendPresenceByIndex(index=%d, user=*0x%x, pres=*0x%x, options=%d)", index, user, pres, options);
 
+	if (!pres)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
 	if (!nph.is_NP_init)
@@ -1215,7 +1278,7 @@ error_code sceNpBasicGetFriendPresenceByIndex(u32 index, vm::ptr<SceNpUserInfo> 
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!user || !pres)
+	if (!user)
 	{
 		// TODO: check index and (options & SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS) depending on fw
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
@@ -1228,6 +1291,11 @@ error_code sceNpBasicGetFriendPresenceByIndex2(u32 index, vm::ptr<SceNpUserInfo>
 {
 	sceNp.todo("sceNpBasicGetFriendPresenceByIndex2(index=%d, user=*0x%x, pres=*0x%x, options=%d)", index, user, pres, options);
 
+	if (!pres)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
 	if (!nph.is_NP_init)
@@ -1235,7 +1303,7 @@ error_code sceNpBasicGetFriendPresenceByIndex2(u32 index, vm::ptr<SceNpUserInfo>
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!user || !pres)
+	if (!user)
 	{
 		// TODO: check index and (options & SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS) depending on fw
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
@@ -1250,12 +1318,17 @@ error_code sceNpBasicGetFriendPresenceByNpId(vm::cptr<SceNpId> npid, vm::ptr<Sce
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
+	if (!pres)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!npid || !pres)
+	if (!npid)
 	{
 		// TODO: check (options & SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS) depending on fw
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
@@ -1270,12 +1343,17 @@ error_code sceNpBasicGetFriendPresenceByNpId2(vm::cptr<SceNpId> npid, vm::ptr<Sc
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
+	if (!pres)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!npid || !pres)
+	if (!npid)
 	{
 		// TODO: check (options & SCE_NP_BASIC_PRESENCE_OPTIONS_ALL_OPTIONS) depending on fw
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
@@ -1361,11 +1439,21 @@ error_code sceNpBasicGetPlayersHistoryEntryCount(u32 options, vm::ptr<u32> count
 {
 	sceNp.todo("sceNpBasicGetPlayersHistoryEntryCount(options=%d, count=*0x%x)", options, count);
 
+	if (options > SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_ALL)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!count)
@@ -1389,11 +1477,21 @@ error_code sceNpBasicGetPlayersHistoryEntry(u32 options, u32 index, vm::ptr<SceN
 {
 	sceNp.warning("sceNpBasicGetPlayersHistoryEntry(options=%d, index=%d, npid=*0x%x)", options, index, npid);
 
+	if (options > SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_ALL)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!npid)
@@ -1420,6 +1518,11 @@ error_code sceNpBasicAddBlockListEntry(vm::cptr<SceNpId> npid)
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!npid || npid->handle.data[0] == '\0')
@@ -1500,6 +1603,11 @@ error_code sceNpBasicGetMessageAttachmentEntryCount(vm::ptr<u32> count)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	if (!count)
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
@@ -1528,6 +1636,11 @@ error_code sceNpBasicGetMessageAttachmentEntry(u32 index, vm::ptr<SceNpUserInfo>
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	if (!from)
 	{
 		// TODO: check index
@@ -1547,17 +1660,27 @@ error_code sceNpBasicGetCustomInvitationEntryCount(vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetCustomInvitationEntryCount(count=*0x%x)", count);
 
-	if (!count)
-	{
-		return SCE_NP_AUTH_EINVAL;
-	}
-
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
-	// TODO: Find the correct test which returns SCE_NP_AUTH_ESRCH
+	if (!nph.is_NP_init)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
+	if (!count)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
+
+	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_AUTH_ESRCH;
+		return SCE_NP_ERROR_ID_NOT_FOUND;
 	}
 
 	// TODO: Check if there are custom invitations
@@ -1570,18 +1693,28 @@ error_code sceNpBasicGetCustomInvitationEntry(u32 index, vm::ptr<SceNpUserInfo> 
 {
 	sceNp.todo("sceNpBasicGetCustomInvitationEntry(index=%d, from=*0x%x)", index, from);
 
+	auto& nph = g_fxo->get<named_thread<np_handler>>();
+
+	if (!nph.is_NP_init)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	if (!from)
 	{
 		// TODO: check index
-		return SCE_NP_AUTH_EINVAL;
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
-
-	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
 	// TODO: Find the correct test which returns SCE_NP_ERROR_ID_NOT_FOUND
 	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
 	{
-		return SCE_NP_AUTH_ESRCH;
+		return SCE_NP_ERROR_ID_NOT_FOUND;
 	}
 
 	return CELL_OK;
@@ -1596,6 +1729,11 @@ error_code sceNpBasicGetMatchingInvitationEntryCount(vm::ptr<u32> count)
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!count)
@@ -1626,6 +1764,11 @@ error_code sceNpBasicGetMatchingInvitationEntry(u32 index, vm::ptr<SceNpUserInfo
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	if (!from)
 	{
 		// TODO: check index
@@ -1650,6 +1793,11 @@ error_code sceNpBasicGetClanMessageEntryCount(vm::ptr<u32> count)
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
 	}
 
 	if (!count)
@@ -1680,6 +1828,11 @@ error_code sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 		return SCE_NP_BASIC_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!nph.basic_handler.registered)
+	{
+		return SCE_NP_BASIC_ERROR_NOT_REGISTERED;
+	}
+
 	if (!from)
 	{
 		// TODO: check index
@@ -1698,6 +1851,12 @@ error_code sceNpBasicGetClanMessageEntry(u32 index, vm::ptr<SceNpUserInfo> from)
 error_code sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 {
 	sceNp.todo("sceNpBasicGetMessageEntryCount(type=%d, count=*0x%x)", type, count);
+
+	// TODO: verify this check and its location
+	if (type > SCE_NP_BASIC_MESSAGE_INFO_TYPE_BOOTABLE_CUSTOM_DATA_MESSAGE)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
@@ -1726,6 +1885,12 @@ error_code sceNpBasicGetMessageEntryCount(u32 type, vm::ptr<u32> count)
 error_code sceNpBasicGetMessageEntry(u32 type, u32 index, vm::ptr<SceNpUserInfo> from)
 {
 	sceNp.todo("sceNpBasicGetMessageEntry(type=%d, index=%d, from=*0x%x)", type, index, from);
+
+	// TODO: verify this check and its location
+	if (type > SCE_NP_BASIC_MESSAGE_INFO_TYPE_BOOTABLE_CUSTOM_DATA_MESSAGE)
+	{
+		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
+	}
 
 	auto& nph = g_fxo->get<named_thread<np_handler>>();
 
