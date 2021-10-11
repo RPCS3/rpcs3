@@ -416,18 +416,14 @@ error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr)
 		return SCE_NP_ERROR_ALREADY_INITIALIZED;
 	}
 
-	if (poolsize == 0)
+	if (poolsize == 0 || !poolptr)
 	{
 		return SCE_NP_ERROR_INVALID_ARGUMENT;
-	}
-	else if (poolsize < SCE_NP_MIN_POOLSIZE)
-	{
-		return SCE_NP_ERROR_INSUFFICIENT_BUFFER;
 	}
 
-	if (!poolptr)
+	if (poolsize < SCE_NP_MIN_POOLSIZE)
 	{
-		return SCE_NP_ERROR_INVALID_ARGUMENT;
+		return SCE_NP_ERROR_INSUFFICIENT_BUFFER;
 	}
 
 	nph.init_NP(poolsize, poolptr);
