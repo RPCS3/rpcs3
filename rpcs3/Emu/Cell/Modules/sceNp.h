@@ -1205,7 +1205,7 @@ struct SceNpSignalingNetInfo
 struct SceNpCustomMenuAction
 {
 	be_t<u32> options;
-	char name[SCE_NP_CUSTOM_MENU_ACTION_CHARACTER_MAX];
+	vm::bcptr<char> name;
 	be_t<SceNpCustomMenuActionMask> mask;
 };
 
