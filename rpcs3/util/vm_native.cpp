@@ -474,8 +474,9 @@ namespace utils
 
 		if ((vm_overcommit & 3) == 0)
 		{
-#ifdef SHM_ANON
-			ensure(::shm_open(SHM_ANON, O_RDWR, S_IWUSR | S_IRUSR) == 0);
+#if defined(__FreeBSD__)
+			m_file = ::memfd_create_("", 0);
+			ensure(m_file >= 0);
 #else
 			const std::string name = "/rpcs3-mem2-" + std::to_string(reinterpret_cast<u64>(this));
 
