@@ -1044,7 +1044,7 @@ void PPUDisAsm::SUBFIC(ppu_opcode_t op)
 
 void PPUDisAsm::CMPLI(ppu_opcode_t op)
 {
-	DisAsm_CR1_R1_IMM(op.l10 ? "cmpdi" : "cmpwi", op.crfd, op.ra, op.uimm16);
+	DisAsm_CR1_R1_IMM(op.l10 ? "cmpldi" : "cmplwi", op.crfd, op.ra, op.uimm16);
 }
 
 void PPUDisAsm::CMPI(ppu_opcode_t op)
