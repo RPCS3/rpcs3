@@ -15,8 +15,9 @@
 #include <sys/types.h>
 #endif
 
-#if !defined(__linux__) && !defined(_WIN32)
+#if defined(__FreeBSD__)
 #include <sys/sysctl.h>
+#include <vm/vm_param.h>
 #endif
 
 #ifdef __linux__
@@ -461,12 +462,9 @@ namespace utils
 #if defined(__NetBSD__) || defined(__APPLE__)
 		// Always ON
 		vm_overcommit = 0;
-#elif defined(__FreeBSD__) && defined(VM_OVERCOMMIT)
+#elif defined(__FreeBSD__)
 		int mib[2]{CTL_VM, VM_OVERCOMMIT};
 		if (::sysctl(mib, 2, &vm_overcommit, &vm_sz, NULL, 0) != 0)
-			vm_overcommit = -1;
-#elif defined(__FreeBSD__) || defined(__DragonFly__)
-		if (::sysctlbyname("vm.overcommit", &vm_overcommit, &vm_sz, NULL, 0) != 0)
 			vm_overcommit = -1;
 #else
 		vm_overcommit = -1;
