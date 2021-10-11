@@ -2165,9 +2165,27 @@ error_code sceNpCustomMenuRegisterActions(vm::cptr<SceNpCustomMenu> menu, vm::pt
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
 
-	if (!menu || !handler)
+	if (!menu || !handler) // TODO: handler check might come later
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
+	}
+
+	if (menu->numActions > SCE_NP_CUSTOM_MENU_ACTION_ITEMS_TOTAL_MAX)
+	{
+		return SCE_NP_CUSTOM_MENU_ERROR_EXCEEDS_MAX;
+	}
+
+	for (u32 i = 0; i < menu->numActions; i++)
+	{
+		if (!menu->actions[i].name)
+		{
+			return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
+		}
+
+		if (!memchr(menu->actions[i].name.get_ptr(), '\0', SCE_NP_CUSTOM_MENU_ACTION_CHARACTER_MAX))
+		{
+			return SCE_NP_CUSTOM_MENU_ERROR_EXCEEDS_MAX;
+		}
 	}
 
 	return CELL_OK;
@@ -2183,6 +2201,8 @@ error_code sceNpCustomMenuActionSetActivation(vm::cptr<SceNpCustomMenuIndexArray
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
+
+	// TODO: SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED
 
 	if (!array)
 	{
@@ -2203,15 +2223,16 @@ error_code sceNpCustomMenuRegisterExceptionList(vm::cptr<SceNpCustomMenuActionEx
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_INITIALIZED;
 	}
 
+	// TODO: SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED
+
+	if (numItems > SCE_NP_CUSTOM_MENU_EXCEPTION_ITEMS_MAX)
+	{
+		return SCE_NP_CUSTOM_MENU_ERROR_EXCEEDS_MAX;
+	}
+
 	if (!items)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
-	}
-
-	if (numItems > SCE_NP_CUSTOM_MENU_ACTION_ITEMS_MAX)
-	{
-		// TODO: what about SCE_NP_CUSTOM_MENU_ACTION_ITEMS_TOTAL_MAX
-		return SCE_NP_CUSTOM_MENU_ERROR_EXCEEDS_MAX;
 	}
 
 	return CELL_OK;
