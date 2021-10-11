@@ -457,6 +457,11 @@ error_code sceNpTerm()
 
 error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_path)
 {
+	if (!k_licensee_addr || !drm_path)
+	{
+		return SCE_NP_DRM_ERROR_INVALID_PARAM;
+	}
+
 	u128 k_licensee{};
 
 	if (k_licensee_addr)
