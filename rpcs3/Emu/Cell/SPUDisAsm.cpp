@@ -288,6 +288,8 @@ SPUDisAsm::insert_mask_info SPUDisAsm::try_get_insert_mask_info(const v128& mask
 
 void SPUDisAsm::WRCH(spu_opcode_t op)
 {
+	DisAsm("wrch", spu_ch_name[op.ra], spu_reg_name[op.rt]);
+
 	const auto [is_const, value] = try_get_const_value(op.rt);
 
 	if (is_const)
@@ -296,7 +298,7 @@ void SPUDisAsm::WRCH(spu_opcode_t op)
 		{
 		case MFC_Cmd:
 		{
-			DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s", spu_reg_name[op.rt], MFC(value._u8[12])).c_str());
+			fmt::append(last_opcode, " #%s", MFC(value._u8[12]));
 			return;
 		}
 		case MFC_WrListStallAck:
@@ -304,41 +306,39 @@ void SPUDisAsm::WRCH(spu_opcode_t op)
 		{
 			const u32 v = value._u32[3];
 			if (v && !(v & (v - 1)))
-				DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s (tag=%u)", spu_reg_name[op.rt], SignedHex(v), std::countr_zero(v)).c_str()); // Single-tag mask
+				fmt::append(last_opcode, " #%s (tag=%u)", SignedHex(v), std::countr_zero(v)); // Single-tag mask
 			else
-				DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s", spu_reg_name[op.rt], SignedHex(v)).c_str()); // Multi-tag mask (or zero)
+				fmt::append(last_opcode, " #%s", SignedHex(v)); // Multi-tag mask (or zero)
 			return;
 		}
 		case MFC_EAH:
 		{
-			DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s", spu_reg_name[op.rt], SignedHex(value._u32[3])).c_str());
+			fmt::append(last_opcode, " #%s", SignedHex(value._u32[3]));
 			return;
 		}
 		case MFC_Size:
 		{
-			DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s", spu_reg_name[op.rt], SignedHex(value._u16[6])).c_str());
+			fmt::append(last_opcode, " #%s", SignedHex(value._u16[6]));
 			return;
 		}
 		case MFC_TagID:
 		{
-			DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%u", spu_reg_name[op.rt], value._u8[12]).c_str());
+			fmt::append(last_opcode, " #%u", value._u8[12]);
 			return;
 		}
 		case MFC_WrTagUpdate:
 		{
 			const auto upd = fmt::format("%s", mfc_tag_update(value._u32[3]));
-			DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s", spu_reg_name[op.rt], upd == "empty" ? "IMMEDIATE" : upd).c_str());
+			fmt::append(last_opcode, " #%s", upd == "empty" ? "IMMEDIATE" : upd);
 			return;
 		}
 		default:
 		{
-			DisAsm("wrch", spu_ch_name[op.ra], fmt::format("%s #%s", spu_reg_name[op.rt], SignedHex(value._u32[3])).c_str());
+			fmt::append(last_opcode, " #%s", SignedHex(value._u32[3]));
 			return;
 		}
 		}
 	}
-
-	DisAsm("wrch", spu_ch_name[op.ra], spu_reg_name[op.rt]);
 }
 
 enum CellError : u32;
@@ -373,6 +373,8 @@ void SPUDisAsm::IOHL(spu_opcode_t op)
 
 void SPUDisAsm::SHUFB(spu_opcode_t op)
 {
+	DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], spu_reg_name[op.rc]);
+
 	const auto [is_const, value] = try_get_const_value(op.rc);
 
 	if (is_const)
@@ -384,15 +386,13 @@ void SPUDisAsm::SHUFB(spu_opcode_t op)
 			if ((size >= 4u && !src) || (size == 2u && src == 1u) || (size == 1u && src == 3u))
 			{
 				// Comment insertion pattern for CWD-alike instruction
-				DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], fmt::format("%s #i%u[%u]", spu_reg_name[op.rc], size * 8, dst).c_str());
+				fmt::append(last_opcode, " #i%u[%u]", size * 8, dst);
 				return;
 			}
 
 			// Comment insertion pattern for unknown instruction formations
-			DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], fmt::format("%s #i%u[%u] = [%u]", spu_reg_name[op.rc], size * 8, dst, src).c_str());
+			fmt::append(last_opcode, " #i%u[%u] = [%u]", size * 8, dst, src);
 			return;
 		}
 	}
-
-	DisAsm("shufb", spu_reg_name[op.rt4], spu_reg_name[op.ra], spu_reg_name[op.rb], spu_reg_name[op.rc]);
 }
