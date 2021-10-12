@@ -4,6 +4,8 @@
 #include "PPUAnalyser.h"
 #include "Emu/IdManager.h"
 
+#include "util/asm.hpp"
+
 const ppu_decoder<PPUDisAsm> s_ppu_disasm;
 const ppu_decoder<ppu_itype> s_ppu_itype;
 
@@ -11,16 +13,36 @@ extern const std::unordered_map<u32, std::string_view>& get_exported_function_na
 
 enum class ppu_syscall_code : u64;
 
+extern std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm()
+{
+	return std::make_shared<PPUDisAsm>(cpu_disasm_mode::normal, vm::g_sudo_addr);
+}
+
 u32 PPUDisAsm::disasm(u32 pc)
 {
+	last_opcode.clear();
+
+	if (pc < m_start_pc)
+	{
+		return 0;
+	}
+
+	if (m_offset == vm::g_sudo_addr && !vm::check_addr(pc, vm::page_executable))
+	{
+		return 0;
+	}
+
 	dump_pc = pc;
 	be_t<u32> op{};
 	std::memcpy(&op, m_offset + pc, 4);
 	m_op = op;
+
 	(this->*(s_ppu_disasm.decode(m_op)))({ m_op });
 
-	if (m_mode != cpu_disasm_mode::interpreter && m_mode != cpu_disasm_mode::normal)
+	if (m_offset != vm::g_sudo_addr)
 	{
+		// Exported functions lookup is not allowed in this case
+		format_by_mode();
 		return 4;
 	}
 
@@ -32,29 +54,50 @@ u32 PPUDisAsm::disasm(u32 pc)
 		last_opcode += it->second;
 	}
 
+	format_by_mode();
 	return 4;
 }
 
-std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc) const
+std::pair<const void*, usz> PPUDisAsm::get_memory_span() const
 {
-	if (m_mode != cpu_disasm_mode::interpreter && m_mode != cpu_disasm_mode::normal)
+	return {m_offset + m_start_pc, (1ull << 32) - m_start_pc};
+}
+
+std::unique_ptr<CPUDisAsm> PPUDisAsm::copy_type_erased() const
+{
+	return std::make_unique<PPUDisAsm>(*this);
+}
+
+std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 reg, u32 pc, u32 TTL) const
+{
+	if (!TTL)
 	{
+		// Recursion limit (Time To Live)
 		return {};
 	}
 
 	if (pc == umax)
 	{
-		pc = dump_pc;
+		// Default arg: choose pc of previous instruction 
+
+		if (dump_pc == 0)
+		{
+			// Do not underflow
+			return {};
+		}
+
+		pc = dump_pc - 4;
 	}
 
-	if (!vm::check_addr(pc, vm::page_executable))
-	{
-		return {};
-	}
+#if __cpp_using_enum >= 201907
+	using enum const_op;
+#else
+	constexpr const_op none = const_op::none, form = const_op::form, xor_mask = const_op::xor_mask;
+#endif
 
 	// Scan PPU executable memory backwards until unmapped or non-executable memory block is encountered
 
-	for (u32 i = pc - 4; vm::check_addr(i, vm::page_executable); i -= 4)
+	for (u32 i = pc; i >= m_start_pc && (m_offset != vm::g_sudo_addr || vm::check_addr(i, vm::page_executable));)
 	{
 		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(m_offset + i);
 		const ppu_opcode_t op{ opcode };
@@ -73,19 +116,21 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc) const
 		}
 
 		// Get constant register value
-		#define GET_CONST_REG(var, reg) \
+		#define GET_CONST_OP_REG(var, reg, op) \
 		{\
 			/* Search for the constant value of the register*/\
-			const auto [is_const, value] = try_get_const_gpr_value(reg, i);\
+			const auto [const_op, value] = try_get_const_op_gpr_value(reg, i - 4, TTL - 1);\
 		\
-			if (!is_const)\
+			if (const_op != const_op::op)\
 			{\
-				/* Cannot compute constant value if register is not constant*/\
+				/* Cannot compute constant value if register/operation is not constant*/\
 				return {};\
 			}\
 		\
 			var = value;\
 		} void() /*<- Require a semicolon*/
+
+		#define GET_CONST_REG(var, reg) GET_CONST_OP_REG(var, reg, form)
 
 		switch (type)
 		{
@@ -104,7 +149,7 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc) const
 				GET_CONST_REG(reg_ra, op.ra);
 			}
 
-			return { true, reg_ra + op.simm16 };
+			return { form, reg_ra + op.simm16 };
 		}
 		case ppu_itype::ADDIS:
 		{
@@ -120,10 +165,16 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc) const
 				GET_CONST_REG(reg_ra, op.ra);
 			}
 
-			return { true, reg_ra + op.simm16 * 65536 };
+			return { form, reg_ra + op.simm16 * 65536 };
 		}
 		case ppu_itype::ORI:
 		{
+			if (op.rs == op.ra && !op.uimm16)
+			{
+				// NO-OP
+				break;
+			}
+
 			if (op.ra != reg)
 			{
 				// Destination register is not relevant to us
@@ -134,9 +185,50 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc) const
 
 			GET_CONST_REG(reg_rs, op.rs);
 
-			return { true, reg_rs | op.uimm16 };
+			return { form, reg_rs | op.uimm16 };
 		}
 		case ppu_itype::ORIS:
+		{
+			if (op.rs == op.ra && !op.uimm16)
+			{
+				// NO-OP
+				break;
+			}
+
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			u64 reg_rs = 0;
+
+			GET_CONST_REG(reg_rs, op.rs);
+
+			return { form, reg_rs | (u64{op.uimm16} << 16)};
+		}
+		case ppu_itype::XORIS:
+		{
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			const auto [const_op, reg_rs] = try_get_const_op_gpr_value(op.rs, i - 4, TTL - 1);
+
+			if (const_op == none)
+			{
+				return { xor_mask, (u64{op.uimm16} << 16) };
+			}
+
+			if (const_op != form)
+			{
+				// Unexpected
+				return {};
+			}
+
+			return { form, reg_rs ^ (u64{op.uimm16} << 16)};
+		}
+		case ppu_itype::RLDICR:
 		{
 			if (op.ra != reg)
 			{
@@ -147,7 +239,64 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc) const
 
 			GET_CONST_REG(reg_rs, op.rs);
 
-			return { true, reg_rs | (u64{op.uimm16} << 16)};
+			return { form, utils::rol64(reg_rs, op.sh64) & (~0ull << (op.mbe64 ^ 63)) };
+		}
+		case ppu_itype::OR:
+		{
+			if (op.rs == op.rb && op.rs == op.ra)
+			{
+				// NO-OP
+				break;
+			}
+
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			u64 reg_rs = 0, reg_rb = 0;
+
+			GET_CONST_REG(reg_rs, op.rs);
+
+			// Try to optimize if it's a register move operation
+			if (op.rs != op.rb)
+			{
+				GET_CONST_REG(reg_rb, op.rb);
+			}
+
+			return { form, reg_rs | reg_rb };
+		}
+		case ppu_itype::XOR:
+		{
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			if (op.rs == op.rb)
+			{
+				return { form, 0 };
+			}
+
+			const auto [const_op_rs, reg_rs] = try_get_const_op_gpr_value(op.rs, i - 4, TTL - 1);
+			const auto [const_op_rb, reg_rb] = try_get_const_op_gpr_value(op.rb, i - 4, TTL - 1);
+
+			if (const_op_rs == form && const_op_rb == form)
+			{
+				// Normally it is not the case
+				return { form, reg_rs ^ reg_rb };
+			}
+
+			if (const_op_rs == form && const_op_rb == none)
+			{
+				return { xor_mask, reg_rs };
+			}
+			else if (const_op_rb == form && const_op_rs == none)
+			{
+				return { xor_mask, reg_rb };
+			}
+
+			return {};
 		}
 		default:
 		{
@@ -161,9 +310,43 @@ std::pair<bool, u64> PPUDisAsm::try_get_const_gpr_value(u32 reg, u32 pc) const
 			break;
 		}
 		}
+
+		if (i == 0)
+		{
+			return {};
+		}
+
+		i -= 4;
 	}
 
 	return {};
+}
+
+enum CellError : u32;
+
+void comment_constant(std::string& last_opcode, u64 value)
+{
+	// Test if potentially a CELL error
+	if ((value >> 28) == 0xf'ffff'fff8u || (value >> 28) == 0x8u)
+	{
+		const usz old_size = last_opcode.size();
+
+		// Comment as CELL error
+		fmt::append(last_opcode, " #%s (0x%x)", CellError{static_cast<u32>(value)}, value);
+
+		// Test if failed to format (appended " #0x8".. in such case)
+		if (last_opcode[old_size + 2] != '0')
+		{
+			// Success
+			return;
+		}
+
+		// Revert and fallback
+		last_opcode.resize(old_size);
+	}
+
+	// Comment constant formation
+	fmt::append(last_opcode, " #0x%x", value);
 }
 
 constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
@@ -1045,11 +1228,40 @@ void PPUDisAsm::SUBFIC(ppu_opcode_t op)
 void PPUDisAsm::CMPLI(ppu_opcode_t op)
 {
 	DisAsm_CR1_R1_IMM(op.l10 ? "cmpldi" : "cmplwi", op.crfd, op.ra, op.uimm16);
+
+	// Try to obtain the true constant value we are comparing against, comment on success
+	// Upper 16/48 bits of it
+	if (auto [is_xor, value] = try_get_const_xor_gpr_value(op.ra); is_xor && !(value & 0xFFFF))
+	{
+		// Fixup value (merge the lower 16-bits of that value)
+		value |= op.uimm16;
+
+		if (!op.l10)
+		{
+			value = static_cast<u32>(value);
+		}
+
+		comment_constant(last_opcode, value);
+	}
 }
 
 void PPUDisAsm::CMPI(ppu_opcode_t op)
 {
 	DisAsm_CR1_R1_IMM(op.l10 ? "cmpdi" : "cmpwi", op.crfd, op.ra, op.simm16);
+
+	// See CMPLI
+	if (auto [is_xor, value] = try_get_const_xor_gpr_value(op.ra); is_xor && !(value & 0xFFFF))
+	{
+		// Signed fixup
+		value ^= s64{op.simm16};
+
+		if (!op.l10)
+		{
+			value = static_cast<u32>(value);
+		}
+
+		comment_constant(last_opcode, value);
+	}
 }
 
 void PPUDisAsm::ADDIC(ppu_opcode_t op)
@@ -1091,7 +1303,7 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 
 	if (m_mode == cpu_disasm_mode::compiler_elf)
 	{
-		Write(fmt::format("bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk));
+		fmt::append(last_opcode, "bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk);
 		return;
 	}
 
@@ -1099,7 +1311,7 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 
 	if (!inst)
 	{
-		Write(fmt::format("bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk));
+		fmt::append(last_opcode, "bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk);
 		return;
 	}
 
@@ -1143,11 +1355,11 @@ void PPUDisAsm::SC(ppu_opcode_t op)
 	// Try to get constant syscall index
 	if (auto [is_const, index] = try_get_const_gpr_value(11); is_const && index < 1024u)
 	{
-		Write(fmt::format("sc #%s", ppu_syscall_code{index}));
+		fmt::append(last_opcode, "%-*s #%s", PadOp(), ppu_syscall_code{index});
 		return;
 	}
 
-	Write("sc");
+	last_opcode += "sc";
 }
 
 void PPUDisAsm::B(ppu_opcode_t op)
@@ -1158,7 +1370,7 @@ void PPUDisAsm::B(ppu_opcode_t op)
 
 	if (m_mode == cpu_disasm_mode::compiler_elf)
 	{
-		Write(fmt::format("b 0x%x, %d, %d", li, aa, lk));
+		fmt::append(last_opcode, "b 0x%x, %d, %d", li, aa, lk);
 		return;
 	}
 
@@ -1196,7 +1408,7 @@ void PPUDisAsm::BCLR(ppu_opcode_t op)
 
 	if (bo == 0b10100)
 	{
-		Write(lk ? "blrl" : "blr");
+		last_opcode += (lk ? "blrl" : "blr");
 		return;
 	}
 
@@ -1204,7 +1416,7 @@ void PPUDisAsm::BCLR(ppu_opcode_t op)
 
 	if (!inst)
 	{
-		Write(fmt::format("bclr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk));
+		fmt::append(last_opcode, "bclr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk);
 		return;
 	}
 
@@ -1239,7 +1451,7 @@ void PPUDisAsm::CRANDC(ppu_opcode_t op)
 
 void PPUDisAsm::ISYNC(ppu_opcode_t)
 {
-	Write("isync");
+	last_opcode += "isync";
 }
 
 void PPUDisAsm::CRXOR(ppu_opcode_t op)
@@ -1299,7 +1511,7 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 
 	if (bo == 0b10100)
 	{
-		Write(lk ? "bctrl" : "bctr");
+		last_opcode += (lk ? "bctrl" : "bctr");
 		return;
 	}
 
@@ -1308,7 +1520,7 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 	if (!inst || inst[1] == 'd')
 	{
 		// Invalid or unknown bcctr form
-		Write(fmt::format("bcctr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk));
+		fmt::append(last_opcode, "bcctr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk);
 		return;
 	}
 
@@ -1347,14 +1559,20 @@ void PPUDisAsm::RLWNM(ppu_opcode_t op)
 
 void PPUDisAsm::ORI(ppu_opcode_t op)
 {
-	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) return Write("nop");
+	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) { last_opcode += "nop"; return; }
 	if (op.uimm16 == 0) return DisAsm_R2("mr", op.ra, op.rs);
 	DisAsm_R2_IMM("ori", op.ra, op.rs, op.uimm16);
+
+	if (auto [is_const, value] = try_get_const_gpr_value(op.rs); is_const)
+	{
+		// Comment constant formation
+		comment_constant(last_opcode, value | op.uimm16);
+	}
 }
 
 void PPUDisAsm::ORIS(ppu_opcode_t op)
 {
-	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) return Write("nop");
+	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) { last_opcode += "nop"; return; }
 	DisAsm_R2_IMM("oris", op.ra, op.rs, op.uimm16);
 }
 
@@ -1898,10 +2116,10 @@ void PPUDisAsm::OR(ppu_opcode_t op)
 	{
 		switch (op.opcode)
 		{
-		case 0x7f9ce378: return Write("db8cyc");
-		case 0x7fbdeb78: return Write("db10cyc");
-		case 0x7fdef378: return Write("db12cyc");
-		case 0x7ffffb78: return Write("db16cyc");
+		case 0x7f9ce378: last_opcode += "db8cyc"; return;
+		case 0x7fbdeb78: last_opcode += "db10cyc"; return;
+		case 0x7fdef378: last_opcode += "db12cyc"; return;
+		case 0x7ffffb78: last_opcode += "db16cyc"; return;
 		default: DisAsm_R2_RC("mr", op.ra, op.rb, op.rc);
 		}
 	}
@@ -2011,7 +2229,7 @@ void PPUDisAsm::LFSUX(ppu_opcode_t op)
 
 void PPUDisAsm::SYNC(ppu_opcode_t op)
 {
-	Write(op.l10 ? "lwsync" : "sync");
+	last_opcode += (op.l10 ? "lwsync" : "sync");
 }
 
 void PPUDisAsm::LFDX(ppu_opcode_t op)
@@ -2101,7 +2319,7 @@ void PPUDisAsm::LVRXL(ppu_opcode_t op)
 
 void PPUDisAsm::DSS(ppu_opcode_t)
 {
-	Write("dss()");
+	last_opcode += "dss";
 }
 
 void PPUDisAsm::SRAWI(ppu_opcode_t op)
@@ -2116,7 +2334,7 @@ void PPUDisAsm::SRADI(ppu_opcode_t op)
 
 void PPUDisAsm::EIEIO(ppu_opcode_t)
 {
-	Write("eieio");
+	last_opcode += "eieio";
 }
 
 void PPUDisAsm::STVLXL(ppu_opcode_t op)
@@ -2361,7 +2579,7 @@ void PPUDisAsm::FNMADDS(ppu_opcode_t op)
 
 void PPUDisAsm::MTFSB1(ppu_opcode_t op)
 {
-	Write(fmt::format("mtfsb1%s %d", op.rc ? "." : "", op.crbd));
+	fmt::append(last_opcode, "%-*s %d", PadOp(), op.rc ? "mtfsb1." : "mtfsb1", op.crbd);
 }
 
 void PPUDisAsm::MCRFS(ppu_opcode_t op)
@@ -2371,12 +2589,12 @@ void PPUDisAsm::MCRFS(ppu_opcode_t op)
 
 void PPUDisAsm::MTFSB0(ppu_opcode_t op)
 {
-	Write(fmt::format("mtfsb0%s %d", op.rc ? "." : "", op.crbd));
+	fmt::append(last_opcode, "%-*s %d", PadOp(), op.rc ? "mtfsb0." : "mtfsb0", op.crbd);
 }
 
 void PPUDisAsm::MTFSFI(ppu_opcode_t op)
 {
-	Write(fmt::format("mtfsfi%s cr%d,%d,%d", op.rc ? "." : "", op.crfd, op.i, op.l15));
+	fmt::append(last_opcode, "%-*s cr%d,%d,%d", PadOp(), op.rc ? "mtfsfi." : "mtfsfi", op.crfd, op.i, op.l15);
 }
 
 void PPUDisAsm::MFFS(ppu_opcode_t op)
@@ -2386,7 +2604,7 @@ void PPUDisAsm::MFFS(ppu_opcode_t op)
 
 void PPUDisAsm::MTFSF(ppu_opcode_t op)
 {
-	Write(fmt::format("mtfsf%s %d,f%d,%d,%d", op.rc ? "." : "", op.rc, op.flm, op.frb, op.l6, op.l15));
+	fmt::append(last_opcode, "%-*s %d,f%d,%d,%d", PadOp(), op.rc ? "mtfsf." : "mtfsf", op.rc, op.flm, op.frb, op.l6, op.l15);
 }
 
 void PPUDisAsm::FCMPU(ppu_opcode_t op)
@@ -2515,10 +2733,10 @@ void PPUDisAsm::UNK(ppu_opcode_t)
 
 		if (dump_pc % 8 == 4 && index < ppu_function_manager::get().size())
 		{
-			Write(fmt::format("Function : %s (index %u)", index < g_ppu_function_names.size() ? g_ppu_function_names[index].c_str() : "?", index));
+			fmt::append(last_opcode, "Function : %s (index %u)", index < g_ppu_function_names.size() ? g_ppu_function_names[index].c_str() : "?", index);
 			return;
 		}
 	}
 
-	Write("?? ??");
+	last_opcode += "?? ??";
 }

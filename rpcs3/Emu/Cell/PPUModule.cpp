@@ -391,8 +391,21 @@ static void ppu_initialize_modules(ppu_linkage_info* link)
 // For the debugger (g_ppu_function_names shouldn't change, string_view should suffice)
 extern const std::unordered_map<u32, std::string_view>& get_exported_function_names_as_addr_indexed_map()
 {
-	static std::unordered_map<u32, std::string_view> res;
-	static u64 update_time = 0;
+	struct info_t
+	{
+		std::unordered_map<u32, std::string_view> res;
+		u64 update_time = 0;
+	};
+
+	static thread_local std::unique_ptr<info_t> info;
+
+	if (!info)
+	{
+		info = std::make_unique<info_t>();
+		info->res.reserve(ppu_module_manager::get().size());
+	}
+
+	auto& [res, update_time] = *info;
 
 	const auto link = g_fxo->try_get<ppu_linkage_info>();
 	const auto hle_funcs = g_fxo->try_get<ppu_function_manager>();
@@ -414,7 +427,6 @@ extern const std::unordered_map<u32, std::string_view>& get_exported_function_na
 	update_time = current_time;
 
 	res.clear();
-	res.reserve(ppu_module_manager::get().size());
 
 	for (auto& pair : ppu_module_manager::get())
 	{

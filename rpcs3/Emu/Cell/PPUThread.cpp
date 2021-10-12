@@ -864,6 +864,8 @@ std::string ppu_thread::dump_regs() const
 {
 	std::string ret;
 
+	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
+
 	for (uint i = 0; i < 32; ++i)
 	{
 		auto reg = gpr[i];
@@ -914,7 +916,6 @@ std::string ppu_thread::dump_regs() const
 				}
 				else
 				{
-					PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
 					dis_asm.disasm(reg);
 					fmt::append(ret, " -> %s", dis_asm.last_opcode);
 				}

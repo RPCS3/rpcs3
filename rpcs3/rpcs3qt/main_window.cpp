@@ -63,6 +63,9 @@ LOG_CHANNEL(gui_log, "GUI");
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 
+class CPUDisAsm;
+std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm();
+
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
@@ -2221,8 +2224,8 @@ void main_window::CreateConnects()
 
 	connect(ui->toolsStringSearchAct, &QAction::triggered, this, [this]
 	{
-		memory_string_searcher* mss = new memory_string_searcher(this);
-		mss->show();
+		if (!Emu.IsStopped())
+			idm::make<memory_searcher_handle>(this, make_basic_ppu_disasm());
 	});
 
 	connect(ui->toolsDecryptSprxLibsAct, &QAction::triggered, this, &main_window::DecryptSPRXLibraries);
