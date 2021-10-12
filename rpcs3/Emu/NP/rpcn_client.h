@@ -215,6 +215,7 @@ namespace rpcn
 
 		atomic_t<bool> connected    = false;
 		atomic_t<bool> authentified = false;
+		atomic_t<bool> want_conn    = false;
 		atomic_t<bool> want_auth    = false;
 		std::binary_semaphore sem_connected, sem_authentified;
 		std::mutex mutex_connected, mutex_authentified;

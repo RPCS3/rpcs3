@@ -168,18 +168,16 @@ namespace rpcn
 				// By default is the object is alive we should be connected
 				if (!connected)
 				{
-					bool result_connect;
+					if (want_conn)
 					{
-						std::lock_guard lock(mutex_connected);
-						result_connect = connect(g_cfg_rpcn.get_host());
+						{
+							std::lock_guard lock(mutex_connected);
+							connect(g_cfg_rpcn.get_host());
+						}
+						sem_connected.release();
 					}
-					sem_connected.release();
 
-					if (!result_connect)
-					{
-						break;
-					}
-					continue;
+					break;
 				}
 
 				if (!authentified)
@@ -434,6 +432,7 @@ namespace rpcn
 					if (res == 0)
 					{
 						// Remote closed connection
+						rpcn_log.error("recv failed: connection reset by server");
 						return recvn_result::recvn_noconn;
 					}
 
@@ -503,12 +502,6 @@ namespace rpcn
 		if (!get_reply(packet_id, reply_data))
 			return false;
 
-		if (is_error(static_cast<ErrorType>(reply_data[0])))
-		{
-			// disconnect();
-			return false;
-		}
-
 		return true;
 	}
 
@@ -548,19 +541,18 @@ namespace rpcn
 
 		connected            = false;
 		authentified         = false;
-		want_auth            = false;
 		server_info_received = false;
 	}
 
 	bool rpcn_client::connect(const std::string& host)
 	{
-		rpcn_log.warning("Attempting to connect to RPCN!");
+		rpcn_log.warning("connect: Attempting to connect");
 
 		state = rpcn_state::failure_no_failure;
 
 		if (host.empty())
 		{
-			rpcn_log.error("RPCN host is empty!");
+			rpcn_log.error("connect: RPCN host is empty!");
 			state = rpcn_state::failure_input;
 			return false;
 		}
@@ -568,7 +560,7 @@ namespace rpcn
 		auto splithost = fmt::split(host, {":"});
 		if (splithost.size() != 1 && splithost.size() != 2)
 		{
-			rpcn_log.error("RPCN host is invalid!");
+			rpcn_log.error("connect: RPCN host is invalid!");
 			state = rpcn_state::failure_input;
 			return false;
 		}
@@ -580,7 +572,7 @@ namespace rpcn
 			port = std::stoul(splithost[1]);
 			if (port == 0)
 			{
-				rpcn_log.error("RPCN port is invalid!");
+				rpcn_log.error("connect: RPCN port is invalid!");
 				state = rpcn_state::failure_input;
 				return false;
 			}
@@ -595,14 +587,14 @@ namespace rpcn
 
 			if (wolfSSL_Init() != WOLFSSL_SUCCESS)
 			{
-				rpcn_log.error("Failed to initialize wolfssl");
+				rpcn_log.error("connect: Failed to initialize wolfssl");
 				state = rpcn_state::failure_wolfssl;
 				return false;
 			}
 
 			if ((wssl_ctx = wolfSSL_CTX_new(wolfTLSv1_2_client_method())) == nullptr)
 			{
-				rpcn_log.error("Failed to create wolfssl context");
+				rpcn_log.error("connect: Failed to create wolfssl context");
 				state = rpcn_state::failure_wolfssl;
 				return false;
 			}
@@ -611,7 +603,7 @@ namespace rpcn
 
 			if ((read_wssl = wolfSSL_new(wssl_ctx)) == nullptr)
 			{
-				rpcn_log.error("Failed to create wolfssl object");
+				rpcn_log.error("connect: Failed to create wolfssl object");
 				state = rpcn_state::failure_wolfssl;
 				return false;
 			}
@@ -624,7 +616,7 @@ namespace rpcn
 			hostent* host_addr = gethostbyname(splithost[0].c_str());
 			if (!host_addr)
 			{
-				rpcn_log.error("Failed to resolve %s", host);
+				rpcn_log.error("connect: Failed to resolve %s", host);
 				state = rpcn_state::failure_resolve;
 				return false;
 			}
@@ -646,21 +638,23 @@ namespace rpcn
 
 			if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<char*>(&timeout), sizeof(timeout)) < 0)
 			{
-				rpcn_log.error("Failed to setsockopt!");
+				rpcn_log.error("connect: Failed to setsockopt!");
 				state = rpcn_state::failure_other;
 				return false;
 			}
 
 			if (::connect(sockfd, reinterpret_cast<struct sockaddr*>(&addr_rpcn), sizeof(addr_rpcn)) != 0)
 			{
-				rpcn_log.error("Failed to connect to RPCN server!");
+				rpcn_log.error("connect: Failed to connect to RPCN server!");
 				state = rpcn_state::failure_connect;
 				return false;
 			}
 
+			rpcn_log.notice("connect: Connection successful");
+
 			if (wolfSSL_set_fd(read_wssl, sockfd) != WOLFSSL_SUCCESS)
 			{
-				rpcn_log.error("Failed to associate wolfssl to the socket");
+				rpcn_log.error("connect: Failed to associate wolfssl to the socket");
 				state = rpcn_state::failure_wolfssl;
 				return false;
 			}
@@ -672,13 +666,15 @@ namespace rpcn
 					continue;
 
 				state = rpcn_state::failure_wolfssl;
-				rpcn_log.error("Handshake failed with RPCN Server: %s", get_wolfssl_error(read_wssl, ret_connect));
+				rpcn_log.error("connect: Handshake failed with RPCN Server: %s", get_wolfssl_error(read_wssl, ret_connect));
 				return false;
 			}
 
+			rpcn_log.notice("connect: Handshake successful");
+
 			if ((write_wssl = wolfSSL_write_dup(read_wssl)) == NULL)
 			{
-				rpcn_log.error("Failed to create write dup for SSL");
+				rpcn_log.error("connect: Failed to create write dup for SSL");
 				state = rpcn_state::failure_wolfssl;
 				return false;
 			}
@@ -688,6 +684,8 @@ namespace rpcn
 		// Wake up both read & write threads
 		sem_reader.release();
 		sem_writer.release();
+
+		rpcn_log.notice("connect: Waiting for protocol version");
 
 		while (!server_info_received && connected && !terminate)
 		{
@@ -707,6 +705,8 @@ namespace rpcn
 			return false;
 		}
 
+		rpcn_log.notice("connect: Protocol version matches");
+
 		last_ping_time = steady_clock::now() - 5s;
 		last_pong_time = last_ping_time;
 
@@ -720,6 +720,8 @@ namespace rpcn
 			return false;
 		}
 
+		rpcn_log.notice("Attempting to login!");
+
 		std::vector<u8> data;
 		std::copy(npid.begin(), npid.end(), std::back_inserter(data));
 		data.push_back(0);
@@ -731,8 +733,10 @@ namespace rpcn
 		u64 req_id = rpcn_request_counter.fetch_add(1);
 
 		std::vector<u8> packet_data;
+
 		if (!forge_send_reply(CommandType::Login, req_id, data, packet_data))
 		{
+			state = rpcn_state::failure_other;
 			return false;
 		}
 
@@ -812,6 +816,7 @@ namespace rpcn
 		std::vector<u8> packet_data;
 		if (!forge_send_reply(CommandType::Create, req_id, data, packet_data))
 		{
+			state = rpcn_state::failure_other;
 			return ErrorType::CreationError;
 		}
 
@@ -952,10 +957,20 @@ namespace rpcn
 		memcpy(data.data(), communication_id.data, COMMUNICATION_ID_SIZE);
 
 		if (!forge_send_reply(CommandType::GetServerList, req_id, data, reply_data))
+		{
 			return false;
+		}
 
-		vec_stream reply(reply_data, 1);
+		vec_stream reply(reply_data);
+		auto error = static_cast<ErrorType>(reply.get<u8>());
+
+		if (is_error(error))
+		{
+			return false;
+		}
+
 		u16 num_servs = reply.get<u16>();
+
 		server_list.clear();
 		for (u16 i = 0; i < num_servs; i++)
 		{
@@ -1570,9 +1585,9 @@ namespace rpcn
 		case LoginInvalidPassword: rpcn_log.error("Login error: invalid password!"); break;
 		case LoginInvalidToken: rpcn_log.error("Login error: invalid token!"); break;
 		case CreationError: rpcn_log.error("Error creating an account!"); break;
-		case CreationExistingUsername: rpcn_log.error("Error creating an account: existing username!");
-		case CreationBannedEmailProvider: rpcn_log.error("Error creating an account: banned email provider!");
-		case CreationExistingEmail: rpcn_log.error("Error creating an account: an account with that email already exist!");
+		case CreationExistingUsername: rpcn_log.error("Error creating an account: existing username!"); break;
+		case CreationBannedEmailProvider: rpcn_log.error("Error creating an account: banned email provider!"); break;
+		case CreationExistingEmail: rpcn_log.error("Error creating an account: an account with that email already exist!"); break;
 		case AlreadyJoined: rpcn_log.error("User has already joined!"); break;
 		case DbFail: rpcn_log.error("A db query failed on the server!"); break;
 		case EmailFail: rpcn_log.error("An email action failed on the server!"); break;
@@ -1606,6 +1621,9 @@ namespace rpcn
 			{
 				return state;
 			}
+			
+			want_conn = true;
+			sem_rpcn.release();
 		}
 
 		sem_connected.acquire();
