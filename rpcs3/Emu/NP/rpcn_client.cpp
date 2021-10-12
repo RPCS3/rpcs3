@@ -168,18 +168,16 @@ namespace rpcn
 				// By default is the object is alive we should be connected
 				if (!connected)
 				{
-					bool result_connect;
+					if (want_conn)
 					{
-						std::lock_guard lock(mutex_connected);
-						result_connect = connect(g_cfg_rpcn.get_host());
+						{
+							std::lock_guard lock(mutex_connected);
+							connect(g_cfg_rpcn.get_host());
+						}
+						sem_connected.release();
 					}
-					sem_connected.release();
 
-					if (!result_connect)
-					{
-						break;
-					}
-					continue;
+					break;
 				}
 
 				if (!authentified)
@@ -195,7 +193,6 @@ namespace rpcn
 
 						if (!result_login)
 						{
-							rpcn_log.notice("MT: login attempt failed");
 							break;
 						}
 						continue;
@@ -435,6 +432,7 @@ namespace rpcn
 					if (res == 0)
 					{
 						// Remote closed connection
+						rpcn_log.error("recv failed: connection reset by server");
 						return recvn_result::recvn_noconn;
 					}
 
@@ -543,7 +541,6 @@ namespace rpcn
 
 		connected            = false;
 		authentified         = false;
-		want_auth            = false;
 		server_info_received = false;
 	}
 
@@ -1624,6 +1621,9 @@ namespace rpcn
 			{
 				return state;
 			}
+			
+			want_conn = true;
+			sem_rpcn.release();
 		}
 
 		sem_connected.acquire();
