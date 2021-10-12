@@ -242,10 +242,15 @@ usb_handler_thread::usb_handler_thread()
 		usb_devices.push_back(std::make_shared<usb_device_ghltar>());
 	}
 
-	if (!found_turntable)
+	if (g_cfg.io.turntable == turntable_handler::one_controller || g_cfg.io.turntable == turntable_handler::two_controllers)
 	{
-		sys_usbd.notice("Adding emulated turntable");
-		usb_devices.push_back(std::make_shared<usb_device_turntable>());
+		sys_usbd.notice("Adding emulated turntable (1 player)");
+		usb_devices.push_back(std::make_shared<usb_device_turntable>(0));
+	}
+	if (g_cfg.io.turntable == turntable_handler::two_controllers)
+	{
+		sys_usbd.notice("Adding emulated turntable (2 players)");
+		usb_devices.push_back(std::make_shared<usb_device_turntable>(1));
 	}
 
 	if (g_cfg.io.buzz == buzz_handler::one_controller || g_cfg.io.buzz == buzz_handler::two_controllers)

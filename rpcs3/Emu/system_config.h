@@ -245,6 +245,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<fake_camera_type> camera_type{ this, "Camera type", fake_camera_type::unknown };
 		cfg::_enum<move_handler> move{ this, "Move", move_handler::null };
 		cfg::_enum<buzz_handler> buzz{ this, "Buzz emulated controller", buzz_handler::null };
+		cfg::_enum<turntable_handler> turntable{this, "Turntable emulated controller", turntable_handler::null};
 	} io{ this };
 
 	struct node_sys : cfg::node
