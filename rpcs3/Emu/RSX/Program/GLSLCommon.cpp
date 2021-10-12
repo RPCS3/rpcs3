@@ -855,7 +855,7 @@ namespace glsl
 			"#define TEX1D_BIAS(index, coord1, bias) process_texel(texture(TEX_NAME(index), COORD_SCALE1(index, coord1), bias), TEX_FLAGS(index))\n"
 			"#define TEX1D_LOD(index, coord1, lod) process_texel(textureLod(TEX_NAME(index), COORD_SCALE1(index, coord1), lod), TEX_FLAGS(index))\n"
 			"#define TEX1D_GRAD(index, coord1, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), COORD_SCALE1(index, coord1), dpdx, dpdy), TEX_FLAGS(index))\n"
-			"#define TEX1D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), vec2(COORD_SCALE1(index, coord2.x), coord2.w)), TEX_FLAGS(index))\n"
+			"#define TEX1D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), vec2(COORD_SCALE1(index, coord4.x), coord4.w)), TEX_FLAGS(index))\n"
 
 			"#define TEX2D(index, coord2) process_texel(texture(TEX_NAME(index), COORD_SCALE2(index, coord2)), TEX_FLAGS(index))\n"
 			"#define TEX2D_BIAS(index, coord2, bias) process_texel(texture(TEX_NAME(index), COORD_SCALE2(index, coord2), bias), TEX_FLAGS(index))\n"
@@ -887,7 +887,7 @@ namespace glsl
 			"#define TEX3D_BIAS(index, coord3, bias) process_texel(texture(TEX_NAME(index), COORD_SCALE3(index, coord3), bias), TEX_FLAGS(index))\n"
 			"#define TEX3D_LOD(index, coord3, lod) process_texel(textureLod(TEX_NAME(index), COORD_SCALE3(index, coord3), lod), TEX_FLAGS(index))\n"
 			"#define TEX3D_GRAD(index, coord3, dpdx, dpdy) process_texel(textureGrad(TEX_NAME(index), COORD_SCALE3(index, coord3), dpdx, dpdy), TEX_FLAGS(index))\n"
-			"#define TEX3D_PROJ(index, coord4) process_texel(textureProj(TEX_NAME(index), vec4(COORD_SCALE3(index, coord4.xyz), coord4.w)), TEX_FLAGS(index))\n\n";
+			"#define TEX3D_PROJ(index, coord4) process_texel(texture(TEX_NAME(index), COORD_SCALE3(index, coord4.xyz) / coord4.w), TEX_FLAGS(index))\n\n";
 
 			if (props.require_depth_conversion)
 			{
