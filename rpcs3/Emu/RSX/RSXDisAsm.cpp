@@ -15,20 +15,34 @@ u32 RSXDisAsm::disasm(u32 pc)
 {
 	last_opcode.clear();
 
-	u32 addr = static_cast<const rsx::thread*>(m_cpu)->iomap_table.get_addr(pc);
+	auto try_read_op = [this](u32 pc) -> bool
+	{
+		if (pc < m_start_pc)
+		{
+			return false;
+		}
 
-	if (addr == umax) return 0;
+		if (m_offset == vm::g_sudo_addr)
+		{
+			// Translation needed
+			pc = static_cast<const rsx::thread*>(m_cpu)->iomap_table.get_addr(pc);
 
-	m_op = *reinterpret_cast<const atomic_be_t<u32>*>(m_offset + addr);
+			if (pc == umax) return false;
+		}
+
+		m_op = *reinterpret_cast<const atomic_be_t<u32>*>(m_offset + pc);
+		return true;
+	};
+
+	if (!try_read_op(pc))
+	{
+		return 0;
+	}
+
 	dump_pc = pc;
 
 	if (m_op & RSX_METHOD_NON_METHOD_CMD_MASK)
 	{
-		if (m_mode == cpu_disasm_mode::list)
-		{
-			return 0;
-		}
-
 		if ((m_op & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 		{
 			u32 jumpAddr = m_op & RSX_METHOD_OLD_JUMP_OFFSET_MASK;
@@ -57,23 +71,14 @@ u32 RSXDisAsm::disasm(u32 pc)
 	}
 	else if ((m_op & RSX_METHOD_NOP_MASK) == RSX_METHOD_NOP_CMD)
 	{
-		if (m_mode == cpu_disasm_mode::list)
-		{
-			return 0;
-		}
-
 		u32 i = 1;
 
-		for (pc += 4; i < 4096; i++, pc += 4)
+		for (pc += 4; m_mode != cpu_disasm_mode::list && pc && i < 4096; i++, pc += 4)
 		{
-			addr = static_cast<const rsx::thread*>(m_cpu)->iomap_table.get_addr(pc);
-
-			if (addr == umax)
+			if (!try_read_op(pc))
 			{
 				break;
 			}
-
-			m_op = *reinterpret_cast<const atomic_be_t<u32>*>(m_offset + addr);
 
 			if ((m_op & RSX_METHOD_NOP_MASK) != RSX_METHOD_NOP_CMD)
 			{
@@ -106,16 +111,12 @@ u32 RSXDisAsm::disasm(u32 pc)
 
 		for (u32 i = 0; i < (m_mode == cpu_disasm_mode::list ? count : 1); i++, pc += 4)
 		{
-			addr = static_cast<const rsx::thread*>(m_cpu)->iomap_table.get_addr(pc);
-
-			if (addr == umax)
+			if (!try_read_op(pc))
 			{
 				last_opcode.clear();
 				Write("?? ??", -1);
 				return 4;
 			}
-
-			m_op = *reinterpret_cast<const atomic_be_t<u32>*>(m_offset + addr);
 
 			const u32 id = id_start + (non_inc ? 0 : i);
 
@@ -132,6 +133,16 @@ u32 RSXDisAsm::disasm(u32 pc)
 
 		return (count + 1) * 4;
 	}
+}
+
+std::pair<const void*, usz> RSXDisAsm::get_memory_span() const
+{
+	return {m_offset + m_start_pc, (1ull << 32) - m_start_pc};
+}
+
+std::unique_ptr<CPUDisAsm> RSXDisAsm::copy_type_erased() const
+{
+	return std::make_unique<RSXDisAsm>(*this);
 }
 
 void RSXDisAsm::Write(const std::string& str, s32 count, bool is_non_inc, u32 id)

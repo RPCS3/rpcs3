@@ -69,15 +69,24 @@ static constexpr const char* spu_ch_name[128] =
 	"ch121", "ch122", "ch123", "ch124", "ch125", "ch126", "ch127",
 };
 
+namespace utils
+{
+	class shm;
+}
+
 class SPUDisAsm final : public PPCDisAsm
 {
+	std::shared_ptr<utils::shm> m_shm;
 public:
-	SPUDisAsm(cpu_disasm_mode mode, const u8* offset) : PPCDisAsm(mode, offset)
+	SPUDisAsm(cpu_disasm_mode mode, const u8* offset, u32 start_pc = 0) : PPCDisAsm(mode, offset, start_pc)
 	{
 	}
 
-	~SPUDisAsm()
+	~SPUDisAsm() = default;
+
+	void set_shm(std::shared_ptr<utils::shm> shm)
 	{
+		m_shm = std::move(shm);
 	}
 
 private:
@@ -86,84 +95,96 @@ private:
 		return spu_branch_target(dump_pc, imm);
 	}
 
-	static const char* BrIndirectSuffix(u32 de)
+	static char BrIndirectSuffix(u32 de)
 	{
 		switch (de)
 		{
-		case 0b01: return "e";
-		case 0b10: return "d";
-		//case 0b11: return "(undef)";
-		default: return "";
+		case 0b01: return 'e';
+		case 0b10: return 'd';
+		case 0b11: return '!';
+		default: return '\0';
 		}
 	}
 
-	std::string& FixOp(std::string& op) const
-	{
-		if (m_mode != cpu_disasm_mode::normal)
-		{
-			op.append(std::max<int>(10 - ::narrow<int>(op.size()), 0), ' ');
-		}
-
-		return op;
-	}
 	void DisAsm(const char* op)
 	{
-		Write(op);
+		last_opcode += op;
 	}
-	void DisAsm(std::string op, u32 a1)
+	void DisAsm(std::string_view op, u32 a1)
 	{
-		Write(fmt::format("%s 0x%x", FixOp(op), a1));
+		fmt::append(last_opcode, "%-*s 0x%x", PadOp(), op, a1);
 	}
-	void DisAsm(std::string op, const char* a1)
+	void DisAsm(std::string_view op, const char* a1)
 	{
-		Write(fmt::format("%s %s", FixOp(op), a1));
+		fmt::append(last_opcode, "%-*s %s", PadOp(), op, a1);
 	}
-	void DisAsm(std::string op, const char* a1, const char* a2)
+	void DisAsm(std::string_view op, const char* a1, const char* a2)
 	{
-		Write(fmt::format("%s %s,%s", FixOp(op), a1, a2));
+		fmt::append(last_opcode, "%-*s %s,%s", PadOp(), op, a1, a2);
 	}
-	void DisAsm(std::string op, int a1, const char* a2)
+	void DisAsm(std::string_view op, int a1, const char* a2)
 	{
-		Write(fmt::format("%s 0x%x,%s", FixOp(op), a1, a2));
+		fmt::append(last_opcode, "%-*s 0x%x,%s", PadOp(), op, a1, a2);
 	}
-	void DisAsm(std::string op, const char* a1, int a2)
+	void DisAsm(std::string_view op, const char* a1, int a2)
 	{
-		Write(fmt::format("%s %s,%s", FixOp(op), a1, SignedHex(a2)));
+		fmt::append(last_opcode, "%-*s %s,%s", PadOp(), op, a1, SignedHex(a2));
 	}
-	void DisAsm(std::string op, int a1, int a2)
+	void DisAsm(std::string_view op, int a1, int a2)
 	{
-		Write(fmt::format("%s 0x%x,0x%x", FixOp(op), a1, a2));
+		fmt::append(last_opcode, "%-*s 0x%x,0x%x", PadOp(), op, a1, a2);
 	}
-	void DisAsm(std::string op, const char* a1, const char* a2, const char* a3)
+	void DisAsm(std::string_view op, const char* a1, const char* a2, const char* a3)
 	{
-		Write(fmt::format("%s %s,%s,%s", FixOp(op), a1, a2, a3));
+		fmt::append(last_opcode, "%-*s %s,%s,%s", PadOp(), op, a1, a2, a3);
 	}
-	void DisAsm(std::string op, const char* a1, int a2, const char* a3)
+	void DisAsm(std::string_view op, const char* a1, int a2, const char* a3)
 	{
-		Write(fmt::format("%s %s,%s(%s)", FixOp(op), a1, SignedHex(a2), a3));
+		fmt::append(last_opcode, "%-*s %s,%s(%s)", PadOp(), op, a1, SignedHex(a2), a3);
 	}
-	void DisAsm(std::string op, const char* a1, const char* a2, int a3)
+	void DisAsm(std::string_view op, const char* a1, const char* a2, int a3)
 	{
-		Write(fmt::format("%s %s,%s,%s", FixOp(op), a1, a2, SignedHex(a3)));
+		fmt::append(last_opcode, "%-*s %s,%s,%s", PadOp(), op, a1, a2, SignedHex(a3));
 	}
-	void DisAsm(std::string op, const char* a1, const char* a2, const char* a3, const char* a4)
+	void DisAsm(std::string_view op, const char* a1, const char* a2, const char* a3, const char* a4)
 	{
-		Write(fmt::format("%s %s,%s,%s,%s", FixOp(op), a1, a2, a3, a4));
+		fmt::append(last_opcode, "%-*s %s,%s,%s,%s", PadOp(), op, a1, a2, a3, a4);
 	}
 
 	using field_de_t = decltype(spu_opcode_t::de);
-	void DisAsm(std::string op, field_de_t de, const char* a1)
+	void DisAsm(std::string_view op, field_de_t de, const char* a1)
 	{
-		Write(fmt::format("%s %s", FixOp(op.append(BrIndirectSuffix(de))), a1));
+		const char c = BrIndirectSuffix(de);
+
+		if (c == '!')
+		{
+			// Invalid
+			fmt::append(last_opcode, "?? ?? (%s)", op);
+			return;
+		}
+
+		fmt::append(last_opcode, "%-*s %s", PadOp(op, c ? 1 : 0), op, a1);
+		insert_char_if(op, !!c, c);
 	}
-	void DisAsm(std::string op, field_de_t de, const char* a1, const char* a2)
+	void DisAsm(std::string_view op, field_de_t de, const char* a1, const char* a2)
 	{
-		Write(fmt::format("%s %s,%s", FixOp(op.append(BrIndirectSuffix(de))), a1, a2));
+		const char c = BrIndirectSuffix(de);
+
+		if (c == '!')
+		{
+			fmt::append(last_opcode, "?? ?? (%s)", op);
+			return;
+		}
+
+		fmt::append(last_opcode, "%-*s %s,%s", PadOp(op, c ? 1 : 0), op, a1, a2);
+		insert_char_if(op, !!c, c);
 	}
 
 public:
 	u32 disasm(u32 pc) override;
-	std::pair<bool, v128> try_get_const_value(u32 reg, u32 pc = -1) const;
+	std::pair<const void*, usz> get_memory_span() const override;
+	std::unique_ptr<CPUDisAsm> copy_type_erased() const override;
+	std::pair<bool, v128> try_get_const_value(u32 reg, u32 pc = -1, u32 TTL = 10) const;
 
 	struct insert_mask_info
 	{
@@ -992,6 +1013,6 @@ public:
 
 	void UNK(spu_opcode_t /*op*/)
 	{
-		Write("?? ??");
+		DisAsm("?? ??");
 	}
 };
