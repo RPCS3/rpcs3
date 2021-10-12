@@ -2579,7 +2579,7 @@ void PPUDisAsm::FNMADDS(ppu_opcode_t op)
 
 void PPUDisAsm::MTFSB1(ppu_opcode_t op)
 {
-	fmt::append(last_opcode, "%-*s%d", PadOp(), op.rc ? "mtfsb1." : "mtfsb1", op.crbd);
+	fmt::append(last_opcode, "%-*s %d", PadOp(), op.rc ? "mtfsb1." : "mtfsb1", op.crbd);
 }
 
 void PPUDisAsm::MCRFS(ppu_opcode_t op)
@@ -2589,7 +2589,7 @@ void PPUDisAsm::MCRFS(ppu_opcode_t op)
 
 void PPUDisAsm::MTFSB0(ppu_opcode_t op)
 {
-	fmt::append(last_opcode, "%-*s%d", PadOp(), op.rc ? "mtfsb0." : "mtfsb0", op.crbd);
+	fmt::append(last_opcode, "%-*s %d", PadOp(), op.rc ? "mtfsb0." : "mtfsb0", op.crbd);
 }
 
 void PPUDisAsm::MTFSFI(ppu_opcode_t op)
@@ -2604,7 +2604,7 @@ void PPUDisAsm::MFFS(ppu_opcode_t op)
 
 void PPUDisAsm::MTFSF(ppu_opcode_t op)
 {
-	fmt::append(last_opcode, "%-*s%d,f%d,%d,%d", PadOp(), op.rc ? "mtfsf." : "mtfsf", op.rc, op.flm, op.frb, op.l6, op.l15);
+	fmt::append(last_opcode, "%-*s %d,f%d,%d,%d", PadOp(), op.rc ? "mtfsf." : "mtfsf", op.rc, op.flm, op.frb, op.l6, op.l15);
 }
 
 void PPUDisAsm::FCMPU(ppu_opcode_t op)
