@@ -51,6 +51,7 @@ set(SRC_FILES
     progress_dialog.cpp
     qt_utils.cpp
     register_editor_dialog.cpp
+    recvmessage_dialog_frame.cpp
     render_creator.cpp
     rpcn_settings_dialog.cpp
     rsx_debugger.cpp
@@ -60,6 +61,7 @@ set(SRC_FILES
     save_manager_dialog.cpp
     screenshot_manager_dialog.cpp
     screenshot_preview.cpp
+    sendmessage_dialog_frame.cpp
     settings.cpp
     settings_dialog.cpp
     skylander_dialog.cpp

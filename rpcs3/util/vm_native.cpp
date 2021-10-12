@@ -15,8 +15,9 @@
 #include <sys/types.h>
 #endif
 
-#if !defined(__linux__) && !defined(_WIN32)
+#if defined(__FreeBSD__)
 #include <sys/sysctl.h>
+#include <vm/vm_param.h>
 #endif
 
 #ifdef __linux__
@@ -461,12 +462,9 @@ namespace utils
 #if defined(__NetBSD__) || defined(__APPLE__)
 		// Always ON
 		vm_overcommit = 0;
-#elif defined(__FreeBSD__) && defined(VM_OVERCOMMIT)
+#elif defined(__FreeBSD__)
 		int mib[2]{CTL_VM, VM_OVERCOMMIT};
 		if (::sysctl(mib, 2, &vm_overcommit, &vm_sz, NULL, 0) != 0)
-			vm_overcommit = -1;
-#elif defined(__FreeBSD__) || defined(__DragonFly__)
-		if (::sysctlbyname("vm.overcommit", &vm_overcommit, &vm_sz, NULL, 0) != 0)
 			vm_overcommit = -1;
 #else
 		vm_overcommit = -1;
@@ -474,8 +472,9 @@ namespace utils
 
 		if ((vm_overcommit & 3) == 0)
 		{
-#ifdef SHM_ANON
-			ensure(::shm_open(SHM_ANON, O_RDWR, S_IWUSR | S_IRUSR) == 0);
+#if defined(__FreeBSD__)
+			m_file = ::memfd_create_("", 0);
+			ensure(m_file >= 0);
 #else
 			const std::string name = "/rpcs3-mem2-" + std::to_string(reinterpret_cast<u64>(this));
 

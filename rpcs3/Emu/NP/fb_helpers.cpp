@@ -55,7 +55,68 @@ void np_handler::UserInfo2_to_SceNpUserInfo2(const UserInfo2* user, SceNpUserInf
 	}
 }
 
-void np_handler::SearchRoomReponse_to_SceNpMatching2SearchRoomResponse(const SearchRoomResponse* resp, SceNpMatching2SearchRoomResponse* search_resp)
+void np_handler::RoomDataExternal_to_SceNpMatching2RoomDataExternal(const RoomDataExternal* room, SceNpMatching2RoomDataExternal* room_info)
+{
+	room_info->serverId           = room->serverId();
+	room_info->worldId            = room->worldId();
+	room_info->publicSlotNum      = room->publicSlotNum();
+	room_info->privateSlotNum     = room->privateSlotNum();
+	room_info->lobbyId            = room->lobbyId();
+	room_info->roomId             = room->roomId();
+	room_info->openPublicSlotNum  = room->openPublicSlotNum();
+	room_info->maxSlot            = room->maxSlot();
+	room_info->openPrivateSlotNum = room->openPrivateSlotNum();
+	room_info->curMemberNum       = room->curMemberNum();
+	room_info->passwordSlotMask   = room->passwordSlotMask();
+	
+	if (auto owner = room->owner())
+	{
+		vm::ptr<SceNpUserInfo2> owner_info(allocate(sizeof(SceNpUserInfo2)));
+		UserInfo2_to_SceNpUserInfo2(owner, owner_info.get_ptr());
+		room_info->owner = owner_info;
+	}
+
+	if (room->roomGroup() && room->roomGroup()->size() != 0)
+	{
+		room_info->roomGroupNum = room->roomGroup()->size();
+		vm::ptr<SceNpMatching2RoomGroup> group_info(allocate(sizeof(SceNpMatching2RoomGroup) * room_info->roomGroupNum));
+		RoomGroup_to_SceNpMatching2RoomGroup(room->roomGroup(), group_info);
+		room_info->roomGroup = group_info;
+	}
+
+	room_info->flagAttr = room->flagAttr();
+
+	if (room->roomSearchableIntAttrExternal() && room->roomSearchableIntAttrExternal()->size() != 0)
+	{
+		room_info->roomSearchableIntAttrExternalNum = room->roomSearchableIntAttrExternal()->size();
+		vm::ptr<SceNpMatching2IntAttr> intattr_info(allocate(sizeof(SceNpMatching2IntAttr) * room_info->roomSearchableIntAttrExternalNum));
+		for (flatbuffers::uoffset_t a_index = 0; a_index < room->roomSearchableIntAttrExternal()->size(); a_index++)
+		{
+			auto int_attr             = room->roomSearchableIntAttrExternal()->Get(a_index);
+			intattr_info[a_index].id  = int_attr->id();
+			intattr_info[a_index].num = int_attr->num();
+		}
+		room_info->roomSearchableIntAttrExternal = intattr_info;
+	}
+
+	if (room->roomSearchableBinAttrExternal() && room->roomSearchableBinAttrExternal()->size() != 0)
+	{
+		room_info->roomSearchableBinAttrExternalNum = room->roomSearchableBinAttrExternal()->size();
+		vm::ptr<SceNpMatching2BinAttr> binattr_info(allocate(sizeof(SceNpMatching2BinAttr) * room_info->roomSearchableBinAttrExternalNum));
+		BinAttr_to_SceNpMatching2BinAttr(room->roomSearchableBinAttrExternal(), binattr_info);
+		room_info->roomSearchableBinAttrExternal = binattr_info;
+	}
+
+	if (room->roomBinAttrExternal() && room->roomBinAttrExternal()->size() != 0)
+	{
+		room_info->roomBinAttrExternalNum = room->roomBinAttrExternal()->size();
+		vm::ptr<SceNpMatching2BinAttr> binattr_info(allocate(sizeof(SceNpMatching2BinAttr) * room_info->roomBinAttrExternalNum));
+		BinAttr_to_SceNpMatching2BinAttr(room->roomBinAttrExternal(), binattr_info);
+		room_info->roomBinAttrExternal = binattr_info;
+	}
+}
+
+void np_handler::SearchRoomResponse_to_SceNpMatching2SearchRoomResponse(const SearchRoomResponse* resp, SceNpMatching2SearchRoomResponse* search_resp)
 {
 	search_resp->range.size       = resp->size();
 	search_resp->range.startIndex = resp->startIndex();
@@ -66,7 +127,7 @@ void np_handler::SearchRoomReponse_to_SceNpMatching2SearchRoomResponse(const Sea
 		vm::addr_t previous_next = vm::cast<u32>(0);
 		for (flatbuffers::uoffset_t i = 0; i < resp->rooms()->size(); i++)
 		{
-			auto room = resp->rooms()->Get(i);
+			auto* room = resp->rooms()->Get(i);
 			vm::ptr<SceNpMatching2RoomDataExternal> room_info(allocate(sizeof(SceNpMatching2RoomDataExternal)));
 
 			if (i > 0)
@@ -81,67 +142,39 @@ void np_handler::SearchRoomReponse_to_SceNpMatching2SearchRoomResponse(const Sea
 
 			previous_next = vm::cast(room_info.addr());
 
-			room_info->serverId           = room->serverId();
-			room_info->worldId            = room->worldId();
-			room_info->publicSlotNum      = room->publicSlotNum();
-			room_info->privateSlotNum     = room->privateSlotNum();
-			room_info->lobbyId            = room->lobbyId();
-			room_info->roomId             = room->roomId();
-			room_info->openPublicSlotNum  = room->openPublicSlotNum();
-			room_info->maxSlot            = room->maxSlot();
-			room_info->openPrivateSlotNum = room->openPrivateSlotNum();
-			room_info->curMemberNum       = room->curMemberNum();
-			room_info->passwordSlotMask   = room->curMemberNum();
-			if (auto owner = room->owner())
-			{
-				vm::ptr<SceNpUserInfo2> owner_info(allocate(sizeof(SceNpUserInfo2)));
-				UserInfo2_to_SceNpUserInfo2(owner, owner_info.get_ptr());
-				room_info->owner = owner_info;
-			}
-
-			if (room->roomGroup() && room->roomGroup()->size() != 0)
-			{
-				room_info->roomGroupNum = room->roomGroup()->size();
-				vm::ptr<SceNpMatching2RoomGroup> group_info(allocate(sizeof(SceNpMatching2RoomGroup) * room_info->roomGroupNum));
-				RoomGroup_to_SceNpMatching2RoomGroup(room->roomGroup(), group_info);
-				room_info->roomGroup = group_info;
-			}
-
-			room_info->flagAttr = room->flagAttr();
-
-			if (room->roomSearchableIntAttrExternal() && room->roomSearchableIntAttrExternal()->size() != 0)
-			{
-				room_info->roomSearchableIntAttrExternalNum = room->roomSearchableIntAttrExternal()->size();
-				vm::ptr<SceNpMatching2IntAttr> intattr_info(allocate(sizeof(SceNpMatching2IntAttr) * room_info->roomSearchableIntAttrExternalNum));
-				for (flatbuffers::uoffset_t a_index = 0; a_index < room->roomSearchableIntAttrExternal()->size(); a_index++)
-				{
-					auto int_attr             = room->roomSearchableIntAttrExternal()->Get(a_index);
-					intattr_info[a_index].id  = int_attr->id();
-					intattr_info[a_index].num = int_attr->num();
-				}
-				room_info->roomSearchableIntAttrExternal = intattr_info;
-			}
-
-			if (room->roomSearchableBinAttrExternal() && room->roomSearchableBinAttrExternal()->size() != 0)
-			{
-				room_info->roomSearchableBinAttrExternalNum = room->roomSearchableBinAttrExternal()->size();
-				vm::ptr<SceNpMatching2BinAttr> binattr_info(allocate(sizeof(SceNpMatching2BinAttr) * room_info->roomSearchableBinAttrExternalNum));
-				BinAttr_to_SceNpMatching2BinAttr(room->roomSearchableBinAttrExternal(), binattr_info);
-				room_info->roomSearchableBinAttrExternal = binattr_info;
-			}
-
-			if (room->roomBinAttrExternal() && room->roomBinAttrExternal()->size() != 0)
-			{
-				room_info->roomBinAttrExternalNum = room->roomBinAttrExternal()->size();
-				vm::ptr<SceNpMatching2BinAttr> binattr_info(allocate(sizeof(SceNpMatching2BinAttr) * room_info->roomBinAttrExternalNum));
-				BinAttr_to_SceNpMatching2BinAttr(room->roomBinAttrExternal(), binattr_info);
-				room_info->roomBinAttrExternal = binattr_info;
-			}
+			RoomDataExternal_to_SceNpMatching2RoomDataExternal(room, room_info.get_ptr());
 		}
 	}
 	else
 	{
 		search_resp->roomDataExternal.set(0);
+	}
+}
+
+void np_handler::GetRoomDataExternalListResponse_to_SceNpMatching2GetRoomDataExternalListResponse(const GetRoomDataExternalListResponse* resp, SceNpMatching2GetRoomDataExternalListResponse* get_resp)
+{
+	get_resp->roomDataExternalNum = resp->rooms() ? resp->rooms()->size() : 0;
+	get_resp->roomDataExternal.set(0);
+
+	vm::addr_t previous_next = vm::cast<u32>(0);
+	for (std::size_t i = 0; i < get_resp->roomDataExternalNum; i++)
+	{
+		auto* room = resp->rooms()->Get(i);
+		vm::ptr<SceNpMatching2RoomDataExternal> room_info(allocate(sizeof(SceNpMatching2RoomDataExternal)));
+
+		if (i > 0)
+		{
+			vm::ptr<SceNpMatching2RoomDataExternal> prev_room(previous_next);
+			prev_room->next.set(room_info.addr());
+		}
+		else
+		{
+			get_resp->roomDataExternal = room_info;
+		}
+
+		previous_next = vm::cast(room_info.addr());
+
+		RoomDataExternal_to_SceNpMatching2RoomDataExternal(room, room_info.get_ptr());
 	}
 }
 

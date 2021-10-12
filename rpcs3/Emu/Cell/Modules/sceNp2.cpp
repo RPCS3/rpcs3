@@ -613,17 +613,23 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 
 	switch (code)
 	{
-		case 1:
+		case SCE_NP_SIGNALING_CONN_INFO_RTT:
 		{
 			connInfo->rtt = 20000; // HACK
 			break;
 		}
-		case 2:
+		case SCE_NP_SIGNALING_CONN_INFO_BANDWIDTH:
 		{
 			connInfo->bandwidth = 10'000'000; // 10 MBPS HACK
 			break;
 		}
-		case 5:
+		case SCE_NP_SIGNALING_CONN_INFO_PEER_NPID:
+		{
+			// TODO: need an update to whole signaling as matching2 signaling ignores npids atm
+			sceNp2.fatal("sceNpMatching2SignalingGetConnectionInfo Unimplemented SCE_NP_SIGNALING_CONN_INFO_PEER_NPID");
+			break;
+		}
+		case SCE_NP_SIGNALING_CONN_INFO_PEER_ADDRESS:
 		{
 			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
 			const auto si = sigh.get_sig2_infos(roomId, memberId);
@@ -631,7 +637,15 @@ error_code sceNpMatching2SignalingGetConnectionInfo(
 			connInfo->address.addr.np_s_addr = si.addr;
 			break;
 		}
-		case 6:
+		case SCE_NP_SIGNALING_CONN_INFO_MAPPED_ADDRESS:
+		{
+			auto& sigh = g_fxo->get<named_thread<signaling_handler>>();
+			const auto si = sigh.get_sig2_infos(roomId, memberId);
+			connInfo->address.port = std::bit_cast<u16, be_t<u16>>(si.mapped_port);
+			connInfo->address.addr.np_s_addr = si.mapped_addr;
+			break;
+		}
+		case SCE_NP_SIGNALING_CONN_INFO_PACKET_LOSS:
 		{
 			connInfo->packet_loss = 1; // HACK
 			break;
@@ -1273,6 +1287,8 @@ error_code sceNpMatching2GetRoomDataExternalList(
 	{
 		return res;
 	}
+
+	*assignedReqId = nph.get_roomdata_external_list(ctxId, optParam, reqParam.get_ptr());
 
 	return CELL_OK;
 }
