@@ -4,7 +4,8 @@
 
 class usb_device_turntable : public usb_device_emulated
 {
-	int controller_index;
+private:
+	int m_controller_index;
 
 public:
 	usb_device_turntable(int controller_index);

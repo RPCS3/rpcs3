@@ -7,10 +7,8 @@
 
 LOG_CHANNEL(turntable_log);
 
-usb_device_turntable::usb_device_turntable(int controller_index)
+usb_device_turntable::usb_device_turntable(int controller_index) : m_controller_index(controller_index)
 {
-	this->controller_index = controller_index;
-
 	device        = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0100, 0x00, 0x00, 0x00, 0x40, 0x12BA, 0x0140, 0x0005, 0x01, 0x02, 0x00, 0x01});
 	auto& config0 = device.add_node(UsbDescriptorNode(USB_DESCRIPTOR_CONFIG, UsbDeviceConfiguration{0x0029, 0x01, 0x01, 0x00, 0x80, 0x19}));
 	config0.add_node(UsbDescriptorNode(USB_DESCRIPTOR_INTERFACE, UsbDeviceInterface{0x00, 0x00, 0x02, 0x03, 0x00, 0x00, 0x00}));
@@ -119,7 +117,7 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 	// All other bufs are always 0x00
 
 	const auto handler = pad::get_current_handler();
-	const auto& pad    = handler->GetPads()[this->controller_index];
+	const auto& pad    = handler->GetPads()[m_controller_index];
 
 	if (!(pad->m_port_status & CELL_PAD_STATUS_CONNECTED))
 		return;

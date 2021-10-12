@@ -189,6 +189,7 @@ usb_handler_thread::usb_handler_thread()
 		{
 			found_ghltar = true;
 		}
+
 		if (check_device(0x12BA, 0x0140, 0x0140, "DJ Hero Turntable"))
 		{
 			found_turntable = true;
