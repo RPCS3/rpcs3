@@ -18,7 +18,7 @@ protected:
 			return pos;
 		}
 
-		ensure(std::exchange(last_opcode[pos], c) == ' ' && last_opcode[pos] == ' ');
+		ensure(std::exchange(last_opcode[pos], c) == ' ' && last_opcode[pos + 1] == ' ');
 		return pos + 1;
 	}
 
