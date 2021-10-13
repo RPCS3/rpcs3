@@ -3,6 +3,7 @@
 #include "Utilities/Timer.h"
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Utilities/Thread.h"
+#include "Emu/Io/camera_handler_base.h"
 
 #include <map>
 
@@ -436,6 +437,8 @@ public:
 	atomic_t<u32> init = 0;
 
 	static constexpr auto thread_name = "Camera Thread"sv;
+
+	std::shared_ptr<camera_handler_base> handler;
 };
 
 using camera_thread = named_thread<camera_context>;

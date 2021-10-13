@@ -243,6 +243,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<mouse_handler> mouse{ this, "Mouse", mouse_handler::basic };
 		cfg::_enum<camera_handler> camera{ this, "Camera", camera_handler::null };
 		cfg::_enum<fake_camera_type> camera_type{ this, "Camera type", fake_camera_type::unknown };
+		cfg::_enum<camera_flip> camera_flip{ this, "Camera flip", camera_flip::none, true };
 		cfg::_enum<move_handler> move{ this, "Move", move_handler::null };
 		cfg::_enum<buzz_handler> buzz{ this, "Buzz emulated controller", buzz_handler::null };
 		cfg::_enum<turntable_handler> turntable{this, "Turntable emulated controller", turntable_handler::null};

@@ -133,6 +133,9 @@
     <Filter Include="Gui\rpcn">
       <UniqueIdentifier>{dfd401ec-dd22-4f8a-9dea-565a03efab6a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Io\camera">
+      <UniqueIdentifier>{f1996891-48b7-441a-b3fe-52794cbebe80}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -777,6 +780,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_recvmessage_dialog_frame.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\qt_camera_handler.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\qt_camera_video_surface.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -910,6 +919,12 @@
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_patch_creator_dialog.h">
       <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\qt_camera_video_surface.h">
+      <Filter>Io\camera</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\qt_camera_handler.h">
+      <Filter>Io\camera</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

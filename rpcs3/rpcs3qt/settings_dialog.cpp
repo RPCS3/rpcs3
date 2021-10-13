@@ -955,6 +955,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->cameraBox, emu_settings_type::Camera);
 	SubscribeTooltip(ui->gb_camera_setting, tooltips.settings.camera);
 
+	m_emu_settings->EnhanceComboBox(ui->cameraFlipBox, emu_settings_type::CameraFlip);
+	SubscribeTooltip(ui->gb_camera_flip, tooltips.settings.camera_flip);
+
 	m_emu_settings->EnhanceComboBox(ui->moveBox, emu_settings_type::Move);
 	SubscribeTooltip(ui->gb_move_handler, tooltips.settings.move);
 

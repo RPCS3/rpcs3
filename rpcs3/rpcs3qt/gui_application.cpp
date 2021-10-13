@@ -15,11 +15,13 @@
 #include "gl_gs_frame.h"
 #include "display_sleep_control.h"
 #include "localized_emu.h"
+#include "qt_camera_handler.h"
 
 #ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
 #endif
 
+#include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/RSX/Overlays/overlay_perf_metrics.h"
 #include "Emu/system_utils.hpp"
@@ -349,6 +351,21 @@ void gui_application::InitializeCallbacks()
 		}
 	};
 
+	callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>
+	{
+		switch (g_cfg.io.camera.get())
+		{
+		case camera_handler::null:
+		case camera_handler::fake:
+		{
+			return std::make_shared<null_camera_handler>();
+		}
+		case camera_handler::qt:
+		{
+			return std::make_shared<qt_camera_handler>();
+		}
+		}
+	};
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };

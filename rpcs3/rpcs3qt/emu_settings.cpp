@@ -1007,11 +1007,21 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case fake_camera_type::uvc1_1: return tr("UVC 1.1", "Camera type");
 		}
 		break;
+	case emu_settings_type::CameraFlip:
+		switch (static_cast<camera_flip>(index))
+		{
+		case camera_flip::none: return tr("No", "Camera flip");
+		case camera_flip::horizontal: return tr("Flip horizontally", "Camera flip");
+		case camera_flip::vertical: return tr("Flip vertically", "Camera flip");
+		case camera_flip::both: return tr("Flip both axis", "Camera flip");
+		}
+		break;
 	case emu_settings_type::Camera:
 		switch (static_cast<camera_handler>(index))
 		{
 		case camera_handler::null: return tr("Null", "Camera handler");
 		case camera_handler::fake: return tr("Fake", "Camera handler");
+		case camera_handler::qt: return tr("Qt", "Camera handler");
 		}
 		break;
 	case emu_settings_type::Move:

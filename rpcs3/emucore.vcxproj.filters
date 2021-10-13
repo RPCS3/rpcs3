@@ -1999,6 +1999,12 @@
     <ClInclude Include="Emu\RSX\Common\bitfield.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\camera_handler_base.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\Null\null_camera_handler.h">
+      <Filter>Emu\Io\Null</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Common\Interpreter\FragmentInterpreter.glsl">
