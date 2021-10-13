@@ -136,7 +136,7 @@ public:
 
 private:
 	// Various generic helpers
-	bool discover_ip_address();
+	void discover_ip_address();
 	bool discover_ether_address();
 	bool error_and_disconnect(const std::string& error_msg);
 
