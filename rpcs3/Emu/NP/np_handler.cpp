@@ -52,12 +52,7 @@ np_handler::np_handler()
 
 	if (get_net_status() == CELL_NET_CTL_STATE_IPObtained)
 	{
-		if (!discover_ip_address())
-		{
-			nph_log.error("Failed to discover local IP!");
-			is_connected  = false;
-			is_psn_active = false;
-		}
+		discover_ip_address();
 
 		if (!discover_ether_address())
 		{
@@ -103,30 +98,38 @@ np_handler::np_handler()
 	}
 }
 
-bool np_handler::discover_ip_address()
+void np_handler::discover_ip_address()
 {
 	hostname.clear();
 	hostname.resize(1024);
 
+	const auto use_default_ip_addr = [this](const std::string_view error_msg)
+	{
+		nph_log.error("discover_ip_address: %s", error_msg);
+		nph_log.error("discover_ip_address: Defaulting to 127.0.0.1!");
+		local_ip_addr  = 0x0100007f;
+		public_ip_addr = local_ip_addr;
+	};
+
 	if (gethostname(hostname.data(), hostname.size()) == -1)
 	{
-		nph_log.error("gethostname failed in IP discovery!");
-		return false;
+		use_default_ip_addr("gethostname failed!");
+		return;
 	}
 
-	nph_log.notice("Hostname was determined to be %s", hostname.c_str());
+	nph_log.notice("discover_ip_address: Hostname was determined to be %s", hostname.c_str());
 
 	hostent* host = gethostbyname(hostname.data());
 	if (!host)
 	{
-		nph_log.error("gethostbyname failed in IP discovery!");
-		return false;
+		use_default_ip_addr("gethostbyname failed!");
+		return;
 	}
 
 	if (host->h_addrtype != AF_INET)
 	{
-		nph_log.error("Could only find IPv6 addresses for current host!");
-		return false;
+		use_default_ip_addr("Could only find IPv6 addresses for current host!");
+		return;
 	}
 
 	// First address is used for now, (TODO combobox with possible local addresses to use?)
@@ -135,9 +138,7 @@ bool np_handler::discover_ip_address()
 	// Set public address to local discovered address for now, may be updated later;
 	public_ip_addr = local_ip_addr;
 
-	nph_log.notice("IP was determined to be %s", ip_to_string(local_ip_addr));
-
-	return true;
+	nph_log.notice("discover_ip_address: IP was determined to be %s", ip_to_string(local_ip_addr));
 }
 
 bool np_handler::discover_ether_address()
