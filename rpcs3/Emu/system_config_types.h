@@ -78,6 +78,15 @@ enum class camera_handler
 {
 	null,
 	fake,
+	qt
+};
+
+enum class camera_flip
+{
+	none,
+	horizontal,
+	vertical,
+	both
 };
 
 enum class fake_camera_type

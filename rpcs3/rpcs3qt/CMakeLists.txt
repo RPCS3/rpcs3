@@ -49,6 +49,8 @@ set(SRC_FILES
     persistent_settings.cpp
     pkg_install_dialog.cpp
     progress_dialog.cpp
+    qt_camera_handler.cpp
+    qt_camera_video_surface.cpp
     qt_utils.cpp
     register_editor_dialog.cpp
     recvmessage_dialog_frame.cpp

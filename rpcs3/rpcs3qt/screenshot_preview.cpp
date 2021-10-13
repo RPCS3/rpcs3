@@ -21,6 +21,7 @@ screenshot_preview::screenshot_preview(const QString& filepath, QWidget* parent)
 	setWindowTitle(tr("Screenshot Viewer"));
 	setObjectName("screenshot_preview");
 	setContextMenuPolicy(Qt::CustomContextMenu);
+	setAttribute(Qt::WA_DeleteOnClose);
 	setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
 	setPixmap(QPixmap::fromImage(m_image));
 	setMinimumSize(160, 90);

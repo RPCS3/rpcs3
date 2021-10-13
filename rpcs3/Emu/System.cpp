@@ -635,7 +635,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 
 		if (!add_only)
 		{
-			if (m_config_mode == cfg_mode::custom_selection || m_config_mode == cfg_mode::continuous)
+			if (m_config_mode == cfg_mode::custom_selection || (m_config_mode == cfg_mode::continuous && !m_config_path.empty()))
 			{
 				if (fs::file cfg_file{ m_config_path })
 				{

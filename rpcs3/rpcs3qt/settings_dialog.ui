@@ -1494,7 +1494,7 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="inputTabLayout3" stretch="1,1,1">
+        <layout class="QHBoxLayout" name="inputTabLayout3">
          <item>
           <widget class="QGroupBox" name="gb_turntable_emulated">
            <property name="title">
@@ -1520,7 +1520,16 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="inputTabSpacerWidget" native="true"/>
+          <widget class="QGroupBox" name="gb_camera_flip">
+           <property name="title">
+            <string>Camera Flip</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_camera_flip_layout">
+            <item>
+             <widget class="QComboBox" name="cameraFlipBox"/>
+            </item>
+           </layout>
+          </widget>
          </item>
         </layout>
        </item>
