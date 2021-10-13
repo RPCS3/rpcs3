@@ -21,8 +21,12 @@ class rpcn_account_dialog : public QDialog
 public:
 	rpcn_account_dialog(QWidget* parent = nullptr);
 
+private:
 	bool save_config();
-	bool create_account();
+
+private Q_SLOTS:	
+	void create_account();
+	void resend_token();
 
 protected:
 	QLineEdit *m_edit_host, *m_edit_npid, *m_edit_token;

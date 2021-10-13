@@ -285,6 +285,7 @@ namespace rpcn
 		void remove_friend_cb(friend_cb_func, void* cb_param);
 
 		ErrorType create_user(const std::string& npid, const std::string& password, const std::string& online_name, const std::string& avatar_url, const std::string& email);
+		ErrorType resend_token(const std::string& npid, const std::string& password);
 		bool add_friend(const std::string& friend_username);
 		bool remove_friend(const std::string& friend_username);
 

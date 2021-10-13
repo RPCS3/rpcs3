@@ -110,8 +110,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 	QPushButton* btn_create      = new QPushButton(tr("Create Account"), this);
 	QPushButton* btn_resendtoken = new QPushButton(tr("Resend Token"), this);
-	btn_resendtoken->setEnabled(false);
-	QPushButton* btn_changepass = new QPushButton(tr("Change Password"), this);
+	QPushButton* btn_changepass  = new QPushButton(tr("Change Password"), this);
 	btn_changepass->setEnabled(false);
 	QPushButton* btn_save = new QPushButton(tr("Save"), this);
 
@@ -171,11 +170,11 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 	connect(btn_save, &QAbstractButton::clicked, this, [this]()
 		{
-			if (this->save_config())
-				this->close();
+			if (save_config())
+				close();
 		});
-	connect(btn_create, &QAbstractButton::clicked, this, [this]()
-		{ this->create_account(); });
+	connect(btn_create, &QAbstractButton::clicked, this, &rpcn_account_dialog::create_account);
+	connect(btn_resendtoken, &QAbstractButton::clicked, this, &rpcn_account_dialog::resend_token);
 
 	g_cfg_rpcn.load();
 
@@ -223,11 +222,11 @@ bool rpcn_account_dialog::save_config()
 	return true;
 }
 
-bool rpcn_account_dialog::create_account()
+void rpcn_account_dialog::create_account()
 {
 	// Validate and save
 	if (!save_config())
-		return false;
+		return;
 
 	QString email;
 	const QRegExpValidator simple_email_validator(QRegExp("^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*$"));
@@ -237,7 +236,7 @@ bool rpcn_account_dialog::create_account()
 		bool clicked_ok = false;
 		email           = QInputDialog::getText(this, tr("Email address"), tr("An email address is required, please note:\n*A valid email is needed to validate your account.\n*Your email won't be used for anything beyond sending you the token.\n*Upon successful creation a token will be sent to your email which you'll need to login.\n\n"), QLineEdit::Normal, "", &clicked_ok);
 		if (!clicked_ok)
-			return false;
+			return;
 
 		int pos = 0;
 		if (email.isEmpty() || simple_email_validator.validate(email, pos) != QValidator::Acceptable)
@@ -252,7 +251,6 @@ bool rpcn_account_dialog::create_account()
 
 	const auto rpcn = rpcn::rpcn_client::get_instance();
 
-	const auto host        = g_cfg_rpcn.get_host();
 	const auto npid        = g_cfg_rpcn.get_npid();
 	const auto online_name = npid;
 	const auto avatar_url  = "https://rpcs3.net/cdn/netplay/DefaultAvatar.png";
@@ -262,7 +260,7 @@ bool rpcn_account_dialog::create_account()
 	{
 		const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(rpcn_state_to_qstr(result));
 		QMessageBox::critical(this, tr("Error Connecting"), error_message, QMessageBox::Ok);
-		return false;
+		return;
 	}
 
 	if (auto error = rpcn->create_user(npid, password, online_name, avatar_url, email.toStdString()); error != rpcn::ErrorType::NoError)
@@ -277,11 +275,47 @@ bool rpcn_account_dialog::create_account()
 		default: error_message = tr("Unknown error"); break;
 		}
 		QMessageBox::critical(this, tr("Error Creating Account"), tr("Failed to create the account:\n%0").arg(error_message), QMessageBox::Ok);
-		return false;
+		return;
 	}
 
 	QMessageBox::information(this, tr("Account created!"), tr("Your account has been created successfully!\nCheck your email for your token!"), QMessageBox::Ok);
-	return true;
+}
+
+void rpcn_account_dialog::resend_token()
+{
+	if (!save_config())
+		return;
+
+	const auto rpcn = rpcn::rpcn_client::get_instance();
+
+	const auto npid     = g_cfg_rpcn.get_npid();
+	const auto password = g_cfg_rpcn.get_password();
+
+	if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
+	{
+		const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(rpcn_state_to_qstr(result));
+		QMessageBox::critical(this, tr("Error Connecting"), error_message, QMessageBox::Ok);
+		return;
+	}
+
+	if (auto error = rpcn->resend_token(npid, password); error != rpcn::ErrorType::NoError)
+	{
+		QString error_message;
+		switch (error)
+		{
+		case rpcn::ErrorType::Invalid: error_message = tr("The server has no email verification and doesn't need a token!"); break;
+		case rpcn::ErrorType::LoginAlreadyLoggedIn: error_message = tr("You can't ask for your token while authentified!"); break;
+		case rpcn::ErrorType::DbFail: error_message = tr("A database related error happened on the server!"); break;
+		case rpcn::ErrorType::TooSoon: error_message = tr("You can only ask for a token mail once every 24 hours!"); break;
+		case rpcn::ErrorType::EmailFail: error_message = tr("The mail couldn't be sent successfully!"); break;
+		case rpcn::ErrorType::LoginError: error_message = tr("The login/password pair is invalid!"); break;
+		default: error_message = tr("Unknown error"); break;
+		}
+		QMessageBox::critical(this, tr("Error Sending Token"), tr("Failed to send the token:\n%0").arg(error_message), QMessageBox::Ok);
+		return;
+	}
+
+	QMessageBox::information(this, tr("Token Sent!"), tr("Your token was successfully resent to the email associated with your account!"), QMessageBox::Ok);
 }
 
 rpcn_ask_password_dialog::rpcn_ask_password_dialog(QWidget* parent)
@@ -363,7 +397,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 	QGroupBox* grp_list_friends   = new QGroupBox(tr("Friends"));
 	QVBoxLayout* vbox_lst_friends = new QVBoxLayout();
-	m_lst_friends                   = new QListWidget(this);
+	m_lst_friends                 = new QListWidget(this);
 	m_lst_friends->setContextMenuPolicy(Qt::CustomContextMenu);
 	vbox_lst_friends->addWidget(m_lst_friends);
 	QPushButton* btn_addfriend = new QPushButton(tr("Add Friend"));
@@ -373,7 +407,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 	QGroupBox* grp_list_requests   = new QGroupBox(tr("Friend Requests"));
 	QVBoxLayout* vbox_lst_requests = new QVBoxLayout();
-	m_lst_requests                   = new QListWidget(this);
+	m_lst_requests                 = new QListWidget(this);
 	m_lst_requests->setContextMenuPolicy(Qt::CustomContextMenu);
 	vbox_lst_requests->addWidget(m_lst_requests);
 	QHBoxLayout* hbox_request_btns = new QHBoxLayout();
@@ -383,7 +417,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 	QGroupBox* grp_list_blocks   = new QGroupBox(tr("Blocked Users"));
 	QVBoxLayout* vbox_lst_blocks = new QVBoxLayout();
-	m_lst_blocks                   = new QListWidget(this);
+	m_lst_blocks                 = new QListWidget(this);
 	vbox_lst_blocks->addWidget(m_lst_blocks);
 	grp_list_blocks->setLayout(vbox_lst_blocks);
 	hbox_groupboxes->addWidget(grp_list_blocks);

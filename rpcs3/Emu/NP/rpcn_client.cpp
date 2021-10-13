@@ -299,7 +299,8 @@ namespace rpcn
 			// Those commands are handled synchronously and won't be forwarded to NP Handler
 			if (command == CommandType::Login || command == CommandType::GetServerList || command == CommandType::Create ||
 				command == CommandType::AddFriend || command == CommandType::RemoveFriend ||
-				command == CommandType::AddBlock || command == CommandType::RemoveBlock || command == CommandType::SendMessage)
+				command == CommandType::AddBlock || command == CommandType::RemoveBlock ||
+				command == CommandType::SendMessage || command == CommandType::SendToken)
 			{
 				std::lock_guard lock(mutex_replies_sync);
 				replies_sync.insert(std::make_pair(packet_id, std::make_pair(command, std::move(data))));
@@ -829,6 +830,41 @@ namespace rpcn
 		}
 
 		rpcn_log.success("You have successfully created a RPCN account(%s | %s)!", npid, online_name);
+
+		return ErrorType::NoError;
+	}
+
+	ErrorType rpcn_client::resend_token(const std::string& npid, const std::string& password)
+	{
+		if (authentified)
+		{
+			// If you're already logged in why do you need a token?
+			return ErrorType::LoginAlreadyLoggedIn;
+		}
+
+		std::vector<u8> data;
+		std::copy(npid.begin(), npid.end(), std::back_inserter(data));
+		data.push_back(0);
+		std::copy(password.begin(), password.end(), std::back_inserter(data));
+		data.push_back(0);
+
+		u64 req_id = rpcn_request_counter.fetch_add(1);
+
+		std::vector<u8> packet_data;
+		if (!forge_send_reply(CommandType::SendToken, req_id, data, packet_data))
+		{
+			return ErrorType::Malformed;
+		}
+
+		vec_stream reply(packet_data);
+		auto error = static_cast<ErrorType>(reply.get<u8>());
+
+		if (is_error(error))
+		{
+			return error;
+		}
+
+		rpcn_log.success("Token has successfully been resent!");
 
 		return ErrorType::NoError;
 	}
@@ -1591,10 +1627,10 @@ namespace rpcn
 		case AlreadyJoined: rpcn_log.error("User has already joined!"); break;
 		case DbFail: rpcn_log.error("A db query failed on the server!"); break;
 		case EmailFail: rpcn_log.error("An email action failed on the server!"); break;
-		case NotFound: rpcn_log.error("A request replied not found!"); return false;
+		case NotFound: rpcn_log.error("A request replied not found!"); break;
 		case Blocked: rpcn_log.error("You're blocked!"); break;
 		case AlreadyFriend: rpcn_log.error("You're already friends!"); break;
-		case Unsupported: rpcn_log.error("An unsupported operation was attempted!"); return false;
+		case Unsupported: rpcn_log.error("An unsupported operation was attempted!"); break;
 		default: rpcn_log.fatal("Unhandled ErrorType reached the switch?"); break;
 		}
 
@@ -1621,7 +1657,7 @@ namespace rpcn
 			{
 				return state;
 			}
-			
+
 			want_conn = true;
 			sem_rpcn.release();
 		}
