@@ -24,6 +24,7 @@ namespace
 	constexpr u32 DUALSENSE_ACC_RES_PER_G = 8192;
 	constexpr u32 DUALSENSE_GYRO_RES_PER_DEG_S = 1024;
 	constexpr u32 DUALSENSE_CALIBRATION_REPORT_SIZE = 41;
+	constexpr u32 DUALSENSE_VERSION_REPORT_SIZE = 64;
 	constexpr u32 DUALSENSE_BLUETOOTH_REPORT_SIZE = 78;
 	constexpr u32 DUALSENSE_USB_REPORT_SIZE = 63;
 	constexpr u32 DUALSENSE_COMMON_REPORT_SIZE = 47;
@@ -219,7 +220,7 @@ void dualsense_pad_handler::check_add_device(hid_device* hidDevice, std::string_
 
 	buf[0] = 0x20;
 
-	res = hid_get_feature_report(hidDevice, buf.data(), 64);
+	res = hid_get_feature_report(hidDevice, buf.data(), DUALSENSE_VERSION_REPORT_SIZE);
 	if (res == 65)
 	{
 		hw_version = read_u32(&buf[24]);

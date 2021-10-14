@@ -18,6 +18,7 @@ namespace
 	constexpr u32 DS4_FEATURE_REPORT_0x05_SIZE = 41;
 	constexpr u32 DS4_FEATURE_REPORT_0x12_SIZE = 16;
 	constexpr u32 DS4_FEATURE_REPORT_0x81_SIZE = 7;
+	constexpr u32 DS4_FEATURE_REPORT_0xA3_SIZE = 49;
 	constexpr u32 DS4_INPUT_REPORT_0x11_SIZE = 78;
 	constexpr u32 DS4_OUTPUT_REPORT_0x05_SIZE = 32;
 	constexpr u32 DS4_OUTPUT_REPORT_0x11_SIZE = 78;
@@ -568,6 +569,22 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 		return;
 	}
 
+	u32 hw_version{};
+	u32 fw_version{};
+
+	buf[0] = 0xA3;
+
+	res = hid_get_feature_report(hidDevice, buf.data(), DS4_FEATURE_REPORT_0xA3_SIZE);
+	if (res <= 0)
+	{
+		ds4_log.error("check_add_device: hid_get_feature_report 0xA3 failed! Could not retrieve firmware version! result=%d, error=%s", res, hid_error(hidDevice));
+	}
+	else
+	{
+		hw_version = read_u32(&buf[35]);
+		fw_version = read_u32(&buf[41]);
+	}
+
 	if (hid_set_nonblocking(hidDevice, 1) == -1)
 	{
 		ds4_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
@@ -581,7 +598,7 @@ void ds4_pad_handler::check_add_device(hid_device* hidDevice, std::string_view p
 
 	send_output_report(device);
 
-	ds4_log.notice("Added device: bluetooth=%d, serial='%s', path='%s'", device->bt_controller, serial, device->path);
+	ds4_log.notice("Added device: bluetooth=%d, serial='%s', hw_version: 0x%x, fw_version: 0x%x, path='%s'", device->bt_controller, serial, hw_version, fw_version, device->path);
 }
 
 ds4_pad_handler::~ds4_pad_handler()
