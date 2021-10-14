@@ -80,10 +80,10 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	QHBoxLayout* hbox_b_main = new QHBoxLayout();
 	hbox_b_main->setContentsMargins(0, 0, 0, 0);
 
-	m_breakpoint_handler = new breakpoint_handler();
-	m_breakpoint_list = new breakpoint_list(this, m_breakpoint_handler);
+	m_ppu_breakpoint_handler = new breakpoint_handler();
+	m_breakpoint_list = new breakpoint_list(this, m_ppu_breakpoint_handler);
 
-	m_debugger_list = new debugger_list(this, m_gui_settings, m_breakpoint_handler);
+	m_debugger_list = new debugger_list(this, m_gui_settings, m_ppu_breakpoint_handler);
 	m_debugger_list->installEventFilter(this);
 
 	m_call_stack_list = new call_stack_list(this);
@@ -823,7 +823,7 @@ void debugger_frame::UpdateUnitList()
 	{
 		if (emu_state == system_state::stopped) return;
 
-		const QVariant var_cpu = QVariant::fromValue<std::pair<cpu_thread*, u32>>(std::make_pair(&cpu, id));
+		const QVariant var_cpu = QVariant::fromValue<data_type>(std::make_pair(&cpu, id));
 
 		// Space at the end is to pad a gap on the right
 		m_choice_units->addItem(qstr((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), var_cpu);
@@ -869,7 +869,7 @@ void debugger_frame::UpdateUnitList()
 
 void debugger_frame::OnSelectUnit()
 {
-	auto [selected, cpu_id] = m_choice_units->currentData().value<std::pair<cpu_thread*, u32>>();
+	auto [selected, cpu_id] = m_choice_units->currentData().value<data_type>();
 
 	if (m_emu_state != system_state::stopped)
 	{
@@ -963,7 +963,7 @@ void debugger_frame::DoUpdate()
 	// Check if we need to disable a step over bp
 	if (const auto cpu0 = get_cpu(); cpu0 && m_last_step_over_breakpoint != umax && cpu0->get_pc() == m_last_step_over_breakpoint)
 	{
-		m_breakpoint_handler->RemoveBreakpoint(m_last_step_over_breakpoint);
+		m_ppu_breakpoint_handler->RemoveBreakpoint(m_last_step_over_breakpoint);
 		m_last_step_over_breakpoint = -1;
 	}
 
@@ -1116,13 +1116,13 @@ void debugger_frame::DoStep(bool step_over)
 
 				// Set breakpoint on next instruction
 				const u32 next_instruction_pc = current_instruction_pc + 4;
-				m_breakpoint_handler->AddBreakpoint(next_instruction_pc);
+				m_ppu_breakpoint_handler->AddBreakpoint(next_instruction_pc);
 
 				// Undefine previous step over breakpoint if it hasnt been already
 				// This can happen when the user steps over a branch that doesn't return to itself
 				if (m_last_step_over_breakpoint != umax)
 				{
-					m_breakpoint_handler->RemoveBreakpoint(next_instruction_pc);
+					m_ppu_breakpoint_handler->RemoveBreakpoint(next_instruction_pc);
 				}
 
 				m_last_step_over_breakpoint = next_instruction_pc;

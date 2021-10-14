@@ -64,7 +64,7 @@ class debugger_frame : public custom_dock_widget
 	rsx::thread* m_rsx = nullptr;
 
 	breakpoint_list* m_breakpoint_list;
-	breakpoint_handler* m_breakpoint_handler;
+	breakpoint_handler* m_ppu_breakpoint_handler;
 	call_stack_list* m_call_stack_list;
 	instruction_editor_dialog* m_inst_editor = nullptr;
 	register_editor_dialog* m_reg_editor = nullptr;

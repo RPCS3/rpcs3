@@ -52,6 +52,7 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::signal: return "sig";
 		case cpu_flag::memory: return "mem";
 		case cpu_flag::pending: return "pend";
+		case cpu_flag::pending_recheck: return "pend-re";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_pause: return "PAUSE";
 		case cpu_flag::dbg_step: return "STEP";
@@ -624,6 +625,11 @@ cpu_thread::cpu_thread(u32 id)
 	}
 
 	g_threads_created++;
+
+	if (u32* pc2 = get_pc2())
+	{
+		*pc2 = umax;
+	}
 }
 
 void cpu_thread::cpu_wait(bs_t<cpu_flag> old)
@@ -762,10 +768,18 @@ bool cpu_thread::check_state() noexcept
 				cpu_counter::add(this);
 			}
 
-			if ((state0 & (cpu_flag::pending + cpu_flag::temp)) == cpu_flag::pending)
+			constexpr auto pending_and_temp = (cpu_flag::pending + cpu_flag::temp);
+
+			if ((state0 & pending_and_temp) == cpu_flag::pending)
 			{
 				// Execute pending work
 				cpu_work();
+
+				if ((state1 ^ state) - pending_and_temp)
+				{
+					// Work could have changed flags
+					continue;
+				}
 			}
 
 			if (retval)
