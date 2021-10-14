@@ -127,7 +127,7 @@ private:
 
 	bool is_init = false;
 
-	std::vector<u64> blacklist;
+	std::vector<u64> m_blacklist;
 	std::shared_ptr<MMJOYDevice> m_dev;
 	std::unordered_map<int, MMJOYDevice> m_devices;
 
