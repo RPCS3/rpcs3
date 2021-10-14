@@ -716,8 +716,15 @@ namespace rpcn
 
 	bool rpcn_client::login(const std::string& npid, const std::string& password, const std::string& token)
 	{
-		if (npid.empty() || password.empty())
+		if (npid.empty())
 		{
+			state = rpcn_state::failure_id_username;
+			return false;
+		}
+
+		if (password.empty())
+		{
+			state = rpcn_state::failure_id_password;
 			return false;
 		}
 
