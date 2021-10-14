@@ -1503,9 +1503,29 @@ void spu_thread::cpu_work()
 
 	const u32 old_iter_count = cpu_work_iteration_count++;
 
-	const auto timeout = +g_cfg.core.mfc_transfers_timeout;
-
 	bool work_left = false;
+
+	if (has_active_local_bps)
+	{
+		if (local_breakpoints[pc / 4])
+		{
+			// Ignore repeatations until a different instruction is issued
+			if (pc != current_bp_pc)
+			{
+				// Breakpoint hit
+				state += cpu_flag::dbg_pause;
+			}
+		}
+
+		current_bp_pc = pc;
+		work_left = true;
+	}
+	else
+	{
+		current_bp_pc = umax;
+	}
+
+	const auto timeout = +g_cfg.core.mfc_transfers_timeout;
 
 	if (u32 shuffle_count = g_cfg.core.mfc_transfers_shuffling)
 	{
@@ -1544,7 +1564,19 @@ void spu_thread::cpu_work()
 
 	if (!work_left)
 	{
-		state -= cpu_flag::pending;
+		// No more pending work
+		state.atomic_op([](bs_t<cpu_flag>& flags)
+		{
+			if (flags & cpu_flag::pending_recheck)
+			{
+				// Do not really remove ::pending because external thread may have pushed more pending work
+				flags -= cpu_flag::pending_recheck;
+			}
+			else
+			{
+				flags -= cpu_flag::pending;
+			}
+		});
 	}
 
 	if (gen_interrupt)

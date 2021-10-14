@@ -843,6 +843,11 @@ public:
 
 	atomic_t<u8> debugger_float_mode = 0;
 
+	// PC-based breakpoint list
+	std::array<atomic_t<bool>, SPU_LS_SIZE / 4> local_breakpoints{};
+	atomic_t<bool> has_active_local_bps = false;
+	u32 current_bp_pc = umax;
+
 	void push_snr(u32 number, u32 value);
 	static void do_dma_transfer(spu_thread* _this, const spu_mfc_cmd& args, u8* ls);
 	bool do_dma_check(const spu_mfc_cmd& args);

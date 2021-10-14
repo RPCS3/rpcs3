@@ -22,6 +22,7 @@ enum class cpu_flag : u32
 	signal, // Thread received a signal (HLE)
 	memory, // Thread must unlock memory mutex
 	pending, // Thread has postponed work
+	pending_recheck, // Thread needs to recheck if there is pending work before ::pending removal
 
 	dbg_global_pause, // Emulation paused
 	dbg_pause, // Thread paused
