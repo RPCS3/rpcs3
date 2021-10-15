@@ -1,4 +1,4 @@
-﻿#include "msg_dialog_frame.h"
+#include "msg_dialog_frame.h"
 #include "custom_dialog.h"
 
 #include <QCoreApplication>
@@ -6,7 +6,6 @@
 #include <QFormLayout>
 
 #ifdef _WIN32
-#include <QWinTHumbnailToolbar>
 #include <QWinTHumbnailToolbutton>
 #elif HAVE_QTDBUS
 #include <QtDBus/QDBusMessage>
@@ -35,7 +34,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 	layout->setFormAlignment(Qt::AlignHCenter);
 	layout->addRow(m_text);
 
-	auto l_AddGauge = [=, this](QProgressBar* &bar, QLabel* &text)
+	auto l_AddGauge = [this, layout](QProgressBar* &bar, QLabel* &text)
 	{
 		text = new QLabel("", m_dialog);
 		bar = new QProgressBar(m_dialog);
@@ -67,7 +66,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 		m_tb_progress->setRange(0, 100);
 		m_tb_progress->setVisible(true);
 #elif HAVE_QTDBUS
-		UpdateProgress(0);
+		UpdateProgress(0, true);
 		m_progress_value = 0;
 #endif
 	}
@@ -102,14 +101,14 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 		connect(m_button_yes, &QAbstractButton::clicked, [this]()
 		{
 			g_last_user_response = CELL_MSGDIALOG_BUTTON_YES;
-			on_close(CELL_MSGDIALOG_BUTTON_YES);
+			if (on_close) on_close(CELL_MSGDIALOG_BUTTON_YES);
 			m_dialog->accept();
 		});
 
 		connect(m_button_no, &QAbstractButton::clicked, [this]()
 		{
 			g_last_user_response = CELL_MSGDIALOG_BUTTON_NO;
-			on_close(CELL_MSGDIALOG_BUTTON_NO);
+			if (on_close) on_close(CELL_MSGDIALOG_BUTTON_NO);
 			m_dialog->accept();
 		});
 	}
@@ -134,7 +133,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 		connect(m_button_ok, &QAbstractButton::clicked, [this]()
 		{
 			g_last_user_response = CELL_MSGDIALOG_BUTTON_OK;
-			on_close(CELL_MSGDIALOG_BUTTON_OK);
+			if (on_close) on_close(CELL_MSGDIALOG_BUTTON_OK);
 			m_dialog->accept();
 		});
 	}
@@ -146,7 +145,7 @@ void msg_dialog_frame::Create(const std::string& msg, const std::string& title)
 		if (!type.disable_cancel)
 		{
 			g_last_user_response = CELL_MSGDIALOG_BUTTON_ESCAPE;
-			on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
+			if (on_close) on_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
 		}
 	});
 
@@ -168,8 +167,6 @@ void msg_dialog_frame::Close(bool success)
 		m_dialog->deleteLater();
 	}
 }
-
-msg_dialog_frame::msg_dialog_frame() {}
 
 msg_dialog_frame::~msg_dialog_frame()
 {
@@ -205,8 +202,20 @@ void msg_dialog_frame::ProgressBarSetMsg(u32 index, const std::string& msg)
 {
 	if (m_dialog)
 	{
-		if (index == 0 && m_text1) m_text1->setText(qstr(msg));
-		if (index == 1 && m_text2) m_text2->setText(qstr(msg));
+		if (index == 0)
+		{
+			if (m_text1)
+			{
+				m_text1->setText(qstr(msg));
+			}
+		}
+		else if (index == 1)
+		{
+			if (m_text2)
+			{
+				m_text2->setText(qstr(msg));
+			}
+		}
 	}
 }
 
@@ -217,14 +226,19 @@ void msg_dialog_frame::ProgressBarReset(u32 index)
 		return;
 	}
 
-	if (index == 0 && m_gauge1)
+	if (index == 0)
 	{
-		m_gauge1->setValue(0);
+		if (m_gauge1)
+		{
+			m_gauge1->setValue(0);
+		}
 	}
-
-	if (index == 1 && m_gauge2)
+	else if (index == 1)
 	{
-		m_gauge2->setValue(0);
+		if (m_gauge2)
+		{
+			m_gauge2->setValue(0);
+		}
 	}
 
 	if (index == taskbar_index + 0u)
@@ -235,7 +249,7 @@ void msg_dialog_frame::ProgressBarReset(u32 index)
 			m_tb_progress->reset();
 		}
 #elif HAVE_QTDBUS
-		UpdateProgress(0);
+		UpdateProgress(0, false);
 #endif
 	}
 }
@@ -247,14 +261,19 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 		return;
 	}
 
-	if (index == 0 && m_gauge1)
+	if (index == 0)
 	{
-		m_gauge1->setValue(std::min(m_gauge1->value() + static_cast<int>(delta), m_gauge1->maximum()));
+		if (m_gauge1)
+		{
+			m_gauge1->setValue(std::min(m_gauge1->value() + static_cast<int>(delta), m_gauge1->maximum()));
+		}
 	}
-
-	if (index == 1 && m_gauge2)
+	else if (index == 1)
 	{
-		m_gauge2->setValue(std::min(m_gauge2->value() + static_cast<int>(delta), m_gauge2->maximum()));
+		if (m_gauge2)
+		{
+			m_gauge2->setValue(std::min(m_gauge2->value() + static_cast<int>(delta), m_gauge2->maximum()));
+		}
 	}
 
 	if (index == taskbar_index + 0u || taskbar_index == -1)
@@ -266,7 +285,43 @@ void msg_dialog_frame::ProgressBarInc(u32 index, u32 delta)
 		}
 #elif HAVE_QTDBUS
 		m_progress_value = std::min(m_progress_value + static_cast<int>(delta), m_gauge_max);
-		UpdateProgress(m_progress_value);
+		UpdateProgress(m_progress_value, true);
+#endif
+	}
+}
+
+void msg_dialog_frame::ProgressBarSetValue(u32 index, u32 value)
+{
+	if (!m_dialog)
+	{
+		return;
+	}
+
+	if (index == 0)
+	{
+		if (m_gauge1)
+		{
+			m_gauge1->setValue(std::min(static_cast<int>(value), m_gauge1->maximum()));
+		}
+	}
+	else if (index == 1)
+	{
+		if (m_gauge2)
+		{
+			m_gauge2->setValue(std::min(static_cast<int>(value), m_gauge2->maximum()));
+		}
+	}
+
+	if (index == taskbar_index + 0u || taskbar_index == -1)
+	{
+#ifdef _WIN32
+		if (m_tb_progress)
+		{
+			m_tb_progress->setValue(std::min(static_cast<int>(value), m_tb_progress->maximum()));
+		}
+#elif HAVE_QTDBUS
+		m_progress_value = std::min(static_cast<int>(value), m_gauge_max);
+		UpdateProgress(m_progress_value, true);
 #endif
 	}
 }
@@ -278,17 +333,22 @@ void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
 		return;
 	}
 
-	if (index == 0 && m_gauge1)
+	if (index == 0)
 	{
-		m_gauge1->setMaximum(limit);
+		if (m_gauge1)
+		{
+			m_gauge1->setMaximum(limit);
+		}
+	}
+	else if (index == 1)
+	{
+		if (m_gauge2)
+		{
+			m_gauge2->setMaximum(limit);
+		}
 	}
 
-	if (index == 1 && m_gauge2)
-	{
-		m_gauge2->setMaximum(limit);
-	}
-
-	bool set_taskbar_limit = false;
+	[[maybe_unused]] bool set_taskbar_limit = false;
 
 	if (index == taskbar_index + 0u)
 	{
@@ -310,21 +370,16 @@ void msg_dialog_frame::ProgressBarSetLimit(u32 index, u32 limit)
 }
 
 #ifdef HAVE_QTDBUS
-void msg_dialog_frame::UpdateProgress(int progress, bool disable)
+void msg_dialog_frame::UpdateProgress(int progress, bool progress_visible)
 {
-	QDBusMessage message = QDBusMessage::createSignal
-	(
+	QDBusMessage message = QDBusMessage::createSignal(
 		QStringLiteral("/"),
 		QStringLiteral("com.canonical.Unity.LauncherEntry"),
-		QStringLiteral("Update")
-	);
+		QStringLiteral("Update"));
 	QVariantMap properties;
-	if (disable)
-		properties.insert(QStringLiteral("progress-visible"), false);
-	else
-		properties.insert(QStringLiteral("progress-visible"), true);
 	// Progress takes a value from 0.0 to 0.1
-	properties.insert(QStringLiteral("progress"), 1.* progress / m_gauge_max);
+	properties.insert(QStringLiteral("progress"), 1. * progress / m_gauge_max);
+	properties.insert(QStringLiteral("progress-visible"), progress_visible);
 	message << QStringLiteral("application://rpcs3.desktop") << properties;
 	QDBusConnection::sessionBus().send(message);
 }

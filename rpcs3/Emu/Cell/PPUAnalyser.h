@@ -3,9 +3,10 @@
 #include <string>
 #include <map>
 #include <set>
+#include "util/types.hpp"
+#include "util/endian.hpp"
 
 #include "Utilities/bit_set.h"
-#include "Utilities/BEType.h"
 #include "PPUOpcodes.h"
 
 // PPU Function Attributes
@@ -30,10 +31,10 @@ struct ppu_function
 	u32 stack_frame = 0;
 	u32 trampoline = 0;
 
-	std::map<u32, u32> blocks; // Basic blocks: addr -> size
-	std::set<u32> calls; // Set of called functions
-	std::set<u32> callers;
-	std::string name; // Function name
+	std::map<u32, u32> blocks{}; // Basic blocks: addr -> size
+	std::set<u32> calls{}; // Set of called functions
+	std::set<u32> callers{};
+	std::string name{}; // Function name
 };
 
 // PPU Relocation Information
@@ -68,14 +69,25 @@ struct ppu_segment
 // PPU Module Information
 struct ppu_module
 {
+	ppu_module() = default;
+
+	ppu_module(const ppu_module&) = delete;
+
+	ppu_module(ppu_module&&) = default;
+
+	ppu_module& operator=(const ppu_module&) = delete;
+
+	ppu_module& operator=(ppu_module&&) = default;
+
 	uchar sha1[20]{};
-	std::string name;
-	std::string path;
-	std::string cache;
-	std::vector<ppu_reloc> relocs;
-	std::vector<ppu_segment> segs;
-	std::vector<ppu_segment> secs;
-	std::vector<ppu_function> funcs;
+	std::string name{};
+	std::string path{};
+	s64 offset = 0; // Offset of file
+	std::string cache{};
+	std::vector<ppu_reloc> relocs{};
+	std::vector<ppu_segment> segs{};
+	std::vector<ppu_segment> secs{};
+	std::vector<ppu_function> funcs{};
 
 	// Copy info without functions
 	void copy_part(const ppu_module& info)
@@ -88,7 +100,7 @@ struct ppu_module
 		secs = info.secs;
 	}
 
-	void analyse(u32 lib_toc, u32 entry);
+	void analyse(u32 lib_toc, u32 entry, u32 end, const std::basic_string<u32>& applied);
 	void validate(u32 reloc);
 };
 
@@ -116,9 +128,9 @@ struct ppu_pattern
 struct ppu_pattern_array
 {
 	const ppu_pattern* ptr;
-	std::size_t count;
+	usz count;
 
-	template <std::size_t N>
+	template <usz N>
 	constexpr ppu_pattern_array(const ppu_pattern(&array)[N])
 		: ptr(array)
 		, count(N)
@@ -139,9 +151,9 @@ struct ppu_pattern_array
 struct ppu_pattern_matrix
 {
 	const ppu_pattern_array* ptr;
-	std::size_t count;
+	usz count;
 
-	template <std::size_t N>
+	template <usz N>
 	constexpr ppu_pattern_matrix(const ppu_pattern_array(&array)[N])
 		: ptr(array)
 		, count(N)
@@ -1178,7 +1190,7 @@ struct ppu_acontext
 		}
 
 		// Range XOR
-		spec_gpr operator ^(const spec_gpr& rhs)
+		spec_gpr operator ^(const spec_gpr& rhs) const
 		{
 			return (~*this & rhs) | (*this & ~rhs);
 		}
@@ -1244,13 +1256,13 @@ struct ppu_acontext
 
 				r.imin = (min + ~mask) & mask;
 				r.imax = max & mask;
-				verify("Impossible range" HERE), r.imin <= r.imax;
+				ensure(r.imin <= r.imax); // "Impossible range"
 			}
 			else
 			{
 				r.imin = min & mask;
 				r.imax = (max + ~mask) & mask;
-				verify("Impossible range" HERE), r.imin >= r.imax;
+				ensure(r.imin >= r.imax); // "Impossible range"
 			}
 
 			// Fix const values

@@ -1,8 +1,11 @@
-﻿#pragma once
+#pragma once
 
 #include "../CPU/CPUThread.h"
 #include "../Memory/vm_ptr.h"
 #include "Utilities/lockless.h"
+
+#include "util/logs.hpp"
+#include "util/v128.hpp"
 
 LOG_CHANNEL(ppu_log, "PPU");
 
@@ -29,6 +32,18 @@ enum class ppu_join_status : u32
 	zombie = 2,
 	exited = 3,
 	max = 4, // Values above it indicate PPU id of joining thread
+};
+
+enum ppu_thread_status : u32
+{
+	PPU_THREAD_STATUS_IDLE,
+	PPU_THREAD_STATUS_RUNNABLE,
+	PPU_THREAD_STATUS_ONPROC,
+	PPU_THREAD_STATUS_SLEEP,
+	PPU_THREAD_STATUS_STOP,
+	PPU_THREAD_STATUS_ZOMBIE,
+	PPU_THREAD_STATUS_DELETED,
+	PPU_THREAD_STATUS_UNKNOWN,
 };
 
 // Formatting helper
@@ -59,26 +74,78 @@ struct ppu_thread_params
 	u64 arg1;
 };
 
+struct cmd64
+{
+	u64 m_data = 0;
+
+	constexpr cmd64() noexcept = default;
+
+	struct pair_t
+	{
+		u32 arg1;
+		u32 arg2;
+	};
+
+	template <typename T, typename T2 = std::common_type_t<T>>
+	cmd64(const T& value)
+		: m_data(std::bit_cast<u64, T2>(value))
+	{
+	}
+
+	template <typename T1, typename T2>
+	cmd64(const T1& arg1, const T2& arg2)
+		: cmd64(pair_t{std::bit_cast<u32>(arg1), std::bit_cast<u32>(arg2)})
+	{
+	}
+
+	explicit operator bool() const
+	{
+		return m_data != 0;
+	}
+
+	template <typename T>
+	T as() const
+	{
+		return std::bit_cast<T>(m_data);
+	}
+
+	template <typename T>
+	T arg1() const
+	{
+		return std::bit_cast<T>(std::bit_cast<pair_t>(m_data).arg1);
+	}
+
+	template <typename T>
+	T arg2() const
+	{
+		return std::bit_cast<T>(std::bit_cast<pair_t>(m_data).arg2);
+	}
+};
+
 class ppu_thread : public cpu_thread
 {
 public:
 	static const u32 id_base = 0x01000000; // TODO (used to determine thread type)
 	static const u32 id_step = 1;
-	static const u32 id_count = 2048;
+	static const u32 id_count = 100;
 	static constexpr std::pair<u32, u32> id_invl_range = {12, 12};
 
-	virtual std::string dump_all() const override;
 	virtual std::string dump_regs() const override;
 	virtual std::string dump_callstack() const override;
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 	virtual std::string dump_misc() const override;
+	virtual std::string dump_all() const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_sleep() override;
-	virtual void cpu_mem() override;
-	virtual void cpu_unmem() override;
+	virtual void cpu_on_stop() override;
 	virtual ~ppu_thread() override;
 
 	ppu_thread(const ppu_thread_params&, std::string_view name, u32 prio, int detached = 0);
+
+	ppu_thread(const ppu_thread&) = delete;
+	ppu_thread& operator=(const ppu_thread&) = delete;
+
+	using cpu_thread::operator=;
 
 	u64 gpr[32] = {}; // General-Purpose Registers
 	f64 fpr[32] = {}; // Floating Point Registers
@@ -89,7 +156,7 @@ public:
 		u8 bits[32];
 		u32 fields[8];
 
-		u8& operator [](std::size_t i)
+		u8& operator [](usz i)
 		{
 			return bits[i];
 		}
@@ -193,7 +260,8 @@ public:
 
 	u32 raddr{0}; // Reservation addr
 	u64 rtime{0};
-	u64 rdata{0}; // Reservation data
+	alignas(64) std::byte rdata[128]{}; // Reservation data
+	bool use_full_rdata{};
 
 	atomic_t<s32> prio{0}; // Thread priority (0..3071)
 	const u32 stack_size; // Stack size
@@ -208,21 +276,59 @@ public:
 	void cmd_pop(u32 = 0);
 	cmd64 cmd_wait(); // Empty command means caller must return, like true from cpu_thread::check_status().
 	cmd64 cmd_get(u32 index) { return cmd_queue[cmd_queue.peek() + index].load(); }
+	atomic_t<u32> cmd_notify = 0;
 
-	const ppu_func_opd_t entry_func;
+	alignas(64) const ppu_func_opd_t entry_func;
 	u64 start_time{0}; // Sleep start timepoint
-	alignas(64) u64 syscall_args[4]{0}; // Last syscall arguments stored
+	u64 syscall_args[8]{0}; // Last syscall arguments stored
 	const char* current_function{}; // Current function name for diagnosis, optimized for speed.
 	const char* last_function{}; // Sticky copy of current_function, is not cleared on function return
 
 	// Thread name
-	stx::atomic_cptr<std::string> ppu_tname;
+	atomic_ptr<std::string> ppu_tname;
+
+	u64 saved_native_sp = 0; // Host thread's stack pointer for emulated longjmp
+
+	u64 last_ftsc = 0;
+	u64 last_ftime = 0;
+	u32 last_faddr = 0;
+	u64 last_fail = 0;
+	u64 last_succ = 0;
+
+	u32 dbg_step_pc = 0;
+
+	struct call_history_t
+	{
+		std::vector<u32> data;
+		u64 index = 0;
+		u64 last_r1 = umax;
+		u64 last_r2 = umax;
+	} call_history;
+
+	static constexpr u32 call_history_max_size = 4096;
+
+	struct hle_func_call_with_toc_info_t
+	{
+		u32 cia;
+		u64 saved_lr;
+		u64 saved_r2;
+	};
+
+	std::vector<hle_func_call_with_toc_info_t> hle_func_calls_with_toc_info;
+
+	// For named_thread ctor
+	const struct thread_name_t
+	{
+		const ppu_thread* _this;
+
+		operator std::string() const;
+	} thread_name{ this };
 
 	be_t<u64>* get_stack_arg(s32 i, u64 align = alignof(u64));
 	void exec_task();
 	void fast_call(u32 addr, u32 rtoc);
 
-	static u32 stack_push(u32 size, u32 align_v);
+	static std::pair<vm::addr_t, u32> stack_push(u32 size, u32 align_v);
 	static void stack_pop_verbose(u32 addr, u32 size) noexcept;
 };
 
@@ -262,20 +368,6 @@ struct ppu_gpr_cast_impl<b8, void>
 	static inline b8 from(const u64 reg)
 	{
 		return static_cast<u32>(reg) != 0;
-	}
-};
-
-template<>
-struct ppu_gpr_cast_impl<error_code, void>
-{
-	static inline u64 to(const error_code& code)
-	{
-		return code;
-	}
-
-	static inline error_code from(const u64 reg)
-	{
-		return not_an_error(reg);
 	}
 };
 

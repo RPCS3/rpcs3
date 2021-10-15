@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
@@ -127,6 +127,7 @@ enum class lv2_mp_flag
 	read_only,
 	no_uid_gid,
 	strict_get_block_size,
+	cache,
 
 	__bitset_enum_max
 };
@@ -140,6 +141,7 @@ enum class lv2_file_type
 
 struct lv2_fs_mount_point
 {
+	const std::string_view root;
 	const u32 sector_size = 512;
 	const u32 block_size = 4096;
 	const bs_t<lv2_mp_flag> flags{};
@@ -149,11 +151,6 @@ struct lv2_fs_mount_point
 
 extern lv2_fs_mount_point g_mp_sys_dev_hdd0;
 extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
-extern lv2_fs_mount_point g_mp_sys_dev_usb;
-extern lv2_fs_mount_point g_mp_sys_dev_bdvd;
-extern lv2_fs_mount_point g_mp_sys_app_home;
-extern lv2_fs_mount_point g_mp_sys_host_root;
-extern lv2_fs_mount_point g_mp_sys_dev_flash;
 
 struct lv2_fs_object
 {
@@ -169,11 +166,17 @@ struct lv2_fs_object
 	// File Name (max 1055)
 	const std::array<char, 0x420> name;
 
+protected:
 	lv2_fs_object(lv2_fs_mount_point* mp, std::string_view filename)
 		: mp(mp)
 		, name(get_name(filename))
 	{
 	}
+
+public:
+	lv2_fs_object(const lv2_fs_object&) = delete;
+
+	lv2_fs_object& operator=(const lv2_fs_object&) = delete;
 
 	static lv2_fs_mount_point* get_mp(std::string_view filename);
 
@@ -190,8 +193,6 @@ struct lv2_fs_object
 		name[filename.size()] = 0;
 		return name;
 	}
-
-	virtual std::string to_string() const { return {}; }
 };
 
 struct lv2_file final : lv2_fs_object
@@ -255,7 +256,7 @@ struct lv2_file final : lv2_fs_object
 	// File reading with intermediate buffer
 	static u64 op_read(const fs::file& file, vm::ptr<void> buf, u64 size);
 
-	u64 op_read(vm::ptr<void> buf, u64 size)
+	u64 op_read(vm::ptr<void> buf, u64 size) const
 	{
 		return op_read(file, buf, size);
 	}
@@ -263,7 +264,7 @@ struct lv2_file final : lv2_fs_object
 	// File writing with intermediate buffer
 	static u64 op_write(const fs::file& file, vm::cptr<void> buf, u64 size);
 
-	u64 op_write(vm::cptr<void> buf, u64 size)
+	u64 op_write(vm::cptr<void> buf, u64 size) const
 	{
 		return op_write(file, buf, size);
 	}
@@ -273,19 +274,6 @@ struct lv2_file final : lv2_fs_object
 
 	// Make file view from lv2_file object (for MSELF support)
 	static fs::file make_view(const std::shared_ptr<lv2_file>& _file, u64 offset);
-
-	virtual std::string to_string() const override
-	{
-		std::string_view type_s;
-		switch (type)
-		{
-		case lv2_file_type::regular: type_s = "Regular file"; break;
-		case lv2_file_type::sdata: type_s = "SDATA"; break;
-		case lv2_file_type::edata: type_s = "EDATA"; break;
-		}
-
-		return fmt::format(u8"%s, “%s”, Mode: 0x%x, Flags: 0x%x", type_s, name.data(), mode, flags);
-	}
 };
 
 struct lv2_dir final : lv2_fs_object
@@ -310,11 +298,6 @@ struct lv2_dir final : lv2_fs_object
 		}
 
 		return nullptr;
-	}
-
-	virtual std::string to_string() const override
-	{
-		return fmt::format(u8"Directory, “%s”, Entries: %u/%u", name.data(), std::min<u64>(pos, entries.size()), entries.size());
 	}
 };
 
@@ -378,6 +361,24 @@ struct lv2_file_op_09 : lv2_file_op
 };
 
 CHECK_SIZE(lv2_file_op_09, 0x40);
+
+struct lv2_file_e0000025 : lv2_file_op
+{
+	be_t<u32> size; // 0x30
+	be_t<u32> _x4;  // 0x10
+	be_t<u32> _x8;  // 0x28 - offset of out_code
+	be_t<u32> name_size;
+	vm::bcptr<char> name;
+	be_t<u32> _x14;
+	be_t<u32> _x18;  // 0
+	be_t<u32> _x1c;  // 0
+	be_t<u32> _x20;  // 16
+	be_t<u32> _x24;  // unk, seems to be memory location
+	be_t<u32> out_code;  // out_code
+	be_t<u32> fd;  // 0xffffffff - likely fd out
+};
+
+CHECK_SIZE(lv2_file_e0000025, 0x30);
 
 // sys_fs_fnctl: cellFsGetDirectoryEntries
 struct lv2_file_op_dir : lv2_file_op

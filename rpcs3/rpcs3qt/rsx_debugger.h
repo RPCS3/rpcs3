@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QDialog>
 #include <QGroupBox>
@@ -11,6 +11,8 @@
 #include <QListWidget>
 #include <QTableWidget>
 #include <QTabWidget>
+
+#include <memory>
 
 class gui_settings;
 
@@ -28,20 +30,15 @@ class Buffer : public QGroupBox
 	QSize m_image_size;
 
 public:
-	Buffer(bool isTex, u32 id, const QString& name, QWidget* parent = 0);
+	Buffer(bool isTex, u32 id, const QString& name, QWidget* parent = nullptr);
 	void showImage(const QImage& image = QImage());
-	void ShowWindowed();
+	void ShowWindowed() const;
 };
 
 class rsx_debugger : public QDialog
 {
 	Q_OBJECT
 
-	u32 m_addr = 0;
-
-	QLineEdit* m_addr_line;
-
-	QTableWidget* m_list_commands;
 	QTableWidget* m_list_captured_frame;
 	QTableWidget* m_list_captured_draw_calls;
 	QListWidget* m_list_index_buffer;
@@ -63,26 +60,20 @@ class rsx_debugger : public QDialog
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 public:
-	bool exit = false;
-	rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = 0);
-	~rsx_debugger();
+	explicit rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* parent = nullptr);
+	~rsx_debugger() = default;
 
-	virtual void UpdateInformation();
-	virtual void GetMemory();
-	virtual void GetBuffers();
-
-	const char* ParseGCMEnum(u32 value, u32 type);
-	QString DisAsmCommand(u32 cmd, u32 count, u32 ioAddr);
-
-	void SetPC(const uint pc);
+	void UpdateInformation() const;
+	void GetMemory() const;
+	void GetBuffers() const;
 
 public Q_SLOTS:
 	virtual void OnClickDrawCalls();
 
 protected:
-	virtual void closeEvent(QCloseEvent* event) override;
-	virtual void keyPressEvent(QKeyEvent* event) override;
-	virtual bool eventFilter(QObject* object, QEvent* event) override;
+	void closeEvent(QCloseEvent* event) override;
+	void keyPressEvent(QKeyEvent* event) override;
+	bool eventFilter(QObject* object, QEvent* event) override;
 
 private:
 	void PerformJump(u32 address);

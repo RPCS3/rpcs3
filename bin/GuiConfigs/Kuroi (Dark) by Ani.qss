@@ -343,3 +343,28 @@ QTextEdit#tty_frame {
 QLabel#tty_text {
 	color: #ffffff; /* White */
 }
+
+/* Tree view changes*/
+QTreeView::branch:has-children:!has-siblings:closed,
+QTreeView::branch:closed:has-children:has-siblings {
+    border-image: none;
+    image: url("GuiConfigs/list_arrow_white.png");
+}
+
+QTreeView::branch:open:has-children:!has-siblings,
+QTreeView::branch:open:has-children:has-siblings  {
+    border-image: none;
+    image: url("GuiConfigs/list_arrow_down_white.png");
+}
+
+QTreeView::branch:has-children:!has-siblings:closed:hover,
+QTreeView::branch:closed:has-children:has-siblings:hover {
+    border-image: none;
+    image: url("GuiConfigs/list_arrow_blue.png");
+}
+
+QTreeView::branch:open:has-children:!has-siblings:hover,
+QTreeView::branch:open:has-children:has-siblings:hover  {
+    border-image: none;
+    image: url("GuiConfigs/list_arrow_down_blue.png");
+}

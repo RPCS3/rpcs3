@@ -1,4 +1,4 @@
-﻿#ifndef HAVE_ALSA
+#ifndef HAVE_ALSA
 #error "ALSA support disabled but still being built."
 #endif
 

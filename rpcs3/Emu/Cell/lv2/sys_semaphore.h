@@ -24,22 +24,18 @@ struct lv2_sema final : lv2_obj
 	static const u32 id_base = 0x96000000;
 
 	const lv2_protocol protocol;
-	const u32 shared;
 	const u64 key;
 	const u64 name;
-	const s32 flags;
 	const s32 max;
 
 	shared_mutex mutex;
 	atomic_t<s32> val;
 	std::deque<cpu_thread*> sq;
 
-	lv2_sema(u32 protocol, u32 shared, u64 key, s32 flags, u64 name, s32 max, s32 value)
-		: protocol{protocol}
-		, shared(shared)
+	lv2_sema(u32 protocol, u64 key, u64 name, s32 max, s32 value) noexcept
+		: protocol{static_cast<u8>(protocol)}
 		, key(key)
 		, name(name)
-		, flags(flags)
 		, max(max)
 		, val(value)
 	{

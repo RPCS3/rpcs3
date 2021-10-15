@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Emu/RSX/GSRender.h"
 #include "GLHelpers.h"
 #include "GLTexture.h"
@@ -10,6 +10,7 @@
 #include "GLShaderInterpreter.h"
 
 #include <optional>
+#include <unordered_map>
 
 #ifdef _WIN32
 #pragma comment(lib, "opengl32.lib")
@@ -121,7 +122,6 @@ private:
 	std::list<gl::work_item> work_queue;
 
 	GLProgramBuffer m_prog_buffer;
-	draw_context_t m_decompiler_context;
 
 	//buffer
 	gl::fbo* m_draw_fbo = nullptr;
@@ -133,12 +133,14 @@ private:
 	gl::vao m_vao;
 
 	shared_mutex m_sampler_mutex;
-	u64 surface_store_tag = 0;
-	std::atomic_bool m_samplers_dirty = {true};
+	atomic_t<bool> m_samplers_dirty = {true};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
 	std::unordered_map<GLenum, std::unique_ptr<gl::texture>> m_null_textures;
 	std::vector<u8> m_scratch_buffer;
+
+	// Occlusion query type, can be SAMPLES_PASSED or ANY_SAMPLES_PASSED
+	GLenum m_occlusion_type = GL_ANY_SAMPLES_PASSED;
 
 public:
 	u64 get_cycles() final;
@@ -163,7 +165,7 @@ private:
 	void load_texture_env();
 	void bind_texture_env();
 
-	gl::texture* get_present_source(gl::present_surface_info* info, const rsx::avconf* avconfig);
+	gl::texture* get_present_source(gl::present_surface_info* info, const rsx::avconf& avconfig);
 
 public:
 	void set_viewport();
@@ -195,11 +197,4 @@ protected:
 	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
 	void notify_tile_unbound(u32 tile) override;
 	void on_semaphore_acquire_wait() override;
-
-	std::array<std::vector<std::byte>, 4> copy_render_targets_to_memory() override;
-	std::array<std::vector<std::byte>, 2> copy_depth_stencil_buffer_to_memory() override;
-
-	void on_decompiler_init() override;
-	void on_decompiler_exit() override;
-	bool on_decompiler_task() override;
 };

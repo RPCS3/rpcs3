@@ -7,6 +7,7 @@
 #include "cellSysutil.h"
 
 #include "Emu/NP/np_handler.h"
+#include "Emu/NP/np_contexts.h"
 
 LOG_CHANNEL(sceNpCommerce2);
 
@@ -96,9 +97,8 @@ error_code sceNpCommerce2Term()
 error_code sceNpCommerce2CreateCtx(u32 version, vm::cptr<SceNpId> npId, vm::ptr<SceNpCommerce2Handler> handler, vm::ptr<void> arg, vm::ptr<u32> ctx_id)
 {
 	sceNpCommerce2.warning("sceNpCommerce2CreateCtx(version=%d, npId=*0x%x, handler=*0x%x, arg=*0x%x, ctx_id=*0x%x)", version, npId, handler, arg, ctx_id);
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-	*ctx_id = nph->create_commerce2_context(version, npId, handler, arg);
+	*ctx_id = create_commerce2_context(version, npId, handler, arg);
 
 	return CELL_OK;
 }
@@ -106,10 +106,12 @@ error_code sceNpCommerce2CreateCtx(u32 version, vm::cptr<SceNpId> npId, vm::ptr<
 s32 sceNpCommerce2DestroyCtx(u32 ctx_id)
 {
 	sceNpCommerce2.warning("sceNpCommerce2DestroyCtx(ctx_id=%d)", ctx_id);
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-	nph->destroy_commerce2_context(ctx_id);
-	
+	if (!destroy_commerce2_context(ctx_id))
+	{
+		return SCE_NP_COMMERCE2_ERROR_CTX_NOT_FOUND; // TODO: verify
+	}
+
 	return CELL_OK;
 }
 
@@ -117,13 +119,17 @@ s32 sceNpCommerce2EmptyStoreCheckStart(u32 ctx_id, s32 store_check_type, vm::cpt
 {
 	sceNpCommerce2.warning("sceNpCommerce2EmptyStoreCheckStart(ctx_id=%d, store_check_type=%d, target_id=*0x%x(%s))", ctx_id, store_check_type, target_id, target_id);
 
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
+	const auto ctx = get_commerce2_context(ctx_id);
 
-	const auto ctx = nph->get_commerce2_context(ctx_id);
+	if (!ctx)
+	{
+		return SCE_NP_COMMERCE2_ERROR_CTX_NOT_FOUND; // TODO: verify
+	}
 
 	if (ctx->context_callback)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		{
 			ctx->context_callback(cb_ppu, ctx_id, 0, SCE_NP_COMMERCE2_EVENT_EMPTY_STORE_CHECK_DONE, 0, ctx->context_callback_param);
 			return 0;
 		});
@@ -148,13 +154,18 @@ s32 sceNpCommerce2EmptyStoreCheckFinish(u32 ctx_id, vm::ptr<s32> is_empty)
 s32 sceNpCommerce2CreateSessionStart(u32 ctx_id)
 {
 	sceNpCommerce2.warning("sceNpCommerce2CreateSessionStart(ctx_id=%d)", ctx_id);
-	const auto nph = g_fxo->get<named_thread<np_handler>>();
 
-	const auto ctx = nph->get_commerce2_context(ctx_id);
+	const auto ctx = get_commerce2_context(ctx_id);
+
+	if (!ctx)
+	{
+		return SCE_NP_COMMERCE2_ERROR_CTX_NOT_FOUND; // TODO: verify
+	}
 
 	if (ctx->context_callback)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		{
 			ctx->context_callback(cb_ppu, ctx_id, 0, SCE_NP_COMMERCE2_EVENT_CREATE_SESSION_DONE, 0, ctx->context_callback_param);
 			return 0;
 		});

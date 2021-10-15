@@ -1,23 +1,12 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
-#include <exception>
-#include <string>
-#include <functional>
-#include <vector>
-#include <memory>
-#include <thread>
-#include <condition_variable>
-#include <chrono>
-
-#include "Utilities/mutex.h"
 #include "GLRenderTargets.h"
-#include "GLOverlays.h"
-#include "GLTexture.h"
-#include "../Common/TextureUtils.h"
 #include "../Common/texture_cache.h"
-#include "../Common/BufferUtils.h"
+
+#include <memory>
+#include <vector>
 
 class GLGSRender;
 
@@ -25,9 +14,7 @@ namespace gl
 {
 	class blitter;
 
-	extern GLenum get_sized_internal_format(u32);
-	extern void copy_typeless(texture*, const texture*, const coord3u&, const coord3u&);
-	extern blitter *g_hw_blitter;
+	extern blitter* g_hw_blitter;
 
 	class cached_texture_section;
 	class texture_cache;
@@ -63,7 +50,7 @@ namespace gl
 		void init_buffer(const gl::texture* src)
 		{
 			const u32 vram_size = src->pitch() * src->height();
-			const u32 buffer_size = align(vram_size, 4096);
+			const u32 buffer_size = utils::align(vram_size, 4096);
 
 			if (pbo)
 			{
@@ -84,7 +71,7 @@ namespace gl
 				gl::texture::format gl_format = gl::texture::format::rgba, gl::texture::type gl_type = gl::texture::type::ubyte, bool swap_bytes = false)
 		{
 			auto new_texture = static_cast<gl::viewable_image*>(image);
-			ASSERT(!exists() || !is_managed() || vram_texture == new_texture);
+			ensure(!exists() || !is_managed() || vram_texture == new_texture);
 			vram_texture = new_texture;
 
 			if (read_only)
@@ -93,7 +80,7 @@ namespace gl
 			}
 			else
 			{
-				ASSERT(!managed_texture);
+				ensure(!managed_texture);
 			}
 
 			if (auto rtt = dynamic_cast<gl::render_target*>(image))
@@ -105,7 +92,7 @@ namespace gl
 			synchronized = false;
 			sync_timestamp = 0ull;
 
-			verify(HERE), rsx_pitch;
+			ensure(rsx_pitch);
 
 			this->rsx_pitch = rsx_pitch;
 			this->width = w;
@@ -248,12 +235,12 @@ namespace gl
 
 			m_fence.reset();
 			synchronized = true;
-			sync_timestamp = get_system_time();
+			sync_timestamp = rsx::get_shared_tag();
 		}
 
 		void copy_texture(gl::command_context& cmd, bool miss)
 		{
-			ASSERT(exists());
+			ensure(exists());
 
 			if (!miss) [[likely]]
 			{
@@ -328,92 +315,13 @@ namespace gl
 
 			m_fence.wait_for_signal();
 
-			verify(HERE), (offset + size) <= pbo.size();
+			ensure(offset + GLsizeiptr{size} <= pbo.size());
 			pbo.bind(buffer::target::pixel_pack);
 
 			return glMapBufferRange(GL_PIXEL_PACK_BUFFER, offset, size, GL_MAP_READ_BIT);
 		}
 
-		void finish_flush()
-		{
-			// Free resources
-			glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
-
-			const auto valid_range = get_confirmed_range_delta();
-			const u32 valid_offset = valid_range.first;
-			const u32 valid_length = valid_range.second;
-			void *dst = get_ptr(get_section_base() + valid_offset);
-
-			if (!gl::get_driver_caps().ARB_compute_shader_supported)
-			{
-				switch (type)
-				{
-				case gl::texture::type::sbyte:
-				case gl::texture::type::ubyte:
-				{
-					// byte swapping does not work on byte types, use uint_8_8_8_8 for rgba8 instead to avoid penalty
-					verify(HERE), !pack_unpack_swap_bytes;
-					break;
-				}
-				case gl::texture::type::uint_24_8:
-				{
-					// Swap bytes on D24S8 does not swap the whole dword, just shuffles the 3 bytes for D24
-					// In this regard, D24S8 is the same structure on both PC and PS3, but the endianness of the whole block is reversed on PS3
-					verify(HERE), pack_unpack_swap_bytes == false;
-					verify(HERE), real_pitch == (width * 4);
-					if (rsx_pitch == real_pitch) [[likely]]
-					{
-						stream_data_to_memory_swapped_u32<true>(dst, dst, valid_length / 4, 4);
-					}
-					else
-					{
-						const u32 num_rows = align(valid_length, rsx_pitch) / rsx_pitch;
-						u8* data = static_cast<u8*>(dst);
-						for (u32 row = 0; row < num_rows; ++row)
-						{
-							stream_data_to_memory_swapped_u32<true>(data, data, width, 4);
-							data += rsx_pitch;
-						}
-					}
-					break;
-				}
-				default:
-					break;
-				}
-			}
-
-			if (is_swizzled())
-			{
-				// This format is completely worthless to CPU processing algorithms where cache lines on die are linear.
-				// If this is happening, usually it means it was not a planned readback (e.g shared pages situation)
-				rsx_log.warning("[Performance warning] CPU readback of swizzled data");
-
-				// Read-modify-write to avoid corrupting already resident memory outside texture region
-				std::vector<u8> tmp_data(rsx_pitch * height);
-				std::memcpy(tmp_data.data(), dst, tmp_data.size());
-
-				switch (type)
-				{
-				case gl::texture::type::uint_8_8_8_8:
-				case gl::texture::type::uint_24_8:
-					rsx::convert_linear_swizzle<u32, false>(tmp_data.data(), dst, width, height, rsx_pitch);
-					break;
-				case gl::texture::type::ushort_5_6_5:
-				case gl::texture::type::ushort:
-					rsx::convert_linear_swizzle<u16, false>(tmp_data.data(), dst, width, height, rsx_pitch);
-					break;
-				default:
-					rsx_log.error("Unexpected swizzled texture format 0x%x", static_cast<u32>(format));
-				}
-			}
-
-			if (context == rsx::texture_upload_context::framebuffer_storage)
-			{
-				// Update memory tag
-				static_cast<gl::render_target*>(vram_texture)->sync_tag();
-			}
-		}
+		void finish_flush();
 
 		/**
 		 * Misc
@@ -440,6 +348,17 @@ namespace gl
 			}
 
 			baseclass::on_section_resources_destroyed();
+		}
+
+		void sync_surface_memory(const std::vector<cached_texture_section*>& surfaces)
+		{
+			auto rtt = gl::as_rtt(vram_texture);
+			rtt->sync_tag();
+
+			for (auto& surface : surfaces)
+			{
+				rtt->inherit_surface_contents(gl::as_rtt(surface->vram_texture));
+			}
 		}
 
 		bool exists() const
@@ -560,52 +479,9 @@ namespace gl
 		}
 
 		gl::texture_view* create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_type, u32 gcm_format,
-				u16 x, u16 y, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap, bool copy)
-		{
-			if (sized_internal_fmt == GL_NONE)
-			{
-				sized_internal_fmt = gl::get_sized_internal_format(gcm_format);
-			}
+				u16 x, u16 y, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap, bool copy);
 
-			std::unique_ptr<gl::texture> dst = std::make_unique<gl::viewable_image>(dst_type, width, height, depth, mipmaps, sized_internal_fmt, rsx::classify_format(gcm_format));
-
-			if (copy)
-			{
-				std::vector<copy_region_descriptor> region =
-				{{
-					src,
-					rsx::surface_transform::coordinate_transform,
-					0,
-					x, y, 0, 0, 0,
-					width, height, width, height
-				}};
-
-				copy_transfer_regions_impl(cmd, dst.get(), region);
-			}
-
-			std::array<GLenum, 4> swizzle;
-			if (!src || static_cast<GLenum>(src->get_internal_format()) != sized_internal_fmt)
-			{
-				// Apply base component map onto the new texture if a data cast has been done
-				swizzle = get_component_mapping(gcm_format, rsx::texture_create_flags::default_component_order);
-			}
-			else
-			{
-				swizzle = src->get_native_component_layout();
-			}
-
-			if (memcmp(remap.first.data(), rsx::default_remap_vector.first.data(), 4) ||
-				memcmp(remap.second.data(), rsx::default_remap_vector.second.data(), 4))
-				swizzle = apply_swizzle_remap(swizzle, remap);
-
-			auto view = std::make_unique<gl::texture_view>(dst.get(), dst_type, sized_internal_fmt, swizzle.data());
-			auto result = view.get();
-
-			m_temporary_surfaces.emplace_back(dst, view);
-			return result;
-		}
-
-		std::array<GLenum, 4> get_component_mapping(u32 gcm_format, rsx::texture_create_flags flags) const
+		std::array<GLenum, 4> get_component_mapping(u32 gcm_format, rsx::component_order flags) const
 		{
 			switch (gcm_format)
 			{
@@ -621,123 +497,24 @@ namespace gl
 
 			switch (flags)
 			{
-			case rsx::texture_create_flags::default_component_order:
+			case rsx::component_order::default_:
 			{
 				return gl::get_swizzle_remap(gcm_format);
 			}
-			case rsx::texture_create_flags::native_component_order:
+			case rsx::component_order::native:
 			{
 				return{ GL_ALPHA, GL_RED, GL_GREEN, GL_BLUE };
 			}
-			case rsx::texture_create_flags::swapped_native_component_order:
+			case rsx::component_order::swapped_native:
 			{
 				return{ GL_BLUE, GL_ALPHA, GL_RED, GL_GREEN };
 			}
 			default:
-				fmt::throw_exception("Unknown texture create flags" HERE);
+				fmt::throw_exception("Unknown texture create flags");
 			}
 		}
 
-		void copy_transfer_regions_impl(gl::command_context& cmd, gl::texture* dst_image, const std::vector<copy_region_descriptor>& sources) const
-		{
-			const auto dst_bpp = dst_image->pitch() / dst_image->width();
-			const auto dst_aspect = dst_image->aspect();
-
-			for (const auto &slice : sources)
-			{
-				if (!slice.src)
-					continue;
-
-				const bool typeless = dst_aspect != slice.src->aspect() ||
-					!formats_are_bitcast_compatible(static_cast<GLenum>(slice.src->get_internal_format()), static_cast<GLenum>(dst_image->get_internal_format()));
-
-				std::unique_ptr<gl::texture> tmp;
-				auto src_image = slice.src;
-				auto src_x = slice.src_x;
-				auto src_y = slice.src_y;
-				auto src_w = slice.src_w;
-				auto src_h = slice.src_h;
-
-				if (slice.xform == rsx::surface_transform::coordinate_transform)
-				{
-					// Dimensions were given in 'dst' space. Work out the real source coordinates
-					const auto src_bpp = slice.src->pitch() / slice.src->width();
-					src_x = (src_x * dst_bpp) / src_bpp;
-					src_w = ::aligned_div<u16>(src_w * dst_bpp, src_bpp);
-				}
-
-				if (auto surface = dynamic_cast<gl::render_target*>(slice.src))
-				{
-					surface->transform_samples_to_pixels(src_x, src_w, src_y, src_h);
-				}
-
-				if (typeless) [[unlikely]]
-				{
-					const auto src_bpp = slice.src->pitch() / slice.src->width();
-					const u16 convert_w = u16(slice.src->width() * src_bpp) / dst_bpp;
-					tmp = std::make_unique<texture>(GL_TEXTURE_2D, convert_w, slice.src->height(), 1, 1, static_cast<GLenum>(dst_image->get_internal_format()));
-
-					src_image = tmp.get();
-
-					// Compute src region in dst format layout
-					const u16 src_w2 = u16(src_w * src_bpp) / dst_bpp;
-					const u16 src_x2 = u16(src_x * src_bpp) / dst_bpp;
-
-					if (src_w2 == slice.dst_w && src_h == slice.dst_h && slice.level == 0)
-					{
-						// Optimization, avoid typeless copy to tmp followed by data copy to dst
-						// Combine the two transfers into one
-						const coord3u src_region = { { src_x, src_y, 0 }, { src_w, src_h, 1 } };
-						const coord3u dst_region = { { slice.dst_x, slice.dst_y, slice.dst_z }, { slice.dst_w, slice.dst_h, 1 } };
-						gl::copy_typeless(dst_image, slice.src, dst_region, src_region);
-
-						continue;
-					}
-
-					const coord3u src_region = { { src_x, src_y, 0 }, { src_w, src_h, 1 } };
-					const coord3u dst_region = { { src_x2, src_y, 0 }, { src_w2, src_h, 1 } };
-					gl::copy_typeless(src_image, slice.src, dst_region, src_region);
-
-					src_x = src_x2;
-					src_w = src_w2;
-				}
-
-				if (src_w == slice.dst_w && src_h == slice.dst_h)
-				{
-					glCopyImageSubData(src_image->id(), GL_TEXTURE_2D, 0, src_x, src_y, 0,
-						dst_image->id(), static_cast<GLenum>(dst_image->get_target()), slice.level, slice.dst_x, slice.dst_y, slice.dst_z, src_w, src_h, 1);
-				}
-				else
-				{
-					verify(HERE), dst_image->get_target() == gl::texture::target::texture2D;
-
-					auto _blitter = gl::g_hw_blitter;
-					const areai src_rect = { src_x, src_y, src_x + src_w, src_y + src_h };
-					const areai dst_rect = { slice.dst_x, slice.dst_y, slice.dst_x + slice.dst_w, slice.dst_y + slice.dst_h };
-
-					gl::texture* _dst;
-					if (src_image->get_internal_format() == dst_image->get_internal_format() && slice.level == 0)
-					{
-						_dst = dst_image;
-					}
-					else
-					{
-						tmp = std::make_unique<texture>(GL_TEXTURE_2D, dst_rect.x2, dst_rect.y2, 1, 1, static_cast<GLenum>(slice.src->get_internal_format()));
-						_dst = tmp.get();
-					}
-
-					_blitter->scale_image(cmd, src_image, _dst,
-						src_rect, dst_rect, false, {});
-
-					if (_dst != dst_image)
-					{
-						// Data cast comes after scaling
-						glCopyImageSubData(tmp->id(), GL_TEXTURE_2D, 0, slice.dst_x, slice.dst_y, 0,
-							dst_image->id(), static_cast<GLenum>(dst_image->get_target()), slice.level, slice.dst_x, slice.dst_y, slice.dst_z, slice.dst_w, slice.dst_h, 1);
-					}
-				}
-			}
-		}
+		void copy_transfer_regions_impl(gl::command_context& cmd, gl::texture* dst_image, const std::vector<copy_region_descriptor>& sources) const;
 
 		gl::texture* get_template_from_collection_impl(const std::vector<copy_region_descriptor>& sections_to_transfer) const
 		{
@@ -857,27 +634,66 @@ namespace gl
 			copy_transfer_regions_impl(cmd, dst->image(), region);
 		}
 
-		cached_texture_section* create_new_texture(gl::command_context&, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
-			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::texture_create_flags flags) override
+		cached_texture_section* create_new_texture(gl::command_context &cmd, const utils::address_range &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u16 pitch,
+			u32 gcm_format, rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, rsx::component_order swizzle_flags, rsx::flags32_t /*flags*/) override
 		{
-			auto image = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
+			const rsx::image_section_attributes_t search_desc = { .gcm_format = gcm_format, .width = width, .height = height, .depth = depth, .mipmaps = mipmaps };
+			const bool allow_dirty = (context != rsx::texture_upload_context::framebuffer_storage);
+			auto& cached = *find_cached_texture(rsx_range, search_desc, true, true, allow_dirty);
+			ensure(!cached.is_locked());
 
-			const auto swizzle = get_component_mapping(gcm_format, flags);
-			image->set_native_component_layout(swizzle);
+			gl::viewable_image* image = nullptr;
+			if (cached.exists())
+			{
+				// Try and reuse this image data. It is very likely to match our needs
+				image = dynamic_cast<gl::viewable_image*>(cached.get_raw_texture());
+				if (!image || cached.get_image_type() != type)
+				{
+					// Type mismatch, discard
+					cached.destroy();
+					image = nullptr;
+				}
+				else
+				{
+					ensure(cached.is_managed());
 
-			auto& cached = *find_cached_texture(rsx_range, gcm_format, true, true, width, height, depth, mipmaps);
-			ASSERT(!cached.is_locked());
+					cached.set_dimensions(width, height, depth, pitch);
+					cached.set_format(texture::format::rgba, texture::type::ubyte, true);
 
-			// Prepare section
-			cached.reset(rsx_range);
-			cached.set_view_flags(flags);
+					// Clear the image before use if it is not going to be uploaded wholly from CPU
+					if (context != rsx::texture_upload_context::shader_read)
+					{
+						if (image->format_class() == RSX_FORMAT_CLASS_COLOR)
+						{
+							g_hw_blitter->fast_clear_image(cmd, image, color4f{});
+						}
+						else
+						{
+							g_hw_blitter->fast_clear_image(cmd, image, 1.f, 0);
+						}
+					}
+				}
+			}
+
+			if (!image)
+			{
+				ensure(!cached.exists());
+				image = gl::create_texture(gcm_format, width, height, depth, mipmaps, type);
+
+				// Prepare section
+				cached.reset(rsx_range);
+				cached.set_image_type(type);
+				cached.set_gcm_format(gcm_format);
+				cached.create(width, height, depth, mipmaps, image, pitch, true);
+			}
+
+			cached.set_view_flags(swizzle_flags);
 			cached.set_context(context);
-			cached.set_image_type(type);
-			cached.set_gcm_format(gcm_format);
 			cached.set_swizzled(swizzled);
-
-			cached.create(width, height, depth, mipmaps, image, pitch, true);
 			cached.set_dirty(false);
+
+			const auto swizzle = get_component_mapping(gcm_format, swizzle_flags);
+			image->set_native_component_layout(swizzle);
 
 			if (context != rsx::texture_upload_context::blit_engine_dst)
 			{
@@ -912,7 +728,7 @@ namespace gl
 					break;
 				}
 				default:
-					fmt::throw_exception("Unexpected gcm format 0x%X" HERE, gcm_format);
+					fmt::throw_exception("Unexpected gcm format 0x%X", gcm_format);
 				}
 
 				//NOTE: Protection is handled by the caller
@@ -926,8 +742,8 @@ namespace gl
 
 		cached_texture_section* create_nul_section(gl::command_context& /*cmd*/, const utils::address_range& rsx_range, bool /*memory_load*/) override
 		{
-			auto& cached = *find_cached_texture(rsx_range, RSX_GCM_FORMAT_IGNORED, true, false);
-			ASSERT(!cached.is_locked());
+			auto& cached = *find_cached_texture(rsx_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, true, false, false);
+			ensure(!cached.is_locked());
 
 			// Prepare section
 			cached.reset(rsx_range);
@@ -943,7 +759,7 @@ namespace gl
 			rsx::texture_upload_context context, const std::vector<rsx::subresource_layout>& subresource_layout, rsx::texture_dimension_extended type, bool input_swizzled) override
 		{
 			auto section = create_new_texture(cmd, rsx_range, width, height, depth, mipmaps, pitch, gcm_format, context, type, input_swizzled,
-				rsx::texture_create_flags::default_component_order);
+				rsx::component_order::default_, 0);
 
 			gl::upload_texture(section->get_raw_texture(), gcm_format, input_swizzled, subresource_layout);
 
@@ -951,7 +767,7 @@ namespace gl
 			return section;
 		}
 
-		void enforce_surface_creation_type(cached_texture_section& section, u32 gcm_format, rsx::texture_create_flags flags) override
+		void set_component_order(cached_texture_section& section, u32 gcm_format, rsx::component_order flags) override
 		{
 			if (flags == section.get_view_flags())
 				return;
@@ -959,13 +775,13 @@ namespace gl
 			const auto swizzle = get_component_mapping(gcm_format, flags);
 			auto image = static_cast<gl::viewable_image*>(section.get_raw_texture());
 
-			verify(HERE), image != nullptr;
+			ensure(image);
 			image->set_native_component_layout(swizzle);
 
 			section.set_view_flags(flags);
 		}
 
-		void insert_texture_barrier(gl::command_context&, gl::texture*) override
+		void insert_texture_barrier(gl::command_context&, gl::texture*, bool) override
 		{
 			auto &caps = gl::get_driver_caps();
 
@@ -1062,6 +878,8 @@ namespace gl
 
 		void on_frame_end() override
 		{
+			trim_sections();
+
 			if (m_storage.m_unreleased_texture_objects >= m_max_zombie_objects)
 			{
 				purge_unreleased_sections();

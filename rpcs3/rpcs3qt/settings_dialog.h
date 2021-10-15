@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "emu_settings.h"
 
@@ -21,35 +21,30 @@ class settings_dialog : public QDialog
 	Q_OBJECT
 
 public:
-	explicit settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, const int& tab_index = 0, QWidget *parent = 0, const GameInfo *game = nullptr);
+	explicit settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, const int& tab_index = 0, QWidget *parent = nullptr, const GameInfo *game = nullptr);
 	~settings_dialog();
 	int exec() override;
 Q_SIGNALS:
-	void GuiSettingsSyncRequest(bool configure_all);
-	void GuiStylesheetRequest(const QString& path);
-	void GuiSettingsSaveRequest();
+	void GuiStylesheetRequest();
 	void GuiRepaintRequest();
 	void EmuSettingsApplied();
-private Q_SLOTS:
-	void OnBackupCurrentGuiConfig();
-	void OnApplyGuiConfig();
-	void OnApplyStylesheet();
+	void signal_restore_dependant_defaults();
 private:
-	void EnhanceSlider(emu_settings_type settings_type, QSlider* slider, QLabel* label, const QString& label_text);
+	void EnhanceSlider(emu_settings_type settings_type, QSlider* slider, QLabel* label, const QString& label_text) const;
 
 	// Snapping of sliders when moved with mouse
 	void SnapSlider(QSlider* slider, int interval);
 	QSlider* m_current_slider = nullptr;
+	std::set<QObject*> m_snap_sliders;
 
-	// Emulator tab
-	void AddGuiConfigs();
+	// Gui tab
 	void AddStylesheets();
+	void ApplyStylesheet(bool reset);
 	QString m_current_stylesheet;
-	QString m_current_gui_config;
 	// Gpu tab
-	QString m_old_renderer = "";
+	QString m_old_renderer;
 	// Audio tab
-	QComboBox *m_mics_combo[4];
+	std::array<QComboBox*, 4> m_mics_combo;
 
 	int m_tab_index;
 	Ui::settings_dialog *ui;

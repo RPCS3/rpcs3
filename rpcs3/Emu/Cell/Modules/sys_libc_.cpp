@@ -1,9 +1,7 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/lv2/sys_tty.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Utilities/cfmt.h"
-#include <string.h>
-#include <ctype.h>
 
 LOG_CHANNEL(sysPrxForUser);
 
@@ -16,47 +14,47 @@ struct ps3_fmt_src
 	ppu_thread* ctx;
 	u32 g_count;
 
-	bool test(std::size_t index) const
+	static bool test(usz)
 	{
 		return true;
 	}
 
 	template <typename T>
-	T get(std::size_t index) const
+	T get(usz index) const
 	{
 		const u32 i = static_cast<u32>(index) + g_count;
 		return ppu_gpr_cast<T>(i < 8 ? ctx->gpr[3 + i] : +*ctx->get_stack_arg(i));
 	}
 
-	void skip(std::size_t extra)
+	void skip(usz extra)
 	{
 		g_count += static_cast<u32>(extra) + 1;
 	}
 
-	std::size_t fmt_string(std::string& out, std::size_t extra) const
+	usz fmt_string(std::string& out, usz extra) const
 	{
-		const std::size_t start = out.size();
+		const usz start = out.size();
 		out += vm::_ptr<const char>(get<u32>(extra));
 		return out.size() - start;
 	}
 
-	std::size_t type(std::size_t extra) const
+	static usz type(usz)
 	{
 		return 0;
 	}
 
-	static constexpr std::size_t size_char  = 1;
-	static constexpr std::size_t size_short = 2;
-	static constexpr std::size_t size_int   = 4;
-	static constexpr std::size_t size_long  = 4;
-	static constexpr std::size_t size_llong = 8;
-	static constexpr std::size_t size_size  = 4;
-	static constexpr std::size_t size_max   = 8;
-	static constexpr std::size_t size_diff  = 4;
+	static constexpr usz size_char  = 1;
+	static constexpr usz size_short = 2;
+	static constexpr usz size_int   = 4;
+	static constexpr usz size_long  = 4;
+	static constexpr usz size_llong = 8;
+	static constexpr usz size_size  = 4;
+	static constexpr usz size_max   = 8;
+	static constexpr usz size_diff  = 4;
 };
 
 template <>
-f64 ps3_fmt_src::get<f64>(std::size_t index) const
+f64 ps3_fmt_src::get<f64>(usz index) const
 {
 	return std::bit_cast<f64>(get<u64>(index));
 }
@@ -92,7 +90,7 @@ s16 __sys_look_ctype_table(s32 ch)
 {
 	sysPrxForUser.trace("__sys_look_ctype_table(ch=%d)", ch);
 
-	verify("__sys_look_ctype_table" HERE), ch >= -1 && ch <= 127;
+	ensure(ch >= -1 && ch <= 127); // "__sys_look_ctype_table"
 
 	return s_ctype_table[ch + 1];
 }
@@ -101,7 +99,7 @@ s32 _sys_tolower(s32 ch)
 {
 	sysPrxForUser.trace("_sys_tolower(ch=%d)", ch);
 
-	verify("_sys_tolower" HERE), ch >= -1 && ch <= 127;
+	ensure(ch >= -1 && ch <= 127); // "_sys_tolower"
 
 	return s_ctype_table[ch + 1] & 1 ? ch + 0x20 : ch;
 }
@@ -110,7 +108,7 @@ s32 _sys_toupper(s32 ch)
 {
 	sysPrxForUser.trace("_sys_toupper(ch=%d)", ch);
 
-	verify("_sys_toupper" HERE), ch >= -1 && ch <= 127;
+	ensure(ch >= -1 && ch <= 127); // "_sys_toupper"
 
 	return s_ctype_table[ch + 1] & 2 ? ch - 0x20 : ch;
 }
@@ -404,7 +402,7 @@ s32 _sys_snprintf(ppu_thread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> 
 	}
 	else
 	{
-		count = static_cast<u32>(std::min<size_t>(count - 1, result.size()));
+		count = static_cast<u32>(std::min<usz>(count - 1, result.size()));
 
 		std::memcpy(dst.get_ptr(), result.c_str(), count);
 		dst[count] = 0;
@@ -418,7 +416,7 @@ error_code _sys_printf(ppu_thread& ppu, vm::cptr<char> fmt, ppu_va_args_t va_arg
 
 	const auto buf = vm::make_str(ps3_fmt(ppu, fmt, va_args.count));
 
-	sys_tty_write(0, buf, buf.get_count() - 1, vm::var<u32>{});
+	sys_tty_write(ppu, 0, buf, buf.get_count() - 1, vm::var<u32>{});
 
 	return CELL_OK;
 }

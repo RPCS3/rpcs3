@@ -1,31 +1,34 @@
-﻿#include "instruction_editor_dialog.h"
+#include "instruction_editor_dialog.h"
 
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
+#include "Emu/Cell/lv2/sys_spu.h"
 
 #include <QFontDatabase>
 #include <QVBoxLayout>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QCheckBox>
 
 constexpr auto qstr = QString::fromStdString;
 
 extern bool ppu_patch(u32 addr, u32 value);
 
-instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm)
+instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, CPUDisAsm* _disasm, std::function<cpu_thread*()> func)
 	: QDialog(parent)
 	, m_pc(_pc)
 	, m_disasm(_disasm)
-	, cpu(_cpu)
+	, m_get_cpu(std::move(func))
 {
 	setWindowTitle(tr("Edit instruction"));
 	setAttribute(Qt::WA_DeleteOnClose);
 	setMinimumSize(300, sizeHint().height());
 
-	const auto cpu = _cpu.get();
-	m_cpu_offset = cpu->id_type() != 1 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
-	QString instruction = qstr(fmt::format("%08x", *reinterpret_cast<be_t<u32>*>(m_cpu_offset + m_pc)));
+	const auto cpu = m_get_cpu();
+
+	m_cpu_offset = cpu && cpu->id_type() == 2 ? static_cast<spu_thread&>(*cpu).ls : vm::g_sudo_addr;
+	const QString instruction = qstr(fmt::format("%08x", *reinterpret_cast<be_t<u32>*>(m_cpu_offset + m_pc)));
 
 	QVBoxLayout* vbox_panel(new QVBoxLayout());
 	QHBoxLayout* hbox_panel(new QHBoxLayout());
@@ -55,6 +58,19 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	vbox_right_panel->addWidget(new QLabel(qstr(fmt::format("%08x", m_pc))));
 	vbox_right_panel->addWidget(m_instr);
 	vbox_right_panel->addWidget(m_preview);
+
+	if (cpu && cpu->id_type() == 2)
+	{
+		const auto& spu = static_cast<spu_thread&>(*cpu);
+
+		if (spu.group && spu.group->max_num > 1)
+		{
+			m_apply_for_spu_group = new QCheckBox(tr("For SPUs Group"));
+			vbox_left_panel->addWidget(m_apply_for_spu_group);
+			vbox_right_panel->addWidget(new QLabel("")); // For alignment
+		}
+	}
+
 	vbox_right_panel->setAlignment(Qt::AlignLeft);
 
 	hbox_b_panel->addWidget(button_ok);
@@ -69,19 +85,29 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	vbox_panel->addSpacing(10);
 	vbox_panel->addLayout(hbox_b_panel);
 	setLayout(vbox_panel);
-	setModal(true);
 
 	// Events
-	connect(button_ok, &QAbstractButton::clicked, [=, this]()
+	connect(button_ok, &QAbstractButton::clicked, [this]()
 	{
+		const auto cpu = m_get_cpu();
+
+		if (!cpu)
+		{
+			close();
+			return;
+		}
+
 		bool ok;
-		ulong opcode = m_instr->text().toULong(&ok, 16);
-		if (!ok || opcode > UINT32_MAX)
+		const ulong opcode = m_instr->text().toULong(&ok, 16);
+		if (!ok || opcode > u32{umax})
 		{
 			QMessageBox::critical(this, tr("Error"), tr("Failed to parse PPU instruction."));
 			return;
 		}
-		else if (cpu->id_type() == 1)
+
+		const be_t<u32> swapped{static_cast<u32>(opcode)};
+
+		if (cpu->id_type() == 1)
 		{
 			if (!ppu_patch(m_pc, static_cast<u32>(opcode)))
 			{
@@ -89,9 +115,18 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 				return;
 			}
 		}
+		else if (m_apply_for_spu_group && m_apply_for_spu_group->isChecked())
+		{
+			for (auto& spu : static_cast<spu_thread&>(*cpu).group->threads)
+			{
+				if (spu)
+				{
+					std::memcpy(spu->ls + m_pc, &swapped, 4);
+				}
+			}
+		}
 		else
 		{
-			const be_t<u32> swapped{static_cast<u32>(opcode)};
 			std::memcpy(m_cpu_offset + m_pc, &swapped, 4);
 		}
 
@@ -103,11 +138,11 @@ instruction_editor_dialog::instruction_editor_dialog(QWidget *parent, u32 _pc, c
 	updatePreview();
 }
 
-void instruction_editor_dialog::updatePreview()
+void instruction_editor_dialog::updatePreview() const
 {
 	bool ok;
 	ulong opcode = m_instr->text().toULong(&ok, 16);
-	Q_UNUSED(opcode);
+	Q_UNUSED(opcode)
 
 	if (ok)
 	{

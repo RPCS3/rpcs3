@@ -1,7 +1,6 @@
-﻿#pragma once
-#include "../Common/FragmentProgramDecompiler.h"
-#include "../Common/GLSLTypes.h"
-#include "Emu/RSX/RSXFragmentProgram.h"
+#pragma once
+#include "../Program/FragmentProgramDecompiler.h"
+#include "../Program/GLSLTypes.h"
 #include "GLHelpers.h"
 
 namespace glsl
@@ -33,8 +32,8 @@ public:
 	void Task();
 
 protected:
-	std::string getFloatTypeName(size_t elementCount) override;
-	std::string getHalfTypeName(size_t elementCount) override;
+	std::string getFloatTypeName(usz elementCount) override;
+	std::string getHalfTypeName(usz elementCount) override;
 	std::string getFunction(FUNCTION) override;
 	std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
 
@@ -59,17 +58,13 @@ public:
 	ParamArray parr;
 	u32 id;
 	gl::glsl::shader shader;
-	std::vector<size_t> FragmentConstantOffsetCache;
+	std::vector<usz> FragmentConstantOffsetCache;
 
 	/**
 	 * Decompile a fragment shader located in the PS3's Memory.  This function operates synchronously.
 	 * @param prog RSXShaderProgram specifying the location and size of the shader in memory
-	 * @param td texture dimensions of input textures
 	 */
 	void Decompile(const RSXFragmentProgram& prog);
-
-	/** Compile the decompiled fragment shader into a format we can use with OpenGL. */
-	void Compile();
 
 private:
 	/** Deletes the shader and any stored information */

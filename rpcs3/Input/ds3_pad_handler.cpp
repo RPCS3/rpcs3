@@ -1,13 +1,54 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "ds3_pad_handler.h"
 #include "Emu/Io/pad_config.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(ds3_log, "DS3");
 
-ds3_pad_handler::ds3_pad_handler() : PadHandlerBase(pad_handler::ds3)
+struct ds3_rumble
+{
+	u8 padding              = 0x00;
+	u8 small_motor_duration = 0xFF; // 0xff means forever
+	u8 small_motor_on       = 0x00; // 0 or 1 (off/on)
+	u8 large_motor_duration = 0xFF; // 0xff means forever
+	u8 large_motor_force    = 0x00; // 0 to 255
+};
+
+struct ds3_led
+{
+	u8 duration             = 0xFF; // total duration, 0xff means forever
+	u8 interval_duration    = 0xFF; // interval duration in deciseconds
+	u8 enabled              = 0x10;
+	u8 interval_portion_off = 0x00; // in percent (100% = 0xFF)
+	u8 interval_portion_on  = 0xFF; // in percent (100% = 0xFF)
+};
+
+struct ds3_output_report
+{
+#ifdef _WIN32
+	u8 report_id = 0x00;
+	u8 idk_what_this_is[3] = {0x02, 0x00, 0x00};
+#else
+	u8 report_id = 0x01;
+#endif
+	ds3_rumble rumble;
+	u8 padding[4]  = {0x00, 0x00, 0x00, 0x00};
+	u8 led_enabled = 0x00; // LED 1 = 0x02, LED 2 = 0x04, etc.
+	ds3_led led[4];
+	ds3_led led_5;         // reserved for another LED
+};
+
+constexpr u8 battery_capacity[] = {0, 1, 25, 50, 75, 100};
+
+constexpr id_pair SONY_DS3_ID_0 = {0x054C, 0x0268};
+
+ds3_pad_handler::ds3_pad_handler()
+    : hid_pad_handler(pad_handler::ds3, {SONY_DS3_ID_0})
 {
 	button_list =
 	{
+		{ DS3KeyCodes::None,     "" },
 		{ DS3KeyCodes::Triangle, "Triangle" },
 		{ DS3KeyCodes::Circle,   "Circle" },
 		{ DS3KeyCodes::Cross,    "Cross" },
@@ -41,6 +82,10 @@ ds3_pad_handler::ds3_pad_handler() : PadHandlerBase(pad_handler::ds3)
 	b_has_config = true;
 	b_has_rumble = true;
 	b_has_deadzones = true;
+	b_has_battery = true;
+	b_has_led = true;
+	b_has_rgb = false;
+	b_has_pressure_intensity_button = false; // The DS3 obviously already has this feature natively.
 
 	m_name_string = "DS3 Pad #";
 	m_max_devices = CELL_PAD_MAX_PORT_NUM;
@@ -51,139 +96,47 @@ ds3_pad_handler::ds3_pad_handler() : PadHandlerBase(pad_handler::ds3)
 
 ds3_pad_handler::~ds3_pad_handler()
 {
-	for (auto& controller : controllers)
+	for (auto& controller : m_controllers)
 	{
-		if (controller->handle)
+		if (controller.second && controller.second->hidDevice)
 		{
 			// Disable blinking and vibration
-			controller->large_motor = 0;
-			controller->small_motor = 0;
-			send_output_report(controller);
-			hid_close(controller->handle);
+			controller.second->large_motor = 0;
+			controller.second->small_motor = 0;
+			send_output_report(controller.second.get());
 		}
 	}
-	hid_exit();
 }
 
-bool ds3_pad_handler::init_usb()
+u32 ds3_pad_handler::get_battery_level(const std::string& padId)
 {
-	if (hid_init() != 0)
+	const std::shared_ptr<ds3_device> device = get_hid_device(padId);
+	if (!device || !device->hidDevice)
 	{
-		ds3_log.fatal("Failed to init hidapi for the DS3 pad handler");
-		return false;
+		return 0;
 	}
-	return true;
+	return std::clamp<u32>(device->battery_level, 0, 100);
 }
 
-bool ds3_pad_handler::Init()
+void ds3_pad_handler::SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
 {
-	if (is_init)
-		return true;
-
-	if (!init_usb())
-		return false;
-
-	bool warn_about_drivers = false;
-
-	// Uses libusb for windows as hidapi will never work with UsbHid driver for the ds3 and it won't work with WinUsb either(windows hid api needs the UsbHid in the driver stack as far as I can tell)
-	// For other os use hidapi and hope for the best!
-	hid_device_info* hid_info = hid_enumerate(DS3_VID, DS3_PID);
-	hid_device_info* head = hid_info;
-	while (hid_info)
-	{
-		hid_device *handle = hid_open_path(hid_info->path);
-
-#ifdef _WIN32
-		u8 buf[0xFF];
-		buf[0] = 0xF2;
-		bool got_report = false;
-		if (handle)
-		{
-			got_report = hid_get_feature_report(handle, buf, 0xFF) >= 0;
-			if (!got_report)
-			{
-				buf[0] = 0;
-				got_report = hid_get_feature_report(handle, buf, 0xFF) >= 0;
-			}
-		}
-		if (got_report)
-#else
-		if(handle)
-#endif
-		{
-			std::shared_ptr<ds3_device> ds3dev = std::make_shared<ds3_device>();
-			ds3dev->device = hid_info->path;
-			ds3dev->handle = handle;
-#ifdef _WIN32
-			ds3dev->report_id = buf[0];
-#endif
-			controllers.emplace_back(ds3dev);
-		}
-		else
-		{
-			if (handle)
-				hid_close(handle);
-
-			warn_about_drivers = true;
-		}
-		hid_info = hid_info->next;
-	}
-
-	hid_free_enumeration(head);
-
-	if (warn_about_drivers)
-	{
-		ds3_log.error("One or more DS3 pads were detected but couldn't be interacted with directly");
-#if defined(_WIN32) || defined(__linux__)
-		ds3_log.error("Check https://wiki.rpcs3.net/index.php?title=Help:Controller_Configuration for intructions on how to solve this issue");
-#endif
-	}
-	else if (controllers.empty())
-	{
-		ds3_log.warning("No controllers found!");
-	}
-	else
-	{
-		ds3_log.success("Controllers found: %d", controllers.size());
-	}
-
-	is_init = true;
-	return true;
-}
-
-std::vector<std::string> ds3_pad_handler::ListDevices()
-{
-	std::vector<std::string> ds3_pads_list;
-
-	if (!Init())
-		return ds3_pads_list;
-
-	for (size_t i = 1; i <= controllers.size(); ++i) // Controllers 1-n in GUI
-	{
-		ds3_pads_list.emplace_back(m_name_string + std::to_string(i));
-	}
-
-	return ds3_pads_list;
-}
-
-void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32/* r*/, s32/* g*/, s32 /* b*/, bool /*battery_led*/, u32 /*battery_led_brightness*/)
-{
-	std::shared_ptr<ds3_device> device = get_ds3_device(padId);
-	if (device == nullptr || device->handle == nullptr)
+	std::shared_ptr<ds3_device> device = get_hid_device(padId);
+	if (device == nullptr || device->hidDevice == nullptr)
 		return;
 
 	// Set the device's motor speeds to our requested values 0-255
 	device->large_motor = largeMotor;
 	device->small_motor = smallMotor;
+	device->player_id = player_id;
 
 	int index = 0;
 	for (uint i = 0; i < MAX_GAMEPADS; i++)
 	{
-		if (g_cfg_input.player[i]->handler == pad_handler::ds3)
+		if (g_cfg_input.player[i]->handler == m_type)
 		{
 			if (g_cfg_input.player[i]->device.to_string() == padId)
 			{
-				m_pad_configs[index].load();
+				m_pad_configs[index].from_string(g_cfg_input.player[i]->config.to_string());
 				device->config = &m_pad_configs[index];
 				break;
 			}
@@ -191,61 +144,61 @@ void ds3_pad_handler::SetPadData(const std::string& padId, u32 largeMotor, u32 s
 		}
 	}
 
+	ensure(device->config);
+
 	// Start/Stop the engines :)
-	send_output_report(device);
+	send_output_report(device.get());
 }
 
-void ds3_pad_handler::send_output_report(const std::shared_ptr<ds3_device>& ds3dev)
+int ds3_pad_handler::send_output_report(ds3_device* ds3dev)
 {
-	if (!ds3dev)
-		return;
+	if (!ds3dev || !ds3dev->hidDevice || !ds3dev->config)
+		return -2;
 
-#ifdef _WIN32
-	u8 report_buf[] = {
-		0x00,
-		0x02, 0x00, 0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00
-	};
+	ds3_output_report output_report;
+	output_report.rumble.small_motor_on    = ds3dev->small_motor;
+	output_report.rumble.large_motor_force = ds3dev->large_motor;
 
-	report_buf[6] = ds3dev->small_motor;
-	report_buf[8] = ds3dev->large_motor;
-#else
-	u8 report_buf[] = {
-		0x01,
-		0x00, 0xff, 0x00, 0xff, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0xff, 0x27, 0x10, 0x00, 0x32,
-		0x00, 0x00, 0x00, 0x00, 0x00
-	};
-	report_buf[3] = ds3dev->large_motor;
-	report_buf[5] = ds3dev->small_motor;
-#endif
+	if (ds3dev->config->led_battery_indicator)
+	{
+		if (ds3dev->battery_level >= 75)
+			output_report.led_enabled = 0b00011110;
+		else if (ds3dev->battery_level >= 50)
+			output_report.led_enabled = 0b00001110;
+		else if (ds3dev->battery_level >= 25)
+			output_report.led_enabled = 0b00000110;
+		else
+			output_report.led_enabled = 0b00000010;
+	}
+	else
+	{
+		switch (ds3dev->player_id)
+		{
+		case 0: output_report.led_enabled = 0b00000010; break;
+		case 1: output_report.led_enabled = 0b00000100; break;
+		case 2: output_report.led_enabled = 0b00001000; break;
+		case 3: output_report.led_enabled = 0b00010000; break;
+		case 4: output_report.led_enabled = 0b00010010; break;
+		case 5: output_report.led_enabled = 0b00010100; break;
+		case 6: output_report.led_enabled = 0b00011000; break;
+		default:
+			fmt::throw_exception("DS3 is using forbidden player id %d", ds3dev->player_id);
+		}
+	}
 
-	hid_write(ds3dev->handle, report_buf, sizeof(report_buf));
+	if (ds3dev->config->led_low_battery_blink && ds3dev->battery_level < 25)
+	{
+		output_report.led[3].interval_duration    = 0x14; // 2 seconds
+		output_report.led[3].interval_portion_on  = ds3dev->led_delay_on;
+		output_report.led[3].interval_portion_off = ds3dev->led_delay_off;
+	}
+
+	return hid_write(ds3dev->hidDevice, &output_report.report_id, sizeof(output_report));
 }
 
-std::shared_ptr<ds3_pad_handler::ds3_device> ds3_pad_handler::get_ds3_device(const std::string& padId)
+void ds3_pad_handler::init_config(cfg_pad* cfg)
 {
-	if (!Init())
-		return nullptr;
-
-	size_t pos = padId.find(m_name_string);
-	if (pos == umax)
-		return nullptr;
-
-	int pad_number = std::stoi(padId.substr(pos + 9));
-	if (pad_number > 0 && pad_number + 0u <= controllers.size())
-		return controllers[static_cast<size_t>(pad_number) - 1];
-
-	return nullptr;
-}
-
-void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
-{
-	// Set this profile's save location
-	cfg->cfg_name = name;
+	if (!cfg) return;
 
 	// Set default button mapping
 	cfg->ls_left.def = button_list.at(DS3KeyCodes::LSXNeg);
@@ -274,6 +227,8 @@ void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->l2.def = button_list.at(DS3KeyCodes::L2);
 	cfg->l3.def = button_list.at(DS3KeyCodes::L3);
 
+	cfg->pressure_intensity_button.def = button_list.at(DS3KeyCodes::None);
+
 	// Set default misc variables
 	cfg->lstickdeadzone.def    = 40; // between 0 and 255
 	cfg->rstickdeadzone.def    = 40; // between 0 and 255
@@ -282,62 +237,144 @@ void ds3_pad_handler::init_config(pad_config* cfg, const std::string& name)
 	cfg->lpadsquircling.def    = 0;
 	cfg->rpadsquircling.def    = 0;
 
-	// Set color value
-	cfg->colorR.def = 0;
-	cfg->colorG.def = 0;
-	cfg->colorB.def = 0;
+	// Set default LED options
+	cfg->led_battery_indicator.def = false;
+	cfg->led_low_battery_blink.def = true;
 
 	// apply defaults
 	cfg->from_default();
 }
 
-ds3_pad_handler::DS3Status ds3_pad_handler::get_data(const std::shared_ptr<ds3_device>& ds3dev)
+void ds3_pad_handler::check_add_device(hid_device* hidDevice, std::string_view path, std::wstring_view wide_serial)
 {
-	if (!ds3dev)
-		return DS3Status::Disconnected;
+	if (!hidDevice)
+	{
+		return;
+	}
 
-	auto& dbuf = ds3dev->buf;
+	ds3_device* device = nullptr;
+
+	for (auto& controller : m_controllers)
+	{
+		ensure(controller.second);
+
+		if (!controller.second->hidDevice)
+		{
+			device = controller.second.get();
+			break;
+		}
+	}
+
+	if (!device)
+	{
+		return;
+	}
+
+	std::string serial;
+
+	// Uses libusb for windows as hidapi will never work with UsbHid driver for the ds3 and it won't work with WinUsb either(windows hid api needs the UsbHid in the driver stack as far as I can tell)
+	// For other os use hidapi and hope for the best!
+#ifdef _WIN32
+	u8 buf[0xFF];
+	buf[0] = 0xF2;
+
+	int res = hid_get_feature_report(hidDevice, buf, 0xFF);
+	if (res < 0)
+	{
+		ds3_log.warning("check_add_device: hid_get_feature_report 0xF2 failed! Trying again with 0x0. (result=%d, error=%s)", res, hid_error(hidDevice));
+		buf[0] = 0;
+		res    = hid_get_feature_report(hidDevice, buf, 0xFF);
+	}
+	if (res < 0)
+	{
+		ds3_log.error("check_add_device: hid_get_feature_report 0x0 failed! result=%d, error=%s", res, hid_error(hidDevice));
+		hid_close(hidDevice);
+		return;
+	}
+	device->report_id = buf[0];
+#endif
+
+	for (wchar_t ch : wide_serial)
+		serial += static_cast<uchar>(ch);
+
+	if (hid_set_nonblocking(hidDevice, 1) == -1)
+	{
+		ds3_log.error("check_add_device: hid_set_nonblocking failed! Reason: %s", hid_error(hidDevice));
+		hid_close(hidDevice);
+		return;
+	}
+
+	device->path      = path;
+	device->hidDevice = hidDevice;
+
+	send_output_report(device);
 
 #ifdef _WIN32
-	dbuf[0] = ds3dev->report_id;
-	int result = hid_get_feature_report(ds3dev->handle, dbuf, sizeof(dbuf));
+	ds3_log.notice("Added device: report_id=%d, serial='%s', path='%s'", device->report_id, serial, device->path);
 #else
-	int result = hid_read(ds3dev->handle, dbuf, sizeof(dbuf));
+	ds3_log.notice("Added device: serial='%s', path='%s'", serial, device->path);
+#endif
+}
+
+ds3_pad_handler::DataStatus ds3_pad_handler::get_data(ds3_device* ds3dev)
+{
+	if (!ds3dev)
+		return DataStatus::ReadError;
+
+#ifdef _WIN32
+	ds3dev->padData[0] = ds3dev->report_id;
+	const int result = hid_get_feature_report(ds3dev->hidDevice, ds3dev->padData.data(), 64);
+#else
+	const int result = hid_read(ds3dev->hidDevice, ds3dev->padData.data(), 64);
 #endif
 
 	if (result > 0)
 	{
 #ifdef _WIN32
-		if (dbuf[0] == ds3dev->report_id)
+		if (ds3dev->padData[0] == ds3dev->report_id)
 #else
-		if (dbuf[0] == 0x01 && dbuf[1] != 0xFF)
+		if (ds3dev->padData[0] == 0x01 && ds3dev->padData[1] != 0xFF)
 #endif
 		{
-			return DS3Status::NewData;
+			const u8 battery_status = ds3dev->padData[30 + DS3_HID_OFFSET];
+
+			if (battery_status >= 0xEE)
+			{
+				// Charging (0xEE) or full (0xEF). Let's set the level to 100%.
+				ds3dev->battery_level = 100;
+				ds3dev->cable_state   = 1;
+			}
+			else
+			{
+				ds3dev->battery_level = battery_capacity[std::min<u8>(battery_status, 5)];
+				ds3dev->cable_state   = 0;
+			}
+
+			return DataStatus::NewData;
 		}
 		else
 		{
-			ds3_log.warning("Unknown packet received:0x%02x", dbuf[0]);
-			return DS3Status::Connected;
+			ds3_log.warning("Unknown packet received:0x%02x", ds3dev->padData[0]);
+			return DataStatus::NoNewData;
 		}
 	}
 	else
 	{
-		if(result == 0)
-			return DS3Status::Connected;
+		if (result == 0)
+			return DataStatus::NoNewData;
 	}
 
-	return DS3Status::Disconnected;
+	return DataStatus::ReadError;
 }
 
 std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
 	std::unordered_map<u64, u16> key_buf;
-	auto dev = std::static_pointer_cast<ds3_device>(device);
+	ds3_device* dev = static_cast<ds3_device*>(device.get());
 	if (!dev)
 		return key_buf;
 
-	auto& dbuf = dev->buf;
+	auto& dbuf = dev->padData;
 
 	const u8 lsx = dbuf[6 + DS3_HID_OFFSET];
 	const u8 lsy = dbuf[7 + DS3_HID_OFFSET];
@@ -384,29 +421,39 @@ std::unordered_map<u64, u16> ds3_pad_handler::get_button_values(const std::share
 	return key_buf;
 }
 
-pad_preview_values ds3_pad_handler::get_preview_values(std::unordered_map<u64, u16> data)
+pad_preview_values ds3_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
 {
-	return { data[L2], data[R2], data[LSXPos] - data[LSXNeg], data[LSYPos] - data[LSYNeg], data[RSXPos] - data[RSXNeg], data[RSYPos] - data[RSYNeg] };
+	return {
+		data.at(L2),
+		data.at(R2),
+		data.at(LSXPos) - data.at(LSXNeg),
+		data.at(LSYPos) - data.at(LSYNeg),
+		data.at(RSXPos) - data.at(RSXNeg),
+		data.at(RSYPos) - data.at(RSYNeg)
+	};
 }
 
 void ds3_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
 {
-	auto ds3dev = std::static_pointer_cast<ds3_device>(device);
+	ds3_device* ds3dev = static_cast<ds3_device*>(device.get());
 	if (!ds3dev || !pad)
 		return;
+
+	pad->m_battery_level = ds3dev->battery_level;
+	pad->m_cable_state   = ds3dev->cable_state;
 
 	// For unknown reasons the sixaxis values seem to be in little endian on linux
 
 #ifdef _WIN32
 	// Official Sony Windows DS3 driver seems to do the same modification of this value as the ps3
-	pad->m_sensors[0].m_value = *reinterpret_cast<le_t<u16, 1>*>(&ds3dev->buf[41 + DS3_HID_OFFSET]);
+	pad->m_sensors[0].m_value = *utils::bless<le_t<u16, 1>>(&ds3dev->padData[41 + DS3_HID_OFFSET]);
 #else
 	// When getting raw values from the device this adjustement is needed
-	pad->m_sensors[0].m_value = 512 - (*reinterpret_cast<le_t<u16, 1>*>(&ds3dev->buf[41]) - 512);
+	pad->m_sensors[0].m_value = 512 - (*utils::bless<le_t<u16, 1>>(&ds3dev->padData[41]) - 512);
 #endif
-	pad->m_sensors[1].m_value = *reinterpret_cast<le_t<u16, 1>*>(&ds3dev->buf[45 + DS3_HID_OFFSET]);
-	pad->m_sensors[2].m_value = *reinterpret_cast<le_t<u16, 1>*>(&ds3dev->buf[43 + DS3_HID_OFFSET]);
-	pad->m_sensors[3].m_value = *reinterpret_cast<le_t<u16, 1>*>(&ds3dev->buf[47 + DS3_HID_OFFSET]);
+	pad->m_sensors[1].m_value = *utils::bless<le_t<u16, 1>>(&ds3dev->padData[45 + DS3_HID_OFFSET]);
+	pad->m_sensors[2].m_value = *utils::bless<le_t<u16, 1>>(&ds3dev->padData[43 + DS3_HID_OFFSET]);
+	pad->m_sensors[3].m_value = *utils::bless<le_t<u16, 1>>(&ds3dev->padData[47 + DS3_HID_OFFSET]);
 
 	// Those are formulas used to adjust sensor values in sys_hid code but I couldn't find all the vars.
 	//auto polish_value = [](s32 value, s32 dword_0x0, s32 dword_0x4, s32 dword_0x8, s32 dword_0xC, s32 dword_0x18, s32 dword_0x1C) -> u16
@@ -427,15 +474,6 @@ void ds3_pad_handler::get_extended_info(const std::shared_ptr<PadDevice>& device
 	//pad->m_sensors[1].m_value = polish_value(pad->m_sensors[1].m_value, 226, 226, 512, 512, 0, 1023);
 	//pad->m_sensors[2].m_value = polish_value(pad->m_sensors[2].m_value, 113, 113, 512, 512, 0, 1023);
 	//pad->m_sensors[3].m_value = polish_value(pad->m_sensors[3].m_value, 1, 1, 512, 512, 0, 1023);
-}
-
-std::shared_ptr<PadDevice> ds3_pad_handler::get_device(const std::string& device)
-{
-	std::shared_ptr<ds3_device> ds3device = get_ds3_device(device);
-	if (ds3device == nullptr || ds3device->handle == nullptr)
-		return nullptr;
-
-	return ds3device;
 }
 
 bool ds3_pad_handler::get_is_left_trigger(u64 keyCode)
@@ -478,62 +516,96 @@ bool ds3_pad_handler::get_is_right_stick(u64 keyCode)
 
 PadHandlerBase::connection ds3_pad_handler::update_connection(const std::shared_ptr<PadDevice>& device)
 {
-	auto dev = std::static_pointer_cast<ds3_device>(device);
-	if (!dev)
+	ds3_device* dev = static_cast<ds3_device*>(device.get());
+	if (!dev || dev->path.empty())
 		return connection::disconnected;
 
-	if (dev->handle == nullptr)
+	if (dev->hidDevice == nullptr)
 	{
-		hid_device* devhandle = hid_open_path(dev->device.c_str());
-		if (!devhandle)
+		hid_device* devhandle = hid_open_path(dev->path.c_str());
+		if (devhandle)
+		{
+			if (hid_set_nonblocking(devhandle, 1) == -1)
+			{
+				ds3_log.error("Reconnecting Device %s: hid_set_nonblocking failed with error %s", dev->path, hid_error(devhandle));
+			}
+			dev->hidDevice = devhandle;
+		}
+		else
 		{
 			return connection::disconnected;
 		}
-
-		dev->handle = devhandle;
 	}
 
-	switch (get_data(dev))
+	if (get_data(dev) == DataStatus::ReadError)
 	{
-	case DS3Status::Disconnected:
-	{
-		if (dev->status == DS3Status::Connected)
-		{
-			dev->status = DS3Status::Disconnected;
-			hid_close(dev->handle);
-			dev->handle = nullptr;
-		}
-		return connection::disconnected;
-	}
-	case DS3Status::Connected:
-	{
-		if (dev->status == DS3Status::Disconnected)
-		{
-			dev->status = DS3Status::Connected;
-		}
+		// this also can mean disconnected, either way deal with it on next loop and reconnect
+		hid_close(dev->hidDevice);
+		dev->hidDevice = nullptr;
+
 		return connection::no_data;
 	}
-	case DS3Status::NewData:
-	{
-		return connection::connected;
-	}
-	default:
-		break;
-	}
 
-	return connection::disconnected;
+	return connection::connected;
 }
 
 void ds3_pad_handler::apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad)
 {
-	auto dev = std::static_pointer_cast<ds3_device>(device);
-	if (!dev || !pad)
+	ds3_device* dev = static_cast<ds3_device*>(device.get());
+	if (!dev || !dev->hidDevice || !dev->config || !pad)
 		return;
 
-	if (dev->large_motor != pad->m_vibrateMotors[0].m_value || dev->small_motor != pad->m_vibrateMotors[1].m_value)
+	cfg_pad* config = dev->config;
+
+	const int idx_l = config->switch_vibration_motors ? 1 : 0;
+	const int idx_s = config->switch_vibration_motors ? 0 : 1;
+
+	const int speed_large = config->enable_vibration_motor_large ? pad->m_vibrateMotors[idx_l].m_value : vibration_min;
+	const int speed_small = config->enable_vibration_motor_small ? pad->m_vibrateMotors[idx_s].m_value : vibration_min;
+
+	const bool wireless    = dev->cable_state == 0;
+	const bool low_battery = dev->battery_level < 25;
+	const bool is_blinking = dev->led_delay_on > 0 || dev->led_delay_off > 0;
+
+	// Blink LED when battery is low
+	if (config->led_low_battery_blink)
 	{
-		dev->large_motor = static_cast<u8>(pad->m_vibrateMotors[0].m_value);
-		dev->small_motor = static_cast<u8>(pad->m_vibrateMotors[1].m_value);
-		send_output_report(dev);
+		// we are now wired or have okay battery level -> stop blinking
+		if (is_blinking && !(wireless && low_battery))
+		{
+			dev->led_delay_on    = 0;
+			dev->led_delay_off   = 0;
+			dev->new_output_data = true;
+		}
+		// we are now wireless and low on battery -> blink
+		else if (!is_blinking && wireless && low_battery)
+		{
+			dev->led_delay_on  = 0x80;
+			dev->led_delay_off = 0xFF - dev->led_delay_on;
+			dev->new_output_data = true;
+		}
+	}
+
+	// Use LEDs to indicate battery level
+	if (config->led_battery_indicator)
+	{
+		if (dev->last_battery_level != dev->battery_level)
+		{
+			dev->new_output_data = true;
+			dev->last_battery_level = dev->battery_level;
+		}
+	}
+
+	dev->new_output_data |= dev->large_motor != speed_large || dev->small_motor != speed_small;
+
+	dev->large_motor = speed_large;
+	dev->small_motor = speed_small;
+
+	if (dev->new_output_data)
+	{
+		if (send_output_report(dev) >= 0)
+		{
+			dev->new_output_data = false;
+		}
 	}
 }

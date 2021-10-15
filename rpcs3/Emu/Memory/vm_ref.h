@@ -1,8 +1,14 @@
 #pragma once
 
 #include <type_traits>
-#include "Utilities/BEType.h"
 #include "vm.h"
+
+#include "util/to_endian.hpp"
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+#endif
 
 namespace vm
 {
@@ -23,8 +29,6 @@ namespace vm
 		using type = T;
 		using addr_type = std::remove_cv_t<AT>;
 
-		_ref_base() = default;
-
 		_ref_base(const _ref_base&) = default;
 
 		_ref_base(vm::addr_t addr)
@@ -39,16 +43,16 @@ namespace vm
 
 		T& get_ref() const
 		{
-			return *static_cast<T*>(vm::base(vm::cast(m_addr, HERE)));
+			return *static_cast<T*>(vm::base(vm::cast(m_addr)));
 		}
 
 		// convert to vm pointer
 		vm::_ptr_base<T, u32> ptr() const
 		{
-			return vm::cast(m_addr, HERE);
+			return vm::cast(m_addr);
 		}
 
-		operator simple_t<T>() const
+		operator std::common_type_t<T>() const
 		{
 			return get_ref();
 		}
@@ -63,27 +67,27 @@ namespace vm
 			return get_ref() = right.get_ref();
 		}
 
-		T& operator =(const simple_t<T>& right) const
+		T& operator =(const std::common_type_t<T>& right) const
 		{
 			return get_ref() = right;
 		}
 
-		decltype(auto) operator ++(int)
+		decltype(auto) operator ++(int) const
 		{
 			return get_ref()++;
 		}
 
-		decltype(auto) operator ++()
+		decltype(auto) operator ++() const
 		{
 			return ++get_ref();
 		}
 
-		decltype(auto) operator --(int)
+		decltype(auto) operator --(int) const
 		{
 			return get_ref()--;
 		}
 
-		decltype(auto) operator --()
+		decltype(auto) operator --() const
 		{
 			return --get_ref();
 		}
@@ -176,6 +180,10 @@ namespace vm
 		template<typename T, typename AT = u32> using bref = brefb<T, AT>;
 	}
 }
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
 
 // Change AT endianness to BE/LE
 template<typename T, typename AT, bool Se>

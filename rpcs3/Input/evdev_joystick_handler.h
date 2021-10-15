@@ -1,10 +1,12 @@
-﻿#pragma once
+#pragma once
 #ifdef HAVE_LIBEVDEV
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Utilities/File.h"
 #include "Emu/Io/PadHandler.h"
 #include <libevdev/libevdev.h>
+#include <memory>
+#include <unordered_map>
 #include <vector>
 #include <thread>
 #include <ctime>
@@ -78,9 +80,12 @@ struct positive_axis : cfg::node
 
 class evdev_joystick_handler final : public PadHandlerBase
 {
+	static constexpr u32 NO_BUTTON = u32{umax}; // Some event code that doesn't exist in evdev (code type is U16)
+
 	// Unique button names for the config files and our pad settings dialog
 	const std::unordered_map<u32, std::string> button_list =
 	{
+		{ NO_BUTTON           , ""            },
 		// Xbox One S Controller returns some buttons as key when connected through bluetooth
 		{ KEY_BACK            , "Back Key"    },
 		{ KEY_HOMEPAGE        , "Homepage Key"},
@@ -350,19 +355,17 @@ class evdev_joystick_handler final : public PadHandlerBase
 		clock_t last_vibration = 0;
 	};
 
-	const int BUTTON_COUNT = 17;
-
 public:
 	evdev_joystick_handler();
 	~evdev_joystick_handler();
 
-	void init_config(pad_config* cfg, const std::string& name) override;
+	void init_config(cfg_pad* cfg) override;
 	bool Init() override;
 	std::vector<std::string> ListDevices() override;
-	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
+	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id) override;
 	void Close();
 	void get_next_button_press(const std::string& padId, const pad_callback& callback, const pad_fail_callback& fail_callback, bool get_blacklist = false, const std::vector<std::string>& buttons = {}) override;
-	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
+	void SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
 
 private:
 	std::shared_ptr<EvdevDevice> get_evdev_device(const std::string& device);
@@ -370,17 +373,17 @@ private:
 	bool update_device(const std::shared_ptr<PadDevice>& device);
 	void update_devs();
 	int add_device(const std::string& device, const std::shared_ptr<Pad>& pad, bool in_settings = false);
-	int GetButtonInfo(const input_event& evt, const std::shared_ptr<EvdevDevice>& device, int& button_code);
+	u32 GetButtonInfo(const input_event& evt, const std::shared_ptr<EvdevDevice>& device, int& button_code);
 	std::unordered_map<u64, std::pair<u16, bool>> GetButtonValues(const std::shared_ptr<EvdevDevice>& device);
-	void SetRumble(std::shared_ptr<EvdevDevice> device, u16 large, u16 small);
+	void SetRumble(EvdevDevice* device, u16 large, u16 small);
 
 	// Search axis_orientations map for the direction by index, returns -1 if not found, 0 for positive and 1 for negative
 	int FindAxisDirection(const std::unordered_map<int, bool>& map, int index);
 
 	positive_axis m_pos_axis_config;
 	std::vector<u32> m_positive_axis;
-	std::vector<std::string> blacklist;
-	std::unordered_map<std::string, int> settings_added;
+	std::vector<std::string> m_blacklist;
+	std::unordered_map<std::string, int> m_settings_added;
 	std::shared_ptr<EvdevDevice> m_dev;
 	bool m_is_button_or_trigger;
 	bool m_is_negative;

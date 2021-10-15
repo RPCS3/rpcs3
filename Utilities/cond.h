@@ -1,8 +1,7 @@
 #pragma once
 
-#include "types.h"
+#include "util/types.hpp"
 #include "util/atomic.hpp"
-#include <shared_mutex>
 
 // Lightweight condition variable
 class cond_variable
@@ -92,5 +91,5 @@ public:
 		}
 	}
 
-	static constexpr u64 max_timeout = UINT64_MAX / 1000;
+	static constexpr u64 max_timeout = u64{umax} / 1000;
 };

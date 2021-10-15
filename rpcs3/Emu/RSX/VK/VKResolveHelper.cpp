@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "VKResolveHelper.h"
 #include "VKRenderPass.h"
@@ -11,7 +11,7 @@ namespace
 		switch (format)
 		{
 			case VK_FORMAT_R5G6B5_UNORM_PACK16:
-				return "r16ui";
+				return "r16";
 			case VK_FORMAT_R8G8B8A8_UNORM:
 			case VK_FORMAT_B8G8R8A8_UNORM:
 				return "rgba8";
@@ -20,7 +20,7 @@ namespace
 			case VK_FORMAT_R32G32B32A32_SFLOAT:
 				return "rgba32f";
 			case VK_FORMAT_A1R5G5B5_UNORM_PACK16:
-				return "r16ui";
+				return "r16";
 			case VK_FORMAT_R8_UNORM:
 				return "r8";
 			case VK_FORMAT_R8G8_UNORM:
@@ -28,7 +28,7 @@ namespace
 			case VK_FORMAT_R32_SFLOAT:
 				return "r32f";
 			default:
-				fmt::throw_exception("Unhandled VkFormat 0x%x" HERE, u32(format));
+				fmt::throw_exception("Unhandled VkFormat 0x%x", u32(format));
 		}
 	}
 }

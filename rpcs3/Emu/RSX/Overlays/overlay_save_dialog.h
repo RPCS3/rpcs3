@@ -1,6 +1,7 @@
-﻿#pragma once
+#pragma once
 
 #include "overlays.h"
+#include "overlay_list_view.hpp"
 #include "Emu/Cell/Modules/cellSaveData.h"
 
 namespace rsx
@@ -35,7 +36,7 @@ namespace rsx
 
 			compiled_resource get_compiled() override;
 
-			s32 show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet);
+			s32 show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet, bool enable_overlay);
 		};
 	}
 }

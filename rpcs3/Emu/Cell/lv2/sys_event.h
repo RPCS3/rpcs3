@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "sys_sync.h"
 
@@ -29,6 +29,7 @@ enum : u64
 enum : s32
 {
 	SYS_EVENT_PORT_LOCAL = 1,
+	SYS_EVENT_PORT_IPC   = 3, // Unofficial name
 };
 
 // Event Port Name
@@ -79,25 +80,18 @@ struct lv2_event_queue final : public lv2_obj
 {
 	static const u32 id_base = 0x8d000000;
 
+	const u32 id;
 	const lv2_protocol protocol;
-	const s32 type;
+	const u8 type;
+	const u8 size;
 	const u64 name;
 	const u64 key;
-	const s32 size;
 
-	atomic_t<u32> exists = 0; // Existence validation (workaround for shared-ptr ref-counting)
 	shared_mutex mutex;
 	std::deque<lv2_event> events;
 	std::deque<cpu_thread*> sq;
 
-	lv2_event_queue(u32 protocol, s32 type, u64 name, u64 ipc_key, s32 size)
-		: protocol{protocol}
-		, type(type)
-		, name(name)
-		, key(ipc_key)
-		, size(size)
-	{
-	}
+	lv2_event_queue(u32 protocol, s32 type, s32 size, u64 name, u64 ipc_key) noexcept;
 
 	CellError send(lv2_event);
 
@@ -112,22 +106,16 @@ struct lv2_event_queue final : public lv2_obj
 	// Check queue ptr validity (use 'exists' member)
 	static bool check(const std::weak_ptr<lv2_event_queue>&);
 	static bool check(const std::shared_ptr<lv2_event_queue>&);
-
-	CellError on_id_create()
-	{
-		exists++;
-		return {};
-	}
 };
 
 struct lv2_event_port final : lv2_obj
 {
 	static const u32 id_base = 0x0e000000;
 
-	const s32 type; // Port type, must be SYS_EVENT_PORT_LOCAL
+	const s32 type; // Port type, either IPC or local
 	const u64 name; // Event source (generated from id and process id if not set)
 
-	std::weak_ptr<lv2_event_queue> queue; // Event queue this port is connected to
+	std::shared_ptr<lv2_event_queue> queue; // Event queue this port is connected to
 
 	lv2_event_port(s32 type, u64 name)
 		: type(type)
@@ -140,15 +128,15 @@ class ppu_thread;
 
 // Syscalls
 
-error_code sys_event_queue_create(vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size);
+error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::ptr<sys_event_queue_attribute_t> attr, u64 event_queue_key, s32 size);
 error_code sys_event_queue_destroy(ppu_thread& ppu, u32 equeue_id, s32 mode);
 error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> dummy_event, u64 timeout);
 error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_event_t> event_array, s32 size, vm::ptr<u32> number);
 error_code sys_event_queue_drain(ppu_thread& ppu, u32 event_queue_id);
 
-error_code sys_event_port_create(vm::ptr<u32> eport_id, s32 port_type, u64 name);
+error_code sys_event_port_create(cpu_thread& cpu, vm::ptr<u32> eport_id, s32 port_type, u64 name);
 error_code sys_event_port_destroy(ppu_thread& ppu, u32 eport_id);
-error_code sys_event_port_connect_local(u32 event_port_id, u32 event_queue_id);
+error_code sys_event_port_connect_local(cpu_thread& cpu, u32 event_port_id, u32 event_queue_id);
 error_code sys_event_port_connect_ipc(ppu_thread& ppu, u32 eport_id, u64 ipc_key);
 error_code sys_event_port_disconnect(ppu_thread& ppu, u32 eport_id);
 error_code sys_event_port_send(u32 event_port_id, u64 data1, u64 data2, u64 data3);

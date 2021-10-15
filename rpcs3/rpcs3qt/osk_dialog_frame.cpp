@@ -1,20 +1,18 @@
-﻿#include "osk_dialog_frame.h"
+#include "osk_dialog_frame.h"
 #include "custom_dialog.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
+#include "util/asm.hpp"
+
+#include <QDialogButtonBox>
 #include <QLabel>
 #include <QLineEdit>
 #include <QTextEdit>
 #include <QHBoxLayout>
 #include <QFormLayout>
-#include <QPushButton>
 #include <QRegExpValidator>
 
 constexpr auto qstr = QString::fromStdString;
-
-osk_dialog_frame::osk_dialog_frame()
-{
-}
 
 osk_dialog_frame::~osk_dialog_frame()
 {
@@ -24,7 +22,7 @@ osk_dialog_frame::~osk_dialog_frame()
 	}
 }
 
-void osk_dialog_frame::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 /*panel_flag*/, u32 /*first_view_panel*/)
+void osk_dialog_frame::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 /*first_view_panel*/)
 {
 	state = OskDialogState::Open;
 
@@ -46,18 +44,11 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	QLabel* message_label = new QLabel(QString::fromStdU16String(message));
 
 	// Text Input Counter
-	const QString text = QString::fromStdU16String(std::u16string(init_text));
-	QLabel* inputCount = new QLabel(QString("%1/%2").arg(text.length()).arg(charlimit));
-
-	// Ok Button
-	QPushButton* button_ok = new QPushButton(tr("OK"), m_dialog);
+	const QString input_text = QString::fromStdU16String(std::u16string(init_text));
+	QLabel* input_count_label = new QLabel(QString("%1/%2").arg(input_text.length()).arg(charlimit));
 
 	// Button Layout
-	QHBoxLayout* buttonsLayout = new QHBoxLayout;
-	buttonsLayout->setAlignment(Qt::AlignCenter);
-	buttonsLayout->addStretch();
-	buttonsLayout->addWidget(button_ok);
-	buttonsLayout->addStretch();
+	QDialogButtonBox* button_box = new QDialogButtonBox(QDialogButtonBox::Ok);
 
 	// Input Layout
 	QHBoxLayout* inputLayout = new QHBoxLayout;
@@ -69,17 +60,22 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 		QLineEdit* input = new QLineEdit(m_dialog);
 		input->setFixedWidth(lineEditWidth());
 		input->setMaxLength(charlimit);
-		input->setText(text);
+		input->setText(input_text);
 		input->setFocus();
+
+		if (panel_flag & CELL_OSKDIALOG_PANELMODE_PASSWORD)
+		{
+			input->setEchoMode(QLineEdit::Password); // Let's assume that games only use the password mode with single-line edit fields
+		}
 
 		if (prohibit_flags & CELL_OSKDIALOG_NO_SPACE)
 		{
 			input->setValidator(new QRegExpValidator(QRegExp("^\\S*$"), this));
 		}
 
-		connect(input, &QLineEdit::textChanged, [=, this](const QString& text)
+		connect(input, &QLineEdit::textChanged, input_count_label, [input_count_label, charlimit, this](const QString& text)
 		{
-			inputCount->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
+			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
 			on_osk_input_entered();
 		});
@@ -91,10 +87,10 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 	{
 		QTextEdit* input = new QTextEdit(m_dialog);
 		input->setFixedWidth(lineEditWidth());
-		input->setText(text);
+		input->setText(input_text);
 		input->setFocus();
 		input->moveCursor(QTextCursor::End);
-		m_text_old = text;
+		m_text_old = input_text;
 
 		connect(input, &QTextEdit::textChanged, [=, this]()
 		{
@@ -143,7 +139,7 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 			m_text_old = text;
 
-			inputCount->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
+			input_count_label->setText(QString("%1/%2").arg(text.length()).arg(charlimit));
 			SetOskText(text);
 			on_osk_input_entered();
 		});
@@ -151,26 +147,32 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 		inputLayout->addWidget(input);
 	}
 
-	inputLayout->addWidget(inputCount);
+	inputLayout->addWidget(input_count_label);
 
 	QFormLayout* layout = new QFormLayout(m_dialog);
 	layout->setFormAlignment(Qt::AlignHCenter);
 	layout->addRow(message_label);
 	layout->addRow(inputLayout);
-	layout->addRow(buttonsLayout);
+	layout->addWidget(button_box);
 	m_dialog->setLayout(layout);
 
 	// Events
-	connect(button_ok, &QAbstractButton::clicked, m_dialog, &QDialog::accept);
+	connect(button_box, &QDialogButtonBox::accepted, m_dialog, &QDialog::accept);
 
-	connect(m_dialog, &QDialog::accepted, [this]()
+	connect(m_dialog, &QDialog::finished, [this](int result)
 	{
-		on_osk_close(CELL_MSGDIALOG_BUTTON_OK);
-	});
-
-	connect(m_dialog, &QDialog::rejected, [this]()
-	{
-		on_osk_close(CELL_MSGDIALOG_BUTTON_ESCAPE);
+		switch (result)
+		{
+		case QDialog::Accepted:
+			on_osk_close(CELL_OSKDIALOG_CLOSE_CONFIRM);
+			break;
+		case QDialog::Rejected:
+			on_osk_close(CELL_OSKDIALOG_CLOSE_CANCEL);
+			break;
+		default:
+			on_osk_close(result);
+			break;
+		}
 	});
 
 	// Fix size
@@ -180,13 +182,24 @@ void osk_dialog_frame::Create(const std::string& title, const std::u16string& me
 
 void osk_dialog_frame::SetOskText(const QString& text)
 {
-	std::memcpy(osk_text, reinterpret_cast<const char16_t*>(text.constData()), (text.size() + 1u) * sizeof(char16_t));
+	std::memcpy(osk_text, utils::bless<char16_t>(text.constData()), (text.size() + 1u) * sizeof(char16_t));
 }
 
-void osk_dialog_frame::Close(bool accepted)
+void osk_dialog_frame::Close(s32 status)
 {
 	if (m_dialog)
 	{
-		m_dialog->done(accepted ? QDialog::Accepted : QDialog::Rejected);
+		switch (status)
+		{
+		case CELL_OSKDIALOG_CLOSE_CONFIRM:
+			m_dialog->done(QDialog::Accepted);
+			break;
+		case CELL_OSKDIALOG_CLOSE_CANCEL:
+			m_dialog->done(QDialog::Rejected);
+			break;
+		default:
+			m_dialog->done(status);
+			break;
+		}
 	}
 }

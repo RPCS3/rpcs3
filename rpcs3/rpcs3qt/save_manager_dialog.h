@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Cell/Modules/cellSaveData.h"
 
@@ -30,9 +30,9 @@ private Q_SLOTS:
 	void SetIconSize(int size);
 	void UpdateDetails();
 private:
-	void Init(std::string dir);
+	void Init();
 	void UpdateList();
-	QPixmap GetResizedIcon(int i);
+	QPixmap GetResizedIcon(int i) const;
 	void UpdateIcons();
 	void ShowContextMenu(const QPoint &pos);
 

@@ -1,10 +1,14 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "BufferUtils.h"
 #include "../rsx_methods.h"
-#include "Utilities/sysinfo.h"
 #include "../RSXThread.h"
 
-#include <limits>
+#include "util/to_endian.hpp"
+#include "util/sysinfo.hpp"
+#include "util/asm.hpp"
+
+#include "emmintrin.h"
+#include "immintrin.h"
 
 #define DEBUG_VERTEX_STREAMING 0
 
@@ -42,20 +46,12 @@ const bool s_use_ssse3 = utils::has_ssse3();
 const bool s_use_sse4_1 = utils::has_sse41();
 const bool s_use_avx2 = utils::has_avx2();
 
-namespace
+namespace utils
 {
-	// FIXME: GSL as_span break build if template parameter is non const with current revision.
-	// Replace with true as_span when fixed.
-	template <typename T>
-	gsl::span<T> as_span_workaround(gsl::span<std::byte> unformated_span)
+	template <typename T, typename U>
+	[[nodiscard]] auto bless(const std::span<U>& span)
 	{
-		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
-	}
-
-	template <typename T>
-	gsl::span<T> as_const_span(gsl::span<const std::byte> unformated_span)
-	{
-		return{ reinterpret_cast<T*>(unformated_span.data()), unformated_span.size_bytes() / sizeof(T) };
+		return std::span<T>(bless<T>(span.data()), sizeof(U) * span.size() / sizeof(T));
 	}
 }
 
@@ -139,8 +135,8 @@ namespace
 
 		if (remaining)
 		{
-			const auto src_ptr2 = reinterpret_cast<const se_t<u32, true, 1>*>(src_ptr);
-			const auto dst_ptr2 = reinterpret_cast<nse_t<u32, 1>*>(dst_ptr);
+			const auto src_ptr2 = utils::bless<const se_t<u32, true, 1>>(src_ptr);
+			const auto dst_ptr2 = utils::bless<nse_t<u32, 1>>(dst_ptr);
 
 			for (u32 i = 0; i < remaining; ++i)
 				dst_ptr2[i] = src_ptr2[i];
@@ -165,7 +161,7 @@ namespace
 		const u32 dword_count = size >> 2;
 		const u32 iterations = dword_count >> 2;
 
-		v128 bits_diff{};
+		__m128i bits_diff = _mm_setzero_si128();
 
 		if (s_use_ssse3) [[likely]]
 		{
@@ -176,12 +172,12 @@ namespace
 
 				if constexpr (!unaligned)
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_load_si128(dst_ptr), shuffled_vector));
+					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_load_si128(dst_ptr), shuffled_vector));
 					_mm_stream_si128(dst_ptr, shuffled_vector);
 				}
 				else
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_loadu_si128(dst_ptr), shuffled_vector));
+					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_loadu_si128(dst_ptr), shuffled_vector));
 					_mm_storeu_si128(dst_ptr, shuffled_vector);
 				}
 
@@ -199,12 +195,12 @@ namespace
 
 				if constexpr (!unaligned)
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_load_si128(dst_ptr), vec2));
+					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_load_si128(dst_ptr), vec2));
 					_mm_stream_si128(dst_ptr, vec2);
 				}
 				else
 				{
-					bits_diff = bits_diff | v128::fromV(_mm_xor_si128(_mm_loadu_si128(dst_ptr), vec2));
+					bits_diff = _mm_or_si128(bits_diff, _mm_xor_si128(_mm_loadu_si128(dst_ptr), vec2));
 					_mm_storeu_si128(dst_ptr, vec2);
 				}
 
@@ -217,8 +213,8 @@ namespace
 
 		if (remaining)
 		{
-			const auto src_ptr2 = reinterpret_cast<const se_t<u32, true, 1>*>(src_ptr);
-			const auto dst_ptr2 = reinterpret_cast<nse_t<u32, 1>*>(dst_ptr);
+			const auto src_ptr2 = utils::bless<const se_t<u32, true, 1>>(src_ptr);
+			const auto dst_ptr2 = utils::bless<nse_t<u32, 1>>(dst_ptr);
 
 			for (u32 i = 0; i < remaining; ++i)
 			{
@@ -227,12 +223,12 @@ namespace
 				if (dst_ptr2[i] != data)
 				{
 					dst_ptr2[i] = data;
-					bits_diff._u32[0] = UINT32_MAX;
+					bits_diff = _mm_set1_epi64x(-1);
 				}
 			}
 		}
 
-		return bits_diff != v128{};
+		return _mm_cvtsi128_si64(_mm_packs_epi32(bits_diff, bits_diff)) != 0;
 	}
 
 	template bool stream_data_to_memory_swapped_and_compare_u32<false>(void *dst, const void *src, u32 size);
@@ -282,8 +278,8 @@ namespace
 
 		if (remaining)
 		{
-			auto src_ptr2 = reinterpret_cast<const se_t<u16, true, 1>*>(src_ptr);
-			auto dst_ptr2 = reinterpret_cast<nse_t<u16, 1>*>(dst_ptr);
+			auto src_ptr2 = utils::bless<const se_t<u16, true, 1>>(src_ptr);
+			auto dst_ptr2 = utils::bless<nse_t<u16, 1>>(dst_ptr);
 
 			for (u32 i = 0; i < remaining; ++i)
 				dst_ptr2[i] = src_ptr2[i];
@@ -346,11 +342,11 @@ namespace
 			const u8 attribute_sz = min_block_size >> 2;
 			for (u32 n = 0; n < remainder; ++n)
 			{
-				auto src_ptr2 = reinterpret_cast<const be_t<u32>*>(src_ptr);
-				auto dst_ptr2 = reinterpret_cast<u32*>(dst_ptr);
+				auto src_ptr2 = utils::bless<const be_t<u32>>(src_ptr);
+				auto dst_ptr2 = utils::bless<u32>(dst_ptr);
 
 				for (u32 v = 0; v < attribute_sz; ++v)
-					dst_ptr2[v] = src_ptr[v];
+					dst_ptr2[v] = src_ptr2[v];
 
 				src_ptr += src_stride;
 				dst_ptr += dst_stride;
@@ -412,11 +408,11 @@ namespace
 			const u8 attribute_sz = min_block_size >> 1;
 			for (u32 n = 0; n < remainder; ++n)
 			{
-				auto src_ptr2 = reinterpret_cast<const be_t<u16>*>(src_ptr);
-				auto dst_ptr2 = reinterpret_cast<u16*>(dst_ptr);
+				auto src_ptr2 = utils::bless<const be_t<u16>>(src_ptr);
+				auto dst_ptr2 = utils::bless<u16>(dst_ptr);
 
 				for (u32 v = 0; v < attribute_sz; ++v)
-					dst_ptr[v] = src_ptr[v];
+					dst_ptr2[v] = src_ptr2[v];
 
 				src_ptr += src_stride;
 				dst_ptr += dst_stride;
@@ -579,9 +575,9 @@ namespace
 	}
 }
 
-void write_vertex_array_data_to_buffer(gsl::span<std::byte> raw_dst_span, gsl::span<const std::byte> src_ptr, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, bool swap_endianness)
+void write_vertex_array_data_to_buffer(std::span<std::byte> raw_dst_span, std::span<const std::byte> src_ptr, u32 count, rsx::vertex_base_type type, u32 vector_element_count, u32 attribute_src_stride, u8 dst_stride, bool swap_endianness)
 {
-	verify(HERE), (vector_element_count > 0);
+	ensure((vector_element_count > 0));
 	const u32 src_read_stride = rsx::get_vertex_type_size_on_host(type, vector_element_count);
 
 	bool use_stream_no_stride = false;
@@ -661,13 +657,13 @@ void write_vertex_array_data_to_buffer(gsl::span<std::byte> raw_dst_span, gsl::s
 	}
 	case rsx::vertex_base_type::cmp:
 	{
-		gsl::span<u16> dst_span = as_span_workaround<u16>(raw_dst_span);
+		std::span<u16> dst_span = utils::bless<u16>(raw_dst_span);
 		for (u32 i = 0; i < count; ++i)
 		{
 			u32 src_value;
 			memcpy(&src_value, src_ptr.subspan(attribute_src_stride * i).data(), sizeof(u32));
 
-			if (swap_endianness) src_value = se_storage<u32>::swap(src_value);
+			if (swap_endianness) src_value = stx::se_storage<u32>::swap(src_value);
 
 			const auto& decoded_vector                 = decode_cmp_vector(src_value);
 			dst_span[i * dst_stride / sizeof(u16)] = decoded_vector[0];
@@ -685,7 +681,7 @@ namespace
 	template <typename T>
 	constexpr T index_limit()
 	{
-		return std::numeric_limits<T>::max();
+		return -1;
 	}
 
 	template <typename T>
@@ -778,11 +774,11 @@ namespace
 
 		template<typename T>
 		static
-		std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst)
+		std::tuple<T, T, u32> upload_untouched(std::span<to_be_t<const T>> src, std::span<T> dst)
 		{
 			T min_index, max_index;
 			u32 written;
-			u32 remaining = ::size32(src, HERE);
+			u32 remaining = ::size32(src);
 
 			if (s_use_sse4_1 && remaining >= 32)
 			{
@@ -798,7 +794,7 @@ namespace
 				}
 				else
 				{
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 				}
 
 				remaining -= written;
@@ -951,12 +947,12 @@ namespace
 
 		template<typename T>
 		static
-		std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, T restart_index, bool skip_restart)
+		std::tuple<T, T, u32> upload_untouched(std::span<to_be_t<const T>> src, std::span<T> dst, T restart_index, bool skip_restart)
 		{
 			T min_index = index_limit<T>();
 			T max_index = 0;
 			u32 written = 0;
-			u32 length = ::size32(src, HERE);
+			u32 length = ::size32(src);
 
 			if (length >= 32 && !skip_restart)
 			{
@@ -986,7 +982,7 @@ namespace
 				}
 				else
 				{
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 				}
 			}
 
@@ -1011,7 +1007,7 @@ namespace
 	};
 
 	template<typename T>
-	std::tuple<T, T, u32> upload_untouched(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, rsx::primitive_type draw_mode, bool is_primitive_restart_enabled, u32 primitive_restart_index)
+	std::tuple<T, T, u32> upload_untouched(std::span<to_be_t<const T>> src, std::span<T> dst, rsx::primitive_type draw_mode, bool is_primitive_restart_enabled, u32 primitive_restart_index)
 	{
 		if (!is_primitive_restart_enabled)
 		{
@@ -1035,17 +1031,16 @@ namespace
 	}
 
 	template<typename T>
-	std::tuple<T, T, u32> expand_indexed_triangle_fan(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index)
+	std::tuple<T, T, u32> expand_indexed_triangle_fan(std::span<to_be_t<const T>> src, std::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index)
 	{
 		const T invalid_index = index_limit<T>();
 
 		T min_index = invalid_index;
 		T max_index = 0;
 
-		verify(HERE), (dst.size() >= 3 * (src.size() - 2));
+		ensure((dst.size() >= 3 * (src.size() - 2)));
 
 		u32 dst_idx = 0;
-		u32 src_idx = 0;
 
 		bool needs_anchor = true;
 		T anchor = invalid_index;
@@ -1088,12 +1083,12 @@ namespace
 	}
 
 	template<typename T>
-	std::tuple<T, T, u32> expand_indexed_quads(gsl::span<to_be_t<const T>> src, gsl::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index)
+	std::tuple<T, T, u32> expand_indexed_quads(std::span<to_be_t<const T>> src, std::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index)
 	{
 		T min_index = index_limit<T>();
 		T max_index = 0;
 
-		verify(HERE), (4 * dst.size_bytes() >= 6 * src.size_bytes());
+		ensure((4 * dst.size_bytes() >= 6 * src.size_bytes()));
 
 		u32 dst_idx = 0;
 		u8 set_size = 0;
@@ -1150,7 +1145,7 @@ bool is_primitive_native(rsx::primitive_type draw_mode)
 		break;
 	}
 
-	fmt::throw_exception("Wrong primitive type" HERE);
+	fmt::throw_exception("Wrong primitive type");
 }
 
 bool is_primitive_disjointed(rsx::primitive_type draw_mode)
@@ -1196,7 +1191,7 @@ u32 get_index_type_size(rsx::index_array_type type)
 	case rsx::index_array_type::u16: return sizeof(u16);
 	case rsx::index_array_type::u32: return sizeof(u32);
 	}
-	fmt::throw_exception("Wrong index type" HERE);
+	fmt::throw_exception("Wrong index type");
 }
 
 void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned count)
@@ -1237,30 +1232,20 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 	case rsx::primitive_type::line_strip:
 	case rsx::primitive_type::triangles:
 	case rsx::primitive_type::triangle_strip:
-		fmt::throw_exception("Native primitive type doesn't require expansion" HERE);
+		fmt::throw_exception("Native primitive type doesn't require expansion");
 	case rsx::primitive_type::invalid:
 		break;
 	}
 
-	fmt::throw_exception("Tried to load invalid primitive type" HERE);
+	fmt::throw_exception("Tried to load invalid primitive type");
 }
 
 
 namespace
 {
-	/**
-	* Get first index and index count from a draw indexed clause.
-	*/
-	std::tuple<u32, u32> get_first_count_from_draw_indexed_clause(const std::vector<std::pair<u32, u32>>& first_count_arguments)
-	{
-		u32 first = std::get<0>(first_count_arguments.front());
-		u32 count = std::get<0>(first_count_arguments.back()) + std::get<1>(first_count_arguments.back()) - first;
-		return std::make_tuple(first, count);
-	}
-
 	template<typename T>
-	std::tuple<T, T, u32> write_index_array_data_to_buffer_impl(gsl::span<T> dst,
-		gsl::span<const be_t<T>> src,
+	std::tuple<T, T, u32> write_index_array_data_to_buffer_impl(std::span<T> dst,
+		std::span<const be_t<T>> src,
 		rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index,
 		const std::function<bool(rsx::primitive_type)>& expands)
 	{
@@ -1288,13 +1273,13 @@ namespace
 			return expand_indexed_quads<T>(src, dst, restart_index_enabled, restart_index);
 		}
 		default:
-			fmt::throw_exception("Unknown draw mode (0x%x)" HERE, static_cast<u8>(draw_mode));
+			fmt::throw_exception("Unknown draw mode (0x%x)", static_cast<u8>(draw_mode));
 		}
 	}
 }
 
-std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<std::byte> dst_ptr,
-	gsl::span<const std::byte> src_ptr,
+std::tuple<u32, u32, u32> write_index_array_data_to_buffer(std::span<std::byte> dst_ptr,
+	std::span<const std::byte> src_ptr,
 	rsx::index_array_type type, rsx::primitive_type draw_mode, bool restart_index_enabled, u32 restart_index,
 	const std::function<bool(rsx::primitive_type)>& expands)
 {
@@ -1302,16 +1287,16 @@ std::tuple<u32, u32, u32> write_index_array_data_to_buffer(gsl::span<std::byte> 
 	{
 	case rsx::index_array_type::u16:
 	{
-		return write_index_array_data_to_buffer_impl<u16>(as_span_workaround<u16>(dst_ptr),
-			as_const_span<const be_t<u16>>(src_ptr), draw_mode, restart_index_enabled, restart_index, expands);
+		return write_index_array_data_to_buffer_impl<u16>(utils::bless<u16>(dst_ptr), utils::bless<const be_t<u16>>(src_ptr),
+			draw_mode, restart_index_enabled, restart_index, expands);
 	}
 	case rsx::index_array_type::u32:
 	{
-		return write_index_array_data_to_buffer_impl<u32>(as_span_workaround<u32>(dst_ptr),
-			as_const_span<const be_t<u32>>(src_ptr), draw_mode, restart_index_enabled, restart_index, expands);
+		return write_index_array_data_to_buffer_impl<u32>(utils::bless<u32>(dst_ptr), utils::bless<const be_t<u32>>(src_ptr),
+			draw_mode, restart_index_enabled, restart_index, expands);
 	}
 	default:
-		fmt::throw_exception("Unreachable" HERE);
+		fmt::throw_exception("Unreachable");
 	}
 }
 

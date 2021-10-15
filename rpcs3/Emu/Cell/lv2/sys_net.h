@@ -4,6 +4,7 @@
 #include "Utilities/mutex.h"
 
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 #include <vector>
 #include <utility>
@@ -181,7 +182,7 @@ struct sys_net_fd_set
 {
 	be_t<u32> fds_bits[32];
 
-	u32 bit(s32 s)
+	u32 bit(s32 s) const
 	{
 		return (fds_bits[(s >> 5) & 31] >> (s & 31)) & 1u;
 	}
@@ -310,7 +311,7 @@ struct sys_net_linger
 struct lv2_socket final
 {
 #ifdef _WIN32
-	using socket_type = std::uintptr_t;
+	using socket_type = uptr;
 #else
 	using socket_type = int;
 #endif
@@ -381,7 +382,7 @@ struct lv2_socket final
 		};
 
 		static constexpr be_t<u32> U2S_sig = (static_cast<u32>('U') << 24 | static_cast<u32>('2') << 16 | static_cast<u32>('S') << 8 | static_cast<u32>('0'));
-		static constexpr std::size_t MAX_RECEIVED_BUFFER = (1024*1024*10);
+		static constexpr usz MAX_RECEIVED_BUFFER = (1024*1024*10);
 
 		// P2P stream socket specific
 		struct encapsulated_tcp
@@ -406,17 +407,17 @@ struct lv2_socket final
 
 		stream_status status = stream_status::stream_closed;
 
-		std::size_t max_backlog = 0; // set on listen
+		usz max_backlog = 0; // set on listen
 		std::queue<s32> backlog;
 
 		u16 op_port = 0, op_vport = 0;
 		u32 op_addr = 0;
 
 		u64 data_beg_seq = 0; // Seq of first byte of received_data
-		u32 data_available = 0; // Amount of continuous data available(calculated on ACK send)
+		u64 data_available = 0; // Amount of continuous data available(calculated on ACK send)
 		std::map<u64, std::vector<u8>> received_data; // holds seq/data of data received
 
-		u32 cur_seq = 0; // SEQ of next packet to be sent
+		u64 cur_seq = 0; // SEQ of next packet to be sent
 	} p2ps;
 
 	// Value keepers

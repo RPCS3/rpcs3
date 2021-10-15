@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rpcs3_version.h"
 #include "git-version.h"
 #include "Utilities/StrUtil.h"
@@ -28,7 +28,7 @@ namespace rpcs3
 	// Currently accessible by Windows and Linux build scripts, see implementations when doing MACOSX
 	const utils::version& get_version()
 	{
-		static constexpr utils::version version{ 0, 0, 12, utils::version_type::alpha, 1, RPCS3_GIT_VERSION };
+		static constexpr utils::version version{ 0, 0, 18, utils::version_type::alpha, 1, RPCS3_GIT_VERSION };
 		return version;
 	}
 

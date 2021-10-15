@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Utilities/types.h"
+#include "util/types.hpp"
 #include "../../Utilities/File.h"
 #include "../../Utilities/bit_set.h"
 
@@ -99,7 +99,7 @@ struct elf_phdr<en_t, u32>
 template<template<typename T> class en_t, typename sz_t>
 struct elf_prog final : elf_phdr<en_t, sz_t>
 {
-	std::vector<uchar> bin;
+	std::vector<uchar> bin{};
 
 	using base = elf_phdr<en_t, sz_t>;
 
@@ -113,7 +113,7 @@ struct elf_prog final : elf_phdr<en_t, sz_t>
 		base::p_vaddr = vaddr;
 		base::p_memsz = memsz;
 		base::p_align = align;
-		base::p_filesz = static_cast<sz_t>(bin.size());
+		base::p_filesz = static_cast<sz_t>(this->bin.size());
 		base::p_paddr = 0;
 		base::p_offset = -1;
 	}
@@ -170,12 +170,7 @@ enum class elf_error
 template<template<typename T> class en_t, typename sz_t, elf_machine Machine, elf_os OS, elf_type Type>
 class elf_object
 {
-	elf_error m_error{};
-
-	elf_error set_error(elf_error e)
-	{
-		return m_error = e;
-	}
+	elf_error m_error = elf_error::stream; // Set initial error to "file not found" error
 
 public:
 	using ehdr_t = elf_ehdr<en_t, sz_t>;
@@ -185,8 +180,8 @@ public:
 
 	ehdr_t header{};
 
-	std::vector<prog_t> progs;
-	std::vector<shdr_t> shdrs;
+	std::vector<prog_t> progs{};
+	std::vector<shdr_t> shdrs{};
 
 public:
 	elf_object() = default;
@@ -246,17 +241,15 @@ public:
 
 		if (!(opts & elf_opt::no_programs))
 		{
-			_phdrs.resize(header.e_phnum);
 			stream.seek(offset + header.e_phoff);
-			if (!stream.read(_phdrs))
+			if (!stream.read<true>(_phdrs, header.e_phnum))
 				return set_error(elf_error::stream_phdrs);
 		}
 
 		if (!(opts & elf_opt::no_sections))
 		{
-			shdrs.resize(header.e_shnum);
 			stream.seek(offset + header.e_shoff);
-			if (!stream.read(shdrs))
+			if (!stream.read<true>(shdrs, header.e_shnum))
 				return set_error(elf_error::stream_shdrs);
 		}
 
@@ -270,9 +263,8 @@ public:
 
 			if (!(opts & elf_opt::no_data))
 			{
-				progs.back().bin.resize(hdr.p_filesz);
 				stream.seek(offset + hdr.p_offset);
-				if (!stream.read(progs.back().bin))
+				if (!stream.read<true>(progs.back().bin, hdr.p_filesz))
 					return set_error(elf_error::stream_data);
 			}
 		}
@@ -283,8 +275,10 @@ public:
 		return m_error = elf_error::ok;
 	}
 
-	void save(const fs::file& stream) const
+	std::vector<u8> save(std::vector<u8>&& init = std::vector<u8>{}) const
 	{
+		fs::file stream = fs::make_stream<std::vector<u8>>(std::move(init));
+
 		// Write header
 		ehdr_t header{};
 		header.e_magic = "\177ELF"_u32;
@@ -293,7 +287,7 @@ public:
 		header.e_curver = 1;
 		header.e_os_abi = OS != elf_os::none ? OS : this->header.e_os_abi;
 		header.e_abi_ver = this->header.e_abi_ver;
-		header.e_type = Type != elf_type::none ? Type : this->header.e_type;
+		header.e_type = Type != elf_type::none ? Type : static_cast<elf_type>(this->header.e_type);
 		header.e_machine = Machine;
 		header.e_version = 1;
 		header.e_entry = this->header.e_entry;
@@ -327,6 +321,33 @@ public:
 		{
 			stream.write(prog.bin);
 		}
+
+		return std::move(static_cast<fs::container_stream<std::vector<u8>>*>(stream.release().get())->obj);
+	}
+
+	elf_object& clear()
+	{
+		// Do not use clear() in order to dealloc memory
+		progs = {};
+		shdrs = {};
+		header.e_magic = 0;
+		m_error = elf_error::stream;
+		return *this;
+	}
+
+	elf_object& set_error(elf_error error)
+	{
+		// Setting an error causes the state to clear if there was no error before
+		// Trying to set elf_error::ok is ignored
+		if (error != elf_error::ok)
+		{
+			if (m_error == elf_error::ok)
+				clear();
+
+			m_error = error;
+		}
+
+		return *this;
 	}
 
 	// Return error code

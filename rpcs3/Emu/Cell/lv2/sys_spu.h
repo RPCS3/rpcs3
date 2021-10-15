@@ -1,11 +1,14 @@
-﻿#pragma once
+#pragma once
 
 #include "sys_sync.h"
 #include "sys_event.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Utilities/File.h"
+
+#include <span>
 
 struct lv2_memory_container;
 
@@ -69,7 +72,7 @@ enum : s32
 	SYS_SPU_SEGMENT_TYPE_INFO = 4,
 };
 
-enum : u32
+enum spu_stop_syscall : u32
 {
 	SYS_SPU_THREAD_STOP_YIELD                = 0x0100,
 	SYS_SPU_THREAD_STOP_GROUP_EXIT           = 0x0101,
@@ -221,8 +224,8 @@ struct sys_spu_image
 	}
 
 	void load(const fs::file& stream);
-	void free();
-	static void deploy(u8* loc, sys_spu_segment* segs, u32 nsegs);
+	void free() const;
+	static void deploy(u8* loc, std::span<const sys_spu_segment> segs);
 };
 
 enum : u32
@@ -262,6 +265,8 @@ struct lv2_spu_group
 	static const u32 id_count = 255;
 	static constexpr std::pair<u32, u32> id_invl_range = {0, 8};
 
+	static_assert(spu_thread::id_count == id_count * 6 + 5);
+
 	const std::string name;
 	const u32 id;
 	const u32 max_num;
@@ -285,12 +290,12 @@ struct lv2_spu_group
 
 	std::array<std::shared_ptr<named_thread<spu_thread>>, 8> threads; // SPU Threads
 	std::array<s8, 256> threads_map; // SPU Threads map based number
-	std::array<std::pair<sys_spu_image, std::vector<sys_spu_segment>>, 8> imgs; // SPU Images
+	std::array<std::pair<u32, std::vector<sys_spu_segment>>, 8> imgs; // Entry points, SPU image segments
 	std::array<std::array<u64, 4>, 8> args; // SPU Thread Arguments
 
-	std::weak_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
-	std::weak_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
-	std::weak_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
+	std::shared_ptr<lv2_event_queue> ep_run; // port for SYS_SPU_THREAD_GROUP_EVENT_RUN events
+	std::shared_ptr<lv2_event_queue> ep_exception; // TODO: SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION
+	std::shared_ptr<lv2_event_queue> ep_sysmodule; // TODO: SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE
 
 	lv2_spu_group(std::string name, u32 num, s32 prio, s32 type, lv2_memory_container* ct, bool uses_scheduler, u32 mem_size)
 		: name(std::move(name))
@@ -308,32 +313,24 @@ struct lv2_spu_group
 		, join_state(0)
 		, running(0)
 		, stop_count(0)
+		// TODO: args()
 	{
 		threads_map.fill(-1);
 	}
 
-	void send_run_event(u64 data1, u64 data2, u64 data3)
+	CellError send_run_event(u64 data1, u64 data2, u64 data3) const
 	{
-		if (const auto queue = ep_run.lock())
-		{
-			queue->send(SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY, data1, data2, data3);
-		}
+		return ep_run ? ep_run->send(SYS_SPU_THREAD_GROUP_EVENT_RUN_KEY, data1, data2, data3) : CELL_ENOTCONN;
 	}
 
-	void send_exception_event(u64 data1, u64 data2, u64 data3)
+	CellError send_exception_event(u64 data1, u64 data2, u64 data3) const
 	{
-		if (const auto queue = ep_exception.lock())
-		{
-			queue->send(SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY, data1, data2, data3);
-		}
+		return ep_exception ? ep_exception->send(SYS_SPU_THREAD_GROUP_EVENT_EXCEPTION_KEY, data1, data2, data3) : CELL_ENOTCONN;
 	}
 
-	void send_sysmodule_event(u64 data1, u64 data2, u64 data3)
+	CellError send_sysmodule_event(u64 data1, u64 data2, u64 data3) const
 	{
-		if (const auto queue = ep_sysmodule.lock())
-		{
-			queue->send(SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3);
-		}
+		return ep_sysmodule ? ep_sysmodule->send(SYS_SPU_THREAD_GROUP_EVENT_SYSTEM_MODULE_KEY, data1, data2, data3) : CELL_ENOTCONN;
 	}
 
 	static std::pair<named_thread<spu_thread>*, std::shared_ptr<lv2_spu_group>> get_thread(u32 id);
@@ -368,14 +365,14 @@ error_code sys_spu_thread_group_disconnect_event_all_threads(ppu_thread&, u32 id
 error_code sys_spu_thread_group_set_cooperative_victims(ppu_thread&, u32 id, u32 threads_mask);
 error_code sys_spu_thread_group_syscall_253(ppu_thread& ppu, u32 id, vm::ptr<sys_spu_thread_group_syscall_253_info> info);
 error_code sys_spu_thread_group_log(ppu_thread&, s32 command, vm::ptr<s32> stat);
-error_code sys_spu_thread_write_ls(ppu_thread&, u32 id, u32 address, u64 value, u32 type);
-error_code sys_spu_thread_read_ls(ppu_thread&, u32 id, u32 address, vm::ptr<u64> value, u32 type);
+error_code sys_spu_thread_write_ls(ppu_thread&, u32 id, u32 lsa, u64 value, u32 type);
+error_code sys_spu_thread_read_ls(ppu_thread&, u32 id, u32 lsa, vm::ptr<u64> value, u32 type);
 error_code sys_spu_thread_write_spu_mb(ppu_thread&, u32 id, u32 value);
 error_code sys_spu_thread_set_spu_cfg(ppu_thread&, u32 id, u64 value);
 error_code sys_spu_thread_get_spu_cfg(ppu_thread&, u32 id, vm::ptr<u64> value);
 error_code sys_spu_thread_write_snr(ppu_thread&, u32 id, u32 number, u32 value);
 error_code sys_spu_thread_connect_event(ppu_thread&, u32 id, u32 eq, u32 et, u8 spup);
-error_code sys_spu_thread_disconnect_event(ppu_thread&, u32 id, u32 event_type, u8 spup);
+error_code sys_spu_thread_disconnect_event(ppu_thread&, u32 id, u32 et, u8 spup);
 error_code sys_spu_thread_bind_queue(ppu_thread&, u32 id, u32 spuq, u32 spuq_num);
 error_code sys_spu_thread_unbind_queue(ppu_thread&, u32 id, u32 spuq_num);
 error_code sys_spu_thread_get_exit_status(ppu_thread&, u32 id, vm::ptr<s32> status);

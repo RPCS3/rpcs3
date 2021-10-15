@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_mutex.h"
 
 #include "Emu/IdManager.h"
@@ -8,8 +8,6 @@
 #include "Emu/Cell/PPUThread.h"
 
 LOG_CHANNEL(sys_mutex);
-
-template<> DECLARE(ipc_manager<lv2_mutex, u64>::g_ipc) {};
 
 error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_mutex_attribute_t> attr)
 {
@@ -59,10 +57,8 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 		return std::make_shared<lv2_mutex>(
 			_attr.protocol,
 			_attr.recursive,
-			_attr.pshared,
 			_attr.adaptive,
 			_attr.ipc_key,
-			_attr.flags,
 			_attr.name_u64);
 	}))
 	{
@@ -88,21 +84,12 @@ error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id)
 			return CELL_EBUSY;
 		}
 
-		if (!mutex.obj_count.fetch_op([](typename lv2_mutex::count_info& info)
-		{
-			if (info.cond_count)
-			{
-				return false;
-			}
-
-			// Decrement mutex copies count
-			info.mutex_count--;
-			return true;
-		}).second)
+		if (mutex.cond_count)
 		{
 			return CELL_EPERM;
 		}
 
+		lv2_obj::on_id_destroy(mutex, mutex.key);
 		return {};
 	});
 
@@ -165,11 +152,11 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 
 	ppu.gpr[3] = CELL_OK;
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state) || state & cpu_flag::signal)
 		{
-			return 0;
+			break;
 		}
 
 		if (timeout)
@@ -179,7 +166,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return 0;
+					return {};
 				}
 
 				std::lock_guard lock(mutex->mutex);
@@ -195,7 +182,7 @@ error_code sys_mutex_lock(ppu_thread& ppu, u32 mutex_id, u64 timeout)
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 

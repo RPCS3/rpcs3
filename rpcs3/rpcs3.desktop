@@ -9,3 +9,4 @@ Exec=rpcs3 %f
 Terminal=false
 Categories=Game;Emulator;
 Keywords=PS3;Playstation;
+StartupWMClass=rpcs3

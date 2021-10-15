@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QDialog>
 #include <QLineEdit>
@@ -8,6 +8,7 @@
 
 class CPUDisAsm;
 class cpu_thread;
+class QCheckBox;
 
 class instruction_editor_dialog : public QDialog
 {
@@ -19,11 +20,12 @@ private:
 	CPUDisAsm* m_disasm;
 	QLineEdit* m_instr;
 	QLabel* m_preview;
+	QCheckBox* m_apply_for_spu_group = nullptr;
+
+	const std::function<cpu_thread*()> m_get_cpu;
 
 public:
-	std::weak_ptr<cpu_thread> cpu;
+	instruction_editor_dialog(QWidget *parent, u32 _pc, CPUDisAsm* _disasm, std::function<cpu_thread*()> func);
 
-	instruction_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm);
-
-	void updatePreview();
+	void updatePreview() const;
 };

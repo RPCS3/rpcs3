@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #ifdef _WIN32
 #include <QWinTHumbnailToolbar>
@@ -12,6 +12,7 @@
 
 #include "update_manager.h"
 #include "settings.h"
+#include "Emu/System.h"
 
 #include <memory>
 
@@ -21,10 +22,16 @@ class game_list_frame;
 class gui_settings;
 class emu_settings;
 class persistent_settings;
+class kernel_explorer;
 
 struct gui_game_info;
 
 enum class game_boot_result : u32;
+
+namespace compat
+{
+	struct package_info;
+}
 
 namespace Ui
 {
@@ -67,46 +74,51 @@ class main_window : public QMainWindow
 		drop_error,
 		drop_pkg,
 		drop_pup,
-		drop_rap,
+		drop_rap_edat,
+		drop_psf,
 		drop_dir,
 		drop_game,
 		drop_rrc
 	};
 
 public:
-	explicit main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent = 0);
-	void Init();
+	explicit main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent = nullptr);
 	~main_window();
-	QIcon GetAppIcon();
+	bool Init(bool with_cli_boot);
+	QIcon GetAppIcon() const;
+	bool OnMissingFw();
+	void InstallPackages(QStringList file_paths = QStringList());
+	void InstallPup(QString file_path = "");
 
 Q_SIGNALS:
 	void RequestLanguageChange(const QString& language);
-	void RequestGlobalStylesheetChange(const QString& stylesheet_path);
+	void RequestGlobalStylesheetChange();
 	void RequestTrophyManagerRepaint();
 	void NotifyEmuSettingsChange();
 
 public Q_SLOTS:
 	void OnEmuStop();
-	void OnEmuRun(bool start_playtime);
-	void OnEmuResume();
-	void OnEmuPause();
-	void OnEmuReady();
+	void OnEmuRun(bool start_playtime) const;
+	void OnEmuResume() const;
+	void OnEmuPause() const;
+	void OnEmuReady() const;
 
 	void RepaintGui();
 	void RetranslateUI(const QStringList& language_codes, const QString& language);
 
 private Q_SLOTS:
 	void OnPlayOrPause();
-	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, bool force_global_config = false);
+	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool add_only = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	void BootElf();
 	void BootGame();
+	void BootVSH();
 	void BootRsxCapture(std::string path = "");
 	void DecryptSPRXLibraries();
-	void show_boot_error(game_boot_result result);
+	static void show_boot_error(game_boot_result status);
 
-	void SaveWindowState();
-	void ConfigureGuiFromSettings(bool configure_all = false);
-	void SetIconSizeActions(int idx);
+	void SaveWindowState() const;
+	void ConfigureGuiFromSettings();
+	void SetIconSizeActions(int idx) const;
 	void ResizeIcons(int index);
 
 	void RemoveDiskCache();
@@ -128,19 +140,21 @@ private:
 	void CreateActions();
 	void CreateConnects();
 	void CreateDockWindows();
-	void EnableMenus(bool enabled);
-	void ShowTitleBars(bool show);
+	void EnableMenus(bool enabled) const;
+	void ShowTitleBars(bool show) const;
 
-	static bool InstallRapFile(const QString& path, const std::string& filename);
+	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
 
-	void InstallPackages(QStringList file_paths = QStringList());
-	void HandlePackageInstallation(QStringList file_paths = QStringList());
+	void HandlePackageInstallation(QStringList file_paths);
 
-	void InstallPup(QString filePath = "");
-	void HandlePupInstallation(QString file_path = "");
+	void HandlePupInstallation(const QString& file_path, const QString& dir_path = "");
+	void ExtractPup();
 
-	drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
-	void AddGamesFromDir(const QString& path);
+	void ExtractTar();
+	void ExtractMSELF();
+
+	static drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
+	static void AddGamesFromDir(const QString& path);
 
 	QAction* CreateRecentAction(const q_string_pair& entry, const uint& sc_idx);
 	void BootRecentAction(const QAction* act);
@@ -148,7 +162,7 @@ private:
 
 	void UpdateLanguageActions(const QStringList& language_codes, const QString& language);
 
-	QString GetCurrentTitle();
+	static QString GetCurrentTitle();
 
 	q_pair_list m_rg_entries;
 	QList<QAction*> m_recent_game_acts;
@@ -164,6 +178,7 @@ private:
 	log_frame* m_log_frame = nullptr;
 	debugger_frame* m_debugger_frame = nullptr;
 	game_list_frame* m_game_list_frame = nullptr;
+	kernel_explorer* m_kernel_explorer = nullptr;
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "GDB.h"
 #include "util/logs.hpp"
@@ -9,8 +9,6 @@
 #include "Emu/IdManager.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Emu/Cell/RawSPUThread.h"
-#include "Emu/Cell/SPUThread.h"
 
 #ifdef _WIN32
 #include <WinSock2.h>
@@ -29,12 +27,10 @@
 #include <sys/un.h> // sockaddr_un
 #endif
 
-#include <algorithm>
 #include <regex>
 #include <charconv>
 
-extern void ppu_set_breakpoint(u32 addr);
-extern void ppu_remove_breakpoint(u32 addr);
+extern bool ppu_breakpoint(u32 addr, bool is_adding);
 
 LOG_CHANNEL(GDB);
 
@@ -66,9 +62,9 @@ void set_nonblocking(int s)
 
 struct gdb_cmd
 {
-	std::string cmd;
-	std::string data;
-	u8 checksum;
+	std::string cmd{};
+	std::string data{};
+	u8 checksum{};
 };
 
 bool check_errno_again()
@@ -205,11 +201,11 @@ void gdb_thread::start_server()
 	GDB.notice("Started listening on Unix socket '%s'.", sname);
 }
 
-int gdb_thread::read(void* buf, int cnt)
+int gdb_thread::read(void* buf, int cnt) const
 {
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
-		int result = recv(client_socket, reinterpret_cast<char*>(buf), cnt, 0);
+		const int result = recv(client_socket, static_cast<char*>(buf), cnt, 0);
 
 		if (result == -1)
 		{
@@ -220,7 +216,7 @@ int gdb_thread::read(void* buf, int cnt)
 			}
 
 			GDB.error("Error during socket read.");
-			fmt::throw_exception("Error during socket read" HERE);
+			fmt::throw_exception("Error during socket read");
 		}
 		return result;
 	}
@@ -232,7 +228,7 @@ char gdb_thread::read_char()
 	char result;
 	int cnt = read(&result, 1);
 	if (!cnt) {
-		fmt::throw_exception("Tried to read char, but no data was available" HERE);
+		fmt::throw_exception("Tried to read char, but no data was available");
 	}
 	return result;
 }
@@ -261,7 +257,7 @@ bool gdb_thread::try_read_cmd(gdb_cmd& out_cmd)
 			c = read_char();
 		}
 		if (c != '$') {
-			fmt::throw_exception("Expected start of packet character '$', got '%c' instead" HERE, c);
+			fmt::throw_exception("Expected start of packet character '$', got '%c' instead", c);
 		}
 	}
 	//clear packet data
@@ -313,7 +309,7 @@ bool gdb_thread::read_cmd(gdb_cmd& out_cmd)
 	}
 }
 
-void gdb_thread::send(const char* buf, int cnt)
+void gdb_thread::send(const char* buf, int cnt) const
 {
 	GDB.trace("Sending %s (%d bytes).", buf, cnt);
 
@@ -350,7 +346,7 @@ void gdb_thread::send_cmd(const std::string& cmd)
 	std::string buf;
 	buf.reserve(cmd.length() + 4);
 	buf += "$";
-	for (std::size_t i = 0; i < cmd.length(); ++i)
+	for (usz i = 0; i < cmd.length(); ++i)
 	{
 		checksum = (checksum + append_encoded_char(cmd[i], buf)) % 256;
 	}
@@ -480,7 +476,7 @@ bool gdb_thread::set_reg(ppu_thread* thread, u32 rid, std::string value)
 	}
 }
 
-u32 gdb_thread::get_reg_size(ppu_thread* thread, u32 rid)
+u32 gdb_thread::get_reg_size(ppu_thread*, u32 rid)
 {
 	switch (rid) {
 	case 66:
@@ -516,29 +512,29 @@ void gdb_thread::wait_with_interrupts()
 			}
 
 			GDB.error("Error during socket read.");
-			fmt::throw_exception("Error during socket read" HERE);
+			fmt::throw_exception("Error during socket read");
 		} else if (c == 0x03) {
 			paused = true;
 		}
 	}
 }
 
-bool gdb_thread::cmd_extended_mode(gdb_cmd& cmd)
+bool gdb_thread::cmd_extended_mode(gdb_cmd&)
 {
 	return send_cmd_ack("OK");
 }
 
-bool gdb_thread::cmd_reason(gdb_cmd& cmd)
+bool gdb_thread::cmd_reason(gdb_cmd&)
 {
 	return send_reason();
 }
 
-bool gdb_thread::cmd_supported(gdb_cmd& cmd)
+bool gdb_thread::cmd_supported(gdb_cmd&)
 {
 	return send_cmd_ack("PacketSize=1200");
 }
 
-bool gdb_thread::cmd_thread_info(gdb_cmd& cmd)
+bool gdb_thread::cmd_thread_info(gdb_cmd&)
 {
 	std::string result;
 	const auto on_select = [&](u32, cpu_thread& cpu)
@@ -554,10 +550,10 @@ bool gdb_thread::cmd_thread_info(gdb_cmd& cmd)
 	//todo: this may exceed max command length
 	result = "m" + result + "l";
 
-	return send_cmd_ack(result);;
+	return send_cmd_ack(result);
 }
 
-bool gdb_thread::cmd_current_thread(gdb_cmd& cmd)
+bool gdb_thread::cmd_current_thread(gdb_cmd&)
 {
 	return send_cmd_ack(selected_thread.expired() ? "" : ("QC" + u64_to_padded_hex(selected_thread.lock()->id)));
 }
@@ -568,8 +564,8 @@ bool gdb_thread::cmd_read_register(gdb_cmd& cmd)
 		return send_cmd_ack("E02");
 	}
 	auto th = selected_thread.lock();
-	if (th->id_type() == 1) {
-		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
+	if (auto ppu = th->try_get<named_thread<ppu_thread>>())
+	{
 		u32 rid = hex_to_u32(cmd.data);
 		std::string result = get_reg(ppu, rid);
 		if (result.empty()) {
@@ -590,7 +586,7 @@ bool gdb_thread::cmd_write_register(gdb_cmd& cmd)
 	auto th = selected_thread.lock();
 	if (th->id_type() == 1) {
 		auto ppu = static_cast<named_thread<ppu_thread>*>(th.get());
-		size_t eq_pos = cmd.data.find('=');
+		usz eq_pos = cmd.data.find('=');
 		if (eq_pos == umax) {
 			GDB.warning("Wrong write_register cmd data '%s'.", cmd.data);
 			return send_cmd_ack("E02");
@@ -609,7 +605,7 @@ bool gdb_thread::cmd_write_register(gdb_cmd& cmd)
 
 bool gdb_thread::cmd_read_memory(gdb_cmd& cmd)
 {
-	size_t s = cmd.data.find(',');
+	usz s = cmd.data.find(',');
 	u32 addr = hex_to_u32(cmd.data.substr(0, s));
 	u32 len = hex_to_u32(cmd.data.substr(s + 1));
 	std::string result;
@@ -631,8 +627,8 @@ bool gdb_thread::cmd_read_memory(gdb_cmd& cmd)
 
 bool gdb_thread::cmd_write_memory(gdb_cmd& cmd)
 {
-	size_t s = cmd.data.find(',');
-	size_t s2 = cmd.data.find(':');
+	usz s = cmd.data.find(',');
+	usz s2 = cmd.data.find(':');
 	if ((s == umax) || (s2 == umax)) {
 		GDB.warning("Malformed write memory request received: '%s'.", cmd.data);
 		return send_cmd_ack("E01");
@@ -641,7 +637,7 @@ bool gdb_thread::cmd_write_memory(gdb_cmd& cmd)
 	u32 len = hex_to_u32(cmd.data.substr(s + 1, s2 - s - 1));
 	const char* data_ptr = (cmd.data.c_str()) + s2 + 1;
 	for (u32 i = 0; i < len; ++i) {
-		if (vm::check_addr(addr + i, 1, vm::page_writable)) {
+		if (vm::check_addr(addr + i, vm::page_writable)) {
 			u8 val;
 			int res = sscanf_s(data_ptr, "%02hhX", &val);
 			if (!res) {
@@ -657,7 +653,7 @@ bool gdb_thread::cmd_write_memory(gdb_cmd& cmd)
 	return send_cmd_ack("OK");
 }
 
-bool gdb_thread::cmd_read_all_registers(gdb_cmd& cmd)
+bool gdb_thread::cmd_read_all_registers(gdb_cmd&)
 {
 	std::string result;
 	select_thread(general_ops_thread_id);
@@ -711,19 +707,19 @@ bool gdb_thread::cmd_set_thread_ops(gdb_cmd& cmd)
 	return send_cmd_ack("E01");
 }
 
-bool gdb_thread::cmd_attached_to_what(gdb_cmd& cmd)
+bool gdb_thread::cmd_attached_to_what(gdb_cmd&)
 {
 	//creating processes from client is not available yet
 	return send_cmd_ack("1");
 }
 
-bool gdb_thread::cmd_kill(gdb_cmd& cmd)
+bool gdb_thread::cmd_kill(gdb_cmd&)
 {
 	Emu.Stop();
 	return true;
 }
 
-bool gdb_thread::cmd_continue_support(gdb_cmd& cmd)
+bool gdb_thread::cmd_continue_support(gdb_cmd&)
 {
 	return send_cmd_ack("vCont;c;s;C;S");
 }
@@ -741,13 +737,13 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 		}
 		ppu->state -= cpu_flag::dbg_pause;
 		//special case if app didn't start yet (only loaded)
-		if (!Emu.IsPaused() && !Emu.IsRunning()) {
+		if (Emu.IsReady()) {
 			Emu.Run(true);
 		}
 		if (Emu.IsPaused()) {
 			Emu.Resume();
 		} else {
-			thread_ctrl::notify(*ppu);
+			ppu->state.notify_one();
 		}
 		wait_with_interrupts();
 		//we are in all-stop mode
@@ -779,7 +775,7 @@ bool gdb_thread::cmd_set_breakpoint(gdb_cmd& cmd)
 			GDB.warning("Can't parse breakpoint request, data: '%s'.", cmd.data);
 			return send_cmd_ack("E02");
 		}
-		ppu_set_breakpoint(addr);
+		ppu_breakpoint(addr, true);
 		return send_cmd_ack("OK");
 	}
 	//other breakpoint types are not supported
@@ -797,7 +793,7 @@ bool gdb_thread::cmd_remove_breakpoint(gdb_cmd& cmd)
 			GDB.warning("Can't parse breakpoint remove request, data: '%s'.", cmd.data);
 			return send_cmd_ack("E01");
 		}
-		ppu_remove_breakpoint(addr);
+		ppu_breakpoint(addr, false);
 		return send_cmd_ack("OK");
 	}
 	//other breakpoint types are not supported
@@ -854,7 +850,8 @@ void gdb_thread::operator()()
 			return;
 		}
 		//stop immediately
-		if (Emu.IsRunning()) {
+		if (Emu.IsRunning())
+		{
 			Emu.Pause();
 		}
 
@@ -892,7 +889,8 @@ void gdb_thread::operator()()
 				PROCESS_CMD("Z", cmd_set_breakpoint);
 
 				GDB.trace("Unsupported command received: '%s'.", cmd.cmd);
-				if (!send_cmd_ack("")) {
+				if (!send_cmd_ack(""))
+				{
 					break;
 				}
 			}

@@ -1,4 +1,5 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -29,7 +30,6 @@ extern "C"
 #include "cellAdec.h"
 
 #include <mutex>
-#include <thread>
 
 extern std::mutex g_mutex_avcodec_open2;
 
@@ -315,9 +315,6 @@ public:
 		, cbFunc(func)
 		, cbArg(arg)
 	{
-		//av_register_all();
-		//avcodec_register_all();
-
 		switch (type)
 		{
 		case CELL_ADEC_TYPE_ATRACX:
@@ -337,28 +334,28 @@ public:
 		}
 		default:
 		{
-			fmt::throw_exception("Unknown type (0x%x)" HERE, type);
+			fmt::throw_exception("Unknown type (0x%x)", type);
 		}
 		}
 
 		if (!codec)
 		{
-			fmt::throw_exception("avcodec_find_decoder() failed" HERE);
+			fmt::throw_exception("avcodec_find_decoder() failed");
 		}
 		if (!input_format)
 		{
-			fmt::throw_exception("av_find_input_format() failed" HERE);
+			fmt::throw_exception("av_find_input_format() failed");
 		}
 		fmt = avformat_alloc_context();
 		if (!fmt)
 		{
-			fmt::throw_exception("avformat_alloc_context() failed" HERE);
+			fmt::throw_exception("avformat_alloc_context() failed");
 		}
 		io_buf = static_cast<u8*>(av_malloc(4096));
-		fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, NULL, NULL);
+		fmt->pb = avio_alloc_context(io_buf, 256, 0, this, adecRead, nullptr, nullptr);
 		if (!fmt->pb)
 		{
-			fmt::throw_exception("avio_alloc_context() failed" HERE);
+			fmt::throw_exception("avio_alloc_context() failed");
 		}
 	}
 
@@ -465,7 +462,7 @@ public:
 						}
 						else
 						{
-							data = NULL;
+							data = nullptr;
 							size = 0;
 						}
 					}
@@ -489,10 +486,10 @@ public:
 				{
 					AVDictionary* opts = nullptr;
 					av_dict_set(&opts, "probesize", "96", 0);
-					err = avformat_open_input(&fmt, NULL, input_format, &opts);
+					err = avformat_open_input(&fmt, nullptr, input_format, &opts);
 					if (err || opts)
 					{
-						fmt::throw_exception("avformat_open_input() failed (err=0x%x, opts=%d)" HERE, err, opts ? 1 : 0);
+						fmt::throw_exception("avformat_open_input() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
 					}
 					//err = avformat_find_stream_info(fmt, NULL);
 					//if (err || !fmt->nb_streams)
@@ -501,7 +498,7 @@ public:
 					//}
 					if (!avformat_new_stream(fmt, codec))
 					{
-						fmt::throw_exception("avformat_new_stream() failed" HERE);
+						fmt::throw_exception("avformat_new_stream() failed");
 					}
 					//ctx = fmt->streams[0]->codec; // TODO: check data
 
@@ -514,7 +511,7 @@ public:
 					}
 					if (err || opts)
 					{
-						fmt::throw_exception("avcodec_open2() failed (err=0x%x, opts=%d)" HERE, err, opts ? 1 : 0);
+						fmt::throw_exception("avcodec_open2() failed (err=0x%x, opts=%d)", err, opts ? 1 : 0);
 					}
 					just_started = false;
 				}
@@ -558,7 +555,7 @@ public:
 
 					if (!frame.data)
 					{
-						fmt::throw_exception("av_frame_alloc() failed" HERE);
+						fmt::throw_exception("av_frame_alloc() failed");
 					}
 
 					int got_frame = 0;
@@ -592,7 +589,7 @@ public:
 						case AV_SAMPLE_FMT_S16P: break;
 						default:
 						{
-							fmt::throw_exception("Unsupported frame format(%d)" HERE, frame.data->format);
+							fmt::throw_exception("Unsupported frame format(%d)", frame.data->format);
 						}
 						}
 						frame.auAddr = task.au.addr;
@@ -624,7 +621,7 @@ public:
 
 			default:
 			{
-				fmt::throw_exception("Unknown task(%d)" HERE, +task.type);
+				fmt::throw_exception("Unknown task(%d)", +task.type);
 			}
 			}
 		}
@@ -658,8 +655,7 @@ next:
 		OMAHeader oma(1 /* atrac3p id */, adec.sample_rate, adec.ch_cfg, adec.frame_size);
 		if (buf_size + 0u < sizeof(oma))
 		{
-			cellAdec.error("adecRead(): OMAHeader writing failed");
-			Emu.Pause();
+			cellAdec.fatal("adecRead(): OMAHeader writing failed");
 			return 0;
 		}
 
@@ -686,9 +682,8 @@ next:
 		case adecClose:
 		{
 			buf_size = adec.reader.size;
+			break;
 		}
-		break;
-
 		case adecDecodeAu:
 		{
 			std::memcpy(buf, vm::base(adec.reader.addr), adec.reader.size);
@@ -705,21 +700,19 @@ next:
 			adec.reader.size = adec.task.au.size;
 			adec.reader.has_ats = adec.use_ats_headers;
 			//cellAdec.notice("Audio AU: size = 0x%x, pts = 0x%llx", adec.task.au.size, adec.task.au.pts);
+			break;
 		}
-		break;
-
+		case adecStartSeq: // TODO ?
 		default:
 		{
-			cellAdec.error("adecRawRead(): unknown task (%d)", +task.type);
-			Emu.Pause();
+			cellAdec.fatal("adecRawRead(): unknown task (%d)", +task.type);
 			return -1;
 		}
 		}
 
 		goto next;
 	}
-	// TODO:: Syphurith: I don't know whether we should keep this else-if now. Since the if condition is same with this one.
-	else if (adec.reader.size < static_cast<u32>(buf_size))
+	else if (adec.reader.size < static_cast<u32>(buf_size) && 0)
 	{
 		buf_size = adec.reader.size;
 	}
@@ -728,14 +721,12 @@ next:
 	{
 		return res;
 	}
-	else
-	{
-		std::memcpy(buf, vm::base(adec.reader.addr), buf_size);
 
-		adec.reader.addr += buf_size;
-		adec.reader.size -= buf_size;
-		return res + buf_size;
-	}
+	std::memcpy(buf, vm::base(adec.reader.addr), buf_size);
+
+	adec.reader.addr += buf_size;
+	adec.reader.size -= buf_size;
+	return res + buf_size;
 }
 
 bool adecCheckType(s32 type)
@@ -756,8 +747,7 @@ bool adecCheckType(s32 type)
 	case CELL_ADEC_TYPE_M4AAC:
 	case CELL_ADEC_TYPE_CELP8:
 	{
-		cellAdec.todo("Unimplemented audio codec type (%d)", type);
-		Emu.Pause();
+		cellAdec.fatal("Unimplemented audio codec type (%d)", type);
 		break;
 	}
 	default: return false;
@@ -887,8 +877,7 @@ error_code cellAdecStartSeq(u32 handle, u32 param)
 	}
 	default:
 	{
-		cellAdec.todo("cellAdecStartSeq(): Unimplemented audio codec type(%d)", adec->type);
-		Emu.Pause();
+		cellAdec.fatal("cellAdecStartSeq(): Unimplemented audio codec type(%d)", adec->type);
 		return CELL_OK;
 	}
 	}
@@ -1044,7 +1033,7 @@ error_code cellAdecGetPcm(u32 handle, vm::ptr<float> outBuffer)
 		}
 		else
 		{
-			fmt::throw_exception("Unsupported frame format (channels=%d, format=%d)" HERE, frame->channels, frame->format);
+			fmt::throw_exception("Unsupported frame format (channels=%d, format=%d)", frame->channels, frame->format);
 		}
 	}
 
@@ -1114,8 +1103,7 @@ error_code cellAdecGetPcmItem(u32 handle, vm::pptr<CellAdecPcmItem> pcmItem)
 		}
 		else
 		{
-			cellAdec.error("cellAdecGetPcmItem(): unsupported channel count (%d)", frame->channels);
-			Emu.Pause();
+			cellAdec.fatal("cellAdecGetPcmItem(): unsupported channel count (%d)", frame->channels);
 		}
 	}
 	else if (adec->type == CELL_ADEC_TYPE_MP3)

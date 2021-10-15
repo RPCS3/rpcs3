@@ -1,8 +1,7 @@
-﻿#pragma once
+#pragma once
 
-#include "../../Utilities/types.h"
-#include "Emu/Cell/PPUModule.h"
-#include "Emu/Cell/PPUOpcodes.h"
+#include "util/types.hpp"
+#include "Emu/Memory/vm_ptr.h"
 #include <vector>
 
 struct shle_pattern
@@ -23,11 +22,14 @@ public:
 	statichle_handler(int);
 	~statichle_handler();
 
+	statichle_handler(const statichle_handler&) = delete;
+	statichle_handler& operator=(const statichle_handler&) = delete;
+
 	bool load_patterns();
 	bool check_against_patterns(vm::cptr<u8>& data, u32 size, u32 addr);
 
 protected:
-	uint16_t gen_CRC16(const uint8_t* data_p, size_t length);
+	static u16 gen_CRC16(const u8* data_p, usz length);
 
 	std::vector<shle_pattern> hle_patterns;
 };

@@ -1,6 +1,11 @@
-﻿#pragma once
+#pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
+
+enum
+{
+	CELL_KB_INFO_INTERCEPTED = 1
+};
 
 enum
 {
@@ -87,7 +92,7 @@ enum Keys
 	CELL_KEYC_KANA        = 0x88,
 	CELL_KEYC_HENKAN      = 0x8a,
 	CELL_KEYC_MUHENKAN    = 0x8b,
-	
+
 	// Raw keycodes for ASCII keys
 	CELL_KEYC_A                     = 0x04,
 	CELL_KEYC_B                     = 0x05,

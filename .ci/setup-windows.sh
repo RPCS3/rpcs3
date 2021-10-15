@@ -7,19 +7,19 @@ PR_NUMBER="$SYSTEM_PULLREQUEST_PULLREQUESTID"
 
 # Resource/dependency URLs
 # Qt mirrors can be volatile and slow, so we list 2
-QT_HOST="http://mirrors.ocf.berkeley.edu/qt/"
-#QT_HOST="http://qt.mirror.constant.com/"
+#QT_HOST="http://mirrors.ocf.berkeley.edu/qt/"
+QT_HOST="http://qt.mirror.constant.com/"
 QT_URL_VER=$(echo "$QT_VER" | sed "s/\.//g")
-QT_PREFIX="online/qtsdkrepository/windows_x86/desktop/qt5_${QT_URL_VER}/qt.qt5.${QT_URL_VER}.win64_msvc2017_64/${QT_VER}-0-${QT_DATE}"
-QT_SUFFIX="-Windows-Windows_10-MSVC2017-Windows-Windows_10-X86_64.7z"
+QT_VER_MSVC_UP=$(echo "${QT_VER_MSVC}" | tr '[:lower:]' '[:upper:]')
+QT_PREFIX="online/qtsdkrepository/windows_x86/desktop/qt${QT_VER_MAIN}_${QT_URL_VER}/qt.qt${QT_VER_MAIN}.${QT_URL_VER}.win64_${QT_VER_MSVC}_64/${QT_VER}-0-${QT_DATE}"
+QT_SUFFIX="-Windows-Windows_10-${QT_VER_MSVC_UP}-Windows-Windows_10-X86_64.7z"
 QT_BASE_URL="${QT_HOST}${QT_PREFIX}qtbase${QT_SUFFIX}"
 QT_WINE_URL="${QT_HOST}${QT_PREFIX}qtwinextras${QT_SUFFIX}"
 QT_DECL_URL="${QT_HOST}${QT_PREFIX}qtdeclarative${QT_SUFFIX}"
 QT_TOOL_URL="${QT_HOST}${QT_PREFIX}qttools${QT_SUFFIX}"
 LLVMLIBS_URL='https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win/llvmlibs_mt.7z'
-#GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'  <- Temporarily disabled auto-builds
-GLSLANG_URL='https://www.dropbox.com/s/cg48qr4zmnn066v/glslanglibs_mt.7z'
-VULKAN_SDK_URL="https://www.dropbox.com/s/adanclixregbp2x/VulkanSDK-${VULKAN_VER}-Installer.exe"
+GLSLANG_URL='https://github.com/RPCS3/glslang/releases/download/custom-build-win/glslanglibs_mt.7z'
+VULKAN_SDK_URL="https://www.dropbox.com/s/fjlh97hrz0crqxv/VulkanSDK-1.2.182.0-Installer.exe"
 
 DEP_URLS="         \
     $QT_BASE_URL   \
@@ -36,7 +36,7 @@ DEP_URLS="         \
 # Pull all the submodules except llvm, since it is built separately and we just download that build
 # Note: Tried to use git submodule status, but it takes over 20 seconds
 # shellcheck disable=SC2046
-git submodule -q update --init --depth 1 $(awk '/path/ && !/llvm/ { print $3 }' .gitmodules)
+git submodule -q update --init --depth=1 --jobs=8 $(awk '/path/ && !/llvm/ { print $3 }' .gitmodules)
 
 # Git bash doesn't have rev, so here it is
 rev()
@@ -76,8 +76,7 @@ for url in $DEP_URLS; do
     case "$url" in
     *qt*) checksum=$(curl -L "${url}.sha1"); algo="sha1"; outDir='C:\Qt\' ;;
     *llvm*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="." ;;
-    #*glslang*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="./lib/Release - LLVM-x64" ;; <- Temporarily disabled auto-build
-    *glslang*) checksum=$(curl -L 'https://www.dropbox.com/s/hwnatk68n70jap0/glslanglibs_mt.7z.sha256'); algo="sha256"; outDir="./lib/Release - LLVM-x64" ;;
+    *glslang*) checksum=$(curl -L "${url}.sha256"); algo="sha256"; outDir="./lib/Release-x64" ;;
     *Vulkan*)
         # Vulkan setup needs to be run in batch environment
         # Need to subshell this or else it doesn't wait

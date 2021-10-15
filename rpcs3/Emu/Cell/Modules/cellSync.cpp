@@ -1,10 +1,8 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "cellSync.h"
-
-#include <atomic>
 
 LOG_CHANNEL(cellSync);
 
@@ -85,7 +83,7 @@ error_code cellSyncMutexLock(ppu_thread& ppu, vm::ptr<CellSyncMutex> mutex)
 		}
 	}
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 	return CELL_OK;
 }
 
@@ -194,7 +192,7 @@ error_code cellSyncBarrierTryNotify(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 
 	if (!barrier->ctrl.atomic_op(&CellSyncBarrier::try_notify))
 	{
@@ -218,7 +216,7 @@ error_code cellSyncBarrierWait(ppu_thread& ppu, vm::ptr<CellSyncBarrier> barrier
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 
 	while (!barrier->ctrl.atomic_op(&CellSyncBarrier::try_wait))
 	{
@@ -245,7 +243,7 @@ error_code cellSyncBarrierTryWait(vm::ptr<CellSyncBarrier> barrier)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 
 	if (!barrier->ctrl.atomic_op(&CellSyncBarrier::try_wait))
 	{
@@ -279,7 +277,7 @@ error_code cellSyncRwmInitialize(vm::ptr<CellSyncRwm> rwm, vm::ptr<void> buffer,
 	rwm->size = buffer_size;
 	rwm->buffer = buffer;
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 
 	return CELL_OK;
 }
@@ -451,7 +449,7 @@ error_code cellSyncQueueInitialize(vm::ptr<CellSyncQueue> queue, vm::ptr<u8> buf
 	queue->depth = depth;
 	queue->buffer = buffer;
 
-	std::atomic_thread_fence(std::memory_order_acq_rel);
+	atomic_fence_acq_rel();
 
 	return CELL_OK;
 }
@@ -683,7 +681,7 @@ error_code cellSyncQueueSize(vm::ptr<CellSyncQueue> queue)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 depth = queue->check_depth();
+	queue->check_depth();
 
 	return not_an_error(queue->ctrl.load().count & 0xffffff);
 }
@@ -702,7 +700,7 @@ error_code cellSyncQueueClear(ppu_thread& ppu, vm::ptr<CellSyncQueue> queue)
 		return CELL_SYNC_ERROR_ALIGN;
 	}
 
-	const u32 depth = queue->check_depth();
+	queue->check_depth();
 
 	while (!queue->ctrl.atomic_op(&CellSyncQueue::try_clear_begin_1))
 	{
@@ -863,7 +861,7 @@ error_code cellSyncLFQueueInitialize(vm::ptr<CellSyncLFQueue> queue, vm::cptr<vo
 			}
 		}
 
-		std::atomic_thread_fence(std::memory_order_acq_rel);
+		atomic_fence_acq_rel();
 	}
 	else
 	{
@@ -961,12 +959,12 @@ error_code _cellSyncLFQueueGetPushPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQue
 			}
 		}
 
-		verify(HERE), sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK;
+		ensure(sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK);
 		var1 = 1;
 	}
 }
 
-error_code _cellSyncLFQueueGetPushPointer2(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> queue, vm::ptr<s32> pointer, u32 isBlocking, u32 useEventQueue)
+error_code _cellSyncLFQueueGetPushPointer2(ppu_thread& /*ppu*/, vm::ptr<CellSyncLFQueue> queue, vm::ptr<s32> pointer, u32 isBlocking, u32 useEventQueue)
 {
 	// arguments copied from _cellSyncLFQueueGetPushPointer
 	cellSync.todo("_cellSyncLFQueueGetPushPointer2(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
@@ -1053,7 +1051,7 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 
 			if (var9 > 1 && static_cast<u32>(var8) > 1)
 			{
-				verify(HERE), (16 - var2 <= 1);
+				ensure((16 - var2 <= 1));
 			}
 
 			s32 var11 = (pack >> 10) & 0x1f;
@@ -1085,12 +1083,12 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 
 		if (queue->push2.compare_and_swap_test(old, push2))
 		{
-			verify(HERE), (var2 + var4 < 16);
+			ensure((var2 + var4 < 16));
 			if (var6 != umax)
 			{
-				verify(HERE), (queue->push3.compare_and_swap_test(old2, push3));
-				verify(HERE), (fpSendSignal);
-				return not_an_error(fpSendSignal(ppu, vm::cast(queue->m_eaSignal.addr(), HERE), var6));
+				ensure((queue->push3.compare_and_swap_test(old2, push3)));
+				ensure((fpSendSignal));
+				return not_an_error(fpSendSignal(ppu, vm::cast(queue->m_eaSignal.addr()), var6));
 			}
 			else
 			{
@@ -1107,7 +1105,7 @@ error_code _cellSyncLFQueueCompletePushPointer(ppu_thread& ppu, vm::ptr<CellSync
 	}
 }
 
-error_code _cellSyncLFQueueCompletePushPointer2(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
+error_code _cellSyncLFQueueCompletePushPointer2(ppu_thread&, vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal)
 {
 	// arguments copied from _cellSyncLFQueueCompletePushPointer
 	cellSync.todo("_cellSyncLFQueueCompletePushPointer2(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x)", queue, pointer, fpSendSignal);
@@ -1161,7 +1159,7 @@ error_code _cellSyncLFQueuePushBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> qu
 	const s32 depth = queue->m_depth;
 	const s32 size = queue->m_size;
 	const s32 pos = *position;
-	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1ull) + size * (pos >= depth ? pos - depth : pos), HERE);
+	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1ull) + size * (pos >= depth ? pos - depth : pos));
 	std::memcpy(vm::base(addr), buffer.get_ptr(), size);
 
 	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)
@@ -1260,12 +1258,12 @@ error_code _cellSyncLFQueueGetPopPointer(ppu_thread& ppu, vm::ptr<CellSyncLFQueu
 			}
 		}
 
-		verify(HERE), (sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK);
+		ensure((sys_event_queue_receive(ppu, queue->m_eq_id, vm::null, 0) == CELL_OK));
 		var1 = 1;
 	}
 }
 
-error_code _cellSyncLFQueueGetPopPointer2(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> queue, vm::ptr<s32> pointer, u32 isBlocking, u32 useEventQueue)
+error_code _cellSyncLFQueueGetPopPointer2(ppu_thread&, vm::ptr<CellSyncLFQueue> queue, vm::ptr<s32> pointer, u32 isBlocking, u32 useEventQueue)
 {
 	// arguments copied from _cellSyncLFQueueGetPopPointer
 	cellSync.todo("_cellSyncLFQueueGetPopPointer2(queue=*0x%x, pointer=*0x%x, isBlocking=%d, useEventQueue=%d)", queue, pointer, isBlocking, useEventQueue);
@@ -1358,7 +1356,7 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 
 			if (var9 > 1 && static_cast<u32>(var8) > 1)
 			{
-				verify(HERE), (16 - var2 <= 1);
+				ensure((16 - var2 <= 1));
 			}
 
 			s32 var11 = (pack >> 10) & 0x1f;
@@ -1388,9 +1386,9 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 		{
 			if (var6 != umax)
 			{
-				verify(HERE), (queue->pop3.compare_and_swap_test(old2, pop3));
-				verify(HERE), (fpSendSignal);
-				return not_an_error(fpSendSignal(ppu, vm::cast(queue->m_eaSignal.addr(), HERE), var6));
+				ensure((queue->pop3.compare_and_swap_test(old2, pop3)));
+				ensure((fpSendSignal));
+				return not_an_error(fpSendSignal(ppu, vm::cast(queue->m_eaSignal.addr()), var6));
 			}
 			else
 			{
@@ -1407,7 +1405,7 @@ error_code _cellSyncLFQueueCompletePopPointer(ppu_thread& ppu, vm::ptr<CellSyncL
 	}
 }
 
-error_code _cellSyncLFQueueCompletePopPointer2(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
+error_code _cellSyncLFQueueCompletePopPointer2(ppu_thread&, vm::ptr<CellSyncLFQueue> queue, s32 pointer, vm::ptr<s32(u32 addr, u32 arg)> fpSendSignal, u32 noQueueFull)
 {
 	// arguments copied from _cellSyncLFQueueCompletePopPointer
 	cellSync.todo("_cellSyncLFQueueCompletePopPointer2(queue=*0x%x, pointer=%d, fpSendSignal=*0x%x, noQueueFull=%d)", queue, pointer, fpSendSignal, noQueueFull);
@@ -1461,7 +1459,7 @@ error_code _cellSyncLFQueuePopBody(ppu_thread& ppu, vm::ptr<CellSyncLFQueue> que
 	const s32 depth = queue->m_depth;
 	const s32 size = queue->m_size;
 	const s32 pos = *position;
-	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1) + size * (pos >= depth ? pos - depth : pos), HERE);
+	const u32 addr = vm::cast<u64>((queue->m_buffer.addr() & ~1) + size * (pos >= depth ? pos - depth : pos));
 	std::memcpy(buffer.get_ptr(), vm::base(addr), size);
 
 	if (queue->m_direction != CELL_SYNC_QUEUE_ANY2ANY)

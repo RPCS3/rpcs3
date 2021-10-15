@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <vector>
@@ -8,7 +7,7 @@
 #include <string_view>
 
 #ifdef _WIN32
-std::string wchar_to_utf8(wchar_t *src);
+std::string wchar_to_utf8(const wchar_t *src);
 std::string wchar_path_to_ansi_path(const std::wstring& src);
 std::string utf8_path_to_ansi_path(const std::string& src);
 #endif
@@ -17,24 +16,29 @@ std::string utf8_path_to_ansi_path(const std::string& src);
 template <typename D, typename T>
 inline void strcpy_trunc(D& dst, const T& src)
 {
-	const std::size_t count = std::size(src) >= std::size(dst) ? std::size(dst) - 1 : std::size(src);
+	const usz count = std::size(src) >= std::size(dst) ? std::size(dst) - 1 : std::size(src);
 	std::memcpy(std::data(dst), std::data(src), count);
 	std::memset(std::data(dst) + count, 0, std::size(dst) - count);
 }
 
+// Convert string to signed integer
+bool try_to_int64(s64* out, const std::string& value, s64 min, s64 max);
+
+// Convert string to unsigned integer
+bool try_to_uint64(u64* out, const std::string& value, u64 min, u64 max);
+
 namespace fmt
 {
-	std::string replace_first(const std::string& src, const std::string& from, const std::string& to);
-	std::string replace_all(const std::string& src, const std::string& from, const std::string& to);
+	std::string replace_all(std::string_view src, std::string_view from, std::string_view to, usz count = -1);
 
-	template <size_t list_size>
+	template <usz list_size>
 	std::string replace_all(std::string src, const std::pair<std::string, std::string> (&list)[list_size])
 	{
-		for (size_t pos = 0; pos < src.length(); ++pos)
+		for (usz pos = 0; pos < src.length(); ++pos)
 		{
-			for (size_t i = 0; i < list_size; ++i)
+			for (usz i = 0; i < list_size; ++i)
 			{
-				const size_t comp_length = list[i].first.length();
+				const usz comp_length = list[i].first.length();
 
 				if (src.length() - pos < comp_length)
 					continue;
@@ -51,14 +55,14 @@ namespace fmt
 		return src;
 	}
 
-	template <size_t list_size>
+	template <usz list_size>
 	std::string replace_all(std::string src, const std::pair<std::string, std::function<std::string()>> (&list)[list_size])
 	{
-		for (size_t pos = 0; pos < src.length(); ++pos)
+		for (usz pos = 0; pos < src.length(); ++pos)
 		{
-			for (size_t i = 0; i < list_size; ++i)
+			for (usz i = 0; i < list_size; ++i)
 			{
-				const size_t comp_length = list[i].first.length();
+				const usz comp_length = list[i].first.length();
 
 				if (src.length() - pos < comp_length)
 					continue;
@@ -75,7 +79,7 @@ namespace fmt
 		return src;
 	}
 
-	std::vector<std::string> split(const std::string& source, std::initializer_list<std::string> separators, bool is_skip_empty = true);
+	std::vector<std::string> split(std::string_view source, std::initializer_list<std::string_view> separators, bool is_skip_empty = true);
 	std::string trim(const std::string& source, const std::string& values = " \t");
 
 	template <typename T>

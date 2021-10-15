@@ -1,9 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include "PPUFunction.h"
 #include "PPUCallback.h"
 #include "ErrorCodes.h"
-#include <typeinfo>
 #include "Emu/Memory/vm_var.h"
 
 // Helper function
@@ -19,7 +18,7 @@ constexpr const char* ppu_select_name(const char* /*name*/, const char* orig_nam
 }
 
 // Generate FNID or VNID for given name
-extern u32 ppu_generate_id(const char* name);
+extern u32 ppu_generate_id(std::string_view name);
 
 // Overload for REG_FNID, REG_VNID macro
 constexpr u32 ppu_generate_id(u32 id)
@@ -32,7 +31,7 @@ enum ppu_static_module_flags : u32
 {
 	MFF_FORCED_HLE = (1 << 0), // Always call HLE function
 	MFF_PERFECT    = (1 << 1), // Indicates complete implementation and LLE interchangeability
-	MFF_HIDDEN     = (1 << 2), // Invisible function for internal use (TODO)
+	MFF_HIDDEN     = (1 << 2), // Invisible variable for internal use (TODO)
 };
 
 // HLE function information
@@ -41,7 +40,6 @@ struct ppu_static_function
 	const char* name;
 	u32 index; // Index for ppu_function_manager
 	u32 flags;
-	const char* type;
 	std::vector<const char*> args; // Arg names
 	const u32* export_addr;
 
@@ -56,11 +54,10 @@ struct ppu_static_function
 struct ppu_static_variable
 {
 	const char* name;
-	vm::gvar<char>* var; // Pointer to variable address storage
+	u32* var; // Pointer to variable address storage
 	void(*init)(); // Variable initialization function
 	u32 size;
 	u32 align;
-	const char* type;
 	u32 flags;
 	u32 addr;
 	const u32* export_addr;
@@ -75,11 +72,13 @@ struct ppu_static_variable
 // HLE module information
 class ppu_static_module final
 {
+	std::vector<void(*)(ppu_static_module*)> m_on_init;
+
 public:
 	const std::string name;
 
-	std::unordered_map<u32, ppu_static_function, value_hash<u32>> functions;
-	std::unordered_map<u32, ppu_static_variable, value_hash<u32>> variables;
+	std::unordered_map<u32, ppu_static_function, value_hash<u32>> functions{};
+	std::unordered_map<u32, ppu_static_variable, value_hash<u32>> variables{};
 
 public:
 	ppu_static_module(const char* name);
@@ -95,6 +94,10 @@ public:
 	{
 		init(this);
 	}
+
+	void add_init_func(void(*func)(ppu_static_module*));
+
+	void initialize();
 };
 
 class ppu_module_manager final
@@ -117,6 +120,8 @@ class ppu_module_manager final
 public:
 	static const ppu_static_module* get_module(const std::string& name);
 
+	static void initialize_modules();
+
 	template <auto* Func>
 	static auto& register_static_function(const char* _module, const char* name, ppu_function_t func, u32 fnid)
 	{
@@ -125,7 +130,6 @@ public:
 		info.name  = name;
 		info.index = ppu_function_manager::register_function<decltype(Func), Func>(func);
 		info.flags = 0;
-		info.type  = typeid(*Func).name();
 
 		registered<Func>::info = &info;
 
@@ -148,11 +152,10 @@ public:
 		auto& info = access_static_variable(_module, vnid);
 
 		info.name  = name;
-		info.var   = reinterpret_cast<vm::gvar<char>*>(Var);
+		info.var   = &Var->raw();
 		info.init  = [] {};
 		info.size  = gvar::alloc_size;
 		info.align = gvar::alloc_align;
-		info.type  = typeid(*Var).name();
 		info.flags = 0;
 		info.addr  = 0;
 
@@ -253,6 +256,7 @@ public:
 	static const ppu_static_module cellVpost;
 	static const ppu_static_module libad_async;
 	static const ppu_static_module libad_core;
+	static const ppu_static_module libfs_utility_init;
 	static const ppu_static_module libmedi;
 	static const ppu_static_module libmixer;
 	static const ppu_static_module libsnd3;
@@ -266,6 +270,7 @@ public:
 	static const ppu_static_module sceNpTrophy;
 	static const ppu_static_module sceNpTus;
 	static const ppu_static_module sceNpUtil;
+	static const ppu_static_module sys_crashdump;
 	static const ppu_static_module sys_io;
 	static const ppu_static_module sys_net;
 	static const ppu_static_module sysPrxForUser;
@@ -288,12 +293,20 @@ inline RT ppu_execute(ppu_thread& ppu, Args... args)
 	return func(ppu, args...);
 }
 
-#define REG_FNID(_module, nid, func) ppu_module_manager::register_static_function<&func>(#_module, ppu_select_name(#func, nid), BIND_FUNC(func, ppu.cia = static_cast<u32>(ppu.lr) & ~3), ppu_generate_id(nid))
+#define BIND_FUNC_WITH_BLR(func) BIND_FUNC(func, ppu.cia = static_cast<u32>(ppu.lr) & ~3)
+
+#define REG_FNID(_module, nid, func) ppu_module_manager::register_static_function<&func>(#_module, ppu_select_name(#func, nid), BIND_FUNC_WITH_BLR(func), ppu_generate_id(nid))
 
 #define REG_FUNC(_module, func) REG_FNID(_module, #func, func)
 
 #define REG_VNID(_module, nid, var) ppu_module_manager::register_static_variable<&var>(#_module, ppu_select_name(#var, nid), ppu_generate_id(nid))
 
 #define REG_VAR(_module, var) REG_VNID(_module, #var, var)
+
+#define REG_HIDDEN_FUNC(func) ppu_function_manager::register_function<decltype(&func), &func>(BIND_FUNC_WITH_BLR(func))
+
+#define REG_HIDDEN_FUNC_PURE(func) ppu_function_manager::register_function<decltype(&func), &func>(func)
+
+#define REINIT_FUNC(func) (ppu_module_manager::find_static_function<&func>().flags = 0, ppu_module_manager::find_static_function<&func>())
 
 #define UNIMPLEMENTED_FUNC(_module) _module.todo("%s()", __func__)

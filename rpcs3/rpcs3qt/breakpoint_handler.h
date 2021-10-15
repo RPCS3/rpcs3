@@ -1,5 +1,6 @@
-﻿#pragma once
-#include "stdafx.h"
+#pragma once
+
+#include "util/types.hpp"
 #include <set>
 
 enum class breakpoint_types
@@ -16,8 +17,8 @@ class breakpoint_handler
 {
 
 public:
-	breakpoint_handler();
-	~breakpoint_handler();
+	breakpoint_handler() = default;
+	~breakpoint_handler() = default;
 
 	/**
 	* Returns true iff breakpoint exists at loc.
@@ -30,7 +31,6 @@ public:
 	*/
 	bool AddBreakpoint(u32 loc);
 
-
 	/**
 	* Returns true if removed breakpoint at loc successfully.
 	*/
@@ -38,6 +38,6 @@ public:
 
 private:
 	// TODO : generalize to hold multiple games and handle flags.Probably do : std::map<std::string (gameid), std::set<breakpoint>>.
-	// Although, externally, they'll only be accessed by loc (I think) so a map of maps may also do? 
+	// Although, externally, they'll only be accessed by loc (I think) so a map of maps may also do?
 	std::set<u32> m_breakpoints; //! Holds all breakpoints.
 };

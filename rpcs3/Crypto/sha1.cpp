@@ -29,6 +29,7 @@
  */
 
 #include "sha1.h"
+#include "utils.h"
 
 /*
  * 32-bit integer manipulation macros (big endian)
@@ -313,7 +314,7 @@ void sha1( const unsigned char *input, size_t ilen, unsigned char output[20] )
     sha1_update( &ctx, input, ilen );
     sha1_finish( &ctx, output );
 
-    memset( &ctx, 0, sizeof( sha1_context ) );
+    mbedtls_zeroize( &ctx, sizeof( sha1_context ) );
 }
 
 /*
@@ -343,7 +344,7 @@ void sha1_hmac_starts( sha1_context *ctx, const unsigned char *key, size_t keyle
     sha1_starts( ctx );
     sha1_update( ctx, ctx->ipad, 64 );
 
-    memset( sum, 0, sizeof( sum ) );
+    mbedtls_zeroize( sum, sizeof( sum ) );
 }
 
 /*

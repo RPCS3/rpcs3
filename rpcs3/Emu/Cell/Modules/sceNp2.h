@@ -1,10 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include "sceNp.h"
 
 #include "Emu/Memory/vm_ptr.h"
-
-#include <atomic>
 
 // Error codes
 enum SceNpMatching2Error : u32

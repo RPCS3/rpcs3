@@ -1,5 +1,7 @@
-﻿#include "stdafx.h"
 #include "persistent_settings.h"
+
+#include "util/logs.hpp"
+#include "Emu/system_utils.hpp"
 
 LOG_CHANNEL(cfg_log, "CFG");
 
@@ -46,15 +48,12 @@ QString persistent_settings::GetCurrentUser(const QString& fallback) const
 		user = fallback;
 	}
 
-	bool is_valid_user;
-	const u32 user_id = user.toInt(&is_valid_user);
-
 	// Set user if valid
-	if (is_valid_user && user_id > 0)
+	if (rpcs3::utils::check_user(user.toStdString()) > 0)
 	{
 		return user;
 	}
 
-	cfg_log.fatal("Could not parse user setting: '%s' = '%d'.", user.toStdString(), user_id);
+	cfg_log.fatal("Could not parse user setting: '%s'.", user.toStdString());
 	return QString();
 }

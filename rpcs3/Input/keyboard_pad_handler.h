@@ -1,10 +1,13 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Emu/Io/PadHandler.h"
 
 #include <QWindow>
 #include <QKeyEvent>
+#include <string>
+#include <vector>
+#include <unordered_map>
 
 enum mouse
 {
@@ -77,21 +80,21 @@ public:
 	void mouseMoveEvent(QMouseEvent* event);
 	void mouseWheelEvent(QWheelEvent* event);
 
-	bool eventFilter(QObject* obj, QEvent* ev) override;
+	bool eventFilter(QObject* target, QEvent* ev) override;
 
-	void init_config(pad_config* cfg, const std::string& name) override;
+	void init_config(cfg_pad* cfg) override;
 	std::vector<std::string> ListDevices() override;
-	void get_next_button_press(const std::string& /*padId*/, const pad_callback& /*callback*/, const pad_fail_callback& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) override {};
-	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device) override;
+	void get_next_button_press(const std::string& /*padId*/, const pad_callback& /*callback*/, const pad_fail_callback& /*fail_callback*/, bool /*get_blacklist*/ = false, const std::vector<std::string>& /*buttons*/ = {}) override {}
+	bool bindPadToDevice(std::shared_ptr<Pad> pad, const std::string& device, u8 player_id) override;
 	void ThreadProc() override;
 
-	std::string GetMouseName(const QMouseEvent* event);
-	std::string GetMouseName(u32 button);
-	QStringList GetKeyNames(const QKeyEvent* keyEvent);
-	std::string GetKeyName(const QKeyEvent* keyEvent);
-	std::string GetKeyName(const u32& keyCode);
-	u32 GetKeyCode(const std::string& keyName);
-	u32 GetKeyCode(const QString& keyName);
+	std::string GetMouseName(const QMouseEvent* event) const;
+	std::string GetMouseName(u32 button) const;
+	static QStringList GetKeyNames(const QKeyEvent* keyEvent);
+	static std::string GetKeyName(const QKeyEvent* keyEvent);
+	static std::string GetKeyName(const u32& keyCode);
+	static u32 GetKeyCode(const std::string& keyName);
+	static u32 GetKeyCode(const QString& keyName);
 
 	static int native_scan_code_from_string(const std::string& key);
 	static std::string native_scan_code_to_string(int native_scan_code);
@@ -102,17 +105,20 @@ protected:
 private:
 	QWindow* m_target = nullptr;
 	bool m_mouse_move_used = false;
-	bool get_mouse_lock_state();
+	bool m_mouse_wheel_used = false;
+	bool get_mouse_lock_state() const;
+	void release_all_keys();
 
-	std::vector<std::shared_ptr<Pad>> bindings;
+	std::vector<std::shared_ptr<Pad>> m_bindings;
+	std::vector<Pad> m_pads_internal; // Accumulates input until the next poll. Only used for user input!
 
 	// Button Movements
-	std::chrono::steady_clock::time_point m_button_time;
+	steady_clock::time_point m_button_time;
 	f32 m_analog_lerp_factor  = 1.0f;
 	f32 m_trigger_lerp_factor = 1.0f;
 
 	// Stick Movements
-	std::chrono::steady_clock::time_point m_stick_time;
+	steady_clock::time_point m_stick_time;
 	f32 m_l_stick_lerp_factor = 1.0f;
 	f32 m_r_stick_lerp_factor = 1.0f;
 	u8 m_stick_min[4] = { 0, 0, 0, 0 };
@@ -120,18 +126,18 @@ private:
 	u8 m_stick_val[4] = { 128, 128, 128, 128 };
 
 	// Mouse Movements
-	std::chrono::steady_clock::time_point m_last_mouse_move_left;
-	std::chrono::steady_clock::time_point m_last_mouse_move_right;
-	std::chrono::steady_clock::time_point m_last_mouse_move_up;
-	std::chrono::steady_clock::time_point m_last_mouse_move_down;
+	steady_clock::time_point m_last_mouse_move_left;
+	steady_clock::time_point m_last_mouse_move_right;
+	steady_clock::time_point m_last_mouse_move_up;
+	steady_clock::time_point m_last_mouse_move_down;
 	int m_deadzone_x = 60;
 	int m_deadzone_y = 60;
 	double m_multi_x = 2;
 	double m_multi_y = 2.5;
 
 	// Mousewheel
-	std::chrono::steady_clock::time_point m_last_wheel_move_up;
-	std::chrono::steady_clock::time_point m_last_wheel_move_down;
-	std::chrono::steady_clock::time_point m_last_wheel_move_left;
-	std::chrono::steady_clock::time_point m_last_wheel_move_right;
+	steady_clock::time_point m_last_wheel_move_up;
+	steady_clock::time_point m_last_wheel_move_down;
+	steady_clock::time_point m_last_wheel_move_left;
+	steady_clock::time_point m_last_wheel_move_right;
 };

@@ -25,10 +25,21 @@ enum CellUserInfoListType
 	CELL_USERINFO_LISTTYPE_NOCURRENT = 1,
 };
 
-enum
+enum cell_user_callback_result : u32
+{
+	CELL_USERINFO_RET_OK     = 0,
+	CELL_USERINFO_RET_CANCEL = 1,
+};
+
+enum : u32
 {
 	CELL_SYSUTIL_USERID_CURRENT  = 0,
 	CELL_SYSUTIL_USERID_MAX      = 99999999,
+};
+
+enum : u32
+{
+	CELL_USERINFO_FOCUS_LISTHEAD = 0xffffffff
 };
 
 // Structs

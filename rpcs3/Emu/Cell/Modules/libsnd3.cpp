@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "libsnd3.h"
@@ -33,6 +33,11 @@ void fmt_class_string<CellSnd3Error>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 error_code cellSnd3Init(u32 maxVoice, u32 samples, vm::ptr<CellSnd3RequestQueueCtx> queue)
 {

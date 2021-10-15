@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -37,7 +37,7 @@ void fmt_class_string<CellPamfError>::format(std::string& out, u64 arg)
 error_code pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFilterId)
 {
 	// convert type and ch to EsFilterId
-	verify(HERE), (ch < 16);
+	ensure(ch < 16);
 	pEsFilterId.supplementalInfo1 = type == CELL_PAMF_STREAM_TYPE_AVC;
 	pEsFilterId.supplementalInfo2 = 0;
 
@@ -125,8 +125,7 @@ error_code pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFi
 
 	default:
 	{
-		cellPamf.error("pamfStreamTypeToEsFilterId(): unknown type (%d, ch=%d)", type, ch);
-		Emu.Pause();
+		cellPamf.fatal("pamfStreamTypeToEsFilterId(): unknown type (%d, ch=%d)", type, ch);
 		return CELL_PAMF_ERROR_INVALID_ARG;
 	}
 	}
@@ -137,7 +136,7 @@ error_code pamfStreamTypeToEsFilterId(u8 type, u8 ch, CellCodecEsFilterId& pEsFi
 u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u32 stream)
 {
 	// TODO: get stream type correctly
-	verify(HERE), (stream < pSelf->pAddr->stream_count);
+	ensure(stream < pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[stream];
 
 	switch (header.type)
@@ -148,17 +147,17 @@ u8 pamfGetStreamType(vm::ptr<CellPamfReader> pSelf, u32 stream)
 	case 0x80: return CELL_PAMF_STREAM_TYPE_PAMF_LPCM;
 	case 0x81: return CELL_PAMF_STREAM_TYPE_AC3;
 	case 0xdd: return CELL_PAMF_STREAM_TYPE_USER_DATA;
+	default: break;
 	}
 
-	cellPamf.todo("pamfGetStreamType(): unsupported stream type found(0x%x)", header.type);
-	Emu.Pause();
+	cellPamf.fatal("pamfGetStreamType(): unsupported stream type found(0x%x)", header.type);
 	return 0xff;
 }
 
 u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u32 stream)
 {
 	// TODO: get stream channel correctly
-	verify(HERE), (stream < pSelf->pAddr->stream_count);
+	ensure(stream < pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[stream];
 
 	switch (header.type)
@@ -166,35 +165,40 @@ u8 pamfGetStreamChannel(vm::ptr<CellPamfReader> pSelf, u32 stream)
 	case 0x1b: // AVC
 	case 0x02: // M2V
 	{
-		verify(HERE), (header.fid_major & 0xf0) == 0xe0, header.fid_minor == 0;
+		ensure((header.fid_major & 0xf0) == 0xe0);
+		ensure(!header.fid_minor);
 		return header.fid_major % 16;
 	}
 
 	case 0xdc: // ATRAC3PLUS
 	{
-		verify(HERE), header.fid_major == 0xbd, (header.fid_minor & 0xf0) == 0;
+		ensure((header.fid_major == 0xbd));
+		ensure((header.fid_minor & 0xf0) == 0);
 		return header.fid_minor % 16;
 	}
 
 	case 0x80: // LPCM
 	{
-		verify(HERE), header.fid_major == 0xbd, (header.fid_minor & 0xf0) == 0x40;
+		ensure((header.fid_major == 0xbd));
+		ensure((header.fid_minor & 0xf0) == 0x40);
 		return header.fid_minor % 16;
 	}
 	case 0x81: // AC3
 	{
-		verify(HERE), header.fid_major == 0xbd, (header.fid_minor & 0xf0) == 0x30;
+		ensure((header.fid_major == 0xbd));
+		ensure((header.fid_minor & 0xf0) == 0x30);
 		return header.fid_minor % 16;
 	}
 	case 0xdd:
 	{
-		verify(HERE), header.fid_major == 0xbd, (header.fid_minor & 0xf0) == 0x20;
+		ensure((header.fid_major == 0xbd));
+		ensure((header.fid_minor & 0xf0) == 0x20);
 		return header.fid_minor % 16;
 	}
+	default: break;
 	}
 
-	cellPamf.todo("pamfGetStreamChannel(): unsupported stream type found(0x%x)", header.type);
-	Emu.Pause();
+	cellPamf.fatal("pamfGetStreamChannel(): unsupported stream type found(0x%x)", header.type);
 	return 0xff;
 }
 
@@ -339,8 +343,7 @@ u8 cellPamfReaderGetNumberOfSpecificStreams(vm::ptr<CellPamfReader> pSelf, u8 st
 	}
 	}
 
-	cellPamf.todo("cellPamfReaderGetNumberOfSpecificStreams(): unsupported stream type (0x%x)", streamType);
-	Emu.Pause();
+	cellPamf.fatal("cellPamfReaderGetNumberOfSpecificStreams(): unsupported stream type (0x%x)", streamType);
 	return 0;
 }
 
@@ -361,10 +364,9 @@ error_code cellPamfReaderSetStreamWithTypeAndChannel(vm::ptr<CellPamfReader> pSe
 {
 	cellPamf.warning("cellPamfReaderSetStreamWithTypeAndChannel(pSelf=*0x%x, streamType=%d, ch=%d)", pSelf, streamType, ch);
 
-	// it probably doesn't support "any audio" or "any video" argument
+	// TODO: it probably doesn't support "any audio" or "any video" argument
 	if (streamType > 5 || ch >= 16)
 	{
-		Emu.Pause();
 		return CELL_PAMF_ERROR_INVALID_ARG;
 	}
 
@@ -473,7 +475,7 @@ error_code cellPamfReaderGetEsFilterId(vm::ptr<CellPamfReader> pSelf, vm::ptr<Ce
 
 	// always returns CELL_OK
 
-	verify(HERE), static_cast<u32>(pSelf->stream) < pSelf->pAddr->stream_count;
+	ensure(static_cast<u32>(pSelf->stream) < pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[pSelf->stream];
 	pEsFilterId->filterIdMajor = header.fid_major;
 	pEsFilterId->filterIdMinor = header.fid_minor;
@@ -486,7 +488,7 @@ error_code cellPamfReaderGetStreamInfo(vm::ptr<CellPamfReader> pSelf, vm::ptr<vo
 {
 	cellPamf.warning("cellPamfReaderGetStreamInfo(pSelf=*0x%x, pInfo=*0x%x, size=%d)", pSelf, pInfo, size);
 
-	verify(HERE), static_cast<u32>(pSelf->stream) < pSelf->pAddr->stream_count;
+	ensure(static_cast<u32>(pSelf->stream) < pSelf->pAddr->stream_count);
 	auto& header = pSelf->pAddr->stream_headers[pSelf->stream];
 	const u8 type = pamfGetStreamType(pSelf, pSelf->stream);
 	const u8 ch = pamfGetStreamChannel(pSelf, pSelf->stream);

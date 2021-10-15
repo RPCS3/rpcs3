@@ -1,11 +1,8 @@
-﻿#pragma once
-
-#include "Utilities/BEType.h"
+#pragma once
 
 #include "cellRtc.h"
 #include "sceNp.h"
 
-#include <atomic>
 #include <map>
 
 // Constants for TUS functions and structures
@@ -108,8 +105,8 @@ struct SceNpTssIfModifiedSinceParam
 struct SceNpTssGetDataOptParam
 {
 	u64 size; // TODO: correct type?
-	vm::ptr<uint64_t> offset;
-	vm::ptr<uint64_t> lastByte;
+	vm::ptr<u64> offset;
+	vm::ptr<u64> lastByte;
 	vm::ptr<SceNpTssIfModifiedSinceParam> ifParam;
 };
 
@@ -136,7 +133,7 @@ private:
 
 public:
 	std::mutex mtx;
-	std::atomic<bool> is_initialized = false;
+	atomic_t<bool> is_initialized = false;
 
 	s32 add_title_context();
 	bool check_title_context_id(s32 titleCtxId);

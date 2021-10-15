@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "game_list.h"
 
@@ -15,14 +15,13 @@ class game_list_grid : public game_list
 	bool m_text_enabled = true;
 
 public:
-	explicit game_list_grid(const QSize& icon_size, const QColor& icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText);
-	~game_list_grid();
+	explicit game_list_grid(const QSize& icon_size, QColor icon_color, const qreal& margin_factor, const qreal& text_factor, const bool& showText);
 
 	void enableText(const bool& enabled);
-	void setIconSize(const QSize& size);
-	void addItem(const QPixmap& img, const QString& name, const int& row, const int& col);
+	void setIconSize(const QSize& size) const;
+	movie_item* addItem(const game_info& app, const QString& name, const QString& movie_path, const int& row, const int& col);
 
-	qreal getMarginFactor();
+	[[nodiscard]] qreal getMarginFactor() const;
 
 private:
 	game_list_grid_delegate* grid_item_delegate; 

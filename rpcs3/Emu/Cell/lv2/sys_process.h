@@ -2,6 +2,7 @@
 
 #include "Crypto/unself.h"
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 // Process Local Object Type
 enum : u32
@@ -27,6 +28,50 @@ enum : u32
 	SYS_EVENT_FLAG_OBJECT            = 0x98,
 };
 
+enum : u64
+{
+	SYS_PROCESS_PRIMARY_STACK_SIZE_32K  = 0x0000000000000010,
+	SYS_PROCESS_PRIMARY_STACK_SIZE_64K  = 0x0000000000000020,
+	SYS_PROCESS_PRIMARY_STACK_SIZE_96K  = 0x0000000000000030,
+	SYS_PROCESS_PRIMARY_STACK_SIZE_128K = 0x0000000000000040,
+	SYS_PROCESS_PRIMARY_STACK_SIZE_256K = 0x0000000000000050,
+	SYS_PROCESS_PRIMARY_STACK_SIZE_512K = 0x0000000000000060,
+	SYS_PROCESS_PRIMARY_STACK_SIZE_1M   = 0x0000000000000070,
+};
+
+constexpr auto SYS_PROCESS_PARAM_SECTION_NAME = ".sys_proc_param";
+
+enum
+{
+	SYS_PROCESS_PARAM_INVALID_PRIO = -32768,
+};
+
+enum : u32
+{
+	SYS_PROCESS_PARAM_INVALID_STACK_SIZE = 0xffffffff,
+
+	SYS_PROCESS_PARAM_STACK_SIZE_MIN = 0x1000,   // 4KB
+	SYS_PROCESS_PARAM_STACK_SIZE_MAX = 0x100000, // 1MB
+
+	SYS_PROCESS_PARAM_VERSION_INVALID = 0xffffffff,
+	SYS_PROCESS_PARAM_VERSION_1       = 0x00000001, // for SDK 08X
+	SYS_PROCESS_PARAM_VERSION_084_0   = 0x00008400,
+	SYS_PROCESS_PARAM_VERSION_090_0   = 0x00009000,
+	SYS_PROCESS_PARAM_VERSION_330_0   = 0x00330000,
+
+	SYS_PROCESS_PARAM_MAGIC = 0x13bcc5f6,
+
+	SYS_PROCESS_PARAM_MALLOC_PAGE_SIZE_NONE = 0x00000000,
+	SYS_PROCESS_PARAM_MALLOC_PAGE_SIZE_64K  = 0x00010000,
+	SYS_PROCESS_PARAM_MALLOC_PAGE_SIZE_1M   = 0x00100000,
+
+	SYS_PROCESS_PARAM_PPC_SEG_DEFAULT       = 0x00000000,
+	SYS_PROCESS_PARAM_PPC_SEG_OVLM          = 0x00000001,
+	SYS_PROCESS_PARAM_PPC_SEG_FIXEDADDR_PRX = 0x00000002,
+
+	SYS_PROCESS_PARAM_SDK_VERSION_UNKNOWN = 0xffffffff,
+};
+
 struct sys_exit2_param
 {
 	be_t<u64> x0; // 0x85
@@ -37,7 +82,7 @@ struct sys_exit2_param
 	vm::bpptr<char, u64, u64> args;
 };
 
-struct ps3_process_info_t 
+struct ps3_process_info_t
 {
 	u32 sdk_ver;
 	u32 ppc_seg;
@@ -47,6 +92,7 @@ struct ps3_process_info_t
 	bool has_root_perm() const;
 	bool has_debug_perm() const;
 	bool debug_or_root() const;
+	std::string_view get_cellos_appname() const;
 };
 
 extern ps3_process_info_t  g_ps3_process_info;
@@ -54,7 +100,9 @@ extern ps3_process_info_t  g_ps3_process_info;
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);
-error_code process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);
+
+enum CellError : u32;
+CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);
 
 // SysCalls
 s32 sys_process_getpid();

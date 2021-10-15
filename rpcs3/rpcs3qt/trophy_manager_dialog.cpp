@@ -1,16 +1,16 @@
-﻿#include "trophy_manager_dialog.h"
+#include "trophy_manager_dialog.h"
 #include "custom_table_widget_item.h"
 #include "table_item_delegate.h"
 #include "qt_utils.h"
 #include "game_list.h"
 #include "gui_settings.h"
 
-#include "stdafx.h"
-
 #include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
+#include "Utilities/File.h"
 #include "Emu/VFS.h"
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 
 #include "Loader/TROPUSR.h"
@@ -41,7 +41,8 @@ namespace
 }
 
 trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_settings)
-	: QWidget(), m_gui_settings(gui_settings)
+	: QWidget()
+	, m_gui_settings(std::move(gui_settings))
 {
 	// Nonspecific widget settings
 	setWindowTitle(tr("Trophy Manager"));
@@ -60,7 +61,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_show_platinum_trophies = m_gui_settings->GetValue(gui::tr_show_platinum).toBool();
 
 	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
-	vfs::mount("/dev_hdd0", Emulator::GetHddDir());
+	vfs::mount("/dev_hdd0", rpcs3::utils::get_hdd0_dir());
 
 	// Get the currently selected user's trophy path.
 	m_trophy_dir = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/";
@@ -209,7 +210,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	setLayout(all_layout);
 
 	// Make connects
-	connect(m_icon_slider, &QSlider::valueChanged, this, [=, this](int val)
+	connect(m_icon_slider, &QSlider::valueChanged, this, [this, trophy_slider_label](int val)
 	{
 		m_icon_height = val;
 		if (trophy_slider_label)
@@ -224,12 +225,12 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		}
 	});
 
-	connect(m_icon_slider, &QSlider::sliderReleased, this, [&]()
+	connect(m_icon_slider, &QSlider::sliderReleased, this, [this]()
 	{
 		m_gui_settings->SetValue(gui::tr_icon_height, m_icon_slider->value());
 	});
 
-	connect(m_icon_slider, &QSlider::actionTriggered, [&](int action)
+	connect(m_icon_slider, &QSlider::actionTriggered, this, [this](int action)
 	{
 		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
 		{	// we only want to save on mouseclicks or slider release (the other connect handles this)
@@ -237,7 +238,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		}
 	});
 
-	connect(m_game_icon_slider, &QSlider::valueChanged, this, [=, this](int val)
+	connect(m_game_icon_slider, &QSlider::valueChanged, this, [this, game_slider_label](int val)
 	{
 		m_game_icon_size_index = val;
 		m_game_icon_size = gui_settings::SizeFromSlider(val);
@@ -253,12 +254,12 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		}
 	});
 
-	connect(m_game_icon_slider, &QSlider::sliderReleased, this, [&]()
+	connect(m_game_icon_slider, &QSlider::sliderReleased, this, [this]()
 	{
 		m_gui_settings->SetValue(gui::tr_game_iconSize, m_game_icon_slider->value());
 	});
 
-	connect(m_game_icon_slider, &QSlider::actionTriggered, [&](int action)
+	connect(m_game_icon_slider, &QSlider::actionTriggered, this, [this](int action)
 	{
 		if (action != QAbstractSlider::SliderNoAction && action != QAbstractSlider::SliderMove)
 		{	// we only want to save on mouseclicks or slider release (the other connect handles this)
@@ -266,49 +267,49 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 		}
 	});
 
-	connect(check_lock_trophy, &QCheckBox::clicked, [this](bool checked)
+	connect(check_lock_trophy, &QCheckBox::clicked, this, [this](bool checked)
 	{
 		m_show_locked_trophies = checked;
 		ApplyFilter();
 		m_gui_settings->SetValue(gui::tr_show_locked, checked);
 	});
 
-	connect(check_unlock_trophy, &QCheckBox::clicked, [this](bool checked)
+	connect(check_unlock_trophy, &QCheckBox::clicked, this, [this](bool checked)
 	{
 		m_show_unlocked_trophies = checked;
 		ApplyFilter();
 		m_gui_settings->SetValue(gui::tr_show_unlocked, checked);
 	});
 
-	connect(check_hidden_trophy, &QCheckBox::clicked, [this](bool checked)
+	connect(check_hidden_trophy, &QCheckBox::clicked, this, [this](bool checked)
 	{
 		m_show_hidden_trophies = checked;
 		ApplyFilter();
 		m_gui_settings->SetValue(gui::tr_show_hidden, checked);
 	});
 
-	connect(check_bronze_trophy, &QCheckBox::clicked, [this](bool checked)
+	connect(check_bronze_trophy, &QCheckBox::clicked, this, [this](bool checked)
 	{
 		m_show_bronze_trophies = checked;
 		ApplyFilter();
 		m_gui_settings->SetValue(gui::tr_show_bronze, checked);
 	});
 
-	connect(check_silver_trophy, &QCheckBox::clicked, [this](bool checked)
+	connect(check_silver_trophy, &QCheckBox::clicked, this, [this](bool checked)
 	{
 		m_show_silver_trophies = checked;
 		ApplyFilter();
 		m_gui_settings->SetValue(gui::tr_show_silver, checked);
 	});
 
-	connect(check_gold_trophy, &QCheckBox::clicked, [this](bool checked)
+	connect(check_gold_trophy, &QCheckBox::clicked, this, [this](bool checked)
 	{
 		m_show_gold_trophies = checked;
 		ApplyFilter();
 		m_gui_settings->SetValue(gui::tr_show_gold, checked);
 	});
 
-	connect(check_platinum_trophy, &QCheckBox::clicked, [this](bool checked)
+	connect(check_platinum_trophy, &QCheckBox::clicked, this, [this](bool checked)
 	{
 		m_show_platinum_trophies = checked;
 		ApplyFilter();
@@ -317,13 +318,13 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 
 	connect(m_trophy_table, &QTableWidget::customContextMenuRequested, this, &trophy_manager_dialog::ShowContextMenu);
 
-	connect(m_game_combo, &QComboBox::currentTextChanged, [this]
+	connect(m_game_combo, &QComboBox::currentTextChanged, this, [this]
 	{
 		PopulateTrophyTable();
 		ApplyFilter();
 	});
 
-	connect(m_game_table, &QTableWidget::itemSelectionChanged, [this]
+	connect(m_game_table, &QTableWidget::itemSelectionChanged, this, [this]
 	{
 		if (m_game_table->selectedItems().isEmpty())
 		{
@@ -355,11 +356,11 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 
 	game_trophy_data->path = vfs::get(trophyPath + "/");
 	game_trophy_data->trop_usr.reset(new TROPUSRLoader());
-	const std::string trophyUsrPath = trophyPath + "/TROPUSR.DAT";
-	const std::string trophyConfPath = trophyPath + "/TROPCONF.SFM";
-	const bool success = game_trophy_data->trop_usr->Load(trophyUsrPath, trophyConfPath);
+	const std::string tropusr_path = trophyPath + "/TROPUSR.DAT";
+	const std::string tropconf_path = trophyPath + "/TROPCONF.SFM";
+	const bool success = game_trophy_data->trop_usr->Load(tropusr_path, tropconf_path).success;
 
-	fs::file config(vfs::get(trophyConfPath));
+	fs::file config(vfs::get(tropconf_path));
 
 	if (!success || !config)
 	{
@@ -371,30 +372,14 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 
 	if (trophy_count == 0)
 	{
-		gui_log.error("Warning game %s in trophy folder %s usr file reports zero trophies.  Cannot load in trophy manager.", game_trophy_data->game_name, game_trophy_data->path);
+		gui_log.error("Warning game %s in trophy folder %s usr file reports zero trophies. Cannot load in trophy manager.", game_trophy_data->game_name, game_trophy_data->path);
 		return false;
 	}
 
 	for (u32 trophy_id = 0; trophy_id < trophy_count; ++trophy_id)
 	{
-		// Figure out how many zeros are needed for padding.  (either 0, 1, or 2)
-		QString padding = "";
-		if (trophy_id < 10)
-		{
-			padding = "00";
-		}
-		else if (trophy_id < 100)
-		{
-			padding = "0";
-		}
-
-		QPixmap trophy_icon;
-		const QString path = qstr(game_trophy_data->path) + "TROP" + padding + QString::number(trophy_id) + ".PNG";
-		if (!trophy_icon.load(path))
-		{
-			gui_log.error("Failed to load trophy icon for trophy %d %s", trophy_id, game_trophy_data->path);
-		}
-		game_trophy_data->trophy_images.emplace_back(std::move(trophy_icon));
+		// A trophy icon has 3 digits from 000 to 999, for example TROP001.PNG
+		game_trophy_data->trophy_image_paths[trophy_id] = qstr(fmt::format("%sTROP%03d.PNG", game_trophy_data->path, trophy_id));
 	}
 
 	// Get game name
@@ -413,7 +398,10 @@ bool trophy_manager_dialog::LoadTrophyFolderToDB(const std::string& trop_name)
 		}
 	}
 
-	m_trophies_db.push_back(std::move(game_trophy_data));
+	{
+		std::scoped_lock lock(m_trophies_db_mtx);
+		m_trophies_db.push_back(std::move(game_trophy_data));
+	}
 
 	config.release();
 	return true;
@@ -446,7 +434,7 @@ void trophy_manager_dialog::RepaintUI(bool restore_layout)
 
 	PopulateTrophyTable();
 
-	QByteArray game_table_state = m_gui_settings->GetValue(gui::tr_games_state).toByteArray();
+	const QByteArray game_table_state = m_gui_settings->GetValue(gui::tr_games_state).toByteArray();
 	if (restore_layout && !m_game_table->horizontalHeader()->restoreState(game_table_state) && m_game_table->rowCount())
 	{
 		// If no settings exist, resize to contents. (disabled)
@@ -454,7 +442,7 @@ void trophy_manager_dialog::RepaintUI(bool restore_layout)
 		//m_game_table->horizontalHeader()->resizeSections(QHeaderView::ResizeMode::ResizeToContents);
 	}
 
-	QByteArray trophy_table_state = m_gui_settings->GetValue(gui::tr_trophy_state).toByteArray();
+	const QByteArray trophy_table_state = m_gui_settings->GetValue(gui::tr_trophy_state).toByteArray();
 	if (restore_layout && !m_trophy_table->horizontalHeader()->restoreState(trophy_table_state) && m_trophy_table->rowCount())
 	{
 		// If no settings exist, resize to contents. (disabled)
@@ -486,7 +474,7 @@ void trophy_manager_dialog::HandleRepaintUiRequest()
 	resize(window_size);
 }
 
-QPixmap trophy_manager_dialog::GetResizedGameIcon(int index)
+QPixmap trophy_manager_dialog::GetResizedGameIcon(int index) const
 {
 	QTableWidgetItem* item = m_game_table->item(index, GameColumns::GameIcon);
 	if (!item)
@@ -520,12 +508,13 @@ void trophy_manager_dialog::ResizeGameIcons()
 	for (int i = 0; i < m_game_table->rowCount(); ++i)
 		indices.append(i);
 
-	std::function<QPixmap(const int&)> get_scaled = [this](const int& i)
+	const std::function<QPixmap(const int&)> get_scaled = [this](const int& i)
 	{
 		return GetResizedGameIcon(i);
 	};
 
-	QList<QPixmap> scaled = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_scaled);
+	// NOTE: Due to a Qt bug in Qt 5.15.2, QtConcurrent::blockingMapped has a high risk of deadlocking. So let's just use QtConcurrent::mapped.
+	const QList<QPixmap> scaled = QtConcurrent::mapped(indices, get_scaled).results();
 
 	for (int i = 0; i < m_game_table->rowCount() && i < scaled.count(); ++i)
 	{
@@ -546,20 +535,33 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 	const qreal dpr = devicePixelRatioF();
 	const int new_height = m_icon_height * dpr;
 
-	QList<int> indices;
+	QList<int> trophy_ids;
 	for (int i = 0; i < m_trophy_table->rowCount(); ++i)
-		indices.append(i);
-
-	std::function<QPixmap(const int&)> get_scaled = [this, db_pos, dpr, new_height](const int& i)
 	{
-		QTableWidgetItem* item = m_trophy_table->item(i, TrophyColumns::Id);
-		QTableWidgetItem* icon_item = m_trophy_table->item(i, TrophyColumns::Icon);
-		if (!item || !icon_item)
+		if (QTableWidgetItem* item = m_trophy_table->item(i, TrophyColumns::Id))
 		{
-			return QPixmap();
+			trophy_ids.append(item->text().toInt());
 		}
-		const int trophy_id = item->text().toInt();
-		const QPixmap icon = m_trophies_db[db_pos]->trophy_images[trophy_id];
+	}
+
+	const std::function<QPixmap(const int&)> get_scaled = [this, data = m_trophies_db.at(db_pos).get(), dpr, new_height](const int& trophy_id)
+	{
+		QPixmap icon;
+		{
+			std::scoped_lock lock(m_trophies_db_mtx);
+			if (data->trophy_images.contains(trophy_id))
+			{
+				icon = data->trophy_images[trophy_id];
+			}
+			else if (const QString& path = data->trophy_image_paths[trophy_id]; !icon.load(path))
+			{
+				gui_log.error("Failed to load trophy icon for trophy %d (icon='%s')", trophy_id, sstr(path));
+			}
+			else
+			{
+				data->trophy_images[trophy_id] = icon;
+			}
+		}
 
 		QPixmap new_icon = QPixmap(icon.size() * dpr);
 		new_icon.setDevicePixelRatio(dpr);
@@ -576,13 +578,15 @@ void trophy_manager_dialog::ResizeTrophyIcons()
 		return new_icon.scaledToHeight(new_height, Qt::SmoothTransformation);
 	};
 
-	QList<QPixmap> scaled = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_scaled);
+
+	// NOTE: Due to a Qt bug in Qt 5.15.2, QtConcurrent::blockingMapped has a high risk of deadlocking. So let's just use QtConcurrent::mapped.
+	const QList<QPixmap> scaled = QtConcurrent::mapped(trophy_ids, get_scaled).results();
 
 	for (int i = 0; i < m_trophy_table->rowCount() && i < scaled.count(); ++i)
 	{
 		QTableWidgetItem* icon_item = m_trophy_table->item(i, TrophyColumns::Icon);
 		if (icon_item)
-			icon_item->setData(Qt::DecorationRole, scaled[i]);
+			icon_item->setData(Qt::DecorationRole, scaled.at(i));
 	}
 
 	ReadjustTrophyTable();
@@ -626,22 +630,13 @@ void trophy_manager_dialog::ApplyFilter()
 		{
 			hide = !hidden;
 		}
-		else if (trophy_unlocked && !m_show_unlocked_trophies)
-		{
-			hide = true;
-		}
-		else if (!trophy_unlocked && !m_show_locked_trophies)
-		{
-			hide = true;
-		}
-		else if (hidden && !trophy_unlocked && !m_show_hidden_trophies)
-		{
-			hide = true;
-		}
-		else if ((trophy_type == SCE_NP_TROPHY_GRADE_BRONZE && !m_show_bronze_trophies)
-		 || (trophy_type == SCE_NP_TROPHY_GRADE_SILVER && !m_show_silver_trophies)
-		 || (trophy_type == SCE_NP_TROPHY_GRADE_GOLD && !m_show_gold_trophies)
-		 || (trophy_type == SCE_NP_TROPHY_GRADE_PLATINUM && !m_show_platinum_trophies))
+		else if ((trophy_unlocked && !m_show_unlocked_trophies)
+		     || (!trophy_unlocked && !m_show_locked_trophies)
+		     || (hidden && !trophy_unlocked && !m_show_hidden_trophies)
+		     || (trophy_type == SCE_NP_TROPHY_GRADE_BRONZE && !m_show_bronze_trophies)
+		     || (trophy_type == SCE_NP_TROPHY_GRADE_SILVER && !m_show_silver_trophies)
+		     || (trophy_type == SCE_NP_TROPHY_GRADE_GOLD && !m_show_gold_trophies)
+		     || (trophy_type == SCE_NP_TROPHY_GRADE_PLATINUM && !m_show_platinum_trophies))
 		{
 			hide = true;
 		}
@@ -665,9 +660,9 @@ void trophy_manager_dialog::ShowContextMenu(const QPoint& pos)
 
 	const int db_ind = m_game_combo->currentData().toInt();
 
-	connect(show_trophy_dir, &QAction::triggered, [=, this]()
+	connect(show_trophy_dir, &QAction::triggered, this, [this, db_ind]()
 	{
-		QString path = qstr(m_trophies_db[db_ind]->path);
+		const QString path = qstr(m_trophies_db[db_ind]->path);
 		QDesktopServices::openUrl(QUrl::fromLocalFile(path));
 	});
 
@@ -679,7 +674,7 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 {
 	m_trophies_db.clear();
 
-	QDir trophy_dir(qstr(vfs::get(m_trophy_dir)));
+	const QDir trophy_dir(qstr(vfs::get(m_trophy_dir)));
 	const auto folder_list = trophy_dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
 	const int count = folder_list.count();
 
@@ -700,14 +695,14 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 
 	connect(&futureWatcher, &QFutureWatcher<void>::progressRangeChanged, &progressDialog, &QProgressDialog::setRange);
 	connect(&futureWatcher, &QFutureWatcher<void>::progressValueChanged, &progressDialog, &QProgressDialog::setValue);
-	connect(&futureWatcher, &QFutureWatcher<void>::finished, [this]() { RepaintUI(true); });
-	connect(&progressDialog, &QProgressDialog::canceled, [this, &futureWatcher]()
+	connect(&futureWatcher, &QFutureWatcher<void>::finished, this, [this]() { RepaintUI(true); });
+	connect(&progressDialog, &QProgressDialog::canceled, this, [this, &futureWatcher]()
 	{
 		futureWatcher.cancel();
-		this->close(); // It's pointless to show an empty window
+		close(); // It's pointless to show an empty window
 	});
 
-	futureWatcher.setFuture(QtConcurrent::map(indices, [this, folder_list, &progressDialog](const int& i)
+	futureWatcher.setFuture(QtConcurrent::map(indices, [this, folder_list](const int& i)
 	{
 		const std::string dir_name = sstr(folder_list.value(i));
 		gui_log.trace("Loading trophy dir: %s", dir_name);
@@ -735,10 +730,10 @@ void trophy_manager_dialog::PopulateGameTable()
 	m_game_combo->clear();
 
 	QList<int> indices;
-	for (size_t i = 0; i < m_trophies_db.size(); ++i)
+	for (usz i = 0; i < m_trophies_db.size(); ++i)
 		indices.append(static_cast<int>(i));
 
-	std::function<QPixmap(const int&)> get_icon = [this](const int& i)
+	const std::function<QPixmap(const int&)> get_icon = [this](const int& i)
 	{
 		// Load game icon
 		QPixmap icon;
@@ -750,7 +745,8 @@ void trophy_manager_dialog::PopulateGameTable()
 		return icon;
 	};
 
-	QList<QPixmap> icons = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_icon);
+	// NOTE: Due to a Qt bug in Qt 5.15.2, QtConcurrent::blockingMapped has a high risk of deadlocking. So let's just use QtConcurrent::mapped.
+	const QList<QPixmap> icons = QtConcurrent::mapped(indices, get_icon).results();
 
 	for (int i = 0; i < indices.count(); ++i)
 	{
@@ -770,6 +766,8 @@ void trophy_manager_dialog::PopulateGameTable()
 
 		m_game_combo->addItem(name, i);
 	}
+
+	m_game_combo->model()->sort(0, Qt::AscendingOrder);
 
 	ResizeGameIcons();
 
@@ -792,7 +790,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 
 	m_game_progress->setText(tr("Progress: %1% (%2/%3)").arg(percentage).arg(unlocked_trophies).arg(all_trophies));
 
-	m_trophy_table->clearContents();
+	m_trophy_table->clear_list();
 	m_trophy_table->setRowCount(all_trophies);
 	m_trophy_table->setSortingEnabled(false); // Disable sorting before using setItem calls
 
@@ -836,6 +834,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 		case 'S': details.trophyGrade = SCE_NP_TROPHY_GRADE_SILVER;   trophy_type = tr("Silver", "Trophy type");   break;
 		case 'G': details.trophyGrade = SCE_NP_TROPHY_GRADE_GOLD;     trophy_type = tr("Gold", "Trophy type");     break;
 		case 'P': details.trophyGrade = SCE_NP_TROPHY_GRADE_PLATINUM; trophy_type = tr("Platinum", "Trophy type"); break;
+		default: gui_log.warning("Unknown trophy grade %s", n->GetAttribute("ttype")); break;
 		}
 
 		// Get hidden state
@@ -863,7 +862,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 		icon_item->setData(Qt::UserRole, hidden, true);
 
 		custom_table_widget_item* type_item = new custom_table_widget_item(trophy_type);
-		type_item->setData(Qt::UserRole, uint(details.trophyGrade), true);
+		type_item->setData(Qt::UserRole, static_cast<uint>(details.trophyGrade), true);
 
 		m_trophy_table->setItem(i, TrophyColumns::Icon, icon_item);
 		m_trophy_table->setItem(i, TrophyColumns::Name, new custom_table_widget_item(qstr(details.name)));
@@ -881,7 +880,7 @@ void trophy_manager_dialog::PopulateTrophyTable()
 	ResizeTrophyIcons();
 }
 
-void trophy_manager_dialog::ReadjustGameTable()
+void trophy_manager_dialog::ReadjustGameTable() const
 {
 	// Fixate vertical header and row height
 	m_game_table->verticalHeader()->setMinimumSectionSize(m_game_icon_size.height());
@@ -896,7 +895,7 @@ void trophy_manager_dialog::ReadjustGameTable()
 	m_game_table->resizeColumnToContents(GameColumns::GameColumnsCount - 1);
 }
 
-void trophy_manager_dialog::ReadjustTrophyTable()
+void trophy_manager_dialog::ReadjustTrophyTable() const
 {
 	// Fixate vertical header and row height
 	m_trophy_table->verticalHeader()->setMinimumSectionSize(m_icon_height);
@@ -936,7 +935,7 @@ bool trophy_manager_dialog::eventFilter(QObject *object, QEvent *event)
 	{
 		QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
 
-		if (keyEvent->modifiers() & Qt::ControlModifier && (is_trophy_table || is_game_table))
+		if (keyEvent && keyEvent->modifiers() == Qt::ControlModifier && (is_trophy_table || is_game_table))
 		{
 			if (keyEvent->key() == Qt::Key_Plus)
 			{

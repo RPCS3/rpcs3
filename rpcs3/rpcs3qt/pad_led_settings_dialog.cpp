@@ -1,24 +1,28 @@
-﻿#include "pad_led_settings_dialog.h"
+#include "pad_led_settings_dialog.h"
 
 #include <QColorDialog>
 #include <QPainter>
 #include <QPixmap>
 #include <QPainterPath>
 
-pad_led_settings_dialog::pad_led_settings_dialog(const int& colorR, const int& colorG, const int& colorB, const bool& led_low_battery_blink, const bool& led_battery_indicator, const int& led_battery_indicator_brightness, QDialog * parent)
+pad_led_settings_dialog::pad_led_settings_dialog(QDialog* parent, int colorR, int colorG, int colorB, bool has_rgb, bool has_battery, bool led_low_battery_blink, bool led_battery_indicator, int led_battery_indicator_brightness)
     : QDialog(parent)
     , ui(new Ui::pad_led_settings_dialog)
     , m_initial{colorR, colorG, colorB, led_low_battery_blink, led_battery_indicator, led_battery_indicator_brightness}
 {
 	ui->setupUi(this);
+	setModal(true);
 	m_new = m_initial;
 
 	ui->hs_indicator_brightness->setValue(m_new.battery_indicator_brightness);
 	ui->cb_led_blink->setChecked(m_new.low_battery_blink);
 	ui->cb_led_indicate->setChecked(m_new.battery_indicator);
 
-	switch_groupboxes(m_new.battery_indicator);
 	update_slider_label(m_new.battery_indicator_brightness);
+
+	ui->gb_led_color->setEnabled(has_rgb);
+	ui->gb_battery_status->setEnabled(has_battery);
+	ui->gb_indicator_brightness->setEnabled(has_battery && has_rgb); // Let's restrict this to rgb capable devices for now
 
 	connect(ui->bb_dialog_buttons, &QDialogButtonBox::clicked, [this](QAbstractButton* button)
 	{
@@ -38,22 +42,26 @@ pad_led_settings_dialog::pad_led_settings_dialog(const int& colorR, const int& c
 		}
 		Q_EMIT pass_led_settings(m_new.cR, m_new.cG, m_new.cB, m_new.low_battery_blink, m_new.battery_indicator, m_new.battery_indicator_brightness);
 	});
-	connect(ui->b_colorpicker, &QPushButton::clicked, [this]()
+
+	if (has_rgb)
 	{
-		const QColor led_color(m_new.cR, m_new.cG, m_new.cB);
-		QColorDialog dlg(led_color, this);
-		dlg.setWindowTitle(tr("LED Color"));
-		if (dlg.exec() == QColorDialog::Accepted)
+		connect(ui->b_colorpicker, &QPushButton::clicked, [this]()
 		{
-			const QColor new_color = dlg.selectedColor();
-			m_new.cR = new_color.red();
-			m_new.cG = new_color.green();
-			m_new.cB = new_color.blue();
-			redraw_color_sample();
-		}
-	});
-	connect(ui->hs_indicator_brightness, &QAbstractSlider::valueChanged, this, &pad_led_settings_dialog::update_slider_label);
-	connect(ui->cb_led_indicate, &QCheckBox::toggled, this, &pad_led_settings_dialog::switch_groupboxes);
+			const QColor led_color(m_new.cR, m_new.cG, m_new.cB);
+			QColorDialog dlg(led_color, this);
+			dlg.setWindowTitle(tr("LED Color"));
+			if (dlg.exec() == QColorDialog::Accepted)
+			{
+				const QColor new_color = dlg.selectedColor();
+				m_new.cR = new_color.red();
+				m_new.cG = new_color.green();
+				m_new.cB = new_color.blue();
+				redraw_color_sample();
+			}
+		});
+		connect(ui->hs_indicator_brightness, &QAbstractSlider::valueChanged, this, &pad_led_settings_dialog::update_slider_label);
+		connect(ui->cb_led_indicate, &QCheckBox::toggled, this, &pad_led_settings_dialog::battery_indicator_checked);
+	}
 
 	// Draw color sample after showing the dialog, in order to have proper dimensions
 	show();
@@ -66,7 +74,7 @@ pad_led_settings_dialog::~pad_led_settings_dialog()
 	delete ui;
 }
 
-void pad_led_settings_dialog::redraw_color_sample()
+void pad_led_settings_dialog::redraw_color_sample() const
 {
 	const qreal dpr = devicePixelRatioF();
 	const qreal w = ui->w_color_sample->width();
@@ -97,15 +105,15 @@ void pad_led_settings_dialog::redraw_color_sample()
 	ui->w_color_sample->setPixmap(color_sample.scaled(w * dpr, h * dpr, Qt::KeepAspectRatio, Qt::TransformationMode::SmoothTransformation));
 }
 
-void pad_led_settings_dialog::update_slider_label(int val)
+void pad_led_settings_dialog::update_slider_label(int val) const
 {
 	const QString label = QString::number(val) + QStringLiteral("%");
 	ui->l_indicator_brightness->setText(label);
 }
 
-void pad_led_settings_dialog::switch_groupboxes(bool tick)
+void pad_led_settings_dialog::battery_indicator_checked(bool checked) const
 {
-	ui->gb_indicator_brightness->setEnabled(tick);
+	ui->gb_indicator_brightness->setEnabled(checked);
 }
 
 void pad_led_settings_dialog::read_form_values()

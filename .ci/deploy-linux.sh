@@ -12,7 +12,6 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     ./squashfs-root/AppRun ./appdir/usr/share/applications/*.desktop -bundle-non-qt-libs
     ls ./appdir/usr/lib/
     rm -r ./appdir/usr/share/doc
-    rm ./appdir/usr/lib/libxcb*
     cp "$(readlink -f /lib/x86_64-linux-gnu/libnsl.so.1)" ./appdir/usr/lib/libnsl.so.1
     export PATH=/rpcs3/build/squashfs-root/usr/bin/:${PATH}
 
@@ -29,11 +28,13 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     # This may need updating if you update the compiler or rpcs3 uses newer c++ features
     # See https://github.com/gcc-mirror/gcc/blob/master/libstdc%2B%2B-v3/config/abi/pre/gnu.ver
     # for which definitions correlate to which CXXABI version.
-    # Currently we target a minimum of GLIBCXX_3.4.26 and CXXABI_1.3.11
-    printf "#include <bits/stdc++.h>\nint main(){std::make_exception_ptr(0);std::pmr::get_default_resource();}" | $CXX -x c++ -std=c++2a -o ./appdir/usr/optional/checker -
+    # Currently we target a minimum of GLIBCXX_3.4.29 and CXXABI_1.3.11
+    printf "#include <sstream>\n#include <exception>\n#include <memory_resource>\nint main(){auto x = std::stringbuf();x.get_allocator();std::make_exception_ptr(0);std::pmr::get_default_resource();}" \
+     | $CXX -x c++ -std=c++2a -o ./appdir/usr/optional/checker -
 
     # Package it up and send it off
-    ./squashfs-root/usr/bin/appimagetool /rpcs3/build/appdir
+    ./squashfs-root/usr/bin/appimagetool "$APPDIR"
+    
     ls
 
     COMM_TAG="$(grep 'version{.*}' ../rpcs3/rpcs3_version.cpp | awk -F[\{,] '{printf "%d.%d.%d", $2, $3, $4}')"
@@ -41,25 +42,17 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
     COMM_HASH="$(git rev-parse --short=8 HEAD)"
     RPCS3_APPIMAGE="rpcs3-v${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}_linux64.AppImage"
 
-    curl -sLO https://github.com/hcorion/uploadtool/raw/master/upload.sh
     mv ./RPCS3*.AppImage "$RPCS3_APPIMAGE"
 
-    # If we're building using Azure Pipelines, let's copy over the AppImage artifact
+    # If we're building using a CI, let's copy over the AppImage artifact
     if [ -n "$BUILD_ARTIFACTSTAGINGDIRECTORY" ]; then
-        cp "$RPCS3_APPIMAGE" ~/artifacts
+        cp "$RPCS3_APPIMAGE" "$ARTDIR"
     fi
 
     FILESIZE=$(stat -c %s ./rpcs3*.AppImage)
-    SHA256SUM=$(sha256sum ./rpcs3*.AppImage)
-    if [ -n "$GITHUB_TOKEN" ]; then
-        unset TRAVIS_REPO_SLUG
-        REPO_SLUG=RPCS3/rpcs3-binaries-linux \
-            UPLOADTOOL_BODY="$SHA256SUM;${FILESIZE}B"\
-            RELEASE_NAME=build-${TRAVIS_COMMIT}\
-            RELEASE_TITLE=${COMM_TAG}-${COMM_COUNT}\
-            REPO_COMMIT=d812f1254a1157c80fd402f94446310560f54e5f\
-            bash upload.sh rpcs3*.AppImage
-    fi
+    SHA256SUM=$(sha256sum ./rpcs3*.AppImage | awk '{ print $1 }')
+    echo "${SHA256SUM};${FILESIZE}B" > "$RELEASE_MESSAGE"
+    
 fi
 
 if [ "$DEPLOY_PPA" = "true" ]; then

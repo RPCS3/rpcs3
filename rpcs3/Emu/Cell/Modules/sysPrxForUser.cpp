@@ -1,5 +1,6 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "Emu/Cell/lv2/sys_interrupt.h"
@@ -9,8 +10,6 @@
 #include "sysPrxForUser.h"
 
 LOG_CHANNEL(sysPrxForUser);
-
-extern u64 get_guest_system_time();
 
 vm::gvar<s32> sys_prx_version; // ???
 vm::gvar<vm::ptr<void()>> g_ppu_atexitspawn;
@@ -74,7 +73,7 @@ error_code sys_get_random_number(vm::ptr<void> addr, u64 size)
 {
 	sysPrxForUser.warning("sys_get_random_number(addr=*0x%x, size=%d)", addr, size);
 
-	if (size > 0x1000)
+	if (size > RANDOM_NUMBER_MAX_SIZE)
 	{
 		return CELL_EINVAL;
 	}
@@ -96,16 +95,16 @@ error_code console_getc()
 	return CELL_OK;
 }
 
-void console_putc(char ch)
+void console_putc(ppu_thread& ppu, char ch)
 {
 	sysPrxForUser.trace("console_putc(ch=0x%x)", ch);
-	sys_tty_write(0, vm::var<char>(ch), 1, vm::var<u32>{});
+	sys_tty_write(ppu, 0, vm::var<char>(ch), 1, vm::var<u32>{});
 }
 
-error_code console_write(vm::ptr<char> data, u32 len)
+error_code console_write(ppu_thread& ppu, vm::ptr<char> data, u32 len)
 {
 	sysPrxForUser.trace("console_write(data=*0x%x, len=%d)", data, len);
-	sys_tty_write(0, data, len, vm::var<u32>{});
+	sys_tty_write(ppu, 0, data, len, vm::var<u32>{});
 	return CELL_OK;
 }
 
@@ -141,30 +140,7 @@ error_code cellSysconfPs1emu_EFDDAF6C()
 
 error_code sys_lv2coredump_D725F320()
 {
-	fmt::raw_error(__func__);
-}
-
-error_code sys_crash_dump_get_user_log_area(u8 index, vm::ptr<sys_crash_dump_log_area_info_t> entry)
-{
-	sysPrxForUser.todo("sys_crash_dump_get_user_log_area(index=%d, entry=*0x%x)", index, entry);
-
-	if (index > SYS_CRASH_DUMP_MAX_LOG_AREA || !entry)
-	{
-		return CELL_EINVAL;
-	}
-
-	return CELL_OK;
-}
-
-error_code sys_crash_dump_set_user_log_area(u8 index, vm::ptr<sys_crash_dump_log_area_info_t> new_entry)
-{
-	sysPrxForUser.todo("sys_crash_dump_set_user_log_area(index=%d, new_entry=*0x%x)", index, new_entry);
-
-	if (index > SYS_CRASH_DUMP_MAX_LOG_AREA || !new_entry)
-	{
-		return CELL_EINVAL;
-	}
-
+	sysPrxForUser.fatal("sys_lv2coredump_D725F320");
 	return CELL_OK;
 }
 
@@ -192,8 +168,8 @@ error_code sysPs2Disc_BB7CD1AE()
 	return CELL_OK;
 }
 
-extern void sysPrxForUser_sys_lwmutex_init();
-extern void sysPrxForUser_sys_lwcond_init();
+extern void sysPrxForUser_sys_lwmutex_init(ppu_static_module*);
+extern void sysPrxForUser_sys_lwcond_init(ppu_static_module*);
 extern void sysPrxForUser_sys_ppu_thread_init();
 extern void sysPrxForUser_sys_prx_init();
 extern void sysPrxForUser_sys_heap_init();
@@ -205,7 +181,7 @@ extern void sysPrxForUser_sys_game_init();
 extern void sysPrxForUser_sys_libc_init();
 extern void sysPrxForUser_sys_rsxaudio_init();
 
-DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
+DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", [](ppu_static_module* _this)
 {
 	static ppu_static_module cellGamePs1Emu("cellGamePs1Emu", []()
 	{
@@ -225,12 +201,6 @@ DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 		REG_FNID(sys_lv2coredump, 0xD725F320, sys_lv2coredump_D725F320);
 	});
 
-	static ppu_static_module sys_crashdump("sys_crashdump", []()
-	{
-		REG_FUNC(sys_crashdump, sys_crash_dump_get_user_log_area);
-		REG_FUNC(sys_crashdump, sys_crash_dump_set_user_log_area);
-	});
-
 	static ppu_static_module sysBdMediaId("sysBdMediaId", []()
 	{
 		REG_FUNC(sysBdMediaId, sys_get_bd_media_id);
@@ -247,8 +217,8 @@ DECLARE(ppu_module_manager::sysPrxForUser)("sysPrxForUser", []()
 		REG_FNID(sysPs2Disc, 0xBB7CD1AE, sysPs2Disc_BB7CD1AE);
 	});
 
-	sysPrxForUser_sys_lwmutex_init();
-	sysPrxForUser_sys_lwcond_init();
+	sysPrxForUser_sys_lwmutex_init(_this);
+	sysPrxForUser_sys_lwcond_init(_this);
 	sysPrxForUser_sys_ppu_thread_init();
 	sysPrxForUser_sys_prx_init();
 	sysPrxForUser_sys_heap_init();

@@ -1,8 +1,9 @@
-﻿#pragma once
+#pragma once
 
 #include "Keyboard.h"
 
 #include <mutex>
+#include <vector>
 
 #include "util/init_mutex.hpp"
 
@@ -31,9 +32,9 @@ struct KbInfo
 
 struct KbData
 {
-	u32 led;
-	u32 mkey;
-	s32 len;
+	u32 led;  // Active led lights
+	u32 mkey; // Active key modifiers
+	s32 len;  // Number of key codes (0 means no data available)
 	std::pair<u16, u32> keycode[CELL_KB_MAX_KEYCODES];
 
 	KbData()
@@ -73,24 +74,18 @@ struct KbButton
 
 struct Keyboard
 {
-	bool m_key_repeat = false; // for future use
+	bool m_key_repeat = false;
 	KbData m_data;
 	KbConfig m_config;
 	std::vector<KbButton> m_buttons;
 
 	Keyboard()
-		: m_data()
-		, m_config()
 	{
 	}
 };
 
 class KeyboardHandlerBase
 {
-protected:
-	KbInfo m_info;
-	std::vector<Keyboard> m_keyboards;
-
 public:
 	std::mutex m_mutex;
 
@@ -99,8 +94,9 @@ public:
 	virtual ~KeyboardHandlerBase() = default;
 
 	void Key(u32 code, bool pressed);
+	void SetIntercepted(bool intercepted);
 
-	bool IsMetaKey(u32 code);
+	static bool IsMetaKey(u32 code);
 
 	KbInfo& GetInfo() { return m_info; }
 	std::vector<Keyboard>& GetKeyboards() { return m_keyboards; }
@@ -109,4 +105,10 @@ public:
 	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
 
 	stx::init_mutex init;
+
+protected:
+	void ReleaseAllKeys();
+
+	KbInfo m_info;
+	std::vector<Keyboard> m_keyboards;
 };

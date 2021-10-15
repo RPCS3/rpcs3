@@ -22,7 +22,9 @@ enum CellCameraError : u32
 	CELL_CAMERA_ERROR_RESOLUTION_UNKNOWN = 0x8014080b,
 	CELL_CAMERA_ERROR_BAD_FRAMERATE      = 0x8014080c,
 	CELL_CAMERA_ERROR_TIMEOUT            = 0x8014080d,
+	CELL_CAMERA_ERROR_BUSY               = 0x8014080e,
 	CELL_CAMERA_ERROR_FATAL              = 0x8014080f,
+	CELL_CAMERA_ERROR_MUTEX              = 0x80140810,
 };
 
 // Event masks
@@ -322,6 +324,39 @@ enum
 	GET_DEF  = 0x87,
 };
 
+enum // version
+{
+	CELL_CAMERA_INFO_VER_100 = 0x0100,
+	CELL_CAMERA_INFO_VER_101 = 0x0101,
+	CELL_CAMERA_INFO_VER_200 = 0x0200,
+	CELL_CAMERA_INFO_VER     = CELL_CAMERA_INFO_VER_200,
+
+	CELL_CAMERA_READ_VER_100 = 0x0100,
+	CELL_CAMERA_READ_VER     = CELL_CAMERA_READ_VER_100,
+};
+
+// Other
+enum
+{
+	CELL_CAMERA_MAX_CAMERAS = 1
+};
+
+struct CellCameraInfo
+{
+	// filled in by application as inputs for open
+	be_t<s32> format;
+	be_t<s32> resolution;
+	be_t<s32> framerate;
+
+	// filled in by open
+	vm::bptr<u8> buffer;
+	be_t<s32> bytesize;
+	be_t<s32> width;
+	be_t<s32> height;
+	be_t<s32> dev_num;
+	be_t<s32> guid;
+};
+
 struct CellCameraInfoEx
 {
 	be_t<s32> format;     // CellCameraFormat
@@ -382,7 +417,7 @@ public:
 
 	shared_mutex mutex;
 	shared_mutex mutex_notify_data_map;
-	Timer timer;
+	u64 start_timestamp = 0;
 
 	atomic_t<u8> read_mode{CELL_CAMERA_READ_FUNCCALL};
 	atomic_t<bool> is_streaming{false};
@@ -408,5 +443,7 @@ using camera_thread = named_thread<camera_context>;
 /// Shared data between cellGem and cellCamera
 struct gem_camera_shared
 {
-	atomic_t<s64> frame_timestamp;    // latest read timestamp from cellCamera (cellCameraRead(Ex))
+	atomic_t<s64> frame_timestamp{}; // latest read timestamp from cellCamera (cellCameraRead(Ex))
+	atomic_t<s32> width{640};
+	atomic_t<s32> height{480};
 };

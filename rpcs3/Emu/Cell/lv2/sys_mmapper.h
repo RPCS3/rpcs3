@@ -1,12 +1,18 @@
-﻿#pragma once
+#pragma once
 
 #include "sys_sync.h"
 
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 #include <vector>
 
 struct lv2_memory_container;
+
+namespace utils
+{
+	class shm;
+}
 
 struct lv2_memory : lv2_obj
 {
@@ -15,12 +21,16 @@ struct lv2_memory : lv2_obj
 	const u32 size; // Memory size
 	const u32 align; // Alignment required
 	const u64 flags;
+	const u64 key; // IPC key
+	const bool pshared; // Process shared flag
 	lv2_memory_container* const ct; // Associated memory container
 	const std::shared_ptr<utils::shm> shm;
 
 	atomic_t<u32> counter{0};
 
-	lv2_memory(u32 size, u32 align, u64 flags, lv2_memory_container* ct);
+	lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv2_memory_container* ct);
+
+	CellError on_id_create();
 };
 
 enum : u64
@@ -82,8 +92,8 @@ error_code sys_mmapper_allocate_address(ppu_thread&, u64 size, u64 flags, u64 al
 error_code sys_mmapper_allocate_fixed_address(ppu_thread&);
 error_code sys_mmapper_allocate_shared_memory(ppu_thread&, u64 ipc_key, u64 size, u64 flags, vm::ptr<u32> mem_id);
 error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread&, u64 ipc_key, u64 size, u32 cid, u64 flags, vm::ptr<u32> mem_id);
-error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread&, u64 ipc_key, u64 size, u32 flags, vm::ptr<mmapper_unk_entry_struct0> src, s32 count, vm::ptr<u32> mem_id);
-error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread&, u64 ipc_key, u64 size, u64 flags, u32 mc_id, vm::ptr<mmapper_unk_entry_struct0> entries, s32 entry_count, vm::ptr<u32> mem_id);
+error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread&, u64 ipc_key, u64 size, u32 flags, vm::ptr<mmapper_unk_entry_struct0> entries, s32 entry_count, vm::ptr<u32> mem_id);
+error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread&, u64 ipc_key, u64 size, u64 flags, u32 cid, vm::ptr<mmapper_unk_entry_struct0> entries, s32 entry_count, vm::ptr<u32> mem_id);
 error_code sys_mmapper_change_address_access_right(ppu_thread&, u32 addr, u64 flags);
 error_code sys_mmapper_free_address(ppu_thread&, u32 addr);
 error_code sys_mmapper_free_shared_memory(ppu_thread&, u32 mem_id);

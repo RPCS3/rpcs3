@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_trace.h"
 
 #include "Emu/Cell/ErrorCodes.h"

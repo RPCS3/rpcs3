@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 
 #include "Emu/Cell/lv2/sys_usbd.h"
@@ -72,7 +72,7 @@ void usb_device_passthrough::read_descriptors()
 	for (u8 index = 0; index < device._device.bNumConfigurations; index++)
 	{
 		u8 buf[1000];
-		int ssize = libusb_control_transfer(lusb_handle, LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_DEVICE, LIBUSB_REQUEST_GET_DESCRIPTOR, 0x0200 | index, 0, buf, 1000, 0);
+		int ssize = libusb_control_transfer(lusb_handle, +LIBUSB_ENDPOINT_IN | +LIBUSB_REQUEST_TYPE_STANDARD | +LIBUSB_RECIPIENT_DEVICE, LIBUSB_REQUEST_GET_DESCRIPTOR, 0x0200 | index, 0, buf, 1000, 0);
 		if (ssize < 0)
 		{
 			sys_usbd.fatal("Couldn't get the config from the device: %d", ssize);
@@ -102,7 +102,7 @@ bool usb_device_passthrough::set_interface(u8 int_num)
 	return (libusb_claim_interface(lusb_handle, int_num) == LIBUSB_SUCCESS);
 }
 
-void usb_device_passthrough::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
+void usb_device_passthrough::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 /*wLength*/, u32 buf_size, u8* buf, UsbTransfer* transfer)
 {
 	if (transfer->setup_buf.size() < buf_size + 8)
 		transfer->setup_buf.resize(buf_size + 8);
@@ -150,7 +150,7 @@ bool usb_device_emulated::open_device()
 	return true;
 }
 
-s32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* ptr, u32 max_size)
+s32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* ptr, u32 /*max_size*/)
 {
 	if (type == USB_DESCRIPTOR_STRING)
 	{
@@ -175,7 +175,7 @@ s32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* ptr, u32 max_size
 	return -1;
 }
 
-void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer)
+void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 /*wIndex*/, u16 /*wLength*/, u32 buf_size, u8* /*buf*/, UsbTransfer* transfer)
 {
 	transfer->fake            = true;
 	transfer->expected_count  = buf_size;
@@ -194,6 +194,11 @@ void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wV
 	default: sys_usbd.fatal("Unhandled control transfer: 0x%x", bmRequestType); break;
 	}
 }
+
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 void usb_device_emulated::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {

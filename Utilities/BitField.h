@@ -1,12 +1,18 @@
-﻿#pragma once
+#pragma once
 
-#include "types.h"
+#include "util/types.hpp"
+#include "Utilities/StrFmt.h"
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
+#endif
 
 template<typename T, uint N>
 struct bf_base
 {
 	using type = T;
-	using vtype = simple_t<type>;
+	using vtype = std::common_type_t<type>;
 	using utype = typename std::make_unsigned<vtype>::type;
 
 	// Datatype bitsize
@@ -216,7 +222,7 @@ struct cf_t<void>
 	}
 
 	template<typename T>
-	static constexpr auto extract(const T& data) -> decltype(+T())
+	static constexpr auto extract(const T&) -> decltype(+T())
 	{
 		return 0;
 	}
@@ -236,7 +242,7 @@ struct ff_t : bf_base<T, N>
 	using vtype = typename ff_t::vtype;
 
 	// Return constant value
-	static constexpr vtype extract(const type& data)
+	static constexpr vtype extract(const type&)
 	{
 		static_assert((V & ff_t::vmask) == V, "ff_t<> error: V out of bounds");
 		return V;
@@ -249,10 +255,14 @@ struct ff_t : bf_base<T, N>
 	}
 };
 
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif
+
 template<typename T, uint I, uint N>
 struct fmt_unveil<bf_t<T, I, N>, void>
 {
-	using type = typename fmt_unveil<simple_t<T>>::type;
+	using type = typename fmt_unveil<std::common_type_t<T>>::type;
 
 	static inline auto get(const bf_t<T, I, N>& bf)
 	{
@@ -263,7 +273,7 @@ struct fmt_unveil<bf_t<T, I, N>, void>
 template<typename F, typename... Fields>
 struct fmt_unveil<cf_t<F, Fields...>, void>
 {
-	using type = typename fmt_unveil<simple_t<typename F::type>>::type;
+	using type = typename fmt_unveil<std::common_type_t<typename F::type>>::type;
 
 	static inline auto get(const cf_t<F, Fields...>& cf)
 	{
@@ -274,7 +284,7 @@ struct fmt_unveil<cf_t<F, Fields...>, void>
 template<typename T, T V, uint N>
 struct fmt_unveil<ff_t<T, V, N>, void>
 {
-	using type = typename fmt_unveil<simple_t<T>>::type;
+	using type = typename fmt_unveil<std::common_type_t<T>>::type;
 
 	static inline auto get(const ff_t<T, V, N>& ff)
 	{

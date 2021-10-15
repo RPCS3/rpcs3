@@ -1,15 +1,14 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_perf_metrics.h"
-#include "../GSRender.h"
-
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPUThread.h"
-#include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/PPUThread.h"
-#include "Utilities/sysinfo.h"
 
 #include <algorithm>
 #include <utility>
 #include <charconv>
+
+#include "util/cpu_stats.hpp"
 
 namespace rsx
 {
@@ -90,17 +89,35 @@ namespace rsx
 			return color4f(r / 255.f, g / 255.f, b / 255.f, a / 255.f * opacity);
 		}
 
-		void perf_metrics_overlay::reset_transform(label& elm, u16 bottom_margin) const
+		void perf_metrics_overlay::reset_transform(label& elm) const
 		{
-			const u32 text_padding = m_font_size / 2;
-
 			// left, top, right, bottom
-			const areau padding { text_padding, text_padding - 4, text_padding, text_padding };
+			const areau padding { m_padding, m_padding - std::min<u32>(4, m_padding), m_padding, m_padding };
 			const positionu margin { m_margin_x, m_margin_y };
 			positionu pos;
 
 			const auto overlay_width = m_body.w + margin.x;
 			const auto overlay_height = m_body.h + margin.y;
+
+			u16 graph_width = 0;
+			u16 graph_height = 0;
+
+			if (m_framerate_graph_enabled)
+			{
+				graph_width = std::max(graph_width, m_fps_graph.w);
+				graph_height += m_fps_graph.get_height();
+			}
+
+			if (m_frametime_graph_enabled)
+			{
+				graph_width = std::max(graph_width, m_frametime_graph.w);
+				graph_height += m_frametime_graph.get_height();
+			}
+
+			if (graph_height > 0 && m_body.h > 0)
+			{
+				graph_height += m_padding;
+			}
 
 			switch (m_quadrant)
 			{
@@ -114,22 +131,22 @@ namespace rsx
 				break;
 			case screen_quadrant::bottom_left:
 				pos.x = margin.x;
-				pos.y = virtual_height - overlay_height - bottom_margin;
+				pos.y = virtual_height - overlay_height - graph_height;
 				break;
 			case screen_quadrant::bottom_right:
 				pos.x = virtual_width - overlay_width;
-				pos.y = virtual_height - overlay_height - bottom_margin;
+				pos.y = virtual_height - overlay_height - graph_height;
 				break;
 			}
 
 			if (m_center_x)
 			{
-				pos.x = (virtual_width - m_body.w) / 2;
+				pos.x = (virtual_width - std::max(m_body.w, graph_width)) / 2;
 			}
 
 			if (m_center_y)
 			{
-				pos.y = (virtual_height - m_body.h - bottom_margin) / 2;
+				pos.y = (virtual_height - m_body.h - graph_height) / 2;
 			}
 
 			elm.set_pos(pos.x, pos.y);
@@ -138,47 +155,29 @@ namespace rsx
 
 		void perf_metrics_overlay::reset_transforms()
 		{
-			const u16 perf_overlay_padding = m_font_size / 2;
-			const u16 graphs_padding = m_font_size * 2;
-
 			const u16 fps_graph_h = 60;
 			const u16 frametime_graph_h = 45;
 
-			u16 bottom_margin{};
-
-			if (m_framerate_graph_enabled || m_frametime_graph_enabled)
+			if (m_framerate_graph_enabled)
 			{
-				// Adjust body size to account for the graphs
-				// TODO: Bit hacky, could do this with margins if overlay_element had bottom margin (or negative top at least)
-				bottom_margin = perf_overlay_padding;
+				m_fps_graph.set_size(m_fps_graph.w, fps_graph_h);
+			}
 
-				if (m_framerate_graph_enabled)
-				{
-					bottom_margin += fps_graph_h;
-
-					if (m_frametime_graph_enabled)
-					{
-						bottom_margin += graphs_padding;
-					}
-				}
-
-				if (m_frametime_graph_enabled)
-				{
-					bottom_margin += frametime_graph_h;
-				}
+			if (m_frametime_graph_enabled)
+			{
+				m_frametime_graph.set_size(m_frametime_graph.w, frametime_graph_h);
 			}
 
 			// Set body/titles transform
-			if (m_is_initialised && m_force_repaint)
+			if (m_force_repaint)
 			{
-				m_force_repaint = false;
-				reset_body(bottom_margin);
-				reset_titles(bottom_margin);
+				reset_body();
+				reset_titles();
 			}
 			else
 			{
-				reset_transform(m_body, bottom_margin);
-				reset_transform(m_titles, bottom_margin);
+				reset_transform(m_body);
+				reset_transform(m_titles);
 			}
 
 			if (m_framerate_graph_enabled || m_frametime_graph_enabled)
@@ -186,50 +185,60 @@ namespace rsx
 				// Position the graphs within the body
 				const u16 graphs_width = m_body.w;
 				const u16 body_left = m_body.x;
-				const u16 body_bottom = m_body.y + m_body.h + perf_overlay_padding;
+				u16 y_offset = m_body.y;
+
+				if (m_body.h > 0)
+				{
+					y_offset += m_body.h + m_padding;
+				}
 
 				if (m_framerate_graph_enabled)
 				{
+					if (m_force_repaint)
+					{
+						m_fps_graph.set_font_size(static_cast<u16>(m_font_size * 0.8));
+					}
 					m_fps_graph.update();
-					m_fps_graph.set_pos(body_left, body_bottom);
+					m_fps_graph.set_pos(body_left, y_offset);
 					m_fps_graph.set_size(graphs_width, fps_graph_h);
+
+					y_offset += m_fps_graph.get_height();
 				}
 
 				if (m_frametime_graph_enabled)
 				{
-					m_frametime_graph.update();
-
-					u16 y_offset{};
-
-					if (m_framerate_graph_enabled)
+					if (m_force_repaint)
 					{
-						y_offset = m_fps_graph.get_height();
+						m_frametime_graph.set_font_size(static_cast<u16>(m_font_size * 0.8));
 					}
-
-					m_frametime_graph.set_pos(body_left, body_bottom + y_offset);
+					m_frametime_graph.update();
+					m_frametime_graph.set_pos(body_left, y_offset);
 					m_frametime_graph.set_size(graphs_width, frametime_graph_h);
 				}
 			}
+
+			m_force_repaint = false;
 		}
 
-		void perf_metrics_overlay::reset_body(u16 bottom_margin)
+		void perf_metrics_overlay::reset_body()
 		{
 			m_body.set_font(m_font.c_str(), m_font_size);
 			m_body.fore_color = convert_color_code(m_color_body, m_opacity);
 			m_body.back_color = convert_color_code(m_background_body, m_opacity);
-			reset_transform(m_body, bottom_margin);
+			reset_transform(m_body);
 		}
 
-		void perf_metrics_overlay::reset_titles(u16 bottom_margin)
+		void perf_metrics_overlay::reset_titles()
 		{
 			m_titles.set_font(m_font.c_str(), m_font_size);
 			m_titles.fore_color = convert_color_code(m_color_title, m_opacity);
 			m_titles.back_color = convert_color_code(m_background_title, m_opacity);
-			reset_transform(m_titles, bottom_margin);
+			reset_transform(m_titles);
 
 			switch (m_detail)
 			{
-			case detail_level::minimal:
+			case detail_level::none: [[fallthrough]];
+			case detail_level::minimal: [[fallthrough]];
 			case detail_level::low: m_titles.set_text(""); break;
 			case detail_level::medium: m_titles.set_text(fmt::format("\n\n%s", title1_medium)); break;
 			case detail_level::high: m_titles.set_text(fmt::format("\n\n%s\n\n\n\n\n\n%s", title1_high, title2)); break;
@@ -240,13 +249,26 @@ namespace rsx
 
 		void perf_metrics_overlay::init()
 		{
+			m_padding = m_font_size / 2;
+			m_fps_graph.set_one_percent_sort_high(false);
+			m_frametime_graph.set_one_percent_sort_high(true);
+
 			reset_transforms();
 			force_next_update();
+
+			if (m_is_initialised)
+			{
+				update();
+				return;
+			}
 
 			m_update_timer.Start();
 			m_frametime_timer.Start();
 
 			update();
+
+			// The text might have changed during the initial update. Recalculate positions.
+			reset_transforms();
 
 			m_is_initialised = true;
 			visible = true;
@@ -261,9 +283,8 @@ namespace rsx
 
 			if (enabled)
 			{
-				m_fps_graph.set_title("   Framerate");
+				m_fps_graph.set_title("Framerate: 00.0");
 				m_fps_graph.set_font_size(static_cast<u16>(m_font_size * 0.8));
-				m_fps_graph.set_count(50);
 				m_fps_graph.set_color(convert_color_code(m_color_body, m_opacity));
 				m_fps_graph.set_guide_interval(10);
 			}
@@ -280,12 +301,41 @@ namespace rsx
 
 			if (enabled)
 			{
-				m_frametime_graph.set_title("   Frametime");
+				m_frametime_graph.set_title("Frametime: 0.0");
 				m_frametime_graph.set_font_size(static_cast<u16>(m_font_size * 0.8));
-				m_frametime_graph.set_count(170);
 				m_frametime_graph.set_color(convert_color_code(m_color_body, m_opacity));
 				m_frametime_graph.set_guide_interval(8);
 			}
+
+			m_force_repaint = true;
+		}
+
+		void perf_metrics_overlay::set_framerate_datapoint_count(u32 datapoint_count)
+		{
+			if (m_fps_graph.get_datapoint_count() == datapoint_count)
+				return;
+
+			m_fps_graph.set_count(datapoint_count);
+			m_force_repaint = true;
+		}
+
+		void perf_metrics_overlay::set_frametime_datapoint_count(u32 datapoint_count)
+		{
+			if (m_frametime_graph.get_datapoint_count() == datapoint_count)
+				return;
+
+			m_frametime_graph.set_count(datapoint_count);
+			m_force_repaint = true;
+		}
+
+		void perf_metrics_overlay::set_graph_detail_levels(perf_graph_detail_level framerate_level, perf_graph_detail_level frametime_level)
+		{
+			m_fps_graph.set_labels_visible(
+				framerate_level == perf_graph_detail_level::show_all || framerate_level == perf_graph_detail_level::show_min_max,
+				framerate_level == perf_graph_detail_level::show_all || framerate_level == perf_graph_detail_level::show_one_percent_avg);
+			m_frametime_graph.set_labels_visible(
+				frametime_level == perf_graph_detail_level::show_all || frametime_level == perf_graph_detail_level::show_min_max,
+				frametime_level == perf_graph_detail_level::show_all || frametime_level == perf_graph_detail_level::show_one_percent_avg);
 
 			m_force_repaint = true;
 		}
@@ -332,6 +382,7 @@ namespace rsx
 				return;
 
 			m_font_size = font_size;
+			m_padding = m_font_size / 2;
 
 			m_force_repaint = true;
 		}
@@ -389,13 +440,16 @@ namespace rsx
 		void perf_metrics_overlay::update()
 		{
 			const auto elapsed_update = m_update_timer.GetElapsedTimeInMilliSec();
+			const bool do_update = m_force_update || elapsed_update >= m_update_interval;
 
 			if (m_is_initialised)
 			{
-				if (m_frametime_graph_enabled)
+				if (m_frametime_graph_enabled && !m_force_update)
 				{
-					const auto elapsed_frame = m_frametime_timer.GetElapsedTimeInMilliSec();
-					m_frametime_graph.record_datapoint(static_cast<float>(elapsed_frame));
+					const float elapsed_frame = static_cast<float>(m_frametime_timer.GetElapsedTimeInMilliSec());
+					m_frametime_timer.Start();
+					m_frametime_graph.record_datapoint(elapsed_frame, do_update);
+					m_frametime_graph.set_title(fmt::format("Frametime: %4.1f", elapsed_frame).c_str());
 				}
 
 				if (m_force_repaint)
@@ -409,100 +463,93 @@ namespace rsx
 				++m_frames;
 			}
 
-			if (elapsed_update >= m_update_interval || m_force_update)
+			if (do_update)
 			{
-				if (!m_force_update)
+				// 1. Fetch/calculate metrics we'll need
+				if (!m_is_initialised || !m_force_update)
 				{
 					m_update_timer.Start();
-				}
 
-				f32 fps{0};
-				f32 frametime{0};
+					auto& rsx_thread = g_fxo->get<rsx::thread>();
 
-				u64 ppu_cycles{0};
-				u64 spu_cycles{0};
-				u64 rsx_cycles{0};
-				u64 total_cycles{0};
-
-				u32 ppus{0};
-				u32 spus{0};
-
-				f32 cpu_usage{-1.f};
-				u32 total_threads{0};
-
-				f32 ppu_usage{0};
-				f32 spu_usage{0};
-				f32 rsx_usage{0};
-				u32 rsx_load{0};
-
-				const auto rsx_thread = g_fxo->get<rsx::thread>();
-
-				std::string perf_text;
-
-				// 1. Fetch/calculate metrics we'll need
-				switch (m_detail)
-				{
-				case detail_level::high:
-				{
-					frametime = m_force_update ? 0.f : std::max(0.f, static_cast<float>(elapsed_update / m_frames));
-
-					rsx_load = rsx_thread->get_load();
-
-					total_threads = CPUStats::get_thread_count();
-
-					[[fallthrough]];
-				}
-				case detail_level::medium:
-				{
-					ppus = idm::select<named_thread<ppu_thread>>([&ppu_cycles](u32, named_thread<ppu_thread>& ppu)
+					switch (m_detail)
 					{
-						ppu_cycles += thread_ctrl::get_cycles(ppu);
-					});
-
-					spus = idm::select<named_thread<spu_thread>>([&spu_cycles](u32, named_thread<spu_thread>& spu)
+					case detail_level::high:
 					{
-						spu_cycles += thread_ctrl::get_cycles(spu);
-					});
+						m_frametime = std::max(0.f, static_cast<float>(elapsed_update / m_frames));
 
-					rsx_cycles += rsx_thread->get_cycles();
+						m_rsx_load = rsx_thread.get_load();
 
-					total_cycles = std::max<u64>(1, ppu_cycles + spu_cycles + rsx_cycles);
-					cpu_usage = static_cast<f32>(m_cpu_stats.get_usage());
+						m_total_threads = utils::cpu_stats::get_thread_count();
 
-					ppu_usage = std::clamp(cpu_usage * ppu_cycles / total_cycles, 0.f, 100.f);
-					spu_usage = std::clamp(cpu_usage * spu_cycles / total_cycles, 0.f, 100.f);
-					rsx_usage = std::clamp(cpu_usage * rsx_cycles / total_cycles, 0.f, 100.f);
+						[[fallthrough]];
+					}
+					case detail_level::medium:
+					{
+						m_ppus = idm::select<named_thread<ppu_thread>>([this](u32, named_thread<ppu_thread>& ppu)
+						{
+							m_ppu_cycles += thread_ctrl::get_cycles(ppu);
+						});
 
-					[[fallthrough]];
-				}
-				case detail_level::low:
-				{
-					if (cpu_usage < 0.)
-						cpu_usage = static_cast<f32>(m_cpu_stats.get_usage());
+						m_spus = idm::select<named_thread<spu_thread>>([this](u32, named_thread<spu_thread>& spu)
+						{
+							m_spu_cycles += thread_ctrl::get_cycles(spu);
+						});
 
-					[[fallthrough]];
-				}
-				case detail_level::minimal:
-				{
-					fps = m_force_update ? 0.f : std::max(0.f, static_cast<f32>(m_frames / (elapsed_update / 1000)));
-					if (m_is_initialised && m_framerate_graph_enabled)
-						m_fps_graph.record_datapoint(fps);
-				}
+						m_rsx_cycles += rsx_thread.get_cycles();
+
+						m_total_cycles = std::max<u64>(1, m_ppu_cycles + m_spu_cycles + m_rsx_cycles);
+						m_cpu_usage    = static_cast<f32>(m_cpu_stats.get_usage());
+
+						m_ppu_usage = std::clamp(m_cpu_usage * m_ppu_cycles / m_total_cycles, 0.f, 100.f);
+						m_spu_usage = std::clamp(m_cpu_usage * m_spu_cycles / m_total_cycles, 0.f, 100.f);
+						m_rsx_usage = std::clamp(m_cpu_usage * m_rsx_cycles / m_total_cycles, 0.f, 100.f);
+
+						[[fallthrough]];
+					}
+					case detail_level::low:
+					{
+						if (m_detail == detail_level::low) // otherwise already acquired in medium
+							m_cpu_usage = static_cast<f32>(m_cpu_stats.get_usage());
+
+						[[fallthrough]];
+					}
+					case detail_level::minimal:
+					{
+						[[fallthrough]];
+					}
+					case detail_level::none:
+					{
+						m_fps = std::max(0.f, static_cast<f32>(m_frames / (elapsed_update / 1000)));
+						if (m_is_initialised && m_framerate_graph_enabled)
+						{
+							m_fps_graph.record_datapoint(m_fps, true);
+							m_fps_graph.set_title(fmt::format("Framerate: %04.1f", m_fps).c_str());
+						}
+						break;
+					}
+					}
 				}
 
 				// 2. Format output string
+				std::string perf_text;
+
 				switch (m_detail)
 				{
+				case detail_level::none:
+				{
+					break;
+				}
 				case detail_level::minimal:
 				{
-					perf_text += fmt::format("FPS : %05.2f", fps);
+					perf_text += fmt::format("FPS : %05.2f", m_fps);
 					break;
 				}
 				case detail_level::low:
 				{
 					perf_text += fmt::format("FPS : %05.2f\n"
 					                         "CPU : %04.1f %%",
-					    fps, cpu_usage);
+					    m_fps, m_cpu_usage);
 					break;
 				}
 				case detail_level::medium:
@@ -513,7 +560,7 @@ namespace rsx
 					                         " SPU   : %04.1f %%\n"
 					                         " RSX   : %04.1f %%\n"
 					                         " Total : %04.1f %%",
-					    fps, std::string(title1_medium.size(), ' '), ppu_usage, spu_usage, rsx_usage, cpu_usage, std::string(title2.size(), ' '));
+					    m_fps, std::string(title1_medium.size(), ' '), m_ppu_usage, m_spu_usage, m_rsx_usage, m_cpu_usage, std::string(title2.size(), ' '));
 					break;
 				}
 				case detail_level::high:
@@ -526,14 +573,22 @@ namespace rsx
 					                         " Total : %04.1f %% (%2u)\n\n"
 					                         "%s\n"
 					                         " RSX   : %02u %%",
-					    fps, frametime, std::string(title1_high.size(), ' '), ppu_usage, ppus, spu_usage, spus, rsx_usage, cpu_usage, total_threads, std::string(title2.size(), ' '), rsx_load);
+					    m_fps, m_frametime, std::string(title1_high.size(), ' '), m_ppu_usage, m_ppus, m_spu_usage, m_spus, m_rsx_usage, m_cpu_usage, m_total_threads, std::string(title2.size(), ' '), m_rsx_load);
 					break;
 				}
 				}
 
 				m_body.set_text(perf_text);
 
-				if (m_body.auto_resize())
+				if (perf_text.empty())
+				{
+					if (m_body.w > 0 || m_body.h > 0)
+					{
+						m_body.set_size(0, 0);
+						reset_transforms();
+					}
+				}
+				else if (m_body.auto_resize())
 				{
 					reset_transforms();
 				}
@@ -549,23 +604,27 @@ namespace rsx
 					// Only force once
 					m_force_update = false;
 				}
-			}
 
-			if (m_framerate_graph_enabled)
-			{
-				m_fps_graph.update();
-			}
+				if (m_framerate_graph_enabled)
+				{
+					m_fps_graph.update();
+				}
 
-			if (m_frametime_graph_enabled)
-			{
-				m_frametime_graph.update();
-				m_frametime_timer.Start();
+				if (m_frametime_graph_enabled)
+				{
+					m_frametime_graph.update();
+				}
 			}
 		}
 
 		compiled_resource perf_metrics_overlay::get_compiled()
 		{
-			auto compiled_resources = m_body.get_compiled();
+			if (!visible)
+			{
+				return {};
+			}
+
+			compiled_resource compiled_resources = m_body.get_compiled();
 
 			compiled_resources.add(m_titles.get_compiled());
 
@@ -625,7 +684,20 @@ namespace rsx
 		void graph::set_count(u32 datapoint_count)
 		{
 			m_datapoint_count = datapoint_count;
-			m_datapoints.resize(datapoint_count, 0);
+
+			if (m_datapoints.empty())
+			{
+				m_datapoints.resize(m_datapoint_count, -1.0f);
+			}
+			else if (m_datapoints.empty() || m_datapoint_count < m_datapoints.size())
+			{
+				std::copy(m_datapoints.begin() + m_datapoints.size() - m_datapoint_count, m_datapoints.end(), m_datapoints.begin());
+				m_datapoints.resize(m_datapoint_count);
+			}
+			else
+			{
+				m_datapoints.insert(m_datapoints.begin(), m_datapoint_count - m_datapoints.size(), -1.0f);
+			}
 		}
 
 		void graph::set_color(color4f color)
@@ -638,22 +710,35 @@ namespace rsx
 			m_guide_interval = guide_interval;
 		}
 
+		void graph::set_labels_visible(bool show_min_max, bool show_1p_avg)
+		{
+			m_show_min_max = show_min_max;
+			m_show_1p_avg = show_1p_avg;
+		}
+
+		void graph::set_one_percent_sort_high(bool sort_1p_high)
+		{
+			m_1p_sort_high = sort_1p_high;
+		}
+
 		u16 graph::get_height() const
 		{
 			return h + m_label.h + m_label.padding_top + m_label.padding_bottom;
 		}
 
-		void graph::record_datapoint(f32 datapoint)
+		u32 graph::get_datapoint_count() const
 		{
+			return m_datapoint_count;
+		}
+
+		void graph::record_datapoint(f32 datapoint, bool update_metrics)
+		{
+			ensure(datapoint >= 0.0f);
+
 			// std::dequeue is only faster for large sizes, so just use a std::vector and resize once in while
 
 			// Record datapoint
 			m_datapoints.push_back(datapoint);
-
-			// Calculate new min/max
-			// Make sure min/max reflects the data being displayed, not the entire datapoints vector
-			m_min = *std::min_element(m_datapoints.end() - m_datapoint_count, m_datapoints.end());
-			m_max = *std::max_element(m_datapoints.end() - m_datapoint_count, m_datapoints.end());
 
 			// Cull vector when it gets large
 			if (m_datapoints.size() > m_datapoint_count * 16ull)
@@ -661,11 +746,76 @@ namespace rsx
 				std::copy(m_datapoints.begin() + m_datapoints.size() - m_datapoint_count, m_datapoints.end(), m_datapoints.begin());
 				m_datapoints.resize(m_datapoint_count);
 			}
+
+			if (!update_metrics)
+			{
+				return;
+			}
+
+			m_max = 0.0f;
+			m_avg = 0.0f;
+			m_1p = 0.0f;
+
+			if (m_show_min_max || m_show_1p_avg)
+			{
+				m_min = max_v<f32>;
+
+				std::vector<f32> valid_datapoints;
+
+				// Make sure min/max reflects the data being displayed, not the entire datapoints vector
+				for (usz i = m_datapoints.size() - m_datapoint_count; i < m_datapoints.size(); i++)
+				{
+					const f32& dp = m_datapoints[i];
+
+					if (dp < 0) continue; // Skip initial negative values. They don't count.
+
+					m_min = std::min(m_min, dp);
+					m_max = std::max(m_max, dp);
+					m_avg += dp;
+
+					valid_datapoints.push_back(dp);
+				}
+
+				// Sanitize min value
+				m_min = std::min(m_min, m_max);
+
+				if (m_show_1p_avg && !valid_datapoints.empty())
+				{
+					// Sort datapoints (we are only interested in the lowest/highest 1%)
+					const usz i_1p = valid_datapoints.size() / 100;
+					const usz n_1p = i_1p + 1;
+
+					if (m_1p_sort_high)
+						std::nth_element(valid_datapoints.begin(), valid_datapoints.begin() + i_1p, valid_datapoints.end(), std::greater<f32>());
+					else
+						std::nth_element(valid_datapoints.begin(), valid_datapoints.begin() + i_1p, valid_datapoints.end());
+
+					// Calculate statistics
+					m_avg /= valid_datapoints.size();
+					m_1p = std::accumulate(valid_datapoints.begin(), valid_datapoints.begin() + n_1p, 0.0f) / static_cast<float>(n_1p);
+				}
+			}
+			else
+			{
+				m_min = 0.0f;
+			}
 		}
 
 		void graph::update()
 		{
-			m_label.set_text(fmt::format("%s\nmn:%4.1f mx:%4.1f", m_title.c_str(), m_min, m_max));
+			std::string fps_info = m_title;
+
+			if (m_show_1p_avg)
+			{
+				fmt::append(fps_info, "\n1%%:%4.1f av:%4.1f", m_1p, m_avg);
+			}
+
+			if (m_show_min_max)
+			{
+				fmt::append(fps_info, "\nmn:%4.1f mx:%4.1f", m_min, m_max);
+			}
+
+			m_label.set_text(fps_info);
 			m_label.set_padding(4, 4, 0, 4);
 
 			m_label.auto_resize();
@@ -677,13 +827,17 @@ namespace rsx
 
 		compiled_resource& graph::get_compiled()
 		{
-			refresh();
+			if (is_compiled)
+			{
+				return compiled_resources;
+			}
+
 			overlay_element::get_compiled();
 
-			const f32 normalize_factor = f32(h) / m_max;
+			const f32 normalize_factor = f32(h) / (m_max != 0.0f ? m_max : 1.0f);
 
 			// Don't show guide lines if they'd be more dense than 1 guide line every 3 pixels
-			const bool guides_too_dense = (m_max / m_guide_interval) > (h / 3);
+			const bool guides_too_dense = (m_max / m_guide_interval) > (h / 3.0f);
 
 			if (m_guide_interval > 0 && !guides_too_dense)
 			{
@@ -697,7 +851,7 @@ namespace rsx
 
 				for (auto y_off = m_guide_interval; y_off < m_max; y_off += m_guide_interval)
 				{
-					const f32 guide_y = y + y_off * normalize_factor;
+					const f32 guide_y = y + h - y_off * normalize_factor;
 					verts_guides.emplace_back(x, guide_y);
 					verts_guides.emplace_back(static_cast<float>(x + w), guide_y);
 				}
@@ -711,13 +865,18 @@ namespace rsx
 
 			auto& verts_graph = compiled_resources.draw_commands.back().verts;
 
-			const f32 x_stride = w * 1.f / m_datapoint_count;
-			const u32 tail_index_offset = ::size32(m_datapoints, HERE) - m_datapoint_count;
+			f32 x_stride = w;
+			if (m_datapoint_count > 2)
+			{
+				x_stride /= (m_datapoint_count - 1);
+			}
+
+			const usz tail_index_offset = m_datapoints.size() - m_datapoint_count;
 
 			for (u32 i = 0; i < m_datapoint_count; ++i)
 			{
 				const f32 x_line = x + i * x_stride;
-				const f32 y_line = y + h - (m_datapoints[tail_index_offset + i] * normalize_factor);
+				const f32 y_line = y + h - (std::max(0.0f, m_datapoints[i + tail_index_offset]) * normalize_factor);
 				verts_graph.emplace_back(x_line, y_line);
 			}
 
@@ -731,10 +890,10 @@ namespace rsx
 			if (!g_cfg.misc.use_native_interface)
 				return;
 
-			if (auto manager = g_fxo->get<rsx::overlays::display_manager>())
+			if (auto& manager = g_fxo->get<rsx::overlays::display_manager>(); g_fxo->is_init<rsx::overlays::display_manager>())
 			{
 				auto& perf_settings = g_cfg.video.perf_overlay;
-				auto perf_overlay = manager->get<rsx::overlays::perf_metrics_overlay>();
+				auto perf_overlay = manager.get<rsx::overlays::perf_metrics_overlay>();
 
 				if (perf_settings.perf_overlay_enabled)
 				{
@@ -742,10 +901,10 @@ namespace rsx
 
 					if (!existed)
 					{
-						perf_overlay = manager->create<rsx::overlays::perf_metrics_overlay>();
+						perf_overlay = manager.create<rsx::overlays::perf_metrics_overlay>();
 					}
 
-					std::scoped_lock lock(*manager);
+					std::lock_guard lock(manager);
 
 					perf_overlay->set_detail_level(perf_settings.level);
 					perf_overlay->set_position(perf_settings.position);
@@ -756,17 +915,16 @@ namespace rsx
 					perf_overlay->set_opacity(perf_settings.opacity / 100.f);
 					perf_overlay->set_body_colors(perf_settings.color_body, perf_settings.background_body);
 					perf_overlay->set_title_colors(perf_settings.color_title, perf_settings.background_title);
+					perf_overlay->set_framerate_datapoint_count(perf_settings.framerate_datapoint_count);
+					perf_overlay->set_frametime_datapoint_count(perf_settings.frametime_datapoint_count);
 					perf_overlay->set_framerate_graph_enabled(perf_settings.framerate_graph_enabled.get());
 					perf_overlay->set_frametime_graph_enabled(perf_settings.frametime_graph_enabled.get());
-
-					if (!existed)
-					{
-						perf_overlay->init();
-					}
+					perf_overlay->set_graph_detail_levels(perf_settings.framerate_graph_detail_level.get(), perf_settings.frametime_graph_detail_level.get());
+					perf_overlay->init();
 				}
 				else if (perf_overlay)
 				{
-					manager->remove<rsx::overlays::perf_metrics_overlay>();
+					manager.remove<rsx::overlays::perf_metrics_overlay>();
 				}
 			}
 		}

@@ -1,5 +1,7 @@
-﻿#pragma once
-#include "Utilities/types.h"
+#pragma once
+
+#include "util/logs.hpp"
+#include "util/types.hpp"
 #include "Utilities/geometry.h"
 #include "OpenGL.h"
 

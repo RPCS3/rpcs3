@@ -1,6 +1,15 @@
-﻿#pragma once
+#pragma once
 #include "Emu/RSX/GSRender.h"
-#include "VKHelpers.h"
+#include "Emu/Cell/timers.hpp"
+
+#include "upscalers/upscaling.h"
+
+#include "vkutils/descriptors.h"
+#include "vkutils/data_heap.h"
+#include "vkutils/instance.hpp"
+#include "vkutils/sync.h"
+#include "vkutils/swapchain.hpp"
+
 #include "VKTextureCache.h"
 #include "VKRenderTargets.h"
 #include "VKFormats.h"
@@ -9,10 +18,10 @@
 #include "VKProgramBuffer.h"
 #include "VKFramebuffer.h"
 #include "VKShaderInterpreter.h"
+#include "VKQueryPool.h"
 #include "../GCM.h"
 
 #include <thread>
-#include <atomic>
 #include <optional>
 
 namespace vk
@@ -21,7 +30,7 @@ namespace vk
 	using weak_vertex_cache = rsx::vertex_cache::weak_vertex_cache<VkFormat>;
 	using null_vertex_cache = vertex_cache;
 
-	using shader_cache = rsx::shaders_cache<vk::pipeline_props, VKProgramBuffer>;
+	using shader_cache = rsx::shaders_cache<vk::pipeline_props, vk::program_cache>;
 
 	struct vertex_upload_info
 	{
@@ -49,16 +58,17 @@ namespace vk
 #define VK_MAX_ASYNC_FRAMES 2
 
 using rsx::flags32_t;
-extern u64 get_system_time();
 
 namespace vk
 {
+	struct buffer_view;
+
 	struct command_buffer_chunk: public vk::command_buffer
 	{
 		vk::fence* submit_fence = nullptr;
 		VkDevice m_device = VK_NULL_HANDLE;
 
-		std::atomic_bool pending = { false };
+		atomic_t<bool> pending = { false };
 		u64 eid_tag = 0;
 		u64 reset_id = 0;
 		shared_mutex guard_mutex;
@@ -110,7 +120,7 @@ namespace vk
 
 				if (pending)
 				{
-					vk::reset_fence(submit_fence);
+					submit_fence->reset();
 					vk::on_event_completed(eid_tag);
 
 					pending = false;
@@ -134,7 +144,7 @@ namespace vk
 
 			if (pending)
 			{
-				vk::reset_fence(submit_fence);
+				submit_fence->reset();
 				vk::on_event_completed(eid_tag);
 
 				pending = false;
@@ -186,8 +196,8 @@ namespace vk
 	{
 		VkSemaphore acquire_signal_semaphore = VK_NULL_HANDLE;
 		VkSemaphore present_wait_semaphore = VK_NULL_HANDLE;
-		VkDescriptorSet descriptor_set = VK_NULL_HANDLE;
 
+		vk::descriptor_set descriptor_set;
 		vk::descriptor_pool descriptor_pool;
 		u32 used_descriptors = 0;
 
@@ -195,7 +205,7 @@ namespace vk
 
 		std::vector<std::unique_ptr<vk::buffer_view>> buffer_views_to_clean;
 
-		u32 present_image = UINT32_MAX;
+		u32 present_image = -1;
 		command_buffer_chunk* swap_command_buffer = nullptr;
 
 		//Heap pointers
@@ -217,7 +227,7 @@ namespace vk
 		{
 			present_wait_semaphore = other.present_wait_semaphore;
 			acquire_signal_semaphore = other.acquire_signal_semaphore;
-			descriptor_set = other.descriptor_set;
+			descriptor_set.swap(other.descriptor_set);
 			descriptor_pool = other.descriptor_pool;
 			used_descriptors = other.used_descriptors;
 			flags = other.flags;
@@ -300,7 +310,11 @@ namespace vk
 		{
 			while (num_waiters.load() != 0)
 			{
+#ifdef _MSC_VER
 				_mm_pause();
+#else
+				__builtin_ia32_pause();
+#endif
 			}
 		}
 
@@ -322,6 +336,9 @@ namespace vk
 		u32 pitch;
 	};
 }
+
+using namespace vk::vmm_allocation_pool_; // clang workaround.
+using namespace vk::upscaling_flags_;     // ditto
 
 class VKGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 {
@@ -360,19 +377,19 @@ private:
 	vk::pipeline_props m_pipeline_properties;
 
 	vk::texture_cache m_texture_cache;
-	rsx::vk_render_targets m_rtts;
+	vk::surface_cache m_rtts;
 
 	std::unique_ptr<vk::buffer> null_buffer;
 	std::unique_ptr<vk::buffer_view> null_buffer_view;
 
 	std::unique_ptr<vk::text_writer> m_text_writer;
+	std::unique_ptr<vk::upscaler> m_upscaler;
 
 	std::unique_ptr<vk::buffer> m_cond_render_buffer;
 	u64 m_cond_render_sync_tag = 0;
 
 	shared_mutex m_sampler_mutex;
-	u64 surface_store_tag = 0;
-	std::atomic_bool m_samplers_dirty = { true };
+	atomic_t<bool> m_samplers_dirty = { true };
 	std::unique_ptr<vk::sampler> m_stencil_mirror_sampler;
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
 	std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
@@ -389,15 +406,15 @@ public:
 	std::unique_ptr<vk::shader_cache> m_shaders_cache;
 
 private:
-	std::unique_ptr<VKProgramBuffer> m_prog_buffer;
+	std::unique_ptr<vk::program_cache> m_prog_buffer;
 
 	std::unique_ptr<vk::swapchain_base> m_swapchain;
-	vk::context m_thread_context;
+	vk::instance m_instance;
 	vk::render_device *m_device;
 
 	//Vulkan internals
 	vk::command_pool m_command_buffer_pool;
-	vk::occlusion_query_pool m_occlusion_query_pool;
+	std::unique_ptr<vk::query_pool_manager> m_occlusion_query_manager;
 	bool m_occlusion_query_active = false;
 	rsx::reports::occlusion_query_info *m_active_query_info = nullptr;
 	std::vector<vk::occlusion_data> m_occlusion_map;
@@ -498,14 +515,14 @@ private:
 		VkSemaphore signal_semaphore = VK_NULL_HANDLE,
 		VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 
-	void flush_command_queue(bool hard_sync = false);
+	void flush_command_queue(bool hard_sync = false, bool do_not_switch = false);
 	void queue_swap_request();
 	void frame_context_cleanup(vk::frame_context_t *ctx, bool free_resources = false);
 	void advance_queued_frames();
 	void present(vk::frame_context_t *ctx);
 	void reinitialize_swapchain();
 
-	vk::image* get_present_source(vk::present_surface_info* info, const rsx::avconf* avconfig);
+	vk::viewable_image* get_present_source(vk::present_surface_info* info, const rsx::avconf& avconfig);
 
 	void begin_render_pass();
 	void close_render_pass();
@@ -526,8 +543,8 @@ private:
 	void update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_info);
 
 	void load_texture_env();
-	void bind_texture_env();
-	void bind_interpreter_texture_env();
+	bool bind_texture_env();
+	bool bind_interpreter_texture_env();
 
 public:
 	void init_buffers(rsx::framebuffer_creation_context context, bool skip_reading = false);
@@ -572,6 +589,4 @@ protected:
 	bool on_access_violation(u32 address, bool is_writing) override;
 	void on_invalidate_memory_range(const utils::address_range &range, rsx::invalidation_cause cause) override;
 	void on_semaphore_acquire_wait() override;
-
-	bool on_decompiler_task() override;
 };

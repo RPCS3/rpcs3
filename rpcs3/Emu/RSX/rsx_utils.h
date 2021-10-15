@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "../system_config.h"
 #include "Utilities/address_range.h"
@@ -14,6 +14,8 @@ extern "C"
 #include <libavutil/pixfmt.h>
 }
 
+#define RSX_SURFACE_DIMENSION_IGNORED 1
+
 namespace rsx
 {
 	// Import address_range utilities
@@ -24,10 +26,10 @@ namespace rsx
 	using utils::page_end;
 	using utils::next_page;
 
-	using flags64_t = uint64_t;
-	using flags32_t = uint32_t;
-	using flags16_t = uint16_t;
-	using flags8_t = uint8_t;
+	using flags64_t = u64;
+	using flags32_t = u32;
+	using flags16_t = u16;
+	using flags8_t = u8;
 
 	extern atomic_t<u64> g_rsx_shared_tag;
 
@@ -42,22 +44,23 @@ namespace rsx
 	//Base for resources with reference counting
 	class ref_counted
 	{
+	protected:
 		atomic_t<s32> ref_count{ 0 }; // References held
 		atomic_t<u8> idle_time{ 0 };  // Number of times the resource has been tagged idle
 
 	public:
 		void add_ref()
 		{
-			ref_count++;
+			++ref_count;
 			idle_time = 0;
 		}
 
 		void release()
 		{
-			ref_count--;
+			--ref_count;
 		}
 
-		bool has_refs()
+		bool has_refs() const
 		{
 			return (ref_count > 0);
 		}
@@ -90,19 +93,19 @@ namespace rsx
 
 	namespace constants
 	{
-		static std::array<const char*, 16> fragment_texture_names =
+		constexpr std::array<const char*, 16> fragment_texture_names =
 		{
 			"tex0", "tex1", "tex2", "tex3", "tex4", "tex5", "tex6", "tex7",
 			"tex8", "tex9", "tex10", "tex11", "tex12", "tex13", "tex14", "tex15",
 		};
 
-		static std::array<const char*, 4> vertex_texture_names =
+		constexpr std::array<const char*, 4> vertex_texture_names =
 		{
 			"vtex0", "vtex1", "vtex2", "vtex3",
 		};
 
 		// Local RSX memory base (known as constant)
-		static constexpr u32 local_mem_base = 0xC0000000;
+		constexpr u32 local_mem_base = 0xC0000000;
 	}
 
 	/**
@@ -141,7 +144,7 @@ namespace rsx
 
 		address_range get_memory_range() const
 		{
-			verify(HERE), range.start == address;
+			ensure(range.start == address);
 			return range;
 		}
 	};
@@ -158,7 +161,7 @@ namespace rsx
 		u32 resolution_y = 720;    // Y RES
 		atomic_t<u32> state = 0;   // 1 after cellVideoOutConfigure was called
 
-		u32 get_compatible_gcm_format()
+		u32 get_compatible_gcm_format() const
 		{
 			switch (format)
 			{
@@ -173,7 +176,7 @@ namespace rsx
 			}
 		}
 
-		u8 get_bpp()
+		u8 get_bpp() const
 		{
 			switch (format)
 			{
@@ -227,8 +230,8 @@ namespace rsx
 		{ CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP, CELL_GCM_TEXTURE_REMAP_REMAP }
 	};
 
-	template<typename T>
-	void pad_texture(void* input_pixels, void* output_pixels, u16 input_width, u16 input_height, u16 output_width, u16 output_height)
+	template <typename T>
+	void pad_texture(void* input_pixels, void* output_pixels, u16 input_width, u16 input_height, u16 output_width, u16 /*output_height*/)
 	{
 		T *src = static_cast<T*>(input_pixels);
 		T *dst = static_cast<T*>(output_pixels);
@@ -289,7 +292,7 @@ namespace rsx
 	// Copy memory in inverse direction from source
 	// Used to scale negatively x axis while transfering image data
 	template <typename Ts = u8, typename Td = Ts>
-	static void memcpy_r(void* dst, void* src, std::size_t size)
+	static void memcpy_r(void* dst, void* src, usz size)
 	{
 		for (u32 i = 0; i < size; i++)
 		{
@@ -575,43 +578,58 @@ namespace rsx
 		}
 	}
 
-	static inline const f32 get_resolution_scale()
+	static inline f32 get_resolution_scale()
 	{
-		return g_cfg.video.strict_rendering_mode? 1.f : (g_cfg.video.resolution_scale_percent / 100.f);
+		return g_cfg.video.strict_rendering_mode ? 1.f : (g_cfg.video.resolution_scale_percent / 100.f);
 	}
 
-	static inline const int get_resolution_scale_percent()
+	static inline int get_resolution_scale_percent()
 	{
 		return g_cfg.video.strict_rendering_mode ? 100 : g_cfg.video.resolution_scale_percent;
 	}
 
-	static inline const u16 apply_resolution_scale(u16 value, bool clamp, u16 ref = 0)
+	template <bool clamp = false>
+	static inline const std::pair<u16, u16> apply_resolution_scale(u16 width, u16 height, u16 ref_width = 0, u16 ref_height = 0)
 	{
-		if (ref == 0)
-			ref = value;
+		ref_width = (ref_width)? ref_width : width;
+		ref_height = (ref_height)? ref_height : height;
+		const u16 ref = std::max(ref_width, ref_height);
 
-		if (ref <= g_cfg.video.min_scalable_dimension)
-			return value;
+		if (ref > g_cfg.video.min_scalable_dimension)
+		{
+			// Upscale both width and height
+			width = (get_resolution_scale_percent() * width) / 100;
+			height = (get_resolution_scale_percent() * height) / 100;
 
-		else if (clamp)
-			return static_cast<u16>(std::max((get_resolution_scale_percent() * value) / 100, 1));
-		else
-			return static_cast<u16>((get_resolution_scale_percent() * value) / 100);
+			if constexpr (clamp)
+			{
+				width = std::max<u16>(width, 1);
+				height = std::max<u16>(height, 1);
+			}
+		}
+
+		return { width, height };
 	}
 
-	static inline const u16 apply_inverse_resolution_scale(u16 value, bool clamp)
+	template <bool clamp = false>
+	static inline const std::pair<u16, u16> apply_inverse_resolution_scale(u16 width, u16 height)
 	{
-		u16 result = value;
+		// Inverse scale
+		auto width_ = (width * 100) / get_resolution_scale_percent();
+		auto height_ = (height * 100) / get_resolution_scale_percent();
 
-		if (clamp)
-			result = static_cast<u16>(std::max((value * 100) / get_resolution_scale_percent(), 1));
-		else
-			result = static_cast<u16>((value * 100) / get_resolution_scale_percent());
+		if constexpr (clamp)
+		{
+			width_ = std::max<u16>(width_, 1);
+			height_ = std::max<u16>(height_, 1);
+		}
 
-		if (result <= g_cfg.video.min_scalable_dimension)
-			return value;
+		if (std::max(width_, height_) > g_cfg.video.min_scalable_dimension)
+		{
+			return { width_, height_ };
+		}
 
-		return result;
+		return { width, height };
 	}
 
 	/**
@@ -677,7 +695,7 @@ namespace rsx
 	{
 		// Converts a stream e.g [1, 2, 3, -1, 4, 5, 6] to a stream with degenerate splits
 		// Output is e.g [1, 2, 3, 3, 3, 4, 4, 5, 6] (5 bogus triangles)
-		T last_index, index;
+		T last_index{}, index;
 		u32 dst_index = 0;
 		for (int n = 0; n < count;)
 		{
@@ -833,372 +851,4 @@ namespace rsx
 
 		return base * scale;
 	}
-
-	template <int N>
-	void unpack_bitset(const std::bitset<N>& block, u64* values)
-	{
-		constexpr int count = N / 64;
-		for (int n = 0; n < count; ++n)
-		{
-			int i = (n << 6);
-			values[n] = 0;
-
-			for (int bit = 0; bit < 64; ++bit, ++i)
-			{
-				if (block[i])
-				{
-					values[n] |= (1ull << bit);
-				}
-			}
-		}
-	}
-
-	template <int N>
-	void pack_bitset(std::bitset<N>& block, u64* values)
-	{
-		constexpr int count = N / 64;
-		for (int n = (count - 1); n >= 0; --n)
-		{
-			if ((n + 1) < count)
-			{
-				block <<= 64;
-			}
-
-			if (values[n])
-			{
-				block |= values[n];
-			}
-		}
-	}
-
-	template <typename T, typename bitmask_type = u32>
-	class atomic_bitmask_t
-	{
-	private:
-		atomic_t<bitmask_type> m_data;
-
-	public:
-		atomic_bitmask_t() { m_data.store(0); }
-		~atomic_bitmask_t() = default;
-
-		T load() const
-		{
-			return static_cast<T>(m_data.load());
-		}
-
-		void store(T value)
-		{
-			m_data.store(static_cast<bitmask_type>(value));
-		}
-
-		bool operator & (T mask) const
-		{
-			return ((m_data.load() & static_cast<bitmask_type>(mask)) != 0);
-		}
-
-		T operator | (T mask) const
-		{
-			return static_cast<T>(m_data.load() | static_cast<bitmask_type>(mask));
-		}
-
-		void operator &= (T mask)
-		{
-			m_data.fetch_and(static_cast<bitmask_type>(mask));
-		}
-
-		void operator |= (T mask)
-		{
-			m_data.fetch_or(static_cast<bitmask_type>(mask));
-		}
-
-		bool test_and_set(T mask)
-		{
-			const auto old = m_data.fetch_or(static_cast<bitmask_type>(mask));
-			return (old & static_cast<bitmask_type>(mask)) != 0;
-		}
-
-		auto clear(T mask)
-		{
-			bitmask_type clear_mask = ~(static_cast<bitmask_type>(mask));
-			return m_data.and_fetch(clear_mask);
-		}
-
-		void clear()
-		{
-			m_data.store(0);
-		}
-	};
-
-	template <typename Ty>
-	struct simple_array
-	{
-	public:
-		using iterator = Ty * ;
-		using const_iterator = Ty * const;
-
-	private:
-		u32 _capacity = 0;
-		u32 _size = 0;
-		Ty* _data = nullptr;
-
-		inline u64 offset(const_iterator pos)
-		{
-			return (_data) ? u64(pos - _data) : 0ull;
-		}
-
-	public:
-		simple_array() = default;
-
-		simple_array(u32 initial_size, const Ty val = {})
-		{
-			reserve(initial_size);
-			_size = initial_size;
-
-			for (u32 n = 0; n < initial_size; ++n)
-			{
-				_data[n] = val;
-			}
-		}
-
-		simple_array(const std::initializer_list<Ty>& args)
-		{
-			reserve(::size32(args));
-
-			for (const auto& arg : args)
-			{
-				push_back(arg);
-			}
-		}
-
-		simple_array(const simple_array<Ty>& other)
-		{
-			_capacity = other._capacity;
-			_size = other._size;
-
-			const auto size_bytes = sizeof(Ty) * _capacity;
-			_data = static_cast<Ty*>(malloc(size_bytes));
-			std::memcpy(_data, other._data, size_bytes);
-		}
-
-		simple_array(simple_array<Ty>&& other) noexcept
-		{
-			swap(other);
-		}
-
-		~simple_array()
-		{
-			if (_data)
-			{
-				free(_data);
-				_data = nullptr;
-				_size = _capacity = 0;
-			}
-		}
-
-		void swap(simple_array<Ty>& other) noexcept
-		{
-			std::swap(_capacity, other._capacity);
-			std::swap(_size, other._size);
-			std::swap(_data, other._data);
-		}
-
-		void reserve(u32 size)
-		{
-			if (_capacity >= size)
-				return;
-
-			verify("realloc() failed!" HERE), _data = static_cast<Ty*>(std::realloc(_data, sizeof(Ty) * size));
-			_capacity = size;
-		}
-
-		void resize(u32 size)
-		{
-			reserve(size);
-			_size = size;
-		}
-
-		void push_back(const Ty& val)
-		{
-			if (_size >= _capacity)
-			{
-				reserve(_capacity + 16);
-			}
-
-			_data[_size++] = val;
-		}
-
-		void push_back(Ty&& val)
-		{
-			if (_size >= _capacity)
-			{
-				reserve(_capacity + 16);
-			}
-
-			_data[_size++] = val;
-		}
-
-		iterator insert(iterator pos, const Ty& val)
-		{
-			verify(HERE), pos >= _data;
-			const auto _loc = offset(pos);
-
-			if (_size >= _capacity)
-			{
-				reserve(_capacity + 16);
-				pos = _data + _loc;
-			}
-
-			if (_loc >= _size)
-			{
-				_data[_size++] = val;
-				return pos;
-			}
-
-			verify(HERE), _loc < _size;
-
-			const auto remaining = (_size - _loc);
-			memmove(pos + 1, pos, remaining * sizeof(Ty));
-
-			*pos = val;
-			_size++;
-
-			return pos;
-		}
-
-		iterator insert(iterator pos, Ty&& val)
-		{
-			verify(HERE), pos >= _data;
-			const auto _loc = offset(pos);
-
-			if (_size >= _capacity)
-			{
-				reserve(_capacity + 16);
-				pos = _data + _loc;
-			}
-
-			if (_loc >= _size)
-			{
-				_data[_size++] = val;
-				return pos;
-			}
-
-			verify(HERE), _loc < _size;
-
-			const u32 remaining = (_size - _loc);
-			memmove(pos + 1, pos, remaining * sizeof(Ty));
-
-			*pos = val;
-			_size++;
-
-			return pos;
-		}
-
-		void clear()
-		{
-			_size = 0;
-		}
-
-		bool empty() const
-		{
-			return _size == 0;
-		}
-
-		u32 size() const
-		{
-			return _size;
-		}
-
-		u32 capacity() const
-		{
-			return _capacity;
-		}
-
-		Ty& operator[] (u32 index)
-		{
-			return _data[index];
-		}
-
-		const Ty& operator[] (u32 index) const
-		{
-			return _data[index];
-		}
-
-		Ty* data()
-		{
-			return _data;
-		}
-
-		const Ty* data() const
-		{
-			return _data;
-		}
-
-		Ty& back()
-		{
-			return _data[_size - 1];
-		}
-
-		const Ty& back() const
-		{
-			return _data[_size - 1];
-		}
-
-		Ty& front()
-		{
-			return _data[0];
-		}
-
-		const Ty& front() const
-		{
-			return _data[0];
-		}
-
-		iterator begin()
-		{
-			return _data;
-		}
-
-		iterator end()
-		{
-			return _data ? _data + _size : nullptr;
-		}
-
-		const_iterator begin() const
-		{
-			return _data;
-		}
-
-		const_iterator end() const
-		{
-			return _data ? _data + _size : nullptr;
-		}
-	};
-
-	struct profiling_timer
-	{
-		bool enabled = false;
-		std::chrono::time_point<steady_clock> last;
-
-		profiling_timer() = default;
-
-		void start()
-		{
-			if (enabled) [[unlikely]]
-			{
-				last = steady_clock::now();
-			}
-		}
-
-		s64 duration()
-		{
-			if (!enabled) [[likely]]
-			{
-				return 0ll;
-			}
-
-			auto old = last;
-			last = steady_clock::now();
-			return std::chrono::duration_cast<std::chrono::microseconds>(last - old).count();
-		}
-	};
 }

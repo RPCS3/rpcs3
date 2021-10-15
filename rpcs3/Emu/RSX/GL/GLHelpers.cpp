@@ -1,8 +1,10 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLHelpers.h"
 #include "GLTexture.h"
 #include "GLCompute.h"
 #include "util/logs.hpp"
+
+#include <unordered_map>
 
 namespace gl
 {
@@ -11,16 +13,21 @@ namespace gl
 	capabilities g_driver_caps;
 	const fbo screen{};
 
-	thread_local bool tls_primary_context_thread = false;
+	static thread_local bool s_tls_primary_context_thread = false;
 
-	void set_primary_context_thread()
+	void set_primary_context_thread(bool value)
 	{
-		tls_primary_context_thread = true;
+		s_tls_primary_context_thread = value;
 	}
 
 	bool is_primary_context_thread()
 	{
-		return tls_primary_context_thread;
+		return s_tls_primary_context_thread;
+	}
+
+	void flush_command_queue(fence& fence_obj)
+	{
+		fence_obj.check_signaled();
 	}
 
 	GLenum draw_mode(rsx::primitive_type in)
@@ -38,7 +45,7 @@ namespace gl
 		case rsx::primitive_type::quad_strip: return GL_TRIANGLE_STRIP;
 		case rsx::primitive_type::polygon: return GL_TRIANGLES;
 		default:
-			fmt::throw_exception("unknown primitive type" HERE);
+			fmt::throw_exception("unknown primitive type");
 		}
 	}
 
@@ -54,8 +61,8 @@ namespace gl
 
 	// https://www.khronos.org/opengl/wiki/Debug_Output
 	void APIENTRY log_debug(GLenum source, GLenum type, GLuint id,
-	  GLenum severity, GLsizei length, const GLchar* message,
-	  const void* user_param)
+	  GLenum severity, GLsizei /*length*/, const GLchar* message,
+	  const void* /*user_param*/)
 	{
 		// Message source
 		std::string str_source;
@@ -293,13 +300,13 @@ namespace gl
 		glDrawElements(draw_mode(mode), count, static_cast<GLenum>(type), indices);
 	}
 
-	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
+	void fbo::draw_elements(rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, usz indices_buffer_offset) const
 	{
 		indices.bind(buffer::target::element_array);
 		glDrawElements(draw_mode(mode), count, static_cast<GLenum>(type), reinterpret_cast<GLvoid*>(indices_buffer_offset));
 	}
 
-	void fbo::draw_elements(const buffer& buffer_, rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, size_t indices_buffer_offset) const
+	void fbo::draw_elements(const buffer& buffer_, rsx::primitive_type mode, GLsizei count, indices_type type, const buffer& indices, usz indices_buffer_offset) const
 	{
 		buffer_.bind(buffer::target::array);
 		draw_elements(mode, count, type, indices, indices_buffer_offset);
@@ -440,13 +447,10 @@ namespace gl
 
 	bool fbo::references_any(const std::vector<GLuint>& resources) const
 	{
-		for (const auto &e : m_resource_bindings)
+		return std::any_of(m_resource_bindings.cbegin(), m_resource_bindings.cend(), [&resources](const auto& e)
 		{
-			if (std::find(resources.begin(), resources.end(), e.second) != resources.end())
-				return true;
-		}
-
-		return false;
+			return std::find(resources.cbegin(), resources.cend(), e.second) != resources.cend();
+		});
 	}
 
 	bool is_primitive_native(rsx::primitive_type in)
@@ -466,7 +470,7 @@ namespace gl
 		case rsx::primitive_type::polygon:
 			return false;
 		default:
-			fmt::throw_exception("unknown primitive type" HERE);
+			fmt::throw_exception("unknown primitive type");
 		}
 	}
 
@@ -548,7 +552,7 @@ namespace gl
 			}
 		}
 
-		verify("Incompatible source and destination format!" HERE), real_src->aspect() == real_dst->aspect();
+		ensure(real_src->aspect() == real_dst->aspect());
 
 		const bool is_depth_copy = (real_src->aspect() != image_aspect::color);
 		const filter interp = (linear_interpolation && !is_depth_copy) ? filter::linear : filter::nearest;
@@ -624,7 +628,7 @@ namespace gl
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, GL_NONE, 0);
 	}
 
-	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, float depth, u8 stencil)
+	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, float /*depth*/, u8 /*stencil*/)
 	{
 		GLenum attachment;
 		GLbitfield clear_mask;

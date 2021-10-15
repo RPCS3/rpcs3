@@ -1,5 +1,5 @@
-﻿#include "util/yaml.hpp"
-#include "Utilities/types.h"
+#include "util/yaml.hpp"
+#include "util/types.hpp"
 #include "Utilities/cheat_info.h"
 #include "Utilities/Config.h"
 

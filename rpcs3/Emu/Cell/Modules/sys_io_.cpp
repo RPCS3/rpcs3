@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -19,7 +19,7 @@ struct libio_sys_config
 	{
 		if (stack_addr)
 		{
-			vm::dealloc_verbose_nothrow(stack_addr, vm::stack);
+			ensure(vm::dealloc(stack_addr, vm::stack));
 		}
 	}
 };
@@ -27,26 +27,26 @@ struct libio_sys_config
 // Only exists internally (has no name)
 extern void libio_sys_config_init()
 {
-	auto cfg = g_fxo->get<libio_sys_config>();
+	auto& cfg = g_fxo->get<libio_sys_config>();
 
-	std::lock_guard lock(cfg->mtx);
+	std::lock_guard lock(cfg.mtx);
 
-	if (cfg->init_ctr++ == 0)
+	if (cfg.init_ctr++ == 0)
 	{
 		// Belongs to "_cfg_evt_hndlr" thread (8k stack)
-		cfg->stack_addr = verify(HERE, vm::alloc(0x2000, vm::stack, 4096));
+		cfg.stack_addr = ensure(vm::alloc(0x2000, vm::stack, 4096));
 	}
 }
 
 extern void libio_sys_config_end()
 {
-	auto cfg = g_fxo->get<libio_sys_config>();
+	auto& cfg = g_fxo->get<libio_sys_config>();
 
-	std::lock_guard lock(cfg->mtx);
+	std::lock_guard lock(cfg.mtx);
 
-	if (cfg->init_ctr-- == 1)
+	if (cfg.init_ctr-- == 1)
 	{
-		verify(HERE), vm::dealloc(std::exchange(cfg->stack_addr, 0), vm::stack);
+		ensure(vm::dealloc(std::exchange(cfg.stack_addr, 0), vm::stack));
 	}
 }
 

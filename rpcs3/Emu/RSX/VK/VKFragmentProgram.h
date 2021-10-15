@@ -1,9 +1,9 @@
-﻿#pragma once
-#include "../Common/FragmentProgramDecompiler.h"
-#include "../Common/GLSLTypes.h"
-#include "Emu/RSX/RSXFragmentProgram.h"
+#pragma once
+#include "../Program/FragmentProgramDecompiler.h"
+#include "../Program/GLSLTypes.h"
 #include "VulkanAPI.h"
-#include "VKHelpers.h"
+#include "VKProgramPipeline.h"
+#include "vkutils/pipeline_binding_table.h"
 
 namespace vk
 {
@@ -33,8 +33,8 @@ public:
 	void Task();
 	const std::vector<vk::glsl::program_input>& get_inputs() { return inputs; }
 protected:
-	std::string getFloatTypeName(size_t elementCount) override;
-	std::string getHalfTypeName(size_t elementCount) override;
+	std::string getFloatTypeName(usz elementCount) override;
+	std::string getHalfTypeName(usz elementCount) override;
 	std::string getFunction(FUNCTION) override;
 	std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
 
@@ -60,7 +60,7 @@ public:
 	VkShaderModule handle = nullptr;
 	u32 id;
 	vk::glsl::shader shader;
-	std::vector<size_t> FragmentConstantOffsetCache;
+	std::vector<usz> FragmentConstantOffsetCache;
 
 	std::array<u32, 4> output_color_masks{ {} };
 
@@ -69,7 +69,6 @@ public:
 	/**
 	 * Decompile a fragment shader located in the PS3's Memory.  This function operates synchronously.
 	 * @param prog RSXShaderProgram specifying the location and size of the shader in memory
-	 * @param td texture dimensions of input textures
 	 */
 	void Decompile(const RSXFragmentProgram& prog);
 

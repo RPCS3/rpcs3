@@ -1,10 +1,10 @@
-﻿#pragma once
+#pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "overlay_utils.h"
 
+#include <memory>
 #include <vector>
-#include <unordered_map>
 
 // STB_IMAGE_IMPLEMENTATION and STB_TRUETYPE_IMPLEMENTATION defined externally
 #include <stb_image.h>
@@ -64,23 +64,23 @@ namespace rsx
 			}
 			codepage_cache;
 
-			language_class classify(char32_t page);
-			glyph_load_setup get_glyph_files(language_class class_);
-			codepage* initialize_codepage(char32_t page);
+			static language_class classify(char32_t codepage_id);
+			glyph_load_setup get_glyph_files(language_class class_) const;
+			codepage* initialize_codepage(char32_t codepage_id);
 		public:
 
 			font(const char* ttf_name, f32 size);
 
 			stbtt_aligned_quad get_char(char32_t c, f32& x_advance, f32& y_advance);
 
-			void render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, u32 char_limit, u16 max_width, bool wrap);
+			void render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, usz char_limit, u16 max_width, bool wrap);
 
-			std::vector<vertex> render_text(const char32_t* text, u16 max_width = UINT16_MAX, bool wrap = false);
+			std::vector<vertex> render_text(const char32_t* text, u16 max_width = -1, bool wrap = false);
 
-			std::pair<f32, f32> get_char_offset(const char32_t* text, u16 max_length, u16 max_width = UINT16_MAX, bool wrap = false);
+			std::pair<f32, f32> get_char_offset(const char32_t* text, usz max_length, u16 max_width = -1, bool wrap = false);
 
 			bool matches(const char* name, int size) const { return font_name == name && static_cast<int>(size_pt) == size; }
-			std::string_view get_name() const { return font_name; };
+			std::string_view get_name() const { return font_name; }
 			f32 get_size_pt() const { return size_pt; }
 			f32 get_size_px() const { return size_px; }
 			f32 get_em_size() const { return em_size; }

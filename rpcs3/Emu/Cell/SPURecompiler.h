@@ -85,11 +85,6 @@ struct spu_program
 
 	bool operator==(const spu_program& rhs) const noexcept;
 
-	bool operator!=(const spu_program& rhs) const noexcept
-	{
-		return !(*this == rhs);
-	}
-
 	bool operator<(const spu_program& rhs) const noexcept;
 };
 
@@ -355,7 +350,7 @@ public:
 	static void old_interpreter(spu_thread&, void* ls, u8*);
 
 	// Get the function data at specified address
-	spu_program analyse(const be_t<u32>* ls, u32 lsa);
+	spu_program analyse(const be_t<u32>* ls, u32 entry_point);
 
 	// Print analyser internal state
 	void dump(const spu_program& result, std::string& out);

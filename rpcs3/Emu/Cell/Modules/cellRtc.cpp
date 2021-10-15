@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellRtc.h"
@@ -584,8 +584,8 @@ error_code cellRtcParseRfc3339(vm::ptr<CellRtcTick> pUtc, vm::cptr<char> pszDate
 
 	char char_1 = pszDateTime[1];
 	char char_2 = pszDateTime[2];
-	char char_3 = pszDateTime[3];
-	if (((((((*pszDateTime - 0x30U) < 10) && ('/' < char_1)) && (char_1 < ':')) && (('/' < char_2 && (char_2 < ':')))) && ('/' < char_3)) && (char_3 < ':'))
+	const char char_3 = pszDateTime[3];
+	if (((*pszDateTime - 0x30U) < 10) && ('/' < char_1) && (char_1 < ':') && ('/' < char_2) && (char_2 < ':') && ('/' < char_3) && (char_3 < ':'))
 	{
 		date_time->year = (char_2 << 1) + (char_2 << 3) + *pszDateTime * 1000 + char_1 * 100 + char_3 + 0x2fb0;
 	}
@@ -823,9 +823,9 @@ error_code cellRtcSetTick(vm::ptr<CellRtcDateTime> pTime, vm::cptr<CellRtcTick> 
 	do
 	{
 		bool leap = is_leap_year(years);
-		for (uint32_t m = 0; m <= 11; m++)
+		for (u32 m = 0; m <= 11; m++)
 		{
-			uint8_t daysinmonth = DAYS_IN_MONTH[m + (leap * 12)];
+			u8 daysinmonth = DAYS_IN_MONTH[m + (leap * 12)];
 			if (days_tmp >= daysinmonth)
 			{
 				months++;
@@ -1129,7 +1129,8 @@ error_code cellRtcConvertLocalTimeToUtc(vm::cptr<CellRtcTick> pLocalTime, vm::pt
 
 error_code cellRtcGetCurrentSecureTick(vm::ptr<CellRtcTick> tick)
 {
-	UNIMPLEMENTED_FUNC(cellRtc);
+	cellRtc.todo("cellRtcGetCurrentSecureTick(*0x%x)", tick);
+
 	return CELL_OK;
 }
 
@@ -1338,7 +1339,7 @@ error_code cellRtcSetCurrentTick(vm::cptr<CellRtcTick> pTick)
 		return CELL_RTC_ERROR_INVALID_POINTER;
 	}
 
-	u64 tmp = pTick->tick + 0xff23400100d44000;
+	//u64 tmp = pTick->tick + 0xff23400100d44000;
 	if (!(0xdcbffeff2bbfff < pTick->tick))
 	{
 		return CELL_RTC_ERROR_INVALID_ARG;

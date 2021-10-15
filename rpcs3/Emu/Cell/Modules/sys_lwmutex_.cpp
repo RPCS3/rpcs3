@@ -1,11 +1,12 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "sysPrxForUser.h"
 
-#include <atomic>
+#include "util/asm.hpp"
 
 LOG_CHANNEL(sysPrxForUser);
 
@@ -127,7 +128,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 
 		// recursive locking succeeded
 		lwmutex->recursive_count++;
-		std::atomic_thread_fence(std::memory_order_acq_rel);
+		atomic_fence_acq_rel();
 
 		return CELL_OK;
 	}
@@ -180,7 +181,7 @@ error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64
 
 		if (old != lwmutex_reserved)
 		{
-			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
+			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 		}
 
 		return CELL_OK;
@@ -287,7 +288,7 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 
 		// recursive locking succeeded
 		lwmutex->recursive_count++;
-		std::atomic_thread_fence(std::memory_order_acq_rel);
+		atomic_fence_acq_rel();
 
 		return CELL_OK;
 	}
@@ -310,7 +311,7 @@ error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 
 			if (old != lwmutex_reserved)
 			{
-				fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
+				fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 			}
 		}
 
@@ -378,11 +379,20 @@ error_code sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex)
 	return CELL_OK;
 }
 
-void sysPrxForUser_sys_lwmutex_init()
+void sysPrxForUser_sys_lwmutex_init(ppu_static_module* _this)
 {
-	REG_FUNC(sysPrxForUser, sys_lwmutex_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_lock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_create);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_destroy);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_lock);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_trylock);
+	REG_FUNC(sysPrxForUser, sys_lwmutex_unlock);
+
+	_this->add_init_func([](ppu_static_module*)
+	{
+		REINIT_FUNC(sys_lwmutex_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwmutex_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwmutex_lock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwmutex_trylock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwmutex_unlock).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	});
 }

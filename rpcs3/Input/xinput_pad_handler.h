@@ -1,11 +1,15 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Io/PadHandler.h"
+
+#include <unordered_map>
+
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #include <Xinput.h>
 #include <chrono>
-#include <optional>
 
 // ScpToolkit defined structure for pressure sensitive button query
 struct SCP_EXTN
@@ -53,6 +57,8 @@ class xinput_pad_handler final : public PadHandlerBase
 	// These are all the possible buttons on a standard xbox 360 or xbox one controller
 	enum XInputKeyCodes
 	{
+		None = 0,
+
 		A,
 		B,
 		X,
@@ -79,9 +85,7 @@ class xinput_pad_handler final : public PadHandlerBase
 		RSXNeg,
 		RSXPos,
 		RSYNeg,
-		RSYPos,
-
-		KeyCodeCount
+		RSYPos
 	};
 
 	using PadButtonValues = std::unordered_map<u64, u16>;
@@ -92,11 +96,11 @@ class xinput_pad_handler final : public PadHandlerBase
 		bool newVibrateData{ true };
 		u16 largeVibrate{ 0 };
 		u16 smallVibrate{ 0 };
-		std::chrono::high_resolution_clock::time_point last_vibration;
+		steady_clock::time_point last_vibration;
 		bool is_scp_device{ false };
 		DWORD state{ ERROR_NOT_CONNECTED }; // holds internal controller state change
-		SCP_EXTN state_scp{ 0 };
-		XINPUT_STATE state_base{ 0 };
+		SCP_EXTN state_scp{};
+		XINPUT_STATE state_base{};
 	};
 
 public:
@@ -106,8 +110,9 @@ public:
 	bool Init() override;
 
 	std::vector<std::string> ListDevices() override;
-	void SetPadData(const std::string& padId, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
-	void init_config(pad_config* cfg, const std::string& name) override;
+	void SetPadData(const std::string& padId, u8 player_id, u32 largeMotor, u32 smallMotor, s32 r, s32 g, s32 b, bool battery_led, u32 battery_led_brightness) override;
+	u32 get_battery_level(const std::string& padId) override;
+	void init_config(cfg_pad* cfg) override;
 
 private:
 	typedef DWORD (WINAPI * PFN_XINPUTGETEXTENDED)(DWORD, SCP_EXTN *);
@@ -118,8 +123,8 @@ private:
 
 private:
 	int GetDeviceNumber(const std::string& padId);
-	PadButtonValues get_button_values_base(const XINPUT_STATE& state);
-	PadButtonValues get_button_values_scp(const SCP_EXTN& state);
+	static PadButtonValues get_button_values_base(const XINPUT_STATE& state);
+	static PadButtonValues get_button_values_scp(const SCP_EXTN& state);
 
 	bool is_init{ false };
 	HMODULE library{ nullptr };
@@ -138,5 +143,5 @@ private:
 	void get_extended_info(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
 	void apply_pad_data(const std::shared_ptr<PadDevice>& device, const std::shared_ptr<Pad>& pad) override;
 	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
-	pad_preview_values get_preview_values(std::unordered_map<u64, u16> data) override;
+	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
 };

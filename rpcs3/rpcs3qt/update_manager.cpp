@@ -1,29 +1,33 @@
-﻿#include "stdafx.h"
 #include "update_manager.h"
 #include "progress_dialog.h"
 #include "localized.h"
 #include "rpcs3_version.h"
 #include "downloader.h"
 #include "Utilities/StrUtil.h"
+#include "Utilities/File.h"
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
+#include "util/logs.hpp"
 
 #include <QApplication>
 #include <QDateTime>
 #include <QMessageBox>
+#include <QLabel>
+#include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QThread>
 
 #if defined(_WIN32)
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #include <CpuArch.h>
 #include <7z.h>
 #include <7zAlloc.h>
-#include <7zBuf.h>
 #include <7zCrc.h>
 #include <7zFile.h>
-#include <7zVersion.h>
 
 #define PATH_MAX MAX_PATH
 
@@ -34,13 +38,10 @@
 
 LOG_CHANNEL(update_log, "UPDATER");
 
-update_manager::update_manager()
-{
-}
-
-void update_manager::check_for_updates(bool automatic, bool check_only, QWidget* parent)
+void update_manager::check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent)
 {
 	m_update_message.clear();
+	m_changelog.clear();
 
 #ifdef __linux__
 	if (automatic && !::getenv("APPIMAGE"))
@@ -61,9 +62,9 @@ void update_manager::check_for_updates(bool automatic, bool check_only, QWidget*
 		}
 	});
 
-	connect(m_downloader, &downloader::signal_download_finished, this, [this, automatic, check_only](const QByteArray& data)
+	connect(m_downloader, &downloader::signal_download_finished, this, [this, automatic, check_only, auto_accept](const QByteArray& data)
 	{
-		const bool result_json = handle_json(automatic, check_only, data);
+		const bool result_json = handle_json(automatic, check_only, auto_accept, data);
 
 		if (!result_json)
 		{
@@ -79,11 +80,11 @@ void update_manager::check_for_updates(bool automatic, bool check_only, QWidget*
 		Q_EMIT signal_update_available(result_json && !m_update_message.isEmpty());
 	});
 
-	const std::string url = "https://update.rpcs3.net/?api=v1&c=" + rpcs3::get_commit_and_hash().second;
+	const std::string url = "https://update.rpcs3.net/?api=v2&c=" + rpcs3::get_commit_and_hash().second;
 	m_downloader->start(url, true, !automatic, tr("Checking For Updates"), true);
 }
 
-bool update_manager::handle_json(bool automatic, bool check_only, const QByteArray& data)
+bool update_manager::handle_json(bool automatic, bool check_only, bool auto_accept, const QByteArray& data)
 {
 	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
 	const int return_code       = json_data["return_code"].toInt(-255);
@@ -171,19 +172,37 @@ bool update_manager::handle_json(bool automatic, bool check_only, const QByteArr
 
 	update_log.notice("Current: %s, latest: %s, difference: %lld ms", cur_str.toStdString(), lts_str.toStdString(), diff_msec);
 
-	Localized localized;
+	const Localized localized;
+
+	m_new_version = latest["version"].toString().toStdString();
 
 	if (hash_found)
 	{
-		m_update_message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 old.\n\nDo you want to update?")
-			.arg(current["version"].toString())
-			.arg(cur_str)
-			.arg(latest["version"].toString())
-			.arg(lts_str)
-			.arg(localized.GetVerboseTimeByMs(diff_msec, true));
+		m_old_version = current["version"].toString().toStdString();
+
+		if (diff_msec < 0)
+		{
+			// This usually means that the current version was marked as broken and won't be shipped anymore, so we need to downgrade to avoid certain bugs.
+			m_update_message = tr("A better version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nBetter version: %2 (%3)\n\nDo you want to update?")
+				.arg(current["version"].toString())
+				.arg(cur_str)
+				.arg(latest["version"].toString())
+				.arg(lts_str);
+		}
+		else
+		{
+			m_update_message = tr("A new version of RPCS3 is available!\n\nCurrent version: %0 (%1)\nLatest version: %2 (%3)\nYour version is %4 old.\n\nDo you want to update?")
+				.arg(current["version"].toString())
+				.arg(cur_str)
+				.arg(latest["version"].toString())
+				.arg(lts_str)
+				.arg(localized.GetVerboseTimeByMs(diff_msec, true));
+		}
 	}
 	else
 	{
+		m_old_version = fmt::format("%s-%s-%s", rpcs3::get_full_branch(), rpcs3::get_branch(), rpcs3::get_version().to_string());
+
 		m_update_message = tr("You're currently using a custom or PR build.\n\nLatest version: %0 (%1)\nThe latest version is %2 old.\n\nDo you want to update to the latest official RPCS3 version?")
 			.arg(latest["version"].toString())
 			.arg(lts_str)
@@ -194,22 +213,122 @@ bool update_manager::handle_json(bool automatic, bool check_only, const QByteArr
 	m_expected_hash = latest[os]["checksum"].toString().toStdString();
 	m_expected_size = latest[os]["size"].toInt();
 
+	if (!m_request_url.starts_with("https://github.com/RPCS3/rpcs3"))
+	{
+		update_log.fatal("Bad url: %s", m_request_url);
+		return false;
+	}
+
+	update_log.notice("Update found: %s", m_request_url);
+
 	if (check_only)
 	{
 		m_downloader->close_progress_dialog();
 		return true;
 	}
 
-	update();
+	if (!auto_accept)
+	{
+		const auto& changelog = json_data["changelog"];
+
+		if (changelog.isArray())
+		{
+			for (const QJsonValue& changelog_entry : changelog.toArray())
+			{
+				if (changelog_entry.isObject())
+				{
+					changelog_data entry;
+
+					if (QJsonValue version = changelog_entry["version"]; version.isString())
+					{
+						entry.version = version.toString();
+					}
+					else
+					{
+						entry.version = tr("N/A");
+						update_log.notice("JSON changelog entry does not contain a version string.");
+					}
+
+					if (QJsonValue title = changelog_entry["title"]; title.isString())
+					{
+						entry.title = title.toString();
+					}
+					else
+					{
+						entry.title = tr("N/A");
+						update_log.notice("JSON changelog entry does not contain a title string.");
+					}
+
+					m_changelog.push_back(entry);
+				}
+				else
+				{
+					update_log.error("JSON changelog entry is not an object.");
+				}
+			}
+		}
+		else if (changelog.isObject())
+		{
+			update_log.error("JSON changelog is not an array.");
+		}
+		else
+		{
+			update_log.notice("JSON does not contain a changelog section.");
+		}
+	}
+
+	update(auto_accept);
 	return true;
 }
 
-void update_manager::update()
+void update_manager::update(bool auto_accept)
 {
-	if (m_update_message.isEmpty() ||
-		QMessageBox::question(m_downloader->get_progress_dialog(), tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No) == QMessageBox::No)
+	ensure(m_downloader);
+
+	if (!auto_accept)
+	{
+		if (m_update_message.isEmpty())
+		{
+			m_downloader->close_progress_dialog();
+			return;
+		}
+
+		QString changelog_content;
+
+		for (const changelog_data& entry : m_changelog)
+		{
+			if (!changelog_content.isEmpty())
+				changelog_content.append('\n');
+			changelog_content.append(tr("• %0: %1").arg(entry.version, entry.title));
+		}
+
+		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), m_update_message, QMessageBox::Yes | QMessageBox::No,m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
+
+		if (!changelog_content.isEmpty())
+		{
+			mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
+			mb.setDetailedText(tr("Changelog:\n\n%0").arg(changelog_content));
+
+			// Smartass hack to make the unresizeable message box wide enough for the changelog
+			const int changelog_width = QLabel(changelog_content).sizeHint().width();
+			while (QLabel(m_update_message).sizeHint().width() < changelog_width)
+			{
+				m_update_message += "          ";
+			}
+			mb.setText(m_update_message);
+		}
+
+		if (mb.exec() == QMessageBox::No)
+		{
+			m_downloader->close_progress_dialog();
+			return;
+		}
+	}
+
+	if (!Emu.IsStopped())
 	{
 		m_downloader->close_progress_dialog();
+		QMessageBox::warning(m_parent, tr("Auto-updater"), tr("Please stop the emulation before trying to update."));
 		return;
 	}
 
@@ -220,9 +339,9 @@ void update_manager::update()
 		QMessageBox::warning(m_parent, tr("Auto-updater"), tr("An error occurred during the auto-updating process.\nCheck the log for more information."));
 	});
 
-	connect(m_downloader, &downloader::signal_download_finished, this, [this](const QByteArray& data)
+	connect(m_downloader, &downloader::signal_download_finished, this, [this, auto_accept](const QByteArray& data)
 	{
-		const bool result_json = handle_rpcs3(data);
+		const bool result_json = handle_rpcs3(data, auto_accept);
 
 		if (!result_json)
 		{
@@ -238,11 +357,11 @@ void update_manager::update()
 	m_downloader->start(m_request_url, true, true, tr("Downloading Update"), true, m_expected_size);
 }
 
-bool update_manager::handle_rpcs3(const QByteArray& data)
+bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)
 {
 	m_downloader->update_progress_dialog(tr("Updating RPCS3"));
 
-	if (m_expected_size != data.size() + 0u)
+	if (m_expected_size != static_cast<u64>(data.size()))
 	{
 		update_log.error("Download size mismatch: %d expected: %d", data.size(), m_expected_size);
 		return false;
@@ -258,7 +377,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 #ifdef _WIN32
 
 	// Get executable path
-	const std::string orig_path = Emulator::GetExeDir() + "rpcs3.exe";
+	const std::string orig_path = rpcs3::utils::get_exe_dir() + "rpcs3.exe";
 
 	std::wstring wchar_orig_path;
 	const auto tmp_size = MultiByteToWideChar(CP_UTF8, 0, orig_path.c_str(), -1, nullptr, 0);
@@ -279,7 +398,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 		update_log.error("Failed to create temporary file: %s", tmpfile_path);
 		return false;
 	}
-	if (tmpfile.write(data.data(), data.size()) != data.size())
+	if (tmpfile.write(data.data(), data.size()) != static_cast<u64>(data.size()))
 	{
 		update_log.error("Failed to write temporary file: %s", tmpfile_path);
 		return false;
@@ -297,7 +416,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 	SRes res;
 	UInt16 temp_u16[PATH_MAX];
 	u8 temp_u8[PATH_MAX];
-	const size_t kInputBufSize = static_cast<size_t>(1u << 18u);
+	const usz kInputBufSize = static_cast<usz>(1u << 18u);
 	const ISzAlloc g_Alloc     = {SzAlloc, SzFree};
 
 	allocImp     = g_Alloc;
@@ -315,14 +434,14 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 
 	res = SZ_OK;
 	{
-		lookStream.buf = (Byte*)ISzAlloc_Alloc(&allocImp, kInputBufSize);
+		lookStream.buf = static_cast<Byte*>(ISzAlloc_Alloc(&allocImp, kInputBufSize));
 		if (!lookStream.buf)
 			res = SZ_ERROR_MEM;
 		else
 		{
 			lookStream.bufSize    = kInputBufSize;
 			lookStream.realStream = &archiveStream.vt;
-			LookToRead2_Init(&lookStream);
+			LookToRead2_Init(&lookStream)
 		}
 	}
 
@@ -361,17 +480,17 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 
 	UInt32 blockIndex    = 0xFFFFFFFF;
 	Byte* outBuffer      = nullptr;
-	size_t outBufferSize = 0;
+	usz outBufferSize = 0;
 
 	// Creates temp folder for moving active files
-	const std::string tmp_folder = Emulator::GetEmuDir() + "rpcs3_old/";
+	const std::string tmp_folder = rpcs3::utils::get_emu_dir() + "rpcs3_old/";
 	fs::create_dir(tmp_folder);
 
 	for (UInt32 i = 0; i < db.NumFiles; i++)
 	{
-		size_t offset           = 0;
-		size_t outSizeProcessed = 0;
-		size_t len;
+		usz offset           = 0;
+		usz outSizeProcessed = 0;
+		usz len;
 		unsigned isDir = SzArEx_IsDir(&db, i);
 		len            = SzArEx_GetFileNameUtf16(&db, i, nullptr);
 
@@ -385,7 +504,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 		SzArEx_GetFileNameUtf16(&db, i, temp_u16);
 		memset(temp_u8, 0, sizeof(temp_u8));
 		// Simplistic conversion to UTF-8
-		for (size_t index = 0; index < len; index++)
+		for (usz index = 0; index < len; index++)
 		{
 			if (temp_u16[index] > 0xFF)
 			{
@@ -397,9 +516,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 			temp_u8[index] = static_cast<u8>(temp_u16[index]);
 		}
 		temp_u8[len] = 0;
-		std::string name((char*)temp_u8);
-
-		name = Emulator::GetEmuDir() + name;
+		const std::string name = rpcs3::utils::get_emu_dir() + std::string(reinterpret_cast<char*>(temp_u8));
 
 		if (!isDir)
 		{
@@ -408,7 +525,7 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 				break;
 		}
 
-		if (const size_t pos = name.find_last_of('/'); pos != umax)
+		if (const usz pos = name.find_last_of('/'); pos != umax)
 		{
 			update_log.trace("Creating path: %s", name.substr(0, pos));
 			fs::create_path(name.substr(0, pos));
@@ -520,12 +637,32 @@ bool update_manager::handle_rpcs3(const QByteArray& data)
 
 	m_downloader->close_progress_dialog();
 
-	QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!\nRPCS3 will now restart."));
+	// Add new version to log file
+	if (fs::file update_file{fs::get_config_dir() + "update_history.log", fs::create + fs::write + fs::append})
+	{
+		const std::string update_time = QDateTime::currentDateTime().toString("yyyy/MM/dd hh:mm:ss").toStdString();
+		const std::string entry = fmt::format("%s: Updated from \"%s\" to \"%s\"", update_time, m_old_version, m_new_version);
+		update_file.write(fmt::format("%s\n", entry));
+		update_log.notice("Added entry '%s' to update_history.log", entry);
+	}
+	else
+	{
+		update_log.error("Failed to append version to update_history.log");
+	}
+
+	if (!auto_accept)
+	{
+		QMessageBox::information(m_parent, tr("Auto-updater"), tr("Update successful!\nRPCS3 will now restart."));
+	}
+
+	Emu.SetForceBoot(true);
+	Emu.Stop();
+	Emu.CleanUp();
 
 #ifdef _WIN32
-	const int ret = _wexecl(wchar_orig_path.data(), wchar_orig_path.data(), L"--updating", nullptr);
+	const int ret = _wexecl(wchar_orig_path.data(), L"--updating", nullptr);
 #else
-	const int ret = execl(replace_path.c_str(), replace_path.c_str(), "--updating", nullptr);
+	const int ret = execl(replace_path.c_str(), "--updating", nullptr);
 #endif
 	if (ret == -1)
 	{

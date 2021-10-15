@@ -5,10 +5,7 @@ trigger:
   tags:
     exclude:
       - '*'
-pr:
-  branches:
-    include:
-      - master
+pr: none
 jobs:
 - job: Linux_Build
   strategy:
@@ -17,12 +14,19 @@ jobs:
         COMPILER: clang
       GCC:
         COMPILER: gcc
-        DEPLOY_APPIMAGE: true
   variables:
     CCACHE_DIR: $(Pipeline.Workspace)/ccache
-    IS_AZURE: true
+    CI_HAS_ARTIFACTS: true
+    UPLOAD_COMMIT_HASH: d812f1254a1157c80fd402f94446310560f54e5f
+    UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-linux"
+    DEPLOY_APPIMAGE: true
+    APPDIR: "/rpcs3/build/appdir"
+    ARTDIR: "/root/artifacts"
+    RELEASE_MESSAGE: "/rpcs3/GitHubReleaseMessage.txt"
+
   pool:
     vmImage: 'ubuntu-latest'
+
   steps:
   - task: Cache@2
     inputs:
@@ -31,30 +35,40 @@ jobs:
     displayName: ccache
 
   - bash: |
-      docker pull --quiet rpcs3/rpcs3-travis-xenial:1.5
+      docker pull --quiet rpcs3/rpcs3-ci-bionic:1.1
       docker run                      \
         -v $(pwd):/rpcs3              \
-        --env-file .ci/travis.env \
+        --env-file .ci/docker.env \
         -v $CCACHE_DIR:/root/.ccache  \
         -v $BUILD_ARTIFACTSTAGINGDIRECTORY:/root/artifacts \
-        rpcs3/rpcs3-travis-xenial:1.5 \
+        rpcs3/rpcs3-ci-bionic:1.1 \
         /rpcs3/.ci/build-linux.sh
     displayName: Docker setup and build
 
   - publish: $(Build.ArtifactStagingDirectory)
-    condition: and(succeeded(), eq(variables['COMPILER'], 'gcc'))
-    artifact: RPCS3 for Linux
+    condition: succeeded()
+    artifact: RPCS3 for Linux ($(COMPILER))
+
+  - bash: .ci/github-upload.sh
+    condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['COMPILER'], 'gcc'))
+    displayName: Push build to GitHub
+    env:
+      RPCS3_TOKEN: $(RPCS3-Token)
 
 - job: Windows_Build
   variables:
     COMPILER: msvc
-    QT_VER: '5.14.2'
-    QT_DATE: '202003291224'
-    QTDIR: C:\Qt\$(QT_VER)\msvc2017_64
-    VULKAN_VER: '1.2.148.1'
-    VULKAN_SDK_SHA: '5dbeafbc75c334811720fb50bd6ed7c9afd42afd31cad6be0b84cd8383aa9472'
+    QT_VER_MAIN: '5'
+    QT_VER: '5.15.2'
+    QT_VER_MSVC: 'msvc2019'
+    QT_DATE: '202011130602'
+    QTDIR: C:\Qt\$(QT_VER)\$(QT_VER_MSVC)_64
+    VULKAN_VER: '1.2.182.0'
+    VULKAN_SDK_SHA: '7089d48011f06c4a02a593913c6a9385d1652ab7765c25d2666d5d6ef4e24af8'
     VULKAN_SDK: C:\VulkanSDK\$(VULKAN_VER)
     CACHE_DIR: ./cache
+    UPLOAD_COMMIT_HASH: 7d09e3be30805911226241afbb14f8cdc2eb054e
+    UPLOAD_REPO_FULL_NAME: "RPCS3/rpcs3-binaries-win"
 
   pool:
     vmImage: "windows-latest"
@@ -79,7 +93,7 @@ jobs:
 
     - task: MSBuild@1
       inputs:
-        solution: './Vulkan/spirv-tools-build/spirv-tools-build.vcxproj'
+        solution: './3rdparty/SPIRV/spirv.vcxproj'
         maximumCpuCount: true
         platform: x64
         configuration: 'Release'
@@ -90,8 +104,7 @@ jobs:
         solution: 'rpcs3.sln'
         maximumCpuCount: true
         platform: x64
-        configuration: 'Release - LLVM'
-        msbuildArgs: '/p:VCToolsVersion=14.25.28610'
+        configuration: 'Release'
       displayName: Compile RPCS3
 
     - bash: .ci/deploy-windows.sh
@@ -101,7 +114,7 @@ jobs:
       condition: succeeded()
       artifact: RPCS3 for Windows
 
-    - bash: .ci/github-upload-windows.sh
+    - bash: .ci/github-upload.sh
       condition: and(ne(variables['Build.Reason'], 'PullRequest'), eq(variables['Build.Repository.Name'], 'RPCS3/rpcs3'), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
       displayName: Push build to GitHub
       env:

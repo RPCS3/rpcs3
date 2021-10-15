@@ -1,5 +1,6 @@
-﻿#include "microphone_creator.h"
+#include "microphone_creator.h"
 
+#include "Utilities/StrFmt.h"
 #include "Utilities/StrUtil.h"
 
 #include "3rdparty/OpenAL/include/alext.h"
@@ -23,42 +24,47 @@ void microphone_creator::refresh_list()
 	m_microphone_list.clear();
 	m_microphone_list.append(get_none());
 
-	if (alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT") == AL_TRUE)
+	if (alcIsExtensionPresent(nullptr, "ALC_ENUMERATION_EXT") == AL_TRUE)
 	{
-		const char* devices = alcGetString(NULL, ALC_CAPTURE_DEVICE_SPECIFIER);
-
-		while (*devices != 0)
+		if (const char* devices = alcGetString(nullptr, ALC_CAPTURE_DEVICE_SPECIFIER); devices != nullptr)
 		{
-			m_microphone_list.append(qstr(devices));
-			devices += strlen(devices) + 1;
+			while (*devices != 0)
+			{
+				m_microphone_list.append(qstr(devices));
+				devices += strlen(devices) + 1;
+			}
 		}
 	}
 	else
 	{
 		// Without enumeration we can only use one device
-		m_microphone_list.append(qstr(alcGetString(NULL, ALC_DEFAULT_DEVICE_SPECIFIER)));
+		if (const char* device = alcGetString(nullptr, ALC_DEFAULT_DEVICE_SPECIFIER); device != nullptr)
+		{
+			m_microphone_list.append(qstr(device));
+		}
 	}
 }
 
-QStringList microphone_creator::get_microphone_list()
+QStringList microphone_creator::get_microphone_list() const
 {
 	return m_microphone_list;
 }
 
-std::array<std::string, 4> microphone_creator::get_selection_list()
+std::array<std::string, 4> microphone_creator::get_selection_list() const
 {
 	return m_sel_list;
 }
 
 std::string microphone_creator::set_device(u32 num, const QString& text)
 {
-	if (text == get_none())
-		m_sel_list[num - 1] = "";
-	else
-		m_sel_list[num - 1] = text.toStdString();
+	ensure(num < m_sel_list.size());
 
-	const std::string final_list = m_sel_list[0] + "@@@" + m_sel_list[1] + "@@@" + m_sel_list[2] + "@@@" + m_sel_list[3] + "@@@";
-	return final_list;
+	if (text == get_none())
+		m_sel_list[num].clear();
+	else
+		m_sel_list[num] = text.toStdString();
+
+	return m_sel_list[0] + "@@@" + m_sel_list[1] + "@@@" + m_sel_list[2] + "@@@" + m_sel_list[3] + "@@@";
 }
 
 void microphone_creator::parse_devices(const std::string& list)

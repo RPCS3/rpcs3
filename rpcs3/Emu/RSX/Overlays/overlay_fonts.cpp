@@ -1,6 +1,16 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_controls.h"
-#include "Emu/system_config.h"
+#include "Emu/vfs_config.h"
+
+#ifndef _WIN32
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+
+#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__)
+#include <sys/sysctl.h>
+#endif
+#endif
 
 namespace rsx
 {
@@ -92,7 +102,7 @@ namespace rsx
 			}
 		}
 
-		glyph_load_setup font::get_glyph_files(language_class class_)
+		glyph_load_setup font::get_glyph_files(language_class class_) const
 		{
 			glyph_load_setup result;
 			result.font_names.push_back(font_name);
@@ -111,14 +121,15 @@ namespace rsx
 				result.lookup_font_dirs[0] += "/.fonts/";
 #endif
 			// Search dev_flash for the font too
-			result.lookup_font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/");
-			result.lookup_font_dirs.push_back(g_cfg.vfs.get_dev_flash() + "data/font/SONY-CC/");
+			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/");
+			result.lookup_font_dirs.push_back(g_cfg_vfs.get_dev_flash() + "data/font/SONY-CC/");
 
 			switch (class_)
 			{
 			case language_class::default_:
 			{
 				result.font_names.emplace_back("Arial.ttf");
+				result.font_names.emplace_back("arial.ttf");
 #ifndef _WIN32
 				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); //	ubuntu
 				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             //	arch
@@ -137,6 +148,7 @@ namespace rsx
 
 				// Known system font as last fallback
 				result.font_names.emplace_back("Yu Gothic.ttf");
+				result.font_names.emplace_back("YuGothR.ttc");
 				break;
 			}
 			case language_class::hangul:
@@ -149,6 +161,7 @@ namespace rsx
 
 				// Known system font as last fallback
 				result.font_names.emplace_back("Malgun Gothic.ttf");
+				result.font_names.emplace_back("malgun.ttf");
 				break;
 			}
 			}
@@ -270,7 +283,7 @@ namespace rsx
 			}
 		}
 
-		void font::render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, u32 char_limit, u16 max_width, bool wrap)
+		void font::render_text_ex(std::vector<vertex>& result, f32& x_advance, f32& y_advance, const char32_t* text, usz char_limit, u16 max_width, bool wrap)
 		{
 			x_advance = 0.f;
 			y_advance = 0.f;
@@ -281,7 +294,7 @@ namespace rsx
 				return;
 			}
 
-			u32 i                = 0u;
+			usz i                = 0u;
 			bool skip_whitespace = false;
 
 			while (true)
@@ -322,7 +335,7 @@ namespace rsx
 							if (wrap)
 							{
 								// scan previous chars
-								for (int j = i - 1, nb_chars = 0; j > 0; j--, nb_chars++)
+								for (usz j = i - 1, nb_chars = 0; j > 0; j--, nb_chars++)
 								{
 									if (text[j] == '\n')
 										break;
@@ -342,7 +355,7 @@ namespace rsx
 											auto first_affected = result.size() - (nb_chars * 4);
 											f32 base_x          = result[first_affected].values[0];
 
-											for (size_t n = first_affected; n < result.size(); ++n)
+											for (usz n = first_affected; n < result.size(); ++n)
 											{
 												auto char_index = n / 4;
 												if (text[char_index] == ' ')
@@ -411,11 +424,11 @@ namespace rsx
 			std::vector<vertex> result;
 			f32 unused_x, unused_y;
 
-			render_text_ex(result, unused_x, unused_y, text, UINT32_MAX, max_width, wrap);
+			render_text_ex(result, unused_x, unused_y, text, -1, max_width, wrap);
 			return result;
 		}
 
-		std::pair<f32, f32> font::get_char_offset(const char32_t* text, u16 max_length, u16 max_width, bool wrap)
+		std::pair<f32, f32> font::get_char_offset(const char32_t* text, usz max_length, u16 max_width, bool wrap)
 		{
 			std::vector<vertex> unused;
 			f32 loc_x, loc_y;

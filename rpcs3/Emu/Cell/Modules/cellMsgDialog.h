@@ -1,7 +1,13 @@
-﻿#pragma once
+#pragma once
 
+#include "util/types.hpp"
+#include "util/atomic.hpp"
 #include "Utilities/BitField.h"
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
+
+#include <string>
+#include <functional>
 
 enum
 {
@@ -108,6 +114,7 @@ public:
 	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) = 0;
 	virtual void ProgressBarReset(u32 progressBarIndex) = 0;
 	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) = 0;
+	virtual void ProgressBarSetValue(u32 progressBarIndex, u32 value) = 0;
 	virtual void ProgressBarSetLimit(u32 index, u32 limit) = 0;
 
 	void ProgressBarSetTaskbarIndex(s32 index)

@@ -1,10 +1,10 @@
-﻿#pragma once
+#pragma once
 
-#include "Utilities/types.h"
-#include "Utilities/StrFmt.h"
+#include "util/types.hpp"
+#include "Utilities/StrUtil.h"
 #include "util/logs.hpp"
 #include "util/atomic.hpp"
-#include "util/shared_cptr.hpp"
+#include "util/shared_ptr.hpp"
 
 #include <utility>
 #include <string>
@@ -17,14 +17,8 @@ namespace cfg
 	// Format min and max values
 	std::vector<std::string> make_int_range(s64 min, s64 max);
 
-	// Convert string to signed integer
-	bool try_to_int64(s64* out, const std::string& value, s64 min, s64 max);
-
 	// Format min and max unsigned values
 	std::vector<std::string> make_uint_range(u64 min, u64 max);
-
-	// Convert string to unsigned integer
-	bool try_to_uint64(u64* out, const std::string& value, u64 min, u64 max);
 
 	// Internal hack
 	bool try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, const std::string&);
@@ -42,16 +36,18 @@ namespace cfg
 		uint, // cfg::uint type
 		string, // cfg::string type
 		set, // cfg::set_entry type
+		map, // cfg::map_entry type
 		log,
 	};
 
 	// Config tree entry abstract base class
 	class _base
 	{
-		const type m_type;
+		const type m_type{};
 
 	protected:
 		bool m_dynamic = true;
+		const std::string m_name{};
 
 		// Ownerless entry constructor
 		_base(type _type);
@@ -64,11 +60,15 @@ namespace cfg
 
 		_base& operator=(const _base&) = delete;
 
+		virtual ~_base() = default;
+
 		// Get type
 		type get_type() const { return m_type; }
 
+		const std::string& get_name() const { return m_name; }
+
 		// Get dynamic property for reloading configs during games
-		bool get_is_dynamic() const { return m_dynamic; };
+		bool get_is_dynamic() const { return m_dynamic; }
 
 		// Reset defaults
 		virtual void from_default() = 0;
@@ -95,7 +95,7 @@ namespace cfg
 	// Config tree node which contains another nodes
 	class node : public _base
 	{
-		std::vector<std::pair<std::string, _base*>> m_nodes;
+		std::vector<_base*> m_nodes{};
 
 		friend class _base;
 
@@ -203,6 +203,11 @@ namespace cfg
 			return m_value;
 		}
 
+		void set(T value)
+		{
+			m_value = value;
+		}
+
 		void from_default() override
 		{
 			m_value = def;
@@ -242,7 +247,7 @@ namespace cfg
 		static_assert(Min < Max, "Invalid cfg::_int range");
 
 		// Prefer 32 bit type if possible
-		using int_type = std::conditional_t<Min >= INT32_MIN && Max <= INT32_MAX, s32, s64>;
+		using int_type = std::conditional_t<Min >= s32{smin} && Max <= s32{smax}, s32, s64>;
 
 		atomic_t<int_type> m_value;
 
@@ -304,10 +309,10 @@ namespace cfg
 	};
 
 	// Alias for 32 bit int
-	using int32 = _int<INT32_MIN, INT32_MAX>;
+	using int32 = _int<s32{smin}, s32{smax}>;
 
 	// Alias for 64 bit int
-	using int64 = _int<INT64_MIN, INT64_MAX>;
+	using int64 = _int<s64{smin}, s64{smax}>;
 
 	// Unsigned 32/64-bit integer entry with custom Min/Max range.
 	template <u64 Min, u64 Max>
@@ -316,7 +321,7 @@ namespace cfg
 		static_assert(Min < Max, "Invalid cfg::uint range");
 
 		// Prefer 32 bit type if possible
-		using int_type = std::conditional_t<Max <= UINT32_MAX, u32, u64>;
+		using int_type = std::conditional_t<Max <= u32{umax}, u32, u64>;
 
 		atomic_t<int_type> m_value;
 
@@ -378,25 +383,22 @@ namespace cfg
 	};
 
 	// Alias for 32 bit uint
-	using uint32 = uint<0, UINT32_MAX>;
+	using uint32 = uint<0, u32{umax}>;
 
 	// Alias for 64 bit int
-	using uint64 = uint<0, UINT64_MAX>;
+	using uint64 = uint<0, u64{umax}>;
 
 	// Simple string entry with mutex
 	class string : public _base
 	{
-		const std::string m_name;
-
-		stx::atomic_cptr<std::string> m_value;
+		atomic_ptr<std::string> m_value;
 
 	public:
 		std::string def;
 
 		string(node* owner, std::string name, std::string def = {}, bool dynamic = false)
 			: _base(type::string, owner, name, dynamic)
-			, m_name(std::move(name))
-			, m_value(m_value.make(def))
+			, m_value(def)
 			, def(std::move(def))
 		{
 		}
@@ -406,7 +408,7 @@ namespace cfg
 			return *m_value.load().get();
 		}
 
-		std::pair<const std::string&, stx::shared_cptr<std::string>> get() const
+		std::pair<const std::string&, shared_ptr<std::string>> get() const
 		{
 			auto v = m_value.load();
 
@@ -421,11 +423,6 @@ namespace cfg
 			}
 		}
 
-		const std::string& get_name() const
-		{
-			return m_name;
-		}
-
 		void from_default() override;
 
 		std::string to_string() const override
@@ -435,7 +432,7 @@ namespace cfg
 
 		bool from_string(const std::string& value, bool /*dynamic*/ = false) override
 		{
-			m_value = m_value.make(value);
+			m_value = value;
 			return true;
 		}
 	};
@@ -443,7 +440,7 @@ namespace cfg
 	// Simple set entry (TODO: template for various types)
 	class set_entry final : public _base
 	{
-		std::set<std::string> m_set;
+		std::set<std::string> m_set{};
 
 	public:
 		// Default value is empty list in current implementation
@@ -477,9 +474,34 @@ namespace cfg
 		}
 	};
 
+	class map_entry final : public _base
+	{
+		std::map<std::string, std::string> m_map{};
+
+	public:
+		map_entry(node* owner, const std::string& name)
+			: _base(type::map, owner, name, true)
+		{
+		}
+
+		const std::map<std::string, std::string>& get_map() const
+		{
+			return m_map;
+		}
+
+		std::string get_value(const std::string& key);
+
+		void set_value(const std::string& key, const std::string& value);
+		void set_map(std::map<std::string, std::string>&& map);
+
+		void erase(const std::string& key);
+
+		void from_default() override;
+	};
+
 	class log_entry final : public _base
 	{
-		std::map<std::string, logs::level> m_map;
+		std::map<std::string, logs::level> m_map{};
 
 	public:
 		log_entry(node* owner, const std::string& name)

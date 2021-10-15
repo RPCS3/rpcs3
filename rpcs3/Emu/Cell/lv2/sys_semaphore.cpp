@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_semaphore.h"
 
 #include "Emu/IdManager.h"
@@ -8,8 +8,6 @@
 #include "Emu/Cell/PPUThread.h"
 
 LOG_CHANNEL(sys_semaphore);
-
-template<> DECLARE(ipc_manager<lv2_sema, u64>::g_ipc) {};
 
 error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sys_semaphore_attribute_t> attr, s32 initial_val, s32 max_val)
 {
@@ -38,12 +36,19 @@ error_code sys_semaphore_create(ppu_thread& ppu, vm::ptr<u32> sem_id, vm::ptr<sy
 		return CELL_EINVAL;
 	}
 
-	if (auto error = lv2_obj::create<lv2_sema>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
+	const u64 ipc_key = lv2_obj::get_key(_attr);
+
+	if (auto error = lv2_obj::create<lv2_sema>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
-		return std::make_shared<lv2_sema>(protocol, _attr.pshared, _attr.ipc_key, _attr.flags, _attr.name_u64, max_val, initial_val);
+		return std::make_shared<lv2_sema>(protocol, ipc_key, _attr.name_u64, max_val, initial_val);
 	}))
 	{
 		return error;
+	}
+
+	if (ppu.test_stopped())
+	{
+		return {};
 	}
 
 	*sem_id = idm::last_id();
@@ -63,6 +68,7 @@ error_code sys_semaphore_destroy(ppu_thread& ppu, u32 sem_id)
 			return CELL_EBUSY;
 		}
 
+		lv2_obj::on_id_destroy(sema, sema.key);
 		return {};
 	});
 
@@ -121,11 +127,16 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 
 	ppu.gpr[3] = CELL_OK;
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state))
 		{
-			return 0;
+			return {};
+		}
+
+		if (state & cpu_flag::signal)
+		{
+			break;
 		}
 
 		if (timeout)
@@ -135,7 +146,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return 0;
+					return {};
 				}
 
 				std::lock_guard lock(sem->mutex);
@@ -145,13 +156,13 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 					break;
 				}
 
-				verify(HERE), 0 > sem->val.fetch_op([](s32& val)
+				ensure(0 > sem->val.fetch_op([](s32& val)
 				{
 					if (val < 0)
 					{
 						val++;
 					}
-				});
+				}));
 
 				ppu.gpr[3] = CELL_ETIMEDOUT;
 				break;
@@ -159,7 +170,7 @@ error_code sys_semaphore_wait(ppu_thread& ppu, u32 sem_id, u64 timeout)
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 
@@ -250,7 +261,7 @@ error_code sys_semaphore_post(ppu_thread& ppu, u32 sem_id, s32 count)
 
 		for (s32 i = 0; i < to_awake; i++)
 		{
-			sem->append(verify(HERE, sem->schedule<ppu_thread>(sem->sq, sem->protocol)));
+			sem->append((ensure(sem->schedule<ppu_thread>(sem->sq, sem->protocol))));
 		}
 
 		if (to_awake > 0)
@@ -281,6 +292,11 @@ error_code sys_semaphore_get_value(ppu_thread& ppu, u32 sem_id, vm::ptr<s32> cou
 	if (!count)
 	{
 		return CELL_EFAULT;
+	}
+
+	if (ppu.test_stopped())
+	{
+		return {};
 	}
 
 	*count = sema.ret;

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 
@@ -6,7 +6,6 @@
 #include "libmixer.h"
 
 #include <cmath>
-#include <thread>
 #include <mutex>
 
 LOG_CHANNEL(libmixer);
@@ -351,9 +350,9 @@ struct surmixer_thread : ppu_thread
 
 	void non_task()
 	{
-		const auto g_audio = g_fxo->get<cell_audio>();
+		auto& g_audio = g_fxo->get<cell_audio>();
 
-		audio_port& port = g_audio->ports[g_surmx.audio_port];
+		audio_port& port = g_audio.ports[g_surmx.audio_port];
 
 		while (port.state != audio_port_state::closed)
 		{
@@ -433,7 +432,7 @@ struct surmixer_thread : ppu_thread
 								g_surmx.mixdata[i * 8 + 1] += right;
 							}
 							if ((p.m_position == p.m_samples && p.m_speed > 0.0f) ||
-								(p.m_position = umax && p.m_speed < 0.0f)) // loop or stop
+								(p.m_position == umax && p.m_speed < 0.0f)) // loop or stop
 							{
 								if (p.m_loop_mode == CELL_SSPLAYER_LOOP_ON)
 								{
@@ -479,9 +478,9 @@ s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
 {
 	libmixer.warning("cellSurMixerCreate(config=*0x%x)", config);
 
-	const auto g_audio = g_fxo->get<cell_audio>();
+	auto& g_audio = g_fxo->get<cell_audio>();
 
-	const auto port = g_audio->open_port();
+	const auto port = g_audio.open_port();
 
 	if (!port)
 	{
@@ -536,7 +535,7 @@ s32 cellSurMixerSetNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction> fu
 
 	if (g_surmx.cb)
 	{
-		fmt::throw_exception("Callback already set" HERE);
+		fmt::throw_exception("Callback already set");
 	}
 
 	g_surmx.cb = func;
@@ -551,7 +550,7 @@ s32 cellSurMixerRemoveNotifyCallback(vm::ptr<CellSurMixerNotifyCallbackFunction>
 
 	if (g_surmx.cb != func)
 	{
-		fmt::throw_exception("Callback not set" HERE);
+		fmt::throw_exception("Callback not set");
 	}
 
 	g_surmx.cb = vm::null;
@@ -563,14 +562,14 @@ s32 cellSurMixerStart()
 {
 	libmixer.warning("cellSurMixerStart()");
 
-	const auto g_audio = g_fxo->get<cell_audio>();
+	auto& g_audio = g_fxo->get<cell_audio>();
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
 		return CELL_LIBMIXER_ERROR_NOT_INITIALIZED;
 	}
 
-	g_audio->ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::opened, audio_port_state::started);
+	g_audio.ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::opened, audio_port_state::started);
 
 	return CELL_OK;
 }
@@ -585,14 +584,14 @@ s32 cellSurMixerFinalize()
 {
 	libmixer.warning("cellSurMixerFinalize()");
 
-	const auto g_audio = g_fxo->get<cell_audio>();
+	auto& g_audio = g_fxo->get<cell_audio>();
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
 		return CELL_LIBMIXER_ERROR_NOT_INITIALIZED;
 	}
 
-	g_audio->ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::opened, audio_port_state::closed);
+	g_audio.ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::opened, audio_port_state::closed);
 
 	return CELL_OK;
 }
@@ -630,14 +629,14 @@ s32 cellSurMixerPause(u32 type)
 {
 	libmixer.warning("cellSurMixerPause(type=%d)", type);
 
-	const auto g_audio = g_fxo->get<cell_audio>();
+	auto& g_audio = g_fxo->get<cell_audio>();
 
 	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
 	{
 		return CELL_LIBMIXER_ERROR_NOT_INITIALIZED;
 	}
 
-	g_audio->ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::started, audio_port_state::opened);
+	g_audio.ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::started, audio_port_state::opened);
 
 	return CELL_OK;
 }
@@ -654,9 +653,9 @@ s32 cellSurMixerGetTimestamp(u64 tag, vm::ptr<u64> stamp)
 {
 	libmixer.error("cellSurMixerGetTimestamp(tag=0x%llx, stamp=*0x%x)", tag, stamp);
 
-	const auto g_audio = g_fxo->get<cell_audio>();
+	auto& g_audio = g_fxo->get<cell_audio>();
 
-	*stamp = g_audio->m_start_time + tag * AUDIO_BUFFER_SAMPLES * 1'000'000 / g_audio->cfg.audio_sampling_rate;
+	*stamp = g_audio.m_start_time + tag * AUDIO_BUFFER_SAMPLES * 1'000'000 / g_audio.cfg.audio_sampling_rate;
 
 	return CELL_OK;
 }
@@ -669,20 +668,20 @@ void cellSurMixerBeep(u32 arg)
 
 f32 cellSurMixerUtilGetLevelFromDB(f32 dB)
 {
-	libmixer.todo("cellSurMixerUtilGetLevelFromDB(dB=%f)", dB);
-	fmt::throw_exception("TODO" HERE);
+	libmixer.fatal("cellSurMixerUtilGetLevelFromDB(dB=%f)", dB);
+	return 0;
 }
 
 f32 cellSurMixerUtilGetLevelFromDBIndex(s32 index)
 {
-	libmixer.todo("cellSurMixerUtilGetLevelFromDBIndex(index=%d)", index);
-	fmt::throw_exception("TODO" HERE);
+	libmixer.fatal("cellSurMixerUtilGetLevelFromDBIndex(index=%d)", index);
+	return 0;
 }
 
 f32 cellSurMixerUtilNoteToRatio(u8 refNote, u8 note)
 {
-	libmixer.todo("cellSurMixerUtilNoteToRatio(refNote=%d, note=%d)", refNote, note);
-	fmt::throw_exception("TODO" HERE);
+	libmixer.fatal("cellSurMixerUtilNoteToRatio(refNote=%d, note=%d)", refNote, note);
+	return 0;
 }
 
 DECLARE(ppu_module_manager::libmixer)("libmixer", []()

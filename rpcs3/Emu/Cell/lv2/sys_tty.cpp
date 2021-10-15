@@ -1,5 +1,7 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/system_config.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "sys_tty.h"
 
@@ -32,7 +34,7 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 		sys_tty.warning("sys_tty_read called with system channel %d", ch);
 	}
 
-	size_t chars_to_read = 0; // number of chars that will be read from the input string
+	usz chars_to_read = 0; // number of chars that will be read from the input string
 	std::string tty_read;     // string for storage of read chars
 
 	if (len > 0)
@@ -45,15 +47,15 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 			std::string& input = g_tty_input[ch].front();
 
 			// we have to stop reading at either a new line, the param len, or our input string size
-			size_t new_line_pos = input.find_first_of('\n');
+			usz new_line_pos = input.find_first_of('\n');
 
 			if (new_line_pos != input.npos)
 			{
-				chars_to_read = std::min(new_line_pos, static_cast<size_t>(len));
+				chars_to_read = std::min(new_line_pos, static_cast<usz>(len));
 			}
 			else
 			{
-				chars_to_read = std::min(input.size(), static_cast<size_t>(len));
+				chars_to_read = std::min(input.size(), static_cast<usz>(len));
 			}
 
 			// read the previously calculated number of chars from the beginning of the input string
@@ -86,13 +88,13 @@ error_code sys_tty_read(s32 ch, vm::ptr<char> buf, u32 len, vm::ptr<u32> preadle
 	return CELL_OK;
 }
 
-error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
+error_code sys_tty_write(ppu_thread& ppu, s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwritelen)
 {
 	sys_tty.notice("sys_tty_write(ch=%d, buf=*0x%x, len=%d, pwritelen=*0x%x)", ch, buf, len, pwritelen);
 
 	std::string msg;
 
-	if (static_cast<s32>(len) > 0 && vm::check_addr(buf.addr(), len))
+	if (static_cast<s32>(len) > 0 && vm::check_addr(buf.addr(), vm::page_readable, len))
 	{
 		msg.resize(len);
 
@@ -100,6 +102,19 @@ error_code sys_tty_write(s32 ch, vm::cptr<char> buf, u32 len, vm::ptr<u32> pwrit
 		{
 			msg.clear();
 		}
+	}
+
+	if (msg.find("abort"sv) != umax || msg.find("error"sv) != umax || [&]()
+	{
+		static atomic_t<u64> last_write = 0;
+
+		// Dump thread about every period which TTY was not being touched for about half a second
+		const u64 current = get_system_time();
+		return current - last_write.exchange(current) >= 500'000;
+	}())
+	{
+		std::string dump_useful_thread_info();
+		ppu_log.notice("\n%s", dump_useful_thread_info());
 	}
 
 	// Hack: write to tty even on CEX mode, but disable all error checks

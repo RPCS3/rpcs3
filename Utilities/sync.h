@@ -2,22 +2,24 @@
 
 /* For internal use. Don't include. */
 
-#include "types.h"
-#include "util/atomic.hpp"
-#include "dynamic_library.h"
+#include "util/types.hpp"
+#include "util/dyn_lib.hpp"
 
 #ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <Windows.h>
-#include <time.h>
+#include <ctime>
 #elif __linux__
 #include <errno.h>
 #include <sys/syscall.h>
 #include <linux/futex.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <fcntl.h>
 #endif
 #include <algorithm>
-#include <ctime>
 #include <chrono>
 #include <mutex>
 #include <condition_variable>
@@ -28,6 +30,12 @@ DYNAMIC_IMPORT("ntdll.dll", NtWaitForKeyedEvent, NTSTATUS(HANDLE, PVOID Key, BOO
 DYNAMIC_IMPORT("ntdll.dll", NtReleaseKeyedEvent, NTSTATUS(HANDLE, PVOID Key, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtWaitForSingleObject, NTSTATUS(HANDLE Handle, BOOLEAN Alertable, PLARGE_INTEGER Timeout));
 DYNAMIC_IMPORT("ntdll.dll", NtDelayExecution, NTSTATUS(BOOLEAN Alertable, PLARGE_INTEGER DelayInterval));
+DYNAMIC_IMPORT("ntdll.dll", NtWaitForAlertByThreadId, NTSTATUS(PVOID Address, PLARGE_INTEGER Timeout));
+DYNAMIC_IMPORT("ntdll.dll", NtAlertThreadByThreadId, NTSTATUS(DWORD_PTR ThreadId));
+
+constexpr NTSTATUS NTSTATUS_SUCCESS = 0;
+constexpr NTSTATUS NTSTATUS_ALERTED = 0x101;
+constexpr NTSTATUS NTSTATUS_TIMEOUT = 0x102;
 #endif
 
 #ifndef __linux__
@@ -61,7 +69,7 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 		};
 
 		std::mutex mutex;
-		std::unordered_multimap<volatile void*, waiter*, pointer_hash<volatile void, alignof(int)>> map;
+		std::unordered_multimap<volatile void*, waiter*> map;
 
 		int operator()(volatile void* uaddr, int futex_op, uint val, const timespec* timeout, uint mask)
 		{

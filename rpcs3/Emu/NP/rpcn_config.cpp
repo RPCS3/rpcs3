@@ -1,10 +1,10 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rpcn_config.h"
 #include "Emu/System.h"
 
 cfg_rpcn g_cfg_rpcn;
 
-LOG_CHANNEL(rpcn_cfg_log, "rpcn config");
+LOG_CHANNEL(rpcn_log, "rpcn");
 
 void cfg_rpcn::load()
 {
@@ -21,18 +21,18 @@ void cfg_rpcn::save() const
 	const std::string path_to_cfg = fs::get_config_dir() + "config/";
 	if (!fs::create_path(path_to_cfg))
 	{
-		rpcn_cfg_log.error("Could not create path: %s", path_to_cfg);
+		rpcn_log.error("Could not create path: %s", path_to_cfg);
 	}
 #endif
 
 	fs::file cfg_file(cfg_rpcn::get_path(), fs::rewrite);
 	if (cfg_file)
 	{
-		cfg_file.write(to_string());	
+		cfg_file.write(to_string());
 	}
 	else
 	{
-		rpcn_cfg_log.error("Could not save config: %s", cfg_rpcn::get_path());
+		rpcn_log.error("Could not save config: %s", cfg_rpcn::get_path());
 	}
 }
 
@@ -70,7 +70,7 @@ std::string cfg_rpcn::get_host() const
 std::string cfg_rpcn::get_npid()
 {
 	std::string final_npid = npid.to_string();
-	if (final_npid == "")
+	if (final_npid.empty())
 	{
 		final_npid = cfg_rpcn::generate_npid();
 		save();

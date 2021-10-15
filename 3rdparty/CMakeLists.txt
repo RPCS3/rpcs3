@@ -1,184 +1,104 @@
 find_package(PkgConfig)
 include(ExternalProject)
+include(CMakeDependentOption)
+
+set(CMAKE_CXX_STANDARD 20)
 
 # Dummy target to use when lib isn't available
 add_library(3rdparty_dummy_lib INTERFACE)
 
 
 # ZLib
-if (USE_SYSTEM_ZLIB)
-	find_package(ZLIB QUIET)
-endif()
-
-if (NOT ZLIB_FOUND)
-	message(STATUS "Using builtin ZLIB")
-	set(SKIP_INSTALL_ALL ON)
-	add_subdirectory(zlib EXCLUDE_FROM_ALL)
-	set(ZLIB_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/zlib" "${CMAKE_CURRENT_BINARY_DIR}/zlib")
-	set(ZLIB_LIBRARY zlibstatic)
-endif()
-
-add_library(3rdparty_zlib INTERFACE)
-target_link_libraries(3rdparty_zlib INTERFACE ${ZLIB_LIBRARY})
-target_include_directories(3rdparty_zlib INTERFACE ${ZLIB_INCLUDE_DIR})
+add_subdirectory(zlib EXCLUDE_FROM_ALL)
 
 # 7z sdk
-if(WIN32)
-	add_library(3rdparty_7z STATIC EXCLUDE_FROM_ALL
-		7z/Sha256.c
-		7z/Ppmd7Dec.c
-		7z/XzDec.c
-		7z/XzEnc.c
-		7z/Lzma2Dec.c
-		7z/XzCrc64.c
-		7z/DllSecur.c
-		7z/Lzma2DecMt.c
-		7z/BraIA64.c
-		7z/7zFile.c
-		7z/7zStream.c
-		7z/Lzma86Enc.c
-		7z/Threads.c
-		7z/7zAlloc.c
-		7z/LzmaEnc.c
-		7z/MtCoder.c
-		7z/Lzma86Dec.c
-		7z/Sort.c
-		7z/LzFindMt.c
-		7z/7zDec.c
-		7z/Bcj2.c
-		7z/Ppmd7.c
-		7z/Bra86.c
-		7z/Bcj2Enc.c
-		7z/7zBuf.c
-		7z/Aes.c
-		7z/AesOpt.c
-		7z/XzCrc64Opt.c
-		7z/7zArcIn.c
-		7z/Lzma2Enc.c
-		7z/Bra.c
-		7z/7zCrcOpt.c
-		7z/7zBuf2.c
-		7z/LzFind.c
-		7z/Ppmd7Enc.c
-		7z/CpuArch.c
-		7z/Delta.c
-		7z/XzIn.c
-		7z/Alloc.c
-		7z/Xz.c
-		7z/LzmaDec.c
-		7z/LzmaLib.c
-		7z/7zCrc.c
-		7z/MtDec.c)
-	target_include_directories(3rdparty_7z INTERFACE 7z)
-else()
-	add_library(3rdparty_7z INTERFACE)
-endif()
+add_subdirectory(7z EXCLUDE_FROM_ALL)
 
 add_library(3rdparty_flatbuffers INTERFACE)
-target_include_directories(3rdparty_flatbuffers INTERFACE flatbuffers/include)
+if (USE_SYSTEM_FLATBUFFERS)
+	pkg_check_modules(FLATBUFFERS REQUIRED IMPORTED_TARGET flatbuffers>=2.0.0)
+	target_link_libraries(3rdparty_flatbuffers INTERFACE PkgConfig::FLATBUFFERS)
+else()
+	target_include_directories(3rdparty_flatbuffers INTERFACE flatbuffers/include)
+endif()
 
 # libPNG
-# Select the version of libpng to use, default is builtin
-if (NOT USE_SYSTEM_LIBPNG)
-	# We use libpng's static library and don't need to build the shared library and run the tests
-	set(PNG_SHARED OFF CACHE BOOL "Build shared lib" FORCE)
-	set(PNG_TESTS OFF CACHE BOOL "Build libpng tests" FORCE)
-	set(PNG_BUILD_ZLIB ON CACHE BOOL "ZLIB is already build or package is found" FORCE)
-	set(SKIP_INSTALL_ALL ON)
-	add_subdirectory(libpng EXCLUDE_FROM_ALL)
-
-	set(LIBPNG_TARGET png_static)
-
-	target_include_directories(png_static INTERFACE "${libpng_BINARY_DIR}" "${libpng_SOURCE_DIR}")
-else()
-	find_package(PNG REQUIRED)
-
-	add_library(3rdparty_system_libpng INTERFACE)
-	target_include_directories(3rdparty_system_libpng INTERFACE ${PNG_INCLUDE_DIR})
-	target_link_libraries(3rdparty_system_libpng INTERFACE ${PNG_LIBRARY})
-	target_compile_definitions(3rdparty_system_libpng INTERFACE ${PNG_DEFINITIONS})
-
-	set(LIBPNG_TARGET 3rdparty_system_libpng)
-endif()
+add_subdirectory(libpng EXCLUDE_FROM_ALL)
 
 
 # pugixml
-add_subdirectory(pugixml EXCLUDE_FROM_ALL)
-
-
-# hidapi
-add_library(3rdparty_hidapi INTERFACE)
-target_include_directories(3rdparty_hidapi INTERFACE hidapi/hidapi)
-
-if(APPLE)
-	add_subdirectory(hidapi/mac EXCLUDE_FROM_ALL)
-	target_include_directories(hidapi-mac PUBLIC hidapi/hidapi)
-
-	target_link_libraries(3rdparty_hidapi INTERFACE hidapi-mac "-framework CoreFoundation" "-framework IOKit")
-elseif(CMAKE_SYSTEM MATCHES "Linux")
-	add_subdirectory(hidapi/linux EXCLUDE_FROM_ALL)
-	target_include_directories(hidapi-hidraw PUBLIC hidapi/hidapi)
-
-	target_link_libraries(3rdparty_hidapi INTERFACE hidapi-hidraw udev)
-elseif(WIN32)
-	add_subdirectory(hidapi/windows EXCLUDE_FROM_ALL)
-	target_include_directories(hidapi-hid PUBLIC hidapi/hidapi)
-
-	target_link_libraries(3rdparty_hidapi INTERFACE hidapi-hid Shlwapi.lib)
+if (USE_SYSTEM_PUGIXML)
+	pkg_check_modules(PUGIXML REQUIRED IMPORTED_TARGET pugixml>=1.11)
+	add_library(pugixml INTERFACE)
+	target_link_libraries(pugixml INTERFACE PkgConfig::PUGIXML)
 else()
-	add_subdirectory(hidapi/libusb EXCLUDE_FROM_ALL)
-	target_include_directories(hidapi-libusb PUBLIC hidapi/hidapi)
-
-	target_link_libraries(3rdparty_hidapi INTERFACE hidapi-libusb usb)
+	add_subdirectory(pugixml EXCLUDE_FROM_ALL)
 endif()
 
 
 # libusb
 if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
+	pkg_check_modules(LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0>=1.0 )
+	CMAKE_DEPENDENT_OPTION( USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" ON
+			"LIBUSB_FOUND" OFF)
+else()
+	pkg_check_modules(LIBUSB IMPORTED_TARGET libusb-1.0>=1.0 )
+	CMAKE_DEPENDENT_OPTION( USE_SYSTEM_LIBUSB "Use system libusb-1.0 as shared library" OFF
+			"LIBUSB_FOUND" OFF)
+endif()
+if(CMAKE_SYSTEM MATCHES "DragonFly|FreeBSD")
 	# Always use system libusb as reference implementation isn't supported
-	add_library(usb-1.0-static INTERFACE)
-	target_link_libraries(usb-1.0-static INTERFACE usb)
+	add_library(usb-1.0-shared INTERFACE)
+	target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
 elseif(MSVC)
 	# Windows time.h defines timespec but doesn't add any flag for it, which makes libusb attempt to define it again
 	add_definitions(-DHAVE_STRUCT_TIMESPEC=1)
-	add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
+	add_subdirectory(libusb EXCLUDE_FROM_ALL)
 else()
-	add_subdirectory(libusb_cmake EXCLUDE_FROM_ALL)
+	if(USE_SYSTEM_LIBUSB)
+		# we have the system libusb and have selected to use it
+		add_library(usb-1.0-shared INTERFACE)
+		target_link_libraries(usb-1.0-shared INTERFACE PkgConfig::LIBUSB)
+	else()
+		# we don't have the system libusb, so we compile from submodule
+		unset(LIBUSB_LIBRARIES CACHE)
+		add_subdirectory(libusb EXCLUDE_FROM_ALL)
+	endif()
 endif()
 
 
+# hidapi
+add_subdirectory(hidapi)
+
+
+# Vulkan
+add_subdirectory(glslang EXCLUDE_FROM_ALL)
+add_subdirectory(SPIRV EXCLUDE_FROM_ALL)
+
+
 # yaml-cpp
-# We don't want to install yaml-cpp but its cmake file doesn't have option
-# to disable it...
-# So we just install it to a different directory
-set(CMAKE_INSTALL_PREFIX_OLD ${CMAKE_INSTALL_PREFIX})
-set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/yaml-cpp_install)
-
-set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Enable testing" FORCE)
-set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools" FORCE)
-set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Enable contrib stuff in library" FORCE)
-add_subdirectory(yaml-cpp EXCLUDE_FROM_ALL)
-
-set(CMAKE_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX_OLD})
+add_subdirectory(yaml-cpp)
 
 
 # xxHash
-set(XXHASH_BUNDLED_MODE ON)
-set(XXHASH_BUILD_XXHSUM OFF)
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Make xxHash build static libs")
-add_subdirectory(xxHash/cmake_unofficial EXCLUDE_FROM_ALL)
-target_include_directories(xxhash INTERFACE xxHash)
-
-
-# cereal
-add_library(3rdparty_cereal INTERFACE)
-target_include_directories(3rdparty_cereal INTERFACE cereal/include)
-
+if (USE_SYSTEM_XXHASH)
+	pkg_check_modules(XXHASH REQUIRED IMPORTED_TARGET libxxhash)
+	add_library(xxhash INTERFACE)
+	target_link_libraries(xxhash INTERFACE PkgConfig::XXHASH)
+else()
+	set(XXHASH_BUNDLED_MODE ON)
+	set(XXHASH_BUILD_XXHSUM OFF)
+	set(BUILD_SHARED_LIBS OFF CACHE BOOL "Make xxHash build static libs")
+	add_subdirectory(xxHash/cmake_unofficial EXCLUDE_FROM_ALL)
+	target_include_directories(xxhash INTERFACE xxHash)
+endif()
 
 # OpenGL
 
-# Prefer GLVND for OpenGL rather than legacy
-set(OpenGL_GL_PREFERENCE GLVND)
+# Prefer GLVND for OpenGL rather than legacy, unless it's been defined elsewhere, in the case of AppImage builds
+if(NOT DEFINED OpenGL_GL_PREFERENCE)
+	set(OpenGL_GL_PREFERENCE GLVND)
+endif()
 find_package(OpenGL REQUIRED)
 
 add_library(3rdparty_opengl INTERFACE)
@@ -200,50 +120,13 @@ else()
 endif()
 
 
-# span
-add_library(3rdparty_span INTERFACE)
-target_include_directories(3rdparty_span INTERFACE span/include)
-
-
 # stblib
 add_library(3rdparty_stblib INTERFACE)
-target_include_directories(3rdparty_stblib INTERFACE stblib)
+target_include_directories(3rdparty_stblib INTERFACE stblib/include)
 
 
-# discord_rpc
-add_library(3rdparty_discord-rpc INTERFACE)
-
-# We don't want Discord Rich Presence on the BSDs and other OSes
-if (USE_DISCORD_RPC AND (WIN32 OR CMAKE_SYSTEM MATCHES "Linux" OR APPLE))
-	if (WIN32 AND NOT MSVC)
-		ExternalProject_Add(discord-rpc
-				GIT_REPOSITORY https://github.com/discordapp/discord-rpc
-				BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/discord-rpc
-				INSTALL_COMMAND ""
-			)
-
-	endif()
-
-	target_include_directories(3rdparty_discord-rpc INTERFACE discord-rpc/include)
-	target_compile_definitions(3rdparty_discord-rpc INTERFACE -DWITH_DISCORD_RPC)
-
-	set(DISCORD_RPC_LIB NOTFOUND)
-	if (WIN32)
-		if (NOT MSVC)
-			set(DISCORD_RPC_LIB ${CMAKE_CURRENT_BINARY_DIR}/discord-rpc/src/libdiscord-rpc.a)
-		else()
-			find_library(DISCORD_RPC_LIB discord-rpc PATHS discord-rpc/lib/ NO_DEFAULT_PATH)
-		endif()
-	elseif(CMAKE_SYSTEM MATCHES "Linux")
-		find_library(DISCORD_RPC_LIB discord-rpc-linux PATHS discord-rpc/lib/ NO_DEFAULT_PATH)
-	elseif(APPLE)
-		find_library(DISCORD_RPC_LIB discord-rpc-mac PATHS discord-rpc/lib/ NO_DEFAULT_PATH)
-	endif()
-	target_link_libraries(3rdparty_discord-rpc INTERFACE ${DISCORD_RPC_LIB})
-	if(APPLE)
-		target_link_libraries(3rdparty_discord-rpc INTERFACE "objc" "-framework Foundation" "-framework CoreServices")
-	endif()
-endif()
+# DiscordRPC
+add_subdirectory(discord-rpc)
 
 
 # ALSA
@@ -320,33 +203,44 @@ if(USE_VULKAN)
 	endif()
 endif()
 
+# AsmJit
+add_subdirectory(asmjit EXCLUDE_FROM_ALL)
 
 # OpenAL
-if (MSVC)
-	find_path(OPENAL_INCLUDE_DIR al.h PATHS OpenAL/include)
-	find_library(OPENAL_LIBRARY OpenAL32 PATHS OpenAL/libs/Win64/)
-else()
-	find_package(OpenAL REQUIRED)
-endif()
-
-add_library(3rdparty_openal INTERFACE)
-target_include_directories(3rdparty_openal INTERFACE ${OPENAL_INCLUDE_DIR})
-target_link_libraries(3rdparty_openal INTERFACE ${OPENAL_LIBRARY})
+add_subdirectory(OpenAL EXCLUDE_FROM_ALL)
 
 # FAudio
 set(FAUDIO_TARGET 3rdparty_dummy_lib)
 if(USE_FAUDIO)
 	# FAudio depends on SDL2
-	pkg_check_modules(SDL2 sdl2)
-	if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.0.9)
-		message("-- RPCS3: FAudio requires SDL 2.0.9 or newer.")
+	find_package(SDL2)
+	if (NOT SDL2_FOUND OR SDL2_VERSION VERSION_LESS 2.0.12)
+		message(WARNING
+			"-- RPCS3: FAudio requires SDL 2.0.9 or newer. Please note, this warning"
+			"can also be displayed with SDL2 versions between 2.0.9-2.0.12, as the"
+			"CMake config files are not correctly installed. Since a valid SDL2"
+			">=2.0.9 version cannot be found, building with FAudio will be skipped.")
+		set(USE_FAUDIO False)
 	else()
-		set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared library")
-		add_subdirectory(FAudio EXCLUDE_FROM_ALL)
-		target_compile_definitions(FAudio INTERFACE -DHAVE_FAUDIO)
-		set(FAUDIO_TARGET FAudio)
+		if (USE_SYSTEM_FAUDIO)
+			message(STATUS "RPCS3: Using system FAudio")
+			find_package(FAudio REQUIRED CONFIGS FAudioConfig.cmake FAudio-config.cmake)
+			add_library(3rdparty_FAudio INTERFACE)
+			target_link_libraries(3rdparty_FAudio INTERFACE FAudio)
+			target_compile_definitions(3rdparty_FAudio INTERFACE -DHAVE_FAUDIO)
+			set(FAUDIO_TARGET 3rdparty_FAudio)
+		else()
+			message(STATUS "RPCS3: Using builtin FAudio")
+			set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared library")
+			add_subdirectory(FAudio EXCLUDE_FROM_ALL)
+			target_compile_definitions(FAudio INTERFACE -DHAVE_FAUDIO)
+			set(FAUDIO_TARGET FAudio)
+		endif()
 	endif()
 endif()
+
+set_property(TARGET ${FAUDIO_TARGET} PROPERTY FOLDER "3rdparty/")
+
 
 # FFMPEG
 add_library(3rdparty_ffmpeg INTERFACE)
@@ -418,48 +312,17 @@ endif()
 include(llvm.cmake)
 
 # WOLFSSL
-if(USE_SYSTEM_WOLFSSL)
-	message("-- RPCS3: using shared wolfssl")
-	find_package(WolfSSL REQUIRED)
-	add_library(wolfssl INTERFACE)
-	target_link_libraries(wolfssl INTERFACE WolfSSL_LIBRARIES)
-	target_include_directories(wolfssl INTERFACE WolfSSL_INCLUDE_DIRS)
-else()
-	SET(BUILD_TESTS NO CACHE BOOL "Build test applications")
-	add_definitions(-DHAVE_FFDHE_2048 -DTFM_TIMING_RESISTANT -DECC_TIMING_RESISTANT 
-					-DWC_RSA_BLINDING -DHAVE_AESGCM -DWOLFSSL_SHA512 -DWOLFSSL_SHA384 -DNO_DSA -DHAVE_ECC -DTFM_ECC256 -DECC_SHAMIR 
-					-DNO_RC4 -DNO_HC128 -DNO_RABBIT -DWOLFSSL_SHA224 -DWOLFSSL_SHA3 -DWOLFSSL_SHAKE256 -DHAVE_POLY1305 
-					-DHAVE_ONE_TIME_AUTH -DHAVE_CHACHA -DHAVE_HASHDRBG -DHAVE_TLS_EXTENSIONS -DHAVE_SNI -DHAVE_SUPPORTED_CURVES 
-					-DHAVE_EXTENDED_MASTER -DNO_RC4 -DHAVE_ENCRYPT_THEN_MAC -DNO_PSK -DNO_MD4 
-					-DWC_NO_ASYNC_THREADING -DOPENSSL_EXTRA -DWOLFSSL_DES_ECB)
-	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
-	target_include_directories(wolfssl INTERFACE "wolfssl/")
-	# This is needed for CURL
-	configure_file(${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/wolfssl/options.h.in ${CMAKE_CURRENT_BINARY_DIR}/wolfssl/wolfssl/options.h)
-	set(WolfSSL_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/libwolfssl.a")
-	set(WolfSSL_LIBRARIES "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/libwolfssl.a")
-	set(WolfSSL_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/" "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/")
-	set(WolfSSL_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/wolfssl/" "${CMAKE_CURRENT_BINARY_DIR}/wolfssl/")
-endif()
+add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 
 # CURL
-if(USE_SYSTEM_CURL)
-	message("-- RPCS3: using shared libcurl")
-	find_package(CURL REQUIRED)
-	add_library(libcurl INTERFACE)
-	target_link_libraries(libcurl INTERFACE CURL::libcurl)
-else()
-	message("-- RPCS3: building libcurl + wolfssl submodules")
-	option(BUILD_CURL_EXE "Set to ON to build curl executable." OFF)
-	option(CMAKE_USE_WOLFSSL "enable wolfSSL for SSL/TLS" ON)
-	option(HTTP_ONLY "disables all protocols except HTTP (This overrides all CURL_DISABLE_* options)" ON)
-	option(CURL_ZLIB "Set to ON to enable building curl with zlib support." OFF)
-	set(CURL_CA_PATH "none" CACHE STRING "Location of default CA path. Set 'none' to disable or 'auto' for auto-detection. Defaults to 'auto'.")
-	add_subdirectory(curl EXCLUDE_FROM_ALL)
-endif()
+add_subdirectory(curl EXCLUDE_FROM_ALL)
 
 # add nice ALIAS targets for ease of use
-add_library(3rdparty::libusb ALIAS usb-1.0-static)
+if(USE_SYSTEM_LIBUSB)
+	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
+else()
+	add_library(3rdparty::libusb ALIAS usb-1.0-static)
+endif()
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::7z ALIAS 3rdparty_7z)
 add_library(3rdparty::flatbuffers ALIAS 3rdparty_flatbuffers)
@@ -468,11 +331,9 @@ add_library(3rdparty::yaml-cpp ALIAS yaml-cpp)
 add_library(3rdparty::xxhash ALIAS xxhash)
 add_library(3rdparty::hidapi ALIAS 3rdparty_hidapi)
 add_library(3rdparty::libpng ALIAS ${LIBPNG_TARGET})
-add_library(3rdparty::cereal ALIAS 3rdparty_cereal)
 add_library(3rdparty::opengl ALIAS 3rdparty_opengl)
-add_library(3rdparty::span ALIAS 3rdparty_span)
 add_library(3rdparty::stblib ALIAS 3rdparty_stblib)
-add_library(3rdparty::discord-rpc ALIAS 3rdparty_discord-rpc)
+add_library(3rdparty::discordRPC ALIAS 3rdparty_discordRPC)
 add_library(3rdparty::alsa ALIAS ${ALSA_TARGET})
 add_library(3rdparty::pulse ALIAS ${PULSE_TARGET})
 add_library(3rdparty::faudio ALIAS ${FAUDIO_TARGET})

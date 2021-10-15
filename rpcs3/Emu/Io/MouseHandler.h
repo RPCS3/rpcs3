@@ -1,6 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include <list>
+#include <algorithm>
+#include <vector>
 #include "Utilities/mutex.h"
 #include "util/init_mutex.hpp"
 
@@ -39,6 +41,11 @@ enum MouseButtonCodes
 	CELL_MOUSE_BUTTON_6 = 0x00000020,
 	CELL_MOUSE_BUTTON_7 = 0x00000040,
 	CELL_MOUSE_BUTTON_8 = 0x00000080,
+};
+
+enum
+{
+	CELL_MOUSE_INFO_INTERCEPTED = 1
 };
 
 static const u32 MAX_MICE = 127;
@@ -108,6 +115,8 @@ struct Mouse
 {
 	s32 x_pos;
 	s32 y_pos;
+	s32 x_max;
+	s32 y_max;
 	u8 buttons; // actual mouse button positions
 
 	MouseTabletDataList m_tablet_datalist;
@@ -117,10 +126,9 @@ struct Mouse
 	Mouse()
 		: x_pos(0)
 		, y_pos(0)
+		, x_max(0)
+		, y_max(0)
 		, buttons(0)
-		, m_tablet_datalist()
-		, m_datalist()
-		, m_rawdata()
 	{
 	}
 };
@@ -130,12 +138,12 @@ class MouseHandlerBase
 protected:
 	MouseInfo m_info;
 	std::vector<Mouse> m_mice;
-	std::chrono::steady_clock::time_point last_update;
+	steady_clock::time_point last_update;
 
 	bool is_time_for_update(double elapsed_time = 10.0) // 4-10 ms, let's use 10 for now
 	{
-		std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-		double elapsed = std::chrono::duration_cast<std::chrono::microseconds>(now - last_update).count() / 1000.0;
+		steady_clock::time_point now = steady_clock::now();
+		double elapsed = (now - last_update).count() / 1000'000.;
 
 		if (elapsed > elapsed_time)
 		{
@@ -209,7 +217,7 @@ public:
 		}
 	}
 
-	void Move(const s32 x_pos_new, const s32 y_pos_new, const bool is_qt_fullscreen = false, s32 x_delta = 0, s32 y_delta = 0)
+	void Move(s32 x_pos_new, s32 y_pos_new, s32 x_max, s32 y_max, const bool is_qt_fullscreen = false, s32 x_delta = 0, s32 y_delta = 0)
 	{
 		std::lock_guard lock(mutex);
 
@@ -240,6 +248,8 @@ public:
 			new_data.x_axis = static_cast<s8>(std::clamp(x_delta, -127, 128));
 			new_data.y_axis = static_cast<s8>(std::clamp(y_delta, -127, 128));
 
+			m_mice[p].x_max = x_max;
+			m_mice[p].y_max = y_max;
 			m_mice[p].x_pos = x_pos_new;
 			m_mice[p].y_pos = y_pos_new;
 
@@ -248,6 +258,21 @@ public:
 			rawdata.len++;*/
 
 			datalist.push_back(new_data);
+		}
+	}
+
+	void SetIntercepted(bool intercepted)
+	{
+		std::lock_guard lock(mutex);
+
+		m_info.info = intercepted ? CELL_MOUSE_INFO_INTERCEPTED : 0;
+
+		if (intercepted)
+		{
+			for (Mouse& mouse : m_mice)
+			{
+				mouse = {};
+			}
 		}
 	}
 

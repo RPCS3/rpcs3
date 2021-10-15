@@ -1,7 +1,10 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
-#include <Emu/Memory/vm_ptr.h>
+#include "util/types.hpp"
+#include "util/endian.hpp"
+#include "Emu/Memory/vm_ptr.h"
+#include <string>
+#include <vector>
 
 // Return codes
 enum CellSaveDataError : u32
@@ -298,7 +301,7 @@ struct CellSaveDataFileSet
 	be_t<u32> fileOperation;
 	vm::bptr<void> reserved;
 	be_t<u32> fileType;
-	be_t<v128, 1> secureFileId;
+	be_t<u128, 1> secureFileId;
 	vm::bptr<char> fileName;
 	be_t<u32> fileOffset;
 	be_t<u32> fileSize;
@@ -349,6 +352,9 @@ struct SaveDataEntry
 	s64 ctime{0};
 	std::vector<uchar> iconBuf;
 	bool isNew{false};
+
+	std::string date() const;
+	std::string data_size() const;
 };
 
 class SaveDialogBase
@@ -356,5 +362,5 @@ class SaveDialogBase
 public:
 	virtual ~SaveDialogBase();
 
-	virtual s32 ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet) = 0;
+	virtual s32 ShowSaveDataList(std::vector<SaveDataEntry>& save_entries, s32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet, bool enable_overlay) = 0;
 };

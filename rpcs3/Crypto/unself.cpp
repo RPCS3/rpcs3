@@ -1,11 +1,10 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "aes.h"
-#include "sha1.h"
 #include "utils.h"
 #include "unself.h"
-#include "Utilities/BEType.h"
 #include "Emu/VFS.h"
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 
 #include <algorithm>
 #include <zlib.h>
@@ -202,7 +201,7 @@ void AppInfo::Load(const fs::file& f)
 	padding   = Read64(f);
 }
 
-void AppInfo::Show()
+void AppInfo::Show() const
 {
 	self_log.notice("AuthID: 0x%llx", authid);
 	self_log.notice("VendorID: 0x%08x", vendor_id);
@@ -220,7 +219,7 @@ void SectionInfo::Load(const fs::file& f)
 	encrypted  = Read32(f);
 }
 
-void SectionInfo::Show()
+void SectionInfo::Show() const
 {
 	self_log.notice("Offset: 0x%llx", offset);
 	self_log.notice("Size: 0x%llx", size);
@@ -238,7 +237,7 @@ void SCEVersionInfo::Load(const fs::file& f)
 	unknown        = Read32(f);
 }
 
-void SCEVersionInfo::Show()
+void SCEVersionInfo::Show() const
 {
 	self_log.notice("Sub-header type: 0x%08x", subheader_type);
 	self_log.notice("Present: 0x%08x", present);
@@ -292,7 +291,7 @@ void ControlInfo::Load(const fs::file& f)
 	}
 }
 
-void ControlInfo::Show()
+void ControlInfo::Show() const
 {
 	self_log.notice("Type: 0x%08x", type);
 	self_log.notice("Size: 0x%08x", size);
@@ -313,51 +312,26 @@ void ControlInfo::Show()
 	{
 		if (size == 0x30)
 		{
-			std::string digest_str;
-			for (int i = 0; i < 20; i++)
-				digest_str += fmt::format("%02x", file_digest_30.digest[i]);
-
-			self_log.notice("Digest: %s", digest_str.c_str());
+			self_log.notice("Digest: %s", file_digest_30.digest);
 			self_log.notice("Unknown: 0x%llx", file_digest_30.unknown);
 		}
 		else if (size == 0x40)
 		{
-			std::string digest_str1;
-			std::string digest_str2;
-			for (int i = 0; i < 20; i++)
-			{
-				digest_str1 += fmt::format("%02x", file_digest_40.digest1[i]);
-				digest_str2 += fmt::format("%02x", file_digest_40.digest2[i]);
-			}
-
-			self_log.notice("Digest1: %s", digest_str1.c_str());
-			self_log.notice("Digest2: %s", digest_str2.c_str());
+			self_log.notice("Digest1: %s", file_digest_40.digest1);
+			self_log.notice("Digest2: %s", file_digest_40.digest2);
 			self_log.notice("Unknown: 0x%llx", file_digest_40.unknown);
 		}
 	}
 	else if (type == 3)
 	{
-		std::string contentid_str;
-		std::string digest_str;
-		std::string invdigest_str;
-		std::string xordigest_str;
-		for (int i = 0; i < 48; i++)
-			contentid_str += fmt::format("%02x", npdrm.content_id[i]);
-		for (int i = 0; i < 16; i++)
-		{
-			digest_str += fmt::format("%02x", npdrm.digest[i]);
-			invdigest_str += fmt::format("%02x", npdrm.invdigest[i]);
-			xordigest_str += fmt::format("%02x", npdrm.xordigest[i]);
-		}
-
 		self_log.notice("Magic: 0x%08x", npdrm.magic);
 		self_log.notice("Unknown1: 0x%08x", npdrm.unknown1);
 		self_log.notice("License: 0x%08x", npdrm.license);
 		self_log.notice("Type: 0x%08x", npdrm.type);
-		self_log.notice("ContentID: %s", contentid_str.c_str());
-		self_log.notice("Digest: %s", digest_str.c_str());
-		self_log.notice("Inverse digest: %s", invdigest_str.c_str());
-		self_log.notice("XOR digest: %s", xordigest_str.c_str());
+		self_log.notice("ContentID: %s", npdrm.content_id);
+		self_log.notice("Digest: %s", npdrm.digest);
+		self_log.notice("Inverse digest: %s", npdrm.invdigest);
+		self_log.notice("XOR digest: %s", npdrm.xordigest);
 		self_log.notice("Unknown2: 0x%llx", npdrm.unknown2);
 		self_log.notice("Unknown3: 0x%llx", npdrm.unknown3);
 	}
@@ -371,7 +345,7 @@ void MetadataInfo::Load(u8* in)
 	memcpy(iv_pad, in + 0x30, 0x10);
 }
 
-void MetadataInfo::Show()
+void MetadataInfo::Show() const
 {
 	std::string key_str;
 	std::string key_pad_str;
@@ -411,7 +385,7 @@ void MetadataHeader::Load(u8* in)
 	unknown3 = swap32(unknown3);
 }
 
-void MetadataHeader::Show()
+void MetadataHeader::Show() const
 {
 	self_log.notice("Signature input length: 0x%llx", signature_input_length);
 	self_log.notice("Unknown1: 0x%08x", unknown1);
@@ -448,7 +422,7 @@ void MetadataSectionHeader::Load(u8* in)
 	compressed = swap32(compressed);
 }
 
-void MetadataSectionHeader::Show()
+void MetadataSectionHeader::Show() const
 {
 	self_log.notice("Data offset: 0x%llx", data_offset);
 	self_log.notice("Data size: 0x%llx", data_size);
@@ -714,7 +688,7 @@ bool SCEDecrypter::LoadMetadata(const u8 erk[32], const u8 riv[16])
 	}
 
 	// Perform AES-CTR encryption on the metadata headers.
-	size_t ctr_nc_off = 0;
+	usz ctr_nc_off = 0;
 	u8 ctr_stream_block[0x10];
 	aes_setkey_enc(&aes, meta_info.key, 128);
 	aes_crypt_ctr(&aes, metadata_headers_size, &ctr_nc_off, meta_info.iv, ctr_stream_block, metadata_headers.get(), metadata_headers.get());
@@ -745,7 +719,7 @@ bool SCEDecrypter::DecryptData()
 	// Calculate the total data size.
 	for (unsigned int i = 0; i < meta_hdr.section_count; i++)
 	{
-		data_buf_length += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+		data_buf_length += ::narrow<u32>(meta_shdr[i].data_size);
 	}
 
 	// Allocate a buffer to store decrypted data.
@@ -757,7 +731,7 @@ bool SCEDecrypter::DecryptData()
 	// Parse the metadata section headers to find the offsets of encrypted data.
 	for (unsigned int i = 0; i < meta_hdr.section_count; i++)
 	{
-		size_t ctr_nc_off = 0;
+		usz ctr_nc_off = 0;
 		u8 ctr_stream_block[0x10];
 		u8 data_key[0x10];
 		u8 data_iv[0x10];
@@ -799,7 +773,7 @@ bool SCEDecrypter::DecryptData()
 		}
 
 		// Advance the buffer's offset.
-		data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+		data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size);
 	}
 
 	return true;
@@ -823,13 +797,13 @@ std::vector<fs::file> SCEDecrypter::MakeFile()
 		// Decompress if necessary.
 		if (meta_shdr[i].compressed == 2)
 		{
-			const size_t BUFSIZE = 32 * 1024;
+			const usz BUFSIZE = 32 * 1024;
 			u8 tempbuf[BUFSIZE];
 			z_stream strm;
 			strm.zalloc = Z_NULL;
 			strm.zfree = Z_NULL;
 			strm.opaque = Z_NULL;
-			strm.avail_in = ::narrow<uInt>(meta_shdr[i].data_size, HERE);
+			strm.avail_in = ::narrow<uInt>(meta_shdr[i].data_size);
 			strm.avail_out = BUFSIZE;
 			strm.next_in = data_buf.get()+data_buf_offset;
 			strm.next_out = tempbuf;
@@ -874,7 +848,7 @@ std::vector<fs::file> SCEDecrypter::MakeFile()
 		}
 
 		// Advance the data buffer offset by data size.
-		data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+		data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size);
 
 		if (out_f.pos() != out_f.size())
 			fmt::throw_exception("MakeELF written bytes (%llu) does not equal buffer size (%llu).", out_f.pos(), out_f.size());
@@ -1209,7 +1183,7 @@ bool SELFDecrypter::LoadMetadata(u8* klic_key)
 	}
 
 	// Perform AES-CTR encryption on the metadata headers.
-	size_t ctr_nc_off = 0;
+	usz ctr_nc_off = 0;
 	u8 ctr_stream_block[0x10];
 	aes_setkey_enc(&aes, meta_info.key, 128);
 	aes_crypt_ctr(&aes, metadata_headers_size, &ctr_nc_off, meta_info.iv, ctr_stream_block, metadata_headers.get(), metadata_headers.get());
@@ -1243,7 +1217,7 @@ bool SELFDecrypter::DecryptData()
 		if (meta_shdr[i].encrypted == 3)
 		{
 			if ((meta_shdr[i].key_idx <= meta_hdr.key_count - 1) && (meta_shdr[i].iv_idx <= meta_hdr.key_count))
-				data_buf_length += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+				data_buf_length += ::narrow<u32>(meta_shdr[i].data_size);
 		}
 	}
 
@@ -1256,7 +1230,7 @@ bool SELFDecrypter::DecryptData()
 	// Parse the metadata section headers to find the offsets of encrypted data.
 	for (unsigned int i = 0; i < meta_hdr.section_count; i++)
 	{
-		size_t ctr_nc_off = 0;
+		usz ctr_nc_off = 0;
 		u8 ctr_stream_block[0x10];
 		u8 data_key[0x10];
 		u8 data_iv[0x10];
@@ -1289,7 +1263,7 @@ bool SELFDecrypter::DecryptData()
 				memcpy(data_buf.get() + data_buf_offset, buf.get(), meta_shdr[i].data_size);
 
 				// Advance the buffer's offset.
-				data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size, HERE);
+				data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size);
 			}
 		}
 	}
@@ -1322,7 +1296,7 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 
 	// Try to find a matching RAP file under exdata folder.
 	const std::string ci_str = reinterpret_cast<const char*>(content_id);
-	const std::string rap_path = Emulator::GetHddDir() + "/home/" + Emu.GetUsr() + "/exdata/" + ci_str + ".rap";
+	const std::string rap_path = rpcs3::utils::get_rap_file_path(ci_str);
 
 	// Open the RAP file and read the key.
 	const fs::file rap_file(rap_path);
@@ -1330,13 +1304,18 @@ bool SELFDecrypter::GetKeyFromRap(u8* content_id, u8* npdrm_key)
 	if (!rap_file)
 	{
 		self_log.fatal("Failed to locate the game license file: %s."
-				  "\nEnsure the .rap license file is placed in the dev_hdd0/home/00000001/exdata folder with a lowercase file extension."
-				  "\nIf you need assistance on dumping the license file from your PS3, read our quickstart guide: https://rpcs3.net/quickstart", rap_path);
+				  "\nEnsure the .rap license file is placed in the dev_hdd0/home/%s/exdata folder with a lowercase file extension."
+				  "\nIf you need assistance on dumping the license file from your PS3, read our quickstart guide: https://rpcs3.net/quickstart", rap_path, Emu.GetUsr());
 		return false;
 	}
 
 	self_log.notice("Loading RAP file %s.rap", ci_str);
-	rap_file.read(rap_key, 0x10);
+
+	if (rap_file.read(rap_key, 0x10) != 0x10)
+	{
+		self_log.fatal("Failed to load %s: RAP file exists but is invalid. Try reinstalling it.", rap_path);
+		return false;
+	}
 
 	// Convert the RAP key.
 	rap_to_rif(rap_key, npdrm_key);
@@ -1392,7 +1371,7 @@ static bool CheckDebugSelf(fs::file& s)
 
 		// Copy the data.
 		char buf[2048];
-		while (u64 size = s.read(buf, 2048))
+		while (const u64 size = s.read(buf, 2048))
 		{
 			e.write(buf, size);
 		}
@@ -1423,7 +1402,7 @@ fs::file decrypt_self(fs::file elf_or_self, u8* klic_key, SelfAdditionalInfo* ou
 	if (elf_or_self.size() >= 4 && elf_or_self.read<u32>() == "SCE\0"_u32 && !CheckDebugSelf(elf_or_self))
 	{
 		// Check the ELF file class (32 or 64 bit).
-		bool isElf32 = IsSelfElf32(elf_or_self);
+		const bool isElf32 = IsSelfElf32(elf_or_self);
 
 		// Start the decrypter on this SELF file.
 		SELFDecrypter self_dec(elf_or_self);
@@ -1466,7 +1445,7 @@ bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 	if (self.size() >= 4 && self.read<u32>() == "SCE\0"_u32)
 	{
 		// Check the ELF file class (32 or 64 bit).
-		bool isElf32 = IsSelfElf32(self);
+		const bool isElf32 = IsSelfElf32(self);
 
 		// Start the decrypter on this SELF file.
 		SELFDecrypter self_dec(self);
@@ -1488,7 +1467,7 @@ bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key)
 	return true;
 }
 
-v128 get_default_self_klic()
+u128 get_default_self_klic()
 {
-	return std::bit_cast<v128>(NP_KLIC_FREE);
+	return std::bit_cast<u128>(NP_KLIC_FREE);
 }

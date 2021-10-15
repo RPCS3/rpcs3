@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_cond.h"
 
 #include "Emu/IdManager.h"
@@ -8,8 +8,6 @@
 #include "Emu/Cell/PPUThread.h"
 
 LOG_CHANNEL(sys_cond);
-
-template<> DECLARE(ipc_manager<lv2_cond, u64>::g_ipc) {};
 
 error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, vm::ptr<sys_cond_attribute_t> attr)
 {
@@ -26,12 +24,12 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 
 	const auto _attr = *attr;
 
-	if (auto error = lv2_obj::create<lv2_cond>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
+	const u64 ipc_key = lv2_obj::get_key(_attr);
+
+	if (const auto error = lv2_obj::create<lv2_cond>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
 		return std::make_shared<lv2_cond>(
-			_attr.pshared,
-			_attr.flags,
-			_attr.ipc_key,
+			ipc_key,
 			_attr.name_u64,
 			mutex_id,
 			std::move(mutex));
@@ -59,7 +57,8 @@ error_code sys_cond_destroy(ppu_thread& ppu, u32 cond_id)
 			return CELL_EBUSY;
 		}
 
-		cond.mutex->obj_count.atomic_op([](typename lv2_mutex::count_info& info){ info.cond_count--; });
+		cond.mutex->cond_count--;
+		lv2_obj::on_id_destroy(cond, cond.key);
 		return {};
 	});
 
@@ -128,7 +127,7 @@ error_code sys_cond_signal_all(ppu_thread& ppu, u32 cond_id)
 			{
 				if (cond.mutex->try_own(*cpu, cpu->id))
 				{
-					verify(HERE), !std::exchange(result, cpu);
+					ensure(!std::exchange(result, cpu));
 				}
 			}
 
@@ -155,8 +154,7 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 	const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&](lv2_cond& cond) -> int
 	{
-		if (const auto cpu = idm::check_unlocked<named_thread<ppu_thread>>(thread_id);
-			!cpu || cpu->joiner == ppu_join_status::exited)
+		if (!idm::check_unlocked<named_thread<ppu_thread>>(thread_id))
 		{
 			return -1;
 		}
@@ -169,7 +167,7 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 			{
 				if (cpu->id == thread_id)
 				{
-					verify(HERE), cond.unqueue(cond.sq, cpu);
+					ensure(cond.unqueue(cond.sq, cpu));
 
 					cond.waiters--;
 
@@ -224,7 +222,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		// Unlock the mutex
 		const auto count = cond.mutex->lock_count.exchange(0);
 
-		if (auto cpu = cond.mutex->reown<ppu_thread>())
+		if (const auto cpu = cond.mutex->reown<ppu_thread>())
 		{
 			cond.mutex->append(cpu);
 		}
@@ -246,11 +244,16 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		return CELL_EPERM;
 	}
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state))
 		{
-			return 0;
+			return {};
+		}
+
+		if (state & cpu_flag::signal)
+		{
+			break;
 		}
 
 		if (timeout)
@@ -260,7 +263,7 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					continue;
+					return {};
 				}
 
 				std::lock_guard lock(cond->mutex->mutex);
@@ -291,12 +294,12 @@ error_code sys_cond_wait(ppu_thread& ppu, u32 cond_id, u64 timeout)
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 
 	// Verify ownership
-	verify(HERE), cond->mutex->owner >> 1 == ppu.id;
+	ensure(cond->mutex->owner >> 1 == ppu.id);
 
 	// Restore the recursive value
 	cond->mutex->lock_count.release(static_cast<u32>(cond.ret));

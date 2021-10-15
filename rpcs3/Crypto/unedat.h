@@ -4,7 +4,6 @@
 
 #include "utils.h"
 
-#include "Utilities/BEType.h"
 #include "Utilities/File.h"
 
 constexpr u32 SDAT_FLAG = 0x01000000;
@@ -17,8 +16,8 @@ constexpr u32 EDAT_DEBUG_DATA_FLAG = 0x80000000;
 
 struct loaded_npdrm_keys
 {
-	atomic_t<v128> devKlic{};
-	atomic_t<v128> rifKey{};
+	atomic_t<u128> devKlic{};
+	atomic_t<u128> rifKey{};
 	atomic_t<u32> npdrm_fds{0};
 };
 
@@ -28,7 +27,7 @@ struct NPD_HEADER
 	s32 version;
 	s32 license;
 	s32 type;
-	u8 content_id[0x30];
+	char content_id[0x30];
 	u8 digest[0x10];
 	u8 title_hash[0x10];
 	u8 dev_hash[0x10];
@@ -44,11 +43,11 @@ struct EDAT_HEADER
 };
 
 // Decrypts full file, or null/empty file
-extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, const std::string& rap_file_name, u8 *custom_klic, bool verbose);
+extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose);
 
 extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, std::string* contentID);
 
-v128 GetEdatRifKeyFromRapFile(const fs::file& rap_file);
+u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file);
 
 struct EDATADecrypter final : fs::file_base
 {
@@ -58,25 +57,27 @@ struct EDATADecrypter final : fs::file_base
 	u32 total_blocks{0};
 	u64 pos{0};
 
-	NPD_HEADER npdHeader;
-	EDAT_HEADER edatHeader;
+	NPD_HEADER npdHeader{};
+	EDAT_HEADER edatHeader{};
 
 	// Internal data buffers.
-	std::unique_ptr<u8[]> data_buf;
+	std::unique_ptr<u8[]> data_buf{};
 	u64 data_buf_size{0};
 
-	v128 dec_key{};
+	u128 dec_key{};
 
 	// edat usage
-	v128 rif_key{};
-	v128 dev_key{};
+	u128 rif_key{};
+	u128 dev_key{};
 public:
 	// SdataByFd usage
 	EDATADecrypter(fs::file&& input)
 		: edata_file(std::move(input)) {}
 	// Edat usage
-	EDATADecrypter(fs::file&& input, const v128& dev_key, const v128& rif_key)
-		: edata_file(std::move(input)), rif_key(rif_key), dev_key(dev_key) {}
+	EDATADecrypter(fs::file&& input, const u128& dev_key, const u128& rif_key)
+		: edata_file(std::move(input))
+		, rif_key(rif_key)
+		, dev_key(dev_key) {}
 
 	~EDATADecrypter() override {}
 	// false if invalid
@@ -85,26 +86,25 @@ public:
 
 	fs::stat_t stat() override
 	{
-		fs::stat_t stats;
-		stats.is_directory = false;
-		stats.is_writable = false;
+		fs::stat_t stats = edata_file.stat();
+		stats.is_writable = false; // TODO
 		stats.size = file_size;
-		stats.atime = -1;
-		stats.ctime = -1;
-		stats.mtime = -1;
 		return stats;
 	}
-	bool trunc(u64 length) override
+
+	bool trunc(u64) override
 	{
-		return true;
+		return false;
 	}
+
 	u64 read(void* buffer, u64 size) override
 	{
-		u64 bytesRead = ReadData(pos, static_cast<u8*>(buffer), size);
+		const u64 bytesRead = ReadData(pos, static_cast<u8*>(buffer), size);
 		pos += bytesRead;
 		return bytesRead;
 	}
-	u64 write(const void* buffer, u64 size) override
+
+	u64 write(const void*, u64) override
 	{
 		return 0;
 	}
@@ -125,5 +125,6 @@ public:
 		pos = new_pos;
 		return pos;
 	}
+
 	u64 size() override { return file_size; }
 };

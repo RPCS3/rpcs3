@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <map>
 #include <list>
@@ -146,9 +146,9 @@ public:
 	{
 		reader_lock lock(m_mutex);
 
-		auto it = events.find(id);
+		const auto it = events.find(id);
 
-		if (it == events.end())
+		if (it == events.cend())
 			return nullptr;
 
 		if (auto event = it->second.lock())
@@ -238,7 +238,7 @@ public:
 	const std::vector<u8> data;
 
 	// Constructors (should not be used directly)
-	lv2_config_service(sys_config_service_id _id, u64 _user_id, u64 _verbosity, u32 _padding, const u8 _data[], size_t size)
+	lv2_config_service(sys_config_service_id _id, u64 _user_id, u64 _verbosity, u32 _padding, const u8 _data[], usz size)
 		: timestamp(get_system_time())
 		, id(_id)
 		, user_id(_user_id)
@@ -269,8 +269,8 @@ public:
 	void notify() const;
 
 	// Utilities
-	size_t get_size() const { return sizeof(sys_config_service_event_t)-1 + data.size(); }
-	std::shared_ptr<lv2_config_service> get_shared_ptr () const { return wkptr.lock(); };
+	usz get_size() const { return sizeof(sys_config_service_event_t)-1 + data.size(); }
+	std::shared_ptr<lv2_config_service> get_shared_ptr () const { return wkptr.lock(); }
 	u32 get_id() const { return idm_id; }
 };
 
@@ -304,7 +304,7 @@ public:
 	const std::vector<u8> data;
 
 	// Constructors (should not be used directly)
-	lv2_config_service_listener(std::shared_ptr<lv2_config_handle>& _handle, sys_config_service_id _service_id, u64 _min_verbosity, sys_config_service_listener_type _type, const u8 _data[], size_t size)
+	lv2_config_service_listener(std::shared_ptr<lv2_config_handle>& _handle, sys_config_service_id _service_id, u64 _min_verbosity, sys_config_service_listener_type _type, const u8 _data[], usz size)
 		: handle(_handle)
 		, service_id(_service_id)
 		, min_verbosity(_min_verbosity)
@@ -327,7 +327,7 @@ public:
 	}
 
 	// Check whether service matches
-	bool check_service(const lv2_config_service& service);
+	bool check_service(const lv2_config_service& service) const;
 
 	// Register new event, and notify queue
 	bool notify(const std::shared_ptr<lv2_config_service>& service);
@@ -337,7 +337,7 @@ public:
 
 	// Utilities
 	u32 get_id() const { return idm_id; }
-	std::shared_ptr<lv2_config_service_listener> get_shared_ptr() const { return wkptr.lock(); };
+	std::shared_ptr<lv2_config_service_listener> get_shared_ptr() const { return wkptr.lock(); }
 };
 
 /*
@@ -352,7 +352,7 @@ class lv2_config_service_event
 			atomic_t<u32> next_id = 0;
 		};
 
-		return g_fxo->get<service_event_id>()->next_id++;
+		return g_fxo->get<service_event_id>().next_id++;
 	}
 
 public:
@@ -385,7 +385,7 @@ public:
 	{
 		auto ev = std::make_shared<lv2_config_service_event>(std::forward<Args>(args)...);
 
-		g_fxo->get<lv2_config>()->add_service_event(ev);
+		g_fxo->get<lv2_config>().add_service_event(ev);
 
 		return ev;
 	}
@@ -393,9 +393,9 @@ public:
 	// Destructor
 	~lv2_config_service_event()
 	{
-		if (auto global = g_fxo->get<lv2_config>())
+		if (auto& global = g_fxo->get<lv2_config>(); !Emu.IsStopped())
 		{
-			global->remove_service_event(id);
+			global.remove_service_event(id);
 		}
 	}
 
@@ -403,10 +403,10 @@ public:
 	bool notify() const;
 
 	// Write event to buffer
-	void write(sys_config_service_event_t *dst);
+	void write(sys_config_service_event_t *dst) const;
 
 	// Check if the buffer can fit the current event, return false otherwise
-	bool check_buffer_size(size_t size) const { return service->get_size() <= size; }
+	bool check_buffer_size(usz size) const { return service->get_size() <= size; }
 };
 
 /*

@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QMap>
 
@@ -10,22 +10,26 @@ enum class emu_settings_type
 	// Core
 	PPUDecoder,
 	SPUDecoder,
-	LibLoadOptions,
 	HookStaticFuncs,
-	EnableThreadScheduler,
-	LowerSPUThreadPrio,
+	ThreadSchedulerMode,
 	SPULoopDetection,
 	PreferredSPUThreads,
 	PPUDebug,
 	SPUDebug,
+	MFCDebug,
 	MaxLLVMThreads,
+	PPULLVMPrecompilation,
 	EnableTSX,
 	AccurateGETLLAR,
 	AccurateSpuDMA,
+	AccurateClineStores,
 	AccurateLLVMdfma,
 	AccurateVectorNaN,
 	AccurateRSXAccess,
 	AccurateXFloat,
+	AccuratePPU128Loop,
+	MFCCommandsShuffling,
+	NumPPUThreads,
 	SetDAZandFTZ,
 	SPUBlockSize,
 	SPUCache,
@@ -34,6 +38,9 @@ enum class emu_settings_type
 	MaxSPURSThreads,
 	SleepTimersAccuracy,
 	ClocksScale,
+	PerformanceReport,
+	FullWidthAVX512,
+	PPULLVMJavaModeHandling,
 
 	// Graphics
 	Renderer,
@@ -49,7 +56,7 @@ enum class emu_settings_type
 	VSync,
 	DebugOutput,
 	DebugOverlay,
-	LegacyBuffers,
+	RenderdocCompatibility,
 	GPUTextureScaling,
 	StretchToDisplayArea,
 	VulkanAdapter,
@@ -64,19 +71,27 @@ enum class emu_settings_type
 	AnisotropicFilterOverride,
 	ResolutionScale,
 	MinimumScalableDimension,
+	FsrUpscalingEnable,
+	FsrSharpeningStrength,
 	ForceCPUBlitEmulation,
 	DisableOnDiskShaderCache,
 	DisableVulkanMemAllocator,
 	ShaderMode,
+	ShaderCompilerNumThreads,
 	MultithreadedRSX,
 	VBlankRate,
 	RelaxedZCULL,
+	PreciseZCULL,
 	DriverWakeUpDelay,
+	VulkanAsyncTextureUploads,
+	VulkanAsyncSchedulerDriver,
 
 	// Performance Overlay
 	PerfOverlayEnabled,
 	PerfOverlayFramerateGraphEnabled,
 	PerfOverlayFrametimeGraphEnabled,
+	PerfOverlayFramerateDatapoints,
+	PerfOverlayFrametimeDatapoints,
 	PerfOverlayDetailLevel,
 	PerfOverlayPosition,
 	PerfOverlayUpdateInterval,
@@ -111,6 +126,8 @@ enum class emu_settings_type
 	Camera,
 	CameraType,
 	Move,
+	Buzz,
+	Turntable,
 
 	// Misc
 	ExitRPCS3OnFinish,
@@ -129,6 +146,7 @@ enum class emu_settings_type
 	PSNStatus,
 
 	// System
+	LicenseArea,
 	Language,
 	KeyboardType,
 	EnterButtonAssignment,
@@ -136,37 +154,32 @@ enum class emu_settings_type
 	LimitCacheSize,
 	MaximumCacheSize,
 	ConsoleTimeOffset,
-
-	// Virtual File System
-	emulatorLocation,
-	dev_hdd0Location,
-	dev_hdd1Location,
-	dev_flashLocation,
-	dev_usb000Location,
 };
 
 /** A helper map that keeps track of where a given setting type is located*/
-static const QMap<emu_settings_type, cfg_location> settings_location =
+inline static const QMap<emu_settings_type, cfg_location> settings_location =
 {
 	// Core Tab
 	{ emu_settings_type::PPUDecoder,               { "Core", "PPU Decoder"}},
 	{ emu_settings_type::SPUDecoder,               { "Core", "SPU Decoder"}},
-	{ emu_settings_type::LibLoadOptions,           { "Core", "Lib Loader"}},
 	{ emu_settings_type::HookStaticFuncs,          { "Core", "Hook static functions"}},
-	{ emu_settings_type::EnableThreadScheduler,    { "Core", "Enable thread scheduler"}},
-	{ emu_settings_type::LowerSPUThreadPrio,       { "Core", "Lower SPU thread priority"}},
+	{ emu_settings_type::ThreadSchedulerMode,      { "Core", "Thread Scheduler Mode"}},
 	{ emu_settings_type::SPULoopDetection,         { "Core", "SPU loop detection"}},
 	{ emu_settings_type::PreferredSPUThreads,      { "Core", "Preferred SPU Threads"}},
 	{ emu_settings_type::PPUDebug,                 { "Core", "PPU Debug"}},
 	{ emu_settings_type::SPUDebug,                 { "Core", "SPU Debug"}},
+	{ emu_settings_type::MFCDebug,                 { "Core", "MFC Debug"}},
 	{ emu_settings_type::MaxLLVMThreads,           { "Core", "Max LLVM Compile Threads"}},
+	{ emu_settings_type::PPULLVMPrecompilation,    { "Core", "PPU LLVM Precompilation"}},
 	{ emu_settings_type::EnableTSX,                { "Core", "Enable TSX"}},
 	{ emu_settings_type::AccurateGETLLAR,          { "Core", "Accurate GETLLAR"}},
 	{ emu_settings_type::AccurateSpuDMA,           { "Core", "Accurate SPU DMA"}},
+	{ emu_settings_type::AccurateClineStores,      { "Core", "Accurate Cache Line Stores"}},
 	{ emu_settings_type::AccurateLLVMdfma,         { "Core", "LLVM Accurate DFMA"}},
 	{ emu_settings_type::AccurateVectorNaN,        { "Core", "PPU LLVM Accurate Vector NaN values"}},
 	{ emu_settings_type::AccurateRSXAccess,        { "Core", "Accurate RSX reservation access"}},
 	{ emu_settings_type::AccurateXFloat,           { "Core", "Accurate xfloat"}},
+	{ emu_settings_type::MFCCommandsShuffling,     { "Core", "MFC Commands Shuffling Limit"}},
 	{ emu_settings_type::SetDAZandFTZ,             { "Core", "Set DAZ and FTZ"}},
 	{ emu_settings_type::SPUBlockSize,             { "Core", "SPU Block Size"}},
 	{ emu_settings_type::SPUCache,                 { "Core", "SPU Cache"}},
@@ -174,6 +187,11 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MaxSPURSThreads,          { "Core", "Max SPURS Threads"}},
 	{ emu_settings_type::SleepTimersAccuracy,      { "Core", "Sleep Timers Accuracy"}},
 	{ emu_settings_type::ClocksScale,              { "Core", "Clocks scale"}},
+	{ emu_settings_type::AccuratePPU128Loop,       { "Core", "Accurate PPU 128-byte Reservation Op Max Length"}},
+	{ emu_settings_type::PerformanceReport,        { "Core", "Enable Performance Report"}},
+	{ emu_settings_type::FullWidthAVX512,          { "Core", "Full Width AVX-512"}},
+	{ emu_settings_type::NumPPUThreads,            { "Core", "PPU Threads"}},
+	{ emu_settings_type::PPULLVMJavaModeHandling,  { "Core", "PPU LLVM Java Mode Handling"}},
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   { "Video", "Renderer"}},
@@ -189,7 +207,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::VSync,                      { "Video", "VSync"}},
 	{ emu_settings_type::DebugOutput,                { "Video", "Debug output"}},
 	{ emu_settings_type::DebugOverlay,               { "Video", "Debug overlay"}},
-	{ emu_settings_type::LegacyBuffers,              { "Video", "Use Legacy OpenGL Buffers"}},
+	{ emu_settings_type::RenderdocCompatibility,     { "Video", "Renderdoc Compatibility Mode"}},
 	{ emu_settings_type::GPUTextureScaling,          { "Video", "Use GPU texture scaling"}},
 	{ emu_settings_type::StretchToDisplayArea,       { "Video", "Stretch To Display Area"}},
 	{ emu_settings_type::ForceHighpZ,                { "Video", "Force High Precision Z buffer"}},
@@ -204,8 +222,10 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DisableOnDiskShaderCache,   { "Video", "Disable On-Disk Shader Cache"}},
 	{ emu_settings_type::DisableVulkanMemAllocator,  { "Video", "Disable Vulkan Memory Allocator"}},
 	{ emu_settings_type::ShaderMode,                 { "Video", "Shader Mode"}},
+	{ emu_settings_type::ShaderCompilerNumThreads,   { "Video", "Shader Compiler Threads"}},
 	{ emu_settings_type::MultithreadedRSX,           { "Video", "Multithreaded RSX"}},
 	{ emu_settings_type::RelaxedZCULL,               { "Video", "Relaxed ZCULL Sync"}},
+	{ emu_settings_type::PreciseZCULL,               { "Video", "Accurate ZCULL stats"}},
 	{ emu_settings_type::AnisotropicFilterOverride,  { "Video", "Anisotropic Filter Override"}},
 	{ emu_settings_type::ResolutionScale,            { "Video", "Resolution Scale"}},
 	{ emu_settings_type::MinimumScalableDimension,   { "Video", "Minimum Scalable Dimension"}},
@@ -213,10 +233,18 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::VBlankRate,                 { "Video", "Vblank Rate"}},
 	{ emu_settings_type::DriverWakeUpDelay,          { "Video", "Driver Wake-Up Delay"}},
 
+	// Vulkan
+	{ emu_settings_type::VulkanAsyncTextureUploads,        { "Video", "Vulkan", "Asynchronous Texture Streaming 2"}},
+	{ emu_settings_type::VulkanAsyncSchedulerDriver,       { "Video", "Vulkan", "Asynchronous Queue Scheduler"}},
+	{ emu_settings_type::FsrUpscalingEnable,               { "Video", "Vulkan", "Enable FidelityFX Super Resolution Upscaling"}},
+	{ emu_settings_type::FsrSharpeningStrength,            { "Video", "Vulkan", "FidelityFX CAS Sharpening Intensity"}},
+
 	// Performance Overlay
 	{ emu_settings_type::PerfOverlayEnabled,               { "Video", "Performance Overlay", "Enabled" } },
 	{ emu_settings_type::PerfOverlayFramerateGraphEnabled, { "Video", "Performance Overlay", "Enable Framerate Graph" } },
 	{ emu_settings_type::PerfOverlayFrametimeGraphEnabled, { "Video", "Performance Overlay", "Enable Frametime Graph" } },
+	{ emu_settings_type::PerfOverlayFramerateDatapoints,   { "Video", "Performance Overlay", "Framerate datapoints" } },
+	{ emu_settings_type::PerfOverlayFrametimeDatapoints,   { "Video", "Performance Overlay", "Frametime datapoints" } },
 	{ emu_settings_type::PerfOverlayDetailLevel,           { "Video", "Performance Overlay", "Detail level" } },
 	{ emu_settings_type::PerfOverlayPosition,              { "Video", "Performance Overlay", "Position" } },
 	{ emu_settings_type::PerfOverlayUpdateInterval,        { "Video", "Performance Overlay", "Metrics update interval (ms)" } },
@@ -251,6 +279,8 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::Camera,          { "Input/Output", "Camera"}},
 	{ emu_settings_type::CameraType,      { "Input/Output", "Camera type"}},
 	{ emu_settings_type::Move,            { "Input/Output", "Move" }},
+	{ emu_settings_type::Buzz,            { "Input/Output", "Buzz emulated controller" }},
+	{ emu_settings_type::Turntable,       { "Input/Output", "Turntable emulated controller" }},
 
 	// Misc
 	{ emu_settings_type::ExitRPCS3OnFinish,         { "Miscellaneous", "Exit RPCS3 when process finishes" }},
@@ -270,6 +300,7 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::PSNStatus,      { "Net", "PSN status"}},
 
 	// System
+	{ emu_settings_type::LicenseArea,           { "System", "License Area"}},
 	{ emu_settings_type::Language,              { "System", "Language"}},
 	{ emu_settings_type::KeyboardType,          { "System", "Keyboard Type"} },
 	{ emu_settings_type::EnterButtonAssignment, { "System", "Enter button assignment"}},
@@ -277,11 +308,4 @@ static const QMap<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::LimitCacheSize,        { "VFS", "Limit disk cache size"}},
 	{ emu_settings_type::MaximumCacheSize,      { "VFS", "Disk cache maximum size (MB)"}},
 	{ emu_settings_type::ConsoleTimeOffset,     { "System", "Console time offset (s)"}},
-
-	// Virtual File System
-	{ emu_settings_type::emulatorLocation,   { "VFS", "$(EmulatorDir)"}},
-	{ emu_settings_type::dev_hdd0Location,   { "VFS", "/dev_hdd0/" }},
-	{ emu_settings_type::dev_hdd1Location,   { "VFS", "/dev_hdd1/" }},
-	{ emu_settings_type::dev_flashLocation,  { "VFS", "/dev_flash/"}},
-	{ emu_settings_type::dev_usb000Location, { "VFS", "/dev_usb000/"}},
 };

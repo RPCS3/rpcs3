@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <string>
 #include <QObject>
@@ -34,28 +34,28 @@ private:
 	{
 		switch (id)
 		{
-		case localized_string_id::RSX_OVERLAYS_TROPHY_BRONZE: return tr("You have earned the bronze trophy\n%0", "Trophy text").arg(std::forward<Args>(args)...);
-		case localized_string_id::RSX_OVERLAYS_TROPHY_SILVER: return tr("You have earned the silver trophy\n%0", "Trophy text").arg(std::forward<Args>(args)...);
-		case localized_string_id::RSX_OVERLAYS_TROPHY_GOLD: return tr("You have earned the gold trophy\n%0", "Trophy text").arg(std::forward<Args>(args)...);
-		case localized_string_id::RSX_OVERLAYS_TROPHY_PLATINUM: return tr("You have earned the platinum trophy\n%0", "Trophy text").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_TROPHY_BRONZE: return tr("You have earned a bronze trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_TROPHY_SILVER: return tr("You have earned a silver trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_TROPHY_GOLD: return tr("You have earned a gold trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_TROPHY_PLATINUM: return tr("You have earned a platinum trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS: return tr("Compiling shaders");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_YES: return tr("Yes", "Message Dialog");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_NO: return tr("No", "Message Dialog");
-		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_CANCEL: return tr("Cancel", "Message Dialog");
+		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_CANCEL: return tr("Back", "Message Dialog");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_OK: return tr("OK", "Message Dialog");
 		case localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_TITLE: return tr("Save Dialog", "Save Dialog");
 		case localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_DELETE: return tr("Delete Save", "Save Dialog");
 		case localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_LOAD: return tr("Load Save", "Save Dialog");
 		case localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_SAVE: return tr("Save", "Save Dialog");
-		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ACCEPT: return tr("Accept", "OSK Dialog");
-		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_CANCEL: return tr("Cancel", "OSK Dialog");
+		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ACCEPT: return tr("Enter", "OSK Dialog");
+		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_CANCEL: return tr("Back", "OSK Dialog");
 		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SPACE: return tr("Space", "OSK Dialog");
 		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_BACKSPACE: return tr("Backspace", "OSK Dialog");
 		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_SHIFT: return tr("Shift", "OSK Dialog");
 		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ENTER_TEXT: return tr("[Enter Text]", "OSK Dialog");
 		case localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ENTER_PASSWORD: return tr("[Enter Password]", "OSK Dialog");
-		case localized_string_id::RSX_OVERLAYS_LIST_SELECT: return tr("Select", "Save Dialog List");
-		case localized_string_id::RSX_OVERLAYS_LIST_CANCEL: return tr("Cancel", "Save Dialog List");
+		case localized_string_id::RSX_OVERLAYS_LIST_SELECT: return tr("Enter", "Enter Dialog List");
+		case localized_string_id::RSX_OVERLAYS_LIST_CANCEL: return tr("Back", "Cancel Dialog List");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_GAMEDATA: return tr("ERROR: Game data is corrupted. The application will continue.", "Game Error");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_HDDGAME: return tr("ERROR: HDD boot game is corrupted. The application will continue.", "Game Error");
 		case localized_string_id::CELL_GAME_ERROR_BROKEN_EXIT_GAMEDATA: return tr("ERROR: Game data is corrupted. The application will be terminated.", "Game Error");
@@ -65,6 +65,14 @@ private:
 		case localized_string_id::CELL_GAME_ERROR_DIR_NAME: return tr("Directory name: %0", "Game Error").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_GAME_DATA_EXIT_BROKEN: return tr("There has been an error!\n\nPlease remove the game data for this title.", "Game Error");
 		case localized_string_id::CELL_HDD_GAME_EXIT_BROKEN: return tr("There has been an error!\n\nPlease reinstall the HDD boot game.", "Game Error");
+		case localized_string_id::CELL_HDD_GAME_CHECK_NOSPACE: return tr("Not enough space to create HDD boot game.\nSpace Needed: %0 KB", "HDD Game Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_HDD_GAME_CHECK_BROKEN: return tr("HDD boot game %0 is corrupt!", "HDD Game Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_HDD_GAME_CHECK_NODATA: return tr("HDD boot game %0 could not be found!", "HDD Game Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_HDD_GAME_CHECK_INVALID: return tr("Error: %0", "HDD Game Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_GAMEDATA_CHECK_NOSPACE: return tr("Not enough space to create game data.\nSpace Needed: %0 KB", "Gamedata Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_GAMEDATA_CHECK_BROKEN: return tr("The game data in %0 is corrupt!", "Gamedata Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_GAMEDATA_CHECK_NODATA: return tr("The game data in %0 could not be found!", "Gamedata Check Error").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_GAMEDATA_CHECK_INVALID: return tr("Error: %0", "Gamedata Check Error").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010001: return tr("The resource is temporarily unavailable.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010002: return tr("Invalid argument or flag.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_MSG_DIALOG_ERROR_80010003: return tr("The feature is not yet implemented.\n(%0)", "Error code").arg(std::forward<Args>(args)...);
@@ -132,12 +140,15 @@ private:
 		case localized_string_id::CELL_SAVEDATA_CB_FAILURE: return tr("Error - Failed to save or load", "Savedata Error");
 		case localized_string_id::CELL_SAVEDATA_CB_NO_DATA: return tr("Error - Save data cannot be found", "Savedata Error");
 		case localized_string_id::CELL_SAVEDATA_CB_NO_SPACE: return tr("Error - Insufficient free space\n\nSpace needed: %0 KB", "Savedata Error").arg(std::forward<Args>(args)...);
-		case localized_string_id::CELL_SAVEDATA_CREATE_CONFIRMATION: return tr("Create new Save Data?", "Savedata Dialog");
-		case localized_string_id::CELL_SAVEDATA_DELETE_CONFIRMATION: return tr("Do you really want to delete this entry?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
-		case localized_string_id::CELL_SAVEDATA_DELETE_SUCCESS: return tr("Successfully removed entry!\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
-		case localized_string_id::CELL_SAVEDATA_DELETE: return tr("Delete this entry?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
-		case localized_string_id::CELL_SAVEDATA_LOAD: return tr("Load this entry?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
-		case localized_string_id::CELL_SAVEDATA_OVERWRITE: return tr("Overwrite this entry?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_SAVEDATA_NO_DATA: return tr("There is no saved data.", "Savedata entry info");
+		case localized_string_id::CELL_SAVEDATA_NEW_SAVED_DATA_TITLE: return tr("New Saved Data", "Savedata Dialog");
+		case localized_string_id::CELL_SAVEDATA_NEW_SAVED_DATA_SUB_TITLE: return tr("Select to create a new entry", "Savedata Dialog");
+		case localized_string_id::CELL_SAVEDATA_SAVE_CONFIRMATION: return tr("Do you want to save this data?", "Savedata Dialog");
+		case localized_string_id::CELL_SAVEDATA_DELETE_CONFIRMATION: return tr("Do you really want to delete this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_SAVEDATA_DELETE_SUCCESS: return tr("Successfully removed data!\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_SAVEDATA_DELETE: return tr("Delete this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_SAVEDATA_LOAD: return tr("Load this data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_SAVEDATA_OVERWRITE: return tr("Do you want to overwrite the saved data?\n\n%0", "Savedata entry info").arg(std::forward<Args>(args)...);
 
 		case localized_string_id::INVALID: return tr("Invalid");
 		default: return tr("Unknown");

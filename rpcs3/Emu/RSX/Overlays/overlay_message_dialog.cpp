@@ -1,14 +1,19 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_message_dialog.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/IdManager.h"
+#include "Utilities/Thread.h"
+
+#include <thread>
 
 namespace rsx
 {
 	namespace overlays
 	{
-		message_dialog::message_dialog(bool use_custom_background)
+		message_dialog::message_dialog(bool allow_custom_background)
+			: custom_background_allowed(allow_custom_background)
 		{
 			background.set_size(1280, 720);
 			background.back_color.a = 0.85f;
@@ -50,26 +55,7 @@ namespace rsx
 				btn_cancel.set_image_resource(resource_config::standard_image_resource::circle);
 			}
 
-			if (use_custom_background)
-			{
-				const auto picture_path = Emu.GetBackgroundPicturePath();
-
-				if (fs::exists(picture_path))
-				{
-					background_image = std::make_unique<image_info>(picture_path.c_str());
-
-					if (background_image->data)
-					{
-						const f32 color              = (100 - g_cfg.video.shader_preloading_dialog.darkening_strength) / 100.f;
-						background_poster.fore_color = color4f(color, color, color, 1.);
-						background.back_color.a      = 0.f;
-
-						background_poster.set_size(1280, 720);
-						background_poster.set_raw_image(background_image.get());
-						background_poster.set_blur_strength(static_cast<u8>(g_cfg.video.shader_preloading_dialog.blur_strength));
-					}
-				}
-			}
+			update_custom_background();
 
 			return_code = CELL_MSGDIALOG_BUTTON_NONE;
 		}
@@ -82,6 +68,8 @@ namespace rsx
 			}
 
 			compiled_resource result;
+
+			update_custom_background();
 
 			if (background_image && background_image->data)
 			{
@@ -145,7 +133,8 @@ namespace rsx
 					// Ignore cancel operation for Ok-only
 					return;
 				}
-				else if (cancel_only)
+
+				if (cancel_only)
 				{
 					return_code = CELL_MSGDIALOG_BUTTON_ESCAPE;
 				}
@@ -161,6 +150,21 @@ namespace rsx
 
 			close(true, true);
 		}
+
+		void message_dialog::close(bool use_callback, bool stop_pad_interception)
+		{
+			if (num_progress_bars > 0)
+			{
+				Emu.GetCallbacks().handle_taskbar_progress(0, 1);
+			}
+
+			user_interface::close(use_callback, stop_pad_interception);
+		}
+
+		struct msg_dialog_thread
+		{
+			static constexpr auto thread_name = "MsgDialog Thread"sv;
+		};
 
 		error_code message_dialog::show(bool is_blocking, const std::string& text, const MsgDialogType& type, std::function<void(s32 status)> on_close)
 		{
@@ -184,11 +188,7 @@ namespace rsx
 				btn_cancel.translate(0, offset);
 			}
 
-			text_display.set_text(text);
-
-			u16 text_w, text_h;
-			text_display.measure_text(text_w, text_h);
-			text_display.translate(0, -(text_h - 16));
+			set_text(text);
 
 			switch (type.button_type.unshifted())
 			{
@@ -221,7 +221,7 @@ namespace rsx
 			{
 				if (interactive)
 				{
-					if (auto error = run_input_loop())
+					if (const auto error = run_input_loop())
 					{
 						rsx_log.error("Dialog input loop exited with error code=%d", error);
 						return error;
@@ -242,15 +242,23 @@ namespace rsx
 			{
 				if (!exit)
 				{
-					g_fxo->init<named_thread>("MsgDialog Thread", [&, tbit = alloc_thread_bit()]()
+					auto& dlg_thread = g_fxo->get<named_thread<msg_dialog_thread>>();
+
+					const auto notify = std::make_shared<atomic_t<bool>>(false);
+
+					dlg_thread([&, notify]()
 					{
+						const u64 tbit = alloc_thread_bit();
 						g_thread_bit = tbit;
+
+						*notify = true;
+						notify->notify_one();
 
 						if (interactive)
 						{
-							auto ref = g_fxo->get<display_manager>()->get(uid);
+							auto ref = g_fxo->get<display_manager>().get(uid);
 
-							if (auto error = run_input_loop())
+							if (const auto error = run_input_loop())
 							{
 								rsx_log.error("Dialog input loop exited with error code=%d", error);
 							}
@@ -264,7 +272,7 @@ namespace rsx
 								// Only update the screen at about 60fps since updating it everytime slows down the process
 								std::this_thread::sleep_for(16ms);
 
-								if (!g_fxo->get<display_manager>())
+								if (!g_fxo->is_init<display_manager>())
 								{
 									rsx_log.fatal("display_manager was improperly destroyed");
 									break;
@@ -275,13 +283,81 @@ namespace rsx
 						thread_bits &= ~tbit;
 						thread_bits.notify_all();
 					});
+
+					while (dlg_thread < thread_state::errored && !*notify)
+					{
+						notify->wait(false, atomic_wait_timeout{1'000'000});
+					}
 				}
 			}
 
 			return CELL_OK;
 		}
 
-		u32 message_dialog::progress_bar_count()
+		void message_dialog::set_text(const std::string& text)
+		{
+			u16 text_w, text_h;
+			text_display.set_pos(90, 364);
+			text_display.set_text(text);
+			text_display.measure_text(text_w, text_h);
+			text_display.translate(0, -(text_h - 16));
+		}
+
+		void message_dialog::update_custom_background()
+		{
+			if (custom_background_allowed && g_cfg.video.shader_preloading_dialog.use_custom_background)
+			{
+				bool dirty = std::exchange(background_blur_strength, g_cfg.video.shader_preloading_dialog.blur_strength.get()) != background_blur_strength;
+				dirty     |= std::exchange(background_darkening_strength, g_cfg.video.shader_preloading_dialog.darkening_strength.get()) != background_darkening_strength;
+
+				if (!background_image)
+				{
+					if (const auto picture_path = Emu.GetBackgroundPicturePath(); fs::exists(picture_path))
+					{
+						background_image = std::make_unique<image_info>(picture_path.c_str());
+						dirty |= !!background_image->data;
+					}
+				}
+
+				if (dirty && background_image && background_image->data)
+				{
+					const f32 color              = (100 - background_darkening_strength) / 100.f;
+					background_poster.fore_color = color4f(color, color, color, 1.);
+					background.back_color.a      = 0.f;
+
+					background_poster.set_size(1280, 720);
+					background_poster.set_raw_image(background_image.get());
+					background_poster.set_blur_strength(static_cast<u8>(background_blur_strength));
+
+					ensure(background_image->w > 0);
+					ensure(background_image->h > 0);
+					ensure(background_poster.h > 0);
+
+					// Set padding in order to keep the aspect ratio
+					if ((background_image->w / static_cast<double>(background_image->h)) > (background_poster.w / static_cast<double>(background_poster.h)))
+					{
+						const int padding = (background_poster.h - static_cast<int>(background_image->h * (background_poster.w / static_cast<double>(background_image->w)))) / 2;
+						background_poster.set_padding(0, 0, padding, padding);
+					}
+					else
+					{
+						const int padding = (background_poster.w - static_cast<int>(background_image->w * (background_poster.h / static_cast<double>(background_image->h)))) / 2;
+						background_poster.set_padding(padding, padding, 0, 0);
+					}
+				}
+			}
+			else
+			{
+				if (background_image)
+				{
+					background_poster.clear_image();
+					background_image.reset();
+				}
+				background.back_color.a = 0.85f;
+			}
+		}
+
+		u32 message_dialog::progress_bar_count() const
 		{
 			return num_progress_bars;
 		}
@@ -316,6 +392,22 @@ namespace rsx
 
 			if (index == static_cast<u32>(taskbar_index) || taskbar_index == -1)
 				Emu.GetCallbacks().handle_taskbar_progress(1, static_cast<s32>(value));
+
+			return CELL_OK;
+		}
+
+		error_code message_dialog::progress_bar_set_value(u32 index, f32 value)
+		{
+			if (index >= num_progress_bars)
+				return CELL_MSGDIALOG_ERROR_PARAM;
+
+			if (index == 0)
+				progress_1.set_value(value);
+			else
+				progress_2.set_value(value);
+
+			if (index == static_cast<u32>(taskbar_index) || taskbar_index == -1)
+				Emu.GetCallbacks().handle_taskbar_progress(3, static_cast<s32>(value));
 
 			return CELL_OK;
 		}

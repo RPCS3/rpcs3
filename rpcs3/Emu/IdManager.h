@@ -1,10 +1,18 @@
-﻿#pragma once
+#pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "Utilities/mutex.h"
 
 #include <memory>
 #include <vector>
+
+#include "util/fixed_typemap.hpp"
+
+extern stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
+
+constexpr auto* g_fxo = &g_fixed_typemap;
+
+enum class thread_state : u32;
 
 // Helper namespace
 namespace id_manager
@@ -47,8 +55,8 @@ namespace id_manager
 
 		static constexpr std::pair<u32, u32> invl_range = invl_range_extract_impl<T>::invl_range;
 
-		static_assert(count && step && u64{step} * (count - 1) + base < u64{UINT32_MAX} + (base != 0 ? 1 : 0), "ID traits: invalid object range");
-	
+		static_assert(count && step && u64{step} * (count - 1) + base < u32{umax} + u64{base != 0 ? 1 : 0}, "ID traits: invalid object range");
+
 		// TODO: Add more conditions
 		static_assert(!invl_range.second || (u64{invl_range.second} + invl_range.first <= 32 /*....*/ ));
 	};
@@ -132,7 +140,41 @@ namespace id_manager
 		}
 	};
 
-	using id_map = std::vector<std::pair<id_key, std::shared_ptr<void>>>;
+	template <typename T>
+	struct id_map
+	{
+		std::vector<std::pair<id_key, std::shared_ptr<void>>> vec{}, private_copy{};
+		shared_mutex mutex{}; // TODO: Use this instead of global mutex
+
+		id_map()
+		{
+			// Preallocate memory
+			vec.reserve(T::id_count);
+		}
+
+		template <bool dummy = false> requires (std::is_assignable_v<T&, thread_state>)
+		id_map& operator=(thread_state state)
+		{
+			if (private_copy.empty())
+			{
+				reader_lock lock(g_mutex);
+
+				// Save all entries
+				private_copy = vec;
+			}
+
+			// Signal or join threads
+			for (const auto& [key, ptr] : private_copy)
+			{
+				if (ptr)
+				{
+					*static_cast<T*>(ptr.get()) = state;
+				}
+			}
+
+			return *this;
+		}
+	};
 }
 
 // Object manager for emulated process. Multiple objects of specified arbitrary type are given unique IDs.
@@ -140,9 +182,6 @@ class idm
 {
 	// Last allocated ID for constructors
 	static thread_local u32 g_id;
-
-	// Type Index -> ID -> Object. Use global since only one process is supported atm.
-	static std::vector<id_manager::id_map> g_map;
 
 	template <typename T>
 	static inline u32 get_type()
@@ -248,12 +287,14 @@ class idm
 		}
 	};
 
+	using map_data = std::pair<id_manager::id_key, std::shared_ptr<void>>;
+
 	// Prepare new ID (returns nullptr if out of resources)
-	static id_manager::id_map::pointer allocate_id(const id_manager::id_key& info, u32 base, u32 step, u32 count, std::pair<u32, u32> invl_range);
+	static map_data* allocate_id(std::vector<map_data>& vec, u32 type_id, u32 base, u32 step, u32 count, std::pair<u32, u32> invl_range);
 
 	// Find ID (additionally check type if types are not equal)
 	template <typename T, typename Type>
-	static id_manager::id_map::pointer find_id(u32 id)
+	static map_data* find_id(u32 id)
 	{
 		static_assert(id_manager::id_verify<T, Type>::value, "Invalid ID type combination");
 
@@ -264,7 +305,7 @@ class idm
 			return nullptr;
 		}
 
-		auto& vec = g_map[get_type<T>()];
+		auto& vec = g_fxo->get<id_manager::id_map<T>>().vec;
 
 		if (index >= vec.size())
 		{
@@ -289,12 +330,9 @@ class idm
 
 	// Allocate new ID and assign the object from the provider()
 	template <typename T, typename Type, typename F>
-	static id_manager::id_map::pointer create_id(F&& provider)
+	static map_data* create_id(F&& provider)
 	{
 		static_assert(id_manager::id_verify<T, Type>::value, "Invalid ID type combination");
-
-		// ID info
-		const id_manager::id_key info{get_type<T>(), get_type<Type>()};
 
 		// ID traits
 		using traits = id_manager::id_traits<Type>;
@@ -302,7 +340,9 @@ class idm
 		// Allocate new id
 		std::lock_guard lock(id_manager::g_mutex);
 
-		if (auto* place = allocate_id(info, traits::base, traits::step, traits::count, traits::invl_range))
+		auto& map = g_fxo->get<id_manager::id_map<T>>();
+
+		if (auto* place = allocate_id(map.vec, get_type<Type>(), traits::base, traits::step, traits::count, traits::invl_range))
 		{
 			// Get object, store it
 			place->second = provider();
@@ -317,18 +357,13 @@ class idm
 	}
 
 public:
-	// Initialize object manager
-	static void init();
-
-	// Remove all objects
-	static void clear();
 
 	// Remove all objects of a type
 	template <typename T>
 	static inline void clear()
 	{
 		std::lock_guard lock(id_manager::g_mutex);
-		g_map[id_manager::typeinfo::get_index<T>()].clear();
+		g_fxo->get<id_manager::id_map<T>>().vec.clear();
 	}
 
 	// Get last ID (updated in create_id/allocate_id)
@@ -387,7 +422,7 @@ public:
 
 	// Access the ID record without locking (unsafe)
 	template <typename T, typename Get = T>
-	static inline id_manager::id_map::pointer find_unlocked(u32 id)
+	static inline map_data* find_unlocked(u32 id)
 	{
 		return find_id<T, Get>(id);
 	}
@@ -508,7 +543,7 @@ public:
 
 		u32 result = 0;
 
-		for (auto& id : g_map[get_type<T>()])
+		for (auto& id : g_fxo->get<id_manager::id_map<T>>().vec)
 		{
 			if (id.second)
 			{
@@ -534,7 +569,7 @@ public:
 
 		reader_lock lock(id_manager::g_mutex);
 
-		for (auto& id : g_map[get_type<T>()])
+		for (auto& id : g_fxo->get<id_manager::id_map<T>>().vec)
 		{
 			if (auto ptr = static_cast<object_type*>(id.second.get()))
 			{
@@ -580,7 +615,7 @@ public:
 		{
 			std::lock_guard lock(id_manager::g_mutex);
 
-			if (const auto found = find_id<T, Get>(id); found && 
+			if (const auto found = find_id<T, Get>(id); found &&
 				(!found->second.owner_before(sptr) && !sptr.owner_before(found->second)))
 			{
 				ptr = std::move(found->second);
@@ -643,9 +678,3 @@ public:
 		return {nullptr};
 	}
 };
-
-#include "util/fixed_typemap.hpp"
-
-extern stx::manual_fixed_typemap<void> g_fixed_typemap;
-
-constexpr stx::manual_fixed_typemap<void>* g_fxo = &g_fixed_typemap;

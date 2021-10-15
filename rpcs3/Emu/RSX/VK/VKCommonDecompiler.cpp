@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKCommonDecompiler.h"
 
 #ifdef _MSC_VER
@@ -8,10 +8,12 @@
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
 #endif
-#include "restore_new.h"
+#endif
 #include "SPIRV/GlslangToSpv.h"
-#include "define_new_memleakdetect.h"
 #include "spirv-tools/optimizer.hpp"
 #ifdef _MSC_VER
 #pragma warning(pop)
@@ -150,7 +152,7 @@ namespace vk
 			}
 		}
 
-		fmt::throw_exception("Unknown register name: %s" HERE, varying_register_name);
+		fmt::throw_exception("Unknown register name: %s", varying_register_name);
 	}
 
 	bool compile_glsl_to_spv(std::string& shader, program_domain domain, std::vector<u32>& spv)
@@ -183,11 +185,11 @@ namespace vk
 				glslang::GlslangToSpv(*program.getIntermediate(lang), spv, &options);
 
 				// Now we optimize
-				spvtools::Optimizer optimizer(SPV_ENV_VULKAN_1_0);
-				optimizer.RegisterPass(spvtools::CreateUnifyConstantPass());      // Remove duplicate constants
-				optimizer.RegisterPass(spvtools::CreateMergeReturnPass());        // Huge savings in vertex interpreter and likely normal vertex shaders
-				optimizer.RegisterPass(spvtools::CreateAggressiveDCEPass());      // Remove dead code
-				optimizer.Run(spv.data(), spv.size(), &spv);
+				//spvtools::Optimizer optimizer(SPV_ENV_VULKAN_1_0);
+				//optimizer.RegisterPass(spvtools::CreateUnifyConstantPass());      // Remove duplicate constants
+				//optimizer.RegisterPass(spvtools::CreateMergeReturnPass());        // Huge savings in vertex interpreter and likely normal vertex shaders
+				//optimizer.RegisterPass(spvtools::CreateAggressiveDCEPass());      // Remove dead code
+				//optimizer.Run(spv.data(), spv.size(), &spv);
 			}
 		}
 		else

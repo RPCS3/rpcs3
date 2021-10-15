@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "sys_sync.h"
 #include "sys_mutex.h"
@@ -22,8 +22,6 @@ struct lv2_cond final : lv2_obj
 {
 	static const u32 id_base = 0x86000000;
 
-	const u32 shared;
-	const s32 flags;
 	const u64 key;
 	const u64 name;
 	const u32 mtx_id;
@@ -32,10 +30,8 @@ struct lv2_cond final : lv2_obj
 	atomic_t<u32> waiters{0};
 	std::deque<cpu_thread*> sq;
 
-	lv2_cond(u32 shared, s32 flags, u64 key, u64 name, u32 mtx_id, std::shared_ptr<lv2_mutex> mutex)
-		: shared(shared)
-		, flags(flags)
-		, key(key)
+	lv2_cond(u64 key, u64 name, u32 mtx_id, std::shared_ptr<lv2_mutex> mutex)
+		: key(key)
 		, name(name)
 		, mtx_id(mtx_id)
 		, mutex(std::move(mutex))
@@ -44,18 +40,15 @@ struct lv2_cond final : lv2_obj
 
 	CellError on_id_create()
 	{
-		if (!mutex->obj_count.fetch_op([](typename lv2_mutex::count_info& info)
+		if (mutex->exists)
 		{
-			if (info.mutex_count)
-				return info.cond_count++, true;
-			return false;
-		}).second)
-		{
-			// Mutex has been destroyed, cannot create conditional variable
-			return CELL_ESRCH;
+			mutex->cond_count++;
+			exists++;
+			return {};
 		}
 
-		return {};
+		// Mutex has been destroyed, cannot create conditional variable
+		return CELL_ESRCH;
 	}
 };
 

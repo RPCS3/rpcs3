@@ -1,5 +1,6 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/system_config_types.h"
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/rsx_utils.h"
@@ -118,13 +119,13 @@ error_code cellVideoOutGetState(u32 videoOut, u32 deviceIndex, vm::ptr<CellVideo
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
 	{
-		const auto conf = g_fxo->get<rsx::avconf>();
+		auto& conf = g_fxo->get<rsx::avconf>();
 		state->state = CELL_VIDEO_OUT_OUTPUT_STATE_ENABLED;
 		state->colorSpace = CELL_VIDEO_OUT_COLOR_SPACE_RGB;
-		state->displayMode.resolutionId = conf->state? conf->resolution_id : g_video_out_resolution_id.at(g_cfg.video.resolution);
+		state->displayMode.resolutionId = conf.state ? conf.resolution_id : g_video_out_resolution_id.at(g_cfg.video.resolution);
 		state->displayMode.scanMode = CELL_VIDEO_OUT_SCAN_MODE_PROGRESSIVE;
 		state->displayMode.conversion = CELL_VIDEO_OUT_DISPLAY_CONVERSION_NONE;
-		state->displayMode.aspect = conf->state? conf->aspect : g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
+		state->displayMode.aspect = conf.state ? conf.aspect : g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
 		state->displayMode.refreshRates = CELL_VIDEO_OUT_REFRESH_RATE_59_94HZ;
 
 		return CELL_OK;
@@ -186,20 +187,20 @@ error_code cellVideoOutConfigure(u32 videoOut, vm::ptr<CellVideoOutConfiguration
 		return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_DISPLAY_MODE;
 	}
 
-	auto conf = g_fxo->get<rsx::avconf>();
-	conf->resolution_id = config->resolutionId;
-	conf->_3d = config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING;
-	conf->aspect = config->aspect;
-	conf->format = config->format;
-	conf->scanline_pitch = config->pitch;
-	conf->resolution_x = res.width;
-	conf->resolution_y = res.height;
-	conf->state = 1;
+	auto& conf = g_fxo->get<rsx::avconf>();
+	conf.resolution_id = config->resolutionId;
+	conf._3d = config->resolutionId >= CELL_VIDEO_OUT_RESOLUTION_720_3D_FRAME_PACKING;
+	conf.aspect = config->aspect;
+	conf.format = config->format;
+	conf.scanline_pitch = config->pitch;
+	conf.resolution_x = res.width;
+	conf.resolution_y = res.height;
+	conf.state = 1;
 
-	if (conf->aspect == CELL_VIDEO_OUT_ASPECT_AUTO)
+	if (conf.aspect == CELL_VIDEO_OUT_ASPECT_AUTO)
 	{
 		// Resolve 'auto' option to actual aspect ratio
-		conf->aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
+		conf.aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
 	}
 
 	cellSysutil.notice("Selected video resolution 0x%x", config->resolutionId);
@@ -223,12 +224,12 @@ error_code cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfig
 	{
 	case CELL_VIDEO_OUT_PRIMARY:
 	{
-		if (auto conf = g_fxo->get<rsx::avconf>(); conf->state)
+		if (auto& conf = g_fxo->get<rsx::avconf>(); conf.state)
 		{
-			config->resolutionId = conf->resolution_id;
-			config->format = conf->format;
-			config->aspect = conf->aspect;
-			config->pitch = conf->scanline_pitch;
+			config->resolutionId = conf.resolution_id;
+			config->format = conf.format;
+			config->aspect = conf.aspect;
+			config->pitch = conf.scanline_pitch;
 		}
 		else
 		{
@@ -237,7 +238,7 @@ error_code cellVideoOutGetConfiguration(u32 videoOut, vm::ptr<CellVideoOutConfig
 			config->aspect = g_video_out_aspect_id.at(g_cfg.video.aspect_ratio);
 
 			CellVideoOutResolution res;
-			verify("Invalid video configuration" HERE), _IntGetResolutionInfo(config->resolutionId, &res) == CELL_OK;
+			ensure(_IntGetResolutionInfo(config->resolutionId, &res) == CELL_OK); // "Invalid video configuration"
 
 			config->pitch = 4 * res.width;
 		}
@@ -359,6 +360,11 @@ error_code cellVideoOutGetResolutionAvailability(u32 videoOut, u32 resolutionId,
 
 	return CELL_VIDEO_OUT_ERROR_UNSUPPORTED_VIDEO_OUT;
 }
+
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 error_code cellVideoOutGetConvertCursorColorInfo(vm::ptr<u8> rgbOutputRange)
 {

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -66,7 +66,8 @@ error_code cellFontInitializeWithRevision(u64 revisionFlags, vm::ptr<CellFontCon
 
 error_code cellFontGetRevisionFlags(vm::ptr<u64> revisionFlags)
 {
-	UNIMPLEMENTED_FUNC(cellFont);
+	cellFont.todo("cellFontGetRevisionFlags(*0x%x)", revisionFlags);
+
 	return CELL_OK;
 }
 
@@ -118,7 +119,7 @@ error_code cellFontOpenFontFile(vm::ptr<CellFontLibrary> library, vm::cptr<char>
 	return ret;
 }
 
-error_code cellFontOpenFontset(ppu_thread& ppu, vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
+error_code cellFontOpenFontset(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
 {
 	cellFont.warning("cellFontOpenFontset(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
 
@@ -353,10 +354,9 @@ error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::pt
 	}
 
 	// Get the baseLineY value
-	s32 baseLineY;
 	s32 ascent, descent, lineGap;
 	stbtt_GetFontVMetrics(font->stbfont, &ascent, &descent, &lineGap);
-	baseLineY = static_cast<int>(ascent * scale); // ???
+	const s32 baseLineY = static_cast<int>(ascent * scale); // ???
 
 	// Move the rendered character to the surface
 	unsigned char* buffer = vm::_ptr<unsigned char>(surface->buffer.addr());
@@ -374,7 +374,7 @@ error_code cellFontRenderCharGlyphImage(vm::ptr<CellFont> font, u32 code, vm::pt
 			buffer[(static_cast<s32>(y) + ypos + yoff + baseLineY) * surface->width + static_cast<s32>(x) + xpos] = box[ypos * width + xpos];
 		}
 	}
-	stbtt_FreeBitmap(box, 0);
+	stbtt_FreeBitmap(box, nullptr);
 	return CELL_OK;
 }
 
@@ -388,7 +388,7 @@ error_code cellFontSetEffectSlant(vm::ptr<CellFont> font, float slantParam)
 {
 	cellFont.trace("cellFontSetEffectSlant(font=*0x%x, slantParam=%f)", font, slantParam);
 
-	if (slantParam < -1.0 || slantParam > 1.0)
+	if (slantParam < -1.0f || slantParam > 1.0f)
 	{
 		return CELL_FONT_ERROR_INVALID_PARAMETER;
 	}
@@ -458,7 +458,7 @@ error_code cellFontGraphicsSetFontRGBA()
 	return CELL_OK;
 }
 
-error_code cellFontOpenFontsetOnMemory(ppu_thread& ppu, vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
+error_code cellFontOpenFontsetOnMemory(vm::ptr<CellFontLibrary> library, vm::ptr<CellFontType> fontType, vm::ptr<CellFont> font)
 {
 	cellFont.todo("cellFontOpenFontsetOnMemory(library=*0x%x, fontType=*0x%x, font=*0x%x)", library, fontType, font);
 

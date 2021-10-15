@@ -9,7 +9,7 @@
 # Compiled Static libraries
 *.lai
 *.la
-# *.a # Commented out since OpenAL Soft's binaries use this extension.
+*.a
 *.opensdf
 *.sdf
 *.suo
@@ -37,13 +37,13 @@
 /rpcs3/Debug
 /rpcs3/Release
 /llvm_build
-/3rdparty/llvm_build
-/Vulkan/Vulkan-build
-/Vulkan/glslang-build
-/Vulkan/spirv-tools-build
 
 !/bin
 /bin/*
+
+# Audio DLLs
+!/bin/soft_oal.dll
+!/bin/xaudio2_9redist.dll
 
 # Themes
 !/bin/GuiConfigs/
@@ -51,6 +51,9 @@
 /bin/GuiConfigs/*.ini.*
 /bin/GuiConfigs/*.dat
 /bin/GuiConfigs/*.dat.*
+
+# Some data from git
+!/bin/git/
 
 # Visual Studio Files
 .vs/*
@@ -62,6 +65,8 @@
 *.vcxproj.user
 enc_temp_folder/*
 CMakeSettings.json
+*PVS-Studio*
+PVS/*
 
 # Ignore other system generated files
 x64/*
@@ -116,3 +121,5 @@ yaml-cpp.pc
 
 # ssl certificate
 cacert.pem
+
+_ReSharper.*/

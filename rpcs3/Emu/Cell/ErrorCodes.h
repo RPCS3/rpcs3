@@ -1,13 +1,81 @@
 #pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
+#include "Utilities/StrFmt.h"
+
+// Error code type (return type), implements error reporting.
+class error_code
+{
+	s32 value;
+
+public:
+	error_code() = default;
+
+	// Implementation must be provided independently
+	static s32 error_report(s32 result, const char* fmt, const fmt_type_info* sup, const u64* args);
+
+	// Common constructor
+	template<typename ET>
+	error_code(const ET& value)
+		: value(error_report(static_cast<s32>(value), " : %s", fmt::type_info_v<ET>, fmt_args_t<ET>{fmt_unveil<ET>::get(value)}))
+	{
+	}
+
+	// Error constructor (2 args)
+	template<typename ET, typename T>
+	error_code(const ET& value, const T& arg)
+		: value(error_report(static_cast<s32>(value), " : %s, %s", fmt::type_info_v<ET, T>, fmt_args_t<ET, T>{fmt_unveil<ET>::get(value), fmt_unveil<T>::get(arg)}))
+	{
+	}
+
+	// Formatting constructor (error, format string, variadic list)
+	template <typename ET, typename... Args> requires (sizeof...(Args) > 0)
+	error_code(const ET& value, const const_str& fmt, const Args&... args)
+		: value(error_report(static_cast<s32>(value), fmt, fmt::type_info_v<Args...>, fmt_args_t<Args...>{fmt_unveil<Args>::get(args)...}))
+	{
+	}
+
+	operator s32() const
+	{
+		return value;
+	}
+};
 
 enum CellNotAnError : s32
 {
 	CELL_OK     = 0,
 	CELL_CANCEL = 1,
+};
 
-	__not_an_error
+// Constructor specialization that doesn't trigger reporting
+template <>
+constexpr FORCE_INLINE error_code::error_code(const CellNotAnError& value)
+	: value(value)
+{
+}
+
+// Helper function for error_code
+template <typename T>
+constexpr FORCE_INLINE CellNotAnError not_an_error(const T& value)
+{
+	return static_cast<CellNotAnError>(static_cast<s32>(value));
+}
+
+template <typename T, typename>
+struct ppu_gpr_cast_impl;
+
+template <>
+struct ppu_gpr_cast_impl<error_code, void>
+{
+	static inline u64 to(const error_code& code)
+	{
+		return code;
+	}
+
+	static inline error_code from(const u64 reg)
+	{
+		return not_an_error(reg);
+	}
 };
 
 enum CellError : u32

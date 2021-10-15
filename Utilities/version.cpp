@@ -67,7 +67,7 @@ namespace utils
 		int vnum2 = 0;
 
 		// Loop until both strings are processed
-		for (size_t i = 0, j = 0; (i < v1.length() || j < v2.length());)
+		for (usz i = 0, j = 0; (i < v1.length() || j < v2.length());)
 		{
 			// Storing numeric part of version 1 in vnum1
 			while (i < v1.length() && v1[i] != '.')

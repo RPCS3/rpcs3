@@ -13,6 +13,14 @@
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Wredundant-decls"
+#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
+#pragma GCC diagnostic ignored "-Weffc++"
+#ifndef __clang__
+#pragma GCC diagnostic ignored "-Wduplicated-branches"
+#endif
 #include <asmjit/asmjit.h>
 #pragma GCC diagnostic pop
 #endif
@@ -41,7 +49,7 @@ struct jit_runtime final : asmjit::HostRuntime
 	asmjit::Error _release(void* p) noexcept override;
 
 	// Allocate memory
-	static u8* alloc(std::size_t size, uint align, bool exec = true) noexcept;
+	static u8* alloc(usz size, uint align, bool exec = true) noexcept;
 
 	// Should be called at least once after global initialization
 	static void initialize();
@@ -53,18 +61,77 @@ struct jit_runtime final : asmjit::HostRuntime
 namespace asmjit
 {
 	// Should only be used to build global functions
-	asmjit::JitRuntime& get_global_runtime();
+	asmjit::Runtime& get_global_runtime();
 
-	// Emit xbegin and adjacent loop, return label at xbegin
-	void build_transaction_enter(X86Assembler& c, Label fallback, const X86Gp& ctr, uint less_than);
+	// Emit xbegin and adjacent loop, return label at xbegin (don't use xabort please)
+	template <typename F>
+	[[nodiscard]] inline asmjit::Label build_transaction_enter(asmjit::X86Assembler& c, asmjit::Label fallback, F func)
+	{
+		Label fall = c.newLabel();
+		Label begin = c.newLabel();
+		c.jmp(begin);
+		c.bind(fall);
 
-	// Emit xabort
-	void build_transaction_abort(X86Assembler& c, unsigned char code);
+		// Don't repeat on zero status (may indicate syscall or interrupt)
+		c.test(x86::eax, x86::eax);
+		c.jz(fallback);
+
+		// First invoked after failure (can fallback to proceed, or jump anywhere else)
+		func();
+
+		// Other bad statuses are ignored regardless of repeat flag (TODO)
+		c.align(kAlignCode, 16);
+		c.bind(begin);
+		return fall;
+
+		// xbegin should be issued manually, allows to add more check before entering transaction
+	}
+
+	// Helper to spill RDX (EDX) register for RDTSC
+	inline void build_swap_rdx_with(asmjit::X86Assembler& c, std::array<X86Gp, 4>& args, const asmjit::X86Gp& with)
+	{
+#ifdef _WIN32
+		c.xchg(args[1], with);
+		args[1] = with;
+#else
+		c.xchg(args[2], with);
+		args[2] = with;
+#endif
+	}
+
+	// Get full RDTSC value into chosen register (clobbers rax/rdx or saves only rax with other target)
+	inline void build_get_tsc(asmjit::X86Assembler& c, const asmjit::X86Gp& to = asmjit::x86::rax)
+	{
+		if (&to != &x86::rax && &to != &x86::rdx)
+		{
+			// Swap to save its contents
+			c.xchg(x86::rax, to);
+		}
+
+		c.rdtsc();
+		c.shl(x86::rdx, 32);
+
+		if (&to == &x86::rax)
+		{
+			c.or_(x86::rax, x86::rdx);
+		}
+		else if (&to == &x86::rdx)
+		{
+			c.or_(x86::rdx, x86::rax);
+		}
+		else
+		{
+			// Swap back, maybe there is more effective way to do it
+			c.xchg(x86::rax, to);
+			c.mov(to.r32(), to.r32());
+			c.or_(to.r64(), x86::rdx);
+		}
+	}
 }
 
 // Build runtime function with asmjit::X86Assembler
 template <typename FT, typename F>
-FT build_function_asm(F&& builder)
+inline FT build_function_asm(F&& builder)
 {
 	using namespace asmjit;
 
@@ -89,6 +156,7 @@ FT build_function_asm(F&& builder)
 
 	X86Assembler compiler(&code);
 	builder(std::ref(compiler), args);
+	ensure(compiler.getLastError() == 0);
 
 	FT result;
 
@@ -107,10 +175,8 @@ FT build_function_asm(F&& builder)
 #include <string_view>
 #include <unordered_map>
 
-#include "types.h"
-#include "mutex.h"
+#include "util/types.hpp"
 
-#include "restore_new.h"
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #else
@@ -118,6 +184,14 @@ FT build_function_asm(F&& builder)
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wsuggest-override"
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
+#pragma GCC diagnostic ignored "-Weffc++"
+#pragma GCC diagnostic ignored "-Wmissing-noreturn"
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Winconsistent-missing-override"
+#endif
 #endif
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -127,25 +201,18 @@ FT build_function_asm(F&& builder)
 #else
 #pragma GCC diagnostic pop
 #endif
-#include "define_new_memleakdetect.h"
 
 // Temporary compiler interface
 class jit_compiler final
 {
 	// Local LLVM context
-	llvm::LLVMContext m_context;
-
-	// JIT Event Listener
-	std::unique_ptr<struct EventListener> m_jit_el;
+	llvm::LLVMContext m_context{};
 
 	// Execution instance
-	std::unique_ptr<llvm::ExecutionEngine> m_engine;
-
-	// Link table
-	std::unordered_map<std::string, u64> m_link;
+	std::unique_ptr<llvm::ExecutionEngine> m_engine{};
 
 	// Arch
-	std::string m_cpu;
+	std::string m_cpu{};
 
 public:
 	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags = 0);
@@ -182,12 +249,6 @@ public:
 
 	// Get CPU info
 	static std::string cpu(const std::string& _cpu);
-
-	// Check JIT purpose
-	bool is_primary() const
-	{
-		return !m_link.empty();
-	}
 };
 
 #endif

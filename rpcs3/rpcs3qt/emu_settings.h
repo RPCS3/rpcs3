@@ -1,8 +1,7 @@
-﻿#pragma once
+#pragma once
 
-#include "yaml-cpp/yaml.h"
-
-#include "stdafx.h"
+#include "util/types.hpp"
+#include "util/yaml.hpp"
 
 #include "microphone_creator.h"
 #include "render_creator.h"
@@ -14,6 +13,9 @@
 #include <QComboBox>
 #include <QSpinBox>
 #include <QDateTimeEdit>
+
+#include <string>
+#include <vector>
 
 constexpr auto qstr = QString::fromStdString;
 
@@ -30,7 +32,8 @@ public:
 	* Settings are only written when SaveSettings is called.
 	*/
 	emu_settings();
-	~emu_settings();
+
+	bool Init();
 
 	/** Connects a combo box with the target settings type*/
 	void EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged = false, bool use_max = false, int max = 0, bool sorted = false);
@@ -45,10 +48,10 @@ public:
 	void EnhanceSlider(QSlider* slider, emu_settings_type type);
 
 	/** Connects an integer spin box with the target settings type*/
-	void EnhanceSpinBox(QSpinBox* slider, emu_settings_type type, const QString& prefix = "", const QString& suffix = "");
+	void EnhanceSpinBox(QSpinBox* spinbox, emu_settings_type type, const QString& prefix = "", const QString& suffix = "");
 
 	/** Connects a double spin box with the target settings type*/
-	void EnhanceDoubleSpinBox(QDoubleSpinBox* slider, emu_settings_type type, const QString& prefix = "", const QString& suffix = "");
+	void EnhanceDoubleSpinBox(QDoubleSpinBox* spinbox, emu_settings_type type, const QString& prefix = "", const QString& suffix = "");
 
 	/** Connects a line edit with the target settings type*/
 	void EnhanceLineEdit(QLineEdit* edit, emu_settings_type type);
@@ -56,11 +59,11 @@ public:
 	/** Connects a button group with the target settings type*/
 	void EnhanceRadioButton(QButtonGroup* button_group, emu_settings_type type);
 
-	std::vector<std::string> GetLoadedLibraries();
+	std::vector<std::string> GetLibrariesControl();
 	void SaveSelectedLibraries(const std::vector<std::string>& libs);
 
 	/** Returns the valid options for a given setting.*/
-	QStringList GetSettingOptions(emu_settings_type type) const;
+	static QStringList GetSettingOptions(emu_settings_type type);
 
 	/** Returns the default value of the setting type.*/
 	std::string GetSettingDefault(emu_settings_type type) const;
@@ -69,10 +72,10 @@ public:
 	std::string GetSetting(emu_settings_type type) const;
 
 	/** Sets the setting type to a given value.*/
-	void SetSetting(emu_settings_type type, const std::string& val);
+	void SetSetting(emu_settings_type type, const std::string& val) const;
 
 	/** Gets all the renderer info for gpu settings.*/
-	render_creator* m_render_creator;
+	render_creator* m_render_creator = nullptr;
 
 	/** Gets a list of all the microphones available.*/
 	microphone_creator m_microphone_creator;
@@ -86,11 +89,21 @@ public:
 	/** Get a localized and therefore freely adjustable version of the string used in config.yml.*/
 	QString GetLocalizedSetting(const QString& original, emu_settings_type type, int index) const;
 
+	/** Validates the settings and logs unused entries or cleans up the yaml*/
+	bool ValidateSettings(bool cleanup);
+
+	/** Resets the current settings to the global default. This includes all connected widgets. */
+	void RestoreDefaults();
+
+Q_SIGNALS:
+	void RestoreDefaultsSignal();
+
 public Q_SLOTS:
 	/** Writes the unsaved settings to file.  Used in settings dialog on accept.*/
 	void SaveSettings();
+
 private:
-	YAML::Node m_defaultSettings; // The default settings as a YAML node.
-	YAML::Node m_currentSettings; // The current settings as a YAML node.
+	YAML::Node m_default_settings; // The default settings as a YAML node.
+	YAML::Node m_current_settings; // The current settings as a YAML node.
 	std::string m_title_id;
 };

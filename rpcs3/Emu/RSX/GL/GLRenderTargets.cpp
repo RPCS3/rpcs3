@@ -1,5 +1,8 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLGSRender.h"
+#include "Emu/RSX/rsx_methods.h"
+
+#include <span>
 
 color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_format color_format)
 {
@@ -62,7 +65,7 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		{ ::gl::texture::channel::a, ::gl::texture::channel::b, ::gl::texture::channel::g, ::gl::texture::channel::r } };
 
 	default:
-		fmt::throw_exception("Unsupported surface color format 0x%x" HERE, static_cast<u32>(color_format));
+		fmt::throw_exception("Unsupported surface color format 0x%x", static_cast<u32>(color_format));
 	}
 }
 
@@ -84,7 +87,7 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 		return{ ::gl::texture::type::float32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
 
 	default:
-		fmt::throw_exception("Unsupported depth format 0x%x" HERE, static_cast<u32>(depth_format));
+		fmt::throw_exception("Unsupported depth format 0x%x", static_cast<u32>(depth_format));
 	}
 }
 
@@ -94,44 +97,11 @@ u8 rsx::internals::get_pixel_size(rsx::surface_depth_format format)
 	{
 	case rsx::surface_depth_format::z16: return 2;
 	case rsx::surface_depth_format::z24s8: return 4;
-	}
-	fmt::throw_exception("Unknown depth format" HERE);
-}
-
-namespace
-{
-	std::array<u32, 4> get_offsets()
-	{
-		return{
-			rsx::method_registers.surface_a_offset(),
-			rsx::method_registers.surface_b_offset(),
-			rsx::method_registers.surface_c_offset(),
-			rsx::method_registers.surface_d_offset(),
-		};
-	}
-
-	std::array<u32, 4> get_locations()
-	{
-		return{
-			rsx::method_registers.surface_a_dma(),
-			rsx::method_registers.surface_b_dma(),
-			rsx::method_registers.surface_c_dma(),
-			rsx::method_registers.surface_d_dma(),
-		};
-	}
-
-	std::array<u32, 4> get_pitchs()
-	{
-		return{
-			rsx::method_registers.surface_a_pitch(),
-			rsx::method_registers.surface_b_pitch(),
-			rsx::method_registers.surface_c_pitch(),
-			rsx::method_registers.surface_d_pitch(),
-		};
+	default: fmt::throw_exception("Unknown depth format");
 	}
 }
 
-void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool skip_reading)
+void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*skip_reading*/)
 {
 	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
 	if (m_current_framebuffer_context == context && !m_rtts_dirty && m_draw_fbo)
@@ -191,7 +161,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 			auto rtt = std::get<1>(m_rtts.m_bound_render_targets[i]);
 			color_targets[i] = rtt->id();
 
-			verify("Pitch mismatch!" HERE), rtt->get_rsx_pitch() == m_framebuffer_layout.actual_color_pitch[i];
+			ensure(rtt->get_rsx_pitch() == m_framebuffer_layout.actual_color_pitch[i]); // "Pitch mismatch!"
 			m_surface_info[i].address = m_framebuffer_layout.color_addresses[i];
 			m_surface_info[i].pitch = m_framebuffer_layout.actual_color_pitch[i];
 			m_surface_info[i].width = m_framebuffer_layout.width;
@@ -220,7 +190,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		depth_stencil_target = ds->id();
 
-		verify("Pitch mismatch!" HERE), std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == m_framebuffer_layout.actual_zeta_pitch;
+		ensure(std::get<1>(m_rtts.m_bound_depth_stencil)->get_rsx_pitch() == m_framebuffer_layout.actual_zeta_pitch); // "Pitch mismatch!"
 
 		m_depth_surface_info.address = m_framebuffer_layout.zeta_address;
 		m_depth_surface_info.pitch = m_framebuffer_layout.actual_zeta_pitch;
@@ -426,16 +396,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool sk
 	}
 }
 
-std::array<std::vector<std::byte>, 4> GLGSRender::copy_render_targets_to_memory()
-{
-	return {};
-}
-
-std::array<std::vector<std::byte>, 2> GLGSRender::copy_depth_stencil_buffer_to_memory()
-{
-	return {};
-}
-
 // Render target helpers
 void gl::render_target::clear_memory(gl::command_context& cmd)
 {
@@ -460,7 +420,7 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	subres.height_in_block = subres.height_in_texel = surface_height * samples_y;
 	subres.pitch_in_block = rsx_pitch / get_bpp();
 	subres.depth = 1;
-	subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<gsl::span<const std::byte>::index_type>(rsx_pitch * surface_height * samples_y) };
+	subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<std::span<const std::byte>::size_type>(rsx_pitch * surface_height * samples_y) };
 
 	// TODO: MSAA support
 	if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
@@ -480,7 +440,7 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	}
 }
 
-void gl::render_target::initialize_memory(gl::command_context& cmd, bool /*read_access*/)
+void gl::render_target::initialize_memory(gl::command_context& cmd, rsx::surface_access /*access*/)
 {
 	const bool memory_load = is_depth_surface() ?
 		!!g_cfg.video.read_depth_buffer :
@@ -498,7 +458,21 @@ void gl::render_target::initialize_memory(gl::command_context& cmd, bool /*read_
 
 void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_access access)
 {
-	const bool read_access = (access != rsx::surface_access::write);
+	const bool read_access = access.is_read();
+	const bool is_depth = is_depth_surface();
+	const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+
+	if (should_read_buffers)
+	{
+		// TODO: Decide what to do when memory loads are disabled but the underlying has memory changed
+		// NOTE: Assume test() is expensive when in a pinch
+		if (last_use_tag && state_flags == rsx::surface_state_flags::ready && !test())
+		{
+			// TODO: Figure out why merely returning and failing the test does not work when reading (TLoU)
+			// The result should have been the same either way
+			state_flags |= rsx::surface_state_flags::erase_bkgnd;
+		}
+	}
 
 	if (old_contents.empty())
 	{
@@ -506,7 +480,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 		if (dirty() && (read_access || state_flags & rsx::surface_state_flags::erase_bkgnd))
 		{
 			// Initialize memory contents if we did not find anything usable
-			initialize_memory(cmd, true);
+			initialize_memory(cmd, access);
 			on_write();
 		}
 
@@ -528,7 +502,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 		if (get_internal_format() == src_texture->get_internal_format())
 		{
 			// Copy data from old contents onto this one
-			verify(HERE), src_bpp == dst_bpp;
+			ensure(src_bpp == dst_bpp);
 		}
 		else
 		{
@@ -551,7 +525,7 @@ void gl::render_target::memory_barrier(gl::command_context& cmd, rsx::surface_ac
 			const auto area = section.dst_rect();
 			if (area.x1 > 0 || area.y1 > 0 || unsigned(area.x2) < width() || unsigned(area.y2) < height())
 			{
-				initialize_memory(cmd, false);
+				initialize_memory(cmd, access);
 			}
 			else
 			{

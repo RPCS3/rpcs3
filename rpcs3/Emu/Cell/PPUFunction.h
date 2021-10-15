@@ -2,6 +2,8 @@
 
 #include "PPUThread.h"
 
+#include "util/v128.hpp"
+
 using ppu_function_t = bool(*)(ppu_thread&);
 
 // BIND_FUNC macro "converts" any appropriate HLE function to ppu_function_t, binding it to PPU thread context.
@@ -11,6 +13,7 @@ using ppu_function_t = bool(*)(ppu_thread&);
 	ppu.current_function = #func;\
 	std::memcpy(ppu.syscall_args, ppu.gpr + 3, sizeof(ppu.syscall_args)); \
 	ppu_func_detail::do_call(ppu, func);\
+	static_cast<void>(ppu.test_stopped());\
 	ppu.current_function = old_f;\
 	ppu.cia += 4;\
 	__VA_ARGS__;\
@@ -86,9 +89,9 @@ namespace ppu_func_detail
 	template<typename T, u32 g_count, u32 f_count, u32 v_count>
 	struct bind_arg<T, ARG_CONTEXT, g_count, f_count, v_count>
 	{
-		static_assert(std::is_same<std::decay_t<T>, ppu_thread>::value, "Invalid function argument type for ARG_CONTEXT");
+		static_assert(std::is_base_of<std::decay_t<T>, ppu_thread>::value, "Invalid function argument type for ARG_CONTEXT");
 
-		static FORCE_INLINE ppu_thread& get_arg(ppu_thread& ppu)
+		static FORCE_INLINE T& get_arg(ppu_thread& ppu)
 		{
 			return ppu;
 		}
@@ -99,9 +102,9 @@ namespace ppu_func_detail
 	{
 		static_assert(std::is_same<std::decay_t<T>, ppu_va_args_t>::value, "Invalid function argument type for ARG_VARIADIC");
 
-		static FORCE_INLINE ppu_va_args_t get_arg(ppu_thread& ppu)
+		static FORCE_INLINE ppu_va_args_t get_arg(ppu_thread&)
 		{
-			return{ g_count };
+			return {g_count};
 		}
 	};
 
@@ -184,7 +187,7 @@ namespace ppu_func_detail
 		// TODO: check calculations
 		const bool is_float = std::is_floating_point<T>::value;
 		const bool is_vector = std::is_same<std::decay_t<T>, v128>::value;
-		const bool is_context = std::is_same<std::decay_t<T>, ppu_thread>::value;
+		const bool is_context = std::is_base_of<std::decay_t<T>, ppu_thread>::value;
 		const bool is_variadic = std::is_same<std::decay_t<T>, ppu_va_args_t>::value;
 		const bool is_general = !is_float && !is_vector && !is_context && !is_variadic;
 
@@ -196,7 +199,7 @@ namespace ppu_func_detail
 			is_variadic ? ARG_VARIADIC :
 			ARG_UNKNOWN;
 
-		const u32 g = g_count + (is_general || is_float ? 1 : is_vector ? ::align(g_count, 2) + 2 : 0);
+		const u32 g = g_count + (is_general || is_float ? 1 : is_vector ? (g_count & 1) + 2 : 0);
 		const u32 f = f_count + is_float;
 		const u32 v = v_count + is_vector;
 
@@ -254,11 +257,17 @@ class ppu_function_manager
 	};
 
 	// Access global function list
-	static std::vector<ppu_function_t>& access();
+	static std::vector<ppu_function_t>& access(bool ghc = false);
 
 	static u32 add_function(ppu_function_t function);
 
 public:
+	ppu_function_manager() = default;
+
+	ppu_function_manager(const ppu_function_manager&) = delete;
+
+	ppu_function_manager& operator=(const ppu_function_manager&) = delete;
+
 	// Register function (shall only be called during global initialization)
 	template<typename T, T Func>
 	static inline u32 register_function(ppu_function_t func)
@@ -274,13 +283,23 @@ public:
 	}
 
 	// Read all registered functions
-	static inline const auto& get()
+	static inline const auto& get(bool llvm = false)
 	{
-		return access();
+		return access(llvm);
+	}
+
+	u32 func_addr(u32 index) const
+	{
+		if (index >= access().size() || !addr)
+		{
+			return 0;
+		}
+
+		return addr + index * 8;
 	}
 
 	// Allocation address
-	static u32 addr;
+	u32 addr = 0;
 };
 
 template<typename T, T Func>

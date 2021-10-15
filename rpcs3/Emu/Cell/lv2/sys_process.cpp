@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_process.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/System.h"
@@ -22,8 +22,8 @@
 #include "sys_rwlock.h"
 #include "sys_semaphore.h"
 #include "sys_timer.h"
-#include "sys_trace.h"
 #include "sys_fs.h"
+#include "sys_vm.h"
 #include "sys_spu.h"
 
 // Check all flags known to be related to extended permissions (TODO)
@@ -42,6 +42,17 @@ bool ps3_process_info_t::has_root_perm() const
 bool ps3_process_info_t::has_debug_perm() const
 {
 	return (ctrl_flags1 & (0xa << 28)) != 0;
+}
+
+// If a SELF file is of CellOS return its filename, otheriwse return an empty string 
+std::string_view ps3_process_info_t::get_cellos_appname() const
+{
+	if (!has_root_perm() || !Emu.GetTitleID().empty())
+	{
+		return {};
+	}
+
+	return std::string_view(Emu.GetBoot()).substr(Emu.GetBoot().find_last_of('/') + 1);
 }
 
 LOG_CHANNEL(sys_process);
@@ -132,7 +143,7 @@ static error_code process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::
 	case SYS_INTR_SERVICE_HANDLE_OBJECT: idm_get_set<lv2_obj, lv2_int_serv>(objects); break;
 	case SYS_EVENT_QUEUE_OBJECT: idm_get_set<lv2_obj, lv2_event_queue>(objects); break;
 	case SYS_EVENT_PORT_OBJECT: idm_get_set<lv2_obj, lv2_event_port>(objects); break;
-	case SYS_TRACE_OBJECT: fmt::throw_exception("SYS_TRACE_OBJECT" HERE);
+	case SYS_TRACE_OBJECT: fmt::throw_exception("SYS_TRACE_OBJECT");
 	case SYS_SPUIMAGE_OBJECT: idm_get_set<lv2_obj, lv2_spu_image>(objects); break;
 	case SYS_PRX_OBJECT: idm_get_set<lv2_obj, lv2_prx>(objects); break;
 	case SYS_OVERLAY_OBJECT: idm_get_set<lv2_obj, lv2_overlay>(objects); break;
@@ -142,7 +153,7 @@ static error_code process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::
 	case SYS_FS_FD_OBJECT: idm_get_set<lv2_fs_object, lv2_fs_object>(objects); break;
 	case SYS_LWCOND_OBJECT: idm_get_set<lv2_obj, lv2_lwcond>(objects); break;
 	case SYS_EVENT_FLAG_OBJECT: idm_get_set<lv2_obj, lv2_event_flag>(objects); break;
-	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT" HERE);
+	case SYS_SPUPORT_OBJECT: fmt::throw_exception("SYS_SPUPORT_OBJECT");
 	default:
 	{
 		return CELL_EINVAL;
@@ -188,22 +199,72 @@ error_code sys_process_get_id2(u32 object, vm::ptr<u32> buffer, u32 size, vm::pt
 	return process_get_id(object, buffer, size, set_size);
 }
 
-error_code process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
+CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 {
 	if (!flags || flags & ~(SYS_MEMORY_ACCESS_RIGHT_SPU_THR | SYS_MEMORY_ACCESS_RIGHT_RAW_SPU))
 	{
 		return CELL_EINVAL;
 	}
 
-	// TODO
-	return CELL_OK;
+	// TODO: respect sys_mmapper region's access rights
+	switch (addr >> 28)
+	{
+	case 0x0: // Main memory
+	case 0x1: // Main memory
+	case 0x2: // User 64k (sys_memory)
+	case 0xc: // RSX Local memory
+	case 0xe: // RawSPU MMIO
+		break;
+
+	case 0xf: // Private SPU MMIO
+	{
+		if (flags & SYS_MEMORY_ACCESS_RIGHT_RAW_SPU)
+		{
+			// Cannot be accessed by RawSPU
+			return CELL_EPERM;
+		}
+
+		break;
+	}
+
+	case 0xd: // PPU Stack area
+		return CELL_EPERM;
+	default:
+	{
+		if (auto vm0 = idm::get<sys_vm_t>(sys_vm_t::find_id(addr & -0x1000'0000)))
+		{
+			// sys_vm area was not covering the address specified but made a reservation on the entire 256mb region
+			if (vm0->addr + vm0->size - 1 < addr)
+			{
+				return CELL_EINVAL;
+			}
+
+			// sys_vm memory is not allowed
+			return CELL_EPERM;
+		}
+
+		if (!vm::get(vm::any, addr & -0x1000'0000))
+		{
+			return CELL_EINVAL;
+		}
+
+		break;
+	}
+	}
+
+	return {};
 }
 
 error_code sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 {
 	sys_process.warning("sys_process_is_spu_lock_line_reservation_address(addr=0x%x, flags=0x%llx)", addr, flags);
 
-	return process_is_spu_lock_line_reservation_address(addr, flags);
+	if (auto err = process_is_spu_lock_line_reservation_address(addr, flags))
+	{
+		return err;
+	}
+
+	return CELL_OK;
 }
 
 error_code _sys_process_get_paramsfo(vm::ptr<char> buffer)
@@ -216,12 +277,12 @@ error_code _sys_process_get_paramsfo(vm::ptr<char> buffer)
 	}
 
 	memset(buffer.get_ptr(), 0, 0x40);
-	memcpy(buffer.get_ptr() + 1, Emu.GetTitleID().c_str(), std::min<size_t>(Emu.GetTitleID().length(), 9));
+	memcpy(buffer.get_ptr() + 1, Emu.GetTitleID().c_str(), std::min<usz>(Emu.GetTitleID().length(), 9));
 
 	return CELL_OK;
 }
 
-s32 process_get_sdk_version(u32 pid, s32& ver)
+s32 process_get_sdk_version(u32 /*pid*/, s32& ver)
 {
 	// get correct SDK version for selected pid
 	ver = g_ps3_process_info.sdk_ver;
@@ -291,11 +352,22 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 		Emu.Stop();
 	});
 
-	ppu.state += cpu_flag::dbg_global_stop;
+	// Wait for GUI thread
+	while (auto state = +ppu.state)
+	{
+		if (is_stopped(state))
+		{
+			break;
+		}
+
+		thread_ctrl::wait_on(ppu.state, state);
+	}
 }
 
 void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> arg, u32 arg_size, u32 arg4)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_process.warning("_sys_process_exit2(status=%d, arg=*0x%x, arg_size=0x%x, arg4=0x%x)", status, arg, arg_size, arg4);
 
 	auto pstr = +arg->args;
@@ -339,9 +411,8 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 	if (disc.empty() && !Emu.GetTitleID().empty())
 		disc = vfs::get(Emu.GetDir());
 
-	ppu.state += cpu_flag::wait;
-
-	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc), hdd1 = std::move(hdd1), klic = g_fxo->get<loaded_npdrm_keys>()->devKlic.load()]() mutable
+	Emu.CallAfter([path = std::move(path), argv = std::move(argv), envp = std::move(envp), data = std::move(data), disc = std::move(disc)
+		, hdd1 = std::move(hdd1), klic = g_fxo->get<loaded_npdrm_keys>().devKlic.load(), old_config = Emu.GetUsedConfig()]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);
 		Emu.SetForceBoot(true);
@@ -352,15 +423,14 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 		Emu.disc = std::move(disc);
 		Emu.hdd1 = std::move(hdd1);
 
-		if (klic != v128{})
+		if (klic)
 		{
-			// TODO: Use std::optional
-			Emu.klic.assign(std::begin(klic._bytes), std::end(klic._bytes));
+			Emu.klic.emplace_back(klic);
 		}
 
 		Emu.SetForceBoot(true);
 
-		auto res = Emu.BootGame(path, "", true);
+		auto res = Emu.BootGame(path, "", true, false, cfg_mode::continuous, old_config);
 
 		if (res != game_boot_result::no_errors)
 		{
@@ -369,7 +439,16 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 		}
 	});
 
-	ppu.state += cpu_flag::dbg_global_stop;
+	// Wait for GUI thread
+	while (auto state = +ppu.state)
+	{
+		if (is_stopped(state))
+		{
+			break;
+		}
+
+		thread_ctrl::wait_on(ppu.state, state);
+	}
 }
 
 error_code sys_process_spawns_a_self2(vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data)

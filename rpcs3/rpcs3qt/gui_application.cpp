@@ -1,4 +1,9 @@
-﻿#include "gui_application.h"
+#ifdef _WIN32
+// This is to avoid inclusion of winsock.h from windows.h header which creates conflicts with inclusion of winsock2.h later
+#define _WINSOCKAPI_
+#endif
+
+#include "gui_application.h"
 
 #include "qt_utils.h"
 #include "welcome_dialog.h"
@@ -17,20 +22,24 @@
 
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/RSX/Overlays/overlay_perf_metrics.h"
+#include "Emu/system_utils.hpp"
+#include "Emu/vfs_config.h"
 #include "trophy_notification_helper.h"
 #include "save_data_dialog.h"
 #include "msg_dialog_frame.h"
 #include "osk_dialog_frame.h"
+#include "recvmessage_dialog_frame.h"
+#include "sendmessage_dialog_frame.h"
 #include "stylesheets.h"
 
 #include <QScreen>
 #include <QFontDatabase>
 #include <QLibraryInfo>
 #include <QDirIterator>
+#include <QFileInfo>
 
 #include <clocale>
 
-#include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
 
@@ -51,7 +60,7 @@ gui_application::~gui_application()
 #endif
 }
 
-void gui_application::Init()
+bool gui_application::Init()
 {
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 
@@ -59,14 +68,20 @@ void gui_application::Init()
 	m_gui_settings.reset(new gui_settings());
 	m_persistent_settings.reset(new persistent_settings());
 
-	// Get deprecated active user (before August 2nd 2020)
-	QString active_user = m_gui_settings->GetValue(gui::um_active_user).toString();
+	if (!m_emu_settings->Init())
+	{
+		return false;
+	}
 
-	// Get active user with deprecated active user as fallback
-	active_user = m_persistent_settings->GetCurrentUser(active_user.isEmpty() ? "00000001" : active_user);
+	// The user might be set by cli arg. If not, set another user.
+	if (m_active_user.empty())
+	{
+		// Get active user with standard user as fallback
+		m_active_user = m_persistent_settings->GetCurrentUser("00000001").toStdString();
+	}
 
 	// Force init the emulator
-	InitializeEmulator(active_user.toStdString(), true, m_show_gui);
+	InitializeEmulator(m_active_user, m_show_gui);
 
 	// Create the main window
 	if (m_show_gui)
@@ -92,9 +107,9 @@ void gui_application::Init()
 		welcome->exec();
 	}
 
-	if (m_main_window)
+	if (m_main_window && !m_main_window->Init(m_with_cli_boot))
 	{
-		m_main_window->Init();
+		return false;
 	}
 
 #ifdef WITH_DISCORD_RPC
@@ -104,6 +119,8 @@ void gui_application::Init()
 		discord::initialize();
 	}
 #endif
+
+	return true;
 }
 
 void gui_application::SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language_code)
@@ -242,9 +259,7 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 {
 	extern const std::unordered_map<video_resolution, std::pair<int, int>, value_hash<video_resolution>> g_video_out_resolution_map;
 
-	const auto size = g_video_out_resolution_map.at(g_cfg.video.resolution);
-	int w           = size.first;
-	int h           = size.second;
+	auto [w, h] = g_video_out_resolution_map.at(g_cfg.video.resolution);
 
 	if (m_gui_settings->GetValue(gui::gs_resize).toBool())
 	{
@@ -252,26 +267,26 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		h = m_gui_settings->GetValue(gui::gs_height).toInt();
 	}
 
-	const auto screen_geometry = m_main_window ? m_main_window->geometry() : primaryScreen()->geometry();
-	const auto frame_geometry  = gui::utils::create_centered_window_geometry(screen_geometry, w, h);
+	const auto screen = m_main_window ? m_main_window->screen() : primaryScreen();
+	const auto base_geometry  = m_main_window ? m_main_window->frameGeometry() : primaryScreen()->geometry();
+	const auto frame_geometry = gui::utils::create_centered_window_geometry(screen, base_geometry, w, h);
 	const auto app_icon = m_main_window ? m_main_window->GetAppIcon() : gui::utils::get_app_icon_from_path(Emu.GetBoot(), Emu.GetTitleID());
 
-	gs_frame* frame;
+	gs_frame* frame = nullptr;
 
-	switch (video_renderer type = g_cfg.video.renderer)
+	switch (g_cfg.video.renderer.get())
 	{
 	case video_renderer::opengl:
 	{
-		frame = new gl_gs_frame(frame_geometry, app_icon, m_gui_settings);
+		frame = new gl_gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
 	case video_renderer::null:
 	case video_renderer::vulkan:
 	{
-		frame = new gs_frame(frame_geometry, app_icon, m_gui_settings);
+		frame = new gs_frame(screen, frame_geometry, app_icon, m_gui_settings);
 		break;
 	}
-	default: fmt::throw_exception("Invalid video renderer: %s" HERE, type);
 	}
 
 	m_game_window = frame;
@@ -284,11 +299,16 @@ void gui_application::InitializeCallbacks()
 {
 	EmuCallbacks callbacks = CreateCallbacks();
 
-	callbacks.exit = [this](bool force_quit) -> bool
+	callbacks.try_to_quit = [this](bool force_quit, std::function<void()> on_exit) -> bool
 	{
 		// Close rpcs3 if closed in no-gui mode
 		if (force_quit || !m_main_window)
 		{
+			if (on_exit)
+			{
+				on_exit();
+			}
+
 			if (m_main_window)
 			{
 				// Close main window in order to save its window state
@@ -307,7 +327,7 @@ void gui_application::InitializeCallbacks()
 
 	callbacks.init_gs_render = []()
 	{
-		switch (video_renderer type = g_cfg.video.renderer)
+		switch (g_cfg.video.renderer.get())
 		{
 		case video_renderer::null:
 		{
@@ -326,10 +346,6 @@ void gui_application::InitializeCallbacks()
 			break;
 		}
 #endif
-		default:
-		{
-			fmt::throw_exception("Invalid video renderer: %s" HERE, type);
-		}
 		}
 	};
 
@@ -337,6 +353,8 @@ void gui_application::InitializeCallbacks()
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
+	callbacks.get_sendmessage_dialog = [this]() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
+	callbacks.get_recvmessage_dialog = [this]() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
 	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
 	callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
@@ -344,6 +362,12 @@ void gui_application::InitializeCallbacks()
 	callbacks.on_resume = [this]() { OnEmulatorResume(true); };
 	callbacks.on_stop   = [this]() { OnEmulatorStop(); };
 	callbacks.on_ready  = [this]() { OnEmulatorReady(); };
+
+	callbacks.on_missing_fw = [this]()
+	{
+		if (!m_main_window) return false;
+		return m_main_window->OnMissingFw();
+	};
 
 	callbacks.handle_taskbar_progress = [this](s32 type, s32 value)
 	{
@@ -354,6 +378,7 @@ void gui_application::InitializeCallbacks()
 			case 0: static_cast<gs_frame*>(m_game_window)->progress_reset(value); break;
 			case 1: static_cast<gs_frame*>(m_game_window)->progress_increment(value); break;
 			case 2: static_cast<gs_frame*>(m_game_window)->progress_set_limit(value); break;
+			case 3: static_cast<gs_frame*>(m_game_window)->progress_set_value(value); break;
 			default: gui_log.fatal("Unknown type in handle_taskbar_progress(type=%d, value=%d)", type, value); break;
 			}
 		}
@@ -367,6 +392,11 @@ void gui_application::InitializeCallbacks()
 	callbacks.get_localized_u32string = [](localized_string_id id, const char* args) -> std::u32string
 	{
 		return localized_emu::get_u32string(id, args);
+	};
+
+	callbacks.resolve_path = [](std::string_view sv)
+	{
+		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
 	};
 
 	Emu.SetCallbacks(std::move(callbacks));
@@ -430,10 +460,9 @@ void gui_application::StopPlaytime()
 }
 
 /*
-* Handle a request to change the stylesheet. May consider adding reporting of errors in future.
-* Empty string means default.
+* Handle a request to change the stylesheet based on the current entry in the settings.
 */
-void gui_application::OnChangeStyleSheetRequest(const QString& path)
+void gui_application::OnChangeStyleSheetRequest()
 {
 	// skip stylesheets on first repaint if a style was set from command line
 	if (m_use_cli_style && gui::stylesheet.isEmpty())
@@ -448,59 +477,73 @@ void gui_application::OnChangeStyleSheetRequest(const QString& path)
 		return;
 	}
 
-	QFile file(path);
+	// Remove old fonts
+	QFontDatabase::removeAllApplicationFonts();
 
-	// If we can't open the file, try the /share or /Resources folder
-#if !defined(_WIN32)
-#ifdef __APPLE__
-	QString share_dir = QCoreApplication::applicationDirPath() + "/../Resources/";
-#else
-	QString share_dir = QCoreApplication::applicationDirPath() + "/../share/rpcs3/";
-#endif
-	QFile share_file(share_dir + "GuiConfigs/" + QFileInfo(file.fileName()).fileName());
-#endif
+	const QString stylesheet_name = m_gui_settings->GetValue(gui::m_currentStylesheet).toString();
 
-	if (path == "")
+	if (stylesheet_name.isEmpty() || stylesheet_name == gui::DefaultStylesheet)
 	{
 		setStyleSheet(gui::stylesheets::default_style_sheet);
 	}
-	else if (path == "-")
+	else if (stylesheet_name == gui::NoStylesheet)
 	{
 		setStyleSheet("/* none */");
 	}
-	else if (file.open(QIODevice::ReadOnly | QIODevice::Text))
-	{
-		QString config_dir = qstr(fs::get_config_dir());
-
-		// Remove old fonts
-		QFontDatabase::removeAllApplicationFonts();
-
-		// Add PS3 fonts
-		QDirIterator ps3_font_it(qstr(g_cfg.vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
-		while (ps3_font_it.hasNext())
-			QFontDatabase::addApplicationFont(ps3_font_it.next());
-
-		// Add custom fonts
-		QDirIterator custom_font_it(config_dir + "fonts/", QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
-		while (custom_font_it.hasNext())
-			QFontDatabase::addApplicationFont(custom_font_it.next());
-
-		// Set root for stylesheets
-		QDir::setCurrent(config_dir);
-		setStyleSheet(file.readAll());
-		file.close();
-	}
-#if !defined(_WIN32)
-	else if (share_file.open(QIODevice::ReadOnly | QIODevice::Text))
-	{
-		QDir::setCurrent(share_dir);
-		setStyleSheet(share_file.readAll());
-		share_file.close();
-	}
-#endif
 	else
 	{
-		setStyleSheet(gui::stylesheets::default_style_sheet);
+		QString stylesheet_path;
+		QString stylesheet_dir;
+		QList<QDir> locs;
+		locs << m_gui_settings->GetSettingsDir();
+
+#if !defined(_WIN32)
+#ifdef __APPLE__
+		locs << QCoreApplication::applicationDirPath() + "/../Resources/GuiConfigs/";
+#else
+		locs << QCoreApplication::applicationDirPath() + "/../share/rpcs3/GuiConfigs/";
+#endif
+		locs << QCoreApplication::applicationDirPath() + "/GuiConfigs/";
+#endif
+
+		for (auto&& loc : locs)
+		{
+			QFileInfo file_info(loc.absoluteFilePath(stylesheet_name + QStringLiteral(".qss")));
+			if (file_info.exists())
+			{
+				loc.cdUp();
+				stylesheet_dir  = loc.absolutePath();
+				stylesheet_path = file_info.absoluteFilePath();
+				break;
+			}
+		}
+
+		if (QFile file(stylesheet_path); !stylesheet_path.isEmpty() && file.open(QIODevice::ReadOnly | QIODevice::Text))
+		{
+			const QString config_dir = qstr(fs::get_config_dir());
+
+			// Add PS3 fonts
+			QDirIterator ps3_font_it(qstr(g_cfg_vfs.get_dev_flash() + "data/font/"), QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+			while (ps3_font_it.hasNext())
+				QFontDatabase::addApplicationFont(ps3_font_it.next());
+
+			// Add custom fonts
+			QDirIterator custom_font_it(config_dir + "fonts/", QStringList() << "*.ttf", QDir::Files, QDirIterator::Subdirectories);
+			while (custom_font_it.hasNext())
+				QFontDatabase::addApplicationFont(custom_font_it.next());
+
+			// Replace relative paths with absolute paths. Since relative paths should always be the same, we can just use simple string replacement.
+			// Another option would be to use QDir::setCurrent, but that changes current working directory for the whole process (We don't want that).
+			QString stylesheet = file.readAll();
+			stylesheet.replace(QStringLiteral("url(\"GuiConfigs/"), QStringLiteral("url(\"") + stylesheet_dir + QStringLiteral("/GuiConfigs/"));
+			setStyleSheet(stylesheet);
+			file.close();
+		}
+		else
+		{
+			gui_log.error("Could not find stylesheet '%s'. Using default.", stylesheet_name.toStdString());
+			setStyleSheet(gui::stylesheets::default_style_sheet);
+		}
 	}
 
 	gui::stylesheet = styleSheet();
@@ -525,7 +568,7 @@ void gui_application::OnEmuSettingsChange()
 		}
 	}
 
-	Emu.ConfigureLogs();
+	rpcs3::utils::configure_logs();
 	audio::configure_audio();
 	rsx::overlays::reset_performance_overlay();
 }

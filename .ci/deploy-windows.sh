@@ -4,7 +4,7 @@
 ARTIFACT_DIR="$BUILD_ARTIFACTSTAGINGDIRECTORY"
 
 # Remove unecessary files
-rm -f ./bin/rpcs3.exp ./bin/rpcs3.lib ./bin/rpcs3.pdb
+rm -f ./bin/rpcs3.exp ./bin/rpcs3.lib ./bin/rpcs3.pdb ./bin/vc_redist.x64.exe
 
 # Prepare compatibility database for packaging, as well as
 # certificate for ssl (auto-updater)
@@ -20,5 +20,5 @@ sha256sum "$BUILD" | awk '{ print $1 }' | tee "$BUILD.sha256"
 echo "$(cat "$BUILD.sha256");$(stat -c %s "$BUILD")B" > GitHubReleaseMessage.txt
 
 # Move files to publishing directory
-mv -- "$BUILD" "$ARTIFACT_DIR"
-mv -- "$BUILD.sha256" "$ARTIFACT_DIR"
+cp -- "$BUILD" "$ARTIFACT_DIR"
+cp -- "$BUILD.sha256" "$ARTIFACT_DIR"

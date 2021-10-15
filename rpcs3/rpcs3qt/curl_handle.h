@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QObject>
 
@@ -13,8 +13,13 @@ private:
 	CURL* m_curl = nullptr;
 
 public:
-	curl_handle(QObject* parent = nullptr);
+	explicit curl_handle(QObject* parent = nullptr);
 	~curl_handle();
 
-	CURL* get_curl();
+	CURL* get_curl() const;
+
+	operator CURL*() const
+	{
+		return get_curl();
+	}
 };

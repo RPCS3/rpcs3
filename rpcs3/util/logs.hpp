@@ -1,28 +1,25 @@
-#pragma once
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
-#include <cstdint>
-#include <atomic>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 #include <initializer_list>
+#include "util/atomic.hpp"
 #include "Utilities/StrFmt.h"
 
 namespace logs
 {
-	using u64 = std::uint64_t;
-
-	enum class level : unsigned
+	enum class level : unsigned char
 	{
-		always, // Highest log severity (cannot be disabled)
-		fatal,
-		error,
-		todo,
-		success,
-		warning,
-		notice,
-		trace, // Lowest severity (usually disabled)
+		always = 0, // Highest log severity (cannot be disabled)
+		fatal = 1,
+		error = 2,
+		todo = 3,
+		success = 4,
+		warning = 5,
+		notice = 6,
+		trace = 7, // Lowest severity (usually disabled)
 	};
 
 	struct channel;
@@ -30,8 +27,27 @@ namespace logs
 	// Message information
 	struct message
 	{
-		channel* ch;
-		level sev;
+		// Default constructor
+		consteval message() = default;
+
+		// Cannot be moved because it relies on its location
+		message(const message&) = delete;
+
+		message& operator =(const message&) = delete;
+
+		// Send log message to the given channel with severity
+		template <typename... Args>
+		void operator()(const const_str& fmt, const Args&... args) const;
+
+		operator level() const
+		{
+			return level(uchar(reinterpret_cast<uptr>(this) & 7));
+		}
+
+		const channel* operator->() const
+		{
+			return reinterpret_cast<const channel*>(reinterpret_cast<uptr>(this) & -16);
+		}
 
 	private:
 		// Send log message to global logger instance
@@ -42,7 +58,7 @@ namespace logs
 
 	struct stored_message
 	{
-		message m;
+		const message& m;
 		u64 stamp;
 		std::string prefix;
 		std::string text;
@@ -51,7 +67,7 @@ namespace logs
 	class listener
 	{
 		// Next listener (linked list)
-		std::atomic<listener*> m_next{};
+		atomic_t<listener*> m_next{};
 
 		friend struct message;
 
@@ -70,41 +86,31 @@ namespace logs
 		void broadcast(const stored_message&) const;
 	};
 
-	struct channel
+	struct alignas(16) channel : private message
 	{
 		// Channel prefix (added to every log message)
 		const char* const name;
 
 		// The lowest logging level enabled for this channel (used for early filtering)
-		std::atomic<level> enabled;
+		atomic_t<level> enabled;
 
 		// Initialize channel
-		constexpr channel(const char* name) noexcept
-			: name(name)
+		consteval channel(const char* name) noexcept
+			: message{}
+			, name(name)
 			, enabled(level::notice)
 		{
 		}
 
-#define GEN_LOG_METHOD(_sev)\
-		const message msg_##_sev{this, level::_sev};\
-		template <typename CharT, std::size_t N, typename... Args>\
-		void _sev(const CharT(&fmt)[N], const Args&... args)\
-		{\
-			if (level::_sev <= enabled.load(std::memory_order_relaxed)) [[unlikely]]\
-			{\
-				if constexpr (sizeof...(Args) > 0)\
-				{\
-					static constexpr fmt_type_info type_list[sizeof...(Args) + 1]{fmt_type_info::make<fmt_unveil_t<Args>>()...};\
-					msg_##_sev.broadcast(reinterpret_cast<const char*>(fmt), type_list, u64{fmt_unveil<Args>::get(args)}...);\
-				}\
-				else\
-				{\
-					msg_##_sev.broadcast(reinterpret_cast<const char*>(fmt), nullptr);\
-				}\
-			}\
-		}\
+		// Special access to "always visible" channel which shouldn't be used
+		const message& always() const
+		{
+			return *this;
+		}
 
-		GEN_LOG_METHOD(always)
+#define GEN_LOG_METHOD(_sev)\
+		const message _sev{};\
+
 		GEN_LOG_METHOD(fatal)
 		GEN_LOG_METHOD(error)
 		GEN_LOG_METHOD(todo)
@@ -115,6 +121,22 @@ namespace logs
 
 #undef GEN_LOG_METHOD
 	};
+
+	template <typename... Args>
+	FORCE_INLINE SAFE_BUFFERS(void) message::operator()(const const_str& fmt, const Args&... args) const
+	{
+		if (*this <= (*this)->enabled.observe()) [[unlikely]]
+		{
+			if constexpr (sizeof...(Args) > 0)
+			{
+				broadcast(fmt, fmt::type_info_v<Args...>, u64{fmt_unveil<Args>::get(args)}...);
+			}
+			else
+			{
+				broadcast(fmt, nullptr);
+			}
+		}
+	}
 
 	struct registerer
 	{
@@ -140,15 +162,9 @@ namespace logs
 	std::vector<std::string> get_channels();
 
 	// Helper: no additional name specified
-	constexpr const char* make_channel_name(const char* name)
+	consteval const char* make_channel_name(const char* name, const char* alt = nullptr)
 	{
-		return name;
-	}
-
-	// Helper: special channel name specified
-	constexpr const char* make_channel_name(const char*, const char* name, ...)
-	{
-		return name;
+		return alt ? alt : name;
 	}
 
 	// Called in main()

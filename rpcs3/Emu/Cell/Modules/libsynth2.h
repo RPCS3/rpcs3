@@ -1,6 +1,4 @@
-﻿#pragma once
-
-#include "Utilities/BEType.h"
+#pragma once
 
 // Error Codes
 enum CellSoundSynth2Error : u32

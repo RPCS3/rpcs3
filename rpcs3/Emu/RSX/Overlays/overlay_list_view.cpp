@@ -1,5 +1,5 @@
-﻿#include "stdafx.h"
-#include "overlay_controls.h"
+#include "stdafx.h"
+#include "overlay_list_view.hpp"
 #include "Emu/system_config.h"
 
 namespace rsx
@@ -62,7 +62,7 @@ namespace rsx
 				return; // Ideally unreachable but it should still be possible to recover by user interaction.
 			}
 
-			const size_t current_index = static_cast<size_t>(m_selected_entry) * 2;
+			const usz current_index = static_cast<usz>(m_selected_entry) * 2;
 
 			if (m_items.size() <= current_index)
 			{
@@ -108,10 +108,17 @@ namespace rsx
 		{
 			const s32 max_entry = m_elements_count - 1;
 
+			// Reset the pulse slightly below 1 rising on each user interaction
+			m_highlight_box->set_sinus_offset(1.6f);
+
 			if (m_selected_entry != entry)
 			{
 				m_selected_entry = std::max(0, std::min(entry, max_entry));
 				update_selection();
+			}
+			else
+			{
+				refresh();
 			}
 		}
 
@@ -145,7 +152,7 @@ namespace rsx
 			update_selection();
 		}
 
-		int list_view::get_selected_index()
+		int list_view::get_selected_index() const
 		{
 			return m_selected_entry;
 		}

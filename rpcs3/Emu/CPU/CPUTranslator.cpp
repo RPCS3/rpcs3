@@ -1,14 +1,66 @@
-﻿#ifdef LLVM_AVAILABLE
+#ifdef LLVM_AVAILABLE
 
 #include "CPUTranslator.h"
 
+#include "util/v128.hpp"
+#include "util/v128sse.hpp"
+
 llvm::LLVMContext g_llvm_ctx;
+
+llvm::Value* peek_through_bitcasts(llvm::Value* arg)
+{
+	llvm::CastInst* i;
+
+	while ((i = llvm::dyn_cast_or_null<llvm::CastInst>(arg)) && i->getOpcode() == llvm::Instruction::BitCast)
+	{
+		arg = i->getOperand(0);
+	}
+
+	return arg;
+}
 
 cpu_translator::cpu_translator(llvm::Module* _module, bool is_be)
     : m_context(g_llvm_ctx)
 	, m_module(_module)
 	, m_is_be(is_be)
 {
+	register_intrinsic("x86_pshufb", [&](llvm::CallInst* ci) -> llvm::Value*
+	{
+		const auto data0 = ci->getOperand(0);
+		const auto index = ci->getOperand(1);
+		const auto zeros = llvm::ConstantAggregateZero::get(get_type<u8[16]>());
+
+		if (m_use_ssse3)
+		{
+			return m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_ssse3_pshuf_b_128), {data0, index});
+		}
+		else
+		{
+			// Emulate PSHUFB (TODO)
+			const auto mask = m_ir->CreateAnd(index, 0xf);
+			const auto loop = llvm::BasicBlock::Create(m_context, "", m_ir->GetInsertBlock()->getParent());
+			const auto prev = ci->getParent();
+			const auto next = prev->splitBasicBlock(ci->getNextNode());
+
+			llvm::cast<llvm::BranchInst>(m_ir->GetInsertBlock()->getTerminator())->setOperand(0, loop);
+
+			llvm::Value* result;
+			//m_ir->CreateBr(loop);
+			m_ir->SetInsertPoint(loop);
+			const auto i = m_ir->CreatePHI(get_type<u32>(), 2);
+			const auto v = m_ir->CreatePHI(get_type<u8[16]>(), 2);
+			i->addIncoming(m_ir->getInt32(0), prev);
+			i->addIncoming(m_ir->CreateAdd(i, m_ir->getInt32(1)), loop);
+			v->addIncoming(zeros, prev);
+			result = m_ir->CreateInsertElement(v, m_ir->CreateExtractElement(data0, m_ir->CreateExtractElement(mask, i)), i);
+			v->addIncoming(result, loop);
+			m_ir->CreateCondBr(m_ir->CreateICmpULT(i, m_ir->getInt32(16)), loop, next);
+			m_ir->SetInsertPoint(next->getFirstNonPHI());
+			result = m_ir->CreateSelect(m_ir->CreateICmpSLT(index, zeros), zeros, result);
+
+			return result;
+		}
+	});
 }
 
 void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngine& engine)
@@ -53,30 +105,43 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		cpu == "icelake" ||
 		cpu == "icelake-client" ||
 		cpu == "icelake-server" ||
-		cpu == "tigerlake")
+		cpu == "tigerlake" ||
+		cpu == "rocketlake")
 	{
 		m_use_fma = true;
+		m_use_avx512 = true;
+	}
+
+	// Test VNNI feature (TODO)
+	if (cpu == "cascadelake" ||
+		cpu == "cooperlake" ||
+		cpu == "alderlake")
+	{
+		m_use_vnni = true;
 	}
 
 	// Test AVX-512_icelake features (TODO)
 	if (cpu == "icelake" ||
 		cpu == "icelake-client" ||
 		cpu == "icelake-server" ||
-		cpu == "tigerlake")
+		cpu == "tigerlake" ||
+		cpu == "rocketlake" ||
+		cpu == "sapphirerapids")
 	{
 		m_use_avx512_icl = true;
+		m_use_vnni = true;
 	}
 }
 
-llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type)
+llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type) const
 {
 	uint s1 = type->getScalarSizeInBits();
 	uint s2 = val->getType()->getScalarSizeInBits();
 
 	if (type->isVectorTy())
-		s1 *= type->getVectorNumElements();
+		s1 *= llvm::cast<llvm::VectorType>(type)->getNumElements();
 	if (val->getType()->isVectorTy())
-		s2 *= val->getType()->getVectorNumElements();
+		s2 *= llvm::cast<llvm::VectorType>(val->getType())->getNumElements();
 
 	if (s1 != s2)
 	{
@@ -85,14 +150,14 @@ llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type)
 
 	if (const auto c1 = llvm::dyn_cast<llvm::Constant>(val))
 	{
-		return verify(HERE, llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, type, m_module->getDataLayout()));
+		return ensure(llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, type, m_module->getDataLayout()));
 	}
 
 	return m_ir->CreateBitCast(val, type);
 }
 
 template <>
-std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32 a, u32 b)
+std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32 _pos, u32 _line)
 {
 	v128 result{};
 
@@ -107,22 +172,20 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 	{
 		if (const auto ci = llvm::dyn_cast<llvm::ConstantInt>(c); ci && ci->getBitWidth() == 128)
 		{
-			auto cv = ci->getValue();
+			const auto& cv = ci->getValue();
 
-			for (int i = 0; i < 128; i++)
-			{
-				result._bit[i] = cv[i];
-			}
+			result._u64[0] = cv.extractBitsAsZExtValue(64, 0);
+			result._u64[1] = cv.extractBitsAsZExtValue(64, 64);
 
 			return {true, result};
 		}
 
-		fmt::throw_exception("[0x%x, %u] Not a vector" HERE, a, b);
+		fmt::throw_exception("[0x%x, %u] Not a vector", _pos, _line);
 	}
 
-	if (uint sz = llvm::cast<llvm::VectorType>(t)->getBitWidth() - 128)
+	if (auto v = llvm::cast<llvm::VectorType>(t); v->getScalarSizeInBits() * v->getNumElements() != 128)
 	{
-		fmt::throw_exception("[0x%x, %u] Bad vector size: %u" HERE, a, b, sz + 128);
+		fmt::throw_exception("[0x%x, %u] Bad vector size: i%ux%u", _pos, _line, v->getScalarSizeInBits(), v->getNumElements());
 	}
 
 	const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(c);
@@ -137,10 +200,10 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 		if (llvm::isa<llvm::ConstantExpr>(c))
 		{
 			// Sorry, if we cannot evaluate it we cannot use it
-			fmt::throw_exception("[0x%x, %u] Constant Expression!" HERE, a, b);
+			fmt::throw_exception("[0x%x, %u] Constant Expression!", _pos, _line);
 		}
 
-		fmt::throw_exception("[0x%x, %u] Unexpected constant type" HERE, a, b);
+		fmt::throw_exception("[0x%x, %u] Unexpected constant type", _pos, _line);
 	}
 
 	const auto sct = t->getScalarType();
@@ -189,21 +252,22 @@ std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32
 	}
 	else
 	{
-		fmt::throw_exception("[0x%x, %u] Unexpected vector element type" HERE, a, b);
+		fmt::throw_exception("[0x%x, %u] Unexpected vector element type", _pos, _line);
 	}
 
 	return {true, result};
 }
 
 template <>
-llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t)
+llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t, u32 _line)
 {
 	if (const auto ct = llvm::dyn_cast<llvm::IntegerType>(t); ct && ct->getBitWidth() == 128)
 	{
 		return llvm::ConstantInt::get(t, llvm::APInt(128, llvm::makeArrayRef(reinterpret_cast<const u64*>(v._bytes), 2)));
 	}
 
-	verify(HERE), t->isVectorTy() && llvm::cast<llvm::VectorType>(t)->getBitWidth() == 128;
+	ensure(t->isVectorTy());
+	ensure(128 == t->getScalarSizeInBits() * llvm::cast<llvm::VectorType>(t)->getNumElements());
 
 	const auto sct = t->getScalarType();
 
@@ -211,28 +275,76 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t)
 	{
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u8*>(v._bytes), 16));
 	}
-	else if (sct->isIntegerTy(16))
+	if (sct->isIntegerTy(16))
 	{
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u16*>(v._bytes), 8));
 	}
-	else if (sct->isIntegerTy(32))
+	if (sct->isIntegerTy(32))
 	{
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u32*>(v._bytes), 4));
 	}
-	else if (sct->isIntegerTy(64))
+	if (sct->isIntegerTy(64))
 	{
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const u64*>(v._bytes), 2));
 	}
-	else if (sct->isFloatTy())
+	if (sct->isFloatTy())
 	{
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const f32*>(v._bytes), 4));
 	}
-	else if (sct->isDoubleTy())
+	if (sct->isDoubleTy())
 	{
 		return llvm::ConstantDataVector::get(m_context, llvm::makeArrayRef(reinterpret_cast<const f64*>(v._bytes), 2));
 	}
 
-	fmt::raw_error("No supported constant type" HERE);
+	fmt::throw_exception("[line %u] No supported constant type", _line);
+}
+
+void cpu_translator::replace_intrinsics(llvm::Function& f)
+{
+	for (auto& bb : f)
+	{
+		for (auto bit = bb.begin(); bit != bb.end();)
+		{
+			if (auto ci = llvm::dyn_cast<llvm::CallInst>(&*bit))
+			{
+				if (auto cf = ci->getCalledFunction())
+				{
+					if (auto it = m_intrinsics.find(std::string_view(cf->getName().data(), cf->getName().size())); it != m_intrinsics.end())
+					{
+						m_ir->SetInsertPoint(ci);
+						ci->replaceAllUsesWith(it->second(ci));
+						bit = ci->eraseFromParent();
+						continue;
+					}
+				}
+			}
+
+			++bit;
+		}
+	}
+}
+
+void cpu_translator::erase_stores(llvm::ArrayRef<llvm::Value*> args)
+{
+	for (auto v : args)
+	{
+		for (auto it = v->use_begin(); it != v->use_end(); ++it)
+		{
+			llvm::Value* i = *it;
+			llvm::CastInst* bci = nullptr;
+
+			// Walk through bitcasts
+			while (i && (bci = llvm::dyn_cast<llvm::CastInst>(i)) && bci->getOpcode() == llvm::Instruction::BitCast)
+			{
+				i = *bci->use_begin();
+			}
+
+			if (auto si = llvm::dyn_cast_or_null<llvm::StoreInst>(i))
+			{
+				si->eraseFromParent();
+			}
+		}
+	}
 }
 
 #endif

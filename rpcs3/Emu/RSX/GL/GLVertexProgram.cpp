@@ -1,19 +1,19 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLVertexProgram.h"
 
 #include "Emu/System.h"
 
 #include "GLCommonDecompiler.h"
-#include "../Common/GLSLCommon.h"
+#include "../Program/GLSLCommon.h"
 
 #include <algorithm>
 
-std::string GLVertexDecompilerThread::getFloatTypeName(size_t elementCount)
+std::string GLVertexDecompilerThread::getFloatTypeName(usz elementCount)
 {
 	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
-std::string GLVertexDecompilerThread::getIntTypeName(size_t elementCount)
+std::string GLVertexDecompilerThread::getIntTypeName(usz /*elementCount*/)
 {
 	return "ivec4";
 }
@@ -50,13 +50,13 @@ void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "};\n\n";
 }
 
-void GLVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
+void GLVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::vector<ParamType>& /*inputs*/)
 {
 	OS << "layout(location=0) uniform usamplerBuffer persistent_input_stream;\n";    //Data stream with persistent vertex data (cacheable)
 	OS << "layout(location=1) uniform usamplerBuffer volatile_input_stream;\n";      //Data stream with per-draw data (registers and immediate draw data)
 }
 
-void GLVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
+void GLVertexDecompilerThread::insertConstants(std::stringstream& OS, const std::vector<ParamType>& constants)
 {
 	OS << "layout(std140, binding = 2) uniform VertexConstantsBuffer\n";
 	OS << "{\n";
@@ -105,7 +105,7 @@ static const vertex_reg_info reg_table[] =
 	{ "tc9", true, "dst_reg6", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX9 }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
 };
 
-void GLVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
+void GLVertexDecompilerThread::insertOutputs(std::stringstream& OS, const std::vector<ParamType>& /*outputs*/)
 {
 	for (auto &i : reg_table)
 	{
@@ -273,11 +273,6 @@ void GLVertexProgram::Decompile(const RSXVertexProgram& prog)
 	decompiler.Task();
 
 	shader.create(::glsl::program_domain::glsl_vertex_program, source);
-}
-
-void GLVertexProgram::Compile()
-{
-	shader.compile();
 	id = shader.id();
 }
 

@@ -1,4 +1,4 @@
-﻿#include "save_manager_dialog.h"
+#include "save_manager_dialog.h"
 
 #include "custom_table_widget_item.h"
 #include "qt_utils.h"
@@ -6,7 +6,7 @@
 #include "persistent_settings.h"
 
 #include "Emu/System.h"
-#include "Emu/Memory/vm.h"
+#include "Emu/system_utils.hpp"
 #include "Loader/PSF.h"
 
 #include <QtConcurrent>
@@ -20,6 +20,9 @@
 #include <QDesktopServices>
 #include <QPainter>
 #include <QScreen>
+#include <QScrollBar>
+
+#include "Utilities/File.h"
 
 LOG_CHANNEL(gui_log, "GUI");
 
@@ -27,7 +30,8 @@ namespace
 {
 	// Helper converters
 	constexpr auto qstr = QString::fromStdString;
-	inline std::string sstr(const QString& _in) { return _in.toStdString(); }
+
+	[[maybe_unused]] inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
 	QString FormatTimestamp(u64 time)
 	{
@@ -52,11 +56,11 @@ namespace
 			}
 
 			// PSF parameters
-			const auto& psf = psf::load_object(fs::file(base_dir + entry.name + "/PARAM.SFO"));
+			const auto [psf, errc] = psf::load(base_dir + entry.name + "/PARAM.SFO");
 
 			if (psf.empty())
 			{
-				gui_log.error("Failed to load savedata: %s", base_dir + "/" + entry.name);
+				gui_log.error("Failed to load savedata: %s (%s)", base_dir + "/" + entry.name, errc);
 				continue;
 			}
 
@@ -80,9 +84,8 @@ namespace
 			if (fs::is_file(base_dir + entry.name + "/ICON0.PNG"))
 			{
 				fs::file icon = fs::file(base_dir + entry.name + "/ICON0.PNG");
-				u32 iconSize = icon.size();
 				std::vector<uchar> iconData;
-				icon.read(iconData, iconSize);
+				icon.read(iconData, icon.size());
 				save_entry2.iconBuf = iconData;
 			}
 			save_entry2.isNew = false;
@@ -95,20 +98,20 @@ namespace
 save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<persistent_settings> persistent_settings, std::string dir, QWidget* parent)
 	: QDialog(parent)
 	, m_dir(dir)
-	, m_gui_settings(gui_settings)
-	, m_persistent_settings(persistent_settings)
+	, m_gui_settings(std::move(gui_settings))
+	, m_persistent_settings(std::move(persistent_settings))
 {
 	setWindowTitle(tr("Save Manager"));
 	setMinimumSize(QSize(400, 400));
 	setAttribute(Qt::WA_DeleteOnClose);
 
-	Init(dir);
+	Init();
 }
 
 /*
  * Future proofing.  Makes it easier in future if I add ability to change directories
  */
-void save_manager_dialog::Init(std::string dir)
+void save_manager_dialog::Init()
 {
 	// Table
 	m_list = new QTableWidget(this);
@@ -118,12 +121,16 @@ void save_manager_dialog::Init(std::string dir)
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_list->setContextMenuPolicy(Qt::CustomContextMenu);
 	m_list->setColumnCount(5);
+	m_list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_list->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+	m_list->verticalScrollBar()->setSingleStep(20);
+	m_list->horizontalScrollBar()->setSingleStep(10);
 	m_list->setHorizontalHeaderLabels(QStringList() << tr("Icon") << tr("Title & Subtitle") << tr("Last Modified") << tr("Save ID") << tr("Notes"));
 	m_list->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
 	m_list->horizontalHeader()->setStretchLastSection(true);
 
 	// Bottom bar
-	int icon_size = m_gui_settings->GetValue(gui::sd_icon_size).toInt();
+	const int icon_size = m_gui_settings->GetValue(gui::sd_icon_size).toInt();
 	m_icon_size = QSize(icon_size, icon_size);
 	QLabel* label_icon_size = new QLabel(tr("Icon size:"), this);
 	QSlider* slider_icon_size = new QSlider(Qt::Horizontal, this);
@@ -228,9 +235,9 @@ void save_manager_dialog::Init(std::string dir)
 
 void save_manager_dialog::UpdateList()
 {
-	if (m_dir == "")
+	if (m_dir.empty())
 	{
-		m_dir = Emulator::GetHddDir() + "home/" + Emu.GetUsr() + "/savedata/";
+		m_dir = rpcs3::utils::get_hdd0_dir() + "home/" + Emu.GetUsr() + "/savedata/";
 	}
 
 	m_save_entries = GetSaveEntries(m_dir);
@@ -238,7 +245,7 @@ void save_manager_dialog::UpdateList()
 	m_list->clearContents();
 	m_list->setRowCount(static_cast<int>(m_save_entries.size()));
 
-	QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
+	const QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
 
 	if (m_gui_settings->GetValue(gui::m_enableUIColors).toBool())
 	{
@@ -250,10 +257,10 @@ void save_manager_dialog::UpdateList()
 	}
 
 	QList<int> indices;
-	for (size_t i = 0; i < m_save_entries.size(); ++i)
+	for (usz i = 0; i < m_save_entries.size(); ++i)
 		indices.append(static_cast<int>(i));
 
-	std::function<QPixmap(const int&)> get_icon = [this](const int& row)
+	const std::function<QPixmap(const int&)> get_icon = [this](const int& row)
 	{
 		const auto& entry = m_save_entries[row];
 		QPixmap icon = QPixmap(320, 176);
@@ -266,7 +273,8 @@ void save_manager_dialog::UpdateList()
 		return icon;
 	};
 
-	QList<QPixmap> icons = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_icon);
+	// NOTE: Due to a Qt bug in Qt 5.15.2, QtConcurrent::blockingMapped has a high risk of deadlocking. So let's just use QtConcurrent::mapped.
+	const QList<QPixmap> icons = QtConcurrent::mapped(indices, get_icon).results();
 
 	for (int i = 0; i < icons.count(); ++i)
 	{
@@ -307,13 +315,13 @@ void save_manager_dialog::UpdateList()
 	m_list->horizontalHeader()->resizeSections(QHeaderView::ResizeToContents);
 	m_list->verticalHeader()->resizeSections(QHeaderView::ResizeToContents);
 
-	QSize tableSize = QSize(
+	const QSize tableSize(
 		m_list->verticalHeader()->width() + m_list->horizontalHeader()->length() + m_list->frameWidth() * 2,
 		m_list->horizontalHeader()->height() + m_list->verticalHeader()->length() + m_list->frameWidth() * 2);
 
-	QSize preferredSize = minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize);
+	const QSize preferredSize = minimumSize().expandedTo(sizeHint() - m_list->sizeHint() + tableSize);
 
-	QSize maxSize = QSize(preferredSize.width(), static_cast<int>(QGuiApplication::primaryScreen()->geometry().height() * 0.6));
+	const QSize maxSize(preferredSize.width(), static_cast<int>(QGuiApplication::primaryScreen()->geometry().height() * 0.6));
 
 	resize(preferredSize.boundedTo(maxSize));
 }
@@ -329,7 +337,7 @@ void save_manager_dialog::HandleRepaintUiRequest()
 	resize(window_size);
 }
 
-QPixmap save_manager_dialog::GetResizedIcon(int i)
+QPixmap save_manager_dialog::GetResizedIcon(int i) const
 {
 	const qreal dpr = devicePixelRatioF();
 	const int width = m_icon_size.width() * dpr;
@@ -340,7 +348,7 @@ QPixmap save_manager_dialog::GetResizedIcon(int i)
 	{
 		return QPixmap();
 	}
-	QPixmap data = item->data(Qt::UserRole).value<QPixmap>();
+	const QPixmap data = item->data(Qt::UserRole).value<QPixmap>();
 
 	QPixmap icon = QPixmap(data.size() * dpr);
 	icon.setDevicePixelRatio(dpr);
@@ -358,17 +366,17 @@ void save_manager_dialog::UpdateIcons()
 	for (int i = 0; i < m_list->rowCount(); ++i)
 		indices.append(i);
 
-	std::function<QPixmap(const int&)> get_scaled = [this](const int& i)
+	const std::function<QPixmap(const int&)> get_scaled = [this](const int& i)
 	{
 		return GetResizedIcon(i);
 	};
 
-	QList<QPixmap> scaled = QtConcurrent::blockingMapped<QList<QPixmap>>(indices, get_scaled);
+	// NOTE: Due to a Qt bug in Qt 5.15.2, QtConcurrent::blockingMapped has a high risk of deadlocking. So let's just use QtConcurrent::mapped.
+	const QList<QPixmap> scaled = QtConcurrent::mapped(indices, get_scaled).results();
 
 	for (int i = 0; i < m_list->rowCount() && i < scaled.count(); ++i)
 	{
-		QTableWidgetItem* icon_item = m_list->item(i, 0);
-		if (icon_item)
+		if (QTableWidgetItem* icon_item = m_list->item(i, 0))
 			icon_item->setData(Qt::DecorationRole, scaled[i]);
 	}
 
@@ -392,7 +400,7 @@ void save_manager_dialog::OnSort(int logicalIndex)
 			m_sort_ascending = true;
 		}
 		m_sort_column = logicalIndex;
-		Qt::SortOrder sort_order = m_sort_ascending ? Qt::AscendingOrder : Qt::DescendingOrder;
+		const Qt::SortOrder sort_order = m_sort_ascending ? Qt::AscendingOrder : Qt::DescendingOrder;
 		m_list->sortByColumn(m_sort_column, sort_order);
 	}
 }
@@ -400,7 +408,7 @@ void save_manager_dialog::OnSort(int logicalIndex)
 // Remove a save file, need to be confirmed.
 void save_manager_dialog::OnEntryRemove()
 {
-	int idx = m_list->currentRow();
+	const int idx = m_list->currentRow();
 	if (idx != -1)
 	{
 		QTableWidgetItem* item = m_list->item(idx, 1);
@@ -434,7 +442,7 @@ void save_manager_dialog::OnEntriesRemove()
 	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %n items?", "", selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
 		std::sort(selection.rbegin(), selection.rend());
-		for (QModelIndex index : selection)
+		for (const QModelIndex& index : selection)
 		{
 			QTableWidgetItem* item = m_list->item(index.row(), 1);
 			if (!item)
@@ -451,7 +459,7 @@ void save_manager_dialog::OnEntriesRemove()
 // Pop-up a small context-menu, being a replacement for save_data_manage_dialog
 void save_manager_dialog::ShowContextMenu(const QPoint &pos)
 {
-	int idx = m_list->currentRow();
+	const int idx = m_list->currentRow();
 	if (idx == -1)
 	{
 		return;
@@ -502,9 +510,7 @@ void save_manager_dialog::closeEvent(QCloseEvent *event)
 
 void save_manager_dialog::UpdateDetails()
 {
-	int selected = m_list->selectionModel()->selectedRows().size();
-
-	if (selected != 1)
+	if (const int selected = m_list->selectionModel()->selectedRows().size(); selected != 1)
 	{
 		m_details_icon->setPixmap(QPixmap());
 		m_details_subtitle->setText("");
@@ -544,9 +550,11 @@ void save_manager_dialog::UpdateDetails()
 		m_details_modified->setText(tr("Last modified: %1").arg(FormatTimestamp(save.mtime)));
 		m_details_details->setText(tr("Details:\n").append(qstr(save.details)));
 		QString note = tr("Note:\n");
-		QVariantMap map = m_gui_settings->GetValue(gui::m_saveNotes).toMap();
-		if (map.contains(qstr(save.dirName)))
+		if (const QVariantMap map = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
+			map.contains(qstr(save.dirName)))
+		{
 			note.append(map[qstr(save.dirName)].toString());
+		}
 		m_details_note->setText(note);
 
 		m_button_delete->setDisabled(false);

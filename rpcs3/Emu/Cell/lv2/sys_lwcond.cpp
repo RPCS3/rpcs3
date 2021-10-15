@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_lwcond.h"
 
 #include "Emu/IdManager.h"
@@ -82,18 +82,18 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 
 	if (mode < 1 || mode > 3)
 	{
-		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
+		fmt::throw_exception("Unknown mode (%d)", mode);
 	}
 
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> int
 	{
 		ppu_thread* cpu = nullptr;
 
-		if (ppu_thread_id != UINT32_MAX)
+		if (ppu_thread_id != u32{umax})
 		{
 			cpu = idm::check_unlocked<named_thread<ppu_thread>>(static_cast<u32>(ppu_thread_id));
 
-			if (!cpu || cpu->joiner == ppu_join_status::exited)
+			if (!cpu)
 			{
 				return -1;
 			}
@@ -129,7 +129,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 
 				if (mode != 2)
 				{
-					verify(HERE), !mutex->signaled;
+					ensure(!mutex->signaled);
 					std::lock_guard lock(mutex->mutex);
 
 					if (mode == 3 && !mutex->sq.empty()) [[unlikely]]
@@ -140,7 +140,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 					}
 					else if (mode == 1)
 					{
-						verify(HERE), mutex->add_waiter(result);
+						mutex->add_waiter(result);
 						result = nullptr;
 					}
 				}
@@ -164,7 +164,7 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 
 	if (!cond.ret)
 	{
-		if (ppu_thread_id == UINT32_MAX)
+		if (ppu_thread_id == u32{umax})
 		{
 			if (mode == 3)
 			{
@@ -193,14 +193,14 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 	if (mode < 1 || mode > 2)
 	{
-		fmt::throw_exception("Unknown mode (%d)" HERE, mode);
+		fmt::throw_exception("Unknown mode (%d)", mode);
 	}
 
 	bool need_awake = false;
 
 	const auto cond = idm::check<lv2_obj, lv2_lwcond>(lwcond_id, [&](lv2_lwcond& cond) -> s32
 	{
-		lv2_lwmutex* mutex;
+		lv2_lwmutex* mutex{};
 
 		if (mode != 2)
 		{
@@ -229,9 +229,9 @@ error_code _sys_lwcond_signal_all(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 
 				if (mode == 1)
 				{
-					verify(HERE), !mutex->signaled;
+					ensure(!mutex->signaled);
 					std::lock_guard lock(mutex->mutex);
-					verify(HERE), mutex->add_waiter(cpu);
+					mutex->add_waiter(cpu);
 				}
 				else
 				{
@@ -286,22 +286,8 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 			return;
 		}
 
-		// Try to increment lwmutex's lwcond's waiters count
-		if (!mutex->lwcond_waiters.fetch_op([](s32& val)
-		{
-			if (val == INT32_MIN)
-			{
-				return false;
-			}
-
-			val++;
-			return true;
-		}).second)
-		{
-			// Failed - lwmutex was detroyed and all waiters have quit
-			mutex.reset();
-			return;
-		}
+		// Increment lwmutex's lwcond's waiters count
+		mutex->lwcond_waiters++;
 
 		std::lock_guard lock(cond.mutex);
 
@@ -332,11 +318,16 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		return CELL_ESRCH;
 	}
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state))
 		{
-			return 0;
+			return {};
+		}
+
+		if (state & cpu_flag::signal)
+		{
+			break;
 		}
 
 		if (timeout)
@@ -346,7 +337,7 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return 0;
+					return {};
 				}
 
 				std::lock_guard lock(cond->mutex);
@@ -358,8 +349,8 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 					break;
 				}
 
-				std::shared_lock lock2(mutex->mutex);
-				
+				reader_lock lock2(mutex->mutex);
+
 				if (std::find(mutex->sq.cbegin(), mutex->sq.cend(), &ppu) == mutex->sq.cend())
 				{
 					break;
@@ -372,11 +363,11 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 
-	if (--mutex->lwcond_waiters == INT32_MIN)
+	if (--mutex->lwcond_waiters == smin)
 	{
 		// Notify the thread destroying lwmutex on last waiter
 		mutex->lwcond_waiters.notify_all();

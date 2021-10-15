@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
@@ -489,22 +489,26 @@ error_code cellSailSourceNotifyMediaStateChanged()
 
 error_code cellSailSourceNotifyOpenCompleted()
 {
-	fmt::throw_exception("Unexpected function" HERE);
+	cellSail.fatal("cellSailSourceNotifyOpenCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailSourceNotifyStartCompleted()
 {
-	fmt::throw_exception("Unexpected function" HERE);
+	cellSail.fatal("cellSailSourceNotifyStartCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailSourceNotifyStopCompleted()
 {
-	fmt::throw_exception("Unexpected function" HERE);
+	cellSail.fatal("cellSailSourceNotifyStopCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailSourceNotifyReadCompleted()
 {
-	fmt::throw_exception("Unexpected function" HERE);
+	cellSail.fatal("cellSailSourceNotifyReadCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailSourceSetDiagHandler()
@@ -515,7 +519,8 @@ error_code cellSailSourceSetDiagHandler()
 
 error_code cellSailSourceNotifyCloseCompleted()
 {
-	fmt::throw_exception("Unexpected function" HERE);
+	cellSail.fatal("cellSailSourceNotifyCloseCompleted: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellSailMp4MovieGetBrand()
@@ -638,7 +643,7 @@ error_code cellSailPlayerInitialize2(ppu_thread& ppu,
 		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
 		event.u32x2.minor = 0;
 		pSelf->callback(ppu, pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_INITIALIZED, 0);
-	};
+	}
 
 	return CELL_OK;
 }
@@ -777,7 +782,7 @@ error_code cellSailPlayerBoot(ppu_thread& ppu, vm::ptr<CellSailPlayer> pSelf, u6
 		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
 		event.u32x2.minor = 0;
 		pSelf->callback(ppu, pSelf->callbackArg, event, CELL_SAIL_PLAYER_STATE_BOOT_TRANSITION, 0);
-	};
+	}
 
 	// TODO: Do stuff here
 	pSelf->booted = true;
@@ -787,7 +792,7 @@ error_code cellSailPlayerBoot(ppu_thread& ppu, vm::ptr<CellSailPlayer> pSelf, u6
 		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_CALL_COMPLETED;
 		event.u32x2.minor = CELL_SAIL_PLAYER_CALL_BOOT;
 		pSelf->callback(ppu, pSelf->callbackArg, event, 0, 0);
-	};
+	}
 
 	return CELL_OK;
 }
@@ -836,10 +841,10 @@ error_code cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 str
 					u32 buffer = vm::alloc(size, vm::main);
 					auto bufPtr = vm::cptr<PamfHeader>::make(buffer);
 					PamfHeader *buf = const_cast<PamfHeader*>(bufPtr.get_ptr());
-					verify(HERE), f.read(buf, size) == size;
+					ensure(f.read(buf, size) == size);
 					u32 sp_ = vm::alloc(sizeof(CellPamfReader), vm::main);
 					auto sp = vm::ptr<CellPamfReader>::make(sp_);
-					u32 reader = cellPamfReaderInitialize(sp, bufPtr, size, 0);
+					[[maybe_unused]] u32 err = cellPamfReaderInitialize(sp, bufPtr, size, 0);
 
 					descriptor->buffer = buffer;
 					descriptor->sp_ = sp_;
@@ -1059,6 +1064,8 @@ error_code cellSailPlayerUnregisterSource()
 DECLARE(ppu_module_manager::cellSail)("cellSail", []()
 {
 	static ppu_static_module cellSailAvi("cellSailAvi");
+
+	[[maybe_unused]] vm::ptr<CellSailMp4MovieInfo<>> test;
 
 	REG_FUNC(cellSail, cellSailMemAllocatorInitialize);
 

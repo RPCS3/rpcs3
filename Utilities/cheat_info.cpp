@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "cheat_info.h"
 #include "Config.h"
 #include "StrUtil.h"
@@ -10,7 +10,7 @@ bool cheat_info::from_str(const std::string& cheat_line)
 	auto cheat_vec = fmt::split(cheat_line, {"@@@"}, false);
 
 	s64 val64 = 0;
-	if (cheat_vec.size() != 5 || !cfg::try_to_int64(&val64, cheat_vec[2], 0, cheat_type_max - 1))
+	if (cheat_vec.size() != 5 || !try_to_int64(&val64, cheat_vec[2], 0, cheat_type_max - 1))
 	{
 		log_cheat.fatal("Failed to parse cheat line");
 		return false;

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "system_config_types.h"
 
 template <>
@@ -132,10 +132,28 @@ void fmt_class_string<detail_level>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
+		case detail_level::none: return "None";
 		case detail_level::minimal: return "Minimal";
 		case detail_level::low: return "Low";
 		case detail_level::medium: return "Medium";
 		case detail_level::high: return "High";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<perf_graph_detail_level>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](perf_graph_detail_level value)
+	{
+		switch (value)
+		{
+		case perf_graph_detail_level::minimal: return "Minimal";
+		case perf_graph_detail_level::show_min_max: return "Show min and max";
+		case perf_graph_detail_level::show_one_percent_avg: return "Show 1% and average";
+		case perf_graph_detail_level::show_all: return "All";
 		}
 
 		return unknown;
@@ -229,8 +247,8 @@ void fmt_class_string<np_psn_status>::format(std::string& out, u64 arg)
 		switch (value)
 		{
 		case np_psn_status::disabled: return "Disconnected";
-		case np_psn_status::fake: return "Simulated";
-		case np_psn_status::rpcn: return "RPCN";
+		case np_psn_status::psn_fake: return "Simulated";
+		case np_psn_status::psn_rpcn: return "RPCN";
 		}
 
 		return unknown;
@@ -356,17 +374,31 @@ void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<lib_loading_type>::format(std::string& out, u64 arg)
+void fmt_class_string<buzz_handler>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](lib_loading_type value)
+	format_enum(out, arg, [](auto value)
 	{
 		switch (value)
 		{
-		case lib_loading_type::manual: return "Manually load selected libraries";
-		case lib_loading_type::hybrid: return "Load automatic and manual selection";
-		case lib_loading_type::liblv2only: return "Load liblv2.sprx only";
-		case lib_loading_type::liblv2both: return "Load liblv2.sprx and manual selection";
-		case lib_loading_type::liblv2list: return "Load liblv2.sprx and strict selection";
+		case buzz_handler::null: return "Null";
+		case buzz_handler::one_controller: return "1 controller";
+		case buzz_handler::two_controllers: return "2 controllers";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<turntable_handler>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+	{
+		switch (value)
+		{
+		case turntable_handler::null: return "Null";
+		case turntable_handler::one_controller: return "1 controller";
+		case turntable_handler::two_controllers: return "2 controllers";
 		}
 
 		return unknown;
@@ -417,6 +449,37 @@ void fmt_class_string<audio_downmix>::format(std::string& out, u64 arg)
 		case audio_downmix::downmix_to_stereo: return "Downmix to Stereo";
 		case audio_downmix::downmix_to_5_1: return "Downmix to 5.1";
 		case audio_downmix::use_application_settings: return "Use application settings";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<vk_gpu_scheduler_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](vk_gpu_scheduler_mode value)
+	{
+		switch (value)
+		{
+		case vk_gpu_scheduler_mode::host: return "Host";
+		case vk_gpu_scheduler_mode::device: return "Device";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<thread_scheduler_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](thread_scheduler_mode value)
+	{
+		switch (value)
+		{
+		case thread_scheduler_mode::old: return "RPCS3 Scheduler";
+		case thread_scheduler_mode::alt: return "RPCS3 Alternative Scheduler";
+		case thread_scheduler_mode::os: return "Operating System";
 		}
 
 		return unknown;

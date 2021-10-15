@@ -1,6 +1,7 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
+
 #include <QDir>
 #include <QComboBox>
 #include <QFont>
@@ -9,20 +10,40 @@
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QTreeWidgetItem>
+#include <QPainter>
+
+#include <string>
 
 namespace gui
 {
 	namespace utils
 	{
+		class circle_pixmap : public QPixmap
+		{
+		public:
+			circle_pixmap(const QColor& color, qreal pixel_ratio)
+			    : QPixmap(pixel_ratio * 16, pixel_ratio * 16)
+			{
+				fill(Qt::transparent);
+
+				QPainter painter(this);
+				setDevicePixelRatio(pixel_ratio);
+				painter.setRenderHint(QPainter::Antialiasing);
+				painter.setPen(Qt::NoPen);
+				painter.setBrush(color);
+				painter.drawEllipse(0, 0, width(), height());
+			}
+		};
+
 		template<typename T>
 		static QSet<T> list_to_set(const QList<T>& list)
 		{
 			return QSet<T>(list.begin(), list.end());
 		}
 
-		// Creates a frame geometry rectangle with given width height that's centered inside the origin,
+		// Creates a frame geometry rectangle with target width and height that's centered inside the base,
 		// while still considering screen boundaries.
-		QRect create_centered_window_geometry(const QRect& origin, s32 width, s32 height);
+		QRect create_centered_window_geometry(const QScreen* screen, const QRect& base, s32 target_width, s32 target_height);
 
 		// Returns a custom colored QPixmap based on another QPixmap.
 		// use colorize_all to repaint every opaque pixel with the chosen color
@@ -44,7 +65,15 @@ namespace gui
 		QFont get_label_font(const QString& object_name);
 
 		// Returns the width of the text
-		int get_label_width(const QString& text);
+		int get_label_width(const QString& text, const QFont* font = nullptr);
+
+		template <typename T>
+		void set_font_size(T& qobj, int size)
+		{
+			QFont font = qobj.font();
+			font.setPointSize(size);
+			qobj.setFont(font);
+		}
 
 		// Returns the part of the image loaded from path that is inside the bounding box of its opaque areas
 		QImage get_opaque_image_area(const QString& path);

@@ -1,7 +1,8 @@
-﻿#include "util/logs.hpp"
+#include "util/logs.hpp"
 #include "Utilities/File.h"
 #include "Utilities/mutex.h"
 #include "Utilities/Thread.h"
+#include "Utilities/StrFmt.h"
 #include <cstring>
 #include <cstdarg>
 #include <string>
@@ -14,7 +15,9 @@
 using namespace std::literals::chrono_literals;
 
 #ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #else
 #include <sys/mman.h>
@@ -23,13 +26,21 @@ using namespace std::literals::chrono_literals;
 
 #include <zlib.h>
 
-static std::string empty_string()
+static std::string default_string()
 {
-	return {};
+	if (thread_ctrl::is_main())
+	{
+		return {};
+	}
+
+	return fmt::format("TID: %s", std::this_thread::get_id());
 }
 
 // Thread-specific log prefix provider
-thread_local std::string(*g_tls_log_prefix)() = &empty_string;
+thread_local std::string(*g_tls_log_prefix)() = &default_string;
+
+// Another thread-specific callback
+thread_local void(*g_tls_log_control)(const char* fmt, u64 progress) = [](const char*, u64){};
 
 template<>
 void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
@@ -54,24 +65,32 @@ void fmt_class_string<logs::level>::format(std::string& out, u64 arg)
 
 namespace logs
 {
+	static_assert(std::is_empty_v<message> && sizeof(message) == 1);
+	static_assert(sizeof(channel) == alignof(channel));
+	static_assert(uchar(level::always) == 0);
+	static_assert(uchar(level::fatal) == 1);
+	static_assert(uchar(level::trace) == 7);
+	static_assert((offsetof(channel, fatal) & 7) == 1);
+	static_assert((offsetof(channel, trace) & 7) == 7);
+
 	// Memory-mapped buffer size
 	constexpr u64 s_log_size = 32 * 1024 * 1024;
 
 	class file_writer
 	{
-		std::thread m_writer;
-		fs::file m_fout;
-		fs::file m_fout2;
-		u64 m_max_size;
+		std::thread m_writer{};
+		fs::file m_fout{};
+		fs::file m_fout2{};
+		u64 m_max_size{};
 
-		std::unique_ptr<uchar[]> m_fptr;
+		std::unique_ptr<uchar[]> m_fptr{};
 		z_stream m_zs{};
-		shared_mutex m_m;
+		shared_mutex m_m{};
 
 		alignas(128) atomic_t<u64> m_buf{0}; // MSB (40 bit): push begin, LSB (24 bis): push size
 		alignas(128) atomic_t<u64> m_out{0}; // Amount of bytes written to file
 
-		uchar m_zout[65536];
+		uchar m_zout[65536]{};
 
 		// Write buffered logs immediately
 		bool flush(u64 bufv);
@@ -82,7 +101,7 @@ namespace logs
 		virtual ~file_writer();
 
 		// Append raw data
-		void log(const char* text, std::size_t size);
+		void log(const char* text, usz size);
 	};
 
 	struct file_listener final : file_writer, public listener
@@ -101,16 +120,16 @@ namespace logs
 		~root_listener() override = default;
 
 		// Encode level, current thread name, channel name and write log message
-		void log(u64 stamp, const message& msg, const std::string& prefix, const std::string& text) override
+		void log(u64, const message&, const std::string&, const std::string&) override
 		{
 			// Do nothing
 		}
 
 		// Channel registry
-		std::unordered_multimap<std::string, channel*> channels;
+		std::unordered_multimap<std::string, channel*> channels{};
 
 		// Messages for delayed listener initialization
-		std::vector<stored_message> messages;
+		std::vector<stored_message> messages{};
 	};
 
 	static root_listener* get_logger()
@@ -134,7 +153,7 @@ namespace logs
 				QueryPerformanceCounter(&start);
 			}
 #else
-			std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
+			steady_clock::time_point start = steady_clock::now();
 #endif
 
 			u64 get() const
@@ -145,7 +164,7 @@ namespace logs
 				const LONGLONG diff = now.QuadPart - start.QuadPart;
 				return diff / freq.QuadPart * 1'000'000 + diff % freq.QuadPart * 1'000'000 / freq.QuadPart;
 #else
-				return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - start).count();
+				return (steady_clock::now() - start).count() / 1000;
 #endif
 			}
 		} timebase{};
@@ -165,7 +184,7 @@ namespace logs
 
 		for (auto&& pair : get_logger()->channels)
 		{
-			pair.second->enabled.store(level::notice, std::memory_order_relaxed);
+			pair.second->enabled.release(level::notice);
 		}
 	}
 
@@ -175,7 +194,7 @@ namespace logs
 
 		for (auto&& pair : get_logger()->channels)
 		{
-			pair.second->enabled.store(level::always, std::memory_order_relaxed);
+			pair.second->enabled.release(level::always);
 		}
 	}
 
@@ -187,7 +206,7 @@ namespace logs
 
 		while (found.first != found.second)
 		{
-			found.first->second->enabled.store(value, std::memory_order_relaxed);
+			found.first->second->enabled.release(value);
 			found.first++;
 		}
 	}
@@ -200,7 +219,7 @@ namespace logs
 
 		if (found.first != found.second)
 		{
-			return found.first->second->enabled.load(std::memory_order_relaxed);
+			return found.first->second->enabled.observe();
 		}
 		else
 		{
@@ -272,7 +291,7 @@ logs::listener::~listener()
 
 		for (auto&& pair : logger->channels)
 		{
-			pair.second->enabled.store(level::always, std::memory_order_relaxed);
+			pair.second->enabled.release(level::always);
 		}
 	}
 }
@@ -287,7 +306,7 @@ void logs::listener::add(logs::listener* _new)
 	// Install new listener at the end of linked list
 	listener* null = nullptr;
 
-	while (lis->m_next || !lis->m_next.compare_exchange_strong(null, _new))
+	while (lis->m_next || !lis->m_next.compare_exchange(null, _new))
 	{
 		lis = lis->m_next;
 		null = nullptr;
@@ -314,13 +333,16 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 	// Get timestamp
 	const u64 stamp = get_stamp();
 
+	// Notify start operation
+	g_tls_log_control(fmt, 0);
+
 	// Get text, extract va_args
 	/*constinit thread_local*/ std::string text;
 	/*constinit thread_local*/ std::basic_string<u64> args;
 
 	static constexpr fmt_type_info empty_sup{};
 
-	std::size_t args_count = 0;
+	usz args_count = 0;
 	for (auto v = sup; v && v->fmt_string; v++)
 		args_count++;
 
@@ -361,6 +383,9 @@ void logs::message::broadcast(const char* fmt, const fmt_type_info* sup, ...) co
 		lis->log(stamp, *this, prefix, text);
 		lis = lis->m_next;
 	}
+
+	// Notify end operation
+	g_tls_log_control(fmt, -1);
 }
 
 logs::file_writer::file_writer(const std::string& name, u64 max_size)
@@ -410,7 +435,7 @@ logs::file_writer::file_writer(const std::string& name, u64 max_size)
 
 	m_writer = std::thread([this]()
 	{
-		thread_ctrl::set_native_priority(-1);
+		thread_ctrl::scoped_priority low_prio(-1);
 
 		while (true)
 		{
@@ -529,7 +554,7 @@ bool logs::file_writer::flush(u64 bufv)
 	return false;
 }
 
-void logs::file_writer::log(const char* text, std::size_t size)
+void logs::file_writer::log(const char* text, usz size)
 {
 	if (!m_fptr)
 	{
@@ -539,7 +564,7 @@ void logs::file_writer::log(const char* text, std::size_t size)
 	// TODO: write bigger fragment directly in blocking manner
 	while (size && size <= 0xffffff)
 	{
-		u64 bufv;
+		u64 bufv = 0;
 
 		const auto pos = m_buf.atomic_op([&](u64& v) -> uchar*
 		{
@@ -601,7 +626,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	text.reserve(50000);
 
 	// Used character: U+00B7 (Middle Dot)
-	switch (msg.sev)
+	switch (msg)
 	{
 	case level::always:  text = reinterpret_cast<const char*>(u8"·A "); break;
 	case level::fatal:   text = reinterpret_cast<const char*>(u8"·F "); break;
@@ -620,7 +645,7 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 	const u64 frac = (stamp % 1'000'000);
 	fmt::append(text, "%u:%02u:%02u.%06u ", hours, mins, secs, frac);
 
-	if (msg.ch == nullptr && stamp == 0)
+	if (stamp == 0)
 	{
 		// Workaround for first special messages to keep backward compatibility
 		text.clear();
@@ -633,12 +658,12 @@ void logs::file_listener::log(u64 stamp, const logs::message& msg, const std::st
 		text += "} ";
 	}
 
-	if (msg.ch && '\0' != *msg.ch->name)
+	if (stamp && msg->name && '\0' != *msg->name)
 	{
-		text += msg.ch->name;
-		text += msg.sev == level::todo ? " TODO: " : ": ";
+		text += msg->name;
+		text += msg == level::todo ? " TODO: " : ": ";
 	}
-	else if (msg.sev == level::todo)
+	else if (msg == level::todo)
 	{
 		text += "TODO: ";
 	}

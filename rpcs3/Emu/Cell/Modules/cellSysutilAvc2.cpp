@@ -110,6 +110,15 @@ error_code cellSysutilAvc2StartVoiceDetection()
 error_code cellSysutilAvc2UnloadAsync()
 {
 	cellSysutilAvc2.todo("cellSysutilAvc2UnloadAsync()");
+
+	if (avc2_cb)
+	{
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+			avc2_cb(cb_ppu, CELL_AVC2_EVENT_UNLOAD_SUCCEEDED, 0, avc2_cb_arg);
+			return 0;
+		});
+	}
+
 	return CELL_OK;
 }
 
@@ -134,7 +143,8 @@ error_code cellSysutilAvc2LoadAsync(SceNpMatching2ContextId ctx_id, u32 containe
 
 	if (avc2_cb)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		{
 			avc2_cb(cb_ppu, CELL_AVC2_EVENT_LOAD_SUCCEEDED, 0, avc2_cb_arg);
 			return 0;
 		});
@@ -230,7 +240,8 @@ error_code cellSysutilAvc2JoinChatRequest(vm::cptr<SceNpMatching2RoomId> room_id
 
 	if (avc2_cb)
 	{
-		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32 {
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		{
 			avc2_cb(cb_ppu, CELL_AVC2_EVENT_JOIN_SUCCEEDED, 0, avc2_cb_arg);
 			return 0;
 		});
@@ -318,7 +329,17 @@ error_code cellSysutilAvc2SetStreamPriority(u8 priority)
 
 error_code cellSysutilAvc2LeaveChatRequest()
 {
-	cellSysutilAvc2.todo("cellSysutilAvc2LeaveChatRequest()");
+	cellSysutilAvc2.notice("cellSysutilAvc2LeaveChatRequest()");
+
+	if (avc2_cb)
+	{
+		sysutil_register_cb([=](ppu_thread& cb_ppu) -> s32
+		{
+			avc2_cb(cb_ppu, CELL_AVC2_EVENT_LEAVE_SUCCEEDED, 0, avc2_cb_arg);
+			return 0;
+		});
+	}
+
 	return CELL_OK;
 }
 
@@ -362,7 +383,7 @@ error_code cellSysutilAvc2EnumPlayers(vm::ptr<s32> players_num, vm::ptr<SceNpMat
 
 	if (players_num)
 		*players_num = 1;
-	
+
 	if (players_id)
 		*players_id = 1;
 

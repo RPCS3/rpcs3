@@ -1,23 +1,22 @@
-﻿#pragma once
+#pragma once
 
 #include "category.h"
 
 #include <QString>
 #include <QObject>
 
-typedef std::map<const QString, const QString> localized_cat;
+#include "util/types.hpp"
 
-using namespace category;
+typedef std::map<const QString, const QString> localized_cat;
 
 class Localized : public QObject
 {
 	Q_OBJECT
 
 public:
+	Localized() {}
 
-	Localized();
-
-	QString GetVerboseTimeByMs(qint64 elapsed_ms, bool show_days = false) const;
+	QString GetVerboseTimeByMs(quint64 elapsed_ms, bool show_days = false) const;
 
 	const struct category // (see PARAM.SFO in psdevwiki.com) TODO: Disc Categories
 	{
@@ -61,31 +60,31 @@ public:
 
 		const localized_cat cat_boot =
 		{
-			{ cat_app_music, app_music }, // media
-			{ cat_app_photo, app_photo }, // media
-			{ cat_app_tv   , app_tv    }, // media
-			{ cat_app_video, app_video }, // media
-			{ cat_bc_video , bc_video  }, // media
-			{ cat_web_tv   , web_tv    }, // media
-			{ cat_home     , home      }, // home
-			{ cat_network  , network   }, // other
-			{ cat_store_fe , store_fe  }, // other
-			{ cat_disc_game, disc_game }, // disc_game
-			{ cat_hdd_game , hdd_game  }, // hdd_game
-			{ cat_ps2_game , ps2_game  }, // ps2_games
-			{ cat_ps2_inst , ps2_inst  }, // ps2_games
-			{ cat_ps1_game , ps1_game  }, // ps1_game
-			{ cat_psp_game , psp_game  }, // psp_games
-			{ cat_psp_mini , psp_mini  }, // psp_games
-			{ cat_psp_rema , psp_rema  }, // psp_games
+			{ cat::cat_app_music, app_music }, // media
+			{ cat::cat_app_photo, app_photo }, // media
+			{ cat::cat_app_tv   , app_tv    }, // media
+			{ cat::cat_app_video, app_video }, // media
+			{ cat::cat_bc_video , bc_video  }, // media
+			{ cat::cat_web_tv   , web_tv    }, // media
+			{ cat::cat_home     , home      }, // home
+			{ cat::cat_network  , network   }, // other
+			{ cat::cat_store_fe , store_fe  }, // other
+			{ cat::cat_disc_game, disc_game }, // disc_game
+			{ cat::cat_hdd_game , hdd_game  }, // hdd_game
+			{ cat::cat_ps2_game , ps2_game  }, // ps2_games
+			{ cat::cat_ps2_inst , ps2_inst  }, // ps2_games
+			{ cat::cat_ps1_game , ps1_game  }, // ps1_game
+			{ cat::cat_psp_game , psp_game  }, // psp_games
+			{ cat::cat_psp_mini , psp_mini  }, // psp_games
+			{ cat::cat_psp_rema , psp_rema  }, // psp_games
 		};
 
 		const localized_cat cat_data =
 		{
-			{ cat_ps3_data, ps3_data }, // data
-			{ cat_ps2_data, ps2_data }, // data
-			{ cat_ps3_save, ps3_save }, // data
-			{ cat_psp_save, psp_save }  // data
+			{ cat::cat_ps3_data, ps3_data }, // data
+			{ cat::cat_ps2_data, ps2_data }, // data
+			{ cat::cat_ps3_save, ps3_save }, // data
+			{ cat::cat_psp_save, psp_save }  // data
 		};
 	} category;
 
@@ -93,7 +92,7 @@ public:
 	{
 		// These values are partly generalized. They can vary between country and category
 		// Normally only values 1,2,3,5,7 and 9 are used
-		const std::map<uint32_t, QString> level
+		const std::map<u32, QString> level
 		{
 			{ 1,  tr("0+") },
 			{ 2,  tr("3+") },
@@ -112,7 +111,7 @@ public:
 	const struct resolution
 	{
 		// there might be different values for other categories
-		const std::map<uint32_t, QString> mode
+		const std::map<u32, QString> mode
 		{
 			{ 1 << 0, tr("480p") },
 			{ 1 << 1, tr("576p") },
@@ -125,7 +124,7 @@ public:
 
 	const struct sound
 	{
-		const std::map<uint32_t, QString> format
+		const std::map<u32, QString> format
 		{
 			{ 1 << 0, tr("LPCM 2.0") },
 			//{ 1 << 1, tr("LPCM ???") },

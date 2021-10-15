@@ -1,9 +1,8 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
-#include "Emu/Cell/lv2/sys_mutex.h"
 #include "Emu/Cell/lv2/sys_cond.h"
 #include "sysPrxForUser.h"
 
@@ -59,7 +58,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 
 	if ((lwmutex->attribute & SYS_SYNC_ATTR_PROTOCOL_MASK) == SYS_SYNC_RETRY)
 	{
-		return _sys_lwcond_signal(ppu, lwcond->lwcond_queue, 0, UINT32_MAX, 2);
+		return _sys_lwcond_signal(ppu, lwcond->lwcond_queue, 0, u32{umax}, 2);
 	}
 
 	if (lwmutex->vars.owner.load() == ppu.id)
@@ -68,7 +67,7 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		lwmutex->all_info++;
 
 		// call the syscall
-		if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, UINT32_MAX, 1))
+		if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, u32{umax}, 1))
 		{
 			if (ppu.test_stopped())
 			{
@@ -96,25 +95,25 @@ error_code sys_lwcond_signal(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond)
 		}
 
 		// call the syscall
-		return _sys_lwcond_signal(ppu, lwcond->lwcond_queue, 0, UINT32_MAX, 2);
+		return _sys_lwcond_signal(ppu, lwcond->lwcond_queue, 0, u32{umax}, 2);
 	}
 
 	// if locking succeeded
-	lwmutex->lock_var.atomic_op([](typename sys_lwmutex_t::sync_var_t& var)
+	lwmutex->lock_var.atomic_op([](sys_lwmutex_t::sync_var_t& var)
 	{
 		var.waiter++;
 		var.owner = lwmutex_reserved;
 	});
 
 	// call the syscall
-	if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, UINT32_MAX, 3))
+	if (error_code res = _sys_lwcond_signal(ppu, lwcond->lwcond_queue, lwmutex->sleep_queue, u32{umax}, 3))
 	{
 		if (ppu.test_stopped())
 		{
 			return 0;
 		}
 
-		lwmutex->lock_var.atomic_op([&](typename sys_lwmutex_t::sync_var_t& var)
+		lwmutex->lock_var.atomic_op([&](sys_lwmutex_t::sync_var_t& var)
 		{
 			var.waiter--;
 			var.owner = ppu.id;
@@ -253,7 +252,7 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 	}
 
 	// if locking succeeded
-	lwmutex->lock_var.atomic_op([](typename sys_lwmutex_t::sync_var_t& var)
+	lwmutex->lock_var.atomic_op([](sys_lwmutex_t::sync_var_t& var)
 	{
 		var.waiter++;
 		var.owner = lwmutex_reserved;
@@ -267,7 +266,7 @@ error_code sys_lwcond_signal_to(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u
 			return 0;
 		}
 
-		lwmutex->lock_var.atomic_op([&](typename sys_lwmutex_t::sync_var_t& var)
+		lwmutex->lock_var.atomic_op([&](sys_lwmutex_t::sync_var_t& var)
 		{
 			var.waiter--;
 			var.owner = ppu.id;
@@ -329,7 +328,7 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 
 		if (old == lwmutex_free || old == lwmutex_dead)
 		{
-			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
+			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 		}
 
 		return res;
@@ -361,21 +360,31 @@ error_code sys_lwcond_wait(ppu_thread& ppu, vm::ptr<sys_lwcond_t> lwcond, u64 ti
 
 		if (old == lwmutex_free || old == lwmutex_dead)
 		{
-			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)" HERE, lwmutex, old);
+			fmt::throw_exception("Locking failed (lwmutex=*0x%x, owner=0x%x)", lwmutex, old);
 		}
 
 		return not_an_error(CELL_ETIMEDOUT);
 	}
 
-	fmt::throw_exception("Unexpected syscall result (lwcond=*0x%x, result=0x%x)" HERE, lwcond, +res);
+	fmt::throw_exception("Unexpected syscall result (lwcond=*0x%x, result=0x%x)", lwcond, +res);
 }
 
-void sysPrxForUser_sys_lwcond_init()
+void sysPrxForUser_sys_lwcond_init(ppu_static_module* _this)
 {
-	REG_FUNC(sysPrxForUser, sys_lwcond_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwcond_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwcond_signal).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwcond_signal_all).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwcond_signal_to).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
-	REG_FUNC(sysPrxForUser, sys_lwcond_wait).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	REG_FUNC(sysPrxForUser, sys_lwcond_create);
+	REG_FUNC(sysPrxForUser, sys_lwcond_destroy);
+	REG_FUNC(sysPrxForUser, sys_lwcond_signal);
+	REG_FUNC(sysPrxForUser, sys_lwcond_signal_all);
+	REG_FUNC(sysPrxForUser, sys_lwcond_signal_to);
+	REG_FUNC(sysPrxForUser, sys_lwcond_wait);
+
+	_this->add_init_func([](ppu_static_module*)
+	{
+		REINIT_FUNC(sys_lwcond_create).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwcond_destroy).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwcond_signal).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwcond_signal_all).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwcond_signal_to).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+		REINIT_FUNC(sys_lwcond_wait).flag(g_cfg.core.hle_lwmutex ? MFF_FORCED_HLE : MFF_PERFECT);
+	});
 }

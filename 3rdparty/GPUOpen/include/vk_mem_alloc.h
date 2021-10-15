@@ -8848,7 +8848,7 @@ bool VmaBlockMetadata_Generic::CheckAllocation(
 
         // Check previous suballocations for BufferImageGranularity conflicts.
         // Make bigger alignment if necessary.
-        if(bufferImageGranularity > 1)
+        if(bufferImageGranularity > 1 && bufferImageGranularity != allocAlignment)
         {
             bool bufferImageGranularityConflict = false;
             VmaSuballocationList::const_iterator prevSuballocItem = suballocItem;
@@ -8932,7 +8932,7 @@ bool VmaBlockMetadata_Generic::CheckAllocation(
 
         // Check next suballocations for BufferImageGranularity conflicts.
         // If conflict exists, we must mark more allocations lost or fail.
-        if(bufferImageGranularity > 1)
+        if(bufferImageGranularity > 1 && (allocSize % bufferImageGranularity || *pOffset % bufferImageGranularity))
         {
             VmaSuballocationList::const_iterator nextSuballocItem = lastSuballocItem;
             ++nextSuballocItem;
@@ -8991,7 +8991,7 @@ bool VmaBlockMetadata_Generic::CheckAllocation(
     
         // Check previous suballocations for BufferImageGranularity conflicts.
         // Make bigger alignment if necessary.
-        if(bufferImageGranularity > 1)
+        if(bufferImageGranularity > 1 && bufferImageGranularity != allocAlignment)
         {
             bool bufferImageGranularityConflict = false;
             VmaSuballocationList::const_iterator prevSuballocItem = suballocItem;
@@ -9031,7 +9031,7 @@ bool VmaBlockMetadata_Generic::CheckAllocation(
 
         // Check next suballocations for BufferImageGranularity conflicts.
         // If conflict exists, allocation cannot be made here.
-        if(bufferImageGranularity > 1)
+        if(bufferImageGranularity > 1 && (allocSize % bufferImageGranularity || *pOffset % bufferImageGranularity))
         {
             VmaSuballocationList::const_iterator nextSuballocItem = suballocItem;
             ++nextSuballocItem;

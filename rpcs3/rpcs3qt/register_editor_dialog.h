@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 
 #include <QDialog>
 #include <QComboBox>
@@ -13,20 +13,18 @@ class register_editor_dialog : public QDialog
 {
 	Q_OBJECT
 
-	u32 m_pc;
 	CPUDisAsm* m_disasm;
 	QComboBox* m_register_combo;
 	QLineEdit* m_value_line;
 
-public:
-	std::weak_ptr<cpu_thread> cpu;
+	const std::function<cpu_thread*()> m_get_cpu;
 
 public:
-	register_editor_dialog(QWidget *parent, u32 _pc, const std::shared_ptr<cpu_thread>& _cpu, CPUDisAsm* _disasm);
+	register_editor_dialog(QWidget *parent, CPUDisAsm* _disasm, std::function<cpu_thread*()> func);
 
 private:
-	void OnOkay(const std::shared_ptr<cpu_thread>& _cpu);
+	void OnOkay();
 
 private Q_SLOTS:
-	void updateRegister(int reg);
+	void updateRegister(int reg) const;
 };

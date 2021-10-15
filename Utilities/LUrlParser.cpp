@@ -29,24 +29,22 @@
 
 #include <algorithm>
 #include <cstring>
-#include <stdlib.h>
+#include <cstdlib>
 
 // check if the scheme name is valid
 static bool IsSchemeValid( const std::string& SchemeName )
 {
-	for ( auto c : SchemeName  )
+	return std::all_of(SchemeName.cbegin(), SchemeName.cend(), [](const auto& c)
 	{
-		if ( !isalpha( c ) && c != '+' && c != '-' && c != '.' ) return false;
-	}
-
-	return true;
+		return isalpha(c) || c == '+' || c == '-' || c == '.';
+	});
 }
 
 bool LUrlParser::clParseURL::GetPort( int* OutPort ) const
 {
 	if ( !IsValid() ) { return false; }
 
-	int Port = atoi( m_Port.c_str() );
+	const int Port = atoi( m_Port.c_str() );
 
 	if ( Port <= 0 || Port > 65535 ) { return false; }
 

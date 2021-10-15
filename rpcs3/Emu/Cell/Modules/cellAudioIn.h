@@ -1,9 +1,10 @@
-﻿#pragma once
+#pragma once
 
-#include "Utilities/BEType.h"
+#include "util/types.hpp"
+#include "util/endian.hpp"
 
 // Error codes
-enum CellAudioInError
+enum CellAudioInError : u32
 {
 	CELL_AUDIO_IN_ERROR_NOT_IMPLEMENTED        = 0x8002b260,
 	CELL_AUDIO_IN_ERROR_ILLEGAL_CONFIGURATION  = 0x8002b261,

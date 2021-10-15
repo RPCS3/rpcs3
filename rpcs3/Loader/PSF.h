@@ -1,7 +1,14 @@
 #pragma once
 
+#include "util/types.hpp"
 #include <map>
+#include <string>
 #include <string_view>
+
+namespace fs
+{
+	class file;
+}
 
 namespace psf
 {
@@ -12,16 +19,24 @@ namespace psf
 		integer = 0x0404,
 	};
 
+	enum class error
+	{
+		ok,
+		stream,
+		not_psf,
+		corrupt,
+	};
+
 	class entry final
 	{
-		format m_type;
-		u32 m_max_size; // Entry max size (supplementary info, stored in PSF format)
-		u32 m_value_integer; // TODO: is it really unsigned?
-		std::string m_value_string;
+		format m_type{};
+		u32 m_max_size{}; // Entry max size (supplementary info, stored in PSF format)
+		u32 m_value_integer{}; // TODO: is it really unsigned?
+		std::string m_value_string{};
 
 	public:
 		// Construct string entry, assign the value
-		entry(format type, u32 max_size, const std::string& value = {});
+		entry(format type, u32 max_size, std::string_view value);
 
 		// Construct integer entry, assign the value
 		entry(u32 value);
@@ -31,7 +46,7 @@ namespace psf
 		const std::string& as_string() const;
 		u32 as_integer() const;
 
-		entry& operator =(const std::string& value);
+		entry& operator =(std::string_view value);
 		entry& operator =(u32 value);
 
 		format type() const { return m_type; }
@@ -42,11 +57,24 @@ namespace psf
 	// Define PSF registry as a sorted map of entries:
 	using registry = std::map<std::string, entry>;
 
+	struct load_result_t
+	{
+		registry sfo;
+		error errc;
+
+		explicit operator bool() const
+		{
+			return !sfo.empty();
+		}
+	};
+
 	// Load PSF registry from SFO binary format
-	registry load_object(const fs::file&);
+	load_result_t load(const fs::file&);
+	load_result_t load(const std::string& filename);
+	inline registry load_object(const fs::file& f) { return load(f).sfo; }
 
 	// Convert PSF registry to SFO binary format
-	void save_object(const fs::file&, const registry&);
+	std::vector<u8> save_object(const registry&, std::vector<u8>&& init = std::vector<u8>{});
 
 	// Get string value or default value
 	std::string_view get_string(const registry& psf, const std::string& key, std::string_view def = ""sv);
@@ -72,12 +100,12 @@ namespace psf
 	// Make string entry
 	inline entry string(u32 max_size, std::string_view value)
 	{
-		return {format::string, max_size, std::string(value)};
+		return {format::string, max_size, value};
 	}
 
 	// Make array entry
 	inline entry array(u32 max_size, std::string_view value)
 	{
-		return {format::array, max_size, std::string(value)};
+		return {format::array, max_size, value};
 	}
 }

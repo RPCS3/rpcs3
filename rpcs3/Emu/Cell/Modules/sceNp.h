@@ -1,10 +1,9 @@
-﻿#pragma once
+#pragma once
 
 #include "cellRtc.h"
+#include "Emu/Cell/ErrorCodes.h"
 
-#include "Utilities/BEType.h"
-
-#include <atomic>
+#include <set>
 
 error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr);
 error_code sceNpTerm();
@@ -716,19 +715,59 @@ enum SceNpBasicMessageRecvOptions : u32
 // Constants for common NP functions and structures
 enum
 {
-	SCE_NET_NP_AVATAR_IMAGE_MAX_SIZE         = 204800,
-	SCE_NET_NP_AVATAR_IMAGE_MAX_SIZE_LARGE   = 204800,
-	SCE_NET_NP_AVATAR_IMAGE_MAX_SIZE_MIDDLE  = 102400,
-	SCE_NET_NP_AVATAR_IMAGE_MAX_SIZE_SMALL   = 10240,
+	SCE_NET_NP_AVATAR_IMAGE_MAX_SIZE         = 204800, // 200 * 1024
+	SCE_NET_NP_AVATAR_IMAGE_MAX_SIZE_LARGE   = 204800, // 200 * 1024
+	SCE_NET_NP_AVATAR_IMAGE_MAX_SIZE_MIDDLE  = 102400, // 100 * 1024
+	SCE_NET_NP_AVATAR_IMAGE_MAX_SIZE_SMALL   = 10240,  //  10 * 1024
 	SCE_NET_NP_AVATAR_URL_MAX_LENGTH         = 127,
 	SCE_NET_NP_ONLINEID_MIN_LENGTH           = 3,
 	SCE_NET_NP_ONLINEID_MAX_LENGTH           = 16,
 	SCE_NET_NP_ONLINENAME_MAX_LENGTH         = 48,
 	SCE_NET_NP_ABOUT_ME_MAX_LENGTH           = 63,
+	SCE_NP_TSS_MAX_SIZE                      = 65536,   // 64 * 1024
+	SCE_NET_NP_TSS_MAX_SIZE                  = SCE_NP_TSS_MAX_SIZE,
+	SCE_NP_TSS_EXTRA_SLOT_MAX_SIZE           = 4194304, // 4 * 1024 * 1024
 	SCE_NP_FRIEND_MAX_NUM                    = 100,
 	SCE_NET_NP_COMMUNICATION_PASSPHRASE_SIZE = 128,
 	SCE_NP_COMMUNICATION_SIGNATURE_SIZE      = 160,
 	SCE_NP_COMMUNICATION_PASSPHRASE_SIZE     = SCE_NET_NP_COMMUNICATION_PASSPHRASE_SIZE,
+	SCE_NET_NP_PSHANDLE_MIN_LENGTH           = SCE_NET_NP_ONLINEID_MIN_LENGTH,
+	SCE_NET_NP_PSHANDLE_MAX_LENGTH           = SCE_NET_NP_ONLINEID_MAX_LENGTH,
+	SCE_NET_NP_SUBHANDLE_MAX_LENGTH          = SCE_NET_NP_ONLINENAME_MAX_LENGTH,
+	SCE_NET_NP_ICON_URL_MAX_LENGTH           = SCE_NET_NP_AVATAR_URL_MAX_LENGTH,
+	SCE_NP_UTIL_NPID_VERSION                 = 1,
+	SCE_NP_UTIL_NPLOBBYID_VERSION            = 1,
+	SCE_NP_UTIL_NPROOMID_VERSION             = 1,
+};
+
+// Languages
+enum
+{
+	SCE_NP_LANG_JAPANESE      = 0,
+	SCE_NP_LANG_ENGLISH       = 1,
+	SCE_NP_LANG_ENGLISH_US    = 1,
+	SCE_NP_LANG_FRENCH        = 2,
+	SCE_NP_LANG_SPANISH       = 3,
+	SCE_NP_LANG_GERMAN        = 4,
+	SCE_NP_LANG_ITALIAN       = 5,
+	SCE_NP_LANG_DUTCH         = 6,
+	SCE_NP_LANG_PORTUGUESE    = 7,
+	SCE_NP_LANG_PORTUGUESE_PT = 7,
+	SCE_NP_LANG_RUSSIAN       = 8,
+	SCE_NP_LANG_KOREAN        = 9,
+	SCE_NP_LANG_CHINESE_T     = 10,
+	SCE_NP_LANG_CHINESE_S     = 11,
+	SCE_NP_LANG_FINNISH       = 12,
+	SCE_NP_LANG_SWEDISH       = 13,
+	SCE_NP_LANG_DANISH        = 14,
+	SCE_NP_LANG_NORWEGIAN     = 15,
+	SCE_NP_LANG_POLISH        = 16,
+	SCE_NP_LANG_PORTUGUESE_BR = 17,
+	SCE_NP_LANG_ENGLISH_GB    = 18,
+	SCE_NP_LANG_TURKISH       = 19,
+	SCE_NP_LANG_SPANISH_LA    = 20,
+	SCE_NP_LANG_ARABIC        = 21,
+	SCE_NP_LANG_FRENCH_CA     = 22,
 };
 
 enum SceNpAvatarSizeType
@@ -856,8 +895,7 @@ struct SceNpDrmOpenArg
 // NP communication ID structure
 struct SceNpCommunicationId
 {
-	char data[9];
-	char term;
+	char data[9 + 1]; // char term;
 	u8 num;
 	char dummy;
 };
@@ -865,8 +903,7 @@ struct SceNpCommunicationId
 // OnlineId structure
 struct SceNpOnlineId
 {
-	char data[16];
-	char term;
+	char data[16 + 1]; // char term;
 	char dummy[3];
 };
 
@@ -891,16 +928,14 @@ CHECK_SIZE_ALIGN(SceNpId, 0x24, 1);
 // Online Name structure
 struct SceNpOnlineName
 {
-	char data[48];
-	char term;
+	char data[48 + 1]; // char term;
 	char padding[3];
 };
 
 // Avatar structure
 struct SceNpAvatarUrl
 {
-	char data[127];
-	char term;
+	char data[127 + 1]; // char term;
 };
 
 // Avatar image structure
@@ -914,8 +949,7 @@ struct SceNpAvatarImage
 // Self introduction structure
 struct SceNpAboutMe
 {
-	char data[SCE_NET_NP_ABOUT_ME_MAX_LENGTH];
-	char term;
+	char data[SCE_NET_NP_ABOUT_ME_MAX_LENGTH + 1]; // char term;
 };
 
 // User information structure
@@ -990,11 +1024,11 @@ struct SceNpBasicMessageDetails
 	be_t<u16> mainType;
 	be_t<u16> subType;
 	be_t<u32> msgFeatures;
-	const SceNpId npids;
+	vm::bptr<SceNpId> npids;
 	be_t<u32> count;
-	const s8 subject;
-	const s8 body;
-	const be_t<u32> data;
+	vm::bptr<char> subject;
+	vm::bptr<char> body;
+	vm::bptr<u8> data;
 	be_t<u32> size;
 };
 
@@ -1171,7 +1205,7 @@ struct SceNpSignalingNetInfo
 struct SceNpCustomMenuAction
 {
 	be_t<u32> options;
-	char name[SCE_NP_CUSTOM_MENU_ACTION_CHARACTER_MAX];
+	vm::bcptr<char> name;
 	be_t<SceNpCustomMenuActionMask> mask;
 };
 
@@ -1327,3 +1361,33 @@ using SceNpMatchingGUIHandler = void(u32 ctx_id, s32 event, s32 error_code, vm::
 using SceNpProfileResultHandler = s32(s32 result, vm::ptr<void> arg);
 
 using SceNpManagerSubSigninCallback = void(s32 result, vm::ptr<SceNpId> npId, vm::ptr<void> cb_arg);
+
+// Used to pass data to UI/RPCN
+struct message_data
+{
+	SceNpCommunicationId commId{};
+	u64 msgId = 0;
+	u16 mainType = 0;
+	u16 subType = 0;
+	u32 msgFeatures = 0;
+	std::string subject;
+	std::string body;
+	std::vector<u8> data;
+	void print() const;
+};
+
+class SendMessageDialogBase
+{
+public:
+	virtual ~SendMessageDialogBase() = default;
+
+	virtual bool Exec(message_data& msg_data, std::set<std::string>& npids) = 0;
+};
+
+class RecvMessageDialogBase
+{
+public:
+	virtual ~RecvMessageDialogBase() = default;
+
+	virtual bool Exec(SceNpBasicMessageMainType type, SceNpBasicMessageRecvOptions options, SceNpBasicMessageRecvAction& recv_result, u64& chosen_msg_id) = 0;
+};

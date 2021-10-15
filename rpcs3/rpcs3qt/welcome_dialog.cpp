@@ -1,4 +1,4 @@
-﻿#include "welcome_dialog.h"
+#include "welcome_dialog.h"
 #include "ui_welcome_dialog.h"
 
 #include "gui_settings.h"

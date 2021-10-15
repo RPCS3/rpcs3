@@ -1,6 +1,6 @@
 // Copyright (C) 2014       Hykem <hykem@hotmail.com>
-// Licensed under the terms of the GNU GPL, version 3
-// http://www.gnu.org/licenses/gpl-3.0.txt
+// Licensed under the terms of the GNU GPL, version 2.0 or later versions.
+// http://www.gnu.org/licenses/gpl-2.0.txt
 
 #include "lz.h"
 
@@ -154,7 +154,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 	{
 		// Set up a temporary buffer (sliding window).
 		memset(tmp, 0x80, 0xCA8);
-		while (1)
+		while (true)
 		{
 			// Start reading at 0xB68.
 			tmp_sect1 = tmp + offset + 0xB68;

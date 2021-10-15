@@ -2,13 +2,12 @@
 #include "Emu/Cell/PPUModule.h"
 #include "signaling_handler.h"
 #include "Emu/IdManager.h"
-#include "Emu/System.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "np_handler.h"
-#include <queue>
 
 #ifdef _WIN32
 #include <winsock2.h>
+#include <ws2tcpip.h>
 #else
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -18,11 +17,13 @@ LOG_CHANNEL(sign_log, "Signaling");
 
 std::vector<std::pair<std::pair<u32, u16>, std::vector<u8>>> get_sign_msgs();
 s32 send_packet_from_p2p_port(const std::vector<u8>& data, const sockaddr_in& addr);
+void need_network();
 
 template <>
 void fmt_class_string<SignalingCommand>::format(std::string& out, u64 arg)
 {
-	format_enum(out, arg, [](auto value) {
+	format_enum(out, arg, [](auto value)
+	{
 		switch (value)
 		{
 		case signal_ping: return "PING";
@@ -38,6 +39,11 @@ void fmt_class_string<SignalingCommand>::format(std::string& out, u64 arg)
 	});
 }
 
+signaling_handler::signaling_handler()
+{
+	need_network();
+}
+
 /////////////////////////////
 //// SIGNALING CALLBACKS ////
 /////////////////////////////
@@ -50,7 +56,7 @@ void signaling_handler::set_sig_cb(u32 sig_cb_ctx, vm::ptr<SceNpSignalingHandler
 	this->sig_cb_arg = sig_cb_arg;
 }
 
-void signaling_handler::set_ext_sig_cb(u32 sig_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_ext_cb, vm::ptr<void> sig_ext_cb_arg)
+void signaling_handler::set_ext_sig_cb(u32 sig_ext_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_ext_cb, vm::ptr<void> sig_ext_cb_arg)
 {
 	std::lock_guard lock(data_mutex);
 	this->sig_ext_cb_ctx = sig_ext_cb_ctx;
@@ -70,7 +76,8 @@ void signaling_handler::signal_sig_callback(u32 conn_id, int event)
 {
 	if (sig_cb)
 	{
-		sysutil_register_cb([sig_cb = this->sig_cb, sig_cb_ctx = this->sig_cb_ctx, conn_id, event, sig_cb_arg = this->sig_cb_arg](ppu_thread& cb_ppu) -> s32 {
+		sysutil_register_cb([sig_cb = this->sig_cb, sig_cb_ctx = this->sig_cb_ctx, conn_id, event, sig_cb_arg = this->sig_cb_arg](ppu_thread& cb_ppu) -> s32
+		{
 			sig_cb(cb_ppu, sig_cb_ctx, conn_id, event, 0, sig_cb_arg);
 			return 0;
 		});
@@ -81,11 +88,12 @@ void signaling_handler::signal_sig_callback(u32 conn_id, int event)
 	signal_ext_sig_callback(conn_id, event);
 }
 
-void signaling_handler::signal_ext_sig_callback(u32 conn_id, int event)
+void signaling_handler::signal_ext_sig_callback(u32 conn_id, int event) const
 {
 	if (sig_ext_cb)
 	{
-		sysutil_register_cb([sig_ext_cb = this->sig_ext_cb, sig_ext_cb_ctx = this->sig_ext_cb_ctx, conn_id, event, sig_ext_cb_arg = this->sig_ext_cb_arg](ppu_thread& cb_ppu) -> s32 {
+		sysutil_register_cb([sig_ext_cb = this->sig_ext_cb, sig_ext_cb_ctx = this->sig_ext_cb_ctx, conn_id, event, sig_ext_cb_arg = this->sig_ext_cb_arg](ppu_thread& cb_ppu) -> s32
+		{
 			sig_ext_cb(cb_ppu, sig_ext_cb_ctx, conn_id, event, 0, sig_ext_cb_arg);
 			return 0;
 		});
@@ -93,12 +101,13 @@ void signaling_handler::signal_ext_sig_callback(u32 conn_id, int event)
 	}
 }
 
-void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event)
+void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event) const
 {
 	// Signal the callback
 	if (sig2_cb)
 	{
-		sysutil_register_cb([sig2_cb = this->sig2_cb, sig2_cb_ctx = this->sig2_cb_ctx, room_id, member_id, event, sig2_cb_arg = this->sig2_cb_arg](ppu_thread& cb_ppu) -> s32 {
+		sysutil_register_cb([sig2_cb = this->sig2_cb, sig2_cb_ctx = this->sig2_cb_ctx, room_id, member_id, event, sig2_cb_arg = this->sig2_cb_arg](ppu_thread& cb_ppu) -> s32
+		{
 			sig2_cb(cb_ppu, sig2_cb_ctx, room_id, member_id, event, 0, sig2_cb_arg);
 			return 0;
 		});
@@ -111,7 +120,7 @@ void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMa
 //// SIGNALING MSGS PROCESSING ////
 ///////////////////////////////////
 
-void signaling_handler::reschedule_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd, std::chrono::time_point<std::chrono::system_clock> new_timepoint)
+void signaling_handler::reschedule_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd, steady_clock::time_point new_timepoint)
 {
 	for (auto it = qpackets.begin(); it != qpackets.end(); it++)
 	{
@@ -194,11 +203,18 @@ void signaling_handler::process_incoming_messages()
 				char npid_buf[17]{};
 				memcpy(npid_buf, sp->V1.npid.handle.data, 16);
 				std::string npid(npid_buf);
-				sign_log.trace("sig1 %s from %s:%d(%s)", sp->command, inet_ntoa(addr), op_port, npid);
+
+				char ip_str[16];
+				inet_ntop(AF_INET, &addr, ip_str, sizeof(ip_str));
+
+				sign_log.trace("sig1 %s from %s:%d(%s)", sp->command, ip_str, op_port, npid);
 			}
 			else
 			{
-				sign_log.trace("sig2 %s from %s:%d(%d:%d)", sp->command, inet_ntoa(addr), op_port, sp->V2.room_id, sp->V2.member_id);
+				char inet_addr[16];
+				const char* inet_addr_string = inet_ntop(AF_INET, &addr, inet_addr, sizeof(inet_addr));
+
+				sign_log.trace("sig2 %s from %s:%d(%d:%d)", sp->command, inet_addr_string, op_port, sp->V2.room_id, sp->V2.member_id);
 			}
 		}
 
@@ -229,7 +245,7 @@ void signaling_handler::process_incoming_messages()
 			continue;
 		}
 
-		const auto now = std::chrono::system_clock::now();
+		const auto now = steady_clock::now();
 		if (si)
 			si->time_last_msg_recvd = now;
 
@@ -257,7 +273,7 @@ void signaling_handler::process_incoming_messages()
 		case signal_pong:
 			reply           = false;
 			schedule_repeat = false;
-			reschedule_packet(si, signal_ping, now + std::chrono::seconds(15));
+			reschedule_packet(si, signal_ping, now + 15s);
 			break;
 		case signal_connect:
 			reply               = true;
@@ -274,6 +290,7 @@ void signaling_handler::process_incoming_messages()
 			retire_packet(si, signal_connect);
 			// connection is active
 			update_si_addr(si, op_addr, op_port);
+			update_si_mapped_addr(si, sp->sent_addr, sp->sent_port);
 			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE);
 			break;
 		case signal_confirm:
@@ -283,6 +300,7 @@ void signaling_handler::process_incoming_messages()
 			retire_packet(si, signal_connect_ack);
 			// connection is active
 			update_si_addr(si, op_addr, op_port);
+			update_si_mapped_addr(si, sp->sent_addr, sp->sent_port);
 			update_si_status(si, SCE_NP_SIGNALING_CONN_STATUS_ACTIVE, true);
 			break;
 		case signal_finished:
@@ -314,7 +332,7 @@ void signaling_handler::operator()()
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
 		std::unique_lock<std::mutex> lock(data_mutex);
-		if (qpackets.size())
+		if (!qpackets.empty())
 			wakey.wait_until(lock, qpackets.begin()->first);
 		else
 			wakey.wait(lock);
@@ -324,14 +342,14 @@ void signaling_handler::operator()()
 
 		process_incoming_messages();
 
-		const auto now = std::chrono::system_clock::now();
+		const auto now = steady_clock::now();
 
 		for (auto it = qpackets.begin(); it != qpackets.end();)
 		{
 			if (it->first > now)
 				break;
 
-			if (it->second.sig_info->time_last_msg_recvd < now - std::chrono::seconds(60))
+			if (it->second.sig_info->time_last_msg_recvd < now - 60s)
 			{
 				// We had no connection to opponent for 60 seconds, consider the connection dead
 				sign_log.trace("Timeout disconnection");
@@ -375,9 +393,15 @@ void signaling_handler::wake_up()
 	wakey.notify_one();
 }
 
+signaling_handler& signaling_handler::operator=(thread_state)
+{
+	wakey.notify_one();
+	return *this;
+}
+
 void signaling_handler::update_si_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port)
 {
-	ASSERT(si);
+	ensure(si);
 
 	if (si->addr != new_addr || si->port != new_port)
 	{
@@ -385,9 +409,35 @@ void signaling_handler::update_si_addr(std::shared_ptr<signaling_info>& si, u32 
 		addr_old.s_addr = si->addr;
 		addr_new.s_addr = new_addr;
 
-		sign_log.trace("Updated Address from %s:%d to %s:%d", inet_ntoa(addr_old), si->port, inet_ntoa(addr_new), new_port);
+		char ip_str_old[16];
+		char ip_str_new[16];
+		inet_ntop(AF_INET, &addr_old, ip_str_old, sizeof(ip_str_old));
+		inet_ntop(AF_INET, &addr_new, ip_str_new, sizeof(ip_str_new));
+
+		sign_log.trace("Updated Address from %s:%d to %s:%d", ip_str_old, si->port, ip_str_new, new_port);
 		si->addr = new_addr;
 		si->port = new_port;
+	}
+}
+
+void signaling_handler::update_si_mapped_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port)
+{
+	ensure(si);
+
+	if (si->addr != new_addr || si->port != new_port)
+	{
+		in_addr addr_old, addr_new;
+		addr_old.s_addr = si->addr;
+		addr_new.s_addr = new_addr;
+
+		char ip_str_old[16];
+		char ip_str_new[16];
+		inet_ntop(AF_INET, &addr_old, ip_str_old, sizeof(ip_str_old));
+		inet_ntop(AF_INET, &addr_new, ip_str_new, sizeof(ip_str_new));
+
+		sign_log.trace("Updated Mapped Address from %s:%d to %s:%d", ip_str_old, si->port, ip_str_new, new_port);
+		si->mapped_addr = new_addr;
+		si->mapped_port = new_port;
 	}
 }
 
@@ -399,7 +449,7 @@ void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s3
 	if (si->connStatus == SCE_NP_SIGNALING_CONN_STATUS_PENDING && new_status == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE)
 	{
 		si->connStatus = SCE_NP_SIGNALING_CONN_STATUS_ACTIVE;
-		ASSERT(si->version == 1u || si->version == 2u);
+		ensure(si->version == 1u || si->version == 2u);
 		if (si->version == 1u)
 			signal_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_ESTABLISHED);
 		else
@@ -411,7 +461,7 @@ void signaling_handler::update_si_status(std::shared_ptr<signaling_info>& si, s3
 	if ((si->connStatus == SCE_NP_SIGNALING_CONN_STATUS_PENDING || si->connStatus == SCE_NP_SIGNALING_CONN_STATUS_ACTIVE) && new_status == SCE_NP_SIGNALING_CONN_STATUS_INACTIVE)
 	{
 		si->connStatus = SCE_NP_SIGNALING_CONN_STATUS_INACTIVE;
-		ASSERT(si->version == 1u || si->version == 2u);
+		ensure(si->version == 1u || si->version == 2u);
 		if (si->version == 1u)
 			signal_sig_callback(si->conn_id, SCE_NP_SIGNALING_EVENT_DEAD);
 		else
@@ -441,10 +491,10 @@ void signaling_handler::set_self_sig2_info(u64 room_id, u16 member_id)
 	sig2_packet.V2.member_id = member_id;
 }
 
-void signaling_handler::send_signaling_packet(signaling_packet& sp, u32 addr, u16 port)
+void signaling_handler::send_signaling_packet(signaling_packet& sp, u32 addr, u16 port) const
 {
 	std::vector<u8> packet(sizeof(signaling_packet) + sizeof(u16));
-	reinterpret_cast<le_t<u16>&>(packet.data()[0]) = 65535;
+	reinterpret_cast<le_t<u16>&>(packet[0]) = 65535;
 	memcpy(packet.data() + sizeof(u16), &sp, sizeof(signaling_packet));
 
 	sockaddr_in dest;
@@ -453,18 +503,24 @@ void signaling_handler::send_signaling_packet(signaling_packet& sp, u32 addr, u1
 	dest.sin_addr.s_addr = addr;
 	dest.sin_port        = std::bit_cast<u16, be_t<u16>>(port);
 
-	sign_log.trace("Sending %s packet to %s:%d", sp.command, inet_ntoa(dest.sin_addr), port);
+	char ip_str[16];
+	inet_ntop(AF_INET, &dest.sin_addr, ip_str, sizeof(ip_str));
+
+	sign_log.trace("Sending %s packet to %s:%d", sp.command, ip_str, port);
+
+	sp.sent_addr = addr;
+	sp.sent_port = port;
 
 	if (send_packet_from_p2p_port(packet, dest) == -1)
 	{
-		sign_log.error("Failed to send signaling packet to %s:%d", inet_ntoa(dest.sin_addr), port);
+		sign_log.error("Failed to send signaling packet to %s:%d", ip_str, port);
 	}
 }
 
-void signaling_handler::queue_signaling_packet(signaling_packet& sp, std::shared_ptr<signaling_info> si, std::chrono::time_point<std::chrono::system_clock> wakeup_time)
+void signaling_handler::queue_signaling_packet(signaling_packet& sp, std::shared_ptr<signaling_info> si, steady_clock::time_point wakeup_time)
 {
 	queued_packet qp;
-	qp.sig_info = si;
+	qp.sig_info = std::move(si);
 	qp.packet   = sp;
 	qpackets.emplace(wakeup_time, std::move(qp));
 }
@@ -481,8 +537,8 @@ std::shared_ptr<signaling_info> signaling_handler::get_signaling_ptr(const signa
 		if (!npid_to_conn_id.count(npid))
 			return nullptr;
 
-		auto conn_id = npid_to_conn_id.at(npid);
-		if (!sig1_peers.count(conn_id))
+		const u32 conn_id = npid_to_conn_id.at(npid);
+		if (!sig1_peers.contains(conn_id))
 		{
 			sign_log.error("Discrepancy in signaling 1 data");
 			return nullptr;
@@ -494,7 +550,7 @@ std::shared_ptr<signaling_info> signaling_handler::get_signaling_ptr(const signa
 	// V2
 	auto room_id   = sp->V2.room_id;
 	auto member_id = sp->V2.member_id;
-	if (!sig2_peers.count(room_id) || !sig2_peers.at(room_id).count(member_id))
+	if (!sig2_peers.contains(room_id) || !sig2_peers.at(room_id).contains(member_id))
 		return nullptr;
 
 	return sig2_peers.at(room_id).at(member_id);
@@ -503,17 +559,22 @@ std::shared_ptr<signaling_info> signaling_handler::get_signaling_ptr(const signa
 void signaling_handler::start_sig(u32 conn_id, u32 addr, u16 port)
 {
 	std::lock_guard lock(data_mutex);
+	start_sig_nl(conn_id, addr, port);
+}
 
+void signaling_handler::start_sig_nl(u32 conn_id, u32 addr, u16 port)
+{
 	auto& sent_packet   = sig1_packet;
 	sent_packet.command = signal_connect;
 
-	auto si = sig1_peers.at(conn_id);
+	ensure(sig1_peers.contains(conn_id));
+	std::shared_ptr<signaling_info> si = sig1_peers.at(conn_id);
 
 	si->addr = addr;
 	si->port = port;
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
-	queue_signaling_packet(sent_packet, si, std::chrono::system_clock::now() + REPEAT_CONNECT_DELAY);
+	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_CONNECT_DELAY);
 }
 
 void signaling_handler::start_sig2(u64 room_id, u16 member_id)
@@ -523,17 +584,21 @@ void signaling_handler::start_sig2(u64 room_id, u16 member_id)
 	auto& sent_packet   = sig2_packet;
 	sent_packet.command = signal_connect;
 
-	auto si = sig2_peers.at(room_id).at(member_id);
+	ensure(sig2_peers.contains(room_id));
+	const auto& sp = sig2_peers.at(room_id);
+
+	ensure(sp.contains(member_id));
+	std::shared_ptr<signaling_info> si = sp.at(member_id);
 
 	send_signaling_packet(sent_packet, si->addr, si->port);
-	queue_signaling_packet(sent_packet, si, std::chrono::system_clock::now() + REPEAT_CONNECT_DELAY);
+	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_CONNECT_DELAY);
 }
 
 void signaling_handler::disconnect_sig2_users(u64 room_id)
 {
 	std::lock_guard lock(data_mutex);
 
-	if (!sig2_peers.count(room_id))
+	if (!sig2_peers.contains(room_id))
 		return;
 
 	auto& sent_packet = sig2_packet;
@@ -546,17 +611,17 @@ void signaling_handler::disconnect_sig2_users(u64 room_id)
 		if (si->connStatus != SCE_NP_SIGNALING_CONN_STATUS_INACTIVE && !si->self)
 		{
 			send_signaling_packet(sent_packet, si->addr, si->port);
-			queue_signaling_packet(sent_packet, si, std::chrono::system_clock::now() + REPEAT_FINISHED_DELAY);
+			queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_FINISHED_DELAY);
 		}
 	}
 }
 
 u32 signaling_handler::create_sig_infos(const SceNpId* npid)
 {
-	ASSERT(npid->handle.term == 0);
+	ensure(npid->handle.data[16] == 0);
 	std::string npid_str(reinterpret_cast<const char*>(npid->handle.data));
 
-	if (npid_to_conn_id.count(npid_str))
+	if (npid_to_conn_id.contains(npid_str))
 	{
 		return npid_to_conn_id.at(npid_str);
 	}
@@ -583,8 +648,8 @@ u32 signaling_handler::init_sig_infos(const SceNpId* npid)
 
 		// Request peer infos from RPCN
 		std::string npid_str(reinterpret_cast<const char*>(npid->handle.data));
-		const auto nph = g_fxo->get<named_thread<np_handler>>();
-		nph->req_sign_infos(npid_str, conn_id);
+		auto& nph = g_fxo->get<named_thread<np_handler>>();
+		nph.req_sign_infos(npid_str, conn_id);
 	}
 	else
 	{
@@ -593,7 +658,7 @@ u32 signaling_handler::init_sig_infos(const SceNpId* npid)
 		{
 			sign_log.trace("Activating already peer activated connection");
 			sig1_peers[conn_id]->ext_status = ext_sign_mutual;
-			start_sig(conn_id, sig1_peers[conn_id]->addr, sig1_peers[conn_id]->port);
+			start_sig_nl(conn_id, sig1_peers[conn_id]->addr, sig1_peers[conn_id]->port);
 			signal_sig_callback(conn_id, SCE_NP_SIGNALING_EVENT_ESTABLISHED);
 			signal_ext_sig_callback(conn_id, SCE_NP_SIGNALING_EVENT_EXT_MUTUAL_ACTIVATED);
 		}
@@ -626,5 +691,15 @@ void signaling_handler::set_sig2_infos(u64 room_id, u16 member_id, s32 status, u
 signaling_info signaling_handler::get_sig2_infos(u64 room_id, u16 member_id)
 {
 	std::lock_guard lock(data_mutex);
+
+	if (!sig2_peers[room_id][member_id])
+	{
+		sig2_peers[room_id][member_id] = std::make_shared<signaling_info>();
+		auto& peer = sig2_peers[room_id][member_id];
+		peer->room_id = room_id;
+		peer->member_id = member_id;
+		peer->version = 2;
+	}
+
 	return *sig2_peers[room_id][member_id];
 }

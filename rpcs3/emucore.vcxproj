@@ -1,20 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Debug - LLVM|x64">
-      <Configuration>Debug - LLVM</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Debug - MemLeak|x64">
-      <Configuration>Debug - MemLeak</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
-      <Platform>x64</Platform>
-    </ProjectConfiguration>
-    <ProjectConfiguration Include="Release - LLVM|x64">
-      <Configuration>Release - LLVM</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
@@ -26,12 +14,12 @@
     <ProjectGuid>{C4A10229-4712-4BD2-B63E-50D93C67A038}</ProjectGuid>
     <RootNamespace>emucore</RootNamespace>
   </PropertyGroup>
-  <Import Project="..\common_default.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
   </PropertyGroup>
-  <Import Project="..\common_default_macros.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default_macros.props" />
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
@@ -41,97 +29,80 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\rpcs3_default.props" />
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_default.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <Import Project="..\rpcs3_debug.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'" Label="PropertySheets">
-    <Import Project="..\rpcs3_debug.props" />
-    <Import Project="..\rpcs3_memleak.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'" Label="PropertySheets">
-    <Import Project="..\rpcs3_debug.props" />
-    <Import Project="..\rpcs3_llvm.props" />
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_debug.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <Import Project="..\rpcs3_release.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'" Label="PropertySheets">
-    <Import Project="..\rpcs3_release.props" />
-    <Import Project="..\rpcs3_llvm.props" />
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_release.props" />
   </ImportGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\3rdparty\wolfssl\;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb;..\3rdparty\zlib;..\llvm\include;..\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">MaxSpeed</Optimization>
+      <AdditionalIncludeDirectories>..\3rdparty\wolfssl\wolfssl;..\3rdparty\flatbuffers\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\zlib\zlib;..\llvm\include;..\llvm_build\include;$(VULKAN_SDK)\Include</AdditionalIncludeDirectories>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
     </ClCompile>
     <PreBuildEvent>
-      <Command>%windir%\sysnative\cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
+      <Command>cmd.exe /c "$(SolutionDir)\Utilities\git-version-gen.cmd"</Command>
       <Message>Updating git-version.h</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\Utilities\cheat_info.cpp" />
     <ClCompile Include="Emu\Audio\ALSA\ALSABackend.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Emu\Audio\audio_device_listener.cpp" />
     <ClCompile Include="Emu\Audio\FAudio\FAudioBackend.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Emu\Audio\Pulse\PulseBackend.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="Emu\cache_utils.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\libfs_utility_init.cpp" />
+    <ClCompile Include="Emu\Cell\Modules\sys_crashdump.cpp" />
+    <ClCompile Include="Emu\Io\Turntable.cpp" />
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
+    <ClCompile Include="Emu\Io\Buzz.cpp" />
     <ClCompile Include="Emu\Audio\AudioBackend.cpp" />
+    <ClCompile Include="Emu\Io\interception.cpp" />
     <ClCompile Include="Emu\Io\KeyboardHandler.cpp" />
     <ClCompile Include="Emu\Io\pad_config.cpp" />
     <ClCompile Include="Emu\Io\pad_config_types.cpp" />
     <ClCompile Include="Emu\localized_string.cpp" />
     <ClCompile Include="Emu\NP\rpcn_config.cpp" />
+    <ClCompile Include="Emu\RSX\Common\texture_cache.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_controls.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_user_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.cpp" />
+    <ClCompile Include="Emu\RSX\Program\ProgramStateCache.cpp" />
+    <ClCompile Include="Emu\RSX\Program\program_util.cpp" />
+    <ClCompile Include="Emu\RSX\RSXDisAsm.cpp" />
     <ClCompile Include="Emu\system_config_types.cpp" />
+    <ClCompile Include="Emu\perf_meter.cpp" />
+    <ClCompile Include="Emu\system_progress.cpp" />
+    <ClCompile Include="Emu\system_utils.cpp" />
     <ClCompile Include="Emu\title.cpp" />
     <ClCompile Include="Emu\system_config.cpp" />
     <ClCompile Include="Emu\NP\fb_helpers.cpp" />
+    <ClCompile Include="Emu\NP\np_contexts.cpp" />
     <ClCompile Include="Emu\NP\np_handler.cpp" />
     <ClCompile Include="Emu\NP\signaling_handler.cpp" />
     <ClCompile Include="Emu\NP\np_structs_extra.cpp" />
     <ClCompile Include="Emu\NP\rpcn_client.cpp" />
+    <ClCompile Include="Emu\vfs_config.cpp" />
     <ClCompile Include="util\atomic.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="util\atomic2.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
+    <ClCompile Include="util\media_utils.cpp" />
     <ClCompile Include="util\yaml.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <ExceptionHandling>Sync</ExceptionHandling>
-    </ClCompile>
-    <ClCompile Include="util\cereal.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="util\shared_cptr.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="util\fixed_typemap.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\bin_patch.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -139,7 +110,9 @@
     <ClCompile Include="..\Utilities\cond.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\Utilities\dynamic_library.cpp" />
+    <ClCompile Include="util\dyn_lib.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="..\Utilities\JIT.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -163,23 +136,18 @@
     <ClCompile Include="..\Utilities\StrFmt.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="..\Utilities\sysinfo.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">NotUsing</PrecompiledHeader>
+    <ClCompile Include="util\sysinfo.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="util\cpu_stats.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="..\Utilities\Thread.cpp" />
     <ClCompile Include="..\Utilities\version.cpp" />
-    <ClCompile Include="..\Utilities\VirtualMemory.cpp" />
+    <ClCompile Include="util\vm_native.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_config.cpp" />
     <ClCompile Include="Crypto\md5.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Emu\Cell\lv2\sys_gpio.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_net.cpp" />
@@ -370,14 +338,14 @@
     <ClCompile Include="Emu\Io\usb_device.cpp" />
     <ClCompile Include="Emu\RSX\Capture\rsx_capture.cpp" />
     <ClCompile Include="Emu\RSX\Capture\rsx_replay.cpp" />
-    <ClCompile Include="Emu\RSX\CgBinaryFragmentProgram.cpp" />
-    <ClCompile Include="Emu\RSX\CgBinaryVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\Program\CgBinaryFragmentProgram.cpp" />
+    <ClCompile Include="Emu\RSX\Program\CgBinaryVertexProgram.cpp" />
     <ClCompile Include="Emu\RSX\Common\BufferUtils.cpp" />
-    <ClCompile Include="Emu\RSX\Common\FragmentProgramDecompiler.cpp" />
-    <ClCompile Include="Emu\RSX\Common\ProgramStateCache.cpp" />
+    <ClCompile Include="Emu\RSX\Program\FragmentProgramDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\Program\GLSLCommon.cpp" />
     <ClCompile Include="Emu\RSX\Common\surface_store.cpp" />
     <ClCompile Include="Emu\RSX\Common\TextureUtils.cpp" />
-    <ClCompile Include="Emu\RSX\Common\VertexProgramDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\Program\VertexProgramDecompiler.cpp" />
     <ClCompile Include="Emu\RSX\gcm_printing.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -446,6 +414,7 @@
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\PUP.cpp" />
     <ClCompile Include="Loader\TAR.cpp" />
+    <ClCompile Include="Loader\mself.cpp" />
     <ClCompile Include="Loader\TROPUSR.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />
     <ClCompile Include="rpcs3_version.cpp" />
@@ -455,36 +424,31 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\3rdparty\stblib\stb_image.h" />
+    <ClInclude Include="..\3rdparty\stblib\include\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
     <ClInclude Include="..\Utilities\cheat_info.h" />
     <ClInclude Include="Emu\Audio\ALSA\ALSABackend.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="Emu\Audio\audio_device_listener.h" />
     <ClInclude Include="Emu\Audio\FAudio\FAudioBackend.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="Emu\Audio\Pulse\PulseBackend.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release - LLVM|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug - MemLeak|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
+    <ClInclude Include="Emu\cache_utils.hpp" />
     <ClInclude Include="Emu\Cell\lv2\sys_crypto_engine.h" />
     <ClInclude Include="Emu\Cell\Modules\cellCrossController.h" />
     <ClInclude Include="Emu\Cell\Modules\cellRemotePlay.h" />
     <ClInclude Include="Emu\Cell\Modules\cellSsl.h" />
     <ClInclude Include="Emu\Cell\Modules\cellStorage.h" />
+    <ClInclude Include="Emu\Cell\Modules\libfs_utility_init.h" />
+    <ClInclude Include="Emu\Cell\Modules\sys_crashdump.h" />
+    <ClInclude Include="Emu\Io\Turntable.h" />
     <ClInclude Include="Emu\Io\GHLtar.h" />
+    <ClInclude Include="Emu\Io\Buzz.h" />
+    <ClInclude Include="Emu\Io\interception.h" />
     <ClInclude Include="Emu\Io\pad_types.h" />
     <ClInclude Include="Emu\Io\Keyboard.h" />
     <ClInclude Include="Emu\Io\pad_config.h" />
@@ -497,8 +461,20 @@
     <ClInclude Include="Emu\NP\np_structs_extra.h" />
     <ClInclude Include="Emu\NP\rpcn_client.h" />
     <ClInclude Include="Emu\NP\rpcn_config.h" />
-    <ClInclude Include="Emu\RSX\Common\ShaderInterpreter.h" />
+    <ClInclude Include="Emu\RSX\Common\bitfield.hpp" />
+    <ClInclude Include="Emu\RSX\Common\profiling_timer.hpp" />
+    <ClInclude Include="Emu\RSX\Common\simple_array.hpp" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_edit_text.hpp" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_list_view.hpp" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_progress_bar.hpp" />
+    <ClInclude Include="Emu\RSX\Program\GLSLTypes.h" />
+    <ClInclude Include="Emu\RSX\Program\ProgramStateCache.h" />
+    <ClInclude Include="Emu\RSX\Program\program_util.h" />
+    <ClInclude Include="Emu\RSX\Program\ShaderInterpreter.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache_helpers.h" />
+    <ClInclude Include="Emu\RSX\Common\texture_cache_types.h" />
+    <ClInclude Include="Emu\RSX\display.h" />
+    <ClInclude Include="Emu\RSX\GSFrameBase.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_fonts.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_message_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_osk.h" />
@@ -507,14 +483,24 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_save_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_shader_compile_notification.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_trophy_notification.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_user_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_utils.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\Shaders\shader_loading_dialog_native.h" />
+    <ClInclude Include="Emu\RSX\RSXDisAsm.h" />
+    <ClInclude Include="Emu\system_progress.hpp" />
+    <ClInclude Include="Emu\system_utils.hpp" />
     <ClInclude Include="Emu\title.h" />
     <ClInclude Include="Emu\system_config.h" />
     <ClInclude Include="Emu\system_config_types.h" />
+    <ClInclude Include="Emu\vfs_config.h" />
+    <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="util\atomic.hpp" />
-    <ClInclude Include="..\Utilities\BEType.h" />
+    <ClInclude Include="util\media_utils.h" />
+    <ClInclude Include="util\serialization.hpp" />
+    <ClInclude Include="util\v128.hpp" />
+    <ClInclude Include="util\v128sse.hpp" />
+    <ClInclude Include="util\to_endian.hpp" />
     <ClInclude Include="..\Utilities\bin_patch.h" />
     <ClInclude Include="..\Utilities\BitField.h" />
     <ClInclude Include="..\Utilities\bit_set.h" />
@@ -522,30 +508,33 @@
     <ClInclude Include="..\Utilities\cond.h" />
     <ClInclude Include="..\Utilities\CRC.h" />
     <ClInclude Include="..\Utilities\date_time.h" />
-    <ClInclude Include="..\Utilities\dynamic_library.h" />
     <ClInclude Include="..\Utilities\geometry.h" />
-    <ClInclude Include="..\Utilities\hash.h" />
+    <ClInclude Include="util\fnv_hash.hpp" />
     <ClInclude Include="..\Utilities\JIT.h" />
     <ClInclude Include="..\Utilities\lockless.h" />
     <ClInclude Include="..\Utilities\mutex.h" />
     <ClInclude Include="..\Utilities\sema.h" />
     <ClInclude Include="..\Utilities\sync.h" />
-    <ClInclude Include="util\atomic2.hpp" />
     <ClInclude Include="util\endian.hpp" />
     <ClInclude Include="util\fixed_typemap.hpp" />
+    <ClInclude Include="util\auto_typemap.hpp" />
     <ClInclude Include="util\init_mutex.hpp" />
+    <ClInclude Include="util\slow_mutex.hpp" />
+    <ClInclude Include="util\fifo_mutex.hpp" />
     <ClInclude Include="util\logs.hpp" />
+    <ClInclude Include="util\cpu_stats.hpp" />
     <ClInclude Include="..\Utilities\File.h" />
     <ClInclude Include="..\Utilities\Config.h" />
     <ClInclude Include="..\Utilities\rXml.h" />
     <ClInclude Include="..\Utilities\StrFmt.h" />
     <ClInclude Include="..\Utilities\StrUtil.h" />
-    <ClInclude Include="..\Utilities\sysinfo.h" />
+    <ClInclude Include="util\sysinfo.hpp" />
     <ClInclude Include="..\Utilities\Thread.h" />
     <ClInclude Include="..\Utilities\Timer.h" />
-    <ClInclude Include="..\Utilities\types.h" />
+    <ClInclude Include="util\types.hpp" />
     <ClInclude Include="..\Utilities\version.h" />
-    <ClInclude Include="..\Utilities\VirtualMemory.h" />
+    <ClInclude Include="util\vm.hpp" />
+    <ClInclude Include="util\asm.hpp" />
     <ClInclude Include="Crypto\aes.h" />
     <ClInclude Include="Crypto\aesni.h" />
     <ClInclude Include="Crypto\ec.h" />
@@ -558,7 +547,6 @@
     <ClInclude Include="Crypto\unpkg.h" />
     <ClInclude Include="Crypto\unself.h" />
     <ClInclude Include="Crypto\utils.h" />
-    <ClInclude Include="define_new_memleakdetect.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_config.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_gpio.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_net.h" />
@@ -704,12 +692,13 @@
     <ClInclude Include="Emu\Cell\SPUOpcodes.h" />
     <ClInclude Include="Emu\Cell\SPURecompiler.h" />
     <ClInclude Include="Emu\Cell\SPUThread.h" />
+    <ClInclude Include="Emu\Cell\timers.hpp" />
     <ClInclude Include="Emu\CPU\CPUDisAsm.h" />
     <ClInclude Include="Emu\CPU\CPUThread.h" />
     <ClInclude Include="Emu\RSX\Capture\rsx_capture.h" />
     <ClInclude Include="Emu\RSX\Capture\rsx_replay.h" />
     <ClInclude Include="Emu\RSX\Capture\rsx_trace.h" />
-    <ClInclude Include="Emu\RSX\Common\GLSLCommon.h" />
+    <ClInclude Include="Emu\RSX\Program\GLSLCommon.h" />
     <ClInclude Include="Emu\RSX\Common\surface_utils.h" />
     <ClInclude Include="Emu\RSX\Common\TextGlyphs.h" />
     <ClInclude Include="Emu\RSX\Common\texture_cache.h" />
@@ -735,22 +724,22 @@
     <ClInclude Include="Emu\Io\Null\NullMouseHandler.h" />
     <ClInclude Include="Emu\Io\Null\NullPadHandler.h" />
     <ClInclude Include="Emu\Io\PadHandler.h" />
-    <ClInclude Include="Emu\RSX\CgBinaryProgram.h" />
+    <ClInclude Include="Emu\RSX\Program\CgBinaryProgram.h" />
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h" />
-    <ClInclude Include="Emu\RSX\Common\FragmentProgramDecompiler.h" />
-    <ClInclude Include="Emu\RSX\Common\ProgramStateCache.h" />
+    <ClInclude Include="Emu\RSX\Program\FragmentProgramDecompiler.h" />
+    <ClInclude Include="Emu\RSX\Program\program_state_cache2.hpp" />
     <ClInclude Include="Emu\RSX\Common\ring_buffer_helper.h" />
-    <ClInclude Include="Emu\RSX\Common\ShaderParam.h" />
+    <ClInclude Include="Emu\RSX\Program\ShaderParam.h" />
     <ClInclude Include="Emu\RSX\Common\surface_store.h" />
     <ClInclude Include="Emu\RSX\Common\TextureUtils.h" />
-    <ClInclude Include="Emu\RSX\Common\VertexProgramDecompiler.h" />
+    <ClInclude Include="Emu\RSX\Program\VertexProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\GCM.h" />
     <ClInclude Include="Emu\RSX\GSRender.h" />
     <ClInclude Include="Emu\RSX\Null\NullGSRender.h" />
-    <ClInclude Include="Emu\RSX\RSXFragmentProgram.h" />
+    <ClInclude Include="Emu\RSX\Program\RSXFragmentProgram.h" />
     <ClInclude Include="Emu\RSX\RSXTexture.h" />
     <ClInclude Include="Emu\RSX\RSXThread.h" />
-    <ClInclude Include="Emu\RSX\RSXVertexProgram.h" />
+    <ClInclude Include="Emu\RSX\Program\RSXVertexProgram.h" />
     <ClInclude Include="Emu\Memory\vm.h" />
     <ClInclude Include="Emu\Memory\vm_ptr.h" />
     <ClInclude Include="Emu\Memory\vm_ref.h" />
@@ -758,6 +747,7 @@
     <ClInclude Include="Emu\RSX\rsx_methods.h" />
     <ClInclude Include="Emu\RSX\rsx_utils.h" />
     <ClInclude Include="Emu\System.h" />
+    <ClInclude Include="Emu\perf_meter.hpp" />
     <ClInclude Include="Emu\GDB.h" />
     <ClInclude Include="Loader\ELF.h" />
     <ClInclude Include="Loader\PSF.h" />
@@ -765,21 +755,20 @@
     <ClInclude Include="Loader\TAR.h" />
     <ClInclude Include="Loader\TROPUSR.h" />
     <ClInclude Include="Loader\TRP.h" />
-    <ClInclude Include="restore_new.h" />
     <ClInclude Include="rpcs3_version.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="util\shared_cptr.hpp" />
+    <ClInclude Include="util\shared_ptr.hpp" />
     <ClInclude Include="util\typeindices.hpp" />
     <ClInclude Include="util\yaml.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\3rdparty\libpng.vcxproj">
+    <ProjectReference Include="..\3rdparty\libpng\libpng.vcxproj">
       <Project>{d6973076-9317-4ef2-a0b8-b7a18ac0713e}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\asmjitsrc\asmjit.vcxproj">
+    <ProjectReference Include="..\3rdparty\asmjit\asmjit.vcxproj">
       <Project>{ac40ff01-426e-4838-a317-66354cefae88}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\3rdparty\yaml-cpp.vcxproj">
+    <ProjectReference Include="..\3rdparty\yaml-cpp\yaml-cpp.vcxproj">
       <Project>{fdc361c5-7734-493b-8cfb-037308b35122}</Project>
     </ProjectReference>
   </ItemGroup>

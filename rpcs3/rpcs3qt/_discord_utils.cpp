@@ -1,15 +1,16 @@
-﻿#ifdef WITH_DISCORD_RPC
-#include "stdafx.h"
+#ifdef WITH_DISCORD_RPC
 #include "_discord_utils.h"
 #include "discord_rpc.h"
-#include "discord_register.h"
+
+#include <string>
+#include <ctime>
 
 namespace discord
 {
 	void initialize(const std::string& application_id)
 	{
 		DiscordEventHandlers handlers = {};
-		Discord_Initialize(application_id.c_str(), &handlers, 1, NULL);
+		Discord_Initialize(application_id.c_str(), &handlers, 1, nullptr);
 	}
 
 	void shutdown()
@@ -27,7 +28,7 @@ namespace discord
 
 		if (reset_timer)
 		{
-			discordPresence.startTimestamp = time(0);
+			discordPresence.startTimestamp = std::time(nullptr);
 		}
 
 		Discord_UpdatePresence(&discordPresence);

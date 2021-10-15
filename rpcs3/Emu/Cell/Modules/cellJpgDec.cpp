@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -9,7 +9,14 @@
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "cellJpgDec.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(cellJpgDec);
+
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 template <>
 void fmt_class_string<CellJpgDecError>::format(std::string& out, u64 arg)
@@ -77,6 +84,7 @@ error_code cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJp
 		current_subHandle.fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
 		break;
 	}
+	default: break; // TODO
 	}
 
 	// From now, every u32 subHandle argument is a pointer to a CellJpgDecSubHandle struct.
@@ -139,10 +147,11 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 		file->file.read(buffer.get(), fileSize);
 		break;
 	}
+	default: break; // TODO
 	}
 
-	if (*reinterpret_cast<le_t<u32>*>(buffer.get()) != 0xE0FFD8FF || // Error: Not a valid SOI header
-		*reinterpret_cast<u32*>(buffer.get() + 6) != "JFIF"_u32)   // Error: Not a valid JFIF string
+	if (*utils::bless<le_t<u32>>(buffer.get() + 0) != 0xE0FFD8FF || // Error: Not a valid SOI header
+		*utils::bless<u32>(buffer.get() + 6) != "JFIF"_u32)   // Error: Not a valid JFIF string
 	{
 		return CELL_JPGDEC_ERROR_HEADER;
 	}
@@ -219,6 +228,7 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 		file->file.read(jpg.get(), fileSize);
 		break;
 	}
+	default: break; // TODO
 	}
 
 	//Decode JPG file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
@@ -234,7 +244,7 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 
 	const bool flip = current_outParam.outputMode == CELL_JPGDEC_BOTTOM_TO_TOP;
 	const int bytesPerLine = static_cast<int>(dataCtrlParam->outputBytesPerLine);
-	size_t image_size = width * height;
+	usz image_size = width * height;
 
 	switch(current_outParam.outputColorSpace)
 	{

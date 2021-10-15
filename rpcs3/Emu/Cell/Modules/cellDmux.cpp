@@ -1,4 +1,5 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -6,7 +7,7 @@
 #include "cellPamf.h"
 #include "cellDmux.h"
 
-#include <thread>
+#include "util/asm.hpp"
 
 LOG_CHANNEL(cellDmux);
 
@@ -180,7 +181,7 @@ public:
 	const u32 spec; //addr
 
 	std::vector<u8> raw_data; // demultiplexed data stream (managed by demuxer thread)
-	std::size_t raw_pos = 0; // should be <= raw_data.size()
+	usz raw_pos = 0; // should be <= raw_data.size()
 	u64 last_dts = CODEC_TS_INVALID;
 	u64 last_pts = CODEC_TS_INVALID;
 
@@ -225,11 +226,11 @@ public:
 		DemuxerStream stream = {};
 		ElementaryStream* esALL[96]{};
 		ElementaryStream** esAVC = &esALL[0]; // AVC (max 16 minus M2V count)
-		ElementaryStream** esM2V = &esALL[16]; // M2V (max 16 minus AVC count)
-		ElementaryStream** esDATA = &esALL[32]; // user data (max 16)
+		//ElementaryStream** esM2V = &esALL[16]; // M2V (max 16 minus AVC count)
+		//ElementaryStream** esDATA = &esALL[32]; // user data (max 16)
 		ElementaryStream** esATX = &esALL[48]; // ATRAC3+ (max 16)
-		ElementaryStream** esAC3 = &esALL[64]; // AC3 (max 16)
-		ElementaryStream** esPCM = &esALL[80]; // LPCM (max 16)
+		//ElementaryStream** esAC3 = &esALL[64]; // AC3 (max 16)
+		//ElementaryStream** esPCM = &esALL[80]; // LPCM (max 16)
 
 		u32 cb_add = 0;
 
@@ -271,7 +272,7 @@ public:
 				{
 					if (!stream.check(14))
 					{
-						fmt::throw_exception("End of stream (PACK_START_CODE)" HERE);
+						fmt::throw_exception("End of stream (PACK_START_CODE)");
 					}
 					stream.skip(14);
 					break;
@@ -281,7 +282,7 @@ public:
 				{
 					if (!stream.check(18))
 					{
-						fmt::throw_exception("End of stream (SYSTEM_HEADER_START_CODE)" HERE);
+						fmt::throw_exception("End of stream (SYSTEM_HEADER_START_CODE)");
 					}
 					stream.skip(18);
 					break;
@@ -291,14 +292,14 @@ public:
 				{
 					if (!stream.check(6))
 					{
-						fmt::throw_exception("End of stream (PADDING_STREAM)" HERE);
+						fmt::throw_exception("End of stream (PADDING_STREAM)");
 					}
 					stream.skip(4);
 					stream.get(len);
 
 					if (!stream.check(len))
 					{
-						fmt::throw_exception("End of stream (PADDING_STREAM, len=%d)" HERE, len);
+						fmt::throw_exception("End of stream (PADDING_STREAM, len=%d)", len);
 					}
 					stream.skip(len);
 					break;
@@ -308,7 +309,7 @@ public:
 				{
 					if (!stream.check(6))
 					{
-						fmt::throw_exception("End of stream (PRIVATE_STREAM_2)" HERE);
+						fmt::throw_exception("End of stream (PRIVATE_STREAM_2)");
 					}
 					stream.skip(4);
 					stream.get(len);
@@ -317,7 +318,7 @@ public:
 
 					if (!stream.check(len))
 					{
-						fmt::throw_exception("End of stream (PRIVATE_STREAM_2, len=%d)" HERE, len);
+						fmt::throw_exception("End of stream (PRIVATE_STREAM_2, len=%d)", len);
 					}
 					stream.skip(len);
 					break;
@@ -330,32 +331,32 @@ public:
 
 					if (!stream.check(6))
 					{
-						fmt::throw_exception("End of stream (PRIVATE_STREAM_1)" HERE);
+						fmt::throw_exception("End of stream (PRIVATE_STREAM_1)");
 					}
 					stream.skip(4);
 					stream.get(len);
 
 					if (!stream.check(len))
 					{
-						fmt::throw_exception("End of stream (PRIVATE_STREAM_1, len=%d)" HERE, len);
+						fmt::throw_exception("End of stream (PRIVATE_STREAM_1, len=%d)", len);
 					}
 
 					const PesHeader pes(stream);
 					if (!pes.is_ok)
 					{
-						fmt::throw_exception("PesHeader error (PRIVATE_STREAM_1, len=%d)" HERE, len);
+						fmt::throw_exception("PesHeader error (PRIVATE_STREAM_1, len=%d)", len);
 					}
 
 					if (len < pes.size + 4)
 					{
-						fmt::throw_exception("End of block (PRIVATE_STREAM_1, PesHeader + fid_minor, len=%d)" HERE, len);
+						fmt::throw_exception("End of block (PRIVATE_STREAM_1, PesHeader + fid_minor, len=%d)", len);
 					}
 					len -= pes.size + 4;
 
 					u8 fid_minor;
 					if (!stream.get(fid_minor))
 					{
-						fmt::throw_exception("End of stream (PRIVATE_STREAM1, fid_minor)" HERE);
+						fmt::throw_exception("End of stream (PRIVATE_STREAM1, fid_minor)");
 					}
 
 					const u32 ch = fid_minor % 16;
@@ -371,7 +372,7 @@ public:
 
 						if (len < 3 || !stream.check(3))
 						{
-							fmt::throw_exception("End of block (ATX, unknown header, len=%d)" HERE, len);
+							fmt::throw_exception("End of block (ATX, unknown header, len=%d)", len);
 						}
 						len -= 3;
 						stream.skip(3);
@@ -393,7 +394,7 @@ public:
 
 							if (data[0] != 0x0f || data[1] != 0xd0)
 							{
-								fmt::throw_exception("ATX: 0x0fd0 header not found (ats=0x%llx)" HERE, *reinterpret_cast<be_t<u64>*>(data));
+								fmt::throw_exception("ATX: 0x0fd0 header not found (ats=0x%llx)", *reinterpret_cast<be_t<u64>*>(data));
 							}
 
 							u32 frame_size = (((u32{data[2]} & 0x3) << 8) | u32{data[3]}) * 8 + 8;
@@ -431,25 +432,25 @@ public:
 
 					if (!stream.check(6))
 					{
-						fmt::throw_exception("End of stream (video, code=0x%x)" HERE, code);
+						fmt::throw_exception("End of stream (video, code=0x%x)", code);
 					}
 					stream.skip(4);
 					stream.get(len);
 
 					if (!stream.check(len))
 					{
-						fmt::throw_exception("End of stream (video, code=0x%x, len=%d)" HERE, code, len);
+						fmt::throw_exception("End of stream (video, code=0x%x, len=%d)", code, len);
 					}
 
 					const PesHeader pes(stream);
 					if (!pes.is_ok)
 					{
-						fmt::throw_exception("PesHeader error (video, code=0x%x, len=%d)" HERE, code, len);
+						fmt::throw_exception("PesHeader error (video, code=0x%x, len=%d)", code, len);
 					}
 
 					if (len < pes.size + 3)
 					{
-						fmt::throw_exception("End of block (video, code=0x%x, PesHeader)" HERE, code);
+						fmt::throw_exception("End of block (video, code=0x%x, PesHeader)", code);
 					}
 					len -= pes.size + 3;
 
@@ -503,7 +504,7 @@ public:
 				{
 					if ((code & PACKET_START_CODE_MASK) == PACKET_START_CODE_PREFIX)
 					{
-						fmt::throw_exception("Unknown code found (0x%x)" HERE, code);
+						fmt::throw_exception("Unknown code found (0x%x)", code);
 					}
 
 					// search
@@ -594,7 +595,7 @@ public:
 				//}
 				//else
 				{
-					fmt::throw_exception("dmuxEnableEs: unknown filter (0x%x, 0x%x, 0x%x, 0x%x)" HERE, es.fidMajor, es.fidMinor, es.sup1, es.sup2);
+					fmt::throw_exception("dmuxEnableEs: unknown filter (0x%x, 0x%x, 0x%x, 0x%x)", es.fidMajor, es.fidMinor, es.sup1, es.sup2);
 				}
 				es.dmux = this;
 				break;
@@ -605,7 +606,7 @@ public:
 				ElementaryStream& es = *task.es.es_ptr;
 				if (es.dmux != this)
 				{
-					fmt::throw_exception("dmuxDisableEs: invalid elementary stream" HERE);
+					fmt::throw_exception("dmuxDisableEs: invalid elementary stream");
 				}
 
 				for (u32 i = 0; i < std::size(esALL); i++)
@@ -672,7 +673,7 @@ public:
 
 			default:
 			{
-				fmt::throw_exception("Demuxer thread error: unknown task (0x%x)" HERE, +task.type);
+				fmt::throw_exception("Demuxer thread error: unknown task (0x%x)", +task.type);
 			}
 			}
 		}
@@ -692,15 +693,15 @@ PesHeader::PesHeader(DemuxerStream& stream)
 	u16 header;
 	if (!stream.get(header))
 	{
-		fmt::throw_exception("End of stream (header)" HERE);
+		fmt::throw_exception("End of stream (header)");
 	}
 	if (!stream.get(size))
 	{
-		fmt::throw_exception("End of stream (size)" HERE);
+		fmt::throw_exception("End of stream (size)");
 	}
 	if (!stream.check(size))
 	{
-		fmt::throw_exception("End of stream (size=%d)" HERE, size);
+		fmt::throw_exception("End of stream (size=%d)", size);
 	}
 
 	u8 pos = 0;
@@ -752,9 +753,9 @@ PesHeader::PesHeader(DemuxerStream& stream)
 }
 
 ElementaryStream::ElementaryStream(Demuxer* dmux, u32 addr, u32 size, u32 fidMajor, u32 fidMinor, u32 sup1, u32 sup2, vm::ptr<CellDmuxCbEsMsg> cbFunc, u32 cbArg, u32 spec)
-	: put(align(addr, 128))
+	: put(utils::align(addr, 128))
 	, dmux(dmux)
-	, memAddr(align(addr, 128))
+	, memAddr(utils::align(addr, 128))
 	, memSize(size - (addr - memAddr))
 	, fidMajor(fidMajor)
 	, fidMinor(fidMinor)
@@ -778,7 +779,7 @@ bool ElementaryStream::is_full(u32 space)
 		u32 first = 0;
 		if (!entries.peek(first, 0, &dmux->is_closed) || !first)
 		{
-			fmt::throw_exception("entries.peek() failed" HERE);
+			fmt::throw_exception("entries.peek() failed");
 		}
 		else if (first >= put)
 		{
@@ -810,7 +811,7 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 	u32 addr;
 	{
 		std::lock_guard lock(m_mutex);
-		verify(HERE), !is_full(size);
+		ensure(!is_full(size));
 
 		if (put + size + 128 > memAddr + memSize)
 		{
@@ -846,12 +847,12 @@ void ElementaryStream::push_au(u32 size, u64 dts, u64 pts, u64 userdata, bool ra
 
 		addr = put;
 
-		put = align(put + 128 + size, 128);
+		put = utils::align(put + 128 + size, 128);
 
 		put_count++;
 	}
 
-	verify(HERE), entries.push(addr, &dmux->is_closed);
+	ensure(entries.push(addr, &dmux->is_closed));
 }
 
 void ElementaryStream::push(DemuxerStream& stream, u32 size)
@@ -870,22 +871,19 @@ bool ElementaryStream::release()
 	std::lock_guard lock(m_mutex);
 	if (released >= put_count)
 	{
-		cellDmux.error("es::release() error: buffer is empty");
-		Emu.Pause();
+		cellDmux.fatal("es::release() error: buffer is empty");
 		return false;
 	}
 	if (released >= got_count)
 	{
-		cellDmux.error("es::release() error: buffer has not been seen yet");
-		Emu.Pause();
+		cellDmux.fatal("es::release() error: buffer has not been seen yet");
 		return false;
 	}
 
 	u32 addr = 0;
 	if (!entries.pop(addr, &dmux->is_closed) || !addr)
 	{
-		cellDmux.error("es::release() error: entries.Pop() failed");
-		Emu.Pause();
+		cellDmux.fatal("es::release() error: entries.Pop() failed");
 		return false;
 	}
 
@@ -898,8 +896,7 @@ bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool updat
 	std::lock_guard lock(m_mutex);
 	if (got_count < released)
 	{
-		cellDmux.error("es::peek() error: got_count(%d) < released(%d) (put_count=%d)", got_count, released, put_count);
-		Emu.Pause();
+		cellDmux.fatal("es::peek() error: got_count(%d) < released(%d) (put_count=%d)", got_count, released, put_count);
 		return false;
 	}
 	if (got_count >= put_count)
@@ -910,8 +907,7 @@ bool ElementaryStream::peek(u32& out_data, bool no_ex, u32& out_spec, bool updat
 	u32 addr = 0;
 	if (!entries.peek(addr, got_count - released, &dmux->is_closed) || !addr)
 	{
-		cellDmux.error("es::peek() error: entries.Peek() failed");
-		Emu.Pause();
+		cellDmux.fatal("es::peek() error: entries.Peek() failed");
 		return false;
 	}
 
@@ -937,14 +933,14 @@ void ElementaryStream::reset()
 	raw_pos = 0;
 }
 
-void dmuxQueryAttr(u32 info_addr /* may be 0 */, vm::ptr<CellDmuxAttr> attr)
+void dmuxQueryAttr(u32 /* info_addr, may be 0 */, vm::ptr<CellDmuxAttr> attr)
 {
 	attr->demuxerVerLower = 0x280000; // TODO: check values
 	attr->demuxerVerUpper = 0x260000;
 	attr->memSize = 0x10000; // 0x3e8e6 from ps3
 }
 
-void dmuxQueryEsAttr(u32 info /* may be 0 */, vm::cptr<CellCodecEsFilterId> esFilterId, u32 esSpecificInfo, vm::ptr<CellDmuxEsAttr> attr)
+void dmuxQueryEsAttr(u32 /* info, may be 0 */, vm::cptr<CellCodecEsFilterId> esFilterId, u32 /*esSpecificInfo*/, vm::ptr<CellDmuxEsAttr> attr)
 {
 	if (esFilterId->filterIdMajor >= 0xe0)
 	{

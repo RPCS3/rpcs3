@@ -3,64 +3,98 @@
 #include <string>
 #include "Utilities/StrFmt.h"
 
-enum CPUDisAsmMode
+enum class cpu_disasm_mode
 {
-	CPUDisAsm_DumpMode,
-	CPUDisAsm_InterpreterMode,
-	//CPUDisAsm_NormalMode,
-	CPUDisAsm_CompilerElfMode,
+	dump,
+	interpreter,
+	normal,
+	compiler_elf,
+	list, // RSX exclusive
 };
+
+class cpu_thread;
 
 class CPUDisAsm
 {
 protected:
-	const CPUDisAsmMode m_mode;
+	cpu_disasm_mode m_mode{};
+	const std::add_pointer_t<const u8> m_offset{};
+	const u32 m_start_pc;
+	const std::add_pointer_t<const cpu_thread> m_cpu{};
+	u32 m_op = 0;
 
-	virtual void Write(const std::string& value)
+	void format_by_mode()
 	{
-		switch(m_mode)
+		switch (m_mode)
 		{
-			case CPUDisAsm_DumpMode:
+			case cpu_disasm_mode::dump:
+			{
 				last_opcode = fmt::format("\t%08x:\t%02x %02x %02x %02x\t%s\n", dump_pc,
-					offset[dump_pc],
-					offset[dump_pc + 1],
-					offset[dump_pc + 2],
-					offset[dump_pc + 3], value);
-			break;
+					static_cast<u8>(m_op >> 24),
+					static_cast<u8>(m_op >> 16),
+					static_cast<u8>(m_op >> 8),
+					static_cast<u8>(m_op >> 0), last_opcode);
+				break;
+			}
 
-			case CPUDisAsm_InterpreterMode:
-				last_opcode = fmt::format("[%08x]  %02x %02x %02x %02x: %s", dump_pc,
-					offset[dump_pc],
-					offset[dump_pc + 1],
-					offset[dump_pc + 2],
-					offset[dump_pc + 3], value);
-			break;
+			case cpu_disasm_mode::interpreter:
+			{
+				last_opcode.insert(0, fmt::format("[%08x]  %02x %02x %02x %02x: ", dump_pc,
+					static_cast<u8>(m_op >> 24),
+					static_cast<u8>(m_op >> 16),
+					static_cast<u8>(m_op >> 8),
+					static_cast<u8>(m_op >> 0)));
+				break;
+			}
 
-			case CPUDisAsm_CompilerElfMode:
-				last_opcode = value + "\n";
-			break;
+			case cpu_disasm_mode::compiler_elf:
+			{
+				last_opcode += '\n';
+				break;
+			}
+			case cpu_disasm_mode::normal:
+			{
+				break;
+			}
+			default: fmt::throw_exception("Unreachable");
 		}
 	}
 
 public:
-	std::string last_opcode;
-	u32 dump_pc;
-	const u8* offset;
+	std::string last_opcode{};
+	u32 dump_pc{};
+
+	CPUDisAsm& change_mode(cpu_disasm_mode mode)
+	{
+		m_mode = mode;
+		return *this;
+	}
 
 protected:
-	CPUDisAsm(CPUDisAsmMode mode)
+	CPUDisAsm(cpu_disasm_mode mode, const u8* offset, u32 start_pc = 0, const cpu_thread* cpu = nullptr)
 		: m_mode(mode)
-		, offset(0)
+		, m_offset(offset - start_pc)
+		, m_start_pc(start_pc)
+		, m_cpu(cpu)
 	{
 	}
 
-	virtual u32 DisAsmBranchTarget(const s32 imm) = 0;
+	CPUDisAsm& operator=(const CPUDisAsm&) = delete;
+
+	virtual u32 DisAsmBranchTarget(s32 /*imm*/);
 
 	// TODO: Add builtin fmt helpper for best performance
 	template <typename T, std::enable_if_t<std::is_integral_v<T>, int> = 0>
 	static std::string SignedHex(T value)
 	{
 		const auto v = static_cast<std::make_signed_t<T>>(value);
+
+		if (v == smin)
+		{
+			// for INTx_MIN
+			return fmt::format("-0x%x", v);
+		}
+
 		const auto av = std::abs(v);
 
 		if (av < 10)
@@ -72,12 +106,17 @@ protected:
 		return fmt::format("%s%s", v < 0 ? "-" : "", av);
 	}
 
-	static std::string FixOp(std::string op)
+	// Signify the formatting function the minimum required amount of characters to print for an instruction
+	// Padding with spaces
+	int PadOp(std::string_view op = {}, int min_spaces = 0) const
 	{
-		op.resize(std::max<std::size_t>(op.length(), 10), ' ');
-		return op;
+		return m_mode == cpu_disasm_mode::normal ? (static_cast<int>(op.size()) + min_spaces) : 10;
 	}
 
 public:
+	virtual ~CPUDisAsm() = default;
+
 	virtual u32 disasm(u32 pc) = 0;
+	virtual std::pair<const void*, usz> get_memory_span() const = 0;
+	virtual std::unique_ptr<CPUDisAsm> copy_type_erased() const = 0;
 };

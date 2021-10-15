@@ -1,5 +1,4 @@
 #pragma once
-#include "Utilities/BEType.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/Modules/sceNp.h"
@@ -22,16 +21,21 @@ struct signaling_info
 	u32 addr       = 0;
 	u16 port       = 0;
 
+	// User seen from that peer
+	u32 mapped_addr = 0;
+	u16 mapped_port = 0;
+
 	// For handler
-	std::chrono::time_point<std::chrono::system_clock> time_last_msg_recvd = std::chrono::system_clock::now();
-	bool self                                                              = false;
-	u32 version                                                            = 0;
+	steady_clock::time_point time_last_msg_recvd = steady_clock::now();
+
+	bool self   = false;
+	u32 version = 0;
 	// Signaling
-	u32 conn_id                                                            = 0;
-	ext_signaling_status ext_status                                        = ext_sign_none;
+	u32 conn_id                     = 0;
+	ext_signaling_status ext_status = ext_sign_none;
 	// Matching2
-	u64 room_id                                                            = 0;
-	u16 member_id                                                          = 0;
+	u64 room_id   = 0;
+	u16 member_id = 0;
 };
 
 enum SignalingCommand : u32
@@ -45,11 +49,13 @@ enum SignalingCommand : u32
 	signal_finished_ack,
 };
 
-class signaling_handler : public need_wakeup
+class signaling_handler
 {
 public:
+	signaling_handler();
 	void operator()();
 	void wake_up();
+	signaling_handler& operator=(thread_state);
 
 	void set_self_sig_info(SceNpId& npid);
 	void set_self_sig2_info(u64 room_id, u16 member_id);
@@ -61,7 +67,7 @@ public:
 	signaling_info get_sig2_infos(u64 room_id, u16 member_id);
 
 	void set_sig_cb(u32 sig_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_cb, vm::ptr<void> sig_cb_arg);
-	void set_ext_sig_cb(u32 sig_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_ext_cb, vm::ptr<void> sig_ext_cb_arg);
+	void set_ext_sig_cb(u32 sig_ext_cb_ctx, vm::ptr<SceNpSignalingHandler> sig_ext_cb, vm::ptr<void> sig_ext_cb_arg);
 	void set_sig2_cb(u16 sig2_cb_ctx, vm::ptr<SceNpMatching2SignalingCallback> sig2_cb, vm::ptr<void> sig2_cb_arg);
 
 	void start_sig(u32 conn_id, u32 addr, u16 port);
@@ -69,7 +75,6 @@ public:
 	void start_sig2(u64 room_id, u16 member_id);
 	void disconnect_sig2_users(u64 room_id);
 
-public:
 	static constexpr auto thread_name = "Signaling Manager Thread"sv;
 
 private:
@@ -83,6 +88,8 @@ private:
 		be_t<u32> signature = SIGNALING_SIGNATURE;
 		le_t<u32> version;
 		le_t<SignalingCommand> command;
+		le_t<u32> sent_addr;
+		le_t<u16> sent_port;
 		union {
 			struct
 			{
@@ -102,7 +109,6 @@ private:
 		std::shared_ptr<signaling_info> sig_info;
 	};
 
-private:
 	u32 sig_cb_ctx = 0;
 	vm::ptr<SceNpSignalingHandler> sig_cb{};
 	vm::ptr<void> sig_cb_arg{};
@@ -115,37 +121,36 @@ private:
 	vm::ptr<SceNpMatching2SignalingCallback> sig2_cb{};
 	vm::ptr<void> sig2_cb_arg{};
 
-private:
 	u32 create_sig_infos(const SceNpId* npid);
-	void update_si_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port);
+	static void update_si_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port);
+	static void update_si_mapped_addr(std::shared_ptr<signaling_info>& si, u32 new_addr, u16 new_port);
 	void update_si_status(std::shared_ptr<signaling_info>& si, s32 new_status, bool confirm_packet = false);
 	void signal_sig_callback(u32 conn_id, int event);
-	void signal_ext_sig_callback(u32 conn_id, int event);
-	void signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event);
+	void signal_ext_sig_callback(u32 conn_id, int event) const;
+	void signal_sig2_callback(u64 room_id, u16 member_id, SceNpMatching2Event event) const;
 
-private:
-	bool validate_signaling_packet(const signaling_packet* sp);
-	void reschedule_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd, std::chrono::time_point<std::chrono::system_clock> new_timepoint);
+	void start_sig_nl(u32 conn_id, u32 addr, u16 port);
+
+	static bool validate_signaling_packet(const signaling_packet* sp);
+	void reschedule_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd, steady_clock::time_point new_timepoint);
 	void retire_packet(std::shared_ptr<signaling_info>& si, SignalingCommand cmd);
 	void retire_all_packets(std::shared_ptr<signaling_info>& si);
 
-private:
 	std::mutex data_mutex;
 	std::condition_variable wakey;
 
 	signaling_packet sig1_packet{.version = 1u};
 	signaling_packet sig2_packet{.version = 2u};
 
-	std::map<std::chrono::time_point<std::chrono::system_clock>, queued_packet> qpackets; // (wakeup time, packet)
+	std::map<steady_clock::time_point, queued_packet> qpackets; // (wakeup time, packet)
 
 	u32 cur_conn_id = 1;
 	std::unordered_map<std::string, u32> npid_to_conn_id;                                         // (npid, conn_id)
 	std::unordered_map<u32, std::shared_ptr<signaling_info>> sig1_peers;                          // (conn_id, sig_info)
 	std::unordered_map<u64, std::unordered_map<u16, std::shared_ptr<signaling_info>>> sig2_peers; // (room (member_id, sig_info))
 
-private:
 	void process_incoming_messages();
 	std::shared_ptr<signaling_info> get_signaling_ptr(const signaling_packet* sp);
-	void send_signaling_packet(signaling_packet& sp, u32 addr, u16 port);
-	void queue_signaling_packet(signaling_packet& sp, std::shared_ptr<signaling_info> si, std::chrono::time_point<std::chrono::system_clock> wakeup_time);
+	void send_signaling_packet(signaling_packet& sp, u32 addr, u16 port) const;
+	void queue_signaling_packet(signaling_packet& sp, std::shared_ptr<signaling_info> si, steady_clock::time_point wakeup_time);
 };

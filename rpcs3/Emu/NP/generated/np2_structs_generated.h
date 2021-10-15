@@ -7,62 +7,103 @@
 #include "flatbuffers/flatbuffers.h"
 
 struct BinAttr;
+struct BinAttrBuilder;
 
 struct IntAttr;
+struct IntAttrBuilder;
 
 struct MemberBinAttrInternal;
+struct MemberBinAttrInternalBuilder;
 
 struct BinAttrInternal;
+struct BinAttrInternalBuilder;
 
 struct OptParam;
+struct OptParamBuilder;
 
 struct GroupConfig;
+struct GroupConfigBuilder;
 
 struct UserInfo2;
+struct UserInfo2Builder;
 
 struct RoomMemberDataInternal;
+struct RoomMemberDataInternalBuilder;
 
 struct RoomGroup;
+struct RoomGroupBuilder;
 
 struct RoomDataInternal;
+struct RoomDataInternalBuilder;
 
 struct RoomDataExternal;
+struct RoomDataExternalBuilder;
 
 struct IntSearchFilter;
+struct IntSearchFilterBuilder;
 
 struct BinSearchFilter;
+struct BinSearchFilterBuilder;
 
 struct PresenceOptionData;
+struct PresenceOptionDataBuilder;
 
 struct RoomGroupPasswordConfig;
+struct RoomGroupPasswordConfigBuilder;
 
 struct SearchRoomRequest;
+struct SearchRoomRequestBuilder;
 
 struct SearchRoomResponse;
+struct SearchRoomResponseBuilder;
 
 struct CreateJoinRoomRequest;
+struct CreateJoinRoomRequestBuilder;
 
 struct JoinRoomRequest;
+struct JoinRoomRequestBuilder;
 
 struct LeaveRoomRequest;
+struct LeaveRoomRequestBuilder;
+
+struct GetRoomDataExternalListRequest;
+struct GetRoomDataExternalListRequestBuilder;
+
+struct GetRoomDataExternalListResponse;
+struct GetRoomDataExternalListResponseBuilder;
 
 struct SetRoomDataExternalRequest;
+struct SetRoomDataExternalRequestBuilder;
 
 struct SetRoomDataInternalRequest;
+struct SetRoomDataInternalRequestBuilder;
 
 struct GetRoomDataInternalRequest;
+struct GetRoomDataInternalRequestBuilder;
 
 struct RoomMemberUpdateInfo;
+struct RoomMemberUpdateInfoBuilder;
 
 struct RoomUpdateInfo;
+struct RoomUpdateInfoBuilder;
 
 struct GetPingInfoResponse;
+struct GetPingInfoResponseBuilder;
 
 struct SendRoomMessageRequest;
+struct SendRoomMessageRequestBuilder;
 
 struct RoomMessageInfo;
+struct RoomMessageInfoBuilder;
+
+struct MessageDetails;
+struct MessageDetailsBuilder;
+
+struct SendMessageRequest;
+struct SendMessageRequestBuilder;
 
 struct BinAttr FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef BinAttrBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ID = 4,
     VT_DATA = 6
@@ -83,6 +124,7 @@ struct BinAttr FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct BinAttrBuilder {
+  typedef BinAttr Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_id(uint16_t id) {
@@ -95,7 +137,6 @@ struct BinAttrBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  BinAttrBuilder &operator=(const BinAttrBuilder &);
   flatbuffers::Offset<BinAttr> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<BinAttr>(end);
@@ -125,6 +166,7 @@ inline flatbuffers::Offset<BinAttr> CreateBinAttrDirect(
 }
 
 struct IntAttr FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef IntAttrBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ID = 4,
     VT_NUM = 6
@@ -144,6 +186,7 @@ struct IntAttr FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct IntAttrBuilder {
+  typedef IntAttr Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_id(uint16_t id) {
@@ -156,7 +199,6 @@ struct IntAttrBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  IntAttrBuilder &operator=(const IntAttrBuilder &);
   flatbuffers::Offset<IntAttr> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<IntAttr>(end);
@@ -175,6 +217,7 @@ inline flatbuffers::Offset<IntAttr> CreateIntAttr(
 }
 
 struct MemberBinAttrInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef MemberBinAttrInternalBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_UPDATEDATE = 4,
     VT_DATA = 6
@@ -195,6 +238,7 @@ struct MemberBinAttrInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tabl
 };
 
 struct MemberBinAttrInternalBuilder {
+  typedef MemberBinAttrInternal Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_updateDate(uint64_t updateDate) {
@@ -207,7 +251,6 @@ struct MemberBinAttrInternalBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  MemberBinAttrInternalBuilder &operator=(const MemberBinAttrInternalBuilder &);
   flatbuffers::Offset<MemberBinAttrInternal> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<MemberBinAttrInternal>(end);
@@ -226,6 +269,7 @@ inline flatbuffers::Offset<MemberBinAttrInternal> CreateMemberBinAttrInternal(
 }
 
 struct BinAttrInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef BinAttrInternalBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_UPDATEDATE = 4,
     VT_UPDATEMEMBERID = 6,
@@ -251,6 +295,7 @@ struct BinAttrInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct BinAttrInternalBuilder {
+  typedef BinAttrInternal Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_updateDate(uint64_t updateDate) {
@@ -266,7 +311,6 @@ struct BinAttrInternalBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  BinAttrInternalBuilder &operator=(const BinAttrInternalBuilder &);
   flatbuffers::Offset<BinAttrInternal> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<BinAttrInternal>(end);
@@ -287,6 +331,7 @@ inline flatbuffers::Offset<BinAttrInternal> CreateBinAttrInternal(
 }
 
 struct OptParam FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef OptParamBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_TYPE = 4,
     VT_FLAG = 6,
@@ -311,6 +356,7 @@ struct OptParam FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct OptParamBuilder {
+  typedef OptParam Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_type(uint8_t type) {
@@ -326,7 +372,6 @@ struct OptParamBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  OptParamBuilder &operator=(const OptParamBuilder &);
   flatbuffers::Offset<OptParam> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<OptParam>(end);
@@ -347,6 +392,7 @@ inline flatbuffers::Offset<OptParam> CreateOptParam(
 }
 
 struct GroupConfig FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef GroupConfigBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_SLOTNUM = 4,
     VT_WITHLABEL = 6,
@@ -377,6 +423,7 @@ struct GroupConfig FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct GroupConfigBuilder {
+  typedef GroupConfig Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_slotNum(uint32_t slotNum) {
@@ -395,7 +442,6 @@ struct GroupConfigBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  GroupConfigBuilder &operator=(const GroupConfigBuilder &);
   flatbuffers::Offset<GroupConfig> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<GroupConfig>(end);
@@ -433,6 +479,7 @@ inline flatbuffers::Offset<GroupConfig> CreateGroupConfigDirect(
 }
 
 struct UserInfo2 FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef UserInfo2Builder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_NPID = 4,
     VT_ONLINENAME = 6,
@@ -460,6 +507,7 @@ struct UserInfo2 FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct UserInfo2Builder {
+  typedef UserInfo2 Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_npId(flatbuffers::Offset<flatbuffers::String> npId) {
@@ -475,7 +523,6 @@ struct UserInfo2Builder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  UserInfo2Builder &operator=(const UserInfo2Builder &);
   flatbuffers::Offset<UserInfo2> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<UserInfo2>(end);
@@ -511,6 +558,7 @@ inline flatbuffers::Offset<UserInfo2> CreateUserInfo2Direct(
 }
 
 struct RoomMemberDataInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RoomMemberDataInternalBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_USERINFO = 4,
     VT_JOINDATE = 6,
@@ -563,6 +611,7 @@ struct RoomMemberDataInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tab
 };
 
 struct RoomMemberDataInternalBuilder {
+  typedef RoomMemberDataInternal Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_userInfo(flatbuffers::Offset<UserInfo2> userInfo) {
@@ -593,7 +642,6 @@ struct RoomMemberDataInternalBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  RoomMemberDataInternalBuilder &operator=(const RoomMemberDataInternalBuilder &);
   flatbuffers::Offset<RoomMemberDataInternal> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<RoomMemberDataInternal>(end);
@@ -647,6 +695,7 @@ inline flatbuffers::Offset<RoomMemberDataInternal> CreateRoomMemberDataInternalD
 }
 
 struct RoomGroup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RoomGroupBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_GROUPID = 4,
     VT_WITHPASSWORD = 6,
@@ -687,6 +736,7 @@ struct RoomGroup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct RoomGroupBuilder {
+  typedef RoomGroup Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_groupId(uint8_t groupId) {
@@ -711,7 +761,6 @@ struct RoomGroupBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  RoomGroupBuilder &operator=(const RoomGroupBuilder &);
   flatbuffers::Offset<RoomGroup> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<RoomGroup>(end);
@@ -757,6 +806,7 @@ inline flatbuffers::Offset<RoomGroup> CreateRoomGroupDirect(
 }
 
 struct RoomDataInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RoomDataInternalBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_SERVERID = 4,
     VT_WORLDID = 6,
@@ -827,6 +877,7 @@ struct RoomDataInternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct RoomDataInternalBuilder {
+  typedef RoomDataInternal Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_serverId(uint16_t serverId) {
@@ -866,7 +917,6 @@ struct RoomDataInternalBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  RoomDataInternalBuilder &operator=(const RoomDataInternalBuilder &);
   flatbuffers::Offset<RoomDataInternal> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<RoomDataInternal>(end);
@@ -934,6 +984,7 @@ inline flatbuffers::Offset<RoomDataInternal> CreateRoomDataInternalDirect(
 }
 
 struct RoomDataExternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RoomDataExternalBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_SERVERID = 4,
     VT_WORLDID = 6,
@@ -1037,6 +1088,7 @@ struct RoomDataExternal FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct RoomDataExternalBuilder {
+  typedef RoomDataExternal Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_serverId(uint16_t serverId) {
@@ -1094,7 +1146,6 @@ struct RoomDataExternalBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  RoomDataExternalBuilder &operator=(const RoomDataExternalBuilder &);
   flatbuffers::Offset<RoomDataExternal> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<RoomDataExternal>(end);
@@ -1187,6 +1238,7 @@ inline flatbuffers::Offset<RoomDataExternal> CreateRoomDataExternalDirect(
 }
 
 struct IntSearchFilter FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef IntSearchFilterBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_SEARCHOPERATOR = 4,
     VT_ATTR = 6
@@ -1207,6 +1259,7 @@ struct IntSearchFilter FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct IntSearchFilterBuilder {
+  typedef IntSearchFilter Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_searchOperator(uint8_t searchOperator) {
@@ -1219,7 +1272,6 @@ struct IntSearchFilterBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  IntSearchFilterBuilder &operator=(const IntSearchFilterBuilder &);
   flatbuffers::Offset<IntSearchFilter> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<IntSearchFilter>(end);
@@ -1238,6 +1290,7 @@ inline flatbuffers::Offset<IntSearchFilter> CreateIntSearchFilter(
 }
 
 struct BinSearchFilter FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef BinSearchFilterBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_SEARCHOPERATOR = 4,
     VT_ATTR = 6
@@ -1258,6 +1311,7 @@ struct BinSearchFilter FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct BinSearchFilterBuilder {
+  typedef BinSearchFilter Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_searchOperator(uint8_t searchOperator) {
@@ -1270,7 +1324,6 @@ struct BinSearchFilterBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  BinSearchFilterBuilder &operator=(const BinSearchFilterBuilder &);
   flatbuffers::Offset<BinSearchFilter> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<BinSearchFilter>(end);
@@ -1289,6 +1342,7 @@ inline flatbuffers::Offset<BinSearchFilter> CreateBinSearchFilter(
 }
 
 struct PresenceOptionData FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef PresenceOptionDataBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_DATA = 4,
     VT_LEN = 6
@@ -1309,6 +1363,7 @@ struct PresenceOptionData FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct PresenceOptionDataBuilder {
+  typedef PresenceOptionData Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_data(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data) {
@@ -1321,7 +1376,6 @@ struct PresenceOptionDataBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  PresenceOptionDataBuilder &operator=(const PresenceOptionDataBuilder &);
   flatbuffers::Offset<PresenceOptionData> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<PresenceOptionData>(end);
@@ -1351,6 +1405,7 @@ inline flatbuffers::Offset<PresenceOptionData> CreatePresenceOptionDataDirect(
 }
 
 struct RoomGroupPasswordConfig FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RoomGroupPasswordConfigBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_GROUPID = 4,
     VT_WITHPASSWORD = 6
@@ -1371,6 +1426,7 @@ struct RoomGroupPasswordConfig FLATBUFFERS_FINAL_CLASS : private flatbuffers::Ta
 };
 
 struct RoomGroupPasswordConfigBuilder {
+  typedef RoomGroupPasswordConfig Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_groupId(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> groupId) {
@@ -1383,7 +1439,6 @@ struct RoomGroupPasswordConfigBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  RoomGroupPasswordConfigBuilder &operator=(const RoomGroupPasswordConfigBuilder &);
   flatbuffers::Offset<RoomGroupPasswordConfig> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<RoomGroupPasswordConfig>(end);
@@ -1413,6 +1468,7 @@ inline flatbuffers::Offset<RoomGroupPasswordConfig> CreateRoomGroupPasswordConfi
 }
 
 struct SearchRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef SearchRoomRequestBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_OPTION = 4,
     VT_WORLDID = 6,
@@ -1477,6 +1533,7 @@ struct SearchRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct SearchRoomRequestBuilder {
+  typedef SearchRoomRequest Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_option(int32_t option) {
@@ -1513,7 +1570,6 @@ struct SearchRoomRequestBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  SearchRoomRequestBuilder &operator=(const SearchRoomRequestBuilder &);
   flatbuffers::Offset<SearchRoomRequest> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<SearchRoomRequest>(end);
@@ -1577,6 +1633,7 @@ inline flatbuffers::Offset<SearchRoomRequest> CreateSearchRoomRequestDirect(
 }
 
 struct SearchRoomResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef SearchRoomResponseBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_STARTINDEX = 4,
     VT_TOTAL = 6,
@@ -1608,6 +1665,7 @@ struct SearchRoomResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct SearchRoomResponseBuilder {
+  typedef SearchRoomResponse Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_startIndex(uint32_t startIndex) {
@@ -1626,7 +1684,6 @@ struct SearchRoomResponseBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  SearchRoomResponseBuilder &operator=(const SearchRoomResponseBuilder &);
   flatbuffers::Offset<SearchRoomResponse> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<SearchRoomResponse>(end);
@@ -1664,6 +1721,7 @@ inline flatbuffers::Offset<SearchRoomResponse> CreateSearchRoomResponseDirect(
 }
 
 struct CreateJoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef CreateJoinRoomRequestBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_WORLDID = 4,
     VT_LOBBYID = 6,
@@ -1777,6 +1835,7 @@ struct CreateJoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tabl
 };
 
 struct CreateJoinRoomRequestBuilder {
+  typedef CreateJoinRoomRequest Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_worldId(uint32_t worldId) {
@@ -1834,7 +1893,6 @@ struct CreateJoinRoomRequestBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  CreateJoinRoomRequestBuilder &operator=(const CreateJoinRoomRequestBuilder &);
   flatbuffers::Offset<CreateJoinRoomRequest> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<CreateJoinRoomRequest>(end);
@@ -1933,6 +1991,7 @@ inline flatbuffers::Offset<CreateJoinRoomRequest> CreateCreateJoinRoomRequestDir
 }
 
 struct JoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef JoinRoomRequestBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ROOMID = 4,
     VT_ROOMPASSWORD = 6,
@@ -1977,6 +2036,7 @@ struct JoinRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct JoinRoomRequestBuilder {
+  typedef JoinRoomRequest Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_roomId(uint64_t roomId) {
@@ -2001,7 +2061,6 @@ struct JoinRoomRequestBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  JoinRoomRequestBuilder &operator=(const JoinRoomRequestBuilder &);
   flatbuffers::Offset<JoinRoomRequest> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<JoinRoomRequest>(end);
@@ -2049,6 +2108,7 @@ inline flatbuffers::Offset<JoinRoomRequest> CreateJoinRoomRequestDirect(
 }
 
 struct LeaveRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef LeaveRoomRequestBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ROOMID = 4,
     VT_OPTDATA = 6
@@ -2069,6 +2129,7 @@ struct LeaveRoomRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct LeaveRoomRequestBuilder {
+  typedef LeaveRoomRequest Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_roomId(uint64_t roomId) {
@@ -2081,7 +2142,6 @@ struct LeaveRoomRequestBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  LeaveRoomRequestBuilder &operator=(const LeaveRoomRequestBuilder &);
   flatbuffers::Offset<LeaveRoomRequest> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<LeaveRoomRequest>(end);
@@ -2099,7 +2159,125 @@ inline flatbuffers::Offset<LeaveRoomRequest> CreateLeaveRoomRequest(
   return builder_.Finish();
 }
 
+struct GetRoomDataExternalListRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef GetRoomDataExternalListRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ROOMIDS = 4,
+    VT_ATTRIDS = 6
+  };
+  const flatbuffers::Vector<uint64_t> *roomIds() const {
+    return GetPointer<const flatbuffers::Vector<uint64_t> *>(VT_ROOMIDS);
+  }
+  const flatbuffers::Vector<uint16_t> *attrIds() const {
+    return GetPointer<const flatbuffers::Vector<uint16_t> *>(VT_ATTRIDS);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_ROOMIDS) &&
+           verifier.VerifyVector(roomIds()) &&
+           VerifyOffset(verifier, VT_ATTRIDS) &&
+           verifier.VerifyVector(attrIds()) &&
+           verifier.EndTable();
+  }
+};
+
+struct GetRoomDataExternalListRequestBuilder {
+  typedef GetRoomDataExternalListRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_roomIds(flatbuffers::Offset<flatbuffers::Vector<uint64_t>> roomIds) {
+    fbb_.AddOffset(GetRoomDataExternalListRequest::VT_ROOMIDS, roomIds);
+  }
+  void add_attrIds(flatbuffers::Offset<flatbuffers::Vector<uint16_t>> attrIds) {
+    fbb_.AddOffset(GetRoomDataExternalListRequest::VT_ATTRIDS, attrIds);
+  }
+  explicit GetRoomDataExternalListRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<GetRoomDataExternalListRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<GetRoomDataExternalListRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<GetRoomDataExternalListRequest> CreateGetRoomDataExternalListRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::Vector<uint64_t>> roomIds = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint16_t>> attrIds = 0) {
+  GetRoomDataExternalListRequestBuilder builder_(_fbb);
+  builder_.add_attrIds(attrIds);
+  builder_.add_roomIds(roomIds);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<GetRoomDataExternalListRequest> CreateGetRoomDataExternalListRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<uint64_t> *roomIds = nullptr,
+    const std::vector<uint16_t> *attrIds = nullptr) {
+  auto roomIds__ = roomIds ? _fbb.CreateVector<uint64_t>(*roomIds) : 0;
+  auto attrIds__ = attrIds ? _fbb.CreateVector<uint16_t>(*attrIds) : 0;
+  return CreateGetRoomDataExternalListRequest(
+      _fbb,
+      roomIds__,
+      attrIds__);
+}
+
+struct GetRoomDataExternalListResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef GetRoomDataExternalListResponseBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_ROOMS = 4
+  };
+  const flatbuffers::Vector<flatbuffers::Offset<RoomDataExternal>> *rooms() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<RoomDataExternal>> *>(VT_ROOMS);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_ROOMS) &&
+           verifier.VerifyVector(rooms()) &&
+           verifier.VerifyVectorOfTables(rooms()) &&
+           verifier.EndTable();
+  }
+};
+
+struct GetRoomDataExternalListResponseBuilder {
+  typedef GetRoomDataExternalListResponse Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_rooms(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RoomDataExternal>>> rooms) {
+    fbb_.AddOffset(GetRoomDataExternalListResponse::VT_ROOMS, rooms);
+  }
+  explicit GetRoomDataExternalListResponseBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<GetRoomDataExternalListResponse> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<GetRoomDataExternalListResponse>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<GetRoomDataExternalListResponse> CreateGetRoomDataExternalListResponse(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<RoomDataExternal>>> rooms = 0) {
+  GetRoomDataExternalListResponseBuilder builder_(_fbb);
+  builder_.add_rooms(rooms);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<GetRoomDataExternalListResponse> CreateGetRoomDataExternalListResponseDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<flatbuffers::Offset<RoomDataExternal>> *rooms = nullptr) {
+  auto rooms__ = rooms ? _fbb.CreateVector<flatbuffers::Offset<RoomDataExternal>>(*rooms) : 0;
+  return CreateGetRoomDataExternalListResponse(
+      _fbb,
+      rooms__);
+}
+
 struct SetRoomDataExternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef SetRoomDataExternalRequestBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ROOMID = 4,
     VT_ROOMSEARCHABLEINTATTREXTERNAL = 6,
@@ -2135,6 +2313,7 @@ struct SetRoomDataExternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
 };
 
 struct SetRoomDataExternalRequestBuilder {
+  typedef SetRoomDataExternalRequest Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_roomId(uint64_t roomId) {
@@ -2153,7 +2332,6 @@ struct SetRoomDataExternalRequestBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  SetRoomDataExternalRequestBuilder &operator=(const SetRoomDataExternalRequestBuilder &);
   flatbuffers::Offset<SetRoomDataExternalRequest> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<SetRoomDataExternalRequest>(end);
@@ -2193,6 +2371,7 @@ inline flatbuffers::Offset<SetRoomDataExternalRequest> CreateSetRoomDataExternal
 }
 
 struct SetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef SetRoomDataInternalRequestBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ROOMID = 4,
     VT_FLAGFILTER = 6,
@@ -2242,6 +2421,7 @@ struct SetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
 };
 
 struct SetRoomDataInternalRequestBuilder {
+  typedef SetRoomDataInternalRequest Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_roomId(uint64_t roomId) {
@@ -2269,7 +2449,6 @@ struct SetRoomDataInternalRequestBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  SetRoomDataInternalRequestBuilder &operator=(const SetRoomDataInternalRequestBuilder &);
   flatbuffers::Offset<SetRoomDataInternalRequest> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<SetRoomDataInternalRequest>(end);
@@ -2321,6 +2500,7 @@ inline flatbuffers::Offset<SetRoomDataInternalRequest> CreateSetRoomDataInternal
 }
 
 struct GetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef GetRoomDataInternalRequestBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ROOMID = 4,
     VT_ATTRID = 6
@@ -2341,6 +2521,7 @@ struct GetRoomDataInternalRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers:
 };
 
 struct GetRoomDataInternalRequestBuilder {
+  typedef GetRoomDataInternalRequest Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_roomId(uint64_t roomId) {
@@ -2353,7 +2534,6 @@ struct GetRoomDataInternalRequestBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  GetRoomDataInternalRequestBuilder &operator=(const GetRoomDataInternalRequestBuilder &);
   flatbuffers::Offset<GetRoomDataInternalRequest> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<GetRoomDataInternalRequest>(end);
@@ -2383,6 +2563,7 @@ inline flatbuffers::Offset<GetRoomDataInternalRequest> CreateGetRoomDataInternal
 }
 
 struct RoomMemberUpdateInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RoomMemberUpdateInfoBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ROOMMEMBERDATAINTERNAL = 4,
     VT_EVENTCAUSE = 6,
@@ -2409,6 +2590,7 @@ struct RoomMemberUpdateInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table
 };
 
 struct RoomMemberUpdateInfoBuilder {
+  typedef RoomMemberUpdateInfo Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_roomMemberDataInternal(flatbuffers::Offset<RoomMemberDataInternal> roomMemberDataInternal) {
@@ -2424,7 +2606,6 @@ struct RoomMemberUpdateInfoBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  RoomMemberUpdateInfoBuilder &operator=(const RoomMemberUpdateInfoBuilder &);
   flatbuffers::Offset<RoomMemberUpdateInfo> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<RoomMemberUpdateInfo>(end);
@@ -2445,6 +2626,7 @@ inline flatbuffers::Offset<RoomMemberUpdateInfo> CreateRoomMemberUpdateInfo(
 }
 
 struct RoomUpdateInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RoomUpdateInfoBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_EVENTCAUSE = 4,
     VT_ERRORCODE = 6,
@@ -2470,6 +2652,7 @@ struct RoomUpdateInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct RoomUpdateInfoBuilder {
+  typedef RoomUpdateInfo Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_eventCause(uint8_t eventCause) {
@@ -2485,7 +2668,6 @@ struct RoomUpdateInfoBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  RoomUpdateInfoBuilder &operator=(const RoomUpdateInfoBuilder &);
   flatbuffers::Offset<RoomUpdateInfo> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<RoomUpdateInfo>(end);
@@ -2506,6 +2688,7 @@ inline flatbuffers::Offset<RoomUpdateInfo> CreateRoomUpdateInfo(
 }
 
 struct GetPingInfoResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef GetPingInfoResponseBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_SERVERID = 4,
     VT_WORLDID = 6,
@@ -2535,6 +2718,7 @@ struct GetPingInfoResponse FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table 
 };
 
 struct GetPingInfoResponseBuilder {
+  typedef GetPingInfoResponse Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_serverId(uint16_t serverId) {
@@ -2553,7 +2737,6 @@ struct GetPingInfoResponseBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  GetPingInfoResponseBuilder &operator=(const GetPingInfoResponseBuilder &);
   flatbuffers::Offset<GetPingInfoResponse> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<GetPingInfoResponse>(end);
@@ -2576,6 +2759,7 @@ inline flatbuffers::Offset<GetPingInfoResponse> CreateGetPingInfoResponse(
 }
 
 struct SendRoomMessageRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef SendRoomMessageRequestBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_ROOMID = 4,
     VT_CASTTYPE = 6,
@@ -2612,6 +2796,7 @@ struct SendRoomMessageRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Tab
 };
 
 struct SendRoomMessageRequestBuilder {
+  typedef SendRoomMessageRequest Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_roomId(uint64_t roomId) {
@@ -2633,7 +2818,6 @@ struct SendRoomMessageRequestBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  SendRoomMessageRequestBuilder &operator=(const SendRoomMessageRequestBuilder &);
   flatbuffers::Offset<SendRoomMessageRequest> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<SendRoomMessageRequest>(end);
@@ -2676,6 +2860,7 @@ inline flatbuffers::Offset<SendRoomMessageRequest> CreateSendRoomMessageRequestD
 }
 
 struct RoomMessageInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef RoomMessageInfoBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_FILTERED = 4,
     VT_CASTTYPE = 6,
@@ -2713,6 +2898,7 @@ struct RoomMessageInfo FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct RoomMessageInfoBuilder {
+  typedef RoomMessageInfo Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_filtered(bool filtered) {
@@ -2734,7 +2920,6 @@ struct RoomMessageInfoBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
-  RoomMessageInfoBuilder &operator=(const RoomMessageInfoBuilder &);
   flatbuffers::Offset<RoomMessageInfo> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<RoomMessageInfo>(end);
@@ -2774,6 +2959,216 @@ inline flatbuffers::Offset<RoomMessageInfo> CreateRoomMessageInfoDirect(
       dst__,
       srcMember,
       msg__);
+}
+
+struct MessageDetails FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef MessageDetailsBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_COMMUNICATIONID = 4,
+    VT_MSGID = 6,
+    VT_MAINTYPE = 8,
+    VT_SUBTYPE = 10,
+    VT_MSGFEATURES = 12,
+    VT_SUBJECT = 14,
+    VT_BODY = 16,
+    VT_DATA = 18
+  };
+  const flatbuffers::String *communicationId() const {
+    return GetPointer<const flatbuffers::String *>(VT_COMMUNICATIONID);
+  }
+  uint64_t msgId() const {
+    return GetField<uint64_t>(VT_MSGID, 0);
+  }
+  uint16_t mainType() const {
+    return GetField<uint16_t>(VT_MAINTYPE, 0);
+  }
+  uint16_t subType() const {
+    return GetField<uint16_t>(VT_SUBTYPE, 0);
+  }
+  uint32_t msgFeatures() const {
+    return GetField<uint32_t>(VT_MSGFEATURES, 0);
+  }
+  const flatbuffers::String *subject() const {
+    return GetPointer<const flatbuffers::String *>(VT_SUBJECT);
+  }
+  const flatbuffers::String *body() const {
+    return GetPointer<const flatbuffers::String *>(VT_BODY);
+  }
+  const flatbuffers::Vector<uint8_t> *data() const {
+    return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_DATA);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_COMMUNICATIONID) &&
+           verifier.VerifyString(communicationId()) &&
+           VerifyField<uint64_t>(verifier, VT_MSGID) &&
+           VerifyField<uint16_t>(verifier, VT_MAINTYPE) &&
+           VerifyField<uint16_t>(verifier, VT_SUBTYPE) &&
+           VerifyField<uint32_t>(verifier, VT_MSGFEATURES) &&
+           VerifyOffset(verifier, VT_SUBJECT) &&
+           verifier.VerifyString(subject()) &&
+           VerifyOffset(verifier, VT_BODY) &&
+           verifier.VerifyString(body()) &&
+           VerifyOffset(verifier, VT_DATA) &&
+           verifier.VerifyVector(data()) &&
+           verifier.EndTable();
+  }
+};
+
+struct MessageDetailsBuilder {
+  typedef MessageDetails Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_communicationId(flatbuffers::Offset<flatbuffers::String> communicationId) {
+    fbb_.AddOffset(MessageDetails::VT_COMMUNICATIONID, communicationId);
+  }
+  void add_msgId(uint64_t msgId) {
+    fbb_.AddElement<uint64_t>(MessageDetails::VT_MSGID, msgId, 0);
+  }
+  void add_mainType(uint16_t mainType) {
+    fbb_.AddElement<uint16_t>(MessageDetails::VT_MAINTYPE, mainType, 0);
+  }
+  void add_subType(uint16_t subType) {
+    fbb_.AddElement<uint16_t>(MessageDetails::VT_SUBTYPE, subType, 0);
+  }
+  void add_msgFeatures(uint32_t msgFeatures) {
+    fbb_.AddElement<uint32_t>(MessageDetails::VT_MSGFEATURES, msgFeatures, 0);
+  }
+  void add_subject(flatbuffers::Offset<flatbuffers::String> subject) {
+    fbb_.AddOffset(MessageDetails::VT_SUBJECT, subject);
+  }
+  void add_body(flatbuffers::Offset<flatbuffers::String> body) {
+    fbb_.AddOffset(MessageDetails::VT_BODY, body);
+  }
+  void add_data(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data) {
+    fbb_.AddOffset(MessageDetails::VT_DATA, data);
+  }
+  explicit MessageDetailsBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<MessageDetails> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<MessageDetails>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<MessageDetails> CreateMessageDetails(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> communicationId = 0,
+    uint64_t msgId = 0,
+    uint16_t mainType = 0,
+    uint16_t subType = 0,
+    uint32_t msgFeatures = 0,
+    flatbuffers::Offset<flatbuffers::String> subject = 0,
+    flatbuffers::Offset<flatbuffers::String> body = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> data = 0) {
+  MessageDetailsBuilder builder_(_fbb);
+  builder_.add_msgId(msgId);
+  builder_.add_data(data);
+  builder_.add_body(body);
+  builder_.add_subject(subject);
+  builder_.add_msgFeatures(msgFeatures);
+  builder_.add_communicationId(communicationId);
+  builder_.add_subType(subType);
+  builder_.add_mainType(mainType);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<MessageDetails> CreateMessageDetailsDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *communicationId = nullptr,
+    uint64_t msgId = 0,
+    uint16_t mainType = 0,
+    uint16_t subType = 0,
+    uint32_t msgFeatures = 0,
+    const char *subject = nullptr,
+    const char *body = nullptr,
+    const std::vector<uint8_t> *data = nullptr) {
+  auto communicationId__ = communicationId ? _fbb.CreateString(communicationId) : 0;
+  auto subject__ = subject ? _fbb.CreateString(subject) : 0;
+  auto body__ = body ? _fbb.CreateString(body) : 0;
+  auto data__ = data ? _fbb.CreateVector<uint8_t>(*data) : 0;
+  return CreateMessageDetails(
+      _fbb,
+      communicationId__,
+      msgId,
+      mainType,
+      subType,
+      msgFeatures,
+      subject__,
+      body__,
+      data__);
+}
+
+struct SendMessageRequest FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  typedef SendMessageRequestBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_MESSAGE = 4,
+    VT_NPIDS = 6
+  };
+  const flatbuffers::Vector<uint8_t> *message() const {
+    return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_MESSAGE);
+  }
+  const MessageDetails *message_nested_root() const {
+    return flatbuffers::GetRoot<MessageDetails>(message()->Data());
+  }
+  const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *npids() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>> *>(VT_NPIDS);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_MESSAGE) &&
+           verifier.VerifyVector(message()) &&
+           VerifyOffset(verifier, VT_NPIDS) &&
+           verifier.VerifyVector(npids()) &&
+           verifier.VerifyVectorOfStrings(npids()) &&
+           verifier.EndTable();
+  }
+};
+
+struct SendMessageRequestBuilder {
+  typedef SendMessageRequest Table;
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_message(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> message) {
+    fbb_.AddOffset(SendMessageRequest::VT_MESSAGE, message);
+  }
+  void add_npids(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> npids) {
+    fbb_.AddOffset(SendMessageRequest::VT_NPIDS, npids);
+  }
+  explicit SendMessageRequestBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  flatbuffers::Offset<SendMessageRequest> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<SendMessageRequest>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<SendMessageRequest> CreateSendMessageRequest(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::Vector<uint8_t>> message = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<flatbuffers::String>>> npids = 0) {
+  SendMessageRequestBuilder builder_(_fbb);
+  builder_.add_npids(npids);
+  builder_.add_message(message);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<SendMessageRequest> CreateSendMessageRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const std::vector<uint8_t> *message = nullptr,
+    const std::vector<flatbuffers::Offset<flatbuffers::String>> *npids = nullptr) {
+  auto message__ = message ? _fbb.CreateVector<uint8_t>(*message) : 0;
+  auto npids__ = npids ? _fbb.CreateVector<flatbuffers::Offset<flatbuffers::String>>(*npids) : 0;
+  return CreateSendMessageRequest(
+      _fbb,
+      message__,
+      npids__);
 }
 
 #endif  // FLATBUFFERS_GENERATED_NP2STRUCTS_H_

@@ -1,6 +1,9 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "shader_loading_dialog.h"
 #include "Emu/System.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
+
+#include "util/asm.hpp"
 
 namespace rsx
 {
@@ -13,7 +16,7 @@ namespace rsx
 			dlg->type.bg_invisible = true;
 			dlg->type.progress_bar_count = 2;
 			dlg->ProgressBarSetTaskbarIndex(-1); // -1 to combine all progressbars in the taskbar progress
-			dlg->on_close = [](s32 status) { Emu.CallAfter([]() { Emu.Stop(); }); };
+			dlg->on_close = [](s32 /*status*/) { Emu.CallAfter([]() { Emu.Stop(); }); };
 
 			ref_cnt++;
 
@@ -26,7 +29,7 @@ namespace rsx
 
 		while (ref_cnt.load() && !Emu.IsStopped())
 		{
-			_mm_pause();
+			utils::pause();
 		}
 	}
 
@@ -62,6 +65,22 @@ namespace rsx
 		});
 	}
 
+	void shader_loading_dialog::set_value(u32 index, u32 value)
+	{
+		if (!dlg)
+		{
+			return;
+		}
+
+		ref_cnt++;
+
+		Emu.CallAfter([&, index, value]()
+		{
+			dlg->ProgressBarSetValue(index, value);
+			ref_cnt--;
+		});
+	}
+
 	void shader_loading_dialog::set_limit(u32 index, u32 limit)
 	{
 		if (!dlg)
@@ -86,7 +105,7 @@ namespace rsx
 	{
 		while (ref_cnt.load() && !Emu.IsStopped())
 		{
-			_mm_pause();
+			utils::pause();
 		}
 	}
 }

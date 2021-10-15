@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QSyntaxHighlighter>
 #include <QRegularExpression>
@@ -10,7 +10,7 @@ class Highlighter : public QSyntaxHighlighter
 	Q_OBJECT
 
 public:
-	Highlighter(QTextDocument *parent = 0);
+	explicit Highlighter(QTextDocument *parent = nullptr);
 
 protected:
 	void highlightBlock(const QString &text) override;
@@ -29,12 +29,20 @@ protected:
 	QTextCharFormat multiLineCommentFormat;
 };
 
+class LogHighlighter : public Highlighter
+{
+	Q_OBJECT
+
+public:
+	explicit LogHighlighter(QTextDocument* parent = nullptr);
+};
+
 class AsmHighlighter : public Highlighter
 {
 	Q_OBJECT
 
 public:
-	AsmHighlighter(QTextDocument *parent = 0);
+	explicit AsmHighlighter(QTextDocument *parent = nullptr);
 };
 
 class GlslHighlighter : public Highlighter
@@ -42,5 +50,5 @@ class GlslHighlighter : public Highlighter
 	Q_OBJECT
 
 public:
-	GlslHighlighter(QTextDocument *parent = 0);
+	explicit GlslHighlighter(QTextDocument *parent = nullptr);
 };

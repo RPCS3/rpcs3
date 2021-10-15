@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "cellDaisy.h"
@@ -25,6 +25,11 @@ void fmt_class_string<CellDaisyError>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 using LFQueue2 = struct CellDaisyLFQueue2;
 using Lock = struct CellDaisyLock;

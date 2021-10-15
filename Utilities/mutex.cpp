@@ -1,8 +1,10 @@
 #include "mutex.h"
 
+#include "util/asm.hpp"
+
 void shared_mutex::imp_lock_shared(u32 val)
 {
-	verify("shared_mutex underflow" HERE), val < c_err;
+	ensure(val < c_err); // "shared_mutex underflow"
 
 	for (int i = 0; i < 10; i++)
 	{
@@ -23,95 +25,17 @@ void shared_mutex::imp_lock_shared(u32 val)
 		return;
 	}
 
-	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one < c_sig;
+	ensure((old % c_sig) + c_one < c_sig); // "shared_mutex overflow"
 	imp_wait();
 	lock_downgrade();
 }
 
 void shared_mutex::imp_unlock_shared(u32 old)
 {
-	verify("shared_mutex underflow" HERE), old - 1 < c_err;
+	ensure(old - 1 < c_err); // "shared_mutex underflow"
 
 	// Check reader count, notify the writer if necessary
 	if ((old - 1) % c_one == 0)
-	{
-		imp_signal();
-	}
-}
-
-void shared_mutex::imp_lock_low(u32 val)
-{
-	verify("shared_mutex underflow" HERE), val < c_err;
-
-	for (int i = 0; i < 10; i++)
-	{
-		busy_wait();
-
-		if (try_lock_low())
-		{
-			return;
-		}
-	}
-
-	// Acquire writer lock and downgrade
-	const u32 old = m_value.fetch_add(c_one);
-
-	if (old == 0)
-	{
-		lock_downgrade();
-		return;
-	}
-
-	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one < c_sig;
-	imp_wait();
-	lock_downgrade();
-}
-
-void shared_mutex::imp_unlock_low(u32 old)
-{
-	verify("shared_mutex underflow" HERE), old - 1 < c_err;
-
-	// Check reader count, notify the writer if necessary
-	if ((old - 1) % c_vip == 0)
-	{
-		imp_signal();
-	}
-}
-
-void shared_mutex::imp_lock_vip(u32 val)
-{
-	verify("shared_mutex underflow" HERE), val < c_err;
-
-	for (int i = 0; i < 10; i++)
-	{
-		busy_wait();
-
-		if (try_lock_vip())
-		{
-			return;
-		}
-	}
-
-	// Acquire writer lock and downgrade
-	const u32 old = m_value.fetch_add(c_one);
-
-	if (old == 0)
-	{
-		lock_downgrade_to_vip();
-		return;
-	}
-
-	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one < c_sig;
-	imp_wait();
-	lock_downgrade_to_vip();
-}
-
-void shared_mutex::imp_unlock_vip(u32 old)
-{
-	verify("shared_mutex underflow" HERE), old - 1 < c_err;
-
-	// Check reader count, notify the writer if necessary
-	if ((old - 1) % c_one / c_vip == 0)
 	{
 		imp_signal();
 	}
@@ -137,19 +61,19 @@ void shared_mutex::imp_wait()
 			break;
 		}
 
-		m_value.wait(old);
+		m_value.wait(old, c_sig);
 	}
 }
 
 void shared_mutex::imp_signal()
 {
 	m_value += c_sig;
-	m_value.notify_one();
+	m_value.notify_one(c_sig);
 }
 
 void shared_mutex::imp_lock(u32 val)
 {
-	verify("shared_mutex underflow" HERE), val < c_err;
+	ensure(val < c_err); // "shared_mutex underflow"
 
 	for (int i = 0; i < 10; i++)
 	{
@@ -168,13 +92,13 @@ void shared_mutex::imp_lock(u32 val)
 		return;
 	}
 
-	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one < c_sig;
+	ensure((old % c_sig) + c_one < c_sig); // "shared_mutex overflow"
 	imp_wait();
 }
 
 void shared_mutex::imp_unlock(u32 old)
 {
-	verify("shared_mutex underflow" HERE), old - c_one < c_err;
+	ensure(old - c_one < c_err); // "shared_mutex underflow"
 
 	// 1) Notify the next writer if necessary
 	// 2) Notify all readers otherwise if necessary (currently indistinguishable from writers)
@@ -199,7 +123,7 @@ void shared_mutex::imp_lock_upgrade()
 	// Convert to writer lock
 	const u32 old = m_value.fetch_add(c_one - 1);
 
-	verify("shared_mutex overflow" HERE), (old % c_sig) + c_one - 1 < c_sig;
+	ensure((old % c_sig) + c_one - 1 < c_sig); // "shared_mutex overflow"
 
 	if (old % c_one == 1)
 	{
@@ -240,19 +164,4 @@ void shared_mutex::imp_lock_unlock()
 
 	imp_wait();
 	unlock();
-}
-
-bool shared_mutex::downgrade_unique_vip_lock_to_low_or_unlock()
-{
-	return m_value.atomic_op([](u32& value)
-	{
-		if (value % c_one / c_vip == 1)
-		{
-			value -= c_vip - 1;
-			return true;
-		}
-
-		value -= c_vip;
-		return false;
-	});
 }

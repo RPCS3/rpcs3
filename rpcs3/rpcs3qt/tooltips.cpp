@@ -1,4 +1,4 @@
-﻿#include "tooltips.h"
+#include "tooltips.h"
 
 Tooltips::Tooltips()
 {

@@ -1,10 +1,8 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rsx_utils.h"
 #include "rsx_methods.h"
 #include "Emu/RSX/GCM.h"
-#include "Common/BufferUtils.h"
 #include "Overlays/overlays.h"
-#include "Utilities/sysinfo.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -13,6 +11,7 @@
 #pragma GCC diagnostic ignored "-Wall"
 #pragma GCC diagnostic ignored "-Wextra"
 #pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 #endif
 extern "C"
 {
@@ -24,6 +23,8 @@ extern "C"
 #pragma GCC diagnostic pop
 #endif
 
+#include "util/sysinfo.hpp"
+
 namespace rsx
 {
 	atomic_t<u64> g_rsx_shared_tag{ 0 };
@@ -32,7 +33,7 @@ namespace rsx
 		const u8 *src, AVPixelFormat src_format, int src_width, int src_height, int src_pitch, int src_slice_h, bool bilinear)
 	{
 		std::unique_ptr<SwsContext, void(*)(SwsContext*)> sws(sws_getContext(src_width, src_height, src_format,
-			dst_width, dst_height, dst_format, bilinear ? SWS_FAST_BILINEAR : SWS_POINT, NULL, NULL, NULL), sws_freeContext);
+			dst_width, dst_height, dst_format, bilinear ? SWS_FAST_BILINEAR : SWS_POINT, nullptr, nullptr, nullptr), sws_freeContext);
 
 		sws_scale(sws.get(), &src, &src_pitch, 0, src_slice_h, &dst, &dst_pitch);
 	}

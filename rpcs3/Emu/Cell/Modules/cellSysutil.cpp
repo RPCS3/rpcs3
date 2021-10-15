@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/IdManager.h"
@@ -10,7 +10,8 @@
 
 #include "Utilities/StrUtil.h"
 #include "Utilities/lockless.h"
-#include "Utilities/span.h"
+
+#include <span>
 
 LOG_CHANNEL(cellSysutil);
 
@@ -50,15 +51,14 @@ struct sysutil_cb_manager
 
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&& cb)
 {
-	const auto cbm = g_fxo->get<sysutil_cb_manager>();
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	cbm->registered.push(std::move(cb));
+	cbm.registered.push(std::move(cb));
 }
 
 extern void sysutil_send_system_cmd(u64 status, u64 param)
 {
-	// May be nullptr if emulation is stopped
-	if (const auto cbm = g_fxo->get<sysutil_cb_manager>())
+	if (auto cbm = g_fxo->try_get<sysutil_cb_manager>())
 	{
 		for (sysutil_cb_manager::registered_cb cb : cbm->callbacks)
 		{
@@ -102,6 +102,26 @@ void fmt_class_string<CellSysutilLang>::format(std::string& out, u64 arg)
 		case CELL_SYSUTIL_LANG_ENGLISH_GB: return "English (UK)";
 		case CELL_SYSUTIL_LANG_PORTUGUESE_BR: return "Portuguese (Brazil)";
 		case CELL_SYSUTIL_LANG_TURKISH: return "Turkish";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<CellSysutilLicenseArea>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](CellSysutilLicenseArea value)
+	{
+		switch (value)
+		{
+		case CELL_SYSUTIL_LICENSE_AREA_J: return "SCEJ";
+		case CELL_SYSUTIL_LICENSE_AREA_A: return "SCEA";
+		case CELL_SYSUTIL_LICENSE_AREA_E: return "SCEE";
+		case CELL_SYSUTIL_LICENSE_AREA_H: return "SCEH";
+		case CELL_SYSUTIL_LICENSE_AREA_K: return "SCEK";
+		case CELL_SYSUTIL_LICENSE_AREA_C: return "SCH";
+		case CELL_SYSUTIL_LICENSE_AREA_OTHER: return "Other";
 		}
 
 		return unknown;
@@ -366,7 +386,7 @@ error_code cellSysutilGetSystemParamString(CellSysutilParamId id, vm::ptr<char> 
 		cellSysutil.error("cellSysutilGetSystemParamString: Unknown ParamId 0x%x", id);
 	}
 
-	gsl::span dst(buf.get_ptr(), copy_size);
+	std::span dst(buf.get_ptr(), copy_size);
 	strcpy_trunc(dst, param_str);
 	return CELL_OK;
 }
@@ -381,9 +401,9 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 {
 	cellSysutil.trace("cellSysutilCheckCallback()");
 
-	const auto cbm = g_fxo->get<sysutil_cb_manager>();
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	for (auto&& func : cbm->registered.pop_all())
+	for (auto&& func : cbm.registered.pop_all())
 	{
 		if (s32 res = func(ppu))
 		{
@@ -393,7 +413,7 @@ error_code cellSysutilCheckCallback(ppu_thread& ppu)
 
 		if (ppu.is_stopped())
 		{
-			return 0;
+			return {};
 		}
 	}
 
@@ -409,9 +429,9 @@ error_code cellSysutilRegisterCallback(s32 slot, vm::ptr<CellSysutilCallback> fu
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	const auto cbm = g_fxo->get<sysutil_cb_manager>();
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	cbm->callbacks[slot].store({func, userdata});
+	cbm.callbacks[slot].store({func, userdata});
 
 	return CELL_OK;
 }
@@ -425,9 +445,9 @@ error_code cellSysutilUnregisterCallback(u32 slot)
 		return CELL_SYSUTIL_ERROR_VALUE;
 	}
 
-	const auto cbm = g_fxo->get<sysutil_cb_manager>();
+	auto& cbm = g_fxo->get<sysutil_cb_manager>();
 
-	cbm->callbacks[slot].store({});
+	cbm.callbacks[slot].store({});
 
 	return CELL_OK;
 }

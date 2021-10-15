@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 struct TROPUSRHeader
 {
@@ -78,7 +78,15 @@ class TROPUSRLoader
 	virtual bool LoadTables();
 
 public:
-	virtual bool Load(const std::string& filepath, const std::string& configpath);
+	virtual ~TROPUSRLoader() = default;
+
+	struct load_result
+	{
+		bool discarded_existing;
+		bool success;
+	};
+
+	virtual load_result Load(const std::string& filepath, const std::string& configpath);
 	virtual bool Save(const std::string& filepath);
 
 	virtual u32 GetTrophiesCount();

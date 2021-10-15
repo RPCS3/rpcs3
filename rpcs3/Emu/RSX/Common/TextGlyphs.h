@@ -2,11 +2,10 @@
 
 #include <array>
 #include <charconv>
-#include <string_view>
 #include <unordered_map>
 #include <vector>
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
 /**
 * FONT GLYPHS GO HERE
@@ -176,7 +175,7 @@ private:
 			const auto glyph_data = font_glyph.substr(7);
 			if (glyph_data.length() == 32)
 			{
-				for (std::size_t n = 0; n < this_glyph.plot.size(); ++n)
+				for (usz n = 0; n < this_glyph.plot.size(); ++n)
 				{
 					const auto line = glyph_data.substr(n * 2, 2);
 					std::from_chars(line.data(), line.data() + line.size(), this_glyph.plot[n], 16);
@@ -215,7 +214,7 @@ public:
 		{
 			entry.glyph_point_offset = ::size32(result);
 
-			for (std::size_t j = 0; j < entry.plot.size(); ++j)
+			for (usz j = 0; j < entry.plot.size(); ++j)
 			{
 				const auto &line = entry.plot[j];
 				if (line == 0)

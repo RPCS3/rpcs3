@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Utilities/LUrlParser.h"
 
@@ -6,7 +6,6 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#include <winhttp.h>
 #include <codecvt>
 #pragma comment(lib, "Winhttp.lib")
 #endif

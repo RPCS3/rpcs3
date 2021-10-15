@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_event_flag.h"
 
 #include "Emu/IdManager.h"
@@ -10,8 +10,6 @@
 #include <algorithm>
 
 LOG_CHANNEL(sys_event_flag);
-
-template<> DECLARE(ipc_manager<lv2_event_flag, u64>::g_ipc) {};
 
 error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_event_flag_attribute_t> attr, u64 init)
 {
@@ -42,13 +40,13 @@ error_code sys_event_flag_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<sys_e
 		return CELL_EINVAL;
 	}
 
-	if (auto error = lv2_obj::create<lv2_event_flag>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
+	const u64 ipc_key = lv2_obj::get_key(_attr);
+
+	if (const auto error = lv2_obj::create<lv2_event_flag>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
 		return std::make_shared<lv2_event_flag>(
 			_attr.protocol,
-			_attr.pshared,
-			_attr.ipc_key,
-			_attr.flags,
+			ipc_key,
 			_attr.type,
 			_attr.name_u64,
 			init);
@@ -74,6 +72,7 @@ error_code sys_event_flag_destroy(ppu_thread& ppu, u32 id)
 			return CELL_EBUSY;
 		}
 
+		lv2_obj::on_id_destroy(flag, flag.key);
 		return {};
 	});
 
@@ -103,7 +102,16 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 	ppu.gpr[6] = 0;
 
 	// Always set result
-	if (result) *result = 0;
+	struct store_result
+	{
+		vm::ptr<u64> ptr;
+		u64 val = 0;
+
+		~store_result() noexcept
+		{
+			if (ptr) *ptr = val;
+		}
+	} store{result};
 
 	if (!lv2_event_flag::check_mode(mode))
 	{
@@ -157,15 +165,20 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 	}
 	else
 	{
-		if (result) *result = ppu.gpr[6];
+		store.val = ppu.gpr[6];
 		return CELL_OK;
 	}
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state))
 		{
-			return 0;
+			return {};
+		}
+
+		if (state & cpu_flag::signal)
+		{
+			break;
 		}
 
 		if (timeout)
@@ -175,7 +188,7 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return 0;
+					return {};
 				}
 
 				std::lock_guard lock(flag->mutex);
@@ -193,16 +206,11 @@ error_code sys_event_flag_wait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode, vm
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 
-	if (ppu.test_stopped())
-	{
-		return 0;
-	}
-
-	if (result) *result = ppu.gpr[6];
+	store.val = ppu.gpr[6];
 	return not_an_error(ppu.gpr[3]);
 }
 
@@ -244,9 +252,9 @@ error_code sys_event_flag_trywait(ppu_thread& ppu, u32 id, u64 bitptn, u32 mode,
 	return CELL_OK;
 }
 
-error_code sys_event_flag_set(u32 id, u64 bitptn)
+error_code sys_event_flag_set(cpu_thread& cpu, u32 id, u64 bitptn)
 {
-	vm::temporary_unlock();
+	cpu.state += cpu_flag::wait;
 
 	// Warning: may be called from SPU thread.
 	sys_event_flag.trace("sys_event_flag_set(id=0x%x, bitptn=0x%llx)", id, bitptn);

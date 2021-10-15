@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Utilities/rXml.h"
 
@@ -10,6 +10,11 @@
 #include <QSlider>
 #include <QSplitter>
 
+#include <memory>
+#include <mutex>
+#include <unordered_map>
+
+class game_list;
 class gui_settings;
 class TROPUSRLoader;
 
@@ -17,7 +22,8 @@ struct GameTrophiesData
 {
 	std::unique_ptr<TROPUSRLoader> trop_usr;
 	rXmlDocument trop_config; // I'd like to use unique but the protocol inside of the function passes around shared pointers..
-	std::vector<QPixmap> trophy_images;
+	std::unordered_map<int, QPixmap> trophy_images; // Cache trophy images to avoid loading from disk as much as possible.
+	std::unordered_map<int, QString> trophy_image_paths;
 	std::string game_name;
 	std::string path;
 };
@@ -57,7 +63,7 @@ public Q_SLOTS:
 	void HandleRepaintUiRequest();
 
 private Q_SLOTS:
-	QPixmap GetResizedGameIcon(int index);
+	QPixmap GetResizedGameIcon(int index) const;
 	void ResizeGameIcons();
 	void ResizeTrophyIcons();
 	void ApplyFilter();
@@ -82,8 +88,8 @@ private:
 	*/
 	void PopulateTrophyTable();
 
-	void ReadjustGameTable();
-	void ReadjustTrophyTable();
+	void ReadjustGameTable() const;
+	void ReadjustTrophyTable() const;
 
 	void closeEvent(QCloseEvent *event) override;
 	bool eventFilter(QObject *object, QEvent *event) override;
@@ -91,10 +97,11 @@ private:
 	std::shared_ptr<gui_settings> m_gui_settings;
 
 	std::vector<std::unique_ptr<GameTrophiesData>> m_trophies_db; //! Holds all the trophy information.
+	std::mutex m_trophies_db_mtx;
 	QComboBox* m_game_combo; //! Lets you choose a game
 	QLabel* m_game_progress; //! Shows you the current game's progress
 	QSplitter* m_splitter; //! Contains the game and trophy tables
-	QTableWidget* m_trophy_table; //! UI element to display trophy stuff.
+	game_list* m_trophy_table; //! UI element to display trophy stuff.
 	QTableWidget* m_game_table; //! UI element to display games.
 
 	bool m_show_hidden_trophies = false;

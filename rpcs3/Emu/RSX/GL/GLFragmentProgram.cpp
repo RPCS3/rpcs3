@@ -1,18 +1,17 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "GLFragmentProgram.h"
 
-#include "Emu/System.h"
-#include "GLFragmentProgram.h"
+#include "Emu/system_config.h"
 #include "GLCommonDecompiler.h"
 #include "../GCM.h"
-#include "../Common/GLSLCommon.h"
+#include "../Program/GLSLCommon.h"
 
-std::string GLFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
+std::string GLFragmentDecompilerThread::getFloatTypeName(usz elementCount)
 {
 	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
-std::string GLFragmentDecompilerThread::getHalfTypeName(size_t elementCount)
+std::string GLFragmentDecompilerThread::getHalfTypeName(usz elementCount)
 {
 	return glsl::getHalfTypeNameImpl(elementCount);
 }
@@ -129,19 +128,20 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			const auto mask = (1 << index);
 
-			if (m_prog.redirected_textures & mask)
+			if (properties.redirected_sampler_mask & mask)
 			{
 				// Provide a stencil view of the main resource for the S channel
 				OS << "uniform u" << samplerType << " " << PI.name << "_stencil;\n";
 			}
-			else if (m_prog.shadow_textures & mask)
+			else if (properties.shadow_sampler_mask & mask)
 			{
-				if (m_shadow_sampled_textures & mask)
+				if (properties.common_access_sampler_mask & mask)
 				{
-					if (m_2d_sampled_textures & mask)
-						rsx_log.error("Texture unit %d is sampled as both a shadow texture and a depth texture", index);
-					else
-						samplerType = "sampler2DShadow";
+					rsx_log.error("Texture unit %d is sampled as both a shadow texture and a depth texture", index);
+				}
+				else
+				{
+					samplerType += "Shadow";
 				}
 			}
 
@@ -168,13 +168,13 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	if (!constants_block.empty())
 	{
-		OS << "layout(std140, binding = 3) uniform FragmentConstantsBuffer\n";
+		OS << "layout(std140, binding = " << GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT << ") uniform FragmentConstantsBuffer\n";
 		OS << "{\n";
 		OS << constants_block;
 		OS << "};\n\n";
 	}
 
-	OS << "layout(std140, binding = 4) uniform FragmentStateBuffer\n";
+	OS << "layout(std140, binding = " << GL_FRAGMENT_STATE_BIND_SLOT << ") uniform FragmentStateBuffer\n";
 	OS << "{\n";
 	OS << "	float fog_param0;\n";
 	OS << "	float fog_param1;\n";
@@ -186,7 +186,7 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "	float wpos_bias;\n";
 	OS << "};\n\n";
 
-	OS << "layout(std140, binding = 5) uniform TextureParametersBuffer\n";
+	OS << "layout(std140, binding = " << GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT << ") uniform TextureParametersBuffer\n";
 	OS << "{\n";
 	OS << "	sampler_info texture_parameters[16];\n";
 	OS << "};\n\n";
@@ -202,11 +202,13 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.domain = glsl::glsl_fragment_program;
 	m_shader_props.require_lit_emulation = properties.has_lit_op;
 	m_shader_props.fp32_outputs = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
-	m_shader_props.require_depth_conversion = m_prog.redirected_textures != 0;
+	m_shader_props.require_depth_conversion = properties.redirected_sampler_mask != 0;
 	m_shader_props.require_wpos = !!(properties.in_register_mask & in_wpos);
 	m_shader_props.require_texture_ops = properties.has_tex_op;
-	m_shader_props.require_shadow_ops = m_prog.shadow_textures != 0;
+	m_shader_props.require_shadow_ops = properties.shadow_sampler_mask != 0;
 	m_shader_props.require_texture_expand = properties.has_exp_tex_op;
+	m_shader_props.require_srgb_to_linear = properties.has_upg;
+	m_shader_props.require_linear_to_srgb = properties.has_pkg;
 	m_shader_props.emulate_coverage_tests = true; // g_cfg.video.antialiasing_level == msaa_level::none;
 	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
 	m_shader_props.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA;
@@ -355,6 +357,7 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	{
 		const auto driver_caps = gl::get_driver_caps();
 		decompiler.device_props.has_native_half_support = driver_caps.NV_gpu_shader5_supported || driver_caps.AMD_gpu_shader_half_float_supported;
+		decompiler.device_props.has_low_precision_rounding = driver_caps.vendor_NVIDIA;
 	}
 
 	decompiler.Task();
@@ -369,17 +372,12 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 				PT.type == "samplerCube")
 				continue;
 
-			size_t offset = atoi(PI.name.c_str() + 2);
+			usz offset = atoi(PI.name.c_str() + 2);
 			FragmentConstantOffsetCache.push_back(offset);
 		}
 	}
 
 	shader.create(::glsl::program_domain::glsl_fragment_program, source);
-}
-
-void GLFragmentProgram::Compile()
-{
-	shader.compile();
 	id = shader.id();
 }
 

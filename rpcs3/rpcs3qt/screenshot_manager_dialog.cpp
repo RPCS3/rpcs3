@@ -1,7 +1,9 @@
-﻿#include "screenshot_manager_dialog.h"
+#include "screenshot_manager_dialog.h"
 #include "screenshot_preview.h"
 #include "qt_utils.h"
 #include "Utilities/File.h"
+#include "Emu/VFS.h"
+#include "Emu/system_utils.hpp"
 
 #include <QApplication>
 #include <QDir>
@@ -26,25 +28,33 @@ screenshot_manager_dialog::screenshot_manager_dialog(QWidget* parent) : QDialog(
 	m_grid->setIconSize(m_icon_size);
 	m_grid->setGridSize(m_icon_size + QSize(10, 10));
 
-	const std::string screen_path = fs::get_config_dir() + "screenshots/";
+	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
+	vfs::mount("/dev_hdd0", rpcs3::utils::get_hdd0_dir());
+
+	const std::string screenshot_path_qt   = fs::get_config_dir() + "screenshots/";
+	const std::string screenshot_path_cell = vfs::get("/dev_hdd0/photo/");
 	const QStringList filter{ QStringLiteral("*.png") };
-	QDirIterator dir_iter(QString::fromStdString(screen_path), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
 	QPixmap placeholder(m_icon_size);
 	placeholder.fill(Qt::gray);
 	m_placeholder = QIcon(placeholder);
 
-	while (dir_iter.hasNext())
+	for (const std::string& path : { screenshot_path_qt, screenshot_path_cell })
 	{
-		const QString filepath = dir_iter.next();
+		QDirIterator dir_iter(QString::fromStdString(path), filter, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
 
-		QListWidgetItem* item = new QListWidgetItem;
-		item->setData(item_role::source, filepath);
-		item->setData(item_role::loaded, false);
-		item->setIcon(m_placeholder);
-		item->setToolTip(filepath);
+		while (dir_iter.hasNext())
+		{
+			const QString filepath = dir_iter.next();
 
-		m_grid->addItem(item);
+			QListWidgetItem* item = new QListWidgetItem;
+			item->setData(item_role::source, filepath);
+			item->setData(item_role::loaded, false);
+			item->setIcon(m_placeholder);
+			item->setToolTip(filepath);
+
+			m_grid->addItem(item);
+		}
 	}
 
 	m_icon_loader = new QFutureWatcher<thumbnail>(this);
@@ -80,7 +90,7 @@ void screenshot_manager_dialog::show_preview(QListWidgetItem* item)
 	preview->show();
 }
 
-void screenshot_manager_dialog::update_icon(int index)
+void screenshot_manager_dialog::update_icon(int index) const
 {
 	const thumbnail tn = m_icon_loader->resultAt(index);
 
@@ -131,9 +141,9 @@ void screenshot_manager_dialog::update_icons(int value)
 		m_icon_loader->waitForFinished();
 	}
 
-	std::function<thumbnail(thumbnail)> load = [icon_size = m_icon_size](thumbnail tn) -> thumbnail
+	const std::function<thumbnail(thumbnail)> load = [icon_size = m_icon_size](thumbnail tn) -> thumbnail
 	{
-		QPixmap pixmap(tn.path);
+		const QPixmap pixmap(tn.path);
 		tn.icon = QIcon(pixmap.scaled(icon_size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
 		return tn;
 	};

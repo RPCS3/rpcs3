@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QStyledItemDelegate>
 #include <QPainter>
@@ -10,9 +10,9 @@ private:
 	bool m_has_icons;
 
 public:
-	explicit table_item_delegate(QObject *parent = 0, bool has_icons = false) : QStyledItemDelegate(parent), m_has_icons(has_icons) {}
+	explicit table_item_delegate(QObject *parent = nullptr, bool has_icons = false) : QStyledItemDelegate(parent), m_has_icons(has_icons) {}
 
-	virtual void initStyleOption(QStyleOptionViewItem *option, const QModelIndex &index) const override
+	void initStyleOption(QStyleOptionViewItem *option, const QModelIndex &index) const override
 	{
 		// Remove the focus frame around selected items
 		option->state &= ~QStyle::State_HasFocus;
@@ -21,12 +21,16 @@ public:
 		{
 			// Don't highlight icons
 			option->state &= ~QStyle::State_Selected;
+
+			// Center icons
+			option->decorationAlignment = Qt::AlignCenter;
+			option->decorationPosition = QStyleOptionViewItem::Top;
 		}
 
 		QStyledItemDelegate::initStyleOption(option, index);
 	}
 
-	virtual void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override
+	void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override
 	{
 		if (index.column() == 0 && option.state & QStyle::State_Selected)
 		{

@@ -1,9 +1,13 @@
-﻿#pragma once
-#include "VKHelpers.h"
+#pragma once
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "VKRenderPass.h"
+#include "VKPipelineCompiler.h"
+
+#include "vkutils/framebuffer_object.hpp"
+
 #include "../Common/TextGlyphs.h"
+#include <unordered_map>
 
 namespace vk
 {
@@ -18,7 +22,7 @@ namespace vk
 		vk::glsl::shader m_fragment_shader;
 
 		vk::descriptor_pool m_descriptor_pool;
-		VkDescriptorSet m_descriptor_set = nullptr;
+		vk::descriptor_set m_descriptor_set;
 		VkDescriptorSetLayout m_descriptor_layout = nullptr;
 		VkPipelineLayout m_pipeline_layout = nullptr;
 		u32 m_used_descriptors = 0;
@@ -28,6 +32,8 @@ namespace vk
 
 		u32 m_uniform_buffer_offset = 0;
 		u32 m_uniform_buffer_size = 0;
+
+		f32 m_scale = 1.0f;
 
 		bool initialized = false;
 		std::unordered_map<u8, std::pair<u32, u32>> m_offsets;
@@ -39,23 +45,21 @@ namespace vk
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 120 },
 			};
 
-			//Reserve descriptor pools
+			// Reserve descriptor pools
 			m_descriptor_pool.create(dev, descriptor_pools, 1, 120, 2);
 
-			VkDescriptorSetLayoutBinding bindings[1] = {};
-
-			//Scale and offset data plus output color
-			bindings[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			bindings[0].descriptorCount = 1;
-			bindings[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			bindings[0].binding = 0;
-
-			VkDescriptorSetLayoutCreateInfo infos = {};
-			infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			infos.pBindings = bindings;
-			infos.bindingCount = 1;
-
-			CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &m_descriptor_layout));
+			// Scale and offset data plus output color
+			std::vector<VkDescriptorSetLayoutBinding> bindings = 
+			{
+				{
+					.binding = 0,
+					.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+					.descriptorCount = 1,
+					.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+					.pImmutableSamplers = nullptr
+				}
+			};
+			m_descriptor_layout = vk::descriptors::create_layout(bindings);
 
 			VkPipelineLayoutCreateInfo layout_info = {};
 			layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -65,7 +69,7 @@ namespace vk
 			CHECK_RESULT(vkCreatePipelineLayout(dev, &layout_info, nullptr, &m_pipeline_layout));
 		}
 
-		void init_program(vk::render_device &dev)
+		void init_program()
 		{
 			std::string vs =
 			{
@@ -176,7 +180,6 @@ namespace vk
 			VkPipelineDepthStencilStateCreateInfo ds = {};
 			ds.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 
-			VkPipeline pipeline;
 			VkGraphicsPipelineCreateInfo info = {};
 			info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 			info.pVertexInputState = &vi;
@@ -194,15 +197,13 @@ namespace vk
 			info.basePipelineHandle = VK_NULL_HANDLE;
 			info.renderPass = m_render_pass;
 
-			CHECK_RESULT(vkCreateGraphicsPipelines(dev, nullptr, 1, &info, NULL, &pipeline));
-
-			const std::vector<vk::glsl::program_input> unused;
-			m_program = std::make_unique<vk::glsl::program>(static_cast<VkDevice>(dev), pipeline, m_pipeline_layout, unused, unused);
+			auto compiler = vk::get_pipe_compiler();
+			m_program = compiler->compile(info, m_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE);
 		}
 
-		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, const float *offsets, size_t nb_offsets, std::array<float, 4> color)
+		void load_program(vk::command_buffer &cmd, float scale_x, float scale_y, const float *offsets, usz nb_offsets, std::array<float, 4> color)
 		{
-			verify(HERE), m_used_descriptors < 120;
+			ensure(m_used_descriptors < 120);
 
 			VkDescriptorSetAllocateInfo alloc_info = {};
 			alloc_info.descriptorPool = m_descriptor_pool;
@@ -210,7 +211,7 @@ namespace vk
 			alloc_info.pSetLayouts = &m_descriptor_layout;
 			alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 
-			CHECK_RESULT(vkAllocateDescriptorSets(device, &alloc_info, &m_descriptor_set));
+			CHECK_RESULT(vkAllocateDescriptorSets(device, &alloc_info, m_descriptor_set.ptr()));
 			m_used_descriptors++;
 
 			float scale[] = { scale_x, scale_y };
@@ -218,7 +219,7 @@ namespace vk
 			float* dst = static_cast<float*>(m_uniforms_buffer->map(m_uniform_buffer_offset, 8192));
 
 			//std140 spec demands that arrays be multiples of 16 bytes
-			for (size_t i = 0; i < nb_offsets; ++i)
+			for (usz i = 0; i < nb_offsets; ++i)
 			{
 				dst[i * 4] = offsets[i * 2];
 				dst[i * 4 + 1] = offsets[i * 2 + 1];
@@ -233,7 +234,7 @@ namespace vk
 			m_uniform_buffer_offset = (m_uniform_buffer_offset + 8192) % m_uniform_buffer_size;
 
 			vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_program->pipeline);
-			vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout, 0, 1, &m_descriptor_set, 0, nullptr);
+			m_descriptor_set.bind(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline_layout);
 
 			VkDeviceSize zero = 0;
 			vkCmdBindVertexBuffers(cmd, 0, 1, &m_vertex_buffer->value, &zero);
@@ -257,22 +258,24 @@ namespace vk
 
 		void init(vk::render_device &dev, VkRenderPass render_pass)
 		{
-			verify(HERE), render_pass != VK_NULL_HANDLE;
+			ensure(render_pass != VK_NULL_HANDLE);
 
 			//At worst case, 1 char = 16*16*8 bytes (average about 24*8), so ~256K for 128 chars. Allocating 512k for verts
 			//uniform params are 8k in size, allocating for 120 lines (max lines at 4k, one column per row. Can be expanded
-			m_vertex_buffer = std::make_unique<vk::buffer>(dev, 524288, dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0);
-			m_uniforms_buffer = std::make_unique<vk::buffer>(dev, 983040, dev.get_memory_mapping().host_visible_coherent, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0);
+			m_vertex_buffer = std::make_unique<vk::buffer>(dev, 524288, dev.get_memory_mapping().host_visible_coherent,
+					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
+			m_uniforms_buffer = std::make_unique<vk::buffer>(dev, 983040, dev.get_memory_mapping().host_visible_coherent,
+					VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
 
 			m_render_pass = render_pass;
 			m_uniform_buffer_size = 983040;
 
 			init_descriptor_set(dev);
-			init_program(dev);
+			init_program();
 
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
-			const size_t buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
+			const usz buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
 
 			u8* dst = static_cast<u8*>(m_vertex_buffer->map(0, buffer_size));
 			memcpy(dst, points.data(), buffer_size);
@@ -292,12 +295,12 @@ namespace vk
 			char *s = const_cast<char *>(text.c_str());
 
 			//Y is in raster coordinates: convert to bottom-left origin
-			y = (target_h - y - 16);
+			y = (static_cast<int>(target_h / m_scale) - y - 16);
 
 			//Compress [0, w] and [0, h] into range [-1, 1]
 			//Flip Y scaling
-			float scale_x = +2.f / target_w;
-			float scale_y = -2.f / target_h;
+			float scale_x = m_scale * +2.f / target_w;
+			float scale_y = m_scale * -2.f / target_h;
 
 			float base_offset = 0.f;
 			shader_offsets.reserve(text.length() * 2);
@@ -364,6 +367,12 @@ namespace vk
 
 			m_descriptor_pool.reset(0);
 			m_used_descriptors = 0;
+		}
+
+		void set_scale(double scale)
+		{
+			// Restrict scale to 2. The dots are gonna be too sparse otherwise.
+			m_scale = std::min(static_cast<f32>(scale), 2.0f);
 		}
 	};
 }

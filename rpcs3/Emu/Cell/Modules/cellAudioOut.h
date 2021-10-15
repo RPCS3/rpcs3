@@ -1,9 +1,7 @@
-﻿#pragma once
-
-#include "Emu/Memory/vm_ptr.h"
+#pragma once
 
 // Error codes
-enum CellAudioOutError
+enum CellAudioOutError : u32
 {
 	CELL_AUDIO_OUT_ERROR_NOT_IMPLEMENTED        = 0x8002b240,
 	CELL_AUDIO_OUT_ERROR_ILLEGAL_CONFIGURATION  = 0x8002b241,

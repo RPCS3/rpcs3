@@ -1,4 +1,4 @@
-﻿#ifndef HAVE_FAUDIO
+#ifndef HAVE_FAUDIO
 #error "FAudio support disabled but still being built."
 #endif
 
@@ -12,9 +12,7 @@ LOG_CHANNEL(FAudio_, "FAudio");
 FAudioBackend::FAudioBackend()
 	: AudioBackend()
 {
-	u32 res;
-
-	res = FAudioCreate(&m_instance, 0, FAUDIO_DEFAULT_PROCESSOR);
+	u32 res = FAudioCreate(&m_instance, 0, FAUDIO_DEFAULT_PROCESSOR);
 	if (res)
 	{
 		FAudio_.fatal("FAudioCreate() failed(0x%08x)", res);
@@ -53,11 +51,10 @@ void FAudioBackend::Play()
 {
 	AUDIT(m_source_voice != nullptr);
 
-	u32 res = FAudioSourceVoice_Start(m_source_voice, 0, FAUDIO_COMMIT_NOW);
+	const u32 res = FAudioSourceVoice_Start(m_source_voice, 0, FAUDIO_COMMIT_NOW);
 	if (res)
 	{
-		FAudio_.error("FAudioSourceVoice_Start() failed(0x%08x)", res);
-		Emu.Pause();
+		FAudio_.fatal("FAudioSourceVoice_Start() failed(0x%08x)", res);
 	}
 }
 
@@ -65,11 +62,10 @@ void FAudioBackend::Pause()
 {
 	AUDIT(m_source_voice != nullptr);
 
-	u32 res = FAudioSourceVoice_Stop(m_source_voice, 0, FAUDIO_COMMIT_NOW);
+	const u32 res = FAudioSourceVoice_Stop(m_source_voice, 0, FAUDIO_COMMIT_NOW);
 	if (res)
 	{
-		FAudio_.error("FAudioSourceVoice_Stop() failed(0x%08x)", res);
-		Emu.Pause();
+		FAudio_.fatal("FAudioSourceVoice_Stop() failed(0x%08x)", res);
 	}
 }
 
@@ -77,11 +73,10 @@ void FAudioBackend::Flush()
 {
 	AUDIT(m_source_voice != nullptr);
 
-	u32 res = FAudioSourceVoice_FlushSourceBuffers(m_source_voice);
+	const u32 res = FAudioSourceVoice_FlushSourceBuffers(m_source_voice);
 	if (res)
 	{
-		FAudio_.error("FAudioSourceVoice_FlushSourceBuffers() failed(0x%08x)", res);
-		Emu.Pause();
+		FAudio_.fatal("FAudioSourceVoice_FlushSourceBuffers() failed(0x%08x)", res);
 	}
 }
 
@@ -112,11 +107,10 @@ void FAudioBackend::Open(u32 /* num_buffers */)
 	waveformatex.wBitsPerSample  = m_sample_size * 8;
 	waveformatex.cbSize          = 0;
 
-	u32 res = FAudio_CreateSourceVoice(m_instance, &m_source_voice, &waveformatex, 0, FAUDIO_DEFAULT_FREQ_RATIO, nullptr, nullptr, nullptr);
+	const u32 res = FAudio_CreateSourceVoice(m_instance, &m_source_voice, &waveformatex, 0, FAUDIO_DEFAULT_FREQ_RATIO, nullptr, nullptr, nullptr);
 	if (res)
 	{
-		FAudio_.error("FAudio_CreateSourceVoice() failed(0x%08x)", res);
-		Emu.Pause();
+		FAudio_.fatal("FAudio_CreateSourceVoice() failed(0x%08x)", res);
 	}
 
 	AUDIT(m_source_voice != nullptr);
@@ -143,15 +137,14 @@ bool FAudioBackend::AddData(const void* src, u32 num_samples)
 	buffer.LoopCount  = 0;
 	buffer.LoopLength = 0;
 	buffer.pAudioData = static_cast<const u8*>(src);
-	buffer.pContext   = 0;
+	buffer.pContext   = nullptr;
 	buffer.PlayBegin  = 0;
 	buffer.PlayLength = AUDIO_BUFFER_SAMPLES;
 
-	u32 res = FAudioSourceVoice_SubmitSourceBuffer(m_source_voice, &buffer, nullptr);
+	const u32 res = FAudioSourceVoice_SubmitSourceBuffer(m_source_voice, &buffer, nullptr);
 	if (res)
 	{
-		FAudio_.error("FAudioSourceVoice_SubmitSourceBuffer() failed(0x%08x)", res);
-		Emu.Pause();
+		FAudio_.fatal("FAudioSourceVoice_SubmitSourceBuffer() failed(0x%08x)", res);
 		return false;
 	}
 
@@ -171,11 +164,10 @@ f32 FAudioBackend::SetFrequencyRatio(f32 new_ratio)
 {
 	new_ratio = std::clamp(new_ratio, FAUDIO_MIN_FREQ_RATIO, FAUDIO_DEFAULT_FREQ_RATIO);
 
-	u32 res = FAudioSourceVoice_SetFrequencyRatio(m_source_voice, new_ratio, FAUDIO_COMMIT_NOW);
+	const u32 res = FAudioSourceVoice_SetFrequencyRatio(m_source_voice, new_ratio, FAUDIO_COMMIT_NOW);
 	if (res)
 	{
-		FAudio_.error("FAudioSourceVoice_SetFrequencyRatio() failed(0x%08x)", res);
-		Emu.Pause();
+		FAudio_.fatal("FAudioSourceVoice_SetFrequencyRatio() failed(0x%08x)", res);
 		return 1.0f;
 	}
 

@@ -1,23 +1,14 @@
-﻿#pragma once
+#pragma once
 
 #include <array>
-#include <vector>
 #include <numeric>
-#include <deque>
-#include <set>
 
-#include "GCM.h"
 #include "rsx_decode.h"
 #include "RSXTexture.h"
 #include "rsx_vertex_data.h"
-#include "rsx_utils.h"
-#include "Utilities/geometry.h"
-
-#include <cereal/types/array.hpp>
-#include <cereal/types/unordered_map.hpp>
-
-extern u64 get_system_time();
-extern bool is_primitive_disjointed(rsx::primitive_type);
+#include "Common/simple_array.hpp"
+#include "Emu/Cell/timers.hpp"
+#include "Program/program_util.h"
 
 namespace rsx
 {
@@ -33,13 +24,15 @@ namespace rsx
 	{
 		primitive_restart_barrier,
 		vertex_base_modifier_barrier,
-		index_base_modifier_barrier
+		index_base_modifier_barrier,
+		vertex_array_offset_modifier_barrier
 	};
 
 	enum command_execution_flags : u32
 	{
 		vertex_base_changed = (1 << 0),
-		index_base_changed = (1 << 1)
+		index_base_changed = (1 << 1),
+		vertex_arrays_changed = (1 << 2),
 	};
 
 	struct barrier_t
@@ -48,6 +41,7 @@ namespace rsx
 		u64 timestamp;
 
 		u32 address;
+		u32 index;
 		u32 arg;
 		u32 flags;
 		command_barrier_type type;
@@ -73,16 +67,16 @@ namespace rsx
 	class draw_clause
 	{
 		// Stores the first and count argument from draw/draw indexed parameters between begin/end clauses.
-		simple_array<draw_range_t> draw_command_ranges;
+		simple_array<draw_range_t> draw_command_ranges{};
 
 		// Stores rasterization barriers for primitive types sensitive to adjacency
-		simple_array<barrier_t> draw_command_barriers;
+		simple_array<barrier_t> draw_command_barriers{};
 
 		// Counter used to parse the commands in order
-		u32 current_range_index;
+		u32 current_range_index{};
 
 		// Location of last execution barrier
-		u32 last_execution_barrier_index;
+		u32 last_execution_barrier_index{};
 
 		// Helper functions
 		// Add a new draw command
@@ -112,56 +106,16 @@ namespace rsx
 		}
 
 	public:
-		primitive_type primitive;
-		draw_command command;
+		primitive_type primitive{};
+		draw_command command{};
 
-		bool is_immediate_draw;          // Set if part of the draw is submitted via push registers
-		bool is_disjoint_primitive;      // Set if primitive type does not rely on adjacency information
-		bool primitive_barrier_enable;   // Set once to signal that a primitive restart barrier can be inserted
+		bool is_immediate_draw{};          // Set if part of the draw is submitted via push registers
+		bool is_disjoint_primitive{};      // Set if primitive type does not rely on adjacency information
+		bool primitive_barrier_enable{};   // Set once to signal that a primitive restart barrier can be inserted
 
-		simple_array<u32> inline_vertex_array;
+		simple_array<u32> inline_vertex_array{};
 
-		void insert_command_barrier(command_barrier_type type, u32 arg)
-		{
-			verify(HERE), !draw_command_ranges.empty();
-
-			auto _do_barrier_insert = [this](barrier_t&& val)
-			{
-				if (draw_command_barriers.empty() || draw_command_barriers.back() < val)
-				{
-					draw_command_barriers.push_back(val);
-					return;
-				}
-
-				for (auto it = draw_command_barriers.begin(); it != draw_command_barriers.end(); it++)
-				{
-					if (*it < val)
-					{
-						continue;
-					}
-
-					draw_command_barriers.insert(it, val);
-					break;
-				}
-			};
-
-			if (type == primitive_restart_barrier)
-			{
-				// Rasterization flow barrier
-				const auto& last = draw_command_ranges[current_range_index];
-				const auto address = last.first + last.count;
-
-				_do_barrier_insert({ current_range_index, 0, address, arg, 0, type });
-			}
-			else
-			{
-				// Execution dependency barrier
-				append_draw_command({});
-
-				_do_barrier_insert({ current_range_index, get_system_time(), ~0u, arg, 0, type });
-				last_execution_barrier_index = current_range_index;
-			}
-		}
+		void insert_command_barrier(command_barrier_type type, u32 arg, u32 register_index = 0);
 
 		/**
 		 * Optimize commands for rendering
@@ -234,7 +188,7 @@ namespace rsx
 		{
 			if (draw_command_ranges.empty())
 			{
-				verify(HERE), command == rsx::draw_command::inlined_array;
+				ensure(command == rsx::draw_command::inlined_array);
 				return 0;
 			}
 
@@ -245,7 +199,7 @@ namespace rsx
 		{
 			if (draw_command_ranges.empty())
 			{
-				verify(HERE), command == rsx::draw_command::inlined_array;
+				ensure(command == rsx::draw_command::inlined_array);
 				return 0;
 			}
 
@@ -259,11 +213,11 @@ namespace rsx
 
 			if (draw_command_ranges.empty())
 			{
-				verify(HERE), !inline_vertex_array.empty();
+				ensure(!inline_vertex_array.empty());
 				return true;
 			}
 
-			verify(HERE), current_range_index != ~0u;
+			ensure(current_range_index != ~0u);
 			for (const auto &barrier : draw_command_barriers)
 			{
 				if (barrier.draw_id != current_range_index)
@@ -285,7 +239,7 @@ namespace rsx
 		{
 			if (draw_command_ranges.empty())
 			{
-				verify(HERE), !inline_vertex_array.empty();
+				ensure(!inline_vertex_array.empty());
 				return 1u;
 			}
 
@@ -293,28 +247,14 @@ namespace rsx
 			if (draw_command_ranges.back().count == 0)
 			{
 				// Dangling barrier
-				verify(HERE), count > 1;
+				ensure(count > 1);
 				count--;
 			}
 
 			return count;
 		}
 
-		void reset(rsx::primitive_type type)
-		{
-			current_range_index = ~0u;
-			last_execution_barrier_index = 0;
-
-			command = draw_command::none;
-			primitive = type;
-			primitive_barrier_enable = false;
-
-			draw_command_ranges.clear();
-			draw_command_barriers.clear();
-			inline_vertex_array.clear();
-
-			is_disjoint_primitive = is_primitive_disjointed(primitive);
-		}
+		void reset(rsx::primitive_type type);
 
 		void begin()
 		{
@@ -338,7 +278,7 @@ namespace rsx
 			if (draw_command_ranges[current_range_index].count == 0)
 			{
 				// Dangling execution barrier
-				verify(HERE), current_range_index > 0 && (current_range_index + 1) == draw_command_ranges.size();
+				ensure(current_range_index > 0 && (current_range_index + 1) == draw_command_ranges.size());
 				current_range_index = 0;
 				return false;
 			}
@@ -351,7 +291,7 @@ namespace rsx
 		 */
 		void post_execute_cleanup()
 		{
-			verify(HERE), current_range_index == 0;
+			ensure(current_range_index == 0);
 
 			if (draw_command_ranges.size() > 1)
 			{
@@ -372,13 +312,13 @@ namespace rsx
 
 		const draw_range_t& get_range() const
 		{
-			verify(HERE), current_range_index < draw_command_ranges.size();
+			ensure(current_range_index < draw_command_ranges.size());
 			return draw_command_ranges[current_range_index];
 		}
 
 		simple_array<draw_range_t> get_subranges() const
 		{
-			verify(HERE), !is_single_draw();
+			ensure(!is_single_draw());
 
 			const auto range = get_range();
 			const auto limit = range.first + range.count;
@@ -407,7 +347,8 @@ namespace rsx
 				vertex_counter += count;
 			}
 
-			verify(HERE), !ret.empty(), previous_barrier < limit;
+			ensure(!ret.empty());
+			ensure(previous_barrier < limit);
 			ret.push_back({ 0, vertex_counter, limit - previous_barrier });
 
 			return ret;
@@ -480,8 +421,8 @@ namespace rsx
 	struct rsx_state
 	{
 	public:
-		std::array<u32, 0x10000 / 4> registers;
-		u32 register_previous_value;
+		std::array<u32, 0x10000 / 4> registers{};
+		u32 register_previous_value{};
 
 		template<u32 opcode>
 		using decoded_type = typename registers_decoder<opcode>::decoded_type;
@@ -493,7 +434,7 @@ namespace rsx
 			return decoded_type<opcode>(register_value);
 		}
 
-		rsx_state &operator=(const rsx_state& in)
+		rsx_state& operator=(const rsx_state& in)
 		{
 			registers = in.registers;
 			transform_program = in.transform_program;
@@ -502,14 +443,23 @@ namespace rsx
 			return *this;
 		}
 
+		rsx_state& operator=(rsx_state&& in)
+		{
+			registers = std::move(in.registers);
+			transform_program = std::move(in.transform_program);
+			transform_constants = std::move(in.transform_constants);
+			register_vertex_info = std::move(in.register_vertex_info);
+			return *this;
+		}
+
 		std::array<fragment_texture, 16> fragment_textures;
 		std::array<vertex_texture, 4> vertex_textures;
 
 
-		std::array<u32, 512 * 4> transform_program;
-		std::array<u32[4], 512> transform_constants;
+		std::array<u32, max_vertex_program_instructions * 4> transform_program{};
+		std::array<u32[4], 512> transform_constants{};
 
-		draw_clause current_draw_clause;
+		draw_clause current_draw_clause{};
 
 		/**
 		* RSX can sources vertex attributes from 2 places:
@@ -528,22 +478,34 @@ namespace rsx
 		* Note that behavior when both vertex array and immediate value system are disabled but vertex attrib mask
 		* request inputs is unknown.
 		*/
-		std::array<register_vertex_data_info, 16> register_vertex_info;
+		std::array<register_vertex_data_info, 16> register_vertex_info{};
 		std::array<data_array_format_info, 16> vertex_arrays_info;
 
 	private:
-		template<typename T, size_t... N, typename Args>
+		template<typename T, usz... N, typename Args>
 		static std::array<T, sizeof...(N)> fill_array(Args&& arg, std::index_sequence<N...>)
 		{
 			return{ T(N, std::forward<Args>(arg))... };
 		}
 
 	public:
-		rsx_state() :
-			fragment_textures(fill_array<fragment_texture>(registers, std::make_index_sequence<16>())),
-			vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>())),
-			vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
+		rsx_state()
+			: fragment_textures(fill_array<fragment_texture>(registers, std::make_index_sequence<16>()))
+			, vertex_textures(fill_array<vertex_texture>(registers, std::make_index_sequence<4>()))
+			, vertex_arrays_info(fill_array<data_array_format_info>(registers, std::make_index_sequence<16>()))
 		{
+		}
+
+		rsx_state(const rsx_state& other)
+			: rsx_state()
+		{
+			this->operator=(other);
+		}
+
+		rsx_state(rsx_state&& other)
+			: rsx_state()
+		{
+			this->operator=(std::move(other));
 		}
 
 		~rsx_state() = default;
@@ -555,15 +517,6 @@ namespace rsx
 		void reset();
 
 		void init();
-
-		template<typename Archive>
-		void serialize(Archive & ar)
-		{
-			ar(transform_program,
-//				transform_constants,
-				registers
-				);
-		}
 
 		u16 viewport_width() const
 		{
@@ -642,7 +595,7 @@ namespace rsx
 
 		u32 window_clip_vertical() const
 		{
-			return registers[NV4097_SET_WINDOW_CLIP_HORIZONTAL];
+			return registers[NV4097_SET_WINDOW_CLIP_VERTICAL];
 		}
 
 		bool depth_test_enabled() const
@@ -1153,64 +1106,37 @@ namespace rsx
 			return decode<NV4097_SET_SURFACE_CLIP_VERTICAL>().height();
 		}
 
-		u32 surface_a_offset() const
+		u32 surface_offset(u32 index) const
 		{
-			return decode<NV4097_SET_SURFACE_COLOR_AOFFSET>().surface_a_offset();
+			switch (index)
+			{
+			case 0: return decode<NV4097_SET_SURFACE_COLOR_AOFFSET>().surface_a_offset();
+			case 1: return decode<NV4097_SET_SURFACE_COLOR_BOFFSET>().surface_b_offset();
+			case 2: return decode<NV4097_SET_SURFACE_COLOR_COFFSET>().surface_c_offset();
+			default: return decode<NV4097_SET_SURFACE_COLOR_DOFFSET>().surface_d_offset();
+			}
 		}
 
-		u32 surface_b_offset() const
+		u32 surface_pitch(u32 index) const
 		{
-			return decode<NV4097_SET_SURFACE_COLOR_BOFFSET>().surface_b_offset();
+			switch (index)
+			{
+			case 0: return decode<NV4097_SET_SURFACE_PITCH_A>().surface_a_pitch();
+			case 1: return decode<NV4097_SET_SURFACE_PITCH_B>().surface_b_pitch();
+			case 2: return decode<NV4097_SET_SURFACE_PITCH_C>().surface_c_pitch();
+			default: return decode<NV4097_SET_SURFACE_PITCH_D>().surface_d_pitch();
+			}
 		}
 
-		u32 surface_c_offset() const
+		u32 surface_dma(u32 index) const
 		{
-			return decode<NV4097_SET_SURFACE_COLOR_COFFSET>().surface_c_offset();
-		}
-
-		u32 surface_d_offset() const
-		{
-			return decode<NV4097_SET_SURFACE_COLOR_DOFFSET>().surface_d_offset();
-		}
-
-		u32 surface_a_pitch() const
-		{
-			return decode<NV4097_SET_SURFACE_PITCH_A>().surface_a_pitch();
-		}
-
-		u32 surface_b_pitch() const
-		{
-			return decode<NV4097_SET_SURFACE_PITCH_B>().surface_b_pitch();
-		}
-
-		u32 surface_c_pitch() const
-		{
-			return decode<NV4097_SET_SURFACE_PITCH_C>().surface_c_pitch();
-		}
-
-		u32 surface_d_pitch() const
-		{
-			return decode<NV4097_SET_SURFACE_PITCH_D>().surface_d_pitch();
-		}
-
-		u32 surface_a_dma() const
-		{
-			return decode<NV4097_SET_CONTEXT_DMA_COLOR_A>().dma_surface_a();
-		}
-
-		u32 surface_b_dma() const
-		{
-			return decode<NV4097_SET_CONTEXT_DMA_COLOR_B>().dma_surface_b();
-		}
-
-		u32 surface_c_dma() const
-		{
-			return decode<NV4097_SET_CONTEXT_DMA_COLOR_C>().dma_surface_c();
-		}
-
-		u32 surface_d_dma() const
-		{
-			return decode<NV4097_SET_CONTEXT_DMA_COLOR_D>().dma_surface_d();
+			switch (index)
+			{
+			case 0: return decode<NV4097_SET_CONTEXT_DMA_COLOR_A>().dma_surface_a();
+			case 1: return decode<NV4097_SET_CONTEXT_DMA_COLOR_B>().dma_surface_b();
+			case 2: return decode<NV4097_SET_CONTEXT_DMA_COLOR_C>().dma_surface_c();
+			default: return decode<NV4097_SET_CONTEXT_DMA_COLOR_D>().dma_surface_d();
+			}
 		}
 
 		u32 surface_z_offset() const
@@ -1601,7 +1527,7 @@ namespace rsx
 			return decode<NV0039_OFFSET_OUT>().output_offset();
 		}
 
-		u32 nv0039_output_location()
+		u32 nv0039_output_location() const
 		{
 			return decode<NV0039_SET_CONTEXT_DMA_BUFFER_OUT>().output_dma();
 		}

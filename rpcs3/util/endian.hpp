@@ -1,43 +1,25 @@
-﻿#pragma once
+#pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
-#include <cstdint>
-#include "Utilities/types.h"
+#include "util/types.hpp"
 
-#if __has_include(<bit>)
-#include <bit>
-#else
-#include <type_traits>
+#ifndef _MSC_VER
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Weffc++"
 #endif
 
 namespace stx
 {
-	static_assert(std::endian::native == std::endian::little || std::endian::native == std::endian::big);
-
-	template<class T, std::size_t... N>
-	constexpr T bswap_impl(T i, std::index_sequence<N...>)
-	{
-		return static_cast<T>(((((i >> (N * 8)) & T{UINT8_MAX}) <<
-				((sizeof(T) - 1 - N) * 8)) | ...));
-	};
-
-	template<class T, class U = typename std::make_unsigned<T>::type>
-	constexpr U bswap(T i)
-	{
-		return bswap_impl<U>(i, std::make_index_sequence<sizeof(T)>{});
-	}
-
-
-	template <typename T, std::size_t Align = alignof(T), std::size_t Size = sizeof(T)>
+	template <typename T, usz Align = alignof(T), usz Size = sizeof(T)>
 	struct se_storage
 	{
 		struct type8
 		{
-			alignas(Align > alignof(T) ? alignof(T) : Align) unsigned char data[sizeof(T)];
+			alignas(Align > alignof(T) ? alignof(T) : Align) uchar data[sizeof(T)];
 		};
 
 		struct type64
 		{
-			alignas(8) std::uint64_t data[sizeof(T) < 8 ? 1 : sizeof(T) / 8];
+			alignas(8) u64 data[sizeof(T) < 8 ? 1 : sizeof(T) / 8];
 		};
 
 		using type = std::conditional_t<(Align >= 8 && sizeof(T) % 8 == 0), type64, type8>;
@@ -47,66 +29,69 @@ namespace stx
 	};
 
 	template <typename T>
-	struct se_storage<T, alignof(std::uint16_t), 2>
+	struct se_storage<T, 2, 2>
 	{
-		using type = std::uint16_t;
+		using type = u16;
 
-		static constexpr std::uint16_t swap(std::uint16_t src) noexcept
+		static constexpr u16 swap(u16 src) noexcept
 		{
-			if (std::is_constant_evaluated())
-			{
-				return stx::bswap(src);
-			}
-
 #if defined(__GNUG__)
 			return __builtin_bswap16(src);
 #else
+			if (std::is_constant_evaluated())
+			{
+				return (src >> 8) | (src << 8);
+			}
+
 			return _byteswap_ushort(src);
 #endif
 		}
 	};
 
 	template <typename T>
-	struct se_storage<T, alignof(std::uint32_t), 4>
+	struct se_storage<T, 4, 4>
 	{
-		using type = std::uint32_t;
+		using type = u32;
 
-		static constexpr std::uint32_t swap(std::uint32_t src) noexcept
+		static constexpr u32 swap(u32 src) noexcept
 		{
-			if (std::is_constant_evaluated())
-			{
-				return stx::bswap(src);
-			}
-
 #if defined(__GNUG__)
 			return __builtin_bswap32(src);
 #else
+			if (std::is_constant_evaluated())
+			{
+				const u32 v0 = ((src << 8) & 0xff00ff00) | ((src >> 8) & 0x00ff00ff);
+				return (v0 << 16) | (v0 >> 16);
+			}
+
 			return _byteswap_ulong(src);
 #endif
 		}
 	};
 
 	template <typename T>
-	struct se_storage<T, alignof(std::uint64_t), 8>
+	struct se_storage<T, 8, 8>
 	{
-		using type = std::uint64_t;
+		using type = u64;
 
-		static constexpr std::uint64_t swap(std::uint64_t src) noexcept
+		static constexpr u64 swap(u64 src) noexcept
 		{
-			if (std::is_constant_evaluated())
-			{
-				return stx::bswap(src);
-			}
-
 #if defined(__GNUG__)
 			return __builtin_bswap64(src);
 #else
+			if (std::is_constant_evaluated())
+			{
+				const u64 v0 = ((src << 8) & 0xff00ff00ff00ff00) | ((src >> 8) & 0x00ff00ff00ff00ff);
+				const u64 v1 = ((v0 << 16) & 0xffff0000ffff0000) | ((v0 >> 16) & 0x0000ffff0000ffff);
+				return (v1 << 32) | (v1 >> 32);
+			}
+
 			return _byteswap_uint64(src);
 #endif
 		}
 	};
 
-	template <typename T, std::size_t Align, std::size_t Size>
+	template <typename T, usz Align, usz Size>
 	constexpr typename se_storage<T, Align, Size>::type se_storage<T, Align, Size>::swap(const type& src) noexcept
 	{
 		// Try to keep u16/u32/u64 optimizations at the cost of more bitcasts
@@ -116,15 +101,15 @@ namespace stx
 		}
 		else if constexpr (sizeof(T) == 2)
 		{
-			return std::bit_cast<type>(se_storage<std::uint16_t>::swap(std::bit_cast<std::uint16_t>(src)));
+			return std::bit_cast<type>(se_storage<u16>::swap(std::bit_cast<u16>(src)));
 		}
 		else if constexpr (sizeof(T) == 4)
 		{
-			return std::bit_cast<type>(se_storage<std::uint32_t>::swap(std::bit_cast<std::uint32_t>(src)));
+			return std::bit_cast<type>(se_storage<u32>::swap(std::bit_cast<u32>(src)));
 		}
 		else if constexpr (sizeof(T) == 8)
 		{
-			return std::bit_cast<type>(se_storage<std::uint64_t>::swap(std::bit_cast<std::uint64_t>(src)));
+			return std::bit_cast<type>(se_storage<u64>::swap(std::bit_cast<u64>(src)));
 		}
 		else if constexpr (sizeof(T) % 8 == 0)
 		{
@@ -132,9 +117,9 @@ namespace stx
 			type64 dst{};
 
 			// Swap u64 blocks
-			for (std::size_t i = 0; i < sizeof(T) / 8; i++)
+			for (usz i = 0; i < sizeof(T) / 8; i++)
 			{
-				dst.data[i] = se_storage<std::uint64_t>::swap(tmp.data[sizeof(T) / 8 - 1 - i]);
+				dst.data[i] = se_storage<u64>::swap(tmp.data[sizeof(T) / 8 - 1 - i]);
 			}
 
 			return std::bit_cast<type>(dst);
@@ -144,7 +129,7 @@ namespace stx
 			type dst{};
 
 			// Swap by moving every byte
-			for (std::size_t i = 0; i < sizeof(T); i++)
+			for (usz i = 0; i < sizeof(T); i++)
 			{
 				dst.data[i] = src.data[sizeof(T) - 1 - i];
 			}
@@ -154,7 +139,7 @@ namespace stx
 	}
 
 	// Endianness support template
-	template <typename T, bool Swap, std::size_t Align = alignof(T)>
+	template <typename T, bool Swap, usz Align = alignof(T)>
 	class alignas(Align) se_t
 	{
 		using type = typename std::remove_cv<T>::type;
@@ -182,22 +167,22 @@ namespace stx
 
 		static constexpr auto int_or_enum()
 		{
-			if constexpr (std::is_enum_v<simple_t<type>>)
+			if constexpr (std::is_enum_v<type>)
 			{
-				return std::underlying_type_t<simple_t<type>>{};
+				return std::underlying_type_t<type>{};
 			}
 			else
 			{
-				return simple_t<type>{};
+				return type{};
 			}
 		}
 
 		using under = decltype(int_or_enum());
 
 	public:
-		constexpr se_t() = default;
+		using enable_bitcopy = std::true_type;
 
-		constexpr se_t(const se_t& right) = default;
+		se_t() noexcept = default;
 
 		constexpr se_t(type value) noexcept
 			: m_data(to_data(value))
@@ -221,15 +206,11 @@ namespace stx
 			return value();
 		}
 
-		constexpr se_t& operator=(const se_t&) = default;
-
 		constexpr se_t& operator=(type value) noexcept
 		{
 			m_data = to_data(value);
 			return *this;
 		}
-
-		using simple_type = simple_t<T>;
 
 		constexpr operator type() const noexcept
 		{
@@ -266,7 +247,7 @@ private:
 			return std::bit_cast<To>(static_cast<se_t<To, Swap>>(rhs));
 		}
 
-		template <typename To, typename Test = int, typename R, std::size_t Align2>
+		template <typename To, typename Test = int, typename R, usz Align2>
 		static constexpr To right_arg_cast(const se_t<R, Swap, Align2>& rhs) noexcept
 		{
 			if constexpr ((std::is_integral_v<R> || std::is_enum_v<R>) && std::is_convertible_v<R, Test> && sizeof(R) == sizeof(T))
@@ -284,7 +265,7 @@ public:
 		template <typename T2, typename = decltype(+std::declval<const T2&>())>
 		constexpr bool operator==(const T2& rhs) const noexcept
 		{
-			using R = simple_t<T2>;
+			using R = std::common_type_t<T2>;
 
 			if constexpr ((std::is_integral_v<T> || std::is_enum_v<T>) && (std::is_integral_v<R> || std::is_enum_v<R>))
 			{
@@ -306,20 +287,11 @@ public:
 			return value() == rhs;
 		}
 
-#if __cpp_impl_three_way_comparison >= 201711
-#else
-		template <typename T2, typename = decltype(+std::declval<const T2&>())>
-		constexpr bool operator!=(const T2& rhs) const noexcept
-		{
-			return !operator==<T2>(rhs);
-		}
-#endif
-
 private:
 		template <typename T2>
 		static constexpr bool check_args_for_bitwise_op()
 		{
-			using R = simple_t<T2>;
+			using R = std::common_type_t<T2>;
 
 			if constexpr ((std::is_integral_v<T> || std::is_enum_v<T>) && (std::is_integral_v<R> || std::is_enum_v<R>))
 			{
@@ -491,3 +463,18 @@ public:
 		}
 	};
 }
+
+// Specializations
+
+template <typename T, bool Swap, usz Align, typename T2, bool Swap2, usz Align2>
+struct std::common_type<stx::se_t<T, Swap, Align>, stx::se_t<T2, Swap2, Align2>> : std::common_type<T, T2> {};
+
+template <typename T, bool Swap, usz Align, typename T2>
+struct std::common_type<stx::se_t<T, Swap, Align>, T2> : std::common_type<T, std::common_type_t<T2>> {};
+
+template <typename T, typename T2, bool Swap2, usz Align2>
+struct std::common_type<T, stx::se_t<T2, Swap2, Align2>> : std::common_type<std::common_type_t<T>, T2> {};
+
+#ifndef _MSC_VER
+#pragma GCC diagnostic pop
+#endif

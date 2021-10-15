@@ -1,16 +1,18 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKFragmentProgram.h"
 #include "VKCommonDecompiler.h"
 #include "VKHelpers.h"
-#include "../Common/GLSLCommon.h"
+#include "vkutils/device.h"
+#include "Emu/system_config.h"
+#include "../Program/GLSLCommon.h"
 #include "../GCM.h"
 
-std::string VKFragmentDecompilerThread::getFloatTypeName(size_t elementCount)
+std::string VKFragmentDecompilerThread::getFloatTypeName(usz elementCount)
 {
 	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
-std::string VKFragmentDecompilerThread::getHalfTypeName(size_t elementCount)
+std::string VKFragmentDecompilerThread::getHalfTypeName(usz elementCount)
 {
 	return glsl::getHalfTypeNameImpl(elementCount);
 }
@@ -107,7 +109,7 @@ void VKFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 		if (m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))
 		{
 			OS << "layout(location=" << std::to_string(output_index++) << ") " << "out vec4 " << table[i].first << ";\n";
-			vk_prog->output_color_masks[i] = UINT32_MAX;
+			vk_prog->output_color_masks[i] = -1;
 		}
 	}
 }
@@ -130,14 +132,15 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			const auto mask = (1 << index);
 
-			if (m_prog.shadow_textures & mask)
+			if (properties.shadow_sampler_mask & mask)
 			{
-				if (m_shadow_sampled_textures & mask)
+				if (properties.common_access_sampler_mask & mask)
 				{
-					if (m_2d_sampled_textures & mask)
-						rsx_log.error("Texture unit %d is sampled as both a shadow texture and a depth texture", index);
-					else
-						samplerType = "sampler2DShadow";
+					rsx_log.error("Texture unit %d is sampled as both a shadow texture and a depth texture", index);
+				}
+				else
+				{
+					samplerType += "Shadow";
 				}
 			}
 
@@ -151,7 +154,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 			OS << "layout(set=0, binding=" << location++ << ") uniform " << samplerType << " " << PI.name << ";\n";
 
-			if (m_prog.redirected_textures & mask)
+			if (properties.redirected_sampler_mask & mask)
 			{
 				// Insert stencil mirror declaration
 				in.name += "_stencil";
@@ -164,7 +167,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		}
 	}
 
-	verify("Too many sampler descriptors!" HERE), location <= m_binding_table.vertex_textures_first_bind_slot;
+	ensure(location <= m_binding_table.vertex_textures_first_bind_slot); // "Too many sampler descriptors!"
 
 	std::string constants_block;
 	for (const ParamType& PT : m_parr.params[PF_PARAM_UNIFORM])
@@ -236,14 +239,16 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.domain = glsl::glsl_fragment_program;
 	m_shader_props.require_lit_emulation = properties.has_lit_op;
 	m_shader_props.fp32_outputs = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
-	m_shader_props.require_depth_conversion = m_prog.redirected_textures != 0;
+	m_shader_props.require_depth_conversion = properties.redirected_sampler_mask != 0;
 	m_shader_props.require_wpos = !!(properties.in_register_mask & in_wpos);
 	m_shader_props.require_texture_ops = properties.has_tex_op;
-	m_shader_props.require_shadow_ops = m_prog.shadow_textures != 0;
+	m_shader_props.require_shadow_ops = properties.shadow_sampler_mask != 0;
 	m_shader_props.require_texture_expand = properties.has_exp_tex_op;
+	m_shader_props.require_srgb_to_linear = properties.has_upg;
+	m_shader_props.require_linear_to_srgb = properties.has_pkg;
 	m_shader_props.emulate_coverage_tests = g_cfg.video.antialiasing_level == msaa_level::none;
 	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
-	m_shader_props.low_precision_tests = vk::get_driver_vendor() == vk::driver_vendor::NVIDIA;
+	m_shader_props.low_precision_tests = device_props.has_low_precision_rounding;
 	m_shader_props.disable_early_discard = vk::get_driver_vendor() != vk::driver_vendor::NVIDIA;
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
 
@@ -372,7 +377,7 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 
 void VKFragmentDecompilerThread::Task()
 {
-	m_binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
+	m_binding_table = vk::g_render_device->get_pipeline_binding_table();
 	m_shader = Decompile();
 	vk_prog->SetInputs(inputs);
 }
@@ -397,6 +402,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	}
 
 	decompiler.device_props.emulate_depth_compare = !pdev->get_formats_support().d24_unorm_s8;
+	decompiler.device_props.has_low_precision_rounding = vk::get_driver_vendor() == vk::driver_vendor::NVIDIA;
 	decompiler.Task();
 
 	shader.create(::glsl::program_domain::glsl_fragment_program, source);
@@ -411,7 +417,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 				PT.type == "samplerCube")
 				continue;
 
-			size_t offset = atoi(PI.name.c_str() + 2);
+			usz offset = atoi(PI.name.c_str() + 2);
 			FragmentConstantOffsetCache.push_back(offset);
 		}
 	}

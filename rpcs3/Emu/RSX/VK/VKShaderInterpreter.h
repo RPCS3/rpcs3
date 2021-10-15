@@ -1,5 +1,7 @@
-﻿#pragma once
+#pragma once
 #include "VKProgramBuffer.h"
+#include "vkutils/descriptors.h"
+#include <unordered_map>
 
 namespace vk
 {
@@ -31,7 +33,7 @@ namespace vk
 
 		struct key_hasher
 		{
-			size_t operator()(const pipeline_key& key) const
+			usz operator()(const pipeline_key& key) const
 			{
 				return rpcs3::hash_struct(key.properties) ^ key.compiler_opt;
 			}
@@ -40,11 +42,11 @@ namespace vk
 		std::unordered_map<pipeline_key, std::unique_ptr<glsl::program>, key_hasher> m_program_cache;
 		std::unordered_map<u64, std::unique_ptr<glsl::shader>> m_fs_cache;
 		vk::descriptor_pool m_descriptor_pool;
-		size_t m_used_descriptors = 0;
+		u32 m_used_descriptors = 0;
 
-		uint32_t m_vertex_instruction_start = 0;
-		uint32_t m_fragment_instruction_start = 0;
-		uint32_t m_fragment_textures_start = 0;
+		u32 m_vertex_instruction_start = 0;
+		u32 m_fragment_instruction_start = 0;
+		u32 m_fragment_textures_start = 0;
 
 		pipeline_key m_current_key{};
 
@@ -62,10 +64,10 @@ namespace vk
 		glsl::program* get(const vk::pipeline_props& properties, const program_hash_util::fragment_program_utils::fragment_program_metadata& metadata);
 		bool is_interpreter(const glsl::program* prog) const;
 
-		uint32_t get_vertex_instruction_location() const;
-		uint32_t get_fragment_instruction_location() const;
+		u32 get_vertex_instruction_location() const;
+		u32 get_fragment_instruction_location() const;
 
-		void update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, VkDescriptorSet descriptor_set);
+		void update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, vk::descriptor_set &set);
 		VkDescriptorSet allocate_descriptor_set();
 	};
 }

@@ -1,48 +1,11 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKFormats.h"
+#include "vkutils/device.h"
+#include "vkutils/image.h"
 
 namespace vk
 {
-	gpu_formats_support get_optimal_tiling_supported_formats(const physical_device& dev)
-	{
-		gpu_formats_support result = {};
-
-		VkFormatProperties props;
-		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_D24_UNORM_S8_UINT, &props);
-
-		result.d24_unorm_s8 = !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
-			&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
-			&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT)
-			&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT);
-
-		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_D32_SFLOAT_S8_UINT, &props);
-		result.d32_sfloat_s8 = !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)
-			&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)
-			&& !!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
-
-		// Hide d24_s8 if force high precision z buffer is enabled
-		if (g_cfg.video.force_high_precision_z_buffer && result.d32_sfloat_s8)
-			result.d24_unorm_s8 = false;
-
-		// Checks if BGRA8 images can be used for blitting
-		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_B8G8R8A8_UNORM, &props);
-		result.bgra8_linear = !!(props.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
-
-		// Check if device supports RGBA8 format
-		vkGetPhysicalDeviceFormatProperties(dev, VK_FORMAT_R8G8B8A8_UNORM, &props);
-		if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT) ||
-			!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT) ||
-			!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT))
-		{
-			// Non-fatal. Most games use BGRA layout due to legacy reasons as old GPUs typically supported BGRA and RGBA was emulated.
-			rsx_log.error("Your GPU and/or driver does not support RGBA8 format. This can cause problems in some rare games that use this memory layout.");
-		}
-
-		result.argb8_linear = !!(props.linearTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT);
-		return result;
-	}
-
-	VkFormat get_compatible_depth_surface_format(const gpu_formats_support &support, rsx::surface_depth_format2 format)
+	VkFormat get_compatible_depth_surface_format(const gpu_formats_support& support, rsx::surface_depth_format2 format)
 	{
 		switch (format)
 		{
@@ -54,17 +17,17 @@ namespace vk
 		{
 			if (support.d24_unorm_s8) return VK_FORMAT_D24_UNORM_S8_UINT;
 			if (support.d32_sfloat_s8) return VK_FORMAT_D32_SFLOAT_S8_UINT;
-			fmt::throw_exception("No hardware support for z24s8" HERE);
+			fmt::throw_exception("No hardware support for z24s8");
 		}
 		case rsx::surface_depth_format2::z24s8_float:
 		{
 			if (support.d32_sfloat_s8) return VK_FORMAT_D32_SFLOAT_S8_UINT;
-			fmt::throw_exception("No hardware support for z24s8_float" HERE);
+			fmt::throw_exception("No hardware support for z24s8_float");
 		}
 		default:
 			break;
 		}
-		fmt::throw_exception("Invalid format (0x%x)" HERE, static_cast<u32>(format));
+		fmt::throw_exception("Invalid format (0x%x)", static_cast<u32>(format));
 	}
 
 	minification_filter get_min_filter(rsx::texture_minify_filter min_filter)
@@ -79,10 +42,8 @@ namespace vk
 		case rsx::texture_minify_filter::linear_linear: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, true };
 		case rsx::texture_minify_filter::convolution_min: return { VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, false };
 		default:
-			ASSUME(0);
-			break;
+			fmt::throw_exception("Invalid min filter");
 		}
-		fmt::throw_exception("Invalid min filter" HERE);
 	}
 
 	VkFilter get_mag_filter(rsx::texture_magnify_filter mag_filter)
@@ -93,10 +54,10 @@ namespace vk
 		case rsx::texture_magnify_filter::linear: return VK_FILTER_LINEAR;
 		case rsx::texture_magnify_filter::convolution_mag: return VK_FILTER_LINEAR;
 		default:
-			ASSUME(0);
 			break;
 		}
-		fmt::throw_exception("Invalid mag filter (0x%x)" HERE, static_cast<u32>(mag_filter));
+
+		fmt::throw_exception("Invalid mag filter (0x%x)", static_cast<u32>(mag_filter));
 	}
 
 	VkBorderColor get_border_color(u32 color)
@@ -117,19 +78,17 @@ namespace vk
 		}
 		default:
 		{
-			auto color4 = rsx::decode_border_color(color);
+			const auto color4 = rsx::decode_border_color(color);
 			if ((color4.r + color4.g + color4.b) > 1.35f)
 			{
 				//If color elements are brighter than roughly 0.5 average, use white border
 				return VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 			}
-			else
-			{
-				if (color4.a > 0.5f)
-					return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
-				else
-					return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
-			}
+
+			if (color4.a > 0.5f)
+				return VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+
+			return VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
 		}
 		}
 	}
@@ -147,10 +106,8 @@ namespace vk
 		case rsx::texture_wrap_mode::mirror_once_border: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 		case rsx::texture_wrap_mode::mirror_once_clamp: return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
 		default:
-			ASSUME(0);
-			break;
+			fmt::throw_exception("Unhandled texture clamp mode");
 		}
-		fmt::throw_exception("unhandled texture clamp mode" HERE);
 	}
 
 	float max_aniso(rsx::texture_max_anisotropy gcm_aniso)
@@ -166,11 +123,10 @@ namespace vk
 		case rsx::texture_max_anisotropy::x12: return 12.0f;
 		case rsx::texture_max_anisotropy::x16: return 16.0f;
 		default:
-			ASSUME(0);
 			break;
 		}
 
-		fmt::throw_exception("Texture anisotropy error: bad max aniso (%d)" HERE, static_cast<u32>(gcm_aniso));
+		fmt::throw_exception("Texture anisotropy error: bad max aniso (%d)", static_cast<u32>(gcm_aniso));
 	}
 
 
@@ -239,13 +195,13 @@ namespace vk
 			mapping = { VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B }; break;
 
 		default:
-			fmt::throw_exception("Invalid or unsupported component mapping for texture format (0x%x)" HERE, format);
+			fmt::throw_exception("Invalid or unsupported component mapping for texture format (0x%x)", format);
 		}
 
 		return mapping;
 	}
 
-	VkFormat get_compatible_sampler_format(const gpu_formats_support &support, u32 format)
+	VkFormat get_compatible_sampler_format(const gpu_formats_support& support, u32 format)
 	{
 		switch (format)
 		{
@@ -279,7 +235,7 @@ namespace vk
 		default:
 			break;
 		}
-		fmt::throw_exception("Invalid or unsupported sampler format for texture format (0x%x)" HERE, format);
+		fmt::throw_exception("Invalid or unsupported sampler format for texture format (0x%x)", format);
 	}
 
 	VkFormat get_compatible_srgb_format(VkFormat rgb_format)
@@ -451,6 +407,7 @@ namespace vk
 			return{ false, 1 };
 			//Depth
 		case VK_FORMAT_D16_UNORM:
+		case VK_FORMAT_D32_SFLOAT:
 			return{ true, 2 };
 		case VK_FORMAT_D32_SFLOAT_S8_UINT:
 		case VK_FORMAT_D24_UNORM_S8_UINT:
@@ -459,7 +416,7 @@ namespace vk
 			break;
 		}
 
-		fmt::throw_exception("Unknown vkFormat 0x%x" HERE, static_cast<u32>(format));
+		fmt::throw_exception("Unknown vkFormat 0x%x", static_cast<u32>(format));
 	}
 
 	bool formats_are_bitcast_compatible(VkFormat format1, VkFormat format2)

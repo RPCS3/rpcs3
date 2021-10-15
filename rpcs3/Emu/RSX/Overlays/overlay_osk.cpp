@@ -1,7 +1,8 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_osk.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
+#include "Emu/Cell/Modules/cellMsgDialog.h"
 
 LOG_CHANNEL(osk, "OSK");
 
@@ -9,19 +10,28 @@ namespace rsx
 {
 	namespace overlays
 	{
-		void osk_dialog::Close(bool ok)
+		osk_dialog::osk_dialog()
+		{
+			auto_repeat_buttons.insert(pad_button::L1);
+			auto_repeat_buttons.insert(pad_button::R1);
+			auto_repeat_buttons.insert(pad_button::cross);
+			auto_repeat_buttons.insert(pad_button::triangle);
+			auto_repeat_buttons.insert(pad_button::square);
+		}
+
+		void osk_dialog::Close(s32 status)
 		{
 			fade_animation.current = color4f(1.f);
 			fade_animation.end = color4f(0.f);
 			fade_animation.duration = 0.5f;
 
-			fade_animation.on_finish = [this, ok]
+			fade_animation.on_finish = [this, status]
 			{
 				if (on_osk_close)
 				{
-					Emu.CallAfter([this, ok]()
+					Emu.CallAfter([this, status]()
 					{
-						on_osk_close(ok ? CELL_MSGDIALOG_BUTTON_OK : CELL_MSGDIALOG_BUTTON_ESCAPE);
+						on_osk_close(status);
 					});
 				}
 
@@ -38,20 +48,16 @@ namespace rsx
 			if (m_panels.size() < 7)
 			{
 				// Don't add this panel if there already exists one with the same panel mode
-				for (const auto& existing : m_panels)
+				if (std::none_of(m_panels.begin(), m_panels.end(), [&panel](const osk_panel& existing) { return existing.osk_panel_mode == panel.osk_panel_mode; }))
 				{
-					if (existing.osk_panel_mode == panel.osk_panel_mode)
-					{
-						return;
-					}
+					m_panels.push_back(panel);
 				}
-				m_panels.push_back(panel);
 			}
 		}
 
 		void osk_dialog::step_panel(bool next_panel)
 		{
-			const size_t num_panels = m_panels.size();
+			const usz num_panels = m_panels.size();
 
 			if (num_panels > 0)
 			{
@@ -74,7 +80,7 @@ namespace rsx
 
 		void osk_dialog::update_panel()
 		{
-			ASSERT(m_panel_index < m_panels.size());
+			ensure(m_panel_index < m_panels.size());
 
 			const auto& panel = m_panels[m_panel_index];
 
@@ -102,7 +108,7 @@ namespace rsx
 				{
 					const auto row = (index / num_columns);
 					const auto col = (index % num_columns);
-					verify(HERE), row < num_rows && col < num_columns;
+					ensure(row < num_rows && col < num_columns);
 
 					auto& _cell = m_grid[index++];
 					_cell.button_flag = props.type_flags;
@@ -122,9 +128,9 @@ namespace rsx
 							continue;
 						}
 
-						size_t cell_shift_layers = 0;
+						usz cell_shift_layers = 0;
 
-						for (size_t i = 0; i < _cell.outputs[layer].size(); ++i)
+						for (usz i = 0; i < _cell.outputs[layer].size(); ++i)
 						{
 							if (_cell.outputs[layer][i].empty() == false)
 							{
@@ -134,11 +140,11 @@ namespace rsx
 
 						if (layer >= num_shift_layers_by_charset.size())
 						{
-							num_shift_layers_by_charset.push_back(u32(cell_shift_layers));
+							num_shift_layers_by_charset.push_back(static_cast<u32>(cell_shift_layers));
 						}
 						else
 						{
-							num_shift_layers_by_charset[layer] = std::max(num_shift_layers_by_charset[layer], u32(cell_shift_layers));
+							num_shift_layers_by_charset[layer] = std::max(num_shift_layers_by_charset[layer], static_cast<u32>(cell_shift_layers));
 						}
 					}
 
@@ -184,11 +190,11 @@ namespace rsx
 				}
 			}
 
-			verify(HERE), num_shift_layers_by_charset.size();
+			ensure(num_shift_layers_by_charset.size());
 
 			for (u32 layer = 0; layer < num_shift_layers_by_charset.size(); ++layer)
 			{
-				verify(HERE), num_shift_layers_by_charset[layer];
+				ensure(num_shift_layers_by_charset[layer]);
 			}
 
 			// Reset to first shift layer in the first charset, because the panel changed and we don't know if the layers are similar between panels.
@@ -209,10 +215,10 @@ namespace rsx
 			const u16 preview_height = (flags & CELL_OSKDIALOG_NO_RETURN) ? 40 : 90;
 
 			// Place elements with absolute positioning
-			u16 frame_w = u16(num_columns * cell_size_x);
-			u16 frame_h = u16(num_rows * cell_size_y) + 30 + preview_height;
-			u16 frame_x = (1280 - frame_w) / 2;
-			u16 frame_y = (720 - frame_h) / 2;
+			const u16 frame_w = static_cast<u16>(num_columns * cell_size_x);
+			const u16 frame_h = static_cast<u16>(num_rows * cell_size_y) + 30 + preview_height;
+			const u16 frame_x = (1280 - frame_w) / 2;
+			const u16 frame_y = (720 - frame_h) / 2;
 
 			m_frame.set_pos(frame_x, frame_y);
 			m_frame.set_size(frame_w, frame_h);
@@ -253,26 +259,28 @@ namespace rsx
 			m_update = true;
 		}
 
-		void osk_dialog::initialize_layout(const std::u32string & title, const std::u32string & initial_text)
+		void osk_dialog::initialize_layout(const std::u32string& title, const std::u32string& initial_text)
 		{
 			m_background.set_size(1280, 720);
 			m_background.back_color.a = 0.8f;
 
 			m_frame.back_color = { 0.2f, 0.2f, 0.2f, 1.f };
 
-			m_title.set_text(title);
+			m_title.set_unicode_text(title);
 			m_title.back_color.a = 0.f;
 
-			if (initial_text.empty())
+			m_preview.password_mode = m_password_mode;
+			m_preview.set_placeholder(get_placeholder());
+			m_preview.set_unicode_text(initial_text);
+
+			if (m_preview.value.empty())
 			{
-				m_preview.set_text(get_placeholder());
 				m_preview.caret_position = 0;
 				m_preview.fore_color.a = 0.5f; // Muted contrast for hint text
 			}
 			else
 			{
-				m_preview.set_text(initial_text);
-				m_preview.caret_position = ::narrow<u16>(initial_text.length());
+				m_preview.caret_position = m_preview.value.length();
 				m_preview.fore_color.a = 1.f;
 			}
 
@@ -345,15 +353,13 @@ namespace rsx
 			while (true)
 			{
 				const auto current_index = (start_index + count);
-				verify(HERE), current_index <= index_limit;
+				ensure(current_index <= index_limit);
+				++count;
 
 				if (m_grid[current_index].flags & border_flags::right)
 				{
-					++count;
 					break;
 				}
-
-				++count;
 			}
 
 			return std::make_pair(start_index, count);
@@ -361,9 +367,9 @@ namespace rsx
 
 		void osk_dialog::update_selection_by_index(u32 index)
 		{
-			auto select_cell = [&](u32 index, bool state)
+			auto select_cell = [&](u32 i, bool state)
 			{
-				const auto info = get_cell_geometry(index);
+				const auto info = get_cell_geometry(i);
 
 				// Tag all in range
 				for (u32 _index = info.first, _ctr = 0; _ctr < info.second; ++_index, ++_ctr)
@@ -386,7 +392,7 @@ namespace rsx
 		{
 			const auto index_limit = (num_columns * num_rows) - 1;
 
-			auto on_accept = [&]()
+			const auto on_accept = [this]()
 			{
 				const u32 current_index = (selected_y * num_columns) + selected_x;
 				const auto& current_cell = m_grid[current_index];
@@ -444,11 +450,10 @@ namespace rsx
 					if (m_grid[get_cell_geometry(current_index).first].enabled)
 					{
 						update_selection_by_index(current_index);
-						m_update = true;
 						break;
 					}
 				}
-
+				m_reset_pulse = true;
 				break;
 			}
 			case pad_button::dpad_left:
@@ -464,7 +469,6 @@ namespace rsx
 						if (m_grid[get_cell_geometry(current_index).first].enabled)
 						{
 							update_selection_by_index(current_index);
-							m_update = true;
 							break;
 						}
 					}
@@ -473,6 +477,7 @@ namespace rsx
 						break;
 					}
 				}
+				m_reset_pulse = true;
 				break;
 			}
 			case pad_button::dpad_down:
@@ -489,10 +494,10 @@ namespace rsx
 					if (m_grid[get_cell_geometry(current_index).first].enabled)
 					{
 						update_selection_by_index(current_index);
-						m_update = true;
 						break;
 					}
 				}
+				m_reset_pulse = true;
 				break;
 			}
 			case pad_button::dpad_up:
@@ -504,10 +509,10 @@ namespace rsx
 					if (m_grid[get_cell_geometry(current_index).first].enabled)
 					{
 						update_selection_by_index(current_index);
-						m_update = true;
 						break;
 					}
 				}
+				m_reset_pulse = true;
 				break;
 			}
 			case pad_button::select:
@@ -517,7 +522,7 @@ namespace rsx
 			}
 			case pad_button::start:
 			{
-				Close(true);
+				Close(CELL_OSKDIALOG_CLOSE_CONFIRM);
 				break;
 			}
 			case pad_button::triangle:
@@ -533,11 +538,12 @@ namespace rsx
 			case pad_button::cross:
 			{
 				on_accept();
+				m_reset_pulse = true;
 				break;
 			}
 			case pad_button::circle:
 			{
-				Close(false);
+				Close(CELL_OSKDIALOG_CLOSE_CANCEL);
 				break;
 			}
 			case pad_button::L2:
@@ -553,11 +559,16 @@ namespace rsx
 			default:
 				break;
 			}
+
+			if (m_reset_pulse)
+			{
+				m_update = true;
+			}
 		}
 
 		void osk_dialog::on_text_changed()
 		{
-			const auto ws = u32string_to_utf16(m_preview.text);
+			const auto ws = u32string_to_utf16(m_preview.value);
 			const auto length = (ws.length() + 1) * sizeof(char16_t);
 			memcpy(osk_text, ws.c_str(), length);
 
@@ -565,6 +576,9 @@ namespace rsx
 			{
 				on_osk_input_entered();
 			}
+
+			// Muted contrast for placeholder text
+			m_preview.fore_color.a = m_preview.value.empty() ? 0.5f : 1.f;
 
 			m_update = true;
 		}
@@ -577,20 +591,19 @@ namespace rsx
 			}
 
 			// Append to output text
-			if (m_preview.text == get_placeholder())
+			if (m_preview.value.empty())
 			{
-				m_preview.caret_position = ::narrow<u16>(str.length());
-				m_preview.set_text(str);
-				m_preview.fore_color.a = 1.f;
+				m_preview.caret_position = str.length();
+				m_preview.set_unicode_text(str);
 			}
 			else
 			{
-				if (m_preview.text.length() == char_limit)
+				if (m_preview.value.length() == char_limit)
 				{
 					return;
 				}
 
-				const auto new_str = m_preview.text + str;
+				const auto new_str = m_preview.value + str;
 				if (new_str.length() <= char_limit)
 				{
 					m_preview.insert_text(str);
@@ -639,12 +652,6 @@ namespace rsx
 		void osk_dialog::on_backspace(const std::u32string&)
 		{
 			m_preview.erase();
-
-			if (m_preview.text.empty())
-			{
-				m_preview.set_text(get_placeholder());
-			}
-
 			on_text_changed();
 		}
 
@@ -660,7 +667,7 @@ namespace rsx
 			}
 		}
 
-		std::u32string osk_dialog::get_placeholder()
+		std::u32string osk_dialog::get_placeholder() const
 		{
 			const localized_string_id id = m_password_mode
 				? localized_string_id::RSX_OVERLAYS_OSK_DIALOG_ENTER_PASSWORD
@@ -709,10 +716,16 @@ namespace rsx
 				m_label.back_color = { 0.f, 0.f, 0.f, 0.f };
 				m_label.set_padding(0, 0, 10, 0);
 
+				if (m_reset_pulse)
+				{
+					// Reset the pulse slightly above 0 falling on each user interaction
+					m_key_pulse_cache.set_sinus_offset(0.6f);
+				}
+
 				for (const auto& c : m_grid)
 				{
-					u16 x = u16(c.pos.x);
-					u16 y = u16(c.pos.y);
+					u16 x = static_cast<u16>(c.pos.x);
+					u16 y = static_cast<u16>(c.pos.y);
 					u16 w = cell_size_x;
 					u16 h = cell_size_y;
 
@@ -736,15 +749,15 @@ namespace rsx
 
 						if (output_count)
 						{
-							const u16 offset_x = u16(buffered_cell_count * cell_size_x);
-							const u16 full_width = u16(offset_x + cell_size_x);
+							const u16 offset_x = static_cast<u16>(buffered_cell_count * cell_size_x);
+							const u16 full_width = static_cast<u16>(offset_x + cell_size_x);
 
 							m_label.set_pos(x - offset_x, y);
 							m_label.set_size(full_width, cell_size_y);
 							m_label.fore_color = c.enabled ? normal_fore_color : disabled_fore_color;
 
 							const auto _z = (selected_z < output_count) ? selected_z : output_count - 1u;
-							m_label.set_text(c.outputs[m_selected_charset][_z]);
+							m_label.set_unicode_text(c.outputs[m_selected_charset][_z]);
 							m_label.align_text(rsx::overlays::overlay_element::text_align::center);
 							render_label = true;
 						}
@@ -767,16 +780,19 @@ namespace rsx
 					tmp.set_pos(x, y);
 					tmp.set_size(w, h);
 					tmp.pulse_effect_enabled = c.selected;
+					tmp.pulse_sinus_offset = m_key_pulse_cache.pulse_sinus_offset;
 
 					m_cached_resource.add(tmp.get_compiled());
 
 					if (render_label)
 					{
 						m_label.pulse_effect_enabled = c.selected;
+						m_label.pulse_sinus_offset = m_key_pulse_cache.pulse_sinus_offset;
 						m_cached_resource.add(m_label.get_compiled());
 					}
 				}
 
+				m_reset_pulse = false;
 				m_update = false;
 			}
 
@@ -784,17 +800,22 @@ namespace rsx
 			return m_cached_resource;
 		}
 
-		void osk_dialog::Create(const std::string& title, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel)
+		struct osk_dialog_thread
+		{
+			static constexpr auto thread_name = "OSK Thread"sv;
+		};
+
+		void osk_dialog::Create(const std::string& /*title*/, const std::u16string& message, char16_t* init_text, u32 charlimit, u32 prohibit_flags, u32 panel_flag, u32 first_view_panel)
 		{
 			state = OskDialogState::Open;
 			flags = prohibit_flags;
 			char_limit = charlimit;
 
-			callback_t shift_cb = std::bind(&osk_dialog::on_shift, this, std::placeholders::_1);
-			callback_t layer_cb = std::bind(&osk_dialog::on_layer, this, std::placeholders::_1);
-			callback_t space_cb = std::bind(&osk_dialog::on_space, this, std::placeholders::_1);
-			callback_t delete_cb = std::bind(&osk_dialog::on_backspace, this, std::placeholders::_1);
-			callback_t enter_cb = std::bind(&osk_dialog::on_enter, this, std::placeholders::_1);
+			const callback_t shift_cb  = [this](const std::u32string& text){ on_shift(text); };
+			const callback_t layer_cb  = [this](const std::u32string& text){ on_layer(text); };
+			const callback_t space_cb  = [this](const std::u32string& text){ on_space(text); };
+			const callback_t delete_cb = [this](const std::u32string& text){ on_backspace(text); };
+			const callback_t enter_cb  = [this](const std::u32string& text){ on_enter(text); };
 
 			if (panel_flag & CELL_OSKDIALOG_PANELMODE_PASSWORD)
 			{
@@ -802,8 +823,6 @@ namespace rsx
 				// first_view_panel can be ignored
 
 				add_panel(osk_panel_password(shift_cb, layer_cb, space_cb, delete_cb, enter_cb));
-
-				// TODO: hide entered text with *
 
 				m_password_mode = true;
 			}
@@ -994,7 +1013,7 @@ namespace rsx
 				}
 
 				// Get initial panel based on first_view_panel
-				for (size_t i = 0; i < m_panels.size(); ++i)
+				for (usz i = 0; i < m_panels.size(); ++i)
 				{
 					if (first_view_panel == m_panels[i].osk_panel_mode)
 					{
@@ -1015,11 +1034,19 @@ namespace rsx
 
 			update_panel();
 
-			g_fxo->init<named_thread>("OSK Thread", [this, tbit = alloc_thread_bit()]
+			auto& osk_thread = g_fxo->get<named_thread<osk_dialog_thread>>();
+
+			const auto notify = std::make_shared<atomic_t<bool>>(false);
+
+			osk_thread([&, notify]()
 			{
+				const u64 tbit = alloc_thread_bit();
 				g_thread_bit = tbit;
 
-				if (auto error = run_input_loop())
+				*notify = true;
+				notify->notify_one();
+
+				if (const auto error = run_input_loop())
 				{
 					rsx_log.error("Osk input loop exited with error code=%d", error);
 				}
@@ -1027,6 +1054,11 @@ namespace rsx
 				thread_bits &= ~tbit;
 				thread_bits.notify_all();
 			});
+
+			while (osk_thread < thread_state::errored && !*notify)
+			{
+				notify->wait(false, atomic_wait_timeout{1'000'000});
+			}
 		}
 	}
 }

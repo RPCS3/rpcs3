@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "NullGSRender.h"
 
 u64 NullGSRender::get_cycles()

@@ -1,18 +1,15 @@
-﻿#pragma once
+#pragma once
 #include "overlay_animation.h"
 #include "overlay_controls.h"
 
-#include "../../../Utilities/Thread.h"
-#include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
 
+#include "Utilities/mutex.h"
 #include "Utilities/Timer.h"
 
-#include <list>
-#include <thread>
+#include <mutex>
+#include <set>
 
-// Utils
-extern u64 get_system_time();
 
 // Definition of user interface implementations
 namespace rsx
@@ -22,8 +19,8 @@ namespace rsx
 		// Non-interactable UI element
 		struct overlay
 		{
-			u32 uid = UINT32_MAX;
-			u32 type_index = UINT32_MAX;
+			u32 uid = umax;
+			u32 type_index = umax;
 
 			u16 virtual_width = 1280;
 			u16 virtual_height = 720;
@@ -36,7 +33,7 @@ namespace rsx
 			virtual void update() {}
 			virtual compiled_resource get_compiled() = 0;
 
-			void refresh();
+			void refresh() const;
 		};
 
 		// Interactable UI element
@@ -73,7 +70,10 @@ namespace rsx
 
 		protected:
 			Timer input_timer;
+			std::set<u8> auto_repeat_buttons = { pad_button::dpad_up, pad_button::dpad_down, pad_button::dpad_left, pad_button::dpad_right };
 			atomic_t<bool> exit = false;
+			atomic_t<bool> m_interactive = false;
+			atomic_t<bool> m_stop_pad_interception = false;
 			atomic_t<u64> thread_bits = 0;
 
 			static thread_local u64 g_thread_bit;
@@ -85,14 +85,13 @@ namespace rsx
 		public:
 			s32 return_code = 0; // CELL_OK
 
-		public:
 			void update() override {}
 
 			compiled_resource get_compiled() override = 0;
 
 			virtual void on_button_pressed(pad_button /*button_press*/) {}
 
-			void close(bool use_callback, bool stop_pad_interception);
+			virtual void close(bool use_callback, bool stop_pad_interception);
 
 			s32 run_input_loop();
 		};

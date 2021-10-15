@@ -1,13 +1,16 @@
 #pragma once
 
-#include "Utilities/BEType.h"
+#include "Loader/PSF.h"
+#include "util/endian.hpp"
+#include "util/types.hpp"
+#include "Utilities/File.h"
 #include <sstream>
 #include <iomanip>
 
 // Constants
 enum
 {
-	PKG_HEADER_SIZE  = 0xC0, //sizeof(pkg_header) + sizeof(pkg_unk_checksum)
+	PKG_HEADER_SIZE  = 0xC0, // sizeof(pkg_header) + sizeof(pkg_unk_checksum)
 	PKG_HEADER_SIZE2 = 0x280,
 };
 
@@ -32,6 +35,8 @@ enum : u32
 
 	PKG_FILE_ENTRY_OVERWRITE      = 0x80000000,
 	PKG_FILE_ENTRY_PSP            = 0x10000000,
+
+	PKG_FILE_ENTRY_KNOWN_BITS     = 0xff | PKG_FILE_ENTRY_PSP | PKG_FILE_ENTRY_OVERWRITE,
 };
 
 enum : u32
@@ -96,7 +101,7 @@ struct PKGExtHeader
 	be_t<u32> ext_hdr_size;                     // Extended header size. ex: 0x40
 	be_t<u32> ext_data_size;                    // ex: 0x180
 	be_t<u32> main_and_ext_headers_hmac_offset; // ex: 0x100
-	be_t<u32> metadata_header_hmac_offset;      // ex: 0x360, 0x390, 0x490 
+	be_t<u32> metadata_header_hmac_offset;      // ex: 0x360, 0x390, 0x490
 	be_t<u64> tail_offset;                      // tail size seams to be always 0x1A0
 	be_t<u32> padding1;
 	be_t<u32> pkg_key_id;                       // Id of the AES key used for decryption. PSP = 0x1, PSVita = 0xC0000002, PSM = 0xC0000004
@@ -118,16 +123,16 @@ struct PKGEntry
 struct PKGMetaData
 {
 private:
-	static std::string to_hex_string(u8 buf[], size_t size)
+	static std::string to_hex_string(u8 buf[], usz size)
 	{
 		std::stringstream sstream;
-		for (size_t i = 0; i < size; i++)
+		for (usz i = 0; i < size; i++)
 		{
 			sstream << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(buf[i]);
 		}
 		return sstream.str();
 	}
-	static std::string to_hex_string(u8 buf[], size_t size, size_t dotpos)
+	static std::string to_hex_string(u8 buf[], usz size, usz dotpos)
 	{
 		std::string result = to_hex_string(buf, size);
 		if (result.size() > dotpos)
@@ -162,7 +167,7 @@ public:
 			make_package_npdrm_ver = to_hex_string(data.make_package_npdrm_ver, sizeof(data.make_package_npdrm_ver));
 			version = to_hex_string(data.version, sizeof(data.version), 2);
 		}
-		std::string to_string()
+		std::string to_string() const
 		{
 			return fmt::format("make package npdrm version: %s, version: %s", make_package_npdrm_ver, version);
 		}
@@ -190,7 +195,7 @@ public:
 			version = to_hex_string(data.version, sizeof(data.version), 2);
 			app_version = to_hex_string(data.app_version, sizeof(data.app_version), 2);
 		}
-		std::string to_string()
+		std::string to_string() const
 		{
 			return fmt::format("unk: %s, firmware version: %s, version: %s, app version: %s",
 				unk, firmware_version, version, app_version);
@@ -208,7 +213,7 @@ public:
 		be_t<u32> size{ 0 };
 		u8 sha256[32]{ 0 };
 
-		std::string to_string()
+		std::string to_string() const
 		{
 			return fmt::format("offset: 0x%x, size: 0x%x, sha256: 0x%x", offset, size, sha256);
 		}
@@ -223,7 +228,7 @@ public:
 		u8 unk_2[8]{ 0 };
 		u8 param_digest[32]{ 0 };       // SHA256 of param_data. Called ParamDigest: This is sha256 digest of param.sfo.
 
-		std::string to_string()
+		std::string to_string() const
 		{
 			return fmt::format("param_offset: 0x%x, param_size: 0x%x, unk_1: 0x%x, psp2_system_ver: 0x%x, unk_2: 0x%x, param_digest: 0x%x",
 				param_offset, param_size, unk_1, psp2_system_ver, unk_2, param_digest);
@@ -237,7 +242,7 @@ public:
 		u8 unk[32]{ 0 };
 		u8 unknown_data_sha256[32]{ 0 };
 
-		std::string to_string()
+		std::string to_string() const
 		{
 			return fmt::format("unknown_data_offset: 0x%x, unknown_data_size: 0x%x, unk: 0x%x, unknown_data_sha256: 0x%x",
 				unknown_data_offset, unknown_data_size, unk, unknown_data_sha256);
@@ -254,7 +259,7 @@ public:
 		u8 unk_3[8]{ 0 };
 		u8 entirety_digest[32]{ 0 };
 
-		std::string to_string()
+		std::string to_string() const
 		{
 			return fmt::format("entirety_data_offset: 0x%x, entirety_data_size: 0x%x, flags: 0x%x, unk_1: 0x%x, unk_2: 0x%x, unk_3: 0x%x, entirety_digest: 0x%x",
 				entirety_data_offset, entirety_data_size, flags, unk_1, unk_2, unk_3, entirety_digest);
@@ -267,7 +272,7 @@ public:
 		be_t<u32> psf_builder_version{ 0 };
 		u8 padding[32]{ 0 };
 
-		std::string to_string()
+		std::string to_string() const
 		{
 			return fmt::format("publishing_tools_version: 0x%x, psf_builder_version: 0x%x, padding: 0x%x",
 				publishing_tools_version, psf_builder_version, padding);
@@ -281,7 +286,7 @@ public:
 		u8 unk[16]{ 0 };
 		u8 self_sha256[32]{ 0 };
 
-		std::string to_string()
+		std::string to_string() const
 		{
 			return fmt::format("self_info_offset: 0x%x, self_info_size: 0x%x, unk: 0x%x, self_sha256: 0x%x",
 				self_info_offset, self_info_size, unk, self_sha256);
@@ -302,30 +307,31 @@ public:
 	package_reader(const std::string& path);
 	~package_reader();
 
-	package_error check_target_app_version();
+	bool is_valid() const { return m_is_valid; }
+	package_error check_target_app_version() const;
 	bool extract_data(atomic_t<double>& sync);
+	psf::registry get_psf() const { return m_psf; }
 
 private:
 	bool read_header();
 	bool read_metadata();
+	bool read_param_sfo();
 	bool decrypt_data();
 	void archive_seek(const s64 new_offset, const fs::seek_mode damode = fs::seek_set);
 	u64 archive_read(void* data_ptr, const u64 num_bytes);
 	u64 decrypt(u64 offset, u64 size, const uchar* key);
 
-	const std::size_t BUF_SIZE = 8192 * 1024; // 8 MB
+	const usz BUF_SIZE = 8192 * 1024; // 8 MB
 
 	bool m_is_valid = false;
 
-	std::string m_path;
-	std::string install_dir;
-	std::vector<fs::file> filelist;
-	size_t cur_file = 0;
-	u64 cur_offset = 0;
-	u64 cur_file_offset = 0;
-	std::unique_ptr<u128[]> buf;
-	std::array<uchar, 16> dec_key{};
+	std::string m_path{};
+	std::string m_install_dir{};
+	fs::file m_file{};
+	std::unique_ptr<u128[]> m_buf{};
+	std::array<uchar, 16> m_dec_key{};
 
-	PKGHeader header{};
-	PKGMetaData metadata{};
+	PKGHeader m_header{};
+	PKGMetaData m_metadata{};
+	psf::registry m_psf{};
 };

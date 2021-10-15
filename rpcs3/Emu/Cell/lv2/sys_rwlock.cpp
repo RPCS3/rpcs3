@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_rwlock.h"
 
 #include "Emu/IdManager.h"
@@ -8,8 +8,6 @@
 #include "Emu/Cell/PPUThread.h"
 
 LOG_CHANNEL(sys_rwlock);
-
-template<> DECLARE(ipc_manager<lv2_rwlock, u64>::g_ipc) {};
 
 error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<sys_rwlock_attribute_t> attr)
 {
@@ -32,9 +30,11 @@ error_code sys_rwlock_create(ppu_thread& ppu, vm::ptr<u32> rw_lock_id, vm::ptr<s
 		return CELL_EINVAL;
 	}
 
-	if (auto error = lv2_obj::create<lv2_rwlock>(_attr.pshared, _attr.ipc_key, _attr.flags, [&]
+	const u64 ipc_key = lv2_obj::get_key(_attr);
+
+	if (auto error = lv2_obj::create<lv2_rwlock>(_attr.pshared, ipc_key, _attr.flags, [&]
 	{
-		return std::make_shared<lv2_rwlock>(protocol, _attr.pshared, _attr.ipc_key, _attr.flags, _attr.name_u64);
+		return std::make_shared<lv2_rwlock>(protocol, ipc_key, _attr.name_u64);
 	}))
 	{
 		return error;
@@ -57,6 +57,7 @@ error_code sys_rwlock_destroy(ppu_thread& ppu, u32 rw_lock_id)
 			return CELL_EBUSY;
 		}
 
+		lv2_obj::on_id_destroy(rw, rw.key);
 		return {};
 	});
 
@@ -127,11 +128,16 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	ppu.gpr[3] = CELL_OK;
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state))
 		{
-			return 0;
+			return {};
+		}
+
+		if (state & cpu_flag::signal)
+		{
+			break;
 		}
 
 		if (timeout)
@@ -141,7 +147,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return 0;
+					return {};
 				}
 
 				std::lock_guard lock(rwlock->mutex);
@@ -157,7 +163,7 @@ error_code sys_rwlock_rlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 
@@ -259,7 +265,7 @@ error_code sys_rwlock_runlock(ppu_thread& ppu, u32 rw_lock_id)
 			{
 				rwlock->owner = 0;
 
-				verify(HERE), rwlock->rq.empty();
+				ensure(rwlock->rq.empty());
 			}
 		}
 	}
@@ -329,11 +335,16 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 
 	ppu.gpr[3] = CELL_OK;
 
-	while (!ppu.state.test_and_reset(cpu_flag::signal))
+	while (auto state = ppu.state.fetch_sub(cpu_flag::signal))
 	{
-		if (ppu.is_stopped())
+		if (is_stopped(state))
 		{
-			return 0;
+			return {};
+		}
+
+		if (state & cpu_flag::signal)
+		{
+			break;
 		}
 
 		if (timeout)
@@ -343,7 +354,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 				// Wait for rescheduling
 				if (ppu.check_state())
 				{
-					return 0;
+					return {};
 				}
 
 				std::lock_guard lock(rwlock->mutex);
@@ -381,7 +392,7 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 		}
 		else
 		{
-			thread_ctrl::wait();
+			thread_ctrl::wait_on(ppu.state, state);
 		}
 	}
 

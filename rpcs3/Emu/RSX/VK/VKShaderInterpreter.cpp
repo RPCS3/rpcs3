@@ -1,10 +1,12 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "VKShaderInterpreter.h"
 #include "VKVertexProgram.h"
 #include "VKFragmentProgram.h"
 #include "VKGSRender.h"
-#include "../Common/GLSLCommon.h"
-#include "../Common/ShaderInterpreter.h"
+
+#include "../Program/GLSLCommon.h"
+#include "../Program/ShaderInterpreter.h"
+#include "../rsx_methods.h"
 
 namespace vk
 {
@@ -51,7 +53,7 @@ namespace vk
 		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
 		vk::glsl::program_input in;
 
-		in.location = binding_table.vertex_params_bind_slot;;
+		in.location = binding_table.vertex_params_bind_slot;
 		in.domain = ::glsl::glsl_vertex_program;
 		in.name = "VertexContextBuffer";
 		in.type = vk::glsl::input_type_uniform_buffer;
@@ -82,7 +84,7 @@ namespace vk
 
 	glsl::shader* shader_interpreter::build_fs(u64 compiler_options)
 	{
-		::glsl::shader_properties properties{};
+		[[maybe_unused]] ::glsl::shader_properties properties{};
 		properties.domain = ::glsl::program_domain::glsl_fragment_program;
 		properties.require_depth_conversion = true;
 		properties.require_wpos = true;
@@ -230,7 +232,7 @@ namespace vk
 		const auto& binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
 		std::vector<VkDescriptorSetLayoutBinding> bindings(binding_table.total_descriptor_bindings);
 
-		uint32_t idx = 0;
+		u32 idx = 0;
 
 		// Vertex stream, one stream for cacheable data, one stream for transient data. Third stream contains vertex layout info
 		for (int i = 0; i < 3; i++)
@@ -355,13 +357,7 @@ namespace vk
 			push_constants[0].size = 20;
 		}
 
-		VkDescriptorSetLayoutCreateInfo infos = {};
-		infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		infos.pBindings = bindings.data();
-		infos.bindingCount = static_cast<uint32_t>(bindings.size());
-
-		VkDescriptorSetLayout set_layout;
-		CHECK_RESULT(vkCreateDescriptorSetLayout(dev, &infos, nullptr, &set_layout));
+		const auto set_layout = vk::descriptors::create_layout(bindings);
 
 		VkPipelineLayoutCreateInfo layout_info = {};
 		layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -377,13 +373,15 @@ namespace vk
 
 	void shader_interpreter::create_descriptor_pools(const vk::render_device& dev)
 	{
-		std::vector<VkDescriptorPoolSize> sizes;
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * DESCRIPTOR_MAX_DRAW_CALLS });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * DESCRIPTOR_MAX_DRAW_CALLS });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 68 * DESCRIPTOR_MAX_DRAW_CALLS });
-		sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 * DESCRIPTOR_MAX_DRAW_CALLS });
+		const auto max_draw_calls = dev.get_descriptor_max_draw_calls();
 
-		m_descriptor_pool.create(dev, sizes.data(), ::size32(sizes), DESCRIPTOR_MAX_DRAW_CALLS, 2);
+		std::vector<VkDescriptorPoolSize> sizes;
+		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER , 6 * max_draw_calls });
+		sizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , 3 * max_draw_calls });
+		sizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER , 68 * max_draw_calls });
+		sizes.push_back({ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 3 * max_draw_calls });
+
+		m_descriptor_pool.create(dev, sizes.data(), ::size32(sizes), max_draw_calls, 2);
 	}
 
 	void shader_interpreter::init(const vk::render_device& dev)
@@ -473,7 +471,7 @@ namespace vk
 		vp.scissorCount = 1;
 
 		VkPipelineMultisampleStateCreateInfo ms = properties.state.ms;
-		verify("Multisample state mismatch!" HERE), ms.rasterizationSamples == VkSampleCountFlagBits((properties.renderpass_key >> 16) & 0xF);
+		ensure(ms.rasterizationSamples == VkSampleCountFlagBits((properties.renderpass_key >> 16) & 0xF)); // "Multisample state mismatch!"
 		if (ms.rasterizationSamples != VK_SAMPLE_COUNT_1_BIT)
 		{
 			// Update the sample mask pointer
@@ -484,7 +482,6 @@ namespace vk
 		VkPipelineColorBlendStateCreateInfo cs = properties.state.cs;
 		cs.pAttachments = properties.state.att_state;
 
-		VkPipeline pipeline;
 		VkGraphicsPipelineCreateInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		info.pVertexInputState = &vi;
@@ -502,36 +499,23 @@ namespace vk
 		info.basePipelineHandle = VK_NULL_HANDLE;
 		info.renderPass = vk::get_renderpass(m_device, properties.renderpass_key);
 
-		CHECK_RESULT(vkCreateGraphicsPipelines(m_device, nullptr, 1, &info, NULL, &pipeline));
-		return new vk::glsl::program(m_device, pipeline, m_shared_pipeline_layout, m_vs_inputs, m_fs_inputs);
+		auto compiler = vk::get_pipe_compiler();
+		auto program = compiler->compile(info, m_shared_pipeline_layout, vk::pipe_compiler::COMPILE_INLINE, {}, m_vs_inputs, m_fs_inputs);
+		return program.release();
 	}
 
-	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, VkDescriptorSet descriptor_set)
+	void shader_interpreter::update_fragment_textures(const std::array<VkDescriptorImageInfo, 68>& sampled_images, vk::descriptor_set &set)
 	{
 		const VkDescriptorImageInfo* texture_ptr = sampled_images.data();
-		for (uint32_t i = 0, binding = m_fragment_textures_start; i < 4; ++i, ++binding, texture_ptr += 16)
+		for (u32 i = 0, binding = m_fragment_textures_start; i < 4; ++i, ++binding, texture_ptr += 16)
 		{
-			const VkWriteDescriptorSet descriptor_writer =
-			{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,    // sType
-				nullptr,                                   // pNext
-				descriptor_set,                            // dstSet
-				binding,                                   // dstBinding
-				0,                                         // dstArrayElement
-				16,                                        // descriptorCount
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, // descriptorType
-				texture_ptr,                               // pImageInfo
-				nullptr,                                   // pBufferInfo
-				nullptr                                    // pTexelBufferView
-			};
-
-			vkUpdateDescriptorSets(m_device, 1, &descriptor_writer, 0, nullptr);
+			set.push(texture_ptr, 16, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding);
 		}
 	}
 
 	VkDescriptorSet shader_interpreter::allocate_descriptor_set()
 	{
-		if (m_used_descriptors == DESCRIPTOR_MAX_DRAW_CALLS)
+		if (!m_descriptor_pool.can_allocate(1u, m_used_descriptors))
 		{
 			m_descriptor_pool.reset(0);
 			m_used_descriptors = 0;
@@ -619,12 +603,12 @@ namespace vk
 		return prog == m_current_interpreter;
 	}
 
-	uint32_t shader_interpreter::get_vertex_instruction_location() const
+	u32 shader_interpreter::get_vertex_instruction_location() const
 	{
 		return m_vertex_instruction_start;
 	}
 
-	uint32_t shader_interpreter::get_fragment_instruction_location() const
+	u32 shader_interpreter::get_fragment_instruction_location() const
 	{
 		return m_fragment_instruction_start;
 	}

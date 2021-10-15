@@ -16,8 +16,6 @@
         <file>Icons/exit_fullscreen.png</file>
         <file>Icons/open.png</file>
         <file>Icons/custom_config.png</file>
-        <file>Icons/custom_config_2.png</file>
-        <file>Icons/controllers_2.png</file>
         <file>Icons/combo_config_bordered.png</file>
     </qresource>
 </RCC>

@@ -1,18 +1,14 @@
 #pragma once
 
 // Copyright (C) 2014       Hykem <hykem@hotmail.com>
-// Licensed under the terms of the GNU GPL, version 3
-// http://www.gnu.org/licenses/gpl-3.0.txt
+// Licensed under the terms of the GNU GPL, version 2.0 or later versions.
+// http://www.gnu.org/licenses/gpl-2.0.txt
 
-#include "../../Utilities/types.h"
-
-#define MAX_PATH 4096
+#include "util/types.hpp"
 
 #include <stdlib.h>
-#include "aes.h"
-#include "sha1.h"
-#include "lz.h"
-#include "ec.h"
+
+enum { CRYPTO_MAX_PATH = 4096 };
 
 // Auxiliary functions (endian swap, xor, and file name).
 inline u16 swap16(u16 i)
@@ -42,7 +38,7 @@ inline u64 swap64(u64 i)
 #endif
 }
 
-char* extract_file_name(const char* file_path, char real_file_name[MAX_PATH]);
+char* extract_file_name(const char* file_path, char real_file_name[CRYPTO_MAX_PATH]);
 
 // Hex string conversion auxiliary functions.
 u64 hex_to_u64(const char* hex_str);
@@ -56,3 +52,10 @@ bool hmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int i
 void hmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash);
 bool cmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash, int hash_len);
 void cmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, int in_len, unsigned char *hash);
+void mbedtls_zeroize(void *v, size_t n);
+
+// SC passphrase crypto
+
+int vtrm_decrypt(int type, u8* iv, u8* input, u8* output);
+int vtrm_decrypt_master(s64 laid, s64 paid, u8* iv, u8* input, u8* output);
+int vtrm_decrypt_with_portability(int type, u8* iv, u8* input, u8* output);

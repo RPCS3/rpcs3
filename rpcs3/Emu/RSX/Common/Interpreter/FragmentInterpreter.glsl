@@ -308,7 +308,7 @@ vec4 _texture(in vec4 coord, float bias)
 
 	ur1 = ur0 + ur0;
 	const uint type = bitfieldExtract(texture_control, int(ur1), 2);
-	coord.xy *= texture_parameters[ur0].scale;
+	coord.xyz = (coord.xyz + texture_parameters[ur0].scale_bias.w) * texture_parameters[ur0].scale_bias.xyz;
 
 	switch (type)
 	{
@@ -340,7 +340,7 @@ vec4 _textureLod(in vec4 coord, float lod)
 
 	ur1 = ur0 + ur0;
 	const uint type = bitfieldExtract(texture_control, int(ur1), 2);
-	coord.xy *= texture_parameters[ur0].scale;
+	coord.xyz = (coord.xyz + texture_parameters[ur0].scale_bias.w) * texture_parameters[ur0].scale_bias.xyz;
 
 	switch (type)
 	{

@@ -1,6 +1,8 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "shader_loading_dialog_native.h"
 #include "../overlay_message_dialog.h"
+#include "../../GSRender.h"
+#include "Emu/Cell/ErrorCodes.h"
 
 namespace rsx
 {
@@ -15,7 +17,7 @@ namespace rsx
 		type.disable_cancel = true;
 		type.progress_bar_count = 2;
 
-		dlg = g_fxo->get<rsx::overlays::display_manager>()->create<rsx::overlays::message_dialog>(!!g_cfg.video.shader_preloading_dialog.use_custom_background);
+		dlg = g_fxo->get<rsx::overlays::display_manager>().create<rsx::overlays::message_dialog>(true);
 		dlg->progress_bar_set_taskbar_index(-1);
 		dlg->show(false, msg, type, [](s32 status)
 		{
@@ -33,6 +35,12 @@ namespace rsx
 	void shader_loading_dialog_native::inc_value(u32 index, u32 value)
 	{
 		dlg->progress_bar_increment(index, static_cast<f32>(value));
+		owner->flip({});
+	}
+
+	void shader_loading_dialog_native::set_value(u32 index, u32 value)
+	{
+		dlg->progress_bar_set_value(index, static_cast<f32>(value));
 		owner->flip({});
 	}
 

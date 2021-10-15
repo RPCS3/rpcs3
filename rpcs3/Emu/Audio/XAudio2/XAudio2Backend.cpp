@@ -1,11 +1,10 @@
-﻿#ifndef _WIN32
+#ifndef _WIN32
 #error "XAudio2 can only be built on Windows."
 #endif
 
+#include <algorithm>
 #include "util/logs.hpp"
-#include "Utilities/StrFmt.h"
 #include "Emu/System.h"
-#include "Emu/system_config.h"
 
 #include "XAudio2Backend.h"
 #include <Windows.h>
@@ -22,9 +21,14 @@ XAudio2Backend::XAudio2Backend()
 
 	// In order to prevent errors on CreateMasteringVoice, apparently we need CoInitializeEx according to:
 	// https://docs.microsoft.com/en-us/windows/win32/api/xaudio2fx/nf-xaudio2fx-xaudio2createvolumemeter
-	CoInitializeEx(NULL, COINIT_MULTITHREADED);
+	HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+	if (FAILED(hr) && hr != RPC_E_CHANGED_MODE)
+	{
+		XAudio.error("CoInitializeEx() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
+		return;
+	}
 
-	HRESULT hr = XAudio2Create(instance.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
+	hr = XAudio2Create(instance.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
 	if (FAILED(hr))
 	{
 		XAudio.error("XAudio2Create() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
@@ -65,11 +69,10 @@ void XAudio2Backend::Play()
 {
 	AUDIT(m_source_voice != nullptr);
 
-	HRESULT hr = m_source_voice->Start();
+	const HRESULT hr = m_source_voice->Start();
 	if (FAILED(hr))
 	{
-		XAudio.error("Start() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		Emu.Pause();
+		XAudio.fatal("Start() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 	}
 }
 
@@ -83,19 +86,16 @@ void XAudio2Backend::Pause()
 {
 	AUDIT(m_source_voice != nullptr);
 
-	HRESULT hr = m_source_voice->Stop();
+	const HRESULT hr = m_source_voice->Stop();
 	if (FAILED(hr))
 	{
-		XAudio.error("Stop() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		Emu.Pause();
+		XAudio.fatal("Stop() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 	}
 }
 
 void XAudio2Backend::Open(u32 /* num_buffers */)
 {
-	HRESULT hr;
-
-	WAVEFORMATEX waveformatex;
+	WAVEFORMATEX waveformatex{};
 	waveformatex.wFormatTag = m_convert_to_u16 ? WAVE_FORMAT_PCM : WAVE_FORMAT_IEEE_FLOAT;
 	waveformatex.nChannels = m_channels;
 	waveformatex.nSamplesPerSec = m_sampling_rate;
@@ -104,11 +104,10 @@ void XAudio2Backend::Open(u32 /* num_buffers */)
 	waveformatex.wBitsPerSample = m_sample_size * 8;
 	waveformatex.cbSize = 0;
 
-	hr = m_xaudio2_instance->CreateSourceVoice(&m_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO);
+	const HRESULT hr = m_xaudio2_instance->CreateSourceVoice(&m_source_voice, &waveformatex, 0, XAUDIO2_DEFAULT_FREQ_RATIO);
 	if (FAILED(hr))
 	{
-		XAudio.error("CreateSourceVoice() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		Emu.Pause();
+		XAudio.fatal("CreateSourceVoice() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		return;
 	}
 
@@ -139,8 +138,7 @@ bool XAudio2Backend::AddData(const void* src, u32 num_samples)
 		return false;
 	}
 
-	XAUDIO2_BUFFER buffer;
-
+	XAUDIO2_BUFFER buffer{};
 	buffer.AudioBytes = num_samples * m_sample_size;
 	buffer.Flags = 0;
 	buffer.LoopBegin = XAUDIO2_NO_LOOP_REGION;
@@ -151,11 +149,10 @@ bool XAudio2Backend::AddData(const void* src, u32 num_samples)
 	buffer.PlayBegin = 0;
 	buffer.PlayLength = AUDIO_BUFFER_SAMPLES;
 
-	HRESULT hr = m_source_voice->SubmitSourceBuffer(&buffer);
+	const HRESULT hr = m_source_voice->SubmitSourceBuffer(&buffer);
 	if (FAILED(hr))
 	{
-		XAudio.error("AddData() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		Emu.Pause();
+		XAudio.fatal("AddData() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		return false;
 	}
 
@@ -166,11 +163,10 @@ void XAudio2Backend::Flush()
 {
 	AUDIT(m_source_voice != nullptr);
 
-	HRESULT hr = m_source_voice->FlushSourceBuffers();
+	const HRESULT hr = m_source_voice->FlushSourceBuffers();
 	if (FAILED(hr))
 	{
-		XAudio.error("FlushSourceBuffers() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		Emu.Pause();
+		XAudio.fatal("FlushSourceBuffers() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 	}
 }
 
@@ -189,11 +185,10 @@ f32 XAudio2Backend::SetFrequencyRatio(f32 new_ratio)
 {
 	new_ratio = std::clamp(new_ratio, XAUDIO2_MIN_FREQ_RATIO, XAUDIO2_DEFAULT_FREQ_RATIO);
 
-	HRESULT hr = m_source_voice->SetFrequencyRatio(new_ratio);
+	const HRESULT hr = m_source_voice->SetFrequencyRatio(new_ratio);
 	if (FAILED(hr))
 	{
-		XAudio.error("SetFrequencyRatio() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
-		Emu.Pause();
+		XAudio.fatal("SetFrequencyRatio() failed: %s (0x%08x)", std::system_category().message(hr), static_cast<u32>(hr));
 		return 1.0f;
 	}
 

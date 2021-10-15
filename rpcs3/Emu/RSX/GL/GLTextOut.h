@@ -1,8 +1,11 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "GLHelpers.h"
 #include "../Common/TextGlyphs.h"
+#include <string>
+#include <vector>
+#include <unordered_map>
 
 namespace gl
 {
@@ -21,6 +24,8 @@ namespace gl
 
 		bool initialized = false;
 		bool enabled = false;
+
+		f32 m_scale = 1.0f;
 
 		void init_program()
 		{
@@ -64,7 +69,7 @@ namespace gl
 			m_program.link();
 		}
 
-		void load_program(float scale_x, float scale_y, float *offsets, size_t nb_offsets, color4f color)
+		void load_program(float scale_x, float scale_y, float *offsets, usz nb_offsets, color4f color)
 		{
 			float scale[] = { scale_x, scale_y };
 
@@ -88,7 +93,7 @@ namespace gl
 			GlyphManager glyph_source;
 			auto points = glyph_source.generate_point_map();
 
-			const size_t buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
+			const usz buffer_size = points.size() * sizeof(GlyphManager::glyph_point);
 
 			m_text_buffer.data(buffer_size, points.data());
 			m_offsets = glyph_source.get_glyph_offsets();
@@ -118,11 +123,16 @@ namespace gl
 			enabled = state;
 		}
 
+		bool is_enabled()
+		{
+			return enabled;
+		}
+
 		void print_text(int x, int y, int target_w, int target_h, const std::string &text, color4f color = { 0.3f, 1.f, 0.3f, 1.f })
 		{
 			if (!enabled) return;
 
-			verify(HERE), initialized;
+			ensure(initialized);
 
 			std::vector<GLint> offsets;
 			std::vector<GLsizei> counts;
@@ -130,11 +140,11 @@ namespace gl
 			char *s = const_cast<char *>(text.c_str());
 
 			//Y is in raster coordinates: convert to bottom-left origin
-			y = (target_h - y - 16);
+			y = (static_cast<int>(target_h / m_scale) - y - 16);
 
 			//Compress [0, w] and [0, h] into range [-1, 1]
-			float scale_x = 2.f / target_w;
-			float scale_y = 2.f / target_h;
+			float scale_x = m_scale * 2.f / target_w;
+			float scale_y = m_scale * 2.f / target_h;
 
 			float base_offset = 0.f;
 			shader_offsets.reserve(text.length() * 2);
@@ -198,6 +208,12 @@ namespace gl
 
 				initialized = false;
 			}
+		}
+
+		void set_scale(double scale)
+		{
+			// Restrict scale to 2. The dots are gonna be too sparse otherwise.
+			m_scale = std::min(static_cast<f32>(scale), 2.0f);
 		}
 	};
 }

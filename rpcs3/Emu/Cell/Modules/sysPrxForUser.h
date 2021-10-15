@@ -1,7 +1,12 @@
-﻿#pragma once
+#pragma once
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
+
+enum
+{
+	RANDOM_NUMBER_MAX_SIZE = 4096
+};
 
 using spu_printf_cb_t = vm::ptr<s32(u32 arg)>;
 
@@ -34,27 +39,15 @@ struct sys_lwmutex_locker
 		: ppu(ppu)
 		, mutex(mutex)
 	{
-		verify(HERE), sys_lwmutex_lock(ppu, mutex, 0) == CELL_OK;
+		ensure(sys_lwmutex_lock(ppu, mutex, 0) == CELL_OK);
 	}
 
 	~sys_lwmutex_locker() noexcept(false)
 	{
-		verify(HERE), sys_lwmutex_unlock(ppu, mutex) == CELL_OK;
+		ensure(sys_lwmutex_unlock(ppu, mutex) == CELL_OK);
 	}
 };
 
-enum
-{
-	SYS_CRASH_DUMP_MAX_LABEL_SIZE = 16,
-	SYS_CRASH_DUMP_MAX_LOG_AREA   = 127 // not actually defined in CELL
-};
-
-struct sys_crash_dump_log_area_info_t
-{
-	char label[SYS_CRASH_DUMP_MAX_LABEL_SIZE]; // 15 + 1 (0 terminated)
-	vm::ptr<void> addr;
-	be_t<u64> size;
-};
 
 struct sys_lwcond_t;
 struct sys_lwcond_attribute_t;

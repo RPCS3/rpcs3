@@ -16,18 +16,13 @@ error_code sys_dbg_read_process_memory(s32 pid, u32 address, u32 size, vm::ptr<v
 		return CELL_LV2DBG_ERROR_DEINVALIDARGUMENTS;
 	}
 
-	if (!vm::check_addr(address, size))
-	{
-		return CELL_EFAULT;
-	}
-
 	if (!size || !data)
 	{
 		return CELL_LV2DBG_ERROR_DEINVALIDARGUMENTS;
 	}
 
 	// Check if data destination is writable
-	if (!vm::check_addr(data.addr(), size, vm::page_writable))
+	if (!vm::check_addr(data.addr(), vm::page_writable, size))
 	{
 		return CELL_EFAULT;
 	}
@@ -47,18 +42,13 @@ error_code sys_dbg_write_process_memory(s32 pid, u32 address, u32 size, vm::cptr
 		return CELL_LV2DBG_ERROR_DEINVALIDARGUMENTS;
 	}
 
-	if (!vm::check_addr(address, size))
-	{
-		return CELL_EFAULT;
-	}
-
 	if (!size || !data)
 	{
 		return CELL_LV2DBG_ERROR_DEINVALIDARGUMENTS;
 	}
 
 	// Check if data source is readable
-	if (!vm::check_addr(data.addr(), size, vm::page_readable))
+	if (!vm::check_addr(data.addr(), vm::page_readable, size))
 	{
 		return CELL_EFAULT;
 	}

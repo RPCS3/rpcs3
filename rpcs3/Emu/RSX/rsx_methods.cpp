@@ -1,7 +1,6 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rsx_methods.h"
 #include "RSXThread.h"
-#include "Emu/Memory/vm_reservation.h"
 #include "rsx_utils.h"
 #include "rsx_decode.h"
 #include "Emu/Cell/PPUCallback.h"
@@ -9,7 +8,6 @@
 #include "Emu/RSX/Common/BufferUtils.h"
 
 #include <thread>
-#include <atomic>
 
 namespace rsx
 {
@@ -17,20 +15,20 @@ namespace rsx
 
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 
-	void invalid_method(thread* rsx, u32 _reg, u32 arg)
+	void invalid_method(thread* rsx, u32 reg, u32 arg)
 	{
 		//Don't throw, gather information and ignore broken/garbage commands
 		//TODO: Investigate why these commands are executed at all. (Heap corruption? Alignment padding?)
 		const u32 cmd = rsx->get_fifo_cmd();
-		rsx_log.error("Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", _reg << 2, arg,
+		rsx_log.error("Invalid RSX method 0x%x (arg=0x%x, start=0x%x, count=0x%x, non-inc=%s)", reg << 2, arg,
 		cmd & 0xfffc, (cmd >> 18) & 0x7ff, !!(cmd & RSX_METHOD_NON_INCREMENT_CMD));
 		rsx->recover_fifo();
 	}
 
-	void trace_method(thread* rsx, u32 _reg, u32 arg)
+	static void trace_method(thread* /*rsx*/, u32 reg, u32 arg)
 	{
 		// For unknown yet valid methods
-		rsx_log.trace("RSX method 0x%x (arg=0x%x)", _reg << 2, arg);
+		rsx_log.trace("RSX method 0x%x (arg=0x%x)", reg << 2, arg);
 	}
 
 	template<typename Type> struct vertex_data_type_from_element_type;
@@ -42,7 +40,7 @@ namespace rsx
 
 	namespace nv406e
 	{
-		void set_reference(thread* rsx, u32 _reg, u32 arg)
+		void set_reference(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			rsx->sync();
 
@@ -50,10 +48,10 @@ namespace rsx
 			vm::_ref<atomic_be_t<u64>>(rsx->dma_address + ::offset32(&RsxDmaControl::get)).store(u64{rsx->fifo_ctrl->get_pos()} << 32 | arg);
 		}
 
-		void semaphore_acquire(thread* rsx, u32 /*_reg*/, u32 arg)
+		void semaphore_acquire(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			rsx->sync_point_request.release(true);
-			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e(), HERE);
+			const u32 addr = get_address(method_registers.semaphore_offset_406e(), method_registers.semaphore_context_dma_406e());
 
 			const auto& sema = vm::_ref<RsxSemaphore>(addr).val;
 
@@ -79,25 +77,20 @@ namespace rsx
 			u64 start = get_system_time();
 			while (sema != arg)
 			{
-				if (Emu.IsStopped())
-					return;
-
-				// Wait for external pause events
-				if (rsx->external_interrupt_lock)
+				if (rsx->is_stopped())
 				{
-					rsx->wait_pause();
-					continue;
+					return;
 				}
 
 				if (const auto tdr = static_cast<u64>(g_cfg.video.driver_recovery_timeout))
 				{
-					if (Emu.IsPaused())
+					if (rsx->is_paused())
 					{
 						const u64 start0 = get_system_time();
 
-						while (Emu.IsPaused())
+						while (rsx->is_paused())
 						{
-							std::this_thread::sleep_for(1ms);
+							rsx->cpu_wait({});
 						}
 
 						// Reset
@@ -114,15 +107,14 @@ namespace rsx
 					}
 				}
 
-				rsx->on_semaphore_acquire_wait();
-				std::this_thread::yield();
+				rsx->cpu_wait({});
 			}
 
 			rsx->fifo_wake_delay();
 			rsx->performance_counters.idle_time += (get_system_time() - start);
 		}
 
-		void semaphore_release(thread* rsx, u32 /*_reg*/, u32 arg)
+		void semaphore_release(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			rsx->sync();
 
@@ -144,30 +136,21 @@ namespace rsx
 				rsx->sync_point_request.release(true);
 			}
 
-			const u32 addr = get_address(offset, ctxt, HERE);
-
-			atomic_t<u64>* res{};
+			const u32 addr = get_address(offset, ctxt);
 
 			// TODO: Check if possible to write on reservations
-			if (!g_use_rtm && rsx->label_addr >> 28 != addr >> 28) [[likely]]
+			if (rsx->label_addr >> 28 != addr >> 28)
 			{
-				res = &vm::reservation_lock(addr, 4).first;
+				rsx_log.fatal("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 			}
 
 			vm::_ref<RsxSemaphore>(addr).val = arg;
-
-			if (res)
-			{
-				res->release(*res + 127);
-			}
-
-			vm::reservation_notifier(addr, 4).notify_all();
 		}
 	}
 
 	namespace nv4097
 	{
-		void clear(thread* rsx, u32 _reg, u32 arg)
+		void clear(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			rsx->clear_surface(arg);
 
@@ -177,7 +160,7 @@ namespace rsx
 			}
 		}
 
-		void clear_zcull(thread* rsx, u32 _reg, u32 arg)
+		void clear_zcull(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 		{
 			if (rsx->capture_current_frame)
 			{
@@ -185,9 +168,9 @@ namespace rsx
 			}
 		}
 
-		void set_cull_face(thread* rsx, u32 reg, u32 arg)
+		void set_cull_face(thread* /*rsx*/, u32 reg, u32 arg)
 		{
-			switch(arg)
+			switch (arg)
 			{
 			case CELL_GCM_FRONT_AND_BACK:
 			case CELL_GCM_FRONT:
@@ -199,7 +182,7 @@ namespace rsx
 			}
 		}
 
-		void set_notify(thread* rsx, u32 _reg, u32 arg)
+		void set_notify(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 		{
 			const u32 location = method_registers.context_dma_notify();
 			const u32 index = (location & 0x7) ^ 0x7;
@@ -212,7 +195,7 @@ namespace rsx
 
 			const u32 addr = rsx->iomap_table.get_addr(0xf100000 + (index * 0x40));
 
-			verify(HERE), addr != umax;
+			ensure(addr != umax);
 
 			vm::_ref<atomic_t<RsxNotify>>(addr).store(
 			{
@@ -221,10 +204,10 @@ namespace rsx
 			});
 		}
 
-		void texture_read_semaphore_release(thread* rsx, u32 _reg, u32 arg)
+		void texture_read_semaphore_release(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier
-			g_fxo->get<rsx::dma_manager>()->sync();
+			g_fxo->get<rsx::dma_manager>().sync();
 			if (g_cfg.video.strict_rendering_mode)
 			{
 				rsx->sync();
@@ -241,13 +224,13 @@ namespace rsx
 				return;
 			}
 
-			vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097(), HERE)).val = arg;
+			vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097())).val = arg;
 		}
 
-		void back_end_write_semaphore_release(thread* rsx, u32 _reg, u32 arg)
+		void back_end_write_semaphore_release(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			// Full pipeline barrier
-			g_fxo->get<rsx::dma_manager>()->sync();
+			g_fxo->get<rsx::dma_manager>().sync();
 			rsx->sync();
 
 			const u32 offset = method_registers.semaphore_offset_4097();
@@ -260,7 +243,7 @@ namespace rsx
 			}
 
 			const u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097(), HERE)).val = val;
+			vm::_ref<RsxSemaphore>(get_address(offset, method_registers.semaphore_context_dma_4097())).val = val;
 		}
 
 		/**
@@ -272,23 +255,27 @@ namespace rsx
 		template<u32 id, u32 index, int count, int register_count, typename type>
 		void set_vertex_data_impl(thread* rsx, u32 arg)
 		{
-			static const size_t increment_per_array_index = (register_count * sizeof(type)) / sizeof(u32);
+			static constexpr usz increment_per_array_index = (register_count * sizeof(type)) / sizeof(u32);
 
-			static const size_t attribute_index = index / increment_per_array_index;
-			static const size_t vertex_subreg = index % increment_per_array_index;
+			static constexpr usz attribute_index = index / increment_per_array_index;
+			static constexpr usz vertex_subreg = index % increment_per_array_index;
 
-			const auto vtype = vertex_data_type_from_element_type<type>::type;
-			verify(HERE), vtype != rsx::vertex_base_type::cmp;
+			constexpr auto vtype = vertex_data_type_from_element_type<type>::type;
+			static_assert(vtype != rsx::vertex_base_type::cmp);
+			static_assert(vtype != rsx::vertex_base_type::ub256);
 
-			switch (vtype)
+			// Convert LE data to BE layout
+			if constexpr (sizeof(type) == 4)
 			{
-			case rsx::vertex_base_type::ub:
-			case rsx::vertex_base_type::ub256:
-				// Get BE data
 				arg = std::bit_cast<u32, be_t<u32>>(arg);
-				break;
-			default:
-				break;
+			}
+			else if constexpr (sizeof(type) == 2)
+			{
+				// 2 16-bit values packed in 1 32-bit word
+				const auto be_data = std::bit_cast<u32, be_t<u32>>(arg);
+
+				// After u32 swap, the components are in the wrong position
+				arg = (be_data << 16) | (be_data >> 16);
 			}
 
 			if (rsx->in_begin_end)
@@ -312,7 +299,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data4ub_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4UB_M, index, 4, 4, u8>(rsx, arg);
 			}
@@ -321,7 +308,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data1f_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA1F_M, index, 1, 1, f32>(rsx, arg);
 			}
@@ -330,7 +317,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data2f_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2F_M, index, 2, 2, f32>(rsx, arg);
 			}
@@ -339,7 +326,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data3f_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				//Register alignment is only 1, 2, or 4 (Rachet & Clank 2)
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA3F_M, index, 3, 4, f32>(rsx, arg);
@@ -349,7 +336,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data4f_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4F_M, index, 4, 4, f32>(rsx, arg);
 			}
@@ -358,7 +345,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data2s_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA2S_M, index, 2, 2, u16>(rsx, arg);
 			}
@@ -367,7 +354,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data4s_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA4S_M, index, 4, 4, u16>(rsx, arg);
 			}
@@ -376,7 +363,7 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_data_scaled4s_m
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 arg)
 			{
 				set_vertex_data_impl<NV4097_SET_VERTEX_DATA_SCALED4S_M, index, 4, 4, s16>(rsx, arg);
 			}
@@ -397,7 +384,7 @@ namespace rsx
 				rsx->append_array_element(arg);
 		}
 
-		void draw_arrays(thread* rsx, u32 _reg, u32 arg)
+		void draw_arrays(thread* /*rsx*/, u32 /*reg*/, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::array;
 			rsx::registers_decoder<NV4097_DRAW_ARRAYS>::decoded_type v(arg);
@@ -405,7 +392,7 @@ namespace rsx
 			rsx::method_registers.current_draw_clause.append(v.start(), v.count());
 		}
 
-		void draw_index_array(thread* rsx, u32 _reg, u32 arg)
+		void draw_index_array(thread* /*rsx*/, u32 /*reg*/, u32 arg)
 		{
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::indexed;
 			rsx::registers_decoder<NV4097_DRAW_INDEX_ARRAY>::decoded_type v(arg);
@@ -413,8 +400,9 @@ namespace rsx
 			rsx::method_registers.current_draw_clause.append(v.start(), v.count());
 		}
 
-		void draw_inline_array(thread* rsx, u32 _reg, u32 arg)
+		void draw_inline_array(thread* /*rsx*/, u32 /*reg*/, u32 arg)
 		{
+			arg = std::bit_cast<u32, be_t<u32>>(arg);
 			rsx::method_registers.current_draw_clause.command = rsx::draw_command::inlined_array;
 			rsx::method_registers.current_draw_clause.inline_vertex_array.push_back(arg);
 		}
@@ -422,7 +410,7 @@ namespace rsx
 		template<u32 index>
 		struct set_transform_constant
 		{
-			static void impl(thread* rsx, u32 /*_reg*/, u32 /*arg*/)
+			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 			{
 				static constexpr u32 reg = index / 4;
 				static constexpr u8 subreg = index % 4;
@@ -434,11 +422,15 @@ namespace rsx
 				const u32 load = rsx::method_registers.transform_constant_load();
 
 				u32 rcount = count;
-				if (const u32 max = (load + reg) * 4 + count + subreg; max > 468 * 4)
+				if (const u32 max = (load + reg) * 4 + count + subreg, limit = 468 * 4; max > limit)
 				{
 					// Ignore addresses outside the usable [0, 467] range
 					rsx_log.warning("Invalid transform register index (load=%u, index=%u, count=%u)", load, index, count);
-					rcount -= max - (468 * 4);
+
+					if ((max - count) < limit)
+						rcount -= max - limit;
+					else
+						rcount = 0;
 				}
 
 				const auto values = &rsx::method_registers.transform_constants[load + reg][subreg];
@@ -464,7 +456,7 @@ namespace rsx
 		template<u32 index>
 		struct set_transform_program
 		{
-			static void impl(thread* rsx, u32 /*_reg*/, u32 /*arg*/)
+			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 			{
 				// Get real args count
 				const u32 count = std::min<u32>({rsx->fifo_ctrl->get_remaining_args_count() + 1,
@@ -475,19 +467,16 @@ namespace rsx
 				u32 rcount = count;
 
 				if (const u32 max = load_pos * 4 + rcount + (index % 4);
-					max > 512 * 4)
+					max > max_vertex_program_instructions * 4)
 				{
-					// PS3 seems to allow exceeding the program buffer by upto 32 instructions before crashing
-					// Discard the "excess" instructions to not overflow our transform program buffer
-					// TODO: Check if the instructions in the overflow area are executed by PS3
-					rsx_log.warning("Program buffer overflow!");
-					rcount -= max - (512 * 4);
+					rsx_log.warning("Program buffer overflow! Attempted to write %u VP instructions.", max / 4);
+					rcount -= max - (max_vertex_program_instructions * 4);
 				}
 
 				stream_data_to_memory_swapped_u32<true>(&rsx::method_registers.transform_program[load_pos * 4 + index % 4]
 					, vm::base(rsx->fifo_ctrl->get_current_arg_ptr()), rcount, 4);
 
-				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_ucode_dirty;
 				rsx::method_registers.transform_program_load_set(load_pos + ((rcount + index % 4) / 4));
 				rsx->fifo_ctrl->skip_methods(count - 1);
 			}
@@ -497,7 +486,7 @@ namespace rsx
 		{
 			if (method_registers.registers[reg] != method_registers.register_previous_value)
 			{
-				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_ucode_dirty;
 			}
 		}
 
@@ -505,11 +494,11 @@ namespace rsx
 		{
 			if (method_registers.registers[reg] != method_registers.register_previous_value)
 			{
-				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty | rsx::pipeline_state::fragment_program_dirty;
+				rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
 			}
 		}
 
-		void set_begin_end(thread* rsxthr, u32 _reg, u32 arg)
+		void set_begin_end(thread* rsxthr, u32 /*reg*/, u32 arg)
 		{
 			// Ignore upper bits
 			if (const u8 prim = static_cast<u8>(arg))
@@ -585,10 +574,10 @@ namespace rsx
 				return vm::addr_t(0);
 			}
 
-			return vm::cast(get_address(offset, location, HERE));
+			return vm::cast(get_address(offset, location));
 		}
 
-		void get_report(thread* rsx, u32 _reg, u32 arg)
+		void get_report(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			u8 type = arg >> 24;
 			u32 offset = arg & 0xffffff;
@@ -621,7 +610,7 @@ namespace rsx
 			}
 		}
 
-		void clear_report_value(thread* rsx, u32 _reg, u32 arg)
+		void clear_report_value(thread* rsx, u32 /*reg*/, u32 arg)
 		{
 			switch (arg)
 			{
@@ -689,7 +678,7 @@ namespace rsx
 
 		void set_shader_program_dirty(thread* rsx, u32, u32)
 		{
-			rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+			rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
 		}
 
 		void set_surface_dirty_bit(thread* rsx, u32 reg, u32 arg)
@@ -790,6 +779,24 @@ namespace rsx
 			}
 		}
 
+		template<u32 index>
+		struct set_vertex_array_offset
+		{
+			static void impl(thread* rsx, u32 reg, u32 arg)
+			{
+				if (rsx->in_begin_end &&
+					!rsx::method_registers.current_draw_clause.empty() &&
+					reg != method_registers.register_previous_value)
+				{
+					// Revert change to queue later
+					method_registers.decode(reg, method_registers.register_previous_value);
+
+					// Insert offset mofifier barrier
+					method_registers.current_draw_clause.insert_command_barrier(vertex_array_offset_modifier_barrier, arg, index);
+				}
+			}
+		};
+
 		void check_index_array_dma(thread* rsx, u32 reg, u32 arg)
 		{
 			// Check if either location or index type are invalid
@@ -803,7 +810,7 @@ namespace rsx
 			}
 		}
 
-		void set_blend_equation(thread* rsx, u32 reg, u32 arg)
+		void set_blend_equation(thread* /*rsx*/, u32 reg, u32 arg)
 		{
 			for (u32 i = 0; i < 32u; i += 16)
 			{
@@ -818,7 +825,7 @@ namespace rsx
 				case CELL_GCM_FUNC_ADD_SIGNED:
 				case CELL_GCM_FUNC_REVERSE_ADD_SIGNED:
 					break;
-			
+
 				default:
 				{
 					// Ignore invalid values as a whole
@@ -829,7 +836,7 @@ namespace rsx
 			}
 		}
 
-		void set_blend_factor(thread* rsx, u32 reg, u32 arg)
+		void set_blend_factor(thread* /*rsx*/, u32 reg, u32 arg)
 		{
 			for (u32 i = 0; i < 32u; i += 16)
 			{
@@ -863,13 +870,13 @@ namespace rsx
 		template<u32 index>
 		struct set_texture_dirty_bit
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 			{
 				rsx->m_textures_dirty[index] = true;
 
 				if (rsx->current_fp_metadata.referenced_textures_mask & (1 << index))
 				{
-					rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_dirty;
+					rsx->m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
 				}
 			}
 		};
@@ -877,13 +884,13 @@ namespace rsx
 		template<u32 index>
 		struct set_vertex_texture_dirty_bit
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 			{
 				rsx->m_vertex_textures_dirty[index] = true;
 
 				if (rsx->current_vp_metadata.referenced_textures_mask & (1 << index))
 				{
-					rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_dirty;
+					rsx->m_graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
 				}
 			}
 		};
@@ -894,7 +901,7 @@ namespace rsx
 		template<u32 index>
 		struct color
 		{
-			static void impl(thread* rsx, u32 /*_reg*/, u32 /*arg*/)
+			static void impl(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 			{
 				const u32 out_x_max = method_registers.nv308a_size_out_x();
 
@@ -918,8 +925,8 @@ namespace rsx
 				const u32 x = method_registers.nv308a_x() + index;
 				const u32 y = method_registers.nv308a_y();
 
-				// TODO
-				//auto res = vm::passive_lock(address, address + write_len);
+				// Skip "handled methods"
+				rsx->fifo_ctrl->skip_methods(count - 1);
 
 				switch (method_registers.blit_engine_nv3062_color_format())
 				{
@@ -928,10 +935,22 @@ namespace rsx
 				{
 					// Bit cast - optimize to mem copy
 
-					const auto dst = vm::_ptr<u8>(get_address(dst_offset + (x * 4) + (out_pitch * y), dst_dma, HERE));
-					const auto src = vm::_ptr<const u8>(get_address(src_offset, CELL_GCM_LOCATION_MAIN, HERE));
-
 					const u32 data_length = count * 4;
+
+					const auto dst_address = get_address(dst_offset + (x * 4) + (out_pitch * y), dst_dma, data_length);
+
+					if (!dst_address)
+					{
+						rsx->recover_fifo();
+						return;
+					}
+
+					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN);
+
+					const auto dst = vm::_ptr<u8>(dst_address);
+					const auto src = vm::_ptr<const u8>(src_address);
+
+					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
 
 					if (rsx->fifo_ctrl->last_cmd() & RSX_METHOD_NON_INCREMENT_CMD_MASK) [[unlikely]]
 					{
@@ -959,8 +978,20 @@ namespace rsx
 				}
 				case blit_engine::transfer_destination_format::r5g6b5:
 				{
-					const auto dst = vm::_ptr<u16>(get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, HERE));
-					const auto src = vm::_ptr<const u32>(get_address(src_offset, CELL_GCM_LOCATION_MAIN, HERE));
+					const auto data_length = count * 2;
+
+					const auto dst_address = get_address(dst_offset + (x * 2) + (y * out_pitch), dst_dma, data_length);
+					const auto src_address = get_address(src_offset, CELL_GCM_LOCATION_MAIN);
+					const auto dst = vm::_ptr<u16>(dst_address);
+					const auto src = vm::_ptr<const u32>(src_address);
+
+					if (!dst_address)
+					{
+						rsx->recover_fifo();
+						return;
+					}
+
+					auto res = rsx::reservation_lock<true>(dst_address, data_length, src_address, data_length);
 
 					auto convert = [](u32 input) -> u16
 					{
@@ -993,21 +1024,16 @@ namespace rsx
 				}
 				default:
 				{
-					fmt::throw_exception("Unreachable" HERE);
+					fmt::throw_exception("Unreachable");
 				}
 				}
-
-				//res->release(0);
-
-				// Skip "handled methods"
-				rsx->fifo_ctrl->skip_methods(count - 1);
 			}
 		};
 	}
 
 	namespace nv3089
 	{
-		void image_in(thread *rsx, u32 _reg, u32 arg)
+		void image_in(thread* rsx, u32 /*reg*/, u32 /*arg*/)
 		{
 			const rsx::blit_engine::transfer_operation operation = method_registers.blit_engine_operation();
 
@@ -1041,7 +1067,7 @@ namespace rsx
 			if (in_w == 0 || in_h == 0)
 			{
 				// Input cant be an empty region
-				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: Invalid blit dimensions passed (in_w=%d, in_h=%d)" HERE, in_w, in_h);
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: Invalid blit dimensions passed (in_w=%d, in_h=%d)", in_w, in_h);
 			}
 
 			u16 clip_x = method_registers.blit_engine_clip_x();
@@ -1064,7 +1090,16 @@ namespace rsx
 
 			if (operation != rsx::blit_engine::transfer_operation::srccopy)
 			{
-				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown operation (%d)" HERE, static_cast<u8>(operation));
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown operation (0x%x)", method_registers.registers[NV3089_SET_OPERATION]);
+				rsx->recover_fifo();
+				return;
+			}
+
+			if (src_color_format == rsx::blit_engine::transfer_source_format::invalid)
+			{
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown src color format (0x%x)", method_registers.registers[NV3089_SET_COLOR_FORMAT]);
+				rsx->recover_fifo();
+				return;
 			}
 
 			const u32 src_offset = method_registers.blit_engine_input_offset();
@@ -1074,7 +1109,7 @@ namespace rsx
 			u32 dst_dma = 0;
 			rsx::blit_engine::transfer_destination_format dst_color_format;
 			u32 out_pitch = 0;
-			u32 out_alignment = 64;
+			[[maybe_unused]] u32 out_alignment = 64;
 			bool is_block_transfer = false;
 
 			switch (method_registers.blit_engine_context_surface())
@@ -1087,6 +1122,14 @@ namespace rsx
 				out_pitch = method_registers.blit_engine_output_pitch_nv3062();
 				out_alignment = method_registers.blit_engine_output_alignment_nv3062();
 				is_block_transfer = fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f);
+
+				if (dst_color_format == rsx::blit_engine::transfer_destination_format::invalid)
+				{
+					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV3062 dst color format (0x%x)", method_registers.registers[NV3062_SET_COLOR_FORMAT]);
+					rsx->recover_fifo();
+					return;
+				}
+
 				break;
 			}
 			case blit_engine::context_surface::swizzle2d:
@@ -1094,6 +1137,14 @@ namespace rsx
 				dst_dma = method_registers.blit_engine_nv309E_location();
 				dst_offset = method_registers.blit_engine_nv309E_offset();
 				dst_color_format = method_registers.blit_engine_output_format_nv309E();
+
+				if (dst_color_format == rsx::blit_engine::transfer_destination_format::invalid)
+				{
+					rsx_log.error("NV3089_IMAGE_IN_SIZE: unknown NV309E dst color format (0x%x)", method_registers.registers[NV309E_SET_FORMAT]);
+					rsx->recover_fifo();
+					return;
+				}
+
 				break;
 			}
 			default:
@@ -1145,17 +1196,22 @@ namespace rsx
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
 			const u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			const u32 src_address = get_address(src_offset, src_dma, HERE);
-			const u32 dst_address = get_address(dst_offset, dst_dma, HERE);
-
 			const u32 src_line_length = (in_w * in_bpp);
 
-			//auto res = vm::passive_lock(dst_address, dst_address + (in_pitch * (in_h - 1) + src_line_length));
+			u32 src_address = 0;
+			const u32 dst_address = get_address(dst_offset, dst_dma, 1); // TODO: Add size
 
 			if (is_block_transfer && (clip_h == 1 || (in_pitch == out_pitch && src_line_length == in_pitch)))
 			{
 				const u32 nb_lines = std::min(clip_h, in_h);
 				const u32 data_length = nb_lines * src_line_length;
+
+				if (src_address = get_address(src_offset, src_dma, data_length);
+					!src_address || !dst_address)
+				{
+					rsx->recover_fifo();
+					return;
+				}
 
 				rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
 
@@ -1171,10 +1227,28 @@ namespace rsx
 			}
 			else
 			{
-				const u32 data_length = in_pitch * (in_h - 1) + src_line_length;
+				const u16 read_h = std::min(static_cast<u16>(clip_h / scale_y), in_h);
+				const u32 data_length = in_pitch * (read_h - 1) + src_line_length;
+
+				if (src_address = get_address(src_offset, src_dma, data_length);
+					!src_address || !dst_address)
+				{
+					rsx->recover_fifo();
+					return;
+				}
 
 				rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
 				rsx->read_barrier(src_address, data_length, true);
+			}
+
+			if (src_address == dst_address &&
+				in_w == clip_w && in_h == clip_h &&
+				in_pitch == out_pitch &&
+				rsx::fcmp(scale_x, 1.f) && rsx::fcmp(scale_y, 1.f))
+			{
+				// NULL operation
+				rsx_log.warning("NV3089_IMAGE_IN: Operation writes memory onto itself with no modification (move-to-self). Will ignore.");
+				return;
 			}
 
 			u8* pixels_src = vm::_ptr<u8>(src_address + in_offset);
@@ -1183,7 +1257,7 @@ namespace rsx
 			if (dst_color_format != rsx::blit_engine::transfer_destination_format::r5g6b5 &&
 				dst_color_format != rsx::blit_engine::transfer_destination_format::a8r8g8b8)
 			{
-				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)" HERE, static_cast<u8>(dst_color_format));
+				fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown dst_color_format (%d)", static_cast<u8>(dst_color_format));
 			}
 
 			if (src_color_format != rsx::blit_engine::transfer_source_format::r5g6b5 &&
@@ -1197,7 +1271,7 @@ namespace rsx
 				else
 				{
 					// TODO: Support more formats
-					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)" HERE, static_cast<u8>(src_color_format));
+					fmt::throw_exception("NV3089_IMAGE_IN_SIZE: unknown src_color_format (%d)", static_cast<u8>(src_color_format));
 				}
 			}
 
@@ -1210,6 +1284,9 @@ namespace rsx
 					method_registers.blit_engine_ds_dx(), method_registers.blit_engine_dt_dy());
 				return;
 			}
+
+			// Lock here. RSX cannot execute any locking operations from this point, including ZCULL read barriers
+			auto res = ::rsx::reservation_lock<true>(dst_address, out_pitch * out_h, src_address, in_pitch * in_h);
 
 			if (!g_cfg.video.force_cpu_blit_processing && (dst_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src_dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER))
 			{
@@ -1475,7 +1552,7 @@ namespace rsx
 
 	namespace nv0039
 	{
-		void buffer_notify(thread *rsx, u32, u32 arg)
+		void buffer_notify(thread* rsx, u32, u32 arg)
 		{
 			s32 in_pitch = method_registers.nv0039_input_pitch();
 			s32 out_pitch = method_registers.nv0039_output_pitch();
@@ -1508,31 +1585,32 @@ namespace rsx
 			u32 dst_dma = method_registers.nv0039_output_location();
 
 			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch + 0u == line_length);
-			const auto read_address = get_address(src_offset, src_dma, HERE);
-			const auto write_address = get_address(dst_offset, dst_dma, HERE);
-			const auto data_length = in_pitch * (line_count - 1) + line_length;
+			const auto read_address = get_address(src_offset, src_dma);
+			const auto write_address = get_address(dst_offset, dst_dma);
+			const auto read_length = in_pitch * (line_count - 1) + line_length;
+			const auto write_length = out_pitch * (line_count - 1) + line_length;
 
-			rsx->invalidate_fragment_program(dst_dma, dst_offset, data_length);
-	
-			if (const auto result = rsx->read_barrier(read_address, data_length, !is_block_transfer);
+			rsx->invalidate_fragment_program(dst_dma, dst_offset, write_length);
+
+			if (const auto result = rsx->read_barrier(read_address, read_length, !is_block_transfer);
 				result == rsx::result_zcull_intr)
 			{
 				// This transfer overlaps will zcull data pool
-				if (rsx->copy_zcull_stats(read_address, data_length, write_address) == data_length)
+				if (rsx->copy_zcull_stats(read_address, read_length, write_address) == write_length)
 				{
 					// All writes deferred
 					return;
 				}
 			}
 
-			//auto res = vm::passive_lock(write_address, data_length + write_address);
+			auto res = ::rsx::reservation_lock<true>(write_address, write_length, read_address, read_length);
 
 			u8 *dst = vm::_ptr<u8>(write_address);
 			const u8 *src = vm::_ptr<u8>(read_address);
 
 			const bool is_overlapping = dst_dma == src_dma && [&]() -> bool
 			{
-				const u32 src_max = src_offset + data_length;
+				const u32 src_max = src_offset + read_length;
 				const u32 dst_max = dst_offset + (out_pitch * (line_count - 1) + line_length);
 				return (src_offset >= dst_offset && src_offset < dst_max) ||
 				 (dst_offset >= src_offset && dst_offset < src_max);
@@ -1542,7 +1620,7 @@ namespace rsx
 			{
 				if (is_block_transfer)
 				{
-					std::memmove(dst, src, line_length * line_count);
+					std::memmove(dst, src, read_length);
 				}
 				else
 				{
@@ -1570,7 +1648,7 @@ namespace rsx
 			{
 				if (is_block_transfer)
 				{
-					std::memcpy(dst, src, line_length * line_count);
+					std::memcpy(dst, src, read_length);
 				}
 				else
 				{
@@ -1589,7 +1667,7 @@ namespace rsx
 
 	void flip_command(thread* rsx, u32, u32 arg)
 	{
-		verify(HERE), rsx->isHLE;
+		ensure(rsx->isHLE);
 		rsx->reset();
 		rsx->request_emu_flip(arg);
 	}
@@ -1611,7 +1689,8 @@ namespace rsx
 				{ ppu_cmd::sleep, 0 }
 			});
 
-			thread_ctrl::notify(*rsx->intr_thread);
+			rsx->intr_thread->cmd_notify++;
+			rsx->intr_thread->cmd_notify.notify_one();
 		}
 	}
 
@@ -1620,7 +1699,7 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* /*rsx*/, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
 			}
@@ -1629,7 +1708,7 @@ namespace rsx
 		template<u32 index>
 		struct queue_flip
 		{
-			static void impl(thread* rsx, u32 _reg, u32 arg)
+			static void impl(thread* /*rsx*/, u32 /*reg*/, u32 arg)
 			{
 				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
 			}
@@ -2627,6 +2706,72 @@ namespace rsx
 		return registers[reg] == value;
 	}
 
+	void draw_clause::insert_command_barrier(command_barrier_type type, u32 arg, u32 index)
+	{
+		ensure(!draw_command_ranges.empty());
+
+		auto _do_barrier_insert = [this](barrier_t&& val)
+		{
+			if (draw_command_barriers.empty() || draw_command_barriers.back() < val)
+			{
+				draw_command_barriers.push_back(val);
+				return;
+			}
+
+			for (auto it = draw_command_barriers.begin(); it != draw_command_barriers.end(); it++)
+			{
+				if (*it < val)
+				{
+					continue;
+				}
+
+				draw_command_barriers.insert(it, val);
+				break;
+			}
+		};
+
+		if (type == primitive_restart_barrier)
+		{
+			// Rasterization flow barrier
+			const auto& last = draw_command_ranges[current_range_index];
+			const auto address = last.first + last.count;
+
+			_do_barrier_insert({ current_range_index, 0, address, index, arg, 0, type });
+		}
+		else
+		{
+			// Execution dependency barrier. Requires breaking the current draw call sequence and start another.
+			if (draw_command_ranges.back().count > 0)
+			{
+				append_draw_command({});
+			}
+			else
+			{
+				// In case of back-to-back modifiers, do not add duplicates
+				current_range_index = draw_command_ranges.size() - 1;
+			}
+
+			_do_barrier_insert({ current_range_index, rsx::get_shared_tag(), ~0u, index, arg, 0, type });
+			last_execution_barrier_index = current_range_index;
+		}
+	}
+
+	void draw_clause::reset(primitive_type type)
+	{
+		current_range_index = ~0u;
+		last_execution_barrier_index = 0;
+
+		command = draw_command::none;
+		primitive = type;
+		primitive_barrier_enable = false;
+
+		draw_command_ranges.clear();
+		draw_command_barriers.clear();
+		inline_vertex_array.clear();
+
+		is_disjoint_primitive = is_primitive_disjointed(primitive);
+	}
+
 	u32 draw_clause::execute_pipeline_dependencies() const
 	{
 		u32 result = 0;
@@ -2650,8 +2795,13 @@ namespace rsx
 				method_registers.decode(NV4097_SET_VERTEX_DATA_BASE_OFFSET, barrier.arg);
 				result |= vertex_base_changed;
 				break;
+			case vertex_array_offset_modifier_barrier:
+				// Change vertex array offset
+				method_registers.decode(NV4097_SET_VERTEX_DATA_ARRAY_OFFSET + barrier.index, barrier.arg);
+				result |= vertex_arrays_changed;
+				break;
 			default:
-				fmt::throw_exception("Unreachable" HERE);
+				fmt::throw_exception("Unreachable");
 			}
 		}
 
@@ -2703,6 +2853,7 @@ namespace rsx
 	}
 
 	// TODO: implement this as virtual function: rsx::thread::init_methods() or something
+	// TODO: this is unused
 	static const bool s_methods_init = []() -> bool
 	{
 		using namespace method_detail;
@@ -3134,6 +3285,7 @@ namespace rsx
 		bind<NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE, nv4097::set_zcull_pixel_count_enable>();
 		bind<NV4097_CLEAR_ZCULL_SURFACE, nv4097::clear_zcull>();
 		bind<NV4097_SET_DEPTH_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
+		bind<NV4097_SET_DEPTH_FUNC, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_STENCIL_TEST_ENABLE, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_DEPTH_MASK, nv4097::set_surface_options_dirty_bit>();
 		bind<NV4097_SET_COLOR_MASK, nv4097::set_surface_options_dirty_bit>();
@@ -3151,10 +3303,15 @@ namespace rsx
 		bind<NV4097_WAIT_FOR_IDLE, nv4097::sync>();
 		bind<NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty>();
 		bind<NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty>();
+		bind<NV4097_SET_SHADER_CONTROL, nv4097::notify_state_changed<fragment_program_state_dirty>>();
+		bind_array<NV4097_SET_TEX_COORD_CONTROL, 1, 10, nv4097::notify_state_changed<fragment_program_state_dirty>>();
+		bind<NV4097_SET_TWO_SIDE_LIGHT_EN, nv4097::notify_state_changed<fragment_program_state_dirty>>();
+		bind<NV4097_SET_POINT_SPRITE_CONTROL, nv4097::notify_state_changed<fragment_program_state_dirty>>();
 		bind<NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start>();
 		bind<NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask>();
 		bind<NV4097_SET_VERTEX_DATA_BASE_OFFSET, nv4097::set_vertex_base_offset>();
 		bind<NV4097_SET_VERTEX_DATA_BASE_INDEX, nv4097::set_index_base_offset>();
+		bind_range<NV4097_SET_VERTEX_DATA_ARRAY_OFFSET, 1, 16, nv4097::set_vertex_array_offset>();
 		bind<NV4097_SET_USER_CLIP_PLANE_CONTROL, nv4097::notify_state_changed<vertex_state_dirty>>();
 		bind<NV4097_SET_TRANSFORM_BRANCH_BITS, nv4097::notify_state_changed<vertex_state_dirty>>();
 		bind<NV4097_SET_CLIP_MIN, nv4097::notify_state_changed<invalidate_zclip_bits>>();

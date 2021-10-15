@@ -1,10 +1,9 @@
-﻿#pragma once
+#pragma once
 
 #include "gcm_enums.h"
-#include "rsx_decode.h"
 
-#include "Utilities/types.h"
-#include "rsx_utils.h"
+#include "Common/simple_array.hpp"
+#include "util/types.hpp"
 
 namespace rsx
 {
@@ -17,15 +16,15 @@ private:
 
 	auto decode_reg() const
 	{
-		const typename rsx::registers_decoder<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT>::decoded_type
+		const rsx::registers_decoder<NV4097_SET_VERTEX_DATA_ARRAY_FORMAT>::decoded_type
 			   decoded_value(registers[NV4097_SET_VERTEX_DATA_ARRAY_FORMAT + index]);
 		return decoded_value;
 	}
 
 public:
 	data_array_format_info(int id, std::array<u32, 0x10000 / 4>& r)
-		   : index(id)
-		   , registers(r)
+		: index(id)
+		, registers(r)
 	{
 	}
 
@@ -75,7 +74,7 @@ struct push_buffer_vertex_info
 		}
 	}
 
-	u8 get_vertex_size_in_dwords(vertex_base_type type)
+	u8 get_vertex_size_in_dwords(vertex_base_type type) const
 	{
 		//NOTE: Types are always provided to fit into 32-bits
 		//i.e no less than 4 8-bit values and no less than 2 16-bit values
@@ -125,7 +124,7 @@ struct register_vertex_data_info
 	vertex_base_type type = vertex_base_type::f;
 
 	register_vertex_data_info() = default;
-	std::array<u32, 4> data;
+	std::array<u32, 4> data{};
 };
 
 }

@@ -1,13 +1,15 @@
-﻿#pragma once
+#pragma once
 
-// I just want the struct for the save data.
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/Modules/cellSaveData.h"
 
 #include <QTableWidget>
 #include <QDialog>
 #include <QLabel>
+
+#include <vector>
+#include <memory>
 
 class gui_settings;
 class persistent_settings;
@@ -27,13 +29,13 @@ class save_data_list_dialog : public QDialog
 public:
 	explicit save_data_list_dialog(const std::vector<SaveDataEntry>& entries, s32 focusedEntry, u32 op, vm::ptr<CellSaveDataListSet>, QWidget* parent = nullptr);
 
-	s32 GetSelection();
+	s32 GetSelection() const;
 private Q_SLOTS:
 	void OnEntryInfo();
 	void OnSort(int logicalIndex);
 private:
-	void UpdateSelectionLabel(void);
-	void UpdateList(void);
+	void UpdateSelectionLabel();
+	void UpdateList();
 
 	s32 m_entry = selection_code::new_save;
 	QLabel* m_entry_label = nullptr;

@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
@@ -9,7 +9,14 @@
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "cellGifDec.h"
 
+#include "util/asm.hpp"
+
 LOG_CHANNEL(cellGifDec);
+
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 
 template <>
 void fmt_class_string<CellGifDecError>::format(std::string& out, u64 arg)
@@ -86,6 +93,7 @@ error_code cellGifDecOpen(PMainHandle mainHandle, PPSubHandle subHandle, PSrc sr
 		current_subHandle.fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
 		break;
 	}
+	default: break; // TODO
 	}
 
 	subHandle->set(vm::alloc(sizeof(GifStream), vm::main));
@@ -106,7 +114,6 @@ error_code cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PI
 	cellGifDec.warning("cellGifDecReadHeader(mainHandle=*0x%x, subHandle=*0x%x, info=*0x%x)", mainHandle, subHandle, info);
 
 	const u32& fd = subHandle->fd;
-	const u64& fileSize = subHandle->fileSize;
 	CellGifDecInfo& current_info = subHandle->info;
 
 	// Write the header to buffer
@@ -125,10 +132,11 @@ error_code cellGifDecReadHeader(PMainHandle mainHandle, PSubHandle subHandle, PI
 		file->file.read(buffer, sizeof(buffer));
 		break;
 	}
+	default: break; // TODO
 	}
 
-	if (*reinterpret_cast<be_t<u32>*>(buffer) != 0x47494638u ||
-		(*reinterpret_cast<le_t<u16>*>(buffer + 4) != 0x6139u && *reinterpret_cast<le_t<u16>*>(buffer + 4) != 0x6137u)) // Error: The first 6 bytes are not a valid GIF signature
+	if (*utils::bless<be_t<u32>>(buffer + 0) != 0x47494638u ||
+		(*utils::bless<le_t<u16>>(buffer + 4) != 0x6139u && *utils::bless<le_t<u16>>(buffer + 4) != 0x6137u)) // Error: The first 6 bytes are not a valid GIF signature
 	{
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT; // Surprisingly there is no error code related with headerss
 	}
@@ -211,6 +219,7 @@ error_code cellGifDecDecodeData(PMainHandle mainHandle, PSubHandle subHandle, vm
 		file->file.read(gif.get(), fileSize);
 		break;
 	}
+	default: break; // TODO
 	}
 
 	//Decode GIF file. (TODO: Is there any faster alternative? Can we do it without external libraries?)

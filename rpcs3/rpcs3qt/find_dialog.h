@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include <QDialog>
 #include <QTextEdit>
@@ -31,5 +31,5 @@ private Q_SLOTS:
 	void find_last();
 	void find_next();
 	void find_previous();
-	void show_count();
+	void show_count() const;
 };

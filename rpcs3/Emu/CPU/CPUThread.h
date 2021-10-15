@@ -1,9 +1,13 @@
-﻿#pragma once
+#pragma once
 
 #include "../Utilities/Thread.h"
 #include "../Utilities/bit_set.h"
 
 #include <vector>
+
+template <typename Derived, typename Base>
+concept DerivedFrom = std::is_base_of_v<Base, Derived> &&
+	std::is_convertible_v<const volatile Derived*, const volatile Base*>;
 
 // Thread state flags
 enum class cpu_flag : u32
@@ -11,25 +15,35 @@ enum class cpu_flag : u32
 	stop, // Thread not running (HLE, initial state)
 	exit, // Irreversible exit
 	wait, // Indicates waiting state, set by the thread itself
+	temp, // Indicates that the thread cannot properly return after next check_state()
 	pause, // Thread suspended by suspend_all technique
 	suspend, // Thread suspended
 	ret, // Callback return requested
 	signal, // Thread received a signal (HLE)
 	memory, // Thread must unlock memory mutex
+	pending, // Thread has postponed work
 
 	dbg_global_pause, // Emulation paused
-	dbg_global_stop, // Emulation stopped
 	dbg_pause, // Thread paused
 	dbg_step, // Thread forced to pause after one step (one instruction, etc)
 
 	__bitset_enum_max
 };
 
+// Test stopped state
+constexpr bool is_stopped(bs_t<cpu_flag> state)
+{
+	return !!(state & (cpu_flag::stop + cpu_flag::exit));
+}
+
+// Test paused state
+constexpr bool is_paused(bs_t<cpu_flag> state)
+{
+	return !!(state & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause)) && !is_stopped(state);
+}
+
 class cpu_thread
 {
-	// PPU cache backward compatibility hack
-	char dummy[sizeof(std::shared_ptr<void>) - 8];
-
 public:
 	u64 block_hash = 0;
 
@@ -37,6 +51,9 @@ protected:
 	cpu_thread(u32 id);
 
 public:
+	cpu_thread(const cpu_thread&) = delete;
+	cpu_thread& operator=(const cpu_thread&) = delete;
+
 	virtual ~cpu_thread();
 	void operator()();
 
@@ -63,16 +80,30 @@ public:
 		return false;
 	}
 
-	// Test stopped state
-	bool is_stopped() const
+	// Wrappers
+	static constexpr bool is_stopped(bs_t<cpu_flag> s)
 	{
-		return !!(state & (cpu_flag::stop + cpu_flag::exit + cpu_flag::dbg_global_stop));
+		return ::is_stopped(s);
 	}
 
-	// Test paused state
+	static constexpr bool is_paused(bs_t<cpu_flag> s)
+	{
+		return ::is_paused(s);
+	}
+
+	bool is_stopped() const
+	{
+		return ::is_stopped(state);
+	}
+
 	bool is_paused() const
 	{
-		return !!(state & (cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause));
+		return ::is_paused(state);
+	}
+
+	bool has_pause_flag() const
+	{
+		return !!(state & cpu_flag::pause);
 	}
 
 	// Check thread type
@@ -81,20 +112,45 @@ public:
 		return id >> 24;
 	}
 
-	void notify();
+	template <DerivedFrom<cpu_thread> T>
+	T* try_get()
+	{
+		if constexpr (std::is_same_v<std::remove_const_t<T>, cpu_thread>)
+		{
+			return this;
+		}
+		else
+		{
+			if (id_type() == (T::id_base >> 24))
+			{
+				return static_cast<T*>(this);
+			}
 
-private:
-	void abort();
+			return nullptr;
+		}
+	}
+
+	template <DerivedFrom<cpu_thread> T>
+	const T* try_get() const
+	{
+		return const_cast<cpu_thread*>(this)->try_get<const T>();
+	}
+
+	u32 get_pc() const;
+	u32* get_pc2(); // Last PC before stepping for the debugger (may be null)
+
+	void notify();
+	cpu_thread& operator=(thread_state);
 
 public:
 	// Thread stats for external observation
-	static atomic_t<u64> g_threads_created, g_threads_deleted;
+	static atomic_t<u64> g_threads_created, g_threads_deleted, g_suspend_counter;
 
 	// Get thread name (as assigned to named_thread)
 	std::string get_name() const;
 
 	// Get CPU state dump (everything)
-	virtual std::string dump_all() const = 0;
+	virtual std::string dump_all() const;
 
 	// Get CPU register dump
 	virtual std::string dump_regs() const;
@@ -114,39 +170,129 @@ public:
 	// Callback for cpu_flag::suspend
 	virtual void cpu_sleep() {}
 
-	// Callback for cpu_flag::memory
-	virtual void cpu_mem() {}
-
-	// Callback for vm::temporary_unlock
-	virtual void cpu_unmem() {}
+	// Callback for cpu_flag::pending
+	virtual void cpu_work() {}
 
 	// Callback for cpu_flag::ret
 	virtual void cpu_return() {}
 
-	// Thread locker
-	class suspend_all
-	{
-		cpu_thread* m_this;
+	// Callback for thread_ctrl::wait or RSX wait
+	virtual void cpu_wait(bs_t<cpu_flag> old);
 
-	public:
-		suspend_all(cpu_thread* _this) noexcept;
-		suspend_all(const suspend_all&) = delete;
-		suspend_all& operator=(const suspend_all&) = delete;
-		~suspend_all();
+	// Callback for function abortion stats on Emu.Stop()
+	virtual void cpu_on_stop() {}
+
+	// For internal use
+	struct suspend_work
+	{
+		// Task priority
+		u8 prio;
+		bool cancel_if_not_suspended;
+		bool was_posted;
+
+		// Size of prefetch list workload
+		u32 prf_size;
+		void* const* prf_list;
+
+		void* func_ptr;
+		void* res_buf;
+
+		// Type-erased op executor
+		void (*exec)(void* func, void* res);
+
+		// Next object in the linked list
+		suspend_work* next;
+
+		// Internal method
+		bool push(cpu_thread* _this) noexcept;
 	};
 
-	// Stop all threads with cpu_flag::dbg_global_stop
-	static void stop_all() noexcept;
+	// Suspend all threads and execute op (may be executed by other thread than caller!)
+	template <u8 Prio = 0, typename F>
+	static auto suspend_all(cpu_thread* _this, std::initializer_list<void*> hints, F op)
+	{
+		constexpr u8 prio = Prio > 3 ? 3 : Prio;
+
+		if constexpr (std::is_void_v<std::invoke_result_t<F>>)
+		{
+			suspend_work work{prio, false, false, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
+			{
+				std::invoke(*static_cast<F*>(func));
+			}};
+
+			work.push(_this);
+			return;
+		}
+		else
+		{
+			std::invoke_result_t<F> result;
+
+			suspend_work work{prio, false, false, ::size32(hints), hints.begin(), &op, &result, [](void* func, void* res_buf)
+			{
+				*static_cast<std::invoke_result_t<F>*>(res_buf) = std::invoke(*static_cast<F*>(func));
+			}};
+
+			work.push(_this);
+			return result;
+		}
+	}
+
+	template <u8 Prio = 0, typename F>
+	static suspend_work suspend_post(cpu_thread* /*_this*/, std::initializer_list<void*> hints, F& op)
+	{
+		constexpr u8 prio = Prio > 3 ? 3 : Prio;
+
+		static_assert(std::is_void_v<std::invoke_result_t<F>>, "cpu_thread::suspend_post only supports void as return type");
+
+		return suspend_work{prio, false, true, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
+		{
+			std::invoke(*static_cast<F*>(func));
+		}};
+	}
+
+	// Push the workload only if threads are being suspended by suspend_all()
+	template <u8 Prio = 0, typename F>
+	static bool if_suspended(cpu_thread* _this, std::initializer_list<void*> hints, F op)
+	{
+		constexpr u8 prio = Prio > 3 ? 3 : Prio;
+
+		static_assert(std::is_void_v<std::invoke_result_t<F>>, "cpu_thread::if_suspended only supports void as return type");
+
+		{
+			suspend_work work{prio, true, false, ::size32(hints), hints.begin(), &op, nullptr, [](void* func, void*)
+			{
+				std::invoke(*static_cast<F*>(func));
+			}};
+
+			return work.push(_this);
+		}
+	}
+
+	// Cleanup thread counting information
+	static void cleanup() noexcept;
 
 	// Send signal to the profiler(s) to flush results
 	static void flush_profilers() noexcept;
+
+	template <DerivedFrom<cpu_thread> T = cpu_thread>
+	static inline T* get_current() noexcept
+	{
+		if (const auto cpu = g_tls_this_thread)
+		{
+			return cpu->try_get<T>();
+		}
+
+		return nullptr;
+	}
+
+private:
+	static thread_local cpu_thread* g_tls_this_thread;
 };
 
-inline cpu_thread* get_current_cpu_thread() noexcept
+template <DerivedFrom<cpu_thread> T = cpu_thread>
+inline T* get_current_cpu_thread() noexcept
 {
-	extern thread_local cpu_thread* g_tls_current_cpu_thread;
-
-	return g_tls_current_cpu_thread;
+	return cpu_thread::get_current<T>();
 }
 
 class ppu_thread;

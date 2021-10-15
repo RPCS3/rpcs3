@@ -1,8 +1,9 @@
-﻿#pragma once
+#pragma once
 
-#include "types.h"
+#include "util/types.hpp"
 #include "StrFmt.h"
 #include <vector>
+#include <algorithm>
 
 
 namespace utils
@@ -40,7 +41,7 @@ namespace utils
 	class address_range
 	{
 	public:
-		u32 start = UINT32_MAX; // First address in range
+		u32 start = umax; // First address in range
 		u32 end = 0; // Last address
 
 	private:
@@ -65,7 +66,6 @@ namespace utils
 	public:
 		// Constructors
 		constexpr address_range() = default;
-		constexpr address_range(const address_range &other) : start(other.start), end(other.end) {}
 
 		static constexpr address_range start_length(u32 _start, u32 _length)
 		{
@@ -92,7 +92,7 @@ namespace utils
 		void set_length(const u32 new_length)
 		{
 			end = start + new_length - 1;
-			ASSERT(valid());
+			ensure(valid());
 		}
 
 		u32 next_address() const
@@ -174,7 +174,7 @@ namespace utils
 		address_range get_min_max(const address_range &other) const
 		{
 			return {
-				std::min(valid() ? start : UINT32_MAX, other.valid() ? other.start : UINT32_MAX),
+				std::min(valid() ? start : umax, other.valid() ? other.start : umax),
 				std::max(valid() ? end : 0, other.valid() ? other.end : 0)
 			};
 		}
@@ -234,19 +234,14 @@ namespace utils
 
 		void invalidate()
 		{
-			start = UINT32_MAX;
+			start = umax;
 			end = 0;
 		}
 
 		// Comparison Operators
-		bool operator ==(const address_range &other) const
+		bool operator ==(const address_range& other) const
 		{
 			return (start == other.start && end == other.end);
-		}
-
-		bool operator !=(const address_range &other) const
-		{
-			return (start != other.start || end != other.end);
 		}
 
 		/**
@@ -272,17 +267,17 @@ namespace utils
 	class address_range_vector
 	{
 	public:
-		using vector_type = typename std::vector<address_range>;
-		using iterator = typename vector_type::iterator;
-		using const_iterator = typename vector_type::const_iterator;
-		using size_type = typename vector_type::size_type;
+		using vector_type = std::vector<address_range>;
+		using iterator = vector_type::iterator;
+		using const_iterator = vector_type::const_iterator;
+		using size_type = vector_type::size_type;
 
 	private:
 		vector_type data;
 
 	public:
 		// Wrapped functions
-		inline void reserve(size_t nr) { data.reserve(nr); }
+		inline void reserve(usz nr) { data.reserve(nr); }
 		inline void clear() { data.clear(); }
 		inline size_type size() const { return data.size(); }
 		inline bool empty() const { return data.empty(); }
@@ -456,9 +451,9 @@ namespace utils
 		// Will fail if ranges within the vector overlap our touch each-other
 		bool check_consistency() const
 		{
-			size_t _size = data.size();
+			const usz _size = data.size();
 
-			for (size_t i = 0; i < _size; ++i)
+			for (usz i = 0; i < _size; ++i)
 			{
 				const auto &r1 = data[i];
 				if (!r1.valid())
@@ -466,7 +461,7 @@ namespace utils
 					continue;
 				}
 
-				for (size_t j = i + 1; j < _size; ++j)
+				for (usz j = i + 1; j < _size; ++j)
 				{
 					const auto &r2 = data[j];
 					if (!r2.valid())
@@ -486,20 +481,10 @@ namespace utils
 		// Test for overlap with a given range
 		bool overlaps(const address_range &range) const
 		{
-			for (const address_range &current : data)
+			return std::any_of(data.cbegin(), data.cend(), [&range](const address_range& cur)
 			{
-				if (!current.valid())
-				{
-					continue;
-				}
-
-				if (current.overlaps(range))
-				{
-					return true;
-				}
-			}
-
-			return false;
+				return cur.valid() && cur.overlaps(range);
+			});
 		}
 
 		// Test for overlap with a given address_range vector
@@ -531,37 +516,19 @@ namespace utils
 		// Test if a given range is fully contained inside this vector
 		bool contains(const address_range &range) const
 		{
-			for (const address_range &cur : *this)
+			return std::any_of(this->begin(), this->end(), [&range](const address_range& cur)
 			{
-				if (!cur.valid())
-				{
-					continue;
-				}
-
-				if (range.inside(cur))
-				{
-					return true;
-				}
-			}
-			return false;
+				return cur.valid() && cur.inside(range);
+			});
 		}
 
 		// Test if all ranges in this vector are full contained inside a specific range
 		bool inside(const address_range &range) const
 		{
-			for (const address_range &cur : *this)
+			return std::all_of(this->begin(), this->end(), [&range](const address_range& cur)
 			{
-				if (!cur.valid())
-				{
-					continue;
-				}
-
-				if (!cur.inside(range))
-				{
-					return false;
-				}
-			}
-			return true;
+				return !cur.valid() || cur.inside(range);
+			});
 		}
 	};
 
@@ -582,15 +549,15 @@ namespace utils
 
 namespace std
 {
-	static_assert(sizeof(size_t) >= 2 * sizeof(u32), "size_t must be at least twice the size of u32");
+	static_assert(sizeof(usz) >= 2 * sizeof(u32), "usz must be at least twice the size of u32");
 
 	template <>
 	struct hash<utils::address_range>
 	{
-		std::size_t operator()(const utils::address_range& k) const
+		usz operator()(const utils::address_range& k) const
 		{
-			// we can guarantee a unique hash since our type is 64 bits and size_t as well
-			return (size_t{ k.start } << 32) | size_t{ k.end };
+			// we can guarantee a unique hash since our type is 64 bits and usz as well
+			return (usz{ k.start } << 32) | usz{ k.end };
 		}
 	};
 }

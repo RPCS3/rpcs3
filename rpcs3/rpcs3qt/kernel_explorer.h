@@ -1,15 +1,18 @@
-﻿#pragma once
+#pragma once
 
 #include <QDialog>
-#include <QTreeWidget>
+#include <QString>
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
+
+class QTreeWidget;
+class QTreeWidgetItem;
 
 class kernel_explorer : public QDialog
 {
 	Q_OBJECT
 
-	static const size_t sys_size = 256;
+	static const usz sys_size = 256;
 
 	enum additional_nodes
 	{
@@ -21,14 +24,18 @@ class kernel_explorer : public QDialog
 		spu_thread_groups,
 		rsx_contexts,
 		file_descriptors,
+		process_info,
 	};
 
 public:
-	kernel_explorer(QWidget* parent);
+	explicit kernel_explorer(QWidget* parent);
 
 private:
 	QTreeWidget* m_tree;
+	QString m_log_buf;
+
+	void log(u32 level = 0, QTreeWidgetItem* node = nullptr);
 
 private Q_SLOTS:
-	void Update();
+	void update();
 };

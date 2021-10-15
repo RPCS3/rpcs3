@@ -1,11 +1,18 @@
-﻿#pragma once
-#include "VKHelpers.h"
+#pragma once
+#include "vkutils/image.h"
+#include "vkutils/query_pool.hpp"
+#include "vkutils/sampler.h"
+
+#include <unordered_map>
+#include <deque>
+#include <memory>
 
 namespace vk
 {
 	u64 get_event_id();
 	u64 current_event_id();
-	void on_event_completed(u64 event_id);
+	u64 last_completed_event_id();
+	void on_event_completed(u64 event_id, bool flush = false);
 
 	struct eid_scope_t
 	{
@@ -15,9 +22,10 @@ namespace vk
 		std::vector<std::unique_ptr<vk::image_view>> m_disposed_image_views;
 		std::vector<std::unique_ptr<vk::image>> m_disposed_images;
 		std::vector<std::unique_ptr<vk::event>> m_disposed_events;
+		std::vector<std::unique_ptr<vk::query_pool>> m_disposed_query_pools;
 
 		eid_scope_t(u64 _eid):
-			eid(_eid), m_device(vk::get_current_renderer())
+			eid(_eid), m_device(g_render_device)
 		{}
 
 		~eid_scope_t()
@@ -31,6 +39,7 @@ namespace vk
 			m_disposed_events.clear();
 			m_disposed_image_views.clear();
 			m_disposed_images.clear();
+			m_disposed_query_pools.clear();
 		}
 	};
 
@@ -89,7 +98,7 @@ namespace vk
 			m_sampler_pool.clear();
 		}
 
-		vk::sampler* find_sampler(VkDevice dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
+		vk::sampler* find_sampler(const vk::render_device& dev, VkSamplerAddressMode clamp_u, VkSamplerAddressMode clamp_v, VkSamplerAddressMode clamp_w,
 			VkBool32 unnormalized_coordinates, float mipLodBias, float max_anisotropy, float min_lod, float max_lod,
 			VkFilter min_filter, VkFilter mag_filter, VkSamplerMipmapMode mipmap_mode, VkBorderColor border_color,
 			VkBool32 depth_compare = VK_FALSE, VkCompareOp depth_compare_mode = VK_COMPARE_OP_NEVER)
@@ -148,6 +157,11 @@ namespace vk
 			event = VK_NULL_HANDLE;
 		}
 
+		void dispose(std::unique_ptr<vk::query_pool>& pool)
+		{
+			get_current_eid_scope().m_disposed_query_pools.emplace_back(std::move(pool));
+		}
+
 		void eid_completed(u64 eid)
 		{
 			while (!m_eid_map.empty())
@@ -169,6 +183,7 @@ namespace vk
 	{
 		u64 size;
 		u32 type_index;
+		vmm_allocation_pool pool;
 	};
 
 	resource_manager* get_resource_manager();

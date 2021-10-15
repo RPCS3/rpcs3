@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utilities/types.h"
+#include "util/types.hpp"
 #include "Utilities/File.h"
 
 struct WAVHeader
@@ -63,13 +63,13 @@ struct WAVHeader
 
 class AudioDumper
 {
-	WAVHeader m_header;
-	fs::file m_output;
+	WAVHeader m_header{};
+	fs::file m_output{};
 
 public:
 	AudioDumper(u16 ch);
 	~AudioDumper();
 
 	void WriteData(const void* buffer, u32 size);
-	const u16 GetCh() const { return m_header.FMT.NumChannels; }
+	u16 GetCh() const { return m_header.FMT.NumChannels; }
 };

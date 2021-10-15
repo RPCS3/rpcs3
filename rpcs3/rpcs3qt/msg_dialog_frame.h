@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "stdafx.h"
+#include "util/types.hpp"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 
 #include <QProgressBar>
@@ -10,6 +10,8 @@
 #include <QWinTaskbarProgress>
 #include <QWinTaskbarButton>
 #endif
+
+#include <string>
 
 class custom_dialog;
 
@@ -34,17 +36,18 @@ private:
 	int m_gauge_max = 0;
 
 public:
-	msg_dialog_frame();
+	msg_dialog_frame() = default;
 	~msg_dialog_frame();
-	virtual void Create(const std::string& msg, const std::string& title = "") override;
-	virtual void Close(bool success) override;
-	virtual void SetMsg(const std::string& msg) override;
-	virtual void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) override;
-	virtual void ProgressBarReset(u32 progressBarIndex) override;
-	virtual void ProgressBarInc(u32 progressBarIndex, u32 delta) override;
-	virtual void ProgressBarSetLimit(u32 index, u32 limit) override;
+	void Create(const std::string& msg, const std::string& title = "") override;
+	void Close(bool success) override;
+	void SetMsg(const std::string& msg) override;
+	void ProgressBarSetMsg(u32 progressBarIndex, const std::string& msg) override;
+	void ProgressBarReset(u32 progressBarIndex) override;
+	void ProgressBarInc(u32 progressBarIndex, u32 delta) override;
+	void ProgressBarSetValue(u32 progressBarIndex, u32 value) override;
+	void ProgressBarSetLimit(u32 index, u32 limit) override;
 #ifdef HAVE_QTDBUS
 private:
-	void UpdateProgress(int progress, bool disable = false);
+	void UpdateProgress(int progress, bool progress_visible);
 #endif
 };

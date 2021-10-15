@@ -1,11 +1,12 @@
-﻿#include "stdafx.h"
-#include "GLGSRender.h"
+#include "stdafx.h"
 #include "../Common/BufferUtils.h"
+#include "../rsx_methods.h"
+#include "GLGSRender.h"
 #include "GLHelpers.h"
 
 namespace
 {
-	static constexpr std::array<const char*, 16> s_reg_table =
+	[[maybe_unused]] constexpr std::array<const char*, 16> s_reg_table =
 	{
 		"in_pos_buffer", "in_weight_buffer", "in_normal_buffer",
 		"in_diff_color_buffer", "in_spec_color_buffer",
@@ -23,7 +24,7 @@ namespace
 	{
 		// This is an emulated buffer, so our indices only range from 0->original_vertex_array_length
 		const auto element_count = get_index_count(primitive_mode, vertex_count);
-		verify(HERE), !gl::is_primitive_native(primitive_mode);
+		ensure(!gl::is_primitive_native(primitive_mode));
 
 		auto mapping = dst.alloc_from_heap(element_count * sizeof(u16), 256);
 		auto mapped_buffer = static_cast<char*>(mapping.first);
@@ -57,15 +58,12 @@ namespace
 
 	struct draw_command_visitor
 	{
-		using attribute_storage = std::vector<
-		    std::variant<rsx::vertex_array_buffer, rsx::vertex_array_register, rsx::empty_vertex_array>>;
-
 		draw_command_visitor(gl::ring_buffer& index_ring_buffer, rsx::vertex_input_layout& vertex_layout)
-		    : m_index_ring_buffer(index_ring_buffer)
+			: m_index_ring_buffer(index_ring_buffer)
 			, m_vertex_layout(vertex_layout)
 		{}
 
-		vertex_input_state operator()(const rsx::draw_array_command& command)
+		vertex_input_state operator()(const rsx::draw_array_command& /*command*/)
 		{
 			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			const u32 min_index    = rsx::method_registers.current_draw_clause.min_index();
@@ -76,7 +74,7 @@ namespace
 				u32 index_count;
 				u32 offset_in_index_buffer;
 				std::tie(index_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw(
-				    rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer,
+					rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer,
 					rsx::method_registers.current_draw_clause.get_elements_count());
 
 				return{ false, min_index, max_index, index_count, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_SHORT), offset_in_index_buffer) };
@@ -126,7 +124,7 @@ namespace
 			return{ true, min_index, max_index, index_count, index_offset, std::make_tuple(get_index_type(type), offset_in_index_buffer) };
 		}
 
-		vertex_input_state operator()(const rsx::draw_inlined_array& command)
+		vertex_input_state operator()(const rsx::draw_inlined_array& /*command*/)
 		{
 			const auto stream_length = rsx::method_registers.current_draw_clause.inline_vertex_array.size();
 			const u32 vertex_count = u32(stream_length * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0].attribute_stride;
@@ -189,7 +187,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 		//TODO: make vertex cache keep local data beyond frame boundaries and hook notify command
 		bool in_cache = false;
 		bool to_store = false;
-		u32  storage_address = UINT32_MAX;
+		u32  storage_address = -1;
 
 		if (m_vertex_layout.interleaved_blocks.size() == 1 &&
 			rsx::method_registers.current_draw_clause.command != rsx::draw_command::inlined_array)
@@ -199,7 +197,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 
 			if (auto cached = m_vertex_cache->find_vertex_range(storage_address, GL_R8UI, required.first))
 			{
-				verify(HERE), cached->local_address == storage_address;
+				ensure(cached->local_address == storage_address);
 
 				in_cache = true;
 				upload_info.persistent_mapping_offset = cached->offset_in_heap;
@@ -224,8 +222,8 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 
 		if (!m_persistent_stream_view.in_range(upload_info.persistent_mapping_offset, required.first, upload_info.persistent_mapping_offset))
 		{
-			verify(HERE), m_max_texbuffer_size < m_attrib_ring_buffer->size();
-			const size_t view_size = ((upload_info.persistent_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
+			ensure(m_max_texbuffer_size < m_attrib_ring_buffer->size());
+			const usz view_size = ((upload_info.persistent_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
 				(m_attrib_ring_buffer->size() - upload_info.persistent_mapping_offset) : m_max_texbuffer_size;
 
 			m_persistent_stream_view.update(m_attrib_ring_buffer.get(), upload_info.persistent_mapping_offset, static_cast<u32>(view_size));
@@ -241,8 +239,8 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 
 		if (!m_volatile_stream_view.in_range(upload_info.volatile_mapping_offset, required.second, upload_info.volatile_mapping_offset))
 		{
-			verify(HERE), m_max_texbuffer_size < m_attrib_ring_buffer->size();
-			const size_t view_size = ((upload_info.volatile_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
+			ensure(m_max_texbuffer_size < m_attrib_ring_buffer->size());
+			const usz view_size = ((upload_info.volatile_mapping_offset + m_max_texbuffer_size) > m_attrib_ring_buffer->size()) ?
 				(m_attrib_ring_buffer->size() - upload_info.volatile_mapping_offset) : m_max_texbuffer_size;
 
 			m_volatile_stream_view.update(m_attrib_ring_buffer.get(), upload_info.volatile_mapping_offset, static_cast<u32>(view_size));

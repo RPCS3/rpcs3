@@ -1,4 +1,5 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
+#include "Emu/System.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
 
@@ -114,7 +115,7 @@ void lv2_config::remove_service_event(u32 id)
 
 
 // LV2 Config Service Listener
-bool lv2_config_service_listener::check_service(const lv2_config_service& service)
+bool lv2_config_service_listener::check_service(const lv2_config_service& service) const
 {
 	// Filter by type
 	if (type == SYS_CONFIG_SERVICE_LISTENER_ONCE && !service_events.empty())
@@ -151,7 +152,7 @@ bool lv2_config_service_listener::notify(const std::shared_ptr<lv2_config_servic
 		return false;
 
 	// Create service event and notify queue!
-	auto event = lv2_config_service_event::create(handle, service, *this);
+	const auto event = lv2_config_service_event::create(handle, service, *this);
 	return notify(event);
 }
 
@@ -160,7 +161,8 @@ void lv2_config_service_listener::notify_all()
 	std::vector<std::shared_ptr<lv2_config_service>> services;
 
 	// Grab all events
-	idm::select<lv2_config_service>([&](u32 id, lv2_config_service& service) -> void {
+	idm::select<lv2_config_service>([&](u32 /*id*/, lv2_config_service& service)
+	{
 		if (check_service(service))
 		{
 			services.push_back(service.get_shared_ptr());
@@ -168,7 +170,8 @@ void lv2_config_service_listener::notify_all()
 	}, 0);
 
 	// Sort services by timestamp
-	sort(services.begin(), services.end(), [](const std::shared_ptr<lv2_config_service>& s1, const std::shared_ptr<lv2_config_service>& s2) -> bool {
+	sort(services.begin(), services.end(), [](const std::shared_ptr<lv2_config_service>& s1, const std::shared_ptr<lv2_config_service>& s2)
+	{
 		return s1->timestamp < s2->timestamp;
 	});
 
@@ -199,7 +202,8 @@ void lv2_config_service::notify() const
 
 	auto sptr = wkptr.lock();
 
-	idm::select<lv2_config_service_listener>([&](u32 id, lv2_config_service_listener& listener) -> void {
+	idm::select<lv2_config_service_listener>([&](u32 /*id*/, lv2_config_service_listener& listener)
+	{
 		if (listener.check_service(*sptr))
 			listeners.push_back(listener.get_shared_ptr());
 	});
@@ -212,7 +216,7 @@ void lv2_config_service::notify() const
 
 bool lv2_config_service_event::notify() const
 {
-	auto _handle = handle.lock();
+	const auto _handle = handle.lock();
 	if (!_handle)
 	{
 		return false;
@@ -224,9 +228,9 @@ bool lv2_config_service_event::notify() const
 
 
 // LV2 Config Service Event
-void lv2_config_service_event::write(sys_config_service_event_t *dst)
+void lv2_config_service_event::write(sys_config_service_event_t *dst) const
 {
-	auto registered = service->is_registered();
+	const auto registered = service->is_registered();
 
 	dst->service_listener_handle = listener.get_id();
 	dst->registered = registered;
@@ -238,7 +242,7 @@ void lv2_config_service_event::write(sys_config_service_event_t *dst)
 		dst->verbosity = service->verbosity;
 		dst->padding = service->padding;
 
-		auto size = service->data.size();
+		const auto size = service->data.size();
 		dst->data_size = static_cast<u32>(size);
 		memcpy(dst->data, service->data.data(), size);
 	}
@@ -262,10 +266,10 @@ error_code sys_config_open(u32 equeue_hdl, vm::ptr<u32> out_config_hdl)
 	}
 
 	// Initialize lv2_config global state
-	const auto global = g_fxo->get<lv2_config>();
+	auto& global = g_fxo->get<lv2_config>();
 	if (true)
 	{
-		global->initialize();
+		global.initialize();
 	}
 
 	// Create a lv2_config_handle object
@@ -306,7 +310,7 @@ error_code sys_config_get_service_event(u32 config_hdl, u32 event_id, vm::ptr<sy
 	}
 
 	// Find service_event object
-	const auto event = g_fxo->get<lv2_config>()->find_event(event_id);
+	const auto event = g_fxo->get<lv2_config>().find_event(event_id);
 	if (!event)
 	{
 		return CELL_ESRCH;
@@ -386,7 +390,7 @@ error_code sys_config_register_service(u32 config_hdl, sys_config_service_id ser
 	}
 
 	// Create service
-	auto service = lv2_config_service::create(service_id, user_id, verbosity, 0, data_buf.get_ptr(), size);
+	const auto service = lv2_config_service::create(service_id, user_id, verbosity, 0, data_buf.get_ptr(), size);
 	if (!service)
 	{
 		return CELL_EAGAIN;
@@ -437,6 +441,6 @@ error_code sys_config_register_io_error_listener(u32 config_hdl)
 
 error_code sys_config_unregister_io_error_listener(u32 config_hdl)
 {
-	sys_config.todo("sys_config_register_io_error_listener(config_hdl=0x%x)", config_hdl);
+	sys_config.todo("sys_config_unregister_io_error_listener(config_hdl=0x%x)", config_hdl);
 	return CELL_OK;
 }

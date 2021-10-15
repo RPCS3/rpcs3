@@ -1,18 +1,19 @@
-﻿#include "stdafx.h"
 #include "gl_gs_frame.h"
+
+#include "Emu/system_config.h"
 
 #include <QOpenGLContext>
 #include <QOffscreenSurface>
 
-gl_gs_frame::gl_gs_frame(const QRect& geometry, const QIcon& appIcon, const std::shared_ptr<gui_settings>& gui_settings)
-	: gs_frame(geometry, appIcon, gui_settings)
+gl_gs_frame::gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings)
+	: gs_frame(screen, geometry, appIcon, std::move(gui_settings))
 {
 	setSurfaceType(QSurface::OpenGLSurface);
 
 	m_format.setMajorVersion(4);
 	m_format.setMinorVersion(3);
 	m_format.setProfile(QSurfaceFormat::CoreProfile);
-	m_format.setDepthBufferSize(16);
+	m_format.setDepthBufferSize(0);
 	m_format.setSwapBehavior(QSurfaceFormat::SwapBehavior::DoubleBuffer);
 	if (g_cfg.video.debug_output)
 	{
@@ -55,7 +56,7 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 {
 	if (!ctx)
 	{
-		fmt::throw_exception("Null context handle passed to set_current" HERE);
+		fmt::throw_exception("Null context handle passed to set_current");
 	}
 
 	const auto context = static_cast<GLContext*>(ctx);
@@ -73,7 +74,7 @@ void gl_gs_frame::set_current(draw_context_t ctx)
 
 		if (!context->handle->makeCurrent(context->surface))
 		{
-			fmt::throw_exception("Could not bind OpenGL context" HERE);
+			fmt::throw_exception("Could not bind OpenGL context");
 		}
 	}
 }

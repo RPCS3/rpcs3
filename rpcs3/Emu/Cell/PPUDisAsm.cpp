@@ -1,14 +1,352 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "PPUDisAsm.h"
 #include "PPUFunction.h"
+#include "PPUAnalyser.h"
+#include "Emu/IdManager.h"
 
-constexpr ppu_decoder<PPUDisAsm> s_ppu_disasm;
+#include "util/asm.hpp"
+
+const ppu_decoder<PPUDisAsm> s_ppu_disasm;
+const ppu_decoder<ppu_itype> s_ppu_itype;
+
+extern const std::unordered_map<u32, std::string_view>& get_exported_function_names_as_addr_indexed_map();
+
+enum class ppu_syscall_code : u64;
+
+extern std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm()
+{
+	return std::make_shared<PPUDisAsm>(cpu_disasm_mode::normal, vm::g_sudo_addr);
+}
 
 u32 PPUDisAsm::disasm(u32 pc)
 {
-	const u32 op = *reinterpret_cast<const be_t<u32>*>(offset + pc);
-	(this->*(s_ppu_disasm.decode(op)))({ op });
+	last_opcode.clear();
+
+	if (pc < m_start_pc)
+	{
+		return 0;
+	}
+
+	if (m_offset == vm::g_sudo_addr && !vm::check_addr(pc, vm::page_executable))
+	{
+		return 0;
+	}
+
+	dump_pc = pc;
+	be_t<u32> op{};
+	std::memcpy(&op, m_offset + pc, 4);
+	m_op = op;
+
+	(this->*(s_ppu_disasm.decode(m_op)))({ m_op });
+
+	if (m_offset != vm::g_sudo_addr)
+	{
+		// Exported functions lookup is not allowed in this case
+		format_by_mode();
+		return 4;
+	}
+
+	const auto& map = get_exported_function_names_as_addr_indexed_map();
+
+	if (auto it = map.find(pc); it != map.end())
+	{
+		last_opcode += " #";
+		last_opcode += it->second;
+	}
+
+	format_by_mode();
 	return 4;
+}
+
+std::pair<const void*, usz> PPUDisAsm::get_memory_span() const
+{
+	return {m_offset + m_start_pc, (1ull << 32) - m_start_pc};
+}
+
+std::unique_ptr<CPUDisAsm> PPUDisAsm::copy_type_erased() const
+{
+	return std::make_unique<PPUDisAsm>(*this);
+}
+
+std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 reg, u32 pc, u32 TTL) const
+{
+	if (!TTL)
+	{
+		// Recursion limit (Time To Live)
+		return {};
+	}
+
+	if (pc == umax)
+	{
+		// Default arg: choose pc of previous instruction 
+
+		if (dump_pc == 0)
+		{
+			// Do not underflow
+			return {};
+		}
+
+		pc = dump_pc - 4;
+	}
+
+#if __cpp_using_enum >= 201907
+	using enum const_op;
+#else
+	constexpr const_op none = const_op::none, form = const_op::form, xor_mask = const_op::xor_mask;
+#endif
+
+	// Scan PPU executable memory backwards until unmapped or non-executable memory block is encountered
+
+	for (u32 i = pc; i >= m_start_pc && (m_offset != vm::g_sudo_addr || vm::check_addr(i, vm::page_executable));)
+	{
+		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(m_offset + i);
+		const ppu_opcode_t op{ opcode };
+
+		const auto type = s_ppu_itype.decode(opcode);
+
+		auto is_branch = [](enum ppu_itype::type itype)
+		{
+			return itype == ppu_itype::BC || itype == ppu_itype::B || itype == ppu_itype::BCLR || itype == ppu_itype::BCCTR; 
+		};
+
+		if (is_branch(type) || type == ppu_itype::UNK)
+		{
+			// TODO: Detect calls, ignore them if reg is a non-volatile register
+			return {};
+		}
+
+		// Get constant register value
+		#define GET_CONST_OP_REG(var, reg, op) \
+		{\
+			/* Search for the constant value of the register*/\
+			const auto [const_op, value] = try_get_const_op_gpr_value(reg, i - 4, TTL - 1);\
+		\
+			if (const_op != const_op::op)\
+			{\
+				/* Cannot compute constant value if register/operation is not constant*/\
+				return {};\
+			}\
+		\
+			var = value;\
+		} void() /*<- Require a semicolon*/
+
+		#define GET_CONST_REG(var, reg) GET_CONST_OP_REG(var, reg, form)
+
+		switch (type)
+		{
+		case ppu_itype::ADDI:
+		{
+			if (op.rd != reg)
+			{
+				// Destination register is not relevant to us
+				break;
+			}
+
+			u64 reg_ra = 0;
+
+			if (op.ra)
+			{
+				GET_CONST_REG(reg_ra, op.ra);
+			}
+
+			return { form, reg_ra + op.simm16 };
+		}
+		case ppu_itype::ADDIS:
+		{
+			if (op.rd != reg)
+			{
+				break;
+			}
+
+			u64 reg_ra = 0;
+
+			if (op.ra)
+			{
+				GET_CONST_REG(reg_ra, op.ra);
+			}
+
+			return { form, reg_ra + op.simm16 * 65536 };
+		}
+		case ppu_itype::ORI:
+		{
+			if (op.rs == op.ra && !op.uimm16)
+			{
+				// NO-OP
+				break;
+			}
+
+			if (op.ra != reg)
+			{
+				// Destination register is not relevant to us
+				break;
+			}
+
+			u64 reg_rs = 0;
+
+			GET_CONST_REG(reg_rs, op.rs);
+
+			return { form, reg_rs | op.uimm16 };
+		}
+		case ppu_itype::ORIS:
+		{
+			if (op.rs == op.ra && !op.uimm16)
+			{
+				// NO-OP
+				break;
+			}
+
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			u64 reg_rs = 0;
+
+			GET_CONST_REG(reg_rs, op.rs);
+
+			return { form, reg_rs | (u64{op.uimm16} << 16)};
+		}
+		case ppu_itype::XORIS:
+		{
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			const auto [const_op, reg_rs] = try_get_const_op_gpr_value(op.rs, i - 4, TTL - 1);
+
+			if (const_op == none)
+			{
+				return { xor_mask, (u64{op.uimm16} << 16) };
+			}
+
+			if (const_op != form)
+			{
+				// Unexpected
+				return {};
+			}
+
+			return { form, reg_rs ^ (u64{op.uimm16} << 16)};
+		}
+		case ppu_itype::RLDICR:
+		{
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			u64 reg_rs = 0;
+
+			GET_CONST_REG(reg_rs, op.rs);
+
+			return { form, utils::rol64(reg_rs, op.sh64) & (~0ull << (op.mbe64 ^ 63)) };
+		}
+		case ppu_itype::OR:
+		{
+			if (op.rs == op.rb && op.rs == op.ra)
+			{
+				// NO-OP
+				break;
+			}
+
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			u64 reg_rs = 0, reg_rb = 0;
+
+			GET_CONST_REG(reg_rs, op.rs);
+
+			// Try to optimize if it's a register move operation
+			if (op.rs != op.rb)
+			{
+				GET_CONST_REG(reg_rb, op.rb);
+			}
+
+			return { form, reg_rs | reg_rb };
+		}
+		case ppu_itype::XOR:
+		{
+			if (op.ra != reg)
+			{
+				break;
+			}
+
+			if (op.rs == op.rb)
+			{
+				return { form, 0 };
+			}
+
+			const auto [const_op_rs, reg_rs] = try_get_const_op_gpr_value(op.rs, i - 4, TTL - 1);
+			const auto [const_op_rb, reg_rb] = try_get_const_op_gpr_value(op.rb, i - 4, TTL - 1);
+
+			if (const_op_rs == form && const_op_rb == form)
+			{
+				// Normally it is not the case
+				return { form, reg_rs ^ reg_rb };
+			}
+
+			if (const_op_rs == form && const_op_rb == none)
+			{
+				return { xor_mask, reg_rs };
+			}
+			else if (const_op_rb == form && const_op_rs == none)
+			{
+				return { xor_mask, reg_rb };
+			}
+
+			return {};
+		}
+		default:
+		{
+			// Ordinary test
+			// TODO: Proper detection of destination register(s) modification (if there are any)
+			if (op.ra == reg || op.rd == reg)
+			{
+				return {};
+			}
+
+			break;
+		}
+		}
+
+		if (i == 0)
+		{
+			return {};
+		}
+
+		i -= 4;
+	}
+
+	return {};
+}
+
+enum CellError : u32;
+
+void comment_constant(std::string& last_opcode, u64 value)
+{
+	// Test if potentially a CELL error
+	if ((value >> 28) == 0xf'ffff'fff8u || (value >> 28) == 0x8u)
+	{
+		const usz old_size = last_opcode.size();
+
+		// Comment as CELL error
+		fmt::append(last_opcode, " #%s (0x%x)", CellError{static_cast<u32>(value)}, value);
+
+		// Test if failed to format (appended " #0x8".. in such case)
+		if (last_opcode[old_size + 2] != '0')
+		{
+			// Success
+			return;
+		}
+
+		// Revert and fallback
+		last_opcode.resize(old_size);
+	}
+
+	// Comment constant formation
+	fmt::append(last_opcode, " #0x%x", value);
 }
 
 constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
@@ -69,7 +407,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x1: info.first = "ble"; break;
 		case 0x2: info.first = "bne"; break;
 		case 0x3: info.first = "bns"; break;
-		default: ASSUME(0); break;
+		default: fmt::throw_exception("Unreachable");
 		}
 		break;
 	}
@@ -82,7 +420,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x1: info.first = "ble"; break;
 		case 0x2: info.first = "bne"; break;
 		case 0x3: info.first = "bns"; break;
-		default: ASSUME(0); break;
+		default: fmt::throw_exception("Unreachable");
 		}
 		break;
 	}
@@ -95,7 +433,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x1: info.first = "ble"; break;
 		case 0x2: info.first = "bne"; break;
 		case 0x3: info.first = "bns"; break;
-		default: ASSUME(0); break;
+		default: fmt::throw_exception("Unreachable");
 		}
 		break;
 	}
@@ -107,7 +445,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x1: info.first = "bgt"; break;
 		case 0x2: info.first = "beq"; break;
 		case 0x3: info.first = "bso"; break;
-		default: ASSUME(0); break;
+		default: fmt::throw_exception("Unreachable");
 		}
 		break;
 	}
@@ -120,7 +458,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x1: info.first = "bgt"; break;
 		case 0x2: info.first = "beq"; break;
 		case 0x3: info.first = "bso"; break;
-		default: ASSUME(0); break;
+		default: fmt::throw_exception("Unreachable");
 		}
 		break;
 	}
@@ -133,7 +471,7 @@ constexpr std::pair<const char*, char> get_BC_info(u32 bo, u32 bi)
 		case 0x1: info.first = "bgt"; break;
 		case 0x2: info.first = "beq"; break;
 		case 0x3: info.first = "bso"; break;
-		default: ASSUME(0); break;
+		default: fmt::throw_exception("Unreachable");
 		}
 		break;
 	}
@@ -889,12 +1227,41 @@ void PPUDisAsm::SUBFIC(ppu_opcode_t op)
 
 void PPUDisAsm::CMPLI(ppu_opcode_t op)
 {
-	DisAsm_CR1_R1_IMM(op.l10 ? "cmpdi" : "cmpwi", op.crfd, op.ra, op.uimm16);
+	DisAsm_CR1_R1_IMM(op.l10 ? "cmpldi" : "cmplwi", op.crfd, op.ra, op.uimm16);
+
+	// Try to obtain the true constant value we are comparing against, comment on success
+	// Upper 16/48 bits of it
+	if (auto [is_xor, value] = try_get_const_xor_gpr_value(op.ra); is_xor && !(value & 0xFFFF))
+	{
+		// Fixup value (merge the lower 16-bits of that value)
+		value |= op.uimm16;
+
+		if (!op.l10)
+		{
+			value = static_cast<u32>(value);
+		}
+
+		comment_constant(last_opcode, value);
+	}
 }
 
 void PPUDisAsm::CMPI(ppu_opcode_t op)
 {
 	DisAsm_CR1_R1_IMM(op.l10 ? "cmpdi" : "cmpwi", op.crfd, op.ra, op.simm16);
+
+	// See CMPLI
+	if (auto [is_xor, value] = try_get_const_xor_gpr_value(op.ra); is_xor && !(value & 0xFFFF))
+	{
+		// Signed fixup
+		value ^= s64{op.simm16};
+
+		if (!op.l10)
+		{
+			value = static_cast<u32>(value);
+		}
+
+		comment_constant(last_opcode, value);
+	}
 }
 
 void PPUDisAsm::ADDIC(ppu_opcode_t op)
@@ -934,9 +1301,9 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 	const u32 aa = op.aa;
 	const u32 lk = op.lk;
 
-	if (m_mode == CPUDisAsm_CompilerElfMode)
+	if (m_mode == cpu_disasm_mode::compiler_elf)
 	{
-		Write(fmt::format("bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk));
+		fmt::append(last_opcode, "bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk);
 		return;
 	}
 
@@ -944,7 +1311,7 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 
 	if (!inst)
 	{
-		Write(fmt::format("bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk));
+		fmt::append(last_opcode, "bc 0x%x, 0x%x, 0x%x, %d, %d", bo, bi, bd, aa, lk);
 		return;
 	}
 
@@ -985,7 +1352,14 @@ void PPUDisAsm::SC(ppu_opcode_t op)
 		return UNK(op);
 	}
 
-	Write("sc");
+	// Try to get constant syscall index
+	if (auto [is_const, index] = try_get_const_gpr_value(11); is_const && index < 1024u)
+	{
+		fmt::append(last_opcode, "%-*s #%s", PadOp(), ppu_syscall_code{index});
+		return;
+	}
+
+	last_opcode += "sc";
 }
 
 void PPUDisAsm::B(ppu_opcode_t op)
@@ -994,9 +1368,9 @@ void PPUDisAsm::B(ppu_opcode_t op)
 	const u32 aa = op.aa;
 	const u32 lk = op.lk;
 
-	if (m_mode == CPUDisAsm_CompilerElfMode)
+	if (m_mode == cpu_disasm_mode::compiler_elf)
 	{
-		Write(fmt::format("b 0x%x, %d, %d", li, aa, lk));
+		fmt::append(last_opcode, "b 0x%x, %d, %d", li, aa, lk);
 		return;
 	}
 
@@ -1034,7 +1408,7 @@ void PPUDisAsm::BCLR(ppu_opcode_t op)
 
 	if (bo == 0b10100)
 	{
-		Write(lk ? "blrl" : "blr");
+		last_opcode += (lk ? "blrl" : "blr");
 		return;
 	}
 
@@ -1042,7 +1416,7 @@ void PPUDisAsm::BCLR(ppu_opcode_t op)
 
 	if (!inst)
 	{
-		Write(fmt::format("bclr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk));
+		fmt::append(last_opcode, "bclr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk);
 		return;
 	}
 
@@ -1075,9 +1449,9 @@ void PPUDisAsm::CRANDC(ppu_opcode_t op)
 	DisAsm_BI3("crandc", op.crbd, op.crba, op.crbb);
 }
 
-void PPUDisAsm::ISYNC(ppu_opcode_t op)
+void PPUDisAsm::ISYNC(ppu_opcode_t)
 {
-	Write("isync");
+	last_opcode += "isync";
 }
 
 void PPUDisAsm::CRXOR(ppu_opcode_t op)
@@ -1137,7 +1511,7 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 
 	if (bo == 0b10100)
 	{
-		Write(lk ? "bctrl" : "bctr");
+		last_opcode += (lk ? "bctrl" : "bctr");
 		return;
 	}
 
@@ -1146,7 +1520,7 @@ void PPUDisAsm::BCCTR(ppu_opcode_t op)
 	if (!inst || inst[1] == 'd')
 	{
 		// Invalid or unknown bcctr form
-		Write(fmt::format("bcctr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk));
+		fmt::append(last_opcode, "bcctr %d, cr%d[%s], %d, %d", bo, bi / 4, get_partial_BI_field(bi), bh, lk);
 		return;
 	}
 
@@ -1185,14 +1559,20 @@ void PPUDisAsm::RLWNM(ppu_opcode_t op)
 
 void PPUDisAsm::ORI(ppu_opcode_t op)
 {
-	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) return Write("nop");
+	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) { last_opcode += "nop"; return; }
 	if (op.uimm16 == 0) return DisAsm_R2("mr", op.ra, op.rs);
 	DisAsm_R2_IMM("ori", op.ra, op.rs, op.uimm16);
+
+	if (auto [is_const, value] = try_get_const_gpr_value(op.rs); is_const)
+	{
+		// Comment constant formation
+		comment_constant(last_opcode, value | op.uimm16);
+	}
 }
 
 void PPUDisAsm::ORIS(ppu_opcode_t op)
 {
-	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) return Write("nop");
+	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) { last_opcode += "nop"; return; }
 	DisAsm_R2_IMM("oris", op.ra, op.rs, op.uimm16);
 }
 
@@ -1328,7 +1708,18 @@ void PPUDisAsm::MFOCRF(ppu_opcode_t op)
 {
 	if (op.l11)
 	{
-		DisAsm_R1_IMM("mfocrf", op.rd, op.crm);
+		const u8 crm = static_cast<u8>(op.crm);
+		const int cr = std::countl_zero<u8>(crm);
+
+		if (cr >= 8 || crm & (crm - 1))
+		{
+			// Note: invalid form
+			DisAsm_R1_IMM("mfocrf", op.rd, crm);
+		}
+		else
+		{
+			DisAsm_R1_CR1("mfocrf", op.rd, cr);
+		}
 	}
 	else
 	{
@@ -1495,19 +1886,30 @@ void PPUDisAsm::ADDE(ppu_opcode_t op)
 
 void PPUDisAsm::MTOCRF(ppu_opcode_t op)
 {
-	if (op.l11)
+	const u8 crm = static_cast<u8>(op.crm);
+
+	if (!op.l11 && crm == 0xff)
 	{
-		DisAsm_INT1_R1("mtocrf", op.crm, op.rs);
+		DisAsm_R1("mtcr", op.rs);
+		return;
+	}
+
+	const int cr = std::countl_zero<u8>(crm);
+	const auto name = op.l11 ? "mtocrf" : "mtcrf";
+
+	if (cr >= 8 || crm & (crm - 1))
+	{
+		DisAsm_INT1_R1(name, crm, op.rs);
 	}
 	else
 	{
-		DisAsm_INT1_R1("mtcrf", op.crm, op.rs);
+		DisAsm_CR1_R1(name, cr, op.rs);
 	}
 }
 
 void PPUDisAsm::STDX(ppu_opcode_t op)
 {
-	DisAsm_R3("stdx.", op.rs, op.ra, op.rb);
+	DisAsm_R3("stdx", op.rs, op.ra, op.rb);
 }
 
 void PPUDisAsm::STWCX(ppu_opcode_t op)
@@ -1714,10 +2116,10 @@ void PPUDisAsm::OR(ppu_opcode_t op)
 	{
 		switch (op.opcode)
 		{
-		case 0x7f9ce378: return Write("db8cyc");
-		case 0x7fbdeb78: return Write("db10cyc");
-		case 0x7fdef378: return Write("db12cyc");
-		case 0x7ffffb78: return Write("db16cyc");
+		case 0x7f9ce378: last_opcode += "db8cyc"; return;
+		case 0x7fbdeb78: last_opcode += "db10cyc"; return;
+		case 0x7fdef378: last_opcode += "db12cyc"; return;
+		case 0x7ffffb78: last_opcode += "db16cyc"; return;
 		default: DisAsm_R2_RC("mr", op.ra, op.rb, op.rc);
 		}
 	}
@@ -1827,7 +2229,7 @@ void PPUDisAsm::LFSUX(ppu_opcode_t op)
 
 void PPUDisAsm::SYNC(ppu_opcode_t op)
 {
-	Write(op.l10 ? "lwsync" : "sync");
+	last_opcode += (op.l10 ? "lwsync" : "sync");
 }
 
 void PPUDisAsm::LFDX(ppu_opcode_t op)
@@ -1915,9 +2317,9 @@ void PPUDisAsm::LVRXL(ppu_opcode_t op)
 	DisAsm_V1_R2("lvrxl", op.vd, op.ra, op.rb);
 }
 
-void PPUDisAsm::DSS(ppu_opcode_t op)
+void PPUDisAsm::DSS(ppu_opcode_t)
 {
-	Write("dss()");
+	last_opcode += "dss";
 }
 
 void PPUDisAsm::SRAWI(ppu_opcode_t op)
@@ -1930,9 +2332,9 @@ void PPUDisAsm::SRADI(ppu_opcode_t op)
 	DisAsm_R2_INT1_RC("sradi", op.ra, op.rs, op.sh64, op.rc);
 }
 
-void PPUDisAsm::EIEIO(ppu_opcode_t op)
+void PPUDisAsm::EIEIO(ppu_opcode_t)
 {
-	Write("eieio");
+	last_opcode += "eieio";
 }
 
 void PPUDisAsm::STVLXL(ppu_opcode_t op)
@@ -2177,7 +2579,7 @@ void PPUDisAsm::FNMADDS(ppu_opcode_t op)
 
 void PPUDisAsm::MTFSB1(ppu_opcode_t op)
 {
-	Write(fmt::format("mtfsb1%s %d", op.rc ? "." : "", op.crbd));
+	fmt::append(last_opcode, "%-*s %d", PadOp(), op.rc ? "mtfsb1." : "mtfsb1", op.crbd);
 }
 
 void PPUDisAsm::MCRFS(ppu_opcode_t op)
@@ -2187,12 +2589,12 @@ void PPUDisAsm::MCRFS(ppu_opcode_t op)
 
 void PPUDisAsm::MTFSB0(ppu_opcode_t op)
 {
-	Write(fmt::format("mtfsb0%s %d", op.rc ? "." : "", op.crbd));
+	fmt::append(last_opcode, "%-*s %d", PadOp(), op.rc ? "mtfsb0." : "mtfsb0", op.crbd);
 }
 
 void PPUDisAsm::MTFSFI(ppu_opcode_t op)
 {
-	Write(fmt::format("mtfsfi%s cr%d,%d,%d", op.rc ? "." : "", op.crfd, op.i, op.l15));
+	fmt::append(last_opcode, "%-*s cr%d,%d,%d", PadOp(), op.rc ? "mtfsfi." : "mtfsfi", op.crfd, op.i, op.l15);
 }
 
 void PPUDisAsm::MFFS(ppu_opcode_t op)
@@ -2202,7 +2604,7 @@ void PPUDisAsm::MFFS(ppu_opcode_t op)
 
 void PPUDisAsm::MTFSF(ppu_opcode_t op)
 {
-	Write(fmt::format("mtfsf%s %d,f%d,%d,%d", op.rc ? "." : "", op.rc, op.flm, op.frb, op.l6, op.l15));
+	fmt::append(last_opcode, "%-*s %d,f%d,%d,%d", PadOp(), op.rc ? "mtfsf." : "mtfsf", op.rc, op.flm, op.frb, op.l6, op.l15);
 }
 
 void PPUDisAsm::FCMPU(ppu_opcode_t op)
@@ -2322,19 +2724,19 @@ void PPUDisAsm::FCFID(ppu_opcode_t op)
 
 extern std::vector<std::string> g_ppu_function_names;
 
-void PPUDisAsm::UNK(ppu_opcode_t op)
+void PPUDisAsm::UNK(ppu_opcode_t)
 {
-	if (op.opcode == dump_pc && ppu_function_manager::addr)
+	if (u32 addr{}; g_fxo->is_init<ppu_function_manager>() && (addr = g_fxo->get<ppu_function_manager>().addr))
 	{
 		// HLE function index
-		const u32 index = (dump_pc - ppu_function_manager::addr) / 8;
+		const u32 index = (dump_pc - addr) / 8;
 
-		if (index < ppu_function_manager::get().size())
+		if (dump_pc % 8 == 4 && index < ppu_function_manager::get().size())
 		{
-			Write(fmt::format("Function : %s (index %u)", index < g_ppu_function_names.size() ? g_ppu_function_names[index].c_str() : "?", index));
+			fmt::append(last_opcode, "Function : %s (index %u)", index < g_ppu_function_names.size() ? g_ppu_function_names[index].c_str() : "?", index);
 			return;
 		}
 	}
 
-	Write("?? ??");
+	last_opcode += "?? ??";
 }

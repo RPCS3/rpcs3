@@ -141,7 +141,7 @@
      <x>0</x>
      <y>0</y>
      <width>1058</width>
-     <height>30</height>
+     <height>25</height>
     </rect>
    </property>
    <property name="contextMenuPolicy">
@@ -188,6 +188,7 @@
     </widget>
     <addaction name="bootElfAct"/>
     <addaction name="bootGameAct"/>
+    <addaction name="bootVSHAct"/>
     <addaction name="bootRecentMenu"/>
     <addaction name="separator"/>
     <addaction name="addGamesAct"/>
@@ -248,13 +249,19 @@
     <property name="title">
      <string>Utilities</string>
     </property>
+    <addaction name="actionLog_Viewer"/>
     <addaction name="toolsCgDisasmAct"/>
     <addaction name="toolskernel_explorerAct"/>
     <addaction name="toolsmemory_viewerAct"/>
     <addaction name="toolsRsxDebuggerAct"/>
     <addaction name="toolsStringSearchAct"/>
+    <addaction name="patchCreatorAct"/>
     <addaction name="separator"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
+    <addaction name="separator"/>
+    <addaction name="toolsExtractMSELFAct"/>
+    <addaction name="toolsExtractPUPAct"/>
+    <addaction name="toolsExtractTARAct"/>
     <addaction name="separator"/>
     <addaction name="actionopen_rsx_capture"/>
     <addaction name="separator"/>
@@ -272,6 +279,9 @@
      <addaction name="setIconSizeSmallAct"/>
      <addaction name="setIconSizeMediumAct"/>
      <addaction name="setIconSizeLargeAct"/>
+     <addaction name="separator"/>
+     <addaction name="showCustomIconsAct"/>
+     <addaction name="playHoverGifsAct"/>
     </widget>
     <widget class="QMenu" name="menuGame_List_Mode">
      <property name="title">
@@ -396,7 +406,7 @@
   </action>
   <action name="bootInstallPkgAct">
    <property name="text">
-    <string>Install Packages/Raps</string>
+    <string>Install Packages/Raps/Edats</string>
    </property>
    <property name="toolTip">
     <string>Install application from a .pkg file</string>
@@ -623,6 +633,24 @@
   <action name="toolsDecryptSprxLibsAct">
    <property name="text">
     <string>Decrypt PS3 Binaries</string>
+   </property>
+  </action>
+  <action name="toolsExtractMSELFAct">
+   <property name="text">
+    <string>Extract MSELF</string>
+   </property>
+  </action>
+  <action name="toolsExtractPUPAct">
+   <property name="text">
+    <string>Extract PUP</string>
+   </property>
+  </action>
+  <action name="toolsExtractTARAct">
+   <property name="text">
+    <string>Extract Encrypted TAR</string>
+   </property>
+   <property name="toolTip">
+    <string>Extract files from special .tar files inside PS3UPDAT.PUP</string>
    </property>
   </action>
   <action name="showDebuggerAct">
@@ -1108,6 +1136,43 @@
    </property>
    <property name="toolTip">
     <string>Configure RPCN</string>
+   </property>
+  </action>
+  <action name="actionLog_Viewer">
+   <property name="text">
+    <string>Log Viewer</string>
+   </property>
+  </action>
+  <action name="showCustomIconsAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Custom Icons</string>
+   </property>
+  </action>
+  <action name="playHoverGifsAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Play Hover Gifs</string>
+   </property>
+  </action>
+  <action name="bootVSHAct">
+   <property name="text">
+    <string>Boot VSH/XMB</string>
+   </property>
+  </action>
+  <action name="patchCreatorAct">
+   <property name="text">
+    <string>Patch Creator</string>
    </property>
   </action>
  </widget>

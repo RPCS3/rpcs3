@@ -1,30 +1,31 @@
 #pragma once
 
 #include "vm_ptr.h"
-#include "Utilities/BEType.h"
+
+#include "util/to_endian.hpp"
 
 namespace vm
 {
 	template <memory_location_t Location = vm::main>
 	struct page_allocator
 	{
-		static inline vm::addr_t alloc(u32 size, u32 align)
+		static inline std::pair<vm::addr_t, u32> alloc(u32 size, u32 align)
 		{
-			return vm::cast(vm::alloc(size, Location, std::max<u32>(align, 0x10000)));
+			return {vm::cast(vm::alloc(size, Location, std::max<u32>(align, 0x10000))), size};
 		}
 
-		static inline void dealloc(u32 addr, u32 size = 0) noexcept
+		static inline void dealloc(u32 addr, u32 size) noexcept
 		{
-			return vm::dealloc_verbose_nothrow(addr, Location);
+			ensure(vm::dealloc(addr, Location) >= size);
 		}
 	};
 
 	template <typename T>
 	struct stack_allocator
 	{
-		static inline vm::addr_t alloc(u32 size, u32 align)
+		static inline std::pair<vm::addr_t, u32> alloc(u32 size, u32 align)
 		{
-			return vm::cast(T::stack_push(size, align));
+			return T::stack_push(size, align);
 		}
 
 		static inline void dealloc(u32 addr, u32 size) noexcept
@@ -39,14 +40,24 @@ namespace vm
 	{
 		using pointer = _ptr_base<T, const u32>;
 
+		const u32 m_mem_size;
+
+		_var_base(std::pair<vm::addr_t, u32> alloc_info)
+			: pointer(alloc_info.first)
+			, m_mem_size(alloc_info.second)
+		{
+		}
+
 	public:
 		// Unmoveable object
 		_var_base(const _var_base&) = delete;
 
 		_var_base& operator=(const _var_base&) = delete;
 
+		using enable_bitcopy = std::false_type; // Disable bitcopy inheritence
+
 		_var_base()
-		    : pointer(A::alloc(sizeof(T), alignof(T)))
+		    : _var_base(A::alloc(sizeof(T), alignof(T)))
 		{
 		}
 
@@ -60,7 +71,7 @@ namespace vm
 		{
 			if (pointer::addr())
 			{
-				A::dealloc(pointer::addr(), sizeof(T));
+				A::dealloc(pointer::addr(), m_mem_size);
 			}
 		}
 	};
@@ -71,16 +82,25 @@ namespace vm
 	{
 		using pointer = _ptr_base<T, const u32>;
 
-		u32 m_size;
+		const u32 m_mem_size;
+		const u32 m_size;
+
+		_var_base(u32 count, std::pair<vm::addr_t, u32> alloc_info)
+			: pointer(alloc_info.first)
+			, m_mem_size(alloc_info.second)
+		    , m_size(u32{sizeof(T)} * count)
+		{
+		}
 
 	public:
 		_var_base(const _var_base&) = delete;
 
 		_var_base& operator=(const _var_base&) = delete;
 
+		using enable_bitcopy = std::false_type; // Disable bitcopy inheritence
+
 		_var_base(u32 count)
-		    : pointer(A::alloc(u32{sizeof(T)} * count, alignof(T)))
-		    , m_size(u32{sizeof(T)} * count)
+		    : _var_base(count, A::alloc(u32{sizeof(T)} * count, alignof(T)))
 		{
 		}
 
@@ -96,7 +116,7 @@ namespace vm
 		{
 			if (pointer::addr())
 			{
-				A::dealloc(pointer::addr(), m_size);
+				A::dealloc(pointer::addr(), m_mem_size);
 			}
 		}
 

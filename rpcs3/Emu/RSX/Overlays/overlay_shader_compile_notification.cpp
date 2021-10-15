@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_shader_compile_notification.h"
 #include "Emu/system_config.h"
 

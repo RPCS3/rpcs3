@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "KeyboardHandler.h"
 #include "Utilities/StrUtil.h"
 
@@ -42,8 +42,6 @@ void fmt_class_string<CellKbMappingType>::format(std::string& out, u64 arg)
 
 void KeyboardHandlerBase::Key(u32 code, bool pressed)
 {
-	// TODO: Key Repeat
-
 	std::lock_guard<std::mutex> lock(m_mutex);
 
 	for (Keyboard& keyboard : m_keyboards)
@@ -164,4 +162,36 @@ bool KeyboardHandlerBase::IsMetaKey(u32 code)
 		|| code == Key_Alt
 		|| code == Key_Super_L
 		|| code == Key_Super_R;
+}
+
+void KeyboardHandlerBase::SetIntercepted(bool intercepted)
+{
+	std::lock_guard<std::mutex> lock(m_mutex);
+
+	m_info.info = intercepted ? CELL_KB_INFO_INTERCEPTED : 0;
+
+	if (intercepted)
+	{
+		for (Keyboard& keyboard : m_keyboards)
+		{
+			keyboard.m_data.mkey = 0;
+			keyboard.m_data.len  = 0;
+
+			for (auto& keycode : keyboard.m_data.keycode)
+			{
+				keycode.first = CELL_KEYC_NO_EVENT;
+			}
+		}
+	}
+}
+
+void KeyboardHandlerBase::ReleaseAllKeys()
+{
+	for (const Keyboard& keyboard : m_keyboards)
+	{
+		for (const KbButton& button : keyboard.m_buttons)
+		{
+			Key(button.m_keyCode, false);
+		}
+	}
 }

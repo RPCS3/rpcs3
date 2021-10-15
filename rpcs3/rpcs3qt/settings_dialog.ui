@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>753</width>
-    <height>620</height>
+    <width>785</width>
+    <height>730</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -38,11 +38,14 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="currentIndex">
+      <number>0</number>
+     </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
        <string>CPU</string>
       </attribute>
-      <layout class="QVBoxLayout" name="coreTabLayout">
+      <layout class="QVBoxLayout" name="coreTabLayout" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="coreTabItemLayout" stretch="1,1,1">
          <item>
@@ -141,20 +144,6 @@
              </property>
              <layout class="QVBoxLayout" name="checkboxes_layout">
               <item>
-               <widget class="QCheckBox" name="enableScheduler">
-                <property name="text">
-                 <string>Enable thread scheduler</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QCheckBox" name="lowerSPUThrPrio">
-                <property name="text">
-                 <string>Lower SPU thread priority</string>
-                </property>
-               </widget>
-              </item>
-              <item>
                <widget class="QCheckBox" name="spuLoopDetection">
                 <property name="text">
                  <string>Enable SPU loop detection</string>
@@ -162,16 +151,16 @@
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="spuCache">
+               <widget class="QCheckBox" name="accurateXFloat">
                 <property name="text">
-                 <string>SPU Cache</string>
+                 <string>Accurate xfloat</string>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QCheckBox" name="accurateXFloat">
+               <widget class="QCheckBox" name="fullWidthAVX512">
                 <property name="text">
-                 <string>Accurate xfloat</string>
+                 <string>Full Width AVX-512</string>
                 </property>
                </widget>
               </item>
@@ -197,7 +186,7 @@
           </layout>
          </item>
          <item>
-          <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="0,0,0,0">
+          <layout class="QVBoxLayout" name="coreTabRightLayout" stretch="0,0,0,0,0">
            <item>
             <widget class="QGroupBox" name="gb_tsx">
              <property name="sizePolicy">
@@ -248,6 +237,24 @@
              <layout class="QVBoxLayout" name="gb_spu_threads_layout">
               <item>
                <widget class="QComboBox" name="preferredSPUThreads"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_threadsched">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="title">
+              <string>Thread Scheduler</string>
+             </property>
+             <layout class="QVBoxLayout" name="gb_threadsched_layout">
+              <item>
+               <widget class="QComboBox" name="threadsched"/>
               </item>
              </layout>
             </widget>
@@ -322,7 +329,7 @@
       <attribute name="title">
        <string>GPU</string>
       </attribute>
-      <layout class="QVBoxLayout" name="gpuTab_layout">
+      <layout class="QVBoxLayout" name="gpuTab_layout" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="gpuTabLayout" stretch="1,1,1">
          <item>
@@ -428,6 +435,36 @@
                 <layout class="QVBoxLayout" name="gb_antiAliasing_layout">
                  <item>
                   <widget class="QComboBox" name="antiAliasing"/>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QWidget" name="widget_gpu_3" native="true">
+             <layout class="QHBoxLayout" name="widget_gpu_3_layout" stretch="1">
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item>
+               <widget class="QGroupBox" name="gbZCULL">
+                <property name="title">
+                 <string>ZCULL Accuracy</string>
+                </property>
+                <layout class="QVBoxLayout" name="gbZCULL_layout">
+                 <item>
+                  <widget class="QComboBox" name="zcullPrecisionMode"/>
                  </item>
                 </layout>
                </widget>
@@ -614,6 +651,100 @@
             </layout>
            </item>
            <item>
+            <widget class="QGroupBox" name="gb_Upscaling">
+             <property name="title">
+              <string>Upscaling</string>
+             </property>
+             <layout class="QVBoxLayout" name="gb_Upscaling_layout">
+              <item>
+               <widget class="QCheckBox" name="fsrUpscalingEnable">
+                <property name="text">
+                 <string>Enable FSR Upscaling</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="Line" name="line">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="fsrSharpeningStrengthLabel">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="text">
+                 <string>RCAS Sharpening Strength</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignBottom|Qt::AlignLeading|Qt::AlignLeft</set>
+                </property>
+                <property name="margin">
+                 <number>1</number>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="fsrSharpeningLayoutTop">
+                <item>
+                 <widget class="QLabel" name="minSharpeningVal">
+                  <property name="text">
+                   <string>0</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QSlider" name="fsrSharpeningStrength">
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="maxSharpeningVal">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="text">
+                   <string>100</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="fsrSharpeningLayoutBottom" stretch="1,0">
+                <item>
+                 <widget class="QLabel" name="fsrSharpeningStrengthVal">
+                  <property name="text">
+                   <string>0</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="fsrSharpeningStrengthReset">
+                  <property name="text">
+                   <string>Reset</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
             <spacer name="gpu_tab_layout_middle_spacer">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
@@ -683,6 +814,18 @@
             </widget>
            </item>
            <item>
+            <widget class="QGroupBox" name="gb_shader_compiler_threads">
+             <property name="title">
+              <string>Number of Shader Compiler Threads</string>
+             </property>
+             <layout class="QVBoxLayout" name="gb_shader_compiler_threads_layout">
+              <item>
+               <widget class="QComboBox" name="shaderCompilerThreads"/>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
             <widget class="QGroupBox" name="gb_additional_settings">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -743,6 +886,13 @@
                <widget class="QCheckBox" name="multithreadedRSX">
                 <property name="text">
                  <string>Multithreaded RSX</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="asyncTextureStreaming">
+                <property name="text">
+                 <string>Asynchronous Texture Streaming</string>
                 </property>
                </widget>
               </item>
@@ -1262,9 +1412,9 @@
       <attribute name="title">
        <string>I/O</string>
       </attribute>
-      <layout class="QVBoxLayout" name="inputTab_layout">
+      <layout class="QVBoxLayout" name="inputTab_layout" stretch="0,0,0,1,0">
        <item>
-        <layout class="QHBoxLayout" name="inputTabLayoutTop" stretch="1,1,1">
+        <layout class="QHBoxLayout" name="inputTabLayout1" stretch="1,1,1">
          <item>
           <widget class="QGroupBox" name="gb_keyboard_handler">
            <property name="title">
@@ -1304,7 +1454,7 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="inputTabLayoutBottom" stretch="1,1,1">
+        <layout class="QHBoxLayout" name="inputTabLayout2" stretch="1,1,1">
          <item>
           <widget class="QGroupBox" name="gb_mouse_handler">
            <property name="title">
@@ -1330,7 +1480,38 @@
           </widget>
          </item>
          <item>
+          <widget class="QGroupBox" name="gb_buzz_emulated">
+           <property name="title">
+            <string>Buzz! emulated controller</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_buzz_emulated_layout">
+            <item>
+             <widget class="QComboBox" name="buzzBox"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="inputTabLayout3" stretch="1,1,1">
+         <item>
+          <widget class="QGroupBox" name="gb_turntable_emulated">
+           <property name="title">
+            <string>DJ Hero emulated turntable</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_turntable_emulated_layout">
+            <item>
+             <widget class="QComboBox" name="turntableBox"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
           <widget class="QWidget" name="inputTabSpacerWidget" native="true"/>
+         </item>
+         <item>
+          <widget class="QWidget" name="inputTabSpacerWidget2" native="true"/>
          </item>
         </layout>
        </item>
@@ -1384,7 +1565,7 @@
       <attribute name="title">
        <string>System</string>
       </attribute>
-      <layout class="QVBoxLayout" name="systemTab_layout">
+      <layout class="QVBoxLayout" name="systemTab_layout" stretch="0,0,0,0,1,0">
        <item>
         <layout class="QHBoxLayout" name="systemTabLayout1" stretch="1,1,1">
          <item>
@@ -1433,9 +1614,6 @@
         <layout class="QHBoxLayout" name="systemTabLayout2" stretch="1,1,1">
          <item>
           <widget class="QGroupBox" name="gb_console_region">
-           <property name="enabled">
-            <bool>false</bool>
-           </property>
            <property name="title">
             <string>Console Region</string>
            </property>
@@ -1640,7 +1818,7 @@
       <attribute name="title">
        <string>Network</string>
       </attribute>
-      <layout class="QVBoxLayout" name="networkTab_layout">
+      <layout class="QVBoxLayout" name="networkTab_layout" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="networkTabLayout" stretch="0,0">
          <item>
@@ -1704,10 +1882,13 @@
               <property name="orientation">
                <enum>Qt::Vertical</enum>
               </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
+              </property>
               <property name="sizeHint" stdset="0">
                <size>
-                <width>20</width>
-                <height>40</height>
+                <width>0</width>
+                <height>0</height>
                </size>
               </property>
              </spacer>
@@ -1738,10 +1919,13 @@
               <property name="orientation">
                <enum>Qt::Vertical</enum>
               </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
+              </property>
               <property name="sizeHint" stdset="0">
                <size>
-                <width>20</width>
-                <height>40</height>
+                <width>0</width>
+                <height>0</height>
                </size>
               </property>
              </spacer>
@@ -1801,7 +1985,7 @@
       <attribute name="title">
        <string>Advanced</string>
       </attribute>
-      <layout class="QVBoxLayout" name="advancedTab_layout">
+      <layout class="QVBoxLayout" name="advancedTab_layout" stretch="1,0,0">
        <item>
         <layout class="QHBoxLayout" name="advancedTabLayout" stretch="1,1,1">
          <item>
@@ -1843,6 +2027,27 @@
                <widget class="QCheckBox" name="AccurateVectorNaN">
                 <property name="text">
                  <string>PPU LLVM Accurate Vector NaNs</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="ppuLlvmJavaModeHandling">
+                <property name="text">
+                 <string>PPU LLVM Java Mode Handling</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="ppuPrecompilation">
+                <property name="text">
+                 <string>PPU LLVM Precompilation</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="mfcDelayCommand">
+                <property name="text">
+                 <string>Delay each odd MFC Command</string>
                 </property>
                </widget>
               </item>
@@ -1893,89 +2098,12 @@
             </widget>
            </item>
            <item>
-            <widget class="QGroupBox" name="gb_lib_settings">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="title">
-              <string>Firmware Settings</string>
-             </property>
-             <layout class="QVBoxLayout" name="lib_settings_layout">
-              <item>
-               <widget class="QRadioButton" name="lib_manu">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string notr="true">Manually load selected libraries</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QRadioButton" name="lib_both">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string notr="true">Load automatic and manual selection</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QRadioButton" name="lib_lv2">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string notr="true">Load liblv2.sprx only</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QRadioButton" name="lib_lv2b">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string notr="true">Load liblv2.sprx and manual selection</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QRadioButton" name="lib_lv2l">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string notr="true">Load liblv2.sprx and strict selection</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
-           <item>
             <spacer name="advancedTabSpacerLeft">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::MinimumExpanding</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -1991,16 +2119,26 @@
           <layout class="QVBoxLayout" name="advancedTabLayoutMiddle">
            <item>
             <widget class="QGroupBox" name="gb_libs">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
              <property name="title">
               <string>Firmware Libraries</string>
              </property>
              <layout class="QVBoxLayout" name="gb_libs_layout">
+              <item>
+               <widget class="QListWidget" name="hleList">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="selectionMode">
+                 <enum>QAbstractItemView::ExtendedSelection</enum>
+                </property>
+                <property name="viewMode">
+                 <enum>QListView::ListMode</enum>
+                </property>
+               </widget>
+              </item>
               <item>
                <widget class="QListWidget" name="lleList">
                 <property name="sizePolicy">
@@ -2018,14 +2156,24 @@
                </widget>
               </item>
               <item>
-               <widget class="QLineEdit" name="searchBox">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
+               <layout class="QHBoxLayout" name="gb_lleLibs_layout" stretch="1,0">
+                <property name="spacing">
+                 <number>6</number>
                 </property>
-               </widget>
+                <property name="sizeConstraint">
+                 <enum>QLayout::SetNoConstraint</enum>
+                </property>
+                <item>
+                 <widget class="QLineEdit" name="searchBox"/>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="resetLleList">
+                  <property name="text">
+                   <string>Reset</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </widget>
@@ -2081,12 +2229,23 @@
                 </property>
                </widget>
               </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QGroupBox" name="gb_vulkansched">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="title">
+              <string>Vulkan Queue Scheduler</string>
+             </property>
+             <layout class="QVBoxLayout" name="gb_vksched_layout">
               <item>
-               <widget class="QCheckBox" name="relaxedZCULL">
-                <property name="text">
-                 <string>Relaxed ZCULL Sync</string>
-                </property>
-               </widget>
+               <widget class="QComboBox" name="vulkansched"/>
               </item>
              </layout>
             </widget>
@@ -2221,14 +2380,17 @@
             </widget>
            </item>
            <item>
-            <spacer name="verticalSpacer_22">
+            <spacer name="advancedTabSpacerRight">
              <property name="orientation">
               <enum>Qt::Vertical</enum>
              </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::MinimumExpanding</enum>
+             </property>
              <property name="sizeHint" stdset="0">
               <size>
-               <width>0</width>
-               <height>0</height>
+               <width>13</width>
+               <height>13</height>
               </size>
              </property>
             </spacer>
@@ -2284,7 +2446,7 @@
       <attribute name="title">
        <string>Emulator</string>
       </attribute>
-      <layout class="QVBoxLayout" name="emulatorTab_layout">
+      <layout class="QVBoxLayout" name="emulatorTab_layout" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="emulatorTabLayout" stretch="1,1,1">
          <item>
@@ -2403,6 +2565,13 @@
                <widget class="QCheckBox" name="gs_showMouseInFullscreen">
                 <property name="text">
                  <string>Show mouse cursor in Fullscreen</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="gs_lockMouseInFullscreen">
+                <property name="text">
+                 <string>Lock mouse cursor in Fullscreen</string>
                 </property>
                </widget>
               </item>
@@ -2891,6 +3060,64 @@
                </widget>
               </item>
               <item>
+               <widget class="QWidget" name="perf_overlay_framerate_datapoints" native="true">
+                <layout class="QVBoxLayout" name="layout_perf_overlay_framerate_datapoints">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_framerate_datapoints">
+                   <property name="text">
+                    <string>Framerate datapoints:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSlider" name="slider_framerate_datapoints">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QWidget" name="perf_overlay_frametime_datapoints" native="true">
+                <layout class="QVBoxLayout" name="layout_perf_overlay_frametime_datapoints">
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_frametime_datapoints">
+                   <property name="text">
+                    <string>Frametime datapoints:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSlider" name="slider_frametime_datapoints">
+                   <property name="orientation">
+                    <enum>Qt::Horizontal</enum>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
                <spacer name="emulatorTabSpacerRight">
                 <property name="orientation">
                  <enum>Qt::Vertical</enum>
@@ -2963,7 +3190,7 @@
       <attribute name="title">
        <string>GUI</string>
       </attribute>
-      <layout class="QVBoxLayout" name="guiTab_layout">
+      <layout class="QVBoxLayout" name="guiTab_layout" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="guiTabLayout" stretch="1,1,1">
          <item>
@@ -3033,92 +3260,29 @@
                 </property>
                </widget>
               </item>
-              <item>
-               <spacer name="guiTabSpacerLeft">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeType">
-                 <enum>QSizePolicy::MinimumExpanding</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
              </layout>
             </widget>
+           </item>
+           <item>
+            <spacer name="guiTabSpacerLeft">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::MinimumExpanding</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+            </spacer>
            </item>
           </layout>
          </item>
          <item>
           <layout class="QVBoxLayout" name="guiTabLayoutMiddle">
-           <item>
-            <widget class="QGroupBox" name="gb_settings">
-             <property name="title">
-              <string>UI Settings</string>
-             </property>
-             <layout class="QVBoxLayout" name="gb_settings_layout">
-              <item>
-               <widget class="QPushButton" name="pb_reset_default">
-                <property name="text">
-                 <string>Restore default settings</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_backup_config">
-                <property name="text">
-                 <string>Save current settings</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_open_folder">
-                <property name="text">
-                 <string>Open configuration folder</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QLabel" name="label">
-                <property name="text">
-                 <string>Load Settings:</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QComboBox" name="combo_configs"/>
-              </item>
-              <item>
-               <widget class="QPushButton" name="pb_apply_config">
-                <property name="text">
-                 <string>Apply</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <spacer name="guiTabSpacerMiddle">
-                <property name="orientation">
-                 <enum>Qt::Vertical</enum>
-                </property>
-                <property name="sizeType">
-                 <enum>QSizePolicy::MinimumExpanding</enum>
-                </property>
-                <property name="sizeHint" stdset="0">
-                 <size>
-                  <width>0</width>
-                  <height>0</height>
-                 </size>
-                </property>
-               </spacer>
-              </item>
-             </layout>
-            </widget>
-           </item>
            <item>
             <widget class="QGroupBox" name="gb_log">
              <property name="title">
@@ -3201,6 +3365,22 @@
              </layout>
             </widget>
            </item>
+           <item>
+            <spacer name="guiTabSpacerMiddle">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeType">
+              <enum>QSizePolicy::MinimumExpanding</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
           </layout>
          </item>
          <item>
@@ -3243,6 +3423,20 @@
                <widget class="QCheckBox" name="cb_show_pup_install">
                 <property name="text">
                  <string>Show PUP Installation Dialog</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="cb_show_obsolete_cfg_dialog">
+                <property name="text">
+                 <string>Show Obsolete Settings Dialog</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QCheckBox" name="cb_show_same_buttons_dialog">
+                <property name="text">
+                 <string>Show Duplicate Buttons Dialog</string>
                 </property>
                </widget>
               </item>
@@ -3367,7 +3561,7 @@
       <attribute name="title">
        <string>Debug</string>
       </attribute>
-      <layout class="QVBoxLayout" name="debugTab_layout">
+      <layout class="QVBoxLayout" name="debugTab_layout" stretch="0,1,0">
        <item>
         <layout class="QHBoxLayout" name="debugTabLayout" stretch="1,1,1">
          <item>
@@ -3383,12 +3577,12 @@
            </property>
            <layout class="QVBoxLayout" name="gb_debug_gpu_layout">
             <item alignment="Qt::AlignTop">
-             <widget class="QCheckBox" name="glLegacyBuffers">
+             <widget class="QCheckBox" name="renderdocCompatibility">
               <property name="enabled">
-               <bool>false</bool>
+               <bool>true</bool>
               </property>
               <property name="text">
-               <string>Use Legacy OpenGL Buffers</string>
+               <string>Renderdoc Compatibility Mode</string>
               </property>
              </widget>
             </item>
@@ -3462,6 +3656,22 @@
               </property>
              </widget>
             </item>
+            <item>
+             <spacer name="verticalSpacerDebugGPU">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
            </layout>
           </widget>
          </item>
@@ -3482,6 +3692,13 @@
              <widget class="QCheckBox" name="spuDebug">
               <property name="text">
                <string>SPU Debug</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="mfcDebug">
+              <property name="text">
+               <string>MFC Debug</string>
               </property>
              </widget>
             </item>
@@ -3507,6 +3724,13 @@
              </widget>
             </item>
             <item>
+             <widget class="QCheckBox" name="accurateClineStores">
+              <property name="text">
+               <string>Accurate Cache Line Stores</string>
+              </property>
+             </widget>
+            </item>
+            <item>
              <widget class="QCheckBox" name="hookStFunc">
               <property name="text">
                <string>Hook static functions</string>
@@ -3514,9 +3738,19 @@
              </widget>
             </item>
             <item>
-             <spacer name="verticalSpacer">
+             <widget class="QCheckBox" name="perfReport">
+              <property name="text">
+               <string>Enable Performance Report</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacerDebugCore">
               <property name="orientation">
                <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
               </property>
               <property name="sizeHint" stdset="0">
                <size>
@@ -3530,7 +3764,62 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="debug_spacer_widget" native="true"/>
+          <widget class="QWidget" name="debug_more_stuff" native="true">
+           <layout class="QVBoxLayout" name="debug_more_stuff_layout">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QGroupBox" name="gb_accurate_ppu_128">
+              <property name="title">
+               <string>Accurate PPU 128 Reservations</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_accurate_ppu_128_layout">
+               <item>
+                <widget class="QComboBox" name="combo_accurate_ppu_128"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_num_ppu_threads">
+              <property name="title">
+               <string>PPU Thread Count</string>
+              </property>
+              <layout class="QVBoxLayout" name="vbl_num_ppu_threads">
+               <item>
+                <widget class="QComboBox" name="combo_num_ppu_threads"/>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <spacer name="verticalSpacerDebugMore">
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+              <property name="sizeType">
+               <enum>QSizePolicy::MinimumExpanding</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
          </item>
         </layout>
        </item>
@@ -3538,6 +3827,9 @@
         <spacer name="debugTabSpacer">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::MinimumExpanding</enum>
          </property>
          <property name="sizeHint" stdset="0">
           <size>
@@ -3582,7 +3874,7 @@
    <item>
     <widget class="QDialogButtonBox" name="buttonBox">
      <property name="standardButtons">
-      <set>QDialogButtonBox::Apply|QDialogButtonBox::Close|QDialogButtonBox::Save</set>
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Close|QDialogButtonBox::RestoreDefaults|QDialogButtonBox::Save</set>
      </property>
     </widget>
    </item>

@@ -1,17 +1,18 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 
 #include "VKVertexProgram.h"
 #include "VKCommonDecompiler.h"
 #include "VKHelpers.h"
-#include "../Common/GLSLCommon.h"
+#include "vkutils/device.h"
+#include "../Program/GLSLCommon.h"
 
 
-std::string VKVertexDecompilerThread::getFloatTypeName(size_t elementCount)
+std::string VKVertexDecompilerThread::getFloatTypeName(usz elementCount)
 {
 	return glsl::getFloatTypeNameImpl(elementCount);
 }
 
-std::string VKVertexDecompilerThread::getIntTypeName(size_t elementCount)
+std::string VKVertexDecompilerThread::getIntTypeName(usz /*elementCount*/)
 {
 	return "ivec4";
 }
@@ -65,14 +66,14 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	OS << "};\n\n";
 
 	vk::glsl::program_input in;
-	in.location = m_binding_table.vertex_params_bind_slot;;
+	in.location = m_binding_table.vertex_params_bind_slot;
 	in.domain = glsl::glsl_vertex_program;
 	in.name = "VertexContextBuffer";
 	in.type = vk::glsl::input_type_uniform_buffer;
 	inputs.push_back(in);
 }
 
-void VKVertexDecompilerThread::insertInputs(std::stringstream & OS, const std::vector<ParamType>& inputs)
+void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::vector<ParamType>& /*inputs*/)
 {
 	OS << "layout(set=0, binding=5) uniform usamplerBuffer persistent_input_stream;\n";    // Data stream with persistent vertex data (cacheable)
 	OS << "layout(set=0, binding=6) uniform usamplerBuffer volatile_input_stream;\n";      // Data stream with per-draw data (registers and immediate draw data)
@@ -168,7 +169,7 @@ static const vertex_reg_info reg_table[] =
 	{ "tc9", true, "dst_reg6", "", false, "", "", "", true, CELL_GCM_ATTRIB_OUTPUT_MASK_TEX9 }  // In this line, dst_reg6 is correct since dst_reg goes from 0 to 15.
 };
 
-void VKVertexDecompilerThread::insertOutputs(std::stringstream & OS, const std::vector<ParamType> & outputs)
+void VKVertexDecompilerThread::insertOutputs(std::stringstream& OS, const std::vector<ParamType>& /*outputs*/)
 {
 	for (auto &i : reg_table)
 	{
@@ -186,7 +187,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	properties2.domain = glsl::glsl_vertex_program;
 	properties2.require_lit_emulation = properties.has_lit_op;
 	properties2.emulate_zclip_transform = true;
-	properties2.emulate_depth_clip_only = vk::get_current_renderer()->get_shader_types_support().allow_float64;
+	properties2.emulate_depth_clip_only = vk::g_render_device->get_shader_types_support().allow_float64;
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_spirv);
@@ -311,7 +312,7 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
 void VKVertexDecompilerThread::Task()
 {
 	m_device_props.emulate_conditional_rendering = vk::emulate_conditional_rendering();
-	m_binding_table = vk::get_current_renderer()->get_pipeline_binding_table();
+	m_binding_table = vk::g_render_device->get_pipeline_binding_table();
 
 	m_shader = Decompile();
 	vk_prog->SetInputs(inputs);

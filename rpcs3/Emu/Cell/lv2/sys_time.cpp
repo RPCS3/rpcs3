@@ -1,9 +1,13 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "sys_time.h"
 
 #include "Emu/system_config.h"
 #include "Emu/Cell/ErrorCodes.h"
-#include "Utilities/asm.h"
+
+#include "util/asm.hpp"
+
+static u64 timebase_offset;
+static u64 systemtime_offset;
 
 #ifdef _WIN32
 
@@ -22,7 +26,7 @@ const auto s_time_aux_info = []() -> time_aux_info_t
 	LARGE_INTEGER freq;
 	if (!QueryPerformanceFrequency(&freq))
 	{
-		MessageBox(0, L"Your hardware doesn't support a high-resolution performance counter", L"Error", MB_OK | MB_ICONERROR);
+		MessageBox(nullptr, L"Your hardware doesn't support a high-resolution performance counter", L"Error", MB_OK | MB_ICONERROR);
 		return {};
 	}
 
@@ -43,6 +47,7 @@ const auto s_time_aux_info = []() -> time_aux_info_t
 #elif __APPLE__
 
 // XXX only supports a single timer
+#if !defined(HAVE_CLOCK_GETTIME)
 #define TIMER_ABSTIME -1
 // The opengroup spec isn't clear on the mapping from REALTIME to CALENDAR being appropriate or not.
 // http://pubs.opengroup.org/onlinepubs/009695299/basedefs/time.h.html
@@ -64,7 +69,7 @@ const auto s_time_aux_info = []() -> time_aux_info_t
 
 // TODO create a list of timers,
 static double mt_timebase = 0.0;
-static uint64_t mt_timestart = 0;
+static u64 mt_timestart = 0;
 
 static int clock_gettime(int clk_id, struct timespec* tp)
 {
@@ -100,10 +105,13 @@ static int clock_gettime(int clk_id, struct timespec* tp)
 
 	return retval;
 }
+#endif
 
 #endif
 
 #ifndef _WIN32
+
+#include <sys/time.h>
 
 static struct timespec start_time = []()
 {
@@ -114,6 +122,8 @@ static struct timespec start_time = []()
 		// Fatal error
 		std::terminate();
 	}
+
+	tzset();
 
 	return ts;
 }();
@@ -129,18 +139,26 @@ u64 get_timebased_time()
 {
 #ifdef _WIN32
 	LARGE_INTEGER count;
-	verify(HERE), QueryPerformanceCounter(&count);
+	ensure(QueryPerformanceCounter(&count));
 
 	const u64 time = count.QuadPart;
 	const u64 freq = s_time_aux_info.perf_freq;
 
-	return (time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u;
+	return ((time / freq * g_timebase_freq + time % freq * g_timebase_freq / freq) * g_cfg.core.clocks_scale / 100u) - timebase_offset;
 #else
 	struct timespec ts;
-	verify(HERE), ::clock_gettime(CLOCK_MONOTONIC, &ts) == 0;
+	ensure(::clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
 
-	return (static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000ull) * g_cfg.core.clocks_scale / 100u;
+	return ((static_cast<u64>(ts.tv_sec) * g_timebase_freq + static_cast<u64>(ts.tv_nsec) * g_timebase_freq / 1000000000ull) * g_cfg.core.clocks_scale / 100u) - timebase_offset;
 #endif
+}
+
+// Add an offset to get_timebased_time to avoid leaking PC's uptime into the game
+void initalize_timebased_time()
+{
+	timebase_offset = 0;
+	timebase_offset = get_timebased_time();
+	systemtime_offset = timebase_offset / (g_timebase_freq / 1000000);
 }
 
 // Returns some relative time in microseconds, don't change this fact
@@ -150,7 +168,7 @@ u64 get_system_time()
 	{
 #ifdef _WIN32
 		LARGE_INTEGER count;
-		verify(HERE), QueryPerformanceCounter(&count);
+		ensure(QueryPerformanceCounter(&count));
 
 		const u64 time = count.QuadPart;
 		const u64 freq = s_time_aux_info.perf_freq;
@@ -158,7 +176,7 @@ u64 get_system_time()
 		const u64 result = time / freq * 1000000ull + (time % freq) * 1000000ull / freq;
 #else
 		struct timespec ts;
-		verify(HERE), ::clock_gettime(CLOCK_MONOTONIC, &ts) == 0;
+		ensure(::clock_gettime(CLOCK_MONOTONIC, &ts) == 0);
 
 		const u64 result = static_cast<u64>(ts.tv_sec) * 1000000ull + static_cast<u64>(ts.tv_nsec) / 1000u;
 #endif
@@ -168,18 +186,81 @@ u64 get_system_time()
 }
 
 // As get_system_time but obeys Clocks scaling setting
-u64 get_guest_system_time()
+u64 get_guest_system_time(u64 time)
 {
-	return get_system_time() * g_cfg.core.clocks_scale / 100;
+	const u64 result = (time != umax ? time : get_system_time()) * g_cfg.core.clocks_scale / 100;
+	ensure(result >= systemtime_offset);
+	return result - systemtime_offset;
 }
 
 // Functions
 error_code sys_time_get_timezone(vm::ptr<s32> timezone, vm::ptr<s32> summertime)
 {
-	sys_time.warning("sys_time_get_timezone(timezone=*0x%x, summertime=*0x%x)", timezone, summertime);
+	sys_time.notice("sys_time_get_timezone(timezone=*0x%x, summertime=*0x%x)", timezone, summertime);
 
-	*timezone   = 180;
-	*summertime = 0;
+#ifdef _WIN32
+	TIME_ZONE_INFORMATION tz{};
+	switch (GetTimeZoneInformation(&tz))
+	{
+	case TIME_ZONE_ID_UNKNOWN:
+	{
+		*timezone = -tz.Bias;
+		*summertime = 0;
+		break;
+	}
+	case TIME_ZONE_ID_STANDARD:
+	{
+		*timezone = -tz.Bias;
+		*summertime = -tz.StandardBias;
+
+		if (tz.StandardBias)
+		{
+			sys_time.error("Unexpected timezone bias (base=%d, std=%d, daylight=%d)", tz.Bias, tz.StandardBias, tz.DaylightBias);
+		}
+		break;
+	}
+	case TIME_ZONE_ID_DAYLIGHT:
+	{
+		*timezone = -tz.Bias;
+		*summertime = -tz.DaylightBias;
+		break;
+	}
+	default:
+	{
+		ensure(0);
+	}
+	}
+#elif __linux__
+	*timezone = ::narrow<s16>(-::timezone / 60);
+	*summertime = !::daylight ? 0 : []() -> s32
+	{
+		struct tm test{};
+		ensure(&test == localtime_r(&start_time.tv_sec, &test));
+
+		// Check bounds [0,1]
+		if (test.tm_isdst & -2)
+		{
+			sys_time.error("No information for timezone DST bias (timezone=%.2fh, tm_gmtoff=%d)", -::timezone / 3600.0, test.tm_gmtoff);
+			return 0;
+		}
+		else
+		{
+			return test.tm_isdst ? ::narrow<s16>((test.tm_gmtoff + ::timezone) / 60) : 0;
+		}
+	}();
+#else
+	// gettimeofday doesn't return timezone on linux anymore, but this should work on other OSes?
+	struct timezone tz{};
+	ensure(gettimeofday(nullptr, &tz) == 0);
+	*timezone = ::narrow<s16>(-tz.tz_minuteswest);
+	*summertime = !tz.tz_dsttime ? 0 : [&]() -> s32
+	{
+		struct tm test{};
+		ensure(&test == localtime_r(&start_time.tv_sec, &test));
+
+		return test.tm_isdst ? ::narrow<s16>(test.tm_gmtoff / 60 + tz.tz_minuteswest) : 0;
+	}();
+#endif
 
 	return CELL_OK;
 }
@@ -195,7 +276,7 @@ error_code sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 
 #ifdef _WIN32
 	LARGE_INTEGER count;
-	verify(HERE), QueryPerformanceCounter(&count);
+	ensure(QueryPerformanceCounter(&count));
 
 	const u64 diff_base = count.QuadPart - s_time_aux_info.start_time;
 
@@ -218,7 +299,7 @@ error_code sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	*nsec = time % 1000000000ull;
 #else
 	struct timespec ts;
-	verify(HERE), ::clock_gettime(CLOCK_REALTIME, &ts) == 0;
+	ensure(::clock_gettime(CLOCK_REALTIME, &ts) == 0);
 
 	if (g_cfg.core.clocks_scale == 100)
 	{

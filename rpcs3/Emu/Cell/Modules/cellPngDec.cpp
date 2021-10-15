@@ -1,10 +1,10 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
-
 #include "Emu/Cell/lv2/sys_fs.h"
 #include "png.h"
+#include "cellPng.h"
 #include "cellPngDec.h"
 
 #if PNG_LIBPNG_VER_MAJOR >= 1 && (PNG_LIBPNG_VER_MINOR < 5 \
@@ -17,6 +17,11 @@
 typedef png_bytep iCCP_profile_type;
 #else
 typedef png_charp iCCP_profile_type;
+#endif
+
+// Temporarily
+#ifndef _MSC_VER
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 #endif
 
 LOG_CHANNEL(cellPngDec);
@@ -153,7 +158,7 @@ void pngDecInfoCallback(png_structp png_ptr, png_infop info)
 		return;
 	}
 
-	const size_t remaining = png_process_data_pause(png_ptr, false);
+	const usz remaining = png_process_data_pause(png_ptr, false);
 	stream->buffer->cursor += (stream->buffer->length - remaining);
 }
 
@@ -170,11 +175,11 @@ void pngDecEndCallback(png_structp png_ptr, png_infop info)
 }
 
 // Custom error handler for libpng
-void pngDecError(png_structp png_ptr, png_const_charp error_message)
+[[noreturn]] void pngDecError(png_structp png_ptr, png_const_charp error_message)
 {
 	cellPngDec.error("%s", error_message);
 	// we can't return here or libpng blows up
-	report_fatal_error("Fatal Error in libpng");
+	fmt::throw_exception("Fatal Error in libpng: %s", error_message);
 }
 
 // Custom warning handler for libpng
@@ -337,7 +342,7 @@ error_code pngDecCreate(ppu_thread& ppu, PPHandle png_handle, PThreadInParam thr
 	// Check if partial image decoding is used
 	if (extra_thread_out_param)
 	{
-		fmt::throw_exception("Partial image decoding is not supported." HERE);
+		fmt::throw_exception("Partial image decoding is not supported.");
 	}
 
 	// Allocate memory for the decoder handle
@@ -411,7 +416,7 @@ error_code pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc
 	// Check for if the buffer structure allocation failed
 	if (!buffer)
 	{
-		fmt::throw_exception("Memory allocation for the PNG buffer structure failed." HERE);
+		fmt::throw_exception("Memory allocation for the PNG buffer structure failed.");
 	}
 
 	// We might not be reading from a file stream
@@ -426,7 +431,7 @@ error_code pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc
 	// Need to test it somewhere
 	if (stream->source.fileOffset != 0)
 	{
-		fmt::throw_exception("Non-0 file offset not supported." HERE);
+		fmt::throw_exception("Non-0 file offset not supported.");
 	}
 
 	// Depending on the source type, get the first 8 bytes
@@ -486,7 +491,7 @@ error_code pngDecOpen(ppu_thread& ppu, PHandle handle, PPStream png_stream, PSrc
 	// Check if the creation of the structure failed
 	if (!stream->info_ptr)
 	{
-		fmt::throw_exception("Creation of png_infop failed." HERE);
+		fmt::throw_exception("Creation of png_infop failed.");
 	}
 
 	// We must indicate, that we allocated more memory
@@ -570,11 +575,11 @@ error_code pngDecSetParameter(PStream stream, PInParam in_param, POutParam out_p
 {
 	if (in_param->outputPackFlag == CELL_PNGDEC_1BYTE_PER_NPIXEL)
 	{
-		fmt::throw_exception("Packing not supported! (%d)" HERE, in_param->outputPackFlag);
+		fmt::throw_exception("Packing not supported! (%d)", in_param->outputPackFlag);
 	}
 
 	// flag to keep unknown chunks
-	png_set_keep_unknown_chunks(stream->png_ptr, PNG_HANDLE_CHUNK_IF_SAFE, 0, 0);
+	png_set_keep_unknown_chunks(stream->png_ptr, PNG_HANDLE_CHUNK_IF_SAFE, nullptr, 0);
 
 	// Scale 16 bit depth down to 8 bit depth.
 	if (stream->info.bitDepth == 16u && in_param->outputBitDepth == 8u)
@@ -703,7 +708,7 @@ error_code pngDecodeData(ppu_thread& ppu, PHandle handle, PStream stream, vm::pt
 	// Log this for now
 	if (bytes_per_line < stream->out_param.outputWidthByte)
 	{
-		fmt::throw_exception("Bytes per line less than expected output! Got: %d, expected: %d" HERE, bytes_per_line, stream->out_param.outputWidthByte);
+		fmt::throw_exception("Bytes per line less than expected output! Got: %d, expected: %d", bytes_per_line, stream->out_param.outputWidthByte);
 	}
 
 	// partial decoding

@@ -1,8 +1,7 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/VFS.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include "Emu/Cell/RawSPUThread.h"
 #include "Emu/Cell/lv2/sys_spu.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
@@ -23,7 +22,7 @@ struct spu_elf_ldr
 	be_t<u64> ehdr_off;
 	be_t<u64> phdr_off;
 
-	s32 get_ehdr(vm::ptr<elf_ehdr<elf_be, u64>> out)
+	s32 get_ehdr(vm::ptr<elf_ehdr<elf_be, u64>> out) const
 	{
 		if (!src)
 		{
@@ -57,7 +56,7 @@ struct spu_elf_ldr
 		return 0;
 	}
 
-	s32 get_phdr(vm::ptr<elf_phdr<elf_be, u64>> out, u32 count)
+	s32 get_phdr(vm::ptr<elf_phdr<elf_be, u64>> out, u32 count) const
 	{
 		if (!src)
 		{
@@ -362,7 +361,7 @@ error_code sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 	if (img->type == SYS_SPU_IMAGE_TYPE_USER)
 	{
 		//_sys_free(img->segs.addr());
-		vm::dealloc_verbose_nothrow(img->segs.addr(), vm::main);
+		vm::dealloc(img->segs.addr(), vm::main);
 	}
 	else if (img->type == SYS_SPU_IMAGE_TYPE_KERNEL)
 	{
@@ -390,7 +389,7 @@ error_code sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 
 	sys_spu_image img;
 	img.load(elf_file);
-	img.deploy(vm::_ptr<u8>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), img.segs.get_ptr(), img.nsegs);
+	img.deploy(vm::_ptr<u8>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), std::span(img.segs.get_ptr(), img.nsegs));
 	img.free();
 
 	*entry = img.entry_point;
@@ -398,12 +397,12 @@ error_code sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 	return CELL_OK;
 }
 
-error_code sys_raw_spu_image_load(ppu_thread& ppu, s32 id, vm::ptr<sys_spu_image> img)
+error_code sys_raw_spu_image_load(s32 id, vm::ptr<sys_spu_image> img)
 {
 	sysPrxForUser.warning("sys_raw_spu_image_load(id=%d, img=*0x%x)", id, img);
 
 	// Load SPU segments
-	img->deploy(vm::_ptr<u8>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), img->segs.get_ptr(), img->nsegs);
+	img->deploy(vm::_ptr<u8>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), std::span(img->segs.get_ptr(), img->nsegs));
 
 	// Use MMIO
 	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point);

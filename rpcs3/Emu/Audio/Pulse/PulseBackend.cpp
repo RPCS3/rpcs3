@@ -1,4 +1,4 @@
-﻿#ifndef HAVE_PULSE
+#ifndef HAVE_PULSE
 #error "PulseAudio support disabled but still being built."
 #endif
 

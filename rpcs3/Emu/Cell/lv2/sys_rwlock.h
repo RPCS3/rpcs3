@@ -24,22 +24,18 @@ struct lv2_rwlock final : lv2_obj
 	static const u32 id_base = 0x88000000;
 
 	const lv2_protocol protocol;
-	const u32 shared;
 	const u64 key;
 	const u64 name;
-	const s32 flags;
 
 	shared_mutex mutex;
 	atomic_t<s64> owner{0};
 	std::deque<cpu_thread*> rq;
 	std::deque<cpu_thread*> wq;
 
-	lv2_rwlock(u32 protocol, u32 shared, u64 key, s32 flags, u64 name)
-		: protocol{protocol}
-		, shared(shared)
+	lv2_rwlock(u32 protocol, u64 key, u64 name) noexcept
+		: protocol{static_cast<u8>(protocol)}
 		, key(key)
 		, name(name)
-		, flags(flags)
 	{
 	}
 };

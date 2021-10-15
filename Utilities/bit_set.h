@@ -21,14 +21,21 @@ Examples:
 Intersection (&) and symmetric difference (^) is also available.
 */
 
-#include "types.h"
+#include "util/types.hpp"
 #include "util/atomic.hpp"
+#include "Utilities/StrFmt.h"
 
 template <typename T>
+concept BitSetEnum = std::is_enum_v<T> && requires(T x)
+{
+	T::__bitset_enum_max;
+};
+
+template <BitSetEnum T>
 class atomic_bs_t;
 
 // Bitset type for enum class with available bits [0, T::__bitset_enum_max)
-template <typename T>
+template <BitSetEnum T>
 class bs_t final
 {
 public:
@@ -48,8 +55,8 @@ private:
 	}
 
 public:
-	static constexpr std::size_t bitmax = sizeof(T) * 8;
-	static constexpr std::size_t bitsize = static_cast<under>(T::__bitset_enum_max);
+	static constexpr usz bitmax = sizeof(T) * 8;
+	static constexpr usz bitsize = static_cast<under>(T::__bitset_enum_max);
 
 	static_assert(std::is_enum<T>::value, "bs_t<> error: invalid type (must be enum)");
 	static_assert(bitsize <= bitmax, "bs_t<> error: invalid __bitset_enum_max");
@@ -111,39 +118,29 @@ public:
 		return *this;
 	}
 
-	constexpr bs_t operator +(bs_t rhs) const
+	friend constexpr bs_t operator +(bs_t lhs, bs_t rhs)
 	{
-		return bs_t(0, m_data | rhs.m_data);
+		return bs_t(0, lhs.m_data | rhs.m_data);
 	}
 
-	constexpr bs_t operator -(bs_t rhs) const
+	friend constexpr bs_t operator -(bs_t lhs, bs_t rhs)
 	{
-		return bs_t(0, m_data & ~rhs.m_data);
+		return bs_t(0, lhs.m_data & ~rhs.m_data);
 	}
 
-	constexpr bs_t operator &(bs_t rhs) const
+	friend constexpr bs_t operator &(bs_t lhs, bs_t rhs)
 	{
-		return bs_t(0, m_data & rhs.m_data);
+		return bs_t(0, lhs.m_data & rhs.m_data);
 	}
 
-	constexpr bs_t operator ^(bs_t rhs) const
+	friend constexpr bs_t operator ^(bs_t lhs, bs_t rhs)
 	{
-		return bs_t(0, m_data ^ rhs.m_data);
+		return bs_t(0, lhs.m_data ^ rhs.m_data);
 	}
 
 	constexpr bool operator ==(bs_t rhs) const
 	{
 		return m_data == rhs.m_data;
-	}
-
-	constexpr bool operator !=(bs_t rhs) const
-	{
-		return m_data != rhs.m_data;
-	}
-
-	constexpr bool test(bs_t rhs) const
-	{
-		return (m_data & rhs.m_data) != 0;
 	}
 
 	constexpr bool test_and_set(T bit)
@@ -166,46 +163,84 @@ public:
 		m_data ^= shift(bit);
 		return r;
 	}
+
+	constexpr bool all_of(bs_t arg)
+	{
+		return (m_data & arg.m_data) == arg.m_data;
+	}
+
+	constexpr bool none_of(bs_t arg)
+	{
+		return (m_data & arg.m_data) == 0;
+	}
 };
 
 // Unary '+' operator: promote plain enum value to bitset value
-template <typename T, typename = decltype(T::__bitset_enum_max)>
+template <BitSetEnum T>
 constexpr bs_t<T> operator +(T bit)
 {
-	return bit;
+	return bs_t<T>(bit);
 }
 
 // Binary '+' operator: bitset union
-template <typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr bs_t<T> operator +(T lhs, T rhs)
+template <BitSetEnum T, typename U> requires (std::is_constructible_v<bs_t<T>, U>)
+constexpr bs_t<T> operator +(T lhs, const U& rhs)
+{
+	return bs_t<T>(lhs) + bs_t<T>(rhs);
+}
+
+// Binary '+' operator: bitset union
+template <typename U, BitSetEnum T> requires (std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
+constexpr bs_t<T> operator +(const U& lhs, T rhs)
 {
 	return bs_t<T>(lhs) + bs_t<T>(rhs);
 }
 
 // Binary '-' operator: bitset difference
-template <typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr bs_t<T> operator -(T lhs, T rhs)
+template <BitSetEnum T, typename U> requires (std::is_constructible_v<bs_t<T>, U>)
+constexpr bs_t<T> operator -(T lhs, const U& rhs)
+{
+	return bs_t<T>(lhs) - bs_t<T>(rhs);
+}
+
+// Binary '-' operator: bitset difference
+template <typename U, BitSetEnum T> requires (std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
+constexpr bs_t<T> operator -(const U& lhs, T rhs)
 {
 	return bs_t<T>(lhs) - bs_t<T>(rhs);
 }
 
 // Binary '&' operator: bitset intersection
-template <typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr bs_t<T> operator &(T lhs, T rhs)
+template <BitSetEnum T, typename U> requires (std::is_constructible_v<bs_t<T>, U>)
+constexpr bs_t<T> operator &(T lhs, const U& rhs)
+{
+	return bs_t<T>(lhs) & bs_t<T>(rhs);
+}
+
+// Binary '&' operator: bitset intersection
+template <typename U, BitSetEnum T> requires (std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
+constexpr bs_t<T> operator &(const U& lhs, T rhs)
 {
 	return bs_t<T>(lhs) & bs_t<T>(rhs);
 }
 
 // Binary '^' operator: bitset symmetric difference
-template <typename T, typename = decltype(T::__bitset_enum_max)>
-constexpr bs_t<T> operator ^(T lhs, T rhs)
+template <BitSetEnum T, typename U> requires (std::is_constructible_v<bs_t<T>, U>)
+constexpr bs_t<T> operator ^(T lhs, const U& rhs)
+{
+	return bs_t<T>(lhs) ^ bs_t<T>(rhs);
+}
+
+// Binary '^' operator: bitset symmetric difference
+template <typename U, BitSetEnum T> requires (std::is_constructible_v<bs_t<T>, U> && !std::is_enum_v<U>)
+constexpr bs_t<T> operator ^(const U& lhs, T rhs)
 {
 	return bs_t<T>(lhs) ^ bs_t<T>(rhs);
 }
 
 // Atomic bitset specialization with optimized operations
-template <typename T>
-class atomic_bs_t : public atomic_t<::bs_t<T>> // TODO: true specialization
+template <BitSetEnum T>
+class atomic_bs_t : public atomic_t<::bs_t<T>>
 {
 	// Corresponding bitset type
 	using bs_t = ::bs_t<T>;
@@ -235,6 +270,8 @@ public:
 		: base(bit)
 	{
 	}
+
+	using base::operator bs_t;
 
 	explicit operator bool() const
 	{
@@ -314,75 +351,6 @@ public:
 	auto fetch_or(const bs_t&) = delete;
 	auto or_fetch(const bs_t&) = delete;
 	auto operator |=(const bs_t&) = delete;
-	auto operator ++() = delete;
-	auto operator --() = delete;
-	auto operator ++(int) = delete;
-	auto operator --(int) = delete;
-
-	bs_t operator +(bs_t rhs) const
-	{
-		return bs_t(0, base::load().m_data | rhs.m_data);
-	}
-
-	bs_t operator -(bs_t rhs) const
-	{
-		return bs_t(0, base::load().m_data & ~rhs.m_data);
-	}
-
-	bs_t operator &(bs_t rhs) const
-	{
-		return bs_t(0, base::load().m_data & rhs.m_data);
-	}
-
-	bs_t operator ^(bs_t rhs) const
-	{
-		return bs_t(0, base::load().m_data ^ rhs.m_data);
-	}
-
-	bs_t operator ==(bs_t rhs) const
-	{
-		return base::load().m_data == rhs.m_data;
-	}
-
-	bs_t operator !=(bs_t rhs) const
-	{
-		return base::load().m_data != rhs.m_data;
-	}
-
-	friend bs_t operator +(bs_t lhs, const atomic_bs_t& rhs)
-	{
-		return bs_t(0, lhs.m_data | rhs.load().m_data);
-	}
-
-	friend bs_t operator -(bs_t lhs, const atomic_bs_t& rhs)
-	{
-		return bs_t(0, lhs.m_data & ~rhs.load().m_data);
-	}
-
-	friend bs_t operator &(bs_t lhs, const atomic_bs_t& rhs)
-	{
-		return bs_t(0, lhs.m_data & rhs.load().m_data);
-	}
-
-	friend bs_t operator ^(bs_t lhs, const atomic_bs_t& rhs)
-	{
-		return bs_t(0, lhs.m_data ^ rhs.load().m_data);
-	}
-
-	friend bs_t operator ==(bs_t lhs, const atomic_bs_t& rhs)
-	{
-		return lhs.m_data == rhs.load().m_data;
-	}
-
-	friend bs_t operator !=(bs_t lhs, const atomic_bs_t& rhs)
-	{
-		return lhs.m_data != rhs.load().m_data;
-	}
-
-	bool test(const bs_t& rhs)
-	{
-		return base::load().test(rhs);
-	}
 
 	bool test_and_set(T rhs)
 	{
@@ -394,9 +362,23 @@ public:
 		return atomic_storage<under>::btr(m_data.m_data, static_cast<uint>(static_cast<under>(rhs)));
 	}
 
-	bool test_and_complement(T rhs)
+	bool test_and_invert(T rhs)
 	{
 		return atomic_storage<under>::btc(m_data.m_data, static_cast<uint>(static_cast<under>(rhs)));
+	}
+
+	bool bit_test_set(uint bit) = delete;
+	bool bit_test_reset(uint bit) = delete;
+	bool bit_test_invert(uint bit) = delete;
+
+	bool all_of(bs_t arg)
+	{
+		return base::load().all_of(arg);
+	}
+
+	bool none_of(bs_t arg)
+	{
+		return base::load().none_of(arg);
 	}
 };
 

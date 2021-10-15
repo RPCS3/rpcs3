@@ -1,9 +1,9 @@
-﻿#pragma once
-#include "../Common/VertexProgramDecompiler.h"
-#include "Emu/RSX/RSXVertexProgram.h"
+#pragma once
+#include "../Program/VertexProgramDecompiler.h"
 #include "Utilities/Thread.h"
 #include "VulkanAPI.h"
-#include "../VK/VKHelpers.h"
+#include "VKProgramPipeline.h"
+#include "vkutils/pipeline_binding_table.h"
 
 namespace vk
 {
@@ -21,13 +21,13 @@ struct VKVertexDecompilerThread : public VertexProgramDecompiler
 
 	struct
 	{
-		bool emulate_conditional_rendering;
+		bool emulate_conditional_rendering{false};
 	}
 	m_device_props;
 
 protected:
-	std::string getFloatTypeName(size_t elementCount) override;
-	std::string getIntTypeName(size_t elementCount) override;
+	std::string getFloatTypeName(usz elementCount) override;
+	std::string getIntTypeName(usz elementCount) override;
 	std::string getFunction(FUNCTION) override;
 	std::string compareFunction(COMPARE, const std::string&, const std::string&, bool scalar) override;
 

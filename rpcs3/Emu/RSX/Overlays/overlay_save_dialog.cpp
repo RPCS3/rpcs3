@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "overlay_save_dialog.h"
 #include "Utilities/date_time.h"
 
@@ -96,10 +96,10 @@ namespace rsx
 			m_time_thingy->set_pos(1000, 30);
 			m_time_thingy->set_text(date_time::current_time());
 
-			static_cast<label*>(m_description.get())->auto_resize();
-			static_cast<label*>(m_time_thingy.get())->auto_resize();
+			m_description->auto_resize();
+			m_time_thingy->auto_resize();
 
-			m_dim_background->back_color.a = 0.8f;
+			m_dim_background->back_color.a = 0.5f;
 			m_description->back_color.a    = 0.f;
 			m_time_thingy->back_color.a    = 0.f;
 
@@ -109,7 +109,7 @@ namespace rsx
 		void save_dialog::update()
 		{
 			m_time_thingy->set_text(date_time::current_time());
-			static_cast<label*>(m_time_thingy.get())->auto_resize();
+			m_time_thingy->auto_resize();
 		}
 
 		void save_dialog::on_button_pressed(pad_button button_press)
@@ -138,6 +138,7 @@ namespace rsx
 				break;
 			default:
 				rsx_log.trace("[ui] Button %d pressed", static_cast<u8>(button_press));
+				break;
 			}
 		}
 
@@ -160,17 +161,26 @@ namespace rsx
 			return result;
 		}
 
-		s32 save_dialog::show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet)
+		s32 save_dialog::show(std::vector<SaveDataEntry>& save_entries, u32 focused, u32 op, vm::ptr<CellSaveDataListSet> listSet, bool enable_overlay)
 		{
 			visible = false;
 
-			std::vector<u8> icon;
+			if (enable_overlay)
+			{
+				m_dim_background->back_color.a = 0.9f;
+			}
+			else
+			{
+				m_dim_background->back_color.a = 0.5f;
+			}
+
 			std::vector<std::unique_ptr<overlay_element>> entries;
 
 			for (auto& entry : save_entries)
 			{
+				const std::string date_and_size = fmt::format("%s   %s", entry.date(), entry.data_size());
 				std::unique_ptr<overlay_element> e;
-				e = std::make_unique<save_dialog_entry>(entry.title, entry.subtitle, entry.details, image_resource_id::raw_image, entry.iconBuf);
+				e = std::make_unique<save_dialog_entry>(entry.subtitle, date_and_size, entry.details, image_resource_id::raw_image, entry.iconBuf);
 				entries.emplace_back(std::move(e));
 			}
 
@@ -199,13 +209,12 @@ namespace rsx
 
 			if (listSet && listSet->newData)
 			{
-				std::unique_ptr<overlay_element> new_stub;
+				std::string title = get_localized_string(localized_string_id::CELL_SAVEDATA_NEW_SAVED_DATA_TITLE);
 
-				const char* title = "Create New";
-
+				std::vector<u8> icon;
 				int id = resource_config::standard_image_resource::new_entry;
 
-				if (auto picon = +listSet->newData->icon)
+				if (const auto picon = +listSet->newData->icon)
 				{
 					if (picon->title)
 						title = picon->title.get_ptr();
@@ -223,7 +232,7 @@ namespace rsx
 					id = image_resource_id::raw_image;
 				}
 
-				new_stub = std::make_unique<save_dialog_entry>(title, "Select to create a new entry", "", id, icon);
+				std::unique_ptr<overlay_element> new_stub = std::make_unique<save_dialog_entry>(title, get_localized_string(localized_string_id::CELL_SAVEDATA_NEW_SAVED_DATA_SUB_TITLE), "", id, icon);
 
 				m_list->add_entry(new_stub);
 			}
@@ -238,7 +247,7 @@ namespace rsx
 
 			if (m_list->m_items.empty())
 			{
-				m_no_saves_text = std::make_unique<label>("There is no saved data.");
+				m_no_saves_text = std::make_unique<label>(get_localized_string(localized_string_id::CELL_SAVEDATA_NO_DATA));
 				m_no_saves_text->set_font("Arial", 20);
 				m_no_saves_text->align_text(overlay_element::text_align::center);
 				m_no_saves_text->set_pos(m_list->x, m_list->y + m_list->h / 2);
@@ -254,16 +263,23 @@ namespace rsx
 				m_list->select_entry(focused);
 			}
 
-			static_cast<label*>(m_description.get())->auto_resize();
+			m_description->auto_resize();
 			visible = true;
 
-			if (auto err = run_input_loop())
+			if (const auto err = run_input_loop())
 				return err;
 
-			if (return_code + 0u == entries.size() && !newpos_head)
-				return selection_code::new_save;
-			if (return_code >= 0 && newpos_head)
-				return return_code - 1;
+			if (return_code >= 0)
+			{
+				if (newpos_head)
+				{
+					return return_code - 1;
+				}
+				if (static_cast<usz>(return_code) == entries.size())
+				{
+					return selection_code::new_save;
+				}
+			}
 
 			return return_code;
 		}

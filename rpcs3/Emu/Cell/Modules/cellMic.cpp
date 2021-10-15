@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
@@ -125,7 +125,7 @@ void mic_context::operator()()
 
 void mic_context::load_config_and_init()
 {
-	auto device_list = fmt::split(g_cfg.audio.microphone_devices, {"@@@"});
+	auto device_list = fmt::split(g_cfg.audio.microphone_devices.to_string(), {"@@@"});
 
 	if (!device_list.empty() && mic_list.empty())
 	{
@@ -155,6 +155,7 @@ void mic_context::load_config_and_init()
 			mic_list.at(0).add_device(device_list[0]);
 			break;
 		}
+		case microphone_handler::null:
 		default: break;
 		}
 	}
@@ -203,7 +204,7 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 	case microphone_handler::singstar:
 	case microphone_handler::real_singstar:
 		// SingStar mic has always 2 channels, each channel represent a physical microphone
-		ASSERT(num_channels >= 2);
+		ensure(num_channels >= 2);
 		if (num_channels > 2)
 		{
 			cellMic.error("Tried to open a SingStar-type device with num_channels = %d", num_channels);
@@ -211,7 +212,8 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 		}
 		break;
 	case microphone_handler::rocksmith: num_channels = 1; break;
-	default: ASSERT(false); break;
+	case microphone_handler::null:
+	default: ensure(false); break;
 	}
 
 	ALCenum num_al_channels;
@@ -226,7 +228,7 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 			num_al_channels = AL_FORMAT_STEREO16;
 		break;
 	case 4:
-		if (alcIsExtensionPresent(NULL, "AL_EXT_MCFORMATS") == AL_TRUE)
+		if (alcIsExtensionPresent(nullptr, "AL_EXT_MCFORMATS") == AL_TRUE)
 		{
 			num_al_channels = AL_FORMAT_QUAD16;
 		}
@@ -363,7 +365,7 @@ bool microphone_device::has_data() const
 
 u32 microphone_device::capture_audio()
 {
-	verify(HERE), sample_size > 0;
+	ensure(sample_size > 0);
 
 	u32 num_samples = inbuf_size / sample_size;
 
@@ -412,7 +414,7 @@ void microphone_device::get_raw(const u32 num_samples)
 		}
 		break;
 	case microphone_handler::singstar:
-		verify(HERE), sample_size == 4;
+		ensure(sample_size == 4);
 
 		// Mixing the 2 mics as if channels
 		if (input_devices.size() == 2)
@@ -437,7 +439,8 @@ void microphone_device::get_raw(const u32 num_samples)
 		}
 
 		break;
-	default: ASSERT(false); break;
+	case microphone_handler::null:
+	default: ensure(false); break;
 	}
 
 	rbuf_raw.write_bytes(tmp_ptr, num_samples * sample_size);
@@ -466,7 +469,7 @@ void microphone_device::get_dsp(const u32 num_samples)
 		}
 		break;
 	case microphone_handler::singstar:
-		verify(HERE), sample_size == 4;
+		ensure(sample_size == 4);
 
 		// Mixing the 2 mics as if channels
 		if (input_devices.size() == 2)
@@ -491,7 +494,8 @@ void microphone_device::get_dsp(const u32 num_samples)
 		}
 
 		break;
-	default: ASSERT(false); break;
+	case microphone_handler::null:
+	default: ensure(false); break;
 	}
 
 	rbuf_dsp.write_bytes(tmp_ptr, num_samples * sample_size);
@@ -503,29 +507,29 @@ error_code cellMicInit()
 {
 	cellMic.notice("cellMicInit()");
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (mic_thr.init)
 		return CELL_MICIN_ERROR_ALREADY_INIT;
 
-	mic_thr->load_config_and_init();
-	mic_thr->init = 1;
+	mic_thr.load_config_and_init();
+	mic_thr.init = 1;
 
 	return CELL_OK;
 }
 
-error_code cellMicEnd(ppu_thread& ppu)
+error_code cellMicEnd()
 {
 	cellMic.notice("cellMicEnd()");
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
 	// TODO
-	mic_thr->init = 0;
-	mic_thr->event_queue_key = 0;
+	mic_thr.init = 0;
+	mic_thr.event_queue_key = 0;
 
 	return CELL_OK;
 }
@@ -536,15 +540,15 @@ error_code cellMicOpen(s32 dev_num, s32 sampleRate)
 {
 	cellMic.trace("cellMicOpen(dev_num=%d sampleRate=%d)", dev_num, sampleRate);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
-	auto& device = mic_thr->mic_list.at(dev_num);
+	auto& device = mic_thr.mic_list.at(dev_num);
 
 	if (device.is_opened())
 		return CELL_MICIN_ERROR_ALREADY_OPEN;
@@ -556,15 +560,15 @@ error_code cellMicOpenRaw(s32 dev_num, s32 sampleRate, s32 maxChannels)
 {
 	cellMic.trace("cellMicOpenRaw(dev_num=%d, sampleRate=%d, maxChannels=%d)", dev_num, sampleRate, maxChannels);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
-	auto& device = mic_thr->mic_list.at(dev_num);
+	auto& device = mic_thr.mic_list.at(dev_num);
 
 	if (device.is_opened())
 		return CELL_MICIN_ERROR_ALREADY_OPEN;
@@ -577,15 +581,15 @@ error_code cellMicOpenEx(s32 dev_num, s32 rawSampleRate, s32 rawChannel, s32 DSP
 	cellMic.trace("cellMicOpenEx(dev_num=%d, rawSampleRate=%d, rawChannel=%d, DSPSampleRate=%d, bufferSizeMS=%d, signalType=0x%x)",
 		dev_num, rawSampleRate, rawChannel, DSPSampleRate, bufferSizeMS, signalType);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
-	auto& device = mic_thr->mic_list.at(dev_num);
+	auto& device = mic_thr.mic_list.at(dev_num);
 
 	if (device.is_opened())
 		return CELL_MICIN_ERROR_ALREADY_OPEN;
@@ -599,15 +603,15 @@ u8 cellMicIsOpen(s32 dev_num)
 {
 	cellMic.trace("cellMicIsOpen(dev_num=%d)", dev_num);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return false;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return false;
 
-	return mic_thr->mic_list.at(dev_num).is_opened();
+	return mic_thr.mic_list.at(dev_num).is_opened();
 }
 
 s32 cellMicIsAttached(s32 dev_num)
@@ -620,15 +624,15 @@ error_code cellMicClose(s32 dev_num)
 {
 	cellMic.trace("cellMicClose(dev_num=%d)", dev_num);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
-	auto& device = mic_thr->mic_list.at(dev_num);
+	auto& device = mic_thr.mic_list.at(dev_num);
 
 	if (!device.is_opened())
 		return CELL_MICIN_ERROR_NOT_OPEN;
@@ -642,15 +646,15 @@ error_code cellMicStart(s32 dev_num)
 {
 	cellMic.trace("cellMicStart(dev_num=%d)", dev_num);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
-	auto& device = mic_thr->mic_list.at(dev_num);
+	auto& device = mic_thr.mic_list.at(dev_num);
 
 	if (!device.is_opened())
 		return CELL_MICIN_ERROR_NOT_OPEN;
@@ -664,15 +668,15 @@ error_code cellMicStartEx(s32 dev_num, u32 iflags)
 
 	// TODO: flags
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
-	auto& device = mic_thr->mic_list.at(dev_num);
+	auto& device = mic_thr.mic_list.at(dev_num);
 
 	if (!device.is_opened())
 		return CELL_MICIN_ERROR_NOT_OPEN;
@@ -686,15 +690,15 @@ error_code cellMicStop(s32 dev_num)
 {
 	cellMic.trace("cellMicStop(dev_num=%d)", dev_num);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
-	auto& device = mic_thr->mic_list.at(dev_num);
+	auto& device = mic_thr.mic_list.at(dev_num);
 
 	if (!device.is_opened())
 		return CELL_MICIN_ERROR_NOT_OPEN;
@@ -716,15 +720,15 @@ error_code cellMicGetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 	if (!arg1 || (!arg2 && deviceAttributes == CELLMIC_DEVATTR_CHANVOL))
 		return CELL_MICIN_ERROR_PARAM;
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
-	auto& device = mic_thr->mic_list.at(dev_num);
+	auto& device = mic_thr.mic_list.at(dev_num);
 
 	switch (deviceAttributes)
 	{
@@ -744,15 +748,15 @@ error_code cellMicSetDeviceAttr(s32 dev_num, CellMicDeviceAttr deviceAttributes,
 {
 	cellMic.trace("cellMicSetDeviceAttr(dev_num=%d, deviceAttributes=%d, arg1=%d, arg2=%d)", dev_num, +deviceAttributes, arg1, arg2);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
-	auto& device = mic_thr->mic_list.at(dev_num);
+	auto& device = mic_thr.mic_list.at(dev_num);
 
 	switch (deviceAttributes)
 	{
@@ -789,9 +793,9 @@ error_code cellMicGetSignalState(s32 dev_num, CellMicSignalState sig_state, vm::
 {
 	cellMic.todo("cellMicGetSignalState(dev_num=%d, sig_state=%d, value=*0x%x)", dev_num, +sig_state, value);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
 	be_t<u32>* ival = vm::_ptr<u32>(value.addr());
@@ -827,15 +831,15 @@ error_code cellMicGetFormatRaw(s32 dev_num, vm::ptr<CellMicInputFormatI> format)
 {
 	cellMic.trace("cellMicGetFormatRaw(dev_num=%d, format=0x%x)", dev_num, format);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
-	auto& device = mic_thr->mic_list.at(dev_num);
+	auto& device = mic_thr.mic_list.at(dev_num);
 
 	format->subframeSize  = device.get_bit_resolution() / 8; // Probably?
 	format->bitResolution = device.get_bit_resolution();
@@ -866,9 +870,9 @@ error_code cellMicSetNotifyEventQueue(u64 key)
 {
 	cellMic.todo("cellMicSetNotifyEventQueue(key=0x%llx)", key);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
 	// default mic queue size = 4
@@ -876,9 +880,9 @@ error_code cellMicSetNotifyEventQueue(u64 key)
 	if (!mic_queue)
 		return CELL_MICIN_ERROR_EVENT_QUEUE;
 
-	mic_thr->event_queue_key = key;
+	mic_thr.event_queue_key = key;
 
-	for (auto& mic_entry : mic_thr->mic_list)
+	for (auto& mic_entry : mic_thr.mic_list)
 	{
 		mic_queue->send(0, CELLMIC_ATTACH, mic_entry.first, 0);
 	}
@@ -891,9 +895,9 @@ error_code cellMicSetNotifyEventQueue2(u64 key, u64 source, u64 flag)
 	// TODO: Actually do things with the source variable
 	cellMic.todo("cellMicSetNotifyEventQueue2(key=0x%llx, source=0x%llx, flag=0x%llx", key, source, flag);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
 	// default mic queue size = 4
@@ -902,7 +906,7 @@ error_code cellMicSetNotifyEventQueue2(u64 key, u64 source, u64 flag)
 		return CELL_MICIN_ERROR_EVENT_QUEUE;
 
 	mic_queue->send(0, CELLMIC_ATTACH, 0, 0);
-	mic_thr->event_queue_key = key;
+	mic_thr.event_queue_key = key;
 
 	return CELL_OK;
 }
@@ -911,12 +915,12 @@ error_code cellMicRemoveNotifyEventQueue(u64 key)
 {
 	cellMic.warning("cellMicRemoveNotifyEventQueue(key=0x%llx)", key);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	mic_thr->event_queue_key = 0;
+	mic_thr.event_queue_key = 0;
 
 	return CELL_OK;
 }
@@ -927,15 +931,15 @@ error_code cellMicReadRaw(s32 dev_num, vm::ptr<void> data, s32 max_bytes)
 {
 	cellMic.trace("cellMicReadRaw(dev_num=%d, data=0x%x, maxBytes=%d)", dev_num, data, max_bytes);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
-	auto& mic = mic_thr->mic_list.at(dev_num);
+	auto& mic = mic_thr.mic_list.at(dev_num);
 
 	if (!mic.is_opened() || !(mic.get_signal_types() & CELLMIC_SIGTYPE_RAW))
 		return CELL_MICIN_ERROR_NOT_OPEN;
@@ -947,15 +951,15 @@ error_code cellMicRead(s32 dev_num, vm::ptr<void> data, u32 max_bytes)
 {
 	cellMic.todo("cellMicRead(dev_num=%d, data=0x%x, maxBytes=0x%x)", dev_num, data, max_bytes);
 
-	const auto mic_thr = g_fxo->get<mic_thread>();
-	const std::lock_guard lock(mic_thr->mutex);
-	if (!mic_thr->init)
+	auto& mic_thr = g_fxo->get<mic_thread>();
+	const std::lock_guard lock(mic_thr.mutex);
+	if (!mic_thr.init)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
-	if (!mic_thr->mic_list.count(dev_num))
+	if (!mic_thr.mic_list.count(dev_num))
 		return CELL_MICIN_ERROR_DEVICE_NOT_FOUND;
 
-	auto& mic = mic_thr->mic_list.at(dev_num);
+	auto& mic = mic_thr.mic_list.at(dev_num);
 
 	if (!mic.is_opened() || !(mic.get_signal_types() & CELLMIC_SIGTYPE_DSP))
 		return CELL_MICIN_ERROR_NOT_OPEN;
@@ -1009,7 +1013,8 @@ error_code cellMicGetStatus(s32 dev_num, vm::ptr<CellMicStatus> status)
 
 error_code cellMicStopEx()
 {
-	fmt::throw_exception("Unexpected function" HERE);
+	cellMic.fatal("cellMicStopEx: unexpected function");
+	return CELL_OK;
 }
 
 error_code cellMicSysShareClose()

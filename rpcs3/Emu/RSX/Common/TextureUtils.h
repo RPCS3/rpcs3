@@ -1,8 +1,8 @@
-﻿#pragma once
+#pragma once
 
 #include "../RSXTexture.h"
-#include "Utilities/span.h"
 
+#include <span>
 #include <vector>
 
 namespace rsx
@@ -36,17 +36,77 @@ namespace rsx
 		bytes = 2
 	};
 
-	enum surface_access : u32
+	class surface_access // This is simply a modified enum class
 	{
-		read = 0,
-		write = 1,
-		transfer = 2
+	public:
+		// Publicly visible enumerators
+		enum
+		{
+			shader_read    = (1 << 0),
+			shader_write   = (1 << 1),
+			transfer_read  = (1 << 2),
+			transfer_write = (1 << 3),
+
+			// Arbitrary r/w flags, use with caution.
+			memory_write   = (1 << 4),
+			memory_read    = (1 << 5),
+
+			// Not r/w but signifies a GPU reference to this object.
+			gpu_reference  = (1 << 6),
+		};
+
+	private:
+		// Meta
+		enum
+		{
+			all_writes = (shader_write | transfer_write | memory_write),
+			all_reads = (shader_read | transfer_read | memory_read),
+			all_transfer = (transfer_read | transfer_write)
+		};
+
+		u32 value_;
+
+	public:
+		// Ctor
+		surface_access(u32 value) : value_(value)
+		{}
+
+		// Quick helpers
+		inline bool is_read() const
+		{
+			return !(value_ & ~all_reads);
+		}
+
+		inline bool is_write() const
+		{
+			return !(value_ & ~all_writes);
+		}
+
+		inline bool is_transfer() const
+		{
+			return !(value_ & ~all_transfer);
+		}
+
+		inline bool is_transfer_or_read() const // Special; reads and transfers generate MSAA load operations
+		{
+			return !(value_ & ~(all_transfer | all_reads));
+		}
+
+		bool operator == (const surface_access& other) const
+		{
+			return value_ == other.value_;
+		}
+
+		bool operator == (u32 other) const
+		{
+			return value_ == other;
+		}
 	};
 
 	// Defines how the underlying PS3-visible memory backed by a texture is accessed
 	namespace format_class_
 	{
-		// TODO: Remove when enum import is supported by GCC
+		// TODO: Remove when enum import is supported by clang
 		enum format_class : u8
 		{
 			RSX_FORMAT_CLASS_UNDEFINED = 0,
@@ -69,8 +129,11 @@ namespace rsx
 		rsx::texture_dimension_extended image_type = texture_dimension_extended::texture_dimension_2d;
 		rsx::format_class format_class = RSX_FORMAT_CLASS_UNDEFINED;
 		bool is_cyclic_reference = false;
+		u32 ref_address = 0;
+		u64 surface_cache_tag = 0;
 		f32 scale_x = 1.f;
 		f32 scale_y = 1.f;
+		f32 scale_z = 1.f;
 
 		virtual ~sampled_image_descriptor_base() = default;
 		virtual u32 encoded_component_map() const = 0;
@@ -97,7 +160,7 @@ namespace rsx
 
 	struct subresource_layout
 	{
-		gsl::span<const std::byte> data;
+		std::span<const std::byte> data;
 		u16 width_in_texel;
 		u16 height_in_texel;
 		u16 width_in_block;
@@ -110,12 +173,22 @@ namespace rsx
 		u32 pitch_in_block;
 	};
 
+	struct memory_transfer_cmd
+	{
+		const void* dst;
+		const void* src;
+		u32 length;
+	};
+
 	struct texture_memory_info
 	{
 		int element_size;
 		int block_length;
 		bool require_swap;
 		bool require_deswizzle;
+		bool require_upload;
+
+		std::vector<memory_transfer_cmd> deferred_cmds;
 	};
 
 	struct texture_uploader_capabilities
@@ -123,16 +196,17 @@ namespace rsx
 		bool supports_byteswap;
 		bool supports_vtc_decoding;
 		bool supports_hw_deswizzle;
-		size_t alignment;
+		bool supports_zero_copy;
+		usz alignment;
 	};
 
 	/**
 	* Get size to store texture in a linear fashion.
 	* Storage is assumed to use a rowPitchAlignment boundary for every row of texture.
 	*/
-	size_t get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, size_t row_pitch_alignment, size_t mipmap_alignment);
-	size_t get_placed_texture_storage_size(const rsx::fragment_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment = 0x200);
-	size_t get_placed_texture_storage_size(const rsx::vertex_texture &texture, size_t row_pitch_alignment, size_t mipmap_alignment = 0x200);
+	usz get_placed_texture_storage_size(u16 width, u16 height, u32 depth, u8 format, u16 mipmap, bool cubemap, usz row_pitch_alignment, usz mipmap_alignment);
+	usz get_placed_texture_storage_size(const rsx::fragment_texture &texture, usz row_pitch_alignment, usz mipmap_alignment = 0x200);
+	usz get_placed_texture_storage_size(const rsx::vertex_texture &texture, usz row_pitch_alignment, usz mipmap_alignment = 0x200);
 
 	/**
 	 * get all rsx::subresource_layout for texture.
@@ -141,13 +215,14 @@ namespace rsx
 	std::vector<subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture);
 	std::vector<subresource_layout> get_subresources_layout(const rsx::vertex_texture &texture);
 
-	texture_memory_info upload_texture_subresource(gsl::span<std::byte> dst_buffer, const subresource_layout &src_layout, int format, bool is_swizzled, const texture_uploader_capabilities& caps);
+	texture_memory_info upload_texture_subresource(std::span<std::byte> dst_buffer, const subresource_layout &src_layout, int format, bool is_swizzled, texture_uploader_capabilities& caps);
 
 	u8 get_format_block_size_in_bytes(int format);
 	u8 get_format_block_size_in_texel(int format);
 	u8 get_format_block_size_in_bytes(rsx::surface_color_format format);
 	u8 get_format_block_size_in_bytes(rsx::surface_depth_format2 format);
 
+	bool is_compressed_host_format(u32 format); // Returns true for host-compressed formats (DXT)
 	u8 get_format_sample_count(rsx::surface_antialiasing antialias);
 	u32 get_max_depth_value(rsx::surface_depth_format2 format);
 	bool is_depth_stencil_format(rsx::surface_depth_format2 format);
@@ -160,8 +235,8 @@ namespace rsx
 	/**
 	* Get number of bytes occupied by texture in RSX mem
 	*/
-	size_t get_texture_size(const rsx::fragment_texture &texture);
-	size_t get_texture_size(const rsx::vertex_texture &texture);
+	usz get_texture_size(const rsx::fragment_texture &texture);
+	usz get_texture_size(const rsx::vertex_texture &texture);
 
 	/**
 	* Get packed pitch

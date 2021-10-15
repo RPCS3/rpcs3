@@ -1,10 +1,10 @@
-﻿#pragma once
-
-#include "stdafx.h"
+#pragma once
 
 #include <QCoreApplication>
 
 #include "main_application.h"
+
+#include <functional>
 
 /** Headless RPCS3 Application Class
  * The main point of this class is to do application initialization and initialize callbacks.
@@ -17,20 +17,20 @@ public:
 	headless_application(int& argc, char** argv);
 
 	/** Call this method before calling app.exec */
-	void Init() override;
+	bool Init() override;
 
 private:
 	void InitializeCallbacks();
-	void InitializeConnects();
+	void InitializeConnects() const;
 
 	QThread* get_thread() override
 	{
 		return thread();
-	};
+	}
 
 Q_SIGNALS:
-	void RequestCallAfter(const std::function<void()>& func);
+	void RequestCallAfter(std::function<void()> func);
 
 private Q_SLOTS:
-	void HandleCallAfter(const std::function<void()>& func);
+	static void HandleCallAfter(const std::function<void()>& func);
 };

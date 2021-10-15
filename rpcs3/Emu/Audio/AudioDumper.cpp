@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "AudioDumper.h"
 
 #include "Utilities/date_time.h"
@@ -13,7 +13,7 @@ AudioDumper::AudioDumper(u16 ch)
 		if (const std::string id = Emu.GetTitleID(); !id.empty())
 		{
 			path += id + "_";
-		};
+		}
 		path += date_time::current_time_narrow<'_'>() + ".wav";
 		m_output.open(path, fs::rewrite);
 		m_output.write(m_header); // write initial file header
@@ -33,7 +33,8 @@ void AudioDumper::WriteData(const void* buffer, u32 size)
 {
 	if (GetCh())
 	{
-		verify(HERE), size, m_output.write(buffer, size) == size;
+		ensure(size);
+		ensure(m_output.write(buffer, size) == size);
 		m_header.Size += size;
 		m_header.RIFF.Size += size;
 	}

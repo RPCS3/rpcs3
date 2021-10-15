@@ -16,6 +16,10 @@ Please briefly describe what is not working correctly.
 
 Please describe the problem as accurately as possible.
 
+#### 0. Make sure you're running with settings as close to default as possible
+* **Do NOT enable any emulator game patches when reporting issues**
+* Only change settings that are required for the game to work
+
 #### 1. Please attach RPCS3's log.
 * Run the game until you find the issue.
 * Completely close RPCS3, or move to the next step in case it has crashed.
@@ -28,12 +32,12 @@ Please describe the problem as accurately as possible.
 	On Windows it will be near the executable.
 * Attach the log:
 	+ Drag and drop your log file into the issue.
-	+ Or upload it to the cloud, such as Dropbox, Mega etc. 
+	+ Or upload it to the cloud, such as Dropbox, Mega etc.
 
 #### 2. If you describe graphical issue, please provide an RSX capture and a RenderDoc capture that demonstrate it.
 * To create an RSX capture, use _Create_ _RSX_ _Capture_ under _Utilities_.
 Captures will be stored in RPCS3 folder → captures.
-	+ Compress your capture with 7z, Rar etc. 
+	+ Compress your capture with 7z, Rar etc.
 	And	drag and drop it into the issue.
 	+ Or upload it to the cloud, such as Dropbox, Mega etc.
 * To create a RenderDoc capture, please refer to [RenderDoc's documentation](https://renderdoc.org/docs/how/how_capture_frame.html).

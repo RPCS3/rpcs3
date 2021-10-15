@@ -1,6 +1,8 @@
-﻿#include "settings.h"
+#include "settings.h"
 
 #include "qt_utils.h"
+
+#include "Utilities/File.h"
 
 inline std::string sstr(const QString& _in) { return _in.toStdString(); }
 
@@ -22,12 +24,12 @@ QString settings::GetSettingsDir() const
 	return m_settings_dir.absolutePath();
 }
 
-QString settings::ComputeSettingsDir() const
+QString settings::ComputeSettingsDir()
 {
 	return QString::fromStdString(fs::get_config_dir()) + "/GuiConfigs/";
 }
 
-void settings::RemoveValue(const QString& key, const QString& name)
+void settings::RemoveValue(const QString& key, const QString& name) const
 {
 	if (m_settings)
 	{
@@ -37,14 +39,19 @@ void settings::RemoveValue(const QString& key, const QString& name)
 	}
 }
 
-QVariant settings::GetValue(const gui_save& entry) const
+void settings::RemoveValue(const gui_save& entry) const
 {
-	return m_settings ? m_settings->value(entry.key + "/" + entry.name, entry.def) : entry.def;
+	RemoveValue(entry.key, entry.name);
 }
 
 QVariant settings::GetValue(const QString& key, const QString& name, const QVariant& def) const
 {
 	return m_settings ? m_settings->value(key + "/" + name, def) : def;
+}
+
+QVariant settings::GetValue(const gui_save& entry) const
+{
+	return GetValue(entry.key, entry.name, entry.def);
 }
 
 QVariant settings::List2Var(const q_pair_list& list)
@@ -64,7 +71,7 @@ q_pair_list settings::Var2List(const QVariant& var)
 	return list;
 }
 
-void settings::SetValue(const gui_save& entry, const QVariant& value)
+void settings::SetValue(const gui_save& entry, const QVariant& value) const
 {
 	if (m_settings)
 	{
@@ -74,7 +81,7 @@ void settings::SetValue(const gui_save& entry, const QVariant& value)
 	}
 }
 
-void settings::SetValue(const QString& key, const QVariant& value)
+void settings::SetValue(const QString& key, const QVariant& value) const
 {
 	if (m_settings)
 	{
@@ -82,7 +89,7 @@ void settings::SetValue(const QString& key, const QVariant& value)
 	}
 }
 
-void settings::SetValue(const QString& key, const QString& name, const QVariant& value)
+void settings::SetValue(const QString& key, const QString& name, const QVariant& value) const
 {
 	if (m_settings)
 	{

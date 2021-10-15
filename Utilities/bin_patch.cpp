@@ -1,15 +1,17 @@
-﻿#include "bin_patch.h"
+#include "bin_patch.h"
 #include "File.h"
 #include "Config.h"
 #include "version.h"
+#include "Emu/Memory/vm.h"
 #include "Emu/System.h"
 
-LOG_CHANNEL(patch_log);
+#include "util/types.hpp"
+#include "util/endian.hpp"
+#include "util/asm.hpp"
 
-namespace config_key
-{
-	static const std::string enable_legacy_patches = "Enable Legacy Patches";
-}
+#include <charconv>
+
+LOG_CHANNEL(patch_log, "PAT");
 
 template <>
 void fmt_class_string<YAML::NodeType::value>::format(std::string& out, u64 arg)
@@ -37,6 +39,11 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		switch (value)
 		{
 		case patch_type::invalid: return "invalid";
+		case patch_type::alloc: return "alloc";
+		case patch_type::code_alloc: return "calloc";
+		case patch_type::jump: return "jump";
+		case patch_type::jump_link: return "jumpl";
+		case patch_type::jump_func: return "jumpf";
 		case patch_type::load: return "load";
 		case patch_type::byte: return "byte";
 		case patch_type::le16: return "le16";
@@ -46,9 +53,12 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 		case patch_type::bef64: return "bef64";
 		case patch_type::be16: return "be16";
 		case patch_type::be32: return "be32";
+		case patch_type::bd32: return "bd32";
 		case patch_type::be64: return "be64";
+		case patch_type::bd64: return "bd64";
 		case patch_type::lef32: return "lef32";
 		case patch_type::lef64: return "lef64";
+		case patch_type::utf8: return "utf8";
 		}
 
 		return unknown;
@@ -57,12 +67,6 @@ void fmt_class_string<patch_type>::format(std::string& out, u64 arg)
 
 patch_engine::patch_engine()
 {
-	const std::string patches_path = get_patches_path();
-
-	if (!fs::create_path(patches_path))
-	{
-		patch_log.fatal("Failed to create path: %s (%s)", patches_path, fs::g_tls_error);
-	}
 }
 
 std::string patch_engine::get_patch_config_path()
@@ -125,16 +129,14 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 	}
 
 	// Load patch config to determine which patches are enabled
-	bool enable_legacy_patches = false;
 	patch_map patch_config;
 
 	if (!importing)
 	{
-		patch_config = load_config(enable_legacy_patches);
+		patch_config = load_config();
 	}
 
 	std::string version;
-	bool is_legacy_patch = false;
 
 	if (const auto version_node = root[patch_key::version])
 	{
@@ -150,16 +152,11 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 		// We don't need the Version node in local memory anymore
 		root.remove(patch_key::version);
 	}
-	else if (importing)
+	else
 	{
 		append_log_message(log_messages, fmt::format("Error: No '%s' entry found. Patch engine version = %s (file: %s)", patch_key::version, patch_engine_version, path));
 		patch_log.error("No '%s' entry found. Patch engine version = %s (file: %s)", patch_key::version, patch_engine_version, path);
 		return false;
-	}
-	else
-	{
-		patch_log.warning("Patch engine version %s: Reading legacy patch file %s", patch_engine_version, path);
-		is_legacy_patch = true;
 	}
 
 	bool is_valid = true;
@@ -169,34 +166,18 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 	{
 		const auto& main_key = pair.first.Scalar();
 
-		// Use old logic and yaml layout if this is a legacy patch
-		if (is_legacy_patch)
-		{
-			struct patch_info info{};
-			info.hash        = main_key;
-			info.is_enabled  = enable_legacy_patches;
-			info.is_legacy   = true;
-			info.source_path = path;
-
-			if (!read_patch_node(info, pair.second, root, log_messages))
-			{
-				is_valid = false;
-			}
-
-			// Find or create an entry matching the key/hash in our map
-			auto& container = patches_map[main_key];
-			container.hash      = main_key;
-			container.is_legacy = true;
-			container.patch_info_map["legacy"] = info;
-			continue;
-		}
-
-		// Use new logic and yaml layout
-
 		if (const auto yml_type = pair.second.Type(); yml_type != YAML::NodeType::Map)
 		{
 			append_log_message(log_messages, fmt::format("Error: Skipping key %s: expected Map, found %s", main_key, yml_type));
 			patch_log.error("Skipping key %s: expected Map, found %s (file: %s)", main_key, yml_type, path);
+			is_valid = false;
+			continue;
+		}
+
+		if (main_key.empty())
+		{
+			append_log_message(log_messages, "Error: Skipping empty key");
+			patch_log.error("Skipping empty key (file: %s)", path);
 			is_valid = false;
 			continue;
 		}
@@ -209,9 +190,8 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 		// Find or create an entry matching the key/hash in our map
 		auto& container = patches_map[main_key];
-		container.is_legacy = false;
-		container.hash      = main_key;
-		container.version   = version;
+		container.hash    = main_key;
+		container.version = version;
 
 		// Go through each patch
 		for (auto patches_entry : pair.second)
@@ -249,10 +229,18 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 				{
 					const std::string& title = game_node.first.Scalar();
 
+					if (title.empty())
+					{
+						append_log_message(log_messages, fmt::format("Error: Empty game title (key: %s, file: %s)", main_key, path));
+						patch_log.error("Empty game title (key: %s, file: %s)", main_key, path);
+						is_valid = false;
+						continue;
+					}
+
 					if (const auto yml_type = game_node.second.Type(); yml_type != YAML::NodeType::Map)
 					{
-						append_log_message(log_messages, fmt::format("Error: Skipping %s: expected Map, found %s (patch: %s, key: %s)", title, yml_type, description, main_key));
-						patch_log.error("Skipping %s: expected Map, found %s (patch: %s, key: %s, file: %s)", title, yml_type, description, main_key, path);
+						append_log_message(log_messages, fmt::format("Error: Skipping game %s: expected Map, found %s (patch: %s, key: %s)", title, yml_type, description, main_key));
+						patch_log.error("Skipping game %s: expected Map, found %s (patch: %s, key: %s, file: %s)", title, yml_type, description, main_key, path);
 						is_valid = false;
 						continue;
 					}
@@ -263,7 +251,14 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 					{
 						const std::string& serial = serial_node.first.Scalar();
 
-						if (serial == patch_key::all)
+						if (serial.empty())
+						{
+							append_log_message(log_messages, fmt::format("Error: Using empty serial (title: %s, patch: %s, key: %s)", title, description, main_key));
+							patch_log.error("Using empty serial (title: %s, patch: %s, key: %s, file: %s)", title, description, main_key, path);
+							is_valid = false;
+							continue;
+						}
+						else if (serial == patch_key::all)
 						{
 							if (!title_is_all_key)
 							{
@@ -389,16 +384,26 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 	return is_valid;
 }
 
-patch_type patch_engine::get_patch_type(YAML::Node node)
+patch_type patch_engine::get_patch_type(const std::string& text)
 {
 	u64 type_val = 0;
 
-	if (!node || !node.IsScalar() || !cfg::try_to_enum_value(&type_val, &fmt_class_string<patch_type>::format, node.Scalar()))
+	if (!cfg::try_to_enum_value(&type_val, &fmt_class_string<patch_type>::format, text))
 	{
 		return patch_type::invalid;
 	}
 
 	return static_cast<patch_type>(type_val);
+}
+
+patch_type patch_engine::get_patch_type(YAML::Node node)
+{
+	if (!node || !node.IsScalar())
+	{
+		return patch_type::invalid;
+	}
+
+	return get_patch_type(node.Scalar());
 }
 
 bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root, std::stringstream* log_messages)
@@ -427,35 +432,6 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 	if (type == patch_type::load)
 	{
 		// Special syntax: anchors (named sequence)
-
-		// Most legacy patches don't use the anchor syntax correctly, so try to sanitize it.
-		if (info.is_legacy)
-		{
-			if (const auto yml_type = addr_node.Type(); yml_type == YAML::NodeType::Scalar)
-			{
-				if (!root)
-				{
-					patch_log.fatal("Trying to parse legacy patch with invalid root."); // Sanity Check
-					return false;
-				}
-
-				const auto anchor = addr_node.Scalar();
-				const auto anchor_node = root[anchor];
-
-				if (anchor_node)
-				{
-					addr_node = anchor_node;
-					append_log_message(log_messages, fmt::format("Incorrect anchor syntax found in legacy patch: %s (key: %s)", anchor, info.hash));
-					patch_log.warning("Incorrect anchor syntax found in legacy patch: %s (key: %s)", anchor, info.hash);
-				}
-				else
-				{
-					append_log_message(log_messages, fmt::format("Anchor not found in legacy patch: %s (key: %s)", anchor, info.hash));
-					patch_log.error("Anchor not found in legacy patch: %s (key: %s)", anchor, info.hash);
-					return false;
-				}
-			}
-		}
 
 		// Check if the anchor was resolved.
 		if (const auto yml_type = addr_node.Type(); yml_type != YAML::NodeType::Sequence)
@@ -490,6 +466,11 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 	switch (p_data.type)
 	{
+	case patch_type::utf8:
+	case patch_type::jump_func:
+	{
+		break;
+	}
 	case patch_type::bef32:
 	case patch_type::lef32:
 	case patch_type::bef64:
@@ -524,7 +505,7 @@ bool patch_engine::read_patch_node(patch_info& info, YAML::Node node, const YAML
 	if (!node)
 	{
 		append_log_message(log_messages, fmt::format("Skipping invalid patch node %s. (key: %s)", info.description, info.hash));
-		patch_log.error("Skipping invalid patch node %s. (key: %s)" HERE, info.description, info.hash);
+		patch_log.error("Skipping invalid patch node %s. (key: %s)", info.description, info.hash);
 		return false;
 	}
 
@@ -550,10 +531,7 @@ bool patch_engine::read_patch_node(patch_info& info, YAML::Node node, const YAML
 
 void patch_engine::append_global_patches()
 {
-	// Legacy patch.yml
-	load(m_map, fs::get_config_dir() + "patch.yml");
-
-	// New patch.yml
+	// Regular patch.yml
 	load(m_map, get_patches_path() + "patch.yml");
 
 	// Imported patch.yml
@@ -567,44 +545,116 @@ void patch_engine::append_title_patches(const std::string& title_id)
 		return;
 	}
 
-	// Legacy patch.yml
-	load(m_map, fs::get_config_dir() + "data/" + title_id + "/patch.yml");
-
-	// New patch.yml
+	// Regular patch.yml
 	load(m_map, get_patches_path() + title_id + "_patch.yml");
 }
 
-std::size_t patch_engine::apply(const std::string& name, u8* dst)
+void ppu_register_range(u32 addr, u32 size);
+bool ppu_form_branch_to_code(u32 entry, u32 target, bool link = false, bool with_toc = false, std::string module_name = {});
+u32 ppu_generate_id(std::string_view name);
+
+void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
 {
-	return apply_patch<false>(name, dst, 0, 0);
+	if (ptr && ptr->flags & (1ull << 62))
+	{
+		vm::unmap(0, true, &ptr);
+	}
 }
 
-std::size_t patch_engine::apply_with_ls_check(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
+// Returns old 'applied' size
+static usz apply_modification(std::basic_string<u32>& applied, const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 min_addr)
 {
-	return apply_patch<true>(name, dst, filesz, ls_addr);
-}
+	const usz old_applied_size = applied.size();
 
-template <bool check_local_storage>
-static std::size_t apply_modification(const patch_engine::patch_info& patch, u8* dst, u32 filesz, u32 ls_addr)
-{
-	size_t applied = 0;
+	for (const auto& p : patch.data_list)
+	{
+		if (p.type != patch_type::alloc) continue;
+
+		// Do not allow null address or if dst is not a VM ptr
+		if (const u32 alloc_at = vm::try_get_addr(dst + (p.offset & -4096)).first; alloc_at >> 16)
+		{
+			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value) + alloc_at % 4096, 4096);
+
+			// Allocate map if needed, if allocated flags will indicate that bit 62 is set (unique identifier)
+			auto alloc_map = vm::reserve_map(vm::any, alloc_at & -0x10000, utils::align(alloc_size, 0x10000), vm::page_size_64k | vm::preallocated | (1ull << 62));
+
+			u64 flags = vm::alloc_unwritable;
+
+			switch (p.offset % patch_engine::mem_protection::mask)
+			{
+			case patch_engine::mem_protection::wx: flags = vm::alloc_executable; break;
+			case patch_engine::mem_protection::ro: break;
+			case patch_engine::mem_protection::rx: flags |= vm::alloc_executable; break;
+			case patch_engine::mem_protection::rw: flags &= ~vm::alloc_unwritable; break;
+			default: ensure(false);
+			}
+
+			if (alloc_map)
+			{
+				if ((p.alloc_addr = alloc_map->falloc(alloc_at, alloc_size, nullptr, flags)))
+				{
+					if (flags & vm::alloc_executable)
+					{
+						ppu_register_range(alloc_at, alloc_size);
+					}
+
+					applied.push_back(::narrow<u32>(&p - patch.data_list.data())); // Remember index in case of failure to allocate any memory
+					continue;
+				}
+
+				// Revert if allocated map before failure
+				unmap_vm_area(alloc_map);
+			}
+		}
+
+		// Revert in case of failure
+		std::for_each(applied.begin() + old_applied_size, applied.end(), [&](u32 index)
+		{
+			const u32 addr = std::exchange(patch.data_list[index].alloc_addr, 0);
+
+			vm::dealloc(addr);
+
+			auto alloc_map = vm::get(vm::any, addr);
+			unmap_vm_area(alloc_map);
+		});
+
+		applied.resize(old_applied_size);
+		return old_applied_size;
+	}
+
+	// Fixup values from before
+	std::fill(applied.begin() + old_applied_size, applied.end(), u32{umax});
+
+	u32 relocate_instructions_at = 0;
 
 	for (const auto& p : patch.data_list)
 	{
 		u32 offset = p.offset;
 
-		if constexpr (check_local_storage)
+		if (relocate_instructions_at && vm::read32(relocate_instructions_at) != 0x6000'0000u)
 		{
-			if (offset < ls_addr || offset >= (ls_addr + filesz))
-			{
-				// This patch is out of range for this segment
-				continue;
-			}
-			
-			offset -= ls_addr;
+			// No longer points a NOP to be filled, meaning we ran out of instructions
+			relocate_instructions_at = 0;
 		}
 
+		if (!relocate_instructions_at && (offset < min_addr || offset - min_addr >= filesz))
+		{
+			// This patch is out of range for this segment
+			continue;
+		}
+
+		offset -= min_addr;
+
 		auto ptr = dst + offset;
+
+		if (relocate_instructions_at)
+		{
+			offset = relocate_instructions_at;
+			ptr = vm::get_super_ptr<u8>(relocate_instructions_at);
+			relocate_instructions_at += 4; // Advance to the next instruction on dynamic memory
+		}
+
+		u32 resval = umax;
 
 		switch (p.type)
 		{
@@ -614,6 +664,140 @@ static std::size_t apply_modification(const patch_engine::patch_info& patch, u8*
 			// Invalid in this context
 			continue;
 		}
+		case patch_type::alloc:
+		{
+			// Applied before
+			continue;
+		}
+		case patch_type::code_alloc:
+		{
+			relocate_instructions_at = 0;
+
+			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
+
+			// Allow only if points to a PPU executable instruction
+			if (out_branch < 0x10000 || out_branch >= 0x4000'0000 || !vm::check_addr<4>(out_branch, vm::page_executable))
+			{
+				continue;
+			}
+
+			const u32 alloc_size = utils::align(static_cast<u32>(p.value.long_value + 1) * 4, 0x10000);
+
+			// Always executable
+			u64 flags = vm::alloc_executable | vm::alloc_unwritable;
+
+			switch (p.offset % patch_engine::mem_protection::mask)
+			{
+			case patch_engine::mem_protection::rw:
+			case patch_engine::mem_protection::wx:
+			{
+				flags &= ~vm::alloc_unwritable;
+				break;
+			}
+			case patch_engine::mem_protection::ro:
+			case patch_engine::mem_protection::rx:
+			{
+				break;
+			}
+			default: ensure(false);
+			}
+
+			const auto alloc_map = ensure(vm::get(vm::any, out_branch));
+
+			// Range allowed for absolute branches to operate at
+			// It takes into account that we need to put a branch for return at the end of memory space
+			const u32 addr = p.alloc_addr = alloc_map->alloc(alloc_size, nullptr, 0x10000, flags);
+
+			if (!addr)
+			{
+				patch_log.error("Failed to allocate 0x%x bytes for code (entry=0x%x)", alloc_size, addr, out_branch);
+				continue;
+			}
+
+			patch_log.success("Allocated 0x%x for code at 0x%x (entry=0x%x)", alloc_size, addr, out_branch);
+
+			// NOP filled
+			std::fill_n(vm::get_super_ptr<u32>(addr), p.value.long_value, 0x60000000);
+
+			// Register code
+			ppu_register_range(addr, alloc_size);
+
+			// Write branch to code
+			ppu_form_branch_to_code(out_branch, addr);
+			resval = out_branch & -4;
+
+			// Write address of the allocated memory to the code entry
+			*vm::get_super_ptr<u32>(resval) = addr;
+
+			// Write branch to return to code
+			ppu_form_branch_to_code(addr + static_cast<u32>(p.value.long_value) * 4, resval + 4);
+			relocate_instructions_at = addr;
+			break;
+		}
+		case patch_type::jump:
+		case patch_type::jump_link:
+		{
+			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
+			const u32 dest = static_cast<u32>(p.value.long_value);
+
+			// Allow only if points to a PPU executable instruction
+			if (!ppu_form_branch_to_code(out_branch, dest, p.type == patch_type::jump_link))
+			{
+				continue;
+			}
+
+			resval = out_branch & -4;
+			break;
+		}
+		case patch_type::jump_func:
+		{
+			const std::string& str = p.original_value;
+
+			const u32 out_branch = vm::try_get_addr(dst + (offset & -4)).first;
+			const usz sep_pos = str.find_first_of(':');
+
+			// Must contain only a single ':' or none
+			// If ':' is found: Left string is the module name, right string is the function name
+			// If ':' is not found: The entire string is a direct address of the function's descriptor in hexadecimal
+			if (str.size() <= 2 || !sep_pos || sep_pos == str.size() - 1 || sep_pos != str.find_last_of(":"))
+			{
+				continue;
+			}
+
+			const std::string_view func_name{std::string_view(str).substr(sep_pos + 1)};
+			u32 id = 0;
+
+			if (func_name.starts_with("0x"sv))
+			{
+				// Raw hexadeciaml-formatted FNID (real function name cannot contain a digit at the start, derived from C/CPP which were used in PS3 development)
+				const auto result = std::from_chars(func_name.data() + 2, func_name.data() + func_name.size() - 2, id, 16);
+
+				if (result.ec != std::errc() || str.data() + sep_pos != result.ptr)
+				{
+					continue;
+				}
+			}
+			else
+			{
+				if (sep_pos == umax)
+				{
+					continue;
+				}
+
+				// Generate FNID using function name
+				id = ppu_generate_id(func_name);
+			}
+
+			// Allow only if points to a PPU executable instruction
+			// FNID/OPD-address is placed at target
+			if (!ppu_form_branch_to_code(out_branch, id, true, true, std::string{str.data(), sep_pos != umax ? sep_pos : 0}))
+			{
+				continue;
+			}
+
+			resval = out_branch & -4;
+			break;
+		}
 		case patch_type::byte:
 		{
 			*ptr = static_cast<u8>(p.value.long_value);
@@ -621,96 +805,121 @@ static std::size_t apply_modification(const patch_engine::patch_info& patch, u8*
 		}
 		case patch_type::le16:
 		{
-			*reinterpret_cast<le_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
+			le_t<u16> val = static_cast<u16>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::le32:
 		{
-			*reinterpret_cast<le_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
+			le_t<u32> val = static_cast<u32>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::lef32:
 		{
-			*reinterpret_cast<le_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
+			le_t<f32> val = static_cast<f32>(p.value.double_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::le64:
 		{
-			*reinterpret_cast<le_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
+			le_t<u64> val = static_cast<u64>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::lef64:
 		{
-			*reinterpret_cast<le_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
+			le_t<f64> val = p.value.double_value;
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::be16:
 		{
-			*reinterpret_cast<be_t<u16, 1>*>(ptr) = static_cast<u16>(p.value.long_value);
+			be_t<u16> val = static_cast<u16>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
+			break;
+		}
+		case patch_type::bd32:
+		{
+			be_t<u32> val = static_cast<u32>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::be32:
 		{
-			*reinterpret_cast<be_t<u32, 1>*>(ptr) = static_cast<u32>(p.value.long_value);
+			be_t<u32> val = static_cast<u32>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
+			if (offset % 4 == 0)
+				resval = offset;
 			break;
 		}
 		case patch_type::bef32:
 		{
-			*reinterpret_cast<be_t<u32, 1>*>(ptr) = std::bit_cast<u32, f32>(static_cast<f32>(p.value.double_value));
+			be_t<f32> val = static_cast<f32>(p.value.double_value);
+			std::memcpy(ptr, &val, sizeof(val));
+			break;
+		}
+		case patch_type::bd64:
+		{
+			be_t<u64> val = static_cast<u64>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
 			break;
 		}
 		case patch_type::be64:
 		{
-			*reinterpret_cast<be_t<u64, 1>*>(ptr) = static_cast<u64>(p.value.long_value);
+			be_t<u64> val = static_cast<u64>(p.value.long_value);
+			std::memcpy(ptr, &val, sizeof(val));
+
+			if (offset % 4)
+			{
+				break;
+			}
+
+			resval = offset;
+			applied.push_back((offset + 7) & -4); // Two 32-bit locations
 			break;
 		}
 		case patch_type::bef64:
 		{
-			*reinterpret_cast<be_t<u64, 1>*>(ptr) = std::bit_cast<u64, f64>(p.value.double_value);
+			be_t<f64> val = p.value.double_value;
+			std::memcpy(ptr, &val, sizeof(val));
+			break;
+		}
+		case patch_type::utf8:
+		{
+			std::memcpy(ptr, p.original_value.data(), p.original_value.size());
 			break;
 		}
 		}
 
-		++applied;
+		// Possibly an executable instruction
+		applied.push_back(resval);
 	}
 
-	return applied;
+	return old_applied_size;
 }
 
-template <bool check_local_storage>
-std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 filesz, u32 ls_addr)
+std::basic_string<u32> patch_engine::apply(const std::string& name, u8* dst, u32 filesz, u32 min_addr)
 {
 	if (m_map.find(name) == m_map.cend())
 	{
-		return 0;
+		return {};
 	}
 
-	size_t applied_total = 0;
+	std::basic_string<u32> applied_total;
 	const auto& container = m_map.at(name);
-	const auto serial = Emu.GetTitleID();
-	const auto app_version = Emu.GetAppVersion();
+	const auto& serial = Emu.GetTitleID();
+	const auto& app_version = Emu.GetAppVersion();
 
 	// Different containers in order to seperate the patches
-	std::vector<patch_engine::patch_info> legacy_patches;
-	std::vector<patch_engine::patch_info> patches_for_this_serial_and_this_version;
-	std::vector<patch_engine::patch_info> patches_for_this_serial_and_all_versions;
-	std::vector<patch_engine::patch_info> patches_for_all_serials_and_this_version;
-	std::vector<patch_engine::patch_info> patches_for_all_serials_and_all_versions;
+	std::vector<const patch_info*> patches_for_this_serial_and_this_version;
+	std::vector<const patch_info*> patches_for_this_serial_and_all_versions;
+	std::vector<const patch_info*> patches_for_all_serials_and_this_version;
+	std::vector<const patch_info*> patches_for_all_serials_and_all_versions;
 
 	// Sort patches into different vectors based on their serial and version
 	for (const auto& [description, patch] : container.patch_info_map)
 	{
-		// Find out if this legacy patch is enabled
-		if (patch.is_legacy)
-		{
-			if (patch.is_enabled)
-			{
-				legacy_patches.push_back(patch);
-			}
-
-			continue;
-		}
-
 		// Find out if this patch is enabled
 		for (const auto& [title, serials] : patch.titles)
 		{
@@ -754,20 +963,20 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 				{
 					if (is_all_versions)
 					{
-						patches_for_all_serials_and_all_versions.push_back(patch);
+						patches_for_all_serials_and_all_versions.emplace_back(&patch);
 					}
 					else
 					{
-						patches_for_all_serials_and_this_version.push_back(patch);
+						patches_for_all_serials_and_this_version.emplace_back(&patch);
 					}
 				}
 				else if (is_all_versions)
 				{
-					patches_for_this_serial_and_all_versions.push_back(patch);
+					patches_for_this_serial_and_all_versions.emplace_back(&patch);
 				}
 				else
 				{
-					patches_for_this_serial_and_this_version.push_back(patch);
+					patches_for_this_serial_and_this_version.emplace_back(&patch);
 				}
 
 				break;
@@ -775,78 +984,96 @@ std::size_t patch_engine::apply_patch(const std::string& name, u8* dst, u32 file
 		}
 	}
 
-	// Sort specific patches in front of global patches
-	std::vector<patch_engine::patch_info> sorted_patches;
-	sorted_patches.insert(sorted_patches.end(), legacy_patches.begin(), legacy_patches.end());
-	sorted_patches.insert(sorted_patches.end(), patches_for_this_serial_and_this_version.begin(), patches_for_this_serial_and_this_version.end());
-	sorted_patches.insert(sorted_patches.end(), patches_for_this_serial_and_all_versions.begin(), patches_for_this_serial_and_all_versions.end());
-	sorted_patches.insert(sorted_patches.end(), patches_for_all_serials_and_this_version.begin(), patches_for_all_serials_and_this_version.end());
-	sorted_patches.insert(sorted_patches.end(), patches_for_all_serials_and_all_versions.begin(), patches_for_all_serials_and_all_versions.end());
-
 	// Apply modifications sequentially
-	for (const auto& patch : sorted_patches)
+	auto apply_func = [&](const patch_info& patch)
 	{
-		if (!patch.patch_group.empty())
+		const usz old_size = apply_modification(applied_total, patch, dst, filesz, min_addr);
+
+		if (applied_total.size() != old_size)
 		{
-			if (m_applied_groups.contains(patch.patch_group))
+			patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %u)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied_total.size() - old_size);
+		}
+	};
+
+	// Sort specific patches after global patches
+	// So they will determine the end results
+	const auto patch_super_list =
+	{
+		&patches_for_all_serials_and_all_versions,
+		&patches_for_all_serials_and_this_version,
+		&patches_for_this_serial_and_all_versions,
+		&patches_for_this_serial_and_this_version
+	};
+
+	// Filter by patch group (reverse so specific patches will be prioritized over globals)
+	for (auto it = std::rbegin(patch_super_list); it != std::rend(patch_super_list); it++)
+	{
+		for (auto& patch : *it.operator*())
+		{
+			if (!patch->patch_group.empty())
 			{
-				continue;
+				if (!m_applied_groups.insert(patch->patch_group).second)
+				{
+					patch = nullptr;
+				}
 			}
-
-			m_applied_groups.insert(patch.patch_group);
 		}
+	}
 
-		const size_t applied = apply_modification<check_local_storage>(patch, dst, filesz, ls_addr);
-		applied_total += applied;
-
-		if (patch.is_legacy)
+	for (auto patch_list : patch_super_list)
+	{
+		for (const patch_info* patch : *patch_list)
 		{
-			patch_log.success("Applied legacy patch (hash='%s')(<- %d)", patch.hash, applied);
-		}
-		else
-		{
-			patch_log.success("Applied patch (hash='%s', description='%s', author='%s', patch_version='%s', file_version='%s') (<- %d)", patch.hash, patch.description, patch.author, patch.patch_version, patch.version, applied);
+			if (patch)
+			{
+				apply_func(*patch);
+			}
 		}
 	}
 
 	return applied_total;
 }
 
-void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_patches)
+void patch_engine::unload(const std::string& name)
+{
+	if (m_map.find(name) == m_map.cend())
+	{
+		return;
+	}
+
+	const auto& container = m_map.at(name);
+
+	for (const auto& [description, patch] : container.patch_info_map)
+	{
+		for (auto& entry : patch.data_list)
+		{
+			// Deallocate used memory
+			if (u32 addr = std::exchange(entry.alloc_addr, 0))
+			{
+				vm::dealloc(addr);
+
+				auto alloc_map = vm::get(vm::any, addr);
+				unmap_vm_area(alloc_map);
+			}
+		}
+	}
+}
+
+void patch_engine::save_config(const patch_map& patches_map)
 {
 	const std::string path = get_patch_config_path();
 	patch_log.notice("Saving patch config file %s", path);
 
-	fs::file file(path, fs::rewrite);
-	if (!file)
-	{
-		patch_log.fatal("Failed to open patch config file %s (%s)", path, fs::g_tls_error);
-		return;
-	}
-
 	YAML::Emitter out;
 	out << YAML::BeginMap;
-
-	// Save "Enable Legacy Patches"
-	out << config_key::enable_legacy_patches << enable_legacy_patches;
 
 	// Save 'enabled' state per hash, description, serial and app_version
 	patch_map config_map;
 
 	for (const auto& [hash, container] : patches_map)
 	{
-		if (container.is_legacy)
-		{
-			continue;
-		}
-
 		for (const auto& [description, patch] : container.patch_info_map)
 		{
-			if (patch.is_legacy)
-			{
-				continue;
-			}
-
 			for (const auto& [title, serials] : patch.titles)
 			{
 				for (const auto& [serial, app_versions] : serials)
@@ -862,7 +1089,7 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 			}
 		}
 
-		if (const auto& enabled_patches = config_map[hash].patch_info_map; enabled_patches.size() > 0)
+		if (const auto& enabled_patches = config_map[hash].patch_info_map; !enabled_patches.empty())
 		{
 			out << hash << YAML::BeginMap;
 
@@ -900,10 +1127,15 @@ void patch_engine::save_config(const patch_map& patches_map, bool enable_legacy_
 
 	out << YAML::EndMap;
 
-	file.write(out.c_str(), out.size());
+	fs::pending_file file(path);
+
+	if (!file.file || (file.file.write(out.c_str(), out.size()), !file.commit()))
+	{
+		patch_log.error("Failed to create patch config file %s (%s)", path, fs::g_tls_error);
+	}
 }
 
-static void append_patches(patch_engine::patch_map& existing_patches, const patch_engine::patch_map& new_patches, size_t& count, size_t& total, std::stringstream* log_messages)
+static void append_patches(patch_engine::patch_map& existing_patches, const patch_engine::patch_map& new_patches, usz& count, usz& total, std::stringstream* log_messages)
 {
 	for (const auto& [hash, new_container] : new_patches)
 	{
@@ -1055,7 +1287,7 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 	return true;
 }
 
-bool patch_engine::import_patches(const patch_engine::patch_map& patches, const std::string& path, size_t& count, size_t& total, std::stringstream* log_messages)
+bool patch_engine::import_patches(const patch_engine::patch_map& patches, const std::string& path, usz& count, usz& total, std::stringstream* log_messages)
 {
 	patch_engine::patch_map existing_patches;
 
@@ -1089,10 +1321,8 @@ bool patch_engine::remove_patch(const patch_info& info)
 	return false;
 }
 
-patch_engine::patch_map patch_engine::load_config(bool& enable_legacy_patches)
+patch_engine::patch_map patch_engine::load_config()
 {
-	enable_legacy_patches = true; // Default to true
-
 	patch_map config_map;
 
 	const std::string path = get_patch_config_path();
@@ -1106,13 +1336,6 @@ patch_engine::patch_map patch_engine::load_config(bool& enable_legacy_patches)
 		{
 			patch_log.fatal("Failed to load patch config file %s:\n%s", path, error);
 			return config_map;
-		}
-
-		// Try to load "Enable Legacy Patches" (default to true)
-		if (auto enable_legacy_node = root[config_key::enable_legacy_patches])
-		{
-			enable_legacy_patches = enable_legacy_node.as<bool>(true);
-			root.remove(config_key::enable_legacy_patches); // Remove the node in order to skip it in the next part
 		}
 
 		for (const auto pair : root)

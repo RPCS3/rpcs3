@@ -1,6 +1,6 @@
-﻿#pragma once
+#pragma once
 
-#include "types.h"
+#include "util/types.hpp"
 #include "util/atomic.hpp"
 
 //! Simple sizeless array base for concurrent access. Cannot shrink, only growths automatically.
@@ -8,7 +8,7 @@
 //!
 //! T is the type of elements. Currently, default constructor of T shall be constexpr.
 //! N is initial element count, available without any memory allocation and only stored contiguously.
-template <typename T, std::size_t N>
+template <typename T, usz N>
 class lf_array
 {
 	// Data (default-initialized)
@@ -28,7 +28,7 @@ public:
 		}
 	}
 
-	T& operator [](std::size_t index)
+	T& operator [](usz index)
 	{
 		if (index < N) [[likely]]
 		{
@@ -51,7 +51,7 @@ public:
 
 //! Simple lock-free FIFO queue base. Based on lf_array<T, N> itself. Currently uses 32-bit counters.
 //! There is no "push_end" or "pop_begin" provided, the queue element must signal its state on its own.
-template<typename T, std::size_t N>
+template<typename T, usz N>
 class lf_fifo : public lf_array<T, N>
 {
 	// LSB 32-bit: push, MSB 32-bit: pop
@@ -159,11 +159,6 @@ public:
 	bool operator ==(const lf_queue_iterator& rhs) const
 	{
 		return m_ptr == rhs.m_ptr;
-	}
-
-	bool operator !=(const lf_queue_iterator& rhs) const
-	{
-		return m_ptr != rhs.m_ptr;
 	}
 
 	T& operator *() const
@@ -307,12 +302,23 @@ public:
 		delete m_head.load();
 	}
 
-	void wait() noexcept
+	template <atomic_wait::op Flags = atomic_wait::op::eq>
+	void wait(std::nullptr_t /*null*/ = nullptr) noexcept
 	{
 		if (m_head == nullptr)
 		{
-			m_head.wait(nullptr);
+			m_head.template wait<Flags>(nullptr);
 		}
+	}
+
+	const volatile void* observe() const noexcept
+	{
+		return m_head.load();
+	}
+
+	explicit operator bool() const noexcept
+	{
+		return m_head != nullptr;
 	}
 
 	template <typename... Args>
@@ -343,9 +349,9 @@ public:
 
 	// Apply func(data) to each element, return the total length
 	template <typename F>
-	std::size_t apply(F func)
+	usz apply(F func)
 	{
-		std::size_t count = 0;
+		usz count = 0;
 
 		for (auto slice = pop_all(); slice; slice.pop_front())
 		{
@@ -353,64 +359,6 @@ public:
 		}
 
 		return count;
-	}
-
-	// Iterator that enables direct endless range-for loop: for (auto* ptr : queue) ...
-	class iterator
-	{
-		lf_queue* _this = nullptr;
-
-		lf_queue_slice<T> m_data;
-
-	public:
-		constexpr iterator() = default;
-
-		explicit iterator(lf_queue* _this)
-			: _this(_this)
-		{
-			m_data = _this->pop_all();
-		}
-
-		bool operator !=(const iterator& rhs) const
-		{
-			return _this != rhs._this;
-		}
-
-		T* operator *() const
-		{
-			return m_data ? m_data.get() : nullptr;
-		}
-
-		iterator& operator ++()
-		{
-			if (m_data)
-			{
-				m_data.pop_front();
-			}
-
-			if (!m_data)
-			{
-				m_data = _this->pop_all();
-
-				if (!m_data)
-				{
-					_this->wait();
-					m_data = _this->pop_all();
-				}
-			}
-
-			return *this;
-		}
-	};
-
-	iterator begin()
-	{
-		return iterator{this};
-	}
-
-	iterator end()
-	{
-		return iterator{};
 	}
 };
 

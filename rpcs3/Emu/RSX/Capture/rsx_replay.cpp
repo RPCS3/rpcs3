@@ -1,13 +1,12 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "rsx_replay.h"
 
+#include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/Cell/lv2/sys_memory.h"
-#include "Emu/RSX/GSRender.h"
+#include "Emu/RSX/RSXThread.h"
 
-#include <map>
-#include <atomic>
-#include <exception>
+#include "util/asm.hpp"
 
 namespace rsx
 {
@@ -24,7 +23,7 @@ namespace rsx
 		}
 
 		// User memory + fifo size
-		buffer_size = ::align<u32>(buffer_size, 0x100000) + 0x10000000;
+		buffer_size = utils::align<u32>(buffer_size, 0x100000) + 0x10000000;
 		// We are not allowed to drain all memory so add a little
 		g_fxo->init<lv2_memory_container>(buffer_size + 0x1000000);
 
@@ -34,27 +33,27 @@ namespace rsx
 		const auto contextInfo = vm::ptr<rsx_context>::make(contextAddr);
 
 		// 'fake' initialize usermemory
-		sys_memory_allocate(buffer_size, SYS_MEMORY_PAGE_SIZE_1M, contextInfo.ptr(&rsx_context::user_addr));
-		verify(HERE), (user_mem_addr = contextInfo->user_addr) != 0;
+		sys_memory_allocate(*this, buffer_size, SYS_MEMORY_PAGE_SIZE_1M, contextInfo.ptr(&rsx_context::user_addr));
+		ensure((user_mem_addr = contextInfo->user_addr) != 0);
 
-		if (sys_rsx_device_map(contextInfo.ptr(&rsx_context::dev_addr), vm::null, 0x8) != CELL_OK)
+		if (sys_rsx_device_map(*this, contextInfo.ptr(&rsx_context::dev_addr), vm::null, 0x8) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_device_map failed!");
 
-		if (sys_rsx_memory_allocate(contextInfo.ptr(&rsx_context::mem_handle), contextInfo.ptr(&rsx_context::mem_addr), 0x0F900000, 0, 0, 0, 0) != CELL_OK)
+		if (sys_rsx_memory_allocate(*this, contextInfo.ptr(&rsx_context::mem_handle), contextInfo.ptr(&rsx_context::mem_addr), 0x0F900000, 0, 0, 0, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_memory_allocate failed!");
 
-		if (sys_rsx_context_allocate(contextInfo.ptr(&rsx_context::context_id), contextInfo.ptr(&rsx_context::dma_addr), contextInfo.ptr(&rsx_context::driver_info), contextInfo.ptr(&rsx_context::reports_addr), contextInfo->mem_handle, 0) != CELL_OK)
+		if (sys_rsx_context_allocate(*this, contextInfo.ptr(&rsx_context::context_id), contextInfo.ptr(&rsx_context::dma_addr), contextInfo.ptr(&rsx_context::driver_info), contextInfo.ptr(&rsx_context::reports_addr), contextInfo->mem_handle, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
 
 		get_current_renderer()->main_mem_size = buffer_size;
 
-		if (sys_rsx_context_iomap(contextInfo->context_id, 0, user_mem_addr, buffer_size, 0xf000000000000800ull) != CELL_OK)
+		if (sys_rsx_context_iomap(*this, contextInfo->context_id, 0, user_mem_addr, buffer_size, 0xf000000000000800ull) != CELL_OK)
 			fmt::throw_exception("Capture Replay: rsx io mapping failed!");
 
 		return contextInfo->context_id;
 	}
 
-	std::vector<u32> rsx_replay_thread::alloc_write_fifo(be_t<u32> context_id)
+	std::vector<u32> rsx_replay_thread::alloc_write_fifo(be_t<u32> /*context_id*/) const
 	{
 		// copy commands into fifo buffer
 		// todo: could change rsx_command to just be values to avoid this loop,
@@ -114,7 +113,7 @@ namespace rsx
 				fmt::throw_exception("requested memory data state for command not found in memory_data_map");
 
 			const auto& data_block = it_data->second;
-			std::memcpy(vm::base(get_address(memblock.offset, memblock.location, HERE)), data_block.data.data(), data_block.data.size());
+			std::memcpy(vm::base(get_address(memblock.offset, memblock.location)), data_block.data.data(), data_block.data.size());
 		}
 
 		if (replay_cmd.display_buffer_state != 0 && replay_cmd.display_buffer_state != cs.display_buffer_hash)
@@ -168,7 +167,7 @@ namespace rsx
 		}
 	}
 
-	void rsx_replay_thread::on_task()
+	void rsx_replay_thread::cpu_task()
 	{
 		be_t<u32> context_id = allocate_context();
 
@@ -178,7 +177,7 @@ namespace rsx
 		{
 			// Load registers while the RSX is still idle
 			method_registers = frame->reg_state;
-			std::atomic_thread_fence(std::memory_order_seq_cst);
+			atomic_fence_seq_cst();
 
 			// start up fifo buffer by dumping the put ptr to first stop
 			sys_rsx_context_attribute(context_id, 0x001, 0x10000000, fifo_stops[0], 0, 0);
@@ -186,11 +185,11 @@ namespace rsx
 			auto render = get_current_renderer();
 			auto last_flip = render->int_flip_index;
 
-			size_t stopIdx = 0;
+			usz stopIdx = 0;
 			for (const auto& replay_cmd : frame->replay_commands)
 			{
 				while (Emu.IsPaused())
-					std::this_thread::sleep_for(10ms);
+					thread_ctrl::wait_for(10'000);
 
 				if (Emu.IsStopped())
 					break;
@@ -203,7 +202,7 @@ namespace rsx
 				while (!Emu.IsStopped() && !render->is_fifo_idle() && (render->ctrl->get != fifo_stops[stopIdx]))
 				{
 					while (Emu.IsPaused())
-						std::this_thread::sleep_for(10ms);
+						thread_ctrl::wait_for(10'000);
 					std::this_thread::yield();
 				}
 
@@ -225,7 +224,7 @@ namespace rsx
 			while (!render->is_fifo_idle() && !Emu.IsStopped())
 			{
 				while (Emu.IsPaused())
-					std::this_thread::sleep_for(10ms);
+					thread_ctrl::wait_for(10'000);
 			}
 
 			// Check if the captured application used syscall instead of a gcm command to flip
@@ -236,12 +235,9 @@ namespace rsx
 			}
 
 			// random pause to not destroy gpu
-			std::this_thread::sleep_for(10ms);
+			thread_ctrl::wait_for(10'000);
 		}
-	}
 
-	void rsx_replay_thread::operator()()
-	{
-		on_task();
+		get_current_cpu_thread()->state += (cpu_flag::exit + cpu_flag::wait);
 	}
 }

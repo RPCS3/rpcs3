@@ -1,4 +1,4 @@
-﻿#include "stdafx.h"
+#include "stdafx.h"
 #include "IdManager.h"
 #include "System.h"
 #include "VFS.h"
@@ -14,21 +14,23 @@
 
 #include <thread>
 
+LOG_CHANNEL(vfs_log, "VFS");
+
 struct vfs_directory
 {
 	// Real path (empty if root or not exists)
-	std::string path;
+	std::string path{};
 
 	// Virtual subdirectories (vector because only vector allows incomplete types)
-	std::vector<std::pair<std::string, vfs_directory>> dirs;
+	std::vector<std::pair<std::string, vfs_directory>> dirs{};
 };
 
 struct vfs_manager
 {
-	shared_mutex mutex;
+	shared_mutex mutex{};
 
 	// VFS root
-	vfs_directory root;
+	vfs_directory root{};
 };
 
 bool vfs::mount(std::string_view vpath, std::string_view path)
@@ -36,19 +38,22 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 	// Workaround
 	g_fxo->need<vfs_manager>();
 
-	const auto table = g_fxo->get<vfs_manager>();
+	auto& table = g_fxo->get<vfs_manager>();
 
 	// TODO: scan roots of mounted devices for undeleted vfs::host::unlink remnants, and try to delete them (_WIN32 only)
 
-	std::lock_guard lock(table->mutex);
+	std::lock_guard lock(table.mutex);
 
 	if (vpath.empty())
 	{
 		// Empty relative path, should set relative path base; unsupported
+		vfs_log.error("Cannot mount empty path to \"%s\"", path);
 		return false;
 	}
 
-	for (std::vector<vfs_directory*> list{&table->root};;)
+	const std::string_view vpath_backup = vpath;
+
+	for (std::vector<vfs_directory*> list{&table.root};;)
 	{
 		// Skip one or more '/'
 		const auto pos = vpath.find_first_not_of('/');
@@ -56,6 +61,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 		if (pos == 0)
 		{
 			// Mounting relative path is not supported
+			vfs_log.error("Cannot mount relative path \"%s\" to \"%s\"", vpath_backup, path);
 			return false;
 		}
 
@@ -63,6 +69,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 		{
 			// Mounting completed
 			list.back()->path = path;
+			vfs_log.notice("Mounted path \"%s\" to \"%s\"", vpath_backup, path);
 			return true;
 		}
 
@@ -111,9 +118,9 @@ bool vfs::mount(std::string_view vpath, std::string_view path)
 
 std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, std::string* out_path)
 {
-	const auto table = g_fxo->get<vfs_manager>();
+	auto& table = g_fxo->get<vfs_manager>();
 
-	reader_lock lock(table->mutex);
+	reader_lock lock(table.mutex);
 
 	// Resulting path fragments: decoded ones
 	std::vector<std::string_view> result;
@@ -136,7 +143,7 @@ std::string vfs::get(std::string_view vpath, std::vector<std::string>* out_dir, 
 		name_list.reserve(vpath.size() / 2);
 	}
 
-	for (std::vector<const vfs_directory*> list{&table->root};;)
+	for (std::vector<const vfs_directory*> list{&table.root};;)
 	{
 		// Skip one or more '/'
 		const auto pos = vpath.find_first_not_of('/');
@@ -291,17 +298,15 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 {
 	std::string result;
 
-	if (name.size() > 2 && name.find_first_not_of('.') == umax)
+	if (name.size() <= 2 && name.find_first_not_of('.') == umax)
 	{
-		// Name contains only dots, not allowed on Windows.
-		result.reserve(name.size() + 2);
-		result += reinterpret_cast<const char*>(u8"．");
-		result += name.substr(1);
+		// Return . or .. as is
+		result = name;
 		return result;
 	}
 
 	// Emulate NTS (limited)
-	auto get_char = [&](std::size_t pos) -> char2
+	auto get_char = [&](usz pos) -> char2
 	{
 		if (pos < name.size())
 		{
@@ -352,7 +357,7 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 
 	result.reserve(result.size() + name.size());
 
-	for (std::size_t i = 0, s = name.size(); i < s; i++)
+	for (usz i = 0, s = name.size(); i < s; i++)
 	{
 		switch (char2 c = name[i])
 		{
@@ -450,10 +455,28 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 			result += c;
 			break;
 		}
+		case '.':
+		case ' ':
+		{
+			if (!get_char(i + 1))
+			{
+				switch (c)
+				{
+				// Directory name ended with a space or a period, not allowed on Windows.
+				case '.': result += reinterpret_cast<const char*>(u8"．"); break;
+				case ' ': result += reinterpret_cast<const char*>(u8"＿"); break;
+				}
+
+				break;
+			}
+
+			result += c;
+			break;
+		}
 		case char2{u8"！"[0]}:
 		{
 			// Escape full-width characters 0xFF01..0xFF5e with ！ (0xFF01)
-			switch (char2 c2 = get_char(i + 1))
+			switch (get_char(i + 1))
 			{
 			case char2{u8"！"[1]}:
 			{
@@ -477,6 +500,7 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 
 				break;
 			}
+			default: break;
 			}
 
 			result += c;
@@ -499,7 +523,7 @@ std::string vfs::unescape(std::string_view name)
 	result.reserve(name.size());
 
 	// Emulate NTS
-	auto get_char = [&](std::size_t pos) -> char2
+	auto get_char = [&](usz pos) -> char2
 	{
 		if (pos < name.size())
 		{
@@ -511,13 +535,13 @@ std::string vfs::unescape(std::string_view name)
 		}
 	};
 
-	for (std::size_t i = 0, s = name.size(); i < s; i++)
+	for (usz i = 0, s = name.size(); i < s; i++)
 	{
 		switch (char2 c = name[i])
 		{
 		case char2{u8"！"[0]}:
 		{
-			switch (char2 c2 = get_char(i + 1))
+			switch (get_char(i + 1))
 			{
 			case char2{u8"！"[1]}:
 			{
@@ -584,6 +608,11 @@ std::string vfs::unescape(std::string_view name)
 
 						i += 3;
 						continue;
+					}
+					case char2{u8"＿"[2]}:
+					{
+						result += ' ';
+						break;
 					}
 					case char2{u8"．"[2]}:
 					{
@@ -707,29 +736,41 @@ std::string vfs::unescape(std::string_view name)
 
 std::string vfs::host::hash_path(const std::string& path, const std::string& dev_root)
 {
-	return fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(__rdtsc()));
+	return fmt::format(u8"%s/＄%s%s", dev_root, fmt::base57(std::hash<std::string>()(path)), fmt::base57(utils::get_unique_tsc()));
 }
 
 bool vfs::host::rename(const std::string& from, const std::string& to, const lv2_fs_mount_point* mp, bool overwrite)
 {
-	// Lock mount point, close file descriptors, retry 
+	// Lock mount point, close file descriptors, retry
 	const auto from0 = std::string_view(from).substr(0, from.find_last_not_of(fs::delim) + 1);
-	const auto escaped_from = fs::escape_path(from);
+	const auto escaped_from = Emu.GetCallbacks().resolve_path(from);
 
-	// Lock app_home as well because it could be in the same drive as current mount point (TODO)
-	std::scoped_lock lock(mp->mutex, g_mp_sys_app_home.mutex);
+	std::lock_guard lock(mp->mutex);
 
 	auto check_path = [&](std::string_view path)
 	{
 		return path.starts_with(from) && (path.size() == from.size() || path[from.size()] == fs::delim[0] || path[from.size()] == fs::delim[1]);
 	};
 
-	idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
+	idm::select<lv2_fs_object, lv2_file>([&](u32 /*id*/, lv2_file& file)
 	{
-		if (check_path(fs::escape_path(file.real_path)))
+		if (check_path(Emu.GetCallbacks().resolve_path(file.real_path)))
 		{
-			verify(HERE), file.mp == mp || file.mp == &g_mp_sys_app_home;
+			ensure(file.mp == mp);
+
+			if (!file.file)
+			{
+				file.restore_data.seek_pos = -1;
+				return;
+			}
+
 			file.restore_data.seek_pos = file.file.pos();
+
+			if (!(file.mp->flags & (lv2_mp_flag::read_only + lv2_mp_flag::cache)) && file.flags & CELL_FS_O_ACCMODE)
+			{
+				file.file.sync(); // For cellGameContentPermit atomicity
+			}
+
 			file.file.close(); // Actually close it!
 		}
 	});
@@ -753,12 +794,17 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	const auto fs_error = fs::g_tls_error;
 
-	idm::select<lv2_fs_object, lv2_file>([&](u32 id, lv2_file& file)
+	idm::select<lv2_fs_object, lv2_file>([&](u32 /*id*/, lv2_file& file)
 	{
-		const auto escaped_real = fs::escape_path(file.real_path);
+		const auto escaped_real = Emu.GetCallbacks().resolve_path(file.real_path);
 
 		if (check_path(escaped_real))
 		{
+			if (file.restore_data.seek_pos == umax)
+			{
+				return;
+			}
+
 			// Update internal path
 			if (res)
 			{
@@ -768,7 +814,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 			// Reopen with ignored TRUNC, APPEND, CREATE and EXCL flags
 			auto res0 = lv2_file::open_raw(file.real_path, file.flags & CELL_FS_O_ACCMODE, file.mode, file.type, file.mp);
 			file.file = std::move(res0.file);
-			verify(HERE), file.file.operator bool();
+			ensure(file.file.operator bool());
 			file.file.seek(file.restore_data.seek_pos);
 		}
 	});
@@ -777,7 +823,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 	return res;
 }
 
-bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
+bool vfs::host::unlink(const std::string& path, [[maybe_unused]] const std::string& dev_root)
 {
 #ifdef _WIN32
 	if (auto device = fs::get_virtual_device(path))
@@ -811,7 +857,7 @@ bool vfs::host::unlink(const std::string& path, const std::string& dev_root)
 #endif
 }
 
-bool vfs::host::remove_all(const std::string& path, const std::string& dev_root, const lv2_fs_mount_point* mp, bool remove_root)
+bool vfs::host::remove_all(const std::string& path, [[maybe_unused]] const std::string& dev_root, [[maybe_unused]] const lv2_fs_mount_point* mp, bool remove_root)
 {
 #ifdef _WIN32
 	if (remove_root)
