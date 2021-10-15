@@ -15,6 +15,7 @@
 #include "cellSysutil.h"
 
 #include "Emu/Cell/lv2/sys_time.h"
+#include "Emu/Cell/lv2/sys_fs.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
 
@@ -476,16 +477,14 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 	sceNp.warning(u8"npDrmIsAvailable(): drm_path=“%s”", enc_drm_path);
 
-	if (!fs::is_file(vfs::get(enc_drm_path)))
-	{
-		sceNp.warning(u8"npDrmIsAvailable(): “%s” not found", enc_drm_path);
-		return CELL_ENOENT;
-	}
-
 	auto& npdrmkeys = g_fxo->get<loaded_npdrm_keys>();
 
-	const std::string& enc_drm_path_local = vfs::get(enc_drm_path);
-	const fs::file enc_file(enc_drm_path_local);
+	const auto [fs_error, ppath, real_path, enc_file, type] = lv2_file::open(enc_drm_path, 0, 0);
+
+	if (!fs_error)
+	{
+		return {fs_error, enc_drm_path};
+	}
 
 	u32 magic;
 
@@ -499,12 +498,12 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 
 		if (verify_npdrm_self_headers(enc_file, reinterpret_cast<u8*>(&k_licensee)))
 		{
-			npdrmkeys.devKlic = k_licensee;
+			npdrmkeys.install_decryption_key(k_licensee);
 		}
 		else
 		{
 			sceNp.error(u8"npDrmIsAvailable(): Failed to verify sce file “%s”", enc_drm_path);
-			return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
+			return {SCE_NP_DRM_ERROR_NO_ENTITLEMENT, enc_drm_path};
 		}
 	}
 	else if (magic == "NPD\0"_u32)
@@ -512,21 +511,34 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		// edata / sdata files
 
 		std::string contentID;
+		u32 license_type = 0;
 
-		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path_local, reinterpret_cast<u8*>(&k_licensee), &contentID))
+		if (VerifyEDATHeaderWithKLicense(enc_file, enc_drm_path, reinterpret_cast<u8*>(&k_licensee), &contentID, &license_type))
 		{
-			const std::string rap_file = rpcs3::utils::get_rap_file_path(contentID);
-			npdrmkeys.devKlic = k_licensee;
-
-			if (fs::is_file(rap_file))
-				npdrmkeys.rifKey = GetEdatRifKeyFromRapFile(fs::file{rap_file});
+			// Check if RAP-free
+			if (license_type == 3)
+			{
+				npdrmkeys.install_decryption_key(k_licensee);
+			}
 			else
-				sceNp.warning(u8"npDrmIsAvailable(): Rap file not found: “%s”", rap_file.c_str());
+			{
+				const std::string rap_file = rpcs3::utils::get_rap_file_path(contentID);
+
+				if (fs::file rap_fd{rap_file}; rap_fd && rap_fd.size() >= sizeof(u128))
+				{
+					npdrmkeys.install_decryption_key(GetEdatRifKeyFromRapFile(rap_fd));
+				}
+				else
+				{
+					sceNp.error(u8"npDrmIsAvailable(): Rap file not found: “%s”", rap_file);
+					return {SCE_NP_DRM_ERROR_LICENSE_NOT_FOUND, enc_drm_path};
+				}
+			}
 		}
 		else
 		{
 			sceNp.error(u8"npDrmIsAvailable(): Failed to verify npd file “%s”", enc_drm_path);
-			return SCE_NP_DRM_ERROR_NO_ENTITLEMENT;
+			return {SCE_NP_DRM_ERROR_NO_ENTITLEMENT, enc_drm_path};
 		}
 	}
 	else
@@ -534,6 +546,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 		// for now assume its just unencrypted
 		sceNp.notice(u8"npDrmIsAvailable(): Assuming npdrm file is unencrypted at “%s”", enc_drm_path);
 	}
+
 	return CELL_OK;
 }
 

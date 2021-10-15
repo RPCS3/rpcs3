@@ -516,13 +516,32 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 			if (magic == "NPD\0"_u32)
 			{
 				auto& edatkeys = g_fxo->get<loaded_npdrm_keys>();
-				auto sdata_file = std::make_unique<EDATADecrypter>(std::move(file), edatkeys.devKlic.load(), edatkeys.rifKey.load());
-				if (!sdata_file->ReadHeader())
-				{
-					return {CELL_EFSSPECIFIC};
-				}
 
-				file.reset(std::move(sdata_file));
+				const u64 init_pos = edatkeys.dec_keys_pos;
+				const auto& dec_keys = edatkeys.dec_keys;
+				const u64 max_i = std::min<u64>(std::size(dec_keys), init_pos);
+
+				for (u64 i = 0;; i++)
+				{
+					if (i == max_i)
+					{
+						// Run out of keys to try
+						return {CELL_EFSSPECIFIC};
+					}
+
+					// Try all registered keys
+					auto edata_file = std::make_unique<EDATADecrypter>(std::move(file), dec_keys[(init_pos - i - 1) % std::size(dec_keys)].load());
+					if (!edata_file->ReadHeader())
+					{
+						// Prepare file for the next iteration
+						file = std::move(edata_file->edata_file);
+						continue;
+					}
+
+					file.reset(std::move(edata_file));
+					break;
+
+				}
 			}
 
 			break;
@@ -677,7 +696,15 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 		return CELL_EIO;
 	}
 
-	*nread = file->op_read(buf, nbytes);
+	const u64 read_bytes = file->op_read(buf, nbytes);
+
+	*nread = read_bytes;
+
+	if (!read_bytes && file->file.pos() < file->file.size())
+	{
+		// EDATA corruption perhaps
+		return CELL_EFSSPECIFIC;
+	}
 
 	return CELL_OK;
 }
@@ -1465,6 +1492,8 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			: file->op_write(arg->buf, arg->size);
 
 		ensure(old_pos == file->file.seek(old_pos));
+
+		// TODO: EDATA corruption detection
 
 		arg->out_code = CELL_OK;
 		return CELL_OK;
