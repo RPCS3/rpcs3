@@ -1903,7 +1903,7 @@ error_code sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 		return -SYS_NET_EINVAL;
 	}
 
-	::sockaddr_storage native_addr;
+	::sockaddr_storage native_addr{};
 	::socklen_t native_addrlen = sizeof(native_addr);
 
 	lv2_socket_type type;
@@ -1915,6 +1915,12 @@ error_code sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 
 		type = sock.type;
 		p2p_vport = sock.p2p.vport;
+
+		// Unbound P2P socket special case
+		if ((sock.type == SYS_NET_SOCK_DGRAM_P2P || sock.type == SYS_NET_SOCK_STREAM_P2P) && sock.socket == 0)
+		{
+			return {};
+		}
 
 		if (::getsockname(sock.socket, reinterpret_cast<struct sockaddr*>(&native_addr), &native_addrlen) == 0)
 		{
@@ -1928,8 +1934,6 @@ error_code sys_net_bnet_getsockname(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sock
 			// windows doesn't support getsockname for sockets that are not bound
 			if (get_native_error() == WSAEINVAL)
 			{
-				memset(&native_addr, 0, native_addrlen);
-				native_addr.ss_family = AF_INET;
 				return {};
 			}
 		}
