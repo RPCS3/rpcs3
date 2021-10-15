@@ -71,7 +71,7 @@ bool serialize<rsx::frame_capture_data::replay_command>(utils::serial& ar, rsx::
 
 // Flags indicating which registers to restore in context restoration
 // Each flag covers 128 registers
-static constexpr std::array<bool, 0x10000 / 4 / 128> saved_registers_mask
+static constexpr std::array<bool, 0x10000 / 4 / 128> saved_registers_mask = []()
 {
 	std::array<bool, 0x10000 / 4 / 128> values{};
 	values[NV4097_SET_CONTEXT_DMA_REPORT / 128] = true;
