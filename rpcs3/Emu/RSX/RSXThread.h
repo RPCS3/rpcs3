@@ -655,6 +655,8 @@ namespace rsx
 		bool is_fifo_idle() const;
 		void flush_fifo();
 
+		alignas(32) std::array<u32, 0x10000 / 4> saved_registers{};
+
 		void recover_fifo(u32 line = __builtin_LINE(),
 			u32 col = __builtin_COLUMN(),
 			const char* file = __builtin_FILE(),

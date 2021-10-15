@@ -69,6 +69,16 @@ bool serialize<rsx::frame_capture_data::replay_command>(utils::serial& ar, rsx::
 	return ar(o.rsx_command, o.memory_state, o.tile_state, o.display_buffer_state);
 }
 
+// Flags indicating which registers to restore in context restoration
+// Each flag covers 128 registers
+static constexpr std::array<bool, 0x10000 / 4 / 128> saved_registers_mask
+{
+	std::array<bool, 0x10000 / 4 / 128> values{};
+	values[NV4097_SET_CONTEXT_DMA_REPORT / 128] = true;
+	values[NV4097_SET_SURFACE_CLIP_HORIZONTAL / 128] = true;
+	return values;
+}();
+
 namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
@@ -722,6 +732,16 @@ namespace rsx
 				restore_point = ctrl->get;
 				saved_fifo_ret = fifo_ret_addr;
 				sync_point_request.release(false);
+
+				// Save important registers
+				for (const bool& flag : saved_registers_mask)
+				{
+					if (flag)
+					{
+						const usz index = (&flag - saved_registers_mask.data()) * 128;
+						std::copy_n(method_registers.registers.begin() + index, 128, saved_registers.begin() + index);
+					}
+				}
 			}
 
 			// Execute backend-local tasks first
@@ -2595,6 +2615,18 @@ namespace rsx
 		}
 
 		recovered_fifo_cmds_history.push({fifo_ctrl->last_cmd(), current_time});
+
+		// Recover important registers
+		for (const bool& flag : saved_registers_mask)
+		{
+			if (flag)
+			{
+				const usz index = (&flag - saved_registers_mask.data()) * 128;
+				std::copy_n(saved_registers.begin() + index, 128, method_registers.registers.begin() + index);
+			}
+		}
+
+		m_graphics_state = pipeline_state::all_dirty;
 	}
 
 	std::vector<std::pair<u32, u32>> thread::dump_callstack_list() const

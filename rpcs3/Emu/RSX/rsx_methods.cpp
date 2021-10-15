@@ -574,7 +574,7 @@ namespace rsx
 				return vm::addr_t(0);
 			}
 
-			return vm::cast(get_address(offset, location));
+			return vm::cast(get_address(offset, location, 1));
 		}
 
 		void get_report(thread* rsx, u32 /*reg*/, u32 arg)
@@ -586,6 +586,7 @@ namespace rsx
 			if (!address_ptr)
 			{
 				rsx_log.error("Bad argument passed to NV4097_GET_REPORT, arg=0x%X", arg);
+				rsx->recover_fifo();
 				return;
 			}
 
@@ -646,6 +647,7 @@ namespace rsx
 			if (!address_ptr)
 			{
 				rsx_log.error("Bad argument passed to NV4097_SET_RENDER_ENABLE, arg=0x%X", arg);
+				rsx->recover_fifo();
 				return;
 			}
 
