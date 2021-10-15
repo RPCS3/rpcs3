@@ -1603,6 +1603,13 @@ error_code sys_net_bnet_connect(ppu_thread& ppu, s32 s, vm::ptr<sys_net_sockaddr
 		std::memcpy(addr_buf.buf, addr.get_ptr(), 16);
 		name.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
 		name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
+#ifdef _WIN32
+		// Windows doesn't support sending packets to 0.0.0.0 but it works on unixes, send to 127.0.0.1 instead
+		if (name.sin_addr.s_addr == 0x00000000)
+		{
+			name.sin_addr.s_addr = 0x0100007F;
+		}
+#endif
 	}
 	else
 	{
@@ -2607,6 +2614,14 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		name.sin_family      = AF_INET;
 		name.sin_port        = std::bit_cast<u16>(psa_in->sin_port);
 		name.sin_addr.s_addr = std::bit_cast<u32>(psa_in->sin_addr);
+
+#ifdef _WIN32
+		// Windows doesn't support sending packets to 0.0.0.0 but it works on unixes, send to 127.0.0.1 instead
+		if (name.sin_addr.s_addr == 0x00000000)
+		{
+			name.sin_addr.s_addr = 0x0100007F;
+		}
+#endif
 
 		char ip_str[16];
 		inet_ntop(AF_INET, &name.sin_addr, ip_str, sizeof(ip_str));
