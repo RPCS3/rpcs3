@@ -16,9 +16,21 @@ constexpr u32 EDAT_DEBUG_DATA_FLAG = 0x80000000;
 
 struct loaded_npdrm_keys
 {
-	atomic_t<u128> devKlic{};
-	atomic_t<u128> rifKey{};
+	atomic_t<u128> dec_keys[16]{};
+	atomic_t<u64> dec_keys_pos = 0;
 	atomic_t<u32> npdrm_fds{0};
+
+	void install_decryption_key(u128 key)
+	{
+		dec_keys_pos.atomic_op([&](u64& pos) { dec_keys[pos++ % std::size(dec_keys)] = key; });
+	}
+
+	// TODO: Check if correct for ELF files usage
+	u128 last_key() const
+	{
+		const usz pos = dec_keys_pos;
+		return pos ? dec_keys[(pos - 1) % std::size(dec_keys)].load() : u128{};
+	}
 };
 
 struct NPD_HEADER
@@ -45,14 +57,14 @@ struct EDAT_HEADER
 // Decrypts full file, or null/empty file
 extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic, bool verbose);
 
-extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, std::string* contentID);
+extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, std::string* contentID = nullptr, u32* license = nullptr);
 
 u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file);
 
 struct EDATADecrypter final : fs::file_base
 {
 	// file stream
-	const fs::file edata_file;
+	fs::file edata_file;
 	u64 file_size{0};
 	u32 total_blocks{0};
 	u64 pos{0};
@@ -61,25 +73,17 @@ struct EDATADecrypter final : fs::file_base
 	EDAT_HEADER edatHeader{};
 
 	// Internal data buffers.
-	std::unique_ptr<u8[]> data_buf{};
-	u64 data_buf_size{0};
+	std::vector<u8> data_buf{};
 
 	u128 dec_key{};
 
-	// edat usage
-	u128 rif_key{};
-	u128 dev_key{};
 public:
-	// SdataByFd usage
-	EDATADecrypter(fs::file&& input)
-		: edata_file(std::move(input)) {}
-	// Edat usage
-	EDATADecrypter(fs::file&& input, const u128& dev_key, const u128& rif_key)
+	EDATADecrypter(fs::file&& input, u128 dec_key = {})
 		: edata_file(std::move(input))
-		, rif_key(rif_key)
-		, dev_key(dev_key) {}
+		, dec_key(dec_key)
+	{
+	}
 
-	~EDATADecrypter() override {}
 	// false if invalid
 	bool ReadHeader();
 	u64 ReadData(u64 pos, u8* data, u64 size);
