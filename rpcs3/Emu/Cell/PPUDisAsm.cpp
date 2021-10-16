@@ -1278,6 +1278,12 @@ void PPUDisAsm::ADDI(ppu_opcode_t op)
 	else
 	{
 		DisAsm_R2_IMM("addi", op.rd, op.ra, op.simm16);
+
+		if (auto [is_const, value] = try_get_const_gpr_value(op.ra); is_const)
+		{
+			// Comment constant formation
+			comment_constant(last_opcode, value + op.simm16);
+		}
 	}
 }
 
@@ -1290,6 +1296,12 @@ void PPUDisAsm::ADDIS(ppu_opcode_t op)
 	else
 	{
 		DisAsm_R2_IMM("addis", op.rd, op.ra, op.simm16);
+
+		if (auto [is_const, value] = try_get_const_gpr_value(op.ra); is_const)
+		{
+			// Comment constant formation
+			comment_constant(last_opcode, value + op.simm16 * 65536);
+		}
 	}
 }
 
@@ -1601,16 +1613,34 @@ void PPUDisAsm::ORIS(ppu_opcode_t op)
 {
 	if (op.rs == 0 && op.ra == 0 && op.uimm16 == 0) { last_opcode += "nop"; return; }
 	DisAsm_R2_IMM("oris", op.ra, op.rs, op.uimm16);
+
+	if (auto [is_const, value] = try_get_const_gpr_value(op.rs); is_const)
+	{
+		// Comment constant formation
+		comment_constant(last_opcode, value | (op.uimm16 << 16));
+	}
 }
 
 void PPUDisAsm::XORI(ppu_opcode_t op)
 {
 	DisAsm_R2_IMM("xori", op.ra, op.rs, op.uimm16);
+
+	if (auto [is_const, value] = try_get_const_gpr_value(op.rs); is_const)
+	{
+		// Comment constant formation
+		comment_constant(last_opcode, value ^ op.uimm16);
+	}
 }
 
 void PPUDisAsm::XORIS(ppu_opcode_t op)
 {
 	DisAsm_R2_IMM("xoris", op.ra, op.rs, op.uimm16);
+
+	if (auto [is_const, value] = try_get_const_gpr_value(op.rs); is_const)
+	{
+		// Comment constant formation
+		comment_constant(last_opcode, value ^ (op.uimm16 << 16));
+	}
 }
 
 void PPUDisAsm::ANDI(ppu_opcode_t op)

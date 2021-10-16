@@ -347,27 +347,12 @@ void SPUDisAsm::IOHL(spu_opcode_t op)
 {
 	DisAsm("iohl", spu_reg_name[op.rt], op.i16);
 
-	const auto [is_const, value] = try_get_const_value(op.rt);
-
-	u32 val0 = value._u32[0];
+	const auto [is_const, value] = try_get_const_equal_value_array<u32>(op.rt);
 
 	// Only print constant for a 4 equal 32-bit constants array
-	if (is_const && value == v128::from32p(val0))
+	if (is_const)
 	{
-		// Fixup value
-		val0 |= op.i16;
-
-		// Test if potentially a CELL error
-		if ((val0 >> 28) == 0x8u)
-		{
-			// Comment as CELL error
-			fmt::append(last_opcode, " #%s (0x%x)", CellError{val0}, val0);
-		}
-		else
-		{
-			// Comment constant formation
-			fmt::append(last_opcode, " #0x%x", val0);
-		}
+		comment_constant(last_opcode, value | op.i16);
 	}
 }
 

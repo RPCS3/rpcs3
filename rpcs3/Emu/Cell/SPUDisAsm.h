@@ -2,8 +2,8 @@
 
 #include "PPCDisAsm.h"
 #include "SPUOpcodes.h"
+#include "util/v128.hpp"
 
-union v128;
 enum spu_stop_syscall : u32;
 
 static constexpr const char* spu_reg_name[128] =
@@ -73,6 +73,8 @@ namespace utils
 {
 	class shm;
 }
+
+void comment_constant(std::string& last_opocde, u64 value);
 
 class SPUDisAsm final : public PPCDisAsm
 {
@@ -185,6 +187,35 @@ public:
 	std::pair<const void*, usz> get_memory_span() const override;
 	std::unique_ptr<CPUDisAsm> copy_type_erased() const override;
 	std::pair<bool, v128> try_get_const_value(u32 reg, u32 pc = -1, u32 TTL = 10) const;
+
+	// Get contant value if the original array is made of only repeatations of the same value 
+	template <typename T> requires (sizeof(T) < sizeof(v128) && !(sizeof(v128) % sizeof(T)))
+	std::pair<bool, T> try_get_const_equal_value_array(u32 reg, u32 pc = -1, u32 TTL = 10) const
+	{
+		auto [ok, res] = try_get_const_value(reg, pc, TTL);
+
+		if (!ok)
+		{
+			return {};
+		}
+
+		v128 test_value{};
+
+		T sample{};
+		std::memcpy(&sample, res._bytes, sizeof(T));
+
+		for (u32 i = 0; i < sizeof(v128); i += sizeof(T))
+		{
+			std::memcpy(test_value._bytes + i, &sample, sizeof(T));
+		}
+
+		if (test_value != res)
+		{
+			return {};
+		}
+
+		return {ok, sample};
+	}
 
 	struct insert_mask_info
 	{
@@ -860,6 +891,12 @@ public:
 		}
 
 		DisAsm("ori", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si10);
+
+		if (auto [is_const, value] = try_get_const_equal_value_array<u32>(+op.ra); is_const)
+		{
+			// Comment constant formation
+			comment_constant(last_opcode, value | static_cast<u32>(op.si10));
+		}
 	}
 	void ORHI(spu_opcode_t op)
 	{
@@ -892,6 +929,12 @@ public:
 	void AI(spu_opcode_t op)
 	{
 		DisAsm("ai", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si10);
+
+		if (auto [is_const, value] = try_get_const_equal_value_array<u32>(op.ra); is_const)
+		{
+			// Comment constant formation
+			comment_constant(last_opcode, value + static_cast<u32>(op.si10));
+		}
 	}
 	void AHI(spu_opcode_t op)
 	{
@@ -908,6 +951,12 @@ public:
 	void XORI(spu_opcode_t op)
 	{
 		DisAsm("xori", spu_reg_name[op.rt], spu_reg_name[op.ra], op.si10);
+
+		if (auto [is_const, value] = try_get_const_equal_value_array<u32>(op.ra); is_const)
+		{
+			// Comment constant formation
+			comment_constant(last_opcode, value ^ static_cast<u32>(op.si10));
+		}
 	}
 	void XORHI(spu_opcode_t op)
 	{
