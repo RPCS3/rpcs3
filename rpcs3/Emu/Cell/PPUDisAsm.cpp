@@ -2067,7 +2067,7 @@ void PPUDisAsm::MFSPR(ppu_opcode_t op)
 	case 0x001: DisAsm_R1("mfxer", op.rd); break;
 	case 0x008: DisAsm_R1("mflr", op.rd); break;
 	case 0x009: DisAsm_R1("mfctr", op.rd); break;
-	default: DisAsm_R1_IMM("mfspr", op.rd, op.spr); break;
+	default: DisAsm_R1_IMM("mfspr", op.rd, n); break;
 	}
 }
 
@@ -2175,7 +2175,7 @@ void PPUDisAsm::MTSPR(ppu_opcode_t op)
 	case 0x001: DisAsm_R1("mtxer", op.rs); break;
 	case 0x008: DisAsm_R1("mtlr", op.rs); break;
 	case 0x009: DisAsm_R1("mtctr", op.rs); break;
-	default: DisAsm_IMM_R1("mtspr", op.spr, op.rs); break;
+	default: DisAsm_R1_IMM("mtspr", n, op.rs); break;
 	}
 }
 
