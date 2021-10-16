@@ -72,15 +72,15 @@ private:
 	}
 	void DisAsm_INT1_R2(std::string_view op, u32 i0, u32 r0, u32 r1)
 	{
-		fmt::append(last_opcode, "%-*s%d,r%d,r%d", PadOp(), op, i0, r0, r1);
+		fmt::append(last_opcode, "%-*s %d,r%d,r%d", PadOp(), op, i0, r0, r1);
 	}
 	void DisAsm_INT1_R1_IMM(std::string_view op, u32 i0, u32 r0, s32 imm0)
 	{
-		fmt::append(last_opcode, "%-*s%d,r%d,%s", PadOp(), op, i0, r0, SignedHex(imm0));
+		fmt::append(last_opcode, "%-*s %d,r%d,%s", PadOp(), op, i0, r0, SignedHex(imm0));
 	}
 	void DisAsm_INT1_R1_RC(std::string_view op, u32 i0, u32 r0, u32 rc)
 	{
-		fmt::append(last_opcode, "%-*s%d,r%d", PadOp(op, rc ? 1 : 0), op, i0, r0);
+		fmt::append(last_opcode, "%-*s %d,r%d", PadOp(op, rc ? 1 : 0), op, i0, r0);
 		insert_char_if(op, !!rc);
 	}
 	void DisAsm_INT1_R1(std::string_view op, u32 i0, u32 r0)
@@ -224,7 +224,7 @@ private:
 	}
 	void DisAsm_IMM_R1(std::string_view op, s32 imm0, u32 r0)
 	{
-		fmt::append(last_opcode, "%-*s%d,r%d  #%x", PadOp(), op, imm0, r0, imm0);
+		fmt::append(last_opcode, "%-*s %d,r%d  #%x", PadOp(), op, imm0, r0, imm0);
 	}
 	void DisAsm_CR1_R1_IMM(std::string_view op, u32 cr0, u32 r0, s32 imm0)
 	{
@@ -266,11 +266,11 @@ private:
 	}
 	void DisAsm_INT3(std::string_view op, const int i0, const int i1, const int i2)
 	{
-		fmt::append(last_opcode, "%-*s%d,%d,%d", PadOp(), op, i0, i1, i2);
+		fmt::append(last_opcode, "%-*s %d,%d,%d", PadOp(), op, i0, i1, i2);
 	}
 	void DisAsm_INT1(std::string_view op, const int i0)
 	{
-		fmt::append(last_opcode, "%-*s%d", PadOp(), op, i0);
+		fmt::append(last_opcode, "%-*s %d", PadOp(), op, i0);
 	}
 	void DisAsm_BRANCH(std::string_view op, const int pc)
 	{
@@ -282,7 +282,7 @@ private:
 	}
 	void DisAsm_B2_BRANCH(std::string_view op, u32 b0, u32 b1, const int pc)
 	{
-		fmt::append(last_opcode, "%-*s%d,%d,0x%x ", PadOp(), op, b0, b1, DisAsmBranchTarget(pc));
+		fmt::append(last_opcode, "%-*s %d,%d,0x%x ", PadOp(), op, b0, b1, DisAsmBranchTarget(pc));
 	}
 	void DisAsm_CR_BRANCH(std::string_view op, u32 cr, const int pc)
 	{
