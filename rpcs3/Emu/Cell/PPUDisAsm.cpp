@@ -1347,19 +1347,46 @@ void PPUDisAsm::BC(ppu_opcode_t op)
 
 void PPUDisAsm::SC(ppu_opcode_t op)
 {
-	if (op.opcode != ppu_instructions::SC(0))
+	if (op.opcode != ppu_instructions::SC(0) && op.opcode != ppu_instructions::SC(1))
 	{
 		return UNK(op);
 	}
 
-	// Try to get constant syscall index
-	if (auto [is_const, index] = try_get_const_gpr_value(11); is_const && index < 1024u)
+	fmt::append(last_opcode, "%-*s ", PadOp(), "sc");
+
+	if (op.lev)
 	{
-		fmt::append(last_opcode, "%-*s #%s", PadOp(), ppu_syscall_code{index});
+		fmt::append(last_opcode, "%u ", op.lev);
+	}
+
+	// Try to get constant syscall index
+	auto [is_const, index] = try_get_const_gpr_value(11);
+
+	if (!is_const)
+	{
 		return;
 	}
 
-	last_opcode += "sc";
+	switch (op.lev)
+	{
+	case 0:
+	{
+		// Lv2 syscall
+		if (index < 1024u)
+		{
+			fmt::append(last_opcode, "#%s", ppu_syscall_code{index});
+		}
+
+		return;
+	}
+	case 1:
+	{
+		// Lv1 syscall
+		fmt::append(last_opcode, "#lv1_syscall_%u", index);
+		return;
+	}
+	default: return;
+	}
 }
 
 void PPUDisAsm::B(ppu_opcode_t op)
