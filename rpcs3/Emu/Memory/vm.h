@@ -82,7 +82,7 @@ namespace vm
 	u32 alloc(u32 size, memory_location_t location, u32 align = 0x10000);
 
 	// Map memory at specified address (in optionally specified memory location)
-	u32 falloc(u32 addr, u32 size, memory_location_t location = any, const std::shared_ptr<utils::shm>* src = nullptr);
+	bool falloc(u32 addr, u32 size, memory_location_t location = any, const std::shared_ptr<utils::shm>* src = nullptr);
 
 	// Unmap memory at specified address (in optionally specified memory location), return size
 	u32 dealloc(u32 addr, memory_location_t location = any, const std::shared_ptr<utils::shm>* src = nullptr);
@@ -147,7 +147,7 @@ namespace vm
 		u32 alloc(u32 size, const std::shared_ptr<utils::shm>* = nullptr, u32 align = 0x10000, u64 flags = 0);
 
 		// Try to map memory at fixed location
-		u32 falloc(u32 addr, u32 size, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
+		bool falloc(u32 addr, u32 size, const std::shared_ptr<utils::shm>* = nullptr, u64 flags = 0);
 
 		// Unmap memory at specified location previously returned by alloc(), return size
 		u32 dealloc(u32 addr, const std::shared_ptr<utils::shm>* = nullptr) const;

@@ -979,7 +979,7 @@ namespace vm
 		return block->alloc(size, nullptr, align);
 	}
 
-	u32 falloc(u32 addr, u32 size, memory_location_t location, const std::shared_ptr<utils::shm>* src)
+	bool falloc(u32 addr, u32 size, memory_location_t location, const std::shared_ptr<utils::shm>* src)
 	{
 		const auto block = get(location, addr);
 
@@ -987,7 +987,7 @@ namespace vm
 		{
 			vm_log.error("vm::falloc(): Invalid memory location (%u, addr=0x%x)", +location, addr);
 			ensure(location == any || location < memory_location_max); // The only allowed locations to fail
-			return 0;
+			return false;
 		}
 
 		return block->falloc(addr, size, src);
@@ -1254,7 +1254,7 @@ namespace vm
 
 		u32 addr = utils::align(this->addr, align);
 
-		if (this->addr > std::min(max, addr))
+		if (this->addr > max || addr > max)
 		{
 			return 0;
 		}
@@ -1284,7 +1284,7 @@ namespace vm
 		return 0;
 	}
 
-	u32 block_t::falloc(u32 addr, const u32 orig_size, const std::shared_ptr<utils::shm>* src, u64 flags)
+	bool block_t::falloc(u32 addr, const u32 orig_size, const std::shared_ptr<utils::shm>* src, u64 flags)
 	{
 		if (!src)
 		{
@@ -1311,7 +1311,7 @@ namespace vm
 			(src && (orig_size | addr) % min_page_size) ||
 			flags & stack_guarded)
 		{
-			return 0;
+			return false;
 		}
 
 		// Force aligned address
@@ -1334,15 +1334,15 @@ namespace vm
 		if (!is_valid())
 		{
 			// Expired block
-			return 0;
+			return false;
 		}
 
 		if (!try_alloc(addr, flags, size, std::move(shm)))
 		{
-			return 0;
+			return false;
 		}
 
-		return addr;
+		return true;
 	}
 
 	u32 block_t::dealloc(u32 addr, const std::shared_ptr<utils::shm>* src) const

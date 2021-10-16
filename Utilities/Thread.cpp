@@ -1423,6 +1423,11 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 	{
 		g_tls_access_violation_recovered = true;
 
+		if (vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable))
+		{
+			return true;
+		}
+
 		const auto area = vm::reserve_map(vm::any, addr & -0x10000, 0x10000);
 
 		if (!area)
@@ -1430,15 +1435,14 @@ bool handle_access_violation(u32 addr, bool is_writing, ucontext_t* context) noe
 			return false;
 		}
 
-		if (vm::writer_lock mlock; vm::check_addr(addr, 0))
+		if (vm::writer_lock mlock; area->flags & vm::preallocated || vm::check_addr(addr, 0))
 		{
 			// For allocated memory with protection lower than required (such as protection::no or read-only while writing to it)
 			utils::memory_protect(vm::base(addr & -0x1000), 0x1000, utils::protection::rw);
 			return true;
 		}
 
-		area->falloc(addr & -0x10000, 0x10000);
-		return vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable);
+		return area->falloc(addr & -0x10000, 0x10000) || vm::check_addr(addr, is_writing ? vm::page_writable : vm::page_readable);
 	};
 
 	if (cpu && (cpu->id_type() == 1 || cpu->id_type() == 2))

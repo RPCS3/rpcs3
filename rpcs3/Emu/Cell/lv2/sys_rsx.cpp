@@ -116,10 +116,10 @@ error_code sys_rsx_memory_allocate(cpu_thread& cpu, vm::ptr<u32> mem_handle, vm:
 
 	sys_rsx.warning("sys_rsx_memory_allocate(mem_handle=*0x%x, mem_addr=*0x%x, size=0x%x, flags=0x%llx, a5=0x%llx, a6=0x%llx, a7=0x%llx)", mem_handle, mem_addr, size, flags, a5, a6, a7);
 
-	if (u32 addr = vm::falloc(rsx::constants::local_mem_base, size, vm::video))
+	if (vm::falloc(rsx::constants::local_mem_base, size, vm::video))
 	{
 		rsx::get_current_renderer()->local_mem_size = size;
-		*mem_addr = addr;
+		*mem_addr = rsx::constants::local_mem_base;
 		*mem_handle = 0x5a5a5a5b;
 		return CELL_OK;
 	}
