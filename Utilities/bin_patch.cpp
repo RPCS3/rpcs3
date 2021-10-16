@@ -610,8 +610,21 @@ static usz apply_modification(std::basic_string<u32>& applied, const patch_engin
 
 			if (alloc_map)
 			{
-				if ((p.alloc_addr = alloc_map->falloc(alloc_at, alloc_size, nullptr, flags)))
+				if (alloc_map->falloc(alloc_at, alloc_size, nullptr, flags))
 				{
+					if (vm::check_addr(alloc_at, vm::page_1m_size))
+					{
+						p.alloc_addr = alloc_at & -0x100000;
+					}
+					else if (vm::check_addr(alloc_at, vm::page_64k_size))
+					{
+						p.alloc_addr = alloc_at & -0x10000;
+					}
+					else
+					{
+						p.alloc_addr = alloc_at & -0x1000;
+					}
+
 					if (flags & vm::alloc_executable)
 					{
 						ppu_register_range(alloc_at, alloc_size);
