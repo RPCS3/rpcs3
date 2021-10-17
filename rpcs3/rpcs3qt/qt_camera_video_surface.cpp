@@ -248,6 +248,11 @@ void qt_camera_video_surface::get_image(u8* buf, u64 size, u32& width, u32& heig
 	{
 		bytes_read = std::min<u64>(image_buffer.size, size);
 		std::memcpy(buf, image_buffer.data, bytes_read);
+
+		if (image_buffer.size != size)
+		{
+			camera_log.error("Buffer size mismatch: in=%d, out=%d. Cropping to incoming size. Please contact a developer.", size, image_buffer.size);
+		}
 	}
 	else
 	{
