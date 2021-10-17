@@ -412,7 +412,7 @@ error_code cellCameraInit()
 
 	// TODO: Some other default attributes? Need to check the actual behaviour on a real PS3.
 
-	g_camera.is_attached = true;
+	g_camera.send_attach_state(true);
 	g_camera.init = 1;
 	return CELL_OK;
 }
@@ -537,9 +537,15 @@ error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 
 	std::lock_guard lock(g_camera.mutex);
 
-	if (info->read_mode != CELL_CAMERA_READ_DIRECT && !info->buffer)
+	if (info->read_mode == CELL_CAMERA_READ_FUNCCALL && !info->buffer)
 	{
 		info->buffer = vm::cast(vm::alloc(vbuf_size, vm::main));
+		info->bytesize = vbuf_size;
+	}
+	else if (info->read_mode && !info->pbuf[0] && !info->pbuf[1])
+	{
+		info->pbuf[0] = vm::cast(vm::alloc(vbuf_size, vm::main));
+		info->pbuf[1] = vm::cast(vm::alloc(vbuf_size, vm::main));
 		info->bytesize = vbuf_size;
 	}
 
@@ -1357,9 +1363,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 
 		if (!result)
 		{
-			g_camera.is_streaming = false;
-			g_camera.is_attached = false;
-			g_camera.is_open = false;
+			g_camera.send_attach_state(false);
 			return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 		}
 
@@ -1379,6 +1383,13 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 error_code cellCameraReadComplete(s32 dev_num, u32 bufnum, u32 arg2)
 {
 	cellCamera.todo("cellCameraReadComplete(dev_num=%d, bufnum=%d, arg2=%d)", dev_num, bufnum, arg2);
+
+	if (bufnum < 2)
+	{
+		auto& g_camera = g_fxo->get<camera_thread>();
+		std::lock_guard lock(g_camera.mutex);
+		g_camera.pbuf_locked[bufnum] = false;
+	}
 
 	return cellCameraSetAttribute(dev_num, CELL_CAMERA_READFINISH, bufnum, arg2);
 }
@@ -1595,15 +1606,63 @@ void camera_context::operator()()
 
 		const u64 frame_start = get_guest_system_time();
 
+		// Get latest frame with CELL_CAMERA_READ_DIRECT.
+		// With CELL_CAMERA_READ_FUNCCALL the game fetches the buffer in cellCameraRead.
+		const u64 buffer_number = pbuf_write_index;
+		bool send_frame_update_event = false;
+		bool frame_update_event_sent = false;
+
+		if (is_streaming)
+		{
+			if (read_mode.load() == CELL_CAMERA_READ_DIRECT)
+			{
+				{
+					std::lock_guard lock(mutex);
+					send_frame_update_event = info.pbuf[pbuf_write_index] && !pbuf_locked[pbuf_write_index];
+				}
+
+				if (handler && send_frame_update_event)
+				{
+					atomic_t<bool> wake_up = false;
+					bool result = false;
+
+					Emu.CallAfter([&]()
+					{
+						u32 width{};
+						u32 height{};
+						u64 frame_number{};
+						u64 bytes_read{};
+						result = handler->get_image(info.pbuf[pbuf_write_index].get_ptr(), info.bytesize, width, height, frame_number, bytes_read);
+
+						wake_up = true;
+						wake_up.notify_one();
+					});
+
+					while (!wake_up && !Emu.IsStopped())
+					{
+						thread_ctrl::wait_on(wake_up, false);
+					}
+
+					pbuf_write_index = pbuf_next_index();
+
+					if (!result)
+					{
+						send_attach_state(false);
+					}
+				}
+			}
+			else
+			{
+				send_frame_update_event = true;
+			}
+		}
+
 		std::unique_lock lock(mutex_notify_data_map);
 
-		for (auto const& notify_data_entry : notify_data_map)
+		for (const auto& [key, evt_data] : notify_data_map)
 		{
-			const auto& key = notify_data_entry.first;
-			const auto& evt_data = notify_data_entry.second;
-
 			// handle FRAME_UPDATE
-			if (is_streaming && evt_data.flag & CELL_CAMERA_EFLAG_FRAME_UPDATE)
+			if (send_frame_update_event && evt_data.flag & CELL_CAMERA_EFLAG_FRAME_UPDATE)
 			{
 				if (auto queue = lv2_event_queue::find(key))
 				{
@@ -1613,24 +1672,31 @@ void camera_context::operator()()
 					if (read_mode.load() == CELL_CAMERA_READ_DIRECT)
 					{
 						const u64 image_data_size = static_cast<u64>(info.bytesize);
-						const u64 buffer_number = 0;
 						const u64 camera_id = 0;
 
 						data2 = image_data_size << 32 | buffer_number << 16 | camera_id;
-						data3 = get_guest_system_time() - start_timestamp;	// timestamp
+						data3 = get_guest_system_time() - start_timestamp; // timestamp
 					}
 					else // CELL_CAMERA_READ_FUNCCALL, also default
 					{
-						data2 = 0;	// device id (always 0)
-						data3 = 0;	// unused
+						data2 = 0; // device id (always 0)
+						data3 = 0; // unused
 					}
 
-					if (queue->send(evt_data.source, CELL_CAMERA_FRAME_UPDATE, data2, data3) == 0) [[likely]]
+					if (queue->send(evt_data.source, CELL_CAMERA_FRAME_UPDATE, data2, data3) == CELL_OK) [[likely]]
 					{
 						++frame_num;
 					}
+
+					frame_update_event_sent = true;
 				}
 			}
+		}
+
+		if (read_mode.load() == CELL_CAMERA_READ_DIRECT && frame_update_event_sent)
+		{
+			std::lock_guard lock(mutex);
+			pbuf_locked[buffer_number] = true;
 		}
 
 		lock.unlock();
@@ -1654,23 +1720,29 @@ void camera_context::reset_state()
 	is_open = false;
 	info.framerate = 0;
 	std::memset(&attr, 0, sizeof(attr));
+	handler.reset();
+	pbuf_write_index = 0;
+	pbuf_locked[0] = false;
+	pbuf_locked[1] = false;
 
 	std::scoped_lock lock(mutex_notify_data_map);
 	notify_data_map.clear();
-	handler.reset();
 }
 
 void camera_context::send_attach_state(bool attached)
 {
+	if (!attached)
+	{
+		is_streaming = false;
+		is_open = false;
+	}
+
 	std::lock_guard lock(mutex_notify_data_map);
 
 	if (!notify_data_map.empty())
 	{
-		for (auto const& notify_data_entry : notify_data_map)
+		for (const auto& [key, evt_data] : notify_data_map)
 		{
-			const auto& key = notify_data_entry.first;
-			const auto& evt_data = notify_data_entry.second;
-
 			if (auto queue = lv2_event_queue::find(key))
 			{
 				if (queue->send(evt_data.source, attached ? CELL_CAMERA_ATTACH : CELL_CAMERA_DETACH, 0, 0) == 0) [[likely]]
@@ -1738,4 +1810,10 @@ void camera_context::remove_queue(u64 key)
 
 		notify_data_map.erase(key);
 	}
+}
+
+u32 camera_context::pbuf_next_index() const
+{
+	// The read buffer index cannot be the same as the write index
+	return (pbuf_write_index + 1u) % 2;
 }

@@ -426,13 +426,16 @@ public:
 	atomic_t<bool> is_open{false};
 
 	CellCameraInfoEx info{};
+	atomic_t<u32> pbuf_write_index = 0;
+	std::array<atomic_t<bool>, 2> pbuf_locked = { false, false };
+	u32 pbuf_next_index() const;
 
 	struct attr_t
 	{
 		u32 v1, v2;
 	};
 	attr_t attr[500]{};
-	atomic_t<u32> frame_num;
+	atomic_t<u32> frame_num = 0;
 
 	atomic_t<u32> init = 0;
 
