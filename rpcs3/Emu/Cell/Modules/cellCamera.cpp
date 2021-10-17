@@ -264,24 +264,28 @@ u32 get_video_buffer_size(const CellCameraInfoEx& info)
 	u32 width, height;
 	std::tie(width, height) = get_video_resolution(info);
 
-	u32 bytes_per_pixel;
+	double bytes_per_pixel;
 
 	switch (info.format)
 	{
 	case CELL_CAMERA_RAW8:
-		bytes_per_pixel = 1;
+		bytes_per_pixel = 1.0;
 		break;
 	case CELL_CAMERA_YUV422:
+		bytes_per_pixel = 2.0;
+		break;
 	case CELL_CAMERA_YUV420:
 	case CELL_CAMERA_V_Y1_U_Y0:
+		bytes_per_pixel = 1.5;
+		break;
 	case CELL_CAMERA_RAW10:
-		bytes_per_pixel = 2;
+		bytes_per_pixel = 1.25;
 		break;
 	case CELL_CAMERA_JPG:
 	case CELL_CAMERA_RGBA:
 	case CELL_CAMERA_FORMAT_UNKNOWN:
 	default:
-		bytes_per_pixel = 4;
+		bytes_per_pixel = 4.0;
 		break;
 	}
 
