@@ -88,6 +88,7 @@ void qt_camera_handler::open_camera()
 	if (m_camera->state() != QCamera::State::UnloadedState)
 	{
 		camera_log.notice("Camera already loaded");
+		return;
 	}
 
 	// Load/open camera
@@ -125,6 +126,7 @@ void qt_camera_handler::close_camera()
 	if (m_camera->state() == QCamera::State::UnloadedState)
 	{
 		camera_log.notice("Camera already unloaded");
+		return;
 	}
 
 	// Unload/close camera
@@ -145,8 +147,10 @@ void qt_camera_handler::start_camera()
 	if (m_camera->state() == QCamera::State::ActiveState)
 	{
 		camera_log.notice("Camera already started");
+		return;
 	}
-	else if (m_camera->state() == QCamera::State::UnloadedState)
+
+	if (m_camera->state() == QCamera::State::UnloadedState)
 	{
 		camera_log.notice("Camera not open");
 		open_camera();
@@ -170,6 +174,7 @@ void qt_camera_handler::stop_camera()
 	if (m_camera->state() == QCamera::State::LoadedState)
 	{
 		camera_log.notice("Camera already stopped");
+		return;
 	}
 
 	// Stop camera. The camera will still be drawing power.
