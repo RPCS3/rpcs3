@@ -555,14 +555,13 @@ error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 
 	std::tie(info->width, info->height) = get_video_resolution(*info);
 
-	g_camera.handler.reset();
-	g_camera.handler = Emu.GetCallbacks().get_camera_handler();
-
 	atomic_t<bool> wake_up = false;
 
-	Emu.CallAfter([&wake_up, handler = g_camera.handler]()
+	Emu.CallAfter([&wake_up, &g_camera]()
 	{
-		handler->open_camera();
+		g_camera.handler.reset();
+		g_camera.handler = Emu.GetCallbacks().get_camera_handler();
+		g_camera.handler->open_camera();
 		wake_up = true;
 		wake_up.notify_one();
 	});
@@ -614,6 +613,7 @@ error_code cellCameraClose(s32 dev_num)
 
 	auto& g_camera = g_fxo->get<camera_thread>();
 	std::lock_guard lock(g_camera.mutex);
+	g_camera.is_streaming = false;
 
 	vm::dealloc(g_camera.info.buffer.addr(), vm::main);
 
@@ -1340,11 +1340,12 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 		u64 bytes_read{};
 
 		atomic_t<bool> wake_up = false;
-		camera_handler_base::camera_handler_state result = camera_handler_base::camera_handler_state::not_available;
+		error_code error = CELL_OK;
 
 		Emu.CallAfter([&]()
 		{
-			result = g_camera.handler->get_image(g_camera.info.buffer.get_ptr(), g_camera.info.bytesize, width, height, frame_number, bytes_read);
+			camera_handler_base::camera_handler_state result = g_camera.handler->get_image(g_camera.info.buffer.get_ptr(), g_camera.info.bytesize, width, height, frame_number, bytes_read);
+			error = g_camera.on_handler_state(result);
 			wake_up = true;
 			wake_up.notify_one();
 		});
@@ -1354,7 +1355,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 			thread_ctrl::wait_on(wake_up, false);
 		}
 
-		if (error_code error = g_camera.on_handler_state(result); error != CELL_OK)
+		if (error != CELL_OK)
 		{
 			return error;
 		}
@@ -1640,7 +1641,7 @@ void camera_context::operator()()
 						u64 frame_number{};
 						u64 bytes_read{};
 						result = handler->get_image(info.pbuf[pbuf_write_index].get_ptr(), info.bytesize, width, height, frame_number, bytes_read);
-
+						send_frame_update_event = on_handler_state(result) = CELL_OK;
 						wake_up = true;
 						wake_up.notify_one();
 					});
@@ -1650,14 +1651,27 @@ void camera_context::operator()()
 						thread_ctrl::wait_on(wake_up, false);
 					}
 
-					pbuf_write_index = pbuf_next_index();
-
-					send_frame_update_event = on_handler_state(result) = CELL_OK;
+					if (send_frame_update_event)
+					{
+						pbuf_write_index = pbuf_next_index();
+					}
 				}
 			}
 			else
 			{
-				send_frame_update_event = on_handler_state(handler->get_state()) = CELL_OK;
+				atomic_t<bool> wake_up = false;
+
+				Emu.CallAfter([&]()
+				{
+					send_frame_update_event = on_handler_state(handler->get_state()) = CELL_OK;
+					wake_up = true;
+					wake_up.notify_one();
+				});
+
+				while (!wake_up && !Emu.IsStopped())
+				{
+					thread_ctrl::wait_on(wake_up, false);
+				}
 			}
 		}
 
@@ -1827,6 +1841,7 @@ error_code camera_context::on_handler_state(camera_handler_base::camera_handler_
 			if (is_streaming)
 			{
 				cellCamera.warning("Camera closed or disconnected (state=%d). Trying to start camera...", static_cast<int>(state));
+				handler->open_camera();
 				handler->start_camera();
 			}
 			else if (is_open)
