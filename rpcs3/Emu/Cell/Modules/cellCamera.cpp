@@ -1217,6 +1217,7 @@ error_code cellCameraStart(s32 dev_num)
 	{
 		g_camera.handler->set_mirrored(!!g_camera.attr[CELL_CAMERA_MIRRORFLAG].v1);
 		g_camera.handler->set_frame_rate(g_camera.info.framerate);
+		g_camera.handler->set_resolution(g_camera.info.width, g_camera.info.height);
 
 		atomic_t<bool> wake_up = false;
 
