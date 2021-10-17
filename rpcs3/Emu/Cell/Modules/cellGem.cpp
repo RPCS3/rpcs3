@@ -1351,7 +1351,7 @@ error_code cellGemPrepareVideoConvert(vm::cptr<CellGemVideoConvertAttribute> vc_
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	const auto vc = *vc_attribute;
+	const CellGemVideoConvertAttribute vc = *vc_attribute;
 
 	if (!vc_attribute || vc.version != CELL_GEM_VERSION)
 	{

@@ -442,6 +442,7 @@ public:
 	static constexpr auto thread_name = "Camera Thread"sv;
 
 	std::shared_ptr<camera_handler_base> handler;
+	error_code on_handler_state(camera_handler_base::camera_handler_state state);
 };
 
 using camera_thread = named_thread<camera_context>;

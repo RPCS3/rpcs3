@@ -1328,17 +1328,6 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 
 	// can call cellCameraReset() and cellCameraStop() in some cases
 
-	if (read) // NULL returns CELL_OK
-	{
-		read->timestamp = (get_guest_system_time() - g_camera.start_timestamp);
-		read->frame = g_camera.frame_num;
-		read->bytesread = g_camera.is_streaming ? get_video_buffer_size(g_camera.info) : 0;
-
-		auto& shared_data = g_fxo->get<gem_camera_shared>();
-
-		shared_data.frame_timestamp.exchange(read->timestamp);
-	}
-
 	if (g_camera.handler)
 	{
 		u32 width{};
@@ -1347,7 +1336,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 		u64 bytes_read{};
 
 		atomic_t<bool> wake_up = false;
-		bool result = false;
+		camera_handler_base::camera_handler_state result = camera_handler_base::camera_handler_state::not_available;
 
 		Emu.CallAfter([&]()
 		{
@@ -1361,10 +1350,9 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 			thread_ctrl::wait_on(wake_up, false);
 		}
 
-		if (!result)
+		if (error_code error = g_camera.on_handler_state(result); error != CELL_OK)
 		{
-			g_camera.send_attach_state(false);
-			return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+			return error;
 		}
 
 		if (read)
@@ -1375,6 +1363,21 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 
 		cellCamera.trace("cellCameraRead: frame_number=%d, width=%d, height=%d. bytes_read=%d (passed to game: frame=%d, bytesread=%d)",
 			frame_number, width, height, bytes_read, read ? read->frame.get() : 0, read ? read->bytesread.get() : 0);
+	}
+
+	if (read) // NULL returns CELL_OK
+	{
+		read->timestamp = (get_guest_system_time() - g_camera.start_timestamp);
+
+		if (!g_camera.handler)
+		{
+			read->frame = g_camera.frame_num;
+			read->bytesread = g_camera.is_streaming ? get_video_buffer_size(g_camera.info) : 0;
+		}
+
+		auto& shared_data = g_fxo->get<gem_camera_shared>();
+
+		shared_data.frame_timestamp.exchange(read->timestamp);
 	}
 
 	return CELL_OK;
@@ -1624,7 +1627,7 @@ void camera_context::operator()()
 				if (handler && send_frame_update_event)
 				{
 					atomic_t<bool> wake_up = false;
-					bool result = false;
+					camera_handler_base::camera_handler_state result = camera_handler_base::camera_handler_state::not_available;
 
 					Emu.CallAfter([&]()
 					{
@@ -1645,15 +1648,12 @@ void camera_context::operator()()
 
 					pbuf_write_index = pbuf_next_index();
 
-					if (!result)
-					{
-						send_attach_state(false);
-					}
+					send_frame_update_event = on_handler_state(result) = CELL_OK;
 				}
 			}
 			else
 			{
-				send_frame_update_event = true;
+				send_frame_update_event = on_handler_state(handler->get_state()) = CELL_OK;
 			}
 		}
 
@@ -1731,32 +1731,21 @@ void camera_context::reset_state()
 
 void camera_context::send_attach_state(bool attached)
 {
-	if (!attached)
-	{
-		is_streaming = false;
-		is_open = false;
-	}
-
 	std::lock_guard lock(mutex_notify_data_map);
 
-	if (!notify_data_map.empty())
+	for (const auto& [key, evt_data] : notify_data_map)
 	{
-		for (const auto& [key, evt_data] : notify_data_map)
+		if (auto queue = lv2_event_queue::find(key))
 		{
-			if (auto queue = lv2_event_queue::find(key))
+			if (queue->send(evt_data.source, attached ? CELL_CAMERA_ATTACH : CELL_CAMERA_DETACH, 0, 0) == 0) [[likely]]
 			{
-				if (queue->send(evt_data.source, attached ? CELL_CAMERA_ATTACH : CELL_CAMERA_DETACH, 0, 0) == 0) [[likely]]
-				{
-					is_attached = attached;
-				}
+				is_attached = attached;
 			}
 		}
 	}
-	else
-	{
-		// We're not expected to send any events for attaching/detaching
-		is_attached = attached;
-	}
+
+	// We're not expected to send any events for attaching/detaching
+	is_attached = attached;
 }
 
 void camera_context::set_attr(s32 attrib, u32 arg1, u32 arg2)
@@ -1816,4 +1805,53 @@ u32 camera_context::pbuf_next_index() const
 {
 	// The read buffer index cannot be the same as the write index
 	return (pbuf_write_index + 1u) % 2;
+}
+
+error_code camera_context::on_handler_state(camera_handler_base::camera_handler_state state)
+{
+	switch (state)
+	{
+	case camera_handler_base::camera_handler_state::not_available:
+	case camera_handler_base::camera_handler_state::closed:
+	{
+		if (is_attached)
+		{
+			send_attach_state(false);
+		}
+		if (handler)
+		{
+			if (is_streaming)
+			{
+				cellCamera.warning("Camera closed or disconnected (state=%d). Trying to start camera...", static_cast<int>(state));
+				handler->start_camera();
+			}
+			else if (is_open)
+			{
+				cellCamera.warning("Camera closed or disconnected (state=%d). Trying to open camera...", static_cast<int>(state));
+				handler->open_camera();
+			}
+		}
+		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+	}
+	case camera_handler_base::camera_handler_state::running:
+	{
+		if (!is_attached)
+		{
+			cellCamera.warning("Camera handler not attached. Sending attach event...", static_cast<int>(state));
+			send_attach_state(true);
+		}
+		break;
+	}
+	case camera_handler_base::camera_handler_state::open:
+	{
+		if (handler && is_streaming)
+		{
+			cellCamera.warning("Camera handler not running (state=%d). Trying to start camera...", static_cast<int>(state));
+			handler->start_camera();
+		}
+		break;
+	}
+	}
+
+	return CELL_OK;
 }
