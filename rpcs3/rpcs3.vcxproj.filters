@@ -786,6 +786,15 @@
     <ClCompile Include="rpcs3qt\qt_camera_video_surface.cpp">
       <Filter>Io\camera</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\qt_camera_error_handler.cpp">
+      <Filter>Io\camera</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_qt_camera_error_handler.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_qt_camera_error_handler.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1152,6 +1161,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\recvmessage_dialog_frame.h">
       <Filter>Gui\message dialog</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\qt_camera_error_handler.h">
+      <Filter>Io\camera</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

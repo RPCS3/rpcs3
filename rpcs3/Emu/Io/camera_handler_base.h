@@ -8,6 +8,7 @@ class camera_handler_base
 public:
 	enum class camera_handler_state
 	{
+		not_available,
 		closed,
 		open,
 		running
@@ -26,13 +27,13 @@ public:
 	virtual void set_mirrored(bool mirrored) = 0;
 
 	virtual u64 frame_number() const = 0; // Convenience function to check if there's a new frame.
-	virtual bool get_image(u8* buf, u64 size, u32& width, u32& height, u64& frame_number, u64& bytes_read) = 0;
+	virtual camera_handler_state get_image(u8* buf, u64 size, u32& width, u32& height, u64& frame_number, u64& bytes_read) = 0;
 
 	camera_handler_state get_state() const { return m_state.load(); };
 
 protected:
 	std::mutex m_mutex;
-	atomic_t<camera_handler_state> m_state = camera_handler_state::closed;
+	atomic_t<camera_handler_state> m_state = camera_handler_state::not_available;
 	bool m_mirrored = false;
 	s32 m_format = 2; // CELL_CAMERA_RAW8
 	u32 m_bytes_per_pixel = 1;

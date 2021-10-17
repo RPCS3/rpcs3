@@ -32,21 +32,37 @@ void qt_camera_handler::set_camera(const QCameraInfo& cameraInfo)
 	// Create camera and video surface
 	m_surface.reset(new qt_camera_video_surface(front_facing, nullptr));
 	m_camera.reset(new QCamera(cameraInfo));
-
-	// Create connects (may not work due to threading)
-	connect(m_camera.get(), &QCamera::stateChanged, this, [this](QCamera::State state){ handle_camera_state(state); });
-	connect(m_camera.get(), &QCamera::statusChanged, this, [this](QCamera::Status status){ handle_camera_status(status); });
-	connect(m_camera.get(), &QCamera::errorOccurred, this, [this](QCamera::Error error){ handle_camera_error(error); });
-	connect(m_camera.get(), &QCamera::captureModeChanged, this, [this](QCamera::CaptureModes modes){ handle_capture_modes(modes); });
-	connect(m_camera.get(), QOverload<QCamera::LockStatus, QCamera::LockChangeReason>::of(&QCamera::lockStatusChanged), this, [this](QCamera::LockStatus status, QCamera::LockChangeReason reason){ handle_lock_status(status, reason); });
+	m_error_handler.reset(new qt_camera_error_handler(m_camera,
+		[this](QCamera::Status status)
+		{
+			switch (status)
+			{
+			case QCamera::UnavailableStatus:
+				m_state = camera_handler_state::not_available;
+				break;
+			case QCamera::UnloadedStatus:
+			case QCamera::UnloadingStatus:
+				m_state = camera_handler_state::closed;
+				break;
+			case QCamera::StandbyStatus:
+			case QCamera::StoppingStatus:
+			case QCamera::LoadedStatus:
+			case QCamera::LoadingStatus:
+				m_state = camera_handler_state::open;
+				break;
+			case QCamera::StartingStatus:
+			case QCamera::ActiveStatus:
+				m_state = camera_handler_state::running;
+				break;
+			default:
+				camera_log.error("Ignoring unknown status %d", static_cast<int>(status));
+				break;
+			}
+		}));
 
 	// Set view finder and update the settings
 	m_camera->setViewfinder(m_surface.get());
 	update_camera_settings();
-
-	// Log some states
-	handle_camera_state(m_camera->state());
-	handle_lock_status(m_camera->lockStatus(), QCamera::UserRequest);
 }
 
 void qt_camera_handler::open_camera()
@@ -65,7 +81,7 @@ void qt_camera_handler::open_camera()
 	if (!m_camera)
 	{
 		camera_log.error("No camera found");
-		m_state = camera_handler_state::closed;
+		m_state = camera_handler_state::not_available;
 		return;
 	}
 
@@ -93,8 +109,6 @@ void qt_camera_handler::open_camera()
 
 	// Update camera and view finder settings
 	update_camera_settings();
-
-	m_state = camera_handler_state::open;
 }
 
 void qt_camera_handler::close_camera()
@@ -104,7 +118,7 @@ void qt_camera_handler::close_camera()
 	if (!m_camera)
 	{
 		camera_log.error("No camera found");
-		m_state = camera_handler_state::closed;
+		m_state = camera_handler_state::not_available;
 		return;
 	}
 
@@ -115,7 +129,6 @@ void qt_camera_handler::close_camera()
 
 	// Unload/close camera
 	m_camera->unload();
-	m_state = camera_handler_state::closed;
 }
 
 void qt_camera_handler::start_camera()
@@ -125,7 +138,7 @@ void qt_camera_handler::start_camera()
 	if (!m_camera)
 	{
 		camera_log.error("No camera found");
-		m_state = camera_handler_state::closed;
+		m_state = camera_handler_state::not_available;
 		return;
 	}
 
@@ -141,7 +154,6 @@ void qt_camera_handler::start_camera()
 
 	// Start camera. We will start receiving frames now.
 	m_camera->start();
-	m_state = camera_handler_state::running;
 }
 
 void qt_camera_handler::stop_camera()
@@ -151,7 +163,7 @@ void qt_camera_handler::stop_camera()
 	if (!m_camera)
 	{
 		camera_log.error("No camera found");
-		m_state = camera_handler_state::closed;
+		m_state = camera_handler_state::not_available;
 		return;
 	}
 
@@ -162,7 +174,6 @@ void qt_camera_handler::stop_camera()
 
 	// Stop camera. The camera will still be drawing power.
 	m_camera->stop();
-	m_state = camera_handler_state::open;
 }
 
 void qt_camera_handler::set_format(s32 format, u32 bytes_per_pixel)
@@ -200,53 +211,34 @@ u64 qt_camera_handler::frame_number() const
 	return m_surface ? m_surface->frame_number() : 0;
 }
 
-bool qt_camera_handler::get_image(u8* buf, u64 size, u32& width, u32& height, u64& frame_number, u64& bytes_read)
+camera_handler_base::camera_handler_state qt_camera_handler::get_image(u8* buf, u64 size, u32& width, u32& height, u64& frame_number, u64& bytes_read)
 {
 	width = 0;
 	height = 0;
 	frame_number = 0;
 	bytes_read = 0;
 
-	// Check for errors
-	if (!m_camera || !m_surface || m_state != camera_handler_state::running)
+	if (!m_camera || !m_surface)
 	{
-		camera_log.error("Error: camera invalid");
-		m_state = camera_handler_state::closed;
-		return false;
+		camera_log.fatal("Error: camera invalid");
+		m_state = camera_handler_state::not_available;
+		return camera_handler_state::not_available;
 	}
 
-	if (QCamera::Error error = m_camera->error(); error != QCamera::NoError)
+	// Backup current state. State may change through events.
+	const camera_handler_state current_state = m_state;
+
+	if (current_state == camera_handler_state::running)
 	{
-		camera_log.error("Error: \"%s\" (error=%d)", m_camera ? m_camera->errorString().toStdString() : "", static_cast<int>(error));
-		m_state = camera_handler_state::closed;
-		return false;
+		// Copy latest image into out buffer.
+		m_surface->get_image(buf, size, width, height, frame_number, bytes_read);
+	}
+	else
+	{
+		camera_log.error("Camera not running (m_state=%d)", static_cast<int>(current_state));
 	}
 
-	switch (QCamera::Status status = m_camera->status())
-	{
-	case QCamera::UnavailableStatus:
-	case QCamera::UnloadedStatus:
-	case QCamera::UnloadingStatus:
-		camera_log.error("Camera not open. State=%d", static_cast<int>(status));
-		m_state = camera_handler_state::closed;
-		return false;
-	case QCamera::LoadedStatus:
-	case QCamera::StandbyStatus:
-	case QCamera::StoppingStatus:
-		camera_log.error("Camera not active. State=%d", static_cast<int>(status));
-		m_state = camera_handler_state::open;
-		return false;
-	case QCamera::LoadingStatus:
-	case QCamera::StartingStatus:
-	case QCamera::ActiveStatus:
-	default:
-		break;
-	}
-
-	// Copy latest image into out buffer.
-	m_surface->get_image(buf, size, width, height, frame_number, bytes_read);
-
-	return true;
+	return current_state;
 }
 
 void qt_camera_handler::update_camera_settings()
@@ -305,29 +297,4 @@ void qt_camera_handler::update_camera_settings()
 		m_surface->set_format(m_format, m_bytes_per_pixel);
 		m_surface->set_mirrored(m_mirrored);
 	}
-}
-
-void qt_camera_handler::handle_camera_state(QCamera::State state)
-{
-	camera_log.notice("Camera state changed to %d", static_cast<int>(state));
-}
-
-void qt_camera_handler::handle_camera_status(QCamera::Status status)
-{
-	camera_log.notice("Camera status changed to %d", static_cast<int>(status));
-}
-
-void qt_camera_handler::handle_lock_status(QCamera::LockStatus status, QCamera::LockChangeReason reason)
-{
-	camera_log.notice("Camera lock status changed to %d (reason=%d)", static_cast<int>(status), static_cast<int>(reason));
-}
-
-void qt_camera_handler::handle_capture_modes(QCamera::CaptureModes capture_modes)
-{
-	camera_log.notice("Camera capture modes changed to %d", static_cast<int>(capture_modes));
-}
-
-void qt_camera_handler::handle_camera_error(QCamera::Error error)
-{
-	camera_log.error("Error: \"%s\" (error=%d)", m_camera ? m_camera->errorString().toStdString() : "", static_cast<int>(error));
 }
