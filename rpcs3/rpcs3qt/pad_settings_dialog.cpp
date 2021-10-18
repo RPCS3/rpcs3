@@ -210,9 +210,6 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 
 	// Resize in order to fit into our scroll area
 	ResizeDialog();
-
-	// Restrict out inner layout size. This is necessary because redrawing things will slow down the dialog otherwise.
-	ui->mainLayout->setSizeConstraint(QLayout::SizeConstraint::SetFixedSize);
 }
 
 pad_settings_dialog::~pad_settings_dialog()

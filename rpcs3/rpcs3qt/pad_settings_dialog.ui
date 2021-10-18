@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>866</width>
-    <height>715</height>
+    <width>500</width>
+    <height>380</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -37,8 +37,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>848</width>
-        <height>668</height>
+        <width>858</width>
+        <height>715</height>
        </rect>
       </property>
       <widget class="QWidget" name="tab">
