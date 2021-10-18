@@ -555,13 +555,15 @@ error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 
 	std::tie(info->width, info->height) = get_video_resolution(*info);
 
+	error_code error = CELL_OK;
 	atomic_t<bool> wake_up = false;
 
-	Emu.CallAfter([&wake_up, &g_camera]()
+	Emu.CallAfter([&wake_up, &error, &g_camera]()
 	{
 		g_camera.handler.reset();
 		g_camera.handler = Emu.GetCallbacks().get_camera_handler();
 		g_camera.handler->open_camera();
+		error = g_camera.on_handler_state(g_camera.handler->get_state());
 		wake_up = true;
 		wake_up.notify_one();
 	});
@@ -569,6 +571,11 @@ error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 	while (!wake_up && !Emu.IsStopped())
 	{
 		thread_ctrl::wait_on(wake_up, false);
+	}
+
+	if (error != CELL_OK)
+	{
+		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
 
 	g_camera.is_open = true;
@@ -1215,6 +1222,7 @@ error_code cellCameraStart(s32 dev_num)
 	}
 
 	auto& g_camera = g_fxo->get<camera_thread>();
+	std::lock_guard lock(g_camera.mutex);
 
 	if (!g_camera.is_attached)
 	{
@@ -1229,11 +1237,13 @@ error_code cellCameraStart(s32 dev_num)
 		g_camera.handler->set_frame_rate(g_camera.info.framerate);
 		g_camera.handler->set_resolution(g_camera.info.width, g_camera.info.height);
 
+		error_code error = CELL_OK;
 		atomic_t<bool> wake_up = false;
 
-		Emu.CallAfter([&wake_up, handler = g_camera.handler]()
+		Emu.CallAfter([&wake_up, &error, &g_camera]()
 		{
-			handler->start_camera();
+			g_camera.handler->start_camera();
+			error = g_camera.on_handler_state(g_camera.handler->get_state());
 			wake_up = true;
 			wake_up.notify_one();
 		});
@@ -1241,6 +1251,11 @@ error_code cellCameraStart(s32 dev_num)
 		while (!wake_up && !Emu.IsStopped())
 		{
 			thread_ctrl::wait_on(wake_up, false);
+		}
+
+		if (error != CELL_OK)
+		{
+			return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 		}
 	}
 
@@ -1357,7 +1372,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 
 		if (error != CELL_OK)
 		{
-			return error;
+			return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 		}
 
 		if (read)
@@ -1417,6 +1432,7 @@ error_code cellCameraStop(s32 dev_num)
 	}
 
 	auto& g_camera = g_fxo->get<camera_thread>();
+	std::lock_guard lock(g_camera.mutex);
 
 	if (!g_camera.is_attached)
 	{
@@ -1624,8 +1640,8 @@ void camera_context::operator()()
 		{
 			if (read_mode.load() == CELL_CAMERA_READ_DIRECT)
 			{
+				std::lock_guard lock(mutex);
 				{
-					std::lock_guard lock(mutex);
 					send_frame_update_event = info.pbuf[pbuf_write_index] && !pbuf_locked[pbuf_write_index];
 				}
 
@@ -1659,6 +1675,7 @@ void camera_context::operator()()
 			}
 			else
 			{
+				std::lock_guard lock(mutex);
 				atomic_t<bool> wake_up = false;
 
 				Emu.CallAfter([&]()
