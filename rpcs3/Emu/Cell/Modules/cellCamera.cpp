@@ -541,15 +541,18 @@ error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 
 	std::lock_guard lock(g_camera.mutex);
 
-	if (info->read_mode == CELL_CAMERA_READ_FUNCCALL && !info->buffer)
-	{
-		info->buffer = vm::cast(vm::alloc(vbuf_size, vm::main));
-		info->bytesize = vbuf_size;
-	}
-	else if (info->read_mode && !info->pbuf[0] && !info->pbuf[1])
+	// TODO: find out if the buffers are also checked for nullptr
+	if (info->read_mode == CELL_CAMERA_READ_DIRECT)
 	{
 		info->pbuf[0] = vm::cast(vm::alloc(vbuf_size, vm::main));
 		info->pbuf[1] = vm::cast(vm::alloc(vbuf_size, vm::main));
+
+		// TODO: verify
+		info->bytesize = vbuf_size;
+	}
+	else
+	{
+		info->buffer = vm::cast(vm::alloc(vbuf_size, vm::main));
 		info->bytesize = vbuf_size;
 	}
 
@@ -604,7 +607,18 @@ error_code cellCameraClose(s32 dev_num)
 	std::lock_guard lock(g_camera.mutex);
 	g_camera.is_streaming = false;
 
-	vm::dealloc(g_camera.info.buffer.addr(), vm::main);
+	if (g_camera.info.buffer)
+	{
+		vm::dealloc(g_camera.info.buffer.addr(), vm::main);
+	}
+	if (g_camera.info.pbuf[0])
+	{
+		vm::dealloc(g_camera.info.pbuf[0].addr(), vm::main);
+	}
+	if (g_camera.info.pbuf[1])
+	{
+		vm::dealloc(g_camera.info.pbuf[1].addr(), vm::main);
+	}
 
 	g_camera.close_camera();
 	g_camera.is_open = false;
@@ -1776,6 +1790,19 @@ void camera_context::reset_state()
 	pbuf_write_index = 0;
 	pbuf_locked[0] = false;
 	pbuf_locked[1] = false;
+
+	if (info.buffer)
+	{
+		vm::dealloc(info.buffer.addr(), vm::main);
+	}
+	if (info.pbuf[0])
+	{
+		vm::dealloc(info.pbuf[0].addr(), vm::main);
+	}
+	if (info.pbuf[1])
+	{
+		vm::dealloc(info.pbuf[1].addr(), vm::main);
+	}
 
 	std::scoped_lock lock(mutex_notify_data_map);
 	notify_data_map.clear();
