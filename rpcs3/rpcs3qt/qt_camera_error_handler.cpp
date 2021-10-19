@@ -3,6 +3,28 @@
 
 LOG_CHANNEL(camera_log, "Camera");
 
+template <>
+void fmt_class_string<QCamera::Status>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](QCamera::Status value)
+	{
+		switch (value)
+		{
+		case QCamera::Status::UnavailableStatus: return "Unavailable";
+		case QCamera::Status::UnloadedStatus: return "Unloaded";
+		case QCamera::Status::LoadingStatus: return "Loading";
+		case QCamera::Status::UnloadingStatus: return "Unloading";
+		case QCamera::Status::LoadedStatus: return "Loaded";
+		case QCamera::Status::StandbyStatus: return "Standby";
+		case QCamera::Status::StartingStatus: return "Starting";
+		case QCamera::Status::StoppingStatus: return "Stopping";
+		case QCamera::Status::ActiveStatus: return "Active";
+		}
+
+		return unknown;
+	});
+}
+
 qt_camera_error_handler::qt_camera_error_handler(std::shared_ptr<QCamera> camera, std::function<void(QCamera::Status)> status_callback)
 	: m_camera(std::move(camera))
 	, m_status_callback(std::move(status_callback))
@@ -34,7 +56,7 @@ void qt_camera_error_handler::handle_camera_state(QCamera::State state)
 
 void qt_camera_error_handler::handle_camera_status(QCamera::Status status)
 {
-	camera_log.notice("Camera status changed to %d", static_cast<int>(status));
+	camera_log.notice("Camera status changed to %s", status);
 
 	if (m_status_callback)
 	{
