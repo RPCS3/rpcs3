@@ -20,7 +20,7 @@ public:
 	void close_camera() override;
 	void start_camera() override;
 	void stop_camera() override;
-	void set_format(s32 format, u32 bytes_per_pixel) override;
+	void set_format(s32 format, u32 bytesize) override;
 	void set_frame_rate(u32 frame_rate) override;
 	void set_resolution(u32 width, u32 height) override;
 	void set_mirrored(bool mirrored) override;

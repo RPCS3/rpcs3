@@ -93,7 +93,7 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 		}
 	}
 
-	const u64 new_size = m_width * m_height * m_bytes_per_pixel;
+	const u64 new_size = m_bytesize;
 	image_buffer& image_buffer = m_image_buffer[m_write_index];
 
 	// Reset buffer if necessary
@@ -226,8 +226,8 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 	// Unmap frame memory
 	tmp.unmap();
 
-	camera_log.trace("Wrote image to video surface. index=%d, m_frame_number=%d, width=%d, height=%d, bytes_per_pixel=%d",
-		m_write_index, m_frame_number.load(), m_width, m_height, m_bytes_per_pixel);
+	camera_log.trace("Wrote image to video surface. index=%d, m_frame_number=%d, width=%d, height=%d, bytesize=%d",
+		m_write_index, m_frame_number.load(), m_width, m_height, m_bytesize);
 
 	// Toggle write/read index
 	std::lock_guard lock(m_mutex);
@@ -237,12 +237,12 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 	return true;
 }
 
-void qt_camera_video_surface::set_format(s32 format, u32 bytes_per_pixel)
+void qt_camera_video_surface::set_format(s32 format, u32 bytesize)
 {
-	camera_log.notice("Setting format: format=%d, bytes_per_pixel=%d", format, bytes_per_pixel);
+	camera_log.notice("Setting format: format=%d, bytesize=%d", format, bytesize);
 
 	m_format = format;
-	m_bytes_per_pixel = bytes_per_pixel;
+	m_bytesize = bytesize;
 }
 
 void qt_camera_video_surface::set_resolution(u32 width, u32 height)

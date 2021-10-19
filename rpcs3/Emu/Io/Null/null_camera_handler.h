@@ -12,10 +12,10 @@ public:
 	void start_camera() override { m_state = camera_handler_state::running; };
 	void stop_camera() override { m_state = camera_handler_state::open; };
 
-	void set_format(s32 format, u32 bytes_per_pixel) override
+	void set_format(s32 format, u32 bytesize) override
 	{
 		m_format = format;
-		m_bytes_per_pixel = bytes_per_pixel;
+		m_bytesize = bytesize;
 	}
 
 	void set_frame_rate(u32 frame_rate) override

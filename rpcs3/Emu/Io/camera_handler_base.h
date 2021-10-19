@@ -36,7 +36,7 @@ protected:
 	atomic_t<camera_handler_state> m_state = camera_handler_state::not_available;
 	bool m_mirrored = false;
 	s32 m_format = 2; // CELL_CAMERA_RAW8
-	u32 m_bytes_per_pixel = 1;
+	u32 m_bytesize = 0;
 	u32 m_width = 640;
 	u32 m_height = 480;
 	u32 m_frame_rate = 30;
