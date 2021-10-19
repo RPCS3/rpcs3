@@ -181,10 +181,10 @@ void qt_camera_handler::stop_camera()
 	m_camera->stop();
 }
 
-void qt_camera_handler::set_format(s32 format, u32 bytes_per_pixel)
+void qt_camera_handler::set_format(s32 format, u32 bytesize)
 {
 	m_format = format;
-	m_bytes_per_pixel = bytes_per_pixel;
+	m_bytesize = bytesize;
 
 	update_camera_settings();
 }
@@ -299,7 +299,7 @@ void qt_camera_handler::update_camera_settings()
 	if (m_surface)
 	{
 		m_surface->set_resolution(m_width, m_height);
-		m_surface->set_format(m_format, m_bytes_per_pixel);
+		m_surface->set_format(m_format, m_bytesize);
 		m_surface->set_mirrored(m_mirrored);
 	}
 }

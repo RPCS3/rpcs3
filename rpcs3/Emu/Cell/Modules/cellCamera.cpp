@@ -1692,6 +1692,7 @@ error_code camera_context::start_camera()
 		handler->set_mirrored(!!attr[CELL_CAMERA_MIRRORFLAG].v1);
 		handler->set_frame_rate(info.framerate);
 		handler->set_resolution(info.width, info.height);
+		handler->set_format(info.format, info.bytesize);
 
 		atomic_t<bool> wake_up = false;
 

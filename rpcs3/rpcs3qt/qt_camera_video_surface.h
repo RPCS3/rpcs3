@@ -14,7 +14,7 @@ public:
 	QList<QVideoFrame::PixelFormat> supportedPixelFormats(QAbstractVideoBuffer::HandleType type = QAbstractVideoBuffer::NoHandle) const override;
 	bool present(const QVideoFrame& frame) override;
 
-	void set_format(s32 format, u32 bytes_per_pixel);
+	void set_format(s32 format, u32 bytesize);
 	void set_resolution(u32 width, u32 height);
 	void set_mirrored(bool mirrored);
 
@@ -28,7 +28,7 @@ private:
 	bool m_front_facing = false;
 	bool m_mirrored = false; // Set by cellCamera
 	s32 m_format = 2; // CELL_CAMERA_RAW8, set by cellCamera
-	u32 m_bytes_per_pixel = 1;
+	u32 m_bytesize = 0;
 	u32 m_width = 640;
 	u32 m_height = 480;
 
