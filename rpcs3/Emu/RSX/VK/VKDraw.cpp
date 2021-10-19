@@ -763,6 +763,36 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	m_frame_stats.vertex_upload_time += m_profiler.duration();
 
+	// Faults are allowed during vertex upload. Ensure consistent CB state after uploads.
+	// Queries are spawned and closed outside render pass scope for consistency reasons.
+	if (m_current_command_buffer->flags & vk::command_buffer::cb_load_occluson_task)
+	{
+		u32 occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
+		if (occlusion_id == umax)
+		{
+			// Force flush
+			rsx_log.error("[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
+			ZCULL_control::sync(this);
+
+			occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
+			if (occlusion_id == umax)
+			{
+				//rsx_log.error("Occlusion pool overflow");
+				if (m_current_task) m_current_task->result = 1;
+			}
+		}
+
+		// Begin query
+		m_occlusion_query_manager->begin_query(*m_current_command_buffer, occlusion_id);
+
+		auto& data = m_occlusion_map[m_active_query_info->driver_handle];
+		data.indices.push_back(occlusion_id);
+		data.set_sync_command_buffer(m_current_command_buffer);
+
+		m_current_command_buffer->flags &= ~vk::command_buffer::cb_load_occluson_task;
+		m_current_command_buffer->flags |= (vk::command_buffer::cb_has_occlusion_task | vk::command_buffer::cb_has_open_query);
+	}
+
 	auto persistent_buffer = m_persistent_attribute_storage ? m_persistent_attribute_storage->value : null_buffer_view->value;
 	auto volatile_buffer = m_volatile_attribute_storage ? m_volatile_attribute_storage->value : null_buffer_view->value;
 	bool update_descriptors = false;
@@ -1022,37 +1052,6 @@ void VKGSRender::end()
 
 	m_texture_cache.release_uncached_temporary_subresources();
 	m_frame_stats.textures_upload_time += m_profiler.duration();
-
-	if (m_current_command_buffer->flags & vk::command_buffer::cb_load_occluson_task)
-	{
-		u32 occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
-		if (occlusion_id == umax)
-		{
-			// Force flush
-			rsx_log.error("[Performance Warning] Out of free occlusion slots. Forcing hard sync.");
-			ZCULL_control::sync(this);
-
-			occlusion_id = m_occlusion_query_manager->allocate_query(*m_current_command_buffer);
-			if (occlusion_id == umax)
-			{
-				//rsx_log.error("Occlusion pool overflow");
-				if (m_current_task) m_current_task->result = 1;
-			}
-		}
-
-		// Begin query
-		m_occlusion_query_manager->begin_query(*m_current_command_buffer, occlusion_id);
-
-		auto &data = m_occlusion_map[m_active_query_info->driver_handle];
-		data.indices.push_back(occlusion_id);
-		data.set_sync_command_buffer(m_current_command_buffer);
-
-		m_current_command_buffer->flags &= ~vk::command_buffer::cb_load_occluson_task;
-		m_current_command_buffer->flags |= (vk::command_buffer::cb_has_occlusion_task | vk::command_buffer::cb_has_open_query);
-	}
-
-	bool primitive_emulated = false;
-	vk::get_appropriate_topology(rsx::method_registers.current_draw_clause.primitive, primitive_emulated);
 
 	// Apply write memory barriers
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil)) ds->write_barrier(*m_current_command_buffer);
