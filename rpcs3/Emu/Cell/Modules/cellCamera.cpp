@@ -555,25 +555,7 @@ error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 
 	std::tie(info->width, info->height) = get_video_resolution(*info);
 
-	error_code error = CELL_OK;
-	atomic_t<bool> wake_up = false;
-
-	Emu.CallAfter([&wake_up, &error, &g_camera]()
-	{
-		g_camera.handler.reset();
-		g_camera.handler = Emu.GetCallbacks().get_camera_handler();
-		g_camera.handler->open_camera();
-		error = g_camera.on_handler_state(g_camera.handler->get_state());
-		wake_up = true;
-		wake_up.notify_one();
-	});
-
-	while (!wake_up && !Emu.IsStopped())
-	{
-		thread_ctrl::wait_on(wake_up, false);
-	}
-
-	if (error != CELL_OK)
+	if (error_code error = g_camera.open_camera())
 	{
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
@@ -624,23 +606,7 @@ error_code cellCameraClose(s32 dev_num)
 
 	vm::dealloc(g_camera.info.buffer.addr(), vm::main);
 
-	if (g_camera.handler)
-	{
-		atomic_t<bool> wake_up = false;
-
-		Emu.CallAfter([&wake_up, handler = g_camera.handler]()
-		{
-			handler->close_camera();
-			wake_up = true;
-			wake_up.notify_one();
-		});
-
-		while (!wake_up && !Emu.IsStopped())
-		{
-			thread_ctrl::wait_on(wake_up, false);
-		}
-	}
-
+	g_camera.close_camera();
 	g_camera.is_open = false;
 
 	return CELL_OK;
@@ -1229,35 +1195,12 @@ error_code cellCameraStart(s32 dev_num)
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
 
-	// TODO: Yet another CELL_CAMERA_ERROR_TIMEOUT
-
-	if (g_camera.handler)
+	if (error_code error = g_camera.start_camera())
 	{
-		g_camera.handler->set_mirrored(!!g_camera.attr[CELL_CAMERA_MIRRORFLAG].v1);
-		g_camera.handler->set_frame_rate(g_camera.info.framerate);
-		g_camera.handler->set_resolution(g_camera.info.width, g_camera.info.height);
-
-		error_code error = CELL_OK;
-		atomic_t<bool> wake_up = false;
-
-		Emu.CallAfter([&wake_up, &error, &g_camera]()
-		{
-			g_camera.handler->start_camera();
-			error = g_camera.on_handler_state(g_camera.handler->get_state());
-			wake_up = true;
-			wake_up.notify_one();
-		});
-
-		while (!wake_up && !Emu.IsStopped())
-		{
-			thread_ctrl::wait_on(wake_up, false);
-		}
-
-		if (error != CELL_OK)
-		{
-			return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
-		}
+		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
+
+	// TODO: Yet another CELL_CAMERA_ERROR_TIMEOUT
 
 	g_camera.start_timestamp = get_guest_system_time();
 	g_camera.is_streaming = true;
@@ -1354,23 +1297,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 		u64 frame_number{};
 		u64 bytes_read{};
 
-		atomic_t<bool> wake_up = false;
-		error_code error = CELL_OK;
-
-		Emu.CallAfter([&]()
-		{
-			camera_handler_base::camera_handler_state result = g_camera.handler->get_image(g_camera.info.buffer.get_ptr(), g_camera.info.bytesize, width, height, frame_number, bytes_read);
-			error = g_camera.on_handler_state(result);
-			wake_up = true;
-			wake_up.notify_one();
-		});
-
-		while (!wake_up && !Emu.IsStopped())
-		{
-			thread_ctrl::wait_on(wake_up, false);
-		}
-
-		if (error != CELL_OK)
+		if (error_code error = g_camera.get_camera_frame(g_camera.info.buffer.get_ptr(), width, height, frame_number, bytes_read))
 		{
 			return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 		}
@@ -1444,23 +1371,7 @@ error_code cellCameraStop(s32 dev_num)
 		return CELL_CAMERA_ERROR_NOT_STARTED;
 	}
 
-	if (g_camera.handler)
-	{
-		atomic_t<bool> wake_up = false;
-
-		Emu.CallAfter([&wake_up, handler = g_camera.handler]()
-		{
-			handler->stop_camera();
-			wake_up = true;
-			wake_up.notify_one();
-		});
-
-		while (!wake_up && !Emu.IsStopped())
-		{
-			thread_ctrl::wait_on(wake_up, false);
-		}
-	}
-
+	g_camera.stop_camera();
 	g_camera.is_streaming = false;
 
 	return CELL_OK;
@@ -1647,25 +1558,13 @@ void camera_context::operator()()
 
 				if (handler && send_frame_update_event)
 				{
-					atomic_t<bool> wake_up = false;
-					camera_handler_base::camera_handler_state result = camera_handler_base::camera_handler_state::not_available;
+					u32 width{};
+					u32 height{};
+					u64 frame_number{};
+					u64 bytes_read{};
 
-					Emu.CallAfter([&]()
-					{
-						u32 width{};
-						u32 height{};
-						u64 frame_number{};
-						u64 bytes_read{};
-						result = handler->get_image(info.pbuf[pbuf_write_index].get_ptr(), info.bytesize, width, height, frame_number, bytes_read);
-						send_frame_update_event = on_handler_state(result) = CELL_OK;
-						wake_up = true;
-						wake_up.notify_one();
-					});
-
-					while (!wake_up && !Emu.IsStopped())
-					{
-						thread_ctrl::wait_on(wake_up, false);
-					}
+					error_code error = get_camera_frame(info.pbuf[pbuf_write_index].get_ptr(), width, height, frame_number, bytes_read);
+					send_frame_update_event = error == CELL_OK;
 
 					if (send_frame_update_event)
 					{
@@ -1743,6 +1642,124 @@ void camera_context::operator()()
 				break;
 
 			lv2_obj::wait_timeout(frame_target_time - time_passed);
+		}
+	}
+}
+
+error_code camera_context::open_camera()
+{
+	error_code error = CELL_OK;
+	atomic_t<bool> wake_up = false;
+
+	Emu.CallAfter([&wake_up, &error, this]()
+	{
+		handler.reset();
+		handler = Emu.GetCallbacks().get_camera_handler();
+		handler->open_camera();
+		error = on_handler_state(handler->get_state());
+		wake_up = true;
+		wake_up.notify_one();
+	});
+
+	while (!wake_up && !Emu.IsStopped())
+	{
+		thread_ctrl::wait_on(wake_up, false);
+	}
+
+	return error;
+}
+
+error_code camera_context::start_camera()
+{
+	error_code error = CELL_OK;
+
+	if (handler)
+	{
+		handler->set_mirrored(!!attr[CELL_CAMERA_MIRRORFLAG].v1);
+		handler->set_frame_rate(info.framerate);
+		handler->set_resolution(info.width, info.height);
+
+		atomic_t<bool> wake_up = false;
+
+		Emu.CallAfter([&wake_up, &error, this]()
+		{
+			handler->start_camera();
+			error = on_handler_state(handler->get_state());
+			wake_up = true;
+			wake_up.notify_one();
+		});
+
+		while (!wake_up && !Emu.IsStopped())
+		{
+			thread_ctrl::wait_on(wake_up, false);
+		}
+	}
+
+	return error;
+}
+
+error_code camera_context::get_camera_frame(u8* dst, u32& width, u32& height, u64& frame_number, u64& bytes_read)
+{
+	error_code error = CELL_OK;
+
+	if (handler)
+	{
+		atomic_t<bool> wake_up = false;
+		error_code error = CELL_OK;
+
+		Emu.CallAfter([&]()
+		{
+			camera_handler_base::camera_handler_state result = handler->get_image(dst, info.bytesize, width, height, frame_number, bytes_read);
+			error = on_handler_state(result);
+			wake_up = true;
+			wake_up.notify_one();
+		});
+
+		while (!wake_up && !Emu.IsStopped())
+		{
+			thread_ctrl::wait_on(wake_up, false);
+		}
+	}
+
+	return error;
+}
+
+void camera_context::stop_camera()
+{
+	if (handler)
+	{
+		atomic_t<bool> wake_up = false;
+
+		Emu.CallAfter([&wake_up, this]()
+		{
+			handler->stop_camera();
+			wake_up = true;
+			wake_up.notify_one();
+		});
+
+		while (!wake_up && !Emu.IsStopped())
+		{
+			thread_ctrl::wait_on(wake_up, false);
+		}
+	}
+}
+
+void camera_context::close_camera()
+{
+	if (handler)
+	{
+		atomic_t<bool> wake_up = false;
+
+		Emu.CallAfter([&wake_up, this]()
+		{
+			handler->close_camera();
+			wake_up = true;
+			wake_up.notify_one();
+		});
+
+		while (!wake_up && !Emu.IsStopped())
+		{
+			thread_ctrl::wait_on(wake_up, false);
 		}
 	}
 }
