@@ -173,49 +173,69 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 			synchronizer.waitForFinished();
 			break;
 		}
-		//case CELL_CAMERA_Y0_U_Y1_V:
-		case CELL_CAMERA_YUV422:
+		//case CELL_CAMERA_YUV422:
+		case CELL_CAMERA_Y0_U_Y1_V:
+		case CELL_CAMERA_V_Y1_U_Y0:
 		{
-			// Simple conversion from stackoverflow.
-			const int rgb_bytes_per_pixel = 4;
-			const int yuv_bytes_per_pixel = 2;
-			const int yuv_pitch = image_buffer.width * yuv_bytes_per_pixel;
-
-			for (u32 y = 0; y < image_buffer.height; y++)
+			// Simple RGB to Y0_U_Y1_V conversion from stackoverflow.
+			const auto convert_to_yuv422 = [&image_buffer, &image, format = m_format](int y_begin, int y_end)
 			{
-				const uint8_t* rgb_row_ptr = image.constScanLine(y);
-				uint8_t* yuv_row_ptr       = &image_buffer.data[y * yuv_pitch];
+				constexpr int yuv_bytes_per_pixel = 2;
+				const int yuv_pitch = image_buffer.width * yuv_bytes_per_pixel;
 
-				for (u32 x = 0; x < image_buffer.width - 1; x += 2)
+				const int y0_offset = (format == CELL_CAMERA_Y0_U_Y1_V) ? 0 : 3;
+				const int u_offset  = (format == CELL_CAMERA_Y0_U_Y1_V) ? 1 : 2;
+				const int y1_offset = (format == CELL_CAMERA_Y0_U_Y1_V) ? 2 : 1;
+				const int v_offset  = (format == CELL_CAMERA_Y0_U_Y1_V) ? 3 : 0;
+
+				for (u32 y = y_begin; y < std::min<int>(image_buffer.height, image.height()) && y < y_end; y++)
 				{
-					const int rgb_index = x * rgb_bytes_per_pixel;
-					const int yuv_index = x * yuv_bytes_per_pixel;
+					uint8_t* yuv_row_ptr = &image_buffer.data[y * yuv_pitch];
 
-					const uint8_t R1 =  rgb_row_ptr[rgb_index + 0];
-					const uint8_t G1 =  rgb_row_ptr[rgb_index + 1];
-					const uint8_t B1 =  rgb_row_ptr[rgb_index + 2];
-					//const uint8_t A1 = rgb_row_ptr[rgb_index + 3];
-					const uint8_t R2 = rgb_row_ptr[rgb_index + 4];
-					const uint8_t G2 = rgb_row_ptr[rgb_index + 5];
-					const uint8_t B2 = rgb_row_ptr[rgb_index + 6];
-					//const uint8_t A2 = rgb_row_ptr[rgb_index + 7];
+					for (u32 x = 0; x < std::min<int>(image_buffer.width, image.width()) - 1; x += 2)
+					{
+						const QRgb pixel_1 = image.pixel(x, y);
+						const QRgb pixel_2 = image.pixel(x + 1, y);
 
-					const int Y  = (0.257f * R1) + (0.504f * G1) + (0.098f * B1) + 16.0f;
-					const int U  = -(0.148f * R1) - (0.291f * G1) + (0.439f * B1) + 128.0f;
-					const int V  = (0.439f * R1) - (0.368f * G1) - (0.071f * B1) + 128.0f;
-					const int Y2 = (0.257f * R2) + (0.504f * G2) + (0.098f * B2) + 16.0f;
+						const double r1 = qRed(pixel_1);
+						const double g1 = qGreen(pixel_1);
+						const double b1 = qBlue(pixel_1);
+						const double r2 = qRed(pixel_2);
+						const double g2 = qGreen(pixel_2);
+						const double b2 = qBlue(pixel_2);
 
-					yuv_row_ptr[yuv_index + 0] = std::max<u8>(0, std::min<u8>(Y, 255));
-					yuv_row_ptr[yuv_index + 1] = std::max<u8>(0, std::min<u8>(U, 255));
-					yuv_row_ptr[yuv_index + 2] = std::max<u8>(0, std::min<u8>(Y2, 255));
-					yuv_row_ptr[yuv_index + 3] = std::max<u8>(0, std::min<u8>(V, 255));
+						const int y0 =  (0.257 * r1) + (0.504 * g1) + (0.098 * b1) +  16.0;
+						const int u  = -(0.148 * r1) - (0.291 * g1) + (0.439 * b1) + 128.0;
+						const int v  =  (0.439 * r1) - (0.368 * g1) - (0.071 * b1) + 128.0;
+						const int y1 =  (0.257 * r2) + (0.504 * g2) + (0.098 * b2) +  16.0;
+
+						const int yuv_index = x * yuv_bytes_per_pixel;
+						yuv_row_ptr[yuv_index + y0_offset] = std::max<u8>(0, std::min<u8>(y0, 255));
+						yuv_row_ptr[yuv_index + u_offset]  = std::max<u8>(0, std::min<u8>( u, 255));
+						yuv_row_ptr[yuv_index + y1_offset] = std::max<u8>(0, std::min<u8>(y1, 255));
+						yuv_row_ptr[yuv_index + v_offset]  = std::max<u8>(0, std::min<u8>( v, 255));
+					}
 				}
+			};
+
+			// Use a multithreaded workload. The faster we get this done, the better.
+			constexpr u32 thread_count = 4;
+			const int lines_per_thread = std::ceil(image_buffer.height / static_cast<double>(thread_count));
+			int y_begin = 0;
+			int y_end = lines_per_thread;
+
+			QFutureSynchronizer<void> synchronizer;
+			for (u32 i = 0; i < thread_count; i++)
+			{
+				synchronizer.addFuture(QtConcurrent::run(convert_to_yuv422, y_begin, y_end));
+				y_begin = y_end;
+				y_end += lines_per_thread;
 			}
+			synchronizer.waitForFinished();
 			break;
 		}
 		case CELL_CAMERA_RAW10:
 		case CELL_CAMERA_YUV420:
-		case CELL_CAMERA_V_Y1_U_Y0:
 		case CELL_CAMERA_FORMAT_UNKNOWN:
 		default:
 			std::memcpy(image_buffer.data, image.constBits(), std::min<usz>(image_buffer.size, image.height() * image.bytesPerLine()));
