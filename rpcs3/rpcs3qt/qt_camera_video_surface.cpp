@@ -4,6 +4,8 @@
 #include "Emu/Cell/Modules/cellCamera.h"
 #include "Emu/system_config.h"
 
+#include <QtConcurrent>
+
 LOG_CHANNEL(camera_log, "Camera");
 
 qt_camera_video_surface::qt_camera_video_surface(bool front_facing, QObject *parent)
@@ -42,18 +44,27 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 {
 	if (!frame.isValid())
 	{
+		camera_log.error("Received invalid video frame");
 		return false;
 	}
 
-	// Get video image
-	QImage image = frame.image();
+	// Get video image. Map frame for faster read operations.
+	QVideoFrame tmp(frame);
+	if (!tmp.map(QAbstractVideoBuffer::ReadOnly))
+	{
+		camera_log.error("Failed to map video frame");
+		return false;
+	}
+
+	// Create shallow copy
+	QImage image(tmp.bits(), tmp.width(), tmp.height(), tmp.bytesPerLine(), QVideoFrame::imageFormatFromPixelFormat(tmp.pixelFormat()));
 
 	if (!image.isNull())
 	{
 		// Scale image if necessary
 		if (m_width > 0 && m_height > 0 && m_width != image.width() && m_height != image.height())
 		{
-			image = image.scaled(m_width, m_height, Qt::AspectRatioMode::KeepAspectRatio, Qt::SmoothTransformation);
+			image = image.scaled(m_width, m_height, Qt::AspectRatioMode::IgnoreAspectRatio, Qt::SmoothTransformation);
 		}
 
 		// Determine image flip
@@ -120,28 +131,46 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 		case CELL_CAMERA_RAW8: // The game seems to expect BGGR
 		{
 			// Let's use a very simple algorithm to convert the image to raw BGGR
-			for (int y = 0; y < std::min<int>(image_buffer.height, image.height()); y++)
+			const auto convert_to_bggr = [&image_buffer, &image](int y_begin, int y_end)
 			{
-				for (int x = 0; x < std::min<int>(image_buffer.width, image.width()); x++)
+				for (int y = y_begin; y < std::min<int>(image_buffer.height, image.height()) && y < y_end; y++)
 				{
-					u8& pixel = image_buffer.data[image_buffer.width * y + x];
-					const bool is_left_pixel = (x % 2) == 0;
-					const bool is_top_pixel = (y % 2) == 0;
+					for (int x = 0; x < std::min<int>(image_buffer.width, image.width()); x++)
+					{
+						u8& pixel = image_buffer.data[image_buffer.width * y + x];
+						const bool is_left_pixel = (x % 2) == 0;
+						const bool is_top_pixel = (y % 2) == 0;
 
-					if (is_left_pixel && is_top_pixel)
-					{
-						pixel = qBlue(image.pixel(x, y));
-					}
-					else if (is_left_pixel || is_top_pixel)
-					{
-						pixel = qGreen(image.pixel(x, y));
-					}
-					else
-					{
-						pixel = qRed(image.pixel(x, y));
+						if (is_left_pixel && is_top_pixel)
+						{
+							pixel = qBlue(image.pixel(x, y));
+						}
+						else if (is_left_pixel || is_top_pixel)
+						{
+							pixel = qGreen(image.pixel(x, y));
+						}
+						else
+						{
+							pixel = qRed(image.pixel(x, y));
+						}
 					}
 				}
+			};
+
+			// Use a multithreaded workload. The faster we get this done, the better.
+			constexpr u32 thread_count = 4;
+			const int lines_per_thread = std::ceil(image_buffer.height / static_cast<double>(thread_count));
+			int y_begin = 0;
+			int y_end = lines_per_thread;
+
+			QFutureSynchronizer<void> synchronizer;
+			for (u32 i = 0; i < thread_count; i++)
+			{
+				synchronizer.addFuture(QtConcurrent::run(convert_to_bggr, y_begin, y_end));
+				y_begin = y_end;
+				y_end += lines_per_thread;
 			}
+			synchronizer.waitForFinished();
 			break;
 		}
 		//case CELL_CAMERA_Y0_U_Y1_V:
@@ -152,12 +181,12 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 			const int yuv_bytes_per_pixel = 2;
 			const int yuv_pitch = image_buffer.width * yuv_bytes_per_pixel;
 
-			for (int y = 0; y < image_buffer.height; y++)
+			for (u32 y = 0; y < image_buffer.height; y++)
 			{
 				const uint8_t* rgb_row_ptr = image.constScanLine(y);
 				uint8_t* yuv_row_ptr       = &image_buffer.data[y * yuv_pitch];
 
-				for (int x = 0; x < image_buffer.width - 1; x += 2)
+				for (u32 x = 0; x < image_buffer.width - 1; x += 2)
 				{
 					const int rgb_index = x * rgb_bytes_per_pixel;
 					const int yuv_index = x * yuv_bytes_per_pixel;
@@ -194,8 +223,11 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 		}
 	}
 
-	camera_log.trace("Wrote image to video surface. index=%d, m_frame_number=%d, width=%d, height=%d, bytesPerLine=%d",
-		m_write_index, m_frame_number.load(), image.width(), image.height(), image.bytesPerLine());
+	// Unmap frame memory
+	tmp.unmap();
+
+	camera_log.trace("Wrote image to video surface. index=%d, m_frame_number=%d, width=%d, height=%d, bytes_per_pixel=%d",
+		m_write_index, m_frame_number.load(), m_width, m_height, m_bytes_per_pixel);
 
 	// Toggle write/read index
 	std::lock_guard lock(m_mutex);
