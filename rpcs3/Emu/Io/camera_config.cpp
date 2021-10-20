@@ -24,6 +24,7 @@ bool cfg_camera::load()
 		return from_string(cfg_file.to_string());
 	}
 
+	camera_log.notice("Camera config missing. Using default settings. Path: %s", path);
 	from_default();
 	return false;
 }
