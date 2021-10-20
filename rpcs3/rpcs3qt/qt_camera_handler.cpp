@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "qt_camera_handler.h"
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include <QMediaService>
 #include <QCameraInfo>
@@ -21,22 +21,24 @@ qt_camera_handler::~qt_camera_handler()
 	close_camera();
 }
 
-void qt_camera_handler::set_camera(const QCameraInfo& cameraInfo)
+void qt_camera_handler::set_camera(const QCameraInfo& camera_info)
 {
-	if (cameraInfo.isNull())
+	if (camera_info.isNull())
 	{
-		camera_log.warning("No camera present");
+		m_surface.reset();
+		m_camera.reset();
+		m_error_handler.reset();
 		return;
 	}
 
 	// Determine if the camera is front facing, in which case we will need to flip the image horizontally.
-	const bool front_facing = cameraInfo.position() == QCamera::Position::FrontFace;
+	const bool front_facing = camera_info.position() == QCamera::Position::FrontFace;
 
-	camera_log.success("Using camera: name=\"%s\", description=\"%s\", front_facing=%d", cameraInfo.deviceName().toStdString(), cameraInfo.description().toStdString(), front_facing);
+	camera_log.success("Using camera: name=\"%s\", description=\"%s\", front_facing=%d", camera_info.deviceName().toStdString(), camera_info.description().toStdString(), front_facing);
 
 	// Create camera and video surface
 	m_surface.reset(new qt_camera_video_surface(front_facing, nullptr));
-	m_camera.reset(new QCamera(cameraInfo));
+	m_camera.reset(new QCamera(camera_info));
 	m_error_handler.reset(new qt_camera_error_handler(m_camera,
 		[this](QCamera::Status status)
 		{
@@ -72,14 +74,42 @@ void qt_camera_handler::set_camera(const QCameraInfo& cameraInfo)
 
 void qt_camera_handler::open_camera()
 {
-	// Let's use the default camera for now
-	set_camera(QCameraInfo::defaultCamera());
-
 	camera_log.notice("Loading camera");
+
+	if (const std::string camera_id = g_cfg.io.camera_id.to_string();
+		m_camera_id != camera_id)
+	{
+		camera_log.notice("Switching camera from %s to %s", camera_id, m_camera_id);
+		camera_log.notice("Unloading old camera...");
+		if (m_camera) m_camera->unload();
+		m_camera_id = camera_id;
+	}
+
+	QCameraInfo selected_camera;
+
+	if (m_camera_id == g_cfg.io.camera_id.def)
+	{
+		selected_camera = QCameraInfo::defaultCamera();
+	}
+	else if (!m_camera_id.empty())
+	{
+		const QString camera_id = QString::fromStdString(m_camera_id);
+		for (const QCameraInfo& camera_info : QCameraInfo::availableCameras())
+		{
+			if (camera_id == camera_info.deviceName())
+			{
+				selected_camera = camera_info;
+				break;
+			}
+		}
+	}
+
+	set_camera(selected_camera);
 
 	if (!m_camera)
 	{
-		camera_log.error("No camera found");
+		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
+		else camera_log.error("No camera found");
 		m_state = camera_handler_state::not_available;
 		return;
 	}
@@ -117,7 +147,8 @@ void qt_camera_handler::close_camera()
 
 	if (!m_camera)
 	{
-		camera_log.error("No camera found");
+		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
+		else camera_log.error("No camera found");
 		m_state = camera_handler_state::not_available;
 		return;
 	}
@@ -138,7 +169,8 @@ void qt_camera_handler::start_camera()
 
 	if (!m_camera)
 	{
-		camera_log.error("No camera found");
+		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
+		else camera_log.error("No camera found");
 		m_state = camera_handler_state::not_available;
 		return;
 	}
@@ -165,7 +197,8 @@ void qt_camera_handler::stop_camera()
 
 	if (!m_camera)
 	{
-		camera_log.error("No camera found");
+		if (m_camera_id.empty()) camera_log.notice("Camera disabled");
+		else camera_log.error("No camera found");
 		m_state = camera_handler_state::not_available;
 		return;
 	}
@@ -221,6 +254,21 @@ camera_handler_base::camera_handler_state qt_camera_handler::get_image(u8* buf, 
 	height = 0;
 	frame_number = 0;
 	bytes_read = 0;
+
+	if (const std::string camera_id = g_cfg.io.camera_id.to_string();
+		m_camera_id != camera_id)
+	{
+		camera_log.notice("Switching cameras");
+		m_state = camera_handler_state::not_available;
+		return camera_handler_state::not_available;
+	}
+
+	if (m_camera_id.empty())
+	{
+		camera_log.notice("Camera disabled");
+		m_state = camera_handler_state::not_available;
+		return camera_handler_state::not_available;
+	}
 
 	if (!m_camera || !m_surface)
 	{

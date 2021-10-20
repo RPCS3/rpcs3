@@ -1412,10 +1412,10 @@
       <attribute name="title">
        <string>I/O</string>
       </attribute>
-      <layout class="QVBoxLayout" name="inputTab_layout" stretch="0,0,0,1,0">
+      <layout class="QVBoxLayout" name="inputTab_layout">
        <item>
-        <layout class="QHBoxLayout" name="inputTabLayout1" stretch="1,1,1">
-         <item>
+        <layout class="QGridLayout" name="ioGridLayout">
+         <item row="0" column="0">
           <widget class="QGroupBox" name="gb_keyboard_handler">
            <property name="title">
             <string>Keyboard Handler</string>
@@ -1427,35 +1427,7 @@
            </layout>
           </widget>
          </item>
-         <item>
-          <widget class="QGroupBox" name="gb_camera_type">
-           <property name="title">
-            <string>Camera Input</string>
-           </property>
-           <layout class="QVBoxLayout" name="gb_camera_type_layout">
-            <item>
-             <widget class="QComboBox" name="cameraTypeBox"/>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="gb_move_handler">
-           <property name="title">
-            <string>Move Handler</string>
-           </property>
-           <layout class="QVBoxLayout" name="gb_move_handler_layout">
-            <item>
-             <widget class="QComboBox" name="moveBox"/>
-            </item>
-           </layout>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="inputTabLayout2" stretch="1,1,1">
-         <item>
+         <item row="1" column="0">
           <widget class="QGroupBox" name="gb_mouse_handler">
            <property name="title">
             <string>Mouse Handler</string>
@@ -1467,19 +1439,7 @@
            </layout>
           </widget>
          </item>
-         <item>
-          <widget class="QGroupBox" name="gb_camera_setting">
-           <property name="title">
-            <string>Camera Settings</string>
-           </property>
-           <layout class="QVBoxLayout" name="gb_camera_setting_layout">
-            <item>
-             <widget class="QComboBox" name="cameraBox"/>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
+         <item row="0" column="2">
           <widget class="QGroupBox" name="gb_buzz_emulated">
            <property name="title">
             <string>Buzz! emulated controller</string>
@@ -1491,11 +1451,7 @@
            </layout>
           </widget>
          </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="inputTabLayout3">
-         <item>
+         <item row="1" column="2">
           <widget class="QGroupBox" name="gb_turntable_emulated">
            <property name="title">
             <string>DJ Hero emulated turntable</string>
@@ -1507,7 +1463,43 @@
            </layout>
           </widget>
          </item>
-         <item>
+         <item row="0" column="1">
+          <widget class="QGroupBox" name="gb_camera_type">
+           <property name="title">
+            <string>Camera Input</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_camera_type_layout">
+            <item>
+             <widget class="QComboBox" name="cameraTypeBox"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QGroupBox" name="gb_camera_flip">
+           <property name="title">
+            <string>Camera Flip</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_camera_flip_layout">
+            <item>
+             <widget class="QComboBox" name="cameraFlipBox"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QGroupBox" name="gb_camera_setting">
+           <property name="title">
+            <string>Camera Handler</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_camera_setting_layout">
+            <item>
+             <widget class="QComboBox" name="cameraBox"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="2" column="2">
           <widget class="QGroupBox" name="gb_ghltar_emulated">
            <property name="title">
             <string>Guitar Hero Live emulated guitar</string>
@@ -1519,14 +1511,26 @@
            </layout>
           </widget>
          </item>
-         <item>
-          <widget class="QGroupBox" name="gb_camera_flip">
+         <item row="2" column="0">
+          <widget class="QGroupBox" name="gb_move_handler">
            <property name="title">
-            <string>Camera Flip</string>
+            <string>Move Handler</string>
            </property>
-           <layout class="QVBoxLayout" name="gb_camera_flip_layout">
+           <layout class="QVBoxLayout" name="gb_move_handler_layout">
             <item>
-             <widget class="QComboBox" name="cameraFlipBox"/>
+             <widget class="QComboBox" name="moveBox"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QGroupBox" name="gb_camera_id">
+           <property name="title">
+            <string>Camera</string>
+           </property>
+           <layout class="QVBoxLayout" name="camera_id_layout">
+            <item>
+             <widget class="QComboBox" name="cameraIdBox"/>
             </item>
            </layout>
           </widget>

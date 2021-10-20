@@ -1,4 +1,5 @@
 #include <QButtonGroup>
+#include <QCameraInfo>
 #include <QDialogButtonBox>
 #include <QFontMetrics>
 #include <QPushButton>
@@ -958,6 +959,37 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceComboBox(ui->cameraFlipBox, emu_settings_type::CameraFlip);
 	SubscribeTooltip(ui->gb_camera_flip, tooltips.settings.camera_flip);
 
+	{
+		const std::string default_camera = m_emu_settings->GetSettingDefault(emu_settings_type::CameraID);
+		const std::string selected_camera = m_emu_settings->GetSetting(emu_settings_type::CameraID);
+		ui->cameraIdBox->addItem(tr("None", "Camera Device"), "");
+		ui->cameraIdBox->addItem(tr("Default", "Camera Device"), qstr(default_camera));
+		for (const QCameraInfo& camera_info : QCameraInfo::availableCameras())
+		{
+			if (!camera_info.isNull())
+				ui->cameraIdBox->addItem(camera_info.description(), camera_info.deviceName());
+		}
+		if (const int index = ui->cameraIdBox->findData(qstr(selected_camera)); index >= 0)
+		{
+			ui->cameraIdBox->setCurrentIndex(index);
+		}
+		else
+		{
+			cfg_log.error("The selected camera was not found. Selecting default camera as fallback.");
+			ui->cameraIdBox->setCurrentIndex(ui->cameraIdBox->findData(qstr(default_camera)));
+		}
+		connect(ui->cameraIdBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+		{
+			if (index >= 0) m_emu_settings->SetSetting(emu_settings_type::CameraID, ui->cameraIdBox->itemData(index).toString().toStdString());
+		});
+		connect(m_emu_settings.get(), &emu_settings::RestoreDefaultsSignal, [this, default_camera]()
+		{
+			m_emu_settings->SetSetting(emu_settings_type::CameraID, default_camera);
+			ui->cameraIdBox->setCurrentIndex(ui->cameraIdBox->findData(qstr(default_camera)));
+		});
+		SubscribeTooltip(ui->gb_camera_id, tooltips.settings.camera_id);
+	}
+
 	m_emu_settings->EnhanceComboBox(ui->moveBox, emu_settings_type::Move);
 	SubscribeTooltip(ui->gb_move_handler, tooltips.settings.move);
 
@@ -1134,7 +1166,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SnapSlider(ui->clockScale, 10);
 	ui->clockScale->setPageStep(50);
 	const int clocks_scale_def = stoi(m_emu_settings->GetSettingDefault(emu_settings_type::ClocksScale));
-	connect(ui->clockScaleReset, &QAbstractButton::clicked, [=, this]()
+	connect(ui->clockScaleReset, &QAbstractButton::clicked, [clocks_scale_def, this]()
 	{
 		ui->clockScale->setValue(clocks_scale_def);
 	});
