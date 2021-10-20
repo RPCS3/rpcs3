@@ -683,9 +683,9 @@ bool fs::create_path(const std::string& path)
 
 #ifdef _WIN32
 	// Workaround: don't call is_dir with naked drive letter
-	if (!parent.empty() && parent.back() != ':' && !is_dir(parent) && !create_path(parent))
+	if (parent.size() < path.size() && parent.back() != ':' && !is_dir(parent) && !create_path(parent))
 #else
-	if (!parent.empty() && !is_dir(parent) && !create_path(parent))
+	if (parent.size() < path.size() && !is_dir(parent) && !create_path(parent))
 #endif
 	{
 		return false;
