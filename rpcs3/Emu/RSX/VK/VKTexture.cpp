@@ -1009,7 +1009,7 @@ namespace vk
 			{
 				caps.supports_byteswap = (image_linear_size >= 1024);
 				caps.supports_hw_deswizzle = caps.supports_byteswap;
-				caps.supports_zero_copy = caps.supports_byteswap;
+				caps.supports_zero_copy = false;// caps.supports_byteswap;
 				caps.supports_vtc_decoding = false;
 				check_caps = false;
 			}

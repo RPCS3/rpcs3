@@ -550,6 +550,7 @@
     <ClInclude Include="Emu\perf_monitor.hpp" />
     <ClInclude Include="Emu\RSX\Common\bitfield.hpp" />
     <ClInclude Include="Emu\RSX\Common\buffer_stream.hpp" />
+    <ClInclude Include="Emu\RSX\Common\tiled_dma_copy.hpp" />
     <ClInclude Include="Emu\RSX\Common\expected.hpp" />
     <ClInclude Include="Emu\RSX\Common\profiling_timer.hpp" />
     <ClInclude Include="Emu\RSX\Common\ranged_map.hpp" />
@@ -905,6 +906,7 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderFS.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderVS.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXMemoryTiling.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXDefines2.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentPrologue.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureDepthConversion.glsl" />
