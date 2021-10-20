@@ -9,6 +9,11 @@ LOG_CHANNEL(camera_log, "Camera");
 
 qt_camera_handler::qt_camera_handler() : camera_handler_base()
 {
+	// List available cameras
+	for (const QCameraInfo& cameraInfo : QCameraInfo::availableCameras())
+	{
+		camera_log.success("Found camera: name=%s, description=%s", cameraInfo.deviceName().toStdString(), cameraInfo.description().toStdString());
+	}
 }
 
 qt_camera_handler::~qt_camera_handler()
@@ -20,7 +25,7 @@ void qt_camera_handler::set_camera(const QCameraInfo& cameraInfo)
 {
 	if (cameraInfo.isNull())
 	{
-		camera_log.error("No camera present");
+		camera_log.warning("No camera present");
 		return;
 	}
 
@@ -67,12 +72,6 @@ void qt_camera_handler::set_camera(const QCameraInfo& cameraInfo)
 
 void qt_camera_handler::open_camera()
 {
-	// List available cameras
-	for (const QCameraInfo& cameraInfo : QCameraInfo::availableCameras())
-	{
-		camera_log.success("Found camera: name=%s, description=%s", cameraInfo.deviceName().toStdString(), cameraInfo.description().toStdString());
-	}
-
 	// Let's use the default camera for now
 	set_camera(QCameraInfo::defaultCamera());
 
