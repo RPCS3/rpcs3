@@ -416,7 +416,7 @@ error_code cellCameraInit()
 
 	// TODO: Some other default attributes? Need to check the actual behaviour on a real PS3.
 
-	g_camera.send_attach_state(true);
+	g_camera.is_attached = true;
 	g_camera.init = 1;
 	return CELL_OK;
 }
@@ -523,7 +523,6 @@ error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 	}
 
 	auto& g_camera = g_fxo->get<camera_thread>();
-	// we know g_camera is valid here (cellCameraSetAttribute above checks for it)
 
 	if (g_camera.is_open)
 	{
@@ -558,7 +557,7 @@ error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 
 	std::tie(info->width, info->height) = get_video_resolution(*info);
 
-	if (error_code error = g_camera.open_camera())
+	if (!g_camera.open_camera())
 	{
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
@@ -755,7 +754,7 @@ s32 cellCameraIsAttached(s32 dev_num)
 
 	bool is_attached = g_camera.is_attached;
 
-	if (g_cfg.io.camera != camera_handler::null)
+	if (g_cfg.io.camera == camera_handler::fake)
 	{
 		// "attach" camera here
 		// normally should be attached immediately after event queue is registered, but just to be sure
@@ -1209,7 +1208,7 @@ error_code cellCameraStart(s32 dev_num)
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
 
-	if (error_code error = g_camera.start_camera())
+	if (!g_camera.start_camera())
 	{
 		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 	}
@@ -1311,7 +1310,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 		u64 frame_number{};
 		u64 bytes_read{};
 
-		if (error_code error = g_camera.get_camera_frame(g_camera.info.buffer.get_ptr(), width, height, frame_number, bytes_read))
+		if (!g_camera.get_camera_frame(g_camera.info.buffer.get_ptr(), width, height, frame_number, bytes_read))
 		{
 			return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 		}
@@ -1577,8 +1576,7 @@ void camera_context::operator()()
 					u64 frame_number{};
 					u64 bytes_read{};
 
-					error_code error = get_camera_frame(info.pbuf[pbuf_write_index].get_ptr(), width, height, frame_number, bytes_read);
-					send_frame_update_event = error == CELL_OK;
+					send_frame_update_event = get_camera_frame(info.pbuf[pbuf_write_index].get_ptr(), width, height, frame_number, bytes_read);
 
 					if (send_frame_update_event)
 					{
@@ -1593,7 +1591,7 @@ void camera_context::operator()()
 
 				Emu.CallAfter([&]()
 				{
-					send_frame_update_event = on_handler_state(handler->get_state()) = CELL_OK;
+					send_frame_update_event = on_handler_state(handler->get_state());
 					wake_up = true;
 					wake_up.notify_one();
 				});
@@ -1660,17 +1658,17 @@ void camera_context::operator()()
 	}
 }
 
-error_code camera_context::open_camera()
+bool camera_context::open_camera()
 {
-	error_code error = CELL_OK;
+	bool result = true;
 	atomic_t<bool> wake_up = false;
 
-	Emu.CallAfter([&wake_up, &error, this]()
+	Emu.CallAfter([&wake_up, &result, this]()
 	{
 		handler.reset();
 		handler = Emu.GetCallbacks().get_camera_handler();
 		handler->open_camera();
-		error = on_handler_state(handler->get_state());
+		result = on_handler_state(handler->get_state());
 		wake_up = true;
 		wake_up.notify_one();
 	});
@@ -1680,12 +1678,12 @@ error_code camera_context::open_camera()
 		thread_ctrl::wait_on(wake_up, false);
 	}
 
-	return error;
+	return result;
 }
 
-error_code camera_context::start_camera()
+bool camera_context::start_camera()
 {
-	error_code error = CELL_OK;
+	bool result = true;
 
 	if (handler)
 	{
@@ -1696,10 +1694,10 @@ error_code camera_context::start_camera()
 
 		atomic_t<bool> wake_up = false;
 
-		Emu.CallAfter([&wake_up, &error, this]()
+		Emu.CallAfter([&wake_up, &result, this]()
 		{
 			handler->start_camera();
-			error = on_handler_state(handler->get_state());
+			result = on_handler_state(handler->get_state());
 			wake_up = true;
 			wake_up.notify_one();
 		});
@@ -1710,22 +1708,20 @@ error_code camera_context::start_camera()
 		}
 	}
 
-	return error;
+	return result;
 }
 
-error_code camera_context::get_camera_frame(u8* dst, u32& width, u32& height, u64& frame_number, u64& bytes_read)
+bool camera_context::get_camera_frame(u8* dst, u32& width, u32& height, u64& frame_number, u64& bytes_read)
 {
-	error_code error = CELL_OK;
+	bool result = true;
 
 	if (handler)
 	{
 		atomic_t<bool> wake_up = false;
-		error_code error = CELL_OK;
 
 		Emu.CallAfter([&]()
 		{
-			camera_handler_base::camera_handler_state result = handler->get_image(dst, info.bytesize, width, height, frame_number, bytes_read);
-			error = on_handler_state(result);
+			result = on_handler_state(handler->get_image(dst, info.bytesize, width, height, frame_number, bytes_read));
 			wake_up = true;
 			wake_up.notify_one();
 		});
@@ -1736,7 +1732,7 @@ error_code camera_context::get_camera_frame(u8* dst, u32& width, u32& height, u6
 		}
 	}
 
-	return error;
+	return result;
 }
 
 void camera_context::stop_camera()
@@ -1817,9 +1813,9 @@ void camera_context::send_attach_state(bool attached)
 	{
 		if (auto queue = lv2_event_queue::find(key))
 		{
-			if (queue->send(evt_data.source, attached ? CELL_CAMERA_ATTACH : CELL_CAMERA_DETACH, 0, 0) == 0) [[likely]]
+			if (queue->send(evt_data.source, attached ? CELL_CAMERA_ATTACH : CELL_CAMERA_DETACH, 0, 0) != CELL_OK) [[unlikely]]
 			{
-				is_attached = attached;
+				cellCamera.warning("Failed to send attach event (attached=%d)", attached);
 			}
 		}
 	}
@@ -1868,7 +1864,7 @@ void camera_context::add_queue(u64 key, u64 source, u64 flag)
 	}
 
 	// send ATTACH event - HACKY
-	send_attach_state(true);
+	send_attach_state(is_attached);
 }
 
 void camera_context::remove_queue(u64 key)
@@ -1887,7 +1883,7 @@ u32 camera_context::pbuf_next_index() const
 	return (pbuf_write_index + 1u) % 2;
 }
 
-error_code camera_context::on_handler_state(camera_handler_base::camera_handler_state state)
+bool camera_context::on_handler_state(camera_handler_base::camera_handler_state state)
 {
 	switch (state)
 	{
@@ -1912,16 +1908,7 @@ error_code camera_context::on_handler_state(camera_handler_base::camera_handler_
 				handler->open_camera();
 			}
 		}
-		return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
-	}
-	case camera_handler_base::camera_handler_state::running:
-	{
-		if (!is_attached)
-		{
-			cellCamera.warning("Camera handler not attached. Sending attach event...", static_cast<int>(state));
-			send_attach_state(true);
-		}
-		break;
+		return false;
 	}
 	case camera_handler_base::camera_handler_state::open:
 	{
@@ -1932,7 +1919,16 @@ error_code camera_context::on_handler_state(camera_handler_base::camera_handler_
 		}
 		break;
 	}
+	case camera_handler_base::camera_handler_state::running:
+	{
+		if (!is_attached)
+		{
+			cellCamera.warning("Camera handler not attached. Sending attach event...", static_cast<int>(state));
+			send_attach_state(true);
+		}
+		break;
+	}
 	}
 
-	return CELL_OK;
+	return true;
 }
