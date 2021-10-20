@@ -51,9 +51,17 @@ std::string cfg_vfs::get(const cfg::string& _cfg, std::string_view emu_dir) cons
 
 void cfg_vfs::load()
 {
-	if (fs::file cfg_file{cfg_vfs::get_path(), fs::read})
+	const std::string path = cfg_vfs::get_path();
+
+	if (fs::file cfg_file{path, fs::read})
 	{
+		vfs_log.notice("Loading VFS config. Path: %s", path);
 		from_string(cfg_file.to_string());
+	}
+	else
+	{
+		vfs_log.notice("VFS config missing. Using default settings. Path: %s", path);
+		from_default();
 	}
 }
 

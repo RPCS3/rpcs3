@@ -28,9 +28,6 @@ screenshot_manager_dialog::screenshot_manager_dialog(QWidget* parent) : QDialog(
 	m_grid->setIconSize(m_icon_size);
 	m_grid->setGridSize(m_icon_size + QSize(10, 10));
 
-	// HACK: dev_hdd0 must be mounted for vfs to work for loading trophies.
-	vfs::mount("/dev_hdd0", rpcs3::utils::get_hdd0_dir());
-
 	const std::string screenshot_path_qt   = fs::get_config_dir() + "screenshots/";
 	const std::string screenshot_path_cell = vfs::get("/dev_hdd0/photo/");
 	const QStringList filter{ QStringLiteral("*.png") };

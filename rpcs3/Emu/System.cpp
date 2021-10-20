@@ -153,6 +153,25 @@ void Emulator::Init(bool add_only)
 
 	// Load VFS config
 	g_cfg_vfs.load();
+	sys_log.notice("Using VFS config:\n%s", g_cfg_vfs.to_string());
+
+	// Mount all devices
+	const std::string emu_dir = rpcs3::utils::get_emu_dir();
+	const std::string elf_dir = fs::get_parent_dir(m_path);
+
+	vfs::mount("/dev_hdd0", g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir));
+	vfs::mount("/dev_flash", g_cfg_vfs.get_dev_flash());
+	vfs::mount("/dev_flash2", g_cfg_vfs.get_dev_flash2());
+	vfs::mount("/dev_flash3", g_cfg_vfs.get_dev_flash3());
+	vfs::mount("/dev_usb", g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir));
+	vfs::mount("/dev_usb000", g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir));
+	vfs::mount("/app_home", g_cfg_vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg_vfs.get(g_cfg_vfs.app_home, emu_dir));
+
+	if (!hdd1.empty())
+	{
+		vfs::mount("/dev_hdd1", hdd1);
+		sys_log.notice("Hdd1: %s", vfs::get("/dev_hdd1"));
+	}
 
 	// Load config file
 	if (m_config_mode == cfg_mode::config_override)
@@ -204,7 +223,6 @@ void Emulator::Init(bool add_only)
 	}
 
 	// Create directories (can be disabled if necessary)
-	const std::string emu_dir = rpcs3::utils::get_emu_dir();
 	const std::string dev_hdd0 = rpcs3::utils::get_hdd0_dir();
 	const std::string dev_hdd1 = g_cfg_vfs.get(g_cfg_vfs.dev_hdd1, emu_dir);
 	const std::string dev_usb = g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir);
@@ -548,6 +566,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 	}
 
 	sys_log.notice("Selected config: mode=%s, path=\"%s\"", m_config_mode, m_config_path);
+	sys_log.notice("Path: %s", m_path);
 
 	{
 		Init(add_only);
@@ -571,8 +590,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 		{
 			games.reset();
 		}
-
-		sys_log.notice("Path: %s", m_path);
 
 		const std::string elf_dir = fs::get_parent_dir(m_path);
 
@@ -730,8 +747,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 			g_rtm_tx_limit2 = static_cast<u64>(g_cfg.core.tx_limit2_ns * _1ns);
 		}
 
-		// Mount all devices
-		const std::string emu_dir = rpcs3::utils::get_emu_dir();
+		// Set bdvd_dir
 		std::string bdvd_dir;
 
 		if (!add_only)
@@ -749,21 +765,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool add_only, bool
 				sys_log.error("Failed to use custom BDVD directory: '%s'", bdvd_dir);
 				bdvd_dir.clear();
 			}
-		}
-
-		// Mount default relative path to non-existent directory
-		vfs::mount("/dev_hdd0", g_cfg_vfs.get(g_cfg_vfs.dev_hdd0, emu_dir));
-		vfs::mount("/dev_flash", g_cfg_vfs.get_dev_flash());
-		vfs::mount("/dev_flash2", g_cfg_vfs.get_dev_flash2());
-		vfs::mount("/dev_flash3", g_cfg_vfs.get_dev_flash3());
-		vfs::mount("/dev_usb", g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir));
-		vfs::mount("/dev_usb000", g_cfg_vfs.get(g_cfg_vfs.dev_usb000, emu_dir));
-		vfs::mount("/app_home", g_cfg_vfs.app_home.to_string().empty() ? elf_dir + '/' : g_cfg_vfs.get(g_cfg_vfs.app_home, emu_dir));
-
-		if (!hdd1.empty())
-		{
-			vfs::mount("/dev_hdd1", hdd1);
-			sys_log.notice("Hdd1: %s", vfs::get("/dev_hdd1"));
 		}
 
 		// Special boot mode (directory scan)

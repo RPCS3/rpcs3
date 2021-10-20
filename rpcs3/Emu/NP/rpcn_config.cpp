@@ -8,10 +8,18 @@ LOG_CHANNEL(rpcn_log, "rpcn");
 
 void cfg_rpcn::load()
 {
-	fs::file cfg_file(cfg_rpcn::get_path(), fs::read);
+	const std::string path = cfg_rpcn::get_path();
+
+	fs::file cfg_file(path, fs::read);
 	if (cfg_file)
 	{
+		rpcn_log.notice("Loading RPCN config. Path: %s", path);
 		from_string(cfg_file.to_string());
+	}
+	else
+	{
+		rpcn_log.notice("RPCN config missing. Using default settings. Path: %s", path);
+		from_default();
 	}
 }
 
