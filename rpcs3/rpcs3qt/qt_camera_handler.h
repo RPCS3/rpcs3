@@ -14,7 +14,7 @@ public:
 	qt_camera_handler();
 	virtual ~qt_camera_handler();
 
-	void set_camera(const QCameraInfo& cameraInfo);
+	void set_camera(const QCameraInfo& camera_info);
 
 	void open_camera() override;
 	void close_camera() override;
@@ -30,6 +30,7 @@ public:
 private:
 	void update_camera_settings();
 
+	std::string m_camera_id;
 	std::shared_ptr<QCamera> m_camera;
 	std::unique_ptr<qt_camera_video_surface> m_surface;
 	std::unique_ptr<qt_camera_error_handler> m_error_handler;
