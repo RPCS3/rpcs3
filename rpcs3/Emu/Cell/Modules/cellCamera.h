@@ -360,7 +360,7 @@ struct CellCameraInfo
 
 struct CellCameraInfoEx
 {
-	be_t<s32> format;     // CellCameraFormat
+	be_t<CellCameraFormat> format; // CellCameraFormat
 	be_t<s32> resolution; // CellCameraResolution
 	be_t<s32> framerate;
 
@@ -435,7 +435,10 @@ public:
 		u32 v1, v2;
 	};
 	attr_t attr[500]{};
+	atomic_t<bool> has_new_frame = false;
 	atomic_t<u32> frame_num = 0;
+	atomic_t<u32> frame_timestamp = 0;
+	atomic_t<u32> bytes_read = 0;
 
 	atomic_t<u32> init = 0;
 
@@ -458,4 +461,8 @@ struct gem_camera_shared
 	atomic_t<s64> frame_timestamp{}; // latest read timestamp from cellCamera (cellCameraRead(Ex))
 	atomic_t<s32> width{640};
 	atomic_t<s32> height{480};
+	atomic_t<s32> size{0};
+	atomic_t<CellCameraFormat> format{CELL_CAMERA_RAW8};
 };
+
+static inline s32 get_video_buffer_size(s32 width, s32 height);
