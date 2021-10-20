@@ -36,6 +36,27 @@ void fmt_class_string<CellCameraError>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<CellCameraFormat>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](CellCameraFormat value)
+	{
+		switch (value)
+		{
+		STR_CASE(CELL_CAMERA_FORMAT_UNKNOWN);
+		STR_CASE(CELL_CAMERA_JPG);
+		STR_CASE(CELL_CAMERA_RAW8);
+		STR_CASE(CELL_CAMERA_YUV422);
+		STR_CASE(CELL_CAMERA_RAW10);
+		STR_CASE(CELL_CAMERA_RGBA);
+		STR_CASE(CELL_CAMERA_YUV420);
+		STR_CASE(CELL_CAMERA_V_Y1_U_Y0);
+		}
+
+		return unknown;
+	});
+}
+
 // Temporarily
 #ifndef _MSC_VER
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -259,14 +280,10 @@ std::pair<u32, u32> get_video_resolution(const CellCameraInfoEx& info)
 	}
 }
 
-u32 get_video_buffer_size(const CellCameraInfoEx& info)
+u32 get_buffer_size_by_format(s32 format, s32 width, s32 height)
 {
-	u32 width, height;
-	std::tie(width, height) = get_video_resolution(info);
-
-	double bytes_per_pixel;
-
-	switch (info.format)
+	double bytes_per_pixel = 0.0;
+	switch (format)
 	{
 	case CELL_CAMERA_RAW8:
 		bytes_per_pixel = 1.0;
@@ -290,6 +307,14 @@ u32 get_video_buffer_size(const CellCameraInfoEx& info)
 	}
 
 	return width * height * bytes_per_pixel;
+}
+
+
+u32 get_video_buffer_size(const CellCameraInfoEx& info)
+{
+	u32 width, height;
+	std::tie(width, height) = get_video_resolution(info);
+	return get_buffer_size_by_format(info.format, width, height);
 }
 
 // ************************
@@ -563,12 +588,14 @@ error_code cellCameraOpenEx(s32 dev_num, vm::ptr<CellCameraInfoEx> info)
 	g_camera.is_open = true;
 	g_camera.info = *info;
 
-	cellCamera.notice("cellCameraOpen info: format=%d, resolution=%d, framerate=%d, bytesize=%d, width=%d, height=%d, dev_num=%d, guid=%d",
+	cellCamera.notice("cellCameraOpen info: format=%s, resolution=%d, framerate=%d, bytesize=%d, width=%d, height=%d, dev_num=%d, guid=%d",
 		info->format, info->resolution, info->framerate, info->bytesize, info->width, info->height, info->dev_num, info->guid);
 
 	auto& shared_data = g_fxo->get<gem_camera_shared>();
 	shared_data.width = info->width > 0 ? +info->width : 640;
 	shared_data.height = info->height > 0 ? +info->height : 480;
+	shared_data.size = vbuf_size;
+	shared_data.format = info->format;
 
 	return CELL_OK;
 }
@@ -1301,41 +1328,47 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 
 	// can call cellCameraReset() and cellCameraStop() in some cases
 
+	const bool has_new_frame = g_camera.has_new_frame.exchange(false);
+
 	if (g_camera.handler)
 	{
-		u32 width{};
-		u32 height{};
-		u64 frame_number{};
-		u64 bytes_read{};
-
-		if (!g_camera.get_camera_frame(g_camera.info.buffer.get_ptr(), width, height, frame_number, bytes_read))
+		if (has_new_frame)
 		{
-			return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
-		}
+			u32 width{};
+			u32 height{};
+			u64 frame_number{};
+			u64 bytes_read{};
 
-		if (read)
-		{
-			read->frame = frame_number;
-			read->bytesread = bytes_read;
-		}
+			if (!g_camera.get_camera_frame(g_camera.info.buffer.get_ptr(), width, height, frame_number, bytes_read))
+			{
+				return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
+			}
 
-		cellCamera.trace("cellCameraRead: frame_number=%d, width=%d, height=%d. bytes_read=%d (passed to game: frame=%d, bytesread=%d)",
-			frame_number, width, height, bytes_read, read ? read->frame.get() : 0, read ? read->bytesread.get() : 0);
+			g_camera.bytes_read = bytes_read;
+
+			cellCamera.trace("cellCameraRead: frame_number=%d, width=%d, height=%d. bytes_read=%d (passed to game: frame=%d, bytesread=%d)",
+				frame_number, width, height, bytes_read, read ? read->frame.get() : 0, read ? read->bytesread.get() : 0);
+		}
+	}
+	else
+	{
+		g_camera.bytes_read = g_camera.is_streaming ? get_video_buffer_size(g_camera.info) : 0;
+	}
+
+	if (has_new_frame)
+	{
+		g_camera.frame_timestamp = (get_guest_system_time() - g_camera.start_timestamp);
 	}
 
 	if (read) // NULL returns CELL_OK
 	{
-		read->timestamp = (get_guest_system_time() - g_camera.start_timestamp);
-
-		if (!g_camera.handler)
-		{
-			read->frame = g_camera.frame_num;
-			read->bytesread = g_camera.is_streaming ? get_video_buffer_size(g_camera.info) : 0;
-		}
+		read->timestamp = g_camera.frame_timestamp;
+		read->frame = g_camera.frame_num;
+		read->bytesread = g_camera.bytes_read;
 
 		auto& shared_data = g_fxo->get<gem_camera_shared>();
 
-		shared_data.frame_timestamp.exchange(read->timestamp);
+		shared_data.frame_timestamp.store(read->timestamp);
 	}
 
 	return CELL_OK;
@@ -1627,15 +1660,18 @@ void camera_context::operator()()
 						data3 = 0; // unused
 					}
 
-					if (queue->send(evt_data.source, CELL_CAMERA_FRAME_UPDATE, data2, data3) == 0) [[likely]]
+					if (queue->send(evt_data.source, CELL_CAMERA_FRAME_UPDATE, data2, data3) != 0) [[unlikely]]
 					{
-						++frame_num;
+						cellCamera.warning("Failed to send frame update event");
 					}
 
 					frame_update_event_sent = true;
 				}
 			}
 		}
+
+		++frame_num;
+		has_new_frame = true;
 
 		if (read_mode.load() == CELL_CAMERA_READ_DIRECT && frame_update_event_sent)
 		{
@@ -1645,7 +1681,7 @@ void camera_context::operator()()
 
 		lock.unlock();
 
-		for (const u64 frame_target_time = 1000000u / fps;;)
+		for (const u64 frame_target_time = 1000000u / fps; !Emu.IsStopped();)
 		{
 			const u64 time_passed = get_guest_system_time() - frame_start;
 			if (time_passed >= frame_target_time)
@@ -1788,6 +1824,9 @@ void camera_context::reset_state()
 	pbuf_write_index = 0;
 	pbuf_locked[0] = false;
 	pbuf_locked[1] = false;
+	has_new_frame = false;
+	frame_timestamp = 0;
+	bytes_read = 0;
 
 	if (info.buffer)
 	{
