@@ -1,6 +1,9 @@
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
 #include "Emu/RSX/rsx_methods.h"
+#include "Emu/RSX/RSXThread.h"
+
+#include "Emu/RSX/Common/tiled_dma_copy.hpp"
 
 namespace vk
 {
@@ -677,6 +680,28 @@ namespace vk
 		subres.pitch_in_block = rsx_pitch / get_bpp();
 		subres.depth = 1;
 		subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<std::span<const std::byte>::size_type>(rsx_pitch * surface_height * samples_y) };
+
+		// FIXME: Move to GPU queue
+		std::vector<std::byte> ext_data;
+		const auto range = get_memory_range();
+
+		if (auto region = rsx::get_current_renderer()->get_tiled_memory_region(range))
+		{
+			auto real_data = vm::get_super_ptr<u8>(range.start);
+			ext_data.resize(region.tile->size);
+			rsx::tile_texel_data<u32, true>(
+				ext_data.data(),
+				real_data,
+				region.base_address,
+				range.start - region.base_address,
+				region.tile->size,
+				region.tile->bank,
+				region.tile->pitch,
+				subres.width_in_block,
+				subres.height_in_block
+			);
+			subres.data = ext_data;
+		}
 
 		if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
 		{
