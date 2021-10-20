@@ -288,7 +288,9 @@ namespace rsx
 
 	static inline u32 get_location(u32 addr)
 	{
-		return (addr >= rsx::constants::local_mem_base) ?
+		// We don't really care about the actual memory map, it shouldn't be possible to use the mmio bar region anyway
+		constexpr address_range local_mem_range = address_range::start_length(rsx::constants::local_mem_base, 0x1000'0000);
+		return local_mem_range.overlaps(addr) ?
 			CELL_GCM_LOCATION_LOCAL :
 			CELL_GCM_LOCATION_MAIN;
 	}

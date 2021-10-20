@@ -1333,7 +1333,7 @@ namespace vk
 
 		void* mem = image->memory->map(0, layout.rowPitch * height);
 
-		auto src = vm::_ptr<const char>(address);
+		auto src = vm::get_super_ptr<const char>(address);
 		auto dst = static_cast<char*>(mem);
 
 		// TODO: SSE optimization
