@@ -32,11 +32,43 @@ QList<QVideoFrame::PixelFormat> qt_camera_video_surface::supportedPixelFormats(Q
 {
 	Q_UNUSED(type)
 
-	// Let's only allow RGB formats for now
+	// Support all cameras
 	QList<QVideoFrame::PixelFormat> result;
 	result
+		<< QVideoFrame::Format_ARGB32
+		<< QVideoFrame::Format_ARGB32_Premultiplied
 		<< QVideoFrame::Format_RGB32
-		<< QVideoFrame::Format_RGB24;
+		<< QVideoFrame::Format_RGB24
+		<< QVideoFrame::Format_RGB565
+		<< QVideoFrame::Format_RGB555
+		<< QVideoFrame::Format_ARGB8565_Premultiplied
+		<< QVideoFrame::Format_BGRA32
+		<< QVideoFrame::Format_BGRA32_Premultiplied
+		<< QVideoFrame::Format_BGR32
+		<< QVideoFrame::Format_BGR24
+		<< QVideoFrame::Format_BGR565
+		<< QVideoFrame::Format_BGR555
+		<< QVideoFrame::Format_BGRA5658_Premultiplied
+		<< QVideoFrame::Format_AYUV444
+		<< QVideoFrame::Format_AYUV444_Premultiplied
+		<< QVideoFrame::Format_YUV444
+		<< QVideoFrame::Format_YUV420P
+		<< QVideoFrame::Format_YV12
+		<< QVideoFrame::Format_UYVY
+		<< QVideoFrame::Format_YUYV
+		<< QVideoFrame::Format_NV12
+		<< QVideoFrame::Format_NV21
+		<< QVideoFrame::Format_IMC1
+		<< QVideoFrame::Format_IMC2
+		<< QVideoFrame::Format_IMC3
+		<< QVideoFrame::Format_IMC4
+		<< QVideoFrame::Format_Y8
+		<< QVideoFrame::Format_Y16
+		<< QVideoFrame::Format_Jpeg
+		<< QVideoFrame::Format_CameraRaw
+		<< QVideoFrame::Format_AdobeDng
+		<< QVideoFrame::Format_ABGR32
+		<< QVideoFrame::Format_YUV422P;
 	return result;
 }
 
@@ -56,10 +88,14 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 		return false;
 	}
 
-	// Create shallow copy
-	QImage image(tmp.bits(), tmp.width(), tmp.height(), tmp.bytesPerLine(), QVideoFrame::imageFormatFromPixelFormat(tmp.pixelFormat()));
+	// Get image. This usually also converts the image to ARGB32.
+	QImage image = frame.image();
 
-	if (!image.isNull())
+	if (image.isNull())
+	{
+		camera_log.warning("Image is invalid: pixel_format=%d, format=%d", static_cast<int>(tmp.pixelFormat()), static_cast<int>(QVideoFrame::imageFormatFromPixelFormat(tmp.pixelFormat())));
+	}
+	else
 	{
 		// Scale image if necessary
 		if (m_width > 0 && m_height > 0 && m_width != image.width() && m_height != image.height())
