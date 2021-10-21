@@ -322,12 +322,10 @@ error_code check_init_and_open(s32 dev_num)
 error_code check_resolution(s32 dev_num)
 {
 	// TODO: Some sort of connection check maybe?
-	error_code error = CELL_OK;
-
-	if (error == CELL_CAMERA_ERROR_RESOLUTION_UNKNOWN)
-	{
-		return CELL_CAMERA_ERROR_TIMEOUT;
-	}
+	//if (error == CELL_CAMERA_ERROR_RESOLUTION_UNKNOWN)
+	//{
+	//	return CELL_CAMERA_ERROR_TIMEOUT;
+	//}
 	// TODO: Yet another CELL_CAMERA_ERROR_FATAL
 	return CELL_OK;
 }
@@ -1591,7 +1589,7 @@ void camera_context::operator()()
 
 				Emu.CallAfter([&]()
 				{
-					send_frame_update_event = on_handler_state(handler->get_state());
+					send_frame_update_event = handler ? on_handler_state(handler->get_state()) : true;
 					wake_up = true;
 					wake_up.notify_one();
 				});
@@ -1629,7 +1627,7 @@ void camera_context::operator()()
 						data3 = 0; // unused
 					}
 
-					if (queue->send(evt_data.source, CELL_CAMERA_FRAME_UPDATE, data2, data3) == CELL_OK) [[likely]]
+					if (queue->send(evt_data.source, CELL_CAMERA_FRAME_UPDATE, data2, data3) == 0) [[likely]]
 					{
 						++frame_num;
 					}
@@ -1667,8 +1665,11 @@ bool camera_context::open_camera()
 	{
 		handler.reset();
 		handler = Emu.GetCallbacks().get_camera_handler();
-		handler->open_camera();
-		result = on_handler_state(handler->get_state());
+		if (handler)
+		{
+			handler->open_camera();
+			result = on_handler_state(handler->get_state());
+		}
 		wake_up = true;
 		wake_up.notify_one();
 	});
@@ -1813,7 +1814,7 @@ void camera_context::send_attach_state(bool attached)
 	{
 		if (auto queue = lv2_event_queue::find(key))
 		{
-			if (queue->send(evt_data.source, attached ? CELL_CAMERA_ATTACH : CELL_CAMERA_DETACH, 0, 0) != CELL_OK) [[unlikely]]
+			if (queue->send(evt_data.source, attached ? CELL_CAMERA_ATTACH : CELL_CAMERA_DETACH, 0, 0) != 0) [[unlikely]]
 			{
 				cellCamera.warning("Failed to send attach event (attached=%d)", attached);
 			}

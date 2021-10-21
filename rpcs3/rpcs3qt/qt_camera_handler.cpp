@@ -311,7 +311,7 @@ void qt_camera_handler::update_camera_settings()
 		}
 		for (const QSize& resolution : resolutions)
 		{
-			if (m_width == resolution.width() && m_height == resolution.height())
+			if (static_cast<int>(m_width) == resolution.width() && static_cast<int>(m_height) == resolution.height())
 			{
 				settings.setResolution(resolution.width(), resolution.height());
 				break;
