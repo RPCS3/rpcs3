@@ -98,13 +98,13 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 	else
 	{
 		// Scale image if necessary
-		if (m_width > 0 && m_height > 0 && m_width != image.width() && m_height != image.height())
+		if (m_width > 0 && m_height > 0 && m_width != static_cast<u32>(image.width()) && m_height != static_cast<u32>(image.height()))
 		{
 			image = image.scaled(m_width, m_height, Qt::AspectRatioMode::IgnoreAspectRatio, Qt::SmoothTransformation);
 		}
 
 		// Determine image flip
-		const camera_flip flip_setting = g_cfg.io.camera_flip;
+		const camera_flip flip_setting = g_cfg.io.camera_flip_option;
 
 		bool flip_horizontally = m_front_facing; // Front facing cameras are flipped already
 		if (flip_setting == camera_flip::horizontal || flip_setting == camera_flip::both)

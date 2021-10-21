@@ -365,6 +365,7 @@ void gui_application::InitializeCallbacks()
 			return std::make_shared<qt_camera_handler>();
 		}
 		}
+		return nullptr;
 	};
 	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
