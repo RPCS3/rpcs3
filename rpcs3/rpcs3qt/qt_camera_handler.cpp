@@ -306,7 +306,7 @@ void qt_camera_handler::update_camera_settings()
 		const QList<QSize> resolutions = m_camera->supportedViewfinderResolutions(settings);
 		if (resolutions.isEmpty())
 		{
-			camera_log.error("No resolution available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
+			camera_log.warning("No resolution available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
 				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
 		}
 		for (const QSize& resolution : resolutions)
@@ -322,7 +322,7 @@ void qt_camera_handler::update_camera_settings()
 		const QList<QCamera::FrameRateRange> frame_rate_ranges = m_camera->supportedViewfinderFrameRateRanges(settings);
 		if (frame_rate_ranges.isEmpty())
 		{
-			camera_log.error("No frame rate available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
+			camera_log.warning("No frame rate available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
 				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
 		}
 		for (const QCamera::FrameRateRange& frame_rate : frame_rate_ranges)
@@ -341,23 +341,31 @@ void qt_camera_handler::update_camera_settings()
 		const QList<QVideoFrame::PixelFormat> pixel_formats = m_camera->supportedViewfinderPixelFormats(settings);
 		if (pixel_formats.isEmpty())
 		{
-			camera_log.error("No pixel format available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
+			camera_log.warning("No pixel format available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
 				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
 		}
-		//for (const QVideoFrame::PixelFormat& pixel_format : pixel_formats)
-		//{
-		//	if (pixel_format matches m_format)
-		//	{
-		//		settings.setPixelFormat(pixel_format);
-		//		break;
-		//	}
-		//}
+		for (const QVideoFrame::PixelFormat& pixel_format : pixel_formats)
+		{
+			if (pixel_format == QVideoFrame::Format_RGB32)
+			{
+				settings.setPixelFormat(pixel_format);
+				break;
+			}
+		}
 
-		camera_log.notice("Setting view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
-			settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
+		if (m_camera->supportedViewfinderSettings(settings).isEmpty())
+		{
+			camera_log.warning("No camera setting available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
+				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
+		}
+		else
+		{
+			camera_log.notice("Setting view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
+				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
 
-		// Apply settings.
-		m_camera->setViewfinderSettings(settings);
+			// Apply settings.
+			m_camera->setViewfinderSettings(settings);
+		}
 	}
 
 	// Update video surface if possible
