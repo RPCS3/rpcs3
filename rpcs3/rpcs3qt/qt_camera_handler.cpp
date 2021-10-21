@@ -303,7 +303,13 @@ void qt_camera_handler::update_camera_settings()
 		QCameraViewfinderSettings settings;
 
 		// Set resolution if possible.
-		for (const QSize& resolution : m_camera->supportedViewfinderResolutions(settings))
+		const QList<QSize> resolutions = m_camera->supportedViewfinderResolutions(settings);
+		if (resolutions.isEmpty())
+		{
+			camera_log.error("No resolution available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
+				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
+		}
+		for (const QSize& resolution : resolutions)
 		{
 			if (m_width == resolution.width() && m_height == resolution.height())
 			{
@@ -313,7 +319,13 @@ void qt_camera_handler::update_camera_settings()
 		}
 
 		// Set frame rate if possible.
-		for (const QCamera::FrameRateRange& frame_rate : m_camera->supportedViewfinderFrameRateRanges(settings))
+		const QList<QCamera::FrameRateRange> frame_rate_ranges = m_camera->supportedViewfinderFrameRateRanges(settings);
+		if (frame_rate_ranges.isEmpty())
+		{
+			camera_log.error("No frame rate available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
+				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
+		}
+		for (const QCamera::FrameRateRange& frame_rate : frame_rate_ranges)
 		{
 			// Some cameras do not have an exact match, so let's approximate.
 			if (static_cast<qreal>(m_frame_rate) >= (frame_rate.maximumFrameRate - 0.5) && static_cast<qreal>(m_frame_rate) <= (frame_rate.maximumFrameRate + 0.5))
@@ -326,7 +338,13 @@ void qt_camera_handler::update_camera_settings()
 		}
 
 		// Set pixel format if possible. (Unused for now, because formats differ between Qt and cell)
-		//for (const QVideoFrame::PixelFormat& pixel_format : m_camera->supportedViewfinderPixelFormats(settings))
+		const QList<QVideoFrame::PixelFormat> pixel_formats = m_camera->supportedViewfinderPixelFormats(settings);
+		if (pixel_formats.isEmpty())
+		{
+			camera_log.error("No pixel format available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
+				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
+		}
+		//for (const QVideoFrame::PixelFormat& pixel_format : pixel_formats)
 		//{
 		//	if (pixel_format matches m_format)
 		//	{

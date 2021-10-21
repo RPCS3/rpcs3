@@ -131,11 +131,11 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 		case CELL_CAMERA_RAW8: // The game seems to expect BGGR
 		{
 			// Let's use a very simple algorithm to convert the image to raw BGGR
-			const auto convert_to_bggr = [&image_buffer, &image](int y_begin, int y_end)
+			const auto convert_to_bggr = [&image_buffer, &image](u32 y_begin, u32 y_end)
 			{
-				for (int y = y_begin; y < std::min<int>(image_buffer.height, image.height()) && y < y_end; y++)
+				for (u32 y = y_begin; y < std::min<u32>(image_buffer.height, image.height()) && y < y_end; y++)
 				{
-					for (int x = 0; x < std::min<int>(image_buffer.width, image.width()); x++)
+					for (u32 x = 0; x < std::min<u32>(image_buffer.width, image.width()); x++)
 					{
 						u8& pixel = image_buffer.data[image_buffer.width * y + x];
 						const bool is_left_pixel = (x % 2) == 0;
@@ -159,9 +159,9 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 
 			// Use a multithreaded workload. The faster we get this done, the better.
 			constexpr u32 thread_count = 4;
-			const int lines_per_thread = std::ceil(image_buffer.height / static_cast<double>(thread_count));
-			int y_begin = 0;
-			int y_end = lines_per_thread;
+			const u32 lines_per_thread = std::ceil(image_buffer.height / static_cast<double>(thread_count));
+			u32 y_begin = 0;
+			u32 y_end = lines_per_thread;
 
 			QFutureSynchronizer<void> synchronizer;
 			for (u32 i = 0; i < thread_count; i++)
@@ -178,7 +178,7 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 		case CELL_CAMERA_V_Y1_U_Y0:
 		{
 			// Simple RGB to Y0_U_Y1_V conversion from stackoverflow.
-			const auto convert_to_yuv422 = [&image_buffer, &image, format = m_format](int y_begin, int y_end)
+			const auto convert_to_yuv422 = [&image_buffer, &image, format = m_format](u32 y_begin, u32 y_end)
 			{
 				constexpr int yuv_bytes_per_pixel = 2;
 				const int yuv_pitch = image_buffer.width * yuv_bytes_per_pixel;
@@ -188,11 +188,11 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 				const int y1_offset = (format == CELL_CAMERA_Y0_U_Y1_V) ? 2 : 1;
 				const int v_offset  = (format == CELL_CAMERA_Y0_U_Y1_V) ? 3 : 0;
 
-				for (u32 y = y_begin; y < std::min<int>(image_buffer.height, image.height()) && y < y_end; y++)
+				for (u32 y = y_begin; y < std::min<u32>(image_buffer.height, image.height()) && y < y_end; y++)
 				{
 					uint8_t* yuv_row_ptr = &image_buffer.data[y * yuv_pitch];
 
-					for (u32 x = 0; x < std::min<int>(image_buffer.width, image.width()) - 1; x += 2)
+					for (u32 x = 0; x < std::min<u32>(image_buffer.width, image.width()) - 1; x += 2)
 					{
 						const QRgb pixel_1 = image.pixel(x, y);
 						const QRgb pixel_2 = image.pixel(x + 1, y);
@@ -220,9 +220,9 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 
 			// Use a multithreaded workload. The faster we get this done, the better.
 			constexpr u32 thread_count = 4;
-			const int lines_per_thread = std::ceil(image_buffer.height / static_cast<double>(thread_count));
-			int y_begin = 0;
-			int y_end = lines_per_thread;
+			const u32 lines_per_thread = std::ceil(image_buffer.height / static_cast<double>(thread_count));
+			u32 y_begin = 0;
+			u32 y_end = lines_per_thread;
 
 			QFutureSynchronizer<void> synchronizer;
 			for (u32 i = 0; i < thread_count; i++)
