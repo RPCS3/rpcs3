@@ -1009,6 +1009,9 @@
     <ClCompile Include="Emu\vfs_config.cpp">
       <Filter>Emu</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\camera_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2004,6 +2007,9 @@
     </ClInclude>
     <ClInclude Include="Emu\Io\Null\null_camera_handler.h">
       <Filter>Emu\Io\Null</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\camera_config.h">
+      <Filter>Emu\Io</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1415,14 +1415,14 @@
       <layout class="QVBoxLayout" name="inputTab_layout">
        <item>
         <layout class="QGridLayout" name="ioGridLayout">
-         <item row="0" column="0">
-          <widget class="QGroupBox" name="gb_keyboard_handler">
+         <item row="1" column="2">
+          <widget class="QGroupBox" name="gb_turntable_emulated">
            <property name="title">
-            <string>Keyboard Handler</string>
+            <string>DJ Hero emulated turntable</string>
            </property>
-           <layout class="QVBoxLayout" name="gb_keyboard_handler_layout">
+           <layout class="QVBoxLayout" name="gb_turntable_emulated_layout">
             <item>
-             <widget class="QComboBox" name="keyboardHandlerBox"/>
+             <widget class="QComboBox" name="turntableBox"/>
             </item>
            </layout>
           </widget>
@@ -1439,30 +1439,6 @@
            </layout>
           </widget>
          </item>
-         <item row="0" column="2">
-          <widget class="QGroupBox" name="gb_buzz_emulated">
-           <property name="title">
-            <string>Buzz! emulated controller</string>
-           </property>
-           <layout class="QVBoxLayout" name="gb_buzz_emulated_layout">
-            <item>
-             <widget class="QComboBox" name="buzzBox"/>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="1" column="2">
-          <widget class="QGroupBox" name="gb_turntable_emulated">
-           <property name="title">
-            <string>DJ Hero emulated turntable</string>
-           </property>
-           <layout class="QVBoxLayout" name="gb_turntable_emulated_layout">
-            <item>
-             <widget class="QComboBox" name="turntableBox"/>
-            </item>
-           </layout>
-          </widget>
-         </item>
          <item row="0" column="1">
           <widget class="QGroupBox" name="gb_camera_type">
            <property name="title">
@@ -1475,7 +1451,43 @@
            </layout>
           </widget>
          </item>
-         <item row="1" column="1">
+         <item row="2" column="0">
+          <widget class="QGroupBox" name="gb_move_handler">
+           <property name="title">
+            <string>Move Handler</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_move_handler_layout">
+            <item>
+             <widget class="QComboBox" name="moveBox"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QGroupBox" name="gb_keyboard_handler">
+           <property name="title">
+            <string>Keyboard Handler</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_keyboard_handler_layout">
+            <item>
+             <widget class="QComboBox" name="keyboardHandlerBox"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QGroupBox" name="gb_buzz_emulated">
+           <property name="title">
+            <string>Buzz! emulated controller</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_buzz_emulated_layout">
+            <item>
+             <widget class="QComboBox" name="buzzBox"/>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item row="3" column="1">
           <widget class="QGroupBox" name="gb_camera_flip">
            <property name="title">
             <string>Camera Flip</string>
@@ -1487,7 +1499,7 @@
            </layout>
           </widget>
          </item>
-         <item row="2" column="1">
+         <item row="1" column="1">
           <widget class="QGroupBox" name="gb_camera_setting">
            <property name="title">
             <string>Camera Handler</string>
@@ -1511,19 +1523,7 @@
            </layout>
           </widget>
          </item>
-         <item row="2" column="0">
-          <widget class="QGroupBox" name="gb_move_handler">
-           <property name="title">
-            <string>Move Handler</string>
-           </property>
-           <layout class="QVBoxLayout" name="gb_move_handler_layout">
-            <item>
-             <widget class="QComboBox" name="moveBox"/>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item row="2" column="2">
+         <item row="2" column="1">
           <widget class="QGroupBox" name="gb_camera_id">
            <property name="title">
             <string>Camera</string>

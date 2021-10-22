@@ -25,12 +25,9 @@ void cfg_rpcn::save() const
 	}
 #endif
 
-	fs::file cfg_file(cfg_rpcn::get_path(), fs::rewrite);
-	if (cfg_file)
-	{
-		cfg_file.write(to_string());
-	}
-	else
+	fs::pending_file cfg_file(cfg_rpcn::get_path());
+
+	if (!cfg_file.file || (cfg_file.file.write(to_string()), !cfg_file.commit()))
 	{
 		rpcn_log.error("Could not save config: %s", cfg_rpcn::get_path());
 	}

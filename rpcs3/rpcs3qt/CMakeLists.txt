@@ -7,6 +7,7 @@ set(SRC_FILES
     breakpoint_handler.cpp
     breakpoint_list.cpp
     call_stack_list.cpp
+    camera_settings_dialog.cpp
     cg_disasm_window.cpp
     cheat_manager.cpp
     config_adapter.cpp
@@ -83,6 +84,7 @@ set(SRC_FILES
 
 set(UI_FILES
     about_dialog.ui
+    camera_settings_dialog.ui
     main_window.ui
     pad_led_settings_dialog.ui
     pad_settings_dialog.ui

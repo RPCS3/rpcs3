@@ -978,11 +978,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			cfg_log.error("The selected camera was not found. Selecting default camera as fallback.");
 			ui->cameraIdBox->setCurrentIndex(ui->cameraIdBox->findData(qstr(default_camera)));
 		}
-		connect(ui->cameraIdBox, QOverload<int>::of(&QComboBox::currentIndexChanged), [this](int index)
+		connect(ui->cameraIdBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index)
 		{
 			if (index >= 0) m_emu_settings->SetSetting(emu_settings_type::CameraID, ui->cameraIdBox->itemData(index).toString().toStdString());
 		});
-		connect(m_emu_settings.get(), &emu_settings::RestoreDefaultsSignal, [this, default_camera]()
+		connect(m_emu_settings.get(), &emu_settings::RestoreDefaultsSignal, this, [this, default_camera]()
 		{
 			m_emu_settings->SetSetting(emu_settings_type::CameraID, default_camera);
 			ui->cameraIdBox->setCurrentIndex(ui->cameraIdBox->findData(qstr(default_camera)));
