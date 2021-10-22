@@ -381,6 +381,11 @@ void np_handler::init_NP(u32 poolsize, vm::ptr<void> poolptr)
 
 void np_handler::terminate_NP()
 {
+	// TODO: proper cleanup of everything here
+
+	// Unregister basic handler
+	basic_handler.registered = false;
+
 	// Reset memory pool
 	mpool.set(0);
 	mpool_size  = 0;
