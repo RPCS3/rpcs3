@@ -116,7 +116,7 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 			flip_horizontally = !flip_horizontally;
 		}
 
-		bool flip_vertically = true; // It appears games expect this. Might be camera specific.
+		bool flip_vertically = false;
 		if (flip_setting == camera_flip::vertical || flip_setting == camera_flip::both)
 		{
 			flip_vertically = !flip_vertically;
