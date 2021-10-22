@@ -28,6 +28,7 @@
 #include "category.h"
 #include "gui_settings.h"
 #include "input_dialog.h"
+#include "camera_settings_dialog.h"
 
 #include <thread>
 #include <charconv>
@@ -1652,6 +1653,7 @@ void main_window::OnEmuStop()
 #endif
 	}
 	ui->actionManage_Users->setEnabled(true);
+	ui->confCamerasAct->setEnabled(true);
 
 	if (std::exchange(m_sys_menu_opened, false))
 	{
@@ -1691,6 +1693,7 @@ void main_window::OnEmuReady() const
 	EnableMenus(true);
 
 	ui->actionManage_Users->setEnabled(false);
+	ui->confCamerasAct->setEnabled(false);
 }
 
 void main_window::EnableMenus(bool enabled) const
@@ -2115,6 +2118,12 @@ void main_window::CreateConnects()
 	};
 
 	connect(ui->confPadsAct, &QAction::triggered, this, open_pad_settings);
+
+	connect(ui->confCamerasAct, &QAction::triggered, this, [this]()
+	{
+		camera_settings_dialog dlg(this);
+		dlg.exec();
+	});
 
 	connect(ui->confRPCNAct, &QAction::triggered, this, [this]()
 	{

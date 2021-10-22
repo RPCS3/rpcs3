@@ -93,7 +93,7 @@ bool qt_camera_video_surface::present(const QVideoFrame& frame)
 
 	if (image.isNull())
 	{
-		camera_log.warning("Image is invalid: pixel_format=%d, format=%d", static_cast<int>(tmp.pixelFormat()), static_cast<int>(QVideoFrame::imageFormatFromPixelFormat(tmp.pixelFormat())));
+		camera_log.warning("Image is invalid: pixel_format=%s, format=%d", tmp.pixelFormat(), static_cast<int>(QVideoFrame::imageFormatFromPixelFormat(tmp.pixelFormat())));
 	}
 	else
 	{

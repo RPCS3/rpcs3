@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "qt_camera_handler.h"
 #include "Emu/system_config.h"
+#include "Emu/Io/camera_config.h"
 
 #include <QMediaService>
 #include <QCameraInfo>
@@ -14,6 +15,8 @@ qt_camera_handler::qt_camera_handler() : camera_handler_base()
 	{
 		camera_log.success("Found camera: name=%s, description=%s", cameraInfo.deviceName().toStdString(), cameraInfo.description().toStdString());
 	}
+
+	g_cfg_camera.load();
 }
 
 qt_camera_handler::~qt_camera_handler()
@@ -218,14 +221,15 @@ void qt_camera_handler::set_format(s32 format, u32 bytesize)
 	m_format = format;
 	m_bytesize = bytesize;
 
-	update_camera_settings();
+	if (m_surface)
+	{
+		m_surface->set_format(m_format, m_bytesize);
+	}
 }
 
 void qt_camera_handler::set_frame_rate(u32 frame_rate)
 {
 	m_frame_rate = frame_rate;
-
-	update_camera_settings();
 }
 
 void qt_camera_handler::set_resolution(u32 width, u32 height)
@@ -233,14 +237,20 @@ void qt_camera_handler::set_resolution(u32 width, u32 height)
 	m_width = width;
 	m_height = height;
 
-	update_camera_settings();
+	if (m_surface)
+	{
+		m_surface->set_resolution(m_width, m_height);
+	}
 }
 
 void qt_camera_handler::set_mirrored(bool mirrored)
 {
 	m_mirrored = mirrored;
 
-	update_camera_settings();
+	if (m_surface)
+	{
+		m_surface->set_mirrored(m_mirrored);
+	}
 }
 
 u64 qt_camera_handler::frame_number() const
@@ -298,73 +308,55 @@ void qt_camera_handler::update_camera_settings()
 	// Update camera if possible. We can only do this if it is already loaded.
 	if (m_camera && m_camera->state() != QCamera::State::UnloadedState)
 	{
-		// List all available settings in a cascading fashion and choose the proper value if possible.
-		// After each step, the next one will only list the settings that are compatible with the prior ones.
-		QCameraViewfinderSettings settings;
+		// Load selected settings from config file
+		bool success = false;
+		cfg_camera::camera_setting cfg_setting = g_cfg_camera.get_camera_setting(m_camera_id, success);
 
-		// Set resolution if possible.
-		const QList<QSize> resolutions = m_camera->supportedViewfinderResolutions(settings);
-		if (resolutions.isEmpty())
+		if (success)
 		{
-			camera_log.warning("No resolution available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
-				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
-		}
-		for (const QSize& resolution : resolutions)
-		{
-			if (static_cast<int>(m_width) == resolution.width() && static_cast<int>(m_height) == resolution.height())
+			camera_log.notice("Found config entry for camera \"%s\"", m_camera_id);
+
+			QCameraViewfinderSettings setting;
+			setting.setResolution(cfg_setting.width, cfg_setting.height);
+			setting.setMinimumFrameRate(cfg_setting.min_fps);
+			setting.setMaximumFrameRate(cfg_setting.max_fps);
+			setting.setPixelFormat(static_cast<QVideoFrame::PixelFormat>(cfg_setting.format));
+			setting.setPixelAspectRatio(cfg_setting.pixel_aspect_width, cfg_setting.pixel_aspect_height);
+
+			// List all available settings and choose the proper value if possible.
+			const double epsilon = 0.001;
+			success = false;
+			for (const QCameraViewfinderSettings& supported_setting : m_camera->supportedViewfinderSettings(setting))
 			{
-				settings.setResolution(resolution.width(), resolution.height());
-				break;
+				if (supported_setting.resolution().width() == setting.resolution().width() &&
+					supported_setting.resolution().height() == setting.resolution().height() &&
+					supported_setting.minimumFrameRate() >= (setting.minimumFrameRate() - epsilon) &&
+					supported_setting.minimumFrameRate() <= (setting.minimumFrameRate() + epsilon) &&
+					supported_setting.maximumFrameRate() >= (setting.maximumFrameRate() - epsilon) &&
+					supported_setting.maximumFrameRate() <= (setting.maximumFrameRate() + epsilon) &&
+					supported_setting.pixelFormat() == setting.pixelFormat() &&
+					supported_setting.pixelAspectRatio().width() == setting.pixelAspectRatio().width() &&
+					supported_setting.pixelAspectRatio().height() == setting.pixelAspectRatio().height())
+				{
+					// Apply settings.
+					camera_log.notice("Setting view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%s",
+						supported_setting.maximumFrameRate(), supported_setting.resolution().width(), supported_setting.resolution().height(), supported_setting.pixelFormat());
+					m_camera->setViewfinderSettings(supported_setting);
+					success = true;
+					break;
+				}
+			}
+
+			if (!success)
+			{
+				camera_log.warning("No matching camera setting available for the camera config: max_fps=%f, width=%d, height=%d, format=%d",
+					cfg_setting.max_fps, cfg_setting.width, cfg_setting.height, cfg_setting.format);
 			}
 		}
 
-		// Set frame rate if possible.
-		const QList<QCamera::FrameRateRange> frame_rate_ranges = m_camera->supportedViewfinderFrameRateRanges(settings);
-		if (frame_rate_ranges.isEmpty())
+		if (!success)
 		{
-			camera_log.warning("No frame rate available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
-				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
-		}
-		for (const QCamera::FrameRateRange& frame_rate : frame_rate_ranges)
-		{
-			// Some cameras do not have an exact match, so let's approximate.
-			if (static_cast<qreal>(m_frame_rate) >= (frame_rate.maximumFrameRate - 0.5) && static_cast<qreal>(m_frame_rate) <= (frame_rate.maximumFrameRate + 0.5))
-			{
-				// Lock the frame rate by setting the min and max to the same value.
-				settings.setMinimumFrameRate(m_frame_rate);
-				settings.setMaximumFrameRate(m_frame_rate);
-				break;
-			}
-		}
-
-		// Set pixel format if possible. (Unused for now, because formats differ between Qt and cell)
-		const QList<QVideoFrame::PixelFormat> pixel_formats = m_camera->supportedViewfinderPixelFormats(settings);
-		if (pixel_formats.isEmpty())
-		{
-			camera_log.warning("No pixel format available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
-				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
-		}
-		for (const QVideoFrame::PixelFormat& pixel_format : pixel_formats)
-		{
-			if (pixel_format == QVideoFrame::Format_RGB32)
-			{
-				settings.setPixelFormat(pixel_format);
-				break;
-			}
-		}
-
-		if (m_camera->supportedViewfinderSettings(settings).isEmpty())
-		{
-			camera_log.warning("No camera setting available for the view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
-				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
-		}
-		else
-		{
-			camera_log.notice("Setting view finder settings: frame_rate=%f, width=%d, height=%d, pixel_format=%d",
-				settings.maximumFrameRate(), settings.resolution().width(), settings.resolution().height(), static_cast<int>(settings.pixelFormat()));
-
-			// Apply settings.
-			m_camera->setViewfinderSettings(settings);
+			camera_log.notice("Using default view finder settings");
 		}
 	}
 
