@@ -511,8 +511,9 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 		{
 			screenshot_log.notice("Taking screenshot (%dx%d)", sshot_width, sshot_height);
 
+			const std::string& id = Emu.GetTitleID();
 			std::string screen_path = fs::get_config_dir() + "screenshots/";
-			if (const std::string id = Emu.GetTitleID(); !id.empty())
+			if (!id.empty())
 			{
 				screen_path += id + "/";
 			};
@@ -523,7 +524,13 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 				return;
 			}
 
-			const std::string filename = screen_path + "screenshot-" + date_time::current_time_narrow<'_'>() + ".png";
+			std::string filename = screen_path;
+			if (!id.empty())
+			{
+				filename += id + "_";
+			};
+
+			filename += "screenshot_" + date_time::current_time_narrow<'_'>() + ".png";
 
 			fs::file sshot_file(filename, fs::open_mode::create + fs::open_mode::write + fs::open_mode::excl);
 			if (!sshot_file)
