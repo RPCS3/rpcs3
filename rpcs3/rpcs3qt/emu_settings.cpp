@@ -1038,6 +1038,14 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case turntable_handler::two_controllers: return tr("2 controllers", "Turntable handler");
 		}
 		break;
+	case emu_settings_type::GHLtar:
+		switch (static_cast<ghltar_handler>(index))
+		{
+		case ghltar_handler::null: return tr("Null", "GHLtar handler");
+		case ghltar_handler::one_controller: return tr("1 controller", "GHLtar handler");
+		case ghltar_handler::two_controllers: return tr("2 controllers", "GHLtar handler");
+		}
+		break;
 	case emu_settings_type::InternetStatus:
 		switch (static_cast<np_internet_status>(index))
 		{

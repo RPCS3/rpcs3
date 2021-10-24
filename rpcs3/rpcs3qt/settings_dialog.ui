@@ -1508,10 +1508,19 @@
           </widget>
          </item>
          <item>
-          <widget class="QWidget" name="inputTabSpacerWidget" native="true"/>
+          <widget class="QGroupBox" name="gb_ghltar_emulated">
+           <property name="title">
+            <string>Guitar Hero Live emulated guitar</string>
+           </property>
+           <layout class="QVBoxLayout" name="gb_ghltar_emulated_layout">
+            <item>
+             <widget class="QComboBox" name="ghltarBox"/>
+            </item>
+           </layout>
+          </widget>
          </item>
          <item>
-          <widget class="QWidget" name="inputTabSpacerWidget2" native="true"/>
+          <widget class="QWidget" name="inputTabSpacerWidget" native="true"/>
          </item>
         </layout>
        </item>

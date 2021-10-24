@@ -527,15 +527,15 @@ void main_window::BootRsxCapture(std::string path)
 
 bool main_window::InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename)
 {
-	if (path.isEmpty() || filename.empty())
+	if (path.isEmpty() || filename.empty() || extension.empty())
 	{
 		return false;
 	}
 
 	// Copy file atomically with thread/process-safe error checking for file size
-
-	fs::pending_file to(rpcs3::utils::get_hdd0_dir() + "/home/" + Emu.GetUsr() + "/exdata/" + filename.substr(0, filename.find_last_of('.')) + "." + extension);
-	const fs::file from(sstr(path));
+	const std::string to_path = rpcs3::utils::get_hdd0_dir() + "/home/" + Emu.GetUsr() + "/exdata/" + filename.substr(0, filename.find_last_of('.'));
+	fs::pending_file to(to_path + "." + extension);
+	fs::file from(sstr(path));
 
 	if (!to.file || !from)
 	{
@@ -543,12 +543,24 @@ bool main_window::InstallFileInExData(const std::string& extension, const QStrin
 	}
 
 	to.file.write(from.to_vector<u8>());
+	from.close();
 
 	if (to.file.size() < 0x10)
 	{
 		// Not a RAP file
 		return false;
 	}
+
+#ifdef _WIN32
+	// In the case of an unexpected crash during the operation, the temporary file can be used as the deleted file
+	// See below
+	to.file.sync();
+
+	// In case we want to rename upper-case file to lower-case
+	// Windows will ignore such rename operation if the file exists
+	// So delete it
+	fs::remove_file(to_path + "." + fmt::to_upper(extension));
+#endif
 
 	return to.commit();
 }

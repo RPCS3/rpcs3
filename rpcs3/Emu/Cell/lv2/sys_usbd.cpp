@@ -236,10 +236,15 @@ usb_handler_thread::usb_handler_thread()
 		usb_devices.push_back(std::make_shared<usb_device_skylander>());
 	}
 
-	if (!found_ghltar)
+	if (g_cfg.io.ghltar == ghltar_handler::one_controller || g_cfg.io.ghltar == ghltar_handler::two_controllers)
 	{
-		sys_usbd.notice("Adding emulated GHLtar");
-		usb_devices.push_back(std::make_shared<usb_device_ghltar>());
+		sys_usbd.notice("Adding emulated GHLtar (1 player)");
+		usb_devices.push_back(std::make_shared<usb_device_ghltar>(0));
+	}
+	if (g_cfg.io.ghltar == ghltar_handler::two_controllers)
+	{
+		sys_usbd.notice("Adding emulated GHLtar (2 players)");
+		usb_devices.push_back(std::make_shared<usb_device_ghltar>(1));
 	}
 
 	if (g_cfg.io.turntable == turntable_handler::one_controller || g_cfg.io.turntable == turntable_handler::two_controllers)

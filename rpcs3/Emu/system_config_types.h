@@ -109,6 +109,13 @@ enum class turntable_handler
 	two_controllers,
 };
 
+enum class ghltar_handler
+{
+	null,
+	one_controller,
+	two_controllers,
+};
+
 enum class microphone_handler
 {
 	null,
