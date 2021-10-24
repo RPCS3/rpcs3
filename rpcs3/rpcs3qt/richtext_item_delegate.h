@@ -51,16 +51,14 @@ public:
 		painter->setClipRect(text_rect.translated(-text_rect.topLeft()));
 
 		// Create a context for our painter
-		const QAbstractTextDocumentLayout::PaintContext context;
+		QAbstractTextDocumentLayout::PaintContext context;
 
-		// We can change the text color based on state (Unused because it didn't look good)
-		//context.palette.setColor(QPalette::Text, option.palette.color(QPalette::Active, (option.state & QStyle::State_Selected) ? QPalette::HighlightedText : QPalette::Text));
+		// Apply the styled palette
+		context.palette = opt.palette;
 
 		// Draw the text
 		m_document->documentLayout()->draw(painter, context);
 
 		painter->restore();
-
-		//QStyledItemDelegate::paint(painter, opt, index); // Unused
 	}
 };
