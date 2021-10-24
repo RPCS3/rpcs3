@@ -12,12 +12,13 @@
 #include "Emu/Cell/Modules/cellScreenshot.h"
 #include "Emu/RSX/rsx_utils.h"
 
-#include <QCoreApplication>
+#include <QApplication>
 #include <QDateTime>
 #include <QKeyEvent>
 #include <QMessageBox>
 #include <QPainter>
 #include <QScreen>
+#include <QSound>
 
 #include <string>
 #include <thread>
@@ -714,6 +715,19 @@ void gs_frame::take_screenshot(std::vector<u8> data, const u32 sshot_width, cons
 
 				screenshot_log.success("Successfully saved cell screenshot to %s", cell_sshot_filename);
 			}
+
+			// Play a sound
+			Emu.CallAfter([]()
+			{
+				if (const std::string sound_path = fs::get_config_dir() + "sounds/screenshot.wav"; fs::is_file(sound_path))
+				{
+					QSound::play(qstr(sound_path));
+				}
+				else
+				{
+					QApplication::beep();
+				}
+			});
 
 			return;
 		},
